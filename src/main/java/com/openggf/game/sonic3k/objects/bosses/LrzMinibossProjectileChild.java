@@ -17,10 +17,10 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * A shot from the Lava Reef miniboss's hand ({@code loc_78A02}, sonic3k.asm:160455-160465,
+ * A shot from the Lava Reef miniboss's hand ({@code loc_78A02}, sonic3k.asm:160531-160541,
  * created through {@code ChildObjDat_78D90} by {@code CreateChild10_NormalAdjusted}).
  *
- * <p>{@code sub_78BAA} (sonic3k.asm:160606-160619) picks the velocity from {@code word_78BCA} by
+ * <p>{@code sub_78BAA} (sonic3k.asm:160682-160695) picks the velocity from {@code word_78BCA} by
  * the subtype the hand stamped on it -- its shot counter -- reading
  * {@code word_78BCA-4(pc,d0.w)} with {@code d0 = subtype << 2}, so shot 1 takes the first pair,
  * shot 2 the second and shot 3 the third. The X component is negated when the <b>firing hand's</b>
@@ -93,12 +93,12 @@ final class LrzMinibossProjectileChild extends AbstractObjectInstance
     }
 
     /**
-     * {@code Sprite_CheckDeleteTouchXY} (sonic3k.asm:179032-179043), literally: the X test is on
+     * {@code Sprite_CheckDeleteTouchXY} (sonic3k.asm:179123-179134), literally: the X test is on
      * the <b>coarse</b> position against {@code Camera_X_pos_coarse_back} with a {@code $280}
      * window, and the Y test is {@code y_pos - Camera_Y_pos + $80} against {@code $200}. Both are
      * {@code bhi}, i.e. unsigned and exclusive, so a value exactly on the bound survives.
      * {@code Camera_X_pos_coarse_back} is refreshed by {@code Load_Sprites} as
-     * {@code (Camera_X_pos - $80) & $FF80} (sonic3k.asm:37545-37553).
+     * {@code (Camera_X_pos - $80) & $FF80} (sonic3k.asm:37585-37593).
      *
      * <p>The window is deliberately not symmetric and deliberately coarse: a shot can sit up to
      * {@code $7F} pixels further left than an eyeballed box would allow, and the Y half reaches

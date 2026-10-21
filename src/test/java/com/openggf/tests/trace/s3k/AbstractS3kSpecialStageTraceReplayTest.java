@@ -68,7 +68,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *       success path {@code clear_routine} jumps to its terminal value the
  *       instant the player reaches the emerald cell
  *       ({@code Sonic3kSpecialStageManager.collectEmerald()},
- *       ROM {@code sub_9B62}/sonic3k.asm:12530-12664), roughly 96+ frames
+ *       ROM {@code sub_9B62}/sonic3k.asm:12566-12700), roughly 96+ frames
  *       before {@code finished} actually flips, and the failure path never
  *       touches {@code clear_routine} at all. A Tier-1
  *       {@code finished_transition_frame} check therefore anchors on
@@ -105,7 +105,7 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
             Path.of("src", "test", "resources", "traces", "s3k", "special_stage");
 
     /**
-     * ROM clear-routine terminal state (sub_9B62, sonic3k.asm:12530-12664):
+     * ROM clear-routine terminal state (sub_9B62, sonic3k.asm:12566-12700):
      * 0=normal play, 1=fly-away timer, 2=emerald-art-load wait,
      * 3=emerald approach, 4=complete. Set the instant the player reaches the
      * emerald cell in {@code collectEmerald()}
@@ -318,23 +318,23 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
      * settled into steady, interactive state -- observing a ROM pre-start
      * hold, not hydrating engine state from the trace.
      *
-     * <p>ROM {@code SpecialStage} (sonic3k.asm:10585-10725) entry is a single
+     * <p>ROM {@code SpecialStage} (sonic3k.asm:10621-10761) entry is a single
      * synchronous 68000 call: {@code Pal_FadeToWhite} runs first
-     * (sonic3k.asm:10591, interrupts still enabled -- BizHawk records these
+     * (sonic3k.asm:10627, interrupts still enabled -- BizHawk records these
      * rows as non-lag even though {@code Special_stage_*} RAM is still
      * whatever a PRIOR special-stage attempt left it at, since the
-     * {@code clearRAM Stat_table,$100} wipe (sonic3k.asm:10607) that zeroes
+     * {@code clearRAM Stat_table,$100} wipe (sonic3k.asm:10643) that zeroes
      * the entire {@code Special_stage_*} block -- confirmed by RAM-layout
      * arithmetic: {@code Stat_table}/{@code Pos_table_P2}
      * (sonic3k.constants.asm:328-333) is exactly the 0x100-byte
      * {@code Pos_table_P2} region that hosts every {@code Special_stage_*}
-     * field at sonic3k.constants.asm:1012-1057 -- hasn't run yet). Immediately
-     * after, {@code move #$2700,sr} (sonic3k.asm:10592) masks interrupts, and
+     * field at sonic3k.constants.asm:1037-1082 -- hasn't run yet). Immediately
+     * after, {@code move #$2700,sr} (sonic3k.asm:10628) masks interrupts, and
      * the routine spends dozens of real frames inside back-to-back
      * {@code Nem_Decomp}/{@code Eni_Decomp}/{@code Kos_Decomp} calls
-     * (sonic3k.asm:10632-10695) loading special-stage art with no controller
+     * (sonic3k.asm:10668-10731) loading special-stage art with no controller
      * poll -- BizHawk marks every one of those frames lag. {@code Wait_VSync}
-     * (sonic3k.asm:10725) is the first frame that reads input again, landing
+     * (sonic3k.asm:10761) is the first frame that reads input again, landing
      * the RAM state the engine's synchronous, instant-load
      * {@code Sonic3kSpecialStageManager#initialize(int)} already produces at
      * construction (matching layout-driven x/y/angle, cleared
@@ -372,7 +372,7 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
      * <p>The scan starts at {@link #firstInteractiveFrame} and skips
      * {@code lag} rows: rows before that point are the pre-boot ROM hold
      * described there (stale leftover {@code Special_stage_fade_timer} from
-     * a prior attempt, sonic3k.asm:10585-10725), and lag rows are recorded
+     * a prior attempt, sonic3k.asm:10621-10761), and lag rows are recorded
      * with every field zero-filled rather than a real RAM read (the recorder
      * does not read {@code mainmemory} on a lag row -- see
      * {@code s3k_complete_run_recorder.lua}'s {@code write_ss_row}), so a
@@ -413,7 +413,7 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
     /**
      * Maps a raw 68000 byte to the signed value used by the ROM's
      * {@code Special_stage_turning} field. It is written with {@code move.b}
-     * as either {@code #4} (left) or {@code #-4} (right) (sonic3k.asm:12000,
+     * as either {@code #4} (left) or {@code #-4} (right) (sonic3k.asm:12036,
      * 12005), i.e. a genuinely signed byte -- Sonic3kSpecialStagePlayer's
      * {@code turning} int mirrors that (TURN_LEFT=4, TURN_RIGHT=-4). The
      * trace CSV records the raw unsigned hex byte (e.g. {@code fc} for -4),

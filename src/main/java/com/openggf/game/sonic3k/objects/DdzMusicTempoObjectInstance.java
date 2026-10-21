@@ -9,7 +9,7 @@ import com.openggf.level.objects.RewindRecreateContext;
 import java.util.List;
 
 /**
- * ROM {@code loc_82722} (sonic3k.asm:174759-174770), allocated by the Doomsday flight controller's
+ * ROM {@code loc_82722} (sonic3k.asm:174850-174861), allocated by the Doomsday flight controller's
  * init. Each frame it selects {@code zTempoSpeedup} 8 while {@code Ring_count <= 10} and 0 otherwise,
  * and calls {@code Change_Music_Tempo} only when the selection changes. The stored selection
  * ({@code $3A(a0)}) starts at 0, so nothing happens until the ring count first drops to ten.

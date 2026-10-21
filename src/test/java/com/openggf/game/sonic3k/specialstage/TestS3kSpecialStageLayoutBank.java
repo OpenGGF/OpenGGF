@@ -21,14 +21,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * The layout bank of a Blue Sphere stage is chosen by {@code SK_special_stage_flag}, not by the
- * stage ordinal. In {@code sub_85B0} (skdisasm 044fa46 sonic3k.asm:10845) the locked-on game
+ * stage ordinal. In {@code sub_85B0} (skdisasm 044fa46 sonic3k.asm:10881) the locked-on game
  * ({@code SK_alone_flag} clear) takes {@code SStageLayoutPtrs} (the Sonic 3 layouts, relocated by
  * {@code LockOnROM_Start} at {@code loc_8630}) unless {@code SK_special_stage_flag} is set, in which
  * case {@code loc_85E4} takes {@code SSLayoutOffs_RAM}: the Sonic &amp; Knuckles set Kos-decompressed
  * from {@code SSCompressedLayoutPtrs}. {@code Current_special_stage & 7} indexes either bank.
  *
  * <p>The only gameplay writer of a nonzero flag is the HPZ pedestal ({@code loc_90926},
- * sonic3k.asm:197836); the giant ring ({@code loc_61892}) writes zero. The same flag also selects the
+ * sonic3k.asm:197943); the giant ring ({@code loc_61892}) writes zero. The same flag also selects the
  * Super Emerald reward counter ({@code loc_9CCE}), cell ({@code $D}) and art, which is why the
  * engine's reward kind carries it. The oracle reads the ROM's own pointer tables, never the engine's
  * layout constants.

@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for SidekickCpuController.FLIGHT_AUTO_RECOVERY (ROM routine 0x04,
- * Tails_FlySwim_Unknown at sonic3k.asm:26534).
+ * Tails_FlySwim_Unknown at sonic3k.asm:26574).
  */
 class TestSidekickCpuControllerFlightAutoRecovery {
 

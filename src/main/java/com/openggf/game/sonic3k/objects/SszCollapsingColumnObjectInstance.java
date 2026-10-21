@@ -19,7 +19,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * ROM {@code Obj_SSZCollapsingColumn} ({@code $7E}, sonic3k.asm:90007-90118): the bobbing column
+ * ROM {@code Obj_SSZCollapsingColumn} ({@code $7E}, sonic3k.asm:90053-90164): the bobbing column
  * that breaks into eight pieces when it is stood on. Twenty-five act-1 placements, all subtype 0 —
  * the subtype is never read.
  *
@@ -164,7 +164,7 @@ public final class SszCollapsingColumnObjectInstance extends AbstractObjectInsta
         return ((data[offset] & 0xFF) << 8) | (data[offset + 1] & 0xFF);
     }
 
-    /** {@code Gradual_SwingOffset} (sonic3k.asm:92484-92515); returns the offset's high word. */
+    /** {@code Gradual_SwingOffset} (sonic3k.asm:92530-92561); returns the offset's high word. */
     private int gradualSwingOffset() {
         int step = SWING_ACCELERATION;
         if (swingReversed) {

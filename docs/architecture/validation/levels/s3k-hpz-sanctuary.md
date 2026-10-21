@@ -2,7 +2,7 @@
 
 Game / slot: S3K `S3K_SPECIAL_STAGE_ARENA`, engine zone `$17` act index 1, ROM `$1701`
 (`HPZS_*` screen events, `HPZMini_Sprites`). Entry: `SSEntryFlash_GoSS` giant ring with seven
-Chaos Emeralds in an S&K level (`sonic3k.asm:128417`); exit back to the origin level.
+Chaos Emeralds in an S&K level (`sonic3k.asm:128471`); exit back to the origin level.
 Implementation predates this matrix (`feature/ai-s3k-super-emeralds`, routing recovery
 `56583f2dba`); this file records current bindings and gaps found during the HPZ bring-up.
 Status: partial. Both fresh-ceremony branches and their reverse-owner replay are qualified
@@ -162,7 +162,7 @@ pixel match**. The wider scene rectangle also remains unequal.
 
 The same images expose a native HUD omission: Level `loc_6460` clears both
 `Update_HUD_timer` and `Level_started_flag` at `$1701`; `Render_Sprites` skips
-`Render_HUD` while the latter is zero (sonic3k.asm:7841–7846,36326–36328).
+`Render_HUD` while the latter is zero (sonic3k.asm:7873–7878,36366–36368).
 The existing S3K zone-feature HUD provider now consults the sanctuary resource
 profile. Existing profile post-load player initialization pauses the level timer
 and clears the camera's started flag before initial Process_Sprites. The existing
@@ -215,7 +215,7 @@ context for both `loc_90CA2` paths. `SetUp_ObjAttributes` does not change
 `anim_frame` or its timer. `Animate_RawNoSST` decrements timer0, increments cursor0
 to1, then reads `1(a1,d0)`; `byte_90FF6` therefore first publishes `$1F`, not the
 leading `$1D`. Twelve mappings precede `$F4` on the thirteenth raw call
-(sonic3k.asm:197833–197840,197990–198000,176901–176919,177341–177388).
+(sonic3k.asm:197940–197947,198097–198107,176992–177010,177432–177479).
 Allocation scans an already-cleared slot; no new allocator clearing is invented.
 
 The callback publishes the parent signal and tail-calls `Go_Delete_Sprite`,
@@ -373,7 +373,7 @@ Saved2 at448/1664, then changed X to213 on its first ordinary player pass.
 The measured writer was `TailsCarryController.forceScriptedCarry`, reached from
 CPU routine zero after the Saved2 bank had already been consumed. Native
 `Tails_Init_Continued` copies `Last_star_post_hit` before returning
-(`sonic3k.asm:26155`), and `loc_13A10` bypasses both story inlets when that copy
+(`sonic3k.asm:26195`), and `loc_13A10` bypasses both story inlets when that copy
 is nonzero (26390–26391). Fresh entry starts at zero; actual checkpoint/Saved2
 assembly publishes the existing captured eligibility flag. Sanctuary exit
 `loc_90C58` ORs$80 before Level (198045–198049). No new snapshot or Mod API
@@ -664,7 +664,7 @@ Actual-ingress and publication-aligned native presentation remain the honest ope
 ## Same-frame pedestal selection — 2026-10-17
 
 `loc_908DE` calls `SolidObjectTop` and tests `p1_standing_bit` in one routine
-(skdisasm 044fa46 sonic3k.asm:197807-197821), so `object_control $81` lands on the landing frame. A declared
+(skdisasm 044fa46 sonic3k.asm:197914-197928), so `object_control $81` lands on the landing frame. A declared
 native twin of the LRZ2 seven-Chaos branch shows this on the same landing at (5805,896). The
 engine pedestal now resolves its solid at that call point (`MANUAL_CHECKPOINT`) instead of
 reading the next frame's ride. Evidence and checks are in the

@@ -17,8 +17,8 @@ import com.openggf.physics.TrigLookupTable;
 import java.util.List;
 
 /**
- * ROM objects {@code Obj_LRZOrbitingSpikeBallHorizontal} (id {@code $2B}, sonic3k.asm:89077-89145)
- * and {@code Obj_LRZOrbitingSpikeBallVertical} (id {@code $2C}, :89149-89222), both drawn from
+ * ROM objects {@code Obj_LRZOrbitingSpikeBallHorizontal} (id {@code $2B}, sonic3k.asm:89123-89191)
+ * and {@code Obj_LRZOrbitingSpikeBallVertical} (id {@code $2C}, :89195-89268), both drawn from
  * {@code Map_LRZOrbitingSpikeBall} at ROM {@code $43D24}. Lava Reef act 2 places twelve of
  * {@code $2B} and forty of {@code $2C}; act 1 and the boss act place none. The {@code S3KL} set
  * spends the two ids on {@code Obj_AIZFlippingBridge} and {@code Obj_AIZCollapsingLogBridge},
@@ -27,7 +27,7 @@ import java.util.List;
  * <p>The two objects are the same routine on a different axis, so they are one class here with an
  * {@link Axis}; every branch below cites the pair of ROM labels it transcribes.
  *
- * <h2>Init (:89077-89094 / :89149-89166)</h2>
+ * <h2>Init (:89123-89140 / :89195-89212)</h2>
  * <p>{@code $44(a0)} and {@code $46(a0)} take the placed position and are the orbit's centre for
  * the rest of its life. {@code bclr #0,subtype(a0)} both TESTS and CLEARS bit 0: a set bit selects
  * the large ball ({@code width_pixels}/{@code height_pixels} {@code $20}, {@code mapping_frame} 1)
@@ -37,7 +37,7 @@ import java.util.List;
  * {@code $00}-{@code $F0}, so none of them is affected, but the clear is the ROM's and is
  * reproduced.
  *
- * <h2>Every frame (:89096-89116 / :89168-89188)</h2>
+ * <h2>Every frame (:89142-89162 / :89214-89234)</h2>
  * <ol>
  *   <li>{@code collision_flags} is cleared and the priority bit is stripped from
  *       {@code art_tile}, unconditionally.</li>
@@ -53,15 +53,15 @@ import java.util.List;
  * </ol>
  *
  * <p>The four displacement shapes are each a different fraction of {@code cos}:
- * horizontal small {@code cos asr 3} (:89122), horizontal large {@code (cos + cos asr 1) asr 3}
- * (:89140-89143), vertical small {@code (cos + cos asr 2) asr 3} (:89194-89197) and vertical large
- * {@code (cos asr 2) - (cos asr 5)} (:89216-89219). They are transcribed as written; the
+ * horizontal small {@code cos asr 3} (:89168), horizontal large {@code (cos + cos asr 1) asr 3}
+ * (:89186-89189), vertical small {@code (cos + cos asr 2) asr 3} (:89240-89243) and vertical large
+ * {@code (cos asr 2) - (cos asr 5)} (:89262-89265). They are transcribed as written; the
  * shifts are arithmetic and the ROM's own rounding towards negative infinity is what
  * {@code >>} gives in Java.
  *
- * <p>Both end at {@code loc_1B666} (sonic3k.asm:37372-37378), which unloads the object when
+ * <p>Both end at {@code loc_1B666} (sonic3k.asm:37412-37418), which unloads the object when
  * {@code ($44(a0) & $FF80) - Camera_X_pos_coarse_back} exceeds {@code $280}. That is the ANCHOR's
- * x for both axes -- {@code move.w $44(a0),d0} (:89126, :89144, :89198, :89220) -- not the orbited
+ * x for both axes -- {@code move.w $44(a0),d0} (:89172, :89190, :89244, :89266) -- not the orbited
  * position.
  */
 public final class LrzOrbitingSpikeBallObjectInstance extends AbstractObjectInstance
@@ -70,17 +70,17 @@ public final class LrzOrbitingSpikeBallObjectInstance extends AbstractObjectInst
     /** Which ROM object this placement is. */
     public enum Axis { HORIZONTAL, VERTICAL }
 
-    /** {@code move.w #$280,priority(a0)} (sonic3k.asm:89081, :89153). */
+    /** {@code move.w #$280,priority(a0)} (sonic3k.asm:89127, :89199). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0280);
-    /** {@code move.b #$10,width_pixels/height_pixels(a0)} (:89085-89086, :89157-89158). */
+    /** {@code move.b #$10,width_pixels/height_pixels(a0)} (:89131-89132, :89203-89204). */
     private static final int SMALL_RADIUS = 0x10;
-    /** {@code move.b #$20,width_pixels/height_pixels(a0)} (:89089-89090, :89161-89162). */
+    /** {@code move.b #$20,width_pixels/height_pixels(a0)} (:89135-89136, :89207-89208). */
     private static final int LARGE_RADIUS = 0x20;
-    /** {@code move.b #$9A,collision_flags(a0)} for the small ball (:89108, :89180). */
+    /** {@code move.b #$9A,collision_flags(a0)} for the small ball (:89154, :89226). */
     private static final int SMALL_COLLISION_FLAGS = 0x9A;
-    /** {@code move.b #$8F,collision_flags(a0)} for the large ball (:89132, :89204). */
+    /** {@code move.b #$8F,collision_flags(a0)} for the large ball (:89178, :89250). */
     private static final int LARGE_COLLISION_FLAGS = 0x8F;
-    /** {@code move.b #1,mapping_frame(a0)} for the large ball (:89091, :89163). */
+    /** {@code move.b #1,mapping_frame(a0)} for the large ball (:89137, :89209). */
     private static final int LARGE_MAPPING_FRAME = 1;
     private static final int SMALL_MAPPING_FRAME = 0;
 
@@ -121,11 +121,11 @@ public final class LrzOrbitingSpikeBallObjectInstance extends AbstractObjectInst
         this.baseX = spawn.x() & 0xFFFF;
         this.baseY = spawn.y() & 0xFFFF;
         int subtype = spawn.subtype() & 0xFF;
-        // bclr #0,subtype(a0): the test AND the write-back (sonic3k.asm:89083, :89155).
+        // bclr #0,subtype(a0): the test AND the write-back (sonic3k.asm:89129, :89201).
         this.large = (subtype & 1) != 0;
         this.phase = subtype & 0xFE;
         // rol.w #3,d2 / andi.w #3 puts the placement's bit 13 into status bit 0
-        // (sonic3k.asm:37756-37758).
+        // (sonic3k.asm:37796-37798).
         this.reversed = (spawn.renderFlags() & 1) != 0;
         this.currentX = baseX;
         this.currentY = baseY;
@@ -152,13 +152,13 @@ public final class LrzOrbitingSpikeBallObjectInstance extends AbstractObjectInst
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // move.b #0,collision_flags(a0) / andi.w #drawing_mask,art_tile(a0): both cleared before
-        // anything else, every frame (sonic3k.asm:89097-89098, :89169-89170).
+        // anything else, every frame (sonic3k.asm:89143-89144, :89215-89216).
         collisionFlags = 0;
         highPriority = false;
 
         int angle = orbitAngle(vIntRunCount);
         // bpl.s: the restore happens only for a byte angle with bit 7 set
-        // (sonic3k.asm:89105-89109, :89177-89181).
+        // (sonic3k.asm:89151-89155, :89223-89227).
         if ((angle & 0x80) != 0) {
             highPriority = true;
             collisionFlags = large ? LARGE_COLLISION_FLAGS : SMALL_COLLISION_FLAGS;
@@ -175,7 +175,7 @@ public final class LrzOrbitingSpikeBallObjectInstance extends AbstractObjectInst
 
     /**
      * {@code move.b (Level_frame_counter+1).w,d0 / add.b d0,d0}, negated for {@code status} bit 0,
-     * then {@code add.b subtype(a0),d0} (sonic3k.asm:89099-89104, :89171-89176). Every step is a
+     * then {@code add.b subtype(a0),d0} (sonic3k.asm:89145-89150, :89217-89222). Every step is a
      * byte, so the orbit wraps every 128 level frames.
      */
     private int orbitAngle(int vIntRunCount) {
@@ -222,7 +222,7 @@ public final class LrzOrbitingSpikeBallObjectInstance extends AbstractObjectInst
     @Override
     public boolean isCustomOutOfRange(int cameraX) {
         // andi.w #$FF80,d0 / sub.w (Camera_X_pos_coarse_back).w,d0 / cmpi.w #$280,d0 / bhi
-        // (sonic3k.asm:37373-37376).
+        // (sonic3k.asm:37413-37416).
         int delta = ((baseX & 0xFF80) - cameraX) & 0xFFFF;
         return delta > 0x280;
     }

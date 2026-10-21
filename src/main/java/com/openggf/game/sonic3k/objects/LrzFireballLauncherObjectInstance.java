@@ -17,19 +17,19 @@ import java.util.List;
 
 /**
  * ROM object {@code Obj_LRZFireballLauncher} -- object id {@code $1B} in the {@code SKL} pointer set
- * (sonic3k.asm:88151-88215, ROM {@code $42B4C}; {@code Map_LRZFireballLauncher} at ROM
+ * (sonic3k.asm:88197-88261, ROM {@code $42B4C}; {@code Map_LRZFireballLauncher} at ROM
  * {@code $42CB2}). The {@code S3KL} set spends the same id on {@code Obj_LBZPipePlug}.
  *
  * <p>A wall nozzle that spits a horizontal fireball on a fixed period. Init stores
- * {@code subtype << 2} in {@code $30(a0)} as that period (:88159-88162), so Lava Reef's eleven
+ * {@code subtype << 2} in {@code $30(a0)} as that period (:88205-88208), so Lava Reef's eleven
  * subtypes give periods of {@code $40} to {@code $E0} frames. {@code $2E(a0)} is the countdown and
  * starts at the zero of a cleared slot, so the first {@code subq.w #1} already goes negative -- but
- * the shot is gated on {@code render_flags} bit 7 (:88168-88169), which only
+ * the shot is gated on {@code render_flags} bit 7 (:88214-88215), which only
  * {@code Sprite_OnScreen_Test} sets, so on the object's first frame the counter is reloaded without
  * firing and the first real shot lands {@code $30 + 1} frames later.
  *
  * <p>The shot copies the launcher's mappings and render flags but is given its own
- * {@code make_art_tile(ArtTile_LRZMisc,0,0)} (:88179), so the same map data is drawn on palette
+ * {@code make_art_tile(ArtTile_LRZMisc,0,0)} (:88225), so the same map data is drawn on palette
  * line 0 rather than the launcher's line 3 -- the same trap the shooting trigger's shot has.
  * {@code status(a0)} bit 0, the placement's X-flip, mirrors it: the velocity is negated and the
  * spawn offset moves from {@code +8} to {@code -8}. None of the twenty-seven Lava Reef placements
@@ -45,17 +45,17 @@ import java.util.List;
 public final class LrzFireballLauncherObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable, RomObjectCodePointerProvider {
 
-    /** {@code move.w #$280,priority(a0)} (sonic3k.asm:88157). */
+    /** {@code move.w #$280,priority(a0)} (sonic3k.asm:88203). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0280);
-    /** {@code move.b #$10,width_pixels(a0)} / {@code #4,height_pixels(a0)} (:88155-88156). */
+    /** {@code move.b #$10,width_pixels(a0)} / {@code #4,height_pixels(a0)} (:88201-88202). */
     private static final int WIDTH_PIXELS = 0x10;
     private static final int HEIGHT_PIXELS = 0x04;
-    /** {@code move.b #2,mapping_frame(a0)} (:88158). */
+    /** {@code move.b #2,mapping_frame(a0)} (:88204). */
     private static final int MAPPING_FRAME = 2;
-    /** {@code addi.w #8,x_pos(a1)} then {@code subi.w #2*8} when mirrored (:88176, :88191). */
+    /** {@code addi.w #8,x_pos(a1)} then {@code subi.w #2*8} when mirrored (:88222, :88237). */
     private static final int SPAWN_OFFSET_X = 8;
 
-    /** {@code btst #0,status(a0)} (:88189): the placement's X-flip mirrors the launcher. */
+    /** {@code btst #0,status(a0)} (:88235): the placement's X-flip mirrors the launcher. */
     private boolean mirrored;
     /** ROM {@code $30(a0)}: {@code subtype << 2}, the reload period in frames. */
     private int period;
@@ -97,7 +97,7 @@ public final class LrzFireballLauncherObjectInstance extends AbstractObjectInsta
         boolean wasRendered = renderedLastFrame;
         renderedLastFrame = isOnScreen();
 
-        // loc_42BF6 (sonic3k.asm:88165-88194): subq.w #1,$2E(a0) / bpl.
+        // loc_42BF6 (sonic3k.asm:88211-88240): subq.w #1,$2E(a0) / bpl.
         countdown = (short) (countdown - 1);
         if (countdown >= 0) {
             return;
@@ -111,13 +111,13 @@ public final class LrzFireballLauncherObjectInstance extends AbstractObjectInsta
         fire();
     }
 
-    /** {@code loc_42C1A} (sonic3k.asm:88171-88193). */
+    /** {@code loc_42C1A} (sonic3k.asm:88217-88239). */
     private void fire() {
         int offset = mirrored ? -SPAWN_OFFSET_X : SPAWN_OFFSET_X;
         final int childX = (getCentreX() + offset) & 0xFFFF;
         final int childY = getCentreY();
         final int childRenderFlags = getSpawn().renderFlags() & 3;
-        // AllocateObjectAfterCurrent (:88170) scans forward from this object's own slot, which is
+        // AllocateObjectAfterCurrent (:88216) scans forward from this object's own slot, which is
         // spawnChild's contract.
         spawnChild(() -> new LrzFireballObjectInstance(childX, childY, childRenderFlags));
         try {
@@ -157,7 +157,7 @@ public final class LrzFireballLauncherObjectInstance extends AbstractObjectInsta
 
     @Override
     public boolean isHighPriority() {
-        // make_art_tile(ArtTile_LRZMisc,3,0) (sonic3k.asm:88153) leaves the priority bit clear.
+        // make_art_tile(ArtTile_LRZMisc,3,0) (sonic3k.asm:88199) leaves the priority bit clear.
         return false;
     }
 

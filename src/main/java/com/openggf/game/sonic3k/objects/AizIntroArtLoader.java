@@ -961,7 +961,7 @@ public class AizIntroArtLoader {
     /**
      * Parses S3K <b>object</b> DPLC (Dynamic Pattern Loading Cue) frames from ROM.
      *
-     * <p>This uses the {@code Perform_DPLC} format (sonic3k.asm:178910), which differs
+     * <p>This uses the {@code Perform_DPLC} format (sonic3k.asm:179001), which differs
      * from the player DPLC format used by {@code Sonic_Load_PLC}:
      * <pre>
      * Player format: count-1 in high 4 bits, startTile in low 12 bits (subq #1,d5)

@@ -15,7 +15,7 @@ import com.openggf.level.objects.SolidObjectProvider;
 
 import java.util.List;
 
-/** SKL $4F, Obj_DEZStaircase / loc_47658..loc_47814 (sonic3k.asm:93322-93511). */
+/** SKL $4F, Obj_DEZStaircase / loc_47658..loc_47814 (sonic3k.asm:93368-93557). */
 public final class S3kDezStaircaseObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable, SolidObjectProvider, SolidObjectListener {
     private static final SolidObjectParams SOLID = SolidObjectParams.of(0x1B, 0x10, 0x11);

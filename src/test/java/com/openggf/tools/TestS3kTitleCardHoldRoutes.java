@@ -41,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Every S3K {@code Level:} entry installs {@code Obj_TitleCard} at loc_62B6, waits in
  * loc_62CC while the card slides in, loads the level, and only then arms the card's
  * LevelLoop hold at loc_64DC: {@code Palette_fade_timer} and the card's {@code $2E}
- * both become {@code $16} (docs/skdisasm/sonic3k.asm:7730-7878).
+ * both become {@code $16} (docs/skdisasm/sonic3k.asm:7762-7910).
  * {@code Obj_TitleCardWait2} (62249) counts {@code $2E} down on LevelLoop frames while
  * the player already has control, and the card starts leaving when it reaches zero.
  * A death's {@code Restart_level_flag}, a data-select launch, a bonus-stage entry and
@@ -175,7 +175,7 @@ class TestS3kTitleCardHoldRoutes {
         int start = firstTitleCard(rows);
         for (int i = start; i < rows.size() && rows.get(i).mode() == GameMode.TITLE_CARD; i++) {
             // Level's Pal_FadeToBlack has left the screen black and LoadPalette_Immediate
-            // (sonic3k.asm:7666) put line 0 up at full colour: the card slides in unfaded.
+            // (sonic3k.asm:7698) put line 0 up at full colour: the card slides in unfaded.
             assertEquals(FadeManager.FadeState.NONE, rows.get(i).host(), "restart title step " + i);
         }
         // Knuckles' LRZ1 start walks him in under the zone's own control lock.

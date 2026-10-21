@@ -22,7 +22,7 @@ import java.util.List;
  * Sonic-alone IceCap Act 1 snowboard intro controller.
  *
  * <p>ROM reference: {@code Obj_LevelIntroICZ1} at
- * {@code docs/skdisasm/sonic3k.asm:76984}. The object owns the startup lock,
+ * {@code docs/skdisasm/sonic3k.asm:77025}. The object owns the startup lock,
  * launches Sonic onto the board, keeps input locked through the ride, applies
  * the two ROM slope tables, and releases Sonic after the crash at the end of
  * the snowboard route.
@@ -45,9 +45,9 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
     private static final int SECOND_SCRIPT_MIN_X = 0x2210;
     private static final int SECOND_SCRIPT_MAX_X = 0x2230;
     private static final int CRASH_X = 0x3880;
-    /** ROM loc_394A0 airborne branch: cmpi.w #$1000,x_vel / move.w #$1000,x_vel (sonic3k.asm:76802-76805). */
+    /** ROM loc_394A0 airborne branch: cmpi.w #$1000,x_vel / move.w #$1000,x_vel (sonic3k.asm:76843-76846). */
     private static final int AIRBORNE_MAX_X_SPEED = 0x1000;
-    /** ROM loc_394E2: cmpi.w #-$200,y_vel / move.w #-$200,y_vel (sonic3k.asm:76806-76809). */
+    /** ROM loc_394E2: cmpi.w #-$200,y_vel / move.w #-$200,y_vel (sonic3k.asm:76847-76850). */
     private static final int AIRBORNE_MIN_Y_SPEED = -0x0200;
     private static final int POST_CRASH_X_SPEED = -0x0200;
     private static final int POST_CRASH_Y_SPEED = -0x0400;
@@ -171,7 +171,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
         updateDynamicSpawn(currentX, currentY);
     }
 
-    // Obj_LevelIntroICZ1 writes priority $80 (sonic3k.asm:77008).
+    // Obj_LevelIntroICZ1 writes priority $80 (sonic3k.asm:77049).
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x80);
 
     @Override
@@ -367,18 +367,18 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
             }
         }
 
-        // ROM loc_394A0 (sonic3k.asm:76797-76815) branches on the player's air
+        // ROM loc_394A0 (sonic3k.asm:76838-76856) branches on the player's air
         // bit BEFORE the scripted-slope x windows are ever looked at:
         //     btst #Status_InAir,status(a2)
         //     beq.s loc_39502      ; grounded -> skid sfx + the x window tests
         //     move.b #0,anim(a0)   ; airborne -> velocity caps, then bra loc_39554
-        // The x window tests live entirely under loc_39502 (sonic3k.asm:76816),
+        // The x window tests live entirely under loc_39502 (sonic3k.asm:76857),
         // so an airborne player crossing $1310..$132F never enters the slope
         // script. Testing the windows unconditionally made the engine hand the
         // player to the slope table mid-jump, freezing x_sub/y_sub (the table
         // writes only the position words) and stalling y_vel.
         if (player.getAir()) {
-            // ROM loc_394A0 airborne branch (sonic3k.asm:76799-76811). Both caps
+            // ROM loc_394A0 airborne branch (sonic3k.asm:76840-76852). Both caps
             // are writes to the player, so they belong here even though they are
             // no-ops while the board arc stays inside these limits.
             if (player.getXSpeed() != 0 && player.getXSpeed() >= AIRBORNE_MAX_X_SPEED) {
@@ -697,7 +697,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
             }
         }
 
-        // loc_393EE writes priority $100 (sonic3k.asm:76755).
+        // loc_393EE writes priority $100 (sonic3k.asm:76796).
         private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x100);
 
         @Override
@@ -757,7 +757,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
             }
         }
 
-        // sub_39924 writes priority $100 (sonic3k.asm:77161).
+        // sub_39924 writes priority $100 (sonic3k.asm:77202).
         private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x100);
 
         @Override

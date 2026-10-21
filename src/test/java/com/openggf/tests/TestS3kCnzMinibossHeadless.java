@@ -80,7 +80,7 @@ class TestS3kCnzMinibossHeadless {
         Optional<CnzMinibossInstance> boss = findBoss();
         assertTrue(boss.isPresent(),
                 "CNZ miniboss instance must exist as soon as the arena entry gate locks the camera");
-        // ROM Obj_CNZMiniboss (sonic3k.asm:144823-144895) locks the arena at
+        // ROM Obj_CNZMiniboss (sonic3k.asm:144888-144960) locks the arena at
         // Camera_X_pos >= $31E0, fades the music and runs a 2-second Obj_Wait, but
         // does NOT set up the sprite or create the top child until the wait elapses
         // and Obj_CNZMinibossGo -> Obj_CNZMinibossStart -> Obj_CNZMinibossInit fires.
@@ -99,7 +99,7 @@ class TestS3kCnzMinibossHeadless {
         positionAtMinibossArenaGate(fixture);
         GameServices.camera().setY((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_Y);
         // Run past the 2-second Obj_Wait release so Obj_CNZMinibossInit has created
-        // the dynamic spinning top child (ROM sonic3k.asm:144885-144895) before we
+        // the dynamic spinning top child (ROM sonic3k.asm:144950-144960) before we
         // exercise the rewind capture/restore recreation path.
         for (int i = 0; i < 123; i++) {
             fixture.stepFrame(false, false, false, false, false);
@@ -146,7 +146,7 @@ class TestS3kCnzMinibossHeadless {
      * ROM anchor: {@code Obj_CNZMinibossEndGo} clears {@code Boss_flag}, calls
      * {@code AfterBoss_Cleanup}, and CNZ's after-boss cleanup entry returns
      * without restoring {@code Camera_stored_max_X_pos}
-     * ({@code docs/skdisasm/sonic3k.asm:144996-145001,176489-176557}).
+     * ({@code docs/skdisasm/sonic3k.asm:145061-145066,176580-176648}).
      */
     @Test
     void minibossDefeatKeepsArenaXClampOnBossFlagFallingEdge() {

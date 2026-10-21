@@ -27,7 +27,7 @@ import static org.mockito.Mockito.when;
 /**
  * Obj_ICZEndBoss draws its body children and frost puffs inline, so the owner
  * must list itself in their ROM priority lists: word_72312 $200 for the top
- * body child (sonic3k.asm:151279) and ObjDat3_72324 $80 for the frost puffs
+ * body child (sonic3k.asm:151347) and ObjDat3_72324 $80 for the frost puffs
  * (151290), both with art bit 15 set.
  */
 class TestIczEndBossRenderBuckets {

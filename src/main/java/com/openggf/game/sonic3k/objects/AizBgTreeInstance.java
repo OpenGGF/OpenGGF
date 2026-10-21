@@ -54,7 +54,7 @@ public class AizBgTreeInstance extends AbstractObjectInstance
     private boolean positionInitialized;
     /**
      * ROM priority(a0), written by Obj_AIZ2MakeTree's {@code move.w (a2)+,8(a1)}
-     * (sonic3k.asm:105579) from the AIZMakeTreeScript entry ($280 or $380).
+     * (sonic3k.asm:105625) from the AIZMakeTreeScript entry ($280 or $380).
      * Non-final so the generic rewind field capturer reapplies it.
      */
     private int priorityWord;
@@ -145,13 +145,13 @@ public class AizBgTreeInstance extends AbstractObjectInstance
     /**
      * Sprite order comes from the script's priority word: $280 is bucket 5 and
      * $380 is bucket 7, alternating per entry. That is how the small Eggman
-     * craft (priority $300, sonic3k.asm:105620) passes between trees.
+     * craft (priority $300, sonic3k.asm:105666) passes between trees.
      */
     @Override
     public int getPriorityBucket() { return RenderPriority.fromS3kWord(priorityWord); }
 
     /**
-     * make_art_tile(ArtTile_AIZBackgroundTree,0,0) (sonic3k.asm:105588): the
+     * make_art_tile(ArtTile_AIZBackgroundTree,0,0) (sonic3k.asm:105634): the
      * low-priority art word puts the trees behind high-priority plane tiles,
      * independently of their sprite bucket.
      */

@@ -5,14 +5,14 @@ import java.nio.ByteBuffer;
 /**
  * ROM {@code Screen_shake_flag}, {@code Screen_shake_offset} and
  * {@code Screen_shake_last_offset} together with {@code ShakeScreen_Setup}
- * (sonic3k.asm:104188-104210), the routine every zone background event
+ * (sonic3k.asm:104234-104256), the routine every zone background event
  * tail-calls once per frame to advance them.
  *
  * <p>Objects and events only write the flag: a positive word is a timed
  * countdown that tapers through {@code ScreenShakeArray}, a negative word
  * ({@code st}) is the constant jitter of {@code ScreenShakeArray2} indexed by
  * {@code Level_frame_counter & $3F}, and zero is off. {@code LevelSetup}
- * clears all three words (sonic3k.asm:102193-102194).
+ * clears all three words (sonic3k.asm:102239-102240).
  *
  * <p>Zone owners hold one instance and decide when {@link #setup} runs
  * relative to their screen/background events; the value a frame's events read
@@ -20,10 +20,10 @@ import java.nio.ByteBuffer;
  */
 public final class S3kScreenShake {
     /**
-     * {@code ScreenShakeArray} (sonic3k.asm:104231-104233) followed by
+     * {@code ScreenShakeArray} (sonic3k.asm:104277-104279) followed by
      * {@code ScreenShakeArray2} (104234-104238). The timed branch reads
      * {@code ScreenShakeArray(pc,d0.w)} with the decremented flag and no bound,
-     * so a countdown above $14 (e.g. {@code #$1E}, sonic3k.asm:6861) walks into
+     * so a countdown above $14 (e.g. {@code #$1E}, sonic3k.asm:6893) walks into
      * the second table; keeping both contiguous reproduces that.
      */
     private static final byte[] SHAKE_TABLE = {

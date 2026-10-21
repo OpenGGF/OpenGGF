@@ -165,11 +165,11 @@ class TestAizVineHandleLogic {
 
     /**
      * AIZRideVineHandle_CheckGrab writes move.b #0,spin_dash_flag(a1)
-     * (sonic3k.asm:46743). That is a byte write, so every meaning the byte
+     * (sonic3k.asm:46783). That is a byte write, so every meaning the byte
      * carries clears together -- pinball mode (bit 0), the pinball speed lock
      * (bit 7) and the spindash charge. Leaving bit 7 set kept a spin-tube lock
      * latched for the rest of the level, and Tails_RollSpeed's entry test
-     * (sonic3k.asm:28180-28181) then skipped friction on every later roll.
+     * (sonic3k.asm:28220-28221) then skipped friction on every later roll.
      */
     @Test
     void grabClearsTheWholeSpinDashFlagByteIncludingTheSpeedLock() {
@@ -200,8 +200,8 @@ class TestAizVineHandleLogic {
 
     /**
      * AIZRideVineHandle_ProcessPlayer drops a held player whose render_flags
-     * bit 7 is clear (sonic3k.asm:46490-46491), and the branch it takes is the
-     * plain AIZRideVineHandle_ReleasePlayer (sonic3k.asm:46548-46552) - which
+     * bit 7 is clear (sonic3k.asm:46530-46531), and the branch it takes is the
+     * plain AIZRideVineHandle_ReleasePlayer (sonic3k.asm:46588-46592) - which
      * writes no velocity, no Status_InAir and no animation, unlike the forced
      * release directly above it.
      */

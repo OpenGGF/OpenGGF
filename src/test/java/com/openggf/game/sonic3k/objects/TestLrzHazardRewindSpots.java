@@ -54,7 +54,7 @@ class TestLrzHazardRewindSpots {
     /** {@code $1B}: {@code $2E(a0)} counts down and reloads from {@code $30(a0)} (:88165-88168). */
     @Test
     void fireballLauncherRewindSpot() {
-        // Subtype $34: (subtype & $F0) >> 2 = $D * 4 = a 52-frame period (sonic3k.asm:88159-88163).
+        // Subtype $34: (subtype & $F0) >> 2 = $D * 4 = a 52-frame period (sonic3k.asm:88205-88209).
         Harness<LrzFireballLauncherObjectInstance> harness = Harness.create(
                 () -> new LrzFireballLauncherObjectInstance(spawn(0x34)),
                 LrzFireballLauncherObjectInstance.class);
@@ -109,7 +109,7 @@ class TestLrzHazardRewindSpots {
     /** {@code $20}: {@code $34(a0)} is a byte angle that repeats every 128 frames. */
     @Test
     void swingingSpikeBallRewindSpot() {
-        // Subtype 3: three chain links (sonic3k.asm:88681-88683).
+        // Subtype 3: three chain links (sonic3k.asm:88727-88729).
         Harness<LrzSwingingSpikeBallObjectInstance> harness = Harness.create(
                 () -> new LrzSwingingSpikeBallObjectInstance(
                         new ObjectSpawn(BASE_X, BASE_Y,

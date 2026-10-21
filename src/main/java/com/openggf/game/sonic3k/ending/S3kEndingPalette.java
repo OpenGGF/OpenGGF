@@ -57,7 +57,7 @@ public final class S3kEndingPalette {
             writeLine(services,line,bytes);
         }
     }
-    /** sub_85EB4 (sonic3k.asm:180701): each component of the line rises one level, up to $E. */
+    /** sub_85EB4 (sonic3k.asm:180792): each component of the line rises one level, up to $E. */
     public static void towardsWhite(ObjectServices services, int line) { towardsWhite(services, line, 0); }
     /** As {@link #towardsWhite(ObjectServices, int)} from {@code first}: loc_5FF62's $30/$3A select the colours. */
     public static void towardsWhite(ObjectServices services, int line, int first) {
@@ -73,7 +73,7 @@ public final class S3kEndingPalette {
         }
         writeLine(services, line, bytes);
     }
-    /** sub_85F2A (sonic3k.asm:180757): components above Target_palette fall one level. */
+    /** sub_85F2A (sonic3k.asm:180848): components above Target_palette fall one level. */
     public static void downTowardsActualTarget(ObjectServices services, int line) { downTowardsActualTarget(services, line, 0); }
     /** As {@link #downTowardsActualTarget(ObjectServices, int)} from {@code first} ($30/$32 offsets, $3A count). */
     public static void downTowardsActualTarget(ObjectServices services, int line, int first) {

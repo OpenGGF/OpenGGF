@@ -648,7 +648,7 @@ class TestHpzSanctuaryObjects {
         for (int i = 0; i < 24; i++) crystal.update(i, null);
         assertEquals(0, hpz.screenShake().flag(), "no shake before the crystal lands");
         crystal.update(24, null);
-        // loc_90CF4: move.w #8,(Screen_shake_flag).w (sonic3k.asm:198089).
+        // loc_90CF4: move.w #8,(Screen_shake_flag).w (sonic3k.asm:198196).
         assertEquals(8, hpz.screenShake().flag());
         assertEquals(0, hpz.screenShake().offset(),
                 "the object only writes the flag; ShakeScreen_Setup produces the offset");

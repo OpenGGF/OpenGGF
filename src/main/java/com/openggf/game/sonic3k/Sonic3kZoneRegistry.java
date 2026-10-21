@@ -54,8 +54,8 @@ public class Sonic3kZoneRegistry extends AbstractZoneRegistry {
     // Bonus stage music is normally set by the coordinator, but is listed here
     // for completeness and fallback.
     // Music IDs per zone/act, transcribed from the ROM's LevelMusic_Playlist
-    // (skdisasm/sonic3k.asm:7476-7500), a 48-byte table read at
-    // sonic3k.asm:7676-7681 with the same zone*2+act index as LevelPtrs.
+    // (skdisasm/sonic3k.asm:7508-7532), a 48-byte table read at
+    // sonic3k.asm:7708-7713 with the same zone*2+act index as LevelPtrs.
     private static final int[][] ZONE_MUSIC = {
             {Sonic3kMusic.AIZ1.id, Sonic3kMusic.AIZ2.id},   // 0  AIZ
             {Sonic3kMusic.HCZ1.id, Sonic3kMusic.HCZ2.id},   // 1  HCZ
@@ -86,10 +86,10 @@ public class Sonic3kZoneRegistry extends AbstractZoneRegistry {
     public Sonic3kZoneRegistry() {
         // Zone structure: outer list = zones (indexed by ROM zone ID), inner
         // list = acts. The shape is the ROM's own: LevelPtrs is 48 longwords
-        // (skdisasm/sonic3k.asm:200438-200485) and Load_Level indexes it as
-        // zone*2 + act (sonic3k.asm:38746-38753), so every zone 0-23 has two
-        // act slots. LevelSizes (sonic3k.asm:38096-38143) and
-        // LevelMusic_Playlist (sonic3k.asm:7476-7500) are the same 48 entries
+        // (skdisasm/sonic3k.asm:200552-200599) and Load_Level indexes it as
+        // zone*2 + act (sonic3k.asm:38786-38793), so every zone 0-23 has two
+        // act slots. LevelSizes (sonic3k.asm:38136-38183) and
+        // LevelMusic_Playlist (sonic3k.asm:7508-7532) are the same 48 entries
         // with the same index, and name each slot.
         super(List.of(
                 List.of(LevelData.S3K_ANGEL_ISLAND_1, LevelData.S3K_ANGEL_ISLAND_2),   // 0  AIZ

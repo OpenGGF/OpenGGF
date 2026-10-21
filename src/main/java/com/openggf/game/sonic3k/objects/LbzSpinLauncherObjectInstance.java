@@ -20,7 +20,7 @@ import java.util.List;
 /**
  * S3K S3KL object $1E - Launch Base Zone Act 2 spin launcher.
  *
- * <p>ROM reference: {@code Obj_LBZSpinLauncher} (sonic3k.asm:56463-56622).
+ * <p>ROM reference: {@code Obj_LBZSpinLauncher} (sonic3k.asm:56503-56662).
  */
 public final class LbzSpinLauncherObjectInstance extends AbstractObjectInstance
         implements SlopedSolidProvider, SolidObjectListener, SpawnRewindRecreatable {
@@ -112,7 +112,7 @@ public final class LbzSpinLauncherObjectInstance extends AbstractObjectInstance
         // Obj_LBZSpinLauncher passes d2=$10 to sub_1DD24. The new-contact
         // path keeps that value, adds the player's y_radius, and then adds
         // the combined range to the vertical overlap before classifying the
-        // contact (sonic3k.asm:56500-56509, 41337-41343).
+        // contact (sonic3k.asm:56540-56549, 41377-41383).
         return true;
     }
 

@@ -28,7 +28,7 @@ import java.util.List;
 /**
  * S3K S3KL Obj $BF - Ribot (LBZ).
  *
- * <p>ROM reference: {@code Obj_Ribot} at {@code sonic3k.asm:191254}. The
+ * <p>ROM reference: {@code Obj_Ribot} at {@code sonic3k.asm:191347}. The
  * parent is the defeatable body; subtype chooses the child layout:
  * downward legs ({@code 0}), side legs ({@code 2}), or a single top appendage
  * ({@code >= 4}). Children use the ROM hurt collision byte {@code $97}.
@@ -438,7 +438,7 @@ public final class RibotBadnikInstance extends AbstractS3kBadnikInstance impleme
         @Override
         public boolean usesCurrentTouchResponseState() {
             // The falling/swinging appendages run movement before
-            // Child_DrawTouch_Sprite publishes them (sonic3k.asm:191391-191399).
+            // Child_DrawTouch_Sprite publishes them (sonic3k.asm:191484-191492).
             // The subtype-$04 head instead publishes through its circular-offset
             // helper while retaining the prior player-slot touch coordinate.
             return parent.subtypeForChildren() != 4;

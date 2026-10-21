@@ -178,7 +178,7 @@ not high. The precondition is unmet, and the evidence was already in the reposit
 
 `object_state.object_code` is **not an object identity**. S3K keeps a 32-bit ROM code pointer
 in the first SST long — `Process_Sprites` does `move.l (a0),d0 / movea.l d0,a1 / jsr (a1)`
-(`sonic3k.asm:35985-35988`) — and objects overwrite their own dispatch pointer with internal
+(`sonic3k.asm:36025-36028`) — and objects overwrite their own dispatch pointer with internal
 sub-routine addresses to advance state, at **1,758 `move.l #<label>,(a0)` sites**. The existing
 audit
 [*S3K trace object identity: the object pointer tables cannot supply it*](2026-08-15-s3k-object-code-pointer-identity.md)

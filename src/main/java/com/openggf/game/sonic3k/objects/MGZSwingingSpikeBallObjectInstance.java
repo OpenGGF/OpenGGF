@@ -25,7 +25,7 @@ import java.util.List;
 /**
  * Object 0x58 - MGZ Swinging Spike Ball.
  *
- * <p>ROM: Obj_MGZSwingingSpikeBall (sonic3k.asm:70563-70730).
+ * <p>ROM: Obj_MGZSwingingSpikeBall (sonic3k.asm:70603-70770).
  * The parent owns the harmful spike ball while a helper sprite renders the anchor and
  * chain links. This port keeps the parent-only collision model and renders the helper
  * geometry inline from the same object instance.

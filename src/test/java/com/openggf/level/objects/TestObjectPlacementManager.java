@@ -119,7 +119,7 @@ public class TestObjectPlacementManager {
     @Test
     void backwardMoveToTheFirstChunkLoadsNothingBehindTheCursor() {
         // S3K loc_1B864 and S2 ObjectsManager_GoingBackward subtract $80 from the new coarse X
-        // and branch on the borrow (sonic3k.asm:37604-37605, s2.asm:33051-33052), so a backward
+        // and branch on the borrow (sonic3k.asm:37644-37645, s2.asm:33051-33052), so a backward
         // pass that lands in the first chunk walks the back cursor for nothing. The SSZ2
         // Knuckles credits jump from $1CF to 0 therefore never reloads the HPZ teleporter pad
         // at X $A0 that Sprite_OnScreen_Test deleted while the camera stood at $240.
@@ -306,7 +306,7 @@ public class TestObjectPlacementManager {
         // ROM parity: bit 7 of Object_respawn_table (sonic3k.asm Touch_EnemyNormal
         // line 20945; S2/S1 RememberState in sub RememberState.asm) is set on spawn
         // and cleared only when a still-alive object self-destructs via
-        // Sprite_OnScreen_Test family (sonic3k.asm:37271-37388, bclr #7,(a2)).
+        // Sprite_OnScreen_Test family (sonic3k.asm:37311-37428, bclr #7,(a2)).
         // After a player kill the badnik becomes Obj_Explosion and never walks
         // that path, so destroyedInWindow stays latched permanently for the rest
         // of the level (until level-init wipes the table at sonic3k.asm loc_1B784).

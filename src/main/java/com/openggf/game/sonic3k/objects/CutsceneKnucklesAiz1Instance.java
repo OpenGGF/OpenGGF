@@ -432,7 +432,7 @@ public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance impleme
 
         // loc_61E02 ends by jumping to PalLoad_Line1. It does not fall through
         // to loc_61E24, so the first MoveSprite call belongs to the next object
-        // dispatch (docs/skdisasm/sonic3k.asm:128644-128665).
+        // dispatch (docs/skdisasm/sonic3k.asm:128701-128722).
     }
 
     // -----------------------------------------------------------------------
@@ -618,7 +618,7 @@ public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance impleme
         // frame's Draw_Sprite before Animate_Raw/MoveSprite2 run. Draw_Sprite
         // then recomputes bit 7 from this post-move position after the routine
         // returns, so crossing the render boundary only triggers the handoff on
-        // the next object dispatch (docs/skdisasm/sonic3k.asm:128608-128614,
+        // the next object dispatch (docs/skdisasm/sonic3k.asm:128665-128671,
         // 128731-128749). Preserve that stale-flag cadence here: the next call's
         // leading check consumes exitRenderFlagOnScreen=false.
     }
@@ -658,7 +658,7 @@ public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance impleme
     private void completeIntroExitHandoff() {
         LOG.fine("Routine 12: offscreen, cleaning up");
 
-        // ROM loc_61F22: clr.b (Palette_cycle_counters+$00).w (sonic3k.asm:128796)
+        // ROM loc_61F22: clr.b (Palette_cycle_counters+$00).w (sonic3k.asm:128853)
         // releases AnPal_AIZ1's counters+$02 cycle.
         if (services().levelManager().getAnimatedPatternManager()
                 instanceof com.openggf.game.sonic3k.S3kPaletteCycleCounterWriter writer) {
@@ -666,7 +666,7 @@ public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance impleme
         }
         unlockPlayerControls();
         // ROM deletes the Knuckles sprite this frame (Go_Delete_Sprite,
-        // sonic3k.asm:128757); only the slot lives on as Obj_TitleCard.
+        // sonic3k.asm:128814); only the slot lives on as Obj_TitleCard.
         visible = false;
 
         if (services().camera() != null) {
@@ -681,10 +681,10 @@ public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance impleme
         }
 
         // ROM loc_61F22 only allocates the Obj_TitleCard slot here
-        // (sonic3k.asm:128743-128750); AllocateObject returns a slot the
+        // (sonic3k.asm:128800-128807); AllocateObject returns a slot the
         // current ExecuteObjects pass has already walked, so Obj_TitleCardInit
         // — which queues the four KosM title-card modules
-        // (sonic3k.asm:62109-62152) — first dispatches on the NEXT frame's
+        // (sonic3k.asm:62149-62192) — first dispatches on the NEXT frame's
         // pass. This slot stands in for the allocated Obj_TitleCard slot:
         // hold one more dispatch (routine 14) to perform that init instead of
         // queueing the art synchronously here.
@@ -693,7 +693,7 @@ public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance impleme
 
     /**
      * Models the allocated Obj_TitleCard slot's first dispatch
-     * (Obj_TitleCardInit, sonic3k.asm:62109-62152): queue the four KosM
+     * (Obj_TitleCardInit, sonic3k.asm:62149-62192): queue the four KosM
      * title-card modules during the next ExecuteObjects pass, then free the
      * slot.
      */
@@ -701,7 +701,7 @@ public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance impleme
         var titleCardProvider = services().titleCardProvider();
         if (titleCardProvider != null) {
             titleCardProvider.initializeInLevel(0, 0);
-            // Obj_TitleCardWait2 (sonic3k.asm:62274-62309) remains in the
+            // Obj_TitleCardWait2 (sonic3k.asm:62314-62349) remains in the
             // allocated title owner's slot for the poll after its child
             // objects retire. Keep the slotless owner alive for that same
             // native dispatch before it reaches LoadEnemyArt.

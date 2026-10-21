@@ -22,7 +22,7 @@ import java.util.List;
 import static com.openggf.game.sonic3k.objects.HpzKnucklesCutsceneSupport.*;
 
 /**
- * ROM {@code loc_64E88} (sonic3k.asm:132749-132873): Robotnik's ship in the Hidden Palace Master
+ * ROM {@code loc_64E88} (sonic3k.asm:132806-132930): Robotnik's ship in the Hidden Palace Master
  * Emerald theft ({@code _unkFAAE}). It hovers at {@code ($1640,$2D0)} with
  * {@code Obj_RobotnikHead4} and the {@code loc_6502E} crane until the crane lifts the emerald
  * ({@code $38} bit 2), drops for {@code $40} frames, then swings right at 2 pixels a frame to

@@ -573,7 +573,7 @@ The matched S1 helper replay retains its exact earlier frontiers; S2
 qualification of the shared test helper is still required.
 A bounded read-only investigation independently localizes the first HCZ Tails
 Y difference to a bar-input discrepancy: native vertical/horizontal checks read
-raw `(Ctrl_2)` at `sonic3k.asm:42788/42952`, whereas Java reads synthesized CPU
+raw `(Ctrl_2)` at `sonic3k.asm:42828/42952`, whereas Java reads synthesized CPU
 directions. At row 653 P2 is neutral and CPU logical Down is set; integer Y alone
 becomes `$0585/$0586`, with matching fractions, speed, status and animation.
 The object-only correction uses the existing raw-controller API. Both new

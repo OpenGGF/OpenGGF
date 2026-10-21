@@ -360,7 +360,7 @@ class TestAizEndBossInstance {
 
         AizEndBossInstance boss = buildBoss(services);
         // Collision is clear until AIZEndBoss_Revealed, so a killing hit is
-        // native-reachable only in Revealed/Hover/AttackWait (sonic3k.asm:138109-138114).
+        // native-reachable only in Revealed/Hover/AttackWait (sonic3k.asm:138174-138179).
         invokeNoArg(boss, "beginHover");
         boss.getState().hitCount = 1;
 
@@ -420,9 +420,9 @@ class TestAizEndBossInstance {
 
     @Test
     void shipEscapeSignalWaitsForStartDefeatAfterTheFadeToLevelMusicWait() throws Exception {
-        // loc_69C36 (pinned 044fa46 sonic3k.asm:139005-139011) installs Wait_FadeToLevelMusic with
+        // loc_69C36 (pinned 044fa46 sonic3k.asm:139070-139076) installs Wait_FadeToLevelMusic with
         // $34 = loc_69482 and only clears $38 bit 6. Bit 4, which Obj_RobotnikShip's routine 4
-        // (loc_67DD8) waits for before its escape, is set by loc_69482 (:138300-138305) when the
+        // (loc_67DD8) waits for before its escape, is set by loc_69482 (:138365-138370) when the
         // $3F countdown underflows.
         RecordingServices services = new RecordingServices();
         services.withCamera(camera);

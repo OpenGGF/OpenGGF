@@ -12,16 +12,16 @@ Sources: `docs/skdisasm/sonic3k.asm` (S&K half), `docs/skdisasm/s3.asm` (S3 half
 
 ## Headline: the constants file's comment is wrong, and so is the S2 analogy
 
-`sonic3k.constants.asm:433` documents the variable as "either `$7FF` or `$FFF`". That is
+`sonic3k.constants.asm:446` documents the variable as "either `$7FF` or `$FFF`". That is
 incomplete in both directions. There are exactly **eight** writes in `sonic3k.asm` and
 **four distinct values** across the locked-on ROM:
 
 | Value | Meaning | Written by |
 |---|---|---|
-| `$FFFF` (`#-1`) | no masking at all | `Get_LevelSizeStart` (sonic3k.asm:38093), special-stage init (sonic3k.asm:10708) |
-| `$FFF` | 12-bit wrap, `$1000` px | **`LevelSetup` (sonic3k.asm:102205) — the default for every level**, and `ICZ1BGE_Transition` (sonic3k.asm:110320) |
-| `$7FF` | 11-bit wrap, `$800` px | `ICZ1_ScreenInit` (sonic3k.asm:110069), `SOZ2_ScreenInit` (114222), `SOZ2_ScreenEvent`'s `loc_561D8` (114251), `Slots_ScreenInit` (119055) |
-| `$3FF` | 10-bit wrap, `$400` px | `Gumball_ScreenInit` — **S3 half only** (s3.asm:76100, lock-on copy at `Lockon S3/Screen Events.asm:1624`) |
+| `$FFFF` (`#-1`) | no masking at all | `Get_LevelSizeStart` (sonic3k.asm:38133), special-stage init (sonic3k.asm:10744) |
+| `$FFF` | 12-bit wrap, `$1000` px | **`LevelSetup` (sonic3k.asm:102251) — the default for every level**, and `ICZ1BGE_Transition` (sonic3k.asm:110366) |
+| `$7FF` | 11-bit wrap, `$800` px | `ICZ1_ScreenInit` (sonic3k.asm:110115), `SOZ2_ScreenInit` (114222), `SOZ2_ScreenEvent`'s `loc_561D8` (114251), `Slots_ScreenInit` (119055) |
+| `$3FF` | 10-bit wrap, `$400` px | `Gumball_ScreenInit` — **S3 half only** (s3.asm:76156, lock-on copy at `Lockon S3/Screen Events.asm:1624`) |
 
 **S2's fixed `$7FF` is not S3K's common case — S3K's default is `$FFF`.** Carrying S2's
 literal across would halve the wrap period in every zone except ICZ1, SOZ2 and Slots,
@@ -31,24 +31,24 @@ including the entire AIZ → HCZ release slice.
 
 Three writes happen in sequence during a level load, and the last one wins.
 
-**1. `Get_LevelSizeStart` (sonic3k.asm:38068), called from the level-load path at
-sonic3k.asm:7759.** After reading the level's bounds out of `LevelSizes`, it sets *both*
+**1. `Get_LevelSizeStart` (sonic3k.asm:38108), called from the level-load path at
+sonic3k.asm:7791.** After reading the level's bounds out of `LevelSizes`, it sets *both*
 axes to no-wrap:
 
 ```
 move.w  #-1,(Screen_X_wrap_value).w
-move.w  #-1,(Screen_Y_wrap_value).w      ; sonic3k.asm:38092-38093
+move.w  #-1,(Screen_Y_wrap_value).w      ; sonic3k.asm:38132-38133
 ```
 
 This is transient. It is the value in force only between `Get_LevelSizeStart` and
 `LevelSetup`, i.e. across `DeformBgLayer`, `LoadLevelLoadBlock` and `LoadLevelLoadBlock2`
-(sonic3k.asm:7760-7762).
+(sonic3k.asm:7792-7794).
 
-**2. `LevelSetup` (sonic3k.asm:102185), called as `j_LevelSetup` at sonic3k.asm:7764.**
+**2. `LevelSetup` (sonic3k.asm:102231), called as `j_LevelSetup` at sonic3k.asm:7796.**
 Unconditionally, with no test of zone, act, or layout size:
 
 ```
-move.w  #$FFF,(Screen_Y_wrap_value).w    ; sonic3k.asm:102205
+move.w  #$FFF,(Screen_Y_wrap_value).w    ; sonic3k.asm:102251
 move.w  #$FF0,(Camera_Y_pos_mask).w
 move.w  #$7C,(Layout_row_index_mask).w
 ```
@@ -58,8 +58,8 @@ always written as a triple and are three encodings of the same vertical period:
 `$FFF` = `$1000` px = 32 layout rows, and `$7C` = `(32-1) * 4`.
 
 **3. The per-zone `*_ScreenInit`, dispatched immediately afterwards** from
-`LevelSetupArray` (sonic3k.asm:102259) indexed by `Current_zone_and_act`
-(sonic3k.asm:102214-102217: `ror.b #2,d0` then `lsr.w #3,d0`, giving 32 bytes per zone —
+`LevelSetupArray` (sonic3k.asm:102305) indexed by `Current_zone_and_act`
+(sonic3k.asm:102260-102263: `ror.b #2,d0` then `lsr.w #3,d0`, giving 32 bytes per zone —
 setup act 0, setup act 1, event act 0, event act 1). Only **three** of the S&K-half
 `*_ScreenInit` routines touch the variable, and each lowers it to `$7FF`:
 
@@ -76,24 +76,24 @@ exhaustion: the eight writes listed above are *all* the writes in `sonic3k.asm`.
 
 **4. Two routines change it mid-level, after load.**
 
-- `ICZ1BGE_Transition` (sonic3k.asm:110285, reached via `bra.w` at 110171) sets it **back
-  to `$FFF`** at sonic3k.asm:110320, together with `Camera_Y_pos_mask` `$FF0` and
+- `ICZ1BGE_Transition` (sonic3k.asm:110331, reached via `bra.w` at 110171) sets it **back
+  to `$FFF`** at sonic3k.asm:110366, together with `Camera_Y_pos_mask` `$FF0` and
   `Layout_row_index_mask` `$7C`, as part of the big-egg transition that also relocates both
   players and the camera. **So ICZ1 runs at `$7FF` and then switches to `$FFF` part-way
   through the act.** Any model that resolves the mask once at level load is wrong for ICZ1.
-- `SOZ2_ScreenEvent`'s dispatch target `loc_561D8` (sonic3k.asm:114250-114251) re-asserts
+- `SOZ2_ScreenEvent`'s dispatch target `loc_561D8` (sonic3k.asm:114296-114297) re-asserts
   `$7FF` whenever that event-routine index runs.
 
-**5. Special stages** set `#-1` at `loc_842C` (sonic3k.asm:10708), alongside zeroing both
+**5. Special stages** set `#-1` at `loc_842C` (sonic3k.asm:10744), alongside zeroing both
 camera copies.
 
 ## The `$3FF` case and the half question
 
 `Gumball_ScreenInit` is **referenced** by the S&K-half `LevelSetupArray`
-(sonic3k.asm:102335-102336, zone index 19) but has **no definition in `sonic3k.asm`**. It
+(sonic3k.asm:102381-102382, zone index 19) but has **no definition in `sonic3k.asm`**. It
 resolves through the lock-on overlay: `Lockon S3/LockOn Pointers.asm:195` reserves the
 symbol, and the body lives in `Lockon S3/Screen Events.asm:1623-1626`, which sets `$3FF` /
-`$3F0` / `$1C` — a 10-bit, `$400` px, 8-row period. `s3.asm:76099-76102` carries the same
+`$3F0` / `$1C` — a 10-bit, `$400` px, 8-row period. `s3.asm:76155-76158` carries the same
 body for the standalone S3 build. So `$3FF` **is** reachable in the locked-on ROM, but only
 by entering the Gumball Machine bonus stage, and only through an S3-half routine.
 
@@ -103,14 +103,14 @@ confident and wrong claim that S3K has three values.
 
 ## Item 3, closed: `$1701` is HPZS
 
-The `Camera_X_pos_coarse_back` load-time special case at sonic3k.asm:37476-37483
+The `Camera_X_pos_coarse_back` load-time special case at sonic3k.asm:37516-37523
 (`clr.w` the variable, then re-derive it from `Camera_X_pos` only when
 `Current_zone_and_act` equals `$1701`) is **zone `$17` = 23, act 1**.
 
 Decoding zone 23 against `LevelSetupArray` at 32 bytes per zone: index 23 act 0 is
-`DEZ3_ScreenInit` and act 1 is **`HPZS_ScreenInit`** (sonic3k.asm:120806) — the Hidden
+`DEZ3_ScreenInit` and act 1 is **`HPZS_ScreenInit`** (sonic3k.asm:120852) — the Hidden
 Palace super-emerald shrine, the room entered from the HPZ teleporters. Zone 23 act 0 is
-Death Egg Zone act 3. There is also a second `$1701` test at sonic3k.asm:37465-37468
+Death Egg Zone act 3. There is also a second `$1701` test at sonic3k.asm:37505-37508
 selecting `$1780` instead of `$800` for `d6`, in the same object-load setup.
 
 **This does not touch AIZ → HCZ or any main-route act.** It is reachable only via the
@@ -134,7 +134,7 @@ load-bearing for S3K-5.
 
 **B. The engine gates wrapping on `minY < 0`; the ROM's `and.w` is unconditional.**
 `LevelManager.java:2852` enables wrap only when `currentLevel.getMinY() < 0`.
-`Render_Sprites` masks unconditionally (sonic3k.asm:36360, 36487) — `$FFFF` is how the ROM
+`Render_Sprites` masks unconditionally (sonic3k.asm:36400, 36527) — `$FFFF` is how the ROM
 expresses "no wrap", not a disabled code path. With `Screen_Y_wrap_value` at `$FFF` and a
 level whose `minY >= 0`, the engine takes `Camera.java:872`'s unwrapped branch while the
 ROM still masks.
@@ -143,13 +143,13 @@ ROM still masks.
 `height_pixels`.** `Camera.java:856-864` reads `sprite.getRenderFlagWidthPixels()` and
 then `int yMargin = useS3kMargin ? widthPixels : 32`. The ROM reads
 `height_pixels(a0)` — SST offset **6**, a separate byte from `width_pixels` at offset 7 —
-at sonic3k.asm:36358 and 36459. `grep` finds **no** `getRenderFlagHeightPixels` anywhere in
+at sonic3k.asm:36398 and 36459. `grep` finds **no** `getRenderFlagHeightPixels` anywhere in
 `src/main/java`: the engine has no `height_pixels` equivalent at all, so the substitution is
 structural, not a local slip. It is exact only for objects whose half-width and half-height
 coincide.
 
 The comment at `Camera.java:866-869` correctly states that S3K masks with
-`Screen_Y_wrap_value` and cites sonic3k.asm:36360, so the *mechanism* was already known;
+`Screen_Y_wrap_value` and cites sonic3k.asm:36400, so the *mechanism* was already known;
 what was missing is that the value is a written constant with a `$FFF` default, not a
 property of the layout.
 
@@ -159,7 +159,7 @@ property of the layout.
    currently latent or currently active on the release slice. Answering it needs a run, not
    a read, and this round was scoped to the disassembly.
 2. **Whether `Screen_X_wrap_value` has a parallel story.** `Get_LevelSizeStart` sets it to
-   `#-1` alongside the Y one (sonic3k.asm:38092) and I did not sweep its other writes. The
+   `#-1` alongside the Y one (sonic3k.asm:38132) and I did not sweep its other writes. The
    X half of `Render_Sprites` does not mask, so it does not affect S3K-5, but it may affect
    something else.
 3. **What `Camera_Y_pos_mask` and `Layout_row_index_mask` are consumed by**, beyond the

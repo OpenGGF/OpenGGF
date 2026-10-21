@@ -47,11 +47,11 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_BreakableWall} is installed from the S3K object pointer table at
      * {@code $0002131C} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:45524).
+     * label is defined at docs/skdisasm/sonic3k.asm:45564).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0002}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -166,7 +166,7 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
     @Override
     public boolean usesInclusiveRightEdge() {
         // Obj_BreakableWall calls SolidObjectFull, whose unsigned X-window
-        // rejection is `bhi`, not `bhs` (sonic3k.asm:41405). A player exactly
+        // rejection is `bhi`, not `bhs` (sonic3k.asm:41445). A player exactly
         // flush with the padded right edge therefore remains a side contact and
         // has Status_Push reasserted without positional correction.
         return true;
@@ -230,7 +230,7 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
         // When Player_1 breaks the wall, sub_2165A returns to loc_215F4 and
         // Obj_BreakableWall still consumes Player_2's SolidObjectFull pushing
         // result. A rolling P2 has the velocity saved before the checkpoint
-        // restored and Status_Push cleared (sonic3k.asm:45589-45620). The
+        // restored and Status_Push cleared (sonic3k.asm:45629-45660). The
         // checkpoint batch has already resolved both players, so mirror that
         // post-break cleanup before the wall slot becomes a fragment.
         for (int i = firstSidekickIndex; i < participants.size(); i++) {
@@ -245,7 +245,7 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
             sidekick.setXSpeed(result.preContact().xSpeed());
             sidekick.setGSpeed(result.preContact().xSpeed());
             // ROM clears p2_pushing_bit on the wall in the Player_2 leg
-            // (docs/skdisasm/sonic3k.asm:45720, :45739, :45858, :45871).
+            // (docs/skdisasm/sonic3k.asm:45760, :45779, :45898, :45911).
             services().objectManager().solidContacts().releaseObjectPushLatch(sidekick, this);
             sidekick.setPushing(false);
         }
@@ -396,7 +396,7 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
         }
 
         // ROM clears p1_pushing_bit on the wall in the Player_1 leg
-        // (docs/skdisasm/sonic3k.asm:45711, :45848, :45933).
+        // (docs/skdisasm/sonic3k.asm:45751, :45888, :45973).
         services().objectManager().solidContacts().releaseObjectPushLatch(player, this);
         player.setPushing(false);
 

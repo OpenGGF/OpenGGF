@@ -1524,7 +1524,7 @@ matched baseline runtime result.
 `minibossSpawned` is captured one-shot history. Native `AIZMiniboss_SpawnEndSign`
 hands the retained actor to `Obj_EndSignControl`; results changes apparent act,
 and the retained owner calls `Change_Act2Sizes` then deletes itself
-(`sonic3k.asm:137395–137398,62713–62724,180420–180424`). Its later absence is
+(`sonic3k.asm:137460–137463,62753–62764,180511–180515`). Its later absence is
 valid. Both native engine spawn cases advance the resize routine immediately;
 clearing this latch alone cannot recover a lost active actor. The fix removes
 only that presence-based inference. Initialization, end-boss reconciliation and

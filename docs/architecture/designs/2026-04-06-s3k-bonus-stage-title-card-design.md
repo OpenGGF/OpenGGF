@@ -42,7 +42,7 @@ The engine currently skips title cards for bonus stages (`consumeTitleCardReques
 
 ### Bonus Title Card Element Positions
 
-Source: `ObjArray_TtlCardBonus` (sonic3k.asm line 62482)
+Source: `ObjArray_TtlCardBonus` (sonic3k.asm line 62522)
 
 | Element | Frame | Start X (VDP) | Target X (VDP) | Y (VDP) | Priority |
 |---------|-------|---------------|----------------|---------|----------|

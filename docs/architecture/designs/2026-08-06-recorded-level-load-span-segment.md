@@ -90,7 +90,7 @@ before the main loop:
 |---|---|---|
 | S1 | `bset #7,(v_gamemode).w` — `docs/s1disasm/sonic.asm:2703` | `bclr #7,(v_gamemode).w` — `sonic.asm:2991` (`Level_StartGame`, `Level_MainLoop` at `:2998`) |
 | S2 | `bset #GameModeFlag_TitleCard,(Game_Mode).w` — `docs/s2disasm/s2.asm:4758` | `bclr` — `s2.asm:5082` |
-| S3K | `bset #7,(Game_mode).w` — `docs/skdisasm/sonic3k.asm:7505` | `bclr #7,(Game_mode).w` — `sonic3k.asm:7882` |
+| S3K | `bset #7,(Game_mode).w` — `docs/skdisasm/sonic3k.asm:7537` | `bclr #7,(Game_mode).w` — `sonic3k.asm:7914` |
 
 The S1 restart path re-enters at the `GM_Level` label (`sonic.asm:3016-3018`,
 `3041-3055`), so the bit is set again for every act advance and every death

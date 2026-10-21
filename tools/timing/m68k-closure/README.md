@@ -71,7 +71,7 @@ python3 -m unittest discover -s tools/timing/m68k-closure -p 'test_*.py'
 ## Citations
 
 `sonic3k.asm` line numbers in `specs/s3k-ending-kos46-v1.json` refer to the local `docs/skdisasm` checkout `1a454a0`
-used by the research (`sonic3k.asm:2976` is `Wait_VSync`). The superproject pins `044fa46`, where `Wait_VSync` is line
+used by the research (`sonic3k.asm:3008` is `Wait_VSync`). The superproject pins `044fa46`, where `Wait_VSync` is line
 3008; ROM bytes and addresses are identical. The v2 spec cites the label, address and pinned line. That `why` text is
 the only difference from the research patch (`specs/s3k-ending-kos46-v2.json` sha256 `59103621...` before,
 `689e768f...` after).

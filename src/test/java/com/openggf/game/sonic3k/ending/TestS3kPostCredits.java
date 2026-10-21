@@ -141,8 +141,8 @@ class TestS3kPostCredits {
         spark.update(2,fixture.sprite());assertTrue(spark.isDestroyed(),"loc_5F7D8 sets native parent $38 bit6");
     }
     /**
-     * off_5EFB6 (sonic3k.asm:125511) gives locked-on Knuckles loc_5F0A6 at progress 0 and +2:
-     * its loc_5F20A keeps the cleared subtype 0, so sub_5FF1C (sonic3k.asm:126931) reads
+     * off_5EFB6 (sonic3k.asm:125557) gives locked-on Knuckles loc_5F0A6 at progress 0 and +2:
+     * its loc_5F20A keeps the cleared subtype 0, so sub_5FF1C (sonic3k.asm:126977) reads
      * word_5F260[0] = ($120,$B0). Only progress -2 takes loc_5F0C4 (subtype 8, ($120,$F0)).
      * The native Knuckles complete run (_unkFA88 2) holds the logo SST at ($120,$B0) from
      * input 432728.
@@ -166,7 +166,7 @@ class TestS3kPostCredits {
         }
     }
     /**
-     * loc_5F480 (sonic3k.asm:125947) allocates loc_5FBA0 (sonic3k.asm:126562) only for a
+     * loc_5F480 (sonic3k.asm:125993) allocates loc_5FBA0 (sonic3k.asm:126608) only for a
      * positive _unkFA88. Native credits-done RAM (inputs 432728..433088, every 20 inputs)
      * dates Obj_5EF68's init to input 432709 ($2E = $1EC at 432728) and holds the flash's
      * $3A below. Colours 2/3 come from the longword, colour 5 from move.w 4(a1,d0.w),2(a2);
@@ -197,7 +197,7 @@ class TestS3kPostCredits {
         assertArrayEquals(new int[]{0,0,0},new int[]{paletteWord(0,2),paletteWord(0,3),paletteWord(0,5)});
     }
     /**
-     * sub_5FF1C (sonic3k.asm:126931) allocates loc_5FF62 after the logo, so its first step
+     * sub_5FF1C (sonic3k.asm:126977) allocates loc_5FF62 after the logo, so its first step
      * falls in the init pass. Every fourth pass sub_85EB4 raises all 16 line-1 colours one
      * level toward $EEE (eight steps); loc_5FF94 then falls into loc_5FFA6's countdown and
      * sub_85F2A lowers them toward Target_palette_line_2 (eight steps). Native RAM: input

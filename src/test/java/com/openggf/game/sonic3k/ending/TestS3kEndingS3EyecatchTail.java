@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * The S3 eyecatch's Tails child loc_5F3AA (044fa46 sonic3k.asm:125913) ends its initialization with
+ * The S3 eyecatch's Tails child loc_5F3AA (044fa46 sonic3k.asm:125959) ends its initialization with
  * CreateChild1_Normal(ChildObjDat_60204): one loc_5F3EA at (-$10,+8). loc_5F3EA takes the parent's
  * mappings and art (SetUp_ObjAttributes3, word_60170: priority $100, frame $A) and falls into
  * loc_5F400, which runs Animate_RawNoSST(AniRaw_6026F: delay $B, frames 5-9) and Draw_Sprite on the

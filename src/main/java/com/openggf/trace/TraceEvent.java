@@ -142,7 +142,7 @@ public sealed interface TraceEvent {
 
     /**
      * Per-frame snapshot of the ROM's {@code Oscillating_table}
-     * (sonic3k.constants.asm:853, $42 bytes at $FFFFFE6E) plus the running
+     * (sonic3k.constants.asm:875, $42 bytes at $FFFFFE6E) plus the running
      * {@code Level_frame_counter}. Emitted on every recorded trace frame by
      * the v6.1+ S3K recorder so divergence diagnostics can ROM-verify global
      * oscillator phase, used by HoverFan, platforms, and other oscillating
@@ -352,7 +352,7 @@ public sealed interface TraceEvent {
      * Used to root-cause the CNZ1 trace F4790 divergence where ROM Tails
      * {@code x_pos} changes from $7F00 to $6125 after {@code sub_13ECA}'s
      * CPU marker path, while the captured cylinder recapture path does not
-     * itself write {@code x_pos} (docs/skdisasm/sonic3k.asm:26800-26809,
+     * itself write {@code x_pos} (docs/skdisasm/sonic3k.asm:26840-26849,
      * 67985-68012).
      *
      * <p><strong>Diagnostic only:</strong> never hydrated into engine state.
@@ -382,7 +382,7 @@ public sealed interface TraceEvent {
     /**
      * Focused S3K AIZ2 battleship autoscroll diagnostic emitted by the
      * recorder around {@code AIZ2_DoShipLoop/sub_50318}
-     * (docs/skdisasm/sonic3k.asm:105200-105253). Captures ROM-side
+     * (docs/skdisasm/sonic3k.asm:105246-105299). Captures ROM-side
      * execution/register context only; replay code must never hydrate engine
      * state from this event.
      */
@@ -402,7 +402,7 @@ public sealed interface TraceEvent {
      * Per-frame hook-driven diagnostic for Player_1 {@code Sonic_RecordPos}
      * calls. Captures the ROM table index and logical input word that will be
      * written into {@code Stat_table} for later Tails CPU delayed reads
-     * (docs/skdisasm/sonic3k.asm:22124-22136, 26683-26700). Diagnostic only:
+     * (docs/skdisasm/sonic3k.asm:22160-22172, 26723-26740). Diagnostic only:
      * never hydrated into engine state.
      */
     @com.openggf.game.ModApi
@@ -419,7 +419,7 @@ public sealed interface TraceEvent {
      * Per-frame focused diagnostic for Tails CPU's normal follow step in S3K.
      * Captures the ROM state around {@code loc_13DD0}, the generated delayed
      * input word, and the state before/after {@code Tails_InputAcceleration_Path}
-     * (docs/skdisasm/sonic3k.asm:26702-26705, 26717-26741, 27798-27805,
+     * (docs/skdisasm/sonic3k.asm:26742-26745, 26757-26781, 27838-27845,
      * 28103-28122, 27957-28017). Diagnostic only: never hydrated into engine
      * state.
      */
@@ -440,7 +440,7 @@ public sealed interface TraceEvent {
      * Per-frame focused diagnostic for the sidekick's interact object in S3K.
      * Captures the sidekick's raw interact pointer and the target object's key
      * bytes needed to diagnose AIZ object ride/grab handoffs
-     * (docs/skdisasm/sonic3k.asm:28407-28451, 43758-43810, 46481-46549,
+     * (docs/skdisasm/sonic3k.asm:28447-28491, 43798-43850, 46521-46589,
      * 46602-46631, 46709-46743, 46749-46789, 46929-46950). Diagnostic only:
      * never hydrated into engine state.
      */
@@ -466,7 +466,7 @@ public sealed interface TraceEvent {
     /**
      * Per-frame CNZ cylinder OST snapshot. Captures the object bytes that
      * {@code Obj_CNZCylinder} uses as the P1/P2 {@code sub_324C0} state blocks:
-     * $32-$35 for P1 and $36-$39 for P2 (docs/skdisasm/sonic3k.asm:67656-67667,
+     * $32-$35 for P1 and $36-$39 for P2 (docs/skdisasm/sonic3k.asm:67696-67707,
      * 67985-68012). Diagnostic only: never hydrated into engine state.
      */
     @com.openggf.game.ModApi
@@ -482,7 +482,7 @@ public sealed interface TraceEvent {
      * surround {@code sub_324C0} and the relevant {@code MvSonicOnPtfm}
      * platform carry points so the report can show Tails x/subpixel before
      * and after ROM-side cylinder/platform movement
-     * (docs/skdisasm/sonic3k.asm:67985-68012, 68019-68038, 41667-41679).
+     * (docs/skdisasm/sonic3k.asm:68025-68052, 68059-68078, 41707-41719).
      * Diagnostic only: never hydrated into engine state.
      */
     @com.openggf.game.ModApi
@@ -538,9 +538,9 @@ public sealed interface TraceEvent {
      * Per-frame S3K fixed {@code Breathing_bubbles} /
      * {@code Breathing_bubbles_P2} diagnostic. These fixed in-level object
      * slots sit after dynamic object RAM and do not consume a dynamic SST slot
-     * (docs/skdisasm/sonic3k.constants.asm:307-312). The recorder polls the
+     * (docs/skdisasm/sonic3k.constants.asm:314-319). The recorder polls the
      * fixed controller fields used by {@code Obj_AirCountdown}'s countdown and
-     * make-item paths (docs/skdisasm/sonic3k.asm:33289-33306,
+     * make-item paths (docs/skdisasm/sonic3k.asm:33329-33346,
      * 33490-33610), plus any visible dynamic {@code Obj_AirCountdown}
      * children that currently point at the same owner.
      *
@@ -594,12 +594,12 @@ public sealed interface TraceEvent {
      * Per-frame AIZ boundary/tree diagnostic for the sidekick around the
      * frame-order-sensitive path where {@code Process_Sprites} runs before
      * {@code DeformBgLayer}/{@code ScreenEvents}
-     * (docs/skdisasm/sonic3k.asm:7884-7898), AIZ resize writes
-     * {@code Camera_min_X_pos=$2D80} (docs/skdisasm/sonic3k.asm:38961-38974),
+     * (docs/skdisasm/sonic3k.asm:7916-7930), AIZ resize writes
+     * {@code Camera_min_X_pos=$2D80} (docs/skdisasm/sonic3k.asm:39001-39014),
      * {@code AIZTree_SetPlayerPos} can reposition and zero velocity
-     * (docs/skdisasm/sonic3k.asm:43776-43810), and
+     * (docs/skdisasm/sonic3k.asm:43816-43850), and
      * {@code Tails_Check_Screen_Boundaries} can clamp/despawn
-     * (docs/skdisasm/sonic3k.asm:28407-28451). Diagnostic only: never
+     * (docs/skdisasm/sonic3k.asm:28447-28491). Diagnostic only: never
      * hydrated into engine state.
      */
     @com.openggf.game.ModApi
@@ -622,15 +622,15 @@ public sealed interface TraceEvent {
     /**
      * Per-frame AIZ1-&gt;AIZ2 fake-fire transition diagnostic. The ROM drives a
      * single continuous {@code Camera_Y_pos_BG_copy} (16.16) ramp via
-     * {@code AIZ1_FireRise} (docs/skdisasm/s3.asm:70383: {@code Events_bg+$02}
+     * {@code AIZ1_FireRise} (docs/skdisasm/s3.asm:70439: {@code Events_bg+$02}
      * accumulates {@code +$280} capped at {@code $A000}, then
      * {@code Camera_Y_pos_BG_copy += speed&lt;&lt;4}), initialized at
      * {@code $200000} with lerp target {@code Events_bg+$00=$68} in
-     * {@code AIZ1_AIZ2_Transition} (docs/skdisasm/sonic3k.asm:104638). The ramp
+     * {@code AIZ1_AIZ2_Transition} (docs/skdisasm/sonic3k.asm:104684). The ramp
      * runs uninterrupted through the seamless reload ({@code AIZ1BGE_Finish}
      * Kos wait) and releases the post-reload {@code Camera_max_X_pos=$6000} when
      * it crosses {@code $310} in {@code AIZ2BGE_WaitFire}
-     * (docs/skdisasm/sonic3k.asm:105084-105096). {@code eventsFg5} marks the
+     * (docs/skdisasm/sonic3k.asm:105130-105142). {@code eventsFg5} marks the
      * fire-transition start trigger; {@code eventsRoutineBg} is the BG event
      * phase. Diagnostic only: never hydrated into engine state.
      */
@@ -653,11 +653,11 @@ public sealed interface TraceEvent {
     /**
      * Per-frame AIZ transition-floor solid diagnostic around the F5415
      * Sonic/Tails split. The ROM spawns {@code Obj_AIZTransitionFloor} during
-     * the AIZ1 fire-refresh sequence (docs/skdisasm/sonic3k.asm:104683-104690)
+     * the AIZ1 fire-refresh sequence (docs/skdisasm/sonic3k.asm:104729-104736)
      * and then calls {@code SolidObjectTop} with {@code d1=$A0,d2=$10,d3=$10}
-     * (docs/skdisasm/sonic3k.asm:104777-104790). The per-player path strings
+     * (docs/skdisasm/sonic3k.asm:104823-104836). The per-player path strings
      * expose whether {@code SolidObjectTop_1P} used the already-standing path
-     * or the first-landing check (docs/skdisasm/sonic3k.asm:41793-41818,
+     * or the first-landing check (docs/skdisasm/sonic3k.asm:41833-41858,
      * 41982-42015). Diagnostic only: never hydrated into engine state.
      */
     @com.openggf.game.ModApi
@@ -676,9 +676,9 @@ public sealed interface TraceEvent {
     /**
      * Per-frame AIZ fire-handoff terrain diagnostic around the F5435
      * transition-floor first landing. Captures delayed redraw / Load_Level
-     * state from the handoff window (docs/skdisasm/sonic3k.asm:104664-104738)
+     * state from the handoff window (docs/skdisasm/sonic3k.asm:104710-104784)
      * plus ROM floor-check and SolidObjectTop vertical-gate evidence
-     * (docs/skdisasm/sonic3k.asm:19839-19891, 41982-42015). Diagnostic only:
+     * (docs/skdisasm/sonic3k.asm:19875-19927, 42022-42055). Diagnostic only:
      * never hydrated into replay state.
      */
     @com.openggf.game.ModApi

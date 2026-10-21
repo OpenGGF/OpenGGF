@@ -293,7 +293,7 @@ class TestSonic3kSuperStateRewind {
         tails.setSuperStateController(tailsController);
         assertTrue(tailsController.activateFromAirAbility());
         // Tails_Transform writes Palette_timer $F; SuperHyper_PalCycle's non-Sonic branch
-        // finishes on the pass that takes it below zero (sonic3k.asm:4617-4630).
+        // finishes on the pass that takes it below zero (sonic3k.asm:4649-4662).
         for (int pass = 0; pass < 15; pass++) {
             tailsController.update();
         }

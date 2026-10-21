@@ -34,7 +34,7 @@ public class Mgz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
     @Override
     protected int targetYOffset() {
         // loc_8664E raises the shared route-8 hover target by $20 while
-        // Current_zone is MGZ (sonic3k.asm:181626-181637).
+        // Current_zone is MGZ (sonic3k.asm:181717-181728).
         return 0x20;
     }
 
@@ -77,7 +77,7 @@ public class Mgz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
     protected boolean defersCollapsedButtonPastLaterSupportOwner() {
         // loc_86770 is a later button-child SST. If the triggering player is
         // supported by an owner after the capsule, that support dispatch must
-        // publish before the button can observe it (sonic3k.asm:181739-181800).
+        // publish before the button can observe it (sonic3k.asm:181830-181891).
         return true;
     }
 

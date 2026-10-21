@@ -148,7 +148,7 @@ class TestNativePcmCaptureLive {
     }
 
     /**
-     * Title_Screen's first request is {@code cmd_FadeOut} (sonic3k.asm:5393-5394). The Z80 driver's first service
+     * Title_Screen's first request is {@code cmd_FadeOut} (sonic3k.asm:5425-5426). The Z80 driver's first service
      * after {@code zInitAudioDriver} runs it through {@code zFadeOutMusic} -> {@code zHaltDACPSG} ->
      * {@code zPSGSilenceAll} (Sound/Z80 Sound Driver.asm:2307-2325, 2587-2597), so the four PSG silence writes
      * follow the DAC idle loop's 2Bh = 0, as in the native startup ledger. The 68000's earlier power-on PSG

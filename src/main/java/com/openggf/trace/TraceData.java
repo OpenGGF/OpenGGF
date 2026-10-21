@@ -276,7 +276,7 @@ public class TraceData {
      *
      * <p>Recorded queue rows are compared as sampled. A child published by
      * {@code Process_Kos_Module_Queue} in LevelLoop's tail
-     * (docs/skdisasm/sonic3k.asm:7908) is decompressed by the next pass's
+     * (docs/skdisasm/sonic3k.asm:7940) is decompressed by the next pass's
      * {@code Process_Kos_Queue} (7887), which V-int can interrupt and bookmark
      * mid-stream (2840-2843, {@code Restore_Kos_Bookmark} at 2957). Its
      * {@code Kos_decomp_queue_count} entry is therefore still an unfinished

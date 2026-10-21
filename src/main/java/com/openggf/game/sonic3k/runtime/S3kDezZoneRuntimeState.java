@@ -8,7 +8,7 @@ import java.util.Objects;
 /**
  * Runtime-shared Sonic 3 &amp; Knuckles Death Egg ({@code $B00}, {@code $B01}) RAM: the event
  * words that {@code DEZ1_ScreenEvent}, {@code DEZ1_BackgroundEvent}, {@code DEZ2_ScreenEvent} and
- * {@code DEZ2_BackgroundEvent} read and write (sonic3k.asm:118623-118810), plus the stored camera
+ * {@code DEZ2_BackgroundEvent} read and write (sonic3k.asm:118669-118856), plus the stored camera
  * bounds the miniboss and end boss restore.
  *
  * <p>This is <b>not</b> Sonic 2's Death Egg.
@@ -19,7 +19,7 @@ import java.util.Objects;
  *       ({@code loc_7E342}) and by the act 2 end boss. Each screen-event handler consumes it with
  *       {@code clr.w}.</li>
  *   <li>{@code Events_fg_5} — raised by {@code Obj_LevelResultsCreate} for every act 1 except AIZ
- *       and ICZ (:62615-62621) and consumed by {@code DEZ1_BackgroundEvent} routine 0, which
+ *       and ICZ (:62655-62661) and consumed by {@code DEZ1_BackgroundEvent} routine 0, which
  *       queues the act 2 art and starts the seamless change.</li>
  *   <li>{@code Events_routine_fg} / {@code Events_routine_bg} — the screen and background stage
  *       indices, in the ROM's units of 4 because they index a table of {@code bra.w}. A direct
@@ -141,7 +141,7 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
     /**
      * {@code MHZ_pollen_counter}, the byte Mushroom Hill counts particles in and Death Egg
      * reuses as {@code Obj_DEZGravityPuzzle}'s six panel bits ({@code bset d0,
-     * (MHZ_pollen_counter).w}, sonic3k.asm:96229). The two zones never share a level, so the
+     * (MHZ_pollen_counter).w}, sonic3k.asm:96275). The two zones never share a level, so the
      * byte lives with whichever zone's runtime state is installed.
      */
     public int panelBits() { return panelBits & 0xFF; }

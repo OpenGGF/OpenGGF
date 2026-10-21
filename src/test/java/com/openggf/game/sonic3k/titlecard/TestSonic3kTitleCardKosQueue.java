@@ -427,7 +427,7 @@ class TestSonic3kTitleCardKosQueue {
 
     private void drainThroughPostObjects(List<HardwareWorkHandle> handles) throws Exception {
         // Kos_modules_left is decremented at exactly one site,
-        // Process_Kos_Module_Queue (docs/skdisasm/sonic3k.asm:2750-2752), which LevelLoop
+        // Process_Kos_Module_Queue (docs/skdisasm/sonic3k.asm:2782-2784), which LevelLoop
         // reaches at 7908 -- immediately after the object pass (ExecuteObjects,
         // 7900-7906), i.e. POST_OBJECTS. Process_Kos_Queue (7887) follows it in the same
         // loop tail and services only the decompression queue, so it can never retire an

@@ -154,7 +154,7 @@ sync; test divergence only if the production lifecycle permits it.
 - **Hyper trails:** rejected as a presumed delayed-art collision.
   `HyperFormTrailSample` delays position and historical art attributes while
   keeping the mapping frame live. ROM `Obj_HyperSonicKnux_Trail_Main`
-  (`sonic3k.asm:35378`) explicitly copies `Player_1+mapping_frame`, and the
+  (`sonic3k.asm:35418`) explicitly copies `Player_1+mapping_frame`, and the
   object uses `ArtTile_Player_1`. Giving it independently delayed animation
   artwork would change the shipped behavior.
 - **Rewind:** presentation records retain immutable pattern versions. This

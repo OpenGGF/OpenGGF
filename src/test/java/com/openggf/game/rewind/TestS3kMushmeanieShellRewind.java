@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Obj_Mushmeanie's shell child reads its parent only until launch: loc_8DC24 follows
  * parent3 while status bit 6 is clear, loc_8DC42 reads the attacker's x_vel through the
  * parent once, then loc_8DC62 runs MoveSprite_LightGravity / Sprite_CheckDeleteXY with no
- * parent dereference (sonic3k.asm:193645-193669). A second hit can therefore delete the
+ * parent dereference (sonic3k.asm:193744-193768). A second hit can therefore delete the
  * body while the launched shell is still flying. Registry capture must not refuse that
  * frame with a dangling {@code ShellChild#parent} (800px MHZ1 route, frames 6827-6860),
  * and restore must replay the shell's flight exactly.

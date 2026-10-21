@@ -43,8 +43,8 @@ recorded as `unknown/not previously run` rather than inferred.
 - Correction: expanded every affected row to the exact S&K mapping label and
   RomOffsetFinder/disassembly address; documented `Obj_FBZSpringPlunger`'s
   allocation-free init/rider/`Sprite_CheckDelete` path at
-  `sonic3k.asm:187094-187119`; and cited `loc_7092A`/`loc_70938` at
-  `sonic3k.asm:148959-148968` for the `$720` camera gate and
+  `sonic3k.asm:187187-187212`; and cited `loc_7092A`/`loc_70938` at
+  `sonic3k.asm:149027-149036` for the `$720` camera gate and
   `StartNewLevel #$0800`.
 - Verification (2026-07-12): focused Maven command exited 0; fresh selected
   Surefire XML remains 3 tests, 0 failures, 0 errors, 0 skipped (MSE aggregate
@@ -247,7 +247,7 @@ recorded as `unknown/not previously run` rather than inferred.
 
 ## Task 4: visual-system foundation (incomplete at PLC corruption gate)
 
-- Disassembly preflight: S&K `FBZ_Deform` at `sonic3k.asm:108859-108920`,
+- Disassembly preflight: S&K `FBZ_Deform` at `sonic3k.asm:108905-108966`,
   exact deform/index arrays at `109229-109296`, `FBZ2_CloudDeform` at
   `109701-109760`, cloud position/frame data at `110038-110048`, AniPLC lists
   at `55812-55890`, and `AnPal_FBZ` at `3370-3376`. The plan-requested

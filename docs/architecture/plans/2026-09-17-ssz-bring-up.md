@@ -40,7 +40,7 @@ ending handoff. Every slice is demonstrated on video, with a final act-ordered r
 | Act 2 exit | **Cold stop line: `loc_7BCFC`** (120 frames after `loc_7BCB0`: defeat, `object_control $83`, `SaveGame`, `Events_fg_4+1` → `SSZ2_ScreenEvent` stage 4 floor patch + `Ending_running_flag`; then `Player_mode = 3` and the spawn of `loc_5E6C0`/`loc_85EE6`). The SSZ2-owned later stages (`loc_59078` routines 4/8, stage 8 = `$66666666` fill of tiles `$7F0-$7FF` + the ending island sprite mask `loc_591D6` + delayed redraw, stage `$C`) are ending presentation, **implemented and tested from a declared seeded write `Events_fg_4 = $FF00`** with `loc_59078` alive and `Special_V_int_routine != 0`, because their only cold trigger is the ending object `loc_5E6C0` (`loc_5E98A`: `st Events_fg_4`). `loc_591D6` is **not** a floor collapse (the first draft was wrong; SSZ2 has none), so nothing gameplay-relevant lies past the stop line and the stop line is unchanged. `loc_5E6C0`, `sub_5B18E`, `Obj_Ending`, credits are the ending campaign (user decision 2026-09-17: stopping at the `sub_5B18E` boundary is accepted) | No S3K `EndingProvider`; the ending code is shared with `$D01` (`Ending_ScreenEvent` reuses `sub_5928C`/`sub_592EE`). Record engine behaviour after `loc_7BCFC`; mark the seeded stages cold-blocked in the act-2 matrix |
 | Roster | `$A00`: Sonic, Sonic + Tails, Tails. `$A01`: Knuckles. Cross entries are ROM-denied (`LevelSelect_CheckKnuckles`/`CheckSonicTails`), except when `Debug_cheat_flag != 0`, which skips both checks | Derive from the production launch contract and assert the live roster and ROM-backed renderers. No raw debug override for Knuckles in `$A00` or Sonic in `$A01` (no art/route) |
 | Tails CPU | `loc_13AB4`: `$A00` runs `sub_13ECA`, sets `Tails_CPU_routine $A`, `object_control $83` (no-starpost path only). **`Obj_57DCC`** (spawned by `loc_57CD2` when `Player_mode == 0`) is the Player 2 arrival helper and ends with `Tails_CPU_routine = 6`, `Tails_CPU_flight_timer = 0` | Player-dispatch hook outside every SSZ table; first cold frames depend on it. Engine owner: `Sonic3kSidekickCpuInitializationPolicy` (+ `game/internal/SidekickCpuInitializationPolicy`), which today models only SOZ1/`$17` |
-| Cutscene Knuckles | In scope, slice 1b: `Obj_57E34` (`subtype $60` delay) beams `Obj_CutsceneKnuckles` subtype `$2C` = `CutsceneKnux_SSZ` into act 1 for **every** player mode; he lands on terrain by `ObjCheckFloorDist` (`$AF` is an inert sprite) and sets `Events_bg+$08` (`loc_658F2`), which `$77` reads (`Obj_SSZCutsceneBridge`, sonic3k.asm:90428) before clearing `Events_bg+$05` | The arrival route is blocked without it: `Events_bg+$05` stays set, so `sub_575EA` never runs and `Camera_max_X` stays `$200`. Missed by the first plan and mis-described in the analysis |
+| Cutscene Knuckles | In scope, slice 1b: `Obj_57E34` (`subtype $60` delay) beams `Obj_CutsceneKnuckles` subtype `$2C` = `CutsceneKnux_SSZ` into act 1 for **every** player mode; he lands on terrain by `ObjCheckFloorDist` (`$AF` is an inert sprite) and sets `Events_bg+$08` (`loc_658F2`), which `$77` reads (`Obj_SSZCutsceneBridge`, sonic3k.asm:90474) before clearing `Events_bg+$05` | The arrival route is blocked without it: `Events_bg+$05` stays set, so `sub_575EA` never runs and `Camera_max_X` stays `$200`. Missed by the first plan and mis-described in the analysis |
 | Widths and donors | 320 plus one wide viewport on every mandatory mechanic from slice 1; S1 donor and an extra-follower team per the level test standard | Arena locks compare `Camera_X == $160/$1660/$19A0`; cloud sprites use `& $1FF` screen maths; the Death Egg is drawn on Plane A from the FG layout (X 1:1, Y from `_unkEEEE`). All width-sensitive |
 | Traces | Strict replay late; movies supply cold input and native states from slice 1 | v2 |
 | Forms | Movie saves hold Super Emeralds; Hyper is the native form. Normal-form rows are authored | Same trap as DDZ: read `Super_emerald_count` from the native state first |
@@ -591,7 +591,7 @@ order. `Sonic3kPatternAnimator` resolves `AniPLC_SSZ` (`$28AA4`) for act 1 only.
 
 | Question | Answer, from the ROM |
 | --- | --- |
-| Is `Apply_FGVScroll`/`word_577B2` part of ordinary act-1 play? | No. It fills `Vscroll_buffer`, which only reaches VSRAM through `SpecialVInt_VScrollCopy`, and `Special_V_int_routine` is non-zero in Sky Sanctuary only during the Death Egg launch (`SSZ1_ScreenEvent`, sonic3k.asm:115961, 116060). The per-column path is slice 8's, not slice 2's |
+| Is `Apply_FGVScroll`/`word_577B2` part of ordinary act-1 play? | No. It fills `Vscroll_buffer`, which only reaches VSRAM through `SpecialVInt_VScrollCopy`, and `Special_V_int_routine` is non-zero in Sky Sanctuary only during the Death Egg launch (`SSZ1_ScreenEvent`, sonic3k.asm:116007, 116106). The per-column path is slice 8's, not slice 2's |
 | What are the ten `word_5853E` clouds? | Invisible collision only: the rows carry no `mappings` and `loc_57B8E` never draws. The clouds the player sees are the background plane |
 | Does each solid cloud's slope table fit its half-width? | No. `SolidObjSloped2` indexes `(dx + $2E) >> 1`, so it reads `$2E + 1` bytes; eight of the ten rows ask for more than their own table holds and run on into the next (address arithmetic: only the two `$40` rows fit, and row 1 reaches into `byte_58658`'s ramp). The engine reads those bytes from the ROM rather than clamping |
 | Which clock drives the cloud drift? | `sub_57A60`'s own `addi.l #$500,-4(a1)` on `HScroll_table+$000`, once per `SSZ1_BackgroundEvent`. At `Camera_X $800` the top band's 16.16 value is `$200000`, so it takes 53 calls to carry one pixel — the test pins that arithmetic rather than a frame count |
@@ -1308,9 +1308,9 @@ the sidecar is load-bearing.
 by constructing a state.
 
 **Two ROM clears, in two different routines, and neither is in the SSZ code.** `LevelSetup`
-(sonic3k.asm:102185) runs `clr.l (Events_bg+$00/$04/$08/$0C).w` on every load, so a beaten boss is
+(sonic3k.asm:102231) runs `clr.l (Events_bg+$00/$04/$08/$0C).w` on every load, so a beaten boss is
 not remembered; the star posts simply sit past each arena. `Level:` runs `clearRAM _unkFA80,$80`
-(sonic3k.asm:7623), which covers `_unkFA82`, `_unkFA8A`, `_unkFAA2`, `_unkFAA4` and
+(sonic3k.asm:7655), which covers `_unkFA82`, `_unkFA8A`, `_unkFAA2`, `_unkFAA4` and
 `_unkFAB0..B8` — the question the plan left open ("`_unkFA82` after respawn: no ROM clear") has an
 answer, and it is that block clear. `_unkFA82` is a shared scratch word used by a dozen unrelated
 routines across the ROM (grep finds writes in ICZ, MGZ and both SSZ bosses), which is exactly why
@@ -1632,7 +1632,7 @@ exactly on the frames it is visible" was wrong and is corrected. But this entry 
 `Obj_SSZGHZBoss` sets `status` bit 7. Nothing in `Obj_SSZGHZBoss` does — and the bit is set
 anyway, by the shared touch response: `Touch_Enemy`'s `.checkhurtenemy` ends
 `subq.b #1,boss_hitcount2(a1) / bne.s .bossnotdefeated / bset #7,status(a1)`
-(sonic3k.asm:20922). See the review-02 entry below for what that changes.
+(sonic3k.asm:20958). See the review-02 entry below for what that changes.
 
 **G — `state.x`/`state.y` were never updated.** The shared base reads them for the defeat
 explosion offsets, the debug overlay and the dynamic spawn a rewind recreation rebuilds from, and
@@ -1701,7 +1701,7 @@ carrying into every future reviewer brief.
 implementer concluded that `loc_7A568`'s `btst #7,status(a1)` is dead code, and both reached it
 the same way: by grepping `Obj_SSZGHZBoss`'s own routines for anything setting `status` bit 7 and
 finding nothing. Nothing there sets it. The shared touch response does —
-`Touch_Enemy`'s `.checkhurtenemy`, at sonic3k.asm:20922:
+`Touch_Enemy`'s `.checkhurtenemy`, at sonic3k.asm:20958:
 
 ```
 		subq.b	#1,boss_hitcount2(a1)	; Subtract from boss hit counter
@@ -1789,7 +1789,7 @@ re-reviewing slice 5's review took the whole of it, and two of the corrections w
 regressions that had to be caught before anything new landed. What follows is the disassembly
 reading done while the suites ran, so the next implementer does not start from the label list.
 
-**The arena gate, `loc_5770C`/`loc_5775C` (sonic3k.asm:116303).** `d0` at entry is the leader's
+**The arena gate, `loc_5770C`/`loc_5775C` (sonic3k.asm:116349).** `d0` at entry is the leader's
 `y_pos`, from `sub_575EA`'s caller. The sequence is: `Events_bg+$02` negative means beaten (jump to
 `loc_5777E`, which reopens the bounds to `0`/`$19A0`); non-zero-but-positive means the fight is
 running and nothing below executes; `Events_bg+$03` non-zero means the lock has already fired, so
@@ -1809,7 +1809,7 @@ where it is `$160` at 320 px in the Green Hill arena, so a raw compare is unreac
 viewport. And the `Camera_Y_pos == $380` gate eases at two pixels a frame, so the test budget is
 ~1650 frames from `$1000`.
 
-**`Obj_SSZMTZBoss` (`loc_7A6B6`, sonic3k.asm:163023).** Same init shape as Green Hill —
+**`Obj_SSZMTZBoss` (`loc_7A6B6`, sonic3k.asm:163101).** Same init shape as Green Hill —
 `Obj_Wait` `$1F` with `$34 = loc_7A712`, `Boss_flag`, `cmd_FadeOut`, an
 `Obj_Song_Fade_Transition` carrying `mus_EndBoss`, `clr.w (_unkFA88).w`, `Load_PLC $7B`,
 `Queue_Kos_Module ArtKosM_SSZMTZOrbs`, the `Normal_palette_line_2 -> Target_palette_line_2` save
@@ -1840,7 +1840,7 @@ byte `word_7A628`. The defeat is `loc_7AD3A` -> `loc_7AC7A` -> `loc_7AC92` -> `l
 `st (_unkFA88).w` and `clr.b $38(a0)` where Green Hill did neither. `collision_flags` is `$11`
 here, not `$F`.
 
-**The orbs, `loc_7AD8A` (sonic3k.asm:163663).** Allocated by a second object the init creates with
+**The orbs, `loc_7AD8A` (sonic3k.asm:163741).** Allocated by a second object the init creates with
 `$34 = a0`; routine 0 allocates seven of them in a loop, each with `$2E`/`$41` from `byte_7AE14`
 (`$24,$6C,$B4,$FC,$48,$90,$D8`) and `$40` from `byte_7AE1B` (`0,1,1,0,1,1,0`),
 `collision_flags $87`, `$2F = $40`. `sub_7AEB0` is the orbit: two `GetSineCosine` lookups scaled by
@@ -1852,7 +1852,7 @@ with a `-$20` per frame vertical term clamped at `$180`, lands at `$42C`, then `
 bounces along the floor with `$DA`. `sub_7B0C2` is the orb's own touch handler, keyed on
 `collision_property` holding which player hit it (`word_7B10E`), and `loc_7B116` is the pop.
 
-**The laser children, `ChildObjDat_7AB80` (sonic3k.asm:163458).** Two, at `(-$C,-4)` and
+**The laser children, `ChildObjDat_7AB80` (sonic3k.asm:163536).** Two, at `(-$C,-4)` and
 `(-$18,-4)`, both `loc_7AB8E`, `ObjDat3_7ABFA` = `dc.b $28,8,$D,$9C` on
 `make_art_tile(ArtTile_SSZMTZOrbs,1,1)` priority `$280`. Subtype 1 waits 8 frames rather than 0 and
 uses mapping frame `$C` and priority `$100`. Then `x_vel = -$400` (negated when X-flipped),
@@ -2018,7 +2018,7 @@ routine 0/2 — which is enough to put the ship on screen and test.
 **Three things a slice-6 implementer should take from this round rather than rediscover.**
 
 1. **The shared touch response writes the boss's SST.** `Touch_Enemy`'s `.checkhurtenemy`
-   (sonic3k.asm:20922) does `move.b collision_flags(a1),$25(a1)`, `move.b d0,$1C(a1)` (which
+   (sonic3k.asm:20958) does `move.b collision_flags(a1),$25(a1)`, `move.b d0,$1C(a1)` (which
    player hit it) and, at zero hits, `bset #7,status(a1)`. Two reviews and one implementer all
    concluded `status` bit 7 was never set, because all three grepped only the boss's own routines.
    For a shared SST field, look in the subsystem that owns the interaction. The MTZ boss's
@@ -2142,7 +2142,7 @@ Slice 6 is complete and reviewed; **slice 7 (Mecha Sonic) was not started.**
    taken when `y_pos < $680` and the spawn fires when `Camera_Y_pos == Camera_max_Y_pos`, through a
    **plain** `AllocateObject` — not `AllocateObjectAfterCurrent`, so the new slot may not run that
    frame. The final arena's own lock (`$19A0`/`$5C0`) is already in `Sonic3kSSZEvents.dynamicResize`.
-2. **`Obj_SSZEndBoss` is a 21-entry table from `loc_7B308`** (`SSZEndBoss_Index`, sonic3k.asm:164170)
+2. **`Obj_SSZEndBoss` is a 21-entry table from `loc_7B308`** (`SSZEndBoss_Index`, sonic3k.asm:164248)
    and it is much larger than either recreation: it runs `sub_7D312`, `sub_7D2D8` and
    `Perform_DPLC` over `DPLCPtr_MechaSonic` on every dispatch, so its art is a per-frame DPLC and
    not a static sheet. Budget for that before budgeting for the routines.

@@ -14,7 +14,7 @@ import com.openggf.physics.TrigLookupTable;
 import java.util.List;
 
 /**
- * ROM {@code loc_8214A} (sonic3k.asm:174252-174282): the Doomsday missile's exhaust flame. It sits
+ * ROM {@code loc_8214A} (sonic3k.asm:174343-174373): the Doomsday missile's exhaust flame. It sits
  * {@code byte_82AF6[$3D]} pixels behind its missile with mapping frame {@code $10 + $3D}, copies the
  * missile's priority ({@code Child_GetPriority}), emits a {@code loc_8218E} puff on every eighth
  * {@code V_int_run_count}, and is drawn only on the two V-ints of every four whose bit 1 is clear.

@@ -98,7 +98,7 @@ Breadth follow-up: `TestS3kHpzCompatibilityMatrix` 102 tests and `TestS3kHpzLife
 
 ## Full SaveGame consumer boundary — 2026-10-08
 
-Both existing HPZ full SaveGame exit gates (sonic3k.asm:91524/91718) now dispatch through the semantic helper; camera/player and ending-countdown gates are unchanged.
+Both existing HPZ full SaveGame exit gates (sonic3k.asm:91570/91718) now dispatch through the semantic helper; camera/player and ending-countdown gates are unchanged.
 
 `828bc94d8` clears the native32-bit collected-ring mask at exactly seven existing
 full-SaveGame gates; existing game-state rewind owns the mask. Focused138 cases
@@ -350,7 +350,7 @@ so whether production or only the capture path skips it is unattributed. The loa
 own frame; native shows the title card over black there.
 
 **Post-title-card fade-in attributed and fixed (titlefade lane, 2026-10-15).** ROM:
-`Level/loc_64DC` (sonic3k.asm:7874-7878) sets `Palette_fade_info = $202F` (lines 1-3), runs
+`Level/loc_64DC` (sonic3k.asm:7906-7910) sets `Palette_fade_info = $202F` (lines 1-3), runs
 `Pal_FillBlack`, then writes `$16` to both `Palette_fade_timer` and the surviving title card's
 `$2E`; `Animate_Palette` (5018-5028) spends each LevelLoop frame on one `Pal_FromBlack` pass
 while gameplay runs and `Obj_TitleCardWait2` (62249) counts the card's hold down on the same
@@ -384,7 +384,7 @@ card over them.
 
 **Level-owned fade on every `Level` entry (titlefade2 lane, 2026-10-15).** The limits above
 are resolved. The lines 1-3 fade now belongs to `Sonic3kLevelAnimationManager`, the engine's
-`Animate_Palette` (sonic3k.asm:5018-5028). It presents `Pal_FromBlack` with `$16 -
+`Animate_Palette` (sonic3k.asm:5050-5060). It presents `Pal_FromBlack` with `$16 -
 Palette_fade_timer` passes, which `Level/loc_64DC` (7874-7878) arms with `Pal_FillBlack` on
 `Palette_fade_info = $202F`. It covers $D01 and $1701, which take `Pal_FromWhite` (5023-5026).
 The ending already owns its white reveal, and the `$1701` arena has no engine white
@@ -432,7 +432,7 @@ is never faded natively, so the card fades in there instead of appearing at full
 
 **HUD over the title card (titlefade2 lane, 2026-10-15).** S3K `Render_Sprites` emits
 `Render_HUD` and `Render_Rings` before walking the object priority buckets once
-`Level_started_flag` is set (sonic3k.asm:36326-36329). Earlier sprite-table entries are drawn
+`Level_started_flag` is set (sonic3k.asm:36366-36369). Earlier sprite-table entries are drawn
 in front, so the HUD covers the card's pieces while the card holds over the running level. The
 native `hpz-entry` frames (seq141, seq152) show the score, time and ring digits over the red
 banner. The engine painted the card over the finished frame. While the S3K card no longer
@@ -501,7 +501,7 @@ all in the score and lives boxes, which carry the native run's own values. The e
 `hud-phase/` measurements (TIME ticks at counter 60, RINGS flash at 24/56) already match seq
 130+k, and counter 2's former two-entry palette swap is gone. The card is published the
 same way (2026-10-16): its pieces are captured where LevelLoop's `Render_Sprites` would place
-them (sonic3k.asm:7911) and drawn from the following `VInt_8` (701-748). Before that it was
+them (sonic3k.asm:7943) and drawn from the following `VInt_8` (701-748). Before that it was
 drawn from the current step's state and its exit matched seq 131+k. On the direct HPZ boot
 the card region (x 110-319) now changes between counters 21-22, 22-23, 23-24 and 24-25 by
 3206, 0, 620 and 471 pixels, as native seq 151-152 through 154-155 do. Counters 21-25 differ

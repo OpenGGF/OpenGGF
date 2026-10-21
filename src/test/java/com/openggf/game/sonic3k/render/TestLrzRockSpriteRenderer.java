@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code Draw_LRZ_Special_Rock_Sprites} (sonic3k.asm:39556-39647) and {@code sub_1CB68}
+ * {@code Draw_LRZ_Special_Rock_Sprites} (sonic3k.asm:39596-39687) and {@code sub_1CB68}
  * (39656-39694).
  *
  * <p>Expectations come from the ROM placement lists and {@code LRZ_Rock_SpriteData}, read here

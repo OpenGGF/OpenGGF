@@ -19,13 +19,13 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * {@code Obj_LRZSolidMovingPlatforms} (sonic3k.asm:51012-51110), id {@code $2D} in the locked-on
+ * {@code Obj_LRZSolidMovingPlatforms} (sonic3k.asm:51052-51150), id {@code $2D} in the locked-on
  * set and 52 of Lava Reef act 2's placements.
  *
  * <p><b>The subtype is read twice, for two different things.</b> {@code lsr.w #2,d0 /
- * andi.w #$1C,d0} (:51019-51020) turns it into a byte offset into {@code byte_25826}, which has
- * only two entries -- {@code $20,$20,0} and {@code $20,$20,1} (:51005-51009) -- so bit 4 picks the
- * skin and nothing else; {@code andi.w #$F,d0} (:51026-51027) picks one of the nine movers in
+ * andi.w #$1C,d0} (:51059-51060) turns it into a byte offset into {@code byte_25826}, which has
+ * only two entries -- {@code $20,$20,0} and {@code $20,$20,1} (:51045-51049) -- so bit 4 picks the
+ * skin and nothing else; {@code andi.w #$F,d0} (:51066-51067) picks one of the nine movers in
  * {@code off_258BC}. Anchors are {@code $30 = x_pos} and {@code $34 = y_pos}, saved once.
  *
  * <p><b>The nine movers.</b> Index 0 is an {@code rts}: a placement that never moves. Indices 1, 2
@@ -35,7 +35,7 @@ import java.util.List;
  * displacement when {@code status} bit 0 is set, and every one writes ONE coordinate and leaves
  * the other at the anchor.
  *
- * <p><b>{@code sub_25974} is an accelerating triangle</b> (sonic3k.asm:51149-51182), and the
+ * <p><b>{@code sub_25974} is an accelerating triangle</b> (sonic3k.asm:51189-51222), and the
  * fixed point is easy to miss: {@code $36} is a word that {@code add.w} accumulates but
  * {@code cmp.b}/{@code move.b} read as a <em>byte</em>, so it is 8.8 and its high byte is the
  * displacement. {@code $40} is the 8.8 velocity, stepped by {@code 4} every frame -- an
@@ -43,21 +43,21 @@ import java.util.List;
  * each end rather than running at a constant rate, and its period depends on the limit.
  *
  * <p><b>The solid call saves the pre-move x on the stack</b> ({@code move.w x_pos(a0),-(sp)} at
- * :51035 and {@code move.w (sp)+,d4} at :51038, either side of the mover), so
+ * :51075 and {@code move.w (sp)+,d4} at :51078, either side of the mover), so
  * {@code SolidObjectFull} carries a standing player by this frame's delta. {@code d1} is
  * {@code width_pixels + $B}, the idiom the shared reconstruction already assumes.
  */
 public final class LrzSolidMovingPlatformObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider {
 
-    /** {@code move.w #$180,priority(a0)} (sonic3k.asm:51016). */
+    /** {@code move.w #$180,priority(a0)} (sonic3k.asm:51056). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0180);
     /** {@code byte_25826}: both entries are {@code $20,$20}; only {@code mapping_frame} differs. */
     private static final int WIDTH_PIXELS = 0x20;
     private static final int HEIGHT_PIXELS = 0x20;
-    /** {@code addi.w #$B,d1} on {@code width_pixels} (sonic3k.asm:51041). */
+    /** {@code addi.w #$B,d1} on {@code width_pixels} (sonic3k.asm:51081). */
     private static final int SOLID_WIDTH_MARGIN = 0x0B;
-    /** {@code Oscillating_table+$0A} and {@code +$1E} with their own centres (:51056-51066). */
+    /** {@code Oscillating_table+$0A} and {@code +$1E} with their own centres (:51096-51106). */
     // Engine offsets exclude Oscillating_table's two-byte control word.
     private static final int OSC_NEAR_OFFSET = 0x08;
     private static final int OSC_NEAR_CENTRE = 0x20;
@@ -68,7 +68,7 @@ public final class LrzSolidMovingPlatformObjectInstance extends AbstractObjectIn
     private static final int RAMP_SHORT_CENTRE = 0x60;
     private static final int RAMP_LONG_LIMIT = 0x7F;
     private static final int RAMP_LONG_CENTRE = 0x80;
-    /** {@code addq.w #4,d1} / {@code subq.w #4,d1} on the 8.8 velocity (:51155, :51165). */
+    /** {@code addq.w #4,d1} / {@code subq.w #4,d1} on the 8.8 velocity (:51195, :51205). */
     private static final int RAMP_ACCELERATION = 4;
 
     /** The nine entries of {@code off_258BC}, in table order. */
@@ -179,10 +179,10 @@ public final class LrzSolidMovingPlatformObjectInstance extends AbstractObjectIn
     }
 
     /**
-     * {@code sub_25974} (sonic3k.asm:51149-51182). The comparison is {@code cmp.b $36(a0),d2}, so
+     * {@code sub_25974} (sonic3k.asm:51189-51222). The comparison is {@code cmp.b $36(a0),d2}, so
      * the limit is tested against the 8.8 accumulator's high byte, and the routine returns that
      * byte -- mirrored as {@code limit - byte}, not as {@code -byte}, when {@code status} bit 0
-     * is set (:51183-51188).
+     * is set (:51223-51228).
      */
     private int ramp(int limit) {
         // add.w / subq.w on a word, so both accumulators wrap at sixteen bits; $40 is signed and
@@ -251,7 +251,7 @@ public final class LrzSolidMovingPlatformObjectInstance extends AbstractObjectIn
 
     @Override
     public boolean isHighPriority() {
-        // make_art_tile($090,2,0) (sonic3k.asm:51014): the priority bit is clear.
+        // make_art_tile($090,2,0) (sonic3k.asm:51054): the priority bit is clear.
         return false;
     }
 

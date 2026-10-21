@@ -40,7 +40,7 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
     private final boolean endingScene;
     /**
      * Animate_Palette branches to Pal_FromWhite instead of Pal_FromBlack for
-     * $D01 and $1701 (sonic3k.asm:5023-5026), as loc_64DC's Pal_FillBlack does
+     * $D01 and $1701 (sonic3k.asm:5055-5058), as loc_64DC's Pal_FillBlack does
      * to Pal_FillWhite (4992-4995). The ending owns its own white reveal; the
      * engine has no white presentation for the $1701 arena, so neither shows
      * the black fade.
@@ -115,7 +115,7 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
     /**
      * {@code Pal_FromBlack} passes lines 1-3 hold at this {@code Palette_fade_timer},
      * or -1 when the level palette is not fading. {@code Level/loc_64DC}
-     * (sonic3k.asm:7874-7878) sets {@code Palette_fade_info = $202F} (lines 1-3),
+     * (sonic3k.asm:7906-7910) sets {@code Palette_fade_info = $202F} (lines 1-3),
      * runs {@code Pal_FillBlack} and arms the timer with {@code $16};
      * {@code Animate_Palette} (5018-5028) then spends one pass per LevelLoop frame
      * while it decrements the timer, so {@code $16 - timer} passes have run. Line 0
@@ -186,9 +186,9 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
         presentLevelFade(false);
         applyPoweredFormPaletteUploadVInt();
         // LevelLoop runs Process_Sprites before ChangeRingFrame
-        // (sonic3k.asm:7888-7910). LevelFrameRuntimeUpdater calls this combined
+        // (sonic3k.asm:7920-7942). LevelFrameRuntimeUpdater calls this combined
         // manager after the object pass, so this is the runtime owner for the
-        // independent AIZ_vine_angle word advanced at sonic3k.asm:9680-9694.
+        // independent AIZ_vine_angle word advanced at sonic3k.asm:9716-9730.
         globalAnimationState.advanceChangeRingFrame();
     }
 
@@ -207,7 +207,7 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
     }
 
     /**
-     * LevelLoop calls Animate_Palette (sonic3k.asm:7923) before DeformBgLayer and
+     * LevelLoop calls Animate_Palette (sonic3k.asm:7955) before DeformBgLayer and
      * ScreenEvents (7929-7930), whose background events perform a seamless reload such as
      * AIZ1BGE_Finish. That iteration's AnPal call therefore belongs to the outgoing act;
      * the incoming act's AnPal first runs on the next iteration.
@@ -289,7 +289,7 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
      */
     @Override
     public void runInitialLevelAnimationPass() {
-        // Animate_Init precedes loc_6468 (sonic3k.asm:7766, 7855) with no deform between them.
+        // Animate_Init precedes loc_6468 (sonic3k.asm:7798, 7887) with no deform between them.
         patternAnimator.runAnimateInitTransfers();
         // MHZ's runtime constructor already represents its pre-loop cap counter;
         // retain that existing ownership while initializing ROM-backed pattern DMA.

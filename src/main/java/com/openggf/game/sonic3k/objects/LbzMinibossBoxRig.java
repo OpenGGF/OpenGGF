@@ -50,14 +50,14 @@ public final class LbzMinibossBoxRig implements RewindStateful<LbzMinibossBoxRig
     private static final int DRIFTING_PIECE_BASE = 6;
     /**
      * ROM loc_8CE64: every piece takes ObjDat3_8D23C priority $100 through SetUp_ObjAttributes
-     * (sonic3k.asm:192427-192429, 192786-192789). The art word make_art_tile(ArtTile_LBZMinibossBox,2,0)
-     * leaves bit 15 clear (sonic3k.asm:192788), so pieces never sit above high-priority tiles.
+     * (sonic3k.asm:192526-192528, 192885-192888). The art word make_art_tile(ArtTile_LBZMinibossBox,2,0)
+     * leaves bit 15 clear (sonic3k.asm:192887), so pieces never sit above high-priority tiles.
      */
     public static final int PIECE_PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x100);
     /**
      * ROM loc_8CF10: when a drifting piece's late Animate_Raw script ends ($F4 -> $34 callback),
-     * the callback installs loc_8CF1E and writes priority $380 (sonic3k.asm:192502-192505). The
-     * six burst pieces Go_Delete_Sprite instead (off_8D1AC, sonic3k.asm:192733-192739).
+     * the callback installs loc_8CF1E and writes priority $380 (sonic3k.asm:192601-192604). The
+     * six burst pieces Go_Delete_Sprite instead (off_8D1AC, sonic3k.asm:192832-192838).
      */
     public static final int LINGER_PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x380);
     private static final int[] NO_EXTRA_BUCKETS = new int[0];
@@ -322,7 +322,7 @@ public final class LbzMinibossBoxRig implements RewindStateful<LbzMinibossBoxRig
                         return;
                     }
                     // ROM loc_8CF10 -> loc_8CF1E: stay drawn until off-screen, now
-                    // behind everything else (move.w #$380,priority(a0), sonic3k.asm:192504).
+                    // behind everything else (move.w #$380,priority(a0), sonic3k.asm:192603).
                     phase = Phase.LINGER;
                     priorityBucket = LINGER_PRIORITY_BUCKET;
                 }

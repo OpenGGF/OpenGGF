@@ -27,7 +27,7 @@ import java.util.List;
 /**
  * S3K Obj $C0 - Orbinaut (LBZ).
  *
- * <p>ROM reference: {@code Obj_Orbinaut} (sonic3k.asm:191626-191725). The
+ * <p>ROM reference: {@code Obj_Orbinaut} (sonic3k.asm:191719-191818). The
  * parent badnik tracks P1's side, but only advances when the shared ROM helper
  * returns a nonzero branch result. Four child orbs orbit as hurt-category
  * hazards.

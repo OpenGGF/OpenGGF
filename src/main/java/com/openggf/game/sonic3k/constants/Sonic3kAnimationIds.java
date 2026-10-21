@@ -23,25 +23,25 @@ public enum Sonic3kAnimationIds implements AnimationId {
     LOOK_UP(0x07),
     DUCK(0x08),
     SPINDASH(0x09),
-    BLINK(0x0A),         // Idle blink/tapping foot interrupt (sonic3k.asm:21613)
-    GET_UP(0x0B),        // Get up from idle blink sequence (sonic3k.asm:21616)
+    BLINK(0x0A),         // Idle blink/tapping foot interrupt (sonic3k.asm:21649)
+    GET_UP(0x0B),        // Get up from idle blink sequence (sonic3k.asm:21652)
     BALANCE2(0x0C),      // Balancing on edge, more precarious
     SKID(0x0D),
     FLOAT(0x0E),         // Suspended/floating (single frame $C8)
     FLOAT2(0x0F),        // Extended float animation sequence
     SPRING(0x10),
     HANG(0x11),
-    VICTORY(0x13),       // Victory/celebration pose (Set_PlayerEndingPose, sonic3k.asm:181979)
+    VICTORY(0x13),       // Victory/celebration pose (Set_PlayerEndingPose, sonic3k.asm:182070)
     HANG2(0x14),         // Hanging from object
-    BUBBLE(0x15),        // Breathing air bubble underwater (sonic3k.asm:64707)
-    DROWN(0x17),         // Drowning death (s3.asm:27706, sonic3k.asm:33553)
-    DEATH(0x18),         // Death (Kill_Character, sonic3k.asm:21152)
-    HURT(0x1A),          // Hurt recoil (Player_Hurt, sonic3k.asm:21109)
-    HURT_FALL(0x1B),     // Hurt/fall in intros (sonic3k.asm:8135, 9089)
-    BLANK(0x1C),         // Blank/invisible animation (sonic3k.asm:67021)
+    BUBBLE(0x15),        // Breathing air bubble underwater (sonic3k.asm:64747)
+    DROWN(0x17),         // Drowning death (s3.asm:27761, sonic3k.asm:33593)
+    DEATH(0x18),         // Death (Kill_Character, sonic3k.asm:21188)
+    HURT(0x1A),          // Hurt recoil (Player_Hurt, sonic3k.asm:21145)
+    HURT_FALL(0x1B),     // Hurt/fall in intros (sonic3k.asm:8167, 9121)
+    BLANK(0x1C),         // Blank/invisible animation (sonic3k.asm:67061)
     BALANCE3(0x1D),      // Balancing on edge, facing away
     BALANCE4(0x1E),      // Balancing on edge, facing away, more precarious
-    SUPER_TRANSFORM(0x1F), // Super transformation (s3.asm:21148)
+    SUPER_TRANSFORM(0x1F), // Super transformation (s3.asm:21198)
     FLY(0x20),           // Legacy CPU recovery flight meaning
     TAILS_FLY(0x20),
     TAILS_FLY_ASCEND(0x21),
@@ -52,10 +52,10 @@ public enum Sonic3kAnimationIds implements AnimationId {
     TAILS_SWIM_ASCEND(0x26),
     TAILS_SWIM_CARRY(0x27),
     TAILS_SWIM_TIRED(0x28),
-    GLIDE_DROP(0x21),    // Knuckles falling after glide (sonic3k.asm:20930)
-    TAILS_CARRIED(0x22), // Sonic carried by Tails during MGZ2 boss transition (sonic3k.asm:27387)
-    GLIDE_LAND(0x22),    // Knuckles glide landing (sonic3k.asm:30987)
-    GLIDE_SLIDE(0x23);   // Knuckles glide slide on ground (sonic3k.asm:30940)
+    GLIDE_DROP(0x21),    // Knuckles falling after glide (sonic3k.asm:20966)
+    TAILS_CARRIED(0x22), // Sonic carried by Tails during MGZ2 boss transition (sonic3k.asm:27427)
+    GLIDE_LAND(0x22),    // Knuckles glide landing (sonic3k.asm:31027)
+    GLIDE_SLIDE(0x23);   // Knuckles glide slide on ground (sonic3k.asm:30980)
 
     private final int id;
 

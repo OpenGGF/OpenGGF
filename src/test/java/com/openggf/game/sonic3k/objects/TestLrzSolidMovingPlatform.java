@@ -13,8 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code Obj_LRZSolidMovingPlatforms} (sonic3k.asm:51012-51110) and {@code sub_25974}
- * (:51149-51188).
+ * {@code Obj_LRZSolidMovingPlatforms} (sonic3k.asm:51052-51150) and {@code sub_25974}
+ * (:51189-51228).
  *
  * <p>Every expectation is the ROM's own arithmetic: the two table reads of the subtype, the
  * {@code Oscillating_table} centres, and the 8.8 accumulator whose <em>high byte</em> the limit is
@@ -63,7 +63,7 @@ class TestLrzSolidMovingPlatform {
     }
 
     /**
-     * {@code loc_258D0} and {@code loc_258FA} (sonic3k.asm:51056-51060, :51081-51085): the same
+     * {@code loc_258D0} and {@code loc_258FA} (sonic3k.asm:51096-51100, :51121-51125): the same
      * {@code Oscillating_table+$0A} byte less {@code $20}, on x for mover 1 and on y for mover 4,
      * and the other coordinate is never written.
      */
@@ -84,7 +84,7 @@ class TestLrzSolidMovingPlatform {
         assertEquals(X, vertical.getCentreX(), "the horizontal coordinate is left at the anchor");
     }
 
-    /** {@code btst #0,status(a0) / neg.w d0} (sonic3k.asm:51061-51064). */
+    /** {@code btst #0,status(a0) / neg.w d0} (sonic3k.asm:51101-51104). */
     @Test
     void theMirroredPlacementTakesTheOppositeSide() {
         LrzSolidMovingPlatformObjectInstance plain = platform(0x02, false);
@@ -131,7 +131,7 @@ class TestLrzSolidMovingPlatform {
         assertNotEquals(X, platform.getCentreX(), "and the platform has travelled by then");
     }
 
-    /** {@code move.w #$7F,d2} against {@code #$5F} (sonic3k.asm:51124, :51152). */
+    /** {@code move.w #$7F,d2} against {@code #$5F} (sonic3k.asm:51164, :51192). */
     @Test
     void theLongRampTravelsFurtherThanTheShortOne() {
         LrzSolidMovingPlatformObjectInstance shortRamp = platform(0x03, false);
@@ -153,7 +153,7 @@ class TestLrzSolidMovingPlatform {
                         + " against " + shortFrames);
     }
 
-    /** {@code addi.w #$B,d1} on {@code width_pixels}, {@code d3 = d2 + 1} (:51041-51046). */
+    /** {@code addi.w #$B,d1} on {@code width_pixels}, {@code d3 = d2 + 1} (:51081-51086). */
     @Test
     void theSolidBoxIsTheWidthBytePlusElevenAndOnePixelTallerOnTheGround() {
         LrzSolidMovingPlatformObjectInstance platform = platform(0x00, false);

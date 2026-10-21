@@ -552,7 +552,7 @@ class TestObjectManagerRewindSnapshot {
 
         manager.removeDynamicObject(solid);
 
-        // Delete_Current_Sprite (docs/skdisasm/sonic3k.asm:36108-36125) zeroes the
+        // Delete_Current_Sprite (docs/skdisasm/sonic3k.asm:36148-36165) zeroes the
         // whole SST slot, status(a0) latch bits included. A retained instance key
         // can never match again, yet capture would record its freed slot and a
         // restore would bind whichever object reuses that slot.

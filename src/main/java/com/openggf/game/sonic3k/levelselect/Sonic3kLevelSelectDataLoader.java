@@ -275,7 +275,7 @@ public class Sonic3kLevelSelectDataLoader {
 
     /**
      * Modifies the decoded screen layout with S3K zone names.
-     * Matches the disasm init flow (s3.asm lines 8336-8393):
+     * Matches the disasm init flow (s3.asm lines 8374-8431):
      * 1. Clear first 800 words (rows 0-19)
      * 2. Clear OOZ leftover text
      * 3. Write zone names at mapping offsets

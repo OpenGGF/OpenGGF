@@ -14,7 +14,7 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidRoutineProfile;
 import java.util.List;
 
-/** SKL $4B, Obj_DEZTiltingBridge / loc_46E1C..loc_46F54 (sonic3k.asm:92699-92840). */
+/** SKL $4B, Obj_DEZTiltingBridge / loc_46E1C..loc_46F54 (sonic3k.asm:92745-92886). */
 public final class S3kDezTiltingBridgeObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable, SolidObjectProvider, RomObjectCodePointerProvider {
     private S3kDezTiltingBridgeObjectInstance parent;

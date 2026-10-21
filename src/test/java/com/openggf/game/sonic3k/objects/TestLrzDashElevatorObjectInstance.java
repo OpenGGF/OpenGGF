@@ -14,14 +14,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code Obj_LRZDashElevator} (sonic3k.asm:88381-88495).
+ * {@code Obj_LRZDashElevator} (sonic3k.asm:88427-88541).
  *
  * <p>Expectations are the routine's own arithmetic, written out per case: the travel range is
  * {@code (subtype & $7F) * 8}, bit 7 starts the platform {@code $20} in, and a flipped placement
- * starts it at the far end with its base Y a whole range higher (:88390-88403). A rider only
+ * starts it at the far end with its base Y a whole range higher (:88436-88449). A rider only
  * latches while {@code anim} is {@code 9}, contributes {@code 8 + spin_dash_counter} negated when
  * it faces right, and the sum drives a 16.16 position at one eighth of that per frame
- * (:88415-88416, :88483-88491).
+ * (:88461-88462, :88529-88537).
  */
 class TestLrzDashElevatorObjectInstance {
 
@@ -56,7 +56,7 @@ class TestLrzDashElevatorObjectInstance {
     }
 
     /**
-     * {@code addi.w}/{@code subi.w #$40} plus {@code bcc} (sonic3k.asm:88472-88482): the carry out
+     * {@code addi.w}/{@code subi.w #$40} plus {@code bcc} (sonic3k.asm:88518-88528): the carry out
      * of the 16-bit operation clamps at zero, so a speed already inside {@code $40} lands exactly
      * on zero rather than crossing it.
      */
@@ -73,7 +73,7 @@ class TestLrzDashElevatorObjectInstance {
     }
 
     /**
-     * {@code cmpi.b #9,anim(a1)} is the only way into a ride (sonic3k.asm:88473-88474), so a
+     * {@code cmpi.b #9,anim(a1)} is the only way into a ride (sonic3k.asm:88519-88520), so a
      * character that never produces the spindash animation - the S1 donor - stands on the platform
      * without ever moving it.
      */
@@ -141,7 +141,7 @@ class TestLrzDashElevatorObjectInstance {
         assertEquals(0, elevator.position(), "bpl loc_42FA4 clamps the position at zero");
     }
 
-    /** {@code cmp.l d1,d0 / blo} clamps at {@code $34(a0)} (sonic3k.asm:88424-88428). */
+    /** {@code cmp.l d1,d0 / blo} clamps at {@code $34(a0)} (sonic3k.asm:88470-88474). */
     @Test
     void thePlatformStopsAtItsTravelRange() {
         // A one-pixel range: eight frames of a plain push would overshoot it.
@@ -159,7 +159,7 @@ class TestLrzDashElevatorObjectInstance {
     }
 
     /**
-     * {@code loc_4303A} (sonic3k.asm:88489-88492): leaving the ground, or any animation but roll
+     * {@code loc_4303A} (sonic3k.asm:88535-88538): leaving the ground, or any animation but roll
      * and spindash, clears {@code x_vel} and drops the ride flag.
      */
     @Test
@@ -190,7 +190,7 @@ class TestLrzDashElevatorObjectInstance {
         assertEquals(0, player.getXSpeed());
     }
 
-    /** {@code SolidObjectFull} arguments {@code $2B}, 8, 9 (sonic3k.asm:88462-88465). */
+    /** {@code SolidObjectFull} arguments {@code $2B}, 8, 9 (sonic3k.asm:88508-88511). */
     @Test
     void solidParamsAreTheRoutineArguments() {
         LrzDashElevatorObjectInstance elevator = elevator(0x20, false);

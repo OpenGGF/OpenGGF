@@ -5,7 +5,7 @@ import com.openggf.level.objects.ObjectServices;
 /**
  * A level runtime whose exit writes the title game mode at once and leaves the title's own entry
  * fade running over the retained level picture: S3K {@code loc_5F314}/{@code Sega_Screen} then
- * {@code Title_Screen}'s {@code Pal_FadeToBlack} (044fa46 sonic3k.asm:125858, 5419-5431, 5074).
+ * {@code Title_Screen}'s {@code Pal_FadeToBlack} (044fa46 sonic3k.asm:125904, 5451-5463, 5106).
  * Engine-internal; not part of the Mod API.
  */
 public interface TitleEntryFadeSource {

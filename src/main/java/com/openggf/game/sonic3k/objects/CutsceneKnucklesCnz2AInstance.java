@@ -83,8 +83,8 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
     private CutsceneKnuxCnz2WallInstance blockingWall;
 
     // ROM ChildObjDat_66560: the blocking wall child is placed at parentX-$20,
-    // parentY-$6C (docs/skdisasm/sonic3k.asm:134971, applied by CreateChild1_Normal
-    // at :176931-176942).
+    // parentY-$6C (docs/skdisasm/sonic3k.asm:135028, applied by CreateChild1_Normal
+    // at :177022-177033).
     private static final int WALL_OFFSET_X = -0x20;
     private static final int WALL_OFFSET_Y = -0x6C;
 
@@ -470,7 +470,7 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
     }
 
     // ObjSlot_CutsceneKnux priority $180, written by SetUp_ObjAttributesSlotted
-    // (sonic3k.asm:134800, 178886).
+    // (sonic3k.asm:134857, 178977).
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x180);
 
     @Override

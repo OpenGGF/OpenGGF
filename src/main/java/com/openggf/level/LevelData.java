@@ -80,9 +80,9 @@ public enum LevelData implements LevelDescriptor {
 
     // S3K zone $0D: the AIZ intro scene (act 0) and the ending scene (act 1).
     // LevelSizes labels the pair "AIZ Intro (?)" / "Ending scene"
-    // (skdisasm/sonic3k.asm:38106-38107); LevelMusic_Playlist labels the row
-    // "AIZ INTRO & ENDING" (skdisasm/sonic3k.asm:7489); LevelPtrs points both
-    // acts at Layout_SSZ2 (skdisasm/sonic3k.asm:200464-200465).
+    // (skdisasm/sonic3k.asm:38146-38147); LevelMusic_Playlist labels the row
+    // "AIZ INTRO & ENDING" (skdisasm/sonic3k.asm:7521); LevelPtrs points both
+    // acts at Layout_SSZ2 (skdisasm/sonic3k.asm:200578-200579).
     S3K_AIZ_INTRO(0xDA, 0x0060, 0x01EC),
     S3K_ENDING_SCENE(0xDB, 0x0060, 0x012C),
 
@@ -108,10 +108,10 @@ public enum LevelData implements LevelDescriptor {
     S3K_SLOT_MACHINE_2(0xEB, 0x0060, 0x0070),
 
     // S3K zone $16: the Lava Reef boss act (act 0, Current_zone_and_act $1600)
-    // and Hidden Palace Zone (act 1, $1601 -- skdisasm/sonic3k.asm:62150);
+    // and Hidden Palace Zone (act 1, $1601 -- skdisasm/sonic3k.asm:62190);
     // zone $17: the Death Egg boss act (act 0, $1700) and the Super Emerald
-    // special-stage arena (act 1, $1701 -- skdisasm/sonic3k.asm:4994-4996).
-    // LevelSizes names all four (skdisasm/sonic3k.asm:38140-38143).
+    // special-stage arena (act 1, $1701 -- skdisasm/sonic3k.asm:5026-5028).
+    // LevelSizes names all four (skdisasm/sonic3k.asm:38180-38183).
     S3K_LRZ_BOSS(0xEC, 0x0040, 0x0070),
     S3K_HIDDEN_PALACE(0xED, 0x0030, 0x0AEC),
     S3K_DEZ_BOSS(0xEE, 0x0060, 0x0070),

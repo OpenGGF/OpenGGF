@@ -293,7 +293,7 @@ review verified:
 
 The ROM lifecycle remains anchored to `Queue_Kos`, `Process_Kos_Queue`, and
 `Process_Kos_Module_Queue` in `docs/skdisasm/sonic3k.asm:2668-2967`, with the
-ordinary level-loop boundary order at `sonic3k.asm:7884-7922`.
+ordinary level-loop boundary order at `sonic3k.asm:7916-7954`.
 
 ## Pre-installation trace frontiers
 

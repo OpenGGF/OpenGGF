@@ -106,7 +106,7 @@ public class CnzTriangleBumperObjectInstance extends AbstractObjectInstance impl
         player.setRollingJump(false);
         // ROM sub_32D16 clears both of the bumper's own pushing bits
         // (`bclr #5` / `bclr #6` on status(a0)) before the character's
-        // Status_Push (docs/skdisasm/sonic3k.asm:68818-68820).
+        // Status_Push (docs/skdisasm/sonic3k.asm:68858-68860).
         services().objectManager().solidContacts().releaseObjectPushLatchForAllPlayers(this);
         player.setPushing(false);
 
@@ -121,7 +121,7 @@ public class CnzTriangleBumperObjectInstance extends AbstractObjectInstance impl
         // sub_329B8 writes anim=Walk after the earlier playable/CPU animation
         // owner has run. Clear the engine's forced-animation projection so the
         // write remains visible when the next CPU recovery entry does not call
-        // Tails_Set_Flying_Animation (sonic3k.asm:68463-68478,26534-26555).
+        // Tails_Set_Flying_Animation (sonic3k.asm:68503-68518,26574-26595).
         player.setForcedAnimationId(-1);
         player.setAnimationId(0);
     }

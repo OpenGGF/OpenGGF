@@ -7,24 +7,24 @@ import com.openggf.physics.SwingMotion;
 /**
  * The swim-and-turn routine {@code Obj_Fireworm}'s head and every one of its segments run, shared
  * because the ROM shares it literally: the segment dispatch table {@code off_8F906}
- * (sonic3k.asm:196354-196359) points its routine 6 and routine 8 entries at {@code loc_8F862} and
+ * (sonic3k.asm:196459-196464) points its routine 6 and routine 8 entries at {@code loc_8F862} and
  * {@code loc_8F89A}, the head's own labels.
  *
- * <p><b>Routine 6, {@code loc_8F862}</b> (:196296-196302) runs {@code Swing_UpAndDown_Count}. While
+ * <p><b>Routine 6, {@code loc_8F862}</b> (:196401-196407) runs {@code Swing_UpAndDown_Count}. While
  * the {@code $39(a0)} half-cycle counter has not gone negative it moves with {@code MoveSprite2}
  * and advances {@code byte_8FA40} through {@code Animate_RawMultiDelay}. When the counter does go
- * negative, {@code loc_8F876} (:196304-196313) latches {@code x_vel} into {@code $44(a0)}, gives
+ * negative, {@code loc_8F876} (:196409-196418) latches {@code x_vel} into {@code $44(a0)}, gives
  * {@code y_vel} the stored {@code $42(a0)}, negates {@code $42(a0)}, clears {@code $2E(a0)} and the
  * animation position, and enters routine 8.
  *
- * <p><b>Routine 8, {@code loc_8F89A}</b> (:196315-196337) animates {@code byte_8FA4D} with
+ * <p><b>Routine 8, {@code loc_8F89A}</b> (:196420-196442) animates {@code byte_8FA4D} with
  * {@code Animate_RawNoSSTMultiDelayFlipX} -- whose third entry, {@code 2|$40}, is what turns the
  * sprite round -- and walks {@code x_vel} across by {@code $10} a frame in the direction opposite
  * to the sign {@code $44(a0)} recorded. The walk stops at {@code -$100} or {@code $100}
- * ({@code loc_8F8DE}, :196339-196343), which clears the animation position and re-enters routine 6
+ * ({@code loc_8F8DE}, :196444-196448), which clears the animation position and re-enters routine 6
  * through {@code loc_8F842}.
  *
- * <p><b>{@code loc_8F842}</b> (:196287-196294) is the swing seed: {@code $39 = 8},
+ * <p><b>{@code loc_8F842}</b> (:196392-196399) is the swing seed: {@code $39 = 8},
  * {@code $3E = y_vel = $80}, {@code $40 = 8}, {@code $38} bit 0 cleared.
  */
 final class FirewormMotion {
@@ -55,7 +55,7 @@ final class FirewormMotion {
     /** ROM {@code $44(a0)}: the {@code x_vel} the turn started from. */
     private int savedXVel;
     /** ROM {@code $2E(a0)} while routine 8 runs. It is written and never read: the ROM's own
-     * {@code addq.w #1,$2E(a0)} at :196318 has no consumer. Kept so rewind sees the same word. */
+     * {@code addq.w #1,$2E(a0)} at :196423 has no consumer. Kept so rewind sees the same word. */
     private int turnFrames;
 
     private final S3kRawAnimation.State anim = new S3kRawAnimation.State();
@@ -89,7 +89,7 @@ final class FirewormMotion {
         }
     }
 
-    /** {@code loc_8F862} (:196296-196313). */
+    /** {@code loc_8F862} (:196401-196418). */
     private void updateSwim(SubpixelMotion.State motion, S3kRawAnimation scripts) {
         SwingMotion.Result swing =
                 SwingMotion.update(SWING_ACCEL, (short) motion.yVel, SWING_MAX_VEL, swingDown);
@@ -115,7 +115,7 @@ final class FirewormMotion {
         }
     }
 
-    /** {@code loc_8F89A} (:196315-196343). */
+    /** {@code loc_8F89A} (:196420-196448). */
     private void updateTurn(SubpixelMotion.State motion, S3kRawAnimation scripts,
             int turnScriptAddress, Runnable toggleFlipX) {
         if (scripts != null) {

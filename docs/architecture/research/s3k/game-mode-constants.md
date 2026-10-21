@@ -14,7 +14,7 @@ runs). Nothing in this file is inferred from `docs/skdisasm/s3.asm`.
 
 The game-mode jump table is called `GameModes` in the S3K disassembly (not
 `GameModeArray` — that's the S1/S2 spelling). It lives at
-`sonic3k.asm:430` and is dispatched from `GameLoop` at `sonic3k.asm:423`.
+`sonic3k.asm:440` and is dispatched from `GameLoop` at `sonic3k.asm:433`.
 
 ```asm
 GameLoop:
@@ -26,13 +26,13 @@ GameLoop:
 ```
 
 The mask `$7C` strips bits 0-1 (so the low two bits are effectively ignored) and
-bit 7 (used transiently as "level loading in progress" — see `sonic3k.asm:7505`
-where `Level` does `bset #7,(Game_mode).w` and `sonic3k.asm:7882` where it clears
+bit 7 (used transiently as "level loading in progress" — see `sonic3k.asm:7537`
+where `Level` does `bset #7,(Game_mode).w` and `sonic3k.asm:7914` where it clears
 it again). Game-mode values are therefore **multiples of 4**, in the range
 `0x00` through `0x7C`, and bit 7 is an orthogonal "loading" flag.
 
 The very first thing `SonicAndKnucklesStartup` does before entering `GameLoop`
-is `move.b #0,(Game_mode).w` (`sonic3k.asm:421`), so the boot-time mode is `0x00`
+is `move.b #0,(Game_mode).w` (`sonic3k.asm:431`), so the boot-time mode is `0x00`
 (Sega screen).
 
 ## `GameModes` jump table
@@ -64,7 +64,7 @@ the byte offset stored in `Game_mode` equals `index * 4`.
 | `0x4C`| `SaveScreen`                | 450          | Save / data select.                                              |
 | `0x50`| `TimeAttack_Records`        | 451          | Time attack records.                                             |
 
-`Sega_Screen` at `sonic3k.asm:5387`:
+`Sega_Screen` at `sonic3k.asm:5419`:
 
 ```asm
 Sega_Screen:
@@ -77,16 +77,16 @@ mode becomes `0x04`. The recorder should treat both as "at or heading to title".
 
 **Important correction to the task-plan hypothesis:** the plan suggested
 `0x08 -> Level select` and `0x1C -> Ending / credits`. Neither is correct for
-S3K. Level select from the title screen is `0x28` (`sonic3k.asm:5657-5658`,
+S3K. Level select from the title screen is `0x28` (`sonic3k.asm:5689-5690`,
 reached when `Title_screen_option == 2`), and credits is `0x20` (`S3Credits`).
 Game mode `0x08` is the level-demo variant of the `Level` routine, dispatched
 from the same `Level:` label as `0x0C` but with `Demo_mode_flag` set.
 
 ## "Pause + A" soft-reset path
 
-`Pause_Game` at `sonic3k.asm:1528` is the in-level pause handler. After Start is
+`Pause_Game` at `sonic3k.asm:1550` is the in-level pause handler. After Start is
 pressed and `Game_paused` is set, the routine enters `Pause_Loop`
-(`sonic3k.asm:1550`). Per-frame while paused:
+(`sonic3k.asm:1572`). Per-frame while paused:
 
 ```asm
 Pause_Loop:
@@ -105,14 +105,14 @@ So the soft-reset transition is:
 
 - **Trigger:** while paused, press **A** on controller 1, with `Slow_motion_flag`
   set (the flag is armed alongside `Level_select_flag` by the title-screen cheat
-  at `sonic3k.asm:46573-46574`, so in practice this means "the player has entered
+  at `sonic3k.asm:46613-46614`, so in practice this means "the player has entered
   the debug / level-select cheat").
 - **Effect:** `Game_mode` is written to **`0x04`** — i.e. the title-screen entry.
 - **Next `GameLoop` iteration:** the level tears down (the `Level` routine's tail
-  at `sonic3k.asm:7917-7922` already exits whenever `Game_mode` is neither `0x08`
+  at `sonic3k.asm:7949-7954` already exits whenever `Game_mode` is neither `0x08`
   nor `0x0C`), and the dispatcher enters `Title_Screen`.
 
-There is also an adjacent 2P time-attack escape at `sonic3k.asm:1577`
+There is also an adjacent 2P time-attack escape at `sonic3k.asm:1599`
 (`move.b #$40+$80,(Game_mode).w` — i.e. `0xC0` before masking, `0x40` after, the
 Competition level-select) but that is gated on `Current_zone` being in the ALZ-EMZ
 range and is not the path the CNZ recorder cares about.
@@ -131,13 +131,13 @@ Sub-cases worth noting for the recorder's detection logic:
 
 1. **Direct soft reset from `Pause_Game`:** `0x0C -> 0x04`. This is the canonical
    case above.
-2. **Demo time-out:** when a demo ends, `DemoMode` at `sonic3k.asm:7925` writes
-   `Game_mode` to `0x00` (`sonic3k.asm:7932, 7939`). Next frame `Sega_Screen`
+2. **Demo time-out:** when a demo ends, `DemoMode` at `sonic3k.asm:7957` writes
+   `Game_mode` to `0x00` (`sonic3k.asm:7964, 7971`). Next frame `Sega_Screen`
    rewrites it to `0x04`. So a demo timeout manifests as
    `0x08 -> 0x00 -> 0x04`. The recorder should normally never record during
    `Game_mode == 0x08`, but this transition is a useful sanity check.
 3. **Legitimate level-select return:** from the title, pressing Start + A with
-   the cheat armed takes you to level select (`sonic3k.asm:6617`,
+   the cheat armed takes you to level select (`sonic3k.asm:6649`,
    `move.b #$28,(Game_mode).w`). So the pattern `0x0C -> 0x04 -> 0x28` is a
    "go back to title and pick a different level" flow — still a discard, but
    distinguishable from a hard abort.
@@ -151,6 +151,6 @@ against `sonic3k.asm:430-451` above.
 ```lua
 local GAMEMODE_SEGA       = 0x00  -- verified from GameModes entry 0 label <Sega_Screen>       (sonic3k.asm:431)
 local GAMEMODE_TITLE      = 0x04  -- verified from GameModes entry 1 label <Title_Screen>      (sonic3k.asm:432)
-local GAMEMODE_LEVEL_SEL  = 0x28  -- verified from GameModes entry 10 label <LevelSelect_S2Options> (sonic3k.asm:441; reached from title via sonic3k.asm:6617)
+local GAMEMODE_LEVEL_SEL  = 0x28  -- verified from GameModes entry 10 label <LevelSelect_S2Options> (sonic3k.asm:441; reached from title via sonic3k.asm:6649)
 local GAMEMODE_LEVEL      = 0x0C  -- already defined in recorder; re-stated here for doc cross-ref (sonic3k.asm:434)
 ```

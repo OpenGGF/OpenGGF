@@ -335,11 +335,11 @@ Same layout as Task 1 Step 1, but for S3K:
 |---|---|---:|---|
 | game mode | `Game_Mode` | `<fill>` | `docs/skdisasm/sonic3k.constants.asm:<line>` |
 | in-level game-mode value | `GM_Level` or `IDs_Level` | `<fill>` | `docs/skdisasm/sonic3k.asm:<line>` |
-| active character selector | `Player_mode` | `<fill>` | `docs/skdisasm/sonic3k.constants.asm:892` (word: 0=Sonic+Tails, 1=Sonic alone, 2=Tails alone, 3=Knuckles alone) |
-| player 1 SST base | `Player_1` | `<fill>` | `docs/skdisasm/sonic3k.constants.asm:304` (main character in 1P mode) |
-| player 2 SST base (partner) | `Player_2` | `<fill>` | `docs/skdisasm/sonic3k.constants.asm:305` (Tails in a Sonic+Tails game) |
-| SST slot size | `object_size` | `0x4A` | `docs/skdisasm/sonic3k.constants.asm:303` (note: `$4A`, NOT S1/S2's `0x40`) |
-| total SST slots | from `Object_RAM` block | `110` | `docs/skdisasm/sonic3k.constants.asm:303` |
+| active character selector | `Player_mode` | `<fill>` | `docs/skdisasm/sonic3k.constants.asm:914` (word: 0=Sonic+Tails, 1=Sonic alone, 2=Tails alone, 3=Knuckles alone) |
+| player 1 SST base | `Player_1` | `<fill>` | `docs/skdisasm/sonic3k.constants.asm:311` (main character in 1P mode) |
+| player 2 SST base (partner) | `Player_2` | `<fill>` | `docs/skdisasm/sonic3k.constants.asm:312` (Tails in a Sonic+Tails game) |
+| SST slot size | `object_size` | `0x4A` | `docs/skdisasm/sonic3k.constants.asm:310` (note: `$4A`, NOT S1/S2's `0x40`) |
+| total SST slots | from `Object_RAM` block | `110` | `docs/skdisasm/sonic3k.constants.asm:310` |
 | camera X | `Camera_X_pos` | `<fill>` | `docs/skdisasm/sonic3k.constants.asm:<line>` |
 | camera Y | `Camera_Y_pos` | `<fill>` | `docs/skdisasm/sonic3k.constants.asm:<line>` |
 | current zone | `Current_zone` | `<fill>` | `docs/skdisasm/sonic3k.constants.asm:<line>` |
@@ -354,15 +354,15 @@ Same layout as Task 1 Step 1, but for S3K:
 | stand-on-object | rider-tracking offset | `<fill>` | `...` |
 | player routine — hurt | routine value | `<fill>` | `docs/skdisasm/_incObj/<Sonic|Tails|Knuckles>.asm:<line>` (replaces S1 `0x04`) |
 | player routine — death | routine value | `<fill>` | `docs/skdisasm/_incObj/<Sonic|Tails|Knuckles>.asm:<line>` (replaces S1 `0x06`) |
-| first dynamic SST slot | `Dynamic_object_RAM` | `<fill>` | `docs/skdisasm/sonic3k.constants.asm:307` (slot index = `(Dynamic_object_RAM - Object_RAM) / object_size`; confirm denominator is `0x4A`, not `0x40`) |
-| last SST slot (exclusive) | `Dynamic_object_RAM_end` | `<fill>` | `docs/skdisasm/sonic3k.constants.asm:308` (slot index; note this is the end of the dynamic block — the broader `Object_RAM` region runs further) |
+| first dynamic SST slot | `Dynamic_object_RAM` | `<fill>` | `docs/skdisasm/sonic3k.constants.asm:314` (slot index = `(Dynamic_object_RAM - Object_RAM) / object_size`; confirm denominator is `0x4A`, not `0x40`) |
+| last SST slot (exclusive) | `Dynamic_object_RAM_end` | `<fill>` | `docs/skdisasm/sonic3k.constants.asm:315` (slot index; note this is the end of the dynamic block — the broader `Object_RAM` region runs further) |
 | insta-shield / double-jump routine values (if any) | per-character | `<fill>` | `docs/skdisasm/_incObj/<Sonic>.asm:<line>` (S3K-only; emit as aux event only — do not leak into v3 CSV) |
 ```
 
 The counter addresses (`Level_frame_counter = 0xFE08`, `V_int_run_count+2 = 0xFE12`, `Lag_frame_count = 0xF628`) are pre-resolved — do not re-derive them.
 
 Note the two structural divergences from S1/S2 embedded in this table:
-- **S3K `object_size` is `$4A`, not `$40`.** S3K extends the SST slot by 10 bytes relative to S2's `$40`. Recorder slot-dump loops must stride by `$4A` or they will read garbage after the first slot. Confirmed from `docs/skdisasm/sonic3k.constants.asm:303` (`Object_RAM` comment states "$4A bytes per object, 110 objects").
+- **S3K `object_size` is `$4A`, not `$40`.** S3K extends the SST slot by 10 bytes relative to S2's `$40`. Recorder slot-dump loops must stride by `$4A` or they will read garbage after the first slot. Confirmed from `docs/skdisasm/sonic3k.constants.asm:310` (`Object_RAM` comment states "$4A bytes per object, 110 objects").
 - **S3K has two always-present player SST slots.** `Player_1` holds the active character; `Player_2` holds Tails in a Sonic+Tails game and is otherwise inert. The recorder only needs to capture `Player_1` physics for the v3 CSV, but Task 5 Step 4 must explicitly read `Player_mode` and route accordingly (see next step).
 
 - [ ] **Step 1a: Document the `Player_mode` routing policy**

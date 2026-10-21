@@ -65,7 +65,7 @@ public final class S3kEndingCoordinator {
             boolean completed = state.credits().step(services.romReader());
             if(previousRoutine==2&&state.credits().routine()==4)
                 state.art().queueModule(services,S3kEndingResources.AND_KNUCKLES,0x3EF); // sub_5B42A
-            // loc_5B204 writes Camera_Y_pos only (sonic3k.asm:121522-121528); ScreenEvents
+            // loc_5B204 writes Camera_Y_pos only (sonic3k.asm:121568-121574); ScreenEvents
             // already published this frame's Camera_Y_pos_copy before the event handler.
             services.camera().setYAfterRenderCopy((short) (state.credits().scroll() >> 16));
             if(completed)services.levelGamestate().setTimerFrames(0);
@@ -91,7 +91,7 @@ public final class S3kEndingCoordinator {
         if (object != null) state.markPostCreditsStarted();
     }
     /**
-     * One Title_Screen entry pass (044fa46 sonic3k.asm:5074-5084): Pal_FadeToBlack's loop waits for
+     * One Title_Screen entry pass (044fa46 sonic3k.asm:5106-5116): Pal_FadeToBlack's loop waits for
      * the V-int and then runs Pal_ToBlack over all 64 colours, $15+1 times. Its VInt_12
      * (871) runs Do_ControllerPal (948-964): the Normal_palette written by the previous pass,
      * the unchanged Sprite_table and the H-scroll buffer go out before this pass's Pal_ToBlack.

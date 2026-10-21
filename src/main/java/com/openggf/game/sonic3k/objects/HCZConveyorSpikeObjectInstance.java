@@ -23,7 +23,7 @@ import java.util.List;
  * pulley back to the top. The ROM implements the curve sections with a packed signed-word table;
  * this class mirrors that table walk directly.</p>
  *
- * <p>ROM references: {@code Obj_HCZConveryorSpike} (sonic3k.asm:66631-66714),
+ * <p>ROM references: {@code Obj_HCZConveryorSpike} (sonic3k.asm:66671-66754),
  * {@code word_31124} shared conveyor bounds, {@code word_31664} curve table,
  * {@code Map_HCZConveyorSpike}, {@code ArtTile_HCZSpikeBall}.</p>
  */

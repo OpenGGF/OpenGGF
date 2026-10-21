@@ -60,9 +60,9 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
      * since this cage instance was constructed. After Player 1 releases,
      * this only affects sidekick latches whose standing bit was written
      * under the dirty {@code d6=1} path: ROM's later P2 call uses the clean
-     * {@code d6=4} from {@code docs/skdisasm/sonic3k.asm:69835-69846}, so
+     * {@code d6=4} from {@code docs/skdisasm/sonic3k.asm:69875-69886}, so
      * {@code btst d6,status(a0)} misses at
-     * {@code docs/skdisasm/sonic3k.asm:69872-69874} and falls out before the
+     * {@code docs/skdisasm/sonic3k.asm:69912-69914} and falls out before the
      * mounted branch. Clean P2 latches still have status bit 4 set and must
      * continue through {@code loc_339A0}.
      */
@@ -77,16 +77,16 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
 
     /**
      * ROM parity: the cage's per-frame routine ends with
-     * {@code jmp (Delete_Sprite_If_Not_In_Range).l} (sonic3k.asm:69867 ->
+     * {@code jmp (Delete_Sprite_If_Not_In_Range).l} (sonic3k.asm:69907 ->
      * 37301-37317), which falls through to {@code Delete_Current_Sprite}
-     * (sonic3k.asm:36108-36124) once the cage has drifted $200+ pixels past
+     * (sonic3k.asm:36148-36164) once the cage has drifted $200+ pixels past
      * the camera's coarse-back chunk. {@code Delete_Current_Sprite} zeros
      * the cage's entire SST. Any sprite still latched onto this cage's slot
      * (e.g. a Tails CPU sidekick stuck in {@code object_control = 0x43} due
      * to the leader-released frozen state) reads zero from
-     * {@code (a3)} on its next {@code sub_13EFC} call (sonic3k.asm:26824),
+     * {@code (a3)} on its next {@code sub_13EFC} call (sonic3k.asm:26864),
      * fails the {@code Tails_CPU_interact} compare, and warps to
-     * {@code (0x7F00, 0)} via {@code sub_13ECA} (sonic3k.asm:26800).
+     * {@code (0x7F00, 0)} via {@code sub_13ECA} (sonic3k.asm:26840).
      * <p>
      * Engine analog: {@link com.openggf.level.objects.ObjectManager}'s
      * {@code unloadCounterBasedOutOfRange} removes this instance from the
@@ -128,7 +128,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
                 // (then +1 = 4 for the sidekick), so sub_338C4's
                 // btst d6,status(a0) test fails for the sidekick because the
                 // cage's status bit was originally set at position 1 (not 4).
-                // Cf. sonic3k.asm:69873-69878 / 69895-69897.
+                // Cf. sonic3k.asm:69913-69918 / 69895-69897.
                 leaderHasReleased = true;
             }
         }
@@ -173,13 +173,13 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
             if (state.standingBit != currentStandingBit(isSidekick, leaderDplcClobberedD6)) {
                 /*
                  * ROM tests the current d6 bit in the cage status before
-                 * entering loc_339A0 (sonic3k.asm:69872-69874). With FixBugs
+                 * entering loc_339A0 (sonic3k.asm:69912-69914). With FixBugs
                  * off, the P2 latch can be written under dirty bit 1 when
                  * Player 1's Perform_Player_DPLC clobbers d6
-                 * (sonic3k.asm:69835-69846, 70039-70041); on later frames d6
+                 * (sonic3k.asm:69875-69886, 70079-70081); on later frames d6
                  * can be the real P2 standing bit 4, so the mounted branch is
                  * skipped and loc_338D8 exits at tst.b object_control(a1)
-                 * (sonic3k.asm:69895-69897). Leave the rider state untouched.
+                 * (sonic3k.asm:69935-69937). Leave the rider state untouched.
                  */
                 if (isSidekick && leaderHasReleased) {
                     /*
@@ -187,7 +187,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
                      * wall checks once the ROM path falls out before the ride
                      * continuation. This preserves the later left-wall
                      * correction in Tails_InputAcceleration_Path
-                     * (sonic3k.asm:27957-28001).
+                     * (sonic3k.asm:27997-28041).
                      */
                     player.setSuppressGroundWallCollision(false);
                 }
@@ -207,7 +207,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
         }
 
         // ROM still runs the P2 cage capture path after Sonic has released
-        // this cage (sonic3k.asm:69835-69846); the leader-release quirk only
+        // this cage (sonic3k.asm:69875-69886); the leader-release quirk only
         // affects already latched sidekick ride continuation below.
         tryLatch(player, state, isSidekick, leaderDplcClobberedD6);
     }
@@ -235,11 +235,11 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
             player.setCentreYPreserveSubpixel((short) (player.getCentreY() - adjustedVertical));
         }
 
-        // ROM (sonic3k.asm:69905-69921) at loc_33922 branches on the
+        // ROM (sonic3k.asm:69945-69961) at loc_33922 branches on the
         // player's Status_InAir bit when cage runs. ROM runs player physics
         // first then objects (slot order), but ROM physics doesn't always
         // ground the player at the cage rim — sub_33C34 calls
-        // Player_TouchFloor as part of cage capture (sonic3k.asm:70170).
+        // Player_TouchFloor as part of cage capture (sonic3k.asm:70210).
         // The engine's terrain collision can be more aggressive about
         // grounding the player on the cage's invisible solid-controller
         // area, masking the ROM "still airborne when cage ran" signal.
@@ -291,8 +291,8 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
 
     private void beginLatchedCooldown(AbstractPlayableSprite player, CageState state) {
         state.cooldown = 1;
-        // ROM Obj_CNZWireCage sets bits 6 and 1 of object_control (sonic3k.asm:69937-69938),
-        // and bit 0 in the air-recapture branch (sonic3k.asm:69921 loc_3394C). None of
+        // ROM Obj_CNZWireCage sets bits 6 and 1 of object_control (sonic3k.asm:69977-69978),
+        // and bit 0 in the air-recapture branch (sonic3k.asm:69961 loc_3394C). None of
         // those is bit 7, so ROM keeps Tails_CPU_Control running each frame — that is
         // what lets the auto-jump trigger fire at the cage and feed Ctrl_2_logical=$78
         // to loc_33ADE for the cage's launch-with-A/B/C path. (CNZ1 trace F1791.)
@@ -314,9 +314,9 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
             }
         }
         // ROM clears Status_InAir before sub_33C34 on the nonzero-angle,
-        // |ground_vel| >= $400 capture path (docs/skdisasm/sonic3k.asm:69905-69916),
+        // |ground_vel| >= $400 capture path (docs/skdisasm/sonic3k.asm:69945-69956),
         // so sub_33C34 only zeroes x_vel when the touch-floor branch remains
-        // airborne (docs/skdisasm/sonic3k.asm:70170-70175).
+        // airborne (docs/skdisasm/sonic3k.asm:70210-70215).
         if (touchFloorDuringLatch && player.getAir()) {
             touchFloorForAirLatch(player);
         }
@@ -345,7 +345,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
             player.setAngle((byte) state.rideAngle);
         }
         // loc_33958 chooses the left/right cage phase and angle, but
-        // loc_3397A always clears Status_Facing (sonic3k.asm:69923-69935).
+        // loc_3397A always clears Status_Facing (sonic3k.asm:69963-69975).
         player.setDirection(Direction.RIGHT);
     }
 
@@ -437,7 +437,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
          * generic SolidObject. If the latch still belongs to this cage and no
          * jump is active, restore the object-owned status before loc_339A0.
          *
-         * Exception: when {@code Player_SlopeRepel} (sonic3k.asm:23907) has
+         * Exception: when {@code Player_SlopeRepel} (sonic3k.asm:23947) has
          * just slipped the player on the CURRENT physics tick (set {@code
          * Status_InAir = 1} and {@code move_lock = 30} because |gSpeed|
          * dropped below $280 at a steep angle), the air state is the
@@ -465,7 +465,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
 
     private boolean tryJumpRelease(int vIntRunCount, AbstractPlayableSprite player, CageState state) {
         // ROM loc_33ADE masks the low byte of Ctrl_1_logical/Ctrl_2_logical
-        // for A/B/C (docs/skdisasm/sonic3k.asm:70052-70056; button masks at
+        // for A/B/C (docs/skdisasm/sonic3k.asm:70092-70096; button masks at
         // docs/skdisasm/sonic3k.constants.asm:167-169). The high byte may
         // contain held A/B/C, but held-only values such as $4808 must fall
         // through to loc_33B1E; only a low-byte A/B/C press launches the
@@ -568,7 +568,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
             } else if (vertical == verticalRange) {
                 // ROM loc_33B1E branches to loc_33BBA when the rider is
                 // exactly at the range edge but the phase low bits are
-                // nonzero (sonic3k.asm:70079-70081). That path updates the
+                // nonzero (sonic3k.asm:70119-70121). That path updates the
                 // x orbit/mapping only; it neither adds cage y_vel nor runs
                 // the loc_33B62 release cleanup.
                 updateReleaseOrbitFrame(player, state);
@@ -634,10 +634,10 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
         short centreY = player.getCentreY();
         player.setAngle((byte) 0);
         player.setRolling(false);
-        // ROM (sonic3k.asm:69986-69987 loc_33A0E and sonic3k.asm:70095-70096
+        // ROM (sonic3k.asm:70026-70027 loc_33A0E and sonic3k.asm:70135-70136
         // loc_33B62) hardcodes y_radius=$13 (19) and x_radius=9 on cage release,
         // regardless of character. Tails's default standing y_radius is $F (15)
-        // (sonic3k.asm:26103 Tails_Init), but ROM cage's release does NOT
+        // (sonic3k.asm:26143 Tails_Init), but ROM cage's release does NOT
         // restore Tails-specific defaults — it writes Sonic-style 19/9 to the
         // player's radii. The taller hitbox lets Tails detect terrain landing
         // sooner after the cage's A/B/C launch, matching ROM at CNZ1 trace

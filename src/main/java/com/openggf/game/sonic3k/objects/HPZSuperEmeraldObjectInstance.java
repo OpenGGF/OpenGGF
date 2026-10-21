@@ -100,7 +100,7 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
 
     /**
      * {@code loc_908DE} calls {@code SolidObjectTop} inside the selectable routine and then tests
-     * {@code p1_standing_bit} (skdisasm 044fa46 sonic3k.asm:197807-197821), so the landing frame already selects
+     * {@code p1_standing_bit} (skdisasm 044fa46 sonic3k.asm:197914-197928), so the landing frame already selects
      * and {@code object_control $81} lands with the player, as a native capture of the same landing
      * shows. The solid is therefore resolved at that call point; every other live path resolves it
      * after its own work, where the automatic mode used to.
@@ -198,7 +198,7 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
     /**
      * {@code Obj_HPZSuperEmerald} jumps through {@code off_9079A} on the collected state:
      * states 1 and 2 both reach {@code loc_907A8}, which sets {@code $38} bit 0, the
-     * selection gate {@code loc_908DE} tests (sonic3k.asm:197550-197582, 197713). Nothing
+     * selection gate {@code loc_908DE} tests (sonic3k.asm:197657-197689, 197820). Nothing
      * clears that bit, so a Chaos Emerald pedestal placed in {@code $1601} is selectable too.
      */
     public static boolean isRomSelectableState(S3kEmeraldProgression.EmeraldState state) {

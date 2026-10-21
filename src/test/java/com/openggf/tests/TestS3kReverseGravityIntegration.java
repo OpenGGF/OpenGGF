@@ -16,12 +16,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Step 2a-1 of the S3K Death Egg reverse-gravity slice: airborne position integration.
  *
- * <p>{@code MoveSprite_TestGravity} (sonic3k.asm:36068-36083) with
+ * <p>{@code MoveSprite_TestGravity} (sonic3k.asm:36108-36123) with
  * {@code Reverse_gravity_flag} ($FFFFF7C6) set still does
  * {@code addi.w #$38,y_vel(a0)} — the velocity is never inverted — but loads the
  * <em>old</em> {@code y_vel} into {@code d0}, runs {@code neg.w d0}, and adds that to
  * {@code y_pos}. Positive {@code y_vel} therefore still means "falling", and falling is
- * now upward on screen. {@code MoveSprite_TestGravity2} (:36088-36101) does the same
+ * now upward on screen. {@code MoveSprite_TestGravity2} (:36128-36141) does the same
  * without the gravity step.
  *
  * <p>The ROM never checks the zone here, so the branch is exercised from a normal S3K

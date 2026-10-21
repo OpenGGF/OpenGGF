@@ -25,14 +25,14 @@ import com.openggf.level.objects.SolidObjectListener;
  * skipped; {@code Obj_InvisibleLavaBlock} sets bit 4 (fire shield) and
  * {@code Obj_InvisibleShockBlock} bit 5 (lightning shield) before falling into this routine.
  * <p>
- * ROM: Obj_InvisibleHurtBlockHorizontal / sub_1F58C (sonic3k.asm:43273, 43427-43438)
+ * ROM: Obj_InvisibleHurtBlockHorizontal / sub_1F58C (sonic3k.asm:43313, 43467-43478)
  */
 public class Sonic3kInvisibleHurtBlockHObjectInstance extends Sonic3kInvisibleBlockObjectInstance implements SolidObjectListener {
 
     /** {@code Status_FireShield}: {@code bset #4,shield_reaction(a0)} in {@code Obj_InvisibleLavaBlock}. */
     public static final int REACTION_FIRE_SHIELD = 1 << 4;
 
-    /** Obj_InvisibleShockBlock: bset #5,shield_reaction(a0) (sonic3k.asm:43265). */
+    /** Obj_InvisibleShockBlock: bset #5,shield_reaction(a0) (sonic3k.asm:43305). */
     public static final int REACTION_LIGHTNING_SHIELD = 1 << 5;
 
     /** The reaction bits this block sets, already masked by {@code sub_1F58C}'s {@code andi.b #$73}. */
@@ -77,7 +77,7 @@ public class Sonic3kInvisibleHurtBlockHObjectInstance extends Sonic3kInvisibleBl
             // derives whether its initializer clears Ring_count this pass or
             // the next. This object has no separate ring-clear rule: it reaches
             // the same HurtCharacter path as ordinary touch damage.
-            // ROM: sonic3k.asm:21065-21077, 35549-35616.
+            // ROM: sonic3k.asm:21101-21113, 35589-35656.
             services().spawnLostRingsAfterCurrentFrame(playerEntity, frameCounter);
         }
         playerEntity.applyHurtOrDeath(sourceX, cause, hadRings);
@@ -119,7 +119,7 @@ public class Sonic3kInvisibleHurtBlockHObjectInstance extends Sonic3kInvisibleBl
         short ySpeed = player.getYSpeed();
         if (ySpeed != 0) {
             // ROM sub_1F58C routes to sub_24280, which subtracts y_vel<<8 from
-            // y_pos before HurtCharacter (docs/skdisasm/sonic3k.asm:43422-43431,
+            // y_pos before HurtCharacter (docs/skdisasm/sonic3k.asm:43462-43471,
             // 49200-49220).
             player.move((short) 0, (short) -ySpeed);
         }

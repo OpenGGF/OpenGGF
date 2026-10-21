@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verify AIZ/LRZ rock debris position and velocity tables match ROM data.
- * ROM reference: sonic3k.asm lines 44643-44720
+ * ROM reference: sonic3k.asm lines 44683-44760
  */
 public class TestTodo19_AizRockDebris {
 

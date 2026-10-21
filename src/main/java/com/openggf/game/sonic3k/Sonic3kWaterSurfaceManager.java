@@ -25,7 +25,7 @@ import java.util.logging.Logger;
 /**
  * Manages water surface sprite rendering for Sonic 3&amp;K levels.
  * <p>
- * From the S3K disassembly (Obj_HCZWaveSplash, sonic3k.asm:43161):
+ * From the S3K disassembly (Obj_HCZWaveSplash, sonic3k.asm:43201):
  * <ul>
  *   <li>Art: ArtNem_HCZWaveSplash at ROM 0x38FBB4, Nemesis compressed, 16 tiles</li>
  *   <li>VRAM: ArtTile_HCZWaveSplash = $042E, palette line 0, priority 1</li>

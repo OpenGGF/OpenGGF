@@ -16,8 +16,8 @@ public interface SpriteMovementManager {
 	 * carried over from the previous act:
 	 * <ul>
 	 * <li>S3K {@code Level:} -&gt; {@code clearRAM Object_RAM,...}
-	 * (sonic3k.asm:7504, :7619), {@code Player_1} first slot
-	 * (sonic3k.constants.asm:303-304)</li>
+	 * (sonic3k.asm:7536, :7651), {@code Player_1} first slot
+	 * (sonic3k.constants.asm:310-311)</li>
 	 * <li>S2 {@code Level_ClrRam} {@code clearRAM Object_RAM,...}
 	 * (s2.asm:4806-4808), {@code MainCharacter} first slot
 	 * (s2.constants.asm:1096-1101)</li>

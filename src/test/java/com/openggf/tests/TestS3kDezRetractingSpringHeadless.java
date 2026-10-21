@@ -25,8 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * SKL {@code $5D}, {@code Obj_DEZRetractingSpring} (sonic3k.asm:94098-94185) and the shared
- * launch {@code sub_22F98} (:47719-47749).
+ * SKL {@code $5D}, {@code Obj_DEZRetractingSpring} (sonic3k.asm:94144-94231) and the shared
+ * launch {@code sub_22F98} (:47759-47789).
  *
  * <p>Every expected number is a literal from the ROM listing or from the decoded
  * {@code DEZ2_Sprites} layout, never a call back into the object's own arithmetic.
@@ -46,8 +46,8 @@ class TestS3kDezRetractingSpringHeadless {
     }
 
     /**
-     * {@code word_4808A} (:94093-94095) is {@code dc.w -$1000, -$A00}, indexed by
-     * {@code subtype & 2} (:94107-94109). The native act 2 row that named this object shows
+     * {@code word_4808A} (:94139-94141) is {@code dc.w -$1000, -$A00}, indexed by
+     * {@code subtype & 2} (:94153-94155). The native act 2 row that named this object shows
      * {@code y_vel} going to {@code $F600}, which is {@code -$A00}.
      */
     @Test
@@ -67,7 +67,7 @@ class TestS3kDezRetractingSpringHeadless {
 
     /**
      * {@code moveq #0,d1 / move.b width_pixels(a0),d1} with {@code move.b #$10,width_pixels}
-     * (:94103, :94159-94160) and {@code moveq #9,d3} (:94161). {@code SolidObjectTop_1P} is
+     * (:94149, :94205-94206) and {@code moveq #9,d3} (:94207). {@code SolidObjectTop_1P} is
      * given no second height, so the air and ground boxes are the same nine pixels.
      */
     @Test
@@ -85,7 +85,7 @@ class TestS3kDezRetractingSpringHeadless {
     }
 
     /**
-     * {@code loc_480D4} :94116-94127. The player must be a full {@code $20} below before the
+     * {@code loc_480D4} :94162-94173. The player must be a full {@code $20} below before the
      * piston moves, and it moves eight pixels an update up to {@code $32(a0) = $20}.
      */
     @Test
@@ -107,7 +107,7 @@ class TestS3kDezRetractingSpringHeadless {
     }
 
     /**
-     * {@code cmpi.w #$20,d0 / blt.s loc_48124} (:94116-94117): {@code $1F} below is inside the
+     * {@code cmpi.w #$20,d0 / blt.s loc_48124} (:94162-94163): {@code $1F} below is inside the
      * dead band and {@code $20} below is not.
      */
     @Test
@@ -120,7 +120,7 @@ class TestS3kDezRetractingSpringHeadless {
     }
 
     /**
-     * {@code loc_48102} :94132-94143. The retract needs more than {@code $20} above, so the
+     * {@code loc_48102} :94178-94189. The retract needs more than {@code $20} above, so the
      * band is asymmetric: {@code $20} below extends but {@code $20} above does not retract.
      */
     @Test
@@ -152,7 +152,7 @@ class TestS3kDezRetractingSpringHeadless {
     }
 
     /**
-     * {@code loc_48124} :94146-94157. {@code btst #0,status(a0)} skips the first negate and
+     * {@code loc_48124} :94192-94203. {@code btst #0,status(a0)} skips the first negate and
      * {@code btst #1,status(a0)} adds a second, so the sign is the exclusive or of the flips.
      * Decoded from {@code Levels/DEZ/Object Pos/2.bin}: records 4 and 373 carry flags 0,
      * records 8, 198, 239, 327, 397 and 398 carry 1 or 2, and records 206, 332, 355, 356 and
@@ -166,7 +166,7 @@ class TestS3kDezRetractingSpringHeadless {
         assertEquals(OBJECT_X - 8, xAfterOneExtendingUpdate(3), "both flips extend towards -X");
     }
 
-    /** The Y never moves: the object writes {@code x_pos} only (:94157-94158). */
+    /** The Y never moves: the object writes {@code x_pos} only (:94203-94204). */
     @Test
     void theSpringNeverMovesInY() {
         HeadlessTestFixture fixture = fixture();
@@ -184,8 +184,8 @@ class TestS3kDezRetractingSpringHeadless {
     }
 
     /**
-     * {@code tst.w $34(a0) / bne.s loc_480FC} (:94121-94122) and
-     * {@code cmp.w $34(a0),d1 / bne.s loc_48120} (:94137-94138): {@code sfx_SpringLatch}
+     * {@code tst.w $34(a0) / bne.s loc_480FC} (:94167-94168) and
+     * {@code cmp.w $34(a0),d1 / bne.s loc_48120} (:94183-94184): {@code sfx_SpringLatch}
      * ({@code $9A}) plays only on the update that leaves rest and the update that leaves full
      * extension, not on the three in between.
      */
@@ -220,7 +220,7 @@ class TestS3kDezRetractingSpringHeadless {
     }
 
     /**
-     * {@code sub_22F98} :47721-47732. {@code addq.w #8,y_pos(a1)}, the stored velocity,
+     * {@code sub_22F98} :47761-47772. {@code addq.w #8,y_pos(a1)}, the stored velocity,
      * {@code Status_InAir} set, {@code Status_OnObj} cleared, {@code jumping} cleared and
      * animation {@code $10}.
      */
@@ -327,7 +327,7 @@ class TestS3kDezRetractingSpringHeadless {
     }
 
     /**
-     * {@code tst.b (Reverse_gravity_flag).w / subi.w #2*8,y_pos(a1)} (:47722-47724): the
+     * {@code tst.b (Reverse_gravity_flag).w / subi.w #2*8,y_pos(a1)} (:47762-47764): the
      * {@code +8} becomes a net {@code -8}. The velocity word is <em>not</em> mirrored.
      */
     @Test
@@ -351,7 +351,7 @@ class TestS3kDezRetractingSpringHeadless {
     }
 
     /**
-     * {@code move.b subtype(a0),d0 / bpl.s loc_22FE0 / move.w #0,x_vel(a1)} (:47733-47735). No
+     * {@code move.b subtype(a0),d0 / bpl.s loc_22FE0 / move.w #0,x_vel(a1)} (:47773-47775). No
      * {@code $5D} placement sets bit 7, so this is the subroutine's contract, not a placement's.
      */
     @Test

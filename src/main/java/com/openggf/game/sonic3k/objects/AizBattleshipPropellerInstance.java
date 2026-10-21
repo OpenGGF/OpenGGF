@@ -17,15 +17,15 @@ import java.util.List;
 /**
  * One of the two AIZ2 battleship propellers.
  *
- * <p>ROM: Obj_BattleshipPropeller (docs/skdisasm/sonic3k.asm:105385-105409).
+ * <p>ROM: Obj_BattleshipPropeller (docs/skdisasm/sonic3k.asm:105431-105455).
  * Obj_AIZBattleship's init allocates the front ($2E = $3FBC) and back
  * ($2E = $3DCC) propeller with {@code AllocateObjectAfterCurrent}
- * (:105303-105318), so both take real SST slots after the ship and run in
+ * (:105349-105364), so both take real SST slots after the ship and run in
  * the ship's first pass. Each pass the propeller deletes itself once
  * {@code Events_routine_fg == $C} (AIZ2SE_EndRefresh), otherwise it runs
  * {@code Animate_Sprite} with Ani_AIZShipPropeller ({@code 2,0,1,2,3,$FF}:
  * every mapping frame is held for three passes),
- * {@code Translate_Camera2ObjPosition} (:105494-105509) from the ship's
+ * {@code Translate_Camera2ObjPosition} (:105540-105555) from the ship's
  * secondary camera, and {@code Draw_Sprite}.
  */
 public class AizBattleshipPropellerInstance extends AbstractObjectInstance implements RewindRecreatable {
@@ -92,7 +92,7 @@ public class AizBattleshipPropellerInstance extends AbstractObjectInstance imple
             return;
         }
         // ROM Obj_BattleshipPropellerMain: cmpi.w #$C,(Events_routine_fg).w /
-        // bne.s loc_50466 / jmp Delete_Current_Sprite (:105395-105399).
+        // bne.s loc_50466 / jmp Delete_Current_Sprite (:105441-105445).
         if (S3kAizEventWriteSupport.isAiz2ShipEndRefreshActive(services())) {
             setDestroyed(true);
             return;
@@ -102,7 +102,7 @@ public class AizBattleshipPropellerInstance extends AbstractObjectInstance imple
     }
 
     private void animate() {
-        // ROM Animate_Sprite (:36197-36236): subq.b #1,anim_frame_timer / bcc.s
+        // ROM Animate_Sprite (:36237-36276): subq.b #1,anim_frame_timer / bcc.s
         // keeps the frame; on borrow it reloads the delay and steps the script.
         animFrameTimer = (animFrameTimer - 1) & 0xFF;
         if (animFrameTimer != 0xFF) {

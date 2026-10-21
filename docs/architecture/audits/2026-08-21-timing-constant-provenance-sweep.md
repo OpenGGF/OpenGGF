@@ -18,7 +18,7 @@ values itself:
 
 | engine constant | ROM |
 |---|---|
-| `Sonic3kSpecialStageConstants.TAILS_CPU_IDLE_TIMEOUT = 600` | `move.w #600,(Tails_CPU_idle_timer).w` (`sonic3k.asm:11721`) — **verified** |
+| `Sonic3kSpecialStageConstants.TAILS_CPU_IDLE_TIMEOUT = 600` | `move.w #600,(Tails_CPU_idle_timer).w` (`sonic3k.asm:11757`) — **verified** |
 | `Sonic2Constants.SUPER_SONIC_RING_DRAIN_INTERVAL = 60` | `move.w #60,(Super_Sonic_frame_count).w` (`s2.asm:37512`) — **verified** |
 | `IczEndBossInstance.DEFEAT_CAPSULE_HANDOFF_WAIT = (2*60)-1` | the `#(2*60)-1` idiom, **21 occurrences** in `sonic3k.asm` — **verified** |
 
@@ -46,7 +46,7 @@ pairs, so only there does a scalar stand in for a script.
 | `Sonic2SpecialStageConstants.java:257` | `MESSAGE_FLYOUT_FRAMES = 15` | comment: *"(approximate)"* |
 
 `FLAME_DURATION` is the clearest case in the sweep and its ROM structure is **verified**:
-`AIZEndBossFlame_Init` (`sonic3k.asm:138579-138591`) selects
+`AIZEndBossFlame_Init` (`sonic3k.asm:138644-138656`) selects
 `AniRaw_AIZEndBossFlame_Diagonal` / `_Vertical` by angle into `$30(a0)` and sets
 `$34 = AIZEndBossFlame_SpawnBomb`; `AIZEndBossFlame_Main` runs `Animate_Raw`, and the script's
 terminator invokes `$34`. **The flame's duration is script-terminated by a callback, exactly
@@ -97,7 +97,7 @@ established this round.
 ## Rank 1 resolved: `FLAME_DURATION = 40` is ROM-exact
 
 Checked in full. `AIZEndBossFlame_Main` steps the flame's script with `Animate_Raw`
-(`sonic3k.asm:138606-138611`), which is the **shared-delay** form `Animate_RawNoSST`
+(`sonic3k.asm:138671-138676`), which is the **shared-delay** form `Animate_RawNoSST`
 (`:177333-177352`): the script's first byte is one delay for the whole script, the rest is a
 flat frame list, and `anim_frame` advances by **one byte** per step.
 
@@ -138,7 +138,7 @@ the value's shape nor its author's confidence counted as evidence.
 
 | constant | verdict | ROM |
 |---|---|---|
-| `Sonic3kSpecialStageConstants.RATE_TIMER_NORMAL = 30 * 60` | **ROM-exact** | `move.w #30*60,(Special_stage_rate_timer).w` — `sonic3k.asm:10700`, `:11450`. Same expression, same variable. |
+| `Sonic3kSpecialStageConstants.RATE_TIMER_NORMAL = 30 * 60` | **ROM-exact** | `move.w #30*60,(Special_stage_rate_timer).w` — `sonic3k.asm:10736`, `:11450`. Same expression, same variable. |
 | `Sonic3kSpecialStageConstants.RATE_TIMER_BLUE_SPHERES = 45 * 60` | **ROM-exact** | `move.w #45*60,(Special_stage_rate_timer).w` — `:10703`, `:11453`. |
 | `Sonic3kSpecialStageConstants.BANNER_DISPLAY_FRAMES = 3 * 60` | **ROM-exact** | `move.w #3*60,$32(a0)` — `:11325`, on the object built from `Map_GetBlueSpheres` / `ArtTile_SStage_GetBlueSpheres`, i.e. the GET BLUE SPHERES banner itself. |
 | `Sonic3kTitleScreenManager.SEGA_HOLD_DURATION = 180` | **no ROM basis** | see below |
@@ -146,13 +146,13 @@ the value's shape nor its author's confidence counted as evidence.
 ### `SEGA_HOLD_DURATION` — the one genuine finding
 
 There is **no SEGA screen sequence in either S3K disassembly**. `Sega_Screen` is
-`move.b #4,(Game_mode).w` followed immediately by the title screen in `sonic3k.asm:5387-5388`,
-and `move.b #4,(Game_mode).w / rts` in `s3.asm:4768-4770`. `JumpToSegaScreen`
-(`sonic3k.asm:454-456`) only sets game mode 0, which then advances the same way.
+`move.b #4,(Game_mode).w` followed immediately by the title screen in `sonic3k.asm:5419-5420`,
+and `move.b #4,(Game_mode).w / rts` in `s3.asm:4801-4803`. `JumpToSegaScreen`
+(`sonic3k.asm:470-472`) only sets game mode 0, which then advances the same way.
 
 A broad case-insensitive search for "sega" across both files returns **only** the cartridge
 header strings, the TMSS write, those two advancing routines, and one vestigial
-`SegaScr_VInt` reference in `s3.asm:830` — reachable at most once, since mode 0 advances on its
+`SegaScr_VInt` reference in `s3.asm:852` — reachable at most once, since mode 0 advances on its
 first main-loop pass. No hold, no timer, no SEGA sound command.
 
 So the engine presents a SEGA screen the ROM does not, and 180 is its own presentation timing.

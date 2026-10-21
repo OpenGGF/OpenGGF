@@ -23,7 +23,7 @@ import java.util.List;
  * Launch Base Zone Act 1 startup controller.
  *
  * <p>ROM: {@code Obj_LevelIntro_PlayerLaunchFromGround} at
- * {@code docs/skdisasm/sonic3k.asm:77207}. The object locks player input for
+ * {@code docs/skdisasm/sonic3k.asm:77248}. The object locks player input for
  * 30 frames while the player sits at the LBZ1 start position inside the terrain,
  * then applies the upward spring launch and releases control once y_pos rises
  * above {@code $05C0}.
@@ -124,7 +124,7 @@ public final class Lbz1GroundLaunchIntroInstance extends AbstractObjectInstance
                 // Obj_LevelIntro_PlayerLaunchFromGround writes object_control=$03.
                 // Bit 1 skips Animate_Sonic/Animate_Tails, so the mapping frame
                 // remains object-owned throughout the buried 30-frame hold.
-                // sonic3k.asm:77245-77249, 22067-22076, 26257-26272.
+                // sonic3k.asm:77286-77290, 22103-22112, 26297-26312.
                 sprite.setObjectMappingFrameControl(true);
             }
         }
@@ -139,7 +139,7 @@ public final class Lbz1GroundLaunchIntroInstance extends AbstractObjectInstance
                 applySpringLaunchAnimation(sprite);
                 // sub_39AB4 replaces $03 with object_control=$01: movement stays
                 // object-owned, but the ordinary animator resumes on the next
-                // player-slot dispatch. sonic3k.asm:77275-77281.
+                // player-slot dispatch. sonic3k.asm:77316-77322.
                 sprite.setObjectMappingFrameControl(false);
                 sprite.setControlLocked(true);
                 sprite.clearForcedInputMask();

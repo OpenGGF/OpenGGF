@@ -19,7 +19,7 @@ import java.util.List;
 import static com.openggf.game.sonic3k.objects.HpzKnucklesCutsceneSupport.*;
 
 /**
- * ROM {@code loc_64C70}-{@code locret_64E86} (sonic3k.asm:132562-132747): the Player 1 script
+ * ROM {@code loc_64C70}-{@code locret_64E86} (sonic3k.asm:132619-132804): the Player 1 script
  * {@code loc_64472} allocates for the Hidden Palace Master Emerald theft.
  *
  * <p>At X {@code $14D0} it stops and locks Player 1, locks Player 2 ({@code loc_863C0}) and sets

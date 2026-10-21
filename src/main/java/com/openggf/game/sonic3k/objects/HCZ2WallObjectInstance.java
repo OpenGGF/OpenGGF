@@ -35,13 +35,13 @@ public class HCZ2WallObjectInstance extends AbstractObjectInstance
 
     /**
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
-     * ROM {@code Obj_HCZ2Wall} (docs/skdisasm/sonic3k.asm:106231) is spawned by its parent rather than from the
+     * ROM {@code Obj_HCZ2Wall} (docs/skdisasm/sonic3k.asm:106277) is spawned by its parent rather than from the
      * object pointer table; every routine in its code block lies in the
      * {@code $0005xxxx} bank.
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0005}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -132,7 +132,7 @@ public class HCZ2WallObjectInstance extends AbstractObjectInstance
         // just these solid checkpoints even though both objects retain valid
         // native slots. Re-run only earlier engine-slot hurt blocks after the
         // wall has applied its side separation, restoring the ROM's wall-then-
-        // hazard order (Obj_HCZ2Wall / loc_1F66C, sonic3k.asm:106226-106244,
+        // hazard order (Obj_HCZ2Wall / loc_1F66C, sonic3k.asm:106272-106290,
         // 43507-43535). The block's own face selector remains the authority for
         // whether the corrected position is lethal.
         int wallSlot = getSlotIndex();
@@ -160,7 +160,7 @@ public class HCZ2WallObjectInstance extends AbstractObjectInstance
         // Obj_HCZ2Wall jumps directly to SolidObjectFull2, whose _1P entry
         // bypasses loc_1DF88's render_flags bit-7 gate. Its $4B collision box
         // can therefore push a player before the smaller $40 render bounds
-        // enter the viewport (sonic3k.asm:106226-106244,41065-41067).
+        // enter the viewport (sonic3k.asm:106272-106290,41105-41107).
         return true;
     }
 

@@ -31,7 +31,7 @@ public final class S3kSlotCollisionSystem {
     }
 
     public Collision checkCollision(int xPixel, int yPixel) {
-        // ROM sub_4BD5A (sonic3k.asm:99081-99110) unconditionally samples all four
+        // ROM sub_4BD5A (sonic3k.asm:99127-99156) unconditionally samples all four
         // corners (top-left, top-right, bottom-left, bottom-right, in that order --
         // (a1)+, (a1)+, adda #$7E, (a1)+, (a1)+) via sub_4BDA2 for every call, and
         // sub_4BDA2 only ever WRITES $30(a0)/$32(a0) when it finds a "special"
@@ -146,10 +146,10 @@ public final class S3kSlotCollisionSystem {
     }
 
     /**
-     * ROM sub_4BE3A's bumper branch (sonic3k.asm:99214-99223) recovers the grid
+     * ROM sub_4BE3A's bumper branch (sonic3k.asm:99260-99269) recovers the grid
      * index from the stored tile pointer: {@code $32(a0)} holds {@code a1} as it
      * stood right after sub_4BDA2's post-increment read ({@code move.b (a1)+,d4},
-     * sonic3k.asm:99099/99101/99104/99106 -- {@code a1 = TABLE + idx + 1} for the
+     * sonic3k.asm:99145/99101/99104/99106 -- {@code a1 = TABLE + idx + 1} for the
      * corner at grid index {@code idx}). {@code subi.l #-$CFFF,d1} (sonic3k.asm:
      * 99215) adds {@code $CFFF} back: with {@code TABLE = RAM_start+$3000} (RAM_start's
      * low word is 0), the low word of {@code TABLE + idx + 1 + $CFFF} is

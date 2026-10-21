@@ -318,156 +318,156 @@ and palettes, AIZ intro cutscene special paths, and dual-routine event counters.
 
 | # | ROM Routine | ROM Reference | Engine Operation | Status |
 |---|-------------|---------------|-----------------|--------|
-| 1 | `bset #7,(Game_mode).w` (set pre-level flag) | sonic3k.asm:7505 | Set loading flag | Needs wrapper |
-| 2 | `Play_SFX cmd_FadeOut` (fade out music; skipped for demos) | sonic3k.asm:7508 | `AudioManager::fadeOutMusic()` | Exists |
-| 3 | `clr.w (Ending_running_flag).w` (clear ending flag) — UNIQUE TO S3K | sonic3k.asm:7512 | Clear ending state flag | Needs wrapper |
-| 4 | `clr.w (Kos_decomp_queue_count).w` + `clearRAM Kos_decomp_stored_registers,$6C` (clear KosinskiM queue) — UNIQUE TO S3K | sonic3k.asm:7513-7514 | KosinskiM decompression queue clear | Needs impl (S3K-specific queue) |
-| 5 | `Clear_Nem_Queue` (clear Nemesis PLC queue) | sonic3k.asm:7515 | Nemesis PLC queue clear | Needs impl |
-| 6 | Special zone/respawn checks: zone `$D01` (special stage arena) or `$1701` (ending), handle `Respawn_table_keep` | sonic3k.asm:7516-7521 | `GameStateManager` special zone transition check | Needs impl |
-| 7 | `Pal_FadeToBlack` for normal levels; `Pal_FadeToWhite` for special stage arena (`$D01`) or ending (`$1701`) — UNIQUE: S3K has white fade option | sonic3k.asm:7524/7529 | `FadeManager::startFadeToBlack()` or `FadeManager::startFadeToWhite()` | Exists (not wired into S3K init) |
-| 8 | `Clear_DisplayData` (clear screen with ints disabled; skipped for demos) | sonic3k.asm:7535 | Clear display data (hardware VDP operation) | Missing (no `GraphicsManager::clearScreen()`) |
-| 9 | Zero `Level_frame_counter` | sonic3k.asm:7538 | `GameLoop` frame counter reset | Needs wrapper |
+| 1 | `bset #7,(Game_mode).w` (set pre-level flag) | sonic3k.asm:7537 | Set loading flag | Needs wrapper |
+| 2 | `Play_SFX cmd_FadeOut` (fade out music; skipped for demos) | sonic3k.asm:7540 | `AudioManager::fadeOutMusic()` | Exists |
+| 3 | `clr.w (Ending_running_flag).w` (clear ending flag) — UNIQUE TO S3K | sonic3k.asm:7544 | Clear ending state flag | Needs wrapper |
+| 4 | `clr.w (Kos_decomp_queue_count).w` + `clearRAM Kos_decomp_stored_registers,$6C` (clear KosinskiM queue) — UNIQUE TO S3K | sonic3k.asm:7545-7546 | KosinskiM decompression queue clear | Needs impl (S3K-specific queue) |
+| 5 | `Clear_Nem_Queue` (clear Nemesis PLC queue) | sonic3k.asm:7547 | Nemesis PLC queue clear | Needs impl |
+| 6 | Special zone/respawn checks: zone `$D01` (special stage arena) or `$1701` (ending), handle `Respawn_table_keep` | sonic3k.asm:7548-7553 | `GameStateManager` special zone transition check | Needs impl |
+| 7 | `Pal_FadeToBlack` for normal levels; `Pal_FadeToWhite` for special stage arena (`$D01`) or ending (`$1701`) — UNIQUE: S3K has white fade option | sonic3k.asm:7556/7529 | `FadeManager::startFadeToBlack()` or `FadeManager::startFadeToWhite()` | Exists (not wired into S3K init) |
+| 8 | `Clear_DisplayData` (clear screen with ints disabled; skipped for demos) | sonic3k.asm:7567 | Clear display data (hardware VDP operation) | Missing (no `GraphicsManager::clearScreen()`) |
+| 9 | Zero `Level_frame_counter` | sonic3k.asm:7570 | `GameLoop` frame counter reset | Needs wrapper |
 
 ### Phase B: Starpost & Zone Restoration
 
 | # | ROM Routine | ROM Reference | Engine Operation | Status |
 |---|-------------|---------------|-----------------|--------|
-| 10 | Starpost zone restore: if starpost hit, restore `Current_zone_and_act` and `Apparent_zone_and_act` from saved values — handles mid-act zone changes like AIZ intro to AIZ1 | sonic3k.asm:7539-7551 | `GameStateManager` starpost zone restore | Needs impl |
-| 11 | AIZ intro PLC override: if AIZ1 with no starpost and Sonic, replace level PLC with AIZ intro PLC — UNIQUE TO S3K | sonic3k.asm:7552-7596 | `Sonic3kPlcLoader::parsePlc()` + AIZ intro PLC via `Sonic3kBootstrapResolver` | Exists (via bootstrap resolver) |
+| 10 | Starpost zone restore: if starpost hit, restore `Current_zone_and_act` and `Apparent_zone_and_act` from saved values — handles mid-act zone changes like AIZ intro to AIZ1 | sonic3k.asm:7571-7583 | `GameStateManager` starpost zone restore | Needs impl |
+| 11 | AIZ intro PLC override: if AIZ1 with no starpost and Sonic, replace level PLC with AIZ intro PLC — UNIQUE TO S3K | sonic3k.asm:7584-7628 | `Sonic3kPlcLoader::parsePlc()` + AIZ intro PLC via `Sonic3kBootstrapResolver` | Exists (via bootstrap resolver) |
 
 ### Phase B2: FBZ2 Lamppost 6 PLC Skip
 
 | # | ROM Routine | ROM Reference | Engine Operation | Status |
 |---|-------------|---------------|-----------------|--------|
-| 11b | FBZ2 lamppost 6 PLC skip: if zone `$401` (FBZ2) and `Last_star_post_hit` = 6, skip loading level PLCs entirely | sonic3k.asm:7566-7569 | PLC skip for FBZ2 lamppost 6 checkpoint | Needs impl |
+| 11b | FBZ2 lamppost 6 PLC skip: if zone `$401` (FBZ2) and `Last_star_post_hit` = 6, skip loading level PLCs entirely | sonic3k.asm:7598-7601 | PLC skip for FBZ2 lamppost 6 checkpoint | Needs impl |
 
 ### Phase C: PLC Loading & Character Setup
 
 | # | ROM Routine | ROM Reference | Engine Operation | Status |
 |---|-------------|---------------|-----------------|--------|
-| 12 | Load zone PLC (1st): read `LevelLoadBlock` byte 0 for PLC ID, call `Load_PLC` | sonic3k.asm:7571-7582 | `Sonic3kPlcLoader::parsePlc()` via `Sonic3k::loadLevel()` | Exists |
-| 13 | `LevelLoad_ActiveCharacter`: copy `Player_option` to `Player_mode`; demos force Sonic+Tails or Knuckles | sonic3k.asm:7585 (calls 8085) | Player mode set via `GameModule` / `PlayerCharacter` | Exists |
-| 14 | Load character/standard PLCs: character-specific PLC (varies by player mode, competition mode, graphics flags). AIZ intro gets special PLCs instead | sonic3k.asm:7586-7615 | `Sonic3kPlcLoader::parsePlc()` with character PLC IDs | Exists |
+| 12 | Load zone PLC (1st): read `LevelLoadBlock` byte 0 for PLC ID, call `Load_PLC` | sonic3k.asm:7603-7614 | `Sonic3kPlcLoader::parsePlc()` via `Sonic3k::loadLevel()` | Exists |
+| 13 | `LevelLoad_ActiveCharacter`: copy `Player_option` to `Player_mode`; demos force Sonic+Tails or Knuckles | sonic3k.asm:7617 (calls 8085) | Player mode set via `GameModule` / `PlayerCharacter` | Exists |
+| 14 | Load character/standard PLCs: character-specific PLC (varies by player mode, competition mode, graphics flags). AIZ intro gets special PLCs instead | sonic3k.asm:7618-7647 | `Sonic3kPlcLoader::parsePlc()` with character PLC IDs | Exists |
 
 ### Phase D: RAM Clear & VDP Setup
 
 | # | ROM Routine | ROM Reference | Engine Operation | Status |
 |---|-------------|---------------|-----------------|--------|
-| 15 | `clearRAM`: sprite table, object RAM, lag frame counter, Tails CPU interaction, oscillating table, unknown region | sonic3k.asm:7618-7623 | `SpriteManager::clearAllSprites()`, `ObjectManager::reset()` | Exists |
-| 16 | `Init_SpriteTable` (separate explicit sprite table initialization) — UNIQUE TO S3K | sonic3k.asm:7624 | Sprite table initialization | Needs wrapper (no `SpriteManager::initSpriteTable()`) |
-| 17 | VDP register config: line scroll (`$8B03`), plane A (`$8230=$C000`), plane B (`$8407=$E000`), sprite table (`$857C=$F800`), 64x32 scroll, H-INT disabled, window register (`$9200`), background color, H-res 40 cells | sonic3k.asm:7625-7634 | Implicit (OpenGL) | N/A |
-| 18 | Debug mode check: if debug cheat + A held, enable debug | sonic3k.asm:7635-7639 | `Engine` config + `DebugModeProvider` interface; `SonicConfigurationService::getBoolean(DEBUG_MODE_KEY)` | Exists |
-| 19 | H-INT counter (`$8AFF`). Competition mode: enable H-INT, adjust plane A/B bases, set `$8A6B`, 128-cell scroll; special handling for zone `$F` | sonic3k.asm:7642-7655 | N/A (no hardware H-INT) | Skip |
-| 20 | Init DMA queue: clear `DMA_queue`, set slot pointer | sonic3k.asm:7658-7659 | N/A (no DMA in OpenGL) | Skip |
+| 15 | `clearRAM`: sprite table, object RAM, lag frame counter, Tails CPU interaction, oscillating table, unknown region | sonic3k.asm:7650-7655 | `SpriteManager::clearAllSprites()`, `ObjectManager::reset()` | Exists |
+| 16 | `Init_SpriteTable` (separate explicit sprite table initialization) — UNIQUE TO S3K | sonic3k.asm:7656 | Sprite table initialization | Needs wrapper (no `SpriteManager::initSpriteTable()`) |
+| 17 | VDP register config: line scroll (`$8B03`), plane A (`$8230=$C000`), plane B (`$8407=$E000`), sprite table (`$857C=$F800`), 64x32 scroll, H-INT disabled, window register (`$9200`), background color, H-res 40 cells | sonic3k.asm:7657-7666 | Implicit (OpenGL) | N/A |
+| 18 | Debug mode check: if debug cheat + A held, enable debug | sonic3k.asm:7667-7671 | `Engine` config + `DebugModeProvider` interface; `SonicConfigurationService::getBoolean(DEBUG_MODE_KEY)` | Exists |
+| 19 | H-INT counter (`$8AFF`). Competition mode: enable H-INT, adjust plane A/B bases, set `$8A6B`, 128-cell scroll; special handling for zone `$F` | sonic3k.asm:7674-7687 | N/A (no hardware H-INT) | Skip |
+| 20 | Init DMA queue: clear `DMA_queue`, set slot pointer | sonic3k.asm:7690-7691 | N/A (no DMA in OpenGL) | Skip |
 
 ### Phase E: Palette & Water
 
 | # | ROM Routine | ROM Reference | Engine Operation | Status |
 |---|-------------|---------------|-----------------|--------|
-| 21 | `LoadPalette_Immediate` with palette ID 3 (or 5 for Knuckles) — CHARACTER-SPECIFIC palette | sonic3k.asm:7660-7666 | `CrossGameFeatureProvider::loadCharacterPalette()` via palette loading in `Sonic3kLevel` constructor | Exists |
-| 22 | `CheckLevelForWater`: set `Water_flag` per zone (AIZ, HCZ, MGZ2/Knux, ICZ2, LBZ2). No water → water level = `$1000`. Water → load from `StartingWaterHeights`, configure H-INT handler (HInt2/HInt3/HInt4 depending on zone and VBlank budget), set water speed | sonic3k.asm:7667 (calls 9751) | `Sonic3kZoneFeatureProvider::hasWater()` | **Missing** (S3K returns `hasWater=false` for all zones) |
-| 23 | Clear `Water_palette_line_2` buffer | sonic3k.asm:7668 | Water palette buffer clear | **Missing** (depends on step 22) |
-| 24 | Enable H-INT for water: if water flag set, write `$8014` | sonic3k.asm:7671 | N/A (no hardware H-INT) | Skip |
+| 21 | `LoadPalette_Immediate` with palette ID 3 (or 5 for Knuckles) — CHARACTER-SPECIFIC palette | sonic3k.asm:7692-7698 | `CrossGameFeatureProvider::loadCharacterPalette()` via palette loading in `Sonic3kLevel` constructor | Exists |
+| 22 | `CheckLevelForWater`: set `Water_flag` per zone (AIZ, HCZ, MGZ2/Knux, ICZ2, LBZ2). No water → water level = `$1000`. Water → load from `StartingWaterHeights`, configure H-INT handler (HInt2/HInt3/HInt4 depending on zone and VBlank budget), set water speed | sonic3k.asm:7699 (calls 9751) | `Sonic3kZoneFeatureProvider::hasWater()` | **Missing** (S3K returns `hasWater=false` for all zones) |
+| 23 | Clear `Water_palette_line_2` buffer | sonic3k.asm:7700 | Water palette buffer clear | **Missing** (depends on step 22) |
+| 24 | Enable H-INT for water: if water flag set, write `$8014` | sonic3k.asm:7703 | N/A (no hardware H-INT) | Skip |
 
 ### Phase F: Music
 
 | # | ROM Routine | ROM Reference | Engine Operation | Status |
 |---|-------------|---------------|-----------------|--------|
-| 25 | Play level music: look up `LevelMusic_Playlist`, special handling for AIZ1 lamppost 3 music and MHZ Knuckles intro music. `Play_Music` | sonic3k.asm:7673-7701 | `AudioManager::playMusic()` | Exists |
-| 26 | MHZ Knuckles intro art: if MHZ, Knuckles, S&K alone, no starpost, decompress squirrel/chicken animal art directly — UNIQUE TO S3K | sonic3k.asm:7711-7727 | `Sonic3kObjectArt` MHZ Knuckles intro art loading | Needs impl |
+| 25 | Play level music: look up `LevelMusic_Playlist`, special handling for AIZ1 lamppost 3 music and MHZ Knuckles intro music. `Play_Music` | sonic3k.asm:7705-7733 | `AudioManager::playMusic()` | Exists |
+| 26 | MHZ Knuckles intro art: if MHZ, Knuckles, S&K alone, no starpost, decompress squirrel/chicken animal art directly — UNIQUE TO S3K | sonic3k.asm:7743-7759 | `Sonic3kObjectArt` MHZ Knuckles intro art loading | Needs impl |
 
 ### Phase G: Title Card Animation
 
 | # | ROM Routine | ROM Reference | Engine Operation | Status |
 |---|-------------|---------------|-----------------|--------|
-| 27 | Spawn title card: `move.l #Obj_TitleCard` to dynamic object slot 5 (skipped for zone `$1701` ending, or if `Act3_flag` set) — NOTE: S3K uses code pointer, not object ID | sonic3k.asm:7730-7735 | `Sonic3kTitleCardManager::initialize()` (via `TitleCardProvider` interface) | Exists |
-| 28 | Title card loop: VBla wait, `Process_Kos_Queue`, `Process_Sprites`, `Render_Sprites`, `Process_Nem_Queue_Init`, `Process_Kos_Module_Queue` — runs THREE decompression queues during title card (Nemesis PLC + Kosinski + KosinskiM) | sonic3k.asm:7737-7748 | `Sonic3kTitleCardManager::update()` + `Sonic3kTitleCardManager::shouldReleaseControl()` loop | Exists |
-| 29 | `clr.b (Act3_flag).w` | sonic3k.asm:7751 | Clear Act3 flag | Needs wrapper |
+| 27 | Spawn title card: `move.l #Obj_TitleCard` to dynamic object slot 5 (skipped for zone `$1701` ending, or if `Act3_flag` set) — NOTE: S3K uses code pointer, not object ID | sonic3k.asm:7762-7767 | `Sonic3kTitleCardManager::initialize()` (via `TitleCardProvider` interface) | Exists |
+| 28 | Title card loop: VBla wait, `Process_Kos_Queue`, `Process_Sprites`, `Render_Sprites`, `Process_Nem_Queue_Init`, `Process_Kos_Module_Queue` — runs THREE decompression queues during title card (Nemesis PLC + Kosinski + KosinskiM) | sonic3k.asm:7769-7780 | `Sonic3kTitleCardManager::update()` + `Sonic3kTitleCardManager::shouldReleaseControl()` loop | Exists |
+| 29 | `clr.b (Act3_flag).w` | sonic3k.asm:7783 | Clear Act3 flag | Needs wrapper |
 
 ### Phase H: HUD & Level Boundaries
 
 | # | ROM Routine | ROM Reference | Engine Operation | Status |
 |---|-------------|---------------|-----------------|--------|
-| 30 | `HUD_DrawInitial` (draw initial HUD with ints disabled) | sonic3k.asm:7753 | `HudRenderManager::draw()` | Exists |
-| 31 | `LoadPalette` with ID 3 (load target palette for fade-in) | sonic3k.asm:7757-7758 | Palette loading in `Sonic3kLevel` constructor (target palette for fade-in) | Exists |
-| 32 | `Get_LevelSizeStart` (camera min/max from `LevelSizes` table, scroll lock flags, distance from top) | sonic3k.asm:7759 | `Sonic3kLevel::loadBoundaries()` (private, called from constructor) — uses `Sonic3kBootstrapResolver` for AIZ intro index | Exists |
-| 33 | `DeformBgLayer` (initial BG deformation) | sonic3k.asm:7760 | `ParallaxManager::initZone()` | Exists |
+| 30 | `HUD_DrawInitial` (draw initial HUD with ints disabled) | sonic3k.asm:7785 | `HudRenderManager::draw()` | Exists |
+| 31 | `LoadPalette` with ID 3 (load target palette for fade-in) | sonic3k.asm:7789-7790 | Palette loading in `Sonic3kLevel` constructor (target palette for fade-in) | Exists |
+| 32 | `Get_LevelSizeStart` (camera min/max from `LevelSizes` table, scroll lock flags, distance from top) | sonic3k.asm:7791 | `Sonic3kLevel::loadBoundaries()` (private, called from constructor) — uses `Sonic3kBootstrapResolver` for AIZ intro index | Exists |
+| 33 | `DeformBgLayer` (initial BG deformation) | sonic3k.asm:7792 | `ParallaxManager::initZone()` | Exists |
 
 ### Phase I: Level Data Loading (Two-Phase)
 
 | # | ROM Routine | ROM Reference | Engine Operation | Status |
 |---|-------------|---------------|-----------------|--------|
-| 34 | `LoadLevelLoadBlock` (1st block): read `LevelLoadBlock` entries 0-1 (8x8 pattern art), `Queue_Kos_Module`, wait loop until all KosinskiM modules decompressed — ASYNC ART QUEUE, unique to S3K | sonic3k.asm:7761 | `ResourceLoader` with KosinskiM compression via `LevelResourcePlan` | Exists |
-| 35 | `LoadLevelLoadBlock2` (2nd block): decompress blocks (entries 2-3 via `Kos_Decomp` to `Block_table`), decompress chunks (entries 4-5 to RAM), `Load_Level` from `LevelPtrs` (level layout), load act-specific PLC (entry 4 byte), load zone palette (entry 5 byte) | sonic3k.asm:7762 | `ResourceLoader` with Kosinski chunks/blocks, `Sonic3kLevel` constructor for layout | Exists |
+| 34 | `LoadLevelLoadBlock` (1st block): read `LevelLoadBlock` entries 0-1 (8x8 pattern art), `Queue_Kos_Module`, wait loop until all KosinskiM modules decompressed — ASYNC ART QUEUE, unique to S3K | sonic3k.asm:7793 | `ResourceLoader` with KosinskiM compression via `LevelResourcePlan` | Exists |
+| 35 | `LoadLevelLoadBlock2` (2nd block): decompress blocks (entries 2-3 via `Kos_Decomp` to `Block_table`), decompress chunks (entries 4-5 to RAM), `Load_Level` from `LevelPtrs` (level layout), load act-specific PLC (entry 4 byte), load zone palette (entry 5 byte) | sonic3k.asm:7794 | `ResourceLoader` with Kosinski chunks/blocks, `Sonic3kLevel` constructor for layout | Exists |
 
 ### Phase J: Zone-Specific Setup
 
 | # | ROM Routine | ROM Reference | Engine Operation | Status |
 |---|-------------|---------------|-----------------|--------|
-| 36 | `j_LevelSetup` → `LevelSetup`: clear event routines, screen shake, plane buffer addresses. Dispatch to per-zone/act setup via `LevelSetupArray` (draws initial FG plane A and BG plane B) — UNIQUE TO S3K, no equivalent in S1/S2 | sonic3k.asm:7764 (calls 38661 → 102180) | Per-zone setup dispatch via `Sonic3kZoneFeatureProvider::initZoneFeatures()` | Partial (only AIZ via bootstrap resolver) |
-| 37 | `Animate_Init` (zone-specific animation counter initialization) — UNIQUE TO S3K | sonic3k.asm:7766 (calls 56368) | `Sonic3kLevelAnimationManager::update()` (no separate `init()`) | Needs impl (per-zone init not present) |
+| 36 | `j_LevelSetup` → `LevelSetup`: clear event routines, screen shake, plane buffer addresses. Dispatch to per-zone/act setup via `LevelSetupArray` (draws initial FG plane A and BG plane B) — UNIQUE TO S3K, no equivalent in S1/S2 | sonic3k.asm:7796 (calls 38661 → 102180) | Per-zone setup dispatch via `Sonic3kZoneFeatureProvider::initZoneFeatures()` | Partial (only AIZ via bootstrap resolver) |
+| 37 | `Animate_Init` (zone-specific animation counter initialization) — UNIQUE TO S3K | sonic3k.asm:7798 (calls 56368) | `Sonic3kLevelAnimationManager::update()` (no separate `init()`) | Needs impl (per-zone init not present) |
 
 ### Phase K: Collision
 
 | # | ROM Routine | ROM Reference | Engine Operation | Status |
 |---|-------------|---------------|-----------------|--------|
-| 38 | `LoadSolids`: read `SolidIndexes` (32-bit entries with flags). Bit 31: Non-interleaved (S3K zones, primary at base, secondary at base+`$600`). Bit 31 clear: Interleaved (SK zones, primary/secondary alternate bytes in `$C00` block). DUAL_PATH model | sonic3k.asm:7767 (calls 9540) | `Sonic3k::getCollisionAddresses()` with flag decoding | Exists |
+| 38 | `LoadSolids`: read `SolidIndexes` (32-bit entries with flags). Bit 31: Non-interleaved (S3K zones, primary at base, secondary at base+`$600`). Bit 31 clear: Interleaved (SK zones, primary/secondary alternate bytes in `$C00` block). DUAL_PATH model | sonic3k.asm:7799 (calls 9540) | `Sonic3k::getCollisionAddresses()` with flag decoding | Exists |
 
 ### Phase L: Water & Controls
 
 | # | ROM Routine | ROM Reference | Engine Operation | Status |
 |---|-------------|---------------|-----------------|--------|
-| 39 | `Handle_Onscreen_Water_Height` (initial water height processing) | sonic3k.asm:7768 (calls 8474) | `WaterSystem::update()` | **Missing** (S3K water not implemented) |
-| 40 | Lock/clear controls: clear logical+physical, `Ctrl_1_locked=1`, `Ctrl_2_locked=1`, `Level_started_flag=0` | sonic3k.asm:7770-7776 | `AbstractLevelEventManager::lockPlayerInput()` (sets `AbstractPlayableSprite::setControlLocked(true)`) | Exists |
+| 39 | `Handle_Onscreen_Water_Height` (initial water height processing) | sonic3k.asm:7800 (calls 8474) | `WaterSystem::update()` | **Missing** (S3K water not implemented) |
+| 40 | Lock/clear controls: clear logical+physical, `Ctrl_1_locked=1`, `Ctrl_2_locked=1`, `Level_started_flag=0` | sonic3k.asm:7802-7808 | `AbstractLevelEventManager::lockPlayerInput()` (sets `AbstractPlayableSprite::setControlLocked(true)`) | Exists |
 
 ### Phase M: Zone-Specific Object Spawning
 
 | # | ROM Routine | ROM Reference | Engine Operation | Status |
 |---|-------------|---------------|-----------------|--------|
-| 41 | HCZ water surface: if zone 1 (HCZ) and `Water_flag` set, spawn `Obj_HCZWaveSplash` and `Obj_HCZWaterSplash` | sonic3k.asm:7777-7787 | HCZ water surface objects | **Missing** (HCZ not implemented) |
-| 42 | MHZ pollen spawner: if zone 7 (MHZ), spawn `Obj_MHZ_Pollen_Spawner` | sonic3k.asm:7790-7792 | MHZ pollen object | **Missing** (MHZ not implemented) |
+| 41 | HCZ water surface: if zone 1 (HCZ) and `Water_flag` set, spawn `Obj_HCZWaveSplash` and `Obj_HCZWaterSplash` | sonic3k.asm:7809-7819 | HCZ water surface objects | **Missing** (HCZ not implemented) |
+| 42 | MHZ pollen spawner: if zone 7 (MHZ), spawn `Obj_MHZ_Pollen_Spawner` | sonic3k.asm:7822-7824 | MHZ pollen object | **Missing** (MHZ not implemented) |
 
 ### Phase N: Game State Init
 
 | # | ROM Routine | ROM Reference | Engine Operation | Status |
 |---|-------------|---------------|-----------------|--------|
-| 43 | Clear game state: if no lamppost, clear rings/timer/lives/status/`Respawn_table_keep`. Always clear: time-over, debug, restart, teleport, ring count, monitors broken, loser time, LRZ rocks, super flag | sonic3k.asm:7794-7833 | `GameStateManager::resetSession()` (partial — covers score/lives/emeralds but not all ROM fields) | Partial |
-| 44 | `OscillateNumInit` (initialize oscillation table) | sonic3k.asm:7834 (calls 9572) | `OscillationManager::reset()` | Exists |
-| 45 | Set HUD update flags + `Level_started_flag=1` — NOTE: S3K sets `Level_started_flag` HERE, BEFORE first object frame (S1/S2 set it after title card exit) | sonic3k.asm:7835-7838 | `HudRenderManager::invalidateCache()` + early `Level_started_flag` | Needs adjustment (flag timing) |
-| 46 | Special zone HUD override: if zone `$D01` or `$1701`, clear timer update and level started flags | sonic3k.asm:7839-7846 | Special zone state override | Needs impl |
+| 43 | Clear game state: if no lamppost, clear rings/timer/lives/status/`Respawn_table_keep`. Always clear: time-over, debug, restart, teleport, ring count, monitors broken, loser time, LRZ rocks, super flag | sonic3k.asm:7826-7865 | `GameStateManager::resetSession()` (partial — covers score/lives/emeralds but not all ROM fields) | Partial |
+| 44 | `OscillateNumInit` (initialize oscillation table) | sonic3k.asm:7866 (calls 9572) | `OscillationManager::reset()` | Exists |
+| 45 | Set HUD update flags + `Level_started_flag=1` — NOTE: S3K sets `Level_started_flag` HERE, BEFORE first object frame (S1/S2 set it after title card exit) | sonic3k.asm:7867-7870 | `HudRenderManager::invalidateCache()` + early `Level_started_flag` | Needs adjustment (flag timing) |
+| 46 | Special zone HUD override: if zone `$D01` or `$1701`, clear timer update and level started flags | sonic3k.asm:7871-7878 | Special zone state override | Needs impl |
 
 ### Phase O: Player & Object Spawning
 
 | # | ROM Routine | ROM Reference | Engine Operation | Status |
 |---|-------------|---------------|-----------------|--------|
-| 47 | `SpawnLevelMainSprites`: spawn collision reset list object, spawn players (Sonic/Tails/Knuckles based on `Player_mode`), spawn powerup shield, zone-specific intro setups (AIZ intro plane, HCZ2 fall, LRZ Knuckles cutscenes, etc.) — NOTE: player spawn happens AFTER game state init in S3K (different from S1/S2) | sonic3k.asm:7849 (calls 8111) | Player spawning + zone intro cutscene setup via `LevelManager::loadLevel()` | Partial (AIZ intro only) |
-| 48 | `Load_Sprites` (initial object placement via spawn windowing) | sonic3k.asm:7850 | `ObjectManager.Placement` initial spawn via `ObjectManager::update()` | Exists |
-| 49 | `Load_Rings` (initial ring placement) | sonic3k.asm:7851 | `RingManager` initial placement via level constructor | Exists |
-| 50 | `Draw_LRZ_Special_Rock_Sprites` (LRZ rock rendering) — UNIQUE TO S3K | sonic3k.asm:7852 | LRZ rock sprites | **Missing** (LRZ not implemented) |
+| 47 | `SpawnLevelMainSprites`: spawn collision reset list object, spawn players (Sonic/Tails/Knuckles based on `Player_mode`), spawn powerup shield, zone-specific intro setups (AIZ intro plane, HCZ2 fall, LRZ Knuckles cutscenes, etc.) — NOTE: player spawn happens AFTER game state init in S3K (different from S1/S2) | sonic3k.asm:7881 (calls 8111) | Player spawning + zone intro cutscene setup via `LevelManager::loadLevel()` | Partial (AIZ intro only) |
+| 48 | `Load_Sprites` (initial object placement via spawn windowing) | sonic3k.asm:7882 | `ObjectManager.Placement` initial spawn via `ObjectManager::update()` | Exists |
+| 49 | `Load_Rings` (initial ring placement) | sonic3k.asm:7883 | `RingManager` initial placement via level constructor | Exists |
+| 50 | `Draw_LRZ_Special_Rock_Sprites` (LRZ rock rendering) — UNIQUE TO S3K | sonic3k.asm:7884 | LRZ rock sprites | **Missing** (LRZ not implemented) |
 
 ### Phase P: First Frame
 
 | # | ROM Routine | ROM Reference | Engine Operation | Status |
 |---|-------------|---------------|-----------------|--------|
-| 51 | `Process_Sprites` (execute one frame of all objects) | sonic3k.asm:7853 | `ObjectManager::update()` | Exists |
-| 52 | `Render_Sprites` (build VDP sprite table) | sonic3k.asm:7854 | `SpriteManager::draw()` | Exists |
-| 53 | `Animate_Tiles` (first frame of tile animation) — UNIQUE TO S3K as explicit post-object call | sonic3k.asm:7855 | `Sonic3kLevelAnimationManager::update()` | Needs impl |
+| 51 | `Process_Sprites` (execute one frame of all objects) | sonic3k.asm:7885 | `ObjectManager::update()` | Exists |
+| 52 | `Render_Sprites` (build VDP sprite table) | sonic3k.asm:7886 | `SpriteManager::draw()` | Exists |
+| 53 | `Animate_Tiles` (first frame of tile animation) — UNIQUE TO S3K as explicit post-object call | sonic3k.asm:7887 | `Sonic3kLevelAnimationManager::update()` | Needs impl |
 
 ### Phase Q: Final Setup & Transition
 
 | # | ROM Routine | ROM Reference | Engine Operation | Status |
 |---|-------------|---------------|-----------------|--------|
-| 54 | Set `Demo_timer = 1800` | sonic3k.asm:7856 | Demo timer init | Partial |
-| 55 | `LoadWaterPalette` (zone-specific water transition palettes, water palette data addresses) — NOTE: loaded AFTER first object frame, much later than S1/S2 | sonic3k.asm:7857 | Water palette loading | **Missing** (S3K water not implemented) |
-| 56 | Clear `Water_palette_line_2` buffer (again) | sonic3k.asm:7858 | Water palette buffer clear (second time) | **Missing** |
-| 57 | Unlock controls: `Ctrl_1_locked=0`, `Ctrl_2_locked=0` | sonic3k.asm:7859-7860 | `AbstractLevelEventManager::unlockPlayerInput()` (sets `AbstractPlayableSprite::setControlLocked(false)`) | Exists |
-| 58 | `GetDemoPtr` (load demo pointer data) | sonic3k.asm:7861 | Demo pointer load | Partial |
-| 59 | `PLCLoad_AnimalsAndExplosion` (load animal/explosion PLCs; skipped for AIZ intro w/o starpost, or zones >= `$E`) — NOTE: loaded AFTER object frame, not in initial PLC batch | sonic3k.asm:7864-7872 | `Sonic3kPlcLoader::parsePlc()` with animal/explosion PLC IDs | Needs impl |
-| 60 | Palette fade setup: set `Palette_fade_info=$202F`, call `Pal_FillBlack`, set fade timer `$16` | sonic3k.asm:7875-7877 | `FadeManager::startFadeFromBlack()` | Exists |
-| 61 | Title card fade timer: set title card fade offset (`objoff_2E = $16`) | sonic3k.asm:7878 | `Sonic3kTitleCardManager::update()` (fade timer set during init, consumed by update loop) | Exists |
-| 62 | Dummy controller input: `Ctrl_1 = $7F00`, `Ctrl_2 = $7F00` (initial hold-right for intro sequences) — UNIQUE TO S3K | sonic3k.asm:7879-7880 | `AbstractLevelEventManager::setForcedInput()` | Needs wiring |
-| 63 | `andi.b #$7F,(Last_star_post_hit).w` (clear starpost high bit) | sonic3k.asm:7881 | Starpost high bit clear | Needs impl |
-| 64 | `bclr #7,(Game_mode).w` — clear pre-level flag, enter main loop | sonic3k.asm:7882 | Clear loading flag, enter main loop | Needs wrapper |
+| 54 | Set `Demo_timer = 1800` | sonic3k.asm:7888 | Demo timer init | Partial |
+| 55 | `LoadWaterPalette` (zone-specific water transition palettes, water palette data addresses) — NOTE: loaded AFTER first object frame, much later than S1/S2 | sonic3k.asm:7889 | Water palette loading | **Missing** (S3K water not implemented) |
+| 56 | Clear `Water_palette_line_2` buffer (again) | sonic3k.asm:7890 | Water palette buffer clear (second time) | **Missing** |
+| 57 | Unlock controls: `Ctrl_1_locked=0`, `Ctrl_2_locked=0` | sonic3k.asm:7891-7892 | `AbstractLevelEventManager::unlockPlayerInput()` (sets `AbstractPlayableSprite::setControlLocked(false)`) | Exists |
+| 58 | `GetDemoPtr` (load demo pointer data) | sonic3k.asm:7893 | Demo pointer load | Partial |
+| 59 | `PLCLoad_AnimalsAndExplosion` (load animal/explosion PLCs; skipped for AIZ intro w/o starpost, or zones >= `$E`) — NOTE: loaded AFTER object frame, not in initial PLC batch | sonic3k.asm:7896-7904 | `Sonic3kPlcLoader::parsePlc()` with animal/explosion PLC IDs | Needs impl |
+| 60 | Palette fade setup: set `Palette_fade_info=$202F`, call `Pal_FillBlack`, set fade timer `$16` | sonic3k.asm:7907-7909 | `FadeManager::startFadeFromBlack()` | Exists |
+| 61 | Title card fade timer: set title card fade offset (`objoff_2E = $16`) | sonic3k.asm:7910 | `Sonic3kTitleCardManager::update()` (fade timer set during init, consumed by update loop) | Exists |
+| 62 | Dummy controller input: `Ctrl_1 = $7F00`, `Ctrl_2 = $7F00` (initial hold-right for intro sequences) — UNIQUE TO S3K | sonic3k.asm:7911-7912 | `AbstractLevelEventManager::setForcedInput()` | Needs wiring |
+| 63 | `andi.b #$7F,(Last_star_post_hit).w` (clear starpost high bit) | sonic3k.asm:7913 | Starpost high bit clear | Needs impl |
+| 64 | `bclr #7,(Game_mode).w` — clear pre-level flag, enter main loop | sonic3k.asm:7914 | Clear loading flag, enter main loop | Needs wrapper |
 
 ### S3K Key Differences from S1/S2
 

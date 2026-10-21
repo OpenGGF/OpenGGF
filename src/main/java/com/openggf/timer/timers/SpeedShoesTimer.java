@@ -20,8 +20,8 @@ import com.openggf.timer.DisplayPhaseTimer;
  * {@code (20*60)/8 = 150} and decremented only on every 8th level frame —
  * {@code Sonic_ChkShoes} gates {@code subq.b} on
  * the low byte at {@code Level_frame_counter+1} being divisible by 8
- * (docs/skdisasm/sonic3k.asm:22108-22111; init
- * docs/skdisasm/sonic3k.asm:40858). Both expire after 1200 wall-clock frames.
+ * (docs/skdisasm/sonic3k.asm:22144-22147; init
+ * docs/skdisasm/sonic3k.asm:40898). Both expire after 1200 wall-clock frames.
  *
  * <p>This is a {@link DisplayPhaseTimer}: all three games run the countdown
  * from {@code Sonic_Display}, after the movement modes have been dispatched,
@@ -31,8 +31,8 @@ import com.openggf.timer.DisplayPhaseTimer;
  * {@code :190-192}, {@code bgm_Slowdown} at {@code :203-204});
  * S2 {@code docs/s2disasm/s2.asm:36307-36326} (restore at
  * {@code :36314-36316}, {@code MusID_SlowDown} at {@code :36325-36326});
- * S3K {@code docs/skdisasm/sonic3k.asm:22103-22127} (restore at
- * {@code :22115-22117}, {@code Change_Music_Tempo} at {@code :22126-22127}).
+ * S3K {@code docs/skdisasm/sonic3k.asm:22139-22163} (restore at
+ * {@code :22151-22153}, {@code Change_Music_Tempo} at {@code :22162-22163}).
  * Ticking it from the character's display step keeps the music command in the
  * same frame as the physics restore, so it reaches the same driver service the
  * ROM's queue write does.

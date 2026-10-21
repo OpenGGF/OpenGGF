@@ -14,8 +14,8 @@ import static org.mockito.Mockito.when;
 /**
  * Focused boundary tests for {@link GumballItemObjectInstance}'s machine-ejected
  * (GUMBALL_EJECT) motion path: the half-open {@code Check_PlayerInRange} proximity
- * box (ROM word_610F0, sonic3k.asm:127793-127794), the dock-eligibility gate
- * (ROM loc_60EE0/loc_60EFC, sonic3k.asm:127609-127624), and the removal of the
+ * box (ROM word_610F0, sonic3k.asm:127847-127848), the dock-eligibility gate
+ * (ROM loc_60EE0/loc_60EFC, sonic3k.asm:127663-127678), and the removal of the
  * engine-only "pushedPlayer" single-trigger latch for the self-polled path
  * (see class-level ROM citation on {@code update()} in GumballItemObjectInstance).
  * <p>

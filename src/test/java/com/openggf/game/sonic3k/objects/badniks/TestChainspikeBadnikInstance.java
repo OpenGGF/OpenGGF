@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * SKL {@code $A5}, {@code Obj_Chainspike} (sonic3k.asm:199132-199420).
+ * SKL {@code $A5}, {@code Obj_Chainspike} (sonic3k.asm:199239-199527).
  *
  * <p>Every expected number is a literal from the ROM listing, never a call back into the
  * object's own arithmetic.
@@ -38,7 +38,7 @@ class TestChainspikeBadnikInstance {
     }
 
     /**
-     * {@code loc_91C62} :199172-199179. {@code -$1200} and {@code $180}, both negated for a
+     * {@code loc_91C62} :199279-199286. {@code -$1200} and {@code $180}, both negated for a
      * {@code render_flags} bit 0 placement.
      */
     @Test
@@ -56,7 +56,7 @@ class TestChainspikeBadnikInstance {
 
     /**
      * {@code $2E(a0)} is zero out of the RAM wipe and {@code SetUp_ObjAttributes}
-     * (:41043-41052) never writes it, so {@code Obj_Wait}'s first {@code subq.w #1} already
+     * (:41083-41092) never writes it, so {@code Obj_Wait}'s first {@code subq.w #1} already
      * goes negative: the badnik charges on its first update in routine 2, with no rest first.
      */
     @Test
@@ -76,7 +76,7 @@ class TestChainspikeBadnikInstance {
     }
 
     /**
-     * {@code loc_91CC2} :199191-199204. The ramp steps {@code $C} towards zero every update and
+     * {@code loc_91CC2} :199298-199311. The ramp steps {@code $C} towards zero every update and
      * the new value is added to {@code x_vel}, so the corrections run
      * {@code $174, $168, $15C, ...} — largest first.
      */
@@ -101,7 +101,7 @@ class TestChainspikeBadnikInstance {
     }
 
     /**
-     * {@code smi d2 / tst.w $3E(a0) / bpl / not.b d2 / bne loc_91CF6} (:199197-199211). The
+     * {@code smi d2 / tst.w $3E(a0) / bpl / not.b d2 / bne loc_91CF6} (:199304-199318). The
      * charge ends on the update the velocity would cross zero; the rest is {@code (2*60)-1}
      * updates and both stored words are negated so the next charge goes the other way.
      *
@@ -130,7 +130,7 @@ class TestChainspikeBadnikInstance {
         }
     }
 
-    /** {@code ChildObjDat_91EEC} :199412-199420: four children at the listed offsets. */
+    /** {@code ChildObjDat_91EEC} :199519-199527: four children at the listed offsets. */
     @Test
     void theFourChildrenSitAtTheRomsOffsets() {
         HeadlessTestFixture fixture = fixture();
@@ -141,7 +141,7 @@ class TestChainspikeBadnikInstance {
             int[][] offsets = { {0, 0x14}, {0, -0x14}, {0x14, 0}, {-0x14, 0} };
             for (int index = 0; index < children.size(); index++) {
                 var child = children.get(index);
-                // Refresh_ChildPosition (:199288) runs in the child's own update, so the
+                // Refresh_ChildPosition (:199395) runs in the child's own update, so the
                 // offsets are only on the live spawn once each child has run once.
                 child.update(0, fixture.sprite());
                 assertEquals(index, child.indexForTest(), "child order");
@@ -154,8 +154,8 @@ class TestChainspikeBadnikInstance {
     }
 
     /**
-     * {@code word_91EE6} (:199410-199411) gives the spikes {@code $98}, and {@code loc_91E5A}
-     * (:199336) gives the fixed pair the same: every child is a hurt box the player cannot
+     * {@code word_91EE6} (:199517-199518) gives the spikes {@code $98}, and {@code loc_91E5A}
+     * (:199443) gives the fixed pair the same: every child is a hurt box the player cannot
      * break. Only the body carries {@code ObjDat_Chainspike}'s destructible {@code $1A}.
      */
     @Test
@@ -175,7 +175,7 @@ class TestChainspikeBadnikInstance {
     }
 
     /**
-     * {@code loc_91D8C} :199289-199302. The parent's Y flip picks which spike extends — the
+     * {@code loc_91D8C} :199396-199409. The parent's Y flip picks which spike extends — the
      * lower one when it is unflipped — and the other never does. The extension is {@code 8} px
      * an update for {@code $17} updates.
      */
@@ -198,10 +198,10 @@ class TestChainspikeBadnikInstance {
 
             lower.update(1, sprite);
             assertEquals(8, lower.extendOffsetForTest(), "add.w y_vel(a0),d0 (:199308-199309)");
-            // jsr (ObjCheckFloorDist) / tst.w d1 / bmi loc_91E46 (:199322-199324) with
-            // y_radius = height_pixels = $80 (word_91EE6, :199411): the spike probes 128 px
+            // jsr (ObjCheckFloorDist) / tst.w d1 / bmi loc_91E46 (:199429-199431) with
+            // y_radius = height_pixels = $80 (word_91EE6, :199518): the spike probes 128 px
             // ahead, so it finds the act's floor on its first outbound update and rebounds at
-            // a quarter of its speed, move.w y_vel(a0),d0 / asr.w #2 / neg.w (:199339-199342).
+            // a quarter of its speed, move.w y_vel(a0),d0 / asr.w #2 / neg.w (:199446-199449).
             lower.update(2, sprite);
             assertEquals(-2, lower.extendVelocityForTest(), "-(8 >> 2)");
             assertEquals(6, lower.extendOffsetForTest(), "and it starts back up the same update");
@@ -211,7 +211,7 @@ class TestChainspikeBadnikInstance {
     }
 
     /**
-     * {@code sub_91EB0} :199383-199401 over {@code RawAni_91ED4} ({@code 7,6,5,4,2}) in
+     * {@code sub_91EB0} :199490-199508 over {@code RawAni_91ED4} ({@code 7,6,5,4,2}) in
      * {@code moveq #$18,d3} steps, compared with {@code bls}.
      */
     @Test
@@ -227,7 +227,7 @@ class TestChainspikeBadnikInstance {
     }
 
     /**
-     * {@code sub_91E7E} :199355-199356: {@code cmpi.w #$10,d2 / bhs} — a player has to be
+     * {@code sub_91E7E} :199462-199463: {@code cmpi.w #$10,d2 / bhs} — a player has to be
      * within sixteen pixels horizontally, which is far closer than the Spikebonker's
      * {@code $60}.
      */

@@ -3,7 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
-/** {@code sub_82C28} (sonic3k.asm:175310-175336) for the phase-2 bombs and rockets. */
+/** {@code sub_82C28} (sonic3k.asm:175401-175427) for the phase-2 bombs and rockets. */
 final class DdzEndBossHitSupport {
     /** {@code word_82C62}. */
     private static final int[] BOX = {-0x10, 0x20, -0x10, 0x20};

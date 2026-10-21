@@ -18,13 +18,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * When the S3K {@code Reverse_gravity_flag} ($FFFFF7C6) survives and when it does not.
  *
  * <p>Nothing in the ROM clears the byte by name except {@code Obj_DEZGravitySwap}
- * ({@code sub_49228}, sonic3k.asm:95511 and :95536) and the persistent clearer object
- * the act 2 boss spawns at defeat ({@code loc_7FC3E}, :170746). A <em>level load</em>
+ * ({@code sub_49228}, sonic3k.asm:95557 and :95582) and the persistent clearer object
+ * the act 2 boss spawns at defeat ({@code loc_7FC3E}, :170837). A <em>level load</em>
  * clears it only as a side effect of the RAM wipe: {@code clearRAM Tails_CPU_interact,$100}
- * (:7621) covers $F700-$F7FF, and that wipe runs for a normal load, a death restart and
- * {@code StartNewLevel} (and again in {@code Title_Screen}, :5415).
+ * (:7653) covers $F700-$F7FF, and that wipe runs for a normal load, a death restart and
+ * {@code StartNewLevel} (and again in {@code Title_Screen}, :5447).
  *
- * <p>The seamless act change does <em>not</em> run it. {@code loc_593EC} (:118724) calls
+ * <p>The seamless act change does <em>not</em> run it. {@code loc_593EC} (:118770) calls
  * {@code Load_Level} and {@code LoadSolids} only, so gravity carries from Death Egg act 1
  * into act 2 unchanged. The engine reaches both paths through
  * {@code GameStateManager.resetForLevel()}, so the act-transition owner has to put the

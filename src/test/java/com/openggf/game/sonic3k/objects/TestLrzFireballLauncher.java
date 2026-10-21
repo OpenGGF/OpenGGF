@@ -18,8 +18,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code Obj_LRZFireballLauncher} (sonic3k.asm:88151-88215, ROM {@code $42B4C}) and the fireball it
- * allocates ({@code loc_42C80}, :88198-88211).
+ * {@code Obj_LRZFireballLauncher} (sonic3k.asm:88197-88261, ROM {@code $42B4C}) and the fireball it
+ * allocates ({@code loc_42C80}, :88244-88257).
  *
  * <p>The eleven subtypes enumerated below are the ones Lava Reef's twenty-seven placements actually
  * carry, read out of {@code Levels/LRZ/Object Pos/1.bin}.
@@ -83,7 +83,7 @@ class TestLrzFireballLauncher {
         assertEquals(shot.captureRewindState(context), restored.captureRewindState(context));
     }
 
-    /** {@code moveq #0,d0 / move.b subtype(a0),d0 / lsl.w #2,d0} (sonic3k.asm:88159-88162). */
+    /** {@code moveq #0,d0 / move.b subtype(a0),d0 / lsl.w #2,d0} (sonic3k.asm:88205-88208). */
     @Test
     void thePeriodIsTheSubtypeTimesFour() {
         int[] placed = {0x10, 0x14, 0x16, 0x18, 0x1A, 0x1C, 0x20, 0x24, 0x28, 0x30, 0x38};
@@ -94,7 +94,7 @@ class TestLrzFireballLauncher {
     }
 
     /**
-     * {@code subq.w #1,$2E(a0) / bpl} then {@code move.w $30(a0),$2E(a0)} (:88166-88168). The
+     * {@code subq.w #1,$2E(a0) / bpl} then {@code move.w $30(a0),$2E(a0)} (:88212-88214). The
      * counter starts at the zero of a cleared slot, so the first frame already reloads it, and the
      * gate on {@code render_flags} bit 7 means that first frame never fires.
      */
@@ -112,7 +112,7 @@ class TestLrzFireballLauncher {
         assertEquals(0x3F, launcher.countdown(), "then one a frame");
     }
 
-    /** {@code jsr (AllocateObjectAfterCurrent)} on the reload frame (:88170-88193). */
+    /** {@code jsr (AllocateObjectAfterCurrent)} on the reload frame (:88216-88239). */
     @Test
     void aShotIsFiredEveryPeriodOnceTheLauncherHasBeenDrawn() {
         Harness harness = Harness.create();
@@ -130,7 +130,7 @@ class TestLrzFireballLauncher {
         assertEquals(0x200, shots.get(0).xVelocity(), "move.w #$200,x_vel(a1)");
     }
 
-    /** {@code btst #0,status(a0)} (:88189-88191): the X-flip mirrors offset and velocity. */
+    /** {@code btst #0,status(a0)} (:88235-88237): the X-flip mirrors offset and velocity. */
     @Test
     void aMirroredLauncherFiresLeftFromTheOtherSide() {
         Harness harness = Harness.create();
@@ -146,8 +146,8 @@ class TestLrzFireballLauncher {
     }
 
     /**
-     * {@code jsr (MoveSprite2)} (:88208): {@code x_vel} only, no gravity and no {@code y_vel}. The
-     * routine does {@code ext.l / lsl.l #8 / add.l} (sonic3k.asm:36054-36057), so {@code $200} is
+     * {@code jsr (MoveSprite2)} (:88254): {@code x_vel} only, no gravity and no {@code y_vel}. The
+     * routine does {@code ext.l / lsl.l #8 / add.l} (sonic3k.asm:36094-36097), so {@code $200} is
      * two pixels a frame; adding the raw word to a 16.16 position instead moves 1/256 of that.
      */
     @Test
@@ -161,7 +161,7 @@ class TestLrzFireballLauncher {
         assertEquals(BASE_Y, shot.getCentreY(), "y never moves");
     }
 
-    /** {@code move.b #$9B,collision_flags(a1)} (sonic3k.asm:88183). */
+    /** {@code move.b #$9B,collision_flags(a1)} (sonic3k.asm:88229). */
     @Test
     void theShotIsHarmful() {
         Harness harness = Harness.create();

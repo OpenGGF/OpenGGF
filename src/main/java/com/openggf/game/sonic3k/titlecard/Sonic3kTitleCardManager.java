@@ -62,7 +62,7 @@ public class Sonic3kTitleCardManager
     private static final int SLIDE_SPEED_OUT = 32;
 
     // Display hold duration (frames). ROM: Obj_TitleCardInit stores 90; Level/loc_64DC
-    // overwrites $2E with $16 (22) for LevelLoop (sonic3k.asm:62162, 7876-7878),
+    // overwrites $2E with $16 (22) for LevelLoop (sonic3k.asm:62202, 7908-7910),
     // synchronizing the hold with Palette_fade_timer.
     private static final int DISPLAY_HOLD_FRAMES = 90;
     private static final int FRESH_LEVEL_TRANSITION_HOLD_FRAMES = 22;
@@ -146,7 +146,7 @@ public class Sonic3kTitleCardManager
     private boolean preloadedActCompletionPrepared;
     private boolean bonusMode;  // 2-element "BONUS STAGE" layout
 
-    // Bonus mode element definitions (ObjArray_TtlCardBonus, sonic3k.asm line 62482)
+    // Bonus mode element definitions (ObjArray_TtlCardBonus, sonic3k.asm line 62522)
     // VDP coords converted to screen coords (subtract 128)
     private static final int BONUS_ELEMENT_COUNT = 2;
     private static final int BONUS_ELEM_BONUS = 0;
@@ -448,7 +448,7 @@ public class Sonic3kTitleCardManager
      * {@code Restart_level_flag} reload, a bonus-stage return, a direct boot --
      * installs this owner at loc_62B6 and runs the same loc_62CC wait,
      * {@code LoadLevelLoadBlock} and loc_64DC hold before LevelLoop
-     * (sonic3k.asm:7730-7878). A zone request differs only in also holding its
+     * (sonic3k.asm:7762-7910). A zone request differs only in also holding its
      * destination players, which LevelManager's fresh boundary owns.
      */
     @Override
@@ -463,7 +463,7 @@ public class Sonic3kTitleCardManager
 
     private void initializeLevelRoutineTitle(int zoneIndex, int actIndex) {
         // Obj_TitleCardInit stores 90, then Level overwrites the same owner
-        // with #$16 just before LevelLoop (sonic3k.asm:62162, 7878).
+        // with #$16 just before LevelLoop (sonic3k.asm:62202, 7910).
         // Obj_TitleCardInit queues its archives on every Level: entry even
         // when this process already retains decoded art from the same act.
         artLoaded = false;
@@ -617,7 +617,7 @@ public class Sonic3kTitleCardManager
     /**
      * Models the owner {@code Level:} installs when the presentation is omitted.
      *
-     * <p>{@code Obj_TitleCardInit} (docs/skdisasm/sonic3k.asm:62121-62164)
+     * <p>{@code Obj_TitleCardInit} (docs/skdisasm/sonic3k.asm:62161-62204)
      * queues four archives — RedAct {@code $500}, Zone {@code $510}, act number
      * {@code $53D} and the zone graphic {@code $54D} — on its first dispatch,
      * before anything is drawn. {@code Level:} installs the owner at 7735 and
@@ -677,7 +677,7 @@ public class Sonic3kTitleCardManager
      * One dispatch of the omitted owner: the locked loop's iteration retires
      * whatever the module queue has made ready, which is what
      * {@code Obj_TitleCardCreate}'s {@code tst.b (Kos_modules_left).w} gate
-     * (docs/skdisasm/sonic3k.asm:62169-62171) waits on before the owner
+     * (docs/skdisasm/sonic3k.asm:62209-62211) waits on before the owner
      * advances. Renders nothing.
      */
     @Override
@@ -703,10 +703,10 @@ public class Sonic3kTitleCardManager
         omittedFreshLevelOwnerActive = false;
         // Retiring here is this engine's form of Kos_modules_left reaching
         // zero, which is the gate Obj_TitleCardCreate holds on
-        // (docs/skdisasm/sonic3k.asm:62169-62171). Once it clears the ROM
-        // builds the card's pieces (:62212), Obj_TitleCardWait clears
-        // objoff_48 (:62244), loc_62CC exits and Level: runs
-        // LoadLevelLoadBlock (:7761) -- so the destination's terrain art is
+        // (docs/skdisasm/sonic3k.asm:62209-62211). Once it clears the ROM
+        // builds the card's pieces (:62252), Obj_TitleCardWait clears
+        // objoff_48 (:62284), loc_62CC exits and Level: runs
+        // LoadLevelLoadBlock (:7793) -- so the destination's terrain art is
         // queued a few dispatches later, still inside the transition window.
         // Publishing it from the destination's own frames instead put it past
         // the segment seam, where the parents could never meet the completions
@@ -714,7 +714,7 @@ public class Sonic3kTitleCardManager
         // run, blocking every later module behind them.
         //
         // Known-incomplete: loc_62CC also holds while Nem_decomp_queue is
-        // non-empty (:7747-7748), and S3K has no per-frame Nemesis drain
+        // non-empty (:7779-7780), and S3K has no per-frame Nemesis drain
         // (NemesisPlcServiceQueue has only S1/S2 consumers), so the engine
         // leaves the loop earlier within the window than the ROM does. The
         // parents simply wait pending until their recorded completions arrive,
@@ -878,7 +878,7 @@ public class Sonic3kTitleCardManager
      * Uses 2 horizontal elements (frames 19/20) instead of the normal 4-element layout.
      * Both elements have exit priority 1 (exit simultaneously).
      *
-     * <p>ROM reference: ObjArray_TtlCardBonus (sonic3k.asm line 62482). A bonus
+     * <p>ROM reference: ObjArray_TtlCardBonus (sonic3k.asm line 62522). A bonus
      * stage is entered through the same {@code Level:} routine as any zone, so
      * this owner takes the same loc_62CC gates and loc_64DC hold.
      */
@@ -996,7 +996,7 @@ public class Sonic3kTitleCardManager
 
     /**
      * Whether the hold is the one {@code Level/loc_64DC} armed for LevelLoop
-     * (sonic3k.asm:7874-7878): {@code Pal_FillBlack} over
+     * (sonic3k.asm:7906-7910): {@code Pal_FillBlack} over
      * {@code Palette_fade_info = $202F}, then {@code Palette_fade_timer} and
      * this owner's {@code $2E} both set to {@code $16}. Every Level-routine
      * owner, the bonus card included, receives that hold at its handoff; an
@@ -1056,7 +1056,7 @@ public class Sonic3kTitleCardManager
                 && resetLevelGamestateCountdown == com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE
                 && isExternalInLevelWaitReady()) {
             // Obj_TitleCardWait clears Timer/Ring_count on the pass after the children
-            // stop publishing movement (sonic3k.asm:62220-62235).
+            // stop publishing movement (sonic3k.asm:62260-62275).
             resetLevelGamestateCountdown = 0;
             consumeLevelGamestateResetRequest();
             // loc_2D810 clears global Timer/Ring_count, not the owner's $2E.
@@ -1215,7 +1215,7 @@ public class Sonic3kTitleCardManager
     /**
      * {@code Render_Sprites} emits {@code Render_HUD} (and the rings) ahead of
      * every object priority bucket once {@code Level_started_flag} is set
-     * (sonic3k.asm:36326-36329), and earlier sprite-table entries are drawn in
+     * (sonic3k.asm:36366-36369), and earlier sprite-table entries are drawn in
      * front, so the HUD covers the card's pieces while it holds over the running
      * level. The native Knuckles HPZ entry (campaign-visual {@code hpz-entry}
      * seq131-152) shows the score, time and ring digits over the red banner.
@@ -1422,13 +1422,13 @@ public class Sonic3kTitleCardManager
 
         if (allExited) {
             if (inLevelGameplayOwnedExternally) return;
-            // Obj_TitleCardWait2 (sonic3k.asm:62249-62262) spins only while
+            // Obj_TitleCardWait2 (sonic3k.asm:62289-62302) spins only while
             // $30(a0) -- the count of card children still on screen -- is
             // non-zero. Each child clears itself out of that count from a
             // higher SST slot (Obj_TitleCardCreate uses AllocateObjectAfterCurrent,
-            // sonic3k.asm:62172; Obj_TitleCardRedBanner decrements $30(a1) at
-            // :62311), so the owner cannot see the drained counter until its
-            // following dispatch. On that dispatch loc_2D86E (:62263-62302)
+            // sonic3k.asm:62212; Obj_TitleCardRedBanner decrements $30(a1) at
+            // :62351), so the owner cannot see the drained counter until its
+            // following dispatch. On that dispatch loc_2D86E (:62303-62342)
             // falls straight through to LoadEnemyArt and
             // Delete_Current_Sprite with no further wait, so exactly one
             // dispatch separates the last child leaving from retirement --
@@ -1476,7 +1476,7 @@ public class Sonic3kTitleCardManager
             if (inLevelMode && !inLevelGameplayOwnedExternally) {
                 // ROM Obj_TitleCardWait2 sets End_of_level_flag only after the
                 // in-level title-card timer has elapsed and its child objects
-                // have disappeared (sonic3k.asm:62244-62279).
+                // have disappeared (sonic3k.asm:62284-62319).
                 GameServices.gameState().setEndOfLevelFlag(true);
                 releasePreloadedActCamera();
             }

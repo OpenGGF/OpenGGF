@@ -17,7 +17,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code loc_659CC} / {@code loc_65A30} / {@code loc_65A4A} (sonic3k.asm:133751-133812):
+ * ROM {@code loc_659CC} / {@code loc_65A30} / {@code loc_65A4A} (sonic3k.asm:133808-133869):
  * the small Death Egg that rises out of Sky Sanctuary while cutscene Knuckles watches.
  *
  * <p>{@code CutsceneKnux_SSZ} routine 4 creates it through {@code ChildObjDat_665F6}. It starts at
@@ -175,7 +175,7 @@ public final class SszDeathEggSmallObjectInstance extends AbstractObjectInstance
         } catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
     }
 
-    /** {@code MoveSprite_SSZBGAdjust} (sonic3k.asm:134355-134371). */
+    /** {@code MoveSprite_SSZBGAdjust} (sonic3k.asm:134412-134428). */
     private void moveSpriteSszBgAdjust(SszZoneRuntimeState state) {
         int cameraDelta = state == null ? 0 : state.backgroundCameraDelta();
         x = (x + cameraDelta) & 0xFFFF;

@@ -13,8 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code Obj_LRZSpikeBall} (sonic3k.asm:88838-89070, ROM {@code $436E8}) and the chip
- * {@code sub_439EC} throws (:88998-89050).
+ * {@code Obj_LRZSpikeBall} (sonic3k.asm:88884-89116, ROM {@code $436E8}) and the chip
+ * {@code sub_439EC} throws (:89044-89096).
  *
  * <p>The four X positions asserted below are ROM sine bytes, not engine values:
  * {@code GetSineCosine} returns {@code cos(a) = sin(a + $40)} and {@code sine.bin} holds
@@ -34,7 +34,7 @@ class TestLrzSpikeBall {
         AbstractObjectInstance.resetCameraBoundsForTests();
     }
 
-    /** {@code tst.b subtype(a0) / beq} then {@code ori.w #high_priority} and {@code $8F} (:88849-88853). */
+    /** {@code tst.b subtype(a0) / beq} then {@code ori.w #high_priority} and {@code $8F} (:88895-88899). */
     @Test
     void subtypeZeroIsHarmfulAndHighPriorityFromTheFirstFrame() {
         LrzSpikeBallObjectInstance ball = ball(0x00);
@@ -47,7 +47,7 @@ class TestLrzSpikeBall {
     }
 
     /**
-     * {@code loc_4397E} (:88979-88983) with {@code subq.b #2,angle(a0)} (:89016): the boulder is
+     * {@code loc_4397E} (:89025-89029) with {@code subq.b #2,angle(a0)} (:89062): the boulder is
      * not static -- it grinds a full 128-pixel sweep on a 128-frame cycle.
      */
     @Test
@@ -71,7 +71,7 @@ class TestLrzSpikeBall {
     }
 
     /**
-     * {@code loc_437FE} (:88863-88870): {@code collision_flags} and the priority bit are cleared
+     * {@code loc_437FE} (:88909-88916): {@code collision_flags} and the priority bit are cleared
      * every frame and restored only while {@code tst.b angle(a0)} is negative.
      */
     @Test
@@ -98,7 +98,7 @@ class TestLrzSpikeBall {
     }
 
     /**
-     * {@code loc_43830} (:88872-88884). The window is {@code (y - $46) + $40 < $80} unsigned and
+     * {@code loc_43830} (:88918-88930). The window is {@code (y - $46) + $40 < $80} unsigned and
      * the {@code bcc} after {@code sub.w $44(a0),d0} arms only for a player strictly LEFT of the
      * anchor.
      */
@@ -126,7 +126,7 @@ class TestLrzSpikeBall {
     }
 
     /**
-     * {@code loc_4385C} (:88886-88891): the break-loose compare is against the subtype and uses
+     * {@code loc_4385C} (:88932-88937): the break-loose compare is against the subtype and uses
      * the angle BEFORE the frame's decrement, so a {@code $C0} boulder armed from the start breaks
      * loose on update 33 and not before.
      */
@@ -148,7 +148,7 @@ class TestLrzSpikeBall {
         assertEquals(0x8F, ball.getCollisionFlags(), "$C0 is negative, so it broke loose harmful");
     }
 
-    /** An unarmed boulder passes its subtype angle without breaking loose (:88886-88887). */
+    /** An unarmed boulder passes its subtype angle without breaking loose (:88932-88933). */
     @Test
     void anUnarmedBoulderSweepsPastItsSubtypeAngle() {
         LrzSpikeBallObjectInstance ball = ball(0xC0);
@@ -159,7 +159,7 @@ class TestLrzSpikeBall {
         assertFalse(ball.rolling(), "tst.b $30(a0) / beq gates the whole transition");
     }
 
-    /** {@code subq.b #1,anim_frame_timer / move.b #3 / addq.b #1,mapping_frame} (:88948-88956). */
+    /** {@code subq.b #1,anim_frame_timer / move.b #3 / addq.b #1,mapping_frame} (:88994-89002). */
     @Test
     void theAnimationAdvancesEveryFourthFrameAndWrapsAtThree() {
         LrzSpikeBallObjectInstance ball = ball(0x00);
@@ -172,8 +172,8 @@ class TestLrzSpikeBall {
     }
 
     /**
-     * {@code loc_1B666} (sonic3k.asm:37372-37377) reads the value the routine hands it, which is
-     * {@code $44(a0)} (:89017), not the swung {@code x_pos}.
+     * {@code loc_1B666} (sonic3k.asm:37412-37417) reads the value the routine hands it, which is
+     * {@code $44(a0)} (:89063), not the swung {@code x_pos}.
      */
     @Test
     void theUnloadTestUsesThePlacedXAndNotTheSwungOne() {
@@ -187,7 +187,7 @@ class TestLrzSpikeBall {
     }
 
     /**
-     * {@code loc_43A6C} (:89059-89070): a chip animates four frames under {@code MoveSprite}'s
+     * {@code loc_43A6C} (:89105-89116): a chip animates four frames under {@code MoveSprite}'s
      * {@code $38} gravity and deletes itself the first frame it was not drawn.
      */
     @Test

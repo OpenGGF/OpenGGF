@@ -180,7 +180,7 @@ class TestLrzMinibossHitPath {
 
     /**
      * The box's own size, from the other side. {@code Touch_Sizes} entry 6 is
-     * {@code dc.b $10,$10} (sonic3k.asm:20713-20720), so the drill is hittable 16 px either side
+     * {@code dc.b $10,$10} (sonic3k.asm:20749-20756), so the drill is hittable 16 px either side
      * of {@code x_pos} and 16 px above and below {@code y_pos} -- <b>not</b> across the
      * {@code $33} half-width of {@code loc_7871A}'s {@code SolidObjectFull}, which is the box the
      * player stands on. A player 40 px left of the drill is outside the touch box and inside the
