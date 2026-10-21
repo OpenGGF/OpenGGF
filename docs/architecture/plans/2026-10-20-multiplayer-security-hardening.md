@@ -131,7 +131,7 @@ core racing handshake/client, or standalone master files.
   compatibility mistakes, and tests that pass without exercising the exploit.
 - [x] Run focused regression selectors, then inspect and run the change-based smoke
   selection from the pinned base `ff5088abf5cce5878f143817f03c941805f11880`.
-- [ ] Fast-forward/reconcile the main `develop` checkout without switching it,
+- [x] Fast-forward/reconcile the main `develop` checkout without switching it,
   verify the integrated tree, push only `develop`, and remove only fully merged
   task-owned worktrees/branches.
 
@@ -172,6 +172,11 @@ Validation on reconciled head `00c20c37b`:
   opt-in measurement/capture/native-graphics checks or documented route
   assumptions; all configured ROM paths were present. The inspected runner
   diagnostics were acknowledged and deleted.
+
+Delivery completed in merge `f70db2eb0`: the integrated tree was verified
+against the reviewed candidate and pushed to `origin/develop`. All four clean,
+fully merged task worktrees and local branches were removed, while the main
+checkout's pre-existing modified submodules and untracked files were preserved.
 
 ## Retained security boundaries
 
