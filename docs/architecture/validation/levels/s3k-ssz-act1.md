@@ -4543,3 +4543,11 @@ ONE freshRight+A15024 releases the parent, then FIRST cachedXgate15096(4611,1186
 73Right+A then32Left/P2Up reach FIRST public free-ground15128: P1(4749,1580),VX733/VY0/G733,airfalse/jumpfalse/riderNULL/unhurt/live; both62rings/3lives. P2ground/free/NORMAL/manual/flag0fuel0/contextNONE and bound world/pair/focus/managers/LEVEL intact.
 105 new/15129 total, ONE Aedge, zero new map queries/neutralsettle/extra groundbrake/groundjump/onward; STOP immediately with actual momentum. Same-JVM finite-pad/all-row and independent full script/ZIP/NINE-original-file proofs agree; **0 JUnit/skips N/A**.
 Moving public inlet only; actual terrain receiver/stored-sensor freshness, stable support, future jump/hazard clearance/physics/native/whole-route correctness UNKNOWN. Expected46/runtime/POM/maintained data unchanged. [Facts, hashes, command, timing and limits](../../plans/2026-10-13-s3k-playable-completion.md#r23-earlier-ramp-braking-reaches-first-moving-ground--2026-10-21).
+
+
+## R24 earlier-ground jump public landing — 2026-10-21
+
+At exact `0ce22f630`, ONE cold ordinary CLI preserves all15129 actualR23 inputs/inlet and matches157 available gates: unchanged52 original available-field comparators plus105 complete retained R23 R/Support/Family pairs. No oldR21/R22 sameindex/input substitution or missing-field reconstruction.
+ONE freshRight+A15129 then sameheld/P2Up for37 new inputs reaches FIRST free-ground15165: P1(4858,1580),VX240/VY0/G240,airfalse/jumpfalse/free/riderNULL/unhurt/live; both62rings/3lives. P2ground/free/NORMAL/manual/flag0fuel0/contextNONE and actual world/pair/focus/managers/LEVEL intact.
+15166 total, exactlyONE Aedge; no new actual rider, hurt/ring/lifeloss, release/repress/secondjump/brake/settle/onward. Same-JVM finite-pad/all-row and independent full script/ZIP/TEN-original-file proofs agree; **0 JUnit/skips N/A**; STOP immediately.
+Only the declared post-nominal-spike public landing box is admitted. Actual hazard contact/protection/avoidance, terrain receiver/stored-sensor freshness, stable ground, future route/native/physics correctness remain UNKNOWN; expected46/runtime/POM/maintained data unchanged. [Facts, exact limits, hashes, command and timing](../../plans/2026-10-13-s3k-playable-completion.md#r24-distinct-earlier-ground-jump-reaches-the-public-landing-box--2026-10-21).
