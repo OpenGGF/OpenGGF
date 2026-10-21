@@ -862,3 +862,42 @@ classes/roundtrip validation copy were consumed before the local docs commit;
 useful actual inputs/private preimages/compact facts remain external. No second
 attempt, native/broad/maintained-route run, push or integration followed. Root
 owns review and any later controller or qualification scope.
+
+
+### Knuckles original remaining Right-tail question R11 — 2026-10-21
+
+One cold lifecycle at exactd62bd0796430a7f93026898199e13fa34712b157 replayed the
+SAME fixed43115-row proposal, preserving all42812 actually executed R10 rows and
+earlier R9/R8/R4/Act1 prefixes byte-for-byte. Production author/loader proof of
+all43115 records/masks/booleans/payloads/finite pad alphabet/JUMP0x10 preceded
+boot in this same JVM. All64 checkpoints42511/42634/42734/42811 matched;
+world/Level/OM/P1/focus/solo-roster/LEVEL7/1/pending/fade/control guards qualified
+the original ordinary landing. One public64 projection followed each normal
+step/draw and its retained values supplied scalar decisions.
+
+Of the only303 authorized remaining fixed Right-only/P2neutral inputs,44 ran:
+42812..42855. Every new row is grounded/unhurt/alive/free,1 ring/3 lives,
+onObject=false and actual rider none. At42854, centre10781/2414 is below the
+threshold;42855 is the first X>10784 boundary at10787/2415, sub12597/8748,
+velocity1535/151/ground1548, angle4, movement active. The stale Spikes latch is
+retained separately. Small X backsteps42829/42836 are actual public observations;
+the selected contact/receiver is UNKNOWN.
+
+The bounded post-wall-coordinate question is reached. Individual wall contact/
+admission/destruction, terrain/mushroom receiver, invulnerability/native correctness
+and future safe passage remain unproved. No new owner/predicate/callback query,
+controller timing, runtime threshold or maintained oracle/data/window change was
+made. No whole-act/boss/FBZ/history/rewind qualification follows. R10 and every
+older result, unknown and deadline stay immutable.
+
+Session52144 exited0 without command-metadata errors:64s reported queue wait,
+01:25 Maven,22.506s boot/prefix/tail;0 JUnit/skips N/A. Exactly42856 total
+step/draw pairs ran, leaving259 fixed rows unexecuted. The same JVM checked the
+actual executed script/BK2 prefix against every original row after stopping.
+The [R11 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-original-remaining-right-tail-question-r11--2026-10-21)
+pins inputs/proofs/source/environment/identity/command, complete selected rows,
+explicit16:44 R11 deadline and one durably consumed budget. Useful actual inputs/
+private preimages/compact facts remain external; raw diagnostics/classes/tmp and
+the roundtrip validation copy were consumed under owned leases before commit.
+No retry, extra policy/native/broad/maintained-route run, push, integration or
+foreign cleanup followed. Root owns any later continuation or adaptation.
