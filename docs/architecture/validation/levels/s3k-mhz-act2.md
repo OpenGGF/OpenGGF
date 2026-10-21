@@ -998,3 +998,15 @@ Same-JVM preboot/post-stop production author/loader and independent script/BK2 e
 Session54238 exited0,0 JUnit/skips N/A:reported queue0s/Maven01:22/AUTHOR22.244s including product proof; engine-only/tail-only unmeasured, no original/metadata exception.
 The [R19 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-current-hurt-recoveryonward-ordinary-question-r19--2026-10-21) pins policy/source/products/command/20:44 workload/20:54 cleanup; owned raw outputs/classes/tmp/validation copies were consumed under leases, target absent.
 Useful exact inputs/private source/preimages/all73 ordered rows/compact facts remain external. Prior refs/native/config/maintained runtime/data/oracles/windows are preserved; Root reviews, no push/integration/automatic next workload.
+
+### Knuckles lower-recovery jump-to-ledge ordinary question R20 — 2026-10-21
+
+At exactbf2937e2, all43168 R19 prefix pads and317 unique complete64 checkpoints matched; [R19/R17 setup](#knuckles-current-hurt-recoveryonward-ordinary-question-r19--2026-10-21) and actual src/POM are unchanged. No new preliminary Right/activity row or inlet-anchor gate was used.
+Immediate freshRA43168 actually jumped; cachedVY20 at43191 selected oneR release43192/VY76 and oneRA repress43193/actualglide1. Firstclimb4 at43200 was10869/2371/property3/mapB7/zeroV;43201 switched once toUp.
+All122 state4 anchors held;18 state5 rows43322..43339 allowedX!=rawxsub. First5→0 ground exit43340 was10880/2220,air/jumpfalse/default9x19/zero X/Y/G,anim5/map86,1 ring/3 lives/free scalar controls/no actual rider.
+173 new/43341 total normal step/draw pairs ran:actual24RA,1R,8RA,140Up/P2neutral. Rings gained0→1 at43204 without receiver attribution; no new public hurt/death, life loss or ring decrease. All original new-boundary guards passed.
+Stale Spikes is separate; support/contact/protection/fluid/reverse/invulnerability/native cause remain UNKNOWN. Centre matches R17, but rawysub/history differ; no further spatial frontier, safe onward or old-tail qualification follows.
+Same-JVM preboot/post-stop production author/loader and independent script/BK2 entire-prefix/all-row/payload/P2/JUMP0x10 proofs passed; all173 complete new rows/errors/proofs/metadata were read, no retry or later walking.
+Session24284 exited0,0 JUnit/skips N/A:reported queue3s/Maven01:23/AUTHOR21.600s including product proof; engine-only/tail-only unmeasured, no original/metadata exception.
+The [R20 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-lower-recovery-jump-to-ledge-ordinary-question-r20--2026-10-21) pins policy/source/products/command/20:54 workload/21:04 cleanup; owned raw outputs/classes/tmp/validation copies were consumed under leases, target absent.
+Useful exact inputs/private source/preimages/all173 ordered rows/compact facts remain external. Prior refs/native/config/maintained runtime/data/oracles/windows are preserved; Root reviews, no push/integration/automatic next workload.
