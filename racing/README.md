@@ -111,6 +111,14 @@ Failure context identifies the seed, state and operation. Existing TLS binding,
 HTTP admission, slow-consumer, client-timeout and parser-fuzz tests complement these
 cases; this is bounded coverage, not proof against every possible attack.
 
+`TestGuestTunnelBounds` covers fallback text and binary in both directions against
+the receiver's reported outbound queue: above 1 MiB, the affected guest closes and
+its tunnel is removed with one host notification; exactly 1 MiB still forwards.
+The host's shared master link and room registrations survive, including unrelated
+tunnels and replacement admission after the queue drains. This telemetry check
+does not bound cross-event-loop tasks, lifecycle notices or global socket scale;
+see the [network contract](../docs/architecture/next-line-subsystems.md).
+
 `socket-stress` runs production clients and servers on owned local endpoints. It
 checks simultaneous room admission, a rejected extra player, identity/slot isolation,
 ghost delivery, accepted finishes and standings, reconnection and server shutdown.

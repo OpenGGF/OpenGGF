@@ -166,6 +166,17 @@ channel and should not accept an invite edited by an untrusted party.
 This required wire-field change uses protocol version 2; version 1 clients and
 servers cannot mix on control connections.
 
+Direct-room fallback tunnels check the receiving `HubConnection.queuedBytes()`
+before forwarding either text or binary in either direction. Above the shared
+`GhostHub.BP_DISCONNECT_BYTES` limit of 1 MiB, the router removes and closes only
+the affected guest and sends its usual single guest-close notification to the host.
+Exactly 1 MiB remains admissible, matching the hub's slow-consumer cutoff. A slow
+host retains its shared master link, room registrations and other tunnels, so
+traffic can resume when its queue drains and replacement guests can attach. This
+is a check of reported transport queue occupancy before a payload send, not an
+atomic byte reservation or a bound on cross-event-loop tasks, lifecycle notices,
+or global socket/room scale. Transports without queue telemetry report zero.
+
 ```bash
 python3 racing/server/build.py
 target/racing-server/racing-server load-test --n 256 --duration 30 --mix adversarial
