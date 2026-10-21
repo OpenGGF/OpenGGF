@@ -18,7 +18,7 @@ import java.util.List;
  *
  * <p>ROM reference: {@code CutsceneKnux_CNZ2A} creates this as {@code ChildObjDat_66560}
  * during its init routine ({@code loc_622E4}); the child runs {@code loc_62458}
- * (docs/skdisasm/sonic3k.asm:129076, 129175, 134968). Every frame the child calls
+ * (docs/skdisasm/sonic3k.asm:129133, 129232, 135025). Every frame the child calls
  * {@code SolidObjectFull2} with {@code d1=$13} (half-width) and {@code d2=$100}
  * (half-height) so Sonic cannot run past Knuckles during the cutscene. The child
  * deletes itself once the parent sets its destroyed status bit
@@ -27,7 +27,7 @@ import java.util.List;
  * <p>{@code loc_62458} routes through {@code SolidObjectFull2_1P}, which falls
  * directly into {@code SolidObject_cont} without the {@code SolidObjectFull_1P}
  * on-screen gate and treats {@code relX == width*2} as a contact via {@code bhi}
- * (sonic3k.asm:41051-41089, 41394-41401). Those translate to
+ * (sonic3k.asm:41091-41129, 41434-41441). Those translate to
  * {@link #bypassesOffscreenSolidGate()} and {@link #usesInclusiveRightEdge()}.
  */
 public final class CutsceneKnuxCnz2WallInstance extends AbstractObjectInstance
@@ -36,11 +36,11 @@ public final class CutsceneKnuxCnz2WallInstance extends AbstractObjectInstance
     /**
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code loc_62458} is the routine this object runs, i.e. address
-     * {@code $00062458} (docs/skdisasm/sonic3k.asm:129180).
+     * {@code $00062458} (docs/skdisasm/sonic3k.asm:129237).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0006}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {

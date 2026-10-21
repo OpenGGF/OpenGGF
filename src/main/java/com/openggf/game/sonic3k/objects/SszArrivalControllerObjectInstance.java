@@ -21,7 +21,7 @@ import java.util.List;
 
 /**
  * ROM {@code Obj_57C1E} and its successors {@code loc_57CD2}, {@code Obj_57D64} and
- * {@code loc_57DA2} (sonic3k.asm:116760-116858): the Sky Sanctuary teleporter arrival.
+ * {@code loc_57DA2} (sonic3k.asm:116806-116904): the Sky Sanctuary teleporter arrival.
  *
  * <p>{@code SSZ1_ScreenInit} allocates it at X {@code $100} with {@code $2D = $6C};
  * {@code SSZ2_ScreenInit} at X {@code $A0} with {@code $2D = $44}. Its first pass

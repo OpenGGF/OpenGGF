@@ -20,7 +20,7 @@ import java.util.List;
 
 /**
  * One link of {@code ChildObjDat_7A684}, the Green Hill recreation's ball and chain
- * (sonic3k.asm:162747-162861, {@code loc_7A428} / {@code loc_7A4D0} / {@code loc_7A514}).
+ * (sonic3k.asm:162825-162939, {@code loc_7A428} / {@code loc_7A4D0} / {@code loc_7A514}).
  *
  * <p>{@code CreateChild9_TreeList} builds six of these with subtypes 0, 2, 4, 6, 8 and {@code $A}.
  * It is a <em>tree</em> list, so each link's {@code parent3} is the link before it and only the
@@ -61,7 +61,7 @@ import java.util.List;
  * {@code parent3}. That bit is not set by anything in {@code Obj_SSZGHZBoss}: the shared touch
  * response sets it, in {@code Touch_Enemy}'s {@code .checkhurtenemy} —
  * {@code subq.b #1,boss_hitcount2(a1) / bne.s .bossnotdefeated / bset #7,status(a1)}
- * (sonic3k.asm:20922) — on the killing hit. When the test passes, {@code loc_849D8} runs
+ * (sonic3k.asm:20958) — on the killing hit. When the test passes, {@code loc_849D8} runs
  * {@code bset #7,status(a0)}, installs {@code Obj_FlickerMove}, <em>clears</em>
  * {@code collision_flags} and calls {@code Set_IndexedVelocity} with {@code d0 = 0}, which reads
  * {@code Obj_VelocityIndex + subtype*2}. Each link's {@code parent3} is the link in front of it

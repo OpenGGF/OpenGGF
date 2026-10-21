@@ -19,7 +19,7 @@ import java.util.List;
  * Multi-segment caterpillar-like badnik. The head is attackable; body segments
  * always hurt the player.
  * <p>
- * Based on Obj_CaterKillerJr (sonic3k.asm lines 183317-183515).
+ * Based on Obj_CaterKillerJr (sonic3k.asm lines 183410-183608).
  *
  * <h3>Movement cycle:</h3>
  * <ol>
@@ -73,7 +73,7 @@ public final class CaterkillerJrHeadInstance extends AbstractS3kBadnikInstance
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isDestroyed()) return;
 
-        // ROM Obj_WaitOffscreen (docs/skdisasm/sonic3k.asm:180271-180305) is a ONE-SHOT
+        // ROM Obj_WaitOffscreen (docs/skdisasm/sonic3k.asm:180362-180396) is a ONE-SHOT
         // latch. It saves the caller's return address in $34(a0) and overwrites the
         // operation pointer with loc_85AD2, so the badnik's own routine does not run
         // while it waits; once the $20-by-$20 placeholder has been drawn, loc_85B02
@@ -89,9 +89,9 @@ public final class CaterkillerJrHeadInstance extends AbstractS3kBadnikInstance
         }
 
         if (initPending) {
-            // CaterKillerJr_Init (sonic3k.asm:183338-183356) calls
+            // CaterKillerJr_Init (sonic3k.asm:183431-183449) calls
             // SetUp_ObjAttributes (tail `addq.b #2,routine(a0)` / `rts`,
-            // sonic3k.asm:176901-176919), sets x_vel = -$100, then creates the
+            // sonic3k.asm:176992-177010), sets x_vel = -$100, then creates the
             // body segments with CreateChild3_NormalRepeated. Unlike the other
             // badniks in this family it DOES fall through to a second label,
             // CaterKillerJr_StartSlowSwing, which overwrites routine with 4 and

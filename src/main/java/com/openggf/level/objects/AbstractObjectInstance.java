@@ -90,7 +90,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * ROM parity: true when this destroy was triggered by an off-screen check
      * (Sprite_OnScreen_Test family in sonic3k.asm, e.g. loc_1B5A0), where ROM
      * clears bit 7 of the respawn-table entry ({@code bclr #7,(a2)} at
-     * sonic3k.asm:37275) so the object can be re-spawned by the placement
+     * sonic3k.asm:37315) so the object can be re-spawned by the placement
      * system when the camera returns. Without this flag, the engine's
      * {@code permanentDestroyLatch} (S3K) treats every destroy as a latched
      * "do not respawn" (modeling player-kill explosions which never clear
@@ -630,11 +630,11 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
 
     /**
      * Marks this object as destroyed via an off-screen check
-     * (ROM Sprite_OnScreen_Test family, sonic3k.asm:37262 etc.). The placement
+     * (ROM Sprite_OnScreen_Test family, sonic3k.asm:37302 etc.). The placement
      * system will release the slot but will NOT latch the spawn into
      * {@code destroyedInWindow}, so when the camera re-enters the placement
      * window the object can re-spawn. This mirrors ROM's
-     * {@code bclr #7,(a2)} at loc_1B5A0 (sonic3k.asm:37275).
+     * {@code bclr #7,(a2)} at loc_1B5A0 (sonic3k.asm:37315).
      */
     public void setDestroyedByOffscreen() {
         this.destroyed = true;
@@ -722,7 +722,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
 
     /**
      * ROM parity for SolidObject_OnScreenTest (s2.asm:35140-35145,
-     * sonic3k.asm:41390-41392 loc_1DF88, s1disasm/_incObj/sub SolidObject.asm
+     * sonic3k.asm:41430-41432 loc_1DF88, s1disasm/_incObj/sub SolidObject.asm
      * Solid_ChkEnter / SolidObject2F): returns true when the object's render
      * box currently overlaps the camera viewport. ROM equivalent is render_flags
      * bit 7 which Render_Sprites sets each frame based on bounding-box
@@ -732,14 +732,14 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * optimisation that the S2 disassembly explicitly documents.
      */
     public boolean isWithinSolidContactBounds() {
-        // ROM Render_Sprites (sonic3k.asm:36336-36370 SolidObject_OnScreenTest,
+        // ROM Render_Sprites (sonic3k.asm:36376-36410 SolidObject_OnScreenTest,
         // s2.asm:35140-35145, s1disasm Solid_ChkEnter / SolidObject2F) sets
         // render_flags bit 7 when the object's bounding box overlaps the
         // 320x224 screen rectangle. The bounding box is centered on x_pos with
-        // half-width = width_pixels(a0) (sonic3k.asm:36347 reads width_pixels
+        // half-width = width_pixels(a0) (sonic3k.asm:36387 reads width_pixels
         // into d2, then 36350/36353 add/subtract d2 from (x_pos - cam) before
         // comparing against [0, 320]). Most gameplay objects use width_pixels=16,
-        // but larger sprites (e.g. the CNZ horizontal door at sonic3k.asm:66167
+        // but larger sprites (e.g. the CNZ horizontal door at sonic3k.asm:66207
         // byte_30FCE = $20, $08) use a wider rendered half-width and stay
         // on-screen longer than a hardcoded 16-px margin allows. Defer to the
         // per-object on-screen half-width so collision parity matches the ROM
@@ -756,10 +756,10 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     /**
      * Per-object rendered half-width used by the on-screen / solid-contact
      * gate. ROM equivalent: {@code width_pixels(a0)} as read by Render_Sprites
-     * (sonic3k.asm:36347 / s2.asm equivalent). Defaults to the widely shared
+     * (sonic3k.asm:36387 / s2.asm equivalent). Defaults to the widely shared
      * gameplay sprite half-width of 16 px so existing call sites stay
      * unchanged; objects with a wider rendered footprint (e.g. CNZ horizontal
-     * door byte_30FCE = $20, $08 at sonic3k.asm:66167) override this to match
+     * door byte_30FCE = $20, $08 at sonic3k.asm:66207) override this to match
      * the ROM-side on-screen test.
      */
     public int getOnScreenHalfWidth() {
@@ -770,7 +770,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * Per-object {@code width_pixels(a1)} as read by the player on-object
      * balance routines (S1 {@code obActWid} at
      * docs/s1disasm/_incObj/01 Sonic.asm:340-351; S2
-     * s2.asm:36259-36271; S3K sonic3k.asm:22460-22473). This is the object's
+     * s2.asm:36259-36271; S3K sonic3k.asm:22495-22508). This is the object's
      * own width byte, which is NOT necessarily the rendered on-screen footprint
      * nor the possibly-extended full-solid X-collision width.
      *
@@ -845,7 +845,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * plus a 32-px margin above and below). ROM S2 {@code Touch_Loop}
      * ({@code docs/s2disasm/s2.asm} ~84502-84551) has no equivalent
      * render-flag gate; S3K {@code TouchResponse}
-     * ({@code docs/skdisasm/sonic3k.asm:20655}) consumes a pre-built
+     * ({@code docs/skdisasm/sonic3k.asm:20691}) consumes a pre-built
      * {@code Collision_response_list} where the gate happens upstream
      * during list build, not at touch time.
      * <p>

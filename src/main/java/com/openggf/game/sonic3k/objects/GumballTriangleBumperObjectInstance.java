@@ -51,7 +51,7 @@ import java.util.List;
  * <p>
  * Contact is resolved exclusively through the generic {@link SolidObjectProvider}
  * / {@link SolidObjectListener} pass (matching ROM's single SolidObjectFull call
- * per frame -- sonic3k.asm:127639-127660). A previous revision additionally ran
+ * per frame -- sonic3k.asm:127693-127714). A previous revision additionally ran
  * a per-frame proximity-box "fallback" bounce with no ROM analog (a symmetric
  * AABB using the player's full half-width/half-height on every side, rather
  * than SolidObjectFull's actual asymmetric quadrant test), which fired a frame
@@ -82,17 +82,17 @@ public class GumballTriangleBumperObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM {@code loc_60F3E} (sonic3k.asm:127644-127647) opens with
+     * ROM {@code loc_60F3E} (sonic3k.asm:127698-127701) opens with
      * {@code tst.w ($FF2020).l / bpl.s loc_60F8E}: while the shared
      * triangle-bumper cooldown word is non-negative the bumper branches
      * straight to {@code Draw_Sprite} and never reaches its
-     * {@code jsr (SolidObjectFull)} at :127651. The bumper is therefore not
+     * {@code jsr (SolidObjectFull)} at :127705. The bumper is therefore not
      * merely non-bouncing during the cooldown -- it is entirely intangible, so
      * neither player nor sidekick is pushed out of it.
      * <p>
      * {@code sub_60F94} arms the word with {@code move.w #$F,($FF2020).l}
-     * (:127680) on a bounce and {@code loc_61050}'s
-     * {@code subq.w #1,($FF2020).l} (:127743) counts it back down, both of
+     * (:127734) on a bounce and {@code loc_61050}'s
+     * {@code subq.w #1,($FF2020).l} (:127797) counts it back down, both of
      * which {@link GumballMachineObjectInstance} already models
      * ({@code onBumperHit} / {@code update}).
      */
@@ -114,11 +114,11 @@ public class GumballTriangleBumperObjectInstance extends AbstractObjectInstance
      * ROM {@code SolidObjectFull_1P}'s new-contact path (the branch taken
      * whenever the player isn't already recorded as standing on this bumper)
      * falls through {@code loc_1DF88} directly into the shared
-     * {@code SolidObject_cont} X-overlap test (sonic3k.asm:41395-41406), which
+     * {@code SolidObject_cont} X-overlap test (sonic3k.asm:41435-41446), which
      * rejects only when {@code d0 > d3} ({@code bhi}) -- an exact edge touch
      * ({@code d0 == d3}, i.e. {@code relX == halfWidth*2}) still counts as
      * contact. {@code Obj_GumballTriangleBumper} calls {@code SolidObjectFull}
-     * directly (sonic3k.asm:127651), so it inherits that inclusive boundary.
+     * directly (sonic3k.asm:127705), so it inherits that inclusive boundary.
      * Without this override the engine's default exclusive right edge drops
      * the bounce for exactly one frame whenever the player's approach lines
      * up flush with the bumper's half-width, matching the frame-112 divergence

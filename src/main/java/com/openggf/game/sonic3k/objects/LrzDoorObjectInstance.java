@@ -22,10 +22,10 @@ import java.util.List;
 
 /**
  * ROM object {@code Obj_LRZDoor} - object id {@code $19} in the {@code SKL} pointer set
- * (sonic3k.asm:88015-88063, {@code Map_LRZDoor} at ROM {@code $429DA}).
+ * (sonic3k.asm:88061-88109, {@code Map_LRZDoor} at ROM {@code $429DA}).
  *
  * <p>A solid vertical door that rises out of the way once its trigger byte is non-zero. The gate is
- * {@code tst.b (Level_trigger_array,d0.w)} with {@code d0 = subtype & $F} (:88033-88036): the whole
+ * {@code tst.b (Level_trigger_array,d0.w)} with {@code d0 = subtype & $F} (:88079-88082): the whole
  * byte, not one bit, so any writer of that index opens it - the {@code $1C} horizontal buttons, the
  * shared {@code $33 Obj_Button}, and the {@code $1D} shooting triggers.
  *
@@ -36,28 +36,28 @@ import java.util.List;
  * even if its trigger is cleared.
  *
  * <p>The travel itself is {@code GetSineCosine($2E) asr #2}, negated and added to the Y the Init
- * saved in {@code $46(a0)} (:88050-88056). {@code sin($40) = $100}, so the door ends exactly 64
+ * saved in {@code $46(a0)} (:88096-88102). {@code sin($40) = $100}, so the door ends exactly 64
  * pixels above its placement over 64 frames.
  *
  * <p>Act 2 re-skins the same mappings: {@code mapping_frame} 1, art tile base {@code $090} instead
  * of {@code ArtTile_LRZMisc}, and {@code height_pixels} {@code $20} instead of {@code $28}
- * (:88025-88029). The height feeds the solid box directly, so the act 2 door is a shorter obstacle.
+ * (:88071-88075). The height feeds the solid box directly, so the act 2 door is a shorter obstacle.
  */
 public final class LrzDoorObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider {
 
-    /** {@code move.w #$200,priority(a0)} (sonic3k.asm:88021). */
+    /** {@code move.w #$200,priority(a0)} (sonic3k.asm:88067). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0200);
-    /** {@code move.b #$10,width_pixels(a0)} (:88019). */
+    /** {@code move.b #$10,width_pixels(a0)} (:88065). */
     private static final int WIDTH_PIXELS = 0x10;
-    /** {@code move.b #$28,height_pixels(a0)} and the act 2 {@code #$20} (:88020, :88028). */
+    /** {@code move.b #$28,height_pixels(a0)} and the act 2 {@code #$20} (:88066, :88074). */
     private static final int HEIGHT_PIXELS_ACT1 = 0x28;
     private static final int HEIGHT_PIXELS_ACT2 = 0x20;
-    /** {@code move.w #$1B,d1} before {@code SolidObjectFull} (:88058). */
+    /** {@code move.w #$1B,d1} before {@code SolidObjectFull} (:88104). */
     private static final int SOLID_HALF_WIDTH = 0x1B;
-    /** {@code cmpi.b #$40,$2E(a0)} (:88044): a quarter turn of the sine table. */
+    /** {@code cmpi.b #$40,$2E(a0)} (:88090): a quarter turn of the sine table. */
     private static final int OPEN_ANGLE = 0x40;
-    /** {@code asr.w #2,d0} (:88053). */
+    /** {@code asr.w #2,d0} (:88099). */
     private static final int TRAVEL_SHIFT = 2;
 
     private static final int STAGE_WAITING = 0;
@@ -120,7 +120,7 @@ public final class LrzDoorObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (stage == STAGE_WAITING) {
-            // tst.b (a3,d0.w) / beq.s loc_429BC (sonic3k.asm:88036-88037): the whole byte.
+            // tst.b (a3,d0.w) / beq.s loc_429BC (sonic3k.asm:88082-88083): the whole byte.
             if (!Sonic3kLevelTriggerManager.testAny(triggerIndex)) {
                 return;
             }
@@ -131,7 +131,7 @@ public final class LrzDoorObjectInstance extends AbstractObjectInstance
         if (stage != STAGE_OPENING) {
             return;
         }
-        // addq.b #1,$2E(a0) / cmpi.b #$40 (sonic3k.asm:88041-88045).
+        // addq.b #1,$2E(a0) / cmpi.b #$40 (sonic3k.asm:88087-88091).
         openTimer = (openTimer + 1) & 0xFF;
         if (openTimer == OPEN_ANGLE) {
             stage = STAGE_OPEN;
@@ -141,7 +141,7 @@ public final class LrzDoorObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * {@code loc_429A6} (sonic3k.asm:88050-88056). {@code GetSineCosine} returns the ROM's
+     * {@code loc_429A6} (sonic3k.asm:88096-88102). {@code GetSineCosine} returns the ROM's
      * {@code SineTable} word for the byte angle; {@code asr.w #2} then {@code neg.w} turns
      * {@code sin($40) = $100} into a 64-pixel rise.
      */
@@ -196,7 +196,7 @@ public final class LrzDoorObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         // move.w #$1B,d1 / moveq #0,d2 / move.b height_pixels(a0),d2 / move.w d2,d3 / addq.w #1,d3
-        // (sonic3k.asm:88058-88062).
+        // (sonic3k.asm:88104-88108).
         return SolidObjectParams.of(SOLID_HALF_WIDTH, heightPixels, heightPixels + 1);
     }
 
@@ -214,7 +214,7 @@ public final class LrzDoorObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isHighPriority() {
         // make_art_tile(ArtTile_LRZMisc,2,0) and make_art_tile($090,2,0) both leave the priority
-        // bit clear (sonic3k.asm:88017, :88027).
+        // bit clear (sonic3k.asm:88063, :88073).
         return false;
     }
 

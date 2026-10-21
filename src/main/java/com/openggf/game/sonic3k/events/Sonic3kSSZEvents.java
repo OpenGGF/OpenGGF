@@ -17,7 +17,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 /**
  * Sky Sanctuary ({@code $A00}/{@code $A01}) screen events: {@code SSZ1_ScreenInit},
  * {@code SSZ2_ScreenInit} and the bounds machine {@code sub_575EA} that {@code SSZ1_ScreenEvent}
- * stage 0 runs every frame (sonic3k.asm:115851-115910, 116198-116290, 117724).
+ * stage 0 runs every frame (sonic3k.asm:115897-115956, 116244-116336, 117770).
  *
  * <p>Persistent event words live in {@link SszZoneRuntimeState} so rewind captures them; the
  * arrival objects and the four bosses read the same state.
@@ -318,7 +318,7 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * {@code SSZ1_ScreenInit}'s always-run tail (sonic3k.asm:115846-115890) followed by
+     * {@code SSZ1_ScreenInit}'s always-run tail (sonic3k.asm:115892-115936) followed by
      * {@code SSZ1_BackgroundInit} (116385-116404), in the order the pointer table runs them:
      * five roaming clouds from {@code word_58758}, each drawing one {@code Random_Number} word
      * for its bob phase; then the {@code _unkEE9C} oscillator; then ten invisible sloped
@@ -350,7 +350,7 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * {@code loc_13AB4} (sonic3k.asm:26439-26449): {@code Current_zone_and_act == $A00} with
+     * {@code loc_13AB4} (sonic3k.asm:26479-26489): {@code Current_zone_and_act == $A00} with
      * {@code Tails_CPU_star_post_flag} clear runs {@code sub_13ECA}, then writes
      * {@code Tails_CPU_routine = $A} and {@code object_control = $83} — the same branch AIZ1's
      * intro takes, so Player 2 waits parked at {@code ($7F00,0)} until
@@ -379,7 +379,7 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * {@code sub_575EA} (sonic3k.asm:116198-116290): the whole act-1 bounds machine. Boss
+     * {@code sub_575EA} (sonic3k.asm:116244-116336): the whole act-1 bounds machine. Boss
      * allocation at {@code loc_576E8}, {@code loc_5775C} and the final arena belongs to the boss
      * slices; this reproduces every bounds write and flag test around them.
      */

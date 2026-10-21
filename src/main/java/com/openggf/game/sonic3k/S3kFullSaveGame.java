@@ -10,7 +10,7 @@ public final class S3kFullSaveGame {
 
     /**
      * SaveGame's common return loc_C4CC clears Collected_special_ring_array
-     * (sonic3k.asm:15922), including SK-alone and zero Save_pointer branches.
+     * (sonic3k.asm:15958), including SK-alone and zero Save_pointer branches.
      * Special-stage/lives saves use separate returns and must not call this.
      * Native clears after SRAM writes; Java requests asynchronous persistence
      * whose payload omits this mask. Clear before that request so No Save and

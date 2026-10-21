@@ -637,7 +637,7 @@ public class ObjectManager {
 
     private void refreshTouchResponseSnapshot(ObjectInstance inst) {
         // ROM Touch_Loop stores object RAM POINTERS, not snapshots: `movea.w (a4)+,a1`
-        // then `x_pos(a1)` (docs/skdisasm/sonic3k.asm:20660-20663, 20674-20681; the S1
+        // then `x_pos(a1)` (docs/skdisasm/sonic3k.asm:20696-20699, 20710-20717; the S1
         // ReactToItem and S2 Touch_Response forms are the same shape). Every placed
         // object sits in a slot after the player, so the player always sees each
         // object's END-OF-PREVIOUS-FRAME position.
@@ -722,7 +722,7 @@ public class ObjectManager {
                 if (slotLayout.twoAxisCursorPlacement()) {
                     // S3K Load_Sprites runs before Process_Sprites and performs
                     // the X-cursor pass before the Y-camera pass
-                    // (docs/skdisasm/sonic3k.asm:7884-7894, 37640-37762).
+                    // (docs/skdisasm/sonic3k.asm:7916-7926, 37680-37802).
                     // S3K stays load-then-exec.
                     runTwoAxisLoadThenExecutePlacement(cameraX, false);
                 }
@@ -1329,7 +1329,7 @@ public class ObjectManager {
             // S3K Load_Sprites runs at the start of LevelLoop before
             // Process_Sprites/DeformBgLayer, so post-camera ObjectPlacementController catch-up
             // would create objects one ROM loader call early
-            // (docs/skdisasm/sonic3k.asm:7884-7895).
+            // (docs/skdisasm/sonic3k.asm:7916-7927).
             return;
         }
         placement.extendForPostCamera(postCameraX, this::inlineCreateObject);
@@ -1627,7 +1627,7 @@ public class ObjectManager {
      * <p>This models the 68000 pointer arithmetic in S2
      * {@code TailsCPU_CheckDespawn} / {@code TailsCPU_UpdateObjInteract}
      * (docs/s2disasm/s2.asm:39409-39419,39435-39446) and the S3K analogue
-     * {@code sub_13EFC} (docs/skdisasm/sonic3k.asm:26816-26833):
+     * {@code sub_13EFC} (docs/skdisasm/sonic3k.asm:26856-26873):
      * {@code a3 = Object_RAM + interact(a0)*object_size}; {@code id(a3)} is the
      * byte at the slot. When ROM {@code DeleteObject} (s2.asm:30324-30339) has
      * zeroed the slot, {@code id(a3)} reads {@code 0}; the engine has no
@@ -1721,12 +1721,12 @@ public class ObjectManager {
      * read a populated list rather than an empty one.
      * <p>
      * ROM: level entry runs {@code Load_Sprites} then {@code Process_Sprites}
-     * once at {@code loc_6468} (docs/skdisasm/sonic3k.asm:7848-7854), before
+     * once at {@code loc_6468} (docs/skdisasm/sonic3k.asm:7880-7886), before
      * {@code LevelLoop} begins. Every object executed in that pass tail-calls
      * {@code Add_SpriteToCollisionResponseList}
-     * (docs/skdisasm/sonic3k.asm:21199-21207), so the list is already populated
+     * (docs/skdisasm/sonic3k.asm:21235-21243), so the list is already populated
      * when the first {@code LevelLoop} pass's Player_1/Player_2 slots walk it in
-     * {@code Touch_Response} (docs/skdisasm/sonic3k.asm:20656).
+     * {@code Touch_Response} (docs/skdisasm/sonic3k.asm:20692).
      * <p>
      * Callers that <em>execute</em> the setup pass must not call this — the
      * dispatch publishes the list itself. It exists only for entry paths that
@@ -1771,7 +1771,7 @@ public class ObjectManager {
      * Captures the live Player 1 target visible when each SST slot begins.
      * {@code Obj_Attracted_Ring} reads Player 1 directly in its own object
      * routine, so a carrier in an earlier slot has already moved that target
-     * while one in a later slot has not (sonic3k.asm:35710-35728,
+     * while one in a later slot has not (sonic3k.asm:35750-35768,
      * 35795-35841).
      */
     private void capturePlayerCentreAtSlotStart(PlayableEntity player) {
@@ -2230,7 +2230,7 @@ public class ObjectManager {
     /**
      * Reserves the next available dynamic slot for non-ObjectInstance systems
      * that still occupy ROM SST slots. Equivalent to S3K AllocateObject
-     * (sonic3k.asm:37906-37909), used by attracted rings whose logic is owned
+     * (sonic3k.asm:37946-37949), used by attracted rings whose logic is owned
      * by {@code RingManager} rather than {@code ObjectManager}.
      */
     public int allocateDynamicSlot() {
@@ -3067,7 +3067,7 @@ public class ObjectManager {
      * Some S3K event routines allocate an object from a background/event path after
      * this engine's normal object pass has already run for the frame, while the ROM
      * object still executes its {@code SolidObjectTop} call in that same frame. The
-     * AIZ transition floor is allocated at docs/skdisasm/sonic3k.asm:104685-104687,
+     * AIZ transition floor is allocated at docs/skdisasm/sonic3k.asm:104731-104733,
      * then its object routine calls {@code SolidObjectTop} at 104777-104790.
      */
     public void processImmediateInlineSolidCheckpoint(ObjectInstance object,
@@ -3289,8 +3289,8 @@ public class ObjectManager {
      *
      * <p>When an object self-destroys via an off-screen check
      * (Sprite_OnScreen_Test family in sonic3k.asm -- see loc_1B5A0 at
-     * sonic3k.asm:37271), ROM clears bit 7 of the respawn-table entry
-     * ({@code bclr #7,(a2)} at sonic3k.asm:37275) so the ObjectPlacementController system
+     * sonic3k.asm:37311), ROM clears bit 7 of the respawn-table entry
+     * ({@code bclr #7,(a2)} at sonic3k.asm:37315) so the ObjectPlacementController system
      * can re-spawn the object when the camera returns. The engine mirrors
      * this by routing those destroys to {@link ObjectPlacementController#removeFromActiveForUnload}
      * which leaves {@code destroyedInWindow} cleared.
@@ -3461,10 +3461,10 @@ public class ObjectManager {
 
         if (slotLayout.twoAxisCursorPlacement()) {
             // S3K Load_Sprites advances the X cursor before the Camera_Y pass
-            // (sonic3k.asm:37640-37656, 37675-37758). X-pass entries use the
+            // (sonic3k.asm:37680-37696, 37715-37798). X-pass entries use the
             // broad camera-Y band from loc_1B7F2/loc_1BA92; the later Y pass
             // runs only when Camera_Y_pos_coarse changes and scans the one
-            // newly exposed chunk strip (sonic3k.asm:37545-37588, 37723-37771).
+            // newly exposed chunk strip (sonic3k.asm:37585-37628, 37763-37811).
             int previousYCoarse = twoAxisCameraYCoarse;
             int currentYCoarse = currentCameraYCoarseForTwoAxisPlacement();
             if (previousYCoarse == Integer.MIN_VALUE) {
@@ -3738,7 +3738,7 @@ public class ObjectManager {
             // whole slot -- S2 DeleteObject/DeleteObject2 (s2.asm:30329-30345),
             // S1 DeleteObject/DeleteChild (_incObj/sub DeleteObject.asm:10-20),
             // S3K Delete_Current_Sprite/Delete_Referenced_Sprite
-            // (sonic3k.asm:36108-36125). So a solid that unloads and is later
+            // (sonic3k.asm:36148-36165). So a solid that unloads and is later
             // reloaded from the same layout entry comes back with its pushing
             // bits CLEAR, and its first SolidObject_TestClearPush takes the
             // `beq SolidObject_NoCollision` exit (s2.asm:35462-35466) without
@@ -3828,7 +3828,7 @@ public class ObjectManager {
     private void updateRenderCameraBounds() {
         // S3K Render_Sprites reads Camera_X_pos_copy/Camera_Y_pos_copy after
         // ScreenEvents, while object logic and placement use the live camera
-        // words (sonic3k.asm:36324,36343-36361). Keep this phase-specific so
+        // words (sonic3k.asm:36364,36383-36401). Keep this phase-specific so
         // the copied event coordinates do not leak into the next object pass.
         int left = camera.getXCopy();
         int top = camera.getYCopy();

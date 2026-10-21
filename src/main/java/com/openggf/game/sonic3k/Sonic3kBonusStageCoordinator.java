@@ -15,7 +15,7 @@ import com.openggf.level.objects.ObjectSpawn;
  * Provides zone ID and music ID mapping for Gumball, Pachinko, and Slots.
  *
  * <p>Ring-based selection formula: {@code remainder = ((rings - 20) / 15) % 3}
- * <p>ROM loc_2D47E (sonic3k.asm lines 61886-61912):
+ * <p>ROM loc_2D47E (sonic3k.asm lines 61926-61952):
  * <ul>
  *   <li>0 -> SLOT_MACHINE (zone $1500, music $1D)</li>
  *   <li>1 -> GLOWING_SPHERE / Pachinko (zone $1400, music $1B)</li>
@@ -151,7 +151,7 @@ public class Sonic3kBonusStageCoordinator extends AbstractBonusStageCoordinator
      *
      * <p>Every S3K/S2/S1 main loop increments it immediately after
      * {@code Wait_VSync} and BEFORE the object pass -- for the bonus/special
-     * stages see {@code sonic3k.asm:10742-10744} and {@code :63207-63209}, where
+     * stages see {@code sonic3k.asm:10778-10780} and {@code :63247-63249}, where
      * {@code addq.w #1,(Level_frame_counter).w} sits between {@code Wait_VSync}
      * and {@code Process_Sprites} -- so an object running this frame reads the
      * already-incremented value. The engine advances its own counter at the same
@@ -163,8 +163,8 @@ public class Sonic3kBonusStageCoordinator extends AbstractBonusStageCoordinator
      * <p>This replaces a free-running counter that was seeded from the level
      * counter once at stage setup and then self-incremented. It read one below
      * the ROM's object-visible value, so the cage's reward-spawn gate
-     * {@code btst #0,(Level_frame_counter+1).w} ({@code sonic3k.asm:99435},
-     * {@code :99417}) fired on the ROM's EVEN frames instead of its odd ones.
+     * {@code btst #0,(Level_frame_counter+1).w} ({@code sonic3k.asm:99481},
+     * {@code :99463}) fired on the ROM's EVEN frames instead of its odd ones.
      */
     private int romLevelFrameCounter() {
         var levelManager = GameServices.levelOrNull();

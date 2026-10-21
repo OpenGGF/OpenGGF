@@ -288,7 +288,7 @@ writes them. The SOZ2 cold route exposed this at `sub_40F52`: its correct
 
 **A held input row still owns a queue tail.** A native LEVEL lag iteration
 skips gameplay but still services the Kos module/direct queues (`LevelLoop`,
-sonic3k.asm:7908/7887). Use `TraceSuppressedRowClosure` in the live, recording
+sonic3k.asm:7940/7887). Use `TraceSuppressedRowClosure` in the live, recording
 and standalone drivers alike.
 
 **Reused position words.** A field named `x_sub` is not always a fraction.
@@ -323,7 +323,7 @@ defect; forcing `setActive(true)` at one of those points returned the ceiling at
 sensor does — `checkCeilingDist` says the Death Egg act 2 corridor ceiling ends at y=$051F,
 the sensor's first clear row is $0520, and an upright head-bonk comes to rest against $0520.
 Shipped player collision runs through the sensor (`Sonic_CheckCeiling`'s `eori.w #$F,d2`
-form of `FindFloor`, sonic3k.asm:20242-20256), so derive expected player positions from the
+form of `FindFloor`, sonic3k.asm:20278-20292), so derive expected player positions from the
 sensor or from a measured upright control, never from the convenience helper.
 
 **Clearing the air bit is not a landing.** Direct `bclr #Status_InAir,status`
@@ -536,7 +536,7 @@ sprite-priority-mask contribution, or correctly low sprites still cover it.
 Assert both submerged pixels and exposed art so a missing sheet cannot make a
 mask test pass. Registry builder names use `Sonic3kObjectArtProvider.invokeBuilder`
 (the explicit switch, not reflection); wire that case as well as the registry.
-**ROM palette-line names are one-based.** `sonic3k.constants.asm:767-770` declares
+**ROM palette-line names are one-based.** `sonic3k.constants.asm:787-790` declares
 `Normal_palette ds.b $80` and then `Normal_palette_line_2 = Normal_palette+$20`,
 `_line_3 = +$40`, `_line_4 = +$60` — so `line_2` is the **second** line, engine palette
 index **1**, and `line_1` is the base label that never appears in a write. Reading the digit
@@ -766,7 +766,7 @@ second zone. Pixel oracles must sample the CPU scroll before the VBlank they
 describe; reading the next loop after rendering compares different generations.
 See the [MHZ follow-up](audits/2026-09-15-s3k-presentation-camera.md).
 Plane drawing is the exception: `ScreenEvents` ends in `DrawTilesAsYouMove`
-(`sonic3k.asm:104978`, `103171`), which reads live `Camera_X_pos_copy` against
+(`sonic3k.asm:105024`, `103171`), which reads live `Camera_X_pos_copy` against
 `Camera_X_pos_rounded` and writes VRAM inside the CPU loop, and
 `AIZ2_DoShipLoop` retargets that baseline in the same routine as its `$200`
 camera subtraction. The engine's AIZ2 foreground ring therefore takes the live
@@ -1250,7 +1250,7 @@ Evidence: 2026-09-25 S&K campaign broad-validation follow-up.
 
 ### Explicit floor probes must not inherit collision-dispatch activation
 
-`Sonic_Balance` calls `ChooseChkFloorEdge` directly (S3K `sonic3k.asm:22531-22535`;
+`Sonic_Balance` calls `ChooseChkFloorEdge` directly (S3K `sonic3k.asm:22566-22570`;
 S1/S2 equivalents are cited in `checkTerrainEdgeBalance`). The engine's sensor
 active flags emulate a different routine's quadrant dispatch. They are a cache,
 not a native precondition for Balance. The Knuckles cold LRZ2 route exposed a

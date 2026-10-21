@@ -64,7 +64,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
 
     /**
      * BG-layout Y that {@code CNZ1BGE_Boss} fills Plane B from when looping the boss-room
-     * background ({@code move.w #$200,d1} at docs/skdisasm/sonic3k.asm:107504). The looping
+     * background ({@code move.w #$200,d1} at docs/skdisasm/sonic3k.asm:107550). The looping
      * carnival tunnel band starts here; the room floor sits below it.
      */
     public static final int CNZ_BOSS_BG_LOOP_BAND_BASE_Y = 0x200;
@@ -79,7 +79,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     /**
      * Camera X threshold that arms the miniboss arena gate.
      *
-     * <p>ROM: {@code Obj_CNZMiniboss} (sonic3k.asm:144824) reads
+     * <p>ROM: {@code Obj_CNZMiniboss} (sonic3k.asm:144889) reads
      * {@code move.w #$31E0,d0} then {@code cmp.w (Camera_X_pos).w,d0} and
      * branches to {@code loc_6D9A8} when the camera reaches the threshold.
      * The ROM value is exposed through {@link Sonic3kConstants#CNZ_MINIBOSS_ARENA_MIN_X}
@@ -93,7 +93,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
      */
     private static final int MINIBOSS_EARLY_TUNNEL_X_THRESHOLD = 0x3000;
     /*
-     * ROM writes #2*60 into the original Obj_Wait object (sonic3k.asm:144838-144840).
+     * ROM writes #2*60 into the original Obj_Wait object (sonic3k.asm:144903-144905).
      * This event handler arms and ticks the engine-side mirror in the same update,
      * so the stored value is one larger to leave the first visible release frame
      * aligned with Obj_CNZMinibossGo installing Obj_CNZMinibossStart.
@@ -125,7 +125,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     /**
      * Saved {@code Camera_max_X_pos} captured when the arena lock fires.
      *
-     * <p>ROM: {@code loc_6D9A8} (sonic3k.asm:144831) writes
+     * <p>ROM: {@code loc_6D9A8} (sonic3k.asm:144896) writes
      * {@code Camera_max_X_pos} into {@code Camera_stored_max_X_pos}; we mirror
      * that here so the falling-edge release can restore the natural camera
      * extent when {@link CnzMinibossInstance#onEndGo} clears
@@ -333,7 +333,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     private static final String SOLO_CARRY_TAILS_CODE = "tails_cnz_carry";
 
     /**
-     * ROM SpawnLevelMainSprites loc_68D8 (sonic3k.asm:8187-8197): at CNZ Act 1 the
+     * ROM SpawnLevelMainSprites loc_68D8 (sonic3k.asm:8219-8229): at CNZ Act 1 the
      * intro carry fires for both Sonic+Tails and solo Sonic. In the solo case
      * (Player_mode==1) the ROM still writes {@code Obj_Tails} into the Player_2
      * slot at Sonic's position so Tails carries him in; after the drop ROM
@@ -457,10 +457,10 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
             updateAct2Fg();
         }
         // Falling-edge: when the boss object clears Boss_flag (via
-        // CnzMinibossInstance.onEndGo, ROM sonic3k.asm:144998), only release
+        // CnzMinibossInstance.onEndGo, ROM sonic3k.asm:145063), only release
         // wall-grab suppression. ROM Obj_CNZMinibossEndGo calls
         // AfterBoss_Cleanup, and AfterBoss_CNZ is an rts; it does not restore
-        // the stored horizontal camera bounds here (sonic3k.asm:144996-145001,
+        // the stored horizontal camera bounds here (sonic3k.asm:145061-145066,
         // 176489-176557). The arena X clamp remains in force until the later
         // CNZ1BGE_DoTransition offset/reload path consumes it.
         if (bossFlagPrev && !bossFlag) {
@@ -494,7 +494,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
      * Handles the normal Act 1 entry path and the miniboss threshold gate.
      *
      * <p>Parity note: in the ROM the arena setup runs from inside
-     * {@code Obj_CNZMiniboss} (sonic3k.asm:144823), so it only fires if that
+     * {@code Obj_CNZMiniboss} (sonic3k.asm:144888), so it only fires if that
      * object is live in the active window. Tests and debug teleports that
      * drop the camera strictly past the arena's far wall
      * ({@link Sonic3kConstants#CNZ_MINIBOSS_ARENA_MAX_X}) would normally not
@@ -543,7 +543,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
      * placed object's Process_Sprites slot.
      *
      * <p>ROM writes {@code Camera_min_X_pos} after both playable slots have
-     * already run ({@code sonic3k.asm:144823-144840}), so Player 2 consumes
+     * already run ({@code sonic3k.asm:144888-144905}), so Player 2 consumes
      * the new left boundary on the following frame.
      */
     public void enterMinibossArenaFromObjectSlot() {
@@ -556,7 +556,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * ROM: {@code loc_6D9A8} (sonic3k.asm:144830) — arena setup invoked
+     * ROM: {@code loc_6D9A8} (sonic3k.asm:144895) — arena setup invoked
      * when {@code Obj_CNZMiniboss}'s outer gate succeeds.
      *
      * <p>Mirrors the ROM sequence: stash {@code Camera_max_X_pos}, clamp the
@@ -585,7 +585,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         bossBackgroundMode = BossBackgroundMode.ACT1_MINIBOSS_PATH;
         bgRoutine = BG_BOSS_START;
         wallGrabSuppressed = true;
-        // ROM sonic3k.asm:144843 — `move.b #1,(Boss_flag).w`. Setting the
+        // ROM sonic3k.asm:144908 — `move.b #1,(Boss_flag).w`. Setting the
         // mirrored event-state bit lets CnzMinibossInstance and downstream
         // CNZ scripts observe the lock without a separate global flag.
         bossFlag = true;
@@ -595,7 +595,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         minibossStartReleaseTimer = MINIBOSS_START_RELEASE_DELAY;
         minibossScrollControlSpawned = false;
 
-        // ROM sonic3k.asm:144841 — `moveq #cmd_FadeOut,d0; jsr Play_Music`.
+        // ROM sonic3k.asm:144906 — `moveq #cmd_FadeOut,d0; jsr Play_Music`.
         // Mirror the music fade through the engine's helper. The miniboss
         // theme starts from updateMinibossStartRelease after the ROM wait.
         if (audio() != null) {
@@ -603,16 +603,16 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         }
         // Miniboss audio handoff is now handled by updateMinibossStartRelease.
         // (Sonic3kMusic.MINIBOSS) once the boss music handoff lands; the
-        // fade-out above already mirrors sonic3k.asm:144841. Workstream D
+        // fade-out above already mirrors sonic3k.asm:144906. Workstream D
         // shipped the boss without this fade-in by design (out of scope for
         // D — see the workstream-D entries in CHANGELOG.md and the
         // post-D baseline doc at docs/architecture/validation/s3k-zones/cnz-post-workstream-d.md).
 
-        // ROM sonic3k.asm:144844 — `moveq #$5D,d0; jsr Load_PLC`.
+        // ROM sonic3k.asm:144909 — `moveq #$5D,d0; jsr Load_PLC`.
         applyPlc(Sonic3kConstants.PLC_CNZ_MINIBOSS);
         invalidateMinibossArenaTilemaps();
 
-        // ROM sonic3k.asm:144846-144847 — `lea Pal_CNZMiniboss(pc),a1; jmp
+        // ROM sonic3k.asm:144911-144912 — `lea Pal_CNZMiniboss(pc),a1; jmp
         // (PalLoad_Line1).l`. PalLoad_Line1 writes one VDP palette line
         // (32 bytes) into line 1.
         installMinibossPalette();
@@ -745,7 +745,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         // ROM loc_51D6E primes Draw_delayed_rowcount=$F and falls through to
         // CNZ1BGE_FGRefresh. The engine observes this handoff after object
         // updates, so keep the post-first-draw remainder before the completion
-        // copy can take the bmi branch (sonic3k.asm:107510-107534).
+        // copy can take the bmi branch (sonic3k.asm:107556-107580).
         postBossFgRefreshRowsRemaining = POST_BOSS_REFRESH_FRAME_ENTRY_REMAINDER;
         advanceRefreshStageToSecondPass();
     }
@@ -756,7 +756,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
      * <p>The real game copies arena data back into the foreground only after
      * {@code Draw_PlaneVertSingleBottomUp} has decremented
      * {@code Draw_delayed_rowcount} below zero. Until then it keeps the
-     * background collision plane live (sonic3k.asm:103436-103452,
+     * background collision plane live (sonic3k.asm:103482-103498,
      * 107527-107539).
      */
     private void advanceRefreshStageToSecondPass() {
@@ -774,7 +774,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
      * ROM: CNZ1BGE_FGRefresh2.
      *
      * <p>The real game finishes the foreground handoff here after the second
-     * delayed draw finishes (sonic3k.asm:107576-107601).
+     * delayed draw finishes (sonic3k.asm:107622-107647).
      */
     private void advanceRefreshStageToTransitionGate() {
         if (!consumePostBossRefreshRow(BG_FG_REFRESH_2)) {
@@ -782,7 +782,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         }
         // ROM CNZ1BGE_FGRefresh2 allocates Obj_EndSign and writes x_pos=$32C0
         // immediately before advancing to CNZ1BGE_DoTransition
-        // (docs/skdisasm/sonic3k.asm:107590-107601).
+        // (docs/skdisasm/sonic3k.asm:107636-107647).
         spawnObject(() -> new S3kSignpostInstance(POST_BOSS_END_SIGN_X, 0, true));
         bgRoutine = BG_DO_TRANSITION;
     }
@@ -805,7 +805,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     private void remapPostBossTunnelToForeground() {
         // ROM loc_51DAE clears Events_bg+$08 and adds $1C0 to both players
         // and Camera_Y_pos/Camera_Y_pos_copy after the BG->FG copy
-        // (sonic3k.asm:107562-107568).
+        // (sonic3k.asm:107608-107614).
         bossScrollOffsetY = 0;
         bossScrollVelocityY = 0;
         for (Sprite sprite : spriteManager().getAllSprites()) {
@@ -843,12 +843,12 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         // ROM CNZ1BGE_DoTransition sets Current_zone_and_act=$301, reloads
         // level/solids/water, then offsets both players/camera by d0=$3000
         // and d1=-$200 without recentering the camera
-        // (docs/skdisasm/sonic3k.asm:107603-107653).
+        // (docs/skdisasm/sonic3k.asm:107649-107699).
         //
         // The current Obj_LevelResults / Obj_EndSignControl objects survive
         // that ROM reload: loc_2DD06 later clears _unkFAA8, and
         // Obj_EndSignControlAwaitStart restores P1/P2 control
-        // (docs/skdisasm/sonic3k.asm:62708-62720,180407-180412).
+        // (docs/skdisasm/sonic3k.asm:62748-62760,180498-180503).
         // The engine rebuilds the object manager for the reload. The persistent
         // results SST is carried into the target manager, while this CNZ event
         // bridge retains the removed EndSignControl ownership until the
@@ -873,12 +873,12 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
                 .preserveOffsetCameraPosition(true)
                 // CNZ's retained EndSignControl reaches Change_Act2Sizes
                 // directly after the title owner retires; it has no extra
-                // preloaded-camera Wait2 tail (sonic3k.asm:62244-62279,
+                // preloaded-camera Wait2 tail (sonic3k.asm:62284-62319,
                 // 180407-180419).
                 .inLevelTitleCardPreloadedActCameraReleaseDispatches(0)
                 // CNZ1BGE_DoTransition offsets the live camera bounds after
                 // Load_Level, and copies the offset max Y into the target max
-                // (docs/skdisasm/sonic3k.asm:107638-107646).
+                // (docs/skdisasm/sonic3k.asm:107684-107692).
                 .postTransitionMinX(postTransitionMinX)
                 .postTransitionMaxX(postTransitionMaxX)
                 .postTransitionMinY(postTransitionMinY)
@@ -903,7 +903,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         try {
             // ROM CNZ1BGE_DoTransition performs Load_Level and the coordinate
             // offsets inside the BG event routine, not on the next frame
-            // (docs/skdisasm/sonic3k.asm:107603-107653).
+            // (docs/skdisasm/sonic3k.asm:107649-107699).
             levelManager().executeActTransition(request);
         } catch (IOException e) {
             throw new IllegalStateException("Failed to apply CNZ act transition", e);
@@ -1048,7 +1048,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     public void advanceMinibossBackgroundRoutineAfterScrollSnap() {
         // ROM Obj_CNZMinibossScrollWait2 advances Events_routine_bg when it
         // snaps Events_bg+$08, restores Camera_target_max_Y_pos, and enables
-        // Background_collision_flag (sonic3k.asm:107814-107828).
+        // Background_collision_flag (sonic3k.asm:107860-107874).
         bgRoutine += 4;
     }
 
@@ -1277,7 +1277,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         }
         // Obj_CNZMinibossTop only stores Events_bg+$00/$02 and spawns the
         // explosion child; CNZ1_ScreenEvent performs the chunk-descriptor clear
-        // on the next screen-event pass (sonic3k.asm:145182-145184,
+        // on the next screen-event pass (sonic3k.asm:145247-145249,
         // 145204-145216, 107340-107365). Keeping the terrain mutation here
         // prevents same-frame object updates from erasing landing collision
         // before player/sidekick terrain collision observes it.
@@ -1390,7 +1390,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     private void clearPostBossBackgroundCollisionFlag() {
         if (gameStateOrNull() != null) {
             // ROM clears Background_collision_flag after copying BG layout bytes
-            // into FG collision (sonic3k.asm:107556-107563).
+            // into FG collision (sonic3k.asm:107602-107609).
             gameState().setBackgroundCollisionFlag(false);
         }
     }

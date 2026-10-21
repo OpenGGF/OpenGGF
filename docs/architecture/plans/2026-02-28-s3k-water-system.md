@@ -413,7 +413,7 @@ import java.util.List;
  * If a target value has bit 15 set, the mean water level is set directly
  * (instant teleport) rather than gradually moving toward the target.
  * <p>
- * Mirrors the ROM pattern at {@code DynamicWaterHeight_HCZ1} (sonic3k.asm:8710).
+ * Mirrors the ROM pattern at {@code DynamicWaterHeight_HCZ1} (sonic3k.asm:8742).
  */
 public class ThresholdTableWaterHandler implements DynamicWaterHandler {
 
@@ -622,7 +622,7 @@ import com.openggf.level.Palette;
 
 /**
  * S3K water data provider. Water heights from {@code StartingWaterHeights.bin},
- * zone detection from {@code CheckLevelForWater} (sonic3k.asm:9751).
+ * zone detection from {@code CheckLevelForWater} (sonic3k.asm:9787).
  */
 public class Sonic3kWaterDataProvider implements WaterDataProvider {
 
@@ -655,7 +655,7 @@ public class Sonic3kWaterDataProvider implements WaterDataProvider {
 
     @Override
     public boolean hasWater(int zoneId, int actId, PlayerCharacter character) {
-        // CheckLevelForWater (sonic3k.asm:9751)
+        // CheckLevelForWater (sonic3k.asm:9787)
         return zoneId == ZONE_AIZ || zoneId == ZONE_HCZ || zoneId == ZONE_LBZ;
     }
 
@@ -694,7 +694,7 @@ Expected: PASS
 ```
 feat: add Sonic3kWaterDataProvider with static water heights
 
-Zone detection matches CheckLevelForWater (sonic3k.asm:9751).
+Zone detection matches CheckLevelForWater (sonic3k.asm:9787).
 Heights from StartingWaterHeights.bin. Dynamic handlers and
 palette loading deferred to subsequent tasks.
 ```
@@ -812,7 +812,7 @@ import com.openggf.level.WaterSystem;
 /**
  * AIZ2 dynamic water handler. Complex state machine with camera X triggers.
  * <p>
- * ROM reference: DynamicWaterHeight_AIZ2 (sonic3k.asm:8648-8695).
+ * ROM reference: DynamicWaterHeight_AIZ2 (sonic3k.asm:8680-8727).
  * <ul>
  *   <li>Camera X &lt; 0x2440 and target==0x0618: drop to 0x0528, speed=2</li>
  *   <li>Camera X &gt;= 0x2850: trigger rising water event</li>

@@ -19,16 +19,16 @@ import com.openggf.physics.TrigLookupTable;
 import java.util.List;
 
 /**
- * {@code Obj_LRZFlameThrower} (sonic3k.asm:89227-89448), id {@code $29} in the locked-on set and
+ * {@code Obj_LRZFlameThrower} (sonic3k.asm:89273-89494), id {@code $29} in the locked-on set and
  * 52 of Lava Reef act 2's placements.
  *
  * <p><b>The subtype picks the variant and the rest.</b> {@code bpl.s loc_43DC4}
- * (sonic3k.asm:89235) branches on bit 7: clear is the horizontal thrower ({@code loc_43DDC},
- * :89257-89341) and set the vertical one ({@code loc_43F12}, :89343-89430). Either way
+ * (sonic3k.asm:89281) branches on bit 7: clear is the horizontal thrower ({@code loc_43DDC},
+ * :89303-89387) and set the vertical one ({@code loc_43F12}, :89389-89476). Either way
  * {@code $32 = (subtype & $7F) * 4} is the <b>idle</b> length and {@code $30} starts at
  * {@code 2*60}, the firing length, so the subtype is the pause between bursts and nothing else.
  * The vertical variant also mirrors itself: {@code btst #0,status(a0)} sets {@code render_flags}
- * bit 1, the y-flip (:89243-89245).
+ * bit 1, the y-flip (:89289-89291).
  *
  * <p><b>The cycle, read from the branch and not from the sprite.</b> {@code $2F} is the phase.
  * At {@code $2F = 0} the thrower is <em>firing</em>: each frame decrements {@code $30} and falls
@@ -36,21 +36,21 @@ import java.util.List;
  * from {@code $32}, {@code $2F} becomes 1 and the frame ends on the solid call alone. At
  * {@code $2F = 1} the thrower is <em>idle</em> until {@code $30} goes negative, at which point
  * {@code $30} reloads {@code 2*60}, {@code $2F} returns to 0 and {@code sfx_FlamethrowerLoud}
- * plays (:89257-89274). Zero-length idles are real: a subtype of {@code 0} gives {@code $32 = 0},
+ * plays (:89303-89320). Zero-length idles are real: a subtype of {@code 0} gives {@code $32 = 0},
  * one idle frame, and a thrower that never stops.
  *
  * <p><b>The emission is on the level clock, not on this object's age.</b> Only frames where
- * {@code (Level_frame_counter+1) & 3 == 0} emit (:89282-89285), so every thrower on screen fires
+ * {@code (Level_frame_counter+1) & 3 == 0} emit (:89328-89331), so every thrower on screen fires
  * in step. The same section re-plays the loud sound every sixteenth level frame while {@code $30}
- * is still {@code 30} or more (:89286-89291) -- so the burst's sound stops half a second before
+ * is still {@code 30} or more (:89332-89337) -- so the burst's sound stops half a second before
  * the flames do.
  *
  * <p><b>The spread is a sine of a sine.</b> {@code $2E = sin(angle) asr 4} and {@code angle}
- * advances by {@code 8} on each emitting frame (:89292-89296); the flame's velocity is then
+ * advances by {@code 8} on each emitting frame (:89338-89342); the flame's velocity is then
  * {@code sin/cos($2E) * 4}. So the jet sweeps through a narrow fan whose half-width is
  * {@code $10} of a byte angle, and the sweep's period is {@code $100/8 = 32} emissions.
  *
- * <p>{@code tst.b render_flags(a0) / bpl} (:89297-89298) skips the allocation entirely while the
+ * <p>{@code tst.b render_flags(a0) / bpl} (:89343-89344) skips the allocation entirely while the
  * previous render pass left the thrower off screen: an off-screen thrower still runs its cycle and
  * still plays its sound, but makes no flames.
  *
@@ -68,36 +68,36 @@ public final class LrzFlameThrowerObjectInstance extends AbstractObjectInstance
         VERTICAL
     }
 
-    /** {@code move.w #$280,priority(a0)} (sonic3k.asm:89232). */
+    /** {@code move.w #$280,priority(a0)} (sonic3k.asm:89278). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0280);
-    /** {@code move.b #$18,width_pixels(a0)} / {@code #$10,height_pixels(a0)} (:89230-89231). */
+    /** {@code move.b #$18,width_pixels(a0)} / {@code #$10,height_pixels(a0)} (:89276-89277). */
     private static final int WIDTH_PIXELS = 0x18;
     private static final int HEIGHT_PIXELS = 0x10;
-    /** {@code move.w #$23,d1} at {@code loc_43EF6} (:89333). */
+    /** {@code move.w #$23,d1} at {@code loc_43EF6} (:89379). */
     private static final int SOLID_HALF_WIDTH_HORIZONTAL = 0x23;
-    /** {@code move.w #$1B,d1} at {@code loc_4402C} (:89428). */
+    /** {@code move.w #$1B,d1} at {@code loc_4402C} (:89474). */
     private static final int SOLID_HALF_WIDTH_VERTICAL = 0x1B;
-    /** {@code move.w #$10,d2 / #$11,d3}, the same for both (:89334-89335, :89429-89430). */
+    /** {@code move.w #$10,d2 / #$11,d3}, the same for both (:89380-89381, :89475-89476). */
     private static final int SOLID_HEIGHT_AIR = 0x10;
     private static final int SOLID_HEIGHT_GROUND = 0x11;
-    /** {@code move.w #2*60,$30(a0)} (:89241, :89251, :89269, :89355): the firing length. */
+    /** {@code move.w #2*60,$30(a0)} (:89287, :89297, :89315, :89401): the firing length. */
     private static final int FIRING_FRAMES = 2 * 60;
-    /** {@code move.b #6/#7,mapping_frame(a0)} (:89242, :89252). */
+    /** {@code move.b #6/#7,mapping_frame(a0)} (:89288, :89298). */
     private static final int FRAME_HORIZONTAL = 6;
     private static final int FRAME_VERTICAL = 7;
-    /** {@code andi.b #3,d0} on {@code Level_frame_counter+1} (:89283). */
+    /** {@code andi.b #3,d0} on {@code Level_frame_counter+1} (:89329). */
     private static final int EMIT_MASK = 3;
-    /** {@code andi.b #$F,d1} for the repeat sound (:89286). */
+    /** {@code andi.b #$F,d1} for the repeat sound (:89332). */
     private static final int LOUD_REPEAT_MASK = 0x0F;
-    /** {@code cmpi.w #30,$30(a0) / blo} (:89288-89289). */
+    /** {@code cmpi.w #30,$30(a0) / blo} (:89334-89335). */
     private static final int LOUD_REPEAT_MIN_REMAINING = 30;
-    /** {@code addq.b #8,angle(a0)} (:89296). */
+    /** {@code addq.b #8,angle(a0)} (:89342). */
     private static final int ANGLE_STEP = 8;
-    /** {@code move.b #2,$24(a0)} on the flame-frame timer (:89277). */
+    /** {@code move.b #2,$24(a0)} on the flame-frame timer (:89323). */
     private static final int FLAME_FRAME_RELOAD = 2;
-    /** {@code addi.w #$10,x_pos(a1)} / {@code y_pos(a1)} (:89294, :89403). */
+    /** {@code addi.w #$10,x_pos(a1)} / {@code y_pos(a1)} (:89340, :89449). */
     private static final int FLAME_SPAWN_OFFSET = 0x10;
-    /** {@code subi.w #2*$10,x_pos(a1)} / {@code #$20,y_pos(a1)} on the flip (:89313, :89422). */
+    /** {@code subi.w #2*$10,x_pos(a1)} / {@code #$20,y_pos(a1)} on the flip (:89359, :89468). */
     private static final int FLAME_FLIP_BACKOFF = 0x20;
 
     // Both are decoded once and never written again, but the rewind coverage guard restores by
@@ -127,8 +127,8 @@ public final class LrzFlameThrowerObjectInstance extends AbstractObjectInstance
         this.axis = axis;
         this.mirrored = spawn != null && (spawn.renderFlags() & 1) != 0;
         int subtype = spawn == null ? 0 : spawn.subtype() & 0xFF;
-        // andi.w #$7F,d0 / lsl.w #2,d0 on the bit-7 branch (:89238-89239); the other branch's
-        // lsl.w #2,d0 runs on a value bpl already proved is below $80 (:89248).
+        // andi.w #$7F,d0 / lsl.w #2,d0 on the bit-7 branch (:89284-89285); the other branch's
+        // lsl.w #2,d0 runs on a value bpl already proved is below $80 (:89294).
         this.idleFrames = (subtype & 0x7F) << 2;
         this.phaseTimer = FIRING_FRAMES;
         this.idle = false;
@@ -193,7 +193,7 @@ public final class LrzFlameThrowerObjectInstance extends AbstractObjectInstance
         advanceFiringFrame(levelFrameCounterOrFallback(vIntRunCount));
     }
 
-    /** {@code loc_43E14} / {@code loc_43F4A} (sonic3k.asm:89275-89320, :89366-89427). */
+    /** {@code loc_43E14} / {@code loc_43F4A} (sonic3k.asm:89321-89366, :89412-89473). */
     private void advanceFiringFrame(int levelFrame) {
         // subq.b #1,$24(a0) / bpl / move.b #2,$24(a0) / addq.b #1,$25(a0) / andi.b #1,$25(a0).
         flameFrameTimer = (flameFrameTimer - 1) & 0xFF;
@@ -217,7 +217,7 @@ public final class LrzFlameThrowerObjectInstance extends AbstractObjectInstance
         spawnFlame();
     }
 
-    /** The {@code AllocateObjectAfterCurrent} block (sonic3k.asm:89292-89320, :89396-89427). */
+    /** The {@code AllocateObjectAfterCurrent} block (sonic3k.asm:89338-89366, :89442-89473). */
     private void spawnFlame() {
         int sin = TrigLookupTable.sinHex(emissionAngle);
         int cos = TrigLookupTable.cosHex(emissionAngle);
@@ -275,7 +275,7 @@ public final class LrzFlameThrowerObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * {@code move.b (Level_frame_counter+1).w,d0} (sonic3k.asm:89282). The fallback is the
+     * {@code move.b (Level_frame_counter+1).w,d0} (sonic3k.asm:89328). The fallback is the
      * dispatch's own {@code V_int_run_count}, which is what a fixture without a level manager
      * can drive; the two agree in production because the level clock is the one the manager keeps.
      */
@@ -341,7 +341,7 @@ public final class LrzFlameThrowerObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isHighPriority() {
-        // make_art_tile($090,1,0) (sonic3k.asm:89228): the priority bit is clear.
+        // make_art_tile($090,1,0) (sonic3k.asm:89274): the priority bit is clear.
         return false;
     }
 

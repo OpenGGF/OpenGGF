@@ -92,7 +92,7 @@ public class LightningShieldObjectInstance extends ShieldObjectInstance {
     }
 
     /**
-     * Obj_LightningShield_CreateSpark (docs/skdisasm/sonic3k.asm:34811-34858).
+     * Obj_LightningShield_CreateSpark (docs/skdisasm/sonic3k.asm:34851-34898).
      * Creates 4 spark particles with diagonal velocities; shield stays on script 0.
      */
     public void triggerSparks() {
@@ -116,14 +116,14 @@ public class LightningShieldObjectInstance extends ShieldObjectInstance {
         int cx = player.getCentreX();
         int cy = player.getCentreY();
         // ROM allocates the children before assigning art state, so headless/object
-        // parity must not depend on loaded renderer art (sonic3k.asm:34811-34844).
+        // parity must not depend on loaded renderer art (sonic3k.asm:34851-34884).
         int[][] velocities = {
             {-0x200, -0x200}, {0x200, -0x200},
             {-0x200,  0x200}, {0x200,  0x200}
         };
         // Obj_LightningShield_Main re-syncs the shield's bit 15 from Player_1's art_tile
-        // (sonic3k.asm:34751-34755) immediately before bsr Obj_LightningShield_CreateSpark, and
-        // each spark copies the shield's art_tile (sonic3k.asm:34825): isHighPriority() here is
+        // (sonic3k.asm:34791-34795) immediately before bsr Obj_LightningShield_CreateSpark, and
+        // each spark copies the shield's art_tile (sonic3k.asm:34865): isHighPriority() here is
         // the player's flag this frame.
         boolean sparkHighPriority = isHighPriority();
         for (int[] vel : velocities) {
@@ -165,7 +165,7 @@ public class LightningShieldObjectInstance extends ShieldObjectInstance {
     }
 
     /**
-     * ROM: {@code Obj_LightningShield_Main} sonic3k.asm:34743-34750 sets the shield's Y-flip bit from
+     * ROM: {@code Obj_LightningShield_Main} sonic3k.asm:34783-34790 sets the shield's Y-flip bit from
      * {@code Reverse_gravity_flag} after masking the inherited status down to the
      * orientation bit. See {@link ShieldAnimationArtLifecycle#reverseGravityMirror}.
      */

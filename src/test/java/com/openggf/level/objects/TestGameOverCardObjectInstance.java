@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * The shared Obj39 routine table: S1 {@code GameOverCard} (docs/s1disasm/_incObj/39
  * Game Over.asm), S2 {@code Obj39} (docs/s2disasm/s2.asm:27670-27774), S3K
- * {@code Obj_GameOver} (docs/skdisasm/sonic3k.asm:62020-62101).
+ * {@code Obj_GameOver} (docs/skdisasm/sonic3k.asm:62060-62141).
  */
 @ExtendWith(SingletonResetExtension.class)
 class TestGameOverCardObjectInstance {
@@ -179,7 +179,7 @@ class TestGameOverCardObjectInstance {
         assertTrue(s1Over.isDismissed(), "S1 Over_Wait tests the buttons before bit 0");
     }
 
-    /** The OVER word's own timer is never counted (S1 :62-66, S2 :27725-27726). */
+    /** The OVER word's own timer is never counted (S1 :62-66, S2 :27765-27766). */
     @Test
     void overWordTimerNeverCountsDown() {
         Card over = card(AbstractGameOverCardObjectInstance.FRAME_OVER_GAME);

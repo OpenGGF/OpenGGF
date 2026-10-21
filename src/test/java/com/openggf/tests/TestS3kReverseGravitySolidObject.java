@@ -23,16 +23,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>Four ROM rows, one mirrored geometry:
  * <ul>
- *   <li>{@code SolidObject_cont} (sonic3k.asm:41403-41424) is {@code loc_1DFD6}
- *       (:41426-41440) plus one {@code neg.w d3} on the player-minus-object Y delta;
+ *   <li>{@code SolidObject_cont} (sonic3k.asm:41443-41464) is {@code loc_1DFD6}
+ *       (:41466-41480) plus one {@code neg.w d3} on the player-minus-object Y delta;
  *       everything else, the {@code default_y_radius}/{@code y_radius} pair included, is
  *       identical.</li>
- *   <li>{@code loc_1E0FC} (:41569-41574) negates the vertical separation before
+ *   <li>{@code loc_1E0FC} (:41609-41614) negates the vertical separation before
  *       {@code sub.w d3,y_pos(a1)}.</li>
- *   <li>{@code loc_1E154} (:41606-41632) inserts {@code neg.w d3} and
+ *   <li>{@code loc_1E154} (:41646-41672) inserts {@code neg.w d3} and
  *       {@code addq.w #2,y_pos(a1)}, turning the landing write from {@code y - d3 + 3}
  *       into {@code y + d3 - 3}.</li>
- *   <li>{@code MvSonicOnPtfm} (:41648-41653) branches to {@code loc_1E1AA}/{@code loc_1E1F4}
+ *   <li>{@code MvSonicOnPtfm} (:41688-41693) branches to {@code loc_1E1AA}/{@code loc_1E1F4}
  *       and carries the rider at {@code y_pos(a0) + d3 + y_radius(a1)}.</li>
  * </ul>
  *
@@ -86,7 +86,7 @@ class TestS3kReverseGravitySolidObject {
     /**
      * Drops the player onto the block and returns the centre Y it settles at. Inverted, the
      * player is started on the far side with the same positive {@code y_vel}, which
-     * {@code MoveSprite_TestGravity} integrates upward (sonic3k.asm:36073-36078).
+     * {@code MoveSprite_TestGravity} integrates upward (sonic3k.asm:36113-36118).
      */
     private int landOnBlock(int blockX, int blockY, boolean reverseGravity) {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()

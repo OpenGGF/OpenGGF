@@ -146,7 +146,7 @@ public class TestSonic3kAIZEvents {
         int incomplete = timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE);
         while (incomplete > 0 && frames++ < HARDWARE_DRAIN_FRAME_LIMIT) {
             // Kos_modules_left is decremented at exactly one site in the ROM:
-            // Process_Kos_Module_Queue (docs/skdisasm/sonic3k.asm:2750-2752). LevelLoop
+            // Process_Kos_Module_Queue (docs/skdisasm/sonic3k.asm:2782-2784). LevelLoop
             // reaches it at 7908, immediately after the object pass (ExecuteObjects,
             // 7900-7906) — that is the POST_OBJECTS boundary. Process_Kos_Queue (7887)
             // services the *decompression* queue and cannot reach 2750, so PRE_MAIN_LOOP
@@ -496,7 +496,7 @@ public class TestSonic3kAIZEvents {
                 break;
             }
 
-            // Process_Kos_Module_Queue (docs/skdisasm/sonic3k.asm:7908) runs immediately
+            // Process_Kos_Module_Queue (docs/skdisasm/sonic3k.asm:7940) runs immediately
             // after the object pass, so the last module retires across POST_OBJECTS
             // above; Process_Kos_Queue (7887) follows it in the same loop tail and only
             // advances decompression. Readiness is still not art either way: neither
@@ -686,9 +686,9 @@ public class TestSonic3kAIZEvents {
 
         // SpawnLevelMainSprites installs the object, then the setup block runs
         // Process_Sprites exactly once before LevelLoop
-        // (sonic3k.asm:7849-7855,8111-8128). Routine 0 initializes
+        // (sonic3k.asm:7881-7887,8143-8160). Routine 0 initializes
         // Events_fg_1=$E918 and the common object tail adds scroll speed 8
-        // (sonic3k.asm:135469-135475,135495-135508,135945-135956).
+        // (sonic3k.asm:135534-135540,135560-135573,136010-136021).
         assertEquals(0, intro.getRoutine());
         assertEquals((short) 0xE918, introEventsFg1(intro));
         assertTrue(GameServices.level().hasPendingInitialProcessSpritesPass());
@@ -1103,9 +1103,9 @@ public class TestSonic3kAIZEvents {
         assertEquals(224, afterReload.coverHeightPx());
         assertEquals(beforeReload.wavePhase(), afterReload.wavePhase());
         // ROM AIZ1BGE_Finish performs the whole act reload without ever writing
-        // Camera_Y_pos_BG_copy (sonic3k.asm:104727-104802), so the AIZ1_FireRise
+        // Camera_Y_pos_BG_copy (sonic3k.asm:104773-104848), so the AIZ1_FireRise
         // ramp carries across the reload untouched; AIZ2BGE_WaitFire's
-        // $180 + (bgY & $7F) re-seat (sonic3k.asm:105070-105076) is the only
+        // $180 + (bgY & $7F) re-seat (sonic3k.asm:105116-105122) is the only
         // thing that ever brings it back into the fire zone.
         assertEquals(beforeReload.sourceWorldY(), afterReload.sourceWorldY());
         assertEquals(FireCurtainStage.AIZ2_REDRAW, afterReload.stage());
@@ -1358,8 +1358,8 @@ public class TestSonic3kAIZEvents {
 
         // Direct entry: no pending fire sequence
         Sonic3kAIZEvents.resetGlobalState();
-        // ROM: LevelSelect_StartZone (sonic3k.asm:10222) and
-        // Load_Starpost_Settings (sonic3k.asm:61760) set Apparent_zone_and_act
+        // ROM: LevelSelect_StartZone (sonic3k.asm:10258) and
+        // Load_Starpost_Settings (sonic3k.asm:61800) set Apparent_zone_and_act
         // = $0001 for direct AIZ2 entry; the engine mirrors this through
         // LevelManager.setApparentAct.
         GameServices.level().setApparentAct(1);
@@ -1387,14 +1387,14 @@ public class TestSonic3kAIZEvents {
      * the old heuristic set enteredAsAct2 = true whenever
      * pendingFireSequence == null, which flipped the engine into the
      * post-miniboss branch even though ROM's Apparent_zone_and_act stayed
-     * at 0.  ROM cite: sonic3k.asm:39046-39058 (AIZ2_SonicResize1).
+     * at 0.  ROM cite: sonic3k.asm:39086-39098 (AIZ2_SonicResize1).
      */
     @Test
     public void aiz2ReloadResumeWithApparentAct0DoesNotSkipMinibossPath() {
         Camera camera = GameServices.camera();
 
         Sonic3kAIZEvents.resetGlobalState();
-        // ROM: AIZ1_AIZ2_Transition (sonic3k.asm:104627) does not write
+        // ROM: AIZ1_AIZ2_Transition (sonic3k.asm:104673) does not write
         // Apparent_zone_and_act; it stays at AIZ1=$0000 across the
         // continuation.  The engine's seamless transition coordinator
         // preserves apparentAct, matching this.

@@ -277,7 +277,7 @@ public class GameLoop {
     // Star-post activation high-water captured at bonus entry (ROM: the star post's
     // respawn bit, kept across the reload by Respawn_table_keep). Restored on bonus
     // exit so the return star post stays used even though Last_star_post_hit was
-    // zeroed (sonic3k.asm:61924). -1 when no bonus entry is in flight.
+    // zeroed (sonic3k.asm:61964). -1 when no bonus entry is in flight.
     private int pendingBonusReturnStarPostMark = -1;
 
     // Flag to freeze level updates during the final-boss fade into ending mode.
@@ -1037,8 +1037,8 @@ public class GameLoop {
      * same way ({@code Level_StartGame} at docs/s1disasm/sonic.asm:2990-2991,
      * then {@code Level_MainLoop}'s {@code WaitForVBlank} at :2998-3001 ahead of
      * {@code jsr (ExecuteObjects).l} at :3006), and so does S3K
-     * ({@code bclr #7,(Game_mode).w} at docs/skdisasm/sonic3k.asm:7882, then
-     * {@code Wait_VSync} at :7888 ahead of {@code Process_Sprites} at :7894).
+     * ({@code bclr #7,(Game_mode).w} at docs/skdisasm/sonic3k.asm:7914, then
+     * {@code Wait_VSync} at :7920 ahead of {@code Process_Sprites} at :7926).
      *
      * <p>Without this term the latch survived every locked title-card row (a
      * title-card iteration never reaches the gap-body test) and was consumed by
@@ -1208,7 +1208,7 @@ public class GameLoop {
 
     private void stepInternalBody() {
         requireInputHandler();
-        // VInt_Done bumps V_int_run_count on every V-int (sonic3k.asm:542-543); the
+        // VInt_Done bumps V_int_run_count on every V-int (sonic3k.asm:558-559); the
         // carrier counts the iterations no level object clock is bound to service.
         com.openggf.game.session.EngineTiming.vIntRunCounter(engineServices).serviceRepresentedVBlank();
         LevelIterationAdmissionController.refreshTraceInputSnapshot(inputHandler);
@@ -1892,7 +1892,7 @@ public class GameLoop {
                 int vblankTicks = playbackDebugManager.currentSkippedTickVblankAdvanceCount();
                 for (int tick = 0; tick < vblankTicks; tick++) {
                     // A held iteration still services LevelLoop's Kos queue
-                    // tail (sonic3k.asm:7908/7887), without gameplay dispatch.
+                    // tail (sonic3k.asm:7940/7887), without gameplay dispatch.
                     TraceSuppressedRowClosure.execute(
                             LevelFrameContext.from(gameplayMode),
                             activePlcLifecycleFrame, levelManager,
@@ -2360,7 +2360,7 @@ public class GameLoop {
      * level-side owner writes the game mode inside its own object tick and
      * runs no fade of its own — S1 {@code Got_ChkSS}
      * ("_incObj/3A Got Through Card.asm":198-201), S2 {@code Obj79_Star}
-     * (s2.asm:44875-44877), S3K {@code SSEntryFlash_GoSS} (s3.asm:79628). The
+     * (s2.asm:44875-44877), S3K {@code SSEntryFlash_GoSS} (s3.asm:79688). The
      * white-out that precedes the stage belongs to the special-stage entry
      * itself ({@code GM_Special}'s {@code PaletteWhiteOut}, sonic.asm:3227 /
      * {@code SpecialStage}'s {@code Pal_FadeToWhite}, s2.asm:6546), which
@@ -2762,7 +2762,7 @@ public class GameLoop {
         if (shouldStartBonusStageExitFade(provider)) {
             // Restart_level_flag re-enters Level:, whose Pal_FadeToBlack holds the
             // frozen stage for 22 V-ints ($15 + dbf) and services the Nemesis queue
-            // on each (sonic3k.asm:7896, 7504-7524, 5042-5051): the death-restart fade.
+            // on each (sonic3k.asm:7928, 7536-7556, 5074-5083): the death-restart fade.
             GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), fadeManager,
                     () -> doExitBonusStage(provider, savedState));
             LOGGER.info("Starting fade-to-black to exit Bonus Stage");
@@ -2784,13 +2784,13 @@ public class GameLoop {
 
         // ROM: on bonus-stage exit the live HUD Ring_count is copied straight into
         // Saved_ring_count (loc_61076: move.w (Ring_count).w,(Saved_ring_count).w,
-        // sonic3k.asm:127760; the pachinko/slots exits do the same at 96683/99001),
+        // sonic3k.asm:127814; the pachinko/slots exits do the same at 96683/99001),
         // and the returning level reload then restores Ring_count from
         // Saved_ring_count. So the count carried back is the interior's LIVE ring
         // total at exit, NOT the entry snapshot plus a bookkeeping reward. This
         // matters where a machine's per-item ring award differs between the HUD
         // Ring_count and the Saved_ring_count it also bumps: the gumball ring ball
-        // adds +10 to the HUD but +20 to Saved_ring_count (loc_6114E, :127845), and
+        // adds +10 to the HUD but +20 to Saved_ring_count (loc_6114E, :127899), and
         // that transient +20 is discarded here by the Ring_count->Saved_ring_count
         // copy. Capture the live HUD ring total now, before onExit()/loadZoneAndAct
         // reset it, and restore it on return below (replacing the former
@@ -2868,7 +2868,7 @@ public class GameLoop {
         pendingBonusReturnStarPostMark = -1;
 
         // Level/loc_62B6 spawns Obj_TitleCard on this reload for every zone but $1701
-        // or Act3_flag (sonic3k.asm:7730-7735); the recorded gumball exit shows it.
+        // or Act3_flag (sonic3k.asm:7762-7767); the recorded gumball exit shows it.
         int apparentZone = (savedState.savedApparentZoneAndAct() >> 8) & 0xFF;
         int apparentAct = savedState.savedApparentZoneAndAct() & 0xFF;
         TitleCardProvider tcp = getTitleCardProviderLazy();
@@ -2928,7 +2928,7 @@ public class GameLoop {
 
     /**
      * ROM {@code SpawnLevelMainSprites_SpawnPowerup} {@code loc_6A02}
-     * (docs/skdisasm/sonic3k.asm:8294-8323) tests the saved elemental bits in
+     * (docs/skdisasm/sonic3k.asm:8326-8355) tests the saved elemental bits in
      * fire -> lightning -> bubble order and re-gives that shield.
      */
     static ShieldType savedShieldType(int savedStatusSecondary) {
@@ -2947,10 +2947,10 @@ public class GameLoop {
 
     /**
      * ROM {@code SpawnLevelMainSprites_SpawnPowerup}
-     * (docs/skdisasm/sonic3k.asm:8264-8290) runs on every level spawn, and the
+     * (docs/skdisasm/sonic3k.asm:8296-8322) runs on every level spawn, and the
      * bonus zones are explicitly routed into its restore arm --
      * {@code cmpi.b #$13,(Current_zone).w / beq loc_69E0} and the same for
-     * {@code #$14} (:8270-8273). It re-gives Player 1 the shield saved in
+     * {@code #$14} (:8302-8305). It re-gives Player 1 the shield saved in
      * {@code Saved_status_secondary}, so the ROM's player keeps its elemental
      * shield for the DURATION of the bonus stage, not only after returning to
      * the level.
@@ -2959,7 +2959,7 @@ public class GameLoop {
      * ({@link #encodeSavedShieldStatus}) but consumed it only on the way out
      * ({@link #resolveShieldToRestore}), leaving the bonus-stage player
      * shieldless. In Pachinko that removes {@code Test_Ring_Collisions}'
-     * {@code Status_LtngShield} arm (:18450-18453), which allocates
+     * {@code Status_LtngShield} arm (:18486-18489), which allocates
      * {@code Obj_Attracted_Ring} and pulls a nearby ring into the player.
      */
     public static void applyBonusStageEntryShieldRestore(
@@ -3233,16 +3233,16 @@ public class GameLoop {
         // return's level reload clears.
         //
         // S3K: Load_Starpost_Settings' giant-ring/bonus branch loc_2D2C2
-        // (docs/skdisasm/sonic3k.asm:61793-61819) restores the whole Saved2_*
+        // (docs/skdisasm/sonic3k.asm:61833-61859) restores the whole Saved2_*
         // block but deliberately writes no Last_star_post_hit, so the value the
         // special-stage exit left there survives -- the exit's
-        // "ori.b #$80,(Last_star_post_hit).w" (:12121, :12676) over the subtype
-        // sub_2D164 stored when the post was touched (:61704), with LevelSizeLoad's
-        // "andi.b #$7F,(Last_star_post_hit).w" (:7881) stripping the marker bit
+        // "ori.b #$80,(Last_star_post_hit).w" (:12157, :12712) over the subtype
+        // sub_2D164 stored when the post was touched (:61744), with LevelSizeLoad's
+        // "andi.b #$7F,(Last_star_post_hit).w" (:7913) stripping the marker bit
         // before LevelLoop. sub_2D028 then reads it as already-hit for every post
         // whose subtype is at or below it ("cmp.b d2,d1 / bhs.w loc_2D0EA",
-        // :61606-61610), which is what stops the post the player entered from
-        // re-arming its 20-ring bonus stars (:61638-61641) on the return.
+        // :61646-61650), which is what stops the post the player entered from
+        // re-arming its 20-ring bonus stars (:61678-61681) on the return.
         //
         // S1 is the same shape: v_lastlamp is cleared only by the end-of-act card
         // (docs/s1disasm/_incObj/3A Got Through Card.asm:198), a death
@@ -3305,12 +3305,12 @@ public class GameLoop {
         // Enter title card mode for the APPARENT zone/act. Obj_TitleCardInit
         // never reads Current_zone_and_act: the act-number art is chosen by
         // "tst.b (Apparent_act).w / bne" -- Num2 when non-zero, Num1 when zero
-        // (sonic3k.asm:62131-62141) -- and the zone art by
-        // "move.b (Apparent_zone_and_act).w,d0" (sonic3k.asm:62155). The two
+        // (sonic3k.asm:62171-62181) -- and the zone art by
+        // "move.b (Apparent_zone_and_act).w,d0" (sonic3k.asm:62195). The two
         // acts diverge across an S3K seamless act transition, because
         // Current_act advances inside the act-1 background-event dispatch while
         // Apparent_act is only raised later, by the end-sign results object's
-        // "move.b #1,(Apparent_act).w" at loc_2DD06 (sonic3k.asm:62714). A
+        // "move.b #1,(Apparent_act).w" at loc_2DD06 (sonic3k.asm:62754). A
         // giant-ring special stage entered in that window returns to a card the
         // ROM still draws with the act-1 digit. The bonus-stage return already
         // reads Saved_apparent_zone_and_act for the same reason.
@@ -3385,7 +3385,7 @@ public class GameLoop {
             camera.setFrozen(false);
 
             // ROM SpawnLevelMainSprites_SpawnPlayers, both arms
-            // (docs/skdisasm/sonic3k.asm:8367 sidekick, :8388 Tails-as-Player_1).
+            // (docs/skdisasm/sonic3k.asm:8399 sidekick, :8420 Tails-as-Player_1).
             SpecialStageReturnSpawn.applyMainCharacterSpawnOffset(playable, configService);
             SpecialStageReturnSpawn.respawnSidekicks(
                     playable, spriteManager.getSidekicks(), levelManager);
@@ -3487,7 +3487,7 @@ public class GameLoop {
      *       s2.asm:4950-4951 immediately after the {@code Level_TtlCard}
      *       wait loop, before the player is allowed to move.</li>
      *   <li>S3K sets {@code Ctrl_1_locked}/{@code Ctrl_2_locked} at
-     *       sonic3k.asm:7774-7775 immediately after the title-card wait
+     *       sonic3k.asm:7806-7807 immediately after the title-card wait
      *       loop, clearing them when the level proper starts.</li>
      * </ul>
      *

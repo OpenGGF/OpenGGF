@@ -244,9 +244,9 @@ class TestS3kSlotBonusStageRuntime {
         assertTrue(slotPlayer.getAir());
     }
 
-    // ROM loc_4BA62 (sonic3k.asm:98751-98752) returns straight out of the whole
+    // ROM loc_4BA62 (sonic3k.asm:98797-98798) returns straight out of the whole
     // ground/air/ring/tile dispatch chain while object_control(a0) is set -- e.g.
-    // during the bonus cage grab (sub_4AF80/loc_4B130, sonic3k.asm:98136). Commit
+    // during the bonus cage grab (sub_4AF80/loc_4B130, sonic3k.asm:98182). Commit
     // 2bf9ac104 added the matching `!slotPlayer.isObjectControlled()` gate around
     // checkRingPickup(). Pin both sides: the ring is NOT consumed while object
     // controlled (this test), and IS consumed once released, so a regression that
@@ -331,7 +331,7 @@ class TestS3kSlotBonusStageRuntime {
         runtime.stageStateForTest().clearCollision();
 
         // Ring pickup (ROM sub_4BDCA) now runs inside the player runtime's movement
-        // branch, spliced in before MoveSprite2 (sonic3k.asm:98776-98780) so a bumper
+        // branch, spliced in before MoveSprite2 (sonic3k.asm:98822-98826) so a bumper
         // launch reaches the same frame's velocity step. update() no longer owns it;
         // drive the hook directly here after seeding the ground-projected origin.
         runtime.runPreMovePlayerInteractionsForTest();

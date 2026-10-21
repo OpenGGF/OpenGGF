@@ -110,8 +110,8 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
      * Rebuilds this controller as {@code SpecialStage_Results} leaves it: {@code loc_2E226}
      * sets {@code HPZ_special_stage_completed} after {@code Load_Sprites}, so the first
      * {@code Obj_HPZSSEntryControl} pass takes {@code loc_909EA}, allocates all seven
-     * pedestals and deletes itself (sonic3k.asm:197781-197792). A cleared stage also left
-     * {@code _unkFAC0} = stage|$80 and {@code _unkFAC1} = $FF (sonic3k.asm:63187-63192);
+     * pedestals and deletes itself (sonic3k.asm:197888-197899). A cleared stage also left
+     * {@code _unkFAC0} = stage|$80 and {@code _unkFAC1} = $FF (sonic3k.asm:63227-63232);
      * the runtime's pedestal-transform and return-transform flags model those two bytes.
      * Must be called before the controller's first update.
      */

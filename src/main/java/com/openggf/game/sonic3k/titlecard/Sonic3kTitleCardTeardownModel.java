@@ -10,17 +10,17 @@ import com.openggf.graphics.GraphicsManager;
  * <p>Skipping the title-card <em>presentation</em> does not shorten the
  * title-card <em>owner</em>'s lifetime. {@code Obj_TitleCard} keeps running as
  * an ordinary object in {@code Obj_TitleCardWait2}
- * ({@code docs/skdisasm/sonic3k.asm:62249-62261}) and only reaches
+ * ({@code docs/skdisasm/sonic3k.asm:62289-62301}) and only reaches
  * {@code loc_2D8CA}'s {@code LoadEnemyArt}
- * ({@code docs/skdisasm/sonic3k.asm:62295-62301}) once two ROM conditions
+ * ({@code docs/skdisasm/sonic3k.asm:62335-62341}) once two ROM conditions
  * clear in order:
  *
  * <ol>
  *   <li>{@code objoff_2E}, seeded to {@code $16} immediately before
- *       {@code LevelLoop} ({@code docs/skdisasm/sonic3k.asm:7878}), decrements
+ *       {@code LevelLoop} ({@code docs/skdisasm/sonic3k.asm:7910}), decrements
  *       once per level frame ({@code 62249-62253}).</li>
  *   <li>{@code objoff_30}, the count of live card elements incremented once per
- *       element at creation ({@code docs/skdisasm/sonic3k.asm:62190}), drains to
+ *       element at creation ({@code docs/skdisasm/sonic3k.asm:62230}), drains to
  *       zero. While it is non-zero the owner only bumps the stagger counter
  *       {@code objoff_32} ({@code 62256-62261}); each element consumes that
  *       counter to leave the screen and decrements {@code objoff_30} on the
@@ -29,12 +29,12 @@ import com.openggf.graphics.GraphicsManager;
  *
  * <p>The drain is therefore driven by element state, not by a frame constant:
  * this class steps the actual {@code ObjArray_TtlCard} elements
- * ({@code docs/skdisasm/sonic3k.asm:62450-62478}) through
+ * ({@code docs/skdisasm/sonic3k.asm:62490-62518}) through
  * {@code Obj_TitleCardElement} ({@code 62356-62378}) and
  * {@code Obj_TitleCardRedBanner} ({@code 62303-62329}), and retires each one
  * using the same visibility test {@code Render_Sprites} applies to a
  * {@code render_flags} {@code $40} sprite
- * ({@code docs/skdisasm/sonic3k.asm:36440-36468}).
+ * ({@code docs/skdisasm/sonic3k.asm:36480-36508}).
  *
  * <p>Working the two phases through gives final-child retirement on provider
  * tick 34 and owner release on provider tick 35 for the standard four-element
@@ -66,7 +66,7 @@ import com.openggf.graphics.GraphicsManager;
  */
 public final class Sonic3kTitleCardTeardownModel {
 
-    /** {@code move.w #$16,...objoff_2E} — sonic3k.asm:7878. */
+    /** {@code move.w #$16,...objoff_2E} — sonic3k.asm:7910. */
     private static final int WAIT2_INITIAL_COUNTER = 0x16;
 
     /** {@code addi.w #$20,x_pos} / {@code subi.w #$20,y_pos} — 62367, 62318. */
@@ -154,7 +154,7 @@ public final class Sonic3kTitleCardTeardownModel {
     private Element[] elements = newStandardCard();
 
     /**
-     * {@code ObjArray_TtlCard} — sonic3k.asm:62450-62478. Fields per entry are
+     * {@code ObjArray_TtlCard} — sonic3k.asm:62490-62518. Fields per entry are
      * {@code objoff_46}, {@code x_pos}, {@code y_pos}, {@code mapping_frame},
      * {@code width_pixels}, {@code objoff_28}; the elements rest at
      * {@code objoff_46} once the entry animation finishes.

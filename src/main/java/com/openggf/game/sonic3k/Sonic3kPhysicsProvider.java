@@ -10,7 +10,7 @@ import com.openggf.game.rules.GameRules;
  * Returns character-specific profiles; spindash is enabled.
  *
  * <p>Normal single-player mode uses the same base constants as S2 ($600/$C/$80).
- * The {@code Character_Speeds} table (sonic3k.asm:202288) is only used in
+ * The {@code Character_Speeds} table (sonic3k.asm:202403) is only used in
  * Competition mode ({@code Sonic2P_Index}, line 21457); it is NOT loaded
  * during normal single-player init.
  */
@@ -26,7 +26,7 @@ public class Sonic3kPhysicsProvider implements PhysicsProvider {
             return PhysicsProfile.SONIC_2_TAILS;
         }
         if ("knuckles".equalsIgnoreCase(characterType)) {
-            // ROM: Knux_Jump (sonic3k.asm:32454) move.w #$600,d2 — lower jump than Sonic
+            // ROM: Knux_Jump (sonic3k.asm:32494) move.w #$600,d2 — lower jump than Sonic
             return PhysicsProfile.SONIC_3K_KNUCKLES;
         }
         return PhysicsProfile.SONIC_2_SONIC;

@@ -202,7 +202,7 @@ public class TestS3kEmzPaletteCycling {
         RomByteReader cyclerReader = RomByteReader.fromRom(com.openggf.tests.TestEnvironment.currentRom());
 
         // EMZ is ROM zone $12: OffsAnPal entries 36/37
-        // (skdisasm/sonic3k.asm:3154-3155), indexed zone*2 + act.
+        // (skdisasm/sonic3k.asm:3186-3187), indexed zone*2 + act.
         Sonic3kPaletteCycler cycler = new Sonic3kPaletteCycler(cyclerReader, level, 0x12, 0);
 
         cycler.update();

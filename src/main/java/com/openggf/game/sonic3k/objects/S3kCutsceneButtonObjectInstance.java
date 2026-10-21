@@ -94,7 +94,7 @@ public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
         }
         // Obj_CutsceneButton reads the object pointer in _unkFAA4 and calls
         // Check_InMyRange directly; it does not require a landing/bounce flag
-        // (sonic3k.asm:133931-133943).
+        // (sonic3k.asm:133988-134000).
         int dx = knuckles.getX() - x;
         int dy = knuckles.getY() - y;
         if (dx >= RANGE_LEFT && dx < RANGE_RIGHT && dy >= RANGE_TOP && dy < RANGE_BOTTOM) {
@@ -113,12 +113,12 @@ public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
             // logical UP word AIZEndBoss_WaitForCutsceneKnuckles wrote from
             // slot 7 is still the word that pass consumed; the unlock only
             // reaches the player on the following frame
-            // (sonic3k.asm:133968-133970, 138317-138323).
+            // (sonic3k.asm:134025-134027, 138382-138388).
             player.setControlLocked(false);
         }
         // loc_65C04 only publishes st (_unkFAA9).w; the draw bridge consumes it
         // from its own, strictly later, SST slot in this same object scan
-        // (sonic3k.asm:59622-59628, 133943-133946). Nothing is pushed at the
+        // (sonic3k.asm:59662-59668, 134000-134003). Nothing is pushed at the
         // bridge from here.
         services().playSfx(Sonic3kSfx.SWITCH.id);
     }

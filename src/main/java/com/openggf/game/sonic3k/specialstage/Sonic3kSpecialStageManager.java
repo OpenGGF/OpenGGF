@@ -87,10 +87,10 @@ public class Sonic3kSpecialStageManager {
     private int emeraldInteractIndex;
     /**
      * The {@code Queue_Kos_Module} workload submitted for the Chaos/Super
-     * Emerald art (ROM {@code loc_9C52}, sonic3k.asm:12608-12610).
+     * Emerald art (ROM {@code loc_9C52}, sonic3k.asm:12644-12646).
      *
      * <p>The wait it drives is not a frame count. {@code loc_9C5C}
-     * (sonic3k.asm:12613-12620) tests {@code Kos_modules_left}, a byte owned
+     * (sonic3k.asm:12649-12656) tests {@code Kos_modules_left}, a byte owned
      * entirely by the module state machine
      * ({@code Process_Kos_Module_Queue_Init} / {@code Process_Kos_Module_Queue},
      * sonic3k.asm:2694-2790): Init sets it to the archive's module count, and
@@ -100,7 +100,7 @@ public class Sonic3kSpecialStageManager {
      * The engine therefore submits the same archive to {@link S3kKosModuleQueue}
      * and reads the same predicate; how long the FIFO child takes to
      * decompress is 68000 main-loop budget ({@code Process_Kos_Queue},
-     * sonic3k.asm:2840, bookmarked and resumed across V-ints at 2818-2830),
+     * sonic3k.asm:2872, bookmarked and resumed across V-ints at 2818-2830),
      * which is exactly the hardware timing the recorded timing port supplies.
      *
      * <p>The ordinal is the rewind-stable identity of that submission; the
@@ -155,10 +155,10 @@ public class Sonic3kSpecialStageManager {
     /**
      * True until this manager's first post-{@link #initialize(int)} call to
      * {@link #update()} has run. ROM: the special-stage object's first
-     * per-frame routine execution (loc_903E, sonic3k.asm:11445) happens
+     * per-frame routine execution (loc_903E, sonic3k.asm:11481) happens
      * synchronously inside the boot sequence's own {@code Process_Sprites}
-     * call (sonic3k.asm:10717) -- BEFORE the first {@code Wait_VSync}
-     * (sonic3k.asm:10725) that starts real input polling. That pre-boot call
+     * call (sonic3k.asm:10753) -- BEFORE the first {@code Wait_VSync}
+     * (sonic3k.asm:10761) that starts real input polling. That pre-boot call
      * is modeled as this manager's first stepped {@code update()} running
      * normally; {@link #postBootFadeHoldFrames} then models the frames that
      * follow it during which the ROM does NOT call {@code Process_Sprites}
@@ -173,13 +173,13 @@ public class Sonic3kSpecialStageManager {
      * touches) does not advance. Two ROM waits stack back to back after the
      * boot's pre-call:
      * <ul>
-     *   <li>{@code Pal_FadeFromWhite} (sonic3k.asm:10735, routine at
+     *   <li>{@code Pal_FadeFromWhite} (sonic3k.asm:10771, routine at
      *       5139-5150): {@code moveq #$15,d4 / dbf d4,loc_3C8E} runs 22
      *       {@code Wait_VSync} iterations, calling only palette-fade helpers
      *       -- no {@code Process_Sprites}.</li>
      *   <li>{@code loc_84C2}'s own leading {@code Wait_VSync}
-     *       (sonic3k.asm:10741) before ITS first {@code Process_Sprites}
-     *       call (sonic3k.asm:10744) -- one more real frame with no object
+     *       (sonic3k.asm:10777) before ITS first {@code Process_Sprites}
+     *       call (sonic3k.asm:10780) -- one more real frame with no object
      *       update.</li>
      * </ul>
      * Total 23 frames; this field only counts the 22 held AFTER
@@ -195,22 +195,22 @@ public class Sonic3kSpecialStageManager {
     /**
      * {@code Pal_FadeToWhite}'s own iteration count: {@code move.w #$15,d4}
      * with a trailing {@code dbf d4} runs $16 = 22 {@code Wait_VSync}
-     * iterations (sonic3k.asm:5232-5242). Identical to the count
+     * iterations (sonic3k.asm:5264-5274). Identical to the count
      * {@link #postBootFadeHoldFrames} takes from {@code Pal_FadeFromWhite}
-     * (sonic3k.asm:5139-5150), which is written the same way.
+     * (sonic3k.asm:5171-5182), which is written the same way.
      */
     private static final int PAL_FADE_TO_WHITE_FRAMES = 22;
 
     /**
      * Remaining real, input-polled frames the ROM spends in the special
      * stage's ENTRY fade, before any special-stage state exists at all.
-     * {@code SpecialStage} (sonic3k.asm:10585) opens with
-     * {@code bsr.w Pal_FadeToWhite} (sonic3k.asm:10591); that routine
-     * (sonic3k.asm:5232-5242) is {@code move.w #$15,d4 / ... bsr.w Wait_VSync
+     * {@code SpecialStage} (sonic3k.asm:10621) opens with
+     * {@code bsr.w Pal_FadeToWhite} (sonic3k.asm:10627); that routine
+     * (sonic3k.asm:5264-5274) is {@code move.w #$15,d4 / ... bsr.w Wait_VSync
      * ... dbf d4,loc_3D3A}, so it blocks for 22 real frames calling only the
      * palette helpers -- no {@code Process_Sprites}, and
      * {@code Special_stage_rate} / {@code Special_stage_rate_timer} are not
-     * written until sonic3k.asm:10701-10707, after the stage load. The engine
+     * written until sonic3k.asm:10737-10743, after the stage load. The engine
      * performs entry and {@code initializeStage} in one frame, so without this
      * hold the manager's first 22 stepped frames land on the ROM's fade-to-
      * white frames and {@code Special_stage_rate_timer} runs 22 frames ahead
@@ -239,7 +239,7 @@ public class Sonic3kSpecialStageManager {
 
     /**
      * Initialize the special stage with the given stage index.
-     * ROM: SpecialStage (sonic3k.asm:10585) + sub_85B0 (line 10809)
+     * ROM: SpecialStage (sonic3k.asm:10621) + sub_85B0 (line 10809)
      *
      * @param stageIndex stage number (0-7)
      * @throws IOException if ROM data loading fails
@@ -568,7 +568,7 @@ public class Sonic3kSpecialStageManager {
                 playerCharacter == PlayerCharacter.KNUCKLES, skPalettes);
         // The palette reaches the shared lines only once the entry
         // Pal_FadeToWhite has elapsed: the ROM loads it inside the masked-
-        // interrupt boot (sub_9D5E, sonic3k.asm:12694), after the fade over
+        // interrupt boot (sub_9D5E, sonic3k.asm:12730), after the fade over
         // the level's last frame.
         stagePalettesUploaded = false;
 
@@ -624,7 +624,7 @@ public class Sonic3kSpecialStageManager {
     /**
      * Returns whether {@code SpecialStage} has reached its reveal boundary: the
      * entry {@code Pal_FadeToWhite} has elapsed, so {@code mus_SpecialStage}
-     * (sonic3k.asm:10731) and {@code Pal_FadeFromWhite} may start while the
+     * (sonic3k.asm:10767) and {@code Pal_FadeFromWhite} may start while the
      * post-boot hold still keeps the stage frozen.
      */
     public boolean isEntryPresentationReady() {
@@ -638,7 +638,7 @@ public class Sonic3kSpecialStageManager {
 
     /**
      * Update the special stage by one frame.
-     * ROM: loc_84C2 (sonic3k.asm:10737) - main loop
+     * ROM: loc_84C2 (sonic3k.asm:10773) - main loop
      */
     public void update() {
         if (!initialized || finished) {
@@ -661,9 +661,9 @@ public class Sonic3kSpecialStageManager {
         // Entry fade hold (see postBootFadeHoldFrames javadoc): the ROM does
         // not run the special-stage object's per-frame routine at all for a
         // stretch of real, input-polled frames right after entry
-        // (Pal_FadeFromWhite, sonic3k.asm:10735, plus loc_84C2's own leading
-        // Wait_VSync, sonic3k.asm:10741, before its first Process_Sprites
-        // call at sonic3k.asm:10744). frameCounter above still advances --
+        // (Pal_FadeFromWhite, sonic3k.asm:10771, plus loc_84C2's own leading
+        // Wait_VSync, sonic3k.asm:10777, before its first Process_Sprites
+        // call at sonic3k.asm:10780). frameCounter above still advances --
         // it is comparator-facing stepped-frame bookkeeping, not a ROM RAM
         // field -- but nothing else in this method (player/tails/collision/
         // banner/HUD/background) may observe these frames.
@@ -690,11 +690,11 @@ public class Sonic3kSpecialStageManager {
 
         // Grid collision is the TAIL of the movement routine, not a separate
         // later pass: the ROM's per-frame player routine loc_903E calls
-        // sub_9580 (sonic3k.asm:11467) which moves the player and then falls
+        // sub_9580 (sonic3k.asm:11503) which moves the player and then falls
         // into its own jump gate -- tst.b (Special_stage_jumping).w / bmi.s
-        // locret_972C (sonic3k.asm:12074-12075) -- before bsr.s sub_972E
-        // (sonic3k.asm:12078), the cell-collision routine. Only AFTERWARDS,
-        // at loc_911E (sonic3k.asm:11520-11527), does the jump physics land
+        // locret_972C (sonic3k.asm:12110-12111) -- before bsr.s sub_972E
+        // (sonic3k.asm:12114), the cell-collision routine. Only AFTERWARDS,
+        // at loc_911E (sonic3k.asm:11556-11563), does the jump physics land
         // the player and write 0 to Special_stage_jumping.
         //
         // The ordering is load-bearing on the landing frame. When the jump
@@ -782,7 +782,7 @@ public class Sonic3kSpecialStageManager {
         collisionQueue.update(grid, this::onBlueSphereAnimComplete,
                 player.getXPos(), player.getYPos());
 
-        // Ring rotation animation (ROM: Animate_SSRings, sonic3k.asm:12723)
+        // Ring rotation animation (ROM: Animate_SSRings, sonic3k.asm:12759)
         // Cycles through 3 frames (0, 1, 2) every 8 game frames
         ringAnimTimer--;
         if (ringAnimTimer < 0) {
@@ -896,7 +896,7 @@ public class Sonic3kSpecialStageManager {
     /**
      * The tail of the ROM's movement routine sub_9580: skip the cell check
      * while airborne or during the clear sequence, otherwise run it.
-     * ROM: sonic3k.asm:12074-12078 --
+     * ROM: sonic3k.asm:12110-12114 --
      * {@code tst.b (Special_stage_jumping).w / bmi.s locret_972C /
      * tst.b (Special_stage_clear_routine).w / bne.s locret_972C /
      * bsr.s sub_972E}. {@code bmi} tests bit 7, so both the normal ($80) and
@@ -908,9 +908,9 @@ public class Sonic3kSpecialStageManager {
      *
      * <p>The cell check is also the LAST thing sub_9580 does, so every earlier
      * exit from that routine suppresses it for the frame -- the fade-out
-     * rotation's {@code rts} (sonic3k.asm:11922), the mid-turn
-     * {@code bne.w locret_972C} (sonic3k.asm:11949), and the bumper's
-     * different-cell unlock {@code rts} (loc_96CE, sonic3k.asm:12039).
+     * rotation's {@code rts} (sonic3k.asm:11958), the mid-turn
+     * {@code bne.w locret_972C} (sonic3k.asm:11985), and the bumper's
+     * different-cell unlock {@code rts} (loc_96CE, sonic3k.asm:12075).
      * {@link Sonic3kSpecialStagePlayer#reachedCellCheck()} reports whether the
      * routine got that far.
      */
@@ -925,7 +925,7 @@ public class Sonic3kSpecialStageManager {
 
     /**
      * Process collision at the player's current position.
-     * ROM: sub_972E (sonic3k.asm:12088)
+     * ROM: sub_972E (sonic3k.asm:12124)
      */
     private void processCollision() {
         var result = collision.checkCollision(grid, player);
@@ -937,7 +937,7 @@ public class Sonic3kSpecialStageManager {
             case BLUE_SPHERE:
                 collisionQueue.addBlueSphere(result.gridIndex);
                 // loc_97BE requests the sound even when Find_SStageCollisionResponseSlot
-                // failed; animation admission does not gate audio (sonic3k.asm:12131-12142).
+                // failed; animation admission does not gate audio (sonic3k.asm:12167-12178).
                 GameServices.audio().playSfx(Sonic3kSfx.BLUE_SPHERE.id);
                 break;
 
@@ -976,7 +976,7 @@ public class Sonic3kSpecialStageManager {
 
     /**
      * Collect a ring at the given grid index.
-     * ROM: loc_9822 (sonic3k.asm:12173)
+     * ROM: loc_9822 (sonic3k.asm:12209)
      */
     private void collectRing(int gridIndex) {
         // Ring queue entry already added by caller
@@ -1002,8 +1002,8 @@ public class Sonic3kSpecialStageManager {
         } else {
             // ROM: loc_984C seeds sfx_RingRight before the Blue_spheres_stage_flag
             // threshold branch and always calls Play_SFX with that ID
-            // (skdisasm/sonic3k.asm:12189-12222), exactly as GiveRing does in a
-            // level (sonic3k.asm:35456). The left/right alternation is the Z80
+            // (skdisasm/sonic3k.asm:12225-12258), exactly as GiveRing does in a
+            // level (sonic3k.asm:35496). The left/right alternation is the Z80
             // driver's, keyed on that raw id (Z80 Sound Driver.asm:1919-1925),
             // so the audio manager alternates this request the same way.
             GameServices.audio().playSfx(Sonic3kSfx.RING_RIGHT.id);
@@ -1012,7 +1012,7 @@ public class Sonic3kSpecialStageManager {
 
     /**
      * Collect the emerald (player walked into emerald cell).
-     * ROM: loc_9CE6 (sonic3k.asm:12664)
+     * ROM: loc_9CE6 (sonic3k.asm:12700)
      */
     private void collectEmerald() {
         publishEmeraldReward();
@@ -1061,7 +1061,7 @@ public class Sonic3kSpecialStageManager {
 
     /**
      * Update the stage clear sequence.
-     * ROM: sub_9B62 (sonic3k.asm:12530)
+     * ROM: sub_9B62 (sonic3k.asm:12566)
      */
     private void updateClearSequence() {
         switch (clearRoutine) {
@@ -1079,7 +1079,7 @@ public class Sonic3kSpecialStageManager {
 
     /**
      * Clear routine state 1: fly-away animation.
-     * ROM: loc_9B7C (sonic3k.asm:12530)
+     * ROM: loc_9B7C (sonic3k.asm:12566)
      */
     private void updateClearFlyaway() {
         if (clearTimer >= CLEAR_TIMER_COMPLETE) {
@@ -1108,7 +1108,7 @@ public class Sonic3kSpecialStageManager {
 
     /**
      * Place the chaos emerald on the grid ahead of the player.
-     * ROM: loc_9BA6 (sonic3k.asm:12553)
+     * ROM: loc_9BA6 (sonic3k.asm:12589)
      */
     private void placeEmerald() {
         grid.clearAll();
@@ -1130,7 +1130,7 @@ public class Sonic3kSpecialStageManager {
     }
 
     /**
-     * ROM {@code loc_9C28}-{@code loc_9C52} (sonic3k.asm:12595-12610) picks the
+     * ROM {@code loc_9C28}-{@code loc_9C52} (sonic3k.asm:12631-12646) picks the
      * Chaos or Super Emerald KosM archive on {@code SK_special_stage_flag},
      * loads {@code tiles_to_bytes(ArtTile_SStage_Emerald)} into d2 and tail-jumps
      * into {@code Queue_Kos_Module} (2668). With the module FIFO empty that call
@@ -1164,7 +1164,7 @@ public class Sonic3kSpecialStageManager {
     /**
      * Retires the emerald archive once {@code Kos_modules_left} has reached
      * zero. ROM does the equivalent inside {@code Process_Kos_Module_Queue}
-     * itself: the last module's DMA (sonic3k.asm:2758-2768) shifts the archive
+     * itself: the last module's DMA (sonic3k.asm:2790-2800) shifts the archive
      * out of {@code Kos_module_queue} (2778-2788). The engine already installed
      * the decompressed emerald patterns when the stage was built (see
      * {@code initialize}'s {@code getChaosEmeraldArt}/{@code getSuperEmeraldArt}
@@ -1198,7 +1198,7 @@ public class Sonic3kSpecialStageManager {
 
     /**
      * Clear routine state 2: wait for emerald art to load.
-     * ROM: loc_9C5C (sonic3k.asm:12613-12620) -- {@code tst.b
+     * ROM: loc_9C5C (sonic3k.asm:12649-12656) -- {@code tst.b
      * Kos_modules_left; bne locret_9C7E} polls every frame and does nothing
      * else (clear_timer and emerald_timer both untouched) until the queued
      * Kosinski module finishes.
@@ -1220,7 +1220,7 @@ public class Sonic3kSpecialStageManager {
     /**
      * Clear routine state 3: player approaches and collects emerald.
      * Handled by normal collision detection (EMERALD case).
-     * ROM: loc_9C80 (sonic3k.asm:12629)
+     * ROM: loc_9C80 (sonic3k.asm:12665)
      */
     private void updateClearEmeraldApproach() {
         // Collision detection handles emerald collection

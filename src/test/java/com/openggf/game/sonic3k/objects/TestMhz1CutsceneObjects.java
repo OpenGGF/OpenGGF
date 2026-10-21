@@ -3095,7 +3095,7 @@ class TestMhz1CutsceneObjects {
     /**
      * Button tests that reach {@code MHZ1CutsceneButton_LoadKnucklesPeer}.
      * That path submits {@code ArtKosM_MHZKnuxPeer} through
-     * {@code Queue_Kos_Module} (sonic3k.asm:130077-130081), so these need a
+     * {@code Queue_Kos_Module} (sonic3k.asm:130134-130138), so these need a
      * real KosM archive and are ROM-backed; the rest of the class is not.
      */
     @Nested

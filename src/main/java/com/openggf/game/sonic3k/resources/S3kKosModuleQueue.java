@@ -132,7 +132,7 @@ public final class S3kKosModuleQueue {
      *
      * <p>Used by the locked title-card owner, whose {@code LoadEnemyArt} sits
      * in {@code Obj_TitleCardWait2}'s dispatch
-     * ({@code docs/skdisasm/sonic3k.asm:62295-62312}), not in the level loop's
+     * ({@code docs/skdisasm/sonic3k.asm:62335-62352}), not in the level loop's
      * {@code ScreenEvents} pass ahead of the module step (7898/7908).
      */
     public void deferFirstChildForLateProducer() {
@@ -269,7 +269,7 @@ public final class S3kKosModuleQueue {
      * Runs the frame's module state step, before the timing ledger is serviced.
      *
      * <p>ROM {@code LevelLoop} calls {@code Process_Kos_Module_Queue} in the loop
-     * tail (sonic3k.asm:7908), after {@code ScreenEvents} (7898) and before
+     * tail (sonic3k.asm:7940), after {@code ScreenEvents} (7898) and before
      * {@code Process_Kos_Queue} (7887) — which reads as the head of the next
      * iteration but runs ahead of {@code Wait_VSync} (7888) and its
      * {@code addq.w #1,(Level_frame_counter)} (7889), so both calls belong to the
@@ -355,7 +355,7 @@ public final class S3kKosModuleQueue {
             // *when* an already-submitted child becomes ready — the
             // decompressor's own progress — and can never skip the state step
             // that submits a head archive's first module. A mid-level
-            // LoadEnemyArt (sonic3k.asm:64281-64313) runs in ScreenEvents
+            // LoadEnemyArt (sonic3k.asm:64321-64353) runs in ScreenEvents
             // (7898) ahead of the same iteration's Process_Kos_Module_Queue
             // (7908), so its first PLCKosM entry is in the direct FIFO by the
             // tail of the admission row itself.
@@ -363,7 +363,7 @@ public final class S3kKosModuleQueue {
             // The one producer whose first child genuinely belongs to the
             // following loop is the locked title-card owner, whose
             // LoadEnemyArt runs in Obj_TitleCardWait2's dispatch
-            // (sonic3k.asm:62295-62312) after that iteration's module step has
+            // (sonic3k.asm:62335-62352) after that iteration's module step has
             // already executed. That ordering is declared by the producer.
             boolean deferFirstChild = deferFirstChildForLateProducer
                     && preparation.completedModules == 0;
@@ -389,7 +389,7 @@ public final class S3kKosModuleQueue {
                 // the closure that follows the old parent. Subsequent parents
                 // are shifted by Process_Kos_Module_Queue in this POST tail,
                 // but their first child is not published until the following
-                // loop's direct-queue tail (sonic3k.asm:2778-2790).
+                // loop's direct-queue tail (sonic3k.asm:2810-2822).
                 deferredChildSubmissionForNextLoop = true;
             }
             return;

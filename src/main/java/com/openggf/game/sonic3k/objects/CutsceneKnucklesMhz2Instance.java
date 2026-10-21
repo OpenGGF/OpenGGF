@@ -128,7 +128,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
     @Override
     public boolean isHighPriority() {
         // ObjSlot_CutsceneKnux_MHZ2 art make_art_tile(ArtTile_CutsceneKnux,1,1) sets bit 15
-        // (sonic3k.asm:134803).
+        // (sonic3k.asm:134860).
         return true;
     }
 
@@ -530,7 +530,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
     }
 
     // ObjSlot_CutsceneKnux_MHZ2 priority $180, written by SetUp_ObjAttributesSlotted
-    // (sonic3k.asm:134807, 178886).
+    // (sonic3k.asm:134864, 178977).
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x180);
 
     @Override
@@ -602,7 +602,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
             }
         }
 
-        // loc_63324 ObjDat3_6646E priority word 0 (sonic3k.asm:134871): display list 0 is the
+        // loc_63324 ObjDat3_6646E priority word 0 (sonic3k.asm:134928): display list 0 is the
         // ROM value.
         private static final int PRIORITY_BUCKET = RenderPriority.bucket(0);
 
@@ -613,7 +613,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
 
         @Override
         public boolean isHighPriority() {
-            // ObjDat3_6646E art make_art_tile(ArtTile_MHZMisc+$21,3,1) sets bit 15 (sonic3k.asm:134870).
+            // ObjDat3_6646E art make_art_tile(ArtTile_MHZMisc+$21,3,1) sets bit 15 (sonic3k.asm:134927).
             return true;
         }
 

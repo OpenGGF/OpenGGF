@@ -297,7 +297,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
     /**
      * Starts a fade from black with optional fully revealed terminal VBlanks.
      * The S3K level reveal services 22 VBlanks: 21 change color and the last is
-     * a no-op (Palette_fade_timer=$16 at sonic3k.asm:7875-7892).
+     * a no-op (Palette_fade_timer=$16 at sonic3k.asm:7907-7924).
      */
     public void startFadeFromBlack(Runnable onComplete, int terminalNoOpFrames) {
         if (terminalNoOpFrames < 0) {

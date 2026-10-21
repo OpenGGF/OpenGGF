@@ -717,19 +717,19 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
     /**
      * Stops the level timer as part of a boss's defeat branch.
      *
-     * <p>ROM: {@code BossDefeated_StopTimer} (docs/skdisasm/sonic3k.asm:180890) —
+     * <p>ROM: {@code BossDefeated_StopTimer} (docs/skdisasm/sonic3k.asm:180981) —
      * {@code clr.b (Update_HUD_timer).w}, entered by every S3K boss whose
      * hit counter reaches zero, immediately before it falls through into
      * {@code BossDefeated}. Beyond freezing the HUD clock this is what ends a
      * Super/Hyper transformation: {@code SonicKnux_SuperHyper}
-     * (docs/skdisasm/sonic3k.asm:23609-23611) tests {@code Update_HUD_timer}
+     * (docs/skdisasm/sonic3k.asm:23649-23651) tests {@code Update_HUD_timer}
      * first and branches straight to {@code .revertToNormal} when it is clear,
      * without waiting for the ring drain.
      *
      * <p>Call this from the boss's own defeat entry, on the frame the ROM
      * routine takes that branch. Bosses whose ROM path goes through plain
      * {@code BossDefeated} instead (e.g. the LBZ miniboss' Knuckles route at
-     * sonic3k.asm:151896) must not call it.
+     * sonic3k.asm:151964) must not call it.
      */
     protected final void stopLevelTimerOnBossDefeat() {
         var levelState = services().levelGamestate();

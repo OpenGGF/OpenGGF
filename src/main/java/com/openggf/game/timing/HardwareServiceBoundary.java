@@ -4,7 +4,7 @@ package com.openggf.game.timing;
  * Ordered production service points at which hardware readiness becomes visible.
  *
  * <p>The order is the ROM's, not the source order of {@code LevelLoop}.
- * {@code Process_Kos_Queue} (docs/skdisasm/sonic3k.asm:7887) is written at the
+ * {@code Process_Kos_Queue} (docs/skdisasm/sonic3k.asm:7919) is written at the
  * head of the loop body but runs ahead of {@code Wait_VSync} (7888) and the
  * {@code addq.w #1,(Level_frame_counter)} that follows it (7889), so it shares
  * the frame-counter value of the iteration whose {@code Process_Sprites} (7893),

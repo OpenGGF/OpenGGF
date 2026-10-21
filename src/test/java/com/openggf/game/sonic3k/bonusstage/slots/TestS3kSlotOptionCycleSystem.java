@@ -278,7 +278,7 @@ class TestS3kSlotOptionCycleSystem {
         assertArrayEquals(lastLockedFaces, resolvedFaces);
     }
 
-    // ROM sonic3k.asm:99684-99686 (loc_4C480): move.b (V_int_run_count+3).w,d0 /
+    // ROM sonic3k.asm:99730-99732 (loc_4C480): move.b (V_int_run_count+3).w,d0 /
     // rol.b #4,d0 / andi.b #7,d0 -- an 8-bit ROTATE of the low byte. Commit
     // 683c84993 fixed reel1Offset from Integer.rotateLeft (a 32-bit rotate
     // that never wraps a set low bit back into bits 0-2 after a left-shift

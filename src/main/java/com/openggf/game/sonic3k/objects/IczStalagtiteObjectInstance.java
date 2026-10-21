@@ -50,11 +50,11 @@ public class IczStalagtiteObjectInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_ICZStalagtite} is installed from the S3K object pointer table at
      * {@code $0008B194} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:189433).
+     * label is defined at docs/skdisasm/sonic3k.asm:189526).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0008}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {

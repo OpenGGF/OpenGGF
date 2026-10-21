@@ -5,7 +5,7 @@ import com.openggf.level.WaterSystem;
 
 /**
  * Dynamic water handler for Angel Island Zone Act 2.
- * Implements the ROM logic from DynamicWaterHeight_AIZ2 (sonic3k.asm:8648-8695).
+ * Implements the ROM logic from DynamicWaterHeight_AIZ2 (sonic3k.asm:8680-8727).
  * <p>
  * The water starts at 0x0528 (from StartingWaterHeights.bin), drops with speed=2
  * early in the act, then rises back to 0x0618 when triggered.

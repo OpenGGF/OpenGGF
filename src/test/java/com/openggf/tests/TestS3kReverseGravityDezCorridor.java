@@ -41,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p><strong>Every inverted case is checked against its own upright control, measured in the
  * same corridor in the same test.</strong> Under {@code Reverse_gravity_flag} the ROM swaps
- * which routine each probe runs ({@code sub_11FD6}/{@code sub_11FEE}, sonic3k.asm:24127-24151)
+ * which routine each probe runs ({@code sub_11FD6}/{@code sub_11FEE}, sonic3k.asm:24167-24191)
  * and negates the Y adjustment at each push-out site, so an inverted landing on the ceiling
  * must come to rest exactly where an upright head-bonk does, and an inverted push-out off the
  * world floor exactly where an upright landing does. Comparing the two makes the assertion
@@ -60,7 +60,7 @@ class TestS3kReverseGravityDezCorridor {
      * The first row below the ceiling that the ceiling <em>sensor</em> reads as clear — one
      * lower than {@code ObjectTerrainUtils.checkCeilingDist}'s zero-distance row. The two
      * helpers disagree by one pixel and it is the sensor that shipped play runs through
-     * ({@code FindFloor}'s {@code eori.w #$F,d2} form, sonic3k.asm:20242-20256), so the
+     * ({@code FindFloor}'s {@code eori.w #$F,d2} form, sonic3k.asm:20278-20292), so the
      * sensor defines the surface here. Recorded in the implementation-pitfall catalogue.
      */
     private static final int CEILING_CLEAR_Y = CEILING_SURFACE_Y + 1; // $0520
@@ -92,11 +92,11 @@ class TestS3kReverseGravityDezCorridor {
 
     /** The three playable characters, each with its own {@code DoLevelCollision} routine. */
     enum Character {
-        /** {@code SonicKnux_DoLevelCollision}, sonic3k.asm:24035. */
+        /** {@code SonicKnux_DoLevelCollision}, sonic3k.asm:24075. */
         SONIC("sonic"),
-        /** {@code Tails_DoLevelCollision}, sonic3k.asm:28880. */
+        /** {@code Tails_DoLevelCollision}, sonic3k.asm:28920. */
         TAILS("tails"),
-        /** {@code Knux_DoLevelCollision}, sonic3k.asm:32630. */
+        /** {@code Knux_DoLevelCollision}, sonic3k.asm:32670. */
         KNUCKLES("knuckles");
 
         private final String code;
@@ -144,7 +144,7 @@ class TestS3kReverseGravityDezCorridor {
 
     /**
      * Positive control: upright, a falling player lands on the corridor floor.
-     * {@code loc_11F9C} (sonic3k.asm:24098-24102) zeroes {@code y_vel} and copies
+     * {@code loc_11F9C} (sonic3k.asm:24138-24142) zeroes {@code y_vel} and copies
      * {@code x_vel} into {@code ground_vel} on a flat landing.
      */
     @ParameterizedTest
@@ -160,10 +160,10 @@ class TestS3kReverseGravityDezCorridor {
 
     /**
      * Inverted, a player "falling" (positive {@code y_vel}, which
-     * {@code MoveSprite_TestGravity} integrates upward, sonic3k.asm:36073-36078) lands on
-     * the corridor ceiling. {@code sub_11FD6} (:24127) has made the ceiling probe the floor
-     * probe, and {@code loc_11F6E} (:24079-24084) negates the push-out before
-     * {@code add.w d1,y_pos}; {@code loc_11F9C} (:24099) zeroes {@code y_vel}.
+     * {@code MoveSprite_TestGravity} integrates upward, sonic3k.asm:36113-36118) lands on
+     * the corridor ceiling. {@code sub_11FD6} (:24167) has made the ceiling probe the floor
+     * probe, and {@code loc_11F6E} (:24119-24124) negates the push-out before
+     * {@code add.w d1,y_pos}; {@code loc_11F9C} (:24139) zeroes {@code y_vel}.
      *
      * <p>The expected rest position is the one an upright head-bonk produces in the same
      * corridor, measured here rather than asserted from a constant.
@@ -185,7 +185,7 @@ class TestS3kReverseGravityDezCorridor {
     /**
      * The mirror of the case above. Inverted with negative {@code y_vel} the player moves
      * <em>down</em> the screen, toward the world floor, and meets it as a ceiling:
-     * {@code Player_HitCeilingAndWalls} into {@code loc_120C2} (:24242-24252) runs
+     * {@code Player_HitCeilingAndWalls} into {@code loc_120C2} (:24282-24292) runs
      * {@code sub_11FEE}, which under the flag is {@code Sonic_CheckFloor}, and negates the
      * push-out before {@code sub.w d1,y_pos}. The rest position is the upright landing's.
      */
@@ -201,7 +201,7 @@ class TestS3kReverseGravityDezCorridor {
 
     /**
      * The two horizontal quadrants' floor sites. Moving mostly sideways,
-     * {@code loc_12148} (:24304-24312, right) and {@code loc_12074} (:24209-24217, left)
+     * {@code loc_12148} (:24344-24352, right) and {@code loc_12074} (:24249-24257, left)
      * run {@code sub_11FD6} — the ceiling probe under the flag — and negate the snap
      * before {@code add.w d1,y_pos}. Both must land the inverted player on the ceiling
      * exactly where the vertical quadrant does.
@@ -220,8 +220,8 @@ class TestS3kReverseGravityDezCorridor {
     }
 
     /**
-     * The same two quadrants' ceiling sites. {@code loc_1211A} (:24280-24288, right) and
-     * {@code Player_HitCeiling} (:24171-24186, left) run {@code sub_11FEE} — the floor
+     * The same two quadrants' ceiling sites. {@code loc_1211A} (:24320-24328, right) and
+     * {@code Player_HitCeiling} (:24211-24226, left) run {@code sub_11FEE} — the floor
      * probe under the flag — and negate the push-out before {@code sub.w d1,y_pos}.
      */
     @ParameterizedTest
@@ -238,7 +238,7 @@ class TestS3kReverseGravityDezCorridor {
     }
 
     /**
-     * The grounded path. {@code Call_Player_AnglePos} (sonic3k.asm:22329-22343) mirrors
+     * The grounded path. {@code Call_Player_AnglePos} (sonic3k.asm:22364-22378) mirrors
      * {@code angle(a0)} with {@code +$40 / neg / -$40} around {@code Player_AnglePos},
      * so a player standing on a ceiling runs {@code Player_WalkCeiling} against the raw
      * $80 terrain angle and keeps the mirrored $00 in {@code angle(a0)} afterwards.
@@ -294,10 +294,10 @@ class TestS3kReverseGravityDezCorridor {
     }
 
     /**
-     * Roll entry keeps the contact point planted. {@code Player_DoRoll} (sonic3k.asm:23259-23268)
+     * Roll entry keeps the contact point planted. {@code Player_DoRoll} (sonic3k.asm:23294-23303)
      * does {@code addq.w #5,y_pos} and, under the flag, {@code subi.w #2*5} — a centre-Y delta of
      * −5 against upright's +5, which is exactly what keeps the head against the ceiling while the
-     * y_radius drops from standing to rolling. Tails' twin {@code loc_14FC4} (:28500) is the same
+     * y_radius drops from standing to rolling. Tails' twin {@code loc_14FC4} (:28540) is the same
      * shape with ±1.
      */
     @ParameterizedTest
@@ -313,10 +313,10 @@ class TestS3kReverseGravityDezCorridor {
     }
 
     /**
-     * And unrolling restores it. {@code loc_11578} (sonic3k.asm:22975-22991) puts the
+     * And unrolling restores it. {@code loc_11578} (sonic3k.asm:23010-23026) puts the
      * standing/rolling {@code y_radius} difference in {@code d0}, negates it under the flag, and
-     * adds it to {@code y_pos}; the Tails and Knuckles twins are {@code loc_14DA2} (:28233) and
-     * {@code loc_175AA} (:32261).
+     * adds it to {@code y_pos}; the Tails and Knuckles twins are {@code loc_14DA2} (:28273) and
+     * {@code loc_175AA} (:32301).
      */
     @ParameterizedTest
     @EnumSource(Character.class)
@@ -353,9 +353,9 @@ class TestS3kReverseGravityDezCorridor {
 
     /**
      * The jump's roll-radius adjustment. {@code Sonic_Jump} {@code loc_1182E}
-     * (sonic3k.asm:23343-23351) puts {@code y_radius - default_y_radius} in {@code d0},
+     * (sonic3k.asm:23378-23386) puts {@code y_radius - default_y_radius} in {@code d0},
      * negates it under the flag, and subtracts it from {@code y_pos}; Tails
-     * {@code loc_1504C} (:28572) and Knuckles {@code loc_1775C} (:32488) are the same.
+     * {@code loc_1504C} (:28612) and Knuckles {@code loc_1775C} (:32528) are the same.
      * The whole first jump frame — radius adjustment plus the launch integration — must
      * therefore be the exact mirror of the upright one.
      */
@@ -383,9 +383,9 @@ class TestS3kReverseGravityDezCorridor {
     }
 
     /**
-     * Landing out of a roll. {@code Player_TouchFloor} (sonic3k.asm:24346-24354) restores the
+     * Landing out of a roll. {@code Player_TouchFloor} (sonic3k.asm:24386-24394) restores the
      * standing radii and negates the compensating {@code y_pos} write under the flag;
-     * {@code Tails_TouchFloor} (:29143) and {@code Knux_TouchFloor} (:32839) are the same.
+     * {@code Tails_TouchFloor} (:29183) and {@code Knux_TouchFloor} (:32879) are the same.
      * A player that lands rolled on the ceiling must end standing with its head still on it.
      */
     @ParameterizedTest
@@ -411,13 +411,13 @@ class TestS3kReverseGravityDezCorridor {
 
     /**
      * The one reverse-gravity row the ROM gets <em>wrong</em>, preserved.
-     * {@code Tails_Test_For_Flight} {@code loc_1515C} (sonic3k.asm:28655-28672) unrolls
+     * {@code Tails_Test_For_Flight} {@code loc_1515C} (sonic3k.asm:28695-28712) unrolls
      * Tails when flight starts: it puts {@code y_radius - default_y_radius} in
      * <strong>{@code d1}</strong>, tests the flag, and on the set side runs
      * {@code neg.w <strong>d0</strong>} — a different register, holding nothing this site
      * uses — before {@code add.w d1,y_pos(a0)}. The unroll adjustment is therefore
      * <em>not</em> inverted under reverse gravity, unlike every other unroll site
-     * ({@code loc_14DA2} :28233, {@code loc_14FC4} :28500, {@code loc_1527C} :28748).
+     * ({@code loc_14DA2} :28273, {@code loc_14FC4} :28540, {@code loc_1527C} :28788).
      *
      * <p>This build is {@code FixBugs = 0}: the shipped behaviour is modelled as shipped.
      * The fixed branch would negate {@code d1} and keep Tails' head against the ceiling;

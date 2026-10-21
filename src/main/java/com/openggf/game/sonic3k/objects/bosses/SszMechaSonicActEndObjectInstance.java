@@ -21,7 +21,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.List;
 
 /**
- * ROM {@code loc_7D056} (sonic3k.asm:166838-166864): the object {@code loc_7B888} allocates
+ * ROM {@code loc_7D056} (sonic3k.asm:166916-166942): the object {@code loc_7B888} allocates
  * beside the beaten Mecha Sonic to hand Sky Sanctuary act 1 over.
  *
  * <p>Three lines of ROM and one subroutine. {@code loc_7D056} writes {@code $2E = (2*60)-1} and

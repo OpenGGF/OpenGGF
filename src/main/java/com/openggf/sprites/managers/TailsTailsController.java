@@ -78,7 +78,7 @@ public class TailsTailsController {
 
     /**
      * Obj_Tails_Tail_AniSelection: maps parent animation ID to Obj05 animation.
-     * ROM (S3K): sonic3k.asm:30076
+     * ROM (S3K): sonic3k.asm:30116
      */
     private static final int[] ANI_SELECTION_S3K = {
         0,     // 0x00 Walk -> Blank
@@ -188,7 +188,7 @@ public class TailsTailsController {
      * neither CalcAngle nor the bank/flip write runs, so both are stored state rather
      * than values derived from the parent's current velocity. S3K's
      * Animate_Tails_Part2 gates the identical directional path the same way
-     * (sonic3k.asm:29375-29376 and :29592-29604), so this is a universal correction.
+     * (sonic3k.asm:29415-29416 and :29632-29644), so this is a universal correction.
      */
     private boolean dirHFlip;
     private boolean dirVFlip;
@@ -232,7 +232,7 @@ public class TailsTailsController {
         // ROM Obj05_Main: moveq #0,d0 / move.b anim(a2),d0, then the pushing
         // override forces d0 = 4 (TailsAni_Push) before both the change test and
         // the Obj05AniSelection lookup (docs/s2disasm/s2.asm:41744-41751;
-        // docs/skdisasm/sonic3k.asm:30041-30051). Obj05AniSelection[4] = 9 =
+        // docs/skdisasm/sonic3k.asm:30081-30091). Obj05AniSelection[4] = 9 =
         // Obj05Ani_Pushing (docs/s2disasm/s2.asm:41770-41776).
         if (parentPushOverrideApplies()) {
             parentAnimId = PARENT_ANIM_PUSH;
@@ -242,13 +242,13 @@ public class TailsTailsController {
         // This allows Flick -> Swish transition without being overridden.
         // The value compared against and stored in Obj05_parent_prev_anim /
         // objoff_34 is the OVERRIDDEN d0 (docs/s2disasm/s2.asm:41755-41758;
-        // docs/skdisasm/sonic3k.asm:30053-30056).
+        // docs/skdisasm/sonic3k.asm:30093-30096).
         if (parentAnimId != lastParentAnim) {
             lastParentAnim = parentAnimId;
             int obj05Anim = resolveObj05Animation(parentAnimId);
             if (obj05Anim != currentAnim) {
                 // ROM: anim_frame = 0, anim_frame_duration = 0 on animation
-                // change (s2.asm:41276-41278; sonic3k.asm:36163-36166).
+                // change (s2.asm:41276-41278; sonic3k.asm:36203-36206).
                 currentAnim = obj05Anim;
                 frameIndex = 0;
                 frameTick = 0;
@@ -296,7 +296,7 @@ public class TailsTailsController {
         // anim_frame, store it in mapping_frame, and only afterwards
         // addq.b #1,anim_frame (s2.asm:41295-41303). The identical
         // read-then-increment convention is used by S3K's shared
-        // Animate_Sprite (sonic3k.asm:36171-36183), so this is a universal
+        // Animate_Sprite (sonic3k.asm:36211-36223), so this is a universal
         // correction rather than a per-game rule.
         mappingFrame = frames[frameIndex];
         frameIndex++;
@@ -307,7 +307,7 @@ public class TailsTailsController {
             // (s2.asm:41485-41516). This runs only past the anim_frame_duration
             // early-out (s2.asm:41338-41339), so the bank and the flips are latched
             // here and held frozen over the countdown frames - matching
-            // sonic3k.asm:29592-29604 behind :29375-29376.
+            // sonic3k.asm:29632-29644 behind :29415-29416.
             int adjustedTailAngle = computeAdjustedTailAngle();
             mappingFrame += (adjustedTailAngle >> 3) & 0x0C;
 
@@ -404,8 +404,8 @@ public class TailsTailsController {
      * the test is the bare pushing status bit (docs/s2disasm/s2.asm:41748-41751);
      * the FixBugs = 1 mapping_frame $63..$66 form (docs/s2disasm/s2.asm:41743-41746)
      * is not the recorded behaviour. S3K additionally requires the parent's
-     * mapping_frame to lie in $A9..$AC (docs/skdisasm/sonic3k.asm:30046-30051).
-     * S3K's {@code tst.b (WindTunnel_flag_P2).w} gate (sonic3k.asm:30045) has no
+     * mapping_frame to lie in $A9..$AC (docs/skdisasm/sonic3k.asm:30086-30091).
+     * S3K's {@code tst.b (WindTunnel_flag_P2).w} gate (sonic3k.asm:30085) has no
      * engine-side state yet; the mapping-frame range is the narrow gate that keeps
      * the override from firing outside the parent's pushing frames.
      */
@@ -497,13 +497,13 @@ public class TailsTailsController {
         // short-circuit. CalcAngle_Zero itself returns $40
         // (docs/s2disasm/s2.asm:4039-4040,4076-4078), which then banks to 8 for a
         // right-facing Tails, not 0. S3K's GetArcTan has the same zero return
-        // (docs/skdisasm/sonic3k.asm:3043), so this is a universal correction.
+        // (docs/skdisasm/sonic3k.asm:3075), so this is a universal correction.
         short xVel = sprite.getXSpeed();
         short yVel = sprite.getYSpeed();
 
         // ROM: TAnim_GetTailFrame (s2.asm:41478-41481) calls CalcAngle
         // (s2.asm:4037-4081, Angle_Data table); S3K's tail routine calls the
-        // identical GetArcTan (sonic3k.asm:3043, ArcTanTable).
+        // identical GetArcTan (sonic3k.asm:3075, ArcTanTable).
         // 0=right, 64=down, 128=left, 192=up (Genesis convention, Y-down).
         int adjustedTailAngle = TrigLookupTable.calcAngle(xVel, yVel);
 

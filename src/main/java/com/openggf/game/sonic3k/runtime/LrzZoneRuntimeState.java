@@ -14,7 +14,7 @@ import java.util.Objects;
  *
  * <ul>
  *   <li>{@code Screen_shake_flag}/{@code Screen_shake_offset}: every Lava Reef background event
- *       tail-calls {@code ShakeScreen_Setup} (sonic3k.asm:115318, 115364, 115388, 115682) and
+ *       tail-calls {@code ShakeScreen_Setup} (sonic3k.asm:115364, 115410, 115434, 115728) and
  *       {@code LRZ1_ScreenEvent}/{@code LRZ2_ScreenEvent} (115199-115201, 115670-115673) add the
  *       offset to {@code Camera_Y_pos_copy} before drawing. The engine advances the countdown at
  *       the head of its screen-event pass, so {@link #appliedScreenShakeOffset()} is the word this
@@ -32,7 +32,7 @@ import java.util.Objects;
  *   <li>{@code LRZ_rocks_routine}: the rock-sprite renderer's state, cleared by the seamless
  *       act change at {@code loc_56CAA} (115349).</li>
  *   <li>{@code LRZ_rocks_addr_front}/{@code LRZ_rocks_addr_back}: the two placement-list pointers
- *       {@code Draw_LRZ_Special_Rock_Sprites} walks (sonic3k.asm:39574-39619), kept here as record
+ *       {@code Draw_LRZ_Special_Rock_Sprites} walks (sonic3k.asm:39614-39659), kept here as record
  *       indices into the act's list. The ROM carries them frame to frame and only nudges them, so
  *       a restore that did not bring them back would resume the walk from the wrong record.</li>
  * </ul>
@@ -265,7 +265,7 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     @Override public int cameraStoredMinY() { return cameraStoredMinY; }
     @Override public int cameraStoredMaxY() { return cameraStoredMaxY; }
 
-    /** {@code Events_fg_5} (sonic3k.asm:115274). */
+    /** {@code Events_fg_5} (sonic3k.asm:115320). */
     public int eventsFg5() {
         return eventsFg5;
     }

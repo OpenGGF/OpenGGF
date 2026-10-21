@@ -40,11 +40,11 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_AIZCollapsingLogBridge} is installed from the S3K object pointer table at
      * {@code $0002ACDC} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:59198).
+     * label is defined at docs/skdisasm/sonic3k.asm:59238).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0002}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -157,7 +157,7 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
     @Override
     public boolean usesCollisionHalfWidthForTopLanding() {
         // loc_2AE98/loc_2AF06 load width_pixels(a0) directly into d1 before
-        // SolidObjectTop (sonic3k.asm:59299-59306,59341-59348). Unlike
+        // SolidObjectTop (sonic3k.asm:59339-59346,59381-59388). Unlike
         // SolidObjectFull callers, this path does not add $B and must not be
         // narrowed again by the shared landing-width correction.
         return true;
@@ -168,7 +168,7 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
         // Both the normal bridge at loc_2AE98 and the fire bridge at loc_2AF06
         // call the same SolidObjectTop -> loc_1E42E entry. It accepts only
         // negative overlap d0 in [-16,-1]; cmpi.w #-$10,d0 / blo rejects
-        // d0 == 0 for either subtype (sonic3k.asm:42048-42068).
+        // d0 == 0 for either subtype (sonic3k.asm:42088-42108).
         return true;
     }
 
@@ -213,7 +213,7 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
         if (state == STATE_IDLE && isFireBridge && drawBridgeBurnActive) {
             // loc_2AEE2 initializes the fire drawbridge collapse and falls
             // through directly into loc_2AF06/SolidObjectTop in the same
-            // object routine (sonic3k.asm:59331-59348).
+            // object routine (sonic3k.asm:59371-59388).
             startCollapse();
             collapseStartedThisFrame = true;
             fireCollapseSolidFrame = true;
@@ -375,7 +375,7 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
     void publishKnockOffAnimationState(AbstractPlayableSprite player) {
         // sub_2AF9C runs after the player's Animate pass and writes only
         // prev_anim=Run. An unchanged Walk byte therefore restarts on the next
-        // player slot (sonic3k.asm:59455-59465).
+        // player slot (sonic3k.asm:59495-59505).
         player.getAnimationManager().publishPreviousAnimationId(Sonic3kAnimationIds.RUN.id());
     }
 

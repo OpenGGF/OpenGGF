@@ -120,8 +120,8 @@ public interface LevelEventProvider {
      * <p>
      * S3K runs fixed objects such as {@code Breathing_bubbles} and
      * {@code Breathing_bubbles_P2} after dynamic object RAM and before
-     * {@code ScreenEvents} (docs/skdisasm/sonic3k.constants.asm:311-312;
-     * docs/skdisasm/sonic3k.asm:7893-7898,35965). The default is a no-op for
+     * {@code ScreenEvents} (docs/skdisasm/sonic3k.constants.asm:318-319;
+     * docs/skdisasm/sonic3k.asm:7925-7930,36005). The default is a no-op for
      * games without fixed object sidecars.
      */
     default void updateFixedInLevelObjects() {

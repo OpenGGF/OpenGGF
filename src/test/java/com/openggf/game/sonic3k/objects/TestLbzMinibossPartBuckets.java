@@ -31,8 +31,8 @@ class TestLbzMinibossPartBuckets {
 
     /**
      * ROM loc_8CF10: a drifting box piece writes priority $380 when its late
-     * Animate_Raw script ends (sonic3k.asm:192502-192505); the six burst pieces
-     * delete instead (off_8D1AC, sonic3k.asm:192733-192739).
+     * Animate_Raw script ends (sonic3k.asm:192601-192604); the six burst pieces
+     * delete instead (off_8D1AC, sonic3k.asm:192832-192838).
      */
     @Test
     void driftingBoxPieceMovesToTheBackBucketWhenItsLateAnimationEnds() {
@@ -91,8 +91,8 @@ class TestLbzMinibossPartBuckets {
 
     /**
      * ROM word_727E2 ($300/$380/$300/$380/$300/$280) written per arm subtype at
-     * loc_727B0 (sonic3k.asm:151737, 151749-151750) and word_72962 $200 for the
-     * centre child (sonic3k.asm:151906); every child copies the body's art_tile
+     * loc_727B0 (sonic3k.asm:151805, 151817-151818) and word_72962 $200 for the
+     * centre child (sonic3k.asm:151974); every child copies the body's art_tile
      * bit 15 through CreateChild1_Normal / CreateChild4_LinkListRepeated.
      */
     @Test

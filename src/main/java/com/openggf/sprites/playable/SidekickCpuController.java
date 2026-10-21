@@ -36,7 +36,7 @@ public class SidekickCpuController {
     // Provider-approved object-order bridges may need the adjacent older sample
     // when the engine has already cleared transient push state before ROM would
     // have consumed it. ROM loc_13DD0 itself uses the same Stat_table entry as
-    // the normal delayed control word (sonic3k.asm:26696-26705).
+    // the normal delayed control word (sonic3k.asm:26736-26745).
     private static final int OBJECT_ORDER_INPUT_DELAY_FRAMES = 17;
     /** Fallback used when the sidekick sprite has no typed rules resolved yet
      *  (e.g. unit tests that bypass the full game-module bootstrap). Matches the S2
@@ -68,7 +68,7 @@ public class SidekickCpuController {
      * which a present sidekick at a zone entry is treated as an already
      * established follower (see {@link #isEstablishedFollowerEntry()}). Sized to
      * the ROM follow envelope (the $20 lead offset plus the $30 S3K steering
-     * snap threshold, sonic3k.asm:26694,26712,26729) so a genuine carried-in
+     * snap threshold, sonic3k.asm:26734,26752,26769) so a genuine carried-in
      * follower passes while a sidekick that still needs a fresh spawn does not.
      */
     private static final int ESTABLISHED_FOLLOWER_ENTRY_BAND = 0x40;
@@ -124,18 +124,18 @@ public class SidekickCpuController {
         MGZ_RESCUE_WAIT,       // ROM Tails_CPU_routine $12: clear Ctrl_2_logical while physics continues
         CARRY_INIT,            // ROM carry init; MGZ boss transition uses Tails_CPU_routine $14
         CARRYING,              // ROM routine 0x0E / 0x20 - per-frame carry body
-        // ROM Tails_CPU_routine $10 (loc_1408A, sonic3k.asm:26953-26972). Entered
+        // ROM Tails_CPU_routine $10 (loc_1408A, sonic3k.asm:26993-27012). Entered
         // when a throwaway carrier Tails drops a solo Sonic at the CNZ1/MHZ1 intro
         // (SpawnLevelMainSprites loc_68D8 spawns Obj_Tails into Player_2 for
         // Player_mode==1; loc_14068 routes the landing to $10 instead of routine 6).
         // Tails flies up-and-right off-screen, then deletes its own object slot.
         CARRY_FLYOFF,
-        CATCH_UP_FLIGHT,       // ROM routine 0x02 (Tails_Catch_Up_Flying, sonic3k.asm:26474)
-        FLIGHT_AUTO_RECOVERY,  // ROM routine 0x04 (Tails_FlySwim_Unknown, sonic3k.asm:26534)
+        CATCH_UP_FLIGHT,       // ROM routine 0x02 (Tails_Catch_Up_Flying, sonic3k.asm:26514)
+        FLIGHT_AUTO_RECOVERY,  // ROM routine 0x04 (Tails_FlySwim_Unknown, sonic3k.asm:26574)
         DORMANT_MARKER,        // ROM routine 0x0A (locret_13FC0); AIZ1 intro waits off-screen
         // ROM Tails OBJECT routine 0x06 (death state, dispatch loc_1578E in
-        // sonic3k.asm:29263). Entered the frame Player_LevelBound calls
-        // Kill_Character (sonic3k.asm:21136) on the sidekick.
+        // sonic3k.asm:29303). Entered the frame Player_LevelBound calls
+        // Kill_Character (sonic3k.asm:21172) on the sidekick.
         DEAD_FALLING
     }
 
@@ -206,7 +206,7 @@ public class SidekickCpuController {
     /**
      * S3K mirror of ROM {@code Tails_CPU_interact}: word 0 of the stood-on
      * object SST, sampled by {@code sub_13EFC} during Tails CPU control
-     * (docs/skdisasm/sonic3k.asm:26816-26843). This is intentionally a CPU
+     * (docs/skdisasm/sonic3k.asm:26856-26883). This is intentionally a CPU
      * global latch rather than a live projection of the final post-collision
      * ride state.
      */
@@ -238,7 +238,7 @@ public class SidekickCpuController {
      * Leader centre coordinates captured at level-load time
      * ({@link #captureLevelStartLeaderAnchor()}, invoked from
      * {@code LevelManager.spawnSidekicks} — the engine analogue of ROM
-     * {@code SpawnLevelMainSprites_SpawnPlayers}, sonic3k.asm:8359-8369). ROM
+     * {@code SpawnLevelMainSprites_SpawnPlayers}, sonic3k.asm:8391-8401). ROM
      * places the CPU sidekick at {@code Player_1 - $20, +4} and prefills
      * {@code Sonic_Pos_Record_Buf} while the leader still sits at its spawn
      * position, BEFORE the first {@code LevelLoop}/{@code Obj01} physics tick
@@ -278,7 +278,7 @@ public class SidekickCpuController {
     /**
      * Models S3K's negative Ctrl_2_locked byte. Tails_Control skips
      * Tails_CPU_Control only when the byte is negative; positive locks still
-     * call the CPU routine (sonic3k.asm:26196-26205).
+     * call the CPU routine (sonic3k.asm:26236-26245).
      */
     private boolean controller2SignedLocked;
     private boolean nativeEndingPosePending;
@@ -297,7 +297,7 @@ public class SidekickCpuController {
     /**
      * True only for a throwaway carrier spawned for a solo (no-sidekick) leader's
      * intro carry — ROM SpawnLevelMainSprites loc_68D8 writes Obj_Tails into the
-     * Player_2 slot when Player_mode==1 at CNZ1/MHZ1 (sonic3k.asm:8190-8197). When
+     * Player_2 slot when Player_mode==1 at CNZ1/MHZ1 (sonic3k.asm:8222-8229). When
      * such a carrier drops its cargo on landing, ROM loc_14068 selects routine $10
      * (fly off + self-delete) instead of routine 6 (normal follow), so the engine
      * routes the release to {@link State#CARRY_FLYOFF} and removes the temporary
@@ -393,7 +393,7 @@ public class SidekickCpuController {
         // the CPU controller did not originate the kill and still holds its
         // prior state. Adopt the native dead-object dispatch on the following
         // CPU tick so Obj02_Dead/sub_123C2 owns the fall/marker transition just
-        // as it does for a boundary kill (sonic3k.asm:21136-21159,26091-26096,
+        // as it does for a boundary kill (sonic3k.asm:21172-21195,26131-26136,
         // 29277-29285; s2.asm:40736-40759).
         if (sidekick.getDead() && state != State.DEAD_FALLING) {
             int romCpuRoutine = romCpuRoutineForState(state);
@@ -453,7 +453,7 @@ public class SidekickCpuController {
             case NORMAL               -> updateNormal();
             case PANIC                -> updatePanic();
             // loc_140C6 clears the full Ctrl_2_logical word, including the
-            // trace-visible held/pressed latches (sonic3k.asm:26976-26978).
+            // trace-visible held/pressed latches (sonic3k.asm:27016-27018).
             case MGZ_RESCUE_WAIT      -> clearController2LogicalLatch();
             case CARRY_INIT           -> updateCarryInit();
             case CARRYING             -> updateCarrying();
@@ -476,7 +476,7 @@ public class SidekickCpuController {
         SidekickCpuRules rules = sidekickCpuRulesOrNull();
         if (rules != null && rules.sidekickCpuUsesLevelFrameCounter() && fallbackFrameCount > 0) {
             // ROM increments Level_frame_counter before object/player CPU slots
-            // (s2.asm:5092, sonic3k.asm:7889). SpriteManager passes that
+            // (s2.asm:5092, sonic3k.asm:7921). SpriteManager passes that
             // already-incremented cadence into the normal sprite CPU path; the
             // LevelManager copy is stored later in the engine frame and can be
             // one tick stale for Tails' $3F jump gate.
@@ -486,7 +486,7 @@ public class SidekickCpuController {
         if (rules != null && rules.sidekickCpuUsesLevelFrameCounter()
                 && levelManager != null && levelManager.getFrameCounter() > 0) {
             // S3K Tails CPU reads (Level_frame_counter).w inside sprite CPU
-            // handlers such as Tails_Catch_Up_Flying (sonic3k.asm:26474-26531).
+            // handlers such as Tails_Catch_Up_Flying (sonic3k.asm:26514-26571).
             // Bootstrap paths that do not pass a sprite-frame cadence preload
             // LevelManager with the already visible ROM counter for the current
             // frame.
@@ -496,7 +496,7 @@ public class SidekickCpuController {
         cpuFrameCounterFromStoredLevelFrame = false;
         if (fallbackFrameCount > 0) {
             // ROM increments Level_frame_counter before object/player CPU slots
-            // (s2.asm:5092, sonic3k.asm:7889). SpriteManager passes that
+            // (s2.asm:5092, sonic3k.asm:7921). SpriteManager passes that
             // already-incremented cadence; LevelManager stores it later in the
             // engine frame and is one tick stale for Tails' $3F jump gate.
             return fallbackFrameCount;
@@ -516,12 +516,12 @@ public class SidekickCpuController {
     /**
      * Returns the ROM-visible {@code Level_frame_counter} value that the S3K Tails
      * CPU gates read. ROM increments {@code Level_frame_counter} before
-     * {@code Process_Sprites} (sonic3k.asm:7889-7894) and the sprite CPU gates read
+     * {@code Process_Sprites} (sonic3k.asm:7921-7926) and the sprite CPU gates read
      * the already-incremented low byte directly: {@code loc_13E7C} reads
-     * {@code (Level_frame_counter).w & $FF} (sonic3k.asm:26760), {@code loc_13E9C}
-     * reads {@code (Level_frame_counter+1).b & $3F} (sonic3k.asm:26775), and
+     * {@code (Level_frame_counter).w & $FF} (sonic3k.asm:26800), {@code loc_13E9C}
+     * reads {@code (Level_frame_counter+1).b & $3F} (sonic3k.asm:26815), and
      * {@code loc_13FFA} reads {@code (Level_frame_counter+1).b & $1F}
-     * (sonic3k.asm:26918) — the {@code +1} is the odd-byte address of the word's low
+     * (sonic3k.asm:26958) — the {@code +1} is the odd-byte address of the word's low
      * byte, not a numeric increment.
      *
      * <p>Both counter sources now carry the post-increment value:
@@ -537,7 +537,7 @@ public class SidekickCpuController {
     private int resolvePanicPhaseCounter() {
         // ROM TailsCPU_Panic reads the low byte at Level_frame_counter+1; the
         // "+1" is the 68000 byte address within the word, not a frame increment
-        // (S3K sonic3k.asm:26869-26884; S2 s2.asm:39122-39139). At CNZ f8958
+        // (S3K sonic3k.asm:26909-26924; S2 s2.asm:39122-39139). At CNZ f8958
         // the ROM-visible word is $22FF, so loc_13F94 keeps DOWN held for one
         // more frame and releases at $2300. Do not project through
         // Sonic_RecordPos: this routine reads Level_frame_counter itself, not a
@@ -611,7 +611,7 @@ public class SidekickCpuController {
         // Check_TailsEndPose clears Ctrl_2_locked, then Player_2's next
         // Tails_Control pass copies raw Ctrl_2 into Ctrl_2_logical before
         // Set_PlayerEndingPose's object_control=$81 freezes movement
-        // (docs/skdisasm/sonic3k.asm:26196-26203,181919-181988).
+        // (docs/skdisasm/sonic3k.asm:26236-26243,182010-182079).
         diagnosticPreObjectCtrl2Frame = frameCounter;
         diagnosticPreObjectCtrl2Held = diagnosticCtrl2HeldLatch & 0xFF;
         diagnosticPreObjectCtrl2Pressed = diagnosticCtrl2PressedLatch & 0xFF;
@@ -659,7 +659,7 @@ public class SidekickCpuController {
         if (usesS3kPointerInteract()) {
             // S3K Tails_CPU_interact is a RAM word copied from a stood-on
             // object's routine pointer and cleared with object RAM
-            // (docs/skdisasm/sonic3k.asm:5415,7621,26816-26843). The engine's
+            // (docs/skdisasm/sonic3k.asm:5447,7653,26856-26883). The engine's
             // lastInteractObjectId is the S2 id-snapshot model, so S3K projects
             // the CPU-latched ROM code-pointer high word when known.
             return diagnosticS3kInteractWord & 0xFFFF;
@@ -717,7 +717,7 @@ public class SidekickCpuController {
     /**
      * Whether the ROM's {@code Tails_CPU_routine} currently holds 4 -- the
      * {@code Tails_FlySwim_Unknown} entry of {@code Tails_CPU_Control_Index}
-     * (docs/skdisasm/sonic3k.asm:26368-26371), the state Tails is in while a
+     * (docs/skdisasm/sonic3k.asm:26408-26411), the state Tails is in while a
      * carry/flight owner is driving him.
      *
      * <p>Several object routines read that word directly to decide whether
@@ -825,7 +825,7 @@ public class SidekickCpuController {
      * Returns true only for a provider-approved object-order bridge that extends
      * S3K's Status_Push handoff after the live push bit has already cleared locally.
      * ROM loc_13DD0 branches from the current Status_Push bit and preserves the
-     * already-loaded Ctrl_2 sample (sonic3k.asm:26702-26705,26775-26785); MGZ
+     * already-loaded Ctrl_2 sample (sonic3k.asm:26742-26745,26815-26825); MGZ
      * F1466-F1470 uses that same no-input deceleration path, so this flag is
      * limited to bridge contexts exposed by the owning level-event provider.
      */
@@ -1059,7 +1059,7 @@ public class SidekickCpuController {
                 PlayerCharacter pc = resolvePlayerCharacter();
                 if (carryTrigger.shouldEnterCarry(zone, act, pc)
                         && carryTrigger.isLeaderAtIntroPosition(leader)) {
-                    // ROM loc_13A10 (sonic3k.asm:26414) for CNZ act 0:
+                    // ROM loc_13A10 (sonic3k.asm:26454) for CNZ act 0:
                     //   move.w #$C,(Tails_CPU_routine).w
                     //   rts
                     // The INIT handler sets routine=0x0C and RETURNS. It does
@@ -1071,7 +1071,7 @@ public class SidekickCpuController {
                     // that fall-through by calling updateCarrying() directly.
                     carryTrigger.applyInitialPlacement(sidekick, leader);
                     // CNZ loc_13A5A sets status=$02 before returning
-                    // (sonic3k.asm:26410-26415). The 0x0C body waits until
+                    // (sonic3k.asm:26450-26455). The 0x0C body waits until
                     // the next CPU tick, but the current Tails object tick
                     // still runs airborne movement and applies the +$38
                     // first-frame gravity visible in the CNZ trace seed row.
@@ -1089,11 +1089,11 @@ public class SidekickCpuController {
             // Keep the presentation decision at the same ROM owner boundary as
             // the gameplay marker. A level rebind can clear the setup-only
             // hidden latch before this first routine-0 dispatch; loc_13A10
-            // (sonic3k.asm:26389-26397) still suppresses Player_2 before
+            // (sonic3k.asm:26429-26437) still suppresses Player_2 before
             // object_control=$83 parks her at the dormant sentinel.
             suppressInitialLevelEventPresentationIfNeeded();
-            // ROM Tails_Init (sonic3k.asm:26101-26156) plus the loc_13A10
-            // dormant-marker block (sonic3k.asm:26389-26397) run inside one
+            // ROM Tails_Init (sonic3k.asm:26141-26196) plus the loc_13A10
+            // dormant-marker block (sonic3k.asm:26429-26437) run inside one
             // ROM tick: SpawnLevelMainSprites installs the Tails object,
             // Tails_Init seeds default fields, then Tails_Control dispatches
             // Tails_CPU_Control with routine 0, which calls sub_13ECA and
@@ -1115,9 +1115,9 @@ public class SidekickCpuController {
 
         if (isDormantMarkerSentinelEntry()) {
             // ROM keeps the CPU sidekick at the off-screen dormant-marker
-            // sentinel ($7F00,0 via sub_13ECA, sonic3k.asm:26800-26809) with
+            // sentinel ($7F00,0 via sub_13ECA, sonic3k.asm:26840-26849) with
             // Tails_CPU_routine == $0A (locret_13FC0, an empty rts —
-            // sonic3k.asm:26374) when she enters a zone parked off-screen, e.g.
+            // sonic3k.asm:26414) when she enters a zone parked off-screen, e.g.
             // the ICZ snowboard intro. ROM runs no movement or physics on the
             // marker until a later routine flips her to catch-up flight. The
             // engine resets the controller to INIT on every level (re)load, so
@@ -1144,7 +1144,7 @@ public class SidekickCpuController {
         if (establishedFollowerEntry) {
             // ROM only runs SpawnLevelMainSprites' Tails placement / kinematic
             // reset for a fresh spawn with Tails_CPU_routine == 0
-            // (sonic3k.asm:8359-8369). When Tails is already an established CPU
+            // (sonic3k.asm:8391-8401). When Tails is already an established CPU
             // follower at a mid-run zone entry (Tails_CPU_routine == 6, present
             // and within follow range of the leader), ROM preserves her
             // position, velocity, and status across the handoff and her CPU slot
@@ -1170,8 +1170,8 @@ public class SidekickCpuController {
             //       dispatcher jumps via TailsCPU_States (:39070-39087), so
             //       TailsCPU_Normal is only reached on the NEXT pass.
             //   S3K routine 0 (loc_13A10, reached via Tails_CPU_Control_Index,
-            //       sonic3k.asm:26363-26369) ends every path in rts
-            //       (:26397, :26415, :26424, :26449, :26468-26471).
+            //       sonic3k.asm:26403-26409) ends every path in rts
+            //       (:26437, :26455, :26464, :26489, :26508-26511).
             //   S1  has no CPU sidekick at all, so this path is unreachable
             //       there and no per-game rule is needed.
             // Established mid-run followers are already past routine 0 (S2/S3K
@@ -1240,7 +1240,7 @@ public class SidekickCpuController {
     private void applyLevelStartSidekickPlacement(
             boolean useRomAccuratePrefill, boolean preserveExistingLeaderPrefill) {
         // S2 InitPlayers (s2.asm:5192-5195) and S3K SpawnLevelMainSprites
-        // (s3.asm:6334-6337, sonic3k.asm:8364-8367) place Player_2 with centre
+        // (s3.asm:6370-6373, sonic3k.asm:8396-8399) place Player_2 with centre
         // coordinates at Player_1 - $20 X, +4 Y. The engine's level-load
         // reanchor path uses sprite top-left coordinates, so correct the first
         // native CPU tick before follow AI reads the sidekick position.
@@ -1276,13 +1276,13 @@ public class SidekickCpuController {
         sidekick.setGSpeed((short) 0);
         // Preserve zone-event-set in-air state. S3K MGZ1 / HCZ1 / LRZ1
         // set status_InAir on the sidekick during applyZonePlayerState
-        // (ROM sonic3k.asm:8132-8205 mirrors loc_6886 / loc_68A6 setting
+        // (ROM sonic3k.asm:8164-8237 mirrors loc_6886 / loc_68A6 setting
         // Status_InAir on Player_2). Resetting to false here would
         // override the falling-intro state before physics applies the
         // first gravity tick. Leave the air state as set by level load.
 
         if (useRomAccuratePrefill) {
-            // ROM Obj01_Init (s2.asm:36201-36217, sonic3k.asm:21936-21940)
+            // ROM Obj01_Init (s2.asm:36201-36217, sonic3k.asm:21972-21976)
             // temporarily applies the same Tails-spawn offset to Sonic's centre,
             // fills Sonic_Pos_Record_Buf 64 times via Sonic_RecordPos, then
             // restores Sonic's centre. The result is a pre-fill ring containing
@@ -1303,7 +1303,7 @@ public class SidekickCpuController {
                     (short) (anchorY + LEVEL_START_Y_OFFSET));
         } else if (!preserveExistingLeaderPrefill) {
             // The ROM CPU routine reads Sonic's delayed position buffer
-            // (S2 s2.asm:38808-38815, S3K sonic3k.asm:26564-26565).
+            // (S2 s2.asm:38808-38815, S3K sonic3k.asm:26604-26605).
             // Trace/bootstrap level placement can move the leader after sprite
             // construction, so seed the engine's native buffer before the first
             // follow read instead of reading trace sidekick state back in.
@@ -1344,7 +1344,7 @@ public class SidekickCpuController {
      * True when the CPU sidekick enters this zone already established as a
      * follower, so ROM does NOT re-run SpawnLevelMainSprites' placement /
      * kinematic reset (that only happens for a fresh spawn with
-     * {@code Tails_CPU_routine == 0}, sonic3k.asm:8359-8369).
+     * {@code Tails_CPU_routine == 0}, sonic3k.asm:8391-8401).
      *
      * <p>Semantic predicate (no zone/route/frame carve-out): the sidekick is
      * present (not parked at the off-screen despawn sentinel) and already sits
@@ -1358,7 +1358,7 @@ public class SidekickCpuController {
     /**
      * True when the CPU sidekick enters this zone parked at the off-screen
      * dormant-marker sentinel (ROM {@code Tails_CPU_routine == $0A},
-     * x_pos = $7F00 from sub_13ECA, sonic3k.asm:26800-26809,26374). Only
+     * x_pos = $7F00 from sub_13ECA, sonic3k.asm:26840-26849,26414). Only
      * considered when a level-start spawn anchor was captured (so focused unit
      * tests that bypass {@code spawnSidekicks} keep the historical path) and the
      * sidekick CPU enters via the catch-up-flight sidekick rules (S3K). Gated on
@@ -1405,13 +1405,13 @@ public class SidekickCpuController {
      * Establishes the follower for a mid-run zone entry without running the
      * SpawnLevelMainSprites kinematic reset: preserves the carried-in
      * position / velocity / air state and only prefills the leader Pos_table
-     * from the captured spawn anchor (sonic3k.asm:8359-8369,22166-22193) so the
+     * from the captured spawn anchor (sonic3k.asm:8391-8401,22202-22229) so the
      * delayed-follow target reproduces ROM's spawn-anchored ring.
      */
     private void establishFollowerWithoutSpawnReset() {
         // Apply the same centre-based spawn-anchor placement as a fresh spawn
         // (so the sidekick sits at the ROM centre coordinates Player_1 - $20, +4,
-        // sonic3k.asm:8364-8367) and clear the transient CPU counters, but
+        // sonic3k.asm:8396-8399) and clear the transient CPU counters, but
         // PRESERVE the carried-in kinematic state (velocity / air). ROM does not
         // re-run SpawnLevelMainSprites' velocity reset for an established CPU
         // follower across a mid-run handoff — only her slot's TailsCPU_Normal
@@ -1470,7 +1470,7 @@ public class SidekickCpuController {
         // sidekick physics rules: those rules describe later catch-up/respawn
         // behavior and can be stale during a live level rebind even though the
         // already-created Player_2 object still has a valid provider branch.
-        // ROM loc_13A10 (sonic3k.asm:26389-26397): when Tails_CPU_Control runs
+        // ROM loc_13A10 (sonic3k.asm:26429-26437): when Tails_CPU_Control runs
         // with routine=0 (uninitialized Tails) and Current_zone_and_act=0
         // (AIZ Act 1), the special AIZ1 dormant-marker branch fires
         // unconditionally — call sub_13ECA (write x_pos=$7F00/y_pos=0), set
@@ -1497,7 +1497,7 @@ public class SidekickCpuController {
     }
 
     private void applyLevelEventDormantMarker() {
-        // ROM loc_13A10 (sonic3k.asm:26389-26397) special-cases
+        // ROM loc_13A10 (sonic3k.asm:26429-26437) special-cases
         // Current_zone_and_act=0: call sub_13ECA, then overwrite
         // Tails_CPU_routine with $0A and object_control with $83.
         state = State.DORMANT_MARKER;
@@ -1516,7 +1516,7 @@ public class SidekickCpuController {
         // loc_13A10 writes object_control=$83 after sub_13ECA without writing
         // anim or mapping_frame. Bit 1 then skips Animate_Tails, retaining the
         // zeroed fresh-slot display state until the later routine-2 catch-up
-        // trigger (sonic3k.asm:26389-26397,26257-26272).
+        // trigger (sonic3k.asm:26429-26437,26297-26312).
         sidekick.setForcedAnimationId(-1);
         sidekick.setAnimationId(0);
         sidekick.setMappingFrame(0);
@@ -1528,7 +1528,7 @@ public class SidekickCpuController {
     /**
      * Suppresses only the setup presentation for a sidekick whose level-event
      * provider owns a dormant-marker intro. The first ordinary CPU dispatch
-     * still owns the gameplay marker itself (sonic3k.asm:26389-26397).
+     * still owns the gameplay marker itself (sonic3k.asm:26429-26437).
      */
     public void suppressInitialLevelEventPresentationIfNeeded() {
         if (initialPresentationSuppressed || !shouldEnterLevelEventDormantMarker()) {
@@ -1723,7 +1723,7 @@ public class SidekickCpuController {
         }
         // Per-game grounded-leader gate: S2 TailsCPU_Spawning checks for
         // grounded / not in water / not roll-jumping (s2.asm:38751-38762);
-        // S3K Tails_Catch_Up_Flying does NOT (sonic3k.asm:26474-26486) —
+        // S3K Tails_Catch_Up_Flying does NOT (sonic3k.asm:26514-26526) —
         // it only honours the 64-frame gate, leader.object_control bit 7,
         // and leader.Status_Super. Without gating, CNZ's catch-up handover
         // never fires because Sonic stays airborne after the carry release
@@ -1912,10 +1912,10 @@ public class SidekickCpuController {
         // whose interact slot is still latched (AIZ2 reload water rebound). It
         // must NOT discard a push bit that was freshly re-set this cycle by a
         // genuine ROM terrain ground-wall collision (Tails_DoLevelCollision
-        // loc_14C00/loc_14BCA bset Status_Push, sonic3k.asm:27997-28017). ROM
+        // loc_14C00/loc_14BCA bset Status_Push, sonic3k.asm:28037-28057). ROM
         // has no such pre-CPU clear: loc_13DD0 reads the live Status_Push, and
         // when a wall rebound re-set it ROM still branches around FollowLeft/
-        // FollowRight to preserve the delayed Ctrl_2 word (sonic3k.asm:26702-
+        // FollowRight to preserve the delayed Ctrl_2 word (sonic3k.asm:26742-
         // 26705). A push carrying terrain ground-wall provenance is genuine and
         // must survive to the loc_13DD0 read (AIZ2 reload underwater wall bounce,
         // trace F14299). A live SolidObject-owned push is the same native
@@ -1938,7 +1938,7 @@ public class SidekickCpuController {
 
         if (leader.getDead()) {
             SidekickCpuRules sidekickRules = sidekickCpuRulesOrNull();
-            // ROM loc_13D4A (sonic3k.asm:26656-26665):
+            // ROM loc_13D4A (sonic3k.asm:26696-26705):
             //   cmpi.b #6, (Player_1+routine).w
             //   blo.s  loc_13D78               ; continue NORMAL if routine < 6
             //   move.w #4, (Tails_CPU_routine).w
@@ -1970,7 +1970,7 @@ public class SidekickCpuController {
             }
             // S2 TailsCPU_Normal writes obj_control=$81 on dead-Sonic
             // recovery (s2.asm:38910-38915); S3K loc_13D4A does the same
-            // before entering Tails_FlySwim_Unknown (sonic3k.asm:26656-26665).
+            // before entering Tails_FlySwim_Unknown (sonic3k.asm:26696-26705).
             ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
             sidekick.setAir(true);
             sidekick.setDoubleJumpFlag(1);
@@ -2001,9 +2001,9 @@ public class SidekickCpuController {
             // to a routine that does NOT call that path, so the timer freezes
             // while Tails is in the hurt routine:
             //   - S3K Tails_Index dispatches routine 4 to the hurt/object path
-            //     instead of Tails_Control (docs/skdisasm/sonic3k.asm:26091-26096).
+            //     instead of Tails_Control (docs/skdisasm/sonic3k.asm:26131-26136).
             //     sub_13EFC is called only from Tails_Control's normal CPU route
-            //     (sonic3k.asm:26159-26190,26816-26833).
+            //     (sonic3k.asm:26199-26230,26856-26873).
             //   - S2 Obj02_Index dispatches routine 4 to Obj02_Hurt
             //     (docs/s2disasm/s2.asm:38883-38891), which runs ObjectMove /
             //     Tails_HurtStop / Tails_LevelBound / Tails_RecordPos / Animate /
@@ -2036,7 +2036,7 @@ public class SidekickCpuController {
                     controller2Held, 0, 0, 0, 0, false, 0);
             return;
         }
-        // ROM Tails_Normal Part 2 entry sonic3k.asm:26672:
+        // ROM Tails_Normal Part 2 entry sonic3k.asm:26712:
         //   tst.b   object_control(a0)
         //   bmi.w   loc_13EBE          ; only branch on sign bit (bit 7)
         // ROM's `bmi.w` only suppresses the CPU controller when bit 7 of
@@ -2060,8 +2060,8 @@ public class SidekickCpuController {
         if (leader.isWallCling()) {
             // S3K loc_13D78 tests Player_1 status_tertiary with BMI before
             // loading Pos_table/Stat_table for Tails normal CPU control
-            // (sonic3k.asm:26672-26675). MGZ top platform sets bit 7 while
-            // Sonic is grabbed (sonic3k.asm:71831-71835), so P2 must not start
+            // (sonic3k.asm:26712-26715). MGZ top platform sets bit 7 while
+            // Sonic is grabbed (sonic3k.asm:71871-71875), so P2 must not start
             // follow steering until the platform release clears it.
             updateNormalPushingGrace(currentPushing);
             finishNormalStepDiagnostics(diagnostics, "leader_status_tertiary_bit7", -1, -1,
@@ -2088,19 +2088,19 @@ public class SidekickCpuController {
         int targetX = effectiveLeader.getCentreX(ROM_FOLLOW_DELAY_FRAMES);
         int targetY = effectiveLeader.getCentreY(ROM_FOLLOW_DELAY_FRAMES);
 
-        // ROM loc_13DA6 (sonic3k.asm:26688-26694): bias the leader-x history
+        // ROM loc_13DA6 (sonic3k.asm:26728-26734): bias the leader-x history
         // target a fixed amount to the LEFT before computing dx, so Tails
         // tracks slightly behind Sonic on flat ground. Suppressed when:
         //   - leader's Status_OnObj bit is set (not just a stale object reference;
-        //     sonic3k.asm:26690-26691) — no useful position to lead to.
-        //   - leader.ground_vel >= $400 (sonic3k.asm:26692-26693) — leader
+        //     sonic3k.asm:26730-26731) — no useful position to lead to.
+        //   - leader.ground_vel >= $400 (sonic3k.asm:26732-26733) — leader
         //     is already faster than the follower can chase.
         // S2 has no equivalent (s2.asm:38933 reads d2 directly), so the
         // offset is gated by SidekickCpuRules.sidekickFollowLeadOffset().
         //
         // The OnObj read here is mid-frame relative to the leader's tick:
         // ROM only clears Status_OnObj later, in solid-object processing
-        // (sub_1FF1E sonic3k.asm:44306-44319, loc_1FFC4 sonic3k.asm:44369-44381),
+        // (sub_1FF1E sonic3k.asm:44346-44359, loc_1FFC4 sonic3k.asm:44409-44421),
         // which runs AFTER Tails_CPU_Control. Sonic_Jump (sonic3k.asm:
         // 23288-23354) sets Status_InAir but never clears Status_OnObj.
         // The engine's PlayableSpriteMovement.doJump (line 642) and the
@@ -2121,21 +2121,21 @@ public class SidekickCpuController {
         int leadOffset = sidekickRules != null
                 ? sidekickRules.sidekickFollowLeadOffset()
                 : 0;
-        // ROM loc_13DA6 (sonic3k.asm:26690-26691, s2.asm:38933+) reads
+        // ROM loc_13DA6 (sonic3k.asm:26730-26731, s2.asm:38933+) reads
         // Status_OnObj on the leader BEFORE solid-object processing has run for
         // the frame, so the spec view is the leader's frame-start OnObj snapshot
         // (captured by SpriteManager.beginPlayableFrame). The previous live
         // isOnObject() && !getAir() heuristic compensated for engine paths that
         // SET or KEPT OnObj for an airborne leader (e.g. Sonic3kSpringObjectInstance
-        // before the sub_22F98 bclr Status_OnObj fix landed at sonic3k.asm:47723-47724).
+        // before the sub_22F98 bclr Status_OnObj fix landed at sonic3k.asm:47763-47764).
         // With the spring trigger now clearing OnObj to match ROM, the snapshot
         // matches ROM's mid-frame view and the air filter is no longer required;
-        // ROM btst #Status_OnObj at sonic3k.asm:26690 has no air gate.
+        // ROM btst #Status_OnObj at sonic3k.asm:26730 has no air gate.
         boolean leaderStatusOnObject = effectiveLeader.getOnObjectAtFrameStart();
         // Slide terrain is processed by the later level-event pass. The engine
         // has already published that pass's next ground velocity when Tails'
         // CPU slot runs, while ROM loc_13DA6 still sees the value from before
-        // the event update (sonic3k.asm:26690-26694, 28918-28958). Use the
+        // the event update (sonic3k.asm:26730-26734, 28958-28998). Use the
         // post-player-physics/pre-zone-feature sample while status_secondary's
         // slide bit owns inertia. A frame-start sample is too early when terrain
         // projection itself crosses the signed $400 gate.
@@ -2194,7 +2194,7 @@ public class SidekickCpuController {
         // delayed status byte does not also have Status_Push, S2/S3K branch
         // around FollowLeft/FollowRight; if delayed d4 still has Status_Push,
         // they fall through to normal follow steering (s2.asm:39287-39294;
-        // sonic3k.asm:26698-26705). Engine-side object-order grace below is
+        // sonic3k.asm:26738-26745). Engine-side object-order grace below is
         // separate: it bridges cases where ROM would still read current
         // Status_Push at the sidekick CPU slot after local collision code has
         // already cleared the transient engine flag.
@@ -2216,7 +2216,7 @@ public class SidekickCpuController {
                         // same native bit while rolling inertia remains nonzero.
                         // Preserve that concrete object latch for loc_13DD0;
                         // only an unowned player-only bit is stale
-                        // (sonic3k.asm:26702-26705,43916-43935).
+                        // (sonic3k.asm:26742-26745,43956-43975).
                         && !sidekick.isPushFromGroundWallCollision()
                         && !hasLiveObjectPushingLatch();
         boolean romVisibleCurrentStatusPush =
@@ -2227,7 +2227,7 @@ public class SidekickCpuController {
                 && (pushBypassLeaderStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && isCurrentPushBypassContext(delayedObjectOrPushContext, dy);
         // Live Status_Push is the direct ROM branch in TailsCPU_Normal
-        // (S2 s2.asm:39291-39294, S3K sonic3k.asm:26702-26705) and can skip
+        // (S2 s2.asm:39291-39294, S3K sonic3k.asm:26742-26745) and can skip
         // follow steering even with a large dy. S3K's grace-status path can
         // still carry a stale push bit into offscreen underwater sidekick
         // frames after the ROM has already cleared it (AIZ F14302: ROM
@@ -2240,7 +2240,7 @@ public class SidekickCpuController {
                 collisionRules != null && collisionRules.sidekickPushBypassUsesGraceStatus();
         // On the S3K grace-status path, Tails_RollSpeed reaches the same
         // wall-response tail as walking movement, and that tail zeroes
-        // ground_vel before setting Status_Push (sonic3k.asm:28013-28017 via
+        // ground_vel before setting Status_Push (sonic3k.asm:28053-28057 via
         // 28231). A rolling sidekick that still has nonzero ground_vel is
         // carrying an engine-stale push bit, not the ROM-visible status byte
         // tested by loc_13DD0.
@@ -2260,7 +2260,7 @@ public class SidekickCpuController {
                 // object-owned bit may be stale. A terrain CalcRoomInFront
                 // response can set the same native Status_Push bit after that
                 // release; ROM loc_13DD0 consumes it and a zero-distance next
-                // probe leaves it intact (sonic3k.asm:26702-26705,
+                // probe leaves it intact (sonic3k.asm:26742-26745,
                 // 27974-28018). Do not classify that fresh terrain source as
                 // the released object's one-shot clear.
                 && !sidekick.isPushFromGroundWallCollision();
@@ -2338,12 +2338,12 @@ public class SidekickCpuController {
         // frame early/late relative to ROM's CPU slot, so the engine must not run
         // ROM loc_13E0A/loc_13E34's +/-1 x_pos follow nudge while that stale-bit
         // window is open. ROM itself gates that nudge only on the *current*
-        // Status_Push bit (loc_13DF2 btst #Status_Push; beq, sonic3k.asm:26702),
+        // Status_Push bit (loc_13DF2 btst #Status_Push; beq, sonic3k.asm:26742),
         // with no multi-frame grace. For a pure terrain-wall push (no solid
         // object involved) the engine's push bit timing already matches ROM, so
         // there is no stale window to bridge and the grace must not suppress the
         // ROM nudge — otherwise Tails free-accelerates into the wall instead of
-        // re-pushing each frame (HCZ1 flat right-wall, sonic3k.asm:26707-26741).
+        // re-pushing each frame (HCZ1 flat right-wall, sonic3k.asm:26747-26781).
         boolean localGracePushBypassObjectContext = localGracePushBypass
                 && (objectOrderFollowSteeringContext
                 || leaderStatusOnObject
@@ -2390,7 +2390,7 @@ public class SidekickCpuController {
                         // spring/wall support case, not a ROM-wide fast-leader
                         // rule. With no latched support, loc_13E0A/loc_13E34
                         // still applies its native +/-1 x_pos nudge
-                        // (sonic3k.asm:26707-26741).
+                        // (sonic3k.asm:26747-26781).
                         && hasLocalLiveInteractSlotObject(interactSlotObject)
                         // The bridge belongs to the support object Tails
                         // actually latched. A recycled slot containing an
@@ -2408,7 +2408,7 @@ public class SidekickCpuController {
             // object-order push jump as one sample ahead of ROM. AIZ F2722's
             // cpu_state trace shows the opposite: Tails falls through
             // loc_13DD0 and consumes the fresh 16-frame Stat_table Ctrl_1 word
-            // immediately (sonic3k.asm:26696-26729,28330-28401).
+            // immediately (sonic3k.asm:26736-26769,28370-28441).
             suppressNextAirbornePushFollowSteering = false;
         }
         // loc_13DD0 tests the current Status_Push bit, not elapsed time since
@@ -2443,18 +2443,18 @@ public class SidekickCpuController {
         // ROM loc_13DD0 only uses d4 (the delayed status byte) to decide
         // whether to bypass FollowLeft/FollowRight. The Ctrl_2 word in d1 was
         // already loaded from the same Stat_table entry and is preserved when
-        // branching to loc_13E9C (sonic3k.asm:26696-26705,26775-26785; S2
+        // branching to loc_13E9C (sonic3k.asm:26736-26745,26815-26825; S2
         // s2.asm:38939-38946). Do not re-read an older input slot here: CNZ1
         // F3925 has Status_Push set but still carries delayed RIGHT in d1, and
         // Tails_InputAcceleration_Path consumes it for +$000C ground speed
-        // (sonic3k.asm:27798-27805,28103-28122).
+        // (sonic3k.asm:27838-27845,28143-28162).
         //
         // The object-order grace/airborne handoff is not a direct ROM branch;
         // it is a provider-owned bridge for zones where object ordering can
         // clear transient push before Tails' CPU slot. Keep its older input
         // sample only in those provider-approved contexts (for the current S3K
         // implementation, the S3K hollow-tree/collapsing-platform/vine object
-        // ordering routes: sonic3k.asm:26690-26705,41668-41679,41793-41818,
+        // ordering routes: sonic3k.asm:26730-26745,41708-41719,41833-41858,
         // 43649-43810).
         // MGZ F1466 has the same delayed
         // Status_OnObj bit but ROM keeps the already-loaded d1 sample
@@ -2463,7 +2463,7 @@ public class SidekickCpuController {
         // Grounded grace with no provider-approved object-order status is the CNZ cylinder
         // release shape instead; it preserves the already-loaded d1 Ctrl_2 word
         // after Tails_CPU_Control, and the cylinder/P2 and path-acceleration
-        // paths consume that same sample (sonic3k.asm:26195-26208,
+        // paths consume that same sample (sonic3k.asm:26235-26248,
         // 67656-67672,27798-27805,28103-28122).
         boolean currentPushObjectOrderInputSample = currentPushBypass
                 && objectOrderFollowSteeringContext
@@ -2499,8 +2499,8 @@ public class SidekickCpuController {
             //
             // S2:  0x10 (s2.asm:38952 TailsCPU_Normal_FollowLeft,
             //            s2.asm:38967 TailsCPU_Normal_FollowRight).
-            // S3K: 0x30 (sonic3k.asm:26712 loc_13DF2,
-            //            sonic3k.asm:26729 loc_13E26).
+            // S3K: 0x30 (sonic3k.asm:26752 loc_13DF2,
+            //            sonic3k.asm:26769 loc_13E26).
             int snapThreshold = followSnapThreshold;
             int steeringDx = resolveFollowSteeringDx(dx, effectiveLeader, leadOffset, leaderStatusOnObject,
                     snapThreshold);
@@ -2534,7 +2534,7 @@ public class SidekickCpuController {
                     && !suppressLocalGraceFollowNudge
                     && !suppressFastLeaderTinyFollowNudge
                     // S3K loc_13E0A gates this nudge on object_control bit 0
-                    // (sonic3k.asm:26722-26724). S2 TailsCPU_Normal has no
+                    // (sonic3k.asm:26762-26764). S2 TailsCPU_Normal has no
                     // equivalent object_control test (s2.asm:38952-38975), so
                     // the check is feature-set gated.
                     && !followNudgeBlockedByObjectControlBit0) {
@@ -2542,7 +2542,7 @@ public class SidekickCpuController {
                     sidekick.shiftX(-1);
                     appliedFollowNudge = -1;
                     // ROM loc_13E0A applies this nudge immediately and has no
-                    // deferred queue (sonic3k.asm:26717-26724). If the engine
+                    // deferred queue (sonic3k.asm:26757-26764). If the engine
                     // had queued a late solid-contact bridge while airborne,
                     // the current grounded CPU pass has now consumed the ROM
                     // effect and the queued bridge must not also run.
@@ -2557,14 +2557,14 @@ public class SidekickCpuController {
                     && !suppressLocalGraceFollowNudge
                     && !suppressFastLeaderTinyFollowNudge
                     // S3K loc_13E34 gates this nudge on object_control bit 0
-                    // (sonic3k.asm:26739-26741). S2 keeps nudging under
+                    // (sonic3k.asm:26779-26781). S2 keeps nudging under
                     // object_control bit 0.
                     && !followNudgeBlockedByObjectControlBit0) {
                 if (sidekick.getGSpeed() != 0) {
                     sidekick.shiftX(1);
                     appliedFollowNudge = 1;
                     // ROM loc_13E34 applies this nudge immediately and has no
-                    // deferred queue (sonic3k.asm:26734-26741).
+                    // deferred queue (sonic3k.asm:26774-26781).
                     pendingGroundedFollowNudge = 0;
                     pendingGroundedFollowNudgeFrame = -1;
                 } else if (!sidekick.getAir()) {
@@ -2577,10 +2577,10 @@ public class SidekickCpuController {
         // ROM loc_13E64 (the Tails_CPU_auto_jump_flag carry/clear) is only reached
         // on the NON-push-bypass path. When Tails is pushing and the delayed leader
         // was not pushing 16 frames ago, loc_13DD0 branches straight to loc_13E9C
-        // (beq.w loc_13E9C, sonic3k.asm:26705), bypassing loc_13E64 entirely. So in
+        // (beq.w loc_13E9C, sonic3k.asm:26745), bypassing loc_13E64 entirely. So in
         // the push-bypass state the auto-jump flag neither drives a jump hold
         // (loc_13E64 ori #(A|B|C)<<8,d1 skipped) nor gets cleared on the ground
-        // (loc_13E64 move.b #0,auto_jump_flag skipped, sonic3k.asm:26753-26758);
+        // (loc_13E64 move.b #0,auto_jump_flag skipped, sonic3k.asm:26793-26798);
         // the flag simply persists, and the frame's jump input comes from the
         // delayed-leader Ctrl_2 passthrough. This matches the f15795 AIZ2 stuck-push
         // bounce: ROM holds Tails_CPU_auto_jump_flag set across ~18 grounded push
@@ -2589,7 +2589,7 @@ public class SidekickCpuController {
         // ROM loc_13DD0 takes the auto-jump bypass (beq.w loc_13E9C) using the
         // LITERAL current Status_Push bit (btst #Status_Push,status(a0)) AND the
         // delayed leader not pushing 16 frames ago (btst #5,d4),
-        // sonic3k.asm:26702-26705. That is exactly the condition under which
+        // sonic3k.asm:26742-26745. That is exactly the condition under which
         // loc_13E64 (the auto_jump_flag carry/clear) is skipped. Use the literal
         // push bit here, not romVisibleCurrentStatusPush / currentPushBypass: those
         // strip a rolling+nonzero-ground_vel "stale push" for follow steering, but
@@ -2643,7 +2643,7 @@ public class SidekickCpuController {
         //    branches DIRECTLY to the trigger gate, SKIPPING loc_13E64 / the
         //    FilterAction flag carry/clear entirely (S3K loc_13DD0
         //    "btst #Status_Push;beq loc_13DF2 / btst #5,d4;beq.w loc_13E9C",
-        //    sonic3k.asm:26702-26705; S2 "btst #pushing,status;beq + /
+        //    sonic3k.asm:26742-26745; S2 "btst #pushing,status;beq + /
         //    btst #pushing,d4;beq.w TailsCPU_Normal_FilterAction_Part2",
         //    s2.asm:39297-39300).
         // The trigger gate itself (loc_13E9C) never consults Tails_CPU_jumping /
@@ -2658,10 +2658,10 @@ public class SidekickCpuController {
             // ROM runs the auto-jump distance/height/gate path regardless of
             // Status_InAir; the in-air check only belongs to the existing
             // Tails_CPU_auto_jump_flag clear path above (S2 s2.asm:38994-39022,
-            // S3K sonic3k.asm:26753-26782). CNZ1 uses this when delayed Sonic
+            // S3K sonic3k.asm:26793-26822). CNZ1 uses this when delayed Sonic
             // jump input makes Tails airborne one frame before the auto-jump
             // latch itself fires.
-            // ROM sonic3k.asm:26702-26705 (loc_13DD0) and s2.asm:38943-38946
+            // ROM sonic3k.asm:26742-26745 (loc_13DD0) and s2.asm:38943-38946
             // (TailsCPU_Normal): if Tails is currently pushing AND the leader was
             // NOT pushing 16 frames ago, branch directly to the auto-jump trigger
             // gate (loc_13E9C / TailsCPU_Normal_FilterAction_Part2), bypassing the
@@ -2678,7 +2678,7 @@ public class SidekickCpuController {
             // bypasses the distance/height gates before loc_13E9C. Provider
             // approval is only for the engine-side object-order grace path,
             // where transient push may have cleared locally before ROM would
-            // read status(a0) in Tails' sprite slot (sonic3k.asm:26702-26705).
+            // read status(a0) in Tails' sprite slot (sonic3k.asm:26742-26745).
             // Ordinary stale grace still falls through loc_13E7C and must pass
             // the normal distance/height gates.
             // Vertical S2 Obj85 can hand Tails into a curled, zero-speed push
@@ -2695,7 +2695,7 @@ public class SidekickCpuController {
             // the already-incremented counter (see resolveCpuFrameCounter). The
             // complete-run handoff row's missing increment is restored by the
             // replay harness, so the NORMAL gate reads frameCounter directly with
-            // no trace-profile-gated bridge (sonic3k.asm:26775 loc_13E9C reads the
+            // no trace-profile-gated bridge (sonic3k.asm:26815 loc_13E9C reads the
             // post-increment (Level_frame_counter+1).b low byte).
             int autoJumpFrameCounter = frameCounter;
             if (titleCardOwnsActiveRetainedResultsSpriteCadence()) {
@@ -2760,7 +2760,7 @@ public class SidekickCpuController {
             // Released underwater object contact can still be visible to
             // loc_13DD0 for this CPU read, then Tails_InputAcceleration_Path
             // clears Status_Push when ground_vel is zero before idle/balance
-            // handling (sonic3k.asm:26702-26705,27814-27837).
+            // handling (sonic3k.asm:26742-26745,27854-27877).
             sidekick.setPushing(false);
             releasedUnderwaterPushConsumed = true;
         }
@@ -2784,8 +2784,8 @@ public class SidekickCpuController {
 
     private int resolveFollowStatDelayFrames() {
         // ROM Sonic_RecordPos writes Pos_table and Stat_table with the same
-        // Pos_table_index (sonic3k.asm:22124-22136), then Tails_Normal reads the
-        // delayed stat word in loc_13DD0 (sonic3k.asm:26683-26700). The engine
+        // Pos_table_index (sonic3k.asm:22160-22172), then Tails_Normal reads the
+        // delayed stat word in loc_13DD0 (sonic3k.asm:26723-26740). The engine
         // updates CPU sidekicks before the main player, so the latest completed
         // player history entry already corresponds to the previous ROM sample.
         return ROM_FOLLOW_DELAY_FRAMES;
@@ -2800,7 +2800,7 @@ public class SidekickCpuController {
         // The default rule copies the delayed Ctrl_1_logical low-byte press bits
         // directly into Ctrl_2_logical; consecutive recorded press bytes remain
         // presses (s2.asm:38939-38946,39025-39027;
-        // sonic3k.asm:26683-26689,26775-26782). Enabling the history-edge rule
+        // sonic3k.asm:26723-26729,26815-26822). Enabling the history-edge rule
         // instead reconstructs the delayed press from consecutive samples.
         if ((recordedInput & AbstractPlayableSprite.INPUT_JUMP) == 0
                 || !effectiveLeader.getJumpPressHistory(delayFrames)) {
@@ -2828,10 +2828,10 @@ public class SidekickCpuController {
         }
 
         // Tails_Normal reads the delayed Pos_table entry before applying the
-        // FollowLeft/FollowRight threshold (sonic3k.asm:26683-26732). In AIZ,
+        // FollowLeft/FollowRight threshold (sonic3k.asm:26723-26772). In AIZ,
         // Obj_AIZHollowTree runs later in Process_Sprites after Player_1 and
-        // Player_2 (sonic3k.asm:35965-35988,43649-43655) and rewrites both
-        // player slots with AIZTree_SetPlayerPos (sonic3k.asm:43776-43810).
+        // Player_2 (sonic3k.asm:36005-36028,43689-43695) and rewrites both
+        // player slots with AIZTree_SetPlayerPos (sonic3k.asm:43816-43850).
         // During the airborne release, the engine's completed player history
         // can sit one object-order sample behind the ROM-visible handoff. Use
         // the adjacent newer sample only when it keeps the same follow side but
@@ -2840,7 +2840,7 @@ public class SidekickCpuController {
         // Do not apply this bridge to the fast-leader branch: ROM loc_13DA6 only
         // skips the S3K lead bias when leader ground_vel >= $400, then still runs
         // FollowLeft/FollowRight from the original delayed Pos_table sample
-        // (sonic3k.asm:26692-26694,26707-26732).
+        // (sonic3k.asm:26732-26734,26747-26772).
         int objectOrderTargetX = effectiveLeader.getCentreX(ROM_FOLLOW_DELAY_FRAMES - 1);
         if (leadOffset > 0
                 && !leaderStatusOnObject
@@ -2860,20 +2860,20 @@ public class SidekickCpuController {
                 && rules != null
                 && rules.sidekickFollowLeadOffset() > 0
                 // ROM loc_13DA6 branches at Status_OnObj before applying the
-                // S3K follow bias (sonic3k.asm:26690-26694). While that bit is
+                // S3K follow bias (sonic3k.asm:26730-26734). While that bit is
                 // set, keep the same delayed position sample for the +/-1 nudge
                 // instead of substituting an adjacent object-order bridge sample.
                 && !effectiveLeader.getOnObjectAtFrameStart()
                 // The fast-leader branch uses the same unadjusted delayed d2 for
                 // both steering and the loc_13E0A/loc_13E34 +/-1 x_pos nudge
-                // (sonic3k.asm:26692-26694,26707-26741).
+                // (sonic3k.asm:26732-26734,26747-26781).
                 && effectiveLeader.getGSpeed() < 0x400
                 && isObjectOrderNudgeSteeringContext(effectiveLeader)) {
             // S3K reads Pos_table_index-$44 for the positional follow target
-            // (sonic3k.asm:26683-26689), then applies the +1 x_pos nudge in
+            // (sonic3k.asm:26723-26729), then applies the +1 x_pos nudge in
             // FollowRight when Tails faces right and object_control bit 0 is
-            // clear (sonic3k.asm:26734-26741). Around AIZ's hollow-tree handoff,
-            // Sonic is on Obj_AIZHollowTree (sonic3k.asm:43605,43649-43655);
+            // clear (sonic3k.asm:26774-26781). Around AIZ's hollow-tree handoff,
+            // Sonic is on Obj_AIZHollowTree (sonic3k.asm:43645,43689-43695);
             // that object-order player update can leave the nudge sign on either
             // adjacent completed leader-position sample while the delayed
             // input/status sample remains aligned.
@@ -2898,16 +2898,16 @@ public class SidekickCpuController {
         int leadOffset = rules != null
                 ? rules.sidekickFollowLeadOffset()
                 : 0;
-        // ROM loc_13DA6 (sonic3k.asm:26690-26691, s2.asm:38933+) reads
+        // ROM loc_13DA6 (sonic3k.asm:26730-26731, s2.asm:38933+) reads
         // Status_OnObj on the leader BEFORE solid-object processing has run for
         // the frame, so the spec view is the leader's frame-start OnObj snapshot
         // (captured by SpriteManager.beginPlayableFrame). The previous live
         // isOnObject() && !getAir() heuristic compensated for engine paths that
         // SET or KEPT OnObj for an airborne leader (e.g. Sonic3kSpringObjectInstance
-        // before the sub_22F98 bclr Status_OnObj fix landed at sonic3k.asm:47723-47724).
+        // before the sub_22F98 bclr Status_OnObj fix landed at sonic3k.asm:47763-47764).
         // With the spring trigger now clearing OnObj to match ROM, the snapshot
         // matches ROM's mid-frame view and the air filter is no longer required;
-        // ROM btst #Status_OnObj at sonic3k.asm:26690 has no air gate.
+        // ROM btst #Status_OnObj at sonic3k.asm:26730 has no air gate.
         boolean leaderStatusOnObject = effectiveLeader.getOnObjectAtFrameStart();
         if (leadOffset > 0
                 && !leaderStatusOnObject
@@ -2993,10 +2993,10 @@ public class SidekickCpuController {
             return false;
         }
         // S3K Tails_Spin_Freespace/Tails_InputAcceleration_Freespace does not
-        // set Status_Push while airborne (sonic3k.asm:27765-27784,
+        // set Status_Push while airborne (sonic3k.asm:27805-27824,
         // 28330-28401). Object release
         // paths also clear the bit when the standing/pushing owner is gone
-        // (sonic3k.asm:53580-53585). If the engine still has an underwater
+        // (sonic3k.asm:53620-53625). If the engine still has an underwater
         // airborne stale push bit in that released state, clear it before
         // Tails_CPU_Control reads status(a0) at loc_13DD0.
         sidekick.setPushing(false);
@@ -3365,7 +3365,7 @@ public class SidekickCpuController {
             // dispatcher entirely, so PANIC must freeze the same respawn timer
             // and Ctrl_2 logical latch as NORMAL instead of running
             // TailsCPU_CheckDespawn (S2 s2.asm:38883-38891; S3K
-            // sonic3k.asm:26091-26096).
+            // sonic3k.asm:26131-26136).
             return;
         }
         diagnosticCtrl2HeldLatch = controller2Held & MANUAL_HELD_MASK;
@@ -3385,7 +3385,7 @@ public class SidekickCpuController {
         // ROM tests spin_dash_flag here. S3K AutoSpin shares that byte in ROM,
         // while the engine stores the AutoSpin state in pinballMode; S2's
         // separate pinball_mode byte must not take this branch (s2.asm:39458,
-        // sonic3k.asm:26858).
+        // sonic3k.asm:26898).
         boolean panicSpinDashFlagSet = panicSpinDashFlagSet(sidekickRules);
         if (!panicSpinDashFlagSet) {
             if (sidekick.getGSpeed() != 0) {
@@ -3527,7 +3527,7 @@ public class SidekickCpuController {
 
         // Tails's hurt/death/drown object routines bypass Tails_CPU_Control and
         // immediately clear Player_1 object_control plus Flying_carrying_Sonic_flag
-        // before running hurt/death motion (sonic3k.asm:29180, 29272, 29316).
+        // before running hurt/death motion (sonic3k.asm:29220, 29312, 29356).
         if (sidekick.isHurt() || sidekick.getDead()) {
             releaseCarryForCarrierDisabled();
             return;
@@ -3586,7 +3586,7 @@ public class SidekickCpuController {
 
         // 4. Ground release (release path A): Sonic in-air bit clear
         if (!leader.getAir()) {
-            // ROM loc_14016 (sonic3k.asm:26923-26946) runs BEFORE Tails_Carry_Sonic
+            // ROM loc_14016 (sonic3k.asm:26963-26986) runs BEFORE Tails_Carry_Sonic
             // branches to loc_1445A. It resets Tails's own airborne state so the
             // next tick runs Tails_FlyingSwimming from a freshly-zeroed velocity
             // (y_vel=0 + Tails_Move_FlySwim's +0x08 gravity -> trace y_vel=0x008):
@@ -3601,7 +3601,7 @@ public class SidekickCpuController {
             sidekick.setGSpeed((short) 0);
             sidekick.setAir(true);
 
-            // ROM loc_1445A (sonic3k.asm:27268): move.w #-$100, y_vel(a1)
+            // ROM loc_1445A (sonic3k.asm:27308): move.w #-$100, y_vel(a1)
             // Small upward impulse on the carried Sonic before clearing
             // object_control, matching ROM fall-through into loc_14460/loc_14466.
             leader.setYSpeed((short) -0x100);
@@ -3623,7 +3623,7 @@ public class SidekickCpuController {
         }
 
         // Synthetic input injection. ROM loc_13FFA reads the post-increment
-        // (Level_frame_counter+1).b & $1F low byte (sonic3k.asm:26918); the engine
+        // (Level_frame_counter+1).b & $1F low byte (sonic3k.asm:26958); the engine
         // recovers that ROM-visible value via romVisibleLevelFrameCounter() rather
         // than an unconditional +1, so the cadence matches whether the counter
         // source is the post-increment sprite cadence or the stale stored copy.
@@ -3659,7 +3659,7 @@ public class SidekickCpuController {
         // ROM loc_14106 ($16): keep flight timer full and pulse A/B/C every
         // eight frames until Tails reaches Camera_Y+$90. loc_14106 reads the
         // post-increment (Level_frame_counter+1).b & 7 low byte
-        // (sonic3k.asm:26996), recovered here via romVisibleLevelFrameCounter().
+        // (sonic3k.asm:27036), recovered here via romVisibleLevelFrameCounter().
         sidekick.setDoubleJumpProperty((byte) 0xF0);
         if (mgzCarryIntroAscend) {
             if ((romVisibleLevelFrameCounter() & 0x07) == 0) {
@@ -3773,7 +3773,7 @@ public class SidekickCpuController {
 
         // ROM loc_13FFA: pulse Right on the carry cadence so Tails keeps drifting.
         // Reads the post-increment (Level_frame_counter+1).b low byte
-        // (sonic3k.asm:26918), recovered via romVisibleLevelFrameCounter().
+        // (sonic3k.asm:26958), recovered via romVisibleLevelFrameCounter().
         if ((romVisibleLevelFrameCounter() & carryTrigger.carryInputInjectMask()) == 0) {
             inputRight = true;
         }
@@ -3896,14 +3896,14 @@ public class SidekickCpuController {
     }
 
     /**
-     * ROM {@code Tails_Catch_Up_Flying} (sonic3k.asm:26474). Entered when
+     * ROM {@code Tails_Catch_Up_Flying} (sonic3k.asm:26514). Entered when
      * {@code Tails_CPU_routine == 2}. Waits on either (a) the sidekick's Ctrl_2
      * A/B/C/START press, or (b) a 64-frame gate firing while Sonic's
      * object_control sign bit is clear and Sonic is not super. On trigger, teleports Tails to
      * (Sonic.x, Sonic.y - 0xC0), sets routine = 4, and enters flight AI.
      */
     private void updateCatchUpFlight() {
-        // ROM Tails_Catch_Up_Flying (sonic3k.asm:26474-26531)
+        // ROM Tails_Catch_Up_Flying (sonic3k.asm:26514-26571)
         boolean trigger = false;
         // Routine 2 does not write a delayed leader word into Ctrl_2_logical.
         // After the marker frame, expose only live Player 2 logical input;
@@ -3927,7 +3927,7 @@ public class SidekickCpuController {
             trigger = true;
         } else {
             // ROM checks Sonic's object_control with `bmi`, so only bit 7 suppresses
-            // the 64-frame catch-up warp (sonic3k.asm:26478-26488).
+            // the 64-frame catch-up warp (sonic3k.asm:26518-26528).
             if ((catchUpFrameCounter & 0x3F) == 0
                     && (!leader.isObjectControlled() || leader.isObjectControlAllowsCpu())
                     && !leader.isSuperSonic()) {
@@ -3938,13 +3938,13 @@ public class SidekickCpuController {
         if (!trigger) {
             // ROM routine 2's wait path only returns: Tails_Catch_Up_Flying
             // branches to locret_13BF6 without writing object_control until
-            // the catch-up trigger fires (sonic3k.asm:26474-26500). Preserve
+            // the catch-up trigger fires (sonic3k.asm:26514-26540). Preserve
             // the current object-control state so CNZ cylinder releases
-            // (sonic3k.asm:68071-68077) can expose the marker to the same
+            // (sonic3k.asm:68111-68117) can expose the marker to the same
             // screen-boundary/movement writes recorded at CNZ1 F4790.
             return;
         }
-        // sonic3k.asm:26487 (loc_13B50) — teleport and enter FLIGHT_AUTO_RECOVERY.
+        // sonic3k.asm:26527 (loc_13B50) — teleport and enter FLIGHT_AUTO_RECOVERY.
         int targetX = leader.getCentreX() & 0xFFFF;
         int targetY = leader.getCentreY() & 0xFFFF;
         catchUpTargetX = targetX;
@@ -3970,28 +3970,28 @@ public class SidekickCpuController {
         // loc_13B50 clears the complete tumble selector before installing the
         // recovery flight state. A later object may write flip_angle without
         // writing flip_type, so retaining an old barber-pole type changes its
-        // next native Anim_Tumble mapping (sonic3k.asm:26487-26508).
+        // next native Anim_Tumble mapping (sonic3k.asm:26527-26548).
         sidekick.setFlipType(0);
         sidekick.setFlipsRemaining(0);
         sidekick.setFlipSpeed(0);
         publishRecoveryFlightAnimation(flyAnimId);
         sidekick.setControlLocked(true);
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
-        // ROM loc_13B50 (sonic3k.asm:26502-26508) writes double_jump_flag=0,
+        // ROM loc_13B50 (sonic3k.asm:26542-26548) writes double_jump_flag=0,
         // status=2, and object_control=$81. Movement remains owned by the CPU
         // flight routine; normal air physics must not be used to carry Tails.
         // status=#2 also clears Status_Facing, so the catch-up snap resets Tails
         // to face right; routine 4 (Tails_FlySwim_Unknown) then re-derives facing
-        // from x_pos vs target each frame (sonic3k.asm:26509,26566-26589). Without
+        // from x_pos vs target each frame (sonic3k.asm:26549,26606-26629). Without
         // this, the off-screen LEFT facing held during routine 2 leaks into the
         // first routine-4 frame where x_pos == target (no facing write).
         sidekick.setDirection(Direction.RIGHT);
         sidekick.setDoubleJumpFlag(0);
         // ROM loc_13B50 also clears the spindash charge before installing the
         // flight state: `move.b d0,spin_dash_flag(a0)` (written twice) and
-        // `move.w d0,spin_dash_counter(a0)` (sonic3k.asm:26522-26524).
+        // `move.w d0,spin_dash_counter(a0)` (sonic3k.asm:26562-26564).
         // Catch-up flight can fire while Tails is mid-charge, and the flag is
-        // read at the TOP of Tails_Spindash (:28696), which only runs from the
+        // read at the TOP of Tails_Spindash (:28736), which only runs from the
         // grounded routine. Without this clear the charge survives the whole
         // recovery flight and the first grounded frame after landing takes the
         // release path with a decayed counter, launching Tails at the speed
@@ -4005,7 +4005,7 @@ public class SidekickCpuController {
     }
 
     /**
-     * ROM {@code Tails_FlySwim_Unknown} (sonic3k.asm:26534). Entered when
+     * ROM {@code Tails_FlySwim_Unknown} (sonic3k.asm:26574). Entered when
      * {@code Tails_CPU_routine == 4}. Per-frame: increments Tails_CPU_flight_timer;
      * after 5*60 frames off-screen, falls back to {@code CATCH_UP_FLIGHT}.
      * Otherwise computes the 16-frame delayed Sonic position, steers Tails toward
@@ -4014,7 +4014,7 @@ public class SidekickCpuController {
      * Sonic isn't hurt/dead.
      */
     private void updateFlightAutoRecovery() {
-        // ROM Tails_FlySwim_Unknown (sonic3k.asm:26534-26653).
+        // ROM Tails_FlySwim_Unknown (sonic3k.asm:26574-26693).
         SidekickCpuRules rules = sidekickCpuRulesOrNull();
         final int AUTO_LAND_FRAMES = rules != null
                 ? rules.sidekickFlightAutoLandFrames()
@@ -4041,7 +4041,7 @@ public class SidekickCpuController {
         if (!onScreen) {
             flightTimer++;
             if (flightTimer >= AUTO_LAND_FRAMES) {
-                // ROM sonic3k.asm:26540-26547 — reset and bounce back to CATCH_UP.
+                // ROM sonic3k.asm:26580-26587 — reset and bounce back to CATCH_UP.
                 // S2 uses the same word writes at s2.asm:38769-38775. These
                 // write x_pos/y_pos only, preserving x_sub/y_sub for the later
                 // MoveSprite position add.
@@ -4057,7 +4057,7 @@ public class SidekickCpuController {
                 return;
             }
         } else {
-            // ROM loc_13C3A (sonic3k.asm:26551-26555): every on-screen frame
+            // ROM loc_13C3A (sonic3k.asm:26591-26595): every on-screen frame
             // resets the flight timer, refuels double_jump_property, and ORs
             // Status_InAir to keep Tails in flight recovery even if terrain
             // collision touched the flag on the previous movement tick.
@@ -4069,21 +4069,21 @@ public class SidekickCpuController {
             // loc_13C3A calls Tails_Set_Flying_Animation every on-screen
             // recovery tick. That routine selects the underwater $25-$28
             // family from live Status_Underwater rather than retaining the
-            // entry-time Fly byte (sonic3k.asm:26551-26555,27646-27717).
+            // entry-time Fly byte (sonic3k.asm:26591-26595,27686-27757).
             int recoveryAnimation = resolveRecoveryFlightAnimation();
             publishRecoveryFlightAnimation(recoveryAnimation);
         }
 
         // 3. Target = Sonic's 16-frame-delayed position. ROM
         //    Tails_FlySwim_Unknown reads Pos_table directly
-        //    (sonic3k.asm:26564-26565) with NO lead offset — the `subi.w #$20, d2`
+        //    (sonic3k.asm:26604-26605) with NO lead offset — the `subi.w #$20, d2`
         //    adjustment lives only in the NORMAL follow AI at loc_13DA6
-        //    (sonic3k.asm:26690-26694). An earlier iteration of this body
+        //    (sonic3k.asm:26730-26734). An earlier iteration of this body
         //    mis-applied that offset here and produced a chronic -0x20 X drift.
         int targetX = leader.getCentreX(ROM_FOLLOW_DELAY_FRAMES) & 0xFFFF;
         // S2 clamps the sampled position-history Y to Water_Level_1-$10
         // (s2.asm:39162-39176); S3K copies Pos_table Y verbatim
-        // (sonic3k.asm:26558-26565). Keep the shared controller driven by the
+        // (sonic3k.asm:26598-26605). Keep the shared controller driven by the
         // typed per-game ROM rule rather than the current zone or water state.
         int delayedTargetY = leader.getCentreY(ROM_FOLLOW_DELAY_FRAMES) & 0xFFFF;
         int targetY = rules != null
@@ -4105,7 +4105,7 @@ public class SidekickCpuController {
             if (step > MAX_X_STEP) {
                 step = MAX_X_STEP;
             }
-            // ROM sonic3k.asm:26580-26586: move.b x_vel(a1), d1 reads the HIGH
+            // ROM sonic3k.asm:26620-26626: move.b x_vel(a1), d1 reads the HIGH
             // byte of Sonic's 16-bit x_vel (big-endian 68000). Engine x_vel is
             // stored in subpixels (256/px), so the ROM's "pixel velocity" byte
             // is (xSpeed >> 8) & 0xFF. Use the signed 8-bit absolute value.
@@ -4125,7 +4125,7 @@ public class SidekickCpuController {
 
         // 5. Y steer: +/-1 per frame. ROM branches on the signed word result
         // of y_pos - Tails_CPU_target_Y (`sub.w` followed by `bmi`;
-        // sonic3k.asm:26614-26622). This matters when catch-up starts above
+        // sonic3k.asm:26654-26662). This matters when catch-up starts above
         // the level top: $FFD9 is a negative Y, not a huge unsigned value.
         int dy = signedWord((sidekick.getCentreY() & 0xFFFF) - targetY);
         int residualY = dy;
@@ -4138,7 +4138,7 @@ public class SidekickCpuController {
 
         // 6. Transition to NORMAL when close enough AND the delayed Stat_table
         //    sample allows it. ROM reads byte 2 from the same delayed
-        //    Stat_table slot as the target position (S3K sonic3k.asm:26623-26630;
+        //    Stat_table slot as the target position (S3K sonic3k.asm:26663-26670;
         //    S2 s2.asm:38871-38876), not live Sonic object_control. This matters
         //    while Sonic is riding ROM object-controlled carriers such as MGZ's
         //    top platform: the delayed status byte can be clear while live
@@ -4154,7 +4154,7 @@ public class SidekickCpuController {
                 || !leader.getDead();
 
         if (closeEnough && delayedStatusAllowsLand && leaderRoutineAllowsLand) {
-            // ROM sonic3k.asm:26631-26648 — return to NORMAL (routine 0x06).
+            // ROM sonic3k.asm:26671-26688 — return to NORMAL (routine 0x06).
             ObjectControlState.none().applyTo(sidekick);
             sidekick.setControlLocked(false);
             sidekick.setXSpeed((short) 0);
@@ -4166,7 +4166,7 @@ public class SidekickCpuController {
                 // loc_13CD2 falls through loc_13AF4 and writes raw anim=Walk
                 // during the routine 4 -> 6 handoff itself. The following
                 // normal movement pulse is not the owner of this byte
-                // (sonic3k.asm:26458-26472,26631-26648).
+                // (sonic3k.asm:26498-26512,26671-26688).
                 sidekick.setAnimationId(0);
             }
             // loc_13CD2 masks status to underwater then sets in-air. Preserve
@@ -4184,7 +4184,7 @@ public class SidekickCpuController {
             sidekick.setTopSolidBit(leader.getTopSolidBit());
             sidekick.setLrbSolidBit(leader.getLrbSolidBit());
             sidekick.setHighPriority(leader.isHighPriority());
-            // ROM loc_1384A (sonic3k.asm:26213): while object_control bit 0 is
+            // ROM loc_1384A (sonic3k.asm:26253): while object_control bit 0 is
             // set (FLIGHT_AUTO_RECOVERY keeps it high), double_jump_flag is
             // cleared every frame by the dispatcher. On the NORMAL transition
             // the engine just cleared object_control, so the dispatcher's
@@ -4213,7 +4213,7 @@ public class SidekickCpuController {
         // 7. Otherwise keep object_control locked to keep flight AI active.
         // loc_13D42 writes the complete byte as $81, so bit 1 from a later
         // object's prior $03 write is cleared before Animate_Tails runs
-        // (sonic3k.asm:26646-26652).
+        // (sonic3k.asm:26686-26692).
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         sidekick.setObjectMappingFrameControl(false);
     }
@@ -4385,7 +4385,7 @@ public class SidekickCpuController {
     }
 
     /**
-     * Enters ROM Tails_CPU_routine $10 (loc_1408A, sonic3k.asm:26953-26972) for a
+     * Enters ROM Tails_CPU_routine $10 (loc_1408A, sonic3k.asm:26993-27012) for a
      * throwaway intro carrier that has just dropped a solo leader. Mirrors the
      * routine's setup: keep Tails airborne with the flight animation and a topped-
      * up double_jump_property so flight stays active while it leaves the screen.
@@ -4417,7 +4417,7 @@ public class SidekickCpuController {
     }
 
     /**
-     * ROM Tails_CPU_routine $10 body (loc_1408A, sonic3k.asm:26953-26972). The ROM
+     * ROM Tails_CPU_routine $10 body (loc_1408A, sonic3k.asm:26993-27012). The ROM
      * pulses A/B/C + Right into Ctrl_2 every 16 frames so Tails flaps up and to the
      * right; once {@code render_flags} reports it off-screen, loc_140AC clears the
      * object code pointer (deleting the slot). This is a one-shot intro cutscene
@@ -4426,7 +4426,7 @@ public class SidekickCpuController {
      * and removes the temporary sprite when it leaves the camera.
      */
     private void updateCarryFlyoff() {
-        // ROM loc_1408A (sonic3k.asm:26953-26972): each frame clear Ctrl_2_logical
+        // ROM loc_1408A (sonic3k.asm:26993-27012): each frame clear Ctrl_2_logical
         // and top up the flight timer; then every 16 frames (andi.b #$F) pulse
         // A/B/C + Right into Ctrl_2 so Tails flaps up and drifts right through the
         // normal Tails_FlyingSwimming flight physics. There is no direct position
@@ -4453,7 +4453,7 @@ public class SidekickCpuController {
     }
 
     /**
-     * ROM loc_140AC (sonic3k.asm:26963-26969) clears the carrier's object code
+     * ROM loc_140AC (sonic3k.asm:27003-27009) clears the carrier's object code
      * pointer once it is off-screen, freeing the slot. The engine removes the
      * temporary sidekick from the {@link SpriteManager} so it never respawns.
      */
@@ -4550,7 +4550,7 @@ public class SidekickCpuController {
      * {@code -1}) maps back to ROM's zeroed object id, so the compare sees the
      * same id change ROM sees after {@code DeleteObject} clears the slot.
      *
-     * <p>S3K {@code sub_13EFC} (sonic3k.asm:26816-26843) instead compares
+     * <p>S3K {@code sub_13EFC} (sonic3k.asm:26856-26883) instead compares
      * the live slot's code-pointer high word with {@code Tails_CPU_interact}.
      * Same-word replacements survive; changed words and a newly emptied slot
      * can despawn. The released-instance fallback is retained only for contacts
@@ -4630,7 +4630,7 @@ public class SidekickCpuController {
                 }
             }
 
-            // S3K sub_13EFC's off-screen + on-object branch (sonic3k.asm:26825-26826)
+            // S3K sub_13EFC's off-screen + on-object branch (sonic3k.asm:26865-26866)
             // does `cmp.w (a3),d0` comparing word 0 of the stood-on object's code
             // longword against the Tails_CPU_interact latch. A DIFFERENT word (Tails
             // switched to a different-code object while off-screen) despawns through
@@ -4647,7 +4647,7 @@ public class SidekickCpuController {
             // Status_OnObj branch is taken -- there is no "latch already armed"
             // precondition. Tails_CPU_interact is zeroed with the rest of the CPU
             // block at level init (clearRAM Tails_CPU_interact,$100,
-            // sonic3k.asm:5415,7621) and the refresh at loc_13F2E only runs on a
+            // sonic3k.asm:5447,7653) and the refresh at loc_13F2E only runs on a
             // frame where Tails is ALREADY on an object, so the FIRST off-screen
             // on-object CPU frame always compares 0 against a live object code high
             // word (>= 3) and mismatches. That is the ROM's real behaviour: landing
@@ -4905,7 +4905,7 @@ public class SidekickCpuController {
 
     /**
      * Trigger a sidekick despawn with explicit cause. LEVEL_BOUNDARY
-     * mirrors ROM Kill_Character (sonic3k.asm:21136): Frame N zeroes
+     * mirrors ROM Kill_Character (sonic3k.asm:21172): Frame N zeroes
      * velocities and enters DEAD_FALLING; Frame N+1 (updateDeadFalling)
      * runs sub_123C2 -> sub_13ECA equivalent (warp + +$38 gravity).
      * Other causes go straight to applyDespawnMarker.
@@ -4924,7 +4924,7 @@ public class SidekickCpuController {
             // (s2.asm:38652-38656). ROM Obj02_Dead does NOT call
             // Tails_LevelBound -- only Obj02_CheckGameOver's kill-plane test
             // (s2.asm:40736-40759). For S3K, sub_13ECA writes object_control
-            // bit 7 in the same frame (sonic3k.asm:26804-26807), which
+            // bit 7 in the same frame (sonic3k.asm:26844-26847), which
             // short-circuits all subsequent boundary checks via
             // isObjectControlSuppressesMovement.
             //
@@ -4944,10 +4944,10 @@ public class SidekickCpuController {
             beginLevelBoundaryKill();
             return;
         }
-        // ROM routine 8 (PANIC / loc_13F40, sonic3k.asm:26851) calls sub_13EFC
+        // ROM routine 8 (PANIC / loc_13F40, sonic3k.asm:26891) calls sub_13EFC
         // and, after the off-screen-timeout respawn tail-calls sub_13ECA, falls
-        // through to its facing block (sonic3k.asm:26861-26865) on the post-warp
-        // x_pos. Routine 6 (NORMAL / loc_13D78, sonic3k.asm:26668) instead branches
+        // through to its facing block (sonic3k.asm:26901-26905) on the post-warp
+        // x_pos. Routine 6 (NORMAL / loc_13D78, sonic3k.asm:26708) instead branches
         // to loc_13EBE after the same respawn (object_control bit 7 -> bmi) and
         // never runs a facing block, so it keeps sub_13ECA's cleared facing.
         // The ordinary TailsCPU_CheckDespawn timeout calls sub_13ECA directly,
@@ -4969,10 +4969,10 @@ public class SidekickCpuController {
     }
 
     /**
-     * ROM Kill_Character (sonic3k.asm:21136-21159) entry reached from
-     * Tails_Check_Screen_Boundaries (sonic3k.asm:28442-28443
+     * ROM Kill_Character (sonic3k.asm:21172-21195) entry reached from
+     * Tails_Check_Screen_Boundaries (sonic3k.asm:28482-28483
      * `loc_14F56: jmp (Kill_Character).l`) when the sidekick crosses the
-     * bottom kill plane. ROM Kill_Character at sonic3k.asm:21148-21151
+     * bottom kill plane. ROM Kill_Character at sonic3k.asm:21184-21187
      * writes:
      *
      * <pre>
@@ -4984,12 +4984,12 @@ public class SidekickCpuController {
      *
      * y_vel is set to {@code -$700}, NOT zero. Because Kill_Character was
      * reached via {@code jmp} (not {@code jsr}), the {@code rts} at
-     * sonic3k.asm:21159 unwinds to Kill_Character's caller's caller — for
+     * sonic3k.asm:21195 unwinds to Kill_Character's caller's caller — for
      * Tails the relevant chain is Tails_Stand_Path
-     * (sonic3k.asm:27520-27526), so control falls through to
+     * (sonic3k.asm:27560-27566), so control falls through to
      * {@code jsr (MoveSprite_TestGravity2).l} on line 27526.
      * MoveSprite_TestGravity2 with Reverse_gravity_flag clear is just
-     * MoveSprite2 (sonic3k.asm:36088-36101) which applies the freshly
+     * MoveSprite2 (sonic3k.asm:36128-36141) which applies the freshly
      * written {@code y_vel = -$700} to {@code y_pos}, shifting Tails up by
      * 7 pixels in the same frame. Trace AIZ F7171 records the post-shift
      * state: {@code y_pos = $0477} (down 7 from $047E) with
@@ -5009,7 +5009,7 @@ public class SidekickCpuController {
         normalFrameCount = 0;
         applyKillCharacterTouchFloorReset();
         sidekick.setXSpeed((short) 0);
-        // ROM Kill_Character (sonic3k.asm:21149) writes y_vel=-$700.
+        // ROM Kill_Character (sonic3k.asm:21185) writes y_vel=-$700.
         sidekick.setYSpeed((short) -0x700);
         sidekick.setGSpeed((short) 0);
         sidekick.setHurt(false);
@@ -5046,11 +5046,11 @@ public class SidekickCpuController {
         int centreY = sidekick.getCentreY();
         if (sidekick.getRolling()) {
             // ROM Kill_Character calls Player_TouchFloor before setting death
-            // velocities (sonic3k.asm:21142-21151). For Tails this restores
+            // velocities (sonic3k.asm:21178-21187). For Tails this restores
             // default radii, clears Status_Roll, and adds the current y_radius
-            // delta to y_pos (sonic3k.asm:29133-29156).
+            // delta to y_pos (sonic3k.asm:29173-29196).
             //
-            // ROM Tails_TouchFloor (sonic3k.asm:29133-29156):
+            // ROM Tails_TouchFloor (sonic3k.asm:29173-29196):
             //   move.b y_radius(a0),d0          ; d0 = OLD y_radius
             //   move.b default_y_radius(a0),y_radius(a0)
             //   ...
@@ -5086,13 +5086,13 @@ public class SidekickCpuController {
      * Runs after beginLevelBoundaryKill.  sub_123C2 first checks whether Tails
      * has fallen below the marker threshold; while he is still above it, the
      * routine returns to loc_157C8 and only MoveSprite_TestGravity runs
-     * (sonic3k.asm:24538-24578,29284-29285).  Once the threshold is crossed,
+     * (sonic3k.asm:24578-24618,29324-29325).  Once the threshold is crossed,
      * sub_123C2 writes Tails_CPU_routine=2 and branches to sub_13ECA
-     * (sonic3k.asm:26800-26809), which warps x_pos=0x7F00, y_pos=0 and sets
+     * (sonic3k.asm:26840-26849), which warps x_pos=0x7F00, y_pos=0 and sets
      * object_control=$81/Status_InAir.  Control then unwinds via the bsr at
-     * sonic3k.asm:29284 back to loc_157C8, where MoveSprite applies the still-
+     * sonic3k.asm:29324 back to loc_157C8, where MoveSprite applies the still-
      * preserved y_vel before the +$38 gravity write
-     * (sonic3k.asm:36032-36042).
+     * (sonic3k.asm:36072-36082).
      * Trace AIZ F7172 records exactly that: {@code y = -0x0007},
      * {@code y_vel = -0x06C8}.
      *
@@ -5111,7 +5111,7 @@ public class SidekickCpuController {
             updateDeadFallingDeferredS2();
             return;
         }
-        // ROM MoveSprite (sonic3k.asm:36037-36041) uses the OLD y_vel for
+        // ROM MoveSprite (sonic3k.asm:36077-36081) uses the OLD y_vel for
         // position before adding gravity; sub_13ECA does not touch y_vel so
         // the value entering MoveSprite is the Kill_Character write of -$700.
         short oldYSpeed = sidekick.getYSpeed();
@@ -5120,7 +5120,7 @@ public class SidekickCpuController {
         // using the pre-gravity y_vel.
         int newCentreY = (sidekick.getCentreY() & 0xFFFF) + (oldYSpeed >> 8);
         sidekick.setCentreYPreserveSubpixel((short) newCentreY);
-        // MoveSprite then adds +$38 (sonic3k.asm:36038) to y_vel.
+        // MoveSprite then adds +$38 (sonic3k.asm:36078) to y_vel.
         sidekick.setYSpeed((short) (oldYSpeed + 0x38));
     }
 
@@ -5128,7 +5128,7 @@ public class SidekickCpuController {
      * Per-frame death-routine equivalent for games whose dead sidekick waits
      * before the off-screen marker. S2 uses Tails_Max_Y_pos+$100
      * (docs/s2disasm/s2.asm:40736-40759); S3K uses Camera_Y_pos+$100 in
-     * sub_123C2 (sonic3k.asm:24538-24578) before branching to sub_13ECA.
+     * sub_123C2 (sonic3k.asm:24578-24618) before branching to sub_13ECA.
      * Each frame ROM runs:
      *
      * <pre>
@@ -5227,7 +5227,7 @@ public class SidekickCpuController {
             Camera camera = sidekick.currentCamera();
             if (camera != null) {
                 // S3K sub_123C2 reads Camera_Y_pos, then adds $100 before
-                // comparing against y_pos(a0) (sonic3k.asm:24549-24565).
+                // comparing against y_pos(a0) (sonic3k.asm:24589-24605).
                 return (camera.getY() & 0xFFFF) + 0x100;
             }
         }
@@ -5239,7 +5239,7 @@ public class SidekickCpuController {
     }
 
     /**
-     * ROM sub_13ECA (sonic3k.asm:26800-26809) marker warp body. Writes
+     * ROM sub_13ECA (sonic3k.asm:26840-26849) marker warp body. Writes
      * despawn marker x/y, sets Tails_CPU_routine=2, and leaves the next
      * S3K CPU tick in Tails_Catch_Up_Flying. S2 keeps the older SPAWNING
      * flow because its TailsCPU_Respawn path owns the approach sequence.
@@ -5252,9 +5252,9 @@ public class SidekickCpuController {
      * @param fromStuckRespawnRoutine8 true when the marker warp is the S3K
      *        flight-timer / off-screen stuck respawn reached from routine 8
      *        ({@code loc_13F40} -> {@code bsr sub_13EFC} -> {@code sub_13ECA},
-     *        sonic3k.asm:26852,26837). After sub_13ECA returns, loc_13F40
+     *        sonic3k.asm:26892,26877). After sub_13ECA returns, loc_13F40
      *        continues and runs its facing block on the POST-warp x_pos
-     *        (sonic3k.asm:26861-26865), facing Tails toward the leader. The
+     *        (sonic3k.asm:26901-26905), facing Tails toward the leader. The
      *        death / boundary-kill marker paths (Kill_Character, sub_123C2)
      *        do NOT run that block, so they keep sub_13ECA's cleared facing.
      */
@@ -5285,7 +5285,7 @@ public class SidekickCpuController {
         normalFrameCount = 0;
         sidekick.setHurt(false);
         // ROM sub_13ECA writes status=Status_InAir directly
-        // (sonic3k.asm:26804-26808). It clears Status_Roll and
+        // (sonic3k.asm:26844-26848). It clears Status_Roll and
         // Status_Underwater, but does not restore x_radius/y_radius or water
         // speed constants, so preserve those separate ROM fields.
         sidekick.clearRollingFlagPreserveRadii();
@@ -5307,10 +5307,10 @@ public class SidekickCpuController {
         if (s3kCatchUpMarker && fromStuckRespawnRoutine8) {
             // ROM sub_13ECA itself only writes status=Status_InAir (facing clear),
             // but on the S3K stuck-respawn frame it is tail-called from routine 8
-            // (loc_13F40, sonic3k.asm:26852 bsr sub_13EFC -> sub_13ECA). loc_13F40
+            // (loc_13F40, sonic3k.asm:26892 bsr sub_13EFC -> sub_13ECA). loc_13F40
             // then continues PAST the sub_13EFC call and runs its facing block on
             // the POST-warp x_pos: bclr Status_Facing; if x_pos(a0) >= x_pos(a1)
-            // bset Status_Facing (sonic3k.asm:26861-26865). The despawn sentinel
+            // bset Status_Facing (sonic3k.asm:26901-26905). The despawn sentinel
             // x_pos ($7F00) is always to the right of the leader, so Tails faces
             // LEFT, and routine 2 (Tails_Catch_Up_Flying) leaves the bit untouched
             // while parked off-screen. (BizHawk: status=$03 held across the catch-up
@@ -5327,20 +5327,20 @@ public class SidekickCpuController {
         }
         sidekick.setControlLocked(true);
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
-        // ROM sub_13ECA (sonic3k.asm:26800-26809) only writes x_pos,
+        // ROM sub_13ECA (sonic3k.asm:26840-26849) only writes x_pos,
         // y_pos, Tails_CPU_routine, object_control, status, and
         // double_jump_flag - it does NOT touch anim, mapping_frame,
         // x_vel/y_vel/ground_vel. Preserve the displayed animation until
-        // loc_13B50 begins catch-up flight (sonic3k.asm:26478-26511).
+        // loc_13B50 begins catch-up flight (sonic3k.asm:26518-26551).
         // Trace AIZ F2405 confirms this: ROM applies the marker warp
         // mid-trajectory and the recorded sidekick_x_speed/y_speed/g_speed
         // at F2405 retain the pre-warp values (0xFE07, 0x022D, 0xFD0D).
         // Don't zero velocities here. The LEVEL_BOUNDARY kill chain
         // (beginLevelBoundaryKill) does its own zeroing earlier in the
-        // Kill_Character (sonic3k.asm:21148-21151) phase, which runs
+        // Kill_Character (sonic3k.asm:21184-21187) phase, which runs
         // before this marker warp on Frame N+1.
         // S2 TailsCPU_Despawn (docs/s2disasm/s2.asm:39391-39400) and S3K
-        // sub_13ECA (docs/skdisasm/sonic3k.asm:26800-26809) do not write the
+        // sub_13ECA (docs/skdisasm/sonic3k.asm:26840-26849) do not write the
         // pinball/spindash flag, spindash_counter, or ROM-visible interact
         // latch. Preserve them until the next active-play update samples
         // another stood-on object or RAM is explicitly reset.
@@ -5365,7 +5365,7 @@ public class SidekickCpuController {
         LevelManager levelManager = sidekick.currentLevelManager();
         if (levelManager != null) {
             // ROM LevelLoop increments Level_frame_counter before Process_Sprites
-            // (sonic3k.asm:7888-7894). Engine zone pre-physics runs before the
+            // (sonic3k.asm:7920-7926). Engine zone pre-physics runs before the
             // stored LevelManager counter advances, so expose the ROM-visible
             // cadence to the first routine-2 tick without changing S3K's normal
             // stored-counter rule.
@@ -5391,7 +5391,7 @@ public class SidekickCpuController {
     }
 
     /**
-     * ROM {@code Obj_57DCC} (sonic3k.asm:116913-116917): the Sky Sanctuary arrival helper clears
+     * ROM {@code Obj_57DCC} (sonic3k.asm:116959-116963): the Sky Sanctuary arrival helper clears
      * {@code object_control} and {@code anim} on Player 2, zeroes
      * {@code Tails_CPU_flight_timer} and writes {@code Tails_CPU_routine = 6} — the ground-follow
      * routine — rather than the routine 2 that {@link #releaseDormantMarkerForLevelEvent()}
@@ -5535,7 +5535,7 @@ public class SidekickCpuController {
      * leaves {@code obj_control=$81} — S2 {@code TailsCPU_Despawn}
      * (docs/s2disasm/s2.asm:39396-39406), the {@code TailsCPU_Flying}
      * off-screen timeout (s2.asm:39142-39157), and S3K {@code sub_13ECA}
-     * (docs/skdisasm/sonic3k.asm:26800-26809). {@code TailsCPU_Respawn}
+     * (docs/skdisasm/sonic3k.asm:26840-26849). {@code TailsCPU_Respawn}
      * itself does not write {@code obj_control} (s2.asm:39122-39140), so the
      * subsequent fly-in only runs object physics when a live object actually
      * cleared the byte while Tails was parked (e.g. the CNZ tube release,
@@ -5620,17 +5620,17 @@ public class SidekickCpuController {
     }
 
     /**
-     * ROM {@code Tails_CPU_Control_Index} (sonic3k.asm:26368-26386) is an 18-entry
+     * ROM {@code Tails_CPU_Control_Index} (sonic3k.asm:26408-26426) is an 18-entry
      * word table indexed by {@code Tails_CPU_routine}, which the dispatcher reads at
-     * sonic3k.asm:26362-26364. Each entry value is the CPU routine byte (0x00, 0x02,
+     * sonic3k.asm:26402-26404. Each entry value is the CPU routine byte (0x00, 0x02,
      * 0x04, ...) — the table stride is 2 bytes, so the value equals the offset.
      *
      * <pre>
      *   0x00  loc_13A10               engine State.INIT  (zone-specific init, carry gate)
-     *   0x02  Tails_Catch_Up_Flying   engine State.CATCH_UP_FLIGHT  (teleport-to-Sonic gate, sonic3k.asm:26474)
-     *   0x04  Tails_FlySwim_Unknown   engine State.FLIGHT_AUTO_RECOVERY (fly-toward-Sonic + 5s timer, sonic3k.asm:26534)
-     *   0x06  loc_13D4A               engine State.NORMAL (ground follow AI, sonic3k.asm:26656)
-     *   0x08  loc_13F40               engine State.PANIC  (idle/standing ground, sonic3k.asm:26851)
+     *   0x02  Tails_Catch_Up_Flying   engine State.CATCH_UP_FLIGHT  (teleport-to-Sonic gate, sonic3k.asm:26514)
+     *   0x04  Tails_FlySwim_Unknown   engine State.FLIGHT_AUTO_RECOVERY (fly-toward-Sonic + 5s timer, sonic3k.asm:26574)
+     *   0x06  loc_13D4A               engine State.NORMAL (ground follow AI, sonic3k.asm:26696)
+     *   0x08  loc_13F40               engine State.PANIC  (idle/standing ground, sonic3k.asm:26891)
      *   0x0A  locret_13FC0            engine State.DORMANT_MARKER (empty; used by AIZ1 intro marker)
      *   0x0C  loc_13FC2               engine State.CARRY_INIT (carry body init)
      *   0x0E  loc_13FFA               engine State.CARRYING  (carry body per-frame)
@@ -5723,7 +5723,7 @@ public class SidekickCpuController {
      * Captures the leader's current centre coordinates as the level-start spawn
      * anchor. Invoked from {@code LevelManager.spawnSidekicks} (the engine
      * analogue of ROM {@code SpawnLevelMainSprites_SpawnPlayers},
-     * sonic3k.asm:8359-8369), while the leader is still at its spawn position
+     * sonic3k.asm:8391-8401), while the leader is still at its spawn position
      * before any LevelLoop physics tick. {@link #applyLevelStartSidekickPlacement}
      * then anchors the deferred sidekick placement and Pos_table prefill to
      * these coordinates instead of the live (possibly already-moved) leader
@@ -5780,7 +5780,7 @@ public class SidekickCpuController {
             // bootstrap time (before any frame is driven), mirroring ROM filling
             // Sonic_Pos_Record_Buf with the spawn position at level-load
             // (SpawnLevelMainSprites / Reset_Player_Position_Array,
-            // sonic3k.asm:8359-8369,22166-22193). For a seed-compared mid-run
+            // sonic3k.asm:8391-8401,22202-22229). For a seed-compared mid-run
             // entry the leader is not driven through frame 0, so the first live
             // Sonic_RecordPos write happens on trace frame 1 and lands on the next
             // ring slot on top of this spawn fill — the delayed-follow target then
@@ -5847,7 +5847,7 @@ public class SidekickCpuController {
      * True while Tails is actively carrying Sonic in flight (ROM
      * Flying_carrying_Sonic_flag). Used by PlayableSpriteMovement.applyGravity
      * to substitute Tails's flight gravity (+0x08/frame, Tails_Move_FlySwim
-     * loc_1488C in sonic3k.asm:27633) for the standard +0x38 air gravity.
+     * loc_1488C in sonic3k.asm:27673) for the standard +0x38 air gravity.
      */
     public boolean isFlyingCarrying() {
         return carryController().isCarryingMainCharacter();
@@ -6042,7 +6042,7 @@ public class SidekickCpuController {
      * Resets the freshly initialized Player_2 CPU globals without releasing or
      * rewriting Player_1. Native {@code Tails_Init} runs in the later SST slot
      * and cannot retroactively clear Player_1 control state established in the
-     * preceding slot (sonic3k.asm:26101-26156).
+     * preceding slot (sonic3k.asm:26141-26196).
      */
     public void resetForInitialProcessSpritesSlot() {
         int assemblyAnimation = sidekick.getForcedAnimationId();

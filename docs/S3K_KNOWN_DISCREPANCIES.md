@@ -116,7 +116,7 @@ private boolean spawnIntroObject() {
     if (existing != null) {
         // ROM SpawnLevelMainSprites installs Obj_AIZPlaneIntro in a fixed
         // dynamic-object slot before the first Process_Sprites call
-        // (sonic3k.asm:7849-7853, 8111-8126). A duplicate engine event init
+        // (sonic3k.asm:7881-7885, 8143-8158). A duplicate engine event init
         // must re-adopt that live object, not allocate a second parent.
         AizPlaneIntroInstance.adoptActiveIntroInstance(existing);
         return true;
@@ -378,20 +378,20 @@ composition delivery remain separate.
 ## Tails Flying-With-Cargo Physics
 
 **Location:** Tails flight physics (`TailsFlightController`, `PlayableSpriteMovement.applyGravity`); CNZ1 carry and CPU flight routines (`SidekickCpuController`)
-**ROM Reference:** `sonic3k.asm:27592` `Tails_Move_FlySwim` (+0x08 flight gravity), `sonic3k.asm:27553` `Tails_Stand_Freespace` (branch on `double_jump_flag`)
+**ROM Reference:** `sonic3k.asm:27632` `Tails_Move_FlySwim` (+0x08 flight gravity), `sonic3k.asm:27593` `Tails_Stand_Freespace` (branch on `double_jump_flag`)
 
 ### Original Implementation
 
-ROM `Tails_Stand_Freespace` at `sonic3k.asm:27553-27555` branches to `Tails_FlyingSwimming` whenever `double_jump_flag(a0)` is non-zero, swapping the normal `+0x38` air gravity for `+0x08` flight gravity from `Tails_Move_FlySwim` (sonic3k.asm:27633 `loc_1488C`). The flag is set when Tails picks up Sonic for the CNZ1 carry intro (`loc_13FC2` at sonic3k.asm:26904 writes `double_jump_flag=1`) and is NOT cleared by the ground-release path at `loc_14016` — Tails continues under flight physics until he actually touches the floor.
+ROM `Tails_Stand_Freespace` at `sonic3k.asm:27593-27595` branches to `Tails_FlyingSwimming` whenever `double_jump_flag(a0)` is non-zero, swapping the normal `+0x38` air gravity for `+0x08` flight gravity from `Tails_Move_FlySwim` (sonic3k.asm:27673 `loc_1488C`). The flag is set when Tails picks up Sonic for the CNZ1 carry intro (`loc_13FC2` at sonic3k.asm:26944 writes `double_jump_flag=1`) and is NOT cleared by the ground-release path at `loc_14016` — Tails continues under flight physics until he actually touches the floor.
 
 ### Our Implementation
 
 The engine reproduces this behavior with a feature-scoped gate rather than a flat bit check:
 
 1. `SidekickCpuController.updateCarryInit()` sets `sidekick.setDoubleJumpFlag(1)` at the same point ROM `loc_13FC2` writes the flag.
-2. The ground-release branch in `updateCarrying()` zeros Tails's `x_vel/y_vel/ground_vel` and keeps the air bit set (matching ROM `loc_14016` at sonic3k.asm:26923-26946). Crucially, it does NOT clear `double_jump_flag` — the ROM leaves it set so Tails continues in flight physics for at least one more tick while the carry-release impulse propagates to Sonic.
+2. The ground-release branch in `updateCarrying()` zeros Tails's `x_vel/y_vel/ground_vel` and keeps the air bit set (matching ROM `loc_14016` at sonic3k.asm:26963-26986). Crucially, it does NOT clear `double_jump_flag` — the ROM leaves it set so Tails continues in flight physics for at least one more tick while the carry-release impulse propagates to Sonic.
 3. `PlayableSpriteMovement.applyGravity()` and `doObjectMoveAndFall()` gate flight gravity on `sprite.getSecondaryAbility() == FLY && sprite.getDoubleJumpFlag() != 0` (mirrors `Tails_Stand_Freespace` → `Tails_FlyingSwimming` branch).
-4. Tails's CPU flight AI — `Tails_Catch_Up_Flying` (routine 0x02 at `sonic3k.asm:26474`) and `Tails_FlySwim_Unknown` (routine 0x04 at `sonic3k.asm:26534`) — is ported into `SidekickCpuController.CATCH_UP_FLIGHT` / `FLIGHT_AUTO_RECOVERY`, plus the NORMAL → `FLIGHT_AUTO_RECOVERY` transition on a dead leader.
+4. Tails's CPU flight AI — `Tails_Catch_Up_Flying` (routine 0x02 at `sonic3k.asm:26514`) and `Tails_FlySwim_Unknown` (routine 0x04 at `sonic3k.asm:26574`) — is ported into `SidekickCpuController.CATCH_UP_FLIGHT` / `FLIGHT_AUTO_RECOVERY`, plus the NORMAL → `FLIGHT_AUTO_RECOVERY` transition on a dead leader.
 
 ### Rationale
 
@@ -414,7 +414,7 @@ The engine reproduces this behavior with a feature-scoped gate rather than a fla
 
 **Location:** `Sonic3kMGZEvents.MGZ_QUAKE_CHUNK_ROM_ADDR = 0x3CBBB4`
 **ROM Reference:** `MGZ2_QuakeChunks` (`sonic3k.lst:316889`), read by `sub_517EA`
-(`sonic3k.asm:106937-106950`)
+(`sonic3k.asm:106983-106996`)
 
 The engine's S3K sourcing rule prefers S&K-half data (addresses below `0x200000`).
 `MGZ2_QuakeChunks` is the one MGZ2 table that lives only in the Sonic 3 half: the
@@ -434,7 +434,7 @@ the permanent source. `TestArchitecturalSourceGuard` pins the constant and this 
 Gameplay state follows the S&K disassembly: `AIZ2_DoShipLoop` writes
 `Level_repeat_offset=$200` and subtracts `$200` from camera/player state when
 the post-bombing ship loop reaches `$46C0`
-(`docs/skdisasm/sonic3k.asm:105200-105221`); `BATTLESHIP_WRAP_DIST_POST_BOMBING`
+(`docs/skdisasm/sonic3k.asm:105246-105267`); `BATTLESHIP_WRAP_DIST_POST_BOMBING`
 is that `$200`.
 
 **Deliberate renderer difference.** The ROM handles the burning-forest background
@@ -559,7 +559,7 @@ not a supported input.
 ## Air Countdown Digits: Rebuilt Mapping Frames Instead of VRAM DMA
 
 **Location:** `Sonic3kObjectArtProvider.loadAirCountdownDigitArt()`, `S3kAirCountdownObjectInstance.java`
-**ROM Reference:** `sonic3k.asm:33320-33327` (`AirCountdown_Init`), `sonic3k.asm:33489-33516` (`AirCountdown_Load_Art`)
+**ROM Reference:** `sonic3k.asm:33360-33367` (`AirCountdown_Init`), `sonic3k.asm:33529-33556` (`AirCountdown_Load_Art`)
 
 ### Original Implementation
 
@@ -620,13 +620,13 @@ The recorder projects this field from bit 15 of `Kos_decomp_queue_count`
 `bool prepared = (rawCount & 0x8000) != 0;`). In the ROM that bit means
 **decompression is in progress right now**, not "prepared":
 
-- `Process_Kos_Queue_Main` (`docs/skdisasm/sonic3k.asm:2845-2846`) sets it with
+- `Process_Kos_Queue_Main` (`docs/skdisasm/sonic3k.asm:2877-2878`) sets it with
   `ori.w #$8000,(Kos_decomp_queue_count).w` — commented in the disassembly as
   "set sign bit to signify decompression in progress" — immediately before entering
   `Process_Kos_Queue_Loop`.
-- `Process_Kos_Queue_EndReached` (`docs/skdisasm/sonic3k.asm:2938-2941`) clears it with
+- `Process_Kos_Queue_EndReached` (`docs/skdisasm/sonic3k.asm:2970-2973`) clears it with
   `andi.w #$7FFF,(Kos_decomp_queue_count).w` when the stream ends.
-- `Set_Kos_Bookmark` (`docs/skdisasm/sonic3k.asm:2819`) only **reads** the bit, to decide
+- `Set_Kos_Bookmark` (`docs/skdisasm/sonic3k.asm:2851`) only **reads** the bit, to decide
   whether to redirect a preempting V-int's `rte` to `Backup_Kos_Registers`. It is not a
   work quantum and it neither sets nor clears the bit.
 
@@ -700,13 +700,13 @@ locked-on cartridge.
 
 - `Sega_Screen` — game mode 0's handler — is
   `move.b #4,(Game_mode).w` and falls straight into `Title_Screen`
-  (`docs/skdisasm/sonic3k.asm:5387-5388`); the S3 half is the same with an explicit `rts`
-  (`docs/skdisasm/s3.asm:4768-4770`).
+  (`docs/skdisasm/sonic3k.asm:5419-5420`); the S3 half is the same with an explicit `rts`
+  (`docs/skdisasm/s3.asm:4801-4803`).
 - `JumpToSegaScreen`, the handler for game modes `$10` and `$18`, only sets game mode 0
-  (`sonic3k.asm:454-456`), which then advances the same way.
+  (`sonic3k.asm:470-472`), which then advances the same way.
 - A case-insensitive search for "sega" across both disassemblies returns **only** the
   cartridge header strings, the TMSS security write, those advancing routines, and one
-  `SegaScr_VInt` reference in `s3.asm:830` that is vestigial — game mode 0 advances on its
+  `SegaScr_VInt` reference in `s3.asm:852` that is vestigial — game mode 0 advances on its
   first main-loop pass, so that V-int handler can run at most once.
 
 There is no hold, no timer, and no SEGA sound command anywhere in either file.
@@ -891,7 +891,7 @@ bindings. See the LRZ1 coverage matrix for validation and visual evidence.
 
 The LRZ cold-route audit based on `bc4e3285d` disproved the old guide claim
 that `Sprite_OnScreen_Test` only draws. Its out-of-range branch clears the
-respawn entry and deletes through `loc_1B5A0` (sonic3k.asm:37262–37278).
+respawn entry and deletes through `loc_1B5A0` (sonic3k.asm:37302–37318).
 LRZ sinking rocks, landed spikes, smashing platforms and intact collapsing
 bridges incorrectly suppressed this unload, retaining slots that change later
 button/door execution order. The LRZ1 matrix records the correction and checks.

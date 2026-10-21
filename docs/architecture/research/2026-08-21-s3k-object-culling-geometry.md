@@ -22,20 +22,20 @@ S3K's SST field names are its own, and they are *not* S1's (`obRender`). From
 | `y_radius` / `x_radius` | `$1E` / `$1F` | collision only — never used by the render cull |
 | `respawn_addr` | — | back-reference into `Object_respawn_table` |
 
-`render_flags` bits used by culling (`Render_Sprites`, sonic3k.asm:36318-36525):
+`render_flags` bits used by culling (`Render_Sprites`, sonic3k.asm:36358-36565):
 
 - **bit 7** — "on-screen" flag. **Written by the render pass**: cleared for every listed
-  object at sonic3k.asm:36338, re-set at sonic3k.asm:36370 (`loc_1ADB2`) and 36497
+  object at sonic3k.asm:36378, re-set at sonic3k.asm:36410 (`loc_1ADB2`) and 36497
   (`loc_1AEE4`) only for objects that survived the cull. Object code reads it on the
   *following* frame.
-- **bit 6** — multi-draw / childsprite object (sonic3k.asm:36342).
-- **bit 5** — static mappings (sonic3k.asm:36375).
+- **bit 6** — multi-draw / childsprite object (sonic3k.asm:36382).
+- **bit 5** — static mappings (sonic3k.asm:36415).
 - **bit 2** — coordinate space. **The disassembly's comments on this bit are inverted at
-  both sites** (sonic3k.asm:36344 and 36442 both read "is this to be positioned by screen
+  both sites** (sonic3k.asm:36384 and 36442 both read "is this to be positioned by screen
   coordinates? if it is, branch", but the branch conditions are opposite). Reading the
   code: bit 2 **set** = level coordinates, camera is subtracted and the object *is* culled;
   bit 2 **clear** = screen coordinates, and in the non-childsprite path the object skips the
-  cull entirely (`beq.s loc_1ADB2`, sonic3k.asm:36345). Do not port the comment.
+  cull entirely (`beq.s loc_1ADB2`, sonic3k.asm:36385). Do not port the comment.
 
 There is no `explicit_height` bit and no `BuildSprites_ApproxYCheck` in S3K, because S3K
 does not need one: `height_pixels` is unconditionally present.
@@ -43,7 +43,7 @@ does not need one: `height_pixels` is unconditionally present.
 ## The camera quantities
 
 `Camera_X_pos_coarse_back` and `Camera_Y_pos_coarse_back` are set in the object-load
-manager at sonic3k.asm:37546-37557:
+manager at sonic3k.asm:37586-37597:
 
 ```
 move.w (Camera_Y_pos).w,d1 / subi.w #$80,d1 / andi.w #$FF80,d1 -> Camera_Y_pos_coarse_back
@@ -52,8 +52,8 @@ move.w (Camera_X_pos).w,d1 / subi.w #$80,d1 / andi.w #$FF80,d1 -> Camera_X_pos_c
 
 i.e. `(camera - 128) & ~$7F` — the same `$80`-block quantisation of `camera-128` that S1
 `out_of_range` and S2 `MarkObjGone` use. It is recomputed as the camera moves
-(sonic3k.asm:37598-37646 for X, 37990-38029), and is *cleared to 0* on level load except in
-zone/act `$1701` (sonic3k.asm:37476-37483) — a load-time special case worth knowing about
+(sonic3k.asm:37638-37686 for X, 37990-38029), and is *cleared to 0* on level load except in
+zone/act `$1701` (sonic3k.asm:37516-37523) — a load-time special case worth knowing about
 but not part of the predicate.
 
 ## The predicates
@@ -65,7 +65,7 @@ column refers to the four predicates established for S1/S2 by the earlier round.
 
 The dominant predicate: **61 occurrences** — *re-measured 2026-08-21, unchanged* — of the
 comparison in sonic3k.asm. One refinement: **58** of the 61 end in `bhi` as shown below; the
-other **three** (sonic3k.asm:81151, 91750, 92055) end in **`bls`**, branching when *in* range
+other **three** (sonic3k.asm:81192, 91796, 92101) end in **`bls`**, branching when *in* range
 and falling through to the off-screen handling. Same predicate, inverted branch — a sweep
 anchored on `bhi` finds 58 and reads like a complete answer.
 
@@ -146,17 +146,17 @@ is a genuine S3K addition, and it is concentrated in CNZ, a vertically-tall zone
 
 ### S3K-3 — mixed coarse-X / fine-Y window (`Sprite_CheckDeleteXY`)
 
-sonic3k.asm:178981, and the same body inlined in `Obj_FlickerMove` (sonic3k.asm:178995)
-and `Sprite_CheckDeleteTouchXY` (sonic3k.asm:179032).
+sonic3k.asm:179072, and the same body inlined in `Obj_FlickerMove` (sonic3k.asm:179086)
+and `Sprite_CheckDeleteTouchXY` (sonic3k.asm:179123).
 
 **Corrected 2026-08-21: there are seven sites, not three.** Beyond those three helpers the
-identical geometry is inlined at **sonic3k.asm:128465** (`loc_61928`), **176267**
+identical geometry is inlined at **sonic3k.asm:128519** (`loc_61928`), **176267**
 (`loc_8395E`, the signpost), **193223** (`loc_8D6E6`) and **197113** (`loc_90282`) — each
 with the coarse-X `$280` half followed by the fine-Y `+$80` / `$200` half, verified by
 reading all four. This more than doubles the population of the one predicate the decision
 procedure below says a symmetric margin cannot express.
 
-A fine-Y test also appears at **sonic3k.asm:133719** (`loc_6594A`) *without* the coarse-X
+A fine-Y test also appears at **sonic3k.asm:133776** (`loc_6594A`) *without* the coarse-X
 half — paired instead with a fine-X `Camera_X_pos - $80` compare, and tailing into a
 star-post trigger rather than a deletion. It is **not** S3K-3; it is listed here so the next
 sweep does not count it as one.
@@ -183,8 +183,8 @@ still not symmetric on either axis. **No S1/S2 counterpart** in this exact form.
 
 ### S3K-4 — offset-window variant, bound `$680`
 
-One occurrence — *re-measured 2026-08-21, unchanged* — sonic3k.asm:95823-95830, inside `Obj_DEZGravityRoom`
-(label at sonic3k.asm:95814; delete tail `loc_49638`):
+One occurrence — *re-measured 2026-08-21, unchanged* — sonic3k.asm:95869-95876, inside `Obj_DEZGravityRoom`
+(label at sonic3k.asm:95860; delete tail `loc_49638`):
 
 ```
 move.w  x_pos(a0),d0
@@ -217,7 +217,7 @@ bpl     <off-screen path>          ; bit 7 clear -> was not drawn last frame
 is withdrawn.** Following each `bpl` target through its label to the routine it actually
 reaches gives **49**; counting only targets whose *name* contains "Delete" gives **11**.
 Neither is 19, so the original number cannot be reconstructed and should not be relied on.
-49 is the defensible figure: `sonic3k.asm:33348` branches to `loc_1824E`, which is
+49 is the defensible figure: `sonic3k.asm:33388` branches to `loc_1824E`, which is
 `jmp (Delete_Current_Sprite).l` — a delete that a name-only match misses.
 
 **And the `bpl` framing misses an inverted-spelling family**, the same failure mode as
@@ -226,27 +226,27 @@ branching to *continue*, with the delete on the fall-through — and **8** of th
 The doc's own first example below is one of them, so it is not a member of the 123 it
 illustrates. Two representative examples:
 
-- `Obj_SuperTailsBirds_FlyAway`, sonic3k.asm:35104-35105 — `bmi` to continue,
+- `Obj_SuperTailsBirds_FlyAway`, sonic3k.asm:35144-35145 — `bmi` to continue,
   otherwise `jmp (Delete_Current_Sprite).l`, with the disassembly's own comment
   "If sprite is off-screen, delete it". The same routine reads bit 7 of *another*
-  object (`render_flags(a1)`, sonic3k.asm:35145) to decide whether its target is still
+  object (`render_flags(a1)`, sonic3k.asm:35185) to decide whether its target is still
   valid.
-- `Obj_WaitOffscreen` (sonic3k.asm:180271) — the inverse gate. It installs a
+- `Obj_WaitOffscreen` (sonic3k.asm:180362) — the inverse gate. It installs a
   `$20`-by-`$20` empty placeholder (`Map_Offscreen`), sets `render_flags` bit 2, and each
   frame runs S3K-1; when bit 7 comes back **set**, it restores the object's saved routine
   pointer from `$34(a0)` and the real object begins. So `Obj_WaitOffscreen` is S3K-1
   *and* S3K-5 in sequence, with the `$20` half-extents feeding the render cull, not the
   deletion cull.
 
-The geometry behind bit 7 is `Render_Sprites` itself (sonic3k.asm:36318):
+The geometry behind bit 7 is `Render_Sprites` itself (sonic3k.asm:36358):
 
 ```
-; X, both paths (sonic3k.asm:36346-36355, 36444-36453 and 36473-36482)
+; X, both paths (sonic3k.asm:36386-36395, 36484-36493 and 36473-36482)
 d2 = width_pixels(a0)                   ; half-width, byte, zero-extended
 d0 = x_pos - Camera_X_pos_copy
 if (d0 + d2) < 0            -> not drawn ; right edge left of screen
 if (d0 - d2) >= 320         -> not drawn ; left edge right of screen
-; Y, both paths (sonic3k.asm:36356-36366 and 36485-36495)
+; Y, both paths (sonic3k.asm:36396-36406 and 36485-36495)
 d1 = y_pos - Camera_Y_pos_copy(4(a3))
 d2 = height_pixels(a0)                  ; half-height, byte
 d1 = (d1 + d2) & (Screen_Y_wrap_value)  ; $7FF or $FFF, per-level
@@ -259,22 +259,22 @@ if d1 >= (224 + 2*d2)       -> not drawn ; UNSIGNED (bhs)
    `height_pixels`; S2 falls back to an assumed ±32 when its flag is clear. Carrying S2's
    ±32 into S3K would be wrong at every object whose half-height is not `$20`.
 2. **The vertical wrap mask is a variable**, `Screen_Y_wrap_value`, documented in
-   `sonic3k.constants.asm:433` as "either `$7FF` or `$FFF`". S2's is a fixed 11-bit wrap.
+   `sonic3k.constants.asm:446` as "either `$7FF` or `$FFF`". S2's is a fixed 11-bit wrap.
    Which value is live depends on level setup; **I did not establish the rule that selects
    it**, and it must be read at runtime rather than assumed.
 3. **The comparison is against `Camera_X_pos_copy` / `Camera_Y_pos_copy`**
-   (sonic3k.asm:36324, and `4(a3)`), the VBlank-latched copies, not the live camera.
-4. The childsprite path (bit 6, `loc_1AE58`, sonic3k.asm:36441) has its **own** Y check —
+   (sonic3k.asm:36364, and `4(a3)`), the VBlank-latched copies, not the live camera.
+4. The childsprite path (bit 6, `loc_1AE58`, sonic3k.asm:36481) has its **own** Y check —
    a plain symmetric `[-height, 224+height)` test against VDP-space coordinates with
    `-128` biases and **no wrap mask** — used when bit 2 is clear. When bit 2 is set it
-   falls through to `loc_1AEA2` (sonic3k.asm:36472), which is byte-for-byte the
+   falls through to `loc_1AEA2` (sonic3k.asm:36512), which is byte-for-byte the
    non-childsprite geometry. So the same object can be culled by two different vertical
    rules depending on one bit.
 5. There is a **sprite budget**: `d7` starts at `$50-1` (80) and, once negative, objects
-   still get bit 7 set (sonic3k.asm:36370 precedes the `tst.w d7` at 36371) but are not
+   still get bit 7 set (sonic3k.asm:36410 precedes the `tst.w d7` at 36371) but are not
    drawn. Bit 7 therefore means "passed the geometry test", not "actually drawn".
 6. Competition mode uses a separate renderer, `Render_Sprites_CompetitionMode`
-   (sonic3k.asm:36894), with a budget of `$50-2` and a vertical extent of `224/2` = 112.
+   (sonic3k.asm:36934), with a budget of `$50-2` and a vertical extent of `224/2` = 112.
    Out of scope for single-player traces, noted so it is not mistaken for the main path.
 
 **S1/S2 counterpart: predicate 2**, but only structurally. The X half matches S2's shape;
@@ -286,7 +286,7 @@ the Y half does not, for reasons 1, 2 and 4 above.
 > like a complete one. Both negatives in the section below were re-run line-ending-tolerantly
 > with a known positive required to appear first. **Predicate 3's absence holds** and is now
 > measured. **Predicate 4's absence does not**: S3K has it, as `Obj_Animal`'s `loc_2CAE4`
-> (sonic3k.asm:61184-61194), instruction-for-instruction the S2 routine and reached by the
+> (sonic3k.asm:61224-61234), instruction-for-instruction the S2 routine and reached by the
 > same `tst.b subtype` selector. Details in
 > [the family sweep](../audits/2026-08-21-onscreen-margin-family-sweep.md).
 >
@@ -317,14 +317,14 @@ the Y half does not, for reasons 1, 2 and 4 above.
 - **Predicate 4, `Obj28_ChkDel`'s player-relative one-sided `$180`.** S3K has no
   general-purpose player-relative *deletion* helper. It does have player-relative *range*
   helpers, but they gate behaviour, not lifetime: `Check_InTheirRange`
-  (sonic3k.asm:179934), `Check_InMyRange` (sonic3k.asm:179964) and `Check_PlayerInRange`
-  (sonic3k.asm:179994) all take a **caller-supplied four-word bounds table**
+  (sonic3k.asm:180025), `Check_InMyRange` (sonic3k.asm:180055) and `Check_PlayerInRange`
+  (sonic3k.asm:180085) all take a **caller-supplied four-word bounds table**
   (`+xlo, +width, +ylo, +height` read through `(a2)+` / `(a1)+`) and return a boolean or an
   object pointer; there is no baked-in constant to port. `Check_CameraInRange`
-  (sonic3k.asm:180433) is the camera-window equivalent, also table-driven, and it
-  *delegates* deletion to `Delete_Sprite_If_Not_In_Range` (sonic3k.asm:180453) — i.e. back
+  (sonic3k.asm:180524) is the camera-window equivalent, also table-driven, and it
+  *delegates* deletion to `Delete_Sprite_If_Not_In_Range` (sonic3k.asm:180544) — i.e. back
   to S3K-1. Per-object bounds tables such as `HCZMiniboss_CameraRange`
-  (sonic3k.asm:139241), `MGZMiniboss_CameraRange` (184837),
+  (sonic3k.asm:139306), `MGZMiniboss_CameraRange` (184837),
   `CNZMiniboss_BaseRange` (145651) and `HCZConveyor_BoundsData` (66292) feed these
   helpers; each is its own data, not an instance of a shared predicate.
 
@@ -335,7 +335,7 @@ the Y half does not, for reasons 1, 2 and 4 above.
 | 1. `out_of_range` / `MarkObjGone`, coarse X, `$280` | **S3K-1** | Exact match, 61 sites. `ObjectRangeOps` is directly reusable. |
 | 2. `BuildSprites` render cull | **S3K-5** (`Render_Sprites`) | X half matches; Y half does **not** — no `explicit_height`, variable wrap mask, separate childsprite rule. |
 | 3. `Obj_DeleteBehindScreen` bare `bmi` | **none** | Absent from S3K. |
-| 4. `Obj28_ChkDel` player-relative `$180` | **`Obj_Animal` `loc_2CAE4`** (sonic3k.asm:61184) | **Corrected**: exact match, same selector. The table-driven player-range helpers are a separate, behaviour-gating family. |
+| 4. `Obj28_ChkDel` player-relative `$180` | **`Obj_Animal` `loc_2CAE4`** (sonic3k.asm:61224) | **Corrected**: exact match, same selector. The table-driven player-range helpers are a separate, behaviour-gating family. |
 | — | **S3K-2** (coarse Y, `$200`) | No S1/S2 counterpart. |
 | — | **S3K-3** (coarse X + fine asymmetric Y) | No S1/S2 counterpart. |
 | — | **S3K-4** (`+$400` bias, `$680`) | No S1/S2 counterpart; a one-site variant of S3K-1. |
@@ -386,18 +386,18 @@ classify by that, never by the margin the engine happens to pass.
 
 1. ~~**`Screen_Y_wrap_value`'s selection rule.**~~ **CLOSED** by
    [2026-08-21-s3k-screen-y-wrap-value-rule.md](2026-08-21-s3k-screen-y-wrap-value-rule.md).
-   The constants file's "`$7FF` or `$FFF`" (sonic3k.constants.asm:433) is wrong in both
+   The constants file's "`$7FF` or `$FFF`" (sonic3k.constants.asm:446) is wrong in both
    directions: there are four values (`$FFFF`, `$FFF`, `$7FF`, `$3FF`) and the default,
-   written unconditionally by `LevelSetup` (sonic3k.asm:102205) for every zone, is
+   written unconditionally by `LevelSetup` (sonic3k.asm:102251) for every zone, is
    **`$FFF`** — not S2's `$7FF`. Only ICZ1, SOZ2 and Slots lower it, and ICZ1 raises it
    back mid-act.
 2. **The 16 blocked sites by identity.** Not in my inputs; the mapping above is a
    procedure, not an assignment. Someone holding the list should run the procedure per
    site.
 3. ~~**Whether the `$1701` zone/act special case for `Camera_X_pos_coarse_back`
-   (sonic3k.asm:37476-37483) affects any traced route.**~~ **CLOSED** by the follow-up
+   (sonic3k.asm:37516-37523) affects any traced route.**~~ **CLOSED** by the follow-up
    doc: `$1701` is zone 23 act 1 = **HPZS**, the Hidden Palace super-emerald shrine
-   (`HPZS_ScreenInit`, sonic3k.asm:120806). It touches no main-route act, so it does not
+   (`HPZS_ScreenInit`, sonic3k.asm:120852). It touches no main-route act, so it does not
    affect AIZ → HCZ, but a complete-run trace that visits the shrine would hit it.
 4. **`$38(a0)` bit 4 and `status` bit 7 semantics in the deferred-delete tails.** I
    recorded which tail each helper uses but did not chase what consumes those bits, so I

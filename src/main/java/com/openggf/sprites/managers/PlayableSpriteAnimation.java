@@ -166,7 +166,7 @@ public class PlayableSpriteAnimation {
         // Dynamic_Object_RAM_End (docs/s2disasm/s2.constants.asm:1144-1152), so
         // ROM executes it after EVERY dynamic level object, not immediately after
         // Obj02. S3K places Tails_tails identically in Level_object_RAM after
-        // Dynamic_object_RAM_end (docs/skdisasm/sonic3k.constants.asm:307-315).
+        // Dynamic_object_RAM_end (docs/skdisasm/sonic3k.constants.asm:314-322).
         // SpriteManager.advanceTailsTailsAfterObjectExecution() owns that slot.
     }
 
@@ -365,7 +365,7 @@ public class PlayableSpriteAnimation {
         var gameState = sprite.currentGameStateOrNull();
         if (gameState != null && gameState.isReverseGravityActive()) {
             // S3K runs Animate_Sonic/Tails/Knuckles, then eori.b #2,render_flags
-            // under Reverse_gravity_flag (sonic3k.asm:22010-22013, 26254-26258,
+            // under Reverse_gravity_flag (sonic3k.asm:22046-22049, 26294-26298,
             // 30452-30456). object_control bit 1 skips both operations.
             // This is the final orientation consumed by player drawing and trails.
             // Do not XOR gravity again at draw time: two mirrors cancel, leaving
@@ -389,7 +389,7 @@ public class PlayableSpriteAnimation {
         // captures a rider with flip_type=$80 and flip_angle=0 after the
         // player's animation slot; the following Animate dispatch must enter
         // Anim_Tumble even before the drum publishes its first non-zero angle.
-        // sonic3k.asm:24804-24812,60657-60670.
+        // sonic3k.asm:24844-24852,60697-60710.
         if ((sprite.getFlipType() & 0x80) != 0 || flipAngle != 0) {
             updateTumble(flipAngle);
             return;
@@ -471,7 +471,7 @@ public class PlayableSpriteAnimation {
      * s2.asm:38494-38495, then decrements/advances at 38496-38505. S2 Tails
      * instead gates the whole special handler first at 41330-41336, then
      * publishes at 41386-41396. S3K's {@code Animate_Sonic} publishes at
-     * sonic3k.asm:24859-24868 before its 24869-24879 timer/advance. S1 returns
+     * sonic3k.asm:24899-24908 before its 24869-24879 timer/advance. S1 returns
      * on the timer gate before selecting a walk/run mapping
      * ({@code _incObj/01 Sonic.asm:2145-2149,2198-2209}).
      */
@@ -493,12 +493,12 @@ public class PlayableSpriteAnimation {
         if (frameIndex > script.frames().size()) {
             // The walk/run special handler reads its frame byte with an
             // unchecked `move.b 1(a1,d1.w),d0` and tests only `cmpi.b #-1,d0`
-            // (sonic3k.asm:24859-24864). An anim_frame stranded past this
+            // (sonic3k.asm:24899-24904). An anim_frame stranded past this
             // script's own frames by a longer table therefore reads on into the
             // following script's bytes rather than restarting. That is exactly
             // what happens when Tails puts the player down: sub_1459E writes
             // `move.w #$22<<8,anim(a1)`, so prev_anim is zeroed alongside the
-            // carried anim byte (sonic3k.asm:27391) and the anim==prev_anim
+            // carried anim byte (sonic3k.asm:27431) and the anim==prev_anim
             // test at 24743 does not reset anim_frame, while
             // Tails_Carry_Sonic has been advancing that same anim_frame across
             // AniRaw_Tails_Carry's 17 entries (27417-27419).
@@ -540,7 +540,7 @@ public class PlayableSpriteAnimation {
     }
 
     private void updateTumble(int flipAngle) {
-        // ROM: Anim_Tumble — S2 uses base 0x5F (s2.asm:38216), S3K uses 0x31 (sonic3k.asm:24955)
+        // ROM: Anim_Tumble — S2 uses base 0x5F (s2.asm:38216), S3K uses 0x31 (sonic3k.asm:24995)
         ScriptedVelocityAnimationProfile profile = resolveVelocityProfile();
         int base = profile != null ? profile.getTumbleFrameBase() : 0x5F;
 
@@ -570,7 +570,7 @@ public class PlayableSpriteAnimation {
         if (flipType >= 5 && profile != null && profile.getTumbleTypeFrameBase(1) >= 0) {
             // S3K Anim_Tumble loc_129F6: flip types above 4 ignore the flip-type
             // sign and use (flip_angle+$B)/$16+$31, mirrored horizontally only by
-            // Status_Facing (sonic3k.asm:25133-25148).
+            // Status_Facing (sonic3k.asm:25173-25188).
             sprite.setRenderFlips(facingLeft, false);
             sprite.setMappingFrame((((d0 + 0x0B) & 0xFF) / 0x16) + base);
             sprite.setAnimationTick(0);
@@ -736,7 +736,7 @@ public class PlayableSpriteAnimation {
                 // resumes at this same $FD command instead of restarting it.
                 //
                 // Do NOT snapshot lastAnimationId (prev_anim) here either.
-                // Animate_Sonic's $FD handler (loc_12698, sonic3k.asm:24795-
+                // Animate_Sonic's $FD handler (loc_12698, sonic3k.asm:24835-
                 // 24801) writes only the live anim byte -- it never touches
                 // prev_anim or anim_frame. When nothing else changes anim
                 // this frame, the next update() call's own anim!=lastAnimationId
@@ -744,7 +744,7 @@ public class PlayableSpriteAnimation {
                 // reset with identical timing. But when an external write
                 // republishes the SAME pre-switch anim id later in this same
                 // frame -- e.g. a second Gumball triangle bumper bounce
-                // (Obj_GumballTriangleBumper sub_60F94, sonic3k.asm:127666-
+                // (Obj_GumballTriangleBumper sub_60F94, sonic3k.asm:127720-
                 // 127709: `move.b #$10,anim(a1)`) landing on the exact frame
                 // Spring's own script (AniSonic10, `$2F,$8E,$FD,0`) auto-
                 // switches to Walk -- ROM's prev_anim is still the old id,
@@ -887,7 +887,7 @@ public class PlayableSpriteAnimation {
         // Run:  Both have 4 frames/set → d0*(4/2)=d0*2
         // Super Run (2 frames/set):
         //   S2: lsr.b #1,d0 = d0/2 (compact mapping layout, s2.asm:38159)
-        //   S3K: add.b d0,d0 = d0*2 (standard run spacing, s3.asm:22323)
+        //   S3K: add.b d0,d0 = d0*2 (standard run spacing, s3.asm:22378)
         int framesPerSet = (activeScript != null && !activeScript.frames().isEmpty())
                 ? activeScript.frames().size()
                 : 4;
@@ -922,12 +922,12 @@ public class PlayableSpriteAnimation {
                                              int frameCounter, int scriptCount) {
         // ROM Animate_Sonic/Animate_Tails clear Status_Push whenever the anim byte
         // differs from prev_anim, then store anim into prev_anim
-        // (s2.asm:38033-38038,40879-40884; sonic3k.asm:29359-29364,29681-29686).
+        // (s2.asm:38033-38038,40879-40884; sonic3k.asm:29399-29404,29721-29726).
         // The byte that drives this is the real ROM anim byte the movement/state
         // code writes (roll/air/walk/wait/balance/...), NOT the engine's push
         // render substitution: ROM shows the push frames inside the walk script's
         // special handler while the anim byte stays at the movement value
-        // (Animate_Sonic loc_12A72, sonic3k.asm:24832). Resolve the anim id with
+        // (Animate_Sonic loc_12A72, sonic3k.asm:24872). Resolve the anim id with
         // the push render substitution disabled and compare against the previous
         // frame's. Track every grounded scripted frame so prev_anim stays current
         // even when no push is set (push-clear is then a no-op, as in ROM).
@@ -964,7 +964,7 @@ public class PlayableSpriteAnimation {
      * Walk animation id into the {@code anim} byte regardless of speed — S2
      * {@code Sonic_MoveRight}/{@code Sonic_MoveLeft} (s2.asm:36956,36891
      * {@code move.b #AniIDSonAni_Walk,anim(a0)}), S3K {@code sub_14CAC}/
-     * {@code sub_14C20} and {@code SonicKnux_Move} (sonic3k.asm:28122,28056,
+     * {@code sub_14C20} and {@code SonicKnux_Move} (sonic3k.asm:28162,28096,
      * 22811,22877 {@code move.b #0,anim(a0)}). The Run frames are a render-time
      * selection inside that same {@code AniXXX00} script (S2 SonAni_Walk vs
      * SonAni_Run pointers are dispatched by speed in the animation routine; S3K
@@ -975,7 +975,7 @@ public class PlayableSpriteAnimation {
      * {@code Animate}'s {@code anim != prev_anim} push-clear. Treating Run as the
      * Walk byte here matches the ROM comparison: a CPU sidekick decelerating
      * from a run into a wall keeps Status_Push across the speed step
-     * (sonic3k.asm:29360-29364,28122 — {@code anim} stays Walk so push is not
+     * (sonic3k.asm:29400-29404,28162 — {@code anim} stays Walk so push is not
      * cleared).
      */
     private static int groundMoveAnimByte(ScriptedVelocityAnimationProfile profile, int animId) {

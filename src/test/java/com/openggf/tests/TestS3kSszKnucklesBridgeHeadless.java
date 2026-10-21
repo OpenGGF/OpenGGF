@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Sky Sanctuary act 1's opening cutscene: {@code Obj_57E34} (sonic3k.asm:116920-116945),
+ * Sky Sanctuary act 1's opening cutscene: {@code Obj_57E34} (sonic3k.asm:116966-116991),
  * {@code CutsceneKnux_SSZ} (133530-133740) and {@code Obj_SSZCutsceneBridge} (90405-90470).
  *
  * <p>The route is blocked without it. {@code SSZ1_ScreenInit} sets {@code Events_bg+$05}, which

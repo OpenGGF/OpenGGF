@@ -39,7 +39,7 @@ public class LevelTilemapManager {
     private static final int VDP_BG_PLANE_HEIGHT_TILES = 32; // VDP 64x32 nametable
     // Height of a fixed BG loop band (in pixels), matching the VDP plane B height.
     // S3K CNZ1BGE_Boss fills Plane B with $10 (16) chunks = 256px and loops that band
-    // via the VDP vertical scroll register (docs/skdisasm/sonic3k.asm:107498-107507).
+    // via the VDP vertical scroll register (docs/skdisasm/sonic3k.asm:107544-107553).
     static final int BG_LOOP_BAND_HEIGHT_PX = VDP_BG_PLANE_HEIGHT_TILES * Pattern.PATTERN_HEIGHT;
     // Tile columns spanned by one 16px chunk column (the BG window step granularity).
     static final int CHUNK_TILE_SPAN = LevelConstants.CHUNK_WIDTH / Pattern.PATTERN_WIDTH;
@@ -115,7 +115,7 @@ public class LevelTilemapManager {
     // AIZ2 ship-loop persistent FG ring ($200-wide Plane A nametable analog).
     // While active, the FG tilemap is a $200-wide ring whose cells RETAIN the
     // last forest column drawn into them at the camera's leading edge, giving a
-    // natural column-by-column reveal AND a seamless $200 loop (s3.asm:70956).
+    // natural column-by-column reveal AND a seamless $200 loop (s3.asm:71012).
     // A state change (full-width <-> ring) forces a rebuild.
     private Boolean lastForegroundWrap;
     // Whether the persistent ring has been seeded for the current loop activation.
@@ -858,7 +858,7 @@ public class LevelTilemapManager {
         // here; its cell content is filled INCREMENTALLY by the persistent-ring
         // seed + per-frame leading-edge fill (see ensureForegroundTilemapData),
         // NOT by this full build (which would snap the whole canopy in). The
-        // engine analog of the ROM's $200 Plane A nametable ring; s3.asm:70956.
+        // engine analog of the ROM's $200 Plane A nametable ring; s3.asm:71012.
         boolean fgWrap = layerIndex == 0
                 && zoneFeatureProvider != null
                 && zoneFeatureProvider.foregroundWrapsHorizontally();
@@ -1027,7 +1027,7 @@ public class LevelTilemapManager {
      *
      * <p>ROM: Plane A holds whatever {@code DrawTilesAsYouMove} last wrote; the
      * engine seeds the visible window here so there is no empty frame, then draws
-     * the entering column at the leading edge each frame (s3.asm:70638,70680).
+     * the entering column at the leading edge each frame (s3.asm:70694,70736).
      */
     private void foregroundRingSeed(BlockLookup blockLookup, Level level) {
         if (foregroundTilemapData == null) {

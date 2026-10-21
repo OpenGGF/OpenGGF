@@ -25,6 +25,13 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
+- [Disassembly citation checker](../../tools/disasm/disasm_citations.py): `check` verifies
+  `file.asm:N-M` citations in code, tests and docs against the pinned (or `--rev checkout`/any)
+  disassembly revision, using the label named beside each citation; `remap` carries citations
+  through a disassembly diff when a pin moves, refusing ranges that touch edited lines.
+  Origin: citation audit, 2026-10-09; evidence in the
+  [audit](../architecture/audits/2026-10-09-disassembly-line-citations.md).
+
 - [Eggman's Sky voice generator](../../tools/audio/eggmans_sky_voice.py) synthesizes
   original directed Alice announcements through OpenRouter, preserves raw takes outside
   Git, verifies literal words after the approved metallic/vocoder/DAC processing, and

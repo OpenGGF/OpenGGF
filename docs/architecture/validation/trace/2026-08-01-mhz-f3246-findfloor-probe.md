@@ -56,7 +56,7 @@ ED12_RETURN  d1=0 player_angle=F8
 Every value matches what the prior analyses derived from the engine: sensor origins
 `(0x0FB1, 0x078A)` and `(0x0F9F, 0x078A)`, `Collision_addr` = Primary `$000987C0`,
 right-sensor distance 0 with angle `F8`. `Player_Angle` leaves `d1 = min = 0`, so
-`Player_AnglePos` takes `beq.s locret_ED12` (sonic3k.asm:18809) and **does not detach**.
+`Player_AnglePos` takes `beq.s locret_ED12` (sonic3k.asm:18845) and **does not detach**.
 `loc_ED38` is never reached anywhere in f3200-f3260. The exit angle `F8` that the trace
 records is written here, by the grounded path.
 
@@ -80,7 +80,7 @@ f=3247 STATUS_WRITE pc=011690 ...  x=0FA8 y=0777 ang=F8 status=02
 ```
 
 `pc=08D732` is the instruction after `$08D72C` — `bset #Status_InAir,status(a1)` in
-`loc_8D724`, the off-camera despawn tail of `loc_8D6E6` (sonic3k.asm:193222-193228):
+`loc_8D724`, the off-camera despawn tail of `loc_8D6E6` (sonic3k.asm:193321-193327):
 
 ```
 loc_8D724:
@@ -106,15 +106,15 @@ f=3246 RELEASE released_is_player1=yes
 ```
 
 `loc_8D6E6` is the Madmole's side-drill arm child (`ChildObjDat_8D9C8` /
-`ChildObjDat_8D9D0`, sonic3k.asm:193508-193514). At f3246 it is at routine 6 — the
+`ChildObjDat_8D9D0`, sonic3k.asm:193607-193613). At f3246 it is at routine 6 — the
 post-release drift state — with `object_control` clear on both itself and Sonic. Sonic is
 running normally on the ground 500px away. The arm scrolls out of the `loc_8D6E6` band
 and its despawn tail detaches him anyway.
 
 **`$44(a0)` is written once and never cleared.** The straight drill's touch response
-`sub_8D8E6` writes it (`move.w a2,$44(a0)`, sonic3k.asm:193439) and the arc grab
-`sub_8D94A` writes it (sonic3k.asm:193477); the wall and floor release paths
-(`loc_8D820` / `loc_8D85E` into `loc_8D834`, sonic3k.asm:193337-193346 and
+`sub_8D8E6` writes it (`move.w a2,$44(a0)`, sonic3k.asm:193538) and the arc grab
+`sub_8D94A` writes it (sonic3k.asm:193576); the wall and floor release paths
+(`loc_8D820` / `loc_8D85E` into `loc_8D834`, sonic3k.asm:193436-193445 and
 193363-193367) only set `Status_InAir`, clear `object_control` and drop the arm to
 routine 6. So an arm that has already knocked a player away still detaches that same
 player when it later leaves the camera band. That is what f3246 is.

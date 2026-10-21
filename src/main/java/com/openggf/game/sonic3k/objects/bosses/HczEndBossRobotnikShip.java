@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 
 /**
  * Obj_RobotnikShip2 (subtype 5) — Eggman's ship cockpit for the HCZ2 end boss.
- * ROM: sonic3k.asm line 136355.
+ * ROM: sonic3k.asm line 136420.
  *
  * <p>Follows the parent boss at offset (0, +0x0C) each frame, rendering
  * Map_RobotnikShip frame 5 (the full ship body). Spawns an inline Eggman
@@ -115,7 +115,7 @@ public class HczEndBossRobotnikShip extends AbstractBossChild implements RewindR
 
     public HczEndBossRobotnikShip(HczEndBossInstance boss) {
         // HCZEndBoss_ShipChild -> Obj_RobotnikShip2: Obj_RobotnikShipInit applies ObjDat_RobotnikShip
-        // priority $280 (sonic3k.asm:136655-136658); its art make_art_tile(ArtTile_RobotnikShip,0,0)
+        // priority $280 (sonic3k.asm:136720-136723); its art make_art_tile(ArtTile_RobotnikShip,0,0)
         // leaves bit 15 clear, matching the default isHighPriority().
         super(boss, "HCZEndBossRobotnikShip", RenderPriority.fromS3kWord(0x280), 0);
         this.boss = boss;
@@ -313,7 +313,7 @@ public class HczEndBossRobotnikShip extends AbstractBossChild implements RewindR
         }
 
         // Obj_RobotnikShipInit allocates the head with Child1_MakeRoboHead /
-        // CreateChild1_Normal (sonic3k.asm:136415-136416, 176924-176929), i.e.
+        // CreateChild1_Normal (sonic3k.asm:136480-136481, 177015-177020), i.e.
         // AllocateObjectAfterCurrent: the head lands in a later slot than the
         // ship. Both use priority $280 (ObjDat_RobotnikShip 136655-136658,
         // ObjDat_RobotnikHead 136645-136648) and Draw_Sprite appends in

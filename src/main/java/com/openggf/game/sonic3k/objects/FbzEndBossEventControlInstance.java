@@ -11,7 +11,7 @@ import com.openggf.level.objects.*;
 
 import java.util.List;
 
-/** Locked-on {@code Obj_FBZEndBossEventControl} (sonic3k.asm:109825-109909). */
+/** Locked-on {@code Obj_FBZEndBossEventControl} (sonic3k.asm:109871-109955). */
 public final class FbzEndBossEventControlInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
     private static final int X_STEP_16_16 = 0x7800;

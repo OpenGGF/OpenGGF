@@ -65,7 +65,7 @@ public class Sonic3kSpecialStagePerspective {
 
     /**
      * Calculate the animation frame based on player position and angle.
-     * ROM: Draw_SSSprites (sonic3k.asm:12266-12307)
+     * ROM: Draw_SSSprites (sonic3k.asm:12302-12343)
      *
      * @param player the player state
      */
@@ -140,7 +140,7 @@ public class Sonic3kSpecialStagePerspective {
 
     /**
      * Get the direction table for the current angle quadrant.
-     * ROM: word_98B0 (sonic3k.asm:12229)
+     * ROM: word_98B0 (sonic3k.asm:12265)
      *
      * @param angle current player angle (0-255)
      * @return 6-element direction table for this quadrant

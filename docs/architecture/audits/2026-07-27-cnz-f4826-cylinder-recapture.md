@@ -14,13 +14,13 @@ subsequent on-screen cylinder pass must still consume that bit.
 ## Native evidence
 
 - `Obj_CNZCylinder` calls the Player 2 `sub_324C0` path after the Player 2
-  control/animation pass (`sonic3k.asm:67656-67672`).
+  control/animation pass (`sonic3k.asm:67696-67712`).
 - `Tails_FlySwim_Unknown` can first publish the complete
-  `object_control=$81` CPU marker (`sonic3k.asm:26651-26653`).
+  `object_control=$81` CPU marker (`sonic3k.asm:26691-26693`).
 - The inactive `sub_324C0` path tests only the cylinder standing bit. When it
   is set it clears speed, writes `object_control=$03`, selects animation zero,
   and dispatches `PlayerTwist_UpdateFrame`
-  (`sonic3k.asm:67985-68012,68078-68100`).
+  (`sonic3k.asm:68025-68052,68118-68140`).
 - `sub_324C0` does not write `y_pos`; the later `SolidObjectFull` pass owns
   either a platform snap for a genuine overlap or clearing stale support.
 

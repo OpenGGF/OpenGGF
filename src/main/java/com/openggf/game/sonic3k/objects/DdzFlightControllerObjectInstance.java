@@ -18,7 +18,7 @@ import com.openggf.sprites.playable.ObjectControlState;
 import java.util.List;
 
 /**
- * ROM {@code loc_81492} (sonic3k.asm:173168-173420), the Doomsday Zone flight controller that
+ * ROM {@code loc_81492} (sonic3k.asm:173259-173511), the Doomsday Zone flight controller that
  * {@code DDZ_ScreenInit} allocates. It owns the camera and flies Player 1:
  * <ul>
  *   <li>routine 0 {@code loc_81554}: scroll lock, boss flag, 16.16 autoscroll seed, Player 1 held

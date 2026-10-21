@@ -57,7 +57,7 @@ Breadth follow-up: `TestS3kHpzCompatibilityMatrix` 102 tests and `TestS3kHpzLife
 
 ## Full SaveGame consumer boundary — 2026-10-08
 
-Both existing HPZ full SaveGame exit gates (sonic3k.asm:91524/91718) now dispatch through the semantic helper; camera/player and ending-countdown gates are unchanged.
+Both existing HPZ full SaveGame exit gates (sonic3k.asm:91570/91718) now dispatch through the semantic helper; camera/player and ending-countdown gates are unchanged.
 
 `828bc94d8` clears the native32-bit collected-ring mask at exactly seven existing
 full-SaveGame gates; existing game-state rewind owns the mask. Focused138 cases

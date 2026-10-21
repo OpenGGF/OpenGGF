@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * {@code ShakeScreen_Setup} (sonic3k.asm:104188-104210) as the Hidden Palace
+ * {@code ShakeScreen_Setup} (sonic3k.asm:104234-104256) as the Hidden Palace
  * sanctuary owns it, plus the rewind round trip of the countdown.
  */
 class TestHpzZoneRuntimeState {

@@ -71,13 +71,13 @@ section below.
 ## What the ROM does, and why 412 is the only answer it can give
 
 * `TouchResponse` is called from the tail of `Obj_Sonic`
-  (`docs/skdisasm/sonic3k.asm:22018-22022`, `loc_10C7E`).
+  (`docs/skdisasm/sonic3k.asm:22054-22058`, `loc_10C7E`).
 * `Process_Sprites` walks `Object_RAM` upward from its first slot
-  (`docs/skdisasm/sonic3k.asm:35963-35995`), and that first slot is `Player_1`
-  (`docs/skdisasm/sonic3k.constants.asm:303-304`).
+  (`docs/skdisasm/sonic3k.asm:36003-36035`), and that first slot is `Player_1`
+  (`docs/skdisasm/sonic3k.constants.asm:310-311`).
 * `Touch_Loop` stores object RAM **pointers**, not snapshots, and dereferences
   `x_pos(a1)` / `y_pos(a1)` live at Sonic's execution time
-  (`docs/skdisasm/sonic3k.asm:20655-20681`).
+  (`docs/skdisasm/sonic3k.asm:20691-20717`).
 
 Sonic therefore scans before any badnik's slot has run that frame, and reads
 every object's **end-of-previous-frame** position. The flybot only holds `0619`
@@ -131,7 +131,7 @@ lands on row 411 instead of 412.
 
 ## Where the frame is lost
 
-`Obj_WaitOffscreen` (`docs/skdisasm/sonic3k.asm:180271-180302`) installs
+`Obj_WaitOffscreen` (`docs/skdisasm/sonic3k.asm:180362-180393`) installs
 `loc_85AD2` as the object's operation and draws it. `loc_85AD2` gates on
 `tst.b render_flags(a0) / bmi` -- bit 7, which the *previous* frame's draw pass
 published -- and only then reaches `loc_85B02`, which restores the saved pointer
@@ -241,7 +241,7 @@ it was asked for.
   not evidence about twenty.
 * **Whether other objects share the dynamic-arm wake phase gap.**
   `Obj_WaitOffscreen` has several callers in the disassembly
-  (`sonic3k.asm:128225`, `134031`, `182275`, `182373`, `182698`, `183323`). Only
+  (`sonic3k.asm:128279`, `134031`, `182275`, `182373`, `182698`, `183323`). Only
   the Flybot767 was measured.
 
 ## A reporting gap that hides a data gap

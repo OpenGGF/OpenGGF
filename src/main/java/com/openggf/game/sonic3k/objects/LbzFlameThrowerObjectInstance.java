@@ -19,7 +19,7 @@ import java.util.List;
 /**
  * S3K S3KL object $16 - Launch Base flame thrower.
  *
- * <p>ROM reference: {@code Obj_LBZFlameThrower} ({@code sonic3k.asm:52053-52104}).
+ * <p>ROM reference: {@code Obj_LBZFlameThrower} ({@code sonic3k.asm:52093-52144}).
  * The parent is a static full solid object and periodically allocates an
  * {@code Obj_AutoSpin460} flame child when
  * {@code (lowByte(V_int_run_count) + subtype) & $7F == 0}.
@@ -31,11 +31,11 @@ public final class LbzFlameThrowerObjectInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_LBZFlameThrower} is installed from the S3K object pointer table at
      * {@code $000263D2} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:52058).
+     * label is defined at docs/skdisasm/sonic3k.asm:52098).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0002}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -101,7 +101,7 @@ public final class LbzFlameThrowerObjectInstance extends AbstractObjectInstance
     public boolean usesInclusiveRightEdge() {
         // Obj16 reaches SolidObject_cont through SolidObjectFull. Its unsigned
         // broad-X gate uses `bhi`, so relX == d1*2 is a valid zero-distance
-        // side contact (sonic3k.asm:52098-52108, 41394-41401).
+        // side contact (sonic3k.asm:52138-52148, 41434-41441).
         return true;
     }
 

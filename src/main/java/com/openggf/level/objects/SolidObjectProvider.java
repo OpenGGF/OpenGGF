@@ -29,7 +29,7 @@ public interface SolidObjectProvider {
      * providers may opt into a different sampled phase when porting an inline
      * ROM top-solid helper. The call site must cite the concrete disassembly
      * routine; for S3K {@code SolidObjectTop}'s new-landing geometry reads
-     * {@code x_pos/y_pos/y_radius} at sonic3k.asm:41982-42015.
+     * {@code x_pos/y_pos/y_radius} at sonic3k.asm:42022-42055.
      */
     default int getTopSolidPlayerPositionHistoryFrames(PlayableEntity player) {
         return 0;
@@ -168,9 +168,9 @@ public interface SolidObjectProvider {
      *       ({@code s2.asm:35651-35652}) —
      *       {@code tst.b obj_control(a1); bmi}.</li>
      *   <li>S3K {@code SolidObject_cont}'s {@code loc_1DFFE}
-     *       ({@code sonic3k.asm:41443-41444}) and the sloped/platform landing
-     *       tail {@code loc_1E45A} ({@code sonic3k.asm:42012-42013}, with its
-     *       reverse-gravity twin at {@code :42060-42061}) —
+     *       ({@code sonic3k.asm:41483-41484}) and the sloped/platform landing
+     *       tail {@code loc_1E45A} ({@code sonic3k.asm:42052-42053}, with its
+     *       reverse-gravity twin at {@code :42100-42101}) —
      *       {@code tst.b object_control(a1); bmi}. The sloped tail's test sits
      *       immediately before its {@code move.w d2,y_pos(a1)}, so a bit-7
      *       rider is never repositioned by the object.</li>
@@ -333,7 +333,7 @@ public interface SolidObjectProvider {
     /**
      * Whether this solid uses S3K's {@code SolidObjectFull} Player 2 visibility
      * gate. That helper processes Player 1, then skips Player 2 when Player 2's
-     * {@code render_flags} bit 7 is clear (sonic3k.asm:41003-41008).
+     * {@code render_flags} bit 7 is clear (sonic3k.asm:41043-41048).
      */
     default boolean skipsCpuSidekickWhenRenderFlagOffScreen() {
         return false;
@@ -686,12 +686,12 @@ public interface SolidObjectProvider {
      * {@code SolidObject} ({@code _incObj/sub SolidObject.asm:122-123,167-168}),
      * S2 {@code SolidObject_cont} ({@code s2.asm:35344+}) and
      * {@code SlopedSolid_cont} ({@code s2.asm:35263-35271}), S3K
-     * {@code SolidObject_cont} ({@code sonic3k.asm:41393-41399}). Top-solid
+     * {@code SolidObject_cont} ({@code sonic3k.asm:41433-41439}). Top-solid
      * platform gates instead reject with {@code bhs}/{@code blo} — exclusive:
      * S1 {@code _incObj/sub PlatformObject & SlopeObject.asm:34-35}, S2
      * {@code PlatformObject_cont} ({@code s2.asm:35960}), S3K
-     * {@code SolidObjectTop_1P} ({@code sonic3k.asm:41808}) and
-     * {@code loc_1E42E} ({@code sonic3k.asm:41995-41996}).
+     * {@code SolidObjectTop_1P} ({@code sonic3k.asm:41848}) and
+     * {@code loc_1E42E} ({@code sonic3k.asm:42035-42036}).
      */
     default boolean usesInclusiveRightEdge() {
         return !isTopSolidOnly();
@@ -709,14 +709,14 @@ public interface SolidObjectProvider {
      * ({@code _incObj/sub SolidObject.asm:318-336}), S2
      * {@code SolidObject_Landed} re-reads {@code width_pixels(a0)}
      * ({@code s2.asm:35588+}), S3K {@code Solid_Landed} / {@code loc_1E154}
-     * re-reads {@code width_pixels(a0)} ({@code sonic3k.asm:41611-41621}).
+     * re-reads {@code width_pixels(a0)} ({@code sonic3k.asm:41651-41661}).
      * Because nearly every full-solid caller passes
      * {@code d1 = width_pixels + $B}, the default reconstructs the width byte
      * as {@code collisionHalfWidth - $B}. Top-solid platform routines instead
      * land on the caller's {@code d1} directly — S1 {@code PlatformObject}
      * passes {@code obActWid} unpadded, S2 {@code PlatformObject_cont}
      * ({@code s2.asm:35960}) and S3K {@code SolidObjectTop_1P}
-     * ({@code sonic3k.asm:41798-41825}) use {@code d1} as-is — so the
+     * ({@code sonic3k.asm:41838-41865}) use {@code d1} as-is — so the
      * top-solid family default is the collision half-width itself.
      * <p>
      * Override with the disassembly-backed {@code width_pixels} when the
@@ -985,16 +985,16 @@ public interface SolidObjectProvider {
      * exactly this frame while the player remains attached to the object.
      * <p>
      * Default: {@code false} (slope sample writes y_pos every frame, matching
-     * ROM {@code SolidObjSloped2} sonic3k.asm:41727-41752 / {@code MvSonicOnSlope}
-     * s2disasm:35429 invoked by {@code sub_205B6} sonic3k.asm:44830).
+     * ROM {@code SolidObjSloped2} sonic3k.asm:41767-41792 / {@code MvSonicOnSlope}
+     * s2disasm:35429 invoked by {@code sub_205B6} sonic3k.asm:44870).
      * <p>
      * ROM divergence covered by this hook: S3K {@code Obj_CollapsingPlatform}
-     * state-1 routine {@code loc_20594} (sonic3k.asm:44814-44824) decrements its
+     * state-1 routine {@code loc_20594} (sonic3k.asm:44854-44864) decrements its
      * collapse timer {@code $38} and, when the timer is already zero at frame
      * start, branches to {@code ObjPlatformCollapse_CreateFragments}
-     * (sonic3k.asm:45394-45442). That branch rewrites {@code (a0)} to
+     * (sonic3k.asm:45434-45482). That branch rewrites {@code (a0)} to
      * {@code loc_205DE} and {@code jmp}s to {@code Play_SFX} <em>without</em>
-     * falling through to {@code sub_205B6} (sonic3k.asm:44830) -- so the slope
+     * falling through to {@code sub_205B6} (sonic3k.asm:44870) -- so the slope
      * sample / y_pos write is skipped on the state-1 to state-2 transition
      * frame. Sonic remains attached because {@code Status_OnObj} and
      * {@code p1_standing_bit} are not cleared, but his y_pos is held at the
@@ -1031,7 +1031,7 @@ public interface SolidObjectProvider {
      * {@code Obj_CollapsingPlatform}) override this to also report the pending
      * (not-yet-promoted) state. ROM: {@code ObjPlatformCollapse_CreateFragments}
      * jmps to {@code Play_SFX} without running {@code sub_205B6}
-     * (sonic3k.asm:44818, 45394), so the platform performs no air-unseat on the
+     * (sonic3k.asm:44858, 45434), so the platform performs no air-unseat on the
      * collapse-transition frame; the rider keeps {@code Status_OnObj} that frame
      * and is unseated the next frame when {@code loc_205DE} re-runs
      * {@code sub_205B6}.
@@ -1047,7 +1047,7 @@ public interface SolidObjectProvider {
      * ROM divergence: S3K {@code Obj_CollapsingPlatform} release frame
      * {@code loc_205DE} calls {@code sub_205B6} before {@code sub_205FC}
      * clears the standing bit and sets {@code Status_InAir}
-     * (sonic3k.asm:44850-44864). If the engine's ride exit path clears the
+     * (sonic3k.asm:44890-44904). If the engine's ride exit path clears the
      * rider first, the player misses that final slope-position write.
      */
     default boolean sampleSlopeOnRideExit(PlayableEntity player) {
@@ -1060,12 +1060,12 @@ public interface SolidObjectProvider {
      * should be bypassed for this object's new-contact resolution path.
      * <p>
      * ROM divergence: the on-screen gate at {@code loc_1DF88}
-     * (sonic3k.asm:41390) lives <em>only</em> in the {@code SolidObjectFull_1P}
-     * helper (sonic3k.asm:41016-41018). Objects that route through the
-     * sibling helper {@code SolidObjectFull2_1P} (sonic3k.asm:41065-41067)
+     * (sonic3k.asm:41430) lives <em>only</em> in the {@code SolidObjectFull_1P}
+     * helper (sonic3k.asm:41056-41058). Objects that route through the
+     * sibling helper {@code SolidObjectFull2_1P} (sonic3k.asm:41105-41107)
      * fall through directly to {@code SolidObject_cont} and never test
      * {@code render_flags} bit 7. Notably <strong>all spring variants</strong>
-     * call {@code SolidObjectFull2_1P} (sonic3k.asm:47664/47673/47692/47701/
+     * call {@code SolidObjectFull2_1P} (sonic3k.asm:47704/47673/47692/47701/
      * 47779/47798/47829/47848/48036/48045/48064/48074), so an off-screen
      * spring still resolves push and side contact in the ROM. The S2 spring
      * helpers use the equivalent {@code SolidObject_Always_SingleCharacter}

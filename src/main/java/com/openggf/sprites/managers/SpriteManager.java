@@ -237,7 +237,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 * sidekick (via {@link #addTemporarySidekick}). No-op for permanently
 	 * registered sidekicks. Used by the CNZ1 solo-Sonic carry-in Tails, which
 	 * deletes its own throwaway carrier once it flies off-screen (ROM
-	 * {@code loc_140AC}, sonic3k.asm:26963-26969).
+	 * {@code loc_140AC}, sonic3k.asm:27003-27009).
 	 *
 	 * @return true if the sprite was a temporary sidekick and was removed
 	 */
@@ -792,7 +792,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		if (!playable.isCpuControlled()) {
 			// Sonic_Init temporarily applies the Player_2 spawn offset, calls
 			// Reset_Player_Position_Array, then restores Player_1
-			// (sonic3k.asm:21931-21941,22166-22193).
+			// (sonic3k.asm:21967-21977,22202-22229).
 			short originalX = playable.getCentreX();
 			short originalY = playable.getCentreY();
 			playable.setCentreXPreserveSubpixel((short) (originalX - 0x20));
@@ -809,7 +809,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 
 		// Player_2 is the first CPU slot after Player_1. Tails_Init resets the
 		// CPU globals and installs the spawn-offset state but returns before the
-		// normal delayed-follow CPU routine (sonic3k.asm:26101-26156).
+		// normal delayed-follow CPU routine (sonic3k.asm:26141-26196).
 		if (sidekicks.isEmpty() || sidekicks.getFirst() != playable) {
 			return;
 		}
@@ -883,7 +883,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 * S2 {@code LevelOnly_Object_RAM: Tails_Tails} follows {@code Object_RAM_End}
 	 * / {@code Dynamic_Object_RAM_End} (docs/s2disasm/s2.constants.asm:1144-1152),
 	 * and S3K {@code Level_object_RAM: Tails_tails} then {@code Dust} follow
-	 * {@code Dynamic_object_RAM_end} (docs/skdisasm/sonic3k.constants.asm:307-317).
+	 * {@code Dynamic_object_RAM_end} (docs/skdisasm/sonic3k.constants.asm:314-324).
 	 * Both therefore execute after every dynamic level object, and Tails' tails
 	 * executes before the dust.
 	 */
@@ -911,7 +911,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 * execution point (docs/s2disasm/s2.asm:41735), then unconditionally runs
 	 * {@code Tails_Animate_Part2} and {@code LoadTailsTailsDynPLC}
 	 * (docs/s2disasm/s2.asm:41756-41763). S3K's Obj_Tails_Tail_Main is the same
-	 * shape (docs/skdisasm/sonic3k.asm:30055-30071). Running this inside the
+	 * shape (docs/skdisasm/sonic3k.asm:30095-30111). Running this inside the
 	 * sidekick's own animation pass read the parent anim one dispatch too early
 	 * and minted DPLC edges the ROM never queues.
 	 */
@@ -998,7 +998,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 	/**
 	 * Removes throwaway carry-in sidekicks (e.g. the CNZ1 solo-Sonic Tails)
 	 * once their CPU controller has flown off-screen and flagged itself for
-	 * despawn (ROM {@code loc_140AC}, sonic3k.asm:26963-26969). Run after the
+	 * despawn (ROM {@code loc_140AC}, sonic3k.asm:27003-27009). Run after the
 	 * playable update loop so the roster is mutated outside iteration; the
 	 * controller only sets the flag and never reaches back into global services
 	 * to mutate the roster.
@@ -1244,13 +1244,13 @@ public class SpriteManager implements PlayableSstDispatcher {
 			AbstractPlayableSprite playable = playables.get(i);
 			playableUpdateOrder.put(playable, i);
 			// Snapshot Status_OnObj before any player tick runs so cross-playable
-			// reads (e.g. Tails_CPU_Control follow-steering, sonic3k.asm:26688-26700,
+			// reads (e.g. Tails_CPU_Control follow-steering, sonic3k.asm:26728-26740,
 			// s2.asm:38933+) see the leader's bit as it stood mid-frame, before
 			// Sonic_Jump-driven engine clears (PlayableSpriteMovement.doJump and
 			// the air-unseat path in ObjectManager.processInlineObjectForPlayer)
 			// have run. ROM only clears Status_OnObj later in solid-object
-			// processing (sub_1FF1E sonic3k.asm:44306-44319, loc_1FFC4
-			// sonic3k.asm:44369-44381).
+			// processing (sub_1FF1E sonic3k.asm:44346-44359, loc_1FFC4
+			// sonic3k.asm:44409-44421).
 			playable.captureOnObjectAtFrameStart();
 		}
 	}
@@ -1819,7 +1819,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		// docs/s2disasm/s2.asm:38158 Obj01_Hurt), S1 Sonic_Hurt only gains the
 		// water call under the FixBugs assembly switch ("Fix water not being
 		// acknowledged during a hurt state", docs/s1disasm/_incObj/01 Sonic.asm:1814-1817),
-		// and S3K Tails hurt loc_156D6 likewise omits it (docs/skdisasm/sonic3k.asm:29194-29210).
+		// and S3K Tails hurt loc_156D6 likewise omits it (docs/skdisasm/sonic3k.asm:29234-29250).
 		// Only the next, first normal-control frame's Obj02_Control reaches Tails_Water,
 		// and it runs AFTER Tails_Move (docs/s2disasm/s2.asm:38973 move, :38981 water),
 		// so the underwater acceleration switch (Tails_acceleration $C->$6,
@@ -1885,7 +1885,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		if (usesInlineSolidResolution && !hurtAtTickStart && !deadAtTickStart) {
 			// S2/S3K run Sonic_Water/Tails_Water after movement and the
 			// position-history write, but before animation and TouchResponse
-			// (sonic3k.asm:21995-22022). Object launchers touched on a water-entry
+			// (sonic3k.asm:22031-22058). Object launchers touched on a water-entry
 			// frame therefore overwrite the quartered entry velocity, rather than
 			// having their launch velocity quartered afterward.
 			levelManager.updatePlayableWaterStateForCurrentLevel(playable);
@@ -1895,7 +1895,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		}
 		// ROM Obj01_Control runs Sonic_Display before Sonic_Animate and
 		// TouchResponse (S1 01 Sonic.asm:73-90, S2 s2.asm:36243-36258,
-		// S3K sonic3k.asm:21995-22022). Sonic_Display decrements
+		// S3K sonic3k.asm:22031-22058). Sonic_Display decrements
 		// invulnerable_time, and spilled-ring touch checks read that decremented
 		// value in the same object-interaction pass.
 		playable.tickInvulnerabilityDisplayTimerBeforeTouchResponse();
@@ -1933,7 +1933,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 * control routine after the movement modes have been dispatched
 	 * (S1 {@code docs/s1disasm/_incObj/01 Sonic.asm:76,80},
 	 * S2 {@code docs/s2disasm/s2.asm:36242,36248},
-	 * S3K {@code docs/skdisasm/sonic3k.asm:22021,22031}), and its
+	 * S3K {@code docs/skdisasm/sonic3k.asm:22057,22067}), and its
 	 * {@code Sonic_ChkShoes} tail does both consequences of the speed-shoes
 	 * countdown reaching zero there in the one frame: the top-speed,
 	 * acceleration and deceleration restore, and the slow-down music command.

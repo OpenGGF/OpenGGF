@@ -32,7 +32,7 @@ import java.util.Map;
 /**
  * Object 0x59 - MGZ Dash Trigger.
  *
- * <p>ROM: Obj_MGZDashTrigger (sonic3k.asm:51473-51608).
+ * <p>ROM: Obj_MGZDashTrigger (sonic3k.asm:51513-51648).
  * Small spring-bumper-shaped pad. When a player stands on it while in the
  * spindash animation (anim 9), the trigger arms for {@value #TIMER_DURATION}
  * frames. While armed it sets the matching {@code Level_trigger_array} slot
@@ -81,7 +81,7 @@ public class MGZDashTriggerObjectInstance extends AbstractObjectInstance
     private static final int SOLID_HALF_WIDTH = 0x1B;
     private static final int SOLID_HALF_HEIGHT = 0x10;
     // ROM: byte_25F0E, sampled by sub_1DD0E/SolidObjSloped2 for standing riders.
-    // Sonic 3K disassembly: sonic3k.asm:51489-51493,51611-51639,41727-41753.
+    // Sonic 3K disassembly: sonic3k.asm:51529-51533,51651-51679,41767-41793.
     private static final byte[] SLOPE_DATA = {
             0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
             0x0F, 0x0F, 0x0E, 0x0E, 0x0D, 0x0C, 0x0A, 0x08, 0x06, 0x04,
@@ -126,7 +126,7 @@ public class MGZDashTriggerObjectInstance extends AbstractObjectInstance
         }
 
         // ROM loc_25D9C resolves sub_1DD0E before inspecting its standing-bit
-        // result and before the armed launch loop (sonic3k.asm:51489-51579).
+        // result and before the armed launch loop (sonic3k.asm:51529-51619).
         checkpointAll();
 
         // ROM: each frame sub_1DD0E performs a proximity probe (independent of
@@ -138,7 +138,7 @@ public class MGZDashTriggerObjectInstance extends AbstractObjectInstance
         // ROM loc_25D9C runs the arm test EVERY frame, ahead of the loc_25E22
         // countdown and regardless of the current value of $30(a0): a player
         // still in the spindash animation against the trigger re-loads
-        // move.w #$3C,$30(a0) on each such frame (sonic3k.asm:51502-51545).
+        // move.w #$3C,$30(a0) on each such frame (sonic3k.asm:51542-51585).
         // It also evaluates P1 (andi.b #$11,d6) and P2 (andi.b #$22,d6)
         // independently -- neither arm short-circuits the other.
         for (PlayableEntity participant : playerQuery(playerEntity).playersFor(PLAYER_PARTICIPATION)) {
@@ -340,7 +340,7 @@ public class MGZDashTriggerObjectInstance extends AbstractObjectInstance
     @Override
     public boolean addsSlopeCatchRangeToVerticalOverlap() {
         // ROM loc_1DECE adds the caller's d2 ($10) to y_radius before
-        // classifying the sampled slope contact (sonic3k.asm:41275-41281).
+        // classifying the sampled slope contact (sonic3k.asm:41315-41321).
         return true;
     }
 
@@ -348,7 +348,7 @@ public class MGZDashTriggerObjectInstance extends AbstractObjectInstance
     public boolean usesInclusiveRightEdge() {
         // ROM loc_1DECE rejects only d0 > d1*2 (bhi), so a player whose
         // centre is exactly halfWidth pixels to the right is still sampled.
-        // sonic3k.asm:41263-41272.
+        // sonic3k.asm:41303-41312.
         return true;
     }
 

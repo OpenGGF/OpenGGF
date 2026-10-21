@@ -166,7 +166,7 @@ class TestEngine {
         assertTrue(gameState.getCollectedSuperEmeraldIndices().isEmpty());
     }
 
-    /** docs/skdisasm/sonic3k.asm:16997-17012: zero lives on load costs a continue and gives three lives. */
+    /** docs/skdisasm/sonic3k.asm:17033-17048: zero lives on load costs a continue and gives three lives. */
     @Test
     void restoreSlotAfterGameOverSpendsAContinueAndRestoresThreeLives() {
         GameplayModeContext gameplayMode = mock(GameplayModeContext.class);

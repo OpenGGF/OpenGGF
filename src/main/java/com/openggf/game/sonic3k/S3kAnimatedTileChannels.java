@@ -301,7 +301,7 @@ final class S3kAnimatedTileChannels {
     }
 
     /**
-     * {@code AnimateTiles_LRZ1}/{@code AnimateTiles_LRZ2} (sonic3k.asm:55045-55054) set the two
+     * {@code AnimateTiles_LRZ1}/{@code AnimateTiles_LRZ2} (sonic3k.asm:55085-55094) set the two
      * destination bases and fall into {@code loc_282D0}, which runs its own split DMA for both
      * background channels and only then branches to {@code loc_286E8}, the shared AniPLC pass.
      * The channel order here is that ROM order.

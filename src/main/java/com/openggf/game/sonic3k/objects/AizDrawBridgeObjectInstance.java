@@ -37,11 +37,11 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_AIZDrawBridge} is installed from the S3K object pointer table at
      * {@code $0002B12A} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:59495).
+     * label is defined at docs/skdisasm/sonic3k.asm:59535).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0002}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -130,7 +130,7 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isPersistent() {
         // Normal/wait routines reach AIZDrawBridge_Solid's range tail, but
-        // loc_2B452 only counts down then deletes (sonic3k.asm:59769-59791).
+        // loc_2B452 only counts down then deletes (sonic3k.asm:59809-59831).
         // The cutscene replacement represents a layout owner that was already
         // live and settled when folded out of the native SST graph. Keep it
         // alive until the button starts loc_2B452; otherwise the dynamic object
@@ -188,7 +188,7 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isTopSolidOnly() {
         // Obj_AIZDrawBridge calls SolidObjectFull2, not SolidObjectTop
-        // (sonic3k.asm:59625-59643). New top landings therefore narrow
+        // (sonic3k.asm:59665-59683). New top landings therefore narrow
         // d1=$6B back to width_pixels=$60 before RideObject_SetRide.
         return false;
     }
@@ -253,7 +253,7 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
             if (settledAngleReached) {
                 // Obj_AIZDrawBridge checks $38 for $80/0 before adding $34; the
                 // flat/full SolidObjectFull2 phase starts on the next routine
-                // entry after the angle reaches its target (sonic3k.asm:59591-59613, 59625-59643).
+                // entry after the angle reaches its target (sonic3k.asm:59631-59653, 59665-59683).
                 settled = true;
                 services().playSfx(Sonic3kSfx.FLIP_BRIDGE.id);
             } else {
@@ -273,7 +273,7 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
             services().playSfx(Sonic3kSfx.BRIDGE_COLLAPSE.id);
             // loc_2B2E8 initializes $34, creates the falling pieces through
             // loc_2B498, and returns. loc_2B452 first decrements on the next
-            // object entry (sonic3k.asm:59614-59623,59764-59791).
+            // object entry (sonic3k.asm:59654-59663,59804-59831).
             return;
         }
 

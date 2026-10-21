@@ -2,18 +2,18 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Port `Tails_Catch_Up_Flying` (ROM CPU routine 0x02, `sonic3k.asm:26474`) and `Tails_FlySwim_Unknown` (ROM CPU routine 0x04, `sonic3k.asm:26534`) so CPU Tails can fly back to Sonic after separation, reducing `TestS3kCnzTraceReplay` error count significantly past its current frame-318 first-divergence.
+**Goal:** Port `Tails_Catch_Up_Flying` (ROM CPU routine 0x02, `sonic3k.asm:26514`) and `Tails_FlySwim_Unknown` (ROM CPU routine 0x04, `sonic3k.asm:26574`) so CPU Tails can fly back to Sonic after separation, reducing `TestS3kCnzTraceReplay` error count significantly past its current frame-318 first-divergence.
 
 **Architecture:** Extend `SidekickCpuController`'s state machine with two new states (`CATCH_UP_FLIGHT`, `FLIGHT_AUTO_RECOVERY`) matching the ROM's `Tails_CPU_Control_Index` layout (routine 0x02 and 0x04). `Tails_Catch_Up_Flying` runs the 64-frame gate + manual-trigger logic that teleports Tails to Sonic's position (center.x, center.y − 0xC0). `Tails_FlySwim_Unknown` runs the per-frame "fly toward Sonic's 16-frame delayed position" with a 5-second (`5*60` frame) auto-land timer that reverts to `CATCH_UP_FLIGHT` if Tails lingers off-screen. Transitions from `NORMAL` (routine 0x06 / `loc_13D4A`) happen via the existing `Tails_CPU_routine` byte-write mechanism — no change to `NORMAL` body except expanding `mapRomCpuRoutine` and the trigger checks.
 
 **Tech Stack:** Java 21, JUnit 5, existing S3K trace-replay framework (`AbstractTraceReplayTest`), `HeadlessTestFixture`, `SidekickCpuController` state machine.
 
 **Design references:**
-- `docs/skdisasm/sonic3k.asm:26368-26386` — `Tails_CPU_Control_Index` (18-entry routine dispatch table, routines 0x00-0x22)
-- `docs/skdisasm/sonic3k.asm:26474-26531` — `Tails_Catch_Up_Flying` (routine 0x02)
-- `docs/skdisasm/sonic3k.asm:26534-26653` — `Tails_FlySwim_Unknown` (routine 0x04, includes target-X steer and the early-close transition back to routine 0x06)
-- `docs/skdisasm/sonic3k.asm:26656-26795` — `loc_13D4A` (routine 0x06 / NORMAL body, already ported)
-- `docs/skdisasm/sonic3k.asm:27592-27644` — `Tails_Move_FlySwim` (flight gravity +0x08 + boost decay, already partially ported for carry)
+- `docs/skdisasm/sonic3k.asm:26408-26426` — `Tails_CPU_Control_Index` (18-entry routine dispatch table, routines 0x00-0x22)
+- `docs/skdisasm/sonic3k.asm:26514-26571` — `Tails_Catch_Up_Flying` (routine 0x02)
+- `docs/skdisasm/sonic3k.asm:26574-26693` — `Tails_FlySwim_Unknown` (routine 0x04, includes target-X steer and the early-close transition back to routine 0x06)
+- `docs/skdisasm/sonic3k.asm:26696-26835` — `loc_13D4A` (routine 0x06 / NORMAL body, already ported)
+- `docs/skdisasm/sonic3k.asm:27632-27684` — `Tails_Move_FlySwim` (flight gravity +0x08 + boost decay, already partially ported for carry)
 
 **Previous work this builds on:**
 - Commit `1e5c8d448` (fix(s3k): sidekick follow snap threshold + post-carry flight persistence) established:
@@ -54,13 +54,13 @@
 - AIZ1 frame-2150 one-frame-early landing for rolling-airborne Tails. This is a terrain/sensor-collision divergence rather than a CPU-AI gap; file a separate plan if it persists after this workstream lands.
 - Tails_Move_FlySwim boost mechanics (A/B/C press to gain altitude while flying). The CPU AI never presses A/B/C during normal follow flight (`loc_13DF2` only writes LEFT/RIGHT via the `ori.w #$404/$808` masks), so this doesn't affect the trace-replay result.
 - `loc_141F2` / `loc_1421C` super-form carry variants (routines 0x1A / 0x1C). No Super Sonic during CNZ1 intro; out of scope for trace parity.
-- Competition-mode flight (`Tails_Set_Flying_Animation loc_148F4` branch at `sonic3k.asm:27683`). Engine has no competition mode.
+- Competition-mode flight (`Tails_Set_Flying_Animation loc_148F4` branch at `sonic3k.asm:27723`). Engine has no competition mode.
 
 ---
 
 ### Task 1: Fix ROM-routine-to-state mapping
 
-**Why first:** The existing `mapRomCpuRoutine` table incorrectly maps 0x02 → `SPAWNING` and 0x04 → `APPROACHING`. Per ROM `Tails_CPU_Control_Index` (sonic3k.asm:26368), 0x02 is `Tails_Catch_Up_Flying` and 0x04 is `Tails_FlySwim_Unknown`. This must be corrected before Task 3 can add the new states without collision. The fix here is purely mechanical — no behavioural change yet; the mapping is only read by `hydrateFromRomCpuState` (trace-replay bootstrap), which doesn't run a new trace that exercises these values until Task 7. This task also adds a javadoc comment documenting the ROM table.
+**Why first:** The existing `mapRomCpuRoutine` table incorrectly maps 0x02 → `SPAWNING` and 0x04 → `APPROACHING`. Per ROM `Tails_CPU_Control_Index` (sonic3k.asm:26408), 0x02 is `Tails_Catch_Up_Flying` and 0x04 is `Tails_FlySwim_Unknown`. This must be corrected before Task 3 can add the new states without collision. The fix here is purely mechanical — no behavioural change yet; the mapping is only read by `hydrateFromRomCpuState` (trace-replay bootstrap), which doesn't run a new trace that exercises these values until Task 7. This task also adds a javadoc comment documenting the ROM table.
 
 **Files:**
 - Modify: `src/main/java/com/openggf/sprites/playable/SidekickCpuController.java:779-792`
@@ -98,17 +98,17 @@ with:
 
 ```java
     /**
-     * ROM {@code Tails_CPU_Control_Index} (sonic3k.asm:26368-26386) is an 18-entry
+     * ROM {@code Tails_CPU_Control_Index} (sonic3k.asm:26408-26426) is an 18-entry
      * word table indexed by {@code Tails_CPU_routine}, which the dispatcher reads at
-     * sonic3k.asm:26362-26364. Each entry value is the CPU routine byte (0x00, 0x02,
+     * sonic3k.asm:26402-26404. Each entry value is the CPU routine byte (0x00, 0x02,
      * 0x04, ...) — the table stride is 2 bytes, so the value equals the offset.
      *
      * <pre>
      *   0x00  loc_13A10               engine State.INIT  (zone-specific init, carry gate)
-     *   0x02  Tails_Catch_Up_Flying   engine State.CATCH_UP_FLIGHT  (teleport-to-Sonic gate, sonic3k.asm:26474)
-     *   0x04  Tails_FlySwim_Unknown   engine State.FLIGHT_AUTO_RECOVERY (fly-toward-Sonic + 5s timer, sonic3k.asm:26534)
-     *   0x06  loc_13D4A               engine State.NORMAL (ground follow AI, sonic3k.asm:26656)
-     *   0x08  loc_13F40               engine State.PANIC  (idle/standing ground, sonic3k.asm:26851)
+     *   0x02  Tails_Catch_Up_Flying   engine State.CATCH_UP_FLIGHT  (teleport-to-Sonic gate, sonic3k.asm:26514)
+     *   0x04  Tails_FlySwim_Unknown   engine State.FLIGHT_AUTO_RECOVERY (fly-toward-Sonic + 5s timer, sonic3k.asm:26574)
+     *   0x06  loc_13D4A               engine State.NORMAL (ground follow AI, sonic3k.asm:26696)
+     *   0x08  loc_13F40               engine State.PANIC  (idle/standing ground, sonic3k.asm:26891)
      *   0x0A  locret_13FC0            (empty; used by Knuckles-only paths)
      *   0x0C  loc_13FC2               engine State.CARRY_INIT (carry body init)
      *   0x0E  loc_13FFA               engine State.CARRYING  (carry body per-frame)
@@ -186,8 +186,8 @@ with:
         PANIC,
         CARRY_INIT,            // ROM routine 0x0C - first tick after trigger (teleport + pickup)
         CARRYING,              // ROM routine 0x0E / 0x20 - per-frame carry body
-        CATCH_UP_FLIGHT,       // ROM routine 0x02 (Tails_Catch_Up_Flying, sonic3k.asm:26474)
-        FLIGHT_AUTO_RECOVERY   // ROM routine 0x04 (Tails_FlySwim_Unknown, sonic3k.asm:26534)
+        CATCH_UP_FLIGHT,       // ROM routine 0x02 (Tails_Catch_Up_Flying, sonic3k.asm:26514)
+        FLIGHT_AUTO_RECOVERY   // ROM routine 0x04 (Tails_FlySwim_Unknown, sonic3k.asm:26574)
     }
 ```
 
@@ -229,7 +229,7 @@ Add right after `updateCarrying()`'s closing brace (near line 473):
 
 ```java
     /**
-     * ROM {@code Tails_Catch_Up_Flying} (sonic3k.asm:26474). Entered when
+     * ROM {@code Tails_Catch_Up_Flying} (sonic3k.asm:26514). Entered when
      * {@code Tails_CPU_routine == 2}. Waits on either (a) the sidekick's Ctrl_2
      * A/B/C/START press, or (b) a 64-frame gate firing while Sonic is not
      * object-controlled and not super. On trigger, teleports Tails to
@@ -238,11 +238,11 @@ Add right after `updateCarrying()`'s closing brace (near line 473):
      * <p>Stubbed in Task 2; body lands in Task 4.
      */
     private void updateCatchUpFlight() {
-        // TODO(Task 4): port sonic3k.asm:26474-26531.
+        // TODO(Task 4): port sonic3k.asm:26514-26571.
     }
 
     /**
-     * ROM {@code Tails_FlySwim_Unknown} (sonic3k.asm:26534). Entered when
+     * ROM {@code Tails_FlySwim_Unknown} (sonic3k.asm:26574). Entered when
      * {@code Tails_CPU_routine == 4}. Per-frame: increments Tails_CPU_flight_timer;
      * after 5*60 frames off-screen, falls back to {@code CATCH_UP_FLIGHT}.
      * Otherwise computes the 16-frame delayed Sonic position, steers Tails toward
@@ -253,7 +253,7 @@ Add right after `updateCarrying()`'s closing brace (near line 473):
      * <p>Stubbed in Task 2; body lands in Task 5.
      */
     private void updateFlightAutoRecovery() {
-        // TODO(Task 5): port sonic3k.asm:26534-26653.
+        // TODO(Task 5): port sonic3k.asm:26574-26693.
     }
 ```
 
@@ -275,7 +275,7 @@ git commit -m "$(cat <<'TRAILER'
 feat(sidekick): stub CATCH_UP_FLIGHT and FLIGHT_AUTO_RECOVERY states
 
 Adds the two remaining Tails CPU routines from Tails_CPU_Control_Index
-(sonic3k.asm:26368) to the state enum and dispatch switch. Bodies are
+(sonic3k.asm:26408) to the state enum and dispatch switch. Bodies are
 stubbed — Task 4 ports Tails_Catch_Up_Flying, Task 5 ports
 Tails_FlySwim_Unknown.
 
@@ -315,34 +315,34 @@ In `Sonic3kConstants.java`, add a new section near the existing Tails-carry cons
 ```java
     // =====================================================================
     // S3K Tails CPU flight/catch-up constants
-    // sonic3k.asm:26474+ (Tails_Catch_Up_Flying) and 26534+ (Tails_FlySwim_Unknown)
+    // sonic3k.asm:26514+ (Tails_Catch_Up_Flying) and 26534+ (Tails_FlySwim_Unknown)
     // =====================================================================
 
     /** Y offset applied when Tails teleports above Sonic on catch-up entry.
-     *  ROM sonic3k.asm:26494 (`subi.w #$C0, d0`). */
+     *  ROM sonic3k.asm:26534 (`subi.w #$C0, d0`). */
     public static final int TAILS_CATCH_UP_Y_OFFSET = 0xC0;
 
     /** Auto-land timeout for Tails_FlySwim_Unknown; after 5 seconds off-screen
      *  Tails falls back to CATCH_UP_FLIGHT so the teleport re-runs.
-     *  ROM sonic3k.asm:26538 (`cmpi.w #5*60, (Tails_CPU_flight_timer).w`). */
+     *  ROM sonic3k.asm:26578 (`cmpi.w #5*60, (Tails_CPU_flight_timer).w`). */
     public static final int TAILS_FLIGHT_AUTO_LAND_FRAMES = 5 * 60;
 
     /** Horizontal steer step clamp for Tails_FlySwim_Unknown: the normalized
      *  |dx| >> 4 is capped at 0xC, producing a max of 12 px/frame X movement.
-     *  ROM sonic3k.asm:26576 (`cmpi.w #$C, d2`). */
+     *  ROM sonic3k.asm:26616 (`cmpi.w #$C, d2`). */
     public static final int TAILS_FLIGHT_MAX_X_STEP = 0xC;
 
     /** Vertical steer step for Tails_FlySwim_Unknown: always +/-1 px per frame
-     *  toward the target Y.  ROM sonic3k.asm:26612 (`moveq #1, d2`). */
+     *  toward the target Y.  ROM sonic3k.asm:26652 (`moveq #1, d2`). */
     public static final int TAILS_FLIGHT_Y_STEP = 1;
 
     /** The "ahead of Sonic" leading offset applied to Sonic's delayed X when
      *  he is not on an object and his ground speed is < 0x400.
-     *  ROM sonic3k.asm:26694 (`subi.w #$20, d2`). */
+     *  ROM sonic3k.asm:26734 (`subi.w #$20, d2`). */
     public static final int TAILS_FLIGHT_LEAD_X_OFFSET = 0x20;
 
     /** The ground-speed threshold Sonic must exceed for the lead offset to be
-     *  suppressed.  ROM sonic3k.asm:26692 (`cmpi.w #$400, ground_vel(a1)`). */
+     *  suppressed.  ROM sonic3k.asm:26732 (`cmpi.w #$400, ground_vel(a1)`). */
     public static final int TAILS_FLIGHT_LEAD_SUPPRESS_GSPEED = 0x400;
 ```
 
@@ -416,7 +416,7 @@ TRAILER
 - Create: `src/test/java/com/openggf/sprites/playable/TestSidekickCpuControllerCatchUpFlight.java`
 - Modify: `src/main/java/com/openggf/sprites/playable/SidekickCpuController.java` — body of `updateCatchUpFlight()`
 
-Reference: `sonic3k.asm:26474-26531`:
+Reference: `sonic3k.asm:26514-26571`:
 
 ```asm
 Tails_Catch_Up_Flying:
@@ -494,7 +494,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for SidekickCpuController.CATCH_UP_FLIGHT (ROM routine 0x02,
- * Tails_Catch_Up_Flying at sonic3k.asm:26474).
+ * Tails_Catch_Up_Flying at sonic3k.asm:26514).
  */
 class TestSidekickCpuControllerCatchUpFlight {
 
@@ -607,7 +607,7 @@ In `SidekickCpuController.java`, replace the stubbed `updateCatchUpFlight()`:
 
 ```java
     private void updateCatchUpFlight() {
-        // ROM Tails_Catch_Up_Flying (sonic3k.asm:26474-26531)
+        // ROM Tails_Catch_Up_Flying (sonic3k.asm:26514-26571)
         boolean trigger = false;
 
         // Ctrl_2_logical A/B/C/START press → immediate trigger
@@ -626,7 +626,7 @@ In `SidekickCpuController.java`, replace the stubbed `updateCatchUpFlight()`:
             return;
         }
 
-        // sonic3k.asm:26487 (loc_13B50) — teleport and enter FLIGHT_AUTO_RECOVERY.
+        // sonic3k.asm:26527 (loc_13B50) — teleport and enter FLIGHT_AUTO_RECOVERY.
         int targetX = leader.getCentreX() & 0xFFFF;
         int targetY = leader.getCentreY() & 0xFFFF;
         catchUpTargetX = targetX;
@@ -685,7 +685,7 @@ git add src/main/java/com/openggf/sprites/playable/SidekickCpuController.java \
 git commit -m "$(cat <<'TRAILER'
 feat(sidekick): port Tails_Catch_Up_Flying (ROM CPU routine 0x02)
 
-Implements the CATCH_UP_FLIGHT body matching sonic3k.asm:26474-26531.
+Implements the CATCH_UP_FLIGHT body matching sonic3k.asm:26514-26571.
 Triggers on either Ctrl_2_logical A/B/C/START press or the 64-frame
 level-counter gate (when Sonic is neither object-controlled nor super).
 On trigger, teleports Tails to (Sonic.x, Sonic.y - 0xC0), zeros all
@@ -716,7 +716,7 @@ TRAILER
 - Create: `src/test/java/com/openggf/sprites/playable/TestSidekickCpuControllerFlightAutoRecovery.java`
 - Modify: `src/main/java/com/openggf/sprites/playable/SidekickCpuController.java` — body of `updateFlightAutoRecovery()`
 
-Reference: `sonic3k.asm:26534-26653`. Summary of the per-frame logic:
+Reference: `sonic3k.asm:26574-26693`. Summary of the per-frame logic:
 
 1. If Tails is off-screen (`render_flags` bit 7 clear): bump `Tails_CPU_flight_timer`; when it reaches `5*60`, reset the timer, set `Tails_CPU_routine = 2` (back to CATCH_UP_FLIGHT), teleport Tails to `($0, $0)`, clear velocities, re-arm double-jump-property budget. Otherwise fall through.
 2. If on-screen: clear the flight timer.
@@ -745,7 +745,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for SidekickCpuController.FLIGHT_AUTO_RECOVERY (ROM routine 0x04,
- * Tails_FlySwim_Unknown at sonic3k.asm:26534).
+ * Tails_FlySwim_Unknown at sonic3k.asm:26574).
  */
 class TestSidekickCpuControllerFlightAutoRecovery {
 
@@ -865,7 +865,7 @@ In `SidekickCpuController.java`, replace the stubbed `updateFlightAutoRecovery()
 
 ```java
     private void updateFlightAutoRecovery() {
-        // ROM Tails_FlySwim_Unknown (sonic3k.asm:26534-26653).
+        // ROM Tails_FlySwim_Unknown (sonic3k.asm:26574-26693).
         final int AUTO_LAND_FRAMES = com.openggf.game.sonic3k.constants
                 .Sonic3kConstants.TAILS_FLIGHT_AUTO_LAND_FRAMES;
         final int MAX_X_STEP = com.openggf.game.sonic3k.constants
@@ -886,7 +886,7 @@ In `SidekickCpuController.java`, replace the stubbed `updateFlightAutoRecovery()
         if (!onScreen) {
             flightTimer++;
             if (flightTimer >= AUTO_LAND_FRAMES) {
-                // ROM sonic3k.asm:26540-26547 — reset and bounce back to CATCH_UP.
+                // ROM sonic3k.asm:26580-26587 — reset and bounce back to CATCH_UP.
                 flightTimer = 0;
                 sidekick.setCentreX((short) 0);
                 sidekick.setCentreY((short) 0);
@@ -899,7 +899,7 @@ In `SidekickCpuController.java`, replace the stubbed `updateFlightAutoRecovery()
                 return;
             }
         } else {
-            // ROM loc_13C3A (sonic3k.asm:26551-26555): every on-screen frame
+            // ROM loc_13C3A (sonic3k.asm:26591-26595): every on-screen frame
             // resets the flight timer AND refuels double_jump_property to
             // (8*60)/2 = 240. The refuel is what keeps Tails's flapping
             // animation + flight state active indefinitely while on-screen.
@@ -912,7 +912,7 @@ In `SidekickCpuController.java`, replace the stubbed `updateFlightAutoRecovery()
         // 3. Target = Sonic's 16-frame-delayed position.
         int targetX = leader.getCentreX(ROM_FOLLOW_DELAY_FRAMES) & 0xFFFF;
         int targetY = leader.getCentreY(ROM_FOLLOW_DELAY_FRAMES) & 0xFFFF;
-        // ROM sonic3k.asm:26690-26694: if Sonic not on-object AND ground_vel < $400,
+        // ROM sonic3k.asm:26730-26734: if Sonic not on-object AND ground_vel < $400,
         // lead him by $20 on X.
         if (!leader.isOnObject() && Math.abs(leader.getGSpeed()) < LEAD_SUPPRESS) {
             targetX -= LEAD_OFFSET;
@@ -932,7 +932,7 @@ In `SidekickCpuController.java`, replace the stubbed `updateFlightAutoRecovery()
             if (step > MAX_X_STEP) {
                 step = MAX_X_STEP;
             }
-            // ROM sonic3k.asm:26580-26586: move.b x_vel(a1), d1 reads the HIGH
+            // ROM sonic3k.asm:26620-26626: move.b x_vel(a1), d1 reads the HIGH
             // byte of Sonic's 16-bit x_vel (big-endian 68000). Engine x_vel is
             // stored in subpixels (256/px), so the ROM's "pixel velocity" byte
             // is (xSpeed >> 8) & 0xFF. Use the signed 8-bit absolute value.
@@ -960,7 +960,7 @@ In `SidekickCpuController.java`, replace the stubbed `updateFlightAutoRecovery()
             // Y step never overshoots (it's ±1 per frame), so residualY
             // approaches 0 but may not reach it for many frames. That matches
             // the ROM which only clears d1 via the beq.s loc_13CD2 at
-            // sonic3k.asm:26613 when y_pos(a0) == target before the step.
+            // sonic3k.asm:26653 when y_pos(a0) == target before the step.
             if (Math.abs(residualY) <= Y_STEP) {
                 residualY = 0;
             }
@@ -971,12 +971,12 @@ In `SidekickCpuController.java`, replace the stubbed `updateFlightAutoRecovery()
         //    post-step residuals (see residualX/residualY above).
         boolean closeEnough = residualX == 0 && residualY == 0;
         boolean sonicAlive = !leader.isHurt() && !leader.getDead();
-        // ROM sonic3k.asm:26624-26630: also checks a stat_table flag bit 7.
+        // ROM sonic3k.asm:26664-26670: also checks a stat_table flag bit 7.
         // Engine approximation: isObjectControlled.
         boolean sonicFreeOfLock = !leader.isObjectControlled();
 
         if (closeEnough && sonicAlive && sonicFreeOfLock) {
-            // ROM sonic3k.asm:26631-26648 — return to NORMAL (routine 0x06).
+            // ROM sonic3k.asm:26671-26688 — return to NORMAL (routine 0x06).
             sidekick.setObjectControlled(false);
             sidekick.setXSpeed((short) 0);
             sidekick.setYSpeed((short) 0);
@@ -1021,7 +1021,7 @@ git add src/main/java/com/openggf/sprites/playable/SidekickCpuController.java \
 git commit -m "$(cat <<'TRAILER'
 feat(sidekick): port Tails_FlySwim_Unknown (ROM CPU routine 0x04)
 
-Implements FLIGHT_AUTO_RECOVERY matching sonic3k.asm:26534-26653.
+Implements FLIGHT_AUTO_RECOVERY matching sonic3k.asm:26574-26693.
 Per-frame: increments a 5-second off-screen timer that rolls back to
 CATCH_UP_FLIGHT on expiry. When on-screen, computes Sonic's 16-frame-
 delayed target (with a -0x20 lead if Sonic isn't on-object and isn't
@@ -1046,7 +1046,7 @@ TRAILER
 
 ### Task 6: Wire the NORMAL → CATCH_UP_FLIGHT transition for dead/off-screen Sonic
 
-**Why:** The existing `updateNormal()` returns early if `leader.getDead()`; it should instead transition to `CATCH_UP_FLIGHT` so the flight AI re-aligns Tails with Sonic's corpse (ROM sonic3k.asm:26657-26665 in `loc_13D4A`: `cmpi.b #6, (Player_1+routine); blo.s loc_13D78; move.w #4, (Tails_CPU_routine)`). Similarly on any condition that writes `Tails_CPU_routine = 2`/`4` outside the carry path.
+**Why:** The existing `updateNormal()` returns early if `leader.getDead()`; it should instead transition to `CATCH_UP_FLIGHT` so the flight AI re-aligns Tails with Sonic's corpse (ROM sonic3k.asm:26697-26705 in `loc_13D4A`: `cmpi.b #6, (Player_1+routine); blo.s loc_13D78; move.w #4, (Tails_CPU_routine)`). Similarly on any condition that writes `Tails_CPU_routine = 2`/`4` outside the carry path.
 
 **Files:**
 - Modify: `src/main/java/com/openggf/sprites/playable/SidekickCpuController.java` — `updateNormal()` dead-leader branch
@@ -1066,7 +1066,7 @@ Replace with:
 
 ```java
         if (leader.getDead() || leader.isHurt()) {
-            // ROM loc_13D4A (sonic3k.asm:26657-26665): `cmpi.b #6, (Player_1+
+            // ROM loc_13D4A (sonic3k.asm:26697-26705): `cmpi.b #6, (Player_1+
             // routine); bhs.s loc_13D78` — fires when Sonic's routine byte is
             // 6 (dead) or above. In the engine, Sonic's "routine >= 6" range
             // maps to either `isHurt()` (routine 0x04/0x05 during the hurt
@@ -1129,7 +1129,7 @@ git add src/main/java/com/openggf/sprites/playable/SidekickCpuController.java \
 git commit -m "$(cat <<'TRAILER'
 feat(sidekick): route dead-leader NORMAL into FLIGHT_AUTO_RECOVERY
 
-ROM loc_13D4A (sonic3k.asm:26657-26665) jumps to Tails_CPU_routine=4
+ROM loc_13D4A (sonic3k.asm:26697-26705) jumps to Tails_CPU_routine=4
 (FLIGHT_AUTO_RECOVERY) when Sonic's routine >= 6 (dead). The engine
 previously approximated this with the APPROACHING/respawn-strategy
 path; route the transition correctly now that flight AI exists.
@@ -1207,14 +1207,14 @@ Insert a new subsection BELOW the existing "Sonic 3&K Sidekick CPU Parity (AIZ/C
 ```markdown
 #### Tails CPU Flight AI (Catch-Up + Auto-Recovery)
 
-- Ported `Tails_Catch_Up_Flying` (sonic3k.asm:26474, ROM CPU routine
+- Ported `Tails_Catch_Up_Flying` (sonic3k.asm:26514, ROM CPU routine
   0x02) to `SidekickCpuController.CATCH_UP_FLIGHT`. Triggers on either
   the sidekick's Ctrl_2_logical A/B/C/START press or the 64-frame
   `Level_frame_counter` gate (suppressed if Sonic is object-controlled
   or super). On trigger, teleports Tails to (Sonic.x, Sonic.y - 0xC0),
   zeros all three velocities, sets the air and double_jump_flag bits,
   and transitions to FLIGHT_AUTO_RECOVERY.
-- Ported `Tails_FlySwim_Unknown` (sonic3k.asm:26534, ROM CPU routine
+- Ported `Tails_FlySwim_Unknown` (sonic3k.asm:26574, ROM CPU routine
   0x04) to `SidekickCpuController.FLIGHT_AUTO_RECOVERY`. Implements
   the 5-second off-screen timer that rolls back to CATCH_UP_FLIGHT on
   expiry, the 16-frame-delayed target with the -0x20 lead when Sonic
@@ -1224,7 +1224,7 @@ Insert a new subsection BELOW the existing "Sonic 3&K Sidekick CPU Parity (AIZ/C
   when aligned and Sonic is alive/free.
 - Routed `updateNormal()`'s dead-leader branch to FLIGHT_AUTO_RECOVERY,
   replacing the APPROACHING/respawn-strategy approximation with the
-  ROM-accurate behavior from `loc_13D4A` (sonic3k.asm:26657-26665).
+  ROM-accurate behavior from `loc_13D4A` (sonic3k.asm:26697-26705).
 - Corrected the `mapRomCpuRoutine` table: 0x02 → `CATCH_UP_FLIGHT` and
   0x04 → `FLIGHT_AUTO_RECOVERY` (previously misrouted to SPAWNING /
   APPROACHING).
@@ -1239,7 +1239,7 @@ Find the section `## Tails Flying-With-Cargo Physics` (updated by commit `1e5c8d
 ```markdown
 ### Remaining Gap
 
-Tails's **post-carry catch-up/hover AI** (`Tails_Catch_Up_Flying` at `sonic3k.asm:26474`, routine 0x02, and `Tails_FlySwim_Unknown` at `sonic3k.asm:26534`, routine 0x04) is still missing. Those routines teleport Tails back to Sonic when the gap exceeds a threshold, then fly toward the Sonic_Pos_Record_Buf trail with a 5-second timer, falling through to ground AI when close. Until they exist, `TestS3kCnzTraceReplay` still diverges later in the trace (first strict error around frame 318 in the current recording), but the CNZ1 carry intro itself is ROM-accurate.
+Tails's **post-carry catch-up/hover AI** (`Tails_Catch_Up_Flying` at `sonic3k.asm:26514`, routine 0x02, and `Tails_FlySwim_Unknown` at `sonic3k.asm:26574`, routine 0x04) is still missing. Those routines teleport Tails back to Sonic when the gap exceeds a threshold, then fly toward the Sonic_Pos_Record_Buf trail with a 5-second timer, falling through to ground AI when close. Until they exist, `TestS3kCnzTraceReplay` still diverges later in the trace (first strict error around frame 318 in the current recording), but the CNZ1 carry intro itself is ROM-accurate.
 ```
 
 **After:**
@@ -1298,5 +1298,5 @@ TRAILER
 ## Deferred / Out-of-Scope Follow-ups
 
 - **AIZ1 frame 2150 rolling-airborne premature landing.** Tails detects a floor one frame earlier than ROM on an angle-0xFA slope. This is a terrain/sensor divergence (either the engine's ground sensor uses a 1-pixel-shorter radius than ROM while Tails is rolling airborne, or the slope-angle probe reads a different block). File a separate plan titled `docs/architecture/plans/YYYY-MM-DD-s3k-tails-rolling-airborne-landing.md` with a minimal-reproducer unit test pinning the sensor-contact frame, then the fix.
-- **Tails flight boost (A/B/C press + y_vel clamp)** in `Tails_Move_FlySwim` (sonic3k.asm:27617-27631). The CPU never presses A/B/C during flight, so this only matters for player-controlled Tails in S3K 1P Tails mode. Not needed for trace parity.
+- **Tails flight boost (A/B/C press + y_vel clamp)** in `Tails_Move_FlySwim` (sonic3k.asm:27657-27671). The CPU never presses A/B/C during flight, so this only matters for player-controlled Tails in S3K 1P Tails mode. Not needed for trace parity.
 - **Super-form carry routines** (0x1A / 0x1C). No Super Sonic in any current trace fixture.

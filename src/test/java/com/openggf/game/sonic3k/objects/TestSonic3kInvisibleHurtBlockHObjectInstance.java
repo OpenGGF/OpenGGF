@@ -124,7 +124,7 @@ public class TestSonic3kInvisibleHurtBlockHObjectInstance {
     }
 
     /**
-     * {@code Obj_InvisibleLavaBlock} (sonic3k.asm:43270-43272) is {@code bset #4,shield_reaction}
+     * {@code Obj_InvisibleLavaBlock} (sonic3k.asm:43310-43312) is {@code bset #4,shield_reaction}
      * and a fall through into this routine, and {@code sub_1F58C} (43427-43438) skips the hurt when
      * {@code shield_reaction(a0) & $73 & shield_reaction(a1)} is non-zero. For a player slot that
      * second byte is {@code status_secondary}, whose bit 4 is {@code Status_FireShield}.

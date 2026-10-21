@@ -306,7 +306,7 @@ public class Sonic3kConstants {
     public static final int MAP_FBZ_MAGNETIC_PENDULUM_ADDR = 0x03D9AE;
     public static final int ARTTILE_FBZ_OUTDOORS = 0x02E5;
     public static final int ARTTILE_FBZ_MISC2 = 0x02D2;
-    public static final int MAP_FBZ_DEZ_PLAYER_LAUNCHER_ADDR = 0x03BA8A; // Map_FBZDEZPlayerLauncher (2 frames, sonic3k.asm:79510)
+    public static final int MAP_FBZ_DEZ_PLAYER_LAUNCHER_ADDR = 0x03BA8A; // Map_FBZDEZPlayerLauncher (2 frames, sonic3k.asm:79551)
 
     // ===== Breakable Wall mappings (Obj_BreakableWall, ID 0x0D) =====
     // Each zone has its own mapping table: even frames = intact, odd frames = broken fragments.
@@ -432,8 +432,8 @@ public class Sonic3kConstants {
     // ArtTile_HCZLargeFan = $0500 (sonic3k.constants.asm), palette 1
     public static final int ARTTILE_HCZ_LARGE_FAN = 0x0500;
 
-    // ===== HCZ Water Drop (Obj_WaterDrop, ID 0x6E, sonic3k.asm:75145) =====
-    // ArtTile_HCZ2Slide = $035C (sonic3k.constants.asm:1183), palette 1
+    // ===== HCZ Water Drop (Obj_WaterDrop, ID 0x6E, sonic3k.asm:75186) =====
+    // ArtTile_HCZ2Slide = $035C (sonic3k.constants.asm:1208), palette 1
     public static final int ARTTILE_HCZ2_SLIDE = 0x035C;
     // Map_HCZWaterDrop (7 frames), ROM address derived from label Frame_23795C
     public static final int MAP_HCZ_WATER_DROP_ADDR = 0x23794E;
@@ -478,14 +478,14 @@ public class Sonic3kConstants {
     public static final int ARTTILE_CNZ_PLATFORM = 0x0430;
     public static final int ARTTILE_ICZ_MISC2 = 0x0377;
     public static final int ARTTILE_ICZ_MISC1 = 0x03B6;
-    // ArtTile_ICZIntroSprites (sonic3k.constants.asm:1263) - loaded by PLC_1E_1F (ICZ1).
+    // ArtTile_ICZIntroSprites (sonic3k.constants.asm:1288) - loaded by PLC_1E_1F (ICZ1).
     // Base for the breakable-wall break debris (ObjDat3_8A41E: make_art_tile(ArtTile_ICZIntroSprites,2,1)).
     public static final int ARTTILE_ICZ_INTRO_SPRITES = 0x0347;
     public static final int ARTTILE_LRZ_TENSION_BRIDGE = 0x0113;
     public static final int ARTTILE_LBZ_MISC = 0x03C3;
     public static final int ARTTILE_FBZ_MISC = 0x0379;
     public static final int ARTTILE_DEZ_MISC = 0x034D;
-    /** {@code ArtTile_DEZMisc2 = $02FC} (sonic3k.constants.asm:1355). */
+    /** {@code ArtTile_DEZMisc2 = $02FC} (sonic3k.constants.asm:1380). */
     public static final int ARTTILE_DEZ_MISC2 = 0x02FC;
 
     /** Obj_DEZMiniboss and its children share this runtime-uploaded sheet. */
@@ -507,9 +507,9 @@ public class Sonic3kConstants {
 
 
     // ===== DEZ Gravity Switch (Obj_DEZGravitySwitch, SKL ID 0x58) =====
-    // Map_DEZGravitySwitch (sonic3k.asm:94909, sonic3k.lst:112040). Two frames:
+    // Map_DEZGravitySwitch (sonic3k.asm:94955, sonic3k.lst:112040). Two frames:
     // word_48BEE is the armed 32x16 pad, word_48C08 the two-piece pressed pose.
-    // The header takes make_art_tile(ArtTile_DEZMisc+$143,1,0) (sonic3k.asm:94802).
+    // The header takes make_art_tile(ArtTile_DEZMisc+$143,1,0) (sonic3k.asm:94848).
     public static final int MAP_DEZ_GRAVITY_SWITCH_ADDR = 0x048BEA;
     /** {@code Map_DEZGravityPuzzle} (sonic3k.lst: ROM $00049A6C). */
     public static final int MAP_DEZ_GRAVITY_PUZZLE_ADDR = 0x049A6C;
@@ -557,7 +557,7 @@ public class Sonic3kConstants {
     public static final int ART_UNC_DEBUG_DIGITS_SIZE = 736;
 
     // Touch_Sizes table: 58 entries of 2 bytes (width, height radius)
-    // sonic3k.asm line 20713, verified via ROM binary search
+    // sonic3k.asm line 20749, verified via ROM binary search
     public static final int TOUCH_SIZES_ADDR = 0x00FF62;
     public static final int TOUCH_SIZES_COUNT = 58;
 
@@ -581,21 +581,21 @@ public class Sonic3kConstants {
     public static final int ART_NEM_BUBBLES_ADDR = 0x191B46;
     // ArtNem_GameOver (General/Sprites/Game Over/GameOver.bin, 549 bytes; S&K half,
     // docs/skdisasm/sonic3k.lst:313029; the S3 half copy is at 0x35E49A). Loaded by
-    // Load_PLC_2 #3 (PLC_03: plreq ArtTile_Shield, ArtNem_GameOver, sonic3k.asm:199633-199635).
+    // Load_PLC_2 #3 (PLC_03: plreq ArtTile_Shield, ArtNem_GameOver, sonic3k.asm:199747-199749).
     public static final int ART_NEM_GAME_OVER_ADDR = 0x191DE4;
     // Map_GameOver: GAME / OVER / TIME / OVER, tiles relative to ArtTile_Shield
     // (docs/skdisasm/sonic3k.lst:76186-76191, General/Sprites/Game Over/Map - Game Over.asm).
     public static final int MAP_GAME_OVER_ADDR = 0x02EDD0;
     public static final int MAP_GAME_OVER_FRAME_COUNT = 4;
     // Reserved_object_3 and the first Dynamic_object_RAM slot, the two slots the
-    // dead player's routine writes Obj_GameOver into (docs/skdisasm/sonic3k.asm:24596-24597;
-    // Object_RAM layout sonic3k.constants.asm:303-323).
+    // dead player's routine writes Obj_GameOver into (docs/skdisasm/sonic3k.asm:24636-24637;
+    // Object_RAM layout sonic3k.constants.asm:310-330).
     public static final int SST_SLOT_GAME_OVER_WORD = 2;
     public static final int SST_SLOT_GAME_OVER_OVER = 3;
     public static final int MAP_BUBBLER_ADDR = 0x02FCB2; // Map_Bubbler (23 frames, S&K side)
     // ArtUnc_AirCountdown (S&K side): the drowning countdown digits, 60 tiles.
     // Obj_AirCountdown DMAs six tiles per mapping frame $09-$12 into
-    // ArtTile_DashDust (sonic3k.asm:33489-33516).
+    // ArtTile_DashDust (sonic3k.asm:33529-33556).
     public static final int ART_UNC_AIR_COUNTDOWN_ADDR = 0x0A9DFC;
     public static final int ART_UNC_AIR_COUNTDOWN_SIZE = 0x780;
     /** {@code ArtTile_DashDust - ArtTile_Bubbles}: digit tile index inside Map_Bubbler. */
@@ -693,7 +693,7 @@ public class Sonic3kConstants {
     public static final int PAL_CYCLE_SUPER_SONIC_ENTRY_SIZE = 6; // 3 words
 
     // PalCycle_SuperSonicUnderwaterAIZICZ / PalCycle_SuperSonicUnderwaterHCZCNZLBZ
-    // (sonic3k.asm:4867 / 4879) - same layout as PalCycle_SuperSonic, written to the
+    // (sonic3k.asm:4899 / 4879) - same layout as PalCycle_SuperSonic, written to the
     // water palette while Water_flag is set. SuperHyper_PalCycle_SonicApply picks the
     // AIZ/ICZ table for those two zones and the HCZ/CNZ/LBZ table otherwise.
     public static final int PAL_CYCLE_SUPER_SONIC_UNDERWATER_AIZ_ICZ_ADDR = 0x0039CA;
@@ -899,7 +899,7 @@ public class Sonic3kConstants {
     public static final int TAILS_EXTRA_ART_FRAME_THRESHOLD = 0xD1;
 
     // ArtTile_Player_2_Tail - VRAM base tile for Tails tail appendage (Obj05)
-    // From sonic3k.constants.asm line 1409
+    // From sonic3k.constants.asm line 1434
     public static final int ART_TILE_TAILS_TAIL = 0x06B0;
 
     // ===== Tails Tail Appendage (separate sprite object) =====
@@ -1025,8 +1025,8 @@ public class Sonic3kConstants {
     public static final int ANPAL_LRZ3_SIZE = 0x3C;
     // BPZ balloons (palette 2, colors 13-15): 3 frames x 6 bytes = 18 bytes
     // Verified by ROM binary search for pattern 00EE 00AE 006C 00AE 006E 00EE 006E 00EE 00AE
-    // Death Egg. AnPal_DEZ1 (sonic3k.asm:3661) runs channel A and then falls through into
-    // AnPal_DEZ2 (:3676); act 2 enters at the AnPal_DEZ2 label, so it runs only B and C.
+    // Death Egg. AnPal_DEZ1 (sonic3k.asm:3693) runs channel A and then falls through into
+    // AnPal_DEZ2 (:3708); act 2 enters at the AnPal_DEZ2 label, so it runs only B and C.
     // Channel B (both acts): AnPal_PalDEZ12_1, palette line 3 colours 13-14 (1 longword),
     // 12 frames x 4 bytes = 48 bytes; counter step +4, wraps at $30 (sonic3k.lst: $3444).
     public static final int ANPAL_DEZ12_1_ADDR = 0x003444;
@@ -1109,7 +1109,7 @@ public class Sonic3kConstants {
     // Verified by table position immediately before AniPLC_LRZ1 at 0x028A6A.
     public static final int ANIPLC_MHZ_ADDR = 0x0289E8;
     /**
-     * {@code AniPLC_DEZ} (sonic3k.asm:56079, sonic3k.lst: $28AEE): eight always-running scripts
+     * {@code AniPLC_DEZ} (sonic3k.asm:56119, sonic3k.lst: $28AEE): eight always-running scripts
      * shared by both Death Egg acts. {@code Offs_AniFunc} pairs both acts with the generic
      * {@code AnimateTiles_DoAniPLC}, so nothing gates them.
      */
@@ -1223,14 +1223,14 @@ public class Sonic3kConstants {
     public static final int MAP_MHZ_MINIBOSS_LOG_ADDR = 0x186B18;
     public static final int MAP_MHZ_KNUX_PEER_ADDR = 0x066A52;
     // MHZ1CutsceneButton_LoadKnucklesPeer queues ArtKosM_MHZKnuxPeer to
-    // ArtTile_MHZKnuxPeer (sonic3k.asm:130077-130081;
-    // sonic3k.constants.asm:1272).
+    // ArtTile_MHZKnuxPeer (sonic3k.asm:130134-130138;
+    // sonic3k.constants.asm:1297).
     public static final int ARTTILE_MHZ_KNUX_PEER = 0x0500;
 
     // Shared badnik-explosion art. Obj_SSEntryRing draws over ArtTile_Explosion
     // through its own DPLC, so SSEntryRing_Display re-queues this archive when
-    // the ring retires (sonic3k.asm:128448-128490;
-    // sonic3k.constants.asm:1404). Offset verified with RomOffsetFinder:
+    // the ring retires (sonic3k.asm:128502-128544;
+    // sonic3k.constants.asm:1429). Offset verified with RomOffsetFinder:
     // ArtKosM_BadnikExplosion -> 0xDB406, 2176 decompressed bytes.
     public static final int ART_KOSM_BADNIK_EXPLOSION_ADDR = 0x0DB406;
     public static final int ARTTILE_EXPLOSION = 0x05A0;
@@ -1382,13 +1382,13 @@ public class Sonic3kConstants {
     public static final int VRAM_RESULTS_ARRAY_SIZE = 0x200;             // Total tile range $520-$71F (includes HUD text tiles at $6xx)
 
     // ===== Special Stage Results Art (KosinskiM) =====
-    // ROM: SpecialStage_Results (sonic3k.asm lines 63054-63094)
+    // ROM: SpecialStage_Results (sonic3k.asm lines 63094-63134)
     public static final int ART_KOSM_SS_RESULTS_ADDR = 0x15BABE;          // SS results text art (149 tiles, 4768 bytes decompressed)
     public static final int ART_KOSM_SS_RESULTS_SUPER_ADDR = 0x15B374;    // Super form art (Sonic)
     public static final int ART_KOSM_SS_RESULTS_SUPER_K_ADDR = 0x15B4F6;  // Super form art (Knuckles)
     public static final int ART_KOSM_SS_RESULTS_HYPER_ADDR = 0x15B678;    // Hyper form art (Sonic)
     public static final int ART_KOSM_SS_RESULTS_HYPER_K_ADDR = 0x15B7EA;  // Hyper form art (Knuckles)
-    /** Pal_SonicTails (sonic3k.asm:200557), one line; Obj_HPZSSEntryControl's Knuckles target line 2. */
+    /** Pal_SonicTails (sonic3k.asm:200671), one line; Obj_HPZSSEntryControl's Knuckles target line 2. */
     public static final int PAL_SONIC_TAILS_ADDR = 0x0A8A3C;
 
     // ===== Special Stage Results VRAM Layout =====
@@ -1585,28 +1585,28 @@ public class Sonic3kConstants {
     // Verified by ROM binary pattern search for offset table fingerprints, 2026-02-17
 
     // Map_AIZRock - AIZ Act 1 rock mappings (7 frames: 3 intact + 4 debris)
-    // Referenced at s3.asm:36232: move.l #Map_AIZRock,mappings(a0)
+    // Referenced at s3.asm:36287: move.l #Map_AIZRock,mappings(a0)
     public static final int MAP_AIZ_ROCK_ADDR = 0x21DCDC;
 
     // Map_AIZRock2 - AIZ Act 2 rock mappings (7 frames: 3 intact + 4 debris)
-    // Referenced at s3.asm:36240: move.l #Map_AIZRock2,mappings(a0)
+    // Referenced at s3.asm:36295: move.l #Map_AIZRock2,mappings(a0)
     public static final int MAP_AIZ_ROCK2_ADDR = 0x21DD64;
 
     // Map_AIZMHZRideVine - AIZ/MHZ ride-vine mappings (36 frames).
-    // Referenced at sonic3k.asm:46152 and 46802.
+    // Referenced at sonic3k.asm:46192 and 46802.
     // Base address derived from map include: first frame at 0x22BE6 with 0x48-byte offset table.
     public static final int MAP_AIZ_MHZ_RIDE_VINE_ADDR = 0x022B9E;
 
     // Map_LRZBreakableRock - LRZ Act 1 breakable rock mappings (11 frames)
-    // Referenced at sonic3k.asm:43871: move.l #Map_LRZBreakableRock,mappings(a0)
-    // Map_LRZCollapsingBridge (9 frames, sonic3k.asm:77581); the label sits
+    // Referenced at sonic3k.asm:43911: move.l #Map_LRZBreakableRock,mappings(a0)
+    // Map_LRZCollapsingBridge (9 frames, sonic3k.asm:77622); the label sits
     // immediately after word_39E20 ($39E20 + 2 + 22*4 = $39E7A), confirmed by the
     // frame pointer table read from the ROM at that address (0012 001A 0022 ...).
     public static final int MAP_LRZ_COLLAPSING_BRIDGE_ADDR = 0x039E7A;
     public static final int MAP_LRZ_BREAKABLE_ROCK_ADDR = 0x0203D8;
 
     // Map_LRZBreakableRock2 - LRZ Act 2 breakable rock mappings (12 frames)
-    // Referenced at sonic3k.asm:43876: move.l #Map_LRZBreakableRock2,mappings(a0)
+    // Referenced at sonic3k.asm:43916: move.l #Map_LRZBreakableRock2,mappings(a0)
     public static final int MAP_LRZ_BREAKABLE_ROCK2_ADDR = 0x02047A;
 
     // ===== AIZ Badnik mappings (SK side, verified from LockOn Pointers) =====
@@ -1784,7 +1784,7 @@ public class Sonic3kConstants {
     public static final int MAP_LRZ_BUTTON_HORIZONTAL2_ADDR = 0x042D9E;
     /** {@code Map_LRZShootingTrigger} (sonic3k.lst: $42F06); the shot reuses it at frame 1. */
     public static final int MAP_LRZ_SHOOTING_TRIGGER_ADDR = 0x042F06;
-    /** {@code make_art_tile($090,2,0)}: the act 2 door's tile base (sonic3k.asm:88027). */
+    /** {@code make_art_tile($090,2,0)}: the act 2 door's tile base (sonic3k.asm:88073). */
     public static final int ARTTILE_LRZ2_DOOR = 0x0090;
     /** {@code Map_LRZSinkingRock} (sonic3k.lst: $42834); both acts share it. */
     public static final int MAP_LRZ_SINKING_ROCK_ADDR = 0x042834;
@@ -1810,7 +1810,7 @@ public class Sonic3kConstants {
     public static final int MAP_LRZ_MINIBOSS_ADDR = 0x186EC8;
     /** {@code ArtKosM_LRZMiniboss} (sonic3k.lst: $16FCDA); {@code loc_78592} queues it. */
     public static final int ART_KOSM_LRZ_MINIBOSS_ADDR = 0x16FCDA;
-    /** {@code ArtTile_LRZMiniboss} (sonic3k.constants.asm:1320). */
+    /** {@code ArtTile_LRZMiniboss} (sonic3k.constants.asm:1345). */
     public static final int ARTTILE_LRZ_MINIBOSS = 0x03FB;
     /** {@code Pal_LRZMiniboss1} (sonic3k.lst: $78E0A): {@code PalLoad_Line1} at object setup. */
     public static final int PAL_LRZ_MINIBOSS_1_ADDR = 0x078E0A;
@@ -1851,13 +1851,13 @@ public class Sonic3kConstants {
     /** {@code Map_LRZChainedPlatforms} (sonic3k.lst, ROM {@code $4A980}). */
     public static final int MAP_LRZ_CHAINED_PLATFORM_ADDR = 0x04A980;
     /**
-     * {@code make_art_tile($090,1,0)}: the flame thrower's tile base (sonic3k.asm:89228). It is
+     * {@code make_art_tile($090,1,0)}: the flame thrower's tile base (sonic3k.asm:89274). It is
      * act 2's secondary art, the same base the act 2 sinking rock and door use; named separately
      * so no owner reads as another's.
      */
     public static final int ARTTILE_LRZ2_FLAME_THROWER = 0x0090;
     /**
-     * {@code make_art_tile($090,2,0)}: the act 2 sinking rock's tile base (sonic3k.asm:87910).
+     * {@code make_art_tile($090,2,0)}: the act 2 sinking rock's tile base (sonic3k.asm:87956).
      * The same base the act 2 door uses; named separately so neither owner reads as the other's.
      */
     public static final int ARTTILE_LRZ2_SINKING_ROCK = 0x0090;
@@ -1925,13 +1925,13 @@ public class Sonic3kConstants {
     public static final int MAP_RIBOT_ADDR = 0x3604B8;
     public static final int ART_KOSM_CORKEY_ADDR = 0x377DFC;
     public static final int MAP_CORKEY_ADDR = 0x3605C2;
-    // PLCKosM_LBZ destination tiles (sonic3k.asm:64397-64402,
-    // sonic3k.constants.asm:1259-1262)
+    // PLCKosM_LBZ destination tiles (sonic3k.asm:64437-64442,
+    // sonic3k.constants.asm:1284-1287)
     public static final int ARTTILE_SNALE_BLASTER = 0x0524;
     public static final int ARTTILE_ORBINAUT = 0x056E;
     public static final int ARTTILE_RIBOT = 0x0547;
     public static final int ARTTILE_CORKEY = 0x0558;
-    // Obj_Flybot767 (sonic3k.asm:191981), LockOn data include.
+    // Obj_Flybot767 (sonic3k.asm:192074), LockOn data include.
     // Map, DPLC, and ArtUnc_Flybot767 verified by S&K-side ROM byte search.
     public static final int ART_UNC_FLYBOT_767_ADDR = 0x377EBE;
     public static final int ART_UNC_FLYBOT_767_SIZE = 4896;
@@ -1957,7 +1957,7 @@ public class Sonic3kConstants {
     public static final int DPLC_CLUCKOID_ADDR = 0x08E4B8;
 
     // LoadEnemyArt destinations for PLCKosM_MHZ1 / PLCKosM_MHZ2
-    // (sonic3k.constants.asm:1270,1276-1278; sonic3k.asm:64404-64415).
+    // (sonic3k.constants.asm:1295,1301-1303; sonic3k.asm:64444-64455).
     public static final int ARTTILE_CLUCKOID = 0x0500;
     public static final int ARTTILE_CLUCKOID_ARROW = ARTTILE_CLUCKOID + 0x22;
     public static final int ARTTILE_DRAGONFLY = 0x0538;
@@ -2187,14 +2187,14 @@ public class Sonic3kConstants {
     // 22 bytes earlier at 0x046B3C.
     public static final int MAP_SSZ_HPZ_TELEPORTER_ADDR = 0x046B3C;
 
-    /** {@code ArtTile_SSZMisc} (sonic3k.constants.asm:1341): PLC_32_33_34_35 loads ArtNem_SSZMisc here. */
+    /** {@code ArtTile_SSZMisc} (sonic3k.constants.asm:1366): PLC_32_33_34_35 loads ArtNem_SSZMisc here. */
     public static final int ARTTILE_SSZ_MISC = 0x02D4;
 
     /** {@code ArtKosM_SSZDeathEggSmall}, queued by CutsceneKnux_SSZ routine 2. */
     public static final int ART_KOSM_SSZ_DEATH_EGG_SMALL_ADDR = 0x17DBC2;
     /** {@code Map_SSZDeathEggSmall} (ObjDat3_664AA). */
     public static final int MAP_SSZ_DEATH_EGG_SMALL_ADDR = 0x066C12;
-    /** {@code ArtTile_SSZCutsceneButton} (sonic3k.constants.asm:1347): ArtNem_GrayButton. */
+    /** {@code ArtTile_SSZCutsceneButton} (sonic3k.constants.asm:1372): ArtNem_GrayButton. */
     public static final int ARTTILE_SSZ_CUTSCENE_BUTTON = 0x048E;
     /** {@code Map_SSZCollapsingBridge}, shared by Obj_SSZCutsceneBridge and the collapsing families. */
     public static final int MAP_SSZ_COLLAPSING_BRIDGE_ADDR = 0x046958;
@@ -2310,7 +2310,7 @@ public class Sonic3kConstants {
     /**
      * CNZ Act 1 miniboss PLC id.
      *
-     * <p>ROM: {@code sonic3k.asm:144844} — {@code moveq #$5D,d0} then
+     * <p>ROM: {@code sonic3k.asm:144909} — {@code moveq #$5D,d0} then
      * {@code jsr (Load_PLC).l}. The engine previously held {@code 0x5C}
      * (off-by-one); corrected in workstream D.
      */
@@ -2319,7 +2319,7 @@ public class Sonic3kConstants {
     /**
      * CNZ Act 1 miniboss palette ROM offset (S&K-side).
      *
-     * <p>ROM: {@code sonic3k.asm:144846} — {@code lea Pal_CNZMiniboss(pc),a1}
+     * <p>ROM: {@code sonic3k.asm:144911} — {@code lea Pal_CNZMiniboss(pc),a1}
      * then {@code jmp (PalLoad_Line1).l}, loading 32 bytes (one VDP palette
      * line) into palette line 1. Verified via {@code RomOffsetFinder
      * search-rom} on the binary signature
@@ -2354,7 +2354,7 @@ public class Sonic3kConstants {
     public static final int PAL_CNZ_ADDR = 0xA8FBC;
 
     // ===== ICZ Miniboss (Object 0xBC) =====
-    // ROM: Obj_ICZMiniboss loads PLC $5F (sonic3k.asm:149653).
+    // ROM: Obj_ICZMiniboss loads PLC $5F (sonic3k.asm:149721).
     // PLC_5F loads ArtNem_ICZMiniboss to ArtTile_ICZMiniboss.
     public static final int PLC_ICZ_MINIBOSS = 0x5F;
     // Pal_ICZMiniboss - loaded by Obj_ICZMiniboss through PalLoad_Line1.
@@ -2366,7 +2366,7 @@ public class Sonic3kConstants {
     public static final int MAP_ICZ_MINIBOSS_ADDR = 0x363344;
 
     // ===== ICZ End Boss (Object 0xBD) =====
-    // ROM: Obj_ICZEndBoss loads PLC $70 (sonic3k.asm:150580).
+    // ROM: Obj_ICZEndBoss loads PLC $70 (sonic3k.asm:150648).
     // PLC_70 loads ArtNem_ICZEndBoss to ArtTile_ICZEndBoss plus shared assets.
     public static final int PLC_ICZ_END_BOSS = 0x70;
     // Pal_ICZEndBoss - loaded through PalLoad_Line1 after the PLC request.
@@ -2452,36 +2452,36 @@ public class Sonic3kConstants {
     //                                            the 0x20 block grid)
     // =====================================================================
 
-    /** ROM: Obj_CNZMinibossTopGo `move.w #$200,x_vel(a0)` (sonic3k.asm:145048). */
+    /** ROM: Obj_CNZMinibossTopGo `move.w #$200,x_vel(a0)` (sonic3k.asm:145113). */
     public static final short CNZ_MINIBOSS_TOP_INIT_X_VEL = (short) 0x0200;
 
-    /** ROM: Obj_CNZMinibossTopGo `move.w #$200,y_vel(a0)` (sonic3k.asm:145049). */
+    /** ROM: Obj_CNZMinibossTopGo `move.w #$200,y_vel(a0)` (sonic3k.asm:145114). */
     public static final short CNZ_MINIBOSS_TOP_INIT_Y_VEL = (short) 0x0200;
 
     /** Arena right-wall screen-edge limit.
-     *  ROM: Obj_CNZMinibossTopMain `cmpi.w #$3380,d0` (sonic3k.asm:145073). */
+     *  ROM: Obj_CNZMinibossTopMain `cmpi.w #$3380,d0` (sonic3k.asm:145138). */
     public static final int CNZ_MINIBOSS_TOP_ARENA_RIGHT = 0x3380;
 
     /** Arena left-wall screen-edge limit.
-     *  ROM: Obj_CNZMinibossTopMain `cmpi.w #$3200,d0` (sonic3k.asm:145088). */
+     *  ROM: Obj_CNZMinibossTopMain `cmpi.w #$3200,d0` (sonic3k.asm:145153). */
     public static final int CNZ_MINIBOSS_TOP_ARENA_LEFT = 0x3200;
 
     /** Arena floor lower bound.
-     *  ROM: Obj_CNZMinibossTopMain `cmpi.w #$380,d1` (sonic3k.asm:145109). */
+     *  ROM: Obj_CNZMinibossTopMain `cmpi.w #$380,d1` (sonic3k.asm:145174). */
     public static final int CNZ_MINIBOSS_TOP_ARENA_BOTTOM = 0x0380;
 
     /** Arena ceiling upper bound.
-     *  ROM: Obj_CNZMinibossTopMain `cmpi.w #$240,d1` (sonic3k.asm:145125). */
+     *  ROM: Obj_CNZMinibossTopMain `cmpi.w #$240,d1` (sonic3k.asm:145190). */
     public static final int CNZ_MINIBOSS_TOP_ARENA_TOP = 0x0240;
 
     /** Half-width used when probing the next-frame X edge vs the arena wall.
      *  ROM: Obj_CNZMinibossTopMain `addi.w #$10,d0` / `subi.w #$10,d0`
-     *  (sonic3k.asm:145072, 145087). */
+     *  (sonic3k.asm:145137, 145152). */
     public static final int CNZ_MINIBOSS_TOP_WALL_PROBE_DX = 0x10;
 
     /** Half-height used when probing the next-frame Y edge vs the arena floor/ceiling.
      *  ROM: Obj_CNZMinibossTopMain `addq.w #8,d1` / `subq.w #8,d1`
-     *  (sonic3k.asm:145104, 145122). */
+     *  (sonic3k.asm:145169, 145187). */
     public static final int CNZ_MINIBOSS_TOP_FLOOR_PROBE_DY = 0x08;
 
     // PLC 0x6E loads ArtNem_CNZEndBoss, ArtNem_RobotnikShip, ArtNem_BossExplosion,
@@ -2881,7 +2881,7 @@ public class Sonic3kConstants {
     public static final int MAP_SPRING2_ADDR = 0x023772;            // Map_Spring2 (yellow spring frames)
 
     // ArtNem_VerticalSpring — standalone red vertical spring art used by gumball bonus springs.
-    // ROM: s3.asm:118453, 325 compressed bytes -> 512 bytes (8 tiles).
+    // ROM: s3.asm:118555, 325 compressed bytes -> 512 bytes (8 tiles).
     public static final int ART_NEM_VERTICAL_SPRING_ADDR = 0x35C988;
 
     // =====================================================================
@@ -2939,37 +2939,37 @@ public class Sonic3kConstants {
 
     // =====================================================================
     // S3K Tails CPU flight/catch-up constants
-    // sonic3k.asm:26474+ (Tails_Catch_Up_Flying) and 26534+ (Tails_FlySwim_Unknown)
+    // sonic3k.asm:26514+ (Tails_Catch_Up_Flying) and 26534+ (Tails_FlySwim_Unknown)
     // =====================================================================
 
     /** Y offset applied when Tails teleports above Sonic on catch-up entry.
-     *  ROM sonic3k.asm:26494 (`subi.w #$C0, d0`). */
+     *  ROM sonic3k.asm:26534 (`subi.w #$C0, d0`). */
     public static final int TAILS_CATCH_UP_Y_OFFSET = 0xC0;
 
     /** Auto-land timeout for Tails_FlySwim_Unknown; after 5 seconds off-screen
      *  Tails falls back to CATCH_UP_FLIGHT so the teleport re-runs.
-     *  ROM sonic3k.asm:26538 (`cmpi.w #5*60, (Tails_CPU_flight_timer).w`). */
+     *  ROM sonic3k.asm:26578 (`cmpi.w #5*60, (Tails_CPU_flight_timer).w`). */
     public static final int TAILS_FLIGHT_AUTO_LAND_FRAMES = 5 * 60;
 
     /** Horizontal steer step clamp for Tails_FlySwim_Unknown: the normalized
      *  |dx| >> 4 is capped at 0xC, producing a max of 12 px/frame X movement.
-     *  ROM sonic3k.asm:26576 (`cmpi.w #$C, d2`). */
+     *  ROM sonic3k.asm:26616 (`cmpi.w #$C, d2`). */
     public static final int TAILS_FLIGHT_MAX_X_STEP = 0xC;
 
     /** Vertical steer step for Tails_FlySwim_Unknown: always +/-1 px per frame
-     *  toward the target Y.  ROM sonic3k.asm:26612 (`moveq #1, d2`). */
+     *  toward the target Y.  ROM sonic3k.asm:26652 (`moveq #1, d2`). */
     public static final int TAILS_FLIGHT_Y_STEP = 1;
 
     /** The "ahead of Sonic" leading offset applied to Sonic's delayed X when
      *  he is not on an object and his ground speed is < 0x400.
-     *  ROM sonic3k.asm:26694 (`subi.w #$20, d2`). */
+     *  ROM sonic3k.asm:26734 (`subi.w #$20, d2`). */
     public static final int TAILS_FLIGHT_LEAD_X_OFFSET = 0x20;
 
     /** The ground-speed threshold Sonic must exceed for the lead offset to be
-     *  suppressed.  ROM sonic3k.asm:26692 (`cmpi.w #$400, ground_vel(a1)`). */
+     *  suppressed.  ROM sonic3k.asm:26732 (`cmpi.w #$400, ground_vel(a1)`). */
     public static final int TAILS_FLIGHT_LEAD_SUPPRESS_GSPEED = 0x400;
 
-    /** ROM sub_13ECA off-screen marker X for despawned Tails. sonic3k.asm:26806. */
+    /** ROM sub_13ECA off-screen marker X for despawned Tails. sonic3k.asm:26846. */
     public static final int TAILS_CPU_DESPAWN_X = 0x7F00;
 
     private static boolean scanned = false;

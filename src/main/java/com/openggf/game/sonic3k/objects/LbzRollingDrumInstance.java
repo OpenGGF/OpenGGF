@@ -24,7 +24,7 @@ import java.util.Map;
  * Invisible Launch Base rolling cylinder controller.
  *
  * <p>ROM reference: {@code Obj_LBZRollingDrum}, {@code sub_2C3E8}
- * (sonic3k.asm:60585-60726). The subtype byte is the cylinder half-width;
+ * (sonic3k.asm:60625-60766). The subtype byte is the cylinder half-width;
  * {@code _unkF7B0+0/+1} store native P1/P2 angle bytes while riding.
  */
 public final class LbzRollingDrumInstance extends AbstractObjectInstance
@@ -43,7 +43,7 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
     private static final int FLIP_SPEED_RELEASE = 4;
     private static final int RIDE_ANGLE_STEP = 2;
     private static final int ANIMATION_ROLLING_DRUM = Sonic3kAnimationIds.WALK.id();
-    // Obj_LBZRollingDrum installs loc_2C3CA in word 0 (sonic3k.asm:60585-60594).
+    // Obj_LBZRollingDrum installs loc_2C3CA in word 0 (sonic3k.asm:60625-60634).
     private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0002;
 
     private int leftBound;
@@ -242,7 +242,7 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
         // and flip_type, but Animate_Sonic/Tails has already run, so the prior
         // rolling mapping remains visible on the capture row. The following
         // player dispatch enters Anim_Tumble; active ride updates may then
-        // republish the object-phase pose. sonic3k.asm:60657-60670.
+        // republish the object-phase pose. sonic3k.asm:60697-60710.
         player.setObjectMappingFrameControl(false);
     }
 
@@ -331,11 +331,11 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
         int savedDoubleJumpFlag = player.getDoubleJumpFlag();
         // RideObject_SetRide tests and clears the live Status_InAir bit after
         // installing the new ride, then calls Player_TouchFloor only when that
-        // bit was set (sonic3k.asm:42052-42070). An earlier drum can release the
+        // bit was set (sonic3k.asm:42092-42110). An earlier drum can release the
         // player in this same object pass, so the frame-start ride latch is not
         // authoritative here.
         boolean shouldTouchFloor = player.getAir();
-        // ROM RideObject_SetRide (sonic3k.asm:42027): if the player is already
+        // ROM RideObject_SetRide (sonic3k.asm:42067): if the player is already
         // Status_OnObj, clear the PREVIOUS interact object's standing bit
         // (bclr d6,status(a3)) before re-latching. For a drum-to-drum handoff
         // this prevents the previous drum's release path from firing this frame

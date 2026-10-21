@@ -35,9 +35,9 @@ Key disassembly anchors:
 - S2: `SolidObject:` at `docs/s2disasm/s2.asm:34813`
 - S2: `SlopedSolid_SingleCharacter:` at `docs/s2disasm/s2.asm:34923`
 - S2: `PlatformObject:` at `docs/s2disasm/s2.asm:35485`
-- S3K: `SolidObjectFull:` at `docs/skdisasm/sonic3k.asm:41000`
-- S3K: `SolidObjectTop:` at `docs/skdisasm/sonic3k.asm:41779`
-- S3K: `SolidObjectTopSloped2:` at `docs/skdisasm/sonic3k.asm:41826`
+- S3K: `SolidObjectFull:` at `docs/skdisasm/sonic3k.asm:41040`
+- S3K: `SolidObjectTop:` at `docs/skdisasm/sonic3k.asm:41819`
+- S3K: `SolidObjectTopSloped2:` at `docs/skdisasm/sonic3k.asm:41866`
 
 What is proven from those references:
 

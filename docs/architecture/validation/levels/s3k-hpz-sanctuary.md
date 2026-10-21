@@ -2,7 +2,7 @@
 
 Game / slot: S3K `S3K_SPECIAL_STAGE_ARENA`, engine zone `$17` act index 1, ROM `$1701`
 (`HPZS_*` screen events, `HPZMini_Sprites`). Entry: `SSEntryFlash_GoSS` giant ring with seven
-Chaos Emeralds in an S&K level (`sonic3k.asm:128417`); exit back to the origin level.
+Chaos Emeralds in an S&K level (`sonic3k.asm:128471`); exit back to the origin level.
 Implementation predates this matrix (`feature/ai-s3k-super-emeralds`, routing recovery
 `56583f2dba`); this file records current bindings and gaps found during the HPZ bring-up.
 Status: partial. Nothing below certifies the sanctuary.

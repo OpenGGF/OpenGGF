@@ -12,7 +12,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.List;
 
 /**
- * ROM {@code loc_81F94} (sonic3k.asm:174094-174129): the phase-1 missile launcher at boss
+ * ROM {@code loc_81F94} (sonic3k.asm:174185-174220): the phase-1 missile launcher at boss
  * {@code + ($D8, $80)}. Its count {@code $39} starts negative; while negative and Player 1 is at or
  * right of it, it sets the count to 2 and allocates three subtype-1 {@code Obj_DDZMissile}s with
  * indices 0-2 ({@code sfx_TubeLauncher}). Each spent missile decrements the count, so the next volley

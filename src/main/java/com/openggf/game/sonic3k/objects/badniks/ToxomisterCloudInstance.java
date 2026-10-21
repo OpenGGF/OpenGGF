@@ -54,7 +54,7 @@ import java.util.List;
  *   <li>{@code cmpi.b #9,anim(a1)}: a spindash frees the player immediately and raises
  *       {@code $38} bit 2, which is what makes the puffs scatter outward instead of just
  *       rising.</li>
- *   <li>{@code Check_LRControllerShake} (sonic3k.asm:179881-179900): {@code $3C(a0)} is reloaded
+ *   <li>{@code Check_LRControllerShake} (sonic3k.asm:179972-179991): {@code $3C(a0)} is reloaded
  *       to 5 and {@code $3D(a0)} to 60 whenever the 60-frame window lapses, and each frame the
  *       held left/right bits ({@code andi.w #$C}) differ from the stored ones costs one of the
  *       five. Spending all five frees the player.</li>
@@ -164,7 +164,7 @@ public final class ToxomisterCloudInstance extends AbstractObjectInstance
             }
             default -> stayAttached(playerEntity);
         }
-        // Child_AddToTouchList (sonic3k.asm:84962-84966) runs after loc_8FDBA's own dispatch:
+        // Child_AddToTouchList (sonic3k.asm:85003-85007) runs after loc_8FDBA's own dispatch:
         // when the body raised status bit 7 the cloud takes Go_Delete_Sprite instead of joining
         // the collision response list. Go_Delete_Sprite (sonic3k.asm) itself does
         // bset #7,status(a0), which is the bit the puffs read in loc_8FEDC -- so the cloud's
@@ -187,7 +187,7 @@ public final class ToxomisterCloudInstance extends AbstractObjectInstance
     /** Routine 4, {@code loc_8FE26} and {@code loc_8FE36}. */
     private void fall() {
         SubpixelMotion.moveSprite2(motion);
-        // ObjHitFloor_DoRoutine (sonic3k.asm:177964-177979): only while y_vel is not negative,
+        // ObjHitFloor_DoRoutine (sonic3k.asm:178055-178070): only while y_vel is not negative,
         // and only a strictly negative or zero distance lands it.
         if (motion.yVel < 0) {
             return;
@@ -234,7 +234,7 @@ public final class ToxomisterCloudInstance extends AbstractObjectInstance
         drainRing(player);
     }
 
-    /** {@code Check_LRControllerShake} (sonic3k.asm:179881-179900). */
+    /** {@code Check_LRControllerShake} (sonic3k.asm:179972-179991). */
     private boolean shakenOff(PlayableEntity player) {
         shakeWindow--;
         if (shakeWindow < 0) {

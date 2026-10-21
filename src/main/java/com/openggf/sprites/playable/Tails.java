@@ -64,7 +64,7 @@ public class Tails extends AbstractPlayableSprite {
 		return SecondaryAbility.FLY;
 	}
 
-	/** ROM: Obj02's roll handler is Tails_RollSpeed (s2.asm:40031, sonic3k.asm:28169). */
+	/** ROM: Obj02's roll handler is Tails_RollSpeed (s2.asm:40031, sonic3k.asm:28209). */
 	@Override
 	public boolean usesTailsRollSpeedRoutine() {
 		return true;

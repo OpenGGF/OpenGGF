@@ -10,7 +10,7 @@ package com.openggf.timer;
  * ({@code docs/s1disasm/_incObj/01 Sonic.asm:76,80}), {@code jsr Obj01_Modes}
  * then {@code bsr.s Sonic_Display} ({@code docs/s2disasm/s2.asm:36242,36248}),
  * and {@code jsr Sonic_Modes} then {@code bsr.s Sonic_Display}
- * ({@code docs/skdisasm/sonic3k.asm:22021,22031}). Every consequence of the
+ * ({@code docs/skdisasm/sonic3k.asm:22057,22067}). Every consequence of the
  * countdown reaching zero — the physics restore and the sound-queue write
  * alike — happens there, in that one frame.
  *

@@ -133,7 +133,7 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider, Specia
 
     /**
      * The ROM opens {@code SpecialStage} with a blocking 22-frame
-     * {@code Pal_FadeToWhite} (sonic3k.asm:10591, routine at 5232-5242) before
+     * {@code Pal_FadeToWhite} (sonic3k.asm:10627, routine at 5232-5242) before
      * any special-stage state exists. That fade is visible (it runs over the
      * level's last frame), so both policies leave the hold armed and step it
      * frame by frame; the presentation controller reveals the stage once

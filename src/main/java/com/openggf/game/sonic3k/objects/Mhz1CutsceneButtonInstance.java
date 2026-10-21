@@ -40,9 +40,9 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
         RomObjectCodePointerProvider {
     // Obj_MHZ1CutsceneButton installs its main code pointer
     // MHZ1CutsceneButton_Main at 0x00062xxx, so word 0 of the stood-on object
-    // SST is high word 0x0006 (docs/skdisasm/sonic3k.asm:130055-130125). S3K
+    // SST is high word 0x0006 (docs/skdisasm/sonic3k.asm:130112-130182). S3K
     // sub_13EFC latches this as Tails_CPU_interact while a sidekick stands on
-    // the button (sonic3k.asm:26816-26843); a later off-screen landing on a
+    // the button (sonic3k.asm:26856-26883); a later off-screen landing on a
     // different-word object (e.g. the 0x0003 MHZ curled vine) then despawns.
     private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0006;
     private static final int INIT_Y_OFFSET = 4;
@@ -224,7 +224,7 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
      * ROM {@code MHZ1CutsceneButton_LoadKnucklesPeer} submits
      * {@code ArtKosM_MHZKnuxPeer} through {@code Queue_Kos_Module} immediately
      * before {@code CreateChild6_Simple}, and does not wait for the module to
-     * finish (sonic3k.asm:130077-130085). The decompressed payload is unused
+     * finish (sonic3k.asm:130134-130142). The decompressed payload is unused
      * here -- the peer sprite sheet is already registered as standalone art --
      * but the submission itself is ROM-visible hardware work, so it must exist
      * for the module and its direct child to complete on the ROM frames.
@@ -279,7 +279,7 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
         cutsceneDoorLatched = true;
         // ROM loc_62ED0 installs Wait_Draw with $2E=$5F, and Obj_Wait
         // branches to loc_62EFC on the same tick that the counter underflows
-        // (docs/skdisasm/sonic3k.asm:130101-130117,177944-177952).
+        // (docs/skdisasm/sonic3k.asm:130158-130174,178035-178043).
         timer = CALLBACK_WAIT - 1;
         services().playSfx(Sonic3kSfx.SWITCH.id);
     }
@@ -357,8 +357,8 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
     public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
         // ROM: SolidObjectFull's top-slice clamp (sonic3k.asm loc_1E154:41611)
         // re-reads width_pixels(a0) for the landing X gate. sub_65DEC
-        // (sonic3k.asm:134105) passes a hardcoded collision d1 = $1B into
-        // SolidObjectFull, but ObjDat_MHZ1CutsceneButton (sonic3k.asm:134853)
+        // (sonic3k.asm:134162) passes a hardcoded collision d1 = $1B into
+        // SolidObjectFull, but ObjDat_MHZ1CutsceneButton (sonic3k.asm:134910)
         // sets width_pixels = $80. So the landing gate is far WIDER than the
         // $1B side-collision box: any player already inside the side box passes
         // the loc_1E154 X check. Without this the engine's default heuristic

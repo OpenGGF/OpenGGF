@@ -113,7 +113,7 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
         // MarkObjGone, so the puff's lifetime is owned entirely by its
         // animation counter ($FC -> routine 4 -> DeleteObject); it must survive
         // the camera scrolling away from where it was dropped. The S3K dash
-        // dust draws the same way (docs/skdisasm/sonic3k.asm:34023, 34068).
+        // dust draws the same way (docs/skdisasm/sonic3k.asm:34063, 34108).
         return true;
     }
 
@@ -241,7 +241,7 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
 
     /**
      * Skid dust bucket: S2 Obj08 {@code move.b #1,priority(a0)} (s2.asm:42725),
-     * S3K Obj_DashDust {@code move.w #$80,priority(a0)} (sonic3k.asm:33971).
+     * S3K Obj_DashDust {@code move.w #$80,priority(a0)} (sonic3k.asm:34011).
      */
     private static final int DUST_PRIORITY_BUCKET = RenderPriority.bucket(1);
 

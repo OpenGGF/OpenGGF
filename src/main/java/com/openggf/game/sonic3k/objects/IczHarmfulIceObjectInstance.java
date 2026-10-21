@@ -33,7 +33,7 @@ import java.util.List;
 /**
  * Object 0xB8 - ICZ harmful ice.
  * <p>
- * ROM reference: {@code Obj_ICZHarmfulIce} at sonic3k.asm:189738.
+ * ROM reference: {@code Obj_ICZHarmfulIce} at sonic3k.asm:189831.
  * Subtype 0 is a static harmful shard. Nonzero subtypes use S3K
  * {@code Touch_Special} collision {@code $D7}, then shatter into 12
  * {@code loc_8B230} ice debris children and delete.
@@ -132,10 +132,10 @@ public class IczHarmfulIceObjectInstance extends AbstractObjectInstance
         }
 
         // FixBugs (docs/skdisasm/sonic3k.asm:38) is assembled as 0 in the shipped
-        // ROM. loc_8B4F8 (sonic3k.asm:189765-189775) gates the hit on
+        // ROM. loc_8B4F8 (sonic3k.asm:189858-189868) gates the hit on
         // `btst #Status_Invincible,status_secondary(a1)` ALONE and then calls
         // HurtCharacter, which performs no invulnerability_timer test of its own
-        // (sonic3k.asm:21065-21095). The engine implements that shipped branch: a
+        // (sonic3k.asm:21101-21131). The engine implements that shipped branch: a
         // flashing (post-hit invulnerable) character IS hurt again by the ice. The
         // FixBugs=1 branch inserts `tst.b invulnerability_timer(a1); bne` and would
         // skip the hurt while flashing. Either branch still breaks the ice, so only

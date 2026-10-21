@@ -5,7 +5,7 @@ import com.openggf.game.PlayableEntity;
 /**
  * The badnik-kill player rebound shared by all three ROMs.
  *
- * <p>S3K {@code EnemyDefeated} ({@code docs/skdisasm/sonic3k.asm:179752-179771}):
+ * <p>S3K {@code EnemyDefeated} ({@code docs/skdisasm/sonic3k.asm:179843-179862}):
  * <pre>
  *   movea.w $44(a0),a1        ; the player recorded by the badnik's own touch check
  *   tst.w   y_vel(a1)
@@ -21,7 +21,7 @@ import com.openggf.game.PlayableEntity;
  * category, which performs the ROM's {@code Touch_KillEnemy} tail itself, and objects
  * whose ObjDat flags select the ROM's {@code Touch_Special} route and therefore call
  * {@code EnemyDefeated} from their own code (for example {@code Obj_MegaChopper} at
- * {@code sonic3k.asm:184243}). Neither path may apply the bounce twice.
+ * {@code sonic3k.asm:184336}). Neither path may apply the bounce twice.
  */
 public final class EnemyDefeatBounce {
 
@@ -49,7 +49,7 @@ public final class EnemyDefeatBounce {
         // The overlap and bounce both dereference the same object slot in all three
         // ROMs; keep the already-resolved touch Y instead of re-reading a later
         // engine projection (S1 ReactToItem.asm:163,301-304; S2 s2.asm:
-        // 85127,85414-85420; S3K sonic3k.asm:20697,20974-20989).
+        // 85127,85414-85420; S3K sonic3k.asm:20733,21010-21025).
         if (player.getCentreY() < enemyY) {
             player.setYSpeed((short) -ySpeed);
         } else {

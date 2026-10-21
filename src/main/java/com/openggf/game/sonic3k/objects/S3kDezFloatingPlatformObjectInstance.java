@@ -13,7 +13,7 @@ import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import java.util.List;
 
-/** SKL $4A, Obj_DEZFloatingPlatform / loc_25A7E (sonic3k.asm:51194-51238). */
+/** SKL $4A, Obj_DEZFloatingPlatform / loc_25A7E (sonic3k.asm:51234-51278). */
 public final class S3kDezFloatingPlatformObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
     private int anchorX;

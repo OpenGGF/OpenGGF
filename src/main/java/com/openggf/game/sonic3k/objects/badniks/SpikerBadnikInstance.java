@@ -35,7 +35,7 @@ import java.util.List;
 /**
  * S3K Obj $9C - Spiker (MGZ).
  *
- * <p>ROM reference: {@code Obj_Spiker} (sonic3k.asm:185372-185672). The main
+ * <p>ROM reference: {@code Obj_Spiker} (sonic3k.asm:185465-185765). The main
  * body rises when Sonic/Tails are within $40 pixels, exposing two side launchers
  * and a spring-loaded top spike. Touching the top spike compresses the shell,
  * then launches the player upward at {@code -$600}. The side launchers animate
@@ -60,8 +60,8 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
     private static final int TOP_SPIKE_COOLDOWN = 0x10;
 
     // Obj_Spiker begins with Obj_WaitOffscreen before sub_88DCE/routine
-    // dispatch (sonic3k.asm:185372-185381). The wrapper uses Map_Offscreen
-    // width/height $20 until render_flags bit 7 is set (sonic3k.asm:180266-180298).
+    // dispatch (sonic3k.asm:185465-185474). The wrapper uses Map_Offscreen
+    // width/height $20 until render_flags bit 7 is set (sonic3k.asm:180357-180389).
     private static final int WAIT_OFFSCREEN_MARGIN = 0x20;
 
     private static final int[] LAUNCH_ANIM_FRAMES = {1, 2, 1, 0};
@@ -718,7 +718,7 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
             if (!spriteCheckDeleteTouchXYKeepsAlive()) {
                 // Go_Delete_Sprite installs Delete_Current_Sprite and removes
                 // collision immediately, but the SST slot is freed only on its
-                // next execution (sonic3k.asm:179032-179047,179131-179134).
+                // next execution (sonic3k.asm:179123-179138,179222-179225).
                 deleteNextFrame = true;
             }
         }

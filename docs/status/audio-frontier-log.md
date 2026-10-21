@@ -1131,7 +1131,7 @@ defined by `com.openggf.tools.audio.parity`.
   `28h/3`. Pinned by `TestAizMinibossCutsceneInstance`, which fails on the
   parameters if the profile supplies another game's.
 - **The drowning restore ignored all three ROM overrides, confirmed by
-  running it.** `Player_ResetAirTimer` (sonic3k.asm:33663-33686) loads
+  running it.** `Player_ResetAirTimer` (sonic3k.asm:33703-33726) loads
   `Current_music` and substitutes `mus_Invincibility` for an invincible player,
   the same track again for Super or Hyper, and `mus_MinibossK` during a boss.
   On a real AIZ1 fixture the engine requested the zone track in every case, so
@@ -1866,9 +1866,9 @@ identity with the committed gameplay fixture. Three captures now agree.
   `FixBugs` rule is what settles it.** `fix_sndbugs = 0` is the shipped branch
   (skdisasm/sonic3k.asm:38) and it does call `zFMClearSSGEGOps` for PSG tracks,
   which the listing flags with its own "(even on PSG tracks!!!)" note
-  (:2099). But every one of that loop's writes goes through
+  (:2121). But every one of that loop's writes goes through
   `zWriteFMIorII`, which opens with `bit 7,(ix+zTrack.VoiceControl) / ret nz`
-  and returns before touching the chip for any PSG track (:2549-2551). So the
+  and returns before touching the chip for any PSG track (:2571-2573). So the
   PSG call is a wasted call, not a write, and the fixed branch merely tests
   that bit at the call site to skip it. The observable stream is identical on
   both branches. The FM-only implementation is therefore complete rather than
@@ -1876,19 +1876,19 @@ identity with the committed gameplay fixture. Three captures now agree.
   and what the fixed branch would do.
 - **Two further guards from the same routines are now modelled.**
   `zWriteFMIorII` also returns on `PlaybackControl` bit 2, the SFX-overriding
-  bit (:2552-2553), and `zKeyOffIfActive` returns on that bit or the
-  do-not-attack bit (:3338-3341). Both are inert for a freshly loaded SFX
+  bit (:2574-2575), and `zKeyOffIfActive` returns on that bit or the
+  do-not-attack bit (:3370-3373). Both are inert for a freshly loaded SFX
   track, which is why the frontier is unchanged, and both are cited.
 - **Two config corrections, cited and inert here.** S3K now uses
   `FmSfxTakeoverMode.REGISTER_SEQUENCE`, because `zSFXTrackInitLoop`'s only
-  chip writes are the key-off and the SSG-EG clear (:2092-2103) and the
+  chip writes are the key-off and the SSG-EG clear (:2114-2125) and the
   engine's legacy takeover additionally forced RR and TL on the channel. And
   `FmSfxReleaseMode.ROM_VOICE_RESTORE`, because `cfStopTrack` releases a
   channel by keying it off, clearing the music track's override bit and
-  restoring its voice (:3040-3070), never force-silencing;
+  restoring its voice (:3072-3102), never force-silencing;
   `zFMSilenceChannel` is reached only from `zInitAudioDriver`'s boot loop
   (:2475-2495) and from the track's own `0F2h` flag, `cfSilenceStopTrack`
-  (:3082-3096). **Correction, made the next cycle:** the "neither changed a
+  (:3114-3128). **Correction, made the next cycle:** the "neither changed a
   byte" claim in this entry was wrong. It came from a `WriteDump` run against
   a stale build. Both modes together removed the whole
   `ym1[81h] [89h] [85h] [8Dh] = 0FFh` and `ym1[41h] [49h] [45h] [4Dh] = 07Fh`
@@ -3539,7 +3539,7 @@ stream.
   of `Sonic_Display` -- restore top speed, acceleration and deceleration, then
   jump to `PlayMusic` with `MusID_SlowDown` (`docs/s2disasm/s2.asm:36307-36326`,
   and the same shape at `docs/s1disasm/_incObj/01 Sonic.asm:182-204` and
-  `docs/skdisasm/sonic3k.asm:22103-22127`). Hanging both on one compensated
+  `docs/skdisasm/sonic3k.asm:22139-22163`). Hanging both on one compensated
   countdown pushed the music command a frame past the ROM's, which is one
   driver service. The countdown is now a `DisplayPhaseTimer` driven by
   `SpriteManager` where the ROM calls `Sonic_Display`, after the movement modes

@@ -17,7 +17,7 @@ import java.util.Map;
 /**
  * Temporary AIZ1-to-AIZ2 fire transition floor.
  *
- * <p>ROM: {@code Obj_AIZTransitionFloor} at sonic3k.asm:104777. Spawned by
+ * <p>ROM: {@code Obj_AIZTransitionFloor} at sonic3k.asm:104823. Spawned by
  * {@code AIZ1BGE_FireTransition} at x=$2FB0/y=$3A0 after the AIZ2 art queues,
  * then calls {@code SolidObjectTop} with d1=$A0, d2=$10, d3=$10.
  */
@@ -62,7 +62,7 @@ public final class AizTransitionFloorObjectInstance extends AbstractObjectInstan
     @Override
     public boolean rejectsZeroDistanceTopSolidLanding(PlayableEntity player) {
         // ROM keeps this helper active through AIZ1BGE_FireRefresh
-        // (sonic3k.asm:104690-104714). During that handoff it repeatedly runs
+        // (sonic3k.asm:104736-104760). During that handoff it repeatedly runs
         // SolidObjectTop (104777-104790), rejecting the exact-surface boundary
         // until the fire-refresh window reaches the landing frame. The accepted
         // first landing then uses the standard SolidObjectTop placement
@@ -104,7 +104,7 @@ public final class AizTransitionFloorObjectInstance extends AbstractObjectInstan
 
     @Override
     public int romObjectCodePointerHighWord() {
-        // Obj_AIZTransitionFloor = 0x0004FE38 (sonic3k.asm:104777).
+        // Obj_AIZTransitionFloor = 0x0004FE38 (sonic3k.asm:104823).
         return 0x0004;
     }
 

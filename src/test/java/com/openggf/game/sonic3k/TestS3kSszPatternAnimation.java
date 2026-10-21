@@ -19,8 +19,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Sky Sanctuary animated tiles against {@code AniPLC_SSZ} (sonic3k.asm:56040-56085) and the
- * {@code Offs_AniFunc} pair the zone's two acts take (sonic3k.asm:53881-53884).
+ * Sky Sanctuary animated tiles against {@code AniPLC_SSZ} (sonic3k.asm:56080-56125) and the
+ * {@code Offs_AniFunc} pair the zone's two acts take (sonic3k.asm:53921-53924).
  *
  * <p>{@code $A00}'s function word is {@code AnimateTiles_DoAniPLC}, so act 1 runs the six
  * scripts; {@code $A01}'s is {@code AnimateTiles_NULL}, a bare {@code rts}, so act 2 animates

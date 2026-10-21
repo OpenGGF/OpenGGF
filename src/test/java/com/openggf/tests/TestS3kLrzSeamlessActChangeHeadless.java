@@ -26,16 +26,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * The Lava Reef seamless act change, {@code $900} to {@code $901}, end to end in production.
  *
- * <p>{@code Obj_Results} (sonic3k.asm:62615-62622) ends its sprite-creation routine with
+ * <p>{@code Obj_Results} (sonic3k.asm:62655-62662) ends its sprite-creation routine with
  * {@code addq.b #2,routine(a0)} and then, only when {@code Apparent_act} is zero and
  * {@code Apparent_zone} is neither Angel Island nor Ice Cap, {@code st (Events_fg_5)}. Lava Reef
  * act 1 satisfies that gate, and the engine's shared results path already publishes it through
  * {@code signalActTransition()}.
  *
- * <p>{@code LRZ1_BackgroundEvent} stage 0 ({@code loc_56BD2}, sonic3k.asm:115274-115293) consumes
+ * <p>{@code LRZ1_BackgroundEvent} stage 0 ({@code loc_56BD2}, sonic3k.asm:115320-115339) consumes
  * the word: it clears it, queues the act-2 secondary resources and PLC {@code $30}, and sets
  * {@code Events_routine_bg} to {@code $C} -- still leaving through {@code loc_56D16}, so that
- * frame draws normally. Stage {@code $C} ({@code loc_56CAA}, sonic3k.asm:115347-115374) then waits
+ * frame draws normally. Stage {@code $C} ({@code loc_56CAA}, sonic3k.asm:115393-115420) then waits
  * on {@code Kos_modules_left} and, on one frame, writes {@code $901}, clears the level variables,
  * runs {@code Clear_Switches}, reloads the level, subtracts {@code $2C00} from both players, every
  * live object, the camera and its two X bounds, and returns {@code Events_routine_bg} to zero.
@@ -47,9 +47,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kLrzSeamlessActChangeHeadless {
 
-    /** {@code move.w #$2C00,d0} (sonic3k.asm:115361). */
+    /** {@code move.w #$2C00,d0} (sonic3k.asm:115407). */
     private static final int REBASE_X = 0x2C00;
-    /** {@code move.w #$C,(Events_routine_bg)} (sonic3k.asm:115292). */
+    /** {@code move.w #$C,(Events_routine_bg)} (sonic3k.asm:115338). */
     private static final int BG_STAGE_ACT_CHANGE = 0x0C;
 
     @AfterEach
@@ -91,7 +91,7 @@ class TestS3kLrzSeamlessActChangeHeadless {
         int cameraXBefore = fixture.camera().getX() & 0xFFFF;
         int minXBefore = fixture.camera().getMinX() & 0xFFFF;
         int maxXBefore = fixture.camera().getMaxX() & 0xFFFF;
-        // jsr (Offset_ObjectsDuringTransition) (sonic3k.asm:115365) subtracts d0 from every
+        // jsr (Offset_ObjectsDuringTransition) (sonic3k.asm:115411) subtracts d0 from every
         // world-space SST entry, not just the players. Pick one that is live now and follow it.
         // Obj_Results only runs after the act has ended, which in Lava Reef act 1 means the
         // miniboss is already Obj_Explosion. Leaving it alive would keep its arena camera lock
@@ -160,7 +160,7 @@ class TestS3kLrzSeamlessActChangeHeadless {
         assertEquals(Sonic3kZoneIds.ZONE_LRZ, after.zoneIndex(), "still Lava Reef");
         assertEquals(0, after.backgroundRoutine(),
                 "clr.w (Events_routine_bg): stage 0 is LRZ2's from here (sonic3k.asm:115374)");
-        // clr.b (LRZ_rocks_routine) (sonic3k.asm:115356) is not assertable after the fact: act 2's
+        // clr.b (LRZ_rocks_routine) (sonic3k.asm:115402) is not assertable after the fact: act 2's
         // own rock-sprite renderer re-arms the routine on the very frame the change lands, as the
         // ROM's does. What is assertable is that act 1's state did not survive the swap at all.
         assertNotSame(before, after, "loc_56CAA's Load_Level installs the act 2 state");
@@ -169,10 +169,10 @@ class TestS3kLrzSeamlessActChangeHeadless {
                 "Clear_Switches wipes the trigger array (sonic3k.asm:115355, 104284-104291)");
 
         assertTrue(playerXBefore >= REBASE_X, "precondition: the player is in act 1 coordinates");
-        // sub.w d0,(Player_1+x_pos) (sonic3k.asm:115363) puts the player at $2C0A - $2C00 = $A,
+        // sub.w d0,(Player_1+x_pos) (sonic3k.asm:115409) puts the player at $2C0A - $2C00 = $A,
         // which is left of the new boundary, so Player_LevelBound pins them on the same frame:
         // move.w (Camera_min_X_pos),d0 / addi.w #$10,d0 / cmp.w d1,d0 / bhi Player_Boundary_Sides
-        // (sonic3k.asm:23179-23181, 23211-23212). With the rebased min at 0 that is exactly $10.
+        // (sonic3k.asm:23214-23216, 23246-23247). With the rebased min at 0 that is exactly $10.
         int rebasedPlayerX = (playerXBefore - REBASE_X) & 0xFFFF;
         int boundaryX = (fixture.camera().getMinX() & 0xFFFF) + 0x10;
         assertTrue(rebasedPlayerX < boundaryX,
@@ -185,20 +185,20 @@ class TestS3kLrzSeamlessActChangeHeadless {
                         + "the same d0 (sonic3k.asm:115365, 104166-104181): "
                         + carried.getClass().getSimpleName());
         assertTrue(cameraXBefore >= REBASE_X - 0x200, "precondition: the camera is in the arena");
-        // sub.w d0,(Camera_X_pos) (sonic3k.asm:115366). The camera was written at $2C00 exactly,
+        // sub.w d0,(Camera_X_pos) (sonic3k.asm:115412). The camera was written at $2C00 exactly,
         // so the rebase is the whole story here and no clamp reaches it.
         assertEquals((cameraXBefore - REBASE_X) & 0xFFFF, fixture.camera().getX() & 0xFFFF,
                 "sub.w d0,(Camera_X_pos) (sonic3k.asm:115366)");
         // The Y bounds are deliberately NOT asserted to survive. loc_56CAA subtracts from no Y
-        // word (sonic3k.asm:115366-115369) and Load_Level writes no camera word (:38747-38761),
-        // but the same routine also does clr.b (Dynamic_resize_routine) at :115350, so act 2's
+        // word (sonic3k.asm:115412-115415) and Load_Level writes no camera word (:38787-38801),
+        // but the same routine also does clr.b (Dynamic_resize_routine) at :115396, so act 2's
         // own resize owner runs from its first entry on the very next pass and installs act 2's
         // Y bounds. Measured here: minY goes 0 to $710 on the change frame. Carrying act 1's Y
         // across would be the deviation, not the fidelity.
         // The camera BOUNDS are deliberately not asserted either, for the same measured reason:
-        // loc_56CAA does subtract $2C00 from Camera_min_X_pos and Camera_max_X_pos (:115368-369)
+        // loc_56CAA does subtract $2C00 from Camera_min_X_pos and Camera_max_X_pos (:115414-369)
         // and the request carries both, but the same routine's clr.b (Dynamic_resize_routine)
-        // at :115350 puts act 2's resize owner back at its first entry, and it installs act 2's
+        // at :115396 puts act 2's resize owner back at its first entry, and it installs act 2's
         // own bounds on the change frame. Measured at this commit: minX 0 (indistinguishable
         // from the subtract) and maxX 0, not the $128 the subtract alone would leave. What is
         // attributable to the subtract is the camera POSITION, asserted above, which the resize

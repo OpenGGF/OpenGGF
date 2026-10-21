@@ -255,7 +255,7 @@ public class Sonic3kObjectArt {
      * Builds the Animated Still Sprites sheet used by AIZ (firefly + leaf animations).
      *
      * <p>Disassembly reference:
-     * Map_AnimatedStillSprites / Ani_AnimatedStillSprites (sonic3k.asm:60424+).
+     * Map_AnimatedStillSprites / Ani_AnimatedStillSprites (sonic3k.asm:60464+).
      * art_tile = make_art_tile(ArtTile_AIZMisc2,3,0). Frames 0-8.
      */
     public ObjectSpriteSheet buildAnimatedStillSpritesSheet(int artTileBase) {
@@ -1380,7 +1380,7 @@ public class Sonic3kObjectArt {
     }
 
     /**
-     * ROM {@code SpecialStage_Results} (sonic3k.asm:63063-63082): Knuckles takes the
+     * ROM {@code SpecialStage_Results} (sonic3k.asm:63103-63122): Knuckles takes the
      * {@code k} variants; everyone except Tails alone reads HYPER once
      * {@code Super_emerald_count} reaches 7, on either kind of stage.
      */

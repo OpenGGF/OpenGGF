@@ -17,7 +17,7 @@ import java.util.List;
  *
  * <p>ROM: {@code HCZEndBossExplosion_Init/Main},
  * {@code HCZEndBossExplosion_ObjData}, and {@code HCZEndBossExplosion_Anim}
- * ({@code docs/skdisasm/sonic3k.asm:141531-141548,142183-142188,142381-142383}).
+ * ({@code docs/skdisasm/sonic3k.asm:141596-141613,142248-142253,142446-142448}).
  */
 public final class HczHarmfulExplosionObjectInstance extends AbstractObjectInstance
         implements TouchResponseProvider, SpawnCoordinateRewindRecreatable {

@@ -1208,7 +1208,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     /**
      * Initialize the water system, with optional seamless-transition awareness.
-     * ROM: CheckLevelForWater (sonic3k.asm:9754-9759) compares Apparent_zone_and_act
+     * ROM: CheckLevelForWater (sonic3k.asm:9790-9795) compares Apparent_zone_and_act
      * to Current_zone_and_act. During seamless transitions Apparent != Current,
      * which enables water in cases that a direct load would disable (AIZ2 Knuckles).
      *
@@ -1462,12 +1462,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // OscillateNumDo runs after the current Level_frame_counter tick, so
         // publish the phase for the frame that the following object pass will
         // consume rather than reusing the completed frame's counter. This is
-        // the ROM order in LevelLoop (sonic3k.asm:7889, 7928-7931): the next
+        // the ROM order in LevelLoop (sonic3k.asm:7921, 7960-7963): the next
         // Process_Sprites pass reads the table after this tail update.
         //
         // OscillateNumDo is reached ONLY from the main level loop in all three
         // games -- S1 Level_MainLoop (sonic.asm:3033), S2 Level_MainLoop
-        // (s2.asm:5108) and S3K Level_MainLoop (sonic3k.asm:7909) -- while
+        // (s2.asm:5108) and S3K Level_MainLoop (sonic3k.asm:7941) -- while
         // OscillateNumInit runs once during level init (S1 sonic.asm:2916,
         // S2 s2.asm:4999). The title-card / level-load sequence never reaches
         // that loop tail, so its passes must not tick the oscillators. The
@@ -1577,7 +1577,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * ({@code docs/s1disasm/sonic.asm:3001-3006}),
      * {@code addq.w #1,(Level_frame_counter).w} after {@code WaitForVint}
      * ({@code docs/s2disasm/s2.asm:5090-5094}) and after {@code Wait_VSync}
-     * ({@code docs/skdisasm/sonic3k.asm:7919-7925}) -- in each case before
+     * ({@code docs/skdisasm/sonic3k.asm:7951-7957}) -- in each case before
      * {@code ExecuteObjects} / {@code RunObjects} / {@code Process_Sprites}.
      */
     public void advanceLevelFrameCounter() {
@@ -2276,7 +2276,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (!rules.collision().layoutYMaskAppliesToAllLookups()) {
             // The mask is real but is not a constant for this game (S3K writes
             // Layout_row_index_mask per level: $7C normally, $3C for looping levels,
-            // sonic3k.asm:102207/110071/110322/114224/114253), and it masks an
+            // sonic3k.asm:102253/110071/110322/114224/114253), and it masks an
             // already-shifted row index rather than a Y position. Treating it as a
             // constant made ICZ1's snowboard intro end its slope ride 193px short, so
             // this game keeps its previous lookup behaviour until the runtime variable
@@ -2299,7 +2299,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      *   <li>S2 {@code Find_Tile}: {@code add.w d0,d0 / andi.w #$F00,d0} over 16 rows of
      *       128px — also an 0x800px window (docs/s2disasm/s2.asm:43366-43368).</li>
      *   <li>S3K {@code Find_Tile_FG}: {@code lsr.w #5,d0 / and.w (Layout_row_index_mask).w,d0}
-     *       (docs/skdisasm/sonic3k.asm:19143-19145).</li>
+     *       (docs/skdisasm/sonic3k.asm:19179-19181).</li>
      * </ul>
      * The per-game window is already carried by
      * {@code CollisionRules.defaultCollisionLayoutYMask()}, which
@@ -3103,7 +3103,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 : null;
         // ROM: Load_Starpost_Settings restores Saved2_camera_max_Y_pos before
         // Get_LevelSizeStart computes the first return camera position
-        // (skdisasm/sonic3k.asm:61834-61837, 38172-38178). Publish that bound
+        // (skdisasm/sonic3k.asm:61874-61877, 38212-38218). Publish that bound
         // before either camera update below; applying it only in the later
         // title-card handoff leaves the return one camera step behind.
         var checkpoint = checkpointCoordinator.state();
@@ -3248,7 +3248,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         }
         if (player instanceof AbstractPlayableSprite leaderInit) {
             // ROM Obj01_Init_Continued (s2.asm:36201-36217) / Sonic_Init_Continued
-            // -> Reset_Player_Position_Array (sonic3k.asm:21931-21941, 22166-22178):
+            // -> Reset_Player_Position_Array (sonic3k.asm:21967-21977, 22202-22214):
             // the leader's own init offsets its position by (-$20, +4), zeroes
             // Sonic_Pos_Record_Index, then runs Sonic_RecordPos 64 times while
             // re-zeroing each Stat_table entry it writes. Neither buffer sits in a
@@ -3262,13 +3262,13 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
             // ROM writes only the x_pos/y_pos words here (S2 InitPlayers
             // s2.asm:5191-5195; S3K SpawnLevelMainSprites_SpawnPlayers
-            // sonic3k.asm:8364-8367), which on a 68000 leaves the adjacent
+            // sonic3k.asm:8396-8399), which on a 68000 leaves the adjacent
             // sub-pixel words untouched -- but the level routine zeroed the
             // whole object RAM block before reaching this point
             // (clearRAM Object_RAM,LevelOnly_Object_RAM_End, s2.asm:4808;
             // clearRAM Object_RAM,(Kos_decomp_buffer-Object_RAM),
-            // sonic3k.asm:7619, ahead of the SpawnLevelMainSprites call at
-            // :7849), so the sidekick's sub-pixel is ZERO here on every level
+            // sonic3k.asm:7651, ahead of the SpawnLevelMainSprites call at
+            // :7881), so the sidekick's sub-pixel is ZERO here on every level
             // entry -- including a re-entry such as the special-stage return,
             // which runs the whole Level: routine again.
             sidekick.setCentreX((short) (player.getCentreX() + xOffset));
@@ -3291,7 +3291,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             // is the Tails-alone branch. S3K Tails_Init is the same shape:
             // `cmpi.w #2,(Player_mode).w / bne.s loc_1375E`, and loc_1375E runs
             // `move.w (Player_1+top_solid_bit).w,top_solid_bit(a0)`
-            // (docs/skdisasm/sonic3k.asm:26105-26133). Sonic 1 has no sidekick.
+            // (docs/skdisasm/sonic3k.asm:26145-26173). Sonic 1 has no sidekick.
             //
             // It is a WORD move in both, so it carries lrb_solid_bit with it.
             // The leader's own init runs first -- Obj01/Sonic occupies the slot
@@ -3311,7 +3311,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 // Capture the spawn centre for the deferred CPU placement. ROM
                 // SpawnLevelMainSprites_SpawnPlayers places the sidekick and fills
                 // Sonic_Pos_Record_Buf before the first LevelLoop physics tick
-                // (sonic3k.asm:8359-8369), while the leader is still at this centre.
+                // (sonic3k.asm:8391-8401), while the leader is still at this centre.
                 if (player instanceof AbstractPlayableSprite leaderSprite) {
                     SidekickCpuController controller = sidekick.getCpuController();
                     controller.captureLevelStartLeaderAnchor(
@@ -3459,7 +3459,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // first dispatch, before anything is drawn, so they belong to a load
         // that reached the game's own Level: routine rather than to the
         // presentation a headless boundary omits.
-        // docs/skdisasm/sonic3k.asm:62108-62164
+        // docs/skdisasm/sonic3k.asm:62148-62204
         var titleCardProvider = activeGameModule().getTitleCardProvider();
         if (titleCardProvider != null) {
             titleCardProvider.beginOmittedPresentation(currentZone, apparentAct, ownsFreshArt);
@@ -3509,7 +3509,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * VBlank-then-RunObjects order (queue at s2.asm:1713, drain at s2.asm:1769),
      * makes gameplay frame 0 submit exactly when the mapping frame really
      * changed across the loop. S1 (docs/s1disasm/_incObj/01 Sonic.asm:2391-2398)
-     * and S3K (docs/skdisasm/sonic3k.asm:25216-25218) use the same predicate;
+     * and S3K (docs/skdisasm/sonic3k.asm:25256-25258) use the same predicate;
      * they contribute no iterations unless their own init profile declares one.
      */
     private void replaySkippedPresentationPlayerAnimation(
@@ -3622,7 +3622,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             // the rebuild so slot-phased object gates (e.g. Batbrain) retain
             // their native timing.
             // A session's first object clock continues the power-on V_int_run_count
-            // (CrossResetRAM, never cleared by Level: sonic3k.asm:542-543).
+            // (CrossResetRAM, never cleared by Level: sonic3k.asm:558-559).
             int inheritedVblaCounter = objectManager != null
                     ? objectManager.getVblaCounter()
                     : com.openggf.game.session.EngineTiming.vIntRunCounter(engineServices).objectClockSeed();
@@ -3634,7 +3634,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
             // ROM: SSEntryFlash_GoSS sets Respawn_table_keep before entering
             // the special stage, and the return path skips clearing
-            // Object_respawn_table (skdisasm/sonic3k.asm:128446-128451,
+            // Object_respawn_table (skdisasm/sonic3k.asm:128500-128505,
             // 37457-37465). Reapply the captured table before InitObjectSystem
             // materializes the new level window. Last_star_post_hit is the
             // same gate used by Get_LevelSizeStart for Saved2_* restoration.
@@ -4841,7 +4841,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * {@code SpriteManager.update()} (which is where
      * {@code SpriteManager.frameCounter} normally increments). Bump it
      * explicitly here so sidekick AI gates that read
-     * {@code (Level_frame_counter & MASK)} — e.g. sonic3k.asm:26775 loc_13E9C
+     * {@code (Level_frame_counter & MASK)} — e.g. sonic3k.asm:26815 loc_13E9C
      * 64-frame jump-cadence check — fire on the same frames as the ROM after
      * AIZ act 1 → act 2 reload.
      *
@@ -4856,7 +4856,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     private void advanceFrameCounterAcrossSeamlessReload() {
         // The reload is requested by ScreenEvents, but the ROM returns to the
         // remainder of LevelLoop afterward: OscillateNumDo still runs before
-        // the next VBlank (docs/skdisasm/sonic3k.asm:7884-7910,
+        // the next VBlank (docs/skdisasm/sonic3k.asm:7916-7942,
         // 104722-104774). The engine applies the pending reload at the next
         // frame top and returns from RecordingFrameDriver/GameLoop, so preserve
         // that native post-ScreenEvents oscillator tick explicitly.
@@ -4873,8 +4873,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         }
 
         // ROM keeps Level_frame_counter ticking through AIZ's reload frame
-        // (docs/skdisasm/sonic3k.asm:7884-7894); S3K Tails CPU reads it for
-        // loc_13E9C's 64-frame auto-jump gate (docs/skdisasm/sonic3k.asm:26775-26782).
+        // (docs/skdisasm/sonic3k.asm:7916-7926); S3K Tails CPU reads it for
+        // loc_13E9C's 64-frame auto-jump gate (docs/skdisasm/sonic3k.asm:26815-26822).
         frameCounter++;
         sidekickRomVisibleReloadFrameCounterBridgeActive = true;
         sidekickRomVisibleReloadFrameCounterBridgePrimed = true;

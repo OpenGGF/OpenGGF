@@ -9,11 +9,11 @@ import com.openggf.level.Palette;
  * ROM {@code Normal_palette}/{@code Target_palette} pair for a Super Emerald results screen.
  *
  * <p>{@code SpecialStage_Results} copies {@code Pal_Results} into both buffers, repeats line 1
- * over line 2 and applies {@code sub_2E2C0} (sonic3k.asm:63115-63142), then leaves lines 3-4
- * at {@code $CCC} with {@code Pal_HPZIntro+$20} as their target (loc_2E150, :63144-63148).
- * The HPZ controller retargets lines 2-4 on its first pass (loc_90998-loc_909B0, :197754-197770), and
+ * over line 2 and applies {@code sub_2E2C0} (sonic3k.asm:63155-63182), then leaves lines 3-4
+ * at {@code $CCC} with {@code Pal_HPZIntro+$20} as their target (loc_2E150, :63184-63188).
+ * The HPZ controller retargets lines 2-4 on its first pass (loc_90998-loc_909B0, :197861-197877), and
  * a cleared stage fades the whole screen from white when the tally wait ends
- * (loc_2E410, :63339-63364) through {@code Pal_FromWhite} (:5157-5188).
+ * (loc_2E410, :63379-63404) through {@code Pal_FromWhite} (:5189-5220).
  */
 final class S3kSanctuaryResultsPalette {
     private static final int LINES = 4;

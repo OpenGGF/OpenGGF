@@ -128,7 +128,7 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
         } else {
             playerEntity.setCentreX((short) SONIC_CLAMP_X);
         }
-        // loc_62D04 calls Stop_Object (sonic3k.asm:177552-177556), which clears
+        // loc_62D04 calls Stop_Object (sonic3k.asm:177643-177647), which clears
         // x_vel, y_vel AND ground_vel. Clearing only the horizontal pair leaves the
         // player falling into the clamp with the gravity it had accumulated.
         playerEntity.setXSpeed((short) 0);
@@ -383,7 +383,7 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
             sidekick.clearLogicalInputState();
             if (sidekick.getCpuController() != null) {
                 // loc_62DC4: st (Ctrl_2_locked).w / clr.w (Ctrl_2_logical).w
-                // before Stop_Object (docs/skdisasm/sonic3k.asm:130013-130018).
+                // before Stop_Object (docs/skdisasm/sonic3k.asm:130070-130075).
                 sidekick.getCpuController().setController2SignedLocked(true);
                 sidekick.getCpuController().clearController2LogicalLatch();
             }
@@ -395,7 +395,7 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
             sidekick.clearLogicalInputState();
             if (sidekick.getCpuController() != null) {
                 // loc_62E04/loc_62E1A clear Ctrl_2_locked and Ctrl_2_logical
-                // when this helper releases/deletes (docs/skdisasm/sonic3k.asm:130033-130047).
+                // when this helper releases/deletes (docs/skdisasm/sonic3k.asm:130090-130104).
                 sidekick.getCpuController().setController2SignedLocked(false);
                 sidekick.getCpuController().clearController2LogicalLatch();
             }

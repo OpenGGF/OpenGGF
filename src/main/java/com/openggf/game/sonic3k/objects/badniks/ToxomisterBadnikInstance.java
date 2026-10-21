@@ -107,7 +107,7 @@ public final class ToxomisterBadnikInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
-        // Obj_WaitOffscreen (sonic3k.asm:180271-180302).
+        // Obj_WaitOffscreen (sonic3k.asm:180362-180393).
         if (!awake) {
             awake = isOnScreen();
             if (!awake) {
@@ -135,10 +135,10 @@ public final class ToxomisterBadnikInstance extends AbstractObjectInstance
     }
 
     /**
-     * {@code Touch_EnemyNormal} (sonic3k.asm:20945-20990).
+     * {@code Touch_EnemyNormal} (sonic3k.asm:20981-21026).
      *
      * <p>{@code ObjDat_Toxomister}'s {@code collision_flags $18} has zero in bits 6-7, so
-     * {@code Touch_ChkValue} (sonic3k.asm:20774-20776) routes the body through
+     * {@code Touch_ChkValue} (sonic3k.asm:20810-20812) routes the body through
      * {@code Touch_Enemy}. An attacking player therefore destroys it exactly like any other
      * badnik: {@code bset #7,status(a1)}, the chain bonus and points, and
      * {@code move.l #Obj_Explosion,(a1)}. The bounce applied to the player belongs to the

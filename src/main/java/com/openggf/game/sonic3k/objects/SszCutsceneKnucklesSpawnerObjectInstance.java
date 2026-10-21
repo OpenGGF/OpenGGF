@@ -16,7 +16,7 @@ import com.openggf.level.objects.RewindRecreatable;
 import java.util.List;
 
 /**
- * ROM {@code Obj_57E34} (sonic3k.asm:116920-116893): the act-1 cutscene Knuckles beam.
+ * ROM {@code Obj_57E34} (sonic3k.asm:116966-116939): the act-1 cutscene Knuckles beam.
  *
  * <p>{@code Obj_57C1E} allocates it with {@code subtype = $60} for every player mode. The
  * subtype counts down; on the frame it reaches zero the spawner allocates

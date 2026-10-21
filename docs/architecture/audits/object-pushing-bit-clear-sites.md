@@ -9,7 +9,7 @@ A solid object carries per-character "pushing" bits in its **own** status byte:
 (single character). The canonical clear is `Solid_NotPushing` — S2
 `docs/s2disasm/s2.asm:35484-35488`, S1
 `docs/s1disasm/_incObj/sub SolidObject.asm:261-263`, S3K `sub_1E0C2`
-`docs/skdisasm/sonic3k.asm:41533-41537`.
+`docs/skdisasm/sonic3k.asm:41573-41577`.
 
 Those bits are not bookkeeping. `SolidObject_TestClearPush` gates its
 `move.w #(Walk<<8)|Run,anim(a1)` animation-restart write on
@@ -30,7 +30,7 @@ to the `moveq` that loaded the bit number, plus mask/whole-byte writes
 
 **Excluded as player-side, not object-side:** `bclr #5,obStatus(a0)` throughout
 `docs/s1disasm/_incObj/01 Sonic.asm` and `_incObj/Sonic AnglePos.asm`, and
-`bclr #5,status(a0)` at `docs/skdisasm/sonic3k.asm:24747`. In all of those `a0`
+`bclr #5,status(a0)` at `docs/skdisasm/sonic3k.asm:24787`. In all of those `a0`
 is the character, so bit 5 is the player's own pushing flag.
 
 ## Sonic 2
@@ -145,7 +145,7 @@ The S3K fixtures carry a per-frame `object_state` aux event with the object's ow
 `status` byte, so whether a given object-side `bclr` fires is checkable directly —
 no probe needed. Over `src/test/resources/traces/s3k/cnz`:
 
-- `Obj_Spikes`' second routine (`loc_2413E`, docs/skdisasm/sonic3k.asm:48965) holds
+- `Obj_Spikes`' second routine (`loc_2413E`, docs/skdisasm/sonic3k.asm:49005) holds
   status `0x22` — `p1_pushing_bit` **set** — continuously across rows 1266-1271
   while the character pushes against it, and drops to `0x02` on row 1272, the same
   row the character's own `Status_Push` clears. That is the ordinary end-of-contact
@@ -153,7 +153,7 @@ no probe needed. Over `src/test/resources/traces/s3k/cnz`:
 - Across the whole route the spike's `p1_pushing_bit` drops four times and on **none**
   of them is the character still pushing.
 
-So `Obj_Spikes`' `bclr #p1_pushing_bit,status(a0)` (:49066, :49073, :49160, :49167)
+So `Obj_Spikes`' `bclr #p1_pushing_bit,status(a0)` (:49106, :49113, :49200, :49207)
 does **not** fire on a mere side touch. A port that fires it on every
 `contact.touchSide()` clears a bit the ROM keeps, and the object then never reaches
 `sub_1E0C2` to clear the character's flag — which is exactly the `status_byte`
@@ -161,7 +161,7 @@ does **not** fire on a mere side touch. A port that fires it on every
 
 The same scan is the way to settle every remaining site. On
 `src/test/resources/traces/s3k/mgz` it finds objects that genuinely do clear their
-own bit mid-push, including `loc_21692` (docs/skdisasm/sonic3k.asm:45757), the
+own bit mid-push, including `loc_21692` (docs/skdisasm/sonic3k.asm:45797), the
 `Obj_BreakableWall` break routine already landed in `8cd07b700` — so the method
 distinguishes real sites from mis-derived ones rather than rejecting all of them.
 

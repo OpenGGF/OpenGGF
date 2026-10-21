@@ -38,7 +38,7 @@ import static org.mockito.Mockito.when;
 /**
  * Obj_ICZMiniboss draws its orb and shard SSTs inline, so the owner must list
  * itself in each ROM priority list its parts occupy: ObjDat3_71972 $280 while an
- * orb waits on the floor, $180 from loc_7153A (sonic3k.asm:150011) and $180/$300
+ * orb waits on the floor, $180 from loc_7153A (sonic3k.asm:150079) and $180/$300
  * from sub_717B8 (150313/150316) once it orbits.
  */
 class TestIczMinibossRenderBuckets {
@@ -110,7 +110,7 @@ class TestIczMinibossRenderBuckets {
 
     /**
      * loc_711EC creates the six shard SSTs with CreateChild1_Normal
-     * (sonic3k.asm:149713-149714) and loc_71446 draws each one every dispatch
+     * (sonic3k.asm:149781-149782) and loc_71446 draws each one every dispatch
      * through Child_Draw_Sprite2_FlickerMove (149907-149908, 178129-178133), so
      * the ice shell is visible from the boss's first routine-0 dispatch, long
      * before loc_71236 sets $38 bit 3 to release it. The shards use word_7196C

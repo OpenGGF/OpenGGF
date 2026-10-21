@@ -108,8 +108,8 @@ public class Sonic3kGameModule implements GameModule {
     private final GameAudioProfile audioProfile = new Sonic3kAudioProfile();
     /**
      * ROM {@code AIZ_vine_angle}, advanced by {@code ChangeRingFrame}
-     * (sonic3k.asm:9693) and never cleared by a level or special-stage init --
-     * both clears stop one word short of it (sonic3k.asm:7622, 10606). The
+     * (sonic3k.asm:9729) and never cleared by a level or special-stage init --
+     * both clears stop one word short of it (sonic3k.asm:7654, 10642). The
      * module is the session-lived owner; the {@code Sonic3k} Game it is handed
      * to is rebuilt on every level load (LevelManager.java:459), so owning it
      * there reset the swing phase of every AIZ giant ride vine on re-entry.
@@ -549,7 +549,7 @@ public class Sonic3kGameModule implements GameModule {
     }
 
     /**
-     * The Doomsday flight controller's init ({@code loc_81554}, sonic3k.asm:173281-173286) zeroes
+     * The Doomsday flight controller's init ({@code loc_81554}, sonic3k.asm:173372-173377) zeroes
      * the whole Player 2 object before the first level frame, so a Sonic and Tails game plays the
      * zone as Sonic alone.
      */

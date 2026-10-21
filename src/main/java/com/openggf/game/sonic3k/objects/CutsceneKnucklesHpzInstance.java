@@ -30,7 +30,7 @@ import static com.openggf.game.sonic3k.objects.HpzKnucklesCutsceneSupport.*;
 
 /**
  * ROM {@code CutsceneKnux_HPZ} ({@code Obj_CutsceneKnuckles} subtype {@code $28},
- * sonic3k.asm:131259-132540): the Sonic/Tails Knuckles fight in Hidden Palace ({@code $1601}),
+ * sonic3k.asm:131316-132597): the Sonic/Tails Knuckles fight in Hidden Palace ({@code $1601}),
  * followed by Knuckles' part in the Master Emerald theft, the altar collapse and the ending.
  *
  * <p>The placed object copies itself into {@code Dynamic_object_RAM+object_size*45} (absolute SST

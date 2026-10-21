@@ -649,7 +649,7 @@ public class HczEndBossInstance extends AbstractBossInstance
         defeatExplosionController = new S3kBossExplosionController(state.x, state.y, 0);
         services().fadeOutMusic();
         services().gameState().setCurrentBossId(0);
-        // ROM loc_6BC1C: jmp (BossDefeated_StopTimer).l (sonic3k.asm:142098).
+        // ROM loc_6BC1C: jmp (BossDefeated_StopTimer).l (sonic3k.asm:142163).
         stopLevelTimerOnBossDefeat();
         // Wait DEFEAT_WAIT frames for explosions, then begin flee
         setWait(DEFEAT_WAIT, WaitCallback.BEGIN_FLEE_SEQUENCE);
@@ -990,7 +990,7 @@ public class HczEndBossInstance extends AbstractBossInstance
     // Rendering
     // =========================================================================
 
-    // ObjDat_HCZEndBoss priority $100 (sonic3k.asm:142153).
+    // ObjDat_HCZEndBoss priority $100 (sonic3k.asm:142218).
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x100);
 
     @Override
@@ -1000,7 +1000,7 @@ public class HczEndBossInstance extends AbstractBossInstance
 
     @Override
     public boolean isHighPriority() {
-        // ObjDat_HCZEndBoss art make_art_tile(ArtTile_HCZEndBoss,1,1) sets bit 15 (sonic3k.asm:142152).
+        // ObjDat_HCZEndBoss art make_art_tile(ArtTile_HCZEndBoss,1,1) sets bit 15 (sonic3k.asm:142217).
         return true;
     }
 

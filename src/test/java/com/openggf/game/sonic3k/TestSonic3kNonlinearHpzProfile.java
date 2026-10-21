@@ -30,8 +30,8 @@ class TestSonic3kNonlinearHpzProfile {
                 Sonic3kZoneIds.ZONE_HPZ).get(1);
 
         // Sprite_Listing / ScreenEvents pair $1601 with HPZ_Sprites and
-        // HPZ_ScreenInit (sonic3k.asm:202441, 102348); LevelList_DA6E resumes
-        // the Hidden Palace save slot at $1601 (sonic3k.asm:17510).
+        // HPZ_ScreenInit (sonic3k.asm:202556, 102394); LevelList_DA6E resumes
+        // the Hidden Palace save slot at $1601 (sonic3k.asm:17546).
         assertEquals(0x0030, descriptor.startX());
         assertEquals(0x0AEC, descriptor.startY());
         Sonic3kLevelResourceProfile profile =
@@ -124,7 +124,7 @@ class TestSonic3kNonlinearHpzProfile {
         assertTrue(features.shouldSuppressInitialTitleCard(
                 Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 1));
         // TitleCard_LevelGfx selects the Hidden Palace card for $1601
-        // (sonic3k.asm:62149-62151).
+        // (sonic3k.asm:62189-62191).
         assertFalse(features.shouldSuppressInitialTitleCard(
                 Sonic3kZoneIds.ZONE_HPZ, 1));
     }

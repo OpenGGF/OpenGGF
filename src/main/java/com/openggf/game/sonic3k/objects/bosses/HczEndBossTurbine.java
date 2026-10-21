@@ -106,8 +106,8 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
      * @param yOffset Vertical offset from boss center
      */
     public HczEndBossTurbine(HczEndBossInstance boss, int xOffset, int yOffset) {
-        // HCZEndBossFan_ObjData priority $200 (sonic3k.asm:142158-142159), applied by
-        // HCZEndBossFan_Init's SetUp_ObjAttributes3 (sonic3k.asm:141030-141032).
+        // HCZEndBossFan_ObjData priority $200 (sonic3k.asm:142223-142224), applied by
+        // HCZEndBossFan_Init's SetUp_ObjAttributes3 (sonic3k.asm:141095-141097).
         super(boss, "HCZEndBossTurbine", RenderPriority.fromS3kWord(0x200), 0);
         this.boss = boss;
         this.xOffset = xOffset;
@@ -120,8 +120,8 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
 
     @Override
     public boolean isHighPriority() {
-        // CreateChild1_Normal copies the boss's art_tile (sonic3k.asm:176933), whose
-        // make_art_tile(ArtTile_HCZEndBoss,1,1) sets bit 15 (sonic3k.asm:142152).
+        // CreateChild1_Normal copies the boss's art_tile (sonic3k.asm:177024), whose
+        // make_art_tile(ArtTile_HCZEndBoss,1,1) sets bit 15 (sonic3k.asm:142217).
         return true;
     }
 
@@ -207,7 +207,7 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
     /**
      * ROM routine 4: accelerate with Animate_RawGetFaster over byte_6BDF4.
      * Its loc_6B212 callback, not entry to routine 4, creates the water column
-     * and advances to routine 6 (sonic3k.asm:141040-141058, 177749-177792).
+     * and advances to routine 6 (sonic3k.asm:141105-141123, 177840-177883).
      */
     private void updateActive(int vIntRunCount) {
         if ((vIntRunCount & (FAN_SFX_INTERVAL - 1)) == 0 && isOnScreen()) {

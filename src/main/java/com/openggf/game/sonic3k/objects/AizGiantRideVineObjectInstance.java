@@ -24,7 +24,7 @@ import java.util.List;
  * S3K Obj 0x0C - AIZ Giant Ride Vine.
  *
  * <p>Primary disassembly references:
- * Obj_AIZGiantRideVine (sonic3k.asm:46749-46963).
+ * Obj_AIZGiantRideVine (sonic3k.asm:46789-47003).
  */
 public class AizGiantRideVineObjectInstance extends AbstractObjectInstance
         implements PostPlayerUpdateHook, SpawnRewindRecreatable {
@@ -115,10 +115,10 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance
     public int getExecutionSlotIndex() {
         // ROM Obj_AIZGiantRideVine keeps the root in its parent slot, then
         // allocates children after it and rewrites the final child to loc_2257E
-        // (docs/skdisasm/sonic3k.asm:46749-46787, 46929-46950). sub_220C2
+        // (docs/skdisasm/sonic3k.asm:46789-46827, 46969-46990). sub_220C2
         // player carry runs from that handle child after earlier slots such as
         // Obj_CollapsingPlatform's loc_205DE solid pass
-        // (docs/skdisasm/sonic3k.asm:44841-44851). Execute the consolidated
+        // (docs/skdisasm/sonic3k.asm:44881-44891). Execute the consolidated
         // Java object at the handle slot once it has been reserved, while
         // retaining the parent slot for lifecycle and child-slot cleanup.
         return handleExecutionSlot >= 0 ? handleExecutionSlot : super.getExecutionSlotIndex();
@@ -144,7 +144,7 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance
         // Obj_AIZGiantRideVine loc_22442 always applies the root's coarse-X
         // cull, even while either handle grab byte ($32/$33) is set, then
         // loc_2245C deletes every child before Delete_Current_Sprite removes
-        // the root (docs/skdisasm/sonic3k.asm:46802-46831). This Java object
+        // the root (docs/skdisasm/sonic3k.asm:46842-46871). This Java object
         // executes from its reserved handle slot for SST-order parity, so the
         // manager's execution-slot cleanup cannot identify the distinct parent
         // slot as the current slot. Release that root ownership explicitly.
@@ -270,7 +270,7 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance
         // sub_220C2's giant-vine grab path only writes the handle's per-player
         // grab byte at $32/$33 and player fields (docs/skdisasm/sonic3k.asm:
         // 46731-46743). It does not alter the first child; loc_2248A continues
-        // to read AIZ_vine_angle on subsequent frames (sonic3k.asm:46840-46854).
+        // to read AIZ_vine_angle on subsequent frames (sonic3k.asm:46880-46894).
         if (services().levelManager() != null && services().levelManager().objectsExecuteAfterPlayerPhysics()) {
             AizVineHandleLogic.updatePostPlayer(handle, player, sidekick);
         }

@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
  * reset.
  *
  * <p>Sonic 3 &amp; Knuckles' {@code Player_ResetAirTimer}
- * (sonic3k.asm:33663-33686) loads {@code Current_music} and then runs three
+ * (sonic3k.asm:33703-33726) loads {@code Current_music} and then runs three
  * substitutions in order: {@code Status_Invincible} selects
  * {@code mus_Invincibility} ($2C), {@code Super_Sonic_Knux_flag} selects the
  * same track, and {@code Boss_flag} selects {@code mus_MinibossK} ($18). The

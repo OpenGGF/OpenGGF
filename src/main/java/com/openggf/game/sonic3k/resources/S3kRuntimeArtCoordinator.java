@@ -82,7 +82,7 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
      * {@code Kos_modules_left} gate; see
      * {@link #freshLevelArtWaitsForModuleQueue}. Once that gate is clear,
      * {@code LoadLevelLoadBlock} queues both parents at the call and only then
-     * blocks (docs/skdisasm/sonic3k.asm:9727, 9734, 9736-9743), so deferring
+     * blocks (docs/skdisasm/sonic3k.asm:9763, 9770, 9772-9779), so deferring
      * there would invert the ROM's order against everything that queues later:
      * the deferred batch releases its slots and the following frames' object
      * art takes them, starving the terrain art behind a full FIFO.
@@ -108,10 +108,10 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
      * {@code LoadLevelLoadBlock} at all.
      *
      * <p>{@code Obj_TitleCardCreate} holds the card's routine on
-     * {@code tst.b (Kos_modules_left).w} (docs/skdisasm/sonic3k.asm:62169-62171)
+     * {@code tst.b (Kos_modules_left).w} (docs/skdisasm/sonic3k.asm:62209-62211)
      * until the archives {@code Obj_TitleCardInit} queued have finished, and
      * only then does the locked loop release and {@code Level:} run
-     * {@code LoadLevelLoadBlock} (:7761). So a caller arriving while modules
+     * {@code LoadLevelLoadBlock} (:7793). So a caller arriving while modules
      * are still outstanding is ahead of the ROM's control flow, not short of
      * FIFO capacity.
      */
@@ -145,7 +145,7 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
 
     /**
      * ROM {@code LevelLoop} runs {@code Process_Kos_Module_Queue} in the loop
-     * tail (sonic3k.asm:7908) and {@code Process_Kos_Queue} (7887) directly
+     * tail (sonic3k.asm:7940) and {@code Process_Kos_Queue} (7887) directly
      * after it, still ahead of {@code Wait_VSync} (7888) and the
      * {@code Level_frame_counter} increment (7889). Both are tail work for the
      * frame whose objects just ran, so the module step lands at

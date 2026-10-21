@@ -66,7 +66,7 @@ public final class S3kSlotRomData {
 
     public static final byte[] SLOT_BONUS_LAYOUT = decodeLayoutRows();
     // Transient layout-cell animations (ROM sub_4B592's four handlers,
-    // sonic3k.asm:98397-98513). Each *_DELAY below is the literal byte the matching
+    // sonic3k.asm:98443-98559). Each *_DELAY below is the literal byte the matching
     // handler reloads its countdown with (`move.b #N,2(a0)`), consumed by the shared
     // `subq.b #1,2(a0) / bpl` idiom -- see TransientAnimationSlot.tick, which models
     // that idiom directly, so these stay the ROM's own numbers rather than a
@@ -93,7 +93,7 @@ public final class S3kSlotRomData {
             0x0D, 0x0E, 0x0F,
             0x0D, 0x0E, 0x0F
     };
-    // loc_4B65A reloads with #1 (sonic3k.asm:98502), like the bumper handler. The
+    // loc_4B65A reloads with #1 (sonic3k.asm:98548), like the bumper handler. The
     // previous value of 2 was a period-2 compensation for the old countdown
     // convention (`--timer > 0` with an eager first publish); the ROM idiom is now
     // modelled directly in TransientAnimationSlot.tick, so the literal reload is

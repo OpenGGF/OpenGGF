@@ -120,7 +120,7 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM {@code loc_226F2} (sonic3k.asm:47072-47074): while the swing root
+     * ROM {@code loc_226F2} (sonic3k.asm:47112-47114): while the swing root
      * routine {@code loc_226B0} runs and Player 1 is grabbed ({@code $32(a1)} on
      * the handle), the vine writes {@code Scroll_force_positions} plus the vine's
      * own {@code x_pos}/{@code y_pos} into {@code Scroll_forced_X_pos}/{@code
@@ -166,7 +166,7 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isPersistent() {
         // loc_22824 applies the root's coarse-X tail even while either handle
-        // grab byte is set (sonic3k.asm:47164-47192).
+        // grab byte is set (sonic3k.asm:47204-47232).
         return false;
     }
 

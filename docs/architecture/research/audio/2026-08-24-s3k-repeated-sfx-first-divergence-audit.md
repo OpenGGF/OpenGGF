@@ -26,10 +26,10 @@ does not. This makes successive explosions sound prematurely truncated.
 - `docs/skdisasm/Sound/Z80 Sound Driver.asm:1619-1629,2628-2644`:
   the three-cell internal queue is rotated in order; `zFillSoundQueue` copies
   music plus both SFX input cells and clears the inputs.
-- `docs/skdisasm/s3.asm:1649-1673`: 68K `Play_SFX` supports two different IDs
+- `docs/skdisasm/s3.asm:1672-1696`: 68K `Play_SFX` supports two different IDs
   per frame. It ignores an ID already in `zSFXNumber0`, fills empty slot 0,
   otherwise overwrites slot 1.
-- `docs/skdisasm/sonic3k.asm:176829-176857`: boss explosion child objects—not
+- `docs/skdisasm/sonic3k.asm:176920-176948`: boss explosion child objects—not
   the controller—load `sfx_Explode` and call `Play_SFX`. ROM instruction PCs
   are `$83F60/$83F62` for `Obj_BossExplosion1` and `$83F96/$83F98` for
   `Obj_BossExplosionOffset`.

@@ -55,7 +55,7 @@ import java.util.logging.Logger;
  * Subtypes: 0=Eggman, 1=1-Up, 2=Eggman, 3=Rings, 4=SpeedShoes,
  * 5=FireShield, 6=LightningShield, 7=BubbleShield, 8=Invincibility, 9=Super.
  * <p>
- * Reference: docs/skdisasm/sonic3k.asm lines 40442-40995
+ * Reference: docs/skdisasm/sonic3k.asm lines 40482-41035
  */
 public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         implements TouchResponseProvider, TouchResponseListener,
@@ -78,7 +78,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     private static final int SUPER_RING_REWARD = 50;
 
     // Icon frame offset: icon mapping frame = type.animId + 1
-    // ROM: addq.b #1,d0 (sonic3k.asm line 40699)
+    // ROM: addq.b #1,d0 (sonic3k.asm line 40739)
     // (Mapping frames: 0=box, 1=eggman, 2=1up, 3=eggman2, 4=rings, ...)
     private static final int ICON_FRAME_OFFSET = 1;
 
@@ -90,7 +90,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
 
     // docs/skdisasm/sonic3k.constants.asm:131-148 define object status bits 3-6
     // as p1/p2 standing and pushing. Obj_MonitorBreak consumes these at
-    // docs/skdisasm/sonic3k.asm:40624-40638 to release touching players.
+    // docs/skdisasm/sonic3k.asm:40664-40678 to release touching players.
     private static final int P1_STANDING = 1 << 3;
     private static final int P2_STANDING = 1 << 4;
     private static final int P1_PUSHING = 1 << 5;
@@ -181,7 +181,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     @Override
     public int romObjectCodePointerHighWord() {
         // Tails_CPU_interact stores word 0 of the stood-on object SST
-        // (docs/skdisasm/sonic3k.asm:26816-26843).
+        // (docs/skdisasm/sonic3k.asm:26856-26883).
         return ROM_CODE_POINTER_HIGH_WORD;
     }
 
@@ -196,7 +196,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     protected boolean delayFirstIconUpdateAfterBreak() {
         // ROM Obj_MonitorBreak allocates Obj_MonitorContents after the current
         // slot, then Obj_MonitorContents init falls through into sub_1D820 on
-        // its first execution (docs/skdisasm/sonic3k.asm:40645-40718). Engine
+        // its first execution (docs/skdisasm/sonic3k.asm:40685-40758). Engine
         // touch responses break the shell before the post-physics object pass,
         // so this embedded content must consume that pass rather than skipping it.
         return false;
@@ -278,7 +278,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
             return;
         }
 
-        // Touch_Monitor.normalgravity/.checkfall (sonic3k.asm:20800-20851).
+        // Touch_Monitor.normalgravity/.checkfall (sonic3k.asm:20836-20887).
         // Layout Y-flip initializes both status and render_flags bit 1. Unlike
         // upright S&K monitors, flipped monitors can still be knocked loose.
         // Reverse gravity mirrors only the direction test, not the stored speed.
@@ -305,7 +305,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         // broader rolling status bit. The animation can lag the status byte by
         // a frame during object releases, which affects monitor break timing.
         boolean canBreak = player.getAnimationId() == Sonic3kAnimationIds.ROLL.id();
-        // ROM Touch_Monitor.checkdestroy (docs/skdisasm/sonic3k.asm:20858-20866):
+        // ROM Touch_Monitor.checkdestroy (docs/skdisasm/sonic3k.asm:20894-20902):
         // Knuckles gliding (double_jump_flag==1) or sliding (==3) also breaks the
         // monitor -- the identical set as the solid gate (isKnucklesGlidingOrSliding).
         canBreak |= isKnucklesGlidingOrSliding(player);
@@ -349,7 +349,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
                 && renderManager.getExplosionRenderer() != null) {
             // ROM Obj_MonitorSpawnIcon creates Obj_MonitorContents, then
             // Obj_Explosion, with AllocateObjectAfterCurrent both times
-            // (docs/skdisasm/sonic3k.asm:40640-40659; allocator at 37911-37925).
+            // (docs/skdisasm/sonic3k.asm:40680-40699; allocator at 37911-37925).
             objectManager.addDynamicObjectAfterSlot(
                     new ExplosionObjectInstance(0x27, posX(), posY(), renderManager),
                     getSlotIndex());
@@ -366,7 +366,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         // The parent shell can be broken by TouchResponse before ObjectManager
         // is executing the monitor slot. Anchor AllocateObjectAfterCurrent to
         // this monitor's SST slot so the content object still lands after the
-        // shell, matching Obj_MonitorSpawnIcon (sonic3k.asm:40640-40652).
+        // shell, matching Obj_MonitorSpawnIcon (sonic3k.asm:40680-40692).
         objectManager.addDynamicObjectAfterSlot(monitorContentsSlot, getSlotIndex());
     }
 
@@ -587,18 +587,18 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         }
         // ROM: SolidObject_Monitor_SonicKnux and SolidObject_Monitor_Tails both
         // open with `btst d6,status(a0) / bne Monitor_ChkOverEdge`
-        // (docs/skdisasm/sonic3k.asm:40559-40562,40583-40585). When the monitor's
+        // (docs/skdisasm/sonic3k.asm:40599-40602,40623-40625). When the monitor's
         // own p1/p2 standing bit is already set, the ROM jumps straight to the
         // continued-ride edge test and NEVER evaluates the roll-anim, Knuckles
         // glide or competition-mode exemptions below. A rider who starts rolling
         // while standing on a monitor therefore keeps the ride: Monitor_ChkOverEdge
-        // (sonic3k.asm:40594-40612) releases them only on Status_InAir or on
+        // (sonic3k.asm:40634-40652) releases them only on Status_InAir or on
         // leaving the horizontal span. Re-testing the acquire-time exemptions on
         // every frame unseats the rider on the roll-entry frame, which the ROM
         // does not do.
         // The object-side bit is mirrored by the rider's own Status_OnObj: both are
-        // set together in RideObject_SetRide (sonic3k.asm:42027-42041) and cleared
-        // together in Monitor_ChkOverEdge (:40613-40617), so require both.
+        // set together in RideObject_SetRide (sonic3k.asm:42067-42081) and cleared
+        // together in Monitor_ChkOverEdge (:40653-40657), so require both.
         ObjectManager solidObjectManager = services().objectManager();
         if (player.isOnObject() && solidObjectManager != null
                 && solidObjectManager.getRidingObject(player) == this) {
@@ -607,25 +607,25 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         if (player.isCpuControlled()) {
             // ROM: SolidObject_Monitor_Tails branches directly to SolidObject_cont
             // outside competition mode before testing the roll anim
-            // (docs/skdisasm/sonic3k.asm:40583-40590).
+            // (docs/skdisasm/sonic3k.asm:40623-40630).
             return true;
         }
-        // ROM: SolidObject_Monitor_SonicKnux (docs/skdisasm/sonic3k.asm:40567-40573)
+        // ROM: SolidObject_Monitor_SonicKnux (docs/skdisasm/sonic3k.asm:40607-40613)
         // also returns non-solid for Knuckles gliding (double_jump_flag==1) or
         // sliding after gliding (==3), after the roll-anim check.
         if (isKnucklesGlidingOrSliding(player)) {
             return false;
         }
         // ROM: SolidObject_Monitor_SonicKnux tests anim(a1) == AniIDSonAni_Roll,
-        // not the broader rolling status bit (docs/skdisasm/sonic3k.asm:40559-40572).
+        // not the broader rolling status bit (docs/skdisasm/sonic3k.asm:40599-40612).
         return player.getAnimationId() != Sonic3kAnimationIds.ROLL.id();
     }
 
     /**
      * ROM parity for the monitor's Knuckles glide/slide exemptions, shared by
      * the solid gate ({@code SolidObject_Monitor_SonicKnux},
-     * docs/skdisasm/sonic3k.asm:40567-40573) and the break gate
-     * ({@code Touch_Monitor.checkdestroy}, docs/skdisasm/sonic3k.asm:20858-20866)
+     * docs/skdisasm/sonic3k.asm:40607-40613) and the break gate
+     * ({@code Touch_Monitor.checkdestroy}, docs/skdisasm/sonic3k.asm:20894-20902)
      * -- both test {@code character_id==2} then {@code double_jump_flag} 1
      * (gliding) or 3 (sliding after gliding). Gated on the GLIDE secondary
      * ability so Sonic's insta-shield {@code double_jump_flag==1}
@@ -647,7 +647,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     @Override
     public int getMonitorSolidObjectVerticalOffset() {
         // ROM: SolidObject_Monitor_SonicKnux falls through to SolidObject_cont
-        // (docs/skdisasm/sonic3k.asm:40559-40576), whose normal-gravity path
+        // (docs/skdisasm/sonic3k.asm:40599-40616), whose normal-gravity path
         // adds +4 before the d2/y_radius overlap check (lines 41429-41432).
         return 4;
     }
@@ -665,7 +665,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     public boolean zeroXSpeedStopsOnLeftSideContact() {
         // S3K SolidObject_cont's player-left branch reaches loc_1E056 when
         // x_vel is zero: only a negative velocity takes the skip branch
-        // (docs/skdisasm/sonic3k.asm:41473-41491). This also publishes the
+        // (docs/skdisasm/sonic3k.asm:41513-41531). This also publishes the
         // wall-cling status_tertiary flag used by later controller slots.
         return true;
     }
@@ -684,7 +684,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     public boolean bypassesOffscreenSolidGate() {
         // Obj_MonitorMain calls SolidObject_Monitor_Tails for Player_2, which branches
         // straight to SolidObject_cont without SolidObjectFull's Player_2 render_flags
-        // test (sonic3k.asm:40486-40500, 40588-40596). An off-screen CPU Tails still
+        // test (sonic3k.asm:40526-40540, 40628-40636). An off-screen CPU Tails still
         // lands on the monitor (soz_completerun row 18642).
         return true;
     }
@@ -732,10 +732,10 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         }
         if (!playerEntity.isCpuControlled()) {
             // ROM: Monitor_ChkOverEdge's .notonmonitor arm does
-            // `bclr d6,status(a0)` (docs/skdisasm/sonic3k.asm:40613-40617), so a
+            // `bclr d6,status(a0)` (docs/skdisasm/sonic3k.asm:40653-40657), so a
             // rider who leaves the monitor clears the object's OWN p1_standing
             // bit immediately. Leaving it latched makes a later Obj_MonitorBreak
-            // (:40628-40634) force Status_InAir on a player who is nowhere near
+            // (:40668-40674) force Status_InAir on a player who is nowhere near
             // the monitor. Only the standing bit is cleared here; p1_pushing is
             // maintained separately by setPlayerPushing, matching the ROM's
             // independent pushing_mask.
@@ -787,7 +787,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
 
         // ROM: Obj_MonitorBreak checks standing_mask|pushing_mask, then applies
         // andi.b #$D7 plus Status_InAir for P1/P2 before spawning the icon/explosion
-        // (docs/skdisasm/sonic3k.asm:40624-40638). This covers MGZ F239 where
+        // (docs/skdisasm/sonic3k.asm:40664-40678). This covers MGZ F239 where
         // Touch_Monitor sets routine=4 while the monitor still has p1_pushing set.
         if ((contactBits & P1_CONTACT_MASK) != 0) {
             releasePlayerFromBrokenMonitor(p1SolidContact != null ? p1SolidContact : breaker);

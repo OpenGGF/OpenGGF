@@ -33,8 +33,8 @@ public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
         RomObjectCodePointerProvider {
     // Obj_MHZCurledVine installs its main code pointer loc_3E8A2 (and display
     // child loc_3E9A6) at 0x0003Exxx, so word 0 of the stood-on object SST is
-    // high word 0x0003 (docs/skdisasm/sonic3k.asm:82778-82797). S3K sub_13EFC
-    // compares this against Tails_CPU_interact (sonic3k.asm:26816-26843).
+    // high word 0x0003 (docs/skdisasm/sonic3k.asm:82819-82838). S3K sub_13EFC
+    // compares this against Tails_CPU_interact (sonic3k.asm:26856-26883).
     private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0003;
     private static final int INITIAL_CURVE_STATE = 0xFFF40000;
     private static final int INITIAL_RANGE_WIDTH = 0x40;
@@ -103,7 +103,7 @@ public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         int halfWidth = rangeWidth / 2;
-        // ROM sub_3E9C6 (sonic3k.asm:82949-82953) accepts a standing player when
+        // ROM sub_3E9C6 (sonic3k.asm:82990-82994) accepts a standing player when
         // 0 <= (playerX - vineX + $40) < rangeWidth, i.e. the window
         // [vineX-$40, vineX-$40+rangeWidth) -- offset $40 LEFT of vineX, not
         // centred on it. The window's centre therefore sits at
@@ -116,7 +116,7 @@ public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
      * Per-x surface heights for new-landing detection, sampled by the shared
      * sloped-solid resolver at {@code sampleX = (playerX - vineX + $40) >> 1}.
      * <p>
-     * ROM sub_3E9C6 -> loc_3EA1E (sonic3k.asm:82980-82996) lands a falling player
+     * ROM sub_3E9C6 -> loc_3EA1E (sonic3k.asm:83021-83037) lands a falling player
      * on the generated curl segment: {@code d0 = $1A(a2,(d0>>4)*6)} then
      * {@code subq.w #8,d0}, i.e. surface = {@code segmentY[d0>>4] - 8}. Encoding
      * each sample as {@code vineY - surface} (with {@link #getSlopeBaseline()} 0)
@@ -146,7 +146,7 @@ public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isSlopeFlipped() {
         // Obj_MHZCurledVine generates its segment table in a single direction with
-        // no render-flag mirroring (sonic3k.asm:82861-82893). The engine folds any
+        // no render-flag mirroring (sonic3k.asm:82902-82934). The engine folds any
         // display h-flip into segmentIndexForSample() so the sampled surface stays
         // consistent with onSolidContact's contour index; the shared resolver must
         // not additionally mirror the sample.
@@ -161,11 +161,11 @@ public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
         int romD0 = sprite.getCentreX() - spawn.x() + INITIAL_RANGE_WIDTH;
         int segmentIndex = segmentIndexForRomD0(romD0);
         // ROM gates the surface Y write on the object's per-player standing bit
-        // (sub_3E9C6 `btst d6,status(a0)`, sonic3k.asm:82943):
+        // (sub_3E9C6 `btst d6,status(a0)`, sonic3k.asm:82984):
         //   - bit already set (continued ride): loc_3E9FA (82963-82977) contours
         //     to y_pos = segmentY - 8 - y_radius every frame.
         //   - bit still clear (establishing frame): the fall-through loc_3EA1E
-        //     landing jumps into loc_1E45A (sonic3k.asm:42004-42028), which snaps
+        //     landing jumps into loc_1E45A (sonic3k.asm:42044-42068), which snaps
         //     y_pos = surface - y_radius - 1 (surface = $1A(a2,d0*6) - 8), i.e.
         //     one pixel higher than the continued contour.
         // The shared sloped resolver applies its continued MvSonicOnSlope snap
@@ -205,7 +205,7 @@ public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
         // This object's bespoke sub_3E9C6 exit is not the shared
         // PlatformObject exit path: loc_3E9E6 clears Status_OnObj and the
         // object's standing bit, but deliberately does not set Status_InAir
-        // (sonic3k.asm:82950-82961). That leaves the player grounded for the
+        // (sonic3k.asm:82991-83002). That leaves the player grounded for the
         // current frame while normal terrain attachment takes over.
         return false;
     }
@@ -243,7 +243,7 @@ public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
     /**
      * World Y of a generated curl segment (0-7), matching the values ROM stores
      * at {@code sub2_x_pos(a1)+$1A+index*6} (the display child's per-segment
-     * position table populated in {@code loc_3E918}, sonic3k.asm:82861-82893).
+     * position table populated in {@code loc_3E918}, sonic3k.asm:82902-82934).
      */
     int segmentY(int segmentIndex) {
         return segmentYs[segmentIndex];
@@ -298,7 +298,7 @@ public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
         }
         // Obj_MHZCurledVine compares $36 (P1 segment) with $37 (P2 segment):
         // `cmp.b d1,d2 / blo.s ... / move.b d2,d1` retains the unsigned larger
-        // index, then adds one (sonic3k.asm:82805-82812). The rider furthest
+        // index, then adds one (sonic3k.asm:82846-82853). The rider furthest
         // along the curl therefore owns both the target curve and landing width.
         int furthestSegment = 0;
         for (int segmentIndex : standingSegmentIndices.values()) {
@@ -311,7 +311,7 @@ public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
      * Curl segment index for a player at ROM {@code d0 = playerX - vineX + $40}.
      * <p>
      * ROM sub_3E9C6 indexes the segment table with {@code d0 >> 4} and applies no
-     * render-flag mirroring (sonic3k.asm:82949-82966). The engine generates its
+     * render-flag mirroring (sonic3k.asm:82990-83007). The engine generates its
      * {@code segmentYs} in the display-flip direction, so a display h-flip mirrors
      * the index here to keep the sampled surface aligned with the rendered curl.
      */

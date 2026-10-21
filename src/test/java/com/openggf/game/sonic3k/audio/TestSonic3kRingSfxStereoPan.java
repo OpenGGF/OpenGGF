@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * ({@code zPlaySound_CheckRing}, {@code Z80 Sound Driver.asm:1919-1925}). This
  * class pins both halves: the per-id side through the sequencer and the
  * Nuked-OPN2 facade, and the alternation when the special stage's raw
- * {@code sfx_RingRight} request ({@code sonic3k.asm:12189-12222}) is played
+ * {@code sfx_RingRight} request ({@code sonic3k.asm:12225-12258}) is played
  * through the audio manager with the real S3K profile map.
  */
 @RequiresRom(SonicGame.SONIC_3K)

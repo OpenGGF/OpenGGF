@@ -109,7 +109,7 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
      * therefore runs the ordinary grounded routine-2 path: it selects Wait
      * before {@code Player_AnglePos} detaches Sonic, then animation dispatch
      * publishes Wait's first {@code $BA} mapping without applying air gravity
-     * ({@code sonic3k.asm:24740-24771};
+     * ({@code sonic3k.asm:24780-24811};
      * {@code General/Sprites/Sonic/Anim - Sonic S3.asm:AniSonic05}).
      */
     @Test

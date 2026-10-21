@@ -13,7 +13,7 @@ import java.util.List;
 
 /**
  * ROM {@code Obj_IncLevEndXGradual}, {@code Obj_DecLevStartXGradual},
- * {@code Obj_DecLevStartYGradual} and {@code Obj_IncLevEndYGradual} (sonic3k.asm:178159-178233)
+ * {@code Obj_DecLevStartYGradual} and {@code Obj_IncLevEndYGradual} (sonic3k.asm:178250-178324)
  * as allocated by the Hidden Palace Knuckles cutscene and the Doomsday flight controller and end
  * boss. Each pass adds {@code $4000} ({@code $8000} for the Y end) to a 16.16 accumulator and moves
  * the boundary by its integer part until it reaches the matching {@code Camera_stored_*} word held

@@ -838,7 +838,7 @@ public interface GameModule {
      * (docs/s1disasm/_incObj/24, 27 &amp; 3F Explosions.asm), whereas S2
      * {@code Obj27_Init} loads {@code move.b #3,anim_frame_duration}
      * (docs/s2disasm/s2.asm:46672) and S3K {@code loc_1E626} loads
-     * {@code move.b #3,anim_frame_timer} (docs/skdisasm/sonic3k.asm:42195).
+     * {@code move.b #3,anim_frame_timer} (docs/skdisasm/sonic3k.asm:42235).
      * All three subsequently reload {@code 7} and delete at mapping_frame 5.
      *
      * <p>Default is the S2/S3K value ({@code 3}); {@code Sonic1GameModule}

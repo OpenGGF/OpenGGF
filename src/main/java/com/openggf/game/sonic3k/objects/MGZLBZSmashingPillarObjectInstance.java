@@ -24,7 +24,7 @@ import java.util.List;
  * Object 0x52 (SK Set 1 entry 82) and 0x20 (SK Set 1 entry 32) -
  * {@code Obj_MGZLBZSmashingPillar}.
  *
- * <p>ROM: {@code sonic3k.asm:56858-56951}. A single routine is shared between
+ * <p>ROM: {@code sonic3k.asm:56898-56991}. A single routine is shared between
  * Marble Garden Zone (MGZ, zone 2) and Launch Base Zone (LBZ, zone 6): the zone
  * check at {@code cmpi.b #2,(Current_zone).w} selects a 32x40 pillar for MGZ
  * vs. a 16x16 spiked tube for LBZ. Both forms drop from their spawn position
@@ -43,11 +43,11 @@ public class MGZLBZSmashingPillarObjectInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_MGZLBZSmashingPillar} is installed from the S3K object pointer table at
      * {@code $00029216} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:56863).
+     * label is defined at docs/skdisasm/sonic3k.asm:56903).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0002}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -189,7 +189,7 @@ public class MGZLBZSmashingPillarObjectInstance extends AbstractObjectInstance
     public boolean usesInclusiveRightEdge() {
         // ROM SolidObjectFull_1P -> SolidObject_cont rejects the X bounding box
         // with bhi (unsigned strictly-greater): cmp.w d3,d0 / bhi.w loc_1E0A2
-        // (sonic3k.asm:41405). A player shoved flush against the right edge has
+        // (sonic3k.asm:41445). A player shoved flush against the right edge has
         // d0 == width*2, which bhi keeps as a live side contact, so ROM re-sets
         // Status_Push every frame the player holds against the pillar. The
         // engine's default exclusive (>=) X gate would instead drop the contact
@@ -203,7 +203,7 @@ public class MGZLBZSmashingPillarObjectInstance extends AbstractObjectInstance
         // abs(d0) < $10 it rejoins loc_1E042, whose grounded tail sets
         // Status_Push even when x_vel points away from the pillar. This is the
         // ordinary SolidObjectFull squash-edge result, driven by the live
-        // contact geometry. sonic3k.asm:41594-41616,41473-41505.
+        // contact geometry. sonic3k.asm:41634-41656,41513-41545.
         return true;
     }
 

@@ -314,10 +314,10 @@ public class EggPrisonAnimalInstance extends AbstractObjectInstance
 
     /**
      * The capsule creates its animals without writing {@code priority} (S2 Obj3E
-     * s2.asm:85045, S3K sonic3k.asm:198673), so they display from the zeroed SST
+     * s2.asm:85045, S3K sonic3k.asm:198780), so they display from the zeroed SST
      * slot, bucket 0, until the delay expires and Obj28_Prison writes
      * {@code move.b #1,priority(a0)} (s2.asm:24738) / Obj_Animal writes
-     * {@code move.w #$80,priority(a0)} (sonic3k.asm:61203).
+     * {@code move.w #$80,priority(a0)} (sonic3k.asm:61243).
      */
     private static final int WAITING_PRIORITY_BUCKET = RenderPriority.bucket(0);
     private static final int RELEASED_PRIORITY_BUCKET = RenderPriority.bucket(1);

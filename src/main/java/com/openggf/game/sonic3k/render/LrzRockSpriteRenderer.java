@@ -13,7 +13,7 @@ import java.io.IOException;
  * Lava Reef's special rock sprites: hardware sprites the ROM appends to the sprite table itself,
  * with no object slot behind them.
  *
- * <p>{@code Draw_LRZ_Special_Rock_Sprites} (sonic3k.asm:39556-39647) keeps a front and a back
+ * <p>{@code Draw_LRZ_Special_Rock_Sprites} (sonic3k.asm:39596-39687) keeps a front and a back
  * pointer into an X-sorted placement list of six-byte {@code (sprite index, x, y)} records.
  * Routine 0 ({@code loc_1CADE}) picks the act's list and scans both pointers from its head; routine
  * 2 ({@code loc_1CB20}) walks each pointer forward and backward from where it was, so the cost is
@@ -27,7 +27,7 @@ import java.io.IOException;
  * record indexes {@code LRZ_Rock_SpriteData} (39699), eight bytes of
  * {@code (y offset, size, art tile, x offset)} in hardware-sprite form.
  *
- * <p>{@code Render_Sprites_NextLevel} (sonic3k.asm:36386-36390) calls it once, while the sprite
+ * <p>{@code Render_Sprites_NextLevel} (sonic3k.asm:36426-36430) calls it once, while the sprite
  * table pointer is still on priority level 0 and only for {@code Current_zone} 9, so the rocks sit
  * behind everything already in bucket 0 and in front of every later bucket.
  *

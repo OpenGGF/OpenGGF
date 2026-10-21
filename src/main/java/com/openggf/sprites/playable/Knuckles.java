@@ -63,9 +63,9 @@ public class Knuckles extends AbstractPlayableSprite {
 
 	@Override
 	public void defineSpeeds() {
-		// ROM: Knuckles_Init (sonic3k.asm:30361-30363)
+		// ROM: Knuckles_Init (sonic3k.asm:30401-30403)
 		// Max_speed = $600, Acceleration = $C, Deceleration = $80
-		// ROM: Knux_Jump (sonic3k.asm:32454) move.w #$600,d2 — lower jump than Sonic
+		// ROM: Knux_Jump (sonic3k.asm:32494) move.w #$600,d2 — lower jump than Sonic
 		runAccel = 12;
 		runDecel = 128;
 		friction = 12;

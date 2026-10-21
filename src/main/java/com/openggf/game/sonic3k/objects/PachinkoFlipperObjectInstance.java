@@ -53,9 +53,9 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
     // ROM Obj_PachinkoFlipper keeps a SEPARATE per-player standing counter byte and
     // calls sub_49CFE once per character with its own pointer: `lea $36(a0),a3 /
     // lea (Player_1).w,a1 ... bsr.s sub_49CFE` then `lea $37(a0),a3 /
-    // lea (Player_2).w,a1 ... bsr.s sub_49CFE` (sonic3k.asm:96389-96397), and
+    // lea (Player_2).w,a1 ... bsr.s sub_49CFE` (sonic3k.asm:96435-96443), and
     // sub_49D72's release pass repeats the same $36/$37 split
-    // (sonic3k.asm:96403-96410). Collapsing both into one reference made a
+    // (sonic3k.asm:96449-96456). Collapsing both into one reference made a
     // two-character ride mutually exclusive: with Sonic and Tails both standing on
     // the same flipper, each character's contact saw the OTHER character in the
     // single slot, re-entered the newly-locked branch and returned before
@@ -102,9 +102,9 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
     /**
      * {@inheritDoc}
      *
-     * <p>ROM {@code SolidObjCheckSloped2}/{@code SolidObjSloped2} (sonic3k.asm:42076-42097,
-     * 41732-41830), reached via {@code SolidObjectTopSloped2} (sonic3k.asm:41831-41872) as
-     * called from {@code Obj_PachinkoFlipper}'s {@code loc_49C8A} (sonic3k.asm:96384
+     * <p>ROM {@code SolidObjCheckSloped2}/{@code SolidObjSloped2} (sonic3k.asm:42116-42137,
+     * 41732-41830), reached via {@code SolidObjectTopSloped2} (sonic3k.asm:41871-41912) as
+     * called from {@code Obj_PachinkoFlipper}'s {@code loc_49C8A} (sonic3k.asm:96430
      * {@code jsr (SolidObjectTopSloped2).l}), samples the slope table byte and subtracts it
      * from {@code y_pos(a0)} directly: {@code move.w y_pos(a0),d0 / sub.w d3,d0} with no
      * baseline term. The engine's default {@link SlopedSolidProvider#getSlopeBaseline()}
@@ -146,11 +146,11 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         boolean newlyLocked = lockedFor(player) != player;
         lockPlayer(player);
         if (newlyLocked) {
-            // ROM sub_49CFE (sonic3k.asm:96416-96434): on a NEW lock (a3 byte was
+            // ROM sub_49CFE (sonic3k.asm:96462-96480): on a NEW lock (a3 byte was
             // 0), the routine locks control, sets roll radii/Status_Roll, and
             // conditionally lifts y_pos, then returns via locret_49D3A WITHOUT
             // ever touching ground_vel(a1). Acceleration (loc_49D54,
-            // sonic3k.asm:96449-96457) is only reachable through the ALREADY-locked
+            // sonic3k.asm:96495-96503) is only reachable through the ALREADY-locked
             // branch (loc_49D3C, taken when (a3)!=0). Applying acceleration on the
             // same frame as the initial lock double-counted the landing's
             // ground_vel=x_vel carry-over (trace f430: expected g_speed=-0x18,
@@ -158,10 +158,10 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
             // set by the landing).
             //
             // The same newly-locked branch writes anim(a1) as a WORD:
-            // `move.w #2<<8,anim(a1)` (sonic3k.asm:96422). anim/prev_anim are the
+            // `move.w #2<<8,anim(a1)` (sonic3k.asm:96468). anim/prev_anim are the
             // adjacent bytes $1C/$1D, so this stores anim=2 (Roll) AND prev_anim=0.
             // Because prev_anim now mismatches anim, the next Animate_Knuckles pass
-            // (loc_17D34-17D40, sonic3k.asm:33034-33037) resets anim_frame=0 and
+            // (loc_17D34-17D40, sonic3k.asm:33074-33077) resets anim_frame=0 and
             // anim_frame_timer=0 -- the ball's roll spin restarts from the first
             // AniKnuckles02 frame the frame after the catch. Without this the
             // engine's roll animation kept advancing from its airborne index and
@@ -226,10 +226,10 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         // ROM sub_49CFE's newly-locked branch (a3 byte == 0, sonic3k.asm:96422-96434)
         // sets object_control(a1) bit 0. From the next frame on, the player's own
         // control routine sees that bit and skips Sonic_Modes ENTIRELY
-        // (sonic3k.asm:21973 btst #0,object_control(a0) / beq.s loc_10C0C): the
+        // (sonic3k.asm:22009 btst #0,object_control(a0) / beq.s loc_10C0C): the
         // locked player never runs RollRepel/RollSpeed, its ground-wall check
         // (loc_11350), or MoveSprite for itself. Its ground_vel/x_vel/y_vel and
-        // position are owned SOLELY by the flipper's loc_49DE4 (sonic3k.asm:96509-96534),
+        // position are owned SOLELY by the flipper's loc_49DE4 (sonic3k.asm:96555-96580),
         // which applies acceleration, projects ground_vel onto the player's angle,
         // moves, and does its OWN wall check.
         //
@@ -259,13 +259,13 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
 
     /**
      * ROM already-locked drive: {@code loc_49D54} acceleration followed by
-     * {@code loc_49DE4} (sonic3k.asm:96449-96534). Because the locked player skips
+     * {@code loc_49DE4} (sonic3k.asm:96495-96580). Because the locked player skips
      * Sonic_Modes (object_control bit 0, asserted in {@link #lockPlayer}), the
      * flipper owns the player's per-frame ground_vel/x_vel/y_vel and position here,
      * exactly as {@code loc_49DE4} does after {@code movea.l a1,a0}.
      */
     private void driveLockedPlayer(AbstractPlayableSprite player) {
-        // loc_49D54 (sonic3k.asm:96449-96457): moveq #$18,d1 / btst #0,status(a0)
+        // loc_49D54 (sonic3k.asm:96495-96503): moveq #$18,d1 / btst #0,status(a0)
         // [flipper facing] / beq.s loc_49D60 / not.w d1 / loc_49D60:
         // add.w d1,ground_vel(a1). NOT.W $18 = $FFE7 = -25 for a flipped flipper.
         // It never writes status(a1)/direction on the player.
@@ -273,7 +273,7 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         int gSpeed = (short) (player.getGSpeed() + accel);
         player.setGSpeed((short) gSpeed);
 
-        // loc_49DE4 friction (sonic3k.asm:96511-96524): ground_vel is nudged toward
+        // loc_49DE4 friction (sonic3k.asm:96557-96570): ground_vel is nudged toward
         // zero by d5 = the raw controller-input word, clamping at 0 (bcc guard).
         // d5 == 0 whenever no button is held, so for the idle locked ride this is a
         // no-op. The engine's collapsed A/B/C input cannot reconstruct the exact ROM
@@ -290,13 +290,13 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM loc_49E0A (sonic3k.asm:96532-96541): project {@code ground_vel(a1)} onto the
+     * ROM loc_49E0A (sonic3k.asm:96578-96587): project {@code ground_vel(a1)} onto the
      * player's own {@code angle(a1)} via {@code GetSineCosine}/{@code muls.w}/{@code asr.l #8},
      * write the result into {@code y_vel}/{@code x_vel}, then {@code jsr MoveSprite_TestGravity2}
      * moves {@code x_pos}/{@code y_pos} by that velocity. Shared by the idle-ride drive path
      * ({@link #driveLockedPlayer}) and the launch-trigger fall-through
      * ({@link #launchPlayer}, reached via {@code loc_49D68}'s {@code bra.w loc_49DE4}
-     * sonic3k.asm:96460-96462).
+     * sonic3k.asm:96506-96508).
      */
     private void projectGroundVelAndMove(AbstractPlayableSprite player) {
         int gSpeed = player.getGSpeed();
@@ -310,14 +310,14 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM loc_49E28-loc_49E56 (sonic3k.asm:96542-96557), reached immediately after the
+     * ROM loc_49E28-loc_49E56 (sonic3k.asm:96588-96603), reached immediately after the
      * ground_vel move above (both from the idle-ride accel branch via
      * {@code loc_49D54->loc_49D60->bra.w loc_49DE4} and the launch-trigger branch via
      * {@code loc_49D68->bra.w loc_49DE4}): {@code jsr (CheckLeftWallDist).l / tst.w d1 /
      * bpl.s loc_49E42 / sub.w d1,x_pos(a0) / move.w #0,ground_vel(a0)}, then the mirrored
      * {@code jsr (CheckRightWallDist).l / tst.w d1 / bpl.s loc_49E56 / add.w d1,x_pos(a0) /
      * move.w #0,ground_vel(a0)}. {@code CheckLeftWallDist}/{@code CheckRightWallDist}
-     * (sonic3k.asm:20505, 20188) probe from the player's own x_pos +/-0xA (the
+     * (sonic3k.asm:20541, 20224) probe from the player's own x_pos +/-0xA (the
      * non-Competition_mode path taken here) at y_pos with no y_radius offset, distinct
      * from the {@code Obj}-prefixed object variants. Only x_pos is patched by the
      * returned (negative-when-overlapping) distance and ground_vel(a1) is zeroed --
@@ -391,13 +391,13 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         // 0x0210 once the launch no longer zeroed g_speed outright).
         applyLaunchTriggerFrameGroundVelDecel(player);
 
-        // loc_49D68's bra.w loc_49DE4 (sonic3k.asm:96462) does not stop at the
+        // loc_49D68's bra.w loc_49DE4 (sonic3k.asm:96508) does not stop at the
         // ground_vel nudge above -- it falls all the way through loc_49E0A
-        // (sonic3k.asm:96532-96541), which projects the just-nudged ground_vel
+        // (sonic3k.asm:96578-96587), which projects the just-nudged ground_vel
         // onto the player's angle into x_vel/y_vel and runs MoveSprite_TestGravity2,
         // moving x_pos/y_pos BEFORE the top-level Obj_PachinkoFlipper routine
-        // consumes $38(a0) and calls sub_49D72 (sonic3k.asm:96469-96504). sub_49D72
-        // then measures `x_pos(a1)-x_pos(a0)` (sonic3k.asm:96472-96473) using that
+        // consumes $38(a0) and calls sub_49D72 (sonic3k.asm:96515-96550). sub_49D72
+        // then measures `x_pos(a1)-x_pos(a0)` (sonic3k.asm:96518-96519) using that
         // ALREADY-MOVED position, not the pre-trigger position. Skipping this move
         // left the distance measurement 2px short (ground_vel=0x200 at angle=0
         // moves the player +2px this same frame), which fed the wrong
@@ -441,10 +441,10 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         player.setControlLocked(false);
         player.setPinballMode(false);
         player.setPinballSpeedLock(false);
-        // ROM sub_49D72 clears object_control(a1) (sonic3k.asm:96505); drop the
+        // ROM sub_49D72 clears object_control(a1) (sonic3k.asm:96551); drop the
         // engine movement gate so the launched player runs its own air physics.
         ObjectControlState.setMovementSuppressionPreservingOwnership(player, false);
-        // sub_49D72's bset/bclr pair (sonic3k.asm:96498-96499) only touches
+        // sub_49D72's bset/bclr pair (sonic3k.asm:96544-96545) only touches
         // Status_InAir/Status_OnObj -- it never writes Status_Facing (bit 0) or
         // calls anything that would flip the player's facing direction, so the
         // launch keeps whatever facing the player had while locked to the flipper
@@ -467,9 +467,9 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM {@code loc_49D48} (sonic3k.asm:96440-96446) clears {@code object_control(a1)}
+     * ROM {@code loc_49D48} (sonic3k.asm:96486-96492) clears {@code object_control(a1)}
      * and the character's OWN counter byte {@code (a3)} -- $36 for Player_1, $37 for
-     * Player_2 (sonic3k.asm:96389-96397) -- so one character leaving the flipper never
+     * Player_2 (sonic3k.asm:96435-96443) -- so one character leaving the flipper never
      * releases the other.
      */
     private void releaseLockedPlayer(AbstractPlayableSprite player) {
@@ -480,13 +480,13 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         lockedPlayer.setControlLocked(false);
         lockedPlayer.setPinballMode(false);
         lockedPlayer.setPinballSpeedLock(false);
-        // ROM loc_49D48 (sonic3k.asm:96444) clears object_control(a1) when the
+        // ROM loc_49D48 (sonic3k.asm:96490) clears object_control(a1) when the
         // player stops standing on the flipper; drop the engine movement gate too.
         ObjectControlState.setMovementSuppressionPreservingOwnership(lockedPlayer, false);
         setLockedFor(lockedPlayer, null);
     }
 
-    /** ROM's Player_2 arm of the {@code $36}/{@code $37} split (sonic3k.asm:96393-96397). */
+    /** ROM's Player_2 arm of the {@code $36}/{@code $37} split (sonic3k.asm:96439-96443). */
     private boolean isSidekick(AbstractPlayableSprite player) {
         return player.isCpuControlled();
     }

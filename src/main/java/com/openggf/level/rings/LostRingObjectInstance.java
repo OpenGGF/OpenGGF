@@ -209,12 +209,12 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
         // ROM (LostRingPool.updatePhysics, RingManager.java:1276-1278 / s2.asm RLoss_Move):
         //   xSubpixel += xVel;  ySubpixel += yVel;  yVel += gravity.
-        // Under the flag loc_1A7E8 (sonic3k.asm:35675-35678) swaps MoveSprite2 for
-        // MoveSprite_TestGravity2, which integrates -y_vel (:36089-36096), and leaves the
+        // Under the flag loc_1A7E8 (sonic3k.asm:35715-35718) swaps MoveSprite2 for
+        // MoveSprite_TestGravity2, which integrates -y_vel (:36129-36136), and leaves the
         // `addi.w #$18,y_vel` gravity step POSITIVE. Velocity is never inverted, only the
         // position integration is. Negating the gravity instead and integrating +y_vel is the
         // sign conjugate of that and agrees on position only if the launch velocity is also
-        // negated — and the spill loop (:35592-35613) has no flag branch, so it is not. That
+        // negated — and the spill loop (:35632-35653) has no flag branch, so it is not. That
         // mirrored the whole spill arc the wrong way; the ROM form below does not.
         xSubpixel += xVel;
         ySubpixel += reverseGravity ? -yVel : yVel;
@@ -230,8 +230,8 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         int vblaCounter = resolveVblaCounter() + resolveFloorCheckCounterPhase();
         boolean boundaryChecksOnlyOnCadence =
                 lostRingBoundaryChecksOnlyOnProbeCadence();
-        // ROM: both bodies test the same sign. loc_1A75C `bmi.s loc_1A7B0` (:35767) and
-        // loc_1A7E8 `bmi.s loc_1A83C` (:35679) both skip the probe while y_vel is negative,
+        // ROM: both bodies test the same sign. loc_1A75C `bmi.s loc_1A7B0` (:35807) and
+        // loc_1A7E8 `bmi.s loc_1A83C` (:35719) both skip the probe while y_vel is negative,
         // because positive y_vel always means "falling", toward whichever surface is the floor.
         boolean movingTowardSurface = yVel >= 0;
         if (!movingTowardSurface) {
@@ -474,7 +474,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      * Vertical extent used by the renderer that latches {@code render_flags} bit 7.
      * S1/S2 use BuildSprites' 32-pixel approximate-height path for Obj37, while
      * S3K Render_Sprites reads the cleared {@code height_pixels} field and therefore
-     * uses no vertical margin (sonic3k.asm:36337-36370).
+     * uses no vertical margin (sonic3k.asm:36377-36410).
      */
     protected int resolveLostRingRenderVerticalMargin() {
         RingRules rules = resolveRingRules();
@@ -490,7 +490,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
     /**
      * S3K's rising/off-cadence branches skip the lifetime and bottom-boundary
-     * checks (sonic3k.asm:35654-35686). S1 and S2 branch to those checks from
+     * checks (sonic3k.asm:35694-35726). S1 and S2 branch to those checks from
      * both paths (S1 Rings.asm:314-356; s2.asm:25209-25249).
      */
     protected boolean lostRingBoundaryChecksOnlyOnProbeCadence() {

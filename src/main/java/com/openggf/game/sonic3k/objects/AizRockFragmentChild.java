@@ -16,7 +16,7 @@ import java.util.List;
  * Each fragment receives a scattered velocity from a ROM velocity table
  * and falls with gravity until offscreen, then deletes itself.
  *
- * ROM: BreakObjectToPieces (sonic3k.asm:45772) gives each fragment a unique
+ * ROM: BreakObjectToPieces (sonic3k.asm:45812) gives each fragment a unique
  * mapping piece from the parent's broken frame. The cork floor's frame 1 has
  * 12 pieces, one per fragment. Each fragment renders only its assigned piece
  * via {@code drawFramePieceByIndex}.
@@ -29,7 +29,7 @@ public class AizRockFragmentChild extends GravityDebrisChild
 
     /**
      * Fragment-specific gravity: 0x18 subpixels/frame.
-     * ROM (sonic3k.asm:58588): loc_2A5F8 uses MoveSprite2 (no gravity) then
+     * ROM (sonic3k.asm:58628): loc_2A5F8 uses MoveSprite2 (no gravity) then
      * {@code addi.w #$18,y_vel(a0)} — much lighter than standard S3K gravity (0x38).
      */
     private static final int GRAVITY = 0x18;
@@ -63,9 +63,9 @@ public class AizRockFragmentChild extends GravityDebrisChild
     }
 
     // Parent CutsceneKnucklesRockChild carries priority $180 (bucket 3). BreakObjectToPieces
-    // keeps piece 0 in the parent slot (a1=a0, sonic3k.asm:45793) with that word, and copies
+    // keeps piece 0 in the parent slot (a1=a0, sonic3k.asm:45833) with that word, and copies
     // only the HIGH byte into each freshly allocated piece (move.b priority(a0),priority(a1),
-    // sonic3k.asm:45811), so pieces 1-11 carry $0100, bucket 2.
+    // sonic3k.asm:45851), so pieces 1-11 carry $0100, bucket 2.
     private static final int PARENT_PRIORITY_WORD = 0x180;
     private static final int PIECE0_PRIORITY_BUCKET = RenderPriority.fromS3kWord(PARENT_PRIORITY_WORD);
     private static final int PIECE_PRIORITY_BUCKET = RenderPriority.fromS3kWord(PARENT_PRIORITY_WORD & 0xFF00);

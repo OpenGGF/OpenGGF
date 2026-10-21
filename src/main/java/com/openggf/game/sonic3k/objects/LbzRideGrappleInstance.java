@@ -26,7 +26,7 @@ import java.util.Map;
 /**
  * S3K S3KL object $17 - Launch Base ride grapple.
  *
- * <p>ROM reference: {@code Obj_LBZRideGrapple} (sonic3k.asm:52124-52531).
+ * <p>ROM reference: {@code Obj_LBZRideGrapple} (sonic3k.asm:52164-52571).
  * The ROM allocates a child multisprite for the chain/handle; this engine
  * instance keeps those child coordinates as local state because the child only
  * renders and supplies the held-player handle position.
@@ -134,8 +134,8 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
         updateDynamicSpawn(motion.x, motion.y);
     }
 
-    // Obj_LBZRideGrapple writes priority $80 (sonic3k.asm:52132); the loc_2668E multisprite helper
-    // copies it with move.w priority(a0),priority(a1) (sonic3k.asm:52149).
+    // Obj_LBZRideGrapple writes priority $80 (sonic3k.asm:52172); the loc_2668E multisprite helper
+    // copies it with move.w priority(a0),priority(a1) (sonic3k.asm:52189).
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x80);
 
     @Override

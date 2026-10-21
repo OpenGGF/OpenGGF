@@ -82,7 +82,7 @@ class TestAizMinibossCutsceneInstance {
 
     /**
      * The AIZ miniboss drop plays {@code mus_Miniboss}, {@code $2E}
-     * (sonic3k.asm:136807-136812, {@code AIZMiniboss_StartDropMusic}), which
+     * (sonic3k.asm:136872-136877, {@code AIZMiniboss_StartDropMusic}), which
      * also writes it to {@code Current_music+1}.
      *
      * <p>The engine used {@code mus_MinibossK}, {@code $18}. Both resolve to the
@@ -119,9 +119,9 @@ class TestAizMinibossCutsceneInstance {
      * The AIZ miniboss cutscene really does fade, and at the S3K driver's rate.
      *
      * <p>Both of its fades are {@code cmd_FadeOut}: the entry fade before the
-     * miniboss theme (ROM {@code loc_68556}, sonic3k.asm:136839-136846) and the
+     * miniboss theme (ROM {@code loc_68556}, sonic3k.asm:136904-136911) and the
      * escape fade before the level music is restored ({@code loc_68646},
-     * :136929-136946). {@code zFadeOutMusic} loads {@code zFadeOutTimeout} with
+     * :136994-137011). {@code zFadeOutMusic} loads {@code zFadeOutTimeout} with
      * 28h and {@code zFadeDelay} with 6 (Sound/Z80 Sound Driver.asm:2306-2311),
      * so silence arrives after 240 frames rather than the 120 of S1 and S2.
      *
@@ -140,7 +140,7 @@ class TestAizMinibossCutsceneInstance {
 
         ForwardingFadeServices services = new ForwardingFadeServices(audio);
         // The trigger only fires once the camera has reached the arena
-        // (ROM loc_68556's Camera_min/max_X lock, sonic3k.asm:136839-136846).
+        // (ROM loc_68556's Camera_min/max_X lock, sonic3k.asm:136904-136911).
         services.camera().setX((short) 0x3000);
         AizMinibossCutsceneInstance cutscene = buildCutscene(services);
         java.lang.reflect.Method trigger =

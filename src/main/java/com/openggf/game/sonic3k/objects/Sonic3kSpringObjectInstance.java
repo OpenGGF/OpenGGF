@@ -66,7 +66,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
 
     // Obj_Spring's routine pointer is $00023050 in the locked-on ROM. S3K's
     // sidekick off-screen watchdog compares word 0 of this pointer against its
-    // prior stood-on-object latch (sub_13EFC, sonic3k.asm:26816-26833).
+    // prior stood-on-object latch (sub_13EFC, sonic3k.asm:26856-26873).
     private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0002;
 
     // Subtype constants (shifted >> 3 & 0xE) - matches ROM Obj_Spring index
@@ -129,7 +129,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         // Obj_Spring installs variants in the $00022xxx-$00023xxx range, so
         // word 0 of its SST code pointer is $0002. S3K sub_13EFC compares this
         // word against Tails_CPU_interact when CPU Tails stands off-screen
-        // (docs/skdisasm/sonic3k.asm:47500-47540,26816-26843).
+        // (docs/skdisasm/sonic3k.asm:47540-47580,26856-26883).
         return ROM_CODE_POINTER_HIGH_WORD;
     }
 
@@ -187,34 +187,34 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
      * - addq.w #8,y_pos(a1)
      * - move.w objoff_30(a0),y_vel(a1) [negative = up]
      * - bset #1,status(a1)             ; Status_InAir
-     * - bclr #3,status(a1)             ; Status_OnObj (sonic3k.asm:47723-47724,
+     * - bclr #3,status(a1)             ; Status_OnObj (sonic3k.asm:47763-47764,
      *                                    s2.asm:33732-33733, s1disasm/_incObj/41 Springs.asm:88-89)
      */
     private void applyUpSpring(AbstractPlayableSprite player) {
         // ROM updates y_pos (centre coordinate) with a word-sized add, so preserve y_sub.
         // sub_22F98 follows it with subi.w #2*8 under Reverse_gravity_flag
-        // (sonic3k.asm:47720-47726), a net -8.
+        // (sonic3k.asm:47760-47766), a net -8.
         player.setCentreYPreserveSubpixel((short) (player.getCentreY()
                 + com.openggf.physics.ReverseGravity.mirrorYDelta(isReverseGravityActive(player), 8)));
         player.setYSpeed((short) getStrength());
         player.setAir(true);
         // ROM sub_22F98 clears jumping(a1) after the spring overwrites y_vel;
         // release input must not apply Sonic_JumpHeight's variable-height cap
-        // to an object-owned launch (sonic3k.asm:47720-47726).
+        // to an object-owned launch (sonic3k.asm:47760-47766).
         player.setJumping(false);
         // sub_22F98 writes routine=2 unconditionally, returning even a hurt
         // player (routine=4) to the normal control path for the spring launch
-        // (sonic3k.asm:47720-47729).
+        // (sonic3k.asm:47760-47769).
         player.setHurt(false);
-        // ROM sub_22F98 (sonic3k.asm:47723-47724) bclr #Status_OnObj after
+        // ROM sub_22F98 (sonic3k.asm:47763-47764) bclr #Status_OnObj after
         // bset #Status_InAir. SolidObjectFull2_1P just landed the player on the
         // spring (set OnObj=1); sub_22F98 immediately clears it as the player
         // launches off. Without this clear, OnObj remains true into subsequent
         // frames where ROM has it cleared, biasing Tails CPU follow-steering at
-        // loc_13DA6 (sonic3k.asm:26690) which reads the leader's Status_OnObj.
+        // loc_13DA6 (sonic3k.asm:26730) which reads the leader's Status_OnObj.
         player.setOnObject(false);
         // ROM sub_22F98 unconditionally writes routine(a1)=2 after launching
-        // the player (sonic3k.asm:47727-47733). If routine was 4 (hurt), this
+        // the player (sonic3k.asm:47767-47773). If routine was 4 (hurt), this
         // immediately restores normal control and air/water processing.
         player.setHurt(false);
 
@@ -235,7 +235,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
     private void applyDownSpring(AbstractPlayableSprite player) {
         // ROM updates y_pos (centre coordinate) with a word-sized subtract, so preserve y_sub.
         // sub_233CA follows it with addi.w #2*8 under Reverse_gravity_flag
-        // (sonic3k.asm:48093-48098), a net +8.
+        // (sonic3k.asm:48133-48138), a net +8.
         player.setCentreYPreserveSubpixel((short) (player.getCentreY()
                 + com.openggf.physics.ReverseGravity.mirrorYDelta(isReverseGravityActive(player), -8)));
 
@@ -249,16 +249,16 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
 
         player.setAir(true);
         // sub_233CA clears jumping for the same object-owned launch contract
-        // as the up spring (sonic3k.asm:48139-48142).
+        // as the up spring (sonic3k.asm:48179-48182).
         player.setJumping(false);
         // sub_233CA writes routine=2 after clearing the launch status bits
-        // (sonic3k.asm:48139-48143).
+        // (sonic3k.asm:48179-48183).
         player.setHurt(false);
-        // ROM sub_233CA (sonic3k.asm:48139-48140) bclr #Status_OnObj after
+        // ROM sub_233CA (sonic3k.asm:48179-48180) bclr #Status_OnObj after
         // bset #Status_InAir; mirrors sub_22F98 for the down-spring trigger.
         player.setOnObject(false);
         // ROM sub_233CA writes routine(a1)=2 after its airborne state writes
-        // (sonic3k.asm:48143-48148), ending an active hurt routine immediately.
+        // (sonic3k.asm:48183-48188), ending an active hurt routine immediately.
         player.setHurt(false);
 
         // ROM: sub_233CA line 48103-48105 - if bit 7 set, clear x velocity
@@ -298,10 +298,10 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         player.setXSpeed((short) strength);
         player.setDirection(dir);
         // ROM sub_23190 updates x_vel/ground_vel and lock state but never
-        // clears Status_InAir (docs/skdisasm/sonic3k.asm:47771-47815,
+        // clears Status_InAir (docs/skdisasm/sonic3k.asm:47811-47855,
         // 47829-47864). Keep airborne side contacts airborne; only the
         // grounded/proactive sub_2326C path is known to arrive with Status_InAir
-        // already clear (sonic3k.asm:47957-48024).
+        // already clear (sonic3k.asm:47997-48064).
         if (!wasAirborne) {
             player.setAir(false);
             player.setGroundMode(GroundMode.GROUND);
@@ -347,19 +347,19 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         player.setDirection(xStrength < 0 ? Direction.LEFT : Direction.RIGHT);
         player.setAir(true);
         // Both diagonal trigger tails clear jumping before returning to player
-        // control (sonic3k.asm:48213-48217,48304-48308).
+        // control (sonic3k.asm:48253-48257,48344-48348).
         player.setJumping(false);
         // Both diagonal launch tails write routine=2, matching the vertical
         // spring contract for a player that arrived in the hurt routine
-        // (sonic3k.asm:48213-48217,48304-48308).
+        // (sonic3k.asm:48253-48257,48344-48348).
         player.setHurt(false);
-        // ROM sub_234E6 (sonic3k.asm:48213-48214) bclr #Status_OnObj after
+        // ROM sub_234E6 (sonic3k.asm:48253-48254) bclr #Status_OnObj after
         // bset #Status_InAir for diagonal-up/down springs. It writes
         // x_vel/y_vel but leaves ground_vel untouched unless subtype bit 0
-        // takes the flip path (sonic3k.asm:48200-48217, 48225-48241).
+        // takes the flip path (sonic3k.asm:48240-48257, 48265-48281).
         player.setOnObject(false);
         // ROM's up- and down-diagonal tails both write routine(a1)=2 after
-        // launching the player (sonic3k.asm:48218-48222, 48306-48310), so
+        // launching the player (sonic3k.asm:48258-48262, 48346-48350), so
         // diagonal springs also end hurt routine 4.
         player.setHurt(false);
         player.recordMgzTopPlatformSpringHandoff(player.getXSpeed(), player.getYSpeed());
@@ -382,7 +382,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
             // ROM sub_23190's launch tail clears BOTH p1_pushing_bit and
             // p2_pushing_bit on the spring, unconditionally, before clearing the
             // launched character's own Status_Push
-            // (docs/skdisasm/sonic3k.asm:47950-47952).
+            // (docs/skdisasm/sonic3k.asm:47990-47992).
             services().objectManager().solidContacts().releaseObjectPushLatchForAllPlayers(this);
             player.setPushing(false);
         } else if (springType == TYPE_UP || springType == TYPE_DIAGONAL_UP) {
@@ -434,7 +434,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
             return;
         }
         initialized = true;
-        // ROM: Reverse_gravity_flag swaps UP<->DOWN during init (sonic3k.asm:47622-47627)
+        // ROM: Reverse_gravity_flag swaps UP<->DOWN during init (sonic3k.asm:47662-47667)
         if (services().gameState() != null && services().gameState().isReverseGravityActive()) {
             if (springType == TYPE_UP) {
                 springType = TYPE_DOWN;
@@ -451,7 +451,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         if (nativeInitExecutionPending) {
             // Obj_Spring installs the variant code pointer and returns through
             // Spring_Common. Obj_Spring_Horizontal/Up/etc. do not execute until
-            // the object's next SST pass (sonic3k.asm:47500-47652). In CNZ the
+            // the object's next SST pass (sonic3k.asm:47540-47692). In CNZ the
             // spring is loaded beside Tails on f1846; allowing the Java variant
             // routine to fall through here launches her one frame before ROM.
             nativeInitExecutionPending = false;
@@ -462,7 +462,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         List<PlayableEntity> nativeParticipants = List.of();
         if (springType == TYPE_HORIZONTAL) {
             // Obj_Spring_Horizontal runs both SolidObjectFull2_1P passes before
-            // falling through to sub_2326C (sonic3k.asm:47779-47814,
+            // falling through to sub_2326C (sonic3k.asm:47819-47854,
             // 47957-48024). Keep that checkpoint ahead of the proactive zone:
             // stacked FBZ springs rely on the later spring's side correction
             // cancelling its own sub_23190 position nudge (trace f12917).
@@ -471,9 +471,9 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
                 applyHorizontalCheckpointContact(participant, checkpointPlayer(participant));
             }
         }
-        // ROM sub_2326C (sonic3k.asm:47957) — proactive horizontal-spring zone.
+        // ROM sub_2326C (sonic3k.asm:47997) — proactive horizontal-spring zone.
         // The whole routine is gated on `cmpi.b #3,anim(a0) / beq.w locret_23324`
-        // (sonic3k.asm:47958-47959); within that gate, Player_1 (line 47973) and
+        // (sonic3k.asm:47998-47999); within that gate, Player_1 (line 47973) and
         // Player_2 (line 47999) are checked independently. Engine equivalent:
         // query native Player_1 plus native Player_2 only. Native Player_2 is
         // the first sidekick; extra engine sidekicks are not promoted into the
@@ -499,7 +499,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
 
         if (springType == TYPE_HORIZONTAL && animationState.getAnimId() == ANIM_IDLE) {
             // ROM sub_2326C falls through from the Player_1 block to the
-            // Player_2 block (sonic3k.asm:47998→47999) regardless of whether
+            // Player_2 block (sonic3k.asm:48038→47999) regardless of whether
             // Player_1 fired the spring, so the second-player check must run
             // unconditionally inside the outer animation gate.
             for (PlayableEntity candidate : nativeParticipants) {
@@ -718,7 +718,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         }
         if (springType == TYPE_HORIZONTAL && proactiveTriggeredThisUpdate.contains(player)) {
             // Obj_Spring_Horizontal calls sub_2326C after both SolidObjectFull2_1P
-            // passes (docs/skdisasm/sonic3k.asm:47779-47814,47957-48024). A player
+            // passes (docs/skdisasm/sonic3k.asm:47819-47854,47997-48064). A player
             // launched by that proactive path cannot be side-pushed by the same
             // spring until the next object execution.
             return false;
@@ -732,9 +732,9 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
 
     private boolean shouldLetHorizontalProactiveTriggerOwnContact(AbstractPlayableSprite player) {
         // Obj_Spring_Horizontal runs SolidObjectFull2_1P first, then sub_2326C
-        // (docs/skdisasm/sonic3k.asm:47779-47814). When Tails lands just outside
+        // (docs/skdisasm/sonic3k.asm:47819-47854). When Tails lands just outside
         // the side-push box but inside sub_2326C's +/-$28, +/-$18 proactive zone
-        // (sonic3k.asm:47957-48024), ROM skips the side push and only applies
+        // (sonic3k.asm:47997-48064), ROM skips the side push and only applies
         // the horizontal spring nudge. Engine generic solid contact includes the
         // player radius in its X overlap and can otherwise pre-push the player
         // onto the spring edge before that proactive trigger runs.
@@ -757,7 +757,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
 
     @Override
     public int getBalanceWidthPixels() {
-        // Spring_Horizontal overwrites width_pixels with 8 (sonic3k.asm:47562-47567);
+        // Spring_Horizontal overwrites width_pixels with 8 (sonic3k.asm:47602-47607);
         // the other orientations keep Obj_Spring's $10. Player object-edge balance reads it.
         return springType == TYPE_HORIZONTAL ? 8 : super.getBalanceWidthPixels();
     }
@@ -785,7 +785,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
     @Override
     public boolean usesInclusiveRightEdge() {
         // ROM SolidObject_cont gates the horizontal overlap with
-        // cmp.w d3,d0 / bhi.w loc_1E0A2 (sonic3k.asm:41394-41401), where
+        // cmp.w d3,d0 / bhi.w loc_1E0A2 (sonic3k.asm:41434-41441), where
         // d0 = (x_pos(a1) - x_pos(a0)) + d1 and d3 = d1*2 (d1 = solid
         // half-width). bhi rejects only when d0 > d1*2, so the player's
         // centre sitting exactly on the right edge (d0 == d1*2) is still a
@@ -796,7 +796,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         // a leftward run, comes to rest with its centre exactly on the
         // vertical spring's right edge, then accelerates away; ROM keeps
         // SolidObject side-contact alive across those frames (loc_1E06E
-        // bset #Status_Push, sonic3k.asm:41488-41495) because the right
+        // bset #Status_Push, sonic3k.asm:41528-41535) because the right
         // edge is inclusive. With an exclusive edge the engine dropped the
         // contact and Status_Push the moment the centre reached the edge.
         return true;
@@ -805,7 +805,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
     @Override
     public boolean preservesEdgeSubpixelMotion() {
         // SolidObject_cont corrects horizontal contact with
-        // `sub.w d0,x_pos(a1)` (sonic3k.asm:41488). That word write leaves
+        // `sub.w d0,x_pos(a1)` (sonic3k.asm:41528). That word write leaves
         // x_sub untouched even when d0 == 0. FBZ's stacked springs at
         // ($2000,$0890/$08B0) depend on retaining P1's $2D00 fraction through
         // both side passes before sub_23190 applies its word-only x_pos nudge.
@@ -816,17 +816,17 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
     public boolean zeroXSpeedStopsOnLeftSideContact() {
         // SolidObject_cont's left-side branch uses bmi after testing x_vel.
         // Zero therefore falls through loc_1E056 and clears ground_vel/x_vel;
-        // only a negative velocity skips the stop (sonic3k.asm:41473-41486).
+        // only a negative velocity skips the stop (sonic3k.asm:41513-41526).
         return true;
     }
 
     /**
      * ROM divergence: every {@code Obj_Spring} variant routes through
-     * {@code SolidObjectFull2_1P} (sonic3k.asm:47664/47673/47692/47701/
+     * {@code SolidObjectFull2_1P} (sonic3k.asm:47704/47673/47692/47701/
      * 47779/47798/47829/47848/48036/48045/48064/48074), and that helper's
      * non-standing branch falls through directly to {@code SolidObject_cont}
-     * (sonic3k.asm:41067) without the {@code render_flags} bit-7 gate at
-     * {@code loc_1DF88} (sonic3k.asm:41390-41392).  S2 mirrors this: every
+     * (sonic3k.asm:41107) without the {@code render_flags} bit-7 gate at
+     * {@code loc_1DF88} (sonic3k.asm:41430-41432).  S2 mirrors this: every
      * spring variant uses {@code SolidObject_Always_SingleCharacter}
      * (s2.asm:33709/33718/33784/33802) which jumps straight to
      * {@code SolidObject_cont} without the {@code SolidObject_OnScreenTest}
@@ -867,10 +867,10 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
     @Override
     public boolean addsSlopeCatchRangeToVerticalOverlap() {
         // ROM: Obj_Spring_UpDiag/DownDiag pass d2=$10 into sub_1DD24
-        // (sonic3k.asm:48150-48158, 48264-48270). Its new-contact path
+        // (sonic3k.asm:48190-48198, 48304-48310). Its new-contact path
         // loc_1DECE keeps that catch range in d2, adds y_radius, then adds
         // d2 into the vertical overlap before classification
-        // (sonic3k.asm:41337-41343).
+        // (sonic3k.asm:41377-41383).
         return springType == TYPE_DIAGONAL_UP || springType == TYPE_DIAGONAL_DOWN;
     }
 

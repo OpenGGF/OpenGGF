@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * Bomb explosion fragment from the AIZ2 battleship bombing sequence.
  *
- * <p>ROM: Obj_AIZBombExplosion (sonic3k.asm:105466).
+ * <p>ROM: Obj_AIZBombExplosion (sonic3k.asm:105512).
  * 8 fragments spawned per bomb impact, each with staggered delay, position offset,
  * and one of 2 animation variants. Collision flags 0x8B active during early frames.
  *
@@ -74,7 +74,7 @@ public class AizBombExplosionInstance extends AbstractObjectInstance
         if (isDestroyed()) return;
 
         if (!active) {
-            // ROM Obj_AIZBombExplosion (sonic3k.asm:105471): subq.w #1,$2E(a0) /
+            // ROM Obj_AIZBombExplosion (sonic3k.asm:105517): subq.w #1,$2E(a0) /
             // bmi.s loc_505B4 / rts. The wait therefore lasts delay+1 frames --
             // it ends on the frame the counter goes negative, not the frame it
             // reaches zero. loc_505B4 then falls through via `bra.s loc_505E4`,
@@ -86,7 +86,7 @@ public class AizBombExplosionInstance extends AbstractObjectInstance
             active = true;
         }
 
-        // ROM loc_505E4 -> Animate_SpriteIrregularDelay (sonic3k.asm:36238):
+        // ROM loc_505E4 -> Animate_SpriteIrregularDelay (sonic3k.asm:36278):
         // `subq.b #1,anim_frame_timer(a0) / bcc.s locret`. The branch is taken
         // while the subtraction did not borrow, so a script entry whose delay
         // byte is D is held for D+1 frames, and the timer of 0 that a freshly

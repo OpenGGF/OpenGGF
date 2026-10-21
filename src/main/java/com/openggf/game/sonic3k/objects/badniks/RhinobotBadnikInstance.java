@@ -77,9 +77,9 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
     }
 
     /**
-     * Rhinobot_Init (sonic3k.asm:182389-182408): loads ObjSlot_Rhinobot through
+     * Rhinobot_Init (sonic3k.asm:182480-182499): loads ObjSlot_Rhinobot through
      * SetUp_ObjAttributesSlotted (whose shared tail is
-     * `addq.b #2,routine(a0)` then `rts`, sonic3k.asm:176901-176919), sets
+     * `addq.b #2,routine(a0)` then `rts`, sonic3k.asm:176992-177010), sets
      * x_radius/y_radius, picks d0/d1 = -$10/-$300 (negated, with $38 bits 2 and 3
      * set, when render_flags bit 0 is set), stores them in $40/$3E and points
      * $34 at Rhinobot_ReverseAcceleration — then `rts`. It does NOT fall through
@@ -104,7 +104,7 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
         if (isDestroyed()) {
             return;
         }
-        // Obj_WaitOffscreen (docs/skdisasm/sonic3k.asm:180271-180305) publishes a
+        // Obj_WaitOffscreen (docs/skdisasm/sonic3k.asm:180362-180396) publishes a
         // $20-wide placeholder before restoring the real routine, so render
         // visibility begins at the placeholder's bounds rather than only when
         // x_pos enters the viewport. It is a ONE-SHOT latch: loc_85B02 does
@@ -198,7 +198,7 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
         }
         // Find_SonicTails selects the native player with the smallest absolute
         // X distance before leaving that player's horizontal distance in d2 and
-        // vertical distance in d3 (sonic3k.asm:178243-178277,182535-182553).
+        // vertical distance in d3 (sonic3k.asm:178334-178368,182626-182644).
         int dx = player.getCentreX() - currentX;
         int dy = Math.abs(player.getCentreY() - currentY);
         if (Math.abs(dx) > DETECT_X || dy > DETECT_Y) {
@@ -299,7 +299,7 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
     @Override
     public int getCollisionFlags() {
         // collision_flags is written by SetUp_ObjAttributesSlotted inside
-        // Rhinobot_Init (sonic3k.asm:176910), so the SST slot still reads zero
+        // Rhinobot_Init (sonic3k.asm:177001), so the SST slot still reads zero
         // for the whole Init dispatch: the frame's touch scan runs at the player
         // slot before this object's routine.
         return initPending ? 0 : super.getCollisionFlags();

@@ -1210,7 +1210,7 @@ class TestAiz2BossEndSequenceObjects {
         // This controller occupies a lower SST slot than the capsule that
         // publishes the release, so its first entry that observes the release
         // is already loc_694D4's Restore_PlayerControl pass; Ctrl_1_locked
-        // stays asserted for loc_69526 (sonic3k.asm:138263-138272).
+        // stays asserted for loc_69526 (sonic3k.asm:138328-138337).
         assertTrue(player.isControlLocked());
         assertFalse(player.isObjectControlled());
         assertFalse(player.isForceInputRight());

@@ -23,7 +23,7 @@ import java.util.logging.Logger;
 /**
  * Sonic 3&K StarPost/Checkpoint (Object 0x34).
  * <p>
- * Based on disassembly: Obj_StarPost (sonic3k.asm line 61554).
+ * Based on disassembly: Obj_StarPost (sonic3k.asm line 61594).
  * <p>
  * Init (routine 0, loc_2CFC0):
  * <ul>
@@ -73,7 +73,7 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
 
     /**
      * Bonus star variant determined by ring count at checkpoint activation.
-     * ROM: loc_2D436 (sonic3k.asm lines 61856-61881).
+     * ROM: loc_2D436 (sonic3k.asm lines 61896-61921).
      * <p>
      * Formula: {@code remainder = ((rings - 20) / 15) % divisor}
      * where divisor=3 for S3K (locked-on) and 2 for S&K standalone.
@@ -119,7 +119,7 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
 
     /**
      * Computes the bonus star variant from ring count using the ROM formula.
-     * ROM: loc_2D436 (sonic3k.asm lines 61857-61877).
+     * ROM: loc_2D436 (sonic3k.asm lines 61897-61917).
      * <pre>
      * subi.w #20,d0      ; rings - 20
      * divu.w #15,d0      ; / 15
@@ -132,7 +132,7 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
     static BonusStarVariant computeBonusStarVariant(int ringCount) {
         // ROM formula: remainder = ((rings - 20) / 15) % divisor
         // S3K locked-on: divisor=3 (all 3 bonus stages available)
-        // ROM loc_2D47E dispatch (sonic3k.asm lines 61886-61912):
+        // ROM loc_2D47E dispatch (sonic3k.asm lines 61926-61952):
         //   remainder 0 -> SLOTS ($1500)
         //   remainder 1 -> PACHINKO / GLOWING_SPHERE ($1400)
         //   remainder 2 -> GUMBALL ($1300)
@@ -190,8 +190,8 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
         }
         initialized = true;
         // Init routine (loc_2CFC0): a star post is already-activated when its
-        // respawn bit is set (btst #0,(a2), sonic3k.asm:61582) OR
-        // Last_star_post_hit >= subtype (:61588). The engine folds both into the
+        // respawn bit is set (btst #0,(a2), sonic3k.asm:61622) OR
+        // Last_star_post_hit >= subtype (:61628). The engine folds both into the
         // persistent activation MARK (getStarPostActivationMark), which equals the
         // checkpoint index in normal play but survives a bonus entry's zeroing of
         // Last_star_post_hit -- so a return-from-bonus star post the player is

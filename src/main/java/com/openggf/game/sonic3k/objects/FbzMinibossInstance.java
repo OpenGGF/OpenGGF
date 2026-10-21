@@ -210,7 +210,7 @@ public final class FbzMinibossInstance extends AbstractObjectInstance
         phaseOrdinal = Phase.DEFEAT_WAIT.ordinal();
         // loc_6F9DE tail-calls BossDefeated_StopTimer, which falls through
         // into BossDefeated: $2E=$3F and HUD_AddToScore(d0=100).
-        // Native score units are tens of displayed points (sonic3k.asm:17645,
+        // Native score units are tens of displayed points (sonic3k.asm:17681,
         // 180814-180829), so the engine awards 1000 points exactly once.
         timer = 0x3F;
         if (tryServices() != null) {

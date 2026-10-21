@@ -104,7 +104,7 @@ public record BigRingReturnState(
 
     /**
      * The full S3K {@code Save_Level_Data2} snapshot, including the level timer
-     * (docs/skdisasm/sonic3k.asm:61732-61752).
+     * (docs/skdisasm/sonic3k.asm:61772-61792).
      */
     public BigRingReturnState(
             int playerX,
@@ -158,7 +158,7 @@ public record BigRingReturnState(
 
     /**
      * Restores all saved state onto the player, camera, and game state.
-     * Mirrors ROM Load_Starpost_Settings2 (s3.asm:22082-22087).
+     * Mirrors ROM Load_Starpost_Settings2 (s3.asm:22137-22142).
      *
      * <p>Note: {@link #dynamicResizeRoutine} must be restored separately
      * by the caller via the level event manager, since this record does
@@ -171,7 +171,7 @@ public record BigRingReturnState(
         camera.setY((short) cameraY);
         // ROM: Load_Starpost_Settings2 writes Saved2_camera_max_Y_pos before
         // Get_LevelSizeStart computes Camera_X/Y from the restored player
-        // position (skdisasm/sonic3k.asm:61834-61837, 38172-38178). Applying
+        // position (skdisasm/sonic3k.asm:61874-61877, 38212-38218). Applying
         // maxY after the forced calculation leaves a return below the level's
         // initial boundary one camera update behind the ROM.
         camera.setMaxY((short) cameraMaxY);
@@ -188,7 +188,7 @@ public record BigRingReturnState(
 
     /**
      * The level-timer frame count {@code loc_2D2C2} leaves behind
-     * (docs/skdisasm/sonic3k.asm:61803-61805).
+     * (docs/skdisasm/sonic3k.asm:61843-61845).
      *
      * <pre>
      *   move.l  (Saved2_timer).w,(Timer).w

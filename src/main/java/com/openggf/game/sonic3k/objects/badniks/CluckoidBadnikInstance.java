@@ -25,7 +25,7 @@ import java.util.List;
 /**
  * S3K SKL Obj $90 - Cluckoid.
  *
- * <p>ROM reference: {@code Obj_Cluckoid} at {@code sonic3k.asm:194045}. The
+ * <p>ROM reference: {@code Obj_Cluckoid} at {@code sonic3k.asm:194150}. The
  * Cluckoid idles until the player is within {@code $80} X and {@code $40} Y,
  * then runs the raw breath animation. Wind pressure starts once the mapping
  * frame reaches 7 and breath child particles are emitted every 8 frames.
@@ -379,7 +379,7 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance impl
             }
         }
 
-        // loc_8E236 ObjDat3_8E3F6 priority word 0 (sonic3k.asm:194327): display list 0 is the
+        // loc_8E236 ObjDat3_8E3F6 priority word 0 (sonic3k.asm:194432): display list 0 is the
         // ROM value.
         private static final int PRIORITY_BUCKET = RenderPriority.bucket(0);
 
@@ -390,7 +390,7 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance impl
 
         @Override
         public boolean isHighPriority() {
-            // ObjDat3_8E3F6 art make_art_tile(ArtTile_MHZMisc+$1C,3,1) sets bit 15 (sonic3k.asm:194326).
+            // ObjDat3_8E3F6 art make_art_tile(ArtTile_MHZMisc+$1C,3,1) sets bit 15 (sonic3k.asm:194431).
             return true;
         }
 
@@ -529,7 +529,7 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance impl
             }
         }
 
-        // loc_8E2BE ObjDat3_8E3EA priority $280 (sonic3k.asm:194322).
+        // loc_8E2BE ObjDat3_8E3EA priority $280 (sonic3k.asm:194427).
         private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
 
         @Override
@@ -539,7 +539,7 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance impl
 
         @Override
         public boolean isHighPriority() {
-            // ObjDat3_8E3EA art make_art_tile(ArtTile_Cluckoid+$22,1,1) sets bit 15 (sonic3k.asm:194321).
+            // ObjDat3_8E3EA art make_art_tile(ArtTile_Cluckoid+$22,1,1) sets bit 15 (sonic3k.asm:194426).
             return true;
         }
 

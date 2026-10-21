@@ -60,7 +60,7 @@ import java.util.logging.Logger;
 /**
  * LBZ2 Robotnik ship + hanging laser turret boss.
  *
- * <p>ROM: {@code Obj_LBZFinalBoss1} at {@code sonic3k.asm:151927}. The ship
+ * <p>ROM: {@code Obj_LBZFinalBoss1} at {@code sonic3k.asm:152001}. The ship
  * docks above a three-segment turret column whose laser heads sweep an arc
  * and fire horizontal bolts; an orbiting spiked pod circles the assembly.
  * The Sonic/Tails defeat branch runs the full Death Egg launch finale through
@@ -298,7 +298,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             // initializeOnAllocationBeforeParentRelease performs the native init side effects
             // early so the allocator sees the same child graph. The boss slot is below the
             // allocating ship, so its first actual dispatch is still the following pass's
-            // init entry and must not consume the Obj_Wait counter (sonic3k.asm:152008-152037).
+            // init entry and must not consume the Obj_Wait counter (sonic3k.asm:152082-152111).
             nativeInitPassPending = false;
             updateDynamicSpawn(getX(), getY());
             return;

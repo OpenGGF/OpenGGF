@@ -22,7 +22,7 @@ public final class S3kSaveSnapshotProvider implements SaveSnapshotProvider {
     public boolean restoreProgress(
             GameStateManager gameState, int lives, int continues, Map<String, Object> payload) {
         // S3K slot load: replenish exhausted lives and spend a continue
-        // (sonic3k.asm:16997-17012), before restoring either payload format.
+        // (sonic3k.asm:17033-17048), before restoring either payload format.
         if (lives == 0 || (lives < 3 && continues == 0)) {
             lives = 3;
             continues = Math.max(0, continues - 1);

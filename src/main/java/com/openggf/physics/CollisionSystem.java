@@ -334,7 +334,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         }
         // ROM AnglePos exits on Status_OnObj before terrain attachment in all
         // games (S1 Sonic AnglePos.asm:5-11, S2 s2.asm:42559-42571,
-        // S3K sonic3k.asm:18728-18741). Non-solid controllers such as S2
+        // S3K sonic3k.asm:18764-18777). Non-solid controllers such as S2
         // Obj06 own that bit until their object routine clears it.
         return true;
     }
@@ -343,7 +343,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         // ROM jump routines only call terrain headroom probes before applying
         // jump velocity: S1 Sonic_CalcHeadroom, S2/S3K CalcRoomOverHead
         // (S1 01 Sonic.asm:1123-1128; S2 s2.asm:37031-37037,40010-40016;
-        // S3K sonic3k.asm:23300-23307,28531-28538). Solid-object headroom is
+        // S3K sonic3k.asm:23335-23342,28571-28578). Solid-object headroom is
         // handled by object collision/crush logic, not by Sonic_Jump/Tails_Jump.
         return getTerrainHeadroomDistance(player, hexAngle) >= 6;
     }
@@ -368,7 +368,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         short gSpeed = sprite.getGSpeed();
         // ROM Sonic_Move/loc_11350 only applies the (angle + $40) sign skip
         // when the angle is not on an exact cardinal quadrant. Exact ceiling
-        // angle $80 must still run CalcRoomInFront (sonic3k.asm:22708-22716).
+        // angle $80 must still run CalcRoomInFront (sonic3k.asm:22743-22751).
         if (((angle & 0x3F) != 0 && (((angle + 0x40) & 0x80) != 0)) || gSpeed == 0) {
             return;
         }
@@ -379,7 +379,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         int xPos32 = (sprite.getX() << 16) | (sprite.getXSubpixelRaw());
         int yPos32 = (sprite.getY() << 16) | (sprite.getYSubpixelRaw());
         int predictedX = (xPos32 + ((int) sprite.getXSpeed() << 8)) >> 16;
-        // CalcRoomInFront loc_F638 (sonic3k.asm:19688-19700): the projected Y uses
+        // CalcRoomInFront loc_F638 (sonic3k.asm:19724-19736): the projected Y uses
         // `neg.w d1` on y_vel while Reverse_gravity_flag ($FFFFF7C6) is set, exactly
         // as MoveSprite_TestGravity does, so the wall probe looks where the player
         // will actually be. x_vel is never negated.
@@ -399,16 +399,16 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         int rotation = (gSpeed < 0) ? 0x40 : 0xC0;
         int rotatedAngle = (angle + rotation) & 0xFF;
         int mode = (rotatedAngle + 0x20) & 0xC0;
-        // ROM CalcRoomInFront (sub_F61C, sonic3k.asm:19679-19743) pushes only when
+        // ROM CalcRoomInFront (sub_F61C, sonic3k.asm:19715-19779) pushes only when
         // the predicted-position wall distance is negative (the caller's tst.w d1 /
         // bpl, e.g. Tails_InputAcceleration_Path loc_14BA8..loc_14C00,
-        // sonic3k.asm:27974-28018). The engine's predicted-position scan already
+        // sonic3k.asm:28014-28058). The engine's predicted-position scan already
         // reproduces FindWall's per-cell penetration (sub_F584 loc_F60C not.w d1,
-        // sonic3k.asm:19666-19672): a flush empty-cell edge yields distance 0 (no
+        // sonic3k.asm:19702-19708): a flush empty-cell edge yields distance 0 (no
         // push) and a predicted pixel inside a solid cell yields a negative
         // distance (push). The S3K CPU sidekick reaches the penetrating pixel via
         // the per-frame follow nudge (loc_13E34 addq.w #1,x_pos,
-        // sonic3k.asm:26734-26741), so no zero-distance seam override is required.
+        // sonic3k.asm:26774-26781), so no zero-distance seam override is required.
         int distance = result.distance();
         if (distance == 0 && shouldDeferFlushWallResponseForRiddenDropOnFloor(sprite, mode, gSpeed)) {
             sprite.deferGroundWallVelocityResponse(mode, -1);
@@ -489,7 +489,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
      * roll paths call {@code CheckLeftWallDist} and {@code CheckRightWallDist}
      * after movement, AnglePos, and SlopeRepel. These checks adjust native
      * {@code x_pos} only; unlike CalcRoomInFront they do not alter velocity or
-     * Status_Push (sonic3k.asm:27529-27548,27741-27760).
+     * Status_Push (sonic3k.asm:27569-27588,27781-27800).
      */
     public boolean hasFatalPostMovementBackgroundFloorOverlap(
             FrameCollisionPlan plan, AbstractPlayableSprite sprite) {
@@ -623,7 +623,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
     }
 
     /**
-     * {@code Call_Player_AnglePos} (sonic3k.asm:22329-22343). With
+     * {@code Call_Player_AnglePos} (sonic3k.asm:22364-22378). With
      * {@code Reverse_gravity_flag} set the ROM mirrors {@code angle(a0)} with
      * {@code addi.b #$40 / neg.b / subi.b #$40}, runs {@code Player_AnglePos}, and mirrors
      * the result back. {@code Player_AnglePos} then dispatches on the <em>raw</em> terrain
@@ -632,8 +632,8 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
      * the mirrored value the rest of the character code expects.
      *
      * <p>All ten main-game callers of {@code Player_AnglePos} go through this wrapper. The
-     * four that do not ({@code Sonic2P_Index} :21629-21846 and {@code Tails2P_Index}
-     * :25748-26050) are competition mode, where the flag is never set — and the engine
+     * four that do not ({@code Sonic2P_Index} :21665-21882 and {@code Tails2P_Index}
+     * :25788-26090) are competition mode, where the flag is never set — and the engine
      * gates on the flag, so they are unaffected either way.
      */
     public void resolveGroundAttachment(FrameCollisionPlan plan,
@@ -661,19 +661,19 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                                                    int positiveThreshold,
                                                    BooleanSupplier hasObjectSupport) {
         requireTerrainOnlyPlan(plan, "resolveGroundAttachment");
-        // ROM: btst #0,object_control(a0) at sonic3k.asm:21555-21561 skips the
+        // ROM: btst #0,object_control(a0) at sonic3k.asm:21591-21597 skips the
         // entire status-based dispatch (which includes terrain probes and
         // air-state transitions) when object_control bit 0 is set. Mirror that
         // here so an object-controlling sprite (e.g. AIZ1 intro plane gripping
         // Sonic via {@code move.b #$53,object_control(a1)} at
-        // sonic3k.asm:135507) never gets {@code setAir(true)} from a manual
+        // sonic3k.asm:135572) never gets {@code setAir(true)} from a manual
         // ground probe — its position is owned by the controlling object.
         if (sprite.isObjectControlSuppressesMovement()) {
             return;
         }
         // ROM: S1 Sonic_AnglePos, S2 AnglePos, and S3K Player_AnglePos all
         // return early only when the player's Status_OnObj bit is set
-        // (S3K: docs/skdisasm/sonic3k.asm:18735-18741). Object-side standing
+        // (S3K: docs/skdisasm/sonic3k.asm:18771-18777). Object-side standing
         // masks can be stale after release; they must not suppress terrain
         // walk-off and airborne transition checks.
         if (sprite.isOnObject()) {
@@ -685,8 +685,8 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
             }
             // Engine-side object support can outlive the object/controller that set it
             // across transitions. The ROM's Player_AnglePos early return only applies
-            // to a live Status_OnObj owner (sonic3k.asm:18735-18741); stale support must
-            // fall through to the terrain walk-off path at sonic3k.asm:18839-18842.
+            // to a live Status_OnObj owner (sonic3k.asm:18771-18777); stale support must
+            // fall through to the terrain walk-off path at sonic3k.asm:18875-18878.
             sprite.setOnObject(false);
         }
 
@@ -707,7 +707,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
             // FindFloor initializes both angle outputs to the flagged empty-tile
             // value 3. Player_Angle sees that odd result and rounds the current
             // angle to its cardinal quadrant before AnglePos detaches the player
-            // (sonic3k.asm:18749-18752,18804-18815,18839-18842; the S2 AnglePos
+            // (sonic3k.asm:18785-18788,18840-18851,18875-18878; the S2 AnglePos
             // routine uses the same sequence). Engine probes represent an empty
             // tile as null, so preserve the ROM's angle normalization explicitly.
             // This is observable when a grounded player crosses the death plane:
@@ -768,14 +768,14 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         // cadence. This is shared by S1 (_incObj/Sonic AnglePos.asm:113-115,
         // 276-278,349-351,422-424), S2 (s2.asm:43108-43110,
         // 43216-43218, 43283-43285, 43350-43352), and S3K
-        // (sonic3k.asm:18840-18842, 18965-18967, 19037-19039, 19109-19111).
+        // (sonic3k.asm:18876-18878, 19001-19003, 19073-19075, 19145-19147).
         sprite.publishRunAsPreviousAnimation();
     }
 
     private boolean hasPendingStaleObjectSupportLoss(AbstractPlayableSprite sprite) {
         // AIZ1->AIZ2 reload order is a special case of that same Status_OnObj
         // rule. The ROM performs Load_Level/LoadSolids and player coordinate
-        // offsets in the level-event path (docs/skdisasm/sonic3k.asm:104725-104756),
+        // offsets in the level-event path (docs/skdisasm/sonic3k.asm:104771-104802),
         // then the next player slot still sees Status_OnObj and skips AnglePos.
         // Later in that ExecuteObjects pass, Obj_AIZTransitionFloor observes
         // Current_act != 0, moves to x=$7FFF, and still calls SolidObjectTop
@@ -811,7 +811,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
 
     private int scanCalcRoomOverHead(AbstractPlayableSprite sprite, int overheadAngle, int quadrant) {
         // CalcRoomOverHead / Sonic_CalcHeadroom preload both angle registers with the
-        // overhead angle before probing (S3K sonic3k.asm:19811-19819, S2 s2.asm:44016-44017,
+        // overhead angle before probing (S3K sonic3k.asm:19847-19855, S2 s2.asm:44016-44017,
         // S1 Sonic Collision.asm:87-88). An empty probe leaves that byte, which the
         // player tail then copies to next_tilt/tilt, so a jump from a ledge does not keep
         // the grounded edge sentinel 3.
@@ -824,7 +824,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
 
         // Floor/ceiling helpers write the +x_radius probe to Primary_Angle and the
         // -x_radius probe to Secondary_Angle; the wall helpers use Primary_Angle for
-        // both (sonic3k.asm:20242-20274, CheckLeftCeilingDist/CheckRightCeilingDist).
+        // both (sonic3k.asm:20278-20310, CheckLeftCeilingDist/CheckRightCeilingDist).
         boolean pairedRegisters = quadrant == 0x00 || quadrant == 0x80;
         int minDistance = Integer.MAX_VALUE;
         for (int i = 0; i < probes.length; i++) {
@@ -938,7 +938,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
     /**
      * @param forceFloorCheck when true, floor collision in quadrants 0x40 and
      *     0xC0 runs even when ySpeed &lt; 0.  ROM equivalent: the
-     *     {@code WindTunnel_flag} check at sonic3k.asm:24204/24299 bypasses
+     *     {@code WindTunnel_flag} check at sonic3k.asm:24244/24299 bypasses
      *     the {@code tst.w y_vel} early return so floor terrain always
      *     constrains the player inside HCZ water tunnels.
      */
@@ -1002,7 +1002,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                 if (!ceilingHit && (forceFloorCheck || sprite.getYSpeed() >= 0)) {
                     // S3K Tails_DoLevelCollision skips sub_11FD6 entirely while
                     // rising unless WindTunnel_flag_P2 forces the floor check
-                    // (sonic3k.asm:29000-29008). Do not publish angles from a
+                    // (sonic3k.asm:29040-29048). Do not publish angles from a
                     // helper the native dispatch never invoked.
                     SensorResult[] groundResult = floorProbes(sprite);
                     publishAirFloorAngleRegisters(groundResult);
@@ -1026,7 +1026,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                 applyPairedAngleWrites(ceilingResult);
                 boolean ceilingHit = doCeilingCollisionInternal(sprite, ceilingResult);
                 if (!ceilingHit && (forceFloorCheck || sprite.getYSpeed() >= 0)) {
-                    // Mirrored right-moving branch (sonic3k.asm:29095-29103).
+                    // Mirrored right-moving branch (sonic3k.asm:29135-29143).
                     SensorResult[] groundResult = floorProbes(sprite);
                     publishAirFloorAngleRegisters(groundResult);
                     doTerrainCollisionAirDirect(sprite, groundResult, landingHandler,
@@ -1043,7 +1043,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
             return;
         }
         // Sonic_CheckFloor/Ceiling probes right into Primary_Angle first, then
-        // left into Secondary_Angle (S3K sonic3k.asm:19839-19881).
+        // left into Secondary_Angle (S3K sonic3k.asm:19875-19917).
         applyPrimaryAngleWrites(results[1]);
         applySecondaryAngleWrites(results[0]);
     }
@@ -1144,7 +1144,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
      * d1 < 0 (floor detected above Sonic's foot sensors).
      *
      * @param forceFloorCheck when true, bypasses the {@code ySpeed < 0} early
-     *     return.  ROM: {@code WindTunnel_flag} at sonic3k.asm:24204/24299
+     *     return.  ROM: {@code WindTunnel_flag} at sonic3k.asm:24244/24299
      *     gates this — when set, the floor check runs regardless of y velocity
      *     direction, keeping the player constrained inside HCZ water tunnels.
      */
@@ -1223,7 +1223,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         }
         moveForSensorResult(sprite, lowestResult);
 
-        // loc_120C2 (sonic3k.asm:24246-24258) takes sub_11FEE's mirrored d3 for the
+        // loc_120C2 (sonic3k.asm:24286-24298) takes sub_11FEE's mirrored d3 for the
         // landing test, the angle write and the ground_vel sign test below, so all
         // three read the mirrored value while the flag is set.
         int ceilingAngle = surfaceAngle(sprite, lowestResult);
@@ -1231,7 +1231,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
 
         if (canLandOnCeiling) {
             // ROM Sonic_FloorUp.angledceiling (s1disasm/_incObj/01 Sonic.asm:1720-1731;
-            // S2 loc_1B02C s2.asm:38048-38057; S3K loc_120EA sonic3k.asm:24258-24264):
+            // S2 loc_1B02C s2.asm:38048-38057; S3K loc_120EA sonic3k.asm:24298-24304):
             // when an in-air player lands on an angled ceiling, the in-air status bit
             // is cleared (Sonic_ResetOnFloor) and inertia is set from y_vel (negated
             // for ascending slopes). resetWallCeilingLandingState() clears the in-air
@@ -1248,7 +1248,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
             resetWallCeilingLandingState(sprite, ceilingAngle);
             if (wasHurt) {
                 // ROM Sonic_HurtStop (s1disasm/_incObj/01 Sonic.asm:1918-1923; S2
-                // s2.asm:38216-38221; S3K sub_12318 sonic3k.asm:24492-24496): after
+                // s2.asm:38216-38221; S3K sub_12318 sonic3k.asm:24532-24536): after
                 // Sonic_Floor/DoLevelCollision returns, the hurt routine re-checks
                 // Status_InAir; since this angled-ceiling land cleared it, the routine
                 // zeroes y_vel/x_vel/inertia (ground_vel) before reverting to control.
@@ -1264,7 +1264,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                 // Player_TouchFloor_Check_Spindash tail as an ordinary floor
                 // landing. In S3K that tail can immediately re-launch Sonic
                 // through BubbleShield_Bounce before ground_vel samples the
-                // resulting y_vel (sonic3k.asm:24248-24264,24325-24426).
+                // resulting y_vel (sonic3k.asm:24288-24304,24365-24466).
                 sprite.applyPostObjectLandingAbilities(savedDoubleJumpFlag);
                 short gSpeed = sprite.getYSpeed();
                 if ((ceilingAngle & 0x80) != 0) {
@@ -1299,7 +1299,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                 sprite.setRolling(false);
                 if (wallLanding) {
                     // S3K Player_TouchFloor restores radii and adjusts y_pos only
-                    // (docs/skdisasm/sonic3k.asm:24335-24363). Preserve engine centre X when
+                    // (docs/skdisasm/sonic3k.asm:24375-24403). Preserve engine centre X when
                     // leaving the narrower roll shape after updateGroundMode has selected a wall.
                     sprite.setCentreXPreserveSubpixel((short) centreX);
                 }
@@ -1365,7 +1365,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
             // Player_TouchFloor_Check_Spindash publishes Walk before clearing
             // the airborne state on every accepted S2/S3K terrain landing,
             // including the angled ceiling/wall path (s2.asm:38049-38052,
-            // 38123-38127; sonic3k.asm:24258-24325). S1 can retain Spring.
+            // 38123-38127; sonic3k.asm:24298-24365). S1 can retain Spring.
             int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
             if (walkAnimationId >= 0) {
                 sprite.setAnimationId(walkAnimationId);
@@ -1621,7 +1621,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
     }
 
     /**
-     * {@code sub_11FD6} (sonic3k.asm:24127-24137): the wrapper every "check the floor"
+     * {@code sub_11FD6} (sonic3k.asm:24167-24177): the wrapper every "check the floor"
      * site in the airborne collision routine calls. With {@code Reverse_gravity_flag}
      * set it runs {@code Sonic_CheckCeiling} instead — ten callers across the three
      * characters' {@code DoLevelCollision} routines.
@@ -1639,7 +1639,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                 : terrainProbes(sprite, floorProbeSensors(sprite), "ground");
     }
 
-    /** {@code sub_11FEE} (sonic3k.asm:24141-24151): the opposite wrapper, nine callers. */
+    /** {@code sub_11FEE} (sonic3k.asm:24181-24191): the opposite wrapper, nine callers. */
     private SensorResult[] ceilingProbes(AbstractPlayableSprite sprite) {
         return isReverseGravity(sprite)
                 ? terrainProbes(sprite, ceilingProbeSensors(sprite), "ground")

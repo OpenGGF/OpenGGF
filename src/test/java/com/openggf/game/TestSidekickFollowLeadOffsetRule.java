@@ -16,9 +16,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *       {@code d2} (the leader-x history target) before
  *       {@code sub.w x_pos(a0), d2}, biasing Tails 0x20 pixels to the left of
  *       Sonic. The offset is suppressed when the leader is riding an object
- *       ({@code Status_OnObj}, sonic3k.asm:26690-26691) or is moving faster
+ *       ({@code Status_OnObj}, sonic3k.asm:26730-26731) or is moving faster
  *       than the follower can chase ({@code ground_vel >= $400},
- *       sonic3k.asm:26692-26693). See sonic3k.asm:26688-26694.</li>
+ *       sonic3k.asm:26732-26733). See sonic3k.asm:26728-26734.</li>
  *   <li>S2:  {@code TailsCPU_Normal} reads {@code d2} from
  *       {@code Sonic_Pos_Record_Buf} (s2.asm:38933) and immediately runs
  *       {@code sub.w x_pos(a0), d2} (s2.asm:38945) with no bias. The follow

@@ -40,11 +40,11 @@ public class Sonic3kInvisibleBlockObjectInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_InvisibleBlock} is installed from the S3K object pointer table at
      * {@code $0001EC18} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:42661).
+     * label is defined at docs/skdisasm/sonic3k.asm:42701).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0001}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -94,7 +94,7 @@ public class Sonic3kInvisibleBlockObjectInstance extends AbstractObjectInstance
     public boolean usesInclusiveRightEdge() {
         // Every S3K invisible-block variant calls SolidObjectFull2. Its X
         // entry gate rejects with bhi, so relX == width * 2 is still a valid
-        // contact (sonic3k.asm:41065-41067,43268-43574).
+        // contact (sonic3k.asm:41105-41107,43308-43614).
         return true;
     }
 
@@ -103,7 +103,7 @@ public class Sonic3kInvisibleBlockObjectInstance extends AbstractObjectInstance
         // Obj_InvisibleBlock and both hurt variants jump directly through
         // SolidObjectFull2. Unlike SolidObjectFull_1P, that entry never tests
         // render_flags bit 7 before falling into SolidObject_cont
-        // (sonic3k.asm:41065-41067,43268-43574).
+        // (sonic3k.asm:41105-41107,43308-43614).
         return true;
     }
 
@@ -112,7 +112,7 @@ public class Sonic3kInvisibleBlockObjectInstance extends AbstractObjectInstance
         // SolidObjectFull2 reaches SolidObject_cont directly. On the left
         // branch, x_vel >= 0 falls through loc_1E056 and clears both x_vel and
         // ground_vel; only a negative velocity is treated as moving away
-        // (sonic3k.asm:41468-41483). In particular, x_vel == 0 must still
+        // (sonic3k.asm:41508-41523). In particular, x_vel == 0 must still
         // discard residual ground_vel before applying the side separation.
         return true;
     }

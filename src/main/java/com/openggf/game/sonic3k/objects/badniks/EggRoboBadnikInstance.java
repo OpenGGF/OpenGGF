@@ -12,7 +12,7 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
- * ROM {@code Obj_EggRobo} ({@code $A0}, sonic3k.asm:198438-198760): Sky Sanctuary's EggRobo, in
+ * ROM {@code Obj_EggRobo} ({@code $A0}, sonic3k.asm:198545-198867): Sky Sanctuary's EggRobo, in
  * three distinct shapes chosen by the subtype's low nibble through {@code sub_9185E}'s
  * {@code off_9186E} table, which has exactly three entries. Twenty-six act-1 placements use low
  * nibbles 0, 2 and 4 and nothing else.
@@ -265,7 +265,7 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
         }
     }
 
-    /** {@code Swing_UpAndDown} (sonic3k.asm:181739-181767). */
+    /** {@code Swing_UpAndDown} (sonic3k.asm:181830-181858). */
     private void swingUpAndDown() {
         int acceleration = swingAcceleration;
         int velocity = yVelocity;

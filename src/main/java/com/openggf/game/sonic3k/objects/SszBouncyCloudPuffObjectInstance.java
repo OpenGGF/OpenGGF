@@ -14,7 +14,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code loc_452DA}/{@code loc_45304} (sonic3k.asm:90717-90790): one of the four puffs
+ * ROM {@code loc_452DA}/{@code loc_45304} (sonic3k.asm:90763-90836): one of the four puffs
  * {@code Obj_SSZBouncyCloud} throws when a player launches off it.
  *
  * <p>{@code loc_452DA} is the puff's first pass and is a <em>cull</em>, not an init: it compares

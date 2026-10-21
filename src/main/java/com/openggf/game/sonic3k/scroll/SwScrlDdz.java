@@ -12,7 +12,7 @@ import static com.openggf.level.scroll.M68KMath.negWord;
 /**
  * The Doomsday Zone ({@code $C00}) screen and background scroll: {@code DDZ_ScreenEvent},
  * {@code sub_59648}, {@code DDZ_BackgroundInit}/{@code DDZ_BackgroundEvent} and {@code sub_596EA}
- * (sonic3k.asm:118813-119007).
+ * (sonic3k.asm:118859-119053).
  *
  * <p><b>Foreground.</b> The foreground plane is not the level: it holds the end boss's body, and
  * its scroll is decoupled from the camera. Every frame {@code sub_59648} sets

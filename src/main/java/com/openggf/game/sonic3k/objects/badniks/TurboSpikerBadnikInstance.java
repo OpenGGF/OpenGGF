@@ -32,7 +32,7 @@ import java.util.List;
  * facing side, and optionally hide behind a waterfall overlay on Y-flipped
  * placements before emerging in a burst of splash particles.
  *
- * <p>ROM reference: {@code Obj_TurboSpiker} (sonic3k.asm:183861-184226).
+ * <p>ROM reference: {@code Obj_TurboSpiker} (sonic3k.asm:183954-184319).
  */
 public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
         implements SpawnRewindRecreatable {
@@ -457,12 +457,12 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
         /**
          * False from detach until the launch dispatch has been consumed. ROM
          * {@code TurboSpiker_SpikeChild_Launch} (loc_87D72,
-         * docs/skdisasm/sonic3k.asm:184042-184053) writes
+         * docs/skdisasm/sonic3k.asm:184135-184146) writes
          * {@code TurboSpiker_SpikeChild_Move} into the child's own {@code (a0)}
          * code pointer and then falls through to {@code Sprite_CheckDeleteTouchXY}
          * -- it never calls {@code MoveSprite2} itself. The dispatcher has already
          * jumped through the old pointer for this frame, so the installed
-         * {@code TurboSpiker_SpikeChild_Move} (loc_87DA4, :184056-184058), whose
+         * {@code TurboSpiker_SpikeChild_Move} (loc_87DA4, :184149-184151), whose
          * only work is {@code MoveSprite2}, first executes on the FOLLOWING frame.
          */
         private boolean moveRoutineInstalled;
@@ -514,7 +514,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
             // loc_87D72 replaces the child operation with loc_87DA4, whose only
             // work is MoveSprite2 + Sprite_CheckDeleteTouchXY. The launched
             // shell no longer reads parent3 and can outlive an unloaded badnik
-            // (docs/skdisasm/sonic3k.asm:184042-184061).
+            // (docs/skdisasm/sonic3k.asm:184135-184154).
             launchParent.detachShell(this);
             parent = null;
             trailEmitter = spawnChild(() -> new TurboSpikerTrailEmitter(this));
@@ -597,7 +597,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
 
             // Sprite_CheckDeleteTouchXY uses Camera_X_pos_coarse_back and
             // unsigned comparisons, not a symmetric screen-space margin
-            // (docs/skdisasm/sonic3k.asm:179032-179047).
+            // (docs/skdisasm/sonic3k.asm:179123-179138).
             int xAligned = currentX & 0xFF80;
             int coarseBack = (cameraX - 0x80) & 0xFF80;
             int xDistance = (xAligned - coarseBack) & 0xFFFF;

@@ -141,7 +141,7 @@ public class AizMinibossCutsceneInstance extends AbstractBossInstance
     public boolean isPersistent() {
         // ROM Obj_AIZMinibossCutscene dispatches directly through its active
         // routines and exit timer without a normal out-of-range deletion path
-        // (sonic3k.asm:136734-136896), so the subtype-2 special explosion
+        // (sonic3k.asm:136799-136961), so the subtype-2 special explosion
         // controller can exhaust all 39 Random_Number draws.
         return true;
     }
@@ -171,20 +171,20 @@ public class AizMinibossCutsceneInstance extends AbstractBossInstance
      * The cutscene miniboss publishes its touch entry AFTER its own movement,
      * exactly like {@link AizMinibossInstance}: both of its moving routines end
      * in {@code MoveWaitTouch} — {@code AIZMiniboss_MoveWaitTouch} for the drop
-     * (sonic3k.asm:136817-136818) and {@code AIZMiniboss_SwingMoveWaitTouch} for
-     * the swing (sonic3k.asm:136845-136847) — and {@code MoveWaitTouch} runs
+     * (sonic3k.asm:136882-136883) and {@code AIZMiniboss_SwingMoveWaitTouch} for
+     * the swing (sonic3k.asm:136910-136912) — and {@code MoveWaitTouch} runs
      * {@code MoveSprite2} before {@code Draw_And_Touch_Sprite}
-     * (sonic3k.asm:179687-179690). {@code Add_SpriteToCollisionResponseList}
-     * stores only the object-RAM pointer (sonic3k.asm:21200-21209), so the
+     * (sonic3k.asm:179778-179781). {@code Add_SpriteToCollisionResponseList}
+     * stores only the object-RAM pointer (sonic3k.asm:21236-21245), so the
      * player slot's {@code Touch_Loop} reads {@code x_pos(a1)}/{@code y_pos(a1)}
-     * live (sonic3k.asm:20661-20662, 20674, 20693) and therefore observes the
+     * live (sonic3k.asm:20697-20698, 20710, 20729) and therefore observes the
      * position produced by this object's PREVIOUS pass, not the one before it.
      *
      * <p>Without this the swing's touch box lagged an extra frame: at the AIZ1
      * swing the engine tested {@code y_pos} $34E where the ROM tested $34F, and
      * the 1px difference put {@code Touch_Height}'s {@code d0} at $16 instead of
      * $17 against a $16 player height, firing the boss rebound
-     * ({@code Touch_Enemy}.checkhurtenemy, sonic3k.asm:20907-20914) one frame
+     * ({@code Touch_Enemy}.checkhurtenemy, sonic3k.asm:20943-20950) one frame
      * early.
      */
     @Override
@@ -278,7 +278,7 @@ public class AizMinibossCutsceneInstance extends AbstractBossInstance
         }
 
         // ROM AIZMiniboss_StartDropMusic plays mus_Miniboss, $2E
-        // (sonic3k.asm:136809-136811), not mus_MinibossK, $18. Both resolve to
+        // (sonic3k.asm:136874-136876), not mus_MinibossK, $18. Both resolve to
         // the same arrangement in the S&K driver table, so this is inaudible
         // today and audible the moment the S3 table is selected.
         services().playMusic(Sonic3kMusic.MINIBOSS_S3.id);

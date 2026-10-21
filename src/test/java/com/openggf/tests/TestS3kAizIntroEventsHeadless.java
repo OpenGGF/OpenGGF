@@ -187,7 +187,7 @@ public class TestS3kAizIntroEventsHeadless {
         // Model a production setup/rebind that reconstructs the CPU state after
         // the event provider has made the AIZ decision but before Tails_Control's
         // routine-0 dispatch. The ROM branch itself must still own the dormant
-        // presentation gate (sonic3k.asm:26389-26397).
+        // presentation gate (sonic3k.asm:26429-26437).
         controller.reset();
         tails.setHidden(false);
         controller.setInitialState(SidekickCpuController.State.INIT);

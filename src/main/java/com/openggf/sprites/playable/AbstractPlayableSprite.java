@@ -189,7 +189,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * When true, the entire roll speed routine (input, friction, deceleration)
          * is skipped — only slope gravity modifies ground_vel. Matches ROM behaviour
          * of spin_dash_flag bit 7 (value 0x81) which causes {@code Sonic_RollSpeed}
-         * to jump directly to velocity conversion (sonic3k.asm line 22936: bmi.w loc_115C6).
+         * to jump directly to velocity conversion (sonic3k.asm line 22971: bmi.w loc_115C6).
          * <p>
          * Set by AutoSpin objects when subtype bit 7 is active. Distinct from
          * {@link #pinballMode} which only prevents uncurling at low speed.
@@ -320,11 +320,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * playable frame (before any player tick has run). Refreshed by
          * {@link #captureOnObjectAtFrameStart()} from {@code SpriteManager.beginPlayableFrame}.
          *
-         * <p>ROM analog: in {@code Tails_CPU_Control} (sonic3k.asm:26688-26700,
+         * <p>ROM analog: in {@code Tails_CPU_Control} (sonic3k.asm:26728-26740,
          * S2 s2.asm:38933+), the follow-steering logic reads the leader's
          * {@code Status_OnObj} bit MID-FRAME, before solid-object processing
-         * (sub_1FF1E sonic3k.asm:44306-44319, loc_1FFC4 sonic3k.asm:44369-44381)
-         * has cleared it for jumpers. {@code Sonic_Jump} (sonic3k.asm:23288-23354)
+         * (sub_1FF1E sonic3k.asm:44346-44359, loc_1FFC4 sonic3k.asm:44409-44421)
+         * has cleared it for jumpers. {@code Sonic_Jump} (sonic3k.asm:23323-23389)
          * sets {@code Status_InAir} but does NOT touch {@code Status_OnObj}; the
          * bit only clears later when objects run. The engine's
          * {@code PlayableSpriteMovement.doJump} and air-unseat paths clear
@@ -350,7 +350,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * on"): the SST <em>slot index</em> of the last object the sprite stood
          * on. This is the persistent slot reference written only by
          * {@code RideObject_SetRide} (docs/s2disasm/s2.asm:35980-36006,
-         * S3K docs/skdisasm/sonic3k.asm:41982-42015) and is NEVER cleared on
+         * S3K docs/skdisasm/sonic3k.asm:42022-42055) and is NEVER cleared on
          * dismount, despawn, or death. Unlike {@link #latchedSolidObjectId}
          * (which is an instance-resolved id byte), this is the raw slot index so
          * the sidekick despawn comparator can re-dereference whatever live
@@ -371,7 +371,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         /**
          * Set when {@code Player_SlopeRepel} slipped the player into air on the
-         * current physics frame (sonic3k.asm:23929 {@code bset #Status_InAir}).
+         * current physics frame (sonic3k.asm:23969 {@code bset #Status_InAir}).
          * Cleared at the start of each player update tick. Used by per-object
          * release-vs-restore decisions (e.g. {@code CnzWireCageObjectInstance})
          * to distinguish "slope-repel just slipped, honour the air state" from
@@ -464,9 +464,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         /**
          * Raw ROM {@code routine(a0)} byte for player objects whose dispatch has been
          * temporarily swapped out for a custom ROM object (e.g. {@code
-         * Obj_Sonic_RotatingSlotBonus}, sonic3k.asm:98656) that reuses {@code Player_1}'s
+         * Obj_Sonic_RotatingSlotBonus}, sonic3k.asm:98702) that reuses {@code Player_1}'s
          * {@code routine} field for its own state machine (values 0/2/4 selecting the
-         * object's init/main-loop/goal-exit handlers, sonic3k.asm:98700-98703) rather than
+         * object's init/main-loop/goal-exit handlers, sonic3k.asm:98746-98749) rather than
          * the standard Sonic control routine values {@link #hurt}/{@link #dead} already
          * model. When non-null, {@code TraceCharacterState.routineFromSprite} reports this
          * value verbatim instead of deriving one from hurt/dead/CPU state, matching a
@@ -588,7 +588,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * When true, the Character_Speeds init values (from {@code PhysicsProvider.getInitProfile()})
          * are active in the mutable speed fields. Cleared on first water, speed shoes, or Super
          * transition — those events reset the mutable fields to the canonical profile values.
-         * <p>ROM ref: sonic3k.asm:202288 (Character_Speeds table loaded at init/respawn).
+         * <p>ROM ref: sonic3k.asm:202403 (Character_Speeds table loaded at init/respawn).
          */
         private boolean initPhysicsActive;
 
@@ -634,7 +634,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Companion flag to {@link #objectControlled}: when {@code true} the
          * controlling object owns physics (object_control bits 0-6 in ROM) but
          * the sidekick CPU AI dispatcher is allowed to run, matching ROM's
-         * {@code bmi.w} (bit 7) check at {@code sonic3k.asm:26672}. Default
+         * {@code bmi.w} (bit 7) check at {@code sonic3k.asm:26712}. Default
          * {@code false} preserves existing engine behaviour for the bit-7
          * (flight / despawn / super state / debug) callers. Cleared whenever
          * {@link #setObjectControlled(boolean)} is set to {@code false}.
@@ -665,7 +665,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         /**
          * When true, the airborne floor check in quadrants 0x40/0xC0 runs even
          * when ySpeed &lt; 0.  ROM equivalent: {@code WindTunnel_flag} gating
-         * at sonic3k.asm:24204/24299.  Set by zone feature providers (e.g.,
+         * at sonic3k.asm:24244/24299.  Set by zone feature providers (e.g.,
          * HCZ horizontal water tunnels) so pipe walls constrain the player
          * vertically even when the tunnel pushes upward.
          */
@@ -879,8 +879,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.balanceState = 0;
                 // The ROM holds no balance state; Sonic_Balance re-derives it every
                 // grounded standing frame from tilt/next_tilt, which the player tail
-                // copies out of Primary_Angle/Secondary_Angle (sonic3k.asm:21999-22000
-                // Sonic, :26243-26244 Tails). A level load zeroes those SST bytes with
+                // copies out of Primary_Angle/Secondary_Angle (sonic3k.asm:22035-22036
+                // Sonic, :26283-26284 Tails). A level load zeroes those SST bytes with
                 // the rest of Object_RAM, so the first Sonic_Balance of a new act can
                 // never see the empty-tile sentinel 3 left by the previous act.
                 controller.getMovement().resetGroundAngleLatches();
@@ -1519,7 +1519,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.shield = true;
                 this.shieldType = type;
                 LOGGER.fine("DEBUG: Shield flag set to true, type=" + type);
-                // Bubble shield replenishes air (s3.asm:34877 Player_ResetAirTimer)
+                // Bubble shield replenishes air (s3.asm:34932 Player_ResetAirTimer)
                 if (type == ShieldType.BUBBLE && controller != null && controller.getDrowning() != null) {
                         controller.getDrowning().replenishAir();
                 }
@@ -1583,7 +1583,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void giveSpeedShoes() {
                 // S3K: shoes activation uses absolute values from canonical base ($C00/$18/$80),
-                // not 2x of Character_Speeds init values (sonic3k.asm:40823-40825)
+                // not 2x of Character_Speeds init values (sonic3k.asm:40863-40865)
                 clearInitOverride();
                 this.speedShoes = true;
                 // Register speed shoes timer using the existing timer framework
@@ -2178,7 +2178,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * cross-playable reads where the ROM accesses another sprite's
          * {@code Status_OnObj} bit BEFORE solid-object processing has run for
          * the frame (e.g. {@code Tails_CPU_Control} follow-steering at
-         * sonic3k.asm:26688-26700 / s2.asm:38933+).
+         * sonic3k.asm:26728-26740 / s2.asm:38933+).
          */
         public boolean getOnObjectAtFrameStart() {
                 return controller.isOnObjectAtFrameStart();
@@ -2222,8 +2222,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * the sprite was last latched onto via the SolidObject framework.
          * Used by {@link SidekickCpuController#checkDespawn()} to detect when
          * the latched instance has been deleted (mirroring ROM
-         * {@code sub_13EFC} sonic3k.asm:26823 reading {@code (a3)=0} from a
-         * slot freed by {@code Delete_Referenced_Sprite} sonic3k.asm:36116).
+         * {@code sub_13EFC} sonic3k.asm:26863 reading {@code (a3)=0} from a
+         * slot freed by {@code Delete_Referenced_Sprite} sonic3k.asm:36156).
          *
          * <p>{@code latchedSolidObjectId} is sticky across destruction
          * (it's an 8-bit ID with no instance identity), so the instance
@@ -2992,7 +2992,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // HurtCharacter calls the reset-on-floor tail before setting InAir;
                 // that reset clears Status_Push, Status_RollJump, and jumping
                 // while leaving Status_OnObj to solids (S1 Sonic ReactToItem.asm:390-392;
-                // S2 s2.asm:85468-85471, 41033-41037; S3K sonic3k.asm:21090-21093,
+                // S2 s2.asm:85468-85471, 41033-41037; S3K sonic3k.asm:21126-21129,
                 // 24365-24369).
                 setPushing(false);
                 setRollingJump(false);
@@ -3013,7 +3013,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // raw animation byte therefore changes on the damage frame while
                 // the already-selected mapping remains displayed until next tick
                 // (S1 Sonic ReactToItem.asm:390-410; S2 s2.asm:85497-85519;
-                // S3K sonic3k.asm:21090-21110).
+                // S3K sonic3k.asm:21126-21146).
                 controller.publishRawAnimation(CanonicalAnimation.HURT);
                 currentAudioManager().playSfx(resolveDamageSound(cause));
                 return true;
@@ -3057,12 +3057,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (debugMode || invincibleFrames > 0 || isSuperSonic()) {
                         return true;
                 }
-                // ROM Touch_Hurt (sonic3k.asm:21044-21047, s2.asm Touch_Hurt) gates
+                // ROM Touch_Hurt (sonic3k.asm:21080-21083, s2.asm Touch_Hurt) gates
                 // purely on a NONZERO invulnerability_timer: `tst.b
                 // invulnerability_timer(a0); bne.s Touch_ChkHurt_Return`. The timer is
                 // decremented earlier in the same object slot by *_Display
-                // (Sonic_Display sonic3k.asm:22038-22041, Tails_Display
-                // sonic3k.asm:26279-26282), which the engine mirrors via
+                // (Sonic_Display sonic3k.asm:22074-22077, Tails_Display
+                // sonic3k.asm:26319-26322), which the engine mirrors via
                 // tickInvulnerabilityDisplayTimerBeforeTouchResponse() before
                 // applyTouchResponses (SpriteManager.java:1414). So invulnerableFrames at
                 // touch time already holds the post-decrement value, and any nonzero
@@ -3387,7 +3387,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * early-out gate. When {@code true}, the controlling object holds the player via
          * ROM {@code object_control} bits 0-6 only (e.g. CNZ wire cage's bits 1+6, MGZ
          * twisting loop's bit 0+1+6) — ROM lets {@code Tails_CPU_Control} keep generating
-         * input in this case (sonic3k.asm:26672 {@code bmi.w} only branches when the sign
+         * input in this case (sonic3k.asm:26712 {@code bmi.w} only branches when the sign
          * bit is set). When {@code false} (default), the controlling object is the
          * ROM-bit-7 case (flight, super state, despawn marker, debug) and the engine's
          * CPU controller skips its NORMAL state body to match ROM's {@code bmi.w} skip.
@@ -3554,7 +3554,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * {@code object_control} bit 0 movement ownership. ROM
          * {@code Player_AnglePos} still runs for non-bit-0 states and takes the
          * ground walkoff branch when no floor is found
-         * (docs/skdisasm/sonic3k.asm:18728, 18839-18842).
+         * (docs/skdisasm/sonic3k.asm:18764, 18875-18878).
          */
         public void deferObjectControlRelease() {
                 this.deferredObjectControlRelease = true;
@@ -3731,7 +3731,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * {@link PlayerMovementRules#controlLockLatchesLogicalInput()} is true and
          * {@link #isControlLocked()} is set, the write is skipped so the
          * previous frame's logical pad state persists.
-         * Mirrors {@code Sonic_Control} (S3K sonic3k.asm:21541-21545
+         * Mirrors {@code Sonic_Control} (S3K sonic3k.asm:21577-21581
          * {@code loc_10760}):
          * <pre>
          *   tst.b   (Ctrl_1_locked).w
@@ -3742,7 +3742,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * moment any in-level object set {@code controlLocked=true}, which
          * propagated through {@link #endOfTick()} into {@code inputHistory}
          * and corrupted the Sidekick CPU's $40-frame-delayed leader input
-         * read ({@code Tails_CPU_Control}, sonic3k.asm:26683-26689).
+         * read ({@code Tails_CPU_Control}, sonic3k.asm:26723-26729).
          *
          * <p>The latch is gated per-game because the previous universal
          * implementation (commit f3347ea89, reverted in 9793e4617)
@@ -4065,7 +4065,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
                         // S3K init override: Character_Speeds table provides different init-time
                         // values that persist until the first water or speed shoes event.
-                        // ROM ref: sonic3k.asm:21467-21474 (Character_Speeds loaded at player init)
+                        // ROM ref: sonic3k.asm:21503-21510 (Character_Speeds loaded at player init)
                         PhysicsProfile initProfile = characterPhysicsSpec == null
                                 ? provider.getInitProfile(charType) : null;
                         if (initProfile != null && profile != null) {
@@ -4860,12 +4860,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         /**
-         * Mirrors ROM `Reset_Player_Position_Array` (sonic3k.asm:22166-22193):
+         * Mirrors ROM `Reset_Player_Position_Array` (sonic3k.asm:22202-22229):
          * writes Pos_table = (x_pos, y_pos) for all 64 entries AND clears all
          * Stat_table 32-bit slots to 0 (`move.l #0, (a2)+`). Called by
-         * Sonic_FireShield (sonic3k.asm:23428), Sonic_HyperDash
-         * (sonic3k.asm:23521), and the player-init / death-respawn paths
-         * (sonic3k.asm:21525, 21938). Subsequent delayed Tails_CPU_Control
+         * Sonic_FireShield (sonic3k.asm:23463), Sonic_HyperDash
+         * (sonic3k.asm:23556), and the player-init / death-respawn paths
+         * (sonic3k.asm:21561, 21974). Subsequent delayed Tails_CPU_Control
          * reads of Stat_table return ZERO for any slot not yet refilled by
          * Sonic_RecordPos.
          *
@@ -4875,7 +4875,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * F7350-F7365 LEFT input bits, while ROM Stat_table read zeros for
          * any slot not yet refilled in the 16 frames after the reset. The
          * stale LEFT input drove Tails CPU to a -0x18 x_speed where ROM
-         * holds 0x0000 (sonic3k.asm:26683-26705,26755-26785).
+         * holds 0x0000 (sonic3k.asm:26723-26745,26795-26825).
          */
         public void resetPositionAndStatTableHistory() {
                 short currentX = getCentreX();
@@ -4897,7 +4897,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * by the given delta, mirroring ROM Obj01_Init's
          * {@code subi.w #$20,x_pos / addi_.w #4,y_pos / Sonic_RecordPos x 64 /
          * addi.w #$20,x_pos / subi_.w #4,y_pos} sequence (s2.asm:35907-35918,
-         * sonic3k.asm:21936-21940). That sequence seeds Sonic_Pos_Record_Buf
+         * sonic3k.asm:21972-21976). That sequence seeds Sonic_Pos_Record_Buf
          * with Tails' spawn-offset position so the first ~16 frames of
          * Tails_CPU_Normal read targetX = Tails_x (no acceleration) before
          * the live Sonic_RecordPos writes the actual Sonic centre into the
@@ -4926,7 +4926,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * uses). Mirrors ROM filling {@code Sonic_Pos_Record_Buf} with the
          * leader's spawn position at level-load
          * (SpawnLevelMainSprites / Reset_Player_Position_Array,
-         * sonic3k.asm:8359-8369,22166-22193) before the leader's first physics
+         * sonic3k.asm:8391-8401,22202-22229) before the leader's first physics
          * tick moves it. Used by the deferred sidekick placement so the
          * delayed-follow target reproduces the ROM "frozen for 16 frames"
          * spawn-anchored ring even when the controller first ticks after the
@@ -4935,7 +4935,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         /**
          * Mirrors ROM {@code Obj01_Init_Continued} (S2, s2.asm:36201-36217) and
          * its S3K twin {@code Sonic_Init_Continued} -> {@code Reset_Player_Position_Array}
-         * (sonic3k.asm:21931-21941, 22166-22178): with the leader's position
+         * (sonic3k.asm:21967-21977, 22202-22214): with the leader's position
          * temporarily offset by {@code (-$20, +4)}, {@code Sonic_Pos_Record_Index}
          * is zeroed and {@code Sonic_RecordPos} is called 64 times, each iteration
          * immediately re-zeroing the {@code Sonic_Stat_Record_Buf} entry it just
@@ -5096,7 +5096,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         /**
          * Mirrors the ROM follower-history write point (`Sonic_RecordPos` in S3K
-         * sonic3k.asm:22119-22136): movement/collision has run, but animation,
+         * sonic3k.asm:22155-22172): movement/collision has run, but animation,
          * touch response, and later object-side rewrites have not. Sidekick CPU
          * reads this table later in the same Process_Sprites pass.
          */
@@ -5226,11 +5226,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         /**
          * Updates the ROM Status_Underwater mirror while object_control bit 0 is
          * suppressing movement. S3K Tails' dispatcher skips Tails_Modes under
-         * object_control (sonic3k.asm:26220-26248), but still falls through to
+         * object_control (sonic3k.asm:26260-26288), but still falls through to
          * Tails_Water. Tails_Water sets/clears Status_Underwater and speed
          * constants before checking object_control; when object_control is set
          * and CPU routine is not 4, it returns before the velocity quarter/double
-         * paths (sonic3k.asm:27416-27470).
+         * paths (sonic3k.asm:27456-27510).
          */
         public boolean waterVelocityChangeGatedByObjectControl() {
                 PlayerMovementRules movementRules = playerMovementRulesOrNull();
@@ -5281,12 +5281,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // Increment global Water_entered_counter so objects can detect water transitions
                 currentWaterSystem().incrementWaterEnteredCounter();
                 // S3K: water entry resets Character_Speeds init values to canonical
-                // (sonic3k.asm:22225-22227 sets absolute values, not relative to init)
+                // (sonic3k.asm:22261-22263 sets absolute values, not relative to init)
                 clearInitOverride();
                 resetSpeedConstantsToCanonical();
                 waterPhysicsActive = true;
 
-                // Fire and Lightning shields dissipate on water entry (s3.asm:34693, 34780)
+                // Fire and Lightning shields dissipate on water entry (s3.asm:34748, 34835)
                 PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
                 if (shield && shieldType != null
                                 && capabilityRules != null && capabilityRules.elementalShieldsEnabled()) {
@@ -5337,7 +5337,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // Increment global Water_entered_counter so objects can detect water transitions
                 currentWaterSystem().incrementWaterEnteredCounter();
                 // S3K: water exit resets Character_Speeds init values to canonical
-                // (sonic3k.asm:22253-22255 sets absolute $600/$C/$80, not relative to init)
+                // (sonic3k.asm:22289-22291 sets absolute $600/$C/$80, not relative to init)
                 clearInitOverride();
                 resetSpeedConstantsToCanonical();
                 waterPhysicsActive = false;
@@ -5347,7 +5347,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
                 // ROM: cmpi.b #4,routine(a0) - skip y_vel doubling if hurt.
                 // S2/S3K additionally skip asl y_vel when already moving upward
-                // faster than -$400 (s2.asm:36120-36124, sonic3k.asm:22267-22270).
+                // faster than -$400 (s2.asm:36120-36124, sonic3k.asm:22303-22306).
                 PlayerMovementRules movementRules = playerMovementRulesOrNull();
                 boolean shouldDoubleYSpeed = !isHurt();
                 if (shouldDoubleYSpeed && movementRules != null && movementRules.waterExitBoostSkipsFastUpwardVelocity()
@@ -5519,7 +5519,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         /**
          * Clears only the underwater status bit for ROM routines that write
          * {@code status(a0)} directly. S3K {@code sub_13ECA} writes
-         * {@code Status_InAir} (sonic3k.asm:26804-26808), so the next
+         * {@code Status_InAir} (sonic3k.asm:26844-26848), so the next
          * {@code Tails_Water} call sees Status_Underwater already clear and
          * does not restore the speed constants.
          */

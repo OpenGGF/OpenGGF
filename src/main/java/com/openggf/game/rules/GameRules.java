@@ -366,7 +366,7 @@ public record GameRules(
                     true,
                     // tailsRollSpeedUsesEffectiveDecelQuarter: S3K Tails_RollSpeed is flat $20
                     false,
-                    // waterVelocityChangeGatedByObjectControl: sonic3k.asm:22235, :27448
+                    // waterVelocityChangeGatedByObjectControl: sonic3k.asm:22271, :27488
                     true
             ,
                     true

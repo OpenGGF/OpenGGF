@@ -23,7 +23,7 @@ import com.openggf.sprites.playable.ObjectControlState;
 import java.util.List;
 
 /**
- * ROM {@code Obj_SSZRotatingPlatform} ({@code $76}, sonic3k.asm:91729-91856): the short post a
+ * ROM {@code Obj_SSZRotatingPlatform} ({@code $76}, sonic3k.asm:91775-91902): the short post a
  * player balances on, which spins them in place. Seven act-1 placements: three {@code $00} and
  * four {@code $01}, and bit 0 is the only subtype bit either half of the object reads — it widens
  * the invisible carrier child from {@code $60} to {@code $A0}.

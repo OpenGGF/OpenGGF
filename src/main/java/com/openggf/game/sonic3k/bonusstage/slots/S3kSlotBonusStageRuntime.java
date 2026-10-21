@@ -54,10 +54,10 @@ public final class S3kSlotBonusStageRuntime {
     private boolean continueAwarded;
     private boolean exitFadeStarted;
     // ROM loc_4BC1E's goal-fade trigger executes `move.w #60,$38(a0)`
-    // (sonic3k.asm:98971). $38 is the character_id offset
+    // (sonic3k.asm:99017). $38 is the character_id offset
     // (sonic3k.constants.asm:66), so the high byte of 60 (=$003C) overwrites
     // character_id with 0. From that frame on, the shared animate dispatcher
-    // sub_4B99E (sonic3k.asm:98683) reads character_id==0 and jumps to
+    // sub_4B99E (sonic3k.asm:98729) reads character_id==0 and jumps to
     // Animate_Sonic instead of Animate_Knuckles/Tails, so the frozen player's
     // roll animation switches from AniKnux02/AniTails02 to AniSonic02. Latched
     // once when the fade begins.
@@ -91,7 +91,7 @@ public final class S3kSlotBonusStageRuntime {
         slotCollisionSystem = new S3kSlotCollisionSystem(slotRenderBuffers, slotStageState);
         slotPlayerRuntime = new S3kSlotPlayerRuntime(slotStageState, slotCollisionSystem);
         // ROM runs sub_4BDCA (ring) + sub_4BE3A (tile dispatch, incl. bumper launch)
-        // inside the player object tick, before MoveSprite2 (sonic3k.asm:98776-98780).
+        // inside the player object tick, before MoveSprite2 (sonic3k.asm:98822-98826).
         // Splice that work into the player runtime's movement branch so a bumper's
         // launch velocity advances the player's position on the firing frame instead
         // of lagging one frame (slots trace f446 bumper: y_pos was one MoveSprite2
@@ -143,12 +143,12 @@ public final class S3kSlotBonusStageRuntime {
 
         if (slotPlayerRuntime != null && slotPlayerRuntime.isExiting()) {
             slotPlayerRuntime.tickExitFrame(slotPlayer);
-            // ROM loc_4BC1E (sonic3k.asm:98964-98972): when the goal-exit
+            // ROM loc_4BC1E (sonic3k.asm:99010-99018): when the goal-exit
             // rotation wind-down reaches SStage_scalar_index_1 == $1800, the
-            // trigger runs `move.w #60,$38(a0)` (sonic3k.asm:98971). $38 is the
+            // trigger runs `move.w #60,$38(a0)` (sonic3k.asm:99017). $38 is the
             // character_id field (sonic3k.constants.asm:66), so 60 (=$003C)'s
             // high byte clobbers character_id to 0, and the shared animate
-            // dispatch sub_4B99E (sonic3k.asm:98683) thereafter runs
+            // dispatch sub_4B99E (sonic3k.asm:98729) thereafter runs
             // Animate_Sonic for the frozen player -- switching the roll mapping
             // sequence to AniSonic02 for the remaining fade frames. Latched at
             // the same frame the fade begins.
@@ -167,8 +167,8 @@ public final class S3kSlotBonusStageRuntime {
             // ROM's per-frame object dispatch always falls through to the shared
             // loc_4B97C tail -- Animate, DPLC, sub_4BBF4 (camera track), Draw_Sprite
             // -- no matter which routine(a0) branch ran, including the goal-exit
-            // handler (loc_4BC1E, sonic3k.asm:98964-99005) and its self-modified
-            // palette-fade successor (loc_4BC54, sonic3k.asm:98981-99005, which
+            // handler (loc_4BC1E, sonic3k.asm:99010-99051) and its self-modified
+            // palette-fade successor (loc_4BC54, sonic3k.asm:99027-99051, which
             // itself ends with `bra.w loc_4B97C`). Skipping updateCamera() here
             // left the engine's camera frozen at whatever value it held the frame
             // before the goal fired, instead of the ROM's actively-recomputed (but
@@ -184,7 +184,7 @@ public final class S3kSlotBonusStageRuntime {
         // ROM line 98745: move.b #0,$30(a0) — clear collision tile at start of frame
 
         // Option cycle system. LevelLoop calls Slots_CycleOptions after
-        // Process_Sprites (sonic3k.asm:7894, 7916), so the reel state this
+        // Process_Sprites (sonic3k.asm:7926, 7948), so the reel state this
         // iteration's cage and reward objects act on was produced at the tail of
         // the previous LevelLoop iteration. The runtime runs that tail cycle here,
         // ahead of the cage, and therefore hands it the V_int_run_count that
@@ -212,12 +212,12 @@ public final class S3kSlotBonusStageRuntime {
         // Ring pickup (sub_4BDCA) + tile dispatch (sub_4BE3A) + throttle tick now
         // run inside the player runtime's movement branch via the pre-move hook
         // (runPreMovePlayerInteractions), which fires between air-gravity collision
-        // and MoveSprite2 (sonic3k.asm:98776-98780) -- so a bumper's launch velocity
+        // and MoveSprite2 (sonic3k.asm:98822-98826) -- so a bumper's launch velocity
         // advances the player's position on the firing frame. When the player is
         // object-controlled (cage grab) or in debug/placement mode, that movement
         // branch (and thus the hook) never runs -- mirroring ROM loc_4BA80, which
         // skips the whole sub_4BABC..sub_4BE3A chain. sub_4BE3A is the ONLY place
-        // the $36/$37 throttles bleed down (sonic3k.asm:99194-99206), so on these
+        // the $36/$37 throttles bleed down (sonic3k.asm:99240-99252), so on these
         // frames the ROM does not decrement them at all; only the engine-local
         // slot-wall contact latch is reset here.
         if (slotStageState != null && (slotPlayer == null || slotPlayer.isDebugMode()
@@ -472,7 +472,7 @@ public final class S3kSlotBonusStageRuntime {
     }
 
     /**
-     * ROM movement-path tail (loc_4BA98, sonic3k.asm:98776-98780): sub_4BDCA (ring
+     * ROM movement-path tail (loc_4BA98, sonic3k.asm:98822-98826): sub_4BDCA (ring
      * pickup) then sub_4BE3A (tile dispatch + throttle bleed-down) run here, before
      * {@code jsr MoveSprite2} folds the just-updated x_vel/y_vel into x_pos/y_pos.
      * Registered as the player runtime's pre-move hook so a bumper launch
@@ -482,7 +482,7 @@ public final class S3kSlotBonusStageRuntime {
      * slot-wall fallback in {@link #update}, mirroring ROM loc_4BA80.
      */
     private void runPreMovePlayerInteractions() {
-        // ROM sub_4BE3A (sonic3k.asm:99194-99206) reads $30(a0) -- the special tile
+        // ROM sub_4BE3A (sonic3k.asm:99240-99252) reads $30(a0) -- the special tile
         // id the corner scan stored this frame -- and branches:
         //
         //     move.b  $30(a0),d0
@@ -495,8 +495,8 @@ public final class S3kSlotBonusStageRuntime {
         // The decrement is therefore gated on "no special tile this frame", not
         // unconditional. While the player rests in continuous contact with a
         // reversal tile (id 6) $30(a0) is non-zero every frame, $37(a0) stays
-        // pinned at the $1E loaded at sonic3k.asm:99261, and the
-        // `tst.b $37(a0) / bne` gate at :99259 suppresses every further
+        // pinned at the $1E loaded at sonic3k.asm:99307, and the
+        // `tst.b $37(a0) / bne` gate at :99305 suppresses every further
         // `neg.w (SStage_scalar_index_1)` for as long as the contact lasts.
         // Ticking unconditionally let the reversal re-fire exactly $1E frames
         // after the first one, flipping the stage rotation a second time the ROM
@@ -523,8 +523,8 @@ public final class S3kSlotBonusStageRuntime {
 
     private void checkRingPickup() {
         // ROM sub_4BDCA reads x_pos(a0)/y_pos(a0) as they stand right after
-        // sub_4BABC's ground-velocity projection (sonic3k.asm:98776-98778), before
-        // MoveSprite2 folds air x_vel/y_vel into position (sonic3k.asm:98780). Using
+        // sub_4BABC's ground-velocity projection (sonic3k.asm:98822-98824), before
+        // MoveSprite2 folds air x_vel/y_vel into position (sonic3k.asm:98826). Using
         // the fully-stepped position here (currentPlayerOriginX/Y, which reflects
         // this frame's air-velocity step too) lets the engine reach a ring cell one
         // step early/late relative to ROM. See S3kSlotPlayerRuntime.groundProjectedOriginX/Y.
@@ -560,7 +560,7 @@ public final class S3kSlotBonusStageRuntime {
      * Dispatch tile interaction based on collision detected during player physics.
      * ROM sub_4BE3A reads $30(a0) which was set by sub_4BDA2 during collision, and
      * (for the bumper-launch branch) reads x_pos(a0)/y_pos(a0) directly at
-     * sonic3k.asm:99224-99225 -- the same pre-MoveSprite2 snapshot sub_4BDCA uses
+     * sonic3k.asm:99270-99271 -- the same pre-MoveSprite2 snapshot sub_4BDCA uses
      * (see checkRingPickup and S3kSlotPlayerRuntime.groundProjectedOriginX/Y).
      */
     private void dispatchTileInteraction() {
@@ -737,19 +737,19 @@ public final class S3kSlotBonusStageRuntime {
      * object dispatch would still reach it this pass.
      *
      * <p>The cage spawns its rewards with {@code jsr (AllocateObject).l}
-     * ({@code sonic3k.asm:99474} for {@code Obj_SlotRing},
-     * {@code :99429} for {@code Obj_SlotSpike}), which scans
+     * ({@code sonic3k.asm:99520} for {@code Obj_SlotRing},
+     * {@code :99475} for {@code Obj_SlotSpike}), which scans
      * {@code Dynamic_object_RAM} forward from its first slot
-     * ({@code sonic3k.asm:37911-37914}) -- so the child can land either below or
+     * ({@code sonic3k.asm:37951-37954}) -- so the child can land either below or
      * above the cage's own slot. The main object pass walks slots in ascending
      * index order, so a child allocated ABOVE the cage's slot is still ahead of
      * the walk and runs its routine 0 in the very same frame it was created;
      * one allocated BELOW it has already been passed and does not run until the
      * next frame. That single tick is what makes {@code Obj_SlotRing}'s
-     * {@code $40} countdown -- seeded to {@code $1A} at {@code sonic3k.asm:99482}
+     * {@code $40} countdown -- seeded to {@code $1A} at {@code sonic3k.asm:99528}
      * and decremented once per routine-0 tick with
      * {@code subq.w #1,$40(a0) / bne.w Draw_Sprite}
-     * ({@code sonic3k.asm:35883-35884}) -- reach zero on spawn frame + 25 rather
+     * ({@code sonic3k.asm:35923-35924}) -- reach zero on spawn frame + 25 rather
      * than + 26.
      *
      * <p>The slot indices compared here are the engine's own ROM-modelled
@@ -785,7 +785,7 @@ public final class S3kSlotBonusStageRuntime {
             boolean inactive = reward instanceof S3kSlotRingRewardObjectInstance ring && !ring.isActive()
                     || reward instanceof S3kSlotSpikeRewardObjectInstance spike && !spike.isActive();
             if (reward.isDestroyed() || inactive) {
-                // Obj_SlotSpike (sonic3k.asm:99568-99604) decrements the cage's
+                // Obj_SlotSpike (sonic3k.asm:99614-99650) decrements the cage's
                 // active count at the same instant it destroys itself -- no
                 // separate sparkle phase -- so this call still applies here for
                 // spikes. Ring rewards already reported their active-count
@@ -806,9 +806,9 @@ public final class S3kSlotBonusStageRuntime {
     }
 
     /**
-     * ROM {@code Slots_CycleOptions} (sonic3k.asm:99614-99946) reads {@code
+     * ROM {@code Slots_CycleOptions} (sonic3k.asm:99660-99992) reads {@code
      * V_int_run_count} -- the longword {@code VInt_Done} increments on every
-     * V-int since power-on (sonic3k.asm:542-543) and never clears on level load
+     * V-int since power-on (sonic3k.asm:558-559) and never clears on level load
      * -- for every reel-spin/target/RNG-mix computation: {@code loc_4C416}'s
      * reel-word seeds (line 99646 {@code move.b (V_int_run_count+3).w,d0}),
      * {@code loc_4C480}'s per-reel velocity offsets and fixed-row scan seed
@@ -827,7 +827,7 @@ public final class S3kSlotBonusStageRuntime {
      * seeds once at the segment boundary (hardware-relative initial base).
      *
      * <p>{@code LevelLoop} calls {@code Slots_CycleOptions} after {@code
-     * Process_Sprites} (sonic3k.asm:7894, 7916), so the runtime's tick ahead of
+     * Process_Sprites} (sonic3k.asm:7926, 7948), so the runtime's tick ahead of
      * the cage stands for the previous iteration's tail call. It reads the count
      * latched when that iteration finished ({@link #latchIterationVIntRunCount}).
      * Lag V-ints between the two iterations advance the live clock but not the
@@ -900,9 +900,9 @@ public final class S3kSlotBonusStageRuntime {
 
     /**
      * ROM loc_4BC1E's goal-fade trigger overwrites {@code character_id} with 0
-     * via {@code move.w #60,$38(a0)} (sonic3k.asm:98971; {@code $38} is the
+     * via {@code move.w #60,$38(a0)} (sonic3k.asm:99017; {@code $38} is the
      * character_id offset, sonic3k.constants.asm:66), so the shared animate
-     * dispatcher sub_4B99E (sonic3k.asm:98683) switches the frozen player's
+     * dispatcher sub_4B99E (sonic3k.asm:98729) switches the frozen player's
      * per-frame animate call from {@code Animate_Knuckles}/{@code Animate_Tails}
      * to {@code Animate_Sonic}. The object keeps its own {@code mappings}
      * (Map_Knuckles etc.), so only the mapping-frame index sequence changes:

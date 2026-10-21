@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code Obj_Iwamodoki} (sonic3k.asm:188040-188135, ROM {@code $8FAF0}) and its fragments.
+ * {@code Obj_Iwamodoki} (sonic3k.asm:188133-188228, ROM {@code $8FAF0}) and its fragments.
  *
  * <p>Expectations are the routine's own tables and comparisons: the {@code $40}-pixel fuse range
  * from {@code cmpi.w #$40,d2}, the {@code byte_8FC30} script, and the {@code ChildObjDat_8FBD6}
@@ -39,7 +39,7 @@ class TestIwamodokiBadnikInstance {
         AbstractObjectInstance.resetCameraBoundsForTests();
     }
 
-    /** {@code ObjDat_Iwamodoki}: {@code dc.b $C,$C,0,0} and {@code dc.w $280} (:188105-188106). */
+    /** {@code ObjDat_Iwamodoki}: {@code dc.b $C,$C,0,0} and {@code dc.w $280} (:188198-188199). */
     @Test
     void itIsASolidBlockWithNoTouchCollisionAtAll() {
         IwamodokiBadnikInstance bomb = bomb();
@@ -52,7 +52,7 @@ class TestIwamodokiBadnikInstance {
         assertFalse(bomb.isHighPriority(), "make_art_tile(ArtTile_Iwamodoki,0,0)");
     }
 
-    /** {@code Obj_WaitOffscreen} (:180271-180302) gates the whole routine on having been drawn. */
+    /** {@code Obj_WaitOffscreen} (:180362-180393) gates the whole routine on having been drawn. */
     @Test
     void anOffscreenBombDoesNothingAtAll() {
         AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);  // the bomb is far outside
@@ -68,7 +68,7 @@ class TestIwamodokiBadnikInstance {
         assertFalse(bomb.detonated());
     }
 
-    /** {@code cmpi.w #$40,d2 / bhs} (:188076): the range is exclusive at {@code $40}. */
+    /** {@code cmpi.w #$40,d2 / bhs} (:188169): the range is exclusive at {@code $40}. */
     @Test
     void theFuseLightsOnlyInsideFortyHexPixelsHorizontally() {
         IwamodokiBadnikInstance far = bomb();
@@ -92,7 +92,7 @@ class TestIwamodokiBadnikInstance {
 
     /**
      * {@code Animate_RawMultiDelay} adds two to {@code anim_frame} BEFORE reading
-     * (sonic3k.asm:177563-177566) and {@code anim_frame_timer} starts at zero, so the first step
+     * (sonic3k.asm:177654-177657) and {@code anim_frame_timer} starts at zero, so the first step
      * lands on {@code byte_8FC30}'s SECOND pair: frame 1 for seven frames, not frame 0.
      */
     @Test
@@ -117,7 +117,7 @@ class TestIwamodokiBadnikInstance {
     }
 
     /**
-     * {@code loc_8FB76} (:188086-188094). {@code FixBugs} is 0, so the ROM's own comment applies:
+     * {@code loc_8FB76} (:188179-188187). {@code FixBugs} is 0, so the ROM's own comment applies:
      * the 100 points is never awarded. Four fragments arrive at {@code ChildObjDat_8FBD6}'s
      * offsets and velocities and the bomb stops being solid.
      */

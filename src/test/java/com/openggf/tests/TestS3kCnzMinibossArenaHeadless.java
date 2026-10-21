@@ -98,7 +98,7 @@ class TestS3kCnzMinibossArenaHeadless {
     }
 
     /**
-     * ROM: {@code Obj_CNZMiniboss} (sonic3k.asm:144823-144840) is placed in the level
+     * ROM: {@code Obj_CNZMiniboss} (sonic3k.asm:144888-144905) is placed in the level
      * but its first routine just {@code rts}-es (drawing nothing, setting nothing up)
      * until {@code Camera_X_pos >= $31E0}, after which it locks the arena and runs a
      * 2-second {@code Obj_Wait} before {@code Obj_CNZMinibossGo} installs the actual
@@ -633,7 +633,7 @@ class TestS3kCnzMinibossArenaHeadless {
     }
 
     /**
-     * ROM anchor: {@code CNZ1BGE_Boss} (docs/skdisasm/sonic3k.asm:107498-107507) fills the
+     * ROM anchor: {@code CNZ1BGE_Boss} (docs/skdisasm/sonic3k.asm:107544-107553) fills the
      * looping boss-room Plane B from a FIXED BG-layout Y of {@code $200} for {@code $10} (16)
      * chunks = 256px, then loops that band purely via the VDP vertical scroll register
      * ({@code Camera_Y_pos_BG_copy}). The CNZ BG layout is 9x9 blocks: the looping carnival

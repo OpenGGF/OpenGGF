@@ -83,9 +83,9 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
         paletteCycler.update(!globalAnimationState.consumePaletteFadeFrame());
         applyPoweredFormPaletteUploadVInt();
         // LevelLoop runs Process_Sprites before ChangeRingFrame
-        // (sonic3k.asm:7888-7910). LevelFrameRuntimeUpdater calls this combined
+        // (sonic3k.asm:7920-7942). LevelFrameRuntimeUpdater calls this combined
         // manager after the object pass, so this is the runtime owner for the
-        // independent AIZ_vine_angle word advanced at sonic3k.asm:9680-9694.
+        // independent AIZ_vine_angle word advanced at sonic3k.asm:9716-9730.
         globalAnimationState.advanceChangeRingFrame();
     }
 

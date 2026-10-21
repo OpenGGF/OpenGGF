@@ -25,7 +25,7 @@ import java.util.List;
 /**
  * Object 0x55 - MGZ Head Trigger (zone-set S3KL only).
  *
- * <p>ROM: Obj_MGZHeadTrigger (sonic3k.asm:70752-70902).
+ * <p>ROM: Obj_MGZHeadTrigger (sonic3k.asm:70792-70942).
  * Stone face mounted on a 3-piece column. Watches one side of the head for an
  * approaching player; when detected, the eyes blink and the head spits a
  * rock-spike projectile. Takes 3 hits (ROM {@code collision_property = 3}).
@@ -227,7 +227,7 @@ public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM Animate_Sprite (sonic3k.asm:36157) replayed against {@link #ANIM_TABLE}.
+     * ROM Animate_Sprite (sonic3k.asm:36197) replayed against {@link #ANIM_TABLE}.
      * Handles commands $FF/$FE/$FD/$FC/$FB as the disassembly routine does.
      */
     private void advanceAnimation() {
@@ -363,10 +363,10 @@ public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
     @Override
     public int getCollisionFlags() {
         // ROM literal behaviour:
-        //   - init sets collision_flags = $17 (sonic3k.asm:70760).
-        //   - Touch_Enemy clears it to 0 on hit (sonic3k.asm:20919).
+        //   - init sets collision_flags = $17 (sonic3k.asm:70800).
+        //   - Touch_Enemy clears it to 0 on hit (sonic3k.asm:20955).
         //   - The 60-frame $32 recovery timer restores it to $17
-        //     (sonic3k.asm:70809).
+        //     (sonic3k.asm:70849).
         //   - Permanently cleared once the head is triggered/destroyed.
         if (triggered || hitPending || recoverTimer > 0) {
             return 0;

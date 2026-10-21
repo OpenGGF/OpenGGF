@@ -22,11 +22,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code Obj_LRZMiniboss} (sonic3k.asm:160001-160900), the Lava Reef act 1 miniboss.
+ * {@code Obj_LRZMiniboss} (sonic3k.asm:160077-160976), the Lava Reef act 1 miniboss.
  *
  * <p>The load-bearing reading here is the child census. {@code loc_78562} makes two rings of
  * twelve through {@code CreateChild8_TreeListRepeated}, whose subtype counter steps with
- * {@code addq.w #2,d2} (sonic3k.asm:177181-177203) -- by <b>two</b>, not one. {@code loc_7880A}
+ * {@code addq.w #2,d2} (sonic3k.asm:177272-177294) -- by <b>two</b>, not one. {@code loc_7880A}
  * then sorts each child by subtype: {@code 0} is an arm segment, {@code $16} the firing hand, and
  * everything between an arm link. Stepping by two makes {@code $16} the twelfth child, so each
  * ring is one segment, ten links and one hand.
@@ -178,7 +178,7 @@ class TestLrzMinibossInstance {
     // ---------------------------------------------------------------------
 
     /**
-     * {@code Obj_LRZMiniboss} (sonic3k.asm:160001-160010) does not enter {@code off_7854C} at all
+     * {@code Obj_LRZMiniboss} (sonic3k.asm:160077-160086) does not enter {@code off_7854C} at all
      * on its first dispatch. It runs {@code Check_CameraInRange} against {@code word_784E0}
      * ({@code $610,$810,$2B00,$2D00}), installs {@code loc_78522} -- which is nothing but
      * {@code jmp loc_85CA4} -- and only when that gate has finished does {@code $34(a0)}
@@ -304,7 +304,7 @@ class TestLrzMinibossInstance {
         assertEquals(2, hands.size());
 
         // The production path only: the touch pass zeroes collision_flags and decrements
-        // collision_property (sonic3k.asm:20916-20923), and sub_78CF4 does the rest from the
+        // collision_property (sonic3k.asm:20952-20959), and sub_78CF4 does the rest from the
         // hand's own update. Nothing here calls a test-only hit entry point.
         int frame = hitEveryHandUntilDead(hands, 0x600);
 
@@ -322,10 +322,10 @@ class TestLrzMinibossInstance {
      * The two frames on which the hand's routine changes, which break the obvious rule in opposite
      * directions.
      *
-     * <p>{@code loc_78946} (sonic3k.asm:160388-160405) ends {@code bra.w sub_78B46} with no
+     * <p>{@code loc_78946} (sonic3k.asm:160464-160481) ends {@code bra.w sub_78B46} with no
      * {@code Draw_Sprite} after it, so the frame the hand <b>arms</b> is not drawn -- and it has
      * done no positional work either, so drawing it would put the sprite wherever the create loop
-     * left it. {@code loc_7897A} (sonic3k.asm:160407-160432) tests the parent's bit 2 and rewrites
+     * left it. {@code loc_7897A} (sonic3k.asm:160483-160508) tests the parent's bit 2 and rewrites
      * {@code (a0)} for the next frame, but this frame still falls through {@code loc_7898C} to
      * {@code loc_789C4}, so the frame it <b>stops</b> is drawn.
      *
@@ -357,7 +357,7 @@ class TestLrzMinibossInstance {
     }
 
     /**
-     * {@code sub_78CF4} (sonic3k.asm:160756-160776): the hand's own hit path. It is gated on
+     * {@code sub_78CF4} (sonic3k.asm:160832-160852): the hand's own hit path. It is gated on
      * {@code collision_flags(a0)} being <b>zero</b> -- the touch pass zeroes it and stows the old
      * value in {@code $25} -- opens a {@code $20}-frame window in {@code $20(a0)}, plays
      * {@code sfx_BossHit}, creates {@code ChildObjDat_78D98}'s ring, and restores
@@ -394,7 +394,7 @@ class TestLrzMinibossInstance {
     }
 
     /**
-     * {@code move.w a0,d0 / move.b d0,$1C(a1)} (sonic3k.asm:20917-20918) records which player
+     * {@code move.w a0,d0 / move.b d0,$1C(a1)} (sonic3k.asm:20953-20954) records which player
      * landed the blow: {@code $00} for {@code Player_1} at {@code $FFFFB000}, {@code $4A} for
      * {@code Player_2} at {@code $FFFFB04A}.
      */
@@ -435,8 +435,8 @@ class TestLrzMinibossInstance {
     }
 
     /**
-     * {@code sub_78B46} (sonic3k.asm:160568-160590) plus {@code loc_78B86}
-     * (sonic3k.asm:160592-160605). Killing a hand sets the parent's bit for that ring, and every
+     * {@code sub_78B46} (sonic3k.asm:160644-160666) plus {@code loc_78B86}
+     * (sonic3k.asm:160668-160681). Killing a hand sets the parent's bit for that ring, and every
      * child of that ring then parks on {@code Wait_Draw} for {@code $2C - subtype * 2} frames
      * before exploding and, {@code $F} frames later, deleting.
      *
@@ -613,7 +613,7 @@ class TestLrzMinibossInstance {
 
     /**
      * {@code parent3(a1)} is a stored pointer: retiring a sibling does not re-aim anyone
-     * (sonic3k.asm:177181-177203). The engine prunes destroyed children from the parent's list,
+     * (sonic3k.asm:177272-177294). The engine prunes destroyed children from the parent's list,
      * so resolving the predecessor by list position survives an unrelated removal only by luck --
      * a link and its immediate neighbour shift together. It does not survive the removal of the
      * <b>anchor itself</b>: ring two's first link would then take whatever slid into that slot,
@@ -657,9 +657,9 @@ class TestLrzMinibossInstance {
     // ======================================================================
 
     /**
-     * {@code sub_78BD6} (sonic3k.asm:160642-160648) parks each link and each hand on
+     * {@code sub_78BD6} (sonic3k.asm:160718-160724) parks each link and each hand on
      * {@code Wait_Draw} for the {@code $2E} {@code loc_7880A} gave it -- {@code (mirrored ? $10 : 0)
-     * + subtype * 2} (sonic3k.asm:160258-160261, 160276-160279) -- so the two arms unroll link by
+     * + subtype * 2} (sonic3k.asm:160334-160337, 160352-160355) -- so the two arms unroll link by
      * link. Without it every child runs {@code loc_788F4} on the same frame and both arms snap out
      * fully formed.
      *
@@ -711,7 +711,7 @@ class TestLrzMinibossInstance {
     }
 
     /**
-     * {@code Animate_RawMultiDelay} (sonic3k.asm:177563-177579) does {@code addq.w #2,d0}
+     * {@code Animate_RawMultiDelay} (sonic3k.asm:177654-177670) does {@code addq.w #2,d0}
      * <b>before</b> the read, on an {@code anim_frame} {@code Set_Raw_Animation} just cleared, so
      * the first pair a script plays is index 2. Index 0/1 is only the frame {@code loc_845F2}
      * emits when {@code $FC} restarts the script.
@@ -740,7 +740,7 @@ class TestLrzMinibossInstance {
     }
 
     /**
-     * {@code loc_788F4} (sonic3k.asm:160361-160377) writes the stepped angle at {@code loc_7890C}
+     * {@code loc_788F4} (sonic3k.asm:160437-160453) writes the stepped angle at {@code loc_7890C}
      * <b>unconditionally</b>; the out-of-window branch at {@code loc_78908} only negates
      * {@code $40} and then falls through to the same store. So the sway reaches {@code $6F} and
      * {@code $91}, one step outside the {@code [$70,$90]} test window, before turning round.
@@ -766,7 +766,7 @@ class TestLrzMinibossInstance {
     }
 
     /**
-     * {@code MoveSprite_CircularSimple} (sonic3k.asm:178424-178441) with {@code d2 = 4}: the 8.8
+     * {@code MoveSprite_CircularSimple} (sonic3k.asm:178515-178532) with {@code d2 = 4}: the 8.8
      * sine and cosine are lifted into the whole half of a 16.16 longword and shifted right four,
      * so the offset from {@code parent3} is {@code sine << 12} on X and {@code cosine << 12} on Y,
      * added to and stored back as a longword. The values are the ROM's
@@ -814,7 +814,7 @@ class TestLrzMinibossInstance {
     }
 
     /**
-     * {@code loc_7897A} (sonic3k.asm:160422-160446) positions the hand with
+     * {@code loc_7897A} (sonic3k.asm:160498-160522) positions the hand with
      * {@code MoveSprite_AtAngleLookup} over {@code AngleLookup_2}, anchored on {@code parent3} --
      * the tenth arm link, subtype {@code $14} -- not on the boss body. {@code sub_78BD6} leaves
      * {@code $3C = $80} and nothing ever steps it, so the offset is
@@ -875,7 +875,7 @@ class TestLrzMinibossInstance {
     }
 
     /**
-     * {@code sub_78C14} (sonic3k.asm:160641-160670) with the {@code FixBugs = 0} branch. A hit
+     * {@code sub_78C14} (sonic3k.asm:160717-160746) with the {@code FixBugs = 0} branch. A hit
      * zeroes {@code collision_flags} (the touch code's work, stowed in {@code $25}) and
      * decrements {@code collision_property}; {@code sub_78C14} then runs {@code $20} frames of
      * {@code sub_78C98}, alternating the {@code word_78CB2} window on bit 0 of {@code $20}, and
@@ -913,7 +913,7 @@ class TestLrzMinibossInstance {
         assertEquals(6, boss.getCollisionFlags(),
                 "move.b $25(a0),collision_flags(a0) restores the slam hit box");
         // word_78CA6's six offsets are into Normal_palette_line_2, and the ROM's palette line
-        // names are ONE-based: sonic3k.constants.asm:767-770 has Normal_palette ds.b $80 with
+        // names are ONE-based: sonic3k.constants.asm:787-790 has Normal_palette ds.b $80 with
         // Normal_palette_line_2 = Normal_palette+$20. Reading the digit as a zero-based engine
         // index puts the whole flash on the wrong line -- and because the shipped window is the
         // boss's own colours rather than white, the symptom is unrelated sprites tinting for $20
@@ -923,7 +923,7 @@ class TestLrzMinibossInstance {
     }
 
     /**
-     * {@code Sprite_CheckDeleteTouchXY} (sonic3k.asm:179032-179043) is coarse and asymmetric: the
+     * {@code Sprite_CheckDeleteTouchXY} (sonic3k.asm:179123-179134) is coarse and asymmetric: the
      * X test aligns {@code x_pos} to {@code $FF80} and compares against
      * {@code Camera_X_pos_coarse_back = (Camera_X_pos - $80) & $FF80} with a {@code $280} window,
      * and the Y test is {@code y_pos - Camera_Y_pos + $80} against {@code $200}. Both are
@@ -950,7 +950,7 @@ class TestLrzMinibossInstance {
 
     /**
      * The defeat chain, end to end: {@code loc_78C60} -> {@code Wait_FadeToLevelMusic}
-     * (sonic3k.asm:179656-179669) -> {@code loc_787E0} (sonic3k.asm:160247-160255).
+     * (sonic3k.asm:179747-179760) -> {@code loc_787E0} (sonic3k.asm:160323-160331).
      *
      * <p>Three readings are load-bearing and none of them can be seen from the end state.
      * {@code loc_78C60} does <b>not</b> reseed {@code $2E}: the fade wait consumes whatever the
@@ -1002,7 +1002,7 @@ class TestLrzMinibossInstance {
         // per-piece displacement after four frames, which is the velocity and nothing else.
         // The table below is the production one, so it is an oracle for the mechanism (the 16.16
         // step and where gravity lands) and not for the values. These three rows are transcribed
-        // here straight from Obj_VelocityIndex entries 23, 24 and 33 (sonic3k.asm:179203-179213)
+        // here straight from Obj_VelocityIndex entries 23, 24 and 33 (sonic3k.asm:179294-179304)
         // so at least the ends and the start of the window are checked against the ROM itself.
         assertEquals(List.of(0, -0x100),
                 List.of(LrzMinibossDebrisChild.DEBRIS_VELOCITIES[0][0],

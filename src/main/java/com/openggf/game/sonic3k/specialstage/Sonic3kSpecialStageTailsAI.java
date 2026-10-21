@@ -34,7 +34,7 @@ public class Sonic3kSpecialStageTailsAI {
 
     /**
      * Record P1 state and determine P2 (Tails) input.
-     * ROM: sub_937C (sonic3k.asm:11711)
+     * ROM: sub_937C (sonic3k.asm:11747)
      *
      * @param p1HeldButtons P1 held buttons this frame
      * @param p1Jumping P1 jumping state

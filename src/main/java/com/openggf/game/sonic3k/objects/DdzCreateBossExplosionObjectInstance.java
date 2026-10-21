@@ -10,7 +10,7 @@ import com.openggf.level.objects.RewindRecreateContext;
 import java.util.List;
 
 /**
- * ROM {@code Obj_CreateBossExplosion} (sonic3k.asm:176661-176800) for the parameter sets that use
+ * ROM {@code Obj_CreateBossExplosion} (sonic3k.asm:176752-176891) for the parameter sets that use
  * {@code Obj_BossExpControl1}: set {@code 0} ({@code Obj_Wait}) and set {@code 8}
  * ({@code Obj_WaitForParent}, which follows a live parent and deletes when the parent is gone or
  * has {@code $38} bit 5 set).

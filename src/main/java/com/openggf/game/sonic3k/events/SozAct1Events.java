@@ -131,7 +131,7 @@ final class SozAct1Events extends Sonic3kZoneEvents {
         var handoff=seamlessTransitionResourceHandoffs().register(new SozActTransitionHandoff(
                 0x140-(player.getCentreX()&65535),0x3AC-(player.getCentreY()&65535),this));
         // loc_55C84 runs Load_Level and the coordinate rebase inside this background-event
-        // dispatch once Kos_modules_left is clear (sonic3k.asm:113811-113870); deferring
+        // dispatch once Kos_modules_left is clear (sonic3k.asm:113857-113916); deferring
         // to the next loop iteration leaves one unreloaded frame.
         levelManager().applySynchronousScreenEventTransition(SeamlessLevelTransitionRequest.builder(
                 SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
@@ -149,7 +149,7 @@ final class SozAct1Events extends Sonic3kZoneEvents {
         var events=state.events();
         if(events.titleCardAllocationPending()){
             // loc_56324's AllocateObject gave Obj_TitleCard a later slot; Obj_TitleCardInit
-            // queues its KosM art on the following object pass (sonic3k.asm:62108-62166).
+            // queues its KosM art on the following object pass (sonic3k.asm:62148-62206).
             events.titleCardAllocationPending(false);
             levelManager().requestInLevelTitleCard(8,1,true,com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE);
         }

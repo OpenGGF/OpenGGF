@@ -56,8 +56,8 @@ import java.util.logging.Logger;
 /**
  * Marble Garden Zone dynamic level events.
  *
- * <p>ROM: MGZ1_BackgroundEvent (sonic3k.asm lines 106269-106345),
- * MGZ2_QuakeEvent (sonic3k.asm lines 106579-106786),
+ * <p>ROM: MGZ1_BackgroundEvent (sonic3k.asm lines 106315-106391),
+ * MGZ2_QuakeEvent (sonic3k.asm lines 106625-106832),
  * MGZ2_QuakeEventArray (Lockon S3/Screen Events.asm lines 1027-1030).
  *
  * <h3>Act 1 BG (MGZ1_BackgroundEvent) — seamless act transition:</h3>
@@ -224,7 +224,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
 
     // ========================================================================
     // Act 2 BG-rise state machine (MGZ2_BGEventTrigger + Obj_MGZ2BGMoveSonic)
-    // ROM: sonic3k.asm:107117-107323. This is the "outrun the terrain as it
+    // ROM: sonic3k.asm:107163-107369. This is the "outrun the terrain as it
     // scrolls up" sequence. HCZ2 parallel: uses Background_collision_flag +
     // dual-path FindFloor in GroundSensor; BG plane Y offset drives the visual.
     // ========================================================================
@@ -466,7 +466,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
 
     /*
      * FixBugs audit (docs/skdisasm/sonic3k.asm:38, assembled as 0 in the shipped
-     * ROM). MGZ1_Resize (sonic3k.asm:39336-39342) is an EMPTY label that falls
+     * ROM). MGZ1_Resize (sonic3k.asm:39376-39382) is an EMPTY label that falls
      * straight through into MGZ2_Resize; the `rts` that would make Act 1 a no-op
      * exists only under FixBugs=1 ("Bug: MGZ1 uses a dynamic resize routine meant
      * for MGZ2. This causes the act 2 boss to spawn in out-of-bounds act 1").
@@ -480,7 +480,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     private void update(int act, int frameCounter, boolean includeBossTransitionObject) {
         if (act == 0) {
             updateAct1Bg();
-            // ROM: MGZ1_Resize (sonic3k.asm:39334-39343).
+            // ROM: MGZ1_Resize (sonic3k.asm:39374-39383).
             //
             // FixBugs conditional (sonic3k.asm:38 -- the shipped ROM assembles
             // with FixBugs = 0, so THIS is the branch the engine implements).
@@ -489,12 +489,12 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             //   therefore runs Act 2's end-boss dynamic-resize gate every frame,
             //   and the disassembly's own comment records the consequence: "This
             //   causes the act 2 boss to spawn in out-of-bounds act 1"
-            //   (sonic3k.asm:39339-39340). The gate is state-driven, not
+            //   (sonic3k.asm:39379-39380). The gate is state-driven, not
             //   act-driven -- it fires only if the camera actually reaches
             //   Y $600..$700 and X >= $3A00 -- so on layouts where act 1's camera
             //   never gets there this is latent, exactly as on hardware.
             //   Fixed (FixBugs = 1), NOT implemented: a bare `rts`
-            //   (sonic3k.asm:39335-39336), making act 1's resize handler a no-op.
+            //   (sonic3k.asm:39375-39376), making act 1's resize handler a no-op.
             updateAct2BossArena();
         } else if (act == 1) {
             // MGZ2_ScreenEvent polls Do_ShakeSound before dispatching any of
@@ -656,7 +656,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * ROM: MGZ2_Resize (sonic3k.asm:39343-39418). This is the end-boss
+     * ROM: MGZ2_Resize (sonic3k.asm:39383-39458). This is the end-boss
      * dynamic-resize gate: lock the vertical camera to the boss corridor,
      * clamp the right edge to $3C80, then spawn Obj_MGZEndBoss when the camera
      * reaches that clamp.
@@ -740,7 +740,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     // ========================================================================
 
     /**
-     * ROM: MGZ2_QuakeEvent (sonic3k.asm:106579-106786). Reads player position
+     * ROM: MGZ2_QuakeEvent (sonic3k.asm:106625-106832). Reads player position
      * and dispatches on {@link #quakeEventRoutine}.
      */
     private void updateAct2QuakeEvent() {
@@ -770,7 +770,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * ROM: MGZ2_QuakeEventCheck (sonic3k.asm:106625-106663). Scans
+     * ROM: MGZ2_QuakeEventCheck (sonic3k.asm:106671-106709). Scans
      * {@link #QUAKE_EVENT_ARRAY} for a matching player position; on the first
      * incomplete entry that contains the player, locks camera bounds and
      * transitions to {@link #QUAKE_EVENT_1}, {@link #QUAKE_EVENT_2}, or
@@ -836,7 +836,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * ROM: MGZ2_QuakeEvent1 (sonic3k.asm:106666-106684). Waits for camera X
+     * ROM: MGZ2_QuakeEvent1 (sonic3k.asm:106712-106730). Waits for camera X
      * to reach {@link Camera#getMaxX()} (the lock). On arrival: freezes the
      * screen, spawns Robotnik, triggers shake, advances to QuakeEvent1Cont.
      * Retreat (player X &lt; {@link #EVENT1_PLAYER_X_THRESHOLD}) reverts to
@@ -859,7 +859,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * ROM: MGZ2_QuakeEvent2 (sonic3k.asm:106687-106720). Waits for camera X
+     * ROM: MGZ2_QuakeEvent2 (sonic3k.asm:106733-106766). Waits for camera X
      * to reach {@link Camera#getMinX()} (the forced-left lock). Retreat
      * (player X &gt;= {@link #EVENT2_PLAYER_X_RETREAT}) reverts.
      */
@@ -885,7 +885,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * ROM: MGZ2_QuakeEvent3 (sonic3k.asm:106723-106742). Retreat threshold is
+     * ROM: MGZ2_QuakeEvent3 (sonic3k.asm:106769-106788). Retreat threshold is
      * {@link #EVENT3_PLAYER_X_RETREAT}.
      */
     private void quakeEvent3(int playerX) {
@@ -905,7 +905,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * ROM: MGZ2_QuakeEvent1Cont (sonic3k.asm:106755-106759). Once the player
+     * ROM: MGZ2_QuakeEvent1Cont (sonic3k.asm:106801-106805). Once the player
      * passes {@link #EVENT1_CONT_RELEASE_X}, restore default camera_max_Y and
      * return to {@link #QUAKE_CHECK} so the remaining quakes can still trigger.
      */
@@ -918,7 +918,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * ROM: MGZ2_QuakeEvent2Cont (sonic3k.asm:106761-106769). Release requires
+     * ROM: MGZ2_QuakeEvent2Cont (sonic3k.asm:106807-106815). Release requires
      * player Y &lt; $100 AND X &gt;= $2F80; additionally resets
      * Camera_max_X to $6000.
      */
@@ -932,7 +932,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * ROM: MGZ2_QuakeEvent3Cont (sonic3k.asm:106775-106778). Release when the
+     * ROM: MGZ2_QuakeEvent3Cont (sonic3k.asm:106821-106824). Release when the
      * player moves back past {@link #EVENT3_CONT_RELEASE_X}. In the ROM this
      * is where the end-of-act boss route continues; the engine fires
      * {@link #onMgz2BossArenaReached()} as a route-transition marker while
@@ -1107,10 +1107,10 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         if (state == null) {
             return;
         }
-        // ROM MGZ2_ScreenEvent raises Screen_shake_flag (st, sonic3k.asm:106395)
+        // ROM MGZ2_ScreenEvent raises Screen_shake_flag (st, sonic3k.asm:106441)
         // and ShakeScreen_Setup samples ScreenShakeArray2 from
         // Level_frame_counter at the background event's tail
-        // (sonic3k.asm:104200-104209, :106308). Keep both in that single owner.
+        // (sonic3k.asm:104246-104255, :106354). Keep both in that single owner.
         if (isVisualShakeActive()) {
             state.requestContinuousScreenShake();
         }
@@ -1164,8 +1164,8 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * ROM: MGZ2_BGEventTrigger (sonic3k.asm:107117-107222) + Obj_MGZ2BGMoveSonic
-     * (sonic3k.asm:107241-107323). The engine's shared frame step calls this
+     * ROM: MGZ2_BGEventTrigger (sonic3k.asm:107163-107268) + Obj_MGZ2BGMoveSonic
+     * (sonic3k.asm:107287-107369). The engine's shared frame step calls this
      * bridge before player physics so the state published by the preceding ROM
      * object/background-event cadence is visible to the corresponding terrain
      * probes. The delayed-refresh counter below preserves the interval where
@@ -1184,9 +1184,9 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             bgRiseFinalShakeTimer--;
         }
         // ROM MGZ2_LevelCollapse sets _unkEEA2 to $FFFF when its special
-        // per-column VScroll mode starts (sonic3k.asm:106555). From then on,
+        // per-column VScroll mode starts (sonic3k.asm:106601). From then on,
         // MGZ2_BGEventTrigger tests that word and returns immediately
-        // (sonic3k.asm:107164-107167). In particular, a falling player in the
+        // (sonic3k.asm:107210-107213). In particular, a falling player in the
         // boss pit must not make the completed state-C terrain event re-enter
         // state 8 and expose the raised-terrain Plane B for a frame.
         if (collapseInitialized) {
@@ -1565,7 +1565,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
 
         if (!carrying && playerBelowTransition) {
             // Obj_MGZ2_BossTransition uses move.w d0,y_pos(a1), preserving
-            // the fractional word (sonic3k.asm:30225-30231).
+            // the fractional word (sonic3k.asm:30265-30271).
             NativePositionOps.writeYPosPreserveSubpixel(player, bossTransitionY);
             player.setXSpeed((short) 0);
             player.setYSpeed((short) 0);
@@ -1587,7 +1587,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                 return;
             }
             // loc_16384 publishes Tails_CPU_routine=$12 before testing the
-            // transition object's $30 wait timer (sonic3k.asm:30247-30259).
+            // transition object's $30 wait timer (sonic3k.asm:30287-30299).
             if (controller == null) {
                 controller = new SidekickCpuController(tails, player);
                 tails.setCpuController(controller);
@@ -2094,7 +2094,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             // consumes that write on the following screen-event dispatch; it
             // then loads Screen_shake_flag=$14 after ShakeScreen_Setup has
             // already run, so the new positive countdown is not decremented
-            // on its arm frame (sonic3k.asm:106412-106427,142844-142866).
+            // on its arm frame (sonic3k.asm:106458-106473,142909-142931).
             if (!collapseRequestObserved) {
                 collapseRequestObserved = true;
                 return;
@@ -2441,7 +2441,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
 
     /**
      * Requests the seamless transition from MGZ Act 1 to MGZ Act 2.
-     * ROM: MGZ1BGE_Transition (sonic3k.asm lines 106307-106345).
+     * ROM: MGZ1BGE_Transition (sonic3k.asm lines 106353-106391).
      */
     private void requestMgz2Transition() {
         transitionRequested = true;

@@ -100,7 +100,7 @@ public final class Sonic3kZoneArt implements ZonePictureSource {
             // The main level's art: LoadLevelLoadBlock's $0D00 entry, which the skip-intro
             // bootstrap selects (Sonic3k.resolveLevelLoadBlockIndex). AIZ1_BGDrawArray is
             // $220, $7FFF: rows below $220 are drawn from (camX - $1300) / 2 rather than X 0
-            // (AIZ1_Deform, s3.asm:70272), so only the top $220 rows repeat at 512. The overview
+            // (AIZ1_Deform, s3.asm:70328), so only the top $220 rows repeat at 512. The overview
             // also repeats the forest rows $220-$37F at 512: drawn from (camX - $1300) / 2, they
             // start from layout X 0 at the act's start and the layout is empty further right.
             // Rows $380 on hold the intro beach, which this art cannot draw; the main level never
@@ -133,7 +133,7 @@ public final class Sonic3kZoneArt implements ZonePictureSource {
             // AnimateTiles_LBZ1's scroll tiles at phase 0 (updateLbz1ScrollTiles: $140 words
             // from the start of ArtUnc_AniLBZ1_1, then the first $20-byte cap tile).
             // LBZ1_BGDrawArray is $D0, $7FFF with HScroll_table+$004 cleared
-            // (LBZ1_BackgroundInit, sonic3k.asm:111168): the sky follows the 1536-px layout,
+            // (LBZ1_BackgroundInit, sonic3k.asm:111214): the sky follows the 1536-px layout,
             // the water below is drawn from X 0. Foreground columns $80 on are the staging rows
             // the LBZ1_DoModN routines copy into the visible layout (Sonic3kLBZEvents
             // LBZ1_LAYOUT_MODS), so the playable foreground ends at X $4000. Stages end at $3B60,
@@ -378,7 +378,7 @@ public final class Sonic3kZoneArt implements ZonePictureSource {
             Pattern[] startTiles = null;
             int startTilesBeforeX = 0;
             if (profile.zone() == Sonic3kZoneIds.ZONE_AIZ && profile.act() == 1) {
-                // AnimateTiles_AIZ2 (sonic3k.asm:53953): left of camera X $1C0 it DMAs
+                // AnimateTiles_AIZ2 (sonic3k.asm:53993): left of camera X $1C0 it DMAs
                 // ArtUnc_AniAIZ2_FirstTree to tile $CA every frame, over the AniPLC slots it
                 // animates from $1C0 on. Those columns are what such a camera can show.
                 startTiles = tiles.clone();

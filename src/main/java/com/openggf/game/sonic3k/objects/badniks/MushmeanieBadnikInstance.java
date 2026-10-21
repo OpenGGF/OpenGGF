@@ -20,7 +20,7 @@ import java.util.List;
 /**
  * S3K SKL Obj $8D - Mushmeanie.
  *
- * <p>ROM reference: {@code Obj_Mushmeanie} at {@code sonic3k.asm:193522}.
+ * <p>ROM reference: {@code Obj_Mushmeanie} at {@code sonic3k.asm:193621}.
  * The parent body uses collision flag {@code $D7} and takes two attacks: the
  * first clears collision for {@code $20} frames and pops the shell, the second
  * runs the normal badnik defeat path.

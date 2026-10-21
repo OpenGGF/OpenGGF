@@ -14,8 +14,8 @@ import java.util.List;
  * issues an unconditional {@code writeVRAM v_sgfx_buffer,...}
  * (docs/s1disasm/sonic.asm:831); Sonic 3&K matches Sonic 2, with
  * {@code Add_To_DMA_Queue} keeping only {@code DMA_queue_slot}
- * (docs/skdisasm/s3.asm:1831) and {@code Process_DMA_Queue} rewinding it to
- * {@code DMA_queue} on every drain (docs/skdisasm/s3.asm:1881). The ids
+ * (docs/skdisasm/s3.asm:1854) and {@code Process_DMA_Queue} rewinding it to
+ * {@code DMA_queue} on every drain (docs/skdisasm/s3.asm:1904). The ids
  * therefore encode delivery ORDER and PAIRING, and only their relative
  * structure is ROM-meaningful.
  *

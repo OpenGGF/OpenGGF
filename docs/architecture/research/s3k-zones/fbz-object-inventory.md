@@ -220,7 +220,7 @@ family implementation/tests. Line references are to `docs/skdisasm/sonic3k.asm`.
   (`ChildObjDat_89EA8`), five freed-animal children (`89EB0`), and boss
   explosions. `Obj_FBZSpringPlunger` is a separate, placed-only family: the
   five `$D0` Act 1 placement records each run their own init/rider/delete path
-  and allocate no children (`sonic3k.asm:187094-187119`).
+  and allocate no children (`sonic3k.asm:187187-187212`).
 - `Obj_FBZMagneticPlatform` (`78926`) allocates a tall multi-sprite chain/field
   companion; `Obj_FBZSnakePlatform` (`79081`) allocates three additional
   segments; `Obj_FBZRotatingPlatform` (`79276`) expands to subtype-selected
@@ -362,7 +362,7 @@ is already visible at wide resolutions.
 The locked-on child helpers `CreateChild1_Normal`, `CreateChild2_Complex`,
 `CreateChild3_NormalRepeated`, `CreateChild4_LinkListRepeated`,
 `CreateChild5_ComplexAdjusted`, and `CreateChild6_Simple` all call
-`AllocateObjectAfterCurrent` (`sonic3k.asm:176924-177142`), i.e. the ROM
+`AllocateObjectAfterCurrent` (`sonic3k.asm:177015-177233`), i.e. the ROM
 `FindNextFreeObj`/after-parent policy. Direct `AllocateObject` calls use the
 global `FindFreeObj` policy. Directly replacing `(a0)` reuses the parent slot.
 
@@ -499,21 +499,21 @@ recorded as `included-binary` rather than substituting an S3-half address.
 | Shared FBZ bridge/cork | `Map_FBZCollapsingBridge` `$2108E`; `Map_FBZCorkFloor` `$2A920` | level PLC `$1A/$1B` or `$1C/$1D` |
 | Floating/chain/magnetic | `Map_FBZFloatingPlatform` `$3A742`; `Map_FBZChainLink` `$3AD8A`; `Map_FBZMagneticSpikeBall` `$3B25C`; `Map_FBZMagneticPlatform` `$3B4DE`; `Map_FBZMagneticPendulum` `$3D9AE` | `ArtNem_FBZMisc`, included-binary, PLC `$1A-$1D` |
 | Snake/bent/rotating/launcher | `Map_FBZSnakePlatform` `$3B6CE`; `Map_FBZBentPipe` `$3B73C`; `Map_FBZRotatingPlatform` `$3B91A`; `Map_FBZDEZPlayerLauncher` `$3BA8A` | `ArtNem_FBZMisc`, included-binary, PLC `$1A-$1D` |
-| Disappearing/screw/pole/propeller | `Ani_FBZDisappearingPlatform` `$3BB9A`; `Map_FBZDisappearingPlatform` `$3BBBE`; `Ani_FBZScrewDoor` `$3BD5E`; `Map_FBZScrewDoor` `$3BD8E`; `Map_FBZSpinningPole` `$3C19C`; `Map_FBZPropeller` `$3C20C` | `ArtNem_FBZMisc`, S&K included-binary at `sonic3k.asm:201450`, PLC `$1A/$1B` and `$1C/$1D` |
-| Piston/blocks/missiles/mine | `Map_FBZPiston` `$3C328`; `Map_FBZPlatformBlocks` `$3C416`; `Map_FBZMissileLauncher` `$3C78E`; `Map_FBZWallMissile` `$3C906`; `Map_FBZMine` `$3CA06` | `ArtNem_FBZMisc` / `ArtNem_FBZMisc2`, S&K included-binary at `sonic3k.asm:201450/201456`, level PLC `$1A-$1D` |
-| Elevator/trap/flame/spider | `Map_FBZElevator` `$3CB0C`; `Ani_FBZTrapSpring` `$3CC4C`; `Map_FBZTrapSpring` `$3CC5A`; `Map_FBZFlameThrower` `$3CFD0`; `Map_FBZSpiderCrane` `$3D2FC` | trap/spider use `ArtNem_FBZMisc2`; flamethrower uses `ArtNem_FBZMisc` (`ArtTile_FBZMisc+$A4`); S&K included binaries at `sonic3k.asm:201450/201456`, PLC `$1C/$1D` |
+| Disappearing/screw/pole/propeller | `Ani_FBZDisappearingPlatform` `$3BB9A`; `Map_FBZDisappearingPlatform` `$3BBBE`; `Ani_FBZScrewDoor` `$3BD5E`; `Map_FBZScrewDoor` `$3BD8E`; `Map_FBZSpinningPole` `$3C19C`; `Map_FBZPropeller` `$3C20C` | `ArtNem_FBZMisc`, S&K included-binary at `sonic3k.asm:201564`, PLC `$1A/$1B` and `$1C/$1D` |
+| Piston/blocks/missiles/mine | `Map_FBZPiston` `$3C328`; `Map_FBZPlatformBlocks` `$3C416`; `Map_FBZMissileLauncher` `$3C78E`; `Map_FBZWallMissile` `$3C906`; `Map_FBZMine` `$3CA06` | `ArtNem_FBZMisc` / `ArtNem_FBZMisc2`, S&K included-binary at `sonic3k.asm:201564/201456`, level PLC `$1A-$1D` |
+| Elevator/trap/flame/spider | `Map_FBZElevator` `$3CB0C`; `Ani_FBZTrapSpring` `$3CC4C`; `Map_FBZTrapSpring` `$3CC5A`; `Map_FBZFlameThrower` `$3CFD0`; `Map_FBZSpiderCrane` `$3D2FC` | trap/spider use `ArtNem_FBZMisc2`; flamethrower uses `ArtNem_FBZMisc` (`ArtTile_FBZMisc+$A4`); S&K included binaries at `sonic3k.asm:201564/201456`, PLC `$1C/$1D` |
 | Act 1 miniboss | `Map_FBZMiniboss` `$6FAF8` | `ArtKosM_FBZMiniboss`, included-binary; queued at spawn |
 | Act 2 subboss | `Map_FBZ2Subboss` `$70440`; `Map_FBZRobotnikRun` `$6837E`; `Map_FBZRobotnikHead` `$68454`; `Map_FBZRobotnikStand` `$6847C` | `PLC_FBZ2Subboss_SonicTails` / `PLC_FBZ2Subboss_Knuckles`; `ArtNem_FBZ2Subboss` and character art, S&K included-binary |
 | Boss-event scenery | `Map_FBZ2Preboss` `$53518` | `ArtKosM_FBZCloud`, `ArtKosM_FBZBossPillar`, included-binary; `PLCKosM_FBZ2Subboss` |
-| End boss/exit | `Map_FBZEndBoss` `$70FB4`; `Map_FBZEndBossFlame` `$71090`; `Map_FBZExitDoor` `$70F7E`; `Map_FBZExitHall` `$86D2A` | `PLC_6F`; `PLCKosM_FBZEndBoss_Exit`; `ArtKosM_FBZExitDoor` / `ArtKosM_FBZExitHall` S&K included-binary at `sonic3k.asm:201670/201658` |
+| End boss/exit | `Map_FBZEndBoss` `$70FB4`; `Map_FBZEndBossFlame` `$71090`; `Map_FBZExitDoor` `$70F7E`; `Map_FBZExitHall` `$86D2A` | `PLC_6F`; `PLCKosM_FBZEndBoss_Exit`; `ArtKosM_FBZExitDoor` / `ArtKosM_FBZExitHall` S&K included-binary at `sonic3k.asm:201784/201658` |
 | Egg prison/capsule | `Map_FBZEggCapsule` `$1871E8` | `ArtNem_FBZEggCapsule`, included-binary, PLC `$1A-$1D` |
-| AniPLC channels | `AniPLC_FBZ1` / `AniPLC_FBZ2` at `sonic3k.asm:55812-55882` | `ArtUnc_AniFBZ__0..4`, included-binary; destinations `$210`, `$230`, `$238`, `$200`, `$208` |
-| Blaster | `Map_Blaster` `$8977C`, S&K include at `sonic3k.asm:186706`; 11 frames, piece counts `4,4,4,1,1,1,1,1,1,1,1`, max tile `$27`; raw animations `byte_8975E`, `89763`, `89768`, `89771`, `89775` | `ArtKosM_Blaster` `$DC6C2`, S&K included-binary at `sonic3k.asm:201024`; palette 1/high plane priority; `PLCKosM_FBZ` entry at `64387`, `ArtTile_Blaster=$506` |
-| TechnoSqueek | `Map_TechnoSqueek` `$89B78`, S&K include at `sonic3k.asm:187031`; 10 one-piece frames, max base tile `$22`; raw animation tables `byte_89B2C`, `89B37`, `89B42`, `89B4D`, `89B52`, `89B5D`, `89B68`, `89B73` | `ArtKosM_Technosqueek` `$DC9C4`, S&K included-binary at `sonic3k.asm:201027`; palette 1/high plane priority; `PLCKosM_FBZ` entry at `64388`, `ArtTile_Technosqueek=$52E` |
-| Wire cages | no standalone mapping: `Obj_FBZWireCage` uses player mappings/DPLC plus `RawAni_3A220`; stationary form builds inline child sprites (`sonic3k.asm:77585-78154`) | player art banks; no independent PLC label |
-| Button | mapping comes from the FBZ misc object routine/level-art bank | `ArtKosM_FBZButton`, S&K included-binary at `sonic3k.asm:201676`; `PLCKosM_FBZ` entry at `64389` |
+| AniPLC channels | `AniPLC_FBZ1` / `AniPLC_FBZ2` at `sonic3k.asm:55852-55922` | `ArtUnc_AniFBZ__0..4`, included-binary; destinations `$210`, `$230`, `$238`, `$200`, `$208` |
+| Blaster | `Map_Blaster` `$8977C`, S&K include at `sonic3k.asm:186799`; 11 frames, piece counts `4,4,4,1,1,1,1,1,1,1,1`, max tile `$27`; raw animations `byte_8975E`, `89763`, `89768`, `89771`, `89775` | `ArtKosM_Blaster` `$DC6C2`, S&K included-binary at `sonic3k.asm:201138`; palette 1/high plane priority; `PLCKosM_FBZ` entry at `64387`, `ArtTile_Blaster=$506` |
+| TechnoSqueek | `Map_TechnoSqueek` `$89B78`, S&K include at `sonic3k.asm:187124`; 10 one-piece frames, max base tile `$22`; raw animation tables `byte_89B2C`, `89B37`, `89B42`, `89B4D`, `89B52`, `89B5D`, `89B68`, `89B73` | `ArtKosM_Technosqueek` `$DC9C4`, S&K included-binary at `sonic3k.asm:201141`; palette 1/high plane priority; `PLCKosM_FBZ` entry at `64388`, `ArtTile_Technosqueek=$52E` |
+| Wire cages | no standalone mapping: `Obj_FBZWireCage` uses player mappings/DPLC plus `RawAni_3A220`; stationary form builds inline child sprites (`sonic3k.asm:77626-78195`) | player art banks; no independent PLC label |
+| Button | mapping comes from the FBZ misc object routine/level-art bank | `ArtKosM_FBZButton`, S&K included-binary at `sonic3k.asm:201790`; `PLCKosM_FBZ` entry at `64389` |
 | Robotnik/EggRobo character art | Robotnik run `$6837E`, head `$68454`, stand `$6847C`; shared EggRobo mappings resolved by their generic labels | `ArtNem_FBZRobotnikStand`, `ArtNem_FBZRobotnikRun`, `ArtNem_EggRoboStand`, `ArtNem_EggRoboRun`; S&K included-binary PLC entries `148683-148695` |
-| End-boss ship/explosion/capsule shared dependencies | shared `Map_RobotnikShip`, `Map_BossExplosion`, generic `Map_EggCapsule` labels | `ArtNem_RobotnikShip`, `ArtNem_BossExplosion`, `ArtNem_EggCapsule` in `PLC_6F` (`sonic3k.asm:199991-199997`); separate placed FBZ prison uses `Map_FBZEggCapsule` |
+| End-boss ship/explosion/capsule shared dependencies | shared `Map_RobotnikShip`, `Map_BossExplosion`, generic `Map_EggCapsule` labels | `ArtNem_RobotnikShip`, `ArtNem_BossExplosion`, `ArtNem_EggCapsule` in `PLC_6F` (`sonic3k.asm:200105-200111`); separate placed FBZ prison uses `Map_FBZEggCapsule` |
 
 ## VRAM / PLC handoff matrix
 

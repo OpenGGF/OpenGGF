@@ -262,11 +262,11 @@ public final class TraceRunPlaybackCoordinator {
      * event handler: {@code AIZ1BGE_Finish} writes
      * {@code move.w #1,(Current_zone_and_act).w} and calls {@code Load_Level}
      * without leaving {@code GameModeID_Level} or re-entering the {@code Level:}
-     * routine (docs/skdisasm/sonic3k.asm:104733-104746), then offsets the
+     * routine (docs/skdisasm/sonic3k.asm:104779-104792), then offsets the
      * players, the objects and the camera in place by
-     * {@code d0=$2F00, d1=$80} (docs/skdisasm/sonic3k.asm:104752-104768). Every
+     * {@code d0=$2F00, d1=$80} (docs/skdisasm/sonic3k.asm:104798-104814). Every
      * seamless act advance on the S3K routes works this way, each from its own
-     * zone's finish routine (for example docs/skdisasm/sonic3k.asm:105755,
+     * zone's finish routine (for example docs/skdisasm/sonic3k.asm:105801,
      * 106315, 107617).
      *
      * <p>Because the recorder cuts segments on MODE changes, and this advance
@@ -597,7 +597,7 @@ public final class TraceRunPlaybackCoordinator {
      * <p>{@code Level:} opens with
      * {@code bset #7,(Game_mode).w} -- the disassembly's own comment reads
      * "Set bit 7 of F600 is indicate that we're loading the level"
-     * (docs/skdisasm/sonic3k.asm:7504-7505). S1's {@code GM_Level} sets the
+     * (docs/skdisasm/sonic3k.asm:7536-7537). S1's {@code GM_Level} sets the
      * same bit -- {@code bset #7,(v_gamemode).w ; add $80 to screen mode (for
      * pre level sequence)} (docs/s1disasm/sonic.asm:2702-2703) -- and S2's
      * {@code Level:} names it, {@code bset #GameModeFlag_TitleCard,

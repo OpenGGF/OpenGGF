@@ -19,8 +19,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code Obj_LRZLavaFall} (sonic3k.asm:88770-88808, ROM {@code $436A0}) and the drops it allocates
- * ({@code loc_4374C} / {@code loc_43764}, :88813-88827).
+ * {@code Obj_LRZLavaFall} (sonic3k.asm:88816-88854, ROM {@code $436A0}) and the drops it allocates
+ * ({@code loc_4374C} / {@code loc_43764}, :88859-88873).
  *
  * <p>The emitter has no level clock of its own in this harness, so each case drives {@code update}
  * with the clock value the ROM would have read in {@code vIntRunCount} -- which is what
@@ -45,7 +45,7 @@ class TestLrzLavaFall {
 
     /**
      * {@code move.w (Level_frame_counter).w,d0 / andi.w #$FF,d0 / cmp.w $30(a0),d0 / blo}
-     * (sonic3k.asm:88777-88780): nothing happens while the clock's low byte is below the subtype.
+     * (sonic3k.asm:88823-88826): nothing happens while the clock's low byte is below the subtype.
      */
     @Test
     void nothingIsEmittedWhileTheClockIsBelowTheSubtype() {
@@ -61,7 +61,7 @@ class TestLrzLavaFall {
     }
 
     /**
-     * {@code subq.b #1,anim_frame_timer(a0) / bpl} then {@code move.b #5} (:88781-88784): a drop
+     * {@code subq.b #1,anim_frame_timer(a0) / bpl} then {@code move.b #5} (:88827-88830): a drop
      * every sixth frame once the clock is above the threshold.
      */
     @Test
@@ -78,7 +78,7 @@ class TestLrzLavaFall {
     }
 
     /**
-     * {@code addq.b #1,$25(a0) / cmpi.b #2 / blo} (:88788-88792): the second of every two drops is
+     * {@code addq.b #1,$25(a0) / cmpi.b #2 / blo} (:88834-88838): the second of every two drops is
      * the one given the routine that plays {@code sfx_LavaFall}.
      */
     @Test
@@ -97,7 +97,7 @@ class TestLrzLavaFall {
         assertTrue(drops.get(3).playsSound());
     }
 
-    /** {@code move.w #$1C,$2E(a1)} and the flipped {@code #$24} (sonic3k.asm:88804, :88806). */
+    /** {@code move.w #$1C,$2E(a1)} and the flipped {@code #$24} (sonic3k.asm:88850, :88852). */
     @Test
     void theDropsLifeComesFromTheEmittersFlipFlag() {
         Harness harness = Harness.create();
@@ -106,7 +106,7 @@ class TestLrzLavaFall {
     }
 
     /**
-     * {@code subq.w #1,$2E(a0) / bmi} before {@code MoveSprite2} (:88820-88823), and
+     * {@code subq.w #1,$2E(a0) / bmi} before {@code MoveSprite2} (:88866-88869), and
      * {@code move.w #$800,y_vel(a1)} through the routine's {@code ext.l / lsl.l #8}: eight pixels
      * a frame straight down, for {@code $2E + 1} frames.
      */
@@ -127,7 +127,7 @@ class TestLrzLavaFall {
         assertTrue(drop.isDestroyed(), "$1C + 1 frames and the drop is gone");
     }
 
-    /** {@code move.b #$99,collision_flags(a1)} (sonic3k.asm:88802). */
+    /** {@code move.b #$99,collision_flags(a1)} (sonic3k.asm:88848). */
     @Test
     void theDropIsHarmful() {
         Harness harness = Harness.create();

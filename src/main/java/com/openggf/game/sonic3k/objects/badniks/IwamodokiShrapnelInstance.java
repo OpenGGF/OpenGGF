@@ -22,10 +22,10 @@ import java.util.List;
 /**
  * The four fragments {@code Obj_Iwamodoki} throws when it detonates:
  * {@code ChildObjDat_8FBD6} -> {@code loc_8FB90} -> {@code loc_8FBB8}
- * (sonic3k.asm:188085-188125, ROM {@code $8FB90}).
+ * (sonic3k.asm:188178-188218, ROM {@code $8FB90}).
  *
  * <p>{@code CreateChild2_Complex} writes the offset and velocity pairs from the table
- * (:188117-188135): {@code (-4,4)} at {@code (-$400,-$200)}, {@code (4,4)} at
+ * (:188210-188228): {@code (-4,4)} at {@code (-$400,-$200)}, {@code (4,4)} at
  * {@code ($400,-$200)}, {@code (-8,-8)} at {@code (-$200,-$400)} and {@code (8,-8)} at
  * {@code ($200,-$400)} -- two low and wide, two high and steep.
  *
@@ -40,9 +40,9 @@ import java.util.List;
 public final class IwamodokiShrapnelInstance extends AbstractObjectInstance
         implements TouchResponseProvider, RewindRecreatable {
 
-    /** {@code word_8FBD0}: {@code dc.w $280} (sonic3k.asm:188110). */
+    /** {@code word_8FBD0}: {@code dc.w $280} (sonic3k.asm:188203). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0280);
-    /** {@code dc.b 8,4,0,$98} (:188111). */
+    /** {@code dc.b 8,4,0,$98} (:188204). */
     private static final int HALF_WIDTH = 8;
     private static final int HALF_HEIGHT = 4;
     private static final int COLLISION_FLAGS = 0x98;
@@ -69,7 +69,7 @@ public final class IwamodokiShrapnelInstance extends AbstractObjectInstance
         super(new ObjectSpawn(x & 0xFFFF, y & 0xFFFF, 0, subtype, 0, false, 0),
                 "IwamodokiShrapnel");
         this.subtype = subtype & 0xFF;
-        // move.b subtype(a0),d0 / lsr.b #2,d0 / addq.b #6,d0 (sonic3k.asm:188095-188098).
+        // move.b subtype(a0),d0 / lsr.b #2,d0 / addq.b #6,d0 (sonic3k.asm:188188-188191).
         this.mappingFrame = (this.subtype >> 2) + 6;
         this.animTimer = this.subtype < 4 ? ANIM_DELAY_LOW : ANIM_DELAY_HIGH;
         this.motion = new SubpixelMotion.State(x & 0xFFFF, y & 0xFFFF, 0, 0, xVel, yVel);
@@ -84,7 +84,7 @@ public final class IwamodokiShrapnelInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
-        // jsr (MoveSprite): the gravity branch (sonic3k.asm:36038).
+        // jsr (MoveSprite): the gravity branch (sonic3k.asm:36078).
         SubpixelMotion.moveSprite(motion, SubpixelMotion.S3K_GRAVITY);
         // Animate_Raw over a two-frame script that ends in $FC, i.e. a loop back to entry 0.
         animTimer--;
@@ -172,7 +172,7 @@ public final class IwamodokiShrapnelInstance extends AbstractObjectInstance
     @Override
     public boolean isHighPriority() {
         // The child copies the parent's art_tile, make_art_tile(ArtTile_Iwamodoki,0,0)
-        // (sonic3k.asm:188107), whose priority bit is clear.
+        // (sonic3k.asm:188200), whose priority bit is clear.
         return false;
     }
 

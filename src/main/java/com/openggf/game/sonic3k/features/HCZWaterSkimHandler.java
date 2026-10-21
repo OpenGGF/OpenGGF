@@ -39,7 +39,7 @@ import java.util.logging.Logger;
  * <p>
  * Port of Obj_HCZWaterSplash (subtype 1) and sub_3857E from sonic3k.asm.
  * <p>
- * Activation conditions (sub_3857E, sonic3k.asm:75393):
+ * Activation conditions (sub_3857E, sonic3k.asm:75434):
  * <ul>
  *   <li>Player feet at water level (y_pos + y_radius + 1 == Water_level)</li>
  *   <li>Zero vertical velocity (y_vel == 0)</li>
@@ -60,20 +60,20 @@ public final class HCZWaterSkimHandler {
     private static final Logger LOGGER = Logger.getLogger(HCZWaterSkimHandler.class.getName());
 
     // ===== Physics constants from sub_3857E =====
-    /** Minimum |x_vel| to start/sustain skimming (sonic3k.asm:75409) */
+    /** Minimum |x_vel| to start/sustain skimming (sonic3k.asm:75450) */
     private static final int SPEED_THRESHOLD = 0x700;
-    /** Friction per frame when airborne with no directional input (sonic3k.asm:75450) */
+    /** Friction per frame when airborne with no directional input (sonic3k.asm:75491) */
     private static final int SKIM_FRICTION = 0xC;
-    /** Y velocity on jump exit (sonic3k.asm:75484) */
+    /** Y velocity on jump exit (sonic3k.asm:75525) */
     private static final short JUMP_EXIT_Y_VEL = -0x680;
     // Jump exit radii ($0E/$07) match standard rolling radii — use applyRollingRadii()
 
-    // ===== Splash animation constants (loc_384B2, sonic3k.asm:75314) =====
-    /** Animation timer: 3 frames per step (sonic3k.asm:75330) */
+    // ===== Splash animation constants (loc_384B2, sonic3k.asm:75355) =====
+    /** Animation timer: 3 frames per step (sonic3k.asm:75371) */
     private static final int SPLASH_ANIM_DELAY = 3;
-    /** Number of animation frames to cycle through (0-4) (sonic3k.asm:75332) */
+    /** Number of animation frames to cycle through (0-4) (sonic3k.asm:75373) */
     private static final int SPLASH_ANIM_FRAMES = 5;
-    /** Frame index for "exit" splash (sonic3k.asm:75475) */
+    /** Frame index for "exit" splash (sonic3k.asm:75516) */
     private static final int SPLASH_EXIT_FRAME = 5;
     /** SFX plays when (Level_frame_counter+1+2) & 0xF == 0, i.e. every 16 frames */
     private static final int SFX_INTERVAL_MASK = 0xF;
@@ -243,7 +243,7 @@ public final class HCZWaterSkimHandler {
                                                ExtensionSkimState extensionState,
                                                boolean suppressSameFrameGravity) {
         if (!wasActive) {
-            // === Activation check (sonic3k.asm:75393-75421) ===
+            // === Activation check (sonic3k.asm:75434-75462) ===
             // Condition 1: y_vel must be zero
             if (player.getYSpeed() != 0) {
                 return false;
@@ -288,7 +288,7 @@ public final class HCZWaterSkimHandler {
             return true;
         }
 
-        // === Sustain / exit logic (sonic3k.asm:75424-75491) ===
+        // === Sustain / exit logic (sonic3k.asm:75465-75532) ===
 
         // Check jump exit (A/B/C pressed)
         // ROM: andi.w #button_A_mask|button_B_mask|button_C_mask,d0
@@ -297,10 +297,10 @@ public final class HCZWaterSkimHandler {
         }
 
         // Calculate pin position BEFORE checking/applying it
-        // ROM: d0 = Water_level - y_radius - 1 (sonic3k.asm:75428-75432)
+        // ROM: d0 = Water_level - y_radius - 1 (sonic3k.asm:75469-75473)
         int pinnedY = waterLevel - player.getYRadius() - 1;
 
-        // ROM: cmp.w y_pos(a1),d0 / bhi.s loc_38646 (sonic3k.asm:75433-75434)
+        // ROM: cmp.w y_pos(a1),d0 / bhi.s loc_38646 (sonic3k.asm:75474-75475)
         // Exit skim if terrain has pushed the player ABOVE the water pin position.
         // In Y-down coordinates, pinnedY > centreY means the pin is below the player,
         // i.e. terrain raised the player above the water surface (e.g. running into a curve).
@@ -310,14 +310,14 @@ public final class HCZWaterSkimHandler {
         }
 
         // Check speed threshold — exit if too slow
-        // ROM: cmpi.w #$700,d1 / blo.s loc_38646 (sonic3k.asm:75440-75441)
+        // ROM: cmpi.w #$700,d1 / blo.s loc_38646 (sonic3k.asm:75481-75482)
         int absXSpeed = Math.abs(player.getXSpeed());
         if (absXSpeed < SPEED_THRESHOLD) {
             return exitBySpeedLoss(player, playerIndex, extensionState, suppressSameFrameGravity);
         }
 
         // NOW pin player Y to water surface (only if still skimming)
-        // ROM: move.w d0,y_pos(a1) / move.w #0,y_vel(a1) (sonic3k.asm:75442-75443)
+        // ROM: move.w d0,y_pos(a1) / move.w #0,y_vel(a1) (sonic3k.asm:75483-75484)
         NativePositionOps.writeYPosPreserveSubpixel(player, pinnedY);
         player.setYSpeed((short) 0);
         if (suppressSameFrameGravity && player.getAir()) {
@@ -327,7 +327,7 @@ public final class HCZWaterSkimHandler {
         // ROM: btst #Status_InAir,status(a1) / andi.w #(left|right)<<8,d5
         if (player.getAir() && !player.isLeftPressed() && !player.isRightPressed()) {
             applySkimFriction(player);
-            // ROM: move.w x_vel(a1),d0 / beq.s loc_38646 (sonic3k.asm:75452)
+            // ROM: move.w x_vel(a1),d0 / beq.s loc_38646 (sonic3k.asm:75493)
             // If friction reduced x_vel to zero, exit skim immediately
             if (player.getXSpeed() == 0) {
                 return exitBySpeedLoss(player, playerIndex, extensionState, suppressSameFrameGravity);
@@ -348,7 +348,7 @@ public final class HCZWaterSkimHandler {
 
     /**
      * Apply friction to horizontal velocity while skimming.
-     * ROM: sub.w/add.w d1 ($C) to x_vel, clamped to zero (sonic3k.asm:75450-75470).
+     * ROM: sub.w/add.w d1 ($C) to x_vel, clamped to zero (sonic3k.asm:75491-75511).
      */
     private static void applySkimFriction(AbstractPlayableSprite player) {
         short xSpeed = player.getXSpeed();
@@ -364,7 +364,7 @@ public final class HCZWaterSkimHandler {
 
     /**
      * Exit skim by jumping (A/B/C pressed).
-     * ROM: loc_38652 (sonic3k.asm:75481-75491).
+     * ROM: loc_38652 (sonic3k.asm:75522-75532).
      */
     private static boolean exitWithJump(AbstractPlayableSprite player, int playerIndex,
                                         ExtensionSkimState extensionState) {
@@ -392,7 +392,7 @@ public final class HCZWaterSkimHandler {
 
     /**
      * Exit skim by speed dropping below threshold.
-     * ROM: loc_38646 (sonic3k.asm:75473-75476).
+     * ROM: loc_38646 (sonic3k.asm:75514-75517).
      */
     private static boolean exitBySpeedLoss(AbstractPlayableSprite player, int playerIndex,
                                            ExtensionSkimState extensionState,
@@ -414,7 +414,7 @@ public final class HCZWaterSkimHandler {
 
     /**
      * Advance the splash animation timer and frame.
-     * ROM: loc_384DA (sonic3k.asm:75328-75334) — 3 frames per step, cycles 0-4.
+     * ROM: loc_384DA (sonic3k.asm:75369-75375) — 3 frames per step, cycles 0-4.
      */
     private static void advanceSplashAnim(int playerIndex, ExtensionSkimState extensionState) {
         if (extensionState != null) {
@@ -454,7 +454,7 @@ public final class HCZWaterSkimHandler {
 
     /**
      * Render splash sprites for active skim players.
-     * ROM: loc_384B2 (sonic3k.asm:75314-75357) — splash follows player X at water level.
+     * ROM: loc_384B2 (sonic3k.asm:75355-75398) — splash follows player X at water level.
      */
     public static void render(Camera camera) {
         if (splashRenderer == null || !artLoaded) return;
