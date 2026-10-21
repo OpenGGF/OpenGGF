@@ -40,6 +40,10 @@ and the CNZ/LRZ/DEZ/HPZ cold intro offsets are outside this fix.
 
 ## Configuration inventory
 
+The [configured frontend inlet control](#real-configured-frontend-inlet--2026-10-21-red)
+is currently red on caller-owned audio-backend retention. It does not add a
+qualified cold entry or route/configuration pass to this inventory.
+
 The representative route is native/off, 320px, Sonic with CPU Tails. Current
 short entry checks resolve every production `WidescreenAspect` preset
 320/352/400/528/800 through `LaunchProfileApplier` and the display resolver,
@@ -996,3 +1000,42 @@ full-world recreation. The distinct alternate remains UNQUALIFIED:11 ring errors
 first13740 rings1/2, ten newly exposed spans without native ring-position/writer
 evidence. Native four-debris/full-SST, missing aux, configuration/BK2/cold/fullchain
 limits remain; this is no act or integration certificate.
+
+## Real configured frontend inlet — 2026-10-21 (RED)
+
+`TestEngineConfiguredHeadlessStartup#realS3kConfiguredFrontendLaunchesFreshAizThroughOrdinaryInput`
+uses a non-overridden Engine, actual ROM catalogue/detection, headless graphics,
+caller-owned null audio, standalone temporary configuration and a blank temporary
+save root. The original locked-on World ROM is SHA-1 checked. Its declared route
+is NTSC, native 320px, donor off, Sonic with CPU Tails and intros enabled; legal
+and engine master-title screens are disabled as in the authenticated runner.
+Ordinary logical input drives the existing loop/presentation inlet. There is no
+zone boot, state hydration, forced mode, clock/RNG/position write or ready override.
+
+On runtime source `839ff7615abf718595cd04fa7344a5c86a523042`, the final case fails
+immediately after configured startup: the supplied `NullAudioBackend` has become
+`LWJGLAudioBackend`. `Engine.initializeGame:1151` calls
+`preparePresentationForLaunch:2268–2271`, which unconditionally replaces the
+backend when audio is enabled. The six existing probe-engine startup tests pass;
+their `initializeGame` override bypasses this real owner. Keep the new identity
+assertion red until production is corrected; disabling audio or reinstalling a
+test backend would conceal the failure.
+
+An earlier test iteration reached real title ACTIVE, normal Start to DataSelect,
+NO SAVE launch, a new world/context retaining the pinned ROM source, fresh AIZ
+Level and matching completed-load generation/cause receipt before failing the
+same backend identity check on the attempted first level iteration. The final
+fail-fast control preserves those later assertions plus the ordinary player/object
+pass and B-edge assertions, but they remain unqualified on its final source.
+
+Final focused command selected 106 cases across 11 actual classes: 105 passed,
+one failed, no errors/skips. Both classes named `TestSonic3kLevelLoading` ran.
+All four mandatory S3K controls and existing runner/input/title timing controls
+passed. The exact command, source epoch and failure are in the
+[dated completion plan](../../plans/2026-10-13-s3k-playable-completion.md#real-rom-configured-frontend-control--2026-10-21-red).
+This is no startup pass, act certification or integration certificate. Native
+reset/row0, region/SRAM equivalence, masked initial decode duration, VInt/movie-row
+association and the eleven pre-run jobs' continuous identity remain open. The
+title timing owner is private and separate from gameplay; no public observation
+of its prepared work was invented. The native320 master-title START-layout and
+hub capture-chord negatives are unchanged, separate obligations.

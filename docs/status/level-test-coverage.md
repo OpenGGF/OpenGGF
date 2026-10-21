@@ -379,6 +379,13 @@ completion record for commands, commit limits and unexecuted obligations.
 
 ## Initial registry inventory
 
+The [real configured frontend inlet control](../architecture/validation/levels/s3k-aiz1-sonic.md#real-configured-frontend-inlet--2026-10-21-red)
+is red on production replacement of its caller-owned null audio backend. Its
+real-ROM title/DataSelect/fresh-AIZ assertions add an actionable startup control,
+but award no cold-entry, route, native-clock or configuration certification.
+The final focused run has 106 cases, one failure and no errors/skips; the AIZ1
+matrix records the failure boundary and remaining proof.
+
 Seeded by source inspection at `5a3cb848a8d45b7bf236fc5ee8ca30cc8af1a33e`.
 The [initial source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md)
 now covers 26 zones / 55 gameplay acts for estimation, with explicit delivered versus

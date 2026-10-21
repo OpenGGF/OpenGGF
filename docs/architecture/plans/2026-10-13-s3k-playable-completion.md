@@ -23426,3 +23426,76 @@ armed-title/physical-full/incidental-flush capacity defect, now under focused
 correction. SSZ controller qualification on the final production epoch and
 other route/native-publication gaps remain open. Main develop is still c13,
 with its unrelated files/submodules preserved; no integration push is qualified.
+
+### Real-ROM configured frontend control — 2026-10-21 (RED)
+
+Implementation child only, on isolated branch
+`feature/ai-s3k-real-engine-startup-control-20261021`, fast-forwarded to exact local
+integration base `839ff7615abf718595cd04fa7344a5c86a523042` before authoring. Main,
+Root's other checkout, setup links, original ROMs and the inherited TraceChaser
+submodule difference were preserved. Exact returned child identities and scope
+were registered under the parent's shared lock before edits. No runtime source
+or boot API changed; Root owns independent source review, runtime correction,
+combined checks, integration and push.
+
+The new real-ROM case in `TestEngineConfiguredHeadlessStartup` calls the existing
+configured Engine seam without overrides/mocked ROM, detection, module or loop.
+It verifies the locked-on ROM's SHA-1, isolates configuration/save paths, uses
+headless graphics and null audio, keeps intros enabled and donor off, then uses
+ordinary input snapshots and production loop/audio presentation. Its intended
+continuation checks actual title ACTIVE, Start to DataSelect, NO SAVE to fresh
+AIZ, source/world/Level/player identity, completed production load generation and
+ORDINARY cause, then one genuine player/object body and a B input edge. Safety
+budgets are bounds, not fitted release frames.
+
+The first iteration failed a test wait predicate: DataSelect `isActive()` includes
+FADE_IN, so the wait was corrected to require its explicit ACTIVE state. The
+second iteration passed the real frontend/fresh-AIZ load assertions, then exposed
+the production backend replacement at its later retention assertion. The final
+case moves that same check immediately after startup and remains red:
+`realS3kConfiguredFrontendLaunchesFreshAizThroughOrdinaryInput:277`, expected the
+supplied `NullAudioBackend`, observed `LWJGLAudioBackend`.
+`Engine.initializeGame:1151 -> preparePresentationForLaunch:2268–2271` calls
+`setBackendForLaunch(new LWJGLAudioBackend(...))` whenever audio is enabled,
+overwriting the caller's sink installed at `initializeConfiguredHeadlessSession:775`.
+The existing six probe-engine cases bypass that owner and remain green. No audio
+disable/reinstall, replacement runner, weakened assertion or runtime fix was used.
+The final case's downstream frontend/AIZ/pass assertions are not qualified.
+
+Actual prerequisite check passed with Java 25, Lua 5.4 and PowerShell after the
+default Lua was rejected before tests. Final focused command, from the child
+checkout (substitute the original verified absolute ROM paths):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u _JAVA_OPTIONS \
+  -u MAVEN_OPTS -u MAVEN_ARGS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_WORKSPACE/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Ds3k.rom.path=$S3K_ROM" "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" \
+  -Dtest=TestEngineConfiguredHeadlessStartup,TestProductionBk2AudioRunner,TestBk2InputCursor,TestInputHandlerLogicalSnapshot,TestSonic3kTitleScreenSegaTiming,TestSonic3kTitleScreenFrameLoadTiming,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test -B
+```
+
+Result: **106 tests, one failure, zero errors/skips**, exit 1, 30.147s Maven
+execution and zero measured queue wait. There were 11 actual classes, since the
+simple `TestSonic3kLevelLoading` selector ran both the game package (36 cases)
+and tests package (7). Remaining counts: startup 7 (one new failure, all six old
+cases pass), logical input 18, bootstrap resolver 6, decoding 3, title frame-load
+timing 2, SEGA timing 4, AIZ skip 8, BK2 cursor 7, production runner 8. All actual
+XML cases, failures and skips were inspected before exact task-owned diagnostics
+cleanup. No class deletion, log archive, pass cache or validation receipt was
+created. No broad/release run or repeated unchanged job was launched.
+
+This is a red production integration control, not a startup/route parity pass.
+The [AIZ1 matrix](../validation/levels/s3k-aiz1-sonic.md#real-configured-frontend-inlet--2026-10-21-red)
+retains the configuration and inherited breadth/rewind gaps. Initial title art
+350D26 remains eagerly decoded before stepping; the interrupt-masked span between
+the two 22-VSync fades has no production blocked-work owner. Later title work has
+a private timing service, DataSelect opens a new gameplay timing owner, and the
+legacy interstitial loader validates then drops pre-run events. True reset/row0,
+region/SRAM, VInt and eleven-job continuous identity remain unproved; offset577
+is not a clock oracle. Existing native320 hub START-layout and capture-chord
+failures were neither changed nor claimed fixed. Root's independent review and
+production correction are the next action; this local child commit is not ready
+for integration as green work.
