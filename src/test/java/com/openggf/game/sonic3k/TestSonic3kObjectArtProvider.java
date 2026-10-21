@@ -48,20 +48,18 @@ public class TestSonic3kObjectArtProvider {
 
     @Test
     public void sandopolisLoadEnemyArtQueuesSkorpSandwormAndRocknForBothActs() throws Exception {
-        // Recorded s3k SOZ run segments submit ArtKosM_Skorp at row 34; without a
-        // SOZ case the engine submitted nothing and every later job ordinal lagged.
+        // LoadEnemyArt selects the same ordered PLCKosM_SOZ descriptors for both acts.
         Method schedule = Sonic3kObjectArtProvider.class.getDeclaredMethod(
                 "scheduleEnemyKosArt", int.class, int.class);
         schedule.setAccessible(true);
-        Field pending = Sonic3kObjectArtProvider.class.getDeclaredField("pendingEnemyKosEntries");
-        pending.setAccessible(true);
         for (int act = 0; act < 2; act++) {
             schedule.invoke(provider, Sonic3kZoneIds.ZONE_SOZ, act);
-            List<?> entries = (List<?>) pending.get(provider);
-            assertEquals(List.of("EnemyKosEntry[source=1486278, destinationTile=1334]",
-                            "EnemyKosEntry[source=1486904, destinationTile=1367]",
-                            "EnemyKosEntry[source=1487546, destinationTile=1280]"),
-                    entries.stream().map(Object::toString).toList(),
+            assertEquals(List.of(List.of(0x16ADC6, 0x536),
+                            List.of(0x16B038, 0x557),
+                            List.of(0x16B2BA, 0x500)),
+                    provider.capture().pendingKosModules().stream()
+                            .map(entry -> List.of(entry.sourceAddress(), entry.destinationTile()))
+                            .toList(),
                     "PLCKosM_SOZ: ArtKosM_Skorp/$536, ArtKosM_Sandworm/$557, ArtKosM_Rockn/$500");
         }
     }
