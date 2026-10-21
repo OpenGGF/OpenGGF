@@ -41,11 +41,12 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
     }
     public StageplayPlayback(StageplayDocument document, String boundActor,
                              StageplayNativeBinding.FinishMode finishMode) {
-        this(document, boundActor, finishMode, Map.of(), null);
+        this(document, boundActor, finishMode, Map.of(), Map.of());
     }
     private StageplayPlayback(StageplayDocument document, String boundActor,
-                              StageplayNativeBinding.FinishMode finishMode, Map<String, byte[]> assets, com.openggf.level.Level set) {
-        this(document, boundActor, finishMode, () -> new LiveHost(document, assets, set));
+                              StageplayNativeBinding.FinishMode finishMode, Map<String, byte[]> assets,
+                              Map<StageplayDocument.SetSource, com.openggf.level.Level> sets) {
+        this(document, boundActor, finishMode, () -> new LiveHost(document, assets, sets));
     }
     StageplayPlayback(StageplayDocument document, String boundActor, StageplayNativeBinding.FinishMode finishMode,
                       HostFactory hostFactory) {
@@ -53,13 +54,38 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
         this.hostFactory = Objects.requireNonNull(hostFactory);
         Objects.requireNonNull(boundActor);
         binding = boundActor.isEmpty() ? null : new StageplayNativeBinding(boundActor);
-        if (binding != null) {
-            var actor = document.actors().stream().filter(value -> value.id().equals(boundActor)).findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException("Bound actor is missing"));
-            if (actor.keys().stream().anyMatch(key -> key.scale() != 1)
-                    || document.camera().stream().anyMatch(key -> key.zoom() != 1))
-                throw new IllegalArgumentException("Native player binding requires unit actor scale and camera zoom");
-        }
+        validateNativeDocument(document, boundActor);
+    }
+
+    private static void validateNativeDocument(StageplayDocument document, String boundActor) {
+        Objects.requireNonNull(boundActor, "boundActor");
+        if (boundActor.isEmpty()) return;
+        var actor = document.actors().stream().filter(value -> value.id().equals(boundActor)).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Bound actor is missing"));
+        if (!document.set().levelProject().isEmpty()
+                || document.sceneChanges().stream().anyMatch(change -> !change.set().equals(document.set())))
+            throw new IllegalArgumentException("Native player binding must stay in its native set; authored or different sets require detached actors");
+        if (!actor.gameId().equals(document.set().gameId()) || actor.keys().stream().anyMatch(key -> key.scale() != 1))
+            throw new IllegalArgumentException("Native player binding requires the set's matching game and unit actor scale");
+        for (var key : actor.keys()) { requireNativeCoordinate(key.x()); requireNativeCoordinate(key.y()); }
+        for (var key : document.camera()) { requireNativeCoordinate(key.x()); requireNativeCoordinate(key.y()); }
+    }
+
+    private static void requireNativeCoordinate(double value) {
+        if (value < Short.MIN_VALUE || value > 0xffff)
+            throw new IllegalArgumentException("Bound actor/camera coordinate is outside native 16-bit space");
+    }
+
+    private void validateNativeCourse(CourseControl course) {
+        if (binding == null) return;
+        var services = course.objectServices();
+        var source = document.set();
+        var actor = document.actors().stream().filter(value -> value.id().equals(binding.capture().actorId())).findFirst().orElseThrow();
+        if (services.levelManager().getCurrentZone() != source.zone()
+                || services.levelManager().getCurrentAct() != source.act()
+                || !source.gameId().equals(services.gameModule().getGameCode())
+                || !actor.character().equals(course.playerState().character()))
+            throw new IllegalArgumentException("Native player binding requires the current native game, zone, act and character");
     }
 
     /** Loads the immutable document and owned voice assets during the registration transaction. */
@@ -83,26 +109,38 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
         var root = context.modAssets();
         var loader = ResourceLoader.forModAssetsOnly();
         var document = StageplayStore.decode(loader.loadSingle(LoadOp.modAssetBase(root, sceneAsset)));
+        validateNativeDocument(document, boundActor);
         String prefix = sceneAsset.contains("/") ? sceneAsset.substring(0, sceneAsset.lastIndexOf('/') + 1) : "";
-        com.openggf.level.Level set = null;
-        if (!document.set().levelProject().isEmpty()) {
-            byte[] encoded = loader.loadSingle(LoadOp.modAssetBase(root, prefix + document.set().levelProject()));
-            var project = AuthoredLevelResources.decode("ogfproject", encoded);
-            if (!project.gameId().equals(document.set().gameId()))
-                throw new IOException("Authored level and scene set use different games");
-            set = project.level();
+        var sources = new LinkedHashSet<StageplayDocument.SetSource>();
+        sources.add(document.set());
+        document.sceneChanges().forEach(change -> sources.add(change.set()));
+        var projects = new HashMap<String, com.openggf.level.resources.AuthoredLevelDecoder.Decoded>();
+        var sets = new HashMap<StageplayDocument.SetSource, com.openggf.level.Level>();
+        long bytes = 0;
+        for (var source : sources) if (!source.levelProject().isEmpty()) {
+            var project = projects.get(source.levelProject());
+            if (project == null) {
+                byte[] encoded = loader.loadSingle(LoadOp.modAssetBase(root, prefix + source.levelProject()));
+                bytes += encoded.length;
+                if (bytes > 64L * 1024 * 1024) throw new IOException("Stageplay assets exceed the 64 MiB registration budget");
+                project = AuthoredLevelResources.decode("ogfproject", encoded);
+                projects.put(source.levelProject(), project);
+            }
+            if (!project.gameId().equals(source.gameId()))
+                throw new IOException("Authored level and scene set use different games: " + source.levelProject());
+            sets.put(source, project.level());
         }
-        final var preparedSet = set;
-        var assets = new HashMap<String, byte[]>(); long bytes = 0;
+        final var preparedSets = Map.copyOf(sets);
+        var assets = new HashMap<String, byte[]>();
         for (var cue : document.audio()) if (cue.kind() == StageplayDocument.AudioKind.VOICE && !assets.containsKey(cue.asset())) {
             byte[] encoded = loader.loadSingle(LoadOp.modAssetBase(root, prefix + cue.asset()));
             bytes += encoded.length;
-            if (assets.size() >= 256 || bytes > 64L * 1024 * 1024) throw new IOException("Stageplay voice assets exceed registration budget");
+            if (assets.size() >= 256 || bytes > 64L * 1024 * 1024) throw new IOException("Stageplay assets exceed registration budget");
             assets.put(cue.asset(), encoded);
         }
         var prepared = Map.copyOf(assets);
         context.registerServiceBundle(localKey, () -> {
-            var player = new StageplayPlayback(document, boundActor, finishMode, prepared, preparedSet);
+            var player = new StageplayPlayback(document, boundActor, finishMode, prepared, preparedSets);
             if (onEntry) player.play();
             return GameServiceBundle.builder().frameController("playback", player).service(StageplayControl.class, player).build();
         });
@@ -139,6 +177,7 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
             if (cancel) { finish(course, Status.CANCELLED); return GameplayFrameDisposition.HOLD; }
             if (status == Status.REQUESTED) {
                 if (!course.presentationReady()) return GameplayFrameDisposition.ADVANCE_NATIVE_INPUT;
+                validateNativeCourse(course);
                 if (host == null) host = hostFactory.create();
                 host.prepare(); host.seek(-1);
                 if (binding != null) binding.captureEntry(course);
@@ -167,7 +206,7 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
         var sampled = StageplayTimeline.sample(document, frame);
         String actorId = binding.capture().actorId();
         var actor = sampled.actors().stream().filter(value -> value.actorId().equals(actorId)).findFirst().orElseThrow();
-        binding.apply(course, actor, sampled.camera(), host.mappingFrame(actor));
+        binding.apply(course, actor, sampled.baseCamera(), host.mappingFrame(actor));
     }
     private void finish(CourseControl course, Status result) {
         if (binding != null && binding.capture().entry() != null) {
@@ -229,12 +268,13 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
         private final StageplayRenderer renderer;
         private final StageplayAudio audio;
         private final SceneSurface surface = new SceneSurface();
-        private LiveHost(StageplayDocument document, Map<String, byte[]> assets, com.openggf.level.Level set) {
+        private LiveHost(StageplayDocument document, Map<String, byte[]> assets,
+                         Map<StageplayDocument.SetSource, com.openggf.level.Level> sets) {
             this.document = document;
             try { library = new SceneRomLibrary(GameServices.module(), GameServices.rom().getRom(), GameServices.rom()); }
             catch (IOException failure) { throw new UncheckedIOException(failure); }
             resources = new StageplayResources(library, false);
-            if (set != null) resources.registerSet(document.set(), StageplayResources.authored(set));
+            sets.forEach((source, level) -> resources.registerSet(source, StageplayResources.authored(level)));
             renderer = new StageplayRenderer(resources);
             audio = new StageplayAudio(GameServices.audio(), library, asset -> {
                 byte[] bytes = assets.get(asset);

@@ -115,8 +115,6 @@ class TestStageplayNativeBinding {
         assertThrows(IllegalArgumentException.class, () -> binding.apply(course,
                 new ActorPose("hero", "s3k", "sonic", 500, 300, 0, 0, 0, false, true, 2),
                 new CameraPose(0, 0, 1), 0));
-        assertThrows(IllegalArgumentException.class, () -> binding.apply(course, pose(500, 300),
-                new CameraPose(0, 0, 2), 0));
         assertThrows(IllegalArgumentException.class, () -> binding.apply(course,
                 new ActorPose("hero", "s2", "sonic", 500, 300, 0, 0, 0, false, true, 1),
                 new CameraPose(0, 0, 1), 0));
@@ -125,6 +123,18 @@ class TestStageplayNativeBinding {
         assertThrows(IllegalArgumentException.class, () -> binding.apply(course, pose(500, 300),
                 new CameraPose(0, 0, 1), 65_535));
         assertEquals(before, course.playerState());
+    }
+
+    @Test void presentationZoomDoesNotChangeNativeCameraCoordinatesOrReleasePosition() throws Exception {
+        var course = course();
+        var binding = new StageplayNativeBinding("hero");
+        binding.captureEntry(course);
+        binding.apply(course, pose(500, 300), new CameraPose(340, 180, 2.5), 1);
+        binding.finish(course, StageplayNativeBinding.FinishMode.KEEP_FINAL_POSITION);
+        assertEquals(500, course.playerState().x());
+        assertEquals(300, course.playerState().y());
+        assertEquals(340, course.playerState().cameraX());
+        assertEquals(180, course.playerState().cameraY());
     }
 
     @Test void closedFrameCapabilitiesAndReloadedLevelVisitsCannotApplyOrReleaseOldState() throws Exception {

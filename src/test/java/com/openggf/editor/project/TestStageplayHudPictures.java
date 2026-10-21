@@ -19,6 +19,7 @@ import com.openggf.stageplay.StageplayTimeline;
 import com.openggf.editor.stageplay.StageplayWorkspace;
 import com.openggf.stageplay.runtime.StageplayRenderer;
 import com.openggf.stageplay.runtime.StageplayResources;
+import com.openggf.stageplay.editor.StageplayEditorSession;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tools.PresentationOffscreenTestContext;
 import org.junit.jupiter.api.Test;
@@ -57,11 +58,16 @@ class TestStageplayHudPictures {
              var chrome = new EditorHudRuntime()) {
             int[] start = fixture.module.getZoneRegistry().getStartPosition(0, 0);
             double x = Math.max(0, start[0] - 80), y = Math.max(0, start[1] - 140);
-            var scene = StageplayDocument.empty("s2", 0, 0, x, y, 320, 224).withName("The next adventure")
+            var scene = StageplayDocument.empty("s2", 0, 0, x, y, 384, 216).withName("The next adventure")
                     .withActors(List.of(
                             new StageplayDocument.Actor("hero", "Sonic", "s2", "sonic", List.of(
-                                    key(0, x + 80, start[1], -1), key(120, x + 160, start[1], 1))),
-                            new StageplayDocument.Actor("friend", "Tails", "s2", "tails", List.of(key(0, x + 220, start[1], -1)))))
+                                    key(0, x + 80, start[1], -1), key(120, x + 160, start[1], 1), key(240,x+80,start[1],-1))),
+                            new StageplayDocument.Actor("friend", "Tails", "s2", "tails", List.of(key(0, x + 220, start[1], -1),key(240,x+220,start[1],-1)))))
+                    .withCamera(List.of(new StageplayDocument.CameraKey(0,x,y,1,StageplayDocument.Interpolation.LINEAR),
+                            new StageplayDocument.CameraKey(240,x,y,1,StageplayDocument.Interpolation.HOLD)))
+                    .withCameraEffects(List.of(new StageplayDocument.CameraEffect("quake",30,90,2,4,8,7)))
+                    .withSceneChanges(List.of(new StageplayDocument.SceneChange("next-shot",240,
+                            new StageplayDocument.SetSource("s2",0,1,"",""),StageplayDocument.Transition.FADE_BLACK,30)))
                     .withCaptions(List.of(new StageplayDocument.Caption("greeting", 0, 180, "Ready for another adventure?", 12, 190, -1)))
                     .withAudio(List.of(new StageplayDocument.AudioCue("music", 0, StageplayDocument.AudioKind.ROM_MUSIC, "s2", 129, "", 1)));
             var workspace = new StageplayWorkspace(() -> scene);
@@ -100,6 +106,13 @@ class TestStageplayHudPictures {
             assertTrue(chrome.update(input));
             render(chrome, surface, scene, 1280, 720);
             capture("commands-720p", 1280, 720);
+            input.update(); input.handleKeyEvent(GLFW_KEY_F1,GLFW_RELEASE); input.update();
+            input.handleKeyEvent(GLFW_KEY_F1,GLFW_PRESS); input.refreshLogicalSnapshot(); chrome.update(input); input.update();
+            workspace.invoke(StageplayWorkspace.Action.CAMERA_MODE);
+            workspace.moveCamera(8,0,1.1);
+            surface.record(scene.width(),scene.height(),canvas -> renderer.draw(workspace.previewDocument(),workspace.previewFrame(),canvas));
+            render(chrome,surface,scene,1280,720); capture("camera-720p",1280,720);
+            render(chrome,surface,scene,1024,576); capture("camera-small",1024,576);
         } finally {
             SessionManager.clear();
             RomManager.getInstance().setRom(null);
@@ -116,13 +129,14 @@ class TestStageplayHudPictures {
     }
 
     private static void render(EditorHudRuntime chrome, SceneSurface surface, StageplayDocument scene, int width, int height) {
-        int[] viewport = chrome.gameViewport(width, height, width, height, scene.width(), scene.height());
+        int[] viewport = chrome.gameViewport(width, height, width, height, 320, 224);
         glViewport(0, 0, width, height);
         glDisable(GL_SCISSOR_TEST);
         glClearColor(0, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT);
-        glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-        surface.render(SceneSurface.projection(scene.width(), scene.height()), viewport);
+        int[] fitted = StageplayEditorSession.fitViewport(viewport,scene.width(),scene.height());
+        glViewport(fitted[0], fitted[1], fitted[2], fitted[3]);
+        surface.render(SceneSurface.projection(scene.width(), scene.height()), fitted);
         chrome.render(width, height, width, height);
         assertEquals(GL_NO_ERROR, glGetError());
     }

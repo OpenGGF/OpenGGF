@@ -313,6 +313,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private int viewportHeight = 0;
 
 	private DisplayWindowController displayWindowController;
+	private StageplayWindowController stageplayWindowController;
 	private String displayScaling;
 
 	// JOML matrices for projection - accessible for shader uniforms
@@ -763,6 +764,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 		// Apply the saved desktop mode before showing the window.
 		displayWindowController = new DisplayWindowController(window);
+		stageplayWindowController = new StageplayWindowController(window);
 		displayWindowController.apply(com.openggf.configuration.DisplaySettingsTrial.forConfig(configService).windowMode());
 		glfwShowWindow(window);
 
@@ -4059,7 +4061,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		if (stageplay.active()) {
 			graphicsManager.flush();
 			graphicsManager.resetForFixedFunction();
-			stageplaySession.draw(stageplay.previewDocument(), stageplay.controller().frame(), stageplay.assetRoot(), failure -> {
+            stageplaySession.draw(stageplay.previewDocument(), stageplay.previewFrame(), stageplay.assetRoot(), failure -> {
 				stageplay.controller().pause(); stageplay.report(failure);
 			});
 			graphicsManager.resetForFixedFunction();
@@ -4107,6 +4109,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	/** Places the game inside the chrome's canvas while the window chrome owns the editor frame. */
 	private void syncEditorChromeViewport() {
+		if (stageplayWindowController != null) stageplayWindowController.sync(
+				getCurrentGameMode() == GameMode.EDITOR && stageplay.active(),
+				displayWindowController == null || displayWindowController.isWindowed());
 		boolean editorFrame = getCurrentGameMode() == GameMode.EDITOR && !contentImportScreen.isOpen()
 				&& !editorProjects.menu().isOpen() && !stageplay.menu().isOpen() && levelEditorController.currentLevel() != null;
 		editorChromeActive = editorChrome != null && editorChrome.setActive(editorFrame);

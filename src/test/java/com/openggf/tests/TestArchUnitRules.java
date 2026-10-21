@@ -719,6 +719,11 @@ class TestArchUnitRules {
         if (typeOrNested(origin, "com.openggf.editor.hud.StageplayHud"))
             return typeOrNested(target, "com.openggf.stageplay.StageplayDocument")
                     || typeOrNested(target, "com.openggf.stageplay.StageplayController");
+        if (typeOrNested(origin, "com.openggf.tools.StageplayTool")
+                || typeOrNested(origin, "com.openggf.tools.StageplayScriptCompiler"))
+            return Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayStore",
+                            "com.openggf.stageplay.StageplayTimeline")
+                    .stream().anyMatch(owner -> typeOrNested(target, owner));
         if (typeOrNested(origin, "com.openggf.tools.StageplayCaptureTool"))
             return Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayStore",
                             "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.runtime.StageplayAudio",

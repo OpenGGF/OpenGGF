@@ -43,6 +43,33 @@ Use **Scene / set** to change duration, output dimensions or the source set.
 Delete keys and cues outside a shorter duration before shortening. Preview fits
 the authored picture into the game viewport; film output uses its exact dimensions.
 
+## Direct the camera and change scenes
+
+Press **C** for camera directing mode. WASD/arrows pan, Q/E zoom, **K** places a
+camera key and **R** records a camera take; Space finishes. A take is one undo edit.
+The draft camera stays separate from the evaluated shake, so saving a key never
+accidentally bakes earthquake offsets into it. Switch back to actor mode to direct
+cast movement.
+
+Both editors expose **Camera effect** and **Scene change** commands with editable
+timeline rows. Camera effects add deterministic seeded shake over a half-open
+frame interval. A scene change selects a location/act/game and **CUT**, **FADE_BLACK**,
+**FADE_WHITE**, **WIPE_LEFT** or **WIPE_RIGHT**. The location switches at the covered
+midpoint; fades/wipes straddle that frame. Every actor and camera receives an anchor
+at the boundary, preventing interpolation between unrelated locations. Revisit those
+anchors to stage the incoming shot. Non-cut transitions cannot overlap.
+
+Stageplay authoring requests a 1280×720 window with a 16:9 constraint while active,
+with a smaller fallback when the monitor workarea cannot fit it. Fullscreen and
+maximized windows retain their operating-system state. Leaving Stageplay restores
+the previous window policy and size. The film itself keeps its authored dimensions
+and aspect ratio, letterboxed inside the available preview area.
+
+For agent-driven authoring, [the screenplay tool](stageplay-authoring.md) discovers
+ROM resources, compiles shot-local scripts, samples frames and renders without
+opening editor menus. Keep the screenplay as the programmatic source; either editor
+can subsequently refine its generated canonical scene.
+
 ## Audio and files
 
 Audio cues use `ROM_MUSIC`, `ROM_SFX`, `VOICE` or `MUSIC_STOP`. ROM sound IDs are
@@ -58,7 +85,7 @@ and after the chosen playhead. Start at frame zero for the complete soundtrack.
 Stopping restores the borrowed soundtrack; imported voices share the existing
 final PCM mix without replacing other installed audio sources.
 
-The version-1 JSON document stores resource references, keys and cues. ROM data
+The version-2 JSON document (with strict version-1 migration) stores resource references, keys and cues. ROM data
 stays in the supplied-ROM pipeline. Authored `.ogfproject` sets and audio stay
 beside the document. Move the whole folder to preserve relative references;
 Save As refuses to relocate a scene away from its asset root. Atomic saves

@@ -51,14 +51,25 @@ class TestStageplayRegistration {
                 new FullLevelExporter.ExportMusic.Stock(0x81),null);
         var project=EditorProjectDocument.create(metadata,level);
         new EditorProjectStore().save(sceneDir.resolve("stage.ogfproject"),project);
-        var scene=StageplayDocument.empty("s2",0,0,0,0,320,224).withSet(new StageplayDocument.SetSource("s2",0,0,"","stage.ogfproject"));
+        var scene=StageplayDocument.empty("s2",0,0,0,0,320,224).withSet(new StageplayDocument.SetSource("s2",0,0,"","stage.ogfproject"))
+                .withCamera(List.of(new StageplayDocument.CameraKey(0,0,0,1,StageplayDocument.Interpolation.HOLD),
+                        new StageplayDocument.CameraKey(100,300,0,1,StageplayDocument.Interpolation.HOLD)))
+                .withSceneChanges(List.of(new StageplayDocument.SceneChange("second-set",100,
+                        new StageplayDocument.SetSource("s2",0,0,"","second.ogfproject"),StageplayDocument.Transition.FADE_BLACK,20)));
         StageplayStore.write(sceneDir.resolve("film.ogfstage"),scene);
+        try(var root=ModAssetRoot.directory(temp,assets,ModInputLimits.production(),DirectoryAccess.TEST)) {
+            var context=new ModContext("movie","s2",root);
+            assertThrows(java.io.IOException.class,()->StageplayPlayback.registerOnEntry(context,"film","scenes/film.ogfstage"),
+                    "a missing later set fails during registration, before a controller is published");
+        }
+        new EditorProjectStore().save(sceneDir.resolve("second.ogfproject"),project);
+        // Asset roots are immutable snapshots: corrected content needs a new registration root.
         try(var root=ModAssetRoot.directory(temp,assets,ModInputLimits.production(),DirectoryAccess.TEST)) {
             var context=new ModContext("movie","s2",root);
             StageplayPlayback.registerOnEntry(context,"film","scenes/film.ogfstage");
             var plan=context.freeze();
             // No late disk read: registration owns the decoded authored set and immutable scene.
-            Files.delete(sceneDir.resolve("stage.ogfproject"));Files.delete(sceneDir.resolve("film.ogfstage"));
+            Files.delete(sceneDir.resolve("stage.ogfproject"));Files.delete(sceneDir.resolve("second.ogfproject"));Files.delete(sceneDir.resolve("film.ogfstage"));
             var module=OwnedModServices.decorate(new com.openggf.game.sonic2.Sonic2GameModule(),plan,boundary());
             assertSame(module.gameplayFrameController(),module.getGameService(StageplayControl.class));
             assertEquals(StageplayControl.Status.REQUESTED,module.getGameService(StageplayControl.class).status());

@@ -42,7 +42,9 @@ public final class StageplayWorkspace {
         NEW("New scene"), OPEN("Open scene"), SAVE("Save"), SAVE_AS("Save as"),
         SCENE("Scene / set"), ADD_ACTOR("Add actor"), EDIT_ACTOR("Actor properties"),
         DELETE_ACTOR("Remove actor"), SET_KEY("Set actor key"), DELETE_KEY("Remove actor key"),
-        CAMERA_KEY("Camera keys"), CAPTION("Captions"), AUDIO("Audio cues"),
+        CAMERA_MODE("Direct camera (C)"), SET_CAMERA_KEY("Capture camera key (K)"), CAMERA_KEY("Camera keys"),
+        RECORD_CAMERA("Record camera take (R)"), CAMERA_EFFECTS("Camera shake / quake"),
+        SCENE_CHANGES("Scene changes / transitions"), FILM_FORMAT("Film format presets"), CAPTION("Captions"), AUDIO("Audio cues"),
         RECORD("Record directed take (WASD)"), PLAY("Play / pause"), STOP("Stop"),
         UNDO("Undo"), REDO("Redo"), EXPORT("Export film"), EXIT("Level editor");
         private final String label;
@@ -61,6 +63,10 @@ public final class StageplayWorkspace {
     private StageplayDocument takeBefore;
     private List<ActorKey> takeKeys;
     private String takeActor;
+    private List<CameraKey> takeCameraKeys;
+    private boolean cameraMode;
+    private boolean cameraInputEnabled = true;
+    private StageplayTimeline.CameraPose cameraDraft;
     private boolean startedThisTick;
     private boolean previewSoundActive;
 
@@ -74,6 +80,13 @@ public final class StageplayWorkspace {
     public EditorProjectMenu menu() { return menu; }
     public boolean active() { return active; }
     public boolean recording() { return takeBefore != null; }
+    public boolean recordingCamera() { return takeCameraKeys != null; }
+    public boolean cameraMode() { return cameraMode; }
+    /** Frontends suspend held camera controls while a palette or text widget owns input. */
+    public void setCameraInputEnabled(boolean enabled) { cameraInputEnabled = enabled; }
+    public StageplayTimeline.CameraPose directorCamera() {
+        return cameraDraft != null ? cameraDraft : StageplayTimeline.sample(recordingDocument(), controller.frame()).baseCamera();
+    }
     public String status() { return status; }
     public Path path() { return path; }
     public Path assetRoot() { return assetRoot; }
@@ -91,15 +104,15 @@ public final class StageplayWorkspace {
     }
 
     /** Workspace changes preserve the scene and unsaved history. */
-    public void deactivate() { stop(); menu.close(); active = false; }
+    public void deactivate() { stop(); menu.close(); cameraDraft = null; cameraMode = false; active = false; }
 
-    public void seek(int frame) { stop(); controller.seek(frame); }
+    public void seek(int frame) { stop(); controller.seek(frame); cameraDraft = null; }
     public void selectActor(String id) { stop(); controller.selectActor(id); }
 
     public void invoke(Action action) {
         try {
             host.finishPendingEdits();
-            if (action != Action.PLAY && action != Action.RECORD) stop();
+            if (action != Action.PLAY && action != Action.RECORD && action != Action.RECORD_CAMERA) stop();
             switch (action) {
                 case NEW -> beforeReplace(this::newDocument);
                 case OPEN -> beforeReplace(this::openForm);
@@ -112,14 +125,23 @@ public final class StageplayWorkspace {
                         .filter(actor -> !actor.id().equals(selectedActor().id())).toList()));
                 case SET_KEY -> keyForm();
                 case DELETE_KEY -> deleteKey();
+                case CAMERA_MODE -> {
+                    cameraMode = !cameraMode; cameraDraft = null;
+                    status = cameraMode ? "Camera: WASD / arrows pan, Q / E zoom, K capture key, R record, C leave camera." : "Actor direction";
+                }
+                case SET_CAMERA_KEY -> captureCameraKey();
                 case CAMERA_KEY -> cameraMenu();
+                case RECORD_CAMERA -> { if (recording()) stop(); else startCameraTake(); }
+                case CAMERA_EFFECTS -> cameraEffectsMenu();
+                case SCENE_CHANGES -> sceneChangesMenu();
+                case FILM_FORMAT -> filmFormatMenu();
                 case CAPTION -> captionMenu();
                 case AUDIO -> audioMenu();
                 case RECORD -> { if (recording()) stop(); else startTake(); }
                 case PLAY -> { if (controller.playing() || recording()) stop(); else play(); }
-                case STOP -> controller.seek(0);
-                case UNDO -> controller.undo();
-                case REDO -> controller.redo();
+                case STOP -> { controller.seek(0); cameraDraft = null; }
+                case UNDO -> { controller.undo(); cameraDraft = null; }
+                case REDO -> { controller.redo(); cameraDraft = null; }
                 case EXPORT -> exportForm();
                 case EXIT -> deactivate();
             }
@@ -133,12 +155,18 @@ public final class StageplayWorkspace {
         try {
             if (recording()) {
                 if (input.isKeyPressed(GLFW_KEY_SPACE) || input.isKeyPressed(GLFW_KEY_ESCAPE)) { stop(); return true; }
-                recordStep(input.isKeyDown(GLFW_KEY_D), input.isKeyDown(GLFW_KEY_A),
-                        input.isKeyDown(GLFW_KEY_S), input.isKeyDown(GLFW_KEY_W));
+                if (recordingCamera()) recordCameraStep(horizontal(input), vertical(input), zoomInput(input));
+                else recordStep(input.isKeyDown(GLFW_KEY_D), input.isKeyDown(GLFW_KEY_A),
+                            input.isKeyDown(GLFW_KEY_S), input.isKeyDown(GLFW_KEY_W));
             } else if (startedThisTick) startedThisTick = false;
             else if (controller.playing()) {
                 if (controller.advance()) host.present(controller.document(), controller.frame());
             } else if (previewSoundActive) stop();
+            else if (cameraMode && cameraInputEnabled && !input.isKeyDown(GLFW_KEY_LEFT_CONTROL) && !input.isKeyDown(GLFW_KEY_RIGHT_CONTROL)
+                    && !input.isKeyDown(GLFW_KEY_LEFT_SUPER) && !input.isKeyDown(GLFW_KEY_RIGHT_SUPER)) {
+                double speed = input.isKeyDown(GLFW_KEY_LEFT_SHIFT) || input.isKeyDown(GLFW_KEY_RIGHT_SHIFT) ? 8 : 2;
+                moveCamera(horizontal(input) * speed, vertical(input) * speed, zoomInput(input));
+            }
         } catch (RuntimeException failure) {
             try { stop(); }
             catch (RuntimeException cleanupFailure) {
@@ -152,14 +180,15 @@ public final class StageplayWorkspace {
     public void stop() {
         controller.pause(); startedThisTick = false; previewSoundActive = false; host.stop();
         if (!recording()) return;
-        var candidate = takeDocument(takeKeys);
+        var candidate = recordingDocument();
         controller.edit(ignored -> candidate);
         // A failed stop or commit must leave the last valid take available for retry.
-        takeBefore = null; takeKeys = null; takeActor = null;
+        takeBefore = null; takeKeys = null; takeActor = null; takeCameraKeys = null; cameraDraft = null;
         status = "Recorded visual take. Undo removes the whole take.";
     }
 
     private void play() {
+        cameraDraft = null;
         io(() -> {
             host.validate(controller.document(), assetRoot);
             controller.play();
@@ -174,6 +203,7 @@ public final class StageplayWorkspace {
     private void startTake() {
         stop();
         var actor = selectedActor();
+        cameraMode = false; cameraDraft = null;
         takeBefore = controller.document(); takeActor = actor.id(); takeKeys = new ArrayList<>(actor.keys());
         status = "Recording visual movement: WASD. Space stops. This is a baked take, not simulation input.";
     }
@@ -197,9 +227,94 @@ public final class StageplayWorkspace {
     }
 
     /** Current draft is shown without polluting undo with one command per captured frame. */
-    public StageplayDocument previewDocument() {
+    public StageplayDocument previewDocument() { return recordingDocument(); }
+
+    /** Unkeyed framing is view state, so a full document key budget cannot break preview. */
+    public StageplayTimeline.Frame previewFrame() {
+        var frame = StageplayTimeline.sample(previewDocument(),controller.frame());
+        if (cameraDraft == null || controller.playing()) return frame;
+        var shaken = new StageplayTimeline.CameraPose(cameraDraft.x()+frame.camera().x()-frame.baseCamera().x(),
+                cameraDraft.y()+frame.camera().y()-frame.baseCamera().y(),cameraDraft.zoom());
+        return new StageplayTimeline.Frame(frame.frame(),frame.actors(),shaken,frame.captions(),frame.set(),frame.transition(),cameraDraft);
+    }
+
+    private StageplayDocument recordingDocument() {
         if (!recording()) return controller.document();
-        return takeDocument(takeKeys);
+        return recordingCamera() ? takeBefore.withCamera(takeCameraKeys) : takeDocument(takeKeys);
+    }
+
+    /** Transient framing: only Capture key or Record commits it to the shared document. */
+    public void moveCamera(double screenX, double screenY, double zoomFactor) {
+        if (!Double.isFinite(screenX) || !Double.isFinite(screenY) || !Double.isFinite(zoomFactor) || zoomFactor <= 0)
+            throw new IllegalArgumentException("Camera movement and zoom must be finite; zoom must be positive");
+        if (screenX == 0 && screenY == 0 && zoomFactor == 1) return;
+        var camera = directorCamera();
+        double zoom = Math.clamp(camera.zoom() * zoomFactor, .05, 64);
+        // Keep the film centre steady while zooming; movement is measured in visible pixels.
+        double x = camera.x() + screenX / camera.zoom() + controller.document().width() * (.5 / camera.zoom() - .5 / zoom);
+        double y = camera.y() + screenY / camera.zoom() + controller.document().height() * (.5 / camera.zoom() - .5 / zoom);
+        cameraDraft = new StageplayTimeline.CameraPose(Math.clamp(x, -1_048_576, 1_048_576),
+                Math.clamp(y, -1_048_576, 1_048_576), zoom);
+        status = "Camera framing preview. K captures a key; R records motion. Seeking discards this unkeyed framing.";
+    }
+
+    private void captureCameraKey() {
+        var camera = directorCamera();
+        var key = new CameraKey(controller.frame(), camera.x(), camera.y(), camera.zoom(), Interpolation.LINEAR);
+        edit(d -> d.withCamera(withCameraKey(d.camera(), key)));
+        cameraDraft = null;
+        status = "Camera key captured at frame " + controller.frame() + ". Set a later key to animate the pan or zoom.";
+    }
+
+    private void startCameraTake() {
+        stop();
+        var camera = directorCamera();
+        var before = controller.document();
+        var keys = withCameraKey(before.camera(), new CameraKey(controller.frame(),
+                camera.x(), camera.y(), camera.zoom(), Interpolation.HOLD));
+        before.withCamera(keys);
+        cameraMode = true; takeBefore = before; takeCameraKeys = keys;
+        cameraDraft = null;
+        status = "Recording camera: WASD / arrows pan, Q / E zoom, Space stops. One take is one undo.";
+    }
+
+    void recordCameraStep(int horizontal, int vertical, double zoomFactor) {
+        if (!recordingCamera()) return;
+        int frame = controller.frame();
+        var previousDraft = cameraDraft;
+        moveCamera(horizontal * 2, vertical * 2, zoomFactor);
+        var camera = directorCamera();
+        List<CameraKey> keys;
+        try {
+            keys = withCameraKey(takeCameraKeys,new CameraKey(frame,camera.x(),camera.y(),camera.zoom(),Interpolation.HOLD));
+            takeBefore.withCamera(keys); // Validate before publishing a preview or advancing.
+        } catch (RuntimeException failure) { cameraDraft = previousDraft; throw failure; }
+        takeCameraKeys = keys; cameraDraft = null;
+        if (frame == controller.document().durationFrames() - 1) stop(); else controller.seek(frame + 1);
+    }
+
+    private static List<CameraKey> withCameraKey(List<CameraKey> keys, CameraKey key) {
+        var result = new ArrayList<>(keys); result.removeIf(k -> k.frame() == key.frame()); result.add(key);
+        result.sort(Comparator.comparingInt(CameraKey::frame)); return result;
+    }
+
+    public static boolean cameraMotionKey(int key) {
+        return key == GLFW_KEY_W || key == GLFW_KEY_A || key == GLFW_KEY_S || key == GLFW_KEY_D
+                || key == GLFW_KEY_UP || key == GLFW_KEY_DOWN || key == GLFW_KEY_LEFT || key == GLFW_KEY_RIGHT
+                || key == GLFW_KEY_Q || key == GLFW_KEY_E || key == GLFW_KEY_LEFT_SHIFT || key == GLFW_KEY_RIGHT_SHIFT;
+    }
+
+    private static int horizontal(InputHandler input) {
+        return (input.isKeyDown(GLFW_KEY_D) || input.isKeyDown(GLFW_KEY_RIGHT) ? 1 : 0)
+                - (input.isKeyDown(GLFW_KEY_A) || input.isKeyDown(GLFW_KEY_LEFT) ? 1 : 0);
+    }
+    private static int vertical(InputHandler input) {
+        return (input.isKeyDown(GLFW_KEY_S) || input.isKeyDown(GLFW_KEY_DOWN) ? 1 : 0)
+                - (input.isKeyDown(GLFW_KEY_W) || input.isKeyDown(GLFW_KEY_UP) ? 1 : 0);
+    }
+    private static double zoomInput(InputHandler input) {
+        int direction = (input.isKeyDown(GLFW_KEY_E) ? 1 : 0) - (input.isKeyDown(GLFW_KEY_Q) ? 1 : 0);
+        return Math.pow(1.02, direction);
     }
 
     private StageplayDocument takeDocument(List<ActorKey> keys) {
@@ -209,6 +324,7 @@ public final class StageplayWorkspace {
 
     private void newDocument() {
         controller.replace(host.initialDocument());
+        cameraDraft = null; cameraMode = false;
         host.refreshResources();
         assetRoot = host.initialAssetRoot().toAbsolutePath().normalize(); path = null; initialized = true;
         status = "New scene. Add a cast member, then set keys at timeline frames.";
@@ -233,6 +349,7 @@ public final class StageplayWorkspace {
         StageplayDocument candidate = StageplayStore.read(absolute);
         // Parse first. Missing ROMs still permit repairing the document in either editor.
         stop(); controller.replace(candidate); path = absolute; assetRoot = absolute.getParent();
+        cameraDraft = null; cameraMode = false;
         host.refreshResources();
         initialized = true; active = true; status = "Opened " + absolute;
     }
@@ -258,8 +375,7 @@ public final class StageplayWorkspace {
     public void saveTo(Path destination) throws IOException {
         stop();
         Path target = destination.toAbsolutePath().normalize();
-        if (!assetRoot.equals(target.getParent()) && controller.anyRevision(d -> !d.set().levelProject().isEmpty()
-                || d.audio().stream().anyMatch(c -> !c.asset().isEmpty())))
+        if (!assetRoot.equals(target.getParent()) && controller.anyRevision(StageplayWorkspace::hasRelativeAssets))
             throw new IOException("This scene's undo history uses relative assets. Save beside them, or reopen the scene to start a new editing history before relocating it.");
         StageplayDocument candidate = rebase(controller.document(), assetRoot, target.getParent());
         Files.createDirectories(target.getParent());
@@ -270,7 +386,7 @@ public final class StageplayWorkspace {
     }
 
     private static StageplayDocument rebase(StageplayDocument doc, Path oldRoot, Path newRoot) throws IOException {
-        if (!oldRoot.equals(newRoot) && (!doc.set().levelProject().isEmpty() || doc.audio().stream().anyMatch(c -> !c.asset().isEmpty())))
+        if (!oldRoot.equals(newRoot) && hasRelativeAssets(doc))
             throw new IOException("Save beside the existing scene assets. To move the project, move its whole folder so relative paths and undo history stay valid.");
         var set = doc.set();
         String project = relative(oldRoot, newRoot, set.levelProject());
@@ -278,6 +394,11 @@ public final class StageplayWorkspace {
         for (var cue : doc.audio()) audio.add(new AudioCue(cue.id(), cue.frame(), cue.kind(), cue.gameId(),
                 cue.soundId(), relative(oldRoot, newRoot, cue.asset()), cue.gain()));
         return doc.withSet(new SetSource(set.gameId(), set.zone(), set.act(), set.romSha1(), project)).withAudio(audio);
+    }
+
+    private static boolean hasRelativeAssets(StageplayDocument doc) {
+        return !doc.set().levelProject().isEmpty() || doc.sceneChanges().stream().anyMatch(c -> !c.set().levelProject().isEmpty())
+                || doc.audio().stream().anyMatch(c -> !c.asset().isEmpty());
     }
 
     private static String relative(Path oldRoot, Path newRoot, String reference) throws IOException {
@@ -305,9 +426,16 @@ public final class StageplayWorkspace {
                 text("game", "ROM: s1 / s2 / s3k", add ? controller.document().set().gameId() : actor.gameId()),
                 text("character", "Character", add ? "sonic" : actor.character())), "Apply actor", v -> {
             String id = add ? nextId("actor", controller.document()) : actor.id();
-            var camera = StageplayTimeline.sample(controller.document(), 0).camera();
+            var camera = StageplayTimeline.sample(controller.document(), 0).baseCamera();
+            var initialKeys = new ArrayList<ActorKey>();
+            initialKeys.add(new ActorKey(0,camera.x()+controller.document().width()/2.0,camera.y()+controller.document().height()/2.0,0,-1,false,true,1,Interpolation.HOLD));
+            for (var change : controller.document().sceneChanges()) {
+                var shotCamera = StageplayTimeline.sample(controller.document(), change.frame()).baseCamera();
+                initialKeys.add(new ActorKey(change.frame(),shotCamera.x()+controller.document().width()/2.0,
+                        shotCamera.y()+controller.document().height()/2.0,0,-1,false,true,1,Interpolation.HOLD));
+            }
             Actor value = new Actor(id,v.get("name"),v.get("game"),v.get("character"),add
-                    ? List.of(new ActorKey(0,camera.x()+controller.document().width()/2.0,camera.y()+controller.document().height()/2.0,0,-1,false,true,1,Interpolation.HOLD)) : actor.keys());
+                    ? initialKeys : actor.keys());
             edit(d -> { var actors = new ArrayList<>(d.actors()); if (!add) actors.removeIf(a -> a.id().equals(id)); actors.add(value); return d.withActors(actors); });
             controller.selectActor(id);
         });
@@ -334,6 +462,7 @@ public final class StageplayWorkspace {
     private void deleteKey() {
         Actor actor = selectedActor(); int frame = controller.frame();
         if (frame == 0) throw new IllegalStateException("Every actor needs its frame-zero key");
+        if (isSceneBoundary(frame)) throw new IllegalStateException("A scene change needs this actor key. Remove the scene change first.");
         edit(d -> replaceActor(d,actor,actor.keys().stream().filter(k -> k.frame()!=frame).toList()));
     }
 
@@ -351,12 +480,13 @@ public final class StageplayWorkspace {
         menu.showActions("Camera at frame " + controller.frame(), List.of(action("Set camera key", this::cameraForm),
                 action("Remove camera key", () -> {
                     if (controller.frame()==0) throw new IllegalStateException("The frame-zero camera key is required");
+                    if (isSceneBoundary(controller.frame())) throw new IllegalStateException("A scene change needs this camera key. Remove the scene change first.");
                     edit(d -> d.withCamera(d.camera().stream().filter(k -> k.frame()!=controller.frame()).toList()));
                 })));
     }
 
     private void cameraForm() {
-        var camera = StageplayTimeline.sample(controller.document(), controller.frame()).camera(); int frame = controller.frame();
+        var camera = directorCamera(); int frame = controller.frame();
         var interpolation = controller.document().camera().stream().filter(k -> k.frame() <= frame).reduce((a,b) -> b).orElseThrow().interpolation();
         menu.showForm("Camera key at frame " + frame,List.of(number("x","World left X",camera.x()),number("y","World top Y",camera.y()),
                 number("zoom","Zoom",camera.zoom()),text("interpolation","HOLD / LINEAR / SMOOTH",interpolation.name())),"Set camera",v -> edit(d -> {
@@ -364,6 +494,102 @@ public final class StageplayWorkspace {
             keys.add(new CameraKey(frame,decimal(v,"x"),decimal(v,"y"),decimal(v,"zoom"),Interpolation.valueOf(v.get("interpolation").toUpperCase(java.util.Locale.ROOT))));
             keys.sort(Comparator.comparingInt(CameraKey::frame)); return d.withCamera(keys);
         }));
+    }
+
+    private boolean isSceneBoundary(int frame) {
+        return controller.document().sceneChanges().stream().anyMatch(c -> c.frame() == frame);
+    }
+
+    private void filmFormatMenu() {
+        menu.showActions("Film dimensions", List.of(
+                action("Widescreen 16:9 (384 x 216)", () -> edit(d -> d.withSize(384,216))),
+                action("Native (320 x 224)", () -> edit(d -> d.withSize(320,224))),
+                action("HD 16:9 (1280 x 720)", () -> edit(d -> d.withSize(1280,720))),
+                action("Custom dimensions", this::sceneForm)));
+        menu.setSubtitle("Film pixels are independent of window size. The preview is letterboxed; existing keys and captions keep their coordinates.");
+    }
+
+    private void cameraEffectsMenu() {
+        var actions = new ArrayList<EditorProjectMenu.Action>();
+        actions.add(action("Add shake / quake", () -> cameraEffectForm(null)));
+        for (var effect : controller.document().cameraEffects()) actions.add(action(effect.startFrame() + ": " + effect.id(),
+                () -> menu.showActions("Camera effect", List.of(action("Edit", () -> cameraEffectForm(effect)),
+                        action("Delete", () -> edit(d -> d.withCameraEffects(d.cameraEffects().stream()
+                                .filter(e -> !e.id().equals(effect.id())).toList())))))));
+        menu.showActions("Camera shake / quake", actions);
+    }
+
+    private void cameraEffectForm(CameraEffect effect) {
+        int frame = controller.frame();
+        menu.showForm("Camera shake / quake", List.of(
+                number("start", "Start frame", effect == null ? frame : effect.startFrame()),
+                number("end", "End frame (exclusive)", effect == null ? Math.min(frame+60, controller.document().durationFrames()) : effect.endFrame()),
+                number("x", "Horizontal amplitude (pixels)", effect == null ? 3 : effect.amplitudeX()),
+                number("y", "Vertical amplitude (pixels)", effect == null ? 5 : effect.amplitudeY()),
+                number("frequency", "Frequency (Hz, >0..30)", effect == null ? 8 : effect.frequency()),
+                number("seed", "Deterministic seed", effect == null ? 1 : effect.seed())), "Apply effect", v -> edit(d -> {
+            String id = effect == null ? nextId("shake", d) : effect.id();
+            var values = new ArrayList<>(d.cameraEffects()); values.removeIf(e -> e.id().equals(id));
+            values.add(new CameraEffect(id, integer(v,"start"), integer(v,"end"), decimal(v,"x"), decimal(v,"y"),
+                    decimal(v,"frequency"), integer(v,"seed")));
+            values.sort(Comparator.comparingInt(CameraEffect::startFrame));
+            return d.withCameraEffects(values);
+        }));
+        menu.setSubtitle("Shake is layered over camera pan and zoom, never baked into camera keys. Preview and export use the same seeded motion.");
+    }
+
+    private void sceneChangesMenu() {
+        var actions = new ArrayList<EditorProjectMenu.Action>();
+        actions.add(action("Add scene change", () -> sceneChangeForm(null)));
+        for (var change : controller.document().sceneChanges()) actions.add(action(change.frame() + ": " + change.transition() + " / " + change.set().gameId(),
+                () -> menu.showActions("Scene change", List.of(action("Edit", () -> sceneChangeForm(change)),
+                        action("Delete", () -> edit(d -> d.withSceneChanges(d.sceneChanges().stream()
+                                .filter(c -> !c.id().equals(change.id())).toList())))))));
+        menu.showActions("Scene changes / transitions", actions);
+        menu.setSubtitle("Each change starts a new shot. Keys at its boundary belong to the incoming shot; removing a change preserves its keys.");
+    }
+
+    private void sceneChangeForm(SceneChange change) {
+        var set = change == null ? StageplayTimeline.sample(controller.document(), controller.frame()).set() : change.set();
+        menu.showForm("Scene change", List.of(
+                number("frame", "Switch frame (at least 1)", change == null ? Math.max(1,controller.frame()) : change.frame()),
+                text("transition", "CUT / FADE_BLACK / FADE_WHITE / WIPE_LEFT / WIPE_RIGHT", change == null ? "CUT" : change.transition().name()),
+                number("duration", "Transition frames (CUT = 0)", change == null ? 0 : change.durationFrames()),
+                text("game", "Incoming set: s1 / s2 / s3k", set.gameId()), number("zone", "Zone (zero based)", set.zone()),
+                number("act", "Act (zero based)", set.act()), text("rom", "Optional ROM SHA-1", set.romSha1()),
+                text("project", "Relative .ogfproject (optional)", set.levelProject())), "Apply scene change", v -> edit(d -> {
+            String id = change == null ? nextId("scene", d) : change.id();
+            var values = new ArrayList<>(d.sceneChanges()); values.removeIf(c -> c.id().equals(id));
+            values.add(new SceneChange(id, integer(v,"frame"), new SetSource(v.get("game"), integer(v,"zone"),
+                    integer(v,"act"), v.get("rom"), v.get("project")),
+                    Transition.valueOf(v.get("transition").toUpperCase(java.util.Locale.ROOT)), integer(v,"duration")));
+            values.sort(Comparator.comparingInt(SceneChange::frame));
+            return withSceneBoundaries(d, values);
+        }));
+        menu.setSubtitle("Transitions are centred on the switch frame and cannot overlap. Incoming actor/camera keys are added in the same undo step; position them for the new set.");
+    }
+
+    /** Build all required boundary keys and the switch together; no invalid intermediate scene. */
+    private static StageplayDocument withSceneBoundaries(StageplayDocument doc, List<SceneChange> changes) {
+        var camera = new ArrayList<>(doc.camera());
+        var actors = new ArrayList<>(doc.actors());
+        for (var change : changes) {
+            var sample = StageplayTimeline.sample(doc, change.frame());
+            if (camera.stream().noneMatch(k -> k.frame() == change.frame())) {
+                var pose = sample.baseCamera();
+                camera.add(new CameraKey(change.frame(), pose.x(), pose.y(), pose.zoom(), Interpolation.HOLD));
+            }
+            for (int i = 0; i < actors.size(); i++) {
+                var actor = actors.get(i);
+                if (actor.keys().stream().anyMatch(k -> k.frame() == change.frame())) continue;
+                var pose = sample.actors().stream().filter(p -> p.actorId().equals(actor.id())).findFirst().orElseThrow();
+                var key = new ActorKey(change.frame(),pose.x(),pose.y(),pose.animation(),pose.pose(),pose.flipX(),pose.visible(),pose.scale(),Interpolation.HOLD);
+                actors.set(i,new Actor(actor.id(),actor.name(),actor.gameId(),actor.character(),withKey(actor.keys(),key)));
+            }
+        }
+        camera.sort(Comparator.comparingInt(CameraKey::frame));
+        return new StageplayDocument(doc.version(),doc.name(),doc.durationFrames(),doc.width(),doc.height(),doc.set(),
+                actors,camera,doc.captions(),doc.audio(),doc.cameraEffects(),changes);
     }
 
     private void captionMenu() {
@@ -415,12 +641,13 @@ public final class StageplayWorkspace {
         })));
     }
 
-    private void edit(UnaryOperator<StageplayDocument> operation) { controller.edit(operation); status="Scene edited"; }
+    private void edit(UnaryOperator<StageplayDocument> operation) { controller.edit(operation); cameraDraft = null; status="Scene edited"; }
     public void report(Throwable failure) { status=failure.getMessage()==null?failure.toString():failure.getMessage(); menu.report(failure); }
     public void setStatus(String value) { status=Objects.requireNonNull(value); }
     private static String nextId(String prefix,StageplayDocument doc) {
         var used = new java.util.HashSet<String>();
         doc.actors().forEach(a -> used.add(a.id())); doc.captions().forEach(c -> used.add(c.id())); doc.audio().forEach(c -> used.add(c.id()));
+        doc.cameraEffects().forEach(e -> used.add(e.id())); doc.sceneChanges().forEach(c -> used.add(c.id()));
         int i=1; while(used.contains(prefix+i)) i++; return prefix+i;
     }
     private static String escapeCaption(String text) { return text.replace("\\","\\\\").replace("\n","\\n"); }

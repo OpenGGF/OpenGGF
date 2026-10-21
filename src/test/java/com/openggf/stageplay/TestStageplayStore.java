@@ -45,7 +45,7 @@ class TestStageplayStore {
                 valid.replace("\"romSha1\":\"\",", ""),
                 valid.replace("\"interpolation\":\"HOLD\"", "\"interpolation\":0"),
                 valid.replace("\"interpolation\":\"HOLD\"", "\"interpolation\":\"UNKNOWN\""),
-                valid.replace("\"version\" : 1", "\"version\" : 2").replace("\"version\":1", "\"version\":2"),
+                valid.replace("\"version\":2", "\"version\":3"),
                 valid.replaceAll("\"durationFrames\"\\s*:\\s*600", "\"durationFrames\":\"600\""),
                 valid.replaceAll("\"zoom\"\\s*:\\s*1\\.0", "\"zoom\":null"),
                 valid.replaceAll("\"camera\"\\s*:", "\"camera\":null,\"ignored\":"))) {
@@ -54,6 +54,34 @@ class TestStageplayStore {
         assertThrows(IOException.class, () -> StageplayStore.decode(new byte[8 * 1024 * 1024 + 1]));
         assertThrows(IOException.class, () -> StageplayStore.decode(new byte[0]));
         assertThrows(IOException.class, () -> StageplayStore.decode("null".getBytes(StandardCharsets.UTF_8)));
+    }
+
+    @Test
+    void versionOneMigrationIsStrictAndSavingPublishesVersionTwoTracks() throws IOException {
+        String legacy = """
+                {"version":1,"name":"Legacy","durationFrames":120,"width":320,"height":224,
+                 "set":{"gameId":"s2","zone":0,"act":0,"romSha1":"","levelProject":""},
+                 "actors":[],"camera":[{"frame":0,"x":0,"y":0,"zoom":1,"interpolation":"HOLD"}],
+                 "captions":[],"audio":[]}
+                """;
+        var migrated = StageplayStore.decode(legacy.getBytes(StandardCharsets.UTF_8));
+        assertEquals(2, migrated.version());
+        assertTrue(migrated.cameraEffects().isEmpty());
+        assertTrue(migrated.sceneChanges().isEmpty());
+        var upgraded = migrated.withCamera(List.of(migrated.camera().getFirst(),
+                        new CameraKey(60, 500, 300, 2, Interpolation.SMOOTH)))
+                .withCameraEffects(List.of(new CameraEffect("rumble", 10, 100, 8, 3, 6, 123)))
+                .withSceneChanges(List.of(new SceneChange("shot-two", 60,
+                        new SetSource("s3k", 0, 1, "", "sets/arrival.ogfproject"), Transition.WIPE_RIGHT, 20)));
+        assertEquals(upgraded, StageplayStore.decode(StageplayStore.encode(upgraded)));
+        for (String bad : List.of(legacy.replace("\"audio\":[]", "\"audio\":[],\"cameraEffects\":[]"),
+                legacy.replace("\"audio\":[]", "\"audio\":[],\"sceneChanges\":[]"),
+                legacy.replace("\"audio\":[]", "\"unknown\":[]"),
+                legacy.replace("\"version\":1", "\"version\":\"1\""),
+                legacy.replace("\"version\":1", "\"version\":1.0"),
+                legacy.replace("\"version\":1", "\"version\":2"))) {
+            assertThrows(IOException.class, () -> StageplayStore.decode(bad.getBytes(StandardCharsets.UTF_8)), bad);
+        }
     }
 
     @Test

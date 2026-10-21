@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.cfg.CoercionAction;
 import com.fasterxml.jackson.databind.cfg.CoercionInputShape;
 import com.fasterxml.jackson.databind.json.JsonMapper;
@@ -100,9 +101,22 @@ public final class StageplayStore {
         Objects.requireNonNull(bytes, "bytes");
         if (bytes.length == 0 || bytes.length > MAX_BYTES) throw new IOException("Stageplay input must contain 1 byte to 8 MiB");
         try {
-            StageplayDocument document = JSON.readValue(bytes, StageplayDocument.class);
-            if (document == null) throw new IOException("Stageplay document is required");
-            return document;
+            var tree = JSON.readTree(bytes);
+            if (!(tree instanceof ObjectNode object)) throw new IOException("Stageplay document must be an object");
+            var version = object.get("version");
+            if (version == null || !version.isIntegralNumber() || !version.canConvertToInt())
+                throw new IOException("Stageplay version must be an integer");
+            if (version.intValue() == 1) {
+                // Version one's exact field shape remains authoritative; new fields cannot masquerade as v1.
+                if (object.has("cameraEffects") || object.has("sceneChanges"))
+                    throw new IOException("Version one cannot contain version two tracks");
+                object.put("version", StageplayDocument.VERSION);
+                object.putArray("cameraEffects");
+                object.putArray("sceneChanges");
+            } else if (version.intValue() != StageplayDocument.VERSION) {
+                throw new IOException("Unsupported Stageplay version: " + version.intValue());
+            }
+            return JSON.treeToValue(object, StageplayDocument.class);
         } catch (IllegalArgumentException error) {
             throw new IOException("Invalid Stageplay document", error);
         }

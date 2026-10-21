@@ -35,3 +35,28 @@ Use matching engine/SDK artifacts from the same unpublished 0.7 candidate commit
 See the [Stageplay guide](../../docs/guide/creating/stageplay.md) for audio assets,
 native player binding and trigger-based playback. The example cannot be combined
 with another controller that already owns native frame admission.
+
+## Location, Location, Location
+
+The 46-second [screenplay](src/main/resources/scenes/location-remote.screenplay.json)
+and [compiled scene](src/main/resources/scenes/location-remote.stageplay) tell a
+short story about Tails' unreliable location remote. They demonstrate a three-role
+cast, visible tail accessories, panning/zoom, earthquake effects, and wipes/fades
+between locations, acts and games. Supply S1, S2 and S3&K ROMs for this scene. The
+original S2-only opening remains the mod's default registration.
+
+Open the compiled scene in either editor, or use the [agent authoring tool](../../docs/guide/creating/stageplay-authoring.md):
+
+```sh
+python3 tools/stageplay/stageplay.py compile \
+  --script examples/stageplay-demo/src/main/resources/scenes/location-remote.screenplay.json \
+  --out /your/production/location-remote.stageplay
+python3 tools/stageplay/stageplay.py render \
+  --scene /your/production/location-remote.stageplay \
+  --out /your/production/location-remote.mkv \
+  --s1-rom /your/existing-s1.gen --s2-rom /your/existing-s2.gen --s3k-rom /your/existing-s3k.gen
+```
+
+Build the current engine first (`--build help`), choose a new output for each take,
+and keep media outside the checkout. This is authored staging, not native gameplay
+or a continuous route. The stage resources represent the ROM's decoded load state.

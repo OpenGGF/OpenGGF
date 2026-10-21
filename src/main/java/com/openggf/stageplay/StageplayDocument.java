@@ -15,8 +15,8 @@ import java.util.Set;
 @ModApi
 public record StageplayDocument(int version, String name, int durationFrames, int width, int height,
         SetSource set, List<Actor> actors, List<CameraKey> camera, List<Caption> captions,
-        List<AudioCue> audio) {
-    public static final int VERSION = 1;
+        List<AudioCue> audio, List<CameraEffect> cameraEffects, List<SceneChange> sceneChanges) {
+    public static final int VERSION = 2;
     public static final int FRAMES_PER_SECOND = 60;
     public static final int MAX_DURATION_FRAMES = 36_000;
     private static final int MAX_KEYS = 100_000;
@@ -33,6 +33,8 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         camera = boundedCopy(camera, MAX_KEYS, "camera");
         captions = boundedCopy(captions, 1024, "captions");
         audio = boundedCopy(audio, 4096, "audio");
+        cameraEffects = boundedCopy(cameraEffects, 256, "cameraEffects");
+        sceneChanges = boundedCopy(sceneChanges, 128, "sceneChanges");
         require(!camera.isEmpty(), "camera must start at frame zero");
         Set<String> ids = new HashSet<>();
         int totalKeys = camera.size();
@@ -57,6 +59,40 @@ public record StageplayDocument(int version, String name, int durationFrames, in
             require(ids.add(cue.id()), "Duplicate id: " + cue.id());
             require(cue.frame() < durationFrames, "Audio cue exceeds scene duration");
         }
+        for (CameraEffect effect : cameraEffects) {
+            require(ids.add(effect.id()), "Duplicate id: " + effect.id());
+            require(effect.endFrame() <= durationFrames, "Camera effect exceeds scene duration");
+        }
+        int previousChange = -1, previousTransitionEnd = -1;
+        Set<Integer> cameraFrames = new HashSet<>();
+        for (CameraKey key : camera) cameraFrames.add(key.frame());
+        for (SceneChange change : sceneChanges) {
+            require(ids.add(change.id()), "Duplicate id: " + change.id());
+            require(change.frame() > previousChange, "Scene changes must be strictly ascending");
+            int start = change.frame() - change.durationFrames() / 2;
+            int end = change.frame() + (change.durationFrames() + 1) / 2;
+            require(start >= 0 && end < durationFrames, "Scene transition exceeds scene duration");
+            require(start >= previousTransitionEnd, "Scene transitions must not overlap");
+            require(cameraFrames.contains(change.frame()), "Scene change requires a camera key at its frame");
+            for (Actor actor : actors) {
+                require(actor.keys().stream().anyMatch(key -> key.frame() == change.frame()),
+                        "Scene change requires an actor key at its frame: " + actor.id());
+            }
+            previousChange = change.frame();
+            previousTransitionEnd = end;
+        }
+    }
+
+    /** Source-compatible version-one constructor. New authored documents always use version two. */
+    public StageplayDocument(int version, String name, int durationFrames, int width, int height,
+            SetSource set, List<Actor> actors, List<CameraKey> camera, List<Caption> captions, List<AudioCue> audio) {
+        this(migratedVersion(version), name, durationFrames, width, height, set, actors, camera, captions, audio,
+                List.of(), List.of());
+    }
+
+    private static int migratedVersion(int version) {
+        require(version == 1 || version == VERSION, "Unsupported Stageplay version: " + version);
+        return VERSION;
     }
 
     /** A ten-second scene with an empty cast and a stationary camera. */
@@ -68,36 +104,45 @@ public record StageplayDocument(int version, String name, int durationFrames, in
     }
 
     public StageplayDocument withName(String value) {
-        return new StageplayDocument(version, value, durationFrames, width, height, set, actors, camera, captions, audio);
+        return new StageplayDocument(version, value, durationFrames, width, height, set, actors, camera, captions, audio, cameraEffects, sceneChanges);
     }
 
     /** Shortening a scene rejects remaining keys/cues beyond its new end. */
     public StageplayDocument withDurationFrames(int value) {
-        return new StageplayDocument(version, name, value, width, height, set, actors, camera, captions, audio);
+        return new StageplayDocument(version, name, value, width, height, set, actors, camera, captions, audio, cameraEffects, sceneChanges);
     }
 
     public StageplayDocument withSize(int newWidth, int newHeight) {
-        return new StageplayDocument(version, name, durationFrames, newWidth, newHeight, set, actors, camera, captions, audio);
+        return new StageplayDocument(version, name, durationFrames, newWidth, newHeight, set, actors, camera, captions, audio, cameraEffects, sceneChanges);
     }
 
     public StageplayDocument withSet(SetSource value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, value, actors, camera, captions, audio);
+        return new StageplayDocument(version, name, durationFrames, width, height, value, actors, camera, captions, audio, cameraEffects, sceneChanges);
     }
 
     public StageplayDocument withActors(List<Actor> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, value, camera, captions, audio);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, value, camera, captions, audio, cameraEffects, sceneChanges);
     }
 
     public StageplayDocument withCamera(List<CameraKey> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, value, captions, audio);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, value, captions, audio, cameraEffects, sceneChanges);
     }
 
     public StageplayDocument withCaptions(List<Caption> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, value, audio);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, value, audio, cameraEffects, sceneChanges);
     }
 
     public StageplayDocument withAudio(List<AudioCue> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, value);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, value, cameraEffects, sceneChanges);
+    }
+
+    public StageplayDocument withCameraEffects(List<CameraEffect> value) {
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio, value, sceneChanges);
+    }
+
+    /** Changes and their required actor/camera anchors must be published as one valid document. */
+    public StageplayDocument withSceneChanges(List<SceneChange> value) {
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio, cameraEffects, value);
     }
 
     /** Stock set reference and optional identity/authored-level reference. */
@@ -167,6 +212,40 @@ public record StageplayDocument(int version, String name, int durationFrames, in
 
     @ModApi
     public enum Interpolation { HOLD, LINEAR, SMOOTH }
+
+    /** A deterministic presentation-only shake on [startFrame,endFrame), with frequency in Hz. */
+    @ModApi
+    public record CameraEffect(String id, int startFrame, int endFrame, double amplitudeX,
+            double amplitudeY, double frequency, int seed) {
+        public CameraEffect {
+            id = identifier(id);
+            range(startFrame, 0, MAX_DURATION_FRAMES - 1, "camera effect start");
+            range(endFrame, startFrame + 1, MAX_DURATION_FRAMES, "camera effect end");
+            finiteRange(amplitudeX, 0, 4096, "camera effect amplitudeX");
+            finiteRange(amplitudeY, 0, 4096, "camera effect amplitudeY");
+            finiteRange(frequency, Double.MIN_VALUE, 30, "camera effect frequency");
+        }
+    }
+
+    @ModApi
+    public enum Transition { CUT, FADE_BLACK, FADE_WHITE, WIPE_LEFT, WIPE_RIGHT }
+
+    /**
+     * Incoming set starts at frame. Non-cut coverage rises for floor(duration/2) frames
+     * before that boundary, then falls for ceil(duration/2) frames after it.
+     * Every actor and camera needs an incoming key at frame; interpolation never crosses it.
+     */
+    @ModApi
+    public record SceneChange(String id, int frame, SetSource set, Transition transition, int durationFrames) {
+        public SceneChange {
+            id = identifier(id);
+            range(frame, 1, MAX_DURATION_FRAMES - 1, "scene change frame");
+            require(set != null, "scene change set is required");
+            require(transition != null, "transition is required");
+            if (transition == Transition.CUT) require(durationFrames == 0, "Cuts have zero transition duration");
+            else range(durationFrames, 2, 600, "transition duration");
+        }
+    }
 
     /** Captions use screen coordinates and a half-open [startFrame,endFrame) interval. */
     @ModApi

@@ -33,6 +33,7 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 ## Tools
 
 - [Stageplay capture](../../src/main/java/com/openggf/tools/StageplayCaptureTool.java): render a saved `.stageplay` scene with supplied ROMs to synchronized lossless MKV; see the [guide](../guide/creating/stageplay.md). [Stageplay HUD pictures](../../src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java) use explicit `-Dopenggf.stageplay.hudPictures=true`, surfaceless EGL and an absolute S2 REV01 ROM path, writing `target/stageplay-hud/` for visual review; desktop has its equivalent `TestStageplayChromePictures` in OpenGGF Editor. Origin: 2026-10-21 Stageplay delivery.
+- [Stageplay authoring CLI](../../tools/stageplay/stageplay.py): compiles shot-local screenplays, discovers supplied-ROM resources, samples/validates scenes and renders offline. [Command reference](../guide/creating/stageplay-authoring.md); skill `stageplay-authoring`. Origin: 2026-10-21 directing extension.
 
 - [Seven-Chaos gateway diagnostic](../../src/main/java/com/openggf/tools/S3kSevenChaosGatewayCaptureTool.java): repeats the declared Tails/LRZ2 ring→sanctuary→sphere-stage→results→return scenario with verified ROM identity, fixed Limited/RAW_RGB, event/state CSVs and original PNGs; `--rom` and `--out-dir` require absolute paths, Linux uses surfaceless EGL with no display. This preserves the 2026-10-17 native RGB investigation; it is not a cold-route certificate.
 

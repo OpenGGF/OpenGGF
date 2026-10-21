@@ -126,6 +126,40 @@ class TestStageplayHud {
         assertTrue(layout.workbench().right() <= layout.width());
     }
 
+    @Test
+    void cameraModeOwnsArrowsCapturesKeysAndKeepsActorCommandsSeparate() {
+        input.handleKeyEvent(GLFW_KEY_C,GLFW_PRESS); tick();
+        assertTrue(workspace.cameraMode());
+        input.handleKeyEvent(GLFW_KEY_C,GLFW_RELEASE);
+        input.handleKeyEvent(GLFW_KEY_RIGHT,GLFW_PRESS);
+        input.refreshLogicalSnapshot(); assertTrue(hud.update(input)); workspace.tick(input); input.update();
+        assertEquals(0,workspace.controller().frame()); assertEquals(2,workspace.directorCamera().x());
+        assertEquals(0,workspace.controller().document().camera().getFirst().x());
+        input.handleKeyEvent(GLFW_KEY_RIGHT,GLFW_RELEASE);
+        input.handleKeyEvent(GLFW_KEY_K,GLFW_PRESS); tick();
+        assertFalse(workspace.menu().isOpen()); assertEquals(2,workspace.controller().document().camera().getFirst().x());
+        input.handleKeyEvent(GLFW_KEY_K,GLFW_RELEASE);
+        input.handleKeyEvent(GLFW_KEY_ESCAPE,GLFW_PRESS); tick();
+        assertFalse(workspace.cameraMode()); assertTrue(workspace.active());
+    }
+
+    @Test
+    void effectsAndSceneChangesAppearInTimelineAndCommands() {
+        var doc = workspace.controller().document();
+        doc = doc.withCamera(List.of(doc.camera().getFirst(),new StageplayDocument.CameraKey(100,20,30,1,StageplayDocument.Interpolation.HOLD)))
+                .withCameraEffects(List.of(new StageplayDocument.CameraEffect("quake",20,60,2,4,8,1)))
+                .withSceneChanges(List.of(new StageplayDocument.SceneChange("shot",100,doc.set(),StageplayDocument.Transition.FADE_BLACK,30)));
+        workspace.controller().replace(doc);
+        input.handleKeyEvent(GLFW_KEY_TAB,GLFW_PRESS); tick();
+        assertEquals(List.of(0,20,100,100),hud.rows().stream().map(StageplayHud.Row::frame).toList());
+        assertTrue(hud.rows().stream().anyMatch(row -> row.label().equals("Camera shake")));
+        assertTrue(hud.rows().stream().anyMatch(row -> row.label().equals("Scene change")));
+        input.handleKeyEvent(GLFW_KEY_TAB,GLFW_RELEASE);
+        input.handleKeyEvent(GLFW_KEY_F1,GLFW_PRESS); tick();
+        assertTrue(hud.rows().stream().anyMatch(row -> row.label().equals("Camera shake / quake")));
+        assertTrue(hud.rows().stream().anyMatch(row -> row.label().equals("Scene changes / transitions")));
+    }
+
     private void tick() {
         input.refreshLogicalSnapshot();
         assertTrue(hud.update(input), "Stageplay must prevent a second level-editor input pass");

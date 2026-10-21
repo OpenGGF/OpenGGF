@@ -88,7 +88,7 @@ public final class StageplayCaptureTool {
                 if (arguments.rom() == null) boot.boot(identity(game), 0, 0); else boot.boot(arguments.rom(), 0, 0);
                 var audio = GameServices.audio();
                 if (audio.presentationFrameRate() != StageplayDocument.FRAMES_PER_SECOND)
-                    throw new IOException("Stageplay version 1 exports require 60 Hz audio; this ROM is using " + audio.presentationFrameRate());
+                    throw new IOException("Stageplay exports require 60 Hz audio; this ROM is using " + audio.presentationFrameRate());
                 audio.stopMusic(); audio.stopAllSfx();
                 try (var library = new SceneRomLibrary(GameServices.module(), GameServices.rom().getRom(), GameServices.rom());
                      var resources = new StageplayResources(library, false);

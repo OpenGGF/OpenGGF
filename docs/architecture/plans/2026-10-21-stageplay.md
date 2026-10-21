@@ -289,3 +289,42 @@ unchanged smoke run. Validate the actual destination push policy, push only
 engine `develop` and desktop `main`, then remove accounted-for task trees and
 the detached baseline. Final destination commits, push results and cleanup are
 reported at task completion; this handoff pins the verified source and limits.
+
+## Directing extension checkpoint
+
+Outcome in progress: Tails accessory fidelity, dynamic cameras, constrained authoring
+windows, scene transitions, agent screenplay tooling/skill, original short and promo.
+Pinned destinations are engine `develop` at `ca58b4691bbc92bfee66b4b18dfed8cad68beed6`,
+Editor `main` at `53722132a07ee409d2740349aeebcaf801de4944`, and Media `main` at
+`40ed0c0048484c51db40eac562229b3c4af05203`. Isolated local branches own development;
+main workspaces retain their branches and unrelated changes.
+
+Core agent owns model/evaluator/persistence/registration/handover; rendering agent
+owns accessory ROM providers and scene rendering/resources; frontend agent owns both
+editors and window policy. Lead owns authoring tool/skill, API pin, production sources,
+combined validation, integrations and cleanup. Workers do not schedule Maven jobs.
+Focused regression checks precede one change-based smoke selection (never the public
+release-only full suite). Movie capture and UI pictures use no-device audio and Linux
+surfaceless EGL with desktop display variables removed. Media sources will be archived
+under `projects/stageplay` in OpenGGF-Media; videos remain in the external production root.
+
+Focused extension validation: Java 25 `test-compile` found one missing checked
+exception declaration in the new ROM test, corrected without production changes.
+The first combined `-Dtest=TestStageplay*,TestTailsTailPose,TestTailsTailsDirectionalAnimation,TestTailsTailsFlightSelection,TestTailsRendering,TestSpriteManagerMainTailsTailsDispatch,TestDonorTailsTailBanks,TestModApiSignatureSurface,TestModApiPinPolicy`
+run used all three absolute verified ROM paths, `-Dopenggf.headless.gl=surfaceless-egl`
+and `-Dopenggf.stageplay.hudPictures=true`: 154 tests, zero failures, four errors,
+zero skips. Three errors were nested Mockito fixture construction; the fourth added
+a set after creating the intentionally immutable ModAssetRoot snapshot. Corrected
+fixtures preserve the production semantics. A narrow queued `package` with
+`-Dtest=TestStageplayTool,TestStageplayRegistration,TestStageplayRenderer` then passed
+18 tests, zero failures/errors/skips, including two added bulk-timeline CLI cases.
+Both runs used `-Dmse=off`; packaging completed engine, universal and SDK artifacts.
+The candidate pin is regenerated from that surface; no version/topology change.
+
+Preflight initially rejected the host's default Lua version. Explicit
+`LUA_BIN=/usr/bin/lua5.4` passed Java 25/Lua/PowerShell checks. The change-based
+selection against the pinned engine base contains 3,549 smoke candidates plus
+guards, in batches of at most 50. Expected ROM-heavy cost is up to about an hour;
+use a 90-minute invocation cap (queue waiting excluded) and the standard 10-minute
+no-output stop. Fix attributable regressions narrowly; retain and attribute inherited
+failures by identity rather than repeating the broad run.

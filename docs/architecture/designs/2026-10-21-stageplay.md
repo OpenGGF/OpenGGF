@@ -161,3 +161,38 @@ The tested runtime implementation is `d74015656`;
 final candidate commit, combined smoke results and delivery are recorded in the
 [implementation plan](../plans/2026-10-21-stageplay.md). Media review artifacts are
 outside the repository, under the task's `stageplay-delivery` directory.
+
+## Directing extension (2026-10-21)
+
+The follow-up adds sampled accessory poses, camera directing/shake/zoom, temporary
+window constraints, scene transitions, and a noninteractive authoring workflow.
+Version 2 appends `cameraEffects` and `sceneChanges`; strict version-1 reads migrate
+with empty lists, and the original Java constructor remains available. Every scene
+boundary has actor and camera keys. The evaluator holds the outgoing segment before
+a boundary and restarts animation phase after it. Shake is deterministic from frame,
+frequency and seed; the unshaken camera remains available for native handover.
+
+A transition is a cut or a bounded fade/wipe straddling the switch. At its midpoint
+the incoming set is selected beneath full coverage. Rendering overlays transitions
+after captions. All sets preflight before playback; mod-authored levels and voices
+share a 64 MiB encoded asset budget and typed LoadOps. A native binding rejects
+cross-set handover before capturing native state. Staged scenery can cross games
+without loading or mutating the held native world.
+
+S2 Obj05 reuses Tails' body art, so testing only for a separate tail bank was wrong.
+The ROM provider now samples accessory relationships using shared native selection
+and animation tables. Stageplay consumes a generic pose/latch API; it has no new
+game-name branch. Fixed mapping holds infer an accessory from a matching ROM script.
+
+Both frontends expose camera mode, effect/scene CRUD and atomic boundary insertion.
+The host owns temporary 16:9/minimum sizing, monitor fallback and restoration; the
+scene's pixel dimensions remain independent and letterboxed. Gameplay configuration
+is not rewritten.
+
+The authoring tool compiles shot-local JSON into the canonical v2 document. It adds
+boundary anchors and hides absent roles, rather than requiring agents to calculate
+global frames or navigate menus. ROM catalog queries expose actual scripts and set
+bounds. Compilation and inspection require no ROM; capture validates resources and
+uses the existing no-device headless host. Rejected: a second playback evaluator,
+implicit cross-game native loads, copying ROM art into production sources, and
+schema coercions which could silently move cues. No round-trip decompiler is claimed.

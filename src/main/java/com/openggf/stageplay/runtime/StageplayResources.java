@@ -52,8 +52,11 @@ public final class StageplayResources implements AutoCloseable {
         sets.put(Objects.requireNonNull(source), Objects.requireNonNull(kit));
     }
     public SceneLevelKit set(StageplayDocument document) {
+        return set(document.set());
+    }
+    /** Resolves any shot's set with the same identity and bounded-path checks as the opening set. */
+    public SceneLevelKit set(StageplayDocument.SetSource sourceKey) {
         requireOpen();
-        var sourceKey = document.set();
         SceneRomArt art = rom(sourceKey.gameId());
         if (!sourceKey.romSha1().isEmpty() && !sourceKey.romSha1().equalsIgnoreCase(art.romSha1()))
             throw new IllegalArgumentException("Scene set requires a different exact ROM identity");
@@ -80,12 +83,15 @@ public final class StageplayResources implements AutoCloseable {
     /** Preflight before transport/export. Missing mapping frames and animations are errors, not invisible actors. */
     public void validate(StageplayDocument document) {
         set(document);
+        for (var change : document.sceneChanges()) set(change.set());
         for (var actor : document.actors()) {
             var art = character(actor.gameId(), actor.character());
             for (var key : actor.keys()) {
                 if (key.pose() >= art.frameCount()) throw new IllegalArgumentException("Missing mapping frame for " + actor.name());
                 if (key.pose() < 0 && art.animationFrames(key.animation()).length == 0)
                     throw new IllegalArgumentException("Missing animation " + key.animation() + " for " + actor.name());
+                rom(actor.gameId()).characterAccessoryPose(actor.character(), key.animation(), key.pose(),
+                        0, key.flipX(), 0, 0);
             }
         }
         for (var cue : document.audio()) if (cue.kind() != StageplayDocument.AudioKind.VOICE
