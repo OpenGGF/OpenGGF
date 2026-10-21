@@ -718,7 +718,9 @@ class TestArchUnitRules {
             return stageplayCoreType(target) && !typeOrNested(target, "com.openggf.stageplay.StageplayControl");
         if (typeOrNested(origin, "com.openggf.editor.hud.StageplayHud"))
             return typeOrNested(target, "com.openggf.stageplay.StageplayDocument")
-                    || typeOrNested(target, "com.openggf.stageplay.StageplayController");
+                    || typeOrNested(target, "com.openggf.stageplay.StageplayController")
+                    || typeOrNested(target, "com.openggf.stageplay.StageplayDialogue")
+                    || typeOrNested(target, "com.openggf.stageplay.StageplayTimeline$CameraPose");
         if (typeOrNested(origin, "com.openggf.tools.StageplayTool")
                 || typeOrNested(origin, "com.openggf.tools.StageplayScriptCompiler"))
             return Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayStore",
@@ -753,6 +755,8 @@ class TestArchUnitRules {
                 "com.openggf.stageplay.StageplayPlayback"));
         assertTrue(!approvedStageplayConsumer("com.openggf.editor.stageplay.StageplayWorkspace",
                 "com.openggf.stageplay.runtime.StageplayAudio"));
+        assertTrue(!approvedStageplayConsumer("com.openggf.editor.stageplay.StageplayWorkspace",
+                "com.openggf.stageplay.runtime.StageplayAssets"));
         assertTrue(!approvedStageplayRuntimeDependency("com.openggf.stageplay.StageplayPlayback", "editor"));
         assertTrue(!approvedStageplayRuntimeDependency("com.openggf.stageplay.editor.StageplayEditorSession", "tools"));
         Set<String> violations = new TreeSet<>();

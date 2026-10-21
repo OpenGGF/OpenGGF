@@ -375,3 +375,16 @@ Both the source and MP4 exports decoded completely; each lossless audio channel 
 2,448,000 samples. Full-short browser playback reached 51 seconds at rate one with
 3,060 presented frames and zero reported dropped frames. This is authored scene
 presentation, not native gameplay qualification or physical audio listening.
+
+Boundary correction after `ffe9492aabb7b988876b9f096079a24159f6196a`: the workspace
+now checks portable document asset references without importing the runtime asset
+loader. HUD permissions name only the new pure dialogue helper and camera value.
+Queued `-Dtest=TestStageplayWorkspace,TestStageplayDialogueWorkspace,TestStageplayHud`
+passes 24 tests, no failures/errors/skips. The repeated exact
+`-Pguards -Dtest=TestArchUnitRules` finishes 32 tests with two failures and no
+errors/skips: `shared_code_does_not_construct_concrete_sonic_provider_classes` and
+`shared_layers_do_not_depend_on_game_specific_packages`. Both failure identities
+and complete assertion messages equal the matched detached `ca58b4691` baseline:
+HubMusicController's three concrete audio-profile constructors and nine total
+game-specific dependencies. The Stageplay ownership rule passes; the inherited
+music-provider issues remain outside this change.

@@ -6,7 +6,6 @@ import com.openggf.game.MenuTextEditor;
 import com.openggf.stageplay.StageplayController;
 import com.openggf.stageplay.StageplayDocument;
 import com.openggf.stageplay.StageplayDialogue;
-import com.openggf.stageplay.runtime.StageplayAssets;
 import com.openggf.stageplay.StageplayStore;
 import com.openggf.stageplay.StageplayTimeline;
 
@@ -419,7 +418,9 @@ public final class StageplayWorkspace {
 
     private static boolean hasRelativeAssets(StageplayDocument doc) {
         return !doc.set().levelProject().isEmpty() || doc.sceneChanges().stream().anyMatch(c -> !c.set().levelProject().isEmpty())
-                || doc.audio().stream().anyMatch(c -> !c.asset().isEmpty()) || !StageplayAssets.imagePaths(doc).isEmpty();
+                || doc.audio().stream().anyMatch(c -> !c.asset().isEmpty())
+                || doc.dialogueSkins().stream().anyMatch(skin -> !skin.decorationAsset().isEmpty())
+                || doc.dialogue().stream().anyMatch(cue -> !cue.portraitAsset().isEmpty());
     }
 
     private static String relative(Path oldRoot, Path newRoot, String reference) throws IOException {
