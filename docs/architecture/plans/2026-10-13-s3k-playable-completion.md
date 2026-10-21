@@ -24254,3 +24254,69 @@ broad smoke/full-suite, canonical trace, new native acceptance or controller-rou
 pass. Current route impact is unknown; no route death is attributed to this fix.
 The [SSZ matrix](../validation/levels/s3k-ssz-act1.md#mtz-orb-allocation-and-first-dispatch--2026-10-21)
 and coverage backlog retain the inherited viewport/donor/team/native gaps.
+
+
+### 2026-10-21 — Root composed MTZ initializer and Tails320 completion
+
+Root normal merges `f1ff6f284db7db8b10e10c373f5493f8ce25adfb` (Tails leaf
+`96c2e062dd38a40a9ccf4157c2dfcda74ab91e20`) and
+`cdada405a384ab19c88fc82375b79cbc38c9f30c` (MTZ leaf
+`74b9f7b364e3c5586381594fa0332917785a767e`) preserve existing Root work.
+Independent source/data reviews found no production/test objection. Root
+corrected one stale Tails script comment, preserving every14923 input row and
+the8350 replica prefix; the resulting script SHA-256 is
+`796eb4ccd95417ccc80d104296b24593ddcb7ab0b459cad915967de8e0fbd45a`.
+Only three documented MTZ ROM-argument quotes were corrected, from single to
+double quotes so the explicit path variable expands. Both complete incoming
+evidence appends remain; current Root sections were preserved by intent.
+
+At tested headcdada, exactly the two reviewed MTZ production owners differ
+from current backend/POM baselinecf46. One focused13-class normal-lane request
+ran **1472T2F0E0S**: all1459 component/domain/rewind/mandatory S3K cases pass;
+paired upper/complete both pass; Tails320 entry/complete, both replica widths
+and all five GHZ approaches pass. The only failures remain
+`TestSszTailsColdRouteCapture#coldMechaEntryRetainsItsNativeWorldBox(int)[2]`,
+`approach death at 9560` (line89), and
+`coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[2]`,
+`death at 9560` (line251). Exact identities/type/messages were compared;
+no full historical rendered-stack equality is claimed. Paired retains50
+complete two-cycle45 windows and actual DEZ20550/20551. Tails320 retains98
+complete windows and the existing semantic/history oracles after MTZ adoption.
+
+All13 XMLs,26 report files,1472 testcase outcomes,69 properties per suite,
+8057-byte actual classpath and complete failure bodies/streams were inspected.
+Java25.0.4.1, explicit original three ROMs and surfaceless EGL were retained.
+Classpath SHA-256 stays
+`9c876456c5ab9625f424b5b2dbcc19f9bf6f9b733cfac477957cd78894589610`.
+The one lifecycle compiled4174 production/4263 test sources at release25.
+Maven displayed02:14min; queue, compiler and parent elapsed are unknown.
+FAST/no-manifest and unmeasured Kos deterministic-estimate warnings remain.
+This is bounded focused validation, not native timing/pixels, strict trace,
+broad smoke/full-suite or a whole SSZ matrix pass. Inspected exact owned
+reports/test temporaries were consumed; compiled outputs were preserved.
+
+```bash
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.game.sonic3k.events.TestSszMetropolisRecipeBirth,com.openggf.tests.TestS3kSszMtzArenaHeadless,com.openggf.tests.TestS3kSszGhzArenaHeadless,com.openggf.game.rewind.TestEveryObjectRewindRoundTrip,com.openggf.game.rewind.TestBossChildExactStateRewind,com.openggf.game.rewind.TestObjectIdentityRebindingAcrossRewind,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils,com.openggf.tools.TestSszColdRouteCapture,com.openggf.tools.TestSszTailsColdRouteCapture' \
+  "-Dsonic1.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_MAIN}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test -B
+```
+
+The separate native703 adoption at32e88 passed13 exact boundary/pin guards.
+The one initialized V5 source-copy opt-in check remains1T1F0E0S at its exact
+capability JSON byte comparison. Root and independent review proved the native
+capability bytes unchanged322=4c3=703; the frozen consumer exactly matches its
+declared9e51ff origin. Only the producer's later task8 executable digest differs.
+No executed baseline run or703-introduced failure is claimed. Immutable artifact
+bytes/provenance remain intact; a bounded followup separates origin equality
+from current-producer compatibility. No native heap/fullCPU/title parity follows.
+Both owned native-check report roots were read and consumed.
+
+Root's source/Plan and external registry retain exact tested epochs and limits.
+Sonic solo, Tails800, cold CNZ2 Knuckles and origin-copy-contract work continue
+independently. Main develop and unknown files/submodules remain untouched; native
+publication must precede any outer gitlink push. The goal remains active; no
+complete delivery, push or owned-worktree cleanup is claimed.
