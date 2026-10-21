@@ -1607,3 +1607,73 @@ movement disagree; native backward loads keep the ROM borrow branch. The full
 route is requalified without changing the movie or supplying gameplay state.
 See the [repair and validation record](../../plans/2026-10-13-s3k-playable-completion.md#wide-route-coarse-camera-discontinuity--2026-10-17)
 for the matched baseline, causal controls, exact commands and remaining limits.
+
+
+## Independent Knuckles incoming first-door check (2026-10-21)
+
+On runtime `b078214e74ddbcb393cbc0173fd8c74055b0dadb`, the fixed26635-input
+first-door proposal from the R5/R6 exploration (`ed736fd3b`) has two fresh
+uninterrupted ordinary static replays. Both used the original locked-on ROM,
+cold9/0 native320 solo Knuckles/off Settings, normal drawing on every input,
+and the accepted public live-history recording seam23307..23452. Neither
+restored, steered, seeded gameplay or invoked terrain/contact predicates.
+
+The two original selected-public-state files are byte-identical:26635 rows,
+all51 fields,6292632 bytes each, SHA256
+`9fdf60e5d2588c14bb23895c0b9f9ae57fc2163dd1badd7e4dc0af0c847e247d`.
+This is the complete selected player/button/door/boss/results/flow/history/owner
+projection, not every object or native state. No pair field was excluded.
+It retains actual initialized six-HP/gate admission20499, same WorldSession/P1/
+controller but new Level/ObjectManager23397, nonempty history90/0→91/91,
+released362/1967 at24027, earned rings1/2/3 at24528/24536/24544, button press/
+opening26510, fully-open64 at26573, grounded landing26591 and passage26634.
+Final2796/1900, fractions4608/15616, X/ground speed336, Y speed0,3 rings/3 lives,
+grounded/jump-clear/free; no death/life loss, and no hurt in the2607 new Act2
+inputs. Forty selected rows remain externally; both full raw series were read,
+compared and consumed after inspection.
+
+The new independent method is
+`TestLrzKnucklesColdRouteCapture#coldKnucklesReplaysIncomingRouteAndFirstActTwoDoor`.
+It forces normal every-input drawing and asserts those real owner/route events,
+including history-retirement relations rather than a fixed history frame.
+Its exact script/BK2 resources are `lrz-knuckles-cold-act2-first-door-320`:
+script SHA256 `f0f39cd4d8a4b70453429ff271fb8dd2dac35a16096fd428a1c5310bf88ee74f`,
+BK2 SHA256 `b7ed53c9c8685c0988b6cdf042ccdaf2e2f373751557dbaec1448d54f96c13cc`.
+Production author/loader and ordered input checks preserve every26428 R5,
+24028 accepted handoff and20500 miniboss row, all P2 neutral, two zip members
+without a state payload. The five original method bodies and shared helpers
+reconstruct byte-exactly by removing only the new method/separators; all14
+existing Knuckles LRZ resources remain unchanged. The other three longer
+maintained methods retain their prior current input5027 negatives; they were
+not rerun here.
+
+The accepted second method retains its68 fight/handoff windows. The new method
+adds17 destination windows, using that unchanged helper's actual WorldSession/
+Level/ObjectManager/mode/pending/fade guards, original input-history restoration
+and strict full-key capture/restore/forward comparison:
+
+| Purpose | Window starts |45-input endpoints |
+| --- | --- | --- |
+| First-door approach |26427 |26472 |
+| Jump edge |26462,26463 |26507,26508 |
+| Glide edge |26498,26499 |26543,26544 |
+| Button pre/pressed/released |26509,26510,26513 |26554,26555,26558 |
+| Full-open pre/at/post |26572,26573,26574 |26617,26618,26619 |
+| Glide-to-slide pre/post |26579,26580 |26624,26625 |
+| Landing endpoints pre/at/post |26545,26546,26547 |26590,26591,26592 |
+| Grounded passage endpoint |26589 |26634 |
+
+All starts follow the real23397 load; no outgoing snapshot crosses replacement.
+Only43 inputs follow landing26591, so no post-landing45-input start is claimed.
+There are no inputs after passage26634. The one exact new-method request
+(session74285) passes **1T/0F/0E/0S**, with all17 windows and all60 registered
+keys. Actual XML selected only this method with Java25.0.4.1, surfaceless EGL
+and the original absolute S3K ROM property; Maven43.118s, queue wait353s.
+The two qualifiers ran zero JUnit tests. Build-only test-compile passed before
+the method request; no original method or whole class was rerun. Owned raw
+series/logs/XML/tmp/adapter class were consumed after inspection. Missing
+measured load-time manifests retained NONE/estimated costs, not native timing
+proof.
+This partial route is independent of the longer failing methods, not Act2
+completion or HPZ/campaign/native pixel/clock/terrain-d1/positive-ring-handoff
+reset coverage.

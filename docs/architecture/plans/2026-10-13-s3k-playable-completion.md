@@ -26953,3 +26953,98 @@ full-act/breadth/HPZ/campaign, true reset/bootstrap, native terrain-return/d1,
 stock-route causality, native pixels/timing and GC are not certified. Root owns
 independent source review, the combined change-based smoke plan and integration;
 this worker creates only a local reviewable commit.
+
+
+### LRZ incoming first-door maintained leaf R7 — 2026-10-21
+
+Own isolated branch `feature/ai-lrz-knuckles-first-door-maintained-20261021`
+at exact runtimebaseb078214e74ddbcb393cbc0173fd8c74055b0dadb preserves ed736,
+ffdb/eef6/r3/R5/R6 refs and the clean preclimb876 checkout. No Root/Main runtime source or build target was modified; its composed smoke
+was not observed. The current absolute Main wrapper supplied scheduling.
+Root explicitly renewed only active R7 to15:04:49UTC while request74285 was
+already queued; original13:04 expiry and older sibling histories are preserved.
+The pair/one-method budgets and frozen source/environment are unchanged.
+
+Before any maintained adaptation, the fixed26635 proposal was replayed twice
+from ordinary row0 with normal drawing, unchanged inputs/settings/environment
+and no restoration/steering. Sessions24873/22321 completed0, Maven16.248s/
+16.771s, zero JUnit tests; second admission waited337s. The original full51-field
+selected-public series match byte-for-byte on all26635 rows, SHA256
+9fdf60e5d2588c14bb23895c0b9f9ae57fc2163dd1badd7e4dc0af0c847e247d.
+Source `LrzKnucklesFirstDoorStaticQualifier.java` SHA256
+61d05e5810b17e25139afb3d3aafbe5e3bd12d9b402178a162604773f45b3bd6
+remains under `$TASK_ARTIFACT_ROOT/lrz-knuckles-first-door-maintained-r7-20261021/`.
+The same absolute Main queue wrapper/Java25.0.4.1/EGL/nullAL/Lua5.4/original ROM/
+three unset ambient JVM options/no-desktop environment was retained. Each exec
+used that class with ROM, exact proposal BK2/script, exact R5 BK2 and a fresh
+immediate target qualifier01/02 directory. Public history recording used only
+23307..23452. The initial missing-import compile error was corrected before any
+replay; a later read-only inverse-check loop was interrupted and replaced by
+an exact byte splice, with no file mutation.
+
+The [Act2 matrix](../validation/levels/s3k-lrz-act2.md#independent-knuckles-incoming-first-door-check-2026-10-21)
+records literal events, hashes, the new method and all17 purpose-based45-input
+windows. All51 pair fields were compared; separately22 retained R6 samples
+match40 common player/button/door fields (R6 Level/OM references begin in the
+destination, whereas R7's begin in Act1). This is not a complete R6 raw-series
+comparison or a native state claim. Exact20500/24028/26428 input prefixes,
+neutral P2 and production-loader/script/BK2 all-row agreement are retained.
+Removing only the new method/separators reconstructs the complete b078 test;
+all14 existing LRZ Knuckles resources remain unchanged. Strict comparator and
+shared drawing/semantic helpers are untouched. New windows are destination-only;
+the accepted second method's68 earlier windows remain independent and untouched.
+
+Build-only test-compile79771 completed0 (Maven27.679s) after activity-isolation
+waiting; the last wait notice was150s, not an exact measured wait. Main classes
+were already up to date;4268 test sources compiled. The one exact affected
+request74285 then completed **1T/0F/0E/0S**, all17 windows/60 registered keys.
+Actual XML selected only the new method; suite16.765s, testcase16.389s,
+Maven43.118s, admission353s. Java25.0.4.1, original absolute S3K ROM property,
+surfaceless EGL and zero skips/failures/errors were inspected, including the
+actual system output and load-time NONE/estimate warnings.
+
+```bash
+env -u JDK_JAVA_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS \
+  -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM" \
+  '-Dopenggf.surefire.reports=target/lrz-first-door-r7-reports' \
+  '-Dopenggf.test.tmpdir=target/lrz-first-door-r7-test-tmp' \
+  '-Dtest=TestLrzKnucklesColdRouteCapture#coldKnucklesReplaysIncomingRouteAndFirstActTwoDoor' test -B
+```
+
+`S3K_ROM` denotes the verified original absolute ROM and `OPENGGF_MAIN` the
+checkout providing the current wrapper. The same environment/wrapper prefix
+submitted each static qualifier with these exact argument shapes:
+
+```bash
+--normal -Dmse=off '-Dexec.executable=/usr/lib/jvm/java-25-openjdk/bin/java' \
+  "-Dexec.args=-cp %classpath com.openggf.tools.LrzKnucklesFirstDoorStaticQualifier \"$S3K_ROM\" $R6_BK2 $R6_SCRIPT $R5_BK2 $NEW_TARGET_DIRECTORY" exec:exec -B
+```
+
+The R6 basename is `lrz-knuckles-cold-act2-first-door-passage-320-proposal`
+under `$TASK_ARTIFACT_ROOT/lrz-knuckles-first-door-r6-20261021/`; the R5 BK2 is
+`lrz-knuckles-cold-act2-first-door-320-proposal.bk2` under the sibling
+`lrz-knuckles-act2-controller-r5-20261021/`. New output directories were
+`target/lrz-first-door-r7-qualifier01` and `...qualifier02`. Compilation used
+the same environment/wrapper with `-Dmse=off -DskipTests test-compile -B`.
+
+Frozen source/resource diff SHA256 is
+`d54a07ca53747385b369ed2fe15524bd2a46db88c19250afb95f4e26e3a4d90c`;
+Java test SHA256 is
+`1326350d0492187a149bf26159614110a90af2f20500169927cfe13aa43ec840`.
+The proposal was fixed before both qualifiers; the new Java/resource bytes
+were frozen before the focused request and stayed unchanged through it.
+All16 own raw/log/XML/tmp/adapter class files14111165B were consumed by exact hashes under worktree/activity
+leases. Forty selected public rows/useful source/proposal remain externally;
+no log archive or pass cache. The8061 production-class manifest exactly
+returned to175135ed4af18d75c3da16f2ead09b03ca658f87f24c6dc91fece01abb4a839f,
+matching both ordinary qualifiers and the maintained run. Only the new
+method/resources and three existing evidence documents form the local leaf;
+its inverse removes the new method/resources and reverts the three doc deltas.
+No production/POM/native/physics/controller edit, old assertion relaxation,
+long-route propagation, full-act/HPZ/campaign/native-pixel/clock/descriptor-d1/
+positive-ring-handoff-reset claim or extra author policy is included.
