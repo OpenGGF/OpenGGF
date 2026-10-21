@@ -4487,3 +4487,13 @@ and17 legacy available-scalar gates match (46 unique); missing historical fields
 Same-JVM production all-row/finite-pad and independent script/ZIP/SIX-prefix proofs;
 **0 JUnit/skips N/A**. Only first held input observed; original cause/private episode,
 longer hold/parent/native/route qualification and expected46 remain unchanged. [Facts, hashes, command and timing](../../plans/2026-10-13-s3k-playable-completion.md#r17-exact-original-first-held-input-retains-support--2026-10-21).
+
+
+## R18 original child-to-parent admission — 2026-10-21
+
+At exact `9772068a7`, one ordinary cold CLI preserves all14945 R17 pads and original46 available-field checkpoints; accepted14944 adds the47th matching boundary.
+After27 neutral rows, firstXgate14971 gives4409/1164; ONE A-only14972 releases the actual child, VX0/VY-1664/air+jumping/control clear.
+FIRST actual original parent rider15022 is managed/live atP1(4409,1099),V0/ground/free; ONE neutral row15023 admits SAME parent ground/control+CPUallowance/movement suppression at4410/1100, thenSTOP.
+Exactly79 new/15024 total, ONE newA edge; both unhurt/live,62rings/3lives. P2Up/ground/manual/NORMAL/flag0fuel0 and actual bound world/pair/focus/managers/LEVEL remain intact.
+Raw original placement134/post.child/rider joins are local to this JVM; no class/XY/native inference. Same-JVM finite-pad/all-row and independent script/ZIP/EIGHT-ancestor proofs agree; **0 JUnit/skips N/A**.
+Source/maintained inputs/expected46 unchanged. No longer parent hold/release/onward/native/route qualification; private episode/contact and stored-sensor freshness UNKNOWN. [Facts, hashes, command, limits and timing](../../plans/2026-10-13-s3k-playable-completion.md#r18-one-vertical-release-admits-the-original-parent-post--2026-10-21).
