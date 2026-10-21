@@ -1,0 +1,7 @@
+interface:
+  display_name: "Promo Direction"
+  short_description: "Creative direction for promos and trailers"
+  default_prompt: "Use $promo-direction to plan, compose and self-review an OpenGGF promo or mod showcase with tools/media/promo_kit.py."
+
+policy:
+  allow_implicit_invocation: true
