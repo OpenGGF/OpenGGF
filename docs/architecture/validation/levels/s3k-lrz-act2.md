@@ -1607,3 +1607,97 @@ movement disagree; native backward loads keep the ROM borrow branch. The full
 route is requalified without changing the movie or supplying gameplay state.
 See the [repair and validation record](../../plans/2026-10-13-s3k-playable-completion.md#wide-route-coarse-camera-discontinuity--2026-10-17)
 for the matched baseline, causal controls, exact commands and remaining limits.
+
+
+## Knuckles current-physics first-door proposal (2026-10-21)
+
+This is an ordinary-input exploration frontier on
+`b078214e74ddbcb393cbc0173fd8c74055b0dadb`, following the accepted
+[24028-input fight/handoff](s3k-lrz-act1.md#knuckles-current-physics-fight-and-act2-handoff-2026-10-21).
+It does not replace the maintained middle/upper/completion movies or their
+assertions. Those three methods and the unpropagated longer controllers remain
+unchanged, with inherited current input5027 negatives pending. No fresh static
+qualifier pair or new route rewind coverage was run in this slice.
+
+The inlet is the same cold zone9/act0 native320 solo Knuckles, donor off,
+original locked-on ROM (SHA1 `CFBF98C36C776677290A872547AC47C53D2761D6`),
+ordinary title policy and normal rendering after every input. No position,
+clock, ring, health, terrain or private-state seeds are supplied. Indices below
+are zero-based movie inputs, not native clocks.
+
+R5 replayed the accepted24028 inputs once, reaching the released Act2 endpoint
+362/1967 with zero rings. Two finite policies each appended2400 ordinary inputs:
+held Right ended2357/1980; a ground jump/glide policy reached2741/1900 with three
+earned rings. Its authoring branch restored the engine's whole registry and
+external held-input history only while WorldSession, Level, ObjectManager,
+player and LEVEL ownership remained the same; all60 keys matched immediately
+after restoration. The selected26428-row proposal preserves every accepted
+input and neutral P2. It ended grounded/jump-clear, with3 lives, no hurt/death
+or life loss, free controls and no pending boundary. The nearby actual Java
+owners were button slot9 at2744/1838 and door slot13 at2768/1888; these are
+run-local Java identities, not native object addresses.
+
+R6 used two fresh uninterrupted cold replays of that exact26428-row proposal,
+with no restoration or adaptive steering. Both reproduced input26427 exactly:
+centre2741/1900, fractions3072/27904, X speed/ground speed12, Y speed0,
+grounded/jump-clear/glide0, three rings/lives and free controls. The first
+finite tail used the existing middle-script recipe35L/35R+A/1R/80R+A then Right.
+It pressed the button and fully opened the door, but did not cross the door's
+solid window; after2400 inputs it ended2384/2092 without hurt/death/life loss.
+Its release at26579 changed glide1 to fall2 at2768/1909. The existing movement
+owner checks released jump after glide movement/collision and divides X speed
+by4 when entering fall (`PlayableSpriteMovement:993-994,1968-1984`). This
+supports trying a longer held jump, not a native cause verdict for the first
+trajectory.
+
+The final policy kept35L/35R+A/1R and allowed160R+A before ordinary Right.
+It stopped at genuine first-door passage after207 appended inputs, so only
+35L/35R+A/1R/**136R+A** were actually emitted. No following Right tail ran.
+The observed public owner events were:
+
+| Input | Actual event / state after normal rendering |
+| --- | --- |
+| 26510 | Button mapping1 and door opening/timer1; button and door trigger index1 |
+| 26513 | Button mapping returns0; door opening remains latched |
+| 26573 | Door fully open, timer64, centre2768/1824 |
+| 26580 / 26591 | Glide1→slide3, then grounded glide0 |
+| 26634 | First P1 centreX beyond doorX+$1B:2796/1900, fractions4608/15616, X/ground speed336, Y speed0; grounded/jump-clear/free,3 rings/3 lives |
+
+All207 tail observations retained the same WorldSession, Level, ObjectManager
+and player, LEVEL9/1, no pending boundary, free control flags and the actual
+button/door references. No hurt/death or life loss occurred. Public rows of both
+R6 policies were identical through26578 before their different jump-release
+choice. The button's pure mapping/trigger getters (`LrzButtonHorizontalObjectInstance:195-214`)
+and door's pure timer/opening/open getters (`LrzDoorObjectInstance:169-189`) were
+observed; contact predicates and terrain probes were never invoked by the
+author. Their existing owners are `Obj_LRZButtonHorizontal` and `Obj_LRZDoor`;
+this slice adds no native execution, descriptor/d1, pixel or clock proof.
+
+The final **26635-input proposal** is retained outside the repository in
+`$TASK_ARTIFACT_ROOT/lrz-knuckles-first-door-r6-20261021/`:
+
+- `lrz-knuckles-cold-act2-first-door-passage-320-proposal.script`, SHA256
+  `f0f39cd4d8a4b70453429ff271fb8dd2dac35a16096fd428a1c5310bf88ee74f`;
+- matching `.bk2`, SHA256
+  `b7ed53c9c8685c0988b6cdf042ccdaf2e2f373751557dbaec1448d54f96c13cc`.
+
+Production InputLogAuthorTool/Bk2MovieLoader round trips and an independent
+ordered script/BK2 row comparison agree on all26635 inputs, all26428 R5 prefix
+rows and all24028 accepted rows. P2 is neutral throughout. The zip contains
+only `Header.txt` and `Input Log.txt`, with the correct Genesis two-pad header
+and26635 count, no state payload. Compact selected public rows and the finite
+author sources remain with the proposal; full state series, logs and adapter
+classes were consumed after inspection.
+
+R5's sole queued author execution (session20431) completed0, Maven18.046s;
+R6 sessions13843/86867 completed0, Maven16.520s/16.535s. The last R6 queue wait
+notices were241s/60s; exact admission times are not inferred from those notices.
+These standalone executions ran **zero JUnit tests**. Java25.0.4.1, surfaceless
+EGL, null OpenAL, Lua5.4, the verified original absolute ROM, unset ambient JVM
+options and no desktop display were retained. Missing measured KOS cost
+profiles used deterministic estimates; no native load-time claim follows.
+No runtime, POM, maintained resource/test/oracle or first/second-method change
+was made. Fresh static replays, semantic replay windows and coherent downstream
+route propagation remain separate work before this proposal can replace a
+maintained route. The unreconstructed native floor descriptor/d1 and the cause
+of the old input5027 failures remain open.
