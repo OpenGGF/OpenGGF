@@ -515,6 +515,19 @@ and writing the ROM animation word changes both current and previous animation.
 The [KiS2 wall investigation](research/trace/2026-09-14-kis2-chain-frontier.md#wall-contact-continuation-2026-09-15-base-b8d0ae91b)
 records independent geometry, position-word and animation-restart regressions.
 
+**Climb offsets precede the radius.** S3K `Knuckles_Wall_Climb` and KiS2
+`Knuckles_Climbing_Wall` pass `Y-8` / `Y+9` to the vertical helpers;
+`CheckCeilingDist_WithRadius` / `sub_F828` then subtract/add the sign-extended
+**X** radius. Stock 10/10 probes therefore reach `Y-18` / `Y+19`, including
+the mirrored reverse branches. Generic object probes and radius-less player
+probes both miss this geometry. Floor contact lands only at a negative distance,
+copies raw `Primary_Angle`, and writes current animation 5 after floor cleanup;
+it retains `double_jump_property`. Preserve that byte across `setAir(false)`'s
+extra landing effects, and keep the floor tail separate from ledge completion.
+S3K idle uses the same downward geometry and retains the shipped `FixBugs=0`
+distance-to-animation clobber; KiS2 omits the idle probe. See the
+[source-derived component controls](research/trace/2026-09-14-kis2-chain-frontier.md#wall-climb-vertical-contract--2026-10-21).
+
 **A player sensor is not a terrain oracle.** `Sensor.doScan` returns `null` when the
 sensor is inactive, and `AbstractPlayableSprite.updateSensors` deactivates the pair the
 current movement quadrant does not use — ceiling sensors whenever the player is grounded

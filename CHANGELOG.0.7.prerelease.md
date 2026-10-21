@@ -209,7 +209,9 @@ Unreleased. The earlier development themes remain in
   Its removal preserves Sonic and Tails' held state, as in the original, while
   ordinary launches still release them.
   Knuckles' glide foot probes use his own live solidity bits and collision array,
-  including inverted ceiling contacts, independently of camera focus. The native
+  including inverted ceiling contacts, independently of camera focus. Wall climbs
+  include the native radius in vertical probes, powered speed and upper bound;
+  floor landings preserve the native angle, animation and climb timer. The native
   second player keeps its ringless hurt response under human control.
   Hydrocity solid blocks retain underside and side contacts while offscreen.
   Spinning columns use cached sprite visibility to release and recapture riders

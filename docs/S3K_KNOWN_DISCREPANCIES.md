@@ -1625,6 +1625,15 @@ separate. Its isolated R110 affected selection passed 113 tests in 12 classes,
 including 18 independent terrain-query cases; that result belongs to that isolated
 source epoch.
 
+The 2026-10-21 vertical-climb correction based on `c8516838` uses the native
+8/9 pre-offset plus signed X radius in upright, reverse and idle probes. Local
+movement now retains powered speed, signed upper bounds, BD-pose undo and strict
+negative floor landing with raw angle/current animation 5 and the existing climb
+timer. S3K idle still clobbers its animation delta with the floor distance under
+`FixBugs=0`; KiS2 still omits that probe. The
+[source and component validation record](architecture/research/trace/2026-09-14-kis2-chain-frontier.md#wall-climb-vertical-contract--2026-10-21)
+does not identify the separate CNZ wall-distance `-32` stall or certify a route.
+
 The local `dae6c29e` damage correction selects the ringless hurt tail by actual
 first native-P2 identity, the existing touch profile and module companion support,
 independently of CPU input ownership. Overlap, attack, listener, protection and
