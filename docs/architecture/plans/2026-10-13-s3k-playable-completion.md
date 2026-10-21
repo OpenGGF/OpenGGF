@@ -29296,3 +29296,30 @@ Owned raw logs/series/checkpoints/decisions/classes/tmp/extraction/validation co
 20:54:49.177308Z workload/no boot with<120s and21:04:49Z cleanup limits were respected. All earlier refs/history/native actual322/index703/config and maintained runtime/POM/test/movie/oracle/count/window predicates remain preserved.
 Actual terrain/contact/receiver/Mushmeanie/protection/invulnerability/fluid/reverse/mutation/native equivalence and safe onward/full-act/boss/FBZ/history/rewind qualification remain UNKNOWN; owner-written ground exit is not fresh terrain proof.
 Root reviews actual source/data before any later input or maintained adaptation; no push/integration/automatic next scope. See the [R20 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-lower-recovery-jump-to-ledge-ordinary-question-r20--2026-10-21).
+
+
+## R21 first moving lower-ground admission — 2026-10-21
+
+ONE cold ordinary CLI at exact `bf2937e27173e58fbd3705301c25dc5f977175a2`, branch `feature/ai-ssz-first-lower-ground-ordinary-r21-20261021`;
+unchanged [R20 setup](#r20-lower-branch-braking-stops-at-the-east-bound--2026-10-21), all15126 actual pads and exact airborne15125 inlet preserved. R19/R20 failed outcomes remain immutable; no parent restart or retrospective widening of R20's4752 bound.
+All60 unique available R gates match:57prior plus15101/15124/15125; all retained Support/Family facts and original local raw-family joins match. Missing25 R20 raw states remain unretained, not reconstructed.
+Sole policy: Left/noABC/P2Up<=60 to FIRST actual free-ground postdraw, airfalse/riderNULL/control clear/unhurt in4754<=X<4773,1536<=Y<1600, nonzero speed allowed; stop earlier on original safety/support/box/cap failure. NEW4773 follows the source spike padded bound, not a changed old success criterion.
+
+| Input | Actual once-read public boundary |
+| --- | --- |
+| 15125 | P1(4754,1543),VX936/VY3992/G0,air+jumping/free/riderNULL,62rings/3lives/unhurt; exact R20 inlet. |
+| 15126 | Left/noABC: P1(4758,1559),VX912/VY4048/G0,stillair+jumping/free/riderNULL. |
+| 15127 | P1(4761,1574),VX888/VY4104/G0,stillair+jumping/free/riderNULL. |
+| 15128 | FIRST airfalse/jumpingfalse: P1(4765,1580),VX864/VY0/G864,free/unhurt/live/riderNULL; STOP. |
+
+Result `FIRST_FREE_GROUND_LOWER_ADMISSION_TERRAIN_UNKNOWN`:3 new/15129 total, zero new actions/neutral/jump/onward inputs. This admits only the first public moving free-ground boundary; no stable ground or later travel measured.
+Both unhurt/live,62rings/3lives; P2 stays(3950,1264),V0/ground/free/NORMAL/manual/flag0fuel0/contextNONE/targetfalse; original world/managers/nativepair/roster/focus/LEVEL/no pending/fade/reverse intact.
+Actual riderNULL does not identify a terrain receiver. At15128 stored sensors both copy tile255/distance-5/angle255/DOWN and radii9/19; freshness/current terrain mutation/contact ownership remain UNKNOWN.
+All original R20 observer/input/gate/support/family/context/boundary/compare helper bodies remain literal unchanged; no new map join/provider/getter/predicate/sensor/private query. PRE reuses cached previous observation; all3 complete pairs read/checked.
+Same-JVM preboot finite-pad production-author/loader fullbool/mask/payload/Left-neutral fresh/held/released controls plus positiveJUMP0x10/A-only/Right+A; every15129 actual row roundtrips.
+Independent complete script/ZIPpayload and ELEVEN original files15126R20/15101R19/15024R18/14945R17/14945R15/14944/14853/14618/14442/14414/9914 agree; all3 new payloads exactlyLeft/noABC/P2Up.
+Current absolute Main queue `--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl compile exec:exec -B`, Java25 source-mode `FirstLowerGroundContinuation.java`, unchanged verified R20 ROM/EGL/nullAL/Lua/profile/unsets; CLI/Java/launcher exit0, **0 JUnit/skips N/A**, no Surefire/XML.
+Queue363s/Maven17.220s/launcher380.836s overlap; Engine/tail-only UNKNOWN. Entire118599-byte336-line original stream/new rows/proofs/metadata/errors read; JOMLUnsafe/resource-encoding/unmeasureds3k-kos-v1 warnings remain limits.
+App fingerprint remains `8e8ccc9304a9acd7c3738d23c538d3278d92ac5683c6dd44f0eae7cbc01ae756`; adapterSHA256 `c35a9ac40204cf003fc4d48fe3cda7f7cddbe820bbc70574f712d89b41e47192`, executedBK2 `80a2119f659a8708d2f51bc6966ca06f5f6554f01da51f492113e25fa36ae75c`.
+Useful source/whole literal preimage+inverse/design/exact inputs/compact FIRST_GROUND/one normalPNG remain external; exact command/env/ROM/native/config/IDs in own R21 registry. Raw namespace/tmp/extraction consumed under leases; no helper classes persist, priorrefs/nativeactual322/index703/config preserved.
+Private air/headroom/protection states, spike membership/contact/clearance, next jump/landing/route/native/physics cause remain UNKNOWN. No runtime omission or broader qualification established; no runtime/POM/maintained test/movie/count/window/oracle/expected46 change, retry or push/integration; STOP Root review.
