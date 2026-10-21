@@ -23426,3 +23426,49 @@ armed-title/physical-full/incidental-flush capacity defect, now under focused
 correction. SSZ controller qualification on the final production epoch and
 other route/native-publication gaps remain open. Main develop is still c13,
 with its unrelated files/submodules preserved; no integration push is qualified.
+
+
+### Solo Tails320 replica route controller recovery — 2026-10-21
+
+The independent controller lane at frozen production
+`39eca8c35c25433b7405b6bdc724f7c6111b55ec` restores the maintained solo Tails320
+**two-replica** route. It does not qualify the later Mecha/DEZ route or ROM power-on.
+The [SSZ matrix record](../validation/levels/s3k-ssz-act1.md#solo-tails320-replica-controller-on-frozen-production-2026-10-21)
+contains exact source/inlet/ROM identities, accepted and rejected ordinary inputs,
+two fresh independent event/end observations, commands, failures and recovery scope.
+
+The original 8,200-input controller still defeated GHZ4895 and released its first
+pad5476, but ran uncurled into EggRobo5571 and never reached MTZ. The replacement
+jumps before that body, clears the later pillar with ordinary flight, descends into
+MTZ7045, accepts all eight hits by7651 and rides the second pad through release8236.
+Its 8,350-input endpoint is zone10/act0,(5888,144),34 rings, three lives, solo Tails,
+both replicas absent, released player control and released native arena projection.
+Two fresh separate JVM cold replays agree on every observed owner event and endpoint;
+there are no private seeds, trace hydration, gameplay writes or runtime changes.
+
+After the bounded original-budget trial, Root explicitly authorized only controller-
+derived 320 test data: count8200→8350, rings3→34 and actual-event replay samples.
+All 53 original 320 replay windows retain identity mapping; 16 owner boundaries are
+added, making69 full-registry45-input restore/forward windows. All original behavior,
+health, roster, death, fixed world geometry, end location, drawing and comparison
+predicates remain. A literal inverse of this small test patch recreates the entire
+original file. All800 expectations and inputs and the complete320 movie/methods
+are unchanged. The new replica movie shares the complete movie's original rows
+0..5534 only; the complete movie is deliberately not claimed to contain the new
+route. Future upper-route authoring needs actual reached events, not blind offsets.
+
+Focused exact320 selection passes1/0/0/0 including all69 rewind windows. One affected
+whole-class run completes11/4/0/0: all five approach widths and both replica widths
+pass; unchanged complete inputs fail Mecha-entry and full-completion methods at
+9465(320) and9560(800). The four exact XML identities and assertion messages are in
+the matrix. The800 completion death is fresh observed, not silently attributed to an
+unrun historical39 baseline. Mecha/DEZ/history coverage remains incomplete; there
+is no whole-class green claim and no broad smoke/full-suite run for controller data.
+
+Delivery is local `feature/ai-s3k-ssz-tails-route-20261021` from parent39 only, with
+normal hooks, all seven documentation trailers and the parsed GPT-6.1-Sol co-author.
+The supplied efd605142 branch and setup remain preserved; only the inherited
+TraceChaser gitlink differs outside owned files and is excluded. Root owns review,
+combined validation/integration and push. No Main mutation, task-branch push or
+worktree removal is authorized here. Exact owned consumed diagnostics are deleted;
+useful authored input proposal and two end stills remain outside the repository.

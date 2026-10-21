@@ -124,10 +124,11 @@ class TestSszTailsColdRouteCapture {
     void coldSoloTailsDefeatsBothReplicasAndRidesTheirTeleporters(int width) throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/ssz1-tails-solo-cold-replicas-" + width + ".bk2"));
-        assertEquals(width == 320 ? 8200 : 8425, movie.getFrameCount());
+        assertEquals(width == 320 ? 8350 : 8425, movie.getFrameCount());
         var settings = new GameplayCaptureSession.Settings(width, "tails", "", "off", null, null, null);
-        // Spots up to 4460 precede the re-authored GHZ fight; later ones follow the fight,
-        // both transports and the MTZ fight of each width's 2026-10-15 re-authored movie.
+        // Retain all 53 original 320 windows. The 2026-10-21 controller additionally covers
+        // the observed carrier release, MTZ allocation/every hit/despawn and pad owner changes.
+        // The 800 movie and its original 2026-10-15 windows remain independent.
         var spots = width == 320 ? Set.of(2215, 2255, 2345, 2465, 2900, 3000, 3240, 3340, 3500, 3780,
                 4018, 4150, 4320, 4460, 4489, 4540, 4580, 4614, 4694, 4779, 4819, 4848, 4882, 4990, 5127,
                 5167, 5256, 5319, 5470, 5640, 5785, 6015, 6160, 6221, 6381, 6436, 6511, 6641, 6771, 6830,
@@ -136,6 +137,11 @@ class TestSszTailsColdRouteCapture {
                 4460, 4494, 4541, 4577, 4608, 4681, 4759, 4795, 4821, 4852, 4950, 5075, 5111, 5196, 5259,
                 5410, 5583, 5730, 5963, 6110, 6172, 6335, 6390, 6467, 6598, 6730, 6793, 6961, 7029, 7104,
                 7172, 7314, 7516, 7575, 7693, 7949, 8079, 8146, 8239, 8350);
+        if (width == 320) {
+            spots = new HashSet<>(spots);
+            spots.addAll(Set.of(5779, 5824, 7045, 7279, 7324, 7385, 7455, 7516, 7587,
+                    7619, 7651, 7835, 7967, 8116, 8171, 8236));
+        }
         var checked = new HashSet<Integer>();
         int ghzHealth = 8, mtzHealth = 8, ghzHits = 0, mtzHits = 0;
         boolean ghzSeen = false, mtzSeen = false;
@@ -193,8 +199,8 @@ class TestSszTailsColdRouteCapture {
                     .activeObjectsOfType(SszMtzBossObjectInstance.class).isEmpty());
             assertEquals(10, GameServices.level().getCurrentZone());
             assertEquals(0, GameServices.level().getCurrentAct());
-            // Each width's re-authored fights scatter and recollect different rings.
-            assertEquals(width == 320 ? 3 : 0, session.player().getRingCount());
+            // Controller outcomes: two fresh cold 320 replays retain 34 rings without damage.
+            assertEquals(width == 320 ? 34 : 0, session.player().getRingCount());
             assertEquals(5888, session.player().getCentreX());
             assertEquals(144, session.player().getCentreY());
             var zone = com.openggf.game.sonic3k.runtime.S3kRuntimeStates
