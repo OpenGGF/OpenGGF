@@ -3460,3 +3460,177 @@ same normal-lane ROM/EGL arguments and selector
 `TestS3kSszMtzArenaHeadless#orbInitializationBoundariesRecreateAndReplayTheCompleteWorldTwice`:
 three tests passed, zero failures/errors/skips. The other1,456 tests were not
 repeated; production code remained unchanged.
+
+## 2026-10-21 — solo Tails800 complete controller on currentcdada (R3)
+
+R3 starts a new owned `feature/ai-ssz-tails800-route-20261021` branch at exact
+`cdada405a384ab19c88fc82375b79cbc38c9f30c`. This explicitly adopts Root's merged
+MTZ74 runtime owners, current POM and native703 gitlink before authoring. It
+supersedes the preceding800 complete frontier; R1/R2 commits and their measured
+history remain immutable. The old96 feature ref and suppliedefd ref remain
+preserved. The unrelated actual TraceChaser checkout322 is unchanged and unused
+by this Java controller lane; the source gitlink703 remains the adopted base.
+Only complete800 script/BK2,800 controller data/comments in the existing Tails
+class, this matrix and the dated plan change. All320 resources/conditional data,
+all replica resources/methods/oracles, runtime, native code and POM remain exact.
+
+The maintained complete800 movie now has **15072 inputs**, including the exact
+**8425 ordered P1/P2 replica prefix**, with P2 neutral throughout. The old15132
+complete movie shared only8225 replica rows; its first changed row is8225 and
+the new total is60 inputs shorter. The new6647-input continuation is ordinary
+controller input. `InputLogAuthorTool` generated the BK2 and passed its production
+loader roundtrip; a separate comparison checked every ordered input against the
+selected proposal and all8425 prefix rows. The author tool owns ZIP generation. No external gameplay state, private
+clock/readiness/HP/RNG/ring/camera/slot values, trace rows or savestate shortcuts
+were supplied. Exploratory checkpoints use the engine registry; neither fresh
+replay restores a checkpoint. The ordinary cold SSZ10:0 solo-Tails inlet is retained.
+
+Actual800 traversal reaches the hanging carrier8603 and releases8606, then
+latches/releases the elevator bar9008/9027. Landing on the lower cloud9061 starts
+its native seven-input counter. Jump9064 retains the launch9068 in Tails flight;
+player/camera wrap occur9145/9196. `Obj_SSZBouncyCloud`, `sub_45170`/`loc_451DC`,
+own the counter, saved horizontal speeds and `-$700` launch. The route flies
+onto the actual lower5376/3824 pad: activation9722, lift9872, receiving arrival9903,
+release9968, grounded receiving exit10020. The ordinary6336/3272 spring launches
+at10680; the retracting-spring zigzag launches10889/10949/11039. Tails lands the
+final pad top11282 and centers Right to activate11369, lift11516, arrive11567
+and initialize Mecha11605. Final transport control releases11632.
+
+Bounded negatives explain the authoring choices. A copied320 continuation took
+EggRobo damage near4484; the chosen shorter flight release crossed that section
+without damage. A held carrier jump recaught the carrier, while pulse flight
+escaped. Jumping before the bar actually latched left the input held when it did
+latch; the later release landed the cloud. The cloud countdown jump produced the
+real wrap. The source-supported spring/pad navigation proposal reached the final
+pad's left edge; its old centering direction missed activation, so actual800
+centering uses Right. These observations support controller changes. No new
+runtime defect or physics/timing adjustment was inferred.
+
+The existing bounded Mecha author uses ordinary inputs from the reached11684
+arena state and stops at12745 after the actual eighth hit12744, within its1800
+input bound. Neutral input then reaches real results and the DEZ load. The chosen
+movie was independently replayed in **two separate fresh cold JVMs**, without
+exploratory branch restoration, before changing any expected test data. Each
+input serviced normal production drawing. Both replays agree byte-for-byte on
+all15072 state rows and every observed owner transition. They observe GHZ/MTZ/
+Mecha each8..0 without healing, no player death/life loss and three lives.
+
+Actual Mecha accepted drops are11891,12009,12167,12311,12368,12652,12698,12744.
+Initialization observes boss6912/1632 (`$1B00/$660`),800 camera6320/1472 and
+world bounds6592..6848 (`$19C0..$1AC0`). Defeat landing/act-end allocation12883,
+results13003 and launch stages13488/13518/13618/13713 precede counter`$910`14837,
+jump14838, hover14868 and **actual DEZ load15071**. The next ordinary dispatch
+assembles zone11 act0, Tails48/2480, rings0, radius15/feet2495, released control,
+same main playable/camera focus, no pending boundary/title card and a retired SSZ
+horizontal lock. Outgoing live history is97; the fresh timeline is1 after
+assembly and31 after30 ordinary inputs. The ordinary Mecha-init images agree
+and were inspected; they are gameplay observations without a native-pixel claim.
+The load-producing PNG contains destination tiles before deferred player assembly;
+it supplies no playable-destination visual qualification. The next ordinary
+dispatch owns the semantic assembly checks. This remains a cold-zone fixture
+rather than a ROM-power-on/native-pixel result.
+
+Only the following800 authored data changes after those two observations:
+
+|800 data | Old → new | Reached basis |
+|---|---|---|
+|Mecha-entry first45-input window |10667 →11369 | Final positive pad activation |
+|Mecha-entry second45-input window |10819 →11516 | Actual lift before Mecha initialization |
+|Mecha-entry input limit |11306 →11606 | Includes first initialized dispatch11605 |
+|Complete count |15132 →15072 | Includes load-producing input15071 |
+|Derived history start |15012 →14952 | Existing count-minus120 formula unchanged |
+|Complete replay windows |49 →108 | All49 old identities retained,59 reached boundaries/predecessors added |
+
+The old-to-new mapping for every original800 complete index is identity:
+8225,8298,8347,8451,8535,8660,8793,8848,8897,8932,9022,9134,9217,9308,9357,9426,
+9635,9705,9775,9844,9928,10053,10179,10262,10471,10541,10631,10680,11053,11306,
+11359,11473,11562,11651,11841,11968,12120,12247,12374,12501,12602,12678,12818,
+13008,13388,13828,14228,14628,14878 each maps to itself as a supplementary
+sample. The existing10680 now directly covers the actual vertical-spring launch.
+Actual gate-role coverage uses the added measured indices below. Original late
+14878+45 ends14923, before live history begins14952, so no window is shortened.
+
+|Added actual owner coverage | New checkpoint indices |
+|---|---|
+|Qualified prefix endpoint/carrier and bar latch/releases |8425,8603,8606,9008,9027 |
+|Cloud landing/jump/launch and wrap predecessors/boundaries |9061,9064,9068,9144,9145,9195,9196,9230 |
+|Lower pad activation/lift/arrival/release/receiving exit |9722,9872,9903,9968,10020 |
+|Spike-wall jump and three actual zigzag launches |10201,10889,10949,11039 |
+|Final pad landing/activation/lift/arrival; Mecha allocation/init/release |11282,11369,11516,11567,11604,11605,11632 |
+|Mecha entry/attack phase boundaries |11653,11717,11797 |
+|Every accepted Mecha drop, predecessor and result |11890/11891,12008/12009,12166/12167,12310/12311,12367/12368,12651/12652,12697/12698,12743/12744 |
+|Defeat landing/results |12872,12883,13003 |
+|Launch allocation/stages/player handover/counter/jump/hover |13488,13518,13618,13633,13713,14837,14838,14868 |
+
+All108 windows keep the original45-input full-registry restore/forward replay,
+input-history restoration and drawing. The added predecessors replay actual wrap,
+Mecha allocation and accepted-damage dispatches through their transitions. All
+native geometry/camera/boss HP/no-healing/death/solo/actual DEZ/fresh rings/main
+and camera identity/radius/feet/control/retired lock/history predicates remain.
+No ring expectation changes, maintained generic test/helper logic, assumptions,
+gates or skips were added. A literal inverse of the six data/comment substitutions exactly
+recreates the cdada test file, including every320 branch and the replica methods.
+
+The exact maintained800 selection passes **2T0F0E0S**, actual XML identities
+`coldMechaEntryRetainsItsNativeWorldBox(int)[2]` and
+`coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[2]`, XML17.670s,
+printed queue24s. One final affected class passes **11T0F0E0S**, XML42.153s,
+reported Maven1:09, queue0s. All eleven actual XML identities/assertions/skips/
+environment properties were inspected: both final-route widths, both replica
+widths and all five GHZ approaches pass. The two Root-baseline800 assertions
+`approach death at9560` and `death at9560` now pass by their exact identities.
+Root's prior1472-case qualification is reused as supplied; no broad/full-suite,
+native-core or mandatory-runtime-control rerun was launched in this controller
+lane. Root owns independent source/data review and final composed qualification.
+
+Commands run from `<OWNED_WORKTREE>` through the current Main absolute queue
+wrapper in the normal7GiB/8-core lane. The launch environment unsets DISPLAY,
+WAYLAND_DISPLAY, JAVA_TOOL_OPTIONS, JDK_JAVA_OPTIONS, _JAVA_OPTIONS and MAVEN_OPTS;
+it supplies JAVA_HOME`/usr/lib/jvm/java-25-openjdk`, LUA_BIN`/usr/bin/lua5.4`,
+ALSOFT_DRIVERS`null` and explicit surfaceless EGL. XML confirms Java25.0.4.1 and
+the original absolute `<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen`,
+4194304 bytes, SHA1`CFBF98C36C776677290A872547AC47C53D2761D6`, CRC32`63522553`.
+
+```bash
+python3 <MAIN_WORKSPACE>/tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' \
+  -Dexec.mainClass=org.junit.platform.console.ConsoleLauncher -Dexec.classpathScope=test \
+  '-Dexec.args=execute --select-iteration=method:com.openggf.tools.TestSszTailsColdRouteCapture#coldMechaEntryRetainsItsNativeWorldBox(int)[1] --select-iteration=method:com.openggf.tools.TestSszTailsColdRouteCapture#coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[1] --reports-dir=target/ssz-tails-r3-focused --details=summary --fail-if-no-tests --include-engine=junit-jupiter --disable-banner' \
+  test-compile exec:java -B
+python3 <MAIN_WORKSPACE>/tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' \
+  -Dtest=TestSszTailsColdRouteCapture \
+  -Dopenggf.surefire.reports=target/ssz-tails-r3-whole-class test -B
+```
+
+FreshA/B each use queued `exec:exec -Dexec.executable=python3` to launch a fresh
+Java25 process with `%classpath`, the original ROM and proposed committed BK2;
+no branch/helper-author state enters either replay. Maven14.904/14.917s, queue0/
+56s. Consumed owned diagnostics and temporary observer are removed without class
+or native-extraction cleanup, pass receipts or raw archives. Useful authored
+proposal script/BK2 and inspected ordinary Mecha-init images remain outside the
+repo in `<TASK_OUTPUT>/complete800-r3/`. Exact native/task/run/cwd/branch ownership
+and expiry13:04:49.177308Z are registered only under the R3 continuation using the
+common lock, fresh strict whole JSON and0600 same-directory atomic replacement.
+
+Sorted tracked `relative-path NUL file-bytes NUL` SHA256:
+`src/main` remains `7d0abf2dca9031cfab99acfea62c676878d07ea1887a596b1bbe3f05e5685aaf`;
+`src/test` is `1af0a02ef40901cccf3dfc8b809ad5ecd63530dd81a8eca11944a569911b73af`.
+Unchanged POM SHA256 is
+`ee155587e971cb5d41ceadc1f7e670dce114d2b9722458ed8b4f45d520163710`.
+Binary main/test diff from cdada hashes to
+`cebfea916f4f3230b4cab594ff5492924666791145f386974ef5709a25e927be`.
+Complete800 script/BK2 SHA256:
+`3a3eebfb3e923a36bfdfa5a5e3b4f7e021bc1c186ba5eeece276bd9de61b135e` /
+`0df391c49e5831d108d2322d7e1e5fccc433afbbd094f8041b5cb03d76258b52`.
+All15072 ordered input rows plus final newline hash to
+`d750d62128ce93d9aec15adc33494ec090675f3f402aa05323254a065d2d2389`.
+
+Recovery inverse restores only complete800 script/BK2 from parentcdada, reverses
+the six documented800 data/comment substitutions (removing only the59 additions)
+and removes this R3 matrix/plan append. All320, replica, runtime, POM, native/setup
+and earlier branch history are independent. Delivery is one local normal-hooks
+commit with seven documentation trailers and the final GPT-6.1-Sol coauthor;
+there is no push, Main/Root integration or worktree cleanup in this lane.

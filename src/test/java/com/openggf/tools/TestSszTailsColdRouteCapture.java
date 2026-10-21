@@ -82,9 +82,9 @@ class TestSszTailsColdRouteCapture {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 10, 0, settings);
             assertEquals(width, GameServices.camera().getWidth());
             // 320: observed pad approach/lift before native Mecha init11571 (two fresh cold replays).
-            // 800 retains its independent 2026-10-15 authored data.
-            int first = width == 320 ? 11324 : 10667, second = width == 320 ? 11524 : 10819;
-            for (int frame = 0; frame < (width == 320 ? 11572 : 11306); frame++) {
+            // 800: observed pad activation/lift before native Mecha init11605 (two fresh cold replays).
+            int first = width == 320 ? 11324 : 11369, second = width == 320 ? 11524 : 11516;
+            for (int frame = 0; frame < (width == 320 ? 11572 : 11606); frame++) {
                 session.step(movie.getFrame(frame)); drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "approach death at " + frame);
                 if (frame == first || frame == second) {
@@ -216,16 +216,24 @@ class TestSszTailsColdRouteCapture {
     void coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int width) throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/ssz1-tails-solo-cold-complete-" + width + ".bk2"));
-        assertEquals(width == 320 ? 14923 : 15132, movie.getFrameCount());
+        assertEquals(width == 320 ? 14923 : 15072, movie.getFrameCount());
         int historyStart = movie.getFrameCount() - 120;
         var settings = new GameplayCaptureSession.Settings(width, "tails", "", "off", null, null, null);
         // Retain all 47 original 320 windows and the independent 800 movie data.
         // Added 320 boundaries follow two fresh cold replays: carriers/cloud wrap, pad states,
         // spring launches, Mecha init/eight accepted hits, results and Death Egg launch/hover.
+        // Retain all 49 original 800 indices; add reached owner boundaries and the
+        // predecessors of wrap, Mecha allocation and every accepted hit to replay their dispatch.
         var spots = width == 800 ? Set.of(8225, 8298, 8347, 8451, 8535, 8660, 8793, 8848, 8897, 8932,
                 9022, 9134, 9217, 9308, 9357, 9426, 9635, 9705, 9775, 9844, 9928, 10053, 10179, 10262, 10471,
                 10541, 10631, 10680, 11053, 11306, 11359, 11473, 11562, 11651, 11841, 11968, 12120, 12247,
-                12374, 12501, 12602, 12678, 12818, 13008, 13388, 13828, 14228, 14628, 14878)
+                12374, 12501, 12602, 12678, 12818, 13008, 13388, 13828, 14228, 14628, 14878,
+                8425, 8603, 8606, 9008, 9027, 9061, 9064, 9068, 9144, 9145,
+                9195, 9196, 9230, 9722, 9872, 9903, 9968, 10020, 10201, 10889,
+                10949, 11039, 11282, 11369, 11516, 11567, 11604, 11605, 11632, 11653,
+                11717, 11797, 11890, 11891, 12008, 12009, 12166, 12167, 12310, 12311,
+                12367, 12368, 12651, 12652, 12697, 12698, 12743, 12744, 12872, 12883,
+                13003, 13488, 13518, 13618, 13633, 13713, 14837, 14838, 14868)
                 : Set.of(8001, 8074, 8123, 8227, 8310, 8435, 8568, 8623, 8671, 8706, 8796, 8908, 8991,
                 9081, 9130, 9199, 9408, 9477, 9547, 9616, 9700, 9825, 9950, 10033, 10242, 10311, 10401,
                 10450, 10719, 10781, 10812, 10874, 10921, 10983, 11044, 11134, 11153, 11190, 11230, 11292,

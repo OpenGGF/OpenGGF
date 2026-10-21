@@ -24254,3 +24254,61 @@ broad smoke/full-suite, canonical trace, new native acceptance or controller-rou
 pass. Current route impact is unknown; no route death is attributed to this fix.
 The [SSZ matrix](../validation/levels/s3k-ssz-act1.md#mtz-orb-allocation-and-first-dispatch--2026-10-21)
 and coverage backlog retain the inherited viewport/donor/team/native gaps.
+
+### 2026-10-21 — Tails controller R3:800 complete on adoptedcdada
+
+New owned `feature/ai-ssz-tails800-route-20261021` starts at exact
+`cdada405a384ab19c88fc82375b79cbc38c9f30c`, explicitly adopting the merged MTZ74
+owners, current POM and native703 source gitlink before authoring. R1=5bad,
+R2=96c2, the suppliedefd ref and unrelated actual native checkout322 remain
+preserved. Only complete800 script/BK2,800 authored data/comments and existing
+matrix/plan append change. Runtime/POM/native, all320 data/resources and every
+replica resource/method/oracle remain exact. Full source/data mapping, commands,
+fingerprints and recovery are in the
+[SSZ matrix R3 section](../validation/levels/s3k-ssz-act1.md#2026-10-21--solo-tails800-complete-controller-on-currentcdada-r3).
+
+The new15072-input movie keeps the exact8425 ordered P1/P2 replica prefix, P2
+neutral. Its ordinary continuation takes the actual carrier/bar/cloud launch,
+upward wrap, lower5376 pad,6336 spring, retracting zigzag and final6720 pad.
+Mecha initializes11605 at native6912/1632, camera6320/1472 and bounds6592..6848;
+accepted hits11891/12009/12167/12311/12368/12652/12698/12744 lead to results13003,
+launch13488/13518/13618/13713 and real DEZ15071. Two separate fresh ordinary cold
+JVM replays agree on all15072 states/events and each boss8..0, with no healing,
+death or life loss, three lives. Fresh DEZ assembly is Tails48/2480, rings0,
+radius15/feet2495, released control, same main/camera and retired SSZ lock;
+outgoing history97 becomes fresh1, then31 after30 ordinary inputs. Normal drawing
+and an inspected Mecha-init image are observations; no native-pixel or true ROM
+power-on claim follows from this cold-zone fixture. The load-producing PNG
+contains destination tiles before deferred player assembly; the next ordinary
+dispatch owns the semantic handoff qualification.
+
+After both observations, only800 entry data10667/10819/limit11306 become11369/
+11516/11606; count15132 becomes15072 and the unchanged count-minus120 formula
+moves history start15012→14952. All49 old800 window identities remain,59 reached
+owner/predecessor windows are added (108 total), retaining every45-input
+full-registry restore/forward/drawing and strict semantic predicate. The added
+predecessors cover actual wrap, Mecha allocation and every accepted hit across
+the dispatch. A six-substitution literal inverse recreates the exact cdada test
+file, including all320/replica code/data.
+
+Exact800 maintained entry+complete passes2T0F0E0S (actual XML[2] identities,
+17.670s). One affected whole class passes11T0F0E0S, XML42.153s, reported Maven1:09,
+queue0s. Both former800 death9560 cases now pass, alongside both320 final checks,
+both replica widths and all5GHZ approaches. All11 XML identities/assertions/skips/
+properties were consumed. Root's prior1472-case qualification was reused as
+supplied, without broad/full-suite/native-core/runtime-control ceremony. Root
+owns independent source/data review, final composition qualification and push.
+
+Production path/byte SHA256 remains
+`7d0abf2dca9031cfab99acfea62c676878d07ea1887a596b1bbe3f05e5685aaf`;
+current src/test is
+`1af0a02ef40901cccf3dfc8b809ad5ecd63530dd81a8eca11944a569911b73af`.
+POM unchanged, normal queued7GiB/8-core lane, Java25/Lua5.4, original ROM SHA1
+CFBF98C36C776677290A872547AC47C53D2761D6, surfaceless EGL/null audio and no ambient
+display/JVM options. Useful proposal and ordinary images remain outside the repo;
+consumed owned diagnostics/helpers are removed without class/native cleanup or
+raw archives. Only `continuations.complete800_r3` is updated under the common
+state lock/fresh strict whole/0600 atomic replacement, exact returned task/run
+IDs and expiry13:04:49.177308Z. Local commit only, parentcdada, normal hooks/seven
+trailers/final GPT-6.1-Sol coauthor; no R1/R2 rewrite, push, Root/Main write or
+worktree cleanup.
