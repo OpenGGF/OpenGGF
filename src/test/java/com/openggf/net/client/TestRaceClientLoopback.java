@@ -116,8 +116,8 @@ class TestRaceClientLoopback {
 
         a.close();
         await(b, e -> e instanceof RaceClient.Control c
-                && c.message() instanceof ControlMessage.RoomState state
-                && state.players().size() == 1);
+                && c.message() instanceof ControlMessage.PlayerLeft left
+                && left.slot() == a.joinAccepted().playerSlot());
         b.close();
     }
 

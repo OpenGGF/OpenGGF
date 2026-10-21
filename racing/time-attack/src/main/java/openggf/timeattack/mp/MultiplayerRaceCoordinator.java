@@ -131,6 +131,10 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                     session.onControl(control.message());
                     if (control.message() instanceof ControlMessage.RoomState state) {
                         registry.onRoomState(state.players());
+                    } else if (control.message() instanceof ControlMessage.PlayerUpsert upsert) {
+                        registry.onPlayerUpsert(upsert.player());
+                    } else if (control.message() instanceof ControlMessage.PlayerLeft left) {
+                        registry.onPlayerLeft(left.slot());
                     } else if (control.message() instanceof ControlMessage.RoundStart) {
                         roundsStarted++;
                         registry.reset();

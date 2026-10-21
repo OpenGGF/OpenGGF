@@ -33,7 +33,16 @@ Unreleased. The earlier development themes remain in
   Creation-proof reconnect stamps and one-use room-attach grants have explicit
   expiry and cardinality bounds.
   Capacity reports count completed work and rejections separately from latency and
-  colocated process costs. Valid attempts at the published countdown boundary are
+  colocated process costs. A multi-process scale harness now isolates one to four
+  full 256-player relay rooms from their load generators and records room/broker
+  latency, traffic, CPU, memory and lifecycle evidence. Recording quota checks,
+  verifier input reads and client proof solving avoid scale-dependent allocation
+  or directory scans; verifier heartbeats preserve long-running job authorization,
+  and live SQLite sanction/identity cleanup predicates are indexed. Protocol v3
+  replaces repeated whole-room membership snapshots with incremental joins/leaves,
+  while packet-local ghost deltas reduce steady relay traffic without cross-packet
+  state; at four full rooms these cut admission traffic 98.5% and steady traffic
+  about 24%. Valid attempts at the published countdown boundary are
   admitted even when the scheduled host tick has not run yet. Multiplayer race
   panels now preserve the stock HUD and act-completion card, with a compact
   nearby-player list. The capacity recording places the live player mid-pack

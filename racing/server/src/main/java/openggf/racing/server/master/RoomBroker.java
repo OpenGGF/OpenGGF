@@ -511,7 +511,7 @@ public final class RoomBroker {
                     room.routing(), descriptor.verified()));
         }
         send(member, new ControlMessage.RoomListResult(summaries, page,
-                registry.totalPages(request.gameFilter())));
+                registry.totalPagesForCount(all.size())));
     }
 
     private void joinRoom(Member member, ControlMessage.RoomJoinRequest request) {

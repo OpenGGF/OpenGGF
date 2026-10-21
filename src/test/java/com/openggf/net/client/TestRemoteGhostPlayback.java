@@ -27,6 +27,56 @@ class TestRemoteGhostPlayback {
         assertTrue(registry.farPlayers(-1).isEmpty());
     }
 
+    @Test
+    void membershipMetadataChangesPreservePlaybackButIdentityReplacementAndLeaveClearIt() {
+        var registry = new RemoteGhostRegistry();
+        registry.onRoomState(List.of(new ControlMessage.PlayerInfo(0, "original", "A", "sonic")));
+        registry.onAggregate(new GhostPackets.Aggregate(0, List.of(entry(1, 0, 9))));
+        assertFalse(registry.advanceAll(-1).isEmpty());
+        registry.onPlayerUpsert(new ControlMessage.PlayerInfo(0, "original", "A", "tails"));
+        assertEquals("tails", registry.advanceAll(-1).getFirst().character());
+        registry.onRoster(List.of(new GhostPackets.RosterEntry(0, 200, 3, 1)));
+        registry.onPlayerUpsert(new ControlMessage.PlayerInfo(0, "replacement", "B", "knuckles"));
+        assertTrue(registry.advanceAll(-1).isEmpty());
+        assertTrue(registry.farPlayers(-1).isEmpty());
+        registry.onAggregate(new GhostPackets.Aggregate(1, List.of(entry(1, 0, 9))));
+        assertEquals("B", registry.advanceAll(-1).getFirst().displayName());
+        registry.onPlayerLeft(0);
+        registry.onRoster(List.of(new GhostPackets.RosterEntry(0, 200, 3, 1)));
+        assertTrue(registry.advanceAll(-1).isEmpty());
+        assertTrue(registry.farPlayers(-1).isEmpty());
+    }
+
+    @Test
+    void freshMembershipSnapshotDoesNotReusePreviousConnectionPlayback() {
+        var registry = new RemoteGhostRegistry();
+        var player = new ControlMessage.PlayerInfo(0, "same", "A", "sonic");
+        registry.onRoomState(List.of(player));
+        registry.onAggregate(new GhostPackets.Aggregate(0, List.of(entry(9, 0, 9))));
+        assertFalse(registry.advanceAll(-1).isEmpty());
+        registry.onRoomState(List.of(player));
+        assertTrue(registry.advanceAll(-1).isEmpty());
+        registry.onAggregate(new GhostPackets.Aggregate(1, List.of(entry(1, 0, 9))));
+        assertFalse(registry.advanceAll(-1).isEmpty());
+    }
+
+    @Test
+    void membershipUpsertMovesAnIdentityAndClearsItsOldSlotPlayback() {
+        var registry = new RemoteGhostRegistry();
+        registry.onRoomState(List.of(
+                new ControlMessage.PlayerInfo(0, "identity", "A", "sonic"),
+                new ControlMessage.PlayerInfo(1, "other", "B", "tails")));
+        registry.onAggregate(new GhostPackets.Aggregate(0, List.of(entryForSlot(0, 1, 0, 9))));
+        assertFalse(registry.advanceAll(-1).isEmpty());
+
+        registry.onPlayerUpsert(new ControlMessage.PlayerInfo(2, "identity", "Moved", "knuckles"));
+        assertTrue(registry.advanceAll(-1).isEmpty());
+        registry.onAggregate(new GhostPackets.Aggregate(1, List.of(entryForSlot(0, 1, 9, 9))));
+        assertTrue(registry.advanceAll(-1).isEmpty(), "retired slot must ignore later aggregates");
+        registry.onAggregate(new GhostPackets.Aggregate(2, List.of(entryForSlot(2, 1, 0, 9))));
+        assertEquals("Moved", registry.advanceAll(-1).getFirst().displayName());
+    }
+
     private static byte[] frames(int startIndex, int count) {
         byte[] data = new byte[count * GhostFrameCodec.BYTES];
         for (int i = 0; i < count; i++) {
@@ -38,8 +88,13 @@ class TestRemoteGhostPlayback {
 
     private static GhostPackets.AggregateEntry entry(
             int attemptId, int startIndex, int count) {
+        return entryForSlot(0, attemptId, startIndex, count);
+    }
+
+    private static GhostPackets.AggregateEntry entryForSlot(
+            int slot, int attemptId, int startIndex, int count) {
         return new GhostPackets.AggregateEntry(
-                0, attemptId, startIndex, count, frames(startIndex, count));
+                slot, attemptId, startIndex, count, frames(startIndex, count));
     }
 
     private static RemoteGhostPlayback fed(int upTo) {

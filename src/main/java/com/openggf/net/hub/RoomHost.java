@@ -35,6 +35,7 @@ public final class RoomHost {
         String fingerprint;
         String displayName;
         String character;
+        ControlMessage.PlayerInfo publishedInfo;
         long memberSinceMillis;
         long lastChatMillis = Long.MIN_VALUE;
         long lastStandingsPageMillis = Long.MIN_VALUE;
@@ -64,6 +65,7 @@ public final class RoomHost {
     private String roomGameId;
     private int roomZone;
     private int roomAct;
+    private boolean closing;
 
     public RoomHost(RoomHostConfig config, PlayerIdentity hostIdentity,
                     LongSupplier wallClockMillis,
@@ -172,7 +174,7 @@ public final class RoomHost {
         Member member = members.remove(connection);
         if (member != null && member.admitted) {
             removeAdmittedMember(member);
-            broadcast(new ControlMessage.RoomState(players()));
+            publishDeparture(member);
         }
     }
 
@@ -234,23 +236,31 @@ public final class RoomHost {
 
     /** Closes every transport currently owned by this ephemeral room. */
     public void close(String reason) {
-        for (Member member : List.copyOf(members.values())) {
-            drop(member, reason);
+        closing = true;
+        try {
+            for (Member member : List.copyOf(members.values())) {
+                drop(member, reason);
+            }
+            expectedFingerprints.clear();
+        } finally {
+            closing = false;
         }
-        expectedFingerprints.clear();
     }
 
     public List<ControlMessage.PlayerInfo> players() {
         List<ControlMessage.PlayerInfo> result = new ArrayList<>();
         for (Member member : members.values()) {
             if (member.admitted) {
-                result.add(new ControlMessage.PlayerInfo(member.slot, member.fingerprint,
-                        member.displayName, member.character,
-                        hooks.isNewPlayer() != null
-                                && hooks.isNewPlayer().test(member.fingerprint)));
+                result.add(playerInfo(member));
             }
         }
         return List.copyOf(result);
+    }
+
+    private ControlMessage.PlayerInfo playerInfo(Member member) {
+        return new ControlMessage.PlayerInfo(member.slot, member.fingerprint,
+                member.displayName, member.character, hooks.isNewPlayer() != null
+                        && hooks.isNewPlayer().test(member.fingerprint));
     }
 
     public HostRoundEngine round() {
@@ -361,7 +371,8 @@ public final class RoomHost {
                 new ControlMessage.JoinAccepted(member.token, slot, descriptor(),
                         round.snapshot())));
         round.sendVoteState(message -> send(member, message));
-        broadcast(new ControlMessage.RoomState(players()));
+        send(member, new ControlMessage.RoomState(players()));
+        publishPlayerChanges(member);
     }
 
     private void dispatch(Member member, ControlMessage message) {
@@ -373,11 +384,12 @@ public final class RoomHost {
             case ControlMessage.SelectCharacter select -> {
                 if (round.phase() == HostRoundEngine.Phase.LOBBY
                         && !"LOCKED".equals(config.characterPolicy())
-                        && boundedLabel(select.character(), MAX_CHARACTER_BYTES)) {
+                        && boundedLabel(select.character(), MAX_CHARACTER_BYTES)
+                        && !select.character().equals(member.character)) {
                     String previous = member.character;
                     member.character = select.character();
                     if (roomStateFits()) {
-                        broadcast(new ControlMessage.RoomState(players()));
+                        publishPlayerChanges(null);
                     } else {
                         member.character = previous;
                     }
@@ -493,6 +505,7 @@ public final class RoomHost {
     }
 
     private void broadcast(ControlMessage message) {
+        if (closing) return;
         String encoded = codec.encode(null, message);
         for (Member member : members.values()) {
             if (member.admitted) {
@@ -541,8 +554,32 @@ public final class RoomHost {
             removeAdmittedMember(member);
         }
         member.connection.close(reason);
-        if (member.admitted) {
-            broadcast(new ControlMessage.RoomState(players()));
+        if (member.admitted && !closing) {
+            publishDeparture(member);
+        }
+    }
+
+    private void publishDeparture(Member member) {
+        if (!closing) {
+            broadcast(new ControlMessage.PlayerLeft(member.slot));
+            publishPlayerChanges(null);
+        }
+    }
+
+    /** Refresh dynamic metadata at the same membership events that used to send snapshots. */
+    private void publishPlayerChanges(Member snapshotRecipient) {
+        for (Member changed : members.values()) {
+            if (!changed.admitted) continue;
+            ControlMessage.PlayerInfo info = playerInfo(changed);
+            if (!info.equals(changed.publishedInfo)) {
+                String encoded = codec.encode(null, new ControlMessage.PlayerUpsert(info));
+                for (Member recipient : members.values()) {
+                    if (recipient.admitted && recipient != snapshotRecipient) {
+                        recipient.connection.sendText(encoded);
+                    }
+                }
+                changed.publishedInfo = info;
+            }
         }
     }
 

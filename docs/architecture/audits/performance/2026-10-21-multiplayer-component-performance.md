@@ -624,3 +624,179 @@ p99 fell 60.2%. This is repeatable evidence for the local hub/classifier path an
 agrees with the JFR attribution. It is not socket throughput, many-room capacity,
 Internet latency or isolated production-server CPU; the full socket controls above
 remain the system-level bound for this task.
+
+## Multi-room server envelope and operating recommendations
+
+The follow-up separates the production master/relay process from one load process
+per room. `RacingScaleTool` provisions established identities, gives every accepted
+connection a distinct loopback source, and runs a real master, browser traffic,
+admission churn, relay rooms, 60 Hz synthetic poses, finish bursts, standings,
+round reset, reconnect and host removal. JFR events report broker dispatch and
+per-room tick/queue latency. Process CPU, RSS, used heap and GC are sampled for
+each JVM. Each child uses `-Xms128m -Xmx1g`.
+
+The exact prebuilt batch was:
+
+```bash
+python3 tools/performance/run_isolated.py \
+  --worktree . --cwd . --estimate-seconds 130 \
+  --audit-report "$OUT/isolation-audit.json" -- "$OUT/run-matrix.sh"
+
+# run-matrix.sh, once for ROOMS=1, 2 and 4
+target/racing-server/racing-server scale-test \
+  --rooms ROOMS --players 256 --warmup 3 --duration 10 --timeout 60 \
+  --browser-ms 2000 --admission-seconds 5 \
+  --data "$OUT/work-ROOMS" --report "$OUT/rooms-ROOMS.json"
+```
+
+The original exclusive test/build-activity lease ran for 127.3 seconds. The
+protocol-v3/compressed-packet repeat ran for 108.4 seconds. Both exited zero and
+detected no bypassing build, test or profiler. The host was the Ryzen 9 9950X
+described above. This is plaintext loopback with pre-established identities and
+synthetic cosmetic poses. TLS, Internet packet loss, production 20/22-bit first-use
+proofs, shared NAT, real engine clients and verifier replay are separate limits.
+The load JVMs still share the physical host and therefore compete for its scheduler,
+memory bandwidth and loopback stack.
+
+All cells admitted and finished every player, rejected capacity plus one, completed
+browser and churn traffic, reset and reconnected, removed all rooms after host
+departure, terminated all children and released the listening port.
+
+| Baseline: 256 players per room, 10 s measured | 1 room | 2 rooms | 4 rooms |
+|---|---:|---:|---:|
+| Server CPU seconds / wall interval | 2.19 / 10.00 | 3.73 / 10.00 | 7.12 / 10.00 |
+| Server peak sampled RSS / used heap, MiB | 419.8 / 93.9 | 464.5 / 97.6 | 477.3 / 103.2 |
+| Server GC, collections / ms | 3 / 2 | 5 / 5 | 7 / 12 |
+| Broker dispatch p99, ms | 1.35 | 1.34 | 1.46 |
+| Worst room tick p99 / maximum, ms | 2.46 / 3.40 | 2.82 / 3.06 | 7.65 / 9.01 |
+| Worst room queue-delay p99, ms | 0.029 | 0.047 | 0.199 |
+| Slowest room fill, s | 7.62 | 8.75 | 12.27 |
+| Worst join p99, ms | 72.9 | 66.9 | 130.8 |
+| Admission downstream, all rooms, MiB | 828.2 | 1,656.7 | 3,316.0 |
+| Steady downstream, all rooms / 10 s, MiB | 16.0 | 32.0 | 64.0 |
+| Worst local ping p99, ms | 5.20 | 5.43 | 10.16 |
+| Worst browser request, maximum, ms | 9.14 | 11.95 | 11.40 |
+
+The exact repeat after incremental membership and packet-local ghost compression
+also admitted and finished every player and passed every lifecycle check:
+
+| Optimized: 256 players per room, 10 s measured | 1 room | 2 rooms | 4 rooms |
+|---|---:|---:|---:|
+| Server CPU seconds / wall interval | 2.22 / 10.00 | 3.83 / 10.00 | 6.58 / 10.00 |
+| Server peak sampled RSS / used heap, MiB | 422.3 / 91.2 | 447.1 / 91.8 | 591.9 / 97.2 |
+| Server GC, collections / ms | 3 / 3 | 6 / 6 | 11 / 11 |
+| Broker dispatch p99, ms | 1.33 | 1.38 | 1.35 |
+| Worst room tick p99 / maximum, ms | 2.50 / 3.79 | 3.47 / 4.04 | 5.07 / 6.32 |
+| Worst room queue-delay p99, ms | 0.027 | 0.050 | 0.043 |
+| Slowest room fill, s | 6.14 | 7.02 | 7.66 |
+| Worst join p99, ms | 39.9 | 53.7 | 49.6 |
+| Admission downstream, all rooms, MiB | 12.5 | 25.2 | 51.2 |
+| Steady downstream, all rooms / 10 s, MiB | 12.1 | 24.2 | 48.4 |
+| Steady upstream, all rooms / 10 s, MiB | 1.59 | 3.18 | 6.36 |
+| Worst local ping p99, ms | 5.30 | 5.48 | 6.10 |
+| Worst browser request, maximum, ms | 10.39 | 8.84 | 10.78 |
+
+The server work scales close to linearly across these four rooms and remains well
+inside the 50 ms room cadence. Four rooms consume about 0.71 CPU-core equivalent,
+with low measured queue delay and GC. This supports a conservative four-room pilot
+on four recent general-purpose vCPUs, while retaining headroom for TLS, admission,
+SQLite, HTTP uploads, operating-system variance and traffic bursts that this arm
+does not contain. It does not justify multiplying the result to dozens of rooms:
+the broker remains a single event loop and the room/load processes shared a
+high-clock 16-core desktop CPU.
+
+Admission traffic was the immediate hotspot. Protocol v2 broadcast a complete JSON
+`RoomState` to every member after each join/leave, making delivered messages
+quadratic and cumulative roster bytes cubic during a fill. Protocol v3 sends one
+complete snapshot to the joining client and bounded `PlayerUpsert`/`PlayerLeft`
+deltas to existing clients. There is no deployed compatibility requirement, so the
+server and clients use one strict v3 handshake rather than carrying a parallel
+legacy path. The four-room admission total fell from 3,316.0 MiB to 51.2 MiB
+(-98.5%), and the slowest fill fell from 12.27 to 7.66 seconds (-37.6%). The same
+98.5% traffic reduction held at one and two rooms. Deterministic model coverage
+at 256 players asserts one snapshot per client, 32,640 upserts and less than
+32 MiB of control text.
+
+The steady relay path is currently economical. Relevance limits each recipient to
+eight nearby senders. Packet-local ghost encoding keeps the first pose absolute,
+then uses unchanged fields, signed-byte position deltas and changed-field masks,
+falling back to raw frames when compression would expand a packet. It retains no
+cross-packet state and therefore adds only bounded temporary packet buffers. In the
+four-room repeat, steady downstream fell from 64.0 to 48.4 MiB per ten seconds
+(-24.4%) and upstream fell 23.5%, with server CPU moving from 7.12 to 6.58 seconds.
+Synthetic packet cases save 19.4-38.7% upstream and 38.5-77.0% in aggregates,
+depending on motion and animation. Dense candidate discovery is still quadratic, but
+the earlier isolated 256-player room result (0.243 ms mean, 0.990 ms p99) and this
+four-room result do not make it the next bottleneck. Add candidate-visit and
+slow-consumer metrics before replacing the classifier.
+
+The four-room repeat's sampled server RSS rose from 477.3 to 591.9 MiB while used
+Java heap fell from 103.2 to 97.2 MiB; the one- and two-room samples stayed near or
+below baseline. That single native-RSS result is measurement variance or off-heap
+retention until reproduced. It is not evidence for reducing the 4 GiB allocation.
+
+### Removed hotspots
+
+Three allocation/storage costs were fixed after reproducing them independently:
+
+| Path | Before | After | Meaning |
+|---|---:|---:|---|
+| Maximum 36,000-frame verifier input scan | 1,296,576,160 allocated bytes; 96.3 ms | 36,176 bytes; 1.29 ms | `AttemptInputRecording` now caches its immutable mask snapshot between appends. |
+| Deterministic production 20-bit PoW solve, nonce 2,215,736 | about 814–820 MiB allocation; about 250 ms | 424,328 bytes; 122–132 ms | One digest and nonce/hash buffers are reused across trials. Server verification remains one hash. |
+| Unique blob admission with 10,000 stored files, 20 writes | p50 22.18 ms, p95 28.07 ms | p50 0.055 ms, p95 0.349 ms | The store accounts bytes at construction/write/delete instead of scanning every file per upload. |
+
+The blob comparison uses fresh local filesystem directories and short probes; it
+is not durable-storage throughput. Cached accounting assumes the recording directory
+is owned by this process. Existing content is reconciled on startup, and the hourly
+retention sweep updates the same counter.
+
+SQLite admission and hourly cleanup also had unindexed live predicates. Startup now
+installs `(fingerprint, expiry)` for active sanctions and a partial `last_seen`
+index for `tier='NEW'`. Schema-equivalent SQLite 3.54 `EXPLAIN QUERY PLAN` changed
+both from table scans to indexed searches; the shipped JDBC SQLite is 3.46.1.3,
+so the functional migration test is authoritative while the external plan probe
+is supporting evidence. Writes pay the normal secondary-index cost. Sanctions have
+no retention policy and can still grow without bound.
+
+Verifier replay used to make no authenticated request while running. A replay over
+the 120-second worker-staleness threshold could lose authorization before posting
+its verdict even though its fixed lease lasts 300 seconds. Workers now send an
+authenticated heartbeat every 30 seconds during a leased cycle. Heartbeats refresh
+worker liveness without leasing a second job or extending ownership. Replays over
+300 seconds still expire and require more worker capacity, faster replay, or a
+separately designed renewable-lease contract.
+The master rejects `verifierStaleSeconds` below 120 so a worker can time out one
+30-second heartbeat and still authenticate a later request.
+
+### Deployment shape and economical scaling
+
+These are conservative starting specifications for a public pilot, not vendor-
+specific instance guarantees:
+
+| Role | Recommended starting allocation | Scale signal and cheap end-user value |
+|---|---|---|
+| Master plus relay, up to four simultaneous 256-player rooms | 4 recent general-purpose vCPU, 4 GiB RAM, 250 Mbit/s symmetric network minimum (1 Gbit/s preferred for burst/TLS headroom), local NVMe; `-Xmx1g` | Room tick p99 and broker-loop delay now lead. At the measured mix, four rooms averaged about 39 Mbit/s downstream payload before overhead. More regional relay nodes behind explicit room affinity give more value than a much larger heap. |
+| Directory-only master separated from relay workers | 2 vCPU, 2 GiB RAM, local NVMe | Split when relay traffic makes browser/admission latency correlate with room ticks. Keep room ownership sticky; the current process is not horizontally distributed. |
+| Each verifier worker | 2 fast vCPU, 4 GiB RAM, ROM on local read-only storage, `-Xmx2g` | Scale workers by queued-job age and p95 replay/lease consumption. One worker processes one replay at a time; do not oversubscribe cores until replay profiles show spare CPU. |
+| Recording/blob and SQLite volume | Start at 20 GiB NVMe with backups and 70/85% alerts | Storage buys cheap reliability and verification history. Default 512 MiB over three days permits only 2.0 KiB/s of sustained unique input, or 8,192 maximum-size recordings total; size from observed upload rate and retention. |
+| Direct room host | 2 modern cores, 1–2 GiB RAM, at least 20 Mbit/s symmetric for the advertised eight players | Direct hosting is capped at eight. Home uplink quality, NAT reachability and jitter matter more than server CPU; fallback relay preserves user value when direct reachability fails. |
+| Rendered player client | 4 modern cores, 4 GiB free RAM, hardware OpenGL, stable broadband | Only eight nearby ghosts are rendered/streamed in normal relevance. Client JSON/WebSocket decode and HUD roster scans deserve telemetry before raising visual density. |
+
+The cheapest user-visible scaling order is: preserve fallback availability; retain
+the implemented membership deltas and packet-local compression; add regional relay
+nodes/egress where rooms are geographically concentrated; add verifier
+workers when job age rises; provision storage before retention pressure; then
+consider directory/relay separation. Raising player count above 256, increasing
+the eight-neighbor visibility cap, or relaxing source-IP admission limits spends
+CPU/network or abuse resistance with less immediate value.
+
+Operate cautiously around four boundaries. First, the four-connections-per-source
+default can reject legitimate CGNAT/LAN groups and must be measured as a separate
+shared-NAT arm rather than silently relaxed. Second, TLS and production first-use
+PoW were not included in the multi-room timing window; the optimized 20-bit solve
+is still about 0.12 seconds on this desktop, while 22-bit attack mode varies by
+nonce and client. Third, client inbound queues and fallback broker queues are
+bounded, but sustained slow-reader recovery needs WAN impairment tests. Finally,
+the browser still scans and copies matching rooms every accepted request on the
+single broker loop. This change removes its redundant second scan; a cached or
+indexed directory should wait for a measured many-room/browser matrix.

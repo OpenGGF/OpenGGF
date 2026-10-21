@@ -54,6 +54,7 @@ public final class TimeAttackVideoPeers implements AutoCloseable {
         int sourceFrame;
         int firstInput = -1;
         int members;
+        final Set<Integer> memberSlots = new HashSet<>();
         Peer(RaceConnection connection, int index) {
             this.connection = connection;
             publisher = new GhostStreamPublisher(connection::sendBinary);
@@ -193,9 +194,21 @@ public final class TimeAttackVideoPeers implements AutoCloseable {
                     case RaceClient.Control control -> {
                         switch (control.message()) {
                             case ControlMessage.RoomState state -> {
-                                peer.members = state.players().size();
+                                peer.memberSlots.clear();
+                                state.players().forEach(player -> peer.memberSlots.add(player.slot()));
+                                peer.members = peer.memberSlots.size();
                                 totalMembers = Math.max(totalMembers, peer.members);
                                 peak = Math.max(peak, peer.members);
+                            }
+                            case ControlMessage.PlayerUpsert upsert -> {
+                                peer.memberSlots.add(upsert.player().slot());
+                                peer.members = peer.memberSlots.size();
+                                totalMembers = Math.max(totalMembers, peer.members);
+                                peak = Math.max(peak, peer.members);
+                            }
+                            case ControlMessage.PlayerLeft left -> {
+                                peer.memberSlots.remove(left.slot());
+                                peer.members = peer.memberSlots.size();
                             }
                             case ControlMessage.RoundStart start -> countdown = start.countdownEndsAtHubMillis();
                             case ControlMessage.StandingsDelta delta -> observe(delta.rows());

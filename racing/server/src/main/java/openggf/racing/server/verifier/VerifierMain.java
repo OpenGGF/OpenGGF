@@ -145,6 +145,14 @@ public final class VerifierMain {
         }
 
         @Override
+        public void heartbeat() {
+            HttpResponse<Void> response = send(workerRequest(base + "/verifier/heartbeat")
+                    .POST(HttpRequest.BodyPublishers.noBody()).build(),
+                    HttpResponse.BodyHandlers.discarding());
+            requireStatus(response.statusCode(), 204);
+        }
+
+        @Override
         public byte[] fetchRecording(String hashHex) {
             HttpResponse<byte[]> response = send(workerRequest(
                             base + "/recordings/" + hashHex).GET().build(),

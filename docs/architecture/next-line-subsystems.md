@@ -147,10 +147,9 @@ path for list, create, and join must still reply. A
 failed `RelayAttach` is answered with `RoomJoinRejected` on the already-attached
 socket; that frame goes to the relay handshake, not the join queue, and fails the
 handshake immediately with the broker's reason. A
-pre-wave-3 version-2 browser treats the negative list sentinel as an empty
-successful page until its next refresh; it does not crash, but may show a
-misleading empty-room state. Protocol compatibility is tracked for the next
-audit rather than claimed solved here.
+Protocol version 3 incorporates the negative list sentinel and membership-delta
+contract. Earlier experimental clients fail the exact-version handshake instead
+of presenting a rate-limited response as an empty successful page.
 
 Operator commands:
 
@@ -172,8 +171,9 @@ base64url code contains both 32-byte pins. Manual join decodes those pins, requi
 sending any proof. A bare address or `ws://` has no safe identity source and is rejected.
 The code is a trust-on-sharing capability: guests must receive it through a trusted
 channel and should not accept an invite edited by an untrusted party.
-This required wire-field change uses protocol version 2; version 1 clients and
-servers cannot mix on control connections.
+These wire fields and the initial-snapshot/`PlayerUpsert`/`PlayerLeft` membership
+contract use protocol version 3. Earlier experimental clients and servers cannot
+mix on control connections; no deployed compatibility path exists.
 
 Direct-room fallback tunnels check the receiving `HubConnection.queuedBytes()`
 before forwarding either text or binary in either direction. Above the shared

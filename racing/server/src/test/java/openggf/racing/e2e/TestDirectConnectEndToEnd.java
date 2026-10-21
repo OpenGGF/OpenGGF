@@ -190,8 +190,8 @@ class TestDirectConnectEndToEnd {
 
         guest.close();
         await(host, event -> event instanceof RaceClient.Control control
-                        && control.message() instanceof ControlMessage.RoomState state
-                        && state.players().size() == 1,
+                        && control.message() instanceof ControlMessage.PlayerLeft left
+                        && left.slot() == guest.joinAccepted().playerSlot(),
                 10_000);
         host.close();
     }

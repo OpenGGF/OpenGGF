@@ -3,7 +3,7 @@ package com.openggf.net.protocol;
 /** Wire-protocol constants for multiplayer time attack. */
 @com.openggf.game.ModApi
 public final class Protocol {
-    public static final int VERSION = 2;
+    public static final int VERSION = 3;
     // A full 256-player roster with bounded labels must fit in one control frame.
     public static final int MAX_CONTROL_BYTES = 64 * 1024;
     public static final int MAX_BINARY_BYTES = 4096;

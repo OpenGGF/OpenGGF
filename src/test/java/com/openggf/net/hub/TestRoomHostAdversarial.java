@@ -186,10 +186,10 @@ class TestRoomHostAdversarial {
     private static void apply(Harness harness, Peer bad, Peer witness, Attack attack) {
         String token = bad.join == null ? "unadmitted" : bad.join.sessionToken();
         switch (attack) {
-            case MALFORMED -> harness.text(bad, "{\"v\":2,\"token\":null,\"msg\":null}");
+            case MALFORMED -> harness.text(bad, "{\"v\":3,\"token\":null,\"msg\":null}");
             case TRAILING_ROOT -> harness.text(bad, CODEC.encode(token, new ControlMessage.Ping(1)) + " {}");
             case WRAPPED_VERSION -> harness.text(bad, CODEC.encode(token, new ControlMessage.Ping(1))
-                    .replace("\"v\":2", "\"v\":4294967298"));
+                    .replace("\"v\":3", "\"v\":4294967299"));
             case PROOF_REPLAY -> harness.control(bad, bad.proof == null
                     ? new ControlMessage.AuthProof("AA==") : bad.proof);
             case HELLO_REPLAY -> harness.control(bad, bad.handshake.hello());
@@ -236,6 +236,12 @@ class TestRoomHostAdversarial {
         }
         assertEquals(256, harness.room.playerCount());
         assertEquals(256, harness.room.players().stream().map(ControlMessage.PlayerInfo::fingerprint).distinct().count());
+        assertTrue(peers.stream().allMatch(peer -> peer.snapshots == 1),
+                "each connection gets only its initial membership snapshot");
+        assertEquals(256L * 255 / 2, peers.stream().mapToLong(peer -> peer.upserts).sum(),
+                "each admission sends one upsert to each incumbent");
+        assertTrue(peers.stream().mapToLong(peer -> peer.textBytes).sum() < 32L * 1024 * 1024,
+                "bounded fixture admission traffic stays below 32 MiB without cubic snapshot fanout");
         Peer overflow = harness.connect(host, "Overflow");
         harness.hello(overflow);
         harness.prove(overflow);
@@ -264,32 +270,35 @@ class TestRoomHostAdversarial {
     }
 
     @Test
-    void validAttemptBurstsAcrossSendersSplitAtBinaryPacketCap() throws Exception {
-        assertValidAttemptBurstIsDelivered(3, 15, 12);
+    void validAttemptBurstsRetainCanonicalDecodedWorkCap() throws Exception {
+        assertValidAttemptBurstIsDelivered(3, 15, 12, true);
     }
 
     @Test
     void validAttemptBurstsAcrossSendersSplitAtAggregateEntryCap() throws Exception {
-        assertValidAttemptBurstIsDelivered(8, 32, 1);
+        assertValidAttemptBurstIsDelivered(8, 32, 1, true);
     }
 
     @Test
-    void validAttemptBurstReservesRelayEnvelopeAt4094Bytes() throws Exception {
-        // 49 entries and 514 frames: 6 + 49 * 10 + 514 * 7 = 4094 bytes.
+    void formerly4094ByteBurstCompressesWithRelayEnvelopeHeadroom() throws Exception {
+        // Canonical bytes remain 4,094, while packet-local motion deltas reduce the wire packet.
         assertValidAttemptBurstIsDelivered(new int[]{17, 16, 16},
-                entry -> entry < 24 ? 11 : 10, 4094);
+                entry -> entry < 24 ? 11 : 10, 1769, false);
     }
 
     private void assertValidAttemptBurstIsDelivered(int senderCount, int attempts,
-                                                   int framesPerAttempt) throws Exception {
+                                                   int framesPerAttempt,
+                                                   boolean expectSplit) throws Exception {
         int[] attemptsPerSender = new int[senderCount];
         java.util.Arrays.fill(attemptsPerSender, attempts);
-        assertValidAttemptBurstIsDelivered(attemptsPerSender, entry -> framesPerAttempt, 0);
+        assertValidAttemptBurstIsDelivered(attemptsPerSender, entry -> framesPerAttempt,
+                0, expectSplit);
     }
 
     private void assertValidAttemptBurstIsDelivered(int[] attemptsPerSender,
                                                    java.util.function.IntUnaryOperator framesPerEntry,
-                                                   int expectedAggregateBytes) throws Exception {
+                                                   int expectedAggregateBytes,
+                                                   boolean expectSplit) throws Exception {
         int senderCount = attemptsPerSender.length;
         PlayerIdentity host = PlayerIdentity.loadOrCreate(dir.resolve("burst-host"));
         Harness harness = new Harness(host, senderCount + 1, false);
@@ -325,11 +334,15 @@ class TestRoomHostAdversarial {
         }
         if (expectedAggregateBytes > 0) {
             assertEquals(expectedAggregateBytes, GhostPackets.encodeAggregate(0, expected).length,
-                    "this boundary passes the raw packet cap but needs relay-envelope headroom");
+                    "packet-local compression must retain deterministic relay headroom");
         }
         // All starts/resets and frames are valid at the same server clock, before one tick.
         assertDoesNotThrow(harness.room::tick);
-        assertTrue(witness.capturedBinary.size() > 1, "oversized aggregate requires bounded chunks");
+        if (expectSplit) {
+            assertTrue(witness.capturedBinary.size() > 1, "entry cap requires bounded chunks");
+        } else {
+            assertEquals(1, witness.capturedBinary.size(), "compressed aggregate should fit one packet");
+        }
         int firstTick = assertBurstEntries(witness.capturedBinary, expected);
         assertEquals(senderCount + 1, harness.room.playerCount());
         assertTrue(senders.stream().noneMatch(peer -> peer.closed));
@@ -470,11 +483,17 @@ class TestRoomHostAdversarial {
         int binaryCount;
         List<byte[]> capturedBinary;
         boolean wrapRelayBinary;
+        long textBytes;
+        int snapshots;
+        int upserts;
 
         Peer(ClientHandshake handshake) { this.handshake = handshake; }
 
         @Override public void sendText(String text) {
+            textBytes += text.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
             ControlMessage message = CODEC.decodeRoom(text).message();
+            if (message instanceof ControlMessage.RoomState) snapshots++;
+            if (message instanceof ControlMessage.PlayerUpsert) upserts++;
             if (message instanceof ControlMessage.Welcome value) welcome = value;
             if (message instanceof ControlMessage.JoinAccepted value) lastAdmission = value;
             if (messages.size() == 8) messages.removeFirst();

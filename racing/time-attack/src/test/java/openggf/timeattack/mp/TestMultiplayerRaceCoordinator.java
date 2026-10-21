@@ -186,6 +186,25 @@ class TestMultiplayerRaceCoordinator {
     }
 
     @Test
+    void membershipDeltasReachBothSessionAndRemotePlayback(@TempDir Path root) {
+        Rig rig = rig(root);
+        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RoomState(List.of(
+                new ControlMessage.PlayerInfo(0, "fp0", "ME", "sonic")))));
+        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.PlayerUpsert(
+                new ControlMessage.PlayerInfo(3, "fp3", "PEER", "tails"))));
+        feedPeerFrames(rig, 1, 200);
+        rig.coordinator().pump();
+        rig.coordinator().afterLevelFrame();
+        assertEquals(2, rig.session().players().size());
+        assertEquals(1, rig.coordinator().remoteActiveGhosts().size());
+        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.PlayerLeft(3)));
+        rig.coordinator().pump();
+        rig.coordinator().afterLevelFrame();
+        assertEquals(1, rig.session().players().size());
+        assertTrue(rig.coordinator().remoteActiveGhosts().isEmpty());
+    }
+
+    @Test
     void countdownHoldsOnlyAttachedRuntime(@TempDir Path root) {
         Rig rig = rig(root);
         ControlMessage.RoundConfig config = new ControlMessage.RoundConfig(

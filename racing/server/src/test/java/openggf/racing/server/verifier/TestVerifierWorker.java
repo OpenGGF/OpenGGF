@@ -6,14 +6,20 @@ import openggf.racing.server.verifier.AttemptReplayHarness;
 import openggf.timeattack.AttemptStartDescriptor;
 import com.openggf.net.identity.PlayerIdentity;
 import openggf.racing.server.master.VerificationJobQueue;
+import openggf.racing.server.master.VerifierRegistry;
 import com.openggf.net.protocol.VerdictCodec;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.HexFormat;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -84,6 +90,83 @@ class TestVerifierWorker {
                 passReplay(), VerdictCodec.RESULT_PASS, true);
     }
 
+    @Test
+    void heartbeatsKeepLongReplayAuthorizedWithinItsOriginalLease() throws Exception {
+        AtomicLong now = new AtomicLong();
+        PlayerIdentity identity = identity("long-replay");
+        VerifierRegistry registry = new VerifierRegistry(now::get, 120_000);
+        var registered = registry.register(identity.publicKeyEncoded(), Set.of("fp"));
+        VerificationJobQueue queue = new VerificationJobQueue(now::get, 300_000);
+        AttemptInputRecording recording = recording("s3k", 0, 0, "sonic", "fp");
+        var candidate = matchingJob(recording, "gg");
+        String jobId = queue.submit(candidate, 10_000);
+        queue.onRecordingUploaded(candidate.inputRecordingHashHex(), "player");
+        var leased = queue.lease(registered.workerId(), Set.of("fp")).orElseThrow();
+        Semaphore observedHeartbeat = new Semaphore(0);
+        FakeApi api = new FakeApi(JSON.writeValueAsString(leased), recording.encode()) {
+            @Override public void heartbeat() {
+                assertTrue(registry.authenticate(registered.workerId(),
+                        registered.workerToken()).isPresent());
+                observedHeartbeat.release();
+            }
+
+            @Override public void postVerdict(String id, String result, byte[] signature) {
+                assertTrue(registry.authenticate(registered.workerId(),
+                        registered.workerToken()).isPresent(), "worker must remain authorized");
+                assertTrue(queue.complete(id, registered.workerId()).isPresent(),
+                        "heartbeat must preserve the original lease owner");
+                super.postVerdict(id, result, signature);
+            }
+        };
+        VerifierWorker worker = new VerifierWorker(api, (inputs, fingerprint) -> {
+            // Four virtual minutes exceed worker staleness but stay inside the 5-minute lease.
+            for (int step = 0; step < 4; step++) {
+                observedHeartbeat.drainPermits();
+                now.addAndGet(60_000);
+                try {
+                    assertTrue(observedHeartbeat.tryAcquire(5, TimeUnit.SECONDS));
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(interrupted);
+                }
+            }
+            return passReplay();
+        }, identity, Duration.ofMillis(1));
+
+        assertTrue(worker.pollOnce());
+        assertEquals(VerdictCodec.RESULT_PASS, api.result);
+        assertEquals(VerificationJobQueue.State.DONE, queue.stateOf(jobId));
+    }
+
+    @Test
+    void endingCycleInterruptsAnInFlightHeartbeat() throws Exception {
+        AttemptInputRecording recording = recording("s3k", 0, 0, "sonic", "fp");
+        CountDownLatch started = new CountDownLatch(1);
+        CountDownLatch interrupted = new CountDownLatch(1);
+        FakeApi api = new FakeApi(JSON.writeValueAsString(matchingJob(recording, "gg")),
+                recording.encode()) {
+            @Override public void heartbeat() {
+                started.countDown();
+                try {
+                    new CountDownLatch(1).await();
+                } catch (InterruptedException expected) {
+                    Thread.currentThread().interrupt();
+                    interrupted.countDown();
+                }
+            }
+        };
+        VerifierWorker worker = new VerifierWorker(api, (inputs, fingerprint) -> {
+            try {
+                assertTrue(started.await(5, TimeUnit.SECONDS));
+            } catch (InterruptedException failure) {
+                throw new IllegalStateException(failure);
+            }
+            return passReplay();
+        }, identity("heartbeat-cleanup"), Duration.ofMillis(1));
+        assertTrue(worker.pollOnce());
+        assertTrue(interrupted.await(5, TimeUnit.SECONDS));
+    }
+
     private void assertDecision(VerificationJobQueue.Job job, byte[] bytes,
                                 AttemptReplayHarness.Result replay,
                                 String expected, boolean expectedReplay) throws Exception {
@@ -133,7 +216,7 @@ class TestVerifierWorker {
                 "gg", 102, null);
     }
 
-    private static final class FakeApi implements VerifierWorker.MasterApi {
+    private static class FakeApi implements VerifierWorker.MasterApi {
         private String jobJson;
         private final byte[] recording;
         private String result;
@@ -152,6 +235,7 @@ class TestVerifierWorker {
             jobJson = null;
             return Optional.ofNullable(result);
         }
+        @Override public void heartbeat() { }
         @Override public byte[] fetchRecording(String hashHex) { return recording; }
         @Override public void postVerdict(String jobId, String result, byte[] signature) {
             this.result = result;

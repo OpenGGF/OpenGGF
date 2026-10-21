@@ -628,6 +628,25 @@ public final class RacingSocketStressTool {
                     peer.roomMembers = Set.copyOf(fingerprints);
                     peer.roomRoster = Map.copyOf(roster);
                 }
+                case ControlMessage.PlayerUpsert upsert -> {
+                    ControlMessage.PlayerInfo player = upsert.player();
+                    int index = Integer.parseInt(player.displayName().substring(1));
+                    check(index >= 0 && index < config.players(), "unexpected room participant");
+                    ownerBySlot.put(player.slot(), index);
+                    Map<Integer, MemberIdentity> roster = new HashMap<>(peer.roomRoster);
+                    roster.put(player.slot(), new MemberIdentity(player.fingerprint(), player.displayName()));
+                    Set<String> fingerprints = new HashSet<>();
+                    roster.values().forEach(info -> check(fingerprints.add(info.fingerprint()), "duplicate room identity"));
+                    peer.roomMembers = Set.copyOf(fingerprints);
+                    peer.roomRoster = Map.copyOf(roster);
+                }
+                case ControlMessage.PlayerLeft left -> {
+                    Map<Integer, MemberIdentity> roster = new HashMap<>(peer.roomRoster);
+                    check(roster.remove(left.slot()) != null, "departure for unknown room slot");
+                    peer.roomRoster = Map.copyOf(roster);
+                    peer.roomMembers = roster.values().stream().map(MemberIdentity::fingerprint)
+                            .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                }
                 case ControlMessage.RoundStart start -> {
                     ControlMessage.RoundConfig expected = new ControlMessage.RoundConfig(
                             "s3k", 0, 0, config.durationSeconds() + 2, "OPEN", null);

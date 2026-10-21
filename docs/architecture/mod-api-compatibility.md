@@ -831,6 +831,13 @@ tools are outside that surface. `RuntimeException` (typed connection/protocol re
 and `IntSupplier` (room capacity callbacks) are individually audited JDK signature types;
 no third-party signature or package-prefix exemption is added.
 
+Protocol v3 replaces repeated whole-room membership snapshots with `PlayerUpsert` and
+`PlayerLeft` messages after the joining client receives its initial `RoomState`. The
+candidate surface therefore adds those two immutable control records and incremental
+`RemoteGhostRegistry` hooks. This protocol has not shipped, so v2 compatibility is not
+retained. Ghost packet compression is an internal wire encoding: decoded public frame
+records and canonical stream hashing remain unchanged.
+
 The mutable `mod-api-signatures-0.7.txt` pin is regenerated against the shared development line's complete
 surface, including its existing scene art/audio capabilities. `ModApiVersion` describes
 the additions; the policy descriptor remains unpublished candidate `0.7.0` and published
