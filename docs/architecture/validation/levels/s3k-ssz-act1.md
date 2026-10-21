@@ -4368,3 +4368,26 @@ expected46 and the observed48-ring prefix. No whole-route, native timing/pixel
 or new native800 coverage is certified. Exact policies, method correction,
 commands and stopping limits are in the dated
 [completion plan](../../plans/2026-10-13-s3k-playable-completion.md#r10-ordinary-paired800-post-prefix-exploration--2026-10-21).
+
+
+## R11 ordinary manual pickup admission — 2026-10-21
+
+One cold ordinary proposal at `a11707c6de4e2f59c3dc171a6dc1b10abee52e19`
+preserves the full R10proposal3 14414-input stream and original9914 P1/P2 prefix,
+then publishes actual **MANUAL carry targeting boundP1 at14441**, after28 new
+step/draw pairs. The required inlet matches; P2 initially has flightFlag0/fuel0,
+CPU NORMAL/manualfalse, airborne/jumping. Up establishes manual control; after
+landing, P2jump14430/release14431/repress14432 activates flight. P1 stays neutral.
+At admission P1(3893,1382) is carried, P2(3893,1354) has flag1/fuel235/manualtrue;
+both unhurt/live,59rings/3lives, same native pair/focus/world/LEVEL. Cooldown and
+original contact operands remain UNKNOWN; published separation28 is after attach.
+
+The same invocation gates all12 finite new two-pad values before boot and
+roundtrips all14442 emitted rows, including both preserved prefixes. Normal
+images/public rows were inspected and raw products consumed. **0 JUnit tests/
+0 skips**; no maintained-class, qualification pair, native or broad run. This
+records only the observed engine admission, with no carry-continuation, wall,
+MTZ, native800/timing/pixel or whole-route coverage. R10 history and all maintained
+runtime/test/movie/oracle data, including expected46, remain unchanged. Exact
+policy, public facts and limits are in the dated
+[completion plan](../../plans/2026-10-13-s3k-playable-completion.md#r11-ordinary-manual-pickup-admission-only--2026-10-21).

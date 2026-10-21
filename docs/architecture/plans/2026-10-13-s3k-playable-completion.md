@@ -28339,3 +28339,70 @@ archives, pass cache or validation receipt was created. Source stayed clean and
 unchanged throughout the run; later MHZ/doc merges change no executable input.
 The original499-candidate smoke continuation and its exact baseline comparison
 remain pending separately; this guard result does not turn that incomplete run green.
+
+
+## R11 ordinary manual pickup admission only — 2026-10-21
+
+A separate owned branch at exact Root
+`a11707c6de4e2f59c3dc171a6dc1b10abee52e19` executes one fresh ordinary cold
+pickup proposal. R10's three requests, refs, inputs and results remain immutable.
+Settings remain native800 Sonic+Tails/off, 7arg titlefalse/null optional setup,
+SSZ10/0. The entire actual R10proposal3 controller stream14414 and its original
+9914 P1/P2 prefix are preserved. No snapshot/restore/import, setters, private
+observer, owner activation/tryGrab call, terrain reprobe or runtime/data change.
+
+The required inlet14413 matches: P1grounded/unhurt/free(3893,1388),59rings/3lives;
+P2live(3893,1317), same bound boot world/native pair/focus/LEVEL, no pending
+assembly. Newly observed P2 state is flightFlag0/fuel0, airborne/jumping,
+CPU NORMAL/manualfalse, carry contextNONE/targetfalse, velocity(48,856).
+These are actual public values in this invocation, not retroactive R10 facts.
+Cooldown remains **UNKNOWN**; the private accessor and public capture/restore
+methods are not used. Local P1/P2/world bindings are real JVM references, not
+native addresses or cross-run aliases.
+
+The one declared recipe keeps P1horizontally neutral. Up establishes P2manual
+control without Down+A spindash; ordinary Left/Right alignment is permitted by
+public X delta but is unnecessary here. Inactive flight waits at most120 inputs
+for an ordinary landing, then uses exactly one grounded jump/release/repress.
+An initially active-flight branch permits at most one P1jump edge, but this
+invocation does not use it. One normal contact-window approach, first missed
+passage, hurt/death/life loss, unsafe world/team/control, flight exhaustion or
+480 new inputs terminates it; there is no second approach or wall-clear goal.
+
+Actual new pads are exactly `16 - / U; 1 - / U+A; 1 - / U; 1 - / U+A; 9 - / U`.
+Manual authority publishes14414. P2 is grounded at14429; grounded jump14430,
+release14431 (Yvelocity-968), repress14432 publish flightFlag1/fuel240.
+At **14441**, after28 new step/draw inputs, the existing public carry owner
+reports `isCarrying(boundP1)=true`, `context=MANUAL`. P1 is(3893,1382), airborne
+and object-controlled; P2 is(3893,1354), flightFlag1/fuel235, CPU NORMAL/manualtrue.
+Both have Yvelocity-840, remain unhurt/live with59rings/3lives, native slots and
+same roster/world/focus/LEVEL; no pending assembly. The attempt stops immediately.
+The published28-pixel separation is post-attachment state, not a measurement of
+the original contact-window operands. No cooldown or native branch value is
+inferred from admission.
+
+Before boot in this same JVM, production author/loader equality gates all12
+finite new two-pad combinations, including jump0x10, masks, Start/debug booleans
+and payload. Afterward all14442 emitted rows roundtrip, with independent payload
+proof of the complete14414 R10 stream and original9914. All29 public POST_DRAW
+rows and28 PRE_STEP reports reusing those values were read before inspecting the
+two normal framebuffer images. Source-derived flight active is flag!=0; original
+predicates/providers are not rerun. No new runtime observer/API or logger exists.
+
+One current Main absolute queue-wrapper `--normal -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl compile exec:exec -B` lifecycle uses Java25,
+verified original absolute ROMs, EGL/nullAL/Lua5.4, cleared ambient JVM/display/
+library overrides and owned target/tmp/native paths. Observed queue wait is at
+least1716s; Maven compile/exec displays16.351s. Actual result is **0 JUnit tests/
+0 skips**, not a suite pass. Whole bounded original streams, gate, properties/
+source pins and all-row proofs were read; owned raw outputs and extraction paths
+were consumed. Useful specific source/design, compact first public facts, fixed
+script/BK2 and two selected normal images remain at
+`<task-artifacts>/ssz-manual-pickup-r11-20261021/` (exact path in ownership registry).
+BK2 SHA256: `c8bbc1d5eddb793a561f1917f1ee969cc6ccd3f4cb296bd2b2df2996d5b41f03`.
+
+This answers only ordinary current-engine manual pickup admission at this inlet.
+Carry continuation/release, wall clearing, MTZ, native carry behavior, boot/pixel/
+timing coverage and independent qualification remain unmeasured. Maintained
+movies/tests/windows/counts and expected46 remain unchanged. Root owns any later
+scope; no retry, second cold request, broad/native run, push or integration.
