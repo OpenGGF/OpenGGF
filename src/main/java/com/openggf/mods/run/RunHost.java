@@ -30,6 +30,14 @@ public interface RunHost {
     default void afterStep(RunStep step) {
     }
 
+    /**
+     * Asked when a host-returning run completes its act, before the run would end. Returning
+     * true restarts the act as a retry ({@link #onLevelReady} follows) instead of ending the run.
+     */
+    default boolean retryOnActCompletion() {
+        return false;
+    }
+
     /** Ghosts to draw this frame; at most eight are drawn. */
     default List<GhostPose> ghosts() {
         return List.of();

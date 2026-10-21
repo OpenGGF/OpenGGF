@@ -91,6 +91,9 @@ final class HostedRunController {
         String determinismFingerprint = new DeterminismFingerprint(AppVersion.get(), romChecksumOrZero()).asString();
         stepOrdinal = 0;
         debugAssistThisStep = false;
+        // The load that just finished satisfies any retry requested before it (for example a
+        // second press during the reload fade); only a request made from here on reloads again.
+        retryRequested = false;
         // The sidekick pattern-bank cursor resets on every level load
         // (LevelPlayableArtInitializer), so cached ghost slots hold stale bank
         // bases; clear them before the new level's first render.
@@ -223,6 +226,42 @@ final class HostedRunController {
         boolean requested = retryRequested;
         retryRequested = false;
         return requested && host != null;
+    }
+
+    /**
+     * Asks the host whether its completed act restarts as a retry instead of ending the run.
+     * False with no run or a pending leave, including a leave the host raises while answering;
+     * a failing host aborts the run and answers false.
+     */
+    boolean retryOnActCompletion() {
+        if (host == null || leaveReason != null) {
+            return false;
+        }
+        try {
+            boolean retry = host.retryOnActCompletion();
+            return retry && leaveReason == null;
+        } catch (RuntimeException failure) {
+            abort(failure);
+            return false;
+        }
+    }
+
+    /**
+     * Resolves a host-returning run's completed act: null restarts the act as a retry (one
+     * requested this frame, or one the host asks for), otherwise the reason the run ends. A
+     * pending leave or host failure wins over a retry, as at the ordinary boundary; a host
+     * failure (including one the retry query raises) ends the run as aborted, anything else
+     * as completed.
+     */
+    RunEndReason resolveActCompletion() {
+        RunEndReason pending = consumeLeave();
+        if (pending == null && (consumeRetry() || retryOnActCompletion())) {
+            return null;
+        }
+        if (pending == null) {
+            pending = consumeLeave();
+        }
+        return pending == RunEndReason.ABORTED ? RunEndReason.ABORTED : RunEndReason.ACT_COMPLETED;
     }
 
     /** The reason the run must end at the next boundary (host leave or host failure), or null. */
