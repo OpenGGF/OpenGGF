@@ -1462,6 +1462,18 @@ selection passes29T/0F/0E/0S. This is later event progression, not the CNZ arriv
 at player X=$3640 or a cold Knuckles route/ICZ2 handoff qualification.
 [Source, commands and limits](architecture/validation/levels/s3k-icz-act1.md#knuckles-snow-free-camera-event-progression--2026-10-21).
 
+ICZ2 crushing-column decoration reconstruction (2026-10-21): the ordinary
+partial crossing exposed a strict second-restore mismatch in the child's
+immutable birth spawn. `BottomDecoration.recreateForRewind` now retains the
+captured record instead of recomputing it from a restore-phase parent position.
+Live child Y still follows `parent.y + $B0` (`loc_8A612`); ordinary movement,
+solid contact and drawing are unchanged. The original 35T/1F group and isolated
+1T/1F captured-context diagnosis remain recorded. The affected group retains
+106 passing cases; the separately corrected exact route passes1T/0F/0E/0S with
+ten complete-registry rewind windows. Source/input applicability corrections and
+partial-route limits are tracked in the [ICZ2 matrix](architecture/validation/levels/s3k-icz-act2.md#maintained-ordinary-partial-crossing--2026-10-21);
+this is not a boss, full-act or native presentation certificate.
+
 ICZ R11 synchronous retained16 owner (2026-10-17): Load_Level now preserves
 known outgoing pattern groups until existing deferred publication, using current
 target collision indices. Unknown placeholder capacity is not exported as RAM;

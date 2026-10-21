@@ -182,3 +182,69 @@ resource/consumer and the affected full-registry rewind spots are still pending.
 No snapshot or newly admitted rewind checkpoint is retained. Boss admission,
 combat/exit, full act, incoming ICZ1 history, roster/donor/viewport breadth and
 native timing/pixel conformance remain open.
+
+
+## Maintained ordinary partial crossing — 2026-10-21
+
+[`TestIcz2ColdCubeBridgeRoute`](../../../../src/test/java/com/openggf/tools/TestIcz2ColdCubeBridgeRoute.java)
+promotes the exact R2 2292-row script/BK2 as an ordinary partial-route consumer.
+The independent packaging test checks all rows/both pads through the production
+compiler/writer/loader, neutral P2/no Start/debug/state payload, full-file hashes
+and the original 2040-row prefix digest. The route uses the same explicit
+title-enabled native 320 solo Sonic/off direct 5/1 inlet, with all gameplay setup
+fields null/false and normal drawing on every main and branch input. It checks
+no death or life loss on every input; it permits the prefix's earlier hurt.
+
+Ten 45-input whole-registry spots cover before/active/after path/corks
+1664/1709/1724/1733/1778, cube approach/shatter/button 2040/2095/2131, bridge fall
+2183 and the final crossing 2246→2291. Each compares all 60 registered keys on
+immediate restore and two forward cycles, restores the external held-input
+history, and rejects loads/mode changes/fresh assembly/callback-bearing fades.
+Actual normal-update references and captured ObjectRefIds bind the placed owners;
+equal class/coordinates are not used as identity across restore.
+
+The original 35T/1F group failed the second restore at row 2040. An authorized
+error-context-only method diagnostic (1T/1F) identified
+`IczCrushingColumnObjectInstance.BottomDecoration`, raw ID `$AF`, child entry
+slot 16, separately ObjectRefId slot -1/dynamicId 253. Its immutable birth spawn
+Y/rawYWord changed from 2818 to 2817. Reconstruction now uses the captured spawn;
+live drawing still follows `parent.y + $B0` (`loc_8A612`). A short independent
+actual-manager component reconstructs twice after ordinary parent movement and
+checks both the complete birth record and further live following. It is a
+declared component fixture, not a second cold route.
+
+The affected 107T/1F/0E/0S group completed all ten world windows and passed its
+other 106 cases, including input packaging, 12 column controls, 8 cube, 11 button,
+14 bridge and 60 required S3K core cases (both level-loading classes are included).
+Its remaining failure exposed the new consumer's break/retirement confusion:
+`isDestroyed` observed cork retirement at 1746/1758; public `isBroken` is the
+actual break writer at the unchanged expected 1724/1733. Only that detector was
+corrected; no runtime/input/timestamp or other assertion changed.
+
+The corrected-detector route method (73490) still fails 1T/1F/0E/0S on cork151:
+actual break1732 versus old expected1733, with all ten windows complete and the
+requested cube/button/bridge/crossing observations unchanged. Retained observer
+source shows that1733 came from attempt07, while this movie retains attempt09's
+prefix; they first differ at1724 (Right versus neutral). That old data point did
+not apply to this input. No runtime/input/timestamp fitting was performed.
+
+After Root's bounded source/data review, only the cork151 expected movie datum
+changes to1732; window1733 and all inputs/runtime/predicates remain unchanged.
+The final exact route method (96349) passes **1T/0F/0E/0S**, with all ten 60-key
+windows and 3642 normally drawn main/forward/replay inputs. It asserts actual
+cube162 shatter/-$300 bounce2095, actual button163 standing/trigger2 at2131,
+same placed bridge165 first fall2183 and grounded crossing2276. After input2291
+P1 is alive, grounded and control-released at9023/2544, velocity713/0, rings6,
+lives3 and camera8863/2448, with the original native320 solo Sonic/off roster.
+
+Qualification combines that separately executed route pass with the affected
+group's 106 unchanged passing cases; it is not a wholly green107-case invocation
+or a full-suite result. The maintained partial interaction and these same-world
+rewind spots are locally qualified on the pinned private-owner source; incoming
+load/history boundaries and other configurations are not added.
+
+The original failures and diagnostic remain recorded in the dated
+[completion plan](../../plans/2026-10-13-s3k-playable-completion.md). This consumer
+adds only this partial native 320 solo Sonic/off interaction and same-world replay.
+Boss admission/combat/exit, full act, incoming ICZ1 history, roster/donor/viewport
+breadth and native timing/pixel conformance remain open.

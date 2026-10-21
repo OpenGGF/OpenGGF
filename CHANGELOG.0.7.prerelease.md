@@ -413,7 +413,9 @@ Unreleased. The earlier development themes remain in
 - **S3K breakable floors:** Cork's placed record becomes its first moving
   fragment, preserving checked sibling allocation, native motion and render
   retirement through rewind. Ice Cap uses the native mapping nibble and its
-  separate fragment velocity table.
+  separate fragment velocity table. Ice Cap's crushing-column decoration keeps
+  its original construction record through rewind while continuing to follow
+  the restored moving column.
 
 - **S3K Knuckles routes:** Locked-on Mushroom Hill deletes the standalone S&K
   intro before it can freeze the camera and take player control. Its native
