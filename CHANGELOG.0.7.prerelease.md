@@ -390,6 +390,8 @@ Unreleased. The earlier development themes remain in
   movie, preserving shared-movie priority and rejecting unsafe source aliases.
   Closing or rebooting a headless capture releases its owned audio ROM reference,
   so a subsequent title and saved-slot launch can read a fresh ROM in the same process.
+  Silent headless boots also retire inherited audio backends before playback, keeping
+  reused capture processes off desktop audio devices.
 
 - **Native-compatible PCM output (diagnostics):** An opt-in audio session setting
   feeds the accurate FM chip's own pin sums through a Java port of blip_buf. It

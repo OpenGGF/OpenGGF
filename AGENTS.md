@@ -260,6 +260,12 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   [briefing-trace-rounds.md](docs/agent-workflow/briefing-trace-rounds.md#measurement-hazards--all-produce-plausible-output).
   Attribute results to the command, commit, and completed run; inspect skips.
 
+## Enforced correction contracts
+
+| Contract | Owner and regression enforcement |
+| --- | --- |
+| Headless boot selects no-device audio even when synthesis is disabled; callers must not rely on a fresh JVM. | `HeadlessGameBoot.installAudioBackend()`; ROM-free `TestHeadlessAudioOwnership` in ordinary CI and ROM-backed `TestHeadlessGameBootAudioIdentity`. |
+
 ## Level test coverage
 
 New zone/act implementations must follow the
