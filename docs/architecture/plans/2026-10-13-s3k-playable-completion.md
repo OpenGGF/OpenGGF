@@ -25665,3 +25665,93 @@ tracked inherited MenuAudioProbeTool singleton violations, and one terminology
 guard repaired by the two unused formal renames. No guard allowlist was relaxed.
 Remaining gameplay failures and parity/coverage gaps keep Main delivery blocked.
 No broad selection was repeated after these bounded fixes.
+
+
+## Knuckles LRZ1 first maintained miniboss leaf 2026-10-21
+
+This isolated input/test leaf starts at
+`0e4f7a9f202f477018d4adeb01295316704c0ea1`. It changes only the native320
+solo-Knuckles miniboss script/BK2, the first method in
+`TestLrzKnucklesColdRouteCapture`, its LRZ1 matrix and coverage-backlog row,
+and this appendix. Production movement, input handling, fixture boot, drawing,
+whole-registry comparison and the other four test methods are unchanged. Only
+the authorized arrival count and observed endpoint data change; the semantic
+gameplay assertions remain or become stronger.
+
+Sixteen bounded ordinary-controller policies were explored from an honestly
+reached checkpoint; no further policies were authored after selection13.
+The selected static proposal preserves inputs0..3863 exactly. Its30 changed
+original P1 rows are3864,5660..5663,10026..10029,12060..12063,13202,
+13886..13889,15206..15209,15768..15771 and18607..18610;90 appended Right-held
+rows20410..20499 make20500 total. P2 remains neutral throughout.
+Production author/loader roundtrip and an independent complete ordered-row
+comparison agree. The maintained script SHA256 is
+`563b39560a5706585f6ff226f06f00656b01ac2c8687bd540793e73b8856474a`;
+BK2 SHA256 is `eea50fdfb7e65e75968a52a359fb6537f6f082334320334cf96ef61d5eed18bf`.
+Only `Header.txt` and `Input Log.txt` are present, with no saved state.
+
+Two independently launched fresh ordinary row0 qualifiers then replayed this
+static movie without restoration, seeds or helper steering and rendered each
+input. Both completed20500 inputs and matched all48 declared player/active-owner
+fields byte-for-byte against one another and the author series. First cloud
+attachment is9919; the original9937 attachment and9943 spindash release remain.
+The second attachment is19646..19657, absent19658 without attributing its cause.
+A real boss appears20355 (routine0), the actual camera/music gate completes20498
+(still routine0), and the first initialized boss return20499 has routine2,
+health6 and no defeat. Endpoint centre(11560,1968),10 rings,3 lives, no hurt/death,
+high priority and all observed object/control locks released are recorded facts.
+These standalone observations are not JUnit, native or broad-suite passes.
+Raw state series and custom classes were inspected and consumed; useful proposal
+and adapter source remain outside the repository.
+
+The maintained first method retains all70 original45-input full-registry windows
+and adds14 starts:3863,3864,5659,5660,9918,9919,19645,19646,19657,19658,20354,
+20355,20453 and20454. Both ordinary forward and restored forward branches retain
+normal drawing and the exact existing comparison. The last replay ends at the
+first initialized return20499; no post-initialization window is claimed.
+Actual first attachment and initialized health/gate admission strengthen the
+retained cloud9937/9943, ring, priority, roster, zone/act and survival assertions.
+
+The one authorized maintained focused request uses the current Main wrapper,
+Java25, original CRC63522553/SHA1CFBF98C36C776677290A872547AC47C53D2761D6
+ROM, surfaceless EGL, null OpenAL and Lua5.4. With `OPENGGF_MAIN` and `S3K_ROM`
+set to their verified absolute locations, its substantive command is:
+
+```sh
+env -u JDK_JAVA_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS \
+  -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off \
+  "-Ds3k.rom.path=$S3K_ROM" \
+  '-Dtest=TestLrzKnucklesColdRouteCapture#coldKnucklesReachesMinibossAndRestoresTraversalAndCloudEscape' \
+  test -B
+```
+
+The exact method completed **1T/0F/0E/0S**, terminal exit0, on base0e4
+plus the scoped test/input leaf. The actual XML identity was
+`com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesReachesMinibossAndRestoresTraversalAndCloudEscape`.
+The whole original XML/TXT, all67 properties, failure/error/skip absence and
+case streams were inspected. Java25.0.4.1/class69, the owned cwd and the
+absolute original ROM property matched; no every-frame drawing override was
+supplied. The queued command also used owned target-local report/tmp properties.
+Admission wait35s, Maven38.902s and XML case11.064s are distinct measurements,
+not elapsed delivery time. The10,796-file src/POM fingerprint remained
+`e193b915229663def8457af2ae5337865eaf9c1d4e3a778df8e3adb54df022f6`; configuration and original ROM identity
+were unchanged. Exact diagnostics were consumed after inspection.
+No unchanged failing methods, whole class, baseline, smoke or native workload
+were repeated. The normal drawing/full-registry84-window pass is bounded
+maintained evidence, separately from the two uninterrupted fully drawn qualifiers.
+
+The other four methods and all twelve files belonging to the six longer
+controllers remain byte-for-byte base0e4. Their inherited current-physics
+input5027 negatives remain pending, as do the HPZ/joined/campaign shared-prefix
+failures. All seven old movies share the entire20410-input prefix; an old fight
+tail was not spliced and downstream events were not reindexed. A coherent
+fight/handoff must be authored separately before any shared-prefix propagation.
+The measured Java idle floor return at3864 is-1; the actual native selected
+terrain descriptor/d1 and a native cause verdict remain unknown. No new terrain
+measurement or gameplay correction is inferred from this successful input
+alternative. There is no native pixel/timing, true reset/bootstrap, broader
+route/product, combined smoke, Main integration or delivery claim.
