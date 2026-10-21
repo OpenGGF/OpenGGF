@@ -14,14 +14,14 @@ public final class StageplayCueDispatcher {
         if (frame < -1 || frame >= document.durationFrames()) throw new IllegalArgumentException("Cue cursor outside scene");
         this.frame = frame;
     }
-    public void advance(int destination, Consumer<StageplayDocument.AudioCue> sink) {
+    public void advance(int destination, Consumer<StageplayDocument.AudioCue> cueConsumer) {
         if (destination < frame || destination >= document.durationFrames())
             throw new IllegalArgumentException("Use seek for backwards or out-of-range transport");
-        Objects.requireNonNull(sink);
+        Objects.requireNonNull(cueConsumer);
         // Stable ordering: authored order is retained for cues at the same frame.
         var due = document.audio().stream().filter(cue -> cue.frame() > frame && cue.frame() <= destination)
                 .sorted(java.util.Comparator.comparingInt(StageplayDocument.AudioCue::frame)).toList();
         frame = destination; // A failed callback cannot cause an already-dispatched cue to fire again.
-        for (var cue : due) sink.accept(cue);
+        for (var cue : due) cueConsumer.accept(cue);
     }
 }

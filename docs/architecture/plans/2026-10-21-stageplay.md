@@ -118,13 +118,94 @@ files; all stated focused passes had zero failures, errors and skips.
   lifetime. The changed new-scene label's picture test passed separately. Both
   frontend pictures were inspected. Native window focus/HiDPI remain untested.
 - Change-based preflight passed with `LUA_BIN=/usr/bin/lua5.4` after the default
-  `lua` reported a different version. Broad smoke and guards are still pending.
+  `lua` reported a different version. Broad smoke and guards completed as recorded below.
+
+## Broad run and failure attribution
+
+The change-based plan selected 3,539 ordinary candidate classes in 71 batches,
+plus a separate guard JVM. Command at engine candidate
+`9ba9a034ec6c3168dad0d12faa1dafee97961d20` (base
+`ae305bdf6b66603b8e7907161d62eb383d850be2`):
+
+```sh
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+python3 tools/testing/run_categories.py \
+  --base ae305bdf6b66603b8e7907161d62eb383d850be2 \
+  --rom-directory <engine-root> --max-minutes 120 --run
+```
+
+The command process terminated with exit 143 at the clean boundary after batch
+42; its cause is unknown. A temporary reviewed continuation retained the complete
+plan, original source/compiled fingerprint, locks, aggregate results and remaining
+execution budget. It ran batches 43–71 and guards without repeating completed
+batches. All 71 ordinary batches completed: **37,217 tests, four failures, two
+errors, 87 skips**. Guards: **717 tests, seven failures, no errors or skips**.
+Ordinary execution was 6,311.30 seconds, guards 272.41 seconds, preparation 83.38
+seconds; these exclude queue waiting and are not elapsed delivery time.
+
+The ordinary failures were attributed as follows:
+
+- `TestAudioPresentationProducer.warmedProducerAllocatesNoFramePacketOrConsumerArray`:
+  introduced 320,000 allocated bytes from a per-frame `ArrayList` iterator in the
+  new PCM overlay loop. Use indexed traversal; the existing regression verifies
+  the warmed zero-allocation contract.
+- `TestTitleInputOwnership.captureChordIsConsumedWhileBlockedAndCannotFireAfterReturningWithKeyHeld`,
+  `TestZoneLayoutMutationPipeline.levelFrameStepFlushesQueuedMutationsAfterCameraScrollAndEventsBeforeBoundary`,
+  `TestLevelManagerModPatternWindows.everyLoadAndEditorRebuildRegistersModWindowsBeforeStockArtCaching`,
+  and `TestOrdinaryTitleScreenCommandEvidence.masterTitleDrawExpandsBackdropAndFitsActionPaneAtEveryWidth`
+  all reproduced at baseline `02325fd026ea4a5ba33e4abe5149a9209a234e34` with
+  matching assertions/errors. Upstream `ad12b52dc` repaired those fixture contracts;
+  it was merged automatically at `597a5b78f`. No runtime conflict was involved.
+- `TestCompleteRunAudioCli.freshJvmBootstrapsTheS1ProfileButItsUnavailableDispatcherEmitsNoStandardOutput`
+  also reproduced on that baseline with the same `JAVA_TOOL_OPTIONS`: the Java
+  launcher prepended its notice to the asserted child stderr. Follow-up commands
+  unset that environment variable and pass EGL on the Maven command line.
+
+Baseline attribution used the same queued Java 25/EGL environment and exact test
+selectors, not a second broad suite. The title/input plus zone mutation classes
+ran 17 tests (one failure, one error); the pattern-window class ran one test (one
+error); the exact title evidence and CLI methods each ran one test (one failure).
+All four runs had no skips. Execution: 81, 29.282, 26.366 and 28.295 seconds,
+respectively; known admission waits were 74, 48 and five seconds for the latter
+three. The first wait was not retained.
+
+The new guard failures were the editor/Stageplay package cycle, its new dependency
+edges, and an audio source-text fan-out check matching the cue callback's generic
+`sink.accept` name. Correct the dependency direction and call the cue callback
+`cueConsumer`; do not weaken cycle or audio ownership guards. The other four
+failures reproduced exactly on baseline `02325fd02`:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  '-Dtest=TestProductionSingletonClosureGuard,TestArchUnitRules' \
+  -Dopenggf.headless.gl=surfaceless-egl test -B
+```
+
+That baseline ran 73 tests, four failures, no errors/skips; 37.036 seconds
+execution and 79 seconds queue waiting. Both singleton guard failures identify
+`MenuAudioProbeTool:41` calling `AudioManager.getInstance`. The two ArchUnit
+failures identify `HubMusicController:118` constructing concrete Sonic audio
+profiles and `:120` accessing concrete title-music enums. These unrelated
+violations remain inherited; they are not waived or fixed by Stageplay.
+
+All 87 ordinary skips were inspected with no omitted cases: 32 inapplicable
+InfiniteSonic combinations, 16 unavailable graphics checks, one isolated-OpenAL
+prerequisite, 37 opt-in diagnostics/captures/benchmarks or optional fixtures, and
+one CPZ spin-tube capture/release assumption abort. That CPZ route remains a
+coverage gap. The Stageplay HUD picture check, opt-in in broad smoke, was run
+explicitly and inspected in the focused acceptance above. This is bounded smoke
+validation, not a full-suite or route certification.
 
 ## Checkpoint
 
-2026-10-21: both implementations and focused acceptance are complete in isolated
-task trees. Desktop commit `98a9659` is local. Engine implementation commit `56d7d140c` has been reconciled with destination
-`02325fd026ea4a5ba33e4abe5149a9209a234e34`. The merge was automatic; shared changelog,
-configuration and subsystem prose retain both Stageplay and upstream racing work. All workers are frozen.
-No live build jobs. Lead owns combined smoke/guards, delivery and cleanup. No push,
-integration or worktree cleanup has completed yet.
+2026-10-21: implementation commit `56d7d140c` and automatic upstream merges
+`9ba9a034e`/`597a5b78f` are local in the engine task tree. Desktop implementation
+commit `98a9659` is local. Broad diagnostics have been consumed. The core worker
+owns a bounded package-boundary correction; lead owns the PCM loop, cue callback,
+portable export launch and final validation/integration. No broad suite will be
+repeated solely because it was red: affected behavioral checks and architecture
+guards will verify corrections. No destination push or worktree cleanup has
+completed yet.

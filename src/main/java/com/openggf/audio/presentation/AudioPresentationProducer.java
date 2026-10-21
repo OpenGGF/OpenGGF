@@ -324,7 +324,11 @@ public final class AudioPresentationProducer {
                 if (scenePcmSource != null) {
                     scenePcmSource.render(pcm, stereoFrames);
                 }
-                for (ScenePcmSource overlay : pcmOverlays) overlay.render(pcm, stereoFrames);
+                // The producer owns this list; presentation forbids registration changes.
+                // Indexed traversal keeps the warmed frame path allocation-free.
+                for (int index = 0; index < pcmOverlays.size(); index++) {
+                    pcmOverlays.get(index).render(pcm, stereoFrames);
+                }
                 if (historyArmed) {
                     history.write(pcm, stereoFrames);
                 }

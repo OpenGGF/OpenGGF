@@ -1,8 +1,8 @@
 package com.openggf.stageplay.runtime;
 
-import com.openggf.editor.project.EditorProjectStore;
 import com.openggf.level.Level;
 import com.openggf.level.render.DetachedLevelKit;
+import com.openggf.level.resources.AuthoredLevelResources;
 import com.openggf.mods.scene.*;
 import com.openggf.mods.scene.host.SceneRomLibrary;
 import com.openggf.stageplay.StageplayDocument;
@@ -64,10 +64,10 @@ public final class StageplayResources implements AutoCloseable {
                     Path root = projectRoot.toRealPath();
                     Path file = root.resolve(source.levelProject()).toRealPath();
                     if (!file.startsWith(root)) throw new IOException("Level project escapes the scene directory");
-                    var project = new EditorProjectStore().open(file);
-                    if (!project.metadata().gameId().code().equals(source.gameId()))
+                    var project = AuthoredLevelResources.read("ogfproject", file);
+                    if (!project.gameId().equals(source.gameId()))
                         throw new IOException("Authored level and scene set use different games");
-                    return authored(project.snapshot());
+                    return authored(project.level());
                 } catch (IOException error) { throw new UncheckedIOException("Cannot load the authored Stageplay set", error); }
             }
             SceneLevelKit kit = art.levelKit(source.zone(), source.act());

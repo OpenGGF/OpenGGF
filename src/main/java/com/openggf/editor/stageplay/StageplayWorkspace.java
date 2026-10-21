@@ -1,4 +1,4 @@
-package com.openggf.stageplay.editor;
+package com.openggf.editor.stageplay;
 
 import com.openggf.control.InputHandler;
 import com.openggf.editor.project.EditorProjectMenu;

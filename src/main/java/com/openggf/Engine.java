@@ -164,7 +164,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			com.openggf.editor.hud.EditorHudRuntime::new);
 	private boolean editorChromeActive;
 	private final EditorProjectWorkspace editorProjects;
-	private final com.openggf.stageplay.editor.StageplayWorkspace stageplay;
+	private final com.openggf.editor.stageplay.StageplayWorkspace stageplay;
 	private final com.openggf.stageplay.editor.StageplayEditorSession stageplaySession;
 	private Path stageplayInitialAssetRoot;
 	private final EditorProjectMenuRenderer editorProjectMenuRenderer = new EditorProjectMenuRenderer();
@@ -464,7 +464,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		levelEditorController.setCanvasNavigationSupplier(() -> editorProjects.document() != null || shownEditorProject != null);
 		this.stageplaySession = new com.openggf.stageplay.editor.StageplayEditorSession(
 				() -> editorProjectBaseModule != null ? editorProjectBaseModule : GameServices.module(), romManager, audioManager);
-		this.stageplay = new com.openggf.stageplay.editor.StageplayWorkspace(new com.openggf.stageplay.editor.StageplayWorkspace.Host() {
+		this.stageplay = new com.openggf.editor.stageplay.StageplayWorkspace(new com.openggf.editor.stageplay.StageplayWorkspace.Host() {
 			public com.openggf.stageplay.StageplayDocument initialDocument() { return initialStageplayDocument(); }
 			public Path initialAssetRoot() {
 				if (stageplayInitialAssetRoot != null) return stageplayInitialAssetRoot;
@@ -3890,7 +3890,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	 */
 	public void update() {
 		gameLoop.stepPresentationFrame();
-		stageplaySession.pollExport(stageplay);
+		String stageplayExportStatus = stageplaySession.pollExport();
+		if (stageplayExportStatus != null) stageplay.setStatus(stageplayExportStatus);
 		if (quitAfterContentInstall && !contentImportScreen.installing()) requestApplicationExit();
 	}
 
@@ -4058,7 +4059,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		if (stageplay.active()) {
 			graphicsManager.flush();
 			graphicsManager.resetForFixedFunction();
-			stageplaySession.draw(stageplay);
+			stageplaySession.draw(stageplay.previewDocument(), stageplay.controller().frame(), stageplay.assetRoot(), failure -> {
+				stageplay.controller().pause(); stageplay.report(failure);
+			});
 			graphicsManager.resetForFixedFunction();
 			prepareOverlayState();
 			if (contentImportScreen.isOpen()) contentImportRenderer.render(contentImportScreen, getProjectionMatrixBuffer(), (int) realWidth);
@@ -4091,7 +4094,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			glfwGetFramebufferSize(window, framebufferW, framebufferH);
 			editorChrome.init(new com.openggf.editor.EditorWindowChrome.Host() {
 				public LevelEditorController controller() { return levelEditorController; }
-				public com.openggf.stageplay.editor.StageplayWorkspace stageplay() { return stageplay; }
+				public com.openggf.editor.stageplay.StageplayWorkspace stageplay() { return stageplay; }
 				public void dispatch(EditorInputHandler.Action action) { editorInputHandler.handleAction(action); }
 				public java.util.List<com.openggf.editor.EditorCommandPalette.HostCommand> commands() {
 					return com.openggf.editor.EditorCommandPalette.forController(levelEditorController).extraCommands();

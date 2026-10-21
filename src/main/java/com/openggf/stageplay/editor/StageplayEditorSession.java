@@ -15,6 +15,7 @@ import com.openggf.stageplay.runtime.StageplayResources;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static org.lwjgl.opengl.GL11.*;
@@ -66,15 +67,15 @@ public final class StageplayEditorSession implements AutoCloseable {
     public void stop() { if (audio != null) audio.stop(); }
 
     /** Draws in the engine's current offscreen viewport; no desktop focus or window is created. */
-    public void draw(StageplayWorkspace workspace) {
-        var document = workspace.previewDocument();
+    public void draw(StageplayDocument document, int frame, Path root, Consumer<Throwable> onFailure) {
+        Objects.requireNonNull(document); Objects.requireNonNull(onFailure);
         if (surface == null) surface = new SceneSurface();
         try {
-            ensure(workspace.assetRoot());
+            ensure(root);
             surface.record(document.width(),document.height(), canvas -> renderer.draw(document,
-                    StageplayTimeline.sample(document,workspace.controller().frame()),canvas));
+                    StageplayTimeline.sample(document,frame),canvas));
         } catch (IOException | RuntimeException failure) {
-            workspace.controller().pause(); stop(); workspace.report(failure);
+            stop(); onFailure.accept(failure);
             surface.record(document.width(),document.height(),canvas -> {
                 canvas.clear(0x101820); canvas.text("Stageplay preview unavailable",10,16,0xFFFFFFFF);
                 canvas.text("Check the set / ROM and actor properties.",10,36,0xFFFFCC88);
@@ -92,7 +93,7 @@ public final class StageplayEditorSession implements AutoCloseable {
     public void export(StageplayDocument document, Path source, Path output) throws IOException {
         export.start(document,source,output,roms);
     }
-    public void pollExport(StageplayWorkspace workspace) { String result = export.poll(); if (result != null) workspace.setStatus(result); }
+    public String pollExport() { return export.poll(); }
 
     /** Call before replacing a native session, while its borrowed ROM is still valid. */
     public void release() {

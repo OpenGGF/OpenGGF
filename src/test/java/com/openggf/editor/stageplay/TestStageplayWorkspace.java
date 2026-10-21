@@ -1,4 +1,4 @@
-package com.openggf.stageplay.editor;
+package com.openggf.editor.stageplay;
 
 import com.openggf.stageplay.StageplayDocument;
 import com.openggf.stageplay.StageplayStore;
@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 
-import static com.openggf.stageplay.editor.StageplayWorkspace.Action.*;
+import static com.openggf.editor.stageplay.StageplayWorkspace.Action.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestStageplayWorkspace {

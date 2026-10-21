@@ -5,7 +5,7 @@ import com.openggf.control.GamepadStateSource;
 import com.openggf.control.InputHandler;
 import com.openggf.control.InputHandlerInternalAccess;
 import com.openggf.stageplay.StageplayDocument;
-import com.openggf.stageplay.editor.StageplayWorkspace;
+import com.openggf.editor.stageplay.StageplayWorkspace;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -79,6 +79,13 @@ or `--rom`, additional `--s1-rom` / `--s2-rom` / `--s3k-rom`, `--scale` (1–8)
 and `--ffmpeg`. Without `--rom`, the normal logical-ROM catalogue is used,
 including supported composite images.
 
+The editor supplies the child JVM's native-access and macOS first-thread flags.
+For manual CLI use, add `--enable-native-access=ALL-UNNAMED`, and on macOS
+`-XstartOnFirstThread`, before `-cp`. Linux automation can unset `DISPLAY` and
+`WAYLAND_DISPLAY` and set `-Dopenggf.headless.gl=surfaceless-egl`; see
+[headless rendering](../contributing/headless-testing.md). Offline synthesis uses
+the no-device audio backend.
+
 ## Use the same scene in a mod
 
 Package the scene and its relative voice/set assets under your mod resources.

@@ -16,7 +16,7 @@ import com.openggf.mods.scene.host.SceneRomLibrary;
 import com.openggf.mods.scene.host.SceneSurface;
 import com.openggf.stageplay.StageplayDocument;
 import com.openggf.stageplay.StageplayTimeline;
-import com.openggf.stageplay.editor.StageplayWorkspace;
+import com.openggf.editor.stageplay.StageplayWorkspace;
 import com.openggf.stageplay.runtime.StageplayRenderer;
 import com.openggf.stageplay.runtime.StageplayResources;
 import com.openggf.tests.TestEnvironment;

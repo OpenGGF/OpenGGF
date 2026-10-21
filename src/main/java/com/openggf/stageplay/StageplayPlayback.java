@@ -8,6 +8,7 @@ import com.openggf.game.mode.*;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.level.resources.LoadOp;
 import com.openggf.level.resources.ResourceLoader;
+import com.openggf.level.resources.AuthoredLevelResources;
 import com.openggf.mods.code.ModContext;
 import com.openggf.mods.scene.host.SceneRomLibrary;
 import com.openggf.mods.scene.host.SceneSurface;
@@ -86,10 +87,10 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
         com.openggf.level.Level set = null;
         if (!document.set().levelProject().isEmpty()) {
             byte[] encoded = loader.loadSingle(LoadOp.modAssetBase(root, prefix + document.set().levelProject()));
-            var project = new com.openggf.editor.project.EditorProjectStore().decode(encoded);
-            if (!project.metadata().gameId().code().equals(document.set().gameId()))
+            var project = AuthoredLevelResources.decode("ogfproject", encoded);
+            if (!project.gameId().equals(document.set().gameId()))
                 throw new IOException("Authored level and scene set use different games");
-            set = project.snapshot();
+            set = project.level();
         }
         final var preparedSet = set;
         var assets = new HashMap<String, byte[]>(); long bytes = 0;

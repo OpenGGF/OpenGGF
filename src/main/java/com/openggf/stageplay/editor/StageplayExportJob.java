@@ -40,6 +40,10 @@ final class StageplayExportJob implements AutoCloseable {
             StageplayStore.write(snapshot,document);
             var command = new ArrayList<String>();
             command.add(Path.of(System.getProperty("java.home"),"bin","java").toString());
+            command.add("--enable-native-access=ALL-UNNAMED");
+            if (System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT).contains("mac")) {
+                command.add("-XstartOnFirstThread");
+            }
             String gl = System.getProperty("openggf.headless.gl");
             if (gl != null) command.add("-Dopenggf.headless.gl="+gl);
             command.add("-cp"); command.add(System.getProperty("java.class.path"));

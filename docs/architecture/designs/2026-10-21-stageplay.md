@@ -34,6 +34,14 @@ Stageplay workspace capability and route by selected authoring workspace. Keep
 input ownership explicit: Stageplay consumes authoring ticks and cannot paint
 terrain accidentally. Frontends queue mutations for update, not render.
 
+The mutable authoring workspace belongs to `editor.stageplay`. Preview sessions
+receive an immutable document, playhead and asset root, with explicit error/status
+handoff to the host. Runtime Stageplay has no dependency on editor or tool classes.
+Saved sets load through the internal `level.resources` authored-level decoder
+port; the editor's `.ogfproject` provider supplies an isolated level snapshot.
+Engine-classloader service discovery selects that typed provider without moving
+project persistence into runtime playback or exposing it as creator API.
+
 ## Scene contract
 
 Version 1 uses fixed 60 Hz integer frame coordinates, a bounded JSON document and
@@ -138,6 +146,16 @@ document capabilities. No separate Stageplay repository is required.
 - Save As checks relative references throughout undo/redo history before changing
   asset roots. Export cancellation retains process descendants before terminating
   the parent and removes only its owned snapshot and staging paths.
+- Architecture checks at `9ba9a034e` rejected the initial runtime imports of the
+  editor workspace and project store. Moving all preview/export classes into the
+  editor would instead violate its audio/data and mod-host ownership boundaries.
+  Move only the authoring workspace, decouple the preview host, and use a typed
+  level-resource decoder for saved sets. Preserve the cycle guard and legacy
+  cluster unchanged; admit only the resulting one-way dependencies with narrow
+  owner checks. Final affected guard evidence is in the implementation plan.
+- The broad warmed-audio regression exposed a per-frame iterator allocation in
+  the new additive voice-source loop. Indexed traversal preserves the existing
+  zero-allocation presentation contract without changing mix order or ownership.
 
 The tested implementation is currently the pinned engine base plus task changes;
 final candidate commit, combined smoke results and delivery are recorded in the

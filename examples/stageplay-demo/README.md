@@ -19,11 +19,17 @@ scene**, and open the `.stageplay` file above. **Export film** renders a new MKV
 with synchronized music and effects. The command-line equivalent is:
 
 ```sh
-java -cp target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar \
+java --enable-native-access=ALL-UNNAMED \
+  -cp target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar \
   com.openggf.tools.StageplayCaptureTool \
   --scene examples/stageplay-demo/src/main/resources/scenes/opening.stageplay \
   --game s2 --out /absolute/output/opening.mkv
 ```
+
+On macOS add `-XstartOnFirstThread` before `-cp`. For display-free Linux rendering,
+unset `DISPLAY` and `WAYLAND_DISPLAY` and add
+`-Dopenggf.headless.gl=surfaceless-egl` before `-cp`. Film synthesis uses the
+no-device audio backend; it does not play through desktop speakers.
 
 Use matching engine/SDK artifacts from the same unpublished 0.7 candidate commit.
 See the [Stageplay guide](../../docs/guide/creating/stageplay.md) for audio assets,

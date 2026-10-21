@@ -5,8 +5,8 @@ import com.openggf.control.MenuInput;
 import com.openggf.editor.hud.EditorHudCanvas.Size;
 import com.openggf.editor.hud.EditorHudLayout.Rect;
 import com.openggf.stageplay.StageplayDocument;
-import com.openggf.stageplay.editor.StageplayWorkspace;
-import com.openggf.stageplay.editor.StageplayWorkspace.Action;
+import com.openggf.editor.stageplay.StageplayWorkspace;
+import com.openggf.editor.stageplay.StageplayWorkspace.Action;
 
 import java.util.ArrayList;
 import java.util.Comparator;
