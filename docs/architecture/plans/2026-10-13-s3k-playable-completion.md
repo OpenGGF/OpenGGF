@@ -28124,3 +28124,74 @@ external. Root's next question can be the actual original caller-owned receiver,
 selected contact/result and evaluated geometry at R8 policy1 first hurt42634;
 no witness/instrumentation or further workload was authored. See the
 [R8 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-first-spikes-support-fresh-jump-r7r8--2026-10-21).
+
+
+## R10 ordinary paired800 post-prefix exploration — 2026-10-21
+
+The isolated `feature/ai-ssz-wide-paired-continuation-r10-20261021` starts at
+exact prepared source `9855aa13fa39dfde430325eb284bbfb9fc6809ed`, including the
+wait-fraction correction and Main's loader/Jackson refresh. R1–R9 refs/history,
+the supplied ref, config and actual native checkout are preserved. Actual
+TraceChaser remains clean at `322851cbfa2e1c1803332142e11ab74b4eb34eea`, while
+the indexed gitlink is `703bd92d32634ce5ebac60625b48c60ef5500427`; no submodule
+checkout or native execution occurs. This slice changes only this Plan/matrix.
+
+Three finite ordinary cold requests consume the entire trial budget. Each uses
+`GameplayCaptureSession.Settings(800,"sonic","tails","off",null,null,null)`
+(titlefalse), SSZ10/0, the original first-replica movie's exact9914 P1/P2 inputs,
+then at most4500 new inputs with neutral P2. The author calls normal step then
+draw once per input, using the existing21-column capture CSV and public gameplay
+fields. Ordinary hurt/ring loss is allowed and recorded; first P1/P2 death, shared
+life decrement, unsafe pair/world/mode/assembly, actual free/live MTZ8 admission,
+or the4500 cap terminates a proposal. No restore, hydration, semantic seeds,
+terrain reprobe, old-tail splice, runtime/private observer or maintained data edits.
+
+| Proposal | Declared finite new P1 policy | Actual disposition |
+|---|---|---|
+| 1 right-ground8 | Right; ground A8 with gap45; let bouncy-cloud support launch | **UNQUALIFIED_AUTHOR_PAD_PROOF_FAILURE** at new row9914: the temporary pad record omitted jump bit0x10 although A was held. Discarded; no usable endpoint or movie and no rerun. `PlayerInputState` normalizes action-held jump, so a trajectory effect is not inferred. |
+| 2 cloud-dwell24 | Neutral30, then Right; ground A24/gap72; neutral7 on new actual bouncy-cloud support | Cap at input14413: P1(3224,1379),57rings,3lives, alive but objectControlled=true; tail maximum X3344. No P1hurt, no life loss or MTZ admission. |
+| 3 cloud-dwell24-release-right | Proposal2 plus A8 when object-controlled, unlocked/unhurt, X>=3300/Y<=1472 and gap72 | A8 sent at10608 from(3301,1392); later checkpoints have free control. Cap14413: P1(3893,1388),59rings,3lives, grounded/unhurt/alive, controlLocked=false/objectControlled=false; P2(3893,1317) alive/present. Tail maximum X3893; no MTZ admission. |
+
+Proposal3 supersedes the never-submitted initial wait60/stall design after2's
+terminal result. Native carrier `loc_4639A`/`loc_463FC` reads logical jump to
+release; only controller input changes. This observation does not bind an
+instrumented original carrier receiver/branch. Production fixed movies2/3 are
+identical through10607; their first differing pad10608 is Right versus Right+A.
+Both tails have no P1hurt or shared ring-count drop. Both report P2hurt at10099
+from(907,1392), cleared10189; the damage receiver/cause remains UNKNOWN. The
+selected normal endpoint image for3 shows the tall wall ahead; neither X nor
+survival certifies the next movement. The new tail is alive/free beyond the old
+11664 death index, but still stalls and does not reach the lower pad/MTZ goal.
+The reported whole-movie `maxX=4583` includes the fixed prefix; it is not either
+tail's maximum. Prefix endpoint9913 remains(512,1420),48rings,3lives, free, on
+actual receiving-pad layout4; expected46 remains unchanged.
+
+The v2 temporary pad correction explicitly supplies direction+jump and action
+masks without changing the comparator or runtime. Before Engine boot in the
+same third request, a production-author/loader gate checks its complete finite
+new alphabet {neutral,Right,Right+A}: both masks, Start/debug booleans, two-pad
+payloads and jump0x10. It returns normally. Final all-row production script/BK2
+roundtrips cover all14414 executed rows in each of2/3; independent payload
+comparison also preserves all9914 original P1/P2 rows and neutral new P2.
+These are single exploratory executions of different controllers, not two
+qualification replays or authority to change ring data.
+
+Each JVM uses the current Main absolute `tools/testing/maven_queue.py --normal
+-Dmse=off -Dopenggf.headless.gl=surfaceless-egl`, `compile exec:exec -B`, explicit
+Java25 source-launcher/runtime classpath, verified original absolute S1/S2/S3K ROMs,
+EGL/nullAL/Lua5.4 and target-local report/tmp/native namespaces. Ambient JVM,
+display and library overrides are cleared; one command/observer owns each job,
+with no admission restart. Actual Maven compile/exec elapsed for2/3 is16.010s/
+15.606s; total queue/authoring elapsed is unavailable. Actual gameplay products
+are **0 JUnit tests/0 skips**, not a passing route class or suite. The full bounded
+CSV/result/error streams were read, then raw reports, logs, generated PNGs and
+invocation namespaces consumed. No extra control, maintained test, broad or
+native replay runs. Useful specific author versions, compact events, selected
+normal PNGs and fixed proposal2/3 script/BK2 remain outside the repository at
+`<external-task-directory>/ssz-wide-paired-continuation-r10-20261021/`
+(exact location remains in the task ownership registry).
+Proposal3 BK2 SHA256 is
+`4e901bd6cd07f005ec0ff1daf47eaad8698fb9fbc1d5e642c51de42d0590c8b5`.
+No fourth policy/retry follows. Root owns review and any later controller or
+qualification scope; no first-case, complete-route, native800, timing/pixel or
+expected46/48 oracle claim is added.
