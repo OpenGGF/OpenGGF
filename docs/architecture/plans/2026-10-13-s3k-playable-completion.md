@@ -24254,3 +24254,93 @@ broad smoke/full-suite, canonical trace, new native acceptance or controller-rou
 pass. Current route impact is unknown; no route death is attributed to this fix.
 The [SSZ matrix](../validation/levels/s3k-ssz-act1.md#mtz-orb-allocation-and-first-dispatch--2026-10-21)
 and coverage backlog retain the inherited viewport/donor/team/native gaps.
+
+## TraceChaser immutable-origin consumer copies — 2026-10-21
+
+This test-only increment starts at OpenGGF
+`cdada405a384ab19c88fc82375b79cbc38c9f30c`, keeping native gitlink
+`703bd92d32634ce5ebac60625b48c60ef5500427` unchanged. Root's original opt-in
+`initializedSourceCopiesMatchThePinnedConsumerCopies` execution remains
+**1T1F0E0S**, with `org.opentest4j.AssertionFailedError` at
+`assertCopyEquals:162`: `src/test/resources/tracechaser/gpgx-audio-capability-v1.json
+==> expected: <true> but was: <false>`. No baseline was executed. Root's separate
+13 passing boundary guards are separate evidence, not a producer-behavior pass.
+
+The source/data audit attributes that mismatch to an inherited temporal-contract
+error: the frozen capability copy matches its declared origin
+`9e51ff79e7a542f3c50d96618a7e24e6fc72397e`, while native703's current file differs
+only in `task8_harness_executable_sha256`. Consumer SHA256 is
+`845323d7fa50af24b4f516c8937fa231737d3e66df648a90e035fdd56072f326`;
+current producer SHA256 is
+`4866497a9ae190012250be6556f8dd9f9b5729aa9f1c58349730457b96494c94`.
+All 92 v5 files and the normalization JSON match both epochs. This does not
+establish current producer compatibility, which remains **UNKNOWN**. Updating
+immutable copies/provenance or ignoring the changed digest was rejected because
+either would erase the declared historical authority or manufacture a current
+compatibility result.
+
+The renamed opt-in method
+`initializedCheckoutPreservesConsumerCopiesFromDeclaredImmutableOrigin` first
+uses the unchanged exact-gitlink checkout guard, then validates unchanged
+provenance and compares all three copies with that origin's local Git objects.
+It checks complete directory file membership and exact binary bytes, including
+the capability digest. Missing origin objects fail clearly; there is no HEAD
+fallback, fetch or new skip. Private Git reads disable replacements and lazy
+fetch, use NUL-delimited tree entries, reject non-regular blobs, cap each output
+at 1 MiB and each copy at 512 files/4 MiB, and bound child-process waits. No production,
+consumer artifact, provenance, POM, selection policy, native source or API changes.
+
+Ordinary real local-Git fixture controls cover a later producer HEAD and dirty
+working files while the origin stays unchanged; equal-length byte tampering,
+missing/extra tree members and missing standalone copies on both sides; and an
+unavailable origin. Existing destination/provenance mutation controls and all 31
+Java consumer semantic cases remain. Fixture names use portable spaces and
+staging disables automatic newline conversion so the fixture preserves bytes.
+
+An isolation incident preceded final validation. The implementation agent
+incorrectly directed its first edits/job into Root's supplied path rather than
+the correctly isolated app checkout. Root verified an external exact patch and
+both preimages, then restored only the two affected paths tocdada and reported
+clean. The earlier 45T pass belongs only to predecessor test blob
+`ab70705c7f5c5093d9b250ec502bf24d5ceaf81b`; the portable final candidate is
+`2e9edb6a83489de2b1d45615d47eb274c4786445`. The app isolation tool worked.
+Subsequent edits and Maven run only in the owned nested `origin-copy-contract`
+worktree on local `feature/ai-tracechaser-origin-copy-contract-20261021`, with an
+absolute Git-top-level check before mutations/launches. Its supplied app branch
+`immutable-origin-copy-contract` stays at efd60514. The native checkout was cloned
+locally from Root at exact 703; no network publication or native edits occurred.
+Only this lane's external registry row records identities, incident and cleanup.
+
+Final owned-worktree qualification on test blob `2e9edb6a`:
+
+- Ordinary whole V5 class: **45T0F0E0S**, XML 0.575s; printed admission wait
+  14s and Maven `01:21 min` (fresh compilation included).
+- Initialized single renamed method: **1T0F0E0S**, XML 0.399s; printed admission
+  wait 14s and Maven 26.338s. Actual testcase identity was the renamed method.
+
+Both used the current Main absolute queue wrapper with `--normal -Dmse=off`,
+Java 25.0.4.1, Lua 5.4, surfaceless EGL/null audio, the original three absolute
+Main ROM paths, own cwd/target, and dedicated owned report/tmp directories.
+`DISPLAY`, `WAYLAND_DISPLAY`, `JDK_JAVA_OPTIONS`, `_JAVA_OPTIONS`, `MAVEN_OPTS`
+and `LD_LIBRARY_PATH` were unset; `JAVA_TOOL_OPTIONS` contained only
+`-Dopenggf.headless.gl=surfaceless-egl`. The exact argv/environment and command
+sessions are recorded in this lane's existing external registry row. The
+selectors/profile were:
+
+```bash
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.trace.TestTraceChaserV5ConsumerContract' test -B
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Ptracechaser-integration -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.trace.TestTraceChaserV5ConsumerContract#initializedCheckoutPreservesConsumerCopiesFromDeclaredImmutableOrigin' test -B
+```
+
+All XML/TXT, 69 properties per run, actual testcase identities and all
+failure/error/skip/stream nodes were inspected: none failed or skipped and no
+stream nodes were present. Consumed owned diagnostics were removed; no raw-log
+archive or validation receipt remains. No engine/broad/full/native/C# workload
+or unchanged boundary-guard repeat was run. This is bounded historical-copy
+preservation, not current-producer compatibility or a retroactive pass for
+Root's original failed method. The local commit remains unmerged/unpushed for
+Root's independent review; app/nested/native setup is retained.

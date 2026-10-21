@@ -1,5 +1,6 @@
 package com.openggf.trace;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -17,7 +18,9 @@ import com.openggf.trace.TraceRunManifest;
 import com.openggf.tests.TraceChaserTestSupport;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.ArrayList;
@@ -27,10 +30,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -39,6 +44,10 @@ class TestTraceChaserV5ConsumerContract {
     private static final Path PACK = Path.of("src/test/resources/tracechaser/v5");
     private static final Path PROVENANCE = Path.of("src/test/resources/tracechaser/provenance.json");
     private static final ObjectMapper JSON = new ObjectMapper();
+    // These are small, reviewed contracts, not an unbounded repository export.
+    private static final int MAX_COPY_FILES = 512;
+    private static final int MAX_GIT_BYTES = 1024 * 1024;
+    private static final int MAX_COPY_BYTES = 4 * MAX_GIT_BYTES;
     private static final Map<String, String> EXPECTED_COPIES = Map.of(
             "contracts/v5", "src/test/resources/tracechaser/v5",
             "bizhawk-headless/fixtures/gpgx-audio-capability-v1.json",
@@ -100,14 +109,114 @@ class TestTraceChaserV5ConsumerContract {
 
     @Test
     @Tag("tracechaser-integration")
-    void initializedSourceCopiesMatchThePinnedConsumerCopies() throws Exception {
+    void initializedCheckoutPreservesConsumerCopiesFromDeclaredImmutableOrigin() throws Exception {
         Path checkout = TraceChaserTestSupport.requirePinnedCheckout();
+        validateProvenance(PROVENANCE, Path.of("."));
         JsonNode provenance = JSON.readTree(PROVENANCE.toFile());
-        for (JsonNode copy : provenance.path("copies")) {
-            Path source = checkout.resolve(copy.path("source").asText());
-            Path destination = Path.of(copy.path("destination").asText());
-            assertCopyEquals(source, destination);
+        assertOriginCopiesMatch(checkout, provenance, Path.of("."));
+    }
+
+    @Test
+    void immutableOriginComparisonAllowsDifferentProducerHeadAndWorkingFiles() throws Exception {
+        OriginFixture fixture = originFixture("different-head");
+        for (String source : EXPECTED_COPIES.keySet()) {
+            Path path = fixture.checkout().resolve(source);
+            if (Files.isDirectory(path)) path = path.resolve("nested/member space.bin");
+            tamperEqualLength(path);
         }
+        Files.writeString(fixture.checkout().resolve("contracts/v5/later-file.json"), "later");
+        String later = commitFixture(fixture.checkout());
+        assertTrue(!later.equals(fixture.provenance().path("origin_commit").asText()));
+        Files.writeString(fixture.checkout().resolve("contracts/v5/manifest.json"), "uncommitted");
+
+        assertOriginCopiesMatch(fixture.checkout(), fixture.provenance(), fixture.consumer());
+        var current = fixture.provenance().deepCopy();
+        ((com.fasterxml.jackson.databind.node.ObjectNode) current).put("origin_commit", later);
+        assertThrows(AssertionError.class,
+                () -> assertOriginCopiesMatch(fixture.checkout(), current, fixture.consumer()));
+    }
+
+    @TestFactory
+    Stream<DynamicTest> immutableOriginComparisonRejectsChangedBytesAndTreeMembership() {
+        return Stream.of("source", "consumer").flatMap(side ->
+                Stream.of("equal-length bytes", "missing member", "extra member", "missing standalone copy")
+                        .map(change -> DynamicTest.dynamicTest(side + " " + change, () -> {
+                            OriginFixture fixture = originFixture(side + "-" + change.replace(' ', '-'));
+                            Path root = side.equals("source") ? fixture.checkout() : fixture.consumer();
+                            Path tree = root.resolve(side.equals("source") ? "contracts/v5"
+                                    : EXPECTED_COPIES.get("contracts/v5"));
+                            Path member = tree.resolve("nested/member space.bin");
+                            switch (change) {
+                                case "equal-length bytes" -> tamperEqualLength(member);
+                                case "missing member" -> Files.delete(member);
+                                case "extra member" -> Files.writeString(tree.resolve("extra.json"), "extra");
+                                case "missing standalone copy" -> Files.delete(root.resolve(side.equals("source")
+                                        ? "contracts/audio/normalization-contract-v1.json"
+                                        : EXPECTED_COPIES.get("contracts/audio/normalization-contract-v1.json")));
+                                default -> throw new AssertionError(change);
+                            }
+                            if (side.equals("source")) {
+                                ((com.fasterxml.jackson.databind.node.ObjectNode) fixture.provenance())
+                                        .put("origin_commit", commitFixture(fixture.checkout()));
+                            }
+                            AssertionError failure = assertThrows(AssertionError.class,
+                                    () -> assertOriginCopiesMatch(fixture.checkout(), fixture.provenance(),
+                                            fixture.consumer()));
+                            assertTrue(failure.getMessage().contains(change.equals("missing standalone copy")
+                                    ? "normalization-contract-v1.json" : "src/test/resources/tracechaser/v5"),
+                                    failure::toString);
+                        })));
+    }
+
+    @Test
+    void immutableOriginComparisonFailsClearlyWhenOriginIsUnavailable() throws Exception {
+        OriginFixture fixture = originFixture("unavailable");
+        String unavailable = "00".repeat(20);
+        ((com.fasterxml.jackson.databind.node.ObjectNode) fixture.provenance()).put("origin_commit", unavailable);
+        AssertionError failure = assertThrows(AssertionError.class,
+                () -> assertOriginCopiesMatch(fixture.checkout(), fixture.provenance(), fixture.consumer()));
+        assertTrue(failure.getMessage().contains("declared immutable origin " + unavailable + " is unavailable"));
+    }
+
+    private record OriginFixture(Path checkout, Path consumer, JsonNode provenance) { }
+
+    private OriginFixture originFixture(String name) throws Exception {
+        Path consumer = materializeProvenance(name);
+        Path tree = consumer.resolve(EXPECTED_COPIES.get("contracts/v5"));
+        Files.createDirectories(tree.resolve("nested"));
+        Files.write(tree.resolve("nested/member space.bin"), new byte[] {0, 1, -1, 42});
+        Path checkout = Files.createDirectories(temporaryDirectory.resolve("git-" + name));
+        git(checkout, "init", "--quiet");
+        for (var copy : EXPECTED_COPIES.entrySet()) {
+            Path from = consumer.resolve(copy.getValue());
+            Path to = checkout.resolve(copy.getKey());
+            try (var paths = Files.walk(from)) {
+                for (Path path : paths.toList()) {
+                    Path target = to.resolve(from.relativize(path));
+                    if (Files.isDirectory(path)) Files.createDirectories(target);
+                    else {
+                        Files.createDirectories(target.getParent());
+                        Files.copy(path, target);
+                    }
+                }
+            }
+        }
+        JsonNode provenance = JSON.readTree(PROVENANCE.toFile());
+        ((com.fasterxml.jackson.databind.node.ObjectNode) provenance).put("origin_commit", commitFixture(checkout));
+        return new OriginFixture(checkout, consumer, provenance);
+    }
+
+    private static String commitFixture(Path checkout) throws Exception {
+        git(checkout, "-c", "core.autocrlf=false", "add", "--all");
+        git(checkout, "-c", "user.name=Contract fixture", "-c", "user.email=fixture@example.invalid",
+                "-c", "commit.gpgSign=false", "commit", "--quiet", "-m", "Immutable contract fixture");
+        return new String(git(checkout, "rev-parse", "HEAD"), StandardCharsets.UTF_8).strip();
+    }
+
+    private static void tamperEqualLength(Path path) throws IOException {
+        byte[] bytes = Files.readAllBytes(path);
+        bytes[bytes.length - 1] ^= 1;
+        Files.write(path, bytes);
     }
 
     private void validateProvenance(Path provenancePath, Path root) throws Exception {
@@ -156,22 +265,103 @@ class TestTraceChaserV5ConsumerContract {
         return HexFormat.of().formatHex(digest.digest(Files.readAllBytes(path)));
     }
 
-    private static void assertCopyEquals(Path source, Path destination) throws IOException {
-        assertEquals(Files.isDirectory(source), Files.isDirectory(destination), destination.toString());
-        if (!Files.isDirectory(source)) {
-            assertTrue(java.util.Arrays.equals(Files.readAllBytes(source), Files.readAllBytes(destination)),
-                    destination.toString());
-            return;
+    private static void assertOriginCopiesMatch(Path checkout, JsonNode provenance, Path consumerRoot)
+            throws Exception {
+        String origin = provenance.path("origin_commit").asText();
+        assertTrue(origin.matches("[0-9a-f]{40}"), "origin must be an immutable full commit ID");
+        try {
+            git(checkout, "cat-file", "-e", origin + "^{commit}");
+        } catch (IOException exception) {
+            throw new AssertionError("declared immutable origin " + origin + " is unavailable in " + checkout
+                    + "; no HEAD fallback or network fetch", exception);
         }
-        try (var sourcePaths = Files.walk(source); var destinationPaths = Files.walk(destination)) {
-            List<Path> sourceFiles = sourcePaths.filter(Files::isRegularFile)
-                    .map(source::relativize).sorted().toList();
-            List<Path> destinationFiles = destinationPaths.filter(Files::isRegularFile)
-                    .map(destination::relativize).sorted().toList();
-            assertEquals(sourceFiles, destinationFiles, destination.toString());
-            for (Path relative : sourceFiles) {
-                assertTrue(java.util.Arrays.equals(Files.readAllBytes(source.resolve(relative)),
-                        Files.readAllBytes(destination.resolve(relative))), relative.toString());
+        for (JsonNode copy : provenance.path("copies")) {
+            String source = copy.path("source").asText();
+            Path destination = consumerRoot.resolve(copy.path("destination").asText());
+            String type;
+            try {
+                type = new String(git(checkout, "cat-file", "-t", origin + ":" + source),
+                        StandardCharsets.UTF_8).strip();
+            } catch (IOException exception) {
+                throw new AssertionError("missing declared origin source: " + source + " -> " + destination,
+                        exception);
+            }
+            assertTrue(type.equals("tree") || type.equals("blob"), "unsupported origin type: " + type);
+            Map<String, String> blobs = new LinkedHashMap<>();
+            // NUL delimiters preserve whitespace in paths; read committed objects, never checkout files.
+            String listing = StandardCharsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(
+                    git(checkout, "ls-tree", "-r", "-z", "--full-tree", origin, "--", source))).toString();
+            for (String entry : listing.split("\0")) {
+                int tab = entry.indexOf('\t');
+                assertTrue(tab > 0, "malformed origin tree entry");
+                String[] header = entry.substring(0, tab).split(" ");
+                assertTrue(header.length == 3 && header[1].equals("blob")
+                        && (header[0].equals("100644") || header[0].equals("100755")),
+                        "origin copy must contain only regular blobs: " + entry);
+                String path = entry.substring(tab + 1);
+                assertTrue(type.equals("tree") ? path.startsWith(source + "/") : path.equals(source));
+                String relative = type.equals("tree") ? path.substring(source.length() + 1) : "";
+                assertEquals(null, blobs.put(relative, header[2]), "duplicate origin path: " + path);
+                assertTrue(blobs.size() <= MAX_COPY_FILES, "origin copy exceeds file bound");
+            }
+            assertTrue(!blobs.isEmpty(), "missing declared origin source: " + source);
+            List<String> destinationFiles;
+            if (type.equals("tree")) {
+                assertTrue(Files.isDirectory(destination, LinkOption.NOFOLLOW_LINKS), destination.toString());
+                try (var paths = Files.walk(destination)) {
+                    List<Path> members = paths.limit(2L * MAX_COPY_FILES + 1).toList();
+                    assertTrue(members.size() <= 2 * MAX_COPY_FILES, "consumer copy exceeds path bound");
+                    for (Path member : members) {
+                        assertTrue(Files.isDirectory(member, LinkOption.NOFOLLOW_LINKS)
+                                || Files.isRegularFile(member, LinkOption.NOFOLLOW_LINKS),
+                                "unsafe consumer copy: " + member);
+                    }
+                    destinationFiles = members.stream().filter(Files::isRegularFile)
+                            .map(destination::relativize).map(path -> path.toString().replace('\\', '/'))
+                            .sorted().toList();
+                }
+            } else {
+                assertTrue(Files.isRegularFile(destination, LinkOption.NOFOLLOW_LINKS), destination.toString());
+                destinationFiles = List.of("");
+            }
+            assertEquals(blobs.keySet().stream().sorted().toList(), destinationFiles,
+                    "origin/consumer file membership: " + destination);
+            int totalBytes = 0;
+            for (var blob : blobs.entrySet()) {
+                byte[] expected = git(checkout, "cat-file", "blob", blob.getValue());
+                totalBytes += expected.length;
+                assertTrue(totalBytes <= MAX_COPY_BYTES, "origin copy exceeds byte bound");
+                Path file = blob.getKey().isEmpty() ? destination : destination.resolve(blob.getKey());
+                byte[] actual;
+                try (var input = Files.newInputStream(file)) {
+                    actual = input.readNBytes(MAX_GIT_BYTES + 1);
+                }
+                assertTrue(actual.length <= MAX_GIT_BYTES, "consumer file exceeds byte bound: " + file);
+                assertArrayEquals(expected, actual, "immutable origin " + origin + ": " + file);
+            }
+        }
+    }
+
+    private static byte[] git(Path checkout, String... arguments) throws Exception {
+        var command = new ArrayList<>(List.of("git", "--no-replace-objects", "--literal-pathspecs",
+                "-C", checkout.toString()));
+        command.addAll(List.of(arguments));
+        var builder = new ProcessBuilder(command).redirectErrorStream(true);
+        builder.environment().put("GIT_NO_LAZY_FETCH", "1");
+        builder.environment().put("GIT_TERMINAL_PROMPT", "0");
+        Process process = builder.start();
+        try (var reader = Executors.newVirtualThreadPerTaskExecutor()) {
+            try {
+                process.getOutputStream().close();
+                byte[] output = reader.submit(() -> process.getInputStream().readNBytes(MAX_GIT_BYTES + 1))
+                        .get(10, TimeUnit.SECONDS);
+                if (output.length > MAX_GIT_BYTES) throw new IOException("local Git output exceeds byte bound");
+                if (!process.waitFor(10, TimeUnit.SECONDS)) throw new IOException("local Git command timed out");
+                if (process.exitValue() != 0) throw new IOException("local Git command failed: "
+                        + String.join(" ", arguments) + ": " + new String(output, StandardCharsets.UTF_8));
+                return output;
+            } finally {
+                process.destroyForcibly();
             }
         }
     }
