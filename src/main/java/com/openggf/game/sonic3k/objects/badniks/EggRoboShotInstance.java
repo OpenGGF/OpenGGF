@@ -52,10 +52,15 @@ public final class EggRoboShotInstance extends AbstractObjectInstance
     /** {@code moveq #0,d0} / {@code moveq #7,d0} on {@code V_int_run_count+3} bit 0. */
     private static final int CHARGE_FRAME_A = 0;
     private static final int CHARGE_FRAME_B = 7;
-    private static final int SHIELD_REACTION = 1 << 3;
+    /**
+     * Native shield_reaction ($2B) stays zero after loc_60DE / Delete_Referenced_Sprite clear SST.
+     * CreateChild10_NormalAdjusted ($84328), SetUp_ObjAttributes3 ($84040) and
+     * loc_91756..loc_917BE leave it untouched (shipped FixBugs=0).
+     */
+    private static final int SHIELD_REACTION = 0;
     private static final TouchResponseProfile TOUCH = new TouchResponseProfile(
             TouchCategoryDecodeMode.NORMAL, false, true, false,
-            TouchShieldDeflectCapability.SHIELD_DEFLECT, SHIELD_REACTION,
+            TouchShieldDeflectCapability.NONE, SHIELD_REACTION,
             TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
             TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
             TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
