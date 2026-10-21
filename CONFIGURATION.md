@@ -796,6 +796,8 @@ These keys belong in the racing server's master YAML (`MasterServerMain
 
 | YAML key | Default | Description |
 |----------|---------|-------------|
+| `newIdentityCacheSize` | `10000` | Maximum entries in each of the anonymous identity-age cache and the creation-proof reconnect-stamp LRU cache. Stamp eviction requires another creation proof for identities without a durable row. |
+| `newIdentityCacheTtlMinutes` | `60` | Anonymous identity-age cache idle TTL and creation-proof reconnect-stamp lifetime from proof completion. Reconnects update stamp recency without extending its expiry. |
 | `verifierRegistrationToken` | disabled | Shared bootstrap token required by `openggf-verifier` workers. Keep it secret and rotate it if disclosed. |
 | `maxRecordingBytes` | `65536` | Maximum accepted input-only attempt recording size. |
 | `maxRecordingStorageBytes` | `536870912` | Maximum total bytes retained in the content-addressed recording store; new uploads receive HTTP 507 when full. |

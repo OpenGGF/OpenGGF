@@ -52,7 +52,7 @@ class TestRoomBrokerAdversarial {
 
     static final class Fixture implements AutoCloseable {
         final long[] now = {1_000_000};
-        final MasterConfig config = TestMasterServer.testConfig();
+        final MasterConfig config;
         final SqliteIdentityStore store;
         final PlayerIdentity master;
         final SessionRegistry registry;
@@ -63,6 +63,10 @@ class TestRoomBrokerAdversarial {
 
         Fixture(Path dir) throws Exception { this(dir, Runnable::run); }
         Fixture(Path dir, Executor roomLoop) throws Exception {
+            this(dir, roomLoop, TestMasterServer.testConfig());
+        }
+        Fixture(Path dir, Executor roomLoop, MasterConfig config) throws Exception {
+            this.config = config;
             store = new SqliteIdentityStore(dir.resolve("ids.db"));
             master = PlayerIdentity.loadOrCreate(dir.resolve("master"));
             NewIdentityCache cache = new NewIdentityCache(100, 3_600_000, () -> now[0]);
@@ -102,11 +106,23 @@ class TestRoomBrokerAdversarial {
         }
 
         String admit(Connection connection, PlayerIdentity identity) throws Exception {
-            ClientHandshake handshake = handshake(identity);
+            return admit(connection, identity, "Peer");
+        }
+
+        ControlMessage beginAdmission(Connection connection, PlayerIdentity identity, String name)
+                throws Exception {
+            ClientHandshake handshake = new ClientHandshake(identity, name, FP, null,
+                    AuthenticationTranscript.Role.MASTER,
+                    () -> AuthenticationTranscript.LOCAL_PLAINTEXT);
             broker.onConnected(connection);
             send(connection, null, handshake.hello());
             send(connection, null, handshake.onWelcome(assertInstanceOf(
                     ControlMessage.Welcome.class, connection.last())));
+            return connection.last();
+        }
+
+        String admit(Connection connection, PlayerIdentity identity, String name) throws Exception {
+            beginAdmission(connection, identity, name);
             if (connection.last() instanceof ControlMessage.PowChallenge challenge) {
                 send(connection, null, new ControlMessage.PowSolution("IDENTITY",
                         identity.creationPowNonce(challenge.difficultyBits())));
@@ -126,6 +142,165 @@ class TestRoomBrokerAdversarial {
             broker.onText(connection, ControlCodec.encode(token, message));
         }
         @Override public void close() { store.close(); }
+    }
+
+    private static MasterConfig smallStampCacheConfig() {
+        return new MasterConfig(0, null, null, true, "ids.db", 0, "test",
+                0, 0, 0, 0, 8, 8, false, 0, 0, 0, 0, 0, 2, 1);
+    }
+
+    @Test
+    void anonymousIdentityReconnectStampExpiresFromProofTime(@TempDir Path dir) throws Exception {
+        try (Fixture f = new Fixture(dir, Runnable::run, smallStampCacheConfig())) {
+            PlayerIdentity identity = PlayerIdentity.loadOrCreate(dir.resolve("anonymous"));
+            Connection first = new Connection();
+            f.admit(first, identity, "");
+            assertTrue(f.store.find(identity.fingerprint()).isEmpty());
+            f.broker.onDisconnected(first);
+            f.now[0] += 30_000;
+            Connection recent = new Connection();
+            assertInstanceOf(ControlMessage.JoinAccepted.class,
+                    f.beginAdmission(recent, identity, ""));
+            f.broker.onDisconnected(recent);
+            f.now[0] += 30_000;
+            Connection expired = new Connection();
+            assertEquals("IDENTITY", assertInstanceOf(ControlMessage.PowChallenge.class,
+                    f.beginAdmission(expired, identity, "")).kind());
+        }
+    }
+
+    @Test
+    void anonymousIdentityReconnectStampsEvictLeastRecentlyUsed(@TempDir Path dir) throws Exception {
+        try (Fixture f = new Fixture(dir, Runnable::run, smallStampCacheConfig())) {
+            PlayerIdentity a = PlayerIdentity.loadOrCreate(dir.resolve("a"));
+            PlayerIdentity b = PlayerIdentity.loadOrCreate(dir.resolve("b"));
+            PlayerIdentity c = PlayerIdentity.loadOrCreate(dir.resolve("c"));
+            for (PlayerIdentity identity : List.of(a, b)) {
+                Connection connection = new Connection();
+                f.admit(connection, identity, "");
+                f.broker.onDisconnected(connection);
+            }
+            Connection recent = new Connection();
+            assertInstanceOf(ControlMessage.JoinAccepted.class, f.beginAdmission(recent, a, ""));
+            f.broker.onDisconnected(recent);
+            Connection newest = new Connection();
+            f.admit(newest, c, "");
+            f.broker.onDisconnected(newest);
+            for (PlayerIdentity retained : List.of(a, c)) {
+                Connection connection = new Connection();
+                assertInstanceOf(ControlMessage.JoinAccepted.class,
+                        f.beginAdmission(connection, retained, ""));
+                f.broker.onDisconnected(connection);
+            }
+            assertInstanceOf(ControlMessage.PowChallenge.class,
+                    f.beginAdmission(new Connection(), b, ""));
+        }
+    }
+
+    @Test
+    void expiredRelayAndTunnelGrantsRejectAttachButFreshGrantsAttach(@TempDir Path dir)
+            throws Exception {
+        for (String routing : List.of("RELAY", "DIRECT")) {
+            try (Fixture f = new Fixture(dir.resolve(routing))) {
+                PlayerIdentity owner = PlayerIdentity.loadOrCreate(dir.resolve(routing + "-owner"));
+                f.establish(owner);
+                Connection host = new Connection();
+                String hostToken = f.admit(host, owner);
+                String room = f.create(host, hostToken, routing);
+                Connection guest = new Connection();
+                String token = f.admit(guest, PlayerIdentity.loadOrCreate(dir.resolve(routing + "-guest")));
+                f.send(guest, token, new ControlMessage.RoomJoinRequest(room));
+                assertInstanceOf(ControlMessage.RoomJoinResult.class, guest.last());
+                f.now[0] += 30_000;
+                f.send(guest, token, new ControlMessage.RelayAttach(room));
+                assertEquals("join not granted", assertInstanceOf(
+                        ControlMessage.RoomJoinRejected.class, guest.last()).reason());
+                assertTrue(f.broker.takeAttachResult(guest).isEmpty());
+                assertTrue(f.relayAttachments.isEmpty());
+                assertEquals(0, f.tunnels.activeTunnels());
+                f.send(guest, token, new ControlMessage.RoomJoinRequest(room));
+                f.send(guest, token, new ControlMessage.RelayAttach(room));
+                RoomBroker.AttachResult result = f.broker.takeAttachResult(guest).orElseThrow();
+                assertEquals(room, result.roomId());
+                assertEquals("RELAY".equals(routing) ? RoomBroker.AttachMode.ROOM
+                        : RoomBroker.AttachMode.TUNNEL_GUEST, result.mode());
+            }
+        }
+    }
+
+    @Test
+    void repeatedJoinsRetainOnlyFiveRecentDistinctAttachGrants(@TempDir Path dir) throws Exception {
+        try (Fixture f = new Fixture(dir)) {
+            Connection guest = new Connection();
+            String token = f.admit(guest, PlayerIdentity.loadOrCreate(dir.resolve("guest")));
+            List<String> rooms = new ArrayList<>();
+            for (int i = 0; i < 20; i++) {
+                // Independent live rooms let the guest accumulate grants without host caps.
+                SessionRegistry.RoomEntry room = f.registry.create(new ControlMessage.RoomDescriptor(
+                        "Room", "s3k", 0, 0, "OPEN", null, 8, false), "DIRECT",
+                        "host-" + i, "address-" + i, 27888, FP);
+                f.tunnels.registerHost(room.roomId(), new Connection());
+                rooms.add(room.roomId());
+                f.send(guest, token, new ControlMessage.RoomJoinRequest(room.roomId()));
+                assertInstanceOf(ControlMessage.RoomJoinResult.class, guest.last());
+                if (i % 5 == 4 && i < 19) f.now[0] += 10_000;
+            }
+            // The oldest grant from the final ten-second window is still unexpired,
+            // but must have been evicted to keep only five pending rooms.
+            f.send(guest, token, new ControlMessage.RelayAttach(rooms.get(10)));
+            assertEquals("join not granted", assertInstanceOf(
+                    ControlMessage.RoomJoinRejected.class, guest.last()).reason());
+            assertEquals(0, f.tunnels.activeTunnels());
+            f.send(guest, token, new ControlMessage.RelayAttach(rooms.getLast()));
+            assertEquals(rooms.getLast(), f.broker.takeAttachResult(guest).orElseThrow().roomId());
+        }
+    }
+
+    @Test
+    void relayCreatorGrantExpiresAndFreshJoinStillAttachesHost(@TempDir Path dir) throws Exception {
+        try (Fixture f = new Fixture(dir)) {
+            PlayerIdentity owner = PlayerIdentity.loadOrCreate(dir.resolve("owner"));
+            f.establish(owner);
+            Connection host = new Connection();
+            String token = f.admit(host, owner);
+            String room = f.create(host, token, "RELAY");
+            f.now[0] += 30_000;
+            f.send(host, token, new ControlMessage.RelayAttach(room));
+            assertInstanceOf(ControlMessage.RoomJoinRejected.class, host.last());
+            assertTrue(f.relayAttachments.isEmpty());
+            f.send(host, token, new ControlMessage.RoomJoinRequest(room));
+            f.send(host, token, new ControlMessage.RelayAttach(room));
+            assertEquals(RoomBroker.AttachMode.ROOM,
+                    f.broker.takeAttachResult(host).orElseThrow().mode());
+        }
+    }
+
+    @Test
+    void refusedTunnelAttachConsumesGrantBeforeRetry(@TempDir Path dir) throws Exception {
+        try (Fixture f = new Fixture(dir)) {
+            PlayerIdentity owner = PlayerIdentity.loadOrCreate(dir.resolve("owner"));
+            f.establish(owner);
+            Connection host = new Connection();
+            String room = f.create(host, f.admit(host, owner), "DIRECT");
+            Connection guest = new Connection();
+            String token = f.admit(guest, PlayerIdentity.loadOrCreate(dir.resolve("guest")));
+            f.send(guest, token, new ControlMessage.RoomJoinRequest(room));
+            f.tunnels.unregisterHost(room);
+            f.send(guest, token, new ControlMessage.RelayAttach(room));
+            assertEquals("relay unavailable", assertInstanceOf(
+                    ControlMessage.RoomJoinRejected.class, guest.last()).reason());
+            f.tunnels.registerHost(room, host);
+            f.send(guest, token, new ControlMessage.RelayAttach(room));
+            assertEquals("join not granted", assertInstanceOf(
+                    ControlMessage.RoomJoinRejected.class, guest.last()).reason());
+            assertEquals(0, f.tunnels.activeTunnels());
+            f.send(guest, token, new ControlMessage.RoomJoinRequest(room));
+            f.send(guest, token, new ControlMessage.RelayAttach(room));
+            assertEquals(room, f.broker.takeAttachResult(guest).orElseThrow().roomId());
+            f.send(guest, token, new ControlMessage.RelayAttach(room));
+            assertTrue(f.broker.takeAttachResult(guest).isEmpty());
+            assertEquals(1, f.tunnels.activeTunnels());
+        }
     }
 
     @Test

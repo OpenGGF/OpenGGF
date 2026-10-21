@@ -98,6 +98,13 @@ The verifier embeds the engine to replay attempts, so build it from the same eng
 clients it verifies. Master settings are documented in
 [CONFIGURATION.md](../CONFIGURATION.md#racing-server-master-verifier-settings).
 
+Anonymous creation-proof reconnect stamps share the configured new-identity cache
+size and TTL limits (`newIdentityCacheSize`, `newIdentityCacheTtlMinutes`). Reconnects
+refresh LRU order but cannot extend the proof's expiry. Pending room attachments
+retain at most five room grants per master connection for 30 seconds after each
+successful join, including the relay creator's initial grant. Attach consumes the
+grant once; an expired or evicted grant requires a fresh rate-limited join.
+
 ## Adversarial and capacity testing
 
 The ordinary tests combine decoder fuzzing with stateful room/broker attacks and
