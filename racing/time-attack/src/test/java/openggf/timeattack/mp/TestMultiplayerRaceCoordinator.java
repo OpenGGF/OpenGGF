@@ -1,5 +1,12 @@
 package openggf.timeattack.mp;
 
+import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.mods.run.PlayerPose;
+import com.openggf.mods.run.RunHandle;
+import com.openggf.mods.run.RunInput;
+import com.openggf.mods.run.RunLevelStart;
+import com.openggf.mods.run.RunStep;
+import com.openggf.mods.scene.SceneKeys;
 import com.openggf.net.ghost.GhostFrame;
 import com.openggf.net.ghost.GhostFrameCodec;
 import openggf.timeattack.GhostStore;
@@ -25,6 +32,8 @@ class TestMultiplayerRaceCoordinator {
         final ArrayDeque<RaceClient.InboundEvent> inbound = new ArrayDeque<>();
         final List<ControlMessage> sentControl = new ArrayList<>();
         final List<byte[]> sentBinary = new ArrayList<>();
+        /** Attempt lifecycle and frame batches in send order. */
+        final List<String> wire = new ArrayList<>();
         boolean open = true;
 
         @Override public List<RaceClient.InboundEvent> drainInbound() {
@@ -32,8 +41,21 @@ class TestMultiplayerRaceCoordinator {
             inbound.clear();
             return events;
         }
-        @Override public void sendControl(ControlMessage message) { sentControl.add(message); }
-        @Override public void sendBinary(byte[] data) { sentBinary.add(data.clone()); }
+        @Override public void sendControl(ControlMessage message) {
+            sentControl.add(message);
+            switch (message) {
+                case ControlMessage.AttemptStart start -> wire.add("start " + start.attemptId());
+                case ControlMessage.AttemptFinish finish -> wire.add("finish " + finish.attemptId());
+                case ControlMessage.AttemptReset reset -> wire.add("reset " + reset.attemptId());
+                default -> { }
+            }
+        }
+        @Override public void sendBinary(byte[] data) {
+            sentBinary.add(data.clone());
+            GhostPackets.FramesBatch batch = GhostPackets.decodeFrames(data);
+            wire.add("frames " + batch.attemptId() + "@" + batch.startFrameIndex()
+                    + "+" + batch.frameCount());
+        }
         @Override public int playerSlot() { return 0; }
         @Override public boolean isOpen() { return open; }
         @Override public void close() { open = false; }
@@ -80,6 +102,62 @@ class TestMultiplayerRaceCoordinator {
         return new GhostFrame(x, 100, 1, false, false, false, 2, false);
     }
 
+    /** Counts the run commands the coordinator issues through the runtime. */
+    private static final class CountingHandle implements RunHandle {
+        int retries;
+        int leaves;
+
+        @Override public void retry() { retries++; }
+        @Override public void leave() { leaves++; }
+        @Override public void spectate(boolean active, int dx, int dy) { }
+        @Override public boolean isActive() { return true; }
+    }
+
+    private static CountingHandle handle(Rig rig) {
+        CountingHandle handle = new CountingHandle();
+        rig.runtime().attachHandle(handle);
+        rig.runtime().setRetryKey(() -> SceneKeys.R);
+        return handle;
+    }
+
+    /** The engine reloading the act (launch, retry key or act-completion retry). */
+    private static void levelReady(TimeAttackRuntime runtime) {
+        runtime.onLevelReady(new RunLevelStart(runtime.runSpec(), "0.6:cafe", false, 4096, 1024));
+    }
+
+    private static RunInput keys(int... pressed) {
+        return new RunInput() {
+            @Override public LogicalInputSnapshot input() { return LogicalInputSnapshot.neutral(); }
+            @Override public boolean keyDown(int key) { return keyPressed(key); }
+            @Override public boolean keyPressed(int key) {
+                for (int candidate : pressed) {
+                    if (candidate == key) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        };
+    }
+
+    /** One engine frame: admit, then (when admitted) the step and its sampled frame. */
+    private static boolean step(Rig rig, RunInput input, int heldMask, boolean actComplete, int x) {
+        if (!rig.runtime().admitStep(input)) {
+            return false;
+        }
+        rig.runtime().afterStep(new RunStep(0, heldMask, false,
+                new PlayerPose(x, 100, 1, false, false, 2, false), actComplete, -1, false));
+        return true;
+    }
+
+    /** A spawn frame, an input frame and a finish: one full three-frame batch. */
+    private static void runToFinish(Rig rig, int x) {
+        assertTrue(step(rig, keys(), 0, false, x));
+        assertTrue(step(rig, keys(), 0x08, false, x + 1));
+        assertTrue(step(rig, keys(), 0x08, true, x + 2));
+        assertTrue(rig.runtime().isAttemptFinished());
+    }
+
     @Test
     void attemptLifecyclePublishesEveryFrameAndHashes(@TempDir Path root) {
         Rig rig = rig(root);
@@ -107,13 +185,12 @@ class TestMultiplayerRaceCoordinator {
 
         rig.coordinator().attachRuntime(rig.runtime());
 
-        assertEquals(1, rig.transport().sentControl.stream()
-                .filter(ControlMessage.AttemptStart.class::isInstance).count());
+        assertTrue(rig.transport().wire.isEmpty(), "the start waits for the first sampled frame");
         for (int frame = 0; frame < 3; frame++) {
             TimeAttackRuntimeTestBridge.tick(
                     rig.runtime(), 0, false, frame(10 + frame));
         }
-        assertFalse(rig.transport().sentBinary.isEmpty());
+        assertEquals(List.of("start 1", "frames 1@0+3"), rig.transport().wire);
     }
 
     @Test
@@ -128,15 +205,15 @@ class TestMultiplayerRaceCoordinator {
         assertTrue(rig.transport().sentControl.stream()
                 .noneMatch(ControlMessage.AttemptStart.class::isInstance));
 
+        assertFalse(step(rig, keys(), 0, false, 10), "the countdown holds the run");
+
         now += 3_000;
         rig.coordinator().pump();
-        assertEquals(1, rig.transport().sentControl.stream()
-                .filter(ControlMessage.AttemptStart.class::isInstance).count());
+        assertTrue(rig.transport().wire.isEmpty(), "RUNNING alone does not start the attempt");
         for (int frame = 0; frame < 3; frame++) {
-            TimeAttackRuntimeTestBridge.tick(
-                    rig.runtime(), 0, false, frame(10 + frame));
+            assertTrue(step(rig, keys(), 0, false, 10 + frame));
         }
-        assertFalse(rig.transport().sentBinary.isEmpty());
+        assertEquals(List.of("start 1", "frames 1@0+3"), rig.transport().wire);
     }
 
     @Test
@@ -286,10 +363,265 @@ class TestMultiplayerRaceCoordinator {
         TimeAttackRuntime second = armedRuntime(root.resolve("round2"));
         rig.coordinator().attachRuntime(second);
         TimeAttackRuntimeTestBridge.begin(second, "0.6:cafe");
-        assertEquals(2, rig.transport().sentControl.stream()
-                .filter(ControlMessage.AttemptStart.class::isInstance).count());
+        TimeAttackRuntimeTestBridge.tick(second, 0, false, frame(10));
+        assertEquals(List.of(new ControlMessage.AttemptStart(1), new ControlMessage.AttemptStart(1)),
+                rig.transport().sentControl.stream()
+                        .filter(ControlMessage.AttemptStart.class::isInstance).toList());
         rig.coordinator().shutdown();
         assertFalse(rig.transport().open);
+    }
+
+    @Test
+    void retryAfterAFinishStartsTheNextAttemptAtItsFirstSampledFrame(@TempDir Path root) {
+        Rig rig = rig(root);
+        CountingHandle handle = handle(rig);
+        levelReady(rig.runtime());
+        runToFinish(rig, 10);
+        assertEquals(List.of("start 1", "frames 1@0+3", "finish 1"), rig.transport().wire);
+
+        assertTrue(rig.runtime().retryOnActCompletion(), "the open window keeps the run going");
+        levelReady(rig.runtime()); // the engine restarts the act after the results tally
+        now += 2_500;              // fade-in and title card: no frames are sampled
+        rig.coordinator().pump();
+        assertEquals(3, rig.transport().wire.size(), "no start before the first sampled frame");
+
+        runToFinish(rig, 20);
+        assertEquals(List.of("start 1", "frames 1@0+3", "finish 1",
+                "start 2", "frames 2@0+3", "finish 2"), rig.transport().wire);
+        assertEquals(0, handle.leaves);
+    }
+
+    @Test
+    void retryKeyMidRunResetsThenStartsTheNextAttempt(@TempDir Path root) {
+        Rig rig = rig(root);
+        CountingHandle handle = handle(rig);
+        levelReady(rig.runtime());
+        assertTrue(step(rig, keys(), 0, false, 10));
+        assertTrue(step(rig, keys(), 0x08, false, 11));
+
+        assertTrue(rig.coordinator().mayRetry());
+        assertTrue(rig.runtime().admitStep(keys(SceneKeys.R)));
+        assertEquals(1, handle.retries);
+        assertEquals(List.of("start 1", "reset 1"), rig.transport().wire);
+
+        levelReady(rig.runtime());
+        for (int frame = 0; frame < 3; frame++) {
+            assertTrue(step(rig, keys(), 0, false, 30 + frame));
+        }
+        assertEquals(List.of("start 1", "reset 1", "start 2", "frames 2@0+3"),
+                rig.transport().wire);
+    }
+
+    @Test
+    void closedWindowIgnoresRetryAndDropsADeferredAttemptsFrame(@TempDir Path root) {
+        Rig rig = rig(root);
+        rig.session().onControl(new ControlMessage.RoundStart(
+                new ControlMessage.RoundConfig("s3k", 0, 0, 10, "OPEN", null), now, now + 10_000));
+        CountingHandle handle = handle(rig);
+        levelReady(rig.runtime());
+        assertTrue(step(rig, keys(), 0, false, 10));
+        assertTrue(rig.runtime().admitStep(keys(SceneKeys.R)));
+        assertEquals(1, handle.retries);
+
+        now += 10_001; // the deadline passes during the reload
+        levelReady(rig.runtime());
+        assertFalse(rig.coordinator().mayRetry());
+        assertDoesNotThrow(() -> rig.runtime().afterStep(new RunStep(0, 0, false,
+                new PlayerPose(10, 100, 1, false, false, 2, false), false, -1, false)));
+        assertFalse(rig.runtime().isAttemptActive(), "the deferred attempt is voided");
+        assertTrue(rig.runtime().admitStep(keys(SceneKeys.R)));
+        assertEquals(1, handle.retries, "a closed window ignores the retry key");
+        assertEquals(List.of("start 1", "reset 1"), rig.transport().wire,
+                "the deferred attempt never reaches the wire");
+        assertFalse(rig.runtime().retryOnActCompletion());
+    }
+
+    @Test
+    void attemptBeganWhilePublishedResetsTheOldAttemptFirst(@TempDir Path root) {
+        Rig rig = rig(root);
+        TimeAttackRuntimeTestBridge.begin(rig.runtime(), "0.6:cafe");
+        TimeAttackRuntimeTestBridge.tick(rig.runtime(), 0x08, false, frame(10));
+
+        // A reload that skipped the void: the next attempt begins over a published one.
+        assertDoesNotThrow(() -> TimeAttackRuntimeTestBridge.begin(rig.runtime(), "0.6:cafe"));
+        assertEquals(List.of("start 1", "reset 1"), rig.transport().wire);
+        for (int frame = 0; frame < 3; frame++) {
+            TimeAttackRuntimeTestBridge.tick(rig.runtime(), 0, false, frame(20 + frame));
+        }
+        assertEquals(List.of("start 1", "reset 1", "start 2", "frames 2@0+3"),
+                rig.transport().wire);
+    }
+
+    @Test
+    void frameForAnAttemptThatNeverBeganStillThrows(@TempDir Path root) {
+        Rig rig = rig(root);
+        TimeAttackRuntimeTestBridge.begin(rig.runtime(), "0.6:cafe");
+        assertThrows(IllegalStateException.class,
+                () -> rig.coordinator().onFrameSampled(7, frame(10)));
+    }
+
+    @Test
+    void roundEndLeavesAnUnfinishedRunExactlyOnce(@TempDir Path root) {
+        Rig rig = rig(root);
+        CountingHandle handle = handle(rig);
+        levelReady(rig.runtime());
+        assertTrue(step(rig, keys(), 0x08, false, 10));
+        assertEquals(0, handle.leaves);
+
+        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RoundEnd(List.of())));
+        rig.runtime().admitStep(keys());
+        rig.runtime().admitStep(keys());
+        assertEquals(1, handle.leaves);
+        assertFalse(rig.coordinator().mayRetry());
+        assertFalse(rig.runtime().retryOnActCompletion());
+
+        rig.runtime().admitStep(keys(SceneKeys.R));
+        assertEquals(0, handle.retries, "a run that is leaving does not retry");
+        assertEquals(1, handle.leaves);
+    }
+
+    @Test
+    void aNewerRoundLeavesTheOldRoundsRun(@TempDir Path root) {
+        Rig rig = rig(root);
+        CountingHandle handle = handle(rig);
+        levelReady(rig.runtime());
+        assertTrue(step(rig, keys(), 0, false, 10));
+
+        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RoundStart(
+                new ControlMessage.RoundConfig("s3k", 1, 0, 60, "OPEN", null),
+                now + 3_000, now + 63_000)));
+        rig.runtime().admitStep(keys(SceneKeys.R));
+        assertEquals(1, handle.leaves);
+        assertEquals(0, handle.retries, "the newer round's countdown is not this run's");
+        assertFalse(rig.coordinator().mayRetry());
+        now += 3_000;
+        assertFalse(rig.runtime().retryOnActCompletion(), "never retry onto the old track");
+        assertTrue(rig.coordinator().holdGameplay(), "a leaving run stays held");
+    }
+
+    @Test
+    void aLeavingRunNeverStepsIntoAnAlreadyRunningNewerRound(@TempDir Path root) {
+        Rig rig = rig(root);
+        CountingHandle handle = handle(rig);
+        levelReady(rig.runtime());
+        assertTrue(step(rig, keys(), 0, false, 10));
+        assertTrue(step(rig, keys(), 0x08, false, 11));
+
+        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RoundStart(
+                new ControlMessage.RoundConfig("s3k", 1, 0, 60, "OPEN", null), now, now + 60_000)));
+        assertFalse(step(rig, keys(), 0x08, false, 12), "the leave frame does not step");
+        assertEquals(1, handle.leaves);
+        assertEquals(List.of("start 1"), rig.transport().wire,
+                "no frame from the old track reaches the newer round");
+    }
+
+    @Test
+    void aNewerRoundsCountdownNeverFreezesAFinishedTally(@TempDir Path root) {
+        Rig rig = rig(root);
+        CountingHandle handle = handle(rig);
+        levelReady(rig.runtime());
+        runToFinish(rig, 10);
+
+        // Without a vote pool the host starts the next round straight from ROUND_END.
+        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RoundEnd(List.of())));
+        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RoundStart(
+                new ControlMessage.RoundConfig("s3k", 1, 0, 60, "OPEN", null),
+                now + 3_000, now + 63_000)));
+        assertTrue(step(rig, keys(SceneKeys.R), 0, false, 13), "the results tally keeps running");
+        assertFalse(rig.coordinator().holdGameplay());
+        assertEquals(0, handle.leaves, "a finished tally is not left");
+        assertEquals(0, handle.retries, "the newer round's countdown is not this run's");
+        assertFalse(rig.runtime().retryOnActCompletion(), "the tally's exit ends the run");
+        assertEquals(List.of("start 1", "frames 1@0+3", "finish 1"), rig.transport().wire);
+    }
+
+    @Test
+    void theEstimatedDeadlineVoidsTheAttemptButOnlyTheHostEndsTheRun(@TempDir Path root) {
+        Rig rig = rig(root);
+        rig.session().onControl(new ControlMessage.RoundStart(
+                new ControlMessage.RoundConfig("s3k", 0, 0, 10, "OPEN", null), now, now + 10_000));
+        CountingHandle handle = handle(rig);
+        levelReady(rig.runtime());
+        assertTrue(step(rig, keys(), 0x08, false, 10));
+
+        now += 10_001; // the client's estimate passes the deadline before the host closes the round
+        assertTrue(step(rig, keys(), 0x08, false, 11));
+        assertFalse(rig.runtime().isAttemptActive(), "the estimated deadline voids the attempt");
+        assertEquals(0, handle.leaves, "an estimate alone never leaves the run");
+
+        // A clock sample shows the hub 5 s behind this client: the window is open after all.
+        rig.transport().inbound.add(new RaceClient.Control(
+                new ControlMessage.Pong(now, now - 5_000)));
+        assertTrue(rig.runtime().admitStep(keys(SceneKeys.R)));
+        assertEquals(1, handle.retries, "the corrected window takes a retry");
+        assertEquals(0, handle.leaves);
+
+        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RoundEnd(List.of())));
+        rig.runtime().admitStep(keys());
+        assertEquals(1, handle.leaves, "the host's RoundEnd leaves the run");
+    }
+
+    @Test
+    void aVoteOfferOrResultAlsoLeavesAnUnfinishedRun(@TempDir Path root) {
+        for (ControlMessage closing : List.of(
+                new ControlMessage.TrackVoteOffer(List.of("s3k:0:0", "s3k:1:0"), now + 15_000),
+                new ControlMessage.TrackVoteResult("s3k:1:0"))) {
+            String name = closing.getClass().getSimpleName();
+            Rig rig = rig(root.resolve(name));
+            CountingHandle handle = handle(rig);
+            levelReady(rig.runtime());
+            assertTrue(step(rig, keys(), 0x08, false, 10));
+
+            rig.transport().inbound.add(new RaceClient.Control(closing));
+            rig.runtime().admitStep(keys());
+            rig.runtime().admitStep(keys());
+            assertEquals(1, handle.leaves, name);
+        }
+    }
+
+    @Test
+    void anAttemptFinishedOnlyOutsideTheWindowNeverReachesTheWire(@TempDir Path root) {
+        Rig rig = rig(root);
+        TimeAttackRuntimeTestBridge.begin(rig.runtime(), "0.6:cafe");
+        now += 60_001; // the deadline passes before the attempt's first sampled frame
+
+        assertDoesNotThrow(() -> TimeAttackRuntimeTestBridge.tick(
+                rig.runtime(), 0x08, true, frame(10)));
+        assertTrue(rig.runtime().isAttemptFinished(), "the finish frame itself was dropped");
+        assertTrue(rig.transport().wire.isEmpty(), "the host never saw this attempt");
+        assertThrows(IllegalStateException.class,
+                () -> rig.coordinator().onFrameSampled(1, frame(11)),
+                "the dropped attempt is no longer pending");
+    }
+
+    @Test
+    void roundEndKeepsAFinishedTallyAndEndsTheRunWhenItExits(@TempDir Path root) {
+        Rig rig = rig(root);
+        CountingHandle handle = handle(rig);
+        levelReady(rig.runtime());
+        runToFinish(rig, 10);
+
+        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RoundEnd(List.of())));
+        rig.runtime().admitStep(keys());
+        rig.runtime().admitStep(keys());
+        assertEquals(0, handle.leaves, "the results tally stays on screen");
+        assertFalse(rig.runtime().retryOnActCompletion(), "the tally's exit ends the run");
+    }
+
+    @Test
+    void retryOnActCompletionFollowsTheWindowAndTheAttachment(@TempDir Path root) {
+        Rig rig = rig(root);
+        rig.session().onControl(new ControlMessage.RoundStart(
+                new ControlMessage.RoundConfig("s3k", 0, 0, 10, "OPEN", null), now, now + 10_000));
+        assertTrue(rig.runtime().retryOnActCompletion());
+        now += 10_001;
+        assertFalse(rig.runtime().retryOnActCompletion());
+
+        Rig solo = rig(root.resolve("solo"), false);
+        assertFalse(solo.runtime().retryOnActCompletion(), "solo runs return to their host");
+        rig.coordinator().detachRuntime();
+        now -= 10_001;
+        assertFalse(rig.runtime().retryOnActCompletion());
     }
 
     private static void feedPeerFrames(Rig rig, int attemptId, int x) {
