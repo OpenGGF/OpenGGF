@@ -4340,3 +4340,31 @@ Root's independent original-b078 R9 found no unload/onUnload in its216 decisions
 adaptation, new controller, native execution or broad run is performed here.
 Scaled-art/shared scratch/DMA, native timing/pixels, full-act and remaining route
 products retain their existing gaps. Root owns review and composed qualification.
+
+
+## R10 ordinary paired800 continuation frontier — 2026-10-21
+
+Three finite cold proposals at exact `9855aa13fa39dfde430325eb284bbfb9fc6809ed`
+use the unchanged9914 first-replica P1/P2 prefix, native800 Sonic+Tails/off,
+7arg titlefalse/null seeds and ordinary step/draw, with at most4500 new inputs
+and neutral new P2. Proposal1 is discarded for a temporary pad-record roundtrip
+failure (missing jump0x10); no endpoint is accepted and it is not rerun.
+Proposal2 ends14413 alive but object-controlled at(3224,1379),57rings/3lives,
+tailmax3344. The third/final policy adds an ordinary A8 release input while
+object-controlled at10608; at14413 P1 is grounded/alive/free at(3893,1388),
+59rings/3lives, P2 alive/present at(3893,1317), tailmax3893. Neither tail has
+P1hurt or shared ring-count loss; P2hurt10099 clears10189, receiver/cause UNKNOWN.
+The wall frontier still stalls, with no lower-pad/MTZ admission. Survival beyond
+11664 on this controller does not qualify the maintained complete route.
+
+Both usable fixed exploratory script/BK2 products roundtrip all14414 actual
+rows through production author/loader, preserve all9914 original P1/P2 rows and
+neutral new P2. The third request also gates every finite new pad before boot
+in that same JVM. Raw products were read/consumed; useful specific source,
+compact facts, selected normal PNGs and fixed proposals remain external.
+These are **0 JUnit tests/0 skips**, no maintained-class/broad/native run or
+qualification pair. Source/POM/tests/movies/oracles remain unchanged, including
+expected46 and the observed48-ring prefix. No whole-route, native timing/pixel
+or new native800 coverage is certified. Exact policies, method correction,
+commands and stopping limits are in the dated
+[completion plan](../../plans/2026-10-13-s3k-playable-completion.md#r10-ordinary-paired800-post-prefix-exploration--2026-10-21).
