@@ -5,6 +5,10 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Recording imports:** copied BK2 recordings are bounded during decompression
+  and parsing, including metadata, input rows and verification sidecars. Oversized,
+  ambiguous or inconsistent files are rejected without hiding healthy recordings.
+
 - **Time Attack multiplayer security:** identity proofs bind the complete join
   intent to the master, direct-room or relay-room role and observed TLS
   certificate. Remote browser, join and recording endpoints require TLS;
