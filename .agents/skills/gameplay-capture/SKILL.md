@@ -5,6 +5,9 @@ description: Take a picture or a movie of any section of OpenGGF gameplay (any g
 
 # Gameplay capture
 
+Use [headless-rendering](../headless-rendering/SKILL.md) for GL backend selection,
+display isolation, prerequisites and rendering lifecycle checks.
+
 `com.openggf.tools.GameplayCaptureTool` boots a zone/act on the production path
 (`HeadlessGameBoot` + `GameLoop.step()`), optionally teleports the leader, drives it
 frame by frame from a BizHawk input log, and writes PNG frames, `state.csv`, and an
