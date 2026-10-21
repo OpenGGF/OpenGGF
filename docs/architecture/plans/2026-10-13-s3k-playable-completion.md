@@ -28770,3 +28770,26 @@ snapshots/restores/seeds, runtime/test/POM/maintained-data/oracle/window edits,
 native/model/broad runs, extra agents, push/integration or foreign cleanup.
 Root owns review and any further workload; no onward question is inferred.
 See the [R11 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-original-remaining-right-tail-question-r11--2026-10-21).
+
+
+## Ownership of the four remaining structural findings — 2026-10-21
+
+At `a6f2116d0b12588f4c2b0036e928d8dbb3297185`, committed Main and the PR
+merge-base are `bd042f08094155a5b7da76e552f25d43d86d98d7`. Root and an
+independent source audit confirm exact whole-blob identity for both witnesses,
+both owning guards and POM; ArchUnit properties and the entire frozen store also
+match Main. `MenuAudioProbeTool:41` (blob `3b0742ae`) introduced its singleton call
+in `1e6d3d93`; `HubMusicController:118/120` (blob `a916e248`) introduced concrete
+audio-profile construction/music dependencies in `d500e326`. The relevant guard
+methods predate those source introductions. The frozen nine dependency entries
+belong to MasterTitleRomPreview, not HubMusic; their count grants no waiver.
+These four witnesses are unchanged Main source, with no relevant PR-owned delta.
+
+This is source ownership, not a manufactured Main test result. Main CI guards
+were skipped, and the historical author's 541-check claim is not an exact matched
+`bd042` execution. The inspected reconciled 718T/4F/0E/0S result remains red at
+its actual `a11707c6` epoch. No repair, guard exclusion or frozen-baseline expansion
+is indicated by this audit, and no new workload was launched. If runtime
+attribution is later disputed, the missing evidence is a bounded matched Main run
+of the two owning guard classes, not another broad suite. No conclusion applies
+to other campaign negatives, native correctness or overall merge readiness.
