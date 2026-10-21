@@ -4237,3 +4237,33 @@ current compile only accounts for outputs. Useful source/inverses/compact facts
 remain external. The [dated R7 plan](../../plans/2026-10-13-s3k-playable-completion.md#wide-paired-original-group2-gate-r7--2026-10-21)
 records complete ordered write history and limits. Main complete and current
 paired800 MTZ/Mecha/DEZ remain unqualified; no third prefix/native/broad run occurs.
+
+## Wide paired layout30 source disposition R8 — 2026-10-21
+
+Source-only inspection at R7 `31bf738f3`/runtime parent `a49194fd0`, pinned shipped
+skdisasm `044fa467` and bounded original-ROM bytes adds no replay/native result.
+Native `Obj_WaitOffscreen` runs for all EggRobo modes; its retained-bit continuation
+returns without init/draw, and the next own dispatch initializes then moves.
+Native fly-by publication requires negative post-add Y velocity and clear retained
+render bit 7. Current's own wait/flight/publication ordering follows those owners;
+Main's earlier group2 publication is not native evidence.
+
+Two source distinctions are now explicit. First, native Wait saves continuation
+`$0009151E` at `$34`, then fly-by initialization replaces only its high word;
+low word `$36=$151E` survives into the 16.16 Y anchor. Main and current Java both
+start `flyY` with a zero fraction. This is an independently proven shared source
+omission, with no measured route effect or campaign attribution. Second, the live
+manager applies its generic coarse-X retirement after active fly-by updates;
+native `loc_91526` ends at `Draw_Sprite` and has no such shared cull. Java `onUnload`
+does not publish group2. The old commented `syncActiveSpawnsUnload` body is excluded.
+
+R7 did not retain layout30's original manager-unload decision/phase/operands, or
+its post-add Y velocity and consumed render flag at the fly-by exit. These remain
+the actual lifecycle discriminators; this source slice cannot state which
+branch occurred. Submitted-only render-bit refresh uses the copied camera at the
+ordinary loop tail, including the retained flag across the return-only dispatch.
+The [dated R8 plan](../../plans/2026-10-13-s3k-playable-completion.md#wide-paired-layout30-fly-by-source-contract-r8--2026-10-21)
+records active placement, unload, render/scaling writers and exact source limits.
+No JVM/probe, runtime/data fix or oracle adaptation follows. Expected 46 and every
+maintained input/test/runtime/POM stay unchanged; the existing route/native
+qualification gaps remain open.

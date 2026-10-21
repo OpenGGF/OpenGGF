@@ -26914,3 +26914,96 @@ assertions, runtime and POM remain unchanged; Main complete/current paired800
 MTZ/Mecha/DEZ and native whole-trajectory correctness remain unqualified. Local
 normal-hook documentation commit goes to Root for independent review/composition;
 no push, integration or foreign-worktree cleanup occurs here.
+
+## Wide paired layout30 fly-by source contract R8 — 2026-10-21
+
+This source-only slice uses owned `feature/ai-ssz-layout30-source-20261021` at R7
+`31bf738f3a5c12b0f672c1936001d37e3c4bb2ee`, whose runtime parent is
+`a49194fd0ae43ad86057cecf0e2e9a3bfc45a21b`. R7's measured layout30 birth6792,
+Main publication6819 and current absence of publication through7007 remain the
+only route observations used here. No JVM, replay, native execution or new probe
+is run. Source, tests, movies, POM, config and actual native checkouts stay intact.
+
+The reference is shipped FixBugs0 skdisasm `044fa467`, `sonic3k.asm`:
+`Obj_EggRobo`198540, `Obj_WaitOffscreen`180357–180389,
+`loc_91874`198837–198859, `loc_91526`198547–198571,
+`loc_91570`198573 onward, and `sub_86180`/`sub_8619A`181132–181168.
+Read-only original-ROM bytes at `$91518` are
+`4EB9 0008 5AAE 6100 033E 2250 4ED1 1028 0040 0400`.
+
+### Native lifecycle and shared fixed-point omission
+
+All modes first enter `Obj_WaitOffscreen`. It installs zero-piece `Map_Offscreen`,
+world-coordinate rendering and 32-pixel extents, saves the caller continuation at
+`$34`, then tests the retained render bit 7. When clear, its unsigned 128-aligned
+coarse-X test can delete without pairing publication; otherwise it submits to
+`Draw_Sprite`. When set, it restores the saved continuation and returns without
+initializing, moving or submitting. Only the next own dispatch initializes and
+immediately runs the selected routine. Current's wait/return-only/initial-dispatch
+structure agrees with this source ordering. Main's earlier motion/publication
+does not establish native timing.
+
+There is an independently proven **shared fixed-point omission**. The verified
+six-byte JSR at `$91518` saves continuation `$0009151E` in the long at `$34`.
+`loc_91874` subsequently writes only the Y-position **word** at `$34`; the low
+word `$36` remains `$151E`. `SetUp_ObjAttributes`, the return from `sub_9185E` and
+the fly-by scaling helper do not clear that fraction before `sub_86180` adds the
+signed velocity to the long. Both Main and current Java instead initialize
+`flyY` with a zero low word in their constructors and retain no continuation
+alias. This establishes a source-level shipped-behavior gap shared by the arms;
+its route effect and any relationship to R7's publication difference are unmeasured.
+No seed, formula, correction or new oracle is introduced.
+
+In native `loc_91526`, scale processing precedes the word decrement at `$3C` and
+addition to Y velocity. Only **negative post-add Y velocity plus clear retained
+render bit 7** selects `loc_91570`. Otherwise the two fixed-point/projection helpers
+run and the routine ends at `Draw_Sprite`. Publication ORs the subtype's high-nibble
+bit into `_unkFA82`, queues restoration art and deletes. Current's written
+decrement/add/exit-test order and `leaveTheScreen` publication follow those owners.
+The inherited scaled-art gap is not qualified here.
+
+### Active unload and preceding render-bit owners
+
+The active Java route is S3K two-axis load-then-execute with the LEGACY window:
+`ObjectManager.update` → `runTwoAxisLoadThenExecutePlacement` → `runExecLoop`.
+After each surviving object's update, `unloadCounterBasedOutOfRange` is live even
+for non-counter S3K placement. EggRobo inherits persistent=false, custom-check=false
+and current `getX()` as the unload reference. The check uses the live object-pass
+camera, an unsigned aligned distance and the existing viewport-scaled limit
+(1120 at 800 versus native Wait's 640; width policy is already declared discrepancy14).
+Its selected retirement calls EggRobo `onUnload`, marks respawnable destruction and
+removes the live instance **without publishing the pairing bit**.
+
+This shared check also covers active fly-by dispatches. Native `Process_Sprites`
+36005 and `Draw_Sprite`36171 provide no corresponding post-routine coarse-X cull
+after `loc_91526`. Thus an additional Java retirement path is source-visible;
+whether layout30 actually selected it in R7 is UNKNOWN. Placement cursor trims
+remove load candidates, not live instances. `syncActiveSpawnsUnload` is empty;
+its older commented body around3185–3230 is not an execution owner. Publishing
+unconditionally from `onUnload` would not reproduce the native fly-by exit condition.
+
+Native `Render_Sprites`36358 clears/sets bit 7 for submitted objects using copied
+camera coordinates, setting it even before a zero-piece mapping is rejected.
+Current `LevelFrameStep` captures render-camera copies after scroll and before
+zone events, then its loop tail calls `refreshObjectPostCameraRenderState` before
+CPU sprite-table preparation. EggRobo refreshes its flag only when its object-local
+`drawSubmitted` marker is set, using 32-pixel extents and exclusive upper bounds;
+the return-only continuation retains the preceding flag. This is not observed
+native queue admission or a fresh exit-site geometry query.
+Native `sub_2468A` also contains a scaling-budget-failure bit 7 clear: the fly-by's
+own scaling call resets that budget to 0 and its closed scale range uses table
+entries within the 128-tile budget, so that failure branch supplies no demonstrated
+missing clear on this source path. No sprite-budget or pixel result is inferred.
+
+The smallest remaining route discriminator is layout30's **original post-routine
+manager unload result and lifecycle phase**, with its already-evaluated current-X,
+live-camera, unsigned-distance and limit operands. If it survives that boundary,
+the remaining original exit operands are post-add signed Y velocity and the consumed
+retained render flag, linked to the preceding submitted/copy-camera phase. R7 did
+not retain these values; source alone cannot choose among those actual outcomes.
+No further carrier, prefix or implementation is authorized by this disposition.
+Expected 46 and all maintained runtime/controllers/tests remain unchanged. Main
+complete/current paired800 MTZ/Mecha/DEZ and native whole-trajectory correctness
+remain unqualified. Only this factual appendix and the existing matrix are changed;
+source/config/native pin checks and normal documentation hooks validate the local
+commit, with no Maven or broader run.
