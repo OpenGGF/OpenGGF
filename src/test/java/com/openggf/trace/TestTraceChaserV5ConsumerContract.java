@@ -244,6 +244,41 @@ class TestTraceChaserV5ConsumerContract {
         }));
     }
 
+    @TestFactory
+    Stream<DynamicTest> provenanceRejectsSymlinksBeforeParsingProductionRelativeJson() {
+        return Stream.of("ancestor", "leaf").map(kind -> DynamicTest.dynamicTest(kind, () -> {
+            Path root = materializeProvenance("preparse-" + kind);
+            Path provenance = root.resolve(PROVENANCE);
+            Files.copy(PROVENANCE, provenance);
+            validateProvenance(provenance, root); // The actual production-relative regular path remains valid.
+            Path link;
+            Path target = temporaryDirectory.resolve("malformed-outside-provenance-" + kind);
+            if (kind.equals("ancestor")) {
+                link = provenance.getParent();
+                Files.move(link, target);
+                Files.writeString(target.resolve("provenance.json"), "{ malformed outside provenance");
+            } else {
+                link = provenance;
+                Files.writeString(target, "{ malformed outside provenance");
+                Files.delete(provenance);
+            }
+            try {
+                Files.createSymbolicLink(link, target.toAbsolutePath());
+            } catch (UnsupportedOperationException | AccessDeniedException exception) {
+                org.junit.jupiter.api.Assumptions.assumeTrue(false,
+                        "temporary provenance symlinks are unavailable on this platform: " + exception);
+            } catch (FileSystemException exception) {
+                String reason = String.valueOf(exception.getReason()).toLowerCase(Locale.ROOT);
+                org.junit.jupiter.api.Assumptions.assumeTrue(!reason.contains("not supported")
+                                && !reason.contains("privilege") && !reason.contains("operation not permitted"),
+                        "temporary provenance symlinks are unavailable on this platform: " + exception);
+                throw exception;
+            }
+            AssertionError failure = assertThrows(AssertionError.class, () -> validateProvenance(provenance, root));
+            assertTrue(failure.getMessage().contains("symbolic-link"), failure::toString);
+        }));
+    }
+
     @Test
     void gitTimeoutTerminatesAChildHoldingItsOutputPipe() throws Exception {
         Path marker = temporaryDirectory.resolve("retained-pipe-child.pid");
@@ -361,8 +396,12 @@ class TestTraceChaserV5ConsumerContract {
     }
 
     private void validateProvenance(Path provenancePath, Path root) throws Exception {
-        JsonNode provenance = JSON.readTree(provenancePath.toFile());
         Path consumerRoot = root.toAbsolutePath().normalize();
+        Path safeProvenance = safeConsumerDestination(consumerRoot,
+                provenancePath.toAbsolutePath().normalize().toString());
+        assertTrue(Files.isRegularFile(safeProvenance, LinkOption.NOFOLLOW_LINKS),
+                "missing regular consumer provenance: " + safeProvenance);
+        JsonNode provenance = JSON.readTree(safeProvenance.toFile());
         assertEquals("9e51ff79e7a542f3c50d96618a7e24e6fc72397e",
                 provenance.path("origin_commit").asText());
         assertEquals("openggf-tracechaser-consumer-copy-v1", provenance.path("format").asText());

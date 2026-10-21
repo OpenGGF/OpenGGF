@@ -24444,3 +24444,63 @@ boundary repeat, engine/broad/full/native/C# check, integration, push or worktre
 cleanup occurred in R2. These are Linux focused results; other-platform runtime
 behavior and detached hostile-process isolation are not certified. This local
 follow-up has literal parent R1 `2fa1ddfb`; Root owns a fresh independent review.
+
+### Provenance pre-parse path guard R3 — 2026-10-21
+
+Fresh independent review of R2 `947694a86593b4900d4b2fb06a93fe4b1e105a59`
+found one remaining P2: `validateProvenance` opened its JSON before checking
+the provenance path itself. Its production location is
+`src/test/resources/tracechaser/provenance.json`; the previous ancestor control
+used a fixture-root JSON outside that linked ancestor. The review supported
+R2's Git environment/process corrections. R1/R2 commits and recorded results
+remain historical; the complete round-2 review/pins are preserved immutably in
+the existing `continuations.provenance_preparse_r3` registry entry.
+
+Two new production-relative controls first validate a regular frozen copy,
+then link either its `tracechaser` ancestor or provenance leaf to malformed
+outside JSON. On predecessor behavior, blob
+`47c2ba10cc77df7d1e0854733009dba610ae0590` produced **XML 2T2F0E0S**:
+both assertions received Jackson `JsonParseException` instead of symbolic-link
+rejection. No FIFO or blocking fixture was used. Maven's factory aggregation
+said 1T1F; both XML/TXT testcase records failed. Printed queue wait 0s, Maven
+26.904s, XML 0.251s. This is a new discriminating RED, not a baseline run.
+
+R3 normalizes root/provenance paths, uses the existing containment/component
+guard and requires a no-follow regular provenance leaf before `readTree`.
+Outside bytes do not decide rejection. A literal inverse of this guard and
+the new control factory reproduces the parent Java source exactly: all 49
+existing controls, 31 semantic cases, bounded Git helper, origin `9e51ff79`,
+renamed initialized method and exact `703bd92d` guard remain unchanged. No
+artifact, provenance data, runtime, native, POM, selection-policy or API edit;
+current producer compatibility remains **UNKNOWN**.
+
+Final R3 checks each ran exactly once on unchanged blob
+`a15b3a18055094f16f4919b5f5de64b512ae3667`: ordinary whole class **51T0F0E0S**
+(XML 3.110s, Maven 28.489s), initialized single renamed method **1T0F0E0S**
+(XML 1.340s, Maven 27.278s). Both printed queue wait 0s. Both new link controls
+executed on Linux without skips. All three jobs used the same normal Main
+absolute queue wrapper, Java25/env/absolute ROMs as R2, with owned cwd/target and
+distinct `origin-copy-r3-{red,ordinary,initialized}-20261021-1` report/tmp roots.
+Exact expanded argv/environment and literal current task/run IDs are in only
+the existing R3 registry continuation. Executed selectors/common flags:
+
+```bash
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.trace.TestTraceChaserV5ConsumerContract#provenanceRejectsSymlinksBeforeParsingProductionRelativeJson' test -B
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.trace.TestTraceChaserV5ConsumerContract' test -B
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Ptracechaser-integration -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.trace.TestTraceChaserV5ConsumerContract#initializedCheckoutPreservesConsumerCopiesFromDeclaredImmutableOrigin' test -B
+```
+
+All XML/TXT, actual identities, 69 properties per job, full RED failures,
+errors/skips and stream nodes were consumed. Final runs had no failures,
+errors, skips or stream nodes. Consumed owned diagnostics were removed without
+archives/receipts. No Root/Main writes/workloads, extra agents, broad/engine/
+native/capture/unchanged-boundary checks, integration, push or worktree cleanup.
+This local follow-up has literal parent `947694a8`; Root owns fresh independent
+review round3. Other-platform runtime and concurrent adversarial filesystem
+mutation are not certified; current producer compatibility remains UNKNOWN.
