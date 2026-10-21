@@ -4075,3 +4075,32 @@ deferred attracted-ring award owner are candidates, not causal findings. The
 records source owners, exact command/pins and coverage limits. One passing Main
 case does not certify the current route, a whole class, native timing/pixels or
 true boot. Owned regenerable diagnostics are consumed after inspection.
+
+
+## Wide paired first matched ordinary state delta R3 — 2026-10-21
+
+Two ordinary cold row0 NORMAL-DRAW first-replica projections, exact Main
+`efd605142603146509995cffbb56a6b48f9c1c1b` and current
+`a4d78a16df5b312e75a23b28df797cef88e496c6`, reproduce **46/48 rings** at512/1420.
+Original9914 pads/P2neutral and Settings7/titlefalse are unchanged. Each observation
+XML records9914 inputs/29742 phase rows/115 public fields/0 skipped inputs;
+these are not JUnit/suite or native parity results. No restore, import or seed is used.
+
+The first observed difference is3491 POST_STEP: P1's persisted interaction slot
+Main28/current27; P2 follows3507. The actual owner correspondence is unobserved.
+At6721 PRE_STEP all115 fields agree; POST_STEP first diverges in P2 motion/hurt:
+Main normal/iframes0, current hurt/iframes120 and knockback, with37 rings in both.
+P1 first differs in motion7164 (vertical speed-856/+856); camera differs7166.
+Only at7172 does the shared ring count differ, Main45/current46, when current
+alone adds placed-ring bit5/sparkle5:7172. No attracted entry is visible in either
+series. Prior trajectory/hurt differences preclude treating this as an isolated
+award-order or ring-data question; actual collector/receiver/order are not observed.
+
+The next seam is actual original contact ownership behind3491's slot write,
+without rerunning the provider; equivalent-owner allocation remains possible.
+The later6721 executed damage receiver/decision remains a separate unexposed seam.
+No cause/native correctness or runtime repair is claimed. Expected46 and every
+maintained controller/assertion stay intact. The [dated R3 plan](../../plans/2026-10-13-s3k-playable-completion.md#widepaired800-first-matched-ordinary-state-delta-r3-2026-10-21)
+records exact boundaries/pins/limits. Complete fixed rows and the useful adapter
+are external; raw diagnostics are consumed. Exactly two requests, no third or
+maintained-class/broad rerun. Current paired800 MTZ/Mecha/DEZ remain unqualified.
