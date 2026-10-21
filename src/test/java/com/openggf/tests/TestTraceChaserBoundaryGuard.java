@@ -21,7 +21,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 /** Guards the optional, immutable TraceChaser consumer boundary. */
 class TestTraceChaserBoundaryGuard {
-    private static final String PIN = "4c3d6ba8c93ae0e607cb15e16e367d47f40f36a0";
+    private static final String PIN = "703bd92d32634ce5ebac60625b48c60ef5500427";
     private static final String LUA_BIN = System.getenv().getOrDefault("LUA_BIN", "lua");
 
     @Test
