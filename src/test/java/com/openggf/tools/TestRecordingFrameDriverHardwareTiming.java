@@ -4,7 +4,9 @@ import com.openggf.LevelFrameResult;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.game.GameModule;
+import com.openggf.game.LevelEventProvider;
 import com.openggf.game.TitleCardProvider;
+import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
@@ -43,7 +45,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -331,9 +332,17 @@ class TestRecordingFrameDriverHardwareTiming {
     void heldS3kTitleCardSkipSurroundsActualProviderScanWithBoundaries()
             throws Exception {
         TitleCardProvider provider = mock(TitleCardProvider.class);
-        GameModule module = spy(new Sonic3kGameModule());
-        doReturn(provider).when(module).getTitleCardProvider();
-        doReturn(null).when(module).getLevelEventProvider();
+        GameModule module = new DelegatingGameModule(new Sonic3kGameModule(), "test:held-s3k-title-scan") {
+            @Override
+            public TitleCardProvider getTitleCardProvider() {
+                return provider;
+            }
+
+            @Override
+            public LevelEventProvider getLevelEventProvider() {
+                return null;
+            }
+        };
         TestEnvironment.configureGameModuleFixture(module);
         GameplayModeContext context = SessionManager.getCurrentGameplayMode();
         List<String> events = observe(context);

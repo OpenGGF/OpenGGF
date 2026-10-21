@@ -23105,3 +23105,64 @@ accepted frozen candidate's 43 ordinary classes, eight fresh guards and Python
 policy checks. This worker did not inspect that run or launch validation,
 write `target/`, integrate into Main, push or clean up worktrees. The unchanged
 setup TraceChaser checkout remains unstaged against the merged gitlink.
+
+## Combined smoke and native fixture follow-up — 2026-10-21
+
+The one original change-based smoke command at composition
+`cf3cfd0b715050d94a3c2ac7d550126ecd733a83`, based on
+`ff5088abf5cce5878f143817f03c941805f11880`, completed all 72 ordinary
+batches and the separate fresh guard process. It selected 3,583 ordinary
+candidate classes with the normal category runner, not the release-only full
+suite. Ordinary results were 37,588 tests, 24 failures, 11 errors and 91 skips;
+guards were 715 tests, 10 failures and no errors or skips. Preparation passed.
+All negative identities, skipped identities and reasons, final status and
+coverage limits were read before acknowledging and deleting that run's
+diagnostic directory. The reported active lane times were 6,306.83 seconds and
+424.67 seconds; queue, gaps and observer intervals are not summed delivery time.
+
+The six source corrections recorded above did not yet belong to that tested
+cf3 epoch. Its remaining native-factory fixture failures identify two more
+fixtures: `TestS3kInitialObjectSetupLifecycle` used a delegating Mockito mock,
+and `TestRecordingFrameDriverHardwareTiming` used a spy with a copied
+owner-bound factory. Both now use actual immutable-base
+`DelegatingGameModule` instances. The lifecycle fixture changes its profile
+on the same active module; the timing fixture returns the same mocked title
+provider and explicit null event provider. Existing assertions, transition
+cases, retry checks and V-int/title/service boundary order remain unchanged.
+The production factory authority check is unchanged.
+
+The one focused command used the normal shared Maven queue, `-Dmse=off`,
+`-Psmoke`, selector
+`com.openggf.tests.TestS3kInitialObjectSetupLifecycle,com.openggf.tools.TestRecordingFrameDriverHardwareTiming`,
+the same verified absolute S1/S2/S3K ROM properties and KiS2 path, and unique
+owned report/tmp directories. Java 25, Lua 5.4, surfaceless EGL and null OpenAL
+were retained; ambient JVM options and desktop display variables were unset.
+It passed all 29 tests (19 lifecycle, 10 timing), with no failures, errors or
+skips. Original XML/TXT, all 29 identities, issue children and emitted streams
+were read. The synthetic startup exception was logged by a passing retry
+assertion. Source/config fingerprints were unchanged through the run.
+Printed queue waiting was 555 seconds; Maven displayed 01:17, and suite times
+were 1.851 and 0.488 seconds. Individual compiler and end-to-end delivery timing
+were not measured. Main and test compilation occurred inside this lifecycle;
+there was no class cleanup or clean-build assertion.
+
+The smoke also exposed distinct route and architecture work. Four guard
+negatives match the documented Main baseline; the six new guard negatives
+remain assigned to structural remediation rather than budget or authority
+waivers. SSZ's 15 failing route identities have documented b4f/c13 baseline
+coverage; SOZ's Knuckles case has a changed bonus/replay caller and needs a
+separate matched control. No shared cause follows from failure totals.
+
+A fresh unmodified SSZ opening comparison passed on c13 and failed at input
+6,501 on e253. Official complete readers validated the partial journals:
+their first 36-field state difference is input 2,200. A bounded temporary
+recorder observed an accepted P1 normal-return hurt call from an
+`EggRoboShotInstance` at that input; its revised journal remained equal to all
+6,501 common e253 observations. This is an actual selected engine call, not
+native cause or whole-world proof. Native source inspection supports current
+fighter movement and gun/shot cadence that c13 lacked; the old pass is not a
+ROM oracle. All temporary Controller/test recorder and journal hooks were
+whole-inverted to committed source, and the baseline's exact owned test-only
+helper was removed. There is no gameplay, controller-input or assertion change
+in this fixture follow-up. Route/producer qualification and structural fixes,
+then final affected validation, integration and push remain outstanding.
