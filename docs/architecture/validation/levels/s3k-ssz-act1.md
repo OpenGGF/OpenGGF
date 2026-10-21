@@ -4560,3 +4560,12 @@ At exact `d48e832911`, ONE cold ordinary CLI preserves all15166 actualR24 pads/i
 15198 total, zero new Aedges; stop before any further air input. GroundedX4992 geographical plane not reached; no recovery/second phase. Both62rings/3lives, P2ground/manual/nonflight/contextNONE and original bound context intact; no hurt/ring/life loss.
 Same-JVM finite-five-pad/all-row proofs and independent complete script/ZIP/ELEVEN-original-file prefix/payload proofs agree; **0 JUnit/skips N/A**. All32 complete new rows retained losslessly externally; owned raw outputs consumed under leases.
 Actual terrain/stored-sensor freshness/contact/causal launch/native/physics/whole-route qualification UNKNOWN; no omission established, expected46/runtime/POM/maintained data unchanged. [Facts, exact limits, hashes, command and timing](../../plans/2026-10-13-s3k-playable-completion.md#r25-landing-corridor-stops-at-actual-rider-publication--2026-10-21).
+
+
+## R26 airborne release P2 control stop — 2026-10-22
+
+At exact `0f8791a4f`, ONE cold ordinary CLI preserves all15198 actualR25 pads/inlet and matches226 available gates: unchanged52 original available-field predicates plus174 complete retained R23/R24/R25 R/Support/Family pairs. Historical no-rider guard retains15024..15165 domain; fullR25 records preserve actual non-null15197, no comparator weakened/missing field invented.
+FIRST new15198 publishes P1(4915,1573),VX648/VY-3976/G1,airtrue/jumpfalse/free/riderNULL. SAME Right/noABC+P2Up continues only to15253 P2guardloss: P2(32512,0),V0/air/locked/objectControlled/CATCH_UP_FLIGHT/manualfalse,flag0fuel0/contextNONE; P1(4984,1043),VX610/VY-896/G1,stillair/free/riderNULL.
+56 new/15254 total, zero new Aedges; all56 P1 rows airborne/no actual rider, first landing UNREACHED. Both62rings/3lives/unhurt/live and bound world/pair/managers/focus/LEVEL intact; no input15254/recovery/wait/nextphase.
+Same-JVM finite-five-pad/all-row and independent full script/ZIP/TWELVE-original-file wholeprefix/payload proofs agree; **0 JUnit/skips N/A**. All56 complete78-field rows retained losslessly; owned raw outputs consumed under leases.
+Original release/vertical/P2transition writers/callback/innerconditions/native cause, terrain receiver/freshness and future landing/route UNKNOWN; no runtime omission established. Expected46/runtime/POM/maintained data unchanged. [Facts, exact limits, hashes, command and timing](../../plans/2026-10-13-s3k-playable-completion.md#r26-airborne-support-release-stops-at-p2-control-boundary--2026-10-22).
