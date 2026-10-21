@@ -29429,3 +29429,29 @@ CLI/Java/launcher exit0, **0 JUnit/skips N/A**, no Surefire/XML/original excepti
 App fingerprint unchanged `8e8ccc9304a9acd7c3738d23c538d3278d92ac5683c6dd44f0eae7cbc01ae756`; adapterSHA256 `174db71791afd5bae3e5d2afd63df0a32a045053225b0d6c7e38276791d21be7`, executedBK2 `9f53c0e0227913fcd8046748ebfc44d853a98fd890389bbc19ce4fb92186d956`.
 Useful specific source/whole54579-byte literal preimage+inverse/design/exact inputs/all105compactfacts/one inspected normalPNG retained externally; exact owned raw namespace/tmp/extraction consumed under leases, no helperclasses. Earlier refs/nativeactual322/index703/config preserved.
 No runtime omission/physics/native correctness, hazard protection/clearance, private rollingJump/headroom, stable/onward/whole-route qualification or expected46 adaptation follows. No runtime/POM/maintained tests/movies/counts/windows/oracles changed, second lifecycle/retry/groundjump/push/integration; STOP Root source/data review.
+
+
+## R24 distinct earlier-ground jump reaches the public landing box — 2026-10-21
+
+ONE cold ordinary CLI at exact `0ce22f63011d4a9167649ed54a3648af85b01795`, branch `feature/ai-ssz-earlier-ground-fresh-jump-ordinary-r24-20261021`;
+unchanged [R23 setup](#r23-earlier-ramp-braking-reaches-first-moving-ground--2026-10-21), ALL15129 actual R23 pads and exact15128 inlet(4749,1580),VX/G733 preserved. This is a distinct earlier-ground input/history branch, not oldR22(4765/864) failed-jump replay; all older failed tails/results/IDs stay immutable.
+All157 available comparison gates match: original52 available-field comparators remain literal, plus105 complete R23 R/Support/Family pairs retranscribed only from losslessly retained facts. Prior R10 fields never retained remain UNOBSERVED; no missing historical raw-state reconstruction or game-state import.
+Whole original56155-byteR23 and73651-byteR22policy preimages/countedinverse and prospective newsource SHA were pinned BEFORE writing the adapter. All original public observer/input/gate/context/owners/support/family/comparator bodies remain literal R23; added tables are comparison-only strings, not gameplay values.
+Sole policy<=121: exactlyONE freshRight+A15129/P2Up/noABC, then SAME heldRight+A<=120 further; stop FIRST landing/support/safety/X<4749/X>=4880/airY>=1600/cap. No prebrake/wait/velocity requirement or launch horizontal-acceleration predicate, release/repress, retiming, secondjump/brake/settle/onward.
+
+| Input | Actual once-read public boundary |
+| --- | --- |
+| 15128 / 15129 | Exact free-ground inlet(4749,1580),VX/G733,VY0 → freshlogicalA,air+jumping/free/riderNULL at(4749,1585),VX733/VY-1664/G733. |
+| 15142 | (4795,1520),VX1013/VY0/G733,stillair+jumping/free/riderNULL; no writer/headroom/contact operand measured. |
+| 15155 | (4853,1550),VX0/VY728/G728,stillair+jumping/free/riderNULL; no side/contact writer inferred. |
+| 15164 / 15165 | (4857,1583),VX216/VY1232/G728,air → FIRST free-ground(4858,1580),VX240/VY0/G240,airfalse/jumpfalse/riderNULL/unhurt; STOP. |
+
+Result `FIRST_POST_NOMINAL_SPIKE_FREE_GROUND_PUBLIC_INLET_TERRAIN_UNKNOWN`:37 new/15166 total, exactlyONE Aedge15129; no earlier landing or actual rider among new rows. Both62rings/3lives/unhurt/live throughout tail; P2(3950,1264),V0/ground/free/NORMAL/manual/flag0fuel0/contextNONE/targetfalse and bound world/managers/nativepair/roster/focus/LEVEL/no pending/fade/reverse intact.
+This is only a moving public inlet inside4827<X<4880/1536<=Y<1600, beyond the nominal source spike interval. No actual current spike identity/liveness/contact/protection/avoidance/native/physics/whole-route qualification follows. Terminal stored sensors tile255/distance-3/angle255/DOWN, radii9/19; terrain receiver/support freshness remain UNKNOWN.
+PRE reuses cached previous postdraw; no new gameplay/private/getter/provider/predicate/sensor/headroom/collision query, map join or owner call. All37 complete ordered new facts retained losslessly as compact constant/varying fields externally; no state writes/seeds/restores.
+Same-JVM preboot production-author/loader positiveJUMP0x10/fullbool/masks/payload finite-pad proof and all15166-row roundtrip pass. Independent full script/ZIP/allTEN original input files(R23 plus NINEolder) agree, exact15129prefix/37Right+A+P2Up rows/oneedge proven.
+Current absolute Main queue invocation shape `--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl compile exec:exec -B`, Java25 source-mode `EarlierGroundFreshJumpContinuation.java`; unchanged R23 original verified absolute ROM/EGL/nullAL/source-qualified NullAudio/Lua/profile/unsets. Full absolute argv/environment/native/config/source/returned IDs remain in own R24 registry.
+CLI/Java/launcher exit0, **0 JUnit/skips N/A**, no Surefire/XML/original exception/error; classes up to date. Reported queue0s/Maven17.567s/launcher18.346s overlap; Engine/tail-only UNKNOWN. Entire360108-byte490-line stream read; inherited JOMLUnsafe/resource-encoding/unmeasureds3k-kos-v1 estimate warnings remain limits.
+App fingerprint unchanged `8e8ccc9304a9acd7c3738d23c538d3278d92ac5683c6dd44f0eae7cbc01ae756`; prospective/executed adapterSHA256 `2dd4e126285c3050b031ab171cb7389966707ad3b943a4361c569d85378e9155`, executedBK2 `fa47061e833c3be9b404180390493160198772fede13cebca5feaf67b9933481`.
+Useful specific source/two wholepreimages/inverse/design/prospectivehash/exact inputs/all37compactfacts/one inspected normalPNG remain external. Owned raw namespace/tmp/extraction consumed under leases; no helperclasses or maintainedsource restore/recompile, earlierrefs/nativeactual322/index703/config preserved.
+No stableground/futurejump/terrain/contact/protection/actualhazard/native/physics-cause/whole-act qualification or expected46 adaptation. No runtime/POM/maintained tests/movies/counts/windows/oracles changed, extra workload/retry/push/integration; STOP Root actual source/data review.
