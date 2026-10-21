@@ -27,6 +27,19 @@ Unreleased. The earlier development themes remain in
   Time Attack opens directly from a fresh boot, retains its lobby and connections
   while launching a level, and resumes its owning scene after a run or load failure.
 
+- **Time Attack multiple attempts:** players can submit several runs inside one
+  round window, and the best valid run counts. While the window is open a finish's
+  results tally is followed by a fresh attempt; the retry key still restarts mid-run.
+  Retried attempts and late joiners no longer trip the host's pacing check, a retry
+  after the deadline or a second retry press during the reload no longer aborts the
+  run, and an unfinished run returns to the lobby when the host closes its round.
+  Verified rooms keep superseded claims as fallbacks, so a failed or voided later run
+  no longer erases an earlier run that passed. Deadline clock skew no longer kicks
+  players, a player pushed out of the top ten sees its new rank, finished and
+  reloading racers stop holding nearby ghost slots and show their state in the
+  roster, and verifiers keep polling after a failed cycle. Mods can opt into the
+  same act-completion retry through `RunHost.retryOnActCompletion()`.
+
 - **Multiplayer services:** The master recording/verifier API bounds outstanding
   requests and copied bodies across connections, closes overlapping HTTP pipelines,
   bounds rejection writes before HTTP aggregation, discards further input during

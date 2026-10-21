@@ -150,7 +150,7 @@ The first experiment uses an equivalent-sample envelope:
 | Nearby | next 6 | 20/s | interpolated full pose |
 | Contextual | next 8 | 5/s | interpolated pose or coarse-to-detailed bridge |
 | Coarse | remaining room | approximately 1/s or dirty-only | progress, direction, status and rank |
-| Dormant | stationary/finished unchanged | heartbeat only | retained final state |
+| Dormant | stationary unchanged (finished senders are already excluded by lifecycle) | heartbeat only | retained final state |
 
 This represents 16 detailed/contextual racers with 280 source samples/s, compared with
 480 for the current eight-at-60 model. These are experimental defaults. The actual
@@ -209,6 +209,22 @@ Backpressure stages remain bounded:
 Reliable control remains ordered and bounded. A required delta may not depend on a pose
 that was replaced before transmission; rebuild against the last delivered/declared
 baseline or send absolute state.
+
+### Repeated attempts
+
+Players submit several attempts per round window (see
+[the multiple-attempts plan](../plans/2026-10-21-time-attack-multiple-attempts.md)).
+"Finished" is therefore a short transient state: racers cycle finish or reset, reload
+and respawn many times per round, so the spawn area stays crowded for the whole
+window, not only at the start. The hub already excludes a finished or reset sender from
+other recipients' near sets once its buffered tail is relayed and shows it `FINISHED`
+or `IDLE` in the roster; budgeted selection must keep that lifecycle exclusion. An
+`ARMED` racer waiting at spawn still streams stationary 60 Hz frames that cannot be
+thinned upstream, so stationary suppression belongs to the per-recipient scheduler.
+Any cross-packet baseline resets on every attempt change (possibly inside one
+aggregate), on round change and on admission change, because attempt ids restart per
+round and per admission; each retry costs about one absolute frame per recipient.
+Standings and verification load scale with improvements per player, not players.
 
 ### Coarse roster and metadata
 

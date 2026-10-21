@@ -225,7 +225,9 @@ position from prior exact values and transmit the residual; do not simulate remo
 Sonic gameplay. Send full state on first visibility, attempt/generation change,
 reconnect, teleport, missing baseline and periodic recovery. Retain raw fallback.
 
-Separately, stop routine poses for stationary/finished racers, replace stale unsent
+Separately, stop routine poses for stationary racers (finished and reset senders already
+leave near sets; players submit several attempts per round, see
+[the multiple-attempts plan](../../plans/2026-10-21-time-attack-multiple-attempts.md)), replace stale unsent
 movement, coalesce standings broadcasts within one room tick, run-length encode
 recorded input masks and use conditional directory responses.
 

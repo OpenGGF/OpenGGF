@@ -32,6 +32,7 @@ that flow.
 4. [Stress-system plan and historical validation](2026-10-21-racing-stress-system.md)
 5. [Next-line subsystem reference](../next-line-subsystems.md)
 6. [Performance measurement hazards](../../agent-workflow/briefing-trace-rounds.md#measurement-hazards--all-produce-plausible-output)
+7. [Multiple attempts per round](2026-10-21-time-attack-multiple-attempts.md): repeated runs change dormancy, baseline resets, spawn crowding and verifier sizing
 
 ## Commit trail and ownership
 

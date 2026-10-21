@@ -68,6 +68,15 @@ Native white steps precede profile/range conversion, including backdrop and deri
 water colours. The normalized mutable `0.7` pin and runtime description are updated
 together; descriptor candidate `0.7.0` and published baselines are unchanged.
 
+Repeated Time Attack attempts add `RunHost.retryOnActCompletion()` (default
+`false`): when a host-returning run completes its act, a host may restart the act as
+a retry instead of ending the run, and a retry requested on that frame now wins over
+the return. A pending leave or host failure still ends the run; a host failure
+pending at act completion now reports `ABORTED` rather than `ACT_COMPLETED`.
+`GhostHub.onAttemptFinished(int,int)` records a finished attempt's roster status. The
+normalized mutable `0.7` pin changes with them; descriptor candidate `0.7.0` and
+published baselines are unchanged.
+
 The exact current candidate inventory is
 `src/test/resources/mods/mod-api-signatures-0.7.txt`. `TestModApiSignatureSurface`
 requires that file to be unique, sorted canonical UTF-8 text and exactly equal to

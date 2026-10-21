@@ -109,6 +109,51 @@ change-based smoke selection then runs once against the pre-task base.
 ROM-backed results-screen paths remain unverified in this container, which
 has no ROMs.
 
+## Delivery record
+
+Five isolated workstreams implemented the slice. Each was reviewed adversarially
+and then corrected, and was integrated as one commit:
+
+| Commit | Workstream | Defects |
+|---|---|---|
+| `162fcfd5` | Engine run lifecycle | 1, 4 |
+| `2fc43c5c` | Time Attack client | 1, 2, 3, 5 |
+| `787e4f0a` | Round engine and room host | 6, 8, 9 |
+| `0fe9ed31` | Ghost hub and remote playback | 10, 11 |
+| `b00bf0df` | Verifier loop and real-socket witness | 7 |
+
+What review changed, and what was rejected:
+
+- The engine first kept ending runs on the deferred cross-act seamless route, citing
+  AIZ1, CNZ1 and MHZ1. Review showed AIZ1 and CNZ1 (and HCZ1, MGZ1, LBZ1, ICZ1)
+  reload in place inside their own event pass and complete at the results exit, so
+  they already retried. Only MHZ1 reaches the deferred route; it now retries and
+  releases the dropped request's resource handoff, a few frames into its tally.
+- A results exit that finished under a mid-act retry fade used to survive the load
+  and reload or end the new attempt. A load now consumes completion requests raised
+  before it. A leave raised inside the host's retry query wins over the retry.
+- The client first left the run on the clock-estimated round end. Because the lobby
+  never relaunches a round, a client clock running ahead would have locked a player
+  out for the rest of the window. The run now leaves only on host messages
+  (`RoundEnd`, a vote offer or result) or a newer round; the estimated deadline still
+  voids the attempt. A newer round's countdown no longer freezes an older run's tally.
+- Expired claims whose recording was already uploaded are recorded as
+  `VOID_VERIFIER_UNAVAILABLE`, not `VOID_NO_UPLOAD`.
+- A stalled remote ghost is kept while late tail frames of its attempt are buffered.
+- Verifier `StackOverflowError` and `LinkageError` fail only their cycle, with no
+  verdict; other errors still end the process.
+- A participant whose only result is removed gets no host message (no wire value
+  means "no rank"). The client clears its own top-ten rank when its slot leaves the
+  broadcast top ten, and the push-out `RankUpdate` then sets the new rank.
+- The progress estimate counts `IDLE` players (between attempts) as seen but never
+  ahead, so other players' reloads do not flip it to the partial "seen" form.
+- An uncredited finish (pacing-flagged or slower) still shows `FINISHED` in the
+  roster; roster status is coarse course progress, not standings.
+
+Not verified in this container (no ROMs): the results-exit retry reload for S1, S2
+and S3K, the MHZ1 deferred-route retry, and the roughly one-frame full-brightness
+frame an S2 results exit may show between its fade and the retry fade.
+
 ## Effect on the budgeted-replication follow-up
 
 The earlier review called dormancy "mostly free" because finished racers stop
