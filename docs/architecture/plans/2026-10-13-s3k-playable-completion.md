@@ -27991,3 +27991,34 @@ positive-ring-handoff-reset claim or extra author policy is included.
   The six initially uncovered/task-modified consumers and any additional changed
   call-path checks will be qualified locally; no repeat broad/full/native sweep
   follows merely from that dependency refresh.
+
+
+### Reconciled Main consumer qualification — 2026-10-21
+
+- At tested commit `9855aa13fa39dfde430325eb284bbfb9fc6809ed`, one normal
+  queued invocation selected exactly `TestUserRecordingDeterminismSmoke`,
+  `TestRecordingFrameDriverInputOnly`, `TestRecordingFrameDriverHardwareTiming`,
+  `TestS3kAizInputProvenance`, `TestTraceDataParsing` and `TestTraceRunManifest`,
+  with `-Dmse=off`, the verified absolute S3K ROM property and the same isolated
+  Java25/surfaceless-EGL launch environment described above. Actual XML reports
+  **76T/0F/0E/0S**: respectively1/3/10/1/46/15 tests. All76 identities,
+  skips and properties were inspected; the120-input recording cycle and the
+  canonical BK2 provenance check executed rather than aborting by assumption.
+- Actual fork classpaths contain Jackson databind/YAML2.22.4 and neither2.22.3
+  artifact. Queue wait689s; Maven displayed01:25min. Individual compiler and
+  parent elapsed time are unknown. Executable source stayed frozen throughout.
+  The six XML reports and generated TXT/invocation temporaries were consumed;
+  no raw archive or validation receipt was retained.
+- Independent transitive-call-path review permits bounded reuse of Main CI's
+  twelve unchanged component classes/138 passing tests. The launcher component
+  fixtures inject runtime adapters and do not execute the changed live team or
+  driver. Timing-loader CSV parsing does not execute the task's changed live
+  drowning helper. These bounds do not establish a live launcher/UI, full CPU,
+  physical pixels, route outcome or green Main CI; Main's three failures and six
+  errors remain separate observed baseline identities. There was no second
+  broad/full-suite/native invocation for this dependency refresh.
+- The earlier composed3T/2F result remains red at the two explicitly recorded
+  SSZ frontiers. LRZ's independent first-door method passes; longer Act2/HPZ,
+  campaigns, the frozen broad remainder and fresh guards still require their
+  own exact disposition. Main itself has not been modified or received a task
+  integration push; this source is tracked only through the draft branch.
