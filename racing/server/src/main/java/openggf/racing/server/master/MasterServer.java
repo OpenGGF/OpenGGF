@@ -142,6 +142,7 @@ public final class MasterServer implements AutoCloseable {
                     new ConnectionHygiene.ConnectionCounter(MAX_CONNECTIONS_PER_IP);
             SslContext ssl = sslContext(config);
             Map<String, Long> lastUploadByIdentity = new HashMap<>();
+            MasterHttpAdmission httpAdmission = new MasterHttpAdmission(brokerLoop);
             channel = new ServerBootstrap().group(brokerGroup, relayGroup)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new ChannelInitializer<SocketChannel>() {
@@ -153,9 +154,7 @@ public final class MasterServer implements AutoCloseable {
                                 pipeline.addLast(ssl.newHandler(socket.alloc()));
                             }
                             pipeline.addLast(new HttpServerCodec());
-                            pipeline.addLast(new HttpObjectAggregator(
-                                    config.maxRecordingBytes() + 8192));
-                            pipeline.addLast(new MasterHttpRoutes(config,
+                            MasterHttpRoutes routes = new MasterHttpRoutes(config,
                                     broker::fingerprintForSessionToken, recordingBlobs,
                                     verifiers, verificationJobs, verdictConsequences,
                                     clock, brokerLoop, (job, pass) -> {
@@ -164,7 +163,11 @@ public final class MasterServer implements AutoCloseable {
                                         }
                                         relays.onVerdict(job, pass);
                                     },
-                                    lastUploadByIdentity));
+                                    lastUploadByIdentity, httpAdmission);
+                            pipeline.addLast(routes.pipelineGuard());
+                            pipeline.addLast(new HttpObjectAggregator(
+                                    MasterHttpRoutes.maxHttpBodyBytes(config)));
+                            pipeline.addLast(routes);
                             pipeline.addLast(new WebSocketServerProtocolHandler(
                                     "/master", null, true,
                                     Protocol.MAX_MASTER_FRAME_BYTES));

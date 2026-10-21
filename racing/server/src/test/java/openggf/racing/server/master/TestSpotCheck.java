@@ -24,7 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class TestSpotCheck {
-    private static final class Connection implements HubConnection {
+    private static final class Connection implements HubConnection, com.openggf.net.hub.HandshakeTransport {
+        @Override public String authenticationBinding() { return com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT; }
         final List<String> text = new ArrayList<>();
         @Override public void sendText(String value) { text.add(value); }
         @Override public void sendBinary(byte[] data) { }

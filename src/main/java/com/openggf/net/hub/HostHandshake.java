@@ -3,8 +3,8 @@ package com.openggf.net.hub;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.Protocol;
+import com.openggf.net.protocol.AuthenticationTranscript;
 
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -39,17 +39,28 @@ public final class HostHandshake {
 
     private final String serverId;
     private final String requiredDeterminismFingerprint;
+    private final AuthenticationTranscript.Role role;
+    private final String transportBinding;
     private final SecureRandom random = new SecureRandom();
 
     private State state = State.EXPECT_HELLO;
     private byte[] nonce;
+    private byte[] transcript;
     private byte[] publicKeyEncoded;
     private String displayName;
     private String determinismFingerprint;
 
     public HostHandshake(String serverId, String requiredDeterminismFingerprint) {
+        this(serverId, requiredDeterminismFingerprint, AuthenticationTranscript.Role.ROOM_DIRECT,
+                AuthenticationTranscript.LOCAL_PLAINTEXT);
+    }
+
+    public HostHandshake(String serverId, String requiredDeterminismFingerprint,
+                         AuthenticationTranscript.Role role, String transportBinding) {
         this.serverId = serverId;
         this.requiredDeterminismFingerprint = requiredDeterminismFingerprint;
+        this.role = java.util.Objects.requireNonNull(role);
+        this.transportBinding = java.util.Objects.requireNonNull(transportBinding);
     }
 
     public Step onHello(ControlMessage.Hello hello) {
@@ -72,6 +83,11 @@ public final class HostHandshake {
         determinismFingerprint = hello.determinismFingerprint();
         nonce = new byte[32];
         random.nextBytes(nonce);
+        try {
+            transcript = AuthenticationTranscript.encode(role, hello, nonce, serverId, transportBinding);
+        } catch (IllegalArgumentException invalid) {
+            return reject("invalid authentication transcript");
+        }
         state = State.EXPECT_PROOF;
         return new SendWelcome(new ControlMessage.Welcome(
                 Protocol.VERSION, Base64.getEncoder().encodeToString(nonce), serverId));
@@ -87,20 +103,12 @@ public final class HostHandshake {
         } catch (IllegalArgumentException | NullPointerException e) {
             return reject("invalid signature encoding");
         }
-        if (!PlayerIdentity.verify(publicKeyEncoded, signedBytes(nonce, serverId), signature)) {
+        if (!PlayerIdentity.verify(publicKeyEncoded, transcript, signature)) {
             return reject("invalid signature");
         }
         state = State.DONE;
         return new Admit(sha256Hex(publicKeyEncoded), displayName, publicKeyEncoded,
                 determinismFingerprint);
-    }
-
-    public static byte[] signedBytes(byte[] nonce, String serverId) {
-        byte[] serverBytes = serverId.getBytes(StandardCharsets.UTF_8);
-        byte[] message = new byte[nonce.length + serverBytes.length];
-        System.arraycopy(nonce, 0, message, 0, nonce.length);
-        System.arraycopy(serverBytes, 0, message, nonce.length, serverBytes.length);
-        return message;
     }
 
     private static String sha256Hex(byte[] data) {

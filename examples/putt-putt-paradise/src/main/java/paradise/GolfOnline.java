@@ -28,10 +28,13 @@ final class GolfOnline implements AutoCloseable {
                 course.engineIdentity(), course.modContentSha256(), GolfRules.fingerprint(selection.rewinds()),
                 course.romSha1(), "competition", course.viewportWidth(), 224);
         room = selection.mode() == GolfMenu.Mode.HOST
-                ? GolfRoom.host(selection.port(), fingerprints, selection.playerOne().code())
+                ? selection.lanHost() ? GolfRoom.hostLan(selection.port(), fingerprints, selection.playerOne().code())
+                    : GolfRoom.host(selection.port(), fingerprints, selection.playerOne().code())
                 : GolfRoom.join(selection.address(), selection.port(), fingerprints, selection.playerOne().code());
     }
     GolfRoom.State state() { return room.state(); }
+    String inviteCode() { return room.inviteCode(); }
+    int port() { return room.boundPort(); }
     String message() { return error.isEmpty() ? room.state().message() : error; }
     int concededOwner() { return concededOwner; }
     String notice() { return error; }

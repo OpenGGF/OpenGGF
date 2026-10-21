@@ -94,6 +94,7 @@ public sealed interface GolfPacket {
             payload = payload.clone();
         }
         @Override public byte[] payload() { return payload.clone(); }
+        int payloadLength() { return payload.length; }
         @Override public boolean equals(Object object) {
             return object instanceof ViewFrame other && id.equals(other.id) && revision == other.revision
                     && tick == other.tick && Arrays.equals(payload, other.payload);

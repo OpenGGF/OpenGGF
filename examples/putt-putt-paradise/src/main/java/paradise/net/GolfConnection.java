@@ -14,13 +14,14 @@ import java.util.concurrent.locks.LockSupport;
  */
 public final class GolfConnection implements AutoCloseable {
     public static final int MAX_INCOMING_COMMANDS = 256;
+    public static final int MAX_INCOMING_BYTES = 4 * 1024 * 1024;
     public static final int WRITE_DEADLINE_SECONDS = 5;
     private static final long FRAME_INTERVAL_NANOS = 1_000_000_000L / 60 + 1;
     public sealed interface Event { }
-    public record Received(GolfPacket packet) implements Event { }
+    public record Received(GolfPacket packet, int encodedBytes) implements Event { }
     /** Every fault/leave delivers one event so the room owner can HOLD before another gameplay step. */
     public record Disconnected(String reason) implements Event { }
-    public record Stats(int incomingCommands, int reliableMessages, int reliableBytes,
+    public record Stats(int incomingCommands, int incomingBytes, int reliableMessages, int reliableBytes,
                         int pendingFrames, int inFlightFrames, long coalescedFrames) { }
     private final Socket socket;
     private final OutboundPackets outbound = new OutboundPackets();
@@ -32,6 +33,7 @@ public final class GolfConnection implements AutoCloseable {
     private long writeDeadline;
     private volatile int inFlightFrame;
     private Disconnected disconnected;
+    private int incomingBytes;
 
     private GolfConnection(Socket socket) {
         this.socket = socket;
@@ -43,12 +45,16 @@ public final class GolfConnection implements AutoCloseable {
 
     public static GolfConnection connect(String hostname, int port) {
         Objects.requireNonNull(hostname);
-        if (hostname.isBlank() || hostname.length() > 253 || port < 1 || port > 65535)
+        int separator = hostname.indexOf('#');
+        byte[] invite = separator < 0 ? null : GolfInvite.parse(hostname.substring(separator + 1));
+        String address = separator < 0 ? hostname : hostname.substring(0, separator);
+        if (address.isBlank() || hostname.length() > 253 || port < 1 || port > 65535)
             throw new IllegalArgumentException("hostname/port");
         var connection = new GolfConnection(new Socket());
         connection.worker("connect", () -> {
             try {
-                connection.socket.connect(new InetSocketAddress(hostname, port), 3000);
+                connection.socket.connect(new InetSocketAddress(address, port), 3000);
+                if (invite != null) GolfInvite.join(connection.socket, invite);
                 connection.startIo();
             } catch (IOException | RuntimeException failure) { connection.disconnect("connect failed"); }
         });
@@ -81,7 +87,7 @@ public final class GolfConnection implements AutoCloseable {
     public List<Event> drain() {
         synchronized (incoming) {
             var result = new ArrayList<Event>(incoming.size() + 1);
-            result.addAll(incoming); incoming.clear();
+            result.addAll(incoming); incoming.clear(); incomingBytes = 0;
             if (disconnected != null) { result.add(disconnected); disconnected = null; }
             return List.copyOf(result);
         }
@@ -98,7 +104,7 @@ public final class GolfConnection implements AutoCloseable {
     public Stats stats() {
         OutboundPackets.Stats out = outbound.stats();
         synchronized (incoming) {
-            return new Stats(incoming.size(), out.reliableMessages(), out.reliableBytes(), out.pendingFrames(),
+            return new Stats(incoming.size(), incomingBytes, out.reliableMessages(), out.reliableBytes(), out.pendingFrames(),
                     inFlightFrame, out.coalescedFrames());
         }
     }
@@ -106,18 +112,34 @@ public final class GolfConnection implements AutoCloseable {
     private void readLoop() {
         try {
             while (!closed.get()) {
-                GolfPacket packet = GolfCodec.read(socket.getInputStream());
-                if (packet == null) { disconnect("remote closed"); return; }
+                var decoded = GolfCodec.readFrame(socket.getInputStream());
+                if (decoded == null) { disconnect("remote closed"); return; }
+                GolfPacket packet = decoded.packet();
                 boolean overflow;
                 synchronized (incoming) {
                     if (closed.get()) return;
-                    overflow = incoming.size() >= MAX_INCOMING_COMMANDS;
-                    if (!overflow) incoming.addLast(new Received(packet));
+                    // Only views within the same uninterrupted view run are replaceable.
+                    // Ordered/control/sound packets are barriers and never removed/reordered.
+                    boolean stale = false;
+                    if (packet instanceof GolfPacket.ViewFrame view) {
+                        var tail = incoming.peekLast();
+                        if (tail != null && tail.packet() instanceof GolfPacket.ViewFrame previous
+                                && previous.id().equals(view.id())) {
+                            stale = view.revision() <= previous.revision();
+                            if (!stale) { incoming.removeLast(); incomingBytes -= tail.encodedBytes(); }
+                        }
+                    }
+                    if (stale) continue;
+                    overflow = incoming.size() >= MAX_INCOMING_COMMANDS
+                            || decoded.encodedBytes() > MAX_INCOMING_BYTES - incomingBytes;
+                    if (!overflow) {
+                        incoming.addLast(new Received(packet, decoded.encodedBytes())); incomingBytes += decoded.encodedBytes();
+                    }
                 }
                 if (overflow) { disconnect("incoming queue overflow"); return; }
             }
         } catch (GolfCodec.IncompatibleProtocolException mismatch) { disconnect(mismatch.getMessage()); }
-        catch (IOException failure) { disconnect("read failed"); }
+        catch (IOException | RuntimeException failure) { disconnect("read failed"); }
     }
     private void writeLoop() {
         long lastViewWrite = 0;
@@ -162,7 +184,9 @@ public final class GolfConnection implements AutoCloseable {
         synchronized (incoming) {
             // A terminal Leave must survive the immediately following EOF, so rooms distinguish exit from a broken link.
             Received terminal = incoming.stream().filter(e -> e.packet() instanceof GolfPacket.Leave).reduce((a, b) -> b).orElse(null);
-            incoming.clear(); if (terminal != null) incoming.add(terminal); disconnected = new Disconnected(reason);
+            incoming.clear(); incomingBytes = 0;
+            if (terminal != null) { incoming.add(terminal); incomingBytes = terminal.encodedBytes(); }
+            disconnected = new Disconnected(reason);
         }
         try { socket.close(); } catch (IOException ignored) { }
         synchronized (deadlineLock) { writeDeadline = 0; deadlineLock.notifyAll(); }

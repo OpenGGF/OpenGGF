@@ -139,7 +139,9 @@ public final class RoomBroker {
 
     public void onConnected(HubConnection connection) {
         members.put(connection, new Member(connection,
-                new HostHandshake(masterIdentity.fingerprint(), null), clock.getAsLong()));
+                new HostHandshake(masterIdentity.fingerprint(), null,
+                        com.openggf.net.protocol.AuthenticationTranscript.Role.MASTER,
+                        com.openggf.net.hub.HandshakeTransport.binding(connection)), clock.getAsLong()));
     }
 
     /** Evict every live connection for a newly sanctioned identity on the broker loop. */

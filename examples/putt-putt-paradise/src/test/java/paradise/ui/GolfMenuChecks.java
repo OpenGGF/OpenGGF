@@ -156,6 +156,19 @@ public final class GolfMenuChecks {
         same(20509, selected.port(), "cancel restores20502 then backspace changes final digit");
         same("127.0.0.1", selected.address(), "default direct address");
         same(GolfMenu.Mode.HOST, selected.mode(), "host mode");
+        require(!selected.lanHost(), "host defaults to loopback exposure");
+    }
+
+    public static void lanExposureRequiresExplicitMenuSelection() {
+        var f = new Fixture(); f.mode(2); f.focus(GolfMenu.Field.EXPOSURE);
+        f.tap(GLFW_KEY_RIGHT);
+        require(f.launch().lanHost(), "explicit LAN choice reaches room launcher");
+        var local = new Fixture(); local.mode(2); local.focus(GolfMenu.Field.EXPOSURE);
+        local.tap(GLFW_KEY_RIGHT); local.tap(GLFW_KEY_LEFT);
+        require(!local.launch().lanHost(), "loopback can be restored before launch");
+        var join = new Fixture(); join.mode(3); join.focus(GolfMenu.Field.ADDRESS);
+        join.tap(GLFW_KEY_ENTER); join.text("192.168.1.25#0123456789abcdef0123456789abcdef"); join.tap(GLFW_KEY_ENTER);
+        same("192.168.1.25#0123456789abcdef0123456789abcdef", join.launch().address(), "shareable address/code reaches launcher intact");
     }
 
     public static void backAndReset() {
