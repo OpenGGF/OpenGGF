@@ -49,6 +49,32 @@ class TestGhostPackets {
     }
 
     @Test
+    void aggregateEncodingPreservesWireBytesAndAllPublicOwnershipBoundaries() {
+        byte[] source = frames(3);
+        byte[] original = source.clone();
+        var entry = new GhostPackets.AggregateEntry(255, 17, 300, 3, source);
+        source[0] ^= 0x7f;
+        byte[] exposed = entry.frameData();
+        exposed[1] ^= 0x7f;
+
+        byte[] expected = java.nio.ByteBuffer.allocate(6 + 10 + original.length)
+                .put((byte) 2).putInt(1234).put((byte) 1)
+                .put((byte) 255).putInt(17).putInt(300).put((byte) 3)
+                .put(original).array();
+        byte[] encoded = GhostPackets.encodeAggregate(1234, List.of(entry));
+        assertArrayEquals(expected, encoded);
+        encoded[encoded.length - 1] ^= 0x7f;
+        assertArrayEquals(original, entry.frameData());
+        assertArrayEquals(expected, GhostPackets.encodeAggregate(1234, List.of(entry)));
+
+        var decoded = GhostPackets.decodeAggregate(expected).entries().getFirst();
+        expected[expected.length - 1] ^= 0x7f;
+        byte[] decodedData = decoded.frameData();
+        decodedData[0] ^= 0x7f;
+        assertArrayEquals(original, decoded.frameData());
+    }
+
+    @Test
     void encodeFramesRejectsBadSizes() {
         assertThrows(ProtocolViolationException.class,
                 () -> GhostPackets.encodeFrames(1, 0, new byte[0]));

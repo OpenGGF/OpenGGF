@@ -37,7 +37,14 @@ Unreleased. The earlier development themes remain in
   admitted even when the scheduled host tick has not run yet. Multiplayer race
   panels now preserve the stock HUD and act-completion card, with a compact
   nearby-player list. The capacity recording places the live player mid-pack
-  and checks ghosts leaving and returning to its viewport.
+  and checks ghosts leaving and returning to its viewport. Nearby ghost
+  routing bounds selected-sender work and avoids redundant copies and standings
+  sorting. Slow-consumer removal remains safe within an aggregation tick.
+  Valid rapid-attempt backlogs split into ordered packets within both the binary
+  and fallback-envelope caps. Fallback host downlink quotas are isolated per
+  guest, and coalesced broker fanout is bounded by frame count and retained bytes,
+  so healthy multi-tunnel fanout no longer retires the shared broker link and an
+  oversized unclassified backlog has a fixed memory ceiling.
 
 - **Putt Putt Paradise multiplayer:** Scene admission bounds aggregate clipped
   raster work, lines clip before traversal, and unchanged presentations reuse

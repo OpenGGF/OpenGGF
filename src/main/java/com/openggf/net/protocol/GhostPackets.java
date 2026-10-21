@@ -108,15 +108,17 @@ public final class GhostPackets {
         }
         int size = AGGREGATE_HEADER;
         for (AggregateEntry entry : entries) {
+            // The enclosing codec can read the record's frozen internal array.
+            // Its public constructor and accessor still copy at caller boundaries.
             int count = validFrameCount(
-                    entry.frameData(), MAX_AGGREGATE_FRAMES_PER_ENTRY);
+                    entry.frameData, MAX_AGGREGATE_FRAMES_PER_ENTRY);
             if (entry.frameCount() != count) {
                 throw new ProtocolViolationException("aggregate frame count mismatch");
             }
             if (entry.playerSlot() < 0 || entry.playerSlot() > 255) {
                 throw new ProtocolViolationException("aggregate player slot " + entry.playerSlot());
             }
-            size += ENTRY_HEADER + entry.frameData().length;
+            size += ENTRY_HEADER + entry.frameData.length;
             if (size > Protocol.MAX_BINARY_BYTES) {
                 throw new ProtocolViolationException("aggregate exceeds binary cap");
             }
@@ -128,7 +130,7 @@ public final class GhostPackets {
                     .putInt(entry.attemptId())
                     .putInt(entry.startFrameIndex())
                     .put((byte) entry.frameCount())
-                    .put(entry.frameData());
+                    .put(entry.frameData);
         }
         return out.array();
     }

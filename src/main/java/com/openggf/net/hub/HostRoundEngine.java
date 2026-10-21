@@ -292,13 +292,15 @@ public final class HostRoundEngine {
         if (existing != null && existing.timeFrames() <= finish.timeFrames()) {
             return null;
         }
-        bests.put(participantId, new Best(slot, participantId, fingerprint,
+        Best improved = new Best(slot, participantId, fingerprint,
                 displayName, character, finish.timeFrames(),
-                achievedCounter++, finish, verifiedRoom ? "PENDING" : "NONE"));
-        List<ControlMessage.StandingsRow> rows = standings();
-        broadcaster.accept(new ControlMessage.StandingsDelta(broadcastStandings(rows)));
-        int rank = results().stream()
-                .map(Result::participantId).toList().indexOf(participantId) + 1;
+                achievedCounter++, finish, verifiedRoom ? "PENDING" : "NONE");
+        bests.put(participantId, improved);
+        List<Best> sorted = sortedBests();
+        // Keep every finish notification: clients outside the cap also use it
+        // to refresh their around-you page. Reuse this ordering for private rank.
+        broadcaster.accept(new ControlMessage.StandingsDelta(broadcastStandings(sorted)));
+        int rank = sorted.indexOf(improved) + 1;
         return new FinishOutcome(slot, rank, rank > STANDINGS_BROADCAST_CAP,
                 finish.attemptId());
     }
@@ -311,7 +313,10 @@ public final class HostRoundEngine {
     }
 
     public List<ControlMessage.StandingsRow> standings() {
-        List<Best> sorted = sortedBests();
+        return standings(sortedBests());
+    }
+
+    private static List<ControlMessage.StandingsRow> standings(List<Best> sorted) {
         List<ControlMessage.StandingsRow> rows = new ArrayList<>(sorted.size());
         for (int index = 0; index < sorted.size(); index++) {
             Best best = sorted.get(index);
@@ -359,13 +364,13 @@ public final class HostRoundEngine {
     }
 
     private List<ControlMessage.StandingsRow> broadcastStandings() {
-        return broadcastStandings(standings());
+        return broadcastStandings(sortedBests());
     }
 
     private static List<ControlMessage.StandingsRow> broadcastStandings(
-            List<ControlMessage.StandingsRow> rows) {
-        return List.copyOf(rows.subList(0,
-                Math.min(STANDINGS_BROADCAST_CAP, rows.size())));
+            List<Best> sorted) {
+        return standings(sorted.subList(0,
+                Math.min(STANDINGS_BROADCAST_CAP, sorted.size())));
     }
 
     private void beginVote() {

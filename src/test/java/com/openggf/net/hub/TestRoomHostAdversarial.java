@@ -263,6 +263,137 @@ class TestRoomHostAdversarial {
         assertEquals(0, harness.room.playerCount());
     }
 
+    @Test
+    void validAttemptBurstsAcrossSendersSplitAtBinaryPacketCap() throws Exception {
+        assertValidAttemptBurstIsDelivered(3, 15, 12);
+    }
+
+    @Test
+    void validAttemptBurstsAcrossSendersSplitAtAggregateEntryCap() throws Exception {
+        assertValidAttemptBurstIsDelivered(8, 32, 1);
+    }
+
+    @Test
+    void validAttemptBurstReservesRelayEnvelopeAt4094Bytes() throws Exception {
+        // 49 entries and 514 frames: 6 + 49 * 10 + 514 * 7 = 4094 bytes.
+        assertValidAttemptBurstIsDelivered(new int[]{17, 16, 16},
+                entry -> entry < 24 ? 11 : 10, 4094);
+    }
+
+    private void assertValidAttemptBurstIsDelivered(int senderCount, int attempts,
+                                                   int framesPerAttempt) throws Exception {
+        int[] attemptsPerSender = new int[senderCount];
+        java.util.Arrays.fill(attemptsPerSender, attempts);
+        assertValidAttemptBurstIsDelivered(attemptsPerSender, entry -> framesPerAttempt, 0);
+    }
+
+    private void assertValidAttemptBurstIsDelivered(int[] attemptsPerSender,
+                                                   java.util.function.IntUnaryOperator framesPerEntry,
+                                                   int expectedAggregateBytes) throws Exception {
+        int senderCount = attemptsPerSender.length;
+        PlayerIdentity host = PlayerIdentity.loadOrCreate(dir.resolve("burst-host"));
+        Harness harness = new Harness(host, senderCount + 1, false);
+        Peer witness = harness.join(PlayerIdentity.loadOrCreate(dir.resolve("burst-witness")), "Witness");
+        witness.capturedBinary = new ArrayList<>();
+        witness.wrapRelayBinary = true;
+        List<Peer> senders = new ArrayList<>();
+        for (int index = 0; index < senderCount; index++) {
+            senders.add(harness.join(PlayerIdentity.loadOrCreate(dir.resolve("burst-" + index)),
+                    "Sender-" + index));
+        }
+        assertTrue(harness.room.requestStartRound(CONFIG));
+        harness.advance(HostRoundEngine.COUNTDOWN_MILLIS);
+        // Seed the witness too: its pending data must never appear in its own aggregates.
+        streamAttempt(harness, witness, 1, 1);
+        List<GhostPackets.AggregateEntry> expected = new ArrayList<>();
+        int entryIndex = 0;
+        for (int senderIndex = 0; senderIndex < senderCount; senderIndex++) {
+            Peer sender = senders.get(senderIndex);
+            int inboundMessages = 2; // Admission hello and proof.
+            int frames = 0;
+            for (int attempt = 1; attempt <= attemptsPerSender[senderIndex]; attempt++) {
+                int count = framesPerEntry.applyAsInt(entryIndex++);
+                inboundMessages += 2 + (count + 2) / 3;
+                frames += count;
+                byte[] data = streamAttempt(harness, sender, attempt, count);
+                expected.add(new GhostPackets.AggregateEntry(sender.join.playerSlot(),
+                        attempt, 0, count, data));
+            }
+            assertTrue(inboundMessages <= com.openggf.net.host.ConnectionHygiene.MESSAGE_RATE_BURST,
+                    "the burst plus admission fits the real transport's inbound message budget");
+            assertTrue(frames <= GhostStreamValidator.RATE_BURST_FRAMES);
+        }
+        if (expectedAggregateBytes > 0) {
+            assertEquals(expectedAggregateBytes, GhostPackets.encodeAggregate(0, expected).length,
+                    "this boundary passes the raw packet cap but needs relay-envelope headroom");
+        }
+        // All starts/resets and frames are valid at the same server clock, before one tick.
+        assertDoesNotThrow(harness.room::tick);
+        assertTrue(witness.capturedBinary.size() > 1, "oversized aggregate requires bounded chunks");
+        int firstTick = assertBurstEntries(witness.capturedBinary, expected);
+        assertEquals(senderCount + 1, harness.room.playerCount());
+        assertTrue(senders.stream().noneMatch(peer -> peer.closed));
+        assertFalse(witness.closed);
+
+        witness.capturedBinary.clear();
+        Peer sender = senders.getFirst();
+        int nextAttempt = attemptsPerSender[0] + 1;
+        byte[] next = streamAttempt(harness, sender, nextAttempt, 3);
+        assertDoesNotThrow(harness.room::tick);
+        assertEquals(firstTick + 1, assertBurstEntries(witness.capturedBinary,
+                List.of(new GhostPackets.AggregateEntry(sender.join.playerSlot(),
+                        nextAttempt, 0, 3, next))));
+        witness.capturedBinary.clear();
+        harness.room.tick();
+        assertTrue(witness.capturedBinary.isEmpty(), "delivered entries were drained exactly once");
+        harness.room.close("burst complete");
+    }
+
+    private static byte[] streamAttempt(Harness harness, Peer peer, int attempt, int count) {
+        harness.control(peer, new ControlMessage.AttemptStart(attempt));
+        byte[] data = new byte[count * GhostFrameCodec.BYTES];
+        for (int frame = 0; frame < count; frame++) {
+            GhostFrameCodec.encode(new GhostFrame(100 + frame, 100, 1, false, false,
+                    false, 0, false), data, frame * GhostFrameCodec.BYTES);
+        }
+        for (int frame = 0; frame < count; frame += GhostPackets.MAX_UPSTREAM_FRAMES_PER_PACKET) {
+            int end = Math.min(count, frame + GhostPackets.MAX_UPSTREAM_FRAMES_PER_PACKET);
+            harness.room.onBinary(peer, GhostPackets.encodeFrames(attempt, frame,
+                    java.util.Arrays.copyOfRange(data, frame * GhostFrameCodec.BYTES,
+                            end * GhostFrameCodec.BYTES)));
+        }
+        harness.control(peer, new ControlMessage.AttemptReset(attempt));
+        return data;
+    }
+
+    private static int assertBurstEntries(List<byte[]> packets,
+                                         List<GhostPackets.AggregateEntry> expected) {
+        List<GhostPackets.AggregateEntry> actual = new ArrayList<>();
+        Integer tick = null;
+        for (byte[] packet : packets) {
+            assertTrue(packet.length <= Protocol.MAX_BINARY_BYTES - 3,
+                    "every aggregate leaves room for the relay guest envelope");
+            assertDoesNotThrow(() -> GhostPackets.encodeRelayGuestBinary(7, packet));
+            GhostPackets.Aggregate aggregate = GhostPackets.decodeAggregate(packet);
+            assertTrue(aggregate.entries().size() <= 255);
+            if (tick == null) tick = aggregate.hubTick();
+            assertEquals(tick.intValue(), aggregate.hubTick(), "all chunks retain the same hub tick");
+            actual.addAll(aggregate.entries());
+        }
+        assertEquals(expected.size(), actual.size());
+        for (int index = 0; index < expected.size(); index++) {
+            GhostPackets.AggregateEntry left = expected.get(index);
+            GhostPackets.AggregateEntry right = actual.get(index);
+            assertEquals(left.playerSlot(), right.playerSlot(), "sender order at " + index);
+            assertEquals(left.attemptId(), right.attemptId(), "attempt order at " + index);
+            assertEquals(left.startFrameIndex(), right.startFrameIndex());
+            assertEquals(left.frameCount(), right.frameCount());
+            assertArrayEquals(left.frameData(), right.frameData());
+        }
+        assertNotNull(tick);
+        return tick;
+    }
+
     private static final class Harness {
         long now = 1_000_000;
         final RoomHost room;
@@ -337,6 +468,8 @@ class TestRoomHostAdversarial {
         boolean closed;
         boolean disconnectDelivered;
         int binaryCount;
+        List<byte[]> capturedBinary;
+        boolean wrapRelayBinary;
 
         Peer(ClientHandshake handshake) { this.handshake = handshake; }
 
@@ -348,7 +481,11 @@ class TestRoomHostAdversarial {
             messages.addLast(message);
         }
 
-        @Override public void sendBinary(byte[] bytes) { binaryCount++; }
+        @Override public void sendBinary(byte[] bytes) {
+            if (wrapRelayBinary) GhostPackets.encodeRelayGuestBinary(7, bytes);
+            binaryCount++;
+            if (capturedBinary != null) capturedBinary.add(bytes.clone());
+        }
         @Override public void close(String reason) { closed = true; }
         @Override public String remoteHost() { return "model-peer"; }
         @Override public String authenticationBinding() { return AuthenticationTranscript.LOCAL_PLAINTEXT; }

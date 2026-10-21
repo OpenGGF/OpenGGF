@@ -108,8 +108,8 @@ that a particular path executed in a recording.
 | Direct Netty host and JDK host | Independent real socket runs at the direct cap of eight | The implementations have different actor/IO models. Loopback throughput is not Internet latency or TLS throughput. |
 | Shared room actor, controls, round engine and standings | Attempt starts/finishes, rounds, pings, control messages and standings page contracts | Per-room mutable state is serialized. Full standings sorting and room-state fanout scale with room population; counts of accepted finishes are correctness observations, not verifier outcomes. |
 | Ghost validator and binary codec | Real upstream three-frame batches and downstream aggregate decoding | Cosmetic synthetic poses validate protocol/stream admission, not simulated ROM correctness. The source-address proxy continuously drains traffic. |
-| Ghost hub and relevance | Relay traffic and recipient-identity/roster assertions; inclusive hub/codec samples | Hub runs at 20 Hz and caps nearby senders at eight. Its current recipient loop still scans every drained sender: O(n²) work even with bounded outgoing nearby payloads. |
-| Spatial classification | Hub rebucketing and per-recipient near sets | Buckets are 512 px, enter/exit distances 480/800 px. Crowded buckets sort candidates per recipient, worst case O(n² log n). The cap limits selected neighbors rather than candidate scanning. |
+| Ghost hub and relevance | Relay traffic and recipient-identity/roster assertions; inclusive hub/codec samples | Hub runs at 20 Hz and caps nearby senders at eight. The measured baseline recipient loop still scans every drained sender: O(n²) work even with bounded outgoing nearby payloads. The follow-up below removes that second full scan. |
+| Spatial classification | Hub rebucketing and per-recipient near sets | Buckets are 512 px, enter/exit distances 480/800 px. The measured baseline sorts crowded candidates per recipient, worst case O(n² log n). The follow-up retains a bounded nearest-eight insertion, while candidate discovery remains quadratic in a dense room. |
 | Backpressure and queues | Existing focused correctness tests; ordinary continuously draining sockets | Hub thresholds degrade above 64 KiB, roster-only above 256 KiB, disconnect above 1 MiB or 30 s sustained degradation. These thresholds are not measured queue occupancy or proof of sustained slow-client recovery. Client inbound queue is bounded to 512 events. |
 | Client transport, pump, ping and publishing | Rendered client plus colocated production `RaceClient`/`MasterClient`; client-vs-server thread groups | Main-thread pump drains controls/aggregate/roster events. Three-frame upstream batching hashes the exact cosmetic frame stream. Colocated bots do not run the rendered client's complete coordinator. |
 | Jitter buffer, remote ghost registry and pose conversion | Rendered client route; registry/playback/presentation groups | Per-slot playback buffers at most 128 frames, uses 6–30 frame adaptive delay and at most six frames extrapolation. Stale playbacks are removed after 120 quiet `advanceAll` calls, so eight-neighbor output does not prove only eight live playback objects. |
@@ -413,3 +413,214 @@ accepted finishes and clean shutdown. Its gameplay-only visibility counts were
 181 distinct identities, 763 rendered-list entries / 755 exits and 383 viewport
 returns, with a peak of eight ghosts. Its 96.133 s video is distinct from the
 profiled recording above; its counters are not substituted into that JFR window.
+
+## Optimization follow-up from `625db2f45`
+
+The follow-up investigates the observed hub, control and allocation costs in an
+isolated `feature/ai-multiplayer-performance-20261021` worktree. It leaves the main
+checkout and integration/pushing to the coordinating thread.
+
+Candidate changes preserve public signatures and packet bytes:
+
+- `GhostHub` looks up at most eight selected nearby senders instead of scanning
+  every drained sender per recipient. It caps membership in nearest-first order,
+  then sorts a separate small slot array for the existing ascending wire order.
+  Missing pending data does not refill a degraded recipient's four-neighbor set.
+- `RelevanceClassifier` retains only the nearest eight candidates by bounded
+  insertion, with distance/slot ties, Chebyshev distance and 480/800 px inclusive
+  hysteresis unchanged. Primitive history replaces temporary sets; a full-sort
+  independent oracle checks movement, negative coordinates, boundaries and reuse.
+  Dense candidate scanning still has quadratic room-population behavior; this
+  does not make all hub work linear or establish a larger supported room cap.
+- Removing a slow consumer after rebucketing previously left its slot in a bucket,
+  allowing a later query to dereference a missing position. The classifier now
+  skips removed positions. Dedicated coverage exercises removal during a hub tick
+  and excludes the departed player from later aggregates and roster output.
+- `HostRoundEngine` sorts accepted bests once to construct the top-ten broadcast
+  and find the current finisher's private rank. Broadcast-only paths build at most
+  ten rows; complete standings, page and results operations remain complete.
+- `GhostPackets.encodeAggregate` reads its nested record's already-owned array
+  internally, avoiding three public-accessor clones per entry. Constructors and
+  public accessors keep defensive copies, and the output packet owns its bytes.
+- `FrameAssembler` gives a complete binary message one newly owned output array,
+  avoiding accumulation and a second copy when there are no buffered fragments.
+  Fragmented messages keep their accumulator; cap checks happen before consuming
+  the supplied buffer, with widened arithmetic for the running binary size.
+
+Identical top-ten broadcast suppression was rejected. A `StandingsDelta` also
+triggers `MultiplayerRaceCoordinator`'s rate-limited around-you page refresh;
+`RankUpdate` is private to the current finisher. Dropping apparently redundant
+broadcasts could leave other participants' private rank/page stale. The candidate
+keeps every existing finish, verification, expiry and round-end notification and
+makes no intentional fanout or downstream-byte reduction claim.
+
+A separate text-byte suspicion did not establish a remote bypass. JDK WebSocket
+text callbacks contain legal UTF-16 sequences; its UTF-8 decoder carries incomplete
+network bytes and emits supplementary codepoints together. Synthetic callbacks
+that split a surrogate pair are outside that guarantee. Whole-message direct,
+master and inner-relay codec limits also check UTF-8 bytes before parsing. The
+binary-allocation change leaves text counting and parsing behavior unchanged.
+Local JDK 25 API/decoder source corroborated the callback contract; the available
+source archive was a different vendor build, not asserted to be the active binary.
+
+Independent read-only reviews found no regressions in the hub/classifier ordering
+or the codec/assembler/standings ownership and notification changes. Dynamic
+verification and fresh matched measurements are recorded below; their limits still
+apply to any performance claim.
+
+### Availability findings from the optimization corpus
+
+The stricter burst corpus exposed two independent failures before optimization
+was measured. Both inputs remain within the published per-connection control and
+frame bursts.
+
+First, several short valid attempts can accumulate before one 20 Hz hub tick.
+The hub previously drained them into one recipient aggregate. Three senders with
+15 twelve-frame attempts produce a packet above 4 KiB; eight senders with 32
+one-frame attempts produce more than 255 entries. Either case throws from
+`GhostPackets.encodeAggregate` after the queues have been drained. A third exact
+boundary produces a valid 4,094-byte aggregate, but `HostMasterLink` cannot add
+its three-byte fallback envelope because the outer binary cap is 4,096 bytes.
+The focused before-state run failed all three cases with `aggregate exceeds binary
+cap`, `aggregate entry count`, and `relay payload length 4094`, respectively.
+
+`GhostHub` now retains the one-encode/one-send path for ordinary traffic. When a
+trusted aggregate exceeds its collection cap or the 4,093-byte fallback payload
+budget, it bisects contiguous entry ranges and submits them in order with the same
+hub tick. Intrinsic entry errors still propagate. Encoding is the only operation
+inside the capacity-recovery catch; a transport exception is submitted once and
+propagates, because an already submitted prefix cannot safely be retried.
+
+Second, fallback guests share their direct host's one master WebSocket. The master
+previously charged every host-to-guest wrapper to that socket's ordinary 60/s,
+120-message burst. Four healthy fallback recipients generate 80 binary wrappers
+per second at the hub cadence and exhaust a full shared bucket after roughly six
+seconds; seven generate 140/s. Closing that broker socket removes the host's rooms
+and all of its tunnels. The socket stress transports do not exercise this path:
+relay mode uses a master-hosted room, while JDK and Netty modes connect directly.
+
+Broker frames are now classified on the broker loop. Only an admitted source with
+exact tunnel ownership (and, for text, the existing valid session token) bypasses
+the ordinary broker quota. Each owned tunnel has an independent combined
+text/binary 60/s, 120-message bucket; excess removes that guest alone. Malformed,
+unknown, unauthenticated, foreign-owner and wrong-token traffic keeps the original
+broker quota and cannot spend a victim tunnel's allowance. Broker binary work is
+serialized with the existing attach handoff and auto-read pause. One classified
+frame may be in flight and at most 960 decoded frames may wait, equal to one
+120-message burst for each supported direct-room player. A separate 4 MiB retained
+budget admits all 960 maximum-size binary wrappers (3.75 MiB), counts pending text
+conservatively at twice its UTF-8 payload size and rejects broker binary above
+4 KiB before copying. This admits a coalesced healthy fanout without permitting
+roughly 121 MiB of maximum master frames; the next frame beyond either bound closes
+the broker connection. Because that preclassification path cannot yet trust a
+claimed tunnel owner, its memory ceiling protects the process rather than proving
+guest-only isolation for a deliberately oversized coalesced host backlog.
+
+The advertised direct-room limit remains eight. A custom in-process `RoomHostConfig`
+can request up to 256 without relevance filtering, so ordinary traffic reaches the
+aggregate byte cap around 133 players. That is a public configuration/API mismatch,
+not an advertised direct-room path, and this change does not claim a larger direct
+capacity. Large published rooms continue to use relay routing and eight-neighbor
+relevance filtering.
+
+### Matched socket measurement
+
+The baseline is clean `625db2f45`; the measured candidate uses the eight runtime
+files listed above with sorted path/content SHA-256
+`6a10994ba51fd44ac70a97020c361a317fdab086f0c31fff35ba224dca5b5add`.
+The stress-tool source remains
+`2583058898e3a0c33d6a7858a6b68ff4c6944af0f99006d8919adadcfdc37ab4`.
+Prebuilt launchers ran under one exclusive test/build-activity lease with the
+0.5 s process guard; its audit recorded exit 0 and no bypass interference.
+The later broker pending-byte hardening changes the final eight-file digest to
+`2dd192630ed52f7c31701d0edfeadb2debc9f3c5fc14c89c5b955b8aa4684b41`.
+It leaves the existing post-attachment room path unchanged and acts only while the
+socket is in broker mode, so no measured totals are reassigned to it.
+
+The fixed unprofiled order was baseline 1, candidate 1, candidate 2, baseline 2,
+baseline 3, candidate 3. Each arm was a fresh JVM using:
+
+```text
+target/racing-server/racing-server socket-stress --transport relay \
+  --players 256 --duration 20 --cycles 1 --seed 4675398 \
+  --mix mixed --timeout 30 --data ARM-data --report ARM.json
+```
+
+All six arms admitted and finished 256 players and observed one expected overflow
+rejection, one hostile-peer sanction, two reconnects, one round reset, one room
+removal and clean owned shutdown, with no unexpected failure. Every arm submitted
+exactly 268,800 ghost frames in 89,600 binary messages and 4,004,870 measured
+upstream bytes. Recipient scheduling changes aggregate delivery counts slightly,
+so downstream results are observations rather than an equality oracle.
+
+| Unprofiled 256-player relay, three fresh JVMs | Baseline median [range] | Candidate median [range] |
+|---|---:|---:|
+| Measured wall, s | 20.360 [20.343–20.379] | 20.352 [20.342–20.380] |
+| Whole colocated-process CPU, s | 17.75 [17.42–19.99] | 19.15 [18.11–20.15] |
+| TCP downstream, decimal MB | 99.591 [98.729–99.591] | 99.591 [99.062–99.591] |
+| Local ping p50 / p95 / p99, ms | 3.05 / 6.74 / 10.08 | 3.16 / 7.37 / 10.41 |
+| GC collections / collection ms | 5 / 21 [20–24 ms] | 4 [4–5] / 20 [17–21 ms] |
+| Peak sampled used heap, MiB | 897.2 [893.1–899.4] | 897.6 [897.0–899.2] |
+
+The candidate-minus-baseline CPU deltas for corresponding fresh-JVM ordinals were
++0.16, +0.36 and +1.73 seconds. The median CPU is 7.9% higher, while measured wall
+is effectively unchanged and the ranges overlap. This bounded colocated workload
+therefore does not demonstrate an end-to-end throughput improvement. It also does
+not isolate server CPU: JSON decoding, JDK client transport, the load generator and
+the source proxy share the process, and the third pair shows material host/JIT
+variation. No rerun was selected or discarded based on its result.
+
+One fixed profiled baseline/candidate pair followed the unprofiled arms with the
+same workload and JFR settings described above. Both again delivered 580,479
+aggregate entries and 2,150,817 ghost frames. Whole-process CPU was 22.85 versus
+21.12 seconds, which conflicts with treating the unprofiled median difference as
+a stable candidate cost and is not a substitute for the unprofiled controls.
+
+| JFR measured traffic window, one arm each | Baseline | Candidate |
+|---|---:|---:|
+| Java execution observations | 318 | 256 |
+| Native observations, including waiting | 1,018 | 1,015 |
+| Hub/relevance exclusive Java observations | 64 | 14 |
+| Hub/relevance inclusive stack observations | 72 | 22 |
+| Estimated hub/relevance allocation sample weight, decimal MB | 886.9 | 143.8 |
+| Estimated complete-window allocation sample weight, decimal GB | 8.214 | 4.437 |
+| Top-level GC pauses / cumulative ms | 5 / 20.1 | 3 / 14.7 |
+
+The profile directly observes the intended component path: hub/relevance exclusive
+samples fell 78% and its estimated allocation weight fell 84%. The whole-window
+allocation estimate fell 46%. These are single throttled sampling profiles, not
+exact allocated bytes or proof of retained-heap reduction. They establish that the
+temporary-collection and full-sort work moved in the intended direction; the
+unprofiled process results prevent promoting that local evidence into a system-wide
+speedup claim.
+
+### Isolated hub measurement
+
+The existing deterministic `GhostLoadTestTool` narrows the measurement to room
+ticks. With relevance filtering enabled, 256 normal in-process participants each
+submit three frames before every 50 ms simulated tick. The timer surrounds only
+`RoomHost.tick`; identity setup, connection handshakes, upstream validation and
+the final finish burst remain outside each tick sample. This exercises the hub,
+classifier, aggregation, room tick and periodic roster path without sockets,
+client JSON decoding or proxy work.
+
+A second exclusive test/build-activity lease recorded exit 0 with no bypass
+interference. Fourteen fresh JVMs ran a fixed alternating order, seven per revision,
+with 60 simulated seconds and 1,202 measured ticks each:
+
+```text
+target/racing-server/racing-server load-test \
+  --n 256 --duration 60 --mix normal
+```
+
+| 256-player in-process room ticks, seven fresh JVMs | Baseline median [range] | Candidate median [range] |
+|---|---:|---:|
+| Per-arm mean tick, ms | 0.775 [0.764–0.801] | 0.243 [0.238–0.269] |
+| Per-arm p99 tick, ms | 2.485 [2.405–2.708] | 0.990 [0.943–1.148] |
+
+Every arm finished all 256 healthy clients, sanctioned none and emitted the same
+1,283-byte maximum packet. The median mean tick fell 68.6% (3.19×), and the median
+p99 fell 60.2%. This is repeatable evidence for the local hub/classifier path and
+agrees with the JFR attribution. It is not socket throughput, many-room capacity,
+Internet latency or isolated production-server CPU; the full socket controls above
+remain the system-level bound for this task.

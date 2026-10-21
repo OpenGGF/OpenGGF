@@ -48,6 +48,66 @@ class TestHostRoundEngineVerified {
             new ControlMessage.RoundConfig("s3k", 0, 0, 1, "OPEN", null);
 
     @Test
+    void finishVerdictFallbackAndExpiryPreserveCompleteControlSequence() {
+        long[] now = {0};
+        List<ControlMessage> actual = new ArrayList<>();
+        List<ControlMessage> expected = new ArrayList<>();
+        HostRoundEngine engine = new HostRoundEngine(() -> now[0], actual::add);
+        engine.setVerifiedRoom(true);
+        engine.setPendingHoldMillis(0);
+        assertTrue(engine.startRound(CONFIG));
+        expected.add(new ControlMessage.RoundStart(CONFIG, 3000, 4000));
+        now[0] = 3000;
+        engine.onTick();
+        List<ControlMessage.StandingsRow> top = new ArrayList<>();
+        for (int slot = 1; slot <= 12; slot++) {
+            assertEquals(new HostRoundEngine.FinishOutcome(slot, slot, slot > 10, 1),
+                    engine.onAttemptFinish(slot, "P" + slot, "sonic",
+                            finish(1, 100 + slot, "a"), false));
+            if (slot <= 10) top.add(verifiedRow(slot, 100 + slot, slot, "PENDING"));
+            expected.add(new ControlMessage.StandingsDelta(List.copyOf(top)));
+            assertEquals(expected, actual, "including unchanged deltas outside the cap");
+        }
+
+        engine.onVerdict(12, 1, true);
+        expected.add(new ControlMessage.StandingsDelta(List.copyOf(top)));
+        engine.onVerdict(1, 1, true);
+        top.set(0, verifiedRow(1, 101, 1, "VERIFIED"));
+        expected.add(new ControlMessage.StandingsDelta(List.copyOf(top)));
+        engine.onAttemptFinish(12, "P12", "sonic", finish(2, 50, "b"), false);
+        List<ControlMessage.StandingsRow> improvedTop = new ArrayList<>();
+        improvedTop.add(verifiedRow(12, 50, 1, "PENDING"));
+        for (int slot = 1; slot <= 9; slot++) {
+            improvedTop.add(verifiedRow(slot, 100 + slot, slot + 1,
+                    slot == 1 ? "VERIFIED" : "PENDING"));
+        }
+        expected.add(new ControlMessage.StandingsDelta(List.copyOf(improvedTop)));
+        engine.onVerdict(12, 2, false);
+        expected.add(new ControlMessage.StandingsDelta(List.copyOf(top)));
+        engine.onVerdict(11, 1, false);
+        expected.add(new ControlMessage.StandingsDelta(List.copyOf(top)));
+        assertEquals(expected, actual, "verdicts notify even when top-ten rows are unchanged");
+
+        now[0] = 4001 + HostRoundEngine.FINISH_GRACE_MILLIS;
+        engine.onTick();
+        expected.add(new ControlMessage.RoundEnd(List.copyOf(top)));
+        now[0] += HostRoundEngine.ROUND_END_LINGER_MILLIS;
+        engine.onTick();
+        List<ControlMessage.StandingsRow> verified = List.of(
+                verifiedRow(1, 101, 1, "VERIFIED"),
+                verifiedRow(12, 112, 2, "VERIFIED"));
+        expected.add(new ControlMessage.StandingsDelta(verified));
+        assertEquals(expected, actual, "round-end and pending-expiry ordering is unchanged");
+        assertEquals(verified, engine.standings());
+        assertEquals(HostRoundEngine.Phase.LOBBY, engine.phase());
+    }
+
+    private static ControlMessage.StandingsRow verifiedRow(
+            int slot, int frames, int rank, String state) {
+        return new ControlMessage.StandingsRow(slot, "P" + slot, "sonic", frames, rank, state);
+    }
+
+    @Test
     void pendingFinishPassesAndFailRecomputesRanks() {
         long[] now = {0};
         HostRoundEngine engine = running(now);

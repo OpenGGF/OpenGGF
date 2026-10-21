@@ -3,14 +3,15 @@ package com.openggf.net.hub;
 import com.openggf.net.ghost.GhostFrame;
 import com.openggf.net.ghost.GhostFrameCodec;
 import com.openggf.net.protocol.GhostPackets;
+import com.openggf.net.protocol.Protocol;
 import com.openggf.net.protocol.ProtocolViolationException;
 
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.LongSupplier;
 
@@ -137,6 +138,7 @@ public final class GhostHub {
                 drained.put(entry.getKey(), entries);
             }
         }
+        int[] relevantSenders = relevanceFiltering ? new int[RelevanceClassifier.NEAR_CAP] : null;
         for (Map.Entry<Integer, Player> recipient : List.copyOf(players.entrySet())) {
             int queued = recipient.getValue().connection.queuedBytes();
             long nowMillis = wallClockMillis.getAsLong();
@@ -158,33 +160,71 @@ public final class GhostHub {
                 continue;
             }
             List<GhostPackets.AggregateEntry> aggregate = new ArrayList<>();
-            Set<Integer> nearSet = relevanceFiltering
-                    ? classifier.nearSetFor(recipient.getKey()) : Set.of();
-            if (relevanceFiltering && queued > BP_DEGRADE_BYTES
-                    && nearSet.size() > BP_DEGRADED_NEAR_CAP) {
-                nearSet = nearSet.stream().limit(BP_DEGRADED_NEAR_CAP)
-                        .collect(java.util.stream.Collectors.toUnmodifiableSet());
-            }
             int senderCap = queued > BP_DEGRADE_BYTES
                     ? BP_DEGRADED_NEAR_CAP : Integer.MAX_VALUE;
-            int includedSenders = 0;
-            for (Map.Entry<Integer, List<GhostPackets.AggregateEntry>> sender
-                    : drained.entrySet()) {
-                boolean relevant = !relevanceFiltering || nearSet.contains(sender.getKey());
-                if (!sender.getKey().equals(recipient.getKey()) && relevant
-                        && includedSenders < senderCap) {
-                    aggregate.addAll(sender.getValue());
-                    includedSenders++;
+            if (relevanceFiltering) {
+                int[] nearest = classifier.nearSlotsFor(recipient.getKey());
+                int count = Math.min(nearest.length, senderCap);
+                // Membership/capping uses nearest-first order; wire entries retain
+                // ascending sender slots, as with the unfiltered drained TreeMap.
+                System.arraycopy(nearest, 0, relevantSenders, 0, count);
+                Arrays.sort(relevantSenders, 0, count);
+                for (int index = 0; index < count; index++) {
+                    List<GhostPackets.AggregateEntry> entries = drained.get(relevantSenders[index]);
+                    if (entries != null) {
+                        aggregate.addAll(entries);
+                    }
+                }
+            } else {
+                int includedSenders = 0;
+                for (Map.Entry<Integer, List<GhostPackets.AggregateEntry>> sender
+                        : drained.entrySet()) {
+                    if (!sender.getKey().equals(recipient.getKey())) {
+                        aggregate.addAll(sender.getValue());
+                        if (++includedSenders >= senderCap) {
+                            break;
+                        }
+                    }
                 }
             }
             if (!aggregate.isEmpty()) {
-                recipient.getValue().connection.sendBinary(
-                        GhostPackets.encodeAggregate(tickCount, aggregate));
+                sendAggregate(recipient.getValue().connection, tickCount, aggregate);
             }
         }
         if (relevanceFiltering && tickCount % ROSTER_INTERVAL_TICKS == 0) {
             sendRoster();
         }
+    }
+
+    private static void sendAggregate(HubConnection connection, int hubTick,
+                                      List<GhostPackets.AggregateEntry> entries) {
+        byte[] packet;
+        try {
+            packet = GhostPackets.encodeAggregate(hubTick, entries);
+        } catch (ProtocolViolationException failure) {
+            // Trusted entries can exceed collection caps after several short
+            // attempts accumulate. Intrinsic entry errors must still propagate.
+            if (entries.size() < 2
+                    || (!"aggregate entry count".equals(failure.getMessage())
+                    && !"aggregate exceeds binary cap".equals(failure.getMessage()))) {
+                throw failure;
+            }
+            packet = null;
+        }
+        // HostMasterLink adds a three-byte RelayGuestBinary envelope. Preserve
+        // the ordinary one-encode path while leaving room for that transport.
+        if (packet == null || packet.length > Protocol.MAX_BINARY_BYTES - 3) {
+            if (entries.size() < 2) {
+                throw new ProtocolViolationException("aggregate exceeds relay payload cap");
+            }
+            int middle = entries.size() / 2;
+            sendAggregate(connection, hubTick, entries.subList(0, middle));
+            sendAggregate(connection, hubTick, entries.subList(middle, entries.size()));
+            return;
+        }
+        // Transport failures are not encoding-capacity failures and must never
+        // trigger a retry/split after a packet may already have been submitted.
+        connection.sendBinary(packet);
     }
 
     public boolean isAttemptFlagged(int slot) {

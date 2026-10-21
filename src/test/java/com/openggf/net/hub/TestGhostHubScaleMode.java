@@ -115,6 +115,71 @@ class TestGhostHubScaleMode {
                 (packet[0] & 0xFF) == GhostPackets.TYPE_ROSTER));
     }
 
+    @Test
+    void nearestMembershipUsesDistanceButAggregateSendersStayAscending() {
+        for (int slot = 4; slot <= 12; slot++) {
+            hub.addPlayer(slot, "fp-" + slot, new FakeHubConnection());
+            hub.onAttemptStart(slot, 1);
+        }
+        stream(0, 1, 0, 1000);
+        // Higher slots are closer, so iteration order differs from wire order.
+        for (int slot = 1; slot <= 12; slot++) stream(slot, 1, 0, 1250 - slot * 10);
+        hub.tick();
+        assertEquals(List.of(5, 6, 7, 8, 9, 10, 11, 12), aggregateSlots(me));
+        me.binary.clear();
+        hub.tick();
+        assertTrue(me.binary.isEmpty(), "all drained frames were consumed on the prior tick");
+    }
+
+    @Test
+    void degradedCapSelectsNearestFourBeforePendingSendersAndSortsTheirSlots() {
+        FakeHubConnection degraded = new FakeHubConnection() {
+            @Override public int queuedBytes() { return GhostHub.BP_DEGRADE_BYTES + 1; }
+        };
+        hub.addPlayer(0, "degraded", degraded);
+        hub.onAttemptStart(0, 1);
+        for (int slot = 4; slot <= 10; slot++) {
+            hub.addPlayer(slot, "fp-" + slot, new FakeHubConnection());
+            hub.onAttemptStart(slot, 1);
+        }
+        stream(0, 1, 0, 1000);
+        for (int slot = 1; slot <= 10; slot++) stream(slot, 1, 0, 1250 - slot * 10);
+        hub.tick();
+        assertEquals(List.of(7, 8, 9, 10), aggregateSlots(degraded));
+        degraded.binary.clear();
+        now += 50;
+        // Nearest slot 10 has no pending data; a fifth-nearest sender must not fill its place.
+        for (int slot = 1; slot <= 9; slot++) stream(slot, 1, 3, 1250 - slot * 10);
+        hub.tick();
+        assertEquals(List.of(7, 8, 9), aggregateSlots(degraded));
+    }
+
+    @Test
+    void disconnectingBucketedSenderDoesNotBreakLaterRecipientsOrRoster() {
+        FakeHubConnection disconnecting = new FakeHubConnection() {
+            @Override public int queuedBytes() { return GhostHub.BP_DISCONNECT_BYTES + 1; }
+        };
+        hub.addPlayer(0, "disconnecting", disconnecting);
+        hub.onAttemptStart(0, 1);
+        stream(0, 1, 0, 1000);
+        stream(1, 1, 0, 1020);
+        stream(2, 1, 0, 1040);
+        hub.tick();
+        assertEquals("slow consumer", disconnecting.closedReason);
+        assertEquals(List.of(2), aggregateSlots(near));
+        assertEquals(List.of(1), aggregateSlots(far));
+        for (int tick = 1; tick < GhostHub.ROSTER_INTERVAL_TICKS; tick++) hub.tick();
+        assertEquals(List.of(1, 2, 3), lastRoster(near).stream()
+                .map(GhostPackets.RosterEntry::playerSlot).toList());
+    }
+
+    private static List<Integer> aggregateSlots(FakeHubConnection connection) {
+        return connection.binary.stream()
+                .filter(packet -> (packet[0] & 0xFF) == GhostPackets.TYPE_GHOST_AGGREGATE)
+                .flatMap(packet -> GhostPackets.decodeAggregate(packet).entries().stream())
+                .map(GhostPackets.AggregateEntry::playerSlot).toList();
+    }
+
     private static List<GhostPackets.RosterEntry> lastRoster(FakeHubConnection connection) {
         List<GhostPackets.RosterEntry> roster = new ArrayList<>();
         for (byte[] packet : connection.binary) {
