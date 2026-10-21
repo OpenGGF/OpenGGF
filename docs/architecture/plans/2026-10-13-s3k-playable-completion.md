@@ -25749,3 +25749,129 @@ The next owner must cold-replay the retained proposal and let the ordinary
 branch tool assess its restore boundary; no snapshot is supplied. Root owns
 source/data review and the next bounded task. Local docs commit only; no push,
 integration or worktree removal is performed by this slice.
+
+
+## ICZ2 maintained crossing leaf — exact rewind frontier, 2026-10-21
+
+Owned branch `feature/ai-icz2-sonic-cold-crossing-20261021` starts at docs-only
+`2b30c5c6289c67a511424b063c077ce140b6504b`, preserving that branch and 791/c93
+history. The tested production epoch is `7fbcfbd8a4597163390d5d813facec4c3e69a637`
+plus only the private column-decoration reconstruction fix below. Root owns
+integration; no Main/Root/native/foreign file or ref was changed by this leaf.
+
+The maintained pair is
+`src/test/resources/routes/s3k/icz2-sonic-cold-cube-button-bridge-320.{script,bk2}`,
+byte-identical to the twice-qualified 2292-row R2 pair: script SHA-256
+`e44eaf90a6d327c1dbcaef557dabc87281eaad0ef1799f02691a4d33b6fdef96`,
+BK2 `e176974a99e1c8d61746149765272c188759deaefbf8f8731d4b00535c58ed55`.
+The first-2040-row raw-input digest is
+`3135b2b423c4e5f7e1d9bc1482b1bc6509c20aa3fc08792c1013bf734393de4b`,
+independently compared with retained attempt09 before authoring the consumer.
+Its cheap packaging method checks complete production compiler/writer/loader
+round trips for both pads, neutral P2, no Start/debug/state payload and file hashes.
+
+`TestIcz2ColdCubeBridgeRoute` retains the explicit title-enabled 15-field
+320/Sonic/solo/off direct 5/1 Settings; all position/checkpoint/rings/emerald/clock/
+camera-fraction/reverse-gravity setup fields are null/false. It checks no death
+or life loss on every main/branch input, permits earlier hurt, keeps actual
+normal-update object references and resolves captured ObjectRefId lineage after
+restore. Ten spots (1664/1709/1724/1733/1778/2040/2095/2131/2183/2246) each compare
+all 60 registered keys on immediate restore and two 45-input forward cycles,
+restoring external held-input history. The final window ends at input2291;
+loads, mode changes, fresh assembly and callback-bearing fades are refused.
+
+### Original results and source correction
+
+All requests used the current absolute Main queue wrapper, normal admission,
+`-Dmse=off -Dopenggf.headless.gl=surfaceless-egl`, original absolute S1/S2/S3K ROM
+properties, Java25.0.4.1/EGL/null OpenAL/Lua5.4 and `test -B`, with separate owned
+report/tmp destinations. `route` below means the exact method
+`com.openggf.tools.TestIcz2ColdCubeBridgeRoute#coldSonicShattersThePlacedCubePressesButton2AndCrossesTheFallingBridgeWithWorldReplay`.
+
+| Request | Selection and original result | Queue wait | Maven |
+| --- | --- | --- | --- |
+| 42021 | new consumer plus cube/button/bridge controls: 35T/1F/0E/0S | 87s | 31.749s |
+| 61719 | route only, captured-entry error context: 1T/1F/0E/0S | 418s | 30.108s |
+| 87808 | affected group described below: 107T/1F/0E/0S | 1s | 1m28s |
+| 73490 | route only, corrected break detector: 1T/1F/0E/0S | 305s | 31.272s |
+| 96349 | route only, matching-movie expected datum: **1T/0F/0E/0S** | 195s | 30.437s |
+
+42021 passes input packaging and 33 component cases, then fails the second
+immediate restore at row2040. The two already-captured values were retained only
+in memory; its report did not identify the type. Root authorized one diagnostic
+that adds lazy error context from those same values, with no extra capture/live
+getter/provider/gameplay call. 61719 reproduces the exact first failure and
+identifies `IczCrushingColumnObjectInstance$BottomDecoration`, raw spawn ID `$AF`,
+subtype2, X=8528, immutable spawn Y/rawYWord2818→2817. Its dynamic entry slot is16;
+separately its ObjectRefId is `(-1,0,-1,253,DYNAMIC)`. `dynamic[16]` is formatted
+from entry.slotIndex, not a list index;253 is dynamicId, not raw objectId. No
+parent phase was retained or inferred from the printed compact-blob address.
+
+The constructor recomputed immutable birth metadata from a restore-phase
+parent's current position; `recreateForRewind` ignored `ctx.spawn()`. The captured
+child has `hasDynamicSpawn=false`, so base field restore does not replace that
+constructor record. The private `(ObjectSpawn,parent)` overload now retains
+`ctx.spawn()` exactly. The ordinary constructor still creates the same record;
+live getY/drawing still follow `parent.y+$B0` (native `loc_8A612`). No movement,
+collision, shared manager/codec/schema, clock or capacity code changes.
+
+A short independent existing-column regression creates the real child through
+an actual manager and ordinary initial dispatch. A declared ceiling fixture lets
+normal standing/crush updates move the parent away from birth. Two recreations
+from the same captured entry retain the complete birth record and follow further
+actual parent motion. It uses no private phase/position writes or fitted
+2818/2817-only expectation. The real-route red already selected this bug, so no
+extra prepatch route/component run was required. Temporary dynamic253 formatting
+was removed exactly to original consumer SHA-256
+`9e9c3430f952f92c9ca84704926a95d53d51f126ea59b5cadf01823473951c0c`.
+
+87808 selects new consumer, existing column/cube/button/bridge, Aiz1SkipHeadless,
+LevelLoading, BootstrapResolver and DecodingUtils. Nine simple selectors execute
+ten classes, including both LevelLoading owners (36+7 cases). Column12, cube8,
+button11, bridge14, core60 and packaging1 pass; route1 fails after all ten windows
+complete. Its map compares cork retirement1746/1758 with break1724/1733. Source
+`isBroken` reads the flag written before the same SST becomes the first fragment;
+`isDestroyed` is later fragment retirement. Root verified that distinction and
+authorized only the before-unbroken→after-broken detector, keeping all expected
+data, actual references, inputs and other assertions. 73490 then agrees on every
+required target event but finds cork151 break1732 against inherited1733.
+
+The preserved original observer SOURCE (3753B, SHA-256
+`18e7ea73b7fd9d6c08e708f7ab5390faabb11afc06a6dbc2f72574249296c759`)
+loads attempt07/variant-1 and records AFTER step/render. Its1733 belongs to that
+proposal. Static all-row comparison proves07→09 first differs at1724 (Right→
+neutral), while09→R2 first differs at2040. Thus1733 never applied to this movie;
+there is no sample-label or newly inferred physics bug. Root independently checked
+source/rows and authorized only expected cork1511733→1732, retaining window1733.
+Final consumer SHA-256 is
+`9fac1a24ce900a4aeb9b4e73876ce85ff5b4364242b25546b068827e80a3eac3`;
+private owner `3378dec0852514cb5677367d44459564132c8756a6a378245c4260c05cee17b4`
+and short control `4c378f7201824bcd6d24c2823bda92bba4f0ba342c45910dde908354b06c537b`
+remain unchanged from87808. No runtime clock/physics/input was fitted.
+
+### Final partial-route qualification and limits
+
+96349 completes all ten 60-key/two-cycle windows and its endpoint assertions:
+path1709, cork150/151 break1724/1732, cube162 roll-top shatter/-$300 bounce2095,
+actual button163 riding/standing trigger2 at2131, same bridge165 first fall2183,
+and grounded crossing2276. After input2291 P1 is alive, grounded, unhurt and
+control-released at9023/2544, velocity713/0,6rings/3lives, camera8863/2448, same
+native320 solo Sonic/off direct5/1 world. All3642 main/forward/replay inputs draw
+normally. The method takes4.774s (suite4.799s); earlier hurt remains permitted.
+
+Qualification combines87808's106 unchanged passing cases with this separately
+executed1T pass, not a new108-case or wholly green107-case invocation. Packaging
+is independent of ROM; component/loading checks and prior two uninterrupted R2
+witnesses keep their own scope. Only prose changes after the final executed source.
+All five originals' identities/assertions/skips,69 properties per actual suite
+and streams were read; owned reports/tmp directories are consumed without raw
+archives. As-run hashes, exact invocation arguments, inverse/file pins and local
+commit metadata remain in the existing owning registry. No broad, Root31,
+baseline, old cold-witness or new authoring-policy run was repeated.
+
+This locally qualifies the maintained partial interaction and ten same-world
+rewind windows. Boss admission/combat/exit, whole act, incoming ICZ1 history,
+other roster/donor/viewport products and native physical pixels/bus timing remain
+open. FAST/deterministic Kos readiness warnings limit native timing claims.
+Root owns source review, composed-footprint assessment, integration and push;
+this slice does not push or remove a worktree.
