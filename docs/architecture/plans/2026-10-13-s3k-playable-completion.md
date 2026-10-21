@@ -25211,8 +25211,34 @@ production Java/POM fingerprint remains
 `671b043b9741cef06709cd48521ee8afedabe45cdf7815260338b0288ab1fcd8`.
 Its Java tree is `ebc862b9bc537115b5dad57698a3cdeefc10c344`, POM blob
 `332caefac3d4f85e1d39f92eebce04c10e8f5d5c`.
-All Java/POM tested fingerprint (sorted relative path/NUL/bytes/NUL) is
-`2adcf0beff7ca24ac59d67f91548a86b18d9f6ead5ff80e81ddf5aa141270aa3`.
+Source hashes below use SHA256 over UTF-8 relative POSIX path, NUL, raw file
+bytes, NUL, in sorted relative-path order. The production universe is
+`src/main/**/*.java` plus `pom.xml` (4,175 files), giving the unchanged
+`671b043b9741cef06709cd48521ee8afedabe45cdf7815260338b0288ab1fcd8` above.
+The final committed consumer universe, `src/main/java/**/*.java` plus
+`src/test/java/**/*.java` and `pom.xml` (8,310 files), hashes to
+`c9f13bfe20e6a3de32bd60dd4cc2e8217cd1dc5dda919166c1b4006503de87eb`.
+The previously recorded `2adcf0beff7ca24ac59d67f91548a86b18d9f6ead5ff80e81ddf5aa141270aa3`
+uses the wider `src/**/*.java` plus `pom.xml` universe (8,334 files), including
+24 Java source fixtures under `src/test/resources/mods`. Both final-tree hashes
+reproduce directly from committed `e1ae92921cb0182336b4f84b25f32c4077952872`
+blobs and match this worktree's source bytes after temporary-adapter removal;
+the different source universes account for the two hashes.
+
+These final-tree fingerprints describe the maintained source footprint, not the
+complete earlier author/ordinary replay epochs. Those requests used temporary
+`src/test/java/com/openggf/tools/TestCnz2KnucklesArrivalR6.java`. Its retained
+`author-executed-adapter.java` hashes to
+`7a754b4103de01158b88827cd565e19ab1479c7d3ba36306e106f3b19efe8e0a`;
+`ordinary-executed-adapter.java` hashes to
+`37c9ea350d8fbf6ee6e5c47c0fec2709be8e3f24825f9c76d3ff9565f9f6a1c5`.
+Original complete pre-removal manifests for those requests were not retained;
+their aggregate source hashes and whole-tree equality to the final committed
+consumer are therefore unproven. The maintained class source pin is
+`54b496864dfb516d46d6dbed726d7e7e297bdc0e5003ff6cd142e8143f7afa69`,
+matching the inspected focused request48106 source pin. Root owns fresh composed
+consumer verification after integration; the earlier temporary epochs do not
+supply that qualification.
 
 The initial R6 no-job record remains historical. Root corrected its inaccurate
 “titlefalse” prose; actual R5 titletrue was retained. Ordinal7's provider capacity
@@ -25262,8 +25288,11 @@ and landing; before/actual late P1 admission and upper-floor approach; capsule
 body/button, before/active results and actual completion; teleporter lock/beam,
 beam control and hide/camera rise; fresh ICZ assembly, release and two supported
 incoming states. Every role captures the complete **60-key** registry, advances
-**45 ordinary inputs**, restores immediately and replays all45 twice, without
-field exclusions. The hide/rise window starts6795 and ends6840, before the actual
+**45 ordinary inputs**, restores immediately and replays all45 twice through
+the existing canonical comparator, with no new route-specific field exclusions.
+`RewindSnapshotDiff.keyEquals` intentionally normalizes level `epochAtCapture`,
+allocator `peakSlotCount`, render `bucketsDirty` and object-list ordering.
+The hide/rise window starts6795 and ends6840, before the actual
 callback-bearing fade; no raw snapshot crosses fade, load or pending assembly.
 After the last source window, a bounded live-history tail starts6815. Its33
 source frames retire at the actual6870 load: incoming currentFrame is below33
