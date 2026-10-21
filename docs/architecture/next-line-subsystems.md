@@ -39,6 +39,19 @@ indices. Maintained contracts live in [creator handbook](../modding/index.md) an
 [compatibility contract](mod-api-compatibility.md);
 dated design specs under `docs/architecture/designs/` are historical provenance only.
 
+**Stageplay.** `com.openggf.stageplay` owns versioned directing data, pure 60 Hz
+evaluation and the shared editing controller/store. Both authoring frontends use
+`StageplayWorkspace` through `EditorWindowChrome.Host.stageplay()`; UI state is not
+scene state. Runtime resource views are detached from native PLC/terrain owners,
+with explicit ROM and relative authored-set/voice dependencies. Playback is one
+exclusive owner-bound frame controller with captured transport. Optional native
+main-player binding uses `CourseControl`'s opaque entry capability; the engine's
+`DirectedPlayerLease` owns cleanup independently of creator callbacks, including
+quarantine, teardown and revoked historical restore. It restores player/camera
+state, never a whole course. Offline capture uses an independent transport and
+existing final PCM/encoder infrastructure. See the [authoring and mod guide](../guide/creating/stageplay.md)
+and [design decisions](designs/2026-10-21-stageplay.md).
+
 **Multiplayer time attack.** The engine retains shared networking under
 `com.openggf.net`: typed protocol and ghost codecs, room services, clients, identity,
 and the JDK in-process host. Public contracts marked `@ModApi` are part of the

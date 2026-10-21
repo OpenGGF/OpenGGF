@@ -86,6 +86,201 @@ public final class CourseControl {
                 p.isHurt() || p.getHurtAtFrameStart(), p.getDead(), p.getRolling(), p.getYRadius(), supportDx, supportDy,
                 context.getCamera().getX(), context.getCamera().getY());
     }
+
+    /**
+     * Opaque main-player/camera entry state for directed presentation. Unlike a course
+     * checkpoint this owns no world, object-manager, campaign, timer-manager or audio snapshot.
+     * It retains an identity tag and immutable values, never a live player or frame capability.
+     */
+    @ModApi
+    public static final class DirectedPlayerState {
+        private final Object owner;
+        private final long loadGeneration;
+        private final String gameId;
+        private final String character;
+        private final com.openggf.level.objects.PerObjectRewindSnapshot player;
+        private final com.openggf.game.rewind.snapshot.CameraSnapshot camera;
+
+        private DirectedPlayerState(Object owner, long loadGeneration, String gameId, String character,
+                com.openggf.level.objects.PerObjectRewindSnapshot player,
+                com.openggf.game.rewind.snapshot.CameraSnapshot camera) {
+            this.owner = owner;
+            this.loadGeneration = loadGeneration;
+            this.gameId = gameId;
+            this.character = character;
+            this.player = player;
+            this.camera = camera;
+        }
+
+        public String gameId() { return gameId; }
+        public String character() { return character; }
+    }
+
+    /**
+     * Captures a freely controlled stock main player. Object custody, abilities, super art,
+     * entry locks and forced controls must finish before directing the native player.
+     * The controller must hold native gameplay while this entry state is in use.
+     */
+    public DirectedPlayerState captureDirectedPlayer() {
+        requireFrame();
+        var p = player();
+        var snapshot = p.captureRewindState();
+        var extra = snapshot.playerExtra();
+        String game = context.getWorldSession().getGameModule().getGameCode();
+        boolean stock = switch (game) {
+            case "s1" -> p.getCode().equals("sonic");
+            case "s2" -> p.getCode().equals("sonic") || p.getCode().equals("tails");
+            case "s3k" -> p.getCode().equals("sonic") || p.getCode().equals("tails") || p.getCode().equals("knuckles");
+            default -> false;
+        };
+        if (!stock || p.getDead() || p.isHurt() || p.isControlLocked() || p.isObjectControlled()
+                || p.isOnObject() || context.getLevelManager().getObjectManager().getRidingObject(p) != null
+                || p.isObjectMappingFrameControl() || p.isSuperSonic() || p.isDebugMode()
+                || p.getDoubleJumpFlag() != 0 || p.getMoveLockTimer() != 0 || p.getPinballMode()
+                || p.getForcedInputMask() != 0 || extra.forcedJumpPress() || extra.deferredObjectControlRelease()
+                || extra.hasQueuedControlLockedState() || extra.hasQueuedForceInputRightState()
+                || p.getRenderCentreX() != p.getCentreX() || p.getRenderCentreY() != p.getCentreY()) {
+            throw new IllegalStateException("Native direction requires a freely controlled stock main player");
+        }
+        var state = new DirectedPlayerState(context.courseCheckpointIdentity(),
+                context.getLevelManager().getCompletedProductionLoadGeneration(), game, p.getCode(),
+                snapshot, context.getCamera().capture());
+        context.directedPlayerLease().begin(state);
+        return state;
+    }
+
+    /** A reload of the same zone/act is a new visit and cannot consume an older entry state. */
+    public boolean isDirectedPlayerCurrent(DirectedPlayerState state) {
+        requireFrame();
+        return context.directedPlayerLease().owns(state) && directedPlayerMatchesVisit(state);
+    }
+
+    private boolean directedPlayerMatchesVisit(DirectedPlayerState state) {
+        return state != null && state.owner == context.courseCheckpointIdentity()
+                && state.loadGeneration == context.getLevelManager().getCompletedProductionLoadGeneration()
+                && state.gameId.equals(context.getWorldSession().getGameModule().getGameCode())
+                && state.character.equals(player().getCode());
+    }
+
+    /**
+     * Applies an authored pixel pose to the actual native main player and camera, without a
+     * physics step. The caller resolves the mapping frame from the matching game's ROM art.
+     * No position, pose or camera value is sourced from trace comparison data.
+     */
+    public void directPlayer(DirectedPlayerState state, int x, int y, int animation, int mappingFrame,
+            boolean flipX, boolean visible, int cameraX, int cameraY) {
+        requireDirectedPlayer(state);
+        requireNativeWord(x, "x");
+        requireNativeWord(y, "y");
+        requireNativeWord(cameraX, "cameraX");
+        requireNativeWord(cameraY, "cameraY");
+        var p = player();
+        if (animation < 0 || animation > 65535 || mappingFrame < 0
+                || mappingFrame >= p.getAnimationFrameCount()) {
+            throw new IllegalArgumentException("Directed animation or mapping frame is unavailable in native player art");
+        }
+        // Entry rejects object custody. Native HOLD keeps that world and all other players still;
+        // leave the object manager's unrelated contact bookkeeping unchanged during preview.
+        p.setOnObject(false);
+        p.setControlLocked(true);
+        p.setGSpeed((short) 0);
+        p.setXSpeed((short) 0);
+        p.setYSpeed((short) 0);
+        NativePositionOps.writeXPosResetSubpixel(p, x);
+        NativePositionOps.writeYPosResetSubpixel(p, y);
+        p.setDirection(flipX ? Direction.LEFT : Direction.RIGHT);
+        p.setRenderFlips(flipX, false);
+        p.setAnimationId(animation);
+        p.setMappingFrame(mappingFrame);
+        p.setObjectMappingFrameControl(true);
+        p.setHidden(!visible);
+        p.setRenderFlagOnScreen(true);
+        p.updateSensors(p.getX(), p.getY());
+        context.getCamera().setX((short) cameraX);
+        context.getCamera().setY((short) cameraY);
+    }
+
+    /**
+     * Restores only entry player/camera state. When keeping the final position, entry control
+     * policy is restored and the main player is released airborne, upright and motionless at
+     * that position; native collision establishes support on the next ordinary step. The final
+     * camera origin is kept with its entry boundary/freeze policy. Audio and other actors are
+     * untouched. Pending gameplay input is cleared for either outcome.
+     */
+    public void releaseDirectedPlayer(DirectedPlayerState state, boolean keepFinalPosition) {
+        requireDirectedPlayer(state);
+        restoreDirectedPlayer(state, keepFinalPosition);
+        context.directedPlayerLease().complete(state);
+    }
+
+    static void restoreDirectedPlayerAfterFailure(GameplayModeContext context, DirectedPlayerState state) {
+        if (!context.isGameplayRuntimeReady()) return;
+        var cleanup = new CourseControl(context);
+        if (cleanup.directedPlayerMatchesVisit(state)) cleanup.restoreDirectedPlayer(state, false);
+    }
+
+    static boolean isDirectedPlayerVisit(GameplayModeContext context, DirectedPlayerState state) {
+        return context.isGameplayRuntimeReady() && new CourseControl(context).directedPlayerMatchesVisit(state);
+    }
+
+    private void restoreDirectedPlayer(DirectedPlayerState state, boolean keepFinalPosition) {
+        var p = player();
+        int x = p.getCentreX(), y = p.getCentreY();
+        int cameraX = context.getCamera().getX(), cameraY = context.getCamera().getY();
+        Direction direction = p.getDirection();
+        boolean flip = p.getRenderHFlip();
+        p.restoreRewindState(state.player);
+        context.getCamera().restore(state.camera);
+        if (keepFinalPosition) {
+            context.getLevelManager().getObjectManager().clearRidingObject(p);
+            p.setRolling(false);
+            p.setJumping(false);
+            p.setRollingJump(false);
+            p.setSpindash(false);
+            p.setPushing(false);
+            p.setSliding(false);
+            p.setCrouching(false);
+            p.setLookingUp(false);
+            p.setStickToConvex(false);
+            p.setAngle((byte) 0);
+            p.setGroundMode(GroundMode.GROUND);
+            p.setAir(true);
+            p.setOnObject(false);
+            p.setLatchedSolidObject(0, null);
+            p.setGSpeed((short) 0);
+            p.setXSpeed((short) 0);
+            p.setYSpeed((short) 0);
+            p.setDirection(direction);
+            p.setRenderFlips(flip, false);
+            NativePositionOps.writeXPosResetSubpixel(p, x);
+            NativePositionOps.writeYPosResetSubpixel(p, y);
+            p.resetPositionAndStatTableHistory();
+            p.forceAnimationRestart();
+            context.getCamera().setX((short) cameraX);
+            context.getCamera().setY((short) cameraY);
+        }
+        p.clearForcedInputMask();
+        p.clearQueuedControlState();
+        p.clearLogicalInputState();
+        p.setJumpInputPressed(false, false);
+        p.setDirectionalInputPressed(false, false, false, false);
+        p.setMovementInputActive(false);
+        p.suppressNextJumpPress();
+        p.updateSensors(p.getX(), p.getY());
+    }
+
+    private void requireDirectedPlayer(DirectedPlayerState state) {
+        if (!isDirectedPlayerCurrent(state)) {
+            throw new IllegalArgumentException("Directed player entry belongs to another session, level visit or character");
+        }
+    }
+
+    private static void requireNativeWord(int value, String field) {
+        if (value < Short.MIN_VALUE || value > 0xffff) {
+            throw new IllegalArgumentException("Directed " + field + " is outside native 16-bit coordinates");
+        }
+    }
+
     /** Consumes a pending initial card request; an already active native overlay finishes through controlled rows. */
     public void finishInitialPresentation() { context.getLevelManager().skipPendingInitialTitleCardPresentation(); }
     /** Advances an active entry fade; returns whether this row serviced that fade.

@@ -80,13 +80,14 @@ import static org.mockito.Mockito.when;
  * Unit tests for the {@link RewindRegistry} integration on
  * {@link GameplayModeContext}.
  *
- * <p>Tests verify that the thirteen always-available atomic adapters are
+ * <p>Tests verify that the fifteen always-available atomic adapters are
  * registered automatically when {@link GameplayModeContext#attachGameplayManagers}
  * is called, without requiring a full level load or ROM access.
  */
 class TestGameplayModeContextRewindRegistry {
     private static final Set<String> CORE_REWIND_KEYS = Set.of(
             "camera",
+            "directed-player-lease",
             "gamestate",
             "gamerng",
             "timermanager",
@@ -144,6 +145,7 @@ class TestGameplayModeContextRewindRegistry {
 
         Set<String> expectedKeys = Set.of(
                 "camera",
+                "directed-player-lease",
                 "gamestate",
                 "gamerng",
                 com.openggf.game.timing.VIntRunCounter.REWIND_KEY,
@@ -162,12 +164,12 @@ class TestGameplayModeContextRewindRegistry {
     }
 
     @Test
-    void exactlyFourteenAtomicKeysAfterAttach() {
+    void exactlyFifteenAtomicKeysAfterAttach() {
         GameplayModeContext ctx = buildAttachedContext();
         RewindRegistry registry = ctx.getRewindRegistry();
         CompositeSnapshot snapshot = registry.capture();
-        assertEquals(14, snapshot.entries().keySet().size(),
-                "Expected exactly 14 atomic adapters, got: " + snapshot.entries().keySet());
+        assertEquals(15, snapshot.entries().keySet().size(),
+                "Expected exactly 15 atomic adapters, got: " + snapshot.entries().keySet());
     }
 
     @Test
@@ -395,7 +397,7 @@ class TestGameplayModeContextRewindRegistry {
         assertNotNull(second);
         assertNotSame(first, second, "Re-attach should produce a new RewindRegistry instance");
         // New registry should have the same thirteen keys
-        assertEquals(14, second.capture().entries().keySet().size());
+        assertEquals(15, second.capture().entries().keySet().size());
     }
 
     @Test

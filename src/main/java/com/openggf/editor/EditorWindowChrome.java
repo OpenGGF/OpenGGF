@@ -28,6 +28,9 @@ public interface EditorWindowChrome extends AutoCloseable {
 
         /** Project, playtest and import commands, from the shared command catalogue. */
         List<EditorCommandPalette.HostCommand> commands();
+
+        /** Shared directing workspace; null for hosts without Stageplay support. */
+        default com.openggf.stageplay.editor.StageplayWorkspace stageplay() { return null; }
     }
 
     /** Requires a current GL context; initialisation failures propagate to the engine. */

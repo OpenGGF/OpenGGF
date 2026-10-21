@@ -164,6 +164,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			com.openggf.editor.hud.EditorHudRuntime::new);
 	private boolean editorChromeActive;
 	private final EditorProjectWorkspace editorProjects;
+	private final com.openggf.stageplay.editor.StageplayWorkspace stageplay;
+	private final com.openggf.stageplay.editor.StageplayEditorSession stageplaySession;
+	private Path stageplayInitialAssetRoot;
 	private final EditorProjectMenuRenderer editorProjectMenuRenderer = new EditorProjectMenuRenderer();
 	private final ContentImportScreen contentImportScreen;
 	private final ContentImportScreenRenderer contentImportRenderer = new ContentImportScreenRenderer();
@@ -423,7 +426,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				levelEditorController, () -> camera, () -> graphicsManager, this::saveCurrentEditorLevel,
 				this::exportCurrentEditorLevel);
 		editorInputHandler.setFrontEnd(new EditorInputHandler.FrontEnd() {
-			public boolean update(InputHandler input) { return editorChromeActive && editorChrome.update(input); }
+			public boolean update(InputHandler input) { return updateEditorFrontEnd(input); }
 			public void finishPendingEdits() { if (editorChrome != null) editorChrome.finishPendingEdits(); }
 		});
 		this.editorProjects = new EditorProjectWorkspace(new EditorProjectWorkspace.Host() {
@@ -459,6 +462,23 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				? editorProjects.document().isModified()
 				: levelEditorController.currentLevel() != null && levelEditorController.currentLevel().isModifiedSinceLastSave());
 		levelEditorController.setCanvasNavigationSupplier(() -> editorProjects.document() != null || shownEditorProject != null);
+		this.stageplaySession = new com.openggf.stageplay.editor.StageplayEditorSession(
+				() -> editorProjectBaseModule != null ? editorProjectBaseModule : GameServices.module(), romManager, audioManager);
+		this.stageplay = new com.openggf.stageplay.editor.StageplayWorkspace(new com.openggf.stageplay.editor.StageplayWorkspace.Host() {
+			public com.openggf.stageplay.StageplayDocument initialDocument() { return initialStageplayDocument(); }
+			public Path initialAssetRoot() {
+				if (stageplayInitialAssetRoot != null) return stageplayInitialAssetRoot;
+				var project = editorProjects.document();
+				return project != null && project.path() != null ? project.path().toAbsolutePath().getParent() : Path.of("projects").toAbsolutePath();
+			}
+			public void finishPendingEdits() { editorInputHandler.finishPendingEdits(); }
+			public void validate(com.openggf.stageplay.StageplayDocument document, Path root) throws IOException { stageplaySession.validate(document, root); }
+			public void refreshResources() { stageplaySession.release(); }
+			public void play(com.openggf.stageplay.StageplayDocument document, Path root, int frame) throws IOException { stageplaySession.play(document, root, frame); }
+			public void present(com.openggf.stageplay.StageplayDocument document, int frame) { stageplaySession.present(document, frame); }
+			public void stop() { stageplaySession.stop(); }
+			public void export(com.openggf.stageplay.StageplayDocument document, Path source, Path output) throws IOException { stageplaySession.export(document, source, output); }
+		});
 		this.contentImportScreen = new ContentImportScreen(new ContentImportService(Path.of("mods"), () ->
 				ModSubsystem.current().processCatalog().scanned().stream()
 						.filter(com.openggf.mods.ModDescriptor.class::isInstance)
@@ -488,24 +508,67 @@ public class Engine implements com.openggf.graphics.RenderProjection {
         com.openggf.editor.EditorCommandPalette.forController(levelEditorController)
                 .setHostActions(this::toggleEditorPlaytestMode, this::startGameplayFromBeginning);
 		var editorCommands = new ArrayList<>(editorProjects.commands());
+		editorCommands.add(new com.openggf.editor.EditorCommandPalette.HostCommand("Stageplay workspace (F4)", stageplay::activate));
 		editorCommands.add(new com.openggf.editor.EditorCommandPalette.HostCommand("Import content", this::openContentImport));
 		com.openggf.editor.EditorCommandPalette.forController(levelEditorController).setHostCommands(editorCommands);
 
 		// Set up game mode change listener to update projection width
 		gameLoop.setGameModeChangeListener((oldMode, newMode) -> {
+			if (oldMode == GameMode.EDITOR && newMode != GameMode.EDITOR) stageplay.stop();
 			if (newMode == GameMode.LEVEL && GameServices.hasRuntime())
                 applyRequiredDisplayAspect(GameServices.module());
             // Resolve module-selected dimensions before the title hands off.
 			projectionWidth = realWidth;
 		});
 		gameLoop.setEditorInputHandler(editorInputHandler);
-		gameLoop.setEditorProjectInputHandler(input -> contentImportScreen.isOpen()
-				? contentImportScreen.update(input) : editorProjects.update(input));
+		gameLoop.setEditorProjectInputHandler(this::updateEditorProjectMenus);
 		gameLoop.setEditorProjectPlaytestSupplier(() -> editorProjectPlaytestActive);
 		gameLoop.setEditorPlaytestToggleHandler(this::toggleEditorPlaytestMode);
 		gameLoop.setEditorFreshStartHandler(this::startGameplayFromBeginning);
 
 		instance = this;
+	}
+
+	private boolean updateEditorFrontEnd(InputHandler input) {
+		boolean owned = editorChromeActive && editorChrome.update(input);
+		return stageplay.tick(input) || owned;
+	}
+
+	private boolean updateEditorProjectMenus(InputHandler input) {
+		if (contentImportScreen.isOpen()) return contentImportScreen.update(input);
+		if (stageplay.menu().isOpen()) {
+			stageplay.tick(input);
+			if (!stageplay.menu().isOpen() && !editorProjects.menu().isOpen() && editorQuitView != null) restoreEditorQuitView();
+			return true;
+		}
+		return editorProjects.update(input);
+	}
+
+	private com.openggf.stageplay.StageplayDocument initialStageplayDocument() {
+		var project = editorProjects.document();
+		stageplayInitialAssetRoot = Path.of("projects").toAbsolutePath().normalize();
+		String game = project != null ? project.metadata().gameId().code() : GameServices.module().getGameId().code();
+		int zone = project != null ? project.metadata().sourceZone() : levelManager.getCurrentZone();
+		int act = project != null ? project.metadata().sourceAct() : levelManager.getCurrentAct();
+		var document = com.openggf.stageplay.StageplayDocument.empty(game, zone, act,
+				camera == null ? 0 : camera.getX(), camera == null ? 0 : camera.getY(), (int) realWidth, (int) realHeight);
+		if (project != null) {
+			Path setPath = project.path();
+			if (setPath == null || project.isModified()) {
+				// Snapshot unsaved terrain without changing the level editor's path or savepoint.
+				stageplayInitialAssetRoot = stageplayInitialAssetRoot.resolve("stageplay-" + java.util.UUID.randomUUID());
+				setPath = stageplayInitialAssetRoot.resolve("set.ogfproject");
+				try {
+					java.nio.file.Files.createDirectories(stageplayInitialAssetRoot);
+					new com.openggf.editor.project.EditorProjectStore().save(setPath,
+							EditorProjectDocument.create(project.metadata(), project.snapshot()));
+				} catch (IOException failure) { throw new java.io.UncheckedIOException("Cannot snapshot the loaded Stageplay set", failure); }
+			} else stageplayInitialAssetRoot = setPath.toAbsolutePath().getParent();
+			var source = document.set();
+			document = document.withSet(new com.openggf.stageplay.StageplayDocument.SetSource(game, zone, act,
+					source.romSha1(), setPath.getFileName().toString()));
+		}
+		return document;
 	}
 
 	static int resolveTargetFps(SonicConfigurationService config) {
@@ -1498,14 +1561,15 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		if (contentImportScreen.installing()) { quitAfterContentInstall = true; return; }
 		quitAfterContentInstall = false;
 		contentImportScreen.close();
+		stageplay.stop();
 		editorInputHandler.finishPendingEdits();
 		var document = editorProjects.document();
-		if (document == null || !document.isModified()) { closeApplicationWindow(); return; }
+		if ((document == null || !document.isModified()) && !stageplay.controller().dirty()) { closeApplicationWindow(); return; }
 		editorQuitView = new EditorQuitView(getCurrentGameMode(), camera,
 				camera == null ? 0 : camera.getX(), camera == null ? 0 : camera.getY(),
 				camera == null ? 0 : camera.getXCopy(), camera == null ? 0 : camera.getYCopy());
 		gameLoop.setEditorProjectModalMode(GameMode.MASTER_TITLE_SCREEN, true);
-		editorProjects.requestQuit(this::closeApplicationWindow);
+		stageplay.requestQuit(() -> editorProjects.requestQuit(this::closeApplicationWindow));
 	}
 
 	private void restoreEditorQuitView() {
@@ -1614,6 +1678,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void resetForGameplayFromMasterTitle() {
+		if (stageplay != null) stageplay.deactivate();
+		if (stageplaySession != null) stageplaySession.release();
 		if (suspendedGame != null) {
 			suspendedGame = null;
 			gameLoop.suspension.discard();
@@ -2553,6 +2619,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	public void toggleEditorPlaytestMode() {
 		if (getCurrentGameMode() == GameMode.EDITOR) {
+			stageplay.deactivate();
 			resumePlaytestFromEditor();
 			return;
 		}
@@ -3823,6 +3890,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	 */
 	public void update() {
 		gameLoop.stepPresentationFrame();
+		stageplaySession.pollExport(stageplay);
 		if (quitAfterContentInstall && !contentImportScreen.installing()) requestApplicationExit();
 	}
 
@@ -3848,7 +3916,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private boolean globalShortcutInputClaimed() {
-		return contentImportScreen.isOpen() || editorProjects.menu().isOpen() || editorQuitView != null
+		return contentImportScreen.isOpen() || editorProjects.menu().isOpen() || stageplay.menu().isOpen() || editorQuitView != null
 				|| (gameLoop != null && gameLoop.modSceneHost.capturesTextInput());
 	}
 
@@ -3967,6 +4035,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private void drawMasterTitle() {
 		resetCameraForScreenSpaceIfPresent();
+		if (stageplay.menu().isOpen()) {
+			editorProjectMenuRenderer.render(stageplay.menu(), getProjectionMatrixBuffer(), (int) realWidth);
+			return;
+		}
 		if (contentImportScreen.isOpen()) {
 			contentImportRenderer.render(contentImportScreen, getProjectionMatrixBuffer(), (int) realWidth);
 			return;
@@ -3983,6 +4055,18 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void drawEditor() {
+		if (stageplay.active()) {
+			graphicsManager.flush();
+			graphicsManager.resetForFixedFunction();
+			stageplaySession.draw(stageplay);
+			graphicsManager.resetForFixedFunction();
+			prepareOverlayState();
+			if (contentImportScreen.isOpen()) contentImportRenderer.render(contentImportScreen, getProjectionMatrixBuffer(), (int) realWidth);
+			else if (editorProjects.menu().isOpen()) editorProjectMenuRenderer.render(editorProjects.menu(), getProjectionMatrixBuffer(), (int) realWidth);
+			else if (stageplay.menu().isOpen()) editorProjectMenuRenderer.render(stageplay.menu(), getProjectionMatrixBuffer(), (int) realWidth);
+			graphicsManager.flushScreenSpace();
+			return;
+		}
 		flushEditorDirtyRegionsForRendering();
 		levelManager.drawWithSpritePriority(spriteManager);
 		editorOverlayRenderer.renderWorldSpaceOverlay();
@@ -3993,6 +4077,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			contentImportRenderer.render(contentImportScreen, getProjectionMatrixBuffer(), (int) realWidth);
 		else if (editorProjects.menu().isOpen())
 			editorProjectMenuRenderer.render(editorProjects.menu(), getProjectionMatrixBuffer(), (int) realWidth);
+		else if (stageplay.menu().isOpen())
+			editorProjectMenuRenderer.render(stageplay.menu(), getProjectionMatrixBuffer(), (int) realWidth);
 		graphicsManager.flushScreenSpace();
 	}
 
@@ -4005,6 +4091,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			glfwGetFramebufferSize(window, framebufferW, framebufferH);
 			editorChrome.init(new com.openggf.editor.EditorWindowChrome.Host() {
 				public LevelEditorController controller() { return levelEditorController; }
+				public com.openggf.stageplay.editor.StageplayWorkspace stageplay() { return stageplay; }
 				public void dispatch(EditorInputHandler.Action action) { editorInputHandler.handleAction(action); }
 				public java.util.List<com.openggf.editor.EditorCommandPalette.HostCommand> commands() {
 					return com.openggf.editor.EditorCommandPalette.forController(levelEditorController).extraCommands();
@@ -4018,7 +4105,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	/** Places the game inside the chrome's canvas while the window chrome owns the editor frame. */
 	private void syncEditorChromeViewport() {
 		boolean editorFrame = getCurrentGameMode() == GameMode.EDITOR && !contentImportScreen.isOpen()
-				&& !editorProjects.menu().isOpen() && levelEditorController.currentLevel() != null;
+				&& !editorProjects.menu().isOpen() && !stageplay.menu().isOpen() && levelEditorController.currentLevel() != null;
 		editorChromeActive = editorChrome != null && editorChrome.setActive(editorFrame);
 		com.openggf.control.InputHandlerInternalAccess.suppressGamepad(inputHandler,
 				editorChromeActive && editorChrome.ownsGamepads());
@@ -4298,6 +4385,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		contentImportShutdown = true;
 		// First, while GL, audio and the session are intact: an open mod scene saves in ModScene.exit.
 		cleanupStep("mod scene", gameLoop.modSceneHost::cleanup);
+		cleanupStep("Stageplay", stageplaySession::close);
 		cleanupStep("screenshots", screenshotWriter::close);
 		cleanupStep("live capture", liveCaptureController::close);
 		cleanupStep("pending saves", com.openggf.game.save.SessionSaveRequests::flushPendingSaves);

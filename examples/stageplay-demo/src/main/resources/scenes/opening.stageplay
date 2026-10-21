@@ -1,0 +1,190 @@
+{
+  "version": 1,
+  "name": "A scene in Emerald Hill",
+  "durationFrames": 900,
+  "width": 320,
+  "height": 224,
+  "set": {
+    "gameId": "s2",
+    "zone": 0,
+    "act": 0,
+    "romSha1": "",
+    "levelProject": ""
+  },
+  "actors": [
+    {
+      "id": "sonic",
+      "name": "Sonic",
+      "gameId": "s2",
+      "character": "sonic",
+      "keys": [
+        {
+          "frame": 0,
+          "x": -24,
+          "y": 640,
+          "animation": 0,
+          "pose": -1,
+          "flipX": false,
+          "visible": true,
+          "scale": 1,
+          "interpolation": "LINEAR"
+        },
+        {
+          "frame": 120,
+          "x": 144,
+          "y": 640,
+          "animation": 5,
+          "pose": -1,
+          "flipX": false,
+          "visible": true,
+          "scale": 1,
+          "interpolation": "HOLD"
+        },
+        {
+          "frame": 480,
+          "x": 144,
+          "y": 640,
+          "animation": 0,
+          "pose": -1,
+          "flipX": false,
+          "visible": true,
+          "scale": 1,
+          "interpolation": "LINEAR"
+        },
+        {
+          "frame": 780,
+          "x": 580,
+          "y": 640,
+          "animation": 0,
+          "pose": -1,
+          "flipX": false,
+          "visible": true,
+          "scale": 1,
+          "interpolation": "LINEAR"
+        }
+      ]
+    },
+    {
+      "id": "tails",
+      "name": "Tails",
+      "gameId": "s2",
+      "character": "tails",
+      "keys": [
+        {
+          "frame": 0,
+          "x": 240,
+          "y": 640,
+          "animation": 5,
+          "pose": -1,
+          "flipX": true,
+          "visible": true,
+          "scale": 1,
+          "interpolation": "HOLD"
+        },
+        {
+          "frame": 480,
+          "x": 240,
+          "y": 640,
+          "animation": 0,
+          "pose": -1,
+          "flipX": false,
+          "visible": true,
+          "scale": 1,
+          "interpolation": "LINEAR"
+        },
+        {
+          "frame": 780,
+          "x": 620,
+          "y": 640,
+          "animation": 0,
+          "pose": -1,
+          "flipX": false,
+          "visible": true,
+          "scale": 1,
+          "interpolation": "LINEAR"
+        }
+      ]
+    }
+  ],
+  "camera": [
+    {
+      "frame": 0,
+      "x": 0,
+      "y": 500,
+      "zoom": 1,
+      "interpolation": "HOLD"
+    },
+    {
+      "frame": 480,
+      "x": 0,
+      "y": 500,
+      "zoom": 1,
+      "interpolation": "SMOOTH"
+    },
+    {
+      "frame": 780,
+      "x": 360,
+      "y": 500,
+      "zoom": 1,
+      "interpolation": "HOLD"
+    }
+  ],
+  "captions": [
+    {
+      "id": "title",
+      "startFrame": 0,
+      "endFrame": 120,
+      "text": "OpenGGF Stageplay",
+      "x": 80,
+      "y": 28,
+      "argb": -1
+    },
+    {
+      "id": "tails-line",
+      "startFrame": 180,
+      "endFrame": 360,
+      "text": "Tails: Ready when you are.",
+      "x": 16,
+      "y": 182,
+      "argb": -1
+    },
+    {
+      "id": "sonic-line",
+      "startFrame": 360,
+      "endFrame": 480,
+      "text": "Sonic: Let's make a scene.",
+      "x": 16,
+      "y": 182,
+      "argb": -1
+    },
+    {
+      "id": "credits",
+      "startFrame": 780,
+      "endFrame": 900,
+      "text": "A new adventure begins.",
+      "x": 40,
+      "y": 28,
+      "argb": -1
+    }
+  ],
+  "audio": [
+    {
+      "id": "music",
+      "frame": 0,
+      "kind": "ROM_MUSIC",
+      "gameId": "s2",
+      "soundId": 129,
+      "asset": "",
+      "gain": 1
+    },
+    {
+      "id": "ring",
+      "frame": 360,
+      "kind": "ROM_SFX",
+      "gameId": "s2",
+      "soundId": 181,
+      "asset": "",
+      "gain": 1
+    }
+  ]
+}

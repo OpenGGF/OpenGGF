@@ -862,6 +862,12 @@ Trace playback retains its configured checkpoint interval.
 
 ### Level Editor (experimental)
 
+**F4** switches between level editing and the [Stageplay workspace](docs/guide/creating/stageplay.md)
+in both editor frontends. Stageplay owns its input while active: Space plays/pauses,
+left/right steps frames, Shift steps 60 frames, K sets an actor key, and F1 opens
+its commands. Record directed take uses WASD; Space stops recording. Stageplay
+settings live in the scene file, and these shortcuts are currently fixed.
+
 Open **Tools → Editor projects** at the master title to create, open, or import
 levels. Choose **New blank level**, then a game and ROM asset source. Entering from
 a supported gameplay layout adopts it as a project; **Clone this layout** makes

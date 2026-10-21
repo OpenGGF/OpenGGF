@@ -1,0 +1,263 @@
+package com.openggf.stageplay;
+
+import com.openggf.game.ModApi;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+
+/**
+ * Immutable, portable authored scene. Time is measured in 60 Hz presentation frames;
+ * coordinates are stage pixels, independent of any gameplay or trace clock.
+ * Resource references never contain ROM-derived bytes.
+ */
+@ModApi
+public record StageplayDocument(int version, String name, int durationFrames, int width, int height,
+        SetSource set, List<Actor> actors, List<CameraKey> camera, List<Caption> captions,
+        List<AudioCue> audio) {
+    public static final int VERSION = 1;
+    public static final int FRAMES_PER_SECOND = 60;
+    public static final int MAX_DURATION_FRAMES = 36_000;
+    private static final int MAX_KEYS = 100_000;
+    private static final double MAX_COORDINATE = 1_048_576;
+
+    public StageplayDocument {
+        require(version == VERSION, "Unsupported Stageplay version: " + version);
+        name = label(name, "name");
+        range(durationFrames, 1, MAX_DURATION_FRAMES, "durationFrames");
+        range(width, 160, 1920, "width");
+        range(height, 112, 1080, "height");
+        require(set != null, "set is required");
+        actors = boundedCopy(actors, 32, "actors");
+        camera = boundedCopy(camera, MAX_KEYS, "camera");
+        captions = boundedCopy(captions, 1024, "captions");
+        audio = boundedCopy(audio, 4096, "audio");
+        require(!camera.isEmpty(), "camera must start at frame zero");
+        Set<String> ids = new HashSet<>();
+        int totalKeys = camera.size();
+        for (Actor actor : actors) {
+            require(ids.add(actor.id()), "Duplicate id: " + actor.id());
+            totalKeys += actor.keys().size();
+            require(actor.keys().getLast().frame() < durationFrames, "Actor key exceeds scene duration");
+        }
+        require(totalKeys <= MAX_KEYS, "Scene has too many keys");
+        int previousFrame = -1;
+        for (CameraKey key : camera) {
+            require(key.frame() > previousFrame, "Camera keys must be strictly ascending");
+            require(previousFrame != -1 || key.frame() == 0, "Camera must start at frame zero");
+            require(key.frame() < durationFrames, "Camera key exceeds scene duration");
+            previousFrame = key.frame();
+        }
+        for (Caption caption : captions) {
+            require(ids.add(caption.id()), "Duplicate id: " + caption.id());
+            require(caption.endFrame() <= durationFrames, "Caption exceeds scene duration");
+        }
+        for (AudioCue cue : audio) {
+            require(ids.add(cue.id()), "Duplicate id: " + cue.id());
+            require(cue.frame() < durationFrames, "Audio cue exceeds scene duration");
+        }
+    }
+
+    /** A ten-second scene with an empty cast and a stationary camera. */
+    public static StageplayDocument empty(String gameId, int zone, int act, double x, double y,
+            int width, int height) {
+        return new StageplayDocument(VERSION, "Untitled", 600, width, height,
+                new SetSource(gameId, zone, act, "", ""), List.of(),
+                List.of(new CameraKey(0, x, y, 1, Interpolation.HOLD)), List.of(), List.of());
+    }
+
+    public StageplayDocument withName(String value) {
+        return new StageplayDocument(version, value, durationFrames, width, height, set, actors, camera, captions, audio);
+    }
+
+    /** Shortening a scene rejects remaining keys/cues beyond its new end. */
+    public StageplayDocument withDurationFrames(int value) {
+        return new StageplayDocument(version, name, value, width, height, set, actors, camera, captions, audio);
+    }
+
+    public StageplayDocument withSize(int newWidth, int newHeight) {
+        return new StageplayDocument(version, name, durationFrames, newWidth, newHeight, set, actors, camera, captions, audio);
+    }
+
+    public StageplayDocument withSet(SetSource value) {
+        return new StageplayDocument(version, name, durationFrames, width, height, value, actors, camera, captions, audio);
+    }
+
+    public StageplayDocument withActors(List<Actor> value) {
+        return new StageplayDocument(version, name, durationFrames, width, height, set, value, camera, captions, audio);
+    }
+
+    public StageplayDocument withCamera(List<CameraKey> value) {
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, value, captions, audio);
+    }
+
+    public StageplayDocument withCaptions(List<Caption> value) {
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, value, audio);
+    }
+
+    public StageplayDocument withAudio(List<AudioCue> value) {
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, value);
+    }
+
+    /** Stock set reference and optional identity/authored-level reference. */
+    @ModApi
+    public record SetSource(String gameId, int zone, int act, String romSha1, String levelProject) {
+        public SetSource {
+            gameId = game(gameId);
+            range(zone, 0, 255, "zone");
+            range(act, 0, 255, "act");
+            require(romSha1 != null && (romSha1.isEmpty() || romSha1.matches("[0-9a-f]{40}")),
+                    "romSha1 must be empty or a lowercase SHA-1");
+            levelProject = relativePath(levelProject, "levelProject", true);
+            require(levelProject.isEmpty() || levelProject.toLowerCase(Locale.ROOT).endsWith(".ogfproject"),
+                    "levelProject must reference an .ogfproject file");
+        }
+    }
+
+    /** A named role with stock ROM appearance and authored performance keys. */
+    @ModApi
+    public record Actor(String id, String name, String gameId, String character, List<ActorKey> keys) {
+        public Actor {
+            id = identifier(id);
+            name = label(name, "actor name");
+            gameId = game(gameId);
+            require(character != null && switch (gameId) {
+                case "s1" -> character.equals("sonic");
+                case "s2" -> character.equals("sonic") || character.equals("tails");
+                case "s3k" -> character.equals("sonic") || character.equals("tails") || character.equals("knuckles");
+                default -> false;
+            }, "Unsupported stock character for " + gameId + ": " + character);
+            keys = boundedCopy(keys, MAX_KEYS, "actor keys");
+            require(!keys.isEmpty() && keys.getFirst().frame() == 0, "Actor keys must start at frame zero");
+            int previous = -1;
+            for (ActorKey key : keys) {
+                require(key.frame() > previous, "Actor keys must be strictly ascending");
+                previous = key.frame();
+            }
+        }
+    }
+
+    /** Interpolation applies from this key to the next; discrete properties change at the key. */
+    @ModApi
+    public record ActorKey(int frame, double x, double y, int animation, int pose, boolean flipX,
+            boolean visible, double scale, Interpolation interpolation) {
+        public ActorKey {
+            range(frame, 0, MAX_DURATION_FRAMES - 1, "actor frame");
+            coordinate(x, "actor x");
+            coordinate(y, "actor y");
+            range(animation, 0, 65535, "animation");
+            range(pose, -1, 65535, "pose");
+            finiteRange(scale, .01, 64, "scale");
+            require(interpolation != null, "interpolation is required");
+        }
+    }
+
+    /** Camera position is the top-left stage coordinate; zoom one is native pixel scale. */
+    @ModApi
+    public record CameraKey(int frame, double x, double y, double zoom, Interpolation interpolation) {
+        public CameraKey {
+            range(frame, 0, MAX_DURATION_FRAMES - 1, "camera frame");
+            coordinate(x, "camera x");
+            coordinate(y, "camera y");
+            finiteRange(zoom, .05, 64, "zoom");
+            require(interpolation != null, "interpolation is required");
+        }
+    }
+
+    @ModApi
+    public enum Interpolation { HOLD, LINEAR, SMOOTH }
+
+    /** Captions use screen coordinates and a half-open [startFrame,endFrame) interval. */
+    @ModApi
+    public record Caption(String id, int startFrame, int endFrame, String text, int x, int y, int argb) {
+        public Caption {
+            id = identifier(id);
+            range(startFrame, 0, MAX_DURATION_FRAMES - 1, "caption start");
+            range(endFrame, startFrame + 1, MAX_DURATION_FRAMES, "caption end");
+            require(text != null && text.length() <= 4096, "Caption text exceeds 4096 characters or is missing");
+            coordinate(x, "caption x");
+            coordinate(y, "caption y");
+        }
+    }
+
+    /** Audio is dispatched by forward playback, never by pure timeline sampling. */
+    @ModApi
+    public record AudioCue(String id, int frame, AudioKind kind, String gameId, int soundId,
+            String asset, double gain) {
+        public AudioCue {
+            id = identifier(id);
+            range(frame, 0, MAX_DURATION_FRAMES - 1, "audio frame");
+            require(kind != null, "audio kind is required");
+            gameId = game(gameId);
+            range(soundId, -1, 65535, "soundId");
+            finiteRange(gain, 0, 1, "gain");
+            asset = relativePath(asset, "asset", kind != AudioKind.VOICE);
+            if (kind == AudioKind.VOICE) {
+                String extension = asset.toLowerCase(Locale.ROOT);
+                require(extension.endsWith(".wav") || extension.endsWith(".ogg"),
+                        "Voice assets must be WAV or OGG files");
+            } else {
+                require(asset.isEmpty(), "Only voice cues reference creator assets");
+            }
+            if (kind == AudioKind.ROM_MUSIC || kind == AudioKind.ROM_SFX) {
+                require(soundId >= 0, "ROM audio cues require a soundId");
+            }
+        }
+    }
+
+    @ModApi
+    public enum AudioKind { ROM_MUSIC, ROM_SFX, VOICE, MUSIC_STOP }
+
+    private static String game(String value) {
+        require("s1".equals(value) || "s2".equals(value) || "s3k".equals(value), "Unknown gameId: " + value);
+        return value;
+    }
+
+    private static String identifier(String value) {
+        require(value != null && value.length() <= 64 && value.matches("[A-Za-z0-9][A-Za-z0-9._-]*"),
+                "Ids must contain 1-64 letters, digits, dots, underscores or hyphens");
+        return value;
+    }
+
+    private static String label(String value, String field) {
+        require(value != null && !value.isBlank() && value.length() <= 256
+                && value.chars().noneMatch(Character::isISOControl), field + " must contain 1-256 printable characters");
+        return value;
+    }
+
+    private static String relativePath(String value, String field, boolean allowEmpty) {
+        require(value != null && value.length() <= 1024, field + " is missing or too long");
+        if (allowEmpty && value.isEmpty()) return value;
+        require(!value.isEmpty() && !value.startsWith("/") && !value.contains("\\") && !value.contains(":")
+                && value.chars().noneMatch(Character::isISOControl), field + " must be a safe portable relative path");
+        for (String component : value.split("/", -1)) {
+            require(!component.isEmpty() && !component.equals(".") && !component.equals("..")
+                    && !component.endsWith(".") && !component.endsWith(" "),
+                    field + " contains an unsafe path component");
+        }
+        return value;
+    }
+
+    private static <T> List<T> boundedCopy(List<T> values, int maximum, String field) {
+        require(values != null && values.size() <= maximum, field + " is missing or exceeds " + maximum);
+        require(values.stream().noneMatch(value -> value == null), field + " contains null");
+        return List.copyOf(values);
+    }
+
+    private static void coordinate(double value, String field) {
+        finiteRange(value, -MAX_COORDINATE, MAX_COORDINATE, field);
+    }
+
+    private static void finiteRange(double value, double minimum, double maximum, String field) {
+        require(Double.isFinite(value) && value >= minimum && value <= maximum, field + " is out of range");
+    }
+
+    private static void range(int value, int minimum, int maximum, String field) {
+        require(value >= minimum && value <= maximum, field + " is out of range");
+    }
+
+    private static void require(boolean condition, String message) {
+        if (!condition) throw new IllegalArgumentException(message);
+    }
+}
