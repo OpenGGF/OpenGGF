@@ -709,3 +709,38 @@ limits remain part of that original record; R5 adds its own bounded fresh-cold
 observations. Useful `r5-products/policy-0.{script,bk2}` and source/ordered facts
 remain in the same external task directory. Root must review the ledge checkpoint
 and later hurt/Spikes tail before further workload or maintained adaptation.
+
+
+### Knuckles reached-ledge continuation R6 — 2026-10-21
+
+The existing42511 ledge was cold-reached exactly in every completed R6 prefix:
+all64 fields match, including10165/1836, sub9525/23340, velocity24/0/ground24,
+10 rings/3 lives, ground/unhurt/no onObject/no actual riding, Right/noA and
+released controls. World/Level/OM/P1/LEVEL and pending/fade guards qualify the
+ordinary inlet; the stale mushroom latch is not contact proof. No restore,
+snapshot or seed was used. The preserved42512 R5 rows include all R4/Act1 inputs.
+
+Three finite policies and their6000-input bounds were declared before execution.
+Three unique policies exhausted; no safe onward frontier qualified.
+
+| Policy | Actual appended inputs | Terminal input | MaxX | Outcome |
+| --- | --- | --- | --- | --- |
+| 0 | 108 | 42619 | 10581 | hurt_ringloss_or_lifeloss |
+| 1 | 109 | 42620 | 10581 | hurt_ringloss_or_lifeloss |
+| 2 | 132 | 42643 | 10581 | hurt_ringloss_or_lifeloss |
+
+Hazard support, first hurt and eventual ring publication remain separate facts.
+Policies0/1 stop on first hurt while the counter still reports21 rings/3 lives;
+no later ring loss or hurt receiver is inferred. Actual nearby/selected owners
+are bounded public observations, not original damage-call or native witnesses.
+The original R5 hazardous stop label stays rejected. A safe onward qualification
+must not be inferred from unhurt Spikes support or a Maven exit0.
+
+The [R6 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-reached-ledge-continuation-r6--2026-10-21)
+records finite recipes, original ROM/source pins, exact row/owner facts, proposal
+hashes, queue/execution times and any expiry cancellation. All requests are
+0 JUnit executable observations, skips N/A; no maintained/broad/native/full66282,
+FBZ, health/load/rewind or campaign qualification was rerun. Consumed raw outputs
+and classes were removed before the docs commit. Useful `r6-products` proposals,
+private adapters and compact facts remain in the existing external task directory.
+Root reviews before any further maintained adaptation or workload.

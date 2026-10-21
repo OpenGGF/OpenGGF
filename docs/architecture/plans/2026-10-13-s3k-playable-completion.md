@@ -27140,3 +27140,98 @@ removed under owned worktree/build leases; useful proposal/adapters and compact
 facts remain external. Root reviews the observed42511 ledge and later hazard
 before any further workload, source fix or maintained adaptation. Current
 Knuckles full-route/health/load/rewind/native-equivalence qualification stays open.
+
+
+### MHZ Knuckles reached-ledge continuation R6 — 2026-10-21
+
+R6 uses new owned `feature/ai-mhz-knuckles-ledge-continuation-20261021` from
+947f49e50334cabbd9dc184ba8123b78b626b206, preserving that exact R5 branch ref,
+all R1–R5 evidence, suppliedefd/fee3/e3 refs and native gitlink703/actual322.
+Its ordinary runtime sources equal frozen b078214e74ddbcb393cbc0173fd8c74055b0dadb;
+Root/Main, configuration, runtime/POM, maintained tests/movies/oracles and all
+health/rewind/load/count/index contracts remain unchanged.
+
+Every completed fresh cold row0 prefix exactly matched all64 facts at42511:
+centre10165/1836, subpixels9525/23340, x/ground velocity24, y velocity0,
+10 rings/3 lives, grounded/unhurt, onObjectfalse, actual riding none, Right/noA.
+World/Level/ObjectManager/P1/LEVEL references, focused player, no pending fresh
+assembly/callback fade/control locks were checked. Stale Mushroom Cap latch is
+history, not actual support. Completed later cold-prefix public64 series also
+match the first R6 cold byte-for-byte. No snapshots, restores or state seeds ran.
+
+Current-source inspection covered JumpHeight/fresh air-ability edges, wall-grab/
+ledge transitions, Madmole and Spikes. The pinned MHZ2 object placement file has
+one exact3330-byte match at original ROM offset0x1F306A (SHA256
+7a662d8002b6858e27e4b228e6824c53513ada0faf47b1885e199d4256ea00a5).
+Full8-bit object IDs identify0x8C Madmole10208/1824; rawY bit15 owns tracking,
+bits13..14 render flags. Spike placements include10256/1888..2240,10360/2352
+and10608/1792..2288. These static ROM/source positions and bounded public nearby
+samples do not identify the R5 or R6 hurt receiver; proximity and a stale latch
+are not damage attribution. No terrain/collision/provider predicate was re-probed.
+
+Before execution, all three finite6000-input policies were registered:0 repeats
+{48 R+A;1 R;71 R+A}50 times;1 holds6000 R+A;2 repeats{36 R+A;1 R;23 R+A}100 times.
+Only actual public pre-step flag4 admits Up. Each policy uses a fresh JVM/cold
+prefix; there is no offset old-tail splice. Production InputLogAuthorTool/loader
+supplied the palette, then authored/reloaded and compared every actual emitted
+proposal row. All42512 selected R5 rows, R4 first40859 and Act1 first30000 stay
+exact; P2 is neutral. Products contain only the actually executed tail, not an
+unexecuted remainder of the6000 bound.
+
+All three actual trials selected zero Up inputs: no pre-step flag4 was reached
+after this inlet, so R6 does not qualify another climb branch.
+
+The predeclared stop rejects first hurt/ring loss/life loss/death/world-mode-P1
+boundary. A meaningful onward candidate requires X>=10784 with unhurt released
+ground flags and no actual rider/onObject, or selected Mushroom Cap support;
+a hazardous owner never qualifies. No stop predicate or label changed after
+execution. Original R5's hazardous safe-label rejection remains intact.
+
+| Policy | Appended / complete rows | Last input | MaxX | Actual terminal centre and fields |
+| --- | --- | --- | --- | --- |
+| 0 | 108 / 42620 | 42619 | 10581 | 10581/2082, hurt=1, rings=21, lives=3 |
+| 1 | 109 / 42621 | 42620 | 10581 | 10581/2094, hurt=1, rings=21, lives=3 |
+| 2 | 132 / 42644 | 42643 | 10581 | 10581/1985, hurt=1, rings=13, lives=3 |
+
+Three unique policies exhausted; no safe onward frontier qualified.
+
+Policies0/1 record actual left-column Spikes support42562..42566 before later
+hurt; that hazardous support is not accepted as a safe checkpoint. Their first
+hurt rows stop immediately, still reporting21 rings/3 lives; a later ring-count
+publication was not executed and must not be invented. Terminal actual riding
+is none in those rows. R5's first hurt receiver remains UNKNOWN, and no R6
+original damage-owner call witness was collected. Selected complete nearby
+rows/owners, every actual outcome/error and source hashes remain in the existing
+external observation record; no native equivalence or all-internals claim follows.
+
+| Policy / command session | Reported queue wait seconds | Maven report | Exit |
+| --- | --- | --- | --- |
+| 0 / 55129 | 329 | [INFO] Total time:  23.690 s | 0 |
+| 1 / 58371 | 943 | [INFO] Total time:  22.927 s | 0 |
+| 2 / 31888 | 421 | [INFO] Total time:  23.336 s | 0 |
+
+Build-only9450 succeeded in reported01:02 min, with external javac--release25
+under owned worktree/shared activity leases. Each ordinary request used the
+current absolute Main queue wrapper from this owned cwd, `-Dmse=off exec:exec -B`,
+Java25, runtime classpath, Xmx3g, native access, surfaceless EGL, null audio,
+Lua5.4, DISPLAY/WAYLAND_DISPLAY unset, canonical absolute original ROM SHA1
+CFBF98C36C776677290A872547AC47C53D2761D6, native320 solo Knuckles/off/cold7/0,
+original title semantics/null seeds, and one normal draw after each actual step.
+Exact argv/Java identities, returned ordinal7 task/run IDs and timings are in the
+owned R6 registry/record. Waiting remained pending, never a failed or repeated
+policy. Commands are bounded executable observations:0 JUnit tests, skips N/A;
+exit0 does not qualify an unsafe controller path.
+
+Useful proposals under the existing `MHZ_DIAGNOSTIC_DIR`:
+
+- `r6-products/policy-0.bk2`: 42620 actual executed rows; SHA256 `6b5ef9902a645457404623a97e7a4da030a5fc9004e512060ca979b52130657c`.
+- `r6-products/policy-1.bk2`: 42621 actual executed rows; SHA256 `f7aed0df733578ef8a0e93f4b649c6d6deb55e7bfd5f331a2619a7b1baa1a1ae`.
+- `r6-products/policy-2.bk2`: 42644 actual executed rows; SHA256 `c6326d4c2cb14c4c427e2e950c1279a22f720f29381cd82423e664f5bd7e5d4c`.
+
+The private source-owned adapter/reader and compact facts remain external.
+All consumed raw logs/series/classes were removed under owned leases BEFORE
+this docs-only append/local normal-hook commit. No extra agent, broad/maintained
+test, qualifying pair, native run, full66282/FBZ/campaign execution, source fix,
+maintained adaptation, push or integration occurred. Root owns any further
+source/ordinary-input question and workload after this bounded result.
+See the [R6 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-reached-ledge-continuation-r6--2026-10-21).
