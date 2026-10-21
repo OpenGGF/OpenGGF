@@ -1033,3 +1033,15 @@ Same-JVM preboot/post-stop production author/loader and independent script/BK2 w
 Session49706 exited0,0 JUnit/skips N/A:reported queue215s/Maven01:27/AUTHOR22.867235552s including product proof; engine-only/tail-only unmeasured, no original/metadata exception. Requested climb/ledge-exit target was not reached.
 The [R22 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-original-upper-ledge-immediate-jump-alternative-r22--2026-10-21) pins policy/source/products/command/22:04 workload/22:14 cleanup; owned raw outputs/classes/tmp/validation copies were consumed under leases, target absent.
 Useful inputs/private source/preimages/all117 ordered rows/compact facts remain external. Prior refs/native/config/maintained runtime/data/oracles/windows are preserved; STOP Root review, no push/integration/automatic next workload.
+
+### Knuckles fall2-to-first-ground ordinary question R23 — 2026-10-21
+
+At exact404a45c3, all43458 R22 pads/607 complete64 checkpoints matched:490prior+117R22. [R22/R20 setup](#knuckles-original-upper-ledge-immediate-jump-alternative-r22--2026-10-21), runtime/POM/observer/context order are unchanged; failed R21tail and old budgets/results remain immutable.
+Constant Right-only/P2neutral43458..43492 released ABC and continued only actual cachedfall2/air/jumping/9x19/RIGHT.35 new/43493 total normal step/draw pairs ran; no new jump/glide/Up/getup/retry or ground walk.
+FIRST and ONLY new non-air row43492 met target:11363/2350,flag0/airfalse/jumpingfalse/default9x19,VX/VY/G0,angle-4,RIGHT,anim35/map156/animationtick15,1ring3lives/unhurt/alive/raw controlsfree/onObjectfalse/actualridernone.
+Markertrue was retained, not required; animationtick15 is not private move_lock/expiration evidence. Zero velocity/pose were observed outcomes, not stop prerequisites; no timer/idle/marker wait or later input occurred.
+All35 original context/pending/fade/control/rider/safety guards passed; no new publichurt/death/ringlife loss. Stale Spikes is separate; selected floor geometry/terrain/contact receiver/freshness/mutation/protection/fluid/reverse/native cause remain UNKNOWN. Old R21 short-circuited operands stay UNKNOWN.
+Same-JVM preboot/post-stop production author/loader and independent script/BK2 whole43493-row/entire43458-prefix/payload/P2/JUMP0x10 proofs passed; all35 complete new rows/errors/proofs/metadata were read.
+Session29574 exited0,0 JUnit/skips N/A:reported queue152s/Maven02:56/AUTHOR52.434064366s including product proof; engine-only/tail-only/compiler-only unmeasured, no original/metadata exception. Bounded firstground reached, no broader qualification.
+The [R23 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-fall2-to-first-ground-ordinary-question-r23--2026-10-21) pins policy/source/products/command/23:04 workload/23:14 cleanup; owned raw outputs/classes/tmp/validation copies were consumed under leases, target absent.
+Useful inputs/private source/preimages/all35 ordered rows/compact facts remain external. Prior refs/native/config/maintained runtime/data/oracles/windows are preserved; STOP Root review, no push/integration/automatic next workload.
