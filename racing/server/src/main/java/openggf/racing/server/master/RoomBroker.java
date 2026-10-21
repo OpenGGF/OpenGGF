@@ -289,6 +289,7 @@ public final class RoomBroker {
 
     private void onPowSolution(Member member, ControlMessage.PowSolution solution) {
         boolean valid = switch (solution.kind()) {
+            case null -> false;
             case "IDENTITY" -> member.state == State.PENDING_IDENTITY_POW
                     && ProofOfWork.verify(member.publicKeyEncoded, solution.nonce(),
                     config.identityPowBits());

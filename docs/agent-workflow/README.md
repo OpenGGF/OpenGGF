@@ -2,6 +2,10 @@
 
 Support material to help agents implement OpenGGF objects/zones/trace-fixes with less context loss.
 
+- [Racing socket stress tool](../../racing/README.md#adversarial-and-capacity-testing):
+  reproducible local room-capacity, hostile-state and lifecycle checks, with explicitly
+  scoped protocol-load measurements (2026-10-21 racing stress task).
+
 Zone delivery: [methodology v2](../architecture/designs/2026-09-15-zone-methodology-v2.md)
 retains FBZ's route slices and adds early short native comparisons and compatibility
 checks. Its first target is the [Sandopolis plan](../architecture/plans/2026-09-15-soz-methodology-v2.md).

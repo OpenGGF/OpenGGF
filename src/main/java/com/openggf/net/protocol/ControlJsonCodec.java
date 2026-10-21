@@ -25,7 +25,9 @@ public final class ControlJsonCodec {
     private final ObjectMapper mapper = new ObjectMapper(JsonFactory.builder()
             .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
             .build())
+            .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT)
             .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
             .enable(DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES);
     private final Set<String> envelopeFields = Set.of("v", "token", "msg");
     private final Map<String, Class<? extends ControlMessage>> messageTypes =
@@ -97,7 +99,7 @@ public final class ControlJsonCodec {
                 }
             });
             JsonNode version = root.get("v");
-            if (version == null || !version.isIntegralNumber()
+            if (version == null || !version.isIntegralNumber() || !version.canConvertToInt()
                     || version.intValue() != Protocol.VERSION) {
                 throw new ProtocolViolationException("unsupported protocol version " + version);
             }

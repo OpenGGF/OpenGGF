@@ -172,8 +172,11 @@ target/racing-server/racing-server load-test --n 256 --duration 30 --mix adversa
 target/racing-server/racing-server verifier --master https://host:27900 --registration-token <token> --rom s3k.gen --data ./verifier-data
 ```
 
-The CI scale gate runs 32 in-JVM bots through `TestGhostLoadTest`; the 128/256-player gate
-above measures hub aggregation CPU, not deployed socket throughput.
+`TestGhostLoadTest` checks exact healthy completion and adversary outcomes with
+in-JVM bots. The `load-test` command reports hub-tick CPU timing and largest emitted
+packet size; it excludes ingress processing and does not measure transport queues or
+socket throughput. The [racing stress plan](plans/2026-10-21-racing-stress-system.md)
+defines complementary stateful adversarial and real-socket capacity coverage.
 
 ## Scoped mutators prototype
 

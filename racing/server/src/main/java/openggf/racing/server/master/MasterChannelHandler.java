@@ -71,8 +71,9 @@ final class MasterChannelHandler extends SimpleChannelInboundHandler<WebSocketFr
     @Override
     public void userEventTriggered(ChannelHandlerContext context, Object event) throws Exception {
         if (event instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
-            connection = new NettyMasterConnection(context.channel(), remoteHost);
-            brokerLoop.execute(() -> broker.onConnected(connection));
+            HubConnection connected = new NettyMasterConnection(context.channel(), remoteHost);
+            connection = connected;
+            brokerLoop.execute(() -> broker.onConnected(connected));
             return;
         }
         if (event instanceof IdleStateEvent) {
@@ -136,8 +137,15 @@ final class MasterChannelHandler extends SimpleChannelInboundHandler<WebSocketFr
             }
             var attach = broker.takeAttachResult(current);
             context.executor().execute(() -> {
-                attach.ifPresent(result -> applyAttach(context, result));
                 brokerInFlight = false;
+                if (!context.channel().isActive()) {
+                    // The broker may hand off ownership before the IO loop observes
+                    // it. Inactive ran in BROKER mode, so release that new owner here.
+                    attach.ifPresent(result -> releaseAttach(current, result));
+                    pendingFrames.clear();
+                    return;
+                }
+                attach.ifPresent(result -> applyAttach(context, result));
                 if (context.channel().isActive()) {
                     context.channel().config().setAutoRead(true);
                     context.read();
@@ -146,6 +154,15 @@ final class MasterChannelHandler extends SimpleChannelInboundHandler<WebSocketFr
             });
         } catch (RuntimeException e) {
             context.executor().execute(context::close);
+        }
+    }
+
+    private void releaseAttach(HubConnection current, RoomBroker.AttachResult result) {
+        if (result.mode() == RoomBroker.AttachMode.ROOM) {
+            relays.find(result.roomId()).ifPresent(access -> access.loop().execute(
+                    () -> access.room().onDisconnected(current)));
+        } else {
+            brokerLoop.execute(() -> tunnels.guestDisconnected(result.guestId()));
         }
     }
 
@@ -192,6 +209,7 @@ final class MasterChannelHandler extends SimpleChannelInboundHandler<WebSocketFr
 
     @Override
     public void channelInactive(ChannelHandlerContext context) throws Exception {
+        pendingFrames.clear();
         if (connection != null) {
             HubConnection disconnected = connection;
             RelayRoomManager.RoomAccess disconnectedRoom = roomAccess;
