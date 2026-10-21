@@ -4416,3 +4416,15 @@ All prior history and maintained runtime/POM/tests/movies/windows/counts/oracles
 including expected46, remain unchanged. Exact finite policy, geometry/read pins,
 actual events and limits are in the dated
 [completion plan](../../plans/2026-10-13-s3k-playable-completion.md#r12-ordinary-carry-release-and-landing--2026-10-21).
+
+## R13 ordinary grounded plateau only — 2026-10-21
+
+At exact `a6f2116d`, the unchanged R12 setup/full14618-row prefix and inlet14617 match.
+One finite neutral/Right/Left/neutral P1 policy with P2Up reaches(4164,1196): first
+three grounded/unhurt/free zero-motion P1 rows14850..14852 after235 new inputs.
+P2 is grounded,flight0/fuel0/NORMAL/manualtrue; both live,62rings/3lives. No carry,
+control or actual rider occurred; terrain owner/stored-sensor freshness/cooldown
+and ring collector/award owners remain UNKNOWN. All14853 actual pads and four
+whole prefixes roundtrip; preboot36-pad proof includes Left/Right/JUMP0x10.
+**0 JUnit/0 skips**, one ordinary CLI, no qualification/native/MTZ/fullroute claim;
+expected46 unchanged. [Policy, fingerprints, timing and limits](../../plans/2026-10-13-s3k-playable-completion.md#r13-ordinary-grounded-plateau-only--2026-10-21).

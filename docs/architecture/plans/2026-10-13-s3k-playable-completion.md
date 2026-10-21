@@ -28817,3 +28817,32 @@ Preboot proof SHA256:`60a0758a740dad84a751872ff76c45178be571e59a5ee780e844820073
 Private R11 preimage/18 reversible orchestration edits and useful inputs remain external. Consumed raw streams/classes/tmp/roundtrip copy are removed; target is absent.
 No retry, new policy, seeds/restores/probes, runtime/maintained-data/oracle/window change, extra agent, push/integration or foreign cleanup occurred. Root owns any later question.
 See the [R12 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-complete-fixed-tail-question-r12--2026-10-21).
+
+## R13 ordinary grounded plateau only — 2026-10-21
+
+One cold lifecycle at `a6f2116d0b12588f4c2b0036e928d8dbb3297185` uses the
+unchanged [R12 setup](#r12-ordinary-carry-release-and-landing--2026-10-21).
+All14618 R12/14442 R11/14414 R10/9914 original inputs are exact; the full public
+R12 inlet14617 matches before any new input. No maintained executable/data changes.
+One declared policy: PARK180, ASCEND300/no-progress60, BRAKE60, SETTLE60; total600.
+P2 holdsUp throughout; P1 neutral/Right/Left/neutral, with no action/jump or retry.
+
+| Actual phase | New inputs | Last input | Observed boundary |
+| --- | --- | --- | --- |
+| PARK | 59 | 14676 | P2 grounded(4055,1215), flight0/fuel0/NORMAL/manualtrue. |
+| ASCEND | 157 | 14833 | P1(4160,1196), VX/G753, grounded/unhurt/free. |
+| BRAKE | 6 | 14839 | P1(4167,1196), VX/G-128. |
+| SETTLE | 13 | 14852 | First three zero-motion grounded/free rows14850..14852 at(4164,1196). |
+
+Both remain live/unhurt,3lives, same bound managers/world/native pair/focus/LEVEL;
+P2 ends(4010,1238), grounded,VX-153/VY62/G-165,flight0/fuel0/manualtrue. Public rings
+59→60 at14671,61 at14721,62 at14741; original collector/award owners UNKNOWN.
+All235 new public rows have no carry/context/control/rider/P1air boundary. Stored
+sensors are copied without scanning; terrain owner/freshness and cooldown UNKNOWN.
+Same-JVM preboot36-pad production-author/loader proof includes P1Left/Right and
+positive JUMP0x10/booleans/masks/payload; all14853 actual rows and four prefixes roundtrip.
+One current absolute Main queue `--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl compile exec:exec -B`;
+wait115s, Maven16.505s, launcher133.761s; exit0, **0 JUnit/0 skips**, not a suite pass.
+Source fingerprint `f8c710eefdb16166f6e186e2927fb63ba0c587eda2aa7cad326464b559947a17` (10808 paths: sorted src/main/src/test/POM/.mvn path-NUL-bytes-NUL).
+Adapter SHA256 `d2336fd3ff4dc968dcec45419049aa16c844519bcd71f75dee9cbfec814bc96e`; BK2 `8a6ac8c24c10f36f66f0a3877fba139e6d9291066584a3cc6d84f7d5a71258b1`.
+Useful specific source/preimage/fixed inputs/compact facts/two normal images remain external; owned raw diagnostics consumed. No independent qualification/native800/pixels/physics/MTZ/fullroute claim; expected46 and all prior histories unchanged.
