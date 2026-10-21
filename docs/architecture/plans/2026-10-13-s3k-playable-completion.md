@@ -28770,3 +28770,27 @@ snapshots/restores/seeds, runtime/test/POM/maintained-data/oracle/window edits,
 native/model/broad runs, extra agents, push/integration or foreign cleanup.
 Root owns review and any further workload; no onward question is inferred.
 See the [R11 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-original-remaining-right-tail-question-r11--2026-10-21).
+
+### MHZ Knuckles complete-fixed-tail question R12 — 2026-10-21
+
+R12 used exact `a6f2116d0b12588f4c2b0036e928d8dbb3297185`; runtime/POM and [R11 setup](#mhz-knuckles-original-remaining-right-tail-question-r11--2026-10-21) are unchanged.
+One budget was consumed before the sole request, with explicit16:54:49.177308Z expiry; all earlier refs/results/budgets stay immutable.
+Only original fixed43115-movie Right/P2neutral/A-released rows42856..43114 were authorized; no changed tail, jump, extension or coordinate stop.
+Same-JVM preboot production author/loader proved all43115 rows and the full42856 R11 prefix, finite alphabet/masks/booleans/payload and10169 positiveJUMP0x10 rows.
+All64 checkpoints42511/42634/42734/42811/42855 matched; original public64 ran once per normal step/draw and retained scalars drove decisions.
+Exactly151 new rows42856..43006 ran (43007 total); first new hurt at43006 stopped the lifecycle, leaving108 fixed rows unexecuted.
+42869 first reached X10869/Y2412;42876 first retained negative VX-197. Neither observation identifies a contact or damage owner.
+43005 remained grounded/unhurt at10869/2412, velocity-197/-6/ground0,1 ring/3 lives, onObject=false/actual rider none.
+43006 is10869/2412, sub14389/39980, velocity512/-1024/ground0, angle-4, airborne/hurt; rings1→0 on this SAME boundary, lives3/no death.
+All150 preceding new rows were grounded/unhurt/rings1; no actual rider/control handoff preceded the stop. Stale Spikes slot25 remained separate from actual rider none.
+Hurt receiver, invulnerability and original terrain/mushroom/contact ownership remain UNKNOWN; static Mushmeanie proximity supplies no attribution.
+The hurt short-circuit precedes terminal pending/fade checks; those terminal getters were not re-run. No source omission, safe inlet, native/full-act/FBZ/rewind qualification follows.
+Command was current absolute Main queue wrapper `-Dmse=off compile exec:exec -B`, runtime classpath, Python `r12_exec.py %classpath`, unchanged R11 Java25/ROM/EGL/null-audio/Lua environment.
+Session99681/one observer exited0: reported queue1s, Maven01:24, boot/prefix/tail22.093s;0 JUnit/skips N/A, no command-metadata exception.
+Same-JVM post-stop production author/loader compared every executed row to the fixed movie, preserving all prior prefixes.
+External `r12-products/executed.bk2` SHA256:`5d1adf11e7ed19ca9dcee3049abf1a98d09a3a484b47b2de470dd576a9e2a454`.
+`executed.script` SHA256:`263608f5e115cca5aa6fe4e320d36e08113e274629ce24568b45c335dc5b6401`.
+Preboot proof SHA256:`60a0758a740dad84a751872ff76c45178be571e59a5ee780e844820073761759`; exact argv/source/identity/selected64 rows remain in existing external compact record.
+Private R11 preimage/18 reversible orchestration edits and useful inputs remain external. Consumed raw streams/classes/tmp/roundtrip copy are removed; target is absent.
+No retry, new policy, seeds/restores/probes, runtime/maintained-data/oracle/window change, extra agent, push/integration or foreign cleanup occurred. Root owns any later question.
+See the [R12 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-complete-fixed-tail-question-r12--2026-10-21).
