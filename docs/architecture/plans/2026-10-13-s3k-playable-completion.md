@@ -26811,3 +26811,106 @@ unchanged. No additional baseline, maintained class, controller, private observe
 native execution or broad run was submitted; Main complete and current paired 800
 MTZ/Mecha/DEZ remain unqualified. Local tool delivery goes to Root for independent
 source review and composed validation; no push or integration occurs here.
+
+## Wide paired original group2 gate R7 — 2026-10-21
+
+This distinct bounded operand slice uses owned
+`feature/ai-ssz-group2-operands-20261021` at exact current
+`a49194fd0ae43ad86057cecf0e2e9a3bfc45a21b`, preserving R1–R6 refs and useful external
+methods. Exactly two ordinary cold row0 prefixes compare exact Main
+`efd605142603146509995cffbb56a6b48f9c1c1b` with that current source. They consume the
+original first-movie inputs0..7007 inclusive, P2neutral, Settings7
+`(800,sonic,tails,off,null,null,null)`/titlefalse, normal step then renderFrame.
+There is no restore/import, extra gameplay query, seed, controller authoring,
+9914 endpoint, maintained test, broad sweep or native reference execution in this slice.
+
+Temporary defaultnull carriers use full literal preimages/inverse prepared before
+source edits. Only EggRobo constructor/state lookup/gate/original branch/bit
+publication, the four actual SSZ pairing-word writers and registry install/clear
+are instrumented. `S3kRuntimeStates.currentSsz`, `currentAs`, predicates and original
+providers are not replayed. Original evaluated locals/returns and strong references
+are retained, with1024 fixed event rows/max32 values; overflow fails qualification
+after ordinary execution. Original throw envelopes and once/evaluation order are
+preserved. Ssz constructor capture retains actual state/act/team but **no evaluated
+pairing word**; default0 is source knowledge, separate from later actual reads.
+All temporary source is restored WHOLE byte exact after each arm; exact compiler
+created-file lists and compile status are consumed before switching/final rebuild.
+
+Both requests use the current absolute Main queue wrapper:
+`--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl compile exec:exec -B`,
+with runtime classpath and the same temporary `WideGroup2Projection.java` source
+launcher, original movie, fresh target-local output/temp/native extraction paths.
+Java25.0.4.1, EGL/nullAL/Lua5.4, verified original absolute S1/S2/S3K ROMs and ambient
+JVM/display/library unsets are unchanged. Adapter/probe/POM/JVM-config/movie/config
+pins agree between arms; SSZ state and registry original/instrumented source bytes
+also agree. The current request waited for admission and was kept, not restarted.
+Actual XML/properties and raw streams are read: **7008 inputs,21024 rows,115 fields,
+0JUnit tests,0skips per arm**. All115 fields match PRE/POST3491,3507,6721 in the
+retained same-arm R3 rows, also previously matched by R5. No further full115 R5
+public rows through7007 exist to compare; no prior raw series is reconstructed.
+
+### Actual group2 query and original branch
+
+The actual layout23 body in each JVM is born6962 from the immutable original
+placement argument `(1312,2304,$A0,$22,flags1,rawY10496,respawn=false)`.
+Constructor argument→raw body→original registry argument→returned raw SSZ state→
+original word-query receiver→original gate and branch all join by strong actual
+references within that JVM. LOCAL labels are never native addresses or cross-JVM
+object equality. Static placement/layout establishes correspondence only.
+
+Main's original early movement gate6962 reads non-null state, word15 (`$000F`),
+group2/mask4, passed=true; helper waiting=false and original admission is selected.
+Current's original initialization gate7006 reads non-null state, word11 (`$000B`),
+group2/mask4, passed=false; waiting=true selects GONE and the original delete call
+returns normally. This agrees with R5's retained current retirement at7006; the
+word/receiver/outcome are now measured rather than inferred from that retirement.
+
+Each arm has one actual SSZ constructor and boot registry installation. All gate
+lookups return that same local state. Each has four original word queries (groups
+3,0,1,2 once each), including exactly one layout23/group2 query. Main has eight
+original body state lookups, current seven; additional Main nonfighter helper
+returns execute no word query. There are no whole-word setters, act2 word setters,
+restore writes or pre-gate registry replacements. Registry clear is CLOSE after
+input7007. Carrier totals are55/40 rows, no overflow.
+
+### Original write history and remaining owner
+
+Every recorded bit publisher binds its actual body and immutable original spawn
+to the exact state receiving the write. The original read/mask/OR/assignment and
+normal publisher return are retained once:
+
+| Pairing group / publisher layout | Before→after when invoked | Main input | Current input |
+|---|---|---|---|
+| 3 /31 | 0→8, mask8 | 1928 | 1934 |
+| 0 /140 | 8→9, mask1 | 3028 | 3061 |
+| 1 /86 | 9→11, mask2 | 6491 | 6563 |
+| 2 /30 | 11→15, mask4 | 6819 | no invocation through7007 |
+
+The first actual word-query reads0 at Main1898/current1917, independently of the
+constructor default. Main's group2 publisher is its actual layout30 body, born6792
+at `(1552,2448,$A0,$20,flags0,rawY2448,respawn=false)`. Current constructs the
+corresponding placement at6792 but never publishes group2 within the covered
+prefix. Its last actual pairing-word write remains9→11 at6563. Thus the current
+rejection follows a genuinely clear bit in the same installed state; null lookup,
+whole-word overwrite and replacement are excluded by the covered original history.
+
+Pinned shipped FixBugs0 skdisasm`044fa467` `sub_91914` reads `_unkFA82`, tests the
+subtype's high-nibble bit and returns when set, otherwise discarding the caller
+and deleting before attributes/children. Group2's actual mask4 and the observed
+set/clear outcomes agree with this conditional. Native `loc_91570` owns fly-by
+publication. R7 does **not** observe native RAM/trajectory, or layout30's original
+`Obj_WaitOffscreen` continuation, flight termination or unload operands. The next
+precise question is why that actual fly-by has not reached publication by7006;
+which of those lifecycle/exit boundaries owns the delay remains UNKNOWN. No
+additional seam/run or runtime fix follows here, and48 is not made an oracle.
+
+Raw CSV/events/XML/logs/temp/native extraction are consumed after inspection.
+Useful `WideGroup2OperandProbe`, public adapter, asserted literal instrumentation,
+whole preimages and compact selected `FIRST_GROUP2` facts remain outside the repo.
+A final current-source compile through the same wrapper is build-only output
+accounting, not a third prefix or test result. Final maintained changes are only
+this factual note and the existing SSZ matrix. Expected46, all maintained inputs,
+assertions, runtime and POM remain unchanged; Main complete/current paired800
+MTZ/Mecha/DEZ and native whole-trajectory correctness remain unqualified. Local
+normal-hook documentation commit goes to Root for independent review/composition;
+no push, integration or foreign-worktree cleanup occurs here.
