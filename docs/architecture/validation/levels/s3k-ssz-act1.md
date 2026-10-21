@@ -4516,3 +4516,12 @@ Left/noABC/P2Up runs25 inputs:15124P1(4751,1528),VX960/VY3936/G0;15125(4754,1543
 15126 total; no ground publication, neutral phase, stable lower inlet, new Aedge or actual rider. Both62rings/3lives/unhurt; P2ground/free/NORMAL/manual/flag0fuel0 and bound world/pair/focus/managers/LEVEL remain intact.
 Same-JVM finite-pad/all15126-row production proofs and independent whole script/ZIP/TEN-original-file proofs agree; **0 JUnit/skips N/A**; lower-brake/settle question failed before ground.
 Expected46/runtime/POM/maintained data unchanged; no current terrain receiver/native/physics cause or runtime omission proved. Stored-sensor freshness/private states remain UNKNOWN. [Facts, policy, hashes, command and timing](../../plans/2026-10-13-s3k-playable-completion.md#r20-lower-branch-braking-stops-at-the-east-bound--2026-10-21).
+
+
+## R21 first free lower-ground publication — 2026-10-21
+
+At exact `bf2937e27`, one cold ordinary CLI preserves all15126 R20 pads and matches60 unique available R checkpoints plus all retained Support/Family facts; R19/R20 failures unchanged, no missing25 raw-state reconstruction.
+Three Left/noABC/P2Up rows reach FIRST public ground15128: P1(4765,1580),VX864/VY0/G864,airfalse/jumpingfalse/free/unhurt/live/riderNULL; both62rings/3lives. P2ground/free/NORMAL/manual/flag0fuel0 and bound world/pair/focus/managers/LEVEL intact.
+15129 total, zero new actions/neutral/jump/onward; STOP at that moving ground publication. NEWX<4773 is a separate source-bound question, not a green R20X<4752 result.
+Same-JVM finite-pad/all15129-row production proofs and independent full script/ZIP/ELEVEN-original-file proofs agree; **0 JUnit/skips N/A**.
+Actual terrain receiver/stored-sensor freshness, stable ground, spike contact/clearance/protection, next jump/route/native cause remain UNKNOWN. Expected46/runtime/POM/maintained data unchanged. [Facts, limits, hashes, command and timing](../../plans/2026-10-13-s3k-playable-completion.md#r21-first-moving-lower-ground-admission--2026-10-21).
