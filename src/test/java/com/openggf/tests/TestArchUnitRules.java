@@ -753,6 +753,9 @@ class TestArchUnitRules {
             String originSlice = topLevelSlice(origin);
             for (Dependency dependency : origin.getDirectDependenciesFromSelf()) {
                 JavaClass target = dependency.getTargetClass();
+                // Enum values()/synthetic $VALUES use array descriptors; ownership belongs
+                // to their element type, just as for ordinary value-type references.
+                if (target.isArray()) target = target.getBaseComponentType();
                 String targetSlice = topLevelSlice(target);
                 if (targetSlice == null || target.getName().equals(ModApi.class.getName())) continue;
                 if ("stageplay".equals(originSlice)) {

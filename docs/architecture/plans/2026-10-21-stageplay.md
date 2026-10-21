@@ -43,9 +43,9 @@ Dear ImGui desktop project. No new UI framework in the engine.
   files; queue all mutations into update. Build against isolated engine artifacts.
 - [x] Integration: engine host lifecycle/preview/cutscene entry; mod example and
   candidate API inventory/signature pins; guide, release note and design evidence.
-- [ ] Verification and review: focused tests, actual ROM art/audio/export, isolated
+- [x] Verification and review: focused tests, actual ROM art/audio/export, isolated
   visual checks, candidate API/structural guards and appropriate change-based smoke.
-- [ ] Delivery: reconcile current destination changes, integrate without branch
+- Delivery: reconcile current destination changes, integrate without branch
   switches or unrelated staging, push only destinations, remove accounted-for task
   worktrees/branches and consumed diagnostics.
 
@@ -199,13 +199,93 @@ coverage gap. The Stageplay HUD picture check, opt-in in broad smoke, was run
 explicitly and inspected in the focused acceptance above. This is bounded smoke
 validation, not a full-suite or route certification.
 
-## Checkpoint
+## Corrective validation
 
-2026-10-21: implementation commit `56d7d140c` and automatic upstream merges
-`9ba9a034e`/`597a5b78f` are local in the engine task tree. Desktop implementation
-commit `98a9659` is local. Broad diagnostics have been consumed. The core worker
-owns a bounded package-boundary correction; lead owns the PCM loop, cue callback,
-portable export launch and final validation/integration. No broad suite will be
-repeated solely because it was red: affected behavioral checks and architecture
-guards will verify corrections. No destination push or worktree cleanup has
-completed yet.
+At runtime source commit `d740156563c61dfeb896efdaf44a9c4ca87c4224`, a clean
+compilation followed by the affected 33-class selection passed **236 tests with
+no failures, errors or skips**. Execution was 91 seconds; admission wait was zero.
+This includes the warmed zero-allocation audio regression, authored-provider
+discovery and bounded/path/game checks, both workspace consumers, native playback,
+export cleanup, API signatures and all seven upstream repaired fixture classes.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestStageplayDocument,TestStageplayTimeline,TestStageplayController,TestStageplayStore,TestStageplayWorkspace,TestStageplayHud,TestStageplayHudPictures,TestStageplayPlayback,TestStageplayRenderer,TestStageplayCueDispatcher,TestStageplayAudioSamples,TestStageplayAudioLifecycle,TestStageplayCaptureTool,TestStageplayRegistration,TestStageplayNativeBinding,TestStageplayLivePlayback,TestStageplayExportJob,TestAuthoredLevelResources,TestOgfProjectLevelDecoder,TestEditorProjects,TestEditorProjectValidation,TestEditorWindowChromes,TestEditorProjectWorkspace,TestAudioPresentationProducer,TestCompleteRunAudioCli,TestModApiSignatureSurface,TestTitleInputOwnership,TestOrdinaryTitleScreenCommandEvidence,TestZoneLayoutMutationPipeline,TestLevelManagerModPatternWindows,TestAizMinibossBarrelShotChild,TestOwnedNativeAttackLifetime,TestPresentationSpritePixels' \
+  -Dopenggf.stageplay.hudPictures=true -Dopenggf.headless.gl=surfaceless-egl \
+  -Dsonic1.rom.path=<verified-S1> -Dsonic2.rom.path=<verified-S2> \
+  -Ds3k.rom.path=<verified-S3K> clean test -B
+```
+
+The three refreshed HUD PNGs were byte-identical to the already reviewed images.
+
+Affected guards used the same display-free Java 25 environment:
+`python3 tools/testing/maven_queue.py -Dmse=off -Pguards
+-Dtest=TestAudioPresentationArchitectureGuard,TestArchUnitRules,TestProductionSingletonClosureGuard
+-Dopenggf.headless.gl=surfaceless-egl test -B`.
+This ran 112 tests, five failures, no errors/skips (44.424 seconds execution,
+61 seconds queue wait). Audio ownership's 38 tests, package cycles and the
+dependency-edge ratchet passed. Four failures matched the inherited violations;
+the new owner check also rejected compiler-generated enum-array descriptors.
+
+A test-only correction normalizes array targets to their element type before
+ownership checks. Rerunning the same guard command with only
+`-Dtest=TestArchUnitRules` ran 32 tests, two inherited failures, no errors/skips
+(33.994 seconds execution, 29 seconds queue wait). The Stageplay owner, cycle and
+edge checks passed. XML failure messages for both ArchUnit violations and the
+two singleton violations were compared against baseline by test identity and
+matched exactly. There are no remaining introduced validation failures; the
+four inherited guard failures remain visible. No cycle exemption or new legacy
+cluster member was added.
+
+The engine/SDK package completed with tests skipped in 38.115 seconds:
+`python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package -B`.
+Thin and universal jars contain the moved workspace and authored-level service
+descriptor/provider, with the old workspace class absent. Public Stageplay API
+classes remain in the engine jar; the SDK classifier intentionally contains
+creator tools, and its Javadoc classifier includes Stageplay's public contract
+without internal editor/provider types. The demo also built against the final
+universal engine and SDK artifacts through
+`python3 examples/build_example.py stageplay-demo --engine <universal-jar>
+--sdk <sdk-jar>`, under the shared build activity/worktree lease:
+**zero validator findings**.
+
+The final engine jar and POM were installed into the desktop task's private
+`.m2/repository` with `install:install-file`. At desktop commit `80b8886`,
+the engine queue wrapper then ran:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py -f <desktop-task>/pom.xml \
+  -Dmaven.repo.local=<desktop-task>/.m2/repository -Dmse=off \
+  -Dopenggf.stageplay.desktopPictures=true -Dopenggf.headless.gl=surfaceless-egl \
+  -Dsonic2.rom.path=<verified-S2> clean test -B
+```
+
+All **15 desktop tests passed, no failures/errors/skips**, in 3.668 seconds
+execution with zero queue wait. The two refreshed desktop PNGs were byte-identical
+to the reviewed images. Its generated default config reference was inspected and
+removed. Linux EGL does not certify native window focus, HiDPI behavior or macOS
+first-thread launch; those remain explicit coverage limits.
+
+Six local links in the added/updated Stageplay design, plan, guide and demo prose
+resolve, and whitespace checks pass. The broad run was acknowledged after its
+evidence was consumed; its diagnostics and temporary continuation were deleted.
+No raw logs or validation receipts are retained in version control.
+
+## Delivery handoff
+
+Both destinations were fetched and fast-forward checked after verification work:
+engine `develop` remains based on `ad12b52dc`; desktop `main` remains based on
+`1686a7189f0cbff96c4e06f277964f952e6223f2`. The current engine tree adds only the
+test-only enum-array guard correction and this evidence to runtime commit
+`d74015656`. Desktop `80b8886` has no pending edits. No build/test jobs remain.
+
+The destination integration must preserve unrelated main-workspace files and
+dirty reference submodules. Identical integrated source does not require another
+unchanged smoke run. Validate the actual destination push policy, push only
+engine `develop` and desktop `main`, then remove accounted-for task trees and
+the detached baseline. Final destination commits, push results and cleanup are
+reported at task completion; this handoff pins the verified source and limits.

@@ -1,6 +1,6 @@
 # OpenGGF Stageplay
 
-Status: approved product direction; first linear authoring delivery in progress.
+Status: first linear authoring implementation verified for integration; validation limits are recorded in the plan.
 
 ## Outcome
 
@@ -157,7 +157,7 @@ document capabilities. No separate Stageplay repository is required.
   the new additive voice-source loop. Indexed traversal preserves the existing
   zero-allocation presentation contract without changing mix order or ownership.
 
-The tested implementation is currently the pinned engine base plus task changes;
+The tested runtime implementation is `d74015656`;
 final candidate commit, combined smoke results and delivery are recorded in the
 [implementation plan](../plans/2026-10-21-stageplay.md). Media review artifacts are
 outside the repository, under the task's `stageplay-delivery` directory.
