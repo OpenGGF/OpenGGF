@@ -1010,3 +1010,14 @@ Same-JVM preboot/post-stop production author/loader and independent script/BK2 e
 Session24284 exited0,0 JUnit/skips N/A:reported queue3s/Maven01:23/AUTHOR21.600s including product proof; engine-only/tail-only unmeasured, no original/metadata exception.
 The [R20 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-lower-recovery-jump-to-ledge-ordinary-question-r20--2026-10-21) pins policy/source/products/command/20:54 workload/21:04 cleanup; owned raw outputs/classes/tmp/validation copies were consumed under leases, target absent.
 Useful exact inputs/private source/preimages/all173 ordered rows/compact facts remain external. Prior refs/native/config/maintained runtime/data/oracles/windows are preserved; Root reviews, no push/integration/automatic next workload.
+
+### Knuckles upper-ledge onward ordinary question R21 — 2026-10-21
+
+At exactf461f39c, all43341 R20 prefix pads and490 unique complete64 checkpoints matched; [R20 setup](#knuckles-lower-recovery-jump-to-ledge-ordinary-question-r20--2026-10-21), runtime/POM/public observer/context order remain unchanged.
+The sole declared policy approached the source11024..11039 band before one conditional jump/glide/onward-climb/Up; only56 new Right-only/P2neutral steps ran, stopping firsthurt43396 at10958/2225 before that band. No new A/glide/climb/Up ran.
+43395 was unhurt ground10955/2225,VX708/VY-70/G714,1 ring/3 lives.43396 retainedVX-512/VY-1024/G0,airtrue/flag0,anim26/map7,0 rings/3 lives/deadfalse; the same-boundary1→0 ring change was actually observed.
+All56 public rows retained actualridernone/onObjectfalse/free scalar controls. Stale Spikes is separate; damage/contact/protection/invulnerability/fluid/reverse/mutation/native cause remain UNKNOWN. Terminal pending/fade guards short-circuited after hurt; no retroactive false value is claimed.
+Same-JVM preboot/post-stop production author/loader plus independent script/BK2 full43397-row/entire-prefix/payload/P2/JUMP0x10 proofs passed; all56 complete new rows/errors/proofs/metadata were read, no retry or later input.
+Session50783 exited0,0 JUnit/skips N/A:reported queue66s/Maven01:25/AUTHOR25.459954305s including product proof; engine-only/tail-only unmeasured, no original/metadata exception. The gameplay question failed before launch.
+The [R21 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-upper-ledge-onward-ordinary-question-r21--2026-10-21) pins policy/source/products/command/21:24 workload/21:34 cleanup; owned raw outputs/classes/tmp/validation copies were consumed under leases, target absent.
+Useful exact inputs/private source/preimages/all56 ordered rows/compact facts remain external. Prior refs/native/config/maintained runtime/data/oracles/windows are preserved; no safe onward or full-route qualification. STOP Root review, no push/integration/automatic next workload.
