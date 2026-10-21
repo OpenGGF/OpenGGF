@@ -4465,3 +4465,16 @@ Unchanged owners:12T/8F/0E/0S. First fixed run:197T/4F/0E/0S (incorrect immediat
 OnObject-clear assertion); original jump retains that bit. Corrected final:197T/0F/0E/0S.
 Component setup is not cold/native800/route or rewind qualification; input14944 cause,
 full-route breadth and expected46 remain unchanged. [Source, exact selections, hashes, failures and timing](../../plans/2026-10-13-s3k-playable-completion.md#r16-rotating-post-and-carrier-retain-positive-control-support--2026-10-21).
+
+
+## R17 original first held row — 2026-10-21
+
+At exact `4bfd11c37`, all14944 R14 pads and original14943 inlet/raw family joins match.
+Original neutralP1/P2Up14944 retains grounded P1(4369,1164),V0/control+CPUallowance/
+movement suppression and SAME actual managed/live original post.child rider. Both
+unhurt/live,62rings/3lives; P2/world/pair/focus/LEVEL/manual/flag0 remain intact.
+Exactly1 new input/14945 total; no A edge/release/futuretail. Thirty original R-record
+and17 legacy available-scalar gates match (46 unique); missing historical fields UNKNOWN.
+Same-JVM production all-row/finite-pad and independent script/ZIP/SIX-prefix proofs;
+**0 JUnit/skips N/A**. Only first held input observed; original cause/private episode,
+longer hold/parent/native/route qualification and expected46 remain unchanged. [Facts, hashes, command and timing](../../plans/2026-10-13-s3k-playable-completion.md#r17-exact-original-first-held-input-retains-support--2026-10-21).
