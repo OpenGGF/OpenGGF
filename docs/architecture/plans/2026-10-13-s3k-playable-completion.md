@@ -25152,3 +25152,45 @@ identity follows. Controller data is not read in this prefix; neutral FrameAdvan
 is no BK2-row proof. Root's historical HCZ/FDF/cold results and all concurrent
 workers are unchanged. Work remains local and unintegrated; this implementation
 stops after qualification for parent review, with no push or worktree removal.
+
+
+### Root independent cold CPU prefix qualification — 2026-10-21
+
+Root adopted `984de812` plus the private same-buffer correction
+`b9355a1cf80be7f3a3dc240bf66496f98cdbc129` in normal merge
+`1ef37f8f491429c58a772a0ddfc654381ba42b3c`. The complete original six-file
+change received independent source review with oneP2: the CLI reread its
+expected path without a bound to print a digest after comparison. Root read
+the entire implementation/tests/docs and complete correction. The corrected
+private loader supplies both strict JSON and digest from the same bounded
+raw buffer; atomic small/65,537-byte path-replacement controls detect the old
+second-read defect. Execution, reset, MOVEM, refresh, profile, existing
+interpreter defaults and the unsupported-device stop are unchanged by that
+correction. Original44-case author evidence remains historical.
+
+On that composed merge, one focused request ran the documented
+`python3 -B -m unittest discover -s tools/timing/s3k-instruction-ledgers/mini68k -p 'test_*.py' -v`
+with all four explicit inputs: **46T/0F/0E/0S**, reported0.682s. All46 actual
+identities were inspected. One subsequent actual CLI invocation also passed:
+38 independently generated40-word records,11 retirements and13 logical reads,
+with `comparison_only:true` and `production_readiness:false`. It stops before
+PC0238/opcode3014/busC00004, without importing the observed device value.
+The same-buffer expected digest is
+`cc5067948cd9c6c05a0f09899e6827f3203dcd53c6cafda7a862958b1c5f7860`,
+identifying the unchanged23,773-byte qualified703 report.
+
+The explicit ROM/GPGX inputs match the author's recorded paths above;
+`COLD_ENTRY_TRACECHASER` in this Root request points to Root's existing clean703
+checkout. The CLI's authenticated source manifest and expected data are read-only.
+All six changed files, original ROM and retained expected report retain exact
+SHA/bytes/mode/integer-nanosecond metadata through the request. No Java,
+native build/capture, broad smoke or queue invocation was needed for this
+isolated diagnostic-only Python increment. Bounded stdout/stderr were read in
+memory; no report archive, bytecode cache or temporary test directory remains.
+
+The three device suffix records still have boundary/order checks only. A
+separate source audit is defining the first VDP-read semantics; this result
+does not close VDP/FIFO/open-bus/IRQ, production reset/Title continuity, movie
+row0 or11 actual hardware-job identities. Gameplay climb implementation and
+the retained CNZ grab continuation remain independent. Main delivery and
+owned-worktree cleanup remain pending; the overall goal stays active.
