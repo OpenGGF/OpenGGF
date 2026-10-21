@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +24,7 @@ public final class RelevanceClassifier {
     private final Map<Integer, List<Integer>> buckets = new HashMap<>();
     private static final int[] NO_NEAR = new int[0];
     private final Map<Integer, int[]> previousNear = new HashMap<>();
+    private final Set<Integer> excludedSenders = new HashSet<>();
     private final int[] nearestSlots = new int[NEAR_CAP];
     private final int[] nearestDistances = new int[NEAR_CAP];
 
@@ -36,8 +38,23 @@ public final class RelevanceClassifier {
 
     public void remove(int slot) {
         positions.remove(slot);
+        excludedSenders.remove(slot);
         previousNear.remove(slot);
         previousNear.replaceAll((recipient, near) -> without(near, slot));
+    }
+
+    /**
+     * An excluded sender keeps its position, roster cell and own near set, but
+     * is never another recipient's candidate, so the next-nearest eligible
+     * sender takes its place. Leaving the result also leaves exit hysteresis:
+     * once eligible again it re-enters only within {@link #NEAR_ENTER_PX}.
+     */
+    void setSenderExcluded(int slot, boolean excluded) {
+        if (excluded) {
+            excludedSenders.add(slot);
+        } else {
+            excludedSenders.remove(slot);
+        }
     }
 
     public void rebucket() {
@@ -84,7 +101,8 @@ public final class RelevanceClassifier {
                 }
                 int distance = distance(self, other);
                 if (distance > NEAR_EXIT_PX
-                        || (distance > NEAR_ENTER_PX && !contains(wasNear, peer))) {
+                        || (distance > NEAR_ENTER_PX && !contains(wasNear, peer))
+                        || (!excludedSenders.isEmpty() && excludedSenders.contains(peer))) {
                     continue;
                 }
                 // Keep only the nearest eight, ordered by distance then slot. This

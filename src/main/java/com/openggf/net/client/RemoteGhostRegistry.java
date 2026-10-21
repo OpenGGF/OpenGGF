@@ -104,7 +104,8 @@ public final class RemoteGhostRegistry {
 
     public List<RemoteGhost> advanceAll(int excludeSlot) {
         quietFrames.replaceAll((slot, age) -> age + 1);
-        playbacks.keySet().removeIf(slot -> quietFrames.getOrDefault(slot, 0) > STALE_PLAYBACK_FRAMES);
+        playbacks.entrySet().removeIf(entry -> quietFrames.getOrDefault(entry.getKey(), 0)
+                > STALE_PLAYBACK_FRAMES || attemptEnded(entry.getKey(), entry.getValue()));
         quietFrames.keySet().retainAll(playbacks.keySet());
         List<RemoteGhost> ghosts = new ArrayList<>();
         for (Map.Entry<Integer, RemoteGhostPlayback> entry : playbacks.entrySet()) {
@@ -119,5 +120,17 @@ public final class RemoteGhostRegistry {
             }
         }
         return List.copyOf(ghosts);
+    }
+
+    /**
+     * A stalled ghost whose roster status left RUNNING has finished or reset,
+     * so it returns to the coarse roster instead of freezing at half opacity
+     * until the quiet cutoff. A playback still draining frames is never dropped,
+     * including one whose late tail arrived after it stalled.
+     */
+    private boolean attemptEnded(int slot, RemoteGhostPlayback playback) {
+        GhostPackets.RosterEntry status = rosterState.get(slot);
+        return playback.isStalled() && !playback.hasPendingFrames() && status != null
+                && status.status() != GhostPackets.ROSTER_STATUS_RUNNING;
     }
 }

@@ -171,6 +171,45 @@ class TestRemoteGhostPlayback {
     }
 
     @Test
+    void attemptSwitchAfterDryEndRestoresInitialDelay() {
+        RemoteGhostPlayback playback = fed(RemoteGhostPlayback.INITIAL_DELAY_FRAMES);
+        for (int i = 0; i < RemoteGhostPlayback.INITIAL_DELAY_FRAMES; i++) {
+            playback.advance();
+        }
+        // The finished attempt stops streaming; every dry frame grows the delay.
+        for (int i = 0; i < 20; i++) {
+            playback.advance();
+        }
+        assertEquals(RemoteGhostPlayback.MAX_DELAY_FRAMES, playback.delayFrames());
+
+        playback.onEntry(entry(2, 0, RemoteGhostPlayback.INITIAL_DELAY_FRAMES));
+        assertEquals(RemoteGhostPlayback.INITIAL_DELAY_FRAMES, playback.delayFrames());
+        RemoteGhostPlayback.RenderState first = playback.advance().orElseThrow(
+                () -> new AssertionError("a retry starts after the initial buffer, not 30 frames late"));
+        assertEquals(0, first.frame().x());
+        assertEquals(1.0f, first.opacityScale());
+    }
+
+    @Test
+    void attemptSwitchRestartsCleanStreak() {
+        RemoteGhostPlayback playback = new RemoteGhostPlayback();
+        int next = 0;
+        int clean = 0;
+        while (clean < RemoteGhostPlayback.DELAY_SHRINK_CLEAN_STREAK - 1) {
+            playback.onEntry(entry(1, next++, 1));
+            if (playback.advance().isPresent()) {
+                clean++;
+            }
+        }
+        assertEquals(RemoteGhostPlayback.INITIAL_DELAY_FRAMES, playback.delayFrames());
+
+        playback.onEntry(entry(2, 0, RemoteGhostPlayback.INITIAL_DELAY_FRAMES));
+        playback.advance().orElseThrow();
+        assertEquals(RemoteGhostPlayback.INITIAL_DELAY_FRAMES, playback.delayFrames(),
+                "the old attempt's clean streak must not shrink the new attempt's delay");
+    }
+
+    @Test
     void registryRoutesAdvancesAndExcludesLocalSlot() {
         RemoteGhostRegistry registry = new RemoteGhostRegistry();
         registry.onRoomState(List.of(

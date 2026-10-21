@@ -173,6 +173,190 @@ class TestGhostHubScaleMode {
                 .map(GhostPackets.RosterEntry::playerSlot).toList());
     }
 
+    @Test
+    void finishedSenderRelaysBufferedTailThenYieldsItsNearPlaceToNextNearest() {
+        for (int slot = 4; slot <= 9; slot++) {
+            hub.addPlayer(slot, "fp-" + slot, new FakeHubConnection());
+            hub.onAttemptStart(slot, 1);
+        }
+        // Slot 1 is nearest and buffers more than one aggregate entry before finishing.
+        for (int batch = 0; batch < 15; batch++) {
+            stream(1, 1, batch * 3, 1010);
+            now += 50;
+        }
+        // RoomHost order: clearing the finished attempt reports a reset first.
+        hub.onAttemptReset(1, 1);
+        hub.onAttemptFinished(1, 1);
+
+        streamAllExceptSlotOne(0);
+        hub.tick();
+        assertEquals(List.of(1, 2, 3, 4, 5, 6, 7, 8), aggregateSlots(me));
+        assertEquals(GhostPackets.MAX_AGGREGATE_FRAMES_PER_ENTRY, entryFor(me, 1).frameCount());
+
+        me.binary.clear();
+        now += 50;
+        streamAllExceptSlotOne(3);
+        hub.tick();
+        assertEquals(List.of(1, 2, 3, 4, 5, 6, 7, 8), aggregateSlots(me),
+                "a silent sender stays relevant while its buffered tail drains");
+        assertEquals(GhostPackets.MAX_AGGREGATE_FRAMES_PER_ENTRY,
+                entryFor(me, 1).startFrameIndex());
+        assertEquals(45 - GhostPackets.MAX_AGGREGATE_FRAMES_PER_ENTRY,
+                entryFor(me, 1).frameCount());
+
+        me.binary.clear();
+        now += 50;
+        streamAllExceptSlotOne(6);
+        hub.tick();
+        assertEquals(List.of(2, 3, 4, 5, 6, 7, 8, 9), aggregateSlots(me),
+                "once drained, the next-nearest sender takes the parked finisher's place");
+    }
+
+    @Test
+    void silentSenderLeavesHysteresisAndReentersOnlyWithinEnterDistance() {
+        // Batch positions end two pixels on; steps stay under the validator speed ceiling.
+        int inside = 1000 + RelevanceClassifier.NEAR_ENTER_PX - 10;
+        int between = 1000 + RelevanceClassifier.NEAR_ENTER_PX + 20;
+        stream(0, 1, 0, 1000);
+        stream(1, 1, 0, inside);
+        hub.tick();
+        assertEquals(List.of(1), aggregateSlots(me));
+        me.binary.clear();
+        now += 50;
+        stream(1, 1, 3, between);
+        hub.tick();
+        assertEquals(List.of(1), aggregateSlots(me), "hysteresis keeps a running peer");
+
+        hub.onAttemptReset(1, 1);
+        hub.tick();
+        me.binary.clear();
+        now += 50;
+        hub.onAttemptStart(1, 2);
+        stream(1, 2, 0, between);
+        hub.tick();
+        assertTrue(aggregateSlots(me).isEmpty(),
+                "a retry outside the enter distance must not reuse stale hysteresis");
+        now += 50;
+        stream(1, 2, 3, inside);
+        hub.tick();
+        assertEquals(List.of(1), aggregateSlots(me));
+    }
+
+    @Test
+    void silentRecipientKeepsItsPositionAndStillReceivesNearSenders() {
+        stream(0, 1, 0, 1000);
+        stream(1, 1, 0, 1200);
+        hub.tick();
+        hub.onAttemptReset(0, 1);
+        hub.onAttemptFinished(0, 1);
+        me.binary.clear();
+        now += 50;
+        stream(1, 1, 3, 1200);
+        hub.tick();
+        assertEquals(List.of(1), aggregateSlots(me), "a finished player may spectate nearby runners");
+    }
+
+    @Test
+    void degradedCapGivesAParkedFinishersPlaceToTheFifthNearestSender() {
+        FakeHubConnection degraded = new FakeHubConnection() {
+            @Override public int queuedBytes() { return GhostHub.BP_DEGRADE_BYTES + 1; }
+        };
+        hub.addPlayer(0, "degraded", degraded);
+        hub.onAttemptStart(0, 1);
+        for (int slot = 4; slot <= 10; slot++) {
+            hub.addPlayer(slot, "fp-" + slot, new FakeHubConnection());
+            hub.onAttemptStart(slot, 1);
+        }
+        stream(0, 1, 0, 1000);
+        for (int slot = 1; slot <= 10; slot++) stream(slot, 1, 0, 1250 - slot * 10);
+        // Nearest slot 10 finishes after its last batch, which still drains first.
+        hub.onAttemptReset(10, 1);
+        hub.onAttemptFinished(10, 1);
+        hub.tick();
+        assertEquals(List.of(7, 8, 9, 10), aggregateSlots(degraded));
+        degraded.binary.clear();
+        now += 50;
+        for (int slot = 1; slot <= 9; slot++) stream(slot, 1, 3, 1250 - slot * 10);
+        hub.tick();
+        assertEquals(List.of(6, 7, 8, 9), aggregateSlots(degraded),
+                "unlike a running sender between batches, a drained finisher frees its place");
+    }
+
+    @Test
+    void senderSilencedLastRoundRejoinsNearSetsAfterTrackChange() {
+        stream(0, 1, 0, 1000);
+        stream(1, 1, 0, 1200);
+        hub.tick();
+        hub.onAttemptReset(1, 1);
+        hub.onAttemptFinished(1, 1);
+        me.binary.clear();
+        now += 50;
+        stream(0, 1, 3, 1000);
+        stream(2, 1, 0, 1300);
+        hub.tick();
+        assertEquals(List.of(2), aggregateSlots(me), "the drained finisher holds no near place");
+
+        hub.setTrack("s3k", 0, 0);
+        for (int slot = 0; slot < 4; slot++) hub.onAttemptStart(slot, 1);
+        me.binary.clear();
+        now += 50;
+        stream(0, 1, 0, 1000);
+        stream(1, 1, 0, 1200);
+        hub.tick();
+        assertEquals(List.of(1), aggregateSlots(me), "a new round starts every sender running");
+    }
+
+    @Test
+    void attemptLifecycleDrivesRosterStatusUntilNextAcceptedBatch() {
+        stream(1, 1, 0, 1200);
+        assertEquals(GhostPackets.ROSTER_STATUS_RUNNING, rosterEntryAfterInterval(1).status());
+
+        hub.onAttemptReset(1, 1);
+        GhostPackets.RosterEntry reset = rosterEntryAfterInterval(1);
+        assertEquals(GhostPackets.ROSTER_STATUS_IDLE, reset.status());
+        assertEquals(1202 >>> 6, reset.cellX(), "a silent sender keeps its last coarse position");
+        hub.onAttemptStart(1, 2);
+        assertEquals(GhostPackets.ROSTER_STATUS_IDLE, rosterEntryAfterInterval(1).status(),
+                "only an accepted batch shows the sender running again");
+        stream(1, 2, 0, 1300);
+        assertEquals(GhostPackets.ROSTER_STATUS_RUNNING, rosterEntryAfterInterval(1).status());
+
+        hub.onAttemptReset(1, 2);
+        hub.onAttemptFinished(1, 2);
+        assertEquals(GhostPackets.ROSTER_STATUS_FINISHED, rosterEntryAfterInterval(1).status());
+        hub.onAttemptStart(1, 3);
+        stream(1, 3, 0, 1000);
+        assertEquals(GhostPackets.ROSTER_STATUS_RUNNING, rosterEntryAfterInterval(1).status());
+
+        hub.onAttemptReset(1, 3);
+        hub.onAttemptFinished(1, 3);
+        hub.setTrack("s3k", 0, 0);
+        GhostPackets.RosterEntry nextRound = rosterEntryAfterInterval(1);
+        assertEquals(GhostPackets.ROSTER_STATUS_IDLE, nextRound.status());
+        assertEquals(0, nextRound.cellX());
+    }
+
+    private void streamAllExceptSlotOne(int startIndex) {
+        stream(0, 1, startIndex, 1000);
+        // Slot s sits s * 10 px from slot 0, so slot 9 is the ninth-nearest sender.
+        for (int slot = 2; slot <= 9; slot++) stream(slot, 1, startIndex, 1000 + slot * 10);
+    }
+
+    private GhostPackets.RosterEntry rosterEntryAfterInterval(int slot) {
+        for (int tick = 0; tick < GhostHub.ROSTER_INTERVAL_TICKS; tick++) {
+            hub.tick();
+        }
+        return lastRoster(me).stream().filter(entry -> entry.playerSlot() == slot)
+                .findFirst().orElseThrow();
+    }
+
+    private static GhostPackets.AggregateEntry entryFor(FakeHubConnection connection, int slot) {
+        return connection.binary.stream()
+                .filter(packet -> (packet[0] & 0xFF) == GhostPackets.TYPE_GHOST_AGGREGATE)
+                .flatMap(packet -> GhostPackets.decodeAggregate(packet).entries().stream())
+                .filter(entry -> entry.playerSlot() == slot).findFirst().orElseThrow();
+    }
+
     private static List<Integer> aggregateSlots(FakeHubConnection connection) {
         return connection.binary.stream()
                 .filter(packet -> (packet[0] & 0xFF) == GhostPackets.TYPE_GHOST_AGGREGATE)

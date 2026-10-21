@@ -436,6 +436,10 @@ public final class RoomHost {
                                 finish.attemptId(), finish.finishFrame(),
                                 finish.ghostStreamHashHex()));
                 clearActiveAttempt(member);
+                // After the reset clearActiveAttempt reported, a finish ends FINISHED
+                // even when uncredited: roster status is coarse course progress (a
+                // sender's own finished frame bit also reports it), not standings.
+                hub.onAttemptFinished(member.slot, finish.attemptId());
                 member.finishedThisRound = round.hasBestForParticipant(member.participantId);
                 if (outcome != null && outcome.outsideBroadcastCap()) {
                     send(member, new ControlMessage.RankUpdate(

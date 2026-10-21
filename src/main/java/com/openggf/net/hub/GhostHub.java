@@ -39,6 +39,8 @@ public final class GhostHub {
         GhostStreamValidator validator;
         int pendingFrames;
         int totalViolations;
+        // Finished or reset with no newer accepted batch; see tick().
+        boolean silent;
 
         Player(String fingerprint, HubConnection connection) {
             this.fingerprint = fingerprint;
@@ -114,6 +116,7 @@ public final class GhostHub {
         switch (verdict) {
             case ACCEPT, ACCEPT_FLAGGED -> {
                 buffer(player, batch);
+                player.silent = false;
                 GhostFrame lastFrame = GhostFrameCodec.decode(batch.frameData(),
                         (batch.frameCount() - 1) * GhostFrameCodec.BYTES);
                 classifier.updatePosition(slot, lastFrame.x(), lastFrame.y());
@@ -136,6 +139,12 @@ public final class GhostHub {
             List<GhostPackets.AggregateEntry> entries = drain(entry.getKey(), entry.getValue());
             if (!entries.isEmpty()) {
                 drained.put(entry.getKey(), entries);
+            }
+            if (relevanceFiltering) {
+                // A finished or reset sender still relays its buffered tail; once
+                // nothing is left it stops holding other recipients' near slots.
+                classifier.setSenderExcluded(entry.getKey(),
+                        entry.getValue().silent && entries.isEmpty());
             }
         }
         int[] relevantSenders = relevanceFiltering ? new int[RelevanceClassifier.NEAR_CAP] : null;
@@ -176,6 +185,8 @@ public final class GhostHub {
                     }
                 }
             } else {
+                // Only drained senders are visited, so a silent sender with no
+                // buffered tail never occupies one of the capped sender places.
                 int includedSenders = 0;
                 for (Map.Entry<Integer, List<GhostPackets.AggregateEntry>> sender
                         : drained.entrySet()) {
@@ -239,11 +250,33 @@ public final class GhostHub {
         }
     }
 
+    /**
+     * The host reports only the member's active attempt. The sender stays
+     * silent, shown {@code IDLE} in the roster, until its next accepted batch.
+     */
     public void onAttemptReset(int slot, int attemptId) {
         Player player = players.get(slot);
         if (player != null) {
             player.validator.onAttemptReset(attemptId);
+            markSilent(slot, player, GhostPackets.ROSTER_STATUS_IDLE);
         }
+    }
+
+    /**
+     * Called after the host has cleared the finished attempt (which already
+     * reported a reset), so a finished sender ends {@code FINISHED}, not
+     * {@code IDLE}, until its next accepted batch.
+     */
+    public void onAttemptFinished(int slot, int attemptId) {
+        Player player = players.get(slot);
+        if (player != null) {
+            markSilent(slot, player, GhostPackets.ROSTER_STATUS_FINISHED);
+        }
+    }
+
+    private void markSilent(int slot, Player player, int rosterStatus) {
+        player.silent = true;
+        lastStatus.put(slot, rosterStatus);
     }
 
     public boolean hasFinishEvidence(int slot, int attemptId, int finishFrame,
@@ -268,6 +301,7 @@ public final class GhostHub {
                 (kind, detail) -> recordViolation(slot, player, kind, detail));
         player.pending.clear();
         player.pendingFrames = 0;
+        player.silent = false;
         classifier.remove(slot);
         lastStatus.remove(slot);
     }

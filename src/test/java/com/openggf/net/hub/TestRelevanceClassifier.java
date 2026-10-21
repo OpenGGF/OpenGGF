@@ -124,6 +124,59 @@ class TestRelevanceClassifier {
         assertEquals(Set.of(2), classifier.nearSetFor(0));
     }
 
+    @Test
+    void excludedSenderYieldsItsPlaceToNextNearestButKeepsItsOwnNearSet() {
+        RelevanceClassifier classifier = new RelevanceClassifier();
+        classifier.updatePosition(0, 5000, 500);
+        for (int slot = 1; slot <= RelevanceClassifier.NEAR_CAP + 1; slot++) {
+            classifier.updatePosition(slot, 5000 + slot * 10, 500);
+        }
+        classifier.rebucket();
+        assertEquals(List.of(1, 2, 3, 4, 5, 6, 7, 8), new ArrayList<>(classifier.nearSetFor(0)));
+
+        classifier.setSenderExcluded(1, true);
+        assertEquals(List.of(2, 3, 4, 5, 6, 7, 8, 9), new ArrayList<>(classifier.nearSetFor(0)));
+        assertEquals(List.of(0, 2, 3, 4, 5, 6, 7, 8), new ArrayList<>(classifier.nearSetFor(1)),
+                "an excluded sender may still be a spectating recipient");
+        assertEquals(5010, classifier.positionOf(1).x());
+
+        classifier.setSenderExcluded(1, false);
+        assertEquals(List.of(1, 2, 3, 4, 5, 6, 7, 8), new ArrayList<>(classifier.nearSetFor(0)));
+    }
+
+    @Test
+    void excludedSenderLeavesHysteresisAndReentersOnlyWithinEnterDistance() {
+        RelevanceClassifier classifier = new RelevanceClassifier();
+        classifier.updatePosition(0, 1000, 500);
+        classifier.updatePosition(1, 1200, 500);
+        classifier.rebucket();
+        assertEquals(Set.of(1), classifier.nearSetFor(0));
+        classifier.updatePosition(1, 1000 + RelevanceClassifier.NEAR_EXIT_PX - 10, 500);
+        classifier.rebucket();
+        assertEquals(Set.of(1), classifier.nearSetFor(0), "hysteresis keeps a known peer");
+
+        classifier.setSenderExcluded(1, true);
+        assertTrue(classifier.nearSetFor(0).isEmpty());
+        classifier.setSenderExcluded(1, false);
+        assertTrue(classifier.nearSetFor(0).isEmpty(),
+                "exclusion forgets the peer, so the exit distance no longer applies");
+        classifier.updatePosition(1, 1000 + RelevanceClassifier.NEAR_ENTER_PX, 500);
+        classifier.rebucket();
+        assertEquals(Set.of(1), classifier.nearSetFor(0));
+    }
+
+    @Test
+    void removingPlayerClearsSenderExclusion() {
+        RelevanceClassifier classifier = new RelevanceClassifier();
+        classifier.updatePosition(0, 100, 100);
+        classifier.updatePosition(1, 110, 100);
+        classifier.setSenderExcluded(1, true);
+        classifier.remove(1);
+        classifier.updatePosition(1, 110, 100);
+        classifier.rebucket();
+        assertEquals(Set.of(1), classifier.nearSetFor(0));
+    }
+
     private static int oracleDistance(RelevanceClassifier.Pos left, RelevanceClassifier.Pos right) {
         return Math.max(Math.abs(right.x() - left.x()), Math.abs(right.y() - left.y()));
     }
