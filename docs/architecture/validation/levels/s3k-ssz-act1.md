@@ -4465,3 +4465,12 @@ Unchanged owners:12T/8F/0E/0S. First fixed run:197T/4F/0E/0S (incorrect immediat
 OnObject-clear assertion); original jump retains that bit. Corrected final:197T/0F/0E/0S.
 Component setup is not cold/native800/route or rewind qualification; input14944 cause,
 full-route breadth and expected46 remain unchanged. [Source, exact selections, hashes, failures and timing](../../plans/2026-10-13-s3k-playable-completion.md#r16-rotating-post-and-carrier-retain-positive-control-support--2026-10-21).
+
+
+### R16 Root composed route consumers — 2026-10-21
+
+At composed `4bfd11c372dfbc50e961b4f68878426165fb1e57`, one focused five-case/three-class request returned **5T/2F/0E/0S**. Native320 paired complete passes50 two-cycle45-input whole-world windows and actual DEZ load/assembly20550/20551; Tails replicas pass both320/800 identities with unchanged semantic and registered restore/forward assertions.
+Both complete WidePaired failure messages remain exact prior: expected46/actual48 at first-replica line87 and `FIRST_FORWARD [wide-route-11640] frame=11640 n=24 input=11664` death at complete line256. No new negative identity/error/skip in this bounded selection; no broad or baseline ceremony rerun.
+Fresh independent SOURCE review found no material issue in the two owner-local opt-ins. Its optional carrier-angle assertion gap remains; integer X alone does not directly certify release ordering. Worker197 focused passes and the original8-of12 unchanged-owner failures remain separate measured states.
+Queue869s/Maven02:03min/actual XML12.611+13.455+18.924s are distinct; execution estimate30.6s is not elapsed. Exact selection, source/POM/ROM/Java25/EGL/property and cleanup evidence is in the [Root Plan](../../plans/2026-10-13-s3k-playable-completion.md#r16-root-composed-route-consumers--2026-10-21).
+Natural original14944 held admission remains a separate pending one-step R17 observation. Cause/native/longer holding/release/parent/onward/whole-act certification and expected46 remain open. Inputs, counts, windows and oracles are unchanged; PR stays draft.
