@@ -23636,3 +23636,81 @@ reset/row0, region/SRAM, masked initial decode, VInt/movie association and all
 eleven pre-run jobs' continuous identity remain open; offset577 is not a clock
 oracle. No boot/native-timing work or unrelated hub START/capture-chord assertion
 was changed.
+
+### Root reconciled backend and dependency checks (2026-10-21)
+
+Root integrated updated Main develop `efd605142` in merge `0fae37294`, then
+adopted the independently reviewed backend fix `ac2c3a541` in merge `cf46bab8d`.
+The Main comparison had 64 changed paths and the existing integration 395;
+only the changelog was shared, with separate insertion regions. All disjoint
+paths retained their owning parent blobs and modes. Main's multiplayer security,
+presentation hardening and Jackson/Netty updates were preserved. The backend
+merge's sole conflict was this plan: both complete appendices were retained;
+its Engine, startup test and AIZ matrix match the accepted child blobs.
+
+Independent final source review found no material issue with the ownership
+branch. The entire real-ROM test remains byte-identical to its red control.
+The child's 138 passing checks retain their own runtime/dependency epoch and
+are not summed with the following fresh integration result.
+
+The actual updated change-based plan selected 3,594 smoke candidates across all
+categories plus guards. Root inspected it and chose a focused replacement from
+the new dependency/consumer audit: configuration and YAML availability, strict
+trace JSON/metadata, mod parsers/state, clipped scene admission/composition/
+codec/replay, caller-owned audio and the real configured frontend graph, plus
+both LevelLoading classes and the other mandatory S3K controls. No duplicate
+broad run or release-only full suite was launched.
+
+On frozen `cf46bab8d9a60dd3cea5c15ec2c12e0e835e1ad1`, **21 whole ordinary
+classes passed 270 tests, with zero failures, errors or skips**. The real
+title/DataSelect/fresh-AIZ/B-edge/cleanup case completed. Actual XML classpaths
+use Jackson databind and YAML 2.22.3 and test Netty 4.1.139.Final; their SHA-256
+is `9c876456c5ab9625f424b5b2dbcc19f9bf6f9b733cfac477957cd78894589610`.
+The scene production-export controls are S2/EHZ; they do not certify S3K scene
+export, native pixels or native display-generation semantics.
+
+A separate JVM ran **four whole guard classes, 105 tests, two inherited
+HubMusic failures, zero errors or skips**. All 31 ArchUnit declarations ran
+against the reconciled production import universe. Both complete failure
+records match the earlier selected result byte-for-byte: three concrete audio
+profile constructors at HubMusicController:118 and nine dependencies including
+the TITLE/id accesses at120. The bypass, rewind-disposition and architectural
+source guards pass. No guard store, source budget or failure predicate changed.
+
+The exact selectors below used the verified Java 25, Lua 5.4, surfaceless/
+null-audio environment and absolute ROM properties recorded above. Ordinary
+compiled 4,174 main and 4,263 test sources; guards reused main and compiled 4,263
+tests. This is an existing target epoch, not a clean build. Maven reported
+1:25 for ordinary and 36.628s for guards; queue and compiler/parent durations
+remain unknown. Actual XML/TXT, all identities, properties, streams and skips
+were read before consuming the exact owned report/tmp roots. No class deletion,
+log archive, pass cache or extra receipt was made.
+
+```bash
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal -Dmse=off -Psmoke \
+  '-Dtest=com.openggf.TestEngineConfiguredHeadlessStartup,com.openggf.audio.TestAudioBackendLifetime,com.openggf.TestEngineDataSelectPatchResolution,com.openggf.tools.audio.completerun.TestProductionBk2AudioRunner,com.openggf.TestExternalContentPolicy,com.openggf.configuration.TestYamlDependencyAvailable,com.openggf.configuration.TestSonicConfigurationFileBootstrap,com.openggf.configuration.TestSonicConfigurationSessionOverrides,com.openggf.tests.trace.TestTraceRunManifest,com.openggf.tests.trace.TestTraceDataParsing,com.openggf.trace.TestTraceDataHardwareTiming,com.openggf.game.presentation.TestGolfScenePresentation,com.openggf.game.presentation.TestSceneReplay,com.openggf.mods.TestModManifestParser,com.openggf.mods.TestModAudioManifestParser,com.openggf.mods.TestModStateStore,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils' \
+  "-Dkis2.rom.path=${OPENGGF_MAIN}/kis2.gen" \
+  "-Dsonic1.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_MAIN}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test -B
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal -Dmse=off -Pguards \
+  '-Dtest=com.openggf.game.rewind.schema.TestRewindFieldDispositionGuard,com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.tests.TestArchUnitRules,com.openggf.audio.TestAudioBackendBypassGuard' \
+  "-Dkis2.rom.path=${OPENGGF_MAIN}/kis2.gen" \
+  "-Dsonic1.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_MAIN}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test -B
+```
+
+The independently reviewed paired controller candidate `3a0b7b5fa` remains
+unmerged: its physical post, both replicas with 25 rewind windows and recovery
+method pass, while its unchanged late suffix dies at input 14554 before Mecha.
+Later controller work is active. A separate solo Tails worker is qualifying a
+re-authored controller and its controller-specific count/ring/replay data;
+strict boss, death, world geometry, endpoint and rewind requirements remain.
+The native reset-prefix observer is also under implementation and review.
+None of these pending results is substituted for a complete route, native reset,
+masked timing, eleven-job identity, live-RAM DMA or full coverage certificate.
+Main's branch, unknown files and dirty submodules remain preserved. No push or
+completion of the remaining parity goal is qualified by this checkpoint.
