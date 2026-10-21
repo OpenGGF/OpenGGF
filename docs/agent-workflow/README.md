@@ -381,3 +381,7 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
 
 - [Positioned S3K ending sampler](../../src/main/java/com/openggf/tools/S3kEndingSamplerTool.java) and [fail-closed native RGB comparator](../../tools/bizhawk/compare_native_rgb.py): explicit nine Sonic/Tails/team NTSC 320×224 title-owner products with declared progress, spot-bound or title completion, complete raw RGB pairs and explicit native filename padding/mapping/crops (2026-10-17 recurring ending parity); [protocol, commands and limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#2026-10-17-nine-declared-ntsc-ending-products).
 - [Passive ending queue probe](../../src/main/java/com/openggf/tools/S3kEndingQueueProbeTool.java): two explicit solo/+2/NTSC products, bounded LF metadata, actual production handles/child fingerprints and LIVE service/readiness projections without payloads or timing writes; [causality evidence and budget blocker](../architecture/plans/2026-10-13-s3k-playable-completion.md#2026-10-17-passive-reunion-queue-causality).
+
+Stageplay's `level`, `catalog`, `simulate` and live offscreen preview/capture owners
+support reproducible native ensemble routes; see the [authoring guide](../guide/creating/stageplay-authoring.md#live-rom-worlds-screenplay-3-document-5)
+and [live-world plan](../architecture/plans/2026-10-21-stageplay-live-world-plan.md).

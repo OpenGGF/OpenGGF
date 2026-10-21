@@ -1167,18 +1167,22 @@ CF-ANNOTATION TYPE com.openggf.stageplay.StageplayDocument$ActorKey visible @com
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayDocument$AudioCue visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayDocument$AudioKind visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayDocument$CameraEffect visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.stageplay.StageplayDocument$CameraFollow visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayDocument$CameraKey visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayDocument$Caption visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayDocument$DialogueCue visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayDocument$DialogueSkin visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayDocument$DialogueTyper visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayDocument$Interpolation visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.stageplay.StageplayDocument$ObjectTarget visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayDocument$PuppetCommand visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayDocument$PuppetCommandKind visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayDocument$PuppetTrack visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayDocument$SceneChange visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayDocument$SetSource visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayDocument$Transition visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.stageplay.StageplayDocument$WaitCondition visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.stageplay.StageplayDocument$WorldPolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayPlayback visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayPlayback$State visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayTimeline visible @com.openggf.game.ModApi
@@ -1186,10 +1190,15 @@ CF-ANNOTATION TYPE com.openggf.stageplay.StageplayTimeline$ActorPose visible @co
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayTimeline$CameraPose visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayTimeline$DialoguePose visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayTimeline$Frame visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.stageplay.StageplayTimeline$LiveActor visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.stageplay.StageplayTimeline$LiveEvent visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.stageplay.StageplayTimeline$LiveObject visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.stageplay.StageplayTimeline$LiveRing visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayTimeline$PuppetAccessory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayTimeline$PuppetSample visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayTimeline$PuppetStatus visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.StageplayTimeline$TransitionPose visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.stageplay.StageplayTimeline$WorldSample visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.runtime.StageplayNativeBinding visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.runtime.StageplayNativeBinding$FinishMode visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.stageplay.runtime.StageplayNativeBinding$State visible @com.openggf.game.ModApi
@@ -1993,15 +2002,20 @@ CONSTRUCTOR com.openggf.stageplay.StageplayDocument$Actor public  <init>(java.la
 CONSTRUCTOR com.openggf.stageplay.StageplayDocument$ActorKey public  <init>(int,double,double,int,int,boolean,boolean,double,com.openggf.stageplay.StageplayDocument$Interpolation)
 CONSTRUCTOR com.openggf.stageplay.StageplayDocument$AudioCue public  <init>(java.lang.String,int,com.openggf.stageplay.StageplayDocument$AudioKind,java.lang.String,int,java.lang.String,double)
 CONSTRUCTOR com.openggf.stageplay.StageplayDocument$CameraEffect public  <init>(java.lang.String,int,int,double,double,double,int)
+CONSTRUCTOR com.openggf.stageplay.StageplayDocument$CameraFollow public  <init>(java.util.List<java.lang.String>,double,double,double,double,double,double)
 CONSTRUCTOR com.openggf.stageplay.StageplayDocument$CameraKey public  <init>(int,double,double,double,com.openggf.stageplay.StageplayDocument$Interpolation)
+CONSTRUCTOR com.openggf.stageplay.StageplayDocument$CameraKey public  <init>(int,double,double,double,com.openggf.stageplay.StageplayDocument$Interpolation,com.openggf.stageplay.StageplayDocument$CameraFollow)
 CONSTRUCTOR com.openggf.stageplay.StageplayDocument$Caption public  <init>(java.lang.String,int,int,java.lang.String,int,int,int)
 CONSTRUCTOR com.openggf.stageplay.StageplayDocument$DialogueCue public  <init>(java.lang.String,int,int,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,int,int,int,int,java.lang.String,java.util.List<java.lang.Integer>)
 CONSTRUCTOR com.openggf.stageplay.StageplayDocument$DialogueSkin public  <init>(java.lang.String,int,int,int,int,int,java.lang.String,int,boolean)
 CONSTRUCTOR com.openggf.stageplay.StageplayDocument$DialogueTyper public  <init>(java.lang.String,int,int,int)
+CONSTRUCTOR com.openggf.stageplay.StageplayDocument$ObjectTarget public  <init>(int,int,int,double,double)
 CONSTRUCTOR com.openggf.stageplay.StageplayDocument$PuppetCommand public  <init>(java.lang.String,int,com.openggf.stageplay.StageplayDocument$PuppetCommandKind,double,double,double,int)
+CONSTRUCTOR com.openggf.stageplay.StageplayDocument$PuppetCommand public  <init>(java.lang.String,int,com.openggf.stageplay.StageplayDocument$PuppetCommandKind,double,double,double,int,com.openggf.stageplay.StageplayDocument$ObjectTarget,com.openggf.stageplay.StageplayDocument$WaitCondition,int)
 CONSTRUCTOR com.openggf.stageplay.StageplayDocument$PuppetTrack public  <init>(java.lang.String,boolean,int,java.util.List<com.openggf.stageplay.StageplayDocument$PuppetCommand>)
 CONSTRUCTOR com.openggf.stageplay.StageplayDocument$SceneChange public  <init>(java.lang.String,int,com.openggf.stageplay.StageplayDocument$SetSource,com.openggf.stageplay.StageplayDocument$Transition,int)
 CONSTRUCTOR com.openggf.stageplay.StageplayDocument$SetSource public  <init>(java.lang.String,int,int,java.lang.String,java.lang.String)
+CONSTRUCTOR com.openggf.stageplay.StageplayDocument$SetSource public  <init>(java.lang.String,int,int,java.lang.String,java.lang.String,com.openggf.stageplay.StageplayDocument$WorldPolicy)
 CONSTRUCTOR com.openggf.stageplay.StageplayPlayback public  <init>(com.openggf.stageplay.StageplayDocument)
 CONSTRUCTOR com.openggf.stageplay.StageplayPlayback public  <init>(com.openggf.stageplay.StageplayDocument,java.lang.String,com.openggf.stageplay.runtime.StageplayNativeBinding$FinishMode)
 CONSTRUCTOR com.openggf.stageplay.StageplayPlayback$State public  <init>(com.openggf.stageplay.StageplayControl$Status,int,boolean,boolean,long,com.openggf.stageplay.runtime.StageplayNativeBinding$State,com.openggf.audio.rewind.AudioLogicalSnapshot)
@@ -2013,10 +2027,17 @@ CONSTRUCTOR com.openggf.stageplay.StageplayTimeline$Frame public  <init>(int,jav
 CONSTRUCTOR com.openggf.stageplay.StageplayTimeline$Frame public  <init>(int,java.util.List<com.openggf.stageplay.StageplayTimeline$ActorPose>,com.openggf.stageplay.StageplayTimeline$CameraPose,java.util.List<com.openggf.stageplay.StageplayDocument$Caption>,com.openggf.stageplay.StageplayDocument$SetSource,com.openggf.stageplay.StageplayTimeline$TransitionPose,com.openggf.stageplay.StageplayTimeline$CameraPose)
 CONSTRUCTOR com.openggf.stageplay.StageplayTimeline$Frame public  <init>(int,java.util.List<com.openggf.stageplay.StageplayTimeline$ActorPose>,com.openggf.stageplay.StageplayTimeline$CameraPose,java.util.List<com.openggf.stageplay.StageplayDocument$Caption>,com.openggf.stageplay.StageplayDocument$SetSource,com.openggf.stageplay.StageplayTimeline$TransitionPose,com.openggf.stageplay.StageplayTimeline$CameraPose,java.util.List<com.openggf.stageplay.StageplayTimeline$DialoguePose>)
 CONSTRUCTOR com.openggf.stageplay.StageplayTimeline$Frame public  <init>(int,java.util.List<com.openggf.stageplay.StageplayTimeline$ActorPose>,com.openggf.stageplay.StageplayTimeline$CameraPose,java.util.List<com.openggf.stageplay.StageplayDocument$Caption>,com.openggf.stageplay.StageplayDocument$SetSource,com.openggf.stageplay.StageplayTimeline$TransitionPose,com.openggf.stageplay.StageplayTimeline$CameraPose,java.util.List<com.openggf.stageplay.StageplayTimeline$DialoguePose>,java.util.List<com.openggf.stageplay.StageplayTimeline$PuppetSample>)
+CONSTRUCTOR com.openggf.stageplay.StageplayTimeline$Frame public  <init>(int,java.util.List<com.openggf.stageplay.StageplayTimeline$ActorPose>,com.openggf.stageplay.StageplayTimeline$CameraPose,java.util.List<com.openggf.stageplay.StageplayDocument$Caption>,com.openggf.stageplay.StageplayDocument$SetSource,com.openggf.stageplay.StageplayTimeline$TransitionPose,com.openggf.stageplay.StageplayTimeline$CameraPose,java.util.List<com.openggf.stageplay.StageplayTimeline$DialoguePose>,java.util.List<com.openggf.stageplay.StageplayTimeline$PuppetSample>,com.openggf.stageplay.StageplayTimeline$WorldSample)
+CONSTRUCTOR com.openggf.stageplay.StageplayTimeline$LiveActor public  <init>(java.lang.String,int,int,boolean,boolean,boolean,int,java.lang.String,int,int,int,int,java.lang.String)
+CONSTRUCTOR com.openggf.stageplay.StageplayTimeline$LiveEvent public  <init>(int,java.lang.String,java.lang.String,java.lang.String,java.lang.String)
+CONSTRUCTOR com.openggf.stageplay.StageplayTimeline$LiveObject public  <init>(int,int,int,int,int,java.lang.String)
+CONSTRUCTOR com.openggf.stageplay.StageplayTimeline$LiveRing public  <init>(int,int,boolean,int)
+CONSTRUCTOR com.openggf.stageplay.StageplayTimeline$LiveRing public  <init>(int,int,int,boolean,int)
 CONSTRUCTOR com.openggf.stageplay.StageplayTimeline$PuppetAccessory public  <init>(int,boolean,boolean)
 CONSTRUCTOR com.openggf.stageplay.StageplayTimeline$PuppetSample public  <init>(java.lang.String,java.lang.String,com.openggf.stageplay.StageplayTimeline$PuppetStatus,double,double,double,boolean,int,int)
 CONSTRUCTOR com.openggf.stageplay.StageplayTimeline$PuppetSample public  <init>(java.lang.String,java.lang.String,com.openggf.stageplay.StageplayTimeline$PuppetStatus,double,double,double,boolean,int,int,com.openggf.stageplay.StageplayTimeline$PuppetAccessory)
 CONSTRUCTOR com.openggf.stageplay.StageplayTimeline$TransitionPose public  <init>(com.openggf.stageplay.StageplayDocument$Transition,double,boolean)
+CONSTRUCTOR com.openggf.stageplay.StageplayTimeline$WorldSample public  <init>(int,int,java.util.List<com.openggf.stageplay.StageplayTimeline$LiveActor>,java.util.List<com.openggf.stageplay.StageplayTimeline$LiveObject>,java.util.List<com.openggf.stageplay.StageplayTimeline$LiveRing>,java.util.List<com.openggf.stageplay.StageplayTimeline$LiveEvent>)
 CONSTRUCTOR com.openggf.stageplay.runtime.StageplayNativeBinding public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.stageplay.runtime.StageplayNativeBinding$State public  <init>(java.lang.String,com.openggf.game.mode.CourseControl$DirectedPlayerState)
 CONSTRUCTOR com.openggf.timer.TimerManager public  <init>()
@@ -3749,21 +3770,46 @@ FIELD com.openggf.stageplay.StageplayDocument$AudioKind public,static,final com.
 FIELD com.openggf.stageplay.StageplayDocument$Interpolation public,static,final com.openggf.stageplay.StageplayDocument$Interpolation HOLD
 FIELD com.openggf.stageplay.StageplayDocument$Interpolation public,static,final com.openggf.stageplay.StageplayDocument$Interpolation LINEAR
 FIELD com.openggf.stageplay.StageplayDocument$Interpolation public,static,final com.openggf.stageplay.StageplayDocument$Interpolation SMOOTH
+FIELD com.openggf.stageplay.StageplayDocument$PuppetCommandKind public,static,final com.openggf.stageplay.StageplayDocument$PuppetCommandKind CROUCH
+FIELD com.openggf.stageplay.StageplayDocument$PuppetCommandKind public,static,final com.openggf.stageplay.StageplayDocument$PuppetCommandKind FLY_TO
+FIELD com.openggf.stageplay.StageplayDocument$PuppetCommandKind public,static,final com.openggf.stageplay.StageplayDocument$PuppetCommandKind GLIDE_TO
+FIELD com.openggf.stageplay.StageplayDocument$PuppetCommandKind public,static,final com.openggf.stageplay.StageplayDocument$PuppetCommandKind HOVER
 FIELD com.openggf.stageplay.StageplayDocument$PuppetCommandKind public,static,final com.openggf.stageplay.StageplayDocument$PuppetCommandKind JUMP
+FIELD com.openggf.stageplay.StageplayDocument$PuppetCommandKind public,static,final com.openggf.stageplay.StageplayDocument$PuppetCommandKind LOOK_UP
 FIELD com.openggf.stageplay.StageplayDocument$PuppetCommandKind public,static,final com.openggf.stageplay.StageplayDocument$PuppetCommandKind MOVE_TO
+FIELD com.openggf.stageplay.StageplayDocument$PuppetCommandKind public,static,final com.openggf.stageplay.StageplayDocument$PuppetCommandKind RELEASE
+FIELD com.openggf.stageplay.StageplayDocument$PuppetCommandKind public,static,final com.openggf.stageplay.StageplayDocument$PuppetCommandKind ROLL
 FIELD com.openggf.stageplay.StageplayDocument$PuppetCommandKind public,static,final com.openggf.stageplay.StageplayDocument$PuppetCommandKind STOP
+FIELD com.openggf.stageplay.StageplayDocument$PuppetCommandKind public,static,final com.openggf.stageplay.StageplayDocument$PuppetCommandKind WAIT
 FIELD com.openggf.stageplay.StageplayDocument$Transition public,static,final com.openggf.stageplay.StageplayDocument$Transition CUT
 FIELD com.openggf.stageplay.StageplayDocument$Transition public,static,final com.openggf.stageplay.StageplayDocument$Transition FADE_BLACK
 FIELD com.openggf.stageplay.StageplayDocument$Transition public,static,final com.openggf.stageplay.StageplayDocument$Transition FADE_WHITE
 FIELD com.openggf.stageplay.StageplayDocument$Transition public,static,final com.openggf.stageplay.StageplayDocument$Transition WIPE_LEFT
 FIELD com.openggf.stageplay.StageplayDocument$Transition public,static,final com.openggf.stageplay.StageplayDocument$Transition WIPE_RIGHT
+FIELD com.openggf.stageplay.StageplayDocument$WaitCondition public,static,final com.openggf.stageplay.StageplayDocument$WaitCondition AIRBORNE
+FIELD com.openggf.stageplay.StageplayDocument$WaitCondition public,static,final com.openggf.stageplay.StageplayDocument$WaitCondition ARRIVED
+FIELD com.openggf.stageplay.StageplayDocument$WaitCondition public,static,final com.openggf.stageplay.StageplayDocument$WaitCondition GROUNDED
+FIELD com.openggf.stageplay.StageplayDocument$WaitCondition public,static,final com.openggf.stageplay.StageplayDocument$WaitCondition HURT
+FIELD com.openggf.stageplay.StageplayDocument$WaitCondition public,static,final com.openggf.stageplay.StageplayDocument$WaitCondition NONE
+FIELD com.openggf.stageplay.StageplayDocument$WaitCondition public,static,final com.openggf.stageplay.StageplayDocument$WaitCondition ON_OBJECT
+FIELD com.openggf.stageplay.StageplayDocument$WaitCondition public,static,final com.openggf.stageplay.StageplayDocument$WaitCondition RECOVERED
+FIELD com.openggf.stageplay.StageplayDocument$WaitCondition public,static,final com.openggf.stageplay.StageplayDocument$WaitCondition RING_COLLECTED
+FIELD com.openggf.stageplay.StageplayDocument$WaitCondition public,static,final com.openggf.stageplay.StageplayDocument$WaitCondition TARGET_AVAILABLE
+FIELD com.openggf.stageplay.StageplayDocument$WorldPolicy public,static,final com.openggf.stageplay.StageplayDocument$WorldPolicy LIVE
+FIELD com.openggf.stageplay.StageplayDocument$WorldPolicy public,static,final com.openggf.stageplay.StageplayDocument$WorldPolicy TERRAIN_ONLY
 FIELD com.openggf.stageplay.StageplayTimeline$PuppetStatus public,static,final com.openggf.stageplay.StageplayTimeline$PuppetStatus ARRIVED
 FIELD com.openggf.stageplay.StageplayTimeline$PuppetStatus public,static,final com.openggf.stageplay.StageplayTimeline$PuppetStatus BLOCKED
+FIELD com.openggf.stageplay.StageplayTimeline$PuppetStatus public,static,final com.openggf.stageplay.StageplayTimeline$PuppetStatus DEAD
 FIELD com.openggf.stageplay.StageplayTimeline$PuppetStatus public,static,final com.openggf.stageplay.StageplayTimeline$PuppetStatus IDLE
 FIELD com.openggf.stageplay.StageplayTimeline$PuppetStatus public,static,final com.openggf.stageplay.StageplayTimeline$PuppetStatus INACTIVE
 FIELD com.openggf.stageplay.StageplayTimeline$PuppetStatus public,static,final com.openggf.stageplay.StageplayTimeline$PuppetStatus MOVING
+FIELD com.openggf.stageplay.StageplayTimeline$PuppetStatus public,static,final com.openggf.stageplay.StageplayTimeline$PuppetStatus PERFORMING
+FIELD com.openggf.stageplay.StageplayTimeline$PuppetStatus public,static,final com.openggf.stageplay.StageplayTimeline$PuppetStatus SATISFIED
 FIELD com.openggf.stageplay.StageplayTimeline$PuppetStatus public,static,final com.openggf.stageplay.StageplayTimeline$PuppetStatus STOPPING
+FIELD com.openggf.stageplay.StageplayTimeline$PuppetStatus public,static,final com.openggf.stageplay.StageplayTimeline$PuppetStatus TARGET_UNAVAILABLE
+FIELD com.openggf.stageplay.StageplayTimeline$PuppetStatus public,static,final com.openggf.stageplay.StageplayTimeline$PuppetStatus TIMED_OUT
 FIELD com.openggf.stageplay.StageplayTimeline$PuppetStatus public,static,final com.openggf.stageplay.StageplayTimeline$PuppetStatus UNRESOLVED
+FIELD com.openggf.stageplay.StageplayTimeline$PuppetStatus public,static,final com.openggf.stageplay.StageplayTimeline$PuppetStatus WAITING
 FIELD com.openggf.stageplay.runtime.StageplayNativeBinding$FinishMode public,static,final com.openggf.stageplay.runtime.StageplayNativeBinding$FinishMode KEEP_FINAL_POSITION
 FIELD com.openggf.stageplay.runtime.StageplayNativeBinding$FinishMode public,static,final com.openggf.stageplay.runtime.StageplayNativeBinding$FinishMode RESTORE_ENTRY
 FIELD com.openggf.tools.disasm.CompressionType public,static,final com.openggf.tools.disasm.CompressionType ASSEMBLY_DATA
@@ -9198,6 +9244,7 @@ METHOD com.openggf.level.LevelManager public  void configureAudio() THROWS java.
 METHOD com.openggf.level.LevelManager public  void discardPreparedLevelLoad()
 METHOD com.openggf.level.LevelManager public  void draw()
 METHOD com.openggf.level.LevelManager public  void drawAllPatterns()
+METHOD com.openggf.level.LevelManager public  void drawCinematicWorld(com.openggf.sprites.managers.SpriteManager)
 METHOD com.openggf.level.LevelManager public  void drawWithRenderOptions(com.openggf.sprites.managers.SpriteManager,com.openggf.level.LevelManager$LevelRenderOptions)
 METHOD com.openggf.level.LevelManager public  void drawWithSpritePriority(com.openggf.sprites.managers.SpriteManager)
 METHOD com.openggf.level.LevelManager public  void drawWithSpritePriority(com.openggf.sprites.managers.SpriteManager,boolean)
@@ -13795,10 +13842,12 @@ METHOD com.openggf.sprites.managers.SpriteManager public  void setFrameCounter(i
 METHOD com.openggf.sprites.managers.SpriteManager public  void setInputSuppressed(boolean)
 METHOD com.openggf.sprites.managers.SpriteManager public  void setPlaybackInputSuppressed(boolean)
 METHOD com.openggf.sprites.managers.SpriteManager public  void update(com.openggf.control.InputHandler)
+METHOD com.openggf.sprites.managers.SpriteManager public  void updateScripted(java.util.Map<java.lang.String,com.openggf.control.PlayerInputState>)
 METHOD com.openggf.sprites.managers.SpriteManager public  void updateWithoutInput()
 METHOD com.openggf.sprites.managers.SpriteManager public  void warmUpCpuSidekicksOnly(int,com.openggf.level.LevelManager)
 METHOD com.openggf.sprites.managers.SpriteManager public  void warmUpCpuSidekicksOnly(int,com.openggf.level.LevelManager,com.openggf.sprites.playable.AbstractPlayableSprite)
 METHOD com.openggf.sprites.managers.SpriteManager public  void warmUpFreshMainPlayableOnly(int,com.openggf.level.LevelManager,com.openggf.sprites.playable.AbstractPlayableSprite)
+METHOD com.openggf.sprites.managers.SpriteManager public  void withScriptedInputs(java.util.Map<java.lang.String,com.openggf.control.PlayerInputState>,java.util.function.Consumer<com.openggf.control.InputHandler>)
 METHOD com.openggf.sprites.managers.SpriteManager public,static  com.openggf.sprites.SensorConfiguration getSensorConfigurationForGroundModeAndDirection(com.openggf.game.GroundMode,com.openggf.physics.Direction)
 METHOD com.openggf.sprites.managers.SpriteManager public,static  com.openggf.sprites.SensorConfiguration[][] createMovementMappingArray()
 METHOD com.openggf.sprites.managers.SpriteManager public,static  void tickPlayablePhysics(com.openggf.sprites.playable.AbstractPlayableSprite,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,com.openggf.level.LevelManager,int)
@@ -14731,6 +14780,18 @@ METHOD com.openggf.stageplay.StageplayDocument$CameraEffect public  java.lang.St
 METHOD com.openggf.stageplay.StageplayDocument$CameraEffect public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.stageplay.StageplayDocument$CameraEffect public,final  int hashCode()
 METHOD com.openggf.stageplay.StageplayDocument$CameraEffect public,final  java.lang.String toString()
+METHOD com.openggf.stageplay.StageplayDocument$CameraFollow public  double deadZoneX()
+METHOD com.openggf.stageplay.StageplayDocument$CameraFollow public  double deadZoneY()
+METHOD com.openggf.stageplay.StageplayDocument$CameraFollow public  double lookAhead()
+METHOD com.openggf.stageplay.StageplayDocument$CameraFollow public  double offsetX()
+METHOD com.openggf.stageplay.StageplayDocument$CameraFollow public  double offsetY()
+METHOD com.openggf.stageplay.StageplayDocument$CameraFollow public  double smoothing()
+METHOD com.openggf.stageplay.StageplayDocument$CameraFollow public  java.util.List<java.lang.String> actors()
+METHOD com.openggf.stageplay.StageplayDocument$CameraFollow public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.stageplay.StageplayDocument$CameraFollow public,final  int hashCode()
+METHOD com.openggf.stageplay.StageplayDocument$CameraFollow public,final  java.lang.String toString()
+METHOD com.openggf.stageplay.StageplayDocument$CameraFollow public,static  com.openggf.stageplay.StageplayDocument$CameraFollow none()
+METHOD com.openggf.stageplay.StageplayDocument$CameraKey public  com.openggf.stageplay.StageplayDocument$CameraFollow follow()
 METHOD com.openggf.stageplay.StageplayDocument$CameraKey public  com.openggf.stageplay.StageplayDocument$Interpolation interpolation()
 METHOD com.openggf.stageplay.StageplayDocument$CameraKey public  double x()
 METHOD com.openggf.stageplay.StageplayDocument$CameraKey public  double y()
@@ -14787,12 +14848,24 @@ METHOD com.openggf.stageplay.StageplayDocument$DialogueTyper public,final  int h
 METHOD com.openggf.stageplay.StageplayDocument$DialogueTyper public,final  java.lang.String toString()
 METHOD com.openggf.stageplay.StageplayDocument$Interpolation public,static  com.openggf.stageplay.StageplayDocument$Interpolation valueOf(java.lang.String)
 METHOD com.openggf.stageplay.StageplayDocument$Interpolation public,static  com.openggf.stageplay.StageplayDocument$Interpolation[] values()
+METHOD com.openggf.stageplay.StageplayDocument$ObjectTarget public  double offsetX()
+METHOD com.openggf.stageplay.StageplayDocument$ObjectTarget public  double offsetY()
+METHOD com.openggf.stageplay.StageplayDocument$ObjectTarget public  int layoutIndex()
+METHOD com.openggf.stageplay.StageplayDocument$ObjectTarget public  int objectId()
+METHOD com.openggf.stageplay.StageplayDocument$ObjectTarget public  int subtype()
+METHOD com.openggf.stageplay.StageplayDocument$ObjectTarget public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.stageplay.StageplayDocument$ObjectTarget public,final  int hashCode()
+METHOD com.openggf.stageplay.StageplayDocument$ObjectTarget public,final  java.lang.String toString()
+METHOD com.openggf.stageplay.StageplayDocument$ObjectTarget public,static  com.openggf.stageplay.StageplayDocument$ObjectTarget none()
+METHOD com.openggf.stageplay.StageplayDocument$PuppetCommand public  com.openggf.stageplay.StageplayDocument$ObjectTarget target()
 METHOD com.openggf.stageplay.StageplayDocument$PuppetCommand public  com.openggf.stageplay.StageplayDocument$PuppetCommandKind kind()
+METHOD com.openggf.stageplay.StageplayDocument$PuppetCommand public  com.openggf.stageplay.StageplayDocument$WaitCondition condition()
 METHOD com.openggf.stageplay.StageplayDocument$PuppetCommand public  double urgency()
 METHOD com.openggf.stageplay.StageplayDocument$PuppetCommand public  double x()
 METHOD com.openggf.stageplay.StageplayDocument$PuppetCommand public  double y()
 METHOD com.openggf.stageplay.StageplayDocument$PuppetCommand public  int frame()
 METHOD com.openggf.stageplay.StageplayDocument$PuppetCommand public  int holdFrames()
+METHOD com.openggf.stageplay.StageplayDocument$PuppetCommand public  int timeoutFrames()
 METHOD com.openggf.stageplay.StageplayDocument$PuppetCommand public  java.lang.String id()
 METHOD com.openggf.stageplay.StageplayDocument$PuppetCommand public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.stageplay.StageplayDocument$PuppetCommand public,final  int hashCode()
@@ -14814,6 +14887,7 @@ METHOD com.openggf.stageplay.StageplayDocument$SceneChange public  java.lang.Str
 METHOD com.openggf.stageplay.StageplayDocument$SceneChange public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.stageplay.StageplayDocument$SceneChange public,final  int hashCode()
 METHOD com.openggf.stageplay.StageplayDocument$SceneChange public,final  java.lang.String toString()
+METHOD com.openggf.stageplay.StageplayDocument$SetSource public  com.openggf.stageplay.StageplayDocument$WorldPolicy worldPolicy()
 METHOD com.openggf.stageplay.StageplayDocument$SetSource public  int act()
 METHOD com.openggf.stageplay.StageplayDocument$SetSource public  int zone()
 METHOD com.openggf.stageplay.StageplayDocument$SetSource public  java.lang.String gameId()
@@ -14824,6 +14898,10 @@ METHOD com.openggf.stageplay.StageplayDocument$SetSource public,final  int hashC
 METHOD com.openggf.stageplay.StageplayDocument$SetSource public,final  java.lang.String toString()
 METHOD com.openggf.stageplay.StageplayDocument$Transition public,static  com.openggf.stageplay.StageplayDocument$Transition valueOf(java.lang.String)
 METHOD com.openggf.stageplay.StageplayDocument$Transition public,static  com.openggf.stageplay.StageplayDocument$Transition[] values()
+METHOD com.openggf.stageplay.StageplayDocument$WaitCondition public,static  com.openggf.stageplay.StageplayDocument$WaitCondition valueOf(java.lang.String)
+METHOD com.openggf.stageplay.StageplayDocument$WaitCondition public,static  com.openggf.stageplay.StageplayDocument$WaitCondition[] values()
+METHOD com.openggf.stageplay.StageplayDocument$WorldPolicy public,static  com.openggf.stageplay.StageplayDocument$WorldPolicy valueOf(java.lang.String)
+METHOD com.openggf.stageplay.StageplayDocument$WorldPolicy public,static  com.openggf.stageplay.StageplayDocument$WorldPolicy[] values()
 METHOD com.openggf.stageplay.StageplayPlayback public  boolean beforeTick(com.openggf.game.mode.CourseControl,com.openggf.control.LogicalInputSnapshot)
 METHOD com.openggf.stageplay.StageplayPlayback public  boolean drawScene()
 METHOD com.openggf.stageplay.StageplayPlayback public  boolean requiresExclusiveControl()
@@ -14887,6 +14965,7 @@ METHOD com.openggf.stageplay.StageplayTimeline$Frame public  com.openggf.stagepl
 METHOD com.openggf.stageplay.StageplayTimeline$Frame public  com.openggf.stageplay.StageplayTimeline$CameraPose baseCamera()
 METHOD com.openggf.stageplay.StageplayTimeline$Frame public  com.openggf.stageplay.StageplayTimeline$CameraPose camera()
 METHOD com.openggf.stageplay.StageplayTimeline$Frame public  com.openggf.stageplay.StageplayTimeline$TransitionPose transition()
+METHOD com.openggf.stageplay.StageplayTimeline$Frame public  com.openggf.stageplay.StageplayTimeline$WorldSample world()
 METHOD com.openggf.stageplay.StageplayTimeline$Frame public  int frame()
 METHOD com.openggf.stageplay.StageplayTimeline$Frame public  java.util.List<com.openggf.stageplay.StageplayDocument$Caption> captions()
 METHOD com.openggf.stageplay.StageplayTimeline$Frame public  java.util.List<com.openggf.stageplay.StageplayTimeline$ActorPose> actors()
@@ -14895,6 +14974,47 @@ METHOD com.openggf.stageplay.StageplayTimeline$Frame public  java.util.List<com.
 METHOD com.openggf.stageplay.StageplayTimeline$Frame public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.stageplay.StageplayTimeline$Frame public,final  int hashCode()
 METHOD com.openggf.stageplay.StageplayTimeline$Frame public,final  java.lang.String toString()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveActor public  boolean dead()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveActor public  boolean hurt()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveActor public  boolean onObject()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveActor public  int abilityState()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveActor public  int abilityTimer()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveActor public  int animation()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveActor public  int mappingFrame()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveActor public  int ridingLayoutIndex()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveActor public  int ringDelta()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveActor public  int rings()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveActor public  java.lang.String ability()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveActor public  java.lang.String actorId()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveActor public  java.lang.String targetStatus()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveActor public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.stageplay.StageplayTimeline$LiveActor public,final  int hashCode()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveActor public,final  java.lang.String toString()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveEvent public  int frame()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveEvent public  java.lang.String actorId()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveEvent public  java.lang.String commandId()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveEvent public  java.lang.String detail()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveEvent public  java.lang.String kind()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveEvent public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.stageplay.StageplayTimeline$LiveEvent public,final  int hashCode()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveEvent public,final  java.lang.String toString()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveObject public  int layoutIndex()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveObject public  int objectId()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveObject public  int subtype()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveObject public  int x()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveObject public  int y()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveObject public  java.lang.String type()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveObject public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.stageplay.StageplayTimeline$LiveObject public,final  int hashCode()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveObject public,final  java.lang.String toString()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveRing public  boolean collected()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveRing public  int placementId()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveRing public  int sparkleStartFrame()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveRing public  int x()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveRing public  int y()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveRing public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.stageplay.StageplayTimeline$LiveRing public,final  int hashCode()
+METHOD com.openggf.stageplay.StageplayTimeline$LiveRing public,final  java.lang.String toString()
 METHOD com.openggf.stageplay.StageplayTimeline$PuppetAccessory public  boolean flipX()
 METHOD com.openggf.stageplay.StageplayTimeline$PuppetAccessory public  boolean flipY()
 METHOD com.openggf.stageplay.StageplayTimeline$PuppetAccessory public  int mappingFrame()
@@ -14922,6 +15042,15 @@ METHOD com.openggf.stageplay.StageplayTimeline$TransitionPose public  double cov
 METHOD com.openggf.stageplay.StageplayTimeline$TransitionPose public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.stageplay.StageplayTimeline$TransitionPose public,final  int hashCode()
 METHOD com.openggf.stageplay.StageplayTimeline$TransitionPose public,final  java.lang.String toString()
+METHOD com.openggf.stageplay.StageplayTimeline$WorldSample public  int levelFrame()
+METHOD com.openggf.stageplay.StageplayTimeline$WorldSample public  int vIntRunCount()
+METHOD com.openggf.stageplay.StageplayTimeline$WorldSample public  java.util.List<com.openggf.stageplay.StageplayTimeline$LiveActor> actors()
+METHOD com.openggf.stageplay.StageplayTimeline$WorldSample public  java.util.List<com.openggf.stageplay.StageplayTimeline$LiveEvent> events()
+METHOD com.openggf.stageplay.StageplayTimeline$WorldSample public  java.util.List<com.openggf.stageplay.StageplayTimeline$LiveObject> objects()
+METHOD com.openggf.stageplay.StageplayTimeline$WorldSample public  java.util.List<com.openggf.stageplay.StageplayTimeline$LiveRing> rings()
+METHOD com.openggf.stageplay.StageplayTimeline$WorldSample public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.stageplay.StageplayTimeline$WorldSample public,final  int hashCode()
+METHOD com.openggf.stageplay.StageplayTimeline$WorldSample public,final  java.lang.String toString()
 METHOD com.openggf.stageplay.runtime.StageplayNativeBinding public  boolean current(com.openggf.game.mode.CourseControl)
 METHOD com.openggf.stageplay.runtime.StageplayNativeBinding public  com.openggf.stageplay.runtime.StageplayNativeBinding$State capture()
 METHOD com.openggf.stageplay.runtime.StageplayNativeBinding public  void abandon()
@@ -16008,27 +16137,36 @@ NESTED com.openggf.stageplay.StageplayDocument com.openggf.stageplay.StageplayDo
 NESTED com.openggf.stageplay.StageplayDocument com.openggf.stageplay.StageplayDocument$AudioCue
 NESTED com.openggf.stageplay.StageplayDocument com.openggf.stageplay.StageplayDocument$AudioKind
 NESTED com.openggf.stageplay.StageplayDocument com.openggf.stageplay.StageplayDocument$CameraEffect
+NESTED com.openggf.stageplay.StageplayDocument com.openggf.stageplay.StageplayDocument$CameraFollow
 NESTED com.openggf.stageplay.StageplayDocument com.openggf.stageplay.StageplayDocument$CameraKey
 NESTED com.openggf.stageplay.StageplayDocument com.openggf.stageplay.StageplayDocument$Caption
 NESTED com.openggf.stageplay.StageplayDocument com.openggf.stageplay.StageplayDocument$DialogueCue
 NESTED com.openggf.stageplay.StageplayDocument com.openggf.stageplay.StageplayDocument$DialogueSkin
 NESTED com.openggf.stageplay.StageplayDocument com.openggf.stageplay.StageplayDocument$DialogueTyper
 NESTED com.openggf.stageplay.StageplayDocument com.openggf.stageplay.StageplayDocument$Interpolation
+NESTED com.openggf.stageplay.StageplayDocument com.openggf.stageplay.StageplayDocument$ObjectTarget
 NESTED com.openggf.stageplay.StageplayDocument com.openggf.stageplay.StageplayDocument$PuppetCommand
 NESTED com.openggf.stageplay.StageplayDocument com.openggf.stageplay.StageplayDocument$PuppetCommandKind
 NESTED com.openggf.stageplay.StageplayDocument com.openggf.stageplay.StageplayDocument$PuppetTrack
 NESTED com.openggf.stageplay.StageplayDocument com.openggf.stageplay.StageplayDocument$SceneChange
 NESTED com.openggf.stageplay.StageplayDocument com.openggf.stageplay.StageplayDocument$SetSource
 NESTED com.openggf.stageplay.StageplayDocument com.openggf.stageplay.StageplayDocument$Transition
+NESTED com.openggf.stageplay.StageplayDocument com.openggf.stageplay.StageplayDocument$WaitCondition
+NESTED com.openggf.stageplay.StageplayDocument com.openggf.stageplay.StageplayDocument$WorldPolicy
 NESTED com.openggf.stageplay.StageplayPlayback com.openggf.stageplay.StageplayPlayback$State
 NESTED com.openggf.stageplay.StageplayTimeline com.openggf.stageplay.StageplayTimeline$ActorPose
 NESTED com.openggf.stageplay.StageplayTimeline com.openggf.stageplay.StageplayTimeline$CameraPose
 NESTED com.openggf.stageplay.StageplayTimeline com.openggf.stageplay.StageplayTimeline$DialoguePose
 NESTED com.openggf.stageplay.StageplayTimeline com.openggf.stageplay.StageplayTimeline$Frame
+NESTED com.openggf.stageplay.StageplayTimeline com.openggf.stageplay.StageplayTimeline$LiveActor
+NESTED com.openggf.stageplay.StageplayTimeline com.openggf.stageplay.StageplayTimeline$LiveEvent
+NESTED com.openggf.stageplay.StageplayTimeline com.openggf.stageplay.StageplayTimeline$LiveObject
+NESTED com.openggf.stageplay.StageplayTimeline com.openggf.stageplay.StageplayTimeline$LiveRing
 NESTED com.openggf.stageplay.StageplayTimeline com.openggf.stageplay.StageplayTimeline$PuppetAccessory
 NESTED com.openggf.stageplay.StageplayTimeline com.openggf.stageplay.StageplayTimeline$PuppetSample
 NESTED com.openggf.stageplay.StageplayTimeline com.openggf.stageplay.StageplayTimeline$PuppetStatus
 NESTED com.openggf.stageplay.StageplayTimeline com.openggf.stageplay.StageplayTimeline$TransitionPose
+NESTED com.openggf.stageplay.StageplayTimeline com.openggf.stageplay.StageplayTimeline$WorldSample
 NESTED com.openggf.stageplay.runtime.StageplayNativeBinding com.openggf.stageplay.runtime.StageplayNativeBinding$FinishMode
 NESTED com.openggf.stageplay.runtime.StageplayNativeBinding com.openggf.stageplay.runtime.StageplayNativeBinding$State
 NESTED com.openggf.trace.TraceEvent com.openggf.trace.TraceEvent$AirCountdownState
@@ -18508,6 +18646,14 @@ RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$CameraEffect frequency 
 RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$CameraEffect id java.lang.String
 RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$CameraEffect seed int
 RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$CameraEffect startFrame int
+RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$CameraFollow actors java.util.List<java.lang.String>
+RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$CameraFollow deadZoneX double
+RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$CameraFollow deadZoneY double
+RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$CameraFollow lookAhead double
+RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$CameraFollow offsetX double
+RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$CameraFollow offsetY double
+RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$CameraFollow smoothing double
+RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$CameraKey follow com.openggf.stageplay.StageplayDocument$CameraFollow
 RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$CameraKey frame int
 RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$CameraKey interpolation com.openggf.stageplay.StageplayDocument$Interpolation
 RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$CameraKey x double
@@ -18547,10 +18693,18 @@ RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$DialogueTyper framesPer
 RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$DialogueTyper id java.lang.String
 RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$DialogueTyper punctuationPauseFrames int
 RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$DialogueTyper spacePauseFrames int
+RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$ObjectTarget layoutIndex int
+RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$ObjectTarget objectId int
+RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$ObjectTarget offsetX double
+RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$ObjectTarget offsetY double
+RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$ObjectTarget subtype int
+RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$PuppetCommand condition com.openggf.stageplay.StageplayDocument$WaitCondition
 RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$PuppetCommand frame int
 RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$PuppetCommand holdFrames int
 RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$PuppetCommand id java.lang.String
 RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$PuppetCommand kind com.openggf.stageplay.StageplayDocument$PuppetCommandKind
+RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$PuppetCommand target com.openggf.stageplay.StageplayDocument$ObjectTarget
+RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$PuppetCommand timeoutFrames int
 RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$PuppetCommand urgency double
 RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$PuppetCommand x double
 RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$PuppetCommand y double
@@ -18567,6 +18721,7 @@ RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$SetSource act int
 RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$SetSource gameId java.lang.String
 RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$SetSource levelProject java.lang.String
 RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$SetSource romSha1 java.lang.String
+RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$SetSource worldPolicy com.openggf.stageplay.StageplayDocument$WorldPolicy
 RECORD-COMPONENT com.openggf.stageplay.StageplayDocument$SetSource zone int
 RECORD-COMPONENT com.openggf.stageplay.StageplayPlayback$State binding com.openggf.stageplay.runtime.StageplayNativeBinding$State
 RECORD-COMPONENT com.openggf.stageplay.StageplayPlayback$State cancel boolean
@@ -18602,6 +18757,36 @@ RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$Frame frame int
 RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$Frame puppets java.util.List<com.openggf.stageplay.StageplayTimeline$PuppetSample>
 RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$Frame set com.openggf.stageplay.StageplayDocument$SetSource
 RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$Frame transition com.openggf.stageplay.StageplayTimeline$TransitionPose
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$Frame world com.openggf.stageplay.StageplayTimeline$WorldSample
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveActor ability java.lang.String
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveActor abilityState int
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveActor abilityTimer int
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveActor actorId java.lang.String
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveActor animation int
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveActor dead boolean
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveActor hurt boolean
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveActor mappingFrame int
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveActor onObject boolean
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveActor ridingLayoutIndex int
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveActor ringDelta int
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveActor rings int
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveActor targetStatus java.lang.String
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveEvent actorId java.lang.String
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveEvent commandId java.lang.String
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveEvent detail java.lang.String
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveEvent frame int
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveEvent kind java.lang.String
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveObject layoutIndex int
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveObject objectId int
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveObject subtype int
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveObject type java.lang.String
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveObject x int
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveObject y int
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveRing collected boolean
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveRing placementId int
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveRing sparkleStartFrame int
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveRing x int
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$LiveRing y int
 RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$PuppetAccessory flipX boolean
 RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$PuppetAccessory flipY boolean
 RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$PuppetAccessory mappingFrame int
@@ -18618,6 +18803,12 @@ RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$PuppetSample velocityY 
 RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$TransitionPose coverage double
 RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$TransitionPose revealing boolean
 RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$TransitionPose transition com.openggf.stageplay.StageplayDocument$Transition
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$WorldSample actors java.util.List<com.openggf.stageplay.StageplayTimeline$LiveActor>
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$WorldSample events java.util.List<com.openggf.stageplay.StageplayTimeline$LiveEvent>
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$WorldSample levelFrame int
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$WorldSample objects java.util.List<com.openggf.stageplay.StageplayTimeline$LiveObject>
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$WorldSample rings java.util.List<com.openggf.stageplay.StageplayTimeline$LiveRing>
+RECORD-COMPONENT com.openggf.stageplay.StageplayTimeline$WorldSample vIntRunCount int
 RECORD-COMPONENT com.openggf.stageplay.runtime.StageplayNativeBinding$State actorId java.lang.String
 RECORD-COMPONENT com.openggf.stageplay.runtime.StageplayNativeBinding$State entry com.openggf.game.mode.CourseControl$DirectedPlayerState
 RECORD-COMPONENT com.openggf.trace.TraceEvent$AirCountdownState fixedSlot int
@@ -19594,6 +19785,8 @@ TYPE enum public,static,final com.openggf.stageplay.StageplayDocument$AudioKind 
 TYPE enum public,static,final com.openggf.stageplay.StageplayDocument$Interpolation SUPER java.lang.Enum<com.openggf.stageplay.StageplayDocument$Interpolation>
 TYPE enum public,static,final com.openggf.stageplay.StageplayDocument$PuppetCommandKind SUPER java.lang.Enum<com.openggf.stageplay.StageplayDocument$PuppetCommandKind>
 TYPE enum public,static,final com.openggf.stageplay.StageplayDocument$Transition SUPER java.lang.Enum<com.openggf.stageplay.StageplayDocument$Transition>
+TYPE enum public,static,final com.openggf.stageplay.StageplayDocument$WaitCondition SUPER java.lang.Enum<com.openggf.stageplay.StageplayDocument$WaitCondition>
+TYPE enum public,static,final com.openggf.stageplay.StageplayDocument$WorldPolicy SUPER java.lang.Enum<com.openggf.stageplay.StageplayDocument$WorldPolicy>
 TYPE enum public,static,final com.openggf.stageplay.StageplayTimeline$PuppetStatus SUPER java.lang.Enum<com.openggf.stageplay.StageplayTimeline$PuppetStatus>
 TYPE enum public,static,final com.openggf.stageplay.runtime.StageplayNativeBinding$FinishMode SUPER java.lang.Enum<com.openggf.stageplay.runtime.StageplayNativeBinding$FinishMode>
 TYPE interface protected,abstract,static com.openggf.game.AbstractLevelInitProfile$IORunnable SUPER <none>
@@ -20226,11 +20419,13 @@ TYPE record public,static,final com.openggf.stageplay.StageplayDocument$Actor SU
 TYPE record public,static,final com.openggf.stageplay.StageplayDocument$ActorKey SUPER java.lang.Record
 TYPE record public,static,final com.openggf.stageplay.StageplayDocument$AudioCue SUPER java.lang.Record
 TYPE record public,static,final com.openggf.stageplay.StageplayDocument$CameraEffect SUPER java.lang.Record
+TYPE record public,static,final com.openggf.stageplay.StageplayDocument$CameraFollow SUPER java.lang.Record
 TYPE record public,static,final com.openggf.stageplay.StageplayDocument$CameraKey SUPER java.lang.Record
 TYPE record public,static,final com.openggf.stageplay.StageplayDocument$Caption SUPER java.lang.Record
 TYPE record public,static,final com.openggf.stageplay.StageplayDocument$DialogueCue SUPER java.lang.Record
 TYPE record public,static,final com.openggf.stageplay.StageplayDocument$DialogueSkin SUPER java.lang.Record
 TYPE record public,static,final com.openggf.stageplay.StageplayDocument$DialogueTyper SUPER java.lang.Record
+TYPE record public,static,final com.openggf.stageplay.StageplayDocument$ObjectTarget SUPER java.lang.Record
 TYPE record public,static,final com.openggf.stageplay.StageplayDocument$PuppetCommand SUPER java.lang.Record
 TYPE record public,static,final com.openggf.stageplay.StageplayDocument$PuppetTrack SUPER java.lang.Record
 TYPE record public,static,final com.openggf.stageplay.StageplayDocument$SceneChange SUPER java.lang.Record
@@ -20240,9 +20435,14 @@ TYPE record public,static,final com.openggf.stageplay.StageplayTimeline$ActorPos
 TYPE record public,static,final com.openggf.stageplay.StageplayTimeline$CameraPose SUPER java.lang.Record
 TYPE record public,static,final com.openggf.stageplay.StageplayTimeline$DialoguePose SUPER java.lang.Record
 TYPE record public,static,final com.openggf.stageplay.StageplayTimeline$Frame SUPER java.lang.Record
+TYPE record public,static,final com.openggf.stageplay.StageplayTimeline$LiveActor SUPER java.lang.Record
+TYPE record public,static,final com.openggf.stageplay.StageplayTimeline$LiveEvent SUPER java.lang.Record
+TYPE record public,static,final com.openggf.stageplay.StageplayTimeline$LiveObject SUPER java.lang.Record
+TYPE record public,static,final com.openggf.stageplay.StageplayTimeline$LiveRing SUPER java.lang.Record
 TYPE record public,static,final com.openggf.stageplay.StageplayTimeline$PuppetAccessory SUPER java.lang.Record
 TYPE record public,static,final com.openggf.stageplay.StageplayTimeline$PuppetSample SUPER java.lang.Record
 TYPE record public,static,final com.openggf.stageplay.StageplayTimeline$TransitionPose SUPER java.lang.Record
+TYPE record public,static,final com.openggf.stageplay.StageplayTimeline$WorldSample SUPER java.lang.Record
 TYPE record public,static,final com.openggf.stageplay.runtime.StageplayNativeBinding$State SUPER java.lang.Record
 TYPE record public,static,final com.openggf.trace.TraceEvent$AirCountdownState SUPER java.lang.Record
 TYPE record public,static,final com.openggf.trace.TraceEvent$AirCountdownState$VisibleChild SUPER java.lang.Record
@@ -21450,18 +21650,22 @@ TYPE-ANNOTATION com.openggf.stageplay.StageplayDocument$ActorKey @com.openggf.ga
 TYPE-ANNOTATION com.openggf.stageplay.StageplayDocument$AudioCue @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.StageplayDocument$AudioKind @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.StageplayDocument$CameraEffect @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.stageplay.StageplayDocument$CameraFollow @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.StageplayDocument$CameraKey @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.StageplayDocument$Caption @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.StageplayDocument$DialogueCue @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.StageplayDocument$DialogueSkin @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.StageplayDocument$DialogueTyper @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.StageplayDocument$Interpolation @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.stageplay.StageplayDocument$ObjectTarget @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.StageplayDocument$PuppetCommand @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.StageplayDocument$PuppetCommandKind @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.StageplayDocument$PuppetTrack @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.StageplayDocument$SceneChange @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.StageplayDocument$SetSource @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.StageplayDocument$Transition @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.stageplay.StageplayDocument$WaitCondition @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.stageplay.StageplayDocument$WorldPolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.StageplayPlayback @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.StageplayPlayback$State @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.StageplayTimeline @com.openggf.game.ModApi
@@ -21469,10 +21673,15 @@ TYPE-ANNOTATION com.openggf.stageplay.StageplayTimeline$ActorPose @com.openggf.g
 TYPE-ANNOTATION com.openggf.stageplay.StageplayTimeline$CameraPose @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.StageplayTimeline$DialoguePose @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.StageplayTimeline$Frame @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.stageplay.StageplayTimeline$LiveActor @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.stageplay.StageplayTimeline$LiveEvent @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.stageplay.StageplayTimeline$LiveObject @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.stageplay.StageplayTimeline$LiveRing @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.StageplayTimeline$PuppetAccessory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.StageplayTimeline$PuppetSample @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.StageplayTimeline$PuppetStatus @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.StageplayTimeline$TransitionPose @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.stageplay.StageplayTimeline$WorldSample @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.runtime.StageplayNativeBinding @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.runtime.StageplayNativeBinding$FinishMode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.stageplay.runtime.StageplayNativeBinding$State @com.openggf.game.ModApi

@@ -19,13 +19,15 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 
-/** Owns detached scene assets, never advances or changes the loaded gameplay world. */
+/** Owns scene assets and explicit offline simulation; an editor's active gameplay world is never replaced. */
 public final class StageplayResources implements AutoCloseable {
     private final Function<String, SceneRomArt> resolver;
     private final List<String> available;
     private final Runnable release;
     private final SceneRomLibrary library;
     private final StageplayPuppets puppets;
+    private StageplayLiveWorld liveWorld;
+    private StageplayOfflinePreview livePreview;
     private final Map<StageplayDocument.SetSource, Level> terrains = new HashMap<>();
     private final Map<StageplayDocument.SetSource, SceneLevelKit> sets = new HashMap<>();
     private Map<String, SceneImage> dialogueImages = Map.of();
@@ -87,13 +89,34 @@ public final class StageplayResources implements AutoCloseable {
         terrains.put(source, Objects.requireNonNull(level)); resetPuppets();
     }
 
-    /** Resolves only physical actors; camera drafts/captions from the supplied authored frame are preserved. */
+    /** Resolves terrain puppets or the shared LIVE world; editor LIVE pixels/state come from an isolated worker. */
     public StageplayTimeline.Frame resolveFrame(StageplayDocument document, StageplayTimeline.Frame authoredFrame) {
         requireOpen();
+        var set = authoredFrame.set() == null ? document.set() : authoredFrame.set();
+        if (set.worldPolicy() == StageplayDocument.WorldPolicy.LIVE) {
+            if (liveWorld != null) return liveWorld.resolve(document, authoredFrame);
+            if (livePreview == null) livePreview = new StageplayOfflinePreview();
+            return livePreview.resolve(document, authoredFrame.frame(), authoredFrame.world() == null ? null : authoredFrame.camera());
+        }
         return puppets.resolve(document, authoredFrame);
     }
 
-    public void resetPuppets() { puppets.reset(); }
+    /** The caller supplies an explicitly owned offline world; resources owns its lifetime. */
+    public void setLiveWorld(StageplayLiveWorld world) {
+        requireOpen();
+        if (liveWorld != null) liveWorld.close();
+        liveWorld = Objects.requireNonNull(world);
+    }
+    public void drawLiveWorld(StageplayTimeline.Frame frame) {
+        if (liveWorld == null) throw new IllegalStateException("Live world was not resolved");
+        liveWorld.draw(frame);
+    }
+    /** Exact owned preview PID for lifecycle diagnostics, or zero before launch/after release. */
+    public long previewProcessId() { return livePreview == null ? 0 : livePreview.processId(); }
+    /** Captured native no-device SFX for this sampled frame; the editor decides forward-playback admission. */
+    public com.openggf.audio.StreamedMusicPort.SfxPcm previewSound(int frame) { return livePreview==null ? null : livePreview.sound(frame); }
+    SceneImage livePreviewImage() { return livePreview == null ? null : livePreview.image(); }
+    public void resetPuppets() { puppets.reset(); if (liveWorld != null) liveWorld.reset(); if (livePreview != null) livePreview.close(); }
 
     private void requirePhysicalLibrary() {
         if (library == null) throw new IllegalStateException("Physics puppets require supplied native ROM resources");
@@ -168,6 +191,20 @@ public final class StageplayResources implements AutoCloseable {
                 if (library.characterArt(actor.gameId(), actor.character()) == null)
                     throw new IllegalArgumentException("Missing native character art: " + actor.id());
                 for (var key : actor.keys()) { nativePixel(key.x(), true); nativePixel(key.y(), false); }
+                for (var command : track.commands()) {
+                    var source = document.set();
+                    for (var change : document.sceneChanges()) if (change.frame() <= command.frame()) source = change.set();
+                    if (source.worldPolicy() != StageplayDocument.WorldPolicy.LIVE) continue;
+                    var capabilities = library.module(source.gameId()).getRules().playerCapability();
+                    if ((command.kind() == StageplayDocument.PuppetCommandKind.FLY_TO || command.kind() == StageplayDocument.PuppetCommandKind.HOVER)
+                            && !capabilities.tailsFlightEnabled()) throw new IllegalArgumentException("Donor module does not support native flight: " + actor.id());
+                    if (command.kind() == StageplayDocument.PuppetCommandKind.GLIDE_TO && !capabilities.glideAttacksEnabled())
+                        throw new IllegalArgumentException("Donor module does not support native glide: " + actor.id());
+                    var target = command.target();
+                    if (target.layoutIndex() >= 0 && terrain(source).getObjects().stream().noneMatch(o -> o.layoutIndex() == target.layoutIndex()
+                            && o.objectId() == target.objectId() && o.subtype() == target.subtype()))
+                        throw new IllegalArgumentException("Unknown placed-object target: " + command.id());
+                }
             }
         }
         for (var cue : document.audio()) if (cue.kind() != StageplayDocument.AudioKind.VOICE
@@ -282,5 +319,5 @@ public final class StageplayResources implements AutoCloseable {
         };
     }
     private void requireOpen() { if (closed) throw new IllegalStateException("Stageplay resources are closed"); }
-    @Override public void close() { if (!closed) { closed = true; puppets.close(); sets.clear(); terrains.clear(); clearDialogue(); release.run(); } }
+    @Override public void close() { if (!closed) { closed = true; puppets.close(); if (liveWorld != null) liveWorld.close(); if (livePreview != null) livePreview.close(); sets.clear(); terrains.clear(); clearDialogue(); release.run(); } }
 }

@@ -228,3 +228,79 @@ for framing; a future smooth world-compositing pass would be needed for animated
 fractional zoom. A larger export `--scale` cannot repair aliasing already present
 in the authored frame. Stage entrances, exits, turns and listener reactions, then
 review the entire movie in motion at its intended output size.
+
+## Live ROM worlds (screenplay 3, document 5)
+
+Existing scenes keep `TERRAIN_ONLY`. A shot opts into a living native level with
+`"set":{"gameId":"s3k","zone":11,"act":1,"worldPolicy":"LIVE"}`.
+All physical cast in that shot use the set's native donor. LIVE views use native
+height 224 and widths 320–1920; use export scale for a larger output. Live spawn
+snapping attaches feet near the floor; disable it for an authored fall. Live worlds run in an
+owned offline process; preview never replaces the editor's active world. The
+in-engine workspace uses a persistent offscreen worker for native pixels and the
+same sampled state used by simulate/capture. Whole-image ROM paths must be configured
+for that worker; composite-image worker transport is not implemented. Linux workers
+remove desktop display variables and require surfaceless EGL. Failure is visible.
+
+Discover original placements and rings before choosing a route:
+
+```bash
+python3 tools/stageplay/stageplay.py level --game s3k --rom "$S3K_ROM" --zone 11 --act 1
+python3 tools/stageplay/stageplay.py catalog --game s3k --rom "$S3K_ROM" --character tails
+```
+
+`level` emits the ROM SHA-1 and complete object/ring placement lists. An object
+anchor uses its original `layoutIndex`, expected `objectId` and `subtype`, plus
+`offsetX`/`offsetY`. Runtime slots and object pointers are not portable identities.
+`MOVE_TO` optionally takes `"target":{"layoutIndex":179,"objectId":74,"subtype":1,
+"offsetX":0,"offsetY":-33}`. With no target the compiler supplies the empty identity
+and uses world-centre `x`/`y`. A target resolves every tick, including after rewind
+recreation. Validation rejects unknown placement/type/subtype combinations; an
+object that has not entered the native activation window reports `NOT_ACTIVE`;
+a previously active object that disappears reports `DESPAWNED` and the actor stops
+steering toward stale coordinates.
+
+Commands keep earliest shot-local `frame` values. `WAIT` gates later due commands
+until `condition` succeeds or `timeoutFrames` expires; neither timing branch moves
+a player. Conditions: `ARRIVED`, `ON_OBJECT`, `GROUNDED`, `AIRBORNE`, `HURT`,
+`RECOVERED`, `RING_COLLECTED`, `TARGET_AVAILABLE`. `ON_OBJECT` can name a particular
+placement; `TARGET_AVAILABLE` requires one. Use a finite timeout, inspect the result,
+and author the next route decision. A timed-out wait continues to later due actions
+and emits `WAIT_TIMED_OUT`; it never silently teleports to satisfy the route.
+A move remains an input attempt. There is no universal pathfinder.
+
+Native intents add `FLY_TO`, `HOVER`, `GLIDE_TO`, `RELEASE`, `CROUCH`, `LOOK_UP`,
+`ROLL`. `FLY_TO`/`GLIDE_TO` use destination/urgency like `MOVE_TO`; `HOVER`,
+`CROUCH`, `LOOK_UP` have finite `holdFrames`. Flight requires S3K Tails and glide
+requires S3K Knuckles. A second jump edge and ordinary jump holds/flaps invoke
+native ability controllers. Exhaustion, gravity, hurt and landing remain native.
+`RELEASE` releases the ability button and brakes horizontal motion; Tails' existing
+flight does not instantly cancel, so allow native descent/landing time. Hurt and
+ring loss come from actual hazard contact; no sprite-only damage command exists.
+
+Camera keys optionally include a `follow` object:
+
+```json
+{"actors":["sonic","tails"],"deadZoneX":24,"deadZoneY":16,
+ "lookAhead":8,"smoothing":0.15,"offsetX":0,"offsetY":-16}
+```
+
+One actor follows that performer; several frame their centre bounds at fixed zoom
+one. Empty actors preserve authored camera keys. Handoffs occur at camera keys.
+The director uses simulated positions and deterministic tick-based smoothing,
+clamps to level bounds, then composes the existing shake. Native camera/focus
+continues to own activation; cinematic camera offsets are temporary render state.
+Keep the ensemble within the native activation window; wide separated routes are
+not independently activated by a cinematic group camera.
+
+`simulate` emits `sample.world`: native clocks, ring population/collection state,
+placed-object positions, actor ring deltas, hurt, support placement, ability state,
+ability timer and actual animation/mapping frame. Its events identify boarding,
+leaving, pickups/loss, hurt/recovery, ability transitions and bounded wait outcomes.
+Repeated frame sampling does not tick. Seeking restores the whole native rewind
+registry and director/control state, then silently replays controller inputs.
+Shot boundaries start a clean world; never interpret spawn placement as movement.
+
+LIVE registered cutscenes use the same isolated world and forward-only native SFX
+packets as editor preview. They cannot borrow/overwrite an interactive player
+through the optional native binding; that existing binding remains terrain-only.

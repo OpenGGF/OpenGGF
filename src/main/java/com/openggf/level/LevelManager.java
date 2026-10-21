@@ -2058,6 +2058,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 includeSpritePass ? LevelRenderOptions.gameplay() : LevelRenderOptions.tilesOnly());
     }
 
+    /** Offline director rendering reuses the native priority pass without publishing a gameplay SAT. */
+    public void drawCinematicWorld(SpriteManager sprites) { levelRenderer.drawCinematicWorld(sprites); }
+
     public void drawWithRenderOptions(SpriteManager spriteManager, LevelRenderOptions renderOptions) {
         levelRenderer.drawWithRenderOptions(spriteManager, renderOptions);
     }

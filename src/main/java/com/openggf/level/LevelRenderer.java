@@ -939,8 +939,18 @@ public final class LevelRenderer {
     }
 
     /** Select the VDP scroll generation paired with the displayed sprite table. */
+    private boolean cinematicDraw;
+
+    /** Presentation-only view of the current world from a director camera; native SAT/scroll publication is retained. */
+    void drawCinematicWorld(SpriteManager sprites) {
+        if (cinematicDraw) throw new IllegalStateException("Nested cinematic world draw");
+        cinematicDraw = true;
+        try { drawWithRenderOptions(sprites, LevelManager.LevelRenderOptions.gameplay()); }
+        finally { cinematicDraw = false; }
+    }
+
     private LevelScrollPresentation scrollForDraw() {
-        return LevelSpritePresentation.enabled(lm) ? spriteTables.publishedScroll() : null;
+        return LevelSpritePresentation.enabled(lm) && !cinematicDraw ? spriteTables.publishedScroll() : null;
     }
 
     LevelSpritePresentation.BackgroundScroll backgroundScrollForDraw() {
@@ -1656,7 +1666,7 @@ public final class LevelRenderer {
      * sprites/objects visible while the level tiles remain hidden.
      */
     public void renderSpriteObjectPass(SpriteManager spriteManager, boolean includeWaterSurface) {
-        if (!preparingSpritePresentation && LevelSpritePresentation.enabled(lm)) {
+        if (!preparingSpritePresentation && LevelSpritePresentation.enabled(lm) && !cinematicDraw) {
             drawPublishedSprites(layer -> !layer.isHud());
         } else {
             prepareOrDrawLiveSprites(spriteManager);

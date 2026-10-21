@@ -5,15 +5,16 @@ carried by `develop` and `next` after the 0.6 release rollover. No Mod API basel
 has been published yet. The runtime-visible, type-only `com.openggf.game.ModApi`
 annotation marks its roots.
 
-Stageplay's directing extension keeps the mutable candidate at 0.7.0. Version-three
-scene records add typed dialogue cues, reusable reveal/skin definitions and sampled
-speaker text alongside camera effects, scene changes and transitions. Legacy
-constructors remain; strict version-one and version-two reads migrate with empty
-extension lists. StageplayDialogue exposes pure layout/reveal sampling. Camera
-position interpolation remains; zoom now holds until the next camera key. SceneRomArt exposes pure accessory pose/time
-sampling and SceneAccessoryPose, allowing native ROM providers to own appendage
-relationships without game-specific branches in Stageplay. The normalized candidate
-pin changes; published-version baselines and release topology do not.
+Stageplay keeps the mutable candidate at 0.7.0. Portable document version five
+adds opt-in LIVE worlds, stable ROM-placement targets, bounded waits, native
+ability intents, fixed-scale camera following and sampled native state/events.
+Screenplay version three compiles that contract. Versions one through four retain
+their terrain-only migration; prior record constructors remain available, including
+version-four canonical callers. Puppet/Poser, dialogue/reveal sampling, camera effects
+and accessory poses remain supported. LIVE editor previews use an isolated native
+worker; these ownership/process details are outside the creator API. The normalized
+candidate pin changes with the typed document/timeline surface; published baselines,
+API version and release topology do not.
 
 Creator dynamic objects implement `ModRewindRecreatable` and receive
 `ObjectReconstructionContext`: captured spawn and typed payload, restore-time

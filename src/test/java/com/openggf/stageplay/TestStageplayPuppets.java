@@ -33,6 +33,9 @@ class TestStageplayPuppets {
         var mapper = new ObjectMapper();
         ObjectNode json = (ObjectNode) mapper.readTree(StageplayStore.encode(old));
         json.put("version", 3); json.remove("puppets");
+        ((ObjectNode)json.get("set")).remove("worldPolicy");
+        for(var change:json.withArray("sceneChanges")) ((ObjectNode)change.get("set")).remove("worldPolicy");
+        for(var key:json.withArray("camera")) ((ObjectNode)key).remove("follow");
         var migrated = StageplayStore.decode(mapper.writeValueAsBytes(json));
         assertTrue(migrated.puppets().isEmpty());
         assertEquals(125, StageplayTimeline.sample(migrated, 15).actors().getFirst().y());

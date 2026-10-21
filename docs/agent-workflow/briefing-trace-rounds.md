@@ -71,6 +71,13 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A live scene can simulate correctly and render valid scenery while every actor is
+outside the picture (2026-10-21, Stageplay live-world review). ROM level maxima
+are camera-origin limits, not terrain dimensions; subtracting the viewport again
+hid the airborne cast. Compare resolved centres with the picture and actual native
+body pixels in each distinct camera regime. A platform-only pixel check or a
+complete lossless decode does not establish airborne framing.
+
 An inverse-affine pixel oracle can disagree with valid GPU edge ownership
 (2026-10-21, sprite presentation smoke). A clipped quad whose edge passes through
 a fragment center has an implementation-defined ownership rule, as explained in

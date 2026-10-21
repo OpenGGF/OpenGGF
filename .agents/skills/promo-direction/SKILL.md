@@ -371,3 +371,8 @@ When the user gives feedback, change the cause, not the symptom. If they say
 "rushed", fewer and longer takes are the fix; a faster cut with more captions
 is not. Record their words and the response in the production README, as the
 archive does for every revision.
+
+For Stageplay LIVE promos, require native world telemetry beside the source:
+boarding/riding/leaving support, collision pickups, hazard hurt/ring loss/recovery,
+and flight/glide/landing. Do not advertise an animation, placement or counter as an
+interaction without that evidence. Keep zoom one and watch complete moving footage.

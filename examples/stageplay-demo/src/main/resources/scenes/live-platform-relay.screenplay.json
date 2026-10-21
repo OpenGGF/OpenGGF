@@ -1,0 +1,297 @@
+{
+  "version": 3,
+  "name": "Platform relay",
+  "width": 320,
+  "height": 224,
+  "cast": [
+    {
+      "id": "sonic",
+      "name": "Sonic",
+      "gameId": "s3k",
+      "character": "sonic",
+      "snapToFloor": false
+    },
+    {
+      "id": "tails",
+      "name": "Tails",
+      "gameId": "s3k",
+      "character": "tails",
+      "snapToFloor": false
+    }
+  ],
+  "shots": [
+    {
+      "id": "relay",
+      "durationFrames": 480,
+      "set": {
+        "gameId": "s3k",
+        "zone": 11,
+        "act": 1,
+        "worldPolicy": "LIVE"
+      },
+      "camera": [
+        {
+          "frame": 0,
+          "x": 5268,
+          "y": 1824,
+          "interpolation": "HOLD",
+          "follow": {
+            "actors": [
+              "sonic",
+              "tails"
+            ],
+            "deadZoneX": 12,
+            "deadZoneY": 12,
+            "lookAhead": 4,
+            "smoothing": 0.2,
+            "offsetX": 0,
+            "offsetY": 0
+          }
+        }
+      ],
+      "actors": {
+        "sonic": [
+          {
+            "frame": 0,
+            "x": 5428,
+            "y": 1936
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "x": 5452,
+            "y": 1936
+          }
+        ]
+      },
+      "actions": {
+        "sonic": [
+          {
+            "frame": 0,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 90,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 1,
+            "kind": "STOP"
+          },
+          {
+            "frame": 110,
+            "kind": "MOVE_TO",
+            "x": 0,
+            "y": 0,
+            "urgency": 0.65,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 111,
+            "kind": "JUMP",
+            "holdFrames": 20
+          },
+          {
+            "frame": 112,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 150,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 113,
+            "kind": "STOP"
+          },
+          {
+            "frame": 300,
+            "kind": "MOVE_TO",
+            "x": 0,
+            "y": 0,
+            "urgency": 0.65,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 301,
+            "kind": "JUMP",
+            "holdFrames": 20
+          },
+          {
+            "frame": 302,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 150,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 303,
+            "kind": "STOP"
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 90,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 1,
+            "kind": "STOP"
+          },
+          {
+            "frame": 115,
+            "kind": "MOVE_TO",
+            "x": 0,
+            "y": 0,
+            "urgency": 0.65,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 116,
+            "kind": "JUMP",
+            "holdFrames": 20
+          },
+          {
+            "frame": 117,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 150,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 118,
+            "kind": "STOP"
+          },
+          {
+            "frame": 305,
+            "kind": "MOVE_TO",
+            "x": 0,
+            "y": 0,
+            "urgency": 0.65,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 306,
+            "kind": "JUMP",
+            "holdFrames": 20
+          },
+          {
+            "frame": 307,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 150,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 308,
+            "kind": "STOP"
+          }
+        ]
+      },
+      "dialogue": [
+        {
+          "startFrame": 20,
+          "endFrame": 105,
+          "speakerActor": "sonic",
+          "text": "Two platforms. Same marks.",
+          "x": 8,
+          "y": 170,
+          "width": 304,
+          "height": 48,
+          "typerId": "pace"
+        },
+        {
+          "startFrame": 185,
+          "endFrame": 285,
+          "speakerActor": "tails",
+          "text": "Your turn. I have this one.",
+          "x": 8,
+          "y": 170,
+          "width": 304,
+          "height": 48,
+          "typerId": "pace"
+        },
+        {
+          "startFrame": 380,
+          "endFrame": 475,
+          "speakerActor": "sonic",
+          "text": "Back on the moving mark.",
+          "x": 8,
+          "y": 170,
+          "width": 304,
+          "height": 48,
+          "typerId": "pace"
+        }
+      ]
+    }
+  ],
+  "dialogueTypers": [
+    {
+      "id": "pace",
+      "framesPerGrapheme": 1,
+      "punctuationPauseFrames": 2,
+      "spacePauseFrames": 0
+    }
+  ]
+}

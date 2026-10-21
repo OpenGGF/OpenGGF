@@ -67,3 +67,64 @@ python3 tools/stageplay/stageplay.py render \
 Build the current engine first (`--build help`), choose a new output for each take,
 and keep media outside the checkout. This is authored staging, not native gameplay
 or a continuous route. The stage resources represent the ROM's decoded load state.
+
+## Live-world demonstrations
+
+Screenplay 3 / portable scene 5 adds four ROM-backed sources beside the original
+terrain-only location remote:
+
+| Source | Length | Native obligations |
+| --- | --- | --- |
+| `live-platform-relay` | 8 s | Two performers board, ride and transfer DEZ2 placements 179 → 166 → 179. |
+| `live-air-traffic` | 9 s | S3K Tails takes off, flies, hovers, releases and lands; Knuckles jumps, glides, releases and lands. |
+| `live-ring-run` | 4 s | Three placed rings disappear once; the placed DEZ1 hazard causes hurt, knockback, native scattered rings and recovery. Camera hands off to Tails. |
+| `one-more-take` | 60 s | Five-shot rehearsal: relay, ring-spill mishap, airborne regrouping, retry, and all-three closing run. |
+
+All use `worldPolicy:LIVE`, physical performers and zoom one. Their controllers
+publish independent native input. Objects, rings, collision, clocks and RNG belong
+to one production world per shot. Posers and old files retain their original
+presentation/terrain-only behavior. The authored routes make explicit jump and
+wait decisions; no universal pathfinder is claimed.
+
+From this engine worktree, use Java 25, Lua 5.4, FFmpeg, and the existing supplied
+locked-on ROM. Build once after source changes, then use a fresh external output
+directory for each take (the tools never overwrite results):
+
+```bash
+export JAVA_HOME=/usr/lib/jvm/java-25-openjdk
+export LUA_BIN=/usr/bin/lua5.4
+STAGEPLAY_ROM='/absolute/path/to/your/existing/Sonic and Knuckles & Sonic 3 (W) [!].gen'
+STAGEPLAY_OUT='/absolute/external/captures/stageplay-delivery/revision-5'
+python3 tools/stageplay/stageplay.py --build help
+python3 tools/stageplay/stageplay.py level --game s3k --rom "$STAGEPLAY_ROM" --zone 11 --act 1
+python3 tools/stageplay/stageplay.py catalog --game s3k --rom "$STAGEPLAY_ROM" --character tails
+python3 tools/stageplay/stageplay.py simulate \
+  --scene examples/stageplay-demo/src/main/resources/scenes/live-platform-relay.stageplay \
+  --out "$STAGEPLAY_OUT/relay-new-take.jsonl" --s3k-rom "$STAGEPLAY_ROM"
+python3 tools/stageplay/stageplay.py render \
+  --scene examples/stageplay-demo/src/main/resources/scenes/one-more-take.stageplay \
+  --out "$STAGEPLAY_OUT/one-more-take-new-take.mkv" --s3k-rom "$STAGEPLAY_ROM" --scale 2
+```
+
+The launcher selects surfaceless EGL and removes desktop display variables on
+Linux. Rendering uses offline synthesis and never opens a speaker device. Source
+screenplays compile with `compile --script NAME.screenplay.json --out NEW.stageplay`.
+Keep canonical source scenes in Git; movies, state JSONL and review images belong
+in the external task directory.
+
+Inspect actual `sample.world` data, not only actor poses. Placement IDs identify
+support; `rings` identifies original ring placements and sparkle state; actor ring
+values are the native shared total, so do not add them together. Native lost rings
+appear as `LostRingObjectInstance` entries. Events record hurt/recovery, ring
+deltas, boarding/leaving, abilities and bounded-wait outcomes. The ROM-backed
+`TestStageplayLiveDemosRom` executes these source routes and compares whole-world
+seek/replay through transfers, pickup/spill, airborne abilities and shot changes.
+
+Both editors consume the shared scene schema and preview owner. Live in-engine
+preview runs a persistent offscreen worker, retains the parent world, accepts
+unkeyed camera drafts without advancing a repeated frame, and admits synthesized
+native SFX only during forward playback. The worker currently requires configured
+original whole-image ROM paths; it does not materialize composite ROMs. Keep the
+ensemble in the native camera's activation window; an authored offset does not
+create another activation region. Separated casts fail with an actionable route
+message. Author a closer route or a new shot.

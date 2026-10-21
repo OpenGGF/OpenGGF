@@ -96,7 +96,11 @@ public final class StageplayCaptureTool {
                      var surface = new SceneSurface();
                      var grabber = new GlReadPixelsGrabber(document.width(), document.height())) {
                     resources.setProjectRoot(arguments.scene().toAbsolutePath().getParent());
-                    resources.validate(document); cues.prepare(document);
+                    resources.validate(document);
+                    if (StageplayTool.usesLiveWorld(document)) resources.setLiveWorld(StageplayLiveWorld.adoptOffline(
+                            library, com.openggf.game.session.SessionManager.getCurrentGameplayMode()));
+                    resources.resolveFrame(document, StageplayTimeline.sample(document, 0));
+                    cues.prepare(document);
                     var renderer = new StageplayRenderer(resources);
                     var encoder = new FfmpegEncoder(arguments.ffmpeg(), arguments.scale());
                     int rate = audio.outputSampleRate();
@@ -106,11 +110,21 @@ public final class StageplayCaptureTool {
                         float[] projection = SceneSurface.projection(document.width(), document.height());
                         int[] viewport = {0, 0, document.width(), document.height()};
                         renderFrames(document, staged, rate, encoder, frame -> {
+                            boolean boundary = frame > 0 && document.sceneChanges().stream().anyMatch(c -> c.frame() == frame);
+                            if (boundary && StageplayTool.usesLiveWorld(document)) audio.endCaptureMode();
+                            var actual = resources.resolveFrame(document, StageplayTimeline.sample(document, frame));
+                            if (boundary && StageplayTool.usesLiveWorld(document)) {
+                                cues.refreshAfterNativeBoundary(frame);
+                                audio.beginCaptureMode(rate, StageplayDocument.FRAMES_PER_SECOND);
+                            }
                             cues.playFrame(document, frame);
                             HeadlessGameBoot.presentHeadlessOuterAudioFrame();
                             int frames = audio.drainCaptureFrame(pcm);
-                            surface.record(document.width(), document.height(), canvas ->
-                                    renderer.draw(document, resources.resolveFrame(document, StageplayTimeline.sample(document, frame)), canvas));
+                            if (actual.world() != null) resources.drawLiveWorld(actual);
+                            surface.record(document.width(), document.height(), canvas -> {
+                                if (actual.world() != null) renderer.drawLiveOverlay(document, actual, canvas);
+                                else renderer.draw(document, actual, canvas);
+                            });
                             org.lwjgl.opengl.GL11.glViewport(0, 0, document.width(), document.height());
                             surface.render(projection, viewport);
                             return new CapturedFrame(grabber.grab(), document.width(), document.height(), pcm, frames, frame);
@@ -165,7 +179,7 @@ public final class StageplayCaptureTool {
         } catch (Exception failure) {
             sink.abort();
             if (failure instanceof IOException io) throw io;
-            throw new IOException("Stageplay export failed", failure);
+            throw new IOException("Stageplay export failed: " + failure.getMessage(), failure);
         }
     }
 
