@@ -23393,3 +23393,36 @@ python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal -Dmse=off -Pguar
   "-Ds3k.rom.path=${OPENGGF_MAIN}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
   "-Dkis2.rom.path=${OPENGGF_MAIN}/kis2.gen" test -B
 ```
+
+### Root bounded gameplay leaf adoption (2026-10-21)
+
+Root adopted SOZ commit3ceac445d with normal isolated merge5ef277d23, after
+independent complete-diff/source/input review found no material issues.
+Removing only the11+39 added neutral rows recovers every one of the original
+24,005 controller rows, in order. Production code and maintained route
+assertions are unchanged. The author-qualified short natural Glowing Sphere
+release check passed1 case and the whole unchanged SOZ route class passed9,
+with no failures, errors or skips, on bf2 plus that committed delta. Root read
+the complete source/data diff and retained result identities; consumed XML was
+not independently re-read or rerun. The
+[SOZ matrix](../validation/levels/s3k-soz-act1.md#natural-knuckles-glowing-sphere-release-2026-10-21)
+keeps the exact commands, controller-phase observations and replay obligations.
+
+Root adopted Shot commit392f3f58 with normal isolated mergeeca3a0ff9, after
+independent native/consumer/source review found no material issues. Its only
+production change is the static raw/profile shield byte0 and capability NONE.
+The expected pre-fix run had12 cases and exactly2 descriptor failures; the
+frozen focused correction passed162 cases across6 classes without errors or
+skips. Ordinary shield-loss hurt and Hyper outcomes already agreed and remain
+controls, not a route-cause claim. The
+[SSZ matrix](../validation/levels/s3k-ssz-act1.md#eggrobo-shot-shield-descriptor--2026-10-21)
+records the exact selectors, tested state and component/configuration limits.
+
+The sole merge conflict was the shared coverage backlog insertion; both full
+SOZ and SSZ paragraphs were retained. These are separately qualified leaf
+results, not a fresh combined smoke, native timing/pixel or delivery pass.
+The art request leaf remains unadopted: its final independent review found one
+armed-title/physical-full/incidental-flush capacity defect, now under focused
+correction. SSZ controller qualification on the final production epoch and
+other route/native-publication gaps remain open. Main develop is still c13,
+with its unrelated files/submodules preserved; no integration push is qualified.
