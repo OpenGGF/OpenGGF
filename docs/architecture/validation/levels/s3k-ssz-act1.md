@@ -4267,3 +4267,34 @@ records active placement, unload, render/scaling writers and exact source limits
 No JVM/probe, runtime/data fix or oracle adaptation follows. Expected 46 and every
 maintained input/test/runtime/POM stay unchanged; the existing route/native
 qualification gaps remain open.
+
+## Wide paired original layout30 unload and exit R9 — 2026-10-21
+
+Exactly one ordinary current `b078214e7` cold row0 prefix0..7007 uses the original
+movie/neutral P2/Settings7 native800 paired/off/titlefalse and normal step/draw.
+Actual XML records7008 inputs/21024 phase rows/115 fields/**0JUnit tests/0skips**.
+All 115 fields agree at the six retained current PRE/POST3491,3507,6721 rows already
+matched by R7. No Main/native/second prefix or endpoint9914 result is added.
+
+Original constructor→raw body→manager→original spawn bindings identify layout30,
+born 6792 from `(1552,2448,$A0,$20,flags0,rawY2448,respawn=false,owner=null,key=null)`.
+All 216 original post-routine manager checks through 7007 evaluate persistent=false,
+custom=false, outOfRange=false and return false normally; distances 0..384 stay
+within the actual 1120 limit. There is no selected unload/`onUnload`/removal for this
+body. R8's additional source-visible coarse-X path is not taken in this prefix.
+
+The original render writer first sets its flag 6946 at body `(1552,2448)`, extents 32/32,
+copied camera `(1583,2376)`. Wait consumes true 6947, returns without drawing and
+retains the flag. Flight starts 6948. First negative Y velocity 6975 is 6→−22, with
+delta −27→−28 and consumed render=true, so it moves. All 33 negative-velocity exits
+through 7007 consume true and move; all 60 flight calls return normally and none
+publishes. The current prefix's missing publication is thus bound to actual wait
+and exit operands, rather than an inferred manager retirement.
+
+The 4096-row allocation-free passive carrier retains 2653 rows without overflow or
+duplicate binding. Whole diagnostic sources/classes are removed, a normal restored
+compile passes, and raw outputs/helpers are consumed; useful source/compact facts
+remain external. The [dated R9 plan](../../plans/2026-10-13-s3k-playable-completion.md#wide-paired-layout30-original-unload-and-exit-operands-r9--2026-10-21)
+records exact boundaries, source/environment pins and restoration. R9 does not
+capture the gate word or establish native trajectory/render correctness. Expected 46,
+all maintained movies/tests/runtime/POM and existing route gaps remain unchanged.
