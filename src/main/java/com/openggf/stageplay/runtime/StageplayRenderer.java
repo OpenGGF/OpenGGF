@@ -27,6 +27,13 @@ public final class StageplayRenderer {
                 || document.puppets().stream().anyMatch(track -> frame.puppets().stream()
                     .noneMatch(value -> value.actorId().equals(track.actorId()))))
             throw new IllegalArgumentException("Resolve physics puppet frames before rendering");
+        if (frame.world() != null) {
+            var image = resources.livePreviewImage();
+            if (image == null) throw new IllegalStateException("The offline host must draw the native world before its overlay");
+            canvas.draw(image, 0, 0, SceneDraw.plain());
+            drawLiveOverlay(document, frame, canvas);
+            return;
+        }
         resources.prepareDialogue(document);
         var camera = frame.camera(); var kit = resources.set(frame.set() == null ? document.set() : frame.set());
         float zoom = (float) camera.zoom();
@@ -43,8 +50,23 @@ public final class StageplayRenderer {
             if (id >= 0 && id < kit.blockCount()) canvas.draw(kit.blockImage(id), (float) ((x * size - camera.x()) * zoom),
                     (float) ((y * size - camera.y()) * zoom), SceneDraw.plain().withScale(zoom));
         }
+        drawPerformersAndOverlay(document, frame, canvas, zoom, false);
+        canvas.unclip();
+    }
+
+    /** Native world already drew terrain/objects/physical cast through the priority renderer. */
+    public void drawLiveOverlay(StageplayDocument document, StageplayTimeline.Frame frame, SceneCanvas canvas) {
+        resources.prepareDialogue(document);
+        canvas.clip(0, 0, document.width(), document.height());
+        drawPerformersAndOverlay(document, frame, canvas, 1, true);
+        canvas.unclip();
+    }
+
+    private void drawPerformersAndOverlay(StageplayDocument document, StageplayTimeline.Frame frame,
+                                         SceneCanvas canvas, float zoom, boolean nativeWorld) {
+        var camera = frame.camera();
         for (var actor : frame.actors()) {
-            if (!actor.visible()) continue;
+            if (!actor.visible() || nativeWorld && document.puppets().stream().anyMatch(p -> p.actorId().equals(actor.actorId()))) continue;
             var set = resources.character(actor.gameId(), actor.character());
             var sprite = set.frame(mappingFrame(actor));
             if (sprite == null) throw new IllegalArgumentException("Actor animation is unavailable: " + actor.actorId());
@@ -65,7 +87,6 @@ public final class StageplayRenderer {
         }
         StageplayDialogueRenderer.draw(document, frame, canvas, resources);
         transition(canvas, frame.transition(), document.width(), document.height());
-        canvas.unclip();
     }
 
     private SceneAccessoryPose accessory(StageplayDocument document, StageplayTimeline.Frame frame,

@@ -27,7 +27,8 @@ Choose the capture owner from what the excerpt needs to show:
 - For staged stories, choreographed promos, dialogue and directed performances, use
   [stageplay-authoring](../stageplay-authoring/SKILL.md). Its screenplay/compiler and
   offline renderer provide actor, camera, caption, audio and scene-transition tracks.
-- For actual gameplay, routes, mechanics and native outcomes, use
+  `LIVE` shots can demonstrate native interactions when supported by world telemetry.
+- For ordinary gameplay, continuous routes and gameplay feature captures, use
   [gameplay-capture](../gameplay-capture/SKILL.md), with
   [bk2-input-authoring](../bk2-input-authoring/SKILL.md) when scripted inputs help.
 - For an existing replay, use [trace-capture](../trace-capture/SKILL.md).
@@ -36,8 +37,11 @@ Choose the capture owner from what the excerpt needs to show:
 
 A reel may combine these sources. Label their source kinds in its provenance and
 make the distinction clear wherever an edit could imply that authored action was
-observed gameplay. Stageplay scenery and actor motion do not prove route completion,
-full-world collision behavior, zone-event execution or native parity.
+observed gameplay. Authored samples and `TERRAIN_ONLY` motion do not demonstrate
+placed-object AI or zone events. `LIVE` telemetry can substantiate the native
+interactions actually observed in its authored setup. Staged spawns and cuts do
+not prove continuous cold route completion; native parity needs separate reference
+evidence, including identifiable emulator footage when used.
 
 Keep enough provenance beside each retained scenario or in the task index:
 
@@ -45,9 +49,11 @@ Keep enough provenance beside each retained scenario or in the task index:
   and resolved character/donor/team.
 - Capture driver/command and source kind. For gameplay, retain the input/controller
   recipe and entry method: cold route, checkpoint reload, positioned setup or seeded
-  diagnostic. For Stageplay, retain the screenplay, compiled scene and shot IDs.
+  diagnostic. For Stageplay, retain the screenplay, compiled scene, shot IDs and
+  per-shot `TERRAIN_ONLY`/`LIVE` world policy, including spawn setup and cuts.
 - Relevant setup writes, frame stride/rate and whether audio was captured.
-- Measured gameplay state CSV or labelled authored/simulated Stageplay JSONL, with named event
+- Measured gameplay state CSV or labelled Stageplay JSONL: authored timeline,
+  `TERRAIN_ONLY` simulation or `LIVE` native world telemetry, with named event
   frames. Keep their meanings distinct. Record the outcome, known defects and whether
   the footage is final, superseded, or a failed experiment.
 
@@ -59,8 +65,15 @@ masks if a live controller leaves the textual input column blank.
 
 For Stageplay, read the screenplay and appropriate JSONL before choosing excerpts.
 `timeline` records authored samples and cues; physical actors remain `UNRESOLVED`.
-`simulate` records actual native player motion against detached terrain, including
-arrival/blocked status. Neither is full-world gameplay or native route evidence. Keep every-frame output when cue timing matters; a sampled
+`simulate` with `TERRAIN_ONLY` records actual native player motion against
+detached static terrain, including arrival/blocked status, without placed-object
+AI, ring collection or zone-event simulation. With `LIVE`, `sample.world` records
+the shared native clocks, actors, placed objects, rings and events. Use those rows
+to verify actual support/riding, pickups, hurt/recovery and ability transitions.
+LIVE is a native world under authored shot setup and inputs; it does not by itself
+prove continuous cold route completion or ROM parity. Normal gameplay CSV records
+observed gameplay with its own entry/input semantics. Keep every-frame output
+when cue timing matters; a sampled
 export omits cues between sampled frames. Verify the visible performance in motion;
 correct authored coordinates alone do not establish a good-looking shot.
 
@@ -111,7 +124,8 @@ do not imply a positioned demonstration is a cold completion run.
 
 Choose an audio policy for the reel. Preserve genuine gameplay audio consistently
 or make gameplay evidence silent when its sources lack audio. Stageplay excerpts may
-use their authored ROM music, effects and creator-supplied voice cues; catalogue their
+use authored ROM music/effects and creator-supplied voices, plus native SFX in
+LIVE shots; distinguish authored cues from observed native events. Catalogue their
 sources and preserve the intended timing. Do not invent soundtrack licensing or let
 editorial audio imply a native sound/event that was never observed. Use text files
 for labels and structured subprocess arguments/concat manifests for paths rather
@@ -142,7 +156,8 @@ and [rebuilding guidance](https://github.com/OpenGGF/OpenGGF-Media/blob/main/doc
 - Update the project index and the repository's project/root/source catalogs,
   including source sizes and SHA-256 hashes. Catalogue footage, finished reels,
   audio, artwork, frame sequences and bulk state data that remain external in
-  `catalog/assets.csv`. Distinguish authored Stageplay timeline JSONL from measured
+  `catalog/assets.csv`. Distinguish authored Stageplay timeline JSONL,
+  `TERRAIN_ONLY` actor simulation, `LIVE` native world telemetry and measured
   gameplay CSV in those entries. Include durable locations and root mappings; a
   catalog entry does not upload or make an external asset downloadable.
 - Keep ROMs, extracted ROM art/audio, recordings, frame dumps, packaged builds,

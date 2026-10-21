@@ -91,7 +91,12 @@ public final class StageplayTimeline {
     @ModApi
     public record Frame(int frame, List<ActorPose> actors, CameraPose camera, List<Caption> captions,
                         SetSource set, TransitionPose transition, CameraPose baseCamera, List<DialoguePose> dialogue,
-                        List<PuppetSample> puppets) {
+                        List<PuppetSample> puppets, WorldSample world) {
+        public Frame(int frame, List<ActorPose> actors, CameraPose camera, List<Caption> captions,
+                     SetSource set, TransitionPose transition, CameraPose baseCamera, List<DialoguePose> dialogue,
+                     List<PuppetSample> puppets) {
+            this(frame, actors, camera, captions, set, transition, baseCamera, dialogue, puppets, null);
+        }
         public Frame {
             actors = List.copyOf(actors);
             Objects.requireNonNull(camera, "camera");
@@ -164,7 +169,21 @@ public final class StageplayTimeline {
     public record PuppetAccessory(int mappingFrame, boolean flipX, boolean flipY) { }
 
     @ModApi
-    public enum PuppetStatus { UNRESOLVED, INACTIVE, IDLE, MOVING, STOPPING, ARRIVED, BLOCKED }
+    public enum PuppetStatus { UNRESOLVED, INACTIVE, IDLE, MOVING, STOPPING, ARRIVED, BLOCKED, WAITING, SATISFIED, TIMED_OUT, TARGET_UNAVAILABLE, DEAD, PERFORMING }
+
+    /** Native observations, sampled after the one shared world tick. No comparison data drives simulation. */
+    @ModApi public record WorldSample(int levelFrame, int vIntRunCount, List<LiveActor> actors,
+                                      List<LiveObject> objects, List<LiveRing> rings, List<LiveEvent> events) {
+        public WorldSample { actors = List.copyOf(actors); objects = List.copyOf(objects); rings = List.copyOf(rings); events = List.copyOf(events); }
+    }
+    @ModApi public record LiveEvent(int frame, String actorId, String commandId, String kind, String detail) { }
+    @ModApi public record LiveActor(String actorId, int rings, int ringDelta, boolean hurt, boolean dead,
+                                   boolean onObject, int ridingLayoutIndex, String ability, int abilityState,
+                                   int abilityTimer, int animation, int mappingFrame, String targetStatus) { }
+    @ModApi public record LiveObject(int layoutIndex, int objectId, int subtype, int x, int y, String type) { }
+    @ModApi public record LiveRing(int placementId, int x, int y, boolean collected, int sparkleStartFrame) {
+        public LiveRing(int x, int y, boolean collected, int sparkleStartFrame) { this(-1, x, y, collected, sparkleStartFrame); }
+    }
 
     @ModApi
     public record CameraPose(double x, double y, double zoom) { }

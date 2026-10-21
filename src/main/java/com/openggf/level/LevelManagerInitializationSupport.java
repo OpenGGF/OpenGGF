@@ -12,17 +12,19 @@ import com.openggf.sprites.Sprite;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.logging.Logger;
+
 final class LevelManagerInitializationSupport {
     private LevelManagerInitializationSupport() {
     }
 
     /** Rebuilds the immutable geometry caches after a level is loaded or restored. */
-    static void cacheLevelDimensions(LevelManager owner, int contiguousBackgroundWidth) {
+    static void cacheLevelDimensions(LevelManager owner, Logger logger) {
         if (owner.level != null) {
             owner.cachedFgWidthPx = owner.getLayerLevelWidthPx((byte) 0);
             owner.cachedFgHeightPx = owner.getLayerLevelHeightPx((byte) 0);
             owner.cachedBgWidthPx = owner.getLayerLevelWidthPx((byte) 1);  // Full map width (matches reference)
-            owner.cachedBgContiguousWidthPx = contiguousBackgroundWidth;  // For bgTilemapBaseX wrapping
+            owner.cachedBgContiguousWidthPx = computeActualBgDataWidthPx(owner.level, owner.blockPixelSize, logger);  // For bgTilemapBaseX wrapping
             owner.cachedBgHeightPx = owner.getLayerLevelHeightPx((byte) 1);
         } else {
             owner.cachedFgWidthPx = owner.blockPixelSize;
@@ -32,6 +34,33 @@ final class LevelManagerInitializationSupport {
             owner.cachedBgHeightPx = owner.blockPixelSize;
         }
         owner.blockGrid = new BlockGridIndexer(owner.blockPixelSize);
+    }
+
+    /**
+     * Scan the BG layer (layer 1) to find the contiguous data width.
+     * On the Mega Drive, the BG nametable is a 512px-wide ring buffer.
+     * The scroll handler fills it from the BG map, wrapping at the map's
+     * data width.  The Map stores both FG and BG with the same total width
+     * (e.g., 128 blocks = 16384px), but BG data typically only spans a
+     * small contiguous region from column 0 (e.g., 8 blocks for HTZ).
+     * <p>
+     * Using the contiguous BG data width for X wrapping ensures that queries
+     * at large camera X positions wrap back to valid BG data rather than
+     * reading empty columns in the unused portion of the map.
+     * <p>
+     * Example: HTZ BG data spans 8 contiguous columns (1024px) within a
+     * 128-column map.  Without this fix, bgTilemapBaseX=6144 queries
+     * column 48 (empty).  With contiguous width = 1024px wrapping,
+     * 6144 mod 1024 = 0 → column 0 (valid).
+     */
+    private static int computeActualBgDataWidthPx(Level level, int blockPixelSize, Logger logger) {
+        int dataWidthPx = LevelGeometry.contiguousBgDataWidthPx(level, blockPixelSize);
+        if (level != null && level.getMap() != null
+                && dataWidthPx < level.getMap().getWidth() * blockPixelSize) {
+            logger.fine("BG contiguous data width: " + dataWidthPx / blockPixelSize + " blocks ("
+                    + dataWidthPx + "px) out of " + level.getMap().getWidth() + " map columns");
+        }
+        return dataWidthPx;
     }
 
     static void registerWorldRenderEffects(com.openggf.game.session.WorldSession world,

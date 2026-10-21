@@ -60,6 +60,9 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
     private static void validateNativeDocument(StageplayDocument document, String boundActor) {
         Objects.requireNonNull(boundActor, "boundActor");
         if (boundActor.isEmpty()) return;
+        if (document.set().worldPolicy() == StageplayDocument.WorldPolicy.LIVE
+                || document.sceneChanges().stream().anyMatch(c -> c.set().worldPolicy() == StageplayDocument.WorldPolicy.LIVE))
+            throw new IllegalArgumentException("LIVE scenes own native players in their isolated world; active-player binding requires terrain-only shots");
         var actor = document.actors().stream().filter(value -> value.id().equals(boundActor)).findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Bound actor is missing"));
         if (!document.set().levelProject().isEmpty()
@@ -320,7 +323,10 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
         public StageplayTimeline.Frame resolveFrame(StageplayTimeline.Frame authored) {
             return resolved = resources.resolveFrame(document, authored);
         }
-        public void playFrame(int frame) { audio.playFrame(document, frame); }
+        public void playFrame(int frame) {
+            audio.playFrame(document, frame);
+            audio.playNativeFrame(frame, resources.previewSound(frame));
+        }
         public void stop() { audio.stop(); resources.resetPuppets(); resolved = null; }
         public com.openggf.audio.rewind.AudioLogicalSnapshot captureEntryAudio() { return audio.captureEntry(); }
         public void restoreEntryAudio(com.openggf.audio.rewind.AudioLogicalSnapshot entry) { audio.restoreEntry(entry); }

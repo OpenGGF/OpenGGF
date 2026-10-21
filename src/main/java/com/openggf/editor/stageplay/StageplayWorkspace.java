@@ -105,7 +105,10 @@ public final class StageplayWorkspace {
     /** Frontends suspend held camera controls while a palette or text widget owns input. */
     public void setCameraInputEnabled(boolean enabled) { cameraInputEnabled = enabled; if (!enabled) resetZoomRepeat(); }
     public StageplayTimeline.CameraPose directorCamera() {
-        return cameraDraft != null ? cameraDraft : StageplayTimeline.sample(recordingDocument(), controller.frame()).baseCamera();
+        if (cameraDraft != null) return cameraDraft;
+        var document = recordingDocument();
+        return liveCamera() ? resolvePreview(document, controller.frame()).baseCamera()
+                : StageplayTimeline.sample(document, controller.frame()).baseCamera();
     }
     public String status() { return status; }
     public Path path() { return path; }
@@ -148,7 +151,9 @@ public final class StageplayWorkspace {
                 case PUPPET_ACTIONS -> puppetMenu();
                 case CAMERA_MODE -> {
                     cameraMode = !cameraMode; cameraDraft = null;
-                    status = cameraMode ? "Camera: WASD / arrows pan, Q / E step integer zoom, K capture key, R record, C leave camera." : "Actor direction";
+                    status = !cameraMode ? "Actor direction" : liveCamera()
+                            ? "LIVE camera: WASD / arrows pan, fixed zoom 1, K capture key, R record, C leave camera."
+                            : "Camera: WASD / arrows pan, Q / E step integer zoom, K capture key, R record, C leave camera.";
                 }
                 case SET_CAMERA_KEY -> captureCameraKey();
                 case CAMERA_KEY -> cameraMenu();
@@ -269,7 +274,7 @@ public final class StageplayWorkspace {
         if (cameraDraft == null || controller.playing()) return frame;
         var shaken = new StageplayTimeline.CameraPose(cameraDraft.x()+frame.camera().x()-frame.baseCamera().x(),
                 cameraDraft.y()+frame.camera().y()-frame.baseCamera().y(),cameraDraft.zoom());
-        return new StageplayTimeline.Frame(frame.frame(),frame.actors(),shaken,frame.captions(),frame.set(),frame.transition(),cameraDraft,frame.dialogue(),frame.puppets());
+        return new StageplayTimeline.Frame(frame.frame(),frame.actors(),shaken,frame.captions(),frame.set(),frame.transition(),cameraDraft,frame.dialogue(),frame.puppets(),frame.world());
     }
 
     private void invalidatePreview() { previewSource=null; resolvedPreview=null; previewError=null; previewAt=-1; }
@@ -392,7 +397,7 @@ public final class StageplayWorkspace {
             throw new IllegalArgumentException("Camera movement and zoom must be finite; zoom must be positive");
         if (screenX == 0 && screenY == 0 && zoomFactor == 1) return;
         var camera = directorCamera();
-        double zoom = zoomFactor == 1 ? camera.zoom() : Math.clamp(Math.round(camera.zoom() * zoomFactor), 1, 64);
+        double zoom = liveCamera() ? 1 : zoomFactor == 1 ? camera.zoom() : Math.clamp(Math.round(camera.zoom() * zoomFactor), 1, 64);
         // Keep the film centre steady while zooming; movement is measured in visible pixels.
         double x = camera.x() + screenX / camera.zoom() + controller.document().width() * (.5 / camera.zoom() - .5 / zoom);
         double y = camera.y() + screenY / camera.zoom() + controller.document().height() * (.5 / camera.zoom() - .5 / zoom);
@@ -406,7 +411,8 @@ public final class StageplayWorkspace {
         var key = new CameraKey(controller.frame(), camera.x(), camera.y(), camera.zoom(), Interpolation.LINEAR);
         edit(d -> d.withCamera(withCameraKey(d.camera(), key)));
         cameraDraft = null;
-        status = "Camera key captured at frame " + controller.frame() + ". Later keys animate pans; zoom changes cut at their key.";
+        status = "Camera key captured at frame " + controller.frame() + (liveCamera()
+                ? ". Authored LIVE framing at fixed zoom 1; following is cleared at this key." : ". Later keys animate pans; zoom changes cut at their key.");
     }
 
     private void startCameraTake() {
@@ -419,7 +425,8 @@ public final class StageplayWorkspace {
         cameraMode = true; takeBefore = before; takeCameraKeys = keys;
         takeDraft = before.withCamera(keys);
         cameraDraft = null;
-        status = "Recording camera: WASD / arrows pan, Q / E step integer zoom, Space stops. One take is one undo.";
+        status = liveCamera() ? "Recording authored LIVE camera: WASD / arrows pan, fixed zoom 1, Space stops. Capture replaces following; one take is one undo."
+                : "Recording camera: WASD / arrows pan, Q / E step integer zoom, Space stops. One take is one undo.";
     }
 
     void recordCameraStep(int horizontal, int vertical, double zoomFactor) {
@@ -456,7 +463,12 @@ public final class StageplayWorkspace {
         return (input.isKeyDown(GLFW_KEY_S) || input.isKeyDown(GLFW_KEY_DOWN) ? 1 : 0)
                 - (input.isKeyDown(GLFW_KEY_W) || input.isKeyDown(GLFW_KEY_UP) ? 1 : 0);
     }
+    private boolean liveCamera() {
+        return StageplayTimeline.sample(recordingDocument(), controller.frame()).set().worldPolicy() == WorldPolicy.LIVE;
+    }
+
     private double zoomInput(InputHandler input) {
+        if (liveCamera()) { resetZoomRepeat(); return 1; }
         int direction = (input.isKeyDown(GLFW_KEY_E) ? 1 : 0) - (input.isKeyDown(GLFW_KEY_Q) ? 1 : 0);
         if (direction == 0) { resetZoomRepeat(); return 1; }
         boolean step = direction != zoomHeldDirection;
@@ -552,7 +564,7 @@ public final class StageplayWorkspace {
         var audio = new ArrayList<AudioCue>();
         for (var cue : doc.audio()) audio.add(new AudioCue(cue.id(), cue.frame(), cue.kind(), cue.gameId(),
                 cue.soundId(), relative(oldRoot, newRoot, cue.asset()), cue.gain()));
-        return doc.withSet(new SetSource(set.gameId(), set.zone(), set.act(), set.romSha1(), project)).withAudio(audio);
+        return doc.withSet(new SetSource(set.gameId(), set.zone(), set.act(), set.romSha1(), project, set.worldPolicy())).withAudio(audio);
     }
 
     private static boolean hasRelativeAssets(StageplayDocument doc) {
@@ -574,10 +586,11 @@ public final class StageplayWorkspace {
         menu.showForm("Stageplay scene / set", List.of(text("name", "Name", doc.name()), number("duration", "Length (60 Hz frames)", doc.durationFrames()),
                 number("width", "Width", doc.width()), number("height", "Height", doc.height()), text("game", "Set game: s1 / s2 / s3k", set.gameId()),
                 number("zone", "Zone (zero based)", set.zone()), number("act", "Act (zero based)", set.act()),
-                text("rom", "Optional ROM SHA-1", set.romSha1()), text("project", "Relative .ogfproject (optional)", set.levelProject())),
+                text("rom", "Optional ROM SHA-1", set.romSha1()), text("project", "Relative .ogfproject (optional)", set.levelProject()),
+                text("world", "World: TERRAIN_ONLY / LIVE", set.worldPolicy().name())),
                 "Apply scene", v -> edit(d -> d.withName(v.get("name")).withDurationFrames(integer(v,"duration"))
                         .withSize(integer(v,"width"), integer(v,"height"))
-                        .withSet(new SetSource(v.get("game"),integer(v,"zone"),integer(v,"act"),v.get("rom"),v.get("project")))));
+                        .withSet(new SetSource(v.get("game"),integer(v,"zone"),integer(v,"act"),v.get("rom"),v.get("project"),WorldPolicy.valueOf(v.get("world").toUpperCase(java.util.Locale.ROOT))))));
         menu.setSubtitle("Shortening requires deleting out-of-range keys and cues first. Linked sets must be saved under the scene folder.");
     }
 
@@ -655,6 +668,18 @@ public final class StageplayWorkspace {
         actions.add(action("Move to destination",() -> puppetCommandForm(actor, null,PuppetCommandKind.MOVE_TO)));
         actions.add(action("Jump",() -> puppetCommandForm(actor,null,PuppetCommandKind.JUMP)));
         actions.add(action("Stop / brake",() -> puppetCommandForm(actor,null,PuppetCommandKind.STOP)));
+        var currentSet = StageplayTimeline.sample(controller.document(), controller.frame()).set();
+        if (currentSet.worldPolicy() == WorldPolicy.LIVE) {
+            for (var kind : List.of(PuppetCommandKind.WAIT, PuppetCommandKind.RELEASE, PuppetCommandKind.CROUCH,
+                    PuppetCommandKind.LOOK_UP, PuppetCommandKind.ROLL))
+                actions.add(action(kind.name(), () -> puppetCommandForm(actor, null, kind)));
+            if (actor.gameId().equals("s3k") && actor.character().equals("tails")) {
+                actions.add(action("Fly toward target", () -> puppetCommandForm(actor, null, PuppetCommandKind.FLY_TO)));
+                actions.add(action("Hover (bounded)", () -> puppetCommandForm(actor, null, PuppetCommandKind.HOVER)));
+            }
+            if (actor.gameId().equals("s3k") && actor.character().equals("knuckles"))
+                actions.add(action("Glide toward target", () -> puppetCommandForm(actor, null, PuppetCommandKind.GLIDE_TO)));
+        }
         actions.add(action("Spawn / current shot placement",() -> puppetPlacementForm(actor)));
         actions.add(action("Visibility at playhead",() -> puppetVisibilityForm(actor)));
         for (var command:track.commands()) {
@@ -673,30 +698,45 @@ public final class StageplayWorkspace {
     }
 
     private void puppetCommandForm(Actor actor,PuppetCommand command,PuppetCommandKind kind) {
-        var pose=selectedActorPose();
-        int frame=command==null?controller.frame():command.frame();
-        var fields=new ArrayList<EditorProjectMenu.Field>(); fields.add(number("frame","Frame",frame));
-        if (kind==PuppetCommandKind.MOVE_TO) {
-            fields.add(number("x","Destination world X",command==null?(pose==null?actor.keys().getFirst().x():pose.x())+96:command.x()));
-            fields.add(number("y","Destination world Y",command==null?(pose==null?actor.keys().getFirst().y():pose.y()):command.y()));
-            fields.add(number("urgency","Urgency (>0 to 1, native speed fraction)",command==null?.65:command.urgency()));
-        } else if (kind==PuppetCommandKind.JUMP) {
+        var pose=selectedActorPose(); int frame=command==null?controller.frame():command.frame();
+        boolean move=kind==PuppetCommandKind.MOVE_TO || kind==PuppetCommandKind.FLY_TO || kind==PuppetCommandKind.GLIDE_TO;
+        boolean hold=kind==PuppetCommandKind.JUMP || kind==PuppetCommandKind.HOVER || kind==PuppetCommandKind.CROUCH || kind==PuppetCommandKind.LOOK_UP;
+        boolean live=StageplayTimeline.sample(controller.document(),frame).set().worldPolicy()==WorldPolicy.LIVE;
+        boolean target=live && (move || kind==PuppetCommandKind.WAIT);
+        var fields=new ArrayList<EditorProjectMenu.Field>(); fields.add(number("frame","Earliest frame",frame));
+        if(move) {
+            fields.add(number("x","Destination centre X",command==null?(pose==null?actor.keys().getFirst().x():pose.x())+96:command.x()));
+            fields.add(number("y","Destination centre Y",command==null?(pose==null?actor.keys().getFirst().y():pose.y()):command.y()));
+            fields.add(number("urgency","Urgency (0..1)",command==null?.65:command.urgency()));
+        }
+        if(hold) {
             int nextJump=puppet(controller.document(),actor.id()).commands().stream()
                     .filter(c -> c.kind()==PuppetCommandKind.JUMP && c.frame()>frame).mapToInt(PuppetCommand::frame).min()
                     .orElse(controller.document().durationFrames()+1);
-            int defaultHold=Math.max(1,Math.min(12,Math.min(shotEnd(controller.document(),frame)-frame,nextJump-frame-1)));
-            fields.add(number("hold","Jump hold (1..60 frames)",command==null?defaultHold:command.holdFrames()));
+            int defaultHold=Math.max(1,Math.min(kind==PuppetCommandKind.JUMP?12:60,shotEnd(controller.document(),frame)-frame));
+            if(kind==PuppetCommandKind.JUMP) defaultHold=Math.max(1,Math.min(defaultHold,nextJump-frame-1));
+            fields.add(number("hold","Button/intent duration (frames)",command==null?defaultHold:command.holdFrames()));
         }
-        menu.showForm(kind==PuppetCommandKind.MOVE_TO?"Move to destination":kind==PuppetCommandKind.JUMP?"Native jump":"Stop / brake",fields,"Apply action",v -> edit(d -> {
+        if(live) fields.add(number("timeout","Timeout (WAIT requires 1..36000)",command==null?(kind==PuppetCommandKind.WAIT?180:0):command.timeoutFrames()));
+        if(kind==PuppetCommandKind.WAIT) fields.add(text("condition","ARRIVED / ON_OBJECT / GROUNDED / AIRBORNE / HURT / RECOVERED / RING_COLLECTED / TARGET_AVAILABLE",command==null?"GROUNDED":command.condition().name()));
+        if(target) {
+            var old=command==null?ObjectTarget.none():command.target();
+            fields.add(number("layout","ROM placement layoutIndex (-1 = coordinate)",old.layoutIndex()));
+            fields.add(number("object","Expected objectId",old.objectId())); fields.add(number("subtype","Expected subtype",old.subtype()));
+            fields.add(number("offsetX","Target local offset X",old.offsetX())); fields.add(number("offsetY","Target local offset Y",old.offsetY()));
+        }
+        menu.showForm(kind==PuppetCommandKind.MOVE_TO?"Move to destination":kind==PuppetCommandKind.JUMP?"Native jump":kind==PuppetCommandKind.STOP?"Stop / brake":"Native intent: "+kind,fields,"Apply action",v -> edit(d -> {
             var track=puppet(d,actor.id()); var commands=new ArrayList<>(track.commands());
             String id=command==null?nextId("action",d):command.id(); commands.removeIf(c -> c.id().equals(id));
-            commands.add(new PuppetCommand(id,integer(v,"frame"),kind,kind==PuppetCommandKind.MOVE_TO?decimal(v,"x"):0,
-                    kind==PuppetCommandKind.MOVE_TO?decimal(v,"y"):0,kind==PuppetCommandKind.MOVE_TO?decimal(v,"urgency"):0,
-                    kind==PuppetCommandKind.JUMP?integer(v,"hold"):0));
+            commands.add(new PuppetCommand(id,integer(v,"frame"),kind,move?decimal(v,"x"):0,move?decimal(v,"y"):0,
+                    move?decimal(v,"urgency"):0,hold?integer(v,"hold"):0,
+                    target?new ObjectTarget(integer(v,"layout"),integer(v,"object"),integer(v,"subtype"),decimal(v,"offsetX"),decimal(v,"offsetY")):ObjectTarget.none(),
+                    kind==PuppetCommandKind.WAIT?WaitCondition.valueOf(v.get("condition").toUpperCase(java.util.Locale.ROOT)):WaitCondition.NONE,
+                    live?integer(v,"timeout"):0));
             commands.sort(Comparator.comparingInt(PuppetCommand::frame));
             return replacePuppet(d,new PuppetTrack(actor.id(),track.snapToFloor(),track.collisionPath(),commands));
         }));
-        menu.setSubtitle(selectedActorStatus()+". A move continues until another move or stop. Jump presses need one released frame between holds. Urgency changes button steering, never native speed constants.");
+        menu.setSubtitle("Native buttons own movement and abilities. WAIT gates later due actions until its condition or timeout. Discover placement identities with the Stageplay level command. LIVE preview uses the isolated offline host.");
     }
 
     private void puppetPlacementForm(Actor actor) {
@@ -767,34 +807,54 @@ public final class StageplayWorkspace {
     }
 
     private void cameraMenu() {
-        menu.showActions("Camera at frame " + controller.frame(), List.of(action("Set camera key", this::cameraForm),
+        var actions = new ArrayList<EditorProjectMenu.Action>(List.of(action("Set camera key", this::cameraForm),
                 action("Remove camera key", () -> {
                     if (controller.frame()==0) throw new IllegalStateException("The frame-zero camera key is required");
                     if (isSceneBoundary(controller.frame())) throw new IllegalStateException("A scene change needs this camera key. Remove the scene change first.");
                     edit(d -> d.withCamera(d.camera().stream().filter(k -> k.frame()!=controller.frame()).toList()));
-                }), action("Capture 1x pixel framing", () -> captureZoom(1)),
-                action("Capture 2x pixel framing", () -> captureZoom(2)),
-                action("Capture 3x pixel framing", () -> captureZoom(3)),
-                action("Capture 4x pixel framing", () -> captureZoom(4))));
+                })));
+        for (int zoom : liveCamera() ? List.of(1) : List.of(1, 2, 3, 4))
+            actions.add(action("Capture " + zoom + "x pixel framing", () -> captureZoom(zoom)));
+        menu.showActions("Camera at frame " + controller.frame(), actions);
+        if (liveCamera()) menu.setSubtitle("LIVE cameras use fixed zoom 1. Use export scale for a larger movie.");
     }
 
     private void captureZoom(int zoom) { moveCamera(0,0,zoom/directorCamera().zoom()); captureCameraKey(); }
 
     private void cameraForm() {
+        boolean live = liveCamera();
         int frame = controller.frame();
         var existing=controller.document().camera().stream().filter(k -> k.frame()==frame).findFirst().orElse(null);
         var camera = existing==null ? integerCamera(directorCamera()) : directorCamera();
         var interpolation = controller.document().camera().stream().filter(k -> k.frame() <= frame).reduce((a,b) -> b).orElseThrow().interpolation();
+        var follow=existing==null?CameraFollow.none():existing.follow();
+        var resolved = live ? resolvePreview(controller.document(), frame).baseCamera() : camera;
+        var authored = StageplayTimeline.sample(controller.document(), frame).baseCamera();
         menu.showForm("Camera key at frame " + frame,List.of(number("x","World left X",camera.x()),number("y","World top Y",camera.y()),
-                number("zoom","Zoom (integer 1..64)",camera.zoom()),text("interpolation","HOLD / LINEAR / SMOOTH",interpolation.name())),"Set camera",v -> edit(d -> {
+                number("zoom",live ? "Zoom (LIVE fixed at 1)" : "Zoom (integer 1..64)",camera.zoom()),text("interpolation","HOLD / LINEAR / SMOOTH",interpolation.name()),
+                text("follow","Follow actor IDs (comma separated; empty = authored)",String.join(",",follow.actors())),
+                number("deadX","Horizontal dead zone",follow.deadZoneX()),number("deadY","Vertical dead zone",follow.deadZoneY()),
+                number("ahead","Look ahead (ticks)",follow.lookAhead()),number("smooth","Smoothing (0.001..1)",follow.smoothing()),
+                number("offsetX","Follow offset X",follow.offsetX()),number("offsetY","Follow offset Y",follow.offsetY())),"Set camera",v -> edit(d -> {
             double zoom=decimal(v,"zoom");
+            if (live && zoom != 1) throw new IllegalArgumentException("LIVE cameras require fixed zoom 1. Use export scale for a larger movie.");
             if ((existing==null || zoom!=existing.zoom()) && (zoom<1 || zoom!=Math.rint(zoom)))
                 throw new IllegalArgumentException("New framing uses integer zoom (1..64). Existing fractional values may be kept unchanged.");
             var keys = new ArrayList<>(d.camera()); keys.removeIf(k -> k.frame()==frame);
-            keys.add(new CameraKey(frame,decimal(v,"x"),decimal(v,"y"),zoom,Interpolation.valueOf(v.get("interpolation").toUpperCase(java.util.Locale.ROOT))));
+            double x=decimal(v,"x"), y=decimal(v,"y");
+            var actors=v.get("follow").isBlank()?List.<String>of():java.util.Arrays.stream(v.get("follow").split(",")).map(String::trim).toList();
+            boolean following=live && !actors.isEmpty();
+            var nextFollow=new CameraFollow(actors,decimal(v,"deadX"),decimal(v,"deadY"),decimal(v,"ahead"),decimal(v,"smooth"),
+                    decimal(v,"offsetX")+(following?x-resolved.x():0), decimal(v,"offsetY")+(following?y-resolved.y():0));
+            // A resolved follow view is not its authored seed. Position edits adjust the follow
+            // offset; an unchanged submit must preserve replay's original smoothing history.
+            keys.add(new CameraKey(frame,following?(existing==null?authored.x():existing.x()):x,
+                    following?(existing==null?authored.y():existing.y()):y,zoom,
+                    Interpolation.valueOf(v.get("interpolation").toUpperCase(java.util.Locale.ROOT)),nextFollow));
             keys.sort(Comparator.comparingInt(CameraKey::frame)); return d.withCamera(keys);
         }));
-        menu.setSubtitle("Pan uses the chosen interpolation; zoom is held until the next key. Integer zoom preserves pixel framing. Imported fractional zoom can shimmer while panning.");
+        menu.setSubtitle(live ? "LIVE fixed zoom 1. With following, position edits adjust follow offsets; Capture key / Record stores authored framing. Use export scale for a larger movie."
+                : "Pan uses the chosen interpolation; zoom is held until the next key. Integer zoom preserves pixel framing. Imported fractional zoom can shimmer while panning.");
     }
 
     private boolean isSceneBoundary(int frame) {
@@ -858,11 +918,12 @@ public final class StageplayWorkspace {
                 number("duration", "Transition frames (CUT = 0)", change == null ? 0 : change.durationFrames()),
                 text("game", "Incoming set: s1 / s2 / s3k", set.gameId()), number("zone", "Zone (zero based)", set.zone()),
                 number("act", "Act (zero based)", set.act()), text("rom", "Optional ROM SHA-1", set.romSha1()),
-                text("project", "Relative .ogfproject (optional)", set.levelProject())), "Apply scene change", v -> edit(d -> {
+                text("project", "Relative .ogfproject (optional)", set.levelProject()),
+                text("world", "World: TERRAIN_ONLY / LIVE", set.worldPolicy().name())), "Apply scene change", v -> edit(d -> {
             String id = change == null ? nextId("scene", d) : change.id();
             var values = new ArrayList<>(d.sceneChanges()); values.removeIf(c -> c.id().equals(id));
             values.add(new SceneChange(id, integer(v,"frame"), new SetSource(v.get("game"), integer(v,"zone"),
-                    integer(v,"act"), v.get("rom"), v.get("project")),
+                    integer(v,"act"), v.get("rom"), v.get("project"), WorldPolicy.valueOf(v.get("world").toUpperCase(java.util.Locale.ROOT))),
                     Transition.valueOf(v.get("transition").toUpperCase(java.util.Locale.ROOT)), integer(v,"duration")));
             values.sort(Comparator.comparingInt(SceneChange::frame));
             return withSceneBoundaries(d, values);

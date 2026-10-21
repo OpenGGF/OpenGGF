@@ -65,9 +65,10 @@ public final class StageplayTool {
                         "inspect --scene film.stageplay [--frame N]",
                         "timeline --scene film.stageplay --out authored.jsonl [--every N]",
                         "simulate --scene film.stageplay --out state.jsonl --s2-rom PATH [--s1-rom PATH --s3k-rom PATH --every N]",
+                        "level --game s3k --rom PATH --zone 11 --act 1",
                         "catalog --game s2 --rom /absolute/game.gen [--character tails] [--zone 0 --act 0]",
                         "render --scene film.stageplay --out film.mkv --s1-rom PATH --s2-rom PATH --s3k-rom PATH"),
-                        "screenplayVersion", 2, "stageplayVersion", StageplayDocument.VERSION,
+                        "screenplayVersion", 3, "stageplayVersion", StageplayDocument.VERSION,
                         "fps", 60, "indices", "Frames, zones and acts are zero-based; every shot uses local frames.",
                         "outputs", "JSON result on stdout; exit 0 success, 2 invalid input/failure. Outputs are never overwritten.",
                         "resources", "catalog and simulate need supplied ROMs; simulate resolves native puppet physics without a window, graphics or audio playback. Render preflights resources and uses offline audio.");
@@ -127,6 +128,7 @@ public final class StageplayTool {
             }
             case "simulate" -> simulate(flags);
             case "catalog" -> catalog(flags);
+            case "level" -> inspectLevel(flags);
             default -> throw new IOException("Unknown command: " + command + "; use help");
         };
     }
@@ -146,6 +148,7 @@ public final class StageplayTool {
              var resources = new StageplayResources(library, false)) {
             resources.setProjectRoot(scene.getParent());
             resources.validate(document);
+            if (usesLiveWorld(document)) resources.setLiveWorld(com.openggf.stageplay.runtime.StageplayLiveWorld.openOffline(library));
             publish(out, staged -> {
                 try (var writer = Files.newBufferedWriter(staged, java.nio.charset.StandardCharsets.UTF_8)) {
                     for (int frame = 0; frame < document.durationFrames(); frame++) {
@@ -164,7 +167,24 @@ public final class StageplayTool {
         }
         return Map.of("timeline", out.toAbsolutePath().toString(), "every", every,
                 "samples", (document.durationFrames() + every - 1) / every,
-                "kind", "native player physics against detached terrain; no live gameplay objects or events");
+                "kind", usesLiveWorld(document) ? "native shared live-world gameplay" : "native player physics against detached terrain; no live gameplay objects or events");
+    }
+
+    static boolean usesLiveWorld(StageplayDocument document) {
+        return document.set().worldPolicy() == StageplayDocument.WorldPolicy.LIVE
+                || document.sceneChanges().stream().anyMatch(c -> c.set().worldPolicy() == StageplayDocument.WorldPolicy.LIVE);
+    }
+
+    private static Object inspectLevel(Map<String, String> flags) throws IOException {
+        allow(flags, "game", "rom", "zone", "act");
+        String game = required(flags, "game");
+        int zone = Integer.parseInt(required(flags, "zone")), act = Integer.parseInt(required(flags, "act"));
+        try (var library = SceneRomLibrary.open(Map.of(game, path(flags, "rom")))) {
+            var level = library.level(game, zone, act);
+            return Map.of("gameId", game, "zone", zone, "act", act, "romSha1", library.rom(game).romSha1(),
+                    "objects", level.getObjects(), "rings", level.getRings(),
+                    "identity", "Use layoutIndex, objectId and subtype together; dynamic slot IDs are not placement identities");
+        }
     }
 
     private static Object catalog(Map<String, String> flags) throws IOException {
@@ -201,6 +221,13 @@ public final class StageplayTool {
             String character = flags.getOrDefault("character", "sonic");
             var sprites = art.character(character);
             report.put("character", character).put("mappingFrameCount", sprites.frameCount());
+            var capabilities = report.putArray("intents");
+            for (String intent : List.of("MOVE_TO", "STOP", "JUMP", "WAIT", "RELEASE", "CROUCH", "LOOK_UP", "ROLL")) capabilities.add(intent);
+            var definition = module.getPlayableCharacterRegistry().find(com.openggf.game.CharacterKey.parsePersisted(character)).orElseThrow();
+            if (definition.secondaryAbility() == com.openggf.sprites.playable.SecondaryAbility.FLY && module.getRules().playerCapability().tailsFlightEnabled()) {
+                capabilities.add("FLY_TO"); capabilities.add("HOVER");
+            }
+            if (definition.secondaryAbility() == com.openggf.sprites.playable.SecondaryAbility.GLIDE && module.getRules().playerCapability().glideAttacksEnabled()) capabilities.add("GLIDE_TO");
             var animations = report.putArray("animations");
             // Stock animation bytecode indexes are bytes; absent scripts return an empty array.
             for (int animation = 0; animation < 256; animation++) {

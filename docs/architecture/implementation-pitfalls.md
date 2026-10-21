@@ -2078,3 +2078,34 @@ not only under a headless Engine fixture. Native floor collision also preserves 
 subpixel word: compare foot pixels for landing support, and exact fractions only
 when both runs consume identical inputs. See the
 [Stageplay design](designs/2026-10-21-stageplay.md).
+
+
+### Offline native worlds need the complete presentation binding (Stageplay, 2026-10-21)
+
+`GameplaySessionFactory.attachManagers` creates owners but does not bind the graphics
+camera; GameLoop normally completes that host step. A host that steps LevelFrameStep
+directly must call `GraphicsManager.bindRuntimeManagedReferences` with its session's
+camera/fade manager. Otherwise tile shaders show the level while queued sprite/HUD
+commands subtract a retired bootstrap camera and disappear. A nonblank frame or
+populated CPU SAT does not prove visible actors. Compare actual body pixels.
+
+Native published SAT/scroll coordinates belong to the native camera. Cinematic
+views reuse LevelRenderer's scoped current-world priority pass, preserving native
+publication and activation. Bind the native camera for updates, apply the director
+camera only for drawing, then restore it. Reopening a level also replaces its audio
+producer: establish/renew an offline capture lease after that boundary, not before.
+
+Stageplay camera limits are ROM camera origins, as consumed by
+`Camera.updatePosition`, not terrain dimensions. Subtracting a second viewport
+height from `Level.getMaxY()` can hide an entire valid airborne cast while native
+state and scenery still look plausible. Clamp the native-height director directly
+to those origins; adjust only the additional widescreen width. Exercise actual
+on-screen airborne body pixels as well as platform pixels.
+
+Fresh offline live-shot contexts also need the production game-entry palette
+boundary: reset `RenderContext` (including per-sidekick banks), then
+`GraphicsManager.clearPaletteTextures()`, before native load/graphics binding.
+Keep initialized atlas/tile renderers. `GraphicsManager.resetState()` drops the
+GL terrain renderers without recreating them and can leave valid bodies over
+black scenery. Verify visible terrain as a positive control, plus a return to an
+earlier act after changing cast; body-only and equal-blank-image checks can pass.

@@ -18,13 +18,25 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         List<AudioCue> audio, List<CameraEffect> cameraEffects, List<SceneChange> sceneChanges,
         List<DialogueTyper> dialogueTypers, List<DialogueSkin> dialogueSkins, List<DialogueCue> dialogue,
         List<PuppetTrack> puppets) {
-    public static final int VERSION = 4;
+    public static final int VERSION = 5;
     public static final int FRAMES_PER_SECOND = 60;
     public static final int MAX_DURATION_FRAMES = 36_000;
     private static final int MAX_KEYS = 100_000;
     private static final double MAX_COORDINATE = 1_048_576;
 
     public StageplayDocument {
+        // Existing compiled candidate callers may have inlined VERSION=4 at this unchanged constructor.
+        if (version == 4) {
+            require(set != null && set.worldPolicy() == WorldPolicy.TERRAIN_ONLY, "Version four cannot opt into LIVE worlds");
+            require(sceneChanges != null && sceneChanges.stream().allMatch(c -> c.set().worldPolicy() == WorldPolicy.TERRAIN_ONLY),
+                    "Version four cannot opt into LIVE worlds");
+            require(camera != null && camera.stream().allMatch(c -> c.follow().actors().isEmpty()), "Version four cannot follow actors");
+            require(puppets != null && puppets.stream().flatMap(p -> p.commands().stream()).allMatch(c ->
+                    (c.kind() == PuppetCommandKind.MOVE_TO || c.kind() == PuppetCommandKind.STOP || c.kind() == PuppetCommandKind.JUMP)
+                            && c.target().layoutIndex() == -1 && c.condition() == WaitCondition.NONE && c.timeoutFrames() == 0),
+                    "Version four cannot contain live directing intents");
+            version = VERSION;
+        }
         require(version == VERSION, "Unsupported Stageplay version: " + version);
         name = label(name, "name");
         range(durationFrames, 1, MAX_DURATION_FRAMES, "durationFrames");
@@ -41,6 +53,9 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         dialogueSkins = boundedCopy(dialogueSkins, 64, "dialogueSkins");
         dialogue = boundedCopy(dialogue, 1024, "dialogue");
         puppets = boundedCopy(puppets, 32, "puppets");
+        boolean liveDocument = set.worldPolicy() == WorldPolicy.LIVE || sceneChanges.stream().anyMatch(c -> c.set().worldPolicy() == WorldPolicy.LIVE);
+        require(!liveDocument || height == 224 && width >= 320,
+                "LIVE worlds use native height 224 and width at least 320; scale the export for a larger output");
         require(!camera.isEmpty(), "camera must start at frame zero");
         Set<String> ids = new HashSet<>();
         int totalKeys = camera.size();
@@ -52,6 +67,18 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         require(totalKeys <= MAX_KEYS, "Scene has too many keys");
         int previousFrame = -1;
         for (CameraKey key : camera) {
+            SetSource cameraSet = set;
+            for (SceneChange change : sceneChanges) if (change.frame() <= key.frame()) cameraSet = change.set();
+            require(cameraSet.worldPolicy() != WorldPolicy.LIVE || key.zoom() == 1, "LIVE cameras require fixed zoom 1");
+            require(key.follow().actors().isEmpty() || cameraSet.worldPolicy() == WorldPolicy.LIVE, "Actor following requires a LIVE world");
+            for (String actor : key.follow().actors()) {
+                require(actors.stream().anyMatch(a -> a.id().equals(actor)), "Unknown camera actor: " + actor);
+                require(puppets.stream().anyMatch(p -> p.actorId().equals(actor)), "Following requires a Puppet actor: " + actor);
+                int first = sceneChanges.stream().filter(c -> c.frame() <= key.frame()).mapToInt(SceneChange::frame).max().orElse(0);
+                int end = sceneChanges.stream().filter(c -> c.frame() > key.frame()).mapToInt(SceneChange::frame).min().orElse(durationFrames);
+                require(actors.stream().filter(a -> a.id().equals(actor)).findFirst().orElseThrow().keys().stream()
+                        .anyMatch(k -> k.frame() >= first && k.frame() < end && k.visible()), "Camera target is absent from this shot: " + actor);
+            }
             require(key.frame() > previousFrame, "Camera keys must be strictly ascending");
             require(previousFrame != -1 || key.frame() == 0, "Camera must start at frame zero");
             require(key.frame() < durationFrames, "Camera key exceeds scene duration");
@@ -96,6 +123,13 @@ public record StageplayDocument(int version, String name, int durationFrames, in
             require(puppetActors.add(puppet.actorId()), "Duplicate puppet track: " + puppet.actorId());
             Actor actor = actors.stream().filter(value -> value.id().equals(puppet.actorId())).findFirst()
                     .orElseThrow(() -> new IllegalArgumentException("Unknown puppet actor: " + puppet.actorId()));
+            for (int boundary : boundaries) {
+                SetSource shotSet = set;
+                for (SceneChange change : sceneChanges) if (change.frame() <= boundary) shotSet = change.set();
+                boolean present = actor.keys().stream().anyMatch(k -> k.frame() == boundary && k.visible());
+                if (present && shotSet.worldPolicy() == WorldPolicy.LIVE)
+                    require(actor.gameId().equals(shotSet.gameId()), "Live actors require the world's native donor: " + actor.id());
+            }
             ActorKey anchor = actor.keys().getFirst();
             for (ActorKey key : actor.keys()) {
                 require(key.interpolation() == Interpolation.HOLD && key.animation() == 0 && key.pose() == -1
@@ -106,9 +140,21 @@ public record StageplayDocument(int version, String name, int durationFrames, in
                         "Physics puppet position/facing keys are only allowed at shot boundaries: " + actor.id());
             }
             for (PuppetCommand command : puppet.commands()) {
+                SetSource commandSet = set;
+                for (SceneChange change : sceneChanges) if (change.frame() <= command.frame()) commandSet = change.set();
+                boolean live = commandSet.worldPolicy() == WorldPolicy.LIVE;
+                require(live || command.kind() == PuppetCommandKind.MOVE_TO || command.kind() == PuppetCommandKind.STOP
+                        || command.kind() == PuppetCommandKind.JUMP, "This intent requires a LIVE world: " + command.id());
+                require(live || command.target().layoutIndex() == -1, "Object target requires a LIVE world");
+                if (live) require(actor.gameId().equals(commandSet.gameId()), "Live actors require the world's native donor");
+                if (command.kind() == PuppetCommandKind.FLY_TO || command.kind() == PuppetCommandKind.HOVER)
+                    require(actor.gameId().equals("s3k") && actor.character().equals("tails"), "Native flight requires S3K Tails");
+                if (command.kind() == PuppetCommandKind.GLIDE_TO)
+                    require(actor.gameId().equals("s3k") && actor.character().equals("knuckles"), "Native glide requires S3K Knuckles");
                 require(ids.add(command.id()), "Duplicate id: " + command.id());
                 require(command.frame() < durationFrames, "Puppet command exceeds scene duration");
-                if (command.kind() == PuppetCommandKind.JUMP) {
+                if (command.kind() == PuppetCommandKind.JUMP || command.kind() == PuppetCommandKind.HOVER
+                        || command.kind() == PuppetCommandKind.CROUCH || command.kind() == PuppetCommandKind.LOOK_UP) {
                     int end = command.frame() + command.holdFrames();
                     require(end <= durationFrames, "Jump hold exceeds scene duration");
                     for (SceneChange change : sceneChanges)
@@ -242,9 +288,14 @@ public record StageplayDocument(int version, String name, int durationFrames, in
 
     /** Stock set reference and optional identity/authored-level reference. */
     @ModApi
-    public record SetSource(String gameId, int zone, int act, String romSha1, String levelProject) {
+    public record SetSource(String gameId, int zone, int act, String romSha1, String levelProject, WorldPolicy worldPolicy) {
+        public SetSource(String gameId, int zone, int act, String romSha1, String levelProject) {
+            this(gameId, zone, act, romSha1, levelProject, WorldPolicy.TERRAIN_ONLY);
+        }
         public SetSource {
             gameId = game(gameId);
+            require(worldPolicy != null, "worldPolicy is required");
+            require(levelProject != null && (worldPolicy != WorldPolicy.LIVE || levelProject.isEmpty()), "Live worlds require stock ROM level data");
             range(zone, 0, 255, "zone");
             range(act, 0, 255, "act");
             require(romSha1 != null && (romSha1.isEmpty() || romSha1.matches("[0-9a-f]{40}")),
@@ -316,36 +367,84 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         }
     }
 
-    /** Goals persist until the next movement command or shot. Jump is an independent native button hold. */
+    /** Native input intent. WAIT gates subsequent due commands until success or a bounded timeout. */
     @ModApi
     public record PuppetCommand(String id, int frame, PuppetCommandKind kind, double x, double y,
-                                double urgency, int holdFrames) {
+                                double urgency, int holdFrames, ObjectTarget target,
+                                WaitCondition condition, int timeoutFrames) {
+        public PuppetCommand(String id, int frame, PuppetCommandKind kind, double x, double y,
+                             double urgency, int holdFrames) {
+            this(id, frame, kind, x, y, urgency, holdFrames, ObjectTarget.none(), WaitCondition.NONE, 0);
+        }
         public PuppetCommand {
             id = identifier(id);
             range(frame, 0, MAX_DURATION_FRAMES - 1, "puppet command frame");
-            require(kind != null, "puppet command kind is required");
+            require(kind != null && target != null && condition != null, "Puppet intent fields are required");
             coordinate(x, "puppet destination x"); coordinate(y, "puppet destination y");
             finiteRange(urgency, 0, 1, "puppet urgency");
-            if (kind == PuppetCommandKind.MOVE_TO) {
-                require(urgency > 0 && holdFrames == 0, "Move requires urgency in (0,1] and no button hold");
-            } else {
-                require(x == 0 && y == 0 && urgency == 0, "Only move commands have a destination and urgency");
+            range(timeoutFrames, 0, MAX_DURATION_FRAMES, "timeoutFrames");
+            boolean movement = kind == PuppetCommandKind.MOVE_TO || kind == PuppetCommandKind.FLY_TO
+                    || kind == PuppetCommandKind.GLIDE_TO;
+            if (movement) require(urgency > 0 && holdFrames == 0, "Movement requires urgency and no hold");
+            else {
+                require(x == 0 && y == 0 && urgency == 0, "Only movement has a destination and urgency");
                 if (kind == PuppetCommandKind.JUMP) range(holdFrames, 1, 60, "jump hold frames");
-                else require(holdFrames == 0, "Stop has no button hold");
+                else if (kind == PuppetCommandKind.HOVER || kind == PuppetCommandKind.CROUCH
+                        || kind == PuppetCommandKind.LOOK_UP) range(holdFrames, 1, 3600, "intent hold frames");
+                else require(holdFrames == 0, "This intent has no hold");
             }
+            require(kind == PuppetCommandKind.WAIT ? condition != WaitCondition.NONE && timeoutFrames > 0
+                    : condition == WaitCondition.NONE, "WAIT requires a condition and finite timeout");
+            require(condition != WaitCondition.TARGET_AVAILABLE || target.layoutIndex() != -1,
+                    "TARGET_AVAILABLE requires a placed-object identity");
+            require(movement || kind == PuppetCommandKind.WAIT || target.layoutIndex() == -1,
+                    "Object targets apply to movement or waits");
         }
     }
 
+    /** Stable ROM placement identity, with expected type/subtype and an authored local offset. */
     @ModApi
-    public enum PuppetCommandKind { MOVE_TO, STOP, JUMP }
+    public record ObjectTarget(int layoutIndex, int objectId, int subtype, double offsetX, double offsetY) {
+        public ObjectTarget {
+            range(layoutIndex, -1, 65535, "placement layoutIndex");
+            range(objectId, 0, 255, "placement objectId"); range(subtype, 0, 255, "placement subtype");
+            coordinate(offsetX, "target offsetX"); coordinate(offsetY, "target offsetY");
+            require(layoutIndex != -1 || objectId == 0 && subtype == 0 && offsetX == 0 && offsetY == 0,
+                    "Absent target must use the canonical empty identity");
+        }
+        public static ObjectTarget none() { return new ObjectTarget(-1, 0, 0, 0, 0); }
+    }
+    @ModApi public enum WorldPolicy { TERRAIN_ONLY, LIVE }
+    @ModApi public enum WaitCondition { NONE, ARRIVED, ON_OBJECT, GROUNDED, AIRBORNE, HURT, RECOVERED, RING_COLLECTED, TARGET_AVAILABLE }
+    @ModApi public enum PuppetCommandKind { MOVE_TO, STOP, JUMP, WAIT, FLY_TO, HOVER, GLIDE_TO, RELEASE, CROUCH, LOOK_UP, ROLL }
+
+    /** Following uses real actor positions at fixed scale; camera keys remain authored offsets. */
+    @ModApi
+    public record CameraFollow(List<String> actors, double deadZoneX, double deadZoneY,
+                               double lookAhead, double smoothing, double offsetX, double offsetY) {
+        public CameraFollow {
+            actors = boundedCopy(actors, 32, "camera follow actors");
+            Set<String> unique = new HashSet<>();
+            for (String actor : actors) require(unique.add(identifier(actor)), "Duplicate follow actor");
+            finiteRange(deadZoneX, 0, 960, "deadZoneX"); finiteRange(deadZoneY, 0, 540, "deadZoneY");
+            finiteRange(lookAhead, 0, 60, "lookAhead"); finiteRange(smoothing, 0.001, 1, "smoothing");
+            coordinate(offsetX, "follow offsetX"); coordinate(offsetY, "follow offsetY");
+        }
+        public static CameraFollow none() { return new CameraFollow(List.of(), 0, 0, 0, 1, 0, 0); }
+    }
 
     /**
      * Camera position is the top-left stage coordinate; interpolation applies only to x/y.
      * Zoom is held until the next key to preserve nearest-neighbour pixel stability; one is native scale.
      */
     @ModApi
-    public record CameraKey(int frame, double x, double y, double zoom, Interpolation interpolation) {
+    public record CameraKey(int frame, double x, double y, double zoom, Interpolation interpolation, CameraFollow follow) {
+        public CameraKey(int frame, double x, double y, double zoom, Interpolation interpolation) {
+            this(frame, x, y, zoom, interpolation, CameraFollow.none());
+        }
         public CameraKey {
+            require(follow != null, "Camera follow is required");
+            require(follow.actors().isEmpty() || zoom == 1, "Following requires fixed zoom 1");
             range(frame, 0, MAX_DURATION_FRAMES - 1, "camera frame");
             coordinate(x, "camera x");
             coordinate(y, "camera y");

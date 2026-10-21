@@ -60,11 +60,21 @@ public final class StageplayEditorSession implements AutoCloseable {
     public void play(StageplayDocument document, Path root, int frame) throws IOException {
         ensure(root);
         if (!document.equals(prepared)) validate(document,root);
-        audio.seek(frame - 1); audio.playFrame(document,frame);
+        audio.seek(frame - 1); audio.playFrame(document,frame); presentNativeSound(document,frame);
     }
 
-    public void present(StageplayDocument document, int frame) { if (audio != null) audio.playFrame(document,frame); }
+    public void present(StageplayDocument document, int frame) {
+        if (audio != null) { audio.playFrame(document,frame); presentNativeSound(document,frame); }
+    }
     public void stop() { if (audio != null) audio.stop(); }
+
+    private void presentNativeSound(StageplayDocument document, int frame) {
+        if (resources == null) return;
+        var authored = StageplayTimeline.sample(document, frame);
+        if (authored.set().worldPolicy() != StageplayDocument.WorldPolicy.LIVE) return;
+        resources.resolveFrame(document, authored);
+        audio.playNativeFrame(frame, resources.previewSound(frame));
+    }
 
     /** Random-access native physics preview; repeated reads never advance its simulation. */
     public StageplayTimeline.Frame resolvePreview(StageplayDocument document, Path root, int frame) throws IOException {

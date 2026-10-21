@@ -11,14 +11,17 @@ belongs to the game. Choose the source workflow from what the film must show:
 - For staged stories, animatics and choreographed promotional scenes, use
   [stageplay-authoring](../stageplay-authoring/SKILL.md) and its shared offline
   `tools/stageplay/stageplay.py` compiler, timeline inspection and renderer.
-- For actual gameplay or claims about working gameplay features, use
+- For ordinary gameplay, continuous routes and gameplay feature captures, use
   [gameplay-capture](../gameplay-capture/SKILL.md), with
   [bk2-input-authoring](../bk2-input-authoring/SKILL.md) when inputs need scripting.
   Use [trace-capture](../trace-capture/SKILL.md) for an existing trace replay.
-- A hybrid can combine these, with provenance identifying each source. Stageplay keys and authored timelines
-  are directing data; `simulate` JSONL measures native player physics against
-  detached terrain. It does not prove full-world gameplay, object AI, zone events
-  or ROM parity.
+- A hybrid can combine these, with provenance identifying each source. Stageplay
+  `timeline` samples describe authored intent; physical actors remain `UNRESOLVED`.
+  `simulate` with `TERRAIN_ONLY` measures native actor physics on detached static
+  terrain, without placed-object AI, rings or zone events. With `LIVE`, it measures
+  a shared native world: actors, placed objects, rings and observed native events.
+  LIVE evidence supports the interactions actually observed from authored shot
+  setups; it does not establish a continuous cold route or ROM parity.
 
 Follow [gameplay-highlights](../gameplay-highlights/SKILL.md) for honest labelling,
 verification and the **required OpenGGF-Media archive** in every promo workflow.
@@ -148,11 +151,14 @@ An example 60–90 s showcase shape at 120–175 BPM, not a required narrative f
   menu → title card → level, or map → node → fight → victory.
 - Preserve lossless source frames where the capture workflow supports them.
   For gameplay clips under an editorial bed, capture SFX separately from music.
-  Stageplay exports use their authored audio cues; avoid mixing that soundtrack
+  Stageplay exports combine authored cues with native SFX in LIVE shots; avoid mixing that soundtrack
   with a second unplanned bed in the compositor.
 - Gameplay start positions must be real for the act; disclose debug jumps and
-  positioned starts. Stageplay uses detached staged sets, so retain its screenplay,
-  canonical scene and authored/simulated JSONL, labelled by source, rather than calling it native play.
+  positioned starts. Stageplay shots have authored spawns and cuts under either
+  `TERRAIN_ONLY` or `LIVE`; retain the screenplay, canonical scene, per-shot world
+  policy and labelled timeline/simulation JSONL. Normal gameplay CSV records a
+  gameplay run with its actual input and entry method. Do not imply uninterrupted
+  gameplay from staged native interactions or positioned excerpts.
 - Make a contact sheet of each clip, for example Slay's `sheet.py` or
   `strips.py`, and pick in-points by frame number.
 
@@ -162,7 +168,10 @@ movement: destinations/urgency and jump button holds drive native acceleration,
 terrain collision, animation and landing. Do not draw a fake jump arc with position
 keys. Inspect `simulate` JSONL for actual arrival/blocked state, then review feet,
 facing and accessories in motion. Poser mode is for deliberate nonphysical staging;
-there is no automatic pathfinding, native object AI or zone-event simulation. A listening character should visibly react where
+there is no universal pathfinder. `TERRAIN_ONLY` omits placed-object AI, rings and
+zone events; `LIVE` runs the shared native world through production owners. Author
+routes and bounded waits, then check native world telemetry for support, pickups,
+hurt and abilities. A listening character should visibly react where
 the line calls for it; an entire idle cast weakens a story about their interaction.
 
 Identify the speaker when the line first appears. Prefer the dialogue track's
@@ -199,7 +208,8 @@ Do the steps in this order:
 
 1. For a compositor edit, `promo_kit.py sheet edit.py 30` makes a five-column
    sheet, one frame every half second. For Stageplay, inspect authored timeline
-   samples and source frames at the action, speaking and transition boundaries.
+   samples, policy-specific simulation JSONL and source frames at the action,
+   speaking and transition boundaries. LIVE claims need `sample.world` evidence.
 2. Render transition midpoints and full layouts, then watch their complete motion
    at the intended output size and cadence. Include camera travel, character and
    accessory animation, entrances/exits, dialogue reveal and listener reactions.
@@ -212,7 +222,7 @@ Do the steps in this order:
    playback.
 6. Archive in OpenGGF-Media as gameplay-highlights requires: applicable edit file,
    brief, beat/shot sheet, capture scripts and chapters, plus Stageplay screenplay,
-   canonical scene and authored timeline when used. A direct Stageplay render does
+   canonical scene and labelled authored/policy-specific simulation JSONL when used. A direct Stageplay render does
    not waive the promo archive requirement.
 
 ## Screen grammar
@@ -271,9 +281,11 @@ to preserve eyelines, speaker identity and the timing of a reaction.
 - A push transition travels the way the action moves. If Sonic runs right,
   the next shot pushes in from the right, using `tdir="left"`.
 - Divider lean, stripe angle and wipe slant agree with each other.
-- In Stageplay, camera x/y can pan while zoom holds until its next key. Author
-  stable integer framing and use cuts to change it. Imported static fractional
-  values remain compatible; do not animate fractional nearest-neighbour zoom.
+- In Stageplay `TERRAIN_ONLY`, camera x/y can pan while zoom holds until its next
+  key. Author stable integer framing and use cuts to change it. Imported static
+  fractional values remain compatible. `LIVE` uses fixed zoom 1 with authored pans
+  or actor/group follow; use export scale for larger output. Do not animate
+  fractional nearest-neighbour source zoom.
 - The compositor's `cam_move`, `cam_slam` and punch zooms are editorial effects
   on captured frames. `game_view` uses an integer nearest-neighbour enlargement
   followed by a BOX area filter, so its fractional framing is filtered, not
@@ -371,3 +383,8 @@ When the user gives feedback, change the cause, not the symptom. If they say
 "rushed", fewer and longer takes are the fix; a faster cut with more captions
 is not. Record their words and the response in the production README, as the
 archive does for every revision.
+
+For Stageplay LIVE promos, require native world telemetry beside the source:
+boarding/riding/leaving support, collision pickups, hazard hurt/ring loss/recovery,
+and flight/glide/landing. Do not advertise an animation, placement or counter as an
+interaction without that evidence. Keep zoom one and watch complete moving footage.

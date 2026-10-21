@@ -33,7 +33,7 @@ public final class StageplayScriptCompiler {
             }
             ObjectNode script = object(parsed, "screenplay", "version", "name", "width", "height", "cast", "shots", "dialogueTypers", "dialogueSkins");
             int version = integer(script, "version", -1);
-            if (version != 1 && version != 2) throw new IOException("Unsupported screenplay version");
+            if (version != 1 && version != 2 && version != 3) throw new IOException("Unsupported screenplay version");
             ArrayNode cast = array(script, "cast"), shots = array(script, "shots");
             if (cast.size() > 32 || shots.isEmpty() || shots.size() > 129)
                 throw new IOException("Screenplay needs 1..129 shots and at most 32 cast members");
@@ -56,7 +56,7 @@ public final class StageplayScriptCompiler {
                         : new String[]{"id", "name", "gameId", "character", "puppet", "snapToFloor", "collisionPath"}).deepCopy();
                 String id = text(role, "id");
                 if (roles.put(id, role) != null) throw new IOException("Duplicate cast id: " + id);
-                if (version == 2 && bool(role, "puppet", true)) {
+                if (version >= 2 && bool(role, "puppet", true)) {
                     var track = puppets.addObject().put("actorId", id)
                             .put("snapToFloor", bool(role, "snapToFloor", true))
                             .put("collisionPath", integer(role, "collisionPath", 0));
@@ -73,14 +73,29 @@ public final class StageplayScriptCompiler {
                 ObjectNode shot = object(item, "shot", "id", "durationFrames", "set", "transition", "camera",
                         "actors", "captions", "audio", "cameraEffects", "dialogue", "actions");
                 if (version == 1 && shot.has("actions")) throw new IOException("Puppet actions require screenplay version 2");
+                if (version < 3) {
+                    for (var cameraKey : optionalArray(shot,"camera")) if (cameraKey.has("follow"))
+                        throw new IOException("Camera following requires screenplay version 3");
+                    if (shot.has("actions")) {
+                        var actionTracks = object(shot.get("actions"),"actions");
+                        for (var track : actionTracks) for (var command : track) {
+                            String kind = command.path("kind").asText();
+                            if (command.has("target") || command.has("condition") || command.has("timeoutFrames")
+                                    || !Set.of("MOVE_TO","STOP","JUMP").contains(kind))
+                                throw new IOException("Live directing fields require screenplay version 3");
+                        }
+                    }
+                }
                 String id = text(shot, "id");
                 if (!id.matches("[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}") || !shotIds.add(id))
                     throw new IOException("Invalid or duplicate shot id: " + id);
                 int duration = integer(shot, "durationFrames", -1);
                 if (duration < 1 || duration > StageplayDocument.MAX_DURATION_FRAMES - offset)
                     throw new IOException("Invalid duration for shot " + id);
-                ObjectNode set = object(required(shot, "set"), "set", "gameId", "zone", "act", "romSha1", "levelProject").deepCopy();
+                ObjectNode set = object(required(shot, "set"), "set", "gameId", "zone", "act", "romSha1", "levelProject", "worldPolicy").deepCopy();
                 defaults(set, "romSha1", ""); defaults(set, "levelProject", "");
+                if (version < 3 && set.has("worldPolicy")) throw new IOException("Live worlds require screenplay version 3");
+                defaults(set, "worldPolicy", "TERRAIN_ONLY");
                 if (offset == 0) {
                     document.set("set", set);
                     if (shot.has("transition")) throw new IOException("The first shot cannot have an incoming transition");
@@ -143,19 +158,21 @@ public final class StageplayScriptCompiler {
             if (out == null) throw new IOException("Actions require a physical cast member: " + actor);
             int index = 0, previous = -1;
             for (JsonNode item : array(actions, actor)) {
-                var command = object(item, "puppet action", "id", "frame", "kind", "x", "y", "urgency", "holdFrames").deepCopy();
+                var command = object(item, "puppet action", "id", "frame", "kind", "x", "y", "urgency", "holdFrames", "target", "condition", "timeoutFrames").deepCopy();
                 int frame = integer(command, "frame", -1);
                 if (frame < previous || frame < 0 || frame >= duration)
                     throw new IOException("Puppet actions must ascend within their shot");
                 previous = frame;
                 String kind = text(command, "kind");
-                if (kind.equals("MOVE_TO")) {
+                if (kind.equals("MOVE_TO") || kind.equals("FLY_TO") || kind.equals("GLIDE_TO")) {
                     required(command, "x"); required(command, "y"); defaults(command, "urgency", 0.5);
                     defaults(command, "holdFrames", 0);
                 } else {
                     defaults(command, "x", 0); defaults(command, "y", 0); defaults(command, "urgency", 0);
                     defaults(command, "holdFrames", kind.equals("JUMP") ? 12 : 0);
                 }
+                defaults(command, "target", StageplayDocument.ObjectTarget.none());
+                defaults(command, "condition", "NONE"); defaults(command, "timeoutFrames", 0);
                 if (kind.equals("JUMP") && integer(command, "holdFrames", -1) > duration - frame)
                     throw new IOException("Jump hold crosses a shot boundary");
                 command.put("id", shotId + "." + actor + "."
@@ -208,13 +225,13 @@ public final class StageplayScriptCompiler {
         for (JsonNode item : input) {
             ObjectNode key = object(item, actor ? "actor key" : "camera key", actor
                     ? new String[]{"frame", "x", "y", "animation", "pose", "flipX", "visible", "scale", "interpolation"}
-                    : new String[]{"frame", "x", "y", "zoom", "interpolation"}).deepCopy();
+                    : new String[]{"frame", "x", "y", "zoom", "interpolation", "follow"}).deepCopy();
             int frame = integer(key, "frame", -1);
             if (frame <= previous || frame >= duration) throw new IOException("Keys must ascend within the shot");
             previous = frame;
             key.put("frame", offset + frame);
             if (actor) actorDefaults(key, puppet);
-            else { defaults(key, "zoom", 1); defaults(key, "interpolation", "LINEAR"); }
+            else { defaults(key, "zoom", 1); defaults(key, "follow", StageplayDocument.CameraFollow.none()); defaults(key, "interpolation", "LINEAR"); }
             out.add(key);
         }
     }
