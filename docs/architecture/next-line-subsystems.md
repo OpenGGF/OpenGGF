@@ -67,7 +67,16 @@ endpoint requires its bearer token and appends to `admin-audit.jsonl`. Identity 
 rounds, sanctions, and trust tiers persist in SQLite. An active BAN or TIMEOUT rejects
 admission and immediately closes existing master sessions, their tokens, hosted rooms,
 and attached relay connections. TIMEOUT preserves earned standing after expiry; BAN
-resets clean-round standing. Verified rooms are relay-only and
+resets clean-round standing. Anonymous identities that solve creation proof of work can
+reconnect without repeating it while their stamp remains in a bounded LRU cache:
+`newIdentityCacheSize` limits its entries and `newIdentityCacheTtlMinutes` expires
+each stamp from proof completion (reconnects update recency, not expiry). Eviction or
+expiry requires a fresh proof; durable identities retain their existing admission path.
+Each master connection retains at most five pending room-attach grants, expiring 30
+seconds after the latest successful join for that room. The relay creator's initial
+host grant follows the same bounds. Attach consumes a current grant once, including
+when the downstream room or tunnel refuses attachment; expired or evicted grants
+require another rate-limited join. Verified rooms are relay-only and
 need a live replay-verifier worker matching the room's determinism fingerprint; ROM bytes
 never cross the network and worker verdicts are Ed25519-signed. The host accepts attempt
 controls and ghost data only during the running phase, permits one strictly increasing

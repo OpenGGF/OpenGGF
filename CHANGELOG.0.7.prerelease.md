@@ -27,6 +27,8 @@ Unreleased. The earlier development themes remain in
   disconnect/attach races isolate the affected guest without retiring its host's
   shared broker link. Reproducible adversarial state tests and a local socket stress
   tool exercise admission, room capacity, varied ghost traffic and connection cleanup.
+  Creation-proof reconnect stamps and one-use room-attach grants have explicit
+  expiry and cardinality bounds.
   Capacity reports count completed work and rejections separately from latency and
   colocated process costs.
 
