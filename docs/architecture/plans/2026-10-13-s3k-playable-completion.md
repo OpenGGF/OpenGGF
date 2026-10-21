@@ -28932,3 +28932,33 @@ Owned logs/series/checkpoints/decisions/classes/tmp/roundtrip-palette copies wer
 No runtime/POM/maintained test/movie/oracle/window edit, seeds/restores/native/model/extra agent/push/integration occurred; prior refs/results/native actual322/index703/config remain preserved.
 This is bounded ordinary inlet evidence, not climb/wall/whole-act/FBZ/rewind/native qualification or a physics omission. Root owns source/data review and any later workload.
 See the [R14 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-slideget-up-ordinary-follow-through-r14--2026-10-21).
+
+## R15 first neutral wait loses the declared rider/ground inlet — 2026-10-21
+
+One ordinary cold lifecycle at `8b321d1696e210d38f72dbfbfb2fd9d3deb682a6` uses
+unchanged [R14 setup](#r14-ordinary-first-gap-and-managed-carrier-admission--2026-10-21).
+All14944 R14/14853 R13/14618 R12/14442 R11/14414 R10/9914 original pads match;
+full14943 scalar and NEW-JVM placement/map/post.child/managed-live rider joins match.
+Declared policy: neutralWAIT128 to publicX4408..4424, oneA-only release, holdA120,
+parent neutralADMIT3,260 total; no private angle/radius/state/episode read or retiming.
+
+| Input | Actual original public observation |
+| --- | --- |
+| 14943 | P1(4369,1164), VX/VY/G0, grounded/jumpingfalse, controlled with CPU allowance/movement suppression; actual rider is original managed/live child. |
+| 14944 | First NEW neutralP1/P2Up input: same position/V0/control flags; air becomes true and actual manager rider becomes NULL; logical A edge false. STOP. |
+
+Exactly1 new input/14945 total; **zero R15 A edges**, no release/X-gate/AIR/parent
+attempt. Guard first short-circuits on NULLrider != this-JVM original child ref.
+P2 remains grounded(3950,1264), V0,flag0/fuel0/NORMAL/manualtrue; both unhurt/live,
+62rings/3lives, same managers/world/native pair/focus/LEVEL/no pending/fade/reverse.
+Post/child raw refs remain same/present; child membership/liveness AFTER rider loss
+was NOT queried. No child-destruction/unload or mechanism-release claim follows.
+Private held/latch episode and original engine rider-clear/air writer/contact decision
+remain UNKNOWN. The unchanged stored sensor values are not fresh contact evidence;
+no fall/deadlock, production omission, native/physics/pixel/timing or route cause proved.
+Same-JVM preboot2-pad A-only/neutral positiveJUMP0x10 masks/bools/payload proof;
+all14945 rows production-roundtrip plus independent SIX entire ZIP-prefix/payload proofs.
+One current absolute Main queue `--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl compile exec:exec -B`: wait322s, Maven17.747s, registered launcher342.465s; engine-only UNKNOWN; **0 JUnit/skips N/A**.
+Source SHA256 `f8c710eefdb16166f6e186e2927fb63ba0c587eda2aa7cad326464b559947a17` (10808 sorted src/main/src/test/POM/.mvn path-NUL-bytes-NUL); adapter `78d066acd20ef6aeb42743a36ad003c3889dc2dfab4bd32750894cc712a5d385`.
+Executed BK2 SHA256 `c3ebd8cbf897d138d4ed44e2be0ce881197c009ee6259eac62a8f0f8473d9c4f`; specific source/preimage/design/inputs/compact facts/one normal endpoint image remain external; owned raw diagnostics consumed.
+No retry or parent/native/MTZ/fullroute/independent qualification. Expected46 and all maintained runtime/POM/tests/movies/windows/oracles/config/native and prior histories remain unchanged.
