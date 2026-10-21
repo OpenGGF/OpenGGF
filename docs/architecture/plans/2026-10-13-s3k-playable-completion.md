@@ -26953,3 +26953,100 @@ full-act/breadth/HPZ/campaign, true reset/bootstrap, native terrain-return/d1,
 stock-route causality, native pixels/timing and GC are not certified. Root owns
 independent source review, the combined change-based smoke plan and integration;
 this worker creates only a local reviewable commit.
+
+## Wide paired layout30 original unload and exit operands R9 — 2026-10-21
+
+This distinct observation uses owned
+`feature/ai-ssz-layout30-unload-operands-20261021` at exact Root
+`b078214e74ddbcb393cbc0173fd8c74055b0dadb`, preserving R7 `31bf738f3`, R8 `90505590c`
+and all prior/supplied refs, actual native 322 checkout bytes/status and config.
+Exactly **one current-arm ordinary cold prefix**, original movie inputs0..7007
+inclusive, uses SSZ 10/0, Settings7 `(800,sonic,tails,off,null,null,null)`/titlefalse,
+neutral P2 and normal step then `renderFrame`. There is no Main/native request,
+second prefix/retry, restore/import/seed, maintained route test or controller edit.
+
+The current absolute Main queue wrapper runs `--normal -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl compile exec:exec -B`, runtime classpath and
+the temporary source launcher. Java 25.0.4.1, EGL/nullAL/Lua 5.4, verified original
+absolute S1/S2/S3K ROMs and ambient JVM/display/library unsets retain the prior
+environment. Output/temp/native extraction use one owned target namespace. The
+single request waits 34 seconds for admission and is kept; Maven reports 71 seconds
+execution. Actual XML/properties and every CSV/carrier row are inspected:
+**7008 inputs,21024 phase rows,115 fields,0 skips,0 JUnit tests**. These are
+observations, not a passing suite. All 115 fields match the six retained current
+PRE/POST3491,3507,6721 rows already matched by R7; no all-row/native oracle is claimed.
+EggRobo's original source is byte-identical to R7/current; ObjectManager's intervening
+change is solely a restore comment. The complete current arm/source pins are retained.
+
+### Original-once retention and actual target
+
+A compact design, complete literal preimages and whole-file inverse precede the
+temporary edits to EggRobo/ObjectManager. The default-null passive carrier uses
+4096 preallocated rows, 16 primitive cells and strong references, with no capture
+allocation/boxing/varargs. Overflow/duplicate-candidate checks stop outside original
+step/draw calls; original once/evaluation order and exception envelopes are preserved.
+Only original locals/returns or direct primitive field copies are retained. The
+existing 115-field public observer's fields/order/calls remain unchanged. No gameplay
+getter, provider, predicate, callback or geometry test is repeated by the carrier.
+
+Constructor capture retains the raw group2 fly-by and its immutable original spawn
+argument. Post-execution descriptor verification identifies exactly layout30:
+`(1552,2448,$A0,$20,flags0,rawY2448,respawn=false,layout30,owner=null,key=null)`, born 6792.
+Its raw body, manager, original manager spawn argument and constructor spawn join
+by actual local references throughout. The managed execution/unload slot is 33;
+these bindings are neither native addresses nor cross-JVM identity. Carrier output
+is 2653 rows, no overflow or duplicate candidate.
+
+### Manager retirement is not selected in this prefix
+
+All 216 original post-routine unload calls, inputs 6792..7007, read persistent=false,
+custom-check=false and outOfRange=false, then return false normally. Each original
+`getX` return equals the original reference-X operand. The actual unsigned coarse
+distance stays 0..384 with limit 1120. No selected unload, `onUnload`, removal or
+publication-normal event occurs for this body within the prefix.
+
+| Original manager boundary | Current/reference X | Live camera X | Rounded object/camera-back | Distance/limit | Result |
+|---|---|---|---|---|---|
+| 6792, waiting | 1552 | 1789 | 1536/1536 | 0/1120 | retain, normal false |
+| 7006, active fly-by | 1549 | 1339 | 1536/1152 | 384/1120 | retain, normal false |
+| 7007, active fly-by | 1550 | 1334 | 1536/1152 | 384/1120 | retain, normal false |
+
+R8's source-visible additional active coarse-X path exists, but it does not retire
+this actual layout30 body through 7007. A manager-unload explanation for this
+covered body's missing publication is therefore excluded by the original decisions.
+
+### Wait continuation and surviving fly-by exit
+
+Wait consumes false 155 times, 6792..6946. The original submitted render writer at 6945
+has body `(1552,2448)`, extents 32/32, copied camera `(1586,2376)`, flag false→false.
+At 6946 the same position/extents with copied camera `(1583,2376)` writes false→true.
+At 6947 Wait consumes that true flag, clears waiting, submits no draw and returns;
+the original refresh skips because the draw marker is false, retaining the flag.
+
+First flight is 6948: delta 0→−1, Y velocity 384→383, then ordinary movement. Its exit
+render operand is **UNKNOWN**, because the nonnegative Y velocity short-circuits
+that original read. There are 60 flight/move normal returns through 7007. At 6974 the
+last nonnegative add is 33→6; its render writer at body `(1560,2469)` and copied
+camera `(1482,2371)` retains true. First negative exit evaluation6975 reads delta
+−27→−28, Y velocity 6→−22 and retained render=true, selecting move, not publication.
+All 33 negative-velocity exit evaluations 6975..7007 consume true and select move.
+At 7007 delta −59→−60 and Y velocity −1386→−1446 still consume true; movement reaches
+`(1550,2358)`, then the copied-camera `(1329,2312)` writer again retains true.
+
+These actual operands explain the current prefix's lack of a fly-by publication:
+the body waits until the retained-bit continuation, then survives the exit predicate.
+R9 has no gate-word/state-writer carrier; R7's historical group2 operands are not
+substituted for a new gate measurement. Native trajectory, queue admission, render
+flag and saved-continuation-fraction correctness remain separately unqualified;
+no fix, unconditional unload publication or 46→48 adaptation follows these facts.
+
+After inspection, both source owners are restored WHOLE byte exact. All 8062
+diagnostic compiler-created classes and their compile status are consumed. One
+current-wrapper **build-only** normal compile passes in 59.452 seconds, rebuilding
+8061 normal classes with no carrier class/reference; it is not a second replay or
+test result. Raw CSV/events/XML/log/temp/native namespaces and execution helpers are
+consumed; useful specific source/preimages/inverse and compact `FIRST_UNLOAD` facts
+remain external. Only this factual appendix and the existing SSZ matrix change.
+Expected 46, every maintained movie/test/runtime/POM and prior histories remain
+unchanged. Main complete/current paired800 MTZ/Mecha/DEZ and native whole-route
+correctness remain open; Root owns independent review and any next workload.
