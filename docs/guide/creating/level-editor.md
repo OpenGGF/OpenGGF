@@ -225,7 +225,10 @@ A stock asset library can contain shared definitions whose art belongs to anothe
 zone or a later native art upload. New blank projects include the available
 definitions and report any omitted chunks/blocks; they never invent replacement
 art. Choose another source library for unavailable definitions. A full layout
-clone remains strict and reports missing assets rather than changing its layout.
+clone never changes what its layout shows. A placed chunk with unavailable art
+fails the clone. An unplaced library chunk keeps its index and collision, and
+its unavailable tiles draw transparent (stock Sonic 2 Emerald Hill has 32 such
+references).
 
 **Close project** asks about unsaved changes. **Save and continue** saves before
 closing; **Discard changes and continue** closes without saving; **Continue

@@ -43,6 +43,27 @@ class TestFullLevelExporter {
 
     @TempDir Path temp;
 
+    /** Stock Sonic 2 Emerald Hill Buzzers set Y-word bit 12, which ChkLoadObj never reads. */
+    @Test
+    void sonic2UnreadPlacementBitIsAcceptedAndExportedCanonically() throws Exception {
+        MutableLevel level = MutableLevel.snapshot(new ExportFixtureLevel());
+        level.replaceObjectSpawnsPersisted(List.of(new ObjectSpawn(8, 16, 0x4B, 0, 0, true, 0x9010, 1)));
+        FullLevelExporter exporter = new FullLevelExporter(new ModLevelExportStagingValidator());
+        Path output = temp.resolve("s2-unread-bit");
+        exporter.export(level, new FullLevelExporter.ExportRequest(output, "Creator Zone", 0x40, 0x400, 16, 32,
+                new FullLevelExporter.ExportMusic.Stock(1), com.openggf.game.GameId.S2, null));
+        try (ModAssetRoot root = ModAssetRoot.directory(temp, output, ModInputLimits.production(), DirectoryAccess.TEST)) {
+            var spawn = (ModLevelDefinition.StockObjectSpawn) ModLevelDefinitionParser.read(root, new BakedLevelRef("level.json")).objects().getFirst();
+            assertEquals(0x8010, spawn.rawYWord());
+        }
+
+        level.replaceObjectSpawnsPersisted(List.of(new ObjectSpawn(8, 16, 0x4B, 0, 0, true, 0xC010, 1)));
+        var flipMismatch = new FullLevelExporter.ExportRequest(temp.resolve("s2-flip"), "Creator Zone", 0x40, 0x400, 16, 32,
+                new FullLevelExporter.ExportMusic.Stock(1), com.openggf.game.GameId.S2, null);
+        assertThrows(IllegalArgumentException.class, () -> exporter.export(level, flipMismatch),
+                "A Y-flip bit that disagrees with the render flags is still rejected");
+    }
+
     @Test
     void completeExportIsParserAcceptedTaggedAndDeterministic() throws Exception {
         MutableLevel level = MutableLevel.snapshot(new ExportFixtureLevel());

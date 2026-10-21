@@ -1,0 +1,35 @@
+# Emerald Remix: Emerald Hill Act 1, rebuilt from the player's own Sonic 2 ROM.
+#
+# The jar carries only this recipe. At load time each "strip" copies an inclusive range of
+# 128-pixel map columns, with every object and ring standing in those columns, from a stock
+# Emerald Hill act. Strips are laid left to right in the order written, and a column may be
+# used more than once; the background, art, collision, music and zone events stay Act 1's own.
+#
+# Each seam joins columns whose ground meets at the same height on the main path and on the
+# lower path, so the run is continuous. Rows below the target act's lowest camera view are
+# not copied; Act 2's deeper underground route has nowhere to lead in Act 1.
+
+target ehz1
+
+# The opening hills.
+strip ehz1 0 6
+# From Act 2: a palm hill, a floating flower ledge and a dip.
+strip ehz2 15 21
+# Back to Act 1: the waterfalls and both early loops, up to the first corkscrew ramp.
+strip ehz1 18 35
+# One triple corkscrew from Act 1's pieces: its double corkscrew, then its single one.
+strip ehz1 72 77
+strip ehz1 36 38
+# Act 1's middle section, ending on its second corkscrew ramp.
+strip ehz1 39 71
+# The single corkscrew again, in place of the double that moved forward.
+strip ehz1 36 38
+# Act 1's run-out and signpost.
+strip ehz1 78 90
+
+# Act 2 numbers its checkpoints for Act 2; a copied one would fire out of order here.
+drop ehz2 0x79
+
+# Authored placements, in remixed-level pixels: object <x> <y> <id> <subtype> [flip flags].
+# A shield monitor (0x26, subtype 6) on the first flat ground.
+object 448 628 0x26 0x06
