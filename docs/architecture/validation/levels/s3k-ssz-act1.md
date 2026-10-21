@@ -4507,3 +4507,12 @@ After77 new/15101 total,15099 is4629/1214,VX1536/VY2536;15100 is4635/1224,VX1536
 No postrelease rider/free-grounded receiving inlet observed; conditional original143 map join never executes (0queries), cloud/contact/terrain/native/cause UNKNOWN. Both62rings/3lives/unhurt; P2ground/free/NORMAL/manual/flag0fuel0 and bound world/pair/focus/managers/LEVEL intact.
 Same-JVM finite-pad/all15101-row production proofs and independent script/ZIP/NINE-original-file proofs agree; **0 JUnit/skips N/A**, failed gameplay question rather than passing route coverage.
 Expected46/runtime/POM/maintained data unchanged; no usable admitted onward inlet or runtime omission proved. [Exact facts, limits, command, hashes and timing](../../plans/2026-10-13-s3k-playable-completion.md#r19-parent-release-misses-the-declared-receiving-bound--2026-10-21).
+
+
+## R20 actual lower branch exits the declared east box — 2026-10-21
+
+At exact `45086f11d`, one cold ordinary CLI preserves all15101 R19 pads/failed upper outcome and matches57 unique available R checkpoints plus all retained Support/Family facts; no parent restart or missing77-state-row reconstruction.
+Left/noABC/P2Up runs25 inputs:15124P1(4751,1528),VX960/VY3936/G0;15125(4754,1543),VX936/VY3992/G0,stillair+jumping/free/riderNULL: FIRSTX>=4752, `LOWER_X_BOX_LOST`.
+15126 total; no ground publication, neutral phase, stable lower inlet, new Aedge or actual rider. Both62rings/3lives/unhurt; P2ground/free/NORMAL/manual/flag0fuel0 and bound world/pair/focus/managers/LEVEL remain intact.
+Same-JVM finite-pad/all15126-row production proofs and independent whole script/ZIP/TEN-original-file proofs agree; **0 JUnit/skips N/A**; lower-brake/settle question failed before ground.
+Expected46/runtime/POM/maintained data unchanged; no current terrain receiver/native/physics cause or runtime omission proved. Stored-sensor freshness/private states remain UNKNOWN. [Facts, policy, hashes, command and timing](../../plans/2026-10-13-s3k-playable-completion.md#r20-lower-branch-braking-stops-at-the-east-bound--2026-10-21).
