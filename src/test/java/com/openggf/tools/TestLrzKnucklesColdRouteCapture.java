@@ -308,6 +308,203 @@ class TestLrzKnucklesColdRouteCapture {
         }
     }
 
+
+
+    @Test
+    void coldKnucklesReplaysIncomingRouteAndFirstActTwoDoor() throws Exception {
+        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
+                "src/test/resources/routes/s3k/lrz-knuckles-cold-act2-first-door-320.bk2"));
+        assertEquals(26635, movie.getFrameCount());
+        var settings = new GameplayCaptureSession.Settings(320, "knuckles", "", "off", null, null, null);
+        // New destination scope only; the untouched fight/handoff method retains its68 windows.
+        // Landing26591 has only43 later inputs: these three45-input windows END
+        // just before/at/after landing, rather than claiming a post-landing start.
+        var spots = Set.of(26427, 26462, 26463, 26498, 26499,
+                26509, 26510, 26513, 26545, 26546, 26547,
+                26572, 26573, 26574, 26579, 26580, 26589);
+        assertEquals(17, spots.size());
+        assertTrue(spots.stream().allMatch(frame -> frame >= 23397
+                && frame + 45 < movie.getFrameCount()));
+        var checked = new HashSet<Integer>();
+        var keyCounts = new HashSet<Integer>();
+        var drawing = new RouteFrameDrawing(true);
+        boolean admitted = false;
+        boolean historyRetired = false;
+        int sourceCurrent = -1;
+        int sourceFloor = -1;
+        int loadXSub = -1;
+        int loadYSub = -1;
+        com.openggf.game.rewind.RewindController sourceController = null;
+        Object destinationLevel = null;
+        Object destinationObjects = null;
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
+            var sourcePlayer = assertInstanceOf(Knuckles.class, session.player());
+            var sourceWorld = SessionManager.getCurrentWorldSession();
+            var sourceLevel = GameServices.level().getCurrentLevel();
+            var sourceObjects = GameServices.level().getObjectManager();
+            var sourceMode = session.loop().getCurrentGameMode();
+            assertEquals(com.openggf.game.GameMode.LEVEL, sourceMode);
+            assertEquals(3, GameServices.gameState().getLives());
+            for (int frame = 0; frame < movie.getFrameCount(); frame++) {
+                if (frame == 23307) GameServices.configuration().setSessionOverride(
+                        com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
+                if (frame == 23453) GameServices.configuration().setSessionOverride(
+                        com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, false);
+                if (frame == 23397) {
+                    assertSame(sourceLevel, GameServices.level().getCurrentLevel());
+                    assertSame(sourceObjects, GameServices.level().getObjectManager());
+                    assertEquals(11560, session.player().getCentreX());
+                    loadXSub = session.player().getXSubpixelRaw();
+                    loadYSub = session.player().getYSubpixelRaw();
+                    sourceController = SessionManager.getCurrentGameplayMode().getRewindController();
+                    assertNotNull(sourceController);
+                    sourceCurrent = sourceController.currentFrame();
+                    sourceFloor = sourceController.earliestAvailableFrame();
+                    assertTrue(sourceCurrent - sourceFloor > 10, "nonempty ordinary source history");
+                }
+                session.step(movie.getFrame(frame));
+                drawing.afterStep(session);
+                var player = session.player();
+                var level = GameServices.level();
+                var objects = level.getObjectManager();
+                assertFalse(player.getDead(), "first-door death at input " + frame);
+                assertEquals(3, GameServices.gameState().getLives(), "first-door lives at input " + frame);
+                assertSame(sourcePlayer, player);
+                assertSame(player, GameServices.sprites().getMainPlayable());
+                assertSame(sourceWorld, SessionManager.getCurrentWorldSession());
+                assertSame(sourceMode, session.loop().getCurrentGameMode());
+                assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
+                assertEquals(320, GameServices.camera().getWidth());
+                assertEquals(9, level.getCurrentZone());
+                if (frame == 20499) {
+                    var bosses = objects.activeObjectsOfType(LrzMinibossInstance.class);
+                    assertEquals(1, bosses.size());
+                    var boss = bosses.getFirst();
+                    assertEquals(2, boss.getState().routine);
+                    assertEquals(6, boss.getCollisionProperty(), "actual initialized incoming miniboss");
+                    assertTrue(boss.isArenaGateComplete());
+                    assertFalse(boss.getState().defeated);
+                    assertTrue(player.isHighPriority());
+                    assertEquals(10, player.getRingCount());
+                    admitted = true;
+                }
+                if (frame == 23397) {
+                    assertEquals(1, level.getCurrentAct());
+                    assertNotSame(sourceLevel, level.getCurrentLevel());
+                    assertNotSame(sourceObjects, objects);
+                    destinationLevel = level.getCurrentLevel();
+                    destinationObjects = objects;
+                    assertEquals(296, player.getCentreX(), "real -$2C00 word rebase");
+                    assertEquals(loadXSub, player.getXSubpixelRaw());
+                    assertEquals(loadYSub, player.getYSubpixelRaw());
+                    assertEquals(0, player.getRingCount(), "observed zero carry; positive carry remains open");
+                    var controller = SessionManager.getCurrentGameplayMode().getRewindController();
+                    assertSame(sourceController, controller);
+                    assertTrue(controller.currentFrame() > sourceCurrent);
+                    assertEquals(controller.currentFrame(), controller.earliestAvailableFrame());
+                    assertTrue(controller.earliestAvailableFrame() > sourceFloor);
+                    historyRetired = true;
+                }
+                if (frame < 23397) {
+                    assertEquals(0, level.getCurrentAct());
+                    assertSame(sourceLevel, level.getCurrentLevel());
+                    assertSame(sourceObjects, objects);
+                } else {
+                    assertEquals(1, level.getCurrentAct());
+                    assertSame(destinationLevel, level.getCurrentLevel());
+                    assertSame(destinationObjects, objects);
+                }
+                if (frame >= 24027) {
+                    assertFalse(player.isObjectControlled());
+                    assertFalse(player.isObjectControlSuppressesMovement());
+                    assertFalse(player.isControlLocked());
+                    assertFalse(level.hasPendingFreshLevelTransitionBoundary());
+                    assertTrue(objects.activeObjectsOfType(
+                            com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance.class).isEmpty());
+                    assertTrue(objects.activeObjectsOfType(
+                            com.openggf.game.sonic3k.objects.S3kBossDefeatSignpostFlow.class).isEmpty());
+                }
+                if (frame >= 24028) assertFalse(player.isHurt(), "new Act2 hurt at input " + frame);
+                if (frame == 24027) {
+                    assertEquals(362, player.getCentreX());
+                    assertEquals(1967, player.getCentreY());
+                    assertEquals(0, player.getRingCount());
+                }
+                if (frame == 24528) assertEquals(1, player.getRingCount());
+                if (frame == 24536) assertEquals(2, player.getRingCount());
+                if (frame >= 24544) assertEquals(3, player.getRingCount());
+                if (frame >= 26427) {
+                    var buttons = objects.activeObjectsOfType(
+                            com.openggf.game.sonic3k.objects.LrzButtonHorizontalObjectInstance.class).stream()
+                            .filter(button -> button.getX() == 2744 && button.getY() == 1838).toList();
+                    var doors = objects.activeObjectsOfType(
+                            com.openggf.game.sonic3k.objects.LrzDoorObjectInstance.class).stream()
+                            .filter(door -> door.getCentreX() == 2768 && door.triggerIndex() == 1).toList();
+                    assertEquals(1, buttons.size());
+                    assertEquals(1, doors.size());
+                    var button = buttons.getFirst();
+                    var door = doors.getFirst();
+                    assertEquals(1, button.triggerIndex());
+                    if (frame < 26510) {
+                        assertEquals(0, button.mappingFrame());
+                        assertEquals(0, door.openTimer());
+                        assertFalse(door.isOpening());
+                        assertFalse(door.isFullyOpen());
+                    }
+                    if (frame >= 26510 && frame <= 26512) assertEquals(1, button.mappingFrame());
+                    if (frame >= 26513) assertEquals(0, button.mappingFrame());
+                    if (frame == 26510) {
+                        assertEquals(1, door.openTimer());
+                        assertTrue(door.isOpening());
+                        assertFalse(door.isFullyOpen());
+                    }
+                    if (frame == 26572) {
+                        assertEquals(63, door.openTimer());
+                        assertTrue(door.isOpening());
+                        assertFalse(door.isFullyOpen());
+                    }
+                    if (frame >= 26573) {
+                        assertEquals(64, door.openTimer());
+                        assertFalse(door.isOpening());
+                        assertTrue(door.isFullyOpen());
+                        assertEquals(1824, door.getCentreY());
+                    }
+                }
+                if (frame == 26580) assertEquals(3, player.getDoubleJumpFlag());
+                if (frame == 26590) assertTrue(player.getAir());
+                if (frame == 26591) {
+                    assertFalse(player.getAir());
+                    assertFalse(player.isJumping());
+                    assertEquals(0, player.getDoubleJumpFlag());
+                }
+                if (!spots.contains(frame)) continue;
+                checked.add(frame);
+                keyCounts.add(replayLrzFightWindow(session, movie, drawing, frame));
+            }
+            drawing.checkpoint(session);
+            assertTrue(admitted);
+            assertTrue(historyRetired);
+            assertEquals(spots, checked);
+            assertEquals(1, keyCounts.size());
+            assertTrue(keyCounts.iterator().next() > 0);
+            assertEquals(2796, session.player().getCentreX());
+            assertEquals(1900, session.player().getCentreY());
+            assertEquals(4608, session.player().getXSubpixelRaw());
+            assertEquals(15616, session.player().getYSubpixelRaw());
+            assertEquals(336, session.player().getXSpeed());
+            assertEquals(0, session.player().getYSpeed());
+            assertEquals(336, session.player().getGSpeed());
+            assertFalse(session.player().getAir());
+            assertFalse(session.player().isJumping());
+            assertEquals(0, session.player().getDoubleJumpFlag());
+            assertEquals(3, session.player().getRingCount());
+            assertTrue(session.player().getCentreX() > 2768 + 0x1B, "beyond the opened door solid window");
+            System.out.println("LRZ_FIRST_DOOR_REPLAY windows=" + checked.size() + " keys=" + keyCounts);
+        }
+    }
+
+
     @Test
     void coldKnucklesRestoresActTwoTraversalToTheMiddleCorridor() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
