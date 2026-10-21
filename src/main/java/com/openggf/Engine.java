@@ -2268,7 +2268,13 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private boolean preparePresentationForLaunch(GameModule module, String standaloneOwner) {
 		try {
 			if (configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
-				audioManager.setBackendForLaunch(new LWJGLAudioBackend(configService, profiler));
+				if (configuredHeadlessSession) {
+					// The configured caller already initialized and owns this backend.
+					// A mode reset may retire its sink, but must not replace the backend.
+					audioManager.ensurePresentationSink();
+				} else {
+					audioManager.setBackendForLaunch(new LWJGLAudioBackend(configService, profiler));
+				}
 			}
 			ModSubsystem subsystem = ModSubsystem.current();
 			// Muting speaker output does not remove creator asset identity. Level

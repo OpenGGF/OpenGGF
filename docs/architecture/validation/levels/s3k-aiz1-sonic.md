@@ -40,9 +40,10 @@ and the CNZ/LRZ/DEZ/HPZ cold intro offsets are outside this fix.
 
 ## Configuration inventory
 
-The [configured frontend inlet control](#real-configured-frontend-inlet--2026-10-21-red)
-is currently red on caller-owned audio-backend retention. It does not add a
-qualified cold entry or route/configuration pass to this inventory.
+The [configured frontend inlet control](#configured-frontend-backend-retention--2026-10-21)
+now passes ordinary real-ROM title/DataSelect/fresh-AIZ entry and one input/object
+pass with its caller-owned backend retained. It does not certify native reset,
+whole-route timing or additional configurations.
 
 The representative route is native/off, 320px, Sonic with CPU Tails. Current
 short entry checks resolve every production `WidescreenAspect` preset
@@ -1003,6 +1004,10 @@ limits remain; this is no act or integration certificate.
 
 ## Real configured frontend inlet — 2026-10-21 (RED)
 
+Historical pre-fix evidence at `7d7fc8b7c`; the
+[production correction below](#configured-frontend-backend-retention--2026-10-21)
+qualifies the unchanged control's complete continuation.
+
 `TestEngineConfiguredHeadlessStartup#realS3kConfiguredFrontendLaunchesFreshAizThroughOrdinaryInput`
 uses a non-overridden Engine, actual ROM catalogue/detection, headless graphics,
 caller-owned null audio, standalone temporary configuration and a blank temporary
@@ -1012,23 +1017,23 @@ and engine master-title screens are disabled as in the authenticated runner.
 Ordinary logical input drives the existing loop/presentation inlet. There is no
 zone boot, state hydration, forced mode, clock/RNG/position write or ready override.
 
-On runtime source `839ff7615abf718595cd04fa7344a5c86a523042`, the final case fails
-immediately after configured startup: the supplied `NullAudioBackend` has become
+On runtime source `839ff7615abf718595cd04fa7344a5c86a523042`, the final pre-fix case failed
+immediately after configured startup: the supplied `NullAudioBackend` had become
 `LWJGLAudioBackend`. `Engine.initializeGame:1151` calls
 `preparePresentationForLaunch:2268–2271`, which unconditionally replaces the
 backend when audio is enabled. The six existing probe-engine startup tests pass;
-their `initializeGame` override bypasses this real owner. Keep the new identity
-assertion red until production is corrected; disabling audio or reinstalling a
-test backend would conceal the failure.
+their `initializeGame` override bypasses this real owner. The new identity
+assertion was retained until production was corrected; disabling audio or
+reinstalling a test backend would conceal the failure.
 
 An earlier test iteration reached real title ACTIVE, normal Start to DataSelect,
 NO SAVE launch, a new world/context retaining the pinned ROM source, fresh AIZ
 Level and matching completed-load generation/cause receipt before failing the
 same backend identity check on the attempted first level iteration. The final
 fail-fast control preserves those later assertions plus the ordinary player/object
-pass and B-edge assertions, but they remain unqualified on its final source.
+pass and B-edge assertions, but they remained unqualified on its final pre-fix source.
 
-Final focused command selected 106 cases across 11 actual classes: 105 passed,
+The final pre-fix command selected 106 cases across 11 actual classes: 105 passed,
 one failed, no errors/skips. Both classes named `TestSonic3kLevelLoading` ran.
 All four mandatory S3K controls and existing runner/input/title timing controls
 passed. The exact command, source epoch and failure are in the
@@ -1039,3 +1044,38 @@ association and the eleven pre-run jobs' continuous identity remain open. The
 title timing owner is private and separate from gameplay; no public observation
 of its prepared work was invented. The native320 master-title START-layout and
 hub capture-chord negatives are unchanged, separate obligations.
+
+## Configured frontend backend retention — 2026-10-21
+
+The same complete test, byte-identical to `7d7fc8b7c`, now passes. The production
+change is confined to `Engine.preparePresentationForLaunch`: an audio-enabled
+configured headless session uses `ensurePresentationSink()` on its already
+initialized caller-owned backend. Interactive launches retain strict
+`setBackendForLaunch(new LWJGLAudioBackend(...))`; subsequent mod-session setup
+still runs. The existing ownership flag selects the branch, without a new API,
+global mode, backend-class predicate or change to teardown/failure handling.
+
+On runtime source `839ff7615abf718595cd04fa7344a5c86a523042` plus this correction,
+the real-ROM case actually passes title ACTIVE, Start to DataSelect, NO SAVE to
+fresh AIZ, pinned-source/new-world/Level/roster identity, completed generation-1
+ORDINARY receipt, the first ordinary player/object body, a B edge and public
+session cleanup. Configuration is the single NTSC/native320/donor-off/Sonic+CPU
+Tails/intros-on case above. No test fixture or gameplay state was substituted.
+
+Affected validation passed **138 distinct cases, no failures/errors/skips**:
+the primary selection ran 128, backend lifetime and DataSelect patch resolution
+ran nine, and the exact backend bypass guard ran one in a separate fresh JVM.
+This includes all six older startup cases, the existing runner/input/title
+controls, all four mandatory S3K controls, strict interactive launch selection
+and external-content presentation/failure lifecycle checks. Actual XML identities
+and skips were inspected; consumed reports and temporary output were removed.
+Commands and source pins are in the
+[dated plan](../../plans/2026-10-13-s3k-playable-completion.md#configured-frontend-backend-retention--2026-10-21).
+
+This qualifies the configured production graph only. Native reset/row0,
+region/SRAM equivalence, the interrupt-masked initial art decode, movie-row/VInt
+association and continuous identity of all eleven pre-run jobs remain open.
+The title's private timing owner was not observed through a fabricated API.
+There is no native pixel/audio-output, long-route, rewind, alternate viewport,
+donor/team or whole-boot parity certificate. The unrelated hub START-layout and
+capture-chord negatives remain unchanged. Root owns integration and broader checks.
