@@ -29132,3 +29132,29 @@ Owned raw logs/series/checkpoints/decisions/classes/tmp/extraction/validation co
 Explicit19:34:49.177308Z workload/no boot with<120s and19:44:49Z cleanup limits were respected. Earlier refs/history/native actual322/index703/config and all maintained runtime/POM/tests/movies/oracles/windows remain preserved.
 This answers only the bounded Up-to-ground-exit question; no fresh terrain qualification, safe future, whole-act/boss/FBZ/history/rewind or native equivalence claim. No seeds/restores/native/model/extra agent/push/integration.
 Root owns source/data review and any later workload; nothing ran after43041. See the [R17 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-up-only-activity-guard-continuation-r17--2026-10-21).
+
+
+## R18 one vertical release admits the original parent post — 2026-10-21
+
+One cold ordinary CLI at exact `9772068a7e7462bdc78480398dbbba5eddbb0eed`, branch `feature/ai-ssz-child-parent-ordinary-r18-20261021`;
+unchanged [R17 setup](#r17-exact-original-first-held-input-retains-support--2026-10-21), all14945 accepted pads and original46 observable checkpoint identities preserved.
+Declared sole policy: neutral hold<=128 to FIRST publicX4408..4424 on the same child; ONE freshA-only edge; heldA<=120 to FIRST original parent rider; neutral<=3 to its ground/control admission; total<=252, P2Up/noABC throughout.
+
+| Input | Actual once-read public boundary |
+| --- | --- |
+| 14944 | Full R17 inlet matches: P1(4369,1164),V0/ground/control3-equivalent on SAME managed/live original child; both62rings/3lives. |
+| 14971 | After27 neutral rows, FIRST gateX4409/Y1164, same child/ground/control/VXG0. |
+| 14972 | ONE freshA edge: P1(4409,1159),VX0/VY-1664,air+jumping/control clear; old child rider released. |
+| 15022 | After50 further heldA rows, FIRST original parent rider: P1(4409,1099),V0/ground/jumpingfalse/free; actual parent managed/live. |
+| 15023 | ONE neutral/A-released row: SAME parent rider, P1(4410,1100),V0/ground/control+CPUallowance/movement suppression; STOP. |
+
+Exactly79 new/15024 total:27neutral+51Aheld+1neutral; no second jump edge/owner release or onward motion. P2 stays(3950,1264),V0/ground/free/NORMAL/manual/flag0fuel0;
+both unhurt/live,62rings/3lives,contextNONE/targetfalse and bound world/managers/roster/focus/LEVEL/no pending/fade/reverse throughout the new tail.
+Actual raw parent is joined through original placement134 map/post.child bindings in THIS JVM; no class/XY/native-address/cross-JVM identity inference.
+Original46 selected available-field gates plus accepted14944 match (47 unique); all79 cachedPRE strings equal the preceding complete observation. Missing historical fields remain UNKNOWN; no all-row-state equality.
+Same-JVM preboot finite2-pad production-author/loader positiveJUMP0x10/bools/masks/payload gate and all15024 actual-row roundtrip; independent complete script/ZIPpayload and EIGHT entire ancestor files14945R17/14945R15/14944/14853/14618/14442/14414/9914 agree.
+Current absolute Main queue `--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl compile exec:exec -B`, Java25 source-mode `ChildParentContinuation.java`; CLI/Java/launcher exit0, **0 JUnit/skips N/A**, no Surefire/XML.
+Queue356s/Maven16.513s/launcher373.581s overlap; Engine/tail-only UNKNOWN. Entire336685-byte478-line original stream/all79 new rows/proofs/errors read; JOMLUnsafe/resource-encoding/unmeasureds3k-kos-v1 warnings remain limits.
+App fingerprint `8e8ccc9304a9acd7c3738d23c538d3278d92ac5683c6dd44f0eae7cbc01ae756` unchanged; private adapter SHA256 `f76c22e3b2d55b86f2376ab83f716fa715f48ad874a016e747da8e0065d56966`, executedBK2 `71784757017ebf6408da9447c10c936312dc0f45a968b50ce5ad9ddd03936ed4`.
+Useful specific source/literal preimages/design/exact inputs/compact FIRST_PARENT and one normalPNG remain external; exact command/environment/ROM/native/config/IDs in own R18 registry. Raw namespace/tmp/extraction consumed under leases; no helper classes persist.
+Stored-sensor freshness/private held/angle/radius/episode/cooldown/contact, non-rider child liveness, original cause/native/longer parent hold/release/onward remain UNKNOWN. No runtime/POM/test/maintained input/window/count/oracle/expected46 change, retry or push/integration; STOP Root review.
