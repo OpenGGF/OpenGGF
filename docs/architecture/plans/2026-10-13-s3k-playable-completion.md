@@ -25194,3 +25194,54 @@ does not close VDP/FIFO/open-bus/IRQ, production reset/Title continuity, movie
 row0 or11 actual hardware-job identities. Gameplay climb implementation and
 the retained CNZ grab continuation remain independent. Main delivery and
 owned-worktree cleanup remain pending; the overall goal stays active.
+
+### SOZ enemy-art descriptor assertion repair — 2026-10-21
+
+Root's ongoing smoke on `25dedb1b9b9f572c81d3376424be7b9c1d547307`
+reported `TestSonic3kObjectArtProvider#sandopolisLoadEnemyArtQueuesSkorpSandwormAndRocknForBothActs`
+failing because its private `EnemyKosEntry.toString()` expectation omitted the
+new `physicalPublication` component. The actual three source/tile pairs matched.
+The consumer assertion was unchanged from Main `efd60514`; `c7fdd304` added the
+private component for SSZ restoration requests. This attributes this assertion
+failure only; Root's other smoke results remain independently owned.
+
+The isolated test repair starts at exact `25dedb1b9` on
+`bugfix/ai-soz-art-test-projection-20261021`. It projects the existing public
+`capture().pendingKosModules()` descriptors through `sourceAddress()` and
+`destinationTile()`, preserving exact ordered list equality for both SOZ acts:
+`(0x16ADC6,0x536)`, `(0x16B038,0x557)`, `(0x16B2BA,0x500)`.
+Pinned disassembly `044fa467` / `sonic3k.asm` blob `0f10a373` has
+`LoadEnemyArt` at64317..64349, both SOZ table entries at64368..64369, and
+`PLCKosM_SOZ` at64452..64456 in that order. Scheduling still uses the existing
+test inlet. No production/API, queue, timing, publication flag, fixture or other
+assertion changes. This descriptor control does not establish physical SOZ
+publication, native timing, pixels or route parity.
+
+The one affected whole-class qualification completed: **15T/0F/0E/0S**, exit0,
+with all15 actual method identities and the XML fork properties inspected.
+The unchanged submitted test SHA256 is
+`96360e867666502fdc4383ac18b442b605bdba9fbc271fc2ffc27533d3c55087`.
+Java25.0.4.1, surfaceless EGL and the explicit original ROM reached the fork.
+The wrapper reported47s of admission waiting; Maven reported75s including
+compilation, and the class reported1.165s. The command below substitutes
+`OPENGGF_MAIN` for the actual existing Main worktree path recorded in the own
+registry; its expanded arguments match the completed request:
+
+```bash
+env -u JDK_JAVA_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal \
+  -Dmse=off "-Ds3k.rom.path=${OPENGGF_MAIN}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  -Dtest=com.openggf.game.sonic3k.TestSonic3kObjectArtProvider test -B
+```
+
+The original locked-on ROM was verified before submission:4,194,304 bytes,
+CRC32 `63522553`, SHA1 `CFBF98C36C776677290A872547AC47C53D2761D6`.
+Root's active smoke is not repeated or observed by this worker. The test-only
+scope needs no release, guide, configuration, skill or discrepancy update;
+this existing Plan records the attribution and bounded check. Integration,
+combined-smoke disposition and worktree cleanup remain Root-owned. Consumed
+focused XML/text reports and invocation temporary directories were removed;
+this direct focused request has no category-run directory to acknowledge.
