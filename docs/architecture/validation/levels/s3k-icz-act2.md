@@ -103,3 +103,47 @@ opaque-extent repair cases are separate source epochs, not one combined rerun.
 Unknown688..717 remain absent until publication; async/cold/presentation builds
 receive no new predecessor. [Exact sources, old-reds, commands and limits](s3k-icz-act1.md#r11-synchronous-known16-handoff-repair--2026-10-17).
 No ICZ2 route, native pixel, full aux, physical death/reload or full-act claim follows.
+
+
+## Ordinary solo Sonic boss-admission authoring frontier — 2026-10-21
+
+A bounded input-only authoring bout on unchanged runtime
+`7fbcfbd8a4597163390d5d813facec4c3e69a637` used direct `5/1`, native 320,
+solo Sonic, donor off and explicit title-enabled `GameplayCaptureSession.Settings`.
+All position, rings, checkpoint, emerald, clock, camera-fraction and reverse-gravity
+setup fields were null/false. This admits the existing fresh assembly/title owners;
+it does not import an ICZ1 world or a native trace. The ROM Sonic start
+`$07E0/$0370` and placed boss record 340 (`$4490/$05B8`, ID `$BD`) remained controls.
+
+Eleven exploratory branch requests produced 30 controller variants. One separate
+uninterrupted 1800-input observation retained public loop/path/cork fields.
+All 12 original Jupiter harness invocations passed 1/0/0/0 with no skips, but those
+harness passes are **not route passes**: branches may stall or die. The best
+proposal ends alive at `$22F5/$08EE` with 6 rings after 3821 inputs, before boss
+placement/admission. One periodic-jump variant died at zero-based input 450.
+No runtime omission was established; no new maintained boss-route consumer or
+controller resource was promoted. Two fresh full-route witnesses, admission
+rewind windows and the final route-class check were therefore not launched.
+
+The real loop path marker 157 (`$2180/$0600`, subtype `$91`) switched C/D→E/F
+at input 1709 in the observed prefix; actual corks 150/151 broke at 1724/1733.
+Releasing Right through that drop let the next proposal reach the lower cave.
+The remaining source-backed interaction question is actual ice cube 162
+(`$2240/$08F4`) → ordinary rolling top landing/shatter → button 163
+(`$2240/$08FC`, subtype 2) → trigger-mode collapsing bridge 165
+(`$22C0/$0911`, subtype `$82`). `Obj_ICZIceCube`/`sub_8B3AA` requires saved
+animation 2 and real standing contact; the button writes momentary trigger 2,
+and `loc_20B40` latches that trigger in the bridge. This chain was not completed
+or observed, and is not proof of a terrain-wall defect or an obligatory whole-act path.
+The last checked restorable branch prefix is 2040 inputs of the lower-cave
+proposal: alive `$221D/$08EE`, 6 rings, LEVEL, camera `$217D/$088E`; pending fresh
+assembly and callback-bearing fade were rejected by the existing author tool.
+Resume by replaying inputs from row 0, never by importing that checkpoint.
+
+Useful input pairs, the exact temporary adapter source and an already-created
+normal end PNG remain in the owned external task directory named in the dated
+[completion plan](../../plans/2026-10-13-s3k-playable-completion.md).
+Raw CSVs/PNGs other than that end still, temporary repository source/class and
+owned Maven reports were consumed. This changes the authoring frontier only;
+boss admission, fight/exit, incoming ICZ1 history, ordinary full-act completion,
+other roster/donor/widths and native timing/pixels remain open.

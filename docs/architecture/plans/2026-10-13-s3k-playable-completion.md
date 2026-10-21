@@ -25857,3 +25857,83 @@ was not run and its Main outcome remains unknown. There is no whole-class,
 broad-suite, Root31, full-game, native timing/pixel or boot qualification.
 Owned diagnostic XML/log/tmp products are consumed after inspection; only the
 compact source-attribution proposal is retained outside the repository.
+
+
+## Ordinary ICZ2 solo Sonic admission attempt — bounded frontier, 2026-10-21
+
+The owned `feature/ai-icz2-sonic-cold-boss-admission-20261021` branch reuses
+`.worktrees/object-vint-test-terminology`, starting at exact Root
+`7fbcfbd8a4597163390d5d813facec4c3e69a637`; the old c93 branch remains intact.
+Runtime, native references, POM, shared tools, existing tests and maintained inputs
+were unchanged. A temporary same-package adapter called the existing
+`GameplayInputBranchTool.run` with explicit 15-field Settings: 320, Sonic, solo,
+off, title enabled, all gameplay seed fields null/false. The CLI's seven-field
+Settings default title off and was not substituted. No native/trace values,
+private writes or forced game owners supplied progress.
+
+Twelve distinct normal queued requests ran through the current absolute Main
+wrapper using Java 25.0.4.1, EGL, null OpenAL, Lua 5.4 and the verified original
+absolute S1/S2/S3K ROM properties. Exact selectors were
+`com.openggf.tools.TestIcz2ColdRouteAuthor` (requests 01–07),
+`com.openggf.tools.TestIcz2ColdRouteAuthor#observeOrdinaryLoopOperands` (08),
+and `com.openggf.tools.TestIcz2ColdRouteAuthor#authorOrdinaryPrefix` (09–12),
+with `-Dmse=off -Dopenggf.headless.gl=surfaceless-egl test -B` and unique owned
+report/tmp paths. All 12 originals were 1T/0F/0E/0S. Eleven branch requests
+produced 30 proposals; one separate uninterrupted 1800-input run observed actual
+public path/cork fields. These are authoring/observation harness results, not
+12 route passes. One periodic-jump proposal died at input 450; the others may
+stall. All XML/TXT identities, failure/error/skip nodes, properties and streams
+were read, and exact owned diagnostics were consumed. No Root’s 31-case composition or broad run
+was observed/repeated, and no additional capture was launched for this handoff.
+
+The first frozen-looking Cork frontier was disconfirmed: actual path marker 157
+switches C/D→E/F at 1709, animation 2 persists, and corks 150/151 break at 1724/1733.
+Releasing Right through the falling shaft clears the stack. Holding Right in the
+fall instead drifts out of the shaft and lands normally. The best later proposal
+reaches `$22F5/$08EE` alive with 6 rings, not boss record 340. The next bounded
+question is a real rolling top landing on cube 162 (`$2240/$08F4`), its
+`sub_8B3AA` shatter/`-$300` bounce, standing on button 163
+(`$2240/$08FC`, subtype 2), then bridge 165 (`$22C0/$0911`, subtype `$82`)
+consuming momentary `Level_trigger_array[2]` at `loc_20B40`.
+Near-stationary one-tick jump attempts remained left of the cube; long jumps
+passed over it. The chain has not been observed; no runtime omission, mandatory
+route proof or wall-opening claim follows. Existing positioned ICZ2 component
+checks do not replace it.
+
+Preserved source/input products are under
+`<owned-task-directory>/icz2-sonic-cold-boss-20261021/`; the exact absolute root
+is recorded in the owning continuation-agent registry:
+
+- Furthest `attempt10/variant-0.{script,bk2}`: 3821 rows, end `8949,2286`, 6 rings,
+  alive. Script SHA-256 `519fba32c632e539e1b02dddc40a4b2f854b5eb9007a94157e0640283e01ef2a`;
+  BK2 SHA-256 `e549ee44c21598e4f9cb81b940b3aa6e9bf22fa79b8f09225947b0c24ecc41d1`.
+- Last checked safe branch prefix: 2040 inputs of
+  `attempt09/variant-0.{script,bk2}` (whole movie 3444 rows). After row 2039:
+  centre `8733,2286`, x/ground velocity 60, y velocity 0, grounded, 6 rings, alive,
+  solo, LEVEL, camera `8573,2190`. The existing branch guard admitted the same
+  world with no pending fresh assembly/callback-bearing fade. Script SHA-256
+  `756c096013a9bcd9937a11bdf92897451a3f4393631c736e61b0c10ca999e3d8`;
+  BK2 SHA-256 `3cd0e762ab9162f7ee2568e334209b9f822b703ce134543dff9b70b8bb5de4b1`.
+  No snapshot is retained/imported; any continuation cold-replays row 0.
+- `attempt07/variant-1.{script,bk2}` retains the ordinary loop/spindash prefix;
+  `attempt12/variant-2.{script,bk2}` retains the final failed cube-landing proposal.
+  Production InputLogAuthorTool verified every generated row against its script
+  for both pads; P2 remained neutral. This is static/controller packaging evidence,
+  not fresh uninterrupted boss-route qualification.
+- `TestIcz2ColdRouteAuthor.java` is the exact temporary source (3753 B,
+  SHA-256 `18e7ea73b7fd9d6c08e708f7ab5390faabb11afc06a6dbc2f72574249296c759`),
+  preserved for Root's resumption. It is removed from repository sources/classes.
+  `request12.txt` documents its input-request format; a future request needs a new
+  empty output directory and new authority, not a blind rerun of that request.
+- Existing normal end image `attempt10/variant-0-3820.png` (32752 B,
+  SHA-256 `20c80d62227d381845c6180805aa31b08ac03bcdcbbd746106c05fd3ba97c975`)
+  is retained as requested; it is engine rendering, not native pixels.
+
+The bout stopped without a genuine boss-admission proposal, so no maintained
+route resource/test was promoted and the two fresh full-route witnesses, admission
+rewind windows and final route-class run were not launched. Raw series and other stills/rejected
+products were consumed; compact identities/owner facts remain in the existing
+agent registry. Only factual matrix/backlog/Plan prose lands here. Full act,
+boss combat/defeat/capsule/LBZ, roster/donor/viewport breadth, incoming ICZ1
+history and native clock/pixel coverage remain open. Root owns review and any
+next bounded continuation; no push, integration or worktree removal occurred.
