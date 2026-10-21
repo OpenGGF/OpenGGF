@@ -25420,3 +25420,154 @@ This is a later camera3940 event component, separate from the CNZ child's
 arrival/release at player3640; cold Knuckles traversal, physical checkpoint
 lifecycle and the actual structural route remain open. Local source review and
 Root's bounded composition decision precede integration/delivery.
+
+
+### CNZ2 cold Knuckles to released ICZ maintained R6 — 2026-10-21
+
+This bounded engine route is now maintained by
+`TestS3kCnz2KnucklesColdRouteCapture` and the input-only
+`routes/s3k/cnz2-knuckles-cold-released-icz-320.script` / `.bk2` resources.
+It starts through public `GameplayCaptureSession.boot(absoluteROM,3,1,settings)`:
+ROM0301, ordinary `$02C0/$06B0`, native320, solo Knuckles, donor off,
+explicit15-field `showTitleCard=true`, every gameplay seed null/false.
+There is no donor, trace/fixture hydration, checkpoint, clock, position, ring,
+RNG, phase or private setup. Source is exact base
+`25dedb1b9b9f572c81d3376424be7b9c1d547307` plus this test/data/documentation change;
+production Java/POM fingerprint remains
+`671b043b9741cef06709cd48521ee8afedabe45cdf7815260338b0288ab1fcd8`.
+Its Java tree is `ebc862b9bc537115b5dad57698a3cdeefc10c344`, POM blob
+`332caefac3d4f85e1d39f92eebce04c10e8f5d5c`.
+Source hashes below use SHA256 over UTF-8 relative POSIX path, NUL, raw file
+bytes, NUL, in sorted relative-path order. The production universe is
+`src/main/**/*.java` plus `pom.xml` (4,175 files), giving the unchanged
+`671b043b9741cef06709cd48521ee8afedabe45cdf7815260338b0288ab1fcd8` above.
+The final committed consumer universe, `src/main/java/**/*.java` plus
+`src/test/java/**/*.java` and `pom.xml` (8,310 files), hashes to
+`c9f13bfe20e6a3de32bd60dd4cc2e8217cd1dc5dda919166c1b4006503de87eb`.
+The previously recorded `2adcf0beff7ca24ac59d67f91548a86b18d9f6ead5ff80e81ddf5aa141270aa3`
+uses the wider `src/**/*.java` plus `pom.xml` universe (8,334 files), including
+24 Java source fixtures under `src/test/resources/mods`. Both final-tree hashes
+reproduce directly from committed `e1ae92921cb0182336b4f84b25f32c4077952872`
+blobs and match this worktree's source bytes after temporary-adapter removal;
+the different source universes account for the two hashes.
+
+These final-tree fingerprints describe the maintained source footprint, not the
+complete earlier author/ordinary replay epochs. Those requests used temporary
+`src/test/java/com/openggf/tools/TestCnz2KnucklesArrivalR6.java`. Its retained
+`author-executed-adapter.java` hashes to
+`7a754b4103de01158b88827cd565e19ab1479c7d3ba36306e106f3b19efe8e0a`;
+`ordinary-executed-adapter.java` hashes to
+`37c9ea350d8fbf6ee6e5c47c0fec2709be8e3f24825f9c76d3ff9565f9f6a1c5`.
+Original complete pre-removal manifests for those requests were not retained;
+their aggregate source hashes and whole-tree equality to the final committed
+consumer are therefore unproven. The maintained class source pin is
+`54b496864dfb516d46d6dbed726d7e7e297bdc0e5003ff6cd142e8143f7afa69`,
+matching the inspected focused request48106 source pin. Root owns fresh composed
+consumer verification after integration; the earlier temporary epochs do not
+supply that qualification.
+
+The initial R6 no-job record remains historical. Root corrected its inaccurate
+“titlefalse” prose; actual R5 titletrue was retained. Ordinal7's provider capacity
+failure was independent of its submitted Java job53400. Ordinal8 took over that
+same completed request as its sole observer; it did not submit another authoring
+job or infer an outcome from the provider failure. No additional provider/model
+or worker was used. Original R1..R5 history, old32e source/worktree/four doc WIPs,
+and the entire R5 current-source documentation prefixes remain unchanged.
+
+`Obj_ICZTeleporterMain` releases P1 when `Gradual_SwingOffset` stops rising;
+`CheckDel` then owns the solid pad. Thus one neutral continuation, bounded at900
+new inputs, used only **175**. The selected movie has **7,164 inputs** and retains
+all6,989 R5 rows exactly. Actual release is7050; supported stationary release is
+7074;90 consecutive supported/control-free boundaries end at7163. Endpoint is
+`$3640/$065C`, camera `$35A0/$05FC`, ICZ engine5/0, Knuckles solo, 0 rings/3 lives,
+actual arrival `initialized=true/released=true`, standing on that pad, zero
+velocities, no object control/input lock/movement suppression/camera freeze,
+LEVEL with no pending fresh assembly or fade callback. Rows are zero-based
+controller data, not native clocks or fitted production timing constants.
+
+Two fresh, separate ordinary JVMs then replayed the complete selected movie,
+without author helper, restore, seed or runtime edit. PIDs2173172/2175186 agreed
+on all83 passive fields excluding only run-local identity numbers (actual identity
+relationships were asserted), projectionSHA
+`6fd37a030308997f0aefaa0a9e8aa7c2fb3a4ab1a45abbc5d1409d7cae400163`.
+Both reached admission4732, natural capsule button5444, results5510,
+completion/control release6047, beam6663, controlled Y-word0 at6813, actual
+level replacement to5/0 at6870, fresh typed arrival assembly6987 and release7050.
+Actual P1, movement and WorldSession references remained stable; loaded level
+identity changed once. Neither full-movie replay died or lost a life. The earlier
+prefix has162 **hurt-state samples** (1927..1967 and3345..3465), not162 hits;
+the175 new neutral inputs had no hurt. The maintained test invents no no-hurt
+oracle and changes none of the existing component conditions.
+
+The independent, ROM-free input method checks both ZIP members, all script →
+writer → production-loader records, neutral P2, neutral new tail and the literal
+data inverse of the original6,989-row prefix. Prefix raw lines joined with LF,
+including final LF, hash to
+`bac5bd0fd4b2d585d94f3c2d83cc27c5693e6ce09387b4eb1a4fa24372fbca4f`.
+The selected script SHA256 is
+`cea508947a54a64e008c7f42b9a431cf8e19de370aace68ceebef47f35ef76be`;
+BK2 SHA256 is `413f2fc551f8b4d69933fb1ec75d50ea4df31bba2efce309942e947ff73fdf9f`.
+The ZIP contains only Header.txt and Input Log.txt, no saved state.
+
+The route method reaches21 named actual roles: before/retained grab, wall jump
+and landing; before/actual late P1 admission and upper-floor approach; capsule
+body/button, before/active results and actual completion; teleporter lock/beam,
+beam control and hide/camera rise; fresh ICZ assembly, release and two supported
+incoming states. Every role captures the complete **60-key** registry, advances
+**45 ordinary inputs**, restores immediately and replays all45 twice through
+the existing canonical comparator, with no new route-specific field exclusions.
+`RewindSnapshotDiff.keyEquals` intentionally normalizes level `epochAtCapture`,
+allocator `peakSlotCount`, render `bucketsDirty` and object-list ordering.
+The hide/rise window starts6795 and ends6840, before the actual
+callback-bearing fade; no raw snapshot crosses fade, load or pending assembly.
+After the last source window, a bounded live-history tail starts6815. Its33
+source frames retire at the actual6870 load: incoming currentFrame is below33
+and its available frame-zero floor is0, before destination advancement. Fresh
+assembly and incoming45-input replay are checked separately. Every main, forward
+and replay input draws normally: **9,999 draws, zero skipped**. Existing short
+positioned/local component checks remain independent of this long traversal.
+
+All four Java requests used this worktree and the updated Main absolute queue
+wrapper, normal lane, actual Java25.0.4.1, surfaceless EGL and nullAL. The original
+absolute locked-on ROM had SHA1 `cfbf98c36c776677290a872547ac47c53d2761d6`,
+CRC32 `63522553`; XML, stdout/stderr, actual identities/assertions and skips were
+inspected. The portable reconstructions below represent one author request, two separate
+ordinary invocations, and one affected whole-class invocation respectively. Set
+`OPENGGF_MAIN` to the absolute Main checkout and `S3K_ROM` to the verified absolute
+locked-on ROM file. Exact machine-local invocations stay in the private task
+registry. The normal resource hook rejected an initial commit containing local
+paths in the earlier R5 proposal and new R6 command examples. R6 examples are now
+portable; the original R5 Plan/CNZ proposals remain byte-exact, uncommitted WIP
+in this worktree rather than being rewritten or silently discarded:
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk ALSOFT_DRIVERS=null python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM" '-Dtest=TestCnz2KnucklesArrivalR6#authorOneNeutralArrivalContinuation' test -B
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk ALSOFT_DRIVERS=null python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM" '-Dtest=TestCnz2KnucklesArrivalR6#ordinaryReplayChosenFinalMovie' test -B
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk ALSOFT_DRIVERS=null python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM" '-Dtest=TestS3kCnz2KnucklesColdRouteCapture' test -B
+```
+
+| Session / actual method | Tests/F/E/S | Queue wait | Suite | Case(s) | Maven |
+| --- | --- | --- | --- | --- | --- |
+| 53400 / authorOneNeutralArrivalContinuation | 1/0/0/0 | 360s | 7.120s | 6.834s | 34.110s |
+| 84561 / ordinaryReplayChosenFinalMovie | 1/0/0/0 | 483s | 6.824s | 6.565s | 33.265s |
+| 89838 / ordinaryReplayChosenFinalMovie | 1/0/0/0 | 32s | 7.072s | 6.777s | 34.087s |
+| 48106 / whole maintained class | 2/0/0/0 | 0s | 10.491s | 10.448s / 0.026s | 38.308s |
+
+Actual maintained XML identities are
+`coldSoloKnucklesTraversesCapsuleAndReplaysTheReleasedIczHandoff` and
+`inputOnlyMovieRoundTripsTheScriptAndRetainsTheExactR5Prefix(Path)` in
+`com.openggf.tools.TestS3kCnz2KnucklesColdRouteCapture`. All5 cases across four
+requests completed without failures/errors/skips. Unmeasured host/provider/idle
+subintervals are unknown; queue waiting is not suite execution time. Deprecation,
+Unsafe, missing FAST manifest and unmeasured Kos deterministic-estimate warnings
+do not establish native timing or physical resource publication.
+
+Only the narrow test, input pair and affected existing coverage documents change.
+No runtime, POM, physics, native, trace/fixture oracle or shared helper changed.
+Inspected diagnostics and temporary repository author/replay adapters were consumed;
+useful selected inputs and executed temporary source remain in the existing external
+R6 task directory. No extra agent, broad baseline/smoke, push or Root/Main mutation
+was performed. Local source/data review and composed qualification remain Root-owned.
+This is direct native320/off solo Knuckles CNZ2 → released ICZ1 coverage, not full
+CNZ/ICZ act, other roster/donor/width, continuous AIZ campaign, boss, native clock/PC,
+pixel or hardware boot proof. Existing broader matrix and lifecycle/native gaps stay open.
