@@ -704,3 +704,40 @@ root before rendering; package without tests; regenerate four MKVs/JSONL/QA
 images under revision-6, compare state with revision-5, decode and inspect them.
 Revision-5, root-owned scripts, MP4s, promo and external repositories stay owned
 by root. No ordinary broad run, integration or push in this worktree.
+
+### Camera correction — rendered handoff
+
+Frozen runtime/test source is **efa7875f8c60885dad0458a2cfbe77c0cd49a4de**.
+The build-only queued `-Dmse=off -DskipTests package -B` passed in 43.689 s;
+the packaged `version.properties` reports `app.commit=efa7875f8`,
+`app.dirty=false`, built with Java25. Jar SHA-256:
+`2c93d2a1bd3a1d19f63ab4b372e9f964399593260582e2aec1af4125b6f396cb`.
+No runtime/test/example changes followed the freeze. This checkpoint is prose only.
+
+Root's unchanged revision-6 `capture.py` generated all four takes with this jar,
+original S3K ROM and a fresh external subdirectory. Canonical compilation matched
+all four retained scenes. After successful completion, the eight MKV/JSONL files
+were moved to the requested revision-6 top-level names; identical temporary source
+copies were removed. Four newly labelled `-qa.png` sheets complete the twelve
+requested outputs. No revision-5 or root-owned input/script/MP4 was overwritten.
+
+Every one of **4860 parsed JSONL records** equals revision-5, including authored
+camera/audio cues and all sampled native actors, objects, rings/events and clocks.
+Raw bytes differ only in JSON object key ordering; do not mistake map iteration
+order for changed native behavior. All four MKVs passed complete
+`ffmpeg -v error -xerror -i MOVIE -f null -` decoding and `ffprobe -count_frames`
+checks: 640×448, 60 fps, 480/540/240/3600 frames respectively, 48 kHz stereo FLAC.
+The QA extraction uses `select` plus nearest-neighbour scale to 320×224 and
+`-fps_mode passthrough`, with labelled native frame numbers. Short sheets select
+relay 0/35/100/190/374/479, air 0/95/115/300/360/440, rings 0/15/29/31/120/239;
+the film selects 0..3480 at stride 120 plus 3599. All four sheets were inspected.
+The frame-239 landing now meets its rendered foreground floor; frame-120's
+native collision/art distinction above remains visible. Frame 960 is authored
+black transition cover. Background anchoring remains as bounded above.
+
+The retained package and shared StageplayLiveWorld draw path supply capture,
+worker preview and registered playback; no Editor/Media repository or creator
+API surface changed. Root owns rebuilding external consumers, moving review,
+promo/MP4 replacement, archive and integrated validation/push. This worktree has
+no remaining live job. Temporary consumed diagnostics/QA helper are removed;
+branch/worktree and packaged build are retained for root.
