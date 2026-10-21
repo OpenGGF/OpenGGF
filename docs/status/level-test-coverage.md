@@ -1,5 +1,10 @@
 # Level test coverage backlog
 
+SSZ MTZ orb allocation/first-dispatch work is tracked in the
+[existing act-1 matrix](../architecture/validation/levels/s3k-ssz-act1.md#mtz-orb-allocation-and-first-dispatch--2026-10-21):
+sparse global/forward slot controls, initializer return, failure prefixes and rewind
+boundaries are bounded encounter coverage. Route and native acceptance remain separate.
+
 SSZ enemy-art requests (2026-10-21): the [bounded production/restoration leaf](../architecture/validation/levels/s3k-ssz-act1.md#enemy-art-production-and-restoration-requests--2026-10-21)
 tracks title-owner admission, retained versus automatic claims, physical VInt
 publication and two-way registered-world replay after fly-by deletion. The

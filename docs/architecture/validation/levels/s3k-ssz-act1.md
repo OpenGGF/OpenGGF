@@ -70,6 +70,7 @@ green label, and "implemented" alone never closes a row.
 | ROUTE: native320 paired physical post + both replicas | Ordinary cold start; physical post2 `($640,$5E8)`; existing GHZ/MTZ owners and transports | Sonic + Tails, donor off,320px | `TestLrzSszCheckpointRoutes#ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost`; `TestSszColdRouteCapture#coldRouteDefeatsBothReplicasAndReplaysTraversalAndTransport` | existing owners; controller-only repair | yes, strict post before7912 and all11051 upper inputs alive | 25 spots, two45-input whole-registry restore/replay cycles each; same world, roster bindings and lives | no new native comparison; actual selected-shot producer chain unknown | ordinary EGL drawing and cloud/pad contact journals; no native pixel claim | Current source39eca8c35; complete method fails14554 before Mecha. Launch/DEZ and later rewind/death/reload limits remain open. |
 | ROUTE: native800px paired all three bosses → released DEZ1 | Ordinary cold entry; GHZ/MTZ/Mecha native health8..0; `loc_7D056` results; `Obj_57E96`/`loc_581D2` launch; `loc_6468` destination assembly | Sonic + Tails, donor off,800px | `TestSszWidePairedColdRouteCapture#coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline` | existing owners; controller-only completion | yes,21014 inputs, no leader death/life loss | two-cycle45 whole-world restore/replay at44 semantic spots; actual full-load history retirement and separate released DEZ window | ROM-backed owners/start/roster; no new native-emulator comparison | independent fully drawn engine capture; no native pixel claim | Qualified first9914 inputs preserved; native CPU Tails recovery allowed. Donor, extra-followers, Sonic solo800, intermediate widths and native acceptance remain open. |
 | LOAD: `$B00` (DEZ) actual destination entry | DEZ campaign; `loc_6468`, `Obj_LevelIntro_PlayerRun`/`loc_44A26`/`loc_44A56` | native selected cold configurations; paired800 detailed below | Complete cold-route checks; `TestSszWidePairedColdRouteCapture#coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline` | yes | actual assembly and native entrance control release | paired800 two-cycle45 intro/released world windows plus actual full-load history retirement | ROM start/floor seating and intro owner; native scene comparison open | independent live DEZ engine still | This row covers destination entry. Full DEZ traversal and later endpoints belong to the DEZ campaign; no native pixel certification. |
+| BOSS: MTZ orb allocation / first dispatch | `loc_7A72C`, `loc_7ADA2`, `loc_7AE12`, global `AllocateObject` vs forward `CreateChild1_Normal` | Declared sparse SST component; native320 whole-world encounter boundaries | `TestSszMetropolisRecipeBirth#metropolisFirstOrbAboveParentReturnsFromItsOwnSetupWithoutOrbitOrPublication`; other `metropolis*` allocator/graph controls; `TestS3kSszMtzArenaHeadless` | one pending global first orb; own setup creates at most six global siblings and returns | Component pressure is not a cold-route result | pending setup, init, orbit and prefix failures; destructive graph replay and world checks | literal shipped-ROM source; no new native run | not measured | See [orb initialization evidence](#mtz-orb-allocation-and-first-dispatch--2026-10-21). Current-route impact remains unknown. |
 | ORACLE: strict segment replay | `TestS3kSonicTailsHpz{,2,3}SegmentTraceReplay`, `TestS3kTailsFullChainHpz{,2}SegmentTraceReplay` | `-Ptrace-segments` | — | — | — | — | not measured | — | Slice 10 records each frontier |
 
 ## Opening Death Egg camera tracking (2026-09-30)
@@ -3129,3 +3130,62 @@ new native-runtime qualification. Four mandatory S3K runtime controls are not
 triggered because runtime source is unchanged. Root owns combined delivery,
 review and integration; this lane makes a local commit only, without push,
 Main integration or worktree/branch removal.
+
+## MTZ orb allocation and first dispatch — 2026-10-21
+
+The bounded implementation starts from `2bad8b9d18dda2f5c2d42b6947878370f0a1d1ff`
+in `feature/ai-ssz-mtz-orb-init-20261021`. The locked-on source separates the head's
+forward `CreateChild1_Normal` scan from the single first orb's global
+`AllocateObject` scan (dynamic slots4–93). Only that first orb's code pointer and
+parent reference are written by `loc_7A72C`. Its own `loc_7ADA2` dispatch initializes
+itself and at most six siblings in global free-slot order, then returns at
+`loc_7AE12`; it does not call the orbit, collision-list or drawing tail. A sibling
+in a later SST slot can orbit in that same sweep; a sibling allocated into an
+already-passed slot retains its seed until its next dispatch. This preserves the
+shipped `FixBugs = 0` path; no conditional repair is introduced.
+
+The ship retains actual successfully allocated orb instances, including a pending
+first orb. Exhaustion retains the successful prefix, never retries, and excludes
+the destroyed shell returned by the existing helper. No shared allocator or native
+policy API changes. Captured routine, angles, draw/publication state and raw
+parent/list references survive restoration. Existing controllers and route health
+remain outside this component claim.
+
+The test-only RED diff was
+`1f0f148f06a7314e436d1e1c788369facd353825e3caa0b0662de8c26cb6d4ef`
+(SHA-256 of `git diff --binary` against the pinned base). Queued Main-tool command
+`--lean -Dmse=off -Dtest=TestSszMetropolisRecipeBirth test -B` ran18 tests:
+11 expected failures, one expected invalid-rewind-reference error from a retained
+failed orb shell, zero skips; all six original recipe controls passed. The
+above-parent first orb advanced `$24` to `$28`; below-parent allocation instead
+created the forward prefix and slot`-1` shells. Those controls reject the old
+parent-owned seven-allocation shortcut. They are declared component controls,
+not native emulator observations or proof of a successful cold route.
+
+Queued component GREEN ran18 tests with zero failures/errors/skips. The final
+normal-lane11-class bundle ran1,459 tests with zero failures/errors/skips, including
+19 recipe/allocator controls,25 MTZ arena cases,17 GHZ arena cases,1,334 isolated
+object rewind cases, three exact boss-child cases, one identity-rebinding case,
+and all60 tests in the five mandatory S3K control classes. The three initializer
+world cases compare every registered key before and after each boundary, with
+two destructive recreation/forward cycles at each spot. The tightened fixture
+explicitly re-registers the ordinarily born ship into a later free SST slot via
+public ObjectManager APIs and fills other free slots with persistent occupants,
+so a pending first orb below the ship is guaranteed. It covers zero, two and six
+available siblings, without private routine, position or HP writes. This declares
+an allocator component, not a naturally allocated cold-route slot landscape.
+
+The unchanged production diff SHA-256 is
+`0be7d0d33cd2ed3299d7399c7890e199c3cc74af7e788222fc2c1893f32152f3`
+(`git diff --binary -- src/main` against the pinned base). Exact commands and
+per-class counts are recorded in the existing
+[playable completion plan](../../plans/2026-10-13-s3k-playable-completion.md#ssz-mtz-orb-allocation-and-first-dispatch--2026-10-21).
+The change-based plan selected3,124 smoke classes; that combined selection is
+Root-owned. Focused leaf validation does not claim a broad smoke/full-suite,
+canonical trace, new native-emulator comparison or controller-route pass.
+
+After that bundle, the strengthened pending-init fixture alone was rerun with the
+same normal-lane ROM/EGL arguments and selector
+`TestS3kSszMtzArenaHeadless#orbInitializationBoundariesRecreateAndReplayTheCompleteWorldTwice`:
+three tests passed, zero failures/errors/skips. The other1,456 tests were not
+repeated; production code remained unchanged.

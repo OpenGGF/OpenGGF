@@ -270,6 +270,10 @@ Unreleased. The earlier development themes remain in
   the launch and rendering state survive recreation. Scaled fly-by art remains
   an implementation gap. Ordinary freed animals retire from the preceding
   sprite-render visibility flag, with separate render and collision dimensions.
+  The Metropolis replica allocates its first orb from the original global pool;
+  that orb initializes the ring on its own dispatch and returns before orbiting,
+  drawing or publishing collision. Partial allocation keeps only the successful
+  prefix through rewind.
 
 - **Spin dash camera:** While a spin dash charges, and on its release frame, the
   camera eases back toward its normal height as it does when standing, as Sonic 2

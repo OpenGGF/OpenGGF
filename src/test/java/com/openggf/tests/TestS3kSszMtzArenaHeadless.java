@@ -211,7 +211,8 @@ class TestS3kSszMtzArenaHeadless {
                 "move.b #$11,collision_flags(a0) — not the $F the hit window restores");
 
         // loc_7A72C allocates the head and the orb slot on this one execution, and the orb slot's
-        // own routine 0 loops seven times on its first, which is one frame later. The native rows
+        // own routine 0 loops seven times on its first dispatch, then returns without orbiting.
+        // The wait to that dispatch depends on its globally allocated SST slot. The native rows
         // put the head and all seven orbs on 6190, one frame after 6189. Comparison only.
         assertEquals(1, countActive(SszMechaSonicHeadChild.class), "Child1_MakeMechaHead");
         fixture.stepIdleFrames(1);
@@ -736,6 +737,97 @@ class TestS3kSszMtzArenaHeadless {
                         + "_unkFA88 never pops an orb that is still on the ring and the "
                         + "cartridge leaves it orbiting a freed slot. Recorded in "
                         + "docs/status/s3k-known-bugs.md");
+    }
+
+    /** Real encounter birth with declared pool pressure; compare every registered world key. */
+    @ParameterizedTest
+    @ValueSource(ints = {0, 2, 6})
+    void orbInitializationBoundariesRecreateAndReplayTheCompleteWorldTwice(int siblingCapacity) {
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, APPROACH_X, APPROACH_Y);
+        SszMtzBossObjectInstance boss = runToSpawn(fixture);
+        for (int frame = 0; frame < 0x40 && !boss.dispatcherInstalledForTest(); frame++) {
+            fixture.stepIdleFrames(1);
+        }
+        assertTrue(boss.dispatcherInstalledForTest());
+        var manager = GameServices.level().getObjectManager();
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        // Keep the encounter, players and event state produced by ordinary engine execution.
+        // Declare a later parent SST slot through the manager's ordinary registration API,
+        // leaving its old slot free below it. No gameplay field or successful route is seeded.
+        var initiallyFree = java.util.stream.IntStream.rangeClosed(4, 93)
+                .filter(slot -> com.openggf.level.objects.NativeSstSlotAccess.currentOwner(manager, slot) == null)
+                .boxed().toList();
+        int parentSlot = initiallyFree.get(initiallyFree.size() - 8);
+        manager.removeDynamicObject(boss);
+        manager.addDynamicObjectAtSlot(boss, parentSlot);
+        // Fill only currently free slots with real persistent occupants; no reservation-only
+        // bits, position/HP seeds or private routine writes enter these component controls.
+        var free = java.util.stream.IntStream.rangeClosed(4, 93)
+                .filter(slot -> com.openggf.level.objects.NativeSstSlotAccess.currentOwner(manager, slot) == null)
+                .boxed().toList();
+        int headSlot = free.stream().filter(slot -> slot > parentSlot).findFirst().orElseThrow();
+        var orbHoles = free.stream().filter(slot -> slot != headSlot).limit(1 + siblingCapacity).toList();
+        assertEquals(1 + siblingCapacity, orbHoles.size());
+        int firstOrbSlot = orbHoles.getFirst();
+        assertTrue(firstOrbSlot < parentSlot, "explicit pending-init boundary after the parent's pass");
+        for (int slot : free) {
+            if (slot != headSlot && !orbHoles.contains(slot)) {
+                manager.createDynamicObjectAtSlot(() -> new OrbInitializationPressureSlot(
+                        new com.openggf.level.objects.ObjectSpawn(0, 0, 0, 0, 0, false, 0)), slot);
+            }
+        }
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        // Before parent setup, pending first init, setup return, orbit.
+        for (int boundary = 0; boundary < 4; boundary++) {
+            CompositeSnapshot before = registry.capture();
+            SszMtzBossObjectInstance original = active(SszMtzBossObjectInstance.class);
+            fixture.stepIdleFrames(1);
+            CompositeSnapshot after = registry.capture();
+            for (int cycle = 0; cycle < 2; cycle++) {
+                manager.getActiveObjects().stream().toList().forEach(manager::removeDynamicObject);
+                registry.restore(before);
+                sameSnapshot(before, registry.capture(), "orb boundary restore " + boundary);
+                var restored = active(SszMtzBossObjectInstance.class);
+                org.junit.jupiter.api.Assertions.assertNotSame(original, restored);
+                for (var orb : restored.orbsForTest()) {
+                    org.junit.jupiter.api.Assertions.assertSame(orb,
+                            com.openggf.level.objects.NativeSstSlotAccess.currentOwner(manager, orb.getSlotIndex()));
+                }
+                fixture.runner().primeInputState(
+                        new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
+                fixture.stepIdleFrames(1);
+                sameSnapshot(after, registry.capture(), "orb boundary forward " + boundary);
+            }
+            var first = (SszMtzBossOrbChild)
+                    com.openggf.level.objects.NativeSstSlotAccess.currentOwner(manager, firstOrbSlot);
+            assertNotNull(first);
+            if (boundary == 0) {
+                assertEquals(1, active(SszMtzBossObjectInstance.class).orbsForTest().size());
+                assertEquals(0, first.routineForTest());
+                assertEquals(0, first.getCollisionFlags());
+            } else {
+                assertEquals(1 + siblingCapacity, active(SszMtzBossObjectInstance.class).orbsForTest().size());
+                assertEquals(2, first.routineForTest());
+                assertEquals(0x87, first.getCollisionFlags());
+            }
+            if (boundary <= 1) {
+                assertFalse(first.publishesTouchResponseListEntryThisFrame());
+                assertEquals(boundary == 0 ? 0 : 0x24, first.horizontalAngleForTest());
+                assertEquals(boundary == 0 ? 0 : 0x180, first.priorityWordForTest());
+            } else {
+                assertTrue(first.publishesTouchResponseListEntryThisFrame());
+            }
+        }
+    }
+
+    public static final class OrbInitializationPressureSlot extends com.openggf.level.objects.AbstractObjectInstance
+            implements com.openggf.level.objects.SpawnRewindRecreatable {
+        public OrbInitializationPressureSlot(com.openggf.level.objects.ObjectSpawn spawn) {
+            super(spawn, "DeclaredMtzInitializationPressure");
+        }
+        @Override public void update(int count, com.openggf.game.PlayableEntity player) { }
+        @Override public boolean isPersistent() { return true; }
+        @Override public void appendRenderCommands(List<com.openggf.graphics.GLCommand> commands) { }
     }
 
     /**
