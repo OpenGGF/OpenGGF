@@ -29375,3 +29375,29 @@ CLI/Java/launcher exit0, **0 JUnit/skips N/A**, no Surefire/XML or original exce
 App fingerprint unchanged `8e8ccc9304a9acd7c3738d23c538d3278d92ac5683c6dd44f0eae7cbc01ae756`; adapterSHA256 `95405b34be4b30aa0afcd22b1b3b2af890fde51479a1ee1a50739094e1e1657a`, executedBK2 `0b7ec5dba024388eb5ad409766603eb155ba9722a5375dc9104b553f98c4d449`.
 Useful source/whole literal preimage+inverse/design/exact inputs/all57 compact facts/one inspected normalPNG remain external. Drawn HUD still62 versus postdraw public0 is retained as a phase/receiver UNKNOWN, not a pixel/native proof. Owned raw namespace/tmp/extraction9files consumed under leases, no helperclasses; priorrefs/nativeactual322/index703/config preserved.
 Private rollingJump/headroom/protection/hazard-contact operands, terrain freshness, damage receiver, physics/native correctness and useful onward route remain UNKNOWN; no runtime omission proved. Expected46/runtime/POM/maintained tests/movies/counts/windows/oracles unchanged; no retry/extra workload/push/integration; STOP Root review.
+
+
+## R23 earlier ramp braking reaches first moving ground — 2026-10-21
+
+ONE cold ordinary CLI at exact `df2b045d8b2cfa4225c710b0947ea10ba0f0928d`, branch `feature/ai-ssz-earlier-ramp-brake-ordinary-r23-20261021`;
+unchanged [R18 setup](#r18-one-vertical-release-admits-the-original-parent-post--2026-10-21), ALL15024 original R18 pads and exact15023 held-parent inlet preserved. All52 unique available R checkpoints and retained Support/Family/local raw-parent-child joins match; missing historical raw states remain unreconstructed.
+R19–R22 failed tails/results stay immutable separate branches; none supplies R23 controller inputs. Source supports an earlier ordinary air-brake choice, without a runtime change or second ground jump.
+Sole finite policy<=301: ONE freshRight+A15024/P2Up, sameheldRight+A<=180 further until FIRST cachedX>=4608, NEXT input Left/noABC<=120, stop FIRST free-ground publication inside4608<=X<4752/1536<=Y<1600 or earlier original safety/support/phase/cap boundary. No neutralsettle/extra groundbrake/onward.
+X4608 is the original128px layout-cell transition86→87 along an existing continuous ramp, NOT floor western start: original4592top1564/4607top1567/4608top1568. It is a fixed spatial marker, not a fitted frame/overshoot/contact cause.
+
+| Input | Actual once-read public boundary |
+| --- | --- |
+| 15023 / 15024 | Held exact parent(4410,1100),V0/ground/controlCPUallowed+suppressed → freshRight+A releases it at4410/1095,VX0/VY-1664/G0,air+jumping/free/riderNULL. |
+| 15095 / 15096 | X4605→4611; FIRST cached gate15096 at(4611,1186),VX1501/VY2368/G0,air+jumping/free/riderNULL. |
+| 15097 | NEXT Left/noABC: (4617,1195),VX1477/VY2424/G0,stillair; no new Aedge. |
+| 15127 / 15128 | (4746,1574),VX757/VY4104/G0,air → FIRST free-ground(4749,1580),VX733/VY0/G733,airfalse/jumpfalse/riderNULL/unhurt; STOP immediately. |
+
+Result `FIRST_EARLIER_BRAKE_FREE_GROUND_TERRAIN_UNKNOWN`:105 new/15129 total,73Right+A then32Left, exactlyONE Aedge15024, no new map queries. Both62rings/3lives/unhurt/live throughout new tail; P2(3950,1264),V0/ground/free/NORMAL/manual/flag0fuel0/contextNONE/targetfalse and original bound world/managers/nativepair/roster/focus/LEVEL/no pending/fade/reverse intact.
+This is a moving public inlet only. Stored terminal sensors both tile255/distance-5, angles1/255/DOWN; radii9/19, riderNULL. Fresh terrain receiver/mutation/contact ownership and support freshness remain UNKNOWN; no settled ground or further jump/clearance proved.
+Original R19 observer/input/context/support/family/comparator helpers remain literal; only pure finite-pad gate reuses the existing R22 four-pad version. PRE reuses cached prior postdraw; no new gameplay/provider/predicate/sensor/private query or cloud map join. All105 complete ordered new facts/decisions retained losslessly as compact constant/varying fields externally.
+Same-JVM preboot production-author/loader positiveJUMP0x10/fullbool/mask/payload and all15129-row proofs pass. Independent full script/ZIP/allNINE original input files (R18 plus EIGHTolder) agree; exact original15024prefix and73RA→32Left/P2Up/oneedge proven. Equal15129count/15128index does not imply equality with historicalR21/R22 input/state.
+Current absolute Main queue invocation shape `--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl compile exec:exec -B`, Java25 source-mode `EarlierRampBrakeContinuation.java`; unchanged R18 original absolute verified ROM/EGL/nullAL/source-qualified NullAudio/Lua/profile/unsets. Full argv/config/native/source/returned IDs pinned in own R23 registry.
+CLI/Java/launcher exit0, **0 JUnit/skips N/A**, no Surefire/XML/original exception/error; classes up to date. Queue981s/Maven17.164s/launcher998.765s overlap; Engine/tail-only UNKNOWN. Full416126-byte555-line original stream read; inherited JOMLUnsafe/resource-encoding/unmeasureds3k-kos-v1 estimate warnings remain limits.
+App fingerprint unchanged `8e8ccc9304a9acd7c3738d23c538d3278d92ac5683c6dd44f0eae7cbc01ae756`; adapterSHA256 `174db71791afd5bae3e5d2afd63df0a32a045053225b0d6c7e38276791d21be7`, executedBK2 `9f53c0e0227913fcd8046748ebfc44d853a98fd890389bbc19ce4fb92186d956`.
+Useful specific source/whole54579-byte literal preimage+inverse/design/exact inputs/all105compactfacts/one inspected normalPNG retained externally; exact owned raw namespace/tmp/extraction consumed under leases, no helperclasses. Earlier refs/nativeactual322/index703/config preserved.
+No runtime omission/physics/native correctness, hazard protection/clearance, private rollingJump/headroom, stable/onward/whole-route qualification or expected46 adaptation follows. No runtime/POM/maintained tests/movies/counts/windows/oracles changed, second lifecycle/retry/groundjump/push/integration; STOP Root source/data review.
