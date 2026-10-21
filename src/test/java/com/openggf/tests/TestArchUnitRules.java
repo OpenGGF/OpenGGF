@@ -186,6 +186,17 @@ class TestArchUnitRules {
             // keeps these two edges closed to general creator execution/registration.
             "editor -> io",
             "editor -> mods",
+            // Authoring consumes the shared directing values/controller; its menus stay in editor.
+            // stageplay_boundaries_have_explicit_owners keeps these new edges narrow and rejects
+            // any runtime dependency back on editor or the offline capture tool.
+            "editor -> stageplay",
+            "tools -> stageplay",
+            "stageplay -> audio",
+            "stageplay -> control",
+            "stageplay -> data",
+            "stageplay -> game",
+            "stageplay -> graphics",
+            "stageplay -> level",
             "game -> architecture",
             "game -> audio",
             "game -> camera",
@@ -691,6 +702,78 @@ class TestArchUnitRules {
                     target.equals("com.openggf.mods.code.ModLevelDefinitionParser");
             default -> false;
         };
+    }
+
+    private static boolean typeOrNested(String name, String owner) {
+        return name.equals(owner) || name.startsWith(owner + "$");
+    }
+
+    private static boolean stageplayCoreType(String name) {
+        return Set.of("StageplayDocument", "StageplayTimeline", "StageplayController", "StageplayStore", "StageplayControl")
+                .stream().anyMatch(owner -> typeOrNested(name, "com.openggf.stageplay." + owner));
+    }
+
+    private static boolean approvedStageplayConsumer(String origin, String target) {
+        if (typeOrNested(origin, "com.openggf.editor.stageplay.StageplayWorkspace"))
+            return stageplayCoreType(target) && !typeOrNested(target, "com.openggf.stageplay.StageplayControl");
+        if (typeOrNested(origin, "com.openggf.editor.hud.StageplayHud"))
+            return typeOrNested(target, "com.openggf.stageplay.StageplayDocument")
+                    || typeOrNested(target, "com.openggf.stageplay.StageplayController");
+        if (typeOrNested(origin, "com.openggf.tools.StageplayCaptureTool"))
+            return Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayStore",
+                            "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.runtime.StageplayAudio",
+                            "com.openggf.stageplay.runtime.StageplayResources", "com.openggf.stageplay.runtime.StageplayRenderer")
+                    .stream().anyMatch(owner -> typeOrNested(target, owner));
+        return false;
+    }
+
+    private static boolean approvedStageplayRuntimeDependency(String origin, String targetSlice) {
+        var owners = java.util.Map.of(
+                "com.openggf.stageplay.StageplayPlayback", Set.of("audio", "control", "data", "game", "graphics", "io", "level", "mods"),
+                "com.openggf.stageplay.runtime.StageplayAudio", Set.of("audio", "data", "game", "io", "mods"),
+                "com.openggf.stageplay.runtime.StageplayResources", Set.of("level", "mods"),
+                "com.openggf.stageplay.runtime.StageplayRenderer", Set.of("mods"),
+                "com.openggf.stageplay.runtime.StageplayNativeBinding", Set.of("game"),
+                "com.openggf.stageplay.editor.StageplayEditorSession", Set.of("audio", "data", "game", "mods"),
+                "com.openggf.stageplay.editor.StageplayExportJob", Set.of("data"));
+        return owners.entrySet().stream().anyMatch(entry -> typeOrNested(origin, entry.getKey())
+                && entry.getValue().contains(targetSlice));
+    }
+
+    @ArchTest
+    static void stageplay_boundaries_have_explicit_owners(JavaClasses classes) {
+        assertTrue(!approvedStageplayConsumer("com.openggf.editor.LevelEditorController",
+                "com.openggf.stageplay.StageplayPlayback"));
+        assertTrue(!approvedStageplayConsumer("com.openggf.editor.stageplay.StageplayWorkspace",
+                "com.openggf.stageplay.runtime.StageplayAudio"));
+        assertTrue(!approvedStageplayRuntimeDependency("com.openggf.stageplay.StageplayPlayback", "editor"));
+        assertTrue(!approvedStageplayRuntimeDependency("com.openggf.stageplay.editor.StageplayEditorSession", "tools"));
+        Set<String> violations = new TreeSet<>();
+        for (JavaClass origin : classes) {
+            String originSlice = topLevelSlice(origin);
+            for (Dependency dependency : origin.getDirectDependenciesFromSelf()) {
+                JavaClass target = dependency.getTargetClass();
+                // Enum values()/synthetic $VALUES use array descriptors; ownership belongs
+                // to their element type, just as for ordinary value-type references.
+                if (target.isArray()) target = target.getBaseComponentType();
+                String targetSlice = topLevelSlice(target);
+                if (targetSlice == null || target.getName().equals(ModApi.class.getName())) continue;
+                if ("stageplay".equals(originSlice)) {
+                    if (stageplayCoreType(origin.getName())) {
+                        if (!stageplayCoreType(target.getName())) violations.add(dependency.getDescription());
+                    } else if (!"stageplay".equals(targetSlice)
+                            && !approvedStageplayRuntimeDependency(origin.getName(), targetSlice)) {
+                        violations.add(dependency.getDescription());
+                    }
+                } else if (originSlice != null && "stageplay".equals(targetSlice)
+                        && !approvedStageplayConsumer(origin.getName(), target.getName())) {
+                    violations.add(dependency.getDescription());
+                }
+            }
+        }
+        assertTrue(violations.isEmpty(),
+                "Stageplay values stay independent; only named authoring/capture hosts consume them, "
+                        + "and runtime adapters cannot depend on editor or tools:\n  " + String.join("\n  ", violations));
     }
 
     @ArchTest

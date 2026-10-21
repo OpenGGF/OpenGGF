@@ -246,7 +246,9 @@ next to the launcher.
 widescreen presentation, further S3K campaign coverage, and existing modding,
 racing, loading and audio foundations. The editor supports all-game project
 authoring, safe saves, isolated playtesting and usable export, with a
-controller-first interface drawn around the level. The Mod API is still an
+controller-first interface drawn around the level. [Stageplay](docs/guide/creating/stageplay.md)
+adds shared directing tools for sprite films and mod cutscenes in both editors.
+The Mod API is still an
 unpublished candidate. [0.7's roadmap](docs/project/v0.7-roadmap.md) prioritizes
 complete campaigns before the feature/API publication gates in 0.8.
 

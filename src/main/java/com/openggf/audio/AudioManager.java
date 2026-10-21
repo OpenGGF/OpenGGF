@@ -513,6 +513,79 @@ public class AudioManager implements MusicRestoreSink {
         if (source != null && presentationSpeakerFailed) source.onSpeakerFailure();
     }
 
+    /**
+     * Prepares at most 64 MiB of short-lived scene voice assets without replacing the launch's
+     * streamed music port. Four simultaneous scopes are permitted. Closing a scope stops only
+     * its own voices; samples are added before the ordinary history/capture/speaker boundary.
+     * The handle belongs to the current audio producer and expires when that producer changes.
+     */
+    public SceneAudioSamples prepareSceneSamples(java.util.Map<String, StreamedMusicPort.SfxPcm> samples) {
+        ensureShadowPresentation();
+        return new SceneAudioSamples(java.util.Objects.requireNonNull(samples));
+    }
+
+    @com.openggf.game.ModApi
+    public final class SceneAudioSamples implements AutoCloseable {
+        private final com.openggf.audio.presentation.AudioPresentationProducer producer = shadowProducer;
+        private final java.util.Map<String, com.openggf.audio.presentation.DecodedPcm> samples = new java.util.HashMap<>();
+        private final java.util.List<com.openggf.audio.presentation.SampleBackedVoice> voices = new java.util.ArrayList<>();
+        private final java.util.Map<String, Float> gains = new java.util.HashMap<>();
+        private final com.openggf.audio.presentation.ScenePcmSource overlay = this::mix;
+        private long[] accumulation = new long[0];
+        private long nextVoice;
+        private boolean closed;
+
+        private SceneAudioSamples(java.util.Map<String, StreamedMusicPort.SfxPcm> offered) {
+            if (offered.size() > 256) throw new IllegalArgumentException("Too many scene voice assets");
+            long bytes = 0;
+            for (var entry : offered.entrySet()) {
+                String key = java.util.Objects.requireNonNull(entry.getKey());
+                if (key.isEmpty() || key.length() > 1024) throw new IllegalArgumentException("Invalid scene sample key");
+                var value = java.util.Objects.requireNonNull(entry.getValue());
+                bytes = Math.addExact(bytes, (long) value.samples().length * Short.BYTES);
+                if (bytes > 64L * 1024 * 1024) throw new IllegalArgumentException("Scene voice assets exceed 64 MiB");
+                if (value.channels() < 1 || value.channels() > 2 || !Float.isFinite(value.gain()) || value.gain() < 0 || value.gain() > 1)
+                    throw new IllegalArgumentException("Scene samples require mono/stereo PCM and gain 0..1");
+                gains.put(key, value.gain());
+                // DecodedPcm copies caller-owned samples; later mutations cannot alter an admitted asset.
+                samples.put(key, new com.openggf.audio.presentation.DecodedPcm(key, value.channels(), value.sampleRate(), value.samples()));
+            }
+            producer.addPcmOverlay(overlay);
+        }
+
+        public void play(String key, float gain) {
+            requireCurrent();
+            if (!Float.isFinite(gain) || gain < 0 || gain > 1) throw new IllegalArgumentException("Scene gain must be 0..1");
+            var pcm = samples.get(key);
+            if (pcm == null) throw new IllegalArgumentException("Scene sample was not prepared: " + key);
+            if (suppressingRewindReplay() || reverseAudioPresentationActive) return;
+            voices.removeIf(com.openggf.audio.presentation.SampleBackedVoice::isComplete);
+            if (voices.size() >= 32) throw new IllegalStateException("Scene voice overlap exceeds 32 voices");
+            voices.add(com.openggf.audio.presentation.SampleBackedVoice.oneShot(++nextVoice, 0, pcm,
+                    outputSampleRate(), 1, gain * gains.get(key)));
+        }
+
+        /** Seeking and cancellation silence owned voices without changing the ROM soundtrack. */
+        public void stop() { voices.clear(); }
+        private void requireCurrent() {
+            if (closed || producer != shadowProducer) throw new IllegalStateException("Scene audio scope has expired");
+        }
+        private void mix(short[] target, int frames) {
+            int count = frames * 2;
+            if (accumulation.length < count) accumulation = new long[count];
+            java.util.Arrays.fill(accumulation, 0, count, 0);
+            for (var voice : voices) voice.mixInto(accumulation, frames);
+            for (int i = 0; i < count; i++) target[i] = (short) Math.clamp(target[i] + accumulation[i], Short.MIN_VALUE, Short.MAX_VALUE);
+            voices.removeIf(com.openggf.audio.presentation.SampleBackedVoice::isComplete);
+        }
+        @Override public void close() {
+            if (closed) return;
+            closed = true;
+            producer.removePcmOverlay(overlay);
+            voices.clear(); samples.clear(); gains.clear(); accumulation = new long[0];
+        }
+    }
+
     /** Audible device coordinate, or -1 for a device-free presentation. */
     public long consumedPresentationStereoFrames() {
         return presentationSink instanceof OpenAlPcmSink sink

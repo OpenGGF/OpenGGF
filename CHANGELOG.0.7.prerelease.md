@@ -5,6 +5,14 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
+  OpenGGF Editor's Stageplay workspace. Author actor movement, animation/poses,
+  camera keys, captions, ROM audio and WAV/Ogg voices; record directed visual
+  takes, undo edits, save/reopen and export synchronized lossless films.
+  Mods play the same scenes with held native gameplay and optional explicit
+  main-player handover. See the [guide](docs/guide/creating/stageplay.md) and
+  [fifteen-second example](examples/stageplay-demo/README.md).
+
 - **Recording imports:** copied BK2 recordings are bounded during decompression
   and parsing, including metadata, input rows and verification sidecars. Oversized,
   ambiguous or inconsistent files are rejected without hiding healthy recordings.

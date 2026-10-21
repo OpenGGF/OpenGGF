@@ -103,6 +103,9 @@ public final class ModApiVersion {
      * expose native S3K CRAM passes; prior GameRules constructors retain their overlay default.
      * Creator reconstruction uses ObjectReconstructionContext; host dynamic-entry
      * queues and whole-object-manager snapshot shapes remain engine internals.
+     * Stageplay adds immutable directing documents, pure timeline evaluation,
+     * owner-bound cutscene playback, bounded sample voices and explicit native
+     * player/camera borrowing with captured handover and fault revocation.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

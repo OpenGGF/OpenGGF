@@ -6,6 +6,8 @@ import com.openggf.game.ModApi;
 /** Session-owned alternative level rules. One call is one presentation/input row. */
 @ModApi
 public interface GameplayFrameController {
+    /** Rejects installation alongside another controller when either requires sole world admission. */
+    default boolean requiresExclusiveControl() { return false; }
     /** Runs before any course clock, fade, PLC, physics or object service. */
     boolean beforeTick(CourseControl course, LogicalInputSnapshot input);
     /** Selects the row's world admission once. Existing controllers retain their neutral-input policy.
