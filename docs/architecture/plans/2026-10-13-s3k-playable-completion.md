@@ -24434,3 +24434,88 @@ arbitrary-focus rewind and full-act/product qualification are outside this
 component result. No broad/full suite or unchanged SSZ workload was run. The
 local commit is retained for Root's independent review and consumer qualification;
 no push, integration or owned-worktree cleanup is claimed.
+
+### Root composed Sonic/CNZ and visible DEZ checkpoint — 2026-10-21
+
+Normal local merge `8c78e7762b4394b5c5d9a531ccb2b21807491028` adopts reviewed
+Solo Sonic leaf `ba71a62c`; its four resources and controller-derived test data
+are exact. The existing SSZ matrix retains its whole previous prefix plus the
+reviewed leaf's row/intro/append. Runtime, POM and native703 are unchanged by that
+merge. ONE current whole `com.openggf.tools.TestSszSoloColdRouteCapture` run,
+session39657, passes3T/0F/0E/0S: replicas6.814s, unchanged Tails opening0.770s,
+complete5.886s, suite13.757s/Maven38.922s. Root read every actual identity,
+all69 properties/full8057-byte classpath+Surefire duplicate and streams/TXT.
+Classpath SHA-256 is9c876456c5ab9625f424b5b2dbcc19f9bf6f9b733cfac477957cd78894589610;
+Java25.0.4.1, canonical absolute original ROMs and surfaceless EGL are explicit.
+FAST/no-manifest and unmeasured Kos deterministic estimates remain. Source/config
+are unchanged, observed wrapper/Maven/fork processes reaped; exact outputs consumed.
+No native pixel/true boot/broader roster or width qualification follows.
+
+The same source review flow independently accepted CNZ leaf
+`162cf1c14ee5c789e45c86d7e08364303e2cdaa1` against exact parent`c18506cf`.
+Root read the full8-file diff and actual native044 `CNZ2_ScreenEvent` preamble:
+unsigned P1 X, not camera focus, controls the existing minY writes. The whole
+leaf diff SHA-256 is3a1578b3df5d35144217df3483fd790b3dbbd72305f466889687f0e0fd9e92dc;
+Java diff f05e7c2e9763c9214f1510ce8815adbe272dfb0a04f3232f9a18ec5752fdc1f5.
+Normal local merge `ff7e1b4d08b8b326159ba584ffcc2790b0ec9a40` carries that
+exact8-file delta; no conflict resolution or other runtime change. A precondition
+first used summary aliases for the six Sonic paths and stopped before any write;
+it was corrected to the actual `resources/routes/s3k/` paths on the same evidence.
+
+The change-based dry plan against pre-merge8c78 selects3594 smoke classes plus
+guards solely because this zone-event owner is unclassified. That broad selection
+is disproportionate to this single bounded lookup with unchanged thresholds,
+state, physics, timing, public API and consumers. Root instead runs ONE composed
+21-case selection below, session32462; the author's60 mandatory S3K checks from
+the81-pass job are reused on an identical runtime/POM/dependency footprint.
+This is not a manual narrowing of an executing category run or a broad-pass claim.
+
+The reproduction selectors below omit only the owned reports/tmp overrides and
+additional S1/S2 ROM arguments. Exact argv/environment remain in the existing
+registry keys solo_sonic_ba71_current_1 and cnz162_composition_current_1.
+Both commands use the current Main wrapper from the intended integration checkout.
+`OPENGGF_MAIN` names Main; prefix with the explicit no-display/null-audio/JDK25
+environment used in the preceding qualification commands:
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Dtest=com.openggf.tools.TestSszSoloColdRouteCapture \
+  "-Ds3k.rom.path=$OPENGGF_MAIN/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.tests.TestS3kCnz2KnucklesAdmissionControls,com.openggf.tests.TestS3kCnz2KnucklesEventAdmission,com.openggf.game.sonic3k.TestSonic3kCnzScroll' \
+  "-Ds3k.rom.path=$OPENGGF_MAIN/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+Actual CNZ results:13/1/7 cases across the three classes,21T/0F/0E/0S, suites
+0.987/0.046/0.370s; Maven displayed01:15min. All21 original identities,
+69properties per suite,8057-byte classpath SHA above/duplicate, ROM/EGL/JDK
+properties and complete streams/TXT were read. Streams contain only51 existing
+FAST/no-manifest warnings; no serialized test error/skip. Main4174 and test4263
+sources compiled release25 inside this sole lifecycle. Source/config unchanged,
+observed processes reaped, exact6 reports and test tmp consumed. Queue, compiler
+and parent elapsed intervals are unknown. No stock cold-route unblock, creator
+transaction, arbitrary-focus rewind or physical presentation claim follows.
+
+Root also closed the narrow engine-visible Tails320 destination sample on
+`c18506cf`:14923 committed inputs plus401 neutral ticks, with normal drawing
+throughout, actual DEZ load14922/fresh assembly14923, same main/focus and no
+dead/sidekick rows. The first assembly image is black; useful original15042 and
+15323 show visible DEZ/player/HUD. The SSZ matrix records exact states, image
+hashes and limits. Maven11.198s, queue unknown; temporary source, state CSV and
+six boundary/duplicate images consumed. Two useful images remain in the explicit
+owned external capture task, not a log archive. No native pixel/SAT/DMA or full
+DEZ-route/true-reset/lives/input-lock certificate is inferred.
+
+Native main publication is now complete separately: its owned integration worktree
+was clean at4c3, fetched/FF'd to exact703bd92d32634ce5ebac60625b48c60ef5500427,
+and normal push plus fresh remote read confirms that main SHA. No force or new
+native commit; Main outer develop/index and its inherited detached nativee0
+working checkout remain unchanged. Outer Main integration/push and fully merged
+owned-worktree cleanup still remain. Origin-copy R1 stays unadopted pending its
+corrected R2/fresh review; the old byte-comparison1F is historical, not retroqualified.
+Tails800's new controller candidate still awaits its maintained/composed result;
+CNZ2 cold Knuckles, DEZ2 cold gravity and source-derived cold CPU work continue.
+The goal remains active; no complete parity, broad suite or delivery is claimed.

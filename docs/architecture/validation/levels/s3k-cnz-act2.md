@@ -59,6 +59,18 @@ six rows, the existing CNZ controls and five mandatory S3K classes;0 failures,
 errors or skips. Exact commands, source hashes, environment and inspection limits
 are recorded in the [dated plan](../../plans/2026-10-13-s3k-playable-completion.md#cnz2-native-p1-vertical-bound-operand--2026-10-21).
 
+
+Root's normal merge `ff7e1b4d08b8b326159ba584ffcc2790b0ec9a40` then passed
+the three composed CNZ classes:13 admission controls,1 event-admission control
+and7 scroll controls, **21T/0F/0E/0S**. All actual identities,69 properties,
+classpath/ROM/EGL values and complete streams were read; no skips. Suites
+0.987/0.046/0.370s respectively; Maven displayed01:15min, queue/compiler/parent
+intervals unknown. The source/config stayed unchanged, observed processes were
+reaped and exact owned reports/tmp were consumed. This reuses the author's
+60 mandatory S3K checks on the same runtime/POM/dependency footprint, without
+rerunning unchanged coverage. See the [Root checkpoint](../../plans/2026-10-13-s3k-playable-completion.md#root-composed-soniccnz-and-visible-dez-checkpoint--2026-10-21)
+for selection reasoning; all component limits below remain.
+
 This is declared public component behavior. The existing 0.7 candidate API
 already exports `Camera.setFocusedSprite`, `ObjectServices.camera` and the
 native-P2 query; no API surface or version changes. No stock configuration

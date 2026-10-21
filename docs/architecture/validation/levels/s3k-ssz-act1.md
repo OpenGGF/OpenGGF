@@ -21,7 +21,7 @@ complete method passes50 two-cycle45 whole-world windows and actual load/assembl
 20550/20551. Earlier records retain their stated sources and limits; see the
 [current complete controller qualification](#post11051-complete-controller-qualification--2026-10-21).
 
-Current native320 solo Sonic evidence uses the same frozen runtime `39eca8c35`
+Original native320 solo Sonic author evidence uses the frozen runtime `39eca8c35`
 and parent `9cc150c12183297293cb45bbf8f24023a95b8dbc`, with controller resources
 and controller-derived test data only. The8300-input replica route and14544-input
 complete route pass the existing solo class, including45+49 full-registry
@@ -3757,3 +3757,47 @@ Four-resource binary diff SHA-256 against9cc:
 
 Four resources plus controller-test-data binary diff SHA-256 against9cc:
 `f793643b75c4f52349c96b768a0aa7607be41cfb815f9da4965e25d0f461160b`.
+
+## Composed Solo Sonic and visible Tails destination — 2026-10-21
+
+Root adopted the reviewed Solo Sonic controller/data leaf `ba71a62c` in normal
+merge `8c78e7762b4394b5c5d9a531ccb2b21807491028`. On that composed tree,
+which includes the MTZ first-dispatch correction and current backend/POM,
+`TestSszSoloColdRouteCapture` passed **3T/0F/0E/0S**. All three original XML
+identities,69 properties, full streams and TXT summaries were inspected; no
+skips. The replica and complete methods retain45+49 full-registry45-input
+windows and the unchanged independent Tails opening passes. XML suite13.757s;
+Maven38.922s; queue waiting and individual compilation intervals are unknown.
+The two earlier Solo Sonic failures at6679 used superseded controller inputs.
+
+This current result is distinct from the author's frozen39 qualification above.
+No runtime, input or assertion was changed during this run. FAST/no-manifest and
+unmeasured Kos-profile deterministic-estimate warnings remain. Exact outputs were
+consumed after inspection; this is focused class coverage, not a broad suite or
+native presentation acceptance.
+
+A separate ordinary full-render Tails320 continuation on Root `c18506cf`
+used all14923 committed complete-route inputs followed by401 neutral ticks.
+The public gameplay boot and normal drawing ran throughout; no gameplay seeds,
+restore or trace hydration. All15324 observed rows retain the same main/focus,
+no sidekick and no dead state. The actual DEZ load at14922 and fresh assembly
+at14923 remain distinct: assembly at48/2480 has zero rings and
+`objectControlled=false`, but that first assembly image is black. At15042 the
+original engine image shows Tails at322/2480, the DEZ floor and HUD. At15323 it
+shows idle Tails at370/2480, the enemy and2 HUD rings after ordinary continuation.
+Root inspected both original images; the black fade-boundary sample is not used
+as visible destination evidence.
+
+Only two useful images remain in the owned external capture task
+`s3k-tails320-dez-visible-20261021/frames/`:
+
+| Image | SHA-256 |
+| --- | --- |
+| `15042.png` | `d00596330a7bfe81aabb6f07e6a563b2f6b27f1610b0072644504bcb28665c9f` |
+| `15323.png` | `0d9198cd780ffcf89eead64031b15e47163da0110123c9655e6c1d75858d3b3f` |
+
+Maven11.198s; queue waiting unknown. The temporary probe, regenerable state CSV
+and six boundary/duplicate images were consumed. This closes this engine-visible
+destination sample only: no native pixel, physical SAT/DMA, true reset, full DEZ
+route, lives-counter or input-lock-release certificate follows. Detailed commands
+and remaining composed limits are in the [dated plan](../../plans/2026-10-13-s3k-playable-completion.md#root-composed-soniccnz-and-visible-dez-checkpoint--2026-10-21).
