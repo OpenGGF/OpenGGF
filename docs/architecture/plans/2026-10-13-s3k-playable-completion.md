@@ -23426,3 +23426,69 @@ armed-title/physical-full/incidental-flush capacity defect, now under focused
 correction. SSZ controller qualification on the final production epoch and
 other route/native-publication gaps remain open. Main develop is still c13,
 with its unrelated files/submodules preserved; no integration push is qualified.
+
+### Root final-art adoption and affected checks (2026-10-21)
+
+Root adopted the SSZ enemy-art request leaf and its independently reviewed
+armed-title/incidental-capacity correction in merge `39eca8c3`. Production/test
+paths match corrected leaf `9d7caf72`; the original 160-case result and the later
+53-case correction result retain their distinct tested source epochs. The
+correction preserves blocked title intent, gives it the next available slot,
+and requires a separate slot for an incidental request after that flush.
+It does not implement native scaled scratch RAM, DMA-at-drain or shared display
+generation semantics.
+
+On frozen `39eca8c3`, fresh affected checks ran 12 top-level ordinary classes
+(13 XML suites, including the zero-case outer snapshot suite): **129 tests,
+zero failures, errors or skips**. They cover PLC snapshot/teardown, results,
+HCZ/FBZ art consumers, CNZ completion and the short SOZ/Shot cross-leaf controls.
+A separate JVM ran 3 whole guard classes: **104 tests, 2 inherited HubMusic
+failures, zero errors or skips**. Both complete failure records equal the
+previous 235-case guard result, including the exact 3-constructor/9-dependency
+signatures and rendered assertions; their source and whole ArchUnit witness
+remain byte-identical to `c13`. No guard baseline or source-size budget changed.
+
+The actual change-based dry plan selected 3,589 smoke candidates; it was inspected
+without launching a duplicate broad run. The affected focused selections below
+used the existing verified Java 25, surfaceless/null-audio configuration and
+four absolute ROM properties already recorded in this plan, with unique owned
+report/tmp roots. The ordinary lifecycle compiled 4,168 production and 4,254
+test sources; guards reused production and compiled 4,254 tests, all at
+release 25. Maven reported 1:23 for ordinary and 36.115s for guards; queue,
+compiler and parent elapsed times remain unknown. All XML/TXT, identities,
+streams and skips were read, then the exact owned report/tmp roots were consumed.
+The ordinary stream also retains FAST/profile estimates and a CNZ animal-renderer
+context warning; passing assertions do not certify those broader semantics.
+
+```bash
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal -Dmse=off -Psmoke \
+  '-Dtest=com.openggf.game.sonic3k.TestSonic3kPlcArtRewindSnapshot,com.openggf.game.sonic3k.TestSonic3kTitleCardTeardownModel,com.openggf.game.sonic3k.objects.TestS3kResultsKosQueueAndChildren,com.openggf.game.sonic3k.objects.TestS3kResultsKosQueueRewind,com.openggf.game.sonic3k.objects.bosses.TestHczRobotnikHeadArtContract,com.openggf.game.sonic3k.resources.TestS3kKosStructuralSequence,com.openggf.game.sonic3k.TestFbzAct2RomRuntimeLifecycle,com.openggf.game.sonic3k.events.TestFbzEventsAct2,com.openggf.tools.TestSozKnucklesGlowingSphereTitleRelease,com.openggf.tests.TestS3kCnz2KnucklesCapsuleHandoff,com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboShotShieldReaction,com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboShotNativeLifetime' \
+  "-Dkis2.rom.path=${OPENGGF_MAIN}/kis2.gen" \
+  "-Dsonic1.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_MAIN}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test -B
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal -Dmse=off -Pguards \
+  '-Dtest=com.openggf.game.rewind.schema.TestRewindFieldDispositionGuard,com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.tests.TestArchUnitRules' \
+  "-Dkis2.rom.path=${OPENGGF_MAIN}/kis2.gen" \
+  "-Dsonic1.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_MAIN}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test -B
+```
+
+One observer-accounting row retained its pre-terminal fields despite the original
+command reporting terminal exit 1 and unchanged source/config. Root recovered only
+its own terminal facts from that same command and current originals, rehashed
+source/POM/config and retained unavailable process observations as unknown;
+no workload or source retry occurred.
+
+Real non-overridden Engine startup separately exposed replacement of the
+caller-supplied audio backend. Its authentic 106-test control remains red with
+one exact failure, and a bounded production correction is active in isolation.
+The SSZ controller route on `39eca8c3` and native reset-prefix observation are also
+independent active work. Historical masked startup/eleven-job continuity,
+live-RAM DMA, route/view/roster breadth and other parity limits remain open.
+Main develop advanced independently to `efd605142` for multiplayer security;
+that foreign work and its dirty submodules/untracked files are preserved.
+No integration push or completion of the remaining parity goal is qualified.
