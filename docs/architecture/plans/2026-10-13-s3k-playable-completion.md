@@ -26438,3 +26438,148 @@ consumer and input resources retain the executed leaf bytes. Its 106 unchanged
 affected passes and separate final route pass are adopted with their recorded
 limits, without repeating the unchanged checks or claiming a new aggregate run.
 The original red smoke and other route frontiers remain open; PR223 stays draft.
+
+
+## WidePaired800 fighter Gun Shot and pickup attribution R5 — 2026-10-21
+
+R5 preserves accepted R1–R4 commits/registry histories, including R4
+`e653f8736c0153246ed5a1f8aecf10d013e75b28`. The same isolated checkout tests exact Main
+`efd605142603146509995cffbb56a6b48f9c1c1b` then new local
+`feature/ai-ssz-wide-paired-r5-20261021` at exact Root
+`605bf14debdb74355bd82d73b9155ea25400f940`. SSZ runtime remains a4d/393; base605's
+LRZ test/data differences are preserved. Root/Main, supplied/R1–R4 refs, actual
+native checkouts/unknown differences and config are untouched. Root owns delivery;
+R5 makes no push, integration, runtime repair or count adaptation.
+
+### Matched ordinary qualification and original-value method
+
+Exactly two full cold row0 NORMAL-DRAW requests use original9914 BK2/P2neutral,
+Settings7/titlefalse/native800 paired Sonic+Tails/off. No restore/import, controller
+authoring, semantic seed or new gameplay query is introduced. Each actual observation
+XML contains9914 completed inputs/29742 rows/115 fields/0 skipped inputs/**0 JUnit
+tests**. All115 fields match all13 retained same-arm R3 rows: PRE/POST of3491,3507,
+6721,7164,7166,7172 and last9913 POST_DRAW. This includes the eight R4 public guards;
+available original R4 touch6721 and Main kill/bounce7164 primitive tuples also match.
+R4's dynamic Shot parent was unbound, so matching tuples do not invent cross-JVM
+receiver identity. Prior raw series were consumed and are not reconstructed.
+Endpoints reproduce Main46/current48 at512/1420, alive/lives3. Neither projection
+contains a visible attracted-ring entry; no claim about unseen intra-step entries
+or native pixels/timing/true boot/fullgame coverage follows.
+
+Before edits, ten literal full Java preimages per arm and a whole-file inverse are
+retained externally. Eight source owners plus a temporary default-null carrier
+retain original fields/read locals/returns, actual raw references and selected
+direct primitive state copies. No gameplay provider, predicate, getter or callback
+is rerun. Original once/order/exception regions remain intact; no catch/finally or
+Throwable replacement is introduced. The actual `spawnChild` return is retained
+only after normal return; constructor parent, original getter return and stored
+charging-parent references provide independent raw links. Attack callback normal
+return is recorded inside its original lambda after the original call. Layout23
+original destroyed writes and original bounce operands are retained. Placed-ring
+acceptance uses the original positive overlap, manager/source index/RingSpawn/raw
+player; award markers follow the original `addRings(1)` normal return.
+`ringAcquired` is not used. Fixed stores retain4070/1953 rows without overflow.
+Unavailable fields/parent storage/native addresses/slot lineage remain UNKNOWN.
+
+Both production-only compiles use the current Main absolute wrapper/build locks:
+4140/4175 sources including the temporary carrier,55.468/53.294s. Each ordinary
+request uses that same current absolute queue with `--normal -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl`, `compile exec:exec -B`, the same source-file
+adapter and target-local XML/tmp/native namespaces. Main queue541s/Maven12.438s;
+current queue24s/Maven12.338s. One session/observer per request; queue waiting is
+pending, no restart. XML/properties confirm Java25.0.4.1/JDK25/EGL and identical
+LWJGL3.4.1 native classpaths. Java25/EGL/nullAL/Lua5.4.9, original absolute
+CRC/SHA-1-verified ROMs, POM/config and ambient JVM/display/library unsets retain
+all declared pins. Exact expanded commands/source/config/adapter pins are in the
+owned R5 registry. No maintained class/control/broad/native or third replay runs.
+
+### First actual fighter state and bound shot producer
+
+Verified locked-on ROM bytes at`$1F9268` are `0A40 29D8 A0 12`: layout63,
+X2624/Y2520, id`$A0`, subtype **hex`$12`=decimal18**, FIGHTER/group1, Hflip1/noVflip.
+Original OM admission and full immutable spawn establish placement correspondence;
+raw body/Gun/Shot references are not equated across JVMs. Known body pre-slots10/27
+are not investigated as a separate allocation cause.
+
+At constructor normal return6551, both actual bodies are FIGHTER/HOVER/group1 with
+X2624/Y2520, but original Xvelocity is Main−128/current0. Main swing max/acceleration/
+yvelocity are all0. Main's first actual hover move6551 changes X2624→2623 because
+`-128 >> 8 = -1`;110 retained moving-hover events through6660 end at2514. Current
+initializes at6596 after its retained visibility wait: pair gate=false, Xvelocity0,
+max/yvelocity256, acceleration8. The same dispatch's swing gives yvelocity248 and
+full16.16 movement changes Ysub0→63488, leaving X2624. Its65 recorded moving-hover
+passes through6660 keep X2624; at6660 Y2519/sub2048→2518/sub6144 with yvelocity−240.
+These are counted original events and operands, not fitted clocks.
+
+Actual original body→Gun allocation returns and Gun constructor parent links agree
+within each JVM. Main Gun is created6551 from `(2624,2520)` and follows immediately.
+Current creates6596 at `(2596,2516)`, exactly body+(−28,−4), with INIT phase; its
+first original dispatch returns MAIN/mapping2/drawSubmitted=false without following
+or firing. At6660 the original Gun queries read bodyX2514/2624, childAnchorY2520,
+facingLeft=false and armed=true; current also reads Vflip=false. Normal allocation
+returns bind the actual Shot to that Gun and body, origins `(2531,2512)`/
+`(2641,2512)`, facingLeft=false, cooldown95. At current Shot's first own dispatch its stored charging parent is
+that exact raw Gun; Main has no such stored field, so only its
+actual allocation producer is known. Both original shots run31→30 on first dispatch
+6660, arm at6691 with Xvelocity2048, and first move6692. Numeric native SST addresses
+and failed-allocation outcomes were not observed.
+
+### Layout23 retirement and actual extra collectors
+
+The original layout23 body is admitted6962 in both arms, full spawn
+`(1312,2304,$A0,$22,flags1,rawY10496)`. Main's actual P1 ENEMY attack7164 returns
+normally, HP-before0, destroyed-before=false/after=true, and the original kill
+bounce reads Yvelocity856/playerY2277/enemyY2304, resolving−856.
+
+Current instead enters its original initialization7006 as FIGHTER/HOVER/group2,
+initialized=false; during that call the same raw body's original destroyed writes
+are false then true, and normal initialization returns initialized=true/stateGONE.
+No original touch/attack callback for this body is retained during its covered
+6962..7164 lifetime. This distinguishes an initialization retirement from a prior
+P2 kill. Source maps the observed GONE/delete outcome to the FIGHTER
+`fighterWaitingOnItsFlyBy` early-delete branch. The direct returned gate Boolean
+was not retained for layout23 (its carrier filter was layout63), and the underlying
+Ssz registry/group2 bit operand is UNKNOWN; why that gate rejects is not inferred.
+
+All original placed-ring awards are46/48 calls to `addRings(1)` returning normally,
+with unique source indices in each arm. Current alone accepts **index5 at7172 and
+index3 at7178**, both through actual P1. Original positive overlap operands for5
+are P1 box left1166/top2299/height22, ring `(1164,2324)`, radii6/6. Index3 uses
+P1 box left1135/top2291/height32, ring `(1132,2308)`, radii6/6. Both original
+`ringsAllowed` results are true before the normal award calls. Shared index1 is Main P2 at7220/current P1 at7184. The two additional
+ordinary placed awards numerically account for+2. Raw collector bindings come
+from the original acceptance/award calls, not the shared HUD accessor or policy
+callback. Native collector RAM addresses and global all-writer completeness are
+not claimed.
+
+### Native source verdict and remaining boundary
+
+Shipped FixBugs0 pinned skdisasm`044fa467` owns these operations. `sub_9185E` uses
+raw low-nibble **byte offset2** into`off_9186E`, selecting fighter`loc_918C4`, not
+fly-by`loc_91874`. Cleared SSTs are established by`loc_60DE` and
+`Delete_Referenced_Sprite`; fighter init leaves Xvelocity0 and falls through
+`sub_918E2` (max/yvelocity`$100`, acceleration8), then runs`loc_9159A` in that own
+dispatch. Main's all-mode fly-by Xvelocity and zero swing state are concrete native
+mismatches now observed on the actual fighter. Main's integer shift also differs
+from native MoveSprite2/full16.16; current's selected operands follow those owners.
+Native gun/shot owners`loc_916EE`, `loc_91712`, `loc_91756/loc_917B4` support the
+current observed child offsets, INIT return, delayed Y, real Gun charging parent,
+charge fallthrough, arming and next-dispatch movement. This source verdict supports
+the changed operations; it does **not** make agreement at48 a native route oracle.
+
+Native`sub_91914` checks the pairing-group bit and drops the caller when absent.
+The remaining precise layout23 question is that original Ssz registry/group2
+operand and its owner/timing at7006, if further attribution is needed. R5 does not
+invent the missing operand, pursue an unrelated platform allocator, patch runtime
+or adapt expected46. Main complete and current paired800 MTZ/Mecha/DEZ remain
+unknown/unqualified; maintained controllers/predicates/replay windows stay intact.
+
+All temporary source is restored WHOLE byte exact after each arm, carrier removed,
+owned classes/maven-status removed before switching/final, and runtime/test/POM/
+input diff is empty. Actual XML/properties and full raw streams are inspected then
+consumed with logs/native extraction. Only useful source/inverses and compact
+selected first-producer facts remain externally, no raw archives/pass receipts.
+The public115-field matched projection is now a recurring tool: flag the existing
+promotion obligation for an engine-facing `com.openggf.tools` tool and a one-line
+`docs/agent-workflow/README.md` entry in a separately scoped follow-up. Private
+source-specific carriers remain temporary; no generic observer framework is added.
