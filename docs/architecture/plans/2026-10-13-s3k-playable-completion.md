@@ -29075,3 +29075,32 @@ Root read the entire R16 private adapter, sole complete new public64 row, prefix
 R16's private combined guard wrongly used that horizontal marker as a generic continuation requirement. Its one-step result remains unchanged:10869/2348,flag4/property2,1ring/3lives/unhurt; post-step pending/fade operands and a unique triggering operand remain unretained. The earlier `default10x10` phrase is corrected to the actual retained10x10 radii, without changing default standing9x19 semantics.
 The next permitted private-controller scope may omit only this marker from the Up-only inlet/control guard and keep it as unchanged observation data. All original world/manager/player/focus/roster/control/pending/fade/rider/damage/ring/life/anchor/flag stops remain. No engine, gameplay, maintained input, oracle or API correction is justified.
 Any separate next workload must cold-reproduce all42925 actual R16 inputs and74 unique complete checkpoints, including the false marker at42924, then continue the same Up-only/P2neutral policy from42925 through at most599 further inputs to the original43523 ceiling. Preserve source-owned state4→5→ground semantics and unknown terrain/fluid/reverse/native causes; no retiming, new jump, walking tail or historical retroqualification.
+
+
+## R17 exact original first held input retains support — 2026-10-21
+
+One ordinary cold CLI at `4bfd11c372dfbc50e961b4f68878426165fb1e57`, branch `feature/ai-ssz-controlled-solid-first-hold-20261021`;
+unchanged [R15 setup](#r15-first-neutral-wait-loses-the-declared-riderground-inlet--2026-10-21), with the accepted R16 owner opt-ins composed.
+All14944 R14 inputs and the14943 scalar/control/actual managed-live layout134 post.child rider inlet match.
+Exactly original R15 input14944 (`P1neutral / P2Up`, noABC) executes, then STOP:14945 total, zero newA edges/releases/future inputs.
+
+| Input | Actual public boundary |
+| --- | --- |
+| 14943 | P1(4369,1164), VX/VY/G0, grounded/jumpingfalse, controlled+CPUallowed/movement-suppressed; actual original child rider managed/live. |
+| 14944 | Same scalar state and SAME actual managed/live child rider, joined through original placement-map/post.child in this JVM; first held-step support retained. |
+
+Both remain unhurt/live,62rings/3lives; P2(3950,1264),V0/flag0/fuel0/NORMAL/manualtrue;
+contextNONE/targetfalse, same world/managers/native slots/roster/focus/LEVEL/no pending/fade/reverse. No cross-JVM raw identity or class/XY owner inference.
+Thirty original R11–R15 public-record gates match their retained fields;17 R10 available-scalar gates also match (46 unique boundaries).
+Historical R10 mapping/camera/rolling/spindash/priority fields absent from R15 projection remain UNOBSERVED; no full-vector/all-row-state equality claim.
+The R15 projection/input/raw-binding helper bodies remain literal unchanged; selected-row reads replace repeated scalar safety reads, and PRE reuses cached14943.
+Same-JVM preboot finite2-pad production-author/loader positiveJUMP0x10/masks/bools/payload proof; all14945 actual rows production-roundtrip.
+Independent entire-script/ZIPpayload proof agrees with original R15 and all SIX whole prefixes14944/14853/14618/14442/14414/9914. Expected46/movies/windows/counts untouched.
+Current absolute Main queue `--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl compile exec:exec -B`, runtime Java25 source-mode `FirstHold.java`, unchanged R15 verified ROM/EGL/nullAL/Lua/unsets/profile.
+Original CLI/Java/launcher exit0, **0 JUnit/skips N/A**, no Surefire/XML; queue592s, Maven16.203s, launcher609.296s overlap; Engine/tail-only UNKNOWN.
+Entire93774-byte325-line output/46 selected rows/cachedPRE/POST read; JOML Unsafe, resource-filter encoding and unmeasured s3k-kos-v1 deterministic-estimate warnings retained as limits.
+App fingerprint remains `8e8ccc9304a9acd7c3738d23c538d3278d92ac5683c6dd44f0eae7cbc01ae756`; exact command/env/input/source pins and returned IDs are in the own R17 registry checkpoint.
+Executed BK2 SHA256 `3d45878425679275da0efd734446a87831a0e935e14ef86c8a46b1102b32a22b` has all original R15 payloads; useful specific source/preimage/design/inputs/facts and one normalPNG remain external.
+That PNG is byte-identical to R15 and cannot distinguish support. Stored-sensor freshness, private held/latch/angle/radius/episode/cooldown/contact and original14944 writer/cause remain UNKNOWN.
+A post-run readback helper's stdin-relative/cross-device relocation errors were corrected for only its verified owned products; no extra JVM/request or maintained/foreign-source edit.
+Owned raw output/tmp/extraction consumed under leases; no helper classes persist. No replay retry, longer hold/release/parent/onward/native/pixel/timing/rewind qualification; no runtime/POM/test/data change or push/integration. STOP Root review.
