@@ -28498,3 +28498,91 @@ inputs, actual executed product and private sources/preimages remain external.
 No push/integration or foreign cleanup occurred. Root reviews row42811 before
 any new policy or maintained adaptation; there is no automatic onward workload.
 See the [R10 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-recovered-lower-support-ordinary-coast-r10--2026-10-21).
+
+
+## Completed original smoke continuation and attribution — 2026-10-21
+
+The original change-based smoke selection at frozen
+`b078214e74ddbcb393cbc0173fd8c74055b0dadb`, integration base
+`e3d23e2fa4da78a1035536fed4448f53e9a804be`, is now complete across two
+invocations. This resolves the pending original remainder described above; it
+does not certify the later reconciled Main/fraction graph or a release full suite.
+The owning worktree stayed clean with source fingerprint
+`0d209a98cc5dea33c55bb976d0f17ca330b7b234d07cb0d801b7515e19e310ec`
+through the terminal read.
+
+The first invocation, `20261021T112411Z-dd9405e1`, completed62 ordinary
+batches/3100 original candidates:32,239 tests,0 failures/errors,83 skips.
+Its interrupted batch63 had reported11 cases in five reports; those11 are
+excluded from completed-batch coverage. The sole continuation,
+`20261021T141615Z-b22698ec`, mechanically selected the exact remaining499
+candidates in unchanged original order (original batches63..72), then fresh
+guards. No completed batch was repeated, candidate dropped or replacement
+selection invented. The ordered suffix SHA256 is
+`91ae647177d23c08dc85af5f35267f0fd4b38f26cf8effe8cee5df8410584936`.
+
+The continuation called unchanged `run_categories.main` with
+`--base e3d23e2fa4da78a1035536fed4448f53e9a804be --rom-directory
+$ROM_ROOT --max-minutes 60 --run`.
+A temporary in-memory plan adapter asserted the original3599-candidate whole,
+3100-candidate completed prefix,499-candidate exact suffix, source/base/HEAD and
+smoke/guard/one-worker contract before selecting only that uncompleted suffix.
+The actual launch retained Java25, surfaceless EGL, Lua5.4, the original absolute
+ROM directory (`$ROM_ROOT` in this portable command), nullAL environment and cleared ambient JVM/display/library
+overrides. An audio environment variable alone is not a backend qualification.
+
+| Completed coverage | Tests | Failures | Errors | Skips |
+| --- | ---: | ---: | ---: | ---: |
+| Original62 complete ordinary batches | 32,239 | 0 | 0 | 83 |
+| Exact10-batch ordinary suffix | 5,644 | 14 | 0 | 8 |
+| Reported ordinary cases in all72 completed batches | 37,883 | 14 | 0 | 91 |
+| Fresh guards on the frozen original graph | 718 | 4 | 0 | 0 |
+
+The continuation exited1 after all10 ordinary batches/472 reports and the
+one guard batch/89 reports completed. Preparation passed in26.28s; runner
+ordinary execution was2131.11s and guards437.20s. Those measured execution
+intervals exclude queue waiting; estimates are not elapsed delivery time.
+All3599 original candidate classes are accounted for across the disjoint
+prefix/suffix, not inferred from a test-count sum. This is red smoke.
+
+All18 current failing entries and eight skipped entries were read without
+omissions. Thirteen ordinary identities/types/messages match the previously
+recorded campaign baseline exactly. The remaining WidePaired complete-case
+message is now
+`FIRST_FORWARD [wide-route-11640] frame=11640 n=24 input=11664 ==>
+expected: <false> but was: <true>`.
+The entire owning-file baseline-to-tested diff adds only FIRST_FORWARD/REPLAY
+labels (four added/two removed lines) to unchanged
+`assertFalse(session.player().getDead())` predicates; input order, horizon
+and predicate are unchanged. The old bare message does not establish the
+old failing input11664. No new failing identity or source-supported
+worsening was identified; this is not a blanket attribution to Main.
+
+The14 ordinary negatives remain the three LRZ Knuckles Act2 upper-door,
+HPZ-completion and middle-corridor cases; MHZ Knuckles Act2-to-FBZ; HPZ joined
+Knuckles upper-pad/crane; the four LRZ/HPZ/SSZ campaign characters; SOZ solo
+Act1 iteration[5] and both Knuckles Act2 widths; and both WidePaired SSZ cases.
+Exact case identities and assertion contexts remain in their existing matrix
+and prior baseline records. All four guard identities/types/complete failure
+details match the earlier MenuAudioProbeTool singleton/raw-getInstance and
+HubMusic provider-construction/dependency findings exactly. Each of the eight
+suffix skip identities and reasons matches the prior baseline; the83 prefix
+skips were already read and compared.
+
+The old SOZ typed-art negative and two LRZ Knuckles miniboss arrival/fight
+negatives are absent from this current negative set. Their repairs also have
+separately inspected affected passes; absence from an aggregate negative list
+alone is not per-case pass evidence. The repaired clock-terminology guard
+passes explicitly. The separate reconciled-graph718T/4F/0E/0S guard result
+recorded at2d1a7e44 remains its own tested epoch; it is not added to this
+original graph's counts.
+
+Root and the sole observer completed full strict results/preparation/plan,
+all-failure/all-skip, ordered-selection and final source-fingerprint reads.
+The observer stopped. Root acknowledged
+`python3 tools/testing/run_categories.py --acknowledge
+20261021T141615Z-b22698ec`; the run directory is absent. No raw archive,
+pass cache or validation receipt was created. Later documentation composition
+does not claim that the original compiled target has a newer source epoch.
+Draft PR223 remains red and not ready for integration; gameplay frontiers
+and exact guard findings remain open.
