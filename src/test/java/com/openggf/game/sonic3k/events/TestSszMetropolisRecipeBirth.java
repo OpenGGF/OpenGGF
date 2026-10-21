@@ -284,7 +284,7 @@ class TestSszMetropolisRecipeBirth {
     public static final class OrbPoolBlocker extends AbstractObjectInstance
             implements SpawnRewindRecreatable {
         public OrbPoolBlocker(ObjectSpawn spawn) { super(spawn, "DeclaredMtzOrbPressure"); }
-        @Override public void update(int count, PlayableEntity player) { }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { }
         @Override public boolean isPersistent() { return true; }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
     }

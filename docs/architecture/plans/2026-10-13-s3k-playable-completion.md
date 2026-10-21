@@ -25194,3 +25194,32 @@ does not close VDP/FIFO/open-bus/IRQ, production reset/Title continuity, movie
 row0 or11 actual hardware-job identities. Gameplay climb implementation and
 the retained CNZ grab continuation remain independent. Main delivery and
 owned-worktree cleanup remain pending; the overall goal stays active.
+
+
+## Object update clock terminology in Metropolis fixtures — 2026-10-21
+
+This isolated test-only leaf starts at
+`25dedb1b9b9f572c81d3376424be7b9c1d547307`. Root supplied the two attributed
+boundary violations in `TestSszMetropolisRecipeBirth`'s `OrbPoolBlocker` and
+`TestS3kSszMtzArenaHeadless`'s `OrbInitializationPressureSlot`. Only their unused
+`update(int count, PlayableEntity)` formal names change to `vIntRunCount`,
+matching `ObjectInstance.update` and the unchanged attributed terminology guard.
+Each inverse substitution recovers its entire parent file byte-for-byte.
+The unrelated `stepAt(count)` touch-frame argument, callers, empty update bodies,
+fixture data, assertions, caps, runtime clocks and guard limits stay unchanged.
+
+One normal queued `-Dmse=off -Pguards -Dopenggf.headless.gl=surfaceless-egl
+-Dtest=com.openggf.level.objects.TestObjectUpdateClockTerminologyGuard test -B`
+request through the current absolute Main wrapper passed **1T/0F/0E/0S**.
+The actual whole-guard identity ends in
+`objectUpdateClockUsesVIntRunCountTerminologyAcrossBoundaryAndFrameworkHooks(Path)`.
+Original XML/TXT, all66 properties, failure/error/skip nodes and streams were
+read; Java25.0.4.1, EGL/null OpenAL/Lua5.4 and the owned cwd were retained.
+The10,793-file tracked-src/POM fingerprint remained
+`737ebe0daff2ea96de5689cde181ad935f8304d3d1f0b0dcd58cc50f3ec2822c`;
+shared configuration was unchanged. Admission wait0s, Maven2m14s, XML55.545s
+are bounded job measurements, not total delivery time. Exact owned diagnostics
+were consumed without archives. No broad/ROM/gameplay/other-guard request,
+Root report read, ICZ90a change, push or integration occurred. Root owns source
+adoption and any subsequent composed validation; other guard failures are not
+waived by this focused pass.
