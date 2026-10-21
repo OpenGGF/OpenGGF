@@ -28846,3 +28846,31 @@ wait115s, Maven16.505s, launcher133.761s; exit0, **0 JUnit/0 skips**, not a suit
 Source fingerprint `f8c710eefdb16166f6e186e2927fb63ba0c587eda2aa7cad326464b559947a17` (10808 paths: sorted src/main/src/test/POM/.mvn path-NUL-bytes-NUL).
 Adapter SHA256 `d2336fd3ff4dc968dcec45419049aa16c844519bcd71f75dee9cbfec814bc96e`; BK2 `8a6ac8c24c10f36f66f0a3877fba139e6d9291066584a3cc6d84f7d5a71258b1`.
 Useful specific source/preimage/fixed inputs/compact facts/two normal images remain external; owned raw diagnostics consumed. No independent qualification/native800/pixels/physics/MTZ/fullroute claim; expected46 and all prior histories unchanged.
+
+### MHZ Knuckles one jump/glide admission question R13 — 2026-10-21
+
+R13 used exact `1f0b7c2f731ac65cd647b7b37f6e44b72d878245`; runtime/POM and [R11 setup](#mhz-knuckles-original-remaining-right-tail-question-r11--2026-10-21) remain unchanged.
+It branched from accepted R11 prefix rows0..42855 to its unhurt/free inlet, not R12's future; all42856 rows and five public64 checkpoints matched exactly.
+One budget was durably spent before session79763; workload expiry17:24:49.177308Z/no boot with<120s, cleanup/readback deadline17:34:49Z.
+Preboot in that same JVM, production author/loader proved the full safe prefix and finite Right/Right+A/neutral pads, masks/booleans/payload/P2neutral/positiveJUMP0x10.
+The sole policy used only already-retained signedVY>=0: one groundRight+A, hold, one Right release, conditional one Right+A repress, then hold only to flag4 or first real failure/boundary/cap600.
+42856 retained an ordinary jump:10787/2420, velocity1685/-1373, air/jumping/flag0, radii7/14; no retry was made.
+42859 retained VY-1205;42860 retained VY1149 and VX-1685 at10813/2399. No original terrain/velocity writer or cause is identified by that reversal.
+42861 was the one Right-only release (prior VY1149); its retained air/jumping/flag0/VY1205 qualified the one repress42862.
+42862 retained actual glide flag1,10811/2411, velocity1048/1773/ground1024, radii10/10; flags1 persisted through42864.
+42865 changed flag1→3 with air=true:10823/2426, velocity1036/0/ground1036, property0, mapping204, animation32, angle-4. STOP: no flag4 climb admission.
+Terminal raw x_sub14389/y_sub14124 and wall_climb_x10027 are retained aliases only; no fractional/cursor/stale-controller semantics are inferred.
+All10 new rows are airborne/unhurt/alive,1 ring/3 lives, no onObject/actual rider, scalar controls free; the stale Spikes slot25 latch stays separate.
+Actual recipe:42856..42860 Right+A;42861 Right;42862..42865 Right+A; P2neutral. Every decision independently matches the original previous public row.
+Exactly42866 normal step/draw pairs ran (42856 prefix+10 new); the600 bound was not exhausted. No Up, flag3 continuation, second jump, retiming or retry.
+Fluid/reverse remain UNKNOWN: the adapter made no effective-provider/private-window query; original gameplay owned its normal calls. VY policy establishes neither state.
+No selected headroom/contact/terrain/mutation/fit writer, damage cause, physics omission, native correctness, upper-climb/full-act/FBZ/rewind qualification follows.
+Current absolute Main queued `-Dmse=off compile exec:exec -B`, runtime classpath/Python `r13_exec.py %classpath`, one command/observer; exact argv and source pins remain external.
+Reported queue15s, Maven01:23, boot/prefix/tail25.331s; launcher/Maven/Java exited0,0 JUnit/skips N/A, no original or command-metadata exception.
+Same-JVM post-stop production author/loader checked every actually emitted row; independent raw-prefix/payload/P2 and one-release/repress proofs passed.
+External `r13-products/executed.bk2` SHA256:`8f42368646cb5fd6ddff0de46ab83c23367a1290557a9a820ff4e2919cee638a`.
+`executed.script` SHA256:`abf33324b2d24561410f34e6e256ab34cbb80553f1259920b356ff0a4adbc560`.
+Preboot proof SHA256:`2176e390fb8746c01b262bcf2e7b4b7378f38d628f1bf7345e77e05d6e9e4415`; exact IDs, all10 ordered rows and decision edges remain in existing compact observation record.
+Private R12 preimage/12 reversible orchestration edits and useful actual inputs remain external; consumed logs/series/decisions/classes/tmp/palette-roundtrip copies are removed under owned leases.
+No extra image/draw/readback query, runtime/POM/maintained test/movie/oracle/window edit, seeds/restores/native/model/extra agent/push/integration occurred; R1–R12 history remains immutable.
+Root owns the next source/data disposition; no further workload is inferred. See the [R13 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-one-jumpglide-admission-question-r13--2026-10-21).
