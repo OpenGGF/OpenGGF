@@ -559,3 +559,41 @@ identical native samples while reflecting the added authored music cues. Preserv
 the former review set under a clearly superseded external subdirectory; leave
 root-created MP4s/scripts/layout review intact. Root may merge the frozen commit
 and begin combined ordinary smoke independently while this worktree captures.
+
+### Final support handoff — capture completion
+
+Frozen engine/example source is `bd4feec2f17b883766145bf01e7f27ec6d699a51`;
+root received it before captures and is integrating/validating independently.
+No further engine, test, schema or example-source edits followed that freeze.
+The build-only queued `-Dmse=off -DskipTests package -B` passed (44.509 s).
+
+All four revised `-review.mkv`, `-final.jsonl` and `-qa.png` outputs are published
+at their original names under `$STAGEPLAY_OUT`. The twelve former artifacts are
+retained under `$STAGEPLAY_OUT/superseded-before-bd4feec/`. Root-created viewing
+MP4s, scripts, metadata and layout review remain untouched. Root owns refreshing
+those views, complete moving/audio review, the edited promo and Media archive.
+
+Every one of the **4,860** regenerated `sample` values is exactly equal to the
+corresponding preceding sample, including native world clocks, actors, objects,
+rings, events and resolved cameras. The added top-level authored music cues are
+the only JSONL differences (1/1/1/5 cues). Thus no native outcome was substituted
+or moved by the presentation repairs. All four movies passed complete
+`ffmpeg -v error -xerror -i MOVIE -f null -` decoding and exact `ffprobe`
+frame/dimension/audio inspection: 640×448, 60 fps, 480/540/240/3600 video frames,
+48 kHz stereo FLAC. Half-second decoded PCM windows at each shot's first 0.1 s
+were nonzero (RMS 934–2175; peaks 3969–7858). This is synthesis evidence, not a
+claim of complete listening review.
+
+All four QA sheets were inspected. First-frame terrain is visible, HUD glyphs
+are absent, and actor/terrain/palette return remains intact. The film's black
+frame at 960 is its authored FADE_BLACK cover, not an uninitialized level.
+Short-sheet frame selections are relay 0/35/100/190/374/479, air
+0/95/115/300/360/440, rings 0/15/29/31/119/239. The film sheet uses frames
+0..3480 at stride 120 plus 3599. Contact sheets supplement the pixel regressions;
+root still owns the complete moving creative review.
+
+No live job remains in this worktree. Its branch remains local and retained for
+root; no main branch, external repository or push was touched. This final
+checkpoint is documentation only and does not change the frozen tested source.
+The five baseline guard identities above remain reported; combined ordinary
+smoke/integration/release claims belong to root's completed runs, not this slice.
