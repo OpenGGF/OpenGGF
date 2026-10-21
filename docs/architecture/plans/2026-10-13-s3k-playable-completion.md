@@ -27688,8 +27688,10 @@ Y `$0BFF` and both-direction X controls also remain independent of the helper.
 Four cases select flags0/1 × pre-init/first-motion captures. Each first asserts
 the public carry, then destroys the live body and reconstructs it by its actual
 ObjectRefId through the whole gameplay registry. Two restore/forward cycles compare
-all registered keys, with no exclusions or normalizer. Pre-init replay checks the
-first-motion snapshot before crossing the carry; active replay checks that saved
+all registered keys with the existing comparator. That comparator excludes
+restore-only telemetry and matches manager collections by stable identity; the
+new test adds no exclusions or normalizer. Pre-init replay checks the first-motion
+snapshot before crossing the carry; active replay checks that saved
 fraction is retained instead of being reinitialized. These are component controls,
 not an ordinary cold route, native execution, physical pixels or timing proof.
 
