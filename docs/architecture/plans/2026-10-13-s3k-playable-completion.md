@@ -28903,3 +28903,32 @@ Preboot proof SHA256:`2176e390fb8746c01b262bcf2e7b4b7378f38d628f1bf7345e77e05d6e
 Private R12 preimage/12 reversible orchestration edits and useful actual inputs remain external; consumed logs/series/decisions/classes/tmp/palette-roundtrip copies are removed under owned leases.
 No extra image/draw/readback query, runtime/POM/maintained test/movie/oracle/window edit, seeds/restores/native/model/extra agent/push/integration occurred; R1–R12 history remains immutable.
 Root owns the next source/data disposition; no further workload is inferred. See the [R13 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-one-jumpglide-admission-question-r13--2026-10-21).
+
+### MHZ Knuckles slide/get-up ordinary follow-through R14 — 2026-10-21
+
+R14 used exact `8b321d1696e210d38f72dbfbfb2fd9d3deb682a6`; runtime/POM and [R13/R11 setup](#mhz-knuckles-one-jumpglide-admission-question-r13--2026-10-21) remain unchanged.
+The complete42866-row actual R13 prefix, including its terminal42865 and all10 R13/five earlier public64 checkpoints, matched before new inputs; R12's future was not used.
+One budget was durably spent before session91156: constant Right-only/P2neutral/A released, max600 new inputs, no new jump/Up/retiming/alternative/retry.
+Workload expiry17:54:49.177308Z/no boot with<120s, cleanup/readback deadline18:04:49Z; the original lifecycle and cleanup finished before both deadlines.
+Same-JVM preboot production author/loader proved every prefix row and finite Right/Right+A/neutral pad, including positiveJUMP0x10/masks/booleans/payload/P2neutral.
+42866 was the first actual flag3→0/get-up:10827/2417, velocity0/0/ground0, air=false/jumping=false, radii9/19, animation34/mapping205.
+That get-up air clear is owner-written, not proof of a new terrain contact/support; the get-up row was explicitly excluded from success.
+Movement input was inactive at42867..42881;42882 first retained movement active, velocity11/-2/ground12, with centreX still10827. No numeric move-lock timer was queried.
+42887 remainedX10827;42888 first qualified the subsequent ground-forward inlet:10828/2417, velocity59/-6/ground60, angle-4, flag0/property0, radii9/19, air=false/jumping=false/movement active.
+Terminal raw x_sub14645/y_sub6956 and wall_climb_x10027 remain retained aliases without fractional/cursor semantics; animation0/mapping8, camera10668/2321.
+All23 new boundaries retain1 ring/3 lives, no hurt/death/onObject/actual rider, scalar controls free, same bound world/Level/OM/P1/focus/solo roster/LEVEL7/1/no pending/fade.
+The stale Spikes slot25 latch remains separate from actual rider none. No terrain receiver, hurt owner, fluid/reverse, invulnerability or native equivalence is established.
+Exactly42889 original step/normal-draw pairs ran:42866 preserved prefix+23 new Right inputs42866..42888. STOP at the declared inlet, without a farther-wall or safe-future question.
+One public64 projection followed each normal step/draw; all23 decisions independently match cached preceding rows. No predicate/provider/sensor rerun, new owner API or image/readback query.
+Current absolute Main queue `-Dmse=off compile exec:exec -B`, runtime classpath/Python `r14_exec.py %classpath`, one command/observer; exact argv/source/environment/returned IDs remain external.
+Queue reported26s; Maven01:26; boot/prefix/tail23.356s. Preparation-metadata→terminal114.561s is not exact enqueue time; engine-only/tail-only time is unmeasured and intervals overlap.
+Launcher/Maven/Java exited0, **0 JUnit/skips N/A**; original output had no exception or command-metadata error. Existing deprecation/unmeasured-load-profile warnings were read.
+A private inverse-metadata AssertionError occurred before queue/JVM/budget consumption; its first error is preserved separately, corrected by one whole-file counted inverse. No workload retry occurred.
+Post-stop same-JVM production author/loader checked every emitted row; independent entire-prefix/payload/P2neutral and constant-Right tail proofs passed.
+External `r14-products/executed.bk2` SHA256:`a279b84bbc958b7fdd0ef160b7b39e1e5a50338b158427aef599afc1e4f02b26`.
+`executed.script` SHA256:`9d0203eb7e44001313cec07b9a6346546c7809c5ce072f9765ee10439f486640`; preboot proof SHA256:`d1dfbe361c09085ad683a736d9c43ba7c05f13075975fb248be6c8459fd6bd81`.
+Private adapter SHA256:`5074efdc9b6752db66060edd8daa42293512fa5cb28831062eb5b94fbd0d5761`; useful exact inputs/preimage/design/all23 ordered rows and compact facts remain external.
+Owned logs/series/checkpoints/decisions/classes/tmp/roundtrip-palette copies were consumed under worktree/activity leases; target is absent. No archives or pass cache were retained.
+No runtime/POM/maintained test/movie/oracle/window edit, seeds/restores/native/model/extra agent/push/integration occurred; prior refs/results/native actual322/index703/config remain preserved.
+This is bounded ordinary inlet evidence, not climb/wall/whole-act/FBZ/rewind/native qualification or a physics omission. Root owns source/data review and any later workload.
+See the [R14 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-slideget-up-ordinary-follow-through-r14--2026-10-21).
