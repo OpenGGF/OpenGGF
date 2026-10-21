@@ -4440,3 +4440,15 @@ Both live/unhurt,62rings/3lives; P2 grounded/flag0/fuel0/NORMAL/manualtrue. Exac
 new inputs/14944 total;36-pad preboot proof and all-row/5-full-prefix roundtrip.
 **0 JUnit/skips N/A**; no release, free-upper-ground, native/MTZ/fullroute qualification.
 Owner-branch/contact operands and sensor freshness UNKNOWN; expected46 unchanged. [Policy, fingerprints, timing and limits](../../plans/2026-10-13-s3k-playable-completion.md#r14-ordinary-first-gap-and-managed-carrier-admission--2026-10-21).
+
+## R15 neutral wait stops before any release — 2026-10-21
+
+At exact `8b321d169`, full14944 R14 prefix/inlet and NEW-JVM raw family joins match.
+First new neutralP1/P2Up14944 changes P1air totrue and actual rider tonull at unchanged
+(4369,1164)/V0/object-control+CPUallowance/movement-suppression. Declared WAIT stops;
+no R15 A edge, release, publicX gate or parent attempt. Both unhurt/live,62rings/3lives;
+P2/world/managers/pair/focus/LEVEL/manual/flag0 remain unchanged. Post/child refs persist;
+child liveness/membership AFTER rider loss and private episode/air-unseat writer UNKNOWN.
+Exactly1 new input/14945 total;2-pad preboot positive0x10/booleans/masks/payload and
+all-row/SIX-full-prefix proofs complete. **0 JUnit/skips N/A**, no retry/native/route
+qualification or omission claim; expected46 unchanged. [Facts, hashes, timing and limits](../../plans/2026-10-13-s3k-playable-completion.md#r15-first-neutral-wait-loses-the-declared-riderground-inlet--2026-10-21).
