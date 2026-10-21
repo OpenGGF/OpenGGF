@@ -24999,3 +24999,156 @@ production continuity, movie row0 and11 actual job identities remain open.
 The goal stays active. Main develop, unknown files/submodules and worktree
 branches remain preserved; no outer integration/push/cleanup or full delivery
 is claimed. Native TraceChaser703 publication is already complete.
+
+
+## 2026-10-21 independent cold-entry semantic control (native output only)
+
+This is a new diagnostic implementation followup on exact frozen Root base
+`8c78e7762b4394b5c5d9a531ccb2b21807491028`, in the separately owned nested
+`cold-entry-semantic-control` worktree and local branch
+`feature/ai-cold-entry-semantic-control-20261021`. It preserves prior outerfbf/native703
+branches, supplied appefd, Root/Main and historical results. Only the new private
+registry subtree `agents.native_cold_entry_semantic_control` records current exact
+returned task/run IDs, resolved inputs/commands, tested files and ownership; the
+original native-prefix and R2 rows remain historical. No extra agent was launched.
+
+The reusable probe is `tools/timing/s3k-instruction-ledgers/mini68k/cold_entry.py`,
+with `test_cold_entry.py`, the existing timing README, workflow catalogue and
+measurement-hazard entry. Existing mini68k/research defaults and callers remain
+byte-identical to the base. No Engine, timing/readiness API, trace schema, fixture,
+ROM, native source or native703 working tree changed. No dormant production port
+was added.
+
+### Independent inputs and transitions
+
+Execution accepts the authenticated original4MiB ROM (SHA1
+`CFBF98C36C776677290A872547AC47C53D2761D6`), an explicit fixed
+`gpgx703-md-usa-ntsc-cold` profile and authenticated source objects. GPGX commit
+`051d430d3d1b54625f9900c8f152d7f232e06daf` / tree
+`1bb96ca74d660d383e70d9cd56b88906a0773519` and TraceChaser
+`703bd92d32634ce5ebac60625b48c60ef5500427` / tree
+`eb61ea653b70b9cab90786014f7deaeb9c2abd6a` are enforced, not guessed from working files.
+The existing `gpgx_cycles.load_table` additionally authenticates cycle-table blob
+`6b18bb209c1fcb1bf4e78d0c1e747da01a164542`. The explicit read-only GPGX object store
+was available; no source fetch or synthetic Git history was required.
+
+Profile MD80/USA80/NTSC262/BIOSoff, normal3button ports, no firmware/save provider,
+fresh native SRAM and neutral inputs follows the qualified GpgxHost wiring.
+`gen_reset` supplies geometry `(262-192+159)*3420+1004`,7-MCLK alignment and15-MCLK
+Z80 alignment; ROM supplies SSP/PC. Actual compiled exception reset40*7 is distinct
+from the RESET opcode's132*7. Fresh BSS `not_z_flag=0` represents Z set, producing
+pre-reset SR0004 and reset SR2704. The synchronized deadline is the next128*7
+multiple. `system_reset` calls `gen_reset` before `io_reset`, so the first two
+snapshots retain BSS I/O while constructor-complete hardware version becomesA0.
+`sram_init` selects the combined-ROM header branch: on1/detected0/custom0, freshFF;
+no user save is read and the prefix never accesses SRAM.
+
+The adapter directly calls actual `mini68k.CPU.step` for eight existing-form
+executions: LEA0206, TST.L020A, untaken BNE0210, TST.W0212, untaken BNE0218,
+LEA021A, MOVE.B0226 and taken BEQ022E. It adds only MOVEM.W/L postincrement and
+ANDI.B-to-Dn. Original opcode/mask/table/immediate bytes determine execution;
+no expected capture field supplies a register, CCR, I/O latch, PC or clock.
+Signed32-bit register representation remains separate from24-bit bus decoding.
+MOVEM.W sign extends D5-D7 in mask order; MOVEM.L loads A0-A4. Each logical read
+captures pre-assignment registers and extension-consumed native PC. A5 updates
+before mandatory extra word reads029E/02B2, with opcode/prefetch reads excluded
+from logical observations. TST.L's two duplicated-lane I/O word handlers become
+one logical32-bit read; controller-data callbacks are unsupported.
+
+For this profile, reset VDP reg0/reg1 leave H/V interrupts disabled, DMA length
+is zero, the Z80 is held reset with bus state/bank0, and no prefix instruction
+changes those device owners. Direct cartridge ROM and the selected control/version
+I/O handlers contain no wait charges. Thus no IRQ acceptance, Z80 bus wait, FIFO
+wait or DMA term is assumed from absent output. Unknown producer/input/IRQ refuses.
+Ordinary refresh is checked after fetch and before execution, adds14 MCLK, and
+sets deadline from current raw clock. MOVEM.L instead applies per-register dynamic
+cycles, conditionally extends the old deadline by128*7 without14, then applies the
+opcode base. The cost reader's unscaled CPU cycles are multiplied by7 exactly once.
+
+The machine stops by decoding the next unsupported device access at opcode3014,
+PC0238, busC00004, before fetching/retiring that instruction or importing its
+observed7208. Only after that stop does the comparator assert38 records:
+3 snapshots +22 fetch/retire +13 logical reads, from11 retired instructions.
+There is no time/frame/instruction-count stop quota. These11 instructions do not
+represent the11 production hardware jobs.
+
+### Expected-output validation, continuation and controls
+
+`generate(rom, sources, profile)` has no expected-data parameter. The CLI finishes
+that independent execution before opening the report. It bounds input size and
+record capacity, rejects duplicate JSON keys and wrong field inventories/types,
+checks schema/status/profile/ROM, managed digest/module/source-lock/harness and
+complete native build/source/patch/toolchain identities, and preserves ordered
+40-word records. Every word of the38 supported events and every named initial
+field agrees exactly. Three trailing native device records receive boundary/order
+checks only; device value and post-read flags/clocks/registers are explicitly
+unclaimed. A mutation of those unsupported values does not gain certification.
+
+The retained R2 observer-on report remains23773 bytes, SHA256
+`cc5067948cd9c6c05a0f09899e6827f3203dcd53c6cafda7a862958b1c5f7860`. Its qualified harness
+is `dad8d30f427978166fcc048dafc8a8d41e6dfce9615a664f33b159cd2f6c44a3`, managed core
+`0144e6e236be68ce126eb771dcb5a9ae7c153a083fa0333f345ac37b4a60acf7`, native compressed
+core `b665a2dd91df065f410841c6caa5fb6d322ad6025e02750aae4d14d2f3a83543` and native build
+identity `ba477ca4acafc26d5ac463c765ee7744ff0e474d91c432fe6412afe60c64e84f`. This is reuse
+of already-qualified expected data, not another native run or retroqualification
+of R1. The initial CLI comparison correctly refused a lowercase-vs-uppercase ROM
+hash string; the validator now uses the unchanged703 report's uppercase format.
+The independently generated state did not change and no capture was edited.
+
+Pure snapshots preserve registers/CCR/SR, PC and native extension cursor, raw/
+refresh clocks, profile, I/O, RAM, prefetch, pending phase and ordered events.
+Copy/restore at all34 encountered instruction/fetch/refresh/execute checkpoints,
+including either side of both MOVEM forms, reproduces the complete final pure
+continuation. Snapshot data is detached and source/ROM/profile-bound. This is no
+native load/re-arm API and never authorizes one.
+
+The focused command completes **44 passed,0 failed,0 skipped**:29 new cold controls
+and15 existing mini68k form controls, in0.583s. Controls include all1,520 claimed
+word mutations; all named initial fields; schema/status/source/profile/managed/
+build/type/bounds refusals; original ROM opcode/mask/vector authentication;
+changed CCR branch behavior; reset phase/refresh/I/O faults; missing/duplicate/
+reordered extra MOVEM reads (including a fault in the pure producer itself);
+copy/restore and comparator-only dataflow. Source-derived clock vectors force the
+MOVEM.L skip-refresh branch and a base-only crossing; golden prefix agreement
+alone does not exercise that branch. Existing research defaults and unsupported
+forms are separately checked unchanged. A prior29-case iteration passed before
+type/IRQ tightening; the44-case result belongs to the final executable source.
+
+```bash
+# Explicit absolute inputs are recorded in the own registry row; no path discovery.
+export S3K_ROM=<original absolute ROM>
+export GPGX_GIT=<object store containing exact051d430d>
+export COLD_ENTRY_TRACECHASER=<source store containing exact703>
+export COLD_ENTRY_EXPECTED=<retained qualified R2 observer-on report>
+python3 -B -m unittest discover -s tools/timing/s3k-instruction-ledgers/mini68k -p 'test_*.py' -v
+python3 -B tools/timing/s3k-instruction-ledgers/mini68k/cold_entry.py \
+  --rom "$S3K_ROM" --gpgx-git "$GPGX_GIT" --tracechaser "$COLD_ENTRY_TRACECHASER" \
+  --expected "$COLD_ENTRY_EXPECTED" --profile gpgx703-md-usa-ntsc-cold
+```
+
+The final actual CLI exits0/PASS with38 claimed records,40 words each,11
+retirements,13 logical reads and `production_readiness:false`. Its independently
+derived boundary raw clock is785694, refresh deadline785834. It emits only bounded
+stdout; no diagnostic file/log archive is retained. No Java, native build/capture,
+engine or broad recorder suite was launched. Source/test SHA256:
+`cold_entry.py` = `c8350bce52d1992d0704c30e4c39fc3ebcc6f77c76a0fecb6007d5e3a6f7cf24`;
+`test_cold_entry.py` = `de259ebe8bb192a8c2d54e73f1b0ccad10b6637c5634f6d04e7af737a852b971`.
+Final local commit/parent, complete/source-test diff hashes, file/source manifests,
+commands, skips and cleanup are reported in the own registry and parent handoff,
+without self-referential evidence or extra result receipts.
+
+### Remaining authority and stopping point
+
+This qualifies the fixed reference-emulator cold CPU transition prefix as an
+independent diagnostic control. It does not qualify physical-console power-on,
+full CPU/device execution, native heap, VDP status/FIFO/open-bus/line/IRQ scheduling,
+Title350D26 synchronous Kos_Decomp or title frame counts. The next device source
+owner remains `system_reset -> vdp_reset`, `system_frame_gen` status/FIFO/line
+scheduling and `mem68k -> vdp_68k_ctrl_r` at the actual raw clock.
+
+No production reset epoch/lifetime continuation, original movie-row0 controller
+poll/lag/callback association or actual job kind/ordinal/fingerprint/submission
+identity follows. Controller data is not read in this prefix; neutral FrameAdvance
+is no BK2-row proof. Root's historical HCZ/FDF/cold results and all concurrent
+workers are unchanged. Work remains local and unintegrated; this implementation
+stops after qualification for parent review, with no push or worktree removal.

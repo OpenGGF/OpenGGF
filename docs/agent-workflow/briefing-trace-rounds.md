@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+MOVEM skip-refresh differs from ordinary bus refresh (2026-10-21, cold-entry control).
+Pinned GPGX performs ordinary refresh after fetch, setting the deadline to current
+raw clock plus128*7 and charging14 MCLK. MOVEM.L instead charges dynamic register
+cycles, conditionally extends the old deadline by128*7 with no14 charge, then adds
+the opcode base cycles. The unchanged cold prefix does not take that skip branch;
+source-backed crossing and base-only-crossing unit controls are required to test
+its order. A matching native prefix alone would miss that implementation error.
+
 A reset mask is not a complete reset SR (2026-10-21, native constructor prefix).
 Pinned GPGX main-CPU reset sets supervisor/IRQ mask but preserves CCR. Fresh
 zero-initialized `not_z_flag` represents Z set, so this exact BIOS-off constructor
