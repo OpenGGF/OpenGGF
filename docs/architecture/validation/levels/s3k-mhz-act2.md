@@ -912,3 +912,14 @@ No rider/control handoff preceded the stop; actual rider stayed none, distinct f
 Session99681 exited0,0 JUnit/skips N/A:queue1s/Maven01:24/boot-prefix-tail22.093s. No retry, changed policy, maintained oracle/data/window edit or full-route qualification.
 The [R12 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-complete-fixed-tail-question-r12--2026-10-21) pins source/proofs/products/command, first facts and16:54 scope; raw diagnostics/classes/tmp were consumed.
 Useful actual inputs/private preimages/compact facts remain external; earlier histories stay immutable. Root owns any later workload; no push/integration occurred.
+
+### Knuckles one jump/glide admission question R13 — 2026-10-21
+
+At exact1f0b7c2f, accepted R11's42856-row prefix and all five64-field checkpoints matched; R12's future was not replayed. Setup is unchanged from [R11](#knuckles-original-remaining-right-tail-question-r11--2026-10-21).
+One captured-signedVY>=0 policy jumped42856, released42861 after retainedVY1149, and repressed42862 after retainedair/jumping/flag0/VY1205; glide flag1 actually activated.
+At42865 flag1→3 whileair=true,10823/2426,VX1036/VY0/G1036,property0/mapping204; no flag4 climb admission. All10 new rows retain1 ring/3 lives/no hurt/death/actual rider.
+Raw x_sub14389/y_sub14124/wall_climb_x10027 imply no fractional/cursor semantics; stale Spikes is not actual support. Fluid/reverse/effective providers/terrain writer remain UNKNOWN.
+The one attempt stopped after10 new/42866 total normal step/draw pairs, with no Up, retiming, second jump or continuation. Preboot finite-pad/prefix and post-stop executed-row production roundtrips/independent payload proofs passed.
+Session79763 exited0,0 JUnit/skips N/A:queue15s/Maven01:23/boot-prefix-tail25.331s, no metadata exception. No maintained predicates/data/window changes or route/native qualification.
+The [R13 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-one-jumpglide-admission-question-r13--2026-10-21) pins source/input/proofs/commands/limits and17:24 workload/17:34 cleanup deadlines; raw diagnostics/classes/tmp/validation copies were consumed.
+Useful exact inputs/private preimage/compact facts remain external. Earlier history is immutable; Root owns source/data review and any later workload. No push/integration occurred.
