@@ -29042,7 +29042,7 @@ See the [R16 matrix](../validation/levels/s3k-ssz-act1.md#r16-root-composed-rout
 
 R16 used exact `6225ccbfeab443283b6fe3c9aa5282f5a823ef1f`; runtime/POM and [R15/R14/R11 setup](#mhz-knuckles-low-speed-jumpglide-ordinary-admission-r15--2026-10-21) remain unchanged.
 The full42924-row actual R15 movie and exactly73 unique complete public64 checkpoints matched:38 older plus all35 R15 rows, including terminal42923.
-The inlet retained climb4/property3/map0xB7,10869/2349,zero X/Y/G velocities,air/jumping/default10x10,1 ring/3 lives/free scalar controls/no actual rider; centreX/rawxsub both10869.
+The inlet retained climb4/property3/map0xB7,10869/2349,zero X/Y/G velocities,air/jumping/radii10x10,1 ring/3 lives/free scalar controls/no actual rider; centreX/rawxsub both10869.
 One durably consumed budget preceded session4890. The sole declared policy was constant Up-only/P2neutral from42924, releasing A+Right, through state4/5 to first observed5→ground exit or a declared boundary/cap600.
 The private adapter retained a combined pending/fade/control/activity guard requiring `movement_input=true`; its original predicate/status are preserved, without correction or retry.
 Same-JVM preboot production author/loader proved all42924 prefix rows, every preserved older prefix, Up/Right+A/neutral pads, positiveJUMP0x10/masks/booleans/payload/P2neutral before boot.
@@ -29067,3 +29067,11 @@ Owned raw logs/series/checkpoints/decisions/classes/tmp/extraction/palette-round
 Explicit workload18:44:49.177308Z/no boot with<120s and cleanup18:54:49Z were respected. Earlier histories/refs/native actual322/index703/config remain preserved; no maintained runtime/POM/test/movie/oracle/window edits.
 Fluid/reverse/mutation/receiver/invulnerability/native equivalence/ledge completion/full-act/FBZ/history/rewind remain UNKNOWN. No seeds/restores/native/model/extra agent/push/integration occurred.
 Root reviews the existing activity-marker/guard semantics and actual data before any further ordinary continuation; no automatic adapter change or next workload. See the [R16 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-up-only-climbledge-exit-guard-frontier-r16--2026-10-21).
+
+
+### MHZ R16 horizontal activity marker source disposition — 2026-10-21
+
+Root read the entire R16 private adapter, sole complete new public64 row, prefix/product proofs and committed evidence. Runtime `PlayableSpriteMovement:698..702` stores `inputLeft || inputRight` in `movementInputActive` for walk/idle animation, then dispatches climb4/ledge5 at732..740; `AbstractPlayableSprite:3828..3837` exposes that field. Constant Up therefore legitimately clears this marker while the owning climb code still consumes Up. It is not a general movement/control permission.
+R16's private combined guard wrongly used that horizontal marker as a generic continuation requirement. Its one-step result remains unchanged:10869/2348,flag4/property2,1ring/3lives/unhurt; post-step pending/fade operands and a unique triggering operand remain unretained. The earlier `default10x10` phrase is corrected to the actual retained10x10 radii, without changing default standing9x19 semantics.
+The next permitted private-controller scope may omit only this marker from the Up-only inlet/control guard and keep it as unchanged observation data. All original world/manager/player/focus/roster/control/pending/fade/rider/damage/ring/life/anchor/flag stops remain. No engine, gameplay, maintained input, oracle or API correction is justified.
+Any separate next workload must cold-reproduce all42925 actual R16 inputs and74 unique complete checkpoints, including the false marker at42924, then continue the same Up-only/P2neutral policy from42925 through at most599 further inputs to the original43523 ceiling. Preserve source-owned state4→5→ground semantics and unknown terrain/fluid/reverse/native causes; no retiming, new jump, walking tail or historical retroqualification.

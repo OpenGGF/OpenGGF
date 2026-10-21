@@ -959,3 +959,6 @@ Session4890 exited0,0 JUnit/skips N/A:queue898s/Maven01:32/AUTHOR27.850s includi
 The [R16 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-up-only-climbledge-exit-guard-frontier-r16--2026-10-21) pins source/inputs/proofs/command/18:44 workload/18:54 cleanup scope; consumed raw outputs/classes/tmp/validation copies leave target absent.
 Useful exact input/private source/preimage/complete new row/compact facts remain external. Prior history/refs/native/config and maintained runtime/POM/tests/movies/oracles/windows are unchanged.
 Root reviews the activity-marker/guard source semantics before any later ordinary workload; terrain/native/fluid/reverse/mutation/receiver/invulnerability/ledge/full-route qualification remain UNKNOWN, with no push/integration.
+
+
+Root source disposition: the R16 `movement_input` marker is horizontal animation activity (`inputLeft || inputRight`), so false is valid for constant Up climbing. The temporary generic guard was too strict; [source disposition](../../plans/2026-10-13-s3k-playable-completion.md#mhz-r16-horizontal-activity-marker-source-disposition--2026-10-21) permits only that observer correction, with every gameplay safety/control/world check retained. No runtime omission or ledge completion is inferred.
