@@ -71,6 +71,21 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A horizontal animation marker is not a general movement permission (2026-10-21,
+MHZ Knuckles ledge). `PlayableSpriteMovement` writes `movementInputActive` from
+`inputLeft || inputRight`; valid Up-only climbing therefore clears it. A private
+controller that required this marker stopped a working climb. Removing only that
+requirement allowed the ordinary state 4→5→ground exit, with gameplay unchanged.
+Keep the marker as observation data and guard the actual control, world and rider
+conditions separately. See the [R17 record](../architecture/plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-up-only-activity-guard-continuation-r17--2026-10-21).
+
+A short-circuited guard is unobserved, not false (2026-10-21, MHZ approach).
+The first-hurt stop at input 43094 ran before the pending/fade guard; retained free-control
+fields do not prove that later guard was evaluated. Preserve the original order
+and unknown operands. A subsequent cold continuation may evaluate its current
+boundary once, but cannot fill the earlier run's missing values. See the
+[R18 record](../architecture/plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-ledge-approachjump-glide-ordinary-question-r18--2026-10-21).
+
 An in-process network bot is not a socket-capacity measurement (2026-10-21,
 racing stress). The old load report called its largest emitted packet "queued
 bytes", although its sink discarded packets immediately. It also timed only hub
