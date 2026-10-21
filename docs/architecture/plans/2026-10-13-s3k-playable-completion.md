@@ -28586,3 +28586,87 @@ pass cache or validation receipt was created. Later documentation composition
 does not claim that the original compiled target has a newer source epoch.
 Draft PR223 remains red and not ready for integration; gameplay frontiers
 and exact guard findings remain open.
+
+
+## R12 ordinary carry, release and landing — 2026-10-21
+
+One new owned ordinary cold lifecycle starts at exact Root
+`570644e5775426ea0e7bf013266611ef4b91c562`; R10/R11 refs, results, budgets and
+external inputs remain immutable. The launcher and fresh locked ownership state
+both check the explicit R12 expiry16:34:49.177308Z. Settings remain native800
+Sonic+Tails/off, 7arg titlefalse/null optional setup, SSZ10/0. All14442 actual R11
+P1/P2 rows, R10's14414 and the original9914 prefix are preserved. The full required
+14441 inlet matches every declared actor/velocity/control/native-slot field,
+59rings/3lives, flag1/fuel235/NORMAL/manualtrue/contextMANUAL/actual boundP1 target,
+and the same real world/roster/focus/LEVEL/no-pending/non-reverse context.
+
+Static design uses verified original-ROM SSZ1 layout `$A458E`, collision `$9A5C0`,
+and primary/secondary128 definitions `$1C8E00/$1CBDA2` plus16 definitions
+`$1C8A7E/$1C8E50`. The pinned disassembly files match those original ROM bytes;
+existing Kosinski control flow supplies source-only decoding, with primary and
+secondary definitions appended as the real loader does. The initial wall starts
+X3904; flat top Y1280 spans3904..3967 before the right slope. Selected landing
+centres3916..3952 have profile255/height16/noVflip. The bounded lift corridor has
+no primary/secondary height hits above that top. These operands guide input;
+they are not a runtime collision probe, native run or physical/pixel oracle.
+
+The one finite policy lifts with P1neutral/P2Up to P1Y<=1216 (180 cap), crosses
+Right to X>=3916 (80 cap/no-progress60), then brakes Left to P2VX<=0 (60 cap),
+requiring the declared landing interval. Ordinary P2A pulses occur only at
+retained flag1/Yvelocity>=-256/nonzero fuel with the previous A released, using
+the existing flight owner. Exactly one neutral-direction P1A releases carry.
+P1 then stays neutral; P2 departs Right by48 pixels and brakes Left, preventing
+a second pickup approach. Landing has120 inputs within the global600 bound.
+Unexpected carry loss/reacquisition, missed first approach, either hurt/death/
+life loss, unsafe world/team/control or carried-flight exhaustion are terminal.
+No tryGrab/activate/carry mutator, state seed/restore, private cooldown, model,
+API/runtime observer, terrain/provider query or original predicate rerun occurs.
+The complete literal R11 adapter preimage and design are retained before launch.
+
+| Actual boundary | Public observation / actual input |
+|---|---|
+| 14524, before crossing starts14525 | P1(3893,1216), P2(3893,1188), VY-272, flag1/fuel194, actual MANUAL carry retained |
+| 14549, before braking14550 | P1X3916/Y1190, shared VX416/VY-264, flag1/fuel181 |
+| 14564, before planned release14565 | P1(3926,1175), P2(3926,1147), VX-19/VY-280, flag3/fuel174; still carrying |
+| 14565 | The sole P1A publishes the planned release; no second release or approach |
+| 14604 | P2 is observed at least48 pixels right of P1; departure braking starts |
+| 14615..14617 | First three consecutive grounded/unhurt/free P1 rows at(3925,1260), VX/Gspeed-3 then0/0, VY0, angle0, native slot present |
+
+The attempt ends14617 after **176 new inputs /14618 total**. P1 has no lock or
+object control, carry contextNONE/targetfalse. P2 is(3996,1132), VX256/VY136,
+flag1/fuel147, CPU NORMAL/manualtrue. Both remain unhurt/alive with59rings/3lives,
+same real native pair/world/focus/LEVEL and no pending assembly. New P1 is neutral
+apart from the one14565 jump edge; actual P2 flaps are14515,14521,14527,14533,
+14539,14545,14551,14557,14563. No healing or state setup was authored; no new hurt,
+death, life loss or ring-count change is observed at the public boundaries. This
+is a useful observed free grounded inlet beyond the declared wall, not MTZ or
+broader route qualification.
+
+Support evidence is explicit: the actual riding-object reference is null. Stored
+ground sensors0/1 each report tile255/DOWN/angle1, distance-3 at14615 then0 at14616/
+14617; P1 radii are9/19 and ground modeGROUND. Public `getCurrentResult()` returns
+the stored object; only its primitive fields are copied, without `scan` or a new
+collision query. Result freshness and exact terrain contact owner remain
+**UNKNOWN**; tile255 is not a unique placement owner or topology proof. Only
+actual non-null riding references could bind an object, and none is present here.
+
+The same JVM gates all12 finite new two-pad combinations before boot, including
+JUMP0x10/masks/Start/debug booleans/payload. Production roundtrip and independent
+payload comparison cover all14618 emitted rows plus all three preserved prefixes.
+All176 POST_DRAW public rows, the inlet and176 PRE_STEP value reuses were read
+before both selected normal framebuffer images. One current Main absolute queue
+`--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl compile exec:exec -B`
+lifecycle uses Java25, verified original absolute ROMs, EGL/nullAL/Lua5.4, cleared
+ambient JVM/display/library overrides and owned extraction/tmp paths. Observed
+queue wait is at least30s; Maven compile/exec displays15.819s. Actual product is
+**0 JUnit tests/0 skips**, not a suite/class pass. Owned raw output and extraction
+paths were consumed; useful specific source/preimage, static pins, compact first
+facts, fixed script/BK2 and two normal images remain in
+`<task-artifacts>/ssz-carry-continuation-r12-20261021/` (exact ownership-registry path).
+Adapter SHA256: `e7eb4e3860239e2330b85acacf53c2c048dcd5c386f9dbb5ccd2ef0c56829c09`;
+BK2 SHA256: `a52b4ef358c417218cd25a4061123f3a5faf3109c7e939adaa8ed5dfd4e49188`.
+
+No second request, independent qualification pair, maintained test, broad/native
+run, runtime/POM/movie/oracle/count/window edit or expected46 adaptation follows.
+Further onward movement, MTZ/bosses, native carry/physics, timing/pixels and full
+route remain unqualified. Root owns review and subsequent scope; no push/integration.

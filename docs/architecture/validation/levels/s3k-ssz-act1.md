@@ -4391,3 +4391,28 @@ MTZ, native800/timing/pixel or whole-route coverage. R10 history and all maintai
 runtime/test/movie/oracle data, including expected46, remain unchanged. Exact
 policy, public facts and limits are in the dated
 [completion plan](../../plans/2026-10-13-s3k-playable-completion.md#r11-ordinary-manual-pickup-admission-only--2026-10-21).
+
+
+## R12 ordinary carry to a free grounded inlet — 2026-10-21
+
+One cold ordinary proposal at `570644e5775426ea0e7bf013266611ef4b91c562`
+preserves14442 R11,14414 R10 and9914 original controller rows and exactly matches
+the specified carried inlet14441. Original-ROM static geometry guides one lift,
+cross, brake and planned one-input P1release14565 over the X3904 wall to its
+Y1280 flat top. P2 then departs to avoid a second pickup; there is no timing matrix
+or second approach. After176 new inputs, P1 is grounded/unhurt/free at(3925,1260)
+for14615..14617; both actors remain alive/unhurt,59rings/3lives, same native pair/
+world/focus/LEVEL. P2 is(3996,1132), flag1/fuel147/NORMAL/manualtrue at14617.
+
+The actual riding object is null. Stored public ground sensors0/1 report tile255,
+DOWN/angle1, distance-3 then0/0 over the three rows. Their freshness and the exact
+terrain owner remain UNKNOWN; no scan or topology/owner inference supplements
+those values. This records the observed free grounded inlet only. The same
+invocation gates the full12 new-pad alphabet before boot and roundtrips all14618
+actual rows and all three prefixes. **0 JUnit tests/0 skips**; raw products read/
+consumed, useful specific source/data/compact facts/normal images retained outside
+the repo. No independent qualification, native/timing/pixel/fullroute or MTZ claim.
+All prior history and maintained runtime/POM/tests/movies/windows/counts/oracles,
+including expected46, remain unchanged. Exact finite policy, geometry/read pins,
+actual events and limits are in the dated
+[completion plan](../../plans/2026-10-13-s3k-playable-completion.md#r12-ordinary-carry-release-and-landing--2026-10-21).
