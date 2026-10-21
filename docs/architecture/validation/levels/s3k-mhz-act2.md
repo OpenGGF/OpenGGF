@@ -947,3 +947,15 @@ Exactly42924 normal step/draw pairs ran; same-JVM preboot/post-stop production r
 Session56447 exited0,0 JUnit/skips N/A:queue359s/Maven01:24/AUTHOR24.557s including product proof; no original/metadata exception or retry. One prior filename read error remains separately recorded.
 The [R15 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-low-speed-jumpglide-ordinary-admission-r15--2026-10-21) pins source/inputs/proofs/command/18:04 workload/18:14 cleanup scope; consumed raw outputs/classes/tmp/validation copies leave target absent.
 Useful exact inputs/private source/preimage/all35 ordered rows/compact facts remain external. Native/terrain/mutation/receiver/fluid/reverse/invulnerability/climb completion/full-route qualification remain UNKNOWN; Root owns review, with no maintained edits/push/integration.
+
+### Knuckles Up-only climb/ledge-exit guard frontier R16 — 2026-10-21
+
+At exact6225ccbfe, all42924 actual R15 prefix rows and73 unique complete64 checkpoints (38 older+35 R15) matched; [R15 setup](#knuckles-low-speed-jumpglide-ordinary-admission-r15--2026-10-21) is unchanged.
+The sole constantUp/P2neutral policy executed only42924:centre10869/2348,zero X/Y/G,air/jumping/flag4,property3→2,map0xB7,radii10x10,centreX/rawxsub10869. No state5 or ground exit was observed.
+`movement_input` (`isMovementInputActive`) changedtrue→false; controlLocked/objectControlled remainfalse,forced0/forceRightfalse,1 ring/3 lives/no hurt/death/onObject/actual rider, with stale Spikes separate.
+The original combined pending/fade/control/activity guard stopped. Its false activity marker is sufficient, but post-step pending/fade operands were not retained; a unique evaluated operand/actual handoff/unsafe gameplay outcome is UNPROVED.
+Exactly42925 normal step/draw pairs ran. Same-JVM preboot/post-stop production roundtrips and independent whole-prefix/payload/P2/Up-only/no-ABC/no-Right proofs passed; no retry or guard correction followed.
+Session4890 exited0,0 JUnit/skips N/A:queue898s/Maven01:32/AUTHOR27.850s including product proof; no original/metadata exception. Up-to-ledge completion remains unanswered.
+The [R16 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-up-only-climbledge-exit-guard-frontier-r16--2026-10-21) pins source/inputs/proofs/command/18:44 workload/18:54 cleanup scope; consumed raw outputs/classes/tmp/validation copies leave target absent.
+Useful exact input/private source/preimage/complete new row/compact facts remain external. Prior history/refs/native/config and maintained runtime/POM/tests/movies/oracles/windows are unchanged.
+Root reviews the activity-marker/guard source semantics before any later ordinary workload; terrain/native/fluid/reverse/mutation/receiver/invulnerability/ledge/full-route qualification remain UNKNOWN, with no push/integration.

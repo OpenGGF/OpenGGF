@@ -29037,3 +29037,33 @@ Printed queue wait869s and Maven02:03min are separate; estimate30.6s was an orde
 Owned three XML/three TXT/log/native-extraction namespace files were inspected, then all10 files consumed under the worktree metadata lease; no archive, pass cache or validation receipt remains. Frozen source/POM fingerprint was reverified after completion.
 The separately authorized R17 exact original14944-input prefix plus original P1neutral/P2Up step14944 remains pending; these maintained checks do not prove that natural held inlet, the original rider-clear cause, long holding/release, parent landing, native equivalence or onward route. Expected46 and all movies/counts/windows remain unchanged.
 See the [R16 matrix](../validation/levels/s3k-ssz-act1.md#r16-root-composed-route-consumers--2026-10-21); the PR remains draft with both known WidePaired negatives explicit.
+
+### MHZ Knuckles Up-only climb/ledge-exit guard frontier R16 — 2026-10-21
+
+R16 used exact `6225ccbfeab443283b6fe3c9aa5282f5a823ef1f`; runtime/POM and [R15/R14/R11 setup](#mhz-knuckles-low-speed-jumpglide-ordinary-admission-r15--2026-10-21) remain unchanged.
+The full42924-row actual R15 movie and exactly73 unique complete public64 checkpoints matched:38 older plus all35 R15 rows, including terminal42923.
+The inlet retained climb4/property3/map0xB7,10869/2349,zero X/Y/G velocities,air/jumping/default10x10,1 ring/3 lives/free scalar controls/no actual rider; centreX/rawxsub both10869.
+One durably consumed budget preceded session4890. The sole declared policy was constant Up-only/P2neutral from42924, releasing A+Right, through state4/5 to first observed5→ground exit or a declared boundary/cap600.
+The private adapter retained a combined pending/fade/control/activity guard requiring `movement_input=true`; its original predicate/status are preserved, without correction or retry.
+Same-JVM preboot production author/loader proved all42924 prefix rows, every preserved older prefix, Up/Right+A/neutral pads, positiveJUMP0x10/masks/booleans/payload/P2neutral before boot.
+42924 was the only new input:Up-only/logical1. It retained centre10869/2348,top-left10859/2329,zero X/Y/G velocities,air=true/jumping=true,flag4/property2/map0xB7,radii10/10.
+Raw x_sub10869/y_sub3884/wall_climb_x10859 stayed recorded separately; cached centreX/rawxsub still match. The post-step anchor branch was not reached because the earlier combined guard stopped.
+`movement_input` changedtrue→false; the unchanged public observer obtains this column from `p.isMovementInputActive()`. ControlLocked/ObjectControlled remainfalse,forcedInput0/forceRightfalse.
+World/Level/OM/P1/focus/solo/LEVEL7/1 checks passed before that guard;1 ring/3 lives/no hurt/death/onObject/actual rider were retained, with the stale Spikes slot25 latch separate.
+Original status:`pending_fade_control_or_movement_handoff_boundary`. The false activity marker is sufficient for that condition, but post-step pending/fade operands were not retained and the original condition short-circuits.
+A unique evaluated triggering operand or actual control handoff is therefore UNPROVED. This is the adapter's guard frontier, not an observed unsafe gameplay outcome or a failed-climb/physics diagnosis.
+No state5,flag0,ledge pose or grounded exit was observed; the Up-to-ledge-exit question remains unanswered. No getter/predicate/provider was re-run to attribute the stop.
+Exactly42925 original step/normal-draw pairs ran:42924 preserved prefix+1 Up. No new ABC, horizontal correction, fitted delay, alternative, retry, state5 continuation or later walking ran.
+The planned anchor check applied only to state4; state5 would allow X!=rawxsub and source-owned property/mapping evolution. Neither a future pose clock nor a fixed future endpoint was imposed.
+One unchanged public64 projection followed each original step/draw; the sole decision independently matches the cached42923 row. No extra image/readback, terrain/fluid/reverse/ability/private query or state write.
+Current absolute Main queued `-Dmse=off compile exec:exec -B`, runtime classpath/Python `r16_exec.py %classpath`, one command/observer; exact argv/source/environment/returned IDs remain external.
+Reported queue898s/Maven01:32; AUTHOR27.850s includes boot/prefix/new input/product proof. Preparation-metadata→terminal992.463s is not exact enqueue time; engine-only/tail-only unmeasured, intervals overlap.
+Launcher/Maven/Java exited0, **0 JUnit/skips N/A**; no original exception/command-metadata error. Queue waiting caused no duplicate, restart or additional workload.
+Post-stop same-JVM production author/loader verified all42925 emitted rows; independent whole-prefix/payload/P2neutral and Up-only/no-ABC/no-Right tail proofs passed.
+External `r16-products/executed.bk2` SHA256:`446bb55603a5e65591278996627b8df801c76af412010b65784ad5cfefb47489`.
+`executed.script` SHA256:`088eff98f063c4f669ab255e00b2d964349a367b1e0c995af99e319c6d735bf1`; preboot proof SHA256:`b6607202822f7a270ea7205cdb852a08160deb62e60c58e12604bdaffedf3cd8`.
+Private adapter SHA256:`0efe879ab579b58909d66b1f2c5439f43442639b737747e51763fc854fe21b36`; exact source/preimage/whole-file inverse/design/inputs/complete new row and compact facts remain external.
+Owned raw logs/series/checkpoints/decisions/classes/tmp/extraction/palette-roundtrip copies were consumed under worktree/activity leases; target is absent, without archives/receipts/pass cache.
+Explicit workload18:44:49.177308Z/no boot with<120s and cleanup18:54:49Z were respected. Earlier histories/refs/native actual322/index703/config remain preserved; no maintained runtime/POM/test/movie/oracle/window edits.
+Fluid/reverse/mutation/receiver/invulnerability/native equivalence/ledge completion/full-act/FBZ/history/rewind remain UNKNOWN. No seeds/restores/native/model/extra agent/push/integration occurred.
+Root reviews the existing activity-marker/guard semantics and actual data before any further ordinary continuation; no automatic adapter change or next workload. See the [R16 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-up-only-climbledge-exit-guard-frontier-r16--2026-10-21).
