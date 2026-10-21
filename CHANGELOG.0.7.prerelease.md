@@ -5,6 +5,10 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Recording imports:** copied BK2 recordings are bounded during decompression
+  and parsing, including metadata, input rows and verification sidecars. Oversized,
+  ambiguous or inconsistent files are rejected without hiding healthy recordings.
+
 - **Time Attack multiplayer security:** identity proofs bind the complete join
   intent to the master, direct-room or relay-room role and observed TLS
   certificate. Remote browser, join and recording endpoints require TLS;
@@ -18,7 +22,16 @@ Unreleased. The earlier development themes remain in
   bounds rejection writes before HTTP aggregation, discards further input during
   terminal rejection writes, and releases queued work
   on disconnect or timeout even during executor shutdown. Netty and Jackson use their
-  patched 4.1.139.Final and 2.22.3 releases.
+  patched 4.1.139.Final and 2.22.4 releases. Control JSON rejects fractional or
+  overflowing integer values and trailing roots. Fallback-tunnel inner bounds,
+  receiver queues above 1 MiB, and disconnect/attach races isolate the affected
+  guest without retiring its host's shared broker link. Reproducible adversarial
+  state tests and a local socket stress tool exercise admission, room capacity,
+  varied ghost traffic and connection cleanup.
+  Creation-proof reconnect stamps and one-use room-attach grants have explicit
+  expiry and cardinality bounds.
+  Capacity reports count completed work and rejections separately from latency and
+  colocated process costs.
 
 - **Putt Putt Paradise multiplayer:** Scene admission bounds aggregate clipped
   raster work, lines clip before traversal, and unchanged presentations reuse

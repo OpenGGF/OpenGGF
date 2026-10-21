@@ -5,6 +5,9 @@ description: Render an existing OpenGGF trace replay to synchronized lossless MK
 
 # Trace capture
 
+Use [headless-rendering](../headless-rendering/SKILL.md) for GL backend selection,
+display isolation, prerequisites and rendering lifecycle checks.
+
 `com.openggf.tools.TraceCaptureTool` replays deterministically with offscreen GL
 and encodes FFV1 video plus FLAC audio in MKV. It renders existing evidence;
 it does not record a new ROM trace or prove parity.

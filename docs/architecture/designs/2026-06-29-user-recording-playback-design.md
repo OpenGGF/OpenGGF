@@ -225,6 +225,34 @@ OpenGGF/manifest.json
 OpenGGF/desync-lite.jsonl
 ```
 
+### User-recording import limits
+
+The recording browser and playback launcher treat copied BK2 archives as untrusted.
+`UserRecordingImport` applies a separate profile from research/debug movie loading:
+64 KiB each for the manifest and header, 8 MiB for input, 128 MiB for the sidecar,
+1 KiB per input/sidecar line, and at most 216,000 input/sidecar frames (one hour at
+60 Hz). These are inflated UTF-8 byte budgets, including whitespace and line
+terminators in each entry's total. Line budgets exclude their CR/LF terminators.
+Reads enforce the actual byte budget before creating strings or collecting rows;
+ZIP sizes permit early rejection but do not replace counted reads. Declared
+inflated sizes inconsistent with the bytes read and duplicate case-insensitive
+names for any recognized entry are rejected. Unknown entries are not inflated.
+
+The manifest frame count must be nonnegative, within the import limit, and match
+the input count. A present supported `every-frame` sidecar must have exactly that
+many rows, ordered from frame zero. Sparse rows remain bounded by the movie's
+frame count and indices. Missing sidecars and unsupported future sidecar schemas
+retain their diagnostic-only playback statuses; unused future-schema payloads
+are not inflated. The browser validates metadata/input and defers sidecar payload
+validation to launch. One rejected recording does not abort scanning its neighbors.
+
+The cap applies to imports, including recordings made locally; it does not change
+recording duration or Time Attack's separate attempt format. `Bk2MovieLoader`
+accepts explicit `ReadLimits`, and its research/debug entry points retain their
+unrestricted default for longer authored movies and trace work. Removing the
+all-lines staging list from ZIP loading also avoids retaining ignored/comment
+lines while parsing input.
+
 ### `Header.txt`
 
 Contains basic BK2 metadata plus OpenGGF creator/version fields. The current

@@ -71,6 +71,16 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+An in-process network bot is not a socket-capacity measurement (2026-10-21,
+racing stress). The old load report called its largest emitted packet "queued
+bytes", although its sink discarded packets immediately. It also timed only hub
+ticks, excluding ingress validation. Keep packet size, queue occupancy, useful
+completed traffic and measured work boundaries distinct. A local socket fleet must
+preserve per-IP admission limits, continuously drain every client, validate every
+recipient's roster identity, and count expected rejections separately from failures.
+Colocated server/client/proxy CPU is whole-process cost, not server CPU. See the
+[racing stress record](../architecture/plans/2026-10-21-racing-stress-system.md).
+
 VDP status sampling time differs from the logical read's raw clock (2026-10-21,
 cold-entry first-status diagnostic). Pinned GPGX adds the current opcode base cost
 to a local status sample, applies pending/status effects before the logical read

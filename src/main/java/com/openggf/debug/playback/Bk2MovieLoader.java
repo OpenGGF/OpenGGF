@@ -2,10 +2,8 @@ package com.openggf.debug.playback;
 
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,8 +25,26 @@ public final class Bk2MovieLoader {
     private static final String INPUT_LOG_ENTRY = "Input Log.txt";
     private static final String HEADER_ENTRY = "Header.txt";
 
+    /** Research tools retain their existing unrestricted profile unless a caller opts into limits. */
+    public record ReadLimits(long maxHeaderBytes, long maxInputBytes, int maxLineBytes, int maxFrames) {
+        public ReadLimits {
+            if (maxHeaderBytes < 0 || maxInputBytes < 0 || maxLineBytes < 1 || maxFrames < 0) {
+                throw new IllegalArgumentException("Invalid BK2 read limits");
+            }
+        }
+
+        public static ReadLimits unrestricted() {
+            return new ReadLimits(Long.MAX_VALUE, Long.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE);
+        }
+    }
+
     public Bk2Movie load(Path bk2Path) throws IOException {
+        return load(bk2Path, ReadLimits.unrestricted());
+    }
+
+    public Bk2Movie load(Path bk2Path, ReadLimits limits) throws IOException {
         Objects.requireNonNull(bk2Path, "bk2Path");
+        Objects.requireNonNull(limits, "limits");
         String pathString = bk2Path.toString().toLowerCase(Locale.ROOT);
         if (!pathString.endsWith(BK2_EXTENSION)) {
             throw new IOException("Unsupported movie file extension (expected .bk2): " + bk2Path);
@@ -37,23 +53,32 @@ public final class Bk2MovieLoader {
             throw new IOException("Movie file not found: " + bk2Path);
         }
 
-        return loadZip(bk2Path);
+        return loadZip(bk2Path, limits);
     }
 
-    private Bk2Movie loadZip(Path bk2Path) throws IOException {
+    private Bk2Movie loadZip(Path bk2Path, ReadLimits limits) throws IOException {
         try (ZipFile zip = new ZipFile(bk2Path.toFile())) {
-            ZipEntry inputLogEntry = findEntryIgnoreCase(zip, INPUT_LOG_ENTRY);
+            ZipEntry inputLogEntry = Bk2Archive.findUniqueEntry(zip, INPUT_LOG_ENTRY);
             if (inputLogEntry == null) {
                 throw new IOException("BK2 missing required entry: " + INPUT_LOG_ENTRY);
             }
 
-            ZipEntry headerEntry = findEntryIgnoreCase(zip, HEADER_ENTRY);
-            Map<String, String> headerMetadata = headerEntry == null
-                    ? Map.of()
-                    : parseHeader(readEntryLines(zip, headerEntry));
+            ZipEntry headerEntry = Bk2Archive.findUniqueEntry(zip, HEADER_ENTRY);
+            Map<String, String> headerMetadata = Map.of();
+            if (headerEntry != null) {
+                try (var reader = new Bk2Archive.LineReader(
+                        Bk2Archive.openEntry(zip, headerEntry, limits.maxHeaderBytes()),
+                        limits.maxHeaderBytes(), (int) Math.min(Integer.MAX_VALUE, Math.max(1, limits.maxHeaderBytes())))) {
+                    headerMetadata = parseHeader(reader::readLine);
+                }
+            }
 
-            List<String> inputLines = readEntryLines(zip, inputLogEntry);
-            ParsedInputLog parsed = parseInputLog(inputLines);
+            ParsedInputLog parsed;
+            try (var reader = new Bk2Archive.LineReader(
+                    Bk2Archive.openEntry(zip, inputLogEntry, limits.maxInputBytes()),
+                    limits.maxInputBytes(), limits.maxLineBytes())) {
+                parsed = parseInputLog(reader::readLine, limits.maxFrames());
+            }
             return new Bk2Movie(bk2Path, parsed.logKey(), headerMetadata, parsed.frames(),
                     parsed.firstFrameLineNumber());
         }
@@ -82,12 +107,13 @@ public final class Bk2MovieLoader {
         if (!Files.exists(path)) {
             throw new IOException("Movie file not found: " + path);
         }
-        return isZipFile(path) ? loadZip(path) : loadInputLog(path);
+        return isZipFile(path) ? loadZip(path, ReadLimits.unrestricted()) : loadInputLog(path);
     }
 
     /** Parses in-memory input-log lines; {@code sourcePath} is diagnostic only. */
     public Bk2Movie parseInputLogText(Path sourcePath, List<String> lines) throws IOException {
-        ParsedInputLog parsed = parseInputLog(Objects.requireNonNull(lines, "lines"));
+        var iterator = Objects.requireNonNull(lines, "lines").iterator();
+        ParsedInputLog parsed = parseInputLog(() -> iterator.hasNext() ? iterator.next() : null, Integer.MAX_VALUE);
         return new Bk2Movie(sourcePath, parsed.logKey(), Map.of(), parsed.frames(),
                 parsed.firstFrameLineNumber());
     }
@@ -100,30 +126,10 @@ public final class Bk2MovieLoader {
         }
     }
 
-    private static ZipEntry findEntryIgnoreCase(ZipFile zip, String expectedName) {
-        String expected = expectedName.toLowerCase(Locale.ROOT);
-        return zip.stream()
-                .filter(entry -> entry.getName().toLowerCase(Locale.ROOT).equals(expected))
-                .findFirst()
-                .orElse(null);
-    }
-
-    private static List<String> readEntryLines(ZipFile zip, ZipEntry entry) throws IOException {
-        try (InputStream in = zip.getInputStream(entry)) {
-            List<String> lines = new ArrayList<>();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    lines.add(line);
-                }
-            }
-            return lines;
-        }
-    }
-
-    private static Map<String, String> parseHeader(List<String> lines) {
+    private static Map<String, String> parseHeader(LineSource lines) throws IOException {
         Map<String, String> metadata = new HashMap<>();
-        for (String line : lines) {
+        String line;
+        while ((line = lines.readLine()) != null) {
             String trimmed = stripBom(line).trim();
             if (trimmed.isEmpty() || trimmed.startsWith("[")) {
                 continue;
@@ -141,7 +147,10 @@ public final class Bk2MovieLoader {
         return metadata;
     }
 
-    private static ParsedInputLog parseInputLog(List<String> lines) throws IOException {
+    @FunctionalInterface
+    private interface LineSource { String readLine() throws IOException; }
+
+    private static ParsedInputLog parseInputLog(LineSource lines, int maxFrames) throws IOException {
         String logKey = null;
         List<String> frameLines = new ArrayList<>();
         boolean inInputBlock = false;
@@ -150,7 +159,8 @@ public final class Bk2MovieLoader {
         int firstFrameLineNumber = -1;
         int lineNumber = 0;
 
-        for (String line : lines) {
+        String line;
+        while ((line = lines.readLine()) != null) {
             lineNumber++;
             String stripped = stripBom(line);
             String trimmed = stripped.trim();
@@ -177,6 +187,7 @@ public final class Bk2MovieLoader {
             if (firstFrameLineNumber < 0) {
                 firstFrameLineNumber = lineNumber;
             }
+            if (frameLines.size() == maxFrames) throw new IOException("BK2 input exceeds frame limit");
             frameLines.add(trimmed);
         }
 
@@ -191,7 +202,7 @@ public final class Bk2MovieLoader {
         List<String> firstFrameFields = splitFields(frameLines.get(0));
         FrameBindings p1Bindings = resolveBindings(logKeyFields, firstFrameFields, Lane.P1);
         if (p1Bindings.bindings().isEmpty()) {
-            throw new IOException("Unable to resolve P1 Genesis bindings from LogKey: " + logKey);
+            throw new IOException("Unable to resolve P1 Genesis bindings from LogKey");
         }
         // P2 bindings are optional — older single-controller BK2s won't carry P2 fields.
         FrameBindings p2Bindings = resolveBindings(logKeyFields, firstFrameFields, Lane.P2);

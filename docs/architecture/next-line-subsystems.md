@@ -67,7 +67,16 @@ endpoint requires its bearer token and appends to `admin-audit.jsonl`. Identity 
 rounds, sanctions, and trust tiers persist in SQLite. An active BAN or TIMEOUT rejects
 admission and immediately closes existing master sessions, their tokens, hosted rooms,
 and attached relay connections. TIMEOUT preserves earned standing after expiry; BAN
-resets clean-round standing. Verified rooms are relay-only and
+resets clean-round standing. Anonymous identities that solve creation proof of work can
+reconnect without repeating it while their stamp remains in a bounded LRU cache:
+`newIdentityCacheSize` limits its entries and `newIdentityCacheTtlMinutes` expires
+each stamp from proof completion (reconnects update recency, not expiry). Eviction or
+expiry requires a fresh proof; durable identities retain their existing admission path.
+Each master connection retains at most five pending room-attach grants, expiring 30
+seconds after the latest successful join for that room. The relay creator's initial
+host grant follows the same bounds. Attach consumes a current grant once, including
+when the downstream room or tunnel refuses attachment; expired or evicted grants
+require another rate-limited join. Verified rooms are relay-only and
 need a live replay-verifier worker matching the room's determinism fingerprint; ROM bytes
 never cross the network and worker verdicts are Ed25519-signed. The host accepts attempt
 controls and ghost data only during the running phase, permits one strictly increasing
@@ -166,14 +175,28 @@ channel and should not accept an invite edited by an untrusted party.
 This required wire-field change uses protocol version 2; version 1 clients and
 servers cannot mix on control connections.
 
+Direct-room fallback tunnels check the receiving `HubConnection.queuedBytes()`
+before forwarding either text or binary in either direction. Above the shared
+`GhostHub.BP_DISCONNECT_BYTES` limit of 1 MiB, the router removes and closes only
+the affected guest and sends its usual single guest-close notification to the host.
+Exactly 1 MiB remains admissible, matching the hub's slow-consumer cutoff. A slow
+host retains its shared master link, room registrations and other tunnels, so
+traffic can resume when its queue drains and replacement guests can attach. This
+is a check of reported transport queue occupancy before a payload send, not an
+atomic byte reservation or a bound on cross-event-loop tasks, lifecycle notices,
+or global socket/room scale. Transports without queue telemetry report zero.
+
 ```bash
 python3 racing/server/build.py
 target/racing-server/racing-server load-test --n 256 --duration 30 --mix adversarial
 target/racing-server/racing-server verifier --master https://host:27900 --registration-token <token> --rom s3k.gen --data ./verifier-data
 ```
 
-The CI scale gate runs 32 in-JVM bots through `TestGhostLoadTest`; the 128/256-player gate
-above measures hub aggregation CPU, not deployed socket throughput.
+`TestGhostLoadTest` checks exact healthy completion and adversary outcomes with
+in-JVM bots. The `load-test` command reports hub-tick CPU timing and largest emitted
+packet size; it excludes ingress processing and does not measure transport queues or
+socket throughput. The [racing stress plan](plans/2026-10-21-racing-stress-system.md)
+defines complementary stateful adversarial and real-socket capacity coverage.
 
 ## Scoped mutators prototype
 

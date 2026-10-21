@@ -8,8 +8,6 @@ import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.version.BuildIdentity;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -18,11 +16,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
 public final class UserRecordingCatalog {
-    private static final String MANIFEST_ENTRY = "OpenGGF/manifest.json";
     private static final String BK2_EXTENSION = ".bk2";
     private static final ObjectMapper MANIFEST_MAPPER = new ObjectMapper();
 
@@ -79,16 +74,11 @@ public final class UserRecordingCatalog {
         String loadError = null;
 
         try {
-            manifest = readManifest(path);
-        } catch (IOException ex) {
-            loadError = loadError(path, ex);
-        }
-
-        try {
-            Bk2Movie movie = movieLoader.load(path);
+            manifest = UserRecordingImport.readManifest(path);
+            Bk2Movie movie = UserRecordingImport.loadMovie(movieLoader, path, manifest);
             frameCount = movie.getFrameCount();
         } catch (IOException ex) {
-            loadError = appendLoadError(loadError, loadError(path, ex));
+            loadError = loadError(path, ex);
         }
 
         return new UserRecordingEntry(
@@ -99,18 +89,6 @@ public final class UserRecordingCatalog {
                 modifiedAt,
                 classifyVersionWarning(manifest, currentIdentity),
                 loadError);
-    }
-
-    private static UserRecordingManifest readManifest(Path path) throws IOException {
-        try (ZipFile zip = new ZipFile(path.toFile())) {
-            ZipEntry entry = findEntryIgnoreCase(zip, MANIFEST_ENTRY);
-            if (entry == null) {
-                throw new IOException("BK2 missing required entry: " + MANIFEST_ENTRY);
-            }
-            try (InputStream in = zip.getInputStream(entry)) {
-                return readCatalogManifest(new String(in.readAllBytes(), StandardCharsets.UTF_8));
-            }
-        }
     }
 
     static UserRecordingManifest readCatalogManifest(String json) throws IOException {
@@ -151,14 +129,6 @@ public final class UserRecordingCatalog {
                 validated.frameCount(),
                 validated.stopReason(),
                 validated.createdAt());
-    }
-
-    private static ZipEntry findEntryIgnoreCase(ZipFile zip, String expectedName) {
-        String expected = expectedName.toLowerCase(Locale.ROOT);
-        return zip.stream()
-                .filter(entry -> entry.getName().toLowerCase(Locale.ROOT).equals(expected))
-                .findFirst()
-                .orElse(null);
     }
 
     private static RecordingVersionWarning classifyVersionWarning(UserRecordingManifest manifest,
@@ -211,13 +181,6 @@ public final class UserRecordingCatalog {
 
     private static String loadError(Path path, IOException ex) {
         return path.getFileName() + ": " + ex.getMessage();
-    }
-
-    private static String appendLoadError(String current, String next) {
-        if (current == null || current.isBlank()) {
-            return next;
-        }
-        return current + "; " + next;
     }
 
     private static String normalized(String value) {

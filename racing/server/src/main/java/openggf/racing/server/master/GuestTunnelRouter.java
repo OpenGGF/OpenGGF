@@ -1,14 +1,17 @@
 package openggf.racing.server.master;
 
 import com.openggf.net.hub.HubConnection;
+import com.openggf.net.hub.GhostHub;
 import openggf.racing.protocol.ControlCodec;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.GhostPackets;
+import com.openggf.net.protocol.Protocol;
 import com.openggf.net.protocol.ProtocolViolationException;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.OptionalInt;
+import java.nio.charset.StandardCharsets;
 
 /** Master-side pairing and routing for direct-room fallback guests. */
 public final class GuestTunnelRouter implements RoomBroker.DirectTunnelDirectory {
@@ -45,16 +48,58 @@ public final class GuestTunnelRouter implements RoomBroker.DirectTunnelDirectory
     public void guestText(int guestId, String text) {
         Tunnel tunnel = tunnels.get(guestId);
         if (tunnel != null) {
-            tunnel.host().sendText(ControlCodec.encode(null,
-                    new ControlMessage.RelayGuestText(guestId, text)));
+            if (text == null || text.getBytes(StandardCharsets.UTF_8).length
+                    > Protocol.MAX_CONTROL_BYTES) {
+                rejectGuest(guestId, tunnel, "relay guest text exceeds inner frame cap");
+                return;
+            }
+            String wrapped = ControlCodec.encode(null,
+                    new ControlMessage.RelayGuestText(guestId, text));
+            // Untrusted raw text can expand sixfold during JSON escaping. Never
+            // send a wrapper which would tear down the host's shared master link.
+            if (wrapped.getBytes(StandardCharsets.UTF_8).length
+                    > Protocol.MAX_MASTER_FRAME_BYTES) {
+                rejectGuest(guestId, tunnel, "relay guest text exceeds wrapper frame cap");
+                return;
+            }
+            if (canForwardTo(guestId, tunnel, tunnel.host())) {
+                tunnel.host().sendText(wrapped);
+            }
         }
     }
 
     public void guestBinary(int guestId, byte[] packet) {
         Tunnel tunnel = tunnels.get(guestId);
         if (tunnel != null) {
-            tunnel.host().sendBinary(GhostPackets.encodeRelayGuestBinary(guestId, packet));
+            final byte[] wrapped;
+            try {
+                // The shared encoder owns the binary cap, including its type/id header.
+                wrapped = GhostPackets.encodeRelayGuestBinary(guestId, packet);
+            } catch (ProtocolViolationException invalid) {
+                rejectGuest(guestId, tunnel, "relay guest binary exceeds payload bounds");
+                return;
+            }
+            if (canForwardTo(guestId, tunnel, tunnel.host())) {
+                tunnel.host().sendBinary(wrapped);
+            }
         }
+    }
+
+    private boolean canForwardTo(int guestId, Tunnel tunnel, HubConnection receiver) {
+        // Match the hub's strict cutoff. This samples transport occupancy, not
+        // cross-event-loop work or an atomic reservation for the next payload.
+        if (receiver.queuedBytes() > GhostHub.BP_DISCONNECT_BYTES) {
+            // Even when the host is slow, only this guest leaves: the host link
+            // and its other rooms/tunnels retain their registration and ownership.
+            rejectGuest(guestId, tunnel, "relay receiver too slow");
+            return false;
+        }
+        return true;
+    }
+
+    private void rejectGuest(int guestId, Tunnel tunnel, String reason) {
+        guestDisconnected(guestId);
+        tunnel.guest().close(reason);
     }
 
     public void guestDisconnected(int guestId) {
@@ -73,7 +118,8 @@ public final class GuestTunnelRouter implements RoomBroker.DirectTunnelDirectory
         switch (message) {
             case ControlMessage.RelayGuestText text -> {
                 Tunnel tunnel = tunnels.get(text.guestId());
-                if (ownedBy(tunnel, source)) {
+                if (ownedBy(tunnel, source)
+                        && canForwardTo(text.guestId(), tunnel, tunnel.guest())) {
                     tunnel.guest().sendText(text.text());
                 }
             }
@@ -97,7 +143,8 @@ public final class GuestTunnelRouter implements RoomBroker.DirectTunnelDirectory
             GhostPackets.RelayGuestBinary payload =
                     GhostPackets.decodeRelayGuestBinary(wrapped);
             Tunnel tunnel = tunnels.get(payload.guestId());
-            if (ownedBy(tunnel, source)) {
+            if (ownedBy(tunnel, source)
+                    && canForwardTo(payload.guestId(), tunnel, tunnel.guest())) {
                 tunnel.guest().sendBinary(payload.payload());
             }
         } catch (ProtocolViolationException ignored) {

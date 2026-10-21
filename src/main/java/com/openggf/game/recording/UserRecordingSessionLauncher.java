@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.GameLoop;
 import com.openggf.ModSubsystem;
 import com.openggf.TraceSessionLauncher;
+import com.openggf.debug.playback.Bk2Archive;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.debug.playback.PlaybackDebugManager;
@@ -12,10 +13,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.level.LevelManager;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -29,8 +27,6 @@ import java.util.zip.ZipFile;
 
 public final class UserRecordingSessionLauncher {
     private static final String ROUTE_CURRENT_ACT_FRESH_START = "current-act-fresh-start";
-    private static final String MANIFEST_ENTRY = "OpenGGF/manifest.json";
-    private static final String DESYNC_LITE_ENTRY = "OpenGGF/desync-lite.jsonl";
     private static final DateTimeFormatter FILE_TIMESTAMP =
             DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmmss");
     private static final ObjectMapper SIDECAR_MAPPER = new ObjectMapper();
@@ -117,9 +113,9 @@ public final class UserRecordingSessionLauncher {
         Objects.requireNonNull(entry, "entry");
         Objects.requireNonNull(options, "options");
 
-        UserRecordingManifest manifest = readManifest(entry.path());
+        UserRecordingManifest manifest = UserRecordingImport.readManifest(entry.path());
         RecordingLaunchContext context = manifest.launchContext();
-        Bk2Movie movie = movieLoader.load(entry.path());
+        Bk2Movie movie = UserRecordingImport.loadMovie(movieLoader, entry.path(), manifest);
         UserRecordingVerifier verifier = createVerifier(entry.path(), manifest);
 
         disableExternalContentForDeterminism();
@@ -217,19 +213,6 @@ public final class UserRecordingSessionLauncher {
         activePlaybackState = UserRecordingPlaybackState.STOPPED;
     }
 
-    private static UserRecordingManifest readManifest(Path bk2Path) throws IOException {
-        try (ZipFile zip = new ZipFile(bk2Path.toFile())) {
-            ZipEntry entry = findEntryIgnoreCase(zip, MANIFEST_ENTRY);
-            if (entry == null) {
-                throw new IOException("BK2 missing required entry: " + MANIFEST_ENTRY);
-            }
-            try (var in = zip.getInputStream(entry)) {
-                String json = new String(in.readAllBytes(), StandardCharsets.UTF_8);
-                return UserRecordingCatalog.readCatalogManifest(json);
-            }
-        }
-    }
-
     private static UserRecordingVerifier createVerifier(Path bk2Path, UserRecordingManifest manifest)
             throws IOException {
         UserRecordingSidecarMetadata sidecar = manifest.sidecar();
@@ -238,7 +221,7 @@ public final class UserRecordingSessionLauncher {
                 > UserRecordingSidecarMetadata.CURRENT_DESYNC_LITE_SCHEMA_VERSION) {
             return UserRecordingVerifier.unsupportedSchema(sidecar.desyncLiteSchemaVersion());
         }
-        SidecarReadResult sidecarRead = readDesyncLiteWithPresence(bk2Path);
+        SidecarReadResult sidecarRead = readDesyncLiteWithPresence(bk2Path, manifest);
         if (!sidecarRead.present()) {
             return UserRecordingVerifier.missingSidecar();
         }
@@ -246,36 +229,47 @@ public final class UserRecordingSessionLauncher {
                 sidecar == null ? UserRecordingSidecarMetadata.everyFrame() : sidecar);
     }
 
-    private static SidecarReadResult readDesyncLiteWithPresence(Path bk2Path) throws IOException {
+    private static SidecarReadResult readDesyncLiteWithPresence(Path bk2Path, UserRecordingManifest manifest)
+            throws IOException {
         try (ZipFile zip = new ZipFile(bk2Path.toFile())) {
-            ZipEntry entry = findEntryIgnoreCase(zip, DESYNC_LITE_ENTRY);
+            ZipEntry entry = Bk2Archive.findUniqueEntry(zip, UserRecordingImport.SIDECAR_ENTRY);
             if (entry == null) {
                 return new SidecarReadResult(false, List.of());
             }
             List<DesyncLiteFrame> frames = new ArrayList<>();
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(zip.getInputStream(entry), StandardCharsets.UTF_8))) {
+            boolean everyFrame = "every-frame".equalsIgnoreCase(manifest.sidecar().sampleMode());
+            try (var reader = new Bk2Archive.LineReader(
+                    Bk2Archive.openEntry(zip, entry, UserRecordingImport.MAX_SIDECAR_BYTES),
+                    UserRecordingImport.MAX_SIDECAR_BYTES, UserRecordingImport.MAX_LINE_BYTES)) {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     String trimmed = line.trim();
                     if (!trimmed.isEmpty()) {
-                        frames.add(SIDECAR_MAPPER.readValue(trimmed, DesyncLiteFrame.class));
+                        if (frames.size() == manifest.frameCount()) {
+                            throw new IOException("Recording sidecar exceeds frame count");
+                        }
+                        DesyncLiteFrame frame;
+                        try {
+                            frame = SIDECAR_MAPPER.readValue(trimmed, DesyncLiteFrame.class);
+                        } catch (IOException invalid) {
+                            throw new IOException("Invalid recording sidecar row");
+                        }
+                        if (frame == null || frame.frame() < 0 || frame.frame() >= manifest.frameCount()
+                                || (everyFrame && frame.frame() != frames.size())) {
+                            throw new IOException("Recording sidecar frame index mismatch");
+                        }
+                        frames.add(frame);
                     }
                 }
+            }
+            if (everyFrame && frames.size() != manifest.frameCount()) {
+                throw new IOException("Recording sidecar frame count mismatch");
             }
             return new SidecarReadResult(true, frames);
         }
     }
 
     private record SidecarReadResult(boolean present, List<DesyncLiteFrame> frames) {
-    }
-
-    private static ZipEntry findEntryIgnoreCase(ZipFile zip, String expectedName) {
-        String expected = expectedName.toLowerCase(java.util.Locale.ROOT);
-        return zip.stream()
-                .filter(entry -> entry.getName().toLowerCase(java.util.Locale.ROOT).equals(expected))
-                .findFirst()
-                .orElse(null);
     }
 
     interface GameLoopAdapter {
