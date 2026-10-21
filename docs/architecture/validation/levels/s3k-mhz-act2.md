@@ -1021,3 +1021,15 @@ Same-JVM preboot/post-stop production author/loader plus independent script/BK2 
 Session50783 exited0,0 JUnit/skips N/A:reported queue66s/Maven01:25/AUTHOR25.459954305s including product proof; engine-only/tail-only unmeasured, no original/metadata exception. The gameplay question failed before launch.
 The [R21 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-upper-ledge-onward-ordinary-question-r21--2026-10-21) pins policy/source/products/command/21:24 workload/21:34 cleanup; owned raw outputs/classes/tmp/validation copies were consumed under leases, target absent.
 Useful exact inputs/private source/preimages/all56 ordered rows/compact facts remain external. Prior refs/native/config/maintained runtime/data/oracles/windows are preserved; no safe onward or full-route qualification. STOP Root review, no push/integration/automatic next workload.
+
+### Knuckles original upper-ledge immediate-jump alternative R22 — 2026-10-21
+
+At exact702a976d, ONLY original R20's43341 pads/490 complete64 checkpoints matched; [R20 setup](#knuckles-lower-recovery-jump-to-ledge-ordinary-question-r20--2026-10-21), runtime/POM/observer/context order are unchanged. Failed R21's later56 rows remain historical, not replayed.
+ImmediateRA43341 actually jumped; cachedVY32 at43369 selected oneR release43370/VY88 and oneRA repress43371/actualglide1. No approach-band wait/retiming/second jump/retry occurred.
+Glide1 continued through43456 at11314/2201,VX1364/VY112/G1364/radii10x10. First fall2 at43457 was11317/2201,VX0/VY144/G1368,air/jumpingtrue/default9x19,anim33/map202; no climb4/ledge5/Up or ground exit was reached.
+117 new/43458 total normal step/draw pairs ran:actual29RA,1R,87RA/P2neutral. All new original context/pending/fade/control/rider/safety guards passed; rings/lives stayed1/3, no new publichurt/death/ring loss, actualridernone/onObjectfalse.
+This is an airborne frontier, not a safe inlet or avoidance/native/physics proof. Static face11328/stale Spikes do not identify selected contact/fit geometry/writer/receiver; protection/fluid/reverse/invulnerability/mutation remain UNKNOWN. Old R21 short-circuited operands stay UNKNOWN.
+Same-JVM preboot/post-stop production author/loader and independent script/BK2 whole43458-row/entire43341-prefix/payload/P2/JUMP0x10 proofs passed; all117 complete new rows/errors/proofs/metadata were read.
+Session49706 exited0,0 JUnit/skips N/A:reported queue215s/Maven01:27/AUTHOR22.867235552s including product proof; engine-only/tail-only unmeasured, no original/metadata exception. Requested climb/ledge-exit target was not reached.
+The [R22 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-original-upper-ledge-immediate-jump-alternative-r22--2026-10-21) pins policy/source/products/command/22:04 workload/22:14 cleanup; owned raw outputs/classes/tmp/validation copies were consumed under leases, target absent.
+Useful inputs/private source/preimages/all117 ordered rows/compact facts remain external. Prior refs/native/config/maintained runtime/data/oracles/windows are preserved; STOP Root review, no push/integration/automatic next workload.
