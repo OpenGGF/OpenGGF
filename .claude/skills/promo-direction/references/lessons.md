@@ -50,8 +50,10 @@ are preserved in [OpenGGF-Media](https://github.com/OpenGGF/OpenGGF-Media/tree/m
 The user subsequently rejected the implausible manually positioned jump and asked
 for default floor contact and native physical direction. Revision three is therefore
 a superseded take, despite its successful decoding and bounded agent review.
-The follow-up uses Puppet mode: destination/urgency and jump commands feed native
-inputs, with actual terrain collision, gravity and landing. Poser mode retains manual
+The terrain follow-up uses `TERRAIN_ONLY` Puppet mode: destination/urgency and
+jump commands feed native inputs, with actual terrain collision, gravity and
+landing. The later `LIVE` policy runs actors, placed objects, rings and events in
+one native world, with authored shot spawns, routes and bounded waits. Poser mode retains manual
 position, animation and frame control for intentional nonphysical staging. Inspect
 simulation state before rendering and review the resulting movement; never substitute
 a fitted position curve for a requested native jump. Code and codec checks alone
@@ -71,18 +73,24 @@ cannot establish creative acceptance.
   hard to read (ring repulsion, an invisible boss). Reframe or recapture.
 - Cutting every shot from the same idle point makes the reel look like "the
   same jump with a new label". Vary the entry points.
-- Staged performance needs direction. Puppet mode runs native player physics
-  against terrain; destinations can be blocked and do not add pathfinding or world
-  object AI. Use explicit jump commands. Poser mode keeps manual choreography.
+- Staged performance needs direction. `TERRAIN_ONLY` Puppets run native player
+  physics against detached static terrain without placed-object AI, rings or zone
+  events. `LIVE` runs those production world owners together; destinations can
+  still be blocked and do not add universal pathfinding. Author explicit jumps,
+  ability intents and bounded waits. Poser mode keeps manual choreography.
   Check actual entrances, exits, floor contact, facing and reactions in motion.
 - Names and consistent placement identify a speaker; color alone does not,
   particularly when several roles use the same stock sprite. Give reveal,
   reading and response their own time instead of forcing each line onto a beat.
 - Do not confuse the compositor's filtered camera with engine world rendering.
   `promo_kit.game_view` enlarges with integer nearest-neighbour and applies a BOX
-  area filter. Stageplay zoom holds between keys; avoid animated fractional
+  area filter. `TERRAIN_ONLY` zoom holds between keys; `LIVE` keeps zoom 1. Avoid animated fractional
   nearest-neighbour source zoom. Scaling the finished frame cannot reconstruct
   stable edges that were lost to changing pixel steps in the source.
-- Authored timeline JSONL describes directing intent; simulate JSONL resolves native
-  Puppet motion against detached terrain; gameplay CSV describes a full gameplay
-  run. Keep all three distinct in provenance and retain the required source archive.
+- Authored `timeline` JSONL describes directing intent with physical actors
+  `UNRESOLVED`. `simulate` JSONL resolves either `TERRAIN_ONLY` native actor motion
+  on static terrain or `LIVE` native world state/events in `sample.world`. Normal
+  gameplay CSV describes an observed gameplay run; retain its input and actual
+  entry method. Authored spawns, positioned starts and cuts cannot establish a
+  continuous cold completion, and none of these alone proves ROM parity. Keep
+  those evidence kinds distinct and retain the required source archive.

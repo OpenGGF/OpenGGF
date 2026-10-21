@@ -2287,8 +2287,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Must be called after a level is loaded (dimensions are immutable during gameplay).
      */
     private void cacheLevelDimensions() {
-        LevelManagerInitializationSupport.cacheLevelDimensions(this,
-                level != null ? computeActualBgDataWidthPx() : blockPixelSize);
+        LevelManagerInitializationSupport.cacheLevelDimensions(this, LOGGER);
         collisionLayoutYMask = resolveCollisionLayoutYMask();
     }
 
@@ -2350,33 +2349,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         return new LevelGeometry(level, cachedFgWidthPx, cachedFgHeightPx,
                 cachedBgWidthPx, cachedBgContiguousWidthPx, cachedBgHeightPx,
                 blockPixelSize, chunksPerBlockSide);
-    }
-
-    /**
-     * Scan the BG layer (layer 1) to find the contiguous data width.
-     * On the Mega Drive, the BG nametable is a 512px-wide ring buffer.
-     * The scroll handler fills it from the BG map, wrapping at the map's
-     * data width.  The Map stores both FG and BG with the same total width
-     * (e.g., 128 blocks = 16384px), but BG data typically only spans a
-     * small contiguous region from column 0 (e.g., 8 blocks for HTZ).
-     * <p>
-     * Using the contiguous BG data width for X wrapping ensures that queries
-     * at large camera X positions wrap back to valid BG data rather than
-     * reading empty columns in the unused portion of the map.
-     * <p>
-     * Example: HTZ BG data spans 8 contiguous columns (1024px) within a
-     * 128-column map.  Without this fix, bgTilemapBaseX=6144 queries
-     * column 48 (empty).  With contiguous width = 1024px wrapping,
-     * 6144 mod 1024 = 0 → column 0 (valid).
-     */
-    private int computeActualBgDataWidthPx() {
-        int dataWidthPx = LevelGeometry.contiguousBgDataWidthPx(level, blockPixelSize);
-        if (level != null && level.getMap() != null
-                && dataWidthPx < level.getMap().getWidth() * blockPixelSize) {
-            LOGGER.fine("BG contiguous data width: " + dataWidthPx / blockPixelSize + " blocks ("
-                    + dataWidthPx + "px) out of " + level.getMap().getWidth() + " map columns");
-        }
-        return dataWidthPx;
     }
 
     /** Fast cached getter for layer pixel width (avoids per-call getLayerWidthBlocks). */

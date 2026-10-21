@@ -97,7 +97,11 @@ All use `worldPolicy:LIVE`, physical performers and zoom one. Their controllers
 publish independent native input. Objects, rings, collision, clocks and RNG belong
 to one production world per shot. Posers and old files retain their original
 presentation/terrain-only behavior. The authored routes make explicit jump and
-wait decisions; no universal pathfinder is claimed.
+wait decisions; no universal pathfinder is claimed. Each shot explicitly cues
+its matching ROM track at local frame zero: DEZ1 22, DEZ2 23 and AIZ1 1, verified
+by `catalog` against the supplied locked-on ROM. The parent preview and exporter
+consume the same music cues alongside native SFX. LIVE films hide the gameplay
+HUD and reveal terrain immediately; authored transitions own their opening reveal.
 
 From this engine worktree, use Java 25, Lua 5.4, FFmpeg, and the existing supplied
 locked-on ROM. Build once after source changes, then use a fresh external output

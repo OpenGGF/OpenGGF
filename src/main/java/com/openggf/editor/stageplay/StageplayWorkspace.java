@@ -105,7 +105,10 @@ public final class StageplayWorkspace {
     /** Frontends suspend held camera controls while a palette or text widget owns input. */
     public void setCameraInputEnabled(boolean enabled) { cameraInputEnabled = enabled; if (!enabled) resetZoomRepeat(); }
     public StageplayTimeline.CameraPose directorCamera() {
-        return cameraDraft != null ? cameraDraft : StageplayTimeline.sample(recordingDocument(), controller.frame()).baseCamera();
+        if (cameraDraft != null) return cameraDraft;
+        var document = recordingDocument();
+        return liveCamera() ? resolvePreview(document, controller.frame()).baseCamera()
+                : StageplayTimeline.sample(document, controller.frame()).baseCamera();
     }
     public String status() { return status; }
     public Path path() { return path; }
@@ -148,7 +151,9 @@ public final class StageplayWorkspace {
                 case PUPPET_ACTIONS -> puppetMenu();
                 case CAMERA_MODE -> {
                     cameraMode = !cameraMode; cameraDraft = null;
-                    status = cameraMode ? "Camera: WASD / arrows pan, Q / E step integer zoom, K capture key, R record, C leave camera." : "Actor direction";
+                    status = !cameraMode ? "Actor direction" : liveCamera()
+                            ? "LIVE camera: WASD / arrows pan, fixed zoom 1, K capture key, R record, C leave camera."
+                            : "Camera: WASD / arrows pan, Q / E step integer zoom, K capture key, R record, C leave camera.";
                 }
                 case SET_CAMERA_KEY -> captureCameraKey();
                 case CAMERA_KEY -> cameraMenu();
@@ -392,7 +397,7 @@ public final class StageplayWorkspace {
             throw new IllegalArgumentException("Camera movement and zoom must be finite; zoom must be positive");
         if (screenX == 0 && screenY == 0 && zoomFactor == 1) return;
         var camera = directorCamera();
-        double zoom = zoomFactor == 1 ? camera.zoom() : Math.clamp(Math.round(camera.zoom() * zoomFactor), 1, 64);
+        double zoom = liveCamera() ? 1 : zoomFactor == 1 ? camera.zoom() : Math.clamp(Math.round(camera.zoom() * zoomFactor), 1, 64);
         // Keep the film centre steady while zooming; movement is measured in visible pixels.
         double x = camera.x() + screenX / camera.zoom() + controller.document().width() * (.5 / camera.zoom() - .5 / zoom);
         double y = camera.y() + screenY / camera.zoom() + controller.document().height() * (.5 / camera.zoom() - .5 / zoom);
@@ -406,7 +411,8 @@ public final class StageplayWorkspace {
         var key = new CameraKey(controller.frame(), camera.x(), camera.y(), camera.zoom(), Interpolation.LINEAR);
         edit(d -> d.withCamera(withCameraKey(d.camera(), key)));
         cameraDraft = null;
-        status = "Camera key captured at frame " + controller.frame() + ". Later keys animate pans; zoom changes cut at their key.";
+        status = "Camera key captured at frame " + controller.frame() + (liveCamera()
+                ? ". Authored LIVE framing at fixed zoom 1; following is cleared at this key." : ". Later keys animate pans; zoom changes cut at their key.");
     }
 
     private void startCameraTake() {
@@ -419,7 +425,8 @@ public final class StageplayWorkspace {
         cameraMode = true; takeBefore = before; takeCameraKeys = keys;
         takeDraft = before.withCamera(keys);
         cameraDraft = null;
-        status = "Recording camera: WASD / arrows pan, Q / E step integer zoom, Space stops. One take is one undo.";
+        status = liveCamera() ? "Recording authored LIVE camera: WASD / arrows pan, fixed zoom 1, Space stops. Capture replaces following; one take is one undo."
+                : "Recording camera: WASD / arrows pan, Q / E step integer zoom, Space stops. One take is one undo.";
     }
 
     void recordCameraStep(int horizontal, int vertical, double zoomFactor) {
@@ -456,7 +463,12 @@ public final class StageplayWorkspace {
         return (input.isKeyDown(GLFW_KEY_S) || input.isKeyDown(GLFW_KEY_DOWN) ? 1 : 0)
                 - (input.isKeyDown(GLFW_KEY_W) || input.isKeyDown(GLFW_KEY_UP) ? 1 : 0);
     }
+    private boolean liveCamera() {
+        return StageplayTimeline.sample(recordingDocument(), controller.frame()).set().worldPolicy() == WorldPolicy.LIVE;
+    }
+
     private double zoomInput(InputHandler input) {
+        if (liveCamera()) { resetZoomRepeat(); return 1; }
         int direction = (input.isKeyDown(GLFW_KEY_E) ? 1 : 0) - (input.isKeyDown(GLFW_KEY_Q) ? 1 : 0);
         if (direction == 0) { resetZoomRepeat(); return 1; }
         boolean step = direction != zoomHeldDirection;
@@ -795,41 +807,54 @@ public final class StageplayWorkspace {
     }
 
     private void cameraMenu() {
-        menu.showActions("Camera at frame " + controller.frame(), List.of(action("Set camera key", this::cameraForm),
+        var actions = new ArrayList<EditorProjectMenu.Action>(List.of(action("Set camera key", this::cameraForm),
                 action("Remove camera key", () -> {
                     if (controller.frame()==0) throw new IllegalStateException("The frame-zero camera key is required");
                     if (isSceneBoundary(controller.frame())) throw new IllegalStateException("A scene change needs this camera key. Remove the scene change first.");
                     edit(d -> d.withCamera(d.camera().stream().filter(k -> k.frame()!=controller.frame()).toList()));
-                }), action("Capture 1x pixel framing", () -> captureZoom(1)),
-                action("Capture 2x pixel framing", () -> captureZoom(2)),
-                action("Capture 3x pixel framing", () -> captureZoom(3)),
-                action("Capture 4x pixel framing", () -> captureZoom(4))));
+                })));
+        for (int zoom : liveCamera() ? List.of(1) : List.of(1, 2, 3, 4))
+            actions.add(action("Capture " + zoom + "x pixel framing", () -> captureZoom(zoom)));
+        menu.showActions("Camera at frame " + controller.frame(), actions);
+        if (liveCamera()) menu.setSubtitle("LIVE cameras use fixed zoom 1. Use export scale for a larger movie.");
     }
 
     private void captureZoom(int zoom) { moveCamera(0,0,zoom/directorCamera().zoom()); captureCameraKey(); }
 
     private void cameraForm() {
+        boolean live = liveCamera();
         int frame = controller.frame();
         var existing=controller.document().camera().stream().filter(k -> k.frame()==frame).findFirst().orElse(null);
         var camera = existing==null ? integerCamera(directorCamera()) : directorCamera();
         var interpolation = controller.document().camera().stream().filter(k -> k.frame() <= frame).reduce((a,b) -> b).orElseThrow().interpolation();
         var follow=existing==null?CameraFollow.none():existing.follow();
+        var resolved = live ? resolvePreview(controller.document(), frame).baseCamera() : camera;
+        var authored = StageplayTimeline.sample(controller.document(), frame).baseCamera();
         menu.showForm("Camera key at frame " + frame,List.of(number("x","World left X",camera.x()),number("y","World top Y",camera.y()),
-                number("zoom","Zoom (integer 1..64)",camera.zoom()),text("interpolation","HOLD / LINEAR / SMOOTH",interpolation.name()),
+                number("zoom",live ? "Zoom (LIVE fixed at 1)" : "Zoom (integer 1..64)",camera.zoom()),text("interpolation","HOLD / LINEAR / SMOOTH",interpolation.name()),
                 text("follow","Follow actor IDs (comma separated; empty = authored)",String.join(",",follow.actors())),
                 number("deadX","Horizontal dead zone",follow.deadZoneX()),number("deadY","Vertical dead zone",follow.deadZoneY()),
                 number("ahead","Look ahead (ticks)",follow.lookAhead()),number("smooth","Smoothing (0.001..1)",follow.smoothing()),
                 number("offsetX","Follow offset X",follow.offsetX()),number("offsetY","Follow offset Y",follow.offsetY())),"Set camera",v -> edit(d -> {
             double zoom=decimal(v,"zoom");
+            if (live && zoom != 1) throw new IllegalArgumentException("LIVE cameras require fixed zoom 1. Use export scale for a larger movie.");
             if ((existing==null || zoom!=existing.zoom()) && (zoom<1 || zoom!=Math.rint(zoom)))
                 throw new IllegalArgumentException("New framing uses integer zoom (1..64). Existing fractional values may be kept unchanged.");
             var keys = new ArrayList<>(d.camera()); keys.removeIf(k -> k.frame()==frame);
-            keys.add(new CameraKey(frame,decimal(v,"x"),decimal(v,"y"),zoom,Interpolation.valueOf(v.get("interpolation").toUpperCase(java.util.Locale.ROOT)),
-                    new CameraFollow(v.get("follow").isBlank()?List.of():java.util.Arrays.stream(v.get("follow").split(",")).map(String::trim).toList(),
-                            decimal(v,"deadX"),decimal(v,"deadY"),decimal(v,"ahead"),decimal(v,"smooth"),decimal(v,"offsetX"),decimal(v,"offsetY"))));
+            double x=decimal(v,"x"), y=decimal(v,"y");
+            var actors=v.get("follow").isBlank()?List.<String>of():java.util.Arrays.stream(v.get("follow").split(",")).map(String::trim).toList();
+            boolean following=live && !actors.isEmpty();
+            var nextFollow=new CameraFollow(actors,decimal(v,"deadX"),decimal(v,"deadY"),decimal(v,"ahead"),decimal(v,"smooth"),
+                    decimal(v,"offsetX")+(following?x-resolved.x():0), decimal(v,"offsetY")+(following?y-resolved.y():0));
+            // A resolved follow view is not its authored seed. Position edits adjust the follow
+            // offset; an unchanged submit must preserve replay's original smoothing history.
+            keys.add(new CameraKey(frame,following?(existing==null?authored.x():existing.x()):x,
+                    following?(existing==null?authored.y():existing.y()):y,zoom,
+                    Interpolation.valueOf(v.get("interpolation").toUpperCase(java.util.Locale.ROOT)),nextFollow));
             keys.sort(Comparator.comparingInt(CameraKey::frame)); return d.withCamera(keys);
         }));
-        menu.setSubtitle("Pan uses the chosen interpolation; zoom is held until the next key. Integer zoom preserves pixel framing. Imported fractional zoom can shimmer while panning.");
+        menu.setSubtitle(live ? "LIVE fixed zoom 1. With following, position edits adjust follow offsets; Capture key / Record stores authored framing. Use export scale for a larger movie."
+                : "Pan uses the chosen interpolation; zoom is held until the next key. Integer zoom preserves pixel framing. Imported fractional zoom can shimmer while panning.");
     }
 
     private boolean isSceneBoundary(int frame) {

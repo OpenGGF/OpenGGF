@@ -201,6 +201,14 @@
           "height": 60,
           "typerId": "pace"
         }
+      ],
+      "audio": [
+        {
+          "frame": 0,
+          "kind": "ROM_MUSIC",
+          "gameId": "s3k",
+          "soundId": 22
+        }
       ]
     }
   ],

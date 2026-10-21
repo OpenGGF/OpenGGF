@@ -465,6 +465,14 @@
           "x": 8,
           "y": 206
         }
+      ],
+      "audio": [
+        {
+          "frame": 0,
+          "kind": "ROM_MUSIC",
+          "gameId": "s3k",
+          "soundId": 23
+        }
       ]
     },
     {
@@ -652,7 +660,15 @@
       "transition": {
         "kind": "FADE_BLACK",
         "durationFrames": 12
-      }
+      },
+      "audio": [
+        {
+          "frame": 0,
+          "kind": "ROM_MUSIC",
+          "gameId": "s3k",
+          "soundId": 22
+        }
+      ]
     },
     {
       "id": "regroup",
@@ -883,7 +899,15 @@
       "transition": {
         "kind": "FADE_BLACK",
         "durationFrames": 12
-      }
+      },
+      "audio": [
+        {
+          "frame": 0,
+          "kind": "ROM_MUSIC",
+          "gameId": "s3k",
+          "soundId": 1
+        }
+      ]
     },
     {
       "id": "retry",
@@ -1235,7 +1259,15 @@
       "transition": {
         "kind": "FADE_BLACK",
         "durationFrames": 12
-      }
+      },
+      "audio": [
+        {
+          "frame": 0,
+          "kind": "ROM_MUSIC",
+          "gameId": "s3k",
+          "soundId": 23
+        }
+      ]
     },
     {
       "id": "closing",
@@ -1455,6 +1487,14 @@
           "text": "ONE MORE RUN",
           "x": 8,
           "y": 84
+        }
+      ],
+      "audio": [
+        {
+          "frame": 0,
+          "kind": "ROM_MUSIC",
+          "gameId": "s3k",
+          "soundId": 1
         }
       ]
     }

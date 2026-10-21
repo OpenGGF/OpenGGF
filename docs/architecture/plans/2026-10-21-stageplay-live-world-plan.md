@@ -458,3 +458,104 @@ JAVA_TOOL_OPTIONS/DISPLAY/WAYLAND_DISPLAY unset. Root owns combined ordinary
 smoke and external editor/media; no broad ordinary or duplicate foundation
 selection is authorized in this support slice. New guard violations will be
 fixed without weakening policy and then checked narrowly.
+
+### Integration-support findings and source freeze
+
+Foundation repair merged as `c391d5c08e881b0313044b4b548c7e2421852399`.
+The single full guard invocation on that exact merged state was:
+
+```bash
+env -u JAVA_TOOL_OPTIONS -u DISPLAY -u WAYLAND_DISPLAY -u MAVEN_ARGS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B
+```
+
+Observed **718 tests, 7 failures, 0 errors/skips**, Maven execution 5:39.
+Five failures match root's reported baseline by identity and owner:
+
+- `TestArchUnitRules.shared_code_does_not_construct_concrete_sonic_provider_classes`
+  and `shared_layers_do_not_depend_on_game_specific_packages`: HubMusicController.
+- `TestProductionSingletonClosureGuard.productionCodeDoesNotUseForbiddenProcessSingletonsOutsideEngineServices`
+  and `productionCodeOnlyUsesRawGetInstanceAtEngineServicesBootstrapBridge`:
+  MenuAudioProbeTool's AudioManager singleton.
+- `TestNativeImageResourceGuard.everyRuntimeResourceIsReachableFromTheNativeImageConfig`:
+  AuthoredLevelDecoder service declaration.
+
+The two new architectural source violations were attributable and corrected:
+remove LIVE's redundant bootstrap `GameModuleRegistry.setCurrent` write (the
+WorldSession already owns the active module), and finish extracting background
+width/cache initialization into `LevelManagerInitializationSupport`. The copied
+geometry calculation and log category are unchanged. No policy, exclusion,
+budget or approval scope changed. A native lifecycle assertion preserves the
+pre-session bootstrap module through LIVE setup/replay/close.
+
+Root's moving review found black terrain at frame zero and gameplay HUD glyphs.
+A new first-draw regression reproduced only 1,507 coloured pixels. Texture IDs
+were stable before/after drawing: missing texture initialization was rejected.
+The owning S3K animator instead starts the real level-load palette fade with
+lines 1–3 black while player line zero remains visible. Cinematic rendering now
+scopes an unfaded display through draw/flush and restores the native requested
+fade, displayed generation, pending publication and prior hold. It does not tick
+actors, clocks or the fade timer. Authored transitions own the film's reveal.
+Cinematic options omit gameplay HUD/debug/art-viewer passes but retain world
+sprites, rings and water. Rendering regressions cover first/repeated draw,
+unchanged clocks/position/fade publication and a real HUD-pixel positive control:
+removing all HUD rows changes ordinary rendering but leaves film pixels identical.
+All five native pixel cases passed, including the previous act/roster round trip.
+
+The shared workspace's unkeyed camera now uses resolved LIVE follow framing,
+without recursing through previewFrame. Pan/capture/record starts at that view;
+Capture/Record explicitly stores authored framing and clears follow at those
+keys. The camera form retains follow: displayed position edits adjust offsets,
+while an unchanged submit preserves the authored seed and smoothing history.
+LIVE controls keep zoom one and omit higher-zoom menu choices. A host regression
+returns a follow view far from the authored origin and verifies those semantics.
+
+Each new demonstration shot now has an explicit local-frame-zero ROM_MUSIC cue,
+so parent preview and export share directed music while preserving native SFX.
+`catalog --game s3k --rom "$STAGEPLAY_ROM" --character sonic --zone 11 --act 1`
+verified locked-on SHA-1 `cfbf98c36c776677290a872547ac47c53d2761d6` and music IDs
+DEZ1=22, DEZ2=23, AIZ1=1. Canonical scenes are regenerated from those screenplays.
+No new audio API, public Mod API surface or version/pin change is needed.
+
+Promo-direction, its lessons, gameplay-highlights and Stageplay authoring skills
+now distinguish authored UNRESOLVED samples, TERRAIN_ONLY native actor simulation,
+LIVE native world telemetry and normal gameplay CSV. All edits are mirrored.
+LIVE telemetry substantiates observed native interactions from authored shot
+setups; cold continuous completion and ROM parity need separate evidence. Root
+owns general stageplay.md, next-line-subsystems and changelog wording; this slice
+leaves those files alone.
+
+Focused native/palette/geometry checks in the combined command below passed
+**27 tests, 0 failures/errors/skips** (plus ten legacy Puppet workspace tests).
+The initial workspace test had a stale-error assertion after a successful closed
+form; the menu intentionally retains its last error text when closed. The
+assertion now checks successful closure. An earlier attempt stopped at test
+compilation because the pixel test reused x/y locals; no tests ran in that attempt.
+The final shared-workspace rerun passed **20 tests, 0 failures/errors/skips**.
+
+```bash
+env -u JAVA_TOOL_OPTIONS -u DISPLAY -u WAYLAND_DISPLAY -u MAVEN_ARGS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$STAGEPLAY_ROM" \
+  '-Dtest=TestStageplayLiveWorldRendering,TestStageplayLiveWorldRom,TestStageplayLiveDemosRom,TestStageplayLivePreviewRom,TestStageplayDirectingWorkspace,TestStageplayPuppetWorkspace,TestPaletteUploadLatch,TestLevelBoundsMaskGeometry' test -B
+# Final workspace check after the resolved-camera correction:
+env -u JAVA_TOOL_OPTIONS -u DISPLAY -u WAYLAND_DISPLAY -u MAVEN_ARGS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestStageplayDirectingWorkspace,TestStageplayPuppetWorkspace' test -B
+```
+
+The exact `-Dmse=off -Pguards -Dtest=TestArchitecturalSourceGuard test -B`
+rerun passed **72 tests, 0 failures/errors/skips**, Maven execution 30.229 s.
+All four canonical scenes were regenerated: only audio cue lists changed
+(1/1/1/5 cues); every other canonical field equals the preceding scene.
+Syntax, skill mirrors and whitespace checks passed.
+
+Remaining at this checkpoint: local source-freeze commit, then build without
+tests and regenerate four review MKVs/QA images. Updated JSONL will retain
+identical native samples while reflecting the added authored music cues. Preserve
+the former review set under a clearly superseded external subdirectory; leave
+root-created MP4s/scripts/layout review intact. Root may merge the frozen commit
+and begin combined ordinary smoke independently while this worktree captures.

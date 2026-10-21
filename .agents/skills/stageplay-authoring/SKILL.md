@@ -117,8 +117,8 @@ must be judged by their observed motion, not the apparent smoothness of camera k
 ## Boundaries that affect directing
 
 TERRAIN_ONLY sets use detached ROM resources: their scene switches do not run native gameplay loads,
-world-object AI or zone-event simulations. LIVE sets opt into the isolated native world described below. Physical puppets do run native player
-physics against detached terrain; that does not prove full-world route completion
+world-object AI or zone-event simulations. LIVE sets opt into the isolated native world described below. `TERRAIN_ONLY` Puppets run native player
+physics against detached static terrain; that does not prove full-world route completion
 or ROM parity. Camera shake and zoom affect presentation, not collision or
 native camera state. Native handover requires the same supported native set and resumes
 unshaken positions; cross-game scenery belongs to staged playback. State these limits
@@ -148,3 +148,14 @@ gameplay/editor world. Do not tween placed objects, force runtime positions or
 velocities, assign pickup counters, or substitute a hurt pose. Only initial shot
 placement may set an actor's centre. Save source scenes in the repo and durable
 state/movie evidence in the task's external capture directory.
+
+LIVE film views omit gameplay HUD/debug overlays and reveal fresh terrain without
+advancing actors through the native load palette fade. Author shot transitions
+for the intended reveal. LIVE camera controls show the resolved follow view;
+Capture key / Record stores authored framing and clears following at those keys.
+The camera form keeps follow targets and applies position edits as follow offsets.
+
+Place explicit `ROM_MUSIC` cues at each shot's local frame zero using verified
+`catalog` IDs. Preview's worker silences automatic level music because the parent
+owns authored cues; exports use the same cues and keep native SFX. A soundtrack
+heard only in a capture is not evidence of matching preview playback.

@@ -17,10 +17,14 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestStageplayLiveWorldRom {
     @org.junit.jupiter.api.BeforeEach void logicGraphics() { com.openggf.game.GameServices.graphics().initHeadless(); }
     @Test void twoPerformersSharePlacedPlatformAndWholeWorldReplay() throws Exception {
+        var bootstrap = com.openggf.game.GameModuleRegistry.getBootstrapDefault();
         try (var library = SceneRomLibrary.open(Map.of("s3k", Path.of(System.getProperty("s3k.rom.path"))));
              var world = StageplayLiveWorld.adoptOffline(library, SessionManager.getCurrentGameplayMode())) {
             var doc = platform();
             var at35 = world.resolve(doc, StageplayTimeline.sample(doc, 35));
+            assertSame(bootstrap, com.openggf.game.GameModuleRegistry.getBootstrapDefault(),
+                    "An offline native world owns its module through WorldSession, not bootstrap state");
+            assertSame(SessionManager.requireCurrentGameModule(), com.openggf.game.GameModuleRegistry.getCurrent());
             assertEquals(2, at35.world().actors().size());
             assertTrue(at35.world().actors().stream().allMatch(a -> a.onObject()), at35.toString());
             assertTrue(at35.world().actors().stream().allMatch(a -> a.ridingLayoutIndex() == 179));
@@ -34,6 +38,8 @@ class TestStageplayLiveWorldRom {
             assertEquals(at100, world.resolve(doc, StageplayTimeline.sample(doc, 100)), "native world + director must replay identically");
             assertEquals(65, at100.world().levelFrame() - at35.world().levelFrame());
         }
+        assertSame(bootstrap, com.openggf.game.GameModuleRegistry.getBootstrapDefault(),
+                "Closing an offline world must preserve the pre-session bootstrap module");
     }
 
     @Test void independentControllersArePublishedBeforeNativeObjectAndZonePhasesWithoutTicking() throws Exception {

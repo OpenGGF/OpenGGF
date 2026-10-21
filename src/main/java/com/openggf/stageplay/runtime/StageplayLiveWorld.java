@@ -138,7 +138,6 @@ public final class StageplayLiveWorld implements AutoCloseable {
             owned = SessionManager.openGameplaySession(module, module, StockGameDataSources.pinned(rom, module), null);
             GameplaySessionFactory.attachManagers(owned, services);
             services.graphics().bindRuntimeManagedReferences(owned.getCamera(), owned.getFadeManager());
-            GameModuleRegistry.setCurrent(module);
             var team = GameplayTeamBootstrap.registerActiveTeam(module, owned.getSpriteManager(), config);
             var nativeCast = new ArrayList<AbstractPlayableSprite>(); nativeCast.add(team.mainSprite()); nativeCast.addAll(team.sidekicks());
             if (nativeCast.size() != performers.size()) throw new IllegalArgumentException("Native module cannot register the requested cast");
@@ -444,16 +443,25 @@ public final class StageplayLiveWorld implements AutoCloseable {
             }
             camera.setX((short) Math.round(view.x())); camera.setY((short) Math.round(view.y()));
             camera.setXCopy(camera.getX()); camera.setYCopy(camera.getY());
-            owned.getLevelManager().setClearColor();
-            org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT | org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT);
-            owned.getLevelManager().drawCinematicWorld(owned.getSpriteManager());
-            var graphics = EngineServices.current().graphics();
-            graphics.flush();
-            if (graphics.getUiRenderPipeline() != null) graphics.getUiRenderPipeline().renderFadePass();
+            // Native fresh-level palette reveal is load presentation. The shot's authored
+            // transitions own its reveal; leave native timers/CRAM publication intact for replay.
+            if (owned.getLevelManager().getAnimatedPaletteManager() instanceof com.openggf.game.internal.LevelPaletteFadeOwner fade
+                    && fade.presentsLevelFadeFromBlack())
+                com.openggf.graphics.PaletteUploadPresentation.withoutDisplayedFade(EngineServices.current().graphics(), this::drawNativeFrame);
+            else drawNativeFrame();
         } finally {
             for (int i=0; i<cast.size(); i++) cast.get(i).sprite.setHidden(hidden.get(i));
             camera.restore(saved, camera.getFocusedSprite());
         }
+    }
+
+    private void drawNativeFrame() {
+        owned.getLevelManager().setClearColor();
+        org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT | org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT);
+        owned.getLevelManager().drawCinematicWorld(owned.getSpriteManager());
+        var graphics = EngineServices.current().graphics();
+        graphics.flush();
+        if (graphics.getUiRenderPipeline() != null) graphics.getUiRenderPipeline().renderFadePass();
     }
 
     private Saved capture() {

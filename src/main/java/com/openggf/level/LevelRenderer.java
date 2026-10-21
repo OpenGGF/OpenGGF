@@ -945,7 +945,7 @@ public final class LevelRenderer {
     void drawCinematicWorld(SpriteManager sprites) {
         if (cinematicDraw) throw new IllegalStateException("Nested cinematic world draw");
         cinematicDraw = true;
-        try { drawWithRenderOptions(sprites, LevelManager.LevelRenderOptions.gameplay()); }
+        try { drawWithRenderOptions(sprites, new LevelManager.LevelRenderOptions(true, true, true, false, false, false, true)); }
         finally { cinematicDraw = false; }
     }
 

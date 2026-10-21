@@ -28,11 +28,15 @@ without replacing existing files. Choose a new output name for each take.
 seconds, active set, poses, camera, transition and cues. `--every N` chooses a
 coarser inspection interval; it does not change the movie cadence. This is authored
 directing state: physical actors are explicitly `UNRESOLVED` here. Use `simulate`
-with explicit `--s1-rom`, `--s2-rom` and/or `--s3k-rom` paths to evaluate native player
-physics against detached terrain without a window or audio playback. Its JSONL
-contains actual positions, velocity, grounded state and movement status. It advances
-every native tick even with `--every N`. Neither command simulates native objects or
-zone events. Keep bulk timelines beside the movie.
+with explicit `--s1-rom`, `--s2-rom` and/or `--s3k-rom` paths to evaluate native
+behavior without a window or audio playback. Under `TERRAIN_ONLY`, this is native
+actor physics against detached static terrain, without placed-object AI, rings or
+zone events. Under `LIVE`, it is one shared native world with actors, placed objects,
+rings and events in `sample.world`. Both simulations report actual positions,
+velocity, grounded state and movement status, advancing every native tick even
+with `--every N`. LIVE shot spawns and cuts remain authored; these observations
+do not alone prove a continuous cold route or ROM parity. Keep bulk timelines
+beside the movie, labelled by world policy rather than as normal gameplay CSV.
 `catalog` verifies the requested ROM identity and reports native registry metadata,
 character animation IDs, delays and mapping frames. Add both `--zone` and `--act`
 to decode one detached set and report bounds. A registry entry alone does not certify
@@ -48,8 +52,11 @@ use the capture host's hidden native context; macOS uses Java's first thread.
 
 ## Screenplay format
 
-The current screenplay format is `version:2`; the generated scene uses Stageplay
-version 4. Version-one screenplays retain manual movement for compatibility. JSON numbers retain their types: numeric strings, duplicate fields,
+The current screenplay format is `version:3`; the generated scene uses Stageplay
+version 5. Version-one screenplays retain manual movement; version two retains
+terrain-only native Puppets. The compatible version-two example below introduces
+the common tracks; see [Live ROM worlds](#live-rom-worlds-screenplay-3-document-5)
+for version-three additions. JSON numbers retain their types: numeric strings, duplicate fields,
 unknown fields and trailing input are rejected. Maximum input size is 8 MiB.
 
 ```json
@@ -128,7 +135,7 @@ the source when you want to revise it programmatically.
 
 ## Puppet and Poser modes
 
-Version-two cast members default to `puppet:true`, `snapToFloor:true` and
+Version-two and version-three cast members default to `puppet:true`, `snapToFloor:true` and
 `collisionPath:0` (**Puppet** mode). Add `puppet:false` for **Poser** mode, with
 manual position, animation and frame selection. A physical
 actor's frame-zero key is a spawn centre; it keeps `animation:0`, `pose:-1`,
@@ -157,16 +164,19 @@ surface; snapping is not a search through the entire level. Once moving, normal
 native collision maintains floor contact or lets the actor fall from an edge.
 `collisionPath` selects terrain path 0 or 1. A destination's Y is part of the
 arrival check, not a vertical movement command: use `JUMP` explicitly when needed.
-There is no automatic route finding, obstacle jump or moving-platform simulation.
+There is no automatic route finding or obstacle jump. `TERRAIN_ONLY` omits moving
+platforms and other placed-object simulation; `LIVE` uses native objects and
+collision with explicit routes/targets and bounded waits.
 
-`simulate` reports `IDLE`, `MOVING`, `STOPPING`, `ARRIVED` or `BLOCKED` plus the
+`TERRAIN_ONLY` simulation reports `IDLE`, `MOVING`, `STOPPING`, `ARRIVED` or `BLOCKED` plus the
 active movement-command ID. Blocking describes lack of progress and does not
 silently cancel the attempt. Roles hidden for the entire shot report `INACTIVE` and
 do not need a floor spawn in that shot. Inspect actual positions and status before rendering;
 a pure `timeline` sample deliberately reports `UNRESOLVED` for physical actors.
 Scrubbing and repeated drawing resolve the same frame without adding ticks or
-playing historical sounds. Native movement sound effects are silent in this
-isolated simulation; place explicit ROM audio cues in the film.
+playing historical sounds. `TERRAIN_ONLY` movement effects are silent; place
+explicit ROM cues in the film. LIVE preview/export also includes forward-only
+native SFX; distinguish those observed events from authored audio cues.
 
 ## Dialogue profiles and decorations
 
@@ -222,9 +232,10 @@ The same definitions work in both editors and offline rendering without mod code
 
 ## Pixel stability and performance
 
-Camera positions interpolate; camera zoom holds its value until the next key.
-The current renderer does not animate zoom. Use held integer scales, cuts and pans
-for framing; a future smooth world-compositing pass would be needed for animated
+Camera positions interpolate. `TERRAIN_ONLY` camera zoom holds its value until
+the next key; `LIVE` cameras use fixed zoom 1, with pans or actor/group follow.
+The renderer does not animate zoom. Use held integer scales for terrain-only
+framing, cuts and pans; a future smooth world-compositing pass would be needed for animated
 fractional zoom. A larger export `--scale` cannot repair aliasing already present
 in the authored frame. Stage entrances, exits, turns and listener reactions, then
 review the entire movie in motion at its intended output size.
@@ -234,7 +245,11 @@ review the entire movie in motion at its intended output size.
 Existing scenes keep `TERRAIN_ONLY`. A shot opts into a living native level with
 `"set":{"gameId":"s3k","zone":11,"act":1,"worldPolicy":"LIVE"}`.
 All physical cast in that shot use the set's native donor. LIVE views use native
-height 224 and widths 320–1920; use export scale for a larger output. Live spawn
+height 224 and widths 320–1920; use export scale for a larger output. Films omit
+gameplay HUD/debug overlays, while native ring telemetry remains available. The
+cinematic draw reveals fresh terrain immediately instead of showing the native
+load palette fade; native fade timers and actor/world clocks remain unchanged.
+Authored shot transitions still control the film reveal. Live spawn
 snapping attaches feet near the floor; disable it for an authored fall. Live worlds run in an
 owned offline process; preview never replaces the editor's active world. The
 in-engine workspace uses a persistent offscreen worker for native pixels and the
@@ -290,6 +305,11 @@ one. Empty actors preserve authored camera keys. Handoffs occur at camera keys.
 The director uses simulated positions and deterministic tick-based smoothing,
 clamps to level bounds, then composes the existing shake. Native camera/focus
 continues to own activation; cinematic camera offsets are temporary render state.
+The shared camera controls start from the resolved LIVE follow view. Capture key
+and Record camera store authored framing, clearing following at the captured keys.
+The camera form preserves follow targets: editing its displayed position adjusts
+follow offsets while preserving the authored smoothing seed. An unchanged form
+submission does not bake the current follow result into that seed.
 Keep the ensemble within the native activation window; wide separated routes are
 not independently activated by a cinematic group camera.
 
@@ -304,3 +324,9 @@ Shot boundaries start a clean world; never interpret spawn placement as movement
 LIVE registered cutscenes use the same isolated world and forward-only native SFX
 packets as editor preview. They cannot borrow/overwrite an interactive player
 through the optional native binding; that existing binding remains terrain-only.
+
+Direct music explicitly with a `ROM_MUSIC` cue at each shot's local frame zero,
+using the matching `catalog` music ID. The isolated preview worker stops its
+automatic level music because the parent owns authored music; offline exports
+consume those same cues alongside native SFX. Do not rely on capture-only level
+music as the film's directed soundtrack.
