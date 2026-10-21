@@ -1,0 +1,235 @@
+package com.openggf.tools;
+
+import com.openggf.Engine;
+import com.openggf.InputBindingFactory;
+import com.openggf.audio.AudioManager;
+import com.openggf.audio.HeadlessSmpsAudioBackend;
+import com.openggf.audio.NullAudioBackend;
+import com.openggf.capture.GlReadPixelsGrabber;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.control.InputHandler;
+import com.openggf.data.RomManager;
+import com.openggf.debug.DebugOverlayManager;
+import com.openggf.debug.PerformanceProfiler;
+import com.openggf.debug.playback.PlaybackDebugManager;
+import com.openggf.game.CrossGameFeatureProvider;
+import com.openggf.game.GameMode;
+import com.openggf.game.RomDetectionService;
+import com.openggf.game.session.EngineContext;
+import com.openggf.graphics.GraphicsManager;
+
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.function.Consumer;
+
+import static org.lwjgl.glfw.GLFW.*;
+
+/**
+ * Display-free capture driver for the ordinary Engine startup and Time Attack UI.
+ * Inputs: an output/profile directory and an existing ROM directory. Run with an
+ * isolated working directory: the mod's identity and ghost paths are relative to it.
+ * Origin: 2026-10-21 Time Attack relay-capacity video task.
+ *
+ * <p>The public configured-session seam deliberately omits platform initialization.
+ * Reflection here reuses its three remaining production presentation/boot operations;
+ * no gameplay state or scene state is injected. A frame is Engine.display(), including
+ * hosted-run callbacks and HUD, with no native window, swap, or desktop event polling.
+ */
+public final class TimeAttackVideoCaptureTool implements AutoCloseable {
+    private final int width;
+    private final int height;
+    private final Path output;
+    private final HeadlessGameBoot glBoot;
+    private final Engine engine;
+    private final InputHandler input;
+    private final AudioManager audio;
+    private final HeadlessSmpsAudioBackend offlineBackend;
+    private final GlReadPixelsGrabber grabber;
+    private final Method display;
+    private long frames;
+    private Consumer<TimeAttackVideoCaptureTool> beforeFrame = ignored -> { };
+    private Consumer<TimeAttackVideoCaptureTool> afterFrame = ignored -> { };
+    private boolean closed;
+
+    public TimeAttackVideoCaptureTool(Path output, Path romRoot) throws Exception {
+        this(output, romRoot, 960, 672);
+    }
+
+    public TimeAttackVideoCaptureTool(Path output, Path romRoot, int width, int height) throws Exception {
+        this.output = output.toAbsolutePath().normalize();
+        this.width = width;
+        this.height = height;
+        Files.createDirectories(this.output);
+        System.setProperty("openggf.headless.gl", "surfaceless-egl");
+        System.setProperty("openggf.saveRoot", this.output.resolve("profile/saves").toString());
+        // Retire any inherited device owner before boot or external content can play.
+        audio = AudioManager.getInstance();
+        audio.setBackend(new NullAudioBackend());
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(this.output.resolve("profile"));
+        config.setSessionOverride(SonicConfiguration.AUDIO_ENABLED, true);
+        config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH, width);
+        config.setSessionOverride(SonicConfiguration.SCREEN_HEIGHT, height);
+        config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, 320);
+        config.setSessionOverride(SonicConfiguration.SCREEN_HEIGHT_PIXELS, 224);
+        config.setSessionOverride(SonicConfiguration.ROMS_DIRECTORY, romRoot.toAbsolutePath().normalize().toString());
+        config.setSessionOverride(SonicConfiguration.TEST_MODE_ENABLED, false);
+        config.setSessionOverride(SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP, true);
+        config.setSessionOverride(SonicConfiguration.SHOW_LEGAL_DISCLAIMER_ON_STARTUP, true);
+        config.setSessionOverride(SonicConfiguration.DEBUG_VIEW_ENABLED, false);
+        EngineContext context = new EngineContext(config, GraphicsManager.getInstance(), audio,
+                RomManager.getInstance(), PerformanceProfiler.getInstance(), DebugOverlayManager.getInstance(),
+                PlaybackDebugManager.getInstance(), RomDetectionService.getInstance(), CrossGameFeatureProvider.getInstance());
+        try {
+            glBoot = new HeadlessGameBoot(width, height, context);
+            engine = new Engine(context);
+            input = new InputHandler(InputBindingFactory.supplier(config));
+            offlineBackend = new HeadlessSmpsAudioBackend(config, context.profiler());
+            grabber = new GlReadPixelsGrabber(width, height);
+            display = method("display");
+            invoke(method("initializeExternalContentAtBoot"));
+            invoke(method("initializePresentationGraphics"));
+            invoke(method("reshape", int.class, int.class), width, height);
+            engine.initializeConfiguredHeadlessSession(input, offlineBackend);
+            requireOfflineAudioOwner();
+        } catch (Throwable failure) {
+            try { close(); } catch (Throwable cleanup) { failure.addSuppressed(cleanup); }
+            throw failure;
+        }
+    }
+
+    public Engine engine() { return engine; }
+    public InputHandler input() { return input; }
+    public long frameNumber() { return frames; }
+    public int width() { return width; }
+    public int height() { return height; }
+    public void beforeFrame(Consumer<TimeAttackVideoCaptureTool> hook) { beforeFrame = hook; }
+    public void afterFrame(Consumer<TimeAttackVideoCaptureTool> hook) { afterFrame = hook; }
+
+    public void frame() throws Exception {
+        if (closed) throw new IllegalStateException("capture closed");
+        requireOfflineAudioOwner();
+        beforeFrame.accept(this);
+        requireOfflineAudioOwner();
+        if (!(Boolean) invoke(display)) throw new IllegalStateException("Engine aborted its display frame");
+        requireOfflineAudioOwner();
+        frames++;
+        afterFrame.accept(this);
+        requireOfflineAudioOwner();
+    }
+
+    /** Exact retained no-device owner, including across scene-launched level loads. */
+    private void requireOfflineAudioOwner() {
+        if (!audio.hasInstalledBackend(offlineBackend)) {
+            throw new IllegalStateException("Capture's supplied offline audio backend was replaced");
+        }
+    }
+
+    public void frames(int count) throws Exception {
+        for (int i = 0; i < count; i++) frame();
+    }
+
+    /** Use real physical keyboard events so both menu layers and gameplay see them. */
+    public void key(int key, boolean held) { input.handleKeyEvent(key, held ? GLFW_PRESS : GLFW_RELEASE); }
+
+    public void tap(int key) throws Exception {
+        key(key, true);
+        frame();
+        key(key, false);
+        frame();
+    }
+
+    /** Returns reusable RGBA bytes in GL bottom-up order, ready for ffmpeg vflip. */
+    public byte[] pixels() { return grabber.grab(); }
+
+    public void png(String name) throws IOException {
+        capture(output.resolve(name));
+    }
+
+    public void capture(Path destination) throws IOException {
+        byte[] rgba = pixels();
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int index = ((height - 1 - y) * width + x) * 4;
+                int argb = ((rgba[index + 3] & 255) << 24) | ((rgba[index] & 255) << 16)
+                        | ((rgba[index + 1] & 255) << 8) | (rgba[index + 2] & 255);
+                image.setRGB(x, y, argb);
+            }
+        }
+        ImageIO.write(image, "png", destination.toFile());
+    }
+
+    /** Ordinary fresh-start route; every transition is driven by the actual input handler. */
+    public void openTimeAttack() throws Exception {
+        frames(40);
+        png("01-legal.png");
+        frames(310);
+        tap(GLFW_KEY_ENTER);
+        for (int i = 0; i < 180 && engine.getCurrentGameMode() != GameMode.MASTER_TITLE_SCREEN; i++) frame();
+        if (engine.getCurrentGameMode() != GameMode.MASTER_TITLE_SCREEN)
+            throw new IllegalStateException("startup did not reach master title: " + engine.getCurrentGameMode());
+        frames(80);
+        png("02-master-title.png");
+        tap(GLFW_KEY_UP);
+        tap(GLFW_KEY_RIGHT);
+        tap(GLFW_KEY_RIGHT);
+        tap(GLFW_KEY_ENTER);
+        frames(30);
+        png("03-extras.png");
+        tap(GLFW_KEY_ENTER);
+        frames(80);
+        png("04-time-attack.png");
+        if (engine.getCurrentGameMode() != GameMode.MOD_SCENE)
+            throw new IllegalStateException("Extras did not open Time Attack: " + engine.getCurrentGameMode());
+    }
+
+    private static Method method(String name, Class<?>... parameters) throws NoSuchMethodException {
+        Method method = Engine.class.getDeclaredMethod(name, parameters);
+        method.setAccessible(true);
+        return method;
+    }
+
+    private Object invoke(Method method, Object... arguments) throws Exception {
+        try { return method.invoke(engine, arguments); }
+        catch (InvocationTargetException failure) {
+            if (failure.getCause() instanceof Exception exception) throw exception;
+            if (failure.getCause() instanceof Error error) throw error;
+            throw new RuntimeException(failure.getCause());
+        }
+    }
+
+    @Override public void close() throws Exception {
+        if (closed) return;
+        closed = true;
+        try {
+            if (engine != null) invoke(method("cleanup"));
+        } finally {
+            try {
+                if (engine != null) engine.closeConfiguredHeadlessSession();
+            } finally {
+                try {
+                    if (grabber != null) grabber.close();
+                } finally {
+                    Engine.clearGlobalInstance();
+                    if (glBoot != null) glBoot.close();
+                }
+            }
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        if (args.length != 2) throw new IllegalArgumentException("Usage: TimeAttackVideoCaptureTool OUTPUT_DIR ROM_DIR");
+        try (TimeAttackVideoCaptureTool capture = new TimeAttackVideoCaptureTool(Path.of(args[0]), Path.of(args[1]), 960, 672)) {
+            capture.frame();
+            capture.png("00-first-frame.png");
+            capture.openTimeAttack();
+            System.out.println("Captured real startup to " + capture.output + " in " + capture.frames + " frames");
+        }
+    }
+}

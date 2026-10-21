@@ -1351,7 +1351,9 @@ public class GameLoop {
             updateNonGameplayAudio(doFrameStep);
         }
 
-        if (!playbackDebugManager.isCurrentGameplayTickSuppressed()) {
+        // Master-title Extras can open a MOD_SCENE before the first gameplay
+        // session. Its menu has no world timers until a run actually loads.
+        if (timerManager != null && !playbackDebugManager.isCurrentGameplayTickSuppressed()) {
             profiler.beginSection("timers");
             timerManager.update();
             profiler.endSection("timers");

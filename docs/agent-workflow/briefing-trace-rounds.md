@@ -71,6 +71,13 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+An injected offline audio backend can be replaced at a later launch boundary
+(2026-10-21, full Time Attack capture). EGL and `java.awt.headless` isolate no
+audio devices. Ordinary Engine launch preparation previously replaced the supplied
+headless backend with LWJGL. Verify exact backend and no-device sink ownership
+through startup, level launch and return, and check the production PCM packets;
+startup identity alone does not establish isolation for the recording.
+
 An in-process network bot is not a socket-capacity measurement (2026-10-21,
 racing stress). The old load report called its largest emitted packet "queued
 bytes", although its sink discarded packets immediately. It also timed only hub

@@ -75,7 +75,9 @@ public final class HostRoundEngine {
     }
 
     boolean mayStartAttempt() {
-        return phase == Phase.RUNNING && hubClockMillis.getAsLong() <= deadline;
+        long now = hubClockMillis.getAsLong();
+        advanceCountdown(now);
+        return phase == Phase.RUNNING && now <= deadline;
     }
 
     public boolean startRound(ControlMessage.RoundConfig newConfig) {
@@ -99,9 +101,7 @@ public final class HostRoundEngine {
 
     public void onTick() {
         long now = hubClockMillis.getAsLong();
-        if (phase == Phase.COUNTDOWN && now >= countdownEndsAt) {
-            phase = Phase.RUNNING;
-        }
+        advanceCountdown(now);
         // Keep accepted attempts alive for finishes in transit. The protocol has no
         // trusted completion timestamp, so the host cannot prove a finish happened
         // before the deadline; RoomHost separately stops new attempts at deadline.
@@ -142,6 +142,15 @@ public final class HostRoundEngine {
         }
         if (phase == Phase.VOTE && now >= voteEndsAt) {
             closeVote();
+        }
+    }
+
+    private void advanceCountdown(long now) {
+        // Socket messages and scheduled ticks share the host clock but can arrive
+        // in either order. Admit the announced start boundary even when its tick
+        // callback has not run yet; deadline/grace checks remain with each owner.
+        if (phase == Phase.COUNTDOWN && now >= countdownEndsAt) {
+            phase = Phase.RUNNING;
         }
     }
 
@@ -266,6 +275,7 @@ public final class HostRoundEngine {
                                   String character, ControlMessage.AttemptFinish finish,
                                   boolean attemptFlagged) {
         long now = hubClockMillis.getAsLong();
+        advanceCountdown(now);
         if (phase != Phase.RUNNING || now > deadline + FINISH_GRACE_MILLIS
                 || attemptFlagged || finish.timeFrames() <= 0
                 || finish.attemptId() <= lastFinishedAttemptByParticipant

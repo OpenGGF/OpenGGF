@@ -31,6 +31,7 @@ TOOLS = {
     "verifier": "openggf.racing.server.verifier.VerifierMain",
     "load-test": "openggf.racing.server.tools.GhostLoadTestTool",
     "socket-stress": "openggf.racing.server.tools.RacingSocketStressTool",
+    "capture-video": "openggf.racing.server.tools.TimeAttackCapacityVideoTool",
     "track-profiles": "openggf.racing.server.tools.TrackProfileExportTool",
 }
 

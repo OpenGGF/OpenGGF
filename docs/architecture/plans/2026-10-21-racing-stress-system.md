@@ -142,3 +142,88 @@ These are single local observations, not throughput thresholds. Server, clients 
 source proxy share the JVM; synthetic poses do not run the engine or ROM playback.
 The relay result certifies one full room. It does not establish a global master-room
 limit, external-network behavior, sustained soak stability or isolated server cost.
+
+## Full-capacity video follow-up
+
+The 2026-10-21 video request uses an isolated worktree based on `02325fd02`.
+`TimeAttackCapacityVideoTool` drives the real Engine through its legal screen,
+master title, Extras entry, Time Attack setup, master browser, relay lobby,
+countdown and stock GHZ1 run. A fresh external working directory owns identity,
+ghosts, settings, saves and all capture output. Surfaceless EGL and direct input
+handler events keep the shared desktop outside the capture.
+
+The one rendered player consumes only P1 controller input from the maintained
+`src/test/resources/traces/s1/ghz1_fullrun/ghz1_fullrun.bk2`, starting at row 840.
+There are no position, clock, ring or completion seeds and no trace-state reads.
+A separate cold route check consumed 3,966 inputs without death, reached the
+signpost at frame 3,229 and rendered the native 0:53 results. The remaining 255
+real authenticated relay connections publish delayed cosmetic copies of the
+visible player's observed poses and synthetic, unverified finish claims. This
+is one engine simulation beside 255 protocol clients, not 256 independently
+completed ROM simulations. Established identity admission is seeded for the
+owned server, as in the capacity harness; production address/room caps remain.
+
+The end-to-end recording uncovered gaps hidden by lower-level tests:
+
+- Before any game had loaded, mod-scene updates dereferenced a missing world timer
+  and drawing dereferenced a missing camera. Both now respect the absence of a
+  gameplay world; a real title-entry scene regression covers update/input/draw.
+- The generic gameplay reset retired the Time Attack scene during hosted launch
+  and return. The runtime-only reset now retains that owner; ordinary title and
+  stock-game transitions continue retiring it. The regression exercises repeated
+  failed launches, return and explicit retirement on the real Engine owner path.
+- A client could reach the advertised countdown expiry before the host's next
+  scheduled tick. Its valid start was rejected, and subsequent ghost packets
+  caused disconnection. Start/finish admission now advances countdown state from
+  the host clock. Tests cover exact expiry before a tick and unchanged deadline
+  and grace limits. The socket harness no longer adds an 80 ms delay that masked
+  this boundary.
+- Ordinary Engine launch preparation replaced an injected headless audio backend
+  with LWJGL, leaking sound to desktop devices. The owned recording was stopped
+  when reported. Configured headless sessions now retain the exact supplied
+  backend and rebuild only its no-device sink; the capture checks its identity
+  around every frame. Regressions exercise repeated resets/launch preparation,
+  the actual headless backend, no-device sinks and offline PCM packets.
+
+The first offscreen prototype used a 960x672 GL context whose fixed-function
+projection did not match the Engine's 320x224 shader projection; its gameplay HUD
+was visibly misplaced. The retained recording uses native 320x224 rendering and
+FFmpeg nearest-neighbour scaling. Gameplay-only capture was useful for route
+qualification, but the actual Engine presentation owner is required to record
+startup, scenes, hosted HUD, fades and production audio together.
+
+The tool records a 30 fps silent MP4, presentation-aligned stereo PCM, chapter
+positions, native stills and observed state. It requires every accepted standings
+row and checks owned socket/proxy shutdown before marking cleanup complete.
+Timing includes rendering, encoding and colocated peers and is not a benchmark.
+
+Final focused verification used Java 25 and:
+
+```sh
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestFirstBootModScene,TestEngineConfiguredHeadlessStartup,TestEngine,TestMenuScreenModeController,TestSceneRunLauncher,TestHostedRunController,TestModEngineWiringSeams,TestHostRoundEngine,TestHostRoundEngineVote,TestHostRoundEngineVerified,TestRacingSocketStress' test
+```
+
+It passed 113 tests with zero failures, errors or skips. The final tool-only
+constructor-failure cleanup adjustment compiled independently with `javac --release
+25`; it changes no recording or gameplay behavior. The server CLI rebuilt with
+`python3 racing/server/build.py --skip-engine`. Change-based planning selected all
+3,523 smoke classes and guards. Focused owner/consumer checks replace that broad
+selection here: runtime reset consumers, fresh scenes, configured audio ownership,
+round timing/verification/votes and all socket stress transports are covered;
+no initialized gameplay algorithm or ROM behavior changes.
+
+The completed recording has 5,137 presentations (85.616 seconds), 4,302 consecutive
+presentations at 256 admitted connections, a natural player finish after 3,230
+movie inputs, and all 256 accepted unverified standings rows. It received 2,214,259
+ghost entries, then closed all owned peer/server/proxy resources successfully.
+The final 1280x720/30 fps MP4 has chapter markers and offline stereo 48 kHz AAC.
+The backend log contains only Null then Headless SMPS initialization; exact-owner
+checks remained active across every presented frame. Selected lobby, gameplay and
+native results frames were inspected. The audio track is non-silent and peaks at
+-9.4 dBFS. These are capture observations, not server performance measurements.
+
+The recording and selected stills live outside the repository under
+`$CAPTURE_ROOT/timeattack-capacity-video-20261021/`.
+This follow-up leaves its branch local for integration; it does not mutate or
+push the main checkout.

@@ -16,6 +16,8 @@ Unreleased. The earlier development themes remain in
   including recording uploads. Master challenge solving is serial, cancellable and
   limited to 24 bits and 30 seconds, with one coalesced pending proof write under
   transport backpressure.
+  Time Attack opens directly from a fresh boot, retains its lobby and connections
+  while launching a level, and resumes its owning scene after a run or load failure.
 
 - **Multiplayer services:** The master recording/verifier API bounds outstanding
   requests and copied bodies across connections, closes overlapping HTTP pipelines,
@@ -31,7 +33,8 @@ Unreleased. The earlier development themes remain in
   Creation-proof reconnect stamps and one-use room-attach grants have explicit
   expiry and cardinality bounds.
   Capacity reports count completed work and rejections separately from latency and
-  colocated process costs.
+  colocated process costs. Valid attempts at the published countdown boundary are
+  admitted even when the scheduled host tick has not run yet.
 
 - **Putt Putt Paradise multiplayer:** Scene admission bounds aggregate clipped
   raster work, lines clip before traversal, and unchanged presentations reuse

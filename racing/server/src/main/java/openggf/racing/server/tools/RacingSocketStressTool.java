@@ -253,7 +253,7 @@ public final class RacingSocketStressTool {
             await(() -> peers.stream().allMatch(peer -> peer.roundStarted), "round start for every peer");
             long countdown = peers.getFirst().countdownEndsAt;
             checkRoundStartAgreement();
-            await(() -> System.currentTimeMillis() >= countdown + 80, "wall-clock countdown");
+            await(() -> System.currentTimeMillis() >= countdown, "wall-clock countdown");
             stage = "measured traffic";
             traffic();
             stage = "round end";
