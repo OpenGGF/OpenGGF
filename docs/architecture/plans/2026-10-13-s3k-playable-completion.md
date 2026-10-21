@@ -23589,3 +23589,135 @@ The source/test/native/project-path diff has SHA256
 `f2068340f8d79a2b62714a4023287d8bed450736a08906bc861c18c8be3ac1fe`.
 Local outer gitlink/documentation commit and cleanup state are reported in the
 parent handoff; all worktree branches remain local for review.
+
+
+## 2026-10-21 native reset-prefix R2: maintained reader and managed byte pin
+
+This followup preserves the R1 outer commit `e38b6533738f6edb2849407a7e6ce1370094c398`
+and native commit `84a7e67ee94d546fc3ff3167240fbe256f4e8e8c`. R1's commands,
+results and two reports above remain historical. Its managed digest was recorded,
+but the CLI did not enforce the stock byte pin; those old reports do not acquire
+the qualification added here. The actual work remains in the same owned nested
+`native-reset-prefix` worktree and local `feature/ai-native-reset-prefix-20261021`
+branches, independently of the app's preserved `efd605142` checkout. Exact task/run
+IDs, resolved working directories, commands and ownership are in the existing
+private registry's `agents.native_reset_prefix_implementation.followups.r2_managed_identity_and_main_reader`.
+Root/Main and their working gitlinks were not edited.
+
+### Preserving the maintained native base
+
+The current destination gitlink is `4c3d6ba8c93ae0e607cb15e16e367d47f40f36a0`,
+not the historical native binary hash prefix `4fdf044`. A normal native merge,
+`c976bcf753c66726de2ad25eee0d79f8714e69a4`, has parents84a7 and4c3. It retains
+all453 lines of `StockKosLiveClockReader.cs` byte-for-byte (SHA256
+`60d014fc3eefe76ef104625676c0122e0eafeb48d6d216f3af05f4e6c847186e`), the maintained
+owning-project guidance and identical AGENTS/CLAUDE mirrors, its single production
+Compile entry and its unchanged README section. Both prefix production Compile
+entries also remain. Project XML checks confirm109 unique production and80 unique
+test Compile entries, with production source referenced rather than compiled again
+in the test project. The dormant reader contributes no reset provenance and has
+no new wiring.
+
+The managed correction is native commit
+`703bd92d32634ce5ebac60625b48c60ef5500427`, directly after that merge. The final
+native tree is `eb61ea653b70b9cab90786014f7deaeb9c2abd6a`.
+
+### Actual loaded constructor qualification
+
+Before `GpgxHost.Open` can construct GPGX, the diagnostic checks the actual
+`typeof(GPGX).Assembly`: ordinary BizHawk.Emulation.Cores2.11.0.0, canonical loaded
+location equal to the explicit installation, no ambiguous second loaded assembly,
+and exact SHA256 matching `source-lock.json`'s `stock.cores_sha256`:
+`0144e6e236be68ce126eb771dcb5a9ae7c153a083fa0333f345ac37b4a60acf7`.
+The source-lock schema and declared BizHawk427 commit must also match. The loaded
+module ID must agree with metadata from the authenticated file; reflection-only
+metadata loading does not construct GPGX. Loaded assembly reference, location,
+digest, module ID and source-lock digest must remain the same immediately after
+construction, after observation and immediately before publication. Native build
+identity is checked before Open, after observations and before publication.
+Reports use that verified loaded identity, not a hash inferred from an assumed
+installation filename. This is artifact/module qualification, not host/live-IL
+attestation; concurrent artifact or IL mutation remains unsupported.
+
+The current loaded module is `9404fb97-fb75-4ebb-9153-5264f4ff6a38`; the source-lock
+file SHA256 is `348ffd29471bcd9a0f452b6112a7bed941f0dd43f364a315c5cbd68f918205f9`.
+The newly qualified harness executable is837632 bytes, SHA256
+`dad8d30f427978166fcc048dafc8a8d41e6dfce9615a664f33b159cd2f6c44a3`, superseding R1's
+`13d785b2c79b06d5289720ae9beec3bd05b66de80d421281e16d3d4b3de6a79e` for this maintained
+source. The test assembly is1310208 bytes, SHA256
+`8aee825c6e12c463a68c5d2010fcad2e987066c0972ad2c1f0d9eb9db0447cf1`.
+
+### Native reuse and actual focused controls
+
+No native rebuild was run. All43 non-Markdown native input files are byte-identical
+to84a7, including patches0001–0006, source-lock, builders/installers and selftests.
+All10 consumed source Git objects, pinned clang/lld, recorded sysroot/zstd digests,
+build identity, raw build core and installed compressed core match the qualified
+R1 build. The installation carries only the compressed core; the raw build file
+was independently rehashed. Compressed SHA256 remains
+`b665a2dd91df065f410841c6caa5fb6d322ad6025e02750aae4d14d2f3a83543`, raw SHA256 remains
+`b9ace4f67f675d645c476a69ccf2c394a8bbbefb4d417a7e7f0d54289b7ab3cd`. R1's native C
+selftests are reused only for those exact unchanged identities. Managed controls
+were freshly run on the frozen resulting source, one job/observer at a time:
+
+```bash
+BIZHAWK_HOME=<root>/install-qualified S3K_ROM_PATH=<absolute-stock-ROM> \
+  OPENGGF_GPGX_RESET_PREFIX_EXPECT=present bizhawk-headless/test.sh \
+  --filter GpgxResetPrefixNative --jobs 1
+BIZHAWK_HOME=<root>/install-qualified S3K_ROM_PATH=<absolute-stock-ROM> \
+  OPENGGF_GPGX_STALL2_EXPECT=present bizhawk-headless/test.sh \
+  --filter GpgxM68kStall2Native --jobs 1
+BIZHAWK_HOME=<root>/install-qualified bizhawk-headless/run.sh \
+  --native-reset-prefix --rom <absolute-stock-ROM> --observer on \
+  --output <root>/capture-r2-on --tracechaser-root <producer> \
+  --input-repository-root <owned-outer> --fixture-root <explicit-consumer-fixtures>
+```
+
+Prefix: **12 passed,0 failed,0 skipped** (nine unit, three live). Its identity case
+now also rejects wrong/missing managed digests and a missing stock pin. Existing
+reset/vector/clock/refresh/order/capacity/discontinuity/nonperturbation and
+restore/forward controls remain. V2: **5 passed,0 failed,0 skipped**, including live
+interval joining and load invalidation. Known Mono xbuild v4.8 toolset warnings
+remain; the build still uses pinned deterministic Roslyn. No Java, broad recorder
+suite or unchanged native rebuild was launched for this bounded correction.
+
+An owned installation copy with one zero byte appended to the managed DLL retains
+version2.11.0.0, passes preflight/build/installation version checks, but has SHA256
+`a406e478bab56749fb985d19049c622ad2dc564a11f4996a78d13b40fd79aed8`. The same CLI with
+that explicit installation exits1 with `Reset-prefix managed constructor bytes
+differ from source-lock stock.cores_sha256.` before Open. It creates no output.
+That consumed copy was deleted; no raw command log archive was created.
+
+The CLI above and its identical `observer off` / `capture-r2-off` control both exit0
+with the same fixed R1 ROM/profile/neutral inputs. On records41 ordered entries,
+off records0 and makes no prefix-completion claim. Both reproduce savestate SHA256
+`bdd9edb8adac4f2b6d25049ca03276d392dc0898c0ab04a3a74f8c4be1c170cc` and checkpoint
+SHA256 `2c90defb255a59b6998d569ca99692809aa5eb700a01b79558ee3dd13c1133a9`. Whole native
+records, initial snapshot, profile and checkpoints also match the preserved R1 pair;
+this comparison does not retroqualify R1's managed gate. The two deliberate R2
+reports stay outside both checkouts: on23773 bytes/SHA256
+`cc5067948cd9c6c05a0f09899e6827f3203dcd53c6cafda7a862958b1c5f7860`, off4990 bytes/SHA256
+`79ff6404639873426d7fed013e415658aa2d03446bb32b2c82dc4ecea7cb87eb`. R1's historical
+pair remains untouched. No canonical fixture, ROM or save was changed.
+
+### Review inputs and limits
+
+TraceChaser index policy, reachable-history audit, maintained reader/guidance and
+README-section preservation, source ownership XML, changed-doc links and whitespace
+checks pass. `git diff --binary 4c3d6ba 703bd92` has SHA256
+`be287f29a128940fe925d51bc9cfeedae23d278eaf3b6d8aaef631feb432b23a`; the same diff restricted
+to `bizhawk-headless/src`, `tests`, `native` and the two owning csproj files has
+SHA256 `dc22baf9628a2d997786cebc7e37c3ff27b2b7485f99b6f7730c758f9721a34e`. Complete322-to703
+binary diff SHA256 is `ad1f13a8471658cc54535dfc64d3f7f11197e2c7972be283e96734af9d74ef83`;
+complete84-to703 followup diff SHA256 is
+`0cb29a6d83f40bb297e0cac6f28a83961a18d6dd34db9b07b2a5c0752817de98`. Full commands and
+per-file manifests are in the own followup registry row; outer commit/diff hashes
+are reported in its parent handoff to avoid self-referential evidence.
+
+This remains a passive reference-emulator prefix through first VDP status access,
+with the same R1 bounds. It certifies no title frame count,11-job plan, later
+synchronous Kos_Decomp, AIZ/SSZ route, full CPU/device model, native heap, physical
+power-on, or gameplay readiness. Root's historical HCZ/FDF/cold results remain
+unchanged. Branches stay local. The next action is Root's NEW independent source
+review of the actual merged/fixed code; no review, integration or push is performed
+by this implementation followup.
