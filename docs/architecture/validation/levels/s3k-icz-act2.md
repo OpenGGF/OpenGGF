@@ -147,3 +147,38 @@ Raw CSVs/PNGs other than that end still, temporary repository source/class and
 owned Maven reports were consumed. This changes the authoring frontier only;
 boss admission, fight/exit, incoming ICZ1 history, ordinary full-act completion,
 other roster/donor/widths and native timing/pixels remain open.
+
+
+## Ordinary cube/button2/bridge cold crossing — R2, 2026-10-21
+
+The follow-up to the authoring frontier above reaches the actual lower-cave
+interaction on unchanged production `7fbcfbd8a4597163390d5d813facec4c3e69a637`,
+starting from docs-only `79103a4aa4cad48662cd32c521a325cc87869364`.
+Only three additional controller policies were tried. The selected policy retains
+all 2040 prior input rows, holds Jump before steering onto cube 162, releases
+movement for the landing/bounce/button, then continues Right. The final 2292-row
+proposal is an exact prefix of that policy, ending before the later enemy encounter.
+
+Two fresh JVMs independently cold-replayed the final input, drawing every tick,
+without capture/restore, authoring calls or gameplay seeds. Each original
+`TestIcz2ColdRouteAuthor#coldWitness` passed 1T/0F/0E/0S. Both measured the same
+placed-owner chain: cube 162 saved roll animation 2 top landing/deletion and native
+`-$300` bounce at input 2095; actual button 163 riding/standing and trigger 2 at 2131;
+the same bridge 165 first fell from Y 2321 to 2322 at 2183; P1 was grounded beyond
+its stock `$50` right span plus player radius at 2276. After row 2291 P1 is alive,
+grounded and control-released at `9023,2544`, moving right at 713, with 6 rings and
+3 lives; camera `8863,2448`, same 5/1 world, native 320 solo Sonic/off.
+
+The witness checks production script-compiler/BK2-loader equality for every row
+and both pads, neutral P2/no Start/debug inputs, the unchanged 2040-row prefix,
+and the final prefix against its original candidate. Explicit title-enabled
+15-field Settings retain null/false gameplay setup fields. The input pair and
+exact temporary witness source remain outside the repository; see the dated
+[completion plan](../../plans/2026-10-13-s3k-playable-completion.md).
+
+This is repeated ordinary gameplay evidence for this partial interaction/crossing,
+not a runtime fix or maintained regression-test qualification. A maintained input
+resource/consumer and the affected full-registry rewind spots are still pending.
+No snapshot or newly admitted rewind checkpoint is retained. Boss admission,
+combat/exit, full act, incoming ICZ1 history, roster/donor/viewport breadth and
+native timing/pixel conformance remain open.

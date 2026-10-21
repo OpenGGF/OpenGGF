@@ -25680,3 +25680,72 @@ agent registry. Only factual matrix/backlog/Plan prose lands here. Full act,
 boss combat/defeat/capsule/LBZ, roster/donor/viewport breadth, incoming ICZ1
 history and native clock/pixel coverage remain open. Root owns review and any
 next bounded continuation; no push, integration or worktree removal occurred.
+
+
+## ICZ2 cube/button2/bridge R2 — ordinary crossing reproduced, 2026-10-21
+
+This bounded follow-up preserves the first bout and docs-only
+`79103a4aa4cad48662cd32c521a325cc87869364`. Production remains exact
+`7fbcfbd8a4597163390d5d813facec4c3e69a637`; no runtime, native, POM, maintained
+input/test, public API or oracle changed. Three of the allowed 12 additional
+controller policies were tried through the existing ordinary branch tool.
+The initial 2040 rows of `attempt09/variant-0.bk2` remain byte-for-byte input
+prefixes. A held jump clears the cube's side before 6/8/10 frames of Right+Jump;
+90 neutral rows allow the real rolling top landing, bounce and button contact.
+The selected first policy uses 6 steering rows. No further policy was needed.
+
+Selected final pair, under the previous task root's `cube-button-bridge-r2/`:
+
+- `icz2-sonic-cube-button-bridge-r2.script`: 302 B, SHA-256
+  `e44eaf90a6d327c1dbcaef557dabc87281eaad0ef1799f02691a4d33b6fdef96`.
+- `icz2-sonic-cube-button-bridge-r2.bk2`: 794 B, 2292 rows, SHA-256
+  `e176974a99e1c8d61746149765272c188759deaefbf8f8731d4b00535c58ed55`.
+- Exact temporary author/cold-witness source `TestIcz2ColdRouteAuthor.java`:
+  10290 B, SHA-256
+  `1207df95f9e339e1b2a90ae923ca7d03c8afeff906b551d66ca906d2e8b7e55f`.
+  It is preserved externally, not installed as a maintained test.
+
+The pair is an exact 2292-row prefix of the production-authored 2391-row first
+candidate. Only its final Right run is shortened from 240 to 141 rows. This stops
+at the requested grounded crossing before the unrelated later enemy hurt at 2302;
+it changes no existing assertion or gameplay code. Both fresh witnesses compare
+every script-compiled/production-loaded row for both pads, reject Start/debug/P2
+inputs, verify the initial 2040 rows against the preserved safe proposal and all
+2292 against the original candidate. The BK2 contains only Header/Input Log.
+Settings are explicitly 320, Sonic, solo, donor off, title enabled, with every
+position/checkpoint/rings/emerald/clock/camera-fraction/reverse-gravity seed
+null/false. Rendering runs on every ordinary tick; the witnesses neither capture
+nor restore state or invoke authoring. ROM start/placements are assertions only.
+
+Original requests 17206 (author), 30924 (cold witness 1) and 31796 (cold witness 2)
+ran once each through the current absolute Main wrapper, normal admission,
+`-Dmse=off -Dopenggf.headless.gl=surfaceless-egl`, original absolute ROM
+properties, Java 25.0.4.1/EGL/null OpenAL/Lua 5.4, then `test -B`.
+The author selector is `com.openggf.tools.TestIcz2ColdRouteAuthor#authorOrdinaryPrefix`;
+both fresh selectors are `com.openggf.tools.TestIcz2ColdRouteAuthor#coldWitness`.
+Each original was 1T/0F/0E/0S; the author result alone is exploratory evidence.
+The two independent cold results both measured: cube 162 real roll-top deletion
+and `-$300` bounce at 2095; actual button 163 ride/standing trigger 2 at 2131; same
+placed bridge 165 first fall at 2183 (`2321→2322`); grounded right-span crossing at 2276.
+Both end after row 2291 at `9023,2544`, velocity `713,0`, 6 rings/3 lives,
+camera `8863,2448`, same 5/1 world, native 320 solo Sonic/off, no suffix hurt,
+death or life loss. The endpoint is 15 ordinary inputs after the first grounded
+crossing; those observations do not define new native timing constants.
+
+Admission waits were 543/565/95 s; Maven durations 31.151/29.398/28.655 s and
+Jupiter 4.446/3.101/3.119 s respectively. Queue waiting is not test execution.
+All original identities/assertions/skips, 70/69/69 properties and streams were
+read and exact owned reports/tmp directories consumed. No broad/old qualifying
+check, new native checkout, Root/Main mutation, runtime fix, extra agent or
+further trial occurred. Raw series/rejected products and repository temporary
+source/class are consumed; selected proposal/original candidate, source and one
+already-created crossing PNG at input 2280 are retained externally. Exact paths
+and full hashes are in the existing owning agent registry, not a new receipt.
+
+This moves the ordinary input-authoring frontier beyond the cube/button2/bridge
+component. It is not maintained route-test/rewind, full-act, boss/admission,
+incoming ICZ1, broader configuration or native hardware/pixel qualification.
+The next owner must cold-replay the retained proposal and let the ordinary
+branch tool assess its restore boundary; no snapshot is supplied. Root owns
+source/data review and the next bounded task. Local docs commit only; no push,
+integration or worktree removal is performed by this slice.
