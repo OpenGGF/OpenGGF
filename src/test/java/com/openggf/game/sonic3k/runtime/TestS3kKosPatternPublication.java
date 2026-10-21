@@ -207,6 +207,89 @@ class TestS3kKosPatternPublication {
         }
     }
 
+    @Test void retainedEggRoboRequestPublishesExactNativeTailWithoutAnAutomaticClaim() throws Exception {
+        Rig rig = new Rig();
+        var handle = S3kRuntimeArtCoordinator.queueRetainedPatternModule(rig.services, 0x17B17E, 0xA000);
+        assertNotNull(handle);
+        rig.bindRecordingSink();
+        assertEquals(1, rig.physical.modulesLeftRaw());
+        assertEquals(0x4F0, rig.physical.capture().archives().getFirst().lastModuleWords());
+        var submitted = rig.registry.capture();
+        rig.tail();
+        var started = rig.registry.capture();
+        assertEquals(0x81, rig.physical.modulesLeftRaw());
+        rig.drain();
+        assertTrue(rig.timing.isReady(handle));
+        assertEquals(java.util.List.of(handle), rig.timing.pendingHandles(), "only the retained owner may claim");
+        rig.coordinator.moduleQueue().claim(handle);
+        assertEquals(0, rig.writes);
+        var queued = rig.registry.capture();
+        assertEquals(0x4F0, rig.coordinator.pendingKosModuleDmaEntries().getFirst().words());
+        rig.coordinator.publishPatternModuleDma();
+        var presented = rig.registry.capture();
+        assertEquals(1, rig.writes);
+        assertEquals(2528, rig.uploads.getFirst().data().length);
+        assertEquals(0xA000, rig.uploads.getFirst().destinationVramBytes());
+        rig.expected(0x17B17E, 0x500);
+        for (int cycle = 0; cycle < 2; cycle++) {
+            rig.registry.restore(submitted); rig.same(submitted);
+            rig.tail(); rig.same(started);
+            rig.drain();
+            rig.coordinator.moduleQueue().claim(handle); rig.same(queued);
+            rig.coordinator.publishPatternModuleDma(); rig.same(presented);
+            rig.registry.restore(presented); rig.same(presented);
+            rig.registry.restore(queued); rig.same(queued);
+            assertArrayEquals(new byte[65536], rig.memory);
+            rig.coordinator.publishPatternModuleDma(); rig.same(presented);
+        }
+    }
+
+    @Test void retainedRequestRejectionAndPreparationFailureLeaveNoUnpairedMutation() throws Exception {
+        Rig rig = new Rig();
+        var empty = rig.registry.capture();
+        var malformed = assertThrows(java.io.IOException.class, () -> S3kRuntimeArtCoordinator.queueRetainedPatternModule(
+                rig.services, -1, 0xA000));
+        assertEquals("KosM source is outside ROM: 0xffffffff", malformed.getMessage());
+        rig.same(empty);
+        assertThrows(IllegalArgumentException.class, () -> S3kRuntimeArtCoordinator.queueRetainedPatternModule(
+                rig.services, 0x17B17E, 0xA001));
+        rig.same(empty);
+        var foreign = new S3kRuntimeArtCoordinator(new HardwareTimingService());
+        foreign.bindPatternModuleQueue(rig.physical);
+        assertThrows(IllegalStateException.class, () -> S3kRuntimeArtCoordinator.queueRetainedPatternModule(
+                rig.services, 0x17B17E, 0xA000));
+        rig.same(empty);
+    }
+
+    @Test void retainedRequestRejectsEitherFullFifoWithoutConsumingAnOrdinal() throws Exception {
+        Rig rig = new Rig();
+        for (int i = 0; i < 4; i++) assertTrue(rig.physical.enqueue(rig.rom, 0x17B17E, 0xA000));
+        var full = rig.registry.capture();
+        assertNull(S3kRuntimeArtCoordinator.queueRetainedPatternModule(rig.services, 0x17B17E, 0xA000));
+        rig.same(full);
+        rig = new Rig();
+        for (int i = 0; i < 4; i++) rig.coordinator.moduleQueue().queue(rig.rom, 0x17B17E, 0x500);
+        full = rig.registry.capture();
+        assertNull(S3kRuntimeArtCoordinator.queueRetainedPatternModule(rig.services, 0x17B17E, 0xA000));
+        rig.same(full);
+    }
+
+    @Test void failedTimedSubmissionCannotLeaveAnUnpairedPhysicalEntry() throws Exception {
+        Rig rig = new Rig();
+        var state = rig.timing.capture();
+        rig.timing.restore(new com.openggf.game.timing.HardwareTimingSnapshot(
+                java.util.Map.of(com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE, Long.MAX_VALUE),
+                state.jobs(), state.admissionPolicies(), state.recordedAdmissionActive(),
+                state.hasSubmitted(), state.lastServicedBoundary(), state.unrepresentedSubmissions()));
+        var before = rig.registry.capture();
+        var error = assertThrows(IllegalStateException.class,
+                () -> S3kRuntimeArtCoordinator.queueRetainedPatternModule(rig.services, 0x17B17E, 0xA000));
+        assertEquals("hardware work ordinal exhausted for KOS_MODULE_QUEUE", error.getMessage());
+        rig.same(before);
+        assertTrue(rig.physical.isIdle());
+        assertTrue(rig.timing.pendingHandles().isEmpty());
+    }
+
     @Test void globalProducerPublishesIntoTheActualResidentOwnerThroughItsJournal() throws Exception {
         Rig rig = new Rig();
         var level = rig.services.currentLevel();

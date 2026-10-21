@@ -23,6 +23,39 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSszEggRoboPresentation {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void retirementPublishesPairingBeforeTheRequestAndDeletesEvenWhenTheFifoRejects(boolean full)
+            throws Exception {
+        HeadlessTestFixture.builder().withZoneAndAct(10, 0).build();
+        var original = TestEnvironment.objectServices();
+        var services = org.mockito.Mockito.spy(original);
+        var physical = original.kosinskiModuleQueue();
+        if (full) {
+            for (int i = 0; i < 4; i++) assertTrue(physical.enqueue(original.rom(), 0x17B17E, 0xA000));
+        }
+        var ssz = (SszZoneRuntimeState) original.zoneRuntimeState();
+        AbstractObjectInstance.updateCameraBounds(0x100, 0xB80, 0x240, 0xC60, 0x1000);
+        var robo = new EggRoboBadnikInstance(new ObjectSpawn(0x200, 0xC00, 0xA0, 0, 0, false, 0));
+        original.objectManager().addDynamicObject(robo);
+        robo.setServices(services); // Registration injects the manager's ordinary services first.
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        org.mockito.Mockito.doAnswer(call -> {
+            assertTrue(ssz.eggRoboFlyByPassed(0), "native pairing write precedes request admission");
+            assertFalse(robo.isDestroyed(), "native deletion follows request admission");
+            calls.incrementAndGet();
+            return original.runtimeArtCoordinator();
+        }).when(services).runtimeArtCoordinator();
+        for (int tick = 0; tick < 200 && !robo.isDestroyed(); tick++) dispatchBodyAndChildren(robo, tick);
+        assertTrue(robo.isDestroyed());
+        assertEquals(1, calls.get());
+        assertTrue(ssz.eggRoboFlyByPassed(0));
+        assertEquals(full ? 4 : 1, physical.queuedArchiveCount());
+        assertEquals(full ? 0 : 1, original.hardwareTiming().pendingHandles().size());
+        robo.update(201, null);
+        assertEquals(1, calls.get(), "deleted owner cannot resubmit");
+    }
+
     @org.junit.jupiter.api.Test
     void restoredUndrawnContinuationKeepsItsOverlappingPlaceholderVisibility() {
         var fixture = HeadlessTestFixture.builder().withZoneAndAct(10, 0).build();

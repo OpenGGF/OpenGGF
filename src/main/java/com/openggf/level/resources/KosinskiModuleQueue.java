@@ -162,25 +162,30 @@ public final class KosinskiModuleQueue
      */
     public boolean enqueue(Rom rom, int sourceAddress, int destinationVramBytes)
             throws IOException {
+        return enqueueWithAdmission(rom, sourceAddress, destinationVramBytes, () -> Boolean.TRUE) != null;
+    }
+
+    /** Commit a paired logical admission only after physical validation, before FIFO mutation. */
+    <T> T enqueueWithAdmission(Rom rom, int sourceAddress, int destinationVramBytes,
+                              java.util.function.Supplier<T> admission) throws IOException {
         if (rom == null) {
             throw new IllegalArgumentException("rom");
         }
         if (archives.size() >= CAPACITY) {
-            return false;
+            return null;
         }
         if (this.rom != null && this.rom != rom) {
             throw new IllegalArgumentException("A gameplay KosM queue cannot mix ROM owners");
         }
-        this.rom = rom;
         ArchiveState queued = new ArchiveState(sourceAddress, -1,
                 destinationVramBytes, 0, 0, 0, 0, -1, false);
-        if (archives.isEmpty()) {
-            archives.addLast(initialize(queued));
-            phase = Phase.READY_TO_START;
-        } else {
-            archives.addLast(queued);
-        }
-        return true;
+        boolean first = archives.isEmpty();
+        if (first) queued = initialize(queued, rom);
+        T admitted = java.util.Objects.requireNonNull(admission.get(), "paired module admission");
+        this.rom = rom;
+        archives.addLast(queued);
+        if (first) phase = Phase.READY_TO_START;
+        return admitted;
     }
 
     /**
@@ -261,6 +266,10 @@ public final class KosinskiModuleQueue
     }
 
     private ArchiveState initialize(ArchiveState queued) throws IOException {
+        return initialize(queued, rom);
+    }
+
+    private static ArchiveState initialize(ArchiveState queued, Rom rom) throws IOException {
         int encodedSize = rom.read16BitAddr(queued.archiveAddress()) & 0xFFFF;
         int uncompressedBytes = encodedSize == 0xA000 ? 0x8000 : encodedSize;
         int totalWords = uncompressedBytes >>> 1;

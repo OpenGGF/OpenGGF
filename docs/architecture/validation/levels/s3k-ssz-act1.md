@@ -2657,3 +2657,222 @@ Original reports verify Java25.0.4.1, surfaceless EGL and all three original
 absolute ROM paths. The test/source fingerprint is unchanged before/after;
 there was one source epoch and no retry. This is focused qualification, not
 a broad smoke or full-suite result.
+
+## Enemy-art production and restoration requests — 2026-10-21
+
+Bounded leaf based on accepted integration `bf2c7c7211a7c71385e4649717ed80fa7383b0a9`,
+fast-forwarded from parent local Main `c13be267fd06771b982679a5ec840a23c2a26b11` in
+`feature/ai-s3k-ssz-enemy-art-requests-20261021`. Main is not integrated or pushed
+by this leaf; the dirty TraceChaser setup is preserved outside its commit.
+
+`Offs_LoadEnemyArt -> PLCKosM_SSZ` names `ArtKosM_EggRoboBadnik` at native tile
+`$0500`. `loc_91570` writes the pairing word, queues that same archive, and
+then deletes the fly-by. Stock ROM `$17B17E` starts with header `$09E0`: one
+module with `$4F0` final words, exactly 2,528 bytes at VRAM `$A000`. The new
+provider recipe carries explicit physical-publication intent through its
+admission fingerprint and `PlcProgressSnapshot`; other recipes retain their
+existing timing-only semantics and fingerprints. StarPost/explosion flushes
+preserve the same intent. Incidental requests defer unarmed physical intent;
+a retired title may append it while the incidental handle is still unfinished.
+The title owner remains the admission authority;
+preparation, cached payloads and ready unclaimed jobs do not retire it.
+
+The coordinator's retained-owner path shares physical/timed capacity, ROM
+preparation, owner binding and target setup with the existing global producer.
+An internal admission callback validates physical header/ROM ownership before
+timed submission, then commits the physical FIFO; timing ordinal exhaustion
+cannot strand an unmatched entry. The public standalone enqueue retains its
+existing immediate-head/deferred-successor behavior.
+The provider claims its one retained handle; fly-by retirement uses the
+coordinator's captured automatic claim. Neither claim publishes pixels. The
+physical FIFO preserves immediate head initialization and deferred successor
+initialization, actual child receipts, queued DMA and the sparse rewind journal.
+Ordinary full-FIFO rejection leaves pairing and actor deletion in native order.
+
+Rejected shortcut: exposing `MgzEndBossArtScaler` or projecting only its
+mapping-selected `Pattern[]` cannot supply native `$FFD000` scratch writes.
+The first `$7C` scale's mapping references 256 bytes but native DMA transmits 384.
+Current module transfers clone payloads; they do not read then-current shared RAM
+at drain. Full scratch/knownness, causal interrupted Kos writes/backreferences,
+live DMA source lifetime and displayed `$A000` generation closure remain open.
+There is no scaled-art completion, trace parity or natural-route claim here.
+
+| Contract | Focused control | Scope |
+| --- | --- | --- |
+| Title retirement and pre-submission intent | `TestSonic3kTitleCardKosQueue#sszTitleRetirementRetainsOnePhysicalRequestAndRewindsItsPublicationIntent` | Real SSZ recipe; cached and queued-title cases; following runtime pass; retained ordinals and whole registered state |
+| Stock physical tail and one claim | `TestS3kKosPatternPublication#retainedEggRoboRequestPublishesExactNativeTailWithoutAnAutomaticClaim` | Submitted/started/claimed/pending/published states; two forwards and both restore directions; recording sink |
+| Rejection and malformed/foreign owner | `TestS3kKosPatternPublication#retainedRequestRejectionAndPreparationFailureLeaveNoUnpairedMutation`, `#retainedRequestRejectsEitherFullFifoWithoutConsumingAnOrdinal` | Both capacity domains; preparation and owner failures before enqueue |
+| Native pairing/request/deletion order | `TestSszEggRoboPresentation#retirementPublishesPairingBeforeTheRequestAndDeletesEvenWhenTheFifoRejects` | Declared component inlet; full and available FIFO |
+| Placed fly-by and actor-independent DMA | `TestS3kSszEggRobo#theFlyByArcsOffTheScreenAndOnlyThenDoesItsFighterSurvive` | Existing group 6 checkpoint inlet, 320/800 native Sonic solo; registered-world replay twice across deletion and publication |
+
+Focused execution is recorded below. These component/checkpoint
+inlets do not establish cold traversal or the complete viewport/donor/team matrix.
+Movement donation does not own archive/claim semantics; additional route and
+presentation coverage remains with the delivery lead. One new genuine title
+parent/direct child adds FIFO occupancy and a `$4F0`-word DMA; queue ordinals,
+polling and later release timing can change. No final route/release timing
+qualification is inherited from earlier request-free runs.
+
+Source epochs and first-run correction record:
+
+- The first completed five-class command tested base `bf2c7c721` plus source/test
+  diff SHA-256 `4eca1a617c0ea9398d9c3c7a1fda49c091910d59aa84f4937f957d72aa69fc81`.
+  It finished 71 tests, 2 failures, 2 errors, 0 skips. Both boolean instances of
+  the new retirement-order control expected one spy callback but saw zero:
+  ObjectManager registration had replaced the injected spy. Both 320/800
+  checkpoint instances read an empty pending-DMA list after assuming one step.
+  Other 67 tests passed. This is not the final candidate's validation.
+- After that run, source changes are confined to provider eager flushes retaining
+  unarmed physical intent, and armed pending admission proceeding independently
+  of unfinished incidental handles. Tests attach the spy after registration,
+  wait on actual queued-DMA state and replay the observed bounded step count,
+  and add both incidental-producer owner/restore cases. Gameplay service timing
+  and native FIFO/readiness rules are not changed to satisfy these controls.
+- The second invocation is frozen at source/test diff SHA-256
+  `d55ad09dfb61101622f735f933532d411a4db54507ca968dbe742b232a885dc3`.
+  Fingerprints are `git diff --binary bf2c7c7211a7c71385e4649717ed80fa7383b0a9 -- src/main src/test | sha256sum`;
+  documentation and the preserved TraceChaser setup are excluded. Root's
+  independent final acceptance review remains pending.
+
+Final focused execution at the second frozen epoch: **160 tests, 0 failures,
+0 errors, 0 skips**, Maven exit 0. The 14 selectors matched 15 actual classes
+because both `com.openggf.game.sonic3k.TestSonic3kLevelLoading` (36 cases) and
+`com.openggf.tests.TestSonic3kLevelLoading` (7) match the simple name. Other
+completed classes were BootstrapResolver (6), DecodingUtils (3), the single mapping
+corruption guard (1), StarPostInvitationArtAdmission (17), EggRoboPresentation (22),
+KosPatternWorldRestore (2), KosPatternPublication (15), TitleCardKosQueue (15),
+KosinskiModuleQueue (6), its DmaJournal (12), its GameplayIntegration (1),
+Aiz1SkipHeadless (8) and placed SszEggRobo (9). Every new owner/order/replay instance
+above passed. XML identities, failures and skips were inspected before removing
+consumed reports; no validation receipt or log archive is retained.
+
+Both commands ran from the isolated task worktree with
+`JAVA_HOME=/usr/lib/jvm/java-25-openjdk` and `LUA_BIN=/usr/bin/lua5.4`. The final
+reports confirm Java 25.0.4.1, the surfaceless EGL flag and all three absolute ROM
+paths. Original ROM CRC32/SHA-1 identities match the repository table. Actual
+category-tool preflight passed without executing tests. The first invocation
+waited 233s for admission and Maven reported 87s including compilation; the second
+waited 779s and Maven reported 89s including compilation. These are separate
+queue/execution measurements, not a summed delivery wall time.
+
+In the commands below, `OPENGGF_MAIN` names the existing Main checkout; exact
+resolved paths and task/run identities are retained in the task registry.
+
+```bash
+# First epoch (71T/2F/2E/0S; the four new harness failures described above).
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Ds3k.rom.path=$OPENGGF_MAIN/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  '-Dtest=TestSonic3kTitleCardKosQueue,TestS3kKosPatternPublication,TestSszEggRoboPresentation,TestS3kSszEggRobo,TestKosinskiModuleQueueDmaJournal' test -B
+
+# Final frozen epoch (160T/0F/0E/0S).
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$OPENGGF_MAIN/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_MAIN/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_MAIN/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  '-Dtest=TestSonic3kTitleCardKosQueue,TestS3kKosPatternPublication,TestSszEggRoboPresentation,TestS3kSszEggRobo,TestKosinskiModuleQueueDmaJournal,TestKosinskiModuleQueue,TestKosinskiModuleQueueGameplayIntegration,TestS3kKosPatternWorldRestore,TestSonic3kStarPostInvitationArtAdmission,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits' test -B
+```
+
+The change-based plan selects 3,587 smoke candidates and guards for shared or
+unclassified sources (including preserved setup). That combined coverage belongs
+to Root under this delegation; neither it nor the release-only full suite was
+launched by this leaf. Native timeline/release effects, scaled fly-by pixels,
+complete route/configuration breadth and independent final Root acceptance remain
+open. Local source review addressed preparation failure, exhausted ordinals,
+alternate flush paths, title authority, retained claims and actor-independent
+rewind ownership; it is not Root's final acceptance stamp.
+
+## Incidental producers and armed title backpressure — 2026-10-21
+
+Root's final source review of `c7fdd30471f91678924f096ddd59a4d08e4d0cd1`
+identified `SSZ-C7-INCIDENTAL-ARMED-FULL` (P2). The runtime pump retained an
+armed physical SSZ request while either FIFO was full, but the incidental
+StarPost/explosion flush bypassed that capacity check and translated normal
+rejection into an uncaught exception. This is a source-supported component
+counterexample, not a reproduced natural route or measured timing failure.
+The original commit, its failed first epoch and its final 160-test result above
+remain preserved; none is relabelled as qualification of this followup.
+
+The corrective policy remains the existing bounded engine admission model.
+Pending physical title intent defers when unarmed or when either FIFO lacks
+capacity. An incidental one-shot request can enter its own logical slot; if
+none remains it is rejected without an ordinal, handle or invented retry state.
+If the title consumes the last logical slot, title-first order remains intact.
+The exact title lease, batch fingerprint and pending intent survive backpressure.
+`tryQueueRingExplosionRestoration` keeps its existing actor-owned retry contract.
+Native StarPost `sub_2D3C8` and CNZ `loc_6E778` issue one request without a
+retained failed-request owner. Native `Queue_Kos_Module` scans beyond four slots
+when overfilled; this bounded rejection policy does not claim overflow parity.
+
+`TestSonic3kTitleCardKosQueue#incidentalProducersRespectArmedTitleBackpressureAndReplayBothFifos`
+uses the existing cached-title owner inlet and declared physical-only FIFO setup.
+Both producers cover physical-only full, logical-only full and one logical slot
+remaining. Exact lease/fingerprint, ordinals, FIFO state, distinct incidental
+versus title handles, eventual one-to-one title pairing, provider claims and
+complete registered-world restoration are checked, with two forward/reverse
+cycles. Real timed predecessors recover capacity through ordinary service;
+only declared physical setup is cleared. No readiness or gameplay values are
+supplied by comparison data.
+
+RED was observed on unchanged `c7` production source with regression-only
+source/test diff SHA-256
+`464c75530593f65962cfc386197d7cd0aefd34102292cbee23f008fa12253ecc`:
+6 tests, 6 failures, 0 errors, 0 skips. Cases 1/2 (physical full) and 3/4
+(logical full) threw `Enemy art physical KosM FIFO is full` from
+`queueEnemyKosEntry -> flushAdmittedEnemyKosEntries`; cases 5/6 (last logical
+slot) threw `S3K KosM module FIFO is full` from the subsequent incidental
+submission. Each producer failed its `assertDoesNotThrow` at the callback,
+with the actual cause inspected in Surefire XML. Admission wait was 479s;
+Maven reported 27.351s including test compilation. The Java 25.0.4.1,
+surfaceless EGL and verified absolute S3K ROM properties were present.
+Consumed XML/text reports were removed after inspection without an archive.
+
+The provider-only source correction checks both FIFO capacities before flushing
+an armed physical entry and checks the incidental producer's own logical slot
+after that flush. It adds no snapshot fields, handles, retry state or capacity.
+The GREEN invocation is frozen at source/test delta SHA-256
+`bc1e73c56bd253e6b7fcd7e9d800833c7845a0e49b3443b141066263cb038c70`
+relative to `c7`. No source/test edit occurs while either invocation is live.
+
+GREEN completed on that unchanged `bc1e73c5` delta: **53 tests, 0 failures,
+0 errors, 0 skips**, Maven exit 0. Whole title-card coverage ran 21 cases,
+including all six new counterexamples; whole `TestSszEggRoboClockGates` ran 15
+and `TestSonic3kStarPostInvitationArtAdmission` ran 17. XML testcase identities,
+all six parameter instances, environment properties, failures and skips were
+inspected. Admission wait was 430s; Maven reported 86s including compilation.
+Java 25.0.4.1, surfaceless EGL and the original absolute S3K ROM were verified.
+Consumed reports were removed after inspection; no receipt or archive is kept.
+
+Both invocations used the isolated task checkout, with `OPENGGF_MAIN` denoting
+the existing Main checkout in these repository-safe command examples. Exact
+resolved commands and session/run IDs remain in the existing task registry.
+
+```bash
+# RED, unchanged c7 production plus regression-only delta 464c7553.
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Ds3k.rom.path=$OPENGGF_MAIN/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  '-Dtest=TestSonic3kTitleCardKosQueue#incidentalProducersRespectArmedTitleBackpressureAndReplayBothFifos' test -B
+
+# GREEN, provider correction plus identical regression, frozen delta bc1e73c5.
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Ds3k.rom.path=$OPENGGF_MAIN/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  '-Dtest=TestSonic3kTitleCardKosQueue,TestSszEggRoboClockGates,TestSonic3kStarPostInvitationArtAdmission' test -B
+```
+
+Fingerprints use `git diff --binary c7fdd30471f91678924f096ddd59a4d08e4d0cd1 -- src/main src/test | sha256sum`.
+The complete source/test diff from accepted integration `bf2c7c721` is
+`62b4951dd7eecd1a9cca7d9bab08e5d8f88b76408ef1b8ed305b75d365937ca9`.
+The historical 160 result is reused only for unchanged pair/FIFO/mapping and
+other unaffected inputs, not presented as a fresh full followup run. No broad
+smoke, release-only full suite, guard or controller qualification was launched.
+Root retains the new independent delta review, combined guards and final-source
+SSZ entry/release/controller/route qualification; old e253 route outcomes are
+not adopted as proof. Shared scratch/scaled-art/DMA/presentation-generation
+limits remain exactly as recorded above.

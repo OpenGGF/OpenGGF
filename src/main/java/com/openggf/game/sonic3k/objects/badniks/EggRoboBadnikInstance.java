@@ -2,6 +2,8 @@ package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
@@ -307,8 +309,16 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
         if (ssz != null) {
             ssz.markEggRoboFlyByPassed(group);
         }
-        // lea (ArtKosM_EggRoboBadnik) / Queue_Kos_Module: the badnik sheet the fighter needs is
-        // already registered for this zone, so the re-queue has nothing left to do here.
+        // loc_91570: publish the pairing bit, restore ArtKosM_EggRoboBadnik
+        // at $A000, then delete even if the existing bounded FIFO rejects it.
+        // The coordinator owns an accepted job/claim beyond this actor's life.
+        try {
+            S3kRuntimeArtCoordinator.queueGlobalPatternModule(services(),
+                    Sonic3kConstants.ART_KOSM_EGG_ROBO_BADNIK_ADDR,
+                    Sonic3kConstants.ARTTILE_EGG_ROBO_BADNIK * 32);
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("Unable to queue EggRobo restoration art", e);
+        }
         state = State.GONE;
         ObjectLifetimeOps.deleteNoRespawn(this);
     }

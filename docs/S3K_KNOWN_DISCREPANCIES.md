@@ -1170,6 +1170,16 @@ The muzzle flash copies only horizontal facing and always starts at GunY-4.
 `sub_91930` retains delayed hover Y, falls back to live Y while `$32` is zero,
 and latches gun position/flags during firing. The flame uses live Y from
 `Refresh_ChildPositionAdjusted`. Scaled fly-by art remains an inherited gap.
+The [bounded enemy-art request leaf](architecture/validation/levels/s3k-ssz-act1.md#enemy-art-production-and-restoration-requests--2026-10-21)
+adds native title-owned `17B17E -> A000` and post-pairing fly-by restoration
+requests, each paired with real physical/timed work and one claim owner.
+The [incidental-backpressure followup](architecture/validation/levels/s3k-ssz-act1.md#incidental-producers-and-armed-title-backpressure--2026-10-21)
+retains armed title intent when either FIFO blocks and rejects an incidental
+request that has no logical slot, without adding a retry owner or claiming
+native overflow parity.
+It retains the existing copied-module DMA contract. Authentic shared scratch
+writes, live RAM reads at DMA drain and displayed residency generations remain
+open; prepared standalone EggRobo sheets do not prove those properties.
 The [bounded vertical-flip correction](architecture/validation/levels/s3k-ssz-act1.md#vertical-facing-and-child-y-offsets--2026-10-20)
 is qualified with explicit flags0/1/2/3 component inlets, CPU/SAT replay output
 and fresh complete-world restoration. Stock SSZ1 placements contain only flags0/1;
