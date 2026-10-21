@@ -25937,3 +25937,92 @@ agent registry. Only factual matrix/backlog/Plan prose lands here. Full act,
 boss combat/defeat/capsule/LBZ, roster/donor/viewport breadth, incoming ICZ1
 history and native clock/pixel coverage remain open. Root owns review and any
 next bounded continuation; no push, integration or worktree removal occurred.
+
+
+## WidePaired800 first matched ordinary state delta, R3 (2026-10-21)
+
+Exactly two fresh ordinary cold row0 projections use the original9914-input
+first-replica BK2, P2neutral, unchanged seven-argument800/Sonic/Tails/off Settings
+and its existing omitted-title inlet: Main
+`efd605142603146509995cffbb56a6b48f9c1c1b`, then owned
+`feature/ai-ssz-wide-paired-r3-20261021` at current
+`a4d78a16df5b312e75a23b28df797cef88e496c6` (execution footprint unchanged393).
+Both normally draw every input. There is no restore, state import, extra seed,
+authored controller, maintained assertion change or third request.
+
+The identical external `WideLedgerProjection.java` reads115 fixed fields at
+PRE_STEP, POST_STEP and POST_DRAW: original P1/P2 position/full16-bit fractions,
+velocity/ground/air, animation/radii, shared rings, shield/hurt/invulnerability,
+lives/control/CPU stored state, camera XY and actual local world/player bindings.
+The45 selected actor/CPU getter bodies match between arms. Public
+`RingManager.capture()` has the same verified read-only body on both: it copies
+placement bits/sparkles/window and attracted entries with source/pool/SST indices.
+CPU diagnostics that query rules/providers are excluded. No original callback,
+predicate or provider is rerun, and `ringAcquired` is not treated as a collector
+or award oracle. Local reference labels are not native addresses; a persisted
+interaction slot is not a stable cross-arm owner or hurt receiver.
+
+Each actual **observation XML**, not a JUnit report, records9914 completed inputs,
+29742 rows,115 fields,0 skipped inputs and0 JUnit tests. Both reproduce P1
+centre512/1420, alive/lives3, with **Main46 versus current48 rings**; P2 ends at
+512/1285 versus512/1349. This closes the ordinary-schedule reproduction question,
+not current-route acceptance. XML Java25.0.4.1/EGL/classpath/ROM/tmp properties,
+actual LWJGL3.4.1 native jars and source/POM/config/adapter/ROM pins were inspected.
+Main Maven1:12 after199s queue waiting; current Maven1:09 after497s waiting.
+Maven durations include compilation/boot/projection; separate replay timing and
+total delivery time were not measured. Both requests used the current Main
+absolute queue, `--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl compile
+exec:exec -B`, runtime classpath and the unchanged source-file adapter. Java25,
+surfaceless EGL/null OpenAL/Lua5.4 and original verified absolute ROMs match R2;
+ambient JVM/display/library overrides are unset. Exact expanded argv is in the
+owned R3 registry. Main classes were discarded before the current fresh build.
+
+All115 columns are compared. POST_STEP→POST_DRAW changes none of these observed
+fields on either arm; each next PRE_STEP matches the preceding POST_DRAW state.
+These are bounded observed-field statements, not whole-renderer/world equivalence.
+The first boundaries are:
+
+- **3491 POST_STEP**, original P1Left/P2neutral: the first difference is solely
+  P1's persisted `interact_slot`, Main28/current27 (both9 before). All other114
+  observed fields still match. P2 first differs on that slot at3507 POST_STEP,
+  also28/27. The actual contacted owner/spawn/routine/lifetime behind those slots
+  was not observed; equivalent-owner allocation versus different contact is open.
+- **6721 POST_STEP**, original P1Left/P2neutral: first motion/hurt difference is
+  P2. **All115 PRE_STEP fields agree** at this input, including rings37 and P2
+  centre2908/2523, fractions35584/21248, velocity-984/+1192, rolling, no hurt/iframes.
+  Main afterwards has centre2904/2527, velocity-1008/+1248, radii7/14, anim2,
+  hurt=false/iframes0. Current has2904/2526, +512/-1024, radii9/15, anim26,
+  hurt=true/iframes120. Both still have37 rings and are alive. Actual executed
+  touch/damage receiver, decision and same-step order remain unexposed.
+- **7164 POST_STEP**: first P1 motion difference, vertical velocity Main-856
+  versus current+856. First camera difference follows7166 POST_STEP, X845/844;
+  the first ring snapshot difference there is camera-window metadata, not a
+  changed collected bit or ring count.
+- **7172 POST_STEP**, original P1Left/P2neutral: first ring-count difference,
+  Main45→45/current45→46. Current alone adds placed-ring bit5 and sparkle
+  `5:7172`; low collected word changes1693491243123779584→1693491243123779616.
+  Main's bits do not change. Trajectories already differ: P1 Main1180/2256,
+  current1174/2310; P2 Main1246/2224, current1210/2259. No attracted entry is
+  visible before/after this boundary, or in any sampled row of either replay.
+  This observes a placed-ring outcome, not the collector or an attributed
+  acceptance callback. The count difference never reconverges and ends+2.
+
+The earliest observed state difference therefore predates the ledger. The
+smallest next seam is the actual original contact owner/spawn/routine/lifetime
+behind the3491 slot28/27 write (P2 follows3507), without rerunning the solid
+provider. This may be an equivalent-owner slot difference; it is not declared
+causal. The later6721 boundary independently needs the actual executed damage
+receiver/decision/order if pursued. Its matched public PRE state does not prove
+the whole object/touch-list world matched. No causal chain from the early slot
+difference to hurt, later trajectory or endpoint, and no native correctness,
+is established. Deferred award/native-P2-hurt suspects are not promoted to causes.
+
+The useful adapter and compact `FIRST_DELTA.txt` remain in the external R3 task
+directory. The latter retains the complete115-field before/after rows, original
+pads and local bindings at3491/3507/6721/7164/7166/7172. Raw series, observation
+XML, logs, tmp/native extraction and generated helper products are consumed
+only after comparison. R1/R2/supplied refs and actual native/reference checkout
+HEADs/status/tracked bytes/config are preserved; Root/Main checkouts are untouched.
+Expected46, all controllers, source/runtime/POM/API and maintained comparisons
+remain unchanged. No maintained class, broad/Root31/full suite, author search,
+native timing/pixels, true boot or complete Main route is run or certified.
