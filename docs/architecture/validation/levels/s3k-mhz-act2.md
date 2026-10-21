@@ -786,3 +786,42 @@ All jobs are0 JUnit executable observations, skips N/A. Consumed raw outputs and
 classes were removed before the local docs commit; useful proposals and compact
 facts remain external. No fourth policy/retry/instrumentation or further workload
 was performed. Root reviews the actual frontier before any later action.
+
+### Knuckles accepted-hit ordinary recovery R9 — 2026-10-21
+
+R9 is one separate damage-recovery lifecycle on exactce443d11a4f07d25d5b21e748337146a558c8e14;
+R8 stays immutable. The maintained Act2 test rejects death/decreasing lives,
+not every hurt or ring loss (`TestMhzKnucklesColdRouteCapture.java:158..162`).
+No maintained oracle, original boss/FBZ/history/rewind predicate or input data
+was weakened or adapted.
+
+The entire42635-input R8 policy1 prefix and a finite480-input Right-only/P2neutral
+tail were production-authored/reloaded before boot in this same request. Every
+mask/boolean/payload was checked, including JUMP0x10. All64 original42511 and
+42634 fields matched on current source; the original world/Level/OM/P1/LEVEL,
+input, pending/fade and released-control guards qualified the already-hurt inlet.
+No seeds, snapshot/restore or terrain/touch/provider re-probe occurred.
+
+| Input | Ordinary reached event |
+| --- | --- |
+| 42635 | A released/Right-only; ring count10→0, lives3. |
+| 42732 | Grounded but hurt, actual Spikes slot25 riding/onObject. |
+| 42733 | Hurt clears; movement input remains inactive. |
+| 42734 | First grounded/unhurt/free movement recovery at10383/2316, velocity12/0/ground12,0 rings/3 lives. |
+
+Recovery is on **actual Spikes**, spawn10360/2352/sub48/layout400, not a safe
+onward inlet or hazard clearance. One request executed100 new/42735 total
+step/draw pairs, stopped at that first recovery and did not run a second public
+new-hurt edge, death or life loss. Invulnerability remains UNOBSERVED; source120
+is not a measured timer. The initial hurt receiver and native/cause equivalence
+remain unknown. No full-act, boss/FBZ, history or rewind qualification follows.
+
+The [R9 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-accepted-hit-ordinary-recovery-r9--2026-10-21)
+records static versus actually executed proposal hashes, pre-boot proof, complete
+selected rows and1467s queue wait/01:26 Maven time. Session91709's original
+Maven/Java exited0; its unchanged launcher then exited1 on a stale old-deadline
+registry-write guard. That original post-result metadata error is retained and
+the record completed under Root's explicit15:34 amendment, without restart.
+All observations are0 JUnit/skips N/A. Raw outputs/classes were consumed before
+the local docs commit; useful proposals and compact facts remain external.
+Root reviews before any later ordinary policy, adaptation or qualification.

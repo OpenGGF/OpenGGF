@@ -28124,3 +28124,99 @@ external. Root's next question can be the actual original caller-owned receiver,
 selected contact/result and evaluated geometry at R8 policy1 first hurt42634;
 no witness/instrumentation or further workload was authored. See the
 [R8 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-first-spikes-support-fresh-jump-r7r8--2026-10-21).
+
+### MHZ Knuckles accepted-hit ordinary recovery R9 — 2026-10-21
+
+R9 is a separately authorized ordinary damage-recovery question, not a fourth
+R8 jump policy. R8 and its refs/results remain immutable. Source was exact
+ce443d11a4f07d25d5b21e748337146a558c8e14 on the new owned
+`feature/ai-mhz-knuckles-damage-recovery-20261021`, adopting that POM/source while
+preserving all earlier refs, supplied branches and native index703/actual322.
+The maintained test at `TestMhzKnucklesColdRouteCapture.java:158..162` forbids
+death/decreasing lives and has no no-hurt/no-ring-loss assertion. R8's first-hurt
+stop remains its exploratory restriction. No maintained test, boss/FBZ/history/
+rewind predicate, input data, count, index or replay window was changed.
+
+One finite proposal preserved the ENTIRE42635-row actual R8 policy1 prefix and
+appended at most480 constant Right-only inputs, A released from42635 and P2
+neutral throughout. Before boot in this same lifecycle, production
+InputLogAuthorTool/Bk2MovieLoader authored/reloaded all43115 proposed rows and
+compared full prefix records plus every raw payload, input/action mask, Start
+and debug boolean. Independent raw-lane checks included JUMP0x10;10169 proposed
+rows carry jump, all in the preserved prefix. Source prefix BK2 SHA256 is
+4c7e3a0bf7859be7a9e3a39094bfd67a09099eac76661b3065f9f3ca9232eeff.
+The pre-boot proof text SHA256 is
+2e354eace208b6d0896d1c9dcf21f286fbfe3956f96e14bcf33851a26ef9d457.
+
+Both original public64 checkpoints42511 and42634 matched exactly on ce443.
+The latter remains10581/1821, x/y velocity-512/-1024, ground speed0, hurt/air,
+not rolling/jumping/gliding,10 rings/3 lives, LEVEL7/1, released controls/forced0
+and actual rider none. World/Level/OM/P1 identity from42511, focus, LEVEL,
+pending fresh assembly/callback fade and control guards qualified the hurt inlet.
+An original mismatch would stop the same lifecycle without fitted/repaired replay.
+
+The stop contract allowed this initial hurt and its subsequent ring-count change.
+It stopped at first grounded/unhurt/movement-active freely controlled recovery,
+death/life loss, world/mode/P1/pending/fade/control boundary, a second public
+false-to-true hurt edge,480 new inputs or the scoped cutoff. There were no seeds,
+snapshots/restores, terrain/touch/provider re-probes or new runtime observers.
+The existing public64 observer, settings/title policy, native320 solo Knuckles/
+off/cold7/0/null seeds and normal one-draw-after-each-step semantics were reused.
+
+| Input | Actual ordered observation |
+| --- | --- |
+| 42634 | Accepted first-hurt prefix row,10 rings/3 lives, airborne, actual rider none. |
+| 42635 | First Right-only row; rings10→0 and movement input inactive. |
+| 42732 | Grounded while still hurt; actual riding/onObject becomes Spikes slot25. |
+| 42733 | Hurt clears; movement input remains inactive. |
+| 42734 | First grounded/unhurt/movement-active recovery; centre10383/2316, velocity12/0/ground12,0 rings/3 lives, released controls. |
+
+The endpoint is actual Spikes support: slot25, spawn10360/2352/id8/sub48/flags0,
+rawY2352/layout400, riding piece-1. Complete row42734 has subpixels18485/25388,
+radii9/19, angle0, no forced input/control/object-control, LEVEL7/1 and Right-only.
+It is **not a safe onward inlet or hazard clearance**. All100 new inputs were
+Right-only, with3 lives/no death. Hurt is observed on98 new rows42635..42732;
+there is no second public new-hurt edge before the stop. The original hurt
+receiver remains UNKNOWN. Invulnerability was not observed: source120 is not a
+measured timer, and neither a remaining timer nor future survival is inferred.
+
+Exactly42735 original step/draw pairs ran:42635 prefix plus100 new, with no
+second attempt or prefix-only ceremony. The single command session91709 used
+the current absolute Main queue wrapper from this owned cwd for
+`-Dmse=off compile exec:exec -B`; main build, private javac and the one cold Java
+lifecycle shared that admission. Queue wait was1467s; Maven reported01:26 min
+including setup. AUTHOR_START15:13:48.349642004Z to
+AUTHOR_END15:14:11.085673767Z is22.736s for boot/prefix/tail. Java25, canonical
+absolute ROM SHA1 CFBF98C36C776677290A872547AC47C53D2761D6, surfaceless EGL,
+null audio and Lua5.4 remained configured; display and ambient Java/Maven options
+were absent. These are0 JUnit executable observations, skips N/A, not a maintained
+route, native, whole-act, boss/FBZ or rewind qualification.
+
+Root explicitly amended this SAME pending request from15:04:49.177308Z to
+15:34:49.177308Z. That scoped amendment, its old deadline and counted private
+deadline-only preimages/hashes are retained; it was not inferred from smoke16:04.
+No request was cancelled/restarted. The original Maven/Java lifecycle exited0.
+The already-running launcher retained the old expiry snapshot and then exited1
+on its final registry write: `r9_run.py:17 -> r5_state.py:28`,
+`RuntimeError: registry expired; cleanup only`. This post-result metadata error
+is preserved separately from the completed gameplay result. The owning observer
+completed the strict own-only record externally under the explicit new deadline;
+there was no replay or gameplay repair.
+
+Useful external `r9-products` artifacts under the existing `MHZ_DIAGNOSTIC_DIR`:
+
+- `proposal.script`: SHA256 `2b01acb9a0d72d2aab216fcaa76a9735043bf58538264a1a1525ef48b2338e7e`.
+- `proposal.bk2`:43115 proposed rows, SHA256 `8759c1e71be3e339de652a5da089c08dd8c9248c9c1993022f593812ef05db35`.
+- `executed.script`: SHA256 `3418daf4bb03cfe927fab5fcd334734f99bb2f14c6c81981843e8fa50d7cd1c8`.
+- `executed.bk2`:42735 actually executed rows, SHA256 `e0f3ff759837ce3cafde693d7fadec0ffd5665bc4cd98833d600df1ba96bc305`.
+
+The executed product was production-authored/reloaded and compared row-for-row
+in the same lifecycle; raw prefix/P2/Right-tail checks also passed on readback.
+Exact argv, current source/class/environment pins, ordinal10 returned task/run
+binding, proof hashes and selected complete rows remain in the existing compact
+observation record. Consumed logs/series/proof files/XML/classes/temp directories
+were removed under owned leases before this docs-only append. Useful private
+adapter/preimages/proposals remain external. No maintained runtime/POM/input/
+oracle change, extra agent, native/model run, retry, push or integration occurred.
+Root owns any later hazard/ordinary-controller question and route adaptation.
+See the [R9 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-accepted-hit-ordinary-recovery-r9--2026-10-21).
