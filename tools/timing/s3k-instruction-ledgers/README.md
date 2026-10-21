@@ -39,7 +39,7 @@ it changes none of the routine-cost models or their callers.
 | `render/` | R15 | Render_Sprites family and Draw_Sprite ([README](render/README.md)) | 10 |
 | `deform/` | R16 | ApplyDeformation (both copies), AIZ1_Deform, AIZ1_ApplyDeformWater ([README](deform/README.md)) | 7 |
 | `palette/` | R17 | palette fade family `$3AF0`–`$3DBE` from palette-owner inputs ([README](palette/README.md)) | 6 |
-| `mini68k/` | R10–R17; cold entry 2026-10-21 | shared fail-closed interpreter/forms; separate `cold_entry.py` reset-to-device semantic control | 15 + 29 cold |
+| `mini68k/` | R10–R17; cold entry 2026-10-21 | shared fail-closed interpreter/forms; separate `cold_entry.py` reset-to-device semantic control | 15 + 31 cold |
 
 `mini68k/` holds the only copy of the interpreter. Each extension adds named forms and delegates everything else
 down the chain, which raises `Unsupported`: `palette_forms` → `deform_forms` → `render_forms` → `nem_forms` →
@@ -66,7 +66,11 @@ ordinary refresh and MOVEM.L's distinct skip-refresh order. Unknown input, sourc
 profile, opcode, producer or IRQ refuses. No VDP-write acceptance is inherited.
 
 `generate(rom, sources, profile)` has no expected-data input. The CLI reads its
-native report only after execution. The comparator strictly authenticates the
+native report only after execution. Its single bounded read (64KiB maximum) supplies
+both strict JSON parsing and the reported `native_expected_sha256`. That digest
+identifies the compared raw buffer, including its whitespace; the path is not reopened
+for hashing, so a later path replacement cannot substitute unchecked bytes.
+The comparator strictly authenticates the
 qualified703 diagnostic schema/status/profile/ROM/managed/native/build/source
 identities and ordered40-word records, then compares every word of the38 supported
 records and all named initial fields. Three snapshots,11 retirements and13 logical
@@ -91,12 +95,14 @@ python3 -B tools/timing/s3k-instruction-ledgers/mini68k/cold_entry.py \
 python3 -B -m unittest discover -s tools/timing/s3k-instruction-ledgers/mini68k -p 'test_*.py' -v
 ```
 
-The second command runs29 cold controls plus15 existing form controls. Cold tests
+The second command runs31 cold controls plus15 existing form controls. Cold tests
 explicitly skip without all four ROM/source/oracle variables; qualification needs
 zero skips. They cover all1,520 claimed-word mutations, identity/profile/type and
 record order/capacity refusals, source/mask/opcode/reset/CCR/refresh faults, both
 extra reads, skip-refresh crossing controls, comparator-only dataflow and restore
-at every phase. Exact qualification is recorded in the existing
+at every phase. CLI controls also atomically replace a task-owned expected path after
+its first read (small and over64KiB replacements), retaining the original compared
+digest and proving no second unbounded read. Exact original qualification is recorded in the existing
 [playable-completion plan](../../../docs/architecture/plans/2026-10-13-s3k-playable-completion.md).
 
 ### `kos/`
@@ -125,7 +131,7 @@ done
 
 The historical research counts are 106 source-model tests (vint 11, hud 10, drawlevel 8, nem 14, hint 10, mainloop 15, render 10,
 deform 7, palette 6, mini68k 15) plus 14 Kos-service tests. `vint/nem/test_nem_decoder.py` takes about 45 s.
-The separate29 cold-entry tests additionally require the variables documented above.
+The separate31 cold-entry tests additionally require the variables documented above.
 
 Most test classes **skip** without `S3K_ROM` and `GPGX_GIT`, and the native comparison cases skip without
 `KOS46_NATIVE_ROOT`. A skip is not a pass: check that the summary line reads `OK` with no `skipped=` count.

@@ -8,12 +8,15 @@ No native/JVM/capture launch, report output or changes to existing model callers
 """
 import ast
 import copy
+from contextlib import redirect_stdout
 from dataclasses import replace
 import inspect
 import io
+import json
 import os
 from pathlib import Path
 import sys
+import tempfile
 import unittest
 from unittest import mock
 
@@ -390,6 +393,64 @@ class ColdEntry(unittest.TestCase):
         self.assertEqual(cpu.snapshot(), before)
         tree = ast.parse(inspect.getsource(ce.generate))
         self.assertEqual([arg.arg for arg in tree.body[0].args.args], ['rom', 'sources', 'profile'])
+
+    def test_cli_digest_identifies_same_bounded_bytes_after_path_replacement(self):
+        original = Path(os.environ['COLD_ENTRY_EXPECTED']).read_bytes()
+        self.assertLessEqual(len(original), 65536)
+        real_open = Path.open
+        for replacement in (None, b'{}', b' ' * 65537):
+            with self.subTest(replacement_size=None if replacement is None else len(replacement)):
+                # Only a task-owned temporary copy changes; the qualified703 input is read-only.
+                with tempfile.TemporaryDirectory(prefix='.cold-entry-expected-r2-',
+                                                 dir=Path(__file__).resolve().parent) as directory:
+                    expected = Path(directory) / 'expected.json'
+                    expected.write_bytes(original)
+                    reads = []
+                    class ExpectedStream:
+                        def __init__(self, stream):
+                            self.stream = stream
+
+                        def __enter__(self):
+                            return self
+
+                        def __exit__(self, *error):
+                            self.stream.close()
+
+                        def read(self, limit=-1):
+                            reads.append(limit)
+                            raw = self.stream.read(limit)
+                            if len(reads) == 1 and replacement is not None:
+                                changed = expected.with_suffix('.replacement')
+                                changed.write_bytes(replacement)
+                                changed.replace(expected)  # genuine atomic pathname replacement after read.
+                            return raw
+
+                    def open_path(path, *args, **kwargs):
+                        stream = real_open(path, *args, **kwargs)
+                        return ExpectedStream(stream) if path == expected else stream
+
+                    output = io.StringIO()
+                    args = ['--rom', os.environ['S3K_ROM'], '--gpgx-git', os.environ['GPGX_GIT'],
+                            '--tracechaser', os.environ['COLD_ENTRY_TRACECHASER'],
+                            '--expected', str(expected), '--profile', ce.PROFILE_NAME]
+                    with mock.patch.object(Path, 'open', open_path), redirect_stdout(output):
+                        self.assertEqual(ce.main(args), 0)
+                    result = json.loads(output.getvalue())
+                    self.assertEqual(result['status'], 'PASS')
+                    self.assertEqual(result['claimed_records'], 38)
+                    self.assertEqual(result['native_expected_sha256'], ce.digest(original))
+                    self.assertEqual(reads, [65537])
+                    self.assertEqual(expected.read_bytes(), original if replacement is None else replacement)
+
+    def test_private_expected_handoff_keeps_raw_digest_and_public_loader_contract(self):
+        raw = b' { "value" : 1 } \n'
+        with mock.patch.object(Path, 'open', return_value=io.BytesIO(raw)):
+            report, sha256 = ce._load_expected_with_digest('comparison-only-input')
+        self.assertEqual(report, {'value': 1})
+        self.assertEqual(sha256, ce.digest(raw))
+        self.assertNotEqual(sha256, ce.digest(json.dumps(report).encode()))
+        with mock.patch.object(Path, 'open', return_value=io.BytesIO(raw)):
+            self.assertEqual(ce.load_expected('comparison-only-input'), report)
 
     def test_device_values_are_explicitly_unclaimed(self):
         report = copy.deepcopy(self.expected)

@@ -415,12 +415,17 @@ PROFILE_REPORT = {'hardware': 'Mega Drive cartridge', 'region_setting': 'Autodet
     'sync_settings': 'GpgxHost.CreateGhz1SyncSettings'}
 
 
-def load_expected(path):
+def _load_expected_with_digest(path):
+    """Retain identity of the same bounded immutable buffer passed to strict JSON parsing."""
     with Path(path).open('rb') as stream:
         raw = stream.read(65537)
     if len(raw) > 65536:
         raise Refused('expected report exceeds bounded size')
-    return json.loads(raw, object_pairs_hook=strict_object)
+    return json.loads(raw, object_pairs_hook=strict_object), digest(raw)
+
+
+def load_expected(path):
+    return _load_expected_with_digest(path)[0]
 
 
 def validate_expected(report, sources):
@@ -556,9 +561,10 @@ def main(argv=None):
         sources = Sources(args.gpgx_git, args.tracechaser)
         cpu, boundary = generate(args.rom.read_bytes(), sources, Profile(args.profile))
         # Expected data is opened only AFTER the entire independently generated continuation.
-        result = compare(cpu, boundary, load_expected(args.expected))
+        expected, expected_sha256 = _load_expected_with_digest(args.expected)
+        result = compare(cpu, boundary, expected)
         result.update(rom_sha1=ROM_SHA1, source_manifest=sources.manifest,
-                      native_expected_sha256=digest(args.expected.read_bytes()))
+                      native_expected_sha256=expected_sha256)
         print(json.dumps(result, sort_keys=True))
         return 0
     except (Refused, mini68k.Unsupported, OSError, ValueError, KeyError) as error:
