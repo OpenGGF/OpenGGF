@@ -1700,7 +1700,7 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.22.3</version>
+            <version>2.22.4</version>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
@@ -1725,7 +1725,7 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-yaml</artifactId>
-            <version>2.22.3</version>
+            <version>2.22.4</version>
         </dependency>
         <dependency>
             <groupId>org.ow2.asm</groupId>
