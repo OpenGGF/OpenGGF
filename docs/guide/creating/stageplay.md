@@ -1,7 +1,7 @@
 # Direct a scene with OpenGGF Stageplay
 
-Stageplay turns supplied ROM art and saved editor levels into sets for linear
-sprite films, animatics and mod cutscenes. Both the built-in editor HUD and
+Stageplay directs supplied ROM characters and worlds, or saved editor sets, for
+linear sprite films, animatics and mod cutscenes. Both the built-in editor HUD and
 [OpenGGF Editor](https://github.com/OpenGGF/OpenGGF-Editor) use the engine's same
 scene document, editing commands and evaluator. A `.stageplay` file opens in either.
 
@@ -37,8 +37,9 @@ can browse local files. Properties apply together when their final action is cho
 Puppet roles use destination and urgency commands, with independent jump button
 holds. The inspector shows the resolved centre and movement status, including
 arrival or blocked attempts. A goal does not guarantee a route: jump explicitly
-where needed. Native objects, moving platforms and zone events are not part of the
-staged terrain simulation. [The authoring reference](stageplay-authoring.md#puppet-and-poser-modes)
+where needed. The default **TERRAIN_ONLY** mode simulates player physics against
+detached terrain without native objects or zone events. Choose **LIVE** for the
+shared native world described below. [The authoring reference](stageplay-authoring.md#puppet-and-poser-modes)
 describes command fields, compatibility and the windowless simulation tool.
 
 **Record directed take** stores physical movement intents for Puppet actors. Poser mode
@@ -51,15 +52,51 @@ Use **Scene / set** to change duration, output dimensions or the source set.
 Delete keys and cues outside a shorter duration before shortening. Preview fits
 the authored picture into the game viewport; film output uses its exact dimensions.
 
+## Direct a live world
+
+In **Scene / set**, choose **LIVE** and a stock ROM zone/act. Remove any authored
+level-project link; LIVE loads the ROM's own level data. Each shot creates a fresh
+native world with independent Puppet inputs, moving objects, rings, hazards,
+collision, clocks and rewind. All Puppets in that shot use its native game. The
+native roster limit applies, rather than the document's general 32-actor limit.
+Older scenes retain terrain-only behavior when reopened.
+
+The selected actor's actions include **WAIT**, **RELEASE**, **CROUCH**, **LOOK_UP**
+and **ROLL**. S3K Tails also has **FLY_TO** and **HOVER**; S3K Knuckles has
+**GLIDE_TO**. Native physics owns takeoff, stamina, damage, recovery and landing.
+Move/fly/glide can target an actual placement using its layout index, expected
+object ID/subtype and offset. Use the offline tool's **level** command to discover
+those values from the loaded ROM. A wait can gate later commands until arrival,
+object support, landing, hurt, recovery or ring collection, with a finite timeout.
+Inspect actual outcomes; a destination does not supply general pathfinding.
+
+The external Editor inspector displays native ability state/timer, shared rings,
+hurt, supporting placement and target status. Its timeline names waits, object
+targets and camera following. Both editors use the same editing forms and preview
+owner. Preview runs separately from the open gameplay/editor world and requires
+the configured original whole-image ROM path for each game. Seeking is silent;
+forward playback admits native effects alongside authored music/voices. Add explicit
+music cues when the scene needs music in both preview and export.
+
+LIVE film dimensions use native height **224**, width **320–1920**, and fixed
+**1x** camera zoom; enlarge the exported video by an integer scale. Keep the cast
+within the native camera's object activation window. A widely separated actor
+fails with an actionable route message; use closer blocking or a new shot.
+The [examples](../../../examples/stageplay-demo/README.md) include platform
+transfers, flight/glide, rings/hurt and the 60-second **One More Take** rehearsal.
+
 ## Direct the camera and change scenes
 
-Press **C** for camera directing mode. WASD/arrows pan, Q/E zoom, **K** places a
+Press **C** for camera directing mode. WASD/arrows pan, Q/E zoom in terrain-only
+shots, **K** places a
 camera key and **R** records a camera take; Space finishes. A take is one undo edit.
 Zoom uses held integer framing; it changes at a key rather than animating through
 fractional nearest-neighbour scales. Pans retain their chosen interpolation.
 The draft camera stays separate from the evaluated shake, so saving a key never
 accidentally bakes earthquake offsets into it. Switch back to actor mode to direct
-cast movement.
+cast movement. LIVE camera keys can follow one actor or a group: set **follow**
+to comma-separated actor IDs, then tune dead zones, look-ahead, smoothing and
+offsets. Follow uses actual native positions and remains at zoom one.
 
 Both editors expose **Camera effect** and **Scene change** commands with editable
 timeline rows. Camera effects add deterministic seeded shake over a half-open
@@ -170,17 +207,18 @@ is installed per effective module; it rejects another controller that already
 owns frame admission. The service and its rewind state share one owner-bound
 instance, with the normal creator fault boundary.
 
-The staged cast is detached from the live world. Puppet actors use private native
-player controllers against the loaded terrain; Poser actors use authored keys.
-The live world's clocks, players and objects remain held while the scene replaces
-its picture, and completion resumes that world. Native objects, rings, water
-programs and evolving zone events are not simulated in the staged performance.
+The existing gameplay world stays held while the scene replaces its picture, and
+completion resumes it. In TERRAIN_ONLY scenes, Puppets use private native controllers
+against detached terrain and Posers use authored keys. LIVE scenes run their own
+native world in the same isolated preview host used by the editors; they do not
+replace or advance the held gameplay world.
 
-For actual main-player direction, the registration overload accepts the actor ID
+For terrain-only main-player handover, the registration overload accepts the actor ID
 and `StageplayNativeBinding.FinishMode`. The bound actor must match the native
 game and character, with unit actor scale. Camera zoom is presentation-only. The first version
 requires a freely controlled player: dead, hurt, super, object-supported and
 object/ability-controlled states are rejected. Other actors remain detached.
+LIVE scenes reject this binding: their performers belong to the isolated world.
 
 - `RESTORE_ENTRY` returns the player's entry state and camera.
 - `KEEP_FINAL_POSITION` restores gameplay control at the final centre with zero

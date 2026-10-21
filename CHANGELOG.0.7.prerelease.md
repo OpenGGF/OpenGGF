@@ -20,7 +20,7 @@ Unreleased. The earlier development themes remain in
   clear speakers and deterministic text reveal in playback, both editors and exports.
   Mods play the same scenes with held native gameplay and optional explicit
   main-player handover. See the [guide](docs/guide/creating/stageplay.md) and
-  [fifteen-second example](examples/stageplay-demo/README.md).
+  [directing examples](examples/stageplay-demo/README.md).
 
 - **Recording imports:** copied BK2 recordings are bounded during decompression
   and parsing, including metadata, input rows and verification sidecars. Oversized,

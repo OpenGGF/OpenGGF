@@ -42,10 +42,16 @@ dated design specs under `docs/architecture/designs/` are historical provenance 
 **Stageplay.** `com.openggf.stageplay` owns versioned directing data, pure 60 Hz
 evaluation and the shared editing controller/store. Both authoring frontends use
 `StageplayWorkspace` through `EditorWindowChrome.Host.stageplay()`; UI state is not
-scene state. Runtime resource views are detached from native PLC/terrain owners,
-with explicit ROM and relative authored-set/voice dependencies. Playback is one
+scene state. TERRAIN_ONLY resource views are detached from native PLC/terrain
+owners, with explicit ROM and relative authored-set/voice dependencies. Opt-in
+LIVE scenes use `StageplayLiveWorld` and the production `LevelFrameStep` pipeline
+for one world per shot, independent native inputs, objects/rings, abilities and
+rewind. Editors and registered playback use `StageplayOfflinePreview` to retain
+the host world; capture explicitly transfers its own disposable session. Cinematic
+framing follows actual actors at fixed zoom without adding activation regions.
+Playback is one
 exclusive owner-bound frame controller with captured transport. Optional native
-main-player binding uses `CourseControl`'s opaque entry capability; the engine's
+terrain-only main-player binding uses `CourseControl`'s opaque entry capability; the engine's
 `DirectedPlayerLease` owns cleanup independently of creator callbacks, including
 quarantine, teardown and revoked historical restore. It restores player/camera
 state, never a whole course. Offline capture uses an independent transport and
