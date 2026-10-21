@@ -27235,3 +27235,105 @@ test, qualifying pair, native run, full66282/FBZ/campaign execution, source fix,
 maintained adaptation, push or integration occurred. Root owns any further
 source/ordinary-input question and workload after this bounded result.
 See the [R6 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-reached-ledge-continuation-r6--2026-10-21).
+
+### MHZ Knuckles first-Spikes-support fresh jump R7–R8 — 2026-10-21
+
+R7 was source-only, with0 workloads/0 JUnit. Current runtime sources remain
+b078214e74ddbcb393cbc0173fd8c74055b0dadb-equivalent. Shipped `FixBugs=0` reference
+044fa46725c71187399e13f5ddb70e11d32dc024 distinguishes Spikes' original solid
+contact from generic selected touch: `sonic3k.asm:48953..49010,49082..49108`
+selects dimensions/side contact, `49240..49259` gates hurt and subtracts signed
+`y_vel<<8` from the full Y position before HurtCharacter; `21126..21157` writes
+the shared hurt response. Current owning ranges are
+`AbstractSpikeObjectInstance.java:24..31,55..58,105..130,258..264`,
+`Sonic3kSpikeObjectInstance.java:68..98,112..146`, and
+`ObjectTouchResponseController.java:1357..1406` /
+`AbstractPlayableSprite.java:2953..3035,3062..3088`. Madmole's placed cap has
+zero touch flags; its body uses enemy0x0B and its side child SPECIAL0xD8
+(`sonic3k.asm:193466..193471,193587..193605`). None of these static branches,
+placement proximity or endpoint arithmetic identifies the actual hurt receiver.
+No demonstrated physics omission was found. R5/R6 hurt attribution stays UNKNOWN;
+R6's21/21/13 ring values remain first-hurt values, not future ring-loss outcomes.
+
+R8 used three unique fresh cold projections at exact1ce48789e94cf509f6559b57bc7620ee828d11cb.
+The new local docs branch preserves that exact R6 branch ref,947/R1–R7 history,
+suppliedefd/fee3/e3 refs and native gitlink703/actual322. The complete42512-input
+accepted prefix remains byte-exact, including R4 first40859 and all30000 Act1
+inputs; P2 is neutral. Each request reproduced every public64 field at42511 and
+the actual selected left Spikes support at42562. The three entire cold-prefix
+public64 CSVs also matched byte-for-byte (SHA256
+670fc1337c4e8c3c9c933fa8b6f690a04caa9544ba8ec7224f11b453688629d3).
+World/Level/OM/P1/LEVEL, focused player, input history, pending fresh assembly,
+callback fade and released controls were guarded. No seeds/snapshots/restores ran.
+
+All finite policies were recorded before launch, each capped at1200 additional
+step/draw pairs. Their shared approach was48 Right+A,1 Right, then Right+A until
+actual left Spikes support, with a72-input approach bound. At42562 this was
+Spikes slot18, spawn10256/1888/id8/sub112/flags1/rawY10080/layout392, grounded
+and actual riding/onObject. Each released A at42563 while retaining that actual
+support, then pressed fresh Right+A at42564. Actual row42564 is10267/1809,
+velocity1040/-1536, airborne/rolling, radii7/14, no onObject and actual riding
+none: the fresh ground jump executed. This differs from R6's held-A walk-off.
+
+| Policy | Declared input after fresh ground jump | Appended / complete rows | First hurt input | Terminal centre |
+| --- | --- | --- | --- | --- |
+| 0 | Hold Right+A through the bound | 111 / 42623 | 42622 | 10581/1916 |
+| 1 | Hold24, release A1, repress Right+A | 123 / 42635 | 42634 | 10581/1821 |
+| 2 | Hold36, release A1, repress Right+A | 120 / 42632 | 42631 | 10581/1927 |
+
+Policy1's release42588/repress42589 and policy2's release42600/repress42601
+actually enter glide flag1. All three stop at first hurt, with maxX10581,
+10 rings throughout the appended inputs,3 lives, no death and released controls.
+No pre-step flag4 or Up input occurred. Terminal actual riding is none; the
+stored left Spikes latch is history and does not identify the damage receiver.
+No later ring-loss row was executed. No unhurt grounded/free inlet beyond10784
+was reached, and the result is three failed bounded policies. No stop label,
+input timing or expected value was adapted after seeing an endpoint.
+
+The stop contract also rejects any ring decrease/life loss/death, world/mode/P1
+or pending/fade/control boundary, missing/materially different actual support,
+or240 inputs without a new maxX. A useful onward inlet required X>10784,
+unhurt ground flags, no onObject/actual rider, released controls and at least
+10 rings/3 lives. The earlier hazardous R5 safe-label rejection and R4's original
+private stale-alias assertion, guard failures and cancelled-before-admission
+policy7 remain historical; R8 does not rewrite or qualify them.
+
+| Policy / command session | Reported queue wait seconds | Maven execution report | Exit |
+| --- | --- | --- | --- |
+| 0 / 36183 | 992 | 21.730 s | 0 |
+| 1 / 31120 | 469 | 21.641 s | 0 |
+| 2 / 3079 | 604 | 21.912 s | 0 |
+
+Build session55261 used the current absolute Main queue wrapper for
+`-Dmse=off compile exec:exec -B` with external owned javac sources; it waited318s
+and reported58.000s execution. Each ordinary job used that wrapper from this
+owned cwd with `-Dmse=off exec:exec -B`, Java25/runtime classpath/Xmx3g/native
+access, surfaceless EGL, null audio, Lua5.4 and canonical absolute original ROM
+SHA1 CFBF98C36C776677290A872547AC47C53D2761D6. Native320 solo Knuckles/off/cold7/0,
+original title policy/null seeds and one normal draw per actual step remain
+unchanged. DISPLAY/WAYLAND and ambient Java/Maven options were absent. Waiting
+was pending, never a failed/repeated policy. Exact argv, source/class hashes,
+returned ordinal9 task/run association and complete selected rows are retained
+in the existing external observation record. Maven exits are executable outcomes:
+0 JUnit, skips N/A, with no maintained route/native/whole-act qualification.
+
+Production InputLogAuthorTool and Bk2MovieLoader authored/reloaded and compared
+every actual emitted row, including the full preserved prefix. Useful products
+under the existing `MHZ_DIAGNOSTIC_DIR` are:
+
+- `r8-products/policy-0.bk2`,42623 rows, SHA256 `8cd94d2b09a1e75c53deeae9cececcd681847b771decdf5deac1c80a948cd37d`.
+- `r8-products/policy-1.bk2`,42635 rows, SHA256 `4c7e3a0bf7859be7a9e3a39094bfd67a09099eac76661b3065f9f3ca9232eeff`.
+- `r8-products/policy-2.bk2`,42632 rows, SHA256 `f1165c0a8982fa70530bb8ca19fdf99f509f40fe7a8ec95e71c74663a3946fa5`.
+
+All354 appended /127890 total ordinary step/draw pairs were within the three
+bounds. No fourth trial, retry, native/model/core/candidate work, terrain/touch/
+provider re-probe, maintained data/oracle/count/index/window change, additional
+agent, push or integration ran. R8's own cutoff remains2026-10-21T15:04:49.177308Z;
+the outer16:04 renewal belongs to Root's original smoke remainder and adds no
+R8 authority. All consumed raw logs/series/XML/classes, temporary directories and
+attempt markers were removed under owned leases before this docs-only append.
+Private source-owned adapters, scripts/BK2s and compact ordered facts remain
+external. Root's next question can be the actual original caller-owned receiver,
+selected contact/result and evaluated geometry at R8 policy1 first hurt42634;
+no witness/instrumentation or further workload was authored. See the
+[R8 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-first-spikes-support-fresh-jump-r7r8--2026-10-21).

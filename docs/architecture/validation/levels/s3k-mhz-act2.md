@@ -744,3 +744,45 @@ FBZ, health/load/rewind or campaign qualification was rerun. Consumed raw output
 and classes were removed before the docs commit. Useful `r6-products` proposals,
 private adapters and compact facts remain in the existing external task directory.
 Root reviews before any further maintained adaptation or workload.
+
+### Knuckles first-Spikes-support fresh jump R7–R8 — 2026-10-21
+
+R7 source-only inspection found no demonstrated physics omission and did not
+attribute the original R5/R6 hurt receiver. Native FixBugs0 dimensions/contact
+selection and shared hurt writes cannot identify a receiver from endpoint X or
+static placement proximity. R6's21/21/13 remain first-hurt ring values.
+
+R8 ran three fresh cold ordinary continuations at1ce48789e94cf509f6559b57bc7620ee828d11cb,
+runtime b078-equivalent. Each preserved all42512 accepted input rows, neutralP2,
+R4 first40859 and Act1 first30000; production author/loader roundtrips compared
+every proposal row. All64 checkpoint42511 and actual left Spikes support42562
+fields match. Entire cold-prefix public64 series also match each other.
+World/Level/OM/P1/LEVEL/input/pending/fade/control guards qualify those reached
+observations, with no seeding, snapshot or restore.
+
+Actual support at42562 is left Spikes slot18/spawn10256/1888/sub112/layout392.
+All policies release A at42563 while still on that support, then execute a fresh
+ground jump42564 (airborne, vy=-1536, actual riding none). Policies1/2 later
+repress into actual glide at42589/42601. These are ordinary input observations.
+
+| Policy | Input after fresh ground jump | Appended inputs | First hurt / centre |
+| --- | --- | --- | --- |
+| 0 | Hold Right+A | 111 | 42622 /10581,1916 |
+| 1 | Hold24; release1; repress | 123 | 42634 /10581,1821 |
+| 2 | Hold36; release1; repress | 120 | 42631 /10581,1927 |
+
+Each bound was1200 appended inputs and stopped on first hurt. All appended rows
+retain10 rings/3 lives and released controls, with no death or flag4/Up.
+Terminal actual riding is none. MaxX10581 never reaches the declared grounded/free
+onward inlet beyond10784. The three-policy cap is exhausted: no safe onward
+frontier, original hurt receiver UNKNOWN, and no later ring-loss/native/full-act
+claim. R4's private assertion/cancellation and rejected R5 hazardous label stay
+unchanged. No maintained inputs/tests/oracles/counts/windows were adapted.
+
+The [R7–R8 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-first-spikes-support-fresh-jump-r7r8--2026-10-21)
+pins source ranges, exact finite recipes, proposal hashes, queue versus execution
+times, scope/expiry and the proposed original receiver/contact question.
+All jobs are0 JUnit executable observations, skips N/A. Consumed raw outputs and
+classes were removed before the local docs commit; useful proposals and compact
+facts remain external. No fourth policy/retry/instrumentation or further workload
+was performed. Root reviews the actual frontier before any later action.
