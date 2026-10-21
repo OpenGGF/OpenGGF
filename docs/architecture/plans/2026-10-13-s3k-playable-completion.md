@@ -28406,3 +28406,95 @@ Carry continuation/release, wall clearing, MTZ, native carry behavior, boot/pixe
 timing coverage and independent qualification remain unmeasured. Maintained
 movies/tests/windows/counts and expected46 remain unchanged. Root owns any later
 scope; no retry, second cold request, broad/native run, push or integration.
+
+
+### MHZ Knuckles recovered lower-support ordinary coast R10 — 2026-10-21
+
+One separately authorized cold lifecycle used exact prepared source
+2d1a7e4432bff3ffc1168aebbc80a54a3a86babd in the existing owned worktree on new
+`feature/ai-mhz-knuckles-coast-drop-20261021`. R1–R9 refs/results, supplied efd,
+native index703/actual322 and config remain preserved. Relevant MHZ movement,
+glide/wall, Spikes, mushroom, breakable-wall and capture/test/movie sources are
+unchanged from ce443. The current POM/source was adopted; this is not a replay of
+Root's frozen smoke or a maintained route qualification.
+
+The sole policy used the SAME R9 fixed43115-row proposal, preserving all42735
+actually executed R9 rows, R8 policy1 first42635, R4 first40859 and the entire
+30000 Act1 prefix. Its remaining380 rows are static Right-only/P2neutral, A
+released. In the same original invocation BEFORE boot, production
+InputLogAuthorTool/Bk2MovieLoader re-authored/reloaded the fixed script and
+compared all43115 records, masks, booleans and payloads, including10169 JUMP0x10
+rows. The original fixed BK2 and script hashes remain respectively
+`8759c1e71be3e339de652a5da089c08dd8c9248c9c1993022f593812ef05db35` and
+`2b01acb9a0d72d2aab216fcaa76a9735043bf58538264a1a1525ef48b2338e7e`.
+The temporary roundtrip BK2 hash was
+`e2c381095816ca576982ce00fd4a480c14634c31619d65d157328b5f929b1912`;
+the complete pre-boot proof text hash is
+`e47f70c130e6132d4d2fdf8223eee3a750ad336a8e290ec9aa4efe2f35cb5818`.
+
+All64 original checkpoint42511,42634 and42734 fields match exactly on this
+source. Actual42734 remains10383/2316, sub18485/25388, velocity12/0/ground12,
+grounded/unhurt/movement-active/free,0 rings/3 lives, actual Spikes slot25
+spawn10360/2352/id8/sub48/flags0/rawY2352/layout400/piece-1. World/Level/OM/P1,
+focus, LEVEL7/1, pending-fresh/callback-fade and control guards qualify this
+ordinary inlet. No invulnerability timer is exposed by the public64 observer.
+
+The predeclared stop was first actual post-step grounded/unhurt/movement-active,
+freely controlled non-Spikes support, or new hurt/death/life loss, world/mode/P1/
+pending/fade/control boundary,380 new inputs or the explicit16:04:49.177308Z
+R10 cutoff. The unchanged public64 observer supplies actual rider/onObject facts;
+no terrain/touch/provider predicate or callback was queried to select inputs.
+The private adapter's R9 preimage,15 counted reversible edits and full diff remain
+external. No runtime/test/POM/API/observer/logger/schema/input-oracle edits,
+snapshots/restores, state seeds or native/model runs occurred.
+
+| Input | Ordered actual observation |
+| --- | --- |
+| 42735..42779 | Right-only, grounded on actual Spikes slot25, unhurt/free;0 rings/3 lives. |
+| 42780 | Centre10436/2316; air0→1, onObject true→false, actual riding Spikes→none. Stale Spikes latch remains. |
+| 42787 | Centre10454/2320, airborne, actual rider none; ring count0→1, lives3. Pickup receiver unobserved. |
+| 42810 | Centre10545/2411, velocity1284/1680, airborne, actual rider none. |
+| 42811 | First grounded/unhurt/free non-object landing:10550/2417, velocity1308/0/ground1308,1 ring/3 lives, onObject=false/actual rider none. Stop. |
+
+The complete endpoint has subpixels59445/6956, radii9/19, angle4, animation0/
+frame4, mapping3, camera10390/2289, no forced input/locks/object-control and
+movement input active. The retained Spikes latch is NOT current support. All77
+new rows42735..42811 are Right-only, unhurt/alive, lives3 and controls free; all
+intermediate42780..42810 post-step rows are airborne with no object rider.
+No post-step mushroom support was retained. A within-step cap contact/bounce is
+UNOBSERVED, not established or excluded by proximity. No named terrain receiver
+was queried. This reaches the requested ordinary landing, not wall admission/
+clearance, a safe future inlet, mushroom/native equivalence, full-act or FBZ
+qualification. Original R5–R9 hurt attribution stays UNKNOWN; invulnerability
+and damage/native cause equivalence stay unqualified.
+
+Exactly42812 original step/normal-draw pairs ran:42735 prefix plus77 new. There
+was one request/session33434, no retry or later policy;303 fixed movie rows were
+not executed. The current absolute Main queue wrapper ran
+`-Dmse=off compile exec:exec -Dexec.executable=/usr/bin/python3
+-Dexec.classpathScope=runtime -Dexec.args="${MHZ_DIAGNOSTIC_DIR}/r10_exec.py %classpath" -B`
+from the owned worktree. Main compile, external javac and one cold Java lifecycle
+shared that admission. Reported queue wait543s and Maven01:23 min are distinct;
+AUTHOR_START15:49:38.522725263Z to AUTHOR_END15:50:00.346171233Z is21.823s for
+boot/prefix/tail. Launcher/Maven/Java exited0, with no command-metadata exception;
+R9's historical post-result stale-expiry error remains unchanged. These are
+0 JUnit executable observations, skips N/A. Java25, original absolute ROM SHA1
+CFBF98C36C776677290A872547AC47C53D2761D6, surfaceless EGL, verified null audio,
+Lua5.4, native320 solo Knuckles/off/cold7/0/title policy/null seeds and absent
+ambient display/JVM/Maven options were preserved.
+
+The same lifecycle production-authored/reloaded the actual42812-row executed
+product and compared every row against the fixed movie after stopping. Useful
+external `${MHZ_DIAGNOSTIC_DIR}/r10-products/executed.script` SHA256 is
+`52a814a9b655219d0e42d05649d2e27b6813a440ae443ba59483c213df46a6b9`;
+`executed.bk2` SHA256 is
+`eaab53f5b4dcbaee24197851bf4d98e0501b273a6bea27a4e07e0ce95e899368`.
+Exact returned ordinal11 task/run binding, source/environment/proof hashes,
+commands and selected complete ordered rows remain in the existing compact
+observation record. Every older observation is preserved byte-equivalently.
+Consumed raw logs/series/proofs/XML/classes/tmp and the regenerable roundtrip
+validation copy were removed under owned leases; target is absent. Useful fixed
+inputs, actual executed product and private sources/preimages remain external.
+No push/integration or foreign cleanup occurred. Root reviews row42811 before
+any new policy or maintained adaptation; there is no automatic onward workload.
+See the [R10 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-recovered-lower-support-ordinary-coast-r10--2026-10-21).
