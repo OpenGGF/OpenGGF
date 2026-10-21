@@ -24162,3 +24162,95 @@ archives. Exact R2 task/run/native/workspace ownership and expiry13:04:49Z stay
 in only this lane's external registry continuation. Local commit only, parent
 5bad, normal hooks/seven documentation trailers/final GPT-6.1-Sol coauthor;
 no rewrite of5bad, push, Main integration or worktree cleanup.
+
+
+## SSZ MTZ orb allocation and first dispatch — 2026-10-21
+
+Owned leaf `feature/ai-ssz-mtz-orb-init-20261021` starts exactly at
+`2bad8b9d18dda2f5c2d42b6947878370f0a1d1ff` in
+`${OPENGGF_TASK_WORKTREE}`.
+Here `OPENGGF_MAIN` names Main’s checkout and `OPENGGF_TASK_WORKTREE` names
+the app child’s owned nested `.worktrees/ssz-mtz-orb-init` checkout.
+The clean app checkout `ssz-mtz-orb-init` at `efd605142` and Root/Main branches
+remain untouched. Hooks are installed; Root owns review/integration/push and
+combined route/domain validation. Production ancestry includes `cf46bab8d9`.
+
+Locked-on `sonic3k.asm` owners: `loc_7A72C` allocates the head with
+`CreateChild1_Normal` (forward `AllocateObjectAfterCurrent`), then one orb with
+plain global `AllocateObject`. That orb's own `loc_7ADA2` initializes itself,
+allocates and initializes six siblings in global order, and returns at
+`loc_7AE12` before orbit, collision publication or drawing. The implementation
+keeps this actual dispatch boundary and retains only successful raw instances;
+allocation exhaustion stops the prefix permanently. The source still models
+`FixBugs = 0`. Shared allocators, physics, health/timing/camera, art, Mod API,
+controller resources and canonical fixtures are unchanged. The rejected old
+shortcut allocated all seven forward from the parent and initialized in the
+constructor. It also retained destroyed failed-allocation shells without IDs.
+
+The test-only RED diff SHA-256 was
+`1f0f148f06a7314e436d1e1c788369facd353825e3caa0b0662de8c26cb6d4ef`.
+At the pinned base, the exact queued command below ran18 tests: six original
+recipe controls passed,11 new assertions failed, and one new graph capture
+failed on an unregistered orb reference; zero skips. The concrete failures were
+`$24` becoming `$28` on the first own pass, the wrong forward-slot prefix rather
+than the lower global slot, and logical slot`-1` children on exhaustion.
+The same command after the two-class fix ran18/0/0/0. Main-tool queue waits were
+25s and10s; Maven reported1:21 and1:22 respectively (compilation included).
+
+```bash
+python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py --lean \
+  -Dmse=off '-Dtest=TestSszMetropolisRecipeBirth' test -B
+```
+
+Final bounded validation used the normal7GiB/8-core lane, Java25.0.4.1,
+explicit existing absolute ROM paths, and surfaceless EGL. S3K ROM identity:
+CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`.
+All11 selected class XMLs and testcase outcomes were inspected:1,459 tests,
+zero failures/errors/skips. Class counts:
+
+| Class | Tests |
+| --- | ---: |
+| `com.openggf.game.sonic3k.events.TestSszMetropolisRecipeBirth` | 19 |
+| `com.openggf.tests.TestS3kSszMtzArenaHeadless` | 25 |
+| `com.openggf.tests.TestS3kSszGhzArenaHeadless` | 17 |
+| `com.openggf.game.rewind.TestEveryObjectRewindRoundTrip` | 1334 |
+| `com.openggf.game.rewind.TestBossChildExactStateRewind` | 3 |
+| `com.openggf.game.rewind.TestObjectIdentityRebindingAcrossRewind` | 1 |
+| `com.openggf.tests.TestS3kAiz1SkipHeadless` | 8 |
+| `com.openggf.game.sonic3k.TestSonic3kLevelLoading` | 36 |
+| `com.openggf.tests.TestSonic3kLevelLoading` | 7 |
+| `com.openggf.game.sonic3k.TestSonic3kBootstrapResolver` | 6 |
+| `com.openggf.game.sonic3k.TestSonic3kDecodingUtils` | 3 |
+
+```bash
+python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.game.sonic3k.events.TestSszMetropolisRecipeBirth,com.openggf.tests.TestS3kSszMtzArenaHeadless,com.openggf.tests.TestS3kSszGhzArenaHeadless,com.openggf.game.rewind.TestEveryObjectRewindRoundTrip,com.openggf.game.rewind.TestBossChildExactStateRewind,com.openggf.game.rewind.TestObjectIdentityRebindingAcrossRewind,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils' \
+  "-Dsonic1.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_MAIN}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test -B
+```
+
+This job waited43s for admission; Maven reported38.659s. Afterward only the
+new whole-world pressure fixture was tightened to guarantee a lower pending
+first orb: it re-registers the ordinarily born ship into a later free SST slot
+through ObjectManager APIs, fills unused slots with actual persistent occupants,
+and asserts pending routine0, setup `$24`/`$180`/`$87` without publication, then
+ordinary orbit. No private gameplay/HP/position state is seeded. Zero, two and
+six available siblings each cover four boundaries with two fresh destructive
+complete-world restore/forward cycles. This declares an allocator component;
+it is not a cold-route slot landscape or a new native-emulator observation.
+Only those three changed cases were rerun, with the same normal lane/ROM/EGL
+arguments and selector
+`com.openggf.tests.TestS3kSszMtzArenaHeadless#orbInitializationBoundariesRecreateAndReplayTheCompleteWorldTwice`:
+3/0/0/0, queue26s, Maven27.682s. The production diff remained unchanged.
+
+`run_categories.py --base 2bad8b9d18dda2f5c2d42b6947878370f0a1d1ff`
+was inspected (not launched):3,124 smoke classes plus guards, from an inventory
+of3,594. That combined selection is disproportionate for this isolated leaf and
+belongs to Root's combined delivery. These are bounded focused passes, not a
+broad smoke/full-suite, canonical trace, new native acceptance or controller-route
+pass. Current route impact is unknown; no route death is attributed to this fix.
+The [SSZ matrix](../validation/levels/s3k-ssz-act1.md#mtz-orb-allocation-and-first-dispatch--2026-10-21)
+and coverage backlog retain the inherited viewport/donor/team/native gaps.

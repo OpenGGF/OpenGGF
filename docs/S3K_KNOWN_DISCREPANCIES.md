@@ -669,6 +669,18 @@ explicitly. Full cold Knuckles traversal remains a separate route obligation.
 
 
 
+## SSZ Metropolis orb allocation and first dispatch (resolved local owner, 2026-10-21)
+
+The head retains `CreateChild1_Normal` forward allocation. The first orb now uses
+`AllocateObject` globally, stays in routine0 until its own dispatch, and initializes
+itself plus at most six global siblings before returning at `loc_7AE12` without an
+orbit, collision-list entry or draw. Failed allocation shells are excluded from the
+ship's raw child list; successful prefixes persist without retries. The
+[act-1 component evidence](architecture/validation/levels/s3k-ssz-act1.md#mtz-orb-allocation-and-first-dispatch--2026-10-21)
+tracks managed slot order, publication and rewind boundaries. This closes the
+source-supported initializer omission; current cold-route impact and new native
+acceptance remain unmeasured. Existing freed-parent lifetime limits remain open.
+
 ## SSZ opening bridge top contact (resolved local owner, 2026-10-14)
 
 `sub_45026` passes SolidObjectTop d1/d2/d3=`$60/$10/$09`. New contact at
