@@ -50,7 +50,7 @@ class TestS3kCnzLocalTraversalHeadless {
         fixture.sprite().setCentreX((short) 0x19B8);
         fixture.sprite().setCentreY((short) 0x05A8);
 
-        // ROM Obj_CNZBalloon (sonic3k.asm:66747) reads collision_property,
+        // ROM Obj_CNZBalloon (sonic3k.asm:66787) reads collision_property,
         // set externally by Touch_Process when the player intersects the
         // balloon's hitbox. The engine wires this through TouchResponseListener:
         // the level loop calls onTouchResponse before objectManager.update.
@@ -111,7 +111,7 @@ class TestS3kCnzLocalTraversalHeadless {
         fixture.sprite().setCentreY((short) 0x05A8);
         fixture.sprite().setYSpeed((short) 0x120);
         // The engine guards launchPlayer with lastLaunchFrame so the same frame
-        // cannot launch the player twice. ROM Obj_CNZBalloon (sonic3k.asm:66747)
+        // cannot launch the player twice. ROM Obj_CNZBalloon (sonic3k.asm:66787)
         // moves the balloon offscreen ($7F00) once the pop animation hits $FB,
         // which removes it from the collision response list — so practical
         // re-touch on a later frame can't happen unless the player is still in

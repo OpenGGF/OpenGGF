@@ -63,8 +63,8 @@ class TestS3kFixedSstTransitionRewind {
 
     /**
      * Shield and Invincibility_stars are fixed Level_object_RAM slots
-     * (sonic3k.constants.asm:318-321). MHZ1_BackgroundEvent's Load_Level reload
-     * (sonic3k.asm:112274-112292) never clears them, so a shield gained in act 1 keeps
+     * (sonic3k.constants.asm:325-328). MHZ1_BackgroundEvent's Load_Level reload
+     * (sonic3k.asm:112320-112338) never clears them, so a shield gained in act 1 keeps
      * running in act 2. The persistent-only carry must not drop those owners while the
      * player keeps the shield status, or registry restore re-spawns an object the live
      * world no longer had (fresh 320px MHZ route, act-two release at frame 9257).

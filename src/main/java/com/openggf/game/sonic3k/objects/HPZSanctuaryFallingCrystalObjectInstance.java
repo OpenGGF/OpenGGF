@@ -36,7 +36,7 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
             0x1D, 0x1F, 0x1D, 0x20, 0x1D, 0x21, 0x1D,
             0x22, 0x1D, 0x23, 0x1D, 0x24, 0x1D
     };
-    /** {@code loc_90CF4}: {@code move.w #8,(Screen_shake_flag).w} on landing (sonic3k.asm:198089). */
+    /** {@code loc_90CF4}: {@code move.w #8,(Screen_shake_flag).w} on landing (sonic3k.asm:198196). */
     private static final int LANDING_SCREEN_SHAKE_FLAG = 8;
 
     // parentRef naming opts into the engine's two-phase ObjectRefId relink.
@@ -135,7 +135,7 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
         }
         // Shipped loc_90D30 falls through loc_90D42 after the $20
         // midpoint call. It arms raw animation immediately, not after the
-        // remaining 33 timer decrements (sonic3k.asm:198104-198116).
+        // remaining 33 timer decrements (sonic3k.asm:198211-198223).
         if (landingTimer < 0 || landingTimer == 0x20) {
             // Cleared-slot anim_frame=0 is incremented before Animate_RawNoSST
             // reads 1(a1,d0), so the first byte_90FF6 mapping published is $1F.
@@ -231,7 +231,7 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
     @Override public int getOutOfRangeReferenceX() { return x; }
-    // ObjDat3_90FCC priority word 0 (sonic3k.asm:198374): display list 0 is the ROM value.
+    // ObjDat3_90FCC priority word 0 (sonic3k.asm:198481): display list 0 is the ROM value.
     private static final int PRIORITY_BUCKET = RenderPriority.bucket(0);
 
     @Override public int getPriorityBucket() { return PRIORITY_BUCKET; }

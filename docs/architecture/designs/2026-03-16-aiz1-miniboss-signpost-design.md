@@ -98,7 +98,7 @@ Gradually increase `Camera.minX` and `Camera.maxX` by 2/frame until reaching sig
 
 ### ROM Reference
 
-`Obj_EndSign` at sonic3k.asm line 176110 (also s3.asm line 100771). 5-routine state machine.
+`Obj_EndSign` at sonic3k.asm line 176201 (also s3.asm line 100849). 5-routine state machine.
 
 ### ROM Addresses
 
@@ -219,7 +219,7 @@ Decoded: Tails → spin → edge → spin_flip → Knuckles → spin → edge �
 
 ### ROM Reference
 
-`Obj_HiddenMonitor` at sonic3k.asm line 176030. Object ID **0x80** in both zone sets (S3KL and SKL). Note: 0xC5 is `LBZMinibossBoxKnux` in S3KL — do NOT register hidden monitor there.
+`Obj_HiddenMonitor` at sonic3k.asm line 176121. Object ID **0x80** in both zone sets (S3KL and SKL). Note: 0xC5 is `LBZMinibossBoxKnux` in S3KL — do NOT register hidden monitor there.
 
 ### New Class: `S3kHiddenMonitorInstance`
 
@@ -254,7 +254,7 @@ Register in `Sonic3kObjectRegistry`:
 
 ### ROM Reference
 
-`Obj_EndSignControl` at sonic3k.asm line 180372. Reused by all S3K minibosses that end with a signpost.
+`Obj_EndSignControl` at sonic3k.asm line 180463. Reused by all S3K minibosses that end with a signpost.
 
 ### New Class: `S3kBossDefeatSignpostFlow` (extends `AbstractObjectInstance`)
 

@@ -11,7 +11,7 @@ import com.openggf.level.objects.RomWorldPositionedObject;
  * <p>The zeroed wait word underflows on the first execution, so the first
  * allocation attempt is immediate. The native $20 byte counter is decremented
  * before allocation and deletes at zero, producing 31 one-shot attempts at a
- * three-update cadence (sonic3k.asm:176659-176890).
+ * three-update cadence (sonic3k.asm:176750-176981).
  */
 final class FbzMinibossExplosionController extends AbstractS3kBossExplosionObjectInstance
         implements RewindRecreatable, RomWorldPositionedObject {

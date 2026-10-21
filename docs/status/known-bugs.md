@@ -88,7 +88,7 @@ Remaining gaps:
   Continue art bank does not reproduce this VRAM alias. The retained Super flag
   and its animation-table selection are preserved separately.
 - S3K `Obj_GameOver` holds on `tst.l (Nem_decomp_queue).w` until `Load_PLC_2 #3` has decompressed `ArtNem_GameOver`
-  (`docs/skdisasm/sonic3k.asm:62021-62023`). The engine has no per-frame S3K Nemesis drain (the same gap
+  (`docs/skdisasm/sonic3k.asm:62061-62063`). The engine has no per-frame S3K Nemesis drain (the same gap
   `Sonic3kTitleCardManager` notes), so the S3K card starts sliding on its first frame rather than a few frames later.
 - S3K `loc_2D638` zeroes `Collision_response_list` on every wait frame (`:62065`); the engine's per-frame list is
   rebuilt by later slots anyway and the clear is not modelled.
@@ -186,7 +186,7 @@ reproduced or refuted them against the current engine:
 
 - **AIZ rope swing:** jumping off the rope swing for the first time was reported to activate the insta-shield
   immediately. The ROM release path sets `Status_InAir` and `Status_Roll` on the player and writes nothing to
-  `double_jump_flag` inside `Obj_AIZRideVineHandle` (`docs/skdisasm/sonic3k.asm:46449+`); the engine release
+  `double_jump_flag` inside `Obj_AIZRideVineHandle` (`docs/skdisasm/sonic3k.asm:46489+`); the engine release
   in `AizVineHandleLogic` sets air and rolling the same way. Whether the ROM also arms the insta-shield on the
   next jump press has not been checked frame-for-frame.
 - **AIZ water launcher:** the object that launches the player over the water was reported to launch too short.

@@ -31,7 +31,7 @@ import java.util.Set;
 /**
  * Object 0x13 - LBZ Exploding Trigger.
  *
- * <p>ROM: {@code Obj_LBZExplodingTrigger} (sonic3k.asm:51421-51456).
+ * <p>ROM: {@code Obj_LBZExplodingTrigger} (sonic3k.asm:51461-51496).
  * Touch_Special sets {@code collision_property}; the object consumes P1/P2
  * bits, checks {@code anim(a1) == 2}, negates both velocity components,
  * toggles {@code Level_trigger_array[subtype & $F]} bit 0, then rewrites this

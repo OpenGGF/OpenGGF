@@ -7,7 +7,7 @@ import com.openggf.level.objects.boss.BossChildComponent;
  * A child of one of the Lava Reef miniboss's two twelve-object rings.
  *
  * <p>Exists so a link can find its {@code parent3} the way the ROM stores it. The create loop sets
- * {@code parent3(a1)} to the previously created child (sonic3k.asm:177188-177191:
+ * {@code parent3(a1)} to the previously created child (sonic3k.asm:177279-177282:
  * {@code move.w a3,parent3(a1)} with {@code movea.l a1,a3} at the end of each iteration), and that
  * is a stored pointer: deleting a sibling does not re-aim anyone. Looking the predecessor up by
  * position in the parent's child list would, because the engine prunes destroyed children from
@@ -15,7 +15,7 @@ import com.openggf.level.objects.boss.BossChildComponent;
  * hand. Identity by (ring, subtype) is stable under pruning and is what the ROM actually means.
  *
  * <p>The anchor is read as a <b>16.16</b> pair, because {@code MoveSprite_CircularSimple}
- * (sonic3k.asm:178433-178438) does {@code move.l x_pos(a1),d2} -- {@code x_pos} and {@code x_sub}
+ * (sonic3k.asm:178524-178529) does {@code move.l x_pos(a1),d2} -- {@code x_pos} and {@code x_sub}
  * as one longword -- and writes the sum back the same way. Ten links chain off one another, so
  * dropping the sub-pixel half would let a truncation error accumulate down the arm.
  */
@@ -73,7 +73,7 @@ interface LrzMinibossRingChild {
     int RETIRE_PRIORITY = 0x80;
 
     /**
-     * {@code sub_78B46} (sonic3k.asm:160568-160590), which every ring child runs at the tail of
+     * {@code sub_78B46} (sonic3k.asm:160644-160666), which every ring child runs at the tail of
      * its own live routine.
      *
      * <p>It tests one bit of the parent's {@code $38} -- {@code 6} for the unmirrored ring,

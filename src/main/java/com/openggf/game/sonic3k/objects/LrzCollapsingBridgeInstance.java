@@ -65,11 +65,11 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_LRZCollapsingBridge} is installed from the S3K object pointer table at
      * {@code $00039C50} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:77384).
+     * label is defined at docs/skdisasm/sonic3k.asm:77425).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0003}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -77,7 +77,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
     }
 
 
-    /** ROM {@code byte_39CA4} (sonic3k.asm:77405). Verified bytes {@code 40 20 08 00}. */
+    /** ROM {@code byte_39CA4} (sonic3k.asm:77446). Verified bytes {@code 40 20 08 00}. */
     private static final int PARAM_TABLE_ADDR = 0x00039CA4;
     /**
      * Fallback for {@code byte_39CA4} index 0, used only when the ROM handle is
@@ -85,19 +85,19 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
      * services). Values transcribed from ROM {@code $39CA4}.
      */
     private static final int[] PARAM_TABLE_ENTRY_0 = {0x40, 0x20, 0x08, 0x00};
-    /** ROM {@code move.b #$1C,y_radius(a0)} (sonic3k.asm:77403). */
+    /** ROM {@code move.b #$1C,y_radius(a0)} (sonic3k.asm:77444). */
     private static final int Y_RADIUS = 0x1C;
-    /** ROM {@code move.b #$2A,$30(a0)} in {@code loc_39D84} (sonic3k.asm:77497). */
+    /** ROM {@code move.b #$2A,$30(a0)} in {@code loc_39D84} (sonic3k.asm:77538). */
     private static final int POST_COLLAPSE_SOLID_FRAMES = 0x2A;
-    /** ROM {@code move.w #$80,priority(a0)} (sonic3k.asm:77387). */
+    /** ROM {@code move.w #$80,priority(a0)} (sonic3k.asm:77428). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x80);
-    /** ROM {@code word_39E20} (sonic3k.asm:77548). Verified header {@code 0015} = 22 entries. */
+    /** ROM {@code word_39E20} (sonic3k.asm:77589). Verified header {@code 0015} = 22 entries. */
     private static final int DEBRIS_TABLE_ADDR = 0x00039E20;
-    /** ROM {@code move.b #7,anim_frame_timer(a0)} in {@code loc_39D4E} (sonic3k.asm:77477). */
+    /** ROM {@code move.b #7,anim_frame_timer(a0)} in {@code loc_39D4E} (sonic3k.asm:77518). */
     private static final int DEBRIS_ANIM_PERIOD = 7;
-    /** ROM {@code move.b #$20,width_pixels(a1)} (sonic3k.asm:77531). */
+    /** ROM {@code move.b #$20,width_pixels(a1)} (sonic3k.asm:77572). */
     private static final int DEBRIS_HALF_WIDTH = 0x20;
-    /** ROM {@code addi.w #$38,y_vel(a0)} inside {@code MoveSprite} (sonic3k.asm:36037). */
+    /** ROM {@code addi.w #$38,y_vel(a0)} inside {@code MoveSprite} (sonic3k.asm:36077). */
     private static final int DEBRIS_GRAVITY = 0x38;
 
     /** Raw {@code subtype(a0)} as placed, before Init overwrites it from the table. */
@@ -125,7 +125,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
         super(spawn, "LRZCollapsingBridge");
         this.spawnSubtype = spawn.subtype() & 0xFF;
 
-        // Init (sonic3k.asm:77388-77394):
+        // Init (sonic3k.asm:77429-77435):
         //   move.b subtype(a0),d0 / andi.w #$F,d0 / lsl.w #4,d0 / addq.w #8,d0
         this.timer = ((spawnSubtype & 0x0F) << 4) + 8;
         // The byte_39CA4 read is deferred to resolveParams(): object
@@ -133,7 +133,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
     }
 
     /**
-     * Init (sonic3k.asm:77395-77402): {@code andi.w #$F0,d1 / lsr.w #2,d1 /
+     * Init (sonic3k.asm:77436-77443): {@code andi.w #$F0,d1 / lsr.w #2,d1 /
      * lea byte_39CA4(pc,d1.w),a1} and four {@code move.b (a1)+} reads. The index
      * is applied to the ROM bytes themselves so that a high subtype nibble
      * reproduces the ROM's own read past the four-byte table rather than a
@@ -160,7 +160,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
 
     /**
      * The spawn {@code Obj_LRZRockCrusher}'s timer child allocates its slabs from
-     * (sonic3k.asm:197227-197231, :197250-197254). {@code AllocateObject} hands out a zeroed SST
+     * (sonic3k.asm:197334-197338, :197357-197361). {@code AllocateObject} hands out a zeroed SST
      * and the ROM writes only word 0, {@code $32}, {@code x_pos} and {@code y_pos}, so the subtype
      * is 0 -- entry 0 of {@code byte_39CA4}.
      */
@@ -171,7 +171,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
     }
 
     /**
-     * {@code move.b #1,$32(a1)} (:197229): the slab arrives already broken loose rather than
+     * {@code move.b #1,$32(a1)} (:197336): the slab arrives already broken loose rather than
      * waiting to be stood on.
      */
     public void markAlreadyBrokenLoose() {
@@ -191,7 +191,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
         // engine runs on this object's AUTO_AFTER_UPDATE checkpoint -- i.e. after
         // this method. Latching here therefore reproduces the ROM's read of the
         // bits left by the PREVIOUS frame's SolidObjectTop, which is exactly what
-        // loc_39CBC (sonic3k.asm:77423-77427) sees.
+        // loc_39CBC (sonic3k.asm:77464-77468) sees.
         p1StandingLatched = p1Standing;
         p2StandingLatched = p2Standing;
         p1Standing = false;
@@ -202,7 +202,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
             return;
         }
 
-        // loc_39CA8 (sonic3k.asm:77411-77417).
+        // loc_39CA8 (sonic3k.asm:77452-77458).
         if (armed) {
             if (timer == 0) {
                 breakCollapse(playerEntity);
@@ -211,25 +211,25 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
             timer--;
         }
 
-        // loc_39CBC (sonic3k.asm:77423-77427): andi.b #standing_mask,d0.
+        // loc_39CBC (sonic3k.asm:77464-77468): andi.b #standing_mask,d0.
         if (p1StandingLatched || p2StandingLatched) {
             armed = true;
         }
 
-        // loc_39CCC (sonic3k.asm:77429-77435) is the SolidObjectTop call, run by
+        // loc_39CCC (sonic3k.asm:77470-77476) is the SolidObjectTop call, run by
         // the engine's solid checkpoint from getSolidParams(). The tail is
-        // Sprite_OnScreen_Test (:77436), whose loc_1B5A0 deletes out of range.
+        // Sprite_OnScreen_Test (:77477), whose loc_1B5A0 deletes out of range.
     }
 
-    /** ROM {@code loc_39CE8} (sonic3k.asm:77439-77453). */
+    /** ROM {@code loc_39CE8} (sonic3k.asm:77480-77494). */
     private void updateCollapsed(PlayableEntity playerEntity) {
-        // SolidObjectTop runs first (:77440-77445) -- the broken slab is still
+        // SolidObjectTop runs first (:77481-77486) -- the broken slab is still
         // solid -- and only then does the countdown tick.
         timer = (timer - 1) & 0xFF;
         if (timer != 0) {
             return;
         }
-        // sub_39D1A for Player_1 then Player_2 (:77447-77452), then
+        // sub_39D1A for Player_1 then Player_2 (:77488-77493), then
         // Delete_Current_Sprite.
         if (p1StandingLatched) {
             releaseRider(playerEntity);
@@ -240,7 +240,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
         ObjectLifetimeOps.expireDynamic(this);
     }
 
-    /** ROM {@code sub_39D1A} (sonic3k.asm:77458-77466). */
+    /** ROM {@code sub_39D1A} (sonic3k.asm:77499-77507). */
     private void releaseRider(PlayableEntity entity) {
         if (!(entity instanceof AbstractPlayableSprite player)) {
             return;
@@ -258,7 +258,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
         }
     }
 
-    /** ROM {@code loc_39D84} (sonic3k.asm:77496-77545). */
+    /** ROM {@code loc_39D84} (sonic3k.asm:77537-77586). */
     private void breakCollapse(PlayableEntity playerEntity) {
         collapsed = true;
         timer = POST_COLLAPSE_SOLID_FRAMES;
@@ -273,13 +273,13 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
             final int childY = (getY() + dy) & 0xFFFF;
             final int childFrame = frame;
             final int childDelay = delay;
-            // AllocateObjectAfterCurrent (sonic3k.asm:77508) scans forward from
+            // AllocateObjectAfterCurrent (sonic3k.asm:77549) scans forward from
             // this object's own slot, which is spawnChild's contract.
             spawnChild(() -> new LrzCollapsingBridgeDebris(
                     childX, childY, childFrame, childDelay));
         }
 
-        // loc_39E08 (sonic3k.asm:77539-77544): bclr #7 on the respawn table entry
+        // loc_39E08 (sonic3k.asm:77580-77585): bclr #7 on the respawn table entry
         // so the bridge is eligible to load again.
         try {
             ObjectLifetimeOps.releaseSpawnForRespawn(services().objectManager(), this, getSpawn());
@@ -287,7 +287,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
             // Focused tests can drive the object without a wired ObjectManager.
         }
 
-        // loc_39E18 (sonic3k.asm:77546-77547).
+        // loc_39E18 (sonic3k.asm:77587-77588).
         try {
             services().playSfx(Sonic3kSfx.COLLAPSE.id);
         } catch (Exception ignored) {
@@ -296,9 +296,9 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM {@code word_39E20} (sonic3k.asm:77548): a {@code dc.w} count of
+     * ROM {@code word_39E20} (sonic3k.asm:77589): a {@code dc.w} count of
      * {@code entries - 1} followed by {@code dx, dy, mapping_frame, delay}
-     * quadruplets consumed by the {@code dbf} loop at {@code :77537}.
+     * quadruplets consumed by the {@code dbf} loop at {@code :77578}.
      */
     private int[] readDebrisTable() {
         try {
@@ -335,20 +335,20 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
     }
 
     /**
-     * The break frame reaches {@code loc_39D84} (sonic3k.asm:77496) by a
+     * The break frame reaches {@code loc_39D84} (sonic3k.asm:77537) by a
      * {@code bra.w} that jumps over {@code loc_39CCC}'s {@code SolidObjectTop}
      * call, so the ROM performs no solid processing on that one frame. It also
      * touches neither {@code status(a0)}'s standing bits nor the riders'
      * {@code Status_OnObj}, and {@code loc_39CE8} calls {@code SolidObjectTop}
-     * again on the very next frame (:77440-77445); only {@code sub_39D1A}
-     * (:77458) ever releases a rider. The slab is stationary, so a skipped
+     * again on the very next frame (:77481-77486); only {@code sub_39D1A}
+     * (:77499) ever releases a rider. The slab is stationary, so a skipped
      * re-seat and a performed re-seat are indistinguishable in position. The
      * engine therefore stays solid throughout rather than reporting "not solid",
      * which its generic platform path reads as a ride exit.
      */
     @Override
     public SolidObjectParams getSolidParams() {
-        // d1 = width_pixels(a0), d3 = y_radius(a0) (sonic3k.asm:77429-77433).
+        // d1 = width_pixels(a0), d3 = y_radius(a0) (sonic3k.asm:77470-77474).
         // SolidObjectTop takes ONE vertical parameter and both the landing test
         // and MvSonicOnPtfm's per-frame re-seat use that same bare d3, so the air
         // and ground half heights are equal -- there is no d3+1 here.
@@ -358,7 +358,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
 
     @Override
     public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
-        // d4 = x_pos(a0) (sonic3k.asm:77432, :77493). The slab never moves, so
+        // d4 = x_pos(a0) (sonic3k.asm:77473, :77534). The slab never moves, so
         // MvSonicOnPtfm's d4 - x_pos(a0) carry is zero either way; false states
         // that plainly instead of relying on the engine default.
         return false;
@@ -412,7 +412,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
 
     @Override
     public boolean isHighPriority() {
-        // make_art_tile($0D3,2,1) (sonic3k.asm:77389) sets the priority bit.
+        // make_art_tile($0D3,2,1) (sonic3k.asm:77430) sets the priority bit.
         return true;
     }
 
@@ -420,7 +420,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
     public void appendRenderCommands(List<GLCommand> commands) {
         if (collapsed) {
             // loc_39CE8 has no Draw_Sprite: the broken slab is invisible while it
-            // remains solid (sonic3k.asm:77439-77453).
+            // remains solid (sonic3k.asm:77480-77494).
             return;
         }
         resolveParams();
@@ -454,7 +454,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM {@code loc_39D3E} (sonic3k.asm:77470-77494) -- one falling slab
+     * ROM {@code loc_39D3E} (sonic3k.asm:77511-77535) -- one falling slab
      * fragment, allocated by {@code loc_39DAA}.
      */
     public static final class LrzCollapsingBridgeDebris extends AbstractObjectInstance
@@ -467,7 +467,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
         private int animTimer;
         /** ROM {@code mapping_frame(a0)}. */
         private int mappingFrame;
-        /** ROM {@code $34(a1)} = {@code mapping_frame & $FC} (sonic3k.asm:77535-77536). */
+        /** ROM {@code $34(a1)} = {@code mapping_frame & $FC} (sonic3k.asm:77576-77577). */
         private int frameGroupBase;
 
         public LrzCollapsingBridgeDebris(int x, int y, int mappingFrame, int holdTimer) {
@@ -492,20 +492,20 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
 
         @Override
         public void update(int vIntRunCount, PlayableEntity player) {
-            // loc_39D3E (sonic3k.asm:77470-77474): hold, drawing only.
+            // loc_39D3E (sonic3k.asm:77511-77515): hold, drawing only.
             if (holdTimer != 0) {
                 holdTimer = (holdTimer - 1) & 0xFF;
                 return;
             }
 
-            // loc_39D4E (sonic3k.asm:77476-77484).
+            // loc_39D4E (sonic3k.asm:77517-77525).
             animTimer--;
             if (animTimer < 0) {
                 animTimer = DEBRIS_ANIM_PERIOD;
                 mappingFrame = ((mappingFrame + 1) & 3) + frameGroupBase;
             }
 
-            // loc_39D6C (sonic3k.asm:77486-77494): MoveSprite (move, then apply
+            // loc_39D6C (sonic3k.asm:77527-77535): MoveSprite (move, then apply
             // gravity to y_vel), then delete once render_flags bit 7 is clear --
             // i.e. once the fragment was not drawn on screen last frame.
             SubpixelMotion.moveSprite(motion, DEBRIS_GRAVITY);
@@ -533,7 +533,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
         @Override
         public int getOnScreenHalfHeight() {
             // FixBugs = 0 (skdisasm/sonic3k.asm:38). The un-fixed branch at
-            // sonic3k.asm:77527-77534 writes #$20 to width_pixels(a1) a SECOND
+            // sonic3k.asm:77568-77575 writes #$20 to width_pixels(a1) a SECOND
             // time instead of to height_pixels(a1), so a freshly allocated
             // fragment keeps height_pixels = 0 and its on-screen test is
             // vertically degenerate. The bug-fixed branch would write #$20 here.
@@ -544,13 +544,13 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
 
         @Override
         public int getPriorityBucket() {
-            // move.w #$80,priority(a1) (sonic3k.asm:77530).
+            // move.w #$80,priority(a1) (sonic3k.asm:77571).
             return PRIORITY_BUCKET;
         }
 
         @Override
         public boolean isHighPriority() {
-            // ori.w #high_priority,art_tile(a1) (sonic3k.asm:77529).
+            // ori.w #high_priority,art_tile(a1) (sonic3k.asm:77570).
             return true;
         }
 

@@ -117,7 +117,7 @@ class TestCnzBarberPoleObjectInstance {
 
     @Test
     void crossingPoleOfOppositeOrientationDoesNotStealRider() {
-        // ROM loc_33472 (sonic3k.asm:69439) checks cmpi.l #loc_33376,(a3): the
+        // ROM loc_33472 (sonic3k.asm:69479) checks cmpi.l #loc_33376,(a3): the
         // normal-pole re-latch path only fires when interact(a1) is itself a
         // normal pole. At a CNZ2 X crossing the other pole is mirrored
         // (routine loc_335A8), so the normal pole must not steal the rider --
@@ -147,7 +147,7 @@ class TestCnzBarberPoleObjectInstance {
     @Test
     void debugPlacementModeBlocksBarberPoleLatch() {
         // ROM sub_33392 / sub_335C4 return at tst.w (Debug_placement_mode).w
-        // (sonic3k.asm:69385-69386, 69597-69598): poles never grab a player in
+        // (sonic3k.asm:69425-69426, 69637-69638): poles never grab a player in
         // debug movement mode.
         CnzBarberPoleObjectInstance pole = new CnzBarberPoleObjectInstance(
                 new ObjectSpawn(0x0100, 0x0100, Sonic3kObjectIds.CNZ_BARBER_POLE, 0, 0, false, 0));

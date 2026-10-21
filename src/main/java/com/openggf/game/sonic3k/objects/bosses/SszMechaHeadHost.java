@@ -1,7 +1,7 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
 /**
- * What {@code Obj_MechaSonicHeadMain} (sonic3k.asm:136265-136272) reads off the ship it rides.
+ * What {@code Obj_MechaSonicHeadMain} (sonic3k.asm:136330-136337) reads off the ship it rides.
  *
  * <p>Both Sky Sanctuary recreations attach the same head with {@code Child1_MakeMechaHead}, and
  * the head's whole body is {@code Refresh_ChildPositionAdjusted} on {@code parent3(a0)} plus

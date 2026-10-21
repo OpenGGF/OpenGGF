@@ -19,7 +19,7 @@ import com.openggf.level.objects.SolidRoutineProfile;
 import java.util.List;
 
 /**
- * {@code Obj_56EA0} (sonic3k.asm:115568-115631, ROM {@code $56EA0}): the lava surface inside a
+ * {@code Obj_56EA0} (sonic3k.asm:115614-115677, ROM {@code $56EA0}): the lava surface inside a
  * Lava Reef act 1 dome region. It is allocated by {@code loc_56E40} the frame the region locks
  * and deletes itself at {@code loc_56EC2} the frame {@code Events_bg+$00} clears, so it exists
  * exactly while the background is locked.
@@ -152,7 +152,7 @@ public final class LrzDomeLavaPlatformObjectInstance extends AbstractObjectInsta
         burn(player, frameCounter);
     }
 
-    /** {@code sub_24280} (sonic3k.asm:36000-36020 region, ROM {@code $24280}). */
+    /** {@code sub_24280} (sonic3k.asm:36040-36060 region, ROM {@code $24280}). */
     private void burn(PlayableEntity player, int frameCounter) {
         if (player.getDead() || player.getInvulnerable()) {
             return;

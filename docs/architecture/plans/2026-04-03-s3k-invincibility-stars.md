@@ -262,7 +262,7 @@ import java.util.List;
 /**
  * S3K Invincibility Stars — trailing position-history stars with orbital sub-sprites.
  * <p>
- * ROM reference: Obj_Invincibility (sonic3k.asm:33751).
+ * ROM reference: Obj_Invincibility (sonic3k.asm:33791).
  * <p>
  * Structure: 1 parent group (at player position) + 4 child groups (trailing via position
  * history at 0/3/6/9 frames behind). Each group renders 2 sub-sprites at opposite orbit

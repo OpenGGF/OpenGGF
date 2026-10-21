@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>ROM: S1 {@code Sonic_HandleDeath} (docs/s1disasm/_incObj/01
  * Sonic.asm:2011-2049) and {@code Sonic_ResetLevel} (:2062-2073); the same
  * shape appears in S2 {@code CheckGameOver} (docs/s2disasm/s2.asm:38279-38352)
- * and S3K {@code loc_12432} (docs/skdisasm/sonic3k.asm:24581-24616).
+ * and S3K {@code loc_12432} (docs/skdisasm/sonic3k.asm:24621-24656).
  *
  * <p>No recorded trace column carries lives or the restart flag, so this is the
  * only coverage the crossing frame has.

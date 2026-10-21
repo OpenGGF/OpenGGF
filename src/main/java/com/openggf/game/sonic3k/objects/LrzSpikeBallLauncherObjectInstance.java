@@ -18,7 +18,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * {@code Obj_LRZSpikeBallLauncher} (sonic3k.asm:89848-89933), id {@code $37} in the locked-on set
+ * {@code Obj_LRZSpikeBallLauncher} (sonic3k.asm:89894-89979), id {@code $37} in the locked-on set
  * and nine of Lava Reef act 2's placements ({@code $50} ×2, {@code $60} ×5, {@code $70} ×2).
  * The {@code S3KL} set spends the id on {@code Obj_HCZWaterRush}, which is the name the id
  * constant carries.
@@ -26,7 +26,7 @@ import java.util.List;
  * <p><b>The launcher is a solid platform that never moves.</b> Its whole behaviour is an
  * animation script read through {@code Animate_SpriteIrregularDelay}, and the script's
  * {@code $FC} command -- {@code addq.b #2,routine(a0)} at {@code loc_1AD0C}
- * (sonic3k.asm:36302-36306) -- is what fires it. {@code routine(a0)} is used here purely as a
+ * (sonic3k.asm:36342-36346) -- is what fires it. {@code routine(a0)} is used here purely as a
  * one-frame flag: the object's own code pointer is {@code loc_448A8} for its whole life, and
  * {@code loc_448B6} clears the byte the frame it reads it.
  *
@@ -34,34 +34,34 @@ import java.util.List;
  * Script {@code 0} ({@code byte_4495E}) holds {@code mapping_frame} 3 for {@code $7F + 1} frames
  * and then runs {@code $FC}; at that instant {@code anim(a0)} is still {@code 0}, because the
  * {@code $FD} that switches to script {@code 1} does not run until the following frame. So
- * {@code tst.b anim(a0) / beq} (:89879) takes the charging branch: {@code sfx_Charging}, nothing
+ * {@code tst.b anim(a0) / beq} (:89925) takes the charging branch: {@code sfx_Charging}, nothing
  * else. Script {@code 1} ({@code byte_44964}) is a forty-two entry flicker between frames 4 and 3
  * whose delays fall {@code $D, $B, 9, 7, 5, 3, 1} and then sit at {@code 0} -- every frame, for
  * the rest of the ramp -- and its {@code $FC} runs with {@code anim(a0) == 1}, which is the
  * branch at {@code loc_448D4} that plays {@code sfx_BossHit} and launches the ball.
  *
  * <p><b>Both sounds are gated on the render flag, not on the cycle</b> ({@code tst.b
- * render_flags(a0) / bpl}, :89881 and :89889): an off-screen launcher still charges and still
+ * render_flags(a0) / bpl}, :89927 and :89935): an off-screen launcher still charges and still
  * fires, silently.
  *
  * <p><b>The subtype is the launch speed and nothing else.</b> {@code lsl.w #4,d0 / neg.w d0}
- * (:89897-89900) makes {@code y_vel} of the ball {@code -(subtype << 4)}: {@code -$500},
+ * (:89943-89946) makes {@code y_vel} of the ball {@code -(subtype << 4)}: {@code -$500},
  * {@code -$600} and {@code -$700} for Lava Reef's three placed subtypes. Gravity is
- * {@code MoveSprite}'s own {@code $38} (sonic3k.asm:36037), so the flight is a plain parabola and
+ * {@code MoveSprite}'s own {@code $38} (sonic3k.asm:36077), so the flight is a plain parabola and
  * the subtype sets its height.
  */
 public final class LrzSpikeBallLauncherObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider {
 
-    /** {@code move.w #$280,priority(a0)} (sonic3k.asm:89853). */
+    /** {@code move.w #$280,priority(a0)} (sonic3k.asm:89899). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0280);
-    /** {@code move.b #$10,width_pixels(a0)} / {@code height_pixels(a0)} (:89851-89852). */
+    /** {@code move.b #$10,width_pixels(a0)} / {@code height_pixels(a0)} (:89897-89898). */
     private static final int HALF_EXTENT = 0x10;
-    /** {@code move.w #$1B,d1 / #4,d2 / #5,d3} before {@code SolidObjectFull} (:89904-89906). */
+    /** {@code move.w #$1B,d1 / #4,d2 / #5,d3} before {@code SolidObjectFull} (:89950-89952). */
     private static final int SOLID_HALF_WIDTH = 0x1B;
     private static final int SOLID_HEIGHT_AIR = 4;
     private static final int SOLID_HEIGHT_GROUND = 5;
-    /** {@code subi.w #8,y_pos(a1)} (:89860): the ball rests eight pixels above the launcher. */
+    /** {@code subi.w #8,y_pos(a1)} (:89906): the ball rests eight pixels above the launcher. */
     static final int BALL_REST_OFFSET = 8;
 
     /**
@@ -98,9 +98,9 @@ public final class LrzSpikeBallLauncherObjectInstance extends AbstractObjectInst
      * pointer is {@code loc_448A8} for the object's whole life.
      */
     private int routineFlag;
-    /** {@code move.b subtype(a0),d0 / lsl.w #4,d0 / neg.w d0} (:89894-89900). */
+    /** {@code move.b subtype(a0),d0 / lsl.w #4,d0 / neg.w d0} (:89940-89946). */
     private int launchVelocity;
-    /** {@code jsr AllocateObjectAfterCurrent} at :89855 runs once, on the init pass. */
+    /** {@code jsr AllocateObjectAfterCurrent} at :89901 runs once, on the init pass. */
     private boolean initialised;
 
     private LrzSpikeBallLauncherBallInstance ball;
@@ -141,9 +141,9 @@ public final class LrzSpikeBallLauncherObjectInstance extends AbstractObjectInst
             initialised = true;
             allocateBall();
         }
-        // lea (Ani_LRZSpikeBallLauncher).l,a1 / jsr Animate_SpriteIrregularDelay (:89876-89877).
+        // lea (Ani_LRZSpikeBallLauncher).l,a1 / jsr Animate_SpriteIrregularDelay (:89922-89923).
         animate();
-        // tst.b routine(a0) / beq.s loc_448FA / clr.b routine(a0) (:89878-89880).
+        // tst.b routine(a0) / beq.s loc_448FA / clr.b routine(a0) (:89924-89926).
         if (routineFlag != 0) {
             routineFlag = 0;
             if (anim == 0) {
@@ -161,7 +161,7 @@ public final class LrzSpikeBallLauncherObjectInstance extends AbstractObjectInst
         }
     }
 
-    /** The {@code AllocateObjectAfterCurrent} block at :89855-89874. */
+    /** The {@code AllocateObjectAfterCurrent} block at :89901-89920. */
     private void allocateBall() {
         int x = getCentreX();
         int y = (getCentreY() - BALL_REST_OFFSET) & 0xFFFF;
@@ -169,7 +169,7 @@ public final class LrzSpikeBallLauncherObjectInstance extends AbstractObjectInst
     }
 
     /**
-     * {@code loc_448E2} (:89892-89901): the launcher writes the ball's code pointer and its
+     * {@code loc_448E2} (:89938-89947): the launcher writes the ball's code pointer and its
      * {@code y_vel}, and nothing else. A ball that has been deleted -- the ROM's own
      * {@code Sprite_CheckDeleteTouch3} can remove it -- leaves the write with nowhere to go.
      */
@@ -181,7 +181,7 @@ public final class LrzSpikeBallLauncherObjectInstance extends AbstractObjectInst
     }
 
     /**
-     * {@code Animate_SpriteIrregularDelay} (sonic3k.asm:36238-36308). The delay byte is read as
+     * {@code Animate_SpriteIrregularDelay} (sonic3k.asm:36278-36348). The delay byte is read as
      * the <em>second</em> byte of each pair and the frame as the first, and {@code subq.b #1} on
      * a timer that is already zero is the only case that advances the script -- which is why a
      * delay of {@code 0} means "every frame", not "skip".
@@ -298,7 +298,7 @@ public final class LrzSpikeBallLauncherObjectInstance extends AbstractObjectInst
 
     @Override
     public boolean isHighPriority() {
-        // make_art_tile(ArtTile_LRZ2Misc,1,0) (sonic3k.asm:89850): the priority bit is clear.
+        // make_art_tile(ArtTile_LRZ2Misc,1,0) (sonic3k.asm:89896): the priority bit is clear.
         return false;
     }
 

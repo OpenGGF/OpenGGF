@@ -151,7 +151,7 @@ class TestHostObjectKeys {
         var objects=new ObjectManager(List.of(hostSpawn()),registry,0,null,null,null,camera,bound);
         ref[0]=objects;
         // LevelManager gives every non-UNIFIED host the load-then-exec order: S3K
-        // Load_Sprites runs before Process_Sprites (sonic3k.asm:7893-7894). Without
+        // Load_Sprites runs before Process_Sprites (sonic3k.asm:7925-7926). Without
         // it a bare manager advances placement after exec and loads next frame, a
         // test-only order whose X-loop latch spans the captured frame boundary.
         objects.enableExecThenLoadPlacement();

@@ -219,7 +219,7 @@ class TestInitialPlayableProcessSpritesPass {
                     InitialPlayableInput.nativeNeutral());
 
             // Locked-on ROM oracle, pre-call $647E -> return $6484:
-            // docs/skdisasm/sonic3k.asm:7848-7856,21931-21941,26101-26156.
+            // docs/skdisasm/sonic3k.asm:7880-7888,21967-21977,26141-26196.
             assertEquals(0x0040, p1.getCentreX());
             assertEquals(0x0420, p1.getCentreY());
             assertEquals(0x0020, p2.getCentreX());
@@ -330,7 +330,7 @@ class TestInitialPlayableProcessSpritesPass {
 
             // Sonic_Init temporarily shifts P1 to $20,$424 and calls
             // Reset_Player_Position_Array. Tails_Init runs later and does not
-            // perform an ordinary delayed-follow read (sonic3k.asm:21931-21941,
+            // perform an ordinary delayed-follow read (sonic3k.asm:21967-21977,
             // 22166-22193,26101-26156).
             assertEquals(0, p1.historyPos());
             assertTrue(allEqual(p1.copyXHistory(), 0x0020));

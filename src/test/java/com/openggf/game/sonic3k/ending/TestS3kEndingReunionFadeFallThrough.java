@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Ending_ScreenEvent's reunion fade-in has no rts between its states: loc_5AE90 falls
  * into loc_5AEA8 (first Pal_FromBlack/subq on the 48->52 frame) and loc_5AEA8's expiry
- * falls into loc_5AED4/sub_5B18E (credits init on the 52->56 frame), sonic3k.asm:121156-121182.
+ * falls into loc_5AED4/sub_5B18E (credits init on the 52->56 frame), sonic3k.asm:121202-121228.
  * Native declared Tails/Super capture: fg 52 at Level_frame_counter 4459, fg 56 at 4480.
  */
 @RequiresRom(SonicGame.SONIC_3K)

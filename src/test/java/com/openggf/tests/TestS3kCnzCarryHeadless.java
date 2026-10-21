@@ -89,14 +89,14 @@ class TestS3kCnzCarryHeadless {
     void cnz1Frame2SonicXSpeedMatchesRom() {
         AbstractPlayableSprite sonic = fixture.sprite();
 
-        // Frame 1: ROM loc_13A10 (sonic3k.asm:26414) INIT handler sets
+        // Frame 1: ROM loc_13A10 (sonic3k.asm:26454) INIT handler sets
         // Tails_CPU_routine=$C and rts. Engine enters CARRY_INIT; the
         // 0x0C body that writes x_vel=$100 has NOT run yet.
         fixture.stepFrame(false, false, false, false, false);
         assertEquals((short) 0x0000, sonic.getXSpeed(),
                 "Frame 1 Sonic.x_speed: 0x0C body has not run yet (INIT just set routine=$C)");
 
-        // Frame 2: ROM loc_13FC2 (the 0x0C body, sonic3k.asm:26903)
+        // Frame 2: ROM loc_13FC2 (the 0x0C body, sonic3k.asm:26943)
         // writes x_vel=$100 and falls through (no rts) to loc_13FFA
         // (the 0x0E body). Engine transitions CARRY_INIT -> CARRYING
         // with the x_speed write.

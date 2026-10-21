@@ -57,9 +57,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * <p>The short, independent checks come first: the ordinary title → data select →
  * LOAD_SLOT inlet into LRZ1, and the native SaveGame next-level semantics at the
  * LRZ/HPZ save sites. Native owners: {@code SaveGame} and {@code SaveGame_NextLevel}
- * (sonic3k.asm:15824-15926), data select {@code sub_DA4E}/{@code LevelList_DA6E}
- * (:17480-17513), {@code Obj_StartNewLevel} (:181375-181394), {@code loc_45B94}
- * (:91514-91526) and {@code loc_45D8A} (:91712-91722).
+ * (sonic3k.asm:15860-15962), data select {@code sub_DA4E}/{@code LevelList_DA6E}
+ * (:17516-17549), {@code Obj_StartNewLevel} (:181466-181485), {@code loc_45B94}
+ * (:91560-91572) and {@code loc_45D8A} (:91758-91768).
  */
 @Isolated
 @RequiresRom(SonicGame.SONIC_3K)
@@ -466,7 +466,7 @@ class TestS3kLrzHpzSszColdCampaign {
 
     /**
      * {@code Obj_LevelResults} saves at {@code loc_2DCA0} when the act is non-zero or the zone is
-     * {@code $A} (sonic3k.asm:62668-62679); Sky Sanctuary act 1 takes the zone branch. Each real
+     * {@code $A} (sonic3k.asm:62708-62719); Sky Sanctuary act 1 takes the zone branch. Each real
      * load retires the outgoing live history: HPZ's tail is armed 120 inputs before SSZ1 (the
      * altar beam's long fade), SSZ's 36 before DEZ (14 live inputs and the 22-input fade-out).
      * SSZ1 assembles P1 at X {@code $100}, Camera Y + {@code $65} (the arrival owner); DEZ1 at
@@ -698,11 +698,11 @@ class TestS3kLrzHpzSszColdCampaign {
      * only declared state). Inputs 0-50099 equal {@code lrz-tails-cold-giant-ring-s9-320.bk2};
      * the authored tail {@code 45 R;46 -;1 A;3000 -} walks off the arrival pad, coasts to a stop
      * under gray pedestal 2 and jumps straight up through its top-only solid, landing on the
-     * descent near its centre (SolidObjectTop loc_1E42E, skdisasm 044fa46 sonic3k.asm:42022-42048), then stays neutral. {@code SSEntryFlash_GoSS} restarts into $1701
-     * (sonic3k.asm:128438-128477), the sanctuary converts every Chaos Emerald to gray
-     * (:197949-197987), the pedestal selects its Super stage by actual contact
-     * (:197808-197841), neutral input fails it, and the results return to LRZ2 at Saved2
-     * (:12709-12712, :7571-7582). The exit band is not crossed by this route. A declared native
+     * descent near its centre (SolidObjectTop loc_1E42E, skdisasm 044fa46 sonic3k.asm:42062-42088), then stays neutral. {@code SSEntryFlash_GoSS} restarts into $1701
+     * (sonic3k.asm:128492-128531), the sanctuary converts every Chaos Emerald to gray
+     * (:198056-198094), the pedestal selects its Super stage by actual contact
+     * (:197915-197948), neutral input fails it, and the results return to LRZ2 at Saved2
+     * (:12745-12748, :7603-7614). The exit band is not crossed by this route. A declared native
      * twin of the hub-onward sequence lands on pedestal 2 at the same release-relative frame.
      */
     @Test
@@ -779,7 +779,7 @@ class TestS3kLrzHpzSszColdCampaign {
                     assertEquals(gray, GameServices.gameState().getS3kEmeraldStates(), "a failed stage keeps the pedestal gray");
                     assertTrue(GameServices.gameState().isEmeraldsConverted());
                     // Level masks the stage exit's ori.b #$80 off with andi.b #$7F,(Last_star_post_hit) just
-                    // before LevelLoop (loc_64DC, skdisasm 044fa46 sonic3k.asm:7913; native RAM $FE2A reads 0 on the first $0C frame), so
+                    // before LevelLoop (loc_64DC, skdisasm 044fa46 sonic3k.asm:7945; native RAM $FE2A reads 0 on the first $0C frame), so
                     // only the restored low-bit mark below is ROM state here. After load the engine boolean
                     // plays Tails_CPU_star_post_flag (loc_137A4 copy, still $80 natively); not asserted here.
                     assertEquals(markBefore, level.getCheckpointState().getStarPostActivationMark(),
@@ -797,7 +797,7 @@ class TestS3kLrzHpzSszColdCampaign {
         assertTrue(hubRelease > hub && hubRelease + 10 + 45 < pedestal, "hub replay window precedes the pedestal");
         assertTrue(pedestal >= authoredFrom && stage > pedestal && results > stage && returned > results,
                 "pedestal, stage, results and LRZ2 return in order");
-        // loc_908DE (skdisasm 044fa46 sonic3k.asm:197807-197821) calls SolidObjectTop and tests p1_standing_bit in the
+        // loc_908DE (skdisasm 044fa46 sonic3k.asm:197914-197928) calls SolidObjectTop and tests p1_standing_bit in the
         // same routine, so object_control $81 lands with the player (native twin: same frame).
         assertEquals(pedestal, selected, "the landing frame selects the pedestal");
         assertTrue(returned + 245 < movie.getFrameCount(), "released LRZ2 return with replays");

@@ -17,7 +17,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * ROM {@code loc_57B8E} (sonic3k.asm:116724-116734): the ten invisible sloped platforms
+ * ROM {@code loc_57B8E} (sonic3k.asm:116770-116780): the ten invisible sloped platforms
  * {@code SSZ1_BackgroundInit} builds from {@code word_5853E} so the drawn cloud background can
  * be stood on.
  *

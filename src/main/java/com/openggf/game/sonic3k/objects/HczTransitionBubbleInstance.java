@@ -22,7 +22,7 @@ import java.util.List;
  * same acceleration routine as the player carriers.
  *
  * <p>ROM: {@code loc_6A710}, {@code loc_6A79C}, and {@code sub_6A916}
- * (sonic3k.asm:139950-140002, 140185-140220).
+ * (sonic3k.asm:140015-140067, 140250-140285).
  */
 public final class HczTransitionBubbleInstance extends AbstractObjectInstance
         implements SpawnCoordinateZeroScalarArgsRewindRecreatable {

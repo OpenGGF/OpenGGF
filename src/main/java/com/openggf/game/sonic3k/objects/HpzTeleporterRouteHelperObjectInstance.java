@@ -25,7 +25,7 @@ import com.openggf.sprites.playable.ObjectControlState;
 import java.util.List;
 
 /**
- * ROM {@code loc_45B94} (sonic3k.asm:91514-91728): the helper {@code Obj_SSZHPZTeleporter}
+ * ROM {@code loc_45B94} (sonic3k.asm:91560-91774): the helper {@code Obj_SSZHPZTeleporter}
  * allocates beside every Hidden Palace teleporter.
  *
  * <p>For Knuckles it ends the act: once the camera is above Y {@code $240} and Player 1 has

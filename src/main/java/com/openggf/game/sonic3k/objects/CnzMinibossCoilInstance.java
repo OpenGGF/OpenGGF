@@ -74,7 +74,7 @@ public final class CnzMinibossCoilInstance extends AbstractObjectInstance
         // Both coil routines refresh the child position before tail-calling
         // Add_SpriteToCollisionResponseList. The next player-slot Touch_Loop
         // dereferences that live SST position, not the snapshot from before the
-        // preceding object pass (sonic3k.asm:145287-145340).
+        // preceding object pass (sonic3k.asm:145352-145405).
         return true;
     }
 

@@ -71,12 +71,12 @@ class TestS3kHcz1GroundWallProbe {
     @Test
     void hcz1FlatRightWallProbePushesAtRecordedTailsFrontier() {
         // ROM BizHawk capture: on the push frames the CPU follow nudge
-        // (Tails_CPU_Control loc_13E34 addq.w #1,x_pos, sonic3k.asm:26734-26741)
+        // (Tails_CPU_Control loc_13E34 addq.w #1,x_pos, sonic3k.asm:26774-26781)
         // has already advanced Tails to x_pos=0x0316. Tails_InputAcceleration_Path
         // accelerates to x_vel=12 and CalcRoomInFront predicts x=0x0320, one pixel
         // inside the flat right-wall cell, so FindWall returns a genuine distance
-        // -1 (sub_F584 loc_F60C not.w d1, sonic3k.asm:19666-19672) and the wall
-        // response runs immediately (loc_14C00, sonic3k.asm:28012-28018).
+        // -1 (sub_F584 loc_F60C not.w d1, sonic3k.asm:19702-19708) and the wall
+        // response runs immediately (loc_14C00, sonic3k.asm:28052-28058).
         Tails tails = newRecordedHczTails(0x0316, 0x1500);
         tails.setXSpeed((short) 0x000C);
         tails.setGSpeed((short) 0x000C);

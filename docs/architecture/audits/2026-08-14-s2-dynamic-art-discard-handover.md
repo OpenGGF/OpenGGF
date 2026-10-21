@@ -187,7 +187,7 @@ rather than piecemeal.
   four lines low and are corrected in `known-discrepancies.md`.
 - **The S3K `PALETTE_FADE`-wins-the-token behaviour is ROM-correct**, not a silent
   regression. Both S3K blocking fades rewrite `V_int_routine = $12` every loop iteration
-  before `Wait_VSync` (`sonic3k.asm:5045-5050`, `:4906-4911`), so a V-blank inside an S3K
+  before `Wait_VSync` (`sonic3k.asm:5077-5082`, `:4906-4911`), so a V-blank inside an S3K
   fade always dispatches `VInt_12` (`:849-852`) and can never reach `VInt_0_Main` — the lag
   path (`:519-520`) and sole bump of `Lag_frame_count` (`:570`). Recorded on
   `LevelFrameStep.serviceVBlankOnly`.

@@ -17,7 +17,7 @@ public final class S3kEndingAizPaletteState {
     public void beginHold() { timer = 0; primaryOffset = 0; secondaryGate = 0; }
     /**
      * {@code st (Palette_cycle_counters+$00).w}: Ending_ScreenEvent before the AIZ fade
-     * (044fa46 sonic3k.asm:121129) and the post-credits loc_5F15A (125706). sub_5928C and sub_592EE
+     * (044fa46 sonic3k.asm:121175) and the post-credits loc_5F15A (125706). sub_5928C and sub_592EE
      * test it first, so the water and sky cycles stop until a {@link #beginHold()} clears it.
      */
     public void beginFade() { secondaryGate = 0xFF; }

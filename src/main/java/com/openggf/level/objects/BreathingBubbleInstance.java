@@ -56,7 +56,7 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
     /**
      * Drowning-bubble bucket: S1 Obj0A {@code move.b #1,obPriority(a0)}
      * (_incObj/0A LZ Drowning Countdown.asm:39), S2 Obj0A {@code move.b #1,priority(a0)}
-     * (s2.asm:41890), S3K Obj_Bubbler child {@code move.w #$80,priority(a0)} (sonic3k.asm:64753).
+     * (s2.asm:41890), S3K Obj_Bubbler child {@code move.w #$80,priority(a0)} (sonic3k.asm:64793).
      * Other spawners pass their own ROM bucket (S2 ChopChop bubbles are Obj91's
      * {@code move.b #4,priority(a1)}, s2.asm:74201).
      */

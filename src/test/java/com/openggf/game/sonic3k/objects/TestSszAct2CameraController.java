@@ -190,7 +190,7 @@ class TestSszAct2CameraController {
     }
 
     /**
-     * loc_58B7C (sonic3k.asm:117827-117839) has no branch after its addq.w #4: the pass that
+     * loc_58B7C (sonic3k.asm:117873-117885) has no branch after its addq.w #4: the pass that
      * finishes the bottom-up redraw falls into loc_58B9E and runs sub_5B18E's loc_5B1A2 init.
      * The native Knuckles complete run holds Events_routine_fg $10 and _unkFA86 2 in the same
      * frame (input 422608); a one-pass delay started every credit line one frame late.
@@ -221,9 +221,9 @@ class TestSszAct2CameraController {
     }
 
     /**
-     * ScreenEvents (sonic3k.asm:102233-102255) copies Camera_Y_pos before the event dispatch
+     * ScreenEvents (sonic3k.asm:102279-102301) copies Camera_Y_pos before the event dispatch
      * and writes V_scroll_value from Camera_Y_pos_copy afterwards; SSZ2_ScreenEvent has added
-     * Screen_shake_offset to that copy (sonic3k.asm:117750-117751). The credits' loc_5B204
+     * Screen_shake_offset to that copy (sonic3k.asm:117796-117797). The credits' loc_5B204
      * moves only Camera_Y_pos, so Plane A keeps the copy: the generation the published sprite
      * table is projected with. Native Knuckles credits frames show both one pass behind RAM.
      * A zero copy is V_scroll_value too, although ParallaxManager reads a zero handler value as
@@ -263,7 +263,7 @@ class TestSszAct2CameraController {
     }
 
     /**
-     * loc_58BBC (sonic3k.asm:117846-117875) tests _unkFAAE (credits part two), not completion:
+     * loc_58BBC (sonic3k.asm:117892-117921) tests _unkFAAE (credits part two), not completion:
      * on the pass where the locked-on Camera_Y_pos equals $1660 it clears _unkFAB9 (no new
      * clouds), lifts Camera_Y_pos_BG_copy by $100, loads Pal_Ending2 and starts BG routine 4.
      * The native Knuckles complete run holds Events_routine_bg 4 and _unkFAB9 0 at the credits'
@@ -312,8 +312,8 @@ class TestSszAct2CameraController {
     }
 
     /**
-     * SSZ2_BackgroundEvent routine 4 (sonic3k.asm:117996) replaces ScreenEvents' background
-     * row pointers (Level_layout_main+2, sonic3k.asm:102239-102246) with Level_layout_main, so
+     * SSZ2_BackgroundEvent routine 4 (sonic3k.asm:118042) replaces ScreenEvents' background
+     * row pointers (Level_layout_main+2, sonic3k.asm:102285-102292) with Level_layout_main, so
      * loc_58D1E's Draw_TileRow (d1=0, d6=$20) refills the retained 64x32 Plane B from foreground
      * rows while loc_59208 lowers Camera_Y_pos_BG_copy by $6000 per pass to $80. sub_58D3E takes
      * loc_58D44 and sub_58FBC applies SSZ2_BGDeformArray. The native Knuckles complete run holds

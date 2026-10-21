@@ -131,7 +131,7 @@ public class TestS3kSlotsPaletteCycling {
     public void slotPaletteTablesStartAtTheirListingLabels() throws IOException {
         RomByteReader reader = RomByteReader.fromRom(com.openggf.tests.TestEnvironment.currentRom());
         // sonic3k.lst: AnPal_PalSlots_1 $3620, AnPal_PalSlots_2 $3660, AnPal_PalSlots_3 $36E0
-        // (sonic3k.asm:4540-4574). _1's last group equals _2's first ($268,$EEE,$AC,$68), so the
+        // (sonic3k.asm:4572-4606). _1's last group equals _2's first ($268,$EEE,$AC,$68), so the
         // second group ($EEE x4) and the twelfth ($EE0 x4) are what tell the tables apart.
         int capture = com.openggf.game.sonic3k.constants.Sonic3kConstants.ANPAL_SLOTS_2_ADDR;
         assertEquals(0x0268, reader.readU16BE(capture));

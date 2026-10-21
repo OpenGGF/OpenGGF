@@ -10,13 +10,13 @@ Both use shared mapping tables parsed from ROM. Each subtype specifies an art_ti
 
 ## Disassembly Reference
 
-### Obj_StillSprite (sonic3k.asm:60199)
+### Obj_StillSprite (sonic3k.asm:60239)
 - Sets `mapping_frame = subtype`
 - Loads art_tile, priority, width, height from `word_2B968` (6 bytes per entry, 51 entries)
 - Calls `Sprite_OnScreen_Test` (no animation, no update)
 - Uses `Map_StillSprites` (51 mapping frames)
 
-### Obj_AnimatedStillSprite (sonic3k.asm:60377)
+### Obj_AnimatedStillSprite (sonic3k.asm:60417)
 - Sets `anim = subtype`
 - Loads art_tile, priority, width, height from `word_2BF6C` (6 bytes per entry, 8 entries)
 - Calls `Animate_Sprite` with `Ani_AnimatedStillSprites` (8 scripts, 30 mapping frames)

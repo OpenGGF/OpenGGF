@@ -876,7 +876,7 @@ Replace lines 2244-2252:
 		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
 		// S3K Player_Boundary_Sides/Tails_Check_Screen_Boundaries use
 		// Camera_max_X_pos+$128 directly, with no normal-play +$40 extension
-		// (sonic3k.asm:23183-23186, 28418-28421).
+		// (sonic3k.asm:23218-23221, 28458-28461).
 		boolean usesRomMaxPlus128 = featureSet != null && featureSet.levelBoundaryRightStrict();
 		if (!usesRomMaxPlus128 && !gameState().isBossFightActive() && !gameState().isEndOfLevelActive()) {
 			rightBoundary += RIGHT_EXTRA;
@@ -889,7 +889,7 @@ with:
 		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
 		// S3K Player_Boundary_Sides/Tails_Check_Screen_Boundaries use
 		// Camera_max_X_pos+$128 directly, with no normal-play +$40 extension
-		// (sonic3k.asm:23183-23186, 28418-28421). At native viewport width (320)
+		// (sonic3k.asm:23218-23221, 28458-28461). At native viewport width (320)
 		// this reproduces +$128 / +$128+$40 exactly; widescreen widens the
 		// boundary to the configured viewport width (declared divergence,
 		// see KNOWN_DISCREPANCIES.md).

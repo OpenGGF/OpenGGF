@@ -49,7 +49,7 @@ public final class Sonic3kSidekickFollowContext {
             return false;
         }
         // ROM loc_13DD0 only tests current Status_Push before falling into
-        // FollowLeft/FollowRight (sonic3k.asm:26702-26724). Obj3C Door
+        // FollowLeft/FollowRight (sonic3k.asm:26742-26764). Obj3C Door
         // keeps P2 marked as standing via SolidObjectFull (sonic3k.asm:
         // 66249-66258), so a stale engine push-grace bridge must not suppress
         // the follow nudge when Tails' current status byte has Status_Push clear.

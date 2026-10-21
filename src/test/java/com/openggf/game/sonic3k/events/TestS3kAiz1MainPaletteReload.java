@@ -22,7 +22,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * AIZ1_Resize routine 0, loc_1C46E/loc_1C4A6 (sonic3k.asm:38913-38935): once Camera_X_pos
+ * AIZ1_Resize routine 0, loc_1C46E/loc_1C4A6 (sonic3k.asm:38953-38975): once Camera_X_pos
  * reaches $1308 it runs LoadPalette_Immediate PalID_AIZ (Pal_AIZ to Normal_palette_line_2,
  * $60 bytes). For Player_mode 3 it then writes word_4FAE4 (104562-104565) to
  * Normal_palette_line_4+$10. Knuckles' AIZ1_ScreenInit also writes word_4FAE4 to

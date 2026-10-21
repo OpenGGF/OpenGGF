@@ -310,7 +310,7 @@ public class HudRenderManager {
     }
 
     /**
-     * Render_HUD (sonic3k.asm:17580-17592) selects Map_HUD frame 4/5 (word_DC96 / word_DCB6)
+     * Render_HUD (sonic3k.asm:17616-17628) selects Map_HUD frame 4/5 (word_DC96 / word_DCB6)
      * in zones $13-$15: the RINGS label plus the two lives-icon pieces at y +$40, the same
      * lives row the ordinary frames carry; HUD_Lives keeps the digits current.
      */

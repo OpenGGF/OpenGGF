@@ -105,7 +105,7 @@ public record TraceCharacterState(
         if (override != null) {
             // See AbstractPlayableSprite#objectRoutineOverride: a custom ROM object has
             // swapped out Player_1's dispatch and reuses routine(a0) for its own state
-            // machine (e.g. Obj_Sonic_RotatingSlotBonus, sonic3k.asm:98700-98703). Report
+            // machine (e.g. Obj_Sonic_RotatingSlotBonus, sonic3k.asm:98746-98749). Report
             // that raw value verbatim rather than deriving one from hurt/dead/CPU state.
             return override;
         }

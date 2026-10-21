@@ -27,26 +27,26 @@ import java.util.List;
 
 /**
  * ROM object {@code Obj_LRZShootingTrigger} - object id {@code $1D} in the {@code SKL} pointer set
- * (sonic3k.asm:88279-88348 plus {@code sub_42EC0} at :88349-88361; {@code Obj_LRZShootingTrigger}
+ * (sonic3k.asm:88325-88394 plus {@code sub_42EC0} at :88395-88407; {@code Obj_LRZShootingTrigger}
  * at ROM {@code $00042DBE}, {@code Map_LRZShootingTrigger} at {@code $42F06}).
  *
  * <p>Two independent behaviours share one object.
  *
- * <p><b>The gun.</b> {@code $30(a0) = (subtype & $F0) >> 2} (:88290-88294) is the reload period, so
+ * <p><b>The gun.</b> {@code $30(a0) = (subtype & $F0) >> 2} (:88336-88340) is the reload period, so
  * the high nibble times four is the number of frames between shots. {@code loc_42E00} decrements
  * the word {@code $2E(a0)} and fires when it goes negative, but only while the previous render pass
- * left the object on-screen ({@code tst.b render_flags(a0) / bpl}, :88300-88301). The shot comes
+ * left the object on-screen ({@code tst.b render_flags(a0) / bpl}, :88346-88347). The shot comes
  * from {@code AllocateObjectAfterCurrent}, so it runs in the same frame it is created.
  *
  * <p><b>The target.</b> {@code collision_flags} is {@code $C6}: the {@code $C0} category routes to
  * {@code Touch_Special}, whose size-index list includes 6, and the handler adds 1 to
- * {@code collision_property} for Player 1 and 2 for Player 2 ({@code loc_103FA}, :21185-21193).
+ * {@code collision_property} for Player 1 and 2 for Player 2 ({@code loc_103FA}, :21221-21229).
  * {@code loc_42E84} then consumes those two bits with {@code bclr}, calling {@code sub_42EC0} once
  * per toucher. The subroutine does nothing unless that player's {@code anim} is 2 - the roll - so
  * running into the trigger on foot only bounces off the solid-less hitbox. When it does fire it
  * negates both of the player's velocities, sets bit 0 of
  * {@code Level_trigger_array[subtype & $F]} ({@code d3} is still the {@code moveq #0,d3} of
- * :88289), and turns this slot into {@code Obj_Explosion} with its collision cleared.
+ * :88335), and turns this slot into {@code Obj_Explosion} with its collision cleared.
  *
  * <p>The trigger index is the low nibble and the shot period the high one, from the same byte:
  * Lava Reef's two placements, {@code $A0} and {@code $C2}, are therefore trigger 0 at a
@@ -56,18 +56,18 @@ public final class LrzShootingTriggerObjectInstance extends AbstractObjectInstan
         implements TouchResponseProvider, TouchResponseListener, RewindRecreatable,
         RomObjectCodePointerProvider {
 
-    /** {@code move.w #$280,priority(a0)} (sonic3k.asm:88285). */
+    /** {@code move.w #$280,priority(a0)} (sonic3k.asm:88331). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0280);
-    /** {@code move.b #$10,width_pixels(a0)} / {@code height_pixels(a0)} (:88283-88284). */
+    /** {@code move.b #$10,width_pixels(a0)} / {@code height_pixels(a0)} (:88329-88330). */
     private static final int HALF_SIZE = 0x10;
-    /** {@code move.b #$C6,collision_flags(a0)} (:88286). */
+    /** {@code move.b #$C6,collision_flags(a0)} (:88332). */
     private static final int COLLISION_FLAGS = 0xC6;
-    /** {@code cmpi.b #2,anim(a1)} in {@code sub_42EC0} (:88350). */
+    /** {@code cmpi.b #2,anim(a1)} in {@code sub_42EC0} (:88396). */
     private static final int ROLL_ANIMATION = Sonic3kAnimationIds.ROLL.id();
 
     /**
      * {@code Touch_ChkValue} routes the {@code $C0} category to {@code Touch_Special}
-     * (sonic3k.asm:20773-20778), which for this object only increments {@code collision_property}:
+     * (sonic3k.asm:20809-20814), which for this object only increments {@code collision_property}:
      * it never hurts, never deflects and never gives points, and both players are polled every
      * frame, since {@code loc_42E84} consumes one bit per player.
      */
@@ -103,7 +103,7 @@ public final class LrzShootingTriggerObjectInstance extends AbstractObjectInstan
         super(spawn, "LRZShootingTrigger");
         int subtype = spawn.subtype() & 0xFF;
         this.triggerIndex = subtype & 0x0F;
-        // moveq #0,d0 / move.b subtype(a0),d0 / andi.w #$F0,d0 / lsr.w #2,d0 (:88290-88293).
+        // moveq #0,d0 / move.b subtype(a0),d0 / andi.w #$F0,d0 / lsr.w #2,d0 (:88336-88339).
         this.shotPeriod = (subtype & 0xF0) >> 2;
         this.flipped = (spawn.renderFlags() & 0x1) != 0;
     }
@@ -132,7 +132,7 @@ public final class LrzShootingTriggerObjectInstance extends AbstractObjectInstan
         consumeTouches(playerEntity);
     }
 
-    /** {@code loc_42E00} (sonic3k.asm:88296-88334). */
+    /** {@code loc_42E00} (sonic3k.asm:88342-88380). */
     private void advanceGun() {
         // subq.w #1,$2E(a0) / bpl.s loc_42E84: a word decrement, so the fire frame is the one the
         // counter first goes negative on, not the one it reaches zero on.
@@ -141,7 +141,7 @@ public final class LrzShootingTriggerObjectInstance extends AbstractObjectInstan
             return;
         }
         reloadTimer = shotPeriod;
-        // tst.b render_flags(a0) / bpl.s loc_42E84 (:88299-88301).
+        // tst.b render_flags(a0) / bpl.s loc_42E84 (:88345-88347).
         if (!onScreen()) {
             return;
         }
@@ -152,7 +152,7 @@ public final class LrzShootingTriggerObjectInstance extends AbstractObjectInstan
         playSfx(Sonic3kSfx.PROJECTILE.id);
     }
 
-    /** {@code loc_42E84} (sonic3k.asm:88335-88348). */
+    /** {@code loc_42E84} (sonic3k.asm:88381-88394). */
     private void consumeTouches(PlayableEntity playerEntity) {
         if (collisionProperty == 0) {
             return;
@@ -168,7 +168,7 @@ public final class LrzShootingTriggerObjectInstance extends AbstractObjectInstan
         }
     }
 
-    /** {@code sub_42EC0} (sonic3k.asm:88349-88361). */
+    /** {@code sub_42EC0} (sonic3k.asm:88395-88407). */
     private void applyRollingHit(PlayableEntity entity) {
         if (!(entity instanceof AbstractPlayableSprite player)) {
             return;
@@ -186,7 +186,7 @@ public final class LrzShootingTriggerObjectInstance extends AbstractObjectInstan
 
     /**
      * {@code move.l #Obj_Explosion,(a0) / move.b #2,routine(a0)} with both collision bytes cleared
-     * (sonic3k.asm:88355-88359). The engine has no in-place routine rewrite, so the slot is
+     * (sonic3k.asm:88401-88405). The engine has no in-place routine rewrite, so the slot is
      * destroyed and an explosion allocated at the same position; routine 2 is the plain explosion,
      * without the {@code Obj_Animal} that routine 0 would create.
      */
@@ -233,7 +233,7 @@ public final class LrzShootingTriggerObjectInstance extends AbstractObjectInstan
                 || !(player instanceof AbstractPlayableSprite sprite)) {
             return;
         }
-        // loc_103FA (sonic3k.asm:21185-21193): +1 when the main character touched, +2 when the
+        // loc_103FA (sonic3k.asm:21221-21229): +1 when the main character touched, +2 when the
         // sidekick did, so the byte says which player(s) overlapped this frame.
         collisionProperty = (collisionProperty + (sprite.isCpuControlled() ? 2 : 1)) & 0xFF;
     }
@@ -265,7 +265,7 @@ public final class LrzShootingTriggerObjectInstance extends AbstractObjectInstan
 
     @Override
     public boolean usesS3kTouchSpecialPropertyResponse() {
-        // Touch_ChkValue (sonic3k.asm:20773-20778) routes the $C0 category to Touch_Special;
+        // Touch_ChkValue (sonic3k.asm:20809-20814) routes the $C0 category to Touch_Special;
         // without this hook the engine decoder maps $C0 to BOSS and never dispatches SPECIAL.
         return true;
     }
@@ -304,7 +304,7 @@ public final class LrzShootingTriggerObjectInstance extends AbstractObjectInstan
 
     @Override
     public boolean isHighPriority() {
-        // make_art_tile(ArtTile_LRZMisc,3,0) (sonic3k.asm:88281) leaves the priority bit clear.
+        // make_art_tile(ArtTile_LRZMisc,3,0) (sonic3k.asm:88327) leaves the priority bit clear.
         return false;
     }
 

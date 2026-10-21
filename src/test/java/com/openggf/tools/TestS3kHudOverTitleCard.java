@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * S3K {@code Render_Sprites} emits {@code Render_HUD} ahead of every object
  * priority bucket once {@code Level_started_flag} is set
- * (docs/skdisasm/sonic3k.asm:36326-36329), and earlier sprite-table entries
+ * (docs/skdisasm/sonic3k.asm:36366-36369), and earlier sprite-table entries
  * are drawn in front. The HUD therefore covers the title card while the card
  * holds over the running level: the native Knuckles HPZ entry dumps
  * (campaign-visual {@code hpz-entry} seq130-152) show the score, time and ring

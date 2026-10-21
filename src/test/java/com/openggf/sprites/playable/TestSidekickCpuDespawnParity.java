@@ -577,7 +577,7 @@ class TestSidekickCpuDespawnParity {
         // setRollingJump(true) mirrors Sonic_Jump restoring default radii while
         // leaving Status_Roll set. S3K Tails_TouchFloor computes the y_pos
         // shift from current y_radius - default_y_radius
-        // (sonic3k.asm:29133-29156), so this setup has no radius delta.
+        // (sonic3k.asm:29173-29196), so this setup has no radius delta.
         assertEquals((short) 0x0402, tails.getCentreY(),
                 "Tails_TouchFloor uses the current y_radius byte, not sprite height");
         assertEquals(15, tails.getYRadius());
@@ -586,12 +586,12 @@ class TestSidekickCpuDespawnParity {
         assertFalse(tails.getRollingJump());
         assertFalse(tails.getPushing());
         assertEquals((short) 0x0000, tails.getXSpeed());
-        // ROM Kill_Character (sonic3k.asm:21149) writes y_vel=-$700, NOT zero.
+        // ROM Kill_Character (sonic3k.asm:21185) writes y_vel=-$700, NOT zero.
         // The kill is reached via `jmp` from Tails_Check_Screen_Boundaries
-        // (sonic3k.asm:28443), and Kill_Character's `rts` (sonic3k.asm:21159)
+        // (sonic3k.asm:28483), and Kill_Character's `rts` (sonic3k.asm:21195)
         // unwinds to the caller of Tails_Check_Screen_Boundaries
-        // (e.g. Tails_Stand_Path at sonic3k.asm:27526), which then runs
-        // MoveSprite_TestGravity2 (->MoveSprite2 at sonic3k.asm:36088,36053)
+        // (e.g. Tails_Stand_Path at sonic3k.asm:27566), which then runs
+        // MoveSprite_TestGravity2 (->MoveSprite2 at sonic3k.asm:36128,36093)
         // applying the negative y-velocity to y_pos in the same frame.
         // Trace AIZ F7171 records the post-shift state with y_vel=-$700
         // retained.
@@ -1331,9 +1331,9 @@ class TestSidekickCpuDespawnParity {
      * cleared {@code Tails_CPU_interact} latch is "unarmed" and must NOT despawn on
      * the first stood-on object. ROM has no such precondition: once the off-screen +
      * {@code Status_OnObj} branch of {@code sub_13EFC} is taken it performs
-     * {@code cmp.w (a3),d0} unconditionally (docs/skdisasm/sonic3k.asm:26816-26843),
+     * {@code cmp.w (a3),d0} unconditionally (docs/skdisasm/sonic3k.asm:26856-26883),
      * and {@code Tails_CPU_interact} is zeroed with the rest of the CPU block at
-     * level init ({@code clearRAM Tails_CPU_interact,$100}, sonic3k.asm:5415,7621).
+     * level init ({@code clearRAM Tails_CPU_interact,$100}, sonic3k.asm:5447,7653).
      * The refresh at {@code loc_13F2E} only runs on a frame where Tails is already
      * on an object, so the FIRST off-screen on-object CPU frame always compares 0
      * against a live code-pointer high word and mismatches into {@code sub_13ECA}.
@@ -1780,10 +1780,10 @@ class TestSidekickCpuDespawnParity {
 
     @Test
     void nonzeroInvulnerabilityTimerBlocksTouchHurt() {
-        // ROM Touch_Hurt (sonic3k.asm:21044-21047) gates on
+        // ROM Touch_Hurt (sonic3k.asm:21080-21083) gates on
         // `tst.b invulnerability_timer(a0); bne.s Touch_ChkHurt_Return`: ANY nonzero
         // timer blocks the hit. The timer is decremented earlier in the same object
-        // slot by Tails_Display (sonic3k.asm:26279-26282), so the value applyHurt sees
+        // slot by Tails_Display (sonic3k.asm:26319-26322), so the value applyHurt sees
         // is already post-decrement; a post-decrement value of 1 is still nonzero and
         // must block. Verified against the AIZ2 miniboss trace at frame 7723: ROM keeps
         // CPU Tails following (tails_x_speed=0x008C) while the body hitbox overlaps,

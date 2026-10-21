@@ -25,7 +25,7 @@ import java.util.List;
 /**
  * Standalone LBZ1 miniboss box for star-post restarts.
  *
- * <p>ROM: {@code Obj_LBZMinibossBox} at {@code sonic3k.asm:192357}. When the
+ * <p>ROM: {@code Obj_LBZMinibossBox} at {@code sonic3k.asm:192456}. When the
  * player restarts from the lamppost after the building collapse, the Robotnik
  * intro never runs ({@code _unkFAAB} clear), so this layout object re-stages
  * the fight: it locks the camera, hosts the closed box pieces, fades to the
@@ -131,8 +131,8 @@ public final class LbzMinibossBoxInstance extends AbstractObjectInstance impleme
     }
 
     // Obj_LBZMinibossBox never draws itself; its ChildObjDat_8D25C pieces take ObjDat3_8D23C
-    // priority $100 at loc_8CE64 (sonic3k.asm:192789) and each drifting piece rewrites $380 at
-    // loc_8CF10 (sonic3k.asm:192504). The rig tracks the per-piece word and this owner draws
+    // priority $100 at loc_8CE64 (sonic3k.asm:192888) and each drifting piece rewrites $380 at
+    // loc_8CF10 (sonic3k.asm:192603). The rig tracks the per-piece word and this owner draws
     // each piece in that piece's bucket.
     private static final int PRIORITY_BUCKET = LbzMinibossBoxRig.PIECE_PRIORITY_BUCKET;
 
@@ -144,7 +144,7 @@ public final class LbzMinibossBoxInstance extends AbstractObjectInstance impleme
     @Override
     public boolean isHighPriority(int bucket) {
         // ObjDat3_8D23C art make_art_tile(ArtTile_LBZMinibossBox,2,0) leaves bit 15 clear
-        // (sonic3k.asm:192788) for every piece.
+        // (sonic3k.asm:192887) for every piece.
         return false;
     }
 

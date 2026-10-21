@@ -161,11 +161,11 @@ public class HczEndBossBlade extends AbstractBossChild implements TouchResponseP
     private int mappingFrame;
 
     /**
-     * ROM HCZEndBossBomb_PriorityBySubtype (sonic3k.asm:141667-141670): $280 / $200 / $180 for
+     * ROM HCZEndBossBomb_PriorityBySubtype (sonic3k.asm:141732-141735): $280 / $200 / $180 for
      * subtypes 0 / 2 / 4. HCZEndBossBomb_Init first takes HCZEndBossBomb_ObjData $200
-     * (sonic3k.asm:141390-141392, 142161-142162) and then immediately writes the subtype word
-     * (sonic3k.asm:141394); HCZEndBossBomb_StartDropWait rewrites it after subq.b #2,subtype
-     * (sonic3k.asm:141430-141435).
+     * (sonic3k.asm:141455-141457, 142226-142227) and then immediately writes the subtype word
+     * (sonic3k.asm:141459); HCZEndBossBomb_StartDropWait rewrites it after subq.b #2,subtype
+     * (sonic3k.asm:141495-141500).
      */
     private static final int[] PRIORITY_WORDS_BY_SUBTYPE = {0x280, 0x200, 0x180};
 
@@ -213,8 +213,8 @@ public class HczEndBossBlade extends AbstractBossChild implements TouchResponseP
 
     @Override
     public boolean isHighPriority() {
-        // CreateChild1_Normal copies the boss's art_tile (sonic3k.asm:176933); ObjDat_HCZEndBoss
-        // make_art_tile(ArtTile_HCZEndBoss,1,1) sets bit 15 (sonic3k.asm:142152) and
+        // CreateChild1_Normal copies the boss's art_tile (sonic3k.asm:177024); ObjDat_HCZEndBoss
+        // make_art_tile(ArtTile_HCZEndBoss,1,1) sets bit 15 (sonic3k.asm:142217) and
         // HCZEndBossBomb_Init's SetUp_ObjAttributes3 leaves art_tile alone.
         return true;
     }
@@ -331,7 +331,7 @@ public class HczEndBossBlade extends AbstractBossChild implements TouchResponseP
         // Signal cleared — shift down (ROM: loc_6B658)
         subtype -= 2;
         // ROM HCZEndBossBomb_StartDropWait: bsr.w HCZEndBossBomb_SetPriorityBySubtype after the
-        // subtype shift (sonic3k.asm:141434), so the blade moves one bucket forward.
+        // subtype shift (sonic3k.asm:141499), so the blade moves one bucket forward.
         priority = bladePriorityBucket(subtype);
         // Update offsets to match new position
         int slotIndex = subtype / 2;

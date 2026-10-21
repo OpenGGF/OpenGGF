@@ -195,7 +195,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     }
 
     /**
-     * S3K {@code Seek_Object_Manager} (sonic3k.asm:37986-38063): after a direct camera X write, moves
+     * S3K {@code Seek_Object_Manager} (sonic3k.asm:38026-38103): after a direct camera X write, moves
      * the two load cursors to the window around {@code (Camera_X_pos + $400) & $FF80} without loading
      * or unloading anything, and makes that the stored coarse camera. The next {@link #update(int)} then
      * sees the real camera behind (or ahead of) the stored one and runs the ordinary backward (or
@@ -367,13 +367,13 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             return false;
         }
         // loc_1B9A4 masks the layout Y word with $FFF, then rejects y < d3 and
-        // y > d3+$80 (sonic3k.asm:37744-37751).
+        // y > d3+$80 (sonic3k.asm:37784-37791).
         int spawnY = spawn.rawYWord() & 0x0FFF;
         return spawnY >= bandTop && spawnY <= bandTop + 0x80;
     }
 
     /**
-     * Load_Sprites' Camera_Y strip start d3 (sonic3k.asm:37679-37723), or -1 when
+     * Load_Sprites' Camera_Y strip start d3 (sonic3k.asm:37719-37763), or -1 when
      * the pass loads nothing. The coarse words compare signed ({@code bge}), so a
      * wrapped camera moving from $FF00 to $0680 counts as moving down.
      */
@@ -604,8 +604,8 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         // S3K's permanent-destroy latch lives in destroyedInWindow, not in
         // `remembered`: the ROM keeps the whole Object_respawn_table across a
         // giant-ring special-stage round trip (Respawn_table_keep = 1,
-        // docs/skdisasm/sonic3k.asm:128409-128412, which makes the reload skip
-        // the table wipe at :37429-37438), so a bit 7 left set by
+        // docs/skdisasm/sonic3k.asm:128463-128466, which makes the reload skip
+        // the table wipe at :37469-37478), so a bit 7 left set by
         // Delete_Current_Sprite must survive the return.
         destroyedInWindow.or(BitSet.valueOf(state.destroyedInWindowBits()));
         if (twoAxisCursorPlacement) {
@@ -619,11 +619,11 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     int restoreRewindState(
             com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlacementSnapshot snapshot) {
         // Load_Sprites keeps no pass flag: loc_1B864 compares Camera_X_pos & $FF80
-        // with Camera_X_pos_coarse on every call (sonic3k.asm:37594-37600). In the
+        // with Camera_X_pos_coarse on every call (sonic3k.asm:37634-37640). In the
         // load-then-exec order the latch therefore spans a frame boundary only
         // between a placement reset and the first loader call: the native
         // Object_load_routine 0 state, whose init writes Camera_X_pos_coarse = -1
-        // (loc_1B7D8, sonic3k.asm:37542-37545) so the same call's X loop runs.
+        // (loc_1B7D8, sonic3k.asm:37582-37585) so the same call's X loop runs.
         // ObjectManager's captured Camera_Y_pos_coarse keeps its reset sentinel
         // until that first loader pass, so it restores exactly that state. Forcing
         // false here lost the initial window of zones whose ScreenInit defers the
@@ -722,7 +722,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
      * The ordering is the point. On a round trip that sets
      * {@code Respawn_table_keep} the ROM never wipes
      * {@code Object_respawn_table} at all -- the wipe at
-     * docs/skdisasm/sonic3k.asm:37429-37438 is skipped -- so the table is
+     * docs/skdisasm/sonic3k.asm:37469-37478 is skipped -- so the table is
      * already populated when {@code Load_Sprites} first scans the entry
      * window. Restoring after that scan instead would let a spawn the ROM
      * still has latched be re-created for the entry window.
@@ -1044,7 +1044,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     private boolean persistsDestruction(ObjectSpawn spawn) {
         // S3K Load_Sprites assigns every six-byte layout entry an a3 byte in
         // Object_respawn_table and always stores that address in respawn_addr
-        // (sonic3k.asm:37513-37560,37741-37758). Unlike S1/S2, persistence is
+        // (sonic3k.asm:37553-37600,37781-37798). Unlike S1/S2, persistence is
         // not conditional on bit 15 of the layout Y word. The shared parser's
         // respawnTracked flag retains the S1/S2 encoding, so the two-axis S3K
         // placement mode must treat every real layout entry as tracked.
@@ -1236,7 +1236,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
 
     private void spawnBackwardNonCounter(int cameraX) {
         // S3K loc_1B864 and S2 ObjectsManager_GoingBackward subtract $80 from the new coarse X
-        // and skip the back cursor on the borrow (sonic3k.asm:37604-37605, s2.asm:33051-33052),
+        // and skip the back cursor on the borrow (sonic3k.asm:37644-37645, s2.asm:33051-33052),
         // so a backward pass into the first chunk loads nothing, however far it jumped.
         if (rawLeftLoadEdge(cameraX) < 0) {
             return;
@@ -1303,7 +1303,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
                 // vertically loadable. ROM loc_1BA92 falls through without
                 // setting the respawn bit or preserving X-pass priority; the
                 // later loc_1B982 Y-camera pass scans the cursor-passed range
-                // in object-list order (docs/skdisasm/sonic3k.asm:37723-37762).
+                // in object-list order (docs/skdisasm/sonic3k.asm:37763-37802).
                 removePendingCursorLoad(index);
                 if (created) {
                     deferredVerticalLoad.clear(index);
@@ -1378,7 +1378,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     List<ObjectSpawn> getDeferredVerticalLoadSpawns() {
         ArrayList<ObjectSpawn> result = new ArrayList<>();
         // loc_1B982 scans only the entries between Object_load_addr_back and
-        // Object_load_addr_front (sonic3k.asm:37723-37762); a deferred entry the
+        // Object_load_addr_front (sonic3k.asm:37763-37802); a deferred entry the
         // X cursors have since left behind is not part of that scan.
         for (int index = deferredVerticalLoad.nextSetBit(leftCursorIndex);
              index >= 0 && index < cursorIndex;

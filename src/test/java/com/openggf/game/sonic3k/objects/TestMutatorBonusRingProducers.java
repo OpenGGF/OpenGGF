@@ -97,7 +97,7 @@ class TestMutatorBonusRingProducers {
         var item = new GumballItemObjectInstance(spawn(2),0,true);
         item.setServices(services);
         var player = player();
-        // Check_PlayerInRange reads Player_2 then Player_1 (sonic3k.asm:179994-180011);
+        // Check_PlayerInRange reads Player_2 then Player_1 (sonic3k.asm:180085-180102);
         // this solo route has no native Player_2.
         services.withPlayerQuery(new ObjectPlayerQuery(()->player,List::of));
         item.update(0,player);

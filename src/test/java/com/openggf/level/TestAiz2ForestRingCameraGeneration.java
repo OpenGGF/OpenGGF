@@ -18,9 +18,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * AIZ2 forest loop: the persistent Plane A ring must be filled from the live CPU
- * camera in the same frame as {@code AIZ2_DoShipLoop} (sonic3k.asm:105205), which
+ * camera in the same frame as {@code AIZ2_DoShipLoop} (sonic3k.asm:105251), which
  * pairs its $200 camera subtraction with the {@code Camera_X_pos_rounded} baseline
- * retarget consumed by {@code DrawTilesAsYouMove} (sonic3k.asm:103171). Only
+ * retarget consumed by {@code DrawTilesAsYouMove} (sonic3k.asm:103217). Only
  * H-scroll/VSRAM/SAT are VBlank-published; a single-player lag VBlank retains the
  * previous ones. Feeding that retained camera into the ring while the frame's
  * {@code Level_repeat_offset} is live (regression from ca44ebed2) shifts the ring

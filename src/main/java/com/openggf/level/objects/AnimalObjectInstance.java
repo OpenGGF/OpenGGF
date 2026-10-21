@@ -353,7 +353,7 @@ public class AnimalObjectInstance extends AbstractObjectInstance
      * Freed-animal sprite bucket, identical in all three games: S1 Obj28
      * {@code move.b #6,obPriority(a0)} (_incObj/28, 29 Animals and Points.asm:142),
      * S2 Obj28 {@code move.b #6,priority(a0)} (s2.asm:24590), S3K Obj_Animal
-     * {@code move.w #$300,priority(a0)} (sonic3k.asm:61043).
+     * {@code move.w #$300,priority(a0)} (sonic3k.asm:61083).
      */
     private static final int ANIMAL_PRIORITY_BUCKET = RenderPriority.bucket(6);
 

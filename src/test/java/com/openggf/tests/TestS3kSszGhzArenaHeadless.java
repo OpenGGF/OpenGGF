@@ -670,7 +670,7 @@ class TestS3kSszGhzArenaHeadless {
      *
      * <p>{@code Touch_Enemy}'s {@code .checkhurtenemy} ends
      * {@code subq.b #1,boss_hitcount2(a1) / bne.s .bossnotdefeated / bset #7,status(a1)}
-     * (sonic3k.asm:20922). Both chain dispatchers and {@code loc_7A568} test that bit on
+     * (sonic3k.asm:20958). Both chain dispatchers and {@code loc_7A568} test that bit on
      * {@code parent3}: the emitter takes {@code loc_7A59A} and deletes, and every link takes
      * {@code loc_849D8}, which installs {@code Obj_FlickerMove}, clears {@code collision_flags}
      * and fills {@code x_vel}/{@code y_vel} from {@code Obj_VelocityIndex + subtype*2}. Because

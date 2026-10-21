@@ -13,7 +13,7 @@ import com.openggf.level.objects.RewindRecreatable;
 import java.util.List;
 
 /**
- * ROM {@code loc_85CA4} (sonic3k.asm:180484-180554) as allocated by {@code loc_63D1A} for the
+ * ROM {@code loc_85CA4} (sonic3k.asm:180575-180645) as allocated by {@code loc_63D1A} for the
  * Hidden Palace Knuckles fight: {@code boss_saved_mus = mus_Knuckles}, {@code $2E = 2*60} and
  * {@code $34 = loc_63DD4}.
  *

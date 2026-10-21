@@ -6,12 +6,12 @@ import java.nio.ByteBuffer;
  * SSZ2 background routine 4's retained Plane B: sixteen 16-pixel row slots of the 256-line
  * VDP ring, each recording the layout row {@code Draw_TileRow} last wrote into it.
  *
- * <p>{@code loc_58BBC} (sonic3k.asm:117846-117875) lifts {@code Camera_Y_pos_BG_copy} by
+ * <p>{@code loc_58BBC} (sonic3k.asm:117892-117921) lifts {@code Camera_Y_pos_BG_copy} by
  * {@code $100} and re-rounds {@code Camera_Y_pos_BG_rounded} with the lifted value, so no row is
  * redrawn and the ring keeps showing the island it already holds. Routine 4
- * (sonic3k.asm:117996) then loads {@code a3 = Level_layout_main}, the foreground row pointers,
+ * (sonic3k.asm:118042) then loads {@code a3 = Level_layout_main}, the foreground row pointers,
  * over the {@code Level_layout_main+2} that {@code ScreenEvents} passes background events
- * (sonic3k.asm:102239-102246). As {@code loc_59208} lowers the copy, {@code loc_58D1E}'s
+ * (sonic3k.asm:102285-102292). As {@code loc_59208} lowers the copy, {@code loc_58D1E}'s
  * {@code Draw_TileRow} (d1=0, d6=$20: layout X 0-$1FF) replaces each entering row with a
  * foreground row. Cells are read from the layout at render time; neither layout region changes
  * after {@code loc_58AE0}'s rows 9-10 write.
@@ -19,7 +19,7 @@ import java.nio.ByteBuffer;
 public final class SszEndingBackgroundPlaneState {
     static final int CAPTURE_BYTES = Integer.BYTES + 2 * Short.BYTES + 16 * Short.BYTES;
     private static final int ROW_SLOTS = 16;
-    /** {@code Camera_Y_pos_mask}, set to {@code $FF0} by {@code LevelSetup} (sonic3k.asm:102206). */
+    /** {@code Camera_Y_pos_mask}, set to {@code $FF0} by {@code LevelSetup} (sonic3k.asm:102252). */
     private static final int Y_MASK = 0xFF0;
 
     private int revision;

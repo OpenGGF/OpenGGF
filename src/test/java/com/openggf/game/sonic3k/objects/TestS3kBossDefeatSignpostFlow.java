@@ -53,9 +53,9 @@ class TestS3kBossDefeatSignpostFlow {
     /**
      * A seamless act change moves this flow with every other world-space slot.
      *
-     * <p>{@code loc_787E0} (sonic3k.asm:160569-160576) rewrites the defeated boss's OWN SST entry
+     * <p>{@code loc_787E0} (sonic3k.asm:160645-160652) rewrites the defeated boss's OWN SST entry
      * to {@code Obj_EndSignControl}, keeping its {@code render_flags}, and
-     * {@code Offset_ObjectsDuringTransition} (sonic3k.asm:104166-104178) subtracts the handover's
+     * {@code Offset_ObjectsDuringTransition} (sonic3k.asm:104212-104224) subtracts the handover's
      * {@code d0} from {@code x_pos} of every slot in
      * {@code Dynamic_object_RAM+object_size}..{@code Breathing_bubbles} whose bit 2 is set. So the
      * flow must carry the native position contract. Before it did, the Lava Reef handover refused

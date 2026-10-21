@@ -13,7 +13,7 @@ import java.util.List;
 
 /**
  * The Lava Reef miniboss's arm-segment child: subtype {@code 0} of each ring
- * ({@code loc_78838}, sonic3k.asm:160287-160349).
+ * ({@code loc_78838}, sonic3k.asm:160363-160425).
  *
  * <p>It is the anchor the ten links chain off, and it does not hang from the boss. Its position
  * is set <b>once</b>, by {@code sub_78BEE} at {@code loc_7885A} -- routine 0, which runs on the
@@ -34,7 +34,7 @@ final class LrzMinibossArmSegmentChild extends LrzMinibossRingChildBase implemen
     /** {@code word_78D66}: priority 0, {@code $08 $08} size, mapping frame 8, collision 0. */
     private static final int MAPPING_FRAME = 8;
     private static final int PRIORITY_BUCKET = 0;
-    /** {@code sub_78BEE} (sonic3k.asm:160641-160655). */
+    /** {@code sub_78BEE} (sonic3k.asm:160717-160731). */
     private static final int CAMERA_X_OFFSET = 0x20;
     private static final int CAMERA_X_OFFSET_MIRRORED = 0x120;
     private static final int CAMERA_Y_OFFSET = 0x1B8;
@@ -110,7 +110,7 @@ final class LrzMinibossArmSegmentChild extends LrzMinibossRingChildBase implemen
         updateDynamicSpawn();
     }
 
-    /** {@code sub_78BEE} (sonic3k.asm:160641-160655), run once from routine 0's {@code loc_7885A}. */
+    /** {@code sub_78BEE} (sonic3k.asm:160717-160731), run once from routine 0's {@code loc_7885A}. */
     private void anchorToCamera() {
         var services = tryServices();
         if (services == null || services.camera() == null) {

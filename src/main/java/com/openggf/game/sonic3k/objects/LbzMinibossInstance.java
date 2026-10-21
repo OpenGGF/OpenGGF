@@ -33,7 +33,7 @@ import java.util.List;
 /**
  * Launch Base Zone Act 1 miniboss.
  *
- * <p>ROM: {@code Obj_LBZMiniboss} at {@code sonic3k.asm:151366}. This object is
+ * <p>ROM: {@code Obj_LBZMiniboss} at {@code sonic3k.asm:151434}. This object is
  * spawned by {@code Obj_LBZ1Robotnik}'s {@code ChildObjDat_8D264} handoff after
  * Robotnik drops the carried yellow box, by {@code Obj_LBZMinibossBox} on a
  * star-post restart, and twice (subtypes 0/2) by {@code Obj_LBZMinibossBoxKnux}
@@ -295,20 +295,20 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         updateDynamicSpawn(getX(), getY());
     }
 
-    // ObjDat_LBZMiniboss priority $280 (sonic3k.asm:151903).
+    // ObjDat_LBZMiniboss priority $280 (sonic3k.asm:151971).
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
     /**
      * ROM: the centre child (ChildObjDat_7296E -> loc_72596) takes word_72962 priority $200 through
-     * SetUp_ObjAttributes3 at loc_725B6 (sonic3k.asm:151545-151547, 151906-151907) and never
+     * SetUp_ObjAttributes3 at loc_725B6 (sonic3k.asm:151613-151615, 151974-151975) and never
      * rewrites it.
      */
     private static final int CENTER_PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x200);
     /**
      * ROM: each arm child (ChildObjDat_72976/ChildObjDat_7297C, subtypes 0..$A) first takes
-     * word_72968 priority $180 at loc_7261C (sonic3k.asm:151596-151597, 151909-151910) and then,
-     * still in the same init dispatch, loc_727B0 writes word_727E2[subtype] (sonic3k.asm:151737,
+     * word_72968 priority $180 at loc_7261C (sonic3k.asm:151664-151665, 151977-151978) and then,
+     * still in the same init dispatch, loc_727B0 writes word_727E2[subtype] (sonic3k.asm:151805,
      * 151749-151750). loc_727B0 is re-run on every angle-table reset with the same subtype, and the
-     * detached sub_72910 -> loc_7279E flight (sonic3k.asm:151878-151889) leaves priority alone, so
+     * detached sub_72910 -> loc_7279E flight (sonic3k.asm:151946-151957) leaves priority alone, so
      * the word is fixed per link for the child's life. Indexed by link (subtype / 2).
      */
     private static final int[] PANEL_PRIORITY_WORDS = {0x300, 0x380, 0x300, 0x380, 0x300, 0x280};
@@ -329,14 +329,14 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
 
     @Override
     public boolean isHighPriority() {
-        // ObjDat_LBZMiniboss art make_art_tile(ArtTile_LBZMiniboss,1,1) sets bit 15 (sonic3k.asm:151902).
+        // ObjDat_LBZMiniboss art make_art_tile(ArtTile_LBZMiniboss,1,1) sets bit 15 (sonic3k.asm:151970).
         return true;
     }
 
     @Override
     public boolean isHighPriority(int bucket) {
-        // CreateChild1_Normal (sonic3k.asm:176933) and CreateChild4_LinkListRepeated
-        // (sonic3k.asm:177050) copy the parent's art_tile into every child, and SetUp_ObjAttributes3
+        // CreateChild1_Normal (sonic3k.asm:177024) and CreateChild4_LinkListRepeated
+        // (sonic3k.asm:177141) copy the parent's art_tile into every child, and SetUp_ObjAttributes3
         // leaves art_tile alone, so the centre and arm children share the body's bit 15.
         return true;
     }

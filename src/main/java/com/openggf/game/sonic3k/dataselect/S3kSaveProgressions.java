@@ -139,8 +139,8 @@ final class S3kSaveProgressions {
     }
 
     /**
-     * {@code SaveGame_NextLevel} (sonic3k.asm:15824-15850), indexed by
-     * {@code Current_zone_and_act} as {@code zone*2 + act} (sonic3k.asm:15860-15862).
+     * {@code SaveGame_NextLevel} (sonic3k.asm:15860-15886), indexed by
+     * {@code Current_zone_and_act} as {@code zone*2 + act} (sonic3k.asm:15896-15898).
      */
     private static final int[] SAVE_GAME_NEXT_LEVEL = {
             1, 1,       // $00 AIZ
@@ -169,7 +169,7 @@ final class S3kSaveProgressions {
             0xD, 0      // $17 DEZ boss arena, $1701
     };
 
-    /** {@code LevelList_DA6E} (sonic3k.asm:17499-17513): level code to zone/act word. */
+    /** {@code LevelList_DA6E} (sonic3k.asm:17535-17549): level code to zone/act word. */
     private static final int[] LEVEL_LIST = {
             0x000, 0x100, 0x200, 0x300, 0x500, 0x600, 0x700, 0x400, 0x800, 0x900, 0x1601, 0xA00, 0xB00, 0xC00
     };
@@ -177,7 +177,7 @@ final class S3kSaveProgressions {
     /**
      * Load destination SaveGame stores at {@code Current_zone_and_act}: the code from
      * {@code SaveGame_NextLevel}, loaded through data select {@code sub_DA4E}
-     * (sonic3k.asm:17480-17496), which turns code {@code $B} into {@code $A01} for
+     * (sonic3k.asm:17516-17532), which turns code {@code $B} into {@code $A01} for
      * Player_mode 3 only. Empty when the table has no destination: code 0 belongs only to
      * rows no SaveGame caller occupies, and code {@code $E} (Doomsday) is always written as a
      * completed file, whose loads use the clear-restart list instead of this code.

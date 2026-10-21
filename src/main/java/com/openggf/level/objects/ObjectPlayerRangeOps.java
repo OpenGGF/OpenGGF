@@ -42,10 +42,10 @@ package com.openggf.level.objects;
  * {@code _btst #render_flags.on_screen}. Every quantity is identical.
  * <p><strong>Sonic 3&amp;K has it too</strong>, in the same object and with the
  * same selector: {@code Obj_Animal}'s {@code loc_2CAE4}
- * ({@code docs/skdisasm/sonic3k.asm:61184-61194}), reached from
- * {@code tst.b subtype(a0) / bne.s loc_2CAE4} at sonic3k.asm:61146 and :61178
- * and unconditionally from :61219, deleting through {@code loc_2C9DA}
- * ({@code jmp (Delete_Current_Sprite).l}, sonic3k.asm:61101). It is
+ * ({@code docs/skdisasm/sonic3k.asm:61224-61234}), reached from
+ * {@code tst.b subtype(a0) / bne.s loc_2CAE4} at sonic3k.asm:61186 and :61218
+ * and unconditionally from :61259, deleting through {@code loc_2C9DA}
+ * ({@code jmp (Delete_Current_Sprite).l}, sonic3k.asm:61141). It is
  * instruction-for-instruction the Sonic 2 routine: {@code bcs} near edge,
  * {@code subi.w #$180}, {@code bpl} far edge, then
  * {@code tst.b render_flags(a0) / bpl}. So this is a <strong>three-game</strong>
@@ -64,7 +64,7 @@ package com.openggf.level.objects;
  * routine performing the identical {@code sub.w} against the player's x to set
  * the horizontal flip rather than to decide lifetime — Sonic 2's
  * {@code AnimalFaceSonic} ({@code docs/s2disasm/s2.asm:24883}) and Sonic 3&amp;K's
- * {@code sub_2CCBA} ({@code docs/skdisasm/sonic3k.asm:61356-61364}). Reach this
+ * {@code sub_2CCBA} ({@code docs/skdisasm/sonic3k.asm:61396-61404}). Reach this
  * predicate through {@code Obj_Animal}'s dispatch, never through a search for
  * the subtraction's shape.
  *
@@ -78,7 +78,7 @@ package com.openggf.level.objects;
  *
  * <p>No {@code FixBugs} conditional sits in or adjacent to either routine. The
  * two {@code FixBugs} blocks in Sonic 1's file
- * ({@code 28, 29 Animals and Points.asm:545} and {@code :573}) belong to
+ * ({@code 28, 29 Animals and Points.asm:545} and {@code :595}) belong to
  * {@code Points} (object $29), not to the animals' deletion path.
  */
 public final class ObjectPlayerRangeOps {

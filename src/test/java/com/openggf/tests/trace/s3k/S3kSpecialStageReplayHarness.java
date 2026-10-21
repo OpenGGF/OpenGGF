@@ -139,7 +139,7 @@ final class S3kSpecialStageReplayHarness {
      * comparison-only input that releases already-submitted, production-created
      * Kosinski work (hard rule 4). The SS loop reaches the same
      * {@code POST_OBJECTS}/{@code PRE_MAIN_LOOP} boundaries production does
-     * (ROM SpecialStage loop tail, sonic3k.asm:10752-10753), so the emerald
+     * (ROM SpecialStage loop tail, sonic3k.asm:10788-10789), so the emerald
      * archive's module and its decompression child are released exactly where
      * the recording observed them.
      */

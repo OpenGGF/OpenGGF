@@ -1343,7 +1343,7 @@ JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py -Dms
 ### Native small-plane palette destination and v5 published evidence (2026-10-14)
 
 `loc_5DD0E` and Knuckles `loc_5E984` call `PalLoad_Line1` ($85940).
-The helper at sonic3k.asm:180037 selects `Normal_palette_line_2`, not the
+The helper at sonic3k.asm:180128 selects `Normal_palette_line_2`, not the
 first line: its suffix is zero-based. Both ending callers now load the ROM
 `Pal_SmallPlane` ($60A9A, 16 words) into engine line1, preserving player line0.
 The previous line0 upload explains the small island figure's 79 Sonic / 75
@@ -1986,7 +1986,7 @@ The C publication did not close the Tails 5119/6143 negative: a v9 jar of
 native transition ledger (`B/native-cloud-transition-tails-super-320-v1`) dates
 the native `loc_5AE0A` `Kos_modules_left` gate at Level_frame_counter 4444; the
 engine opened it at 4443. ROM order makes the gate depend only on FIFO costs
-(`Process_Kos_Module_Queue` runs after ScreenEvents, sonic3k.asm:7884-7908), and
+(`Process_Kos_Module_Queue` runs after ScreenEvents, sonic3k.asm:7916-7940), and
 the two top-level direct jobs ahead of the module chain had no FAST rows, so the
 estimator gave `1D17A6`=2 and `1CF2D4`=4 against native 4 and 3. Publishing their
 exact rows (separate `$1BEE` proof in the same capture) makes the engine gate,
@@ -2001,7 +2001,7 @@ Native RAM confirms the corrected timing independently: Tails `Camera_Y_pos`
 Sonic `_unkF660`=355 at LF4096 with the ROM delay 660 dates its init at LF3791.
 Finally `loc_5B204` writes only `Camera_Y_pos`; ScreenEvents copies the camera
 before the handlers and publishes `V_scroll_value=Camera_Y_pos_copy`
-(sonic3k.asm:102233-102253). `updateCredits` used `Camera.setY`, which also
+(sonic3k.asm:102279-102299). `updateCredits` used `Camera.setY`, which also
 rewrites the copy, and `SwScrlEnding` published the live position; both now keep
 the ROM copy (`setYAfterRenderCopy`, copy-based FG VScroll). Each step was
 measured against native before the next (engine products v10–v13 in B); the v12

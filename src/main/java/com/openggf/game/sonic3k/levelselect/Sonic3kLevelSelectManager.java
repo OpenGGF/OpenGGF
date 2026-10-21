@@ -425,7 +425,7 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
 
     /**
      * Draws the selection highlight by re-rendering marked tiles with the highlight palette.
-     * Matches disasm LevelSelect_MarkFields (s3.asm line 8727).
+     * Matches disasm LevelSelect_MarkFields (s3.asm line 8771).
      */
     private void drawSelectionHighlight(GraphicsManager gm, int[] map, int width, int height) {
         if (selectedIndex < 0 || selectedIndex >= Sonic3kLevelSelectConstants.MARK_TABLE.length) {
@@ -475,7 +475,7 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
 
     /**
      * Draws the sound test value as two hex digits.
-     * Matches disasm LevelSelect_DrawSoundNumber (s3.asm line 8801).
+     * Matches disasm LevelSelect_DrawSoundNumber (s3.asm line 8845).
      * Position: VRAM_Plane_A_Name_Table+$846 → row 16, col 35 (64-wide nametable).
      */
     private void drawSoundTestValue(GraphicsManager gm, int paletteIndex) {
@@ -505,7 +505,7 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
 
     /**
      * Draws the zone preview icon.
-     * Matches disasm LevelSelect_DrawIcon (s3.asm line 8828).
+     * Matches disasm LevelSelect_DrawIcon (s3.asm line 8872).
      */
     private void drawZoneIcon(GraphicsManager gm) {
         if (selectedIndex >= Sonic3kLevelSelectConstants.ICON_TABLE.length) return;

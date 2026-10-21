@@ -107,7 +107,7 @@ class TestS3kMhzAuthoredRoute {
     }
 
     /**
-     * SpawnLevelMainSprites loc_68C2/loc_68D8 (sonic3k.asm:8180-8197): locked-on MHZ1
+     * SpawnLevelMainSprites loc_68C2/loc_68D8 (sonic3k.asm:8212-8229): locked-on MHZ1
      * (SK_alone_flag clear) gives solo Sonic (Player_mode 1) a temporary Obj_Tails carrier
      * at Player_2, which flies off after the drop. It is not a configured follower.
      */

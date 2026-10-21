@@ -16,7 +16,7 @@ final class HczEndBossRobotnikHead extends AbstractBossChild implements RewindRe
 
     HczEndBossRobotnikHead(HczEndBossInstance boss) {
         // Child1_MakeRoboHead -> Obj_RobotnikHead applies ObjDat_RobotnikHead priority $280
-        // (sonic3k.asm:136645-136648); its art make_art_tile(ArtTile_RobotnikShip,0,0) leaves
+        // (sonic3k.asm:136710-136713); its art make_art_tile(ArtTile_RobotnikShip,0,0) leaves
         // bit 15 clear, matching the default isHighPriority().
         super(boss, "HCZEndBossRobotnikHead", RenderPriority.fromS3kWord(0x280), 0);
     }

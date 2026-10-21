@@ -492,7 +492,7 @@ private boolean isAizBossActive() {
 3. Update `updateAiz1()` (line 105-110):
 ```java
 private void updateAiz1() {
-    // ROM: tst.b (Boss_flag).w / bne.s locret_27848 (sonic3k.asm:53939)
+    // ROM: tst.b (Boss_flag).w / bne.s locret_27848 (sonic3k.asm:53979)
     if (isAizBossActive()) {
         return;
     }
@@ -505,7 +505,7 @@ private void updateAiz1() {
 4. Update `updateAiz2()` (line 117-139):
 ```java
 private void updateAiz2() {
-    // ROM: tst.b (Boss_flag).w / bne.s locret_2787E (sonic3k.asm:53949)
+    // ROM: tst.b (Boss_flag).w / bne.s locret_2787E (sonic3k.asm:53989)
     if (isAizBossActive()) {
         return;
     }

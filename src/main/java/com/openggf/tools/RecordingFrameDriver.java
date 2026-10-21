@@ -329,7 +329,7 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
                 // ROM: a retained Obj_LevelResults that mutates into
                 // Obj_TitleCard runs Obj_TitleCardInit and queues its KosM art
                 // within the same object pass that observed the cleared
-                // End_of_level state (docs/skdisasm/sonic3k.asm:62703-62734,
+                // End_of_level state (docs/skdisasm/sonic3k.asm:62743-62774,
                 // 62120-62166). Poll again after the frame body so a results
                 // exit during this pass starts the in-level title card in the
                 // same frame rather than the next frame's top.
@@ -659,7 +659,7 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         // An ordinary lag row did not reach Joypad_Read, so its press-edge
         // baseline stays at the last polled movie row. Pause_Loop is different:
         // VInt_10 polls controllers on every Wait_VSync before checking Start
-        // again (sonic3k.asm:1572-1607,719-725). While already paused, compare
+        // again (sonic3k.asm:1594-1629,741-747). While already paused, compare
         // against the immediately preceding movie row and retain this row as
         // the next poll baseline so a held Start is not repeatedly re-read as
         // an edge and the later unpause press remains visible.

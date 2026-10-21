@@ -1226,7 +1226,7 @@ class TestAiz2BossEndSequenceObjects {
         // AIZEndBoss_StartPostDefeatCutscene is the restore owner. Once that
         // owner has released control, the floating capsule's loc_866CC only
         // checks the ending-pose gate and swings; it must not overwrite the
-        // playables again (sonic3k.asm:138263-138276,181675-181679).
+        // playables again (sonic3k.asm:138328-138341,181766-181770).
         sonic.setAnimationId(Sonic3kAnimationIds.WALK);
         tails.setAnimationId(Sonic3kAnimationIds.ROLL);
         sonic.setAir(true);
@@ -1413,7 +1413,7 @@ class TestAiz2BossEndSequenceObjects {
         // This controller occupies a lower SST slot than the capsule that
         // publishes the release, so its first entry that observes the release
         // is already loc_694D4's Restore_PlayerControl pass; Ctrl_1_locked
-        // stays asserted for loc_69526 (sonic3k.asm:138263-138272).
+        // stays asserted for loc_69526 (sonic3k.asm:138328-138337).
         assertTrue(player.isControlLocked());
         assertFalse(player.isObjectControlled());
         assertFalse(player.isForceInputRight());

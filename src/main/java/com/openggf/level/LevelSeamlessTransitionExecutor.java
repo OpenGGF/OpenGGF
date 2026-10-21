@@ -105,7 +105,7 @@ final class LevelSeamlessTransitionExecutor {
      * {@code SpriteManager.update()} (which is where
      * {@code SpriteManager.frameCounter} normally increments). Bump it
      * explicitly here so sidekick AI gates that read
-     * {@code (Level_frame_counter & MASK)} — e.g. sonic3k.asm:26775 loc_13E9C
+     * {@code (Level_frame_counter & MASK)} — e.g. sonic3k.asm:26815 loc_13E9C
      * 64-frame jump-cadence check — fire on the same frames as the ROM after
      * AIZ act 1 → act 2 reload.
      *
@@ -123,7 +123,7 @@ final class LevelSeamlessTransitionExecutor {
         // the native OscillateNumDo dispatch for this transition-only row at
         // the same post-Level_frame_counter boundary as LevelLoop. Using the
         // old counter value here is deduplicated after the preceding tail and
-        // drops one oscillator tick across the AIZ reload (sonic3k.asm:7889,
+        // drops one oscillator tick across the AIZ reload (sonic3k.asm:7921,
         // 7931).
         levelManager.advanceGlobalOscillationAtLevelLoopTail();
         // This boundary-owned reload returns before the ordinary level update,
@@ -146,8 +146,8 @@ final class LevelSeamlessTransitionExecutor {
         }
 
         // ROM keeps Level_frame_counter ticking through AIZ's reload frame
-        // (docs/skdisasm/sonic3k.asm:7884-7894); S3K Tails CPU reads it for
-        // loc_13E9C's 64-frame auto-jump gate (docs/skdisasm/sonic3k.asm:26775-26782).
+        // (docs/skdisasm/sonic3k.asm:7916-7926); S3K Tails CPU reads it for
+        // loc_13E9C's 64-frame auto-jump gate (docs/skdisasm/sonic3k.asm:26815-26822).
         levelManager.frameCounter++;
         levelManager.markSidekickRomVisibleReloadFrameCounterBridge();
         SpriteManager spriteManager = GameServices.spritesOrNull();

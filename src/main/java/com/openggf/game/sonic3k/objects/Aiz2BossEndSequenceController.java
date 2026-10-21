@@ -201,7 +201,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
             pendingLookUpInputAfterStop = true;
             setSidekickControlLocked(player, true);
             // AIZEndBoss_StopPlayer uses AllocateObject, not
-            // CreateChild6_Simple (sonic3k.asm:138299-138304). A lower free
+            // CreateChild6_Simple (sonic3k.asm:138364-138369). A lower free
             // SST slot waits for the next scan; allocating after this owner
             // instead can start the cutscene on this same scan.
             spawnFreeChild(CutsceneKnucklesAiz2Instance::createDefault);
@@ -269,7 +269,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     private int postResultsControlRestoreDelay() {
         // The first boss entry that reads _unkFAA8 clear restores controls
         // and returns; walking starts on its following dispatch
-        // (AIZEndBoss_StartPostDefeatCutscene, sonic3k.asm:138263-138276).
+        // (AIZEndBoss_StartPostDefeatCutscene, sonic3k.asm:138328-138341).
         // One phase entry is consumed here, without adding a synthetic wait.
         return POST_RESULTS_CONTROL_RESTORE_DELAY;
     }

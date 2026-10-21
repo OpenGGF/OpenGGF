@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * The level fade-in reaches the picture with the V-int that publishes its frame's sprite table.
  *
- * <p>{@code Level/loc_64DC} (sonic3k.asm:7874-7878) runs {@code Pal_FillBlack} and arms
+ * <p>{@code Level/loc_64DC} (sonic3k.asm:7906-7910) runs {@code Pal_FillBlack} and arms
  * {@code Palette_fade_timer = $16}; each {@code LevelLoop} frame's {@code Animate_Palette}
  * (5018-5028) applies one {@code Pal_FromBlack} pass to {@code Normal_palette}, and only the next
  * {@code VInt_8} copies {@code Normal_palette} to CRAM beside the sprite table and scroll buffers.

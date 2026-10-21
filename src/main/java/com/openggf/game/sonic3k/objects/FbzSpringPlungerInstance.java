@@ -23,7 +23,7 @@ public final class FbzSpringPlungerInstance extends AbstractObjectInstance
     @Override public void update(int vIntRunCount, PlayableEntity player) {
         // loc_89C86 calls sub_86A3E (SolidObjectFull) and immediately tests the
         // standing bits established by that same call before returning from the
-        // object's SST entry (sonic3k.asm:187094-187119). Manual checkpoints
+        // object's SST entry (sonic3k.asm:187187-187212). Manual checkpoints
         // return those fresh per-player bits directly; listener callbacks are
         // intentionally reserved for the compatibility auto-solid path.
         SolidCheckpointBatch checkpoint = checkpointAll();

@@ -17,7 +17,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code loc_44BCC}/{@code loc_44BF8} (sonic3k.asm:90084-90118): one of the eight pieces
+ * ROM {@code loc_44BCC}/{@code loc_44BF8} (sonic3k.asm:90130-90164): one of the eight pieces
  * {@code Obj_SSZCollapsingColumn} breaks into.
  *
  * <p>Init: {@code render_flags $84}, {@code height_pixels 8}, {@code width_pixels 8},

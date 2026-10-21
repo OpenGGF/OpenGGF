@@ -8,7 +8,7 @@ public final class S3kPostCreditsData {
     private S3kPostCreditsData() { }
     public record Dispatch(int bannerInitializer, int afterBanner) {
         /**
-         * The loc_5F20A subtype each locked-on initializer leaves (sonic3k.asm:125542-125599):
+         * The loc_5F20A subtype each locked-on initializer leaves (sonic3k.asm:125588-125645):
          * loc_5F05C writes 4, loc_5F0C4 writes 8, and loc_5F0A6 writes none, so the
          * slot AllocateObject cleared keeps 0.
          */
@@ -31,7 +31,7 @@ public final class S3kPostCreditsData {
         int address=S3kEndingResources.POST_CREDITS_DISPATCH+offset;
         return new Dispatch(rom.readU32BE(address),rom.readU32BE(address+4));
     }
-    /** sub_5FF1C (sonic3k.asm:126931): the subtype indexes word_5F260's x/y pairs. */
+    /** sub_5FF1C (sonic3k.asm:126977): the subtype indexes word_5F260's x/y pairs. */
     public static int bannerX(RomByteReader rom, Dispatch dispatch) {
         return rom.readU16BE(S3kEndingResources.S3K_LOGO_POSITIONS + dispatch.bannerSubtype());
     }

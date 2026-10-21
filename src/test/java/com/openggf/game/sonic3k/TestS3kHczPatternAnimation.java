@@ -214,7 +214,7 @@ public class TestS3kHczPatternAnimation {
         camera.setFrozen(true);
 
         // AnimateTiles_HCZ1 composes only within +-$60 of the waterline equilibrium;
-        // beyond it nothing is queued (sonic3k.asm:54001-54002, 54042-54044).
+        // beyond it nothing is queued (sonic3k.asm:54041-54042, 54082-54084).
         camera.setX((short) 0);
         camera.setY((short) 0x5A5);
         advanceAnimationFrame();

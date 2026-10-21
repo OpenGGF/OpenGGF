@@ -50,5 +50,5 @@ landing probe retained shared Primary `$00`; his next grounded `AnglePos` seeded
 Primary `$03`; Tails landed later that frame and its empty right probe retained
 that shared `$03`, causing the native facing clear on the following dispatch.
 The write/no-write instructions are `FindFloor`/`sub_F264`/`sub_F30C` at
-`docs/skdisasm/sonic3k.asm:19187-19310`; the paired player copy is at
-`sonic3k.asm:26215-26244`.
+`docs/skdisasm/sonic3k.asm:19223-19346`; the paired player copy is at
+`sonic3k.asm:26255-26284`.

@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code sub_56DCA} and {@code word_56F88} (sonic3k.asm:115457-115497, :115645-115649).
+ * {@code sub_56DCA} and {@code word_56F88} (sonic3k.asm:115503-115543, :115691-115695).
  *
  * <p>The three boundaries the ROM's branches actually draw -- {@code $1AFF}/{@code $1B00},
  * {@code $22BF}/{@code $22C0}, {@code $79F}/{@code $7A0} -- plus the two box edges that differ
@@ -86,7 +86,7 @@ class TestLrzDomeRegions {
                 "a locked background is not released by walking out of the box");
     }
 
-    /** {@code sub_56DAC} (sonic3k.asm:115442-115452). */
+    /** {@code sub_56DAC} (sonic3k.asm:115488-115498). */
     @Test
     void theLockedBackgroundCopiesAreTheRomArithmetic() {
         assertEquals((0x900 - 0x788 + 0x40) & 0xFFFF,

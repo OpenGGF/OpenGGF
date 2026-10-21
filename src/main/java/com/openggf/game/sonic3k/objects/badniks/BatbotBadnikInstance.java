@@ -64,7 +64,7 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implem
             // Obj_WaitOffscreen installs Map_Offscreen with width/height $20
             // and restores Obj_Batbot only after the temporary sprite has been
             // drawn onscreen; the restored object op runs next frame
-            // (sonic3k.asm:180266-180297, 186266-186272).
+            // (sonic3k.asm:180357-180388, 186359-186365).
             if (isDeleteSpriteIfNotInRange()) {
                 // loc_85AD2 still owns the ordinary coarse-X deletion path
                 // while the placeholder waits. Without it, vertically distant
@@ -114,7 +114,7 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implem
         // CreateChild1_Normal allocates both visual pieces as genuine objects
         // after the parent. Even though their collision byte is zero, their SST
         // occupancy changes later AllocateObjectAfterCurrent results
-        // (sonic3k.asm:176914-176943,186283-186397).
+        // (sonic3k.asm:177005-177034,186376-186490).
         spawnVisualChildren();
     }
 
@@ -212,7 +212,7 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implem
         // Obj_Batbot publishes itself after Chase_Object + MoveSprite2, and
         // S3K's Collision_response_list stores its SST pointer. Touch_Loop
         // therefore reads the Batbot's live frame-start x_pos/y_pos rather
-        // than a copied coordinate (sonic3k.asm:186312-186319,20656-20710).
+        // than a copied coordinate (sonic3k.asm:186405-186412,20692-20746).
         return true;
     }
 
@@ -253,7 +253,7 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implem
         // sets that bit when it installs the parent's one-dispatch delete marker.
         // Child_Draw_Sprite then installs the child's own Delete_Current_Sprite
         // marker; the child slot is cleared on its following dispatch
-        // (sonic3k.asm:178046-178052,179058-179139).
+        // (sonic3k.asm:178137-178143,179149-179230).
         return isDestroyed() || deleteCurrentSpriteMarker;
     }
 
@@ -319,7 +319,7 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implem
 
             // Both child operations begin with Refresh_ChildPosition, so a
             // higher-slot child observes movement performed by the parent earlier
-            // in this same ExecuteObjects pass (sonic3k.asm:186320-186374).
+            // in this same ExecuteObjects pass (sonic3k.asm:186413-186467).
             currentX = parent.currentX;
             currentY = parent.currentY + kind.yOffset;
             switch (childState) {
@@ -380,7 +380,7 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implem
         @Override
         public boolean isHighPriority() {
             // CreateChild1_Normal copies the parent's art_tile, including its
-            // high-priority plane bit (sonic3k.asm:176925-176927).
+            // high-priority plane bit (sonic3k.asm:177016-177018).
             return true;
         }
 
@@ -394,7 +394,7 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implem
                 // CreateChild1_Normal copies mappings and art_tile, but not the
                 // parent's render_flags; SetUp_ObjAttributes3 only sets bit 2.
                 // Batbot visual children therefore never inherit parent X flip
-                // (sonic3k.asm:176907-176947).
+                // (sonic3k.asm:176998-177038).
                 renderer.drawFrameIndex(mappingFrame, currentX, currentY, false, false);
             }
         }

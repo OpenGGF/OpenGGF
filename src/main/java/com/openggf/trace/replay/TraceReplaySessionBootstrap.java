@@ -289,13 +289,13 @@ public final class TraceReplaySessionBootstrap {
         boolean representedS3kCompleteRun =
                 TraceReplayBootstrap.isS3kCompleteRunSegment(trace);
         // The level's own Load_Sprites/Process_Sprites setup pass
-        // (Level loc_6468, sonic3k.asm:7849-7860) is NOT discarded here for any
+        // (Level loc_6468, sonic3k.asm:7881-7892) is NOT discarded here for any
         // trace. It runs below, in bootstrap, before the first driven frame --
         // see the consumePendingInitialProcessSpritesPass call at the end of
         // this method. That placement is the whole model: the pass precedes
         // LevelLoop, so it performs no Wait_VSync, no Read_Joypads and no
         // addq.w #1,(Level_frame_counter).w (that increment lives inside
-        // LevelLoop at sonic3k.asm:7888-7894). It must therefore spend neither
+        // LevelLoop at sonic3k.asm:7920-7926). It must therefore spend neither
         // a recorded controller row nor a frame-counter tick, and recorded row
         // 0 -- which reads Level_frame_counter == 1 on every segment -- anchors
         // to the first LevelLoop frame, the first frame the driver steps.
@@ -451,7 +451,7 @@ public final class TraceReplaySessionBootstrap {
         // frame index.
         if (gameplayMode != null && gameplayMode.getLevelManager() != null) {
             // Objects the ROM creates from SpawnLevelMainSprites (loc_690A /
-            // loc_6926, sonic3k.asm:8205-8216) are written into
+            // loc_6926, sonic3k.asm:8237-8248) are written into
             // Dynamic_object_RAM at main-sprite spawn -- which happens as part
             // of this same setup pass, after the title card. They are therefore
             // not resident for any earlier Level_MainLoop tick, and the pass
@@ -523,7 +523,7 @@ public final class TraceReplaySessionBootstrap {
      *
      * <p>These segments open on the level's own setup pass, where
      * {@code Sonic_Init} does {@code routine += 2} then {@code rts} without
-     * touching {@code x_vel}/{@code y_vel} (sonic3k.asm:21902-21943). Whatever
+     * touching {@code x_vel}/{@code y_vel} (sonic3k.asm:21938-21979). Whatever
      * the SST held when the level loaded therefore survives into the first
      * recorded row: HCZ and MGZ record the routine change with {@code y_vel}
      * already {@code 0x38}, ICZ with {@code 0x280}, while AIZ, CNZ, LBZ and MHZ
@@ -553,7 +553,7 @@ public final class TraceReplaySessionBootstrap {
      * {@code Last_star_pole_hit} is zero (s2.asm:36192-36199), and
      * {@code Obj79_SaveData} / {@code Obj79_LoadData} save and restore
      * {@code MainCharacter+top_solid_bit} across a star post and the
-     * special-stage return (s2.asm:44740, :44787). A segment that resumes a
+     * special-stage return (s2.asm:44740, :44827). A segment that resumes a
      * level mid-run therefore inherits the pair from the star post, not from
      * the zone default, and no metadata field carries it.
      *
@@ -645,7 +645,7 @@ public final class TraceReplaySessionBootstrap {
         // 0. Row 0 is a recorded LevelLoop iteration-1 row -- a POST-frame
         // sample -- so copying it in as pre-frame state hands the engine frame
         // 0's own result before frame 0 runs. The player's spawn state is owned
-        // by SpawnLevelMainSprites (sonic3k.asm:8111-8205), which takes x_pos /
+        // by SpawnLevelMainSprites (sonic3k.asm:8143-8237), which takes x_pos /
         // y_pos from the level start position and sets Status_InAir only via
         // the explicit per-zone bsets, leaving velocity and the subpixel
         // fraction zero (the object RAM is cleared before the spawn writes);
@@ -661,10 +661,10 @@ public final class TraceReplaySessionBootstrap {
         // engine then ran frame 0's own -$1800 air-control step on top of it --
         // a permanent one-frame x offset, plus a 1px sidekick placement error
         // because SpawnLevelMainSprites_SpawnPlayers derives Player_2's x_pos
-        // from Player_1's (sonic3k.asm:8363-8366).
+        // from Player_1's (sonic3k.asm:8395-8398).
         // anim/prev_anim and mapping_frame survive the load the same way: ROM
         // writes them as a word at spawn for the zones that need one
-        // (sonic3k.asm:8155-8190) and Sonic_Init never touches them, so row 0
+        // (sonic3k.asm:8187-8222) and Sonic_Init never touches them, so row 0
         // carries whatever the previous segment left behind.
         sprite.setAnimationId(entry.animationId());
         sprite.getAnimationManager().publishPreviousAnimationId(entry.animationId());
@@ -705,7 +705,7 @@ public final class TraceReplaySessionBootstrap {
      * Mirrors native post-row effects for an S3K complete-run handoff row that
      * replay skips for gameplay comparison. ROM still ran LevelLoop on that
      * row: {@code Level_frame_counter} increments before {@code Process_Sprites}
-     * and {@code Animate_Tiles} runs after it (sonic3k.asm:7889-7906). This
+     * and {@code Animate_Tiles} runs after it (sonic3k.asm:7921-7938). This
      * advances only live timing systems; it never copies frame data from the
      * trace into engine state.
      */
@@ -804,7 +804,7 @@ public final class TraceReplaySessionBootstrap {
         gameplayMode.registerBonusStageAdapter(provider);
 
         // Rings live on LevelState, not GameStateManager — same call the live
-        // path makes (GameLoop.prepareBonusStageForTitleCard, :2274).
+        // path makes (GameLoop.prepareBonusStageForTitleCard, :2296).
         GameServices.level().getLevelGamestate().setRings(frame0Rings);
         GameServices.level().setBonusStageHudLayout(true);
         for (var sprite : GameServices.sprites().getAllSprites()) {
@@ -819,12 +819,12 @@ public final class TraceReplaySessionBootstrap {
                 // Restart_level_flag level reload: Object_RAM (Player_1 included)
                 // is fully cleared -- Status_InAir off -- before Get_LevelSizeStart
                 // repositions the player from the zone's Start Location table
-                // (sonic3k.asm:7619 clearRAM Object_RAM; 38160-38183
+                // (sonic3k.asm:7651 clearRAM Object_RAM; 38160-38183
                 // Get_LevelSizeStart). SpawnLevelMainSprites' zone-specific
                 // air/animation branches (the only code that would otherwise set
                 // Status_InAir before the level loop starts) are skipped whenever
                 // Special_bonus_entry_flag is set, which bonus-stage entry always
-                // does (sonic3k.asm:8117-8118 tst.b Special_bonus_entry_flag / bne
+                // does (sonic3k.asm:8149-8150 tst.b Special_bonus_entry_flag / bne
                 // locret_69B6; 61896 move.b #2,Special_bonus_entry_flag). So the
                 // ground/air transition for Gumball/Pachinko/Slots is decided
                 // exclusively by frame 0's own Player_AnglePos probe, not a
@@ -1436,9 +1436,9 @@ public final class TraceReplaySessionBootstrap {
             }
             level.initLevelEventsForLevel();
             // Re-apply zone player state after sidekick reposition. ROM's
-            // SpawnLevelMainSprites_SpawnPlayers (sonic3k.asm:8335-8427) sets
+            // SpawnLevelMainSprites_SpawnPlayers (sonic3k.asm:8367-8459) sets
             // sidekick position FIRST, then SpawnLevelMainSprites
-            // (sonic3k.asm:8132-8205) sets the in-air status for zones like
+            // (sonic3k.asm:8164-8237) sets the in-air status for zones like
             // MGZ1 / HCZ1 / LRZ1 non-Knuckles. repositionRegisteredSidekicks above
             // clears the in-air bit via spawnSidekicks, so the zone-event
             // handler must run again to restore the falling-intro state.

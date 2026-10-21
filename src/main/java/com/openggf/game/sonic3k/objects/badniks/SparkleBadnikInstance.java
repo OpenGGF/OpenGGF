@@ -23,7 +23,7 @@ import java.util.List;
 /**
  * S3K Obj $A4 - Sparkle.
  *
- * <p>ROM reference: {@code Obj_Sparkle} (sonic3k.asm:186053-186253).
+ * <p>ROM reference: {@code Obj_Sparkle} (sonic3k.asm:186146-186346).
  * The parent is an attackable CNZ badnik that charges when a player is within
  * $80 pixels, then alternates firing lightning vertically up/down while
  * releasing two diagonal spark children.
@@ -74,7 +74,7 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
             // Obj_WaitOffscreen owns a $20-by-$20 placeholder until Render_Sprites
             // has brought it onscreen. Once the saved Obj_Sparkle operation is
             // restored, later offscreen frames must not freeze an in-progress
-            // charge (sonic3k.asm:180266-180297,186058-186066).
+            // charge (sonic3k.asm:180357-180388,186151-186159).
             if (hasCameraContext()) {
                 if (!isOnScreen(WAIT_OFFSCREEN_MARGIN)) {
                     return;
@@ -86,10 +86,10 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
         }
 
         if (initPending) {
-            // loc_891BA (sonic3k.asm:186074-186076), Sparkle's routine-0 entry, is
+            // loc_891BA (sonic3k.asm:186167-186169), Sparkle's routine-0 entry, is
             // `lea ObjDat_Sparkle,a1 / jmp SetUp_ObjAttributes`; that subroutine
             // ends `addq.b #2,routine(a0)` then `rts`
-            // (sonic3k.asm:176901-176919). Init RETURNS instead of falling through
+            // (sonic3k.asm:176992-177010). Init RETURNS instead of falling through
             // to loc_891C2, so this dispatch runs no Find_SonicTails proximity
             // test and cannot start the charge; routine 2 runs next dispatch.
             initPending = false;
@@ -197,7 +197,7 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
     @Override
     public int getCollisionFlags() {
         // collision_flags is written by SetUp_ObjAttributes inside loc_891BA
-        // (sonic3k.asm:176910), so the freshly allocated SST slot still reads
+        // (sonic3k.asm:177001), so the freshly allocated SST slot still reads
         // zero for the whole Init dispatch: the frame's touch scan runs at the
         // player slot before this object's routine.
         return initPending ? 0 : super.getCollisionFlags();

@@ -21,7 +21,7 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
     private static final int FLY_LAND_BLOCKERS_FALLBACK =
             GameRules.SONIC_2.sidekickCpu().sidekickFlyLandStatusBlockerMask();
     /** Sonic OST routine value at/above which the leader is considered dead/dying.
-     *  ROM: {@code cmpi.b #6,(Player_1+routine).w / bhs.s loc_13D42} (sonic3k.asm:26629-26630). */
+     *  ROM: {@code cmpi.b #6,(Player_1+routine).w / bhs.s loc_13D42} (sonic3k.asm:26669-26670). */
     private static final int LEADER_DEAD_ROUTINE_THRESHOLD = 6;
 
     private final SidekickCpuController controller;
@@ -50,7 +50,7 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         diagnosticTargetX = leader.getCentreX() & 0xFFFF;
         diagnosticTargetY = leader.getCentreY() & 0xFFFF;
         sidekick.setCentreXPreserveSubpixel(leader.getCentreX());
-        // ROM Tails_Catch_Up_Flying loc_13B50 (sonic3k.asm:26493-26499): the spawn Y is
+        // ROM Tails_Catch_Up_Flying loc_13B50 (sonic3k.asm:26533-26539): the spawn Y is
         // `subi.w #$C0,d0` and then, under Reverse_gravity_flag, `addi.w #2*$C0,d0` — a net
         // +$C0. The sidekick always flies in from the level's "sky" side, which is below the
         // leader when gravity is inverted. Tails_CPU_target_Y above is deliberately NOT
@@ -68,7 +68,7 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         // marker writes $81 and remains fully scripted.
         approachRunsObjectPhysics = !catchUpMarker && !sidekick.isObjectControlSuppressesMovement();
         if (catchUpMarker) {
-            // S3K Tails_Catch_Up_Flying loc_13B50 (sonic3k.asm:26503-26506)
+            // S3K Tails_Catch_Up_Flying loc_13B50 (sonic3k.asm:26543-26546)
             // zeroes x_vel, y_vel, and ground_vel immediately after teleporting.
             // S2 TailsCPU_Respawn (s2.asm:39122-39140) only writes routine,
             // position, priority, and spindash fields; TailsCPU_Flying clears
@@ -83,7 +83,7 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         sidekick.setSpindashCounter((short) 0);
         if (catchUpMarker) {
             // S3K's catch-up teleport explicitly calls
-            // Tails_Set_Flying_Animation (docs/skdisasm/sonic3k.asm:26474-26500).
+            // Tails_Set_Flying_Animation (docs/skdisasm/sonic3k.asm:26514-26540).
             // S2 TailsCPU_Respawn has no animation write at all: it preserves
             // anim/prev_anim while changing routine and position
             // (docs/s2disasm/s2.asm:39122-39140). This distinction is visible
@@ -209,7 +209,7 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         //   * S2 (s2.asm:38872-38873) andi.b #$D2,d2 / bne return — bits 1+4+6+7
         //     (in_air|roll_jump|underwater|bit7). NO leader-routine check; transitions
         //     to NORMAL even if Sonic is hurt or dead.
-        //   * S3K (sonic3k.asm:26625, 26629-26630) andi.b #$80,d2 (bit 7 only) AND
+        //   * S3K (sonic3k.asm:26665, 26669-26670) andi.b #$80,d2 (bit 7 only) AND
         //     cmpi.b #6,(Player_1+routine).w / bhs (skip if Sonic dead).
         // Resolved through SidekickCpuRules so each game's ROM behavior is preserved.
         int statusBlockerMask = rules != null

@@ -147,17 +147,17 @@ public class TestSonic3kTitleScreenIntroSkipAudio {
     /**
      * The ROM's intro emits exactly three numbered sound requests, in one order,
      * however the intro is left. {@code Title_Screen} opens with a fourth,
-     * {@code cmd_FadeOut} (sonic3k.asm:5393-5394), which the manager issues on
+     * {@code cmd_FadeOut} (sonic3k.asm:5425-5426), which the manager issues on
      * entry through the fade path ({@code AudioManager.fadeOutMusic}); this
      * request seam does not record fades, so it is not counted here.
      *
      * <p>{@code cmd_SEGA} follows {@code Pal_FadeFromBlack}
-     * (sonic3k.asm:5485). {@code Wait_SegaS3K} is left either by its timeout or
+     * (sonic3k.asm:5517). {@code Wait_SegaS3K} is left either by its timeout or
      * by a Start press, and both exits run the single {@code cmd_StopSEGA} at
-     * {@code loc_3FE4} (:5493-5500). {@code mus_TitleScreen} then starts just
-     * before {@code Wait_TitleS3K} (:5529-5530). A Start press inside
+     * {@code loc_3FE4} (:5525-5532). {@code mus_TitleScreen} then starts just
+     * before {@code Wait_TitleS3K} (:5561-5562). A Start press inside
      * {@code Wait_TitleS3K} branches to {@code loc_4090} and issues no sound
-     * command at all (:5541-5546), so nothing may follow the music.
+     * command at all (:5573-5578), so nothing may follow the music.
      *
      * <p>Gating the skip's stop on "the chant once played" rather than "the
      * chant is still playing" put a second stop-all after the music and left

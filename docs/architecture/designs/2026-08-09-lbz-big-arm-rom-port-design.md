@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-09
 **Object:** S3KL `$CC`, `Obj_LBZFinalBoss2` / Big Arm
-**Source of truth:** `docs/skdisasm/sonic3k.asm:154231-155585`, assembled
+**Source of truth:** `docs/skdisasm/sonic3k.asm:154305-155659`, assembled
 with `FixBugs = 0`
 
 ## Problem

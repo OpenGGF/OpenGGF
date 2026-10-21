@@ -9,7 +9,7 @@ import com.openggf.level.objects.boss.AbstractBossInstance;
 
 /**
  * The half of a Lava Reef miniboss ring child that every one of the three kinds shares:
- * {@code sub_78B46} (sonic3k.asm:160568-160590) and the two-step retirement behind it.
+ * {@code sub_78B46} (sonic3k.asm:160644-160666) and the two-step retirement behind it.
  *
  * <p>In the ROM this is literally shared code -- {@code loc_78838} (the arm segment),
  * {@code loc_788F4} (a link) and both of the hand's routines {@code loc_78946}/{@code loc_7897A}
@@ -22,7 +22,7 @@ import com.openggf.level.objects.boss.AbstractBossInstance;
  *   <li>{@code sub_78B46} replaces the child's routine with {@code Wait_Draw}, raises
  *       {@code priority} to {@code $80} and loads {@code $2E} with {@code $2C - subtype * 2}.
  *       From here the child no longer moves or animates; it only counts down and draws.</li>
- *   <li>{@code loc_78B86} (sonic3k.asm:160592-160605), reached when {@code $2E} counts past zero,
+ *   <li>{@code loc_78B86} (sonic3k.asm:160668-160681), reached when {@code $2E} counts past zero,
  *       spawns a {@code Child6_CreateBossExplosion} with subtype {@code 6} and re-arms
  *       {@code $2E} to {@code $F} with {@code Go_Delete_Sprite} as the continuation.</li>
  *   <li>{@code $F} frames later the child deletes itself.</li>

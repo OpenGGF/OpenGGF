@@ -27,7 +27,7 @@ import java.util.List;
  * Object 0xAF - ICZ crushing column.
  *
  * <p>ROM reference: {@code Obj_ICZCrushingColumn}
- * (sonic3k.asm:187924-188150). The object runs its movement routine before the
+ * (sonic3k.asm:188017-188243). The object runs its movement routine before the
  * per-frame {@code SolidObjectFull} call, so contact triggers are latched from
  * the previous frame and consumed by the next update.
  */
@@ -38,11 +38,11 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_ICZCrushingColumn} is installed from the S3K object pointer table at
      * {@code $0008A44A} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:187929).
+     * label is defined at docs/skdisasm/sonic3k.asm:188022).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0008}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {

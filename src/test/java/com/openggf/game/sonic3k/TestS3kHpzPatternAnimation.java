@@ -14,7 +14,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/** AniPLC_HPZ (sonic3k.asm:56327) drives both Hidden Palace ($1601) and the sanctuary ($1701). */
+/** AniPLC_HPZ (sonic3k.asm:56367) drives both Hidden Palace ($1601) and the sanctuary ($1701). */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kHpzPatternAnimation {
 

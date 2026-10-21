@@ -26,7 +26,7 @@ import java.util.List;
  * - subtype bit 7 clear: rising bubble child
  * - subtype bit 7 set: floor bubbler that periodically spawns child bubbles
  * <p>
- * ROM: Obj_Bubbler (sonic3k.asm:64446-64736)
+ * ROM: Obj_Bubbler (sonic3k.asm:64486-64776)
  */
 public class BubblerObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final int ROUTINE_INIT = 0;
@@ -306,7 +306,7 @@ public class BubblerObjectInstance extends AbstractObjectInstance implements Rew
         }
 
         // Obj_Bubbler compares the Obj_Sonic routine, not the player slot or name
-        // (sonic3k.asm:64719). Sonic clears Roll; other characters retain it.
+        // (sonic3k.asm:64759). Sonic clears Roll; other characters retain it.
         if (CharacterKey.SONIC.equals(player.characterKey())) {
             player.replenishAir();
         } else {
@@ -428,7 +428,7 @@ public class BubblerObjectInstance extends AbstractObjectInstance implements Rew
 
     /**
      * {@code Obj_Bubbler} writes {@code width_pixels=$10} but leaves
-     * {@code height_pixels} at the cleared SST value (sonic3k.asm:64491-64498).
+     * {@code height_pixels} at the cleared SST value (sonic3k.asm:64531-64538).
      * Its rising-child and maker paths both use the resulting zero-height
      * Render_Sprites bound as the off-screen delete gate.
      */

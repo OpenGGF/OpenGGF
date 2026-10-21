@@ -6,7 +6,7 @@ spelling the same fudge differently would not appear in a search for `$22`.
 
 ## The role
 
-Every engine site that models `Obj_WaitOffscreen` (`docs/skdisasm/sonic3k.asm:180271-180305`):
+Every engine site that models `Obj_WaitOffscreen` (`docs/skdisasm/sonic3k.asm:180362-180396`):
 the routine parks the object on `loc_85AD2` behind a `$20`-square `Map_Offscreen` placeholder,
 and `loc_85B02` restores the saved operation pointer once `render_flags` bit 7 is set.
 
@@ -15,7 +15,7 @@ constant. Three axes were checked independently.
 
 ## The ROM half, settled exactly
 
-`Render_Sprites` (`sonic3k.asm:36336-36366`) is what sets bit 7, and it tests the object's own
+`Render_Sprites` (`sonic3k.asm:36376-36406`) is what sets bit 7, and it tests the object's own
 `width_pixels`/`height_pixels` — `$20` for the placeholder:
 
 - X: `d3 = x - camX + width; bmi` reject, then `d3 = x - camX - width; cmpi.w #320,d3; bge`

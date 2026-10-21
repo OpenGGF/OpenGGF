@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Headless regression for the solo-Sonic CNZ1 Tails-carry intro.
  *
- * <p>ROM {@code SpawnLevelMainSprites loc_68D8} (sonic3k.asm:8187-8197) spawns a
+ * <p>ROM {@code SpawnLevelMainSprites loc_68D8} (sonic3k.asm:8219-8229) spawns a
  * throwaway {@code Obj_Tails} into the Player_2 slot for solo Sonic
  * (Player_mode==1) at CNZ Act 1, so Tails carries Sonic in and then flies off.
  *

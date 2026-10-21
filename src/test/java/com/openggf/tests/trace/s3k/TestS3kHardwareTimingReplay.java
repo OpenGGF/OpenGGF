@@ -140,7 +140,7 @@ class TestS3kHardwareTimingReplay {
         HardwareWorkHandle handle;
         if (directEdge) {
             // The child is submitted by the module state step at the frame top
-            // (sonic3k.asm:7908 runs in the previous iteration's tail).
+            // (sonic3k.asm:7940 runs in the previous iteration's tail).
             queue.beforeTimingService(
                     com.openggf.game.timing.HardwareServiceBoundary.PRE_MAIN_LOOP);
             queue.processModuleQueueAfterObjects();

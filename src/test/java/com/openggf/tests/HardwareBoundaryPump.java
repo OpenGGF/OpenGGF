@@ -13,7 +13,7 @@ import com.openggf.game.timing.HardwareTimingService;
  * {@code LevelFrameStep.serviceBoundary} runs in production. Tests must not compose
  * {@code timing.service(...)} with the coordinator hooks themselves: a model that omits
  * {@link RuntimeArtCoordinator#beforeTimingService} never advances the Kos module state
- * step (docs/skdisasm/sonic3k.asm:7908), so no module retires and readiness starves.
+ * step (docs/skdisasm/sonic3k.asm:7940), so no module retires and readiness starves.
  */
 public final class HardwareBoundaryPump {
 

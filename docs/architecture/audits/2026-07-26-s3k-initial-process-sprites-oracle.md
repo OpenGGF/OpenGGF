@@ -7,7 +7,7 @@ The attended capture used the locked-on World ROM with SHA-1
 at `$00647E` are `4E B9 00 01 AA DA`, an absolute-long `jsr $0001AADA`;
 `Process_Sprites` is assembled at `$1AADA`, and the return PC is therefore
 `$006484`. This agrees with `loc_6468` and the `Process_Sprites` source
-(`docs/skdisasm/sonic3k.asm:7848-7856,35965-36008`).
+(`docs/skdisasm/sonic3k.asm:7880-7888,36005-36048`).
 
 The local raw artifact is
 `target/initial-process-sprites-oracle/aiz1.jsonl`. References below use its
@@ -32,10 +32,10 @@ one-based lines: line 1 is `ADJACENT_MINUS_ONE_PRE_SETUP`, line 2 is
 Thus the initial pass does not advance the level, VInt, emulator-frame, or
 observed oscillation epochs. The ordinary boundary advances level and VInt
 once. Control remains neutral throughout setup, consistent with the locked
-control writes before `loc_6468` (`sonic3k.asm:7765-7774`).
+control writes before `loc_6468` (`sonic3k.asm:7797-7806`).
 `Water_flag` is the byte at `$F730`
-(`sonic3k.constants.asm:618-633`; byte reads at
-`sonic3k.asm:7777,8474-8478`) and remains 1 at all three boundaries: AIZ1 has
+(`sonic3k.constants.asm:637-652`; byte reads at
+`sonic3k.asm:7809,8506-8510`) and remains 1 at all three boundaries: AIZ1 has
 water enabled, and the initial `Process_Sprites` pass does not change that
 level water state.
 
@@ -44,8 +44,8 @@ but its first two bytes are a native big-endian **word** byte count:
 `Touch_Process` reads it with `move.w (a4)+,d6`,
 `Add_SpriteToCollisionResponseList` compares/increments it by 2, and slot 2
 clears it with `move.w #0`
-(`sonic3k.constants.asm:330`;
-`sonic3k.asm:8467-8469,20655-20667,21200-21209`). The probe therefore keeps a
+(`sonic3k.constants.asm:338`;
+`sonic3k.asm:8499-8501,20691-20703,21236-21245`). The probe therefore keeps a
 `u16` read and names the field `collision_list_byte_count`; the value is zero
 at all three captured boundaries.
 
@@ -54,7 +54,7 @@ fractions and x/y/ground velocities remain zero. Both player routines change
 from 0 to 2. P1 `object_control` changes `$00->$53`; P2 remains `$00`.
 Both `air_left` bytes change `0->30`, and both `flip_speed` bytes change
 `0->4`, matching the two native init routines
-(`sonic3k.asm:21931-21940,26139-26155`). Status, secondary status,
+(`sonic3k.asm:21967-21976,26179-26195`). Status, secondary status,
 double-jump flag, flips remaining, move lock, animation
 id/previous/frame/timer, collision flags/property, and the actual
 invulnerability, invincibility, and speed-shoes timers remain zero (raw lines
@@ -70,19 +70,19 @@ The preceding history entry `$FC` changes from zero to P2's centre
 from `$0040,$0420` to `$0020,$0424`, calls
 `Reset_Player_Position_Array` to fill the shared history at that adjusted
 position, then restores P1 before returning
-(`sonic3k.asm:21931-21941,22166-22193`). The later non-competition
+(`sonic3k.asm:21967-21977,22202-22229`). The later non-competition
 `Tails_Init` initializes Tails CPU state and installs `Tails_tails`, but does
-not call the history reset (`sonic3k.asm:26101-26156`).
+not call the history reset (`sonic3k.asm:26141-26196`).
 
 This is initialization behavior, not an ordinary `Sonic_RecordPos` increment.
 The source order still places P1 before P2 because `Process_Sprites` walks 110
 `$4A`-byte SST records from `Object_RAM` in ascending order
-(`sonic3k.asm:35965-35986`; `sonic3k.constants.asm:303-323`). No normal
+(`sonic3k.asm:36005-36026`; `sonic3k.constants.asm:310-330`). No normal
 delayed-follow CPU read occurs in this setup pass: CPU
 routine/targets/timers remain zero. The first ordinary P1 entry is `$10A94`;
 its later `Sonic_RecordPos` write precedes the subsequent P2 slot's delayed
 CPU read by the same ascending SST order
-(`sonic3k.asm:22119-22136,26683-26705`).
+(`sonic3k.asm:22155-22172,26723-26745`).
 
 This qualifies an important implementation expectation: Task 2 must pin the
 setup's player-init/history-array behavior, not assert that the setup pass
@@ -92,7 +92,7 @@ selection.
 ## Fixed slots
 
 The fixed SST layout is the 17 slots 93-109 documented at
-`sonic3k.constants.asm:309-323`.
+`sonic3k.constants.asm:316-330`.
 
 - Slots 93-97 and 101-109 are initially null. During the pass, slot 97
   (`Tails_tails`) activates as `$000160D2`, frame 1, timer 32.

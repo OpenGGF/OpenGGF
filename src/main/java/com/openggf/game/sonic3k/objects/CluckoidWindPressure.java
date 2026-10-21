@@ -4,7 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
-/** Shared shipped-ROM sub_8E388 pressure consumer (sonic3k.asm:194275–194305). */
+/** Shared shipped-ROM sub_8E388 pressure consumer (sonic3k.asm:194380–194410). */
 public final class CluckoidWindPressure {
     private CluckoidWindPressure() { }
 

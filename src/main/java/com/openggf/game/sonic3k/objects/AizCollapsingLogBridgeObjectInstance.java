@@ -42,11 +42,11 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_AIZCollapsingLogBridge} is installed from the S3K object pointer table at
      * {@code $0002ACDC} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:59198).
+     * label is defined at docs/skdisasm/sonic3k.asm:59238).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0002}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -176,7 +176,7 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
     @Override
     public boolean usesCollisionHalfWidthForTopLanding() {
         // loc_2AE98/loc_2AF06 load width_pixels(a0) directly into d1 before
-        // SolidObjectTop (sonic3k.asm:59299-59306,59341-59348). Unlike
+        // SolidObjectTop (sonic3k.asm:59339-59346,59381-59388). Unlike
         // SolidObjectFull callers, this path does not add $B and must not be
         // narrowed again by the shared landing-width correction.
         return true;
@@ -187,7 +187,7 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
         // Both the normal bridge at loc_2AE98 and the fire bridge at loc_2AF06
         // call the same SolidObjectTop -> loc_1E42E entry. It accepts only
         // negative overlap d0 in [-16,-1]; cmpi.w #-$10,d0 / blo rejects
-        // d0 == 0 for either subtype (sonic3k.asm:42048-42068).
+        // d0 == 0 for either subtype (sonic3k.asm:42088-42108).
         return true;
     }
 
@@ -224,7 +224,7 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!displayChildAllocated) {
-            // Obj_AIZCollapsingLogBridge init (sonic3k.asm:59245-59268 normal,
+            // Obj_AIZCollapsingLogBridge init (sonic3k.asm:59285-59308 normal,
             // 59290-59318 fire): AllocateObjectAfterCurrent gives the six logs their
             // own display SST (loc_2AEB4) and stores its address in $3C. The parent
             // never calls Draw_Sprite. Init then branches into loc_2AE70/loc_2AEE2
@@ -244,7 +244,7 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
         if (state == STATE_IDLE && isFireBridge && drawBridgeBurnActive) {
             // loc_2AEE2 initializes the fire drawbridge collapse and falls
             // through directly into loc_2AF06/SolidObjectTop in the same
-            // object routine (sonic3k.asm:59331-59348).
+            // object routine (sonic3k.asm:59371-59388).
             startCollapse();
             collapseStartedThisFrame = true;
             fireCollapseSolidFrame = true;
@@ -346,7 +346,7 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
                     segmentX[i], y, segmentFrame[i], delay, artKey, isFireBridge);
             segment.brittleWarning = brittleSupportTicks != 0;
             if (i == 0 && display != null) {
-                // sub_2AFFE (sonic3k.asm:59486-59493): movea.w $3C(a0),a3 / movea.l a3,a1
+                // sub_2AFFE (sonic3k.asm:59526-59533): movea.w $3C(a0),a3 / movea.l a3,a1
                 // writes the first falling log into the display SST itself; it runs
                 // later in this pass because that SST follows the parent.
                 int displaySlot = ObjectLifetimeOps.detachSlotForTransfer(display);
@@ -380,7 +380,7 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
     /**
      * Delete_Sprite_If_Not_In_Range and Sprite_OnScreen_Test share this window: the
      * object's X with the low 7 bits cleared, minus Camera_X_pos_coarse_back, compared
-     * unsigned against $280 (sonic3k.asm:37302-37308).
+     * unsigned against $280 (sonic3k.asm:37342-37348).
      */
     private static boolean outsideCoarseWindow(int cameraX, int objectX) {
         int cameraXPosCoarseBack = ((cameraX & 0xFFFF) - 0x80) & 0xFF80;
@@ -447,7 +447,7 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
     void publishKnockOffAnimationState(AbstractPlayableSprite player) {
         // sub_2AF9C runs after the player's Animate pass and writes only
         // prev_anim=Run. An unchanged Walk byte therefore restarts on the next
-        // player slot (sonic3k.asm:59455-59465).
+        // player slot (sonic3k.asm:59495-59505).
         player.getAnimationManager().publishPreviousAnimationId(Sonic3kAnimationIds.RUN.id());
     }
 
@@ -544,7 +544,7 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
     /**
      * ROM loc_2AEB4: the bridge's display SST. Init copies the parent's mappings, art,
      * width, priority $200 and the six log positions and frames into its sub-sprites,
-     * then it only runs Sprite_OnScreen_Test (sonic3k.asm:37302-37315): Draw_Sprite
+     * then it only runs Sprite_OnScreen_Test (sonic3k.asm:37342-37355): Draw_Sprite
      * inside the coarse window, otherwise Delete_Current_Sprite. It has no respawn
      * entry. sub_2AFFE reuses this SST as the first falling log.
      */

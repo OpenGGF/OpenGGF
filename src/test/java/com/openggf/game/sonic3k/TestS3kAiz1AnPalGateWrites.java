@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Writes to {@code Palette_cycle_counters+$00} come from objects, which LevelLoop runs in
- * Process_Sprites (sonic3k.asm:7926) after Animate_Palette (7923). Obj_AIZPlaneIntro
+ * Process_Sprites (sonic3k.asm:7958) after Animate_Palette (7923). Obj_AIZPlaneIntro
  * sets it (loc_67712, 135756) and Obj_CutsceneKnuckles clears it (loc_61F22, 128796);
  * both call {@link S3kPaletteCycleCounterWriter}, the interface used here. Level's
  * loc_60DE clears the byte with the rest of the bank (7652).

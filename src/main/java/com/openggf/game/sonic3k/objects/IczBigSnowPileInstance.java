@@ -29,7 +29,7 @@ import java.util.List;
  * IceCap Act 1 big snow pile used after Sonic crashes into the wall.
  *
  * <p>ROM reference: {@code Obj_ICZ1BigSnowPile} at
- * {@code docs/skdisasm/sonic3k.asm:110433}. The visual snow fall is background
+ * {@code docs/skdisasm/sonic3k.asm:110479}. The visual snow fall is background
  * event driven; this object supplies the sloped top collision and the jump-out
  * release once the pile reaches its final Y position.
  */
@@ -111,7 +111,7 @@ public final class IczBigSnowPileInstance extends AbstractObjectInstance
     }
 
     // Obj_ICZ1BigSnowPile never calls Draw_Sprite and never writes priority
-    // (sonic3k.asm:110438-110484): the ROM never displays the pile, so the
+    // (sonic3k.asm:110484-110530): the ROM never displays the pile, so the
     // cleared word 0 is the verified value.
     private static final int PRIORITY_BUCKET = RenderPriority.bucket(0);
 
@@ -219,7 +219,7 @@ public final class IczBigSnowPileInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM {@code loc_53A4C} (sonic3k.asm:110464-110480): the pile only tests
+     * ROM {@code loc_53A4C} (sonic3k.asm:110510-110526): the pile only tests
      * {@code Ctrl_1_locked} — it never sets it. The lock is established by
      * {@code ICZ1SE_Init} after the snowboard wall crash, so a route that
      * reaches a settled pile without that quake (a checkpoint restart) simply

@@ -85,10 +85,10 @@ Death/reload products, combined smoke and integration were not rerun here. This 
 covers the first physical star post through the production `GameLoop`. Independent oracles:
 `Levels/MGZ/Object Pos/1.bin` (posts 1–3 at (`$1180`,`$AF4`), (`$1E98`,`$3B4`), (`$2AE0`,`$E72`);
 upright spikes `$08` at (`$1310`,`$B1D`); `Obj_MGZSwingingSpikeBall` `$58` at (`$1400`,`$B34`)),
-`Obj_StarPost` (sonic3k.asm:61559: P1-only window `x-post+8` in `[0,$10)`, `y-post+$40` in
+`Obj_StarPost` (sonic3k.asm:61599: P1-only window `x-post+8` in `[0,$10)`, `y-post+$40` in
 `[0,$68)`; routine-6 twirl child with `$36=$20`; `sub_2D164` saves subtype and the post's own
 X/Y; a reloaded post with subtype ≤ `Last_star_post_hit` starts used), `Touch_Sizes`
-(:20713) and `HurtCharacter`/`Kill_Character` with no rings.
+(:20749) and `HurtCharacter`/`Kill_Character` with no rings.
 
 - Inlet: a declared position 48 px left of the unactivated post at its own Y (not a cold
   route). No checkpoint, life, ring, clock, position or death state is written.

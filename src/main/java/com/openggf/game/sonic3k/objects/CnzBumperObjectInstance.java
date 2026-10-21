@@ -124,8 +124,8 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
         // Obj_Bumper adds CNZ bumpers to Collision_response_list using the
         // original anchor $30(a0), not the current orbit point:
         // (origin_x & $FF80) - Camera_X_pos_coarse_back <= $280
-        // (sonic3k.asm:68881-68886). Camera_X_pos_coarse_back is
-        // (Camera_X_pos - $80) & $FF80 (sonic3k.asm:37472-37478).
+        // (sonic3k.asm:68921-68926). Camera_X_pos_coarse_back is
+        // (Camera_X_pos - $80) & $FF80 (sonic3k.asm:37512-37518).
         int cameraCoarseBack = ((svc.camera().getX() & 0xFFFF) - CAMERA_COARSE_BACK_OFFSET) & 0xFF80;
         int originCoarse = originX & 0xFF80;
         int delta = (originCoarse - cameraCoarseBack) & 0xFFFF;
@@ -278,7 +278,7 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
             if (svc != null && svc.objectManager() != null) {
                 // ROM sub_32F56 adds the bumper score, then AllocateObject
                 // creates Obj_EnemyScore at the bumper coordinates.
-                // docs/skdisasm/sonic3k.asm:68980-68989
+                // docs/skdisasm/sonic3k.asm:69020-69029
                 spawnFreeChild(() -> new Sonic3kPointsObjectInstance(
                         new ObjectSpawn(currentX, currentY, 0x29, 0, 0, false, 0),
                         svc,

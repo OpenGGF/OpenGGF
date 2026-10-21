@@ -86,8 +86,8 @@ public class Mgz2CapsuleAnimalInstance extends AbstractObjectInstance
         }
     }
 
-    // loc_86820 word_86B50 priority $280 (sonic3k.asm:182169); loc_8689C drops to $80 when the
-    // orbit timer expires and the animal walks off (sonic3k.asm:181867).
+    // loc_86820 word_86B50 priority $280 (sonic3k.asm:182260); loc_8689C drops to $80 when the
+    // orbit timer expires and the animal walks off (sonic3k.asm:181958).
     private static final int ORBIT_PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
     private static final int RELEASED_PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x80);
 
@@ -127,7 +127,7 @@ public class Mgz2CapsuleAnimalInstance extends AbstractObjectInstance
     @Override
     public boolean isHighPriority() {
         // CreateChild copies the capsule's art_tile, ObjDat_EggCapsule
-        // make_art_tile(ArtTile_EggCapsule,0,1) (sonic3k.asm:182157).
+        // make_art_tile(ArtTile_EggCapsule,0,1) (sonic3k.asm:182248).
         return true;
     }
 

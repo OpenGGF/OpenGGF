@@ -87,7 +87,7 @@ class TestS3kResultsScreenObjectInstance {
     @Test
     void timingCompensationDoesNotDelayReadinessGatedCreate() throws Exception {
         // ROM Obj_LevelResultsCreate gates on Kos_modules_left alone
-        // (docs/skdisasm/sonic3k.asm:62596-62598); no dispatch countdown
+        // (docs/skdisasm/sonic3k.asm:62636-62638); no dispatch countdown
         // delays child creation once the queued results art is ready.
         S3kResultsScreenObjectInstance none = resultsWithTimingAdjustment("NONE", true);
         S3kResultsScreenObjectInstance compensation = resultsWithTimingAdjustment(

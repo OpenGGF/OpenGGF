@@ -34,7 +34,7 @@ public final class EngineContext {
     private final CrossGameFeatureProvider crossGameFeatures;
     private final ModuleResolutionService moduleResolutionService;
     /**
-     * Power-on {@code V_int_run_count} (docs/skdisasm/sonic3k.asm:542-543). Engine-lifetime
+     * Power-on {@code V_int_run_count} (docs/skdisasm/sonic3k.asm:558-559). Engine-lifetime
      * like the console's work RAM: gameplay sessions bind their object clock to it and
      * hand the count back when they close.
      */

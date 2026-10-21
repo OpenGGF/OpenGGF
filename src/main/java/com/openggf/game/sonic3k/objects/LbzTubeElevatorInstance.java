@@ -36,7 +36,7 @@ import java.util.Map;
  * S3K S3KL object $10 - Launch Base tube elevator.
  *
  * <p>ROM reference: {@code Obj_LBZTubeElevator} and
- * {@code LBZTubeElevator_Action} (sonic3k.asm:57796-58298). The elevator
+ * {@code LBZTubeElevator_Action} (sonic3k.asm:57836-58338). The elevator
  * reuses {@code AutoTunnel_GetPath}; path data comes from
  * {@link AutomaticTunnelObjectInstance#PATHS}.
  */
@@ -47,11 +47,11 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_LBZTubeElevator} is installed from the S3K object pointer table at
      * {@code $00029C9E} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:57801).
+     * label is defined at docs/skdisasm/sonic3k.asm:57841).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0002}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -536,7 +536,7 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         // ROM clears the elevator's OWN p1 bit and only p1, even when the
-        // captured character is Player_2 (docs/skdisasm/sonic3k.asm:58249).
+        // captured character is Player_2 (docs/skdisasm/sonic3k.asm:58289).
         services().objectManager().solidContacts().releaseObjectPushLatch(
                 services().playerQuery().mainPlayerOrNull(), this);
         player.setPushing(false);

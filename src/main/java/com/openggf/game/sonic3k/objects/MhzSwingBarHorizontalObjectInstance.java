@@ -139,7 +139,7 @@ public final class MhzSwingBarHorizontalObjectInstance extends AbstractObjectIns
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
         player.setRenderFlips(false, false);
-        // ROM loc_3EEDA (sonic3k.asm:83448-83450): move.w d0,y_pos(a1) touches only the pixel word,
+        // ROM loc_3EEDA (sonic3k.asm:83489-83491): move.w d0,y_pos(a1) touches only the pixel word,
         // leaving y_sub untouched.
         NativePositionOps.writeYPosPreserveSubpixel(player, spawn.y() + GRAB_Y_OFFSET);
         player.setAnimationId(Sonic3kAnimationIds.WALK);
@@ -175,10 +175,10 @@ public final class MhzSwingBarHorizontalObjectInstance extends AbstractObjectIns
         if ((state.animationPhase & 0xFF) == UPWARD_AUTO_RELEASE_PHASE) {
             releaseAutomatically(player, amplifiedStoredYVelocity(state.storedIncomingYVelocity),
                     Sonic3kAnimationIds.SPRING);
-            // ROM loc_3EE7A (sonic3k.asm:83389-83390): move.w #$10<<8,anim(a1) writes anim and
+            // ROM loc_3EE7A (sonic3k.asm:83430-83431): move.w #$10<<8,anim(a1) writes anim and
             // prev_anim as one word, landing prev_anim on 0 so Animate_Sonic
-            // (sonic3k.asm:24739-24749) sees the mismatch and restarts the script. The grab path
-            // (sonic3k.asm:83451) writes the anim byte alone, leaving prev_anim stale at the
+            // (sonic3k.asm:24779-24789) sees the mismatch and restarts the script. The grab path
+            // (sonic3k.asm:83492) writes the anim byte alone, leaving prev_anim stale at the
             // pre-grab animation; a player who was already spring-jumping into the bar otherwise
             // keeps the expired script state and never publishes mapping frame $8E.
             player.getAnimationManager().publishPreviousAnimationId(0);
@@ -189,14 +189,14 @@ public final class MhzSwingBarHorizontalObjectInstance extends AbstractObjectIns
             return;
         }
         advancePhase(state);
-        // ROM sub_3EFBA (sonic3k.asm:83533-83534): add.w y_pos(a0),d1 / move.w d1,y_pos(a1) writes only
+        // ROM sub_3EFBA (sonic3k.asm:83574-83575): add.w y_pos(a0),d1 / move.w d1,y_pos(a1) writes only
         // the pixel word each hang frame, leaving y_sub untouched.
         NativePositionOps.writeYPosPreserveSubpixel(player, spawn.y() + hangingYOffsetFor(state.animationPhase, state.framePage));
         player.setMappingFrame(hangingFrameFor(state.animationPhase, state.framePage));
     }
 
     private void applyHorizontalInput(AbstractPlayableSprite player, HangState state) {
-        // ROM sub_3ED6E (sonic3k.asm:83326, 83340): subq.w/addq.w #1,x_pos(a1) modify only the pixel
+        // ROM sub_3ED6E (sonic3k.asm:83367, 83381): subq.w/addq.w #1,x_pos(a1) modify only the pixel
         // word, leaving x_sub untouched.
         int logicalInput = player.getLogicalInputState();
         if ((logicalInput & AbstractPlayableSprite.INPUT_LEFT) != 0
@@ -249,7 +249,7 @@ public final class MhzSwingBarHorizontalObjectInstance extends AbstractObjectIns
         player.setAnimationId(animation);
         // ROM auto-release is a WORD write to anim (loc_3EE7A upward: move.w #$10<<8,
         // anim(a1); loc_3EEC2 downward: move.w #0,anim(a1)) which also clobbers the
-        // adjacent prev_anim byte to 0 (sonic3k.asm:83390,83412). The engine's
+        // adjacent prev_anim byte to 0 (sonic3k.asm:83431,83453). The engine's
         // byte-only setAnimationId leaves lastAnimationId frozen at the pre-grab
         // value (e.g. SPRING 0x10 from the first release), so on re-release
         // updateScriptedAnimation sees animationId == lastAnimationId and skips the

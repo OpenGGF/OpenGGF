@@ -30,7 +30,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 /**
  * When S3K {@code Title_Screen} issues {@code cmd_SEGA}, counted in title updates
  * (one {@code Wait_VSync} each), straight from the ROM: {@code Pal_FadeToBlack}
- * (sonic3k.asm:5399; {@code move.w #$15,d4} / {@code dbf}, 5042-5052), the
+ * (sonic3k.asm:5431; {@code move.w #$15,d4} / {@code dbf}, 5042-5052), the
  * interrupt-masked decompression span (5400-5483, no VSync, not modelled), then
  * {@code Pal_FadeFromBlack} (5484; 4903-4913) and {@code cmd_SEGA} before
  * {@code Wait_SegaS3K} first reads Start (5485-5494). Neither fade reads Start.

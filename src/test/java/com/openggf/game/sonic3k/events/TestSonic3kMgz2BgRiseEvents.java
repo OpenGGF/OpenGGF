@@ -36,8 +36,8 @@ import static org.mockito.Mockito.verify;
 /**
  * Tests the MGZ Act 2 BG rise ("rising floor") mechanic, Sonic path.
  *
- * <p>ROM: {@code MGZ2_BGEventTrigger} (sonic3k.asm:107117-107222) and
- * {@code Obj_MGZ2BGMoveSonic} (sonic3k.asm:107241-107325).
+ * <p>ROM: {@code MGZ2_BGEventTrigger} (sonic3k.asm:107163-107268) and
+ * {@code Obj_MGZ2BGMoveSonic} (sonic3k.asm:107287-107371).
  *
  * <p>The ROM uses event state {@code Events_bg+$00} with values:
  * <ul>

@@ -10,7 +10,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
 
-/** Locked-on {@code Obj_FBZBossPillar} (sonic3k.asm:109912-110000). */
+/** Locked-on {@code Obj_FBZBossPillar} (sonic3k.asm:109958-110046). */
 public final class FbzBossPillarInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SpawnRewindRecreatable {
     private int x = 0x2DE0;

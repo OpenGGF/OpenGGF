@@ -23,7 +23,7 @@ import java.util.List;
  * palette line 2 and otherwise just delegates collision to the generic solid-object
  * pipeline.
  * <p>
- * ROM references: Obj_HCZBlock (sonic3k.asm:43233), byte_1F38A, Map_HCZBlock.
+ * ROM references: Obj_HCZBlock (sonic3k.asm:43273), byte_1F38A, Map_HCZBlock.
  */
 public class HCZBlockObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable, SolidObjectProvider,

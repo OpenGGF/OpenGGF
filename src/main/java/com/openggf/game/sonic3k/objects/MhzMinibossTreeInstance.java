@@ -192,7 +192,7 @@ public final class MhzMinibossTreeInstance extends AbstractObjectInstance implem
             // CreateChild6_Simple allocates this SST after the tree. Its first
             // dispatch runs loc_75AD4, which initializes and draws without
             // falling through to loc_75B34's MoveSprite2 call
-            // (sonic3k.asm:156353-156429,177119-177139). The constructor
+            // (sonic3k.asm:156427-156503,177210-177230). The constructor
             // represents that initialized state, so movement begins next frame.
             return true;
         }

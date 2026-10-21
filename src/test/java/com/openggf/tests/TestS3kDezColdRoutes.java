@@ -103,7 +103,7 @@ class TestS3kDezColdRoutes {
      * Measured 2026-09-18 on this branch: 527 frames of exact player x, y, camera and ring
      * parity from the first frame of act 2 free play. It was 390 until {@code $A4}
      * {@code Obj_Spikebonker} landed — the divergence there was the badnik's own destruction
-     * rebound ({@code neg.w y_vel(a0)}, sonic3k.asm:20979) that a placeholder could not give —
+     * rebound ({@code neg.w y_vel(a0)}, sonic3k.asm:21015) that a placeholder could not give —
      * and 472 until {@code $5D} {@code Obj_DEZRetractingSpring} landed, which is the
      * {@code -$A00} launch at native row 20245.
      *

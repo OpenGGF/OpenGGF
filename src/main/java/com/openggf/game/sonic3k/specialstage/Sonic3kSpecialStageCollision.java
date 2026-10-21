@@ -49,7 +49,7 @@ public class Sonic3kSpecialStageCollision {
 
     /**
      * Check for collision at the player's current position.
-     * ROM: sub_972E (sonic3k.asm:12088)
+     * ROM: sub_972E (sonic3k.asm:12124)
      *
      * @param grid the game grid
      * @param player the player state
@@ -105,7 +105,7 @@ public class Sonic3kSpecialStageCollision {
     /**
      * Red sphere collision: only triggers fail when player is
      * fully aligned to the cell (both X and Y low bits zero).
-     * ROM: loc_97AA (sonic3k.asm:12131)
+     * ROM: loc_97AA (sonic3k.asm:12167)
      */
     private CollisionData checkRedSphere(int xPos, int yPos, int gridIndex) {
         int combined = xPos | yPos;
@@ -117,7 +117,7 @@ public class Sonic3kSpecialStageCollision {
 
     /**
      * Spring collision: only triggers when not jumping and angle-aligned.
-     * ROM: loc_97EE (sonic3k.asm:12158)
+     * ROM: loc_97EE (sonic3k.asm:12194)
      */
     private CollisionData checkSpring(Sonic3kSpecialStagePlayer player, int gridIndex) {
         if ((player.getJumping() & 0x80) != 0) {
@@ -131,7 +131,7 @@ public class Sonic3kSpecialStageCollision {
 
     /**
      * Emerald collision: triggers when player is aligned and at the emerald cell.
-     * ROM: loc_9C80 (sonic3k.asm:12629)
+     * ROM: loc_9C80 (sonic3k.asm:12665)
      */
     private CollisionData checkEmerald(int xPos, int yPos, int gridIndex) {
         int combined = xPos | yPos;

@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- The disassembly is the source of truth; cite `docs/skdisasm/sonic3k.asm:7737-7748`, `:7849-7855`, `:7889-7906`, and `:66747-66799` in production comments that encode ordering.
+- The disassembly is the source of truth; cite `docs/skdisasm/sonic3k.asm:7769-7780`, `:7849-7855`, `:7889-7906`, and `:66747-66799` in production comments that encode ordering.
 - Trace data remains comparison-only. Replay may consume a production token and apply its one-time frame-zero RNG/VInt bootstrap, but it must never arm the token from `TraceData`, `trace_profile`, filename, zone, route, frame, checkpoint, sidekick metadata, or an expected outcome.
 - S1 and S2 retain their current title-card and startup behavior. The new `LevelInitProfile` capability defaults to `NONE`; only `Sonic3kLevelInitProfile` opts in.
 - The S3K locked title-card correction must distinguish ROM title-card SST dispatch from the engine's already-loaded level `ObjectManager`.
@@ -55,7 +55,7 @@
 
 ### ROM order
 
-The S3K `Level` routine first creates `Obj_TitleCard` in dynamic slot 5 and loops at `loc_62CC`, calling `Process_Sprites` and `Render_Sprites` while waiting for the title-card object and decompression queues (`sonic3k.asm:7737-7748`). Level setup then creates the playable slots and zone state. At `sonic3k.asm:7849-7855`, the ROM calls:
+The S3K `Level` routine first creates `Obj_TitleCard` in dynamic slot 5 and loops at `loc_62CC`, calling `Process_Sprites` and `Render_Sprites` while waiting for the title-card object and decompression queues (`sonic3k.asm:7769-7780`). Level setup then creates the playable slots and zone state. At `sonic3k.asm:7881-7887`, the ROM calls:
 
 ```text
 SpawnLevelMainSprites
@@ -67,9 +67,9 @@ Render_Sprites
 Animate_Tiles
 ```
 
-The ordinary loop is distinct: `Level_frame_counter` increments before `Process_Sprites`, with rendering and animated tiles afterward (`sonic3k.asm:7889-7906`).
+The ordinary loop is distinct: `Level_frame_counter` increments before `Process_Sprites`, with rendering and animated tiles afterward (`sonic3k.asm:7921-7938`).
 
-CNZ balloons prove the setup pass is observable. `Obj_CNZBalloon` calls `Random_Number`, stores the low byte in `angle`, then uses and increments that angle during its first routine (`sonic3k.asm:66747-66799`). Replaying frame zero with an uninitialized balloon consumes the recorded frame-zero RNG seed one epoch too early. Historical commit `0f9b2c281` demonstrated that one object pass before RNG installation advances standalone CNZ from frame 185 to frame 1558, but selected it with `usesSidekickTitleCardSeedFrame(trace)`. That selection is prohibited and is not reused.
+CNZ balloons prove the setup pass is observable. `Obj_CNZBalloon` calls `Random_Number`, stores the low byte in `angle`, then uses and increments that angle during its first routine (`sonic3k.asm:66787-66839`). Replaying frame zero with an uninitialized balloon consumes the recorded frame-zero RNG seed one epoch too early. Historical commit `0f9b2c281` demonstrated that one object pass before RNG installation advances standalone CNZ from frame 185 to frame 1558, but selected it with `usesSidekickTitleCardSeedFrame(trace)`. That selection is prohibited and is not reused.
 
 ### Current engine divergence
 
@@ -822,12 +822,12 @@ after one ordinary LevelFrameStep:
 ```
 
 `Random_Number` resets a zero low word to `$2A6D365B` and advances the seed
-(`docs/skdisasm/sonic3k.asm:2992-3011`). `Obj_CNZBalloon` consumes one random
+(`docs/skdisasm/sonic3k.asm:3024-3043`). `Obj_CNZBalloon` consumes one random
 value during initialization, then increments its angle in the routine tail
-(`docs/skdisasm/sonic3k.asm:66750-66795`). Level setup runs
+(`docs/skdisasm/sonic3k.asm:66790-66835`). Level setup runs
 `Load_Sprites`/`Process_Sprites` once before `LevelLoop`, whose next ordinary
 row runs them again after its VBlank and level-counter increment
-(`docs/skdisasm/sonic3k.asm:7849-7855,7884-7906`). The recorder writes its
+(`docs/skdisasm/sonic3k.asm:7881-7887,7916-7938`). The recorder writes its
 pre-trace object snapshots at the next-frame arm boundary before emitting the
 first CSV row (`tools/bizhawk/s3k_trace_recorder.lua:1210-1222` and the native
 contract in `tools/bizhawk-headless/docs/s3k-aux-events.md:64-88`).

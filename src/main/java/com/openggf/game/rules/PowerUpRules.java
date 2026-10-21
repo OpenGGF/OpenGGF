@@ -20,8 +20,8 @@ package com.openggf.game.rules;
  * {@code LevelOnly_Object_RAM} ({@code docs/s2disasm/s2.constants.asm:1149-1155})
  * -- past {@code Object_RAM_End}, so above rather than below the dynamic pool,
  * but equally outside it. Sonic 3&K writes its super/hyper stars into
- * {@code Super_stars} ({@code docs/skdisasm/sonic3k.asm:23504}), the third entry
- * of {@code Level_object_RAM} ({@code docs/skdisasm/sonic3k.constants.asm:309-315}).
+ * {@code Super_stars} ({@code docs/skdisasm/sonic3k.asm:23539}), the third entry
+ * of {@code Level_object_RAM} ({@code docs/skdisasm/sonic3k.constants.asm:316-322}).
  * Sonic 1 has no super form and no such object.
  */
 @com.openggf.game.ModApi

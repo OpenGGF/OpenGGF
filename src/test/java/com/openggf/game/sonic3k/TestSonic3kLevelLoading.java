@@ -340,7 +340,7 @@ class TestSonic3kLevelLoading {
 
         Sonic3kLevel level = assertInstanceOf(
                 Sonic3kLevel.class, levelManager.getCurrentLevel());
-        // LevelSizes "HPZ" row (sonic3k.asm:38142).
+        // LevelSizes "HPZ" row (sonic3k.asm:38182).
         assertEquals(0x0000, level.getMinX());
         assertEquals(0x1880, level.getMaxX());
         assertEquals(0x0000, level.getMinY());

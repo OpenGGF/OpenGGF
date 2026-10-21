@@ -19,7 +19,7 @@ import static org.mockito.Mockito.verify;
  * Regression guard for the water-entry/exit splash.
  *
  * <p>The S2/S3K splash rides the fixed Sonic_Dust object (ROM writes
- * {@code anim=1} into it; sonic3k.asm:22241,22281) rather than spawning an
+ * {@code anim=1} into it; sonic3k.asm:22277,22317) rather than spawning an
  * object slot. A 2026-05-26 refactor stubbed the splash path out entirely, so
  * no splash showed in S3K water zones (e.g. CNZ Act 2). This verifies the
  * controller plays and then ends the splash animation.

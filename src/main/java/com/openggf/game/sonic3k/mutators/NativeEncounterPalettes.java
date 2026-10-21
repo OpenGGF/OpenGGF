@@ -36,7 +36,7 @@ final class NativeEncounterPalettes {
             lines[line].fromSegaFormat(reader.slice(line==0?Sonic3kConstants.PAL_SONIC_TAILS_ADDR:address+(line-1)*32,32));
         }
         // Hyudoro_init_tbl uses art_tile palette 1. AnPal_SOZ2 lighting only rewrites lines 2/3;
-        // darkness changes the ghost's animation/attack state, never its palette-1 colours (sonic3k.asm:3527..3545).
+        // darkness changes the ghost's animation/attack state, never its palette-1 colours (sonic3k.asm:3559..3545).
         return lines;
     }
     void prepare(Rom rom,GraphicsManager graphics,Set<String> needed) {

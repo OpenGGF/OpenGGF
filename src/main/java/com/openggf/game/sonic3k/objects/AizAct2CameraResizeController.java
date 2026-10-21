@@ -16,7 +16,7 @@ import java.util.List;
  * <p>The ROM replaces the AIZ miniboss with {@code Obj_EndSignControl}, then
  * allocates independent {@code Obj_IncLevEndXGradual} and
  * {@code Obj_IncLevEndYGradual} objects before deleting the former miniboss
- * slot (sonic3k.asm:180415-180419,180575-180609,178154-178169,178210-178225).
+ * slot (sonic3k.asm:180506-180510,180666-180700,178245-178260,178301-178316).
  * Keeping these workers separate is significant: ordinary level objects may
  * reuse the released boss slot while the boundary changes continue.
  */
@@ -35,7 +35,7 @@ final class AizAct2CameraResizeController extends AbstractObjectInstance
         // The ROM's $30 accumulator starts at zero. CreateChild1_Normal
         // allocates each worker through AllocateObjectAfterCurrent, which only
         // ever hands back an SST slot *after* the creating object
-        // (sonic3k.asm:37917-37932,176924-176936), so Process_Sprites reaches
+        // (sonic3k.asm:37957-37972,177015-177027), so Process_Sprites reaches
         // the worker in the same pass that created it. The creation frame is
         // therefore the worker's dispatch 1, whose fixed-point carry
         // ($4000 for X, $8000 for Y) still yields a zero integer step. No

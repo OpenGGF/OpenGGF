@@ -60,7 +60,7 @@ This is the more important of the two items, and the answer is three-part rather
 ### S3K's player and camera paths gate on an exact `-$100`
 
 ```
-loc_10C26:                                              ; sonic3k.asm:21988
+loc_10C26:                                              ; sonic3k.asm:22024
         cmpi.w  #-$100,(Camera_min_Y_pos).w    ; is vertical wrapping enabled?
         bne.s   loc_10C36                      ; if not, branch
         move.w  (Screen_Y_wrap_value).w,d0
@@ -69,12 +69,12 @@ loc_10C26:                                              ; sonic3k.asm:21988
 
 The disassembly names the predicate itself — *"is vertical wrapping enabled?"*. It is an
 **equality** test, not a sign test: every one of the ten `cmpi.w #-$100,(Camera_min_Y_pos).w`
-sites branches on `bne`/`beq` (sonic3k.asm:21564, 21989, 24457, 25708, 26233, 29202, 30431,
+sites branches on `bne`/`beq` (sonic3k.asm:21600, 22025, 24497, 25748, 26273, 29242, 30471,
 31317, 32893, 38444). `Camera_min_Y_pos` is level data, loaded from the `LevelSizes` table at
-sonic3k.asm:38086-38087.
+sonic3k.asm:38126-38127.
 
 `MoveCameraY` carries the same gate before masking the camera's own delta
-(sonic3k.asm:38444-38446).
+(sonic3k.asm:38484-38486).
 
 Sonic 1 uses the identical constant for the identical purpose
 (`SV_TopBoundary`, `cmpi.w #-$100,d1`, "does level wrap vertically? (top boundary set to
@@ -83,11 +83,11 @@ Sonic 1 uses the identical constant for the identical purpose
 ### S3K's object-load manager gates on a *sign test* instead
 
 ```
-        tst.w   (Camera_min_Y_pos).w           ; sonic3k.asm:37560
+        tst.w   (Camera_min_Y_pos).w           ; sonic3k.asm:37600
         bpl.s   loc_1B84A
 ```
 
-and likewise at sonic3k.asm:37687 and 37708. **S3K therefore has two different predicates on
+and likewise at sonic3k.asm:37727 and 37708. **S3K therefore has two different predicates on
 the same variable**: an exact `== -$100` in the player/camera paths and a `< 0` sign test in
 the object-load manager. They disagree for any level whose `Camera_min_Y_pos` is negative but
 not exactly `-$100`. I found no such level — every act measured last round is either `>= 0`
@@ -96,7 +96,7 @@ divergence A: two things that must agree, nothing making them agree.
 
 ### `Render_Sprites` has no trigger at all
 
-`and.w (Screen_Y_wrap_value).w,d1` at sonic3k.asm:36360 and 36487 is **ungated**. There is no
+`and.w (Screen_Y_wrap_value).w,d1` at sonic3k.asm:36400 and 36487 is **ungated**. There is no
 `Camera_min_Y_pos` test anywhere in `Render_Sprites`. The render cull masks on every frame in
 every act, and `$FFFF` is how a non-wrapping level expresses "no wrap" — which is exactly why
 `Get_LevelSizeStart` writes `#-1` rather than leaving a flag clear.

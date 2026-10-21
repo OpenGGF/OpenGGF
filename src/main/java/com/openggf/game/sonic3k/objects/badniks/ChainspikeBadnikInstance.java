@@ -22,38 +22,38 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * S3K SKL Obj {@code $A5} — Chainspike ({@code Obj_Chainspike}, sonic3k.asm:199132-199420).
+ * S3K SKL Obj {@code $A5} — Chainspike ({@code Obj_Chainspike}, sonic3k.asm:199239-199527).
  *
  * <p>Death Egg's charging spike robot: 6 act 1 and 12 act 2 placements. S3KL {@code $A5} is
  * {@code Obj_Batbot}, so the factory is zone-set bound the way {@code $A4}'s is.
  *
  * <p><b>It is five objects.</b> The body carries the destructible hitbox
- * ({@code ObjDat_Chainspike}, :199406-199409: priority {@code $280}, {@code $18} x {@code $C},
- * frame 0, collision flags {@code $1A}). {@code ChildObjDat_91EEC} (:199412-199420) creates four
+ * ({@code ObjDat_Chainspike}, :199513-199516: priority {@code $280}, {@code $18} x {@code $C},
+ * frame 0, collision flags {@code $1A}). {@code ChildObjDat_91EEC} (:199519-199527) creates four
  * children: two extendable spikes at {@code (0,+$14)} and {@code (0,-$14)} running
  * {@code loc_91D52}, and two fixed {@code 8} x {@code 8} hurt boxes at {@code (+$14,0)} and
  * {@code (-$14,0)} running {@code loc_91E5A}. The fixed pair is what a player running into the
  * badnik hits.
  *
  * <p><b>The charge is a decelerating launch, not a patrol.</b> {@code $2E(a0)} is zero out of
- * the RAM wipe and {@code SetUp_ObjAttributes} does not write it (:41043-41052), so
- * {@code Obj_Wait}'s first {@code subq.w #1} goes negative immediately (:180237-180243) and the
- * body launches on its first update in routine 2. {@code loc_91CA6} (:199180-199186) loads
+ * the RAM wipe and {@code SetUp_ObjAttributes} does not write it (:41083-41092), so
+ * {@code Obj_Wait}'s first {@code subq.w #1} goes negative immediately (:180328-180334) and the
+ * body launches on its first update in routine 2. {@code loc_91CA6} (:199287-199293) loads
  * {@code x_vel} from {@code $3E(a0)} — {@code -$1200}, negated for a {@code render_flags} bit 0
- * placement (:199172-199179) — and {@code $40(a0)} from {@code $3C(a0)} ({@code $180}), then
+ * placement (:199279-199286) — and {@code $40(a0)} from {@code $3C(a0)} ({@code $180}), then
  * plays {@code sfx_TunnelBooster}.
  *
  * <p><b>The deceleration ramp runs down, not up.</b> Each update {@code loc_91CC2}
- * (:199188-199204) moves {@code $40(a0)} by {@code $C} <em>towards zero</em> — the {@code bmi}
- * at :199193 chooses {@code +$C} for a negative accumulator and {@code -$C} for anything else —
+ * (:199295-199311) moves {@code $40(a0)} by {@code $C} <em>towards zero</em> — the {@code bmi}
+ * at :199300 chooses {@code +$C} for a negative accumulator and {@code -$C} for anything else —
  * and adds the new value to {@code x_vel}. So the largest correction is the first one and it
  * shrinks by {@code $C} an update. The stop test is {@code smi d2} on that sum, inverted by the
- * sign of the original launch (:199197-199201): the body stops the moment its velocity would
+ * sign of the original launch (:199304-199308): the body stops the moment its velocity would
  * cross zero, waits {@code (2*60)-1} updates, and negates both {@code $3E} and {@code $3C} so
  * the next charge goes the other way.
  *
  * <p><b>A player within {@code $10} px interrupts everything.</b> {@code sub_91E7E}
- * (:199353-199366) runs in both routine 2 and routine 4, and on a hit it saves the current
+ * (:199460-199473) runs in both routine 2 and routine 4, and on a hit it saves the current
  * routine in {@code $3A(a0)} and the current timer in {@code $26(a0)}, switches to routine 6,
  * points the raw animation at {@code byte_91F06} and {@code $34(a0)} at {@code loc_91D12} — and
  * then does {@code addq.w #4,sp}, discarding its caller's return address so the rest of that
@@ -65,32 +65,32 @@ import java.util.List;
 public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
         implements SpawnRewindRecreatable {
 
-    /** {@code ObjDat_Chainspike} (:199406-199409). */
+    /** {@code ObjDat_Chainspike} (:199513-199516). */
     private static final int COLLISION_SIZE_INDEX = 0x1A;
     private static final int PRIORITY_BUCKET = 5;
     private static final int RENDER_HALF_WIDTH = 0x18;
     private static final int RENDER_HALF_HEIGHT = 0x0C;
     private static final int WAIT_OFFSCREEN_MARGIN = 0x20;
 
-    /** {@code move.w #-$1200,d0} (:199172). */
+    /** {@code move.w #-$1200,d0} (:199279). */
     private static final int LAUNCH_X_VEL = -0x1200;
-    /** {@code move.w #$180,d1} (:199173). */
+    /** {@code move.w #$180,d1} (:199280). */
     private static final int LAUNCH_RAMP = 0x180;
-    /** {@code moveq #$C,d2} (:199191). */
+    /** {@code moveq #$C,d2} (:199298). */
     private static final int RAMP_STEP = 0xC;
-    /** {@code move.w #(2*60)-1,$2E(a0)} (:199208). */
+    /** {@code move.w #(2*60)-1,$2E(a0)} (:199315). */
     private static final int REST_FRAMES = (2 * 60) - 1;
-    /** {@code cmpi.w #$10,d2 / bhs} (:199355-199356). */
+    /** {@code cmpi.w #$10,d2 / bhs} (:199462-199463). */
     private static final int REACT_RANGE = 0x10;
-    /** {@code move.b #$1F,$39(a0)} (:199234). */
+    /** {@code move.b #$1F,$39(a0)} (:199341). */
     private static final int RECOVER_FRAMES = 0x1F;
 
-    /** {@code byte_91F06} (:199421-199424): delay, loop limit, then the frame list. */
+    /** {@code byte_91F06} (:199528-199531): delay, loop limit, then the frame list. */
     private static final int RAW_ANIM_DELAY = 5;
     private static final int RAW_ANIM_LOOPS = 6;
     private static final int[] RAW_ANIM_FRAMES = { 0, 3 };
 
-    /** {@code Chainspike_Index} (:199140-199146). */
+    /** {@code Chainspike_Index} (:199247-199253). */
     private enum Routine { INIT, WAITING, CHARGING, REACTING, HOLDING, RECOVERING }
 
     private Routine routine = Routine.INIT;
@@ -143,7 +143,7 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
         if (isDestroyed()) {
             return;
         }
-        // Obj_WaitOffscreen (:199133).
+        // Obj_WaitOffscreen (:199240).
         if (waitingForOnscreen) {
             if (placeholderRenderedOnscreen) {
                 waitingForOnscreen = false;
@@ -155,27 +155,27 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
         switch (routine) {
             case INIT -> init();
             case WAITING -> {
-                // loc_91C9A :199149-199152.
+                // loc_91C9A :199256-199259.
                 if (!reactToNearbyPlayer(playerEntity)) {
                     objWait();
                 }
             }
             case CHARGING -> {
-                // loc_91CC2 :199188-199204.
+                // loc_91CC2 :199295-199311.
                 if (!reactToNearbyPlayer(playerEntity)) {
                     charge();
                 }
             }
             case REACTING -> animateRawGetFaster();
             case HOLDING -> {
-                // loc_91D20 :199229-199234.
+                // loc_91D20 :199336-199341.
                 if (!extendSignal) {
                     routine = Routine.RECOVERING;
                     recoverTimer = RECOVER_FRAMES;
                 }
             }
             case RECOVERING -> {
-                // loc_91D36 :199238-199243.
+                // loc_91D36 :199345-199350.
                 if (--recoverTimer < 0) {
                     routine = savedRoutine;
                     waitTimer = savedWaitTimer;
@@ -186,9 +186,9 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
         updateDynamicSpawn(currentX, currentY);
     }
 
-    /** {@code loc_91C62} :199167-199186. */
+    /** {@code loc_91C62} :199274-199293. */
     private void init() {
-        // btst #0,render_flags(a0) / beq / neg.w d0 / neg.w d1 (:199174-199178): the placement
+        // btst #0,render_flags(a0) / beq / neg.w d0 / neg.w d1 (:199281-199285): the placement
         // flip negates both words, so an unflipped chainspike charges towards -X.
         boolean flipped = (spawn.renderFlags() & 1) != 0;
         launchVelocity = flipped ? -LAUNCH_X_VEL : LAUNCH_X_VEL;
@@ -205,12 +205,12 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
         routine = Routine.WAITING;
     }
 
-    /** {@code Obj_Wait} :180237-180243, whose handler here is {@code loc_91CA6}. */
+    /** {@code Obj_Wait} :180328-180334, whose handler here is {@code loc_91CA6}. */
     private void objWait() {
         if (--waitTimer >= 0) {
             return;
         }
-        // loc_91CA6 :199180-199186.
+        // loc_91CA6 :199287-199293.
         routine = Routine.CHARGING;
         xVelocity = launchVelocity;
         ramp = launchRamp;
@@ -219,18 +219,18 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
         }
     }
 
-    /** {@code loc_91CC2} :199188-199211. */
+    /** {@code loc_91CC2} :199295-199318. */
     private void charge() {
-        // moveq #$C,d2 / move.w $40(a0),d1 / bmi / neg.w d2 (:199191-199195): the ramp always
+        // moveq #$C,d2 / move.w $40(a0),d1 / bmi / neg.w d2 (:199298-199302): the ramp always
         // steps towards zero, so the first correction is the largest one.
         int step = ramp < 0 ? RAMP_STEP : -RAMP_STEP;
         ramp = (short) (ramp + step);
         int next = (short) (xVelocity + ramp);
-        // smi d2 / tst.w $3E(a0) / bpl / not.b d2 (:199197-199201): the stop test is "the
+        // smi d2 / tst.w $3E(a0) / bpl / not.b d2 (:199304-199308): the stop test is "the
         // velocity has crossed zero relative to the launch".
         boolean crossed = launchVelocity < 0 ? next >= 0 : next < 0;
         if (crossed) {
-            // loc_91CF6 :199206-199211.
+            // loc_91CF6 :199313-199318.
             routine = Routine.WAITING;
             waitTimer = REST_FRAMES;
             launchVelocity = -launchVelocity;
@@ -242,7 +242,7 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     /**
-     * {@code sub_91E7E} :199353-199366. The {@code addq.w #4,sp} at :199362 throws away the
+     * {@code sub_91E7E} :199460-199473. The {@code addq.w #4,sp} at :199469 throws away the
      * caller's return address, so routines 2 and 4 stop where they are on the update this
      * fires.
      */
@@ -259,7 +259,7 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     /**
-     * {@code Animate_RawGetFaster} :181386-181420 over {@code byte_91F06}: two frames a loop,
+     * {@code Animate_RawGetFaster} :181477-181511 over {@code byte_91F06}: two frames a loop,
      * the per-frame delay counting {@code 5,4,3,2,1,0} as it wraps, then six more wraps at zero
      * before {@code $2F} reaches the script's loop limit and {@code $34(a0)} is called.
      */
@@ -293,18 +293,18 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
         if (++rawLoops < RAW_ANIM_LOOPS) {
             return;
         }
-        // loc_84790's tail (:181416-181420): bclr #5,$38(a0) then jsr ($34(a0)) = loc_91D12.
+        // loc_84790's tail (:181507-181511): bclr #5,$38(a0) then jsr ($34(a0)) = loc_91D12.
         rawAnimRunning = false;
         routine = Routine.HOLDING;
         extendSignal = true;
     }
 
-    /** Bit 1 of {@code $38(a0)}, read by the spikes in {@code loc_91D8C} (:199289-199290). */
+    /** Bit 1 of {@code $38(a0)}, read by the spikes in {@code loc_91D8C} (:199396-199397). */
     boolean isExtendSignalSet() {
         return extendSignal;
     }
 
-    /** {@code bclr #1,$38(a1)} in {@code loc_91E22} (:199330-199331). */
+    /** {@code bclr #1,$38(a1)} in {@code loc_91E22} (:199437-199438). */
     void clearExtendSignal() {
         extendSignal = false;
     }
@@ -372,37 +372,37 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     /**
-     * The four children of {@code ChildObjDat_91EEC} (:199412-199420). Indices 0 and 1 are the
+     * The four children of {@code ChildObjDat_91EEC} (:199519-199527). Indices 0 and 1 are the
      * extendable spikes at {@code (0,±$14)} running {@code loc_91D52}; indices 2 and 3 are the
      * fixed {@code 8} x {@code 8} hurt boxes at {@code (±$14,0)} running {@code loc_91E5A},
      * which only ever refresh their position and add themselves to the touch list
-     * (:199344-199348).
+     * (:199451-199455).
      */
     public static final class ChainspikeChild extends AbstractObjectInstance
             implements TouchResponseProvider, RewindRecreatable {
 
         static final int CHILD_COUNT = 4;
-        /** {@code dc.b 0,$14 / 0,-$14 / $14,0 / -$14,0} (:199414-199420). */
+        /** {@code dc.b 0,$14 / 0,-$14 / $14,0 / -$14,0} (:199521-199527). */
         private static final int[] OFFSET_X = { 0, 0, 0x14, -0x14 };
         private static final int[] OFFSET_Y = { 0x14, -0x14, 0, 0 };
 
-        /** {@code word_91EE6} (:199410-199411): priority {@code $280}, 8 x {@code $80}, frame 2. */
+        /** {@code word_91EE6} (:199517-199518): priority {@code $280}, 8 x {@code $80}, frame 2. */
         private static final int SPIKE_COLLISION_FLAGS = 0x98;
-        /** {@code move.b #$18,collision_flags(a0)} (:199294, :199341). */
+        /** {@code move.b #$18,collision_flags(a0)} (:199401, :199448). */
         private static final int SPIKE_EXTENDED_FLAGS = 0x18;
-        /** {@code move.b #$98,collision_flags(a0)} (:199327, :199336). */
+        /** {@code move.b #$98,collision_flags(a0)} (:199434, :199443). */
         private static final int FIXED_COLLISION_FLAGS = 0x98;
         private static final int FIXED_HALF_SIZE = 8;
         private static final int SPIKE_HALF_WIDTH = 8;
         private static final int SPIKE_HALF_HEIGHT = 0x80;
 
-        /** {@code moveq #8,d0} (:199296), negated when the parent is Y-flipped. */
+        /** {@code moveq #8,d0} (:199403), negated when the parent is Y-flipped. */
         private static final int EXTEND_SPEED = 8;
-        /** {@code move.w #$17,$2E(a0)} (:199302). */
+        /** {@code move.w #$17,$2E(a0)} (:199409). */
         private static final int EXTEND_FRAMES = 0x17;
-        /** {@code move.w #$5F,$2E(a0)} (:199338). */
+        /** {@code move.w #$5F,$2E(a0)} (:199445). */
         private static final int RETRACT_FRAMES = 0x5F;
-        /** {@code RawAni_91ED4} (:199403-199404) over {@code moveq #$18,d3} steps (:199393). */
+        /** {@code RawAni_91ED4} (:199510-199511) over {@code moveq #$18,d3} steps (:199500). */
         private static final int[] EXTENSION_FRAMES = { 7, 6, 5, 4, 2 };
         private static final int EXTENSION_STEP = 0x18;
 
@@ -446,7 +446,7 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
         @Override
         public void update(int vIntRunCount, PlayableEntity player) {
             if (body == null || body.isDestroyed()) {
-                // Child_CheckParent (:180545-180557).
+                // Child_CheckParent (:180636-180648).
                 ObjectLifetimeOps.deleteNoRespawn(this);
                 return;
             }
@@ -456,14 +456,14 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
             updateDynamicSpawn(anchorX(), anchorY());
         }
 
-        /** {@code loc_91D8C} / {@code loc_91DE2} :199287-199351. */
+        /** {@code loc_91D8C} / {@code loc_91DE2} :199394-199458. */
         private void updateSpike() {
             if (phase == Phase.IDLE) {
                 if (!body.isExtendSignalSet()) {
                     return;
                 }
                 // btst #1,render_flags(a1) / sne d0 / tst.b subtype(a0) / not.b d0
-                // (:199289-199293): the spike on the side the parent's Y flip points at is the
+                // (:199396-199400): the spike on the side the parent's Y flip points at is the
                 // one that extends, and the other never does.
                 boolean parentFlipped = body.isYFlipped();
                 boolean thisOne = index == 0 ? !parentFlipped : parentFlipped;
@@ -477,11 +477,11 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
                 extendTimer = EXTEND_FRAMES;
                 return;
             }
-            // loc_91DE2 :199307-199318.
+            // loc_91DE2 :199414-199425.
             extendOffset += extendVelocity;
             mappingFrame = frameForExtension(Math.abs(extendOffset));
             if (extendOffset == 0) {
-                // loc_91E22 :199326-199332: fully retracted, and the parent is released.
+                // loc_91E22 :199433-199439: fully retracted, and the parent is released.
                 phase = Phase.IDLE;
                 collisionFlags = SPIKE_COLLISION_FLAGS;
                 mappingFrame = 2;
@@ -489,15 +489,15 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
                 return;
             }
             // btst #1,render_flags(a0) / sne d0 / tst.w y_vel(a0) / bmi / not.b d0
-            // (:199311-199316): only the outbound half looks for a floor.
+            // (:199418-199423): only the outbound half looks for a floor.
             boolean outbound = extendVelocity > 0;
             if (outbound) {
-                // tst.w d1 / bmi.s loc_91E46 (:199323-199324): the floor turns it around.
+                // tst.w d1 / bmi.s loc_91E46 (:199430-199431): the floor turns it around.
                 if (hitFloor()) {
                     bounceBack();
                     return;
                 }
-                // tst.b collision_flags(a0) / beq.s loc_91E40 (:199325): a spike whose flags
+                // tst.b collision_flags(a0) / beq.s loc_91E40 (:199432): a spike whose flags
                 // have been cleared is the one that turns around here; a live one falls
                 // through to the ordinary Obj_Wait below.
                 if (collisionFlags == 0) {
@@ -506,20 +506,20 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
                     return;
                 }
             }
-            // loc_91E1C :199320: both the inbound half and a live outbound spike fall through
+            // loc_91E1C :199427: both the inbound half and a live outbound spike fall through
             // to Obj_Wait, whose handler is loc_91E46.
             if (--extendTimer < 0) {
                 bounceBack();
             }
         }
 
-        /** {@code loc_91E46} :199338-199343. */
+        /** {@code loc_91E46} :199445-199450. */
         private void bounceBack() {
             extendTimer = RETRACT_FRAMES;
             extendVelocity = -(extendVelocity >> 2);
         }
 
-        /** {@code sub_91EB0} :199368-199401 over {@code RawAni_91ED4}. */
+        /** {@code sub_91EB0} :199475-199508 over {@code RawAni_91ED4}. */
         static int frameForExtension(int distance) {
             int bound = 0;
             for (int i = 0; i < EXTENSION_FRAMES.length - 1; i++) {
@@ -532,7 +532,7 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         /**
-         * {@code bsr.w ObjCheckFloorDist / tst.w d1 / bmi} (:199322-199323). The ROM probes
+         * {@code bsr.w ObjCheckFloorDist / tst.w d1 / bmi} (:199429-199430). The ROM probes
          * from the object's own position with {@code height_pixels} as the radius.
          */
         private boolean hitFloor() {
@@ -556,7 +556,7 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
 
         @Override
         public int getCollisionProperty() {
-            // move.b #-1,collision_property(a0) (:199295) while extended; SetUp_ObjAttributes3
+            // move.b #-1,collision_property(a0) (:199402) while extended; SetUp_ObjAttributes3
             // leaves it zero otherwise.
             return phase == Phase.EXTENDING ? -1 : 0;
         }
@@ -617,7 +617,7 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
             if (renderer == null || !renderer.isReady()) {
                 return;
             }
-            // tst.b subtype(a0) / bset #1,render_flags(a0) (:199277-199279): the upper spike is
+            // tst.b subtype(a0) / bset #1,render_flags(a0) (:199384-199386): the upper spike is
             // drawn Y-flipped.
             renderer.drawFrameIndex(mappingFrame, getX(), getY(), false, index == 1);
         }

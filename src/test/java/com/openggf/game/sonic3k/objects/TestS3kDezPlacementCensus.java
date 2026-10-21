@@ -120,7 +120,7 @@ class TestS3kDezPlacementCensus {
 
     /**
      * The wiring that nothing else can catch: {@code Obj_DEZGravitySwap} selects its crossing
-     * direction from {@code btst #0,render_flags(a0)} (sonic3k.asm:95512, :95537), and the
+     * direction from {@code btst #0,render_flags(a0)} (sonic3k.asm:95558, :95583), and the
      * placement record carries that bit in the <em>y word's</em> top nibble, not in a subtype.
      * {@code CommonPlacementParser} reads it as {@code (yWord >> 13) & 3}, so the eleven act 2
      * records — six with top nibble {@code 0} and five with top nibble {@code 2} — must come

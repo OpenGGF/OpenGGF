@@ -23,7 +23,7 @@ Object records are six bytes (`x`, `flags|y`, `id`, `subtype`; bits 13/14 of the
 `$FFFF,0,0` terminator, which is not counted. Live counts: **365 + 494 + 0 = 859**.
 
 Ring files start with a four-byte `0,0` lead record that `sub_EB1A` skips (`addq.w #4,a1`,
-sonic3k.asm:18596) and end with `$FFFF`. Ring counts, which are also `Perfect_rings_left`:
+sonic3k.asm:18632) and end with `$FFFF`. Ring counts, which are also `Perfect_rings_left`:
 **act 1 278, act 2 198, `$1700` 0**. The `$1700` rings come from `Act3_ring_count`, not placements.
 `Sonic3kRingPlacement.parseRawRingRecords` does not skip a lead record; check that the ring pointer
 the engine reads already points past it before asserting a DEZ ring total (cross-zone, not DEZ work).
@@ -66,7 +66,7 @@ Read from `Sonic3kObjectRegistry` at `9cba6dbb6`. It is a registration fact, not
 
 `$6D` resolved and implemented in the 2026-09-22 campaign: SKL now creates
 `Sonic3kInvisibleShockBlockObjectInstance`; S3KL keeps `HCZWaterSplash`.
-`Obj_InvisibleShockBlock` (sonic3k.asm:43265) sets shield-reaction bit 5 then uses
+`Obj_InvisibleShockBlock` (sonic3k.asm:43305) sets shield-reaction bit 5 then uses
 the horizontal hurt block shared with LRZ's fire-bit `$6E`. Status bit 0 selects
 sides before bit 1 selects the underside; no flags select the top. DEZ uses
 no-flip (56) and Y-flip (22) placements. Shield/face combinations, init return,
@@ -97,7 +97,7 @@ wins. Verify which class DEZ actually gets before testing it.
 | `$4F` | `Obj_DEZStaircase` | 18 | 15 | placeholder | 4 |
 | `$50` | `Obj_DEZConveyorBelt` | 8 | 5 | placeholder | 4 |
 | `$52` | `Obj_DEZLightning` | 48 | 94 | placeholder | 4 |
-| `$53` | `Obj_DEZConveyorPad` | 4 | 5 | placeholder | 4 (reads the flag, sonic3k.asm:93727) |
+| `$53` | `Obj_DEZConveyorPad` | 4 | 5 | placeholder | 4 (reads the flag, sonic3k.asm:93773) |
 | `$55` | `Obj_DEZEnergyBridge` | 13 | 12 | `S3kDezEnergyBridgeObjectInstance` | 4 |
 | `$56` | `Obj_DEZEnergyBridgeCurved` | 1 | 0 | placeholder | 4 |
 | `$57` | `Obj_DEZTunnelLauncher` | 3 | 4 | placeholder | 5 |

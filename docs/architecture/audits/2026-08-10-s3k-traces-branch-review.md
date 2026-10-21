@@ -66,7 +66,7 @@ below.
 `SidekickCpuController.java:3979-3998` (commit `c7335ad21`) re-admits a sidekick as on-screen
 under `screenIsShaken && isVisibleForCpuDispatch && physicalTopMargin > -width && leaderIsAirborne`.
 
-The owning ROM routine `Tails_FlySwim_Unknown` (`skdisasm/sonic3k.asm:26534-26535`) tests
+The owning ROM routine `Tails_FlySwim_Unknown` (`skdisasm/sonic3k.asm:26574-26575`) tests
 **only** `tst.b render_flags(a0) / bmi.s`. Three of the four conjuncts have no ROM expression.
 The comment admits the predicate compensates a one-pixel engine discrepancy in the shaken
 render copy — so it is a fitted correction for a defect elsewhere, and it is only ever true in
@@ -101,13 +101,13 @@ decide only when it becomes *ready*.
 These were checked against the disassembly and are correct. Recording them so the next reviewer
 does not re-litigate them:
 
-- The `LostRingObjectInstance` rewrite reproduces `sonic3k.asm:35685-35701` branch for branch,
+- The `LostRingObjectInstance` rewrite reproduces `sonic3k.asm:35725-35741` branch for branch,
   including the subtle render-flag fall-through, with the per-game divergence placed in a typed
   `RingRules.lostRingBoundaryChecksOnlyOnProbeCadence` field — exactly the shape hard rule 2
   asks for. Cross-checked against `s1disasm/_incObj/25,37 Rings.asm:314-352`.
 - `requestCnzPostTransitionRelease` **deletes** a fitted frame countdown in favour of an event
   boundary.
-- `MgzDrillingRobotnik`'s `0x3F` verified against `BossDefeated` (`sonic3k.asm:180823`) plus
+- `MgzDrillingRobotnik`'s `0x3F` verified against `BossDefeated` (`sonic3k.asm:180914`) plus
   `Wait_FadeToLevelMusic` (`:179656-179658`) = 64 frames.
 - `Blastoid`'s `0x20` verified against `Obj_WaitOffscreen` (`:180274-180275`).
 - Every added zone/act predicate sits inside an S3K zone provider; `ObjectSolidContactController`
@@ -169,7 +169,7 @@ if (screenIsShaken
 ```
 
 **Evidence.** The routine this models is `Tails_FlySwim_Unknown`
-(`docs/skdisasm/sonic3k.asm:26534-26535`):
+(`docs/skdisasm/sonic3k.asm:26574-26575`):
 
 ```
 Tails_FlySwim_Unknown:
@@ -206,7 +206,7 @@ containment is fine; the predicate is the problem.
 **Rule:** Hard rule 3 (a landed value must be traceable to the ROM routine that owns it).
 
 **Evidence.** The owning routine is `Obj_EndSignControlDoStart`
-(`docs/skdisasm/sonic3k.asm:180420-180424`):
+(`docs/skdisasm/sonic3k.asm:180511-180515`):
 
 ```
 Obj_EndSignControlDoStart:
@@ -223,7 +223,7 @@ exist. The ROM-derivable value here is 0, not 2 and not the 9 it replaced.
 
 Two things make this a MAJOR rather than a MINOR. First, the comment sitting immediately above
 the constant (`:97-99`) is a *correct* citation — of the SST slot arithmetic
-(`sonic3k.asm:7793`, `sonic3k.constants.asm:303-307`) — and it did not change when the value
+(`sonic3k.asm:7825`, `sonic3k.constants.asm:310-314`) — and it did not change when the value
 moved 9 → 2. This is precisely the inverse trap: the citation licenses the surrounding
 mechanism (which slot owns the handoff), not the number (how many dispatches it waits). A
 reader scanning for provenance will find a file:line above a value it does not justify.
@@ -242,7 +242,7 @@ Two independently-adjustable knobs multiplying into one observable is the shape 
 takes when the underlying ordering is wrong.
 
 **Related, smaller:** the comment at `:1393` says `Change_Act2Sizes` "allocates the four
-gradual bound owners". `Child1_Act2LevelSize` (`sonic3k.asm:180608-180615`) is `dc.w 3-1` and
+gradual bound owners". `Child1_Act2LevelSize` (`sonic3k.asm:180699-180706`) is `dc.w 3-1` and
 lists three (`Obj_IncLevEndXGradual`, `Obj_DecLevStartYGradual`, `Obj_IncLevEndYGradual`).
 The engine carries four accumulators including a min-X one the ROM has no owner for. The
 accumulators predate this branch, so this is context rather than a finding against it, but the
@@ -263,7 +263,7 @@ publish the hurt animation byte, and exactly one production object overrides it:
 spiked-log child. The override's justification carries no file:line — *"ROM's spiked-log child
 reaches the generic touch-hurt owner with Tails' existing anim byte still live"*.
 
-**Evidence against.** `HurtCharacter` (`docs/skdisasm/sonic3k.asm:21109`):
+**Evidence against.** `HurtCharacter` (`docs/skdisasm/sonic3k.asm:21145`):
 
 ```
 loc_10320:
@@ -319,7 +319,7 @@ A per-phase correction table is the textbook signature the skill warns about: it
 for a recording that entered the transition on the phase it was tuned against and wrong for one
 that entered a frame earlier. Note the file *also* contains correctly-derived constants a few
 lines up (`DISPLAY_HOLD_FRAMES`/`FRESH_LEVEL_TRANSITION_HOLD_FRAMES = 22` cited to
-`sonic3k.asm:7897-7900`, `Palette_fade_timer = $16`) — the contrast is what makes the
+`sonic3k.asm:7929-7932`, `Palette_fade_timer = $16`) — the contrast is what makes the
 uncited block conspicuous.
 
 ---
@@ -348,7 +348,7 @@ The AIZ2 pair is the one I'd fix first, because it is internally inconsistent. T
 `Aiz2BossEndSequenceController.java:240-247` says the two cases are *"retain one entry"* versus
 *"restore immediately"* — which reads as 1 and 0 — while the code returns 2 and 1. A uniform
 `+1` between the stated model and the landed values is the classic sign of a constant absorbing
-an error one layer down. The cited range (`sonic3k.asm:62709-62720`) is
+an error one layer down. The cited range (`sonic3k.asm:62749-62760`) is
 `clr.b (_unkFAA8).w / st (End_of_level_flag).w / jmp Delete_Current_Sprite` — real and
 relevant, but it licenses *that the handoff exists*, not *that it takes one or two passes*.
 
@@ -369,7 +369,7 @@ uncited integers is how a fitted model looks at scale.
 The branch makes `getXWithShake()` / `getYWithShake()` — which everything visible reads —
 return a `renderCopyX/Y` published once per frame by `camera.captureRenderCopy()`, called from
 shared `LevelFrameStep` **before** `levelEvents.update()`. The comment cites S3K `ScreenEvents`,
-and that citation is exact: `docs/skdisasm/sonic3k.asm:102233-102234` publishes both copies at
+and that citation is exact: `docs/skdisasm/sonic3k.asm:102279-102280` publishes both copies at
 the head of `ScreenEvents`, ahead of the zone handlers.
 
 But that ordering is S3K's, not the engine's other two games':
@@ -412,7 +412,7 @@ producer, this method should go with it.
 **Rule:** citation accuracy.
 
 The added `publishSolidPushReleaseAnimationWord(...)` call is **correct** — I verified it — but
-the comment attributes the walk/run write to `sub_1E0C2` (`sonic3k.asm:41528-41532`), which
+the comment attributes the walk/run write to `sub_1E0C2` (`sonic3k.asm:41568-41572`), which
 only clears the two push bits:
 
 ```
@@ -424,7 +424,7 @@ sub_1E0C2:
 ```
 
 The routine that actually writes `anim` is `loc_1E0A2` immediately above
-(`sonic3k.asm:41517-41525`), which skips on `anim == 2` (Roll) and `anim == 9` (Spindash) and
+(`sonic3k.asm:41557-41565`), which skips on `anim == 2` (Roll) and `anim == 9` (Spindash) and
 otherwise does `move.w #1,anim(a1)` before falling into `sub_1E0C2`. The engine's guards match
 `loc_1E0A2` exactly — the code is right, the pointer is off by one label. Retarget the comment
 so the next reader can find the licence.
@@ -469,7 +469,7 @@ These are positive results, not padding — each was a live suspicion that the R
 
 - **`LostRingObjectInstance` control-flow rewrite** (`2e509a603`, `74aaffb8f`) — the best
   modelling work on the branch. The rewrite reproduces S3K `Obj_Bouncing_Ring`
-  (`docs/skdisasm/sonic3k.asm:35685-35701`) branch for branch, including the genuinely subtle
+  (`docs/skdisasm/sonic3k.asm:35725-35741`) branch for branch, including the genuinely subtle
   part: `bmi.s loc_1A83C` (rising) and `bne.s loc_1A83C` (off-cadence) skip the boundary check
   entirely, while `bpl.s loc_1A828` (render flag clear) skips only the terrain probe and
   **still falls through** to it. The engine's `stepPhysics` return value encodes exactly that
@@ -482,11 +482,11 @@ These are positive results, not padding — each was a live suspicion that the R
   *"instead of estimating its arrival from elapsed frames"*. This is the correct instinct and
   deserves credit even while F2 sits a hundred lines away.
 - **`MgzDrillingRobotnikInstance.END_DEFEAT_FADE_WAIT_FRAMES = 0x3F`** — verified.
-  `BossDefeated` writes `move.w #$3F,$2E(a0)` (`sonic3k.asm:180823`) and
+  `BossDefeated` writes `move.w #$3F,$2E(a0)` (`sonic3k.asm:180914`) and
   `Wait_FadeToLevelMusic` does `subq.w #1,$2E(a0) / bmi.s` (`:179656-179658`), giving the
   64-frame wait the comment claims. Correct value, correct routine, correct arithmetic.
 - **`BlastoidBadnikInstance.WAIT_OFFSCREEN_MARGIN = 0x20`** — verified against
-  `Obj_WaitOffscreen` (`sonic3k.asm:180274-180275`, `move.b #$20,width_pixels/height_pixels`).
+  `Obj_WaitOffscreen` (`sonic3k.asm:180365-180366`, `move.b #$20,width_pixels/height_pixels`).
 - **`Aiz2BossEndSequenceController` geometry constants** (`$158`, `$1F8`, `$1E6`) — all carry
   routine-level citations and are pre-existing; unchanged by this branch.
 - **Zone/act predicates.** The only `currentAct ==` / `zoneIndex ==` conditions the branch adds
@@ -619,10 +619,10 @@ closure (`TraceSuppressedRowClosure`), never as a precondition on the production
 **Rule:** hard rule 3 — a constant not read out of the disassembly is a fitted model.
 
 The comment claims: *"The native owner reaches LoadEnemyArt only after those three post-exit
-dispatches in the fresh-level path (sonic3k.asm:62249-62312)"*, and lands
+dispatches in the fresh-level path (sonic3k.asm:62289-62352)"*, and lands
 `FRESH_LEVEL_TRANSITION_OWNER_RETIREMENT_FRAMES = 3`.
 
-The cited routine does not contain a three. `Obj_TitleCardWait2` (sonic3k.asm:62249-62260):
+The cited routine does not contain a three. `Obj_TitleCardWait2` (sonic3k.asm:62289-62300):
 
 ```
 62249 Obj_TitleCardWait2:
@@ -652,7 +652,7 @@ enemy-art admission chain in B1; it is also squarely a Lane A concern and the tw
 together. The right model is the ROM's: count modelled children and test for zero.
 
 (`FRESH_LEVEL_TRANSITION_HOLD_FRAMES = 22` in the same block is **fine** — `#$16` is written to
-`objoff_2E` and `Palette_fade_timer` at sonic3k.asm:7877-7878. Only the neighbouring comment's line
+`objoff_2E` and `Palette_fade_timer` at sonic3k.asm:7909-7910. Only the neighbouring comment's line
 reference "7897-7900" is off by ~20 lines in the current disassembly.)
 
 ---
@@ -665,11 +665,11 @@ reference "7897-7900" is off by ~20 lines in the current disassembly.)
 **Commit:** `2a08c51b6`.
 **Rule:** hard rule 3 — a boundary chosen for effect rather than read out of the routine.
 
-The in-code citation for the deferral is right in substance: at sonic3k.asm:2783-2787 the queue
+The in-code citation for the deferral is right in substance: at sonic3k.asm:2815-2819 the queue
 shifts and `jmp (Process_Kos_Module_Queue_Init)`, and `Init` (2694-2716) only sets
 `Kos_modules_left` / `Kos_module_destination` and `rts` — it never calls `Queue_Kos`. So the next
 parent's first child really is published one call later. Good structural reasoning, and the
-`sonic3k.asm:2778-2790` reference should be tightened to 2783-2787 + 2694-2716, which is where the
+`sonic3k.asm:2810-2822` reference should be tightened to 2783-2787 + 2694-2716, which is where the
 "Init publishes nothing" fact actually lives.
 
 The placement, however, does not follow. That "one call later" is the **next**
@@ -770,7 +770,7 @@ self-maintaining and, unlike the current form, correct for the next recording.
 - **NOTE (praise) — the new `Pos_table_index` witness is structural, not measured.** The `+4`
   in `TestTraceReplayStartPositionPolicy.java:181-183` and the `PLAYABLE_ANIMATION_ONLY`
   promotion in `TraceReplayBootstrap` come from `addq.b #4,(Pos_table_index+1).w`
-  (sonic3k.asm:22129/22148) — one `Sonic_RecordPos` entry. That is exactly the "rule, not a
+  (sonic3k.asm:22165/22148) — one `Sonic_RecordPos` entry. That is exactly the "rule, not a
   number" form the skill asks for, and it replaces a hook that the native recorder does not emit.
   Worth noting for the author: Tails uses `Pos_table_index_P2` (22153-22158); confirm the
   recorder's `"tails"` `cpu_state.posTableIndex` is the P2 index and not P1, or the witness is
@@ -873,7 +873,7 @@ Sixteen classes, run alone with `-Dsurefire.argLine=-Xmx3g`, same flags. Branch 
 These are not padding; each was a place a violation could have hidden and did not.
 
 **The branch deletes fitted constants instead of adding them.**
-- `Aiz2BossEndSequenceController.java:46-47` — `POST_RESULTS_CONTROL_RESTORE_DELAY = 4` / `RIDING_SIDEKICK_CONTROL_RESTORE_DELAY = 6` become `RELEASE_OWNER_BEFORE/AFTER_CONTROLLER_DELAY = 1/2`, selected by an SST-ordering predicate (`Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch()`) with the citation at the use site (`Aiz2BossEndSequenceController.java:243-251`, `sonic3k.asm:62709-62720,138313-138331,181978-181990`). A delay derived from *which object allocated first* is a model; `4` and `6` were not.
+- `Aiz2BossEndSequenceController.java:46-47` — `POST_RESULTS_CONTROL_RESTORE_DELAY = 4` / `RIDING_SIDEKICK_CONTROL_RESTORE_DELAY = 6` become `RELEASE_OWNER_BEFORE/AFTER_CONTROLLER_DELAY = 1/2`, selected by an SST-ordering predicate (`Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch()`) with the citation at the use site (`Aiz2BossEndSequenceController.java:243-251`, `sonic3k.asm:62749-62760,138378-138396,182069-182081`). A delay derived from *which object allocated first* is a model; `4` and `6` were not.
 - `Sonic3kLevelEventManager.cnzPendingPostTransitionReleaseFrames` (an `int` countdown) collapses to a `boolean`.
 - `S3kSignpostInstance.java:108-115` — `RESULTS_POST_OBJECT_RETIRE_DISPATCHES = 0`, with the synthetic parent pass deleted outright.
 - `TestS3kIczMinibossObject.java:492` — `resultsWaitDurationAdjustment` assertion corrected from `1` to `0`. A test that pinned a fitted value was **lowered**, which is the opposite of the failure mode this project has been bitten by.
@@ -884,7 +884,7 @@ These are not padding; each was a place a violation could have hidden and did no
 
 **`RingRules.lostRingBoundaryChecksOnlyOnProbeCadence` is ROM-correct — verified against all three disassemblies, not taken on trust.**
 - S1 `RLoss_Bounce` reaches `.chkdel` (lifetime + bottom-boundary) via **both** `bmi.s .chkdel` (still rising) and `bne.s .chkdel` (off-cadence) — `docs/s1disasm/_incObj/25, 37 Rings.asm:314-352`. Value `false`. Correct.
-- S3K's equivalent branches to `loc_1A83C`, which is the `Add_SpriteToCollisionResponseList` / `Draw_Sprite` tail and **skips** `loc_1A828`'s `Ring_spill_anim_counter` and `Camera_max_Y_pos + $E0` checks — `docs/skdisasm/sonic3k.asm:35679-35703`. Value `true`. Correct.
+- S3K's equivalent branches to `loc_1A83C`, which is the `Add_SpriteToCollisionResponseList` / `Draw_Sprite` tail and **skips** `loc_1A828`'s `Ring_spill_anim_counter` and `Camera_max_Y_pos + $E0` checks — `docs/skdisasm/sonic3k.asm:35719-35743`. Value `true`. Correct.
 - This is precisely the shape hard rule 2 wants: a typed, game-wide semantic predicate on `GameRules`, not a game-name branch, with the ROM asymmetry named. Good work.
 
 **Artifact placement is clean.** The only added docs are `docs/architecture/audits/2026-08-06-llm-review-remediation.md` (correct subdirectory for a point-in-time assessment), `CHANGELOG.md`, `README.md`, and `docs/status/trace-frontier-log.md`. No loose Markdown in `docs/`, no `docs/plans`, no `archive`/`misc`/`notes`. The frontier log is genuinely append-only (the diff is pure `+` after the protected prefix), the 25 new entries all carry command, commit/worktree context, pass/fail, error counts and first-error frame/field, and I grepped every added line for `/home/`, `/tmp/`, `C:\`, `.cache/` and `/mnt/` — **zero machine-local paths**; commands use repo-relative `./*.gen`.
@@ -1002,13 +1002,13 @@ At minimum, the assertion should compare against values read out of the `TraceDa
 **Rule:** hard rule 3 — "a value that is close to the ROM's but not equal is usually absorbing an error elsewhere."
 
 ```java
-// Dynamic_object_RAM+object_size (sonic3k.asm:7793) == dynamic slot 1, which
+// Dynamic_object_RAM+object_size (sonic3k.asm:7825) == dynamic slot 1, which
 // is absolute SST slot 4 (Player_1, Player_2, Reserved_object_3 precede the
-// dynamic range -- sonic3k.constants.asm:303-307).
+// dynamic range -- sonic3k.constants.asm:310-314).
 private static final int CNZ_POST_TITLE_CARD_CONTROL_HANDOFF_DISPATCHES = 2;   // was 9
 ```
 
-I read the cited routine. `docs/skdisasm/sonic3k.asm:180420-180425`:
+I read the cited routine. `docs/skdisasm/sonic3k.asm:180511-180516`:
 
 ```
 Obj_EndSignControlDoStart:
@@ -1018,7 +1018,7 @@ Obj_EndSignControlDoStart:
         jmp     (Delete_Current_Sprite).l
 ```
 
-`Change_Act2Sizes` runs on **the same dispatch** that observes the flag. There is no `2`-dispatch delay and there was never a `9`-dispatch delay. The comment at the use site (`:1395-1398`) cites `sonic3k.asm:180407-180419` for "the later `Obj_EndSignControl` owner observes the flag after its retained slot chain advances" — true as far as it goes, but that citation establishes *that* there is a slot-ordering delay, not that its magnitude is 2. And the block comment sitting above the constant still describes slot arithmetic that yields neither 9 nor 2; it is now stale decoration on a different number.
+`Change_Act2Sizes` runs on **the same dispatch** that observes the flag. There is no `2`-dispatch delay and there was never a `9`-dispatch delay. The comment at the use site (`:1395-1398`) cites `sonic3k.asm:180498-180510` for "the later `Obj_EndSignControl` owner observes the flag after its retained slot chain advances" — true as far as it goes, but that citation establishes *that* there is a slot-ordering delay, not that its magnitude is 2. And the block comment sitting above the constant still describes slot arithmetic that yields neither 9 nor 2; it is now stale decoration on a different number.
 
 I want to be fair about this one: the knob is **not new**, the divergence it compensates for is genuine and documented in the code ("the engine reload rebuild removes that object chain"), and moving 9 → 2 is moving *toward* the ROM. But a value that changes because a trace went green, with a comment that does not derive it, is a fitted model by this project's own definition, and it will desync a CNZ recording with a different object population. The right shape here is the same one the branch used successfully elsewhere: derive the delay from the SST ordering of the surviving owner (as `Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch()` does), or register the compensation in `docs/status/known-discrepancies.md` with the reason the engine cannot represent the native chain. Please also refresh the stale block comment either way.
 

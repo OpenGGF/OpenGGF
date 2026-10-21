@@ -11,7 +11,7 @@ import java.util.List;
  * If a target value has bit 15 set, the mean water level is set directly
  * (instant teleport) rather than gradually moving toward the target.
  * <p>
- * Mirrors the ROM pattern at {@code DynamicWaterHeight_HCZ1} (sonic3k.asm:8710).
+ * Mirrors the ROM pattern at {@code DynamicWaterHeight_HCZ1} (sonic3k.asm:8742).
  */
 public class ThresholdTableWaterHandler implements DynamicWaterHandler {
 

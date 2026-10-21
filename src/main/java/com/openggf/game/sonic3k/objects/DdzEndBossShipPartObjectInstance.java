@@ -14,7 +14,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code loc_81D72} / {@code loc_81DCC} (sonic3k.asm:173860-173928): the three phase-2 ship
+ * ROM {@code loc_81D72} / {@code loc_81DCC} (sonic3k.asm:173951-174019): the three phase-2 ship
  * parts ({@code ObjDat3_8320E}: priority {@code $200}). Subtype 0 (frame {@code $3A}, animated by
  * {@code byte_832D0}, offset {@code $64,$4C}) carries the Master Emerald {@code loc_81CC6}; subtype 2
  * is frame 5 at {@code $10,$20}; subtype 4 is frame {@code $3D} animated by {@code byte_832D9} at

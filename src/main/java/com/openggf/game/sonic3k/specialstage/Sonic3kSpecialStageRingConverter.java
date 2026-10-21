@@ -43,7 +43,7 @@ public class Sonic3kSpecialStageRingConverter {
 
     /**
      * Attempt sphere-to-ring conversion after a blue sphere is touched.
-     * ROM: Sphere_To_Rings (sonic3k.asm:12902)
+     * ROM: Sphere_To_Rings (sonic3k.asm:12938)
      *
      * @param grid the game grid
      * @param touchedIndex grid buffer index of the touched sphere (already marked 0x0A)
@@ -64,7 +64,7 @@ public class Sonic3kSpecialStageRingConverter {
         int blueConverted = seedBlueConverted; // Include DFS-seeded conversions
 
         // Phase 2: BFS flood fill - convert connected blue spheres to rings
-        // ROM: Blue_To_Ring_Next_Ring_B (sonic3k.asm:12916)
+        // ROM: Blue_To_Ring_Next_Ring_B (sonic3k.asm:12952)
         int queueIdx = 0;
         while (queueIdx < ringQueue.size()) {
             int ringPos = ringQueue.get(queueIdx);
@@ -82,7 +82,7 @@ public class Sonic3kSpecialStageRingConverter {
         }
 
         // Phase 3: Convert red/touched sphere neighbors of rings to rings
-        // ROM: Blue_To_Ring_Next_Ring_R (sonic3k.asm:12943)
+        // ROM: Blue_To_Ring_Next_Ring_R (sonic3k.asm:12979)
         // Re-scan the entire queue (including newly added entries from phase 2)
         for (int ringPos : ringQueue) {
             for (int dir : DIRECTIONS_8) {
@@ -105,7 +105,7 @@ public class Sonic3kSpecialStageRingConverter {
     /**
      * Find closed loops of red spheres using DFS, and seed the ring queue
      * with enclosed blue spheres converted to rings.
-     * ROM: Find_Red_Sphere_Loop (sonic3k.asm:12993)
+     * ROM: Find_Red_Sphere_Loop (sonic3k.asm:13029)
      *
      * @param grid the game grid
      * @param touchedIndex index of the touched sphere
@@ -116,7 +116,7 @@ public class Sonic3kSpecialStageRingConverter {
 
         // Step 1: Check neighbors - mark touched (0x0A) neighbors as red,
         // count blue neighbors
-        // ROM: Red_Loop_Check_Neighbors (sonic3k.asm:12999)
+        // ROM: Red_Loop_Check_Neighbors (sonic3k.asm:13035)
         int blueNeighborCount = 0;
         for (int dir : DIRECTIONS_8) {
             int neighbor = (touchedIndex + dir) & 0x3FF;
@@ -134,7 +134,7 @@ public class Sonic3kSpecialStageRingConverter {
         }
 
         // Step 2: Span check - horizontal and vertical spans must each be >= 3
-        // ROM: Red_Loop_Count_Horizontal_Left (sonic3k.asm:13020)
+        // ROM: Red_Loop_Count_Horizontal_Left (sonic3k.asm:13056)
         int horizontalSpan = countSpan(grid, touchedIndex, -1, 1)
                            + countSpan(grid, touchedIndex, 1, 1);
         if (horizontalSpan < 4) { // < 4 because touched position is double-counted
@@ -148,7 +148,7 @@ public class Sonic3kSpecialStageRingConverter {
         }
 
         // Step 3: DFS walk to find loops
-        // ROM: Red_Loop_Find_Next (sonic3k.asm:13074)
+        // ROM: Red_Loop_Find_Next (sonic3k.asm:13110)
         dfsWalk(grid, touchedIndex, ringQueue);
 
         return ringQueue;
@@ -180,7 +180,7 @@ public class Sonic3kSpecialStageRingConverter {
     /**
      * DFS walk along red spheres to find closed loops.
      * When a loop is found, processes it to find enclosed blue spheres.
-     * ROM: Red_Loop_Find_Next through Red_Loop_Pop_Stack (sonic3k.asm:13074-13142)
+     * ROM: Red_Loop_Find_Next through Red_Loop_Pop_Stack (sonic3k.asm:13110-13178)
      */
     private void dfsWalk(Sonic3kSpecialStageGrid grid, int touchedIndex,
                          List<Integer> ringQueue) {
@@ -271,7 +271,7 @@ public class Sonic3kSpecialStageRingConverter {
 
     /**
      * Process a detected loop to find enclosed blue spheres.
-     * ROM: Red_Loop_Processes_Loop (sonic3k.asm:13168)
+     * ROM: Red_Loop_Processes_Loop (sonic3k.asm:13204)
      *
      * @param grid the game grid
      * @param touchedIndex the originally touched sphere position

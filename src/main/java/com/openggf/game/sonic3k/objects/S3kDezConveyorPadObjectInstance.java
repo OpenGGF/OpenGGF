@@ -17,7 +17,7 @@ import com.openggf.sprites.NativePositionOps;
 import java.io.IOException;
 import java.util.List;
 
-/** SKL $53, Obj_DEZConveyorPad / loc_479F0..sub_47B58 (sonic3k.asm:93619-93865). */
+/** SKL $53, Obj_DEZConveyorPad / loc_479F0..sub_47B58 (sonic3k.asm:93665-93911). */
 public final class S3kDezConveyorPadObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
     private int currentX;

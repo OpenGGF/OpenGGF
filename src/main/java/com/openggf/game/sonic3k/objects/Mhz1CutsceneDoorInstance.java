@@ -105,9 +105,9 @@ public final class Mhz1CutsceneDoorInstance extends AbstractObjectInstance
 
     @Override
     public boolean usesInclusiveRightEdge() {
-        // MHZ1CutsceneButton_Door_Wait's jsr sub_65E4C (sonic3k.asm:130214,134149)
+        // MHZ1CutsceneButton_Door_Wait's jsr sub_65E4C (sonic3k.asm:130271,134206)
         // reaches SolidObjectFull -> SolidObject_cont, whose right-edge X-window
-        // check is cmp.w d3,d0 / bhi.w (sonic3k.asm:41399-41406) -- not bhs -- so
+        // check is cmp.w d3,d0 / bhi.w (sonic3k.asm:41439-41446) -- not bhs -- so
         // relX == width*2 remains a valid zero-distance side contact and keeps
         // Status_Push (bit 5, constants.asm:140/179) set. The sibling
         // Obj_MHZ1CutsceneButton overrides the same way for the same gate; see
@@ -122,7 +122,7 @@ public final class Mhz1CutsceneDoorInstance extends AbstractObjectInstance
                 parent.clearDoorSwitchActive();
                 startSlide();
                 // Fall through to the movement step: MHZ1CutsceneButton_Door_Move
-                // (sonic3k.asm:130237) arms y_vel/$2E/$34 and then falls straight
+                // (sonic3k.asm:130294) arms y_vel/$2E/$34 and then falls straight
                 // through MHZ1CutsceneButton_Door_SetVelocity into
                 // MHZ1CutsceneButton_Door_Moving (130251) with no rts, so the
                 // trigger frame itself runs MoveSprite2 + Obj_Wait. Returning here

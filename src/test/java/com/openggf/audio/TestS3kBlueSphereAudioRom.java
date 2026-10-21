@@ -106,7 +106,7 @@ class TestS3kBlueSphereAudioRom {
         collide(stage);
 
         // loc_97AA branches to loc_97BE on allocation failure; Play_SFX is
-        // outside the successful-slot writes (sonic3k.asm:12131-12142).
+        // outside the successful-slot writes (sonic3k.asm:12167-12178).
         assertEquals(List.of(Sonic3kSfx.BLUE_SPHERE.id), requests);
         assertFalse(queue.addBlueSphere(0), "no duplicate slot, including after failed admission");
     }

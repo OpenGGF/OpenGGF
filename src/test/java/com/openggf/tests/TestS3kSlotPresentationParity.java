@@ -32,9 +32,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Slot Machine presentation phase and content against the ROM's frame order, from the
  * 2026-10-15 native-still spot check (bonus_slots rows 300-1036).
  *
- * <p>LevelLoop (sonic3k.asm:7911-7915) runs {@code Render_Sprites} and then
+ * <p>LevelLoop (sonic3k.asm:7943-7947) runs {@code Render_Sprites} and then
  * {@code Slots_RenderLayout}, which appends the rotated layout pieces to the same
- * {@code Sprite_table} after every Render_Sprites entry (sonic3k.asm:98158-98269,
+ * {@code Sprite_table} after every Render_Sprites entry (sonic3k.asm:98204-98315,
  * {@code Sprites_drawn}). The following VBlank DMAs that table, so the layout is displayed
  * with the player and objects of its own iteration and behind all of them.
  */
@@ -95,7 +95,7 @@ class TestS3kSlotPresentationParity {
         fixture.stepIdleFrames(2);
         assertEquals(0, runtime.paletteCycleMode());
         // The cage writes Palette_cycle_counters+0 during Process_Sprites; LevelLoop's
-        // Animate_Palette (sonic3k.asm:7891) already ran for that iteration.
+        // Animate_Palette (sonic3k.asm:7923) already ran for that iteration.
         runtime.setPaletteCycleEnabledForTest(true);
         assertEquals(0, runtime.paletteCycleMode(), "AnPal_Slots of the writing iteration keeps the old mode");
         fixture.stepIdleFrames(1);
@@ -109,7 +109,7 @@ class TestS3kSlotPresentationParity {
         var controller = runtime.stageController();
         int scalar = controller.scalarIndex();
         // sub_4BE3A dispatches the goal tile ($30(a0) = 4) inside this iteration's movement:
-        // loc_4BED0 only advances routine(a0) (sonic3k.asm:99247-99253); loc_4BC1E's first
+        // loc_4BED0 only advances routine(a0) (sonic3k.asm:99293-99299); loc_4BC1E's first
         // +$40 belongs to the next iteration.
         controller.setLastCollision(4, 0);
         runtime.runPreMovePlayerInteractionsForTest();
@@ -125,7 +125,7 @@ class TestS3kSlotPresentationParity {
         HeadlessTestFixture fixture = enterSlots();
         fixture.stepIdleFrames(2);
         var tiles = LevelSpritePresentation.published(GameServices.level()).tiles();
-        // Render_HUD (sonic3k.asm:17580-17589) selects Map_HUD frame 4/5 for zones $13-$15
+        // Render_HUD (sonic3k.asm:17616-17625) selects Map_HUD frame 4/5 for zones $13-$15
         // (word_DC96 / word_DCB6): RINGS plus the two y=+$40 lives pieces, which land at
         // screen Y $108+$40-$80 = 200 like the ordinary HUD's lives row.
         boolean rings = false, lives = false;
@@ -147,7 +147,7 @@ class TestS3kSlotPresentationParity {
         fixture.stepIdleFrames(4);
         runtime.startGoalExitForTest();
 
-        // loc_4BC1E (sonic3k.asm:98964-98979): +$40 per iteration until $1800, then
+        // loc_4BC1E (sonic3k.asm:99010-99025): +$40 per iteration until $1800, then
         // Palette_fade_info=$003F, Pal_fade_delay=0, $38=60, Palette_cycle_counters+0=$FF.
         int guard = 0;
         while (!runtime.activeExitSequenceForTest().isFading()) {
@@ -160,7 +160,7 @@ class TestS3kSlotPresentationParity {
         int delay = 0;
         for (int iteration = 1; iteration <= 60; iteration++) {
             fixture.stepIdleFrames(1);
-            // loc_4BC54 (sonic3k.asm:98981-98987): subq #1,Pal_fade_delay / bpl / #2 / Pal_ToBlack.
+            // loc_4BC54 (sonic3k.asm:99027-99033): subq #1,Pal_fade_delay / bpl / #2 / Pal_ToBlack.
             if (--delay < 0) {
                 delay = 2;
                 calls++;
@@ -196,10 +196,10 @@ class TestS3kSlotPresentationParity {
         var playerRuntime = runtime.slotPlayerRuntimeForTest();
         for (int iteration = 1; iteration <= 40; iteration++) {
             fixture.stepIdleFrames(1);
-            // Obj_SlotBonus loc_4BF9A (sonic3k.asm:99324-99348) runs in every Process_Sprites
+            // Obj_SlotBonus loc_4BF9A (sonic3k.asm:99370-99394) runs in every Process_Sprites
             // pass after the player's loc_4BC1E rotation step: it rotates ($460,$430) about
             // Player_1 by Stat_table&$FC and writes Events_bg+$00/$02, which Slots_ScreenEvent
-            // (sonic3k.asm:119061-119133) follows with the machine plane.
+            // (sonic3k.asm:119107-119179) follows with the machine plane.
             int angle = controller.angle() & 0xFC;
             int px = playerRuntime.slotOriginX() >> 16;
             int py = playerRuntime.slotOriginY() >> 16;
@@ -225,7 +225,7 @@ class TestS3kSlotPresentationParity {
         return words;
     }
 
-    /** Pal_DecColor (sonic3k.asm:5085-5113): red, then green, then blue, one 2-step per call. */
+    /** Pal_DecColor (sonic3k.asm:5117-5145): red, then green, then blue, one 2-step per call. */
     private static int palToBlack(int word, int calls) {
         for (int i = 0; i < calls; i++) {
             if ((word & 0x00E) != 0) word -= 0x002;

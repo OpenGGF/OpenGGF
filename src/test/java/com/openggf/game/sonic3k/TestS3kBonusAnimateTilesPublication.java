@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * AnimateTiles_Gumball and AnimateTiles_Pachinko (sonic3k.asm:55271-55288, 55291-55390) write
+ * AnimateTiles_Gumball and AnimateTiles_Pachinko (sonic3k.asm:55311-55328, 55331-55430) write
  * their art with Add_To_DMA_Queue, which VInt's Process_DMA_Queue drains before the next
  * displayed frame, like the AniPLC scripts. Found by the 2026-10-15 native bonus spot stills:
  * the engine showed each Pachinko background step one frame early.

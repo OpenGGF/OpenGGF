@@ -15,7 +15,7 @@ import java.io.IOException;
 /**
  * Host presentation of the dedicated Slot sprite, Obj_Sonic_RotatingSlotBonus.
  *
- * <p>loc_4B9E8 (sonic3k.asm:98718-98742) installs host {@code Map_Sonic},
+ * <p>loc_4B9E8 (sonic3k.asm:98764-98788) installs host {@code Map_Sonic},
  * {@code Map_Tails} or {@code Map_Knuckles} by {@code Player_mode} with
  * {@code ArtTile_Player_1} ({@code ArtTile_Player_2} for Tails alone, which also
  * gets a fresh {@code Obj_Tails_Tail} whose {@code $30} is this sprite). These are

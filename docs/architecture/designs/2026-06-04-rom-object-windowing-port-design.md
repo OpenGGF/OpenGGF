@@ -60,10 +60,10 @@ Wording: this is a **"shared SST/respawn/allocator substrate (owned by ObjectMan
 - **Object-side unload** (`out_of_range` macro `Macros.asm:261`; `RememberState.asm:5`): native compare `128 + 320 + 192 = $280`, with `screenX = (v_screenposx − 128) & $FF80`. Object-driven (sets respawn state, deletes) — **not** placement-window deletion.
 
 ### S3K (distinct model — not S2 + a Y filter)
-- **State** (`sonic3k.constants.asm:662`): `Object_load_addr_front/back`, `Object_respawn_index_front/back`, a **one-byte** respawn-table entry per object, `Camera_X_pos_coarse`, `Camera_Y_pos_coarse`, `Camera_X_pos_coarse_back`.
+- **State** (`sonic3k.constants.asm:681`): `Object_load_addr_front/back`, `Object_respawn_index_front/back`, a **one-byte** respawn-table entry per object, `Camera_X_pos_coarse`, `Camera_Y_pos_coarse`, `Camera_X_pos_coarse_back`.
 - **Empty predicate / delete (DIFFERS from S1/S2):** `AllocateObject` tests the first **longword / object routine-pointer** (`tst.l (a1)`), not the id byte; `Delete_Current_Sprite` zeroes the slot (incl. the routine pointer). The §3 contract's empty predicate must be "routine-pointer longword == 0" for S3K.
 - **Load thresholds:** front = first X `>= coarse + $280`; back = first X `>= coarse − $80`.
-- **Object-side unload** (`Sprite_OnScreen_Test`, `sonic3k.asm:37262`): `(x_pos & $FF80) − Camera_X_pos_coarse_back > $280`, then clear bit 7 via `respawn_addr(a0)` and `Delete_Current_Sprite`. Note `Camera_X_pos_coarse_back = (Camera_X_pos − $80) & $FF80` — a different subtract target than S2's load base.
+- **Object-side unload** (`Sprite_OnScreen_Test`, `sonic3k.asm:37302`): `(x_pos & $FF80) − Camera_X_pos_coarse_back > $280`, then clear bit 7 via `respawn_addr(a0)` and `Delete_Current_Sprite`. Note `Camera_X_pos_coarse_back = (Camera_X_pos − $80) & $FF80` — a different subtract target than S2's load base.
 - **Respawn-table selection (call out now, even though S3K is staged last):** S3K's loader *selects between respawn tables* and has `Respawn_table_keep`-style retention during setup. The §3 shared substrate must **not** assume a single global respawn table — respawn-entry addressing is per-game and, for S3K, table-selecting. Bake this into the contract's "respawn-entry addressing" surface from the start.
 
 ## 5. Per-game frame ordering (NOT universal)
@@ -72,7 +72,7 @@ Caller order within the level frame differs per game and must be honored:
 
 - **S1:** execute objects **before** placement loading (`sonic.asm:2950`).
 - **S2:** execute objects **before** placement loading (`RunObjects` then `ObjectsManager`, `s2.asm:5095` then `:5112`).
-- **S3K:** `Load_Sprites` **before** `Process_Sprites` — i.e. **load-then-execute** (normal level loop `sonic3k.asm:7884`, the calls at `:7893-7894`). *(Not `sonic3k.asm:63150`, which is HPZ/special-stage setup context.)*
+- **S3K:** `Load_Sprites` **before** `Process_Sprites` — i.e. **load-then-execute** (normal level loop `sonic3k.asm:7916`, the calls at `:7893-7894`). *(Not `sonic3k.asm:63190`, which is HPZ/special-stage setup context.)*
 
 Do **not** encode a single "execute then windowing-load" rule for all games. Each game's `LevelFrameStep`-equivalent wires its own order.
 

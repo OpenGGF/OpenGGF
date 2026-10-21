@@ -24,7 +24,7 @@ import com.openggf.sprites.art.SpriteArtSet;
 import java.util.List;
 
 /**
- * Lightning shield spark particle (sonic3k.asm:34811-34858).
+ * Lightning shield spark particle (sonic3k.asm:34851-34898).
  * Created by {@link LightningShieldObjectInstance#triggerSparks()} — 4 sparks fly
  * diagonally with gravity, playing animation script 0 (frames [0,1,2] delay=0).
  * Auto-deletes after {@link #MAX_LIFE} frames.
@@ -35,7 +35,7 @@ import java.util.List;
  */
 public class LightningSparkObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
-    /** Gravity per frame in subpixels (sonic3k.asm:34849: addi.w #$18,y_vel(a0)) */
+    /** Gravity per frame in subpixels (sonic3k.asm:34889: addi.w #$18,y_vel(a0)) */
     private static final int GRAVITY = 0x18;
 
     /** Lifetime in frames before auto-delete */
@@ -67,8 +67,8 @@ public class LightningSparkObjectInstance extends AbstractObjectInstance impleme
     private int currentMappingFrame;
     /**
      * ROM Obj_LightningShield_CreateSpark copies the shield's art_tile into each spark
-     * (sonic3k.asm:34825), and the shield's bit 15 tracks Player_1's art_tile every frame
-     * (init sonic3k.asm:34724-34726, main sonic3k.asm:34751-34755). Captured once at creation;
+     * (sonic3k.asm:34865), and the shield's bit 15 tracks Player_1's art_tile every frame
+     * (init sonic3k.asm:34764-34766, main sonic3k.asm:34791-34795). Captured once at creation;
      * the spark never re-reads it. Plain field so the generic rewind capture restores it.
      */
     private boolean highPriority;
@@ -86,7 +86,7 @@ public class LightningSparkObjectInstance extends AbstractObjectInstance impleme
 
     /**
      * @param highPriority the creating shield's art-word bit 15 at creation time
-     *                     (sonic3k.asm:34825), i.e. the player's flag that frame
+     *                     (sonic3k.asm:34865), i.e. the player's flag that frame
      */
     public LightningSparkObjectInstance(int x, int y, int xVel, int yVel,
             SpriteAnimationSet animSet, Pattern[] sparkTiles, boolean highPriority) {
@@ -173,8 +173,8 @@ public class LightningSparkObjectInstance extends AbstractObjectInstance impleme
         stepAnimation();
     }
 
-    // Obj_LightningShield_CreateSpark writes priority $80 (sonic3k.asm:34827) and copies the
-    // shield's art_tile (sonic3k.asm:34825), so the spark carries the player's bit 15 as it
+    // Obj_LightningShield_CreateSpark writes priority $80 (sonic3k.asm:34867) and copies the
+    // shield's art_tile (sonic3k.asm:34865), so the spark carries the player's bit 15 as it
     // stood when the spark was created; see {@link #highPriority}.
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x80);
 

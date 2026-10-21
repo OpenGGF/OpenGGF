@@ -16,7 +16,7 @@ import java.util.logging.Logger;
 
 /**
  * Breakable rock child spawned by CutsceneKnucklesAiz1Instance.
- * ROM: loc_61F60 (sonic3k.asm:128755)
+ * ROM: loc_61F60 (sonic3k.asm:128812)
  *
  * Phase 1 (Init/Wait): Spawned by Knuckles init routine. Draws itself each
  * frame and polls the parent's status bit 7 (triggered flag).
@@ -121,7 +121,7 @@ public class CutsceneKnucklesRockChild extends AbstractObjectInstance implements
      * Spawns rock fragment children with scattered velocities from
      * ROM word_2A8B0 (12 entries), implementing BreakObjectToPieces.
      *
-     * ROM (sonic3k.asm:45772): each fragment gets a unique mapping piece
+     * ROM (sonic3k.asm:45812): each fragment gets a unique mapping piece
      * from the parent's broken frame (frame 1 has 12 pieces). Piece index
      * matches the velocity table index (0-11).
      */

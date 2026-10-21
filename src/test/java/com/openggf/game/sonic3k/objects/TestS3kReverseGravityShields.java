@@ -14,9 +14,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * All four shields are drawn upside down while {@code Reverse_gravity_flag} is set.
  *
- * <p>{@code Obj_InstaShield_Main} (sonic3k.asm:34590-34597), {@code Obj_FireShield_Main}
- * (:34662-34669), {@code Obj_LightningShield_Main} (:34743-34750) and
- * {@code Obj_BubbleShield_Main} (:34907-34914) share one shape:
+ * <p>{@code Obj_InstaShield_Main} (sonic3k.asm:34630-34637), {@code Obj_FireShield_Main}
+ * (:34702-34709), {@code Obj_LightningShield_Main} (:34783-34790) and
+ * {@code Obj_BubbleShield_Main} (:34947-34954) share one shape:
  *
  * <pre>
  *   move.b  status(a2),status(a0)   ; inherit the player's status

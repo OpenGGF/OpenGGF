@@ -85,7 +85,7 @@ public class TestMegaChopperBadnikInstance {
         player.setRingCount(3);
         GameServices.camera().setFocusedSprite(player);
 
-        // Obj_MegaChopper begins with jsr (Obj_WaitOffscreen).l (sonic3k.asm:184233),
+        // Obj_MegaChopper begins with jsr (Obj_WaitOffscreen).l (sonic3k.asm:184326),
         // so no routine runs until Render_Sprites has drawn the placeholder. These
         // cases exercise post-Init behaviour directly, so release the gate here as
         // production does once render_flags bit 7 is set.
@@ -125,7 +125,7 @@ public class TestMegaChopperBadnikInstance {
         player.setRingCount(10);
         GameServices.camera().setFocusedSprite(player);
 
-        // Obj_MegaChopper begins with jsr (Obj_WaitOffscreen).l (sonic3k.asm:184233),
+        // Obj_MegaChopper begins with jsr (Obj_WaitOffscreen).l (sonic3k.asm:184326),
         // so no routine runs until Render_Sprites has drawn the placeholder. These
         // cases exercise post-Init behaviour directly, so release the gate here as
         // production does once render_flags bit 7 is set.
@@ -155,7 +155,7 @@ public class TestMegaChopperBadnikInstance {
                 new ObjectSpawn(0x210, 0x180, Sonic3kObjectIds.MEGA_CHOPPER, 0, 0, false, 0));
         megaChopper.setServices(new QueryOnlyPlayerServices(null, List.of(nativeP2), List.of()));
 
-        // Obj_MegaChopper begins with jsr (Obj_WaitOffscreen).l (sonic3k.asm:184233),
+        // Obj_MegaChopper begins with jsr (Obj_WaitOffscreen).l (sonic3k.asm:184326),
         // so no routine runs until Render_Sprites has drawn the placeholder. These
         // cases exercise post-Init behaviour directly, so release the gate here as
         // production does once render_flags bit 7 is set.

@@ -21,7 +21,7 @@ import java.util.List;
 /**
  * Object 0x53 - MGZ Swinging Platform.
  *
- * <p>ROM: Obj_MGZSwingingPlatform (sonic3k.asm:70459-70558).
+ * <p>ROM: Obj_MGZSwingingPlatform (sonic3k.asm:70499-70598).
  * A platform on a chain of 4 links that rotates continuously around its pivot
  * at a constant angular velocity of 1 angle unit per frame. The player can
  * stand on the platform piece at the end of the chain (SolidObjectTop).
@@ -37,11 +37,11 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_MGZSwingingPlatform} is installed from the S3K object pointer table at
      * {@code $00033F84} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:70464).
+     * label is defined at docs/skdisasm/sonic3k.asm:70504).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0003}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -129,7 +129,7 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
         }
         // ROM Obj_MGZSwingingPlatform allocates a visual child immediately
         // after the parent with AllocateObjectAfterCurrent before entering
-        // loc_3403A (docs/skdisasm/sonic3k.asm:70468-70499). The engine draws
+        // loc_3403A (docs/skdisasm/sonic3k.asm:70508-70539). The engine draws
         // that child inline, but its SST slot must remain reserved so later
         // ObjPosLoad/AllocateObject calls see the same low-slot pressure.
         svc.objectManager().allocateChildSlotsAfter(spawn, ROM_CHILD_SLOT_COUNT, getSlotIndex());
@@ -172,8 +172,8 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
         // KNOWN FITTED MODEL -- see docs/S3K_KNOWN_DISCREPANCIES.md.
         //
         // GetSineCosine writes only d1.w (`move.w SineTable(pc,d0.w),d1`,
-        // sonic3k.asm:3025), so the high word of d1 entering sub_34074 survives
-        // `swap d1 / asr.l #4` (sonic3k.asm:70487-70490) as the low twelve bits
+        // sonic3k.asm:3057), so the high word of d1 entering sub_34074 survives
+        // `swap d1 / asr.l #4` (sonic3k.asm:70527-70530) as the low twelve bits
         // of the X step. Writing H for that inherited high word and C for the
         // cosine word, the exact ROM endpoint is
         //
@@ -196,7 +196,7 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
         // correctly requires modelling d1's inherited high word.
         //
         // The sine side needs no term: Process_Sprites does `move.l (a0),d0`
-        // before `jsr (a1)` (sonic3k.asm:35983-35988), so d0's high word is the
+        // before `jsr (a1)` (sonic3k.asm:36023-36028), so d0's high word is the
         // high word of loc_3403A's own address, $0003, and `asr.l #4` of $0003
         // is zero.
         if (hasLaterSlotRiderCosineResidue(angleByte, getSlotIndex())
@@ -246,7 +246,7 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
     @Override
     public boolean rejectsZeroDistanceTopSolidLanding() {
         // ROM SolidObjectTop reaches loc_1E45A, where d0 == 0 is rejected by
-        // cmpi.w #-$10,d0 / blo (sonic3k.asm:42004-42005). Only the negative
+        // cmpi.w #-$10,d0 / blo (sonic3k.asm:42044-42045). Only the negative
         // overlap window [-$10, -1] proceeds to RideObject_SetRide.
         return true;
     }
@@ -321,10 +321,10 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
     /**
      * ROM {@code Obj_MGZSwingingPlatform} init stores
      * {@code move.b #$18,width_pixels(a0)} / {@code move.b #$C,height_pixels(a0)}
-     * (docs/skdisasm/sonic3k.asm:70468-70469). Render_Sprites builds the
+     * (docs/skdisasm/sonic3k.asm:70508-70509). Render_Sprites builds the
      * render_flags bit-7 box from those bytes, and that bit is the gate
      * SolidObjectTop tests before doing any solid work
-     * (sonic3k.asm:41390-41392). The AbstractObjectInstance default of 16 is
+     * (sonic3k.asm:41430-41432). The AbstractObjectInstance default of 16 is
      * narrower than $18 and taller than $C, so the platform stopped being
      * solid before the ROM's box left the screen. See pitfall P60.
      */

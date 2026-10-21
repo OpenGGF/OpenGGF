@@ -90,9 +90,9 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
     }
 
     /**
-     * Rhinobot_Init (sonic3k.asm:182389-182408): loads ObjSlot_Rhinobot through
+     * Rhinobot_Init (sonic3k.asm:182480-182499): loads ObjSlot_Rhinobot through
      * SetUp_ObjAttributesSlotted (whose own tail is
-     * `addq.b #2,routine(a0)` then `rts`, sonic3k.asm:178880-178896), sets
+     * `addq.b #2,routine(a0)` then `rts`, sonic3k.asm:178971-178987), sets
      * x_radius/y_radius, picks d0/d1 = -$10/-$300 (negated, with $38 bits 2 and 3
      * set, when render_flags bit 0 is set), stores them in $40/$3E and points
      * $34 at Rhinobot_ReverseAcceleration — then `rts`. It does NOT fall through
@@ -123,7 +123,7 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
             ObjectLifetimeOps.destroyRespawnableOffscreen(this);
             return;
         }
-        // Obj_WaitOffscreen / loc_85AD2 (sonic3k.asm:180271-180301)
+        // Obj_WaitOffscreen / loc_85AD2 (sonic3k.asm:180362-180392)
         // queues Map_Offscreen, then consumes the preceding Render_Sprites
         // sign bit. X-only current bounds would start a vertically hidden
         // Rhinobot. loc_85B02 restores the saved operation and returns; Init
@@ -159,7 +159,7 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
 
     private void checkNativeRetirement() {
         // Sprite_CheckDeleteTouchSlotted / Go_Delete_SpriteSlotted
-        // (sonic3k.asm:179086-179095,179056-179064) marks status7/code now,
+        // (sonic3k.asm:179177-179186,179147-179155) marks status7/code now,
         // after routine and DPLC work, and clears on the next slot dispatch.
         if (isOutsideNativeCoarseWindow()) {
             nativeRetirementPending = true;
@@ -239,7 +239,7 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
         }
         // Find_SonicTails selects the native player with the smallest absolute
         // X distance before leaving that player's horizontal distance in d2 and
-        // vertical distance in d3 (sonic3k.asm:178243-178277,182535-182553).
+        // vertical distance in d3 (sonic3k.asm:178334-178368,182626-182644).
         int dx = player.getCentreX() - currentX;
         int dy = Math.abs(player.getCentreY() - currentY);
         if (Math.abs(dx) > DETECT_X || dy > DETECT_Y) {
@@ -374,7 +374,7 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
     @Override
     public int getCollisionFlags() {
         // SetUp_ObjAttributesSlotted writes collision_flags inside Init
-        // (sonic3k.asm:178890), after this pass's player-slot touch scan. The
+        // (sonic3k.asm:178981), after this pass's player-slot touch scan. The
         // waiter and restored-but-undispatched continuation still read zero.
         return initPending || nativeRetirementPending ? 0 : super.getCollisionFlags();
     }

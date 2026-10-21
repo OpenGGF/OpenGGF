@@ -21,18 +21,18 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * {@code Offs_AniFunc} holds a {@code (AnimateTiles, AniPLC)} pair per act
- * (sonic3k.asm:53842-53881). Counting pairs from the table head, entry 18 is Lava Reef act 1 -
+ * (sonic3k.asm:53882-53921). Counting pairs from the table head, entry 18 is Lava Reef act 1 -
  * {@code AnimateTiles_LRZ1} with {@code AniPLC_LRZ1} - and entry 19 act 2, which pairs
  * {@code AnimateTiles_LRZ2} with {@code AniPLC_LRZ2}. The animator gave both acts
  * {@code AniPLC_LRZ1}.
  *
- * <p>The two lists are unambiguous: {@code AniPLC_LRZ1} (sonic3k.asm:56007) declares two scripts of
+ * <p>The two lists are unambiguous: {@code AniPLC_LRZ1} (sonic3k.asm:56047) declares two scripts of
  * four VRAM tiles each at {@code $354} and {@code $350}, and {@code AniPLC_LRZ2} (56022) one of six
  * tiles at {@code $358} and one of eight at {@code $350}
  * ({@code zoneanimdecl duration,artaddr,vramaddr,numentries,numvramtiles}).
  *
  * <p>Both acts additionally run the custom {@code AnimateTiles_LRZ1}/{@code AnimateTiles_LRZ2}
- * split-DMA channels before the AniPLC pass. {@code loc_282D0} (sonic3k.asm:55055-55095) uploads
+ * split-DMA channels before the AniPLC pass. {@code loc_282D0} (sonic3k.asm:55095-55135) uploads
  * one $480-byte frame of {@code ArtUnc_AniLRZ__BG} rotated by {@code (phase & $38) * $C0} bytes,
  * split into the two transfer lengths {@code word_2834C} (55107-55119) holds for that band;
  * {@code loc_28364} (55121-55167) does the same over $180-byte frames of
@@ -77,11 +77,11 @@ class TestS3kLrzPatternAnimation {
 
     /**
      * {@code loc_282D0} splits one frame at {@code band * $C0} bytes; {@code word_2834C}
-     * (sonic3k.asm:55107-55119) holds the resulting (first, second) word counts per band.
+     * (sonic3k.asm:55147-55159) holds the resulting (first, second) word counts per band.
      */
     private static final int[] WORD_2834C = {
             0x240, 0x000, 0x1E0, 0x060, 0x180, 0x0C0, 0x120, 0x120, 0x0C0, 0x180, 0x060, 0x1E0};
-    /** {@code word_283D2} (sonic3k.asm:55177-55184), the same split at {@code band * $60}. */
+    /** {@code word_283D2} (sonic3k.asm:55217-55224), the same split at {@code band * $60}. */
     private static final int[] WORD_283D2 = {0x0C0, 0x000, 0x090, 0x030, 0x060, 0x060, 0x030, 0x090};
     /** {@code ArtUnc_AniLRZ__BG} / {@code ArtUnc_AniLRZ__BG2} (sonic3k.lst). */
     private static final int ART_LRZ_BG = 0x0C0300;
@@ -89,7 +89,7 @@ class TestS3kLrzPatternAnimation {
 
     /**
      * {@code Animate_Init} writes {@code -1} to {@code Anim_Counters+1} and {@code +3} for
-     * {@code $900} (sonic3k.asm:56411-56414) and {@code $1600} (56458-56461). {@code $901} is not
+     * {@code $900} (sonic3k.asm:56451-56454) and {@code $1600} (56458-56461). {@code $901} is not
      * in that list, so it starts from the cleared counters.
      */
     @Test

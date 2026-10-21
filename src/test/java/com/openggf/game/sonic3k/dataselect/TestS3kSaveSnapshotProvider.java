@@ -235,8 +235,8 @@ class TestS3kSaveSnapshotProvider {
     }
 
     /**
-     * SaveGame stores {@code SaveGame_NextLevel[Current_zone_and_act]} (sonic3k.asm:15824-15872);
-     * data select loads it through {@code sub_DA4E}/{@code LevelList_DA6E} (:17480-17513).
+     * SaveGame stores {@code SaveGame_NextLevel[Current_zone_and_act]} (sonic3k.asm:15860-15908);
+     * data select loads it through {@code sub_DA4E}/{@code LevelList_DA6E} (:17516-17549).
      * Rows are the native SaveGame callers' zone states.
      */
     @org.junit.jupiter.params.ParameterizedTest(name = "SaveGame at {0}/{1} as {2} resumes {3}/{4}")
