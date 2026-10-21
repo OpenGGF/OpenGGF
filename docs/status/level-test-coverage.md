@@ -1734,3 +1734,12 @@ prefix damage is allowed and observed;162 hurt-state samples are not a hit count
 Full CNZ/ICZ act, other roster/donor/width, checkpoint/respawn, campaign/boss,
 native clock/PC/pixel and hardware boot obligations remain open. This local result
 awaits Root source/data review and composed qualification; no integration is claimed.
+
+
+CNZ/ICZ Root composition (2026-10-21): source/data review and one six-class
+shared-JVM check now pass31T/0F/0E/0S at `7fbcfbd8a`, including the cold7164-input
+Knuckles handoff and the five affected ICZ classes. The earlier pending composed
+qualification is closed only for this direct320/off/solo edge and its components.
+Full-act, breadth, native and other route failures remain open; Main is unmerged
+and the complete original smoke selection remains red. See the
+[Root evidence and limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#root-icz-cnz-composition-and-smoke-disposition-2026-10-21).

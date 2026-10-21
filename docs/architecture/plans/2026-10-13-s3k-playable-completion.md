@@ -25600,3 +25600,68 @@ were consumed without archives. No broad/ROM/gameplay/other-guard request,
 Root report read, ICZ90a change, push or integration occurred. Root owns source
 adoption and any subsequent composed validation; other guard failures are not
 waived by this focused pass.
+
+
+## Root ICZ-CNZ composition and smoke disposition 2026-10-21
+
+Root locally composed diagnostic972799, typed SOZ test projection78e7,
+ICZ Knuckles camera90a387, maintained CNZ arrival e1ae plus its b5 documentation
+correction, and test-clock names c93b54. Normal merges culminate at
+`7fbcfbd8a4597163390d5d813facec4c3e69a637`; Main integration/push remain
+pending. Append-only Plan/matrix evidence was reconciled by preserving the
+complete current Root prefix and each exact incoming appendix.
+
+One actual six-class ICZ/CNZ request on that head passed **31T/0F/0E/0S**.
+It selected `com.openggf.tests.TestS3kIczKnucklesArrival`, `com.openggf.tests.TestS3kIcz1SnowboardIntroHeadless`,
+`com.openggf.tests.TestS3kIczAct1TransitionHeadless`, `com.openggf.tests.TestS3kIczRetainedChunkHandoff`,
+`com.openggf.game.sonic3k.events.TestSonic3kIczRewindRoundTrip` and
+`com.openggf.tools.TestS3kCnz2KnucklesColdRouteCapture`.
+The six selected roots produced seven XML files: the nested lifecycle suite
+has9 cases and its outer report has0. All31 actual identities, all69 properties
+per report, failure/error/skip absence and streams were inspected. Required
+absolute original S1/S2/S3K ROMs were CRC/SHA1-verified; actual Java25.0.4.1,
+class version69, surfaceless EGL, null OpenAL and Lua5.4 were retained.
+The tracked-src/POM fingerprint stayed
+`11f184b7e4f93efdee47b086b51dbe43ed9488dd695a325f181309b3bedd89a6`
+(10,796 files); configuration5880B/0600 stayed
+`6abd111c03f798dbe2a618cb4985aeb599127f44668edb2a8edbde118d11f7da`.
+
+The actual queued invocation used the current Main wrapper with `--normal`,
+`-Dmse=off`, `-Dopenggf.headless.gl=surfaceless-egl`, the six fully qualified
+`-Dtest` classes above, all three absolute ROM properties, owned target-local
+report/tmp properties, and `test -B`. Ambient JDK_JAVA_OPTIONS, _JAVA_OPTIONS,
+MAVEN_OPTS, DISPLAY, WAYLAND_DISPLAY and LD_LIBRARY_PATH were unset.
+Printed admission wait0s, Maven1m26s and observed parent88.773s are distinct
+measurements. Exact owned diagnostics were consumed after inspection.
+The CNZ method retained all21 complete60-key45-input windows/two cycles,
+real history retirement, arrival release7050 and its supported endpoint;
+the pure input inverse remained an independent case. Existing canonical
+comparison normalizations remain; there are no new route-specific exclusions.
+
+The same local composition separately passed the cold-entry diagnostic's64
+Python cases and both actual CLI modes (default38 and opt-in first-VDP41 records).
+The SOZ15-case and terminology1-case isolated results remain explicitly scoped
+leaf results; they were not rerun as a broad ceremony or relabelled Root runs.
+No production boot, native pixels, physical PLC/VRAM, full-act, roster/donor/width,
+checkpoint/respawn or complete campaign closure follows from these passes.
+
+The original3,596-candidate smoke selection at `25dedb1` is fully accounted
+across two invocations. The first completed66 ordinary batches then reached its
+execution timeout; the exact296 remaining candidates ran in six more batches
+plus separate guards. Combined ordinary results were **37,861T/17F/0E/91S**;
+guards were **717T/5F/0E/0S**. Both run directories were inspected and acknowledged,
+not archived. This remains a red selection, not a full-suite or green-delivery
+claim. The17 ordinary failures comprise the now-repaired SOZ test projection,
+11 observed post-climb Knuckles route failures, two WidePaired failures and
+three further SSZ campaign failures. Only representative LRZ and MHZ predecessor
+controls have matched execution evidence; other predecessor outcomes remain
+unknown. Both WidePaired full failure traces recur exactly from frozen cf3,
+but attribution against Main is still unresolved. An ordinary matched LRZ
+prefix isolates first divergence to idle wall-climbing at input3864; its actual
+native collision return and eventual cause have not been established.
+
+The guard failures comprise two literal inherited HubMusic assertions, two
+tracked inherited MenuAudioProbeTool singleton violations, and one terminology
+guard repaired by the two unused formal renames. No guard allowlist was relaxed.
+Remaining gameplay failures and parity/coverage gaps keep Main delivery blocked.
+No broad selection was repeated after these bounded fixes.

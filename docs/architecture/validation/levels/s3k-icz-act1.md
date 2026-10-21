@@ -727,3 +727,15 @@ short entry/restart products remain independent. This closes one direct cold
 handoff configuration, not ICZ1 traversal/completion, wider/donor/team/respawn
 breadth or native timing/pixel proof. Source/data hashes, commands and exact limits
 are in the [R6 Plan](../../plans/2026-10-13-s3k-playable-completion.md#cnz2-cold-knuckles-to-released-icz-maintained-r6--2026-10-21).
+
+
+### Root composed qualification 2026-10-21
+
+Root head `7fbcfbd8a4597163390d5d813facec4c3e69a637` passed the five affected
+ICZ classes together with the real cold CNZ arrival class: **31T/0F/0E/0S**.
+This covers the snow-free Knuckles camera component and its existing Sonic
+consumers in the same JVM as the maintained incoming edge. It does not turn
+camera-word components into ordinary ICZ traversal or qualify later act/boss,
+roster/donor/width, checkpoint/respawn or native timing/pixel gaps. Exact scope
+and the still-red delivery selection are in the
+[Root composition record](../../plans/2026-10-13-s3k-playable-completion.md#root-icz-cnz-composition-and-smoke-disposition-2026-10-21).

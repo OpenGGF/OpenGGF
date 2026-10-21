@@ -342,3 +342,16 @@ literal inverse, commands, two fresh JVMs, queue/case timings and limits are in 
 Only this direct320/off/solo edge is added: full-act, other route/roster/donor/width,
 checkpoint/respawn breadth, native clocks/PC/pixels and physical PLC/VRAM proof
 remain inherited gaps. Root source/data review and composed qualification are separate.
+
+
+### Root composed qualification 2026-10-21
+
+After source/data review and the canonical-comparator/source-epoch wording
+correction, Root head `7fbcfbd8a4597163390d5d813facec4c3e69a637` passed one
+six-class ICZ/CNZ request **31T/0F/0E/0S**, including both maintained CNZ methods.
+The21 complete60-key45-input/two-cycle windows, ordinary released arrival and
+input inverse remain intact. This supersedes the pending composed-check note
+above only for that bounded edge; full-act/breadth/native limits remain open.
+Actual identities, environment, source fingerprint, timings, cleanup and broader
+red smoke disposition are in the
+[Root composition record](../../plans/2026-10-13-s3k-playable-completion.md#root-icz-cnz-composition-and-smoke-disposition-2026-10-21).
