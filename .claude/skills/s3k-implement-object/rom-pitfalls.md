@@ -5597,6 +5597,18 @@ wait/publication/release/Init/delete markers, not just current visibility.
 
 Origin: 2026-10-14 Rhinobot parity slice over `6fc85aab8`.
 
+Saved continuation slots can later become fixed-point operands. EggRobo's shipped
+JSR at `$91518` is six bytes; Wait stores `$0009151E` at `$34`. `loc_91874` writes
+only the high Y word there, so `$36=$151E` survives into `sub_86180`'s long add.
+Replacing that partial write with a freshly cleared 16.16 anchor loses a real
+carry. Establish the residue from the actual caller address/instruction width at
+the continuation's initialization boundary, then preserve the existing captured
+field across restore. Test public motion at a literal carry and destructive
+replay on both sides of initialization. Do not transplant this return address
+into another caller/game or infer a route cause from the shared source omission.
+Origin: 2026-10-21 EggRobo waiter-fraction correction over `b078214e`; focused
+`TestSszEggRoboPresentation` component controls, not a native trajectory capture.
+
 
 ## Multipart SAT order and displayed scroll generation (2026-10-14)
 

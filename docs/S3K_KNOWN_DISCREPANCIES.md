@@ -1189,6 +1189,15 @@ The muzzle flash copies only horizontal facing and always starts at GunY-4.
 `sub_91930` retains delayed hover Y, falls back to live Y while `$32` is zero,
 and latches gun position/flags during firing. The flame uses live Y from
 `Refresh_ChildPositionAdjusted`. Scaled fly-by art remains an inherited gap.
+The fly-by now retains the native waiter's saved-return low word `$151E` in its
+Y fraction when mode0 initializes (`Obj_EggRobo $91518`, `loc_91874`, `sub_86180`).
+Both historical Main and the preceding candidate cleared that residue. Focused
+component controls exercise the resulting public-position carry and destructive
+restore/forward replay before and after initialization; they do not measure its
+ordinary route impact or explain the Main/current outcome difference. The separate
+generic coarse-X unload path is unchanged. See the
+[fraction qualification](architecture/validation/levels/s3k-ssz-act1.md#native-waiter-residue-in-fly-by-y--2026-10-21)
+for exact source, red/green results and remaining route/native limits.
 The [bounded enemy-art request leaf](architecture/validation/levels/s3k-ssz-act1.md#enemy-art-production-and-restoration-requests--2026-10-21)
 adds native title-owned `17B17E -> A000` and post-pairing fly-by restoration
 requests, each paired with real physical/timed work and one claim owner.

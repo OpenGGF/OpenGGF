@@ -4298,3 +4298,45 @@ remain external. The [dated R9 plan](../../plans/2026-10-13-s3k-playable-complet
 records exact boundaries, source/environment pins and restoration. R9 does not
 capture the gate word or establish native trajectory/render correctness. Expected 46,
 all maintained movies/tests/runtime/POM and existing route gaps remain unchanged.
+
+
+## Native waiter residue in fly-by Y — 2026-10-21
+
+The isolated correction over `b078214e74ddbcb393cbc0173fd8c74055b0dadb` changes
+only mode0 initialization of `EggRoboBadnikInstance`. Shipped FixBugs=0
+`Obj_EggRobo` at `$91518` begins with a six-byte JSR to `Obj_WaitOffscreen`.
+Wait saves its return `$0009151E` at `$34`; `loc_91874` replaces only the high
+Y word, leaving `$36=$151E` as the fraction read by `sub_86180`. Java now
+establishes that source-derived residue when the real continuation initializes,
+after the unchanged wait/return-only passes and before its first active move.
+The existing captured `flyY` field handles rewind; no schema, API or manager
+change accompanies it. Other modes, X arithmetic, flags, art, collision and
+publication/lifetime owners remain unchanged.
+
+`TestSszEggRoboPresentation#flyByWaitResidueCarriesIntoPublicYAndReplaysFromInitAndMotion`
+is an explicitly declared ROM-backed component with a public spawn, real wait/init
+updates and no private state writes. Four cases cover flags0/1 and captures before
+initialization or after the first active move. Native first velocities `$17F/$17D`
+and the retained fraction imply literal public Y `$0C01` on the second active move;
+a zero fraction produces `$0C00`. The test asserts X/Y directly, then reconstructs
+through the real manager and compares every registered snapshot key after restore
+and two forward cycles at each selected spot. No production integrator or new
+constant supplies the expected positions.
+
+Before production edits, session20575 is **4T/4F/0E/0S**, all at the intended public
+Y assertion: expected3073, actual3072. After the narrow fix, session5911 is
+**15 classes/229T/0F/0E/0S**, including the unchanged new four cases, existing
+EggRobo motion/presentation/dispatch/lifetime/rewind and all four mandatory S3K
+selectors (both level-loading classes execute). These are separate invocations,
+not an aggregate green result. Original XML identities, assertions, skips and
+properties were read and owned reports/tmp consumed. Exact commands/source pins
+are in the dated [completion plan](../../plans/2026-10-13-s3k-playable-completion.md#eggrobo-saved-waiter-y-fraction--isolated-correction-2026-10-21).
+
+This fixes a shared source omission in historical Main and current Java. It does
+not measure the fraction's ordinary route effect or explain the wide paired
+Main/current difference. The separate generic coarse-X unload path is unchanged;
+Root's independent original-b078 R9 found no unload/onUnload in its216 decisions
+6792..7007, a limit on that measured prefix only. No paired route, expected46
+adaptation, new controller, native execution or broad run is performed here.
+Scaled-art/shared scratch/DMA, native timing/pixels, full-act and remaining route
+products retain their existing gaps. Root owns review and composed qualification.

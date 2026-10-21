@@ -23,6 +23,60 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSszEggRoboPresentation {
+    /**
+     * Declared component, not a cold route. The shipped JSR at $91518 returns to
+     * $9151E; Wait stores that long at $34, and mode0 init replaces only its high
+     * word. First two active velocities are $17F/$17D. Their sum $2FC plus the
+     * retained $151E fraction crosses a pixel before the $100/(scale+4)=2 projection:
+     * native public Y is $0C01, while a zero fraction produces $0C00.
+     * No expected value calls the production integrator or reads its private state.
+     */
+    @ParameterizedTest
+    @CsvSource({"0,0", "1,0", "0,1", "1,1"})
+    void flyByWaitResidueCarriesIntoPublicYAndReplaysFromInitAndMotion(int flags, int spot) {
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(10, 0).build();
+        var manager = TestEnvironment.objectServices().objectManager();
+        AbstractObjectInstance.updateCameraBounds(0x100, 0xB80, 0x240, 0xC60, 0x1000);
+        var robo = new EggRoboBadnikInstance(new ObjectSpawn(0x200, 0xC00, 0xA0, 0, flags, false, 0));
+        manager.addDynamicObject(robo);
+        var identity = manager.objectQuery().identityOf(robo).orElseThrow();
+
+        dispatchBodyAndChildren(robo, 1); // Wait submits its placeholder.
+        assertEquals(0x200, robo.getX());
+        assertEquals(0xC00, robo.getY());
+        dispatchBodyAndChildren(robo, 2); // Visible continuation returns without init/motion.
+        assertEquals(0x200, robo.getX());
+        assertEquals(0xC00, robo.getY());
+        assertEquals(0x7F, robo.scaleIndexForTest());
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var beforeInit = registry.capture();
+        dispatchBodyAndChildren(robo, 3); // Init and first active move share the next dispatch.
+        assertEquals(flags == 0 ? 0x1FE : 0x1FD, robo.getX());
+        assertEquals(0xBFF, robo.getY());
+        var beforeCarry = registry.capture();
+        dispatchBodyAndChildren(robo, 4);
+        assertEquals(flags == 0 ? 0x1FF : 0x1FD, robo.getX());
+        assertEquals(0xC01, robo.getY(), "saved continuation low word carries into ordinary public Y");
+        var expected = registry.capture();
+
+        var saved = spot == 0 ? beforeInit : beforeCarry;
+        for (int cycle = 0; cycle < 2; cycle++) {
+            robo.setDestroyed(true); // Require actual manager reconstruction, not an in-place field reset.
+            registry.restore(saved);
+            assertWorldEquals(saved, registry.capture(), "fraction restore at spot " + spot + " cycle " + cycle);
+            robo = (EggRoboBadnikInstance) manager.objectQuery().resolve(identity).orElseThrow();
+            if (spot == 0) {
+                dispatchBodyAndChildren(robo, 3);
+                assertEquals(0xBFF, robo.getY());
+                assertWorldEquals(beforeCarry, registry.capture(), "first motion after restored init");
+            }
+            dispatchBodyAndChildren(robo, 4);
+            assertEquals(flags == 0 ? 0x1FF : 0x1FD, robo.getX());
+            assertEquals(0xC01, robo.getY());
+            assertWorldEquals(expected, registry.capture(), "fraction carry forward replay cycle " + cycle);
+        }
+    }
+
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void retirementPublishesPairingBeforeTheRequestAndDeletesEvenWhenTheFifoRejects(boolean full)

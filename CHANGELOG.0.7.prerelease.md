@@ -261,7 +261,8 @@ Unreleased. The earlier development themes remain in
   upload, preserving the earlier displayed bytes through entry rewind.
   Sky Sanctuary's EggRobo starts on the original object pass, hovers and launches
   with the original fractional motion, and retains its last drawn visibility
-  through camera movement and rewind. Its jet flame and gun arm keep their own
+  through camera movement and rewind. Its fly-by keeps the original waiter's
+  fractional Y residue. Its jet flame and gun arm keep their own
   first-dispatch setup and original retirement order through recreation. The arm
   preserves its cooldown and last parent refresh before retirement. Charging
   shots stop with their gun, while fired shots continue independently and retain
