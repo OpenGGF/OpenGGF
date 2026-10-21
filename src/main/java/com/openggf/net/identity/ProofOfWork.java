@@ -29,8 +29,17 @@ public final class ProofOfWork {
     }
 
     public static long solve(byte[] payload, int difficultyBits) {
+        return solve(payload, difficultyBits, Long.MAX_VALUE);
+    }
+
+    /** Bounded client work; cancellation is checked inside the actual hashing loop. */
+    public static long solve(byte[] payload, int difficultyBits, long deadlineNanos) {
         requireDifficulty(difficultyBits);
         for (long nonce = 0; ; nonce++) {
+            if (Thread.currentThread().isInterrupted())
+                throw new java.util.concurrent.CancellationException("proof solve interrupted");
+            if (deadlineNanos != Long.MAX_VALUE && System.nanoTime() - deadlineNanos >= 0)
+                throw new java.util.concurrent.CancellationException("proof solve deadline exceeded");
             if (verify(payload, nonce, difficultyBits)) {
                 return nonce;
             }

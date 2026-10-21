@@ -5,6 +5,30 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Time Attack multiplayer security:** identity proofs bind the complete join
+  intent to the master, direct-room or relay-room role and observed TLS
+  certificate. Remote browser, join and recording endpoints require TLS;
+  plaintext and insecure TLS trust are restricted to literal-loopback development,
+  including recording uploads. Master challenge solving is serial, cancellable and
+  limited to 24 bits and 30 seconds, with one coalesced pending proof write under
+  transport backpressure.
+
+- **Multiplayer services:** The master recording/verifier API bounds outstanding
+  requests and copied bodies across connections, closes overlapping HTTP pipelines,
+  bounds rejection writes before HTTP aggregation, discards further input during
+  terminal rejection writes, and releases queued work
+  on disconnect or timeout even during executor shutdown. Netty and Jackson use their
+  patched 4.1.139.Final and 2.22.3 releases.
+
+- **Putt Putt Paradise multiplayer:** Scene admission bounds aggregate clipped
+  raster work, lines clip before traversal, and unchanged presentations reuse
+  composed images; invisible geometry skips raster row traversal. Incoming scenes
+  coalesce within ordered packet boundaries at transport and room delivery, with
+  each mailbox capped at 256 entries / 4 MiB retained bytes. Ended room state stays
+  final across buffered reconnects and failed sends. Hosting defaults to literal
+  loopback; explicit LAN hosting displays a private session invite and verifies a
+  fresh HMAC proof before admitting a guest. LAN game traffic remains plaintext.
+
 - **Widescreen HUD position:** score, time, rings and lives can keep their
   centered native-frame position or align to the screen's left edge. Native
   4:3 positioning is unchanged.

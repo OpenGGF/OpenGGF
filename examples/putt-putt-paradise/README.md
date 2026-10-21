@@ -68,10 +68,42 @@ turn automatically. Reconnecting preserves the current handoff and pause state.
 
 Choose a viewport on the menu: native 320, or 352, 400, 528, and 800 logical
 pixels wide, all 224 pixels high. Online peers must use matching engine, API,
-mod/rules, ROM identity, and viewport settings. Host and Join default to
-`127.0.0.1:20502`; edit the port (1–65535) and, for Join, the IP address or hostname.
-Each online participant chooses their own character. For another machine, use
-the host's reachable address and allow its chosen TCP port through the network.
+mod/rules, ROM identity, and viewport settings. Host defaults to **LOOPBACK ONLY**:
+it binds literal `127.0.0.1`, so only another process on the same machine can join.
+Join defaults to `127.0.0.1:20502`; edit the separate port field (1–65535).
+Each online participant chooses their own character.
+
+For another machine, deliberately change Host Access to **LAN + INVITE**. This
+binds all interfaces and generates a fresh 128-bit invitation for that session.
+While waiting, the host displays the complete 32-digit hexadecimal invite and
+port. Privately share the host's reachable IP/hostname, that port, and the invite.
+In Join's **HOST/IP#CODE** field enter e.g.
+`192.168.1.25#0123456789abcdef0123456789abcdef`, replacing both parts with the
+host's actual values; enter the port separately. Allow that TCP port through the
+host's firewall if necessary. The displayed invitation is a credential, not a
+network address; the game cannot infer which address is reachable from a guest.
+
+LAN admission proves knowledge of the invite with HMAC-SHA-256 over a fresh host
+nonce and a versioned guest-role transcript. The raw invite is never sent, and
+an invalid, expired or replayed proof cannot reserve the guest seat. Handshake
+messages, time and concurrent unauthenticated sockets are bounded. Starting a new
+host session creates a new invite; reconnecting to the same host uses the same
+invitation plus the existing room reconnect token.
+
+This is still **plaintext TCP**, without TLS or authenticated host identity.
+Invitations prevent an uninvited first-seat race and passive proof replay; they
+do not encrypt scenes, shots or reconnect tokens, or protect against an active
+network intermediary. Use a trusted LAN or an encrypted private network, and
+never publish the invite or forward this service to an untrusted network.
+
+Incoming packets and downstream room events each have both count and retained-byte
+limits (256 entries / 4 MiB per mailbox). Only consecutive pending views of the
+same shot coalesce; ordered control, results and sound cues stay ordered. A room
+mailbox overflow closes the room with an explicit terminal failure; ending a room
+releases pending scene payloads while preserving ordered terminal delivery.
+Scenes also have an aggregate raster-work
+budget, viewport-clipped line traversal, and cached composition while their
+revision, projected pose and survey offset stay unchanged.
 
 Controls below are logical controller buttons; keyboard bindings follow the
 engine settings.

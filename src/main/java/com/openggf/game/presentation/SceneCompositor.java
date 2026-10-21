@@ -10,6 +10,9 @@ public final class SceneCompositor {
         if (offsetX < -32_768 || offsetX > 32_768 || offsetY < -32_768 || offsetY > 32_768) {
             throw new IllegalArgumentException("Survey offset exceeds limits");
         }
+        // Surveying can bring previously offscreen geometry into view; re-admit
+        // its actual clipped work before allocating or resolving any art.
+        SceneRasterWork.requireBudget(frame.width(), frame.height(), frame.tiles(), frame.primitives(), offsetX, offsetY);
         int[] pixels = new int[frame.width() * frame.height()];
         Arrays.fill(pixels, frame.backdropArgb());
         int[] priorities = new int[pixels.length]; Arrays.fill(priorities, -1);
@@ -22,16 +25,17 @@ public final class SceneCompositor {
             if (index == frame.tiles().size()) break;
             var tile = frame.tiles().get(index);
             var pattern = art.resolve(tile.art());
-            int left = tile.x() - offsetX, top = tile.y() - offsetY;
-            int startX = Math.max(0, left), endX = Math.min(frame.width(), left + tile.width());
-            int startY = Math.max(0, top + (tile.rowStart() * tile.height() + 7) / 8);
-            int endY = Math.min(frame.height(), top + (tile.rowEnd() * tile.height() + 7) / 8);
+            long left = (long)tile.x() - offsetX, top = (long)tile.y() - offsetY;
+            int startX = clip(left, frame.width()), endX = clip(left + tile.width(), frame.width());
+            int startY = clip(top + (tile.rowStart() * tile.height() + 7) / 8, frame.height());
+            int endY = clip(top + (tile.rowEnd() * tile.height() + 7) / 8, frame.height());
+            if (startX >= endX || startY >= endY) continue;
             boolean terrain = tile.layer() == ScenePresentationFrame.Layer.BACKGROUND
                     || tile.layer() == ScenePresentationFrame.Layer.FOREGROUND;
             for (int y = startY; y < endY; y++) {
-                int py = (y - top) * 8 / tile.height(); if (tile.vFlip()) py = 7 - py;
+                int py = (int)((y - top) * 8 / tile.height()); if (tile.vFlip()) py = 7 - py;
                 for (int x = startX; x < endX; x++) {
-                    int px = (x - left) * 8 / tile.width(); if (tile.hFlip()) px = 7 - px;
+                    int px = (int)((x - left) * 8 / tile.width()); if (tile.hFlip()) px = 7 - px;
                     int color = RomSceneArtCatalog.pixel(pattern, px, py);
                     if (color == 0) continue;
                     int destination = y * frame.width() + x;
@@ -51,10 +55,11 @@ public final class SceneCompositor {
                                       int[] pixels, int dx, int dy) {
         if (primitive.kind() == ScenePresentationFrame.PrimitiveKind.RECTANGLE) {
             for (var vertex : primitive.vertices()) {
-                int x0 = Math.max(0, Math.min(vertex.x1(), vertex.x2()) - dx);
-                int x1 = Math.min(width, Math.max(vertex.x1(), vertex.x2()) - dx);
-                int y0 = Math.max(0, Math.min(vertex.y1(), vertex.y2()) - dy);
-                int y1 = Math.min(height, Math.max(vertex.y1(), vertex.y2()) - dy);
+                int x0 = clip((long)Math.min(vertex.x1(), vertex.x2()) - dx, width);
+                int x1 = clip((long)Math.max(vertex.x1(), vertex.x2()) - dx, width);
+                int y0 = clip((long)Math.min(vertex.y1(), vertex.y2()) - dy, height);
+                int y1 = clip((long)Math.max(vertex.y1(), vertex.y2()) - dy, height);
+                if (x0 >= x1 || y0 >= y1) continue;
                 for (int y = y0; y < y1; y++) for (int x = x0; x < x1; x++) {
                     int index = y * width + x; pixels[index] = blend(pixels[index], vertex.argb(), vertex.argb() >>> 24);
                 }
@@ -80,13 +85,20 @@ public final class SceneCompositor {
         }
     }
 
+    private static int clip(long coordinate, int extent) {
+        return (int)Math.max(0, Math.min(extent, coordinate));
+    }
+
     private static void line(int[] pixels, int width, int height, int x0, int y0, int x1, int y1, int color) {
-        int dx = Math.abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
-        int dy = -Math.abs(y1 - y0), sy = y0 < y1 ? 1 : -1, error = dx + dy;
+        long[] clipped = SceneRasterWork.clip(width, height, x0, y0, x1, y1);
+        if (clipped == null) return;
+        x0 = (int)clipped[0]; y0 = (int)clipped[1]; x1 = (int)clipped[2]; y1 = (int)clipped[3];
+        long dx = Math.abs((long)x1 - x0), sx = x0 < x1 ? 1 : -1;
+        long dy = -Math.abs((long)y1 - y0), sy = y0 < y1 ? 1 : -1, error = dx + dy;
         while (true) {
             plot(pixels, width, height, x0, y0, color);
             if (x0 == x1 && y0 == y1) return;
-            int twice = 2 * error;
+            long twice = 2 * error;
             if (twice >= dy) { error += dy; x0 += sx; }
             if (twice <= dx) { error += dx; y0 += sy; }
         }

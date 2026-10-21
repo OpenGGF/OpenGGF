@@ -41,16 +41,34 @@ verifier exists — main spec §2).
 - Connect handshake: the **room authority** (master for brokered/relay
   connections, the player-host for direct connect — same authority that issues
   session tokens, §7.3) sends a nonce in its `Welcome`; the client proves
-  identity by returning `sign(nonce ‖ serverId)`. `serverId` is the
-  authority's **own keypair fingerprint** — masters and player-hosts hold
-  identities too — carried in `Welcome` alongside the nonce. Binding the
-  signature to the authority's identity prevents replaying a handshake
-  captured on one server against another, and identifies the authority to the
-  client for free. No passwords, no accounts, no PII.
+  identity by signing the canonical `OpenGGF/Ed25519/client-auth/v1`
+  transcript. It includes a distinct `MASTER`, `ROOM_DIRECT` or `ROOM_RELAY`
+  audience; every Hello field (protocol version, encoded key, display name and
+  determinism fingerprint); the 32-byte nonce; the authority's own keypair
+  fingerprint (`serverId`); and the SHA-256 digest of the actual TLS leaf
+  certificate. Strings are UTF-8 with big-endian 32-bit byte lengths (`-1`
+  distinguishes null); malformed UTF-16 strings are rejected before Welcome
+  rather than replaced during UTF-8 conversion. The protocol version is a big-endian 32-bit integer,
+  and the nonce is length-prefixed bytes. Both sides use the same builder.
+  The client observes the validated WebSocket engine's peer certificate;
+  verification uses the authority transport's own certificate. An invite's
+  pin cannot independently select the signed binding. An inner relay handshake
+  uses the outer master certificate, including host-tunneled rooms. Explicit
+  literal-loopback plaintext uses a separate sentinel domain and cannot
+  authorize a TLS endpoint. The obsolete `nonce ‖ serverId` proof is rejected.
+  No passwords, no accounts, no PII.
 - **Identity creation PoW stamp:** a new identity includes a one-time
   proof-of-work over its own pubkey (difficulty a master-side config; target
   a few seconds of client compute). Unnoticeable for a real player creating
   one key ever; rate-limits bulk identity farming for flood attacks.
+  MasterClient accepts at most 24-bit challenges, retains one serial solver
+  and one replaceable pending challenge, and cancels superseded work inside
+  the hashing loop. A solve has a 30-second deadline; connection admission's
+  shorter timeout also cancels it. Retirement, failure and close stop the worker,
+  and a superseded proof waiting on transport backpressure is discarded. Proof
+  writes retain one replaceable slot behind the active write, reserving one
+  outbound ordering position regardless of how many challenges finish; replacing
+  the slot does not append send-chain continuations. Retirement clears the slot.
 - Identity is deliberately *not* prevention against regeneration — it is the
   substrate that makes bans stick, names unforgeable, and trust accruable.
   Sybil economics are handled by the trust ladder (§4).
@@ -301,12 +319,22 @@ caps, a global speed ceiling from the repo's physics constants).
   unbounded input.
 - Pre-parse per-connection and per-IP message/byte rate caps.
 - Handshake timeout, idle timeout, max concurrent connections per IP.
-- **TLS (`wss://`) required on the master** — integrity, privacy, and
-  front-proxy compatibility. Broker-listed player-hosted direct rooms also
-  require `wss://` with a fresh certificate digest pinned through the
-  authenticated broker session. Manual LAN joins likewise require `wss://`
-  and a complete invite carrying the certificate and host-identity pins;
-  a bare address or plaintext `ws://` is rejected before authentication.
+- **TLS required for remote endpoints:** masters, broker-listed direct rooms and
+  manual LAN joins require `wss://`; recording upload URLs require `https://`.
+  Broker-listed rooms pin a fresh certificate digest through the authenticated
+  broker session. Manual LAN joins require a complete invite carrying both the
+  certificate and host-identity pins; a bare address is rejected. Explicit
+  development/tests may use `ws://`/`http://` only with literal loopback IPv4/IPv6
+  addresses, and never as a pinned broker-listed or manual-LAN direct room.
+  Hostnames such as `localhost`, shortened IPv4 forms, user-info and fragment
+  authorities do not grant that exception. No DNS resolution grants trust.
+  RecordingUploader itself restricts insecure TLS trust to literal loopback
+  before retaining or copying upload work, independently of scene/session gates.
+  A reverse proxy must preserve the certificate identity seen by both protocol
+  endpoints; independently terminated TLS certificates cannot share proofs.
+  A future trusted-edge deployment requires an authenticated server-side binding
+  contract; ordinary forwarding headers or client-reported certificate metadata
+  cannot establish that identity.
 - Session tokens are issued by the **room authority** — whoever admits you:
   the master for brokered/relay rooms, the player-host for direct-connect
   rooms. The envelope carries the token from day 1 in both cases. Phase 2

@@ -42,6 +42,7 @@ public final class RecordingUploader implements AutoCloseable {
     private final String sessionToken;
     private final ThreadPoolExecutor executor;
     private final UploadTransport transport;
+    private final boolean loopbackOnly;
     private final Map<String, Job> pending = new LinkedHashMap<>();
     private final Map<String, byte[]> completed = new LinkedHashMap<>();
     private int pendingBytes;
@@ -53,7 +54,7 @@ public final class RecordingUploader implements AutoCloseable {
     }
 
     public RecordingUploader(String sessionToken, boolean trustInsecure) {
-        this(sessionToken, httpTransport(trustInsecure));
+        this(sessionToken, httpTransport(trustInsecure), trustInsecure);
     }
 
     private static UploadTransport httpTransport(boolean trustInsecure) {
@@ -70,8 +71,14 @@ public final class RecordingUploader implements AutoCloseable {
     }
 
     RecordingUploader(String sessionToken, UploadTransport transport) {
+        this(sessionToken, transport, false);
+    }
+
+    /** A fake transport must explicitly select insecure admission when testing it. */
+    RecordingUploader(String sessionToken, UploadTransport transport, boolean trustInsecure) {
         this.sessionToken = Objects.requireNonNull(sessionToken, "sessionToken");
         this.transport = Objects.requireNonNull(transport, "transport");
+        this.loopbackOnly = trustInsecure;
         executor = new ThreadPoolExecutor(1, 1, 0, TimeUnit.MILLISECONDS,
                 new ArrayBlockingQueue<>(MAX_PENDING), runnable -> {
                     Thread thread = new Thread(runnable, "recording-uploader");
@@ -87,6 +94,11 @@ public final class RecordingUploader implements AutoCloseable {
         if (closed) return Admission.CLOSED;
         if (recording.length > AttemptInputRecording.MAX_ENCODED_BYTES) return Admission.TOO_LARGE;
         if (uploadUrl == null || uploadUrl.length() > 2048) return Admission.INVALID_URL;
+        try {
+            URI endpoint = NetworkEndpoints.upload(URI.create(uploadUrl));
+            if (loopbackOnly && !NetworkEndpoints.literalLoopback(endpoint.getHost())) return Admission.INVALID_URL;
+        }
+        catch (IllegalArgumentException invalid) { return Admission.INVALID_URL; }
         Job existing = pending.get(uploadUrl);
         byte[] prior = existing == null ? completed.get(uploadUrl) : existing.digest;
         if (prior == null && (pending.size() >= MAX_PENDING || recording.length > MAX_PENDING_BYTES - pendingBytes)) {
@@ -168,11 +180,15 @@ public final class RecordingUploader implements AutoCloseable {
         URI masterOrigin = masterHttpOrigin(configuredMasterUrl);
         URI requested = URI.create(Objects.requireNonNull(uploadUrlOrPath,
                 "uploadUrlOrPath"));
+        if (requested.getRawUserInfo() != null || requested.getRawFragment() != null
+                || (!requested.isAbsolute() && requested.getRawAuthority() != null))
+            throw new IllegalArgumentException("invalid upload authority");
         if (requested.getPath() == null
                 || !requested.getPath().startsWith("/recordings/")) {
             throw new IllegalArgumentException("upload URL must target /recordings/");
         }
         if (requested.isAbsolute()) {
+            NetworkEndpoints.upload(requested);
             if (!sameOrigin(requested, masterOrigin)) {
                 throw new IllegalArgumentException(
                         "upload URL must match the configured master origin");
@@ -192,7 +208,7 @@ public final class RecordingUploader implements AutoCloseable {
         if (configuredMasterUrl == null || configuredMasterUrl.isBlank()) {
             throw new IllegalArgumentException("configured master URL is required");
         }
-        URI master = URI.create(configuredMasterUrl);
+        URI master = NetworkEndpoints.webSocket(URI.create(configuredMasterUrl));
         String scheme = switch (String.valueOf(master.getScheme()).toLowerCase()) {
             case "ws" -> "http";
             case "wss" -> "https";
