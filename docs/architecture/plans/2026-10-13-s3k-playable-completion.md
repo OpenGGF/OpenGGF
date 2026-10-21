@@ -26185,3 +26185,117 @@ terrain descriptor/d1 and a native cause verdict remain unknown. No new terrain
 measurement or gameplay correction is inferred from this successful input
 alternative. There is no native pixel/timing, true reset/bootstrap, broader
 route/product, combined smoke, Main integration or delivery claim.
+
+
+## WidePaired800 original contact and hurt owner R4 — 2026-10-21
+
+R4 follows accepted R3 `90e642ade0e9f0ec5c381514f06e80ea25be2d6b` without altering its
+history. Two diagnostic ordinary cold projections test exact Main
+`efd605142603146509995cffbb56a6b48f9c1c1b` and current
+`a4d78a16df5b312e75a23b28df797cef88e496c6` in the same owned isolated checkout. R4's
+local branch then fast-forwards to the preserved docs-only R3 commit before this
+append; execution source remains a4d/393/7fbc. Root/Main/supplied/R1/R2/R3 refs and
+actual native/config differences are preserved. No integration or push is performed.
+
+### Original-value protocol and qualification
+
+The useful external R4 adapter retains the original R3 115-field PRE_STEP,
+POST_STEP and POST_DRAW projection and normal drawing, with the original9914 BK2,
+P2neutral and Settings7/titlefalse. It stops after7165 inputs (last7164); there is
+**no fresh46/48 endpoint result** in R4. No restore, import, authored pads, semantic
+seed, private reflection or new gameplay query is used. Actual XML per arm:
+7165 completed inputs/21495 rows/115 fields/0 skipped inputs/0 JUnit tests. Every
+field at PRE and POST of3491,3507,6721,7164 matches the corresponding retained R3
+arm: eight full rows per arm. R3 raw series were already consumed, so this is
+selected-boundary agreement, not an unavailable whole-series comparison.
+
+Before edits, literal full preimages of six original Java files per arm and a
+whole-file inverse are retained outside the repo. Temporary default-null carriers
+retain only original constructor/admission, contact/latch, touch-member/overlap,
+attack/damage-return and selected bounce operands. Original queries, providers,
+predicates and callbacks execute once in their original order and exception
+scopes; no catch/finally is added and no Throwable is swallowed or replaced.
+Normal hurt-call Boolean results are captured after the original return.
+The listener marker records normal callback-dispatch return, not an independent
+observer inside its existing fault boundary. Strong raw references persist from
+birth through selected calls within each JVM; raw labels do not mean cross-JVM
+`==`. Immutable ROM layout records establish placed-owner correspondence only.
+Routine/native PC, missing parent and native slot lineage remain UNKNOWN.
+Fixed stores retain419/407 rows without overflow, then serialize outside gameplay.
+
+Both production compiles use the current Main absolute Maven wrapper's build locks
+(Main4140/current4175 files including the temporary carrier). Each ordinary request
+uses the same current absolute queue, `--normal -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl`, `compile exec:exec -B`, the source-file adapter
+and target-local report/tmp/native directories, as in R3. Main admission wait0s,
+Maven9.753s; current wait414s, Maven9.703s. One session/observer per request, exactly
+two requests, no third/class/control/broad run. Actual XML confirms Java25.0.4.1,
+JDK25 and surfaceless EGL; classpaths use identical LWJGL3.4.1 native jars.
+Java25/EGL/nullAL/Lua5.4.9, original absolute CRC/SHA-1-verified ROMs, ambient JVM,
+display and library unsets, POM/config/input/native pins match the declared setup.
+Expanded commands/source/config/adapter pins are in the owned registry subtree.
+
+### Measured original owners and branches
+
+- **3491 P1 /3507 P2:** both original standing/top contacts bind to the same raw
+  floating-platform instance within each arm, admitted to its actual OM at3138.
+  Both use ROM layout115, spawn `(3848,3088,$7F,$00,flags0,respawn=false,rawY3088)`.
+  Original constructor preallocation and later latch slot are Main28/current27.
+  Thus the first persisted-slot difference is not evidence of a different ROM
+  placement contact. Why allocation differs, full platform state and routine
+  equivalence are unobserved.
+- **6721 P2:** both original loops carry `isSidekick=true`, previous-list/pre-update
+  flags true, visiting monitor→EggRobo→shot. P2 box left2896/top2516/width16/height22
+  agrees. The local shot is Main `(2763,2512)` slot29 versus current `(2873,2512)`
+  slot31, collision `$9C`, size `$1C`, radii24/4; original overlap=false/true.
+  Profile category NORMAL-decoded HURT and actor policy
+  `MAIN_FULL_SIDEKICK_HURT_ONLY` agree; shield reaction is Main8/current0.
+  Current selects the existing sidekick HURT handler and calls the same raw P2's
+  `applyHurt(2873)` once, normal Boolean result=true. Main has no hurt call.
+  The normal-handler native-P2-tail query, `hadRings`, `applyHurtOrDeath` and
+  ENEMY attack decision are **not evaluated** here; none can be inferred from
+  P2 hurt alone. Raw damaged P2 equals the registered paired sidekick; equality
+  to a native-P2 query result is UNKNOWN because that query did not execute.
+- **World producer frontier:** corresponding placed EggRobo layout63
+  `(2624,2520,$A0,$12,flags1,rawY10712)` is born6551 with pre-slot10/27. Its actual
+  touch coordinates at6721 are `(2514,2520)`/`(2624,2518)`. The two locally retained
+  shot births occur6660 with spawnX2531/2641, Y2512, layout-1. Actual Gun/body
+  parent references and cross-arm shot correspondence were not retained; matching
+  class, birth index or row order is insufficient to invent them.
+- **7164 P1:** Main's original first receiver is layout23 EggRobo
+  `(1312,2304,$A0,$22,flags1,rawY10496)`, born6962. The original ENEMY result is
+  attack=true, HP-before0, destroyed-before=false/after=true. Its kill bounce
+  reads Yvel856 and playerY2277/enemyY2304, resolving-856. Current has the same
+  static placement birth6962 but no retained P1 touch-member/attack/bounce event
+  at7164. The entry/empty-list reason and that instance's prior removal are
+  unobserved; no destruction cause is invented.
+
+### Native owners and remaining seam
+
+Pinned shipped `FixBugs=0` skdisasm `044fa467` owns the semantics.
+`Obj_SSZFloatingPlatform`/`loc_44AA0..loc_44ABE` call SolidObjectTop with `$2B,$11,$11`
+and maintain the standing-bit dip; these labels do not identify a native PC in an
+Engine run. `HurtCharacter` lines21103..21106 selects the noncompetitive P2 tail by
+address before the ring-loss/death choice; the observed existing CPU-sidekick
+handler reaches knockback directly, while the new normal-handler tail is not
+executed at6721. `EnemyDefeated` lines179838..179857 negates descending Yvel when
+playerY is above enemyY, matching Main's selected bounce operands. That local
+match does not establish native route correctness. Native EggRobo
+`sub_9185E`/`loc_918C4`, the fighter's `loc_9159A` motion and Gun
+`loc_91712`→shot `loc_91756/loc_917B4` own the next producer question.
+
+The minimal next seam is actual layout63 fighter initialization/motion operands
+and its raw Gun→Shot allocation before6660; its projectile is already geometrically
+different before P2 hurt. The separate platform-allocation difference exists by3138,
+but no causal chain from it to the EggRobo or ring endpoint is proven. No runtime,
+physics, collision, rendering, art, native or oracle patch is supported by R4.
+Restoring46 is not automatically ROM-correct. Expected46 and all maintained
+controllers/predicates/windows/registry checks remain unchanged; Main complete
+and current paired800 MTZ/Mecha/DEZ remain unknown/unqualified.
+
+After each arm, all six diagnostic source files are restored WHOLE byte exact,
+the carrier is removed and owned classes/maven-status are deleted before another
+arm/final handoff. Final runtime/test/POM/input diff is empty. Actual XML/properties,
+raw series/logs and native extraction directories are inspected then consumed.
+Only useful external adapter/instrumentation source, literal preimages/inverse and
+compact selected owner facts remain. No validation receipt or raw archive is kept.

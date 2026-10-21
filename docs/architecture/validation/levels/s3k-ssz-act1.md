@@ -4104,3 +4104,47 @@ maintained controller/assertion stay intact. The [dated R3 plan](../../plans/202
 records exact boundaries/pins/limits. Complete fixed rows and the useful adapter
 are external; raw diagnostics are consumed. Exactly two requests, no third or
 maintained-class/broad rerun. Current paired800 MTZ/Mecha/DEZ remain unqualified.
+
+
+## Wide paired original contact and hurt owners R4 — 2026-10-21
+
+Two further matched ordinary row0 NORMAL-DRAW projections use exact Main `efd605142`
+and current `a4d78a16d`, unchanged9914 pads/P2neutral/Settings7 titlefalse, stopping
+at input7164 (7165 inputs). Each XML records21495 phase rows/115 public fields,
+0 skipped inputs and0 JUnit tests. All115 fields at PRE/POST of3491,3507,6721,7164
+match the retained same-arm R3 rows. These shortened runs add no endpoint result.
+
+Original raw-reference carriers bind both3491 P1 and3507 P2 standing contacts to
+one local floating-platform instance per JVM, from **ROM layout115**, full spawn
+`(3848,3088,$7F,$00,flags0,rawY3088,respawn=false)`. Its construction/admission at3138
+already assigns Main28/current27; the original latch writes those slots. This is
+placement correspondence, not cross-JVM instance equality, full dynamic-state
+identity, native slot lineage or an explanation of the allocation difference.
+
+At6721 both actual P2 loops use the sidekick path and visit monitor, EggRobo, shot
+in that order. Original P2 box operands are left2896/top2516/width16/height22 in both.
+The selected shot operands differ: Main `(2763,2512)`/slot29 misses; current
+`(2873,2512)`/slot31 overlaps, flags `$9C`, radii24/4, category HURT and
+`MAIN_FULL_SIDEKICK_HURT_ONLY`. Current's existing sidekick handler calls
+`P2.applyHurt(2873)`, returning **true** normally. Main executes no hurt call.
+Neither pass evaluates the new normal-handler native-P2 hurt-tail query, a rings
+choice or an ENEMY attack predicate here. Raw damaged actor equals the registered
+P2 locally; nativeP2-query equality remains UNKNOWN because that query is unexecuted.
+
+Earlier world geometry is therefore exposed: corresponding placed EggRobo layout63
+is born6551 at slot10/27 and resolves touch position `(2514,2520)`/`(2624,2518)` at6721.
+Each local shot is born6660 with original spawnX2531/2641, layout-1. Its actual
+Gun/body parent binding and cross-arm shot correspondence are not observed.
+At7164 Main's original layout23 EggRobo ENEMY hit has attack=true, HP0,
+destroyed=false→true; the original bounce reads Yvel856, playerY2277/enemyY2304
+and resolves-856. Current retains no P1 touch-member/attack/bounce event there;
+empty-list versus earlier entry gating and that badnik's prior lifetime remain unknown.
+
+The next seam is the original layout63 fighter motion/initialization and Gun→Shot
+allocation operands before6660, plus the separate slot-allocation frontier by3138.
+No causal link between those frontiers, native correctness or runtime repair is
+established. Temporary instrumentation is restored whole byte exact and its classes
+removed; expected46, movies, assertions and runtime stay unchanged. The
+[dated R4 plan](../../plans/2026-10-13-s3k-playable-completion.md#widepaired800-original-contact-and-hurt-owner-r4-2026-10-21)
+records original branch/native sources, protocol and remaining limits. Current
+paired800 MTZ/Mecha/DEZ stay unqualified; Main complete remains unknown.
