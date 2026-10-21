@@ -51,7 +51,7 @@ public final class StageplayNativeBinding {
             throw new IllegalArgumentException("Native binding requires its matching game/character at unit actor scale");
         }
         course.directPlayer(entry, pixel(actor.x()), pixel(actor.y()), actor.animation(), mappingFrame,
-                actor.flipX(), actor.visible(), pixel(camera.x()), pixel(camera.y()));
+                actor.flipX(), actor.flipY(), actor.visible(), pixel(camera.x()), pixel(camera.y()));
     }
 
     public void finish(CourseControl course, FinishMode mode) {

@@ -2141,7 +2141,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 * same frame's driver service, where the ROM's is.
 	 */
 	private static void tickDisplayPhaseTimers(AbstractPlayableSprite playable) {
-		TimerManager timers = GameServices.timersOrNull();
+		TimerManager timers = com.openggf.sprites.playable.PlayableRuntimeContext.timersOrNull(playable);
 		if (timers != null) {
 			timers.updateDisplayPhaseTimersFor(playable);
 		}
@@ -2153,7 +2153,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		if (objectManager == null) {
 			return;
 		}
-		CollisionSystem collisionSystem = GameServices.collisionOrNull();
+		CollisionSystem collisionSystem = playable.currentCollisionSystemOrNull();
 		if (collisionSystem != null) {
 			collisionSystem.setObjectManager(objectManager);
 			collisionSystem.runSolidObjectResolution(
@@ -2187,7 +2187,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 				&& cpu.deadFallBypassesScreenYWrapValue()) {
 			return;
 		}
-		Camera camera = GameServices.cameraOrNull();
+		Camera camera = com.openggf.sprites.playable.PlayableRuntimeContext.cameraOrNull(playable);
 		if (camera != null) {
 			camera.applyScreenYWrapValue(playable);
 		}

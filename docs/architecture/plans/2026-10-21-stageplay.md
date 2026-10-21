@@ -410,3 +410,107 @@ from that unchanged plan, preserving the original 50-class partitions, smoke tag
 ROM paths and EGL environment through the shared Maven queue. No passing batch is
 repeated or selected candidate dropped. Final guards run separately on the merged
 dialogue tree. The interruption's initiating cause is unconfirmed.
+
+
+### Physical puppet follow-up checkpoint
+
+User steering during final delivery requires default floor support, genuine jump
+physics and destination/urgency puppet commands. Engine integration is held for
+that implementation. Editor `main` is already delivered at `402a04cc30becaf2f3f78371863f85bf6adf65ef`;
+Media `main` is delivered at `7266a51d501e5c74e90ba3e7bca29fed2987d71f`. Their task
+worktrees/branches are removed. Revision-three film sources remain preserved;
+new feedback requires a new take rather than overwriting that film.
+
+Engine candidate before physics is `074a7479c5eb8959018d50e0b93d928d26e11b12`.
+All 718 guard cases completed with five failures, no errors/skips: the two matched
+HubMusic rules, two MenuAudioProbeTool singleton-use rules, and the missing native
+image resource entry for AuthoredLevelDecoder. A matched detached-base check of
+TestProductionSingletonClosureGuard/TestNativeImageResourceGuard is queued; these
+three additional failures are not yet attributed. Ordinary recovery has completed
+batch 65 (221 tests, no failures/errors/skips); batches 66–71 continue in the frozen
+original tree. Root is the sole Maven scheduler.
+
+Ownership: runtime agent implements isolated native playable context/tick/floor
+placement plus physics/isolation tests; core owns schema/intent scheduling and
+shared resolved performance/resource/render/playback/capture integration; frontend
+owns shared workspace, HUD and preview session. Lead owns screenplay/compiler/CLI,
+API pins, documentation, revised film/archive, integration and whole-delivery
+validation. No worker launches builds or tests. The constructor-bound service
+context keeps native defaults unchanged; test direct native-input equivalence,
+slope/wall/top-only/stacked floor behavior, short/held jump and landing, donor rules,
+seek/repeat/reset, and sentinels proving no live gameplay/audio/camera mutation.
+
+
+Physics validation checkpoint: all three worker slices are frozen for lead compilation.
+The first compile found one malformed shared-menu expression; repaired by frontend.
+The second found the remaining DrowningController caller of the newly actor-bound
+level-event service; the lead passes its existing player so ordinary fallback remains
+unchanged. No physics tests have executed yet. Updated-base preflight passes with
+Java 25 and explicit `LUA_BIN=/usr/bin/lua5.4`; the first probe without that setting
+failed its Lua prerequisite before running tests.
+
+Matched baseline checks now attribute all five pre-physics guard failures. The two
+MenuAudioProbeTool messages match exactly. AuthoredLevelDecoder's missing native-image
+resource assertion matches after normalizing only the checkout-root path printed
+in the message. The previously matched two HubMusic assertions remain unchanged.
+Original smoke recovery batch66 completed:298 tests, no failures/errors, two skips
+(opt-in native GL property and SecondStrike air-recovery mod property missing).
+Remaining batches67–71 continue; no previously completed batch was repeated.
+
+
+User naming update: the two authoring modes are **Puppet** (native player movement)
+and **Poser** (manual position, animation and mapping frames). Portable v4 still
+uses puppet-track presence; old documents remain Poser. Both editor labels/forms,
+CLI cast summaries and guides now use those names.
+
+First physics-focused run:40 classes,234 tests,7 failures,2 errors,1 skipped
+(opt-in HUD pictures). Existing collision/sensor/Tails tests and API closure passed.
+New failures exposed missing pre-tick native jump-edge publication; tick's held
+boolean alone does not create the ROM press byte. The facade now follows the native
+host's raw/logical input publication. Other repairs: a nested Mockito stub, stable-ID
+rather than same-frame command-order assertion, effective S3K profile lookup, and
+terrain fixture expectations (a45-degree abrupt angle was correctly cardinal-snapped).
+Independent review also found Camera.restore rebinding through the live roster;
+an explicit-focus overload now preserves private actor ownership and coordinates.
+No native physics constants or trajectories were adjusted to satisfy the tests.
+
+Original ordinary smoke coverage is complete across64 original and7 recovered batches:
+37,273 tests,1 failure,2 errors,93 skips. All original/recovery skips were inspected.
+The1 failure is the baseline-matched HCZ GLFW pixel prerequisite. The2 recovery errors
+are TraceCaptureBootDimensionsTest's two native boot dimensions; a bounded baseline
+with explicit surfaceless-EGL passes2/2. Recovery put EGL only in MAVEN_ARGS, which
+this Maven invocation did not propagate; the same explicit-flag check on the frozen feature also passes 2/2. These were
+launch-prerequisite errors, not engine regressions. The consumed category diagnostics
+were acknowledged and removed.
+The final change-based plan selects3,558 smoke candidates plus guards; physical-service
+changes require renewed affected coverage, unlike the earlier comment-only upstream merge.
+
+
+Repaired physics check: `python3 tools/testing/maven_queue.py --normal -Dmse=off
+-Dtest=TestPlayablePuppet,TestPlayablePuppetRom,TestStageplayPuppetsRuntime,TestStageplayRenderer,TestStageplayPuppetWorkspace,TestStageplayWorkspace,TestStageplayDirectingWorkspace,TestStageplayDialogueWorkspace,TestStageplayHud,TestStageplayTool,TestStageplayPuppets,TestModApiSignatureSurface
+-Dopenggf.headless.gl=surfaceless-egl <three verified absolute ROM properties> test -B`
+completed 90 tests, one failure, no errors or skips (34.094 seconds Maven execution).
+Jump initiation, variable-height ROM jumps, arrival/blocked behavior, seek and both
+authoring modes pass. The remaining synthetic landing test compares fractional
+centres even though native floor correction preserves subpixel phase; investigate
+that expectation without rewriting native physics. A standalone packaged `simulate`
+then exposed an active-gameplay camera dependency absent in hosted tests; add fresh
+process coverage before accepting the agent-only workflow.
+
+The landing comparison now asserts native foot pixels while preserving fractional
+phase. Standalone simulation's actual stack exposed the S3K landing-animation
+callback reaching HCZ live player queries. Bound puppets now skip that world-event
+publication; ordinary players keep it. New `TestStageplayOfflineSimulationRom`
+executes production simulation in a fresh JVM without an Engine session, using S2
+Tails and S3K Knuckles ROM terrain/art. It checks movement, actual jump/landing,
+every resolved row and identical replay after closing/reopening detached resources.
+
+Queued exact checks `-Dtest=TestPlayablePuppet,TestStageplayOfflineSimulationRom,TestHCZWaterTunnelHandler,TestModApiSignatureSurface`
+with explicit EGL and the verified S2/S3K paths pass **34 tests, no failures, errors
+or skips** (80 seconds Maven execution, including full source compilation).
+The external Editor task tree passes **19 tests, no failures/errors/skips** with
+`-Dopenggf.stageplay.desktopPictures=true -Dopenggf.headless.gl=surfaceless-egl`
+and the verified S2 path (11.396 seconds Maven execution). It uses the matching
+physics artifact before the landing-callback fix; its S2 UI path is unaffected.
+Actual Puppet inspector, action menu and destination form images were inspected.
+Final engine packaging and broad smoke/guards remain pending.

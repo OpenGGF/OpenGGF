@@ -15,11 +15,12 @@ scene document, editing commands and evaluator. A `.stageplay` file opens in eit
 3. Choose **Add actor**, name the role and select its ROM (`s1`, `s2`, `s3k`) and
    character. The first version supports Sonic, S2/S3K Tails and S3K Knuckles.
    Each game's ROM must be available when its cast or audio is used.
-4. Select the role, move the timeline to a frame, and choose **Set actor key**.
-   Positions are world-space sprite centres. Choose a native animation, or a
-   fixed mapping frame with **Pose**. `-1` selects animation playback.
-5. Use **HOLD**, **LINEAR** or **SMOOTH** for the segment leaving a key. Movement
-   keys retain animation phase; changing animation or pose starts a new phase.
+4. New roles default to **Puppet** mode. Set their spawn centre near the floor,
+   then choose **Set actor key** to add a destination/urgency, stop or jump action.
+   The native player controller handles acceleration, terrain, gravity, animation
+   and landing. Floor snapping is enabled at spawn; movement uses native collision.
+5. Choose **Poser** mode for manual positions, animations and fixed mapping frames. Poser keys
+   use **HOLD**, **LINEAR** or **SMOOTH**; `Pose:-1` selects animation playback.
    Camera keys use the world's top-left coordinate and a zoom factor.
 6. Add dialogue with a named speaker, captions and audio cues. End frames are exclusive. Existing keys
    and cues can be revisited, edited or deleted; frame-zero actor/camera keys remain.
@@ -33,10 +34,17 @@ K sets an actor key, and F1 opens commands. The desktop editor provides cast,
 direction and timeline panels with the same operations. The form's PATH fields
 can browse local files. Properties apply together when their final action is chosen.
 
-**Record directed take** captures WASD movement at two world pixels per tick.
-Space or Stop finishes it; the entire take undoes as one edit. It is a baked visual
-performance, not a controller-input recording or a simulation replay. Native
-input recordings remain the engine recording system's separate format.
+Puppet roles use destination and urgency commands, with independent jump button
+holds. The inspector shows the resolved centre and movement status, including
+arrival or blocked attempts. A goal does not guarantee a route: jump explicitly
+where needed. Native objects, moving platforms and zone events are not part of the
+staged terrain simulation. [The authoring reference](stageplay-authoring.md#puppet-and-poser-modes)
+describes command fields, compatibility and the windowless simulation tool.
+
+**Record directed take** stores physical movement intents for Puppet actors. Poser mode
+retains baked visual movement at two world pixels per tick. Space or Stop finishes
+the take, and the entire take undoes as one edit. Native input recordings remain
+the engine recording system's separate format.
 
 Scenes run at 60 frames per second, up to ten minutes, with up to 32 actors.
 Use **Scene / set** to change duration, output dimensions or the source set.
@@ -109,7 +117,8 @@ and after the chosen playhead. Start at frame zero for the complete soundtrack.
 Stopping restores the borrowed soundtrack; imported voices share the existing
 final PCM mix without replacing other installed audio sources.
 
-The version-3 JSON document (with strict version-1 and version-2 migration) stores resource references, keys and cues. ROM data
+The version-4 JSON document stores resource references, keys, puppet commands and cues.
+Versions 1–3 migrate strictly and retain their manual choreography. ROM data
 stays in the supplied-ROM pipeline. Authored `.ogfproject` sets, dialogue PNGs and audio stay
 beside the document. Move the whole folder to preserve relative references;
 Save As refuses to relocate a scene away from its asset root. Atomic saves
@@ -161,10 +170,11 @@ is installed per effective module; it rejects another controller that already
 owns frame admission. The service and its rewind state share one owner-bound
 instance, with the normal creator fault boundary.
 
-By default the cast is detached: native physics, world clocks and objects are
-held, the staged scene replaces their picture, and completion resumes the native
-world. Sets depict their loaded terrain/background; native objects, rings,
-water programs and evolving zone events are not simulated in the performance.
+The staged cast is detached from the live world. Puppet actors use private native
+player controllers against the loaded terrain; Poser actors use authored keys.
+The live world's clocks, players and objects remain held while the scene replaces
+its picture, and completion resumes that world. Native objects, rings, water
+programs and evolving zone events are not simulated in the staged performance.
 
 For actual main-player direction, the registration overload accepts the actor ID
 and `StageplayNativeBinding.FinishMode`. The bound actor must match the native
@@ -180,5 +190,5 @@ object/ability-controlled states are rejected. Other actors remain detached.
   binding; it cannot write into the new level.
 
 These are unpublished **0.7.0 candidate** APIs. Match the engine and SDK commit.
-Branching dialogue, reusable shot libraries, rigs, lip sync, simulation takes and
+Branching dialogue, reusable shot libraries, rigs, lip sync and
 multi-user editing are future work, not version-1 controls.

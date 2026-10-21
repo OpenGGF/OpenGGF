@@ -110,7 +110,7 @@ public final class StageplayCaptureTool {
                             HeadlessGameBoot.presentHeadlessOuterAudioFrame();
                             int frames = audio.drainCaptureFrame(pcm);
                             surface.record(document.width(), document.height(), canvas ->
-                                    renderer.draw(document, StageplayTimeline.sample(document, frame), canvas));
+                                    renderer.draw(document, resources.resolveFrame(document, StageplayTimeline.sample(document, frame)), canvas));
                             org.lwjgl.opengl.GL11.glViewport(0, 0, document.width(), document.height());
                             surface.render(projection, viewport);
                             return new CapturedFrame(grabber.grab(), document.width(), document.height(), pcm, frames, frame);

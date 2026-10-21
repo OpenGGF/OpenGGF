@@ -162,14 +162,25 @@ final class StageplayHud {
                 }));
             }
             case CAST -> {
-                for (var actor : document.actors()) rows.add(new Row(actor.name(),
-                        actor.gameId().toUpperCase(java.util.Locale.ROOT) + " / " + actor.character() + " / " + actor.keys().size() + " keys",
-                        -1, () -> workspace.selectActor(actor.id())));
+                for (var actor : document.actors()) {
+                    boolean physical = document.puppets().stream().anyMatch(p -> p.actorId().equals(actor.id()));
+                    rows.add(new Row(actor.name(), actor.gameId().toUpperCase(java.util.Locale.ROOT) + " / " + actor.character()
+                            + (physical ? " / Puppet" : " / Poser"), -1, () -> workspace.selectActor(actor.id())));
+                }
             }
             case TIMELINE -> {
                 for (var actor : document.actors()) for (var key : actor.keys()) {
-                    rows.add(new Row(actor.name(), key.pose() >= 0 ? "Pose " + key.pose() : "Animation " + key.animation(), key.frame(),
+                    boolean physical = document.puppets().stream().anyMatch(p -> p.actorId().equals(actor.id()));
+                    rows.add(new Row(actor.name(), physical ? "Placement / visibility" : key.pose() >= 0 ? "Pose " + key.pose() : "Animation " + key.animation(), key.frame(),
                             () -> { workspace.selectActor(actor.id()); workspace.seek(key.frame()); }));
+                }
+                for (var track : document.puppets()) for (var command : track.commands()) {
+                    var actor = document.actors().stream().filter(a -> a.id().equals(track.actorId())).findFirst().orElseThrow();
+                    String detail = command.kind() == StageplayDocument.PuppetCommandKind.MOVE_TO
+                            ? "Goal " + command.x() + ", " + command.y() + " / " + Math.round(command.urgency() * 100) + "%"
+                            : command.kind() == StageplayDocument.PuppetCommandKind.JUMP ? "Hold " + command.holdFrames() + " frames" : "Native braking";
+                    rows.add(new Row(actor.name() + " / " + command.kind(), detail, command.frame(),
+                            () -> { workspace.selectActor(actor.id()); workspace.seek(command.frame()); }));
                 }
                 for (var key : document.camera()) rows.add(new Row("Camera", key.interpolation().name(), key.frame(), () -> workspace.seek(key.frame())));
                 for (var caption : document.captions()) rows.add(new Row("Caption", caption.text(), caption.startFrame(), () -> workspace.seek(caption.startFrame())));
@@ -214,10 +225,11 @@ final class StageplayHud {
         drawTimeline(c, layout.dock(), document, nextHits);
         c.rect(0, layout.promptBar().y(), layout.width(), layout.promptBar().h(), PANEL, 1);
         String prompt = workspace.recordingCamera() ? "CAMERA TAKE  /  WASD or arrows pan  /  Q E integer zoom  /  Space stop"
-                : workspace.recording() ? "RECORDING DIRECTED TAKE  /  WASD move  /  Space or South stop"
+                : workspace.recordingPuppet() ? "PUPPET TAKE  /  A D move  /  W jump  /  release or S brake  /  Space end"
+                : workspace.recording() ? "POSER TAKE  /  WASD move  /  Space or South stop"
                 : workspace.cameraMode() ? "CAMERA  WASD/arrows pan  Q E integer zoom  K key  R record  C exit  F1 commands"
                 : controllerPrompts ? "D-pad seek/select   A choose   X key   Y actor   View timeline   Start commands"
-                : "Arrows seek/select  Tab timeline  K key  C camera  Space play  F1 commands";
+                : "Arrows seek/select  Tab timeline  K direct actor  R record  C camera  Space play  F1 commands";
         if (workspace.cameraMode() && workspace.directorCamera().zoom()!=Math.rint(workspace.directorCamera().zoom()))
             prompt = "FRACTIONAL ZOOM: Q/E choose integer framing; K capture. Imported zoom may shimmer while panning.";
         c.fittedText(prompt, 8, layout.promptBar().y() + 5, layout.width() - 16, Size.SMALL,
@@ -250,9 +262,10 @@ final class StageplayHud {
             c.rect(area.x(), area.y(), area.w(), area.h(), chosen ? PANEL_HIGHLIGHT : PANEL_RAISED, 1);
             if (chosen) c.rect(area.x(), area.y(), 2, area.h(), GOLD, 1);
             String label = (row.frame() >= 0 ? row.frame() + "  " : "") + row.label();
-            if (page == Page.CAST && workspace.controller().document().actors().get(i).id().equals(workspace.controller().selectedActorId())) label = "* " + label;
+            boolean selectedActor = page == Page.CAST && workspace.controller().document().actors().get(i).id().equals(workspace.controller().selectedActorId());
+            if (selectedActor) label = "* " + label;
             c.fittedText(label, area.x() + 6, area.y() + 4, area.w() - 12, Size.SMALL, TEXT, 1);
-            c.fittedText(row.detail(), area.x() + 6, area.y() + 15, area.w() - 12, Size.SMALL, TEXT_DIM, 1);
+            c.fittedText(selectedActor ? workspace.selectedActorStatus() : row.detail(), area.x() + 6, area.y() + 15, area.w() - 12, Size.SMALL, TEXT_DIM, 1);
             nextHits.add(new Hit(area, () -> { selected = index; row.action().run(); }));
         }
         float bottom = panel.bottom() - 67;
@@ -288,6 +301,8 @@ final class StageplayHud {
         for (var actor : document.actors()) if (actor.id().equals(workspace.controller().selectedActorId())) {
             for (var key : actor.keys()) marker(c, key.frame(), document.durationFrames(), ACCENT, 5);
         }
+        for (var track : document.puppets()) if (track.actorId().equals(workspace.controller().selectedActorId()))
+            for (var command : track.commands()) marker(c, command.frame(), document.durationFrames(), GOOD, 7);
         for (var caption : document.captions()) marker(c, caption.startFrame(), document.durationFrames(), GOOD, 3);
         for (var cue : document.dialogue()) marker(c, cue.startFrame(), document.durationFrames(), GOLD, 4);
         for (var cue : document.audio()) marker(c, cue.frame(), document.durationFrames(), WARN, 3);

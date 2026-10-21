@@ -204,7 +204,7 @@ final class RomSceneArt implements SceneRomArt {
         });
     }
 
-    private SpriteArtSet playerArt(String code) {
+    SpriteArtSet playerArt(String code) {
         return playerArtCache.computeIfAbsent(code, key -> {
             PlayerSpriteArtProvider provider = players.get();
             if (provider == null) return null;
@@ -351,6 +351,12 @@ final class RomSceneArt implements SceneRomArt {
         }
         ZonePictureSource.Picture picture = zones.foreground(zone, act, x, y, width, height);
         return picture == null ? null : toSceneImage(picture);
+    }
+
+    /** Same detached native collision data as the pictured set; never the live world. */
+    com.openggf.level.Level puppetLevel(int zone, int act) {
+        var kit = zones == null ? null : zones.kit(zone, act);
+        return kit == null ? null : kit.level();
     }
 
     @Override

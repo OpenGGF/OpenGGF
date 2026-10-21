@@ -23,6 +23,10 @@ public final class StageplayRenderer {
     }
 
     public void draw(StageplayDocument document, StageplayTimeline.Frame frame, SceneCanvas canvas) {
+        if (frame.puppets().stream().anyMatch(value -> value.status() == StageplayTimeline.PuppetStatus.UNRESOLVED)
+                || document.puppets().stream().anyMatch(track -> frame.puppets().stream()
+                    .noneMatch(value -> value.actorId().equals(track.actorId()))))
+            throw new IllegalArgumentException("Resolve physics puppet frames before rendering");
         resources.prepareDialogue(document);
         var camera = frame.camera(); var kit = resources.set(frame.set() == null ? document.set() : frame.set());
         float zoom = (float) camera.zoom();
@@ -45,7 +49,7 @@ public final class StageplayRenderer {
             var sprite = set.frame(mappingFrame(actor));
             if (sprite == null) throw new IllegalArgumentException("Actor animation is unavailable: " + actor.actorId());
             float x = (float) ((actor.x() - camera.x()) * zoom), y = (float) ((actor.y() - camera.y()) * zoom);
-            var style = SceneDraw.plain().withScale((float) actor.scale() * zoom).withFlipX(actor.flipX());
+            var style = SceneDraw.plain().withScale((float) actor.scale() * zoom).withFlipX(actor.flipX()).withFlipY(actor.flipY());
             var accessory = accessory(document, frame, actor);
             if (accessory != null) {
                 canvas.draw(accessory.sprite(), x, y,
@@ -67,6 +71,15 @@ public final class StageplayRenderer {
     private SceneAccessoryPose accessory(StageplayDocument document, StageplayTimeline.Frame frame,
                                           StageplayTimeline.ActorPose actor) {
         var rom = resources.rom(actor.gameId());
+        var nativePose = frame.puppets().stream().filter(value -> value.actorId().equals(actor.actorId())).findFirst();
+        if (nativePose.isPresent()) {
+            var tail = nativePose.get().accessory();
+            if (tail == null) return null;
+            var art = rom.characterAccessory(actor.character());
+            if (art == null || tail.mappingFrame() < 0 || tail.mappingFrame() >= art.frameCount())
+                throw new IllegalArgumentException("Missing native accessory mapping for " + actor.actorId());
+            return new SceneAccessoryPose(art.frame(tail.mappingFrame()), tail.flipX(), tail.flipY());
+        }
         if (rom.characterAccessory(actor.character()) == null) return null;
         long tick = rom.characterAccessorySampleTick(actor.character(), actor.animation(), actor.pose(), actor.animationTick());
         if (tick < 0 || tick > actor.animationTick()) throw new IllegalArgumentException("Invalid accessory sample time");

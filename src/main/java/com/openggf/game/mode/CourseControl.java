@@ -169,6 +169,12 @@ public final class CourseControl {
      */
     public void directPlayer(DirectedPlayerState state, int x, int y, int animation, int mappingFrame,
             boolean flipX, boolean visible, int cameraX, int cameraY) {
+        directPlayer(state, x, y, animation, mappingFrame, flipX, false, visible, cameraX, cameraY);
+    }
+
+    /** Native sampled poses can also retain vertical render orientation while under direction. */
+    public void directPlayer(DirectedPlayerState state, int x, int y, int animation, int mappingFrame,
+            boolean flipX, boolean flipY, boolean visible, int cameraX, int cameraY) {
         requireDirectedPlayer(state);
         requireNativeWord(x, "x");
         requireNativeWord(y, "y");
@@ -189,7 +195,7 @@ public final class CourseControl {
         NativePositionOps.writeXPosResetSubpixel(p, x);
         NativePositionOps.writeYPosResetSubpixel(p, y);
         p.setDirection(flipX ? Direction.LEFT : Direction.RIGHT);
-        p.setRenderFlips(flipX, false);
+        p.setRenderFlips(flipX, flipY);
         p.setAnimationId(animation);
         p.setMappingFrame(mappingFrame);
         p.setObjectMappingFrameControl(true);

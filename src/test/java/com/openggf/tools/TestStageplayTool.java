@@ -150,8 +150,13 @@ class TestStageplayTool {
         assertEquals(0, compiled.status());
         assertEquals(StageplayDocument.VERSION, compiled.json().path("result").path("version").intValue());
         assertEquals(300, compiled.json().path("result").path("frames").intValue());
+        assertEquals("PUPPET", compiled.json().path("result").path("cast").get(0).path("mode").textValue());
         assertEquals(5, compiled.json().path("result").path("seconds").doubleValue());
         assertEquals("First take", StageplayStore.read(scene).name());
+        assertEquals(1, StageplayStore.read(scene).puppets().size());
+        assertTrue(StageplayStore.read(scene).puppets().getFirst().snapToFloor());
+        assertEquals(List.of(StageplayDocument.PuppetCommandKind.MOVE_TO, StageplayDocument.PuppetCommandKind.JUMP),
+                StageplayStore.read(scene).puppets().getFirst().commands().stream().map(StageplayDocument.PuppetCommand::kind).toList());
         var inspected = execute("inspect", "--scene", scene.toString(), "--frame", "299");
         assertEquals(0, inspected.status());
         var sample = inspected.json().path("result").path("sample");
@@ -287,10 +292,26 @@ class TestStageplayTool {
         assertEquals(Set.of("oversized.json", "empty.json"), entries(directory));
     }
 
+    @Test void simulateRequiresExplicitRomsAndNeverPublishesUnresolvedOrPartialState() throws Exception {
+        Path scene = directory.resolve("scene.stageplay"), out = directory.resolve("state.jsonl");
+        StageplayStore.write(scene, StageplayScriptCompiler.compile(StageplayTool.scaffold().getBytes(StandardCharsets.UTF_8)));
+        assertEquals(2, execute("simulate", "--scene", scene.toString(), "--out", out.toString()).status());
+        assertFalse(Files.exists(out));
+        Path rom = directory.resolve("wrong.gen"); Files.write(rom, new byte[1024]);
+        assertEquals(2, execute("simulate", "--scene", scene.toString(), "--out", out.toString(),
+                "--s2-rom", rom.toString()).status());
+        assertFalse(Files.exists(out));
+        Files.writeString(out, "prior output");
+        assertEquals(2, execute("simulate", "--scene", scene.toString(), "--out", out.toString(),
+                "--s2-rom", rom.toString()).status());
+        assertEquals("prior output", Files.readString(out));
+        assertEquals(Set.of("scene.stageplay", "state.jsonl", "wrong.gen"), entries(directory));
+    }
+
     @Test void helpDocumentsMachineReadableExitCodesAndCurrentSchemaWithoutRomAccess() throws Exception {
         var result = execute();
         assertEquals(0, result.status());
-        assertEquals(1, result.json().path("result").path("screenplayVersion").intValue());
+        assertEquals(2, result.json().path("result").path("screenplayVersion").intValue());
         assertEquals(StageplayDocument.VERSION, result.json().path("result").path("stageplayVersion").intValue());
         assertEquals(60, result.json().path("result").path("fps").intValue());
         assertTrue(result.json().path("result").path("outputs").textValue().contains("never overwritten"));

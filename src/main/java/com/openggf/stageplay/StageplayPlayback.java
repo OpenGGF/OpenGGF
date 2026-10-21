@@ -207,14 +207,14 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
             }
             if (skip) {
                 frame = document.durationFrames() - 1;
-                applyBinding(course);
+                applyBinding(course, host.resolveFrame(StageplayTimeline.sample(document, frame)));
                 finish(course, Status.SKIPPED); return GameplayFrameDisposition.HOLD;
             }
             if (frame + 1 == document.durationFrames()) {
                 finish(course, Status.COMPLETED); return GameplayFrameDisposition.HOLD;
             }
             frame++;
-            applyBinding(course);
+            applyBinding(course, host.resolveFrame(StageplayTimeline.sample(document, frame)));
             host.playFrame(frame);
             return GameplayFrameDisposition.HOLD;
         } catch (RuntimeException failure) {
@@ -223,9 +223,8 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
         }
     }
 
-    private void applyBinding(CourseControl course) {
+    private void applyBinding(CourseControl course, StageplayTimeline.Frame sampled) {
         if (binding == null) return;
-        var sampled = StageplayTimeline.sample(document, frame);
         String actorId = binding.capture().actorId();
         var actor = sampled.actors().stream().filter(value -> value.actorId().equals(actorId)).findFirst().orElseThrow();
         binding.apply(course, actor, sampled.baseCamera(), host.mappingFrame(actor));
@@ -275,6 +274,10 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
     interface Host {
         void prepare(); void seek(int frame); void playFrame(int frame); void draw(int frame); void stop(); void abandon();
         int mappingFrame(StageplayTimeline.ActorPose actor);
+        default StageplayTimeline.Frame resolveFrame(StageplayTimeline.Frame authored) {
+            if (!authored.puppets().isEmpty()) throw new IllegalStateException("Host has no physics puppet simulation");
+            return authored;
+        }
         default boolean current() { return true; }
         default void close() { try { if (current()) stop(); } finally { abandon(); } }
         default com.openggf.audio.rewind.AudioLogicalSnapshot captureEntryAudio() { return null; }
@@ -289,6 +292,7 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
         private final StageplayResources resources;
         private final StageplayRenderer renderer;
         private final StageplayAudio audio;
+        private StageplayTimeline.Frame resolved;
         private final SceneSurface surface = new SceneSurface();
         private LiveHost(StageplayDocument document, Map<String, byte[]> assets,
                          Map<StageplayDocument.SetSource, com.openggf.level.Level> sets) {
@@ -297,7 +301,7 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
             catch (IOException failure) { throw new UncheckedIOException(failure); }
             resources = new StageplayResources(library, false);
             resources.setAssetReader(path -> preparedAsset(assets, path));
-            sets.forEach((source, level) -> resources.registerSet(source, StageplayResources.authored(level)));
+            sets.forEach((source, level) -> resources.registerSet(source, level));
             renderer = new StageplayRenderer(resources);
             audio = new StageplayAudio(GameServices.audio(), library, path -> preparedAsset(assets, path));
         }
@@ -308,14 +312,23 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
                     && visit == GameServices.levelOrNull().getCompletedProductionLoadGeneration();
         }
         public void prepare() { resources.validate(document); try { audio.prepare(document); } catch (IOException failure) { throw new UncheckedIOException(failure); } }
-        public void seek(int frame) { audio.seek(frame); }
+        public void seek(int frame) {
+            audio.seek(frame);
+            if (frame < 0) { resources.resetPuppets(); resolved = null; }
+            else resolveFrame(StageplayTimeline.sample(document, frame));
+        }
+        public StageplayTimeline.Frame resolveFrame(StageplayTimeline.Frame authored) {
+            return resolved = resources.resolveFrame(document, authored);
+        }
         public void playFrame(int frame) { audio.playFrame(document, frame); }
-        public void stop() { audio.stop(); }
+        public void stop() { audio.stop(); resources.resetPuppets(); resolved = null; }
         public com.openggf.audio.rewind.AudioLogicalSnapshot captureEntryAudio() { return audio.captureEntry(); }
         public void restoreEntryAudio(com.openggf.audio.rewind.AudioLogicalSnapshot entry) { audio.restoreEntry(entry); }
         public int mappingFrame(StageplayTimeline.ActorPose actor) { return renderer.mappingFrame(actor); }
         public void draw(int frame) {
-            surface.record(document.width(), document.height(), canvas -> renderer.draw(document, StageplayTimeline.sample(document, frame), canvas));
+            if (resolved == null || resolved.frame() != frame)
+                throw new IllegalStateException("Stageplay frame was not evaluated before drawing");
+            surface.record(document.width(), document.height(), canvas -> renderer.draw(document, resolved, canvas));
             var graphics = GameServices.graphics();
             if (graphics.isGlInitialized()) surface.render(SceneSurface.projection(document.width(), document.height()),
                     new int[] {graphics.getViewportX(), graphics.getViewportY(), graphics.getViewportWidth(), graphics.getViewportHeight()});

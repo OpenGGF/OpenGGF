@@ -11,6 +11,7 @@ python3 tools/stageplay/stageplay.py init --out /your/production/first.script.js
 python3 tools/stageplay/stageplay.py catalog --game s2 --rom /your/existing-s2.gen --character tails --zone 0 --act 0
 python3 tools/stageplay/stageplay.py compile --script /your/production/first.script.json --out /your/production/first.stageplay
 python3 tools/stageplay/stageplay.py inspect --scene /your/production/first.stageplay --frame 120
+python3 tools/stageplay/stageplay.py simulate --scene /your/production/first.stageplay --out /your/production/state.jsonl --s2-rom /your/existing-s2.gen
 python3 tools/stageplay/stageplay.py render --scene /your/production/first.stageplay --out /your/production/first.mkv --s2-rom /your/existing-s2.gen
 ```
 
@@ -26,7 +27,12 @@ without replacing existing files. Choose a new output name for each take.
 `timeline --scene PATH --out state.jsonl` streams every evaluated frame with its
 seconds, active set, poses, camera, transition and cues. `--every N` chooses a
 coarser inspection interval; it does not change the movie cadence. This is authored
-directing state, not native simulation telemetry. Keep bulk timelines beside the movie.
+directing state: physical actors are explicitly `UNRESOLVED` here. Use `simulate`
+with explicit `--s1-rom`, `--s2-rom` and/or `--s3k-rom` paths to evaluate native player
+physics against detached terrain without a window or audio playback. Its JSONL
+contains actual positions, velocity, grounded state and movement status. It advances
+every native tick even with `--every N`. Neither command simulates native objects or
+zone events. Keep bulk timelines beside the movie.
 `catalog` verifies the requested ROM identity and reports native registry metadata,
 character animation IDs, delays and mapping frames. Add both `--zone` and `--act`
 to decode one detached set and report bounds. A registry entry alone does not certify
@@ -42,13 +48,13 @@ use the capture host's hidden native context; macOS uses Java's first thread.
 
 ## Screenplay format
 
-The screenplay format has its own `version:1`; the generated scene uses Stageplay
-version 3. JSON numbers retain their types: numeric strings, duplicate fields,
+The current screenplay format is `version:2`; the generated scene uses Stageplay
+version 4. Version-one screenplays retain manual movement for compatibility. JSON numbers retain their types: numeric strings, duplicate fields,
 unknown fields and trailing input are rejected. Maximum input size is 8 MiB.
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "name": "A change of scenery",
   "width": 400,
   "height": 224,
@@ -58,8 +64,9 @@ unknown fields and trailing input are rejected. Maximum input size is 8 MiB.
       "id":"hello", "durationFrames":240,
       "set":{"gameId":"s2","zone":0,"act":0},
       "camera":[{"frame":0,"x":0,"y":500},{"frame":239,"x":40,"y":500,"zoom":1}],
-      "actors":{"tails":[{"frame":0,"x":80,"y":655,"animation":0},
-                         {"frame":50,"x":140,"y":648,"animation":5}]},
+      "actors":{"tails":[{"frame":0,"x":80,"y":655}]},
+      "actions":{"tails":[{"frame":0,"kind":"MOVE_TO","x":140,"y":648,"urgency":0.5},
+                          {"frame":30,"kind":"JUMP","holdFrames":12}]},
       "dialogue":[{"startFrame":60,"endFrame":220,"speakerActor":"tails",
                    "text":"A small change of scenery..."}]
     },
@@ -68,7 +75,7 @@ unknown fields and trailing input are rejected. Maximum input size is 8 MiB.
       "set":{"gameId":"s1","zone":0,"act":0},
       "transition":{"kind":"FADE_WHITE","durationFrames":30},
       "camera":[{"frame":0,"x":0,"y":800}],
-      "actors":{"tails":[{"frame":0,"x":140,"y":944,"animation":5}]},
+      "actors":{"tails":[{"frame":0,"x":140,"y":944}]},
       "cameraEffects":[{"startFrame":20,"endFrame":50,"amplitudeX":3,"amplitudeY":2,"frequency":8,"seed":7}],
       "dialogue":[{"startFrame":60,"endFrame":220,"speakerActor":"tails",
                    "text":"...a very small change."}]
@@ -93,14 +100,14 @@ A shot is an explicit cut even when it reuses the preceding set.
 | Track | Fields and defaults |
 | --- | --- |
 | Camera key | `frame,x,y`; `zoom:1`, `interpolation:"LINEAR"` |
-| Actor key | `frame`; `x:0,y:0,animation:0,pose:-1,flipX:false,visible:true,scale:1,interpolation:"LINEAR"` |
+| Actor key | `frame`; `x:0,y:0,animation:0,pose:-1,flipX:false,visible:true,scale:1`; interpolation defaults to `HOLD` for puppets, `LINEAR` for Poser actors |
 | Dialogue | `startFrame,endFrame,text` and `speakerActor` or `speakerName`; optional profiles, timing and panel fields below |
 | Caption | `startFrame,endFrame,text`; `x:12,y:12,argb:-1`, optional `id` |
 | Audio | `frame,kind`; `gameId` defaults to the shot's game, `soundId:0,asset:"",gain:1`, optional `id` |
 | Camera effect | `startFrame,endFrame,amplitudeX,amplitudeY,frequency`; `seed:0`, optional `id` |
 | Incoming transition | `kind` (`CUT`, `FADE_BLACK`, `FADE_WHITE`, `WIPE_LEFT`, `WIPE_RIGHT`), `durationFrames` |
 
-Interpolation is `HOLD`, `LINEAR` or `SMOOTH`. Actor `pose:-1` selects its animation;
+For Poser actors, interpolation is `HOLD`, `LINEAR` or `SMOOTH`. Actor `pose:-1` selects its animation;
 nonnegative values hold a mapping frame. Positions use sprite origins. Captions are
 screen-space pixels. Audio kinds are `ROM_MUSIC`, `ROM_SFX`, `VOICE`, `MUSIC_STOP`;
 voices reference bounded WAV/Ogg files beside/below the scene. Relative resource scenes
@@ -118,6 +125,48 @@ across them. Both editors can subsequently edit the canonical scene. Exporting i
 back to a shot-local screenplay is not currently supported; keep the screenplay as
 the source when you want to revise it programmatically.
 
+
+## Puppet and Poser modes
+
+Version-two cast members default to `puppet:true`, `snapToFloor:true` and
+`collisionPath:0` (**Puppet** mode). Add `puppet:false` for **Poser** mode, with
+manual position, animation and frame selection. A physical
+actor's frame-zero key is a spawn centre; it keeps `animation:0`, `pose:-1`,
+`scale:1` and `interpolation:"HOLD"`. The native controller selects its actual
+animation, pose and facing. Interior keys may change visibility only; movement and
+turning come from commands. Every shot resets the actor from its boundary key and
+clears earlier goals and jump holds.
+
+The shot's `actions` object maps actor IDs to ordered command arrays:
+
+| Action | Fields |
+| --- | --- |
+| `MOVE_TO` | `frame,kind,x,y`; `urgency:0.5`, in `(0,1]` |
+| `STOP` | `frame,kind` |
+| `JUMP` | `frame,kind`; `holdFrames:12`, from 1 to 60 |
+
+An optional short `id` is namespaced by shot and actor. A movement command and a
+jump may share a frame; two movement commands may not. Jump holds require a released tick between presses and cannot cross a shot boundary. The engine receives directional and jump button inputs:
+urgency requests a fraction of that character's native running speed, rather than
+setting velocity. Acceleration, slopes, jump impulse, variable jump height, gravity,
+terrain collision and landing remain native behavior. `STOP` brakes through inputs.
+No command teleports an actor to its destination or guarantees arrival.
+
+Initial floor snapping searches near the spawn feet. Put the spawn near a real
+surface; snapping is not a search through the entire level. Once moving, normal
+native collision maintains floor contact or lets the actor fall from an edge.
+`collisionPath` selects terrain path 0 or 1. A destination's Y is part of the
+arrival check, not a vertical movement command: use `JUMP` explicitly when needed.
+There is no automatic route finding, obstacle jump or moving-platform simulation.
+
+`simulate` reports `IDLE`, `MOVING`, `STOPPING`, `ARRIVED` or `BLOCKED` plus the
+active movement-command ID. Blocking describes lack of progress and does not
+silently cancel the attempt. Roles hidden for the entire shot report `INACTIVE` and
+do not need a floor spawn in that shot. Inspect actual positions and status before rendering;
+a pure `timeline` sample deliberately reports `UNRESOLVED` for physical actors.
+Scrubbing and repeated drawing resolve the same frame without adding ticks or
+playing historical sounds. Native movement sound effects are silent in this
+isolated simulation; place explicit ROM audio cues in the film.
 
 ## Dialogue profiles and decorations
 

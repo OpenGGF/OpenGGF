@@ -75,12 +75,23 @@ public final class StageplayTimeline {
                 .filter(cue -> cue.startFrame() <= frame && frame < cue.endFrame())
                 .map(cue -> new DialoguePose(cue, StageplayDialogue.speakerName(document, cue),
                         StageplayDialogue.visibleText(document, cue, frame - cue.startFrame()))).toList();
-        return new Frame(frame, actors, cameraPose, captions, set, transition, baseCamera, dialogue);
+        List<PuppetSample> puppets = new ArrayList<>();
+        for (PuppetTrack track : document.puppets()) {
+            String command = "";
+            for (PuppetCommand cue : track.commands()) {
+                if (cue.frame() > frame) break;
+                if (cue.frame() >= sceneStart && cue.kind() != PuppetCommandKind.JUMP) command = cue.id();
+            }
+            puppets.add(new PuppetSample(track.actorId(), command, PuppetStatus.UNRESOLVED,
+                    0, 0, 0, false, 0, track.collisionPath()));
+        }
+        return new Frame(frame, actors, cameraPose, captions, set, transition, baseCamera, dialogue, puppets);
     }
 
     @ModApi
     public record Frame(int frame, List<ActorPose> actors, CameraPose camera, List<Caption> captions,
-                        SetSource set, TransitionPose transition, CameraPose baseCamera, List<DialoguePose> dialogue) {
+                        SetSource set, TransitionPose transition, CameraPose baseCamera, List<DialoguePose> dialogue,
+                        List<PuppetSample> puppets) {
         public Frame {
             actors = List.copyOf(actors);
             Objects.requireNonNull(camera, "camera");
@@ -88,6 +99,13 @@ public final class StageplayTimeline {
             Objects.requireNonNull(transition, "transition");
             Objects.requireNonNull(baseCamera, "baseCamera");
             dialogue = List.copyOf(dialogue);
+            puppets = List.copyOf(puppets);
+        }
+
+        /** Source-compatible version-three frame, without physics puppet observations. */
+        public Frame(int frame, List<ActorPose> actors, CameraPose camera, List<Caption> captions,
+                     SetSource set, TransitionPose transition, CameraPose baseCamera, List<DialoguePose> dialogue) {
+            this(frame, actors, camera, captions, set, transition, baseCamera, dialogue, List.of());
         }
 
         /** Source-compatible version-two frame, without dialogue. */
@@ -119,7 +137,34 @@ public final class StageplayTimeline {
 
     @ModApi
     public record ActorPose(String actorId, String gameId, String character, double x, double y,
-            int animation, int animationTick, int pose, boolean flipX, boolean visible, double scale) { }
+            int animation, int animationTick, int pose, boolean flipX, boolean visible, double scale, boolean flipY) {
+        public ActorPose(String actorId, String gameId, String character, double x, double y,
+                         int animation, int animationTick, int pose, boolean flipX, boolean visible, double scale) {
+            this(actorId, gameId, character, x, y, animation, animationTick, pose, flipX, visible, scale, false);
+        }
+    }
+
+    /** Actual native velocities use stage pixels per 60 Hz tick. UNRESOLVED values are not simulation results. */
+    @ModApi
+    public record PuppetSample(String actorId, String commandId, PuppetStatus status,
+                               double velocityX, double velocityY, double groundSpeed,
+                               boolean airborne, int angle, int collisionPath, PuppetAccessory accessory) {
+        public PuppetSample {
+            Objects.requireNonNull(actorId); Objects.requireNonNull(commandId); Objects.requireNonNull(status);
+        }
+        public PuppetSample(String actorId, String commandId, PuppetStatus status,
+                            double velocityX, double velocityY, double groundSpeed,
+                            boolean airborne, int angle, int collisionPath) {
+            this(actorId, commandId, status, velocityX, velocityY, groundSpeed, airborne, angle, collisionPath, null);
+        }
+    }
+
+    /** Stored native appendage mapping and flips, independent of draw order and repeated rendering. */
+    @ModApi
+    public record PuppetAccessory(int mappingFrame, boolean flipX, boolean flipY) { }
+
+    @ModApi
+    public enum PuppetStatus { UNRESOLVED, INACTIVE, IDLE, MOVING, STOPPING, ARRIVED, BLOCKED }
 
     @ModApi
     public record CameraPose(double x, double y, double zoom) { }

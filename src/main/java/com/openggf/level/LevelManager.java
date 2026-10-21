@@ -416,6 +416,25 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         this.level = worldSession.getCurrentLevel();
     }
 
+    /**
+     * Installs detached static terrain without starting a level, object execution,
+     * artwork, zone events, audio, camera scrolling, or global service registration.
+     * The supplied Level must be owned by the caller and remain unchanged while used.
+     */
+    public void initializeCollisionOnly(Level terrain, int zone, int act) {
+        if (level != null || objectManager != null) {
+            throw new IllegalStateException("Collision-only terrain requires a fresh level manager");
+        }
+        gameModule = worldSession.getGameModule();
+        writeCurrentLevel(java.util.Objects.requireNonNull(terrain, "terrain"));
+        writeCurrentZone(zone);
+        writeCurrentAct(act);
+        writeApparentAct(act);
+        blockPixelSize = terrain.getBlockPixelSize();
+        chunksPerBlockSide = terrain.getChunksPerBlockSide();
+        cacheLevelDimensions();
+    }
+
     public void setEditorSaveManager(EditorSaveManager editorSaveManager) { this.editorSaveManager = editorSaveManager; }
 
     /**

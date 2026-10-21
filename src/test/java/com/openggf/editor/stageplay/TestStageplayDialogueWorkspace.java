@@ -27,7 +27,8 @@ class TestStageplayDialogueWorkspace {
             public StageplayDocument initialDocument() { return StageplayDocument.empty("s2",0,0,0,0,320,224); }
             public Path initialAssetRoot() { return root; }
         });
-        workspace.activate(); workspace.invoke(ADD_ACTOR); workspace.menu().setValue("name","Sonic"); workspace.menu().submit();
+        workspace.activate(); workspace.invoke(ADD_ACTOR); workspace.menu().setValue("name","Sonic");
+        workspace.menu().setValue("mode","POSER"); workspace.menu().submit();
         return workspace;
     }
 

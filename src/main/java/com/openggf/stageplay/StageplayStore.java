@@ -122,6 +122,10 @@ public final class StageplayStore {
                 object.putArray("dialogueTypers");
                 object.putArray("dialogueSkins");
                 object.putArray("dialogue");
+            }
+            if (sourceVersion <= 3) {
+                if (object.has("puppets")) throw new IOException("Legacy scenes cannot contain puppet tracks");
+                object.putArray("puppets");
                 object.put("version", StageplayDocument.VERSION);
             }
             return JSON.treeToValue(object, StageplayDocument.class);

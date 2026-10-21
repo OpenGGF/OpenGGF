@@ -146,9 +146,10 @@ above requires EGL and fails if context creation is unavailable on Linux;
 
 For gameplay captures, inspect `state.csv` before selecting frames; for trace
 captures, inspect the selected clip and replay reports using `trace-capture`.
-For Stageplay, inspect the authored timeline JSONL and moving footage using
-`stageplay-authoring`; its evaluated positions and cues are not measured native
-gameplay state. Confirm dimensions, scene/mode, nonblank pixels, and the playable
+For Stageplay, inspect the screenplay, labelled authored/simulated JSONL and moving
+footage using `stageplay-authoring`. `simulate` resolves native puppet physics against
+detached terrain without GL; pure `timeline` leaves puppets `UNRESOLVED`. Neither is
+full-world gameplay state. Confirm dimensions, scene/mode, nonblank pixels, and the playable
 sprite when expected. Compare relevant pixels or a deliberately cleared target to reject stale framebuffer
 success; a PNG file's existence is insufficient. Distinguish capture correctness
 from gameplay/trace parity and from coverage of other modes or routes.

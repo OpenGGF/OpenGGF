@@ -55,7 +55,7 @@ class TestStageplayPlayback {
         when(course.presentationReady()).thenReturn(true);
         var player = new StageplayPlayback(document, "hero", StageplayNativeBinding.FinishMode.KEEP_FINAL_POSITION, () -> host);
         player.play(); player.beforeFrame(course, null); player.skip(); player.beforeFrame(course, null);
-        verify(course, times(2)).directPlayer(entry, 100, 200, 0, 0, false, true, 300, 200);
+        verify(course, times(2)).directPlayer(entry, 100, 200, 0, 0, false, false, true, 300, 200);
         verify(course).releaseDirectedPlayer(entry, true);
     }
 

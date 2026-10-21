@@ -212,44 +212,31 @@ public class TailsTailsController {
         }
     }
 
-    public void draw() {
-        if (currentAnim == ANIM_BLANK || renderer == null) {
-            return;
-        }
+    /** Native appendage presentation, including the animation's latched directional flips. */
+    @com.openggf.game.ModApi
+    public record Presentation(int mappingFrame, boolean flipX, boolean flipY) { }
 
-        // ROM: rendering consumes mapping_frame, the value resolved by the last
-        // script read - not the already-incremented anim_frame (s2.asm:41302-41303).
-        if (mappingFrame < 0) {
-            return;
-        }
-
-        int mappingFrame = this.mappingFrame;
-        boolean hFlip;
-        boolean vFlip;
-
+    /** Returns null when the native tail animation is blank. Does not advance animation. */
+    public Presentation presentation() {
+        if (currentAnim == ANIM_BLANK || mappingFrame < 0) return null;
         if (currentAnim == ANIM_DIRECTIONAL) {
-            // ROM Obj05_Main runs DisplaySprite after the animation routine, so the
-            // drawn frame is the stored mapping_frame(a0) / render_flags(a0)
-            // (s2.asm:41756-41763). The direction bank is already folded into
-            // mapping_frame at its single write point.
-            hFlip = dirHFlip;
-            vFlip = dirVFlip;
-        } else {
-            // Standard animations: flip matches parent's facing direction
-            hFlip = Direction.LEFT.equals(sprite.getDirection());
-            // S3K loc_1613C XORs render bit 1 after animation, except for
-            // directional animation 3 (whose angle already supplies both flips).
-            // Compose at draw time because our animation flags persist between
-            // updates; writing the XOR back would toggle on repeated renders.
-            var gameState = sprite.currentGameStateOrNull();
-            vFlip = gameState != null && gameState.isReverseGravityActive();
+            return new Presentation(mappingFrame, dirHFlip, dirVFlip);
         }
+        // S3K loc_1613C composes reverse-gravity at draw time, except for the
+        // directional animation whose stored flags already contain both flips.
+        var gameState = sprite.currentGameStateOrNull();
+        return new Presentation(mappingFrame, Direction.LEFT.equals(sprite.getDirection()),
+                gameState != null && gameState.isReverseGravityActive());
+    }
 
+    public void draw() {
+        Presentation pose = presentation();
+        if (pose == null || renderer == null) return;
         int originX = sprite.getRenderCentreX();
         int originY = sprite.getRenderCentreY();
         com.openggf.sprites.playable.PlayableMutatorPresentation.draw(sprite,
                 com.openggf.graphics.SpritePresentation.Part.APPENDAGE,
-                () -> renderer.drawFrame(mappingFrame, originX, originY, hFlip, vFlip));
+                () -> renderer.drawFrame(pose.mappingFrame(), originX, originY, pose.flipX(), pose.flipY()));
     }
 
     public RewindState captureRewindState() {

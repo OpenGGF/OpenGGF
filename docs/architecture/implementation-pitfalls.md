@@ -2066,3 +2066,15 @@ for detached UI fades. Keep renderer attachment separate: only the actively
 bound palette owner publishes CRAM fades. Origin: 2026-10-17 white-fade
 architecture guard repair; existing native component/22-V-int and immediate-scene
 rewind-release semantics are unchanged.
+
+### Detached player simulation must not publish live world events
+
+A private native player can still escape its service context through callbacks in
+`setAir(false)`. Stageplay's first standalone S3K simulation reached the live HCZ
+water-tunnel player query through `publishLandingAnimationWrite`, even though its
+hosted tests passed. Bound puppets skip live world-event publication; ordinary players
+retain it. Verify graphics-free tools in a fresh JVM with no gameplay/editor session,
+not only under a headless Engine fixture. Native floor collision also preserves the
+subpixel word: compare foot pixels for landing support, and exact fractions only
+when both runs consume identical inputs. See the
+[Stageplay design](designs/2026-10-21-stageplay.md).

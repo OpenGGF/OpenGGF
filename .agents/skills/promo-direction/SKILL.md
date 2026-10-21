@@ -15,9 +15,10 @@ belongs to the game. Choose the source workflow from what the film must show:
   [gameplay-capture](../gameplay-capture/SKILL.md), with
   [bk2-input-authoring](../bk2-input-authoring/SKILL.md) when inputs need scripting.
   Use [trace-capture](../trace-capture/SKILL.md) for an existing trace replay.
-- A hybrid can combine these, with provenance identifying each source. Authored
-  Stageplay poses and timeline JSONL are directing data, not measured gameplay
-  state or proof of native AI, collision, physics or parity.
+- A hybrid can combine these, with provenance identifying each source. Stageplay keys and authored timelines
+  are directing data; `simulate` JSONL measures native player physics against
+  detached terrain. It does not prove full-world gameplay, object AI, zone events
+  or ROM parity.
 
 Follow [gameplay-highlights](../gameplay-highlights/SKILL.md) for honest labelling,
 verification and the **required OpenGGF-Media archive** in every promo workflow.
@@ -151,15 +152,17 @@ An example 60–90 s showcase shape at 120–175 BPM, not a required narrative f
   with a second unplanned bed in the compositor.
 - Gameplay start positions must be real for the act; disclose debug jumps and
   positioned starts. Stageplay uses detached staged sets, so retain its screenplay,
-  canonical scene and authored timeline JSONL rather than calling it native play.
+  canonical scene and authored/simulated JSONL, labelled by source, rather than calling it native play.
 - Make a contact sheet of each clip, for example Slay's `sheet.py` or
   `strips.py`, and pick in-points by frame number.
 
 For Stageplay blocking, give characters purposeful entrances, approaches, turns,
-gestures, reactions and exits as the scene needs. Match movement to catalogued
-walk/run animation, place feet against the set, and check facing and accessories
-through the motion. Detached staging does not invent gameplay AI or collision to
-fill in missing performance. A listening character should visibly react where
+gestures, reactions and exits as the scene needs. Prefer physical puppets for player
+movement: destinations/urgency and jump button holds drive native acceleration,
+terrain collision, animation and landing. Do not draw a fake jump arc with position
+keys. Inspect `simulate` JSONL for actual arrival/blocked state, then review feet,
+facing and accessories in motion. Poser mode is for deliberate nonphysical staging;
+there is no automatic pathfinding, native object AI or zone-event simulation. A listening character should visibly react where
 the line calls for it; an entire idle cast weakens a story about their interaction.
 
 Identify the speaker when the line first appears. Prefer the dialogue track's

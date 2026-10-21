@@ -224,3 +224,37 @@ automatic typing audio remain outside this surface; timed sound cues remain avai
 There is no creator-reported owner or failure-swallowing fallback. Missing resources
 and overflowing dialogue fail preflight. The corrected promo skills distinguish
 authored timeline evidence from observed gameplay and require moving-footage review.
+
+
+### Physical puppets and intent direction
+
+Follow-up review rejected the hand-keyed jump and requested default floor support,
+real jumping, and players directed toward a destination at a chosen urgency. The
+new performance owner uses the production playable tick, movement, animation and
+terrain collision. It does not fit a parabola or write destination coordinates
+into each frame. Move-to and stop cues produce controller inputs; jump cues hold
+and release the native jump button. Urgency is a desired fraction of the native
+maximum speed, expressed through acceleration/coasting/braking inputs. A target
+is an intention, not guaranteed pathfinding: actual arrival and lack of progress
+are visible to authoring tools, and a blocked character never teleports.
+
+Each puppet owns a construction-bound runtime context and private collision,
+camera, timer, state and silent-audio peers over detached ROM/authored terrain.
+The existing gameplay context remains the default for ordinary characters. A
+collision-only level initializer avoids gameplay boot, art/events initialization
+and global session swapping. The actor's module supplies native movement rules
+and art; the set's module supplies terrain layout semantics. Initial placement
+snaps to a nearby valid floor by default, with native radii, headroom and explicit
+collision path; subsequent floor following and airborne landing use real sensors.
+
+Canonical schema 4 adds document-owned puppet tracks without redefining legacy
+ActorKey meaning. Version 1–3 documents migrate with no puppet tracks, preserving
+old choreography. New actors and version-two screenplays default to physical
+puppets; manual choreography remains an explicit option. Existing boundary keys
+place actors at shot starts; interior physical position tweening is rejected.
+Move-to/stop commands and independent jump edges are portable data. One shared
+runtime resolver produces actual mapping frames, flips, velocities and accessory
+state for editor preview, playback, capture and native handover. The pure timeline
+labels physical poses unresolved; it must not present an authored goal as a
+measured position. Seeking restores/replays isolated native state deterministically,
+and repeated reads/draws of one frame do not advance the simulation.

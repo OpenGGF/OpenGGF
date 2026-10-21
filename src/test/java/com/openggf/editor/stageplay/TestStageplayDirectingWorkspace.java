@@ -116,7 +116,7 @@ class TestStageplayDirectingWorkspace {
     }
 
     @Test void sceneChangeInsertionMoveAndRemovalKeepBoundaryEditsAtomic() {
-        var workspace = workspace(); workspace.invoke(ADD_ACTOR); workspace.menu().submit();
+        var workspace = workspace(); workspace.invoke(ADD_ACTOR); workspace.menu().setValue("mode","POSER"); workspace.menu().submit();
         var before = workspace.controller().document(); workspace.seek(120);
         workspace.invoke(SCENE_CHANGES); choose(workspace.menu(),0);
         var menu = workspace.menu(); menu.setValue("game","s3k"); menu.setValue("zone","1"); menu.setValue("act","1");
@@ -132,7 +132,7 @@ class TestStageplayDirectingWorkspace {
         var moved = workspace.controller().document();
         assertEquals(List.of(0,120,240),moved.camera().stream().map(StageplayDocument.CameraKey::frame).toList());
         assertEquals(240,moved.sceneChanges().getFirst().frame());
-        workspace.invoke(ADD_ACTOR); menu.submit();
+        workspace.invoke(ADD_ACTOR); menu.setValue("mode","POSER"); menu.submit();
         assertEquals(List.of(0,240),workspace.controller().document().actors().getLast().keys().stream().map(StageplayDocument.ActorKey::frame).toList());
         workspace.seek(240); workspace.invoke(DELETE_KEY);
         assertTrue(menu.error().contains("scene change"));
@@ -145,7 +145,7 @@ class TestStageplayDirectingWorkspace {
         var workspace = workspace(); workspace.invoke(CAMERA_EFFECTS); choose(workspace.menu(),0); workspace.menu().submit();
         workspace.seek(100); workspace.invoke(SCENE_CHANGES); choose(workspace.menu(),0); workspace.menu().submit();
         var effects = workspace.controller().document().cameraEffects(); var changes = workspace.controller().document().sceneChanges();
-        workspace.invoke(ADD_ACTOR); workspace.menu().submit();
+        workspace.invoke(ADD_ACTOR); workspace.menu().setValue("mode","POSER"); workspace.menu().submit();
         workspace.invoke(SCENE); workspace.menu().setValue("name","Two shots"); workspace.menu().submit();
         workspace.invoke(FILM_FORMAT); choose(workspace.menu(),0);
         workspace.invoke(RECORD); workspace.recordStep(true,false,false,false); workspace.stop();

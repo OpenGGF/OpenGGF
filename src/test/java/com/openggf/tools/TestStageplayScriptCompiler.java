@@ -50,6 +50,76 @@ class TestStageplayScriptCompiler {
         assertThrows(IOException.class, () -> compile(script), script.toString());
     }
 
+    private static ObjectNode puppetRecipe() throws IOException {
+        return (ObjectNode) JSON.readTree("""
+                {"version":2,"name":"Real movement","cast":[
+                  {"id":"hero","name":"Hero","gameId":"s2","character":"sonic"},
+                  {"id":"prop","name":"Prop","gameId":"s2","character":"tails","puppet":false}],
+                 "shots":[
+                  {"id":"first","durationFrames":60,"set":{"gameId":"s2","zone":0,"act":0},
+                   "camera":[{"frame":0,"x":0,"y":500}],
+                   "actors":{"hero":[{"frame":0,"x":80,"y":655}],
+                             "prop":[{"frame":0,"x":20,"y":600},{"frame":30,"x":40,"y":580}]},
+                   "actions":{"hero":[{"frame":0,"kind":"MOVE_TO","x":180,"y":648,"urgency":0.75},
+                                        {"frame":20,"kind":"JUMP","holdFrames":10}]}},
+                  {"id":"second","durationFrames":60,"set":{"gameId":"s1","zone":0,"act":0},
+                   "camera":[{"frame":0,"x":0,"y":500}],
+                   "actors":{"hero":[{"frame":0,"x":100,"y":655}]},
+                   "actions":{"hero":[{"frame":0,"kind":"MOVE_TO","x":200,"y":650},
+                                        {"frame":30,"kind":"STOP"}]}}
+                 ]}
+                """);
+    }
+
+    @Test void versionTwoDefaultsToPhysicalPuppetsAndOffsetsIntentWithoutInventingMotion() throws Exception {
+        var document = compile(puppetRecipe());
+        var puppet = document.puppets().getFirst();
+        assertEquals(1, document.puppets().size());
+        assertEquals("hero", puppet.actorId()); assertTrue(puppet.snapToFloor());
+        assertEquals(0, puppet.collisionPath());
+        assertEquals(List.of(0, 20, 60, 90), puppet.commands().stream().map(StageplayDocument.PuppetCommand::frame).toList());
+        assertEquals("first.hero.action0", puppet.commands().getFirst().id());
+        assertEquals(0.75, puppet.commands().getFirst().urgency());
+        assertEquals(0.5, puppet.commands().get(2).urgency());
+        assertEquals(10, puppet.commands().get(1).holdFrames());
+        assertEquals(StageplayDocument.Interpolation.HOLD, document.actors().getFirst().keys().getFirst().interpolation());
+        assertEquals(80, StageplayTimeline.sample(document, 30).actors().getFirst().x(),
+                "ROM-free compilation retains the spawn; native simulation owns movement");
+        assertEquals(StageplayTimeline.PuppetStatus.UNRESOLVED,
+                StageplayTimeline.sample(document, 30).puppets().getFirst().status());
+        assertEquals(40, StageplayTimeline.sample(document, 30).actors().getLast().x(),
+                "explicit manual roles retain interpolated choreography");
+        assertEquals(document, StageplayStore.decode(StageplayStore.encode(document)));
+        assertTrue(compile(recipe()).puppets().isEmpty(), "version one remains manual");
+    }
+
+    @Test void puppetCommandsRejectSilentCoercionUnknownActorsAndInvalidPhysicsContracts() throws Exception {
+        List<Consumer<ObjectNode>> edits = List.of(
+                root -> ((ObjectNode) root.path("cast").get(0)).put("puppet", "true"),
+                root -> ((ObjectNode) root.path("cast").get(0)).put("snapToFloor", "true"),
+                root -> ((ObjectNode) root.path("cast").get(0)).put("collisionPath", 2),
+                root -> ((ObjectNode) root.path("cast").get(1)).put("snapToFloor", true),
+                root -> ((ObjectNode) shot(root, 0).path("actions")).putArray("missing"),
+                root -> ((ObjectNode) shot(root, 0).path("actions")).putArray("prop"),
+                root -> ((ObjectNode) shot(root, 0).path("actions").path("hero").get(0)).put("urgency", 0),
+                root -> ((ObjectNode) shot(root, 0).path("actions").path("hero").get(0)).put("urgency", "0.5"),
+                root -> ((ObjectNode) shot(root, 0).path("actions").path("hero").get(0)).remove("y"),
+                root -> ((ObjectNode) shot(root, 0).path("actions").path("hero").get(0)).put("teleport", true),
+                root -> ((ObjectNode) shot(root, 0).path("actions").path("hero").get(0)).put("kind", "FLY"),
+                root -> ((ObjectNode) shot(root, 0).path("actions").path("hero").get(1)).put("holdFrames", 41),
+                root -> ((ObjectNode) shot(root, 0).path("actors").path("hero").get(0)).put("animation", 5),
+                root -> ((ArrayNode) shot(root, 0).path("actors").path("hero")).addObject()
+                        .put("frame", 20).put("x", 99).put("y", 655));
+        for (var edit : edits) {
+            var script = puppetRecipe(); edit.accept(script);
+            assertThrows(IOException.class, () -> compile(script), script.toString());
+        }
+        var legacy = recipe(); shot(legacy, 0).putObject("actions");
+        assertThrows(IOException.class, () -> compile(legacy));
+        var incompatible = recipe(); ((ObjectNode) incompatible.path("cast").get(0)).put("puppet", true);
+        assertThrows(IOException.class, () -> compile(incompatible));
+    }
+
     @Test void multiShotCompilationOffsetsEveryTrackAndSeedsHiddenCastAtEveryBoundary() throws Exception {
         var document = compile(recipe());
         assertEquals(StageplayDocument.VERSION, document.version());

@@ -75,6 +75,9 @@ import com.openggf.timer.timers.SpeedShoesTimer;
  */
 @ModApi
 public abstract class AbstractPlayableSprite extends AbstractSprite implements com.openggf.game.PlayableEntity {
+        @RewindTransient(reason = "immutable construction services; isolated puppet owner snapshots each mutable manager")
+        final PlayableRuntimeContext runtimeServices = PlayableRuntimeContext.captureConstruction();
+
         private static final Logger LOGGER = Logger.getLogger(AbstractPlayableSprite.class.getName());
 
         @RewindTransient(reason = "session policy source is structural; effective revision is captured by its session owner")
@@ -948,7 +951,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 resetBaseSpeeds(); // Reset speeds to default
                 instaShieldRegistered = false; // Force re-registration with new ObjectManager on level load
                 // Fresh level assembly runs before tickStatus refreshes cached rules.
-                resolvePhysicsProfile(GameServices.currentOrBootstrapGameModule());
+                resolvePhysicsProfile(currentGameModule());
                 // ROM: Obj01_Init unconditionally sets y_radius=$13, x_radius=9.
                 // Since we reuse the sprite rather than recreating it, we must
                 // explicitly restore standing dimensions and sensor offsets here.
@@ -1683,11 +1686,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return superSonic;
         }
 
-        public final Camera currentCamera() { return PlayableSpriteRuntimeServices.camera(); }
-        public final LevelManager currentLevelManager() { return PlayableSpriteRuntimeServices.level(); }
-        public final LevelManager currentLevelManagerIfAvailable() { return PlayableSpriteRuntimeServices.levelOrNull(); }
-        public final GameModule currentGameModule() { return PlayableSpriteRuntimeServices.currentOrBootstrapGameModule(); }
-        public final CrossGameFeatureProvider currentCrossGameFeatures() { return PlayableSpriteRuntimeServices.crossGameFeatures(); }
+        public final Camera currentCamera() { return PlayableSpriteRuntimeServices.camera(this); }
+        public final LevelManager currentLevelManager() { return PlayableSpriteRuntimeServices.level(this); }
+        public final LevelManager currentLevelManagerIfAvailable() { return PlayableSpriteRuntimeServices.levelOrNull(this); }
+        public final GameModule currentGameModule() { return PlayableSpriteRuntimeServices.currentOrBootstrapGameModule(this); }
+        public final CrossGameFeatureProvider currentCrossGameFeatures() { return PlayableSpriteRuntimeServices.crossGameFeatures(this); }
 
         public final int resolveAnimationId(CanonicalAnimation animation) {
                 refreshRuntimeBoundStateIfNeeded();
@@ -1695,14 +1698,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public final LevelState currentLevelState() { return PlayableSpriteRuntimeServices.levelState(currentLevelManagerIfAvailable()); }
-        public final TimerManager currentTimerManager() { return PlayableSpriteRuntimeServices.timers(); }
-        public final GameStateManager currentGameState() { return PlayableSpriteRuntimeServices.gameState(); }
-        public final GameStateManager currentGameStateOrNull() { return PlayableSpriteRuntimeServices.gameStateOrNull(); }
-        public final CollisionSystem currentCollisionSystem() { return PlayableSpriteRuntimeServices.collision(); }
-        public final CollisionSystem currentCollisionSystemOrNull() { return PlayableSpriteRuntimeServices.collisionOrNull(); }
-        public final AudioManager currentAudioManager() { return PlayableSpriteRuntimeServices.audio(); }
-        public final com.openggf.game.GameRng currentRng() { return PlayableSpriteRuntimeServices.rng(); }
-        public final com.openggf.game.GameRng currentRngOrNull() { return PlayableSpriteRuntimeServices.rngOrNull(); }
+        public final TimerManager currentTimerManager() { return PlayableSpriteRuntimeServices.timers(this); }
+        public final GameStateManager currentGameState() { return PlayableSpriteRuntimeServices.gameState(this); }
+        public final GameStateManager currentGameStateOrNull() { return PlayableSpriteRuntimeServices.gameStateOrNull(this); }
+        public final CollisionSystem currentCollisionSystem() { return PlayableSpriteRuntimeServices.collision(this); }
+        public final CollisionSystem currentCollisionSystemOrNull() { return PlayableSpriteRuntimeServices.collisionOrNull(this); }
+        public final AudioManager currentAudioManager() { return PlayableSpriteRuntimeServices.audio(this); }
+        public final com.openggf.game.GameRng currentRng() { return PlayableSpriteRuntimeServices.rng(this); }
+        public final com.openggf.game.GameRng currentRngOrNull() { return PlayableSpriteRuntimeServices.rngOrNull(this); }
 
         public final DrowningController getDrowningController() { return controller != null ? controller.getDrowning() : null; }
         public final TailsFlightController getTailsFlightController() {
@@ -1711,11 +1714,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public final TailsCarryController getTailsCarryController() {
                 return controller != null ? controller.getTailsCarry() : null;
         }
-        public final WaterSystem currentWaterSystem() { return PlayableSpriteRuntimeServices.water(); }
+        public final WaterSystem currentWaterSystem() { return PlayableSpriteRuntimeServices.water(this); }
         public final com.openggf.sprites.managers.SpriteManager currentSpriteManagerOrNull() {
-                return PlayableSpriteRuntimeServices.spritesOrNull();
+                return PlayableSpriteRuntimeServices.spritesOrNull(this);
         }
-        public final int currentGameplayFrameCounter() { return PlayableSpriteRuntimeServices.gameplayFrameCounter(); }
+        public final int currentGameplayFrameCounter() { return PlayableSpriteRuntimeServices.gameplayFrameCounter(this); }
 
         /**
          * Returns this character's secondary (double-jump) ability.
@@ -2911,7 +2914,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         /** ROM: {@code tst.b (Boss_flag).w} — a boss fight owns the music. */
         private boolean bossOwnsMusic() {
-                return PlayableSpriteRuntimeServices.levelEventsOrNull()
+                return PlayableSpriteRuntimeServices.levelEventsOrNull(this)
                                 instanceof AbstractLevelEventManager events
                                 && events.isBossActive();
         }
@@ -4015,7 +4018,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 resetBaseSpeeds();
                 // Runtime construction belongs to the selected world; pre-session
                 // construction still uses the bootstrap default through this accessor.
-                resolvePhysicsProfile(GameServices.currentOrBootstrapGameModule());
+                resolvePhysicsProfile(currentGameModule());
 
                 if (specification != null) {
                         setWidth((standXRadius + 1) * 2);
@@ -4103,7 +4106,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         LOGGER.fine("PhysicsProvider unavailable, using defineSpeeds() values: " + e.getMessage());
                 }
                 // Cross-game donation: override only typed rules with donated capabilities.
-                if (CrossGameFeatureProvider.isActive()) {
+                if (runtimeServices == null && CrossGameFeatureProvider.isActive()) {
                         this.gameRules = currentCrossGameFeatures().getHybridRules();
                 }
                 ensurePersistentInstaShieldObject();
@@ -5285,7 +5288,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         private boolean fixedLevelObjectOwnsDrowningBubbleCadence() {
                 try {
-                        return GameServices.module().getLevelEventProvider()
+                        return currentGameModule().getLevelEventProvider()
                                         .ownsFixedDrowningBubbleCadence(this);
                 } catch (IllegalStateException ex) {
                         return false;

@@ -47,8 +47,15 @@ zoom one, active blocking and original panel skins. Its complete playback and
 transition sequences received bounded agent review; decoded exports contain
 3,060 frames with no reported browser drops. Production sources and review limits
 are preserved in [OpenGGF-Media](https://github.com/OpenGGF/OpenGGF-Media/tree/main/projects/stageplay).
-This is not user creative acceptance. Code and codec checks alone cannot establish
-that a film works; retain that distinction when reusing this example.
+The user subsequently rejected the implausible manually positioned jump and asked
+for default floor contact and native physical direction. Revision three is therefore
+a superseded take, despite its successful decoding and bounded agent review.
+The follow-up uses Puppet mode: destination/urgency and jump commands feed native
+inputs, with actual terrain collision, gravity and landing. Poser mode retains manual
+position, animation and frame control for intentional nonphysical staging. Inspect
+simulation state before rendering and review the resulting movement; never substitute
+a fitted position curve for a requested native jump. Code and codec checks alone
+cannot establish creative acceptance.
 
 ## Recurring hazards
 
@@ -64,9 +71,10 @@ that a film works; retain that distinction when reusing this example.
   hard to read (ring repulsion, an invisible boss). Reframe or recapture.
 - Cutting every shot from the same idle point makes the reel look like "the
   same jump with a new label". Vary the entry points.
-- Staged performance must be authored: detached Stageplay sets do not supply
-  gameplay AI or collision to make actors act. Check entrances, exits, facing,
-  walking/running and listener reactions through the full take.
+- Staged performance needs direction. Puppet mode runs native player physics
+  against terrain; destinations can be blocked and do not add pathfinding or world
+  object AI. Use explicit jump commands. Poser mode keeps manual choreography.
+  Check actual entrances, exits, floor contact, facing and reactions in motion.
 - Names and consistent placement identify a speaker; color alone does not,
   particularly when several roles use the same stock sprite. Give reveal,
   reading and response their own time instead of forcing each line onto a beat.
@@ -75,6 +83,6 @@ that a film works; retain that distinction when reusing this example.
   area filter. Stageplay zoom holds between keys; avoid animated fractional
   nearest-neighbour source zoom. Scaling the finished frame cannot reconstruct
   stable edges that were lost to changing pixel steps in the source.
-- An authored timeline JSONL describes directing intent and evaluated samples;
-  measured gameplay CSV describes an actual gameplay run. Keep them distinct in
-  provenance and retain the required OpenGGF-Media source archive for either form.
+- Authored timeline JSONL describes directing intent; simulate JSONL resolves native
+  Puppet motion against detached terrain; gameplay CSV describes a full gameplay
+  run. Keep all three distinct in provenance and retain the required source archive.

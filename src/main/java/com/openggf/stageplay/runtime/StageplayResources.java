@@ -8,6 +8,8 @@ import com.openggf.level.resources.AuthoredLevelResources;
 import com.openggf.mods.scene.*;
 import com.openggf.mods.scene.host.SceneRomLibrary;
 import com.openggf.stageplay.StageplayDocument;
+import com.openggf.stageplay.StageplayTimeline;
+import com.openggf.sprites.playable.PlayablePuppet;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
@@ -22,6 +24,9 @@ public final class StageplayResources implements AutoCloseable {
     private final Function<String, SceneRomArt> resolver;
     private final List<String> available;
     private final Runnable release;
+    private final SceneRomLibrary library;
+    private final StageplayPuppets puppets;
+    private final Map<StageplayDocument.SetSource, Level> terrains = new HashMap<>();
     private final Map<StageplayDocument.SetSource, SceneLevelKit> sets = new HashMap<>();
     private Map<String, SceneImage> dialogueImages = Map.of();
     private Map<String, Integer> dialogueImageBytes = Map.of();
@@ -33,22 +38,29 @@ public final class StageplayResources implements AutoCloseable {
     private boolean closed;
 
     public StageplayResources(SceneRomLibrary library, boolean ownsLibrary) {
-        this(library::rom, library.availableGames(), ownsLibrary ? library::close : () -> { });
+        this(library::rom, library.availableGames(), ownsLibrary ? library::close : () -> { }, library);
     }
     public StageplayResources(Function<String, SceneRomArt> resolver, List<String> available) {
-        this(resolver, available, () -> { });
+        this(resolver, available, () -> { }, null);
     }
-    private StageplayResources(Function<String, SceneRomArt> resolver, List<String> available, Runnable release) {
+    private StageplayResources(Function<String, SceneRomArt> resolver, List<String> available, Runnable release, SceneRomLibrary library) {
         this.resolver = Objects.requireNonNull(resolver); this.available = List.copyOf(available); this.release = release;
+        this.library = library;
+        puppets = new StageplayPuppets((document, source, actor, anchor, track) -> {
+            requirePhysicalLibrary();
+            return PlayablePuppet.create(terrain(source), library.module(source.gameId()), source.zone(), source.act(),
+                    library.module(actor.gameId()), actor.character(), library.characterArt(actor.gameId(), actor.character()),
+                    nativePixel(anchor.x(), true), nativePixel(anchor.y(), false), track.collisionPath(), track.snapToFloor(), anchor.flipX());
+        });
     }
     public List<String> availableGames() { requireOpen(); return available; }
     public void setProjectRoot(Path root) {
         requireOpen(); projectRoot = root == null ? null : root.toAbsolutePath().normalize(); sets.clear();
-        assetReader = null; clearDialogue();
+        assetReader = null; terrains.clear(); resetPuppets(); clearDialogue();
     }
     /** A bounded owner snapshot reader, used by registered cutscenes without filesystem access. */
     public void setAssetReader(StageplayAssets.Reader reader) {
-        requireOpen(); assetReader = Objects.requireNonNull(reader); clearDialogue();
+        requireOpen(); assetReader = Objects.requireNonNull(reader); resetPuppets(); clearDialogue();
     }
     private void clearDialogue() {
         preparedDialogue = null; dialogueImages = Map.of(); dialogueLayouts = Map.of();
@@ -67,7 +79,41 @@ public final class StageplayResources implements AutoCloseable {
         requireOpen();
         if (source.levelProject().isEmpty()) throw new IllegalArgumentException("Only authored sets may be registered");
         sets.put(Objects.requireNonNull(source), Objects.requireNonNull(kit));
+        terrains.remove(source); resetPuppets();
     }
+    /** Registered authored terrain is shared by its pictured set and private playable simulation. */
+    public void registerSet(StageplayDocument.SetSource source, Level level) {
+        registerSet(source, authored(level));
+        terrains.put(source, Objects.requireNonNull(level)); resetPuppets();
+    }
+
+    /** Resolves only physical actors; camera drafts/captions from the supplied authored frame are preserved. */
+    public StageplayTimeline.Frame resolveFrame(StageplayDocument document, StageplayTimeline.Frame authoredFrame) {
+        requireOpen();
+        return puppets.resolve(document, authoredFrame);
+    }
+
+    public void resetPuppets() { puppets.reset(); }
+
+    private void requirePhysicalLibrary() {
+        if (library == null) throw new IllegalStateException("Physics puppets require supplied native ROM resources");
+    }
+
+    private Level terrain(StageplayDocument.SetSource source) {
+        set(source); // validates identity and prepares authored project data first
+        if (terrains.containsKey(source)) return terrains.get(source);
+        requirePhysicalLibrary();
+        if (!source.levelProject().isEmpty()) throw new IllegalArgumentException("Authored set has no native terrain data");
+        return terrains.computeIfAbsent(source, value -> library.level(value.gameId(), value.zone(), value.act()));
+    }
+
+    private static int nativePixel(double value, boolean horizontal) {
+        long rounded = Math.round(value);
+        if (rounded < (horizontal ? 0 : Short.MIN_VALUE) || rounded > Short.MAX_VALUE)
+            throw new IllegalArgumentException("Physics puppet spawn lies outside native 16-bit coordinates");
+        return (int) rounded;
+    }
+
     public SceneLevelKit set(StageplayDocument document) {
         return set(document.set());
     }
@@ -87,6 +133,7 @@ public final class StageplayResources implements AutoCloseable {
                     var project = AuthoredLevelResources.read("ogfproject", file);
                     if (!project.gameId().equals(source.gameId()))
                         throw new IOException("Authored level and scene set use different games");
+                    terrains.put(source, project.level());
                     return authored(project.level());
                 } catch (IOException error) { throw new UncheckedIOException("Cannot load the authored Stageplay set", error); }
             }
@@ -110,6 +157,17 @@ public final class StageplayResources implements AutoCloseable {
                     throw new IllegalArgumentException("Missing animation " + key.animation() + " for " + actor.name());
                 rom(actor.gameId()).characterAccessoryPose(actor.character(), key.animation(), key.pose(),
                         0, key.flipX(), 0, 0);
+            }
+        }
+        if (!document.puppets().isEmpty()) {
+            requirePhysicalLibrary();
+            terrain(document.set());
+            for (var change : document.sceneChanges()) terrain(change.set());
+            for (var track : document.puppets()) {
+                var actor = document.actors().stream().filter(value -> value.id().equals(track.actorId())).findFirst().orElseThrow();
+                if (library.characterArt(actor.gameId(), actor.character()) == null)
+                    throw new IllegalArgumentException("Missing native character art: " + actor.id());
+                for (var key : actor.keys()) { nativePixel(key.x(), true); nativePixel(key.y(), false); }
             }
         }
         for (var cue : document.audio()) if (cue.kind() != StageplayDocument.AudioKind.VOICE
@@ -224,5 +282,5 @@ public final class StageplayResources implements AutoCloseable {
         };
     }
     private void requireOpen() { if (closed) throw new IllegalStateException("Stageplay resources are closed"); }
-    @Override public void close() { if (!closed) { closed = true; sets.clear(); clearDialogue(); release.run(); } }
+    @Override public void close() { if (!closed) { closed = true; puppets.close(); sets.clear(); terrains.clear(); clearDialogue(); release.run(); } }
 }

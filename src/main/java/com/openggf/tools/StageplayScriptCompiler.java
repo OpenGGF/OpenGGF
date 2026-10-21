@@ -32,7 +32,8 @@ public final class StageplayScriptCompiler {
                 if (parser.nextToken() != null) throw new IOException("Trailing screenplay content");
             }
             ObjectNode script = object(parsed, "screenplay", "version", "name", "width", "height", "cast", "shots", "dialogueTypers", "dialogueSkins");
-            if (integer(script, "version", -1) != 1) throw new IOException("Unsupported screenplay version");
+            int version = integer(script, "version", -1);
+            if (version != 1 && version != 2) throw new IOException("Unsupported screenplay version");
             ArrayNode cast = array(script, "cast"), shots = array(script, "shots");
             if (cast.size() > 32 || shots.isEmpty() || shots.size() > 129)
                 throw new IOException("Screenplay needs 1..129 shots and at most 32 cast members");
@@ -44,21 +45,34 @@ public final class StageplayScriptCompiler {
             ArrayNode actors = document.putArray("actors"), camera = document.putArray("camera"),
                     captions = document.putArray("captions"), audio = document.putArray("audio"),
                     effects = document.putArray("cameraEffects"), changes = document.putArray("sceneChanges"),
-                    dialogue = document.putArray("dialogue");
+                    dialogue = document.putArray("dialogue"), puppets = document.putArray("puppets");
             appendDialogueProfiles(script, document);
             Map<String, ObjectNode> roles = new LinkedHashMap<>();
             Map<String, ObjectNode> lastPoses = new LinkedHashMap<>();
+            Map<String, ArrayNode> commands = new LinkedHashMap<>();
             for (JsonNode item : cast) {
-                ObjectNode role = object(item, "cast member", "id", "name", "gameId", "character").deepCopy();
+                ObjectNode role = object(item, "cast member", version == 1
+                        ? new String[]{"id", "name", "gameId", "character"}
+                        : new String[]{"id", "name", "gameId", "character", "puppet", "snapToFloor", "collisionPath"}).deepCopy();
                 String id = text(role, "id");
                 if (roles.put(id, role) != null) throw new IOException("Duplicate cast id: " + id);
+                if (version == 2 && bool(role, "puppet", true)) {
+                    var track = puppets.addObject().put("actorId", id)
+                            .put("snapToFloor", bool(role, "snapToFloor", true))
+                            .put("collisionPath", integer(role, "collisionPath", 0));
+                    commands.put(id, track.putArray("commands"));
+                } else if (role.has("snapToFloor") || role.has("collisionPath")) {
+                    throw new IOException("Floor snapping and collision paths require a puppet: " + id);
+                }
+                role.remove(java.util.List.of("puppet", "snapToFloor", "collisionPath"));
                 role.putArray("keys"); actors.add(role);
             }
             Set<String> shotIds = new HashSet<>();
             int offset = 0;
             for (JsonNode item : shots) {
                 ObjectNode shot = object(item, "shot", "id", "durationFrames", "set", "transition", "camera",
-                        "actors", "captions", "audio", "cameraEffects", "dialogue");
+                        "actors", "captions", "audio", "cameraEffects", "dialogue", "actions");
+                if (version == 1 && shot.has("actions")) throw new IOException("Puppet actions require screenplay version 2");
                 String id = text(shot, "id");
                 if (!id.matches("[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}") || !shotIds.add(id))
                     throw new IOException("Invalid or duplicate shot id: " + id);
@@ -81,7 +95,7 @@ public final class StageplayScriptCompiler {
                 ArrayNode localCamera = array(shot, "camera");
                 if (localCamera.isEmpty() || integer(object(localCamera.get(0), "camera key"), "frame", -1) != 0)
                     throw new IOException("Every shot needs a camera key at local frame zero: " + id);
-                appendKeys(camera, localCamera, offset, duration, false);
+                appendKeys(camera, localCamera, offset, duration, false, false);
                 ObjectNode tracks = shot.has("actors") ? object(shot.get("actors"), "actor tracks") : JSON.createObjectNode();
                 var fields = tracks.fieldNames();
                 while (fields.hasNext()) {
@@ -95,14 +109,15 @@ public final class StageplayScriptCompiler {
                         ArrayNode track = array(tracks, roleId);
                         if (track.isEmpty() || integer(object(track.get(0), "actor key"), "frame", -1) != 0)
                             throw new IOException("Actor track must begin at local frame zero: " + id + "/" + roleId);
-                        appendKeys(keys, track, offset, duration, true);
+                        appendKeys(keys, track, offset, duration, true, commands.containsKey(roleId));
                         lastPoses.put(roleId, ((ObjectNode) keys.get(keys.size() - 1)).deepCopy());
                     } else {
                         ObjectNode hidden = lastPoses.containsKey(roleId) ? lastPoses.get(roleId).deepCopy() : JSON.createObjectNode();
                         hidden.put("frame", offset).put("visible", false);
-                        actorDefaults(hidden); keys.add(hidden);
+                        actorDefaults(hidden, commands.containsKey(roleId)); keys.add(hidden);
                     }
                 }
+                appendActions(shot, commands, id, offset, duration);
                 appendEvents(captions, optionalArray(shot, "captions"), id, "caption", offset, duration, text(set, "gameId"));
                 appendEvents(audio, optionalArray(shot, "audio"), id, "audio", offset, duration, text(set, "gameId"));
                 appendEvents(effects, optionalArray(shot, "cameraEffects"), id, "effect", offset, duration, text(set, "gameId"));
@@ -114,6 +129,41 @@ public final class StageplayScriptCompiler {
             return StageplayStore.decode(JSON.writeValueAsBytes(document));
         } catch (IllegalArgumentException failure) {
             throw new IOException("Invalid screenplay: " + failure.getMessage(), failure);
+        }
+    }
+
+    private static void appendActions(ObjectNode shot, Map<String, ArrayNode> tracks, String shotId,
+                                      int offset, int duration) throws IOException {
+        if (!shot.has("actions")) return;
+        ObjectNode actions = object(shot.get("actions"), "puppet actions");
+        var fields = actions.fieldNames();
+        while (fields.hasNext()) {
+            String actor = fields.next();
+            ArrayNode out = tracks.get(actor);
+            if (out == null) throw new IOException("Actions require a physical cast member: " + actor);
+            int index = 0, previous = -1;
+            for (JsonNode item : array(actions, actor)) {
+                var command = object(item, "puppet action", "id", "frame", "kind", "x", "y", "urgency", "holdFrames").deepCopy();
+                int frame = integer(command, "frame", -1);
+                if (frame < previous || frame < 0 || frame >= duration)
+                    throw new IOException("Puppet actions must ascend within their shot");
+                previous = frame;
+                String kind = text(command, "kind");
+                if (kind.equals("MOVE_TO")) {
+                    required(command, "x"); required(command, "y"); defaults(command, "urgency", 0.5);
+                    defaults(command, "holdFrames", 0);
+                } else {
+                    defaults(command, "x", 0); defaults(command, "y", 0); defaults(command, "urgency", 0);
+                    defaults(command, "holdFrames", kind.equals("JUMP") ? 12 : 0);
+                }
+                if (kind.equals("JUMP") && integer(command, "holdFrames", -1) > duration - frame)
+                    throw new IOException("Jump hold crosses a shot boundary");
+                command.put("id", shotId + "." + actor + "."
+                        + (command.has("id") ? text(command, "id") : "action" + index));
+                index++;
+                command.put("frame", offset + frame);
+                out.add(command);
+            }
         }
     }
 
@@ -153,7 +203,7 @@ public final class StageplayScriptCompiler {
         }
     }
 
-    private static void appendKeys(ArrayNode out, ArrayNode input, int offset, int duration, boolean actor) throws IOException {
+    private static void appendKeys(ArrayNode out, ArrayNode input, int offset, int duration, boolean actor, boolean puppet) throws IOException {
         int previous = -1;
         for (JsonNode item : input) {
             ObjectNode key = object(item, actor ? "actor key" : "camera key", actor
@@ -163,16 +213,16 @@ public final class StageplayScriptCompiler {
             if (frame <= previous || frame >= duration) throw new IOException("Keys must ascend within the shot");
             previous = frame;
             key.put("frame", offset + frame);
-            if (actor) actorDefaults(key);
+            if (actor) actorDefaults(key, puppet);
             else { defaults(key, "zoom", 1); defaults(key, "interpolation", "LINEAR"); }
             out.add(key);
         }
     }
 
-    private static void actorDefaults(ObjectNode key) {
+    private static void actorDefaults(ObjectNode key, boolean puppet) {
         defaults(key, "x", 0); defaults(key, "y", 0); defaults(key, "animation", 0); defaults(key, "pose", -1);
         defaults(key, "flipX", false); defaults(key, "visible", true); defaults(key, "scale", 1);
-        defaults(key, "interpolation", "LINEAR");
+        defaults(key, "interpolation", puppet ? "HOLD" : "LINEAR");
     }
 
     private static void appendEvents(ArrayNode out, ArrayNode input, String shot, String kind, int offset, int duration, String gameId) throws IOException {
@@ -226,6 +276,12 @@ public final class StageplayScriptCompiler {
         JsonNode value = required(node, field);
         if (!value.isTextual()) throw new IOException(field + " must be a string");
         return value.textValue();
+    }
+    private static boolean bool(ObjectNode node, String field, boolean fallback) throws IOException {
+        if (!node.has(field)) return fallback;
+        JsonNode value = node.get(field);
+        if (!value.isBoolean()) throw new IOException(field + " must be a boolean");
+        return value.booleanValue();
     }
     private static int integer(ObjectNode node, String field, int fallback) throws IOException {
         if (!node.has(field)) return fallback;

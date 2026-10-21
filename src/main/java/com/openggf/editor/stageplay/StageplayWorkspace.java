@@ -33,6 +33,9 @@ public final class StageplayWorkspace {
         default void validate(StageplayDocument document, Path assetRoot) throws IOException { }
         default void play(StageplayDocument document, Path assetRoot, int frame) throws IOException { }
         default void present(StageplayDocument document, int frame) { }
+        default StageplayTimeline.Frame resolvePreview(StageplayDocument document, Path assetRoot, int frame) throws IOException {
+            return StageplayTimeline.sample(document, frame);
+        }
         default void stop() { }
         default void export(StageplayDocument document, Path source, Path output) throws IOException {
             throw new IOException("Film export is unavailable in this host");
@@ -42,12 +45,13 @@ public final class StageplayWorkspace {
     public enum Action {
         NEW("New scene"), OPEN("Open scene"), SAVE("Save"), SAVE_AS("Save as"),
         SCENE("Scene / set"), ADD_ACTOR("Add actor"), EDIT_ACTOR("Actor properties"),
-        DELETE_ACTOR("Remove actor"), SET_KEY("Set actor key"), DELETE_KEY("Remove actor key"),
+        DELETE_ACTOR("Remove actor"), SET_KEY("Direct actor / set key"), DELETE_KEY("Remove actor key / action"),
+        PUPPET_ACTIONS("Puppet actions"),
         CAMERA_MODE("Direct camera (C)"), SET_CAMERA_KEY("Capture camera key (K)"), CAMERA_KEY("Camera keys"),
         RECORD_CAMERA("Record camera take (R)"), CAMERA_EFFECTS("Camera shake / quake"),
         SCENE_CHANGES("Scene changes / transitions"), FILM_FORMAT("Film format presets"), CAPTION("Captions"), DIALOGUE("Dialogue lines"),
         DIALOGUE_TYPERS("Dialogue typers"), DIALOGUE_SKINS("Dialogue decorations"), AUDIO("Audio cues"),
-        RECORD("Record directed take (WASD)"), PLAY("Play / pause"), STOP("Stop"),
+        RECORD("Record actor take (R)"), PLAY("Play / pause"), STOP("Stop"),
         UNDO("Undo"), REDO("Redo"), EXPORT("Export film"), EXIT("Level editor");
         private final String label;
         Action(String label) { this.label = label; }
@@ -66,6 +70,16 @@ public final class StageplayWorkspace {
     private List<ActorKey> takeKeys;
     private String takeActor;
     private List<CameraKey> takeCameraKeys;
+    private List<PuppetCommand> takeCommands;
+    private StageplayDocument takeDraft;
+    private int takeDirection;
+    private int takeStartFrame;
+    private boolean takeJumpHeld;
+    private StageplayDocument previewSource;
+    private Path previewRoot;
+    private int previewAt = -1;
+    private StageplayTimeline.Frame resolvedPreview;
+    private String previewError;
     private boolean cameraMode;
     private boolean cameraInputEnabled = true;
     private StageplayTimeline.CameraPose cameraDraft;
@@ -85,6 +99,8 @@ public final class StageplayWorkspace {
     public boolean active() { return active; }
     public boolean recording() { return takeBefore != null; }
     public boolean recordingCamera() { return takeCameraKeys != null; }
+    public boolean recordingPuppet() { return takeCommands != null; }
+    public boolean selectedActorIsPuppet() { return puppet(controller.document(), controller.selectedActorId()) != null; }
     public boolean cameraMode() { return cameraMode; }
     /** Frontends suspend held camera controls while a palette or text widget owns input. */
     public void setCameraInputEnabled(boolean enabled) { cameraInputEnabled = enabled; if (!enabled) resetZoomRepeat(); }
@@ -100,6 +116,7 @@ public final class StageplayWorkspace {
             host.finishPendingEdits();
             if (!initialized) newDocument();
             host.refreshResources();
+            invalidatePreview();
             active = true;
         } catch (RuntimeException failure) {
             menu.showActions("Cannot open Stageplay", List.of(action("Keep editing", () -> { })));
@@ -126,8 +143,9 @@ public final class StageplayWorkspace {
                 case ADD_ACTOR -> actorForm(null);
                 case EDIT_ACTOR -> actorForm(selectedActor());
                 case DELETE_ACTOR -> deleteActor();
-                case SET_KEY -> keyForm();
+                case SET_KEY -> { if (selectedActorIsPuppet()) puppetMenu(); else keyForm(); }
                 case DELETE_KEY -> deleteKey();
+                case PUPPET_ACTIONS -> puppetMenu();
                 case CAMERA_MODE -> {
                     cameraMode = !cameraMode; cameraDraft = null;
                     status = cameraMode ? "Camera: WASD / arrows pan, Q / E step integer zoom, K capture key, R record, C leave camera." : "Actor direction";
@@ -190,8 +208,10 @@ public final class StageplayWorkspace {
         var candidate = recordingDocument();
         controller.edit(ignored -> candidate);
         // A failed stop or commit must leave the last valid take available for retry.
-        takeBefore = null; takeKeys = null; takeActor = null; takeCameraKeys = null; cameraDraft = null;
-        status = "Recorded visual take. Undo removes the whole take.";
+        boolean physical = recordingPuppet();
+        takeBefore = null; takeKeys = null; takeActor = null; takeCameraKeys = null; takeCommands = null; takeDraft = null; cameraDraft = null;
+        status = physical ? "Recorded Puppet instructions. Undo removes the whole take."
+                : "Recorded Poser visual take. Undo removes the whole take.";
     }
 
     private void play() {
@@ -211,13 +231,19 @@ public final class StageplayWorkspace {
         stop();
         var actor = selectedActor();
         cameraMode = false; cameraDraft = null;
-        takeBefore = controller.document(); takeActor = actor.id(); takeKeys = new ArrayList<>(actor.keys());
-        status = "Recording visual movement: WASD. Space stops. This is a baked take, not simulation input.";
+        var track = puppet(controller.document(), actor.id());
+        if (track != null) requireResolvedActor(controller.document(), actor.id());
+        takeBefore = controller.document(); takeActor = actor.id(); takeDraft = takeBefore; takeStartFrame=controller.frame();
+        if (track == null) takeKeys = new ArrayList<>(actor.keys());
+        else { takeCommands = new ArrayList<>(track.commands()); takeDirection = 0; takeJumpHeld = false; }
+        status = track == null ? "Recording Poser movement: WASD. Space stops. Undo removes the whole visual take."
+                : "Recording Puppet actions: A/D move, release/S stop, W jump. Space ends the take. Goals use native acceleration.";
     }
 
     /** Deterministic puppet recording, deliberately separate from engine input replays. */
     void recordStep(boolean right, boolean left, boolean down, boolean up) {
         if (!recording()) return;
+        if (recordingPuppet()) { recordPuppetStep(right, left, down, up); return; }
         int frame = controller.frame();
         var draft = takeDocument(takeKeys);
         var pose = StageplayTimeline.sample(draft, frame).actors().stream()
@@ -228,8 +254,9 @@ public final class StageplayWorkspace {
         var keys = new ArrayList<>(takeKeys);
         keys.removeIf(k -> k.frame() == frame); keys.add(key); keys.sort(Comparator.comparingInt(ActorKey::frame));
         // Validate the whole scene budget before publishing a draft that either frontend can draw.
-        takeDocument(keys);
+        var candidate = takeDocument(keys);
         takeKeys = keys;
+        takeDraft = candidate;
         if (frame == controller.document().durationFrames() - 1) stop(); else controller.seek(frame + 1);
     }
 
@@ -238,16 +265,125 @@ public final class StageplayWorkspace {
 
     /** Unkeyed framing is view state, so a full document key budget cannot break preview. */
     public StageplayTimeline.Frame previewFrame() {
-        var frame = StageplayTimeline.sample(previewDocument(),controller.frame());
+        var frame = resolvePreview(previewDocument(), controller.frame());
         if (cameraDraft == null || controller.playing()) return frame;
         var shaken = new StageplayTimeline.CameraPose(cameraDraft.x()+frame.camera().x()-frame.baseCamera().x(),
                 cameraDraft.y()+frame.camera().y()-frame.baseCamera().y(),cameraDraft.zoom());
-        return new StageplayTimeline.Frame(frame.frame(),frame.actors(),shaken,frame.captions(),frame.set(),frame.transition(),cameraDraft,frame.dialogue());
+        return new StageplayTimeline.Frame(frame.frame(),frame.actors(),shaken,frame.captions(),frame.set(),frame.transition(),cameraDraft,frame.dialogue(),frame.puppets());
+    }
+
+    private void invalidatePreview() { previewSource=null; resolvedPreview=null; previewError=null; previewAt=-1; }
+
+    private StageplayTimeline.Frame resolvePreview(StageplayDocument document,int frame) {
+        if (resolvedPreview != null && frame==previewAt && assetRoot.equals(previewRoot) && document.equals(previewSource)) return resolvedPreview;
+        previewSource=document; previewRoot=assetRoot; previewAt=frame; previewError=null;
+        try { resolvedPreview=Objects.requireNonNull(host.resolvePreview(document,assetRoot,frame),"preview frame"); }
+        catch (IOException | RuntimeException failure) {
+            controller.pause(); startedThisTick=false; previewSoundActive=false;
+            try { host.stop(); } catch (RuntimeException cleanup) { if (cleanup!=failure) failure.addSuppressed(cleanup); }
+            previewError="Puppet preview unavailable: "+(failure.getMessage()==null?failure.getClass().getSimpleName():failure.getMessage());
+            status=previewError;
+            // Keep authoring available without claiming the unresolved placement is a simulated result.
+            resolvedPreview=StageplayTimeline.sample(document,frame);
+        }
+        return resolvedPreview;
+    }
+
+    public StageplayTimeline.ActorPose selectedActorPose() {
+        String id=controller.selectedActorId();
+        return previewFrame().actors().stream().filter(a -> a.actorId().equals(id)).findFirst().orElse(null);
+    }
+
+    /** Shared readout for both frontends; goals are never reported as actual positions. */
+    public String selectedActorStatus() {
+        if (controller.selectedActorId().isEmpty()) return "Select a cast member";
+        var frame=previewFrame();
+        if (previewError!=null) return previewError;
+        var actor=frame.actors().stream().filter(a -> a.actorId().equals(controller.selectedActorId())).findFirst().orElse(null);
+        if (actor==null) return "Select a cast member";
+        var sample=frame.puppets().stream().filter(a -> a.actorId().equals(actor.actorId())).findFirst().orElse(null);
+        if (sample==null) return "Poser x"+coordinate(actor.x())+" y"+coordinate(actor.y());
+        if (sample.status().name().equals("UNRESOLVED")) return "Puppet preview unavailable";
+        if (sample.status().name().equals("INACTIVE")) return "INACTIVE / hidden for this shot";
+        String value=sample.status()+" x"+coordinate(actor.x())+" y"+coordinate(actor.y())+(sample.airborne()?" / airborne":"");
+        var track=puppet(previewDocument(),actor.actorId());
+        if (track!=null) for (var command:track.commands()) if (command.id().equals(sample.commandId()) && command.kind()==PuppetCommandKind.MOVE_TO)
+            value+=" / goal "+coordinate(command.x())+","+coordinate(command.y());
+        return value;
+    }
+
+    private StageplayTimeline.ActorPose requireResolvedActor(StageplayDocument document,String id) {
+        var frame=resolvePreview(document,controller.frame());
+        if (previewError!=null) throw new IllegalStateException(previewError);
+        var sample=frame.puppets().stream().filter(p -> p.actorId().equals(id)).findFirst().orElse(null);
+        if (sample==null || sample.status().name().equals("UNRESOLVED"))
+            throw new IllegalStateException("Puppet preview must be available before recording this actor");
+        if (sample.status().name().equals("INACTIVE"))
+            throw new IllegalStateException("Make this actor visible during the shot before recording physics");
+        return frame.actors().stream().filter(a -> a.actorId().equals(id)).findFirst().orElseThrow();
+    }
+
+    private void recordPuppetStep(boolean right,boolean left,boolean stop,boolean jump) {
+        int frame=controller.frame();
+        var pose=requireResolvedActor(takeDraft,takeActor);
+        int direction=stop?0:(right?1:0)-(left?1:0);
+        var commands=new ArrayList<>(takeCommands);
+        boolean replaced=commands.removeIf(c -> c.frame()==frame);
+        var oldMove=takeCommands.stream().filter(c -> c.frame()<=frame && c.kind()!=PuppetCommandKind.JUMP).reduce((a,b)->b).orElse(null);
+        boolean nearingGoal=direction!=0 && oldMove!=null && oldMove.kind()==PuppetCommandKind.MOVE_TO
+                && Math.abs(oldMove.x()-pose.x())<128;
+        boolean newShot=takeBefore.sceneChanges().stream().anyMatch(c -> c.frame()==frame);
+        if (replaced || frame==takeStartFrame || newShot || direction!=takeDirection || nearingGoal) {
+            PuppetCommandKind kind=direction==0?PuppetCommandKind.STOP:PuppetCommandKind.MOVE_TO;
+            commands.add(new PuppetCommand(nextCommandId(commands),frame,kind,
+                    direction==0?0:Math.clamp(pose.x()+direction*8192,-1_048_576,1_048_576),
+                    direction==0?0:pose.y(),direction==0?0:1,0));
+        }
+        if (jump && !takeJumpHeld) {
+            int hold=Math.min(12,shotEnd(takeBefore,frame)-frame);
+            int nextJump=commands.stream().filter(c -> c.kind()==PuppetCommandKind.JUMP && c.frame()>frame)
+                    .mapToInt(PuppetCommand::frame).min().orElse(takeBefore.durationFrames()+1);
+            hold=Math.min(hold,nextJump-frame-1);
+            if (hold<1) throw new IllegalArgumentException("Leave one released frame between jump presses");
+            // Native jump needs a released tick before another press, including imported earlier holds.
+            for (int i=0;i<commands.size();i++) {
+                var c=commands.get(i);
+                if (c.kind()!=PuppetCommandKind.JUMP || c.frame()>=frame || c.frame()+c.holdFrames()<frame) continue;
+                int previousHold=frame-c.frame()-1;
+                if (previousHold<1) throw new IllegalArgumentException("Leave one released frame between jump presses");
+                commands.set(i,new PuppetCommand(c.id(),c.frame(),c.kind(),c.x(),c.y(),c.urgency(),previousHold));
+            }
+            commands.add(new PuppetCommand(nextCommandId(commands),frame,PuppetCommandKind.JUMP,0,0,0,hold));
+        }
+        commands.sort(Comparator.comparingInt(PuppetCommand::frame));
+        var track=puppet(takeBefore,takeActor);
+        var candidate=replacePuppet(takeBefore,new PuppetTrack(takeActor,track.snapToFloor(),track.collisionPath(),commands));
+        // Resolve before publishing: a failed step retains the last valid take and playhead.
+        requireResolvedActor(candidate,takeActor);
+        takeCommands=commands; takeDraft=candidate; takeDirection=direction; takeJumpHeld=jump;
+        if (frame==takeBefore.durationFrames()-1) stop(); else controller.seek(frame+1);
+    }
+
+    private String nextCommandId(List<PuppetCommand> commands) {
+        var used=allIds(takeBefore); commands.forEach(c -> used.add(c.id()));
+        int i=1; while(used.contains("action"+i)) i++; return "action"+i;
+    }
+
+    private static int shotEnd(StageplayDocument document,int frame) {
+        return document.sceneChanges().stream().filter(c -> c.frame()>frame).mapToInt(SceneChange::frame).min().orElse(document.durationFrames());
+    }
+    private static String coordinate(double value) { return String.format(java.util.Locale.ROOT,"%.1f",value); }
+    private static PuppetTrack puppet(StageplayDocument document,String id) {
+        return document.puppets().stream().filter(p -> p.actorId().equals(id)).findFirst().orElse(null);
+    }
+    private static StageplayDocument replacePuppet(StageplayDocument document,PuppetTrack track) {
+        var tracks=new ArrayList<>(document.puppets()); tracks.removeIf(p -> p.actorId().equals(track.actorId())); tracks.add(track);
+        return document.withPuppets(tracks);
     }
 
     private StageplayDocument recordingDocument() {
         if (!recording()) return controller.document();
-        return recordingCamera() ? takeBefore.withCamera(takeCameraKeys) : takeDocument(takeKeys);
+        return takeDraft;
     }
 
     /** Transient framing: only Capture key or Record commits it to the shared document. */
@@ -281,6 +417,7 @@ public final class StageplayWorkspace {
                 camera.x(), camera.y(), camera.zoom(), Interpolation.HOLD));
         before.withCamera(keys);
         cameraMode = true; takeBefore = before; takeCameraKeys = keys;
+        takeDraft = before.withCamera(keys);
         cameraDraft = null;
         status = "Recording camera: WASD / arrows pan, Q / E step integer zoom, Space stops. One take is one undo.";
     }
@@ -296,7 +433,7 @@ public final class StageplayWorkspace {
             keys = withCameraKey(takeCameraKeys,new CameraKey(frame,camera.x(),camera.y(),camera.zoom(),Interpolation.HOLD));
             takeBefore.withCamera(keys); // Validate before publishing a preview or advancing.
         } catch (RuntimeException failure) { cameraDraft = previousDraft; throw failure; }
-        takeCameraKeys = keys; cameraDraft = null;
+        takeCameraKeys = keys; takeDraft = takeBefore.withCamera(keys); cameraDraft = null;
         if (frame == controller.document().durationFrames() - 1) stop(); else controller.seek(frame + 1);
     }
 
@@ -346,6 +483,7 @@ public final class StageplayWorkspace {
         controller.replace(host.initialDocument());
         cameraDraft = null; cameraMode = false;
         host.refreshResources();
+        invalidatePreview();
         assetRoot = host.initialAssetRoot().toAbsolutePath().normalize(); path = null; initialized = true;
         status = "New scene. Add a cast member, then set keys at timeline frames.";
     }
@@ -371,6 +509,7 @@ public final class StageplayWorkspace {
         stop(); controller.replace(candidate); path = absolute; assetRoot = absolute.getParent();
         cameraDraft = null; cameraMode = false;
         host.refreshResources();
+        invalidatePreview();
         initialized = true; active = true; status = "Opened " + absolute;
     }
 
@@ -443,24 +582,141 @@ public final class StageplayWorkspace {
     }
 
     private void actorForm(Actor actor) {
-        boolean add = actor == null;
-        menu.showForm(add ? "Add actor" : "Actor properties", List.of(text("name", "Name", add ? "Sonic" : actor.name()),
-                text("game", "ROM: s1 / s2 / s3k", add ? controller.document().set().gameId() : actor.gameId()),
-                text("character", "Character", add ? "sonic" : actor.character())), "Apply actor", v -> {
-            String id = add ? nextId("actor", controller.document()) : actor.id();
-            var camera = StageplayTimeline.sample(controller.document(), 0).baseCamera();
-            var initialKeys = new ArrayList<ActorKey>();
-            initialKeys.add(new ActorKey(0,camera.x()+controller.document().width()/2.0,camera.y()+controller.document().height()/2.0,0,-1,false,true,1,Interpolation.HOLD));
-            for (var change : controller.document().sceneChanges()) {
-                var shotCamera = StageplayTimeline.sample(controller.document(), change.frame()).baseCamera();
-                initialKeys.add(new ActorKey(change.frame(),shotCamera.x()+controller.document().width()/2.0,
-                        shotCamera.y()+controller.document().height()/2.0,0,-1,false,true,1,Interpolation.HOLD));
-            }
-            Actor value = new Actor(id,v.get("name"),v.get("game"),v.get("character"),add
-                    ? initialKeys : actor.keys());
-            edit(d -> { var actors = new ArrayList<>(d.actors()); if (!add) actors.removeIf(a -> a.id().equals(id)); actors.add(value); return d.withActors(actors); });
-            controller.selectActor(id);
+        boolean add=actor==null;
+        var oldTrack=add?null:puppet(controller.document(),actor.id());
+        var fields=new ArrayList<>(List.of(text("name","Name",add?"Sonic":actor.name()),
+                text("game","ROM: s1 / s2 / s3k",add?controller.document().set().gameId():actor.gameId()),
+                text("character","Character",add?"sonic":actor.character()),
+                text("mode","Performance: PUPPET / POSER",add || oldTrack!=null?"PUPPET":"POSER"),
+                text("snap","Start on floor: true / false",Boolean.toString(oldTrack==null || oldTrack.snapToFloor())),
+                number("collision","Terrain collision path (0 / 1)",oldTrack==null?0:oldTrack.collisionPath())));
+        if (add) {
+            var camera=StageplayTimeline.sample(controller.document(),0).baseCamera();
+            fields.add(number("x","Initial world centre X",camera.x()+controller.document().width()/2.0));
+            fields.add(number("y","Initial world centre Y (near floor)",camera.y()+controller.document().height()/2.0));
+        }
+        menu.showForm(add?"Add actor":"Actor properties",fields,"Apply actor",v -> {
+            String mode=v.get("mode").toUpperCase(java.util.Locale.ROOT);
+            if (!mode.equals("PUPPET") && !mode.equals("POSER")) throw new IllegalArgumentException("Performance must be PUPPET or POSER");
+            boolean physical=mode.equals("PUPPET");
+            String id=add?nextId("actor",controller.document()):actor.id();
+            var keys=new ArrayList<ActorKey>();
+            if (add) {
+                var frames=new ArrayList<Integer>(); frames.add(0); controller.document().sceneChanges().forEach(c -> frames.add(c.frame()));
+                for (int frame:frames) {
+                    var camera=StageplayTimeline.sample(controller.document(),frame).baseCamera();
+                    keys.add(new ActorKey(frame,frame==0?decimal(v,"x"):camera.x()+controller.document().width()/2.0,
+                            frame==0?decimal(v,"y"):camera.y()+controller.document().height()/2.0,
+                            0,-1,false,true,1,Interpolation.HOLD));
+                }
+            } else keys.addAll(actor.keys());
+            var value=new Actor(id,v.get("name"),v.get("game"),v.get("character"),keys);
+            if (physical) value=physicalKeys(value,controller.document().sceneChanges());
+            Actor replacement=value;
+            Runnable apply=() -> {
+                edit(d -> {
+                    var actors=new ArrayList<>(d.actors()); actors.removeIf(a -> a.id().equals(id)); actors.add(replacement);
+                    var tracks=new ArrayList<>(d.puppets()); tracks.removeIf(t -> t.actorId().equals(id));
+                    if (physical) tracks.add(new PuppetTrack(id,bool(v,"snap"),integer(v,"collision"),oldTrack==null?List.of():oldTrack.commands()));
+                    return withCast(d,actors,tracks);
+                });
+                controller.selectActor(id);
+            };
+            if (!add && physical!=(oldTrack!=null)) {
+                menu.showActions("Change actor performance?",List.of(
+                        action(physical?"Use Puppet; replace Poser motion keys":"Use Poser; remove Puppet commands",apply),
+                        action("Keep current performance",() -> { })));
+                menu.setSubtitle("This is one undoable change. Puppet keeps shot placements and visibility; Poser starts from those placements. Undo restores all previous keys and commands.");
+            } else apply.run();
         });
+        menu.setSubtitle("Puppet uses native movement and jumps. Floor snap searches near the feet, up to 128 pixels below; disable it for an airborne start. Poser controls position, animation and frames. Existing scenes keep their original mode.");
+    }
+
+    private static StageplayDocument withCast(StageplayDocument d,List<Actor> actors,List<PuppetTrack> puppets) {
+        return new StageplayDocument(d.version(),d.name(),d.durationFrames(),d.width(),d.height(),d.set(),actors,d.camera(),
+                d.captions(),d.audio(),d.cameraEffects(),d.sceneChanges(),d.dialogueTypers(),d.dialogueSkins(),d.dialogue(),puppets);
+    }
+
+    /** Native physics owns motion, scale and animation; authored keys retain shot placement and visibility. */
+    private static Actor physicalKeys(Actor actor,List<SceneChange> changes) {
+        var boundaries=new java.util.HashSet<Integer>(); boundaries.add(0); changes.forEach(c -> boundaries.add(c.frame()));
+        var keys=new ArrayList<ActorKey>(); ActorKey anchor=actor.keys().getFirst();
+        for (var key:actor.keys()) {
+            if (boundaries.contains(key.frame())) anchor=key;
+            keys.add(new ActorKey(key.frame(),anchor.x(),anchor.y(),0,-1,anchor.flipX(),key.visible(),1,Interpolation.HOLD));
+        }
+        return new Actor(actor.id(),actor.name(),actor.gameId(),actor.character(),keys);
+    }
+
+    private void puppetMenu() {
+        var actor=selectedActor(); var track=puppet(controller.document(),actor.id());
+        if (track==null) throw new IllegalStateException("Choose PUPPET in Actor properties to direct native movement and jump actions");
+        var actions=new ArrayList<EditorProjectMenu.Action>();
+        actions.add(action("Move to destination",() -> puppetCommandForm(actor, null,PuppetCommandKind.MOVE_TO)));
+        actions.add(action("Jump",() -> puppetCommandForm(actor,null,PuppetCommandKind.JUMP)));
+        actions.add(action("Stop / brake",() -> puppetCommandForm(actor,null,PuppetCommandKind.STOP)));
+        actions.add(action("Spawn / current shot placement",() -> puppetPlacementForm(actor)));
+        actions.add(action("Visibility at playhead",() -> puppetVisibilityForm(actor)));
+        for (var command:track.commands()) {
+            actions.add(action(command.frame()+": "+command.kind(),() -> {
+                var editAction=action("Edit",() -> puppetCommandForm(actor,command,command.kind()));
+                var deleteAction=action("Delete",() -> edit(d -> {
+                    var current=puppet(d,actor.id());
+                    return replacePuppet(d,new PuppetTrack(actor.id(),current.snapToFloor(),current.collisionPath(),
+                            current.commands().stream().filter(c -> !c.id().equals(command.id())).toList()));
+                }));
+                menu.showActions("Actor action",List.of(editAction,deleteAction));
+            }));
+        }
+        menu.showActions("Direct "+actor.name(),actions);
+        menu.setSubtitle(selectedActorStatus()+". Goals are attempts, not teleports; jump clears obstacles using native physics.");
+    }
+
+    private void puppetCommandForm(Actor actor,PuppetCommand command,PuppetCommandKind kind) {
+        var pose=selectedActorPose();
+        int frame=command==null?controller.frame():command.frame();
+        var fields=new ArrayList<EditorProjectMenu.Field>(); fields.add(number("frame","Frame",frame));
+        if (kind==PuppetCommandKind.MOVE_TO) {
+            fields.add(number("x","Destination world X",command==null?(pose==null?actor.keys().getFirst().x():pose.x())+96:command.x()));
+            fields.add(number("y","Destination world Y",command==null?(pose==null?actor.keys().getFirst().y():pose.y()):command.y()));
+            fields.add(number("urgency","Urgency (>0 to 1, native speed fraction)",command==null?.65:command.urgency()));
+        } else if (kind==PuppetCommandKind.JUMP) {
+            int nextJump=puppet(controller.document(),actor.id()).commands().stream()
+                    .filter(c -> c.kind()==PuppetCommandKind.JUMP && c.frame()>frame).mapToInt(PuppetCommand::frame).min()
+                    .orElse(controller.document().durationFrames()+1);
+            int defaultHold=Math.max(1,Math.min(12,Math.min(shotEnd(controller.document(),frame)-frame,nextJump-frame-1)));
+            fields.add(number("hold","Jump hold (1..60 frames)",command==null?defaultHold:command.holdFrames()));
+        }
+        menu.showForm(kind==PuppetCommandKind.MOVE_TO?"Move to destination":kind==PuppetCommandKind.JUMP?"Native jump":"Stop / brake",fields,"Apply action",v -> edit(d -> {
+            var track=puppet(d,actor.id()); var commands=new ArrayList<>(track.commands());
+            String id=command==null?nextId("action",d):command.id(); commands.removeIf(c -> c.id().equals(id));
+            commands.add(new PuppetCommand(id,integer(v,"frame"),kind,kind==PuppetCommandKind.MOVE_TO?decimal(v,"x"):0,
+                    kind==PuppetCommandKind.MOVE_TO?decimal(v,"y"):0,kind==PuppetCommandKind.MOVE_TO?decimal(v,"urgency"):0,
+                    kind==PuppetCommandKind.JUMP?integer(v,"hold"):0));
+            commands.sort(Comparator.comparingInt(PuppetCommand::frame));
+            return replacePuppet(d,new PuppetTrack(actor.id(),track.snapToFloor(),track.collisionPath(),commands));
+        }));
+        menu.setSubtitle(selectedActorStatus()+". A move continues until another move or stop. Jump presses need one released frame between holds. Urgency changes button steering, never native speed constants.");
+    }
+
+    private void puppetPlacementForm(Actor actor) {
+        int frame=controller.document().sceneChanges().stream().filter(c -> c.frame()<=controller.frame()).mapToInt(SceneChange::frame).max().orElse(0);
+        var key=actor.keys().stream().filter(k -> k.frame()==frame).findFirst().orElseThrow();
+        menu.showForm("Shot placement at frame "+frame,List.of(number("x","World centre X",key.x()),number("y","World centre Y / floor search",key.y()),
+                text("flip","Face left: true / false",Boolean.toString(key.flipX()))),"Apply placement",v -> edit(d -> {
+            var replacement=new ActorKey(frame,decimal(v,"x"),decimal(v,"y"),0,-1,bool(v,"flip"),key.visible(),1,Interpolation.HOLD);
+            var candidate=new Actor(actor.id(),actor.name(),actor.gameId(),actor.character(),withKey(actor.keys(),replacement));
+            var normalized=physicalKeys(candidate,d.sceneChanges());
+            return d.withActors(d.actors().stream().map(a -> a.id().equals(actor.id())?normalized:a).toList());
+        }));
+        menu.setSubtitle("Placement resets the actor at the start of this shot. Floor snap searches up to 128 pixels below the feet; disable Start on floor in Actor properties for an airborne start. Use Move to destination for movement.");
+    }
+
+    private void puppetVisibilityForm(Actor actor) {
+        int frame=controller.frame();
+        var key=actor.keys().stream().filter(k -> k.frame()<=frame).reduce((a,b)->b).orElseThrow();
+        menu.showForm("Visibility at frame "+frame,List.of(text("visible","Visible: true / false",Boolean.toString(key.visible()))),"Apply visibility",v -> edit(d ->
+                replaceActor(d,actor,withKey(actor.keys(),new ActorKey(frame,key.x(),key.y(),0,-1,key.flipX(),bool(v,"visible"),1,Interpolation.HOLD)))));
     }
 
     private Actor selectedActor() {
@@ -483,6 +739,18 @@ public final class StageplayWorkspace {
 
     private void deleteKey() {
         Actor actor = selectedActor(); int frame = controller.frame();
+        var track=puppet(controller.document(),actor.id());
+        if (track!=null) {
+            var actions=new ArrayList<EditorProjectMenu.Action>();
+            for (var command:track.commands()) if (command.frame()==frame) actions.add(action("Remove "+command.kind(),() -> edit(d -> {
+                var current=puppet(d,actor.id()); return replacePuppet(d,new PuppetTrack(actor.id(),current.snapToFloor(),current.collisionPath(),
+                        current.commands().stream().filter(c -> !c.id().equals(command.id())).toList()));
+            })));
+            if (frame!=0 && !isSceneBoundary(frame) && actor.keys().stream().anyMatch(k -> k.frame()==frame))
+                actions.add(action("Remove visibility key",() -> edit(d -> replaceActor(d,actor,actor.keys().stream().filter(k -> k.frame()!=frame).toList()))));
+            if (actions.isEmpty()) throw new IllegalStateException("No actor action or removable visibility key at this frame");
+            menu.showActions("Remove actor action",actions); return;
+        }
         if (frame == 0) throw new IllegalStateException("Every actor needs its frame-zero key");
         if (isSceneBoundary(frame)) throw new IllegalStateException("A scene change needs this actor key. Remove the scene change first.");
         edit(d -> replaceActor(d,actor,actor.keys().stream().filter(k -> k.frame()!=frame).toList()));
@@ -576,7 +844,7 @@ public final class StageplayWorkspace {
         actions.add(action("Add scene change", () -> sceneChangeForm(null)));
         for (var change : controller.document().sceneChanges()) actions.add(action(change.frame() + ": " + change.transition() + " / " + change.set().gameId(),
                 () -> menu.showActions("Scene change", List.of(action("Edit", () -> sceneChangeForm(change)),
-                        action("Delete", () -> edit(d -> d.withSceneChanges(d.sceneChanges().stream()
+                        action("Delete", () -> edit(d -> withSceneBoundaries(d,d.sceneChanges().stream()
                                 .filter(c -> !c.id().equals(change.id())).toList())))))));
         menu.showActions("Scene changes / transitions", actions);
         menu.setSubtitle("Each change starts a new shot. Keys at its boundary belong to the incoming shot; removing a change preserves its keys.");
@@ -621,25 +889,29 @@ public final class StageplayWorkspace {
             }
         }
         camera.sort(Comparator.comparingInt(CameraKey::frame));
+        for (int i=0;i<actors.size();i++) if (puppet(doc,actors.get(i).id())!=null) actors.set(i,physicalKeys(actors.get(i),changes));
         return new StageplayDocument(doc.version(),doc.name(),doc.durationFrames(),doc.width(),doc.height(),doc.set(),
-                actors,camera,doc.captions(),doc.audio(),doc.cameraEffects(),changes,doc.dialogueTypers(),doc.dialogueSkins(),doc.dialogue());
+                actors,camera,doc.captions(),doc.audio(),doc.cameraEffects(),changes,doc.dialogueTypers(),doc.dialogueSkins(),doc.dialogue(),doc.puppets());
     }
 
+
+    private static StageplayDocument removeActor(StageplayDocument d,String id) {
+        return withCast(d,d.actors().stream().filter(a -> !a.id().equals(id)).toList(),d.puppets().stream().filter(p -> !p.actorId().equals(id)).toList());
+    }
 
     private void deleteActor() {
         var actor = selectedActor();
         if (controller.document().dialogue().stream().noneMatch(c -> c.speakerActor().equals(actor.id()))) {
-            edit(d -> d.withActors(d.actors().stream().filter(a -> !a.id().equals(actor.id())).toList()));
+            edit(d -> removeActor(d,actor.id()));
             return;
         }
         menu.showActions("Remove " + actor.name() + "?", List.of(
                 action("Keep dialogue as offscreen speech", () -> edit(d -> {
                     var cues = d.dialogue().stream().map(c -> c.speakerActor().equals(actor.id())
                             ? dialogueSpeaker(c, "", StageplayDialogue.speakerName(d,c)) : c).toList();
-                    return d.withDialogue(cues).withActors(d.actors().stream().filter(a -> !a.id().equals(actor.id())).toList());
-                })), action("Remove actor and their dialogue", () -> edit(d -> d.withDialogue(d.dialogue().stream()
-                        .filter(c -> !c.speakerActor().equals(actor.id())).toList()).withActors(d.actors().stream()
-                        .filter(a -> !a.id().equals(actor.id())).toList()))), action("Keep actor", () -> { })));
+                    return removeActor(d.withDialogue(cues),actor.id());
+                })), action("Remove actor and their dialogue", () -> edit(d -> removeActor(d.withDialogue(d.dialogue().stream()
+                        .filter(c -> !c.speakerActor().equals(actor.id())).toList()),actor.id()))), action("Keep actor", () -> { })));
     }
 
     private void dialogueMenu() {
@@ -871,11 +1143,15 @@ public final class StageplayWorkspace {
     public void report(Throwable failure) { status=failure.getMessage()==null?failure.toString():failure.getMessage(); menu.report(failure); }
     public void setStatus(String value) { status=Objects.requireNonNull(value); }
     private static String nextId(String prefix,StageplayDocument doc) {
+        var used=allIds(doc); int i=1; while(used.contains(prefix+i)) i++; return prefix+i;
+    }
+    private static java.util.Set<String> allIds(StageplayDocument doc) {
         var used = new java.util.HashSet<String>();
         doc.actors().forEach(a -> used.add(a.id())); doc.captions().forEach(c -> used.add(c.id())); doc.audio().forEach(c -> used.add(c.id()));
         doc.cameraEffects().forEach(e -> used.add(e.id())); doc.sceneChanges().forEach(c -> used.add(c.id()));
         doc.dialogue().forEach(c -> used.add(c.id()));
-        int i=1; while(used.contains(prefix+i)) i++; return prefix+i;
+        doc.puppets().forEach(p -> p.commands().forEach(c -> used.add(c.id())));
+        return used;
     }
     private static String escapeCaption(String text) { return text.replace("\\","\\\\").replace("\n","\\n"); }
     private static String unescapeCaption(String text) {

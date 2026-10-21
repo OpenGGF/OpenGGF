@@ -41,6 +41,7 @@ class TestStageplayHud {
         press(BUTTON_Y);
         assertEquals("Add actor", workspace.menu().title());
         workspace.menu().setValue("name", "Hero");
+        workspace.menu().setValue("mode", "POSER");
         workspace.menu().submit();
         assertEquals("Hero", workspace.controller().document().actors().getFirst().name());
 
@@ -119,6 +120,24 @@ class TestStageplayHud {
         var line=hud.rows().stream().filter(r -> r.label().equals("Dialogue / Sonic")).findFirst().orElseThrow();
         assertEquals("Hello!",line.detail()); line.action().run();
         assertEquals(20,workspace.controller().frame()); assertEquals(actor,workspace.controller().selectedActorId());
+    }
+
+    @Test
+    void physicalActorUsesActionMenuAndTimelineSelectsItsInstructions() {
+        press(BUTTON_Y); workspace.menu().submit();
+        String actor=workspace.controller().selectedActorId();
+        assertTrue(workspace.selectedActorIsPuppet());
+        hud.reactivated(); tick(); press(BUTTON_X);
+        assertEquals("Direct Sonic",workspace.menu().title()); workspace.menu().close();
+        var doc=workspace.controller().document();
+        workspace.controller().replace(doc.withPuppets(List.of(new StageplayDocument.PuppetTrack(actor,true,0,List.of(
+                new StageplayDocument.PuppetCommand("move",10,StageplayDocument.PuppetCommandKind.MOVE_TO,300,112,.5,0),
+                new StageplayDocument.PuppetCommand("jump",20,StageplayDocument.PuppetCommandKind.JUMP,0,0,0,12))))));
+        input.handleKeyEvent(GLFW_KEY_TAB,GLFW_PRESS); tick();
+        assertEquals(List.of(0,0,10,20),hud.rows().stream().map(StageplayHud.Row::frame).toList());
+        var move=hud.rows().stream().filter(r -> r.label().endsWith("MOVE_TO")).findFirst().orElseThrow();
+        assertTrue(move.detail().contains("50%")); move.action().run();
+        assertEquals(10,workspace.controller().frame()); assertEquals(actor,workspace.controller().selectedActorId());
     }
 
     @Test

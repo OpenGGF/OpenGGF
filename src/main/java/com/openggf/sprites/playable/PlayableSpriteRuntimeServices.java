@@ -22,17 +22,18 @@ final class PlayableSpriteRuntimeServices {
         private PlayableSpriteRuntimeServices() {
         }
 
-        static Camera camera() { return GameServices.camera(); }
-        static LevelManager level() { return GameServices.level(); }
-        static LevelManager levelOrNull() { return GameServices.levelOrNull(); }
-        static GameModule currentOrBootstrapGameModule() { return GameServices.currentOrBootstrapGameModule(); }
-        static CrossGameFeatureProvider crossGameFeatures() { return GameServices.crossGameFeatures(); }
+        static Camera camera(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.camera : GameServices.camera(); }
+        static LevelManager level(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.level : GameServices.level(); }
+        static LevelManager levelOrNull(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.level : GameServices.levelOrNull(); }
+        static GameModule currentOrBootstrapGameModule(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.module : GameServices.currentOrBootstrapGameModule(); }
+        static CrossGameFeatureProvider crossGameFeatures(AbstractPlayableSprite sprite) { return GameServices.crossGameFeatures(); }
         /**
          * Level events belong to the active world session — nothing outside one
          * can have a boss fight running — so this deliberately does not fall
          * back to the bootstrap module.
          */
-        static LevelEventProvider levelEventsOrNull() {
+        static LevelEventProvider levelEventsOrNull(AbstractPlayableSprite sprite) {
+                if (sprite.runtimeServices != null) return null;
                 WorldSession world = SessionManager.getCurrentWorldSession();
                 GameModule module = world != null ? world.getGameModule() : null;
                 return module != null ? module.getLevelEventProvider() : null;
@@ -43,18 +44,18 @@ final class PlayableSpriteRuntimeServices {
         static int resolveAnimationId(GameModule module, CanonicalAnimation animation) {
                 return module != null ? module.resolveAnimationId(animation) : -1;
         }
-        static TimerManager timers() { return GameServices.timers(); }
-        static GameStateManager gameState() { return GameServices.gameState(); }
-        static GameStateManager gameStateOrNull() { return GameServices.gameStateOrNull(); }
-        static CollisionSystem collision() { return GameServices.collision(); }
-        static CollisionSystem collisionOrNull() { return GameServices.collisionOrNull(); }
-        static AudioManager audio() { return GameServices.audio(); }
-        static GameRng rng() { return GameServices.rng(); }
-        static GameRng rngOrNull() { return GameServices.rngOrNull(); }
-        static WaterSystem water() { return GameServices.water(); }
-        static SpriteManager spritesOrNull() { return GameServices.spritesOrNull(); }
-        static int gameplayFrameCounter() {
-                SpriteManager sprites = spritesOrNull();
+        static TimerManager timers(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.timers : GameServices.timers(); }
+        static GameStateManager gameState(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.gameState : GameServices.gameState(); }
+        static GameStateManager gameStateOrNull(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.gameState : GameServices.gameStateOrNull(); }
+        static CollisionSystem collision(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.collision : GameServices.collision(); }
+        static CollisionSystem collisionOrNull(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.collision : GameServices.collisionOrNull(); }
+        static AudioManager audio(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.audio : GameServices.audio(); }
+        static GameRng rng(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.rng : GameServices.rng(); }
+        static GameRng rngOrNull(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.rng : GameServices.rngOrNull(); }
+        static WaterSystem water(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.water : GameServices.water(); }
+        static SpriteManager spritesOrNull(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.sprites : GameServices.spritesOrNull(); }
+        static int gameplayFrameCounter(AbstractPlayableSprite sprite) {
+                SpriteManager sprites = spritesOrNull(sprite);
                 return sprites != null ? sprites.getFrameCounter() : 0;
         }
 }

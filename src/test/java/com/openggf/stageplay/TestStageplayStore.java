@@ -47,7 +47,7 @@ class TestStageplayStore {
                 valid.replace("\"romSha1\":\"\",", ""),
                 valid.replace("\"interpolation\":\"HOLD\"", "\"interpolation\":0"),
                 valid.replace("\"interpolation\":\"HOLD\"", "\"interpolation\":\"UNKNOWN\""),
-                valid.replace("\"version\":3", "\"version\":4"),
+                valid.replace("\"version\":" + VERSION, "\"version\":" + (VERSION + 1)),
                 valid.replaceAll("\"durationFrames\"\\s*:\\s*600", "\"durationFrames\":\"600\""),
                 valid.replaceAll("\"zoom\"\\s*:\\s*1\\.0", "\"zoom\":null"),
                 valid.replaceAll("\"camera\"\\s*:", "\"camera\":null,\"ignored\":"))) {
@@ -99,6 +99,7 @@ class TestStageplayStore {
         var mapper = new JsonMapper();
         ObjectNode legacy = (ObjectNode) mapper.readTree(StageplayStore.encode(source));
         legacy.put("version", 2);
+        legacy.remove("puppets");
         legacy.remove(List.of("dialogueTypers", "dialogueSkins", "dialogue"));
         var migrated = StageplayStore.decode(mapper.writeValueAsBytes(legacy));
         assertEquals(source, migrated);

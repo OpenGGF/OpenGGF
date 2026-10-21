@@ -86,7 +86,7 @@ class TestStageplayDocument {
         assertThrows(IllegalArgumentException.class,
                 () -> scene().withAudio(List.of(new AudioCue("cue", 600, AudioKind.MUSIC_STOP, "s3k", -1, "", 1))));
         assertThrows(IllegalArgumentException.class, () -> scene().withSize(159, 224));
-        assertThrows(IllegalArgumentException.class, () -> new StageplayDocument(4, "future", 10, 320, 224,
+        assertThrows(IllegalArgumentException.class, () -> new StageplayDocument(VERSION + 1, "future", 10, 320, 224,
                 scene().set(), List.of(), scene().camera(), List.of(), List.of()));
     }
 

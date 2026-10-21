@@ -16,8 +16,9 @@ import java.util.Set;
 public record StageplayDocument(int version, String name, int durationFrames, int width, int height,
         SetSource set, List<Actor> actors, List<CameraKey> camera, List<Caption> captions,
         List<AudioCue> audio, List<CameraEffect> cameraEffects, List<SceneChange> sceneChanges,
-        List<DialogueTyper> dialogueTypers, List<DialogueSkin> dialogueSkins, List<DialogueCue> dialogue) {
-    public static final int VERSION = 3;
+        List<DialogueTyper> dialogueTypers, List<DialogueSkin> dialogueSkins, List<DialogueCue> dialogue,
+        List<PuppetTrack> puppets) {
+    public static final int VERSION = 4;
     public static final int FRAMES_PER_SECOND = 60;
     public static final int MAX_DURATION_FRAMES = 36_000;
     private static final int MAX_KEYS = 100_000;
@@ -39,6 +40,7 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         dialogueTypers = boundedCopy(dialogueTypers, 64, "dialogueTypers");
         dialogueSkins = boundedCopy(dialogueSkins, 64, "dialogueSkins");
         dialogue = boundedCopy(dialogue, 1024, "dialogue");
+        puppets = boundedCopy(puppets, 32, "puppets");
         require(!camera.isEmpty(), "camera must start at frame zero");
         Set<String> ids = new HashSet<>();
         int totalKeys = camera.size();
@@ -85,6 +87,38 @@ public record StageplayDocument(int version, String name, int durationFrames, in
             previousChange = change.frame();
             previousTransitionEnd = end;
         }
+        Set<String> puppetActors = new HashSet<>();
+        Set<Integer> boundaries = new HashSet<>();
+        boundaries.add(0);
+        sceneChanges.forEach(change -> boundaries.add(change.frame()));
+        int commandCount = 0;
+        for (PuppetTrack puppet : puppets) {
+            require(puppetActors.add(puppet.actorId()), "Duplicate puppet track: " + puppet.actorId());
+            Actor actor = actors.stream().filter(value -> value.id().equals(puppet.actorId())).findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Unknown puppet actor: " + puppet.actorId()));
+            ActorKey anchor = actor.keys().getFirst();
+            for (ActorKey key : actor.keys()) {
+                require(key.interpolation() == Interpolation.HOLD && key.animation() == 0 && key.pose() == -1
+                                && key.scale() == 1,
+                        "Physics puppets require held unit-scale keys and native animation: " + actor.id());
+                if (boundaries.contains(key.frame())) anchor = key;
+                else require(key.x() == anchor.x() && key.y() == anchor.y() && key.flipX() == anchor.flipX(),
+                        "Physics puppet position/facing keys are only allowed at shot boundaries: " + actor.id());
+            }
+            for (PuppetCommand command : puppet.commands()) {
+                require(ids.add(command.id()), "Duplicate id: " + command.id());
+                require(command.frame() < durationFrames, "Puppet command exceeds scene duration");
+                if (command.kind() == PuppetCommandKind.JUMP) {
+                    int end = command.frame() + command.holdFrames();
+                    require(end <= durationFrames, "Jump hold exceeds scene duration");
+                    for (SceneChange change : sceneChanges)
+                        require(change.frame() <= command.frame() || change.frame() >= end,
+                                "Jump hold crosses a scene boundary");
+                }
+            }
+            commandCount += puppet.commands().size();
+        }
+        require(commandCount <= 4096, "Scene has too many puppet commands");
         Set<String> typerIds = new HashSet<>(), skinIds = new HashSet<>();
         for (DialogueTyper typer : dialogueTypers)
             require(typerIds.add(typer.id()), "Duplicate dialogue typer: " + typer.id());
@@ -111,7 +145,7 @@ public record StageplayDocument(int version, String name, int durationFrames, in
     public StageplayDocument(int version, String name, int durationFrames, int width, int height,
             SetSource set, List<Actor> actors, List<CameraKey> camera, List<Caption> captions, List<AudioCue> audio) {
         this(migratedVersion(version), name, durationFrames, width, height, set, actors, camera, captions, audio,
-                List.of(), List.of(), List.of(), List.of(), List.of());
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
     }
 
     /** Source-compatible version-two constructor, retaining its camera and scene-change tracks. */
@@ -119,7 +153,16 @@ public record StageplayDocument(int version, String name, int durationFrames, in
             SetSource set, List<Actor> actors, List<CameraKey> camera, List<Caption> captions, List<AudioCue> audio,
             List<CameraEffect> cameraEffects, List<SceneChange> sceneChanges) {
         this(migratedVersion(version), name, durationFrames, width, height, set, actors, camera, captions, audio,
-                cameraEffects, sceneChanges, List.of(), List.of(), List.of());
+                cameraEffects, sceneChanges, List.of(), List.of(), List.of(), List.of());
+    }
+
+    /** Source-compatible version-three constructor: existing choreography remains manual. */
+    public StageplayDocument(int version, String name, int durationFrames, int width, int height,
+            SetSource set, List<Actor> actors, List<CameraKey> camera, List<Caption> captions, List<AudioCue> audio,
+            List<CameraEffect> cameraEffects, List<SceneChange> sceneChanges,
+            List<DialogueTyper> dialogueTypers, List<DialogueSkin> dialogueSkins, List<DialogueCue> dialogue) {
+        this(migratedVersion(version), name, durationFrames, width, height, set, actors, camera, captions, audio,
+                cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, List.of());
     }
 
     private static int migratedVersion(int version) {
@@ -136,60 +179,65 @@ public record StageplayDocument(int version, String name, int durationFrames, in
     }
 
     public StageplayDocument withName(String value) {
-        return new StageplayDocument(version, value, durationFrames, width, height, set, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue);
+        return new StageplayDocument(version, value, durationFrames, width, height, set, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets);
     }
 
     /** Shortening a scene rejects remaining keys/cues beyond its new end. */
     public StageplayDocument withDurationFrames(int value) {
-        return new StageplayDocument(version, name, value, width, height, set, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue);
+        return new StageplayDocument(version, name, value, width, height, set, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets);
     }
 
     public StageplayDocument withSize(int newWidth, int newHeight) {
-        return new StageplayDocument(version, name, durationFrames, newWidth, newHeight, set, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue);
+        return new StageplayDocument(version, name, durationFrames, newWidth, newHeight, set, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets);
     }
 
     public StageplayDocument withSet(SetSource value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, value, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue);
+        return new StageplayDocument(version, name, durationFrames, width, height, value, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets);
     }
 
     public StageplayDocument withActors(List<Actor> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, value, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, value, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets);
     }
 
     public StageplayDocument withCamera(List<CameraKey> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, value, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, value, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets);
     }
 
     public StageplayDocument withCaptions(List<Caption> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, value, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, value, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets);
     }
 
     public StageplayDocument withAudio(List<AudioCue> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, value, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, value, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets);
     }
 
     public StageplayDocument withCameraEffects(List<CameraEffect> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio, value, sceneChanges, dialogueTypers, dialogueSkins, dialogue);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio, value, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets);
     }
 
     /** Changes and their required actor/camera anchors must be published as one valid document. */
     public StageplayDocument withSceneChanges(List<SceneChange> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio, cameraEffects, value, dialogueTypers, dialogueSkins, dialogue);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio, cameraEffects, value, dialogueTypers, dialogueSkins, dialogue, puppets);
     }
 
     public StageplayDocument withDialogueTypers(List<DialogueTyper> value) {
         return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio,
-                cameraEffects, sceneChanges, value, dialogueSkins, dialogue);
+                cameraEffects, sceneChanges, value, dialogueSkins, dialogue, puppets);
     }
 
     public StageplayDocument withDialogueSkins(List<DialogueSkin> value) {
         return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio,
-                cameraEffects, sceneChanges, dialogueTypers, value, dialogue);
+                cameraEffects, sceneChanges, dialogueTypers, value, dialogue, puppets);
     }
 
     public StageplayDocument withDialogue(List<DialogueCue> value) {
         return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio,
-                cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, value);
+                cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, value, puppets);
+    }
+
+    public StageplayDocument withPuppets(List<PuppetTrack> value) {
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio,
+                cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, value);
     }
 
     /** Stock set reference and optional identity/authored-level reference. */
@@ -244,6 +292,52 @@ public record StageplayDocument(int version, String name, int durationFrames, in
             require(interpolation != null, "interpolation is required");
         }
     }
+
+    /** Presence opts an actor into native physics; absent actors retain manual choreography. */
+    @ModApi
+    public record PuppetTrack(String actorId, boolean snapToFloor, int collisionPath, List<PuppetCommand> commands) {
+        public PuppetTrack {
+            actorId = identifier(actorId);
+            range(collisionPath, 0, 1, "puppet collision path");
+            commands = boundedCopy(commands, 4096, "puppet commands");
+            int previous = -1, movement = -1, jump = -1, jumpEnd = -1;
+            for (PuppetCommand command : commands) {
+                require(command.frame() >= previous, "Puppet commands must be ordered by frame");
+                previous = command.frame();
+                if (command.kind() == PuppetCommandKind.JUMP) {
+                    require(command.frame() != jump && command.frame() > jumpEnd,
+                            "Puppet jumps require a released tick between button holds");
+                    jump = command.frame(); jumpEnd = jump + command.holdFrames();
+                } else {
+                    require(command.frame() != movement, "Only one puppet movement command is allowed per frame");
+                    movement = command.frame();
+                }
+            }
+        }
+    }
+
+    /** Goals persist until the next movement command or shot. Jump is an independent native button hold. */
+    @ModApi
+    public record PuppetCommand(String id, int frame, PuppetCommandKind kind, double x, double y,
+                                double urgency, int holdFrames) {
+        public PuppetCommand {
+            id = identifier(id);
+            range(frame, 0, MAX_DURATION_FRAMES - 1, "puppet command frame");
+            require(kind != null, "puppet command kind is required");
+            coordinate(x, "puppet destination x"); coordinate(y, "puppet destination y");
+            finiteRange(urgency, 0, 1, "puppet urgency");
+            if (kind == PuppetCommandKind.MOVE_TO) {
+                require(urgency > 0 && holdFrames == 0, "Move requires urgency in (0,1] and no button hold");
+            } else {
+                require(x == 0 && y == 0 && urgency == 0, "Only move commands have a destination and urgency");
+                if (kind == PuppetCommandKind.JUMP) range(holdFrames, 1, 60, "jump hold frames");
+                else require(holdFrames == 0, "Stop has no button hold");
+            }
+        }
+    }
+
+    @ModApi
+    public enum PuppetCommandKind { MOVE_TO, STOP, JUMP }
 
     /**
      * Camera position is the top-left stage coordinate; interpolation applies only to x/y.

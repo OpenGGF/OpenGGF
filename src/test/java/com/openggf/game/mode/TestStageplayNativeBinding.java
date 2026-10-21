@@ -41,7 +41,7 @@ class TestStageplayNativeBinding {
     }
 
     private static ActorPose pose(double x, double y) {
-        return new ActorPose("hero", "s3k", "sonic", x, y, 0, 12, 1, true, true, 1);
+        return new ActorPose("hero", "s3k", "sonic", x, y, 0, 12, 1, true, true, 1, true);
     }
 
     @Test void directsTheRealNativePlayerAndCancelRestoresItsEntryWithoutRestoringWorldOrAudio() throws Exception {
@@ -65,6 +65,7 @@ class TestStageplayNativeBinding {
         assertEquals(350, player.getCentreY());
         assertEquals(1, player.getMappingFrame());
         assertEquals(Direction.LEFT, player.getDirection());
+        assertTrue(player.getRenderVFlip(), "native sampled vertical orientation is retained under direction");
         assertTrue(player.isObjectMappingFrameControl());
         assertTrue(player.isControlLocked());
         assertEquals(0, player.getXSpeed());
@@ -101,6 +102,7 @@ class TestStageplayNativeBinding {
         assertEquals(0, player.getGSpeed());
         assertFalse(player.isControlLocked());
         assertFalse(player.isObjectMappingFrameControl());
+        assertFalse(player.getRenderVFlip(), "final-position handover restores an upright playable");
         assertEquals(0, player.getLogicalInputState());
         assertFalse(player.isJumpJustPressed());
         assertEquals(384, runtime.getCamera().getX());

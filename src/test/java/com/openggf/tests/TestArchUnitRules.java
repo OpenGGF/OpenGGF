@@ -197,6 +197,7 @@ class TestArchUnitRules {
             "stageplay -> game",
             "stageplay -> graphics",
             "stageplay -> level",
+            "stageplay -> sprites",
             "game -> architecture",
             "game -> audio",
             "game -> camera",
@@ -722,6 +723,8 @@ class TestArchUnitRules {
                     || typeOrNested(target, "com.openggf.stageplay.StageplayDialogue")
                     || typeOrNested(target, "com.openggf.stageplay.StageplayTimeline$CameraPose");
         if (typeOrNested(origin, "com.openggf.tools.StageplayTool")
+                && typeOrNested(target, "com.openggf.stageplay.runtime.StageplayResources")) return true;
+        if (typeOrNested(origin, "com.openggf.tools.StageplayTool")
                 || typeOrNested(origin, "com.openggf.tools.StageplayScriptCompiler"))
             return Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayStore",
                             "com.openggf.stageplay.StageplayTimeline")
@@ -738,7 +741,8 @@ class TestArchUnitRules {
         var owners = java.util.Map.of(
                 "com.openggf.stageplay.StageplayPlayback", Set.of("audio", "control", "data", "game", "graphics", "io", "level", "mods"),
                 "com.openggf.stageplay.runtime.StageplayAudio", Set.of("audio", "data", "game", "io", "mods"),
-                "com.openggf.stageplay.runtime.StageplayResources", Set.of("level", "mods", "io"),
+                "com.openggf.stageplay.runtime.StageplayResources", Set.of("level", "mods", "io", "game", "sprites"),
+                "com.openggf.stageplay.runtime.StageplayPuppets", Set.of("sprites"),
                 "com.openggf.stageplay.runtime.StageplayAssets", Set.of("io"),
                 "com.openggf.stageplay.runtime.StageplayDialogueRenderer", Set.of("mods"),
                 "com.openggf.stageplay.runtime.StageplayRenderer", Set.of("mods"),

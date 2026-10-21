@@ -132,6 +132,37 @@ class TestStageplayRenderer {
         }
     }
 
+    @Test void physicsRenderingRequiresResolvedFramesAndUsesNativeBodyAndTailFlips() {
+        var art = mock(SceneRomArt.class); var sprites = mock(SceneSpriteSet.class);
+        var body = new SceneSprite(new SceneImage(8, 8, new int[64]), 4, 4);
+        var tail = new SceneSprite(new SceneImage(16, 8, new int[128]), 8, 4);
+        var terrain = emptySet(0);
+        when(art.levelKit(0, 0)).thenReturn(terrain); when(art.character("tails")).thenReturn(sprites);
+        when(art.characterAccessory("tails")).thenReturn(sprites);
+        when(sprites.frame(1)).thenReturn(body); when(sprites.frame(2)).thenReturn(tail); when(sprites.frameCount()).thenReturn(3);
+        var document = StageplayDocument.empty("s2", 0, 0, 0, 0, 320, 224).withActors(List.of(
+                new Actor("tails", "Tails", "s2", "tails", List.of(new ActorKey(0, 100, 100, 0, -1, false, true, 1, Interpolation.HOLD)))))
+                .withPuppets(List.of(new PuppetTrack("tails", true, 0, List.of())));
+        var authored = StageplayTimeline.sample(document, 0);
+        var resolved = new StageplayTimeline.Frame(0, List.of(new StageplayTimeline.ActorPose(
+                "tails", "s2", "tails", 120, 90, 2, 0, 1, false, true, 1, true)), authored.camera(),
+                authored.captions(), authored.set(), authored.transition(), authored.baseCamera(), authored.dialogue(),
+                List.of(new StageplayTimeline.PuppetSample("tails", "", StageplayTimeline.PuppetStatus.IDLE,
+                        2, -3, 0, true, 0, 0, new StageplayTimeline.PuppetAccessory(2, true, false))));
+        try (var resources = new StageplayResources(game -> art, List.of("s2")); var surface = new SceneSurface()) {
+            var renderer = new StageplayRenderer(resources);
+            assertThrows(IllegalArgumentException.class, () -> surface.record(320, 224, canvas -> renderer.draw(document, authored, canvas)));
+            for (int repeat = 0; repeat < 2; repeat++) {
+                surface.record(320, 224, canvas -> renderer.draw(document, resolved, canvas));
+                var bodyDraw = surface.recordedFrame().stream().filter(op -> op.image() == body.image()).findFirst().orElseThrow();
+                var tailDraw = surface.recordedFrame().stream().filter(op -> op.image() == tail.image()).findFirst().orElseThrow();
+                assertTrue(bodyDraw.v0() > bodyDraw.v1()); assertTrue(tailDraw.u0() > tailDraw.u1());
+                assertTrue(tailDraw.v0() < tailDraw.v1()); assertEquals(116, bodyDraw.x0());
+            }
+            verify(art, never()).characterAccessorySampleTick(anyString(), anyInt(), anyInt(), anyLong());
+        }
+    }
+
     private static StageplayDocument twoShots(SetSource incoming, Transition transition) {
         return StageplayDocument.empty("s2", 0, 0, 0, 0, 320, 224).withDurationFrames(12)
                 .withCamera(List.of(new CameraKey(0, 0, 0, 1, Interpolation.HOLD),

@@ -5,6 +5,8 @@ import com.openggf.data.Rom;
 import com.openggf.game.BuiltInRomDetectors;
 import com.openggf.game.GameId;
 import com.openggf.mods.scene.host.SceneRomArtFactory;
+import com.openggf.mods.scene.host.SceneRomLibrary;
+import com.openggf.stageplay.runtime.StageplayResources;
 import com.openggf.stageplay.StageplayDocument;
 import com.openggf.stageplay.StageplayStore;
 import com.openggf.stageplay.StageplayTimeline;
@@ -61,13 +63,14 @@ public final class StageplayTool {
                         "compile --script screenplay.json --out film.stageplay",
                         "validate --scene film.stageplay",
                         "inspect --scene film.stageplay [--frame N]",
-                        "timeline --scene film.stageplay --out state.jsonl [--every N]",
+                        "timeline --scene film.stageplay --out authored.jsonl [--every N]",
+                        "simulate --scene film.stageplay --out state.jsonl --s2-rom PATH [--s1-rom PATH --s3k-rom PATH --every N]",
                         "catalog --game s2 --rom /absolute/game.gen [--character tails] [--zone 0 --act 0]",
                         "render --scene film.stageplay --out film.mkv --s1-rom PATH --s2-rom PATH --s3k-rom PATH"),
-                        "screenplayVersion", 1, "stageplayVersion", StageplayDocument.VERSION,
+                        "screenplayVersion", 2, "stageplayVersion", StageplayDocument.VERSION,
                         "fps", 60, "indices", "Frames, zones and acts are zero-based; every shot uses local frames.",
                         "outputs", "JSON result on stdout; exit 0 success, 2 invalid input/failure. Outputs are never overwritten.",
-                        "resources", "catalog needs a supplied ROM; render validates every resource before encoding and uses offline audio.");
+                        "resources", "catalog and simulate need supplied ROMs; simulate resolves native puppet physics without a window, graphics or audio playback. Render preflights resources and uses offline audio.");
             }
             case "init" -> {
                 allow(flags, "out"); Path out = path(flags, "out");
@@ -122,9 +125,46 @@ public final class StageplayTool {
                         "samples", (document.durationFrames() + every - 1) / every,
                         "kind", "authored directing state; not native gameplay simulation");
             }
+            case "simulate" -> simulate(flags);
             case "catalog" -> catalog(flags);
             default -> throw new IOException("Unknown command: " + command + "; use help");
         };
+    }
+
+    private static Object simulate(Map<String, String> flags) throws IOException {
+        allow(flags, "scene", "out", "every", "s1-rom", "s2-rom", "s3k-rom");
+        Path scene = path(flags, "scene").toAbsolutePath().normalize(), out = path(flags, "out");
+        var document = StageplayStore.read(scene);
+        int every = Integer.parseInt(flags.getOrDefault("every", "1"));
+        if (every < 1 || every > document.durationFrames()) throw new IOException("Invalid simulation sampling interval");
+        var paths = new LinkedHashMap<String, Path>();
+        for (String game : List.of("s1", "s2", "s3k")) {
+            if (flags.containsKey(game + "-rom")) paths.put(game, path(flags, game + "-rom"));
+        }
+        if (paths.isEmpty()) throw new IOException("Simulation requires supplied ROM paths (--s1-rom, --s2-rom or --s3k-rom)");
+        try (var library = SceneRomLibrary.open(paths);
+             var resources = new StageplayResources(library, false)) {
+            resources.setProjectRoot(scene.getParent());
+            resources.validate(document);
+            publish(out, staged -> {
+                try (var writer = Files.newBufferedWriter(staged, java.nio.charset.StandardCharsets.UTF_8)) {
+                    for (int frame = 0; frame < document.durationFrames(); frame++) {
+                        if (Thread.currentThread().isInterrupted())
+                            throw new java.io.InterruptedIOException("Stageplay simulation cancelled");
+                        var actual = resources.resolveFrame(document, StageplayTimeline.sample(document, frame));
+                        if (frame % every != 0) continue;
+                        int at = frame;
+                        writer.write(JSON.writeValueAsString(Map.of("frame", frame, "seconds", frame / 60.0,
+                                "sample", actual,
+                                "cues", document.audio().stream().filter(cue -> cue.frame() == at).toList())));
+                        writer.newLine();
+                    }
+                }
+            });
+        }
+        return Map.of("timeline", out.toAbsolutePath().toString(), "every", every,
+                "samples", (document.durationFrames() + every - 1) / every,
+                "kind", "native player physics against detached terrain; no live gameplay objects or events");
     }
 
     private static Object catalog(Map<String, String> flags) throws IOException {
@@ -181,11 +221,13 @@ public final class StageplayTool {
         result.put("width", document.width()); result.put("height", document.height());
         result.put("initialSet", document.set()); result.put("changes", document.sceneChanges());
         result.put("cast", document.actors().stream().map(a -> Map.of("id", a.id(), "name", a.name(),
-                "gameId", a.gameId(), "character", a.character(), "keys", a.keys().size())).toList());
+                "gameId", a.gameId(), "character", a.character(), "keys", a.keys().size(),
+                "mode", document.puppets().stream().anyMatch(p -> p.actorId().equals(a.id())) ? "PUPPET" : "POSER")).toList());
         result.put("cameraKeys", document.camera().size()); result.put("cameraEffects", document.cameraEffects());
         result.put("captions", document.captions()); result.put("audio", document.audio());
         result.put("dialogueTypers", document.dialogueTypers()); result.put("dialogueSkins", document.dialogueSkins());
         result.put("dialogue", document.dialogue());
+        result.put("puppets", document.puppets());
         return result;
     }
 
@@ -235,14 +277,15 @@ public final class StageplayTool {
     static String scaffold() {
         return """
                 {
-                  "version": 1, "name": "First take", "width": 400, "height": 224,
+                  "version": 2, "name": "First take", "width": 400, "height": 224,
                   "cast": [{"id":"tails","name":"Tails","gameId":"s2","character":"tails"}],
                   "shots": [{
                     "id":"opening", "durationFrames":300,
                     "set":{"gameId":"s2","zone":0,"act":0},
                     "camera":[{"frame":0,"x":0,"y":500},{"frame":299,"x":80,"y":500,"zoom":1}],
-                    "actors":{"tails":[{"frame":0,"x":80,"y":655,"animation":0},
-                      {"frame":60,"x":180,"y":648,"animation":5}]},
+                    "actors":{"tails":[{"frame":0,"x":80,"y":655}]},
+                    "actions":{"tails":[{"frame":0,"kind":"MOVE_TO","x":180,"y":648,"urgency":0.5},
+                      {"frame":30,"kind":"JUMP","holdFrames":12}]},
                     "dialogue":[{"startFrame":75,"endFrame":260,"speakerActor":"tails",
                       "text":"Ready for our first take!"}],
                     "audio":[], "cameraEffects":[]

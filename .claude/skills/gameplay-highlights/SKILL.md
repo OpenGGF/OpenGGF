@@ -37,7 +37,7 @@ Choose the capture owner from what the excerpt needs to show:
 A reel may combine these sources. Label their source kinds in its provenance and
 make the distinction clear wherever an edit could imply that authored action was
 observed gameplay. Stageplay scenery and actor motion do not prove route completion,
-collision behavior, zone-event execution or native parity.
+full-world collision behavior, zone-event execution or native parity.
 
 Keep enough provenance beside each retained scenario or in the task index:
 
@@ -47,7 +47,7 @@ Keep enough provenance beside each retained scenario or in the task index:
   recipe and entry method: cold route, checkpoint reload, positioned setup or seeded
   diagnostic. For Stageplay, retain the screenplay, compiled scene and shot IDs.
 - Relevant setup writes, frame stride/rate and whether audio was captured.
-- Measured gameplay state CSV or authored Stageplay timeline JSONL, with named event
+- Measured gameplay state CSV or labelled authored/simulated Stageplay JSONL, with named event
   frames. Keep their meanings distinct. Record the outcome, known defects and whether
   the footage is final, superseded, or a failed experiment.
 
@@ -57,9 +57,10 @@ entry can skip priority switches, lighting, camera history or terrain events. A 
 clip from invalid setup is not a good final demonstration. Record real input
 masks if a live controller leaves the textual input column blank.
 
-For Stageplay, read the authored timeline JSONL alongside the screenplay before
-choosing excerpts. It records evaluator samples and cues, not measured physics or
-native simulation state. Keep every-frame output when cue timing matters; a sampled
+For Stageplay, read the screenplay and appropriate JSONL before choosing excerpts.
+`timeline` records authored samples and cues; physical actors remain `UNRESOLVED`.
+`simulate` records actual native player motion against detached terrain, including
+arrival/blocked status. Neither is full-world gameplay or native route evidence. Keep every-frame output when cue timing matters; a sampled
 export omits cues between sampled frames. Verify the visible performance in motion;
 correct authored coordinates alone do not establish a good-looking shot.
 

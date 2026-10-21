@@ -66,6 +66,12 @@ public final class StageplayEditorSession implements AutoCloseable {
     public void present(StageplayDocument document, int frame) { if (audio != null) audio.playFrame(document,frame); }
     public void stop() { if (audio != null) audio.stop(); }
 
+    /** Random-access native physics preview; repeated reads never advance its simulation. */
+    public StageplayTimeline.Frame resolvePreview(StageplayDocument document, Path root, int frame) throws IOException {
+        ensure(root);
+        return resources.resolveFrame(document, StageplayTimeline.sample(document, frame));
+    }
+
     /** Draws in the engine's current offscreen viewport; no desktop focus or window is created. */
     public void draw(StageplayDocument document, int frame, Path root, Consumer<Throwable> onFailure) {
         draw(document,StageplayTimeline.sample(document,frame),root,onFailure);
@@ -77,7 +83,8 @@ public final class StageplayEditorSession implements AutoCloseable {
         if (surface == null) surface = new SceneSurface();
         try {
             ensure(root);
-            surface.record(document.width(),document.height(), canvas -> renderer.draw(document,frame,canvas));
+            var resolved = resources.resolveFrame(document, frame);
+            surface.record(document.width(),document.height(), canvas -> renderer.draw(document,resolved,canvas));
         } catch (IOException | RuntimeException failure) {
             stop(); onFailure.accept(failure);
             surface.record(document.width(),document.height(),canvas -> {
