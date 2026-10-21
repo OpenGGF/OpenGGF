@@ -303,6 +303,37 @@ class TestMultiplayerRaceCoordinator {
     }
 
     @Test
+    void pushedOutOfTheTopTenClearsTheStaleRankUntilTheHostReportsIt(@TempDir Path root) {
+        Rig rig = rig(root, false);
+        List<ControlMessage.StandingsRow> top = new ArrayList<>();
+        for (int rank = 1; rank <= 10; rank++) {
+            // The local player (slot 0) holds tenth place.
+            top.add(new ControlMessage.StandingsRow(rank == 10 ? 0 : rank, "P" + rank,
+                    "sonic", 1000 + rank, rank, "NONE"));
+        }
+        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.StandingsDelta(top)));
+        rig.coordinator().pump();
+        assertEquals(10, rig.coordinator().hudState().localRank());
+
+        // A faster retry by another player enters the top ten and pushes slot 0 out.
+        List<ControlMessage.StandingsRow> pushed = new ArrayList<>();
+        pushed.add(new ControlMessage.StandingsRow(42, "FAST", "sonic", 900, 1, "NONE"));
+        for (int rank = 2; rank <= 10; rank++) {
+            pushed.add(new ControlMessage.StandingsRow(rank - 1, "P" + (rank - 1),
+                    "sonic", 1000 + rank - 1, rank, "NONE"));
+        }
+        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.StandingsDelta(pushed)));
+        rig.coordinator().pump();
+        assertEquals(-1, rig.coordinator().hudState().localRank(),
+                "the old top-ten rank is no longer true");
+
+        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RankUpdate(11, 1010)));
+        rig.coordinator().pump();
+        assertEquals(11, rig.coordinator().hudState().localRank());
+        assertTrue(rig.transport().sentControl.contains(new ControlMessage.StandingsPageRequest(1)));
+    }
+
+    @Test
     void rankOutsideBroadcastCapRequestsAndSplicesAroundYouPage(@TempDir Path root) {
         Rig rig = rig(root, false);
         List<ControlMessage.StandingsRow> top = new ArrayList<>();

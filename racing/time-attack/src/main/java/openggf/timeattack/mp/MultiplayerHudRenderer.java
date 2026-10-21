@@ -116,8 +116,10 @@ public final class MultiplayerHudRenderer {
         long ahead = state.farPlayers().stream()
                 .filter(player -> player.status() == -1 || player.status() == 1 || player.status() == 2)
                 .filter(player -> player.status() == 2 || (long) player.cellX() * 64 > localCentreX).count();
+        // An idle player (between attempts, reloading at the start) is seen but never ahead:
+        // its last cell is where the previous attempt ended, not where it is now.
         long seen = state.farPlayers().stream()
-                .filter(player -> player.status() == -1 || player.status() == 1 || player.status() == 2).count();
+                .filter(player -> player.status() >= -1 && player.status() <= 2).count();
         if (seen < state.totalPlayers() - 1) return "AHEAD " + ahead + " / " + seen + " SEEN";
         return "PROGRESS EST " + (ahead + 1) + "/" + state.totalPlayers();
     }

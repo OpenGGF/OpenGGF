@@ -155,11 +155,19 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                         topStandings = List.of();
                         aroundYouStandings = List.of();
                     } else if (control.message() instanceof ControlMessage.StandingsDelta delta) {
+                        boolean wasInTop = topStandings.stream()
+                                .anyMatch(row -> row.slot() == session.localSlot());
                         topStandings = List.copyOf(delta.rows());
-                        delta.rows().stream()
+                        var localRow = delta.rows().stream()
                                 .filter(row -> row.slot() == session.localSlot())
-                                .findFirst()
-                                .ifPresent(row -> localRank = row.rank());
+                                .findFirst();
+                        if (localRow.isPresent()) {
+                            localRank = localRow.get().rank();
+                        } else if (wasInTop) {
+                            // Pushed out of the top ten (the host's RankUpdate follows on
+                            // this ordered connection) or the only result was removed.
+                            localRank = -1;
+                        }
                         maybeRequestAroundYouPage();
                     } else if (control.message() instanceof ControlMessage.RankUpdate rank) {
                         localRank = rank.rank();

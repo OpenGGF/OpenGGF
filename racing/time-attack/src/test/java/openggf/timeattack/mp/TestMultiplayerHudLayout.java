@@ -61,6 +61,20 @@ class TestMultiplayerHudLayout {
     }
 
     @Test
+    void idlePlayerBetweenAttemptsIsSeenButNeverAhead() {
+        var source = state("RUNNING", -1);
+        // Slot 2 reset (or finished) and is reloading: IDLE at the cell where its attempt ended.
+        var players = List.of(
+                new RemoteGhostRegistry.FarPlayer(1, "RUNNER", "sonic", 50, 0, 1),
+                new RemoteGhostRegistry.FarPlayer(2, "RELOADING", "sonic", 400, 0, 0),
+                new RemoteGhostRegistry.FarPlayer(3, "FINISHER", "sonic", 400, 0, 2));
+        var state = new MultiplayerHudState(true, "RUNNING", 60_000, 0, source.standings(),
+                List.of(), false, null, 4, players, "OPEN", List.of(), List.of(), 0, null,
+                List.of(), -1);
+        assertEquals("PROGRESS EST 2/4", MultiplayerHudRenderer.progressPosition(state, 8192));
+    }
+
+    @Test
     void denseRosterGivesEstimatedProgressAndLongNamesPreserveRankAndTime() {
         var source = state("RUNNING", -1);
         List<RemoteGhostRegistry.FarPlayer> players = IntStream.range(1, 256)
