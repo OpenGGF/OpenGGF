@@ -66,6 +66,28 @@ final class LevelScrollPresentation {
     }
 
     Registers registers() { return registers; }
+
+    /** Reframe the foreground without rerunning native deformation or advancing its owners.
+     * Background registers keep their native phase (including deliberately stationary backgrounds).
+     * Column scrolls are deltas, so only the scalar/override origin moves vertically.
+     */
+    LevelScrollPresentation forCinematicCamera(int x, int y, ArenaMaskState mask) {
+        int dx = x - registers.cameraX(), dy = y - registers.cameraY();
+        int[] reframed = horizontal.clone();
+        for (int i = 0; i < reframed.length; i++) {
+            short foreground = (short) ((short) (reframed[i] >>> 16) - dx);
+            reframed[i] = (foreground << 16) | (reframed[i] & 0xffff);
+        }
+        var view = new Registers(x, y, registers.cameraXWithShake() + dx,
+                (short) (registers.foregroundY() + dy), registers.backgroundY(),
+                registers.backgroundX(), registers.backgroundPeriod(), registers.heatHaze(),
+                registers.perLineForeground(), registers.reversePlanes(), registers.overrideForegroundY(),
+                registers.overrideForegroundY() ? (short) (registers.overriddenForegroundY() + dy)
+                        : registers.overriddenForegroundY(),
+                registers.overrideBackgroundY(), registers.overriddenBackgroundY(), mask);
+        return new LevelScrollPresentation(view, reframed, backgroundLines, backgroundColumns,
+                foregroundColumns, overrideColumns);
+    }
     int[] horizontal() { return horizontal.clone(); }
     short[] backgroundLines() { return copy(backgroundLines); }
     short[] backgroundColumns() { return copy(backgroundColumns); }

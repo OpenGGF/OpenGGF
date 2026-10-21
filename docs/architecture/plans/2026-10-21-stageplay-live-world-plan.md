@@ -597,3 +597,110 @@ root; no main branch, external repository or push was touched. This final
 checkpoint is documentation only and does not change the frozen tested source.
 The five baseline guard identities above remain reported; combined ordinary
 smoke/integration/release claims belong to root's completed runs, not this slice.
+
+### Ring-spill vertical-camera review — 2026-10-22
+
+The user spotted the vertical defect in the delivered preview from frozen
+`bd4feec2f`; root then reproduced grounded Tails/skid dust floating above absent
+terrain at recovery and the final landing (frames 120/239).
+This follow-up is isolated in the retained feature worktree at `154cb7fb8`;
+root's unchanged combined smoke continues independently. Revision-5 media is
+frozen. Root prepared `revision-6` for corrected captures and owns promo/archive.
+
+Hypothesis: LIVE draw changes camera X/Y and sprite projection but foreground
+VScroll/mask still consumes ParallaxManager output computed for native focus.
+The camera centres and native simulation can both be correct while those two
+coordinate spaces disagree. DEZ's background is intentionally stationary:
+`SwScrlS3kDez` documents and implements zero background scroll. Do not fit the
+screenplay, force physics, retick native scroll handlers or turn that backdrop
+into a foreground plane to hide the fault.
+
+A ROM/EGL pixel regression uses the existing ring-run source at two independent
+native grounded contacts. It checks decoded foreground art below actual native
+feet and the real GPU priority mask against ROM tile/pattern/palette pixels,
+with multiple directed vertical offsets. It also checks full camera register,
+native scroll/presentation preservation and backward replay after repeated draws.
+The exact focused selector is `TestStageplayCinematicCameraRendering`, with
+Java25/Lua5.4, absolute original S3K path, explicit surfaceless EGL and launcher/
+display environment removed. The first floor oracle incorrectly included an
+off-screen performer and assumed visible floor art beneath every grounded actor;
+it failed its own positive control and was not renderer proof. The corrected test includes the
+former camera-only draw as a negative control. That path demonstrably disagrees
+with the decoded world-coordinate priority mask at both contacts. The first
+candidate run passed all frame-239 obligations; frame 120 reached/passed the
+floor comparison, then exposed over-strict oracles: Sonic was in native
+post-hurt blinking, and the ROM foreground is transparent directly beneath
+Tails' footprint at frame 120. The oracle now requires decoded art at a native
+grounded contact and a visible grounded body in each view, compares every decoded
+contact-art pixel, and checks the whole viewport's priority mask. It neither
+invents art beyond the ROM's visible ledge nor overrides native blinking.
+The final focused rerun passed.
+
+Implementation: an internal LevelSpritePresentation bridge scopes the camera and
+a private immutable LevelScrollPresentation. Rebase foreground scalar/active
+override Y and packed foreground HScroll words by the director/native delta;
+retain shake and deformation. Column scroll values are deltas, not another
+absolute origin. The visible foreground and its GPU priority mask consume the
+same sample. Restore camera registers/copies and prior draw scroll/render mode
+in finally, including callback failure; discard aborted queued drawing.
+Published/pending SAT, scroll, CRAM, native parallax owners and gameplay stepping
+are untouched. Advanced render policy resolves under the native camera before
+projection; retain an owned copy because controller results are double-buffered.
+
+Bound: background registers, line/column deformation and effect phase remain
+anchored to the native gameplay camera in every zone. In AIZ a manual pan or
+secondary-actor follow reframes terrain and sprites against that native-phase
+backdrop. This is intentional for this bounded correction, not arbitrary-view
+parallax recomputation; no background handler is reticked or inferred from one
+sample. DEZ's deliberately stationary background stays stationary. Script,
+physics, native camera following and movement constants are unchanged.
+
+The bounded verification selector adds TestLevelSpritePresentation,
+TestLevelRendererBackgroundViewport, TestStageplayLiveWorldRendering,
+TestStageplayLiveWorldRom, TestStageplayLiveDemosRom, TestModApiSignatureSurface,
+TestModApiPinPolicy and TestArchitecturalSourceGuard. No ordinary broad run or
+guard-policy/pin relaxation is requested. Root owns combined smoke attribution.
+
+Source-freeze verification: the eight companion classes passed **122 tests,
+0 failures/errors/skips** on the final production patch (the combined invocation
+was red only for the contact-oracle assumption subsequently corrected). The
+final exact pixel selector passed **2 tests, 0 failures/errors/skips** in 27.850 s
+Maven execution after 500 s queue wait. No production source changed between
+those checks. API signatures/pins and 72 architectural-source guards passed;
+the new bridge is internal and does not change the Mod API descriptor/version.
+
+Reproducible commands, from this worktree with Java25/Lua5.4 and original ROM:
+
+```sh
+env -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u MAVEN_ARGS -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$STAGEPLAY_ROM" \
+  '-Dtest=TestStageplayCinematicCameraRendering,TestLevelSpritePresentation,TestLevelRendererBackgroundViewport,TestStageplayLiveWorldRendering,TestStageplayLiveWorldRom,TestStageplayLiveDemosRom,TestModApiSignatureSurface,TestModApiPinPolicy,TestArchitecturalSourceGuard' test -B
+# After the test-only contact oracle refinements, rerun that exact class:
+env -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u MAVEN_ARGS -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$STAGEPLAY_ROM" \
+  '-Dtest=TestStageplayCinematicCameraRendering' test -B
+```
+
+Cause/evidence: native/director/foreground Y is 2228/2193/2228 at frame 120,
+and 2316/2547/2316 at frame 239. The old camera-only path produces **1914/8689**
+wrong priority-mask samples. The corrected path has zero mismatches across
+**104280** viewport samples over six views (Y offsets 0/-32/+32 paired with X
+offsets 0/-16/+16). Frame 120 Sonic's 33 contact-art pixels all match;
+Tails shows 205–206 body pixels but zero decoded art below his footprint.
+Both of his native floor sensors report tile 255, distance 0: a native
+collision/art distinction, not missing renderer output to fabricate.
+Frame 239 Tails has **231/231** floor pixels and **201** body pixels at every
+offset. Camera copies/registers, native parallax, pending/published SAT/scroll/
+CRAM remain equal after repeated draws and an exception with queued commands.
+Ordinary gameplay pictures remain byte-identical, and backward seek/replay
+reproduces the same frame and actor/terrain picture.
+
+Remaining at freeze: commit this bounded source/test/plan change locally; notify
+root before rendering; package without tests; regenerate four MKVs/JSONL/QA
+images under revision-6, compare state with revision-5, decode and inspect them.
+Revision-5, root-owned scripts, MP4s, promo and external repositories stay owned
+by root. No ordinary broad run, integration or push in this worktree.
