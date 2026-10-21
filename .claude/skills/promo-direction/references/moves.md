@@ -5,16 +5,30 @@ Every call below is in `tools/media/promo_kit.py`. An edit file defines
 overlays take output frames, so place them with `b = e.bf`, which converts beats
 to frames. Run `promo_kit.py demo DIR` to see every move on synthetic footage.
 
+These are editorial compositor operations on captured images, not a list of
+Stageplay engine capabilities. For staged performances, first author and export
+with [stageplay-authoring](../../stageplay-authoring/SKILL.md). Keep its authored
+timeline and source soundtrack distinct from any compositor overlays or extra
+sound layers. A direct Stageplay film does not require this compositor.
+
 ## Sources and cameras
 
 | Call | Use |
 |---|---|
 | `Frames(dir, "frame-*.png")` | A captured clip, one PNG per tick. Indexes clamp, so an overrun holds the last frame (`e.check()` warns). |
 | `extract(video, dir, start, frames, vf)` | Cut frames from an earlier master, for example the 0.6 engine promos. |
-| `game_view(img, cx, cy, zoom, w, h)` | Pixel-exact camera. Integer nearest-neighbour, then area filter. Crops, never stretches. |
-| `cam_move((cx,cy,z),(cx,cy,z))` | Slow drift or push over a take, for example `(200,112,1.06)→(200,112,1.0)`. |
-| `cam_slam(1.3, 26, total)` | The title-drop camera: starts tight and slams out over 26 frames. |
-| `e.punches.append((frame, 0.1))` | A zoom kick decaying over 14 frames, on a hit or a boss landing. |
+| `game_view(img, cx, cy, zoom, ow, oh)` | Cropped editorial framing: integer nearest-neighbour enlargement followed by BOX area filtering to output size. Fractional framing is filtered, not pixel-exact integer-only scaling. Preserves aspect ratio. |
+| `cam_move((cx,cy,z),(cx,cy,z))` | Compositor drift or push over captured frames, for example `(200,112,1.06)→(200,112,1.0)`. Review moving output before choosing it. |
+| `cam_slam(1.3, 26, total)` | Compositor title-drop framing: starts tight and slams out over 26 frames. |
+| `e.punches.append((frame, 0.1))` | Compositor zoom kick decaying over 14 frames, on a hit or a boss landing. |
+
+Stageplay camera x/y can interpolate, but zoom holds until its next key. Use held
+integer framing, pans and shot cuts for new staged scenes; imported static
+fractional values remain compatible. Do not translate a compositor `cam_move`
+example into animated nearest-neighbour world zoom. Review sprites, scenery and
+text through the whole move: final upscaling/filtering cannot repair stepping
+already baked into the source render. A smooth engine zoom path would need its
+own implementation and moving-footage review.
 
 ## Shots
 
@@ -39,6 +53,12 @@ clip frame N. Use it only on a deliberate final pose, never to pad time.
 
 ## Typography
 
+These are promotional title/label treatments. Stageplay speaker names and dialogue
+body text should retain stable readable placement in their authored panel; use its
+typers/skins for reveal and appearance rather than adding a title animation to
+every line. `Typed` below is the compositor's code-panel effect, not a Stageplay
+dialogue typer.
+
 | Call | Example |
 |---|---|
 | `text(s, role, size, fill, stroke, shadow, tracking)` | `text("BOSSES DROP IN", "title", 150, WHITE, stroke=8, shadow=9)` |
@@ -59,6 +79,10 @@ for k, word in enumerate(["EVERY SPRITE.", "EVERY SOUND.", "EVERY STAGE."]):
 ```
 
 ## Transitions and accents
+
+Stageplay set changes support cuts, black/white fades and left/right wipes.
+The branded wipes, iris, pushes and other operations below belong to the
+compositor and must not be advertised as equivalent Stageplay settings.
 
 | Name in `trans=` | Look | Budget |
 |---|---|---|

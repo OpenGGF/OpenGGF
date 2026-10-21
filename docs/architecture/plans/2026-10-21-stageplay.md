@@ -388,3 +388,25 @@ and complete assertion messages equal the matched detached `ca58b4691` baseline:
 HubMusicController's three concrete audio-profile constructors and nine total
 game-specific dependencies. The Stageplay ownership rule passes; the inherited
 music-provider issues remain outside this change.
+
+
+Upstream reconciliation: destination advanced to `79e5ebea27ca75dd90c17666c5e8783056fe099c`.
+Merge `83ce60144` retains the new promo-direction skill and disassembly citation
+refresh. Lexical comparison of all 1,041 upstream Java files found no executable
+token changes. The sole conflict was a citation inside tail tables moved by this
+feature; the table remains in TailsTailPose with the updated citation, without
+restoring duplicate constants. Promo guidance now routes staged narratives to
+Stageplay, permits deliberate silence/reaction holds, distinguishes engine zoom
+from compositor filtering and keeps native evidence requirements. Five relevant
+skill mirrors, frontmatter and 27 local links pass checks. Independent behavioral
+scenarios cover a quiet dialogue film, a native boss-defeat promo and baked source
+zoom shimmer; no blocking contradictions were found.
+
+The original smoke invocation ended with signal status 143 after 64/71 completed
+batches (35,093 tests, one inherited GLFW failure, no errors, 88 skips; 4,876.66
+seconds recorded execution, queue waits excluded). The in-flight 65th batch did
+not finish and is not counted. Recovery derives the exact remaining 349 candidates
+from that unchanged plan, preserving the original 50-class partitions, smoke tags,
+ROM paths and EGL environment through the shared Maven queue. No passing batch is
+repeated or selected candidate dropped. Final guards run separately on the merged
+dialogue tree. The interruption's initiating cause is unconfirmed.

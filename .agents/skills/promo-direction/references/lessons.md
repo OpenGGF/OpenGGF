@@ -5,6 +5,11 @@ Paths are relative to the
 directory. The finished videos are external; the edit code and READMEs are in
 the archive.
 
+These examples record particular briefs and feedback. Preserve their craft
+lessons without turning the ≥80% gameplay mix, a single bed, moving sales copy or
+3–5 s showcase rhythm into requirements for a staged dialogue film. A narrative
+may need stable speech panels, longer reactions and intentional silence.
+
 ## Reference productions
 
 | Production | What to copy | Where |
@@ -29,6 +34,22 @@ the archive.
 | Chaos Mode revision 3 | "retain a coherent HCZ soundtrack…; do not fade into the ghost source's DEZ music… omit minigames and related challenge/chat spoilers" | One bed throughout, curated effects and no spoilers. |
 | Second Strike reels (flat reference) | DejaVu `drawtext` at `x=40`, a solid pad, hard concat, a text-only end card | Use this as the counter-example when choosing type and composition. |
 
+## Stageplay dialogue revision
+
+The 2026-10-21 Stageplay review identified visibly poor fractional
+nearest-neighbour zoom, an idle cast and unclear speaker identity. The response
+is to author purposeful movement and reactions, identify speakers with named
+dialogue and use stable held zoom, pans and cuts. The dialogue work adds reusable
+reveal typers and skins rather than relying on plain caption overlays.
+
+Revision three is a rendered 51-second short with fourteen named lines, held
+zoom one, active blocking and original panel skins. Its complete playback and
+transition sequences received bounded agent review; decoded exports contain
+3,060 frames with no reported browser drops. Production sources and review limits
+are preserved in [OpenGGF-Media](https://github.com/OpenGGF/OpenGGF-Media/tree/main/projects/stageplay).
+This is not user creative acceptance. Code and codec checks alone cannot establish
+that a film works; retain that distinction when reusing this example.
+
 ## Recurring hazards
 
 - Correct footage does not make good pacing. Count the cuts and compare with
@@ -43,3 +64,17 @@ the archive.
   hard to read (ring repulsion, an invisible boss). Reframe or recapture.
 - Cutting every shot from the same idle point makes the reel look like "the
   same jump with a new label". Vary the entry points.
+- Staged performance must be authored: detached Stageplay sets do not supply
+  gameplay AI or collision to make actors act. Check entrances, exits, facing,
+  walking/running and listener reactions through the full take.
+- Names and consistent placement identify a speaker; color alone does not,
+  particularly when several roles use the same stock sprite. Give reveal,
+  reading and response their own time instead of forcing each line onto a beat.
+- Do not confuse the compositor's filtered camera with engine world rendering.
+  `promo_kit.game_view` enlarges with integer nearest-neighbour and applies a BOX
+  area filter. Stageplay zoom holds between keys; avoid animated fractional
+  nearest-neighbour source zoom. Scaling the finished frame cannot reconstruct
+  stable edges that were lost to changing pixel steps in the source.
+- An authored timeline JSONL describes directing intent and evaluated samples;
+  measured gameplay CSV describes an actual gameplay run. Keep them distinct in
+  provenance and retain the required OpenGGF-Media source archive for either form.
