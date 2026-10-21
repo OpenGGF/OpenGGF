@@ -986,3 +986,15 @@ Same-JVM preboot/post-stop production author/loader and independent script/BK2 e
 Session77958 exited0,0 JUnit/skips N/A:queue886s/Maven01:25/AUTHOR23.941s including product proof; engine-only/tail-only unmeasured, no original/metadata exception.
 The [R18 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-ledge-approachjump-glide-ordinary-question-r18--2026-10-21) pins source/policy/products/command/19:54 workload/20:04 cleanup; owned raw outputs/classes/tmp/validation copies were consumed under leases, target absent.
 Useful exact inputs/private source/preimages/all53 ordered rows/compact facts remain external. Prior refs/native/config/maintained runtime/data/oracles/windows are preserved; Root reviews, no push/integration/automatic next workload.
+
+### Knuckles current-hurt recovery/onward ordinary question R19 — 2026-10-21
+
+At exactff14498e, all43095 R18 prefix pads and244 unique complete64 checkpoints matched, including original hurt43094; [R18/R17 setup](#knuckles-ledge-approachjump-glide-ordinary-question-r18--2026-10-21) and actual src/POM are unchanged.
+Fresh same existing inlet context/pending/fade/control/rider guards passed once before first new step; original R18 terminal unretained operands remain UNKNOWN. Only the current hurt episode was admitted, ending at first cachedfalse.
+73 constantRight/P2neutral inputs43095..43167 ran,43168 total normal step/draw pairs. Hurt stayedtrue through43166;43167 first hurtfalse/normal-ground recovery was10804/2417,zero X/Y/G,flag0/jumpingfalse/default9x19,0 rings/3 lives/no death/free scalar controls/no actual rider.
+All73 horizontal markers remainedfalse, valid for filtered recoil/landing; no subsequent ordinary markertrue row or ABC/jump/glide ran. CentreY2417>=2240 caused the declared distinct-recovery stop, without upper-geometry reuse.
+All new original context/pending/fade/control/rider guards passed; rings/lives stayed0/3. Stale Spikes is separate; hurt/recovery support receiver, protection/invulnerability/fluid/reverse/mutation/native cause remain UNKNOWN. Right during hurt is not steering proof or safe onward qualification.
+Same-JVM preboot/post-stop production author/loader and independent script/BK2 entire-prefix/all-row/payload/P2/JUMP0x10 proofs passed; all73 complete new rows/errors/proofs/metadata were read, no retry.
+Session54238 exited0,0 JUnit/skips N/A:reported queue0s/Maven01:22/AUTHOR22.244s including product proof; engine-only/tail-only unmeasured, no original/metadata exception.
+The [R19 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-current-hurt-recoveryonward-ordinary-question-r19--2026-10-21) pins policy/source/products/command/20:44 workload/20:54 cleanup; owned raw outputs/classes/tmp/validation copies were consumed under leases, target absent.
+Useful exact inputs/private source/preimages/all73 ordered rows/compact facts remain external. Prior refs/native/config/maintained runtime/data/oracles/windows are preserved; Root reviews, no push/integration/automatic next workload.
