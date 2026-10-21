@@ -12,15 +12,18 @@ comparison or test-oracle input.
 
 ## What they charge and what they do not
 
-They charge instruction cycles only, from the pinned Genesis Plus GX `051d430d` cycle table (Motorola MC68000
+The routine-cost research models charge instruction cycles only, from the pinned Genesis Plus GX `051d430d` cycle table (Motorola MC68000
 section 8 times as a cross-check), decoded from ROM bytes by [`../m68k-closure`](../m68k-closure/README.md). Branches
 and loop counts follow from explicit semantic inputs that an engine owner would hold; unsupported paths raise.
 
-These terms are separate and are never included:
+These terms are separate and are never included in those routine-cost models:
 - interrupt acceptance (50–59 cycles in GPGX);
 - bus refresh;
 - Z80-to-68000 bus waits and VDP FIFO waits;
 - DMA freeze.
+
+The separate cold-entry control below includes source-derived reset and refresh;
+it changes none of the routine-cost models or their callers.
 
 ## Layout
 
@@ -36,13 +39,65 @@ These terms are separate and are never included:
 | `render/` | R15 | Render_Sprites family and Draw_Sprite ([README](render/README.md)) | 10 |
 | `deform/` | R16 | ApplyDeformation (both copies), AIZ1_Deform, AIZ1_ApplyDeformWater ([README](deform/README.md)) | 7 |
 | `palette/` | R17 | palette fade family `$3AF0`–`$3DBE` from palette-owner inputs ([README](palette/README.md)) | 6 |
-| `mini68k/` | R10–R17 | the shared fail-closed 68000 interpreter and its form extensions | 15 |
+| `mini68k/` | R10–R17; cold entry 2026-10-21 | shared fail-closed interpreter/forms; separate `cold_entry.py` reset-to-device semantic control | 15 + 29 cold |
 
 `mini68k/` holds the only copy of the interpreter. Each extension adds named forms and delegates everything else
 down the chain, which raises `Unsupported`: `palette_forms` → `deform_forms` → `render_forms` → `nem_forms` →
 `vdp_forms` → `mini68k`. R16 and R17 sources were frozen at their qualification and hash-bound on copy (see their
 READMEs).
 `vint/test_vint8_cost.py` is also the shared native-oracle loader that the other ledger tests import.
+
+### Cold-entry semantic control
+
+[`mini68k/cold_entry.py`](mini68k/cold_entry.py) independently executes original-ROM
+EntryPoint from reset vectors through the taken BEQ at `$022E`, stopping before
+the unsupported VDP read `$0238` (`MOVE.W (A4),D0`, bus `$C00004`). It requires the
+original4MiB ROM, explicit `gpgx703-md-usa-ntsc-cold` profile, GPGX object store at
+`051d430d` and TraceChaser objects at `703bd92`. It reads authenticated commit
+objects, not mutable source working files. That exact MD/USA/NTSC262, BIOS-off,
+three-button, fresh SRAM/no-save profile derives hardware versionA0 and SR2704
+from emulator initialization; it makes no physical-console power-on claim.
+
+The adapter calls actual `mini68k.CPU.step` for eight existing-form executions and
+adds only MOVEM.W/L postincrement and ANDI.B-to-Dn. It preserves raw32-bit register
+values versus24-bit bus addresses, ordered register updates, both extra MOVEM word
+reads, logical versus prefetch reads, source opcode/dynamic cycles times7 once,
+ordinary refresh and MOVEM.L's distinct skip-refresh order. Unknown input, source,
+profile, opcode, producer or IRQ refuses. No VDP-write acceptance is inherited.
+
+`generate(rom, sources, profile)` has no expected-data input. The CLI reads its
+native report only after execution. The comparator strictly authenticates the
+qualified703 diagnostic schema/status/profile/ROM/managed/native/build/source
+identities and ordered40-word records, then compares every word of the38 supported
+records and all named initial fields. Three snapshots,11 retirements and13 logical
+reads are source-derived assertions after the unsupported-device stop, never a
+count/time/frame budget. These11 instructions are unrelated to11 hardware jobs.
+The final three native device records have boundary/order checks only: device
+value and post-read flags/clocks/registers remain explicitly unsupported.
+
+Pure continuations copy/restore registers, CCR/SR, both PCs, raw/refresh clocks,
+profile, I/O, prefetch, pending phase and observations around both MOVEM forms and
+refresh. They do not authorize native provenance re-arm after a load. This is a
+diagnostic prerequisite, with no runtime port, readiness, Engine/Title or fixture
+consumer. VDP/FIFO/open-bus/IRQ scheduling, production continuity, movie row0 and
+real job identity remain separate obligations.
+
+```bash
+export COLD_ENTRY_TRACECHASER=<source repository containing exact703 objects>
+export COLD_ENTRY_EXPECTED=<qualified703 observer-on reset-prefix.json>
+python3 -B tools/timing/s3k-instruction-ledgers/mini68k/cold_entry.py \
+  --rom "$S3K_ROM" --gpgx-git "$GPGX_GIT" --tracechaser "$COLD_ENTRY_TRACECHASER" \
+  --expected "$COLD_ENTRY_EXPECTED" --profile gpgx703-md-usa-ntsc-cold
+python3 -B -m unittest discover -s tools/timing/s3k-instruction-ledgers/mini68k -p 'test_*.py' -v
+```
+
+The second command runs29 cold controls plus15 existing form controls. Cold tests
+explicitly skip without all four ROM/source/oracle variables; qualification needs
+zero skips. They cover all1,520 claimed-word mutations, identity/profile/type and
+record order/capacity refusals, source/mask/opcode/reset/CCR/refresh faults, both
+extra reads, skip-refresh crossing controls, comparator-only dataflow and restore
+at every phase. Exact qualification is recorded in the existing
+[playable-completion plan](../../../docs/architecture/plans/2026-10-13-s3k-playable-completion.md).
 
 ### `kos/`
 
@@ -68,8 +123,9 @@ for d in kos mini68k vint vint/hud vint/drawlevel vint/nem vint/hint mainloop re
 done
 ```
 
-The expected counts are 106 source-model tests (vint 11, hud 10, drawlevel 8, nem 14, hint 10, mainloop 15, render 10,
+The historical research counts are 106 source-model tests (vint 11, hud 10, drawlevel 8, nem 14, hint 10, mainloop 15, render 10,
 deform 7, palette 6, mini68k 15) plus 14 Kos-service tests. `vint/nem/test_nem_decoder.py` takes about 45 s.
+The separate29 cold-entry tests additionally require the variables documented above.
 
 Most test classes **skip** without `S3K_ROM` and `GPGX_GIT`, and the native comparison cases skip without
 `KOS46_NATIVE_ROOT`. A skip is not a pass: check that the summary line reads `OK` with no `skipped=` count.
