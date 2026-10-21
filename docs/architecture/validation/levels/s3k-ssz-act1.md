@@ -4452,3 +4452,16 @@ child liveness/membership AFTER rider loss and private episode/air-unseat writer
 Exactly1 new input/14945 total;2-pad preboot positive0x10/booleans/masks/payload and
 all-row/SIX-full-prefix proofs complete. **0 JUnit/skips N/A**, no retry/native/route
 qualification or omission claim; expected46 unchanged. [Facts, hashes, timing and limits](../../plans/2026-10-13-s3k-playable-completion.md#r15-first-neutral-wait-loses-the-declared-riderground-inlet--2026-10-21).
+
+
+## R16 positive-control rotating-solid component contract — 2026-10-21
+
+Both actual ID76 post/carrier owners opt into existing positive-control solid contacts;
+ROM FixBugs0 `loc_45E90`/`loc_45FE4` control3 remains eligible in `MvSonicOnPtfm`.
+Real-manager/manual-checkpoint tests naturally land P1 or native-query CPU P2 on
+post or actual spawned child, then prove owner-acquired control, eight held steps,
+actual rider/OnObject/ground, held-A/fresh-edge release and signed-bit7 new-contact rejection.
+Unchanged owners:12T/8F/0E/0S. First fixed run:197T/4F/0E/0S (incorrect immediate
+OnObject-clear assertion); original jump retains that bit. Corrected final:197T/0F/0E/0S.
+Component setup is not cold/native800/route or rewind qualification; input14944 cause,
+full-route breadth and expected46 remain unchanged. [Source, exact selections, hashes, failures and timing](../../plans/2026-10-13-s3k-playable-completion.md#r16-rotating-post-and-carrier-retain-positive-control-support--2026-10-21).
