@@ -62,14 +62,13 @@ class TestSceneRomLibrary {
     }
 
     @Test
-    void offlineLibraryRejectsUnknownGamesAndWrongRomIdentity() throws Exception {
+    void offlineLibraryRejectsUnknownGamesAndWrongRomIdentity(
+            @org.junit.jupiter.api.io.TempDir java.nio.file.Path temporaryDirectory) throws Exception {
         assertThrows(IllegalArgumentException.class, () -> SceneRomLibrary.open(java.util.Map.of()));
         assertThrows(IllegalArgumentException.class, () -> SceneRomLibrary.open(java.util.Map.of("other", java.nio.file.Path.of("unused"))));
-        var file = java.nio.file.Files.createTempFile("scene-invalid-rom-", ".gen");
-        try {
-            java.nio.file.Files.write(file, new byte[1024]);
-            assertThrows(java.io.IOException.class, () -> SceneRomLibrary.open(java.util.Map.of("s2", file)));
-        } finally { java.nio.file.Files.delete(file); }
+        var file = temporaryDirectory.resolve("invalid.gen");
+        java.nio.file.Files.write(file, new byte[1024]);
+        assertThrows(java.io.IOException.class, () -> SceneRomLibrary.open(java.util.Map.of("s2", file)));
     }
 
     @Test

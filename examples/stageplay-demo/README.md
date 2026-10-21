@@ -41,7 +41,8 @@ with another controller that already owns native frame admission.
 The 51-second [screenplay](src/main/resources/scenes/location-remote.screenplay.json)
 and [compiled scene](src/main/resources/scenes/location-remote.stageplay) tell a
 short story about Tails' unreliable location remote. They demonstrate a three-role
-cast, visible tail accessories, active choreography, stable pans, earthquake effects, and wipes/fades
+cast in Puppet mode, visible tail accessories, native jumps and landings, stable
+pans, earthquake effects, and wipes/fades
 between locations, acts and games. Supply S1, S2 and S3&K ROMs for this scene. The
 original S2-only opening remains the mod's default registration.
 
@@ -58,6 +59,10 @@ cp -R examples/stageplay-demo/src/main/resources/scenes /your/production
 python3 tools/stageplay/stageplay.py compile \
   --script /your/production/location-remote.screenplay.json \
   --out /your/production/new-take.stageplay
+python3 tools/stageplay/stageplay.py simulate \
+  --scene /your/production/new-take.stageplay \
+  --out /your/production/state.jsonl \
+  --s1-rom /your/existing-s1.gen --s2-rom /your/existing-s2.gen --s3k-rom /your/existing-s3k.gen
 python3 tools/stageplay/stageplay.py render \
   --scene /your/production/new-take.stageplay \
   --out /your/production/location-remote.mkv \
@@ -65,8 +70,16 @@ python3 tools/stageplay/stageplay.py render \
 ```
 
 Build the current engine first (`--build help`), choose a new output for each take,
-and keep media outside the checkout. This is authored staging, not native gameplay
-or a continuous route. The stage resources represent the ROM's decoded load state.
+and keep media outside the checkout. The bundled version-two screenplay has a
+legacy version-four compiled scene; the current compiler writes version five
+with terrain-only behavior for this source. Inspect the simulated native positions, velocities and goal statuses
+before rendering: the authored timeline alone cannot resolve Puppet movement.
+
+This performance uses native player physics on detached ROM terrain. Placed world
+objects, moving platforms, rings, water/zone events and automatic obstacle navigation
+do not run in this example. Each shot starts a new performance, so the scene changes
+are authored cuts rather than native gameplay transitions. Poser mode remains
+available for manual positioning, animation and mapping frames.
 
 ## Live-world demonstrations
 

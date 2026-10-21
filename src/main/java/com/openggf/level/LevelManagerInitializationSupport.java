@@ -16,6 +16,24 @@ final class LevelManagerInitializationSupport {
     private LevelManagerInitializationSupport() {
     }
 
+    /** Rebuilds the immutable geometry caches after a level is loaded or restored. */
+    static void cacheLevelDimensions(LevelManager owner, int contiguousBackgroundWidth) {
+        if (owner.level != null) {
+            owner.cachedFgWidthPx = owner.getLayerLevelWidthPx((byte) 0);
+            owner.cachedFgHeightPx = owner.getLayerLevelHeightPx((byte) 0);
+            owner.cachedBgWidthPx = owner.getLayerLevelWidthPx((byte) 1);  // Full map width (matches reference)
+            owner.cachedBgContiguousWidthPx = contiguousBackgroundWidth;  // For bgTilemapBaseX wrapping
+            owner.cachedBgHeightPx = owner.getLayerLevelHeightPx((byte) 1);
+        } else {
+            owner.cachedFgWidthPx = owner.blockPixelSize;
+            owner.cachedFgHeightPx = owner.blockPixelSize;
+            owner.cachedBgWidthPx = owner.blockPixelSize;
+            owner.cachedBgContiguousWidthPx = owner.blockPixelSize;
+            owner.cachedBgHeightPx = owner.blockPixelSize;
+        }
+        owner.blockGrid = new BlockGridIndexer(owner.blockPixelSize);
+    }
+
     static void registerWorldRenderEffects(com.openggf.game.session.WorldSession world,
                                           com.openggf.game.render.SpecialRenderEffectRegistry registry) {
         var motion = com.openggf.game.session.WorldSessionPolicyAccess.getService(

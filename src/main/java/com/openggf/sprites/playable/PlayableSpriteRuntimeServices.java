@@ -38,6 +38,10 @@ final class PlayableSpriteRuntimeServices {
                 GameModule module = world != null ? world.getGameModule() : null;
                 return module != null ? module.getLevelEventProvider() : null;
         }
+        static boolean bossOwnsMusic(AbstractPlayableSprite sprite) {
+                return levelEventsOrNull(sprite) instanceof com.openggf.game.AbstractLevelEventManager events
+                                && events.isBossActive();
+        }
         static LevelState levelState(LevelManager levelManager) {
                 return levelManager != null ? levelManager.getLevelGamestate() : null;
         }

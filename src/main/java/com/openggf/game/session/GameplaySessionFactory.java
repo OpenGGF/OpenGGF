@@ -34,6 +34,17 @@ public final class GameplaySessionFactory {
     private GameplaySessionFactory() {
     }
 
+    /** Creates a private terrain-only world without replacing or registering an active session. */
+    public static LevelManager createCollisionOnlyLevel(
+            GameModule module, com.openggf.level.Level terrain, int zone, int act,
+            EngineContext services, Camera camera, SpriteManager sprites,
+            CollisionSystem collision, WaterSystem water, GameStateManager gameState) {
+        var level = new LevelManager(camera, sprites, new ParallaxManager(), collision, water,
+                gameState, services, new WorldSession(module));
+        level.initializeCollisionOnly(terrain, zone, act);
+        return level;
+    }
+
     public static void attachManagers(GameplayModeContext gameplayMode,
                                       EngineContext services) {
         attachManagers(gameplayMode, services, new Camera());

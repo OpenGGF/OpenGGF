@@ -20,7 +20,6 @@ import com.openggf.game.PowerUpSpawner;
 import com.openggf.game.GroundMode;
 import com.openggf.game.ShieldType;
 import com.openggf.game.DamageCause;
-import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelState;
 import com.openggf.game.rules.GameRules;
@@ -2914,9 +2913,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         /** ROM: {@code tst.b (Boss_flag).w} — a boss fight owns the music. */
         private boolean bossOwnsMusic() {
-                return PlayableSpriteRuntimeServices.levelEventsOrNull(this)
-                                instanceof AbstractLevelEventManager events
-                                && events.isBossActive();
+                return PlayableSpriteRuntimeServices.bossOwnsMusic(this);
         }
 
         /** ROM: {@code cmpi.b #12,air_left(a0)} — the drowning countdown owns the music. */

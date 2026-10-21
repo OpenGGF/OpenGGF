@@ -439,3 +439,22 @@ this tree. Root continues slice D: that reconciliation, combined validation and
 guard attribution, external Editor/Media work, full moving/audio promo review,
 integration, pushes and eventual T3 worktree/branch cleanup. The earlier observed
 architecture findings are not claimed fixed or baseline-attributed by this task.
+
+### Integration-support slice — foundation repair
+
+Received and reviewed `556db2cecf843c5382ea8d7fa6b40909a6e8d361`, descending
+from `508915e67`. Its factory composition, geometry cache and boss-state helper
+extractions merged without source conflicts; the geometry-width calculation reads
+only level/block data, so its earlier argument evaluation does not change cached
+state semantics. Root's bounded native/foundation followup already covers those
+copies. Only two prose conflicts occurred: retain both measurement hazards, and
+combine the reviewed rev4 performance description with the LIVE demos section.
+Clarify that the bundled legacy scene is v4 while the current compiler emits v5.
+All four new source/compiled scenes and schemas remain intact; root's reviewed
+location-remote pair is retained byte for byte. No demonstration is invalidated.
+
+Next check: one queued full guard lane on the merged source, Java25/Lua5.4,
+JAVA_TOOL_OPTIONS/DISPLAY/WAYLAND_DISPLAY unset. Root owns combined ordinary
+smoke and external editor/media; no broad ordinary or duplicate foundation
+selection is authorized in this support slice. New guard violations will be
+fixed without weakening policy and then checked narrowly.

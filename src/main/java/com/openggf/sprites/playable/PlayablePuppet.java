@@ -13,10 +13,8 @@ import com.openggf.game.rewind.snapshot.GameStateSnapshot;
 import com.openggf.game.rewind.snapshot.TimerManagerSnapshot;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
-import com.openggf.game.session.WorldSession;
+import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.level.Level;
-import com.openggf.level.LevelManager;
-import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.physics.CollisionSystem;
@@ -72,9 +70,8 @@ public final class PlayablePuppet implements AutoCloseable {
             var water = new WaterSystem();
             var gameState = new GameStateManager();
             var timers = new TimerManager();
-            var level = new LevelManager(camera, sprites, new ParallaxManager(), collision, water,
-                    gameState, engine, new WorldSession(setModule));
-            level.initializeCollisionOnly(terrain, zone, act);
+            var level = GameplaySessionFactory.createCollisionOnlyLevel(setModule, terrain, zone, act,
+                    engine, camera, sprites, collision, water, gameState);
             var context = new PlayableRuntimeContext(actorModule, camera, level, collision, water,
                     sprites, gameState, timers, audio);
             AbstractPlayableSprite actor = context.construct(() -> CharacterConstructionScope.call(key,

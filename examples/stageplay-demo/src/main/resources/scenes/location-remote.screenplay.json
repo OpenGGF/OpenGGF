@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "name": "Location, Location, Location",
   "width": 400,
   "height": 224,
@@ -81,12 +81,26 @@
           "x": 0,
           "y": 500,
           "zoom": 1,
+          "interpolation": "HOLD"
+        },
+        {
+          "frame": 88,
+          "x": 5,
+          "y": 500,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
+        },
+        {
+          "frame": 155,
+          "x": 10,
+          "y": 455,
+          "zoom": 1,
           "interpolation": "SMOOTH"
         },
         {
           "frame": 420,
           "x": 25,
-          "y": 500,
+          "y": 455,
           "zoom": 1,
           "interpolation": "SMOOTH"
         }
@@ -95,45 +109,9 @@
         "sonic": [
           {
             "frame": 0,
-            "x": -30,
+            "x": 32,
             "y": 655,
-            "animation": 1
-          },
-          {
-            "frame": 65,
-            "x": 150,
-            "y": 648,
-            "animation": 5
-          },
-          {
-            "frame": 260,
-            "x": 150,
-            "y": 648,
-            "animation": 8
-          },
-          {
-            "frame": 282,
-            "x": 150,
-            "y": 648,
-            "animation": 2
-          },
-          {
-            "frame": 318,
-            "x": 190,
-            "y": 590,
-            "animation": 2
-          },
-          {
-            "frame": 354,
-            "x": 220,
-            "y": 648,
-            "animation": 8
-          },
-          {
-            "frame": 375,
-            "x": 220,
-            "y": 648,
-            "animation": 5
+            "flipX": false
           }
         ],
         "tails": [
@@ -141,35 +119,6 @@
             "frame": 0,
             "x": 330,
             "y": 648,
-            "animation": 0,
-            "flipX": true
-          },
-          {
-            "frame": 60,
-            "x": 265,
-            "y": 648,
-            "animation": 5,
-            "flipX": true
-          },
-          {
-            "frame": 300,
-            "x": 265,
-            "y": 648,
-            "animation": 7,
-            "flipX": true
-          },
-          {
-            "frame": 350,
-            "x": 265,
-            "y": 648,
-            "animation": 8,
-            "flipX": true
-          },
-          {
-            "frame": 388,
-            "x": 265,
-            "y": 648,
-            "animation": 5,
             "flipX": true
           }
         ]
@@ -230,7 +179,46 @@
           "y": 18,
           "argb": -256
         }
-      ]
+      ],
+      "actions": {
+        "sonic": [
+          {
+            "frame": 0,
+            "kind": "MOVE_TO",
+            "x": 150,
+            "y": 648,
+            "urgency": 0.65
+          },
+          {
+            "frame": 282,
+            "kind": "MOVE_TO",
+            "x": 220,
+            "y": 655,
+            "urgency": 0.6
+          },
+          {
+            "frame": 282,
+            "kind": "JUMP",
+            "holdFrames": 12
+          },
+          {
+            "frame": 390,
+            "kind": "MOVE_TO",
+            "x": 232,
+            "y": 656,
+            "urgency": 0.2
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "kind": "MOVE_TO",
+            "x": 265,
+            "y": 648,
+            "urgency": 0.35
+          }
+        ]
+      }
     },
     {
       "id": "closer",
@@ -261,67 +249,15 @@
           {
             "frame": 0,
             "x": 485,
-            "y": 590,
-            "animation": 2
-          },
-          {
-            "frame": 28,
-            "x": 520,
             "y": 622,
-            "animation": 8
-          },
-          {
-            "frame": 48,
-            "x": 520,
-            "y": 622,
-            "animation": 5
-          },
-          {
-            "frame": 140,
-            "x": 520,
-            "y": 622,
-            "animation": 0
-          },
-          {
-            "frame": 170,
-            "x": 560,
-            "y": 624,
-            "animation": 5,
-            "flipX": true
-          },
-          {
-            "frame": 210,
-            "x": 560,
-            "y": 624,
-            "animation": 5
+            "flipX": false
           }
         ],
         "tails": [
           {
             "frame": 0,
-            "x": 610,
+            "x": 670,
             "y": 624,
-            "animation": 8,
-            "flipX": true
-          },
-          {
-            "frame": 50,
-            "x": 610,
-            "y": 624,
-            "animation": 0
-          },
-          {
-            "frame": 80,
-            "x": 640,
-            "y": 624,
-            "animation": 5,
-            "flipX": true
-          },
-          {
-            "frame": 280,
-            "x": 640,
-            "y": 624,
-            "animation": 8,
             "flipX": true
           }
         ]
@@ -374,6 +310,33 @@
       "transition": {
         "kind": "WIPE_LEFT",
         "durationFrames": 30
+      },
+      "actions": {
+        "sonic": [
+          {
+            "frame": 0,
+            "kind": "MOVE_TO",
+            "x": 520,
+            "y": 622,
+            "urgency": 0.4
+          },
+          {
+            "frame": 170,
+            "kind": "MOVE_TO",
+            "x": 560,
+            "y": 624,
+            "urgency": 0.35
+          }
+        ],
+        "tails": [
+          {
+            "frame": 50,
+            "kind": "MOVE_TO",
+            "x": 640,
+            "y": 624,
+            "urgency": 0.3
+          }
+        ]
       }
     },
     {
@@ -388,14 +351,14 @@
         {
           "frame": 0,
           "x": 0,
-          "y": 535,
+          "y": 490,
           "zoom": 1,
           "interpolation": "SMOOTH"
         },
         {
           "frame": 360,
           "x": 35,
-          "y": 535,
+          "y": 490,
           "zoom": 1,
           "interpolation": "SMOOTH"
         }
@@ -405,101 +368,15 @@
           {
             "frame": 0,
             "x": 145,
-            "y": 560,
-            "animation": 2
-          },
-          {
-            "frame": 25,
-            "x": 145,
-            "y": 610,
-            "animation": 2
-          },
-          {
-            "frame": 46,
-            "x": 145,
             "y": 687,
-            "animation": 8
-          },
-          {
-            "frame": 65,
-            "x": 145,
-            "y": 687,
-            "animation": 7
-          },
-          {
-            "frame": 140,
-            "x": 145,
-            "y": 687,
-            "animation": 0
-          },
-          {
-            "frame": 192,
-            "x": 215,
-            "y": 687,
-            "animation": 5,
-            "flipX": true
-          },
-          {
-            "frame": 232,
-            "x": 215,
-            "y": 687,
-            "animation": 5
-          },
-          {
-            "frame": 350,
-            "x": 215,
-            "y": 687,
-            "animation": 8
+            "flipX": false
           }
         ],
         "tails": [
           {
             "frame": 0,
             "x": 275,
-            "y": 545,
-            "animation": 2,
-            "flipX": true
-          },
-          {
-            "frame": 25,
-            "x": 275,
-            "y": 600,
-            "animation": 2,
-            "flipX": true
-          },
-          {
-            "frame": 50,
-            "x": 275,
             "y": 687,
-            "animation": 8,
-            "flipX": true
-          },
-          {
-            "frame": 72,
-            "x": 275,
-            "y": 687,
-            "animation": 5,
-            "flipX": true
-          },
-          {
-            "frame": 228,
-            "x": 275,
-            "y": 687,
-            "animation": 0,
-            "flipX": true
-          },
-          {
-            "frame": 260,
-            "x": 244,
-            "y": 687,
-            "animation": 5,
-            "flipX": true
-          },
-          {
-            "frame": 360,
-            "x": 244,
-            "y": 687,
-            "animation": 8,
             "flipX": true
           }
         ]
@@ -538,6 +415,12 @@
           "soundId": 129
         },
         {
+          "frame": 20,
+          "kind": "ROM_SFX",
+          "gameId": "s2",
+          "soundId": 160
+        },
+        {
           "frame": 398,
           "kind": "ROM_SFX",
           "gameId": "s2",
@@ -558,6 +441,36 @@
       "transition": {
         "kind": "FADE_BLACK",
         "durationFrames": 30
+      },
+      "actions": {
+        "sonic": [
+          {
+            "frame": 20,
+            "kind": "JUMP",
+            "holdFrames": 12
+          },
+          {
+            "frame": 150,
+            "kind": "MOVE_TO",
+            "x": 215,
+            "y": 687,
+            "urgency": 0.5
+          }
+        ],
+        "tails": [
+          {
+            "frame": 235,
+            "kind": "MOVE_TO",
+            "x": 244,
+            "y": 687,
+            "urgency": 0.25
+          },
+          {
+            "frame": 360,
+            "kind": "JUMP",
+            "holdFrames": 8
+          }
+        ]
       }
     },
     {
@@ -588,76 +501,17 @@
         "sonic": [
           {
             "frame": 0,
-            "x": -20,
+            "x": 32,
             "y": 944,
-            "animation": 1
-          },
-          {
-            "frame": 70,
-            "x": 190,
-            "y": 944,
-            "animation": 7
-          },
-          {
-            "frame": 215,
-            "x": 190,
-            "y": 944,
-            "animation": 0,
-            "flipX": true
-          },
-          {
-            "frame": 245,
-            "x": 160,
-            "y": 944,
-            "animation": 5
-          },
-          {
-            "frame": 340,
-            "x": 160,
-            "y": 944,
-            "animation": 8
-          },
-          {
-            "frame": 385,
-            "x": 160,
-            "y": 944,
-            "animation": 5
+            "flipX": false
           }
         ],
         "tails": [
           {
             "frame": 0,
-            "x": 20,
+            "x": 90,
             "y": 944,
-            "animation": 1
-          },
-          {
-            "frame": 90,
-            "x": 295,
-            "y": 944,
-            "animation": 5,
-            "flipX": true
-          },
-          {
-            "frame": 235,
-            "x": 295,
-            "y": 944,
-            "animation": 0,
-            "flipX": true
-          },
-          {
-            "frame": 285,
-            "x": 245,
-            "y": 944,
-            "animation": 5,
-            "flipX": true
-          },
-          {
-            "frame": 410,
-            "x": 245,
-            "y": 944,
-            "animation": 8,
-            "flipX": true
+            "flipX": false
           }
         ]
       },
@@ -715,6 +569,40 @@
       "transition": {
         "kind": "FADE_WHITE",
         "durationFrames": 30
+      },
+      "actions": {
+        "sonic": [
+          {
+            "frame": 0,
+            "kind": "MOVE_TO",
+            "x": 190,
+            "y": 944,
+            "urgency": 0.7
+          },
+          {
+            "frame": 215,
+            "kind": "MOVE_TO",
+            "x": 160,
+            "y": 944,
+            "urgency": 0.25
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "kind": "MOVE_TO",
+            "x": 295,
+            "y": 944,
+            "urgency": 0.8
+          },
+          {
+            "frame": 250,
+            "kind": "MOVE_TO",
+            "x": 245,
+            "y": 944,
+            "urgency": 0.3
+          }
+        ]
       }
     },
     {
@@ -729,21 +617,21 @@
         {
           "frame": 0,
           "x": 4900,
-          "y": 900,
+          "y": 865,
           "zoom": 1,
           "interpolation": "SMOOTH"
         },
         {
           "frame": 180,
           "x": 4950,
-          "y": 900,
+          "y": 865,
           "zoom": 1,
           "interpolation": "SMOOTH"
         },
         {
           "frame": 560,
           "x": 4910,
-          "y": 900,
+          "y": 865,
           "zoom": 1,
           "interpolation": "SMOOTH"
         }
@@ -753,96 +641,16 @@
           {
             "frame": 0,
             "x": 5035,
-            "y": 930,
-            "animation": 2
-          },
-          {
-            "frame": 25,
-            "x": 5035,
-            "y": 985,
-            "animation": 2
-          },
-          {
-            "frame": 44,
-            "x": 5035,
             "y": 1050,
-            "animation": 8
-          },
-          {
-            "frame": 67,
-            "x": 5035,
-            "y": 1050,
-            "animation": 5
-          },
-          {
-            "frame": 290,
-            "x": 5035,
-            "y": 1050,
-            "animation": 0,
-            "flipX": true
-          },
-          {
-            "frame": 345,
-            "x": 4970,
-            "y": 1050,
-            "animation": 5
-          },
-          {
-            "frame": 440,
-            "x": 4970,
-            "y": 1050,
-            "animation": 8
+            "flipX": false
           }
         ],
         "tails": [
           {
             "frame": 0,
             "x": 5110,
-            "y": 915,
-            "animation": 2
-          },
-          {
-            "frame": 25,
-            "x": 5110,
-            "y": 970,
-            "animation": 2
-          },
-          {
-            "frame": 48,
-            "x": 5110,
             "y": 1052,
-            "animation": 8
-          },
-          {
-            "frame": 75,
-            "x": 5110,
-            "y": 1052,
-            "animation": 5
-          },
-          {
-            "frame": 245,
-            "x": 5110,
-            "y": 1052,
-            "animation": 0,
-            "flipX": true
-          },
-          {
-            "frame": 305,
-            "x": 5050,
-            "y": 1052,
-            "animation": 5
-          },
-          {
-            "frame": 440,
-            "x": 5050,
-            "y": 1052,
-            "animation": 7
-          },
-          {
-            "frame": 525,
-            "x": 5050,
-            "y": 1052,
-            "animation": 8
+            "flipX": false
           }
         ],
         "knuckles": [
@@ -850,35 +658,6 @@
             "frame": 0,
             "x": 5290,
             "y": 1046,
-            "animation": 0,
-            "flipX": true
-          },
-          {
-            "frame": 160,
-            "x": 5180,
-            "y": 1046,
-            "animation": 5,
-            "flipX": true
-          },
-          {
-            "frame": 260,
-            "x": 5180,
-            "y": 1046,
-            "animation": 0,
-            "flipX": true
-          },
-          {
-            "frame": 315,
-            "x": 5125,
-            "y": 1046,
-            "animation": 5,
-            "flipX": true
-          },
-          {
-            "frame": 500,
-            "x": 5125,
-            "y": 1046,
-            "animation": 7,
             "flipX": true
           }
         ]
@@ -929,10 +708,10 @@
           "soundId": 1
         },
         {
-          "frame": 44,
+          "frame": 530,
           "kind": "ROM_SFX",
           "gameId": "s2",
-          "soundId": 177
+          "soundId": 160
         },
         {
           "frame": 580,
@@ -942,14 +721,6 @@
         }
       ],
       "cameraEffects": [
-        {
-          "startFrame": 44,
-          "endFrame": 75,
-          "amplitudeX": 4,
-          "amplitudeY": 3,
-          "frequency": 9,
-          "seed": 17
-        },
         {
           "startFrame": 565,
           "endFrame": 592,
@@ -963,6 +734,47 @@
       "transition": {
         "kind": "WIPE_RIGHT",
         "durationFrames": 30
+      },
+      "actions": {
+        "sonic": [
+          {
+            "frame": 295,
+            "kind": "MOVE_TO",
+            "x": 4970,
+            "y": 1050,
+            "urgency": 0.4
+          }
+        ],
+        "tails": [
+          {
+            "frame": 245,
+            "kind": "MOVE_TO",
+            "x": 5050,
+            "y": 1052,
+            "urgency": 0.4
+          },
+          {
+            "frame": 530,
+            "kind": "JUMP",
+            "holdFrames": 8
+          }
+        ],
+        "knuckles": [
+          {
+            "frame": 0,
+            "kind": "MOVE_TO",
+            "x": 5180,
+            "y": 1046,
+            "urgency": 0.3
+          },
+          {
+            "frame": 280,
+            "kind": "MOVE_TO",
+            "x": 5125,
+            "y": 1046,
+            "urgency": 0.35
+          }
+        ]
       }
     },
     {
@@ -995,32 +807,7 @@
             "frame": 0,
             "x": 170,
             "y": 648,
-            "animation": 0,
             "flipX": true
-          },
-          {
-            "frame": 65,
-            "x": 100,
-            "y": 650,
-            "animation": 5
-          },
-          {
-            "frame": 210,
-            "x": 100,
-            "y": 650,
-            "animation": 0
-          },
-          {
-            "frame": 245,
-            "x": 140,
-            "y": 648,
-            "animation": 7
-          },
-          {
-            "frame": 365,
-            "x": 140,
-            "y": 648,
-            "animation": 8
           }
         ],
         "tails": [
@@ -1028,28 +815,6 @@
             "frame": 0,
             "x": 285,
             "y": 648,
-            "animation": 0,
-            "flipX": true
-          },
-          {
-            "frame": 75,
-            "x": 235,
-            "y": 648,
-            "animation": 5,
-            "flipX": true
-          },
-          {
-            "frame": 275,
-            "x": 235,
-            "y": 648,
-            "animation": 8,
-            "flipX": true
-          },
-          {
-            "frame": 320,
-            "x": 235,
-            "y": 648,
-            "animation": 5,
             "flipX": true
           }
         ]
@@ -1099,6 +864,33 @@
       "transition": {
         "kind": "FADE_BLACK",
         "durationFrames": 30
+      },
+      "actions": {
+        "sonic": [
+          {
+            "frame": 0,
+            "kind": "MOVE_TO",
+            "x": 100,
+            "y": 650,
+            "urgency": 0.4
+          },
+          {
+            "frame": 210,
+            "kind": "MOVE_TO",
+            "x": 140,
+            "y": 648,
+            "urgency": 0.3
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "kind": "MOVE_TO",
+            "x": 235,
+            "y": 660,
+            "urgency": 0.3
+          }
+        ]
       }
     },
     {
@@ -1131,19 +923,7 @@
             "frame": 0,
             "x": 130,
             "y": 944,
-            "animation": 7
-          },
-          {
-            "frame": 135,
-            "x": 130,
-            "y": 944,
-            "animation": 1
-          },
-          {
-            "frame": 295,
-            "x": 575,
-            "y": 944,
-            "animation": 1
+            "flipX": false
           }
         ],
         "tails": [
@@ -1151,20 +931,7 @@
             "frame": 0,
             "x": 240,
             "y": 944,
-            "animation": 5,
             "flipX": true
-          },
-          {
-            "frame": 125,
-            "x": 240,
-            "y": 944,
-            "animation": 1
-          },
-          {
-            "frame": 240,
-            "x": 580,
-            "y": 944,
-            "animation": 1
           }
         ]
       },
@@ -1204,6 +971,26 @@
       "transition": {
         "kind": "FADE_WHITE",
         "durationFrames": 30
+      },
+      "actions": {
+        "sonic": [
+          {
+            "frame": 160,
+            "kind": "MOVE_TO",
+            "x": 575,
+            "y": 944,
+            "urgency": 1
+          }
+        ],
+        "tails": [
+          {
+            "frame": 180,
+            "kind": "MOVE_TO",
+            "x": 580,
+            "y": 944,
+            "urgency": 0.9
+          }
+        ]
       }
     }
   ]
