@@ -3,16 +3,20 @@ package com.openggf.net.hub;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.ControlJsonCodec;
 import com.openggf.net.protocol.ControlMessage;
+import com.openggf.net.protocol.GhostPackets;
 import com.openggf.net.protocol.Protocol;
 import com.openggf.net.protocol.ProtocolViolationException;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.LongSupplier;
+import java.util.stream.Collectors;
 
 /** Single-threaded room protocol driver and owner of its hub and round state. */
 @com.openggf.game.ModApi
@@ -44,6 +48,9 @@ public final class RoomHost {
         boolean finishedThisRound;
         int activeAttemptId = -1;
         int lastAttemptId = -1;
+        // Latest start refused only because the window was not open. Its in-flight
+        // frames, reset and finish are dropped quietly rather than counted.
+        int refusedAttemptId = -1;
 
         Member(HubConnection connection, HostHandshake handshake, long connectedAt) {
             this.connection = connection;
@@ -62,6 +69,8 @@ public final class RoomHost {
     private final ControlJsonCodec codec;
     private final Map<HubConnection, Member> members = new LinkedHashMap<>();
     private final Map<HubConnection, String> expectedFingerprints = new LinkedHashMap<>();
+    // Slots in the last broadcast top ten, for private rank updates on push-out.
+    private Set<Integer> broadcastTopSlots = Set.of();
     private String roomGameId;
     private int roomZone;
     private int roomAct;
@@ -163,7 +172,9 @@ public final class RoomHost {
         }
         if (round.phase() != HostRoundEngine.Phase.RUNNING
                 || member.activeAttemptId < 0) {
-            recordAttemptViolation(member, "binary outside active attempt");
+            if (!isRefusedAttemptBatch(member, data)) {
+                recordAttemptViolation(member, "binary outside active attempt");
+            }
             return;
         }
         hub.onBinary(member.slot, data);
@@ -218,6 +229,7 @@ public final class RoomHost {
             member.finishedThisRound = false;
             member.activeAttemptId = -1;
             member.lastAttemptId = -1;
+            member.refusedAttemptId = -1;
         }
         hub.setTrack(roundConfig.gameId(), roundConfig.zone(), roundConfig.act());
         roomGameId = roundConfig.gameId();
@@ -376,6 +388,11 @@ public final class RoomHost {
     }
 
     private void dispatch(Member member, ControlMessage message) {
+        if (message instanceof ControlMessage.AttemptFinish finish
+                && isRefusedAttempt(member, finish.attemptId())) {
+            // The window was closed when this attempt started: nothing to score.
+            return;
+        }
         long now = wallClockMillis.getAsLong();
         switch (message) {
             case ControlMessage.Chat chat -> handleChat(member, chat, now);
@@ -468,22 +485,47 @@ public final class RoomHost {
     }
 
     private void startAttempt(Member member, int attemptId) {
-        if (!round.mayStartAttempt()
-                || member.activeAttemptId >= 0 || attemptId <= member.lastAttemptId) {
+        if (member.activeAttemptId >= 0 || attemptId <= member.lastAttemptId) {
             recordAttemptViolation(member, "invalid attempt start " + attemptId);
             return;
         }
-        member.activeAttemptId = attemptId;
+        // Clock skew near the countdown or deadline is not misbehaviour. Keep the
+        // id so ordering stays strict and its trailing traffic can be recognised.
         member.lastAttemptId = attemptId;
+        if (!round.mayStartAttempt()) {
+            member.refusedAttemptId = attemptId;
+            return;
+        }
+        member.refusedAttemptId = -1;
+        member.activeAttemptId = attemptId;
         hub.onAttemptStart(member.slot, attemptId);
     }
 
     private void resetAttempt(Member member, int attemptId) {
+        if (isRefusedAttempt(member, attemptId)) {
+            return;
+        }
         if (attemptId != member.activeAttemptId) {
             recordAttemptViolation(member, "reset outside matching active attempt");
             return;
         }
         clearActiveAttempt(member);
+    }
+
+    private static boolean isRefusedAttempt(Member member, int attemptId) {
+        return member.refusedAttemptId >= 0 && member.activeAttemptId < 0
+                && attemptId == member.refusedAttemptId;
+    }
+
+    private static boolean isRefusedAttemptBatch(Member member, byte[] data) {
+        if (member.refusedAttemptId < 0) {
+            return false;
+        }
+        try {
+            return isRefusedAttempt(member, GhostPackets.decodeFrames(data).attemptId());
+        } catch (ProtocolViolationException malformed) {
+            return false;
+        }
     }
 
     private void clearActiveAttempt(Member member) {
@@ -510,6 +552,33 @@ public final class RoomHost {
         for (Member member : members.values()) {
             if (member.admitted) {
                 member.connection.sendText(encoded);
+            }
+        }
+        switch (message) {
+            case ControlMessage.RoundStart ignored -> broadcastTopSlots = Set.of();
+            case ControlMessage.StandingsDelta delta -> notifyPushedOut(delta.rows());
+            default -> { }
+        }
+    }
+
+    /**
+     * Clients learn their own rank from the top-ten broadcast. A participant
+     * pushed out of it gets its new rank privately, or it would keep showing its
+     * last top-ten rank and never page the standings around itself.
+     */
+    private void notifyPushedOut(List<ControlMessage.StandingsRow> top) {
+        Set<Integer> pushedOut = new HashSet<>(broadcastTopSlots);
+        broadcastTopSlots = top.stream().map(ControlMessage.StandingsRow::slot)
+                .collect(Collectors.toUnmodifiableSet());
+        pushedOut.removeAll(broadcastTopSlots);
+        if (pushedOut.isEmpty()) {
+            return;
+        }
+        // A slot without a row lost its only result and has no rank to report.
+        for (ControlMessage.StandingsRow row : round.standings()) {
+            Member member = pushedOut.remove(row.slot()) ? memberForSlot(row.slot()) : null;
+            if (member != null) {
+                send(member, new ControlMessage.RankUpdate(row.rank(), row.bestTimeFrames()));
             }
         }
     }
