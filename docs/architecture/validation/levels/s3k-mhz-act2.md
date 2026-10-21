@@ -962,3 +962,15 @@ Root reviews the activity-marker/guard source semantics before any later ordinar
 
 
 Root source disposition: the R16 `movement_input` marker is horizontal animation activity (`inputLeft || inputRight`), so false is valid for constant Up climbing. The temporary generic guard was too strict; [source disposition](../../plans/2026-10-13-s3k-playable-completion.md#mhz-r16-horizontal-activity-marker-source-disposition--2026-10-21) permits only that observer correction, with every gameplay safety/control/world check retained. No runtime omission or ledge completion is inferred.
+
+### Knuckles Up-only activity-guard continuation R17 — 2026-10-21
+
+At exactafb4d77e, all42925 actual R16 prefix rows and74 unique complete64 checkpoints matched, including42924's false horizontal activity marker; [R16/R15 setup](#knuckles-up-only-climbledge-exit-guard-frontier-r16--2026-10-21) and MHZ/Movement/POM are unchanged.
+Only two private Up-guard marker requirements were removed; the once-read public64 column and all original safety/context/pending/fade/control/rider/state/anchor checks remain. R16's original unretained operands/unknowns stay historical.
+One constantUp/P2neutral tail ran117 new inputs42925..43041. State4's98 anchors held; actual5 began43023 at10872/2247/property4/map0xBD, then0xBE43029 and0xBF43035, allowing X!=rawxsub.
+43041 first observed5→flag0/airfalse/jumpingfalse/default9x19/zero X/Y/G velocities at10880/2220,anim5/map86. All117 rows retained1 ring/3 lives/no hurt/death/free scalar controls/same context/no actual rider; horizontal activity stayedfalse.
+The stale Spikes latch is separate; owner-written ground clearing is not new terrain/support proof. No fluid/reverse/receiver/invulnerability/native equivalence or safe onward/full-route qualification follows.
+Exactly43042 normal step/draw pairs ran. Same-JVM preboot/post-stop production author/loader and independent entire-prefix/all-row/payload/P2/Up-only/JUMP0x10 proofs passed; no retry or later walking.
+Session96970 exited0,0 JUnit/skips N/A:queue324s/Maven01:27/AUTHOR25.164s including product proof; engine-only/tail-only unmeasured, no original/metadata exception.
+The [R17 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-up-only-activity-guard-continuation-r17--2026-10-21) pins source/inputs/proofs/command/19:34 workload/19:44 cleanup; all owned raw outputs/classes/tmp/validation copies were consumed under leases, target absent.
+Useful actual inputs/private source/preimage/all117 ordered rows/compact facts remain external; earlier refs/native/config and maintained runtime/data/oracles/windows are preserved. Local docs only; Root reviews before any next workload, no push/integration.
