@@ -26953,3 +26953,73 @@ full-act/breadth/HPZ/campaign, true reset/bootstrap, native terrain-return/d1,
 stock-route causality, native pixels/timing and GC are not certified. Root owns
 independent source review, the combined change-based smoke plan and integration;
 this worker creates only a local reviewable commit.
+
+
+### Knuckles LRZ2 ordinary first-door frontier R5/R6 — 2026-10-21
+
+Owned branch `feature/ai-lrz-knuckles-act2-controller-20261021`, base
+`b078214e74ddbcb393cbc0173fd8c74055b0dadb`, worktree
+`$OPENGGF_MAIN/.worktrees/ai-soz-art-test-projection-20261021`.
+Earlier ffdb/eef6/r3 refs and the clean preclimb876 worktree are preserved.
+Root alone owns composed smoke/integration. Its source/target and Main's build
+target were untouched; the current absolute Main queue wrapper was used.
+
+The [Act2 matrix](../validation/levels/s3k-lrz-act2.md#knuckles-current-physics-first-door-proposal-2026-10-21)
+records actual events, both rejected alternatives, full proposal hashes and
+coverage limits. R5 used2/8 finite policies, an honestly reached same-owner
+whole-registry/external-input-history checkpoint (all60 keys equal), and selected
+26428 rows preserving all24028 accepted inputs. R6 used exactly2/2 policies,
+each after a fresh uninterrupted ordinary26428-row prefix with normal drawing,
+no restoration or adaptive steering. Both reproduced2741/1900, fractions3072/
+27904, grounded/jump-clear/free,3 rings/3 lives. The first opened the door but
+ended west after2400 inputs. The final held-jump extension reached passage26634
+and stopped after207 appended inputs: actual35L/35R+A/1R/136R+A, count26635.
+No following Right tail or beyond-door continuation ran. Actual button press/
+opening26510, fully-open26573 and grounded/free2796/1900 passage retain3 rings/
+3 lives with no hurt/death/life loss and unchanged WorldSession/Level/OM/P1.
+
+The queued standalone shape, from the owned worktree, was:
+
+```bash
+env -u JDK_JAVA_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS \
+  -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" \
+  --normal -Dmse=off \
+  '-Dexec.executable=/usr/lib/jvm/java-25-openjdk/bin/java' \
+  "-Dexec.args=-cp %classpath $R6_CLASS \"$S3K_ROM\" $R5_BK2 $R5_SCRIPT $NEW_TARGET_DIRECTORY" \
+  exec:exec -B
+```
+
+`R6_CLASS` was `com.openggf.tools.LrzKnucklesFirstDoorProposalDriver` for
+session13843 and `com.openggf.tools.LrzKnucklesFirstDoorPolicyTwoDriver` for
+86867. Source SHA256s are
+`1121112e5832b744ab180196b4edc49abb12cfbaca7f3c3a2f73ed5e9e3a812d` and
+`73e87aa403ac3d2b84c3b7da44abff7c52700b420ff79a1fe063c44110b86226`.
+`OPENGGF_MAIN` denotes the checkout supplying the current queue wrapper;
+`TASK_ARTIFACT_ROOT` is the external task-artifact directory, and `S3K_ROM`
+is the verified original absolute ROM path. The R5 input basename is `lrz-knuckles-cold-act2-first-door-320-proposal`
+under `$TASK_ARTIFACT_ROOT/lrz-knuckles-act2-controller-r5-20261021/`;
+outputs were `target/lrz-first-door-r6-author01` and `...author02`.
+R5 session20431 completed0, Maven18.046s; R6 completed0, Maven16.520s/16.535s,
+Java25.0.4.1/EGL, **zero JUnit tests**. Last R6 queue notices241s/60s are bounded
+observations, not exact waits. Sources verified the original ROM/prefix hashes,
+320solo/off Settings and actual prefix owners/roster/control/pending/fade guards.
+
+Production author/loader round trips and independent ordered script/BK2 checks
+proved every26635 row, exact26428/24028 prefixes, neutral P2, proper header and
+two zip members without state payload. Useful proposal/source and46 selected
+public rows remain externally. All16 inspected R6 raw/log/class files623227B
+were consumed by exact hashes under owned worktree/activity leases; the8061
+production-class manifest returned to
+`175135ed4af18d75c3da16f2ead09b03ca658f87f24c6dc91fece01abb4a839f`.
+R5's15 raw files965089B/three adapter classes were already consumed. No raw
+archive, pass cache or foreign cleanup. Only this Plan, Act2 matrix and backlog
+change; preimages are b078 git blobs, inverse the owned three-document diff.
+Production/POM/configuration/maintained movies/tests and earlier refs remain
+unchanged. No qualifier pair, new rewind coverage, native descriptor/d1/pixel/
+clock/cause/GC or full-act/HPZ/campaign closure. The three unpropagated maintained
+methods/controllers retain current input5027 negatives; positive-ring handoff
+recovery/carry/reset stays open. Root reviews future coverage adaptation.
