@@ -583,7 +583,10 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
                 // into the indoor refresh trigger before Obj_ICZ1BigSnowPile has
                 // finished and released him. The snowboard intro object can otherwise
                 // cross $3940 during its object-control handoff in the engine.
-                if (backgroundRoutine == ICZ1_BG_SNOW_FALL
+                // Player_mode=3 skips the pile in ICZ1BGE_Intro/SnowFall, so
+                // loc_1C9FA must not wait for its permanently zero snow offset.
+                if (playerCharacter() != PlayerCharacter.KNUCKLES
+                        && backgroundRoutine == ICZ1_BG_SNOW_FALL
                         && (bigSnowOffset > ICZ1_BIG_SNOW_FINAL_OFFSET || isFocusedPlayerControlLocked())) {
                     return;
                 }

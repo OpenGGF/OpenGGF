@@ -648,3 +648,62 @@ class was removed only after all six precursor/successful episodes, rejected
 approach findings, input stream and method lessons were mapped to the maintained
 test, this matrix and the existing Plan. No additional Knuckles, death/reload
 or route coverage follows from deleting that owned temporary file.
+
+
+## Knuckles snow-free camera event progression — 2026-10-21
+
+This bounded event correction starts at parent
+`25dedb1b9b9f572c81d3376424be7b9c1d547307` in isolated
+`bugfix/ai-icz-knuckles-snow-gate-20261021`. The inherited snow-pile wait in
+`Sonic3kICZEvents.updateAct1Resize` also applied to Knuckles, whose Intro and
+SnowFall branches deliberately never advance the zero snow offset. That kept
+resize stage2/background4 from emitting the second foreground trigger and
+subsequently reaching indoor Normal/the later handoff owner.
+
+The stock owner is `ICZ1_Resize/loc_1C9E0` (camera X=$3700 and Y=$68C), then
+`loc_1C9FA` (camera X=$3940). `ICZ1BGE_Intro` and `ICZ1BGE_SnowFall` explicitly
+skip the pile for Player_mode3. Current Main reference
+`1a454a0e335137a1a016d1090a9f4528d36944cf` places these at
+`sonic3k.asm:39433–39449` and `110174–110228`; the decisive branches have no
+FixBugs alternative. Only Knuckles bypasses the absent-pile wait. The existing
+non-Knuckles wait remains: the pile retires at background8 and must retain its
+settled, grounded jump-edge control-release opportunity before that retirement.
+No general removal of the Sonic guard or owner-order rewrite is qualified.
+
+`TestS3kIczKnucklesArrival#nativeCameraTriggersAdvanceKnucklesWithoutSnowAndReplayTwice`
+uses genuine fresh initialization and64 ordinary neutral release frames, then
+explicit **camera-word component inputs**, not a traversed route. It checks
+$36FF/$68C and $3700/$68B refusal, $3700/$68C admission, $393F refusal and
+$3940 admission through the normal event manager. No background stage, player
+position, snow offset or private state is supplied. Knuckles retains zero snow
+offset, no pile and no quake lock; the existing refresh owners reach Normal.
+Two complete-registry restore/replay cycles cover the first and second triggers
+and the resulting background state. This later camera boundary is distinct
+from the separately owned CNZ arrival/release at player X=$3640.
+
+Before any production edit, the exact new method failed **1T/1F/0E/0S**, at
+`native Knuckles background stage: expected8/actual4` (method82/helper410).
+After the narrow predicate edit, one final request selected
+`TestS3kIczKnucklesArrival,TestS3kIcz1SnowboardIntroHeadless,TestS3kIczAct1TransitionHeadless,TestS3kIczRetainedChunkHandoff,TestSonic3kIczRewindRoundTrip`:
+**29T/0F/0E/0S**. This includes11 Arrival cases,7 Sonic intro/snow/escape cases,
+the actual handoff and retained-chunk cases, and9 event-rewind cases. The
+all-tracked-`src`/POM fingerprint stayed
+`a8bed04e9430591a70b2eb4c04c5a4dbd1e65838101095445a786911672030b3`
+(10,793 files). Shared configuration was unchanged.
+
+Both requests used the absolute current Main `tools/testing/maven_queue.py`,
+`--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl`, exact `-Dtest`
+selectors above, original absolute S1/S2/S3K ROM properties and owned report/tmp
+paths, followed by `test -B`. Java25.0.4.1, null OpenAL and Lua5.4 were retained;
+DISPLAY/WAYLAND_DISPLAY and ambient JVM/library overrides were unset. The
+original XML/TXT identities, all69 properties per XML and every failure/error/
+skip/stream node were read. Existing FAST/Kos-estimate warnings and the deferred
+map193/20 warning were present. Exact owned diagnostic directories were consumed;
+no raw archive or repeated workload was made. Red admission wait was97s/Maven
+1m16s; green wait0s/Maven1m22s. These intervals are not overall delivery time.
+
+No ordinary Knuckles travel beyond arrival, physical post/death/reload, natural
+ICZ1-to-ICZ2 traversal, native audiovisual timing/pixels, other widths/donors/team
+products or full-act certification follows. The older positioned handoff fixture
+still forces Normal and is not reclassified as a cold route. Root owns source
+review, any composed check, integration and delivery.
