@@ -923,3 +923,15 @@ The one attempt stopped after10 new/42866 total normal step/draw pairs, with no 
 Session79763 exited0,0 JUnit/skips N/A:queue15s/Maven01:23/boot-prefix-tail25.331s, no metadata exception. No maintained predicates/data/window changes or route/native qualification.
 The [R13 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-one-jumpglide-admission-question-r13--2026-10-21) pins source/input/proofs/commands/limits and17:24 workload/17:34 cleanup deadlines; raw diagnostics/classes/tmp/validation copies were consumed.
 Useful exact inputs/private preimage/compact facts remain external. Earlier history is immutable; Root owns source/data review and any later workload. No push/integration occurred.
+
+### Knuckles slide/get-up ordinary follow-through R14 — 2026-10-21
+
+At exact8b321d169, the full42866-row actual R13 prefix and all10 R13/five earlier complete64 checkpoints matched; [R13/R11 setup](#knuckles-one-jumpglide-admission-question-r13--2026-10-21) is unchanged.
+One constant Right/P2neutral/A-released policy observed first flag3→0/get-up42866 at10827/2417, V0/G0, default9/19 radii; owner-written air=false is not new terrain/support proof.
+Movement input was inactive42867..42881, active42882;42888 first qualified a subsequent forward inlet:10828/2417,VX59/VY-6/G60,flag0/airfalse/jumpingfalse/radii9x19/movement active.
+All23 new rows retain1 ring/3 lives/no hurt/death/free scalar controls/same world/focus/LEVEL/no pending/fade, onObject=false/actual rider none; stale Spikes slot25 is separate.
+Exactly42889 step/normal-draw pairs ran; one original public64 row per boundary supplied cached decisions. Same-JVM preboot/post-stop production roundtrips and independent full-prefix/payload/P2/JUMP0x10 proofs passed.
+Session91156 exited0,0 JUnit/skips N/A:queue26s/Maven01:26/boot-prefix-tail23.356s, no command error. A corrected pre-request private inverse-metadata assertion stays separately recorded; no retry.
+The [R14 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-slideget-up-ordinary-follow-through-r14--2026-10-21) pins products/source/command/17:54 workload/18:04 cleanup scope; consumed raw outputs/classes/tmp/validation copies leave target absent.
+Useful exact inputs/private preimage/all23 ordered rows/compact facts remain external. Terrain/hurt receiver, fluid/reverse/invulnerability/native equivalence and safe future remain UNKNOWN; no maintained change or route qualification.
+Prior histories/refs/native/config remain intact; Root owns review and any next question. No push/integration followed.
