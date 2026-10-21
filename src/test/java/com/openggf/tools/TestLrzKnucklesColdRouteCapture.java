@@ -26,11 +26,13 @@ class TestLrzKnucklesColdRouteCapture {
     void coldKnucklesReachesMinibossAndRestoresTraversalAndCloudEscape() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/lrz-knuckles-cold-miniboss-320.bk2"));
-        assertEquals(20410, movie.getFrameCount());
+        assertEquals(20500, movie.getFrameCount());
         var settings = new GameplayCaptureSession.Settings(320, "knuckles", "", "off", null, null, null);
         // Intro, crusher/bridge, earned monitor, wall jumps, lower switch/door,
         // stairs and crushers, attached cloud and real spindash release, spring,
-        // upper return passage, final switch/door and native arena entry.
+        // upper return passage, final switch/door and ordinary arena entry. All 70 original windows remain;
+        // added windows cross changed wall grabs, both cloud contacts and allocation.
+        // The 20454 window ends at the first initialized boss return (20499).
         var spots = Set.of(200, 500, 780, 830, 991, 1050, 1248, 1454, 1660,
                 1750, 2074, 2200, 2425, 2510, 2841, 3050, 3347, 3500, 3823,
                 4000, 4299, 4390, 4490, 4954, 5050, 5120, 5619, 5800, 6095,
@@ -38,7 +40,9 @@ class TestLrzKnucklesColdRouteCapture {
                 9200, 9609, 9850, 9937, 9943, 9951, 10038, 10559, 11235,
                 12031, 13107, 13219, 13845, 14471, 15123, 15210, 15712,
                 16138, 16644, 16705, 16765, 16876, 17452, 18028, 18545,
-                19221, 19588, 20108, 20200, 20300, 20349);
+                19221, 19588, 20108, 20200, 20300, 20349,
+                3863, 3864, 5659, 5660, 9918, 9919,
+                19645, 19646, 19657, 19658, 20354, 20355, 20453, 20454);
         var checked = new HashSet<Integer>();
         var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
@@ -50,7 +54,13 @@ class TestLrzKnucklesColdRouteCapture {
                 session.step(movie.getFrame(frame));
                 drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at input " + frame);
-                if (frame == 9937) {
+                if (frame == 9918) {
+                    assertTrue(GameServices.level().getObjectManager()
+                            .activeObjectsOfType(ToxomisterCloudInstance.class).stream()
+                            .noneMatch(cloud -> cloud.routine() == 8 && cloud.attachedPlayerSlot() == 1),
+                            "the first placed-cloud attachment has not happened yet");
+                }
+                if (frame == 9919 || frame == 9937) {
                     assertTrue(GameServices.level().getObjectManager()
                             .activeObjectsOfType(ToxomisterCloudInstance.class).stream()
                             .anyMatch(cloud -> cloud.routine() == 8 && cloud.attachedPlayerSlot() == 1),
@@ -89,12 +99,21 @@ class TestLrzKnucklesColdRouteCapture {
             assertEquals(spots, checked);
             assertEquals(9, GameServices.level().getCurrentZone());
             assertEquals(0, GameServices.level().getCurrentAct());
-            assertEquals(11362, session.player().getCentreX());
-            assertEquals(1969, session.player().getCentreY());
+            assertEquals(11560, session.player().getCentreX());
+            assertEquals(1968, session.player().getCentreY());
             assertEquals(10, session.player().getRingCount());
             assertTrue(session.player().isHighPriority(), "crossed the arena's placed priority marker");
-            assertEquals(1, GameServices.level().getObjectManager()
-                    .activeObjectsOfType(LrzMinibossInstance.class).size());
+            var bosses = GameServices.level().getObjectManager()
+                    .activeObjectsOfType(LrzMinibossInstance.class);
+            assertEquals(1, bosses.size());
+            var boss = bosses.getFirst();
+            assertTrue(boss.isArenaGateComplete(), "the ordinary camera/music gate completed");
+            assertEquals(2, boss.getState().routine, "the allocated boss actually initialized");
+            assertEquals(6, boss.getCollisionProperty(), "initialized health before the fight");
+            assertFalse(boss.getState().defeated);
+            assertFalse(session.player().isObjectControlled());
+            assertFalse(session.player().isObjectControlSuppressesMovement());
+            assertFalse(session.player().isControlLocked());
             assertInstanceOf(Knuckles.class, session.player());
             assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
         }

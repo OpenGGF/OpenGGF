@@ -1721,3 +1721,52 @@ so every LRZ1 entry that passes through `Level` fades lines 1-3 in, with or with
 A death restart measured 0, 68/70/68, 113/112/100 and 146/136/120 at counters 0, 5, 10 and 21;
 before the change it showed full colour as the card left. See `TestS3kLevelPaletteFadeOwner`
 and the 2026-10-15 level-owned fade entry in [the HPZ act matrix](s3k-hpz-act.md).
+
+
+## Knuckles current-physics miniboss arrival (2026-10-21)
+
+The first method of `TestLrzKnucklesColdRouteCapture` now consumes the accepted
+20500-input native320 solo-Knuckles/donor-off proposal. It preserves original
+inputs0..3863 exactly, changes30 P1 rows in the original20410-input portion,
+and appends90 Right-held inputs. Every P2 row remains neutral. The script and
+BK2 contain the same ordered inputs; the BK2 has only its header and input log.
+The arrival count and endpoint data reflect the observed proposal. No production
+physics, terrain or test comparison changes are included, and the semantic
+gameplay assertions are retained or strengthened. This is an ordinary input alternative following the wall-climb change,
+not proof that the inherited controller or the unmeasured native terrain return
+was wrong.
+
+Two separate fresh ordinary row0 replays, with normal rendering every input and
+no restore, helper steering or seeds, agreed on all20500 rows of their48-field
+player/active-owner projection. They reached the first cloud attachment at9919,
+retained the original attached-cloud check at9937 and actual spindash escape at
+9943. A second cloud was attached19646..19657 and absent19658; its removal cause
+is not attributed. The real miniboss first appeared20355 in routine0, its arena
+gate completed20498, and its first initialized routine2 return was20499, health6.
+The endpoint is LRZ1 centre(11560,1968),10 rings, high priority, solo Knuckles,
+320px, no death and released object/control locks. These are Java gameplay
+observations, without native clock, pixel, reset/bootstrap or cause closure.
+
+The maintained method keeps all70 original45-input full-registry restore and
+forward-replay windows. Fourteen additional starts are3863,3864,5659,5660,
+9918,9919,19645,19646,19657,19658,20354,20355,20453 and20454: changed wall grabs,
+first attachment/escape, second-cloud boundaries, allocation and pre-initialization.
+The final window ends at20499; there are no later movie inputs and no
+post-initialization replay claim. Existing normal drawing policy, full-registry
+comparisons and their existing comparison normalizations remain unchanged.
+The first attachment boundary and completed gate/initialized six-health boss
+are asserted alongside the retained9937/9943, survival, rings, roster, zone/act
+and priority checks.
+
+Maintained focused qualification: **1T/0F/0E/0S**, exact first method once.
+The exact command, observed outcome and source limits are recorded in the
+[completion plan](../../plans/2026-10-13-s3k-playable-completion.md#knuckles-lrz1-first-maintained-miniboss-leaf-2026-10-21).
+
+The other four methods and all six longer script/BK2 pairs remain byte-for-byte
+`0e4f7a9f202f477018d4adeb01295316704c0ea1`. Their inherited current-physics
+input5027 death failures remain pending; this first-leaf result does not qualify
+those controllers, the miniboss fight/handoff, HPZ/campaign or additional widths,
+rosters and donors. All seven old movies shared the full20410-input prefix;
+propagation requires an actually authored fight/handoff, rather than splicing
+an old fight tail or shifting downstream event indices. Earlier milestone
+sections retain their historical source and validation scope.
