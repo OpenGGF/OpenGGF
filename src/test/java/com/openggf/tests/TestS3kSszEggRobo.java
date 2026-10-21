@@ -204,10 +204,11 @@ class TestS3kSszEggRobo {
      * at {@code ($1520,$C80)} and the fighter {@code $A0:$62} at {@code ($1660,$C80)} sit on the
      * same row, {@code $140} apart.
      */
-    @Test
-    void theFlyByArcsOffTheScreenAndOnlyThenDoesItsFighterSurvive() {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {320, 800})
+    void theFlyByArcsOffTheScreenAndOnlyThenDoesItsFighterSurvive(int width) {
         // $A0:$60 at ($1520,$C80).
-        HeadlessTestFixture fixture = bootAtCheckpoint(320, 0x1500, 0x0C80);
+        HeadlessTestFixture fixture = bootAtCheckpoint(width, 0x1500, 0x0C80);
         SszZoneRuntimeState state = S3kRuntimeStates
                 .currentSsz(GameServices.zoneRuntimeRegistry()).orElse(null);
         assertNotNull(state, "SSZ act 1 has a runtime state");
@@ -227,7 +228,10 @@ class TestS3kSszEggRobo {
         int scaleAtStart = flyBy.scaleIndexForTest();
         int yAtStart = flyBy.getY() & 0xFFFF;
 
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        CompositeSnapshot beforeRetirement = null;
         for (int frame = 0; frame < 600 && !state.eggRoboFlyByPassed(6); frame++) {
+            beforeRetirement = registry.capture();
             fixture.stepIdleFrames(1);
         }
         assertTrue(state.eggRoboFlyByPassed(6),
@@ -236,6 +240,41 @@ class TestS3kSszEggRobo {
                 "the scale index fell from $" + Integer.toHexString(scaleAtStart)
                         + " on the way past");
         assertNotEquals(yAtStart, flyBy.getY() & 0xFFFF, "and the arc moved it");
+        assertTrue(flyBy.isDestroyed(), "loc_91570 deletes the producer in the same dispatch");
+        var physical = fixture.gameplayMode().getKosinskiModuleQueue();
+        assertEquals(1, physical.queuedArchiveCount(), "restoration survives its deleted producer");
+        assertEquals(0x17B17E, physical.capture().archives().getFirst().archiveAddress());
+        assertEquals(0xA000, physical.capture().archives().getFirst().destinationVramBytes());
+        var submitted = registry.capture();
+        var coordinator = com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.current();
+        int pendingSteps = 0;
+        while (pendingSteps < 16 && coordinator.pendingKosModuleDmaEntries().isEmpty()) {
+            fixture.stepIdleFrames(1);
+            pendingSteps++;
+        }
+        assertFalse(coordinator.pendingKosModuleDmaEntries().isEmpty(), "actual direct child reaches queued DMA");
+        var pendingDma = registry.capture();
+        assertEquals(0x4F0, coordinator.pendingKosModuleDmaEntries().getFirst().words());
+        fixture.stepIdleFrames(1);
+        var published = registry.capture();
+        assertTrue(coordinator.pendingKosModuleDmaEntries().isEmpty());
+        assertFalse(physical.capture().appliedWrites().isEmpty());
+        for (int cycle = 0; cycle < 2; cycle++) {
+            registry.restore(beforeRetirement);
+            sameSnapshot(beforeRetirement, registry.capture(), "restore live fly-by before retirement");
+            fixture.stepIdleFrames(1);
+            sameSnapshot(submitted, registry.capture(), "retirement submits exactly once after recreation");
+            fixture.stepIdleFrames(pendingSteps);
+            sameSnapshot(pendingDma, registry.capture(), "deleted actor's pending DMA forward replay");
+            fixture.stepIdleFrames(1);
+            sameSnapshot(published, registry.capture(), "native VInt publication forward replay");
+            registry.restore(published);
+            sameSnapshot(published, registry.capture(), "restore published world");
+            registry.restore(pendingDma);
+            sameSnapshot(pendingDma, registry.capture(), "reverse restore pending DMA");
+            registry.restore(submitted);
+            sameSnapshot(submitted, registry.capture(), "reverse restore submitted request");
+        }
     }
 
     /**

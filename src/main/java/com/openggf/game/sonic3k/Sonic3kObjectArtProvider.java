@@ -95,7 +95,10 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     private com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardTeardownModel
             titleCardTeardown;
 
-    private record EnemyKosEntry(int source, int destinationTile) {
+    private record EnemyKosEntry(int source, int destinationTile, boolean physicalPublication) {
+        private EnemyKosEntry(int source, int destinationTile) {
+            this(source, destinationTile, false);
+        }
     }
 
     private enum RuntimeArtState {
@@ -1613,11 +1616,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             }
             // Preserve native FIFO order if activation occurs while the
             // title-retired enemy group is waiting to submit.
-            for (EnemyKosEntry entry : pendingEnemyKosEntries) {
-                enemyKosHandles.add(enemyKosQueue.queue(
-                        rom, entry.source(), entry.destinationTile()));
-            }
-            pendingEnemyKosEntries = List.of();
+            flushAdmittedEnemyKosEntries(rom);
             enemyKosHandles.add(enemyKosQueue.queue(
                     rom,
                     sourceAddress,
@@ -1665,11 +1664,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                 enemyKosQueue =
                         S3kRuntimeArtCoordinator.current().moduleQueue();
             }
-            for (EnemyKosEntry entry : pendingEnemyKosEntries) {
-                enemyKosHandles.add(enemyKosQueue.queue(
-                        rom, entry.source(), entry.destinationTile()));
-            }
-            pendingEnemyKosEntries = List.of();
+            flushAdmittedEnemyKosEntries(rom);
             enemyKosHandles.add(enemyKosQueue.queue(
                     rom,
                     Sonic3kConstants.ART_KOSM_BADNIK_EXPLOSION_ADDR,
@@ -1879,6 +1874,11 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                     new EnemyKosEntry(
                             Sonic3kConstants.ART_KOSM_ROCKN_ADDR,
                             Sonic3kConstants.ARTTILE_ROCKN));
+            // Offs_LoadEnemyArt -> PLCKosM_SSZ, also restored by loc_91570.
+            // This is physical residency, independent of the prepared standalone sheet.
+            case Sonic3kZoneIds.ZONE_SSZ -> List.of(new EnemyKosEntry(
+                    Sonic3kConstants.ART_KOSM_EGG_ROBO_BADNIK_ADDR,
+                    Sonic3kConstants.ARTTILE_EGG_ROBO_BADNIK, true));
             default -> List.of();
         };
     }
@@ -1913,6 +1913,12 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             hash *= 0x100000001b3L;
             hash ^= Integer.toUnsignedLong(entry.destinationTile());
             hash *= 0x100000001b3L;
+            if (entry.physicalPublication()) {
+                // Preserve prior timing-only recipes' fingerprints; physical
+                // publication is additional owner intent, not source magic.
+                hash ^= 1;
+                hash *= 0x100000001b3L;
+            }
         }
         return hash;
     }
@@ -1993,29 +1999,24 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         if (pendingEnemyKosEntries.isEmpty() && enemyKosHandles.isEmpty()) {
             return;
         }
-        if (enemyKosHandles.isEmpty()) {
-            if (!enemyKosSubmissionArmed) {
-                return;
-            }
-            var timing = GameServices.hardwareTiming();
+        if (!pendingEnemyKosEntries.isEmpty() && enemyKosSubmissionArmed) {
             try {
                 Rom rom = GameServices.rom().getRom();
                 enemyKosQueue = S3kRuntimeArtCoordinator.current().moduleQueue();
-                if (!enemyKosQueue.hasCapacityFor(pendingEnemyKosEntries.size())) {
+                if (enemyKosQueue.hasCapacityFor(pendingEnemyKosEntries.size())
+                        && hasPhysicalEnemyKosCapacity()) {
+                    for (EnemyKosEntry entry : pendingEnemyKosEntries) {
+                        enemyKosHandles.add(queueEnemyKosEntry(rom, entry));
+                    }
+                    pendingEnemyKosEntries = List.of();
                     return;
                 }
-                for (EnemyKosEntry entry : pendingEnemyKosEntries) {
-                    enemyKosHandles.add(enemyKosQueue.queue(
-                            rom, entry.source(), entry.destinationTile()));
-                }
-                pendingEnemyKosEntries = List.of();
             } catch (IOException e) {
                 throw new IllegalStateException(
                         "Unable to queue S3K enemy KosM art", e);
             }
-            return;
         }
-        if (enemyKosHandles.stream().allMatch(enemyKosQueue::isReady)) {
+        if (!enemyKosHandles.isEmpty() && enemyKosHandles.stream().allMatch(enemyKosQueue::isReady)) {
             S3kKosModuleQueue completedQueue = enemyKosQueue;
             for (HardwareWorkHandle handle : enemyKosHandles) {
                 enemyKosQueue.claim(handle);
@@ -2024,6 +2025,43 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             enemyKosQueue = null;
             completedQueue.allowChildSubmissionAfterHeldAdmission();
         }
+    }
+
+    private void flushAdmittedEnemyKosEntries(Rom rom) throws IOException {
+        // An incidental producer owns only its own request. In particular an
+        // unretired title's physical batch cannot borrow StarPost/explosion
+        // authority. Keep it pending independently of the incidental handle.
+        var deferred = new ArrayList<EnemyKosEntry>();
+        for (EnemyKosEntry entry : pendingEnemyKosEntries) {
+            if (entry.physicalPublication() && !enemyKosSubmissionArmed) {
+                deferred.add(entry);
+            } else {
+                enemyKosHandles.add(queueEnemyKosEntry(rom, entry));
+            }
+        }
+        pendingEnemyKosEntries = List.copyOf(deferred);
+    }
+
+    private boolean hasPhysicalEnemyKosCapacity() {
+        long physicalEntries = pendingEnemyKosEntries.stream()
+                .filter(EnemyKosEntry::physicalPublication).count();
+        if (physicalEntries == 0) return true;
+        var physical = GameServices.level().getObjectManager().getObjectServices()
+                .kosinskiModuleQueue();
+        if (physical == null) throw new IllegalStateException("Enemy art has no physical KosM owner");
+        return physical.queuedArchiveCount() + physicalEntries
+                <= com.openggf.level.resources.KosinskiModuleQueue.CAPACITY;
+    }
+
+    private HardwareWorkHandle queueEnemyKosEntry(Rom rom, EnemyKosEntry entry) throws IOException {
+        if (!entry.physicalPublication()) {
+            return enemyKosQueue.queue(rom, entry.source(), entry.destinationTile());
+        }
+        var services = GameServices.level().getObjectManager().getObjectServices();
+        var handle = S3kRuntimeArtCoordinator.queueRetainedPatternModule(
+                services, entry.source(), entry.destinationTile() * 32);
+        if (handle == null) throw new IllegalStateException("Enemy art physical KosM FIFO is full");
+        return handle;
     }
 
     /**
@@ -2874,7 +2912,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                 pendingModules = pendingEnemyKosEntries.stream()
                 .map(entry ->
                         new com.openggf.game.rewind.snapshot.PlcProgressSnapshot.PendingKosModule(
-                                entry.source(), entry.destinationTile()))
+                                entry.source(), entry.destinationTile(), entry.physicalPublication()))
                 .toList();
         return new com.openggf.game.rewind.snapshot.PlcProgressSnapshot(
                 loadEpoch, cnzTeleporterArtState.ordinal()
@@ -2910,7 +2948,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         enemyKosArmOnNextRuntimePass = (packedState & (1 << 4)) != 0;
         pendingEnemyKosEntries = snap.pendingKosModules().stream()
                 .map(entry -> new EnemyKosEntry(
-                        entry.sourceAddress(), entry.destinationTile()))
+                        entry.sourceAddress(), entry.destinationTile(), entry.physicalPublication()))
                 .toList();
         enemyKosSubmissionArmed = snap.kosSubmissionArmed();
         runtimeArtAdmissionGeneration = snap.runtimeArtAdmissionGeneration();

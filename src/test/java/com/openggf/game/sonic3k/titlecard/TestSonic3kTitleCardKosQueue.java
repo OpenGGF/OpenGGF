@@ -414,6 +414,134 @@ class TestSonic3kTitleCardKosQueue {
                 .get(com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE));
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void sszTitleRetirementRetainsOnePhysicalRequestAndRewindsItsPublicationIntent(boolean cached)
+            throws Exception {
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(10, 0).build();
+        timing = GameServices.hardwareTiming();
+        var provider = (Sonic3kObjectArtProvider) GameServices.module().getObjectArtProvider();
+        provider.prepareRuntimeArtForActTransition(10, RuntimeArtAdmissionPolicy.TITLE_OWNER);
+        var physical = fixture.gameplayMode().getKosinskiModuleQueue();
+        assertTrue(moduleHandles().isEmpty());
+        assertTrue(physical.isIdle());
+        var prepared = provider.capture();
+        assertEquals(List.of(new PlcProgressSnapshot.PendingKosModule(
+                0x17B17E, 0x500, true)), prepared.pendingKosModules());
+        provider.restore(prepared);
+        assertEquals(prepared, provider.capture(), "pre-submission rewind retains physical intent and lease");
+        if (cached) {
+            installCachedTitleArt();
+            setField(manager, "lastLoadedZone", 10);
+        }
+        manager.initializeInLevel(10, 0);
+        var titleHandles = moduleHandles();
+        for (int frame = 0; frame < 4096 && readyCount(titleHandles) < titleHandles.size(); frame++) {
+            service(HardwareServiceBoundary.POST_OBJECTS);
+            service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        }
+        assertEquals(titleHandles.size(), readyCount(titleHandles));
+        provider.processRuntimeArtQueue();
+        assertEquals(titleHandles, moduleHandles(), "cached/ready art is not owner retirement");
+        assertTrue(physical.isIdle());
+        if (!cached) S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
+        prepareExitForCompletion(manager);
+        S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
+        assertTrue(manager.isComplete());
+        assertTrue(provider.capture().runtimeArtAdmissionConsumed());
+        assertTrue(physical.isIdle(), "in-level retirement defers until the next runtime pass");
+        // Declared capacity control: occupy only the physical facade, then
+        // release those setup entries. The title-owned intent must survive.
+        for (int i = 0; i < 4; i++) assertTrue(physical.enqueue(rom, 0x17B17E, 0xA000));
+        var nextOrdinals = timing.capture().nextOrdinals();
+        provider.processRuntimeArtQueue();
+        assertEquals(nextOrdinals, timing.capture().nextOrdinals());
+        assertEquals(prepared.pendingKosModules(), provider.capture().pendingKosModules());
+        assertTrue(provider.capture().pendingKosOrdinals().isEmpty());
+        assertEquals(4, physical.queuedArchiveCount());
+        physical.clear();
+        provider.processRuntimeArtQueue();
+        var handles = moduleHandles();
+        assertEquals(1, handles.size());
+        assertEquals(handles.stream().map(HardwareWorkHandle::ordinal).toList(),
+                provider.capture().pendingKosOrdinals());
+        var descriptor = S3kRuntimeArtCoordinator.current().moduleQueue().descriptor(handles.getFirst());
+        assertEquals(0x17B17E, descriptor.sourceAddress());
+        assertEquals(0xA000, descriptor.destinationAddress());
+        assertEquals(2528, descriptor.destinationLength());
+        assertEquals(1, descriptor.moduleCount());
+        assertEquals(1, physical.queuedArchiveCount());
+        assertEquals(0x4F0, physical.capture().archives().getFirst().lastModuleWords());
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var submitted = registry.capture();
+        service(HardwareServiceBoundary.POST_OBJECTS);
+        service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        registry.restore(submitted);
+        assertEquals(submitted.entries().keySet(), registry.capture().entries().keySet());
+        for (String key : submitted.entries().keySet()) {
+            assertTrue(com.openggf.game.rewind.RewindSnapshotDiff.diffKey(key,
+                    submitted.get(key), registry.capture().get(key)).isEmpty(), key);
+        }
+        provider.processRuntimeArtQueue();
+        assertEquals(handles, moduleHandles(), "restored ordinals rebind without another submission");
+        assertEquals(1, physical.queuedArchiveCount());
+        for (int frame = 0; frame < 4096 && !timing.isReady(handles.getFirst()); frame++) {
+            service(HardwareServiceBoundary.POST_OBJECTS);
+            service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            physical.processNativeFrame();
+        }
+        assertTrue(timing.isReady(handles.getFirst()));
+        assertEquals(handles, moduleHandles(), "retained provider handle has no automatic claim owner");
+        provider.processRuntimeArtQueue();
+        assertTrue(moduleHandles().isEmpty());
+        assertTrue(provider.capture().pendingKosOrdinals().isEmpty());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void incidentalProducersCannotAdmitSszArtOrDelayItsRetiredTitleOwner(boolean starPost)
+            throws Exception {
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(10, 0).build();
+        timing = GameServices.hardwareTiming();
+        var provider = (Sonic3kObjectArtProvider) GameServices.module().getObjectArtProvider();
+        provider.prepareRuntimeArtForActTransition(10, RuntimeArtAdmissionPolicy.TITLE_OWNER);
+        var pending = provider.capture();
+        if (starPost) provider.queueStarPostBonusArt(Sonic3kConstants.ART_KOSM_STARPOST_STARS1_ADDR);
+        else provider.queueBadnikExplosionArt();
+        var incidental = moduleHandles().getFirst();
+        assertFalse(timing.isReady(incidental));
+        assertEquals(pending.pendingKosModules(), provider.capture().pendingKosModules());
+        assertFalse(provider.capture().runtimeArtAdmissionConsumed());
+        assertTrue(fixture.gameplayMode().getKosinskiModuleQueue().isIdle());
+        provider.processRuntimeArtQueue();
+        assertEquals(List.of(incidental), moduleHandles());
+
+        installCachedTitleArt();
+        setField(manager, "lastLoadedZone", 10);
+        manager.initializeInLevel(10, 0);
+        prepareExitForCompletion(manager);
+        S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
+        provider.processRuntimeArtQueue();
+        assertFalse(timing.isReady(incidental), "title admission cannot wait for incidental art readiness");
+        assertEquals(2, moduleHandles().size());
+        assertTrue(provider.capture().pendingKosModules().isEmpty());
+        assertEquals(1, fixture.gameplayMode().getKosinskiModuleQueue().queuedArchiveCount());
+        assertEquals(0x17B17E, S3kRuntimeArtCoordinator.current().moduleQueue()
+                .descriptor(moduleHandles().getLast()).sourceAddress());
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var both = registry.capture();
+        service(HardwareServiceBoundary.POST_OBJECTS);
+        service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        registry.restore(both);
+        for (String key : both.entries().keySet()) {
+            assertTrue(com.openggf.game.rewind.RewindSnapshotDiff.diffKey(key,
+                    both.get(key), registry.capture().get(key)).isEmpty(), key);
+        }
+        provider.processRuntimeArtQueue();
+        assertEquals(2, moduleHandles().size(), "restore retains both owners without resubmission");
+        assertEquals(1, fixture.gameplayMode().getKosinskiModuleQueue().queuedArchiveCount());
+    }
+
     private List<HardwareWorkHandle> expectedHandles(
             int[] sources, int[] destinations) throws Exception {
         HardwareTimingService expectedTiming = new HardwareTimingService();

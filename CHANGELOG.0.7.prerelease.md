@@ -298,6 +298,9 @@ Unreleased. The earlier development themes remain in
   Sanctuary), Tails' body again covers his tails as in the native sprite table.
   Its clouds and collapsing columns retain native foreground priority, and
   the HUD RINGS label uses its dedicated ROM R glyph.
+  Title retirement and departing EggRobo fly-bys submit the native enemy-art
+  restoration requests, with physical publication and rewind ownership retained
+  after the producer disappears. Scaled fly-by pixels remain incomplete.
   Teleporter beams retain the selected ROM art bank through recreation,
   including SSZ transport priority and whole-sky rewind publication.
   Slot bonus-stage layouts, player starts, prize/reel tables, background

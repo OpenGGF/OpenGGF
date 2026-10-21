@@ -2015,6 +2015,8 @@ public class Sonic3kConstants {
 
     // ===== SSZ/DDZ Badnik Art =====
     public static final int ART_KOSM_EGG_ROBO_BADNIK_ADDR = 0x17B17E;
+    /** Native ArtTile_EggRoboBadnik, used by PLCKosM_SSZ and loc_91570. */
+    public static final int ARTTILE_EGG_ROBO_BADNIK = 0x0500;
     public static final int MAP_EGG_ROBO_ADDR = 0x184F34;
 
     // ===== DDZ (Doomsday) =====

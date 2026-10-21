@@ -1,5 +1,11 @@
 # Level test coverage backlog
 
+SSZ enemy-art requests (2026-10-21): the [bounded production/restoration leaf](../architecture/validation/levels/s3k-ssz-act1.md#enemy-art-production-and-restoration-requests--2026-10-21)
+tracks title-owner admission, retained versus automatic claims, physical VInt
+publication and two-way registered-world replay after fly-by deletion. This
+does not close scaled pixels, shared scratch/DMA source lifetime, native
+presentation, intermediate viewport/donor/team breadth or cold-route obligations.
+
 Slot retained-plane restore (2026-10-17): the [R7G qualification](../architecture/validation/levels/s3k-bonus-stage-transitions.md#r7g-actual-captured-plane-inlet-and-bounded-repair-qualification--2026-10-17)
 adds a genuine matched old-red/green with the actual stored parallax checkpoint,
 then all five maintained portal pilots pass, including twice-forward world

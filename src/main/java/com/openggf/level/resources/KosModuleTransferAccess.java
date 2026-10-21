@@ -14,4 +14,11 @@ public final class KosModuleTransferAccess {
     public static void bind(KosinskiModuleQueue queue, NativeKosModuleTransfer transfer) {
         queue.bindNativeTransfer(transfer);
     }
+
+    /** No FIFO mutation if physical validation or the actual timed submission fails. */
+    public static <T> T enqueuePaired(KosinskiModuleQueue queue, com.openggf.data.Rom rom,
+            int source, int destinationVramBytes, java.util.function.Supplier<T> submission)
+            throws java.io.IOException {
+        return queue.enqueueWithAdmission(rom, source, destinationVramBytes, submission);
+    }
 }
