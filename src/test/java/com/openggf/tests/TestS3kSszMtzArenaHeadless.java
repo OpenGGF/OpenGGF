@@ -825,7 +825,7 @@ class TestS3kSszMtzArenaHeadless {
         public OrbInitializationPressureSlot(com.openggf.level.objects.ObjectSpawn spawn) {
             super(spawn, "DeclaredMtzInitializationPressure");
         }
-        @Override public void update(int count, com.openggf.game.PlayableEntity player) { }
+        @Override public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) { }
         @Override public boolean isPersistent() { return true; }
         @Override public void appendRenderCommands(List<com.openggf.graphics.GLCommand> commands) { }
     }
