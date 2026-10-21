@@ -26953,3 +26953,190 @@ full-act/breadth/HPZ/campaign, true reset/bootstrap, native terrain-return/d1,
 stock-route causality, native pixels/timing and GC are not certified. Root owns
 independent source review, the combined change-based smoke plan and integration;
 this worker creates only a local reviewable commit.
+
+
+## MHZ Knuckles current motion and controller frontier — 2026-10-21
+
+R1–R5 are bounded diagnostics, not renewed qualification of
+`TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndIsolatesTheFbzTimeline`.
+The original supplied isolated checkout `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-c8eb85f9`
+was clean apart from inherited native source state, but at supplied efd605142603146509995cffbb56a6b48f9c1c1b;
+the original preflight stopped with0 workloads rather than mutating an unexpected
+branch. Subsequent explicit authority created
+`feature/ai-mhz-knuckles-first-motion-20261021` at fee3c7a56ffd397cae5919e08a329c4a9844be5b,
+then `feature/ai-mhz-knuckles-climb-controller-20261021` at
+e3d23e2fa4da78a1035536fed4448f53e9a804be. Both refs and the supplied branch remain
+preserved. Native gitlink703bd92d32634ce5ebac60625b48c60ef5500427 and actual
+322851cbfa2e1c1803332142e11ab74b4eb34eea remain unchanged; no native build/capture
+or Main/Root mutation occurred.
+
+**Ordinary first departure.** R1's current fee3 and matched immediate pre-climb
+876037b4c685169f71c69be783b3a85ad9d45912 each ran cold row0 with unchanged inputs,
+no restore, and step → normal renderFrame → public64-column observation. Current
+died39940; baseline survived that inclusive budget. Every recorded field agreed
+through35018. Both took flag4→0 at35019 under Right+A; current centreY1427,
+property3, angle−34, animation5/mapping86 contrasts with baseline1437,0,0,32/183.
+The stored Spring latch was stale with no actual riding in either. This supports
+climb-delta association, not cause of death or stale-controller proof. Commands
+77892/83404 exited0 with0 JUnit tests and about21.20/21.33 seconds adapter
+execution, each reporting0 seconds queue wait.
+
+**Source and original-call boundary.** R2 reused established5aef geometry/exit
+proof in `docs/architecture/research/trace/2026-09-14-kis2-chain-frontier.md` and
+found no new textual omission. Prospective query1464/1454 and endpoint−18/−8
+were explicitly not measured returns in that source-only round. R3 separately
+observed existing evaluated arguments/return objects once, without a terrain
+requery: current8387,1464 → distance−18/raw angle−34; baseline8387,1454 →−8/−34.
+Effective Up/Down/Leftfalse, Right/jump-heldtrue, jump-pressfalse and idle-ruletrue
+match. Both actual original calls selected idle negative-floor exit. All retained
+35016..35020 public rows matched their earlier same-source observations. Temporary
+instrumentation preimages, counted inverses and whole-file restoration were
+verified after each arm; no maintained runtime edit remains.
+
+Pinned skdisasm044fa46725c71187399e13f5ddb70e11d32dc024, shipped FixBugs0:
+`sonic3k.asm:31383..31397` uses CY+9 through `sub_F828`;19966..19975 adds signed
+XR, giving1445+9+10=1464. The full-height regression19304..19324 admits the current
+15−(9+8)−16=−18 result. Negative floor31415..31417 reaches31280..31293, adding the
+distance and publishing Primary_Angle/Knux_TouchFloor/animation5;32869..32910 does
+not clear double_jump_property. Centre WORD writes preserve subpixels; restored
+collision radii do not themselves shift the native centre. Current tile42 is a
+SolidTile index; baseline448 is a ChunkDesc index, so those identifiers are not
+comparable terrain identities. No native original d1/angle/terrain-fetch witness
+exists for this route, no all-internals passivity claim is made, and later death
+cause remains unqualified. This evidence does not justify reverting physics.
+
+**R4 finite controller exploration.** Eight unique finite6000-input policies were
+authored with production InputLogAuthorTool and reloaded by Bk2MovieLoader from
+cold-reached pre-grab prefix35018. Policies0–6 were attempted; only1–6 reached
+changed inputs; no policy retried. Policy3 releases A on35020..35035, fresh A35036,
+with Right held and every other original row through41017 unchanged. It stayed
+alive/unhurt with9 rings/3 lives throughout its branch. Actual mushroom riding at
+40858 is x9939/y2181, ground velocity705, airfalse/onObjecttrue, selected
+`MHZMushroomCap;slot=16;spawn=9936/2208/id=35/sub=0/flags=0/tracked=false/rawY=2208/layout=381/mod=null/key=null`.
+At41017 it is airborne x10037/y1998. MaximumX10037 fails the declared X10240
+threshold. This is a useful restored branch, not an independent uninterrupted
+cold replay, a current maintained-test pass, whole66282 completion or FBZ claim.
+
+Preserve the first private assertion honestly: restored35018 lost only the stale
+Spring instance descriptor, with the other63 columns equal and no riding owner
+in either. Original error and full pair remain in the existing external record.
+The private check then excluded only that descriptor, raw64 output remained,
+maintained assertions were untouched, and policy0 was consumed without retry.
+AbstractPlayableSprite capture/restore plus SpriteManager released-owner refresh
+support intentional stale-alias normalization; the actual captured release bit
+was not separately measured. No new runtime omission was established. Real death
+guards then rejected further restore after policy2 died39934 and policy6 died39796.
+Policy7 was cancelled before admission and never ran; stop was based on useful
+exploration, not a claim that X10240 passed. R4 command sessions38722/42272/11015
+reported waits0/32/303 seconds, Maven19.057/25.035/30.555 seconds, each exit1 on
+the retained private assertion or death guard. Cancelled session73394 exited130
+without admission (133.71 seconds wall waiting). These are not green test runs.
+
+All gameplay observations use absolute S3K ROM SHA1 CFBF98C36C776677290A872547AC47C53D2761D6,
+Java25, Lua5.4, surfaceless EGL with DISPLAY/WAYLAND_DISPLAY unset, null audio,
+native320 solo Knuckles/off, cold7/0, original title/drawing semantics and null
+seeds. The entire30000 Act1 prefix, neutralP2, original maintained test/script/BK2,
+health9..1/terminal-one, fixed replay spots, rewind enable63600 and actual
+FBZ66064 isolation predicates remain byte-exact and unqualified by these observations.
+Maintained SHA256: test99472b8595fff2ca0ec71f4232ae056c754e7931617589f8550718b41dd2e5b1;
+BK2 6e4cd1409bcb7e3d1889cf014dbb363e0a687bcea395073003008e063156676a;
+script e86695bf0eebee19f2fd01d2464e5ff458b8ad16610c2e780bcae978984adff7.
+
+`MHZ_DIAGNOSTIC_DIR` denotes the existing external task directory
+`mhz-knuckles-first-motion-20261021`; its exact location is in the owned registry.
+Useful private adapters/preimages, compact ordered facts/source/commands/errors,
+and selected R4 script/BK2 are retained in the existing external task directory
+`${MHZ_DIAGNOSTIC_DIR}`.
+R4 proposal BK2 SHA2566f268b2354f9c5491ff13d777a93d02c7564a9fb1fbbaf68013ada32310e309f;
+script0d6e372ab9e944143344b8d491545f8531be8b8d1fbf18d7b90257f2ce951b0d.
+Consumed raw logs/CSV series/XML/classes are removed, not archived. Original
+preflight/R1–R4 task/run IDs and records remain immutable in the owned registry
+subtree. No agent remained running; expiry is a checked lifecycle deadline, not
+an automatic reaper. See the [Act2 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-current-source-frontier-r1r5--2026-10-21)
+for the bounded coverage classification.
+
+
+**R5 fresh mushroom and ordinary wall/ledge continuation.** Explicit frozen-source
+authority created `feature/ai-mhz-knuckles-mushroom-wall-controller-20261021` at
+b078214e74ddbcb393cbc0173fd8c74055b0dadb in the same owned checkout. The supplied,
+fee3 and e3 branches remain at their prior exact commits, and native actual322
+remains untouched. The MHZ movement/session/author sources retain their R4 hashes;
+the newer boss-ordinal rewind history and LRZ/tool/docs changes were preserved.
+No shared boss candidate was adopted or changed.
+
+Before execution, the owned `mushroom_wall_controller_r5` continuation declared
+four finite policies, each at most6000 inputs after exact selected R4 prefix40859:
+0 original same-index remainder;1 repeat100{24 R+A;1 R;35 R+A};2 repeat50{48 R+A;
+1 R;71 R+A};3 repeat100{12 R+A;1 R;47 R+A}. All select Up only when the actual public
+pre-step double_jump_flag is4. Policy0 replaces an original Up with Right while
+that flag is not4. Inputs come from the production author/loader palette; each
+actual full proposal is also authored/reloaded and compared to every emitted row.
+There is no offset tail splice, terrain/provider re-probe, physics/position/phase
+write, maintained input/oracle/count/index adaptation, extra agent or native run.
+
+Only policy0 executed. Its first40859 inputs cold-reached R4's mushroom checkpoint
+exactly in all64 public fields:9939/2181, velocity705/0,9 rings/3 lives,
+airfalse/onObjecttrue, actual selected mushroom and latched owner equal, Right held
+without A. Same Level/ObjectManager/LEVEL, no pending fresh assembly or callback
+fade and released controls were checked. Policy0 continued directly; registry
+capture occurred once and **no restore** occurred. The fresh41017 public row also
+matches R4's earlier endpoint exactly. Those new bounded observations do not
+retroactively turn R4's restored branch into an independent cold qualifier.
+
+| Input(s) | Actual ordered public evidence |
+| --- | --- |
+| 41924 | At10037/1990, actual glide flag1→wall-grab4, radius10/10, no riding owner. |
+| 41925..42049 | All125 Up selections had actual pre-step flag4. Last input enters flag5 at10040/1863;42050 switches to Right rather than replaying an ungrounded assumption about Up. |
+| 42067 | Ledge animation completes: flag0, ground10048/1836,9 rings/3 lives, no hurt, actual riding none, no object/control lock. This is actual ordinary onward ledge admission beyond oldX10037. |
+| 42511 | Useful released-ground checkpoint10165/1836,10 rings/3 lives, airfalse/onObjectfalse, actual riding none, no hurt/control/object lock, previous input Right/noA. No snapshot or restore was taken here. |
+| 42549 | First X≥10240:10242/1769, airborne/gliding,10 rings, no hurt. This is not a grounded safe checkpoint. |
+| 42621..42622 | MaximumX10581 at42621 also publishes first hurt; rings still10 then become0 at42622. First-hurt owner/cause was not observed. |
+| 42720..42721 | Actual riding becomes `Spikes;slot=25;spawn=10360/2352/id=8/sub=48/flags=0/tracked=false/rawY=2352/layout=400/mod=null/key=null`. At42721 player10381/2316 is grounded/unhurt with0 rings/3 lives. |
+
+The private automatic predicate (X≥10240, unhurt,3 lives, ground or riding,
+same-world/unlocked) labelled42721 `meaningful_safe_onward_frontier`. That predicate
+omitted hazardous-owner/prior-ring-loss discrimination; complete-row review
+**rejects its label as safe endpoint qualification**. Preserve the original label
+and observed rows rather than rewriting the error away. Hurt is true for100 rows
+42621..42720. There are no deaths or life losses, but no zero-damage route claim.
+The useful result is the earlier ordinary wall/ledge passage and42511 released
+ground. Policies1–3 remain untried. Stop for Root review; no private predicate
+edit/retry, additional cold prefix or automatic whole-movie qualifier followed.
+
+R5's actual product preserves the entire30000 Act1 and selected R4 first40859
+rows, with neutralP2 throughout. Relative to the maintained original, the only
+additional changed spans are41925..42040 Up and42050..42511 Right; original
+Up42041..42049 is retained because flag4 actually admits it. All other same-index
+rows through42721 remain original. Useful full product42722 rows, including the
+hazardous tail, is external `r5-products/policy-0.bk2` SHA256
+b32efceb6e1742a52d7eca3e9d9d4a2b8940b7d23ce4408dac3e4925d93e8582;
+script fbfb1467ec54c143f22758ad8d654d537f5370b8014a639108030731eb81071d.
+The source-owned external `MhzKnucklesMushroomFrontier.java` reuses the unchanged
+64-column R4 observer. All42722 ordered public rows and125 original controller
+decision rows were consumed; compact complete nearby rows and intervals remain
+in the existing observation record. Actual object-controlled intervals are
+retained; their controlling owner was not newly identified. A final Spikes
+support does not identify the earlier hurt owner or prove future safety.
+
+Build-only command12596 used the current absolute Main queue wrapper in this
+owned cwd: `-Dmse=off compile -B`, success, reported about66 seconds. External
+adapters compiled with Java25 --release25 under worktree/shared activity leases.
+Ordinary command54947 used the same current wrapper with `-Dmse=off exec:exec -B`,
+Java25 executable, runtime classpath, `-Xmx3g`, native access enabled,
+`-Dopenggf.headless.gl=surfaceless-egl`, quiet logging and target-local temp/LWJGL/
+prefs paths, invoking `com.openggf.tools.MhzKnucklesMushroomFrontier 0`.
+Exact argv/source hashes and returned R5 ordinal6 task/run IDs are in the owned
+registry/record. The single request reported389 seconds waiting,23.143 seconds
+Maven execution; Java start12:01:15.015744034Z/end12:01:37.537255029Z (22.521510995s
+including boot/drawing/I/O). Policy1863 inputs plus product authoring took about
+0.951s; this is not a performance measurement. Exit0,0 JUnit tests, skips N/A,
+no broad/maintained test, no native or full66282 replay and no FBZ claim. Queue
+waiting remained pending; the request was neither duplicated nor restarted.
+
+Only this Plan and the existing MHZ2 matrix change in the resulting local docs
+commit. Runtime/POM/tests/maintained movies/oracles and all semantic health,
+rewind/load obligations remain byte-exact. Consumed raw logs/series/classes are
+removed under owned worktree/build leases; useful proposal/adapters and compact
+facts remain external. Root reviews the observed42511 ledge and later hazard
+before any further workload, source fix or maintained adaptation. Current
+Knuckles full-route/health/load/rewind/native-equivalence qualification stays open.

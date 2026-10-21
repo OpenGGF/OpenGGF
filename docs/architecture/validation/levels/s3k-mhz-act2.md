@@ -11,7 +11,7 @@ historically; current campaign act certification pending.
 | --- | --- |
 | Implemented | Historical source review missed composition gaps; the campaign has corrected entry/boss lifetime, shared defeat acknowledgement, results ownership and the ship Plane A consumer. |
 | Cold-reachable | Actual fresh MHZ1 incoming native320 Sonic solo route traverses Act2 and reaches FBZ1 without gameplay seeds or deaths (2026-09-23). |
-| Completable | Cold native Sonic/Tails/pair and800px Sonic reach actual capsule/results, ship carry and released FBZ1. Native320 Knuckles now completes the full cold chain with terminal health one; current evidence below supersedes the historical ninth-hit-to-zero assumption. Other route products remain open. |
+| Completable | Cold native Sonic/Tails/pair and800px Sonic reach actual capsule/results, ship carry and released FBZ1. Historical native320 Knuckles completed the cold chain with terminal health one; the October21 current-source frontier below does not requalify that maintained movie. Other route products remain open. |
 | Native-accurate | Direct ROM review/local corrections; no complete native visual or frame-perfect claim. |
 | Rewind/standard | Native320 incoming route now passes all eight complete-registry restore/45-input replay spots through released FBZ1; five-preset entry/admission have independent short checks. Other breadth and lifecycle obligations remain incomplete. |
 
@@ -650,3 +650,62 @@ movement disagree; native backward loads keep the ROM borrow branch. The full
 route is requalified without changing the movie or supplying gameplay state.
 See the [repair and validation record](../../plans/2026-10-13-s3k-playable-completion.md#wide-route-coarse-camera-discontinuity--2026-10-17)
 for the matched baseline, causal controls, exact commands and remaining limits.
+
+
+### Knuckles current-source frontier R1–R5 — 2026-10-21
+
+The historical complete-route results above do not qualify the unchanged Knuckles
+movie on the current climb implementation. All observations below use native320,
+solo Knuckles, donor off, cold engine7/0, the original settings/title policy,
+null gameplay seeds, neutral P2 and normal drawing after every actual step.
+The entire30000-input Act1 prefix remains exact. The maintained test, script,
+BK2, health predicates, fixed replay windows and load/timeline assertions are
+unchanged; no maintained test ran in these rounds.
+
+| Round | Actual evidence | Limit |
+| --- | --- | --- |
+| R1 | First supplied checkout was efd605142 rather than expected fee3; stopped with0 workloads. After explicit source reconciliation, two uninterrupted row0 projections on fee3c7a56 and immediate pre-climb876037b4 reached39940: current died there; baseline survived. All64 recorded public fields agreed through35018. First departure35019: current centreY1427/property3/angle−34/animation5 versus baseline1437/0/0/32. | Source association, not later death cause or stale-controller proof. |
+| R2 | Source-only review, including existing5aef proof, found no new textual omission in the changed climb exit. Native centre/top-left and radius conventions were checked. | Prospective1464/1454 probe coordinates and−18/−8 displacement were not measured returns in R2. |
+| R3 | Two original-once call witnesses through35020: current query8387,1464 returned distance−18/raw angle−34; baseline8387,1454 returned−8/−34. Both took idle negative-floor exit under the same effective Right+A operands. Retained35016..35020 public rows matched each earlier same-source arm. Temporary source preimages/inverses were checked and whole files restored. | Pinned shipped FixBugs0 geometry/landing tail supports current arithmetic and retained property3/animation5. No native route operand witness or later death attribution; no physics revert justified. |
+| R4 | On e3d23e2fa, eight finite policies were authored/round-tripped;0–6 attempted,1–6 reached changed inputs. Selected policy3 releases only A at35020..35035, represses at35036, and otherwise preserves original same-index rows through41017. It stayed alive/unhurt with9 rings/3 lives, recorded actual mushroom support40858, and reached maxX10037. | Restored-checkpoint exploration only. Declared X10240 threshold **not met**; no independent cold or complete66282-input qualification. |
+| R5 | On frozen b078214e7, one uninterrupted cold row0 trial matched all64 R4 mushroom40858 fields and R4's41017 endpoint. Actual flag4 at41924 admitted Up41925..42049; flag5 ledge animation completed into released ground42067 at10048/1836. At42511, released ground10165/1836 has10 rings/3 lives and no hurt. | First airborne X≥10240 is42549. Hurt42621..42720 loses all10 rings; final42721 is on actual Spikes support at10381/2316,0 rings. Generic stop label fired but is **not a safe endpoint qualification**. Policies1–3 remain untried. |
+
+R4's first private comparison failed at35018 solely because the stale Spring
+instance descriptor became absent after rewind; all other63 columns agreed,
+and actual riding was absent in both. The original exception remains retained.
+The private comparison subsequently excluded only that descriptor, with raw64
+columns preserved; maintained assertions were not changed, and policy0 was never
+retried. Captured released-owner normalization is source-supported, while the
+actual captured release bit was not separately observed. This is not a demonstrated
+runtime omission. Later real death guards refused restoration after policies2
+(death39934) and6 (39796). Policy7 was cancelled before admission, never executed,
+after review accepted policy3 only as useful exploration.
+
+`MHZ_DIAGNOSTIC_DIR` denotes the existing external task directory
+`mhz-knuckles-first-motion-20261021`; its exact location is in the owned registry.
+The compact source/commands/ordered rows, original errors and selected proposal
+remain outside the repository in
+`${MHZ_DIAGNOSTIC_DIR}/observation.json`
+and `r4-products/policy-3.{script,bk2}`. Raw logs/series/classes were consumed and
+removed. Each round reports0 JUnit tests; skips are inapplicable to these executable
+observations. See the [dated Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-current-motion-and-controller-frontier--2026-10-21)
+for source pins, original-call interpretation and continuation boundaries.
+
+R5 retained all selected R4 rows through40858. Its only later differences from the
+original same-index stream are Up41925..42040 and Right42050..42511; Up41925..42049
+was selected only from actual pre-step flag4, including the input that produced
+flag5. The full42722-row product was production-authored/reloaded and compared
+against every emitted controller row. It includes the later hazardous tail;
+the useful next checkpoint is the observed42511 ground row, not a rewritten movie
+count or a restored/qualified safe endpoint. No R5 restore occurred. Capturing
+one registry checkpoint did not seed gameplay. The first policy alone consumed
+1863 of its6000 additional-input bound, and no second request was submitted.
+
+R5 command54947 exited0 with0 JUnit tests (skips N/A),389 seconds reported queue
+wait and23.143 seconds Maven execution. This proves a bounded ordinary wall/ledge
+passage on b078, not independent post-author replay, full66282 completion, native
+route equivalence or FBZ admission. The prior R4 restored-only and no-cold-qualifier
+limits remain part of that original record; R5 adds its own bounded fresh-cold
+observations. Useful `r5-products/policy-0.{script,bk2}` and source/ordered facts
+remain in the same external task directory. Root must review the ledge checkpoint
+and later hurt/Spikes tail before further workload or maintained adaptation.
