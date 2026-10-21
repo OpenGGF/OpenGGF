@@ -3374,6 +3374,12 @@ the owning KiS2 routine in the catalogue):
   store their native X anchor in `x_sub` and detach on displacement or object carry;
   wall and ledge steps preserve the low position words. Ledge entries use the native
   six-slot animation holds and same-slot grounding, with bounded rewind checks.
+  Vertical climb probes include the signed X radius after the caller's 8/9 offset,
+  use powered one/two-pixel movement and the signed upper-bound clamp, undo the
+  first ledge pose before descending, and land only on negative floor distance
+  with the raw angle and current animation 5 while retaining the climb timer.
+  [Independent real-terrain components](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md#wall-climb-vertical-contract--2026-10-21)
+  qualify these local branches, not a complete KiS2 or CNZ route.
   Wall-grab suppression and complete rewind route coverage remain open.
 - **Zone mechanics.** Wind tunnels use the $420 first-tunnel minimum, clamp Up
   movement and clear roll-jump/glide state. Held vines pin the player each pass;

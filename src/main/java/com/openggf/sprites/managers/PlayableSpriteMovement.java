@@ -2203,6 +2203,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	private void updateWallClimbWithCollisionRadii() {
 		int climbAnimDelta = 0;  // +1 = forward (climbing up), -1 = backward (climbing down)
+		SuperStateController powered = sprite.getSuperStateController();
+		int climbSpeed = powered != null && powered.isSuper() ? 2 : 1;
 
 		if (isReverseGravityActive() && (inputUp || inputDown)) {
 			climbAnimDelta = updateReversedWallClimb(inputUp);
@@ -2222,20 +2224,32 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			if (wallResult != null && wallResult.distance() != 0) {
 				// Small dip in wall — don't move
 			} else {
-				// Check ceiling clearance
-				var ceilResult = ObjectTerrainUtils.checkCeilingDist(
-						sprite.getCentreX(), sprite.getCentreY(), sprite.getYRadius());
+				// Knuckles_Wall_Climb: CY-8, then WithRadius subtracts signed XR;
+				// the native player height scan owns LRB solidity and collision path.
+				var ceilResult = com.openggf.physics.GlideWallGrabTerrain
+						.climbVerticalDistance(sprite, true, false);
 				if (ceilResult != null && ceilResult.distance() < 0) {
 					// Bumping ceiling — push out
 					NativePositionOps.addYPosPreserveSubpixel(sprite, -ceilResult.distance());
 				} else {
-					NativePositionOps.addYPosPreserveSubpixel(sprite, -1);
+					NativePositionOps.addYPosPreserveSubpixel(sprite, -climbSpeed);
+					// .moveUp clamps only this clear branch, using signed WORDs.
+					if (camera().getMinY() != (short) -0x100) {
+						int limit = (short) (camera().getMinY() + 16);
+						if (sprite.getCentreY() < limit) NativePositionOps.writeYPosPreserveSubpixel(sprite, limit);
+					}
 				}
 				climbAnimDelta = 1;
 			}
 		} else if (inputDown) {
-			// Climbing down: check wall distance at the bottom
 			boolean facingRight = sprite.getDirection() == Direction.RIGHT;
+			if (sprite.getMappingFrame() == 0xBD) {
+				// .skip4 undoes the first ledge pose before either terrain probe.
+				// These WORD writes leave the original wall anchor in x_sub.
+				sprite.setMappingFrame(0xB7);
+				NativePositionOps.addYPosPreserveSubpixel(sprite, 3);
+				NativePositionOps.addXPosPreserveSubpixel(sprite, facingRight ? -3 : 3);
+			}
 			int probeY = sprite.getCentreY() + 11;
 			var wallResult = getWallDistance(probeY, facingRight);
 
@@ -2245,16 +2259,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				return;
 			}
 
-			// Check floor clearance
-			var floorResult = ObjectTerrainUtils.checkFloorDist(
-					sprite.getCentreX(), sprite.getCentreY() + sprite.getYRadius());
-			if (floorResult != null && floorResult.distance() <= 0) {
-				// Reached floor
+			// .skip4: CY+9, then sub_F828 adds signed XR with TOP solidity.
+			var floorResult = com.openggf.physics.GlideWallGrabTerrain
+					.climbVerticalDistance(sprite, false, false);
+			if (floorResult != null && floorResult.distance() < 0) {
+				// BPL includes zero: only penetration takes .reachedFloor.
 				NativePositionOps.addYPosPreserveSubpixel(sprite, floorResult.distance());
-				exitWallClimbToGround();
+				landFromWallClimb(floorResult.angle());
 				return;
 			}
-			NativePositionOps.addYPosPreserveSubpixel(sprite, 1);
+			NativePositionOps.addYPosPreserveSubpixel(sprite, climbSpeed);
 			climbAnimDelta = -1;
 		}
 
@@ -2284,14 +2298,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// reached the floor and detaches (.reachedFloor).
 		if (!inputUp && !inputDown && (playerMovementRulesOrNull() == null
 				|| playerMovementRulesOrNull().air().idleWallClimbChecksFloor())) {
-			// ROM probe point: x_pos, y_pos + 9, top_solid_bit (sonic3k.asm:31349-31352).
-			int probeY = sprite.getCentreY() + 9;
-			int floorDistance = romFloorProbeDistance(
-					ObjectTerrainUtils.checkFloorDist(sprite.getCentreX(), probeY), probeY);
+			// .finishMoving always probes the normal-world floor, even reversed:
+			// CY+9+signed XR, TOP solidity. KiS2 omits this entire idle block.
+			int probeY = (short) (sprite.getCentreY() + 9 + (byte) sprite.getXRadius());
+			var floorResult = com.openggf.physics.GlideWallGrabTerrain
+					.climbVerticalDistance(sprite, false, false);
+			int floorDistance = romFloorProbeDistance(floorResult, probeY);
 			if (floorDistance < 0) {
-				// ROM .reachedFloor: add.w d1,y_pos, then detach to the ground.
-				sprite.setY((short) (sprite.getY() + floorDistance));
-				exitWallClimbToGround();
+				NativePositionOps.addYPosPreserveSubpixel(sprite, floorDistance);
+				landFromWallClimb(floorResult.angle());
 				return;
 			}
 			// The FixBugs = 0 clobber: d1 now holds the floor distance, not the delta.
@@ -2372,9 +2387,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			NativePositionOps.addYPosPreserveSubpixel(sprite,
 					towardsLedge ? vertical.distance() : -vertical.distance());
 			if (!towardsLedge) {
-				sprite.setAngle((byte) ReverseGravity.mirrorAngle(vertical.angle()));
-				exitWallClimbToGround();
-				sprite.setForcedAnimationId(5); // native anim = pushing after Knux_TouchFloor
+				landFromWallClimb((byte) ReverseGravity.mirrorAngle(vertical.angle()));
 				return 0;
 			}
 			return 1;
@@ -2393,7 +2406,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	/**
-	 * Maps an {@link ObjectTerrainUtils} floor probe onto the word the ROM's
+	 * Maps an absent floor probe onto the word the ROM's
 	 * {@code FindFloor} chain actually returns in {@code d1}.
 	 *
 	 * <p>The engine reports "nothing solid in either probed tile" with the
@@ -2434,7 +2447,23 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setAnimationFrameIndex(1);
 	}
 
-	/** Transition from wall climb to standing on ground (reached floor while climbing down). */
+	/** Native .reachedFloor / Knux_TouchFloor tail, distinct from ledge completion. */
+	private void landFromWallClimb(byte angle) {
+		byte property = sprite.getDoubleJumpProperty();
+		sprite.setAngle(angle); // raw Primary_Angle, not the helper's filtered d3
+		exitWallClimbToGround();
+		// Neither Knux_TouchFloor nor KiS2 ResetOnFloor writes this byte.
+		// Restore it after both the generic exit and setAir(false) landing effects.
+		sprite.setDoubleJumpProperty(property);
+		sprite.setPushing(false);
+		sprite.setRollingJump(false);
+		sprite.setFlipAngle(0);
+		sprite.setFlipType(0);
+		sprite.setFlipsRemaining(0);
+		sprite.setAnimationId(5); // move.b #5,anim; prev_anim remains untouched
+	}
+
+	/** Common ground exit, also used by ledge completion. */
 	private void exitWallClimbToGround() {
 		sprite.setGSpeed((short) 0);
 		sprite.setXSpeed((short) 0);
