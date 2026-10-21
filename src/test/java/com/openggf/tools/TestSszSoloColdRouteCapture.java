@@ -26,13 +26,15 @@ class TestSszSoloColdRouteCapture {
     void coldSoloSonicDefeatsBothReplicasAndReplaysTheirApproaches() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/ssz1-sonic-solo-cold-replicas-320.bk2"));
-        assertEquals(11200, movie.getFrameCount());
+        assertEquals(8300, movie.getFrameCount());
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, null, null);
-        var spots = Set.of(2888, 3440, 3540, 3818, 4168, 4400, 4700, 4930,
-                5020, 5070, 5328, 5470, 5630, 6200, 6400, 6600, 6800, 7000,
-                7199, 7339, 7450, 7740, 7800, 7850, 7920, 7995, 8150, 8430,
-                8458, 8570, 8626, 8690, 8890, 9040, 9300, 9600, 9840, 10000,
-                9344, 9950, 10200, 10300, 10410, 10500, 11050);
+        // 45 replica identities mapped in the SSZ matrix; two fresh cold JVMs precede this data update.
+        var spots = Set.of(2888, 3348, 3408, 3500, 3750, 3932, 4048, 4096,
+                4164, 4299, 4482, 4855, 5100, 5137, 5300, 5420,
+                5540, 5660, 5780, 5900, 6020, 6140, 6180, 6220,
+                6260, 6340, 6420, 6516, 6701, 6813, 6889, 6938,
+                7055, 7119, 7181, 7241, 7301, 7484, 7802, 7857,
+                7980, 8061, 8124, 8149, 8250);
         var checked = new HashSet<Integer>();
         int ghzHealth = 8, mtzHealth = 8, ghzHits = 0, mtzHits = 0;
         boolean ghzSeen = false, mtzSeen = false;
@@ -90,7 +92,7 @@ class TestSszSoloColdRouteCapture {
                     .activeObjectsOfType(SszMtzBossObjectInstance.class).isEmpty());
             assertEquals(10, GameServices.level().getCurrentZone());
             assertEquals(0, GameServices.level().getCurrentAct());
-            assertEquals(26, session.player().getRingCount());
+            assertEquals(3, session.player().getRingCount());
             assertEquals(5888, session.player().getCentreX());
             assertEquals(140, session.player().getCentreY(), "second receiving platform after transport");
             assertFalse(session.player().isObjectControlled());
@@ -101,15 +103,17 @@ class TestSszSoloColdRouteCapture {
     void coldSoloSonicDefeatsMechaAndLoadsDezWithIsolatedHistory() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/ssz1-sonic-solo-cold-complete-320.bk2"));
-        assertEquals(17611, movie.getFrameCount());
+        assertEquals(14544, movie.getFrameCount());
         int historyStart = movie.getFrameCount() - 120;
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, null, null);
-        var spots = Set.of(11200, 11334, 11850, 11911, 11971, 12031, 12061,
-                12131, 12191, 12221, 12259, 12309, 12339, 12459, 12579, 12750,
-                12790, 13000, 13200, 13239, 13400, 13596, 13680, 13800, 13980,
-                14050, 14226, 14350, 14510, 14550, 14660, 14750, 14850, 15000,
-                15126, 15246, 15298, 15400, 15600, 15850, 16000, 16260, 16400,
-                16600, 16743, 16900, 17150, 17300, movie.getFrameCount() - 170);
+        // 49 complete identities mapped in the SSZ matrix; two fresh cold JVMs precede this data update.
+        var spots = Set.of(8300, 8479, 8746, 8804, 8865, 8893, 8930, 8979,
+                9077, 9276, 9451, 9517, 9618, 9678, 9800, 9924,
+                9951, 10118, 10228, 10431, 11024, 11180, 11250, 11362,
+                11493, 11533, 11643, 11691, 11820, 11943, 11988, 12195,
+                12323, 12354, 12400, 12500, 12600, 12700, 12800, 12900,
+                13000, 13100, 13195, 13300, 13500, 13700, 13900, 14250,
+                movie.getFrameCount() - 170);
         var checked = new HashSet<Integer>();
         boolean seen = false;
         int health = 8, hits = 0;

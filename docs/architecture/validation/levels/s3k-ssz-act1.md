@@ -21,6 +21,13 @@ complete method passes50 two-cycle45 whole-world windows and actual load/assembl
 20550/20551. Earlier records retain their stated sources and limits; see the
 [current complete controller qualification](#post11051-complete-controller-qualification--2026-10-21).
 
+Current native320 solo Sonic evidence uses the same frozen runtime `39eca8c35`
+and parent `9cc150c12183297293cb45bbf8f24023a95b8dbc`, with controller resources
+and controller-derived test data only. The8300-input replica route and14544-input
+complete route pass the existing solo class, including45+49 full-registry
+45-input replay windows and strict DEZ entry/history assertions. See the
+[solo controller qualification](#solo-sonic-native320-controller-qualification--2026-10-21).
+
 Incoming: HPZ teleporter altar ending → `$A00` (`HpzTeleporterRouteHelperObjectInstance`), level
 select, save progression. Outgoing: `StartNewLevel $B00` from the Death Egg launch (`loc_581D2`);
 DEZ presentation and route belong to the DEZ campaign.
@@ -69,6 +76,7 @@ green label, and "implemented" alone never closes a row.
 | BOSS: Mecha Sonic spawn / fight / defeat, results + save | `loc_45A84`, `sub_868F8`, `Check_TailsEndPose`, `loc_2DCA0` | 320 | `TestS3kSszMechaSpawnHeadless` | partial | declared final-pad checkpoint; real results reaches end flag | yes: real results graph restore and forward replay | ROM source | recording owed | Production results added in campaign; native P2 pose, allocation exhaustion, signed countdown. Save/launch and broader route matrix still open. |
 | EVENT: crumble, hot-swap, Death Egg BG, debris, ramp script, `$B00` request | `SSZ1_ScreenEvent` stages 0/4/8, `Obj_57E96`, `sub_5750C`, `sub_574DC`, `loc_58192`, `loc_581D2` | 320, 400, 800 | `TestS3kSszMechaSpawnHeadless`, `TestSszLaunchState`, `TestSszLaunchBackground` | partial | declared checkpoint and positioned boss hits; production results, first forced jump and neutral-input launch reach actual DEZ1 load | graph recreation and forward replay at four launch boundaries, including retained Plane B | source-backed; native parity not yet measured | clip 24: controller Hyper checkpoint clear, full 4800-frame capture through DEZ1 | Native Sonic 320/400/800, Sonic + Tails 320, Tails 400 and S1 donor 320 pass component handover. Cold320/800 paired and solo-Tails complete routes verify actual-load history isolation. Extra-followers, exhausted slots, other handover configurations and native comparison remain open. |
 | ROUTE: native320 paired all three bosses → released DEZ1 | Ordinary cold start; unchanged physical post2 and upper waypoints; Mecha/results/launch/destination owners | Sonic + Tails, donor off,320px | `TestLrzSszCheckpointRoutes#ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost` (preserved3a prefix); whole `TestSszColdRouteCapture` (fresh follow-up) | existing owners; controller-only repair | yes, all20720 complete inputs alive, three real killing hits and actual DEZ1 | upper25/complete50 spots, two45-input full-registry restore/replay cycles each; actual full-load history retirement plus incoming intro/released windows | no new native comparison; selected-shot producer identity unknown | independent fully drawn engine capture; no native pixel claim | Runtime39eca8c35, parent3a plus841 post11051 input changes. Root owns later dependency/integration qualification; inherited configuration breadth remains open. |
+| ROUTE: native320 solo Sonic all three bosses → DEZ1 | Ordinary cold boot10/0; genuine eight-hit GHZ/MTZ/Mecha defeats, transports, results and actual load | Sonic solo, donor off,320px; zero CPU followers | whole `TestSszSoloColdRouteCapture` | existing owners; controller-only repair | yes,8300 replica/14544 complete inputs; no leader death | unchanged45 replica+49 complete full-registry45-input windows; actual-load live-history isolation | no native comparison or cause claim | independent ordinary cold captures; results and later incoming DEZ scene inspected | Runtime39eca8c35 / parent9cc plus exact solo input/data hashes below. Root owns current-POM/backend/composed qualification; widths/donors/native acceptance remain open. |
 | ROUTE: native800px paired all three bosses → released DEZ1 | Ordinary cold entry; GHZ/MTZ/Mecha native health8..0; `loc_7D056` results; `Obj_57E96`/`loc_581D2` launch; `loc_6468` destination assembly | Sonic + Tails, donor off,800px | `TestSszWidePairedColdRouteCapture#coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline` | existing owners; controller-only completion | yes,21014 inputs, no leader death/life loss | two-cycle45 whole-world restore/replay at44 semantic spots; actual full-load history retirement and separate released DEZ window | ROM-backed owners/start/roster; no new native-emulator comparison | independent fully drawn engine capture; no native pixel claim | Qualified first9914 inputs preserved; native CPU Tails recovery allowed. Donor, extra-followers, Sonic solo800, intermediate widths and native acceptance remain open. |
 | LOAD: `$B00` (DEZ) actual destination entry | DEZ campaign; `loc_6468`, `Obj_LevelIntro_PlayerRun`/`loc_44A26`/`loc_44A56` | native selected cold configurations; paired800 detailed below | Complete cold-route checks; `TestSszWidePairedColdRouteCapture#coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline` | yes | actual assembly and native entrance control release | paired800 two-cycle45 intro/released world windows plus actual full-load history retirement | ROM start/floor seating and intro owner; native scene comparison open | independent live DEZ engine still | This row covers destination entry. Full DEZ traversal and later endpoints belong to the DEZ campaign; no native pixel certification. |
 | ORACLE: strict segment replay | `TestS3kSonicTailsHpz{,2,3}SegmentTraceReplay`, `TestS3kTailsFullChainHpz{,2}SegmentTraceReplay` | `-Ptrace-segments` | — | — | — | — | not measured | — | Slice 10 records each frontier |
@@ -3083,3 +3091,292 @@ Complete-resource binary diff SHA-256 against3a:
 | --- | --- |
 | `ssz1-sonic-tails-cold-complete-320.script` | `f0abe1fb7a7dcc2cba05980862f581471a639c3e702843e2e1c3bc1a6ef976cc` |
 | `ssz1-sonic-tails-cold-complete-320.bk2` | `670bd74f17b069cf81d92b1f0c98d5acbe8213e6566a709b5b194bb1692a917a` |
+
+
+## Solo Sonic native320 controller qualification — 2026-10-21
+
+This is the new solo continuation after immutable paired commit
+`9cc150c12183297293cb45bbf8f24023a95b8dbc`, on
+`feature/ai-ssz-solo-sonic-controller-20261021`. Production Java/physics/collision,
+EggRobo/gun/shield, native timing, ROM, fixtures, configuration, paired/Tails
+movies and authoring tools are unchanged. Runtime source remains
+`39eca8c35c25433b7405b6bdc724f7c6111b55ec`; the tested tree is9cc plus the
+four solo resources and the existing test's controller-derived data identified
+below. Root's later POM/backend reconciliation and pending isolated MTZ orb
+work are outside this result. No native mismatch, selected-shot producer,
+clock, presentation parity or cause is inferred from a controller pass.
+
+All indices below are zero-based input-row identities, not ROM constants.
+Both movies boot through public `GameplayCaptureSession.boot(ROM,10,0,settings)`:
+320px, Sonic real main, donor off, no sidekick and P2 neutral. No positions,
+health, rings, phases, RNG, readiness, clocks or history are supplied by inputs.
+No gameplay is advanced outside normal session input. The full test still checks
+Sonic/zero followers/no leader death, monotonic health and all eight required
+hits, escaped replica owners absent, zone10/0, receiver `(5888,140)` and released
+control. Complete still requires all eight Mecha hits/health0, actual zone11/0,
+fresh rings0, `(48,2476)`, main/focus identity, no object control and zero
+followers. The ordinary pending-assembly step, outgoing history `>10`,30
+incoming neutral steps and `DEZ timeline < outgoing` predicates are unchanged.
+The entire short independent Tails flight method and its resource are exact.
+
+### Observed frontier and finite controller choices
+
+The original replica method was run once on this frozen source:1 test,1 failure,
+0 errors/skips, `death at6679` (Maven29.826s; wrapper30.60s; reported queue0s).
+An ordinary cold movement probe also dies6679. It shows the old input never
+reaches the GHZ arena; its authored boss controls execute in the lower opening.
+The old complete and replica movies share their first11051 input rows, so the
+historical complete death6679 was reused instead of another unchanged long run.
+No c13 trajectory was rerun or treated as a native oracle.
+
+Blind paired-input reuse is also insufficient: solo prefix4400 followed by a
+bounded1800-input GHZ author ends `LIMIT_REACHED` at6200, still on the carrier
+with no boss. Four900-input carrier-release candidates miss the arena. Existing
+`ReferencePathInputAuthor` then authors normal solo inputs against the qualified
+paired P1 comparison path: first window3400..4400 reaches reference4513 in3880
+solo inputs; upper window5826..8440 reaches8685 at6460; third-pad window
+11050..13400 reaches13675 at9860; final approach13675..17454 reaches17457 at11220.
+The existing finite horizons/commit/stuck limits apply. Reference positions score
+controller choices only; they never populate the solo world or create followers.
+
+Existing `SszBossInputAuthorTool` uses finite new-input budgets: GHZ1800
+(actual420 inputs), MTZ2400 (actual842), Mecha2400 (actual976). Their selected
+inputs are independently cold-replayed below. First-pad trials show why
+standing alone is insufficient: a22-input left brake stops atX499, outside
+`loc_45660`'s `x-padX+$C < $18` centre gate;18Left stops at516, then the fresh4800
+jump produces contact4855 and first receiving-pad contact5137. This changes
+controller braking, not the gate. Cloud/carrier traversal uses real contacts
+(`sub_45170` / `loc_451DC`, `loc_45F74`); native Y wrap and all collision owners
+remain authoritative.
+
+Actual ordinary encounter observations on the selected input are:
+
+| Event | Input identity |
+| --- | --- |
+| GHZ allocation / accepted hits1..8 / last escaped-owner row | 3932 /4048,4096,4128,4164,4197,4233,4265,4299 /4482 |
+| First active pad / receiving pad | 4855 /5137; receiver `(512,1420)` |
+| MTZ allocation / accepted hits1..8 / last escaped-owner row | 6516 /6813,6889,6938,7055,7119,7181,7241,7301 /7484 |
+| Second active pad / receiving pad | 7857 /8149; released end `(5888,140)`,3rings |
+| Seam bouncer / wrapped rotating carrier / third activating pad / receiver | 8930 /8979 /9678 /9951 |
+| Final activating pad / Mecha allocation | 11024 /11250 |
+| Mecha accepted hits1..8 | 11493,11533,11643,11691,11820,11943,11988,12195 |
+| Mecha defeat fall / floor landing / last owner row | 12323 /12354 /13213 |
+| Results presentation / tally | inspected12600/12700; source handover `loc_7D056` and ordinary results owner |
+| Spiral entry / actual DEZ load / ordinary destination assembly | 13195 /14543 /14544 |
+
+The selected route survives ordinary hurts2036/2297/6701/11386; no producer or
+new engine cause is claimed. A single3200-neutral exploratory exit candidate
+stops on the real load at14543. The maintained movie ends on that input; it
+contains14544 rows, with the test's unchanged next neutral input assembling DEZ.
+
+### Independent cold replays before changing derived data
+
+Two separate ordinary cold `GameplayCaptureTool` JVMs establish each selection
+before the existing test's lengths/rings/event indices are changed. Both8300-row
+replica captures are byte-equal across every recorded CSV row, alive with zero
+followers, ending at `(5888,140)` with3rings. Both complete captures replay14544
+movie rows plus the ordinary assembly neutral input; all14545 recorded CSV rows
+are byte-equal, alive/zero followers, with actual load14543 and assembly14544 at
+`(48,2476)`,0rings. Their first8300 state rows also equal the replica captures.
+This is capture-field repeatability, not an official/native journal or
+whole-world parity claim. The strict maintained whole-registry checks follow.
+
+| Fresh JVM | Reported queue wait | Maven execution | Wrapper elapsed |
+| --- | ---: | ---: | ---: |
+| replicas-cold1 | 0s | 17.536s | 18.19s |
+| replicas-cold2 | 0s | 17.527s | 18.26s |
+| complete-cold1 | 143s | 18.719s | 162.84s |
+| complete-cold2 | 0s | 18.282s | 19.02s |
+
+The first incoming assembly image is black and is not used as a positive scene
+witness. A separate bounded capture adds30 ordinary neutral inputs after
+assembly: input14574 shows the drawn DEZ scene, Sonic `(71,2476)`,0rings and no
+follower/death. Reported queue53s, Maven18.168s, wrapper71.64s. Results and
+incoming-scene images were inspected, then consumed. No native pixel claim.
+
+The old derived movie lengths11200/17611 and26 end rings are replaced by observed
+8300/14544 and3 rings. Both new movies retain the old leading2190 rows. Among
+common indices,4032 replica P1 rows and8564 complete P1 rows change; old trailing
+2900/3067 rows are removed by the new lengths. No P2 row is non-neutral. The
+complete movie shares every one of the8300 new replica inputs and their ordered
+script instructions; there is no split prefix or inferred state recovery.
+
+Production `InputLogAuthorTool` generated both maintained BK2s from the maintained
+scripts and verified the `Bk2MovieLoader` round trip on every row/both pads. An
+independent exact row comparison matches the separately replayed candidates.
+ZIP members remain only `Header.txt` and `Input Log.txt`; no state container.
+
+### Rewind identity mapping
+
+The old45 replica and49 complete identities are preserved one-for-one in
+chronological execution order, with new indices bound to actual selected-route
+contacts/encounters. Old numbers identify prior test data; the old movie does
+not reach its later events on this source. These are explicit new observations,
+not offsets applied to unreached old events. Every window keeps the original
+45-input forward/restore/replay loops, complete snapshot key-set/content
+comparisons, external held-input restore and normal branch drawing. No test
+algorithm, assertion predicate or snapshot-key list changes. The final relative
+`movieLength-170` identity and `movieLength-120` live-history enable remain intact.
+
+Replica mapping (45 unique windows):
+
+| Old input identity | New input identity | Observed selected-route window |
+| --- | --- | --- |
+| 2888 | 2888 | stair approach |
+| 3440 | 3348 | rotating carrier hold |
+| 3540 | 3408 | carrier release |
+| 3818 | 3500 | retracting spring ledge |
+| 4168 | 3750 | upper stairs |
+| 4400 | 3932 | GHZ allocation |
+| 4700 | 4048 | GHZ hit1 |
+| 4930 | 4096 | GHZ hit2 |
+| 5020 | 4164 | GHZ hit4 |
+| 5070 | 4299 | GHZ hit8 |
+| 5328 | 4482 | GHZ last escape row |
+| 5470 | 4855 | first active pad landing |
+| 5630 | 5100 | first transport rise |
+| 6200 | 5137 | first receiving pad landing |
+| 6400 | 5300 | first receiver exit |
+| 6600 | 5420 | upper traversal jump |
+| 6800 | 5540 | upper traversal jump |
+| 7000 | 5660 | diagonal platform traversal |
+| 7199 | 5780 | upper rise |
+| 7339 | 5900 | upper rise |
+| 7450 | 6020 | upper stairs |
+| 7740 | 6140 | solid cloud approach |
+| 7800 | 6180 | cloud jump |
+| 7850 | 6220 | upper cloud ascent |
+| 7920 | 6260 | cloud release |
+| 7995 | 6340 | upper walkway |
+| 8150 | 6420 | MTZ approach |
+| 8430 | 6516 | MTZ allocation |
+| 8458 | 6701 | ordinary hurt/recovery |
+| 8570 | 6813 | MTZ hit1 |
+| 8626 | 6889 | MTZ hit2 |
+| 8690 | 6938 | MTZ hit3 |
+| 8890 | 7055 | MTZ hit4 |
+| 9040 | 7119 | MTZ hit5 |
+| 9300 | 7181 | MTZ hit6 |
+| 9344 | 7241 | MTZ hit7 |
+| 9600 | 7301 | MTZ hit8 |
+| 9840 | 7484 | MTZ last escape row |
+| 9950 | 7802 | second pad fresh jump |
+| 10000 | 7857 | second active pad landing |
+| 10200 | 7980 | second pad charge |
+| 10300 | 8061 | second transport ascent |
+| 10410 | 8124 | second receiver off-pad |
+| 10500 | 8149 | second receiving pad landing |
+| 11050 | 8250 | second receiver released/stable |
+
+Complete mapping (49 unique windows):
+
+| Old input identity | New input identity | Observed selected-route window |
+| --- | --- | --- |
+| 11200 | 8300 | second receiver exit |
+| 11334 | 8479 | rotating platform contact |
+| 11850 | 8746 | solid cloud first landing |
+| 11911 | 8804 | solid cloud second landing |
+| 11971 | 8865 | collapsing column contact |
+| 12031 | 8893 | seam solid cloud landing |
+| 12061 | 8930 | seam bouncy cloud contact |
+| 12131 | 8979 | wrapped rotating carrier catch |
+| 12191 | 9077 | lower collapsing column |
+| 12221 | 9276 | diagonal bridge contact |
+| 12259 | 9451 | third-pad bouncy cloud |
+| 12309 | 9517 | third-pad first landing |
+| 12339 | 9618 | third-pad second landing |
+| 12459 | 9678 | third-pad activating landing |
+| 12579 | 9800 | third-pad charge |
+| 12750 | 9924 | third transport release |
+| 12790 | 9951 | third receiving pad landing |
+| 13000 | 10118 | lower spring contact |
+| 13200 | 10228 | upper spring contact |
+| 13239 | 10431 | upper diagonal bridge contact |
+| 13400 | 11024 | final pad activating landing |
+| 13596 | 11180 | final transport rise |
+| 13680 | 11250 | Mecha allocation |
+| 13800 | 11362 | Mecha flying routine and hurt/recovery |
+| 13980 | 11493 | Mecha hit1 |
+| 14050 | 11533 | Mecha hit2 |
+| 14226 | 11643 | Mecha hit3 |
+| 14350 | 11691 | Mecha hit4 |
+| 14510 | 11820 | Mecha hit5 |
+| 14550 | 11943 | Mecha hit6 |
+| 14660 | 11988 | Mecha hit7 |
+| 14750 | 12195 | Mecha hit8 |
+| 14850 | 12323 | Mecha defeat fall |
+| 15000 | 12354 | Mecha defeat landing |
+| 15126 | 12400 | post-defeat handover |
+| 15246 | 12500 | results presentation |
+| 15298 | 12600 | results presentation |
+| 15400 | 12700 | results presentation |
+| 15600 | 12800 | results presentation |
+| 15850 | 12900 | collapse approach |
+| 16000 | 13000 | forced launch jump |
+| 16260 | 13100 | collapse fall |
+| 16400 | 13195 | spiral entry |
+| 16600 | 13300 | spiral ascent |
+| 16743 | 13500 | spiral ascent |
+| 16900 | 13700 | spiral ascent |
+| 17150 | 13900 | spiral ascent |
+| 17300 | 14250 | spiral top/launch |
+| movieLength-170 (=17441) | movieLength-170 (=14374) | late outgoing SSZ window before live-history enable/load |
+
+### Maintained qualification and limits
+
+`TestSszSoloColdRouteCapture` passes3 tests,0 failures,0 errors,0 skips on the
+exact input/test-data hashes below, frozen runtime39 / parent9cc:
+
+| Maintained method | Result | Covered obligation |
+| --- | --- | --- |
+| `coldSoloSonicDefeatsBothReplicasAndReplaysTheirApproaches` | PASS6.696s | both8-hit defeats/escaped owners,45 full-registry windows, zone10/0 and released second receiver |
+| `coldSoloSonicDefeatsMechaAndLoadsDezWithIsolatedHistory` | PASS5.720s | Mecha8hits/health0,49 full-registry windows, actual DEZ entry/main/focus/control/rings/roster and isolated history |
+| `coldTailsFliesPastTheOpeningSpikesWithNegativeCameraMinimum` | PASS0.822s | unchanged independent short Tails resource/method and5 replay spots |
+
+XML suite13.531s; Maven39.115s; wrapper39.74s; reported queue wait0s. XML properties
+confirm Java25.0.4.1, JDK25, the canonical absolute S3&K ROM and surfaceless EGL.
+ROM SHA1 is `CFBF98C36C776677290A872547AC47C53D2761D6`; no ROM copy/link was made.
+The whole-class command, from the isolated branch, uses `OPENGGF_MAIN` for the
+existing absolute Main checkout and its current queue wrapper:
+
+```bash
+env -u JDK_JAVA_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS -u DISPLAY \
+  -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off \
+  "-Ds3k.rom.path=$OPENGGF_MAIN/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  -Dtest=TestSszSoloColdRouteCapture test -B
+```
+
+The original negative selector was the same prefix/environment with
+`-Dtest=TestSszSoloColdRouteCapture#coldSoloSonicDefeatsBothReplicasAndReplaysTheirApproaches`.
+Each cold capture used that queued `exec:java` lane with
+`com.openggf.tools.GameplayCaptureTool`, `--game s3k --zone ssz --act 1 --width 320
+--main sonic --sidekick none --donor off --input <maintained-or-exact-candidate.bk2>
+--frames <8300-or-14545> --every 100000 --no-video --out-dir <owned-empty-directory>`
+and explicit `--rom` pointing to the same verified absolute ROM. No seed flags.
+
+No paired check, broad/release suite or unchanged runtime-control suite was
+repeated in this lane. Root owns final current-POM/backend/composed-source
+qualification and integration. Other viewport/donor/roster, death/respawn and
+native acceptance breadth remains open; this source-qualified controller result
+does not certify the act or validate the pending MTZ runtime proposal.
+Only useful controller inputs are retained for handoff; owned raw CSV/PNG/log/XML
+products are consumed after inspection. The worktree/old branches and unrelated
+TraceChaser setup remain preserved for Root accounting.
+
+| File under `src/test/` | SHA-256 |
+| --- | --- |
+| `resources/routes/s3k/ssz1-sonic-solo-cold-replicas-320.script` | `a2d7e77811c9a362b9dd46fc58d91d026b27ed4b5606cbcd400695e79645f148` |
+| `resources/routes/s3k/ssz1-sonic-solo-cold-replicas-320.bk2` | `3d18908bfa9c6c10580eb2a023de5dd376bcfb93ebf81bc483389848fc246789` |
+| `resources/routes/s3k/ssz1-sonic-solo-cold-complete-320.script` | `1ac87458262519888381fc7477faa5640eb27f0f0e74b1e8c4b737148178f62c` |
+| `resources/routes/s3k/ssz1-sonic-solo-cold-complete-320.bk2` | `52719ecb9279f26016dbe69def98eeb7e9029ec8d5443a711a5e4ee46799a049` |
+| `java/com/openggf/tools/TestSszSoloColdRouteCapture.java` | `07081cbad325a3fa4b9cb12cb02ff2ff3b03751b331a8cbd33cbf92b1fd316ec` |
+
+Four-resource binary diff SHA-256 against9cc:
+`ff06f25cd706c6d9cb2b2daca578fb5c8a597e9fc0ed91001fc6d5872b15f313`.
+
+Four resources plus controller-test-data binary diff SHA-256 against9cc:
+`f793643b75c4f52349c96b768a0aa7607be41cfb815f9da4965e25d0f461160b`.
