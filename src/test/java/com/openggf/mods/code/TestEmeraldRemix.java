@@ -317,6 +317,27 @@ class TestEmeraldRemix {
         }
     }
 
+    /**
+     * The engine, like the ROM, snaps a floor angle that changes by 0x20 or more in one step to
+     * a cardinal angle, so Clover Valley's slopes ease in. Sonic must actually take the slope
+     * angles on its first hill rather than run it as flat ground.
+     */
+    @Test void cloverValleySlopesTurnSonicThroughEasedAngles() throws Exception {
+        var romFile = RomTestUtils.ensureSonic2RomAvailable();
+        assumeTrue(romFile != null, "Requires configured S2 World REV01 ROM");
+        try (Rom rom = open(romFile); Fixture fixture = load(compilePackage())) {
+            var play = play(rom, fixture);
+            enter(play, fixture.resolved.getZoneRegistry().resolveZoneKey(CLOVER_KEY).orElseThrow(), 0);
+            var angles = new LinkedHashSet<Integer>();
+            for (int frame = 0; frame < 240; frame++) {
+                play.runner.stepFrame(false, false, false, true, false);
+                if (!play.main.getAir()) angles.add(play.main.getAngle() & 0xFF);
+            }
+            assertTrue(angles.containsAll(List.of(0xEC, 0xE0, 0x14, 0x20)),
+                    "eased and 45-degree angles up and down the first hill; saw " + angles);
+        }
+    }
+
     /** Everything a placed cell shows and collides with, independent of definition numbering. */
     static String terrain(Level level) {
         var map = level.getMap();

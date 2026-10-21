@@ -32,16 +32,19 @@ WIDTH_PX, HEIGHT_PX = COLS * CELL, ROWS * CELL
 START_ROW = 36               # ground surface row at the start (y = 576)
 
 # Terrain, left to right: (kind, amount). "flat" runs n columns at the current row; "up"/"down"
-# add n 45-degree slope columns, each changing the surface by one row; "step" moves the
-# surface by n rows at once (negative = a wall to jump up).
+# change the surface by n rows over n + 2 columns: a half-gradient column pair at each end
+# and n - 2 45-degree columns between. The eased ends matter: like the ROM, the engine
+# snaps a floor angle that changes by 0x20 or more in one step back to a cardinal angle,
+# so a slope that went straight from flat to 45 degrees would play as flat ground.
+# "step" moves the surface by n rows at once (negative = a wall to jump up).
 TERRAIN = [
-    ("flat", 30), ("up", 4), ("flat", 14), ("down", 4), ("flat", 8),
-    ("down", 3), ("flat", 6), ("up", 3), ("flat", 10),
+    ("flat", 30), ("up", 4), ("flat", 12), ("down", 4), ("flat", 6),
+    ("down", 3), ("flat", 4), ("up", 3), ("flat", 8),
     ("step", -2), ("flat", 12), ("step", -2), ("flat", 10), ("down", 4),
-    ("flat", 36), ("up", 6), ("flat", 4), ("up", 4), ("flat", 12), ("down", 10),
-    ("flat", 16), ("down", 2), ("flat", 10), ("up", 2),
-    ("step", -3), ("flat", 14), ("down", 3), ("flat", 12),
-    ("up", 4), ("flat", 8), ("down", 4), ("flat", 65),
+    ("flat", 34), ("up", 6), ("flat", 2), ("up", 4), ("flat", 10), ("down", 10),
+    ("flat", 14), ("down", 2), ("flat", 8), ("up", 2), ("flat", 2),
+    ("step", -3), ("flat", 10), ("down", 3), ("flat", 10),
+    ("up", 4), ("flat", 6), ("down", 4), ("flat", 63),
 ]
 # Top-solid floating ledges: (first column, length, surface row).
 LEDGES = [(60, 9, 34), (112, 30, 25), (196, 8, 33)]
@@ -62,15 +65,37 @@ LINE3 = [SKY, 0x0C62, 0x0E84, 0x0EA6, 0x0EC8, 0x0EEC, 0x0EEE, 0x0ECA,
          0x0A86, 0x0864, 0x06A6, 0x0484, 0x0262, 0x08C8, 0x0AEA, 0x0040]   # background
 FG_LINE, BG_LINE = 2, 3
 
-EMPTY, FULL, UP, DOWN, LEDGE = range(5)
+EMPTY, FULL, UP, DOWN, LEDGE, EASE_UP_LOW, EASE_UP_HIGH, EASE_DOWN_HIGH, EASE_DOWN_LOW = range(9)
+
+
+def _widths(heights):
+    """Horizontal profile for a floor profile: solid run per row, + from the right, - from the left."""
+    rising = heights[-1] >= heights[0]
+    out = []
+    for y in range(16):
+        count = sum(1 for h in heights if h >= 16 - y)
+        out.append(count if count in (0, 16) or rising else -count)
+    return out
+
+
+_EASE = {kind: [x // 2 + 1 + offset for x in range(16)] for kind, offset in ((EASE_UP_LOW, 0), (EASE_UP_HIGH, 8))}
+_EASE[EASE_DOWN_HIGH] = _EASE[EASE_UP_HIGH][::-1]
+_EASE[EASE_DOWN_LOW] = _EASE[EASE_UP_LOW][::-1]
 SOLID_TILES = [  # (heights, widths, angle) per collision profile index
     ([0] * 16, [0] * 16, 0x00),
     ([16] * 16, [16] * 16, 0x00),
     ([x + 1 for x in range(16)], [y + 1 for y in range(16)], 0xE0),
     ([16 - x for x in range(16)], [-(y + 1) for y in range(15)] + [16], 0x20),
+    # Half-gradient (1:2) ease-in/out profiles; 0xEC/0x14 are within 0x20 of both flat and 45 degrees.
+    (_EASE[EASE_UP_LOW], _widths(_EASE[EASE_UP_LOW]), 0xEC),
+    (_EASE[EASE_UP_HIGH], _widths(_EASE[EASE_UP_HIGH]), 0xEC),
+    (_EASE[EASE_DOWN_HIGH], _widths(_EASE[EASE_DOWN_HIGH]), 0x14),
+    (_EASE[EASE_DOWN_LOW], _widths(_EASE[EASE_DOWN_LOW]), 0x14),
 ]
-PROFILE = {EMPTY: 0, FULL: 1, UP: 2, DOWN: 3, LEDGE: 1}
-MODE = {EMPTY: 0, FULL: 3, UP: 3, DOWN: 3, LEDGE: 1}   # 3 = solid on all sides, 1 = top only
+PROFILE = {EMPTY: 0, FULL: 1, UP: 2, DOWN: 3, LEDGE: 1,
+           EASE_UP_LOW: 4, EASE_UP_HIGH: 5, EASE_DOWN_HIGH: 6, EASE_DOWN_LOW: 7}
+MODE = {kind: 3 for kind in PROFILE}                    # 3 = solid on all sides
+MODE[EMPTY], MODE[LEDGE] = 0, 1                         # 1 = top only
 
 
 def build_cells():
@@ -89,12 +114,29 @@ def build_cells():
             continue
         for _ in range(amount):
             if kind == "flat":
-                fill(col, row, FULL); surface.append(row)
+                fill(col, row, FULL); surface.append(row); col += 1
             elif kind == "up":
-                fill(col, row - 1, UP); surface.append(row - 1); row -= 1
+                if amount < 2:
+                    raise SystemExit("slopes need at least two rows for their eased ends")
+                for cell in ((EASE_UP_LOW, EASE_UP_HIGH) if _ == 0 else ()):
+                    fill(col, row - 1, cell); surface.append(row - 1); col += 1
+                if _ == 0:
+                    row -= 1
+                elif _ < amount - 1:
+                    fill(col, row - 1, UP); surface.append(row - 1); row -= 1; col += 1
+                if _ == amount - 1:
+                    for cell in (EASE_UP_LOW, EASE_UP_HIGH):
+                        fill(col, row - 1, cell); surface.append(row - 1); col += 1
+                    row -= 1
             elif kind == "down":
-                fill(col, row, DOWN); surface.append(row); row += 1
-            col += 1
+                if amount < 2:
+                    raise SystemExit("slopes need at least two rows for their eased ends")
+                if _ == 0 or _ == amount - 1:
+                    for cell in (EASE_DOWN_HIGH, EASE_DOWN_LOW):
+                        fill(col, row, cell); surface.append(row); col += 1
+                    row += 1
+                else:
+                    fill(col, row, DOWN); surface.append(row); row += 1; col += 1
     if col != COLS:
         raise SystemExit(f"terrain covers {col} columns, expected {COLS}")
     for first, length, r in LEDGES:
@@ -112,6 +154,8 @@ def solid_at(cells, x, y):
         return ly >= 15 - lx
     if kind == DOWN:
         return ly >= lx
+    if kind in _EASE:
+        return ly >= 16 - _EASE[kind][lx]
     return False
 
 
