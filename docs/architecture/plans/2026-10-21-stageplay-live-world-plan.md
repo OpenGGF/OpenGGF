@@ -414,3 +414,28 @@ pathfinding. No main branch integration, task push, external repository edit or
 root revision-four source change was performed here.
 
 All short-demo event frame numbers above are zero-based scene frames.
+
+### Local commit / stopping checkpoint
+
+Implementation slices A–C are committed locally as
+`1e5420f10123a20eb4ebb02b97791957eca7ec57` on
+`feature/ai-stageplay-live-world`, based on `508915e67`. That commit contains the
+engine/tool/shared-workspace additions, focused regressions, mirrored skills,
+four reusable source/compiled scenes and the evidence/decision record above.
+No live validation/capture/preview job remains. Consumed task-owned target logs,
+inspection JSON and one-off probes were removed after their results were recorded.
+The external directory retains only the twelve current movie/state/review artifacts.
+
+The descriptor remains unchanged: ordinary mutable candidate pin regeneration
+must not edit release policy. Current API is still unpublished `0.7.0`; runtime
+description and normalized `0.7` inventory cover the actual added surface. Both
+commit co-author trailers were validated with `git interpret-trailers --parse`;
+repository hooks ran without bypass. Committed recipes use portable variables
+and placeholders to satisfy the repository's machine-local-path policy. The
+delivery lead receives exact local paths in the handoff.
+
+Root's announced foundation repair commit has not yet been supplied/merged in
+this tree. Root continues slice D: that reconciliation, combined validation and
+guard attribution, external Editor/Media work, full moving/audio promo review,
+integration, pushes and eventual T3 worktree/branch cleanup. The earlier observed
+architecture findings are not claimed fixed or baseline-attributed by this task.
