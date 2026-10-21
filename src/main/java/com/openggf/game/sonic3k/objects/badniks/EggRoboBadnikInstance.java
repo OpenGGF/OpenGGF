@@ -70,6 +70,12 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
     static final int SCALE_FLOOR = 4;
     /** {@code move.w #$180,y_vel(a0)}. */
     static final int FLYBY_Y_VEL = 0x180;
+    /**
+     * Shipped FixBugs=0 Obj_EggRobo: JSR at $91518 is six bytes (4EB9 0008 5AAE).
+     * Obj_WaitOffscreen saves its return long at $34; loc_91874 replaces only the
+     * high Y word, leaving the return address's low word as sub_86180's fraction.
+     */
+    private static final int FLYBY_WAIT_Y_FRACTION = (0x91518 + 6) & 0xFFFF;
     /** {@code move.w #-$80,d0} in {@code loc_91874}. */
     static final int FLYBY_X_VEL = 0x80;
     /** {@code move.b #4,$39(a0)}. */
@@ -253,6 +259,7 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
         switch (mode) {
             case FLY_BY -> {
                 artHigh = true; // ObjDat3_9199A: $A500.
+                flyY = (y << 16) | FLYBY_WAIT_Y_FRACTION;
                 // loc_91874: clear render bit0 negates -$80; a set bit keeps it.
                 xVelocity = badnikFacingLeft() ? FLYBY_X_VEL : -FLYBY_X_VEL;
                 yVelocity = FLYBY_Y_VEL;

@@ -26953,3 +26953,142 @@ full-act/breadth/HPZ/campaign, true reset/bootstrap, native terrain-return/d1,
 stock-route causality, native pixels/timing and GC are not certified. Root owns
 independent source review, the combined change-based smoke plan and integration;
 this worker creates only a local reviewable commit.
+
+
+## EggRobo saved waiter Y fraction — isolated correction, 2026-10-21
+
+Use the existing owned `.worktrees/object-vint-test-terminology` on new
+`bugfix/ai-ssz-eggrobo-wait-fraction-20261021`, exact base
+`b078214e74ddbcb393cbc0173fd8c74055b0dadb`. Preserve ICZ docs875d, e7,2b30,289d
+and prior worktrees/refs. Root's source/target/composed smoke and the separate
+R9 original-b078 measurement are untouched and unobserved by this worker.
+Native gitlink703 remains indexed, with no initialized owned native marker;
+there is no native invocation, checkout or source edit.
+
+### Source and smallest change
+
+The independently reviewed R8 source claim uses exact skdisasm
+`044fa46725c71187399e13f5ddb70e11d32dc024` Git objects. `Obj_EggRobo` is at
+sonic3k.asm198540, `Obj_WaitOffscreen`180357..180389, `loc_91874`198837..198859,
+`SetUp_ObjAttributes`176987..177004 and `sub_86180/19A`181132..181168.
+Original locked-on ROM SHA1`CFBF98C36C776677290A872547AC47C53D2761D6` has
+`4EB9 0008 5AAE` at `$91518`: a six-byte JSR, hence return `$0009151E`.
+Wait pops that long into `$34`. The visible waiter restores its operation pointer
+and returns; the next own dispatch initializes and immediately runs the flight.
+Initialization writes only a word to `$34`, retaining low word `$36=$151E`.
+Attributes and the object-preserving scaling wrapper do not clear it before the
+long velocity add. Scratch scaling RAM is distinct from Object_RAM.
+
+Historical Main `efd605142` and the b078 Java body both initialize `flyY` with
+zero fraction. This is a definite shared source omission, not evidence for the
+Main/current route difference. The correction adds only a private constant
+`(0x91518 + 6) & 0xFFFF` and `flyY = (y << 16) | FLYBY_WAIT_Y_FRACTION` inside
+mode0 initialization. The actual native address/length owns the constant; no
+movie row, measured route coordinate, seed or timing manifest selects behavior.
+Wait/return/init ordering and the existing signed-word velocity updates, long
+addition, projection, X anchor, other modes, flags, collision, art requests,
+publication, unload and deletion stay unchanged. The existing captured flyY field
+restores both before and after initialization; no schema/codec/API/helper is added.
+
+### Independent public-motion carry and rewind control
+
+The new existing-Presentation method is
+`flyByWaitResidueCarriesIntoPublicYAndReplaysFromInitAndMotion`. It creates an
+explicit component at `$200,$C00`, mode0, with flags0/1, ordinary manager registration
+and public object updates/render-flag refresh. It does not seed velocity, phase,
+clock, fraction or pairing. Both wait dispatches leave public X/Y and scale alone.
+First active velocities are `$17F` then `$17D`, sum `$2FC` in8.8; adding their
+shifted sum to low word `$151E` carries the anchor to `$0C03`, then projection2
+produces literal `$0C01`. Zero residue instead gives `$0C00`. Literal first-move
+Y `$0BFF` and both-direction X controls also remain independent of the helper.
+
+Four cases select flags0/1 × pre-init/first-motion captures. Each first asserts
+the public carry, then destroys the live body and reconstructs it by its actual
+ObjectRefId through the whole gameplay registry. Two restore/forward cycles compare
+all registered keys, with no exclusions or normalizer. Pre-init replay checks the
+first-motion snapshot before crossing the carry; active replay checks that saved
+fraction is retained instead of being reinitialized. These are component controls,
+not an ordinary cold route, native execution, physical pixels or timing proof.
+
+The exact predecessor request20575 runs only the new method, with production
+byte-exact b078: **4T/4F/0E/0S**, all expected3073/actual3072 at test line59.
+The assertions fail before the rewind loops execute. Queue wait382s, Maven26.685s;
+queue time is not execution. As-run test34945B/SHA256
+`75fe580854f26ddfd33fca07f8d4ad52770e02d8e698693194655b78157d92ea`;
+production24700B/SHA256
+`1ee5532c74ea9fb197fa60d646460819c0e363bdd1daa63a9051f55c1821abc8`.
+Red test-only full-index diff3964B/SHA256
+`665b15d7117e3a6b9f050e4f7ef63a85499ad7c599b1ef51cafa8cd2c118f579`.
+No red rerun or expected-value change follows.
+
+After the minimal production change, the same four cases and affected existing
+controls run once in request5911: **15 classes/229T/0F/0E/0S**. There are14selectors;
+`TestSonic3kLevelLoading` intentionally selects both36- and7-case classes.
+The remaining required core counts are AIZ8, Bootstrap6 and Decoding3. EggRobo
+Presentation26 includes the four new cases, ClockGates15, VerticalFlip44,
+ArtPriority14, GunDispatch19, JetDispatch12, ShotLifetime22, PendingAnimal4,
+AnimalLaunch4 and the placed EggRobo class9. Queue wait13s; Maven reports01:32 min.
+Every suite's69 properties, all229 actual test identities, failures/errors/skips
+and original streams were inspected. Java25.0.4.1/EGL and all absolute original
+ROM properties agree. No test is skipped. All owned original reports/tmp are
+consumed; no raw archive or pass receipt is kept.
+
+Both requests use this common command/environment shape, with red/green
+report namespaces and the selections below. OPENGGF_MAIN denotes the actual Main
+workspace; S1_ROM, S2_REV01_ROM and S3K_ROM denote the verified original absolute
+ROM paths. Their expanded machine-local identities are in the owned registry:
+
+```bash
+env -u JDK_JAVA_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS \
+  -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$S1_ROM" \
+  "-Dsonic2.rom.path=$S2_REV01_ROM" \
+  "-Ds3k.rom.path=$S3K_ROM" \
+  '-Dtest=<selection>' \
+  -Dopenggf.surefire.reports=target/ssz-fraction-<red|green>/surefire-reports \
+  -Dopenggf.test.tmpdir=target/ssz-fraction-<red|green>/test-tmp test -B
+```
+
+Red selection:
+`com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboPresentation#flyByWaitResidueCarriesIntoPublicYAndReplaysFromInitAndMotion`.
+Green selection:
+`TestSszEggRoboPresentation,TestSszEggRoboClockGates,TestSszEggRoboVerticalFlip,TestSszEggRoboArtPriority,TestSszEggRoboGunNativeDispatch,TestSszEggRoboJetNativeDispatch,TestSszEggRoboShotNativeLifetime,TestSszEggRoboPendingAnimalLaunch,TestSszEggRoboAnimalLaunch,TestS3kSszEggRobo,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+
+Green source is frozen before submission: production25100B/SHA256
+`2d0b6fc6218fcf73c7f662dcf9aad637e7acc353c586ddd98e1ed692e3770ceb`;
+the test is byte-exact the red test above. Full Java source/test diff5592B/SHA256
+`3758d9393dd353c95f1c39c6256ca2a993933baa3fe7dddd80ab8a2441679726`;
+production-only diff1628B/SHA256
+`196b55985c8376f2ae0911d74d394c986e5869ebf1f48e30d6971f93f4a58130`.
+Only documentation is added after that run; no repeat is needed for unchanged
+execution dependencies. This private mode0 initialization change has no generic
+manager, physics, build or public-contract impact, so the authorized focused
+selection replaces a broad run. Root owns source review and composed assessment.
+
+### Preserved limits and documentation
+
+The shared fraction's actual ordinary route effect and the Main/current800 paired
+difference remain unknown. Expected46 and all maintained controllers/oracles are
+unchanged; no paired route or new native capture runs. The active generic coarse-X
+unload path is separate and is not edited or made to publish unconditionally.
+Root's independently read R9 original-b078 data retain216 unload decisions
+6792..7007: persistent/custom/outOfRange false, unsigned distance0..384/limit1120,
+no unload/onUnload. Wait visibility firsttrue6946, return-only6947 and flight6948;
+33 negative-Y exit reads6975..7007 consume true and move. That excludes culling
+only in the covered prefix, without qualifying a native800 trajectory or making
+this fraction the difference's cause. This worker did not read R9 reports/jobs.
+
+The existing SSZ matrix and S3K discrepancy entry distinguish the implemented
+source correction and component rewind from open route/native evidence. The
+per-version release theme is refined, and the existing waiter pitfall receives
+this pointer/long alias lesson in both skill mirrors. Backlog obligations do not
+change. No source/API/config/ROM/submodule change outside the narrow owner/test
+is made; useful prior refs remain local and preserved. Normal documentation/link/
+mirror checks and installed hooks precede a seven-trailer/final Sol-coauthor local
+commit. No push, integration, worktree removal or extra validation is authorized
+by this record.
