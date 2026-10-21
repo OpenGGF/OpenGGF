@@ -39,7 +39,7 @@ it changes none of the routine-cost models or their callers.
 | `render/` | R15 | Render_Sprites family and Draw_Sprite ([README](render/README.md)) | 10 |
 | `deform/` | R16 | ApplyDeformation (both copies), AIZ1_Deform, AIZ1_ApplyDeformWater ([README](deform/README.md)) | 7 |
 | `palette/` | R17 | palette fade family `$3AF0`–`$3DBE` from palette-owner inputs ([README](palette/README.md)) | 6 |
-| `mini68k/` | R10–R17; cold entry 2026-10-21 | shared fail-closed interpreter/forms; separate `cold_entry.py` reset-to-device semantic control | 15 + 31 cold |
+| `mini68k/` | R10–R17; cold entry 2026-10-21 | shared fail-closed interpreter/forms; separate `cold_entry.py` reset-to-device semantic control, with opt-in first-status retirement | 15 + 49 cold |
 
 `mini68k/` holds the only copy of the interpreter. Each extension adds named forms and delegates everything else
 down the chain, which raises `Unsupported`: `palette_forms` → `deform_forms` → `render_forms` → `nem_forms` →
@@ -50,7 +50,7 @@ READMEs).
 ### Cold-entry semantic control
 
 [`mini68k/cold_entry.py`](mini68k/cold_entry.py) independently executes original-ROM
-EntryPoint from reset vectors through the taken BEQ at `$022E`, stopping before
+EntryPoint by default from reset vectors through the taken BEQ at `$022E`, stopping before
 the unsupported VDP read `$0238` (`MOVE.W (A4),D0`, bus `$C00004`). It requires the
 original4MiB ROM, explicit `gpgx703-md-usa-ntsc-cold` profile, GPGX object store at
 `051d430d` and TraceChaser objects at `703bd92`. It reads authenticated commit
@@ -76,15 +76,45 @@ identities and ordered40-word records, then compares every word of the38 support
 records and all named initial fields. Three snapshots,11 retirements and13 logical
 reads are source-derived assertions after the unsupported-device stop, never a
 count/time/frame budget. These11 instructions are unrelated to11 hardware jobs.
-The final three native device records have boundary/order checks only: device
+In the default mode, the final three native device records have boundary/order checks only: device
 value and post-read flags/clocks/registers remain explicitly unsupported.
 
 Pure continuations copy/restore registers, CCR/SR, both PCs, raw/refresh clocks,
 profile, I/O, prefetch, pending phase and observations around both MOVEM forms and
 refresh. They do not authorize native provenance re-arm after a load. This is a
 diagnostic prerequisite, with no runtime port, readiness, Engine/Title or fixture
-consumer. VDP/FIFO/open-bus/IRQ scheduling, production continuity, movie row0 and
-real job identity remain separate obligations.
+consumer. The opt-in below adds only the first status-read device/scheduler semantics;
+later device execution, production continuity, movie row0 and real job identity remain open.
+
+`--first-vdp-status --bizhawk-git <repository containing exact427 objects>` explicitly
+opts in to **41 independently generated records**, including first `MOVE.W (A4),D0`
+retirement. `FirstVDPSources` additionally authenticates BizHawk427 commit/tree and
+managed FrameAdvance/settings/callback/native-interface/build sources, plus GPGX
+render/input/ROM-byte-order sources. The default `Sources`, `generate` and `compare`
+remain the38-record control. No expected artifact or native schema changes.
+
+The opt-in derives VDP reset registers (including explicit reg10=FF), H32 geometry,
+FIFO, pending/IRQ/DMA state and the first `system_frame_gen(0)` CPU admission. Managed
+`render=false` skips only video copying: native rendering still runs, with display
+disabled; its MD blank/remap path cannot add sprite flags. Source deadline iteration,
+not an assigned VCounter, reaches active line159. The adapter refuses any later
+scheduler handoff, display/DMA/interlace producer, input/callback or profile variant.
+
+`vdp_68k_ctrl_r` samples local CPU raw plus the current opcode base cost, without
+charging CPU raw at the read. DMA completion and pending/status clears precede the
+logical observation; FIFO/display/VINT/HBlank predicates affect the returned bits.
+Open-bus upper bits come from the original ROM word at advanced PC `$023A` masked
+with `$FC00`, never from IR or an expected field. Actual `mini68k.CPU.step` owns the
+MOVE register/CCR update; the inherited clock adapter charges base cycles once and
+emits retirement, then stops before fetching `$023A`. Three snapshots,12 retirements
+and14 logical reads are assertions after that semantic stop. All41×40 words compare
+only after generation. The matching `$7208` and clocks are outputs, never seeds.
+
+Pure continuations include the entire modeled VDP/scheduler and first-frame profile
+at every exposed fetch/refresh/execute boundary and after retirement. They do not
+offer a mid-instruction suspension or native restore/re-arm. Internal VDP fields are
+tested against source predicates because the native report does not expose them;
+the41-record match does not claim native observation of those internal fields or pixels.
 
 ```bash
 export COLD_ENTRY_TRACECHASER=<source repository containing exact703 objects>
@@ -92,11 +122,17 @@ export COLD_ENTRY_EXPECTED=<qualified703 observer-on reset-prefix.json>
 python3 -B tools/timing/s3k-instruction-ledgers/mini68k/cold_entry.py \
   --rom "$S3K_ROM" --gpgx-git "$GPGX_GIT" --tracechaser "$COLD_ENTRY_TRACECHASER" \
   --expected "$COLD_ENTRY_EXPECTED" --profile gpgx703-md-usa-ntsc-cold
+export BIZHAWK_GIT=<source repository containing exact427 objects>
+python3 -B tools/timing/s3k-instruction-ledgers/mini68k/cold_entry.py \
+  --rom "$S3K_ROM" --gpgx-git "$GPGX_GIT" --tracechaser "$COLD_ENTRY_TRACECHASER" \
+  --expected "$COLD_ENTRY_EXPECTED" --profile gpgx703-md-usa-ntsc-cold \
+  --first-vdp-status --bizhawk-git "$BIZHAWK_GIT"
 python3 -B -m unittest discover -s tools/timing/s3k-instruction-ledgers/mini68k -p 'test_*.py' -v
 ```
 
-The second command runs31 cold controls plus15 existing form controls. Cold tests
-explicitly skip without all four ROM/source/oracle variables; qualification needs
+Discovery runs49 cold controls plus15 existing form controls. The original31 cold
+controls need all four ROM/source/oracle variables;18 additional controls require
+`BIZHAWK_GIT` too. Tests explicitly skip without these inputs; qualification needs
 zero skips. They cover all1,520 claimed-word mutations, identity/profile/type and
 record order/capacity refusals, source/mask/opcode/reset/CCR/refresh faults, both
 extra reads, skip-refresh crossing controls, comparator-only dataflow and restore
@@ -104,6 +140,10 @@ at every phase. CLI controls also atomically replace a task-owned expected path 
 its first read (small and over64KiB replacements), retaining the original compared
 digest and proving no second unbounded read. Exact original qualification is recorded in the existing
 [playable-completion plan](../../../docs/architecture/plans/2026-10-13-s3k-playable-completion.md).
+The opt-in controls add all120 suffix-word mutations, first-admission deadline
+equality, FIFO/HBlank/VINT/DMA boundaries, status side-effect order, advanced-PC
+open bus, local sample versus raw observation time, complete pure restore, source/
+profile/device refusals and an actual oversize atomic expected-path replacement.
 
 ### `kos/`
 
@@ -131,7 +171,7 @@ done
 
 The historical research counts are 106 source-model tests (vint 11, hud 10, drawlevel 8, nem 14, hint 10, mainloop 15, render 10,
 deform 7, palette 6, mini68k 15) plus 14 Kos-service tests. `vint/nem/test_nem_decoder.py` takes about 45 s.
-The separate31 cold-entry tests additionally require the variables documented above.
+The separate49 cold-entry tests additionally require the variables documented above.
 
 Most test classes **skip** without `S3K_ROM` and `GPGX_GIT`, and the native comparison cases skip without
 `KOS46_NATIVE_ROOT`. A skip is not a pass: check that the summary line reads `OK` with no `skipped=` count.

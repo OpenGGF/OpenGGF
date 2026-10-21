@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Independent, diagnostic-only S3K cold entry through the first unsupported device read.
+"""Independent diagnostic S3K cold entry; optionally retire the first VDP status read.
 
 Origin: cold-entry-semantic-control-20261021, base8c78e776. Inputs: original ROM,
 explicit fixed profile, pinned GPGX object store and TraceChaser703 object store.
@@ -8,10 +8,13 @@ No engine/native/runtime writes, capture, readiness authority or research-defaul
 Sources: EntryPoint/SetupValues (skdisasm044fa46); GPGX051d430d genesis.c gen_reset,
 io_ctrl.c io_reset, system.c system_reset/frame_gen, m68kcpu.c reset/run,
 m68kcpu.h immediate/operand reads and m68kops.h MOVEM/branch/ANDI/refresh.
+First-status opt-in (task first-vdp-r3/base876037b4) additionally derives VDP reset,
+first system_frame_gen(0) admission and status predicates from those pinned sources,
+vdp_render.c and BizHawk427 managed/native frame wiring. No later device execution.
 """
 import argparse
 import copy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import hashlib
 import json
 from pathlib import Path
@@ -406,6 +409,229 @@ def generate(rom, sources, profile):
             return cpu, boundary
 
 
+class FirstVDPSources(Sources):
+    """Additional source admission is opt-in; the default source manifest is unchanged."""
+    def __init__(self, gpgx_repo, tracechaser_repo, bizhawk_repo):
+        super().__init__(gpgx_repo, tracechaser_repo)
+        require_repository(bizhawk_repo, BIZHAWK, '7281227ed2f3b89c0962b2792b28539e35361c6b')
+        for path in ('core/vdp_render.c', 'core/input_hw/input.c', 'core/loadrom.c', 'core/macros.h'):
+            self.files[path] = _git(gpgx_repo, 'show', GPGX + ':' + path)
+            self.manifest[path] = digest(self.files[path])
+        managed = 'src/BizHawk.Emulation.Cores/Consoles/Sega/gpgx64/'
+        paths = [managed + name for name in ('GPGX.cs', 'GPGX.IEmulator.cs', 'GPGX.ISettable.cs',
+                 'GPGX.IDebuggable.cs', 'GPGXControlConverter.cs')]
+        for path in paths + ['waterbox/gpgx/cinterface/cinterface.c', 'waterbox/gpgx/Makefile']:
+            self.manifest['BizHawk:' + path] = digest(_git(bizhawk_repo, 'show', BIZHAWK + ':' + path))
+        vdp = self.files['core/vdp_ctrl.c'].decode()
+        self.status_timings = tuple(int(re.search(r'#define\s+' + name + r'\s+\((\d+)\)', vdp)[1])
+            for name in ('VINT_H32_MCYCLE', 'HBLANK_H32_START_MCYCLE', 'HBLANK_H32_END_MCYCLE'))
+        self.fingerprint = digest(json.dumps(self.manifest, sort_keys=True).encode())
+
+
+@dataclass(frozen=True)
+class FirstFrameProfile:
+    # GpgxHost703 settings/Advance -> BizHawk427 FrameAdvance -> gpgx_advance.
+    overscan: int = 3
+    managed_render: bool = False
+    native_skip: int = 0  # render=false skips managed UpdateVideo, never system_frame_gen.
+    memory_callbacks: bool = False
+    input_devices: tuple = (0, 0xFF, 0xFF, 0xFF, 0, 0xFF, 0xFF, 0xFF)  # PAD3B / NO_DEVICE
+
+    def require(self):
+        if (self != FirstFrameProfile() or json.dumps(vars(self), sort_keys=True)
+                != json.dumps(vars(FirstFrameProfile()), sort_keys=True)):
+            raise Refused('unsupported first-frame profile/render/input/callback path')
+
+
+@dataclass
+class FirstVDP:
+    """Source-only device/scheduler state, not extra native-observer fields.
+
+    vdp_reset explicitly clears registers/control/DMA/IRQ state, then sets reg10=FF.
+    Unaccessed VRAM/pixels are outside this adapter. No absent report field supplies state.
+    """
+    reg: list = field(default_factory=lambda: [0] * 0x20)
+    addr: int = 0
+    addr_latch: int = 0
+    code: int = 0
+    pending: int = 0
+    hint_pending: int = 0
+    vint_pending: int = 0
+    dma_length: int = 0
+    dma_end: int = 0
+    odd_frame: int = 0
+    interlaced: int = 0
+    im2: int = 0
+    fifo_idx: int = 0
+    fifo_cycles: list = field(default_factory=lambda: [0] * 4)
+    status: int = 0
+    width: int = 256
+    height: int = 192
+    viewport_x: int = 0
+    viewport_y: int = 0
+    hvc_latch: int = 0x10000
+    v_counter: int = 192
+    h_counter: int = 0xFF
+    vint_cycle: int = 0
+    hblank_start: int = 0
+    hblank_end: int = 0
+    z80_irq: bool = False
+    mcycles: int = 0
+    line_end: int = 0
+    first_frame: bool = False
+    admitted: bool = False
+    last_sample: int = 0
+
+    @classmethod
+    def reset(cls, sources, profile, frame):
+        frame.require()
+        device = cls(status=profile.pal, viewport_x=(frame.overscan & 2) * 7,
+                     viewport_y=(frame.overscan & 1) * 24 * (profile.pal + 1))
+        device.reg[10] = 0xFF  # vdp_ctrl.c:419..420; overrides memset, not an assumption.
+        device.vint_cycle, device.hblank_start, device.hblank_end = sources.status_timings
+        return device
+
+    def admit_first_frame(self, raw, sources, profile, frame):
+        """system.c:351..676, only until the first m68k_run whose target exceeds raw.
+
+        Earlier m68k_run calls return immediately (m68kcpu.c:265). MD display-off
+        render_line still blanks/remaps, but cannot parse sprites or alter status.
+        PAD3B/NO_DEVICE input_refresh is inert, Z80 is held reset, SVP is absent.
+        """
+        frame.require()
+        if self.first_frame or self.v_counter != self.height or self.h_counter != 0xFF:
+            raise mini68k.Unsupported('unsupported initial VDP/frame interrupt state')
+        self.first_frame = True
+        self.mcycles = 0
+        self.fifo_cycles = [0] * 4
+        self.status = (self.status & 0xFEED) | 0x08
+        if self.interlaced or self.dma_length or self.reg[1] & 0x40:
+            raise mini68k.Unsupported('unsupported frame DMA/interlace/display producer')
+
+        def run():
+            self.line_end = self.mcycles + sources.line_mclk
+            self.admitted = raw < self.line_end
+            return self.admitted
+
+        if run():  # initial overscan line, no initial VINT because VC == viewport.h.
+            return
+        self.z80_irq = False
+        self.mcycles += sources.line_mclk
+        for line in range(self.height + 1, profile.lines - 1):
+            self.v_counter = line
+            if run():
+                return
+            self.mcycles += sources.line_mclk
+        self.v_counter = profile.lines - 1
+        self.h_counter = self.reg[10]
+        self.status &= ~0x08
+        if run():
+            return
+        self.mcycles += sources.line_mclk
+        for line in range(self.height):
+            self.v_counter = line
+            if self.h_counter == 0:
+                self.h_counter = self.reg[10]
+                self.hint_pending = 0x10
+                if self.reg[0] & 0x10:
+                    raise mini68k.Unsupported('unsupported first-frame HINT producer')
+            else:
+                self.h_counter -= 1
+            if run():
+                return
+            self.mcycles += sources.line_mclk
+        raise mini68k.Unsupported('CPU not admitted before unsupported frame-end rebase')
+
+    def require_window(self, raw):
+        if not self.admitted or not self.mcycles <= raw < self.line_end:
+            raise mini68k.Unsupported('unsupported scheduler handoff beyond first admitted line')
+
+    def control_read(self, raw, base_mclk):
+        # vdp_ctrl.c:1201..1272. Only this local sample advances; CPU raw is untouched.
+        cycles = raw + base_mclk
+        self.last_sample = cycles
+        if self.status & 2 and not self.dma_length and cycles >= self.dma_end:
+            self.status &= 0xFFFD
+        value = self.status
+        self.pending = 0
+        self.status &= 0xFF9F
+        if cycles >= self.fifo_cycles[(self.fifo_idx + 3) & 3]:
+            value |= 0x200
+        elif cycles < self.fifo_cycles[self.fifo_idx]:
+            value |= 0x100
+        if not self.reg[1] & 0x40:
+            value |= 8
+        relative = cycles - self.mcycles
+        if self.v_counter == self.height and relative >= self.vint_cycle and not self.z80_irq:
+            value |= 0x80
+        if self.hblank_start <= relative < self.hblank_end:
+            value |= 4
+        return value
+
+
+class FirstVDPCPU(ColdCPU):
+    """Opt-in single device read. No device write or subsequent instruction is admitted."""
+    def __init__(self, rom, sources, profile, frame=None):
+        if type(sources) is not FirstVDPSources:
+            raise Refused('first status requires additional authenticated source objects')
+        self.frame_profile = FirstFrameProfile() if frame is None else frame
+        if type(self.frame_profile) is not FirstFrameProfile:
+            raise Refused('unknown first-frame profile type')
+        self.frame_profile.require()
+        super().__init__(rom, sources, profile)
+        self.vdp = FirstVDP.reset(sources, profile, self.frame_profile)
+        self.vdp.admit_first_frame(self.raw, sources, profile, self.frame_profile)
+        self.status_read = False
+
+    def check_form(self, op):
+        if op == 0x3014:  # m68k_op_move_16_d_ai; actual CPU.step owns D0 and CCR.
+            if self.a[4] & 0xFFFFFF != 0xC00004 or self.status_read:
+                raise mini68k.Unsupported('unsupported first-status operand/continuation')
+            return
+        super().check_form(op)
+
+    def read(self, address, size):
+        if self.extension or (address & 0xFFFFFF, size) != (0xC00004, 'w'):
+            return super().read(address, size)
+        if self.phase != 'execute' or self.ir != 0x3014 or self.status_read:
+            raise mini68k.Unsupported('status read outside supported MOVE.W instruction')
+        base, dynamic = self.sources.cycles(self.rom, self.pc, 'seq')
+        if dynamic:
+            raise Refused('unresolved status instruction dynamic timing')
+        self.vdp.require_window(self.raw + base * 7)
+        low = self.vdp.control_read(self.raw, base * 7) & 0x3FF
+        # mem68k.c:1426..1430 uses direct ROM map at *advanced PC*, not IR/pref_data.
+        # LSB_FIRST loadrom byteswap + uint16 dereference equals original big-endian word.
+        value = low | (self.rom_word(self.cursor) & 0xFC00)
+        self.status_read = True
+        self.emit(6, address, value, 2)  # pending/status effects already applied; D0/CCR still old.
+        return value
+
+    def advance_phase(self):
+        if self.phase == 'first_status_retired':
+            raise mini68k.Unsupported('first VDP status read retired; later execution unsupported')
+        self.frame_profile.require()
+        self.vdp.require_window(self.raw)
+        executing = self.phase == 'execute'
+        super().advance_phase()
+        self.vdp.require_window(self.raw)
+        if executing and self.status_read:
+            self.phase = 'first_status_retired'
+
+    def restore(self, continuation):
+        if continuation.state.get('frame_profile') != self.frame_profile:
+            raise Refused('continuation first-frame profile differs')
+        super().restore(continuation)
+
+
+def generate_first_vdp(rom, sources, profile, frame=None):
+    """No expected input. Stop only after the supported status instruction actually retires."""
+    cpu = FirstVDPCPU(rom, sources, profile, frame)
+    while cpu.phase != 'first_status_retired':
+        cpu.advance_phase()
+    return cpu
+
+
 PROFILE_REPORT = {'hardware': 'Mega Drive cartridge', 'region_setting': 'Autodetect',
     'expected_region': 'USA NTSC', 'bios': 'disabled; NoFirmwareProvider',
     'controllers': 'two normal three-button ports',
@@ -551,18 +777,53 @@ def compare(cpu, boundary, report):
         'boundary': str(boundary), 'production_readiness': False}
 
 
+def compare_first_vdp(cpu, report):
+    if type(cpu) is not FirstVDPCPU or cpu.phase != 'first_status_retired' or not cpu.status_read:
+        raise Refused('first status retirement was not generated')
+    # Reuse the original strict admission/initial snapshot/default prefix comparison.
+    prefix = copy.copy(cpu)
+    prefix.events = cpu.events[:38]
+    result = compare(prefix, DeviceBoundary(0x238, 0x3014, 0xC00004, 2), report)
+    if len(cpu.events) != 41 or len(report['records']) != len(cpu.events):
+        raise Refused('source-derived first-status record assertion differs')
+    retired = sum(row[0] == 5 for row in cpu.events)
+    reads = sum(row[0] == 6 for row in cpu.events)
+    if (retired, reads) != (12, 14):
+        raise Refused('source-derived first-status instruction/read assertion differs')
+    for index in range(38, len(cpu.events)):
+        for word, (got, expected) in enumerate(zip(cpu.events[index], report['records'][index])):
+            if got != expected:
+                raise Refused('conformance differs at record%d word%d: pure%08X expected%08X'
+                              % (index, word, got, expected))
+    result.update(claimed_records=len(cpu.events), retired_instructions=retired, logical_reads=reads,
+        boundary='first VDP status read retired; next instruction not fetched',
+        unsupported='later device/CPU execution; internal VDP/scheduler fields are source-unit qualified only')
+    return result
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('rom', 'gpgx-git', 'tracechaser', 'expected'):
         parser.add_argument('--' + name, required=True, type=Path)
     parser.add_argument('--profile', required=True, choices=(PROFILE_NAME,))
+    parser.add_argument('--first-vdp-status', action='store_true',
+                        help='opt in to independent first status-read retirement (41 claimed records)')
+    parser.add_argument('--bizhawk-git', type=Path, help='BizHawk427 object store; required only for opt-in')
     args = parser.parse_args(argv)
     try:
-        sources = Sources(args.gpgx_git, args.tracechaser)
-        cpu, boundary = generate(args.rom.read_bytes(), sources, Profile(args.profile))
+        if args.first_vdp_status:
+            if args.bizhawk_git is None:
+                raise Refused('--first-vdp-status requires --bizhawk-git')
+            sources = FirstVDPSources(args.gpgx_git, args.tracechaser, args.bizhawk_git)
+            cpu = generate_first_vdp(args.rom.read_bytes(), sources, Profile(args.profile))
+        else:
+            if args.bizhawk_git is not None:
+                raise Refused('--bizhawk-git requires --first-vdp-status')
+            sources = Sources(args.gpgx_git, args.tracechaser)
+            cpu, boundary = generate(args.rom.read_bytes(), sources, Profile(args.profile))
         # Expected data is opened only AFTER the entire independently generated continuation.
         expected, expected_sha256 = _load_expected_with_digest(args.expected)
-        result = compare(cpu, boundary, expected)
+        result = compare_first_vdp(cpu, expected) if args.first_vdp_status else compare(cpu, boundary, expected)
         result.update(rom_sha1=ROM_SHA1, source_manifest=sources.manifest,
                       native_expected_sha256=expected_sha256)
         print(json.dumps(result, sort_keys=True))

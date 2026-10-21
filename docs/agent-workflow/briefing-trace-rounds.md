@@ -71,6 +71,16 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+VDP status sampling time differs from the logical read's raw clock (2026-10-21,
+cold-entry first-status diagnostic). Pinned GPGX adds the current opcode base cost
+to a local status sample, applies pending/status effects before the logical read
+hook, and charges CPU base cycles at retirement. Upper status bits use the ROM
+word at advanced PC, not IR. Managed `render=false` still calls native
+`system_frame_gen(0)`; reset phase must pass through its real deadline scheduler
+before deriving VCounter/FIFO/HBlank/VINT. Comparing all41 native records tests
+their40 exposed fields, not unexposed VDP internals or physical pixels. Keep source
+predicate controls and default38-record pre-device claims explicitly separate.
+
 MOVEM skip-refresh differs from ordinary bus refresh (2026-10-21, cold-entry control).
 Pinned GPGX performs ordinary refresh after fetch, setting the deadline to current
 raw clock plus128*7 and charging14 MCLK. MOVEM.L instead charges dynamic register
