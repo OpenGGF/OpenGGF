@@ -23760,3 +23760,57 @@ TraceChaser gitlink differs outside owned files and is excluded. Root owns revie
 combined validation/integration and push. No Main mutation, task-branch push or
 worktree removal is authorized here. Exact owned consumed diagnostics are deleted;
 useful authored input proposal and two end stills remain outside the repository.
+
+
+### Reviewed SSZ320 controller composition and current consumers — 2026-10-21
+
+Root merged reviewed paired opening3a0b7b5fa as f7fba1422e921a59c6607475dc1da07633fd1dd8
+and solo Tails replica5bad0be8e as c5b5120ac475445b5e4ff9c6c96e7e4715f3a840.
+The Plan/matrix conflicts preserve the entire current Root documents and every
+incoming line after the exact39 parent prefix. Test/resource blobs match their
+reviewed leaves; production source/POM remain byte-identical to testedcf46.
+
+The paired route reaches the physical saved post and both replicas with25
+two-cycle45-input whole-world windows. Solo Tails320 completes both replicas
+and transports with8350 inputs/34 rings/69 full-registry45-input windows:
+all53 original samples plus16 observed owner boundaries. Ordered script/BK2
+data and preserved800/complete320 inputs were independently read. No gameplay
+assertion, native-world geometry or physics was weakened. These cold-zone
+results do not establish native reset, pixels or full SSZ completion.
+
+ONE current-source invocation ran four focused class/method selections:
+**15 tests, five failures, zero errors or skips**. The10 passes include physical
+post, reference-path recovery, paired upper route, five GHZ approach widths
+and both Tails replica widths. Remaining failures are paired completion death
+14554; Tails Mecha-entry approachdeath9465(320)/9560(800) and completion death
+9465(320)/9560(800). Exact class/test/type/message and owning assertion locations
+match the frozen author results. Full rendered stacks were read; cross-dependency
+stack equality is not claimed. No new selected failure, whole-class green,
+Mecha/DEZ completion or broad-smoke pass is claimed.
+
+Actual XML verifies Java25, Jackson databind/YAML2.22.3, test Netty4.1.139.Final
+and8057-byte classpath SHA256
+9c876456c5ab9625f424b5b2dbcc19f9bf6f9b733cfac477957cd78894589610.
+Main was up-to-date;4263 tests compiled inside this existing target epoch.
+Maven reported1:08; queue/compiler/parent durations remain unknown. All15
+identities, complete failures,69 properties per suite, ROM paths, streams and
+skips were read before consuming the exact owned report/tmp root; build classes
+remain. Priorcf46270 ordinary passes and105 guards with two inherited HubMusic
+failures retain their separate selections. No unchanged guard/full suite reran.
+```bash
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal -Dmse=off -Psmoke \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.tools.TestSszColdRouteCapture#coldRouteDefeatsBothReplicasAndReplaysTraversalAndTransport+coldCompleteRouteDefeatsMechaAndLoadsDeathEggWithRewindAtLateEvents,com.openggf.tools.TestReferencePathInputAuthor#recoversTheReferencePathAfterADeliberateDivergenceAndReplaysUninterrupted,com.openggf.tests.TestLrzSszCheckpointRoutes#ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost,com.openggf.tools.TestSszTailsColdRouteCapture' \
+  "-Dsonic1.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_MAIN}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test -B
+```
+
+Paired and solo Tails complete-route continuations run in owned worktrees.
+The native prefix leaf has a managed-assembly identity P2 and must preserve
+Main's actual4c3d6ba8 dormant reader before adoption; prior passing controls
+do not repair that identity gap. Independent gameplay audit found an MTZ orb
+allocation/initializer ordering omission, without attributing any route death
+to it. The remaining parity/coverage goal stays active. Main's develop branch,
+unknown files and dirty submodules remain preserved; no delivery push is claimed.
