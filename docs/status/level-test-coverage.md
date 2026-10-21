@@ -237,6 +237,14 @@ both bonus-load history resets, the three semantic bonus replay windows, all
 readiness workloads remain intact. Broader route products and native timing,
 pixel and whole-world parity remain open.
 
+SSZ EggRobo Shot shield follow-up (2026-10-21): the
+[Act 1 matrix](../architecture/validation/levels/s3k-ssz-act1.md#eggrobo-shot-shield-descriptor--2026-10-21)
+records the inherited zero-byte/`NONE` descriptor contract through actual
+Body/Gun allocation and public P1 arming, with both horizontal directions and
+all four real shields through the completed-list touch consumer. This bounded
+component correction preserves ordinary shield-loss hurt; route, configuration,
+native presentation and existing rewind breadth gaps remain inherited.
+
 ## Historical S&K campaign snapshot — 2026-09-28
 
 This September snapshot reconciles its dated milestones against integrated

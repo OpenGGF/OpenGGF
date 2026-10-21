@@ -234,7 +234,8 @@ Unreleased. The earlier development themes remain in
   through camera movement and rewind. Its jet flame and gun arm keep their own
   first-dispatch setup and original retirement order through recreation. The arm
   preserves its cooldown and last parent refresh before retirement. Charging
-  shots stop with their gun, while fired shots continue independently. Art
+  shots stop with their gun, while fired shots continue independently and retain
+  the native zero shield-reaction descriptor. Art
   priority follows the original body writes and child copies at allocation. Its
   aim now follows the original signed word comparison, including equal and
   wrapped coordinates. Body and attachment drawing preserve vertical facing;

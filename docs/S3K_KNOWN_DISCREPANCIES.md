@@ -1174,6 +1174,12 @@ The [bounded vertical-flip correction](architecture/validation/levels/s3k-ssz-ac
 is qualified with explicit flags0/1/2/3 component inlets, CPU/SAT replay output
 and fresh complete-world restoration. Stock SSZ1 placements contain only flags0/1;
 natural vertical-facing route relevance and native pixel parity remain unproved.
+The inherited Shot shield descriptor now retains native byte `$2B=0` and
+capability `NONE` through charge and motion. Real-shield contact still gives
+ordinary shield-loss hurt; the former false descriptor only enabled a redundant
+no-op deflection callback in the inspected stock consumer. The
+[bounded shield contract check](architecture/validation/levels/s3k-ssz-act1.md#eggrobo-shot-shield-descriptor--2026-10-21)
+does not establish a cause or correction for the separate cold-route failure.
 The specialized animal launch is now source-backed and independently qualified:
 fixed Rabbit/Chicken table, one full RNG draw, captured parent facing, direct
 WALK/FLY entry/frame1 and stationary first draw, with persistent native render

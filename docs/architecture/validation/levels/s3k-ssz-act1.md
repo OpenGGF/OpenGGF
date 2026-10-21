@@ -2573,6 +2573,84 @@ ordinary physical display production or native pixels. The
 [dated plan](../../plans/2026-10-13-s3k-playable-completion.md#literal-eggrobo-full-cycle-and-paused-history--2026-10-20)
 records the focused run and its limits; Root retains broad smoke and delivery.
 
+## EggRobo Shot shield descriptor — 2026-10-21
+
+Independent inherited contract correction on base
+`7bfb7e8eb316ea5a94c8b661e3278f9ab21f8602`. The verified locked-on ROM
+(SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`) has SK SSZ entry
+`$95522 -> $91518`. Fresh `loc_60DE` initialization and normal
+`Delete_Referenced_Sprite` clear the SST, including `shield_reaction` byte `$2B`.
+`AllocateObjectAfterCurrent` only scans empty slots; it does not clear them.
+Gun `loc_91712` creates the shot through `CreateChild10_NormalAdjusted`
+(`$84328`), which neither copies nor writes `$2B`. `SetUp_ObjAttributes3`
+(`$84040`) and Shot `loc_91756..loc_917BE` also leave it untouched. Thus its
+native descriptor is zero at allocation, charge, arming and motion, with no
+shield deflection or elemental immunity. These source chains and bounded raw
+instruction/data bytes were rechecked against disassembly commit
+`044fa46725c71187399e13f5ddb70e11d32dc024`, with shipped `FixBugs=0`.
+
+Only `EggRoboShotInstance`'s raw/profile shield flags and capability change:
+`8/SHIELD_DEFLECT` becomes `0/NONE`. The old inherited `onShieldDeflect`
+returned false, so the inspected stock consumer already produced ordinary
+shield-loss hurt and left Hyper-touched shots unchanged. Adding radial bounce
+or clearing collision would contradict the native zero-byte contract. No
+shared touch, movement, charge, lifetime, input, art or rewind state changes.
+
+`TestSszEggRoboShotShieldReaction` uses the existing VerticalFlip component
+inlets: declared subtype2 fighter/pairing and public P1 pose, actual Body→Gun→Shot
+allocation, child INIT and manual own entries. Both H directions assert literal
+raw/profile zero and `NONE` at birth, all32 charge entries, arming and motion.
+The hurt cases run an ordinary manager pass to build the completed publication,
+then the public player-slot touch consumer. They verify actual visibility and
+exclude competing published overlaps. ROM `$FF9A` supplies Shot radius24×4;
+gap40 is shield-only and gap16 is body contact, away from the producing family.
+Each BASIC/FIRE/LIGHTNING/BUBBLE case retains its shield at gap40, then receives
+ordinary hurt, loses the shield and retains10 rings. Shot stays alive with
+collision `$9C` and its next literal ±8 movement. Two actual published-shot
+Hyper controls preserve collision and movement too.
+
+The pre-fix queued class run on this base plus the new test executed12 cases:
+2 descriptor failures,0 errors,0 skips. Each failure reports raw/profile8
+instead of0 and `SHIELD_DEFLECT` instead of `NONE`; all8 real-shield cases and
+both Hyper controls already passed. Queue wait233s; Maven execution1m13s.
+This is an independently detectable descriptor defect, not an established
+cause of selected input2200/6501 or another cold-route failure. No native
+producer/caller identity or new route pass is claimed. Native320 Sonic with
+donation off is the bounded fixture configuration; other participants, widths,
+donors, natural contact, native pixels and route/rewind breadth remain open.
+The static correction adds no mutable snapshot state; existing lifetime/fresh
+family restoration coverage remains separate. Root owns combined validation,
+independent adoption review and integration.
+
+Focused green validation on the same base plus the correction:162 passed,
+0 failures/errors/skips. Actual class counts were GunNativeDispatch19,
+ShotNativeLifetime22 (including its existing fresh family replay controls),
+ShotShieldReaction12, PoweredScreenAttack9, TouchResponseManager79 and
+TouchResponseProfileMapping21. The generic genuine-deflection, elemental-immunity
+and Insta-Shield/blocker controls remain green. Final fixture assertions also
+verify Sonic, width320 and donation off. Queue wait543s; Maven execution1m24s.
+The entire frozen tracked/untracked input fingerprint matched before/after
+(`ba110c2a0e5ec6666fcffc788ce02d9f808bfc74d15253f89356efd165e8913d`,
+14,121 regular non-symlink files, Path-sorted path/content SHA256 projection).
+Only this prose result was added afterward; runtime and test bytes are unchanged.
+
+Both runs used the absolute Main `tools/testing/maven_queue.py --normal`,
+`-Dmse=off`, `test -B`, verified absolute S1/S2/S3K ROM properties, Java25,
+Lua5.4, null audio, and `JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl`
+with `EGL_PLATFORM=surfaceless`. Ambient display and JVM overrides were unset.
+The red selector was the new class alone; the green selector was exactly:
+
+```text
+-Dtest=com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboShotShieldReaction,com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboShotNativeLifetime,com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboGunNativeDispatch,com.openggf.level.objects.TestTouchResponseManager,com.openggf.level.objects.TestTouchResponseProfileMapping,com.openggf.level.objects.TestPoweredScreenAttack
+```
+
+Actual tool preflight passed. The inspected change-based plan selected3,588
+smoke classes, including all categories because the preserved TraceChaser
+checkout differs from the new base's gitlink. Focused validation is proportionate
+for this static Shot-only descriptor change; no broad or release suite was run.
+All selected report identities/failures/skips were read, and the two task-owned
+report/temp directories were consumed and removed without archives.
+
 The single focused five-class run passes110T/0F/0E/0S: VerticalFlip44,
 ClockGates15, Presentation20, GunNativeDispatch19 and JetNativeDispatch12.
 Original reports verify Java25.0.4.1, surfaceless EGL and all three original
