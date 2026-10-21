@@ -28670,3 +28670,103 @@ No second request, independent qualification pair, maintained test, broad/native
 run, runtime/POM/movie/oracle/count/window edit or expected46 adaptation follows.
 Further onward movement, MTZ/bosses, native carry/physics, timing/pixels and full
 route remain unqualified. Root owns review and subsequent scope; no push/integration.
+
+
+### MHZ Knuckles original remaining Right-tail question R11 — 2026-10-21
+
+Root's R11 basis and independent current-route source audit were read before
+preparation. The source-backed question used only the303 remaining static
+Right-only/P2neutral/A-released inputs42812..43114 of the SAME fixed43115-row
+R9 proposal. No new jump family, controller timing or changed suffix was authored.
+Native wall admission `loc_21862` and the matching Java Knuckles/actual-side-touch
+branch support asking this ordinary-input question, without establishing that
+either wall was actually selected or destroyed. The X>10784 stop is an explicit
+observation threshold beyond the two source-backed wall centres, not a runtime
+rule, wall-placement ID or fitted physics value.
+
+The new owned `feature/ai-mhz-knuckles-original-wall-tail-20261021` began at
+exactd62bd0796430a7f93026898199e13fa34712b157. All R1–R10 refs/results, supplied
+efd/config and native index703/actual322 were preserved. Current POM/runtime and
+relevant MHZ owners/capture/test/movie sources are unchanged from R10's2d1a7.
+App-owned actual thread/worktree/active run were read and agree with the literal
+Root-returned ordinal12 task/run binding; the delivery did not replace that epoch.
+The scoped deadline is16:44:49.177308Z, independent of historical R9/R10 deadlines.
+Exactly one budget was durably consumed before queue submission; none remains.
+
+The entire42812-row actually executed R10 prefix, including all R9/R8/R4/Act1
+inputs, matches the fixed proposal byte-for-byte. BEFORE boot in this same JVM,
+production InputLogAuthorTool/Bk2MovieLoader re-authored/reloaded all43115 rows.
+Every record/mask/boolean/raw payload and the finite UDLRSABC-or-dot alphabet was
+checked, including10169 JUMP0x10 rows and all-neutralP2. Fixed proposal/script
+SHA256 remain respectively
+`8759c1e71be3e339de652a5da089c08dd8c9248c9c1993022f593812ef05db35` and
+`2b01acb9a0d72d2aab216fcaa76a9735043bf58538264a1a1525ef48b2338e7e`.
+The temporary roundtrip BK2 hash was
+`918ae7506bf5088ad73360b1e6705483c9178aaad6344be75d37b5cd35c72ef6`;
+pre-boot proof text hash is
+`d052e85f7056278334602d2615b255e3d1318c2bdfe73625291fd8ff8faac60d`.
+
+All64 checkpoints42511/42634/42734 and the required original R10 endpoint42811
+matched exactly on d62bd. The latter retains10550/2417, sub59445/6956,
+velocity1308/0/ground1308, angle4, grounded/unhurt/free,1 ring/3 lives,
+onObject=false and actual rider none. World/Level/OM/P1/focus/solo-roster/LEVEL7/1,
+pending-fresh/callback-fade and control guards qualify the ordinary inlet.
+The existing public64 projection runs once after each actual step and normal
+draw; its retained row is reused for scalar/stop decisions, without another
+stateLine, terrain/provider predicate, callback or new owner API.
+
+| Input | Actual ordered public observation |
+| --- | --- |
+| 42812 | First new fixed Right-only input:10556/2418, velocity1312/129, ground1323, grounded/unhurt/free, no onObject/actual rider. |
+| 42828→42829 | X10642→10641; subsequent velocity1475/145/ground1475. Actual selected contact/receiver UNKNOWN. |
+| 42835→42836 | X10676→10673; subsequent velocity1531/150/ground1531. Actual selected contact/receiver UNKNOWN. |
+| 42854 | X10781/Y2414, velocity1532/150/ground1545; below the declared threshold. |
+| 42855 | First X>10784:10787/2415, velocity1535/151/ground1548; grounded/unhurt/free, onObject=false/actual rider none. Stop. |
+
+All44 new inputs42812..42855 remain grounded, alive/unhurt, controls free,
+LEVEL7/1, solo,1 ring/3 lives, Right-only/P2neutral with no forced input. Complete
+terminal42855 retains sub12597/8748, radii9/19, angle4, animation0/frame3,
+mapping36, camera10627/2319 and movement active. Positive Y velocity151 coexists
+with the actual air=false field; it is not an inferred airborne state. The stale
+Spikes slot25/spawn10360/2352/sub48/layout400 latch remains separate from actual
+riding, which is none throughout all44 new rows.
+
+This reaches the bounded post-wall-coordinate inlet. It does NOT identify an
+original wall contact/break writer or prove individual wall admission/destruction,
+terrain/mushroom receiver, invulnerability, native correctness, safe future
+survival, whole-act/boss/FBZ/history/rewind qualification. The two X backsteps are
+retained observations, not receiver attribution. No extra owner/predicate probe
+was added; original R5–R9 hurt attribution and R10 callback unknowns remain intact.
+
+Exactly42856 original step/draw pairs ran:42812 preserved plus44 new, leaving259
+fixed movie rows unexecuted. There was one queued command/session52144 and one
+owning observer, no retry or second policy. Main compile, private javac and the
+single cold Java session shared the current absolute Main queue wrapper command:
+`-Dmse=off compile exec:exec -Dexec.executable=/usr/bin/python3
+-Dexec.classpathScope=runtime -Dexec.args="${MHZ_DIAGNOSTIC_DIR}/r11_exec.py %classpath" -B`.
+Reported queue wait64s, Maven01:25 min and AUTHOR_START16:14:08.527992426Z to
+AUTHOR_END16:14:31.034271035Z (22.506s boot/prefix/tail) are separate intervals;
+unallocated overhead is unmeasured. Launcher/Maven/Java exited0; no original
+exception, guard failure or command-metadata error was observed. These are
+0 JUnit executable observations, skips N/A. Java25, original absolute ROM SHA1
+CFBF98C36C776677290A872547AC47C53D2761D6, normal surfaceless-EGL rendering,
+verified NullAudioBackend, Lua5.4, native320 solo Knuckles/off/cold7/0/title policy/
+null seeds and absent ambient display/JVM/Maven options were preserved.
+
+After stopping, the same JVM production-authored/reloaded all42856 executed
+records and compared every row to the fixed movie. Useful external
+`${MHZ_DIAGNOSTIC_DIR}/r11-products/executed.script` SHA256 is
+`a47d3a7afcad74fe31ab590188b504c8ca2eabf0a3c86ea2fbcf0c0f3825bee8`;
+`executed.bk2` SHA256 is
+`203fe3210c72ac56ad81c8d8cf018181ebb748a503c86afb00981d2ad5bdd39a`.
+The private adapter's R10 preimage,21 counted reversible orchestration edits,
+exact strip recovery, source/POM/environment/class hashes, literal identity,
+commands and selected complete ordered rows remain in the existing external
+compact record. R10 and all older views remain unchanged. Consumed raw logs/
+series/proofs/XML/classes/tmp and the regenerable roundtrip copy were removed
+under owned worktree/activity leases before the docs-only commit. Useful fixed
+inputs/executed prefix/private source/preimages remain external. There were no
+snapshots/restores/seeds, runtime/test/POM/maintained-data/oracle/window edits,
+native/model/broad runs, extra agents, push/integration or foreign cleanup.
+Root owns review and any further workload; no onward question is inferred.
+See the [R11 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-original-remaining-right-tail-question-r11--2026-10-21).
