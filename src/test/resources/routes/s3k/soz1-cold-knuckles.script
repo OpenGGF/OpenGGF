@@ -3,6 +3,10 @@
 # (FadeWindowRetimeTool ceil(21/2) inserts only 10 for this phase). Bonus exit: the player-frozen fade runs with live VInt, so the tool does not
 # treat it as frozen; the old return row 3559 lands at native 3581, so the held L run before it gains 11 inputs.
 # Retimed for the Level-routine title-card hold (titlecard-r2 lane, base d3fb0625e): the bonus entry card releases BONUS_STAGE at its loc_64DC hold 5 frames earlier (old locked window 3215-3321, now 102 frames) and the bonus return card 64 frames earlier (old window 3588-3712, now 61 frames), so 5 neutral inputs before the entry release (3312-3316) and the return window's first 64 inputs (3588-3651, never read while locked) are removed; the held L / R at each release keep their edge history.
+# 2026-10-21, accepted runtime bf2c7c721: keep the real Num1/Nemesis/terrain title work.
+# Ordinary controller observations release the entry title at 3328; extend its neutral span by11 so the intended playable Left span survives.
+# That entry-only trial returns at3594 and naturally releases SOZ at3694, but traversal inputs advance while the return title is locked.
+# Add39 neutral inputs inside that observed locked return phase. These are controller waits, not native clock calibration or gameplay changes.
 88 - / -
 9 B / -
 19 - / -
@@ -139,7 +143,7 @@
 6 R / -
 32 - / -
 11 B / -
-119 - / -
+130 - / -
 111 L / -
 2 - / -
 10 B / -
@@ -151,7 +155,7 @@
 13 L / -
 25 L+B / -
 45 L / -
-27 - / -
+66 - / -
 14 L / -
 5 - / -
 23 R / -

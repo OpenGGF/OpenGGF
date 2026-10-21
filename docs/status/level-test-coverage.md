@@ -227,6 +227,16 @@ both acts, and 154 focused passes without skips. Gameplay capture is blocked
 by this environment's GLSL support; inherited route/configuration and native
 whole-scene coverage gaps remain open.
 
+SOZ1 Knuckles bonus-route follow-up (2026-10-21): the
+[Act 1 matrix](../architecture/validation/levels/s3k-soz-act1.md#natural-knuckles-glowing-sphere-release-2026-10-21)
+records an independent natural `$1400` title/release/first ordinary input tick
+regression and a controller-only script/BK2 refresh on `bf2c7c721`. The entire
+unchanged `TestSozColdRouteCapture` passes nine cases without skips, preserving
+both bonus-load history resets, the three semantic bonus replay windows, all
+29 Knuckles route windows, actual boss/results and playable SOZ2. Production
+readiness workloads remain intact. Broader route products and native timing,
+pixel and whole-world parity remain open.
+
 ## Historical S&K campaign snapshot — 2026-09-28
 
 This September snapshot reconciles its dated milestones against integrated

@@ -11,6 +11,97 @@ Owning [v2 execution plan](../../plans/2026-09-15-soz-methodology-v2.md) and
 
 
 
+## Natural Knuckles Glowing Sphere release (2026-10-21)
+
+Worktree `bugfix/ai-s3k-soz-knuckles-bonus-route-20261021`, accepted runtime
+base `bf2c7c7211a7c71385e4649717ed80fa7383b0a9`. The maintained original movie
+(SHA-256 `f2d6cdccac2a5f1ca7d70c6aa8f62a8803cbb972ba66be3dc71c3b4f28f332d6`)
+reproduces the current cold-route death at zero-based input 11174,
+`($2870,$0C00)`. A temporary ordinary controller observation, using the maintained
+route's exact public boot and initial ProcessSprites consumer, observes actual
+bonus load 3215, natural bonus title release 3328, saved-origin load 3549 and return
+title release 3649. That observation has no survival assertion or original rewind
+windows; its successful diagnostic mechanism is not a route pass.
+
+The entry-only controller trial adds 11 neutral inputs before the interior Left
+block. It survives its 24,016 inputs but does not reach the destination, ending at
+`(10759,2825)` in SOZ1. Its actual return load is 3594 and natural return release
+is 3694; the traversal input block advances during that locked title phase. This
+rejects entry-only retiming as a route repair. The selected authored route adds 39
+neutral inputs inside that observed return title, preserving all original
+ordinary controller actions after release. These waits follow actual gameplay
+observations, with no production readiness, clock or physics change.
+
+The independent `TestSozKnucklesGlowingSphereTitleRelease` now covers the short
+cold portal prefix, actual Glowing Sphere `$1400` world/load generation, saved
+`$0800` origin, four native title archives in order including Num1, world-owned
+Nemesis and the physical terrain FIFO. It holds ordinary controller Left through
+natural release and observes setup-only release followed by one ordinary bonus
+tick, one real energy-trap update and input-driven Knuckles movement in the same
+loaded world. It neither requests a bonus entry nor writes mode, position,
+health, timing readiness or phase. The initial public ProcessSprites consumer
+executes its production object pass; it does not discard that pass.
+
+The source audit established no candidate-native release mismatch. Native
+`044fa46725c71187399e13f5ddb70e11d32dc024` `Obj_TitleCardInit` (62156–62201),
+`loc_62CC` (7769–7780) and `LoadLevelLoadBlock` (9737–9780) require the title
+archives, settled children, idle Nemesis and drained physical terrain work.
+`loc_64DC` (7906–7926) returns to LevelLoop before its first ordinary object
+pass. Earlier release in `c13be267f` is not a ROM timing oracle; the production
+release workloads remain intact. Controller authoring here is engine gameplay
+coverage, not native clock, pixel or whole-world parity proof.
+
+`InputLogAuthorTool` compiled and round-trip checked the maintained script into
+24,055 BK2 rows (SHA-256
+`76ee24742ef3243bc1289d17ccaef50799ba487ff03036517f7be43925738e30`).
+Removing only the added neutral rows 3312–3322 and 3614–3652 reproduces all
+24,005 original controller rows, in order. Both inserted spans are inside the
+observed locked title phases. The entry-only trial's BK2 SHA-256 is
+`f49a872e218927d99c99b8b621192b5b815c933e97c061be2d621ec0f82cd8d8`.
+The selected route independently reaches unlocked SOZ2 at input 23853 without a
+death; that authoring observation is separate from maintained route acceptance.
+The final short regression passes with zero skips (one case, 0.438 seconds).
+The temporary authoring class and its compiled class were removed after consuming
+the observations; no diagnostic source or raw archive is retained.
+
+Focused validation used Java 25.0.4.1, Lua 5.4, no display connection,
+`-Dmse=off`, `--normal`, `-Dopenggf.headless.gl=surfaceless-egl` and the absolute
+Main ROM selected through the absolute `S3K_ROM_PATH`
+(CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`).
+All tests ran on accepted base `bf2c7c721` plus these uncommitted task changes,
+in this isolated worktree and its own `target/`. Command prefix below parameterizes only machine-local paths: `OPENGGF_MAIN` is
+the Main checkout and `S3K_ROM_PATH` is that verified existing absolute ROM path.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Ds3k.rom.path=$S3K_ROM_PATH"
+```
+
+The final author/short-check command appended
+`-Dexec.mainClass=com.openggf.tools.InputLogAuthorTool`,
+`'-Dexec.args=--script src/test/resources/routes/s3k/soz1-cold-knuckles.script --out src/test/resources/routes/s3k/soz1-cold-knuckles.bk2 --game s3k'`,
+`-Dtest=TestSozKnucklesControllerAuthoring,TestSozKnucklesGlowingSphereTitleRelease`,
+`-Dsoz.authoring.output=target/soz-authoring-both-waits exec:java test -B`.
+It passed both cases without skips: one temporary authoring observation and the
+independent short regression. Maven execution was 30.857 seconds after a
+171-second queue wait; these are separate intervals.
+
+The acceptance command appended `-Dtest=TestSozColdRouteCapture test -B` to
+that prefix, selecting the **whole maintained class**. It passed **9 tests,
+0 failures, 0 errors, 0 skips**, 65.55 seconds in JUnit, 1m31s Maven execution
+after a 35-second queue wait. The existing class is unchanged: survival, actual
+golem defeat/results/seamless playable destination, both real bonus loads and
+history resets, three distinct semantic bonus replay windows and all 29 Knuckles
+traversal/destination windows remain strict. The caller's live-history arm at
+3100 and off at 3753 remain unchanged; the actual return load and released
+45-input replay fit within those original bounds. All other BK2s, character/team
+cases and viewport coverage are unchanged. Production code is unchanged, so no
+new production-domain control or broad smoke run was needed here; Root owns
+combined validation. This is bounded gameplay/rewind coverage, not a release
+suite or native timing/pixel certificate.
+
 ## Solo Knuckles cold completion (2026-09-27)
 
 Base `84b819ab3`, `feature/ai-soz-knuckles-cold`. The24,059-input
