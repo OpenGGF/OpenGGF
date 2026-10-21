@@ -4104,3 +4104,46 @@ maintained controller/assertion stay intact. The [dated R3 plan](../../plans/202
 records exact boundaries/pins/limits. Complete fixed rows and the useful adapter
 are external; raw diagnostics are consumed. Exactly two requests, no third or
 maintained-class/broad rerun. Current paired800 MTZ/Mecha/DEZ remain unqualified.
+
+
+## Wide paired fighter and pickup attribution R5 — 2026-10-21
+
+Exactly two full ordinary row0 NORMAL-DRAW projections, Main `efd605142` and
+current `605bf14de` (SSZ execution footprint a4d), retain unchanged9914 pads,
+P2neutral and Settings7/titlefalse. Each XML records9914 inputs/29742 phase rows/
+115 fields/0 skipped inputs/0 JUnit tests. All115 fields agree with all13 retained
+same-arm R3 rows, including the eight R4 public guards and endpoints **46/48 rings**.
+Available R4 touch/bounce primitive tuples also agree; dynamic Java identities
+are never equated across JVMs. Prior raw series are not reconstructed.
+
+The first measured layout63 **fighter motion-field** difference is constructor6551:
+Main Xvelocity−128/current0, both FIGHTER/group1. Main immediately performs110
+original hover moves with `-128 >> 8 = -1`, X2624→2514 and zero swing/yvelocity.
+Current waits, initializes6596 with max/yvelocity256 and acceleration8, then performs
+65 original hover moves with Xvelocity0 and full16.16 Y; X stays2624. Original
+normal allocation returns and constructor links bind **that body→actual Gun→actual
+Shot** within each JVM. At6660 the Gun's original parentX reads2514/2624, delayedY2520
+in both; the returned shot origins are2531/2641,Y2512. Current's stored charging
+parent is that same raw Gun. Native fighter/gun initialization and motion sources
+support current's changed operations; this does not certify48 as a native oracle.
+
+Layout23's missing bounce is resolved further: current's same raw fighter enters
+initialization7006, writes destroyed=false→true and returns GONE, without a captured
+attack callback. Source maps this outcome to the fighter pair-gate early-delete
+branch; its underlying group2 flag/registry operand was not retained. Main instead
+has P1's original ENEMY attack/callback/destruction and856→−856 bounce at7164.
+The current absence is an initialization retirement, with no measured prior P2 kill.
+
+Original placed-ring overlap and `addRings(1)` normal-return carriers record46/48
+unique source-index awards. Current's extra **indices5 at7172 and3 at7178 are P1
+collections**; shared index1 is Main P2 at7220/current P1 at7184. Those two extra
+ordinary awards account numerically for+2; `ringAcquired` is unused as an oracle.
+No attracted entry is visible in either full projection. Native collector addresses,
+full-route correctness and why the group2 gate rejects remain unqualified.
+
+Expected46, every maintained movie/assertion and runtime stay unchanged. All
+temporary source is restored whole byte exact; its compiled classes and inspected
+raw output are consumed. The [dated R5 plan](../../plans/2026-10-13-s3k-playable-completion.md#widepaired800-fighter-gun-shot-and-pickup-attribution-r5-2026-10-21)
+records native owners, strong bindings, source verdict and limits. No third request,
+maintained-class/broad/native run, oracle adaptation or current paired800
+MTZ/Mecha/DEZ certification follows this attribution; Main complete remains unknown.
