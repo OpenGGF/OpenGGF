@@ -29349,3 +29349,29 @@ Owned raw logs/series/checkpoints/decisions/classes/tmp/extraction/validation co
 21:24:49.177308Z workload/no boot with<120s and21:34:49Z cleanup limits were respected. All prior histories/supplied refs/native actual322/index703/config and maintained runtime/POM/tests/movies/oracles/counts/windows remain preserved.
 Actual damage receiver/terrain contact/mutation/current actor/protection/invulnerability/effectivefluid/reverse/native equivalence remain UNKNOWN; static source geometry and earlier R18 hurt do not establish current cause, clearance or a physics omission.
 No safe onward/full-act/boss/FBZ/history/rewind qualification or maintained adaptation follows. STOP for Root actual source/data review, no push/integration/automatic next scope. See the [R21 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-upper-ledge-onward-ordinary-question-r21--2026-10-21).
+
+
+## R22 moving lower-ground jump stops on hurt — 2026-10-21
+
+ONE cold ordinary CLI at exact `b724d71d829073b36e32b29562ce6cbe1dc282c2`, branch `feature/ai-ssz-lower-ground-jump-ordinary-r22-20261021`;
+unchanged [R21 setup](#r21-first-moving-lower-ground-admission--2026-10-21), all15129 actual pads and exact15128 moving-ground inlet preserved. All63 unique available R checkpoints and all retained Support/Family facts/local raw-family joins match; missing historical raw rows remain unretained.
+Sole finite policy: ONE fresh Right+A15129/P2Up, then SAME heldRight+A<=120 further; stop FIRST landing/support/safety/X<4754/X>=4880/airY>=1600/cap. No preliminary brake/wait, launch horizontal-acceleration requirement, second edge, release/repress or later settling/onward.
+
+| Input | Actual once-read public boundary |
+| --- | --- |
+| 15128 | Exact inlet P1(4765,1580),VX864/VY0/G864,ground/jumpingfalse/free/riderNULL,62rings/3lives/unhurt. |
+| 15129 | Fresh logicalA admitted: (4765,1585),VX864/VY-1664/G864,air+jumping/free/riderNULL; no launch X-acceleration predicate. |
+| 15132 / 15159 | (4773,1567),VX0/VY-1496/G0; later(4789,1486),VX91/VY16/G-376; stillair/jumping/unhurt/riderNULL. No writer/contact inferred. |
+| 15184 | (4796,1553),VX288/VY1416/G72,air+jumping/free/riderNULL,62rings. |
+| 15185 | FIRST hurt: (4797,1552),VX-512/VY-1024/G0,airtrue/jumpingfalse; both public ring counts62→0, lives3/no death. STOP. |
+
+Result `TERMINAL hurt/death/life`:57 new/15186 total, exactlyONE newA edge, no admitted post-nominal-spike free-ground inlet or later input. The result label includes death/life guards; neither occurred.
+Terminal actual manager rider is managed/live `Sonic3kSpikeObjectInstance`; its original public spawn descriptor is layout146/id8/sub0,(4800,1588),rawY1588/renderFlags0,respawnTrackedfalse. Family relation is OTHER_RAW_RIDER; this is rider metadata, not a captured damage callback/receiver or native alias.
+P2 remains(3950,1264),V0/ground/free/NORMAL/manual/flag0fuel0/contextNONE/targetfalse/unhurt; bound world/managers/nativepair/roster/focus/LEVEL/no pending/fade/reverse remain intact. Public P1 airtrue on every new row; no landing admitted before terminal.
+Original observer/input/gate/support/family/context helpers stay literal unchanged; PRE caches previous observation, no new map join/provider/getter/predicate/sensor/private query. All57 complete new observations are retained compactly as full constant/varying-field decomposition externally.
+Same-JVM preboot finite-pad production-author/loader positiveJUMP0x10/fullbool/mask/payload proof and every15186-row roundtrip pass; independent complete script/ZIP payload matches acceptedR21 plus ELEVEN entire older files, all57 new payloadsRight+A/P2Up/noABC, edge15129 only.
+Current absolute Main queue invocation shape `--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl compile exec:exec -B`, Java25 source-mode `MovingLowerGroundJumpContinuation.java`; unchanged R21 verified absolute ROMs/EGL/nullAL/source-qualified NullAudio/Lua/profile/unsets. Exact absolute argv/environment/IDs/pins remain in own R22 registry.
+CLI/Java/launcher exit0, **0 JUnit/skips N/A**, no Surefire/XML or original exception/error; Maven classes up to date. Queue613s/Maven16.522s/launcher630.090s overlap; Engine/tail-only UNKNOWN. Full288539-byte457-line stream and all original new facts/proofs read; inherited JOMLUnsafe/resource-encoding/unmeasureds3k-kos-v1 estimate warnings remain limits.
+App fingerprint unchanged `8e8ccc9304a9acd7c3738d23c538d3278d92ac5683c6dd44f0eae7cbc01ae756`; adapterSHA256 `95405b34be4b30aa0afcd22b1b3b2af890fde51479a1ee1a50739094e1e1657a`, executedBK2 `0b7ec5dba024388eb5ad409766603eb155ba9722a5375dc9104b553f98c4d449`.
+Useful source/whole literal preimage+inverse/design/exact inputs/all57 compact facts/one inspected normalPNG remain external. Drawn HUD still62 versus postdraw public0 is retained as a phase/receiver UNKNOWN, not a pixel/native proof. Owned raw namespace/tmp/extraction9files consumed under leases, no helperclasses; priorrefs/nativeactual322/index703/config preserved.
+Private rollingJump/headroom/protection/hazard-contact operands, terrain freshness, damage receiver, physics/native correctness and useful onward route remain UNKNOWN; no runtime omission proved. Expected46/runtime/POM/maintained tests/movies/counts/windows/oracles unchanged; no retry/extra workload/push/integration; STOP Root review.
