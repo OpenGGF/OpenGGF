@@ -388,6 +388,14 @@ completion record for commands, commit limits and unexecuted obligations.
 
 ## Initial registry inventory
 
+The [real configured frontend inlet control](../architecture/validation/levels/s3k-aiz1-sonic.md#configured-frontend-backend-retention--2026-10-21)
+now passes with its supplied backend retained through real-ROM title, DataSelect,
+fresh AIZ and the first ordinary input/object passes. The unchanged control covers
+one NTSC/native320/donor-off/Sonic+CPU Tails/intros-on configuration. All 138 affected
+cases pass without errors/skips; historical red evidence remains in the AIZ1
+matrix. Native reset/clocks, eleven-job continuity, whole-route/configuration
+breadth and rewind obligations remain open.
+
 Seeded by source inspection at `5a3cb848a8d45b7bf236fc5ee8ca30cc8af1a33e`.
 The [initial source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md)
 now covers 26 zones / 55 gameplay acts for estimation, with explicit delivered versus
