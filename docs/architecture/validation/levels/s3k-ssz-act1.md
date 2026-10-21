@@ -4497,3 +4497,13 @@ FIRST actual original parent rider15022 is managed/live atP1(4409,1099),V0/groun
 Exactly79 new/15024 total, ONE newA edge; both unhurt/live,62rings/3lives. P2Up/ground/manual/NORMAL/flag0fuel0 and actual bound world/pair/focus/managers/LEVEL remain intact.
 Raw original placement134/post.child/rider joins are local to this JVM; no class/XY/native inference. Same-JVM finite-pad/all-row and independent script/ZIP/EIGHT-ancestor proofs agree; **0 JUnit/skips N/A**.
 Source/maintained inputs/expected46 unchanged. No longer parent hold/release/onward/native/route qualification; private episode/contact and stored-sensor freshness UNKNOWN. [Facts, hashes, command, limits and timing](../../plans/2026-10-13-s3k-playable-completion.md#r18-one-vertical-release-admits-the-original-parent-post--2026-10-21).
+
+
+## R19 parent release reaches the first missed bound — 2026-10-21
+
+At exact `0c2038fd7`, one cold ordinary CLI matches all15024 accepted pads and52 unique available original checkpoints, including SIX retained R18 Support/Family facts and actual local raw parent/child joins.
+ONE Right+A15024 releases the parent at4410/1095,VX0/VY-1664/air+jumping/control clear; sameRight+A/P2Up held throughout, no second edge/alternative.
+After77 new/15101 total,15099 is4629/1214,VX1536/VY2536;15100 is4635/1224,VX1536/VY2592,stillair/free/riderNULL: FIRST airY>=1216 terminal, `FIRST_RECEIVING_BOX_MISSED`.
+No postrelease rider/free-grounded receiving inlet observed; conditional original143 map join never executes (0queries), cloud/contact/terrain/native/cause UNKNOWN. Both62rings/3lives/unhurt; P2ground/free/NORMAL/manual/flag0fuel0 and bound world/pair/focus/managers/LEVEL intact.
+Same-JVM finite-pad/all15101-row production proofs and independent script/ZIP/NINE-original-file proofs agree; **0 JUnit/skips N/A**, failed gameplay question rather than passing route coverage.
+Expected46/runtime/POM/maintained data unchanged; no usable admitted onward inlet or runtime omission proved. [Exact facts, limits, command, hashes and timing](../../plans/2026-10-13-s3k-playable-completion.md#r19-parent-release-misses-the-declared-receiving-bound--2026-10-21).

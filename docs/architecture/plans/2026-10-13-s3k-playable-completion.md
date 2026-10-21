@@ -29158,3 +29158,29 @@ Queue356s/Maven16.513s/launcher373.581s overlap; Engine/tail-only UNKNOWN. Entir
 App fingerprint `8e8ccc9304a9acd7c3738d23c538d3278d92ac5683c6dd44f0eae7cbc01ae756` unchanged; private adapter SHA256 `f76c22e3b2d55b86f2376ab83f716fa715f48ad874a016e747da8e0065d56966`, executedBK2 `71784757017ebf6408da9447c10c936312dc0f45a968b50ce5ad9ddd03936ed4`.
 Useful specific source/literal preimages/design/exact inputs/compact FIRST_PARENT and one normalPNG remain external; exact command/environment/ROM/native/config/IDs in own R18 registry. Raw namespace/tmp/extraction consumed under leases; no helper classes persist.
 Stored-sensor freshness/private held/angle/radius/episode/cooldown/contact, non-rider child liveness, original cause/native/longer parent hold/release/onward remain UNKNOWN. No runtime/POM/test/maintained input/window/count/oracle/expected46 change, retry or push/integration; STOP Root review.
+
+
+## R19 parent release misses the declared receiving bound — 2026-10-21
+
+ONE cold ordinary CLI at exact `0c2038fd74b405b91a0d76ed3b37c4ff6b925a7a`, branch `feature/ai-ssz-parent-receiving-ordinary-r19-20261021`;
+unchanged [R18 setup](#r18-one-vertical-release-admits-the-original-parent-post--2026-10-21), full15024 accepted pads and52 unique original available-field gates match.
+Those52 are47 old plus14971/14972/15002/15022/15023;14944 is already old. SIX retained R18 Support/Family facts including14944 also match, with actual same-session raw parent/child/map joins; no absent79 raw state rows reconstructed.
+Sole policy: ONE freshRight+A/P2Up-noABC release, then SAME Right+A held<=180 further inputs; stop first original143 cloud admission/free-ground receiving box or safety/support/bound failure. No second edge, release, brake, settle or alternative.
+
+| Input | Actual once-read public boundary |
+| --- | --- |
+| 15023 | Full parent inlet matches: P1(4410,1100),V0/ground/control+CPUallowance/movement suppression, SAME managed/live original parent rider. |
+| 15024 | Fresh logicalA, P1(4410,1095),VX0/VY-1664/G0,air+jumping/control clear, old parent rider released. |
+| 15099 | P1(4629,1214),VX1536/VY2536/G0,air+jumping/free, riderNULL. |
+| 15100 | P1(4635,1224),VX1536/VY2592/G0,air+jumping/free/riderNULL; FIRST airY>=1216 bound crossed, STOP. |
+
+Result `FIRST_RECEIVING_BOX_MISSED`:77 new/15101 total, oneA edge15024; all77 new rows remain airborne with no actual rider. No cloud or free-grounded receiving inlet reached; endpoint is not a usable admitted onward inlet.
+Both unhurt/live,62rings/3lives; P2 stays(3950,1264),V0/ground/free/NORMAL/manual/flag0fuel0;contextNONE/targetfalse and bound world/managers/nativepair/roster/focus/LEVEL/no pending/fade/reverse remain intact.
+Original143 descriptor fields are selected/validated in the SAME original spawn iteration, aliasing layoutIndex once. Its conditional one-time map join never executes (0queries): no actual nonoriginal rider occurs. Cloud instance/liveness/currentY/phase/contact remain UNKNOWN.
+Original observer/input/support/family/boundary helper bodies remain literal R18; only finite orchestration, comparison-only retained facts and pure Right+A pad gate change. PRE reuses cached previous observation; all77 complete PRE/POST pairs checked.
+Same-JVM preboot neutral/A-only/Right+A production-author/loader fullbool/mask/payload/JUMP0x10 proof; all15101 actual rows roundtrip. Independent whole script/ZIPpayload and NINE original files15024/14945R17/14945R15/14944/14853/14618/14442/14414/9914 agree; all77 new pads exactlyRight+A/P2Up.
+Current absolute Main queue `--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl compile exec:exec -B`, Java25 source-mode `ParentReceivingContinuation.java`, unchanged verified R18 ROM/EGL/nullAL/Lua/profile/unsets; CLI/Java/launcher exit0, **0 JUnit/skips N/A**, no Surefire/XML or passing gameplay claim.
+Queue0s/Maven17.503s/launcher18.260s overlap; Engine/tail-only UNKNOWN. Entire328351-byte465-line original stream/new rows/proofs/metadata/errors read; JOMLUnsafe/resource-encoding/unmeasureds3k-kos-v1 warnings remain limits.
+App fingerprint remains `8e8ccc9304a9acd7c3738d23c538d3278d92ac5683c6dd44f0eae7cbc01ae756`; adapterSHA256 `7d8db7f436914943b9e08945fbd8bac1ef54bf0e9d12604eac350fd93b67b624`, executedBK2 `d925d46a5f4fb24d0efb0263c23db2d2cca47f04219671a08d47295f1013fe49`.
+Useful source/literal preimage/design/exact inputs/compact FIRST_RECEIVING and one normalPNG remain external; exact command/env/ROM/native/config/IDs in own R19 registry. Owned raw namespace/tmp/extraction consumed under leases; no helper classes persist.
+No runtime omission/native/physics/terrain receiver/cause or onward qualification established. Private phase/countdown/contact and stored-sensor freshness remain UNKNOWN. No runtime/POM/maintained test/movie/window/count/oracle/expected46 change, retry or push/integration; STOP Root review.
