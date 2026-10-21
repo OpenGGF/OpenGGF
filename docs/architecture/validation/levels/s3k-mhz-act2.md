@@ -974,3 +974,15 @@ Exactly43042 normal step/draw pairs ran. Same-JVM preboot/post-stop production a
 Session96970 exited0,0 JUnit/skips N/A:queue324s/Maven01:27/AUTHOR25.164s including product proof; engine-only/tail-only unmeasured, no original/metadata exception.
 The [R17 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-up-only-activity-guard-continuation-r17--2026-10-21) pins source/inputs/proofs/command/19:34 workload/19:44 cleanup; all owned raw outputs/classes/tmp/validation copies were consumed under leases, target absent.
 Useful actual inputs/private source/preimage/all117 ordered rows/compact facts remain external; earlier refs/native/config and maintained runtime/data/oracles/windows are preserved. Local docs only; Root reviews before any next workload, no push/integration.
+
+### Knuckles ledge approach/jump-glide ordinary question R18 — 2026-10-21
+
+At exactfb6d4e193, all43042 R17 prefix inputs and191 unique complete64 checkpoints matched; [R17 setup](#knuckles-up-only-activity-guard-continuation-r17--2026-10-21) and actual src/POM remain unchanged.
+The single policy declared Right to cached normalground/11024..11039, then one jump/release/repress/glide question. It stopped firsthurt43094 after53 new/43095 total normal step/draw pairs, all newRight/P2neutral; no A/jump/glide ran.
+43093 was grounded/unhurt10947/2226,VX684/VY67/G690,1 ring/3 lives;43094 was hurt/air10950/2226,VX-512/VY-1024/G0,0 rings/3 lives/no death,flag0/anim26/map7.
+All53 actualrider fields remainnone/onObjectfalse with stale Spikes separate. Static Dragonfly proximity or knockback is not actual hurt attribution; receiver/native/fluid/reverse/invulnerability remain UNKNOWN.
+All inlet and first52 new pending/fade/control/context/rider/safety guards passed. Terminal context/life/death passed before hurt stopped; later pending/fade branch was not evaluated or re-probed. No safe onward or jump/glide feasibility claim.
+Same-JVM preboot/post-stop production author/loader and independent script/BK2 entire-prefix/all-row/payload/P2/JUMP0x10 proofs passed; all53 complete new rows/errors/proofs/metadata were read, with no retry.
+Session77958 exited0,0 JUnit/skips N/A:queue886s/Maven01:25/AUTHOR23.941s including product proof; engine-only/tail-only unmeasured, no original/metadata exception.
+The [R18 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-ledge-approachjump-glide-ordinary-question-r18--2026-10-21) pins source/policy/products/command/19:54 workload/20:04 cleanup; owned raw outputs/classes/tmp/validation copies were consumed under leases, target absent.
+Useful exact inputs/private source/preimages/all53 ordered rows/compact facts remain external. Prior refs/native/config/maintained runtime/data/oracles/windows are preserved; Root reviews, no push/integration/automatic next workload.
