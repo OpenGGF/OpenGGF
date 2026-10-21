@@ -23,6 +23,50 @@ The initial native/default binding covers all three solo mains at 320; the finit
 | ROUTE: representative completion and compatibility axes | Authentic entry→mandatory mechanics→boss/results→released next state | Complete character-route composition, every preset/donor axis and applicable team-shape traversals remain open; short entry is not route certification. |
 | ORACLE: timing-sensitive native behavior | Existing CNZ trace bindings and [frontier log](../../../status/trace-frontier-log.md); no new strict trace run in this slice. | Preserve each owning strict-ledger result/source. Comparison rows do not supply gameplay; no strict trace or conformance sweep was run here. |
 
+## Native P1 vertical-bound operand — 2026-10-21
+
+Native `CNZ2_ScreenEvent` (`sonic3k.asm:107927..107943`, reference commit
+`044fa46725c71187399e13f5ddb70e11d32dc024`, blob
+`0f10a373ff0e3d5c0033ed7d13c678bcb927c7b0`) reads unsigned
+`Player_1+x_pos`. Below `$0940` it writes minY `$0580`; `$0940..$45FF`
+writes zero; `$4600..$FFFF` leaves the existing bound untouched. The runtime
+Y-start helper resolves the registered main playable, as adjacent CNZ2 P1
+admission/control owners do. Its null guard, word mask, thresholds and
+conditional bound write are preserved. Camera targeting remains independent.
+
+`TestS3kCnz2KnucklesAdmissionControls#act2YStartUsesNativePrimaryWithContradictoryRegisteredSidekickFocus`
+declares a native 320×224 Knuckles/Tails component inlet after real initial
+Player2 setup. It selects registered P2 through `ObjectServices.camera()` and
+calls the ordinary public `events.update(1, 0)`, without a private helper or
+event-phase seed. It asserts the bound, unchanged main/P2 identities and
+coordinates, retained P2 focus, and no late capsule/teleporter admission.
+
+| P1 X | Focused P2 X | Initial minY | Native minY |
+| --- | --- | --- | --- |
+| `$093F` | `$0940` | `$0000` | `$0580` |
+| `$0940` | `$093F` | `$0580` | `$0000` |
+| `$4600` | `$093F` | `$0123` | `$0123` |
+| `$45FF` | `$4600` | `$0580` | `$0000` |
+| `$8000` | `$093F` | `$0123` | `$0123` |
+| `$FFFF` | `$0940` | `$0123` | `$0123` |
+
+The existing late-admission P2-focus control has both actors beyond `$4600`
+and cannot distinguish this earlier operand. The existing scroll-band control
+now registers its main sprite instead of treating an unregistered focus as P1.
+RED on the original runtime produced6 expected minY failures/0 errors/0 skips.
+GREEN on the final source passed81 cases across8 selected classes, including all
+six rows, the existing CNZ controls and five mandatory S3K classes;0 failures,
+errors or skips. Exact commands, source hashes, environment and inspection limits
+are recorded in the [dated plan](../../plans/2026-10-13-s3k-playable-completion.md#cnz2-native-p1-vertical-bound-operand--2026-10-21).
+
+This is declared public component behavior. The existing 0.7 candidate API
+already exports `Camera.setFocusedSprite`, `ObjectServices.camera` and the
+native-P2 query; no API surface or version changes. No stock configuration
+changing focus away from P1 was established. Cold-route impact, creator callback
+transactions/fault handling, arbitrary-focus rewind, native pixels/timing and
+whole-act/product qualification remain unproven. Inherited route, presentation
+and rewind obligations above are unchanged.
+
 ## Qualification — 2026-10-14
 
 Base/runtime lineage: `5b2ff8e78`; branch tip before this slice `390ebd765`, plus this commit’s explicit native-scripted art owner and test. Worktree `.worktrees/ai-s3k-parity-hpz`, Java 25.0.4.1, all three original ROMs by absolute path, `env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null`.

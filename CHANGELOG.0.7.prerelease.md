@@ -243,6 +243,8 @@ Unreleased. The earlier development themes remain in
   Carnival Night's miniboss stays dormant until the arena camera gate and native
   wait release it, including at wide viewports. Its defeated top releases standing
   riders before deletion, preserving their status and the rewindable encounter.
+  Act 2's vertical camera boundary follows the primary player even when a custom
+  component directs the camera toward a sidekick.
   After Knuckles' Act 2 capsule results, control returns to him and the camera
   opens gradually toward the teleporter lane; a full object pool leaves the
   handoff pending until allocation succeeds. The teleporter uses the native

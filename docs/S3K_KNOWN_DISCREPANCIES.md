@@ -13,6 +13,13 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 submodule changes recorder ownership, not Sonic 3 & Knuckles runtime behaviour.
 No S3K discrepancy was added or reclassified by the cutover.
 
+**CNZ2 primary-player operand (2026-10-21, local candidate):** the early
+vertical-bound gate follows native unsigned `Player_1+x_pos`, independently
+of an exported camera-target change. The [component matrix](architecture/validation/levels/s3k-cnz-act2.md#native-p1-vertical-bound-operand--2026-10-21)
+records the contradictory registered-P2 controls and qualification limits.
+This restores ROM semantics without adding an accepted deviation or changing
+the 0.7 candidate API. No stock cold-route impact is established.
+
 **AIZ handoff prerequisite (2026-10-12, candidate):** the runtime performance
 qualification repairs shipped-ROM boss/results/button/bridge ownership without
 adding an intentional deviation. The complete original AIZ → HCZ control passes;
