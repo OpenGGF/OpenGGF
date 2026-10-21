@@ -901,3 +901,14 @@ private preimages/compact facts remain external; raw diagnostics/classes/tmp and
 the roundtrip validation copy were consumed under owned leases before commit.
 No retry, extra policy/native/broad/maintained-route run, push, integration or
 foreign cleanup followed. Root owns any later continuation or adaptation.
+
+### Knuckles complete-fixed-tail question R12 — 2026-10-21
+
+At exacta6f2116d, the unchanged [R11 setup](#knuckles-original-remaining-right-tail-question-r11--2026-10-21) replayed all42856 preserved inputs; all five64-field checkpoints matched.
+Same-JVM production author/loader proved every fixed43115 row/finite pad/mask/boolean/payload/JUMP0x10 before boot and every actually executed row after stopping.
+The sole259-row fixed Right/P2neutral tail stopped on first new hurt43006 after151 new/43007 total step/draw pairs;108 fixed rows remain unexecuted.
+43005 was grounded/unhurt10869/2412,1 ring/3 lives;43006 is airborne/hurt10869/2412, velocity512/-1024/ground0, rings0/lives3/no death.
+No rider/control handoff preceded the stop; actual rider stayed none, distinct from the stale Spikes latch. Hurt receiver/invulnerability/native cause remain UNKNOWN.
+Session99681 exited0,0 JUnit/skips N/A:queue1s/Maven01:24/boot-prefix-tail22.093s. No retry, changed policy, maintained oracle/data/window edit or full-route qualification.
+The [R12 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-complete-fixed-tail-question-r12--2026-10-21) pins source/proofs/products/command, first facts and16:54 scope; raw diagnostics/classes/tmp were consumed.
+Useful actual inputs/private preimages/compact facts remain external; earlier histories stay immutable. Root owns any later workload; no push/integration occurred.
