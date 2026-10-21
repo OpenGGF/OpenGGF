@@ -13,6 +13,7 @@ import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.mutation.MutableLevelMutationSurface;
 import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.AbstractLevel;
@@ -209,6 +210,7 @@ class TestZoneLayoutMutationPipeline {
     @Test
     void levelFrameStepFlushesQueuedMutationsAfterCameraScrollAndEventsBeforeBoundary() {
         GameModule module = mock(GameModule.class);
+        when(module.getRules()).thenReturn(GameRules.SONIC_2);
         when(module.createRuntimeArtCoordinator(
                 org.mockito.ArgumentMatchers.any())).thenReturn(RuntimeArtCoordinator.NONE);
         LevelEventProvider levelEvents = mock(LevelEventProvider.class);

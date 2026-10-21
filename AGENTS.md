@@ -451,6 +451,7 @@ never preserved.
 - PLC/art queues: `plc-system`, plus `s3k-plc-system` for S3K.
 - Zone work: relevant S3K zone/events/parallax/animated-tiles/palette skill;
   whole-zone delivery: `s3k-zone-bring-up`.
+- Offscreen engine rendering for tests, captures and tools: `headless-rendering`.
 - Headless tests: [headless testing](docs/guide/contributing/headless-testing.md).
 - Current gaps: [general](docs/status/known-discrepancies.md),
   [S3K](docs/S3K_KNOWN_DISCREPANCIES.md). Configuration: [CONFIGURATION.md](CONFIGURATION.md).

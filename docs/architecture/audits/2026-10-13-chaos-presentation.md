@@ -187,3 +187,90 @@ native pack owner; the final combined route matrix belongs to the coordinator.
 Retained sprite/HUD packets that predate an activation receive producer labels
 at the next native publication. No extra native execution or SAT rebuild is
 performed merely to start a picture effect.
+
+## CI pixel-oracle follow-up, 2026-10-21
+
+The develop CI run [39594989371](https://github.com/OpenGGF/OpenGGF/actions/runs/39594989371)
+at `bd042f08094155a5b7da76e552f25d43d86d98d7` failed the exact SQUASH framebuffer
+comparison at `(19,36)`, with expected 0 and actual 255. Explicit surfaceless EGL
+passed locally, while Mesa software rendering through the test's GLFW null-platform
+EGL path reproduced the CI result. The temporary diagnostic used the original
+strength 120 and projection offsets of -1/16, zero, and +1/16 pixel. At width 320
+without flips, the first two offsets disagreed at exactly ten pixels, x=19..28 on
+row 36; the positive offset had no mismatches. SCALE and ROTATE matched at all
+three offsets. The renderer reported llvmpipe, LLVM 23.1.1, Mesa 26.2.4, and eight
+subpixel bits.
+
+The clipped quad's bottom edge was y=36.5. The CPU inverse-floor oracle excluded
+that sample-center edge, whose ownership OpenGL leaves implementation-defined.
+This does not justify a renderer epsilon or relaxed RGB assertions. A proposed
+strength 125 was rejected by the existing SQUASH bounds of 100..120 during the
+diagnostic; those bounds remain unchanged. The corrected fixture uses strength
+115, whose bottom edge is approximately y=36.609. It also independently checks
+the native four-color tile, clipped rows, black surrounding pixels, and both
+flips at widths 320 and 640. Every original transform and trail assertion remains.
+All diagnostic offsets, aggregation, and logging were removed.
+
+The experiment ran from `.worktrees/ai-develop-ci-smoke-fix-20261021` on the pinned
+base above, with this queued command:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LIBGL_ALWAYS_SOFTWARE=1 \
+  __EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/50_mesa.json \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestPresentationSpritePixels#admittedRowsFlipsWholeBodyTransformsAndDistinctFrozenTrailVersionsRenderAt320And640' test -B
+```
+
+The diagnostic exited 1 with no skips because the out-of-range candidate stopped
+the experiment after reproducing the original mismatch. Its purpose was causal
+evidence, not validation of the corrected fixture. Final validation is recorded
+below.
+
+### Corrected-fixture validation
+
+The final source in the same worktree, based on `bd042f080`, passed the following
+affected-class command through CI's GLFW null-platform EGL path. It reported
+37 tests, zero failures, zero errors, and two skips. The skipped methods were
+`savedExpansionReuploadsResidentPaletteAndChangesActualFramebufferPixels` and
+`paletteBackdropClearUsesTheDisplayedProfileAndExpansion`, which explicitly
+require the surfaceless property. The original failing transform method executed
+and passed. Queue waiting was 1,143 seconds; Maven execution was 27.367 seconds.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LIBGL_ALWAYS_SOFTWARE=1 \
+  __EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/50_mesa.json \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestTitleInputOwnership,TestOrdinaryTitleScreenCommandEvidence,TestZoneLayoutMutationPipeline,TestLevelManagerModPatternWindows,TestAizMinibossBarrelShotChild,TestOwnedNativeAttackLifetime,TestPresentationSpritePixels' test -B
+```
+
+The explicit surfaceless and neighbor command below then passed 123 tests with
+zero failures, errors, or skips. All three pixel methods executed. This includes
+both `TestSonic3kLevelLoading` classes, AIZ1 skip, bootstrap, decoding, native shot
+and flare graphs, title layout, white-fade binding, transform geometry, and private
+graphics-bank ownership. Queue waiting was 1,100 seconds; Maven execution was
+32.124 seconds. The two queue-wait intervals overlap and must not be added as
+delivery elapsed time. Root ROM hashes matched the repository's canonical S1,
+S2, and S3K identities; both injected animation slices also matched the S3K ROM
+byte-for-byte.
+
+Set `OPENGGF_ROM_ROOT` to the existing checkout containing those verified root
+ROMs before repeating this command.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 LIBGL_ALWAYS_SOFTWARE=1 \
+  __EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/50_mesa.json \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestPresentationSpritePixels,TestSpritePictureTransform,TestPresentationGraphicsAccess,TestMasterTitleScreenLayout,TestWhiteFadePresentationBinding,TestAizMinibossFallingShotNativeGraph,TestAizMinibossFlareNativeGraph,TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_ROOT/s1.gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_ROOT/s2.gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_ROOT/s3k.gen" test -B
+```
+
+The change-based plan selected 2,638 smoke classes and guards before the prose
+updates. Focused affected and neighbor checks replaced that selection because
+only seven test fixtures changed; runtime, build, selection policy, and workflows
+were untouched. This is bounded fixture qualification, not a full smoke, full
+suite, trace replay, or route-certification result. Independent review found no
+correctness blockers. The initial available-title repair exposed a missing mock
+launch profile and aspect setting, which were supplied before these final runs.

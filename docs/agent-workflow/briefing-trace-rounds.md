@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+An inverse-affine pixel oracle can disagree with valid GPU edge ownership
+(2026-10-21, sprite presentation smoke). A clipped quad whose edge passes through
+a fragment center has an implementation-defined ownership rule, as explained in
+[ARB_clip_control issue 9](https://registry.khronos.org/OpenGL/extensions/ARB/ARB_clip_control.txt).
+The SQUASH fixture's 120-percent stretch put its bottom edge at y=36.5; CPU
+inverse-floor sampling excluded row 36 while CI rendered it. Keep exact color
+comparisons away from these ties, and independently check native clipping and
+flips. A local GPU pass does not establish portable ownership of a tied edge.
+
 An in-process network bot is not a socket-capacity measurement (2026-10-21,
 racing stress). The old load report called its largest emitted packet "queued
 bytes", although its sink discarded packets immediately. It also timed only hub

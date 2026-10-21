@@ -135,9 +135,10 @@ class TestTitleInputOwnership {
         }
 
         void enterActions() {
-            input.handleKeyEvent(GLFW_KEY_ENTER, GLFW_PRESS);
+            input.handleKeyEvent(GLFW_KEY_DOWN, GLFW_PRESS);
             title.update(input);
-            release(GLFW_KEY_ENTER);
+            release(GLFW_KEY_DOWN);
+            assertEquals(TitleHubNavigation.Zone.ACTIONS, title.hubZoneForTest());
         }
 
         void release(int key) {
