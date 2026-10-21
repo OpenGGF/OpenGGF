@@ -9,6 +9,7 @@ import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 
 import java.io.IOException;
 
@@ -20,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -172,7 +174,8 @@ class TestLevelSeamlessTransitionExecutor {
         ArgumentCaptor<SeamlessLevelTransitionRequest> capture =
                 ArgumentCaptor.forClass(SeamlessLevelTransitionRequest.class);
         verify(levelManager).executeActTransition(capture.capture());
-        verify(levelManager).consumeActTransitionRewindBoundaryDuringFrame();
+        verify(levelManager, never()).consumeActTransitionRewindBoundaryDuringFrame();
+        verify(levelManager, never()).consumeActTransitionExecutedDuringFrame();
         assertEquals(SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL,
                 capture.getValue().type());
         assertEquals(5, capture.getValue().targetZone());
@@ -195,7 +198,8 @@ class TestLevelSeamlessTransitionExecutor {
         executor.execute(request);
 
         verify(levelManager).executeActTransition(request);
-        verify(levelManager).consumeActTransitionRewindBoundaryDuringFrame();
+        verify(levelManager, never()).consumeActTransitionRewindBoundaryDuringFrame();
+        verify(levelManager, never()).consumeActTransitionExecutedDuringFrame();
         verify(levelManager).advanceGlobalOscillationAtLevelLoopTail();
         verify(transitions).setLevelInactiveForTransition(false);
     }
@@ -257,4 +261,81 @@ class TestLevelSeamlessTransitionExecutor {
         assertFalse(java.util.Arrays.equals(
                 oscillationBeforeReload, OscillationManager.valuesForTest()));
     }
+
+    @Test
+    void synchronousReloadKeepsClockTailAndRewindBoundaryWithTheScreenEventOwner()
+            throws Exception {
+        var request = SeamlessLevelTransitionRequest.builder(
+                SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
+                .targetZoneAct(6, 0).build();
+        levelManager.currentZone = 5;
+        levelManager.currentAct = 1;
+
+        executor.executeSynchronousScreenEvent(request);
+
+        InOrder order = inOrder(transitions, levelManager);
+        order.verify(transitions).beginSynchronousScreenEventTransition(5, 1, request);
+        order.verify(levelManager).executeActTransition(request);
+        order.verify(transitions).setLevelInactiveForTransition(false);
+        order.verify(transitions).endSynchronousScreenEventTransition();
+        verify(levelManager, never()).advanceGlobalOscillationAtLevelLoopTail();
+        verify(levelManager, never()).consumeActTransitionRewindBoundaryDuringFrame();
+        verify(levelManager, never()).revokeNativePlcTargetAdmission();
+    }
+
+    @Test
+    void reloadTailFailureRevokesAdmissionAfterCleanupWithoutRepeatingTheLoad()
+            throws Exception {
+        var request = SeamlessLevelTransitionRequest.builder(
+                SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
+                .targetZoneAct(6, 0).build();
+        var failure = new IllegalStateException("oscillator failed");
+        doThrow(failure).when(levelManager).advanceGlobalOscillationAtLevelLoopTail();
+
+        assertSame(failure, assertThrows(IllegalStateException.class,
+                () -> executor.execute(request)));
+
+        InOrder order = inOrder(levelManager, transitions);
+        order.verify(levelManager).executeActTransition(request);
+        order.verify(levelManager).advanceGlobalOscillationAtLevelLoopTail();
+        order.verify(transitions).setLevelInactiveForTransition(false);
+        order.verify(levelManager).revokeNativePlcTargetAdmission();
+    }
+
+    @Test
+    void cleanupFailureRevokesOnlyAnActuallySelectedReload() throws Exception {
+        var failure = new IllegalStateException("cleanup failed");
+        doThrow(failure).when(transitions).setLevelInactiveForTransition(false);
+        var mutation = SeamlessLevelTransitionRequest.builder(
+                SeamlessLevelTransitionRequest.TransitionType.MUTATE_ONLY).build();
+        assertSame(failure, assertThrows(IllegalStateException.class,
+                () -> executor.execute(mutation)));
+        verify(levelManager, never()).revokeNativePlcTargetAdmission();
+
+        var reload = SeamlessLevelTransitionRequest.builder(
+                SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL).build();
+        assertSame(failure, assertThrows(IllegalStateException.class,
+                () -> executor.execute(reload, false)));
+        verify(levelManager).revokeNativePlcTargetAdmission();
+    }
+
+    @Test
+    void frameBridgeClearRetainsPrimingUntilAnActualReset() {
+        SpriteManager sprites = GameServices.sprites();
+        levelManager.frameCounter = 12;
+        sprites.setFrameCounter(13);
+        assertFalse(executor.isPostReloadFrameCounterBridgeStillVisible());
+        executor.markFrameCounterBridge();
+        assertTrue(executor.isFrameCounterBridgeActive());
+        assertTrue(executor.isPostReloadFrameCounterBridgeStillVisible());
+        executor.clearFrameCounterBridge();
+        assertFalse(executor.isFrameCounterBridgeActive());
+        assertTrue(executor.isPostReloadFrameCounterBridgeStillVisible());
+        sprites.setFrameCounter(14);
+        assertFalse(executor.isPostReloadFrameCounterBridgeStillVisible());
+        sprites.setFrameCounter(13);
+        executor.resetFrameCounterBridge();
+        assertFalse(executor.isPostReloadFrameCounterBridgeStillVisible());
+    }
+
 }

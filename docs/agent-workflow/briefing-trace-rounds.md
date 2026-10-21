@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+An ArchUnit field selector can execute the whole class (2026-10-21, composition
+structural remediation). Surefire `-Dtest=TestArchUnitRules#<field>` selected all
+26 ArchUnit rules, alongside five requested Jupiter methods:31 tests, two
+inherited HubMusic failures, and all six targeted checks passing. Inspect actual
+XML identities, failures and skips; never label that command a six-test or wholly
+green guard run from its argument alone. Source attribution and limits are in
+the existing S3K playable-completion plan.
+
+
 A cleanup exception can erase the first diagnostic failure (2026-10-18,
 ending-clock positive control). The observer stopped before its header/first
 Advance, then a finally artifact check overwrote the primary exception. Its

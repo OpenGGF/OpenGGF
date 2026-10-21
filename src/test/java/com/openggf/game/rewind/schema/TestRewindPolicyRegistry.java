@@ -334,6 +334,17 @@ class TestRewindPolicyRegistry {
                 RewindPolicyRegistry.policyForAudit(treeNativeP2).orElse(null));
     }
 
+    @Test
+    void defaultObjectPolicyCapturesTeleporterBeamsAndChargingGun() throws NoSuchFieldException {
+        // These required live links use exact object-id fixups; they are not structural hints.
+        assertDefaultPolicy("com.openggf.game.sonic3k.objects.CnzTeleporterInstance",
+                "beam", RewindFieldPolicy.CAPTURED);
+        assertDefaultPolicy("com.openggf.game.sonic3k.objects.IczTeleporterInstance",
+                "beam", RewindFieldPolicy.CAPTURED);
+        assertDefaultPolicy("com.openggf.game.sonic3k.objects.badniks.EggRoboShotInstance",
+                "chargingGun", RewindFieldPolicy.CAPTURED);
+    }
+
     private static void assertPolicy(RewindClassSchema schema, String fieldName, RewindFieldPolicy policy) {
         RewindFieldPlan plan = schema.fields().stream()
                 .filter(field -> field.key().fieldName().equals(fieldName))

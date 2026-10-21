@@ -187,25 +187,7 @@ public class ObjectManager {
     // slot numbers (affecting timing gates like (v_vbla_byte + d7) & 7).
     private final Map<ObjectSpawn, int[]> reservedChildSlots = new IdentityHashMap<>();
 
-    // Rewind: captured DynamicObjectEntry payloads for player-bound dynamics
-    // (Shield, Stars) that are NOT recreated by generic dynamic restore. The
-    // post-restore callback in
-    // AbstractPlayableSprite#refreshPowerUpObjectsAfterRewindRestore relinks a
-    // live matching shield when one exists, otherwise re-spawns via the power-up
-    // spawner. The spawner consumes the captured entry via
-    // {@link #consumePendingPlayerBoundEntry(Class)} so the new instance lands
-    // at the same slot the reference run had AND has the captured field surface
-    // restored on top of its fresh-construction state. Without that restore,
-    // animation cursors and similar non-construction-set scalars would reset to
-    // zero on every rewind.
-    private final Map<Class<?>, java.util.ArrayDeque<
-            com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>>
-            pendingPlayerBoundEntries = new java.util.HashMap<>();
-    // One captured work item per restore, including after consumption; retries may revisit the same entry.
-    private final Set<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>
-            pendingPlayerBoundWork = Collections.newSetFromMap(new IdentityHashMap<>());
-    private final Map<ObjectRefId, com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>
-            pendingPlayerBoundIds = new java.util.HashMap<>();
+    private final ObjectRewindPlayerBindings playerBoundRewind = new ObjectRewindPlayerBindings();
 
     // Rewind: in-place restore support. Matching live instances are reused by the
     // snapshot restore instead of destroy/recreate when the class passes the
@@ -448,7 +430,7 @@ public class ObjectManager {
 
     private void reset(int cameraX, PersistentRespawnState persistentRespawnState,
             boolean materializeInitialWindow) {
-        clearPendingPlayerBoundEntries();
+        playerBoundRewind.clear();
         clearActiveObjects();
         dynamicObjects.clear();
         objectCallbacks.clear();
@@ -4088,7 +4070,7 @@ public class ObjectManager {
 
             @Override
             public void restore(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot s) {
-                clearPendingPlayerBoundEntries();
+                playerBoundRewind.clear();
                 // The restore is TWO-PHASE so object-reference resolution is order-independent.
                 //   Phase 1 recreates (reuse / adopt / genericRecreate / registry) every
                 //           captured object — active and dynamic — and registers each under its
@@ -4108,21 +4090,7 @@ public class ObjectManager {
                 registerPlayersInto(restoreTable);
                 // Resolve structural player bindings while this restore table is live. Keep one
                 // prepared identity per original entry so parked probe retries cannot duplicate work.
-                var preparedDynamicEntries = new IdentityHashMap<
-                        com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry,
-                        com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>();
-                for (var entry : s.dynamicObjects()) {
-                    preparedDynamicEntries.computeIfAbsent(entry, captured -> {
-                        if (captured.playerOwnerId() == null) return captured;
-                        if (captured.playerOwnerId().isNull())
-                            throw new IllegalArgumentException("Captured player-bound owner role is null");
-                        var owner = restoreTable.resolvePlayer(captured.playerOwnerId(), true);
-                        return new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry(
-                                captured.className(), captured.spawn(), captured.slotIndex(), captured.state(), owner,
-                                captured.objectId(), captured.ownerModId(), captured.rewindableAuxiliary(),
-                                captured.playerOwnerId());
-                    });
-                }
+                var preparedDynamicEntries = playerBoundRewind.prepareEntries(s.dynamicObjects(), restoreTable);
                 com.openggf.game.rewind.schema.RewindCaptureContext rewindContext =
                         com.openggf.game.rewind.schema.RewindCaptureContext.withIdentityTable(restoreTable);
                 // Phase-2 work item: a recreated instance paired with the entry whose field
@@ -4700,24 +4668,7 @@ public class ObjectManager {
      */
     void enqueuePendingPlayerBoundEntry(Class<?> baseType,
             com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
-        if (entry == null || entry.slotIndex() < 0) return;
-        if (pendingPlayerBoundWork.contains(entry)) return;
-        if (entry.objectId() != null) {
-            var previous = pendingPlayerBoundIds.get(entry.objectId());
-            if (previous != null && previous != entry)
-                throw new IllegalStateException("Distinct pending entries share captured object identity: " + entry.objectId());
-            pendingPlayerBoundIds.put(entry.objectId(), entry);
-        }
-        pendingPlayerBoundWork.add(entry);
-        pendingPlayerBoundEntries
-                .computeIfAbsent(baseType, k -> new java.util.ArrayDeque<>())
-                .add(entry);
-    }
-
-    private void clearPendingPlayerBoundEntries() {
-        pendingPlayerBoundEntries.clear();
-        pendingPlayerBoundWork.clear();
-        pendingPlayerBoundIds.clear();
+        playerBoundRewind.enqueue(baseType, entry);
     }
 
     /**
@@ -4742,22 +4693,7 @@ public class ObjectManager {
     com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry
             consumePendingPlayerBoundEntry(Class<?> baseType,
                     Predicate<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry> matcher) {
-        java.util.ArrayDeque<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>
-                queue = pendingPlayerBoundEntries.get(baseType);
-        if (queue == null || queue.isEmpty()) return null;
-        Iterator<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry> iterator =
-                queue.iterator();
-        while (iterator.hasNext()) {
-            com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry = iterator.next();
-            if (matcher.test(entry)) {
-                iterator.remove();
-                if (queue.isEmpty()) {
-                    pendingPlayerBoundEntries.remove(baseType);
-                }
-                return entry;
-            }
-        }
-        return null;
+        return playerBoundRewind.consume(baseType, matcher);
     }
 
     private PlayableEntity playerBoundOwner(ObjectInstance inst) {

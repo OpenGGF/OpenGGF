@@ -32,6 +32,22 @@ final class LevelActTransitionExecutor {
     }
 
     void execute(SeamlessLevelTransitionRequest request) throws IOException {
+        // BEGIN HCZ1_DIRECT_FF_SEAMLESS_ADMISSION: the public owner surrounds its original single delegate.
+        var previousPlcAdmission = levelManager.nativePlcLoadAdmission;
+        var plcAdmission = request != null ? levelManager.beginNativePlcLoadAdmission() : null;
+        levelManager.nativePlcLoadAdmission = request != null ? plcAdmission : previousPlcAdmission;
+        boolean plcLoadCompleted = false;
+        try {
+            executeAdmitted(request);
+            plcLoadCompleted = true;
+        } finally {
+            levelManager.finishNativePlcLoadAdmission(plcAdmission, plcLoadCompleted);
+            levelManager.nativePlcLoadAdmission = previousPlcAdmission;
+        }
+        // END HCZ1_DIRECT_FF_SEAMLESS_ADMISSION
+    }
+
+    private void executeAdmitted(SeamlessLevelTransitionRequest request) throws IOException {
         if (request == null) {
             return;
         }

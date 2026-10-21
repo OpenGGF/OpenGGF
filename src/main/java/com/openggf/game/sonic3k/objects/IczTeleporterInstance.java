@@ -1,8 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.identity.ObjectRefId;
-import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
@@ -10,7 +8,6 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectLifetimeOps;
-import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -38,10 +35,6 @@ public final class IczTeleporterInstance extends AbstractObjectInstance
     private int playerBaseY;
     private TeleporterBeamObjectInstance beam;
     private final S3kGradualSwing swing = new S3kGradualSwing();
-
-    private record RewindExtra(boolean initialized, boolean released, int playerBaseY,
-                               S3kGradualSwing.Value swing, ObjectRefId beamId)
-            implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public IczTeleporterInstance(ObjectSpawn spawn) {
         super(spawn, "ICZTeleporter");
@@ -116,23 +109,4 @@ public final class IczTeleporterInstance extends AbstractObjectInstance
         if (renderer != null) renderer.drawFrameIndex(0x1A, PAD_X, PAD_Y, false, false, 1);
     }
 
-    @Override
-    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
-        ObjectRefId beamId = context.identityTable().map(table -> table.encodeObject(beam)).orElse(null);
-        return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(
-                initialized, released, playerBaseY, swing.captureRewindStateValue(), beamId));
-    }
-
-    @Override
-    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
-        super.restoreRewindState(snapshot, context);
-        if (snapshot.objectSubclassExtra() instanceof RewindExtra extra) {
-            initialized = extra.initialized();
-            released = extra.released();
-            playerBaseY = extra.playerBaseY();
-            swing.restoreRewindStateValue(extra.swing());
-            beam = extra.beamId() == null ? null : (TeleporterBeamObjectInstance)
-                    context.requireIdentityTable().resolveObject(extra.beamId(), true);
-        }
-    }
 }

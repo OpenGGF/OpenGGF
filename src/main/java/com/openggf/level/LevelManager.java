@@ -277,8 +277,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     int currentAct = 0;
     private int apparentAct = 0;
     int currentZone = 0;
-    private boolean sidekickRomVisibleReloadFrameCounterBridgeActive;
-    private boolean sidekickRomVisibleReloadFrameCounterBridgePrimed;
     private boolean resetCounterPlacementAfterCameraSnap;
     private long completedProductionLoadGeneration;
 
@@ -294,7 +292,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         worldSession.setCurrentAct(act);
     }
 
-    private void writeApparentAct(int act) {
+    void writeApparentAct(int act) {
         this.apparentAct = act;
         worldSession.setApparentAct(act);
     }
@@ -308,16 +306,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     // BEGIN HCZ1_DIRECT_FF_LOAD_ADMISSION: actual owner outcomes, never captured or producer-minted.
-    private record NativePlcLoadAdmission(
+    record NativePlcLoadAdmission(
             com.openggf.game.internal.WorldPlcPatternPublication owner, Object attempt) { }
-    private NativePlcLoadAdmission nativePlcLoadAdmission;
+    NativePlcLoadAdmission nativePlcLoadAdmission;
 
     private com.openggf.game.internal.WorldPlcPatternPublication nativePlcTargetPublication() {
         return worldSession != null && com.openggf.game.session.WorldPlcLifecycleAccess.owned(worldSession)
                 instanceof com.openggf.game.internal.WorldPlcPatternPublication publication ? publication : null;
     }
 
-    private NativePlcLoadAdmission beginNativePlcLoadAdmission() {
+    NativePlcLoadAdmission beginNativePlcLoadAdmission() {
         var publication = nativePlcTargetPublication();
         if (publication == null) return null;
         try {
@@ -344,7 +342,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         }
     }
 
-    private void finishNativePlcLoadAdmission(NativePlcLoadAdmission admission, boolean completed) {
+    void finishNativePlcLoadAdmission(NativePlcLoadAdmission admission, boolean completed) {
         if (admission == null) return;
         try {
             admission.owner().finishLevelTargetLoad(this, admission.attempt(), level, completed);
@@ -353,7 +351,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             // closed and never masks the original assembly/policy exception.
         }
     }
-    private void revokeNativePlcTargetAdmission() {
+    void revokeNativePlcTargetAdmission() {
         var publication = nativePlcTargetPublication();
         if (publication == null) return;
         try {
@@ -427,6 +425,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     final LevelWaterCoordinator waterCoordinator;
     final LevelCheckpointCoordinator checkpointCoordinator;
     private final LevelActTransitionExecutor actTransitionExecutor;
+    private final LevelSeamlessTransitionExecutor seamlessTransitionExecutor;
+    private final LevelZoneLoadExecutor zoneLoadExecutor;
     private EngineContext engineServices; private EditorSaveManager editorSaveManager;
 
     @Deprecated(forRemoval = true)
@@ -465,6 +465,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         this.waterCoordinator = new LevelWaterCoordinator(this);
         this.checkpointCoordinator = new LevelCheckpointCoordinator(this);
         this.actTransitionExecutor = new LevelActTransitionExecutor(this);
+        this.seamlessTransitionExecutor = new LevelSeamlessTransitionExecutor(this, transitions);
+        this.zoneLoadExecutor = new LevelZoneLoadExecutor(this, transitions);
         this.cachedScreenWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
         this.cachedScreenHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
         // Inherit any zone/act metadata and loaded Level already on the
@@ -3677,7 +3679,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 titleCardRequiredInHeadlessMode, false);
     }
 
-    private void loadCurrentLevel(
+    void loadCurrentLevel(
             boolean showTitleCard, LevelLoadMode loadMode, boolean runtimeReload,
             boolean titleCardRequiredInHeadlessMode,
             boolean queueFreshLevelRuntimeArt) {
@@ -3761,8 +3763,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             }
 
             frameCounter = 0;
-            sidekickRomVisibleReloadFrameCounterBridgeActive = false;
-            sidekickRomVisibleReloadFrameCounterBridgePrimed = false;
+            seamlessTransitionExecutor.resetFrameCounterBridge();
             activateScheduledPlaybackForLoadedLevel();
             // BEGIN HCZ1_DIRECT_FF_OUTER_LOAD_SUCCESS
             plcOuterLoadCompleted = true;
@@ -3923,15 +3924,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     /** Loads a fresh destination at its native pre-title-card player boundary. */
     public void loadZoneAndActAtFreshTitleCardBoundary(int zone, int act)
             throws IOException {
-        // BEGIN HCZ1_DIRECT_FF_FRESH_BOUNDARY_FAILURE: the delegate includes post-load player/camera work.
-        boolean plcFreshBoundaryCompleted = false;
-        try {
-            freshLevelTransitionBoundary.load(this, zone, act);
-            plcFreshBoundaryCompleted = true;
-        } finally {
-            if (!plcFreshBoundaryCompleted) revokeNativePlcTargetAdmission();
-        }
-        // END HCZ1_DIRECT_FF_FRESH_BOUNDARY_FAILURE
+        freshLevelTransitionBoundary.load(this, zone, act);
     }
 
     /** Completes the destination-player assembly after its title-card loop. */
@@ -3964,39 +3957,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             int zone, int act, LevelLoadMode loadMode,
             boolean titleCardRequiredInHeadlessMode,
             boolean queueFreshLevelRuntimeArt) throws IOException {
-        LevelContinuationCarry.beginLoad(transitions, zone, act);
-        boolean succeeded = false;
-        try {
-            writeCurrentAct(act);
-            writeApparentAct(act);
-            writeCurrentZone(zone);
-            // Manual changes discard checkpoints. A bonus return has already
-            // prepared its saved position for the load profile, before ScreenInit.
-            if (!transitions.isBonusStageReturn()) {
-                checkpointCoordinator.clear();
-            }
-            loadCurrentLevel(
-                    loadMode != LevelLoadMode.PREVIEW_CAPTURE,
-                    loadMode,
-                    false,
-                    titleCardRequiredInHeadlessMode,
-                    queueFreshLevelRuntimeArt);
-            succeeded = true;
-        } finally {
-            // BEGIN HCZ1_DIRECT_FF_OUTER_ZONE_FINISH: an enclosing carry/cleanup failure revokes, never admits.
-            boolean plcZoneCleanupCompleted = false;
-            try {
-                LevelContinuationCarry.finishLoad(transitions, succeeded);
-                // A load that fails before initCameraBounds must not leak a stage-return
-                // respawn table into a later, potentially different, level.
-                checkpointCoordinator.clearPendingPersistentRespawn();
-                plcZoneCleanupCompleted = true;
-            } finally {
-                if (!succeeded || !plcZoneCleanupCompleted)
-                    revokeNativePlcTargetAdmission();
-            }
-            // END HCZ1_DIRECT_FF_OUTER_ZONE_FINISH
-        }
+        zoneLoadExecutor.execute(zone, act, loadMode,
+                titleCardRequiredInHeadlessMode, queueFreshLevelRuntimeArt);
     }
 
     /**
@@ -4015,19 +3977,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * @throws IOException if level data loading fails
      */
     public void executeActTransition(SeamlessLevelTransitionRequest request) throws IOException {
-        // BEGIN HCZ1_DIRECT_FF_SEAMLESS_ADMISSION: the public owner surrounds its original single delegate.
-        var previousPlcAdmission = nativePlcLoadAdmission;
-        var plcAdmission = request != null ? beginNativePlcLoadAdmission() : null;
-        nativePlcLoadAdmission = request != null ? plcAdmission : previousPlcAdmission;
-        boolean plcLoadCompleted = false;
-        try {
-            actTransitionExecutor.execute(request);
-            plcLoadCompleted = true;
-        } finally {
-            finishNativePlcLoadAdmission(plcAdmission, plcLoadCompleted);
-            nativePlcLoadAdmission = previousPlcAdmission;
-        }
-        // END HCZ1_DIRECT_FF_SEAMLESS_ADMISSION
+        actTransitionExecutor.execute(request);
     }
 
     void markActTransitionOscillationAdvancedDuringFrame() {
@@ -4740,8 +4690,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         currentAct = 0;
         apparentAct = 0;
         frameCounter = 0;
-        sidekickRomVisibleReloadFrameCounterBridgeActive = false;
-        sidekickRomVisibleReloadFrameCounterBridgePrimed = false;
+        seamlessTransitionExecutor.resetFrameCounterBridge();
         actTransitionExecutor.resetFrameMarkers();
         transitions.resetState();
         verticalWrapEnabled = false;
@@ -4772,8 +4721,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public void resetFrameCounter() {
         this.frameCounter = 0;
-        sidekickRomVisibleReloadFrameCounterBridgeActive = false;
-        sidekickRomVisibleReloadFrameCounterBridgePrimed = false;
+        seamlessTransitionExecutor.resetFrameCounterBridge();
         actTransitionExecutor.resetFrameMarkers();
     }
 
@@ -4898,23 +4846,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * which bypasses the profile system and matches ROM behavior.
      */
     public void applySeamlessTransition(SeamlessLevelTransitionRequest request) {
-        applySeamlessTransition(request, true);
+        seamlessTransitionExecutor.execute(request, true);
     }
 
     /** Executes a ScreenEvents-owned reload before that same frame's tail work. */
     public void applySynchronousScreenEventTransition(SeamlessLevelTransitionRequest request) {
-        if (request == null) {
-            return;
-        }
-        // The owning ScreenEvents routine marks the post boundary only after
-        // its native post-Load_Level tail has completed. Marking here would
-        // expose a half-finished FBZ1BGE_Normal frame to LiveRewindManager.
-        transitions.beginSynchronousScreenEventTransition(currentZone, currentAct, request);
-        try {
-            applySeamlessTransition(request, false);
-        } finally {
-            transitions.endSynchronousScreenEventTransition();
-        }
+        seamlessTransitionExecutor.executeSynchronousScreenEvent(request);
     }
 
     /**
@@ -4935,131 +4872,20 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         }
     }
 
-    private void applySeamlessTransition(SeamlessLevelTransitionRequest request,
-                                         boolean advanceReloadFrameCounter) {
-        if (request == null) {
-            return;
-        }
-
-        // BEGIN HCZ1_DIRECT_FF_ENCLOSING_RELOAD: only the original selected RELOAD arm owns this fence.
-        boolean plcReloadSelected = false;
-        boolean plcReloadCompleted = false;
-        // END HCZ1_DIRECT_FF_ENCLOSING_RELOAD
-        try {
-            transitions.setSpecialStageReturnLevelReloadRequested(false);
-            switch (request.type()) {
-                case MUTATE_ONLY -> applySeamlessMutation(request.mutationKey());
-                case RELOAD_SAME_LEVEL -> {
-                    // BEGIN HCZ1_DIRECT_FF_RELOAD_SAME_SELECTED
-                    plcReloadSelected = true;
-                    // END HCZ1_DIRECT_FF_RELOAD_SAME_SELECTED
-                    executeActTransition(request.retargetedForReload(currentZone, currentAct));
-                    if (advanceReloadFrameCounter) advanceFrameCounterAcrossSeamlessReload();
-                    // BEGIN HCZ1_DIRECT_FF_RELOAD_SAME_COMPLETED
-                    plcReloadCompleted = true;
-                    // END HCZ1_DIRECT_FF_RELOAD_SAME_COMPLETED
-                }
-                case RELOAD_TARGET_LEVEL -> {
-                    // BEGIN HCZ1_DIRECT_FF_RELOAD_TARGET_SELECTED
-                    plcReloadSelected = true;
-                    // END HCZ1_DIRECT_FF_RELOAD_TARGET_SELECTED
-                    executeActTransition(request);
-                    if (advanceReloadFrameCounter) advanceFrameCounterAcrossSeamlessReload();
-                    // BEGIN HCZ1_DIRECT_FF_RELOAD_TARGET_COMPLETED
-                    plcReloadCompleted = true;
-                    // END HCZ1_DIRECT_FF_RELOAD_TARGET_COMPLETED
-                }
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to apply seamless transition", e);
-        } finally {
-            // BEGIN HCZ1_DIRECT_FF_ENCLOSING_RELOAD_FINISH: include the original oscillator/frame and cleanup tail.
-            boolean plcReloadCleanupCompleted = false;
-            try {
-                transitions.setLevelInactiveForTransition(false);
-                plcReloadCleanupCompleted = true;
-            } finally {
-                if (plcReloadSelected && (!plcReloadCompleted || !plcReloadCleanupCompleted))
-                    revokeNativePlcTargetAdmission();
-            }
-            // END HCZ1_DIRECT_FF_ENCLOSING_RELOAD_FINISH
-        }
-    }
-
-    /**
-     * ROM {@code Level_frame_counter} (incremented in VInt_0_Main every gameplay
-     * frame) keeps ticking through the act-reload frame; the engine's
-     * {@code GameLoop} and headless test runner both {@code return} after
-     * applying a seamless reload transition, skipping
-     * {@code SpriteManager.update()} (which is where
-     * {@code SpriteManager.frameCounter} normally increments). Bump it
-     * explicitly here so sidekick AI gates that read
-     * {@code (Level_frame_counter & MASK)} — e.g. sonic3k.asm:26775 loc_13E9C
-     * 64-frame jump-cadence check — fire on the same frames as the ROM after
-     * AIZ act 1 → act 2 reload.
-     *
-     * <p>S3K sidekick CPU now resolves this gate through the stored
-     * {@code LevelManager.frameCounter}, so keep that counter aligned with the
-     * sprite-manager gameplay counter here.
-     *
-     * <p>Only applies to RELOAD transitions: MUTATE_ONLY runs in places
-     * (e.g. AIZ1 fire-transition art overlay) that may execute mid-frame
-     * without skipping the rest of the gameplay loop.
-     */
-    private void advanceFrameCounterAcrossSeamlessReload() {
-        // The reload is requested by ScreenEvents, but the ROM returns to the
-        // remainder of LevelLoop afterward: OscillateNumDo still runs before
-        // the next VBlank (docs/skdisasm/sonic3k.asm:7884-7910,
-        // 104722-104774). The engine applies the pending reload at the next
-        // frame top and returns from RecordingFrameDriver/GameLoop, so preserve
-        // that native post-ScreenEvents oscillator tick explicitly.
-        advanceGlobalOscillationAtLevelLoopTail();
-        if (animatedPatternManager instanceof com.openggf.level.animation.SeamlessTransitionAnimationClock clock)
-            clock.advanceForSeamlessTransition();
-
-        // The pending seamless reload is consumed at frame top, so this row
-        // returns before ObjectManager.update() can perform its normal V-int
-        // clock increment. V_int_run_count is global work RAM and still ticks
-        // in the ROM on that transition-only VBlank.
-        if (objectManager != null) {
-            objectManager.advanceVblaCounter();
-        }
-
-        // ROM keeps Level_frame_counter ticking through AIZ's reload frame
-        // (docs/skdisasm/sonic3k.asm:7884-7894); S3K Tails CPU reads it for
-        // loc_13E9C's 64-frame auto-jump gate (docs/skdisasm/sonic3k.asm:26775-26782).
-        frameCounter++;
-        sidekickRomVisibleReloadFrameCounterBridgeActive = true;
-        sidekickRomVisibleReloadFrameCounterBridgePrimed = true;
-        SpriteManager spriteManager = GameServices.spritesOrNull();
-        if (spriteManager != null) {
-            spriteManager.setFrameCounter(spriteManager.getFrameCounter() + 1);
-        }
-    }
-
     public boolean isSidekickRomVisibleReloadFrameCounterBridgeActive() {
-        return sidekickRomVisibleReloadFrameCounterBridgeActive;
+        return seamlessTransitionExecutor.isFrameCounterBridgeActive();
     }
 
     void markSidekickRomVisibleReloadFrameCounterBridge() {
-        sidekickRomVisibleReloadFrameCounterBridgeActive = true;
-        sidekickRomVisibleReloadFrameCounterBridgePrimed = true;
+        seamlessTransitionExecutor.markFrameCounterBridge();
     }
 
     public boolean isSidekickRomVisibleReloadResumeFrameCounterBridgeActive() {
-        return currentAct != apparentAct || isPostReloadFrameCounterBridgeStillVisible();
+        return currentAct != apparentAct || seamlessTransitionExecutor.isPostReloadFrameCounterBridgeStillVisible();
     }
 
     public void clearSidekickRomVisibleReloadFrameCounterBridge() {
-        sidekickRomVisibleReloadFrameCounterBridgeActive = false;
-    }
-
-    private boolean isPostReloadFrameCounterBridgeStillVisible() {
-        if (!sidekickRomVisibleReloadFrameCounterBridgePrimed) {
-            return false;
-        }
-        SpriteManager spriteManager = GameServices.spritesOrNull();
-        return spriteManager != null && spriteManager.getFrameCounter() == frameCounter + 1;
+        seamlessTransitionExecutor.clearFrameCounterBridge();
     }
 
     void applySeamlessMutation(String mutationKey) {

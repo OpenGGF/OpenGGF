@@ -10,6 +10,8 @@ import java.io.IOException;
 final class LevelSeamlessTransitionExecutor {
     private final LevelManager levelManager;
     private final LevelTransitionCoordinator transitions;
+    private boolean frameCounterBridgeActive;
+    private boolean frameCounterBridgePrimed;
 
     LevelSeamlessTransitionExecutor(
             LevelManager levelManager,
@@ -18,38 +20,76 @@ final class LevelSeamlessTransitionExecutor {
         this.transitions = transitions;
     }
 
+    void executeSynchronousScreenEvent(SeamlessLevelTransitionRequest request) {
+        if (request == null) {
+            return;
+        }
+        // The owning ScreenEvents routine marks the post boundary only after
+        // its native post-Load_Level tail has completed. Marking here would
+        // expose a half-finished FBZ1BGE_Normal frame to LiveRewindManager.
+        transitions.beginSynchronousScreenEventTransition(levelManager.currentZone, levelManager.currentAct, request);
+        try {
+            execute(request, false);
+        } finally {
+            transitions.endSynchronousScreenEventTransition();
+        }
+    }
+
     void execute(SeamlessLevelTransitionRequest request) {
+        execute(request, true);
+    }
+
+    void execute(SeamlessLevelTransitionRequest request,
+                                         boolean advanceReloadFrameCounter) {
         if (request == null) {
             return;
         }
 
+        // BEGIN HCZ1_DIRECT_FF_ENCLOSING_RELOAD: only the original selected RELOAD arm owns this fence.
+        boolean plcReloadSelected = false;
+        boolean plcReloadCompleted = false;
+        // END HCZ1_DIRECT_FF_ENCLOSING_RELOAD
         try {
             transitions.setSpecialStageReturnLevelReloadRequested(false);
             switch (request.type()) {
-                case MUTATE_ONLY -> levelManager.applySeamlessMutation(
-                        request.mutationKey());
+                case MUTATE_ONLY -> levelManager.applySeamlessMutation(request.mutationKey());
                 case RELOAD_SAME_LEVEL -> {
-                    levelManager.executeActTransition(normalizeReloadSameRequest(
-                            request,
-                            levelManager.currentZone,
-                            levelManager.currentAct));
-                    advanceFrameCounterAcrossReload();
-                    levelManager.consumeActTransitionExecutedDuringFrame();
-                    levelManager.consumeActTransitionRewindBoundaryDuringFrame();
+                    // BEGIN HCZ1_DIRECT_FF_RELOAD_SAME_SELECTED
+                    plcReloadSelected = true;
+                    // END HCZ1_DIRECT_FF_RELOAD_SAME_SELECTED
+                    levelManager.executeActTransition(request.retargetedForReload(levelManager.currentZone, levelManager.currentAct));
+                    if (advanceReloadFrameCounter) advanceFrameCounterAcrossReload();
+                    // BEGIN HCZ1_DIRECT_FF_RELOAD_SAME_COMPLETED
+                    plcReloadCompleted = true;
+                    // END HCZ1_DIRECT_FF_RELOAD_SAME_COMPLETED
                 }
                 case RELOAD_TARGET_LEVEL -> {
+                    // BEGIN HCZ1_DIRECT_FF_RELOAD_TARGET_SELECTED
+                    plcReloadSelected = true;
+                    // END HCZ1_DIRECT_FF_RELOAD_TARGET_SELECTED
                     levelManager.executeActTransition(request);
-                    advanceFrameCounterAcrossReload();
-                    levelManager.consumeActTransitionExecutedDuringFrame();
-                    levelManager.consumeActTransitionRewindBoundaryDuringFrame();
+                    if (advanceReloadFrameCounter) advanceFrameCounterAcrossReload();
+                    // BEGIN HCZ1_DIRECT_FF_RELOAD_TARGET_COMPLETED
+                    plcReloadCompleted = true;
+                    // END HCZ1_DIRECT_FF_RELOAD_TARGET_COMPLETED
                 }
             }
         } catch (IOException e) {
             throw new RuntimeException("Failed to apply seamless transition", e);
         } finally {
-            transitions.setLevelInactiveForTransition(false);
+            // BEGIN HCZ1_DIRECT_FF_ENCLOSING_RELOAD_FINISH: include the original oscillator/frame and cleanup tail.
+            boolean plcReloadCleanupCompleted = false;
+            try {
+                transitions.setLevelInactiveForTransition(false);
+                plcReloadCleanupCompleted = true;
+            } finally {
+                if (plcReloadSelected && (!plcReloadCompleted || !plcReloadCleanupCompleted))
+                    levelManager.revokeNativePlcTargetAdmission();
+            }
+            // END HCZ1_DIRECT_FF_ENCLOSING_RELOAD_FINISH
         }
     }
+
 
     static SeamlessLevelTransitionRequest normalizeReloadSameRequest(
             SeamlessLevelTransitionRequest request,
@@ -155,4 +195,29 @@ final class LevelSeamlessTransitionExecutor {
             spriteManager.setFrameCounter(spriteManager.getFrameCounter() + 1);
         }
     }
+
+    boolean isFrameCounterBridgeActive() {
+        return frameCounterBridgeActive;
+    }
+
+    void markFrameCounterBridge() {
+        frameCounterBridgeActive = true;
+        frameCounterBridgePrimed = true;
+    }
+
+    void clearFrameCounterBridge() {
+        frameCounterBridgeActive = false;
+    }
+
+    void resetFrameCounterBridge() {
+        frameCounterBridgeActive = false;
+        frameCounterBridgePrimed = false;
+    }
+
+    boolean isPostReloadFrameCounterBridgeStillVisible() {
+        if (!frameCounterBridgePrimed) return false;
+        SpriteManager sprites = GameServices.spritesOrNull();
+        return sprites != null && sprites.getFrameCounter() == levelManager.frameCounter + 1;
+    }
+
 }

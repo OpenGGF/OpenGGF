@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k.render;
 
 import com.openggf.game.internal.NativePhysicalLevelLoad;
+import com.openggf.game.internal.NativePhysicalWorldData;
+import com.openggf.game.internal.WorldDataRewindPublication;
 import com.openggf.game.internal.WorldRewindAdapterFactory;
 import com.openggf.game.rewind.NativeRewindAdapterPublication;
 import com.openggf.game.rewind.RewindSnapshottable;
@@ -13,13 +15,15 @@ import java.util.Objects;
  * One world's clear-owned DATA only. The production consumer is the actual
  * fresh-Level Object_RAM / Sprite_table_input clear (loc_60DE). Ordinary
  * physical writers, current-RAM qualification, producers, SAT and rendering
- * remain unintegrated. This adapter exposes none of those authorities.
+ * remain unintegrated. This service exposes none of those authorities. Its
+ * distinct rewind projection retains the same DATA identity across runtime rebuilds.
  */
-public final class S3kPhysicalDisplayWorld implements RewindSnapshottable<Object> {
+public final class S3kPhysicalDisplayWorld implements NativePhysicalWorldData, WorldDataRewindPublication {
     public static final String KEY = "s3k-physical-display-world";
     private final OwnerKey owner = new OwnerKey();
     private final S3kPhysicalSstHeaderBank bank = new S3kPhysicalSstHeaderBank();
     private final S3kPhysicalDisplayQueue queue = new S3kPhysicalDisplayQueue();
+    private final RewindSnapshottable<Object> rewindAdapter = new S3kPhysicalDisplayRewindAdapter(this);
 
     private S3kPhysicalDisplayWorld() { }
 
@@ -36,7 +40,7 @@ public final class S3kPhysicalDisplayWorld implements RewindSnapshottable<Object
         return new S3kPhysicalDisplayWorld();
     }
 
-    public void clearAtFreshLevel(NativePhysicalLevelLoad.Clear invocation) {
+    @Override public void clearAtFreshLevel(NativePhysicalLevelLoad.Clear invocation) {
         Objects.requireNonNull(invocation);
         // Allocate before consuming/mutating, so ordinary validation/allocation failure is nonpartial.
         var emptyQueue = new S3kPhysicalDisplayQueue().capture();
@@ -46,11 +50,12 @@ public final class S3kPhysicalDisplayWorld implements RewindSnapshottable<Object
         invocation.bodyReturned(MethodHandles.lookup(), this);
     }
 
-    @Override public String key() { return KEY; }
-    @Override public Object capture() {
+    @Override public RewindSnapshottable<?> dataRewindState() { return rewindAdapter; }
+
+    Object capture() {
         return new State(owner, new BankState(owner, bank.capture()), new QueueState(owner, queue.capture()));
     }
-    @Override public void restore(Object value) {
+    void restore(Object value) {
         // Preflight BOTH channels before either leaf writes. Leaf values can only
         // be built by their private cloning constructors; cursor validity is preserved by construction.
         if (!(value instanceof State state) || state.owner != owner

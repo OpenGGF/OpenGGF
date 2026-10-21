@@ -122,8 +122,11 @@ class TestGameplayModeContextRewindRegistry {
         var ctx = new GameplayModeContext(world);
         ctx.attachGameplayManagers(new Camera(), new TimerManager(), new GameStateManager(),
                 new FadeManager(), new GameRng(GameRng.Flavour.S1_S2), new DefaultSolidExecutionRegistry());
-        var ownerField = WorldSession.class.getDeclaredField("worldRewindAdapter"); ownerField.setAccessible(true);
+        var ownerField = WorldSession.class.getDeclaredField("worldPhysicalData"); ownerField.setAccessible(true);
         Object owner = ownerField.get(world);
+        var adapterField = owner.getClass().getDeclaredField("rewindAdapter"); adapterField.setAccessible(true);
+        Object adapter = adapterField.get(owner);
+        assertNotSame(owner, adapter, "The durable DATA service and runtime rewind projection have distinct owners");
         String physical = com.openggf.game.sonic3k.render.S3kPhysicalDisplayWorld.KEY;
         assertFalse(ctx.getRewindRegistry().capture().containsKey(physical));
         LevelManager level = mock(LevelManager.class);
@@ -148,10 +151,11 @@ class TestGameplayModeContextRewindRegistry {
             assertSame(owner, ownerField.get(world));
         }
         var cache = GameplayModeContext.class.getDeclaredField("worldRewindAdapter"); cache.setAccessible(true);
-        assertSame(owner, cache.get(ctx));
+        assertSame(adapter, cache.get(ctx));
         ctx.tearDownManagers();
         assertNull(cache.get(ctx));
         assertSame(owner, ownerField.get(world), "Manager teardown must preserve the world's DATA owner");
+        assertSame(adapter, adapterField.get(owner), "Manager teardown must preserve the DATA projection identity");
     }
 
     @Test

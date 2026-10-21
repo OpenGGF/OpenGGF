@@ -23105,3 +23105,123 @@ accepted frozen candidate's 43 ordinary classes, eight fresh guards and Python
 policy checks. This worker did not inspect that run or launch validation,
 write `target/`, integrate into Main, push or clean up worktrees. The unchanged
 setup TraceChaser checkout remains unstaged against the merged gitlink.
+
+
+### Composition structural ownership remediation — 2026-10-21
+
+Bounded child work starts at accepted composition `e253b4fb86e8` in
+`bugfix/ai-s3k-composition-structural-guards-20261021`. It addresses the six new
+structural negatives from the original `cf3cfd0b` guard result (715 tests,
+10 failures); the four inherited failures retain the matched c13/b4f attribution
+in [shared-development-line validation](../validation/2026-10-20-shared-development-line.md).
+The original run was consumed and acknowledged by Root; it was not rerun here.
+Root owns gameplay, combined validation, baseline comparison, integration and push.
+
+The teleporter parents now use the existing default compact schema. Both beam
+links use exact captured-field policies and the ICZ final `S3kGradualSwing`
+uses the existing `RewindStateful` codec. Duplicate typed extras and four custom
+capture/restore overrides were removed. New two-family same-position graph tests
+force recreation and check exact parent/beam identity, all captured channels,
+swing forward replay and rejection of an unregistered live beam. The Shot's
+charging Gun already used the default object-reference codec; its exact
+`CAPTURED` audit policy now states that contract. Existing SSZ Shot tests cover
+the required parent only during charge and fresh graph replay at four boundaries.
+Rejected: growing the override baseline or exempting the Shot coverage gap; the
+generic codecs already own these fields, including final stateful helpers.
+
+WorldSession retains one native physical DATA service for its world lifetime.
+That semantic service performs the actual fresh-Level clear; a separate stable
+runtime adapter projects the same owner/bank/queue into rewind. The native
+factory reserves that projection before returning, and composition registers it
+across context rebuilds. Snapshot owner checks, factory/root/clear authentication
+and physical DATA restore bodies are unchanged. New two-world whole-registry
+restore cycles verify isolation and context-rebuild identity. Rejected: storing
+an erased adapter, moving RAM lifetime into the disposable gameplay context,
+using a global identity map or broadening an access guard.
+
+LevelActTransitionExecutor now surrounds its original single execution with the
+unchanged admission/finally fence. LevelSeamlessTransitionExecutor owns the
+original production dispatch, synchronous-event scope and transition clock bridge;
+LevelZoneLoadExecutor owns the distinct outer zone-load carry/cleanup. The fresh
+boundary controller surrounds its full player/camera operation with its existing
+failure fence. Raw PLC begin/install/finish calls still originate lexically in
+LevelManager; Sonic3kLevelTitlePlcService's exact LevelManager caller gate is
+unchanged. Pending reloads preserve oscillator, animation, V-int, level-counter,
+bridge and sprite-counter order; synchronous reloads retain their event-owned
+tail. Production markers remain available to their original consumers. The
+previously unused seamless helper's tests were reconciled with that production
+behavior, and focused tests cover failed load/tail/cleanup, nested admission,
+null selection, source/target flags and bridge clear versus reset.
+
+ObjectRewindPlayerBindings owns the pending power-up FIFO, entry-identity retry
+deduplication, captured-id collisions and per-entry player-role preparation.
+The same IdentityHashMap preparation remains before two-phase reconstruction;
+queue clear and consumption points are unchanged. Existing Shield/Stars tests
+cover equal legacy entries, retry after consumption, failed-restore cleanup,
+reverse refresh and recreated owners. Effective source lines fall from 3245 to
+3137 for LevelManager (budget 3144), and 3131 to 3080 for ObjectManager (budget
+3086). No budget, guard, authentication, gameplay, timing or fixture was relaxed.
+A bounded independent source comparison found no behavioral or authority change
+in the LevelManager extractions; executable validation remains separate.
+
+Validation checkpoint: one combined focused ordinary request was submitted
+through the absolute Main queue wrapper with `--normal -Dmse=off`, Java 25,
+`JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl`, surfaceless EGL,
+null audio, Lua 5.4 and absolute original ROM properties. S3K SHA-1 was verified
+as `cfbf98c36c776677290a872547ac47c53d2761d6`. The setup config symlink was
+replaced by a task-private regular 0600 copy; Main and the setup submodule were
+left unchanged. Focused ordinary/guard outcomes are recorded below; no broad smoke or
+release-only suite is authorized for this child.
+
+
+The focused ordinary run completed on `e253b4fb86e8` plus the remediation tree:
+**260 tests across 24 executed classes, zero failures/errors/skips**. All XML
+class identities and skips were inspected; the Java source fingerprint remained
+unchanged through completion. This includes the four required S3K controls
+(the loading selector selects both loading classes), graph/lifetime/whole-world
+round trips, pending Shield/Stars work, two-phase/in-place restore, native
+publication, seven direct-water admission cases, transition/fresh-load wrappers
+and the CNZ2 Knuckles handoff. Maven reported 01:33 including compilation; the
+queue separately reported 143 seconds of admission wait. Neither is end-to-end
+delivery time. The six exact guard methods are a separate fresh-JVM request.
+
+Ordinary command with the absolute Main-checkout prefix normalized to
+`MAIN_WORKSPACE` for repository portability (the actual run used absolute paths),
+with the environment above and the six requested JVM/display/library variables unset:
+
+```bash
+python3 "${MAIN_WORKSPACE}/tools/testing/maven_queue.py" --normal -Dmse=off \
+  "-Ds3k.rom.path=${MAIN_WORKSPACE}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dsonic1.rom.path=${MAIN_WORKSPACE}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${MAIN_WORKSPACE}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  '-Dtest=TestTeleporterDefaultRewindGraph,TestRewindPolicyRegistry,TestSszEggRoboShotNativeLifetime,TestS3kCnz2KnucklesTeleporterCharge,TestS3kPhysicalDisplayWorld,TestGameplayModeContextRewindRegistry,TestNativeRewindAdapterPublication,TestShieldRewindPendingRestore,TestTwoPhaseRestoreOrdering,TestObjectManagerDynamicChainRewindRestore,TestRewindInPlaceObjectRestore,TestObjectManagerRewindSnapshot,TestLevelSeamlessTransitionExecutor,TestLevelActTransitionAdmission,TestLevelZoneLoadExecutor,TestLevelLoadAttempt,TestLevelContinuationCarry,TestS3kHcz1DirectWaterNemesisPublication,TestActTransitionHeadless,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test -B
+```
+
+
+The guard request completed on the same unchanged Java tree: **31 tests,
+29 passing, two inherited failures, no errors or skips**. The six requested
+remediation checks all passed. ArchUnit ran all 26 fields in TestArchUnitRules,
+ignoring the field-level selector; its only failures were the unchanged
+`shared_code_does_not_construct_concrete_sonic_provider_classes` and
+`shared_layers_do_not_depend_on_game_specific_packages`. Their three constructor
+calls at HubMusicController:118 and nine shared-package violations at118/120
+match the durable c13/b4f baseline. Both inherited owner files are byte-identical
+from c13 to e253 and unchanged by this task. The two MenuAudioProbeTool failures
+were not selected again; all four inherited failures remain explicitly outside
+this remediation. No guard/baseline/store was edited. Maven reported34.439s;
+queue admission separately reported17s.
+
+```bash
+python3 "${MAIN_WORKSPACE}/tools/testing/maven_queue.py" --normal -Dmse=off -Pguards \
+  '-Dtest=TestRewindArchitectureGuard#objectRewindOverridesDoNotGrowWithoutExplicitBaselineTriage,TestRewindCoverageGuard#noNewCoverageGapsBeyondBaseline,TestArchUnitRules#world_session_does_not_depend_on_runtime_managers_or_registries,TestArchitecturalSourceGuard#levelManagerDelegatesActTransitionExecutionToNamedCollaborator+objectManagerFacadeStaysWithinExtractedCollaboratorBudget+releaseCriticalLargeClassesDoNotGrowWithoutExtraction' test -B
+```
+
+Both requests used `JAVA_HOME=/usr/lib/jvm/java-25-openjdk` with its bin first
+on PATH, `JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl`,
+`EGL_PLATFORM=surfaceless`, `ALSOFT_DRIVERS=null`, `LUA_BIN=/usr/bin/lua5.4`;
+`JDK_JAVA_OPTIONS`, `_JAVA_OPTIONS`, `MAVEN_OPTS`, `DISPLAY`, `WAYLAND_DISPLAY`
+and `LD_LIBRARY_PATH` were unset. Required checks are bounded validation, not
+a green broad-smoke/whole-guard or release-suite claim. Root's new fixture-only
+follow-up `cea6e6ee01f3` was announced while the ordinary job was running;
+its normal Git incorporation follows these source-stable checks and preserves
+both independent append histories.

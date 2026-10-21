@@ -120,7 +120,7 @@ public class Sonic3kGameModule implements GameModule {
 
     private final com.openggf.game.internal.WorldRewindAdapterFactory worldDataFactory =
             new com.openggf.game.internal.WorldRewindAdapterFactory() {
-                @Override public com.openggf.game.rewind.RewindSnapshottable<?> open(
+                @Override public com.openggf.game.internal.NativePhysicalWorldData open(
                         java.lang.invoke.MethodHandles.Lookup lookup,
                         com.openggf.game.session.WorldSession world) {
                     Class<?> caller = com.openggf.util.EngineCallerAccess.callerOutside(getClass());
@@ -132,15 +132,14 @@ public class Sonic3kGameModule implements GameModule {
                     var owner = com.openggf.game.sonic3k.render.S3kPhysicalDisplayWorld.create(
                             java.lang.invoke.MethodHandles.lookup(), this, world);
                     com.openggf.game.rewind.NativeRewindAdapterPublication.reserveWorldDataCreation(
-                            java.lang.invoke.MethodHandles.lookup(), world, this, owner);
+                            java.lang.invoke.MethodHandles.lookup(), world, this, owner.dataRewindState());
                     return owner;
                 }
             };
     private final com.openggf.game.internal.NativePhysicalLevelLoad.Writer worldDataWriter =
             new com.openggf.game.internal.NativePhysicalLevelLoad.Writer() {
                 @Override public void clearFresh(com.openggf.game.internal.NativePhysicalLevelLoad.Clear invocation) {
-                    var owner = (com.openggf.game.sonic3k.render.S3kPhysicalDisplayWorld)
-                            invocation.target(java.lang.invoke.MethodHandles.lookup(), this);
+                    var owner = invocation.target(java.lang.invoke.MethodHandles.lookup(), this);
                     owner.clearAtFreshLevel(invocation);
                     invocation.handlerReturned(java.lang.invoke.MethodHandles.lookup(), this);
                 }

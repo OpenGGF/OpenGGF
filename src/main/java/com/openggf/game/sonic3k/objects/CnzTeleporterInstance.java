@@ -2,8 +2,6 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
-import com.openggf.game.rewind.identity.ObjectRefId;
-import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
@@ -14,7 +12,6 @@ import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -76,12 +73,6 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance
     private boolean playerHidden;
     private boolean transitionRequested;
     private TeleporterBeamObjectInstance beam;
-
-    private record RewindExtra(int centreX, int centreY, boolean armed,
-                               boolean paletteLine2Patched, boolean teleportArtQueued,
-                               boolean beamSpawned, boolean playerHidden, boolean transitionRequested,
-                               ObjectRefId beamId)
-            implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public CnzTeleporterInstance(ObjectSpawn spawn) {
         super(spawn, "CNZTeleporter");
@@ -342,28 +333,4 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance
         // Obj_CNZTeleporter never calls Draw_Sprite; only its shared beam draws.
     }
 
-    @Override
-    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
-        return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(
-                centreX, centreY, armed, paletteLine2Patched, teleportArtQueued,
-                beamSpawned, playerHidden, transitionRequested,
-                context.identityTable().map(table -> table.encodeObject(beam)).orElse(null)));
-    }
-
-    @Override
-    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
-        super.restoreRewindState(snapshot, context);
-        if (snapshot.objectSubclassExtra() instanceof RewindExtra extra) {
-            centreX = extra.centreX();
-            centreY = extra.centreY();
-            armed = extra.armed();
-            paletteLine2Patched = extra.paletteLine2Patched();
-            teleportArtQueued = extra.teleportArtQueued();
-            beamSpawned = extra.beamSpawned();
-            playerHidden = extra.playerHidden();
-            transitionRequested = extra.transitionRequested();
-            beam = extra.beamId() == null ? null : (TeleporterBeamObjectInstance)
-                    context.requireIdentityTable().resolveObject(extra.beamId(), true);
-        }
-    }
 }

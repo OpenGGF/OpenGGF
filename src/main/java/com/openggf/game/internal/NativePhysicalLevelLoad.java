@@ -6,7 +6,6 @@ import com.openggf.game.LevelInitProfile;
 import com.openggf.game.LevelLoadContext;
 import com.openggf.game.LevelLoadMode;
 import com.openggf.game.rewind.NativeRewindAdapterPublication;
-import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.session.WorldRewindAdapterAccess;
 import com.openggf.game.session.WorldSession;
 import com.openggf.util.EngineCallerAccess;
@@ -82,7 +81,7 @@ public final class NativePhysicalLevelLoad {
         if (root == null || root.getLevelInitProfile() != profile)
             throw new SecurityException("Fresh clear profile is not the actual native root");
         Writer writer = root.getGameService(Writer.class);
-        var target = WorldRewindAdapterAccess.owned(MethodHandles.lookup(), scope.world);
+        var target = WorldRewindAdapterAccess.data(MethodHandles.lookup(), scope.world);
         if (writer == null || target == null)
             throw new IllegalStateException("Fresh clear has no existing world DATA owner/writer");
         // Profile/eligibility/service predicates above may reenter the actual load loop.
@@ -140,10 +139,10 @@ public final class NativePhysicalLevelLoad {
         private final Scope scope;
         private final GameModule root;
         private final Writer writer;
-        private final RewindSnapshottable<?> target;
+        private final NativePhysicalWorldData target;
         private final InitStep step;
         private boolean consumed, bodyReturned, handlerReturned, closed;
-        private Clear(Scope scope, GameModule root, Writer writer, RewindSnapshottable<?> target) {
+        private Clear(Scope scope, GameModule root, Writer writer, NativePhysicalWorldData target) {
             this.scope = scope; this.root = root; this.writer = writer; this.target = target; step = scope.step;
         }
         private void requireCurrent() {
@@ -151,7 +150,7 @@ public final class NativePhysicalLevelLoad {
                     || scope.thread != Thread.currentThread() || scope.step != step || !scope.used
                     || !scope.context.permitsInitialProcessSpritesRequest()
                     || NativeRewindAdapterPublication.nativeRoot(scope.world.rootGameModule()) != root
-                    || WorldRewindAdapterAccess.owned(MethodHandles.lookup(), scope.world) != target)
+                    || WorldRewindAdapterAccess.data(MethodHandles.lookup(), scope.world) != target)
                 throw new IllegalStateException("Stale or foreign clear invocation");
             // The virtual eligibility/root queries can nest a load and revoke us
             // after the first check. No callback-bearing read follows this pure
@@ -168,7 +167,7 @@ public final class NativePhysicalLevelLoad {
                 throw new SecurityException("Only the exact selected native writer may dispatch");
             requireCurrent();
         }
-        public Object target(MethodHandles.Lookup lookup, Writer actual) {
+        public NativePhysicalWorldData target(MethodHandles.Lookup lookup, Writer actual) {
             requireWriter(lookup, actual);
             if (consumed) throw new IllegalStateException("Clear already consumed");
             return target;

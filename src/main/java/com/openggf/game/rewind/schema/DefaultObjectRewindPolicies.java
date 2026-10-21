@@ -137,6 +137,8 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.EggRoboBadnikInstance", "mode"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.EggRoboBadnikInstance", "group"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.EggRoboShotInstance", "facingLeft"), RewindFieldPolicy.TRANSIENT),
+            // loc_9176C reads the exact allocating Gun through parent3 until its last charging tail.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.EggRoboShotInstance", "chargingGun"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszMechaScreenFlash", "holdWhite"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszMechaSonicTrailChild", "subtype"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszMechaSonicTrailChild", "childDx"), RewindFieldPolicy.TRANSIENT),
@@ -589,7 +591,9 @@ final class DefaultObjectRewindPolicies {
             // stick_to_convex); dropping it re-runs the setup and restarts the ride animation
             // one frame after a mid-ride rewind restore.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzGiantWheelInstance", "attachedPlayers"), RewindFieldPolicy.CAPTURED),
+            // Native teleporter/beam links retain exact managed identities through generic restore.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzTeleporterInstance", "beam"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczTeleporterInstance", "beam"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzMinibossCoilInstance", "boss"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzMinibossSparkInstance", "boss"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzMinibossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),

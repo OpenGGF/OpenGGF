@@ -55,7 +55,25 @@ class TestS3kPhysicalDisplayWorld {
         return field.get(value);
     }
     private static S3kPhysicalDisplayWorld owner(WorldSession world) throws Exception {
-        return (S3kPhysicalDisplayWorld) field(world, "worldRewindAdapter");
+        return (S3kPhysicalDisplayWorld) field(world, "worldPhysicalData");
+    }
+    private static com.openggf.game.rewind.RewindSnapshottable<Object> adapter(
+            S3kPhysicalDisplayWorld owner) throws Exception {
+        @SuppressWarnings("unchecked") var adapter =
+                (com.openggf.game.rewind.RewindSnapshottable<Object>) field(owner, "rewindAdapter");
+        return adapter;
+    }
+    private static GameplayModeContext attachedContext(WorldSession world) {
+        var context = new GameplayModeContext(world);
+        context.attachGameplayManagers(new com.openggf.camera.Camera(), new com.openggf.timer.TimerManager(),
+                new GameStateManager(), new com.openggf.graphics.FadeManager(),
+                new GameRng(GameRng.Flavour.S1_S2), new com.openggf.game.solid.DefaultSolidExecutionRegistry());
+        var terrain = new com.openggf.physics.TerrainCollisionManager();
+        context.attachLevelManagers(new com.openggf.level.WaterSystem(),
+                new com.openggf.level.ParallaxManager(), terrain,
+                new com.openggf.physics.CollisionSystem(terrain), new SpriteManager(),
+                mock(com.openggf.level.LevelManager.class));
+        return context;
     }
     private static S3kPhysicalSstHeaderBank bank(S3kPhysicalDisplayWorld owner) throws Exception {
         return (S3kPhysicalSstHeaderBank) field(owner, "bank");
@@ -135,13 +153,46 @@ class TestS3kPhysicalDisplayWorld {
         var root = new Sonic3kGameModule();
         var a = new WorldSession(root); var b = new WorldSession(root);
         assertNotSame(owner(a), owner(b));
-        assertTrue(RewindAdapterOwnership.isNativePublication(owner(a)));
-        assertTrue(RewindAdapterOwnership.isNativePublication(owner(b)));
+        assertNotSame(owner(a), adapter(owner(a)));
+        assertFalse(com.openggf.game.rewind.RewindSnapshottable.class.isInstance(owner(a)));
+        assertTrue(RewindAdapterOwnership.isNativePublication(adapter(owner(a))));
+        assertTrue(RewindAdapterOwnership.isNativePublication(adapter(owner(b))));
         for (boolean known : bank(owner(a)).capture().knownBytes()) assertFalse(known);
         assertNull(root.getGameService(S3kPhysicalDisplayWorld.class));
         assertEquals(0, field(owner(a), "owner").getClass().getDeclaredFields().length);
         for (var field : S3kPhysicalDisplayWorld.class.getDeclaredFields())
             assertFalse(WorldSession.class.isAssignableFrom(field.getType()));
+    }
+
+    @Test void contextRebuildRestoresBothWorldsThroughTheirOriginalDataAndAdapterOwners() throws Exception {
+        var root = new Sonic3kGameModule();
+        var worldA = new WorldSession(root); var worldB = new WorldSession(root);
+        var dataA = owner(worldA); var dataB = owner(worldB);
+        var adapterA = adapter(dataA); var adapterB = adapter(dataB);
+        var contextA = attachedContext(worldA); seed(dataA, 0x1234);
+        var savedA = contextA.getRewindRegistry().capture();
+        contextA.tearDownManagers();
+        var contextB = attachedContext(worldB); seed(dataB, 0x5678);
+        var savedB = contextB.getRewindRegistry().capture();
+        contextB.tearDownManagers();
+
+        for (int replay = 0; replay < 2; replay++) {
+            seed(dataA, 0xA000 + replay); seed(dataB, 0xB000 + replay);
+            contextA = attachedContext(worldA);
+            contextA.getRewindRegistry().restore(savedA);
+            assertSame(dataA, owner(worldA)); assertSame(adapterA, adapter(dataA));
+            assertEquals(savedA.get(S3kPhysicalDisplayWorld.KEY), adapterA.capture());
+            assertEquals(0x1234, bank(dataA).artTile(0xB000));
+            assertEquals(0xB000 + replay, bank(dataB).artTile(0xB000));
+            contextA.tearDownManagers();
+            contextB = attachedContext(worldB);
+            contextB.getRewindRegistry().restore(savedB);
+            assertSame(dataB, owner(worldB)); assertSame(adapterB, adapter(dataB));
+            assertEquals(savedB.get(S3kPhysicalDisplayWorld.KEY), adapterB.capture());
+            assertEquals(0x5678, bank(dataB).artTile(0xB000));
+            assertEquals(savedA.get(S3kPhysicalDisplayWorld.KEY), adapterA.capture());
+            contextB.tearDownManagers();
+        }
     }
 
     @Test void actualSelectedFreshActionClearsFullBankAndPendingOpenQueueBeforeRngAndDma() throws Exception {
@@ -323,7 +374,7 @@ class TestS3kPhysicalDisplayWorld {
         var qs = (S3kPhysicalDisplayQueue.Snapshot) field(field(saved, "queue"), "value");
         bs.image()[0] = 99; bs.knownBytes()[0] = false; bs.provenance()[0] = null; qs.image()[0] = 99;
         assertEquals(saved, a.capture());
-        assertThrows(IllegalStateException.class, a::resetForMissingSnapshot);
+        assertThrows(IllegalStateException.class, adapter(a)::resetForMissingSnapshot);
         assertEquals(saved, a.capture());
     }
 
@@ -333,7 +384,8 @@ class TestS3kPhysicalDisplayWorld {
         assertThrows(SecurityException.class, () -> factory.open(MethodHandles.lookup(), world));
         assertThrows(SecurityException.class, () -> S3kPhysicalDisplayWorld.create(MethodHandles.lookup(), factory, world));
         assertThrows(SecurityException.class, () -> WorldRewindAdapterAccess.owned(MethodHandles.lookup(), world));
+        assertThrows(SecurityException.class, () -> WorldRewindAdapterAccess.data(MethodHandles.lookup(), world));
         assertThrows(SecurityException.class, () -> NativeRewindAdapterPublication.reserveWorldDataCreation(
-                MethodHandles.lookup(), world, factory, owner(world)));
+                MethodHandles.lookup(), world, factory, adapter(owner(world))));
     }
 }
