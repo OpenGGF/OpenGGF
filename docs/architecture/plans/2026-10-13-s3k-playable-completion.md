@@ -25194,3 +25194,30 @@ does not close VDP/FIFO/open-bus/IRQ, production reset/Title continuity, movie
 row0 or11 actual hardware-job identities. Gameplay climb implementation and
 the retained CNZ grab continuation remain independent. Main delivery and
 owned-worktree cleanup remain pending; the overall goal stays active.
+
+
+## ICZ1 Knuckles absent-snow camera gate — 2026-10-21
+
+Independent source audit on Root25ded found the inherited resize snow-pile wait
+blocking Player_mode3: the native branch never updates its zero snow offset.
+The isolated leaf from `25dedb1b9b9f572c81d3376424be7b9c1d547307` preserves
+all non-Knuckles wait/escape behavior and exempts only Knuckles. It uses stock
+`loc_1C9E0/loc_1C9FA` and `ICZ1BGE_Intro/SnowFall`, not a controller/frame fit.
+Its new Arrival test exercises both real event thresholds with explicitly
+declared camera-word component inputs after genuine initialization/release;
+no private stage/offset or player-state bypass is used.
+
+Original exact predecessor method request37534 is1T/1F/0E/0S at expected8/actual4.
+Final affected five-class request6568 is29T/0F/0E/0S, including Sonic snow escape,
+handoff/retained resources and event rewind. All29 identities, original XML/TXT,
+69 properties per XML, skips and streams were read; source fingerprint
+`a8bed04e9430591a70b2eb4c04c5a4dbd1e65838101095445a786911672030b3`
+and configuration stayed unchanged. Both exact owned report/tmp directories
+were consumed without archives. No Root81754 observation, repeat/broad/native
+workload, Root/Main source edit or push occurred.
+
+[Exact selectors, native source ranges, environment, controls and limits](../validation/levels/s3k-icz-act1.md#knuckles-snow-free-camera-event-progression--2026-10-21).
+This is a later camera3940 event component, separate from the CNZ child's
+arrival/release at player3640; cold Knuckles traversal, physical checkpoint
+lifecycle and the actual structural route remain open. Local source review and
+Root's bounded composition decision precede integration/delivery.

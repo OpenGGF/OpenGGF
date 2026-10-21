@@ -8,6 +8,7 @@ import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
+import com.openggf.game.sonic3k.objects.IczBigSnowPileInstance;
 import com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance;
 import com.openggf.game.sonic3k.objects.IczTeleporterInstance;
 import com.openggf.game.sonic3k.objects.TeleporterBeamObjectInstance;
@@ -49,6 +50,61 @@ class TestS3kIczKnucklesArrival {
     private HeadlessTestFixture boot() {
         return HeadlessTestFixture.builder().withZoneAndAct(5, 0)
                 .withFreshLevelStartLifecycle().build();
+    }
+
+    @Test
+    void nativeCameraTriggersAdvanceKnucklesWithoutSnowAndReplayTwice() {
+        var fixture = boot();
+        assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass());
+        step(fixture, 64);
+        assertTrue(pad().released(), "the real teleporter releases Knuckles first");
+        assertFalse(fixture.sprite().isObjectControlled());
+        assertSnowFreeBackground(fixture, 0);
+
+        // Declared camera-word component controls, not ordinary traversal from
+        // x=$3640. Stock loc_1C9E0 checks BOTH $3700 and $68C; loc_1C9FA
+        // checks $3940. No background stage, snow offset or player state is set.
+        updateAtCamera(fixture, 0x36FF, 0x068C);
+        assertSnowFreeBackground(fixture, 0);
+        updateAtCamera(fixture, 0x3700, 0x068B);
+        assertSnowFreeBackground(fixture, 0);
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var beforeFirst = registry.capture();
+
+        updateAtCamera(fixture, 0x3700, 0x068C);
+        assertSnowFreeBackground(fixture, 4);
+        var afterFirst = registry.capture();
+        updateAtCamera(fixture, 0x393F, 0x068C);
+        assertSnowFreeBackground(fixture, 4);
+        var beforeSecond = registry.capture();
+
+        updateAtCamera(fixture, 0x3940, 0x068C);
+        assertSnowFreeBackground(fixture, 8);
+        var afterSecond = registry.capture();
+        // Continue through the existing refresh owners to Normal, without the
+        // late-handoff fixture's forceAct1NormalBackgroundRoutineForTest bypass.
+        updateAtCamera(fixture, 0x3940, 0x068C);
+        assertSnowFreeBackground(fixture, 12);
+        updateAtCamera(fixture, 0x3940, 0x068C);
+        assertSnowFreeBackground(fixture, 16);
+        assertFalse(events().isAct2TransitionRequested(), "the later $6900 handoff is independent");
+        var normal = registry.capture();
+
+        for (int cycle = 0; cycle < 2; cycle++) {
+            registry.restore(beforeFirst);
+            assertWorld(beforeFirst, registry.capture(), "before first camera trigger " + cycle);
+            updateAtCamera(fixture, 0x3700, 0x068C);
+            assertWorld(afterFirst, registry.capture(), "first camera trigger " + cycle);
+            updateAtCamera(fixture, 0x393F, 0x068C);
+            assertWorld(beforeSecond, registry.capture(), "before second camera trigger " + cycle);
+            registry.restore(beforeSecond);
+            assertWorld(beforeSecond, registry.capture(), "second trigger restore " + cycle);
+            updateAtCamera(fixture, 0x3940, 0x068C);
+            assertWorld(afterSecond, registry.capture(), "second camera trigger " + cycle);
+            updateAtCamera(fixture, 0x3940, 0x068C);
+            updateAtCamera(fixture, 0x3940, 0x068C);
+            assertWorld(normal, registry.capture(), "normal background forward " + cycle);
+        }
     }
 
     @Test
@@ -345,6 +401,19 @@ class TestS3kIczKnucklesArrival {
     }
 
     private static ObjectSpawn spawn() { return new ObjectSpawn(0, 0, 0, 0, 0, false, 0); }
+    private static void updateAtCamera(HeadlessTestFixture fixture, int x, int y) {
+        fixture.camera().setX((short) x);
+        fixture.camera().setY((short) y);
+        ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider()).update();
+    }
+    private static void assertSnowFreeBackground(HeadlessTestFixture fixture, int routine) {
+        assertEquals(routine, events().getIcz1BackgroundRoutine(), "native Knuckles background stage");
+        assertEquals(0, events().getIcz1BigSnowOffset(), "Knuckles never runs ICZ1_BigSnowFall");
+        assertFalse(events().isEventsFg5(), "the normal background owner consumes the trigger");
+        assertFalse(fixture.sprite().isControlLocked(), "Knuckles does not acquire Sonic's quake lock");
+        assertTrue(GameServices.level().getObjectManager()
+                .activeObjectsOfType(IczBigSnowPileInstance.class).isEmpty());
+    }
     private static byte[] normalPaletteLine() {
         var palette = GameServices.level().getCurrentLevel().getPalette(1);
         byte[] bytes = new byte[32];

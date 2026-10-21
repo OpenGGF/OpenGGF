@@ -1451,6 +1451,17 @@ unproven; no runtime fix or new engine/route/visual qualification is claimed.
 
 
 
+ICZ1 Knuckles snow-free camera gate (2026-10-21): the native Player_mode3
+branch skips ICZ1_BigSnowFall, so its zero snow offset must not block loc_1C9FA
+at camera X=$3940. The existing snow-pile wait now applies only to the other
+player modes; Sonic retains its settled-pile jump/control-release owner. The
+new explicit camera-word component reaches both native thresholds through the
+normal event handlers and replays the complete registered world twice. Its
+predecessor failed1T/1F at expected background8/actual4; the affected five-class
+selection passes29T/0F/0E/0S. This is later event progression, not the CNZ arrival
+at player X=$3640 or a cold Knuckles route/ICZ2 handoff qualification.
+[Source, commands and limits](architecture/validation/levels/s3k-icz-act1.md#knuckles-snow-free-camera-event-progression--2026-10-21).
+
 ICZ R11 synchronous retained16 owner (2026-10-17): Load_Level now preserves
 known outgoing pattern groups until existing deferred publication, using current
 target collision indices. Unknown placeholder capacity is not exported as RAM;
