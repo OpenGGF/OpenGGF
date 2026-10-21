@@ -50,11 +50,11 @@ import java.util.logging.Logger;
  *
  * <p>Hit count is seeded from
  * {@link Sonic3kConstants#CNZ_MINIBOSS_REAL_HITS} (ROM
- * {@code Obj_CNZMinibossInit} — {@code sonic3k.asm:144888},
+ * {@code Obj_CNZMinibossInit} — {@code sonic3k.asm:144953},
  * {@code move.b #4,$45(a0)}).
  *
  * <p>Workstream D Task 4 layers in the first three dispatch-table routines
- * from {@code CNZMiniboss_Index} (sonic3k.asm:144874):
+ * from {@code CNZMiniboss_Index} (sonic3k.asm:144939):
  * {@code Obj_CNZMinibossInit} (routine 0, line 144885),
  * {@code Obj_CNZMinibossLower} (routine 2, line 144898) and
  * {@code Obj_CNZMinibossMove} (routine 4, line 144912), plus the
@@ -63,24 +63,24 @@ import java.util.logging.Logger;
  *
  * <p>Workstream D Task 5 extends the dispatch with the next three routines
  * and their {@code $34(a0)} callbacks, keeping the ROM dispatch table
- * canonical (sonic3k.asm:144874..144882):
+ * canonical (sonic3k.asm:144939..144882):
  * <ul>
  *   <li>routine 6 — duplicate Move slot entered by
- *       {@code Obj_CNZMinibossCloseGo} (sonic3k.asm:144922). The Move
+ *       {@code Obj_CNZMinibossCloseGo} (sonic3k.asm:144987). The Move
  *       body keeps swinging while the wait-timer cadence ({@code $9F}
  *       from Go3, then {@code $13F}) fires
- *       {@code Obj_CNZMinibossChangeDir} (sonic3k.asm:144935) to
+ *       {@code Obj_CNZMinibossChangeDir} (sonic3k.asm:145000) to
  *       negate {@code x_vel}.</li>
- *   <li>routine 8 — {@code Obj_CNZMinibossOpening} (sonic3k.asm:144941),
+ *   <li>routine 8 — {@code Obj_CNZMinibossOpening} (sonic3k.asm:145006),
  *       a {@code Animate_RawMultiDelay} body. Without the full S3K
  *       animation pipeline the engine models it as a finite wait whose
  *       {@code $34} callback is {@code Obj_CNZMinibossOpenGo}
- *       (sonic3k.asm:144945), which advances to routine A and sets
+ *       (sonic3k.asm:145010), which advances to routine A and sets
  *       {@code $38} bit 6 (Open state).</li>
- *   <li>routine A — {@code Obj_CNZMinibossWaitHit} (sonic3k.asm:144954).
+ *   <li>routine A — {@code Obj_CNZMinibossWaitHit} (sonic3k.asm:145019).
  *       Gates on {@code btst #6,status(a0)}; if clear the body
  *       {@code rts} (no timer tick, no position update). On hit the
- *       handler {@code loc_6DB4E} (sonic3k.asm:144960) clears
+ *       handler {@code loc_6DB4E} (sonic3k.asm:145025) clears
  *       {@code $38} bit 6, installs the closing animation, writes
  *       {@code $34 = Obj_CNZMinibossCloseGo}, and advances routine to
  *       C. Routine C's body stays deferred to T6; T5 only performs the
@@ -107,7 +107,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
      */
     private static final int LOWERING_STEP_PIXELS = 0x20;
 
-    // ---- Routine indices (CNZMiniboss_Index, sonic3k.asm:144874) ----
+    // ---- Routine indices (CNZMiniboss_Index, sonic3k.asm:144939) ----
     private static final int ROUTINE_INIT = 0;     // Obj_CNZMinibossInit     (144885)
     private static final int ROUTINE_LOWER = 2;    // Obj_CNZMinibossLower    (144898)
     private static final int ROUTINE_MOVE = 4;     // Obj_CNZMinibossMove     (144912)
@@ -116,24 +116,24 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     private static final int ROUTINE_WAIT_HIT = 0xA; // Obj_CNZMinibossWaitHit (144954)
     private static final int ROUTINE_CLOSING = 0xC;  // Obj_CNZMinibossClosing (144968)
     private static final int ROUTINE_LOWER2 = 0xE;   // Obj_CNZMinibossLower2  (144972)
-    // Note: Obj_CNZMinibossEnd (sonic3k.asm:144984) is NOT a dispatch-table
+    // Note: Obj_CNZMinibossEnd (sonic3k.asm:145049) is NOT a dispatch-table
     // routine — it is installed via $34(a0) by CNZMiniboss_BossDefeated
-    // (sonic3k.asm:145467) after routine (a0) has been replaced with
+    // (sonic3k.asm:145532) after routine (a0) has been replaced with
     // Wait_FadeToLevelMusic. See onDefeatStarted() / onEndGo().
 
     /**
      * ROM: Swing_UpAndDown uses {@code $3E(a0)} as the peak |y_vel|.
-     * {@code SetUp_CNZMinibossSwing} (sonic3k.asm:145393) writes {@code $60}.
+     * {@code SetUp_CNZMinibossSwing} (sonic3k.asm:145458) writes {@code $60}.
      */
     private static final int SWING_MAX_VEL = 0x60;
     /**
      * ROM: Swing_UpAndDown uses {@code $40(a0)} as the per-frame acceleration.
-     * {@code SetUp_CNZMinibossSwing} (sonic3k.asm:145397) writes {@code 8}.
+     * {@code SetUp_CNZMinibossSwing} (sonic3k.asm:145462) writes {@code 8}.
      */
     private static final int SWING_ACCEL = 8;
 
     /**
-     * ROM: {@code Obj_CNZMinibossOpenGo} (sonic3k.asm:144949) writes
+     * ROM: {@code Obj_CNZMinibossOpenGo} (sonic3k.asm:145014) writes
      * {@code move.b #$7F,$3B(a0)} — a {@code $7F} (127-frame) counter
      * representing the duration of the Opening animation. The engine
      * uses this as the routine-8 {@code $2E} wait since we lack the
@@ -145,7 +145,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     private static final int FRAME_BASE_CLOSED = 0;
     private static final int FRAME_BASE_OPEN = 6;
     /**
-     * ROM: {@code AniRaw_CNZMinibossOpening} (sonic3k.asm:145705).
+     * ROM: {@code AniRaw_CNZMinibossOpening} (sonic3k.asm:145770).
      * Pairs are {@code mapping_frame, delay}; {@code Animate_RawMultiDelay}
      * advances its cursor before reading on a fresh script, so index 0 is
      * the parked frame and index 1 is the first visible animation step.
@@ -153,7 +153,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     private static final int[] ANIM_OPENING_FRAMES = {0, 1, 2, 3, 4, 5, 6};
     private static final int[] ANIM_OPENING_DELAYS = {3, 3, 3, 3, 3, 3, 3};
     /**
-     * ROM: {@code AniRaw_CNZMinibossClosing} (sonic3k.asm:145707).
+     * ROM: {@code AniRaw_CNZMinibossClosing} (sonic3k.asm:145772).
      */
     private static final int[] ANIM_CLOSING_FRAMES = {6, 5, 4, 3, 2, 1, 0};
     private static final int[] ANIM_CLOSING_DELAYS = {3, 3, 3, 3, 3, 3, 3};
@@ -185,47 +185,47 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
      * ROM: bit 0 of {@code $38(a0)} — Swing_UpAndDown direction flag.
      * {@code false} = ascending (velocity decreasing toward {@code -SWING_MAX_VEL}),
      * {@code true} = descending (velocity increasing toward {@code +SWING_MAX_VEL}).
-     * Cleared by {@code SetUp_CNZMinibossSwing} (sonic3k.asm:145398,
+     * Cleared by {@code SetUp_CNZMinibossSwing} (sonic3k.asm:145463,
      * {@code bclr #0,$38(a0)}).
      */
     private boolean swingDirectionDown;
     /**
      * ROM: bit 6 of {@code $38(a0)} — Open-state flag.
-     * Set by {@code Obj_CNZMinibossOpenGo} (sonic3k.asm:144948,
+     * Set by {@code Obj_CNZMinibossOpenGo} (sonic3k.asm:145013,
      * {@code bset #6,$38(a0)}) when routine advances to WaitHit.
-     * Cleared by {@code loc_6DB4E} (sonic3k.asm:144962,
+     * Cleared by {@code loc_6DB4E} (sonic3k.asm:145027,
      * {@code bclr #6,$38(a0)}) when a hit lands during WaitHit, and by
-     * {@code Obj_CNZMinibossCloseGo} (sonic3k.asm:144925,
+     * {@code Obj_CNZMinibossCloseGo} (sonic3k.asm:144990,
      * {@code bclr #3,$38(a0)} — different bit, kept here alongside the
      * Open-state bit for documentation completeness).
      */
     private boolean openState;
     /**
      * ROM: bit 3 of {@code $38(a0)} gates the parent hit-to-opening handoff.
-     * {@code Obj_CNZMinibossInit} sets it (sonic3k.asm:144890), so early
+     * {@code Obj_CNZMinibossInit} sets it (sonic3k.asm:144955), so early
      * body/coil boss-touch rebounds only restore collision via
      * {@code CNZMiniboss_CheckPlayerHit} and do not enter Opening. The later
-     * {@code Obj_CNZMinibossCloseGo} clears it (sonic3k.asm:144925), after
+     * {@code Obj_CNZMinibossCloseGo} clears it (sonic3k.asm:144990), after
      * which a cleared parent collision flag may write routine 8 at
-     * sonic3k.asm:145411-145415.
+     * sonic3k.asm:145476-145480.
      */
     private boolean playerHitOpeningBlocked = true;
     /**
      * ROM: Touch_Enemy backs up the parent collision byte, clears
      * collision_flags, and decrements collision_property on a boss-body
-     * rebound (sonic3k.asm:20916-20921). The parent then runs
+     * rebound (sonic3k.asm:20952-20957). The parent then runs
      * CNZMiniboss_CheckPlayerHit after its routine body; that routine seeds
      * $3A(a0) with $10 and only restores $25(a0) to collision_flags after the
-     * countdown expires (sonic3k.asm:145404-145425).
+     * countdown expires (sonic3k.asm:145469-145490).
      */
     private boolean playerHitCollisionSuppressed;
     private int playerHitCollisionRestoreTimer = -1;
     /**
      * ROM: bit 6 of {@code status(a0)} — top-hit-in-progress marker.
-     * Set by {@code CNZMiniboss_CheckTopHit} (sonic3k.asm:145442,
+     * Set by {@code CNZMiniboss_CheckTopHit} (sonic3k.asm:145507,
      * {@code bset #6,status(a0)}) when the top-piece child reports a
      * successful hit on the base. Cleared by {@code loc_6DB4E}
-     * (sonic3k.asm:144957-144962 path) once WaitHit reacts to the hit
+     * (sonic3k.asm:145022-145027 path) once WaitHit reacts to the hit
      * and transitions to Closing.
      *
      * <p>Distinct from {@link #openState} ({@code $38} bit 6) despite the
@@ -239,10 +239,10 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
 
     /**
      * ROM: bit 1 of {@code $38(a0)} — top-piece "Move" signal.
-     * Set by {@code Obj_CNZMinibossGo2} (sonic3k.asm:144906,
+     * Set by {@code Obj_CNZMinibossGo2} (sonic3k.asm:144971,
      * {@code bset #1,$38(a0)}) when the base finishes its Lower routine
      * and drops into the Move/Swing body. The top-piece child polls this
-     * bit inside {@code Obj_CNZMinibossTopWait} (sonic3k.asm:145027) and
+     * bit inside {@code Obj_CNZMinibossTopWait} (sonic3k.asm:145092) and
      * only advances to {@code Wait2}/{@code Main} once the parent has
      * flagged it.
      */
@@ -250,14 +250,14 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
 
     /**
      * ROM: {@code $43(a0)} — {@code Obj_CNZMinibossLower2} countdown
-     * (sonic3k.asm:144974). {@code -1} indicates "no Lower2 run in
+     * (sonic3k.asm:145039). {@code -1} indicates "no Lower2 run in
      * progress", since the ROM normally writes a fresh counter on entry.
      */
     private int lower2Counter = -1;
 
     /**
      * ROM: {@code $42(a0)} — routine value to restore when the Lower2
-     * counter expires (sonic3k.asm:144980,
+     * counter expires (sonic3k.asm:145045,
      * {@code move.b $42(a0),routine(a0)}).
      */
     private int lower2PreviousRoutine;
@@ -288,7 +288,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     /**
      * {@code CNZMiniboss_CheckPlayerHit} returns after replacing {@code $30/$34};
      * Opening's {@code Animate_RawMultiDelay} body first runs on the following
-     * object dispatch (sonic3k.asm:145404-145425, 144941-144944).
+     * object dispatch (sonic3k.asm:145469-145490, 145006-145009).
      */
     private boolean openingObjectDispatchDeferred;
 
@@ -308,7 +308,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
 
     @Override
     protected void initializeBossState() {
-        // ROM: routine 0 = Obj_CNZMinibossInit (sonic3k.asm:144885).
+        // ROM: routine 0 = Obj_CNZMinibossInit (sonic3k.asm:144950).
         // state.hitCount is already seeded to CNZ_MINIBOSS_REAL_HITS by the
         // super constructor via getInitialHitCount(); state.x/y are seeded
         // from the spawn. The remainder of Init (y_vel / wait timer /
@@ -318,7 +318,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
 
     @Override
     protected int getInitialHitCount() {
-        // ROM: Obj_CNZMinibossInit — sonic3k.asm:144888,
+        // ROM: Obj_CNZMinibossInit — sonic3k.asm:144953,
         // collision_property is 6, but the real damage counter at $45 is 4.
         return Sonic3kConstants.CNZ_MINIBOSS_REAL_HITS;
     }
@@ -334,7 +334,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
                 || (services().camera().getX() & 0xFFFF) >= 0x3000)) {
             if (!cnz.isMinibossStartReleased()) {
                 // ROM Obj_CNZMiniboss stays fully dormant during the camera-lock
-                // approach and the Obj_Wait 2-second delay (sonic3k.asm:144824-144840):
+                // approach and the Obj_Wait 2-second delay (sonic3k.asm:144889-144905):
                 // it renders nothing and does NOT set up the boss sprite until
                 // Obj_CNZMinibossGo installs Obj_CNZMinibossStart after the wait.
                 // Running updateInit() here made the boss appear (and start lowering)
@@ -345,7 +345,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
             }
             if (pendingStartReleaseHandoff) {
                 // ROM: Obj_Wait calls Obj_CNZMinibossGo, which only installs
-                // Obj_CNZMinibossStart this update (sonic3k.asm:144838-144851).
+                // Obj_CNZMinibossStart this update (sonic3k.asm:144903-144916).
                 // Obj_CNZMinibossInit dispatches on the following object update.
                 pendingStartReleaseHandoff = false;
                 diagnosticSkippedStartGate = true;
@@ -353,7 +353,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
             }
         }
 
-        // After CNZMiniboss_BossDefeated (sonic3k.asm:145464), the ROM writes
+        // After CNZMiniboss_BossDefeated (sonic3k.asm:145529), the ROM writes
         // Wait_FadeToLevelMusic into (a0) so the normal CNZMiniboss_Index
         // dispatcher stops running. The object simply ticks its $2E timer
         // until Obj_CNZMinibossEnd ($34 callback) fires. This mirrors that
@@ -365,7 +365,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
             return;
         }
 
-        // CNZMiniboss_Index dispatch (sonic3k.asm:144874). All eight routines
+        // CNZMiniboss_Index dispatch (sonic3k.asm:144939). All eight routines
         // in the ROM dispatch table (0/2/4/6/8/A/C/E) are handled. Each routine
         // body that matches the ROM's `Obj_Wait` tail (Lower, Move, Opening,
         // Closing) calls tickWait() itself at the end — Init / WaitHit /
@@ -397,7 +397,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
 
     @Override
     protected void onHitTaken(int remainingHits) {
-        // ROM: CNZMiniboss_CheckTopHit at sonic3k.asm:145435.
+        // ROM: CNZMiniboss_CheckTopHit at sonic3k.asm:145500.
         //   subq.b #1,$45(a0)
         //   beq.s CNZMiniboss_BossDefeated
         //   bset #6,status(a0)          ; top-hit latch — handled separately
@@ -507,7 +507,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
 
     @Override
     protected boolean usesDefeatSequencer() {
-        // ROM: CNZMiniboss_BossDefeated (sonic3k.asm:145464) replaces the
+        // ROM: CNZMiniboss_BossDefeated (sonic3k.asm:145529) replaces the
         // object routine with Wait_FadeToLevelMusic and installs
         // Obj_CNZMinibossEnd at $34(a0). That path is orthogonal to the
         // generic 179-frame exploding/fleeing/spawn-prison sequencer used by
@@ -525,7 +525,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
             return 0;
         }
         // ROM: ObjDat_CNZMiniboss stores the full collision_flags byte $0C
-        // (sonic3k.asm:145652-145656). AbstractBossInstance's default $C0
+        // (sonic3k.asm:145717-145721). AbstractBossInstance's default $C0
         // boss-category synthesis is not valid for this CNZ body.
         return 0x0C;
     }
@@ -533,7 +533,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     @Override
     protected int getCollisionSizeIndex() {
         // ROM: ObjDat_CNZMiniboss stores collision_flags byte $0C after
-        // width/height/frame (sonic3k.asm:145652-145656). The separate
+        // width/height/frame (sonic3k.asm:145717-145721). The separate
         // collision_property(a0)=6 write in Init is the boss-touch property,
         // not part of the collision_flags byte.
         return 0x0C;
@@ -561,7 +561,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
         // ROM Touch_Enemy's boss path clears collision_flags and backs the
         // previous value into $25 before CNZMiniboss_CheckPlayerHit decides
         // whether this hit is allowed to start/restart Opening
-        // (sonic3k.asm:20916-20921, 145404-145425). Tails can hit the body
+        // (sonic3k.asm:20952-20957, 145469-145490). Tails can hit the body
         // while Opening is already running; that still suppresses body
         // collision for the restore window and prevents an immediate repeat
         // rebound on the next frame.
@@ -573,7 +573,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
         // CNZMiniboss_CheckPlayerHit runs after the routine body in the boss's
         // own slot. While $38 bit 3 is set it does not change routine, so the
         // later-slot update remains the sole Move/Obj_Wait dispatch
-        // (sonic3k.asm:145404-145425). A synthetic move here would make every
+        // (sonic3k.asm:145469-145490). A synthetic move here would make every
         // blocked player hit decrement $2E a second time.
         if (playerHitOpeningBlocked) {
             diagnosticPlayerHitBlocked = true;
@@ -581,9 +581,9 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
         }
         // Engine touch callbacks arrive as the observable equivalent of
         // CNZMiniboss_CheckPlayerHit, but the ROM runs Obj_CNZMinibossMove
-        // first in Obj_CNZMinibossStart (sonic3k.asm:144863-144871). Preserve
+        // first in Obj_CNZMinibossStart (sonic3k.asm:144928-144936). Preserve
         // that order before installing Opening so the parent's x/y anchor
-        // matches the hit frame (sonic3k.asm:144912-144915, 145404-145425).
+        // matches the hit frame (sonic3k.asm:144977-144980, 145469-145490).
         applyMoveStepBeforePlayerHitOpening();
         if (state.routine == ROUTINE_OPENING
                 || state.routine == ROUTINE_WAIT_HIT
@@ -632,9 +632,9 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
             return;
         }
         // ROM Obj_CNZMinibossStart dispatches Obj_CNZMinibossMove before
-        // CNZMiniboss_CheckPlayerHit (sonic3k.asm:144863-144871). The Move
+        // CNZMiniboss_CheckPlayerHit (sonic3k.asm:144928-144936). The Move
         // routine itself is Swing_UpAndDown, MoveSprite2, then Obj_Wait
-        // (sonic3k.asm:144912-144915).
+        // (sonic3k.asm:144977-144980).
         SwingMotion.Result result = SwingMotion.update(
                 SWING_ACCEL, yVel, SWING_MAX_VEL, swingDirectionDown);
         yVel = (short) result.velocity();
@@ -658,7 +658,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     }
 
     /**
-     * ROM: Obj_CNZMinibossInit (sonic3k.asm:144885). The ROM sequence is:
+     * ROM: Obj_CNZMinibossInit (sonic3k.asm:144950). The ROM sequence is:
      * <pre>
      *   jsr (SetUp_ObjAttributes).l      ; addq.b #2,routine(a0) (line 176909)
      *   move.b #6,collision_property(a0) ; hit counter — already seeded
@@ -677,13 +677,13 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
      * {@link #tickWait()}.
      */
     private void updateInit() {
-        // ROM sonic3k.asm:144891 — move.w #$80,y_vel(a0).
+        // ROM sonic3k.asm:144956 — move.w #$80,y_vel(a0).
         yVel = Sonic3kConstants.CNZ_MINIBOSS_INIT_Y_VEL;
         state.yVel = yVel;
-        // ROM sonic3k.asm:144892-144893 — move.w #$11F,$2E(a0) +
+        // ROM sonic3k.asm:144957-144958 — move.w #$11F,$2E(a0) +
         //                                 move.l #Obj_CNZMinibossGo2,$34(a0).
         setWait(Sonic3kConstants.CNZ_MINIBOSS_INIT_WAIT, WaitCallback.GO2);
-        // ROM sonic3k.asm:176909 — SetUp_CNZMinibossInit's jsr
+        // ROM sonic3k.asm:177000 — SetUp_CNZMinibossInit's jsr
         // (SetUp_ObjAttributes).l ends with `addq.b #2,routine(a0)`, so
         // routine advances from 0 to ROUTINE_LOWER (2) on the same frame
         // that Init runs. This prevents Init from re-running next frame.
@@ -730,67 +730,67 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     }
 
     /**
-     * ROM: Obj_CNZMinibossLower (sonic3k.asm:144898). Two-line routine body:
+     * ROM: Obj_CNZMinibossLower (sonic3k.asm:144963). Two-line routine body:
      * {@code jsr (MoveSprite2).l} followed by {@code jmp (Obj_Wait).l}.
      */
     private void updateLower() {
-        // ROM sonic3k.asm:144899 — jsr (MoveSprite2).l
-        // (MoveSprite2 at sonic3k.asm:36053: `add.l d0,x_pos(a0)` /
+        // ROM sonic3k.asm:144964 — jsr (MoveSprite2).l
+        // (MoveSprite2 at sonic3k.asm:36093: `add.l d0,x_pos(a0)` /
         //  `add.l d0,y_pos(a0)` with d0 = vel<<8). BossStateContext.applyVelocity
         // performs the same 16:16 accumulation off state.xVel/state.yVel.
         state.xVel = xVel;
         state.yVel = yVel;
         state.applyVelocity();
-        // ROM sonic3k.asm:144900 — jmp (Obj_Wait).l tail.
+        // ROM sonic3k.asm:144965 — jmp (Obj_Wait).l tail.
         tickWait();
     }
 
     /**
-     * ROM: Obj_CNZMinibossMove (sonic3k.asm:144912). Three-line routine body:
+     * ROM: Obj_CNZMinibossMove (sonic3k.asm:144977). Three-line routine body:
      * {@code jsr (Swing_UpAndDown).l} + {@code jsr (MoveSprite2).l} +
-     * {@code jmp (Obj_Wait).l}. Swing_UpAndDown lives at sonic3k.asm:177851
+     * {@code jmp (Obj_Wait).l}. Swing_UpAndDown lives at sonic3k.asm:177942
      * and is ported by {@link SwingMotion#update(int, int, int, boolean)}.
      *
-     * <p>Routine 6 (duplicate slot, sonic3k.asm:144878) dispatches to the
+     * <p>Routine 6 (duplicate slot, sonic3k.asm:144943) dispatches to the
      * same body; the only difference between routine 4 and routine 6 is
      * which {@code $34} callback is armed on wait expiry
      * ({@code Obj_CNZMinibossGo3} for routine 4,
      * {@code Obj_CNZMinibossChangeDir} for routine 6).
      */
     private void updateMove() {
-        // ROM sonic3k.asm:144913 — jsr (Swing_UpAndDown).l. Swing uses
+        // ROM sonic3k.asm:144978 — jsr (Swing_UpAndDown).l. Swing uses
         // $40 (accel), $3E (max |y_vel|) and bit 0 of $38 (direction).
         SwingMotion.Result result = SwingMotion.update(
                 SWING_ACCEL, yVel, SWING_MAX_VEL, swingDirectionDown);
         yVel = (short) result.velocity();
         swingDirectionDown = result.directionDown();
 
-        // ROM sonic3k.asm:144914 — jsr (MoveSprite2).l (applies both x_vel
+        // ROM sonic3k.asm:144979 — jsr (MoveSprite2).l (applies both x_vel
         // and y_vel). After Go3 fires, xVel carries the 0x100 swing magnitude.
         state.xVel = xVel;
         state.yVel = yVel;
         state.applyVelocity();
-        // ROM sonic3k.asm:144915 — jmp (Obj_Wait).l tail.
+        // ROM sonic3k.asm:144980 — jmp (Obj_Wait).l tail.
         tickWait();
     }
 
     /**
-     * ROM: Obj_CNZMinibossOpening (sonic3k.asm:144941). The ROM body is a
+     * ROM: Obj_CNZMinibossOpening (sonic3k.asm:145006). The ROM body is a
      * tail-call into {@code Animate_RawMultiDelay}: it advances the
      * {@code $30(a0)} animation cursor and, once the script terminator
      * fires, jumps to the {@code $34(a0)} handler which is
-     * {@code Obj_CNZMinibossOpenGo} (sonic3k.asm:144945).
+     * {@code Obj_CNZMinibossOpenGo} (sonic3k.asm:145010).
      *
      * <p>The engine lacks a full {@code Animate_RawMultiDelay} pipeline,
      * so the routine is modelled as a fixed {@code CNZ_MINIBOSS_OPENING_WAIT}
      * wait (matching the {@code move.b #$7F,$3B(a0)} written by OpenGo
-     * at sonic3k.asm:144949 — {@code $3B} is the ROM's Opening-frames
+     * at sonic3k.asm:145014 — {@code $3B} is the ROM's Opening-frames
      * counter, which the animation script decrements). When the wait
      * expires, the armed callback {@link #onOpenGo()} runs and advances
      * state to routine A (WaitHit).
      */
     private void updateOpening() {
-        // ROM sonic3k.asm:144942 — jmp (Animate_RawMultiDelay).l
+        // ROM sonic3k.asm:145007 — jmp (Animate_RawMultiDelay).l
         if (openingObjectDispatchDeferred) {
             openingObjectDispatchDeferred = false;
             return;
@@ -799,7 +799,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     }
 
     /**
-     * ROM: Obj_CNZMinibossWaitHit (sonic3k.asm:144954):
+     * ROM: Obj_CNZMinibossWaitHit (sonic3k.asm:145019):
      * <pre>
      *   btst   #6,status(a0)
      *   bne.s  loc_6DB4E
@@ -809,21 +809,21 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
      * <p>With {@code status} bit 6 clear the body is a pure {@code rts} —
      * no timer decrement, no velocity application, no animation step. If
      * the top child's collision path sets {@link #statusBit6TopHit} via
-     * {@code CNZMiniboss_CheckTopHit} (sonic3k.asm:145442), the routine
-     * falls through to {@code loc_6DB4E} (sonic3k.asm:144960).
+     * {@code CNZMiniboss_CheckTopHit} (sonic3k.asm:145507), the routine
+     * falls through to {@code loc_6DB4E} (sonic3k.asm:145025).
      */
     private void updateWaitHit() {
-        // ROM sonic3k.asm:144955 — btst #6,status(a0).
+        // ROM sonic3k.asm:145020 — btst #6,status(a0).
         if (!statusBit6TopHit) {
-            // ROM sonic3k.asm:144957 — rts (idle until top hit lands).
+            // ROM sonic3k.asm:145022 — rts (idle until top hit lands).
             return;
         }
-        // ROM sonic3k.asm:144960 — loc_6DB4E.
+        // ROM sonic3k.asm:145025 — loc_6DB4E.
         handleWaitHitHandoff();
     }
 
     /**
-     * ROM: Obj_CNZMinibossClosing (sonic3k.asm:144968):
+     * ROM: Obj_CNZMinibossClosing (sonic3k.asm:145033):
      * <pre>
      *   jmp (Animate_RawMultiDelay).l
      * </pre>
@@ -844,7 +844,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     }
 
     /**
-     * ROM: Obj_CNZMinibossLower2 (sonic3k.asm:144972):
+     * ROM: Obj_CNZMinibossLower2 (sonic3k.asm:145037):
      * <pre>
      *   addq.w #1,y_pos(a0)
      *   subq.b #1,$43(a0)
@@ -861,18 +861,18 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
      * disarms the counter so the boss returns to its pre-Lower2 state.
      */
     private void updateLower2() {
-        // ROM sonic3k.asm:144973 — addq.w #1,y_pos(a0). The ROM writes the
+        // ROM sonic3k.asm:145038 — addq.w #1,y_pos(a0). The ROM writes the
         // integer y_pos word directly without touching the fractional part.
         // Mirror that by nudging state.y AND state.yFixed so a subsequent
         // routine's MoveSprite2 (state.applyVelocity) accumulates from the
         // new pixel position, not the stale pre-Lower2 yFixed value.
         state.y += 1;
         state.yFixed += (1 << 16);
-        // ROM sonic3k.asm:144974 — subq.b #1,$43(a0).
+        // ROM sonic3k.asm:145039 — subq.b #1,$43(a0).
         lower2Counter--;
         if (lower2Counter < 0) {
-            // ROM sonic3k.asm:144975-144976 — bmi.s loc_6DB7E.
-            // ROM sonic3k.asm:144979-144981 — move.b $42(a0),routine(a0); rts.
+            // ROM sonic3k.asm:145040-145041 — bmi.s loc_6DB7E.
+            // ROM sonic3k.asm:145044-145046 — move.b $42(a0),routine(a0); rts.
             state.routine = lower2PreviousRoutine;
             // Disarm the counter so a future re-entry via forceRoutineForTest
             // re-seeds it cleanly rather than underflowing further on a stale
@@ -882,9 +882,9 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     }
 
     /**
-     * ROM: CNZMiniboss_BossDefeated (sonic3k.asm:145464) +
-     *       Obj_CNZMinibossEnd (sonic3k.asm:144984) +
-     *       Obj_CNZMinibossEndGo (sonic3k.asm:144996).
+     * ROM: CNZMiniboss_BossDefeated (sonic3k.asm:145529) +
+     *       Obj_CNZMinibossEnd (sonic3k.asm:145049) +
+     *       Obj_CNZMinibossEndGo (sonic3k.asm:145061).
      *
      * <pre>
      *   ; CNZMiniboss_BossDefeated (145465-145472)
@@ -916,13 +916,13 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
      * (flag writes, debris spawn, and $34 arming), and {@link #onEndGo()} handles
      * Obj_CNZMinibossEndGo. Wait_FadeToLevelMusic does not seed a delay: it
      * consumes the live {@code $2E(a0)} value inherited from the interrupted
-     * boss routine (sonic3k.asm:179656-179669).
+     * boss routine (sonic3k.asm:179747-179760).
      */
     @Override
     protected void onDefeatStarted() {
-        // ROM sonic3k.asm:145465 — move.l #Wait_FadeToLevelMusic,(a0).
-        // ROM sonic3k.asm:145466 — bset #7,status(a0).
-        // ROM sonic3k.asm:144987 — bset #4,$38(a0).
+        // ROM sonic3k.asm:145530 — move.l #Wait_FadeToLevelMusic,(a0).
+        // ROM sonic3k.asm:145531 — bset #7,status(a0).
+        // ROM sonic3k.asm:145052 — bset #4,$38(a0).
         // The engine doesn't model Wait_FadeToLevelMusic, status bit 7, or
         // $38 bit 4 separately; state.defeated + the wait-timer early-return
         // in updateBossLogic() cover the observable "routine dispatch is
@@ -937,16 +937,16 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
         // before its own onGo2() latches it again.
         parentSignalBit1 = false;
 
-        // ROM sonic3k.asm:145469 — st (Events_fg_5).w. This is the BG signal
+        // ROM sonic3k.asm:145534 — st (Events_fg_5).w. This is the BG signal
         // that drives the post-boss arena-reveal chain in Sonic3kCNZEvents
         // (updateAct1Bg -> handleAct1Entry -> BG_FG_REFRESH).
         S3kCnzEventWriteSupport.signalMinibossDefeatedForScrollControl(services());
 
         // ROM CNZMiniboss_BossDefeated: jmp (BossDefeated_StopTimer).l
-        // (sonic3k.asm:145527).
+        // (sonic3k.asm:145592).
         stopLevelTimerOnBossDefeat();
 
-        // ROM sonic3k.asm:145467 + 144988 — the combined BossDefeated /
+        // ROM sonic3k.asm:145532 + 144988 — the combined BossDefeated /
         // Obj_CNZMinibossEnd chain installs Obj_CNZMinibossEndGo at $34(a0)
         // and relies on Wait_FadeToLevelMusic to consume the live $2E value.
         // Preserve waitTimer exactly; only replace the $34 callback pointer.
@@ -964,7 +964,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     }
 
     private void spawnBreakApartDebris() {
-        // ROM sonic3k.asm:144989 + 145698:
+        // ROM sonic3k.asm:145054 + 145698:
         // Obj_CNZMinibossEnd creates Child6_CNZMinibossMakeDebris, nine
         // Obj_CNZMinibossDebris children with subtypes 0,2,...,$10.
         for (int i = 0; i < 9; i++) {
@@ -993,7 +993,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     }
 
     /**
-     * ROM: Obj_CNZMinibossEndGo (sonic3k.asm:144996):
+     * ROM: Obj_CNZMinibossEndGo (sonic3k.asm:145061):
      * <pre>
      *   move.l #Obj_EndSignControlAwaitStart,(a0)
      *   clr.b  (Boss_flag).w
@@ -1013,7 +1013,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     private void onEndGo() {
         Sonic3kCNZEvents cnz = getCnzEvents();
         if (cnz != null) {
-            // ROM sonic3k.asm:144998 — clr.b (Boss_flag).w.
+            // ROM sonic3k.asm:145063 — clr.b (Boss_flag).w.
             cnz.setBossFlag(false);
             // Inverse of the arena-entry setWallGrabSuppressed(true) in
             // Sonic3kCNZEvents#handleAct1Entry; re-enables wall-grab now
@@ -1022,10 +1022,10 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
             // chain.
             cnz.setWallGrabSuppressed(false);
         }
-        // ROM sonic3k.asm:144999 — jsr (AfterBoss_Cleanup).l — deferred to
+        // ROM sonic3k.asm:145064 — jsr (AfterBoss_Cleanup).l — deferred to
         // the post-boss zone event flow (T10/T11 — music restart, camera
         // unlock handled by Sonic3kCNZEvents).
-        // ROM sonic3k.asm:145000-145001 — PLC_EndSignStuff load — deferred
+        // ROM sonic3k.asm:145065-145066 — PLC_EndSignStuff load — deferred
         // to the PLC slice (T10/T11).
     }
 
@@ -1047,7 +1047,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     }
 
     /**
-     * ROM: loc_6DB4E (sonic3k.asm:144960):
+     * ROM: loc_6DB4E (sonic3k.asm:145025):
      * <pre>
      *   move.b #$C,routine(a0)                 ; advance to Closing
      *   bclr   #6,$38(a0)                      ; clear Open-state flag
@@ -1063,18 +1063,18 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
      */
     private void handleWaitHitHandoff() {
         diagnosticWaitHitHandoff = true;
-        // ROM sonic3k.asm:144961 — move.b #$C,routine(a0).
+        // ROM sonic3k.asm:145026 — move.b #$C,routine(a0).
         state.routine = ROUTINE_CLOSING;
-        // ROM sonic3k.asm:144962 — bclr #6,$38(a0).
+        // ROM sonic3k.asm:145027 — bclr #6,$38(a0).
         openState = false;
         openSparkChildrenSpawned = false;
         // Clear the top-hit latch so WaitHit can't re-fire if the code
         // ever re-dispatches to routine A before T6 wires the Closing body.
         statusBit6TopHit = false;
-        // ROM sonic3k.asm:144963-144964 writes only the raw-animation
+        // ROM sonic3k.asm:145028-145029 writes only the raw-animation
         // pointer and CloseGo callback; it does not run Set_Raw_Animation.
         // Animate_RawMultiDelay pre-decrements anim_frame_timer before
-        // loading the next pair (sonic3k.asm:177558-177586). This compact
+        // loading the next pair (sonic3k.asm:177649-177677). This compact
         // raw-state representation therefore enters Closing with timer 1,
         // matching the ROM-visible CloseGo frame at CNZ trace f15004.
         startRawAnimationWithTimer(ANIM_CLOSING_FRAMES, 1);
@@ -1082,7 +1082,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     }
 
     /**
-     * ROM: Obj_CNZMinibossGo2 (sonic3k.asm:144903). Runs when
+     * ROM: Obj_CNZMinibossGo2 (sonic3k.asm:144968). Runs when
      * {@code Obj_CNZMinibossLower}'s wait timer expires:
      * <pre>
      *   move.b #4,routine(a0)                 ; ROUTINE_MOVE
@@ -1094,49 +1094,49 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
      * </pre>
      */
     private void onGo2() {
-        // ROM sonic3k.asm:144904 — move.b #4,routine(a0).
+        // ROM sonic3k.asm:144969 — move.b #4,routine(a0).
         state.routine = ROUTINE_MOVE;
-        // ROM sonic3k.asm:144905 — clr.w y_vel(a0). Overridden below by
+        // ROM sonic3k.asm:144970 — clr.w y_vel(a0). Overridden below by
         // SetUp_CNZMinibossSwing, but we match the ROM write order so future
         // trace-replay of the $38 bit1 flag (T5/T6) lines up frame-for-frame.
         yVel = 0;
-        // ROM sonic3k.asm:144906 — bset #1,$38(a0). Top-piece "Move" signal
-        // polled by Obj_CNZMinibossTopWait (sonic3k.asm:145027). Top-piece
+        // ROM sonic3k.asm:144971 — bset #1,$38(a0). Top-piece "Move" signal
+        // polled by Obj_CNZMinibossTopWait (sonic3k.asm:145092). Top-piece
         // Wait routine stalls on Refresh_ChildPosition until this latches.
         parentSignalBit1 = true;
-        // ROM sonic3k.asm:144907-144908 — move.w #$90,$2E(a0) +
+        // ROM sonic3k.asm:144972-144973 — move.w #$90,$2E(a0) +
         //                                 move.l #Obj_CNZMinibossGo3,$34(a0).
         // The parent dispatcher reaches this callback from Obj_Wait's
-        // post-decrement branch (sonic3k.asm:177944-177949). Store the ROM
+        // post-decrement branch (sonic3k.asm:178035-178040). Store the ROM
         // word verbatim; each later boss dispatch decrements it exactly once.
         setWait(Sonic3kConstants.CNZ_MINIBOSS_GO2_WAIT, WaitCallback.GO3);
-        // ROM sonic3k.asm:144909 — bra.w SetUp_CNZMinibossSwing (tail call).
+        // ROM sonic3k.asm:144974 — bra.w SetUp_CNZMinibossSwing (tail call).
         setUpSwing();
     }
 
     /**
-     * ROM: SetUp_CNZMinibossSwing (sonic3k.asm:145393). Seeds the
+     * ROM: SetUp_CNZMinibossSwing (sonic3k.asm:145458). Seeds the
      * Swing_UpAndDown state used by {@code Obj_CNZMinibossMove} — peak
      * |y_vel| = {@code $60}, initial y_vel = {@code +$60}, accel = {@code 8},
      * direction bit cleared ({@code bclr #0,$38(a0)}).
      */
     private void setUpSwing() {
-        // ROM sonic3k.asm:145394-145396 — move.w #$60,d0 / move.w d0,$3E(a0) /
+        // ROM sonic3k.asm:145459-145461 — move.w #$60,d0 / move.w d0,$3E(a0) /
         //                                 move.w d0,y_vel(a0).
         yVel = (short) SWING_MAX_VEL;
-        // ROM sonic3k.asm:145397 — move.w #8,$40(a0). SWING_ACCEL constant.
+        // ROM sonic3k.asm:145462 — move.w #8,$40(a0). SWING_ACCEL constant.
         // (Acceleration is read per frame from SWING_ACCEL; no field to set.)
-        // ROM sonic3k.asm:145398 — bclr #0,$38(a0). Swing starts ascending.
+        // ROM sonic3k.asm:145463 — bclr #0,$38(a0). Swing starts ascending.
         swingDirectionDown = false;
     }
 
     /**
-     * ROM: Obj_CNZMinibossGo3 (sonic3k.asm:144918). Runs when
+     * ROM: Obj_CNZMinibossGo3 (sonic3k.asm:144983). Runs when
      * {@code Obj_CNZMinibossMove}'s wait timer expires:
      * <pre>
      *   move.w #$100,x_vel(a0)   ; swing magnitude
      *   move.w #$9F,$2E(a0)      ; wait 159 frames
-     *   ; falls through to Obj_CNZMinibossCloseGo (sonic3k.asm:144922)
+     *   ; falls through to Obj_CNZMinibossCloseGo (sonic3k.asm:144987)
      * </pre>
      *
      * <p>T5 wires the {@code Obj_CNZMinibossCloseGo} fallthrough — the
@@ -1144,9 +1144,9 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
      * advances to the duplicate-Move slot ({@link #ROUTINE_MOVE_DUP}).
      */
     private void onGo3() {
-        // ROM sonic3k.asm:144919 — move.w #$100,x_vel(a0).
+        // ROM sonic3k.asm:144984 — move.w #$100,x_vel(a0).
         xVel = Sonic3kConstants.CNZ_MINIBOSS_SWING_X_VEL;
-        // ROM sonic3k.asm:144920 — move.w #$9F,$2E(a0). Then falls through
+        // ROM sonic3k.asm:144985 — move.w #$9F,$2E(a0). Then falls through
         // to Obj_CNZMinibossCloseGo which installs the ChangeDir callback
         // and advances the routine to the Move-duplicate slot (routine 6).
         setWait(Sonic3kConstants.CNZ_MINIBOSS_SWING_WAIT, WaitCallback.CHANGE_DIR);
@@ -1154,7 +1154,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     }
 
     /**
-     * ROM: Obj_CNZMinibossCloseGo (sonic3k.asm:144922):
+     * ROM: Obj_CNZMinibossCloseGo (sonic3k.asm:144987):
      * <pre>
      *   move.b #6,routine(a0)
      *   move.l #Obj_CNZMinibossChangeDir,$34(a0)
@@ -1182,25 +1182,25 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
      * covers, and the headless Opening test doesn't depend on it.
      */
     private void onCloseGo() {
-        // ROM sonic3k.asm:144923 — move.b #6,routine(a0).
+        // ROM sonic3k.asm:144988 — move.b #6,routine(a0).
         state.routine = ROUTINE_MOVE_DUP;
         mappingFrame = FRAME_BASE_CLOSED;
-        // ROM sonic3k.asm:144924 — move.l #Obj_CNZMinibossChangeDir,$34(a0).
+        // ROM sonic3k.asm:144989 — move.l #Obj_CNZMinibossChangeDir,$34(a0).
         // The wait timer itself is preserved from whichever caller invoked
         // CloseGo: $9F if we fell through from Go3, or a fresh timer written
         // by the Closing callback in T6. T5's onGo3 writes $9F above, so
         // the first ChangeDir fires after $9F frames for the natural flow.
         waitCallback = WaitCallback.CHANGE_DIR;
-        // ROM sonic3k.asm:144925 — bclr #3,$38(a0). Clears the in-hit-window
+        // ROM sonic3k.asm:144990 — bclr #3,$38(a0). Clears the in-hit-window
         // flag set by CNZMiniboss_CheckPlayerHit. Tracked alongside openState
         // for documentation; T6 wires the full $38 bit map.
         playerHitOpeningBlocked = false;
-        // ROM sonic3k.asm:144926-144931 — palette rotation pointer copy +
+        // ROM sonic3k.asm:144991-144996 — palette rotation pointer copy +
         // sparkle custom handler. Deferred to T6 (parallel to palette wiring).
     }
 
     /**
-     * ROM: Obj_CNZMinibossChangeDir (sonic3k.asm:144935):
+     * ROM: Obj_CNZMinibossChangeDir (sonic3k.asm:145000):
      * <pre>
      *   neg.w  x_vel(a0)
      *   move.w #$13F,$2E(a0)
@@ -1212,20 +1212,20 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
      * callback, and ChangeDir simply re-arms its own wait. This keeps
      * the boss swinging back and forth until a player hit kicks the
      * state machine into {@link #ROUTINE_OPENING} via
-     * {@code CNZMiniboss_CheckPlayerHit} (sonic3k.asm:145413, which
+     * {@code CNZMiniboss_CheckPlayerHit} (sonic3k.asm:145478, which
      * writes {@code routine = 8} and {@code $34 = Obj_CNZMinibossOpenGo}).
      */
     private void onChangeDir() {
-        // ROM sonic3k.asm:144936 — neg.w x_vel(a0).
+        // ROM sonic3k.asm:145001 — neg.w x_vel(a0).
         xVel = (short) -xVel;
         state.xVel = xVel;
-        // ROM sonic3k.asm:144937 — move.w #$13F,$2E(a0).
+        // ROM sonic3k.asm:145002 — move.w #$13F,$2E(a0).
         // $34 stays = ChangeDir so the swing keeps oscillating.
         setWait(Sonic3kConstants.CNZ_MINIBOSS_CHANGEDIR_WAIT, WaitCallback.CHANGE_DIR);
     }
 
     /**
-     * ROM: Obj_CNZMinibossOpenGo (sonic3k.asm:144945):
+     * ROM: Obj_CNZMinibossOpenGo (sonic3k.asm:145010):
      * <pre>
      *   move.b #$A,routine(a0)                 ; routine = WaitHit
      *   move.l #Obj_CNZMinibossChangeDir,$34(a0)
@@ -1241,36 +1241,36 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
      * {@code btst #6,status(a0)} until the top child reports a hit.
      *
      * <p>The {@code $34 = ChangeDir} write is preserved for ROM parity.
-     * OpenGo does not write {@code $2E(a0)} (sonic3k.asm:144945-144951),
+     * OpenGo does not write {@code $2E(a0)} (sonic3k.asm:145010-145016),
      * and WaitHit/Closing do not call {@code Obj_Wait}
-     * (sonic3k.asm:144954-144969), so the pre-opening Move counter survives
+     * (sonic3k.asm:145019-145034), so the pre-opening Move counter survives
      * until the parent returns to routine 6. The {@code $3B=$7F} counter
      * stays deferred to the palette/spark-cadence slice, but
      * {@code Child1_CNZCoilOpenSparks} creates live hurt objects and
      * participates in touch response.
      */
     private void onOpenGo() {
-        // ROM sonic3k.asm:144946 — move.b #$A,routine(a0).
+        // ROM sonic3k.asm:145011 — move.b #$A,routine(a0).
         state.routine = ROUTINE_WAIT_HIT;
         mappingFrame = FRAME_BASE_OPEN;
-        // ROM sonic3k.asm:144947 — move.l #Obj_CNZMinibossChangeDir,$34(a0).
+        // ROM sonic3k.asm:145012 — move.l #Obj_CNZMinibossChangeDir,$34(a0).
         waitCallback = WaitCallback.CHANGE_DIR;
-        // ROM sonic3k.asm:144945-144951 leaves $2E untouched; WaitHit and
+        // ROM sonic3k.asm:145010-145016 leaves $2E untouched; WaitHit and
         // Closing idle without Obj_Wait, so ChangeDir resumes from this stored
-        // counter once CloseGo returns to Move (sonic3k.asm:144954-144969).
-        // ROM sonic3k.asm:144948 — bset #6,$38(a0). Open-state flag.
+        // counter once CloseGo returns to Move (sonic3k.asm:145019-145034).
+        // ROM sonic3k.asm:145013 — bset #6,$38(a0). Open-state flag.
         openState = true;
-        // ROM sonic3k.asm:144949 — move.b #$7F,$3B(a0). $3B counter for
+        // ROM sonic3k.asm:145014 — move.b #$7F,$3B(a0). $3B counter for
         // T6 (sparks spawn cadence / ring-spray framing). Not tracked
         // here because T5's WaitHit test only asserts the idle-vs-hit
         // routine state, not the coil-sparks child effect.
-        // ROM sonic3k.asm:144950-144951 — CreateChild1_Normal from
+        // ROM sonic3k.asm:145015-145016 — CreateChild1_Normal from
         // Child1_CNZCoilOpenSparks.
         spawnOpenSparkChildrenOnce();
     }
 
     /**
-     * ROM: Obj_Wait (sonic3k.asm:177944) dispatch helper — writes {@code $2E(a0)}
+     * ROM: Obj_Wait (sonic3k.asm:178035) dispatch helper — writes {@code $2E(a0)}
      * and the {@code $34(a0)} next-handler pointer. Setting
      * {@code frames = -1} leaves the timer quiescent (no post-wait fire)
      * while still letting the callback slot carry a pointer for ROM
@@ -1295,7 +1295,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     }
 
     /**
-     * ROM: {@code Animate_RawMultiDelay} (sonic3k.asm:177558). CNZ miniboss
+     * ROM: {@code Animate_RawMultiDelay} (sonic3k.asm:177649). CNZ miniboss
      * opening/closing use the short S&K-side raw scripts at
      * {@code AniRaw_CNZMinibossOpening/Closing}; their {@code $F4}
      * terminator jumps through the callback slot.
@@ -1309,7 +1309,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
         rawAnimPairIndex++;
         if (rawAnimPairIndex >= frames.length) {
             // $F4 clears anim_frame_timer and jumps through $34(a0) in this
-            // same dispatch (sonic3k.asm:177516-177528, 177558-177586).
+            // same dispatch (sonic3k.asm:177607-177619, 177649-177677).
             waitCallback = terminatorCallback;
             runWaitCallback();
             return;
@@ -1320,7 +1320,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     }
 
     /**
-     * ROM: Obj_Wait (sonic3k.asm:177944) —
+     * ROM: Obj_Wait (sonic3k.asm:178035) —
      * {@code subq.w #1,$2E(a0); bmi.s loc_84892; rts}. When the timer goes
      * below zero, jumps to {@code $34(a0)} (our {@link #waitCallback}).
      */
@@ -1361,9 +1361,9 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
      * against {@code $3C(a0)} and, when it changes, stores the current
      * routine in {@code $42(a0)}, enters {@code Obj_CNZMinibossLower2}, and
      * seeds {@code $43(a0) = $1F}; {@code Lower2} then lowers one pixel per
-     * update (sonic3k.asm:145508-145515, 144972-144981). The top-piece
+     * update (sonic3k.asm:145573-145580, 145037-145046). The top-piece
      * block explosion only writes the impact coordinate and visual child
-     * (sonic3k.asm:145204-145224); this hook represents the later
+     * (sonic3k.asm:145269-145289); this hook represents the later
      * {@code Events_bg+$04} row-clear observation.
      */
     public void onArenaChunkDestroyed() {
@@ -1427,10 +1427,10 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
      *
      * <p>Consumed by {@link CnzMinibossTopInstance#update(int,
      * com.openggf.game.PlayableEntity)} inside the {@code Wait} routine
-     * ({@code Obj_CNZMinibossTopWait}, sonic3k.asm:145027) to decide
+     * ({@code Obj_CNZMinibossTopWait}, sonic3k.asm:145092) to decide
      * whether to fall through to {@code Wait2}/{@code Main} or stay in
      * {@code Refresh_ChildPosition}. Set by {@link #onGo2()} mirroring
-     * {@code bset #1,$38(a0)} at sonic3k.asm:144906.
+     * {@code bset #1,$38(a0)} at sonic3k.asm:144971.
      */
     public boolean isParentSignalBit1Set() {
         return parentSignalBit1;
@@ -1507,7 +1507,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
             case ROUTINE_CLOSING -> {
                 // ROM: Closing is normally entered from handleWaitHitHandoff
                 // which writes $30 = Closing and $34 = onCloseGo without a
-                // Set_Raw_Animation reset (sonic3k.asm:144960-144969).
+                // Set_Raw_Animation reset (sonic3k.asm:145025-145034).
                 startRawAnimationWithTimer(ANIM_CLOSING_FRAMES, 1);
                 waitCallback = WaitCallback.CLOSE_GO;
             }
@@ -1540,14 +1540,14 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
 
     void forcePlayerHitOpeningReadyForTest() {
         // Mirrors Obj_CNZMinibossCloseGo's bclr #3,$38(a0)
-        // (sonic3k.asm:144925) without perturbing routine/timer state.
+        // (sonic3k.asm:144990) without perturbing routine/timer state.
         playerHitOpeningBlocked = false;
     }
 
     /**
      * Simulates the top-piece hit signal — equivalent to the ROM
      * {@code bset #6,status(a0)} at {@code CNZMiniboss_CheckTopHit}
-     * (sonic3k.asm:145442). Public for cross-package test access (T11
+     * (sonic3k.asm:145507). Public for cross-package test access (T11
      * integration test in {@code com.openggf.tests}); the {@code ForTest}
      * suffix is the visibility marker.
      *
@@ -1574,7 +1574,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     /**
      * Test seam: arm {@link #ROUTINE_LOWER2} with an explicit countdown
      * ({@code $43(a0)}) and an explicit restore target for
-     * {@code loc_6DB7E} (sonic3k.asm:144979 — {@code move.b $42(a0),routine(a0)}).
+     * {@code loc_6DB7E} (sonic3k.asm:145044 — {@code move.b $42(a0),routine(a0)}).
      * Package-private — test-only.
      *
      * <p>Tests must pass the routine they want restored when the counter
@@ -1605,7 +1605,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
      * dormant phase: the placed object exists but has not yet been triggered by the
      * camera reaching the arena ({@code $31E0}) and the 2-second wait completing
      * (minibossStartReleased). In that phase the ROM draws nothing
-     * (sonic3k.asm:144823-144840), so neither should we. Once {@link #updateInit()}
+     * (sonic3k.asm:144888-144905), so neither should we. Once {@link #updateInit()}
      * runs (routine advances past INIT, children spawned) the boss is visible.
      */
     private boolean isDormantBeforeStart() {

@@ -62,7 +62,7 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
     @Override
     public int romObjectCodePointerHighWord() {
         // Obj_CollapsingPlatform / loc_20594 are in ROM bank 0x0002
-        // (sonic3k.asm:44784,44814).
+        // (sonic3k.asm:44824,44854).
         return 0x0002;
     }
 
@@ -164,7 +164,7 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
     private int solidStayTimer;
     private boolean releasePending;
     /**
-     * ROM {@code loc_205DE} (sonic3k.asm:44850-44859) runs {@code sub_205B6} --
+     * ROM {@code loc_205DE} (sonic3k.asm:44890-44899) runs {@code sub_205B6} --
      * one {@code SolidObjectTopSloped2} pass covering BOTH players -- before it
      * decrements {@code $38}, rewrites the action pointer and calls
      * {@code sub_205FC} for Player 1 and then Player 2. The engine splits that
@@ -183,12 +183,12 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
     private int velY;
     private int yFrac;
 
-    // ROM Sprite_OnScreen_Test (sonic3k.asm:37262) reads Camera_X_pos_coarse_back,
-    // which Load_Sprites (sonic3k.asm:37545 loc_1B7F2) sets at the START of each
-    // frame's level loop -- BEFORE Process_Sprites (sonic3k.asm:7893 -> 7894).
+    // ROM Sprite_OnScreen_Test (sonic3k.asm:37302) reads Camera_X_pos_coarse_back,
+    // which Load_Sprites (sonic3k.asm:37585 loc_1B7F2) sets at the START of each
+    // frame's level loop -- BEFORE Process_Sprites (sonic3k.asm:7925 -> 7894).
     // Camera_X_pos_coarse_back therefore reflects {@code Camera_X_pos} at the
     // start of frame N, which equals end-of-frame-N-1 (camera moves during
-    // DeformBgLayer at sonic3k.asm:7897, AFTER Process_Sprites). In the engine
+    // DeformBgLayer at sonic3k.asm:7929, AFTER Process_Sprites). In the engine
     // {@link com.openggf.LevelFrameStep} runs object execution (step 4) BEFORE
     // the camera tracking step (step 5: {@code camera.updatePosition()}), so
     // {@code services().camera().getX()} read at the start of this object's
@@ -198,7 +198,7 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
     //
     // (Round 13 attempted to mirror ROM by caching the previous frame's value,
     // under the mistaken premise that Load_Sprites runs AFTER Process_Sprites.
-    // The disassembly (sonic3k.asm:7893 jsr Load_Sprites; 7894 jsr
+    // The disassembly (sonic3k.asm:7925 jsr Load_Sprites; 7894 jsr
     // Process_Sprites; 7897 jsr DeformBgLayer) shows the order is in fact
     // Load_Sprites -> Process_Sprites -> DeformBgLayer, so the round-13 cache
     // pulled cam_X from too far in the past and let the platform's destruction
@@ -282,7 +282,7 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
         }
         // ObjPlatformCollapse_CreateFragments jumps to Play_SFX instead of
         // calling sub_205B6/SolidObjectTopSloped2 on the transition dispatch
-        // (sonic3k.asm:45399). Existing riders retain their standing bits across
+        // (sonic3k.asm:45439). Existing riders retain their standing bits across
         // that skipped pass, but a second player cannot establish a fresh
         // contact until loc_205DE resumes the solid helper on the following
         // dispatch.
@@ -292,7 +292,7 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
     /**
      * One-frame suppression of the slope sample / y_pos write for the
      * state-1 -> state-2 transition frame. ROM
-     * {@code ObjPlatformCollapse_CreateFragments} (sonic3k.asm:45399-45442)
+     * {@code ObjPlatformCollapse_CreateFragments} (sonic3k.asm:45439-45482)
      * does not fall through to {@code sub_205B6}, so the slope sample is
      * skipped while the player remains attached. Player y_pos therefore
      * holds the previous frame's value -- which is the trace observation at
@@ -322,7 +322,7 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
     public boolean defersAirborneRiderUnseatThisFrame(PlayableEntity player) {
         // Also true before this frame's update() has run, for the dispatch that
         // is about to fragment: loc_20594's `tst.b $38 / beq.w
-        // ObjPlatformCollapse_CreateFragments` (sonic3k.asm:44822-44823) takes
+        // ObjPlatformCollapse_CreateFragments` (sonic3k.asm:44862-44863) takes
         // the branch when the countdown has already reached zero, so
         // state 1 with an exhausted timer IS the CreateFragments dispatch.
         return transitionFrameSlopeSkip || (state == 1 && collapseTimer <= 0);
@@ -332,7 +332,7 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
     public boolean sampleSlopeOnRideExit(PlayableEntity player) {
         // ROM loc_205DE runs sub_205B6 (SolidObjectTopSloped2) before
         // sub_205FC clears Status_OnObj and sets Status_InAir on the rider
-        // (sonic3k.asm:44850-44864). The engine's split object/solid phases
+        // (sonic3k.asm:44890-44904). The engine's split object/solid phases
         // can reach the ride-exit branch after state has advanced to 3, so the
         // final sloped y_pos write is still required before clearing support.
         return state == 3;
@@ -346,7 +346,7 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
      * {@code unloadCounterBasedOutOfRange} compares against the CURRENT
      * frame's camera_x, while ROM's S3K {@code Sprite_OnScreen_Test} reads
      * {@code Camera_X_pos_coarse_back} which {@code Load_Sprites} updates
-     * AFTER {@code Process_Sprites} (sonic3k.asm:37545 loc_1B7F2). Letting
+     * AFTER {@code Process_Sprites} (sonic3k.asm:37585 loc_1B7F2). Letting
      * the engine destroy the platform with the eager current-frame value
      * collapses it one frame too early relative to ROM, which was the
      * blocker preventing the F6255 freed-slot despawn analog from firing.
@@ -382,14 +382,14 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
     void publishReleaseAnimationState(AbstractPlayableSprite player) {
         // sub_205FC clears Status_Push and writes only prev_anim=Run. The
         // current Walk byte remains untouched, forcing Animate to restart it
-        // on the following player tick (sonic3k.asm:44860-44864).
+        // on the following player tick (sonic3k.asm:44900-44904).
         player.setPushing(false);
         player.getAnimationManager().publishPreviousAnimationId(Sonic3kAnimationIds.RUN.id());
     }
 
     /**
      * ROM {@code loc_205A6}: {@code move.b status(a0),d0 / andi.b #standing_mask,d0}
-     * (sonic3k.asm:44826-44828). {@code standing_mask = p1_standing|p2_standing}
+     * (sonic3k.asm:44866-44868). {@code standing_mask = p1_standing|p2_standing}
      * (sonic3k.constants.asm:147), so either character's standing bit arms the
      * collapse. Read fresh at dispatch entry, never cached.
      */
@@ -413,7 +413,7 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
         releaseDispatchActive = false;
         switch (state) {
             case 0 -> {
-                // ROM loc_20594 (sonic3k.asm:44819-44824): the $38 countdown is
+                // ROM loc_20594 (sonic3k.asm:44859-44864): the $38 countdown is
                 // reached only when $3A is ALREADY set, so the dispatch that
                 // sets $3A does not decrement.
                 if (triggered) {
@@ -427,13 +427,13 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
                         collapseTimer--;
                     }
                 }
-                // ROM loc_205A6 (sonic3k.asm:44826-44830) then re-reads the
+                // ROM loc_205A6 (sonic3k.asm:44866-44870) then re-reads the
                 // object's own standing bits and sets $3A from them. This is a
                 // fresh read every dispatch, not a latch taken at contact time:
                 // the bits it reads were written by the PREVIOUS dispatch's
                 // sub_205B6, and any other solid object that has re-seated the
                 // same character since will have cleared them via
-                // RideObject_SetRide's `bclr d6,status(a3)` (:42027-42031).
+                // RideObject_SetRide's `bclr d6,status(a3)` (:42067-42071).
                 // Two overlapping platforms therefore starve each other's
                 // trigger: the lower slot clears the higher slot's bit every
                 // frame before the higher slot's routine body reads it.
@@ -470,7 +470,7 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
                 // $38, so the normal solid pass must still see this object as solid.
                 if (releasePending) {
                     if (releaseSolidPassExposed) {
-                        // ROM loc_205DE (sonic3k.asm:44850-44854) performs
+                        // ROM loc_205DE (sonic3k.asm:44890-44894) performs
                         // sub_205B6 before rewriting the action pointer and
                         // clearing any rider in sub_205FC. Expose one engine
                         // post-update solid pass first; if no contact consumed
@@ -491,7 +491,7 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
                 }
                 // ROM loc_205DE entry-point begins with `bsr.w sub_205B6` which
                 // re-runs the SolidObjectTopSloped2 + Sprite_OnScreen_Test pair
-                // each frame (sonic3k.asm:44851). Off-screen delete remains
+                // each frame (sonic3k.asm:44891). Off-screen delete remains
                 // active during solid-stay countdown so the platform exits
                 // cleanly when the camera scrolls past during fragment fall.
                 if (!spriteOnScreenTestPasses()) {
@@ -520,13 +520,13 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
         if (!isOnScreen(128)) {
             // ROM ObjPlatformCollapse_CreateFragments clears the respawn table
             // bit before the falling parent reaches loc_20620
-            // (sonic3k.asm:45435-45438).
+            // (sonic3k.asm:45475-45478).
             setDestroyedByOffscreen();
         }
     }
 
     /**
-     * ROM Sprite_OnScreen_Test (sonic3k.asm:37262):
+     * ROM Sprite_OnScreen_Test (sonic3k.asm:37302):
      * <pre>
      *   move.w  x_pos(a0),d0
      *   andi.w  #$FF80,d0
@@ -535,9 +535,9 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
      *   bhi.w   loc_1B5A0    ; off-screen -> Delete_Current_Sprite
      * </pre>
      * {@code Camera_X_pos_coarse_back} = {@code (Camera_X_pos - $80) & $FF80},
-     * recomputed by {@code Load_Sprites} (sonic3k.asm:37472-37478) at the
+     * recomputed by {@code Load_Sprites} (sonic3k.asm:37512-37518) at the
      * START of the level loop -- BEFORE {@code Process_Sprites} runs the
-     * platform's solid pass (sonic3k.asm:7893 jsr Load_Sprites; 7894 jsr
+     * platform's solid pass (sonic3k.asm:7925 jsr Load_Sprites; 7894 jsr
      * Process_Sprites; 7897 jsr DeformBgLayer). So during ROM
      * {@code Process_Sprites} of frame N, {@code Camera_X_pos_coarse_back}
      * reflects {@code Camera_X_pos} at the start of frame N (i.e. the same
@@ -585,7 +585,7 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
         state = 2;
         releasePending = false;
         releaseSolidPassExposed = false;
-        // ROM ObjPlatformCollapse_CreateFragments (sonic3k.asm:45399) does NOT
+        // ROM ObjPlatformCollapse_CreateFragments (sonic3k.asm:45439) does NOT
         // fall through to sub_205B6 -- it jmps to Play_SFX. So the slope
         // sample / y_pos write is skipped on the ROM transition frame.
         //
@@ -596,8 +596,8 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
         transitionFrameSlopeSkip = true;
         // ObjPlatformCollapse_CreateFragments reuses the parent's own slot as
         // the first fragment (movea.l a0,a1), so the parent takes the first
-        // delay-table byte: `move.b (a4)+,$38(a1)` (sonic3k.asm:45434) with a4
-        // = $30(a0), the byte_20CB6 delay table. loc_205DE (:44855-44858) then
+        // delay-table byte: `move.b (a4)+,$38(a1)` (sonic3k.asm:45474) with a4
+        // = $30(a0), the byte_20CB6 delay table. loc_205DE (:44895-44898) then
         // runs sub_205B6 and decrements $38, releasing when it reaches zero, so
         // release lands collapseDelays[0] dispatches after fragmentation.
         solidStayTimer = config.collapseDelays[0];

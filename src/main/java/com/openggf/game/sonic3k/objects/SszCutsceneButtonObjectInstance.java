@@ -12,7 +12,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code Obj_SSZCutsceneButton} ({@code $AF}, sonic3k.asm:133742-133749): the grey button
+ * ROM {@code Obj_SSZCutsceneButton} ({@code $AF}, sonic3k.asm:133799-133806): the grey button
  * cutscene Knuckles lands on at {@code ($3A0,$C7C)} in Sky Sanctuary act 1.
  *
  * <p>It is inert. {@code SetUp_ObjAttributes} with {@code ObjDat_SSZCutsceneButton}

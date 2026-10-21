@@ -12,12 +12,12 @@ import org.junit.jupiter.api.Test;
  * Focused tests for the {@link AbstractPlayableSprite#captureOnObjectAtFrameStart()}
  * / {@link AbstractPlayableSprite#getOnObjectAtFrameStart()} pair that mirrors
  * the ROM's mid-frame {@code Status_OnObj} read in {@code Tails_CPU_Control}
- * (sonic3k.asm:26688-26700) / {@code TailsCPU_Normal} (s2.asm:38933+).
+ * (sonic3k.asm:26728-26740) / {@code TailsCPU_Normal} (s2.asm:38933+).
  *
  * <p>The snapshot is the foundation for closing the OnObj timing gap between
  * engine and ROM: ROM reads {@code status(a1)} mid-frame, before solid-object
- * processing (sub_1FF1E sonic3k.asm:44306-44319, loc_1FFC4 sonic3k.asm:
- * 44369-44381) clears the bit; {@code Sonic_Jump} (sonic3k.asm:23288-23354)
+ * processing (sub_1FF1E sonic3k.asm:44346-44359, loc_1FFC4 sonic3k.asm:
+ * 44369-44381) clears the bit; {@code Sonic_Jump} (sonic3k.asm:23323-23389)
  * sets {@code Status_InAir} but never touches {@code Status_OnObj}. The
  * engine's player tick clears the bit earlier (in
  * {@code PlayableSpriteMovement.doJump} and the air-unseat path in

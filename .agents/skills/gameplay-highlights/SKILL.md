@@ -11,6 +11,11 @@ Keep the complete source archive separate from the edited reel. Do not concatena
 every probe, screenshot and test variant into a “highlights” movie. This skill works
 across games; it does not require an S3K bring-up or authorize engine changes.
 
+For a promo, trailer or showcase meant to sell the work, also follow
+[promo-direction](../promo-direction/SKILL.md) for the brief, beat-grid storyboard,
+typography, layouts, soundtrack and the flatness review. This skill still governs
+provenance, honest labelling, verification and the OpenGGF-Media archive.
+
 ## Collect evidence as work proceeds
 
 Use one explicit task directory outside the engine repository for durable media. Reuse

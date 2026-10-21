@@ -4,13 +4,13 @@ import com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
 
 /**
  * {@code LRZ2_BackgroundEvent}'s stage machine: {@code LRZ2_BackgroundEvent_Index}
- * (sonic3k.asm:115682-115690) and its three entries, {@code loc_5700C} (:115692-115710),
- * {@code loc_57040} (:115712-115722) and {@code loc_57058} (:115724-115738).
+ * (sonic3k.asm:115728-115736) and its three entries, {@code loc_5700C} (:115738-115756),
+ * {@code loc_57040} (:115758-115768) and {@code loc_57058} (:115770-115784).
  *
  * <p>Stage 0 is reached only by the seamless act change. {@code loc_56CAA} ends with
- * {@code clr.w (Events_routine_bg)} (:115374) and the act word is already {@code $901}, so the
+ * {@code clr.w (Events_routine_bg)} (:115420) and the act word is already {@code $901}, so the
  * next background dispatch is this index's first entry; a direct {@code $901} load never sees it,
- * because {@code LRZ2_BackgroundInit} writes {@code #8} into the routine word (:115661) after its
+ * because {@code LRZ2_BackgroundInit} writes {@code #8} into the routine word (:115707) after its
  * own {@code Refresh_PlaneFull}.
  *
  * <p>What stage 0 does is arm a plane-B refill and start it on the same frame:
@@ -40,7 +40,7 @@ public final class Lrz2BackgroundStageMachine {
     public static final int BG_STAGE_REFRESH = 4;
     /** Its third, {@code loc_57058}: the steady state a direct {@code $901} load starts in. */
     public static final int BG_STAGE_STEADY = 8;
-    /** {@code move.w #$F,(Draw_delayed_rowcount).w} at {@code loc_5701E} (:115707). */
+    /** {@code move.w #$F,(Draw_delayed_rowcount).w} at {@code loc_5701E} (:115753). */
     public static final int REFRESH_ROWCOUNT = 0x0F;
 
     private Lrz2BackgroundStageMachine() {
@@ -69,11 +69,11 @@ public final class Lrz2BackgroundStageMachine {
     }
 
     /**
-     * {@code Draw_PlaneVertBottomUp} (sonic3k.asm:103429-103434) calls
+     * {@code Draw_PlaneVertBottomUp} (sonic3k.asm:103475-103480) calls
      * {@code Draw_PlaneVertSingleBottomUp} once and then, while that call's
-     * {@code subq.w #1,(Draw_delayed_rowcount)} (:103456) left the counter non-negative, a second
+     * {@code subq.w #1,(Draw_delayed_rowcount)} (:103502) left the counter non-negative, a second
      * time. {@code loc_57044}'s {@code bpl} keeps stage 4; the call that takes the counter
-     * negative runs {@code addq.w #4,(Events_routine_bg)} (:115718) and parks on stage 8.
+     * negative runs {@code addq.w #4,(Events_routine_bg)} (:115764) and parks on stage 8.
      */
     private static void drainBottomUpRows(LrzZoneRuntimeState lrz) {
         int count = lrz.delayedRowcount() - 1;

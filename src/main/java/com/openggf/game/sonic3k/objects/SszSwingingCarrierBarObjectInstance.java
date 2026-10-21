@@ -27,7 +27,7 @@ import com.openggf.sprites.playable.ObjectControlState;
 import java.util.List;
 
 /**
- * ROM {@code loc_46284}-{@code loc_46424} (sonic3k.asm:92158-92300): the short bar at the tip of
+ * ROM {@code loc_46284}-{@code loc_46424} (sonic3k.asm:92204-92346): the short bar at the tip of
  * {@code Obj_SSZSwingingCarrier}'s arm, and the only part of the family a player touches.
  *
  * <p>Init: {@code render_flags 4}, {@code height_pixels $C}, {@code width_pixels $18},

@@ -175,7 +175,7 @@ class TestAizExitLookout {
                 .findFirst().orElseThrow();
         assertEquals(0x2DE0, lookout.getCollisionX(), "construction retains the original left-facing origin");
         // MonkeyDude_Wait (loc_85652: Animate_Raw/Obj_Wait) and MonkeyDude_Active
-        // (sonic3k.asm:182734-182789) never write body x_pos or render_flags; only
+        // (sonic3k.asm:182825-182880) never write body x_pos or render_flags; only
         // the arm root targets P1. The body keeps its placement origin while P1 is
         // to the right, so 48 remains a conservative, not a tight, P2 birth span.
         boolean published = false;

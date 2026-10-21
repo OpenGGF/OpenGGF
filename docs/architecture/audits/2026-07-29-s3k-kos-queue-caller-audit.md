@@ -91,9 +91,9 @@ identity is correct.
 
 | Engine owner | ROM behavior | Current behavior | Required correction |
 |---|---|---|---|
-| HCZ1-to-HCZ2 | Two direct jobs followed by one module job; transition polls global module-queue empty (`sonic3k.asm:105723-105754`). | Only the module job is submitted and the engine polls its handle. | Submit the two direct jobs first, retain all handles for rewind/lifetime, and gate on global module-queue empty. |
-| MGZ1-to-MGZ2 | Two direct jobs followed by one module job; transition polls global module-queue empty (`sonic3k.asm:106290-106314`). | No queue submission; a 26-frame timer approximates decompression. | Replace the timer with exact direct/module descriptors and gate on global module-queue empty. |
-| LBZ1-to-LBZ2 | Two direct jobs followed by one module job; transition polls global module-queue empty (`sonic3k.asm:111210-111235`). | No queue submission; a 55-frame timer approximates decompression. | Replace the timer with exact direct/module descriptors and gate on global module-queue empty. |
+| HCZ1-to-HCZ2 | Two direct jobs followed by one module job; transition polls global module-queue empty (`sonic3k.asm:105769-105800`). | Only the module job is submitted and the engine polls its handle. | Submit the two direct jobs first, retain all handles for rewind/lifetime, and gate on global module-queue empty. |
+| MGZ1-to-MGZ2 | Two direct jobs followed by one module job; transition polls global module-queue empty (`sonic3k.asm:106336-106360`). | No queue submission; a 26-frame timer approximates decompression. | Replace the timer with exact direct/module descriptors and gate on global module-queue empty. |
+| LBZ1-to-LBZ2 | Two direct jobs followed by one module job; transition polls global module-queue empty (`sonic3k.asm:111256-111281`). | No queue submission; a 55-frame timer approximates decompression. | Replace the timer with exact direct/module descriptors and gate on global module-queue empty. |
 
 These are synchronization-affecting gaps: completion changes the frame on which act
 state, layouts, managers, camera/event state, and subsequent object processing advance.

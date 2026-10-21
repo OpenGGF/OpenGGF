@@ -122,7 +122,7 @@ final class SszAct2Deformation {
     }
 
     /**
-     * {@code loc_58D44} (sonic3k.asm:118015-118032), taken by {@code sub_58D3E} once
+     * {@code loc_58D44} (sonic3k.asm:118061-118078), taken by {@code sub_58D3E} once
      * {@code Events_routine_bg} is non-zero: {@code HScroll_table}'s longword gains {@code $8000}
      * and its old integer word seeds eight words that each drop by an eighth, from {@code +$16}
      * down to {@code +$08}, under a fixed {@code $5E} at {@code +$18}.
@@ -139,7 +139,7 @@ final class SszAct2Deformation {
     }
 
     /**
-     * {@code ApplyDeformation} (sonic3k.asm:103664-103760) as {@code sub_58FBC} enters it with
+     * {@code ApplyDeformation} (sonic3k.asm:103710-103806) as {@code sub_58FBC} enters it with
      * {@code SSZ2_BGDeformArray} and {@code HScroll_table+$004}: bands measured down from
      * {@code Camera_Y_pos_BG_copy}, each line pairing {@code -Camera_X_pos_copy} with the
      * negated band word, or one word per line for a band with bit 15 set.

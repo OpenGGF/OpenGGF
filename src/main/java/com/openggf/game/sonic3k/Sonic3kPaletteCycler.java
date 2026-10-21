@@ -188,7 +188,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                 break;
 
             // Competition-zone ids follow the ROM's OffsAnPal table, which is
-            // 48 entries indexed zone*2 + act (skdisasm/sonic3k.asm:3110-3165):
+            // 48 entries indexed zone*2 + act (skdisasm/sonic3k.asm:3142-3197):
             // BPZ occupies entries 30/31, CGZ 34/35 and EMZ 36/37.
             case 0x0F: // BPZ (competition) — AnPal_BPZ balloons + background
                 loadBpzCycles(reader, list);
@@ -207,7 +207,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                 break;
             // OffsAnPal entries 45 ($1601 Hidden Palace) and 47 ($1701 sanctuary)
             // are AnPal_HPZ; entries 44 (LRZ3) and 46 (DEZ3) are not
-            // (sonic3k.asm:3161-3164).
+            // (sonic3k.asm:3193-3196).
             case 0x16, 0x17:
                 if (zoneIndex == 0x16 && actIndex == 0) {
                     list.add(new Lrz3Cycle(reader.slice(Sonic3kConstants.ANPAL_LRZ12_1_ADDR,
@@ -241,7 +241,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                 && introData1.length >= Sonic3kConstants.ANPAL_AIZ1_3_SIZE
                 && introData2.length >= Sonic3kConstants.ANPAL_AIZ1_4_SIZE) {
             // AnPal_AIZ1's normal branch reads 6 bytes at counters+$02 before wrapping it
-            // (sonic3k.asm:3219-3223); a fire-branch value carried in can be $30 or $36,
+            // (sonic3k.asm:3251-3255); a fire-branch value carried in can be $30 or $36,
             // which reads the ROM bytes after AnPal_PalAIZ1_2.
             byte[] secondaryRomRead = safeSlice(reader, Sonic3kConstants.ANPAL_AIZ1_2_ADDR,
                     AIZ1_SECONDARY_ROM_READ_BYTES);
@@ -270,7 +270,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
     }
 
     private void loadHczCycles(RomByteReader reader, List<PaletteCycle> list, int actIndex) {
-        // AnPal_HCZ2 (sonic3k.asm line 3315) is rts — Act 2 has no palette cycling.
+        // AnPal_HCZ2 (sonic3k.asm line 3347) is rts — Act 2 has no palette cycling.
         if (actIndex != 0) {
             return;
         }
@@ -347,8 +347,8 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
     }
 
     /**
-     * {@code AnPal_DEZ1} (sonic3k.asm:3661) runs channel A and then falls through into
-     * {@code AnPal_DEZ2} (:3676); the act 2 dispatch entry is the {@code AnPal_DEZ2} label
+     * {@code AnPal_DEZ1} (sonic3k.asm:3693) runs channel A and then falls through into
+     * {@code AnPal_DEZ2} (:3708); the act 2 dispatch entry is the {@code AnPal_DEZ2} label
      * itself, below channel A's timer, so act 2 never touches palette line 4.
      */
     private void loadDezCycles(RomByteReader reader, List<PaletteCycle> list, int actIndex) {
@@ -544,8 +544,8 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
         private boolean dirty2;
         private boolean dirty3;
 
-        // ROM AIZ1_palette_cycle_flag (sonic3k.constants.asm:649), written by AIZ1_Resize
-        // routine 0 (loc_1C46E, sonic3k.asm:38913-38917): 1 while Camera_X_pos < $1000, else 0.
+        // ROM AIZ1_palette_cycle_flag (sonic3k.constants.asm:668), written by AIZ1_Resize
+        // routine 0 (loc_1C46E, sonic3k.asm:38953-38957): 1 while Camera_X_pos < $1000, else 0.
         // Do_ResizeEvents runs at the end of DeformBgLayer (38343-38356), after
         // Animate_Palette (7923), so a call reads the decision made after the previous call;
         // Level's own DeformBgLayer (7792) decides it before the first call.
@@ -569,7 +569,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
             }
 
             // Both branches open with subq.w #1,(Palette_cycle_counter1) / bpl.s and
-            // reload 9 (fire) or 7 (normal) when it expires (sonic3k.asm:3208-3210, 3235-3237).
+            // reload 9 (fire) or 7 (normal) when it expires (sonic3k.asm:3240-3242, 3267-3269).
             if (ram.expirePaletteCycleCounter1(introFlag ? 9 : 7)) {
                 if (introFlag) {
                     tickIntro(level, registry, gm);
@@ -654,7 +654,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
             dirty2 = true;
 
             // PalAIZ1_2 → palette 3, colors 12-14
-            // ROM: tst.b (Palette_cycle_counters+$00) / bne.s (sonic3k.asm:3217-3218).
+            // ROM: tst.b (Palette_cycle_counters+$00) / bne.s (sonic3k.asm:3249-3250).
             // Obj_AIZPlaneIntro sets it once Sonic reaches x $13D0 (loc_67712, 135755-135756)
             // and Obj_CutsceneKnuckles clears it when Knuckles leaves (loc_61F22,
             // 128795-128796), so the cycle holds while the emeralds own those colours.
@@ -708,7 +708,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
         @Override
         void tick(Level level, PaletteOwnershipRegistry registry) {
             GraphicsManager gm = GameServices.graphics();
-            // AnPal_AIZ2: subq.w #1,(Palette_cycle_counter1) / bpl.s / reload 5 (sonic3k.asm:3264-3266)
+            // AnPal_AIZ2: subq.w #1,(Palette_cycle_counter1) / bpl.s / reload 5 (sonic3k.asm:3296-3298)
             if (ram.expirePaletteCycleCounter1(5)) {
                 int cameraX = GameServices.camera().getX() & 0xFFFF;
 
@@ -798,7 +798,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
         @Override
         void tick(Level level, PaletteOwnershipRegistry registry) {
             GraphicsManager gm = GameServices.graphics();
-            // loc_22F6: subq.w #1,(Palette_cycle_counters+$08) / bpl.s / reload 1 (sonic3k.asm:3295-3297)
+            // loc_22F6: subq.w #1,(Palette_cycle_counters+$08) / bpl.s / reload 1 (sonic3k.asm:3327-3329)
             if (ram.expirePaletteCycleWord(8, 1)) {
                 int cameraX = GameServices.camera().getX() & 0xFFFF;
 
@@ -830,7 +830,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
     }
 
     // ========== HCZ1 Water Cycle ==========
-    // ROM: AnPal_HCZ1 (sonic3k.asm line 3287), timer period 7
+    // ROM: AnPal_HCZ1 (sonic3k.asm line 3319), timer period 7
     // AnPal_PalHCZ1 → palette 2 colors 3-6 (Normal_palette_line_3+$06/$0A)
     //   counter0 & 0x18 for data index, counter0 += 8, wraps at 0x20 (cycles 0,8,16,24)
     // ROM also writes the SAME table to Water_palette_line_3+$06/$0A. Because the
@@ -925,7 +925,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
     }
 
     // ========== CNZ Unified Cycle ==========
-    // ROM: AnPal_CNZ (sonic3k.asm line 3319)
+    // ROM: AnPal_CNZ (sonic3k.asm line 3351)
     //
     // Channel 1 - Bumpers/teacups (gated by Palette_cycle_counter1, period 3):
     //   AnPal_PalCNZ_1 → Normal_palette_line_4+$12 → palette[3] colors 9-11
@@ -1034,7 +1034,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
     }
 
     // ========== ICZ Unified Cycle ==========
-    // ROM: AnPal_ICZ (sonic3k.asm line 3379)
+    // ROM: AnPal_ICZ (sonic3k.asm line 3411)
     //
     // Channel 1 — geyser/ice (timer period 5):
     //   counter0 +4, wrap 0x40 → Normal_palette_line_3+$1C = palette[2] colors 14-15
@@ -1253,7 +1253,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
     }
 
     // ========== LBZ Cycle ==========
-    // ROM: AnPal_LBZ1 / AnPal_LBZ2 (shared logic at loc_2516, sonic3k.asm line 3448)
+    // ROM: AnPal_LBZ1 / AnPal_LBZ2 (shared logic at loc_2516, sonic3k.asm line 3480)
     // Single channel, timer period 4 (reset to 3), counter0 step +6, wrap at 0x12 (18 bytes).
     // AnPal_PalLBZ1/2 → Normal_palette_line_3+$10: move.l + move.w = 3 colors
     //   palette 2 colors 8-10 (offset 0x10 = 8 words from line start)
@@ -1456,7 +1456,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
     }
 
     // ========== DEZ (Death Egg) Cycle ==========
-    // ROM: AnPal_DEZ1 (sonic3k.asm:3661) falls through into AnPal_DEZ2 (:3676).
+    // ROM: AnPal_DEZ1 (sonic3k.asm:3693) falls through into AnPal_DEZ2 (:3708).
     // This is Sonic 3 & Knuckles Death Egg, not Sonic 2's.
     //
     // Channel A — act 1 only, because act 2's dispatch entry is the AnPal_DEZ2 label,
@@ -1708,7 +1708,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
     }
 
     // ========== BPZ Cycle ==========
-    // ROM: AnPal_BPZ (sonic3k.asm lines 3712-3743)
+    // ROM: AnPal_BPZ (sonic3k.asm lines 3744-3775)
     //
     // Channel 1 (Balloons): timer period 8 (reset to 7), counter0 step +6, wrap at 0x12
     //   AnPal_PalBPZ_1 → palette 2, colors 13-15 (longword + word = 3 colors)
@@ -1842,7 +1842,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
     }
 
     // ========== HPZ Palette Cycle ==========
-    // ROM: AnPal_HPZ (sonic3k.asm:3934-3951). Counters live in HpzZoneRuntimeState
+    // ROM: AnPal_HPZ (sonic3k.asm:3966-3983). Counters live in HpzZoneRuntimeState
     // because Obj_HPZMasterEmerald and the HPZ teleporter write them.
     private static class HpzCycle extends PaletteCycle {
         private final byte[] hpzData; // AnPal_PalHPZ: 10 frames x 4 bytes

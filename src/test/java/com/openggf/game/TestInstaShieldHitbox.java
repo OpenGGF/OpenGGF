@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests insta-shield hitbox expansion preconditions.
- * ROM: sonic3k.asm:20620-20640.
+ * ROM: sonic3k.asm:20656-20676.
  */
 class TestInstaShieldHitbox {
 
@@ -80,7 +80,7 @@ class TestInstaShieldHitbox {
 
     @Test
     void superSonicSuppressesAbilityButSetsFlag() {
-        // ROM (sonic3k.asm:23404-23408): Super Sonic sets flag=1 but no ability fires
+        // ROM (sonic3k.asm:23439-23443): Super Sonic sets flag=1 but no ability fires
         TestablePlayableSprite sprite = new TestablePlayableSprite("test", (short) 100, (short) 100);
         sprite.setGameRulesForTest(GameRules.SONIC_3K);
         sprite.setSuperSonic(true);

@@ -51,9 +51,9 @@ within that late window:
 | 22733 | `$08B6C2` | slot 10, snow particle, routine `$02` | `73EF3BAB -> 1FB38E63` |
 
 `$02C92E` returns from the subtype-zero animal RNG call at `loc_2C924`
-(`docs/skdisasm/sonic3k.asm:61049-61055`). `$08B6C2` returns from the snow
+(`docs/skdisasm/sonic3k.asm:61089-61095`). `$08B6C2` returns from the snow
 particle RNG call in `loc_8B6AE`
-(`docs/skdisasm/sonic3k.asm:189957-189985`).
+(`docs/skdisasm/sonic3k.asm:190050-190078`).
 
 The follow-up `tools/bizhawk/probes/icz_slot20_allocation_probe.lua` arms at
 the earlier ICZ2 `$3888` gameplay-counter boundary and records only the
@@ -82,7 +82,7 @@ already retired the `loc_8B660` emitter SST: native slot 5 is code
 
 The ROM emitter at `loc_8B660` increments its timer/count and calls
 `AllocateObject`; only an allocated child later reaches `loc_8B6AE` and calls
-`Random_Number` (`docs/skdisasm/sonic3k.asm:189930-189985`).
+`Random_Number` (`docs/skdisasm/sonic3k.asm:190023-190078`).
 
 The aligned native allocation timeline identifies late emitter retirement as
 the owner:
@@ -99,7 +99,7 @@ the owner:
 following body dispatch; that routine follows `_unkFAAE`, verifies
 `loc_8B660`, and sets its `$38` bit 5 while the independent
 `Child6_CreateBossExplosion` SST continues
-(`docs/skdisasm/sonic3k.asm:149867-149875,179656-179670,180814-180829`).
+(`docs/skdisasm/sonic3k.asm:149935-149943,179747-179761,180905-180920`).
 
 The engine had an unused `defeatTimer` initialized to the unrelated `$B3`
 value and stopped the emitter only when the explosion-controller SST finished.
@@ -128,9 +128,9 @@ the twelve children received a real SST slot and all twelve dispatched:
 
 The native SST snapshots show the same parents, positions, child subtypes
 `$00..$16`, and child routine `$02`. `CreateChild1_Normal` stops on allocation
-failure (`docs/skdisasm/sonic3k.asm:176924-176957`); each allocated child
+failure (`docs/skdisasm/sonic3k.asm:177015-177048`); each allocated child
 first dispatches `loc_8B432`, which then calls `Random_Number`
-(`docs/skdisasm/sonic3k.asm:189690-189705`).
+(`docs/skdisasm/sonic3k.asm:189783-189798`).
 
 Consequently, the previously suspected eager `IceCubeDebris` construction is
 not the observed owner of this trace's persistent mismatch. No examined child

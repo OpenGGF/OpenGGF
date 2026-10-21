@@ -20,7 +20,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * SKL {@code $A4}, {@code Obj_Spikebonker} (sonic3k.asm:198893-199124): Death Egg's mace robot.
+ * SKL {@code $A4}, {@code Obj_Spikebonker} (sonic3k.asm:199000-199231): Death Egg's mace robot.
  *
  * <p>Every expected number is a literal read out of the listing — {@code AngleLookup_1}'s own
  * bytes, {@code byte_91C0E}'s own thresholds — never a value computed by calling the object's
@@ -32,7 +32,7 @@ class TestSpikebonkerBadnikInstance {
     private static final int OBJECT_Y = 0x0100;
 
     /**
-     * {@code ObjDat_Spikebonker} (:199117-199120) and {@code word_91C26} (:199121-199123). The
+     * {@code ObjDat_Spikebonker} (:199224-199227) and {@code word_91C26} (:199228-199230). The
      * mace's {@code $9A} has bit 7 set where the body's {@code $1A} does not: the head hurts and
      * cannot be broken, so a player who destroys this badnik has hit the body.
      */
@@ -53,9 +53,9 @@ class TestSpikebonkerBadnikInstance {
     }
 
     /**
-     * {@code move.w #-$80,d0 / btst #0,render_flags(a0) / neg.w d0} (:198908-198912), and the
+     * {@code move.w #-$80,d0 / btst #0,render_flags(a0) / neg.w d0} (:199015-199019), and the
      * two-phase {@code Obj_Wait} countdown {@code $2E = subtype - 1}, {@code $3A = subtype*2 - 1}
-     * (:198914-198918). The first leg is half the length of every leg after it, because the
+     * (:199021-199025). The first leg is half the length of every leg after it, because the
      * badnik starts at one end of its beat.
      */
     @Test
@@ -77,7 +77,7 @@ class TestSpikebonkerBadnikInstance {
         assertEquals(0x20 * 2 - 1, body.walkTimerForTest(), "$2E is reloaded from $3A");
     }
 
-    /** The same {@code btst #0,render_flags(a0)} on a flipped placement (:198909-198912). */
+    /** The same {@code btst #0,render_flags(a0)} on a flipped placement (:199016-199019). */
     @Test
     void aFlippedPlacementStartsWalkingRight() {
         SpikebonkerBadnikInstance body = activated(0x20, 1);
@@ -88,7 +88,7 @@ class TestSpikebonkerBadnikInstance {
 
     /**
      * {@code move.w #$40,d0 / move.w d0,$3E(a0) / move.w d0,y_vel(a0) / move.w #4,$40(a0) /
-     * bclr #0,$38(a0)} (:198926-198930), then {@code Swing_UpAndDown} (:180155-180180). With the
+     * bclr #0,$38(a0)} (:199033-199037), then {@code Swing_UpAndDown} (:180246-180271). With the
      * direction bit clear the acceleration is negated, so the hover falls by four a frame from
      * its {@code $40} peak.
      */
@@ -107,7 +107,7 @@ class TestSpikebonkerBadnikInstance {
     }
 
     /**
-     * {@code cmpi.w #$60,d2 / bhs} and the {@code render_flags} side test (:198936-198944). The
+     * {@code cmpi.w #$60,d2 / bhs} and the {@code render_flags} side test (:199043-199051). The
      * slam fires only when the player is inside {@code $60} px <em>and</em> on the side the
      * badnik is walking toward; the other side is ignored at the same distance.
      */
@@ -121,9 +121,9 @@ class TestSpikebonkerBadnikInstance {
     }
 
     /**
-     * {@code loc_91A9A} (:198952-198956): {@code routine} 4, {@code bset #3,$38(a0)} and
+     * {@code loc_91A9A} (:199059-199063): {@code routine} 4, {@code bset #3,$38(a0)} and
      * {@code sfx_Bouncy}. The walk stops for the whole slam — {@code loc_91AC2} runs nothing
-     * until the mace clears the bit (:198969-198973).
+     * until the mace clears the bit (:199076-199080).
      */
     @Test
     void theSlamPlaysBouncyAndFreezesTheWalkUntilTheMaceReleasesIt() {
@@ -152,7 +152,7 @@ class TestSpikebonkerBadnikInstance {
     }
 
     /**
-     * {@code subq.b #8,d0 / move.b d0,$3C(a1)} (:199010-199011): the mace's angle walks down by
+     * {@code subq.b #8,d0 / move.b d0,$3C(a1)} (:199117-199118): the mace's angle walks down by
      * eight an update and wraps through zero, which is why it orbits continuously rather than
      * waiting for a slam.
      */
@@ -169,8 +169,8 @@ class TestSpikebonkerBadnikInstance {
     }
 
     /**
-     * {@code MoveSprite_AngleXLookupOffset} (:178670-178713) reads {@code AngleLookup_1}
-     * (:201847-201850) four different ways depending on the angle's top two bits. Expected
+     * {@code MoveSprite_AngleXLookupOffset} (:178761-178804) reads {@code AngleLookup_1}
+     * (:201961-201964) four different ways depending on the angle's top two bits. Expected
      * values are that table's own first and last bytes: {@code 0} and {@code $C}.
      */
     @Test
@@ -186,7 +186,7 @@ class TestSpikebonkerBadnikInstance {
     }
 
     /**
-     * {@code sub_91BFA} over {@code byte_91C0E} (:199101-199116). The compare is {@code bls},
+     * {@code sub_91BFA} over {@code byte_91C0E} (:199208-199223). The compare is {@code bls},
      * so each byte is an inclusive upper bound and the frame changes on the byte after it.
      */
     @Test
@@ -205,7 +205,7 @@ class TestSpikebonkerBadnikInstance {
 
     /**
      * {@code loc_91B14} → {@code loc_91B3E} → {@code loc_91B68} → {@code loc_91B70} →
-     * {@code loc_91B8A} → {@code loc_91B56} (:199019-199077). The head slides out for
+     * {@code loc_91B8A} → {@code loc_91B56} (:199126-199184). The head slides out for
      * {@code $1F} counted frames at {@code 4} px each, sweeps its angle down to {@code $80},
      * slides back, and only then clears the body's bit 3.
      */
@@ -253,7 +253,7 @@ class TestSpikebonkerBadnikInstance {
         SpikebonkerBadnikInstance body = new SpikebonkerBadnikInstance(new ObjectSpawn(
                 OBJECT_X, OBJECT_Y, Sonic3kObjectIds.SPARKLE, subtype, renderFlags, false, 0));
         body.setServices(services);
-        // Obj_WaitOffscreen (:198894) holds the object until Draw_Sprite has set render_flags
+        // Obj_WaitOffscreen (:199001) holds the object until Draw_Sprite has set render_flags
         // bit 7, which the engine reports through refreshPostCameraRenderState.
         body.update(0, null);
         body.refreshPostCameraRenderState();

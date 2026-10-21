@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * SKL {@code $5C}, {@code Obj_DEZGravityHub} (sonic3k.asm:95545-95690): the junction the act 2
+ * SKL {@code $5C}, {@code Obj_DEZGravityHub} (sonic3k.asm:95591-95736): the junction the act 2
  * gravity tubes feed into. Three act 2 placements, each beside a {@code $5A}.
  */
 @RequiresRom(SonicGame.SONIC_3K)
@@ -42,7 +42,7 @@ class TestS3kDezGravityHubHeadless {
     }
 
     /**
-     * {@code addi.w #$20,d0 / cmpi.w #$40,d0 / bhs} on both axes (:95560-95567): a
+     * {@code addi.w #$20,d0 / cmpi.w #$40,d0 / bhs} on both axes (:95606-95613): a
      * {@code $40} px square centred on the hub, top-inclusive and bottom-exclusive on the
      * biased compare.
      */
@@ -57,7 +57,7 @@ class TestS3kDezGravityHubHeadless {
     }
 
     /**
-     * {@code btst #Status_OnObj,status(a1) / bne} (:95571). The hub sits beside a
+     * {@code btst #Status_OnObj,status(a1) / bne} (:95617). The hub sits beside a
      * {@code $5A}, so without this it would steal the tube's rider mid-ride.
      */
     @Test
@@ -80,7 +80,7 @@ class TestS3kDezGravityHubHeadless {
     }
 
     /**
-     * The capture (:95576-95581) zeroes all three speeds, sets {@code Status_InAir} and takes
+     * The capture (:95622-95627) zeroes all three speeds, sets {@code Status_InAir} and takes
      * object control. {@code move.w #0,angle(a1)} is a word write over {@code angle} and
      * {@code flip_angle}, so both must land.
      */
@@ -113,7 +113,7 @@ class TestS3kDezGravityHubHeadless {
     }
 
     /**
-     * {@code loc_49348} :95594-95630. Eight pixels per axis per frame until the player is
+     * {@code loc_49348} :95640-95676. Eight pixels per axis per frame until the player is
      * within eight, then a snap onto the hub's own coordinate — and one state bit per axis,
      * so the byte walks 1 → 3 or 5 → 7 rather than counting.
      */
@@ -134,7 +134,7 @@ class TestS3kDezGravityHubHeadless {
 
             hub.update(2, sprite);
             assertEquals(OBJECT_X + 0x08, sprite.getCentreX() & 0xFFFF, "x pulled 8 more");
-            // dy is exactly 8 here, and cmpi.w #8,d0 / bhs (:95601) takes the step branch:
+            // dy is exactly 8 here, and cmpi.w #8,d0 / bhs (:95647) takes the step branch:
             // the snap needs to be strictly inside eight, so it lands a frame later.
             assertEquals(OBJECT_Y, sprite.getCentreY() & 0xFFFF, "y stepped the last 8");
             assertEquals(1, hub.stateForTest(true), "and no bit yet, because it stepped");
@@ -151,7 +151,7 @@ class TestS3kDezGravityHubHeadless {
     }
 
     /**
-     * {@code and.b subtype(a0),d1} (:95664) with {@code word_49420} (:95672). The table is
+     * {@code and.b subtype(a0),d1} (:95710) with {@code word_49420} (:95718). The table is
      * ordered up, down, left, right and {@code loc_49408} takes the first set bit.
      */
     @Test
@@ -190,7 +190,7 @@ class TestS3kDezGravityHubHeadless {
 
     /**
      * {@code d1} is the whole {@code Ctrl_N_logical} word and the {@code and.b} masks its low
-     * byte, which is the press half (:95664). A direction already held when the hub catches
+     * byte, which is the press half (:95710). A direction already held when the hub catches
      * the player is not a press and must not launch them straight back out.
      */
     @Test
@@ -218,7 +218,7 @@ class TestS3kDezGravityHubHeadless {
     }
 
     /**
-     * {@code loc_49430} (:95677-95690): state {@code 8} holds until the player has left the
+     * {@code loc_49430} (:95723-95736): state {@code 8} holds until the player has left the
      * same {@code $40} px window, and {@code move.w #0,(a2)} then clears both bytes.
      */
     @Test
@@ -246,7 +246,7 @@ class TestS3kDezGravityHubHeadless {
     }
 
     /**
-     * {@code loc_493AE} :95626-95636: the pose counter increments every frame and wraps at
+     * {@code loc_493AE} :95672-95682: the pose counter increments every frame and wraps at
      * {@code $60}, and {@code RawAni_493DA} is indexed by it shifted right two, so each of
      * the twenty-four poses holds for four frames.
      */

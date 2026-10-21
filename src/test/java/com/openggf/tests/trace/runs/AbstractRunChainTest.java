@@ -1761,7 +1761,7 @@ abstract class AbstractRunChainTest {
                     returnCursorArrivedOrganically = true;
                 } else {
                     // OPTION B (bonus interior): the recorded post-catch tail is the ROM
-                    // Level: re-entry -- 22 Pal_FadeToBlack V-ints (sonic3k.asm:7523-7524,
+                    // Level: re-entry -- 22 Pal_FadeToBlack V-ints (sonic3k.asm:7555-7556,
                     // 5042-5051), the loc_62CC title-card loop (7737-7748, ~80 rows with
                     // Obj_TitleCard in slot 8) and the pre-LevelLoop load with its lag
                     // rows. The engine reproduces the fade and shows the title card, but
@@ -3503,9 +3503,9 @@ abstract class AbstractRunChainTest {
      * <p>Why the chain needs this and the standalone gets it for free: the ROM's
      * S3K bonus machines seed their RNG from the free-running hardware
      * {@code V_int_run_count} at machine init -- the gumball does
-     * {@code move.l (V_int_run_count).w,(RNG_seed).w} (sonic3k.asm:127412), folding
+     * {@code move.l (V_int_run_count).w,(RNG_seed).w} (sonic3k.asm:127466), folding
      * power-on run history (menu time, prior acts) into the ball-subtype roll
-     * (sub_612A8, sonic3k.asm:127988-128008). A standalone bonus trace boots
+     * (sub_612A8, sonic3k.asm:128042-128062). A standalone bonus trace boots
      * directly into the interior and its bootstrap applies the recorded frame-0
      * {@code rng_seed} (== that run's {@code V_int_run_count} at entry, e.g.
      * 0x1598 for gumball #1) before the first interior frame. The chain instead

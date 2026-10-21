@@ -316,10 +316,10 @@ class TestMhzBossObjects {
 
         miniboss.update(0, null);
 
-        // ROM loc_75220 (sonic3k.asm:155651-155654) does NOT play the miniboss track
+        // ROM loc_75220 (sonic3k.asm:155725-155728) does NOT play the miniboss track
         // directly: it AllocateObjects an Obj_Song_Fade_Transition with subtype
         // mus_Miniboss, fading the zone music over 90 frames (Obj_Song_Fade_Transition,
-        // :180323) before swapping. So setup spawns the fade helper, not instant music.
+        // :180414) before swapping. So setup spawns the fade helper, not instant music.
         SongFadeTransitionInstance fade = spawned.stream()
                 .filter(SongFadeTransitionInstance.class::isInstance)
                 .map(SongFadeTransitionInstance.class::cast)
@@ -1066,7 +1066,7 @@ class TestMhzBossObjects {
         }
 
         verify(renderer, org.mockito.Mockito.times(2)).drawFrameIndex(5, 0x42D1, 0x02AF, false, false);
-        // byte_769CE's initial mapping frame is $D (sonic3k.asm:157786-157787); the
+        // byte_769CE's initial mapping frame is $D (sonic3k.asm:157862-157863); the
         // three Animate_Raw ticks that follow are $E, $F, $10.
         verify(renderer).drawFrameIndex(0x0D, 0x4284, 0x0261, false, false);
         verify(renderer).drawFrameIndex(0x0D, 0x4230, 0x020D, false, false);

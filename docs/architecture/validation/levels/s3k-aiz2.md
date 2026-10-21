@@ -61,8 +61,8 @@ One coherent focused invocation qualified all eight acts: command session54147 o
 ## AnPal bank carry across the AIZ1 reload — 2026-10-16
 
 AnPal_AIZ1 and AnPal_AIZ2 share `Palette_cycle_counter0`, `Palette_cycle_counter1` and
-`Palette_cycle_counters` (sonic3k.constants.asm:580-596). Level's loc_60DE clears them
-(sonic3k.asm:7652), but the seamless reload in AIZ1BGE_Finish does not reach it. The
+`Palette_cycle_counters` (sonic3k.constants.asm:599-615). Level's loc_60DE clears them
+(sonic3k.asm:7684), but the seamless reload in AIZ1BGE_Finish does not reach it. The
 engine used to rebuild the AIZ2 cycles with private counters starting at zero. On the
 reload row it also ticked the new AIZ2 cycler: engine observation `palobs1` at row 6300
 shows timer 5, counter0 8, counter2 6. The native `aiz_completerun` RAM instead carries

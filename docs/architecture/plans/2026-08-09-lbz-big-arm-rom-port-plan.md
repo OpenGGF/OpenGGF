@@ -21,7 +21,7 @@ commit-policy hooks.
 
 ## Global constraints
 
-- Use `docs/skdisasm/sonic3k.asm:154231-155585` with `FixBugs = 0` as the
+- Use `docs/skdisasm/sonic3k.asm:154305-155659` with `FixBugs = 0` as the
   behavior oracle. The complete-run trace is comparison-only evidence.
 - Runtime art, mappings, palettes, animation scripts, lookup tables, and
   position tables come from the user-supplied ROM. Never read `docs/skdisasm`

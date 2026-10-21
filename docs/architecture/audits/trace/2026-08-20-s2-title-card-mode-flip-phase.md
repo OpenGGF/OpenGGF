@@ -14,7 +14,7 @@ All three level routines clear the control lock and the title-card game-mode bit
   instructions after the `RunObjects` that deleted it, in the SAME iteration, so its
   26th pass (1 leading pass at :5006 + 25 loop iterations) is also the fall-through row.
 - S3K `move.b #0,(Ctrl_1_locked).w` / `bclr #7,(Game_mode).w` ahead of `LevelLoop`'s
-  `Wait_VSync` — `docs/skdisasm/sonic3k.asm:7859, 7883, 7888-7891`.
+  `Wait_VSync` — `docs/skdisasm/sonic3k.asm:7891, 7915, 7920-7923`.
 - S1 runs a real `Level_LoadObj` / `ExecuteObjects` pass with no V-int of its own
   between `Level_TtlCardLoop` and `Level_MainLoop` —
   `docs/s1disasm/sonic.asm:2895-2897, 2999-3003`.

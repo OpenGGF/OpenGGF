@@ -12,7 +12,7 @@ import java.util.function.Supplier;
 /**
  * The Doomsday Zone foreground plane is scrolled independently of the camera: {@code ApplyDeformation2}
  * writes {@code -_unkEE98} as every line's Plane A word and {@code V_scroll_value} is {@code _unkEE9C}
- * (sonic3k.asm:118964-118976). This mode makes the renderer read the per-line foreground words and
+ * (sonic3k.asm:119010-119022). This mode makes the renderer read the per-line foreground words and
  * the absolute foreground V-scroll, so the end boss body drawn in the foreground layout appears at
  * the window {@code SwScrlDdz} computes. Sprites keep the gameplay camera.
  */

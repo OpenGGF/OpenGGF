@@ -41,7 +41,7 @@ class TestS3kEndingS3Eyecatch {
     }
     /**
      * One native frame of this terminal: the object pass, then Ending_BackgroundEvent routine 4's
-     * sub_5928C (044fa46 sonic3k.asm:118597), which native calls every frame until the exit.
+     * sub_5928C (044fa46 sonic3k.asm:118643), which native calls every frame until the exit.
      */
     private void frame(S3kPostCreditsObjectInstance owner,HeadlessTestFixture fixture,int pass){
         owner.update(pass,fixture.sprite());
@@ -49,7 +49,7 @@ class TestS3kEndingS3Eyecatch {
     }
 
     /**
-     * loc_5F15A (044fa46 sonic3k.asm:125704-125706) sets Palette_cycle_counters+0 and nothing in the
+     * loc_5F15A (044fa46 sonic3k.asm:125750-125752) sets Palette_cycle_counters+0 and nothing in the
      * terminal clears it. sub_5928C tests that byte first, so after the object fade to black the
      * water colours 13-15 of line 3 stay black (native poll 13311: all of line 3 is $000).
      */
@@ -70,7 +70,7 @@ class TestS3kEndingS3Eyecatch {
     /**
      * loc_5F26C subtype 4's sub_5FF1C (line 1, 16 colours), loc_5F31C (Normal_palette+2,
      * $3A=$E) and loc_5F410 (Normal_palette_line_3+2, $3A=$E) each allocate loc_5FF62
-     * (044fa46 sonic3k.asm:126999). The allocations land after their allocators in the same pass
+     * (044fa46 sonic3k.asm:127045). The allocations land after their allocators in the same pass
      * (native slots 4 -> 5, 8 -> 11, 10 -> 13), so each takes its first step on the eyecatch
      * initialization pass. sub_85EB4 raises every fourth pass, eight times; loc_5FF94 then
      * waits and sub_85F2A lowers toward the live Target_palette every fourth pass, eight times.
@@ -118,7 +118,7 @@ class TestS3kEndingS3Eyecatch {
     }
 
     /**
-     * Obj_5EF68 (044fa46 sonic3k.asm:125517-125520) clears Super_palette_status on its first pass, so
+     * Obj_5EF68 (044fa46 sonic3k.asm:125563-125566) clears Super_palette_status on its first pass, so
      * SuperHyper_PalCycle stops writing line 0 while Super_Sonic_Knux_flag keeps its value.
      * Native PAL Sonic/+2 RAM: Super_palette_status 0 and Super_Sonic_Knux_flag $FF at polls 12287
      * and 13311, with line 0 static between the post-credits start and the object fade.
@@ -143,7 +143,7 @@ class TestS3kEndingS3Eyecatch {
     }
 
     /**
-     * loc_5F15A allocates Obj_FadeSelectedToBlack (044fa46 sonic3k.asm:179589) after its own slot.
+     * loc_5F15A allocates Obj_FadeSelectedToBlack (044fa46 sonic3k.asm:179680) after its own slot.
      * Its first pass falls into loc_8555E with $2E=0, so DecColor_Obj runs on the allocation pass,
      * then every sixth pass, eight times. loc_5F18A sees the deleted fade's status bit 7 on the
      * following pass. Native Tails/+2 NTSC: Palette_cycle_counters+0 and the first decrement both

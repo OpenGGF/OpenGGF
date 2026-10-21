@@ -17,7 +17,7 @@ import java.util.Map;
 /**
  * Temporary AIZ1-to-AIZ2 fire transition floor.
  *
- * <p>ROM: {@code Obj_AIZTransitionFloor} at sonic3k.asm:104777. Spawned by
+ * <p>ROM: {@code Obj_AIZTransitionFloor} at sonic3k.asm:104823. Spawned by
  * {@code AIZ1BGE_FireTransition} at x=$2FB0/y=$3A0 after the AIZ2 art queues,
  * then calls {@code SolidObjectTop} with d1=$A0, d2=$10, d3=$10.
  */
@@ -46,7 +46,7 @@ public final class AizTransitionFloorObjectInstance extends AbstractObjectInstan
         }
         // Obj_AIZTransitionFloor's Act2 branch writes the hidden sentinel and
         // Delete_Current_Sprite code, then still calls SolidObjectTop. Physical
-        // deletion belongs to the next dispatch (sonic3k.asm:104777-104790).
+        // deletion belongs to the next dispatch (sonic3k.asm:104823-104836).
         if (services().currentAct() != 0) {
             currentX = 0x7FFF;
             pendingDelete = true;
@@ -59,7 +59,7 @@ public final class AizTransitionFloorObjectInstance extends AbstractObjectInstan
     @Override
     public boolean suppressesObjectEdgeBalance() {
         // Every SolidObjectTop pass sets status bit7 first. Sonic_Move's
-        // tst.b/bmi skips the object-edge branch (sonic3k.asm:22458-22460).
+        // tst.b/bmi skips the object-edge branch (sonic3k.asm:22493-22495).
         return true;
     }
 
@@ -90,7 +90,7 @@ public final class AizTransitionFloorObjectInstance extends AbstractObjectInstan
     @Override
     public boolean rejectsZeroDistanceTopSolidLanding(PlayableEntity player) {
         // ROM keeps this helper active through AIZ1BGE_FireRefresh
-        // (sonic3k.asm:104690-104714). During that handoff it repeatedly runs
+        // (sonic3k.asm:104736-104760). During that handoff it repeatedly runs
         // SolidObjectTop (104777-104790), rejecting the exact-surface boundary
         // until the fire-refresh window reaches the landing frame. The accepted
         // first landing then uses the standard SolidObjectTop placement
@@ -132,7 +132,7 @@ public final class AizTransitionFloorObjectInstance extends AbstractObjectInstan
 
     @Override
     public int romObjectCodePointerHighWord() {
-        // Obj_AIZTransitionFloor = 0x0004FE38 (sonic3k.asm:104777).
+        // Obj_AIZTransitionFloor = 0x0004FE38 (sonic3k.asm:104823).
         return pendingDelete ? 0x0001 : 0x0004; // Delete_Current_Sprite versus floor code
     }
 

@@ -129,7 +129,7 @@ unqualified; independent pilot passes do not certify their full traces.
 | C5 | Waiting boss remains alive without invented range deletion; results-parent dispatch owns capsule release, with host policy retained before disposal. |
 | C6 | Results allocate lowest-free and dispatch normally; button clears forced input without rewriting already-consumed UP history. Bridge checks solids only at its native checkpoint, keeps its rider latch through the $0E countdown and delayed eject; rider set is captured for recreation/forward rewind. |
 | C7 | Button routine entry changes routine and returns; Y contact is checked on the next dispatch. One old extra-UP oracle was replaced by `cutsceneButtonRetainsConsumedUpHistoryAndUnlocksNextPlayerDispatch`, explicitly preserving test identity change. |
-| C8 | Construction/reset bind the selected world, retaining pre-session bootstrap fallback. A normal S3K world with S2 bootstrap otherwise wrote Tails' $4000 instead of `sub_13ECA`'s $7F00 (sonic3k.asm:26806) for 767 early observations. Both regression paths failed before the fix. Rebinding legacy config alone was disproved. |
+| C8 | Construction/reset bind the selected world, retaining pre-session bootstrap fallback. A normal S3K world with S2 bootstrap otherwise wrote Tails' $4000 instead of `sub_13ECA`'s $7F00 (sonic3k.asm:26846) for 767 early observations. Both regression paths failed before the fix. Rebinding legacy config alone was disproved. |
 
 The original full trace passes 20,463 compared observations and its exact terminal
 control: KOS_MODULE_QUEUE ordinals 38–41, ROM sources $0D6F28, $15C3A2, $0D6D84,

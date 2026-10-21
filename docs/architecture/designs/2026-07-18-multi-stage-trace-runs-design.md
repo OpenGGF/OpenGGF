@@ -60,7 +60,7 @@ correctly, end to end:
   `s2_ss_trace_recorder.lua`).
 - **S3K:** `GameModes` table (`sonic3k.asm:430-451`): Level entries at `$8`
   and `$C`, but `$8` is the **attract-mode demo** (`move.b #8,(Game_mode)`,
-  `sonic3k.asm:5715`), which real player recordings never hit — the recorder
+  `sonic3k.asm:5747`), which real player recordings never hit — the recorder
   guard `(Game_Mode & 0x0F) == 0x0C` (family mask with load-handoff bits 6/7)
   **deliberately excludes `$8`**; do not "fix" the mask to include it.
   `SpecialStage = $34`, `SpecialStage_Results = $48`, BlueSpheres standalone
@@ -69,14 +69,14 @@ correctly, end to end:
   `Levels/Pachinko`, `Levels/Slots` in skdisasm and run under the
   level-family game mode with zone ids `$13` (Gumball), `$14` (Pachinko),
   `$15` (Slots), readable from the `LevelMusic_Playlist` table
-  (`sonic3k.asm:7496-7498`); the engine models them as zones
+  (`sonic3k.asm:7528-7530`); the engine models them as zones
   `0x13`/`0x14`/`0x15`.
-- **`Special_bonus_entry_flag`** (`sonic3k.constants.asm:831`): `1` entering a
+- **`Special_bonus_entry_flag`** (`sonic3k.constants.asm:853`): `1` entering a
   Special Stage, `2` entering a Bonus Stage — the ROM-side transition
   discriminator.
 - **Return anchors:** player init skips re-saving `Saved_X_pos`/`Saved_Y_pos`/
   `Saved_art_tile`/`Saved_solid_bits` when `Special_bonus_entry_flag == 2` or
-  `Last_star_post_hit != 0` (`sonic3k.asm:21917-21929`, Tails
+  `Last_star_post_hit != 0` (`sonic3k.asm:21953-21965`, Tails
   `:26118-26129`, Knuckles `:30364-30375`) — these RAM cells are the recorded
   ground truth for return-position boundary assertions.
 
@@ -433,7 +433,7 @@ New short dedicated bk2s (recorded once the recorder work lands):
 
 - S3K: level→gumball→level, level→pachinko→level, level→slots→level (star
   post with ring counts chosen to select each type via the
-  `((rings-20)/15)%3` formula — ROM `loc_2D47E`, `sonic3k.asm:61886-61912`,
+  `((rings-20)/15)%3` formula — ROM `loc_2D47E`, `sonic3k.asm:61926-61952`,
   already cited by `Sonic3kBonusStageCoordinator`),
   level→blue-spheres→level (giant ring).
 - S1: level→maze→level (GHZ big ring).

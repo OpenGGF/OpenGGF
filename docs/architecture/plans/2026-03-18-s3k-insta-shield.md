@@ -230,7 +230,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests insta-shield activation gating.
- * ROM: sonic3k.asm:23397-23479 (Sonic_ShieldMoves).
+ * ROM: sonic3k.asm:23432-23514 (Sonic_ShieldMoves).
  */
 class TestInstaShieldGating {
 
@@ -369,7 +369,7 @@ import java.util.List;
  * (empty frame), triggered to anim 1 on activation. Transitions
  * doubleJumpFlag 1→2 when animation reaches frame 7.
  *
- * ROM: sonic3k.asm:34566-34611 (Obj_InstaShield / Obj_InstaShield_Main)
+ * ROM: sonic3k.asm:34606-34651 (Obj_InstaShield / Obj_InstaShield_Main)
  */
 public class InstaShieldObjectInstance extends ShieldObjectInstance {
 
@@ -409,7 +409,7 @@ public class InstaShieldObjectInstance extends ShieldObjectInstance {
         if (isShieldDestroyed()) return;
         stepAnimation();
 
-        // ROM (sonic3k.asm:34607-34611): when mapping_frame reaches 7 and
+        // ROM (sonic3k.asm:34647-34651): when mapping_frame reaches 7 and
         // double_jump_flag is still 1, transition to 2 (attack over).
         if (currentMappingFrame == FINAL_FRAME && player.getDoubleJumpFlag() == 1) {
             player.setDoubleJumpFlag(2);
@@ -564,7 +564,7 @@ In `PlayableSpriteMovement.java`, replace `tryShieldAbility()` (lines 524-541) w
 
 ```java
     /**
-     * Sonic_ShieldMoves: Try to activate the player's shield ability (sonic3k.asm:23397-23479).
+     * Sonic_ShieldMoves: Try to activate the player's shield ability (sonic3k.asm:23432-23514).
      * @return true if an ability was activated (or suppressed by Super)
      */
     private boolean tryShieldAbility() {
@@ -578,18 +578,18 @@ In `PlayableSpriteMovement.java`, replace `tryShieldAbility()` (lines 524-541) w
             return false;
         }
 
-        // ROM (sonic3k.asm:23404-23408): Super Sonic suppresses all abilities
+        // ROM (sonic3k.asm:23439-23443): Super Sonic suppresses all abilities
         if (sprite.isSuperSonic()) {
             sprite.setDoubleJumpFlag(1);
             return true;
         }
 
-        // ROM (sonic3k.asm:23412-23413): Invincibility suppresses all abilities
+        // ROM (sonic3k.asm:23447-23448): Invincibility suppresses all abilities
         if (sprite.getInvincibleFrames() > 0) {
             return false;
         }
 
-        // ROM (sonic3k.asm:23411-23453): Elemental shield abilities
+        // ROM (sonic3k.asm:23446-23488): Elemental shield abilities
         ShieldType shield = sprite.getShieldType();
         if (hasElemental && shield != null) {
             switch (shield) {
@@ -602,7 +602,7 @@ In `PlayableSpriteMovement.java`, replace `tryShieldAbility()` (lines 524-541) w
             return true;
         }
 
-        // ROM (sonic3k.asm:23473-23479): Insta-shield (no shield equipped)
+        // ROM (sonic3k.asm:23508-23514): Insta-shield (no shield equipped)
         if (hasInsta && shield == null) {
             activateInstaShield();
             return true;
@@ -611,7 +611,7 @@ In `PlayableSpriteMovement.java`, replace `tryShieldAbility()` (lines 524-541) w
         return false;
     }
 
-    /** ROM: Sonic_InstaShield (sonic3k.asm:23473-23479) */
+    /** ROM: Sonic_InstaShield (sonic3k.asm:23508-23514) */
     private void activateInstaShield() {
         sprite.setDoubleJumpFlag(1);
         InstaShieldObjectInstance instaShield = sprite.getInstaShieldObject();
@@ -675,7 +675,7 @@ Search for all calls to `isOverlapping(` and `isOverlappingXY(` within the `Touc
 Near the top of `update()` (after line 1018), add:
 
 ```java
-            // ROM (sonic3k.asm:20620-20640): Insta-shield expands hitbox to 48x48
+            // ROM (sonic3k.asm:20656-20676): Insta-shield expands hitbox to 48x48
             boolean instaShieldActive = false;
             int playerWidth = 0x10; // Normal width
             PhysicsFeatureSet fs = player.getPhysicsFeatureSet();
@@ -740,7 +740,7 @@ Expected: All pass
 ```bash
 git add -A && git commit -m "feat: add insta-shield hitbox expansion in TouchResponses
 
-ROM (sonic3k.asm:20620-20640): expands player collision from 16x~20 to
+ROM (sonic3k.asm:20656-20676): expands player collision from 16x~20 to
 48x48 when doubleJumpFlag==1 with no shield/invincibility. Adds
 playerWidth param to isOverlapping(). isPlayerAttacking() treats
 insta-shield as attacking state for enemy destruction."
@@ -939,7 +939,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests insta-shield hitbox expansion preconditions.
- * ROM: sonic3k.asm:20620-20640.
+ * ROM: sonic3k.asm:20656-20676.
  */
 class TestInstaShieldHitbox {
 

@@ -29,13 +29,13 @@ public record PhysicsProfile(
         short rollYRadius,
         // Tails' S2/S3K balance routine has only one facing-edge balance state:
         // object and terrain edge branches immediately face toward the edge
-        // (s2.asm:39733-39743; sonic3k.asm:27842-27859). Sonic/Knuckles keep
+        // (s2.asm:39733-39743; sonic3k.asm:27882-27899). Sonic/Knuckles keep
         // the four-state facing-away balance handling.
         boolean singleFacingBalance,
         // On-object balance edge threshold used by S2/S3K extended-balance mode.
         // ROM: s2.asm:36287-36296 (Sonic, #2), s2.asm:39361-39368 (Tails, #4),
-        // sonic3k.asm:22465 (Sonic, #2), sonic3k.asm:27825 (Tails, #4),
-        // sonic3k.asm:31810 (Knuckles, #2). Unused in S1 (single-state balance
+        // sonic3k.asm:22500 (Sonic, #2), sonic3k.asm:27865 (Tails, #4),
+        // sonic3k.asm:31850 (Knuckles, #2). Unused in S1 (single-state balance
         // uses a hard-coded #4; see s1disasm/_incObj/01 Sonic.asm:392).
         short onObjectBalanceShift
 ) {
@@ -99,7 +99,7 @@ public record PhysicsProfile(
     }
 
     // Sonic 2 Sonic (also identical for S1 Sonic; S3K canonical reset profile)
-    // S3K uses this as the "reset" profile after water/shoes events (sonic3k.asm:22253)
+    // S3K uses this as the "reset" profile after water/shoes events (sonic3k.asm:22289)
     public static final PhysicsProfile SONIC_2_SONIC = new PhysicsProfile(
             (short) 12,    // runAccel (0x0C)
             (short) 128,   // runDecel (0x80)
@@ -120,7 +120,7 @@ public record PhysicsProfile(
             (short) 7,     // rollXRadius
             (short) 14,    // rollYRadius
             false,          // singleFacingBalance
-            (short) 2      // onObjectBalanceShift (s2.asm:36287, sonic3k.asm:22465)
+            (short) 2      // onObjectBalanceShift (s2.asm:36287, sonic3k.asm:22500)
     );
 
     // Sonic 2 Tails (differs in runHeight, standYRadius; minStartRollSpeed matches Sonic's $80)
@@ -145,11 +145,11 @@ public record PhysicsProfile(
             (short) 7,     // rollXRadius
             (short) 14,    // rollYRadius
             true,           // singleFacingBalance (s2.asm:39733-39743)
-            (short) 4      // onObjectBalanceShift (s2.asm:39361, sonic3k.asm:27825)
+            (short) 4      // onObjectBalanceShift (s2.asm:39361, sonic3k.asm:27865)
     );
 
     // S3K Knuckles (lower jump than Sonic: $600 vs $680)
-    // ROM: Knux_Jump (sonic3k.asm:32454) move.w #$600,d2
+    // ROM: Knux_Jump (sonic3k.asm:32494) move.w #$600,d2
     // All other values identical to Sonic's canonical profile.
     public static final PhysicsProfile SONIC_3K_KNUCKLES = new PhysicsProfile(
             (short) 12,    // runAccel (0x0C)
@@ -171,7 +171,7 @@ public record PhysicsProfile(
             (short) 7,     // rollXRadius
             (short) 14,    // rollYRadius
             false,          // singleFacingBalance
-            (short) 2      // onObjectBalanceShift (sonic3k.asm:31810)
+            (short) 2      // onObjectBalanceShift (sonic3k.asm:31850)
     );
 
     // S3K Super Sonic (higher speeds: max=0xA00, accel=0x30, decel=0x100)
@@ -198,7 +198,7 @@ public record PhysicsProfile(
             (short) 2      // onObjectBalanceShift (SuperSonic_Balance shares Sonic shift)
     );
 
-    // S3K Sonic Competition mode — Character_Speeds table (sonic3k.asm:202288, loaded at line 21467)
+    // S3K Sonic Competition mode — Character_Speeds table (sonic3k.asm:202403, loaded at line 21467)
     // Only used by Sonic2P_Index (Competition mode init, line 21457), NOT normal single-player.
     // Differs from canonical in accel ($10 vs $C), decel ($20 vs $80).
     public static final PhysicsProfile SONIC_3K_SONIC_INIT = new PhysicsProfile(
@@ -224,7 +224,7 @@ public record PhysicsProfile(
             (short) 2      // onObjectBalanceShift
     );
 
-    // S3K Tails Competition mode — Character_Speeds table (sonic3k.asm:202290)
+    // S3K Tails Competition mode — Character_Speeds table (sonic3k.asm:202405)
     // Only used by Competition mode. max=$4C0, accel=$1C, decel=$70.
     public static final PhysicsProfile SONIC_3K_TAILS_INIT = new PhysicsProfile(
             (short) 0x1C,  // runAccel (Character_Speeds word 2)
@@ -245,11 +245,11 @@ public record PhysicsProfile(
             (short) 15,    // standYRadius (0x0F, shorter than Sonic)
             (short) 7,     // rollXRadius
             (short) 14,    // rollYRadius
-            true,           // singleFacingBalance (sonic3k.asm:27842-27859)
+            true,           // singleFacingBalance (sonic3k.asm:27882-27899)
             (short) 4      // onObjectBalanceShift
     );
 
-    // S3K Super Tails (sonic3k.asm:26325-26327: max=$800, accel=$18, decel=$C0)
+    // S3K Super Tails (sonic3k.asm:26365-26367: max=$800, accel=$18, decel=$C0)
     public static final PhysicsProfile SONIC_3K_SUPER_TAILS = new PhysicsProfile(
             (short) 0x18,  // runAccel
             (short) 0xC0,  // runDecel
@@ -273,7 +273,7 @@ public record PhysicsProfile(
             (short) 4      // onObjectBalanceShift
     );
 
-    // S3K Super/Hyper Knuckles (sonic3k.asm:32611-32613: max=$800, accel=$18, decel=$C0)
+    // S3K Super/Hyper Knuckles (sonic3k.asm:32651-32653: max=$800, accel=$18, decel=$C0)
     public static final PhysicsProfile SONIC_3K_SUPER_KNUCKLES = new PhysicsProfile(
             (short) 0x18,  // runAccel
             (short) 0xC0,  // runDecel

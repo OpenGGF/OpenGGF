@@ -134,7 +134,7 @@ class TestIczHarmfulIceObjectInstance {
         ice.onTouchResponse(player, specialResult(), 123);
 
         // Shipped FixBugs=0 loc_8B4F8 omits the invulnerability_timer test, so the
-        // hurt path ignores post-hit i-frames (sonic3k.asm:189765-189775).
+        // hurt path ignores post-hit i-frames (sonic3k.asm:189858-189868).
         verify(player).applyHurtIgnoringIFrames(0x1200, DamageCause.SPIKE);
         assertTrue(ice.isDestroyed());
         assertEquals(List.of(Sonic3kSfx.ICE_SPIKES.id), sfx);

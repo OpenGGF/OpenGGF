@@ -13,10 +13,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * The look-up and look-down camera pans reverse direction and change their limits under
- * {@code Reverse_gravity_flag}: {@code loc_11276}/{@code loc_112A6} (sonic3k.asm:22615-22637)
- * and {@code loc_112B0}/{@code loc_112E0} (:22638-22660), repeated verbatim for Tails
- * ({@code loc_14AA0} :27868, {@code loc_14ADA} :27891) and Knuckles ({@code loc_172A8} :31896,
- * {@code loc_172E2} :31919). The engine has one camera, so one owner covers all six rows.
+ * {@code Reverse_gravity_flag}: {@code loc_11276}/{@code loc_112A6} (sonic3k.asm:22650-22672)
+ * and {@code loc_112B0}/{@code loc_112E0} (:22673-22695), repeated verbatim for Tails
+ * ({@code loc_14AA0} :27908, {@code loc_14ADA} :27931) and Knuckles ({@code loc_172A8} :31936,
+ * {@code loc_172E2} :31959). The engine has one camera, so one owner covers all six rows.
  *
  * <p>Both the direction and the target change: upright the bias walks from its $60 default
  * down to 8 (look down) or up to $C8 (look up); inverted it walks up to $D8 or down to $18.

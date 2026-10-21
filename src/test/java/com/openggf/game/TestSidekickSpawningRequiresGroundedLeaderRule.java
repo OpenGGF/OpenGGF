@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code Status_OnGround}, {@code Status_Underwater}, {@code Status_RollJump}
  * and skips respawn while any are blocking. Engine-side gate: {@code true}.
  *
- * <p>S3K ({@code Tails_Catch_Up_Flying}, sonic3k.asm:26474-26486): does NOT
+ * <p>S3K ({@code Tails_Catch_Up_Flying}, sonic3k.asm:26514-26526): does NOT
  * check those; only the 64-frame {@code (Level_frame_counter & $3F) == 0}
  * gate, the leader's {@code object_control} bit 7, and the leader's
  * {@code Status_Super}. Engine-side gate: {@code false}.

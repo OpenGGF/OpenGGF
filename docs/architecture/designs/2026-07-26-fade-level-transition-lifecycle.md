@@ -27,13 +27,13 @@ leaves the request pending and retains the retired level indefinitely.
 The ROM sequence establishes the required behavior:
 
 - `StartNewLevel` writes `Current_zone_and_act` and `Restart_level_flag`
-  (`docs/skdisasm/sonic3k.asm:180642-180648`).
+  (`docs/skdisasm/sonic3k.asm:180733-180739`).
 - `LevelLoop` branches to `Level` immediately after `Process_Sprites` when
-  `Restart_level_flag` is set (`sonic3k.asm:7884-7897`).
+  `Restart_level_flag` is set (`sonic3k.asm:7916-7929`).
 - `Level` fades, clears display state, resets `Level_frame_counter`, and clears
-  object, Tails CPU, and oscillation RAM (`sonic3k.asm:7523-7538,7617-7621`).
+  object, Tails CPU, and oscillation RAM (`sonic3k.asm:7555-7570,7649-7653`).
 - The destination setup installs and dispatches `Obj_TitleCard` before normal
-  level setup (`sonic3k.asm:7730-7748`).
+  level setup (`sonic3k.asm:7762-7780`).
 
 The committed fixture declares schema 6, CSV 7, recorder
 `6.33-s3k-completerun`, and a trailing `$8C`-frame next-zone handoff. Its

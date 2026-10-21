@@ -126,7 +126,7 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
         }
     }
     private void initializeBanner() {
-        // Obj_5EF68 (044fa46 sonic3k.asm:125517-125520): clr.b (Super_palette_status).w before the dispatch.
+        // Obj_5EF68 (044fa46 sonic3k.asm:125563-125566): clr.b (Super_palette_status).w before the dispatch.
         if (services().playerQuery().mainPlayerOrNull() instanceof com.openggf.sprites.playable.AbstractPlayableSprite player
                 && player.getSuperStateController() instanceof com.openggf.game.sonic3k.Sonic3kSuperStateController powered)
             powered.clearEndingPaletteStatus();
@@ -143,7 +143,7 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
                 ending().art().loadRaw(services(),S3kEndingResources.KNUCKLES_POSE,0x2C1);
                 S3kEndingPalette.loadLine(services(),0,S3kEndingResources.PAL_KNUCKLES_POSE);
                 S3kRawAnimation.set(animation, 0x602CA);
-                // loc_5F480 (sonic3k.asm:125947): tst.b (_unkFA88).w; beq/bmi skip, so only
+                // loc_5F480 (sonic3k.asm:125993): tst.b (_unkFA88).w; beq/bmi skip, so only
                 // +2 allocates loc_5FBA0. That slot follows the pose and runs this pass.
                 poseFlash=ending().progress()>0; poseFlashTimer=0; poseFlashOffset=0;
             }
@@ -152,7 +152,7 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
         } catch(IOException failure) { throw new UncheckedIOException(failure); }
     }
     /**
-     * Obj_FadeSelectedToBlack (044fa46 sonic3k.asm:179589-179612): its first pass falls into
+     * Obj_FadeSelectedToBlack (044fa46 sonic3k.asm:179680-179703): its first pass falls into
      * loc_8555E with $2E clear, so DecColor_Obj runs at once, then every sixth pass, eight times.
      * The eighth step clears Palette_rotation_disable and deletes the fade.
      */
@@ -163,7 +163,7 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
     }
     private void stepBannerFade() { stepThroughWhite(false); }
     /**
-     * loc_5FF62 (044fa46 sonic3k.asm:126999), allocated by sub_5FF1C after the logo: every fourth
+     * loc_5FF62 (044fa46 sonic3k.asm:127045), allocated by sub_5FF1C after the logo: every fourth
      * pass, from the allocating one, sub_85EB4 raises the 16 line-1 colours a level toward
      * $EEE, eight times. loc_5FF94 then resets $2E to 3 and falls into loc_5FFA6's subq,
      * and sub_85F2A lowers them toward Target_palette_line_2, eight more times.
@@ -186,7 +186,7 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
         else S3kEndingPalette.downTowardsActualTarget(services(),line,first);
     }
     /**
-     * loc_5F15A (044fa46 sonic3k.asm:125704-125706) sets Palette_cycle_counters+0 beside the object fade.
+     * loc_5F15A (044fa46 sonic3k.asm:125750-125752) sets Palette_cycle_counters+0 beside the object fade.
      * Nothing in the terminal clears it, so D01's sub_5928C water cycle stays stopped and the
      * faded line 3 stays black (native PAL Sonic/+2, poll 13311).
      */
@@ -195,7 +195,7 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
             zone.screen().aizPalette.beginFade();
     }
     /**
-     * loc_5FBA0 (sonic3k.asm:126562): deleted once Palette_cycle_counters+0 is set; otherwise
+     * loc_5FBA0 (sonic3k.asm:126608): deleted once Palette_cycle_counters+0 is set; otherwise
      * every third pass ($E after the wrap) it steps $3A by 6 through Pal_KnuxEndPoseSuper.
      * move.l (a1,d0.w),(a2)+ writes colours 2-3 and move.w 4(a1,d0.w),2(a2) lands on
      * colour 5, so colour 4 keeps Pal_KnuxEndPose.
@@ -353,7 +353,7 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
         if (ending().startHeld() || (timer=(short)(timer-1))<0) finish();
     }
     /**
-     * loc_5F314 / loc_5F0DA (044fa46 sonic3k.asm:125858, 125642) only write Game_mode 0: the SST
+     * loc_5F314 / loc_5F0DA (044fa46 sonic3k.asm:125904, 125688) only write Game_mode 0: the SST
      * stays, so the last sprite table stays on screen through Title_Screen's entry fade.
      */
     private void finish() {
@@ -380,7 +380,7 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         int phase=this.phase==8?drawPhase:this.phase; // the retained picture after loc_5F314
         if(isDestroyed() || phase==0 || phase==8) return;
-        // loc_5F2F8 (044fa46 sonic3k.asm:125848-125861), shared by every terminal hold, takes
+        // loc_5F2F8 (044fa46 sonic3k.asm:125894-125907), shared by every terminal hold, takes
         // loc_5F314 instead of Draw_Sprite: the holder's own sprite leaves the last table while
         // its separately allocated children, TM and caption keep theirs.
         boolean held=this.phase==8&&drawPhase>=4;
@@ -425,7 +425,7 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
         } else if(phase==7&&!held) draw(Sonic3kObjectArtKeys.MECHA_SONIC,frame,screenX,screenY,false,-1);
     }
     /**
-     * loc_5F4FA (sonic3k.asm:125982): ObjDat3_60130's TM, mapping frame 2, placed by
+     * loc_5F4FA (sonic3k.asm:126028): ObjDat3_60130's TM, mapping frame 2, placed by
      * loc_5FFD4 at byte_5F520[subtype] from its parent. loc_5F20A passes subtype 2 and
      * loc_5F26C subtype 4. Its Graphics_flags bit-7 gate deletes it on Japanese
      * hardware; like the title screen's TM, the engine models overseas hardware.

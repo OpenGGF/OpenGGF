@@ -874,7 +874,7 @@ class TestFbzAct1RouteHeadless {
             // real Obj_LevelResultsCreate publication dispatch. The synchronous
             // ScreenEvents reload must replace both words through the ordinary
             // ResetActual -> FBZ_Deform -> ResetEffective -> GoDeform tail
-            // (sonic3k.asm:108794-108850), not leave stale Act-1 output.
+            // (sonic3k.asm:108840-108896), not leave stale Act-1 output.
             var parallaxBeforePublication = GameServices.parallax();
             java.util.Arrays.fill(parallaxBeforePublication.getHScroll(), 0x1234_5678);
             setField(parallaxBeforePublication, "vscrollFactorBG", (short) 0x7777);

@@ -16,12 +16,12 @@ import java.util.logging.Logger;
 /**
  * Spawner for AIZ2 parallax background trees during the post-bombing transition.
  *
- * <p>ROM: Obj_AIZ2MakeTree (docs/skdisasm/sonic3k.asm:105553-105583).
+ * <p>ROM: Obj_AIZ2MakeTree (docs/skdisasm/sonic3k.asm:105599-105629).
  * It waits until Camera_X_pos >= $44D0, records Events_fg_1 ($2E) and the
  * script start ($30), and falls into loc_50632 in the same pass. Every pass
  * first tests the next AIZMakeTreeScript word: the $FFFF terminator deletes
- * the maker, so it outlives its last tree by one pass (:105564-105568).
- * Otherwise loc_50640 (:105571-105580) makes at most one allocation attempt.
+ * the maker, so it outlives its last tree by one pass (:105610-105614).
+ * Otherwise loc_50640 (:105617-105626) makes at most one allocation attempt.
  * Once the unsigned 16-bit Events_fg_1 delta reaches the entry's threshold
  * ({@code cmp.w (a2)+,d0 / blo}), AllocateObjectAfterCurrent places one
  * {@link AizBgTreeInstance} after the maker. {@code move.w (a2)+,8(a1)}
@@ -30,7 +30,7 @@ import java.util.logging.Logger;
  * entry is retried on the next pass.
  *
  * <p>Allocated after the leaving {@link AizBattleshipInstance} with
- * AllocateObjectAfterCurrent (Obj_AIZBattleshipMain, sonic3k.asm:105334-105337).
+ * AllocateObjectAfterCurrent (Obj_AIZBattleshipMain, sonic3k.asm:105380-105383).
  */
 public class AizBgTreeSpawnerInstance extends AbstractObjectInstance
         implements ZeroArgRewindRecreatable {

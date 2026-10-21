@@ -17,7 +17,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code ChildObjDat_7AB80} -&gt; {@code loc_7AB8E} (sonic3k.asm:163458-163509): the pair of
+ * ROM {@code ChildObjDat_7AB80} -&gt; {@code loc_7AB8E} (sonic3k.asm:163536-163587): the pair of
  * shots the Metropolis recreation fires during its laser pass.
  *
  * <p>Two children, at {@code (-$C,-4)} and {@code (-$18,-4)}, both running the same code with

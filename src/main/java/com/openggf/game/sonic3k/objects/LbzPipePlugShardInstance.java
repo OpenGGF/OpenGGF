@@ -15,7 +15,7 @@ import java.util.List;
  * Falling visual shard spawned by {@link LbzPipePlugObjectInstance}.
  *
  * <p>ROM reference: {@code loc_275B2} and the falling children allocated by
- * {@code PipePlugSmashObject} ({@code sonic3k.asm:53684-53779}).
+ * {@code PipePlugSmashObject} ({@code sonic3k.asm:53724-53819}).
  */
 final class LbzPipePlugShardInstance extends AbstractObjectInstance
         implements SpawnDefaultArgsRewindRecreatable {

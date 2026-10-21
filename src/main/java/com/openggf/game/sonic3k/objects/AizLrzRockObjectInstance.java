@@ -222,11 +222,11 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         if (!result.pushingNow() && result.pushingLastFrame()) {
             // SolidObject_TestClearPush clears Status_Push when this rock's
             // per-player pushing bit was set at entry but SolidObjectFull no
-            // longer reports a side push (sonic3k.asm:41503-41532). Manual
+            // longer reports a side push (sonic3k.asm:41543-41572). Manual
             // checkpoint batching retains that previous bit in the result.
             // ROM AIZLRZEMZRock clears this character's own pushing bit on
             // the rock -- p1 in the Player_1 leg, p2 in the Player_2 leg
-            // (docs/skdisasm/sonic3k.asm:44189, :44202, :44233).
+            // (docs/skdisasm/sonic3k.asm:44229, :44242, :44273).
             services().objectManager().solidContacts().releaseObjectPushLatch(player, this);
             player.setPushing(false);
             if (player.getAnimationId() != Sonic3kAnimationIds.ROLL.id()
@@ -234,7 +234,7 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
                 // SolidObjectFull_Offset_1P publishes the paired
                 // anim=Walk/prev_anim=Run word before clearing Status_Push;
                 // Roll and Spindash branch directly to the clear helper
-                // (sonic3k.asm:41503-41532).
+                // (sonic3k.asm:41543-41572).
                 player.setAnimationId(Sonic3kAnimationIds.WALK.id());
                 player.publishRunAsPreviousAnimation();
             }
@@ -338,23 +338,23 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
     @Override
     public int getOnScreenHalfWidth() {
         // Render_Sprites builds the on-screen flag from the object's own
-        // width_pixels/height_pixels bytes (sonic3k.asm:36347-36370), and
+        // width_pixels/height_pixels bytes (sonic3k.asm:36387-36410), and
         // Obj_AIZLRZEMZRock writes both from AIZLRZEMZRock_SizeData indexed by
-        // subtype >> 4 (sonic3k.asm:43844-43854, table at 43832-43840). The
+        // subtype >> 4 (sonic3k.asm:43884-43894, table at 43832-43840). The
         // shared 16-px default is wrong for every rock size: it widens the
         // horizontal gate for the $18/$28-wide entries and, worse, keeps the
         // $F-tall entries "on screen" one frame past the ROM, because the
         // vertical test is y_pos >= camera_y - height_pixels. That extra frame
         // leaves the rock solid for one pass after the camera has scrolled off
         // its bottom edge, so SolidObject_cont still runs its side push
-        // (sonic3k.asm:41396-41398 gates that path on render_flags bit 7).
+        // (sonic3k.asm:41436-41438 gates that path on render_flags bit 7).
         return SIZE_TABLE[Math.clamp(sizeIndex, 0, SIZE_TABLE.length - 1)][0];
     }
 
     @Override
     public int getOnScreenHalfHeight() {
         // height_pixels from the same AIZLRZEMZRock_SizeData entry
-        // (sonic3k.asm:43852-43854); see getOnScreenHalfWidth.
+        // (sonic3k.asm:43892-43894); see getOnScreenHalfWidth.
         return SIZE_TABLE[Math.clamp(sizeIndex, 0, SIZE_TABLE.length - 1)][1];
     }
 
@@ -363,15 +363,15 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         // Obj_AIZLRZEMZRock stores byte_1F9D0's unpadded width in
         // width_pixels. Tails_Move reads that byte for its on-object balance
         // window; SolidObjectFull alone receives the separate +$B extension.
-        // (sonic3k.asm:43838-43848,43922-43935,27820-27837).
+        // (sonic3k.asm:43878-43888,43962-43975,27860-27877).
         return SIZE_TABLE[Math.clamp(sizeIndex, 0, SIZE_TABLE.length - 1)][0];
     }
 
     @Override
     public boolean usesInclusiveRightEdge() {
-        // Obj_AIZLRZEMZRock calls SolidObjectFull (sonic3k.asm:43935). For a player
+        // Obj_AIZLRZEMZRock calls SolidObjectFull (sonic3k.asm:43975). For a player
         // who is not standing on the rock, SolidObjectFull_1P branches to loc_1DF88 ->
-        // SolidObject_cont (sonic3k.asm:41022-41023, 41399), whose initial X gate is
+        // SolidObject_cont (sonic3k.asm:41062-41063, 41439), whose initial X gate is
         // cmp.w d3,d0 / bhi loc_1E0A2 (41403-41406): contact when d0 <= 2*halfwidth,
         // so the player's centre sitting exactly on the rock's right solid edge
         // (relX == width*2) is an inclusive zero-distance side contact and re-sets
@@ -507,7 +507,7 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
     private void handlePush(AbstractPlayableSprite player, PlayerSolidContactResult result) {
         // ROM sub_200A2/sub_200CC moves the concrete player whose pushing bit is
         // set only when that player's saved pre-helper status also had
-        // Status_Push (sonic3k.asm:44446-44478). The checkpoint preserves both
+        // Status_Push (sonic3k.asm:44486-44518). The checkpoint preserves both
         // phases per player; using the old aggregate latch could let P2's first
         // contact move P1 one frame early.
         if (player == null || result == null
@@ -533,14 +533,14 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         pushDistanceRemaining--;
         currentX--;
         // subq.w #1,x_pos(a1) changes only the ROM integer word and keeps
-        // x_sub untouched (sonic3k.asm:44472-44473).
+        // x_sub untouched (sonic3k.asm:44512-44513).
         NativePositionOps.addXPosPreserveSubpixel(player, -1);
         int halfHeight = SIZE_TABLE[Math.clamp(sizeIndex, 0, SIZE_TABLE.length - 1)][1];
         TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(currentX, currentY, halfHeight);
         if (floor.foundSurface()) {
             // sub_200CC follows each horizontal push with ObjCheckFloorDist and
             // adds d1 even when the adjacent floor is below the rock
-            // (sonic3k.asm:44474-44475).
+            // (sonic3k.asm:44514-44515).
             currentY += floor.distance();
         }
     }

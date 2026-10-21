@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Obj_MHZMushroomCap keeps the character's last airborne y_vel in $30/$32(a0) and the
- * standing bits in status(a0) (MHZMushroomCap_BounceCharacter, sonic3k.asm:82282-82316).
+ * standing bits in status(a0) (MHZMushroomCap_BounceCharacter, sonic3k.asm:82323-82357).
  * The engine holds both per player in identity-keyed collections. A capture taken while a
  * player stands on the cap must restore them: otherwise the recreated cap re-records the
  * landed y_vel of zero and launches at -$680 where live play launches at -$780 (MHZ1
@@ -89,7 +89,7 @@ class TestS3kMhzMushroomCapRewind {
                 "restored cap must launch on the same frame with the captured y_vel");
     }
 
-    /** byte thresholds from MHZMushroomCap_BounceCharacter (sonic3k.asm:82292-82300). */
+    /** byte thresholds from MHZMushroomCap_BounceCharacter (sonic3k.asm:82333-82341). */
     private static int expectedMagnitude(int previousYVelocity) {
         if (previousYVelocity < 0x660) return 0x660;
         if (previousYVelocity < 0x760) return 0x760;

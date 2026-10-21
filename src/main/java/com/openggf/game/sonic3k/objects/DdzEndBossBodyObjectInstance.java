@@ -16,7 +16,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code loc_81E3C} (sonic3k.asm:173930-173961): the phase-1 end boss body sprite, the target
+ * ROM {@code loc_81E3C} (sonic3k.asm:174021-174052): the phase-1 end boss body sprite, the target
  * {@code _unkFAA4} points at. It stays at boss {@code + ($C0, $4B)} ({@code sub_82C86}) with
  * {@code ObjDat3_831CC} (priority {@code $300}, frame {@code $38}) and seven hit points.
  *

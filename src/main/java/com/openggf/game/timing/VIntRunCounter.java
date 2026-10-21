@@ -8,8 +8,8 @@ import java.util.function.LongSupplier;
 /**
  * ROM {@code V_int_run_count}: the longword every V-int handler increments on
  * its way out ({@code VInt_Done: addq.l #1,(V_int_run_count).w},
- * docs/skdisasm/sonic3k.asm:542-543). It lives in {@code CrossResetRAM}
- * (sonic3k.constants.asm:790), so no level load, game-mode change or soft reset
+ * docs/skdisasm/sonic3k.asm:558-559). It lives in {@code CrossResetRAM}
+ * (sonic3k.constants.asm:812), so no level load, game-mode change or soft reset
  * clears it: the value an object reads is the number of V-ints serviced since
  * power-on, including every title-screen, menu and load frame.
  *
@@ -64,12 +64,12 @@ public final class VIntRunCounter implements RewindSnapshottable<VIntRunCounterS
         return live != NO_OBJECT_CLOCK ? live : value;
     }
 
-    /** {@code V_int_run_count+2}: the word the Slots reel draw adds (sonic3k.asm:99722). */
+    /** {@code V_int_run_count+2}: the word the Slots reel draw adds (sonic3k.asm:99768). */
     public int lowWord() {
         return (int) (value() & 0xFFFF);
     }
 
-    /** {@code V_int_run_count+3}: the byte most per-frame consumers mask (sonic3k.asm:99646). */
+    /** {@code V_int_run_count+3}: the byte most per-frame consumers mask (sonic3k.asm:99692). */
     public int lowByte() {
         return (int) (value() & 0xFF);
     }

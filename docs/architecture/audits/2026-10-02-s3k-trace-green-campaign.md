@@ -37,7 +37,7 @@ The ROM pitfalls are in the S3K object skill's `rom-pitfalls.md` and in
 | `bda587a99b` | `loc_26EEA` | The cup elevator runs its per-player solid check before testing for capture. |
 | `7a85c01222` | `loc_2C3CA` | The rolling drum runs both participant updates before range deletion and does not release live native riders. |
 | `3fa9c0a88a`, `c54cbfdf93` | `loc_26F26`, `loc_26FF4`, `sub_62800`, `loc_6278A` | Cup capture alone writes `object_control=$03`, which sets the animation bit. Later full-byte writers own the release. |
-| `b38e8354d4` | `LevelLoop` (`sonic3k.asm:7908/7887`) | Held LEVEL iterations in the live loop still service the Kos queue tail, via `TraceSuppressedRowClosure`. |
+| `b38e8354d4` | `LevelLoop` (`sonic3k.asm:7940/7887`) | Held LEVEL iterations in the live loop still service the Kos queue tail, via `TraceSuppressedRowClosure`. |
 | `b217fe6bd8` | `sub_875B4`, `sub_8756A`, `sub_87592` | Monkey Dude has five linked children with 16.16 positions and throws one coconut from the hand's previous position. |
 | `6a3131036c` | `AIZTree_FallOff` | Tree release writes literal radii 9/`$13` until `Tails_TouchFloor` restores them. |
 | `36e73ddcc2` | — | Compared bonus interiors drive physical movie rows and close source ownership after the last published row. |

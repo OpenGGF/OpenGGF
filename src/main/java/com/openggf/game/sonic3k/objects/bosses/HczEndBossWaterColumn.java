@@ -97,7 +97,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0006}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -253,7 +253,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
      * The separately allocated spray SST runs after its platform parent. When
      * {@code HCZEndBossPlatform_StartFallAway} selects DESCEND, that later slot
      * still completes its final suction dispatch before observing parent bit 3
-     * (docs/skdisasm/sonic3k.asm:141143-141176,141205-141229).
+     * (docs/skdisasm/sonic3k.asm:141208-141241,141270-141294).
      */
     private boolean pendingSprayTailInteraction;
 
@@ -277,8 +277,8 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
     // =========================================================================
 
     public HczEndBossWaterColumn(HczEndBossInstance boss, HczEndBossTurbine turbine) {
-        // HCZEndBossPlatform_ObjData priority $80 (sonic3k.asm:142164-142166), applied by
-        // HCZEndBossPlatform_Init's SetUp_ObjAttributes2 (sonic3k.asm:141112-141114).
+        // HCZEndBossPlatform_ObjData priority $80 (sonic3k.asm:142229-142231), applied by
+        // HCZEndBossPlatform_Init's SetUp_ObjAttributes2 (sonic3k.asm:141177-141179).
         super(boss, "HCZEndBossWaterColumn", RenderPriority.fromS3kWord(0x80), 0);
         this.boss = boss;
         this.turbine = turbine;
@@ -291,7 +291,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
     @Override
     public boolean isHighPriority() {
         // HCZEndBossPlatform_ObjData art make_art_tile(ArtTile_HCZEndBoss,0,1) sets bit 15
-        // (sonic3k.asm:142165).
+        // (sonic3k.asm:142230).
         return true;
     }
 

@@ -24,7 +24,7 @@ import java.util.List;
 
 /**
  * ROM {@code CutsceneKnux_SSZ} ({@code Obj_CutsceneKnuckles} subtype {@code $2C},
- * sonic3k.asm:133530-133740): Knuckles' arrival in Sky Sanctuary act 1.
+ * sonic3k.asm:133587-133797): Knuckles' arrival in Sky Sanctuary act 1.
  *
  * <p>{@code Obj_57E34} beams him in at X {@code $100} and drives his Y until the beam swing
  * completes ({@code _unkFAB8} bit 0). He then falls to the terrain, watches the Death Egg rise
@@ -198,7 +198,7 @@ public final class CutsceneKnucklesSszInstance extends AbstractObjectInstance
 
     /** {@code loc_65794}: {@code MoveSprite_LightGravity} until the floor is reached. */
     private void loc65794() {
-        // MoveSprite_LightGravity (sonic3k.asm:178357): gravity $20 rather than $38.
+        // MoveSprite_LightGravity (sonic3k.asm:178448): gravity $20 rather than $38.
         moveSprite(0x20);
         int distance = floorDistance();
         if (distance >= 0) {

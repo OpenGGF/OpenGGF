@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * StillSprite (obj 0x2F) loops in the ROM's {@code Sprite_OnScreen_Test}
- * (sonic3k.asm:37262-37277): it deletes only when its chunk-aligned X leaves
+ * (sonic3k.asm:37302-37317): it deletes only when its chunk-aligned X leaves
  * the coarse window {@code (camX-128)&0xFF80 .. +0x280}, NOT the exact screen.
  * Placement spawns objects beyond the screen edge, so an exact-screen check
  * kills every StillSprite on its first update before it can be seen (HCZ

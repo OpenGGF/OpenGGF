@@ -34,7 +34,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * CNZ miniboss sprite-frame coverage against the S&K-side raw animation
- * labels at sonic3k.asm:145705-145711.
+ * labels at sonic3k.asm:145770-145776.
  */
 class TestCnzMinibossAnimationArt {
 

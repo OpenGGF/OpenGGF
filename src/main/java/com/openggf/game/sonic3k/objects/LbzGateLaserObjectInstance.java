@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * S3K S3KL object $21 - Launch Base Zone Act 2 gate laser.
  *
- * <p>ROM reference: {@code Obj_LBZGateLaser} ({@code sonic3k.asm:56954-57029}).
+ * <p>ROM reference: {@code Obj_LBZGateLaser} ({@code sonic3k.asm:56994-57069}).
  * The resident parent owns a subtype-derived timer and periodically allocates
  * two falling laser halves. The second half is the harmful $98 touch object.
  */

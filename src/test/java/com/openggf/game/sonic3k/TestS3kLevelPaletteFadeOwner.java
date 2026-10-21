@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The fresh-level fade from black belongs to the S3K {@code Level} routine.
- * {@code Level/loc_64DC} (docs/skdisasm/sonic3k.asm:7874-7878) sets
+ * {@code Level/loc_64DC} (docs/skdisasm/sonic3k.asm:7906-7910) sets
  * {@code Palette_fade_info = $202F} (lines 1-3), runs {@code Pal_FillBlack} and
  * arms {@code Palette_fade_timer = $16}; {@code Animate_Palette} (5018-5028)
  * spends one {@code Pal_FromBlack} pass per LevelLoop frame. Lines 1-3 hold

@@ -24,7 +24,7 @@ import java.util.List;
 /**
  * Object 0xB7 - ICZ ice spikes.
  * <p>
- * ROM reference: {@code Obj_ICZIceSpikes} at sonic3k.asm:189535
+ * ROM reference: {@code Obj_ICZIceSpikes} at sonic3k.asm:189628
  * ({@code loc_8B2A8}). Subtype 0 is a solid spike base with a separate
  * {@code collision_flags=$98} hurt child. Nonzero subtypes use
  * {@code collision_flags=$92}, arm when the nearest player is within 0x40 px on
@@ -37,11 +37,11 @@ public class IczIceSpikesObjectInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_ICZIceSpikes} is installed from the S3K object pointer table at
      * {@code $0008B2A0} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:189540).
+     * label is defined at docs/skdisasm/sonic3k.asm:189633).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0008}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {

@@ -14,7 +14,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * The post-credits terminal ends with loc_5F314 (044fa46 sonic3k.asm:125858): Game_mode 0. Sega_Screen
+ * The post-credits terminal ends with loc_5F314 (044fa46 sonic3k.asm:125904): Game_mode 0. Sega_Screen
  * (5419) writes Game_mode 4 and Title_Screen (5424) opens with Pal_FadeToBlack (5074): 22 passes of
  * Wait_VSync then Pal_ToBlack over all 64 colours, before any title initialization. Native Tails/+2
  * NTSC (declared D01 product): Game_mode is 4 at the end of poll 15531, the pass the terminal ends;

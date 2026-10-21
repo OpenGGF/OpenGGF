@@ -26,7 +26,7 @@ import java.util.List;
  * switches to the falling-drop routine, applies ROM's {@code y_vel=$800}, and
  * installs the same marker at that routine's callback.</p>
  *
- * <p>ROM: {@code sonic3k.asm:138701-138739,139024-139026,139046-139049,
+ * <p>ROM: {@code sonic3k.asm:138766-138804,139089-139091,139111-139114,
  * 139193-139221}.</p>
  */
 public final class AizEndBossWaterfallChild extends AbstractObjectInstance
@@ -122,7 +122,7 @@ public final class AizEndBossWaterfallChild extends AbstractObjectInstance
         // Go_Delete_Sprite replaces the operation pointer with
         // Delete_Current_Sprite and returns. The SST is cleared only when that
         // marker receives its own dispatch on the following object pass
-        // (sonic3k.asm:179136-179143; locked-on ROM $000852A0->$0001ABB6).
+        // (sonic3k.asm:179227-179234; locked-on ROM $000852A0->$0001ABB6).
         if (routine == STATE_DELETE_PENDING) {
             ObjectLifetimeOps.expireDynamic(this);
             return;
@@ -148,7 +148,7 @@ public final class AizEndBossWaterfallChild extends AbstractObjectInstance
         // Every live routine reaches Draw_Sprite/Animate_Raw directly; none
         // calls Sprite_OnScreen_Test or MarkObjGone. Only the raw-animation
         // callback's Go_Delete_Sprite marker may retire this SST.
-        // ROM: sonic3k.asm:138701-138739.
+        // ROM: sonic3k.asm:138766-138804.
         return true;
     }
 

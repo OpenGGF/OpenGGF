@@ -65,7 +65,7 @@ public final class TailsTailPose {
 
     /**
      * Obj_Tails_Tail_AniSelection: maps parent animation ID to Obj05 animation.
-     * ROM (S3K): sonic3k.asm:30076
+     * ROM (S3K): sonic3k.asm:30116
      */
     static final int[] ANI_SELECTION_S3K = {
         0,     // 0x00 Walk -> Blank

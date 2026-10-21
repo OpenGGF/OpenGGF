@@ -50,7 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *       {@code Level_MainLoop}.</li>
  *   <li>S2 {@code Level_TtlCard} (s2.asm:4914-4924) calls
  *       {@code RunObjects} every iteration of the title-card wait loop.</li>
- *   <li>S3K title-card wait loop at {@code loc_62CC} (sonic3k.asm:7737-7748)
+ *   <li>S3K title-card wait loop at {@code loc_62CC} (sonic3k.asm:7769-7780)
  *       calls {@code Process_Sprites} every iteration.</li>
  * </ul>
  *
@@ -102,7 +102,7 @@ class TestTitleCardObjectExecution {
     void titleCardAdvancesObjectAndLevelFrameCounters_s2Ehz1() {
         // S2: the level's placed objects and the players are both created by
         // the s2.asm:5003-5004 ObjectsManager / InitPlayers pair, which runs
-        // after the Level_TtlCard scroll-in loop at :4914-4925. The RunObjects
+        // after the Level_TtlCard scroll-in loop at :4946-4957. The RunObjects
         // that loop dispatches therefore sees only the Obj34 title-card pieces,
         // so no level-object pass may run while the card is sliding in.
         File romFile = RomTestUtils.ensureSonic2RomAvailable();
@@ -311,9 +311,9 @@ class TestTitleCardObjectExecution {
             // Run the rest of the card and count the level-object passes that
             // land while it is still up. The ROM window is the single
             // RunObjects at s2.asm:5006 plus the 25 iterations of the leave
-            // loop at :5060-5066 -- the pass counts of Obj34_LeftPartOut (5),
+            // loop at :5092-5098 -- the pass counts of Obj34_LeftPartOut (5),
             // Obj34_BottomPartOut (11) and Obj34_BackgroundOut (9) at
-            // :27518-27604 -- so 26 passes between InitPlayers and
+            // :27558-27644 -- so 26 passes between InitPlayers and
             // Level_MainLoop.
             int passesWhileCardUp = objectDelta;
             int guard = 2000;
@@ -328,8 +328,8 @@ class TestTitleCardObjectExecution {
             assertEquals(26, objectManager.getFrameCounter() - objectFramesBefore,
                     "S2 releases after all 26 native passes without another VBlank");
             // Level_frame_counter is cleared at s2.asm:4772, and Level_MainLoop
-            // increments it at :5092 -- one instruction AFTER its own
-            // bsr.w WaitForVint at :5091. That wait is the console frame the
+            // increments it at :5124 -- one instruction AFTER its own
+            // bsr.w WaitForVint at :5123. That wait is the console frame the
             // release iteration ends on, so the counter is still 0 when the
             // title-card flag clears and reads 1 only once Level_MainLoop's
             // first pass has resumed from the wait.
@@ -357,7 +357,7 @@ class TestTitleCardObjectExecution {
                     "title card should release within the test guard");
             // Level_LoadObj's ExecuteObjects (sonic.asm:2896) has no
             // WaitForVBlank of its own; id_VBlank_Levels is first set by
-            // Level_MainLoop (:2999-3003). The release iteration therefore owns
+            // Level_MainLoop (:3031-3035). The release iteration therefore owns
             // the prelude pass alone, and the first Level_MainLoop pass belongs
             // to the following iteration.
             assertEquals(1, objectManager.getFrameCounter() - objectFramesBefore,

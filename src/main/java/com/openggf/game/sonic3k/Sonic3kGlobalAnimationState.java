@@ -6,11 +6,11 @@ package com.openggf.game.sonic3k;
  */
 final class Sonic3kGlobalAnimationState {
     private static final int AIZ_VINE_ANGLE_STEP = 0x180;
-    /** {@code Palette_cycle_counters: ds.b $C} (sonic3k.constants.asm:596). */
+    /** {@code Palette_cycle_counters: ds.b $C} (sonic3k.constants.asm:615). */
     static final int PALETTE_CYCLE_COUNTERS_BYTES = 0xC;
     /** Counter0 and counter1 words, then the counters bytes. */
     static final int PALETTE_CYCLE_SNAPSHOT_BYTES = 4 + PALETTE_CYCLE_COUNTERS_BYTES;
-    /** {@code Level/loc_64DC}: {@code move.w #$16,(Palette_fade_timer).w} (sonic3k.asm:7877). */
+    /** {@code Level/loc_64DC}: {@code move.w #$16,(Palette_fade_timer).w} (sonic3k.asm:7909). */
     static final int FRESH_LEVEL_PALETTE_FADE_FRAMES = 0x16;
 
     private int aizVineAngle;
@@ -20,9 +20,9 @@ final class Sonic3kGlobalAnimationState {
     private int paletteFadeTimer;
     /**
      * {@code Palette_cycle_counter0}/{@code Palette_cycle_counter1} words and
-     * {@code Palette_cycle_counters} (sonic3k.constants.asm:580-596). Every AnPal routine
+     * {@code Palette_cycle_counters} (sonic3k.constants.asm:599-615). Every AnPal routine
      * reads and writes this one bank. Level's loc_60DE clears it
-     * ({@code clearRAM Lag_frame_count,(Nem_decomp_queue-Lag_frame_count)}, sonic3k.asm:7652); a seamless act reload never
+     * ({@code clearRAM Lag_frame_count,(Nem_decomp_queue-Lag_frame_count)}, sonic3k.asm:7684); a seamless act reload never
      * reaches loc_60DE, so the next act's AnPal continues from the previous act's values.
      */
     private int paletteCycleCounter0;
@@ -30,7 +30,7 @@ final class Sonic3kGlobalAnimationState {
     private final byte[] paletteCycleCounters = new byte[PALETTE_CYCLE_COUNTERS_BYTES];
     /**
      * Byte writes objects made to {@code Palette_cycle_counters} this frame: offset in the
-     * high byte, value in the low byte. ROM objects run in Process_Sprites (sonic3k.asm:7926),
+     * high byte, value in the low byte. ROM objects run in Process_Sprites (sonic3k.asm:7958),
      * after Animate_Palette (7923); the engine's palette call runs after its object pass, so
      * these land after that call, as the ROM's land after AnPal.
      */
@@ -64,14 +64,14 @@ final class Sonic3kGlobalAnimationState {
 
     /**
      * {@code Level/loc_64DC}: {@code move.w #$16,(Palette_fade_timer).w} before LevelLoop
-     * (sonic3k.asm:7877). Seamless reloads never reach it.
+     * (sonic3k.asm:7909). Seamless reloads never reach it.
      */
     void armFreshLevelPaletteFade() {
         paletteFadeTimer = FRESH_LEVEL_PALETTE_FADE_FRAMES;
     }
 
     /**
-     * {@code Animate_Palette} (sonic3k.asm:5018): while the timer is non-zero the frame runs
+     * {@code Animate_Palette} (sonic3k.asm:5050): while the timer is non-zero the frame runs
      * Pal_FromBlack/Pal_FromWhite and decrements it instead of calling AnPal_Load.
      *
      * @return true when this level frame spends the fade instead of animating palettes
@@ -153,7 +153,7 @@ final class Sonic3kGlobalAnimationState {
         return ran;
     }
 
-    /** Level loc_60DE clears {@code Lag_frame_count} up to {@code Nem_decomp_queue} (sonic3k.asm:7652). */
+    /** Level loc_60DE clears {@code Lag_frame_count} up to {@code Nem_decomp_queue} (sonic3k.asm:7684). */
     void resetFreshLevelPaletteCycles() {
         objectPhaseCounterBytes.clear();
         paletteCycleCounter0 = 0;

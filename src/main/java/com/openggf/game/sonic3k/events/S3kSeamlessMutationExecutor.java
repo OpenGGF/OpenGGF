@@ -111,7 +111,7 @@ public final class S3kSeamlessMutationExecutor {
             applyImmediateMutation(levelManager, context -> {
                 // AIZ1BGE_FireTransition queues these Kosinski streams into
                 // RAM_start and Block_table before the module-art wait
-                // (sonic3k.asm:104664-104681). Once that queue has drained,
+                // (sonic3k.asm:104710-104727). Once that queue has drained,
                 // collision observes the AIZ2 128x128/16x16 definitions even
                 // though Current_act and the live layout are still AIZ1.
                 sonic3kLevel.applyBlockOverlay(overlay.blocks128x128(), 0, false);
@@ -134,7 +134,7 @@ public final class S3kSeamlessMutationExecutor {
 
         // AIZ1BGE_FireTransition queues AIZ2 block/chunk/art work, then
         // allocates Obj_AIZTransitionFloor and enters delayed fire refresh
-        // (docs/skdisasm/sonic3k.asm:104664-104691, 104701-104714).
+        // (docs/skdisasm/sonic3k.asm:104710-104737, 104747-104760).
         // The module art is not visible until Kos_modules_left reaches zero.
         // Keep this stage to the non-art state owned before that wait.
         Sonic3kZoneEvents.loadPaletteFromPalPointers(PAL_POINTER_AIZ_FIRE_INDEX);

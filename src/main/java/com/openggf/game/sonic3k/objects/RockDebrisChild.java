@@ -19,7 +19,7 @@ import java.util.List;
  * frame from the parent rock's sprite sheet. Falls with gravity until offscreen,
  * then deletes itself.
  * <p>
- * ROM: BreakObjectToPieces (sonic3k.asm:45772) creates fragments with
+ * ROM: BreakObjectToPieces (sonic3k.asm:45812) creates fragments with
  * velocities from word_2A8B0. Gravity = 0x18 subpixels/frame (same as
  * cork floor fragments).
  */
@@ -45,9 +45,9 @@ public class RockDebrisChild extends GravityDebrisChild implements SpawnDefaultA
         this.artKey = artKey;
     }
 
-    // Parent Obj_AIZLRZEMZRock writes priority $200 (sonic3k.asm:43858). BreakObjectToPieces
+    // Parent Obj_AIZLRZEMZRock writes priority $200 (sonic3k.asm:43898). BreakObjectToPieces
     // keeps piece 0 in the parent slot (a1=a0) and copies only the HIGH byte of that word into
-    // each freshly allocated piece (move.b priority(a0),priority(a1), sonic3k.asm:45811), so
+    // each freshly allocated piece (move.b priority(a0),priority(a1), sonic3k.asm:45851), so
     // later pieces get $0200: for this parent both paths are bucket 4.
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x200 & 0xFF00);
 

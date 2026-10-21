@@ -11,7 +11,7 @@ import java.util.Objects;
  *
  * <p>The sanctuary has no zone-events class; its only per-frame event state is
  * the screen shake the falling-crystal ceremony raises. {@code HPZS_ScreenEvent}
- * (sonic3k.asm:120823-120826) adds {@code Screen_shake_offset} to
+ * (sonic3k.asm:120869-120872) adds {@code Screen_shake_offset} to
  * {@code Camera_Y_pos_copy}, {@code HPZS_BackgroundEvent} (120845-120855)
  * folds the same word into the background scroll, then tail-calls
  * {@code ShakeScreen_Setup} to produce the next frame's value. The engine runs
@@ -79,7 +79,7 @@ public final class HpzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     }
 
     /**
-     * Runs one {@code AnPal_HPZ} pass (sonic3k.asm:3934-3951) and returns the
+     * Runs one {@code AnPal_HPZ} pass (sonic3k.asm:3966-3983) and returns the
      * {@code AnPal_PalHPZ} byte offset to copy into {@code Normal_palette_line_4+$2},
      * or {@code -1} when the pass writes nothing. The counters start cleared,
      * as level initialization clears {@code Palette_cycle_counters}.

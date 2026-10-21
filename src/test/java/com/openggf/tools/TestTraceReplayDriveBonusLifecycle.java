@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Trace capture/benchmark rows run the production bonus-frame tail. The trace bootstrap
  * enters a bonus stage without the render-only player-priority write that
  * GameLoop.prepareBonusStageForTitleCard makes; GameLoop then restores it after every
- * physics frame (Obj_GumballMachine: bset #7,(Player_1+art_tile).w, sonic3k.asm:127416). Without the
+ * physics frame (Obj_GumballMachine: bset #7,(Player_1+art_tile).w, sonic3k.asm:127470). Without the
  * shared hook a Gumball capture draws Knuckles behind the machine glass.
  */
 @RequiresRom(SonicGame.SONIC_3K)

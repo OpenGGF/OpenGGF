@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code Obj_SSZFloatingPlatform} ({@code $7F}, sonic3k.asm:89968-90005) and
+ * {@code Obj_SSZFloatingPlatform} ({@code $7F}, sonic3k.asm:90014-90051) and
  * {@code Obj_SSZCollapsingColumn} ({@code $7E}, 90007-90118) with its {@code loc_44BCC} debris.
  *
  * <p>Expectations come from the routines and from {@code word_46618} ({@code $46618}) decoded from

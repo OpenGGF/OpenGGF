@@ -12,9 +12,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code LRZ1_BackgroundEvent}'s dome stages against {@code loc_56E40} (sonic3k.asm:115538-115551),
- * {@code loc_56E66} (:115552-115567), {@code loc_56C88} (:115333-115345) and
- * {@code Draw_PlaneVertBottomUpComplex} (:103557-103591).
+ * {@code LRZ1_BackgroundEvent}'s dome stages against {@code loc_56E40} (sonic3k.asm:115584-115597),
+ * {@code loc_56E66} (:115598-115613), {@code loc_56C88} (:115379-115391) and
+ * {@code Draw_PlaneVertBottomUpComplex} (:103603-103637).
  *
  * <p>Every expectation here is a ROM immediate or a ROM branch: the {@code addq.w #4} steps, the
  * {@code #$F} seed, the two {@code subq.w #1} decrements a

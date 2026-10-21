@@ -309,7 +309,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
         lastFrameCounter = vIntRunCount;
         AbstractPlayableSprite trackedPlayer = resolveTrackedPlayer(player);
 
-        // ROM: routine dispatch FIRST (s3.asm line 81188-81195)
+        // ROM: routine dispatch FIRST (s3.asm line 81252-81259)
         switch (routine) {
             case 0  -> routine0Init(trackedPlayer);
             case 2  -> routine2Wait(trackedPlayer);
@@ -606,7 +606,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
             // Obj_AIZPlaneIntro init writes mapping_frame=0 and
             // object_control=$53. Bit 1 keeps Animate_Sonic from replacing
             // that frame while the hidden player slot is owned by the intro
-            // (sonic3k.asm:135492-135495,22067-22076).
+            // (sonic3k.asm:135557-135560,22103-22112).
             player.setMappingFrame(0);
             player.setObjectMappingFrameControl(true);
             player.setAir(false);
@@ -660,7 +660,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
             spawnDynamicObject(planeChild);
 
             // CreateChild1_Normal also allocates the two animated plane pieces
-            // in their own following SST slots (sonic3k.asm:135702-135718,
+            // in their own following SST slots (sonic3k.asm:135767-135783,
             // 135741-135819). They must remain real dynamic objects so later
             // AllocateObject calls observe the same slot pressure.
             ObjectSpawn glow1Spawn = new ObjectSpawn(
@@ -1050,7 +1050,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
         }
 
         if (checkX >= EXPLOSION_TRIGGER_X) {
-            // ROM loc_67712: st (Palette_cycle_counters+$00).w (sonic3k.asm:135756) holds
+            // ROM loc_67712: st (Palette_cycle_counters+$00).w (sonic3k.asm:135821) holds
             // AnPal_AIZ1's counters+$02 cycle while the emeralds use its colours.
             if (services().levelManager().getAnimatedPatternManager()
                     instanceof com.openggf.game.sonic3k.S3kPaletteCycleCounterWriter writer) {
@@ -1067,7 +1067,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
                 // The object runs after the player slot. Retail publishes the
                 // Hurt byte immediately but leaves the already displayed intro
                 // frame intact until the next Animate_Sonic pass
-                // (sonic3k.asm:135609-135619).
+                // (sonic3k.asm:135674-135684).
                 player.setObjectMappingFrameControl(false);
                 player.setAnimationId(Sonic3kAnimationIds.HURT);
                 player.setYSpeed((short) -0x400);

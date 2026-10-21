@@ -41,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *   <li>LBZ moving platform, falling type: the riders recorded by the solid pass are released
  *       by a later update when the fall timer expires.</li>
  *   <li>Obj_SinkingMud: each character's surface depth and its standing bit persist between
- *       frames (sonic3k.asm:68500-68661); a restore that forgets them resets a sinking player
+ *       frames (sonic3k.asm:68540-68701); a restore that forgets them resets a sinking player
  *       to the full surface.</li>
  * </ul>
  */

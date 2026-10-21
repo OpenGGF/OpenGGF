@@ -356,7 +356,7 @@ Source context: `d8025e094` plus the owned Cork implementation (SHA256
 original selection base `5b2ff8e78`. No controller, fixture, shared allocator,
 collision algorithm or clock changed.
 
-`BreakObjectToPieces2` (sonic3k.asm:45786–45822) initializes piece0 with a1=a0,
+`BreakObjectToPieces2` (sonic3k.asm:45826–45862) initializes piece0 with a1=a0,
 then allocates only N−1 checked AfterCurrent siblings. A failed allocation ends
 the admitted mapping prefix. The original Cork record now retains its typed
 identity as the first moving fragment: CNZ `loc_65D46` compares the saved child's
@@ -1102,8 +1102,8 @@ separate from this pure helper result. Native AIZ handoff is still unstaged.
 
 Source7001b1eef plus this local candidate; the qualified native handoff is kept
 separate from its unresolved results/core composition. AIZ1BGE_Finish
-(sonic3k.asm:104727–104775) calls Load_Level, which reads the layout header rather
-than clearing Object_RAM. Offset_SomeObjectsDuringTransition(:104154–104182)
+(sonic3k.asm:104773–104821) calls Load_Level, which reads the layout header rather
+than clearing Object_RAM. Offset_SomeObjectsDuringTransition(:104200–104228)
 returns without a scan normally; Super_Tails_flag admits only the four physical
 Invincibility_stars at globalSST102..105. The existing ALL_LIVE_SST and
 ROM_WORLD_OFFSET_RANGE policies now express this retained graph and empty normal
@@ -1122,16 +1122,16 @@ Debris now has a pure ctx.spawn shell and captured exact parent3; native Wait
 and Move own retirement rather than an engine screen cutoff. The moving callback
 only replaces code and returns; Draw is admitted on the next actual Move pass.
 
-AIZMinibossCutscene_End(:136896–136901) clears Boss_flag, restores level music,
-loads the actual PLC_Monitors and jumps Go_Delete_Sprite_2(:179146–179149), which
-changes code and sets38bit4. Its child Draw tails(:178087–178109) observe that bit,
+AIZMinibossCutscene_End(:136961–136966) clears Boss_flag, restores level music,
+loads the actual PLC_Monitors and jumps Go_Delete_Sprite_2(:179237–179240), which
+changes code and sets38bit4. Its child Draw tails(:178178–178200) observe that bit,
 mark their own code and return without drawing. Physical clear is next dispatch.
 The cutscene, body, arm, barrels and debris capture this marker state; the boss's
 original camera-reset branch was not native and is removed. Fightable91's
 separate ordinary lifetime is retained.
 
 ALL_LIVE_SST exposed the transition floor's previous omission. Its native Act2
-branch(:104777–104790) writes X7FFF/Delete_Current_Sprite, then still runs
+branch(:104823–104836) writes X7FFF/Delete_Current_Sprite, then still runs
 SolidObjectTop with statusbit7. Java immediately destroyed it, and its missing
 existing suppressesObjectEdgeBalance semantic made Sonic balance against the old
 world-space support after his coordinate rebase. Sonic_Move's tst.b/bmi bypass
@@ -1446,7 +1446,7 @@ routine, wait timer, pending flag and score.
 
 The existing capsule-wait test previously hit the boss in its INIT routine.
 That is not native-reachable: collision is clear until Revealed
-(sonic3k.asm:138109-138114). The test now hits in Hover and asserts the CheckHit
+(sonic3k.asm:138174-138179). The test now hits in Hover and asserts the CheckHit
 pass publishes $3F. Its 0x40 + 0x78 wait contract is unchanged.
 
 Qualification:

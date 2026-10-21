@@ -99,7 +99,7 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
     protected ObjectPlayerParticipationPolicy resultsLockParticipationPolicy() {
         // AIZ route 0 sub_868F8 applies Set_PlayerEndingPose to Player_1 when
         // results start; Player_2 is handled later by Check_TailsEndPose after
-        // its own eligibility gate (sonic3k.asm:181900-181939).
+        // its own eligibility gate (sonic3k.asm:181991-182030).
         return ObjectPlayerParticipationPolicy.MAIN_ONLY_NATIVE;
     }
 
@@ -151,7 +151,7 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
             // owner after both player animation slots have run. The routine
             // writes anim and prev_anim together as $0505, then clears the
             // animation frame/timer while leaving the displayed mapping intact
-            // for this frame (sonic3k.asm:166696-166703,180361-180370).
+            // for this frame (sonic3k.asm:166774-166781,180452-180461).
             ObjectControlState.none().applyTo(player);
             player.setAir(false);
             player.setForcedAnimationId(-1);
@@ -172,9 +172,9 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
         }
         // ROM Check_TailsEndPose clears Ctrl_2_locked when Tails is eligible for
         // the ending pose, then latches parent $38 bit 7 so it runs once
-        // (sonic3k.asm:181919-181939). Obj_EggCapsule routine $0C calls this
+        // (sonic3k.asm:182010-182030). Obj_EggCapsule routine $0C calls this
         // while Obj_LevelResults/_unkFAA8 is still active, before End_of_level_flag
-        // is set on results exit (sonic3k.asm:181670-181672,62693-62705).
+        // is set on results exit (sonic3k.asm:181761-181763,62733-62745).
         if (!tailsEndingPoseApplied
                 && nativeP2EndingPoseOwner != null
                 && nativeP2EndingPoseOwner.getCpuController() != null
@@ -190,7 +190,7 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
             // neither routine writes Ctrl_2_logical; retain the word already
             // published by Player_2 this frame. The following Tails_Control
             // dispatch copies raw Ctrl_2 before object_control=$81 blocks CPU
-            // steering (sonic3k.asm:181924-181944,181982-181992,
+            // steering (sonic3k.asm:182015-182035,182073-182083,
             // 26195-26212).
             lockForResults(sidekick);
             sidekick.setAir(wasAir);
@@ -375,9 +375,9 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
         @Override
         protected boolean shouldRestorePlayerControlsOnExit() {
             // ROM Obj_LevelResultsWait2 clears _unkFAA8 and deletes itself
-            // (sonic3k.asm:62693-62705). AIZEndBoss_StartPostDefeatCutscene
+            // (sonic3k.asm:62733-62745). AIZEndBoss_StartPostDefeatCutscene
             // owns Restore_PlayerControl/2 after its own SST dispatch observes
-            // that flag clear (sonic3k.asm:138263-138276).
+            // that flag clear (sonic3k.asm:138328-138341).
             return false;
         }
 
@@ -386,7 +386,7 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
             // Obj_LevelResultsWait2 clears the result flag and deletes its SST.
             // AIZEndBoss_StartPostDefeatCutscene retains the arena and creates
             // Obj_IncLevEndXGradual from the surviving boss slot; there is no
-            // full-level camera restore (sonic3k.asm:62693-62705,138263-138276).
+            // full-level camera restore (sonic3k.asm:62733-62745,138328-138341).
             return false;
         }
 
@@ -397,7 +397,7 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
             if (!returnsToHost) {
                 // The final child decrements $30; Obj_LevelResultsWait2 reads
                 // that zero from its own SST on the next scan, then clears
-                // _unkFAA8 (sonic3k.asm:62685-62705). Publish here so the
+                // _unkFAA8 (sonic3k.asm:62725-62745). Publish here so the
                 // surviving boss observes the release in native slot order.
                 Aiz2BossEndSequenceState.releaseEggCapsule();
             }
@@ -405,7 +405,7 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
 
         // AIZEndBoss_StartPostDefeatCutscene owns Restore_PlayerControl/2.
         // The floating capsule's loc_866CC only calls Check_TailsEndPose and
-        // continues swinging after _unkFAA8 clears (sonic3k.asm:138263-138276,
+        // continues swinging after _unkFAA8 clears (sonic3k.asm:138328-138341,
         // 181675-181679). Do not schedule the later restore from loc_7D078:
         // that is a different post-boss owner, not this AIZ capsule route.
     }

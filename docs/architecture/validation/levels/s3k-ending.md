@@ -287,7 +287,7 @@ acceptance is claimed.
 | `loc_5DB76`/`loc_5DD6A` full-table dispatch and downstream composition | Qualified for the two declared products | Native poll 3071 holds all 20 IslandLift SSTs (2 `$42` from `word_5DBB6`, 18 from the six `word_5DDD2`…`word_5DE12` tables) with engine-identical slot, x, y and mapping in both products; whole-SST and 3-bit pixel agreement at every checkpoint. `TestS3kEndingIslandLift` (22) and the continuation-pressure cases pass | No native Knuckles or progress -2 product. The director-owned dispatch is covered by headless tests over declared IslandLift pressure (below), not by a cold-campaign occupancy |
 | Tails/+2 and Sonic/0 declared products | Qualified as declared scenes | 22/22 checkpoints, zero level mismatches, all whole frames viewed | Cold campaign identity, original-RGB bytes |
 | Sonic -2, Tails -2, Tails 0, Sonic+Tails -2/0 declared products | Qualified as declared scenes | Newly captured native references (unchanged v1 adapter, immutable host); engine `6ace9000f`: zero 3-bit-level mismatches and identical SST inventories at all 11 checkpoints each | Cold campaign identity, original-RGB bytes |
-| Sonic +2 and Sonic+Tails +2 (Hyper Sonic route) | Open, attributed to native CPU time | Checkpoints 1–4095 match exactly; SST identical at all 11. Native v5 ledgers (`B/native-cloud-transition-{tails,sonic,team}-super-320-v5`, Tails/+2 reproducing the v1 control) queue the same three Kos entries at LF 4402 and the module chain at 4403 on all three routes; only the FIFO head `$1D17A6` (fingerprint `5b4280f6…`) finishes in 3 polls on the Sonic and team routes (`Kos_decomp_queue_count` 3→2 at LF 4405) against 4 on Tails/+2 (LF 4406). Every later service step is identical, one frame earlier, so the `loc_5AE0A` gate opens at LF 4443 instead of 4444 | 171/194 level pixels at 5119/6143 (`HScroll_table+0` `$14F800`, `Camera_Y_pos` 517/1345 against engine `$14F000`, 516/1344). `Process_Kos_Queue` runs in main-loop idle time and resumes from a VInt bookmark (sonic3k.asm:2840), so the same job's duration depends on how much of those frames the route's objects consume. The FAST manifest holds one cost per fingerprint (4, measured on Tails/+2, which also matches Sonic/0 and the other five products); a route- or character-keyed cost would be a fitted constant (runtime invariant 3) and was not added. Closing it needs a CPU-cycle budget model for the Kos queue. The 2026-10-15 native measurement ([lifecycle design](../../designs/2026-10-13-s3k-ending-lifecycle.md#kos-idle-budget-measurement-of-the-hyper-sonic-residual-2026-10-15-opus-kos-budget-lane)) confirms the per-object idle-budget cause and rules out a route-free model; tracked in [S3K known bugs](../../../status/s3k-known-bugs.md#ending-reunion-kos-service-count--per-object-cpu-budget-open) |
+| Sonic +2 and Sonic+Tails +2 (Hyper Sonic route) | Open, attributed to native CPU time | Checkpoints 1–4095 match exactly; SST identical at all 11. Native v5 ledgers (`B/native-cloud-transition-{tails,sonic,team}-super-320-v5`, Tails/+2 reproducing the v1 control) queue the same three Kos entries at LF 4402 and the module chain at 4403 on all three routes; only the FIFO head `$1D17A6` (fingerprint `5b4280f6…`) finishes in 3 polls on the Sonic and team routes (`Kos_decomp_queue_count` 3→2 at LF 4405) against 4 on Tails/+2 (LF 4406). Every later service step is identical, one frame earlier, so the `loc_5AE0A` gate opens at LF 4443 instead of 4444 | 171/194 level pixels at 5119/6143 (`HScroll_table+0` `$14F800`, `Camera_Y_pos` 517/1345 against engine `$14F000`, 516/1344). `Process_Kos_Queue` runs in main-loop idle time and resumes from a VInt bookmark (sonic3k.asm:2872), so the same job's duration depends on how much of those frames the route's objects consume. The FAST manifest holds one cost per fingerprint (4, measured on Tails/+2, which also matches Sonic/0 and the other five products); a route- or character-keyed cost would be a fitted constant (runtime invariant 3) and was not added. Closing it needs a CPU-cycle budget model for the Kos queue. The 2026-10-15 native measurement ([lifecycle design](../../designs/2026-10-13-s3k-ending-lifecycle.md#kos-idle-budget-measurement-of-the-hyper-sonic-residual-2026-10-15-opus-kos-budget-lane)) confirms the per-object idle-budget cause and rules out a route-free model; tracked in [S3K known bugs](../../../status/s3k-known-bugs.md#ending-reunion-kos-service-count--per-object-cpu-budget-open) |
 | Knuckles products (SSZ2 `$0A01`) | Open | Lifecycle 9 and terminal pixels pass. Credits against the native complete run (below): with the native inlet declared, `Camera_Y_pos`, all 32 Plane A rows and every cloud SST equal native at all 52 state-anchored spots (32 during the text, 20 after it); `8f602642c`, `9b0c85dd0`. Background routine 4's starfield and sea Plane B (`516ca64f1`). The terminal banner's `word_5F260` row and TM, `loc_5FBA0`'s pink flash, `loc_5FF62`'s logo fade and SSZ2's Plane A V-scroll from `Camera_Y_pos_copy` (kterminal lane): all 20 credits-done spots are pixel-identical with the native `HScroll_table` longword declared, and the credit text sits where native shows it at all 32 text spots | With the native `V_int_run_count` `$66141` declared at the flight edge, all 12 credits-one spans are pixel-identical to native; the earlier "one V-int late" clouds came from a `$66142` declaration ([presentation section](#knuckles-credits-v-int-inlet-teleporter-pad-and-zero-copy-pass-presentation-lane-2026-10-16)). The S3 eyecatch fades are fixed from `loc_5FF62` ([2026-10-16 terminal section](#native-pal-50-hz-sonic2-product-ending-pal-lane-2026-10-16); [known bugs](../../../status/s3k-known-bugs.md#knuckles-credits-and-terminal-residuals-resolved)); no declared native product; `loc_5B1A2` there clears only `Camera_Y_pos` and is not separately compared |
 | Team retirement / full-frame replay | Passing on Root `e0a136b83` | `TestS3kEndingRescue` 36/36 and `TestS3kEndingLifecycleCapture` 18/18 (0 skipped), one queued focused run on 2026-10-15 05:58–06:01 UTC, Root plus the test-only wrapped-particle correction | The 30 roster and 6 team replay failures recorded on `be2a3f6d3`/`2b9eb431d` do not reproduce. Which composed commit cleared them was not bisected |
 | Wrapped particle presentation | Resolved: test premise corrected | Bisect (first-parent `5b2ff8e78..da27f4f3d`) puts the 0/398 failure at `90897f41d`, the merge of `9a7070930`, which added native Plane B high-priority sea composition. Subtype `$41` is low priority (`loc_5EDFE` clears art_tile bit 15). Native Sonic/0 spots at polls 1279, 1398–1401 and 1535 (`B/declared-native-spots-sonic-chaos-320-islandlift-v1`; engine input 1400 is poll 1399) hold 512/512 B-high opaque sea pixels under the old particle box (screen 224–255 × 188–203) and B-low sky at 40–71 × 40–55, so the VDP hides the old vector. The visible wrapped-Y cases now use the same threshold vector in the sky (Y `$FEB0`), and new `wrappedLowPriorityParticleIsCoveredByTheHighPrioritySea` (320/800) asserts that the old vector shows no particle pixels. No production change | The engine's B-high composition between native spot checkpoints is covered by the declared-product comparisons, not by this vector |
@@ -321,7 +321,7 @@ engine frames use `LIMITED`/`RAW_RGB`. Pictures, RAM/VRAM/CRAM/SST dumps and pro
 ### Knuckles credits text, plane ring and clouds (credits lane, 2026-10-15)
 
 Same native spots as above, re-measured by credits state from the RAM, VRAM and SST dumps
-rather than by eye. The ROM owner is `sub_5B18E`: `loc_5B204` (sonic3k.asm:121520–121580)
+rather than by eye. The ROM owner is `sub_5B18E`: `loc_5B204` (sonic3k.asm:121566–121626)
 adds `_unkFAC8` to `Camera_Y_pos` every frame. On each 16px crossing it clears the row pair
 at `(Camera_Y_pos+$E0)` mod 256 in the 32-row Plane A and writes at most one line whose
 descriptor high byte matches that position. `sub_5B514` takes the speed from
@@ -338,11 +338,11 @@ descriptor high byte matches that position. `sub_5B514` takes the speed from
   world Y `$980`–`$12FF` and from `$1C80` showed rows 128px from native. That is the
   part-two "same block wraps back in" report. The override now reports a 32-row ring and
   the pass builds exactly that.
-- **Credits start (engine, `9b0c85dd0`).** `loc_58B7C` (sonic3k.asm:117827–117839) falls
+- **Credits start (engine, `9b0c85dd0`).** `loc_58B7C` (sonic3k.asm:117873–117885) falls
   into `loc_58B9E` and runs `sub_5B18E` on the pass that finishes the redraw. Native shows
   `Events_routine_fg` `$10` with `_unkFA86` 2 at input 422608. The engine started a pass
   later, which moved every credit line and the credits-relative cloud picture by a frame.
-- **Clouds and the part-two island (engine, `9b0c85dd0`).** `loc_58BBC` (sonic3k.asm:117846–117875)
+- **Clouds and the part-two island (engine, `9b0c85dd0`).** `loc_58BBC` (sonic3k.asm:117892–117921)
   tests `_unkFAAE`, not completion. When `Camera_Y_pos` reaches `$1660` it clears `_unkFAB9`,
   lifts `Camera_Y_pos_BG_copy` by `$100` and loads `Pal_Ending2`. The engine waited for
   completion at `$1CA0`, so this never fired. At credits-done native holds BG routine 4,
@@ -411,9 +411,9 @@ All 20 credits-done spots also hold no clouds (`_unkFAB9` 0) in both. Limits:
 ### Knuckles post-credits Plane B and the credit-text phase (postcredits lane, 2026-10-15)
 
 **Post-credits Plane B (engine, `516ca64f1`).** `SSZ2_BackgroundEvent` routine 4
-(sonic3k.asm:117996) is a single `lea (Level_layout_main).w,a3` before `loc_58D1E`.
+(sonic3k.asm:118042) is a single `lea (Level_layout_main).w,a3` before `loc_58D1E`.
 `ScreenEvents` hands background events `Level_layout_main+2`, the background row pointers
-(sonic3k.asm:102239-102246), so routine 4 makes `Draw_TileRow` (d1=0, d6=$20: layout X
+(sonic3k.asm:102285-102292), so routine 4 makes `Draw_TileRow` (d1=0, d6=$20: layout X
 0-$1FF) refill Plane B from foreground rows. `loc_59208` lowers `Camera_Y_pos_BG_copy` by
 `$6000` per pass from the lifted `$1D0` and stops when the word reads `$80`, at `$80.C000`.
 Each 16-line crossing replaces one ring row. The lift re-rounds `Camera_Y_pos_BG_rounded`
@@ -451,9 +451,9 @@ sky, then the sea and the stars. No native picture exists between `$141B` and
 credits-done.
 
 **The native picture is one pass behind RAM.** `VInt` writes VSRAM from
-`V_scroll_value` (sonic3k.asm:528) and `VInt_8` DMAs `Sprite_table` (sonic3k.asm:761) in
+`V_scroll_value` (sonic3k.asm:544) and `VInt_8` DMAs `Sprite_table` (sonic3k.asm:783) in
 the same interrupt. `ScreenEvents` sets `V_scroll_value` from `Camera_Y_pos_copy`
-(sonic3k.asm:102253), before `sub_5B18E` advances `Camera_Y_pos`. At that interrupt both
+(sonic3k.asm:102299), before `sub_5B18E` advances `Camera_Y_pos`. At that interrupt both
 hold the pass that just finished, latched together. In the 8 consecutive native frames (credits-one
 422795-422798, credits-two 428089-428092), the dumped VSRAM and the dumped SAT always
 equal the previous dump's RAM `V_scroll_value` and `Sprite_table`. The picture is drawn
@@ -480,23 +480,23 @@ Knuckles movie with the postcredits lane's declared inlets: Super Emeralds after
 defeat; `V_int_run_count` `$66142`, the swing/`_unkEE9C` state and `HScroll_table`
 `$032B2160` at flight init.
 
-- **Banner position (engine).** `Obj_5EF68` (sonic3k.asm:125476) indexes `off_5EFB6` by
+- **Banner position (engine).** `Obj_5EF68` (sonic3k.asm:125522) indexes `off_5EFB6` by
   `Player_mode`, `SK_alone_flag` and `_unkFA88`. Locked-on Knuckles at progress 0 or +2
   takes `loc_5F0A6`: the end pose (`loc_5F480`) and `loc_5F20A` with the subtype that
-  `AllocateObject` cleared. `sub_5FF1C` (sonic3k.asm:126931) then reads `word_5F260[0]`,
+  `AllocateObject` cleared. `sub_5FF1C` (sonic3k.asm:126977) then reads `word_5F260[0]`,
   (`$120`,`$B0`). Progress -2 takes `loc_5F0C4` (subtype 8, (`$120`,`$F0`)), and every
   Sonic and Tails row takes `loc_5F05C` (subtype 4, (`$D0`,`$B8`)). The engine hard-coded
   (`$120`,`$F0`) for Knuckles and (`$120`,`$B0`) for Sonic. Native holds the logo SST at
   (`$120`,`$B0`) from input 432728. Sonic's and Tails' rows now follow the same table; no
   native picture of those terminals exists.
-- **Trademark (engine).** `loc_5F20A` also allocates `loc_5F4FA` (sonic3k.asm:125982)
+- **Trademark (engine).** `loc_5F20A` also allocates `loc_5F4FA` (sonic3k.asm:126028)
   with subtype 2: `ObjDat3_60130`'s TM, mapping frame 2, at `byte_5F520[2]` (+`$34`,
   -`$10`). Native slot 11 holds it at (`$154`,`$A0`). `loc_5F26C` passes subtype 4 for the
   S3 eyecatch. The child deletes itself when `Graphics_flags` bit 7 is clear (Japanese
   hardware); like the engine's title screen, the ending models overseas hardware. No
   initializer draws in its own pass, so the banner first draws one pass after
   `Obj_5EF68`'s init.
-- **Pink flash (engine).** `loc_5F480` allocates `loc_5FBA0` (sonic3k.asm:126562) only
+- **Pink flash (engine).** `loc_5F480` allocates `loc_5FBA0` (sonic3k.asm:126608) only
   when `_unkFA88` is positive. Until `Palette_cycle_counters+0` is set, it steps `$3A` by 6
   through `Pal_KnuxEndPoseSuper` every third pass, waiting `$E` passes after the wrap at
   `$3C`. `move.l (a1,d0.w),(a2)+` writes colours 2-3 of line 0 and
@@ -504,7 +504,7 @@ defeat; `V_int_run_count` `$66142`, the swing/`_unkEE9C` state and `HScroll_tabl
   `$0080`; native CRAM agrees. Native RAM dates `Obj_5EF68`'s init to input 432709 (`$2E`
   `$1EC` at 432728), with the first flash write in that pass. The engine reproduces the
   native `$3A` colours at all 19 later spots.
-- **Logo fade (engine).** `sub_5FF1C` allocates `loc_5FF62` (sonic3k.asm:126958) after
+- **Logo fade (engine).** `sub_5FF1C` allocates `loc_5FF62` (sonic3k.asm:127004) after
   the logo. From that pass, every fourth pass `sub_85EB4` raises the 16 line-1 colours a
   level toward `$EEE`, eight times. `loc_5FF94` then falls into `loc_5FFA6`'s countdown,
   and `sub_85F2A` lowers them toward `Target_palette_line_2` eight times (passes 31-59).
@@ -513,9 +513,9 @@ defeat; `V_int_run_count` `$66142`, the swing/`_unkEE9C` state and `HScroll_tabl
 - **Credits Plane A phase (engine).** The engine prepares the sprite table and scroll
   registers at the loop tail and publishes them at the next VInt (`LevelSpritePresentation`).
   That is the native picture's one-pass latch. In SSZ2, `SwScrlSsz.getVscrollFactorFG()`
-  returned the physical camera plus shake. `ScreenEvents` (sonic3k.asm:102253) writes
+  returned the physical camera plus shake. `ScreenEvents` (sonic3k.asm:102299) writes
   `V_scroll_value` from `Camera_Y_pos_copy`, after `SSZ2_ScreenEvent` has added
-  `Screen_shake_offset` to the copy (sonic3k.asm:117750-117751). `loc_5B204` moves only
+  `Screen_shake_offset` to the copy (sonic3k.asm:117796-117797). `loc_5B204` moves only
   `Camera_Y_pos`, so Plane A led the published sprites by one pass. A temporary instrumented
   render showed each cloud drawn inside the step (`LevelFrameStep` →
   `LevelSpritePresentation.prepare`), never in the render pass. Plane A now takes the copy.
@@ -573,7 +573,7 @@ cloud. Native SSTs hold the pad (routine `loc_455CC`) through the phase-one spot
 bit clear. Native RAM then shows camera X `$1CF` at the flight and 0 at the credits, with
 `Object_load_routine` 4.
 
-`Load_Sprites`'s backward branch (`loc_1B864`, sonic3k.asm:37601-37605) subtracts `$80`
+`Load_Sprites`'s backward branch (`loc_1B864`, sonic3k.asm:37641-37645) subtracts `$80`
 from the new coarse X and branches past the back cursor on the borrow. A backward pass
 landing in the first chunk therefore loads nothing, however far it jumped. S2's
 `ObjectsManager_GoingBackward` has the same `subi.w #$80,d6 / bcs.s` (s2.asm:33051-33052).
@@ -587,7 +587,7 @@ negative. The trim of the front cursor still runs, as `loc_1B8A8` does.
 **Zero-copy pass.** `ParallaxManager` reads a handler's FG V-scroll of 0 as "follow the
 camera", and `ZoneScrollHandler` is Mod API. `SwScrlSsz` now implements the internal
 `ExplicitForegroundVerticalScroll` while act 2's screen init holds, so a `Camera_Y_pos_copy`
-of 0 is used as `V_scroll_value` (sonic3k.asm:102253). `TestSszAct2CameraController`'s
+of 0 is used as `V_scroll_value` (sonic3k.asm:102299). `TestSszAct2CameraController`'s
 credits case now asserts every pass, including the one zero-copy pass; it was red 13/1 at
 pass 122 (Plane A 1 against copy 0). No Mod API declaration changed.
 
@@ -626,11 +626,11 @@ declared protocol: `AudioRequestObserver`, `musicFadeOutCount()` and
 
 On base `6405313ce` all nine products pass every assertion:
 
-- **A1** (`loc_5DE36`/`loc_5DE46`, skdisasm 044fa46 sonic3k.asm:124105-124116): one fade, on the first
+- **A1** (`loc_5DE36`/`loc_5DE46`, skdisasm 044fa46 sonic3k.asm:124151-124162): one fade, on the first
   gate-true frame. That is Level_frame_counter 3281 for −2 and 3692 for 0/+2. The
   gate's `foregroundY` equals the published camera Y copy on every gate frame.
-- **A2** (`Obj_5DFEE`, :124273-124287): `$DC` only for +2, at 3714.
-- **A3** (`Obj_Ending` `loc_5E1C2`, :124416-124426): `$DC` at 3303 for −2 and 3714 for
+- **A2** (`Obj_5DFEE`, :124319-124333): `$DC` only for +2, at 3714.
+- **A3** (`Obj_Ending` `loc_5E1C2`, :124462-124472): `$DC` at 3303 for −2 and 3714 for
   0. It is absent for +2, although `Obj_Ending` still first runs there at 4403.
 - No other credits or fade request occurs in the 6144 inputs.
 
@@ -654,8 +654,8 @@ Red-first checks:
   across audio enabled, audio disabled and the v16-limited run.
 
 The `$0D01` load issues `mus_SSZ` (`$15`) from `LevelMusic_Playlist`
-(:7712-7733). The ROM's non-demo `Level` entry also sends `cmd_FadeOut` through
-`Play_SFX` (:7540-7541). The declared engine ingress records no request for it, which
+(:7744-7765). The ROM's non-demo `Level` entry also sends `cmd_FadeOut` through
+`Play_SFX` (:7572-7573). The declared engine ingress records no request for it, which
 is noted here and not asserted. Whether the ordinary mode transition issues it was not
 checked.
 
@@ -708,7 +708,7 @@ The only change is GPGX `SyncSettings.Region=Europe`, set in memory. The movie f
 unchanged, and the fence requires `Graphics_flags` bit 6. The engine runs the v16-limited
 title-owner ingress with `REGION=PAL` before boot, `FrameRateResolver` at 50, and LIMITED +
 RAW_RGB output. Inputs are neutral after the startup Start, so the terminal times out
-(`loc_5F2F8`, 044fa46 sonic3k.asm:125848, `$4AF`). Pairing is native poll p ↔ engine outer p+1, with no offset. The
+(`loc_5F2F8`, 044fa46 sonic3k.asm:125894, `$4AF`). Pairing is native poll p ↔ engine outer p+1, with no offset. The
 plan, probes, hashes and sampled times are in
 `$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/ending-pal-v1/provenance.md`.
 Native ran 20:22:56–20:24:07 UTC and the engine (`e94f6c4e7`) 20:30:49–20:30:58 UTC, both
@@ -726,7 +726,7 @@ under queued `exec:exec`.
 
 **First divergence: ordinal 3777, LF 3778.** Native `Events_routine_fg` goes 16→20 and the
 camera jumps to `($1EB8,$1E0)` four frames before the engine (LF 3782). `loc_5AC70`
-(044fa46 sonic3k.asm:121051-121053) waits on `Kos_modules_left` for the AIZ1 jobs that `loc_5AC12`
+(044fa46 sonic3k.asm:121097-121099) waits on `Kos_modules_left` for the AIZ1 jobs that `loc_5AC12`
 queued: three `Queue_Kos` and two `Queue_Kos_Module` (121031-121048). Native finishes
 them at LF 3777. The NTSC native reference (`declared-native-spots-sonic-super-320-v1`)
 and the engine finish at 3781.
@@ -735,7 +735,7 @@ The cause is idle CPU, not object state. Native NTSC and PAL pixels, VRAM and CR
 identical at every spot through poll 3071, and every ledger field matches until ordinal
 3777. RAM differs only in stack bytes, plus, at poll 1, a 274-byte in-progress block of
 `Kos_decomp_buffer` from `$FFD64E`. Only the service rate differs. `Process_Kos_Queue` runs in
-main-loop idle time (044fa46 sonic3k.asm:2872). A PAL frame has 313 lines instead of 262, and VInt
+main-loop idle time (044fa46 sonic3k.asm:2904). A PAL frame has 313 lines instead of 262, and VInt
 spends 17,942 cycles in its PAL `move.w #$700,d0 / dbf d0,*` (044fa46 sonic3k.asm:545-548).
 
 The engine's `s3k-kos-v1` service counts are NTSC measurements keyed by fingerprint, with
@@ -800,7 +800,7 @@ Pictures and provenance:
 
 **Not claimed.** Not claimed: other PAL products, Knuckles at PAL, PAL wall-clock pacing,
 PCM, request dates (A8), or whole-run original-RGB acceptance beyond poll 3071. The
-title-side `Demo_timer` PAL values (044fa46 sonic3k.asm:5553, 6526) were not compared. The native
+title-side `Demo_timer` PAL values (044fa46 sonic3k.asm:5585, 6558) were not compared. The native
 run went on through the attract demo before its post-exit `$3FB2` display enable.
 
 ### Full-table continuation from the director's own routines (ending-pal lane, 2026-10-17)

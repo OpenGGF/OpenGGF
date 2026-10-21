@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code AnPal_DEZ1} / {@code AnPal_DEZ2} (sonic3k.asm:3661-3718), the Sonic 3 &amp; Knuckles
+ * {@code AnPal_DEZ1} / {@code AnPal_DEZ2} (sonic3k.asm:3693-3750), the Sonic 3 &amp; Knuckles
  * Death Egg palette cycles. Act 1 enters at {@code AnPal_DEZ1} and falls through into
  * {@code AnPal_DEZ2}; act 2 enters at the {@code AnPal_DEZ2} label, so act 1 runs three
  * channels and act 2 runs two.

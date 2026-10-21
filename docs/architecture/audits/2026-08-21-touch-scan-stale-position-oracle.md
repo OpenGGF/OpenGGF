@@ -22,20 +22,20 @@ after the ROM's entire main loop for frame *N* has run.
 Independent confirmation from the data itself: at every recorded badnik kill the row-*N*
 `player_y_speed` already carries the `Touch_EnemyNormal` bounce (`±$100`, plus that frame's
 gravity). `TouchResponse` is the last call in the player's routine
-(`sonic3k.asm:22022-22026`), so row *N* is post-scan for frame *N*. Verified on all 24 S3K
+(`sonic3k.asm:22058-22062`), so row *N* is post-scan for frame *N*. Verified on all 24 S3K
 events below.
 
 ## 2. What the ROM does (disassembly, not inference)
 
 - Object slots run in ascending order. `Player_1` = slot 0, `Player_2` = slot 1,
-  `Reserved_object_3` = slot 2 (`sonic3k.constants.asm:303-306`).
+  `Reserved_object_3` = slot 2 (`sonic3k.constants.asm:310-313`).
 - Slot 2 is `Obj_ResetCollisionResponseList`, an unconditional
-  `move.w #0,(Collision_response_list).w` (`sonic3k.asm:8467-8469`), installed by
-  `SpawnLevelMainSprites` (`sonic3k.asm:8112`).
-- Both player routines end with `jsr (TouchResponse).l` (`sonic3k.asm:22022`), i.e. **before**
+  `move.w #0,(Collision_response_list).w` (`sonic3k.asm:8499-8501`), installed by
+  `SpawnLevelMainSprites` (`sonic3k.asm:8144`).
+- Both player routines end with `jsr (TouchResponse).l` (`sonic3k.asm:22058`), i.e. **before**
   the list is cleared and before slots 3..109 run.
 - `Touch_Loop` reads each candidate's **live** `x_pos(a1)`/`y_pos(a1)`
-  (`sonic3k.asm:20686`, `:20703`).
+  (`sonic3k.asm:20722`, `:20703`).
 
 Therefore, at the frame-*N* scan, no non-player object has moved this frame: their SST holds
 end-of-frame-*N-1* values — exactly what the recorder wrote as row *N-1*. Both the *membership*
@@ -48,19 +48,19 @@ slot-0 routine.
 ## 3. The oracle
 
 For each recorded kill event at frame *N* (slot's object code becomes `Obj_Explosion`), the
-overlap predicate of `Touch_Width`/`Touch_Height` (`sonic3k.asm:20677-20712`) was evaluated
+overlap predicate of `Touch_Width`/`Touch_Height` (`sonic3k.asm:20713-20748`) was evaluated
 literally — 16-bit `sub`/`add` with the ROM's carry branches — twice:
 
 - **stale model:** player row *N* vs. object row *N-1*
 - **live model:** player row *N* vs. object row *N* (and, for the "fires early" test, player
   row *N-1* vs. object row *N-1*)
 
-Touch radii come from `Touch_Sizes` (`sonic3k.asm:20713-20769`, 57 entries) indexed by
+Touch radii come from `Touch_Sizes` (`sonic3k.asm:20749-20805`, 57 entries) indexed by
 `collision_flags & $3F`, and `collision_flags` from each object's `ObjDat_*` attribute table
-(last byte; `SetUp_ObjAttributes`, `sonic3k.asm:176901-176911`). Player box:
-`x_pos-8 … +$10` wide, `y_pos ∓ (y_radius-3)` tall (`sonic3k.asm:20647-20655`), with
+(last byte; `SetUp_ObjAttributes`, `sonic3k.asm:176992-177002`). Player box:
+`x_pos-8 … +$10` wide, `y_pos ∓ (y_radius-3)` tall (`sonic3k.asm:20683-20691`), with
 `y_radius` = `$13` walking / `$E` rolling for Sonic, `$F` / `$E` for Tails
-(`sonic3k.asm:21904, 23261, 26103`).
+(`sonic3k.asm:21940, 23296, 26143`).
 
 Object identities were resolved from the recorded `object_code` by matching ROM bytes at that
 address against the disassembly (each value is the object head **+6**, the address past
@@ -95,7 +95,7 @@ overlaps at *N-1*, so it does not predict an earlier kill anywhere.
 | 22861 | 14 | 22861 | 22860 | 22861 |
 
 A live-position scan fires one frame early in each. Jawz uses `collision_flags $D7`
-(`Touch_Special`, `sonic3k.asm:21162-21182`), which increments `collision_property`; Jawz's own
+(`Touch_Special`, `sonic3k.asm:21198-21218`), which increments `collision_property`; Jawz's own
 routine consumes it the *same* frame (slot > 2), so a frame-*N-1* touch would have produced a
 frame-*N-1* explosion. It did not.
 
@@ -144,7 +144,7 @@ Kept for reproduction; comparison-only, reads fixtures and never writes engine s
 W = 0xFFFF
 
 def axis(objpos, rad, plo, span):
-    """Touch_Width / Touch_Height, sonic3k.asm:20677-20712, literal 68k semantics."""
+    """Touch_Width / Touch_Height, sonic3k.asm:20713-20748, literal 68k semantics."""
     d0 = (objpos - rad) & W
     borrow = d0 < (plo & W)          # C from `sub.w d2,d0`
     d0 = (d0 - plo) & W
@@ -153,8 +153,8 @@ def axis(objpos, rad, plo, span):
     return (d0 + ((rad * 2) & W)) > W  # bcs -> inside
 
 def touches(px, py, y_radius, ox, oy, w, h):
-    d2 = (px - 8) & W                       # sonic3k.asm:20647
-    d5 = (y_radius - 3) & 0xFF              # :20651
+    d2 = (px - 8) & W                       # sonic3k.asm:20683
+    d5 = (y_radius - 3) & 0xFF              # :20687
     d3 = (py - d5) & W
     return axis(ox & W, w, d2, 0x10) and axis(oy & W, h, d3, (d5 * 2) & W)
 ```

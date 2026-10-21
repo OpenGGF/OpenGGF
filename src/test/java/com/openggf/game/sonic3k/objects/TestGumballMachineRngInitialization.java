@@ -18,7 +18,7 @@ class TestGumballMachineRngInitialization {
         var machine = services.objectManager().createDynamicObject(() ->
                 new GumballMachineObjectInstance(new ObjectSpawn(0x100, 0x200, 0x86, 0, 0, false, 0)));
         machine.update(nativeVint, null);
-        // Obj_GumballMachine, sonic3k.asm:127412: move.l(V_int_run_count),RNG_seed.
+        // Obj_GumballMachine, sonic3k.asm:127466: move.l(V_int_run_count),RNG_seed.
         // V_int_run_count is ds.l, including bit31; this is an assignment, not a
         // claim that a pre-existing independently advanced seed is equal entropy.
         assertEquals(Integer.toUnsignedLong(nativeVint), rng.getSeed());

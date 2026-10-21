@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * SST occupant for an event-allocated in-level {@code Obj_TitleCard}. The title card itself is
  * presented by the title-card manager, but the native owner holds its slot until loc_2D86E's
- * allocations run and {@code Delete_Current_Sprite} frees it (sonic3k.asm:62263-62302).
+ * allocations run and {@code Delete_Current_Sprite} frees it (sonic3k.asm:62303-62342).
  */
 public final class S3kTitleCardOwnerSlotObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private boolean requestsInLevelCard;

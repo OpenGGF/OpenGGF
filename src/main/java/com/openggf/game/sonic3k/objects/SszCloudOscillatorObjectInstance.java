@@ -11,7 +11,7 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 import java.util.List;
 
 /**
- * ROM {@code loc_57B6A}/{@code loc_57B76} (sonic3k.asm:116712-116723): the invisible object
+ * ROM {@code loc_57B6A}/{@code loc_57B76} (sonic3k.asm:116758-116769): the invisible object
  * {@code SSZ1_BackgroundInit} allocates first, whose only job is to drive {@code _unkEE9C}.
  *
  * <p>Its init pass seeds {@code $30(a0)} — the low word of {@code Gradual_SwingOffset}'s

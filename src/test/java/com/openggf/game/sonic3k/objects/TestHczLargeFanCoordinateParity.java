@@ -64,7 +64,7 @@ class TestHczLargeFanCoordinateParity {
         assertEquals(fanY, fan.getY(),
                 "Obj_HCZLargeFan queues Kosinski art on trigger before the first drop tick");
         // Kos_modules_left is decremented by Process_Kos_Module_Queue
-        // (docs/skdisasm/sonic3k.asm:2750-2752), which LevelLoop calls in its tail
+        // (docs/skdisasm/sonic3k.asm:2782-2784), which LevelLoop calls in its tail
         // (7908) — reached at the frame top ahead of Process_Kos_Queue (7887). The
         // object pass (Process_Sprites, 7889) that follows in the same frame is the
         // first poll to observe zero, so the fan drops on that pass rather than a later

@@ -1,7 +1,7 @@
 package com.openggf.game.sonic3k.bonusstage.slots;
 
 /**
- * Exit sequence matching ROM loc_4BC1E / loc_4BC54 (sonic3k.asm:98964-99005).
+ * Exit sequence matching ROM loc_4BC1E / loc_4BC54 (sonic3k.asm:99010-99051).
  * Phase 1: Rotation wind-down — increment scalar by 0x40 per frame until 0x1800.
  * Phase 2: loc_4BC54 for 60 iterations ($38): rotation continues and Pal_ToBlack runs
  * whenever Pal_fade_delay underflows (every third iteration, starting with the first).

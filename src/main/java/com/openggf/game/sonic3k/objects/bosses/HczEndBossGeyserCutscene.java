@@ -460,7 +460,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
 
         // loc_6B8C8 moves both owners, but subtype=-1 branches back to draw
         // before touching $2E. Only the primary owns the transition timer
-        // (sonic3k.asm:141621-141633).
+        // (sonic3k.asm:141686-141698).
         if (targetsNativeP2) {
             return;
         }

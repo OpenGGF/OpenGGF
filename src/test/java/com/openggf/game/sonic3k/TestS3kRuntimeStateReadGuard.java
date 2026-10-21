@@ -53,7 +53,7 @@ class TestS3kRuntimeStateReadGuard {
 
     /**
      * The {@code Save_Level_Data2} snapshot moved from the ring to the flash:
-     * ROM calls it from {@code SSEntryFlash_GoSS} (skdisasm/sonic3k.asm:128392)
+     * ROM calls it from {@code SSEntryFlash_GoSS} (skdisasm/sonic3k.asm:128446)
      * with {@code a0} on the flash object, not from the ring's touch response.
      * The guarded property is unchanged — whichever object owns the save must
      * read {@code Dynamic_resize_routine} through the typed runtime registry and

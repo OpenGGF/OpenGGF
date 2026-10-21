@@ -243,7 +243,7 @@ public class TestPhysicsProfile {
     @Test
     public void testPermanentRespawnTableLatch_PerGame() {
         // S3K only: ROM Touch_EnemyNormal sets bit 7 of Object_respawn_table
-        // permanently after a player kill (sonic3k.asm:20953 bset #7,status(a1)).
+        // permanently after a player kill (sonic3k.asm:20989 bset #7,status(a1)).
         // S1/S2 ObjectsManager_Main only latches remembered spawns.
         assertFalse(GameRules.SONIC_1.objectInteraction().permanentRespawnTableLatch(),
                 "S1 does not permanently latch respawn-table bits");
@@ -274,7 +274,7 @@ public class TestPhysicsProfile {
         // physics restore and the slow-down music command there in the one frame
         // (docs/s1disasm/_incObj/01 Sonic.asm:76,80,182-204;
         // docs/s2disasm/s2.asm:36242,36248,36307-36326;
-        // docs/skdisasm/sonic3k.asm:22021,22031,22103-22127). The engine models
+        // docs/skdisasm/sonic3k.asm:22057,22067,22139-22163). The engine models
         // that by ticking the countdown from the character's display step rather
         // than from the level loop's pre-physics timer pass, so no per-game phase
         // compensation constant exists.
@@ -285,7 +285,7 @@ public class TestPhysicsProfile {
     @Test
     public void testSpeedShoesTimerDecimation_PerGame() {
         // S1/S2 use a per-frame word timer; S3K a byte timer decremented every
-        // 8th level frame (docs/skdisasm/sonic3k.asm:22108-22111).
+        // 8th level frame (docs/skdisasm/sonic3k.asm:22144-22147).
         assertEquals(1, GameRules.SONIC_1.powerUp().speedShoesTimerDecimation(), "S1 per-frame word timer");
         assertEquals(1, GameRules.SONIC_2.powerUp().speedShoesTimerDecimation(), "S2 per-frame word timer");
         assertEquals(8, GameRules.SONIC_3K.powerUp().speedShoesTimerDecimation(),

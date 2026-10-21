@@ -23,8 +23,8 @@ class TestInitialProcessSpritesCoordinator {
                 stages, new ProcessSpritesEpoch(0, 1, false)));
 
         // Process_Sprites walks Object_RAM in ascending $4A-byte slots after
-        // Load_Sprites (docs/skdisasm/sonic3k.asm:7848-7856,35965-36008;
-        // sonic3k.constants.asm:303-323).
+        // Load_Sprites (docs/skdisasm/sonic3k.asm:7880-7888,36005-36048;
+        // sonic3k.constants.asm:310-330).
         assertEquals(List.of(
                 "LOAD", "P1", "P2", "RESET", "DYNAMIC_SLOT_3",
                 "DYNAMIC_SLOTS_4_92", "FIXED", "CAPTURE", "CLOSE"), calls);

@@ -12,7 +12,7 @@ import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Locked-on oracle for Obj_FBZEndBoss (sonic3k.asm:148698-149618). */
+/** Locked-on oracle for Obj_FBZEndBoss (sonic3k.asm:148766-149686). */
 class TestFbzEndBoss {
     @Test
     void nativeRootShapeAndCharacterCadenceAreExact() {

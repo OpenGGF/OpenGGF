@@ -116,7 +116,7 @@ public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstanc
     @Override
     public boolean isHighPriority() {
         // ObjSlot_KnuxIntroLay art make_art_tile(ArtTile_Player_2,0,0) leaves bit 15 clear and
-        // CutsceneKnux_SKIntro never sets it (sonic3k.asm:134811).
+        // CutsceneKnux_SKIntro never sets it (sonic3k.asm:134868).
         return false;
     }
 
@@ -330,7 +330,7 @@ public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstanc
         return landingAnimationCallback;
     }
 
-    // ObjSlot_KnuxIntroLay priority $180 (sonic3k.asm:134814).
+    // ObjSlot_KnuxIntroLay priority $180 (sonic3k.asm:134871).
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x180);
 
     @Override
@@ -550,8 +550,8 @@ final class CutsceneKnucklesSkIntroBombInstance extends AbstractObjectInstance {
         return ((blue & 0x07) << 9) | ((green & 0x07) << 5) | ((red & 0x07) << 1);
     }
 
-    // ObjDat3_66486 priority $180 (sonic3k.asm:134881); its art word
-    // make_art_tile(ArtTile_KnuxIntroBomb,1,0) leaves bit 15 clear (sonic3k.asm:134880).
+    // ObjDat3_66486 priority $180 (sonic3k.asm:134938); its art word
+    // make_art_tile(ArtTile_KnuxIntroBomb,1,0) leaves bit 15 clear (sonic3k.asm:134937).
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x180);
 
     @Override
@@ -684,7 +684,7 @@ final class CutsceneKnucklesSkIntroEggRoboEntryInstance extends AbstractObjectIn
         spawnFreeChild(() -> new CutsceneKnucklesSkIntroEggRoboUpperVisualChild(this));
     }
 
-    // ObjDat3_919A6 priority $280 (sonic3k.asm:198862).
+    // ObjDat3_919A6 priority $280 (sonic3k.asm:198969).
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
 
     @Override
@@ -694,7 +694,7 @@ final class CutsceneKnucklesSkIntroEggRoboEntryInstance extends AbstractObjectIn
 
     @Override
     public boolean isHighPriority() {
-        // ObjDat3_919A6 art make_art_tile(ArtTile_EggRoboBadnik,0,1) sets bit 15 (sonic3k.asm:198861).
+        // ObjDat3_919A6 art make_art_tile(ArtTile_EggRoboBadnik,0,1) sets bit 15 (sonic3k.asm:198968).
         return true;
     }
 
@@ -754,7 +754,7 @@ final class CutsceneKnucklesSkIntroEggRoboLowerVisualChild extends AbstractObjec
         y = parent.getY() + Y_OFFSET;
     }
 
-    // loc_916A8 word_919BE priority $280 (sonic3k.asm:198870).
+    // loc_916A8 word_919BE priority $280 (sonic3k.asm:198977).
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
 
     @Override
@@ -765,7 +765,7 @@ final class CutsceneKnucklesSkIntroEggRoboLowerVisualChild extends AbstractObjec
     @Override
     public boolean isHighPriority() {
         // SetUp_ObjAttributes3 leaves the art_tile CreateChild copied from the EggRobo parent,
-        // ObjDat3_919A6 make_art_tile(ArtTile_EggRoboBadnik,0,1) (sonic3k.asm:198861).
+        // ObjDat3_919A6 make_art_tile(ArtTile_EggRoboBadnik,0,1) (sonic3k.asm:198968).
         return true;
     }
 
@@ -834,7 +834,7 @@ final class CutsceneKnucklesSkIntroEggRoboUpperVisualChild extends AbstractObjec
         y = parent.getY() + Y_OFFSET;
     }
 
-    // loc_916EE word_919C4 priority $280 (sonic3k.asm:198873).
+    // loc_916EE word_919C4 priority $280 (sonic3k.asm:198980).
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
 
     @Override
@@ -845,7 +845,7 @@ final class CutsceneKnucklesSkIntroEggRoboUpperVisualChild extends AbstractObjec
     @Override
     public boolean isHighPriority() {
         // SetUp_ObjAttributes3 leaves the art_tile CreateChild copied from the EggRobo parent,
-        // ObjDat3_919A6 make_art_tile(ArtTile_EggRoboBadnik,0,1) (sonic3k.asm:198861).
+        // ObjDat3_919A6 make_art_tile(ArtTile_EggRoboBadnik,0,1) (sonic3k.asm:198968).
         return true;
     }
 
@@ -936,7 +936,7 @@ final class CutsceneKnucklesSkIntroEggRoboLaserChild extends AbstractObjectInsta
         return 0;
     }
 
-    // loc_91756 word_919CA priority $280 (sonic3k.asm:198876).
+    // loc_91756 word_919CA priority $280 (sonic3k.asm:198983).
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
 
     @Override
@@ -947,7 +947,7 @@ final class CutsceneKnucklesSkIntroEggRoboLaserChild extends AbstractObjectInsta
     @Override
     public boolean isHighPriority() {
         // SetUp_ObjAttributes3 leaves the art_tile CreateChild copied from the EggRobo parent,
-        // ObjDat3_919A6 make_art_tile(ArtTile_EggRoboBadnik,0,1) (sonic3k.asm:198861).
+        // ObjDat3_919A6 make_art_tile(ArtTile_EggRoboBadnik,0,1) (sonic3k.asm:198968).
         return true;
     }
 

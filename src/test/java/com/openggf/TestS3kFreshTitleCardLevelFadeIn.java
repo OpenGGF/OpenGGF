@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code Level/loc_64DC} (docs/skdisasm/sonic3k.asm:7874-7878) ends a fresh S3K level load
+ * {@code Level/loc_64DC} (docs/skdisasm/sonic3k.asm:7906-7910) ends a fresh S3K level load
  * with {@code Palette_fade_info = $202F} (lines 1-3), {@code Pal_FillBlack},
  * {@code Palette_fade_timer = $16} and the surviving title card's hold {@code $2E = $16}.
  * {@code Animate_Palette} (5018-5028) then spends each LevelLoop frame on one

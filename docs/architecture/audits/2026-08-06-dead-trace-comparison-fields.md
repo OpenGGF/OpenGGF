@@ -92,7 +92,7 @@ exists and there is nothing to compare against.
 The three games share an identical RAM layout for this block. Anchoring on `Ring_count`,
 which every recorder already reads at `$FFFFFE20`:
 
-| | S1 (`_Variables.asm:356,376`) | S2 (`s2.constants.asm:1677,1702`) | S3K (`sonic3k.constants.asm:794,811`) |
+| | S1 (`_Variables.asm:356,376`) | S2 (`s2.constants.asm:1677,1702`) | S3K (`sonic3k.constants.asm:816,833`) |
 |---|---|---|---|
 | lives address | `v_lives` `$FFFFFE12` (byte) | `Life_count` `$FFFFFE12` (byte) | `Life_count` `$FFFFFE12` (byte) |
 | score address | `v_score` `$FFFFFE26` (long) | `Score` `$FFFFFE26` (long) | `Score` `$FFFFFE26` (long) |

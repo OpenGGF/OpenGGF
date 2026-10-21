@@ -60,7 +60,7 @@ public final class IczSwingingPlatformChainLinkInstance extends AbstractObjectIn
             return;
         }
         // MoveSprite adds $38 to y_vel after using the old word for movement
-        // (sonic3k.asm:36072-36083), unlike the no-gravity MoveSprite2.
+        // (sonic3k.asm:36112-36123), unlike the no-gravity MoveSprite2.
         SubpixelMotion.State motion = new SubpixelMotion.State(x, y, xSub, ySub, xVel, yVel);
         SubpixelMotion.objectFallXY(motion, SubpixelMotion.S3K_GRAVITY);
         x = motion.x;

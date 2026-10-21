@@ -18,7 +18,7 @@ import com.openggf.sprites.playable.ObjectControlState;
 import java.util.List;
 
 /**
- * SKL {@code $5A}, {@code Obj_DEZGravityTube} (sonic3k.asm:95169-95401).
+ * SKL {@code $5A}, {@code Obj_DEZGravityTube} (sonic3k.asm:95215-95447).
  *
  * <p>Twenty-four act 1 and seventeen act 2 placements, and the only remaining <em>reader</em>
  * of {@code Reverse_gravity_flag} in the Death Egg object set. It is also the neighbour of
@@ -26,7 +26,7 @@ import java.util.List;
  * footage waits on it.
  *
  * <p>{@code subtype} bit 7 selects one of two entirely separate bodies, chosen once in the
- * init (:95170-95171):
+ * init (:95216-95217):
  *
  * <ul>
  *   <li><b>Horizontal</b> ({@code loc_48EEC} / {@code sub_48F12}, bit 7 clear). The player
@@ -41,53 +41,53 @@ import java.util.List;
  * </ul>
  *
  * <p><b>Both reverse-gravity rows are in the horizontal body.</b> {@code loc_48FBA}
- * (:95273-95284) mirrors {@code flip_angle} about the horizontal on the way out —
+ * (:95319-95330) mirrors {@code flip_angle} about the horizontal on the way out —
  * {@code addi.b #$40 / neg.b / subi.b #$40}, which is a reflection, not a negation — and
- * XORs {@code render_flags} bit 1; {@code loc_4904A} (:95320-95323) XORs the same bit every
+ * XORs {@code render_flags} bit 1; {@code loc_4904A} (:95366-95369) XORs the same bit every
  * frame of the ride. The vertical body reads the flag nowhere.
  */
 public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
 
-    /** ROM {@code andi.w #$3F,d0 / lsl.w #3,d0} (:95172-95173, :95180-95181). */
+    /** ROM {@code andi.w #$3F,d0 / lsl.w #3,d0} (:95218-95219, :95226-95227). */
     private static final int SPAN_SHIFT = 3;
     private static final int SPAN_MASK = 0x3F;
-    /** ROM {@code move.w #$20,d0} / {@code move.w #$60,d0} on {@code subtype} bit 6 (:95183-95188). */
+    /** ROM {@code move.w #$20,d0} / {@code move.w #$60,d0} on {@code subtype} bit 6 (:95229-95234). */
     private static final int HORIZONTAL_HALF_HEIGHT = 0x20;
     private static final int HORIZONTAL_HALF_HEIGHT_WIDE = 0x60;
-    /** ROM {@code addi.w #$20,d0 / cmpi.w #$40,d0} (:95355-95357), the vertical X window. */
+    /** ROM {@code addi.w #$20,d0 / cmpi.w #$40,d0} (:95401-95403), the vertical X window. */
     private static final int VERTICAL_HALF_WIDTH = 0x20;
 
-    /** ROM {@code move.w #$1000,d0} / {@code move.w #$5000,d0} (:95301-95305). */
+    /** ROM {@code move.w #$1000,d0} / {@code move.w #$5000,d0} (:95347-95351). */
     private static final int LIFT_AMPLITUDE = 0x1000;
     private static final int LIFT_AMPLITUDE_WIDE = 0x5000;
-    /** ROM {@code moveq #8,d3} / {@code moveq #4,d3} (:95300, :95306): the angle step. */
+    /** ROM {@code moveq #8,d3} / {@code moveq #4,d3} (:95346, :95352): the angle step. */
     private static final int ANGLE_STEP = 8;
     private static final int ANGLE_STEP_WIDE = 4;
-    /** ROM {@code muls.w #$1000,d1} (:95443), the vertical body's fixed amplitude. */
+    /** ROM {@code muls.w #$1000,d1} (:95489), the vertical body's fixed amplitude. */
     private static final int SWING_AMPLITUDE = 0x1000;
-    /** ROM {@code addq.b #8,(a2)} (:95451). */
+    /** ROM {@code addq.b #8,(a2)} (:95497). */
     private static final int SWING_ANGLE_STEP = 8;
 
-    /** {@code byte_48F90} (:95253): the narrow mount angle table. */
+    /** {@code byte_48F90} (:95299): the narrow mount angle table. */
     private static final int[] MOUNT_ANGLES = {0x80, 0x80, 0x80, 0x40, 0x40, 0, 0, 0};
-    /** {@code byte_48F98} (:95255): the {@code subtype} bit 6 table. */
+    /** {@code byte_48F98} (:95301): the {@code subtype} bit 6 table. */
     private static final int[] MOUNT_ANGLES_WIDE = {
         0x80, 0x80, 0x70, 0x60, 0x50, 0x40, 0x40, 0x30, 0x20, 0x10, 0, 0
     };
-    /** {@code RawAni_491DA} (:95469): the vertical body's twenty-six rider frames. */
+    /** {@code RawAni_491DA} (:95515): the vertical body's twenty-six rider frames. */
     private static final int[] SWING_FRAMES = {
         0x6D, 0x6D, 0x6E, 0x6E, 0x6F, 0x6F, 0x70, 0x70, 0x71, 0x71, 0x72, 0x72, 0x73,
         0x73, 0x74, 0x74, 0x75, 0x75, 0x76, 0x76, 0x77, 0x77, 0x6C, 0x6C, 0x6D, 0x6D
     };
-    /** ROM {@code divu.w #$B,d2} (:95452). */
+    /** ROM {@code divu.w #$B,d2} (:95498). */
     private static final int SWING_FRAME_DIVISOR = 0x0B;
 
-    /** ROM {@code move.b #$80,flip_type(a1)} (:95246). */
+    /** ROM {@code move.b #$80,flip_type(a1)} (:95292). */
     private static final int RIDE_FLIP_TYPE = 0x80;
-    /** ROM {@code move.b #4,flip_speed(a1)} (:95277, :95429). */
+    /** ROM {@code move.b #4,flip_speed(a1)} (:95323, :95475). */
     private static final int EXIT_FLIP_SPEED = 4;
-    /** ROM {@code cmpi.b #6,routine(a1) / bhs} (:95230): dead or hurt players are ignored. */
+    /** ROM {@code cmpi.b #6,routine(a1) / bhs} (:95276): dead or hurt players are ignored. */
     private static final int SFX_PERIOD_MASK = 0x0F;
 
     private final RiderState playerOneState = new RiderState();
@@ -97,12 +97,12 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
         super(spawn, "DEZGravityTube");
     }
 
-    /** {@code move.b subtype(a0),d0 / bpl.s loc_48EC8} (:95170-95171). */
+    /** {@code move.b subtype(a0),d0 / bpl.s loc_48EC8} (:95216-95217). */
     private boolean isVertical() {
         return (spawn.subtype() & 0x80) != 0;
     }
 
-    /** {@code btst #6,subtype(a0)} (:95185, :95259, :95302). */
+    /** {@code btst #6,subtype(a0)} (:95231, :95305, :95348). */
     private boolean isWide() {
         return (spawn.subtype() & 0x40) != 0;
     }
@@ -129,7 +129,7 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
         if (playerTwo == playerOne) {
             playerTwo = null;
         }
-        // loc_48EEC / loc_4906A (:95192-95204, :95369-95387): the same subroutine over
+        // loc_48EEC / loc_4906A (:95238-95250, :95415-95433): the same subroutine over
         // Player_1 with p1_standing_bit and Player_2 with p2_standing_bit.
         if (playerOne != null) {
             runFor(playerOne, playerOneState, vIntRunCount);
@@ -157,7 +157,7 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
 
     // ---- horizontal body: loc_48EEC / sub_48F12 ----
 
-    /** {@code sub_48F12} :95216-95252. */
+    /** {@code sub_48F12} :95262-95298. */
     private void horizontalMount(AbstractPlayableSprite player, RiderState state) {
         int halfSpan = halfSpan();
         int dx = (player.getCentreX() - getX() + halfSpan) & 0xFFFF;
@@ -174,7 +174,7 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
             return;
         }
         setRide(player);
-        // lsr.w #3,d1 then, for the bit 6 tube, lsr.w #1 again (:95238-95243). d1 is the
+        // lsr.w #3,d1 then, for the bit 6 tube, lsr.w #1 again (:95284-95289). d1 is the
         // biased dy that the band test just accepted, so the index is always in range.
         int index = dy >> 3;
         int[] table = MOUNT_ANGLES_WIDE;
@@ -192,11 +192,11 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
         }
     }
 
-    /** {@code loc_48FA4} :95262-95330. */
+    /** {@code loc_48FA4} :95308-95376. */
     private void horizontalRide(AbstractPlayableSprite player, RiderState state,
                                 int vIntRunCount) {
         if (player.getAir()) {
-            // loc_48FF6 (:95292-95293): an airborne rider leaves with y_vel zeroed first.
+            // loc_48FF6 (:95338-95339): an airborne rider leaves with y_vel zeroed first.
             player.setYSpeed((short) 0);
             horizontalExit(player, state);
             return;
@@ -212,8 +212,8 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
         }
         int amplitude = isWide() ? LIFT_AMPLITUDE_WIDE : LIFT_AMPLITUDE;
         int step = isWide() ? ANGLE_STEP_WIDE : ANGLE_STEP;
-        // GetSineCosine returns the cosine in d1 (:3025); muls.w d0,d1 / swap d1 keeps the
-        // high word, which is the 8.8 cosine scaled by the amplitude (:95307-95312).
+        // GetSineCosine returns the cosine in d1 (:3057); muls.w d0,d1 / swap d1 keeps the
+        // high word, which is the 8.8 cosine scaled by the amplitude (:95353-95358).
         int lift = (TrigLookupTable.cosHex(state.angle) * amplitude) >> 16;
         NativePositionOps.writeYPosPreserveSubpixel(player, (getY() + lift) & 0xFFFF);
         player.setFlipAngle(state.angle);
@@ -222,14 +222,14 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
             player.setGSpeed((short) 1);
             player.setAnimationId(1);
         }
-        // loc_4904A (:95320-95323): eori.b #2,render_flags(a1) every frame the flag is set.
+        // loc_4904A (:95366-95369): eori.b #2,render_flags(a1) every frame the flag is set.
         // The engine composes the player's drawn Y flip from the flag at the draw already,
         // so the XOR's net effect is carried there; nothing is written here.
         playTunnelSfx(vIntRunCount);
     }
 
     /**
-     * {@code loc_48FBA} :95272-95291. The reverse-gravity row is a <em>reflection</em> of
+     * {@code loc_48FBA} :95318-95337. The reverse-gravity row is a <em>reflection</em> of
      * {@code flip_angle} about the horizontal, not a negation: {@code addi.b #$40,d0},
      * {@code neg.b d0}, {@code subi.b #$40,d0}.
      */
@@ -250,7 +250,7 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
 
     // ---- vertical body: loc_4906A / sub_49090 ----
 
-    /** {@code sub_49090} :95352-95410. */
+    /** {@code sub_49090} :95398-95456. */
     private void verticalMount(AbstractPlayableSprite player, RiderState state,
                                int vIntRunCount) {
         int dx = (player.getCentreX() - getX() + VERTICAL_HALF_WIDTH) & 0xFFFF;
@@ -269,9 +269,9 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
         state.riding = true;
         player.setAngle((byte) 0xC0);
         player.setDirection(com.openggf.physics.Direction.RIGHT);
-        // move.b #0,(a2) then #$80 when the player is left of the tube (:95396-95400).
+        // move.b #0,(a2) then #$80 when the player is left of the tube (:95442-95446).
         state.angle = (short) (player.getCentreX() - getX()) < 0 ? 0x80 : 0;
-        // move.w y_vel(a1),ground_vel(a1) / neg.w (:95402-95403).
+        // move.w y_vel(a1),ground_vel(a1) / neg.w (:95448-95449).
         int groundVel = -player.getYSpeed();
         if ((short) (player.getCentreY() - getY()) < 0) {
             player.setAngle((byte) 0x40);
@@ -288,13 +288,13 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
         verticalRide(player, state, vIntRunCount);
     }
 
-    /** {@code loc_49142} :95415-95461. */
+    /** {@code loc_49142} :95461-95507. */
     private void verticalRide(AbstractPlayableSprite player, RiderState state,
                               int vIntRunCount) {
         int halfSpan = halfSpan();
         int dy = (player.getCentreY() - getY() + halfSpan) & 0xFFFF;
         if (dy >= halfSpan * 2) {
-            // loc_49142's exit (:95420-95428). No reverse-gravity row here.
+            // loc_49142's exit (:95466-95474). No reverse-gravity row here.
             ObjectControlState.none().applyTo(player);
             player.setObjectMappingFrameControl(false);
             player.setOnObject(false);
@@ -319,14 +319,14 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
 
     // ---- shared ----
 
-    /** {@code cmpi.b #6,routine(a1) / bhs} plus the debug-placement gate (:95230-95233). */
+    /** {@code cmpi.b #6,routine(a1) / bhs} plus the debug-placement gate (:95276-95279). */
     private boolean isIgnorable(AbstractPlayableSprite player) {
         return player.getDead() || player.isHurt() || player.isDebugMode();
     }
 
     /**
-     * The ROM clears {@code Status_OnObj} at both exits ({@code loc_48FBA} :95273 and
-     * {@code loc_49142}'s :95420) and leaves {@code interact(a1)} pointing at the last
+     * The ROM clears {@code Status_OnObj} at both exits ({@code loc_48FBA} :95319 and
+     * {@code loc_49142}'s :95466) and leaves {@code interact(a1)} pointing at the last
      * support, which the next {@code RideObject_SetRide} overwrites. The engine's latch is
      * read together with {@code Status_OnObj}, so it is dropped here rather than left stale.
      */
@@ -336,7 +336,7 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
         }
     }
 
-    /** {@code sub_33C34} (:70167-70187), the ROM's {@code RideObject_SetRide}. */
+    /** {@code sub_33C34} (:70207-70227), the ROM's {@code RideObject_SetRide}. */
     private void setRide(AbstractPlayableSprite player) {
         ObjectServices objectServices = tryServices();
         if (objectServices != null && objectServices.objectManager() != null) {
@@ -356,8 +356,8 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
         }
         player.setOnObject(true);
         player.setAir(false);
-        // move.w a0,interact(a1) (:70172). The rider's interact word points at the tube for
-        // the whole ride, which is what keeps Player_AnglePos (:18736-18741) out of the
+        // move.w a0,interact(a1) (:70212). The rider's interact word points at the tube for
+        // the whole ride, which is what keeps Player_AnglePos (:18772-18777) out of the
         // terrain probe: it returns on Status_OnObj before any FindFloor. The engine models
         // that non-solid ownership as a latch, the same way the CNZ wire cage and barber pole
         // do; without it the terrain walk-off detaches the rider every frame and the tube
@@ -366,8 +366,8 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
     }
 
     /**
-     * {@code move.b (Level_frame_counter+1).w,d0 / andi.b #$F,d0 / bne} (:95324-95328,
-     * :95454-95458): one {@code sfx_GravityTunnel} every sixteen frames, shared by both
+     * {@code move.b (Level_frame_counter+1).w,d0 / andi.b #$F,d0 / bne} (:95370-95374,
+     * :95500-95504): one {@code sfx_GravityTunnel} every sixteen frames, shared by both
      * bodies and keyed on the level clock rather than on the rider.
      */
     private void playTunnelSfx(int vIntRunCount) {

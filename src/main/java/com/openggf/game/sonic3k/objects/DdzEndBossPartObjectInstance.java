@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * ROM {@code loc_81F36} (phase 1, {@code ObjDat3_831D8}: priority {@code $280}, frame 7, offsets
  * {@code word_81F5E}) and {@code loc_81F7E} (phase 2, {@code ObjDat3_831E4}: priority {@code $180},
- * frame 6, offsets {@code word_81F8C}) (sonic3k.asm:174037-174093). Both follow the boss by their
+ * frame 6, offsets {@code word_81F8C}) (sonic3k.asm:174128-174184). Both follow the boss by their
  * subtype's offset and are drawn only on V-ints whose bit 1 is clear; either deletes itself once the
  * boss's {@code status} bit 7 is set.
  */

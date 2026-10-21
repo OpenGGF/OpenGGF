@@ -16,7 +16,7 @@ import static com.openggf.level.scroll.M68KMath.*;
  * the camera.
  *
  * <p>ROM reference: {@code Gumball_SetUpVScroll} / {@code Gumball_VScroll}
- * (s3.asm lines 76130-76147) runs every frame in {@code Gumball_ScreenEvent}:
+ * (s3.asm lines 76186-76203) runs every frame in {@code Gumball_ScreenEvent}:
  * <pre>
  *   d0 = Camera_Y_pos_copy
  *   d1 = machineY_saved - $C8 - cameraY
@@ -94,7 +94,7 @@ public class SwScrlGumball extends AbstractZoneScrollHandler {
         resetScrollTracking();
         composer.reset();
 
-        // Flat deformation: FG tied to camera; Gumball_Deform (s3.asm:76172) pins
+        // Flat deformation: FG tied to camera; Gumball_Deform (s3.asm:76228) pins
         // Camera_X_pos_BG_copy at $FFE0 and sets Camera_Y_pos_BG_copy = cameraY/2, and
         // PlainDeformation writes the negated BG copy to every line (native plane-B
         // H-scroll $0020 at camera X $60, 2026-10-15 gumball row 250 still).

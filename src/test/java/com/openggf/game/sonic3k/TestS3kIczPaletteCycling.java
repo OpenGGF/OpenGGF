@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Tests ICZ palette cycling (zone 0x05) implemented in {@link Sonic3kPaletteCycler}.
  *
- * <p>ICZ has 4 channels (AnPal_ICZ, sonic3k.asm line 3379):
+ * <p>ICZ has 4 channels (AnPal_ICZ, sonic3k.asm line 3411):
  * <ul>
  *   <li>Channel 1: timer period 5, counter0 +4, wrap 0x40 Ã¢â€ â€™ palette[2] colors 14-15</li>
  *   <li>Channel 2: timer period 9, counter2 +4, wrap 0x48 Ã¢â€ â€™ palette[3] colors 14-15</li>

@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * A rewind to a Lava Reef load frame, before the first background event, replays the
  * once-per-load background initializer exactly. {@code LRZ1_BackgroundInit} and
- * {@code LRZ2_BackgroundInit} (skdisasm 044fa46 sonic3k.asm:115704-115717 for act 2, which leaves
+ * {@code LRZ2_BackgroundInit} (skdisasm 044fa46 sonic3k.asm:115750-115763 for act 2, which leaves
  * {@code Events_routine_bg} on 8) run in the native level setup; the engine runs them at the
  * first event dispatch, so whether they are still pending is restorable world state.
  *

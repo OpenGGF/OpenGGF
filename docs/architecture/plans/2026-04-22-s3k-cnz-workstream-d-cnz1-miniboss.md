@@ -110,10 +110,10 @@ Audit results (no code changed):
   Implemented IDs: 0xA6 present in S3KL_IMPLEMENTED_IDS (Sonic3kObjectProfile.java:203)
   Base class: AbstractBossInstance (level.objects.boss), not Sonic3kBossInstance
     (which does not exist in this repo). Parent spec §7.2 wording corrected in T3.
-  PLC_CNZ_MINIBOSS in engine: 0x5C. ROM: 0x5D (sonic3k.asm:144844).
+  PLC_CNZ_MINIBOSS in engine: 0x5C. ROM: 0x5D (sonic3k.asm:144909).
     Off-by-one, fixed in T2.
   Arena X trigger in Sonic3kCNZEvents.MINIBOSS_CAM_X_THRESHOLD: 0x3000.
-    ROM: 0x31E0 (sonic3k.asm:144824). Fixed in T8.
+    ROM: 0x31E0 (sonic3k.asm:144889). Fixed in T8.
 ```
 
 - [ ] **Step 6: Commit the audit note (empty-tree commit via `--allow-empty`)**
@@ -128,9 +128,9 @@ No code change. Confirms:
 - Base is AbstractBossInstance (no Sonic3kBossInstance exists;
   parent spec §7.2 naming corrected here)
 - Engine PLC_CNZ_MINIBOSS=0x5C is off-by-one vs ROM moveq #$5D,d0
-  at sonic3k.asm:144844 (fixed in T2)
+  at sonic3k.asm:144909 (fixed in T2)
 - Engine MINIBOSS_CAM_X_THRESHOLD=0x3000 is short of ROM $31E0 at
-  sonic3k.asm:144824 (fixed in T8)
+  sonic3k.asm:144889 (fixed in T8)
 
 Changelog: n/a
 Guide: n/a
@@ -188,7 +188,7 @@ class TestCnzMinibossConstants {
     @Test
     void plcIdMatchesRom() {
         assertEquals(0x5D, Sonic3kConstants.PLC_CNZ_MINIBOSS,
-                "ROM sonic3k.asm:144844 reads `moveq #$5D,d0`");
+                "ROM sonic3k.asm:144909 reads `moveq #$5D,d0`");
     }
 
     @Test
@@ -226,7 +226,7 @@ Open `src/main/java/com/openggf/game/sonic3k/constants/Sonic3kConstants.java`. A
     /**
      * CNZ Act 1 miniboss PLC id.
      *
-     * <p>ROM: {@code sonic3k.asm:144844} — {@code moveq #$5D,d0} then
+     * <p>ROM: {@code sonic3k.asm:144909} — {@code moveq #$5D,d0} then
      * {@code jsr (Load_PLC).l}. The engine previously held {@code 0x5C}
      * (off-by-one); corrected in workstream D.
      */
@@ -298,7 +298,7 @@ git add src/main/java/com/openggf/game/sonic3k/constants/Sonic3kConstants.java \
 git commit -m "$(cat <<'EOF'
 feat(s3k): add CNZ1 miniboss arena + state-machine constants
 
-Corrects PLC_CNZ_MINIBOSS 0x5C -> 0x5D (ROM sonic3k.asm:144844
+Corrects PLC_CNZ_MINIBOSS 0x5C -> 0x5D (ROM sonic3k.asm:144909
 `moveq #$5D,d0` before Load_PLC). Adds the arena camera clamps
 (0x31E0..0x3260, 0x01C0..0x02B8) and the state-machine literals
 (hit count 6, init y_vel 0x80, swing x_vel 0x100, wait timers 0x11F /
@@ -454,7 +454,7 @@ downstream tasks can add the 8-routine state machine, hit handler,
 and defeat sequencer without re-threading boss-state plumbing.
 Preserves Task-7 seams: onArenaChunkDestroyed, getCentreX/Y, and
 the empty appendRenderCommands contract. Initial hit count wired
-to CNZ_MINIBOSS_HIT_COUNT (6) from ROM sonic3k.asm:144888.
+to CNZ_MINIBOSS_HIT_COUNT (6) from ROM sonic3k.asm:144953.
 
 Changelog: n/a
 Guide: n/a
@@ -608,7 +608,7 @@ git commit -m "$(cat <<'EOF'
 feat(s3k): port CNZ1 miniboss routines 0/2/4 (Init, Lower, Move+swing)
 
 Implements Obj_CNZMinibossInit, Obj_CNZMinibossLower, Obj_CNZMinibossGo2,
-Obj_CNZMinibossMove, and Obj_CNZMinibossGo3 from sonic3k.asm:144885..144920.
+Obj_CNZMinibossMove, and Obj_CNZMinibossGo3 from sonic3k.asm:144950..144920.
 Descent at y_vel 0x80 for $11F frames, clear y_vel + $90 frame wait,
 then x_vel 0x100 swing for $9F frames. Timer dispatch mirrors the ROM's
 $2E(a0)/$34(a0) pair. Hit count (6) and ID 0xA6 unchanged.
@@ -752,7 +752,7 @@ feat(s3k): port CNZ1 miniboss routines 6/8/A (Opening, WaitHit, Closing)
 
 Implements Obj_CNZMinibossCloseGo, Obj_CNZMinibossChangeDir,
 Obj_CNZMinibossOpenGo, Obj_CNZMinibossWaitHit, loc_6DB4E, and
-Obj_CNZMinibossClosing from sonic3k.asm:144922..144968. Direction flip
+Obj_CNZMinibossClosing from sonic3k.asm:144987..144968. Direction flip
 on swing boundary, hit-window gate via status bit 6, and closing
 transition back into routine C for the next swing cycle.
 
@@ -914,7 +914,7 @@ feat(s3k): port CNZ1 miniboss routines C/E + hit/defeat wiring
 Implements Obj_CNZMinibossLower2 (one-pixel-per-frame descent with
 $43 counter), Obj_CNZMinibossEnd (end-of-boss flag, signpost hand-off),
 and Obj_CNZMinibossEndGo (clr.b Boss_flag, re-enable wall grab) from
-sonic3k.asm:144972..145002. onHitTaken / onDefeatStarted route the
+sonic3k.asm:145037..145002. onHitTaken / onDefeatStarted route the
 final hit into routine E via the shared defeat sequencer.
 
 Changelog: n/a
@@ -1060,7 +1060,7 @@ git commit -m "$(cat <<'EOF'
 feat(s3k): port CNZ1 miniboss top bouncing-ball physics
 
 Implements Obj_CNZMinibossTop's 4-routine state machine
-(sonic3k.asm:145004..145673): TopInit attribute setup, TopWait /
+(sonic3k.asm:145069..145673): TopInit attribute setup, TopWait /
 TopWait2 delay gates, and TopMain's gravity + reflective wall/floor
 collision inside the miniboss arena. Impact coordinates route through
 the existing S3kCnzEventWriteSupport bridge so the Task-7 arena
@@ -1137,7 +1137,7 @@ class TestCnzMinibossArenaEntry {
 
     @Test
     void arenaThresholdMatchesRom() {
-        // The hard number: ROM sonic3k.asm:144824 reads `move.w #$31E0,d0`.
+        // The hard number: ROM sonic3k.asm:144889 reads `move.w #$31E0,d0`.
         // The scaffold previously held 0x3000; workstream D corrects it.
         assertEquals(0x31E0, Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X);
     }
@@ -1186,7 +1186,7 @@ git commit -m "$(cat <<'EOF'
 feat(s3k): wire CNZ1 miniboss arena entry (camera lock, PLC, palette)
 
 Corrects MINIBOSS_CAM_X_THRESHOLD 0x3000 -> 0x31E0 to match ROM
-sonic3k.asm:144824 (`move.w #$31E0,d0`). On threshold crossing, the
+sonic3k.asm:144889 (`move.w #$31E0,d0`). On threshold crossing, the
 CNZ event manager now sets arena camera clamps (0x31E0..0x3260,
 0x01C0..0x02B8), raises Boss_flag, suppresses wall grab, triggers
 PLC 0x5D, and installs Pal_CNZMiniboss via the shared palette
@@ -1542,11 +1542,11 @@ Open `CHANGELOG.md`. Add a new sub-section under `## Unreleased`:
 ```markdown
 ### Sonic 3&K CNZ1 Mini-Boss (Workstream D)
 
-- Ported `Obj_CNZMiniboss` (sonic3k.asm:144823..145002) to
+- Ported `Obj_CNZMiniboss` (sonic3k.asm:144888..145002) to
   `CnzMinibossInstance` atop `AbstractBossInstance`: full 8-routine
   state machine (Init, Lower, Move, Opening, WaitHit, Closing, Lower2,
   End), ROM hit count of 6, and the Lower2 per-pixel descent.
-- Ported `Obj_CNZMinibossTop` (sonic3k.asm:145004..145673) to
+- Ported `Obj_CNZMinibossTop` (sonic3k.asm:145069..145673) to
   `CnzMinibossTopInstance`: 4-routine state machine (TopInit, TopWait,
   TopWait2, TopMain) with bouncing-ball physics and arena-chunk
   destruction publication.
@@ -1556,7 +1556,7 @@ Open `CHANGELOG.md`. Add a new sub-section under `## Unreleased`:
   ROM `loc_6D9A8`. Corrected the miniboss camera-trigger X from 0x3000
   to the ROM's 0x31E0.
 - Corrected `PLC_CNZ_MINIBOSS` from 0x5C to 0x5D (ROM
-  `sonic3k.asm:144844`). No external behaviour depended on the
+  `sonic3k.asm:144909`). No external behaviour depended on the
   off-by-one value in prior commits; the now-corrected PLC load is
   guarded per spec §9.
 - Reduced `TestS3kCnzTraceReplay` error count from 1954 to <NNN>

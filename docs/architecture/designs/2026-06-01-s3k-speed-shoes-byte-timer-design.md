@@ -143,7 +143,7 @@ ROM granularity, verified:
   s2.asm:36008-36025 `Obj01_ChkShoes`.
 - **S3K:** a **byte** timer (`subq.b #1`) decremented **only on every 8th**
   level frame, initialised to `(20*60)/8 = 150`. `Sonic_ChkShoes`
-  (sonic3k.asm:22067-22090):
+  (sonic3k.asm:22103-22126):
   ```
   Sonic_ChkShoes:
       btst    #Status_SpeedShoes,status_secondary(a0)
@@ -156,7 +156,7 @@ ROM granularity, verified:
       subq.b  #1,speed_shoes_timer(a0)
       ...                                     ; on 0: restore speeds, clear bit, Change_Music_Tempo
   ```
-  Init: `move.b #(20*60)/8,speed_shoes_timer(a1)` (sonic3k.asm:40818).
+  Init: `move.b #(20*60)/8,speed_shoes_timer(a1)` (sonic3k.asm:40858).
 
 Both schemes expire after 1200 wall-clock frames; only the storage width and the
 decrement cadence differ. **The 8-frame phase is derived from the GLOBAL
@@ -192,7 +192,7 @@ Add one field:
 /** Level-frame cadence at which the speed-shoes timer decrements. S1/S2 use a
  *  per-frame word timer ({@code 1}); S3K uses a byte timer decremented only on
  *  every 8th level frame ({@code 8}) — ROM Sonic_ChkShoes gates subq.b on
- *  (Level_frame_counter+1) & 7 == 0 (sonic3k.asm:22072-22078). */
+ *  (Level_frame_counter+1) & 7 == 0 (sonic3k.asm:22108-22114). */
 int speedShoesTimerDecimation   // SONIC_1 = 1, SONIC_2 = 1, SONIC_3K = 8
 ```
 
@@ -230,7 +230,7 @@ S3K granularity is correct (it is what regressed S3K CNZ when attempted first).
 
 ### Music slowdown
 
-On expiry, ROM jumps to `Change_Music_Tempo` (sonic3k.asm:22090). Preserve the
+On expiry, ROM jumps to `Change_Music_Tempo` (sonic3k.asm:22126). Preserve the
 existing `SpeedShoesTimer.perform()` music-off path; it must fire on the frame
 the decimated count reaches zero (i.e. on an aligned frame), unchanged for
 S1/S2.
@@ -284,6 +284,6 @@ Unit guards:
 ## References
 
 - `docs/status/trace-frontier-log.md` — 2026-06-01 speed-shoes timing entry.
-- sonic3k.asm:22067-22090 `Sonic_ChkShoes` (every-8th-frame gate + decrement);
-  sonic3k.asm:40818 init `(20*60)/8`.
+- sonic3k.asm:22103-22126 `Sonic_ChkShoes` (every-8th-frame gate + decrement);
+  sonic3k.asm:40858 init `(20*60)/8`.
 - s2.asm:36008-36025 `Obj01_ChkShoes`; s1disasm/_incObj/01 Sonic.asm:175-184.

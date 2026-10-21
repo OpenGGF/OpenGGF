@@ -8,10 +8,10 @@ The implementation must be ROM-accurate and support cross-game feature donation 
 
 ## ROM Reference
 
-- **Activation:** sonic3k.asm:23473-23479 (`Sonic_InstaShield`)
-- **Shield ability decision tree:** sonic3k.asm:23397-23479 (`Sonic_ShieldMoves`)
-- **Hitbox expansion:** sonic3k.asm:20620-20640 (touch response insta-shield path)
-- **Visual object:** sonic3k.asm:34566-34611 (`Obj_InstaShield` / `Obj_InstaShield_Main`)
+- **Activation:** sonic3k.asm:23508-23514 (`Sonic_InstaShield`)
+- **Shield ability decision tree:** sonic3k.asm:23432-23514 (`Sonic_ShieldMoves`)
+- **Hitbox expansion:** sonic3k.asm:20656-20676 (touch response insta-shield path)
+- **Visual object:** sonic3k.asm:34606-34651 (`Obj_InstaShield` / `Obj_InstaShield_Main`)
 - **Animation:** `General/Sprites/Shields/Anim - Insta-Shield.asm` (2 scripts, 8 mapping frames)
 - **Mappings:** `General/Sprites/Shields/Map - Insta-Shield.asm` (8 frames, 0-7, frame 7 = empty)
 - **DPLC:** `General/Sprites/Shields/DPLC - Insta-Shield.asm` (8 entries)
@@ -54,7 +54,7 @@ This separates the insta-shield gate from the elemental shield gate. Elemental a
 
 Modify `tryShieldAbility()` to handle the insta-shield as the null-shield fallback.
 
-**Priority chain** (matching sonic3k.asm:23397-23479):
+**Priority chain** (matching sonic3k.asm:23432-23514):
 
 ```
 1. Neither elementalShieldsEnabled nor instaShieldEnabled → return false
@@ -72,10 +72,10 @@ Modify `tryShieldAbility()` to handle the insta-shield as the null-shield fallba
 - Triggers the persistent `InstaShieldObjectInstance` by setting its animation to 1 (attack sequence)
 - Plays `GameSound.INSTA_SHIELD` SFX (already mapped to S3K SFX 0x42)
 
-**Super Sonic gate (sonic3k.asm:23404-23408):**
+**Super Sonic gate (sonic3k.asm:23439-23443):**
 When `sprite.isSuperSonic()` is true, set `doubleJumpFlag = 1` and return `true` without activating any ability. This prevents Super Sonic from using insta-shield or any elemental ability.
 
-**Invincibility gate (sonic3k.asm:23412-23413):**
+**Invincibility gate (sonic3k.asm:23447-23448):**
 When invincibility stars are active (`Status_Invincible`), all abilities are suppressed — return `false` without setting `doubleJumpFlag`. This applies to fire/lightning/bubble AND insta-shield. Note: the existing elemental abilities are also missing this gate; it should be added to the shared path before the shield-type switch.
 
 Hyper Sonic uses a different ability (`Sonic_HyperDash`) — deferred to future work per user direction.
@@ -84,7 +84,7 @@ Hyper Sonic uses a different ability (`Sonic_HyperDash`) — deferred to future 
 
 Modify `TouchResponses.update()` to expand the player's collision box when the insta-shield is active.
 
-**ROM mechanism (sonic3k.asm:20620-20640):**
+**ROM mechanism (sonic3k.asm:20656-20676):**
 The ROM temporarily sets `Status_Invincible`, uses a 48×48 hitbox for `Touch_Process`, then clears `Status_Invincible`. This makes Sonic destroy all overlapping enemies without taking damage.
 
 **Implementation:**
@@ -214,7 +214,7 @@ No new states. The existing 3-state system matches the ROM exactly:
 | 1 | Attacking (expanded hitbox, enemy invincibility) | `tryShieldAbility()` | `InstaShieldObjectInstance` at frame 7 |
 | 2 | Post-attack (normal hitbox, visual fading) | `InstaShieldObjectInstance` at frame 7 | Landing via `resetOnFloor()` |
 
-The 1→2 transition happens inside `InstaShieldObjectInstance.update()` when `mapping_frame == 7`, matching sonic3k.asm:34607-34611. The animation then SWITCHes back to anim 0 (idle), and the object is ready for the next activation.
+The 1→2 transition happens inside `InstaShieldObjectInstance.update()` when `mapping_frame == 7`, matching sonic3k.asm:34647-34651. The animation then SWITCHes back to anim 0 (idle), and the object is ready for the next activation.
 
 ## Files Changed
 

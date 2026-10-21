@@ -434,10 +434,10 @@ predicate.
 or the S3K research round had it. S1 is `Anml_End_ChkDel`
 (`docs/s1disasm/_incObj/28, 29 Animals and Points.asm:300-311`, `loc_9224`), spelling `bcs` as
 `blo`, `$180` as `#320+64`, and the flag as `tst.b obRender(a0) / bpl`. S3K is `Obj_Animal`'s
-`loc_2CAE4` (`docs/skdisasm/sonic3k.asm:61184-61194`), instruction-for-instruction the S2
+`loc_2CAE4` (`docs/skdisasm/sonic3k.asm:61224-61234`), instruction-for-instruction the S2
 routine, reached by the *same* selector (`tst.b subtype(a0) / bne.s loc_2CAE4`,
-sonic3k.asm:61146 and :61178, plus an unconditional `bra.w` at :61219) and deleting through
-`loc_2C9DA` (`jmp (Delete_Current_Sprite).l`, sonic3k.asm:61101).
+sonic3k.asm:61186 and :61218, plus an unconditional `bra.w` at :61259) and deleting through
+`loc_2C9DA` (`jmp (Delete_Current_Sprite).l`, sonic3k.asm:61141).
 
 ### The S3K negatives were CRLF-contaminated — one fell, one now stands as measured
 
@@ -452,14 +452,14 @@ negative counts for anything:
 | sweep | known positive | sign-test / player-relative result |
 |---|---|---|
 | coarse-camera subtracts | 73 in sonic3k.asm (69 X, 4 Y) and 57 in s3.asm, **all** reaching a `cmpi` bound. The research's 61 counted only the exact five-instruction form, and its 4 Y-axis sites match exactly | **0** sign branches |
-| all `andi.w #$FF80` sites | 84 of 91 reach a compare first | 2 reach a sign branch: `sonic3k.asm:37568` and `:37588` — the object manager's **vertical-scan clamp**, not a per-object delete (S3-half copies at `s3.asm:30931`, `:30951`) |
+| all `andi.w #$FF80` sites | 84 of 91 reach a compare first | 2 reach a sign branch: `sonic3k.asm:37608` and `:37588` — the object manager's **vertical-scan clamp**, not a per-object delete (S3-half copies at `s3.asm:30986`, `:30951`) |
 | `sub.w (Player_N+x_pos)` | — | **3 sites**, one of which **is predicate 4** |
 
 So **predicate 3's absence from S3K stands, and is now measured rather than inherited.**
 **Predicate 4's absence was wrong**, and the sweep that produced it is exactly the shape the
 CRLF hazard describes.
 
-The three player-x sites also reproduce the S1/S2 near-miss: `sonic3k.asm:61356` (`sub_2CCBA`)
+The three player-x sites also reproduce the S1/S2 near-miss: `sonic3k.asm:61396` (`sub_2CCBA`)
 performs the identical subtraction against the player's x to set the horizontal flip, as S2's
 `AnimalFaceSonic` (`s2.asm:24883`) does. In all three games the predicate must be reached
 through `Obj_Animal`'s dispatch, never through a search for the subtraction's shape.

@@ -47,7 +47,7 @@ The entire sequence runs within the normal level engine (not a separate game mod
 
 ### Level Loading & Init
 
-The intro is gated by three conditions checked during `SpawnLevelMainSprites` (sonic3k.asm line 8111):
+The intro is gated by three conditions checked during `SpawnLevelMainSprites` (sonic3k.asm line 8143):
 
 ```asm
 SpawnLevelMainSprites:
@@ -83,7 +83,7 @@ This places Sonic at the left edge of the intro layout, far below the visible ar
 
 ### Obj_AIZPlaneIntro State Machine
 
-The master intro object (`Obj_AIZPlaneIntro`, sonic3k.asm line 135464) uses **stride-2 routine dispatch** — the `routine` byte steps by 2 each transition (0x00, 0x02, 0x04, ..., 0x1A), indexing a word-sized branch table.
+The master intro object (`Obj_AIZPlaneIntro`, sonic3k.asm line 135529) uses **stride-2 routine dispatch** — the `routine` byte steps by 2 each transition (0x00, 0x02, 0x04, ..., 0x1A), indexing a word-sized branch table.
 
 Each frame, the object:
 1. Dispatches to the current routine handler
@@ -128,7 +128,7 @@ Each frame, the object:
 
 ### Scroll Velocity & Camera System
 
-The intro uses a clever pseudo-scrolling mechanism (`sub_67A08`, sonic3k.asm line 135806):
+The intro uses a clever pseudo-scrolling mechanism (`sub_67A08`, sonic3k.asm line 135871):
 
 ```
 Events_fg_1 starts at 0xE918 (signed: -5864)

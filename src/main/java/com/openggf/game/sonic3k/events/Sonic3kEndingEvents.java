@@ -70,7 +70,7 @@ public final class Sonic3kEndingEvents extends Sonic3kZoneEvents {
                 camera().setXCopy((short)0x200);camera().setYCopy((short)0x200);drawForeground(false);}}
             case 44 -> drawForeground(false);
             // loc_5AE90 has no rts after addq Events_routine_fg: it falls into loc_5AEA8,
-            // so the first Pal_FromBlack/subq runs on the 48->52 frame (sonic3k.asm:121156-121175).
+            // so the first Pal_FromBlack/subq runs on the 48->52 frame (sonic3k.asm:121202-121221).
             case 48 -> {if(ram.backgroundRoutine<=4){ram.foregroundRoutine=52;ram.fadeTimer=0x15;fadeReunionIn();}}
             case 52 -> fadeReunionIn();
             case 56 -> S3kEndingCoordinator.updateCredits(services);
@@ -150,7 +150,7 @@ public final class Sonic3kEndingEvents extends Sonic3kZoneEvents {
         if(finished){ram.backgroundRoutine=aiz?8:20;ram.foregroundRoutine=aiz?24:48;}}
     private void fadeIn(){S3kEndingPalette.fromBlackAll(objectServices());}
     /** loc_5AEA8: its expiry falls into loc_5AED4, so sub_5B18E's first dispatch (loc_5B1A2
-     * credits init) runs on the same 52->56 frame and skips loc_5AEE4 (sonic3k.asm:121163-121182, loc_5B1A2 121487). */
+     * credits init) runs on the same 52->56 frame and skips loc_5AEE4 (sonic3k.asm:121209-121228, loc_5B1A2 121487). */
     private void fadeReunionIn(){var ram=state().screen();fadeIn();
         if((ram.fadeTimer=(short)(ram.fadeTimer-1))>=0)return;
         ram.foregroundRoutine=56;setPaletteAnimationBlocked(false);ram.aizPalette.beginHold();

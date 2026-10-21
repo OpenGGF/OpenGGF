@@ -25,9 +25,9 @@ import java.util.List;
 
 /**
  * One of the four body segments {@code Obj_Fireworm}'s head creates:
- * {@code ChildObjDat_8FA16} -> {@code loc_8F8F0} (sonic3k.asm:196345-196380, ROM {@code $8F8F0}).
+ * {@code ChildObjDat_8FA16} -> {@code loc_8F8F0} (sonic3k.asm:196450-196485, ROM {@code $8F8F0}).
  *
- * <p>Its init ({@code loc_8F910}, :196362-196372) takes {@code ObjDat3_8F9FC}
+ * <p>Its init ({@code loc_8F910}, :196467-196477) takes {@code ObjDat3_8F9FC}
  * ({@code Map_FirewormSegments}, {@code make_art_tile(ArtTile_FirewormSegments,1,1)},
  * {@code priority $200}, an {@code 8 x 8} box, {@code mapping_frame} 1,
  * {@code collision_flags $98}), copies the head's {@code x_vel} and {@code render_flags}, and
@@ -36,24 +36,24 @@ import java.util.List;
  * segment waits eleven frames longer than the one in front of it, and that stagger is the whole
  * trailing shape: while it waits it does nothing at all, so the head swims away from it.
  *
- * <p>When the wait expires, {@code loc_8F94E} (:196387-196390) gives the segment its own flame
+ * <p>When the wait expires, {@code loc_8F94E} (:196492-196495) gives the segment its own flame
  * child and then falls into the head's {@code loc_8F82E}, so from that frame on the segment runs
  * the identical swim-and-turn routine. See {@link FirewormMotion}.
  *
- * <p>{@code Child_DrawTouch_Sprite_FlickerMove} (:178136-178141) only publishes the segment to the
+ * <p>{@code Child_DrawTouch_Sprite_FlickerMove} (:178227-178232) only publishes the segment to the
  * collision list while the parent's {@code status} bit 7 is clear, which is why a segment stops
  * hurting the moment the head is gone.
  */
 public final class FirewormSegmentInstance extends AbstractObjectInstance
         implements TouchResponseProvider, RewindRecreatable {
 
-    /** {@code ObjDat3_8F9FC}: {@code dc.w $200} (sonic3k.asm:196444). */
+    /** {@code ObjDat3_8F9FC}: {@code dc.w $200} (sonic3k.asm:196549). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0200);
-    /** {@code dc.b 8,8,1,$98} (:196445). */
+    /** {@code dc.b 8,8,1,$98} (:196550). */
     private static final int HALF_SIZE = 8;
     private static final int INITIAL_MAPPING_FRAME = 1;
     private static final int COLLISION_FLAGS = 0x98;
-    /** {@code word_8F940}: {@code dc.w $B,$16,$21,$2C} (:196373-196374). */
+    /** {@code word_8F940}: {@code dc.w $B,$16,$21,$2C} (:196478-196479). */
     static final int[] WAIT_FRAMES = {0x0B, 0x16, 0x21, 0x2C};
 
     private enum Phase { WAITING, MOVING }
@@ -147,11 +147,11 @@ public final class FirewormSegmentInstance extends AbstractObjectInstance
     }
 
     /**
-     * {@code Child_DrawTouch_Sprite_FlickerMove} (sonic3k.asm:178135-178140) is the segment's draw
+     * {@code Child_DrawTouch_Sprite_FlickerMove} (sonic3k.asm:178226-178231) is the segment's draw
      * tail, so this runs at the end of the dispatch as the ROM does. With the head's {@code status}
-     * bit 7 set it branches to {@code loc_849D8} (:178120-178125), which sets the segment's own
+     * bit 7 set it branches to {@code loc_849D8} (:178211-178216), which sets the segment's own
      * bit 7, turns it into {@code Obj_FlickerMove} and clears {@code collision_flags}. Each flame
-     * draws through {@code Child_DrawTouch_Sprite} (:178053-178058) and sees that bit on its own
+     * draws through {@code Child_DrawTouch_Sprite} (:178144-178149) and sees that bit on its own
      * parent, so it runs {@code Go_Delete_Sprite} on its next dispatch -- which is why a killed
      * worm takes its flames with it instead of leaving four live hurt regions behind.
      *
@@ -301,7 +301,7 @@ public final class FirewormSegmentInstance extends AbstractObjectInstance
     @Override
     public int getCollisionFlags() {
         // Child_DrawTouch_Sprite_FlickerMove: no Add_SpriteToCollisionResponseList while the
-        // parent's status bit 7 is set (sonic3k.asm:178136-178141).
+        // parent's status bit 7 is set (sonic3k.asm:178227-178232).
         // loc_849D8 clears the segment's own collision_flags permanently.
         // Once the deleted head leaves the world, rewind cannot reattach it;
         // the captured retirement state must still keep this debris harmless.

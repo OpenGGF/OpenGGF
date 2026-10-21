@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- The disassembly is the source of truth. Cite the setup sequence at `docs/skdisasm/sonic3k.asm:7848-7856`, `Process_Sprites` at `:35965-36008`, and the SST layout at `docs/skdisasm/sonic3k.constants.asm:303-323` in production comments that encode ordering.
+- The disassembly is the source of truth. Cite the setup sequence at `docs/skdisasm/sonic3k.asm:7880-7888`, `Process_Sprites` at `:35965-36008`, and the SST layout at `docs/skdisasm/sonic3k.constants.asm:310-330` in production comments that encode ordering.
 - This plan supersedes only the object-only execution assumption in `2026-07-26-s3k-initial-object-setup-lifecycle.md`. Preserve that plan's production arming, atomic one-shot consumption, title/no-title seams, restoration discard, rewind capture, and no-selector requirements.
 - Trace data remains comparison-only. No trace filename, profile, route, zone, act, frame, checkpoint, sidekick metadata, expected value, or current frontier may arm, suppress, or alter setup execution.
 - The setup pass must model actual runtime state. It must not hydrate player, sidekick, object, RNG, counter, or lifecycle state from expected trace rows.
@@ -68,7 +68,7 @@ The order has concrete consequences:
 - AIZ plane-intro state changes after both playable slots and after the reset slot.
 - Fixed tails/dust/shield/star routines run after dynamic objects; they are not generic “pre-dynamic fixed hooks.”
 
-`Load_Sprites` is not an SST slot. At `sonic3k.asm:7848-7855`, it completes before `Load_Rings`, the LRZ helper, and the call to `Process_Sprites`; within the coordinator's owned subset the mandatory order is therefore `LOAD -> P1 -> P2 -> RESET -> DYNAMIC_SLOT_3 -> DYNAMIC_SLOTS_4_92 -> FIXED`. `Load_Rings` and the LRZ helper remain existing level-load responsibilities and must already have completed before the coordinator is consumed.
+`Load_Sprites` is not an SST slot. At `sonic3k.asm:7880-7887`, it completes before `Load_Rings`, the LRZ helper, and the call to `Process_Sprites`; within the coordinator's owned subset the mandatory order is therefore `LOAD -> P1 -> P2 -> RESET -> DYNAMIC_SLOT_3 -> DYNAMIC_SLOTS_4_92 -> FIXED`. `Load_Rings` and the LRZ helper remain existing level-load responsibilities and must already have completed before the coordinator is consumed.
 
 The engine's dynamic allocator does not own all 90 native slots. `ObjectSlotLayout.SONIC_3K` starts at absolute slot 4 and manages 89 slots through 92 because native `AllocateObject` pre-increments from `Dynamic_object_RAM`; `ObjectManager.runExecLoop` therefore cannot represent absolute slot 3. `InitialDynamicSstDispatcher` must expose three distinct operations:
 
@@ -78,13 +78,13 @@ void processAbsoluteDynamicSlot3();
 void processManagedDynamicSlots4Through93();
 ```
 
-Fresh `SpawnLevelMainSprites` writes player slots, reset slot 2, fixed power-up slots, and zone intro objects such as AIZ in `Dynamic_object_RAM+(object_size*2)` (absolute slot 5), but does not write absolute slot 3 (`sonic3k.asm:8111-8350`). Task 1's oracle must record the slot-3 function pointer as zero immediately before and after initial `Process_Sprites`. The production S3K adapter implements `processAbsoluteDynamicSlot3()` as an explicit evidence-backed empty operation for fresh level setup and fails its invariant test if a registered owner appears; the generic coordinator still emits a `DYNAMIC_SLOT_3` stage before `DYNAMIC_SLOTS_4_92`. Do not relabel the existing 89-slot manager loop as 90 slots.
+Fresh `SpawnLevelMainSprites` writes player slots, reset slot 2, fixed power-up slots, and zone intro objects such as AIZ in `Dynamic_object_RAM+(object_size*2)` (absolute slot 5), but does not write absolute slot 3 (`sonic3k.asm:8143-8382`). Task 1's oracle must record the slot-3 function pointer as zero immediately before and after initial `Process_Sprites`. The production S3K adapter implements `processAbsoluteDynamicSlot3()` as an explicit evidence-backed empty operation for fresh level setup and fails its invariant test if a registered owner appears; the generic coordinator still emits a `DYNAMIC_SLOT_3` stage before `DYNAMIC_SLOTS_4_92`. Do not relabel the existing 89-slot manager loop as 90 slots.
 
 The rare `Process_Sprites` death branch draws a subset of dynamic objects rather than executing them. It is not active during a fresh setup pass and must not be generalized into this coordinator without separate ROM evidence and tests.
 
 ### Fixed SST inventory
 
-The fixed range is exactly 17 slots (`sonic3k.constants.asm:309-323`). The S3K-specific implementation lives behind `InitialFixedSstDispatcher`, supplied by `Sonic3kLevelEventManager` through the game module/provider boundary. The generic coordinator receives that semantic dependency and never discovers the game or zone. “No engine owner” below is an explicit audit result to prove with an empty-slot test; it is not permission to skip the slot.
+The fixed range is exactly 17 slots (`sonic3k.constants.asm:316-330`). The S3K-specific implementation lives behind `InitialFixedSstDispatcher`, supplied by `Sonic3kLevelEventManager` through the game module/provider boundary. The generic coordinator receives that semantic dependency and never discovers the game or zone. “No engine owner” below is an explicit audit result to prove with an empty-slot test; it is not permission to skip the slot.
 
 | SST | Native label | Spawn/init condition | Current engine owner | Initial-pass operation and expected mutation | ROM/test evidence |
 |---:|---|---|---|---|---|
@@ -93,7 +93,7 @@ The fixed range is exactly 17 slots (`sonic3k.constants.asm:309-323`). The S3K-s
 | 95 | `Breathing_bubbles_P2` | zero after clear; activated later for P2 | same | dispatch P2 fixed-air controller; fresh inactive controller remains inert | constants `:312`; P2 fixed-air test |
 | 96 | `Tails_tails_2P` | competition-only tails visual, not main-level spawn | playable/tails renderer; no fixed SST controller exists | `empty(96)` in non-competition level lifecycle; provider rejects competition arming | constants `:314`; profile eligibility test |
 | 97 | `Tails_tails` | installed/used by Tails player routine when applicable, not directly in `SpawnLevelMainSprites` | playable Tails animation/render state | semantic tails-fixed dispatch after dynamic; prove whether the initial player routine activates it, then apply one native tails mapping step or explicit empty | constants `:315`; ROM oracle plus tails animation test |
-| 98 | `Dust` | `Obj_DashDust` for Sonic/Knuckles P1 (`sonic3k.asm:8359-8385`) | `SpriteManager.advanceFixedSkidDustAfterObjectExecution` / movement dust state | one post-dynamic fixed dust dispatch; may initialize/advance mapping | spawn and dust routine source; focused P1 dust test |
+| 98 | `Dust` | `Obj_DashDust` for Sonic/Knuckles P1 (`sonic3k.asm:8391-8417`) | `SpriteManager.advanceFixedSkidDustAfterObjectExecution` / movement dust state | one post-dynamic fixed dust dispatch; may initialize/advance mapping | spawn and dust routine source; focused P1 dust test |
 | 99 | `Dust_P2` | `Obj_DashDust` for Tails/P2 where spawned (`:8368-8375`, `:8388+`) | same | one post-dynamic P2 dust dispatch; inactive slots inert | spawn source; focused P2 dust test |
 | 100 | `Shield` | `Obj_InstaShield` for Sonic/Knuckles, or saved elemental shield replaces it (`:8359-8385`, `:8280-8330`) | `AbstractPlayableSprite` power-up handles plus `ObjectManager` power-up instances | dispatch the registered P1 shield fixed object once after dynamic | spawn/power-up source; shield type matrix test |
 | 101 | `Shield_P2` | normally zero in one-player level setup | no independent fixed P2 shield owner unless a live power-up instance is registered | explicit empty or registered P2 shield dispatch, determined by owner registry rather than character/zone | constants `:319`; empty/registered test |
@@ -104,7 +104,7 @@ The fixed range is exactly 17 slots (`sonic3k.constants.asm:309-323`). The S3K-s
 | 106 | `Invincibility_stars_P2[0]` | zero unless P2 power-up creates stars | current power-up registry or no owner | dispatch registered P2 star 0, otherwise explicit empty | constants `:321`; P2 registry test |
 | 107 | `Invincibility_stars_P2[1]` | same | same | dispatch registered P2 star 1, otherwise explicit empty | same |
 | 108 | `Invincibility_stars_P2[2]` | same | same | dispatch registered P2 star 2, otherwise explicit empty | same |
-| 109 | `Wave_Splash` | HCZ load installs wave splash state (`sonic3k.asm:7786-7787`) | `Sonic3kWaterSurfaceManager`/zone feature provider | dispatch one fixed wave-splash animation step only when its semantic owner is registered; AIZ/CNZ empty | constants `:322`; HCZ and non-HCZ owner tests |
+| 109 | `Wave_Splash` | HCZ load installs wave splash state (`sonic3k.asm:7818-7819`) | `Sonic3kWaterSurfaceManager`/zone feature provider | dispatch one fixed wave-splash animation step only when its semantic owner is registered; AIZ/CNZ empty | constants `:322`; HCZ and non-HCZ owner tests |
 
 Task 1's ROM oracle decides the two deliberately evidence-dependent entries (native Tails tails activation and fresh dust/shield mapping mutation) before implementation. Task 4 may update the expected-mutation column from that evidence, but it may not defer ownership, omit a slot, or add a zone branch to the coordinator.
 
@@ -124,7 +124,7 @@ The exact playable mutations are an oracle question, not a policy choice. Task 1
 
 ### Collision-response list mapping
 
-ROM `Obj_ResetCollisionResponseList` at `sonic3k.asm:8467-8469` clears only the current list count in slot 2. Player touch has already read the list built by the preceding native pass. OpenGGF must map that temporal split explicitly:
+ROM `Obj_ResetCollisionResponseList` at `sonic3k.asm:8499-8501` clears only the current list count in slot 2. Player touch has already read the list built by the preceding native pass. OpenGGF must map that temporal split explicitly:
 
 1. Before `LOAD`, freeze the existing `ObjectCollisionResponseList.previousObjects` as the setup player-touch read view and set `usePrevious=true`; take the ordinary frame-start touch snapshot without clearing overlap state.
 2. `P1` and `P2` read that frozen previous view. Dynamic materialization from `LOAD` cannot enter this already-selected read view.
@@ -232,7 +232,7 @@ public record InitialPlayableInput(
 }
 ```
 
-`ProcessSpritesEpoch` is a public immutable value carrying `nativeLevelEpoch=0`, `objectDispatchOrdinal=1`, and `advanceGameplayCounter=false`. `InitialPlayableInput.nativeNeutral()` has no dependency on `InputHandler`: raw held and just-pressed `Ctrl_1`/`Ctrl_2` words are zero, matching the clears/locks before setup at `sonic3k.asm:7765-7774`, and P2 manual/virtual controller input is zero. Debug/test shortcuts and BK2/live input are not sampled. Existing object-owned forced-input masks and control locks remain visible. `applyQueuedControlStateForFrameStart` **does run**, because those queued mutations are runtime object-control state rather than user input; it must not consume an input-handler edge or playback cursor. The method reuses the canonical per-playable routine body also used by ordinary updates so setup and gameplay cannot drift in physics, history, animation, status, water, and eligible touch ordering.
+`ProcessSpritesEpoch` is a public immutable value carrying `nativeLevelEpoch=0`, `objectDispatchOrdinal=1`, and `advanceGameplayCounter=false`. `InitialPlayableInput.nativeNeutral()` has no dependency on `InputHandler`: raw held and just-pressed `Ctrl_1`/`Ctrl_2` words are zero, matching the clears/locks before setup at `sonic3k.asm:7797-7806`, and P2 manual/virtual controller input is zero. Debug/test shortcuts and BK2/live input are not sampled. Existing object-owned forced-input masks and control locks remain visible. `applyQueuedControlStateForFrameStart` **does run**, because those queued mutations are runtime object-control state rather than user input; it must not consume an input-handler edge or playback cursor. The method reuses the canonical per-playable routine body also used by ordinary updates so setup and gameplay cannot drift in physics, history, animation, status, water, and eligible touch ordering.
 
 `SpriteManager` already owns the active `LevelManager` through its injected
 session wiring and ordinary playable dispatch resolves that field internally.

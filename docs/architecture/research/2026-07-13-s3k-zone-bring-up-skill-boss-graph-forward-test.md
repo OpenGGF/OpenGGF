@@ -49,7 +49,7 @@ The independent updated-skill result and final hashes are recorded below after v
 
 ## First Forward Pass -- Refactor Required
 
-The first updated-skill evaluator scored R37-R44 as PASS and correctly reported 8/13/18/19, scripted terminal damage, cyclic graphs, independent partial prefixes, same-sweep allocation, and the results-owned `Events_fg_5` chain. Its raw participation result nevertheless said activation was a camera/world gate plus all-native-player solid contact. That conflated the shared solid routine with the plunger's later explicit P1 standing-bit test at `sonic3k.asm:146904-146922`.
+The first updated-skill evaluator scored R37-R44 as PASS and correctly reported 8/13/18/19, scripted terminal damage, cyclic graphs, independent partial prefixes, same-sweep allocation, and the results-owned `Events_fg_5` chain. Its raw participation result nevertheless said activation was a camera/world gate plus all-native-player solid contact. That conflated the shared solid routine with the plunger's later explicit P1 standing-bit test at `sonic3k.asm:146969-146987`.
 
 R43 therefore remained **FAIL** and the first forward verdict was **RED, 7/8**. The skills were refactored to require tracing every standing/status/control-bit activation gate to its exact native slot instead of inheriting the participation policy of generic solid handling.
 

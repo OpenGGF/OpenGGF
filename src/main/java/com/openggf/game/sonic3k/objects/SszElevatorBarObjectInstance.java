@@ -19,7 +19,7 @@ import com.openggf.sprites.playable.ObjectControlState;
 import java.util.List;
 
 /**
- * ROM {@code Obj_SSZElevatorBar} ({@code $7A}, sonic3k.asm:90793-90928): the horizontal bar that
+ * ROM {@code Obj_SSZElevatorBar} ({@code $7A}, sonic3k.asm:90839-90974): the horizontal bar that
  * hangs a player from a slow vertical swing and throws them on the jump press. Five act-1
  * placements, all subtype 0 — the subtype is never read.
  *
@@ -229,7 +229,7 @@ public final class SszElevatorBarObjectInstance extends AbstractObjectInstance
         setCooldown(slot, cooldown);
     }
 
-    /** {@code Gradual_SwingOffset} (sonic3k.asm:92484-92515); returns the offset's high word. */
+    /** {@code Gradual_SwingOffset} (sonic3k.asm:92530-92561); returns the offset's high word. */
     private int gradualSwingOffset() {
         int step = SWING_ACCELERATION;
         if (swingReversed) {

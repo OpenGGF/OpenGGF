@@ -18,9 +18,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Every S3K boss whose hit counter reaches zero enters its defeat branch through
- * {@code BossDefeated_StopTimer} (sonic3k.asm:180890), which clears
+ * {@code BossDefeated_StopTimer} (sonic3k.asm:180981), which clears
  * {@code Update_HUD_timer}. That flag is the first thing
- * {@code SonicKnux_SuperHyper} tests (sonic3k.asm:23609-23611): with it clear the
+ * {@code SonicKnux_SuperHyper} tests (sonic3k.asm:23649-23651): with it clear the
  * routine branches straight to {@code .revertToNormal}, so beating a boss or
  * miniboss as Super/Hyper drops the player back to the normal form regardless of
  * how many rings are left.

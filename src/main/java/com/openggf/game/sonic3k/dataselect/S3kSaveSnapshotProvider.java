@@ -24,7 +24,7 @@ public final class S3kSaveSnapshotProvider implements SaveSnapshotProvider {
     public boolean restoreProgress(
             GameStateManager gameState, int lives, int continues, Map<String, Object> payload) {
         // S3K slot load: replenish exhausted lives and spend a continue
-        // (sonic3k.asm:16997-17012), before restoring either payload format.
+        // (sonic3k.asm:17033-17048), before restoring either payload format.
         if (lives == 0 || (lives < 3 && continues == 0)) {
             lives = 3;
             continues = Math.max(0, continues - 1);
@@ -91,7 +91,7 @@ public final class S3kSaveSnapshotProvider implements SaveSnapshotProvider {
         ZoneKey zoneKey = context.zoneKey();
         if (Boolean.TRUE.equals(context.capturedFields().get(SAVE_GAME_FIELD)) && zoneKey instanceof ZoneKey.Stock) {
             // SaveGame writes SaveGame_NextLevel[Current_zone_and_act] as the slot's level
-            // (sonic3k.asm:15860-15872), so the file resumes where the exit leads, not where it
+            // (sonic3k.asm:15896-15908), so the file resumes where the exit leads, not where it
             // was saved. Persistence-only requests keep the current location.
             var next = S3kSaveProgressions.saveGameNextLevel(zone, act, context.selectedTeam());
             if (next.isPresent()) {

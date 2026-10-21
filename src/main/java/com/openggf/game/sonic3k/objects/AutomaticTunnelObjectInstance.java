@@ -27,8 +27,8 @@ import java.util.logging.Logger;
  * Captures the player and guides them along a predefined waypoint path through
  * cylindrical tube sections. Used in AIZ (tubes) and LBZ (water tunnels).
  * <p>
- * ROM: Obj_AutomaticTunnel (sonic3k.asm lines 57180-57457).
- * Path data: AutoTunnel_Data (sonic3k.asm lines 202488-203387).
+ * ROM: Obj_AutomaticTunnel (sonic3k.asm lines 57220-57497).
+ * Path data: AutoTunnel_Data (sonic3k.asm lines 202603-203502).
  *
  * <h3>Subtype Encoding:</h3>
  * <ul>
@@ -65,7 +65,7 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
     private static final int EXIT_FRAMES = 2;
 
     // =========================================================================
-    // Path data — AutoTunnel_Data (sonic3k.asm lines 202488-203387)
+    // Path data — AutoTunnel_Data (sonic3k.asm lines 202603-203502)
     // Each path: flat array of X, Y coordinate pairs.
     // =========================================================================
 
@@ -424,7 +424,7 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
 
         // ROM: bclr #p1_pushing_bit,status(a0) -- the tunnel clears its OWN
         // p1 bit and ONLY p1, even when the captured character is Player_2
-        // (docs/skdisasm/sonic3k.asm:57246). That asymmetry is the ROM's, so it
+        // (docs/skdisasm/sonic3k.asm:57286). That asymmetry is the ROM's, so it
         // is modelled as written rather than generalised per-character.
         services().objectManager().solidContacts().releaseObjectPushLatch(
                 services().playerQuery().mainPlayerOrNull(), this);

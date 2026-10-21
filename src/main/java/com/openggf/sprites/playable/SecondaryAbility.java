@@ -9,7 +9,7 @@ package com.openggf.sprites.playable;
  */
 @com.openggf.game.ModApi
 public enum SecondaryAbility {
-    /** Sonic's insta-shield: momentary hitbox expansion (sonic3k.asm:23473). S3K feature only. */
+    /** Sonic's insta-shield: momentary hitbox expansion (sonic3k.asm:23508). S3K feature only. */
     INSTA_SHIELD,
     /** Tails' flight: sustained vertical movement. */
     FLY,

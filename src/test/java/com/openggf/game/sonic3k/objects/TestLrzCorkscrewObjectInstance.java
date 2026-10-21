@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code Obj_LRZCorkscrew} (sonic3k.asm:87494-87663).
+ * {@code Obj_LRZCorkscrew} (sonic3k.asm:87540-87709).
  *
  * <p>Expectations come from the routine's own arithmetic and from the three ROM tables it indexes,
  * which were read out of the user-supplied ROM image at {@code $4247E}, {@code $4248A} and
@@ -27,7 +27,7 @@ class TestLrzCorkscrewObjectInstance {
     private static final int BASE_Y = 0x0600;
 
     /**
-     * {@code sub_42278} head (sonic3k.asm:87527-87537). The horizontal test is an unsigned borrow
+     * {@code sub_42278} head (sonic3k.asm:87573-87583). The horizontal test is an unsigned borrow
      * plus a signed {@code bge #$20}, so it is half-open; the vertical test is a signed
      * {@code bgt #$20}, so it includes its far edge. That asymmetry is the ROM's, not a typo.
      */
@@ -61,7 +61,7 @@ class TestLrzCorkscrewObjectInstance {
         assertFalse(second.isRidingFor(true), "a player moving left is not caught");
     }
 
-    /** {@code cmpi.w #$600,ground_vel(a1)} / {@code move.w #$600,ground_vel(a1)} (:87540-87542). */
+    /** {@code cmpi.w #$600,ground_vel(a1)} / {@code move.w #$600,ground_vel(a1)} (:87586-87588). */
     @Test
     void captureFloorsGroundVelocityAtSixHundred() {
         LrzCorkscrewObjectInstance corkscrew = corkscrew();
@@ -103,7 +103,7 @@ class TestLrzCorkscrewObjectInstance {
     }
 
     /**
-     * {@code loc_423D0} (:87613-87615): {@code ext.l} then {@code lsl.l #8} means the accumulator
+     * {@code loc_423D0} (:87659-87661): {@code ext.l} then {@code lsl.l #8} means the accumulator
      * climbs by {@code ground_vel << 8}, and every {@code (a2)} word read is its HIGH word. At the
      * floor speed that is six parameter units a frame.
      */
@@ -120,7 +120,7 @@ class TestLrzCorkscrewObjectInstance {
         assertEquals(0x0006, corkscrew.rideParameter(true), "$60000 >>> 16 is 6");
     }
 
-    /** {@code cmpi.w #$1000,ground_vel(a1)} / {@code addi.w #$10} (:87617-87620). */
+    /** {@code cmpi.w #$1000,ground_vel(a1)} / {@code addi.w #$10} (:87663-87666). */
     @Test
     void rideAcceleratesSixteenAFrameToACapOfFourThousandNinetySix() {
         LrzCorkscrewObjectInstance corkscrew = corkscrew();
@@ -139,7 +139,7 @@ class TestLrzCorkscrewObjectInstance {
     }
 
     /**
-     * {@code muls.w #$4800,d0 / swap d0} (:87627-87628): the high word of the signed product of the
+     * {@code muls.w #$4800,d0 / swap d0} (:87673-87674): the high word of the signed product of the
      * ROM sine and {@code $4800}. Checked against values recomputed from the ROM sine table.
      */
     @Test
@@ -155,7 +155,7 @@ class TestLrzCorkscrewObjectInstance {
     }
 
     /**
-     * {@code andi.w #$FF80,d0 / add.b (a3,d1.w),d0} (:87640-87643). The add is a BYTE add into a
+     * {@code andi.w #$FF80,d0 / add.b (a3,d1.w),d0} (:87686-87689). The add is a BYTE add into a
      * word whose low seven bits were just cleared, so the table value occupies the low byte and the
      * {@code $80} step survives in bit 7 of that same byte - it does not carry into the high byte.
      */
@@ -175,7 +175,7 @@ class TestLrzCorkscrewObjectInstance {
         assertEquals(0x198, LrzCorkscrewObjectInstance.rideYOffset(0x680));
     }
 
-    /** {@code divu.w #$16,d0} into {@code RawAni_4247E} (:87650-87654). */
+    /** {@code divu.w #$16,d0} into {@code RawAni_4247E} (:87696-87700). */
     @Test
     void rideMappingFrameWalksTheTwelveRawDplcFrames() {
         assertEquals(0xEF, LrzCorkscrewObjectInstance.rideMappingFrame(0x000), "quotient 0");
@@ -186,8 +186,8 @@ class TestLrzCorkscrewObjectInstance {
     }
 
     /**
-     * {@code cmpi.w #$700,(a2) / bhs.s loc_42396} then {@code neg.w ground_vel(a1)} (:87616,
-     * :87607). Both exits reverse the rider, which is the ROM's behaviour and not a slip.
+     * {@code cmpi.w #$700,(a2) / bhs.s loc_42396} then {@code neg.w ground_vel(a1)} (:87662,
+     * :87653). Both exits reverse the rider, which is the ROM's behaviour and not a slip.
      */
     @Test
     void reachingTheEndEjectsTheRiderBackwards() {

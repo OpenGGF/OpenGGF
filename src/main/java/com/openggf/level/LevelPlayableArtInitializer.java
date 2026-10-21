@@ -87,7 +87,7 @@ final class LevelPlayableArtInitializer {
      * VBlank-then-RunObjects order (queue at s2.asm:1713, drain at s2.asm:1769),
      * makes gameplay frame 0 submit exactly when the mapping frame really
      * changed across the loop. S1 (docs/s1disasm/_incObj/01 Sonic.asm:2391-2398)
-     * and S3K (docs/skdisasm/sonic3k.asm:25216-25218) use the same predicate;
+     * and S3K (docs/skdisasm/sonic3k.asm:25256-25258) use the same predicate;
      * they contribute no iterations unless their own init profile declares one.
      */
     void replaySkippedPresentationPlayerAnimation(

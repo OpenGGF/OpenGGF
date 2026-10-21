@@ -18,7 +18,7 @@ import java.util.List;
  * Falling half of {@link LbzGateLaserObjectInstance}.
  *
  * <p>ROM reference: {@code sub_293D0}, {@code loc_29416}, and {@code loc_2941C}
- * ({@code sonic3k.asm:56988-57029}).
+ * ({@code sonic3k.asm:57028-57069}).
  */
 public final class LbzGateLaserBeamInstance extends AbstractObjectInstance
         implements TouchResponseProvider, SpawnAndCoordinateZeroScalarArgsRewindRecreatable {

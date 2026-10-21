@@ -42,7 +42,7 @@ import java.util.List;
  * <p>Shares art with the MGZ Miniboss ({@code ObjDat_Tunnelbot → Map_MGZMiniboss,
  * ArtTile_MGZMiniboss}). Art is loaded by {@code PLCKosM_MGZ1} at level start.
  *
- * <p>Based on {@code Obj_Tunnelbot} (sonic3k.asm, lines 184710–185006).
+ * <p>Based on {@code Obj_Tunnelbot} (sonic3k.asm, lines 184803–185099).
  *
  * <h3>State machine:</h3>
  * <ul>
@@ -124,7 +124,7 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
     private static final int LEVEL_TRIGGER_INDEX = 8;
 
     // Obj_WaitOffscreen installs Map_Offscreen with width/height $20 while it
-    // waits for Render_Sprites to set render_flags bit 7 (sonic3k.asm:180266-180298).
+    // waits for Render_Sprites to set render_flags bit 7 (sonic3k.asm:180357-180389).
     private static final int WAIT_OFFSCREEN_MARGIN = 0x20;
 
     // ── Hit flash (sub_88A62) ───────────────────────────────────────────
@@ -251,7 +251,7 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
      * After Obj_WaitOffscreen activates the object, Sprite_CheckDeleteTouch at the
      * end handles deletion when the object is too far from the camera. The engine's
      * ObjectManager only checks X distance for the spawn window; we add the Y bounds
-     * check from Sprite_CheckDeleteTouchXY (sonic3k.asm:178982-178986) to prevent
+     * check from Sprite_CheckDeleteTouchXY (sonic3k.asm:179073-179077) to prevent
      * Tunnelbots on a different vertical path from triggering while far off-screen:
      * <pre>
      *     move.w  y_pos(a0),d0
@@ -266,10 +266,10 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
         this.vIntRunCount = vIntRunCount;
 
         // ROM: Obj_Tunnelbot begins with jsr (Obj_WaitOffscreen).l
-        // (sonic3k.asm:184710-184717). Obj_WaitOffscreen keeps the SST slot
+        // (sonic3k.asm:184803-184810). Obj_WaitOffscreen keeps the SST slot
         // alive as loc_85AD2 and suppresses the object's routine, hit-flash
         // helper, and child allocation until render_flags bit 7 is set
-        // (sonic3k.asm:180266-180298). This preserves the ROM's delayed
+        // (sonic3k.asm:180357-180389). This preserves the ROM's delayed
         // Tunnelbot activation after the placement loader has reserved a slot.
         if (waitingForOnscreen) {
             if (!isOnScreen(WAIT_OFFSCREEN_MARGIN)) {
@@ -282,7 +282,7 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
             return;
         }
 
-        // Y bounds check matching Sprite_CheckDeleteTouchXY (sonic3k.asm:178982).
+        // Y bounds check matching Sprite_CheckDeleteTouchXY (sonic3k.asm:179073).
         // Prevents Tunnelbots at a vertically distant path from running their logic.
         // Range: Camera_Y - $80 to Camera_Y + $180 (512px window).
         if (!isWithinVerticalBounds()) {
@@ -306,7 +306,7 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
     }
 
     /**
-     * Sprite_CheckDeleteTouchXY Y bounds (sonic3k.asm:178982-178986).
+     * Sprite_CheckDeleteTouchXY Y bounds (sonic3k.asm:179073-179077).
      * <pre>
      *     (y_pos - Camera_Y + $80) unsigned <= $200
      * </pre>
@@ -371,7 +371,7 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
     }
 
     /**
-     * Port of Animate_RawGetFaster (sonic3k.asm:177749).
+     * Port of Animate_RawGetFaster (sonic3k.asm:177840).
      * Plays animation frames with decreasing delay per loop.
      * After DRILL_ANIM_LOOP_COUNT complete loops, transitions to TUNNELING.
      */
@@ -439,7 +439,7 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
         animateRaw();
         currentY -= 1; // subq.w #1,y_pos(a0)
 
-        // ObjCheckCeilingDist (docs/skdisasm/sonic3k.asm:20351-20366) reaches the
+        // ObjCheckCeilingDist (docs/skdisasm/sonic3k.asm:20387-20402) reaches the
         // ceiling through FindFloor with the caller's `eori.w #$F,d2` low-nibble
         // transform, which is what checkNativeUpwardCeilingDist models -- the
         // legacy checkCeilingDist entry is the S1/S2 object-ceiling contract and
@@ -593,18 +593,18 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
         // adds the SST address to Collision_response_list. The following player
         // pass dereferences that live x_pos/y_pos, not the older pre-movement
         // coordinate retained by the engine's generic snapshot.
-        // sonic3k.asm:184710-184723,20656-20708,21200-21210.
+        // sonic3k.asm:184803-184816,20692-20744,21236-21246.
         return true;
     }
 
     // ── Screen shake ────────────────────────────────────────────────────
 
     /**
-     * ROM {@code st (Screen_shake_flag).w} (docs/skdisasm/sonic3k.asm:184784,
-     * :184886, :184907) — the Tunnelbot only raises the continuous-shake flag.
+     * ROM {@code st (Screen_shake_flag).w} (docs/skdisasm/sonic3k.asm:184877,
+     * :184979, :185000) — the Tunnelbot only raises the continuous-shake flag.
      * The offset itself is {@code ShakeScreen_Setup}'s
      * {@code ScreenShakeArray2[Level_frame_counter & $3F]}
-     * (sonic3k.asm:104200-104209), computed once per frame by the zone's
+     * (sonic3k.asm:104246-104255), computed once per frame by the zone's
      * background event, not by this object. Indexing the table here with the
      * object clock ({@code V_int_run_count}) de-phased the shake by the
      * accumulated lag count, which is not the clock the ROM routine reads.
@@ -941,7 +941,7 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
     private static final class TunnelbotDebris extends AbstractObjectInstance
             implements RewindRecreatable {
 
-        // MoveSprite_LightGravity (sonic3k.asm:178352): moveq #$20,d1
+        // MoveSprite_LightGravity (sonic3k.asm:178443): moveq #$20,d1
         private static final int GRAVITY = 0x20;
 
         private int debrisX;

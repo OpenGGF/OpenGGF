@@ -164,7 +164,7 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
     @Override
     public int romObjectCodePointerHighWord() {
         // Obj_MHZMushroomCap lives at 0x0003E080; S3K Tails_CPU_interact stores word 0
-        // of the stood-on object SST (docs/skdisasm/sonic3k.asm:26816-26843, 82129).
+        // of the stood-on object SST (docs/skdisasm/sonic3k.asm:26856-26883, 82170).
         return ROM_CODE_POINTER_HIGH_WORD;
     }
 
@@ -182,7 +182,7 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
             recordPreviousYVelocity(sidekick);
         }
         // MHZMushroomCap_BounceCharacter rewrites $30/$32 from the Player_1/Player_2 slots
-        // every frame (sonic3k.asm:82282-82286). A sprite that has left those slots (MHZ1's
+        // every frame (sonic3k.asm:82323-82327). A sprite that has left those slots (MHZ1's
         // carry-in Tails) has no SST record, so keep none for it either.
         previousYVelocities.keySet().removeIf(rider -> rider != player && !participants.contains(rider));
         if (!standingPlayers.isEmpty()) {
@@ -211,14 +211,14 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
     public boolean rejectsZeroDistanceTopSolidLanding() {
         // SolidObjectTop accepts only d0=$FFF0..$FFFF. At exact contact
         // d0=0, `cmpi.w #-$10,d0 / blo` branches to the miss return
-        // (sonic3k.asm:42008-42013).
+        // (sonic3k.asm:42048-42053).
         return true;
     }
 
     @Override
     public boolean allowsObjectControlledSolidContacts() {
         // SolidObjectTop's new-contact path rejects only negative object_control
-        // values (sonic3k.asm:42014-42019). The Madmole arm's positive value 1
+        // values (sonic3k.asm:42054-42059). The Madmole arm's positive value 1
         // can therefore land on the cap while the arm still owns movement.
         return true;
     }
@@ -261,7 +261,7 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
         if (contact.standing() && player instanceof AbstractPlayableSprite sprite) {
             standingPlayers.add(sprite);
             // Obj_MHZMushroomCap calls SolidObjectTop before BounceCharacter
-            // (sonic3k.asm:82170-82186), so launch after the contact snap.
+            // (sonic3k.asm:82211-82227), so launch after the contact snap.
             launchStandingPlayerOnSpringFrame(sprite, frameCounter);
         }
     }

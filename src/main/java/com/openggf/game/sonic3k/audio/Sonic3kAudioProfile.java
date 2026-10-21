@@ -32,7 +32,7 @@ import java.util.Map;
  */
 public class Sonic3kAudioProfile extends AbstractAudioProfile implements com.openggf.audio.NativeAudioEffectCues,
         com.openggf.audio.NativeMailboxMusicRoutes {
-    /** {@code mus_CreditsK}, placed after the SFX ids (skdisasm 044fa46 sonic3k.constants.asm:1691). */
+    /** {@code mus_CreditsK}, placed after the SFX ids (skdisasm 044fa46 sonic3k.constants.asm:1716). */
     private static final int MUS_CREDITS_K = 0xDC;
 
     /**
@@ -240,7 +240,7 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile implements com.ope
     }
 
     /**
-     * {@code Player_ResetAirTimer} (sonic3k.asm:33663-33686) loads
+     * {@code Player_ResetAirTimer} (sonic3k.asm:33703-33726) loads
      * {@code Current_music}, then overrides it in three tests taken in order:
      * {@code Status_Invincible} and {@code Super_Sonic_Knux_flag} both select
      * {@code mus_Invincibility} ($2C), and {@code Boss_flag} selects

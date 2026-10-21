@@ -15,11 +15,11 @@ import java.util.List;
 
 /**
  * {@code loc_90502} / {@code loc_90512}, the invisible timer {@code Obj_LRZRockCrusher} allocates
- * when both of its camera limits have been reached (sonic3k.asm:197215-197226, ROM {@code $90502}).
+ * when both of its camera limits have been reached (sonic3k.asm:197322-197333, ROM {@code $90502}).
  *
  * <p>{@code loc_90502} raises {@code Screen_shake_flag} and loads {@code (3*60)-1} into
  * {@code $2E(a0)}; {@code loc_90512} counts it down and, on the frame it goes negative, performs
- * the crusher's whole world change and deletes itself (:197218-197246):
+ * the crusher's whole world change and deletes itself (:197325-197353):
  *
  * <ul>
  *   <li><b>Subtype 0</b>: {@code st (Events_bg+$0C)} -- the NEGATIVE chunk-edit request that
@@ -39,14 +39,14 @@ import java.util.List;
 public final class LrzRockCrusherTimerChildInstance extends AbstractObjectInstance
         implements RewindRecreatable {
 
-    /** {@code move.w #(3*60)-1,$2E(a0)} (sonic3k.asm:197217). */
+    /** {@code move.w #(3*60)-1,$2E(a0)} (sonic3k.asm:197324). */
     static final int COUNTDOWN = 3 * 60 - 1;
     /** {@code st (Events_bg+$0C).w}: the whole word set to {@code -1}. */
     static final int CHUNK_EDIT_REQUEST_NEGATIVE = -1;
     /** {@code st (Events_bg+$0D).w}: the low byte only, so the word reads {@code $00FF}. */
     static final int CHUNK_EDIT_REQUEST_POSITIVE = 0x00FF;
 
-    /** ROM {@code subtype(a0)}, copied from the parent (:197247). */
+    /** ROM {@code subtype(a0)}, copied from the parent (:197354). */
     private int subtype;
     /** ROM {@code $2E(a0)}. */
     private int countdown;
@@ -72,13 +72,13 @@ public final class LrzRockCrusherTimerChildInstance extends AbstractObjectInstan
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!armed) {
-            // loc_90502 (:197215-197217).
+            // loc_90502 (:197322-197324).
             armed = true;
             countdown = COUNTDOWN;
             screenShakeFlag(true);
             return;
         }
-        // loc_90512 (:197218-197219): subq.w #1,$2E(a0) / bpl.
+        // loc_90512 (:197325-197326): subq.w #1,$2E(a0) / bpl.
         countdown--;
         if (countdown >= 0) {
             return;
@@ -91,7 +91,7 @@ public final class LrzRockCrusherTimerChildInstance extends AbstractObjectInstan
         ObjectLifetimeOps.expireDynamic(this);
     }
 
-    /** {@code loc_90512}'s {@code beq} arm (sonic3k.asm:197221-197245). */
+    /** {@code loc_90512}'s {@code beq} arm (sonic3k.asm:197328-197352). */
     private void fireSubtypeZero() {
         LrzZoneRuntimeState state = lrzState();
         if (state != null) {
@@ -102,7 +102,7 @@ public final class LrzRockCrusherTimerChildInstance extends AbstractObjectInstan
         spawnBridge(0x0F80, 0x0760);
     }
 
-    /** {@code loc_9056E} (sonic3k.asm:197248-197260). */
+    /** {@code loc_9056E} (sonic3k.asm:197355-197367). */
     private void fireOtherSubtype() {
         LrzZoneRuntimeState state = lrzState();
         if (state != null) {
@@ -117,7 +117,7 @@ public final class LrzRockCrusherTimerChildInstance extends AbstractObjectInstan
     }
 
     /**
-     * {@code move.l #Obj_LRZCollapsingBridge,(a1) / move.b #1,$32(a1)} (:197227-197231). The
+     * {@code move.l #Obj_LRZCollapsingBridge,(a1) / move.b #1,$32(a1)} (:197334-197338). The
      * bridge's {@code $32} is its "already broken loose" flag, which is why these arrive already
      * falling rather than waiting to be stood on.
      */

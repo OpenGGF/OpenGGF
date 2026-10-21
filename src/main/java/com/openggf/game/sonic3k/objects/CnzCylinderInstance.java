@@ -39,11 +39,11 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_CNZCylinder} is installed from the S3K object pointer table at
      * {@code $000320F2} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:67619).
+     * label is defined at docs/skdisasm/sonic3k.asm:67659).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0003}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -197,14 +197,14 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
     @Override
     public int getOnScreenHalfWidth() {
         // ROM Obj_CNZCylinder init writes width_pixels=$20 before loc_32188's
-        // SolidObjectFull pass (sonic3k.asm:67634-67641, 67656-67672).
+        // SolidObjectFull pass (sonic3k.asm:67674-67681, 67696-67712).
         return 0x20;
     }
 
     @Override
     public int getOnScreenHalfHeight() {
         // ROM Obj_CNZCylinder init writes height_pixels=$20 before loc_32188's
-        // SolidObjectFull pass (sonic3k.asm:67634-67641, 67656-67672).
+        // SolidObjectFull pass (sonic3k.asm:67674-67681, 67696-67712).
         return 0x20;
     }
 
@@ -216,7 +216,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         reconcileNativeP2(nativeP2, participants, vIntRunCount);
         List<AbstractPlayableSprite> extensionPlayers = extensionPlayers(participants, playerEntity, nativeP2);
         reconcileExtensionRoster(extensionPlayers, vIntRunCount);
-        // ROM sub_324C0 / SolidObjectFull (sonic3k.asm:41006-41008): when a
+        // ROM sub_324C0 / SolidObjectFull (sonic3k.asm:41046-41048): when a
         // rider is offscreen (`tst.b render_flags(a1); bpl.w locret_1DCB4`)
         // the entire SolidObjectFull pass for that rider is skipped, so the
         // cylinder's per-rider standing bit is NOT cleared. The engine's
@@ -266,7 +266,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
 
     private int activeGroundedHeldStandingMask() {
         // ROM loc_32208 compares status(a0)&standing_mask with $3C(a0)
-        // before sub_324C0 and SolidObjectFull run (sonic3k.asm:67709-67718,
+        // before sub_324C0 and SolidObjectFull run (sonic3k.asm:67749-67758,
         // 67656-67672). While sub_324C0 holds a grounded rider with
         // object_control=$03, that cylinder status bit remains a continuous
         // standing bit; a missing engine-side solid callback must not create a
@@ -315,7 +315,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         if (standingMask != standingMaskCache) {
             int delta = standingMask - standingMaskCache;
             standingMaskCache = standingMask;
-            // ROM sonic3k.asm:67725-67729 (loc_32208): only apply the +0x400
+            // ROM sonic3k.asm:67765-67769 (loc_32208): only apply the +0x400
             // player-landing boost when the cylinder is within ±0x40 pixels of
             // its base. The ROM check is `addi.w #$40, d0; cmpi.w #$80, d0; bhs`
             // i.e. the boost only fires when (centerY - baseY) is in [-0x40, 0x40).
@@ -357,7 +357,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
                 // ROM loc_322AC/loc_322D2 uses BPL after subtracting $20, so
                 // zero is treated as non-negative and takes the fixed -$10
                 // deceleration instead of the UP-held -$20 branch
-                // (docs/skdisasm/sonic3k.asm:67772-67782).
+                // (docs/skdisasm/sonic3k.asm:67812-67822).
                 if (mode0Velocity >= 0) {
                     mode0Velocity -= 0x10;
                 } else if ((collectHeldInputMask() & AbstractPlayableSprite.INPUT_UP) != 0) {
@@ -457,7 +457,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         // ROM loc_32254 reads Ctrl_1_held_logical / Ctrl_2_held_logical after
         // MoveSprite2 using the cylinder's current standing bits; it does not
         // reuse a held-input byte latched by the prior SolidObjectFull pass
-        // (sonic3k.asm:67736-67752, 67772-67782). The engine still latches
+        // (sonic3k.asm:67776-67792, 67812-67822). The engine still latches
         // standing feedback across the split object/solid phases, but the
         // mode-0 acceleration must see this frame's UP/DOWN transition.
         int mask = 0;
@@ -607,10 +607,10 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         boolean latchedContact = slot.contactLatched;
         slot.contactLatched = false;
 
-        // ROM sub_324C0 loc_32538 (sonic3k.asm:68019-68022): when the captured
+        // ROM sub_324C0 loc_32538 (sonic3k.asm:68059-68062): when the captured
         // rider is offscreen (`tst.b render_flags(a1); bpl.w loc_325F2`), the
         // cylinder takes the release branch every frame. ROM SolidObjectFull
-        // (sonic3k.asm:41006-41008) ALSO skips Player_2 when his render_flags
+        // (sonic3k.asm:41046-41048) ALSO skips Player_2 when his render_flags
         // bit 7 is clear, so the cylinder's p2_standing_bit stays set from the
         // last on-screen frame. The next frame's sub_324C0 (a2)==0 path then
         // re-captures from that preserved standing bit, producing the
@@ -633,7 +633,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
                 // sets Status_InAir, and clears object_control (sonic3k.asm:
                 // 66804-66810). ROM still applies loc_32538's held X/twist
                 // write before that external launch is observed in the final
-                // frame state (sonic3k.asm:68026-68038), but loc_32604 only
+                // frame state (sonic3k.asm:68066-68078), but loc_32604 only
                 // clears the cylinder's rider byte (sonic3k.asm:
                 // 68024-68025,68076-68078); it does not zero the player's
                 // velocity. Preserve that external launch.
@@ -645,7 +645,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
                 // has published this final twist. Keep the rider until the
                 // next cylinder dispatch reaches loc_32604; release only the
                 // mapping latch now so the earlier Player_1 slot can run
-                // Animate_Sonic first (sonic3k.asm:66809-66816,
+                // Animate_Sonic first (sonic3k.asm:66849-66856,
                 // 68024-68025,68076-68083).
                 player.setObjectMappingFrameControl(false);
                 slot.externalAirRetirePending = true;
@@ -674,7 +674,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
             endPlayerTwoDiagnostic(slot, player);
             // Obj_CNZCylinder passes Ctrl_1_logical/Ctrl_2_logical in d5 to
             // sub_324C0, and loc_325B6 branches on the low-byte A/B/C press
-            // bits (sonic3k.asm:67656-67672, 68059-68064). Held raw jump or a
+            // bits (sonic3k.asm:67696-67712, 68099-68104). Held raw jump or a
             // live raw edge is insufficient here; the low byte of the logical
             // word must carry the A/B/C press bits that Obj_CNZCylinder passed
             // in d5.
@@ -689,10 +689,10 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         }
 
         // Tails_FlySwim_Unknown can write object_control=$81 before
-        // Obj_CNZCylinder's P2 sub_324C0 pass (sonic3k.asm:26651-26653,
+        // Obj_CNZCylinder's P2 sub_324C0 pass (sonic3k.asm:26691-26693,
         // 67656-67672). The inactive-cylinder path tests only the cylinder's
         // preserved standing bit before replacing object_control with $03 and
-        // clearing Status_InAir (sonic3k.asm:67985-68005), whether the prior
+        // clearing Status_InAir (sonic3k.asm:68025-68045), whether the prior
         // BuildSprites result is on-screen or off-screen.
         if (!standing) {
             clearStaleCylinderSupport(player);
@@ -702,9 +702,9 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         // It only tests the cylinder standing bit before writing object_control=3
         // and clearing Status_InAir/x_vel/y_vel/ground_vel (sonic3k.asm:
         // 67985-68005). Tails CPU can write its offscreen despawn marker earlier
-        // in the same frame (sub_13ECA, sonic3k.asm:26800-26809), then
+        // in the same frame (sub_13ECA, sonic3k.asm:26840-26849), then
         // Obj_CNZCylinder runs its P2 sub_324C0 pass afterward
-        // (sonic3k.asm:67656-67672). Let the standing bit recapture immediately
+        // (sonic3k.asm:67696-67712). Let the standing bit recapture immediately
         // for both on-screen and offscreen riders.
         if (playerOnScreen) {
             beginPlayerTwoDiagnostic(slot, "capture", player);
@@ -746,9 +746,9 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         }
 
         // ROM Tails CPU runs before Obj_CNZCylinder's P2 sub_324C0 pass
-        // (sonic3k.asm:26195-26208, 67656-67672). Its FollowLeft/FollowRight
+        // (sonic3k.asm:26235-26248, 67696-67712). Its FollowLeft/FollowRight
         // branches nudge x_pos by one pixel when the delayed target is on the
-        // facing side and ground_vel is nonzero (sonic3k.asm:26717-26724,
+        // facing side and ground_vel is nonzero (sonic3k.asm:26757-26764,
         // 26734-26741). The engine discovers this cylinder standing contact
         // after the CPU pass, so apply only the CPU-recorded pending nudge
         // immediately before the first P2 capture consumes the standing bit.
@@ -799,7 +799,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         slot.horizontalDistance = Math.min(0xFF, Math.abs(player.getCentreX() - captureCenterX));
         slot.priorityThresholdSource = getPriorityThresholdSource();
         slot.jumpPressedLastFrame = player.isJumpPressed();
-        // ROM Obj_CNZCylinder (sonic3k.asm:67668-67672) calls SolidObjectFull
+        // ROM Obj_CNZCylinder (sonic3k.asm:67708-67712) calls SolidObjectFull
         // every frame, which sets the cylinder's per-rider standing bit on
         // capture. The engine's SolidObject framework blocks the contact pass
         // for object-controlled players (ObjectManager.java:4120-4131
@@ -836,7 +836,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         // sub_324C0 itself never writes y_pos. The later SolidObjectFull pass
         // owns any MvSonicOnPtfm snap when the rider still overlaps; a stale
         // standing bit can instead be consumed and cleared without moving the
-        // rider (sonic3k.asm:67656-67672,67985-68005,41016-41040).
+        // rider (sonic3k.asm:67696-67712,68025-68045,41056-41080).
         if (latchedContact && riderRenderFlagOnScreen(player)) {
             player.setCentreYPreserveSubpixel((short) (heldSupportAnchorY() + SOLID_PARAMS.offsetY()
                     - SOLID_PARAMS.groundHalfHeight() - player.getYRadius()));
@@ -860,7 +860,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
 
     private int firstCaptureDistanceAnchorX(AbstractPlayableSprite player, boolean latchedContact) {
         // sub_321E2 updates x_pos before sub_324C0 captures the rider distance
-        // in the same object slot (sonic3k.asm:67656-67672, 67985-67998).
+        // in the same object slot (sonic3k.asm:67696-67712, 68025-68038).
         return centerX;
     }
 
@@ -900,7 +900,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         slot.twistAngle = (slot.twistAngle + 2) & 0xFF;
         // A/B/C takes loc_325B6 -> loc_325F2 before loc_3260A, so the jump
         // release row keeps the prior mapping_frame even though the twist byte
-        // itself has already advanced (sonic3k.asm:68019-68078).
+        // itself has already advanced (sonic3k.asm:68059-68118).
         if (publishTwistMapping) {
             applyTwistFrame(player, slot.twistAngle);
         }
@@ -929,7 +929,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
 
     private int heldAnchorX(RiderSlot slot) {
         // sub_321E2 updates x_pos before loc_32538 positions a held rider in
-        // the same object slot (sonic3k.asm:67656-67672, 68019-68038).
+        // the same object slot (sonic3k.asm:67696-67712, 68059-68078).
         return centerX;
     }
 
@@ -940,7 +940,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
     }
 
     private int cylinderLaunchGroundSpeed(AbstractPlayableSprite player) {
-        // ROM sub_324C0 loc_32594 (sonic3k.asm:68045-68056): ground_vel is
+        // ROM sub_324C0 loc_32594 (sonic3k.asm:68085-68096): ground_vel is
         // cleared, then set to $800 only while the rider is grounded and
         // abs(y_vel(a0)) has reached the cylinder launch threshold.
         if (player.getAir() || Math.abs((short) romStoredYVelocity()) < 0x480) {
@@ -953,7 +953,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         // ROM loc_32594/loc_325B6 read y_vel(a0), but only mode 0's
         // loc_32208 controller updates that field. Sine/circular routes such
         // as loc_3238C write y_pos(a0) directly and leave y_vel(a0) unchanged
-        // (sonic3k.asm:67709-67804, 67865-67872, 68045-68068).
+        // (sonic3k.asm:67749-67844, 67905-67912, 68085-68108).
         return motionSelector == 0 ? currentYVelocity : 0;
     }
 
@@ -961,7 +961,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         if (!isLatchedToThisCylinder(player)) {
             return;
         }
-        // ROM sub_324C0 loc_32538 (sonic3k.asm:68019-68025) exits the
+        // ROM sub_324C0 loc_32538 (sonic3k.asm:68059-68065) exits the
         // rider-control path when the cylinder standing bit is clear. Clear
         // only this cylinder's engine-side latch so the shared SolidObject
         // finalizer cannot preserve stale object support for a released rider.
@@ -1031,10 +1031,10 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
             short releaseY = jumpReleaseY;
             clearCylinderReleaseSupport(player);
             // The same Obj_CNZCylinder pass still calls SolidObjectFull after
-            // sub_324C0 (sonic3k.asm:67656-67672). Since the cylinder standing
+            // sub_324C0 (sonic3k.asm:67696-67712). Since the cylinder standing
             // bit was set for loc_32538, SolidObjectFull_1P takes loc_1DC98
             // for the now-airborne rider and returns d4=0 without applying
-            // loc_1E154's upward-velocity lift (sonic3k.asm:41016-41034).
+            // loc_1E154's upward-velocity lift (sonic3k.asm:41056-41074).
             releasedJumpSolidSkipPlayer = player;
             player.setAir(true);
             player.setJumping(true);
@@ -1051,7 +1051,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
             // ROM loc_325F2 is also the off-screen/invalid-rider release tail.
             // It sets Status_InAir, restores priority, and clears
             // object_control, but does not touch x_vel, y_vel, or ground_vel
-            // (sonic3k.asm:68019-68025,68069-68078). In particular, a rider
+            // (sonic3k.asm:68059-68065,68109-68118). In particular, a rider
             // released just after loc_32594 must retain its $0800 launch
             // ground speed for the following CPU slot.
             player.setAir(true);
@@ -1136,7 +1136,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         // Obj_CNZCylinder calls SolidObjectFull, whose new-contact path enters
         // SolidObject_cont. Its horizontal gate rejects only with `bhi`, so
         // relX == d1*2 remains a zero-distance side contact and grounded
-        // players retain Status_Push (sonic3k.asm:67656-67672,
+        // players retain Status_Push (sonic3k.asm:67696-67712,
         // 41383-41400,41468-41501).
         return true;
     }
@@ -1150,11 +1150,11 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
     @Override
     public boolean allowsObjectControlledSolidContacts() {
         // ROM Obj_CNZCylinder writes object_control=$03 on capture
-        // (sonic3k.asm:68002), then still calls SolidObjectFull every frame
-        // after sub_324C0 (sonic3k.asm:67656-67672). SolidObjectFull's active
+        // (sonic3k.asm:68042), then still calls SolidObjectFull every frame
+        // after sub_324C0 (sonic3k.asm:67696-67712). SolidObjectFull's active
         // rider branch can clear the cylinder standing bit when the rider is
-        // airborne or leaves bounds (sonic3k.asm:41016-41033), which sub_324C0
-        // consumes on the next active-slot check (sonic3k.asm:68019-68025).
+        // airborne or leaves bounds (sonic3k.asm:41056-41073), which sub_324C0
+        // consumes on the next active-slot check (sonic3k.asm:68059-68065).
         return true;
     }
 
@@ -1162,7 +1162,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
     public boolean rejectsBit7ObjectControlSideContact(PlayableEntity player) {
         // ROM SolidObject_cont rejects signed object_control values before side
         // separation (`tst.b object_control(a1); bmi.w loc_1E0A2`,
-        // sonic3k.asm:41438-41440). This is narrower than the normal
+        // sonic3k.asm:41478-41480). This is narrower than the normal
         // object-controlled opt-in above: CNZCylinder's bit-7-clear captured
         // states such as $03 still need SolidObjectFull feedback, while Tails'
         // $81 flight/despawn marker must not be pushed sideways by the cylinder.
@@ -1172,10 +1172,10 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
     @Override
     public boolean rejectsBit7ObjectControlNewSolidContact(PlayableEntity player) {
         // Obj_CNZCylinder reaches SolidObjectFull after sub_324C0
-        // (sonic3k.asm:67656-67672). For new contacts, SolidObject_cont tests
+        // (sonic3k.asm:67696-67712). For new contacts, SolidObject_cont tests
         // signed object_control before both side separation and top landing
         // (`tst.b object_control(a1); bmi.w loc_1E0A2`,
-        // sonic3k.asm:41394-41440). This must not block bit-7-clear captured
+        // sonic3k.asm:41434-41480). This must not block bit-7-clear captured
         // riders because their standing-bit branch is consumed before
         // SolidObject_cont.
         return true;
@@ -1190,7 +1190,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
     public boolean usesInstanceSolidStateLatchKey() {
         // Obj_CNZCylinder keeps its standing/pushing bits in the live SST
         // status byte while sub_321E2 changes x_pos/y_pos every object pass
-        // (sonic3k.asm:67656-67672). The engine mirrors that moving body by
+        // (sonic3k.asm:67696-67712). The engine mirrors that moving body by
         // rebuilding its dynamic ObjectSpawn coordinates, so spawn identity
         // cannot own the native solid bits: a coordinate change would orphan
         // the prior push latch before loc_1E0A2 can clear Status_Push.
@@ -1201,7 +1201,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
     public boolean usesPreUpdatePositionForSolidContact(PlayableEntity player) {
         // Obj_CNZCylinder calls sub_321E2 before sub_324C0 and SolidObjectFull,
         // so every rider and free-contact branch observes the post-motion
-        // x_pos/y_pos from the current object slot (sonic3k.asm:67656-67672).
+        // x_pos/y_pos from the current object slot (sonic3k.asm:67696-67712).
         return false;
     }
 
@@ -1239,9 +1239,9 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
 
         // ROM Obj_CNZCylinder positions captured riders in sub_324C0 before
         // calling SolidObjectFull with d4 = current x_pos(a0)
-        // (sonic3k.asm:67656-67672, 68026-68038). SolidObjectFull_1P then
+        // (sonic3k.asm:67696-67712, 68066-68078). SolidObjectFull_1P then
         // calls MvSonicOnPtfm with that same current anchor, so the platform
-        // X delta is zero for captured riders (sonic3k.asm:41038-41040,
+        // X delta is zero for captured riders (sonic3k.asm:41078-41080,
         // 41667-41679). Keep the standing bit feedback, but do not let the
         // engine's previous-X riding tracker apply a second carry delta next
         // frame.

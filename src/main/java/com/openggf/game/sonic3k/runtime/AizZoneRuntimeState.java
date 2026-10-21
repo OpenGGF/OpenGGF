@@ -29,7 +29,7 @@ public final class AizZoneRuntimeState implements S3kZoneRuntimeState {
     @Override
     public boolean rightWallDeepProbePreservesPenetration() {
         // Player_WalkVertR applies its deep-probe recovery only when the
-        // combined zone/act word is zero: AIZ1 (sonic3k.asm:18884-18941).
+        // combined zone/act word is zero: AIZ1 (sonic3k.asm:18920-18977).
         return actIndex == 0;
     }
     public boolean isBackedBy(Sonic3kAIZEvents candidate) { return events == candidate; }

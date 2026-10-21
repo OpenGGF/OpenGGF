@@ -44,7 +44,7 @@ public final class DynamicArtSpecialStageComparator {
         // (docs/s2disasm/s2.asm:1713, drained by ProcessDMAQueue at
         // docs/s2disasm/s2.asm:1769), S1 V-blank writes VRAM unconditionally
         // with no queue (docs/s1disasm/sonic.asm:831), and S3K's DMA_queue_slot
-        // is rewound the same way (docs/skdisasm/s3.asm:1831 and :1881).
+        // is rewound the same way (docs/skdisasm/s3.asm:1854 and :1904).
         // Compare their relative structure, per segment origin.
         put(fields, "dynamic_art.edges",
                 expected.edges().stream()

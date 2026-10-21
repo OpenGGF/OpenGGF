@@ -14,7 +14,7 @@ written only by `Process_Kos_Module_Queue` (`$1B28`). The final-parent path
 clears bit 7, decrements the low count to zero, queues the DMA, shifts entries
 1-3 into entries 0-2, clears entry 3, and either returns empty or tail-jumps to
 `Process_Kos_Module_Queue_Init` for the new head
-(`sonic3k.asm:2750-2788`; the shift completes at `$1BC4`). This is the ROM
+(`sonic3k.asm:2782-2820`; the shift completes at `$1BC4`). This is the ROM
 POST owner called after `Process_Sprites` from `LevelLoop`.
 
 Therefore a single observation interval containing all of the following is

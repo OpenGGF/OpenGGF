@@ -23,7 +23,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * ROM {@code Obj_SSZBouncyCloud} ({@code $7D}, sonic3k.asm:90521-90720): the small cloud that
+ * ROM {@code Obj_SSZBouncyCloud} ({@code $7D}, sonic3k.asm:90567-90766): the small cloud that
  * squashes under a standing player, throws them up and back, and sheds four puffs. Twenty-seven
  * act-1 placements, all subtype 0 — the subtype is never read.
  *
@@ -329,7 +329,7 @@ public final class SszBouncyCloudObjectInstance extends AbstractObjectInstance
         swingSpeed = ((draw & PHASE_MASK) + PHASE_BIAS) & 0xFFFF;
     }
 
-    /** {@code Gradual_SwingOffset} (sonic3k.asm:92484-92515); returns the offset's high word. */
+    /** {@code Gradual_SwingOffset} (sonic3k.asm:92530-92561); returns the offset's high word. */
     private int gradualSwingOffset() {
         int step = SWING_ACCELERATION;
         if (swingReversed) {

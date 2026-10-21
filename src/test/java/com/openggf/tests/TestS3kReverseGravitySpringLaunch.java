@@ -16,13 +16,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * The two spring launch rows of the reverse-gravity table: {@code sub_22F98}
- * (sonic3k.asm:47720-47726) and {@code sub_233CA} (:48093-48098). Each nudges the
+ * (sonic3k.asm:47760-47766) and {@code sub_233CA} (:48133-48138). Each nudges the
  * launched player's {@code y_pos} by 8 px and reverses that nudge under
  * {@code Reverse_gravity_flag}.
  *
  * <p><strong>Which spring the inverted player actually meets.</strong> {@code Spring_Up}'s
  * init jumps to the {@code Obj_Spring_Down} body under the flag and {@code Spring_Down}'s to
- * {@code Obj_Spring_Up}'s (:47576-47637, already covered). Under reverse gravity the player
+ * {@code Obj_Spring_Up}'s (:47616-47677, already covered). Under reverse gravity the player
  * falls <em>up</em> the screen and stands on ceilings, so it is the authored <em>down</em>
  * spring that ends up underfoot there, running the up-spring body — and that body's launch
  * velocity, negative, integrates through {@code MoveSprite_TestGravity}'s negated copy into

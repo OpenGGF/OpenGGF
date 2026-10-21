@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Every S3K entry that passes through the ROM's {@code Level} routine ends with
- * {@code Level/loc_64DC} (docs/skdisasm/sonic3k.asm:7874-7878):
+ * {@code Level/loc_64DC} (docs/skdisasm/sonic3k.asm:7906-7910):
  * {@code Palette_fade_info = $202F} (lines 1-3), {@code Pal_FillBlack} and
  * {@code Palette_fade_timer = $16}. {@code Animate_Palette} (5018-5028) then
  * spends one {@code Pal_FromBlack} pass per LevelLoop frame, so lines 1-3 hold

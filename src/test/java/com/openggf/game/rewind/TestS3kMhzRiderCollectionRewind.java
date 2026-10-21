@@ -41,10 +41,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * restored (with the object recreated) and replayed against the live run.
  * <ul>
  *   <li>Obj_MHZCurledVine: P1/P2 segment at $36/$37 with the standing bits (loc_3E8A2,
- *       sonic3k.asm:82803-82812); sub_3E9C6's continued ride omits loc_1E45A's landing -1
+ *       sonic3k.asm:82844-82853); sub_3E9C6's continued ride omits loc_1E45A's landing -1
  *       (800px MHZ1 route frame 6861: restored rider 1px high).</li>
  *   <li>Mushroom catapult: standing riders collected by the solid pass, launched by the next
- *       update, which tests those standing bits (sub_3FA26/sub_3FA5A, sonic3k.asm:84311-84353).</li>
+ *       update, which tests those standing bits (sub_3FA26/sub_3FA5A, sonic3k.asm:84352-84394).</li>
  *   <li>Mushroom platform: standing riders released when the dropping platform moves.</li>
  * </ul>
  */
