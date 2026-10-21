@@ -17,6 +17,9 @@ its first-replica endpoint has48 rather than46 rings, and its complete route die
 at input11664. Older800 paired reachability, completion and replay evidence below
 retains its dated runtime attribution; it does not qualify this base. See the
 [bounded current investigation](#wide-paired-current-frontier--2026-10-21).
+Matched R2 Main control passes the46-ring first case; the current48-ring endpoint
+is therefore a campaign-introduced outcome difference. See the
+[R2 Main attribution](#wide-paired-matched-main-control-r2--2026-10-21).
 Nothing below certifies the act.
 
 Current native320 Sonic + Tails controller evidence on runtime `39eca8c35`,
@@ -4043,3 +4046,32 @@ regenerable diagnostics are consumed. The [dated plan](../../plans/2026-10-13-s3
 records the exact command, source/environment pins, alternative inputs and limits.
 This does not certify full-game, native timing, pixels, true boot or additional
 width/donor/team routes.
+
+
+## Wide paired matched Main control R2 — 2026-10-21
+
+One exact Main `efd605142603146509995cffbb56a6b48f9c1c1b` first-case control is
+**1T/0F/0E/0S**: `TestSszWidePairedColdRouteCapture#coldFirstReplicaAndTransportReplayWithRetiredColumnDebris`.
+It reaches and passes the46-ring endpoint assertion. The identical first-method
+source and input/driver/drawing paths produce48 in R1's current Root-runtime run.
+This establishes a campaign-introduced endpoint difference against Main; it is
+not an inherited Main negative and46 must not be changed to48 to silence it.
+No first-divergent event or native cause is proven. Main's complete case remains
+unrun/unknown; the current paired800 MTZ/Mecha/DEZ obligations stay unreached.
+
+After that control, the same isolated checkout returns to new owned
+`feature/ai-ssz-wide-paired-r2-20261021` at exact Root
+`393b831f3cefcc0ae7c446d65dd0ab35d7eb9472`, production7fbc. R1/supplied refs, actual
+reference/native HEADs/status/tracked bytes and config are preserved. No build or
+JVM state is reused across source arms. The passing-Main condition stops all R2
+cloud/controller work: zero ordinary projections, alternatives or fresh replays.
+No Java, controller, ring-oracle or runtime input changes follow this control.
+
+Static next question: which first real ledger event differs on the unchanged9914
+pads—P1/P2 acceptance/own-pass award or native-P2 hurt/lost-ring handling—and does
+its preceding trajectory already differ? The changed native-P2 hurt tail and
+deferred attracted-ring award owner are candidates, not causal findings. The
+[dated plan](../../plans/2026-10-13-s3k-playable-completion.md#widepaired800-matched-main-control-r2-2026-10-21)
+records source owners, exact command/pins and coverage limits. One passing Main
+case does not certify the current route, a whole class, native timing/pixels or
+true boot. Owned regenerable diagnostics are consumed after inspection.

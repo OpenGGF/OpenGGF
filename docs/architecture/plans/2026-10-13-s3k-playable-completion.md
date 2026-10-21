@@ -25768,3 +25768,92 @@ Root31, unrelated controller, full-suite, full-game, native timing, pixel or tru
 boot certification was attempted. Actual XML and owned regenerable probe outputs
 are consumed after inspection; only the compact frontier/proposal and selected
 normal-render evidence remain outside the repository.
+
+
+## WidePaired800 matched Main control, R2 (2026-10-21)
+
+R2 starts from the preserved R1 commit `37601d69d0dea0281c9b7cd1d133b46852c2c0ea`.
+With no owned Maven/Java job active and no owned source changes, only the supplied
+isolated T3 checkout was temporarily detached at exact Main
+`efd605142603146509995cffbb56a6b48f9c1c1b`, with `submodule.recurse=false`.
+The R1 branch and supplied `ssz-wide-paired-route` ref remain at376/efd.
+The actual TraceChaser and three disassembly checkout HEADs, status and tracked
+bytes were pinned before the switch and verified unchanged after both switches;
+config is unchanged. Prior owned compiled classes were discarded before Main's
+fresh4139-production/4181-test-source release25 build. No other checkout moved.
+
+**Main passes the exact first case: 1T/0F/0E/0S**, actual XML identity
+`com.openggf.tools.TestSszWidePairedColdRouteCapture#coldFirstReplicaAndTransportReplayWithRetiredColumnDebris`.
+The46-ring assertion and the preceding semantic/replay assertions execute and
+pass. Case10.357s, class10.625s, Maven1:29, queue wait2s; these intervals are not
+summed as delivery time. This is an actual Main execution result, not attribution
+from cf3 recurrence, a historical pass, or source equality alone.
+
+The single invocation used the current Main absolute queue. `OPENGGF_MAIN`,
+`S1_ROM`/`S2_ROM`/`S3K_ROM` denote the original absolute checkout/verified ROM paths
+pinned in the R2 registry; `PWD` is this isolated checkout. Expanded argv is
+retained in that existing registry, not in an extra validation receipt:
+
+```bash
+env -u JDK_JAVA_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS \
+  -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH -u LIBGL_DRIVERS_PATH \
+  -u LIBGL_ALWAYS_SOFTWARE -u MESA_LOADER_DRIVER_OVERRIDE -u LWJGL_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" \
+  --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestSszWidePairedColdRouteCapture#coldFirstReplicaAndTransportReplayWithRetiredColumnDebris' \
+  "-Dopenggf.surefire.reports=$PWD/target/ssz-wide-r2-main-control/reports" \
+  "-Dopenggf.test.tmpdir=$PWD/target/ssz-wide-r2-main-control/tmp" \
+  "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" \
+  "-Ds3k.rom.path=$S3K_ROM" test -B
+```
+
+Actual XML properties confirm Java25.0.4.1, surfaceless EGL, the exact method
+selector and unique target-local report/tmp paths. Actual LWJGL3.4.1 native jars,
+POM, all source/resource inputs, config and original ROM CRC32/SHA1s were pinned;
+source/config/native pins remained unchanged throughout the control. POM and
+first-case source match Root393. The first-method source SHA256 is
+`237749dc350d27f0402e4442e6523fc089cd3ad5efa288cc20b03e284dcba537` on both refs;
+the two driver/drawing paths and four script/BK2 paths also match byte-for-byte.
+R1's exact Root-runtime first-case result is46 expected versus48 actual.
+Consequently this endpoint difference is campaign-introduced relative to Main;
+it must not be hidden by changing46 to48 on the unchanged movie. No first differing
+ledger event, collector/slot, preceding trajectory or native cause is established.
+This does not prove which implementation is ROM-correct.
+
+The only further work is bounded static attribution. Two changed owners warrant
+the next question, rather than a route-data repair:
+
+- `ObjectTouchResponseController.usesNativeP2HurtTail`/`applyHurt` (Root lines1346–1407,
+  composition05bebcc2e): the registered native P2, under
+  `MAIN_FULL_SIDEKICK_HURT_ONLY`, now goes directly to `applyHurt` instead of the
+  ordinary ring-loss/death choice. `HurtCharacter` tests Player1 and noncompetitive
+  mode before its ring-loss allocation, then branches to `loc_102E0`.
+- `RingManager.collectAttractedRing`/`updateCollectedAttractedRing` (Root lines267–287,
+  1133–1152; f854e0185): touch acceptance now records collected/start=-1, with
+  `GiveRing` deferred to the ring's own pass. Main awards immediately at acceptance.
+  `Touch_ChkValue`, `AttractedRing_GiveRing` and `GiveRing_1P` distinguish accepted
+  object-slot state from the global Ring_count write. These source differences
+  alone do not prove either caused the two-ring endpoint delta.
+
+The smallest remaining question is: **which first actual ledger event diverges
+on the unchanged9914-pad prefix—collector/slot acceptance, own-pass award, or
+native-P2 hurt/lost-ring handling—and did preceding P1/P2 trajectories already
+differ?** No new probe is run to answer it in this arm. ROM-owned branches remain
+FixBugs0; no rollback, fitted gameplay change or oracle replacement is proposed.
+
+After the terminal control, the same isolated checkout was placed on new owned
+`feature/ai-ssz-wide-paired-r2-20261021` at exact Root
+`393b831f3cefcc0ae7c446d65dd0ab35d7eb9472`; production/POM inputs match7fbc.
+Main's generated classes were discarded; no JVM/gameplay state crosses arms.
+The supplied actual native checkout difference remains untouched and unstaged.
+The passing-Main arm stops here: **zero R2 ordinary projections, controller
+alternatives, author/qualification replays or runtime probes**. No Java, controller,
+ring data, runtime, POM or API changes are made. R1 history and Root's explicit
+unreached current paired800 DEZ LOAD row remain intact. Main's complete method
+was not run and its Main outcome remains unknown. There is no whole-class,
+broad-suite, Root31, full-game, native timing/pixel or boot qualification.
+Owned diagnostic XML/log/tmp products are consumed after inspection; only the
+compact source-attribution proposal is retained outside the repository.
