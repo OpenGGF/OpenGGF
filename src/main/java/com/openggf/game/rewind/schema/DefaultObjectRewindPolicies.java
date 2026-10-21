@@ -902,11 +902,9 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.level.objects.AbstractObjectInstance", "spawn"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.level.objects.boss.AbstractBossChild", "dynamicSpawn"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.level.objects.boss.AbstractBossInstance", "dynamicSpawn"), RewindFieldPolicy.DEFERRED),
-            // childSpawnOrdinalCounters is fully derivable from live children and is
-            // re-derived post-restore by AbstractBossInstance#afterRewindRestoreSettled()
-            // (max(child.getChildOrdinal()) + 1 per class) once every child's own restore
-            // has settled -- not merely "doesn't matter", so DEFERRED rather than TRANSIENT.
-            Map.entry(new FieldKey("com.openggf.level.objects.boss.AbstractBossInstance", "childSpawnOrdinalCounters"), RewindFieldPolicy.DEFERRED),
+            // Future child identity depends on all prior constructions, including
+            // retired highest ordinals and classes with no surviving children.
+            Map.entry(new FieldKey("com.openggf.level.objects.boss.AbstractBossInstance", "childSpawnOrdinalCounters"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.level.objects.BreathingBubbleInstance", "owner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.level.objects.InvincibilityStarsObjectInstance", "player"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.level.objects.ShieldObjectInstance", "player"), RewindFieldPolicy.TRANSIENT)

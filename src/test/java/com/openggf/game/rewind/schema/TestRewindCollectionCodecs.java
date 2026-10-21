@@ -1,5 +1,6 @@
 package com.openggf.game.rewind.schema;
 
+import com.openggf.game.rewind.GenericFieldCapturer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -112,6 +114,74 @@ class TestRewindCollectionCodecs {
         assertThrows(IllegalStateException.class,
                 () -> CompactFieldCapturer.capture(new UnsupportedCollectionFixture()));
     }
+
+    @Test
+    void classKeyedOrdinalMapPreservesIndependentValuesAndExactClassIdentity() throws Exception {
+        Field field = ClassOrdinalFixture.class.getDeclaredField("ordinals");
+        assertTrue(RewindCodecs.codecFor(field).isPresent(), "typed Class<?> ordinal map must be captured");
+        byte[] bytes;
+        try (var input = ClassKey.class.getResourceAsStream("TestRewindCollectionCodecs$ClassKey.class")) {
+            assertTrue(input != null);
+            bytes = input.readAllBytes();
+        }
+        class IsolatedLoader extends ClassLoader {
+            IsolatedLoader() { super(null); }
+            Class<?> define() { return defineClass(null, bytes, 0, bytes.length); }
+        }
+        Class<?> first = new IsolatedLoader().define();
+        Class<?> second = new IsolatedLoader().define();
+        assertEquals(first.getName(), second.getName());
+        assertNotSame(first, second);
+        ClassOrdinalFixture fixture = new ClassOrdinalFixture();
+        fixture.ordinals.put(first, 4);
+        fixture.ordinals.put(second, 9);
+        fixture.ordinals.put(ClassKey.class, 12);
+        var originalMap = fixture.ordinals;
+        RewindObjectStateBlob saved = CompactFieldCapturer.capture(fixture);
+        var genericSaved = GenericFieldCapturer.capture(fixture);
+        assertEquals(saved, CompactFieldCapturer.capture(fixture), "ordered encoding is repeatable");
+        for (int round = 1; round <= 2; round++) {
+            fixture.ordinals.clear();
+            fixture.ordinals.put(String.class, 99);
+            CompactFieldCapturer.restore(fixture, saved);
+            assertSame(originalMap, fixture.ordinals);
+            var keys = new ArrayList<>(fixture.ordinals.keySet());
+            assertSame(first, keys.get(0));
+            assertSame(second, keys.get(1));
+            assertSame(ClassKey.class, keys.get(2));
+            assertEquals(List.of(4, 9, 12), new ArrayList<>(fixture.ordinals.values()));
+            fixture.ordinals.clear();
+            fixture.ordinals.put(Integer.class, -1);
+            GenericFieldCapturer.restore(fixture, genericSaved);
+            assertSame(originalMap, fixture.ordinals);
+            var genericKeys = new ArrayList<>(fixture.ordinals.keySet());
+            assertSame(first, genericKeys.get(0));
+            assertSame(second, genericKeys.get(1));
+            assertSame(ClassKey.class, genericKeys.get(2));
+            assertEquals(List.of(4, 9, 12), new ArrayList<>(fixture.ordinals.values()));
+        }
+    }
+
+    @Test
+    void classOrdinalCodecDoesNotAcceptErasedOrDifferentMapShapes() throws Exception {
+        for (String name : List.of("erased", "rawClassKeys", "nonOrdinalValues", "boundedClassKeys")) {
+            assertTrue(RewindCodecs.codecFor(UnsupportedClassMaps.class.getDeclaredField(name)).isEmpty(), name);
+        }
+    }
+
+    @SuppressWarnings("rawtypes")
+    private static final class UnsupportedClassMaps {
+        Map erased;
+        Map<Class, Integer> rawClassKeys;
+        Map<Class<?>, String> nonOrdinalValues;
+        Map<Class<? extends Number>, Integer> boundedClassKeys;
+    }
+
+    private static final class ClassOrdinalFixture {
+        final Map<Class<?>, Integer> ordinals = new LinkedHashMap<>();
+    }
+
+    private static final class ClassKey { }
 
     private enum Mode {
         ALPHA,

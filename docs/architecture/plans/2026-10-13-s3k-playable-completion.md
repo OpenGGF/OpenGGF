@@ -26583,3 +26583,145 @@ The public115-field matched projection is now a recurring tool: flag the existin
 promotion obligation for an engine-facing `com.openggf.tools` tool and a one-line
 `docs/agent-workflow/README.md` entry in a separately scoped follow-up. Private
 source-specific carriers remain temporary; no generic observer framework is added.
+
+
+## Shared boss ordinal history and Knuckles LRZ1 fight and handoff (2026-10-21)
+
+This local leaf is based on8d0646888db9f4794ef27effc19113a985849ed4 and retains
+the accepted first-method commit eef6e5558d33a7424dc548619410eed4c485b31b.
+The input-only fight proposal was already accepted after two fresh uninterrupted
+row0 normal-render replays. Its final24028 rows preserve the whole20500-input
+miniboss movie, all23993 earlier proposal rows and only35 appended Right inputs;
+P2 is neutral throughout. Script SHA256 is
+`2a3fc4dfca3755cd5eeeea09592f64be6df9d26a809b7295faac84e8d7d14033`,
+BK2 SHA256 is
+`d8e6f323c9857a88057f138f383fe5dda713b50ce74f00d31b55cd3474ac586f`.
+Production author/loader checks agree on every ordered row and the BK2 has only
+Header/Input Log members, with no state payload. The previous ordinary qualifiers
+remain distinct from the maintained capture/restore checks below.
+
+The first maintained attempt (session89725, base8d, test SHA256
+`52b63214dccbe293fffe59d96094e096ed87211276775228da51d8aa0add5d9b`)
+was1T/1F/0E/0S. At window21757, forward/replay inputs21758..21802 produced an
+object-manager difference for dynamicId2008 `LrzMinibossHitSparkChild`:
+spawn.subtype2/1 and scalarData[0]02/01. No normalization, window deletion,
+controller edit or successful-result substitution was used. The original three-file
+full-index binary diff SHA256 is
+`1117be703a837967e0cce70f90cb8af0323e1294024009ec0db010b14363ca28`;
+its source/resource preimages and r3 branch/ref remain accounted for in the owned
+agent status. That historical run used the property-controlled drawing default.
+Only the new second method now forces `RouteFrameDrawing(true)`, matching the
+accepted ordinary series; other methods/helpers keep their existing drawing policy.
+
+Source disposition identified a shared rewind contract gap inherited from Main:
+`AbstractBossInstance.childSpawnOrdinalCounters` was DEFERRED, then cleared and
+rebuilt as max(live ordinal)+1 in the settled hook. A retired highest child, or a
+class whose children have all retired, cannot supply that history. The correction
+captures the complete next-ordinal map per exact runtime Class, including retired
+classes. A private LinkedHashMap gives deterministic construction order. Normal
+`nextChildOrdinal` allocation/order is unchanged. ObjectManager restores all
+phase-2 fields before any settled hook; captured parent history therefore replaces
+provisional reconstruction consumption, and the destructive rebuild is removed.
+No specific retired-spark sequence at21757 was retained or reconstructed, so the
+source contract and regression controls do not claim that unmeasured sequence.
+
+The codec admits only the typed `Map<Class<?>, Integer>` addition. It carries
+immutable Class objects as in-memory opaque identities, never class names or
+`Class.forName`. GenericFieldCapturer additionally allows Class identity in its
+clone-only immutable branch; declared-field eligibility and
+`isSmallImmutableValueType` are unchanged. Compact and GenericObjectSnapshot tests
+mutate live maps after capture, restore them twice, retain the original final map,
+and distinguish two separately loaded Classes with the same binary name. Erased,
+raw-Class, bounded-Class and non-Integer map shapes remain rejected. EHZ's existing
+live-highest control is retained; new retired-highest and all-retired tests drive
+real boss construction, retirement, capture/restore and future child creation,
+without seeding the ordinal map.
+
+The three new short controls were run before production edits (session27461):
+**3T/3F/0E/0S**. Retired-highest expected next4 but returned3; all-retired expected4
+but returned0; the typed Class map had no codec. These were assertion failures,
+not compiler/reference errors. Maven27.267s, queue wait0s. After the fix, the
+bounded selection (session76273) is **18 classes/163T/0F/0E/0S**, Maven printed
+01:40 min, wait0s. Seventeen selectors intentionally cover both actual
+TestSonic3kLevelLoading classes. This includes codec/schema/field-disposition
+and compact-reachability guards, generic codec scratch, the complete EHZ class,
+EHZ graph/exact-child/no-double-spawn consumers, three LRZ component classes and
+all four required S3K owner names. The field-disposition guard retained inherited
+debt without editing its baseline; no new gap was waived.
+
+```bash
+env -u JDK_JAVA_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS \
+  -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME="$JAVA25_HOME" JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN="$LUA54_BIN" \
+  python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off \
+  "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_REV01_ROM" "-Ds3k.rom.path=$S3K_ROM" \
+  '-Dtest=TestRewindCollectionCodecs,TestRewindSchemaRegistry,TestCapturedPolicyCompactReachabilityGuard,TestRewindFieldDispositionGuard,TestRewindCodecFieldScratchReuse,TestCompactFieldCapturerPolicy,TestEHZBossWheelOrphanAfterSiblingDestroy,TestS2EhzBossGraphRewind,TestBossChildExactStateRewind,TestBossChildNoDoubleSpawnParity,TestLrzMinibossInstance,TestLrzMinibossHitPath,TestS3kLrzBossRewindHeadless,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test -B
+```
+
+The one exact affected second-method request (session98154) then completed
+**1T/0F/0E/0S**, Maven49.954s, queue wait13s. Actual XML selected only
+`coldKnucklesClearsMinibossAndRestoresFightAndActTwoHandoff`; Java25.0.4.1,
+surfaceless EGL and the original absolute S3K ROM property were inspected.
+All three original ROM identities were verified for the focused run. The normal
+null OpenAL/Lua5.4/no-desktop environment and three unset ambient JVM option
+variables match the accepted ordinary-driver contract. Load-time warnings retain
+NONE/estimated costs where measured manifests are absent; no native clock or
+pixel conclusion follows from these tests.
+
+```bash
+env -u JDK_JAVA_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS \
+  -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME="$JAVA25_HOME" JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN="$LUA54_BIN" \
+  python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off \
+  "-Ds3k.rom.path=$S3K_ROM" \
+  '-Dtest=TestLrzKnucklesColdRouteCapture#coldKnucklesClearsMinibossAndRestoresFightAndActTwoHandoff' test -B
+```
+
+Both actual requests additionally used their own target-local report/tmp paths;
+the first also isolated the disposition diagnostic. XML identities, assertions,
+errors/skips, properties and bounded original streams were read before consuming
+owned raw diagnostics. No baseline, unchanged first method, whole route class,
+broad smoke, native execution or new controller policy was repeated.
+
+The final source/resource full-index binary diff SHA256 is
+`f315965380d1cc4e0903df5e2a3739f5b9b9bfe06901af4cbda56e428cd02140`;
+the src/main-only diff is
+`0cefcd3c097831421044b5bfd0e7a7b274d239f35d658ef54501cae87bc4fb68`.
+Final route test SHA256 is
+`cf66a7ab3e4510084cd6489145fd9b66458e5568f1b82026a54d77b8bb58ef73`.
+These bytes were frozen for both green requests. Source dependency review from
+eef6 to8d found only ICZ's private decoration ctx.spawn restoration change, with
+no LRZ/physics/allocator/POM dependency change. The new shared change does not
+alter ordinary allocation or physics. POM, configuration, ROMs and the first
+method/other three methods/resources are protected. Removing only the dedicated
+new LRZ helpers and substituting only the original second method exactly
+reconstructs the8d test file; no shared comparison or drawing helper is changed.
+
+The maintained method reaches all six one-health drops, defeat, results, real9/1
+load/rebase11560→296, unchanged player/solo roster and no death/life loss.
+It compares all60 registered keys at68 windows (54 source/14 destination),
+including pre/at/post six hits and actual defeat/results boundaries. The last
+source window23351→23396 ends before the23397 Level/ObjectManager replacement;
+first-destination windows begin23397/23398. Owner/mode/pending/fade guards precede
+restoration and each branch retains its original input history. No outgoing
+snapshot is restored across replacement merely because WorldSession survived.
+The public live-history seam23307..23452 observes source current360/floor0,
+then the same controller/world at361/floor361 with new Level/ObjectManager.
+Assertions use those relations rather than the ordinary driver's91. The final
+23982→24027 replay spans45 successive positive16.16 X inputs with grounded/free
+controls after results/flow retirement; endpoint(362,1967),0 rings/3 lives.
+
+The [LRZ1 matrix](../validation/levels/s3k-lrz-act1.md#knuckles-current-physics-fight-and-act2-handoff-2026-10-21)
+accounts explicitly for all37 old fight/handoff starts by actual event category,
+not an offset. Positive-ring recovery/carry/reset from positive is an inherited
+gap; old endpoint distance is reduced while the45 released-input purpose is
+preserved by the deterministic extension. Other three methods and unpropagated
+longer controllers retain their prior current input5027 negatives. The accepted
+miniboss first leaf is unchanged. This closes only the shared future-identity
+history defect and this maintained second-method route/rewind obligation;
+full-act/breadth/HPZ/campaign, true reset/bootstrap, native terrain-return/d1,
+stock-route causality, native pixels/timing and GC are not certified. Root owns
+independent source review, the combined change-based smoke plan and integration;
+this worker creates only a local reviewable commit.

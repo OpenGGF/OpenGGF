@@ -1730,6 +1730,17 @@ path (it documents such no-codec-but-correctly-restored classes as acceptable `#
 over-approximations). Verified by `TestBossChildNoDoubleSpawnParity` (count parity) and
 `TestBossChildExactStateRewind` (exact non-init state + reference integrity).
 
+Boss-child construction ordinals additionally retain their complete per-runtime-class
+next-ordinal history in snapshots, including retired highest ordinals and classes
+with no live children. Rebuilding the counters from surviving children lost this
+history and changed future child identities on replay. Phase-2 capture/restore now
+owns the counter map; the settled hook does not reconstruct it. The narrow
+`Map<Class<?>, Integer>` codec preserves exact in-memory class identity without
+resolving class names. Short EHZ controls cover live-highest, retired-highest and
+all-retired families; LRZ's maintained fight exposed the independent future-effect
+identity difference. This is shared rewind bookkeeping, not a native child-slot or
+ordinary gameplay-clock change.
+
 **Affected children (no codec, construction-spawned, adopted in place at exact state):**
 
 - `com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ArticulatedChild`
