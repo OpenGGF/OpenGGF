@@ -6,12 +6,17 @@ Character routes: Sonic, Sonic + Tails, Tails (`LevelSelect_CheckKnuckles` denie
 with `Debug_cheat_flag != 0`, and no Knuckles art or route exists for act 1).
 Owning plan: [SSZ bring-up](../../plans/2026-09-17-ssz-bring-up.md).
 Status: all 213 placed records have concrete owners; arrival Death Egg, bosses,
-results and the DEZ launch are implemented. Cold Sonic + Tails routes at 320/800,
+results and the DEZ launch are implemented. Historical cold Sonic + Tails routes at 320/800,
 Sonic solo at 320 and Tails solo at 320/800 defeat all three bosses and load DEZ1
 without leader deaths or position/health/ring seeds. Native 800px paired coverage
 also checks the released destination, native P2 roster and full-load history
 isolation. Sonic solo at 800, intermediate viewport widths, donors, additional
-team shapes and native presentation acceptance remain open.
+team shapes and native presentation acceptance remain open. The current800 paired
+route is failing on exact Root base `0e4f7a9f202f477018d4adeb01295316704c0ea1`:
+its first-replica endpoint has48 rather than46 rings, and its complete route dies
+at input11664. Older800 paired reachability, completion and replay evidence below
+retains its dated runtime attribution; it does not qualify this base. See the
+[bounded current investigation](#wide-paired-current-frontier--2026-10-21).
 Nothing below certifies the act.
 
 Current native320 Sonic + Tails controller evidence on runtime `39eca8c35`,
@@ -77,8 +82,8 @@ green label, and "implemented" alone never closes a row.
 | EVENT: crumble, hot-swap, Death Egg BG, debris, ramp script, `$B00` request | `SSZ1_ScreenEvent` stages 0/4/8, `Obj_57E96`, `sub_5750C`, `sub_574DC`, `loc_58192`, `loc_581D2` | 320, 400, 800 | `TestS3kSszMechaSpawnHeadless`, `TestSszLaunchState`, `TestSszLaunchBackground` | partial | declared checkpoint and positioned boss hits; production results, first forced jump and neutral-input launch reach actual DEZ1 load | graph recreation and forward replay at four launch boundaries, including retained Plane B | source-backed; native parity not yet measured | clip 24: controller Hyper checkpoint clear, full 4800-frame capture through DEZ1 | Native Sonic 320/400/800, Sonic + Tails 320, Tails 400 and S1 donor 320 pass component handover. Cold320/800 paired and solo-Tails complete routes verify actual-load history isolation. Extra-followers, exhausted slots, other handover configurations and native comparison remain open. |
 | ROUTE: native320 paired all three bosses → released DEZ1 | Ordinary cold start; unchanged physical post2 and upper waypoints; Mecha/results/launch/destination owners | Sonic + Tails, donor off,320px | `TestLrzSszCheckpointRoutes#ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost` (preserved3a prefix); whole `TestSszColdRouteCapture` (fresh follow-up) | existing owners; controller-only repair | yes, all20720 complete inputs alive, three real killing hits and actual DEZ1 | upper25/complete50 spots, two45-input full-registry restore/replay cycles each; actual full-load history retirement plus incoming intro/released windows | no new native comparison; selected-shot producer identity unknown | independent fully drawn engine capture; no native pixel claim | Runtime39eca8c35, parent3a plus841 post11051 input changes. Root owns later dependency/integration qualification; inherited configuration breadth remains open. |
 | ROUTE: native320 solo Sonic all three bosses → DEZ1 | Ordinary cold boot10/0; genuine eight-hit GHZ/MTZ/Mecha defeats, transports, results and actual load | Sonic solo, donor off,320px; zero CPU followers | whole `TestSszSoloColdRouteCapture` | existing owners; controller-only repair | yes,8300 replica/14544 complete inputs; no leader death | unchanged45 replica+49 complete full-registry45-input windows; actual-load live-history isolation | no native comparison or cause claim | independent ordinary cold captures; results and later incoming DEZ scene inspected | Runtime39eca8c35 / parent9cc plus exact solo input/data hashes below. Root owns current-POM/backend/composed qualification; widths/donors/native acceptance remain open. |
-| ROUTE: native800px paired all three bosses → released DEZ1 | Ordinary cold entry; GHZ/MTZ/Mecha native health8..0; `loc_7D056` results; `Obj_57E96`/`loc_581D2` launch; `loc_6468` destination assembly | Sonic + Tails, donor off,800px | `TestSszWidePairedColdRouteCapture#coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline` | existing owners; controller-only completion | yes,21014 inputs, no leader death/life loss | two-cycle45 whole-world restore/replay at44 semantic spots; actual full-load history retirement and separate released DEZ window | ROM-backed owners/start/roster; no new native-emulator comparison | independent fully drawn engine capture; no native pixel claim | Qualified first9914 inputs preserved; native CPU Tails recovery allowed. Donor, extra-followers, Sonic solo800, intermediate widths and native acceptance remain open. |
-| LOAD: `$B00` (DEZ) actual destination entry | DEZ campaign; `loc_6468`, `Obj_LevelIntro_PlayerRun`/`loc_44A26`/`loc_44A56` | native selected cold configurations; paired800 detailed below | Complete cold-route checks; `TestSszWidePairedColdRouteCapture#coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline` | yes | actual assembly and native entrance control release | paired800 two-cycle45 intro/released world windows plus actual full-load history retirement | ROM start/floor seating and intro owner; native scene comparison open | independent live DEZ engine still | This row covers destination entry. Full DEZ traversal and later endpoints belong to the DEZ campaign; no native pixel certification. |
+| ROUTE: native800px paired all three bosses → released DEZ1 | Ordinary cold entry; GHZ/MTZ/Mecha native health8..0; `loc_7D056` results; `Obj_57E96`/`loc_581D2` launch; `loc_6468` destination assembly | Sonic + Tails, donor off,800px | `TestSszWidePairedColdRouteCapture#coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline` | existing owners; current controller route unqualified | **fail on0e4f7a9f**: first forward branch11640+24 dies at11664 | Current run stops before MTZ/Mecha/DEZ; historical44 semantic two-cycle45 windows retain their original runtime | ROM-backed owners; no new native comparison | Ordinary fully drawn replay also dies11664; no native pixel claim | All21014 maintained inputs and all predicates retained. Bounded eight-candidate exploration does not qualify a replacement; see current frontier below. |
+| LOAD: `$B00` (DEZ) actual destination entry | DEZ campaign; `loc_6468`, `Obj_LevelIntro_PlayerRun`/`loc_44A26`/`loc_44A56` | Other qualified cold configurations; paired800 historical only | Complete cold-route checks; `TestSszWidePairedColdRouteCapture#coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline` | yes on other qualified routes; current paired800 unreached | actual assembly and native entrance control release on qualified configurations | paired800 two-cycle45 intro/released windows and full-load history retirement are historical; current paired800 remains open | ROM start/floor seating and intro owner; native scene comparison open | independent live DEZ engine still | Destination entry only. Current paired800 stops before MTZ and cannot qualify DEZ. Full DEZ traversal and later endpoints belong to the DEZ campaign; no native pixel certification. |
 | BOSS: MTZ orb allocation / first dispatch | `loc_7A72C`, `loc_7ADA2`, `loc_7AE12`, global `AllocateObject` vs forward `CreateChild1_Normal` | Declared sparse SST component; native320 whole-world encounter boundaries | `TestSszMetropolisRecipeBirth#metropolisFirstOrbAboveParentReturnsFromItsOwnSetupWithoutOrbitOrPublication`; other `metropolis*` allocator/graph controls; `TestS3kSszMtzArenaHeadless` | one pending global first orb; own setup creates at most six global siblings and returns | Component pressure is not a cold-route result | pending setup, init, orbit and prefix failures; destructive graph replay and world checks | literal shipped-ROM source; no new native run | not measured | See [orb initialization evidence](#mtz-orb-allocation-and-first-dispatch--2026-10-21). Current-route impact remains unknown. |
 | ORACLE: strict segment replay | `TestS3kSonicTailsHpz{,2,3}SegmentTraceReplay`, `TestS3kTailsFullChainHpz{,2}SegmentTraceReplay` | `-Ptrace-segments` | — | — | — | — | not measured | — | Slice 10 records each frontier |
 
@@ -4006,3 +4011,35 @@ destination tiles before deferred player assembly, with no playable-DEZ or
 native-pixel claim. The separate visible Tails320 evidence above is unchanged.
 Exact consumed reports and the command are accounted for in the
 [composition checkpoint](../../plans/2026-10-13-s3k-playable-completion.md#root-tails800-origin-copy-and-knuckles-dez2-composition--2026-10-21).
+
+
+## Wide paired current frontier — 2026-10-21
+
+Exact Root base `0e4f7a9f202f477018d4adeb01295316704c0ea1`, owned branch
+`feature/ai-ssz-wide-paired-route-20261021`: the whole
+`TestSszWidePairedColdRouteCapture` diagnostic is **2T/2F/0E/0S**. The first
+method reaches its40 two-cycle45 full-registry windows, eight GHZ hits and
+512/1420 receiving platform, then fails46 expected rings versus48. The complete
+method fails its **first forward** branch at checkpoint11640, n24, input11664,
+before restore. Its downstream MTZ/Mecha/DEZ obligations remain unverified here.
+This is recurrence on the exact Root runtime, not new attribution against Main.
+
+The only test edit adds existing pending/frame/n operands to the forward and
+replay death messages. Original scripts/BK2s, counts, ring expectations, all
+semantic predicates and complete whole-registry comparisons are retained.
+An independent ordinarily drawn uninterrupted replay also dies11664, with21
+rings at4853/2908; first hurt is10969 at2528/1452. Actual touch receiver and native
+causality are unproven. Seven-argument800/Sonic/Tails/off Settings retains its
+existing omitted-title inlet; no position/clock/ring/health seeds were supplied.
+
+Eight bounded controller alternatives found ways past the first fall but no
+qualified complete route. The best later branches reach only x4583 and do not
+encounter MTZ. A fresh no-jump candidate using the remaining original tail dies
+16349. No controller or ring-data repair is accepted, no production omission is
+established, and no unchanged final class or broad suite is repeated. Required
+ordinary qualification and the passing final leaf class remain open. Original
+normal-render frontier stills and the rejected controller proposal are external;
+regenerable diagnostics are consumed. The [dated plan](../../plans/2026-10-13-s3k-playable-completion.md#widepaired800-current-controller-frontier-2026-10-21)
+records the exact command, source/environment pins, alternative inputs and limits.
+This does not certify full-game, native timing, pixels, true boot or additional
+width/donor/team routes.
