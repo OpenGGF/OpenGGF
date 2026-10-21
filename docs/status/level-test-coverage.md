@@ -1719,3 +1719,18 @@ The one five-whole-class focused run passes110T/0F/0E/0S, including all44
 VerticalFlip cases. Original reports and source fingerprint were inspected;
 Java25.0.4.1/surfaceless EGL/original ROM paths are verified. No retry or broad
 run was made; Root's delivery-wide validation remains independent.
+
+
+CNZ2 → ICZ1 direct cold Knuckles edge (2026-10-21): the
+[CNZ2 matrix](../architecture/validation/levels/s3k-cnz-act2.md#maintained-cold-knuckles-completion-edge-r6--2026-10-21)
+and [ICZ1 matrix](../architecture/validation/levels/s3k-icz-act1.md#maintained-direct-cold-cnz2-knuckles-arrival-edge-r6--2026-10-21)
+now record native320/off solo Knuckles ordinary entry through real capsule/results,
+teleporter/load and released supported arrival. Two fresh ordinary7,164-input JVM
+replays agree. The new narrow class passed2T/0F/0E/0S, including independent
+input-only data inverse and21 complete60-key45-input windows replayed twice,
+with actual nonempty source-history retirement and fresh-world isolation.
+Normal drawing, actual roster/focus/control/lives/endfloor are checked. Earlier
+prefix damage is allowed and observed;162 hurt-state samples are not a hit count.
+Full CNZ/ICZ act, other roster/donor/width, checkpoint/respawn, campaign/boss,
+native clock/PC/pixel and hardware boot obligations remain open. This local result
+awaits Root source/data review and composed qualification; no integration is claimed.

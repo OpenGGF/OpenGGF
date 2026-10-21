@@ -308,3 +308,37 @@ and released ICZ world replay qualify the positioned route tail. Cold traversal
 to the button, product breadth, native pixels and physical KosM/VRAM/renderer
 publication remain open. These local results are not integration or a complete
 act certificate.
+
+
+## Maintained cold Knuckles completion edge R6 — 2026-10-21
+
+[`TestS3kCnz2KnucklesColdRouteCapture`](../../../../src/test/java/com/openggf/tools/TestS3kCnz2KnucklesColdRouteCapture.java)
+now independently checks an input-only script/BK2 contract and the direct ordinary
+cold native320/off solo Knuckles route from ROM0301/engine3/1 into **released
+ICZ1 engine5/0**. Its explicit15-field inlet preserves titletrue and all-null/false
+gameplay seeds. All6,989 R5 rows remain exact;175 neutral inputs pass native-owned
+arrival release, making7,164 total. Two fresh ordinary JVM replays agreed before
+adding the maintained checks; no author helper/restore ran in those replays.
+
+The route reaches actual late admission4732, natural capsule button5444,
+results5510/completion6047, beam6663, Y-word0/camera rise6813, load6870,
+fresh assembly6987, release7050 and supported control-free endpoint7163.
+It preserves solo Knuckles/main/movement/focus/lives, actual level replacement,
+normal rendering and the final `$3640/$065C` pad floor, 0 rings/3 lives.
+There is no no-hurt oracle: the earlier prefix has162 hurt-state samples, not162 hits.
+
+Twenty-one actual role windows compare all60 registered keys, restore and replay
+45 ordinary inputs twice. They cover traversal/grab/wall-jump, admission,
+capsule/button/results, teleporter control/beam/hide-rise, active incoming arrival,
+release and supported incoming states. The real full load retires33 source history
+frames; pending fade/load/title assembly is observed without a raw restore across
+it. Every main/forward/replay input draws normally (9,999 draws, zero skipped).
+
+One affected whole-class request48106 passed **2T/0F/0E/0S**; its pure input
+method does not depend on the traversal or ROM availability. Existing short
+positioned/local cases and their oracles remain separate. Exact source/input hashes,
+literal inverse, commands, two fresh JVMs, queue/case timings and limits are in the
+[dated Plan](../../plans/2026-10-13-s3k-playable-completion.md#cnz2-cold-knuckles-to-released-icz-maintained-r6--2026-10-21).
+Only this direct320/off/solo edge is added: full-act, other route/roster/donor/width,
+checkpoint/respawn breadth, native clocks/PC/pixels and physical PLC/VRAM proof
+remain inherited gaps. Root source/data review and composed qualification are separate.

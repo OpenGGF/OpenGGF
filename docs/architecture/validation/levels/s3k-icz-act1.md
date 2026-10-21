@@ -648,3 +648,23 @@ class was removed only after all six precursor/successful episodes, rejected
 approach findings, input stream and method lessons were mapped to the maintained
 test, this matrix and the existing Plan. No additional Knuckles, death/reload
 or route coverage follows from deleting that owned temporary file.
+
+
+## Maintained direct cold CNZ2 Knuckles arrival edge R6 — 2026-10-21
+
+The new
+[`TestS3kCnz2KnucklesColdRouteCapture`](../../../../src/test/java/com/openggf/tools/TestS3kCnz2KnucklesColdRouteCapture.java)
+reaches this actual act from ordinary cold CNZ2, native320/off solo Knuckles,
+without gameplay seeds. Two fresh ordinary7,164-input movies agreed on load6870,
+fresh assembly6987, arrival release7050 and supported stationary control-free
+`$3640/$065C` endpoint7163 (0 rings/3 lives, camera unfrozen and focused on P1).
+The maintained cold route separately checks real outgoing-history retirement,
+fresh typed arrival, complete60-key45-input restoration/forward replay twice at
+active arrival, release and supported incoming states, and full normal drawing.
+It does not rewind across fade/load or pending assembly.
+
+The affected whole class passed2T/0F/0E/0S; the existing positioned arrival and
+short entry/restart products remain independent. This closes one direct cold
+handoff configuration, not ICZ1 traversal/completion, wider/donor/team/respawn
+breadth or native timing/pixel proof. Source/data hashes, commands and exact limits
+are in the [R6 Plan](../../plans/2026-10-13-s3k-playable-completion.md#cnz2-cold-knuckles-to-released-icz-maintained-r6--2026-10-21).
