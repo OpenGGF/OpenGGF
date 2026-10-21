@@ -26742,3 +26742,72 @@ commit; syntax/link/identity checks suffice, with no new JVM run. The maintained
 other roster/donor/widths and native bus/timing/pixels remain open. Root owns
 review/adoption/push and any new bounded continuation; no further authoring is
 authorized by this record.
+
+## 2026-10-21 R6 — recurring public projection tool promotion
+
+On isolated `feature/ai-gameplay-state-projection-20261021` at Root
+`8d0646888db9f4794ef27effc19113a985849ed4`, promote only the public portion of R5
+`dd77b57c2483`'s retained `WideLedgerProjection` into
+[`GameplayStateProjectionTool`](../../../src/main/java/com/openggf/tools/GameplayStateProjectionTool.java).
+The source-specific R3–R5 carrier sources/inverses remain external historical
+methods. The maintained tool has no private carrier dependency or runtime owner
+changes; the workflow catalogue now records this recurring method.
+
+The sole explicit profile `s3k-ssz1-paired-800` is ordinary cold zone 10/act 0,
+Settings7 native 800 Sonic+Tails/off/title false, neutral P2, no debug inputs. Required
+`--rom` (absolute original ROM), `--input`, `--frames` and `--out-dir` have no fixture
+or configured-path fallback. Inputs are row0 through the requested positive limit,
+no longer than the movie and at most 20000. Each original pad is stepped once then
+normally drawn with `GameplayCaptureSession.renderFrame()`, without pixel readback,
+restore/import, steering, terrain reprobes or semantic seeds. PRE_STEP, POST_STEP
+and POST_DRAW retain the original 115 named public fields, copied ring snapshot
+records and strong invocation-local Java reference bindings. These labels are not
+native addresses or cross-JVM identities; shared ring accessors do not identify a
+collector. This profile declaration does not certify other games/routes.
+
+Output streams to CREATE_NEW files in an exactly new directory: 115-column CSV
+and one observation XML with the endpoint/properties, explicitly 0 JUnit tests.
+Bounds are 20000 inputs/60000 rows, 64 KiB per CSV row, 128 MiB combined products and 1024
+retained local reference bindings. Existing output is refused; incomplete owned
+products are removed, while unknown additions survive and cleanup errors remain
+visible with the original failure. There are no pass caches or validation receipts.
+
+Focused verification used the current absolute Main queue wrapper, `--normal
+-Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+-Dtest=TestGameplayStateProjectionTool test -B`, with target-local
+`openggf.surefire.reports`/`openggf.test.tmpdir` namespaces and the three verified
+original absolute ROM properties. Actual XML is **12 tests, 0 failures, 0 errors, 0
+skips**. These pure contracts exercise argument rejection, movie-prefix limits,
+CSV/ring-record encoding, local reference identity/bounds, no-overwrite output,
+partial cleanup, original-exception preservation and honest observation XML. They
+do not boot Engine or open a ROM.
+
+Exactly one actual CLI smoke followed through the same current queue,
+`--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl compile exec:exec -B`,
+using the runtime classpath and Java 25 child with `--enable-native-access=ALL-UNNAMED
+-Xmx3g`, owned temporary/native extraction directories and the same original ROM
+properties. Its CLI selection was:
+
+```text
+GameplayStateProjectionTool --profile s3k-ssz1-paired-800 --rom "$S3K_ROM" \
+  --input src/test/resources/routes/s3k/ssz1-sonic-tails-cold-first-replica-800.bk2 \
+  --frames 9914 --out-dir target/public-projection-r6-cli/series
+```
+
+The tested source is 8d064 plus the new tool/test; the source fingerprint agrees
+between the focused contracts and CLI. Java 25.0.4.1, surfaceless EGL, nullAL and
+Lua 5.4 retain the previous original-ROM/native/config pins and ambient JVM,
+display and library unsets. Actual observation XML/properties and raw CSV/log
+streams were inspected: 9914 inputs, 29742 rows (9914 per phase), 115 fields,
+**0 JUnit tests/0 skips**. All 115 fields agree at the 13 retained R3/current rows:
+PRE/POST 3491,3507,6721,7164,7166,7172 and POST_DRAW 9913. Endpoint remains P1
+`(512,1420)`, 48 rings, alive, 3 lives; P2 `(512,1349)`. The combined products were
+24402240 bytes and were consumed with logs/temp/native extraction after inspection.
+Unretained prior rows are not reconstructed or claimed equal.
+
+This is new-tool smoke qualification, not another R5 attribution round or a native
+oracle. Expected 46, every maintained movie/test predicate and runtime/POM remain
+unchanged. No additional baseline, maintained class, controller, private observer,
+native execution or broad run was submitted; Main complete and current paired 800
+MTZ/Mecha/DEZ remain unqualified. Local tool delivery goes to Root for independent
+source review and composed validation; no push or integration occurs here.

@@ -496,6 +496,10 @@ Unreleased. The earlier development themes remain in
   so a subsequent title and saved-slot launch can read a fresh ROM in the same process.
   Configured headless startup retains its supplied audio backend through the native
   title, save selection and first gameplay frame.
+  A public state projection tool records controller-driven cold Sky Sanctuary
+  paired widescreen play before and after each step and normal draw, including
+  copied ring state and local player bindings, with explicit inputs and bounded
+  temporary output.
 
 - **Native-compatible PCM output (diagnostics):** An opt-in audio session setting
   feeds the accurate FM chip's own pin sums through a Java port of blip_buf. It
