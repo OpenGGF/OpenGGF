@@ -80,7 +80,9 @@ public final class StageplayTool {
                 // Relative resources retain their meaning only beside the source recipe.
                 boolean relative = !document.set().levelProject().isEmpty()
                         || document.sceneChanges().stream().anyMatch(c -> !c.set().levelProject().isEmpty())
-                        || document.audio().stream().anyMatch(c -> !c.asset().isEmpty());
+                        || document.audio().stream().anyMatch(c -> !c.asset().isEmpty())
+                        || document.dialogueSkins().stream().anyMatch(s -> !s.decorationAsset().isEmpty())
+                        || document.dialogue().stream().anyMatch(c -> !c.portraitAsset().isEmpty());
                 if (relative && !input.toAbsolutePath().normalize().getParent().toRealPath()
                         .equals(out.toAbsolutePath().normalize().getParent().toRealPath()))
                     throw new IOException("Compile scenes with relative assets beside their screenplay");
@@ -91,7 +93,7 @@ public final class StageplayTool {
                 allow(flags, "scene", "frame");
                 var document = StageplayStore.read(path(flags, "scene"));
                 var report = summary(document);
-                report.put("validation", "document structure; render preflights ROMs, sets, poses and audio assets");
+                report.put("validation", "document structure; render preflights ROMs, sets, poses, dialogue layout and audio/image assets");
                 if (flags.containsKey("frame")) {
                     int frame = Integer.parseInt(flags.get("frame"));
                     if (frame < 0 || frame >= document.durationFrames()) throw new IOException("Frame lies outside scene");
@@ -182,6 +184,8 @@ public final class StageplayTool {
                 "gameId", a.gameId(), "character", a.character(), "keys", a.keys().size())).toList());
         result.put("cameraKeys", document.camera().size()); result.put("cameraEffects", document.cameraEffects());
         result.put("captions", document.captions()); result.put("audio", document.audio());
+        result.put("dialogueTypers", document.dialogueTypers()); result.put("dialogueSkins", document.dialogueSkins());
+        result.put("dialogue", document.dialogue());
         return result;
     }
 
@@ -236,9 +240,11 @@ public final class StageplayTool {
                   "shots": [{
                     "id":"opening", "durationFrames":300,
                     "set":{"gameId":"s2","zone":0,"act":0},
-                    "camera":[{"frame":0,"x":0,"y":500},{"frame":299,"x":80,"y":500,"zoom":1.2}],
-                    "actors":{"tails":[{"frame":0,"x":140,"y":655,"animation":5}]},
-                    "captions":[{"startFrame":30,"endFrame":240,"text":"Tails: Ready for our first take!"}],
+                    "camera":[{"frame":0,"x":0,"y":500},{"frame":299,"x":80,"y":500,"zoom":1}],
+                    "actors":{"tails":[{"frame":0,"x":80,"y":655,"animation":0},
+                      {"frame":60,"x":180,"y":648,"animation":5}]},
+                    "dialogue":[{"startFrame":75,"endFrame":260,"speakerActor":"tails",
+                      "text":"Ready for our first take!"}],
                     "audio":[], "cameraEffects":[]
                   }]
                 }

@@ -43,7 +43,7 @@ use the capture host's hidden native context; macOS uses Java's first thread.
 ## Screenplay format
 
 The screenplay format has its own `version:1`; the generated scene uses Stageplay
-version 2. JSON numbers retain their types: numeric strings, duplicate fields,
+version 3. JSON numbers retain their types: numeric strings, duplicate fields,
 unknown fields and trailing input are rejected. Maximum input size is 8 MiB.
 
 ```json
@@ -57,9 +57,11 @@ unknown fields and trailing input are rejected. Maximum input size is 8 MiB.
     {
       "id":"hello", "durationFrames":240,
       "set":{"gameId":"s2","zone":0,"act":0},
-      "camera":[{"frame":0,"x":0,"y":500},{"frame":239,"x":40,"y":500,"zoom":1.2}],
-      "actors":{"tails":[{"frame":0,"x":140,"y":655,"animation":5}]},
-      "captions":[{"startFrame":20,"endFrame":200,"text":"Tails: A small change of scenery..."}]
+      "camera":[{"frame":0,"x":0,"y":500},{"frame":239,"x":40,"y":500,"zoom":1}],
+      "actors":{"tails":[{"frame":0,"x":80,"y":655,"animation":0},
+                         {"frame":50,"x":140,"y":648,"animation":5}]},
+      "dialogue":[{"startFrame":60,"endFrame":220,"speakerActor":"tails",
+                   "text":"A small change of scenery..."}]
     },
     {
       "id":"elsewhere", "durationFrames":240,
@@ -68,7 +70,8 @@ unknown fields and trailing input are rejected. Maximum input size is 8 MiB.
       "camera":[{"frame":0,"x":0,"y":800}],
       "actors":{"tails":[{"frame":0,"x":140,"y":944,"animation":5}]},
       "cameraEffects":[{"startFrame":20,"endFrame":50,"amplitudeX":3,"amplitudeY":2,"frequency":8,"seed":7}],
-      "captions":[{"startFrame":60,"endFrame":220,"text":"Tails: ...a very small change."}]
+      "dialogue":[{"startFrame":60,"endFrame":220,"speakerActor":"tails",
+                   "text":"...a very small change."}]
     }
   ]
 }
@@ -91,6 +94,7 @@ A shot is an explicit cut even when it reuses the preceding set.
 | --- | --- |
 | Camera key | `frame,x,y`; `zoom:1`, `interpolation:"LINEAR"` |
 | Actor key | `frame`; `x:0,y:0,animation:0,pose:-1,flipX:false,visible:true,scale:1,interpolation:"LINEAR"` |
+| Dialogue | `startFrame,endFrame,text` and `speakerActor` or `speakerName`; optional profiles, timing and panel fields below |
 | Caption | `startFrame,endFrame,text`; `x:12,y:12,argb:-1`, optional `id` |
 | Audio | `frame,kind`; `gameId` defaults to the shot's game, `soundId:0,asset:"",gain:1`, optional `id` |
 | Camera effect | `startFrame,endFrame,amplitudeX,amplitudeY,frequency`; `seed:0`, optional `id` |
@@ -113,3 +117,65 @@ The compiler flattens offsets, adds all boundary anchors and prevents interpolat
 across them. Both editors can subsequently edit the canonical scene. Exporting it
 back to a shot-local screenplay is not currently supported; keep the screenplay as
 the source when you want to revise it programmatically.
+
+
+## Dialogue profiles and decorations
+
+Use `dialogue` for speech and `captions` for titles or ordinary overlays. A dialogue
+cue names its `speakerActor`; its displayed name comes from that cast member.
+`speakerName` overrides the label or identifies an offscreen speaker when the actor
+reference is empty. The name appears immediately, independently of text reveal.
+An optional pointer follows an onstage speaker through camera motion.
+
+Define up to 64 reusable `dialogueTypers` and 64 `dialogueSkins` at screenplay root:
+
+```json
+{
+  "dialogueTypers": [{"id":"excited","framesPerGrapheme":1,"punctuationPauseFrames":4,"spacePauseFrames":0}],
+  "dialogueSkins": [{"id":"blue","nameArgb":-9060353,"borderArgb":-9060353,
+    "decorationAsset":"decor/blue.png","decorationBorder":5,"padding":8}]
+}
+```
+
+These fields join the normal screenplay root; this fragment is not a complete film.
+A shot's line selects them with `typerId:"excited"` and `skinId:"blue"`. IDs are local
+to the document, so two installed mods do not compete for a global style name.
+Unknown references fail validation. Empty IDs use the built-in profiles.
+
+| Definition | Fields and compiler defaults |
+| --- | --- |
+| Typer | `id`; `framesPerGrapheme:2` (0–30), `punctuationPauseFrames:6` and `spacePauseFrames:0` (0–120) |
+| Skin | `id`; `textArgb:-593700`, `nameArgb:-11172`, `panelArgb:-15722457`, `borderArgb:-7826009`, `padding:6`, `decorationAsset:""`, `decorationBorder:0`, `pointer:true` |
+| Dialogue cue | `startFrame,endFrame,text`; `speakerActor:""`, `speakerName:""`, `skinId:""`, `typerId:""`, `x:12,y:12,width:filmWidth-24,height:min(70,filmHeight-24)`, `portraitAsset:""`, `revealFrames:[]`, optional `id` |
+
+Colour values are signed 32-bit ARGB integers. The canonical document requires all
+fields; the screenplay compiler supplies these defaults. Typing is deterministic at
+60 Hz: the first grapheme appears at elapsed frame zero, followed by the selected
+cadence and pauses. A rate of zero displays the whole line immediately. `revealFrames`
+can override the profile with one nondecreasing elapsed-frame offset per Unicode
+grapheme. This supports manually timed bursts and pauses without executable scripts.
+All text must finish before the line ends. Scrubbing and drawing emit no sounds;
+use explicit audio cues for authored sound effects.
+
+The complete text wraps before revealing, so words stay in place. The panel must
+fit inside the film and contain the speaker name and all wrapped rows; overflow is
+an error. The existing engine font and its glyph coverage are unchanged. These are
+portable reveal profiles, not arbitrary glyph-animation callbacks or custom fonts.
+
+A decoration is a creator PNG interpreted as a nine-slice panel. `decorationBorder`
+sets equal edge/corner insets in source pixels; it must leave a nonempty middle and
+fit the panel. An optional portrait PNG fits a 32×32 region beside the text. PNGs
+are limited to 1024×1024 each and four million decoded pixels across the scene.
+Keep PNGs beside or beneath the scene, compile beside the screenplay, and move the
+whole package together. In mods, images use the registering owner's bounded asset
+root and typed loads, sharing the existing encoded asset budget with voices/sets.
+The same definitions work in both editors and offline rendering without mod code.
+
+## Pixel stability and performance
+
+Camera positions interpolate; camera zoom holds its value until the next key.
+The current renderer does not animate zoom. Use held integer scales, cuts and pans
+for framing; a future smooth world-compositing pass would be needed for animated
+fractional zoom. A larger export `--scale` cannot repair aliasing already present
+in the authored frame. Stage entrances, exits, turns and listener reactions, then
+review the entire movie in motion at its intended output size.

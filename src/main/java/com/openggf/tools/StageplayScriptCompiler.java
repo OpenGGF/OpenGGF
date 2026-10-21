@@ -31,7 +31,7 @@ public final class StageplayScriptCompiler {
                 parsed = JSON.readTree(parser);
                 if (parser.nextToken() != null) throw new IOException("Trailing screenplay content");
             }
-            ObjectNode script = object(parsed, "screenplay", "version", "name", "width", "height", "cast", "shots");
+            ObjectNode script = object(parsed, "screenplay", "version", "name", "width", "height", "cast", "shots", "dialogueTypers", "dialogueSkins");
             if (integer(script, "version", -1) != 1) throw new IOException("Unsupported screenplay version");
             ArrayNode cast = array(script, "cast"), shots = array(script, "shots");
             if (cast.size() > 32 || shots.isEmpty() || shots.size() > 129)
@@ -43,7 +43,9 @@ public final class StageplayScriptCompiler {
             document.put("height", integer(script, "height", 224));
             ArrayNode actors = document.putArray("actors"), camera = document.putArray("camera"),
                     captions = document.putArray("captions"), audio = document.putArray("audio"),
-                    effects = document.putArray("cameraEffects"), changes = document.putArray("sceneChanges");
+                    effects = document.putArray("cameraEffects"), changes = document.putArray("sceneChanges"),
+                    dialogue = document.putArray("dialogue");
+            appendDialogueProfiles(script, document);
             Map<String, ObjectNode> roles = new LinkedHashMap<>();
             Map<String, ObjectNode> lastPoses = new LinkedHashMap<>();
             for (JsonNode item : cast) {
@@ -56,7 +58,7 @@ public final class StageplayScriptCompiler {
             int offset = 0;
             for (JsonNode item : shots) {
                 ObjectNode shot = object(item, "shot", "id", "durationFrames", "set", "transition", "camera",
-                        "actors", "captions", "audio", "cameraEffects");
+                        "actors", "captions", "audio", "cameraEffects", "dialogue");
                 String id = text(shot, "id");
                 if (!id.matches("[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}") || !shotIds.add(id))
                     throw new IOException("Invalid or duplicate shot id: " + id);
@@ -104,12 +106,50 @@ public final class StageplayScriptCompiler {
                 appendEvents(captions, optionalArray(shot, "captions"), id, "caption", offset, duration, text(set, "gameId"));
                 appendEvents(audio, optionalArray(shot, "audio"), id, "audio", offset, duration, text(set, "gameId"));
                 appendEvents(effects, optionalArray(shot, "cameraEffects"), id, "effect", offset, duration, text(set, "gameId"));
+                appendDialogue(dialogue, optionalArray(shot, "dialogue"), id, offset, duration,
+                        document.path("width").intValue(), document.path("height").intValue());
                 offset += duration;
             }
             document.put("durationFrames", offset);
             return StageplayStore.decode(JSON.writeValueAsBytes(document));
         } catch (IllegalArgumentException failure) {
             throw new IOException("Invalid screenplay: " + failure.getMessage(), failure);
+        }
+    }
+
+    private static void appendDialogueProfiles(ObjectNode script, ObjectNode document) throws IOException {
+        ArrayNode typers = document.putArray("dialogueTypers"), skins = document.putArray("dialogueSkins");
+        for (var item : optionalArray(script, "dialogueTypers")) {
+            var typer = object(item, "dialogue typer", "id", "framesPerGrapheme", "punctuationPauseFrames", "spacePauseFrames").deepCopy();
+            defaults(typer, "framesPerGrapheme", 2); defaults(typer, "punctuationPauseFrames", 6);
+            defaults(typer, "spacePauseFrames", 0); typers.add(typer);
+        }
+        for (var item : optionalArray(script, "dialogueSkins")) {
+            var skin = object(item, "dialogue skin", "id", "textArgb", "nameArgb", "panelArgb", "borderArgb",
+                    "padding", "decorationAsset", "decorationBorder", "pointer").deepCopy();
+            defaults(skin, "textArgb", 0xFFF6F0DC); defaults(skin, "nameArgb", 0xFFFFD45C);
+            defaults(skin, "panelArgb", 0xFF101827); defaults(skin, "borderArgb", 0xFF8895A7);
+            defaults(skin, "padding", 6); defaults(skin, "decorationAsset", "");
+            defaults(skin, "decorationBorder", 0); defaults(skin, "pointer", true); skins.add(skin);
+        }
+    }
+
+    private static void appendDialogue(ArrayNode out, ArrayNode input, String shot, int offset,
+                                       int duration, int width, int height) throws IOException {
+        int index = 0;
+        for (var item : input) {
+            var cue = object(item, "dialogue", "id", "startFrame", "endFrame", "speakerActor", "speakerName",
+                    "text", "skinId", "typerId", "x", "y", "width", "height", "portraitAsset", "revealFrames").deepCopy();
+            int start = integer(cue, "startFrame", -1), end = integer(cue, "endFrame", -1);
+            if (start < 0 || end <= start || end > duration) throw new IOException("Dialogue lies outside its shot");
+            cue.put("id", shot + "." + (cue.has("id") ? text(cue, "id") : "dialogue" + index++));
+            cue.put("startFrame", offset + start).put("endFrame", offset + end);
+            defaults(cue, "speakerActor", ""); defaults(cue, "speakerName", "");
+            defaults(cue, "skinId", ""); defaults(cue, "typerId", "");
+            defaults(cue, "x", 12); defaults(cue, "y", 12);
+            defaults(cue, "width", width - 24); defaults(cue, "height", Math.min(70, height - 24));
+            defaults(cue, "portraitAsset", ""); defaults(cue, "revealFrames", java.util.List.of());
+            out.add(cue);
         }
     }
 

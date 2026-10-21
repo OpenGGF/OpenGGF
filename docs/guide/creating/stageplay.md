@@ -21,7 +21,7 @@ scene document, editing commands and evaluator. A `.stageplay` file opens in eit
 5. Use **HOLD**, **LINEAR** or **SMOOTH** for the segment leaving a key. Movement
    keys retain animation phase; changing animation or pose starts a new phase.
    Camera keys use the world's top-left coordinate and a zoom factor.
-6. Add captions and audio cues. Caption end frames are exclusive. Existing keys
+6. Add dialogue with a named speaker, captions and audio cues. End frames are exclusive. Existing keys
    and cues can be revisited, edited or deleted; frame-zero actor/camera keys remain.
 7. Save beside the scene's referenced assets. Play, scrub and reopen it in the
    other editor. Switching back to the level editor preserves Stageplay undo and
@@ -47,6 +47,8 @@ the authored picture into the game viewport; film output uses its exact dimensio
 
 Press **C** for camera directing mode. WASD/arrows pan, Q/E zoom, **K** places a
 camera key and **R** records a camera take; Space finishes. A take is one undo edit.
+Zoom uses held integer framing; it changes at a key rather than animating through
+fractional nearest-neighbour scales. Pans retain their chosen interpolation.
 The draft camera stays separate from the evaluated shake, so saving a key never
 accidentally bakes earthquake offsets into it. Switch back to actor mode to direct
 cast movement.
@@ -70,6 +72,28 @@ ROM resources, compiles shot-local scripts, samples frames and renders without
 opening editor menus. Keep the screenplay as the programmatic source; either editor
 can subsequently refine its generated canonical scene.
 
+## Speakers, typing and dialogue skins
+
+Add a **Dialogue** line, choose its speaker and interval, then enter plain text.
+The name stays visible while the text types; a pointer can identify the visible
+actor. An explicit name also supports offscreen speakers. Dialogue has its own
+panel, separate from title captions.
+
+Reusable **Typer** profiles set reveal cadence and punctuation/space pauses.
+**Dialogue skin** profiles set text/name/panel/border colours, padding and an
+optional nine-slice PNG decoration. A line selects either profile, or uses the
+built-in defaults. Optional custom reveal offsets support hand-timed pauses and
+bursts; optional PNG portraits use a small area beside the text. Full text wraps
+once and is validated against the panel before playback. Seeking does not make
+text reflow or play typing sounds.
+
+Mods can ship these definitions inside their `.stageplay` assets and include the
+referenced PNGs in the same resource package. No extra plugin registration is
+needed. Both editors expose the same editable profiles and preserve them through
+undo and save. See [the exact fields and limits](stageplay-authoring.md#dialogue-profiles-and-decorations).
+This version supports data-defined reveal timing and decoration, using the engine's
+existing font; it does not execute custom glyph-effect code.
+
 ## Audio and files
 
 Audio cues use `ROM_MUSIC`, `ROM_SFX`, `VOICE` or `MUSIC_STOP`. ROM sound IDs are
@@ -85,8 +109,8 @@ and after the chosen playhead. Start at frame zero for the complete soundtrack.
 Stopping restores the borrowed soundtrack; imported voices share the existing
 final PCM mix without replacing other installed audio sources.
 
-The version-2 JSON document (with strict version-1 migration) stores resource references, keys and cues. ROM data
-stays in the supplied-ROM pipeline. Authored `.ogfproject` sets and audio stay
+The version-3 JSON document (with strict version-1 and version-2 migration) stores resource references, keys and cues. ROM data
+stays in the supplied-ROM pipeline. Authored `.ogfproject` sets, dialogue PNGs and audio stay
 beside the document. Move the whole folder to preserve relative references;
 Save As refuses to relocate a scene away from its asset root. Atomic saves
 validate staged bytes before replacing the previous scene.
@@ -115,7 +139,7 @@ the no-device audio backend.
 
 ## Use the same scene in a mod
 
-Package the scene and its relative voice/set assets under your mod resources.
+Package the scene and its relative voice/set/dialogue image assets under your mod resources.
 During the existing `ModContext` registration transaction:
 
 ```java
@@ -144,7 +168,7 @@ water programs and evolving zone events are not simulated in the performance.
 
 For actual main-player direction, the registration overload accepts the actor ID
 and `StageplayNativeBinding.FinishMode`. The bound actor must match the native
-game and character, with unit scale and unit camera zoom. The first version
+game and character, with unit actor scale. Camera zoom is presentation-only. The first version
 requires a freely controlled player: dead, hurt, super, object-supported and
 object/ability-controlled states are rejected. Other actors remain detached.
 

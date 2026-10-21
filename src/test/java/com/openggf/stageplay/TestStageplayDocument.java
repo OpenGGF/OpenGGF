@@ -86,7 +86,7 @@ class TestStageplayDocument {
         assertThrows(IllegalArgumentException.class,
                 () -> scene().withAudio(List.of(new AudioCue("cue", 600, AudioKind.MUSIC_STOP, "s3k", -1, "", 1))));
         assertThrows(IllegalArgumentException.class, () -> scene().withSize(159, 224));
-        assertThrows(IllegalArgumentException.class, () -> new StageplayDocument(3, "future", 10, 320, 224,
+        assertThrows(IllegalArgumentException.class, () -> new StageplayDocument(4, "future", 10, 320, 224,
                 scene().set(), List.of(), scene().camera(), List.of(), List.of()));
     }
 
@@ -95,12 +95,12 @@ class TestStageplayDocument {
         var effects = new ArrayList<>(List.of(new CameraEffect("quake", 0, 60, 8, 4, 7, 42)));
         var document = scene().withCameraEffects(effects);
         effects.clear();
-        assertEquals(2, document.version());
+        assertEquals(VERSION, document.version());
         assertEquals(1, document.withName("Renamed").withSet(document.set()).withSize(640, 448)
                 .withDurationFrames(601).withActors(List.of()).withCamera(document.camera())
                 .withCaptions(List.of()).withAudio(List.of()).cameraEffects().size());
         assertThrows(UnsupportedOperationException.class, () -> document.cameraEffects().clear());
-        assertEquals(2, new StageplayDocument(1, "Old source", 600, 320, 224,
+        assertEquals(VERSION, new StageplayDocument(1, "Old source", 600, 320, 224,
                 scene().set(), List.of(), scene().camera(), List.of(), List.of()).version());
         assertThrows(IllegalArgumentException.class, () -> new CameraEffect("bad", 0, 1, Double.NaN, 0, 1, 0));
         assertThrows(IllegalArgumentException.class, () -> new CameraEffect("bad", 0, 1, 0, 0, 31, 0));

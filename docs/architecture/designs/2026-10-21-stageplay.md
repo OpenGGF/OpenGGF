@@ -196,3 +196,31 @@ bounds. Compilation and inspection require no ROM; capture validates resources a
 uses the existing no-device headless host. Rejected: a second playback evaluator,
 implicit cross-game native loads, copying ROM art into production sources, and
 schema coercions which could silently move cues. No round-trip decompiler is claimed.
+
+
+### Dialogue and visual feedback revision
+
+User review rejected fractional nearest-neighbour zoom, idle performances and
+unclear speakers in the first short. Camera zoom now holds until its next key;
+position interpolation remains independent. New editor keys use integer framing.
+The revised production uses zoom one, entrances, reactions, movement and exits.
+Rejected: a global GL_LINEAR switch, which would blur text and risks straight-alpha
+sprite fringes; smooth animated zoom needs a separate bounded world presentation pass.
+
+Version 3 appends document-owned dialogue, typer and skin lists. Strict v1/v2
+migration inserts empty lists; legacy constructors remain. Speaker identity is a
+real actor reference or explicit offscreen name, independent of caption text.
+Typing samples a grapheme reveal schedule from scene time; full-text wrapping
+precedes reveal, and names appear immediately. It adds no mutable clock or draw
+side effects. Profiles and optional nine-slice/portrait PNGs are portable to both
+editors, mod registration and offline export. PNG headers and decoded aggregate
+pixels are bounded before allocation, and creator assets retain the existing
+ModAssetRoot/typed LoadOp ownership and shared budget.
+
+Chosen over a new executable provider registry: portable data meets the requested
+speaker styles, text reveal and dialogue decoration without loading mod code in
+the external editor/exporter. Programmable glyph callbacks, custom fonts and
+automatic typing audio remain outside this surface; timed sound cues remain available.
+There is no creator-reported owner or failure-swallowing fallback. Missing resources
+and overflowing dialogue fail preflight. The corrected promo skills distinguish
+authored timeline evidence from observed gameplay and require moving-footage review.

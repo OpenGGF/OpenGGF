@@ -26,23 +26,34 @@ def run_owned(command, *, env, leases=None, stdout=None):
     try:
         return process.wait()
     except (KeyboardInterrupt, SystemExit):
-        if os.name == 'posix':
-            os.killpg(process.pid, signal.SIGTERM)
-        else:
-            process.terminate()
+        try:
+            if os.name == 'posix':
+                os.killpg(process.pid, signal.SIGTERM)
+            else:
+                process.terminate()
+        except ProcessLookupError:
+            pass  # The owned child may finish between interruption and retirement.
         try:
             process.wait(timeout=10)
         except subprocess.TimeoutExpired:
-            if os.name == 'posix':
-                os.killpg(process.pid, signal.SIGKILL)
-            else:
-                process.kill()
+            try:
+                if os.name == 'posix':
+                    os.killpg(process.pid, signal.SIGKILL)
+                else:
+                    process.kill()
+            except ProcessLookupError:
+                pass
             process.wait()
         raise
 
 
+class JsonArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        raise ValueError(message)
+
+
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = JsonArgumentParser(description=__doc__)
     parser.add_argument('--build', action='store_true', help='Package current sources without running tests first')
     parser.add_argument('--jar', type=Path, help='Use an explicitly supplied packaged engine jar')
     parser.add_argument('command', nargs='?', default='help')
@@ -53,7 +64,7 @@ def main(argv=None):
         code = run_owned([sys.executable, str(ROOT / 'tools/testing/maven_queue.py'),
                           '-Dmse=off', '-DskipTests', 'package'], env=env, stdout=sys.stderr)
         if code:
-            return code
+            raise ValueError(f"Engine build failed (exit {code}); see stderr diagnostics")
     jar = args.jar
     if jar is None:
         metadata = ROOT / 'target/openggf-artifact.properties'

@@ -15,8 +15,9 @@ import java.util.Set;
 @ModApi
 public record StageplayDocument(int version, String name, int durationFrames, int width, int height,
         SetSource set, List<Actor> actors, List<CameraKey> camera, List<Caption> captions,
-        List<AudioCue> audio, List<CameraEffect> cameraEffects, List<SceneChange> sceneChanges) {
-    public static final int VERSION = 2;
+        List<AudioCue> audio, List<CameraEffect> cameraEffects, List<SceneChange> sceneChanges,
+        List<DialogueTyper> dialogueTypers, List<DialogueSkin> dialogueSkins, List<DialogueCue> dialogue) {
+    public static final int VERSION = 3;
     public static final int FRAMES_PER_SECOND = 60;
     public static final int MAX_DURATION_FRAMES = 36_000;
     private static final int MAX_KEYS = 100_000;
@@ -35,6 +36,9 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         audio = boundedCopy(audio, 4096, "audio");
         cameraEffects = boundedCopy(cameraEffects, 256, "cameraEffects");
         sceneChanges = boundedCopy(sceneChanges, 128, "sceneChanges");
+        dialogueTypers = boundedCopy(dialogueTypers, 64, "dialogueTypers");
+        dialogueSkins = boundedCopy(dialogueSkins, 64, "dialogueSkins");
+        dialogue = boundedCopy(dialogue, 1024, "dialogue");
         require(!camera.isEmpty(), "camera must start at frame zero");
         Set<String> ids = new HashSet<>();
         int totalKeys = camera.size();
@@ -81,17 +85,45 @@ public record StageplayDocument(int version, String name, int durationFrames, in
             previousChange = change.frame();
             previousTransitionEnd = end;
         }
+        Set<String> typerIds = new HashSet<>(), skinIds = new HashSet<>();
+        for (DialogueTyper typer : dialogueTypers)
+            require(typerIds.add(typer.id()), "Duplicate dialogue typer: " + typer.id());
+        for (DialogueSkin skin : dialogueSkins)
+            require(skinIds.add(skin.id()), "Duplicate dialogue skin: " + skin.id());
+        for (DialogueCue cue : dialogue) {
+            require(ids.add(cue.id()), "Duplicate id: " + cue.id());
+            require(cue.endFrame() <= durationFrames, "Dialogue exceeds scene duration: " + cue.id());
+            require(cue.x() + cue.width() <= width && cue.y() + cue.height() <= height,
+                    "Dialogue panel exceeds the viewport: " + cue.id());
+            Actor speaker = null;
+            if (!cue.speakerActor().isEmpty()) {
+                for (Actor actor : actors) if (actor.id().equals(cue.speakerActor())) { speaker = actor; break; }
+                require(speaker != null, "Unknown dialogue speaker: " + cue.speakerActor());
+            }
+            String speakerName = cue.speakerName().isEmpty() ? speaker.name() : cue.speakerName();
+            StageplayDialogue.validate(cue, speakerName,
+                    StageplayDialogue.resolveSkin(dialogueSkins, cue.skinId()),
+                    StageplayDialogue.resolveTyper(dialogueTypers, cue.typerId()));
+        }
     }
 
-    /** Source-compatible version-one constructor. New authored documents always use version two. */
+    /** Source-compatible version-one constructor. New authored documents use the current version. */
     public StageplayDocument(int version, String name, int durationFrames, int width, int height,
             SetSource set, List<Actor> actors, List<CameraKey> camera, List<Caption> captions, List<AudioCue> audio) {
         this(migratedVersion(version), name, durationFrames, width, height, set, actors, camera, captions, audio,
-                List.of(), List.of());
+                List.of(), List.of(), List.of(), List.of(), List.of());
+    }
+
+    /** Source-compatible version-two constructor, retaining its camera and scene-change tracks. */
+    public StageplayDocument(int version, String name, int durationFrames, int width, int height,
+            SetSource set, List<Actor> actors, List<CameraKey> camera, List<Caption> captions, List<AudioCue> audio,
+            List<CameraEffect> cameraEffects, List<SceneChange> sceneChanges) {
+        this(migratedVersion(version), name, durationFrames, width, height, set, actors, camera, captions, audio,
+                cameraEffects, sceneChanges, List.of(), List.of(), List.of());
     }
 
     private static int migratedVersion(int version) {
-        require(version == 1 || version == VERSION, "Unsupported Stageplay version: " + version);
+        require(version >= 1 && version <= VERSION, "Unsupported Stageplay version: " + version);
         return VERSION;
     }
 
@@ -104,45 +136,60 @@ public record StageplayDocument(int version, String name, int durationFrames, in
     }
 
     public StageplayDocument withName(String value) {
-        return new StageplayDocument(version, value, durationFrames, width, height, set, actors, camera, captions, audio, cameraEffects, sceneChanges);
+        return new StageplayDocument(version, value, durationFrames, width, height, set, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue);
     }
 
     /** Shortening a scene rejects remaining keys/cues beyond its new end. */
     public StageplayDocument withDurationFrames(int value) {
-        return new StageplayDocument(version, name, value, width, height, set, actors, camera, captions, audio, cameraEffects, sceneChanges);
+        return new StageplayDocument(version, name, value, width, height, set, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue);
     }
 
     public StageplayDocument withSize(int newWidth, int newHeight) {
-        return new StageplayDocument(version, name, durationFrames, newWidth, newHeight, set, actors, camera, captions, audio, cameraEffects, sceneChanges);
+        return new StageplayDocument(version, name, durationFrames, newWidth, newHeight, set, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue);
     }
 
     public StageplayDocument withSet(SetSource value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, value, actors, camera, captions, audio, cameraEffects, sceneChanges);
+        return new StageplayDocument(version, name, durationFrames, width, height, value, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue);
     }
 
     public StageplayDocument withActors(List<Actor> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, value, camera, captions, audio, cameraEffects, sceneChanges);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, value, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue);
     }
 
     public StageplayDocument withCamera(List<CameraKey> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, value, captions, audio, cameraEffects, sceneChanges);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, value, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue);
     }
 
     public StageplayDocument withCaptions(List<Caption> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, value, audio, cameraEffects, sceneChanges);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, value, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue);
     }
 
     public StageplayDocument withAudio(List<AudioCue> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, value, cameraEffects, sceneChanges);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, value, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue);
     }
 
     public StageplayDocument withCameraEffects(List<CameraEffect> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio, value, sceneChanges);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio, value, sceneChanges, dialogueTypers, dialogueSkins, dialogue);
     }
 
     /** Changes and their required actor/camera anchors must be published as one valid document. */
     public StageplayDocument withSceneChanges(List<SceneChange> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio, cameraEffects, value);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio, cameraEffects, value, dialogueTypers, dialogueSkins, dialogue);
+    }
+
+    public StageplayDocument withDialogueTypers(List<DialogueTyper> value) {
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio,
+                cameraEffects, sceneChanges, value, dialogueSkins, dialogue);
+    }
+
+    public StageplayDocument withDialogueSkins(List<DialogueSkin> value) {
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio,
+                cameraEffects, sceneChanges, dialogueTypers, value, dialogue);
+    }
+
+    public StageplayDocument withDialogue(List<DialogueCue> value) {
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio,
+                cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, value);
     }
 
     /** Stock set reference and optional identity/authored-level reference. */
@@ -198,7 +245,10 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         }
     }
 
-    /** Camera position is the top-left stage coordinate; zoom one is native pixel scale. */
+    /**
+     * Camera position is the top-left stage coordinate; interpolation applies only to x/y.
+     * Zoom is held until the next key to preserve nearest-neighbour pixel stability; one is native scale.
+     */
     @ModApi
     public record CameraKey(int frame, double x, double y, double zoom, Interpolation interpolation) {
         public CameraKey {
@@ -260,6 +310,66 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         }
     }
 
+    /** Silent grapheme reveal cadence. Zero frames per grapheme reveals the whole text immediately. */
+    @ModApi
+    public record DialogueTyper(String id, int framesPerGrapheme, int punctuationPauseFrames, int spacePauseFrames) {
+        public DialogueTyper {
+            id = identifier(id);
+            range(framesPerGrapheme, 0, 30, "framesPerGrapheme");
+            range(punctuationPauseFrames, 0, 120, "punctuationPauseFrames");
+            range(spacePauseFrames, 0, 120, "spacePauseFrames");
+        }
+    }
+
+    /** Portable panel appearance; decoration PNGs are optional creator assets, never ROM fallbacks. */
+    @ModApi
+    public record DialogueSkin(String id, int textArgb, int nameArgb, int panelArgb, int borderArgb,
+            int padding, String decorationAsset, int decorationBorder, boolean pointer) {
+        public DialogueSkin {
+            id = identifier(id);
+            range(padding, 4, 32, "dialogue padding");
+            decorationAsset = pngPath(decorationAsset, "decorationAsset");
+            range(decorationBorder, 0, 64, "decorationBorder");
+        }
+    }
+
+    /** A screen-space panel on [startFrame,endFrame), with optional elapsed reveal offsets per grapheme. */
+    @ModApi
+    public record DialogueCue(String id, int startFrame, int endFrame, String speakerActor, String speakerName,
+            String text, String skinId, String typerId, int x, int y, int width, int height,
+            String portraitAsset, List<Integer> revealFrames) {
+        public DialogueCue {
+            id = identifier(id);
+            range(startFrame, 0, MAX_DURATION_FRAMES - 1, "dialogue start");
+            range(endFrame, startFrame + 1, MAX_DURATION_FRAMES, "dialogue end");
+            speakerActor = optionalIdentifier(speakerActor);
+            require(speakerName != null, "speakerName is required");
+            if (!speakerName.isEmpty()) speakerName = label(speakerName, "speakerName");
+            require(!speakerActor.isEmpty() || !speakerName.isEmpty(), "Offscreen dialogue needs an explicit speaker name");
+            require(text != null && !text.isBlank() && text.length() <= 4096, "Dialogue text must contain 1-4096 characters");
+            require(text.chars().noneMatch(c -> Character.isISOControl(c) && c != '\n' && c != '\r' && c != '\t'),
+                    "Dialogue text contains unsupported control characters");
+            skinId = optionalIdentifier(skinId);
+            typerId = optionalIdentifier(typerId);
+            range(x, 0, 1920, "dialogue x");
+            range(y, 0, 1080, "dialogue y");
+            range(width, 80, 1920, "dialogue width");
+            range(height, 36, 1080, "dialogue height");
+            portraitAsset = pngPath(portraitAsset, "portraitAsset");
+            revealFrames = boundedCopy(revealFrames, 4096, "revealFrames");
+            if (!revealFrames.isEmpty()) {
+                require(revealFrames.size() == StageplayDialogue.graphemeCount(text),
+                        "revealFrames needs one offset per dialogue grapheme: " + id);
+                int previous = -1;
+                for (int frame : revealFrames) {
+                    require(frame >= 0 && frame >= previous && frame < endFrame - startFrame,
+                            "Reveal offsets must ascend within dialogue duration: " + id);
+                    previous = frame;
+                }
+            }
+        }
+    }
+
     /** Audio is dispatched by forward playback, never by pure timeline sampling. */
     @ModApi
     public record AudioCue(String id, int frame, AudioKind kind, String gameId, int soundId,
@@ -296,6 +406,17 @@ public record StageplayDocument(int version, String name, int durationFrames, in
     private static String identifier(String value) {
         require(value != null && value.length() <= 64 && value.matches("[A-Za-z0-9][A-Za-z0-9._-]*"),
                 "Ids must contain 1-64 letters, digits, dots, underscores or hyphens");
+        return value;
+    }
+
+    private static String optionalIdentifier(String value) {
+        require(value != null, "Optional id must be empty or an identifier");
+        return value.isEmpty() ? value : identifier(value);
+    }
+
+    private static String pngPath(String value, String field) {
+        value = relativePath(value, field, true);
+        require(value.isEmpty() || value.toLowerCase(Locale.ROOT).endsWith(".png"), field + " must reference a PNG file");
         return value;
     }
 

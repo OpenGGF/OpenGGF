@@ -7,12 +7,14 @@ Unreleased. The earlier development themes remain in
 
 - **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
   OpenGGF Editor's Stageplay workspace. Author actor movement, animation/poses,
-  camera movement, zoom, earthquake effects, captions, ROM audio and WAV/Ogg voices;
+  camera movement, held integer zoom, earthquake effects, captions, ROM audio and WAV/Ogg voices;
   direct scene changes across locations, acts and games with cuts, fades and wipes.
   Record directed visual takes, undo edits, save/reopen and export synchronized
   lossless films. Shot-local screenplay tools and a mirrored agent skill support
   resource discovery, validation and offline filmmaking; Tails uses native accessory
   relationships, and both editors keep a usable constrained authoring window.
+  Named dialogue, reusable typing profiles and creator PNG skins give mod scenes
+  clear speakers and deterministic text reveal in playback, both editors and exports.
   Mods play the same scenes with held native gameplay and optional explicit
   main-player handover. See the [guide](docs/guide/creating/stageplay.md) and
   [fifteen-second example](examples/stageplay-demo/README.md).

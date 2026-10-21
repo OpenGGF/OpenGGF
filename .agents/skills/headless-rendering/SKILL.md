@@ -20,6 +20,7 @@ full-suite or ROM-parity result.
 | Need | Existing owner |
 | --- | --- |
 | Gameplay screenshots or movies | [gameplay-capture](../gameplay-capture/SKILL.md): `GameplayCaptureTool` |
+| Stageplay animatics, directed dialogue or staged promos | [stageplay-authoring](../stageplay-authoring/SKILL.md): `tools/stageplay/stageplay.py` and `StageplayCaptureTool`, using detached scene resources and offline audio |
 | Render an existing trace replay | [trace-capture](../trace-capture/SKILL.md): `TraceCaptureTool`; video completion does not prove parity |
 | Rendered gameplay tests or custom route probes | `GameplayCaptureSession`: production boot, stepping, mode-aware drawing, and optional image readback |
 | Component, shader, framebuffer, or presentation pixel tests | `PresentationOffscreenTestContext.open(width, height)` in test scope; it owns a core-profile EGL context, not a loaded game or initialized graphics manager |
@@ -145,9 +146,10 @@ above requires EGL and fails if context creation is unavailable on Linux;
 
 For gameplay captures, inspect `state.csv` before selecting frames; for trace
 captures, inspect the selected clip and replay reports using `trace-capture`.
-Confirm dimensions, scene/mode, nonblank pixels, and the playable sprite when
-expected. Compare
-relevant pixels or a deliberately cleared target to reject stale framebuffer
+For Stageplay, inspect the authored timeline JSONL and moving footage using
+`stageplay-authoring`; its evaluated positions and cues are not measured native
+gameplay state. Confirm dimensions, scene/mode, nonblank pixels, and the playable
+sprite when expected. Compare relevant pixels or a deliberately cleared target to reject stale framebuffer
 success; a PNG file's existence is insufficient. Distinguish capture correctness
 from gameplay/trace parity and from coverage of other modes or routes.
 

@@ -3,6 +3,49 @@
   "name": "Location, Location, Location",
   "width": 400,
   "height": 224,
+  "dialogueTypers": [
+    {
+      "id": "sonic",
+      "framesPerGrapheme": 1,
+      "punctuationPauseFrames": 5
+    },
+    {
+      "id": "tails",
+      "framesPerGrapheme": 2,
+      "punctuationPauseFrames": 8
+    },
+    {
+      "id": "knuckles",
+      "framesPerGrapheme": 3,
+      "punctuationPauseFrames": 10
+    }
+  ],
+  "dialogueSkins": [
+    {
+      "id": "sonic",
+      "nameArgb": -9060353,
+      "borderArgb": -9060353,
+      "decorationAsset": "decor/sonic.png",
+      "decorationBorder": 5,
+      "padding": 8
+    },
+    {
+      "id": "tails",
+      "nameArgb": -14756,
+      "borderArgb": -14756,
+      "decorationAsset": "decor/tails.png",
+      "decorationBorder": 5,
+      "padding": 8
+    },
+    {
+      "id": "knuckles",
+      "nameArgb": -32126,
+      "borderArgb": -32126,
+      "decorationAsset": "decor/knuckles.png",
+      "decorationBorder": 5,
+      "padding": 8
+    }
+  ],
   "cast": [
     {
       "id": "sonic",
@@ -26,7 +69,7 @@
   "shots": [
     {
       "id": "remote",
-      "durationFrames": 420,
+      "durationFrames": 480,
       "set": {
         "gameId": "s2",
         "zone": 0,
@@ -37,13 +80,14 @@
           "frame": 0,
           "x": 0,
           "y": 500,
-          "zoom": 1
+          "zoom": 1,
+          "interpolation": "SMOOTH"
         },
         {
-          "frame": 300,
-          "x": 35,
-          "y": 515,
-          "zoom": 1.15,
+          "frame": 420,
+          "x": 25,
+          "y": 500,
+          "zoom": 1,
           "interpolation": "SMOOTH"
         }
       ],
@@ -51,64 +95,109 @@
         "sonic": [
           {
             "frame": 0,
-            "x": -20,
+            "x": -30,
             "y": 655,
-            "animation": 0
+            "animation": 1
           },
           {
-            "frame": 100,
-            "x": 156,
+            "frame": 65,
+            "x": 150,
             "y": 648,
             "animation": 5
           },
           {
-            "frame": 300,
-            "x": 156,
+            "frame": 260,
+            "x": 150,
             "y": 648,
-            "animation": 7
+            "animation": 8
+          },
+          {
+            "frame": 282,
+            "x": 150,
+            "y": 648,
+            "animation": 2
+          },
+          {
+            "frame": 318,
+            "x": 190,
+            "y": 590,
+            "animation": 2
+          },
+          {
+            "frame": 354,
+            "x": 220,
+            "y": 648,
+            "animation": 8
+          },
+          {
+            "frame": 375,
+            "x": 220,
+            "y": 648,
+            "animation": 5
           }
         ],
         "tails": [
           {
             "frame": 0,
-            "x": 240,
+            "x": 330,
+            "y": 648,
+            "animation": 0,
+            "flipX": true
+          },
+          {
+            "frame": 60,
+            "x": 265,
             "y": 648,
             "animation": 5,
             "flipX": true
           },
           {
-            "frame": 260,
-            "x": 240,
+            "frame": 300,
+            "x": 265,
             "y": 648,
             "animation": 7,
+            "flipX": true
+          },
+          {
+            "frame": 350,
+            "x": 265,
+            "y": 648,
+            "animation": 8,
+            "flipX": true
+          },
+          {
+            "frame": 388,
+            "x": 265,
+            "y": 648,
+            "animation": 5,
             "flipX": true
           }
         ]
       },
-      "captions": [
+      "dialogue": [
         {
-          "startFrame": 12,
-          "endFrame": 140,
-          "text": "LOCATION, LOCATION, LOCATION",
-          "x": 14,
-          "y": 20,
-          "argb": -256
+          "startFrame": 100,
+          "endFrame": 265,
+          "speakerActor": "tails",
+          "text": "One button. Every location.",
+          "skinId": "tails",
+          "typerId": "tails",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
         },
         {
-          "startFrame": 150,
-          "endFrame": 290,
-          "text": "Tails: One remote. Every location.",
-          "x": 14,
-          "y": 18,
-          "argb": -1
-        },
-        {
-          "startFrame": 300,
-          "endFrame": 402,
-          "text": "Sonic: Can it skip the walking?",
-          "x": 14,
-          "y": 18,
-          "argb": -1
+          "startFrame": 285,
+          "endFrame": 455,
+          "speakerActor": "sonic",
+          "text": "Great! Skip the walking.",
+          "skinId": "sonic",
+          "typerId": "sonic",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
         }
       ],
       "audio": [
@@ -119,17 +208,33 @@
           "soundId": 129
         },
         {
-          "frame": 390,
+          "frame": 282,
+          "kind": "ROM_SFX",
+          "gameId": "s2",
+          "soundId": 160
+        },
+        {
+          "frame": 462,
           "kind": "ROM_SFX",
           "gameId": "s2",
           "soundId": 160
         }
       ],
-      "cameraEffects": []
+      "cameraEffects": [],
+      "captions": [
+        {
+          "startFrame": 8,
+          "endFrame": 86,
+          "text": "LOCATION, LOCATION, LOCATION",
+          "x": 35,
+          "y": 18,
+          "argb": -256
+        }
+      ]
     },
     {
       "id": "closer",
-      "durationFrames": 300,
+      "durationFrames": 360,
       "set": {
         "gameId": "s2",
         "zone": 0,
@@ -140,69 +245,116 @@
           "frame": 0,
           "x": 380,
           "y": 470,
-          "zoom": 1.15
+          "zoom": 1,
+          "interpolation": "SMOOTH"
         },
         {
-          "frame": 299,
-          "x": 420,
-          "y": 495,
-          "zoom": 1.35
+          "frame": 330,
+          "x": 410,
+          "y": 470,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
         }
       ],
       "actors": {
         "sonic": [
           {
             "frame": 0,
+            "x": 485,
+            "y": 590,
+            "animation": 2
+          },
+          {
+            "frame": 28,
             "x": 520,
             "y": 622,
-            "animation": 7
+            "animation": 8
+          },
+          {
+            "frame": 48,
+            "x": 520,
+            "y": 622,
+            "animation": 5
+          },
+          {
+            "frame": 140,
+            "x": 520,
+            "y": 622,
+            "animation": 0
           },
           {
             "frame": 170,
-            "x": 520,
-            "y": 622,
-            "animation": 5,
-            "flipX": true
-          }
-        ],
-        "tails": [
-          {
-            "frame": 0,
-            "x": 600,
+            "x": 560,
             "y": 624,
             "animation": 5,
             "flipX": true
           },
           {
             "frame": 210,
-            "x": 600,
+            "x": 560,
             "y": 624,
-            "animation": 7,
+            "animation": 5
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "x": 610,
+            "y": 624,
+            "animation": 8,
+            "flipX": true
+          },
+          {
+            "frame": 50,
+            "x": 610,
+            "y": 624,
+            "animation": 0
+          },
+          {
+            "frame": 80,
+            "x": 640,
+            "y": 624,
+            "animation": 5,
+            "flipX": true
+          },
+          {
+            "frame": 280,
+            "x": 640,
+            "y": 624,
+            "animation": 8,
             "flipX": true
           }
         ]
       },
-      "captions": [
+      "dialogue": [
         {
-          "startFrame": 30,
-          "endFrame": 160,
-          "text": "Sonic: That was only three steps.",
-          "x": 14,
-          "y": 18,
-          "argb": -1
+          "startFrame": 45,
+          "endFrame": 178,
+          "speakerActor": "sonic",
+          "text": "That was three steps.",
+          "skinId": "sonic",
+          "typerId": "sonic",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
         },
         {
-          "startFrame": 170,
-          "endFrame": 275,
-          "text": "Tails: I was being careful.",
-          "x": 14,
-          "y": 18,
-          "argb": -1
+          "startFrame": 190,
+          "endFrame": 330,
+          "speakerActor": "tails",
+          "text": "I was being careful.",
+          "skinId": "tails",
+          "typerId": "tails",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
         }
       ],
       "audio": [
         {
-          "frame": 265,
+          "frame": 342,
           "kind": "ROM_SFX",
           "gameId": "s2",
           "soundId": 160
@@ -210,17 +362,18 @@
       ],
       "cameraEffects": [
         {
-          "startFrame": 240,
-          "endFrame": 280,
+          "startFrame": 325,
+          "endFrame": 350,
           "amplitudeX": 2,
           "amplitudeY": 2,
           "frequency": 9,
           "seed": 17
         }
       ],
+      "captions": [],
       "transition": {
         "kind": "WIPE_LEFT",
-        "durationFrames": 36
+        "durationFrames": 30
       }
     },
     {
@@ -236,64 +389,145 @@
           "frame": 0,
           "x": 0,
           "y": 535,
-          "zoom": 1
+          "zoom": 1,
+          "interpolation": "SMOOTH"
         },
         {
-          "frame": 220,
-          "x": 20,
-          "y": 547,
-          "zoom": 1.2
+          "frame": 360,
+          "x": 35,
+          "y": 535,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
         }
       ],
       "actors": {
         "sonic": [
           {
             "frame": 0,
-            "x": 150,
+            "x": 145,
+            "y": 560,
+            "animation": 2
+          },
+          {
+            "frame": 25,
+            "x": 145,
+            "y": 610,
+            "animation": 2
+          },
+          {
+            "frame": 46,
+            "x": 145,
+            "y": 687,
+            "animation": 8
+          },
+          {
+            "frame": 65,
+            "x": 145,
             "y": 687,
             "animation": 7
           },
           {
-            "frame": 175,
-            "x": 150,
+            "frame": 140,
+            "x": 145,
+            "y": 687,
+            "animation": 0
+          },
+          {
+            "frame": 192,
+            "x": 215,
             "y": 687,
             "animation": 5,
             "flipX": true
+          },
+          {
+            "frame": 232,
+            "x": 215,
+            "y": 687,
+            "animation": 5
+          },
+          {
+            "frame": 350,
+            "x": 215,
+            "y": 687,
+            "animation": 8
           }
         ],
         "tails": [
           {
             "frame": 0,
-            "x": 235,
+            "x": 275,
+            "y": 545,
+            "animation": 2,
+            "flipX": true
+          },
+          {
+            "frame": 25,
+            "x": 275,
+            "y": 600,
+            "animation": 2,
+            "flipX": true
+          },
+          {
+            "frame": 50,
+            "x": 275,
+            "y": 687,
+            "animation": 8,
+            "flipX": true
+          },
+          {
+            "frame": 72,
+            "x": 275,
             "y": 687,
             "animation": 5,
             "flipX": true
           },
           {
-            "frame": 280,
-            "x": 235,
+            "frame": 228,
+            "x": 275,
             "y": 687,
-            "animation": 7,
+            "animation": 0,
+            "flipX": true
+          },
+          {
+            "frame": 260,
+            "x": 244,
+            "y": 687,
+            "animation": 5,
+            "flipX": true
+          },
+          {
+            "frame": 360,
+            "x": 244,
+            "y": 687,
+            "animation": 8,
             "flipX": true
           }
         ]
       },
-      "captions": [
+      "dialogue": [
         {
-          "startFrame": 35,
-          "endFrame": 180,
-          "text": "Sonic: This looks familiar...",
-          "x": 14,
-          "y": 18,
-          "argb": -1
+          "startFrame": 75,
+          "endFrame": 215,
+          "speakerActor": "sonic",
+          "text": "Hang on... Act TWO?",
+          "skinId": "sonic",
+          "typerId": "sonic",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
         },
         {
-          "startFrame": 195,
-          "endFrame": 390,
-          "text": "Tails: Same hill. Different act.",
-          "x": 14,
-          "y": 18,
-          "argb": -1
+          "startFrame": 230,
+          "endFrame": 392,
+          "speakerActor": "tails",
+          "text": "Now you're getting it!",
+          "skinId": "tails",
+          "typerId": "tails",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
         }
       ],
       "audio": [
@@ -304,7 +538,7 @@
           "soundId": 129
         },
         {
-          "frame": 390,
+          "frame": 398,
           "kind": "ROM_SFX",
           "gameId": "s2",
           "soundId": 160
@@ -312,22 +546,23 @@
       ],
       "cameraEffects": [
         {
-          "startFrame": 350,
-          "endFrame": 402,
+          "startFrame": 380,
+          "endFrame": 410,
           "amplitudeX": 4,
           "amplitudeY": 2,
           "frequency": 9,
-          "seed": 5
+          "seed": 17
         }
       ],
+      "captions": [],
       "transition": {
         "kind": "FADE_BLACK",
-        "durationFrames": 36
+        "durationFrames": 30
       }
     },
     {
       "id": "greenhill",
-      "durationFrames": 420,
+      "durationFrames": 480,
       "set": {
         "gameId": "s1",
         "zone": 0,
@@ -338,70 +573,118 @@
           "frame": 0,
           "x": 0,
           "y": 800,
-          "zoom": 1
+          "zoom": 1,
+          "interpolation": "SMOOTH"
         },
         {
-          "frame": 300,
-          "x": 45,
-          "y": 820,
-          "zoom": 1.25
+          "frame": 390,
+          "x": 60,
+          "y": 800,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
         }
       ],
       "actors": {
         "sonic": [
           {
             "frame": 0,
-            "x": 130,
+            "x": -20,
+            "y": 944,
+            "animation": 1
+          },
+          {
+            "frame": 70,
+            "x": 190,
             "y": 944,
             "animation": 7
           },
           {
-            "frame": 150,
-            "x": 160,
+            "frame": 215,
+            "x": 190,
             "y": 944,
-            "animation": 0
+            "animation": 0,
+            "flipX": true
           },
           {
-            "frame": 205,
+            "frame": 245,
             "x": 160,
             "y": 944,
-            "animation": 5,
-            "flipX": true
+            "animation": 5
+          },
+          {
+            "frame": 340,
+            "x": 160,
+            "y": 944,
+            "animation": 8
+          },
+          {
+            "frame": 385,
+            "x": 160,
+            "y": 944,
+            "animation": 5
           }
         ],
         "tails": [
           {
             "frame": 0,
-            "x": 240,
+            "x": 20,
+            "y": 944,
+            "animation": 1
+          },
+          {
+            "frame": 90,
+            "x": 295,
             "y": 944,
             "animation": 5,
             "flipX": true
           },
           {
-            "frame": 300,
-            "x": 240,
+            "frame": 235,
+            "x": 295,
             "y": 944,
-            "animation": 7,
+            "animation": 0,
+            "flipX": true
+          },
+          {
+            "frame": 285,
+            "x": 245,
+            "y": 944,
+            "animation": 5,
+            "flipX": true
+          },
+          {
+            "frame": 410,
+            "x": 245,
+            "y": 944,
+            "animation": 8,
             "flipX": true
           }
         ]
       },
-      "captions": [
+      "dialogue": [
         {
-          "startFrame": 30,
-          "endFrame": 175,
-          "text": "Sonic: Now this is REALLY familiar.",
-          "x": 14,
-          "y": 18,
-          "argb": -1
+          "startFrame": 100,
+          "endFrame": 245,
+          "speakerActor": "sonic",
+          "text": "I know this place!",
+          "skinId": "sonic",
+          "typerId": "sonic",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
         },
         {
-          "startFrame": 190,
-          "endFrame": 390,
-          "text": "Tails: The settings are... nostalgic.",
-          "x": 14,
-          "y": 18,
-          "argb": -1
+          "startFrame": 275,
+          "endFrame": 445,
+          "speakerActor": "tails",
+          "text": "Oops. Wrong decade.",
+          "skinId": "tails",
+          "typerId": "tails",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
         }
       ],
       "audio": [
@@ -412,7 +695,7 @@
           "soundId": 129
         },
         {
-          "frame": 390,
+          "frame": 462,
           "kind": "ROM_SFX",
           "gameId": "s2",
           "soundId": 160
@@ -420,22 +703,23 @@
       ],
       "cameraEffects": [
         {
-          "startFrame": 350,
-          "endFrame": 402,
+          "startFrame": 440,
+          "endFrame": 470,
           "amplitudeX": 3,
-          "amplitudeY": 4,
+          "amplitudeY": 3,
           "frequency": 9,
-          "seed": 31
+          "seed": 17
         }
       ],
+      "captions": [],
       "transition": {
         "kind": "FADE_WHITE",
-        "durationFrames": 36
+        "durationFrames": 30
       }
     },
     {
       "id": "island",
-      "durationFrames": 540,
+      "durationFrames": 600,
       "set": {
         "gameId": "s3k",
         "zone": 0,
@@ -446,19 +730,22 @@
           "frame": 0,
           "x": 4900,
           "y": 900,
-          "zoom": 1
+          "zoom": 1,
+          "interpolation": "SMOOTH"
         },
         {
           "frame": 180,
-          "x": 5000,
-          "y": 906,
-          "zoom": 1.1
+          "x": 4950,
+          "y": 900,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
         },
         {
-          "frame": 440,
-          "x": 5010,
-          "y": 920,
-          "zoom": 1.25
+          "frame": 560,
+          "x": 4910,
+          "y": 900,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
         }
       ],
       "actors": {
@@ -466,85 +753,172 @@
           {
             "frame": 0,
             "x": 5035,
-            "y": 1000,
+            "y": 930,
             "animation": 2
           },
           {
-            "frame": 45,
+            "frame": 25,
+            "x": 5035,
+            "y": 985,
+            "animation": 2
+          },
+          {
+            "frame": 44,
+            "x": 5035,
+            "y": 1050,
+            "animation": 8
+          },
+          {
+            "frame": 67,
             "x": 5035,
             "y": 1050,
             "animation": 5
           },
           {
-            "frame": 350,
+            "frame": 290,
             "x": 5035,
             "y": 1050,
-            "animation": 7
+            "animation": 0,
+            "flipX": true
+          },
+          {
+            "frame": 345,
+            "x": 4970,
+            "y": 1050,
+            "animation": 5
+          },
+          {
+            "frame": 440,
+            "x": 4970,
+            "y": 1050,
+            "animation": 8
           }
         ],
         "tails": [
           {
             "frame": 0,
             "x": 5110,
-            "y": 990,
+            "y": 915,
             "animation": 2
           },
           {
-            "frame": 45,
+            "frame": 25,
+            "x": 5110,
+            "y": 970,
+            "animation": 2
+          },
+          {
+            "frame": 48,
             "x": 5110,
             "y": 1052,
-            "animation": 5,
+            "animation": 8
+          },
+          {
+            "frame": 75,
+            "x": 5110,
+            "y": 1052,
+            "animation": 5
+          },
+          {
+            "frame": 245,
+            "x": 5110,
+            "y": 1052,
+            "animation": 0,
             "flipX": true
           },
           {
-            "frame": 380,
-            "x": 5110,
+            "frame": 305,
+            "x": 5050,
             "y": 1052,
-            "animation": 7,
-            "flipX": true
+            "animation": 5
+          },
+          {
+            "frame": 440,
+            "x": 5050,
+            "y": 1052,
+            "animation": 7
+          },
+          {
+            "frame": 525,
+            "x": 5050,
+            "y": 1052,
+            "animation": 8
           }
         ],
         "knuckles": [
           {
             "frame": 0,
-            "x": 5280,
+            "x": 5290,
             "y": 1046,
             "animation": 0,
             "flipX": true
           },
           {
-            "frame": 180,
+            "frame": 160,
             "x": 5180,
             "y": 1046,
             "animation": 5,
             "flipX": true
+          },
+          {
+            "frame": 260,
+            "x": 5180,
+            "y": 1046,
+            "animation": 0,
+            "flipX": true
+          },
+          {
+            "frame": 315,
+            "x": 5125,
+            "y": 1046,
+            "animation": 5,
+            "flipX": true
+          },
+          {
+            "frame": 500,
+            "x": 5125,
+            "y": 1046,
+            "animation": 7,
+            "flipX": true
           }
         ]
       },
-      "captions": [
+      "dialogue": [
         {
-          "startFrame": 45,
-          "endFrame": 210,
-          "text": "Knuckles: I ordered a quiet\n          afternoon.",
-          "x": 14,
-          "y": 18,
-          "argb": -1
+          "startFrame": 85,
+          "endFrame": 280,
+          "speakerActor": "knuckles",
+          "text": "This is a QUIET afternoon.",
+          "skinId": "knuckles",
+          "typerId": "knuckles",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
         },
         {
-          "startFrame": 230,
-          "endFrame": 365,
-          "text": "Sonic: We can return this one.",
-          "x": 14,
-          "y": 18,
-          "argb": -1
+          "startFrame": 295,
+          "endFrame": 440,
+          "speakerActor": "sonic",
+          "text": "We'll see ourselves out.",
+          "skinId": "sonic",
+          "typerId": "sonic",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
         },
         {
-          "startFrame": 390,
-          "endFrame": 510,
-          "text": "Tails: Found the HOME button!",
-          "x": 14,
-          "y": 18,
-          "argb": -1
+          "startFrame": 455,
+          "endFrame": 575,
+          "speakerActor": "tails",
+          "text": "Found HOME!",
+          "skinId": "tails",
+          "typerId": "tails",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
         }
       ],
       "audio": [
@@ -555,13 +929,13 @@
           "soundId": 1
         },
         {
-          "frame": 25,
+          "frame": 44,
           "kind": "ROM_SFX",
           "gameId": "s2",
           "soundId": 177
         },
         {
-          "frame": 510,
+          "frame": 580,
           "kind": "ROM_SFX",
           "gameId": "s2",
           "soundId": 160
@@ -569,25 +943,26 @@
       ],
       "cameraEffects": [
         {
-          "startFrame": 20,
-          "endFrame": 65,
-          "amplitudeX": 5,
+          "startFrame": 44,
+          "endFrame": 75,
+          "amplitudeX": 4,
           "amplitudeY": 3,
           "frequency": 9,
-          "seed": 11
+          "seed": 17
         },
         {
-          "startFrame": 490,
-          "endFrame": 525,
+          "startFrame": 565,
+          "endFrame": 592,
           "amplitudeX": 2,
           "amplitudeY": 2,
           "frequency": 9,
-          "seed": 3
+          "seed": 17
         }
       ],
+      "captions": [],
       "transition": {
         "kind": "WIPE_RIGHT",
-        "durationFrames": 36
+        "durationFrames": 30
       }
     },
     {
@@ -602,77 +977,107 @@
         {
           "frame": 0,
           "x": 25,
-          "y": 515,
-          "zoom": 1.15
+          "y": 500,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
         },
         {
-          "frame": 240,
+          "frame": 380,
           "x": 0,
           "y": 500,
-          "zoom": 1
-        },
-        {
-          "frame": 419,
-          "x": 0,
-          "y": 500,
-          "zoom": 1
+          "zoom": 1,
+          "interpolation": "SMOOTH"
         }
       ],
       "actors": {
         "sonic": [
           {
             "frame": 0,
-            "x": 156,
+            "x": 170,
             "y": 648,
+            "animation": 0,
+            "flipX": true
+          },
+          {
+            "frame": 65,
+            "x": 100,
+            "y": 650,
             "animation": 5
           },
           {
-            "frame": 180,
-            "x": 156,
+            "frame": 210,
+            "x": 100,
+            "y": 650,
+            "animation": 0
+          },
+          {
+            "frame": 245,
+            "x": 140,
             "y": 648,
             "animation": 7
           },
           {
-            "frame": 320,
-            "x": 156,
+            "frame": 365,
+            "x": 140,
             "y": 648,
-            "animation": 5,
-            "flipX": true
+            "animation": 8
           }
         ],
         "tails": [
           {
             "frame": 0,
-            "x": 240,
+            "x": 285,
+            "y": 648,
+            "animation": 0,
+            "flipX": true
+          },
+          {
+            "frame": 75,
+            "x": 235,
             "y": 648,
             "animation": 5,
             "flipX": true
           },
           {
-            "frame": 270,
-            "x": 240,
+            "frame": 275,
+            "x": 235,
             "y": 648,
-            "animation": 7,
+            "animation": 8,
+            "flipX": true
+          },
+          {
+            "frame": 320,
+            "x": 235,
+            "y": 648,
+            "animation": 5,
             "flipX": true
           }
         ]
       },
-      "captions": [
+      "dialogue": [
         {
-          "startFrame": 35,
-          "endFrame": 180,
-          "text": "Tails: See? Perfectly reliable.",
-          "x": 14,
-          "y": 18,
-          "argb": -1
+          "startFrame": 90,
+          "endFrame": 240,
+          "speakerActor": "tails",
+          "text": "Perfectly reliable!",
+          "skinId": "tails",
+          "typerId": "tails",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
         },
         {
-          "startFrame": 200,
-          "endFrame": 350,
-          "text": "Sonic: Great. Now put it down.",
-          "x": 14,
-          "y": 18,
-          "argb": -1
+          "startFrame": 260,
+          "endFrame": 385,
+          "speakerActor": "sonic",
+          "text": "Put. It. Down.",
+          "skinId": "sonic",
+          "typerId": "sonic",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
         }
       ],
       "audio": [
@@ -683,21 +1088,22 @@
           "soundId": 129
         },
         {
-          "frame": 390,
+          "frame": 398,
           "kind": "ROM_SFX",
           "gameId": "s2",
           "soundId": 160
         }
       ],
       "cameraEffects": [],
+      "captions": [],
       "transition": {
         "kind": "FADE_BLACK",
-        "durationFrames": 36
+        "durationFrames": 30
       }
     },
     {
       "id": "mostly",
-      "durationFrames": 240,
+      "durationFrames": 300,
       "set": {
         "gameId": "s1",
         "zone": 0,
@@ -707,14 +1113,16 @@
         {
           "frame": 0,
           "x": 20,
-          "y": 810,
-          "zoom": 1.2
+          "y": 800,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
         },
         {
-          "frame": 210,
-          "x": 30,
-          "y": 815,
-          "zoom": 1.25
+          "frame": 280,
+          "x": 100,
+          "y": 800,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
         }
       ],
       "actors": {
@@ -723,8 +1131,19 @@
             "frame": 0,
             "x": 130,
             "y": 944,
-            "animation": 7,
-            "flipX": true
+            "animation": 7
+          },
+          {
+            "frame": 135,
+            "x": 130,
+            "y": 944,
+            "animation": 1
+          },
+          {
+            "frame": 295,
+            "x": 575,
+            "y": 944,
+            "animation": 1
           }
         ],
         "tails": [
@@ -734,25 +1153,33 @@
             "y": 944,
             "animation": 5,
             "flipX": true
+          },
+          {
+            "frame": 125,
+            "x": 240,
+            "y": 944,
+            "animation": 1
+          },
+          {
+            "frame": 240,
+            "x": 580,
+            "y": 944,
+            "animation": 1
           }
         ]
       },
-      "captions": [
+      "dialogue": [
         {
           "startFrame": 30,
-          "endFrame": 125,
-          "text": "Tails: ...Mostly reliable.",
-          "x": 14,
-          "y": 18,
-          "argb": -1
-        },
-        {
-          "startFrame": 145,
-          "endFrame": 230,
-          "text": "Made with OpenGGF Stageplay",
-          "x": 14,
-          "y": 18,
-          "argb": -256
+          "endFrame": 155,
+          "speakerActor": "tails",
+          "text": "...Mostly.",
+          "skinId": "tails",
+          "typerId": "tails",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
         }
       ],
       "audio": [
@@ -764,9 +1191,19 @@
         }
       ],
       "cameraEffects": [],
+      "captions": [
+        {
+          "startFrame": 190,
+          "endFrame": 299,
+          "text": "OpenGGF Stageplay\nDirect the unexpected.",
+          "x": 35,
+          "y": 18,
+          "argb": -256
+        }
+      ],
       "transition": {
         "kind": "FADE_WHITE",
-        "durationFrames": 36
+        "durationFrames": 30
       }
     }
   ]

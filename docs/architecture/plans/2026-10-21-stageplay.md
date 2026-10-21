@@ -328,3 +328,50 @@ guards, in batches of at most 50. Expected ROM-heavy cost is up to about an hour
 use a 90-minute invocation cap (queue waiting excluded) and the standard 10-minute
 no-output stop. Fix attributable regressions narrowly; retain and attribute inherited
 failures by identity rather than repeating the broad run.
+
+
+### Dialogue revision checkpoint
+
+The directing smoke tree remained frozen while dialogue drafts and skill corrections
+were prepared outside it. User clarification confirms text reveal effects, speaker
+styles and dialogue skins. The bounded extension uses v3 portable data, explicit
+speakers, named reveal/skin profiles, custom elapsed reveal offsets and bounded PNG
+assets. Core owns schema/evaluator; runtime owns resources/presentation/registration;
+frontends own shared editing and desktop controls; lead owns CLI, docs, pins and media.
+No new executable mod registry or global graphics filtering is introduced.
+
+The second production revision is retained as a superseded preview, including its
+successful codec checks: those checks did not establish creative quality. Revision
+three uses active choreography and fixed zoom, with original generated dialogue
+panel art and distinct typing profiles. Final focused validation and media review
+must cover the new surface before integration; earlier smoke evidence alone does not.
+
+
+Dialogue candidate checkpoint (captured before the subsequent boundary correction):
+`-Dtest=TestStageplay* -Dopenggf.stageplay.hudPictures=true` with all three verified
+ROM paths and surfaceless EGL completed 145 tests, two failures and no errors/skips.
+The failures were stale test expectations: help still expected schema 2, and the
+actor-delete test assumed undo restored selection, contrary to the controller's
+separate view-state contract. The corrected command
+`-Dtest=TestStageplayDialogueWorkspace,TestStageplayTool,TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiJavadocTool,TestModApiSdkPackager,TestModSdkArtifactVerifier,TestSampleModsPackage`
+passed all 51 tests, no failures/errors/skips (88 seconds Maven execution, 187
+seconds admission wait). The normalized candidate gains 160 additive signatures,
+no removals; descriptor/version remain the unpublished 0.7.0 candidate.
+`-DskipTests package` then built engine, universal and exact SDK/Javadoc artifacts.
+All 18 desktop tests passed against that installed engine, including actual dialogue
+and skin forms (3.407 seconds Maven execution, 395 seconds admission wait).
+
+The separate `-Pguards -Dtest=TestArchUnitRules` check has 32 cases and three
+failures: two HubMusicController provider rules need matched baseline attribution;
+the Stageplay boundary rule identifies a workspace reference to runtime image-path
+enumeration and two new HUD references to pure dialogue/camera values. The next
+change removes the runtime dependency and narrowly declares the pure HUD owners.
+The candidate is not ready for integration until that correction and attribution.
+
+The 51-second schema-3 film was compiled and rendered with the packaged candidate.
+Its 3,060 authored timeline rows hold zoom one; reviewed half-second sequences show
+entrances, landings, turns, retreats and the closing chase, with named speaker panels.
+Both the source and MP4 exports decoded completely; each lossless audio channel has
+2,448,000 samples. Full-short browser playback reached 51 seconds at rate one with
+3,060 presented frames and zero reported dropped frames. This is authored scene
+presentation, not native gameplay qualification or physical audio listening.

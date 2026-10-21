@@ -38,21 +38,28 @@ with another controller that already owns native frame admission.
 
 ## Location, Location, Location
 
-The 46-second [screenplay](src/main/resources/scenes/location-remote.screenplay.json)
+The 51-second [screenplay](src/main/resources/scenes/location-remote.screenplay.json)
 and [compiled scene](src/main/resources/scenes/location-remote.stageplay) tell a
 short story about Tails' unreliable location remote. They demonstrate a three-role
-cast, visible tail accessories, panning/zoom, earthquake effects, and wipes/fades
+cast, visible tail accessories, active choreography, stable pans, earthquake effects, and wipes/fades
 between locations, acts and games. Supply S1, S2 and S3&K ROMs for this scene. The
 original S2-only opening remains the mod's default registration.
+
+The location scene includes reusable per-speaker typing profiles and original
+nine-slice panel decorations under `scenes/decor/`. Their colours, reveal cadence,
+punctuation pauses and image references are ordinary typed scene data; mods can
+replace or reuse them without adding Java callbacks. Names/pointers identify the
+speaker. All camera zooms are held at one; the film uses pans and cuts for framing.
 
 Open the compiled scene in either editor, or use the [agent authoring tool](../../docs/guide/creating/stageplay-authoring.md):
 
 ```sh
+cp -R examples/stageplay-demo/src/main/resources/scenes /your/production
 python3 tools/stageplay/stageplay.py compile \
-  --script examples/stageplay-demo/src/main/resources/scenes/location-remote.screenplay.json \
-  --out /your/production/location-remote.stageplay
+  --script /your/production/location-remote.screenplay.json \
+  --out /your/production/new-take.stageplay
 python3 tools/stageplay/stageplay.py render \
-  --scene /your/production/location-remote.stageplay \
+  --scene /your/production/new-take.stageplay \
   --out /your/production/location-remote.mkv \
   --s1-rom /your/existing-s1.gen --s2-rom /your/existing-s2.gen --s3k-rom /your/existing-s3k.gen
 ```

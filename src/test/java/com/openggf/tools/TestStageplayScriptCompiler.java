@@ -52,7 +52,7 @@ class TestStageplayScriptCompiler {
 
     @Test void multiShotCompilationOffsetsEveryTrackAndSeedsHiddenCastAtEveryBoundary() throws Exception {
         var document = compile(recipe());
-        assertEquals(2, document.version());
+        assertEquals(StageplayDocument.VERSION, document.version());
         assertEquals(90, document.durationFrames());
         assertEquals(List.of(0, 20, 30, 50, 70), document.camera().stream().map(StageplayDocument.CameraKey::frame).toList());
         assertEquals(List.of(30, 70), document.sceneChanges().stream().map(StageplayDocument.SceneChange::frame).toList());
@@ -78,6 +78,55 @@ class TestStageplayScriptCompiler {
         assertEquals(35, document.cameraEffects().getFirst().startFrame());
         assertEquals(40, document.cameraEffects().getFirst().endFrame());
         assertEquals(document, StageplayStore.decode(StageplayStore.encode(document)));
+    }
+
+    @Test void dialogueCompilationKeepsReusableProfilesAndOffsetsOnlySceneTime() throws Exception {
+        var script = recipe();
+        script.putArray("dialogueTypers").addObject().put("id", "brisk").put("framesPerGrapheme", 1);
+        script.putArray("dialogueSkins").addObject().put("id", "blue").put("nameArgb", 0xFF88CCFF)
+                .put("decorationAsset", "skins/blue.png").put("decorationBorder", 4);
+        var line = shot(script, 1).putArray("dialogue").addObject()
+                .put("id", "hello").put("startFrame", 2).put("endFrame", 8)
+                .put("speakerActor", "friend").put("text", "Hi").put("skinId", "blue").put("typerId", "brisk");
+        line.putArray("revealFrames").add(0).add(4);
+        var document = compile(script);
+        var cue = document.dialogue().getFirst();
+        assertEquals("middle.hello", cue.id());
+        assertEquals(32, cue.startFrame()); assertEquals(38, cue.endFrame());
+        assertEquals(List.of(0, 4), cue.revealFrames(), "reveal offsets are elapsed time within the line");
+        assertEquals(296, cue.width()); assertEquals(12, cue.x());
+        assertEquals("skins/blue.png", document.dialogueSkins().getFirst().decorationAsset());
+        assertEquals(1, document.dialogueTypers().getFirst().framesPerGrapheme());
+        var first = StageplayTimeline.sample(document, 32).dialogue().getFirst();
+        assertEquals("Friend", first.speakerName()); assertEquals("H", first.visibleText());
+        assertEquals("Hi", StageplayTimeline.sample(document, 36).dialogue().getFirst().visibleText());
+        assertEquals(first, StageplayTimeline.sample(document, 32).dialogue().getFirst());
+        assertTrue(StageplayTimeline.sample(document, 38).dialogue().isEmpty());
+        assertEquals(document, StageplayStore.decode(StageplayStore.encode(document)));
+    }
+
+    @Test void dialogueRejectsUnresolvedProfilesUnsafeArtAndWrongLocalTiming() throws Exception {
+        var script = recipe();
+        var line = shot(script, 1).putArray("dialogue").addObject()
+                .put("startFrame", 2).put("endFrame", 20).put("speakerActor", "friend").put("text", "Hello");
+        assertEquals(1, compile(script).dialogue().size());
+        for (var field : List.of("skinId", "typerId", "speakerActor")) {
+            var invalid = script.deepCopy();
+            ((ObjectNode) shot(invalid, 1).path("dialogue").get(0)).put(field, "missing");
+            assertThrows(IOException.class, () -> compile(invalid));
+        }
+        for (Consumer<ObjectNode> edit : List.<Consumer<ObjectNode>>of(
+                cue -> cue.put("endFrame", 41), cue -> cue.put("startFrame", -1),
+                cue -> cue.put("portraitAsset", "../escape.png"), cue -> cue.put("width", 400),
+                cue -> cue.put("typo", 1), cue -> cue.put("startFrame", "2"))) {
+            var invalid = script.deepCopy(); edit.accept((ObjectNode) shot(invalid, 1).path("dialogue").get(0));
+            assertThrows(IOException.class, () -> compile(invalid));
+        }
+        script.putArray("dialogueTypers").addObject().put("id", "bad").put("framesPerGrapheme", "2");
+        assertThrows(IOException.class, () -> compile(script));
+        script.putArray("dialogueTypers");
+        script.putArray("dialogueSkins").addObject().put("id", "bad").put("decorationAsset", "../skin.png");
+        assertThrows(IOException.class, () -> compile(script));
     }
 
     @Test void compiledShotBoundariesHoldOutgoingCoordinatesAndRestartIncomingAnimation() throws Exception {

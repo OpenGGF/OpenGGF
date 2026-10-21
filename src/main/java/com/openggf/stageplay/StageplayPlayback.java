@@ -88,7 +88,7 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
             throw new IllegalArgumentException("Native player binding requires the current native game, zone, act and character");
     }
 
-    /** Loads the immutable document and owned voice assets during the registration transaction. */
+    /** Loads the immutable document and owned media assets during the registration transaction. */
     public static void register(ModContext context, String localKey, String sceneAsset) throws IOException {
         register(context, localKey, sceneAsset, "", StageplayNativeBinding.FinishMode.RESTORE_ENTRY);
     }
@@ -115,6 +115,7 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
         sources.add(document.set());
         document.sceneChanges().forEach(change -> sources.add(change.set()));
         var projects = new HashMap<String, com.openggf.level.resources.AuthoredLevelDecoder.Decoded>();
+        var projectBytes = new HashMap<String, byte[]>();
         var sets = new HashMap<StageplayDocument.SetSource, com.openggf.level.Level>();
         long bytes = 0;
         for (var source : sources) if (!source.levelProject().isEmpty()) {
@@ -125,6 +126,7 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
                 if (bytes > 64L * 1024 * 1024) throw new IOException("Stageplay assets exceed the 64 MiB registration budget");
                 project = AuthoredLevelResources.decode("ogfproject", encoded);
                 projects.put(source.levelProject(), project);
+                projectBytes.put(source.levelProject(), encoded);
             }
             if (!project.gameId().equals(source.gameId()))
                 throw new IOException("Authored level and scene set use different games: " + source.levelProject());
@@ -132,18 +134,38 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
         }
         final var preparedSets = Map.copyOf(sets);
         var assets = new HashMap<String, byte[]>();
-        for (var cue : document.audio()) if (cue.kind() == StageplayDocument.AudioKind.VOICE && !assets.containsKey(cue.asset())) {
-            byte[] encoded = loader.loadSingle(LoadOp.modAssetBase(root, prefix + cue.asset()));
-            bytes += encoded.length;
-            if (assets.size() >= 256 || bytes > 64L * 1024 * 1024) throw new IOException("Stageplay assets exceed registration budget");
-            assets.put(cue.asset(), encoded);
+        var paths = new LinkedHashSet<String>();
+        for (var cue : document.audio()) if (cue.kind() == StageplayDocument.AudioKind.VOICE) paths.add(cue.asset());
+        paths.addAll(StageplayAssets.imagePaths(document));
+        if (paths.size() > StageplayAssets.MAX_ASSETS) throw new IOException("Stageplay assets exceed registration count budget");
+        for (String path : paths) {
+            byte[] encoded = projectBytes.get(path);
+            if (encoded == null) {
+                encoded = loader.loadSingle(LoadOp.modAssetBase(root, prefix + path));
+                bytes += encoded.length;
+            }
+            if (encoded.length > StageplayAssets.MAX_ENCODED_BYTES || bytes > StageplayAssets.MAX_TOTAL_BYTES)
+                throw new IOException("Stageplay assets exceed registration byte budget");
+            assets.put(path, encoded);
         }
         var prepared = Map.copyOf(assets);
+        // Validate decoration dimensions, slicing and layout before publishing any service.
+        // This pass needs neither the native world nor a loaded ROM.
+        try (var presentation = new StageplayResources(game -> null, List.of())) {
+            presentation.setAssetReader(path -> preparedAsset(prepared, path));
+            presentation.prepareDialogue(document);
+        } catch (UncheckedIOException failure) { throw failure.getCause(); }
         context.registerServiceBundle(localKey, () -> {
             var player = new StageplayPlayback(document, boundActor, finishMode, prepared, preparedSets);
             if (onEntry) player.play();
             return GameServiceBundle.builder().frameController("playback", player).service(StageplayControl.class, player).build();
         });
+    }
+
+    private static byte[] preparedAsset(Map<String, byte[]> assets, String path) throws IOException {
+        byte[] bytes = assets.get(path);
+        if (bytes == null) throw new IOException("Asset was not loaded in the mod registration transaction: " + path);
+        return bytes;
     }
 
     @Override public void play() {
@@ -274,13 +296,10 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
             try { library = new SceneRomLibrary(GameServices.module(), GameServices.rom().getRom(), GameServices.rom()); }
             catch (IOException failure) { throw new UncheckedIOException(failure); }
             resources = new StageplayResources(library, false);
+            resources.setAssetReader(path -> preparedAsset(assets, path));
             sets.forEach((source, level) -> resources.registerSet(source, StageplayResources.authored(level)));
             renderer = new StageplayRenderer(resources);
-            audio = new StageplayAudio(GameServices.audio(), library, asset -> {
-                byte[] bytes = assets.get(asset);
-                if (bytes == null) throw new IOException("Voice was not loaded in the mod registration transaction: " + asset);
-                return bytes;
-            });
+            audio = new StageplayAudio(GameServices.audio(), library, path -> preparedAsset(assets, path));
         }
         public boolean current() {
             return world == com.openggf.game.session.SessionManager.getCurrentWorldSession()

@@ -9,7 +9,6 @@ import com.openggf.mods.PcmDecoder;
 import com.openggf.mods.scene.host.SceneRomLibrary;
 import com.openggf.stageplay.StageplayDocument;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
@@ -38,25 +37,14 @@ public final class StageplayAudio implements AutoCloseable {
 
     /** Bounded, real-path-confined project asset read; symlinks cannot escape the project root. */
     public static byte[] readAsset(Path projectRoot, String relativePath) throws IOException {
-        com.openggf.io.ModAssetRoot.requireNormalizedEntry(relativePath);
-        if (projectRoot == null) throw new IOException("Save the scene before loading relative voice assets");
-        Path root = projectRoot.toRealPath();
-        Path file = root.resolve(relativePath).toRealPath();
-        if (!file.startsWith(root) || !Files.isRegularFile(file)) throw new IOException("Voice asset escapes scene directory");
-        long maximum = Math.min(ModInputLimits.production().maxAssetBytes(), 32L * 1024 * 1024);
-        if (Files.size(file) > maximum) throw new IOException("Voice asset exceeds encoded size limit");
-        try (var input = Files.newInputStream(file)) {
-            byte[] bytes = input.readNBytes(Math.toIntExact(maximum + 1));
-            if (bytes.length > maximum) throw new IOException("Voice asset exceeds encoded size limit");
-            return bytes;
-        }
+        return StageplayAssets.read(projectRoot, relativePath);
     }
 
     /** Validates every cue before changing playback; missing assets never silently disappear. */
     public void prepare(StageplayDocument next) throws IOException {
         requireOpen(); Objects.requireNonNull(next);
         if (audio.presentationFrameRate() != StageplayDocument.FRAMES_PER_SECOND)
-            throw new IOException("Stageplay version 1 requires 60 Hz audio presentation");
+            throw new IOException("Stageplay requires 60 Hz audio presentation");
         if (next.equals(document)) return;
         var prepared = new LinkedHashMap<String, StreamedMusicPort.SfxPcm>();
         long retained = 0;

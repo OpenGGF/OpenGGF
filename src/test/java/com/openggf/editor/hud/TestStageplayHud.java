@@ -71,6 +71,9 @@ class TestStageplayHud {
         press(BUTTON_START);
         assertEquals(StageplayWorkspace.Action.values().length, hud.rows().size());
         assertTrue(hud.rows().stream().anyMatch(row -> row.label().equals("Audio cues")));
+        assertTrue(hud.rows().stream().anyMatch(row -> row.label().equals("Dialogue lines")));
+        assertTrue(hud.rows().stream().anyMatch(row -> row.label().equals("Dialogue typers")));
+        assertTrue(hud.rows().stream().anyMatch(row -> row.label().equals("Dialogue decorations")));
         assertTrue(hud.rows().stream().anyMatch(row -> row.label().equals("Export film")));
     }
 
@@ -104,6 +107,18 @@ class TestStageplayHud {
         hud.rows().getLast().action().run();
         assertEquals(40, workspace.controller().frame());
         assertEquals("hero", workspace.controller().selectedActorId());
+    }
+
+    @Test
+    void dialogueTimelineIdentifiesSpeakerAndSelectsThemAtTheLineStart() {
+        workspace.invoke(StageplayWorkspace.Action.ADD_ACTOR); workspace.menu().setValue("name","Sonic"); workspace.menu().submit();
+        String actor=workspace.controller().selectedActorId();
+        workspace.controller().replace(workspace.controller().document().withDialogue(List.of(new StageplayDocument.DialogueCue(
+                "speech",20,100,actor,"","Hello!","","",8,140,304,72,"",List.of()))));
+        input.handleKeyEvent(GLFW_KEY_TAB,GLFW_PRESS); tick();
+        var line=hud.rows().stream().filter(r -> r.label().equals("Dialogue / Sonic")).findFirst().orElseThrow();
+        assertEquals("Hello!",line.detail()); line.action().run();
+        assertEquals(20,workspace.controller().frame()); assertEquals(actor,workspace.controller().selectedActorId());
     }
 
     @Test

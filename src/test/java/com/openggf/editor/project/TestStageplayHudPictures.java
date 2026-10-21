@@ -69,7 +69,15 @@ class TestStageplayHudPictures {
                     .withSceneChanges(List.of(new StageplayDocument.SceneChange("next-shot",240,
                             new StageplayDocument.SetSource("s2",0,1,"",""),StageplayDocument.Transition.FADE_BLACK,30)))
                     .withCaptions(List.of(new StageplayDocument.Caption("greeting", 0, 180, "Ready for another adventure?", 12, 190, -1)))
-                    .withAudio(List.of(new StageplayDocument.AudioCue("music", 0, StageplayDocument.AudioKind.ROM_MUSIC, "s2", 129, "", 1)));
+                    .withAudio(List.of(new StageplayDocument.AudioCue("music", 0, StageplayDocument.AudioKind.ROM_MUSIC, "s2", 129, "", 1)))
+                        .withDialogueTypers(List.of(new StageplayDocument.DialogueTyper("conversation",3,8,0)))
+                        .withDialogueSkins(List.of(new StageplayDocument.DialogueSkin("warm",0xfff5f0df,0xffffcf66,
+                                0xff172338,0xffa8b8cf,6,"",0,true)))
+                        .withDialogue(List.of(new StageplayDocument.DialogueCue("spoken-greeting",0,180,"hero","",
+                                "Tails, ready for another adventure?","warm","conversation",12,8,360,62,"",List.of())));
+            var line = StageplayTimeline.sample(scene,60).dialogue().getFirst();
+            assertEquals("Sonic",line.speakerName());
+            assertFalse(line.visibleText().isEmpty());
             var workspace = new StageplayWorkspace(() -> scene);
             workspace.activate();
             workspace.selectActor("hero");
@@ -109,7 +117,7 @@ class TestStageplayHudPictures {
             input.update(); input.handleKeyEvent(GLFW_KEY_F1,GLFW_RELEASE); input.update();
             input.handleKeyEvent(GLFW_KEY_F1,GLFW_PRESS); input.refreshLogicalSnapshot(); chrome.update(input); input.update();
             workspace.invoke(StageplayWorkspace.Action.CAMERA_MODE);
-            workspace.moveCamera(8,0,1.1);
+            workspace.moveCamera(8,0,2);
             surface.record(scene.width(),scene.height(),canvas -> renderer.draw(workspace.previewDocument(),workspace.previewFrame(),canvas));
             render(chrome,surface,scene,1280,720); capture("camera-720p",1280,720);
             render(chrome,surface,scene,1024,576); capture("camera-small",1024,576);

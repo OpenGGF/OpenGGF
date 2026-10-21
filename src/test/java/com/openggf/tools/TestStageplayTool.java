@@ -148,7 +148,7 @@ class TestStageplayTool {
         assertEquals(0, execute("init", "--out", script.toString()).status());
         var compiled = execute("compile", "--script", script.toString(), "--out", scene.toString());
         assertEquals(0, compiled.status());
-        assertEquals(2, compiled.json().path("result").path("version").intValue());
+        assertEquals(StageplayDocument.VERSION, compiled.json().path("result").path("version").intValue());
         assertEquals(300, compiled.json().path("result").path("frames").intValue());
         assertEquals(5, compiled.json().path("result").path("seconds").doubleValue());
         assertEquals("First take", StageplayStore.read(scene).name());
@@ -157,8 +157,12 @@ class TestStageplayTool {
         var sample = inspected.json().path("result").path("sample");
         assertEquals(299, sample.path("frame").intValue());
         assertEquals("tails", sample.path("actors").get(0).path("character").textValue());
-        assertEquals(1.2, sample.path("baseCamera").path("zoom").doubleValue());
+        assertEquals(1, sample.path("baseCamera").path("zoom").doubleValue());
         assertEquals("s2", sample.path("set").path("gameId").textValue());
+        var dialogue = execute("inspect", "--scene", scene.toString(), "--frame", "150")
+                .json().path("result").path("sample").path("dialogue").get(0);
+        assertEquals("Tails", dialogue.path("speakerName").textValue());
+        assertEquals("Ready for our first take!", dialogue.path("visibleText").textValue());
         var validated = execute("validate", "--scene", scene.toString());
         assertEquals(0, validated.status());
         assertFalse(validated.json().path("result").has("sample"));
@@ -176,7 +180,11 @@ class TestStageplayTool {
                     ((com.fasterxml.jackson.databind.node.ArrayNode) script.get("shots")).add(second);
                 },
                 script -> shot(script).putArray("audio").addObject().put("frame", 0)
-                        .put("kind", "VOICE").put("asset", "voice/hello.wav"));
+                        .put("kind", "VOICE").put("asset", "voice/hello.wav"),
+                script -> script.putArray("dialogueSkins").addObject().put("id", "blue")
+                        .put("decorationAsset", "skins/blue.png").put("decorationBorder", 4),
+                script -> ((ObjectNode) shot(script).path("dialogue").get(0))
+                        .put("portraitAsset", "portraits/tails.png"));
         for (int i = 0; i < relativeAssets.size(); i++) {
             var recipe = recipe(); relativeAssets.get(i).accept(recipe);
             Path input = script("relative" + i + ".json", recipe);
@@ -283,7 +291,7 @@ class TestStageplayTool {
         var result = execute();
         assertEquals(0, result.status());
         assertEquals(1, result.json().path("result").path("screenplayVersion").intValue());
-        assertEquals(2, result.json().path("result").path("stageplayVersion").intValue());
+        assertEquals(StageplayDocument.VERSION, result.json().path("result").path("stageplayVersion").intValue());
         assertEquals(60, result.json().path("result").path("fps").intValue());
         assertTrue(result.json().path("result").path("outputs").textValue().contains("never overwritten"));
         assertTrue(entries(directory).isEmpty());

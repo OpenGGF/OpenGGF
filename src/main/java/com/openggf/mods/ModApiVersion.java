@@ -106,6 +106,8 @@ public final class ModApiVersion {
      * Stageplay adds immutable directing documents, pure timeline evaluation,
      * owner-bound cutscene playback, bounded sample voices and explicit native
      * player/camera borrowing with captured handover and fault revocation.
+     * Reusable dialogue typers and skins, grapheme-safe reveal schedules and
+     * shared dialogue layout keep creator styling portable between both editors.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

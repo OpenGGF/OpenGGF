@@ -5,10 +5,12 @@ carried by `develop` and `next` after the 0.6 release rollover. No Mod API basel
 has been published yet. The runtime-visible, type-only `com.openggf.game.ModApi`
 annotation marks its roots.
 
-Stageplay's directing extension keeps the mutable candidate at 0.7.0. Version-two
-scene records append camera effects, scene changes, sampled active sets and transition
-coverage while retaining their original constructors. Strict version-one documents
-migrate with empty extension lists. SceneRomArt exposes pure accessory pose/time
+Stageplay's directing extension keeps the mutable candidate at 0.7.0. Version-three
+scene records add typed dialogue cues, reusable reveal/skin definitions and sampled
+speaker text alongside camera effects, scene changes and transitions. Legacy
+constructors remain; strict version-one and version-two reads migrate with empty
+extension lists. StageplayDialogue exposes pure layout/reveal sampling. Camera
+position interpolation remains; zoom now holds until the next camera key. SceneRomArt exposes pure accessory pose/time
 sampling and SceneAccessoryPose, allowing native ROM providers to own appendage
 relationships without game-specific branches in Stageplay. The normalized candidate
 pin changes; published-version baselines and release topology do not.

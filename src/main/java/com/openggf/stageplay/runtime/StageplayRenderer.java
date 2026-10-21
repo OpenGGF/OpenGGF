@@ -23,6 +23,7 @@ public final class StageplayRenderer {
     }
 
     public void draw(StageplayDocument document, StageplayTimeline.Frame frame, SceneCanvas canvas) {
+        resources.prepareDialogue(document);
         var camera = frame.camera(); var kit = resources.set(frame.set() == null ? document.set() : frame.set());
         float zoom = (float) camera.zoom();
         canvas.clear(kit.palette()[0]);
@@ -58,6 +59,7 @@ public final class StageplayRenderer {
                 canvas.text(line, caption.x(), y, caption.argb()); y += 12;
             }
         }
+        StageplayDialogueRenderer.draw(document, frame, canvas, resources);
         transition(canvas, frame.transition(), document.width(), document.height());
         canvas.unclip();
     }

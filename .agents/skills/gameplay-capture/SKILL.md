@@ -14,6 +14,11 @@ frame by frame from a BizHawk input log, and writes PNG frames, `state.csv`, and
 MP4 when `ffmpeg` is on `PATH`. Use it to show a user what happens at a location, to
 check a visual change, or to reproduce a route failure with real rendering.
 
+For choreographed dialogue, directed performances or staged promo scenes, use
+[stageplay-authoring](../stageplay-authoring/SKILL.md). Its timeline JSONL describes
+authored presentation; this capture's state CSV describes executed gameplay. Use
+this workflow when the actual gameplay behavior is the subject of the footage.
+
 Use `--interactive-pacing` for title menus, gameplay observers and presentation-timed
 effects such as Chaos Mode. It uses the production `GameLoop.stepPresentationFrame`
 owner: each input row represents one presentation, which may admit zero or several

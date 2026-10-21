@@ -709,7 +709,7 @@ class TestArchUnitRules {
     }
 
     private static boolean stageplayCoreType(String name) {
-        return Set.of("StageplayDocument", "StageplayTimeline", "StageplayController", "StageplayStore", "StageplayControl")
+        return Set.of("StageplayDocument", "StageplayTimeline", "StageplayController", "StageplayStore", "StageplayControl", "StageplayDialogue")
                 .stream().anyMatch(owner -> typeOrNested(name, "com.openggf.stageplay." + owner));
     }
 
@@ -736,7 +736,9 @@ class TestArchUnitRules {
         var owners = java.util.Map.of(
                 "com.openggf.stageplay.StageplayPlayback", Set.of("audio", "control", "data", "game", "graphics", "io", "level", "mods"),
                 "com.openggf.stageplay.runtime.StageplayAudio", Set.of("audio", "data", "game", "io", "mods"),
-                "com.openggf.stageplay.runtime.StageplayResources", Set.of("level", "mods"),
+                "com.openggf.stageplay.runtime.StageplayResources", Set.of("level", "mods", "io"),
+                "com.openggf.stageplay.runtime.StageplayAssets", Set.of("io"),
+                "com.openggf.stageplay.runtime.StageplayDialogueRenderer", Set.of("mods"),
                 "com.openggf.stageplay.runtime.StageplayRenderer", Set.of("mods"),
                 "com.openggf.stageplay.runtime.StageplayNativeBinding", Set.of("game"),
                 "com.openggf.stageplay.editor.StageplayEditorSession", Set.of("audio", "data", "game", "mods"),

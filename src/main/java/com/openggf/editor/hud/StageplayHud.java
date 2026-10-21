@@ -5,6 +5,7 @@ import com.openggf.control.MenuInput;
 import com.openggf.editor.hud.EditorHudCanvas.Size;
 import com.openggf.editor.hud.EditorHudLayout.Rect;
 import com.openggf.stageplay.StageplayDocument;
+import com.openggf.stageplay.StageplayDialogue;
 import com.openggf.editor.stageplay.StageplayWorkspace;
 import com.openggf.editor.stageplay.StageplayWorkspace.Action;
 
@@ -172,6 +173,11 @@ final class StageplayHud {
                 }
                 for (var key : document.camera()) rows.add(new Row("Camera", key.interpolation().name(), key.frame(), () -> workspace.seek(key.frame())));
                 for (var caption : document.captions()) rows.add(new Row("Caption", caption.text(), caption.startFrame(), () -> workspace.seek(caption.startFrame())));
+                for (var cue : document.dialogue()) rows.add(new Row("Dialogue / "+StageplayDialogue.speakerName(document,cue),
+                        cue.text().replace('\n',' '),cue.startFrame(),() -> {
+                    if (!cue.speakerActor().isEmpty()) workspace.selectActor(cue.speakerActor());
+                    workspace.seek(cue.startFrame());
+                }));
                 for (var cue : document.audio()) rows.add(new Row("Audio", cue.kind().name(), cue.frame(), () -> workspace.seek(cue.frame())));
                 for (var effect : document.cameraEffects()) rows.add(new Row("Camera shake", effect.amplitudeX()+" / "+effect.amplitudeY()+" px, "+effect.frequency()+" Hz",
                         effect.startFrame(), () -> workspace.seek(effect.startFrame())));
@@ -207,11 +213,13 @@ final class StageplayHud {
         if (panel != null && panel.w() > 20) drawPanel(c, panel, nextHits);
         drawTimeline(c, layout.dock(), document, nextHits);
         c.rect(0, layout.promptBar().y(), layout.width(), layout.promptBar().h(), PANEL, 1);
-        String prompt = workspace.recordingCamera() ? "CAMERA TAKE  /  WASD or arrows pan  /  Q E zoom  /  Space stop"
+        String prompt = workspace.recordingCamera() ? "CAMERA TAKE  /  WASD or arrows pan  /  Q E integer zoom  /  Space stop"
                 : workspace.recording() ? "RECORDING DIRECTED TAKE  /  WASD move  /  Space or South stop"
-                : workspace.cameraMode() ? "CAMERA  WASD/arrows pan  Q E zoom  K key  R record  C exit  F1 commands"
+                : workspace.cameraMode() ? "CAMERA  WASD/arrows pan  Q E integer zoom  K key  R record  C exit  F1 commands"
                 : controllerPrompts ? "D-pad seek/select   A choose   X key   Y actor   View timeline   Start commands"
                 : "Arrows seek/select  Tab timeline  K key  C camera  Space play  F1 commands";
+        if (workspace.cameraMode() && workspace.directorCamera().zoom()!=Math.rint(workspace.directorCamera().zoom()))
+            prompt = "FRACTIONAL ZOOM: Q/E choose integer framing; K capture. Imported zoom may shimmer while panning.";
         c.fittedText(prompt, 8, layout.promptBar().y() + 5, layout.width() - 16, Size.SMALL,
                 workspace.recording() ? WARN : TEXT_DIM, 1);
         hits = List.copyOf(nextHits);
@@ -281,6 +289,7 @@ final class StageplayHud {
             for (var key : actor.keys()) marker(c, key.frame(), document.durationFrames(), ACCENT, 5);
         }
         for (var caption : document.captions()) marker(c, caption.startFrame(), document.durationFrames(), GOOD, 3);
+        for (var cue : document.dialogue()) marker(c, cue.startFrame(), document.durationFrames(), GOLD, 4);
         for (var cue : document.audio()) marker(c, cue.frame(), document.durationFrames(), WARN, 3);
         for (var effect : document.cameraEffects()) marker(c, effect.startFrame(), document.durationFrames(), WARN, 6);
         for (var change : document.sceneChanges()) marker(c, change.frame(), document.durationFrames(), GOLD, 8);

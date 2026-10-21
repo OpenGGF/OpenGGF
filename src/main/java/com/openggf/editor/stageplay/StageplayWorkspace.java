@@ -5,6 +5,8 @@ import com.openggf.editor.project.EditorProjectMenu;
 import com.openggf.game.MenuTextEditor;
 import com.openggf.stageplay.StageplayController;
 import com.openggf.stageplay.StageplayDocument;
+import com.openggf.stageplay.StageplayDialogue;
+import com.openggf.stageplay.runtime.StageplayAssets;
 import com.openggf.stageplay.StageplayStore;
 import com.openggf.stageplay.StageplayTimeline;
 
@@ -44,7 +46,8 @@ public final class StageplayWorkspace {
         DELETE_ACTOR("Remove actor"), SET_KEY("Set actor key"), DELETE_KEY("Remove actor key"),
         CAMERA_MODE("Direct camera (C)"), SET_CAMERA_KEY("Capture camera key (K)"), CAMERA_KEY("Camera keys"),
         RECORD_CAMERA("Record camera take (R)"), CAMERA_EFFECTS("Camera shake / quake"),
-        SCENE_CHANGES("Scene changes / transitions"), FILM_FORMAT("Film format presets"), CAPTION("Captions"), AUDIO("Audio cues"),
+        SCENE_CHANGES("Scene changes / transitions"), FILM_FORMAT("Film format presets"), CAPTION("Captions"), DIALOGUE("Dialogue lines"),
+        DIALOGUE_TYPERS("Dialogue typers"), DIALOGUE_SKINS("Dialogue decorations"), AUDIO("Audio cues"),
         RECORD("Record directed take (WASD)"), PLAY("Play / pause"), STOP("Stop"),
         UNDO("Undo"), REDO("Redo"), EXPORT("Export film"), EXIT("Level editor");
         private final String label;
@@ -69,6 +72,8 @@ public final class StageplayWorkspace {
     private StageplayTimeline.CameraPose cameraDraft;
     private boolean startedThisTick;
     private boolean previewSoundActive;
+    private int zoomHeldDirection;
+    private int zoomHeldTicks;
 
     public StageplayWorkspace(Host host) {
         this.host = Objects.requireNonNull(host);
@@ -83,7 +88,7 @@ public final class StageplayWorkspace {
     public boolean recordingCamera() { return takeCameraKeys != null; }
     public boolean cameraMode() { return cameraMode; }
     /** Frontends suspend held camera controls while a palette or text widget owns input. */
-    public void setCameraInputEnabled(boolean enabled) { cameraInputEnabled = enabled; }
+    public void setCameraInputEnabled(boolean enabled) { cameraInputEnabled = enabled; if (!enabled) resetZoomRepeat(); }
     public StageplayTimeline.CameraPose directorCamera() {
         return cameraDraft != null ? cameraDraft : StageplayTimeline.sample(recordingDocument(), controller.frame()).baseCamera();
     }
@@ -121,13 +126,12 @@ public final class StageplayWorkspace {
                 case SCENE -> sceneForm();
                 case ADD_ACTOR -> actorForm(null);
                 case EDIT_ACTOR -> actorForm(selectedActor());
-                case DELETE_ACTOR -> edit(doc -> doc.withActors(doc.actors().stream()
-                        .filter(actor -> !actor.id().equals(selectedActor().id())).toList()));
+                case DELETE_ACTOR -> deleteActor();
                 case SET_KEY -> keyForm();
                 case DELETE_KEY -> deleteKey();
                 case CAMERA_MODE -> {
                     cameraMode = !cameraMode; cameraDraft = null;
-                    status = cameraMode ? "Camera: WASD / arrows pan, Q / E zoom, K capture key, R record, C leave camera." : "Actor direction";
+                    status = cameraMode ? "Camera: WASD / arrows pan, Q / E step integer zoom, K capture key, R record, C leave camera." : "Actor direction";
                 }
                 case SET_CAMERA_KEY -> captureCameraKey();
                 case CAMERA_KEY -> cameraMenu();
@@ -136,6 +140,9 @@ public final class StageplayWorkspace {
                 case SCENE_CHANGES -> sceneChangesMenu();
                 case FILM_FORMAT -> filmFormatMenu();
                 case CAPTION -> captionMenu();
+                case DIALOGUE -> dialogueMenu();
+                case DIALOGUE_TYPERS -> typerMenu();
+                case DIALOGUE_SKINS -> skinMenu();
                 case AUDIO -> audioMenu();
                 case RECORD -> { if (recording()) stop(); else startTake(); }
                 case PLAY -> { if (controller.playing() || recording()) stop(); else play(); }
@@ -151,7 +158,7 @@ public final class StageplayWorkspace {
     /** Called once per editor presentation tick, after the active frontend's queued commands. */
     public boolean tick(InputHandler input) {
         if (!active && !menu.isOpen()) return false;
-        if (menu.update(input)) return true;
+        if (menu.update(input)) { resetZoomRepeat(); return true; }
         try {
             if (recording()) {
                 if (input.isKeyPressed(GLFW_KEY_SPACE) || input.isKeyPressed(GLFW_KEY_ESCAPE)) { stop(); return true; }
@@ -178,6 +185,7 @@ public final class StageplayWorkspace {
     }
 
     public void stop() {
+        resetZoomRepeat();
         controller.pause(); startedThisTick = false; previewSoundActive = false; host.stop();
         if (!recording()) return;
         var candidate = recordingDocument();
@@ -235,7 +243,7 @@ public final class StageplayWorkspace {
         if (cameraDraft == null || controller.playing()) return frame;
         var shaken = new StageplayTimeline.CameraPose(cameraDraft.x()+frame.camera().x()-frame.baseCamera().x(),
                 cameraDraft.y()+frame.camera().y()-frame.baseCamera().y(),cameraDraft.zoom());
-        return new StageplayTimeline.Frame(frame.frame(),frame.actors(),shaken,frame.captions(),frame.set(),frame.transition(),cameraDraft);
+        return new StageplayTimeline.Frame(frame.frame(),frame.actors(),shaken,frame.captions(),frame.set(),frame.transition(),cameraDraft,frame.dialogue());
     }
 
     private StageplayDocument recordingDocument() {
@@ -249,7 +257,7 @@ public final class StageplayWorkspace {
             throw new IllegalArgumentException("Camera movement and zoom must be finite; zoom must be positive");
         if (screenX == 0 && screenY == 0 && zoomFactor == 1) return;
         var camera = directorCamera();
-        double zoom = Math.clamp(camera.zoom() * zoomFactor, .05, 64);
+        double zoom = zoomFactor == 1 ? camera.zoom() : Math.clamp(Math.round(camera.zoom() * zoomFactor), 1, 64);
         // Keep the film centre steady while zooming; movement is measured in visible pixels.
         double x = camera.x() + screenX / camera.zoom() + controller.document().width() * (.5 / camera.zoom() - .5 / zoom);
         double y = camera.y() + screenY / camera.zoom() + controller.document().height() * (.5 / camera.zoom() - .5 / zoom);
@@ -259,23 +267,23 @@ public final class StageplayWorkspace {
     }
 
     private void captureCameraKey() {
-        var camera = directorCamera();
+        var camera = integerCamera(directorCamera());
         var key = new CameraKey(controller.frame(), camera.x(), camera.y(), camera.zoom(), Interpolation.LINEAR);
         edit(d -> d.withCamera(withCameraKey(d.camera(), key)));
         cameraDraft = null;
-        status = "Camera key captured at frame " + controller.frame() + ". Set a later key to animate the pan or zoom.";
+        status = "Camera key captured at frame " + controller.frame() + ". Later keys animate pans; zoom changes cut at their key.";
     }
 
     private void startCameraTake() {
         stop();
-        var camera = directorCamera();
+        var camera = integerCamera(directorCamera());
         var before = controller.document();
         var keys = withCameraKey(before.camera(), new CameraKey(controller.frame(),
                 camera.x(), camera.y(), camera.zoom(), Interpolation.HOLD));
         before.withCamera(keys);
         cameraMode = true; takeBefore = before; takeCameraKeys = keys;
         cameraDraft = null;
-        status = "Recording camera: WASD / arrows pan, Q / E zoom, Space stops. One take is one undo.";
+        status = "Recording camera: WASD / arrows pan, Q / E step integer zoom, Space stops. One take is one undo.";
     }
 
     void recordCameraStep(int horizontal, int vertical, double zoomFactor) {
@@ -312,9 +320,22 @@ public final class StageplayWorkspace {
         return (input.isKeyDown(GLFW_KEY_S) || input.isKeyDown(GLFW_KEY_DOWN) ? 1 : 0)
                 - (input.isKeyDown(GLFW_KEY_W) || input.isKeyDown(GLFW_KEY_UP) ? 1 : 0);
     }
-    private static double zoomInput(InputHandler input) {
+    private double zoomInput(InputHandler input) {
         int direction = (input.isKeyDown(GLFW_KEY_E) ? 1 : 0) - (input.isKeyDown(GLFW_KEY_Q) ? 1 : 0);
-        return Math.pow(1.02, direction);
+        if (direction == 0) { resetZoomRepeat(); return 1; }
+        boolean step = direction != zoomHeldDirection;
+        if (step) { zoomHeldDirection=direction; zoomHeldTicks=0; }
+        else { zoomHeldTicks++; step=zoomHeldTicks>=18 && (zoomHeldTicks-18)%6==0; }
+        if (!step) return 1;
+        double current=directorCamera().zoom();
+        double next=Math.clamp(direction>0 ? Math.floor(current)+1 : Math.ceil(current)-1,1,64);
+        return next/current;
+    }
+    private void resetZoomRepeat() { zoomHeldDirection=0; zoomHeldTicks=0; }
+    private StageplayTimeline.CameraPose integerCamera(StageplayTimeline.CameraPose camera) {
+        double zoom=Math.clamp(Math.round(camera.zoom()),1,64);
+        return new StageplayTimeline.CameraPose(Math.clamp(camera.x()+controller.document().width()*(.5/camera.zoom()-.5/zoom),-1_048_576,1_048_576),
+                Math.clamp(camera.y()+controller.document().height()*(.5/camera.zoom()-.5/zoom),-1_048_576,1_048_576),zoom);
     }
 
     private StageplayDocument takeDocument(List<ActorKey> keys) {
@@ -398,7 +419,7 @@ public final class StageplayWorkspace {
 
     private static boolean hasRelativeAssets(StageplayDocument doc) {
         return !doc.set().levelProject().isEmpty() || doc.sceneChanges().stream().anyMatch(c -> !c.set().levelProject().isEmpty())
-                || doc.audio().stream().anyMatch(c -> !c.asset().isEmpty());
+                || doc.audio().stream().anyMatch(c -> !c.asset().isEmpty()) || !StageplayAssets.imagePaths(doc).isEmpty();
     }
 
     private static String relative(Path oldRoot, Path newRoot, String reference) throws IOException {
@@ -482,18 +503,29 @@ public final class StageplayWorkspace {
                     if (controller.frame()==0) throw new IllegalStateException("The frame-zero camera key is required");
                     if (isSceneBoundary(controller.frame())) throw new IllegalStateException("A scene change needs this camera key. Remove the scene change first.");
                     edit(d -> d.withCamera(d.camera().stream().filter(k -> k.frame()!=controller.frame()).toList()));
-                })));
+                }), action("Capture 1x pixel framing", () -> captureZoom(1)),
+                action("Capture 2x pixel framing", () -> captureZoom(2)),
+                action("Capture 3x pixel framing", () -> captureZoom(3)),
+                action("Capture 4x pixel framing", () -> captureZoom(4))));
     }
 
+    private void captureZoom(int zoom) { moveCamera(0,0,zoom/directorCamera().zoom()); captureCameraKey(); }
+
     private void cameraForm() {
-        var camera = directorCamera(); int frame = controller.frame();
+        int frame = controller.frame();
+        var existing=controller.document().camera().stream().filter(k -> k.frame()==frame).findFirst().orElse(null);
+        var camera = existing==null ? integerCamera(directorCamera()) : directorCamera();
         var interpolation = controller.document().camera().stream().filter(k -> k.frame() <= frame).reduce((a,b) -> b).orElseThrow().interpolation();
         menu.showForm("Camera key at frame " + frame,List.of(number("x","World left X",camera.x()),number("y","World top Y",camera.y()),
-                number("zoom","Zoom",camera.zoom()),text("interpolation","HOLD / LINEAR / SMOOTH",interpolation.name())),"Set camera",v -> edit(d -> {
+                number("zoom","Zoom (integer 1..64)",camera.zoom()),text("interpolation","HOLD / LINEAR / SMOOTH",interpolation.name())),"Set camera",v -> edit(d -> {
+            double zoom=decimal(v,"zoom");
+            if ((existing==null || zoom!=existing.zoom()) && (zoom<1 || zoom!=Math.rint(zoom)))
+                throw new IllegalArgumentException("New framing uses integer zoom (1..64). Existing fractional values may be kept unchanged.");
             var keys = new ArrayList<>(d.camera()); keys.removeIf(k -> k.frame()==frame);
-            keys.add(new CameraKey(frame,decimal(v,"x"),decimal(v,"y"),decimal(v,"zoom"),Interpolation.valueOf(v.get("interpolation").toUpperCase(java.util.Locale.ROOT))));
+            keys.add(new CameraKey(frame,decimal(v,"x"),decimal(v,"y"),zoom,Interpolation.valueOf(v.get("interpolation").toUpperCase(java.util.Locale.ROOT))));
             keys.sort(Comparator.comparingInt(CameraKey::frame)); return d.withCamera(keys);
         }));
+        menu.setSubtitle("Pan uses the chosen interpolation; zoom is held until the next key. Integer zoom preserves pixel framing. Imported fractional zoom can shimmer while panning.");
     }
 
     private boolean isSceneBoundary(int frame) {
@@ -589,7 +621,200 @@ public final class StageplayWorkspace {
         }
         camera.sort(Comparator.comparingInt(CameraKey::frame));
         return new StageplayDocument(doc.version(),doc.name(),doc.durationFrames(),doc.width(),doc.height(),doc.set(),
-                actors,camera,doc.captions(),doc.audio(),doc.cameraEffects(),changes);
+                actors,camera,doc.captions(),doc.audio(),doc.cameraEffects(),changes,doc.dialogueTypers(),doc.dialogueSkins(),doc.dialogue());
+    }
+
+
+    private void deleteActor() {
+        var actor = selectedActor();
+        if (controller.document().dialogue().stream().noneMatch(c -> c.speakerActor().equals(actor.id()))) {
+            edit(d -> d.withActors(d.actors().stream().filter(a -> !a.id().equals(actor.id())).toList()));
+            return;
+        }
+        menu.showActions("Remove " + actor.name() + "?", List.of(
+                action("Keep dialogue as offscreen speech", () -> edit(d -> {
+                    var cues = d.dialogue().stream().map(c -> c.speakerActor().equals(actor.id())
+                            ? dialogueSpeaker(c, "", StageplayDialogue.speakerName(d,c)) : c).toList();
+                    return d.withDialogue(cues).withActors(d.actors().stream().filter(a -> !a.id().equals(actor.id())).toList());
+                })), action("Remove actor and their dialogue", () -> edit(d -> d.withDialogue(d.dialogue().stream()
+                        .filter(c -> !c.speakerActor().equals(actor.id())).toList()).withActors(d.actors().stream()
+                        .filter(a -> !a.id().equals(actor.id())).toList()))), action("Keep actor", () -> { })));
+    }
+
+    private void dialogueMenu() {
+        var d = controller.document();
+        var actions = new ArrayList<EditorProjectMenu.Action>();
+        actions.add(action("Add dialogue line", () -> speakerMenu(null)));
+        actions.add(action("Reusable typers", this::typerMenu));
+        actions.add(action("Reusable decorations", this::skinMenu));
+        for (var cue : d.dialogue()) actions.add(action(cue.startFrame()+": "+StageplayDialogue.speakerName(d,cue)+" - "+cue.text(),
+                () -> dialogueCueMenu(cue)));
+        menu.showActions("Dialogue lines", actions);
+        menu.setSubtitle("Names appear immediately. Typed text, speaker pointers and decorations share the film timeline.");
+    }
+
+    private void dialogueCueMenu(DialogueCue cue) {
+        menu.showActions(StageplayDialogue.speakerName(controller.document(),cue)+" / dialogue", List.of(
+                action("Edit line, timing and panel", () -> dialogueForm(cue)),
+                action("Choose speaker", () -> speakerMenu(cue)),
+                action("Choose decoration", () -> dialogueProfileMenu(cue,false)),
+                action("Choose typer", () -> dialogueProfileMenu(cue,true)),
+                action("Custom reveal timing", () -> revealForm(cue)),
+                action("Use typer timing", () -> edit(d -> replaceDialogue(d,dialogueTiming(cue,List.of())))),
+                action("Delete line", () -> edit(d -> d.withDialogue(d.dialogue().stream().filter(c -> !c.id().equals(cue.id())).toList())))));
+    }
+
+    private void speakerMenu(DialogueCue cue) {
+        var choices = new ArrayList<EditorProjectMenu.Action>();
+        for (var actor : controller.document().actors()) choices.add(action(actor.name()+" ("+actor.character()+")", () -> {
+            if (cue == null) dialogueForm(newDialogue(actor.id(),""));
+            else edit(d -> replaceDialogue(d,dialogueSpeaker(cue,actor.id(),"")));
+        }));
+        choices.add(action("Offscreen speaker / narrator", () -> {
+            if (cue == null) dialogueForm(newDialogue("","Narrator"));
+            else dialogueForm(dialogueSpeaker(cue,"",StageplayDialogue.speakerName(controller.document(),cue)));
+        }));
+        menu.showActions("Who is speaking?", choices);
+    }
+
+    private DialogueCue newDialogue(String actor, String name) {
+        var d = controller.document();
+        int margin = Math.min(12,Math.max(0,(d.width()-80)/2));
+        int height = Math.min(72,d.height());
+        return new DialogueCue(nextId("dialogue",d),controller.frame(),Math.min(controller.frame()+180,d.durationFrames()),
+                actor,name,"Hello.","","",margin,Math.max(0,d.height()-height-margin),d.width()-margin*2,height,"",List.of());
+    }
+
+    private void dialogueForm(DialogueCue cue) {
+        menu.showForm("Dialogue line",List.of(
+                text("name",cue.speakerActor().isEmpty()?"Speaker name":"Name override (blank = actor)",cue.speakerName()),
+                new EditorProjectMenu.Field("text","Text (\\n = line break)",escapeCaption(cue.text()),MenuTextEditor.Mode.TEXT,8192),
+                number("start","Start frame",cue.startFrame()),number("end","End frame (exclusive)",cue.endFrame()),
+                number("x","Panel screen X",cue.x()),number("y","Panel screen Y",cue.y()),
+                number("width","Panel width",cue.width()),number("height","Panel height",cue.height()),
+                file("portrait","Relative portrait PNG (optional)",cue.portraitAsset())),"Apply dialogue",v -> edit(d -> {
+            String line = unescapeCaption(v.get("text"));
+            if (!cue.revealFrames().isEmpty() && StageplayDialogue.graphemeCount(line)!=cue.revealFrames().size())
+                throw new IllegalArgumentException("Choose Use typer timing before changing this line's character count, then edit custom timing again.");
+            return replaceDialogue(d,new DialogueCue(cue.id(),integer(v,"start"),integer(v,"end"),cue.speakerActor(),v.get("name"),line,
+                    cue.skinId(),cue.typerId(),integer(v,"x"),integer(v,"y"),integer(v,"width"),integer(v,"height"),v.get("portrait"),cue.revealFrames()));
+        }));
+        menu.setSubtitle("Speaker: "+StageplayDialogue.speakerName(controller.document(),cue)+". Choose decoration and typer from the line menu. Panels use film pixels.");
+    }
+
+    private void dialogueProfileMenu(DialogueCue cue, boolean typer) {
+        var choices = new ArrayList<EditorProjectMenu.Action>();
+        choices.add(action("Built-in default", () -> edit(d -> replaceDialogue(d,dialogueProfile(cue,typer,"")))));
+        if (typer) for (var value : controller.document().dialogueTypers()) choices.add(action(value.id()+" / "+value.framesPerGrapheme()+" frames per character",
+                () -> edit(d -> replaceDialogue(d,dialogueProfile(cue,true,value.id())))));
+        else for (var value : controller.document().dialogueSkins()) choices.add(action(value.id(),
+                () -> edit(d -> replaceDialogue(d,dialogueProfile(cue,false,value.id())))));
+        menu.showActions(typer ? "Choose dialogue typer" : "Choose dialogue decoration",choices);
+        if (typer && !cue.revealFrames().isEmpty()) menu.setSubtitle("This line has custom reveal timing. Choose Use typer timing in its menu to use the new rhythm.");
+    }
+
+    private void revealForm(DialogueCue cue) {
+        var offsets = StageplayDialogue.revealFrames(controller.document(),cue);
+        var fields = new ArrayList<EditorProjectMenu.Field>();
+        for (int from=0;from<offsets.size();from+=128) {
+            int end=Math.min(from+128,offsets.size());
+            fields.add(new EditorProjectMenu.Field("offsets"+(from/128),"Characters "+(from+1)+".."+end,
+                    offsets.subList(from,end).stream().map(Object::toString).collect(java.util.stream.Collectors.joining(", ")),
+                    MenuTextEditor.Mode.TEXT,8192));
+        }
+        menu.showForm("Custom dialogue reveal timing",fields,"Apply reveal timing",v -> edit(d -> {
+            var values = new ArrayList<Integer>();
+            for (int i=0;i<fields.size();i++) {
+                String input=v.get("offsets"+i).trim();
+                if (!input.isEmpty()) for (String token:input.split("[,\\s]+")) values.add(Integer.parseInt(token));
+            }
+            if (values.size()!=StageplayDialogue.graphemeCount(cue.text()))
+                throw new IllegalArgumentException("Enter exactly one reveal frame per character (combining characters stay together).");
+            return replaceDialogue(d,dialogueTiming(cue,values));
+        }));
+        menu.setSubtitle("Frame offsets from the line's start, in character order; equal offsets reveal together. Every offset must be inside its interval.");
+    }
+
+    private void typerMenu() {
+        var actions = new ArrayList<EditorProjectMenu.Action>();
+        actions.add(action("Add typer", () -> typerForm(null)));
+        for (var typer : controller.document().dialogueTypers()) actions.add(action(typer.id(), () -> menu.showActions("Typer: "+typer.id(),List.of(
+                action("Edit typer", () -> typerForm(typer)),
+                action("Delete and use default for its lines", () -> edit(d -> d.withDialogue(d.dialogue().stream()
+                        .map(c -> c.typerId().equals(typer.id()) ? dialogueProfile(c,true,"") : c).toList())
+                        .withDialogueTypers(d.dialogueTypers().stream().filter(t -> !t.id().equals(typer.id())).toList())))))));
+        menu.showActions("Reusable dialogue typers",actions);
+    }
+
+    private void typerForm(DialogueTyper typer) {
+        String id=typer==null ? nextProfileId("typer",controller.document().dialogueTypers().stream().map(DialogueTyper::id).toList()) : typer.id();
+        var fields=new ArrayList<EditorProjectMenu.Field>();
+        if (typer==null) fields.add(text("id","Profile name",id));
+        fields.add(number("speed","Frames per character (0 = instant)",typer==null?2:typer.framesPerGrapheme()));
+        fields.add(number("punctuation","Extra pause after punctuation",typer==null?6:typer.punctuationPauseFrames()));
+        fields.add(number("space","Extra pause after spaces",typer==null?0:typer.spacePauseFrames()));
+        menu.showForm(typer==null?"Add dialogue typer":"Typer: "+id,fields,"Apply typer",v -> edit(d -> {
+            String profile=typer==null?v.get("id"):id;
+            if (typer==null && d.dialogueTypers().stream().anyMatch(t -> t.id().equals(profile))) throw new IllegalArgumentException("That typer name already exists");
+            var values=new ArrayList<>(d.dialogueTypers()); values.removeIf(t -> t.id().equals(profile));
+            values.add(new DialogueTyper(profile,integer(v,"speed"),integer(v,"punctuation"),integer(v,"space")));
+            return d.withDialogueTypers(values);
+        }));
+        menu.setSubtitle("Reusable profile names use letters, digits, dots, underscores or hyphens. Choose this typer from a dialogue line's menu.");
+    }
+
+    private void skinMenu() {
+        var actions = new ArrayList<EditorProjectMenu.Action>();
+        actions.add(action("Add decoration", () -> skinForm(null)));
+        for (var skin : controller.document().dialogueSkins()) actions.add(action(skin.id(), () -> menu.showActions("Decoration: "+skin.id(),List.of(
+                action("Edit decoration", () -> skinForm(skin)),
+                action("Delete and use default for its lines", () -> edit(d -> d.withDialogue(d.dialogue().stream()
+                        .map(c -> c.skinId().equals(skin.id()) ? dialogueProfile(c,false,"") : c).toList())
+                        .withDialogueSkins(d.dialogueSkins().stream().filter(s -> !s.id().equals(skin.id())).toList())))))));
+        menu.showActions("Reusable dialogue decorations",actions);
+    }
+
+    private void skinForm(DialogueSkin skin) {
+        String id=skin==null ? nextProfileId("skin",controller.document().dialogueSkins().stream().map(DialogueSkin::id).toList()) : skin.id();
+        var fields=new ArrayList<EditorProjectMenu.Field>();
+        if (skin==null) fields.add(text("id","Profile name",id));
+        fields.add(text("text","Text ARGB hex",hex(skin==null?0xfff5f0df:skin.textArgb())));
+        fields.add(text("name","Speaker name ARGB hex",hex(skin==null?0xffffcf66:skin.nameArgb())));
+        fields.add(text("panel","Panel ARGB hex",hex(skin==null?0xff172338:skin.panelArgb())));
+        fields.add(text("border","Border ARGB hex",hex(skin==null?0xffa8b8cf:skin.borderArgb())));
+        fields.add(number("padding","Inner padding (4..32)",skin==null?6:skin.padding()));
+        fields.add(file("asset","Relative decoration PNG (optional)",skin==null?"":skin.decorationAsset()));
+        fields.add(number("slice","Fixed PNG border (0..64 pixels)",skin==null?0:skin.decorationBorder()));
+        fields.add(text("pointer","Speaker pointer: true / false",Boolean.toString(skin==null || skin.pointer())));
+        menu.showForm(skin==null?"Add dialogue decoration":"Decoration: "+id,fields,"Apply decoration",v -> edit(d -> {
+            String profile=skin==null?v.get("id"):id;
+            if (skin==null && d.dialogueSkins().stream().anyMatch(s -> s.id().equals(profile))) throw new IllegalArgumentException("That decoration name already exists");
+            var values=new ArrayList<>(d.dialogueSkins()); values.removeIf(s -> s.id().equals(profile));
+            values.add(new DialogueSkin(profile,color(v,"text"),color(v,"name"),color(v,"panel"),color(v,"border"),integer(v,"padding"),v.get("asset"),integer(v,"slice"),bool(v,"pointer")));
+            return d.withDialogueSkins(values);
+        }));
+        menu.setSubtitle("An optional PNG stretches its centre and edges while keeping corners fixed. Keep the PNG beneath the scene folder. Profile names are stable.");
+    }
+
+    private static StageplayDocument replaceDialogue(StageplayDocument doc,DialogueCue cue) {
+        var values=new ArrayList<>(doc.dialogue()); values.removeIf(c -> c.id().equals(cue.id())); values.add(cue);
+        values.sort(Comparator.comparingInt(DialogueCue::startFrame)); return doc.withDialogue(values);
+    }
+    private static DialogueCue dialogueSpeaker(DialogueCue c,String actor,String name) {
+        return new DialogueCue(c.id(),c.startFrame(),c.endFrame(),actor,name,c.text(),c.skinId(),c.typerId(),c.x(),c.y(),c.width(),c.height(),c.portraitAsset(),c.revealFrames());
+    }
+    private static DialogueCue dialogueProfile(DialogueCue c,boolean typer,String id) {
+        return new DialogueCue(c.id(),c.startFrame(),c.endFrame(),c.speakerActor(),c.speakerName(),c.text(),typer?c.skinId():id,typer?id:c.typerId(),c.x(),c.y(),c.width(),c.height(),c.portraitAsset(),c.revealFrames());
+    }
+    private static DialogueCue dialogueTiming(DialogueCue c,List<Integer> timing) {
+        return new DialogueCue(c.id(),c.startFrame(),c.endFrame(),c.speakerActor(),c.speakerName(),c.text(),c.skinId(),c.typerId(),c.x(),c.y(),c.width(),c.height(),c.portraitAsset(),timing);
+    }
+    private static String nextProfileId(String prefix,List<String> used) { int i=1; while(used.contains(prefix+i)) i++; return prefix+i; }
+    private static String hex(int color) { return String.format("%08X",color); }
+    private static int color(Map<String,String> v,String key) {
+        String value=v.get(key).trim();
+        if (!value.matches("[0-9a-fA-F]{8}")) throw new IllegalArgumentException("Colors need eight ARGB hex digits");
+        return (int)Long.parseLong(value,16);
     }
 
     private void captionMenu() {
@@ -648,6 +873,7 @@ public final class StageplayWorkspace {
         var used = new java.util.HashSet<String>();
         doc.actors().forEach(a -> used.add(a.id())); doc.captions().forEach(c -> used.add(c.id())); doc.audio().forEach(c -> used.add(c.id()));
         doc.cameraEffects().forEach(e -> used.add(e.id())); doc.sceneChanges().forEach(c -> used.add(c.id()));
+        doc.dialogue().forEach(c -> used.add(c.id()));
         int i=1; while(used.contains(prefix+i)) i++; return prefix+i;
     }
     private static String escapeCaption(String text) { return text.replace("\\","\\\\").replace("\n","\\n"); }

@@ -94,7 +94,8 @@ class TestStageplayTimeline {
         assertEquals(50, first.actors().getFirst().x());
         assertEquals(5, first.actors().getFirst().animationTick());
         assertEquals(125, first.camera().x());
-        assertEquals(1.25, first.camera().zoom());
+        assertEquals(1, first.camera().zoom());
+        assertEquals(2, StageplayTimeline.sample(document, 20).camera().zoom());
         var smooth = StageplayTimeline.sample(document, 15).actors().getFirst();
         assertEquals(115.625, smooth.x());
         assertEquals(15, smooth.animationTick());
@@ -102,6 +103,19 @@ class TestStageplayTimeline {
         assertEquals(2, changed.animation());
         assertEquals(1, changed.animationTick());
         assertEquals(first, StageplayTimeline.sample(document, 5), "backward seeking reconstructs the same pose");
+    }
+
+    @Test
+    void fractionalImportedZoomIsHeldWhilePositionStillInterpolates() {
+        var document = scene().withCamera(List.of(new CameraKey(0, 0, 0, 1.25, Interpolation.SMOOTH),
+                new CameraKey(20, 200, 400, 2, Interpolation.LINEAR),
+                new CameraKey(40, 400, 800, 3, Interpolation.HOLD)));
+        assertEquals(new StageplayTimeline.CameraPose(100, 200, 1.25), StageplayTimeline.sample(document, 10).camera());
+        assertEquals(1.25, StageplayTimeline.sample(document, 19).camera().zoom());
+        assertEquals(2, StageplayTimeline.sample(document, 20).camera().zoom());
+        assertEquals(new StageplayTimeline.CameraPose(300, 600, 2), StageplayTimeline.sample(document, 30).camera());
+        assertEquals(3, StageplayTimeline.sample(document, 40).camera().zoom());
+        assertEquals(1.25, StageplayTimeline.sample(document, 10).baseCamera().zoom());
     }
 
     @Test

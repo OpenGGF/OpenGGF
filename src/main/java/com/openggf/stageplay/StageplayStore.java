@@ -106,15 +106,23 @@ public final class StageplayStore {
             var version = object.get("version");
             if (version == null || !version.isIntegralNumber() || !version.canConvertToInt())
                 throw new IOException("Stageplay version must be an integer");
-            if (version.intValue() == 1) {
-                // Version one's exact field shape remains authoritative; new fields cannot masquerade as v1.
+            int sourceVersion = version.intValue();
+            if (sourceVersion < 1 || sourceVersion > StageplayDocument.VERSION)
+                throw new IOException("Unsupported Stageplay version: " + sourceVersion);
+            if (sourceVersion == 1) {
+                // Exact legacy shapes remain authoritative: later fields cannot masquerade as old data.
                 if (object.has("cameraEffects") || object.has("sceneChanges"))
                     throw new IOException("Version one cannot contain version two tracks");
-                object.put("version", StageplayDocument.VERSION);
                 object.putArray("cameraEffects");
                 object.putArray("sceneChanges");
-            } else if (version.intValue() != StageplayDocument.VERSION) {
-                throw new IOException("Unsupported Stageplay version: " + version.intValue());
+            }
+            if (sourceVersion <= 2) {
+                if (object.has("dialogueTypers") || object.has("dialogueSkins") || object.has("dialogue"))
+                    throw new IOException("Version " + sourceVersion + " cannot contain dialogue tracks");
+                object.putArray("dialogueTypers");
+                object.putArray("dialogueSkins");
+                object.putArray("dialogue");
+                object.put("version", StageplayDocument.VERSION);
             }
             return JSON.treeToValue(object, StageplayDocument.class);
         } catch (IllegalArgumentException error) {

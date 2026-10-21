@@ -60,7 +60,7 @@ public final class StageplayTimeline {
         CameraKey nextCamera = cameraKeys.get(Math.min(cameraIndex + 1, cameraKeys.size() - 1));
         double weight = nextCamera.frame() == nextScene ? 0 : weight(camera.interpolation(), camera.frame(), nextCamera.frame(), frame);
         CameraPose baseCamera = new CameraPose(lerp(camera.x(), nextCamera.x(), weight),
-                lerp(camera.y(), nextCamera.y(), weight), lerp(camera.zoom(), nextCamera.zoom(), weight));
+                lerp(camera.y(), nextCamera.y(), weight), camera.zoom());
         double shakeX = 0, shakeY = 0;
         for (CameraEffect effect : document.cameraEffects()) {
             if (frame < effect.startFrame() || frame >= effect.endFrame()) continue;
@@ -71,18 +71,29 @@ public final class StageplayTimeline {
         CameraPose cameraPose = new CameraPose(baseCamera.x() + shakeX, baseCamera.y() + shakeY, baseCamera.zoom());
         List<Caption> captions = document.captions().stream()
                 .filter(caption -> caption.startFrame() <= frame && frame < caption.endFrame()).toList();
-        return new Frame(frame, actors, cameraPose, captions, set, transition, baseCamera);
+        List<DialoguePose> dialogue = document.dialogue().stream()
+                .filter(cue -> cue.startFrame() <= frame && frame < cue.endFrame())
+                .map(cue -> new DialoguePose(cue, StageplayDialogue.speakerName(document, cue),
+                        StageplayDialogue.visibleText(document, cue, frame - cue.startFrame()))).toList();
+        return new Frame(frame, actors, cameraPose, captions, set, transition, baseCamera, dialogue);
     }
 
     @ModApi
     public record Frame(int frame, List<ActorPose> actors, CameraPose camera, List<Caption> captions,
-                        SetSource set, TransitionPose transition, CameraPose baseCamera) {
+                        SetSource set, TransitionPose transition, CameraPose baseCamera, List<DialoguePose> dialogue) {
         public Frame {
             actors = List.copyOf(actors);
             Objects.requireNonNull(camera, "camera");
             captions = List.copyOf(captions);
             Objects.requireNonNull(transition, "transition");
             Objects.requireNonNull(baseCamera, "baseCamera");
+            dialogue = List.copyOf(dialogue);
+        }
+
+        /** Source-compatible version-two frame, without dialogue. */
+        public Frame(int frame, List<ActorPose> actors, CameraPose camera, List<Caption> captions,
+                     SetSource set, TransitionPose transition, CameraPose baseCamera) {
+            this(frame, actors, camera, captions, set, transition, baseCamera, List.of());
         }
 
         /** Legacy manually sampled frames use the renderer's document set. */
@@ -112,6 +123,16 @@ public final class StageplayTimeline {
 
     @ModApi
     public record CameraPose(double x, double y, double zoom) { }
+
+    /** Active cue and a silent, grapheme-complete prefix; the speaker name is immediately available. */
+    @ModApi
+    public record DialoguePose(DialogueCue cue, String speakerName, String visibleText) {
+        public DialoguePose {
+            Objects.requireNonNull(cue, "cue");
+            Objects.requireNonNull(speakerName, "speakerName");
+            Objects.requireNonNull(visibleText, "visibleText");
+        }
+    }
 
     private static int actorKeyAt(List<ActorKey> keys, int frame) {
         int low = 0, high = keys.size() - 1;

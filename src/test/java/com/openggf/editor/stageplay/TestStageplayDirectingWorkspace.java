@@ -51,12 +51,12 @@ class TestStageplayDirectingWorkspace {
     @Test void cameraRecordingNeedsNoActorAndCommitsOneUndoStep() {
         var workspace = workspace(); var before = workspace.controller().document();
         workspace.invoke(RECORD_CAMERA);
-        workspace.recordCameraStep(1,0,1); workspace.recordCameraStep(1,1,1.02);
+        workspace.recordCameraStep(1,0,1); workspace.recordCameraStep(1,1,2);
         assertEquals(before,workspace.controller().document());
         assertTrue(workspace.recordingCamera()); assertEquals(2,workspace.controller().frame());
         var preview = workspace.previewDocument();
         assertEquals(102,preview.camera().getFirst().x());
-        assertEquals(1.02,preview.camera().getLast().zoom());
+        assertEquals(2,preview.camera().getLast().zoom());
         workspace.stop(); assertEquals(preview,workspace.controller().document());
         assertFalse(workspace.recording());
         workspace.invoke(UNDO); assertEquals(before,workspace.controller().document());
