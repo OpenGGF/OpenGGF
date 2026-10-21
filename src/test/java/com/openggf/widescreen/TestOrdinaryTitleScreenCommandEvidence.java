@@ -21,6 +21,7 @@ import com.openggf.game.sonic2.titlescreen.TitleScreenDataLoader;
 import com.openggf.game.sonic2.titlescreen.TitleScreenManager;
 import com.openggf.game.sonic3k.titlescreen.Sonic3kTitleScreenDataLoader;
 import com.openggf.game.sonic3k.titlescreen.Sonic3kTitleScreenManager;
+import com.openggf.game.launch.LaunchProfile;
 import com.openggf.game.launch.LaunchProfileStore;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GLCommandable;
@@ -81,8 +82,16 @@ class TestOrdinaryTitleScreenCommandEvidence {
     @Test
     void masterTitleDrawExpandsBackdropAndFitsActionPaneAtEveryWidth() throws Exception {
         SonicConfigurationService configuration = GameServices.configuration();
-        MasterTitleScreen title = new MasterTitleScreen(configuration,
-                mock(LaunchProfileStore.class));
+        when(configuration.getString(SonicConfiguration.DISPLAY_ASPECT)).thenReturn("NATIVE_4_3");
+        LaunchProfileStore profiles = mock(LaunchProfileStore.class);
+        LaunchProfile profile = LaunchProfile.stockFor(MasterTitleScreen.GameEntry.SONIC_2);
+        when(profiles.load(MasterTitleScreen.GameEntry.SONIC_2)).thenReturn(profile);
+        when(profiles.displayValue(profile, LaunchProfile.Row.MAIN_CHARACTER,
+                MasterTitleScreen.GameEntry.SONIC_2)).thenReturn("Sonic");
+        when(profiles.displayValue(profile, LaunchProfile.Row.SIDEKICK,
+                MasterTitleScreen.GameEntry.SONIC_2)).thenReturn("Tails");
+        MasterTitleScreen title = new MasterTitleScreen(configuration, profiles);
+        title.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, true);
         RecordingQuadRenderer renderer = new RecordingQuadRenderer();
         RecordingFont font = new RecordingFont();
         setField(title, "renderer", renderer);

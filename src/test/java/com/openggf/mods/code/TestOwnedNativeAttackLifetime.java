@@ -3,6 +3,7 @@ package com.openggf.mods.code;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.data.RomByteReader;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.rewind.RewindRegistry;
@@ -153,6 +154,11 @@ class TestOwnedNativeAttackLifetime {
             when(renders.getRenderer(anyString())).thenReturn(renderer);
             ObjectManager[] holder = new ObjectManager[1];
             var state = new GameStateManager();
+            var reader = mock(RomByteReader.class, invocation -> {
+                throw new AssertionError("Unexpected animation reader operation " + invocation.getMethod().getName());
+            });
+            doReturn(new byte[] {7, 1, 7, 1, 8, 1, 9, 3, 10, 3, 11, 3, (byte) 0xF4})
+                    .when(reader).slice(0x6913F, 13);
             var services = new StubObjectServices() {
                 @Override public Camera camera() { return camera; }
                 @Override public SonicConfigurationService configuration() { return config; }
@@ -160,6 +166,7 @@ class TestOwnedNativeAttackLifetime {
                 @Override public ObjectRenderManager renderManager() { return renders; }
                 @Override public ObjectManager objectManager() { return holder[0]; }
                 @Override public GameStateManager gameState() { return state; }
+                @Override public RomByteReader romReader() { return reader; }
             };
             objects = new ObjectManager(List.of(), new Sonic3kObjectRegistry(), 0, null, null,
                     GraphicsManager.getInstance(), camera, services);
