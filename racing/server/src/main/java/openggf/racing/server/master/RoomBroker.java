@@ -16,13 +16,12 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
-import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.LongSupplier;
 import java.util.function.Predicate;
@@ -55,13 +54,57 @@ public final class RoomBroker {
     private static final long LIST_INTERVAL_MILLIS = 2_000;
     private static final long JOIN_WINDOW_MILLIS = 10_000;
     private static final int JOIN_LIMIT = 5;
+    // Allows the client's direct-connect timeout and fallback, without retaining
+    // abandoned browser joins for the lifetime of a master connection.
+    private static final long JOIN_GRANT_TTL_MILLIS = 30_000;
     private static final long GC_INTERVAL_MILLIS = 3_600_000;
+
+    /** Broker-loop-confined LRU set with expiry fixed at the latest grant. */
+    private static final class ExpiringGrants {
+        private final int maxSize;
+        private final long ttlMillis;
+        private final LinkedHashMap<String, Long> grantedAt = new LinkedHashMap<>(16, 0.75f, true);
+
+        ExpiringGrants(int maxSize, long ttlMillis) {
+            this.maxSize = maxSize;
+            this.ttlMillis = ttlMillis;
+        }
+
+        void grant(String key, long now) {
+            expire(now);
+            grantedAt.put(key, now);
+            while (grantedAt.size() > maxSize) {
+                grantedAt.pollFirstEntry();
+            }
+        }
+
+        boolean contains(String key, long now) {
+            Long issuedAt = grantedAt.get(key);
+            if (issuedAt == null) {
+                return false;
+            }
+            if (now - issuedAt >= ttlMillis) {
+                grantedAt.remove(key);
+                return false;
+            }
+            return true;
+        }
+
+        boolean consume(String key, long now) {
+            Long issuedAt = grantedAt.remove(key);
+            return issuedAt != null && now - issuedAt < ttlMillis;
+        }
+
+        void expire(long now) {
+            grantedAt.values().removeIf(issuedAt -> now - issuedAt >= ttlMillis);
+        }
+    }
 
     private static final class Member {
         final HubConnection connection;
         final HostHandshake handshake;
         final long connectedAtMillis;
-        final Set<String> joinGrantedRooms = new HashSet<>();
+        final ExpiringGrants joinGrantedRooms = new ExpiringGrants(JOIN_LIMIT, JOIN_GRANT_TTL_MILLIS);
         final ArrayDeque<Long> joinRequests = new ArrayDeque<>();
         State state = State.HANDSHAKE;
         String fingerprint;
@@ -97,7 +140,7 @@ public final class RoomBroker {
     private final AtomicBoolean attackMode;
     private final Map<HubConnection, Member> members = new LinkedHashMap<>();
     private final Map<String, String> tokenFingerprints = new HashMap<>();
-    private final Set<String> stampedThisSession = new HashSet<>();
+    private final ExpiringGrants identityPowStamps;
     private final Map<HubConnection, AttachResult> attachResults = new HashMap<>();
     private long nextGcMillis;
 
@@ -133,6 +176,8 @@ public final class RoomBroker {
         this.tunnels = tunnels;
         this.knownTrack = knownTrack;
         this.verifiers = verifiers;
+        identityPowStamps = new ExpiringGrants(config.newIdentityCacheSize(),
+                TimeUnit.MINUTES.toMillis(config.newIdentityCacheTtlMinutes()));
         attackMode = new AtomicBoolean(config.attackMode());
         nextGcMillis = clock.getAsLong() + GC_INTERVAL_MILLIS;
     }
@@ -211,7 +256,9 @@ public final class RoomBroker {
 
     public void tick() {
         long now = clock.getAsLong();
+        identityPowStamps.expire(now);
         for (Member member : List.copyOf(members.values())) {
+            member.joinGrantedRooms.expire(now);
             if (member.state != State.ADMITTED && member.state != State.HANDED_OFF
                     && now - member.connectedAtMillis > ADMISSION_TIMEOUT_MILLIS) {
                 reject(member, "handshake timeout");
@@ -278,7 +325,7 @@ public final class RoomBroker {
             return;
         }
         if (store.find(member.fingerprint).isEmpty()
-                && !stampedThisSession.contains(member.fingerprint)) {
+                && !identityPowStamps.contains(member.fingerprint, clock.getAsLong())) {
             member.state = State.PENDING_IDENTITY_POW;
             send(member, new ControlMessage.PowChallenge(
                     "IDENTITY", "", config.identityPowBits()));
@@ -289,6 +336,7 @@ public final class RoomBroker {
 
     private void onPowSolution(Member member, ControlMessage.PowSolution solution) {
         boolean valid = switch (solution.kind()) {
+            case null -> false;
             case "IDENTITY" -> member.state == State.PENDING_IDENTITY_POW
                     && ProofOfWork.verify(member.publicKeyEncoded, solution.nonce(),
                     config.identityPowBits());
@@ -302,7 +350,7 @@ public final class RoomBroker {
             return;
         }
         if (member.state == State.PENDING_IDENTITY_POW) {
-            stampedThisSession.add(member.fingerprint);
+            identityPowStamps.grant(member.fingerprint, clock.getAsLong());
             maybeJoinPowOrAdmit(member);
         } else {
             finishAdmission(member);
@@ -414,7 +462,7 @@ public final class RoomBroker {
                     create.certificateSha256());
             if ("RELAY".equals(routing)) {
                 relays.createRelayRoom(entry);
-                member.joinGrantedRooms.add(entry.roomId());
+                member.joinGrantedRooms.grant(entry.roomId(), clock.getAsLong());
             } else {
                 tunnels.registerHost(entry.roomId(), member.connection);
             }
@@ -494,7 +542,7 @@ public final class RoomBroker {
             send(member, new ControlMessage.RoomJoinRejected("room under pressure"));
             return;
         }
-        member.joinGrantedRooms.add(room.roomId());
+        member.joinGrantedRooms.grant(room.roomId(), now);
         send(member, new ControlMessage.RoomJoinResult(room.roomId(), room.routing(),
                 "DIRECT".equals(room.routing()) ? room.hostAddress() : null,
                 room.directPort(), "DIRECT".equals(room.routing())
@@ -503,7 +551,7 @@ public final class RoomBroker {
     }
 
     private void attach(Member member, String roomId) {
-        if (!member.joinGrantedRooms.remove(roomId)) {
+        if (!member.joinGrantedRooms.consume(roomId, clock.getAsLong())) {
             send(member, new ControlMessage.RoomJoinRejected("join not granted"));
             return;
         }

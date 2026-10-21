@@ -123,8 +123,8 @@ files; all stated focused passes had zero failures, errors and skips.
 ## Checkpoint
 
 2026-10-21: both implementations and focused acceptance are complete in isolated
-task trees. Desktop commit `98a9659` is local. Engine sources are based on the pinned
-pre-task SHA plus task changes, ready for an implementation commit and reconciliation
-with destination `02325fd026ea4a5ba33e4abe5149a9209a234e34`. All workers are frozen.
+task trees. Desktop commit `98a9659` is local. Engine implementation commit `56d7d140c` has been reconciled with destination
+`02325fd026ea4a5ba33e4abe5149a9209a234e34`. The merge was automatic; shared changelog,
+configuration and subsystem prose retain both Stageplay and upstream racing work. All workers are frozen.
 No live build jobs. Lead owns combined smoke/guards, delivery and cleanup. No push,
 integration or worktree cleanup has completed yet.
