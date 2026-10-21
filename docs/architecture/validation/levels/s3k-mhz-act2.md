@@ -935,3 +935,15 @@ Session91156 exited0,0 JUnit/skips N/A:queue26s/Maven01:26/boot-prefix-tail23.35
 The [R14 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-slideget-up-ordinary-follow-through-r14--2026-10-21) pins products/source/command/17:54 workload/18:04 cleanup scope; consumed raw outputs/classes/tmp/validation copies leave target absent.
 Useful exact inputs/private preimage/all23 ordered rows/compact facts remain external. Terrain/hurt receiver, fluid/reverse/invulnerability/native equivalence and safe future remain UNKNOWN; no maintained change or route qualification.
 Prior histories/refs/native/config remain intact; Root owns review and any next question. No push/integration followed.
+
+### Knuckles low-speed jump/glide ordinary admission R15 — 2026-10-21
+
+At exacta9385e077, full42889-row actual R14 prefix and exactly38 unique complete64 checkpoints (earlier15+all23 R14) matched; [R14/R13/R11 setup](#knuckles-slideget-up-ordinary-follow-through-r14--2026-10-21) is unchanged.
+From the distinct10828/2417,VX59/VY-6/G60/angle-4 inlet, the one fresh Right+A jump42889 retainedair/jumping/flag0; cachedVY first reached38 at42917, without dry/apex/cause attribution.
+42918 releasedA once and retainedair/jumping/flag0/VY94/RIGHT;42919 repressed once and actually activated glide1. ConstantRight+A continued only through first retainedclimb4 at42923.
+42923 is centre10869/2349,property3/mapping0xB7,zero X/Y/ground velocities,airtrue/jumpingtrue,radii10x10. Raw x_sub10869/y_sub3884/wall_climb_x10859 imply no fractional or selected-terrain semantics.
+All35 new rows retain1 ring/3 lives/no hurt/death/free movement/same world/focus/LEVEL/no pending/fade/no actual rider; stale Spikes is separate. No Up or onward climb ran.
+Exactly42924 normal step/draw pairs ran; same-JVM preboot/post-stop production roundtrips and independent entire-prefix/payload/P2/JUMP0x10/one-edge proofs passed; one unchanged public64 row supplied each boundary's decisions.
+Session56447 exited0,0 JUnit/skips N/A:queue359s/Maven01:24/AUTHOR24.557s including product proof; no original/metadata exception or retry. One prior filename read error remains separately recorded.
+The [R15 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-low-speed-jumpglide-ordinary-admission-r15--2026-10-21) pins source/inputs/proofs/command/18:04 workload/18:14 cleanup scope; consumed raw outputs/classes/tmp/validation copies leave target absent.
+Useful exact inputs/private source/preimage/all35 ordered rows/compact facts remain external. Native/terrain/mutation/receiver/fluid/reverse/invulnerability/climb completion/full-route qualification remain UNKNOWN; Root owns review, with no maintained edits/push/integration.

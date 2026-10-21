@@ -28962,3 +28962,33 @@ One current absolute Main queue `--normal -Dmse=off -Dopenggf.headless.gl=surfac
 Source SHA256 `f8c710eefdb16166f6e186e2927fb63ba0c587eda2aa7cad326464b559947a17` (10808 sorted src/main/src/test/POM/.mvn path-NUL-bytes-NUL); adapter `78d066acd20ef6aeb42743a36ad003c3889dc2dfab4bd32750894cc712a5d385`.
 Executed BK2 SHA256 `c3ebd8cbf897d138d4ed44e2be0ce881197c009ee6259eac62a8f0f8473d9c4f`; specific source/preimage/design/inputs/compact facts/one normal endpoint image remain external; owned raw diagnostics consumed.
 No retry or parent/native/MTZ/fullroute/independent qualification. Expected46 and all maintained runtime/POM/tests/movies/windows/oracles/config/native and prior histories remain unchanged.
+
+### MHZ Knuckles low-speed jump/glide ordinary admission R15 — 2026-10-21
+
+R15 used exact `a9385e0772ac4da8ed6177ac627bbf0cd28d3c12`; runtime/POM and [R14/R13/R11 setup](#mhz-knuckles-slideget-up-ordinary-follow-through-r14--2026-10-21) remain unchanged.
+The full42889-row actual R14 movie and exactly38 unique complete public64 checkpoints matched: the earlier15 plus all23 R14 rows, including terminal42888; no duplicate endpoint coverage is claimed.
+The distinct ordinary inlet was10828/2417,VX59/VY-6/G60,angle-4,grounded/default9x19/free/RIGHT-facing,1 ring/3 lives/no actual rider; R12's future and R13's high-speed trajectory were not replayed as a new tail.
+One durably consumed budget preceded session56447; the only policy was fresh Right+A, hold until cached signedVY>=0, one Right release, then one conditional Right+A repress requiring retained air/jumping/flag0/VY>=0/RIGHT.
+Workload expiry18:04:49.177308Z/no boot with<120s; cleanup/readback deadline18:14:49Z. The sole original lifecycle and cleanup completed before both deadlines.
+Same-JVM preboot production author/loader proved the entire prefix, every older preserved prefix, finite Right/Right+A/neutral pads, positiveJUMP0x10/masks/booleans/payload/P2neutral before boot.
+42889 retained the sole fresh jump:10828/2422,VX-91/VY-1530/G60,air/jumping/flag0,RIGHT,radii7/14; negative VX was an observation, not a facing or cause inference.
+42916 retained signedVY-18;42917 first retained signedVY>=0 (38),10850/2337,air/jumping/flag0/RIGHT. This is neither dry-state nor apex proof.
+42918 was the single Right-only release; its retained10852/2337,VY94,air/jumping/flag0/RIGHT qualified the one repress42919.
+42919 actually activated glide flag1:10856/2339,VX1048/VY662/G1024,radii10/10; flag1 persisted through42922.
+42923 first retained climb flag4/property3/mapping183(0xB7), centre10869/2349, X/Y velocities and ground speed all0,air=true/jumping=true; STOP at admission.
+Terminal top-left10859/2330, raw x_sub10869/y_sub3884/wall_climb_x10859, animation/forced32 and camera10709/2268 are retained fields, without fractional/cursor or selected-terrain semantics.
+All35 new rows retain1 ring/3 lives/no hurt/death, movement active/free scalar controls, same world/Level/OM/P1/focus/solo roster/LEVEL7/1/no pending/fade, onObject=false/actual rider none.
+The stale Spikes slot25 latch remains separate. No landing, Up, climb continuation, second jump, retiming, alternative, retry or further wall question ran.
+Exactly42924 original step/normal-draw pairs ran:42889 preserved prefix+35 new. Actual recipe:42889..42917 Right+A;42918 Right;42919..42923 Right+A; P2neutral throughout.
+One unchanged public64 projection followed each normal step/draw; all35 decisions independently match cached previous rows. No new getter/provider/sensor/effective-fluid/reverse/private-window query or extra image/readback.
+Current absolute Main queued `-Dmse=off compile exec:exec -B`, runtime classpath/Python `r15_exec.py %classpath`, one command/observer; exact argv/source/environment/returned IDs remain external.
+Reported queue359s/Maven01:24; AUTHOR24.557s includes boot/prefix/tail/executed-product proof. Preparation-metadata→terminal445.799s is not exact enqueue time; engine-only/tail-only times remain unmeasured and intervals overlap.
+Launcher/Maven/Java exited0, **0 JUnit/skips N/A**; no original exception/command-metadata error. A pre-request read used a nonexistent private filename, resolved by file inventory before authoring; no workload retry.
+Post-stop same-JVM production author/loader verified all42924 emitted rows; independent entire-prefix/payload/P2neutral and one-release/repress proofs passed.
+External `r15-products/executed.bk2` SHA256:`531ffd666e843e53ba049fdbaa8922c44cae2d2be5c168d2fb217408b10e73a7`.
+`executed.script` SHA256:`c325405529a85747d171f03563b1b50747e5b2afb7290c4a1dd4161683c69024`; preboot proof SHA256:`27735f84ecb03227bf13abba9534ba543e78a99ca7681cae72fd28405544d3dc`.
+Private adapter SHA256:`fb36a5d2fcde45762bc17344ced294898ba01d0662ec6a61c1929cf1dea1fc71`; exact source/preimage/whole-file inverse/design/inputs/all35 ordered rows and compact facts remain external.
+Owned raw logs/series/checkpoints/decisions/classes/tmp/extraction/palette-roundtrip copies were consumed under worktree/activity leases; target is absent, with no archive/receipt/pass cache.
+Prior histories/refs/native actual322/index703/config and all maintained runtime/POM/tests/movies/oracles/windows remain unchanged; no seeds/restores/native/model/extra agent/push/integration occurred.
+This establishes only the retained ordinary climb-admission inlet. Fluid/reverse/mutation/receiver/invulnerability/native equivalence, climb completion/clearance/full-act/FBZ/history/rewind remain UNKNOWN; no physics omission follows.
+Root owns source/data review and any later workload. See the [R15 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-low-speed-jumpglide-ordinary-admission-r15--2026-10-21).
