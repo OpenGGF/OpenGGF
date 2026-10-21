@@ -24577,3 +24577,253 @@ state lock/fresh strict whole/0600 atomic replacement, exact returned task/run
 IDs and expiry13:04:49.177308Z. Local commit only, parentcdada, normal hooks/seven
 trailers/final GPT-6.1-Sol coauthor; no R1/R2 rewrite, push, Root/Main write or
 worktree cleanup.
+
+## TraceChaser immutable-origin consumer copies — 2026-10-21
+
+This test-only increment starts at OpenGGF
+`cdada405a384ab19c88fc82375b79cbc38c9f30c`, keeping native gitlink
+`703bd92d32634ce5ebac60625b48c60ef5500427` unchanged. Root's original opt-in
+`initializedSourceCopiesMatchThePinnedConsumerCopies` execution remains
+**1T1F0E0S**, with `org.opentest4j.AssertionFailedError` at
+`assertCopyEquals:162`: `src/test/resources/tracechaser/gpgx-audio-capability-v1.json
+==> expected: <true> but was: <false>`. No baseline was executed. Root's separate
+13 passing boundary guards are separate evidence, not a producer-behavior pass.
+
+The source/data audit attributes that mismatch to an inherited temporal-contract
+error: the frozen capability copy matches its declared origin
+`9e51ff79e7a542f3c50d96618a7e24e6fc72397e`, while native703's current file differs
+only in `task8_harness_executable_sha256`. Consumer SHA256 is
+`845323d7fa50af24b4f516c8937fa231737d3e66df648a90e035fdd56072f326`;
+current producer SHA256 is
+`4866497a9ae190012250be6556f8dd9f9b5729aa9f1c58349730457b96494c94`.
+All 92 v5 files and the normalization JSON match both epochs. This does not
+establish current producer compatibility, which remains **UNKNOWN**. Updating
+immutable copies/provenance or ignoring the changed digest was rejected because
+either would erase the declared historical authority or manufacture a current
+compatibility result.
+
+The renamed opt-in method
+`initializedCheckoutPreservesConsumerCopiesFromDeclaredImmutableOrigin` first
+uses the unchanged exact-gitlink checkout guard, then validates unchanged
+provenance and compares all three copies with that origin's local Git objects.
+It checks complete directory file membership and exact binary bytes, including
+the capability digest. Missing origin objects fail clearly; there is no HEAD
+fallback, fetch or new skip. Private Git reads disable replacements and lazy
+fetch, use NUL-delimited tree entries, reject non-regular blobs, cap each output
+at 1 MiB and each copy at 512 files/4 MiB, and bound child-process waits. No production,
+consumer artifact, provenance, POM, selection policy, native source or API changes.
+
+Ordinary real local-Git fixture controls cover a later producer HEAD and dirty
+working files while the origin stays unchanged; equal-length byte tampering,
+missing/extra tree members and missing standalone copies on both sides; and an
+unavailable origin. Existing destination/provenance mutation controls and all 31
+Java consumer semantic cases remain. Fixture names use portable spaces and
+staging disables automatic newline conversion so the fixture preserves bytes.
+
+An isolation incident preceded final validation. The implementation agent
+incorrectly directed its first edits/job into Root's supplied path rather than
+the correctly isolated app checkout. Root verified an external exact patch and
+both preimages, then restored only the two affected paths tocdada and reported
+clean. The earlier 45T pass belongs only to predecessor test blob
+`ab70705c7f5c5093d9b250ec502bf24d5ceaf81b`; the portable final candidate is
+`2e9edb6a83489de2b1d45615d47eb274c4786445`. The app isolation tool worked.
+Subsequent edits and Maven run only in the owned nested `origin-copy-contract`
+worktree on local `feature/ai-tracechaser-origin-copy-contract-20261021`, with an
+absolute Git-top-level check before mutations/launches. Its supplied app branch
+`immutable-origin-copy-contract` stays at efd60514. The native checkout was cloned
+locally from Root at exact 703; no network publication or native edits occurred.
+Only this lane's external registry row records identities, incident and cleanup.
+
+Final owned-worktree qualification on test blob `2e9edb6a`:
+
+- Ordinary whole V5 class: **45T0F0E0S**, XML 0.575s; printed admission wait
+  14s and Maven `01:21 min` (fresh compilation included).
+- Initialized single renamed method: **1T0F0E0S**, XML 0.399s; printed admission
+  wait 14s and Maven 26.338s. Actual testcase identity was the renamed method.
+
+Both used the current Main absolute queue wrapper with `--normal -Dmse=off`,
+Java 25.0.4.1, Lua 5.4, surfaceless EGL/null audio, the original three absolute
+Main ROM paths, own cwd/target, and dedicated owned report/tmp directories.
+`DISPLAY`, `WAYLAND_DISPLAY`, `JDK_JAVA_OPTIONS`, `_JAVA_OPTIONS`, `MAVEN_OPTS`
+and `LD_LIBRARY_PATH` were unset; `JAVA_TOOL_OPTIONS` contained only
+`-Dopenggf.headless.gl=surfaceless-egl`. The exact argv/environment and command
+sessions are recorded in this lane's existing external registry row. The
+selectors/profile were:
+
+```bash
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.trace.TestTraceChaserV5ConsumerContract' test -B
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Ptracechaser-integration -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.trace.TestTraceChaserV5ConsumerContract#initializedCheckoutPreservesConsumerCopiesFromDeclaredImmutableOrigin' test -B
+```
+
+All XML/TXT, 69 properties per run, actual testcase identities and all
+failure/error/skip/stream nodes were inspected: none failed or skipped and no
+stream nodes were present. Consumed owned diagnostics were removed; no raw-log
+archive or validation receipt remains. No engine/broad/full/native/C# workload
+or unchanged boundary-guard repeat was run. This is bounded historical-copy
+preservation, not current-producer compatibility or a retroactive pass for
+Root's original failed method. The local commit remains unmerged/unpushed for
+Root's independent review; app/nested/native setup is retained.
+
+### Immutable-origin copy contract: review corrections R2 — 2026-10-21
+
+Independent source review of `2fa1ddfb33b6d3f11ed04cc7d0a4c1edf6a04382`
+(Java blob `2e9edb6a83489de2b1d45615d47eb274c4786445`, parent `cdada405`)
+requested three P2 corrections. It supported the immutable-origin semantics,
+but found inherited Git repository/config selectors could redirect fixture
+writes; executor closure could wait indefinitely after direct-process timeout;
+and leaf-only no-follow checks missed consumer-path ancestor symlinks. R1's
+45/1 passes did not exercise these defects and do not certify those safety
+properties. R1 and Root's original 1F remain unchanged historical evidence.
+The complete review and literal pins are preserved immutably in this lane's
+existing `continuations.review_corrections_r2` registry entry.
+
+New real controls on the predecessor behavior (test blob
+`ed33995efa778bb7133310bc17e738cc365e951a`) produced **XML 4T4F0E0S**:
+
+- Poisoned `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, `GIT_COMMON_DIR` and
+  config environment changed the owned foreign fixture's index, branch ref,
+  reflogs and objects. Only temporary test repositories were involved.
+- Both byte-identical ancestor-link controls (v5 directory and standalone audio
+  copy) incorrectly passed the origin comparison.
+- A real Java child retaining its parent's output pipe exceeded the outer
+  four-second control deadline after the helper's 1.2-second deadline. The
+  control's independent safety cleanup terminated both owned processes; no
+  cleanup failure was suppressed over the primary failure.
+
+The RED run waited 0s; Maven reported 29.999s and XML 4.525s. Its console summary
+said 3T3F, but the XML and TXT contain four actual failing testcase records:
+two dynamic symlink children, environment control and retained-pipe control.
+Counts here follow the completed reports, not the console summary. This is a
+new discriminating RED execution, not an executed baseline or an R1 rerun.
+
+R2 removes inherited `GIT_*` variables from each child environment, resolves
+the explicit checkout as its cwd, and ignores global/system Git configuration.
+Only this test helper suppresses hooks, init templates, fsmonitor and automatic
+maintenance. Actual AI-assisted repository commits still use normal installed
+hooks. The environment control snapshots every foreign file, including HEAD,
+index and configuration, and also checks exact binary Git-object output.
+
+The process reader now has one operation deadline, observes owned descendants,
+and explicitly cancels its reader and shuts down its executor. Descendants and
+the direct process are terminated; stream closure, reader termination and
+process waits share a separate two-second cleanup budget. No unbounded executor
+closure remains. Cleanup errors are suppressed onto the original failure;
+the retained-pipe control requires clean cleanup and dead owned processes
+before returning. This is a bounded private Git helper, not a general detached
+process or hostile-process isolation facility.
+
+Both provenance validation and origin comparison check every component from
+the consumer root through the destination before opening consumer bytes.
+Symbolic-link components and non-directory ancestors fail. Workspace ancestry
+outside the consumer root is unaffected. Only an actual platform inability to
+create temporary symlinks may skip the two link controls; it does not skip the
+contract or other checks.
+
+Declared origin `9e51ff79`, all immutable consumer artifacts/provenance, exact
+initialized gitlink `703bd92d`, all 31 consumer semantic cases, existing tamper
+controls and the renamed opt-in method remain. Current producer compatibility
+remains **UNKNOWN**. R2 changes only this test's private helper/controls and this
+existing plan; no native, production, POM, selection-policy or API changes.
+
+Final R2 checks each ran exactly once on frozen Java blob
+`39af165c991266ba0c1575c86f355409a46ecf18`:
+
+- Ordinary whole class: **49T0F0E0S**, XML 3.352s, printed queue wait 19s,
+  Maven 28.924s. The four new cases passed; the retained-pipe case took 1.356s,
+  with no suppressed cleanup error and both owned processes dead. Both link
+  cases executed on Linux: zero platform skips.
+- Initialized renamed method: **1T0F0E0S**, XML 1.462s, printed queue wait 36s,
+  Maven 27.453s. Actual testcase identity was the single renamed method.
+
+All three jobs used the Main absolute queue wrapper, owned cwd/target, Java
+25.0.4.1, Lua 5.4, surfaceless EGL/null audio and the same original absolute ROM
+arguments/environment as R1. Each had distinct owned report/tmp directories
+(`origin-copy-r2-red-20261021-1`, `origin-copy-r2-ordinary-20261021-1`,
+`origin-copy-r2-initialized-20261021-1`). Exact expanded argv/environment and
+literal current task/run IDs are retained only in the existing R2 registry
+continuation. The executed selections/common flags were:
+
+```bash
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.trace.TestTraceChaserV5ConsumerContract#gitEnvironmentCannotRedirectFixtureWritesIntoTheCallerRepository+gitTimeoutTerminatesAChildHoldingItsOutputPipe+consumerCopiesRejectAncestorSymlinksBeforeReadingTheirTargets' test -B
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.trace.TestTraceChaserV5ConsumerContract' test -B
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Ptracechaser-integration -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.trace.TestTraceChaserV5ConsumerContract#initializedCheckoutPreservesConsumerCopiesFromDeclaredImmutableOrigin' test -B
+```
+
+All XML/TXT, 69 properties per job, actual identities, full failures (RED),
+skips/errors and stream nodes were consumed. Final runs had no failures,
+errors, skips or stream nodes. Consumed owned diagnostics were removed without
+an archive or validation receipt. No Root/Main write or workload, extra agent,
+boundary repeat, engine/broad/full/native/C# check, integration, push or worktree
+cleanup occurred in R2. These are Linux focused results; other-platform runtime
+behavior and detached hostile-process isolation are not certified. This local
+follow-up has literal parent R1 `2fa1ddfb`; Root owns a fresh independent review.
+
+### Provenance pre-parse path guard R3 — 2026-10-21
+
+Fresh independent review of R2 `947694a86593b4900d4b2fb06a93fe4b1e105a59`
+found one remaining P2: `validateProvenance` opened its JSON before checking
+the provenance path itself. Its production location is
+`src/test/resources/tracechaser/provenance.json`; the previous ancestor control
+used a fixture-root JSON outside that linked ancestor. The review supported
+R2's Git environment/process corrections. R1/R2 commits and recorded results
+remain historical; the complete round-2 review/pins are preserved immutably in
+the existing `continuations.provenance_preparse_r3` registry entry.
+
+Two new production-relative controls first validate a regular frozen copy,
+then link either its `tracechaser` ancestor or provenance leaf to malformed
+outside JSON. On predecessor behavior, blob
+`47c2ba10cc77df7d1e0854733009dba610ae0590` produced **XML 2T2F0E0S**:
+both assertions received Jackson `JsonParseException` instead of symbolic-link
+rejection. No FIFO or blocking fixture was used. Maven's factory aggregation
+said 1T1F; both XML/TXT testcase records failed. Printed queue wait 0s, Maven
+26.904s, XML 0.251s. This is a new discriminating RED, not a baseline run.
+
+R3 normalizes root/provenance paths, uses the existing containment/component
+guard and requires a no-follow regular provenance leaf before `readTree`.
+Outside bytes do not decide rejection. A literal inverse of this guard and
+the new control factory reproduces the parent Java source exactly: all 49
+existing controls, 31 semantic cases, bounded Git helper, origin `9e51ff79`,
+renamed initialized method and exact `703bd92d` guard remain unchanged. No
+artifact, provenance data, runtime, native, POM, selection-policy or API edit;
+current producer compatibility remains **UNKNOWN**.
+
+Final R3 checks each ran exactly once on unchanged blob
+`a15b3a18055094f16f4919b5f5de64b512ae3667`: ordinary whole class **51T0F0E0S**
+(XML 3.110s, Maven 28.489s), initialized single renamed method **1T0F0E0S**
+(XML 1.340s, Maven 27.278s). Both printed queue wait 0s. Both new link controls
+executed on Linux without skips. All three jobs used the same normal Main
+absolute queue wrapper, Java25/env/absolute ROMs as R2, with owned cwd/target and
+distinct `origin-copy-r3-{red,ordinary,initialized}-20261021-1` report/tmp roots.
+Exact expanded argv/environment and literal current task/run IDs are in only
+the existing R3 registry continuation. Executed selectors/common flags:
+
+```bash
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.trace.TestTraceChaserV5ConsumerContract#provenanceRejectsSymlinksBeforeParsingProductionRelativeJson' test -B
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.trace.TestTraceChaserV5ConsumerContract' test -B
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Ptracechaser-integration -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.trace.TestTraceChaserV5ConsumerContract#initializedCheckoutPreservesConsumerCopiesFromDeclaredImmutableOrigin' test -B
+```
+
+All XML/TXT, actual identities, 69 properties per job, full RED failures,
+errors/skips and stream nodes were consumed. Final runs had no failures,
+errors, skips or stream nodes. Consumed owned diagnostics were removed without
+archives/receipts. No Root/Main writes/workloads, extra agents, broad/engine/
+native/capture/unchanged-boundary checks, integration, push or worktree cleanup.
+This local follow-up has literal parent `947694a8`; Root owns fresh independent
+review round3. Other-platform runtime and concurrent adversarial filesystem
+mutation are not certified; current producer compatibility remains UNKNOWN.
