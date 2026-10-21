@@ -81,8 +81,16 @@ public final class BotClient {
                 && (connection.closed || (slot >= 0 && room.hub().isAttemptFlagged(slot)));
     }
 
-    public int maxObservedQueuedBytes() {
+    /** Largest emitted packet; this in-process sink does not simulate a queue. */
+    public int maxEmittedPacketBytes() {
         return connection.maxPacketBytes;
+    }
+
+    /** Transport close notifications run after the current room callback, never reentrantly. */
+    void deliverDisconnectIfClosed() {
+        if (connection.closed) {
+            disconnect();
+        }
     }
 
     public void disconnect() {
@@ -114,11 +122,17 @@ public final class BotClient {
     /** In-process load harness: no socket or remote peer supplies this explicit test binding. */
     private static final class Connection implements HubConnection, com.openggf.net.hub.HandshakeTransport {
         @Override public String authenticationBinding() { return com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT; }
-        private final java.util.List<String> text = new java.util.ArrayList<>();
+        private ControlMessage lastControl;
+        private ControlMessage.JoinAccepted joined;
         private boolean closed;
         private int maxPacketBytes;
 
-        @Override public void sendText(String value) { text.add(value); }
+        @Override public void sendText(String value) {
+            lastControl = ControlCodec.decode(value).message();
+            if (lastControl instanceof ControlMessage.JoinAccepted accepted) {
+                joined = accepted;
+            }
+        }
         @Override public void sendBinary(byte[] data) {
             maxPacketBytes = Math.max(maxPacketBytes, data.length);
         }
@@ -126,14 +140,14 @@ public final class BotClient {
         @Override public String remoteHost() { return "load-bot"; }
 
         private ControlMessage lastControl() {
-            return ControlCodec.decode(text.getLast()).message();
+            return lastControl;
         }
 
         private ControlMessage.JoinAccepted findJoin() {
-            return text.stream().map(value -> ControlCodec.decode(value).message())
-                    .filter(ControlMessage.JoinAccepted.class::isInstance)
-                    .map(ControlMessage.JoinAccepted.class::cast)
-                    .findFirst().orElseThrow();
+            if (joined == null) {
+                throw new IllegalStateException("load bot was not admitted: " + lastControl);
+            }
+            return joined;
         }
     }
 }

@@ -25,7 +25,7 @@ public final class GhostLoadTestTool {
     }
 
     public record LoadReport(double meanTickMillis, double p99TickMillis,
-                             long maxQueuedBytesAnyClient,
+                             long maxEmittedPacketBytes,
                              long healthyClientsFinished,
                              long adversariesSanctioned) {
     }
@@ -36,7 +36,7 @@ public final class GhostLoadTestTool {
     public static LoadReport run(int n, Behavior mix, Duration duration, Path dataDir)
             throws Exception {
         if (n < 1 || n > 256 || duration == null || duration.isNegative()
-                || duration.isZero()) {
+                || duration.isZero() || duration.compareTo(Duration.ofHours(1)) > 0) {
             throw new IllegalArgumentException("invalid load-test arguments");
         }
         Files.createDirectories(dataDir);
@@ -47,50 +47,58 @@ public final class GhostLoadTestTool {
                 "OPEN", null, n, fingerprint), host, () -> now[0],
                 TrackValidationProfileSource.none(),
                 new RoomHostHooks(true, null, null, null, null));
-        room.applyTrackValidationProfile(new TrackValidationProfile(
-                100_000, 10_000, 32, 60));
-
         List<BotClient> bots = new ArrayList<>(n);
-        for (int index = 0; index < n; index++) {
-            Behavior behavior = behaviorFor(mix, index, n);
-            bots.add(new BotClient(room, behavior,
-                    dataDir.resolve("bot-" + index), fingerprint));
-        }
-        room.requestStartRound(new ControlMessage.RoundConfig(
-                "s3k", 0, 0, Math.max(60, (int) duration.toSeconds() + 10),
-                "OPEN", null));
-        now[0] += HostRoundEngine.COUNTDOWN_MILLIS;
-        room.tick();
-
-        int ticks = Math.max(1, (int) Math.ceil(duration.toMillis() / 50.0)) + 2;
-        long[] tickNanos = new long[ticks];
-        for (int tick = 0; tick < ticks; tick++) {
-            for (BotClient bot : bots) {
-                bot.publishTick();
+        try {
+            for (int index = 0; index < n; index++) {
+                Behavior behavior = behaviorFor(mix, index, n);
+                bots.add(new BotClient(room, behavior,
+                        dataDir.resolve("bot-" + index), fingerprint));
             }
-            now[0] += 50;
-            long started = System.nanoTime();
+            room.requestStartRound(new ControlMessage.RoundConfig(
+                    "s3k", 0, 0, Math.max(60, (int) duration.toSeconds() + 10),
+                    "OPEN", null));
+            // Starting a round selects its track and clears any previously applied profile.
+            room.applyTrackValidationProfile(new TrackValidationProfile(
+                    100_000, 10_000, 32, 60));
+            now[0] += HostRoundEngine.COUNTDOWN_MILLIS;
             room.tick();
-            tickNanos[tick] = System.nanoTime() - started;
-        }
-        for (BotClient bot : bots) {
-            bot.finish();
-        }
-        room.tick();
 
-        long caught = bots.stream().filter(BotClient::adversaryCaught).count();
-        long healthyFinished = room.round().standings().size();
-        long maxQueued = bots.stream().mapToLong(BotClient::maxObservedQueuedBytes)
-                .max().orElse(0);
-        for (BotClient bot : bots) {
-            bot.disconnect();
+            int ticks = Math.max(1, (int) Math.ceil(duration.toMillis() / 50.0)) + 2;
+            long[] tickNanos = new long[ticks];
+            for (int tick = 0; tick < ticks; tick++) {
+                for (BotClient bot : bots) {
+                    bot.publishTick();
+                    bot.deliverDisconnectIfClosed();
+                }
+                now[0] += 50;
+                long started = System.nanoTime();
+                room.tick();
+                tickNanos[tick] = System.nanoTime() - started;
+                for (BotClient bot : bots) {
+                    bot.deliverDisconnectIfClosed();
+                }
+            }
+            for (BotClient bot : bots) {
+                bot.finish();
+            }
+            room.tick();
+
+            long caught = bots.stream().filter(BotClient::adversaryCaught).count();
+            long healthyFinished = room.round().standings().size();
+            long maxPacket = bots.stream().mapToLong(BotClient::maxEmittedPacketBytes)
+                    .max().orElse(0);
+            Arrays.sort(tickNanos);
+            double mean = Arrays.stream(tickNanos).average().orElse(0) / 1_000_000.0;
+            int p99Index = Math.min(tickNanos.length - 1,
+                    (int) Math.ceil(tickNanos.length * 0.99) - 1);
+            double p99 = tickNanos[p99Index] / 1_000_000.0;
+            return new LoadReport(mean, p99, maxPacket, healthyFinished, caught);
+        } finally {
+            for (BotClient bot : bots) {
+                bot.disconnect();
+            }
+            room.close("load test complete");
         }
-        Arrays.sort(tickNanos);
-        double mean = Arrays.stream(tickNanos).average().orElse(0) / 1_000_000.0;
-        int p99Index = Math.min(tickNanos.length - 1,
-                (int) Math.ceil(tickNanos.length * 0.99) - 1);
-        double p99 = tickNanos[p99Index] / 1_000_000.0;
-        return new LoadReport(mean, p99, maxQueued, healthyFinished, caught);
     }
 
     private static Behavior behaviorFor(Behavior mix, int index, int n) {
