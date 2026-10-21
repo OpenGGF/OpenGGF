@@ -42,6 +42,11 @@ final class OwnedModServices {
                 bundle.rewindAdapters().forEach((key,value) -> adapters.put("services/" + entry.getKey() + "/" + key,value));
             }
             Object controller = fixed.get(GameplayFrameController.class);
+            if (controller instanceof GameplayFrameController incoming) {
+                GameplayFrameController existing = base.gameplayFrameController();
+                if (existing != null && (existing.requiresExclusiveControl() || incoming.requiresExclusiveControl()))
+                    throw new IllegalArgumentException("An exclusive gameplay controller cannot replace or be replaced by another controller");
+            }
             if (controller instanceof RewindSnapshottable<?> && adapters.values().stream().noneMatch(value -> value == controller))
                 throw new IllegalArgumentException("A rewindable frame controller must be captured in its service graph");
             Object observer = fixed.get(com.openggf.game.GameplayObserver.class);

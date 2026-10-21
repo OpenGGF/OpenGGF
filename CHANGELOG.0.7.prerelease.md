@@ -5,6 +5,14 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
+  OpenGGF Editor's Stageplay workspace. Author actor movement, animation/poses,
+  camera keys, captions, ROM audio and WAV/Ogg voices; record directed visual
+  takes, undo edits, save/reopen and export synchronized lossless films.
+  Mods play the same scenes with held native gameplay and optional explicit
+  main-player handover. See the [guide](docs/guide/creating/stageplay.md) and
+  [fifteen-second example](examples/stageplay-demo/README.md).
+
 - **Recording imports:** copied BK2 recordings are bounded during decompression
   and parsing, including metadata, input rows and verification sidecars. Oversized,
   ambiguous or inconsistent files are rejected without hiding healthy recordings.
@@ -404,6 +412,8 @@ Unreleased. The earlier development themes remain in
   movie, preserving shared-movie priority and rejecting unsafe source aliases.
   Closing or rebooting a headless capture releases its owned audio ROM reference,
   so a subsequent title and saved-slot launch can read a fresh ROM in the same process.
+  Silent headless boots also retire inherited audio backends before playback, keeping
+  reused capture processes off desktop audio devices.
 
 - **Native-compatible PCM output (diagnostics):** An opt-in audio session setting
   feeds the accurate FM chip's own pin sums through a Java port of blip_buf. It

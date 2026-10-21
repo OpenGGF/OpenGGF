@@ -24,6 +24,10 @@ imports.
 
 ## Offscreen rendering prerequisites
 
+For real GL rendering in tests, captures or batch tools, use the project
+[headless-rendering skill](../../../.agents/skills/headless-rendering/SKILL.md).
+It distinguishes display-free EGL from logic-only headless mode and hidden windows.
+
 Mandatory Linux background rendering tests create a Mesa surfaceless EGL context
 and render into an owned pbuffer without connecting to X11 or Wayland. Ubuntu needs `libegl1`,
 `libegl-mesa0`, `libgl1` and `libgl1-mesa-dri`; CI installs these explicitly for

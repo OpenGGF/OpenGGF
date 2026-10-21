@@ -10,6 +10,10 @@ commands are available from the editor menu. The editor remains
 experimental; pixel-art painting, collision-profile shape drawing, native stock
 cutscenes/boss scripts, and campaign packaging are separate workflows.
 
+For authored sprite films and mod cutscenes, press **F4** to open
+[OpenGGF Stageplay](stageplay.md). It shares the loaded set with a separate
+directing document and preserves the level workspace when you switch back.
+
 ## Start a project
 
 1. Choose **New blank level**, then choose the game and source zone/act for its

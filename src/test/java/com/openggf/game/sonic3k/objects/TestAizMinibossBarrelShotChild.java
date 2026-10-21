@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.session.SessionManager;
+import com.openggf.data.RomByteReader;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.camera.Camera;
@@ -26,12 +27,15 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
 public class TestAizMinibossBarrelShotChild {
 
     private DummyBoss parent;
     private AizMinibossFlameBarrelChild barrel;
     private Camera camera;
+    private TestObjectServices services;
 
     @BeforeEach
     public void setUp() {
@@ -41,16 +45,21 @@ public class TestAizMinibossBarrelShotChild {
         camera.resetState();
         camera.setX((short) 0);
         camera.setY((short) 0);
+        var reader = mock(RomByteReader.class, invocation -> {
+            throw new AssertionError("Unexpected animation reader operation " + invocation.getMethod().getName());
+        });
+        doReturn(new byte[] {1, 12, 13, (byte) 0xFC}).when(reader).slice(0x6914C, 4);
+        services = new TestObjectServices().withCamera(camera).withRomReader(reader);
         parent = new DummyBoss();
         barrel = new AizMinibossFlameBarrelChild(parent, 0, false);
-        barrel.setServices(new TestObjectServices().withCamera(camera));
+        barrel.setServices(services);
     }
 
     @Test
     public void simpleModeNeverBecomesHazardousAndSelfDeletes() {
         AizMinibossBarrelShotChild shot = new AizMinibossBarrelShotChild(
                 parent, barrel, 100, 100, AizMinibossBarrelShotChild.Mode.SIMPLE);
-        shot.setServices(new TestObjectServices().withCamera(camera));
+        shot.setServices(services);
 
         for (int i = 0; i < 250 && !shot.isDestroyed(); i++) {
             shot.update(i, null);
@@ -64,7 +73,7 @@ public class TestAizMinibossBarrelShotChild {
     public void advancedNonCollidingModeNeverSetsCollisionFlags() {
         AizMinibossBarrelShotChild shot = new AizMinibossBarrelShotChild(
                 parent, barrel, 100, 100, AizMinibossBarrelShotChild.Mode.ADVANCED_NON_COLLIDING);
-        shot.setServices(new TestObjectServices().withCamera(camera));
+        shot.setServices(services);
 
         for (int i = 0; i < 220 && !shot.isDestroyed(); i++) {
             shot.update(i, null);
@@ -76,7 +85,7 @@ public class TestAizMinibossBarrelShotChild {
     public void advancedCollidingModeEventuallyEntersHazardPhase() {
         AizMinibossBarrelShotChild shot = new AizMinibossBarrelShotChild(
                 parent, barrel, 100, 100, AizMinibossBarrelShotChild.Mode.ADVANCED_COLLIDING);
-        shot.setServices(new TestObjectServices().withCamera(camera));
+        shot.setServices(services);
 
         boolean sawCollision = false;
         for (int i = 0; i < 260 && !shot.isDestroyed(); i++) {
@@ -93,7 +102,7 @@ public class TestAizMinibossBarrelShotChild {
     @Test
     public void flameChildTracksParentOffsetsAndFlip() {
         AizMinibossFlameChild flame = new AizMinibossFlameChild(parent, -0x64, 4, 0);
-        flame.setServices(new TestObjectServices().withCamera(camera));
+        flame.setServices(services);
 
         flame.update(0, null);
         assertEquals(parent.getX() - 0x64, flame.getX());
@@ -150,7 +159,7 @@ public class TestAizMinibossBarrelShotChild {
     private final class DummyBoss extends AbstractBossInstance {
         private DummyBoss() {
             super(new ObjectSpawn(0x1200, 0x300, 0x91, 0, 0, false, 0), "DummyBoss");
-            setServices(new TestObjectServices().withCamera(camera));
+            setServices(TestAizMinibossBarrelShotChild.this.services);
             state.x = 0x1200;
             state.y = 0x300;
             state.xFixed = state.x << 16;

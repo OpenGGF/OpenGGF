@@ -84,6 +84,11 @@ import com.openggf.trace.replay.runs.TraceRunFrameDriver;
 
 public final class GameplayModeContext implements ModeContext {
     private final Object courseCheckpointIdentity = new Object();
+    private final com.openggf.game.mode.DirectedPlayerLease directedPlayerLease =
+            new com.openggf.game.mode.DirectedPlayerLease(this);
+
+    /** Engine-owned direction cleanup, separate from creator callbacks and their availability. */
+    public com.openggf.game.mode.DirectedPlayerLease directedPlayerLease() { return directedPlayerLease; }
     private final List<com.openggf.audio.AudioReplay> audioReplays = new ArrayList<>();
 
     /** Engine lifetime owner for controlled-mode PCM recordings; use CourseControl in creator code. */
@@ -158,6 +163,7 @@ public final class GameplayModeContext implements ModeContext {
     private BonusStageProvider activeBonusStageProvider = NoOpBonusStageProvider.INSTANCE;
     private GameplayInputFilter gameplayInputFilter = GameplayInputFilter.IDENTITY;
     private boolean managersTornDown;
+    private boolean managersTearingDown;
 
     private PerformanceProfiler profiler;
     private RewindRegistry rewindRegistry;
@@ -355,6 +361,8 @@ public final class GameplayModeContext implements ModeContext {
         runtimeArtCoordinator.registerRewindAdapters(this.rewindRegistry);
         this.rewindRegistry.register(seamlessTransitionResourceHandoffs);
         this.rewindRegistry.register(camera);
+        this.rewindRegistry.register(directedPlayerLease);
+        this.rewindRegistry.registerPostRestoreCallback(directedPlayerLease.key(), directedPlayerLease::afterRestore);
         this.rewindRegistry.register(gameStateManager);
         this.rewindRegistry.register(rng);
         // Power-on V_int_run_count carrier: the ObjectManager snapshot restores the
@@ -1240,10 +1248,13 @@ public final class GameplayModeContext implements ModeContext {
      * Reentrant or repeated teardown is a no-op, including after failure.
      */
     public void tearDownManagers() {
-        if (managersTornDown) return;
+        if (managersTornDown || managersTearingDown) return;
+        managersTearingDown = true;
+        var cleanup = new GameplayCleanup();
+        // Native state is still available here even if the creator controller is quarantined.
+        cleanup.run(directedPlayerLease::abort);
         managersTornDown = true;
         scheduledPlaybackInputPublisher = null;
-        var cleanup = new GameplayCleanup();
         try {
             // Hand the session's final V-int count back to the power-on carrier.
             cleanup.run(() -> EngineServices.current().vIntRunCounter().unbindObjectClock());
@@ -1293,6 +1304,7 @@ public final class GameplayModeContext implements ModeContext {
         } finally {
             cleanup.run(() -> GroundSensor.setLevelManager(null));
             clearManagerReferences();
+            managersTearingDown = false;
         }
         cleanup.throwIfFailed();
     }

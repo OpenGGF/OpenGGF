@@ -80,7 +80,9 @@ public final class EditorProjectStore {
         return document;
     }
 
-    private EditorProjectDocument decode(byte[] bytes) throws IOException {
+    /** Decodes a bounded owned asset without retaining a filesystem path. */
+    public EditorProjectDocument decode(byte[] bytes) throws IOException {
+        if (bytes.length > MAX_BYTES) throw new IOException("Project exceeds the 64 MiB storage limit");
         try (JsonParser parser = mapper.createParser(bytes)) {
             JsonNode node = mapper.readTree(parser);
             if (node == null || !node.isObject() || parser.nextToken() != null) throw new IOException("Project must contain exactly one JSON object");

@@ -4,6 +4,7 @@ import com.openggf.Engine;
 import com.openggf.GameLoop;
 import com.openggf.ModSubsystem;
 import com.openggf.audio.HeadlessSmpsAudioBackend;
+import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
@@ -167,6 +168,32 @@ public final class HeadlessGameBoot implements AutoCloseable {
     public void setLaunchModuleDecorator(
             java.util.function.BiFunction<GameModule, GameplayLaunchRequest, GameModule> decorator) {
         moduleDecorator = java.util.Objects.requireNonNull(decorator, "decorator");
+    }
+
+    /** Selects and installs this boot's no-device audio before level playback. */
+    void installAudioBackend() {
+        // --- audio backend (real SMPS synthesis) ------------------------
+        // Must precede any music (loadZoneAndAct below) so the presentation
+        // producer this backend installs is the one that admits the level's
+        // music/SFX voices. The default NullAudioBackend synthesizes nothing,
+        // which is what made captured audio silent.
+        SonicConfigurationService audioConfig = engineServices.configuration();
+        installedHeadlessAudioBackend = null;
+        if (audioConfig.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
+            // Headless backend: it builds the normal presentation producer
+            // over a NoDeviceAudioSink (AudioBackend.createPresentationSink),
+            // so the same SMPS/WAV/raw-PCM voice registry renders offline
+            // without ever opening an audio device. AudioManager's offline
+            // capture lease is a non-consuming view of that producer, not a
+            // replacement for it.
+            installedHeadlessAudioBackend =
+                    new HeadlessSmpsAudioBackend(audioConfig, engineServices.profiler());
+            engineServices.audio().setBackend(installedHeadlessAudioBackend);
+        } else {
+            // AUDIO_ENABLED gates synthesis, not an inherited device's lifetime.
+            // Every boot owns the no-device selection, including reused JVMs.
+            engineServices.audio().setBackend(new NullAudioBackend());
+        }
     }
 
     /** Observes this boot's exact audio owner without exposing backend commands. */
@@ -502,26 +529,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
 
         GameModuleRegistry.setCurrent(module);
 
-        // --- audio backend (real SMPS synthesis) ------------------------
-        // Must precede any music (loadZoneAndAct below) so the presentation
-        // producer this backend installs is the one that admits the level's
-        // music/SFX voices. The default NullAudioBackend synthesizes nothing,
-        // which is what made captured audio silent.
-        // Mirrors Engine.initializeGlobalGameplayServices (Engine.java:676);
-        // setBackend() falls back to NullAudioBackend if OpenAL init fails.
-        SonicConfigurationService audioConfig = services.configuration();
-        installedHeadlessAudioBackend = null;
-        if (audioConfig.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
-            // Headless backend: it builds the normal presentation producer
-            // over a NoDeviceAudioSink (AudioBackend.createPresentationSink),
-            // so the same SMPS/WAV/raw-PCM voice registry renders offline
-            // without ever opening an audio device. AudioManager's offline
-            // capture lease is a non-consuming view of that producer, not a
-            // replacement for it.
-            installedHeadlessAudioBackend =
-                    new HeadlessSmpsAudioBackend(audioConfig, services.profiler());
-            services.audio().setBackend(installedHeadlessAudioBackend);
-        }
+        installAudioBackend();
 
         // --- per-replay subsystem reset ---------------------------------
         // Clear the per-zone subsystem state (sprites, collision, camera, fade,

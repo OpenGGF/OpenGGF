@@ -260,6 +260,12 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   [briefing-trace-rounds.md](docs/agent-workflow/briefing-trace-rounds.md#measurement-hazards--all-produce-plausible-output).
   Attribute results to the command, commit, and completed run; inspect skips.
 
+## Enforced correction contracts
+
+| Contract | Owner and regression enforcement |
+| --- | --- |
+| Headless boot selects no-device audio even when synthesis is disabled; callers must not rely on a fresh JVM. | `HeadlessGameBoot.installAudioBackend()`; ROM-free `TestHeadlessAudioOwnership` in ordinary CI and ROM-backed `TestHeadlessGameBootAudioIdentity`. |
+
 ## Level test coverage
 
 New zone/act implementations must follow the
@@ -451,6 +457,7 @@ never preserved.
 - PLC/art queues: `plc-system`, plus `s3k-plc-system` for S3K.
 - Zone work: relevant S3K zone/events/parallax/animated-tiles/palette skill;
   whole-zone delivery: `s3k-zone-bring-up`.
+- Offscreen engine rendering for tests, captures and tools: `headless-rendering`.
 - Headless tests: [headless testing](docs/guide/contributing/headless-testing.md).
 - Current gaps: [general](docs/status/known-discrepancies.md),
   [S3K](docs/S3K_KNOWN_DISCREPANCIES.md). Configuration: [CONFIGURATION.md](CONFIGURATION.md).
