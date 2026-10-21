@@ -26,7 +26,12 @@ public final class VerifierWorker {
         Optional<String> pollJobJson();
         void heartbeat();
         byte[] fetchRecording(String hashHex);
-        void postVerdict(String jobId, String result, byte[] signature);
+
+        /**
+         * Submits a signed verdict. Returns {@code false} when the master refuses it
+         * because the job was voided, superseded or re-leased; other failures throw.
+         */
+        boolean postVerdict(String jobId, String result, byte[] signature);
     }
 
     public interface Replayer {
@@ -81,9 +86,20 @@ public final class VerifierWorker {
             String result = decide(job, encoded);
             byte[] signature = identity.sign(VerdictCodec.canonicalBytes(
                     job.jobId(), job.attemptRef(), job.inputRecordingHashHex(), result));
-            api.postVerdict(job.jobId(), result, signature);
+            if (!api.postVerdict(job.jobId(), result, signature)) {
+                // Nothing is left to retry: the master already moved the job on, so the
+                // leased job still counts as processed.
+                LOG.log(System.Logger.Level.INFO, "verdict " + result + " for job "
+                        + job.jobId() + " refused: job voided, superseded or re-leased");
+            }
             return true;
-        } catch (Exception failure) {
+        } catch (Exception | StackOverflowError | LinkageError failure) {
+            // A StackOverflowError (a recording driving deep replay recursion) or a
+            // LinkageError (a lazily linked class failing to load or initialise) leaves
+            // the JVM usable and poisons only this job, so it fails this cycle and the
+            // loop survives it. No verdict is posted: a verifier-side fault is no evidence
+            // against the recording, and the lapsed lease returns the job to the master.
+            // Any other Error (OutOfMemoryError, InternalError, ...) stays fatal.
             throw new IllegalStateException("verification cycle failed", failure);
         } finally {
             heartbeats.shutdownNow();
