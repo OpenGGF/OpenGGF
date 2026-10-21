@@ -23295,3 +23295,36 @@ fixture files are byte-identical to cea6e6ee, and production source is identical
 to the tested remediation commit. Neither fixture belongs to the260-test or
 31-test selections; Root retains its29-test fixture result and owns final
 combined validation. No unchanged focused check was repeated as a merge ritual.
+
+### Root composition checkpoint: structural adoption and neutral SOZ prefix (2026-10-21)
+
+The integration branch fast-forwarded from `cea6e6ee01f3` to
+`bf2c7c7211a7` after an independent source review found no material issue in
+the six structural corrections. The worker's source-stable focused ordinary
+selection passed260 tests. Its guard request ran31 tests: all six new checks
+passed; two inherited HubMusic ArchUnit failures remained. These are bounded
+results, not a combined whole-guard or route-completion pass. Main develop and
+its unrelated setup changes remain untouched.
+
+A temporary matched ordinary SOZ1 Knuckles driver submitted the original
+`soz1-cold-knuckles.bk2` inputs0..11199 in both c13 and cea6, using the same
+320px cold boot, initial Process_Sprites consumer, disabled drawing properties
+and Java25/surfaceless environment. It omitted the original bonus-history
+toggles and replay windows and made no survival assertion. Each invocation of
+`-Psmoke -Dtest=com.openggf.tools.TestSozMatchedNeutralPrefix test -B`
+completed1T/0F/0E/0S with a partial11200-row journal. The existing
+`GameplayMatchedStateJournal` reader validated both full binaries against the
+unchanged24005-input BK2: all36 fields agreed through row3316; first difference
+row3317 was game_mode BONUS_STAGE(16) on c13 versus TITLE_CARD(1) on cea6.
+Reader exit0 and unchanged source/input hashes qualify that comparison only.
+They do not qualify the original route, rewind, native clock or cause of death.
+
+The official reader reported479s of queue waiting and0.312s Maven execution;
+the two diagnostic tests reported27.684s and27.421s Maven execution. These are
+separate intervals, not elapsed delivery time. Both original XML/TXT pairs and
+journals were inspected, then the two owned report/tmp roots and two journal
+files were removed. The three exact temporary source files were inverted before
+structural adoption; no compiled classes were manually deleted or logs archived.
+The actual bf launch-environment category preflight passed Java25, Lua5.4 and
+PowerShell prerequisites without executing engine tests. SSZ route failures,
+SOZ Knuckles completion and combined affected verification remain unresolved.
