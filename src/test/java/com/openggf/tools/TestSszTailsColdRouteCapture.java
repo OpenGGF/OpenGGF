@@ -81,9 +81,10 @@ class TestSszTailsColdRouteCapture {
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 10, 0, settings);
             assertEquals(width, GameServices.camera().getWidth());
-            // Spawner-pad approach and lift windows of the 2026-10-15 re-authored movies.
-            int first = width == 320 ? 10443 : 10667, second = width == 320 ? 10645 : 10819;
-            for (int frame = 0; frame < (width == 320 ? 10784 : 11306); frame++) {
+            // 320: observed pad approach/lift before native Mecha init11571 (two fresh cold replays).
+            // 800 retains its independent 2026-10-15 authored data.
+            int first = width == 320 ? 11324 : 10667, second = width == 320 ? 11524 : 10819;
+            for (int frame = 0; frame < (width == 320 ? 11572 : 11306); frame++) {
                 session.step(movie.getFrame(frame)); drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "approach death at " + frame);
                 if (frame == first || frame == second) {
@@ -215,10 +216,12 @@ class TestSszTailsColdRouteCapture {
     void coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int width) throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/ssz1-tails-solo-cold-complete-" + width + ".bk2"));
-        assertEquals(width == 320 ? 13667 : 15132, movie.getFrameCount());
+        assertEquals(width == 320 ? 14923 : 15132, movie.getFrameCount());
         int historyStart = movie.getFrameCount() - 120;
         var settings = new GameplayCaptureSession.Settings(width, "tails", "", "off", null, null, null);
-        // Upper route, Mecha fight and Death Egg lift windows of the 2026-10-15 re-authored movies.
+        // Retain all 47 original 320 windows and the independent 800 movie data.
+        // Added 320 boundaries follow two fresh cold replays: carriers/cloud wrap, pad states,
+        // spring launches, Mecha init/eight accepted hits, results and Death Egg launch/hover.
         var spots = width == 800 ? Set.of(8225, 8298, 8347, 8451, 8535, 8660, 8793, 8848, 8897, 8932,
                 9022, 9134, 9217, 9308, 9357, 9426, 9635, 9705, 9775, 9844, 9928, 10053, 10179, 10262, 10471,
                 10541, 10631, 10680, 11053, 11306, 11359, 11473, 11562, 11651, 11841, 11968, 12120, 12247,
@@ -226,7 +229,13 @@ class TestSszTailsColdRouteCapture {
                 : Set.of(8001, 8074, 8123, 8227, 8310, 8435, 8568, 8623, 8671, 8706, 8796, 8908, 8991,
                 9081, 9130, 9199, 9408, 9477, 9547, 9616, 9700, 9825, 9950, 10033, 10242, 10311, 10401,
                 10450, 10719, 10781, 10812, 10874, 10921, 10983, 11044, 11134, 11153, 11190, 11230, 11292,
-                11336, 11420, 11778, 12150, 12393, 12943, 13489);
+                11336, 11420, 11778, 12150, 12393, 12943, 13489,
+                8350, 8529, 8540, 8683, 8781, 9022, 9041, 9084, 9088, 9174,
+                9214, 9250, 9743, 9892, 9923, 9988, 10040, 10221, 10698, 10904,
+                10964, 11053, 11132, 11324, 11337, 11484, 11524, 11535, 11571, 11600,
+                11619, 11683, 11763, 11807, 11886, 11946, 12005, 12128, 12205, 12251,
+                12613, 12741, 12742, 12862, 13339, 13369, 13469, 13484, 13565, 14689,
+                14719);
         var checked = new HashSet<Integer>();
         boolean seen = false;
         int health = 8, hits = 0;
