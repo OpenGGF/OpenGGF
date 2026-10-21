@@ -28846,3 +28846,32 @@ wait115s, Maven16.505s, launcher133.761s; exit0, **0 JUnit/0 skips**, not a suit
 Source fingerprint `f8c710eefdb16166f6e186e2927fb63ba0c587eda2aa7cad326464b559947a17` (10808 paths: sorted src/main/src/test/POM/.mvn path-NUL-bytes-NUL).
 Adapter SHA256 `d2336fd3ff4dc968dcec45419049aa16c844519bcd71f75dee9cbfec814bc96e`; BK2 `8a6ac8c24c10f36f66f0a3877fba139e6d9291066584a3cc6d84f7d5a71258b1`.
 Useful specific source/preimage/fixed inputs/compact facts/two normal images remain external; owned raw diagnostics consumed. No independent qualification/native800/pixels/physics/MTZ/fullroute claim; expected46 and all prior histories unchanged.
+
+## R14 ordinary first gap and managed carrier admission — 2026-10-21
+
+At exact `1f0b7c2f731ac65cd647b7b37f6e44b72d878245`, unchanged
+[R13/R12 setup](#r13-ordinary-grounded-plateau-only--2026-10-21) and all14853 R13,
+14618 R12/14442 R11/14414 R10/9914 original pads match; full inlet14852 matches.
+One finite RUN120/JUMP120/ADMIT3 or free-ground BRAKE60/SETTLE60 policy,400 cap.
+Actual new inputs:34 Right,56 heldRight+A,1 neutral; P2Up/no actions throughout.
+
+| Input | Original public boundary |
+| --- | --- |
+| 14886 | P1 grounded/free(4192,1196), VX/G408; first jump box reached. |
+| 14887 | Sole fresh P1A edge; air/jumping(4192,1201), VY-1664, logical edge true. |
+| 14942 | P1 grounded(4369,1163), actual manager rider equals original post's raw child; object control false. |
+| 14943 | One neutral input: SAME raw live managed child, P1(4369,1164), VX/VY/G0, grounded/controlled, CPU-allowed/movement-suppressed; STOP. |
+
+The original decoded layout134 descriptor is(4416,1152), ID0x76/sub1/flags0,
+respawnfalse/rawY0x480. Pure actual map lookup binds that post; its public child
+field and raw collection membership bind the rider. Class/XY alone is not used;
+no native slot/address/PC or original private latch/write-branch inference follows.
+All91 rows retain both live/unhurt,62rings/3lives, same managers/world/native pair/
+focus/LEVEL/no pending/fade/reverse/TailsCarry. P2 ends grounded(3950,1264), V0,
+flag0/fuel0/NORMAL/manualtrue. No mechanism release or free-upper-ground branch ran.
+Same-JVM36-pad author/loader proof includes positive0x10/masks/booleans/payload;
+all14944 executed rows roundtrip; independent full ZIP-payload proofs cover all5 prefixes.
+One current absolute Main queue `--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl compile exec:exec -B`: wait0s, Maven17.135s, registered launcher19.432s; engine-only UNKNOWN; **0 JUnit/skips N/A**.
+Source SHA256 `f8c710eefdb16166f6e186e2927fb63ba0c587eda2aa7cad326464b559947a17` (10808 sorted src/main/src/test/POM/.mvn path-NUL-bytes-NUL); adapter `1c3436124494a70dc99e59f261ec5e33418bd54e2c1edfc53c3c28a4c7190d29`.
+BK2 SHA256 `f027094cbd4e41ab6cbd7ebcc2696937bd72fe7ba5fcb89ad8f4edffa3d3d5f1`; useful specific source/preimage/design/fixed inputs/compact facts/one normal endpoint image remain external; owned raw diagnostics consumed.
+No production omission, native/pixel/physics/timing/MTZ/boss/fullroute or independent qualification is established. Stored-sensor freshness/terrain owner/cooldown remain UNKNOWN; expected46 and all maintained runtime/POM/tests/movies/windows/oracles and prior histories unchanged.

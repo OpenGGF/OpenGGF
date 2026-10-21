@@ -4428,3 +4428,15 @@ and ring collector/award owners remain UNKNOWN. All14853 actual pads and four
 whole prefixes roundtrip; preboot36-pad proof includes Left/Right/JUMP0x10.
 **0 JUnit/0 skips**, one ordinary CLI, no qualification/native/MTZ/fullroute claim;
 expected46 unchanged. [Policy, fingerprints, timing and limits](../../plans/2026-10-13-s3k-playable-completion.md#r13-ordinary-grounded-plateau-only--2026-10-21).
+
+## R14 ordinary gap to managed carrier admission — 2026-10-21
+
+One cold CLI at exact `1f0b7c2f` preserves all14853 R13 and four earlier full prefixes;
+full14852 inlet matches. One P1A edge14887, heldRight+A until first raw rider14942,
+then neutral14943: grounded P1(4369,1164), V0, object-controlled with CPU allowance/
+movement suppression. Actual manager membership + decoded layout134 post's original
+child field bind that SAME raw live child; class/XY does not identify it alone.
+Both live/unhurt,62rings/3lives; P2 grounded/flag0/fuel0/NORMAL/manualtrue. Exactly91
+new inputs/14944 total;36-pad preboot proof and all-row/5-full-prefix roundtrip.
+**0 JUnit/skips N/A**; no release, free-upper-ground, native/MTZ/fullroute qualification.
+Owner-branch/contact operands and sensor freshness UNKNOWN; expected46 unchanged. [Policy, fingerprints, timing and limits](../../plans/2026-10-13-s3k-playable-completion.md#r14-ordinary-first-gap-and-managed-carrier-admission--2026-10-21).
