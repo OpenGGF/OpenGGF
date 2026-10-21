@@ -24109,3 +24109,56 @@ power-on, or gameplay readiness. Root's historical HCZ/FDF/cold results remain
 unchanged. Branches stay local. The next action is Root's NEW independent source
 review of the actual merged/fixed code; no review, integration or push is performed
 by this implementation followup.
+
+### 2026-10-21 — Tails controller R2: genuine320 Mecha and DEZ on frozen39
+
+The followup to immutable `5bad0be8e034472fb6c753cc068c1783061b3e30` restores
+ordinary cold solo Tails320 completion without changing runtime39. Full
+controller/evidence/data-inverse/command details are in the
+[SSZ matrix R2 section](../validation/levels/s3k-ssz-act1.md#2026-10-21--solo-tails320-complete-controller-on-frozen39-r2).
+The new complete movie preserves all8350 qualified replica inputs exactly,
+then takes the real cloud launch/wrap, lower transport,6336 spring, retracting
+zigzag and final pad. Mecha initializes11571 at native geometry; accepted damage
+is11807/11886/11946/12005/12128/12205/12251/12613. Results12862 and the ordinary
+launch reach actual DEZ load14922; complete count14923, fresh Tails48/2480,
+radius15/feet2495, rings0, same main/camera, no death/life loss. Two independent
+fresh ordinary cold JVM replays agree on all6573 tail-state rows and owner
+events, all three bosses8..0, three lives and outgoing97/new31 history after30.
+Black load-boundary PNGs supply no visible/native-pixel qualification and were
+discarded; normal drawing remains exercised. This is a cold-zone fixture, not
+true ROM power-on.
+
+Only complete320 script/BK2, controller-derived320 count/indices/comments and
+these existing docs change. Root authorized those data changes after actual
+ordinary-route observations; no semantic assertion or logic changes. Entry
+windows10443/10645 become11324/11524, limit10784 becomes11572. Complete
+count13667 becomes14923, so the unchanged count-minus120 history start becomes
+14803. All47 original complete windows remain and51 actual owner boundaries
+are added (98 total), each retaining45-input whole-registry restore/forward
+checks and drawing. Every800 input/literal and qualified replica input/oracle
+remain unchanged. A literal inverse recreates the5bad test source exactly.
+
+The two maintained320 checks pass2T0F0E0S. One final affected whole class is
+**11T2F0E0S**: both320 final methods, both replica widths and five GHZ approach
+widths pass. The unchanged800 failures remain
+`coldMechaEntryRetainsItsNativeWorldBox(int)[2]`: `approach death at9560`, and
+`coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[2]`: `death at9560`.
+All XML identities/assertions/skips/environment properties were consumed.
+Whole-class Maven57.799s, XML30.871s, printed queue4s; focused XML12.523s.
+No whole-class green,800 completion, native pixel, broad smoke/full-suite or new
+production qualification is claimed. The current Root composition and separate
+MTZ-orb candidate were not adopted; Root owns final composed-consumer review.
+
+Production path/byte SHA-256 stays
+`00c3cae4b58fd67022b1c5049303bd4b9b4313cecff08b4ebc3a30ac5a7a7f27`;
+current src/test SHA-256 is
+`19de60e842c2a5f86a3124f23900d3a638abcf8f5a3d0946243f44d227b35b60`.
+All jobs used the current Main absolute queue wrapper, own cwd/target, Java25,
+Lua5.4, original SHA1CFBF98C36C776677290A872547AC47C53D2761D6 ROM,
+surfaceless EGL/null audio and no ambient display/JVM options. Useful authored
+complete proposal is retained outside the repo; consumed owned diagnostics and
+temporary observer are removed, without class/native-extraction cleanup or raw
+archives. Exact R2 task/run/native/workspace ownership and expiry13:04:49Z stay
+in only this lane's external registry continuation. Local commit only, parent
+5bad, normal hooks/seven documentation trailers/final GPT-6.1-Sol coauthor;
+no rewrite of5bad, push, Main integration or worktree cleanup.

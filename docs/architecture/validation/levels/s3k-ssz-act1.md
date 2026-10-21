@@ -3230,3 +3230,173 @@ new native-runtime qualification. Four mandatory S3K runtime controls are not
 triggered because runtime source is unchanged. Root owns combined delivery,
 review and integration; this lane makes a local commit only, without push,
 Main integration or worktree/branch removal.
+
+## 2026-10-21 — solo Tails320 complete controller on frozen39 (R2)
+
+This continuation starts from immutable replica commit
+`5bad0be8e034472fb6c753cc068c1783061b3e30`, parent runtime
+`39eca8c35c25433b7405b6bdc724f7c6111b55ec`, on
+`feature/ai-s3k-ssz-tails-route-20261021`. It supersedes the preceding complete320
+frontier, without revising the R1 measurements. Only complete320 script/BK2,
+320 controller-derived data/comments in `TestSszTailsColdRouteCapture`, this
+matrix and the dated plan change. Production source, replica inputs and all800
+resources/branch expectations remain exact. The separate Root MTZ-orb candidate
+was not adopted or used to infer a route cause. Supplied branch and dirty
+TraceChaser setup remain preserved; Root owns composition and integration.
+
+The maintained complete320 movie now contains **14923 ordinary inputs**. Its
+rows0..8349, both controllers and ordering, are identical to the qualified8350
+replica movie, including MTZ pad release8236 and endpoint8350. Compared with the
+old13667-input complete movie, the first different row is5535 and total length
+increases1256. The qualified prefix replaces the obsolete complete-prefix fight;
+no old trajectory is a runtime oracle. `InputLogAuthorTool` generated the BK2
+and its production-loader roundtrip passed. An independent comparison checked
+all14923 ordered P1/P2 rows against the selected authored proposal and the exact
+8350-row shared prefix. No ZIP bytes or savestate shortcut were authored.
+
+The route jumps during the lower bouncy-cloud countdown9084, takes its native
+launch9088 and crosses the upward camera wrap9214. It flies east to the actual
+5376/3824 pad, rides to5376/3312 and releases at9988. A later flight clears the
+spike barrier; the ordinary spring at6336/3272 launches Tails at10698. The
+retracting-spring zigzag launches at10904/10964/11053, then Tails jumps onto the
+6720/2480 pad and centers for the final lift. Mecha actually initializes11571.
+
+Rejected ordinary navigation is useful evidence, not a reason to tune physics:
+flight above the seam at the wrong X exhausted before the camera wrapped;
+premature Right returned to walls or the original upper route. Continuing Right
+past the lower pad fell through the wrap and died; braking onto it transported
+correctly. Running at the spike wall stalled safely, while an early flight met
+EggRobo on landing. The later jump/flight crossed the barrier and reached the
+real spring. Staying Right on the next landing stalled at the side spring;
+turning Left entered the native zigzag. Running through the final pad at ground
+height missed its top; a jump and small centering movement activated it. These
+are controller negatives on39, with no production omission established.
+
+Two separate fresh JVMs independently replayed the proposed committed BK2 from
+ordinary cold SSZ10:0, solo Tails, default world/player/seed/save inlet. The
+read-only temporary observer stepped and drew every input, observed public
+owners, and enabled the same late live-history configuration as the maintained
+test; it did not restore a branch, hydrate a trace or write gameplay state.
+Both runs agreed on all6573 tail-state rows and every observed event. They saw
+GHZ/MTZ/Mecha each take eight accepted health drops without healing, no player
+death or life loss, and three lives throughout. Accepted Mecha damage occurred
+at11807,11886,11946,12005,12128,12205,12251,12613. The eighth hit precedes genuine
+defeat landing12742, results12862, launch owner13339 and actual DEZ load14922.
+
+At initialization both runs observed camera6560/1472 (`$19A0/$5C0`), Mecha
+6912/1632 (`$1B00/$660`) and boss bounds6592..6848 (`$19C0..$1AC0`). Final pad
+control releases11600. Deferred DEZ assembly occurs on the next ordinary input:
+zone11 act0, Tails48/2480, rings0, radius15 and feet2495, no object control,
+identical main playable/camera focus. Outgoing SSZ live history reaches97;
+the fresh timeline is1 after assembly and31 after30 ordinary inputs. The load
+boundary PNGs were black and discarded as regenerable, uninformative images;
+no visible destination or native-pixel qualification follows. Normal production
+drawing is exercised by both observers and the maintained checks.
+
+The two fresh runs preceded the explicitly authorized controller-data adaptation:
+
+|320 authored data | Old → new | Actual basis |
+|---|---|---|
+|Mecha-entry first window |10443 →11324 | On final pad top before activation11337 |
+|Mecha-entry second window |10645 →11524 | Final lift, before Mecha init11571 |
+|Mecha-entry input limit |10784 →11572 | Includes actual first initialized dispatch11571 |
+|Complete movie count |13667 →14923 | Includes actual load-producing input14922 |
+|Derived history start |13547 →14803 | Existing `movie.getFrameCount() -120` formula unchanged |
+|Complete replay indices |47 →98 windows | All47 originals retained,51 reached owner boundaries added |
+
+The51 additions are grouped by actual observed owner boundaries, rather than
+an offset applied to unreached gates:
+
+|Owner coverage | Added input indices |
+|---|---|
+|Prefix endpoint/carrier latch and releases/bar |8350,8529,8540,8683,8781,9022,9041 |
+|Cloud jump/launch/player and camera wrap/east departure |9084,9088,9174,9214,9250 |
+|Lower pad activation/lift/arrival/release, receiving exit |9743,9892,9923,9988,10040 |
+|Spike-wall jump, vertical spring, zigzag, upper exit |10221,10698,10904,10964,11053,11132 |
+|Final pad approach/activation/lift/arrival/init/release |11324,11337,11484,11524,11535,11571,11600 |
+|Mecha entry/attack phases and all eight accepted drops |11619,11683,11763,11807,11886,11946,12005,12128,12205,12251,12613 |
+|Defeat landing/results |12741,12742,12862 |
+|Launch allocation/stages/player handover/spiral jump/hover |13339,13369,13469,13484,13565,14689,14719 |
+
+All98 windows retain the original45-input full-registry capture/restore and
+forward-replay comparisons, input-history restoration and drawing. Native camera,
+world geometry, eight-hit/no-healing, death/solo roster, actual DEZ load/fresh
+rings/main/camera identity/radius/feet, retired SSZ lock and history-isolation
+predicates are unchanged. No ring expectation changes in R2. Every800 literal
+and the entire replica method remain unchanged. A literal inverse of the six
+320 data/comment substitutions exactly recreates the5bad test source; no oracle
+logic, assumption, skip or gate was added or removed.
+
+The exact320 maintained selection passes **2T0F0E0S** (actual XML identities
+`coldMechaEntryRetainsItsNativeWorldBox(int)[1]` and
+`coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[1]`, XML12.523s).
+The affected whole class then completes **11T2F0E0S**, XML30.871s, Maven57.799s,
+printed queue wait4s. Both320 final methods, both replica widths and all five
+GHZ-approach widths pass. The only remaining failures are unchanged800:
+
+|Actual XML identity | Exact assertion |
+|---|---|
+|`coldMechaEntryRetainsItsNativeWorldBox(int)[2]` | `approach death at9560`, line89 |
+|`coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[2]` | `death at9560`, line251 |
+
+This is a bounded320 completion result, **not a whole-class green claim**, an800
+completion or a true ROM-power-on route. There is no new native runtime or pixel
+qualification. All11 XML identities, assertions, skips and environment properties
+were read. The two unchanged800 failures match R1 by identity and assertion frame.
+No broad smoke/full suite or repeated baseline ceremony was run; unchanged
+production does not trigger the four mandatory S3K runtime controls.
+
+Commands ran from `<OWNED_WORKTREE>` through the current
+`<MAIN_WORKSPACE>/tools/testing/maven_queue.py` absolute path. Each used Java25,
+Lua5.4, surfaceless EGL and null audio, with ambient display and JVM option
+variables removed. The original absolute ROM is
+`<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen`, 4194304 bytes,
+SHA-1`CFBF98C36C776677290A872547AC47C53D2761D6`, CRC32`63522553`.
+XML confirms Java25.0.4.1 and `openggf.headless.gl=surfaceless-egl`.
+
+```bash
+# Focused: exactly the two320 iterations, no800 or separate replica rerun.
+python3 <MAIN_WORKSPACE>/tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' \
+  -Dexec.mainClass=org.junit.platform.console.ConsoleLauncher -Dexec.classpathScope=test \
+  '-Dexec.args=execute --select-iteration=method:com.openggf.tools.TestSszTailsColdRouteCapture#coldMechaEntryRetainsItsNativeWorldBox(int)[0] --select-iteration=method:com.openggf.tools.TestSszTailsColdRouteCapture#coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[0] --reports-dir=target/ssz-tails-r2-focused --details=summary --fail-if-no-tests --include-engine=junit-jupiter --disable-banner' \
+  test-compile exec:java -B
+# One final affected whole class.
+python3 <MAIN_WORKSPACE>/tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' \
+  -Dtest=TestSszTailsColdRouteCapture \
+  -Dopenggf.surefire.reports=target/ssz-tails-r2-whole-class test -B
+```
+
+Fresh replayA/B used two queued `exec:exec -Dexec.executable=python3` invocations
+of the temporary observer, each launching Java25 with `%classpath`, the same
+original ROM and committed14923-input BK2. Maven times10.919/11.149s, queue0s.
+Their state/event diagnostics were consumed; no pass receipts or raw archives
+are retained. Useful complete proposal script/BK2 remain in
+`<TASK_OUTPUT>/complete320-r2/`; actual paths and task/run/native ownership are
+registered outside the repository. One command/observer owned each job, with
+no duplicate test request or lock removal.
+
+Sorted tracked `relative-path NUL file-bytes NUL` SHA-256 fingerprints:
+production `src/main` remains
+`00c3cae4b58fd67022b1c5049303bd4b9b4313cecff08b4ebc3a30ac5a7a7f27`;
+`src/test` is
+`19de60e842c2a5f86a3124f23900d3a638abcf8f5a3d0946243f44d227b35b60`.
+Binary main/test diff from39 hashes to
+`638387037b60aaeb2724bad9d3f6c333a4ca2da6d59d830d28477d50750ccd67`;
+R2-only diff from5bad hashes to
+`886a2c181956cbdc58620a3447c1bba2d8f81be52be20b0aa6bd607b3a9318df`.
+Complete script/BK2 SHA-256:
+`a8688321bdfa29763f881917ee7ea201c060ef47ba03609ee90585f281c2963a` /
+`c3d3d5446064c376086cea3e7438b45e2277364f99db1eeea32ca0c985a20c73`.
+All14923 ordered controller rows plus final newline hash to
+`08abc4365004102cbe4cc7e000b3260dbb36bf8a889e57c13a6e4fdc14ead866`.
+
+Recovery inverse: restore only the complete320 script/BK2 from parent5bad,
+reverse the six documented320 test-data/comment substitutions (including removing
+only the51 additions), and remove this R2 matrix/plan append. The qualified
+replica commit,800 data, runtime, supplied branch and setup are independent.
+This lane makes a local normal-hooks commit only; Root owns review, final
+composed qualification, integration and push.
