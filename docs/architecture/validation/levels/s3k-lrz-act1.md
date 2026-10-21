@@ -1770,3 +1770,84 @@ rosters and donors. All seven old movies shared the full20410-input prefix;
 propagation requires an actually authored fight/handoff, rather than splicing
 an old fight tail or shifting downstream event indices. Earlier milestone
 sections retain their historical source and validation scope.
+
+
+## Knuckles current-physics fight and Act2 handoff (2026-10-21)
+
+The maintained second method of `TestLrzKnucklesColdRouteCapture` now uses the
+24028-input ordinary solo-Knuckles/native320/donor-off movie. Its first20500 rows
+are exactly the accepted miniboss-arrival movie; the first23993 rows retain the
+successful fight/handoff proposal, followed only by35 Right/P2-neutral inputs.
+All P2 input stays neutral. The earlier two fresh uninterrupted row0 qualifiers
+agreed on their complete59-field public projection; no steering or restore ran
+inside them. The final35 inputs preserve the old45-input released-movement
+purpose, rather than splice the old fight tail or shift old event indices.
+
+The real six-health boss loses one health at21297,21335,22145,22182,23000 and
+23037, never heals, and is defeated on the sixth hit. The signpost flow is present
+23072..23973; results are present23346..23823. Actual load23397 changes zone/act
+9/0 to9/1 and centreX11560 to296, preserving fractions. The WorldSession and
+rewind controller survive while the Level and ObjectManager are replaced.
+Controls first become free23398, but results/flow still own the presentation;
+the released-movement proof instead compares successive16.16 X for all45 inputs
+23983..24027, with grounded/free controls and no results, flow or pending boundary.
+The final centre is(362,1967),0 rings,3 lives, with no death or life loss.
+The old endpoint(430,1969) and longer25763-input budget are replaced by these
+observed data. Damage at20851 leaves0 rings through the load: positive-ring
+recovery, positive carry and a reset from a positive value remain explicit gaps.
+
+All37 old fight/handoff window starts are accounted for below by actual event
+categories, without a constant offset. Historical per-index intermediate phases
+were not retained, so this table does not invent them or claim the old cycle count.
+Every new window has45 actual future inputs. All18 starts surrounding the six
+hits are the input before, at and after each listed hit.
+
+| Original starts / purpose | Actual replacement coverage |
+|---|---|
+| 20410,20550,20740,20830,21000,21250,21450,21580,21640,21890: entry, hand/cycle and damage/recovery | 20354,20355,20454,20498,20499,20500,20548; damage20850/20851 and hurt-clear20903/20904; rise20980, swing21034, pre-drop21226, drop21258. No attribution of the hurt to a particular shot. |
+| 21300,21347,22165,22185,23045,23052,23907,24776,24777: accepted-hit boundaries | Pre/at/post each actual hit21297,21335,22145,22182,23000,23037. Old hit data21301/21348/22185/23052/23907/24777 map to those six actual hits respectively. |
+| 22330,22500,22890: between the third and fourth hits | 22146 and22181 bracket that actual interval; both hits now occur in the same observed slam. |
+| 23280,23420,23780,23860: fourth-to-fifth cycle | 22214,22265,22614,22694,22748,22940,22972,22975 cover the actual recovery/rise/swing/drop interval. |
+| 24160,24300,24520,24720: low-health interval | 22999,23000,23001,23036,23037,23038 cover entry to1HP and its final hit/defeat; the actual1HP interval is23000..23036. |
+| 24850,24920,25000,25050: defeat/results and last source | 23071/23072,23345/23346 and23351; the last source window is23351→23396. |
+| 25150,25550,25700: destination/results/released movement | First-destination23397/23398;23712,23713,23715,23803,23804,23823,23824; flow23928,23929,23973,23974; final23982→24027. |
+
+There are68 windows:54 source and14 destination, each comparing all60 registered
+keys. Each performs capture, forward45, restore/compare, forward45/compare and
+final restore/compare, with original input history restored after restoration.
+Before every branch input and restore, guards require the same WorldSession,
+Level, ObjectManager, mode, registry and act, with no pending fresh boundary;
+restorability checks reject callback-bearing fades. No source snapshot is restored
+after the real Level/ObjectManager replacement, and no window crosses23397.
+This method alone now uses `RouteFrameDrawing(true)` for every input; the first
+method, other three methods, shared comparison helper and their drawing policy
+are unchanged.
+
+Public live-history configuration is enabled only23307..23452. The maintained
+branching test observes source current360/floor0 before load and destination
+current361/floor361 afterward. Assertions require a nonempty source interval,
+the same controller, an advancing current and floor equal to that actual current;
+they do not assume the ordinary qualifier's91 because replay branches record
+additional inputs. History retirement is separate from collecting garbage or
+retiring the whole WorldSession.
+
+The first maintained attempt failed full-registry replay at21757: one future
+`LrzMinibossHitSparkChild` had subtype2 versus1. The shared boss next-ordinal map
+had been rebuilt from surviving children, losing retired construction history.
+It is now captured with exact runtime-Class keys; no local LRZ workaround,
+comparison normalization, ordinary allocation or gameplay physics changed.
+The exact retired spark sequence at that checkpoint was not measured, and this
+is not a native slot/timing or earlier route-death cause verdict.
+
+Qualification on the source-frozen8d064688-based leaf: the shared focused
+selection is18 classes/163T/0F/0E/0S, including the four required S3K owner names
+and both level-loading classes. The one exact changed second method is
+**1T/0F/0E/0S**, all68 windows and45 successive moved/free destination inputs.
+Commands, RED controls, exact source pins and limits are in the
+[completion plan](../../plans/2026-10-13-s3k-playable-completion.md#shared-boss-ordinal-history-and-knuckles-lrz1-fight-and-handoff-2026-10-21).
+No unchanged first-method or whole-class repeat was run. Its accepted20500-input
+resources, all other route resource pairs and the other three methods remain
+byte-identical to8d064688. Their inherited input5027 negatives and longer
+Act2/HPZ/campaign controllers remain pending. This is bounded maintained Java
+route/rewind coverage, not full-act, broader-product, native-clock/pixel or reset
+parity qualification.

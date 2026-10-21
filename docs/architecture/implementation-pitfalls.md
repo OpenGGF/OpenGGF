@@ -698,6 +698,19 @@ for the first volley made an immediate restore change the record during the hand
 stagger delay, even though its live coordinates and ordinary replay looked right.
 `TestS3kLrzBossRewindHeadless` covers arms, hit flashes and defeat debris through
 explicit removal/recreation and whole-world forward replay.
+
+The next boss-child ordinal is construction history, not a cache derivable from
+survivors. Retiring the highest ordinal, or every child of one exact runtime class,
+must not make a future spawn reuse that identity after rewind. Capture the complete
+per-class next-ordinal map; reconstruction may consume provisional ordinals before
+phase-2 field restore overwrites them. Do not clear it in the settled hook and
+rebuild `max(live ordinal)+1`. Keep immutable `Class` keys themselves in the typed
+in-memory codec: two class loaders can define different classes with the same name.
+Exercise retired-highest and all-retired checkpoints with a future spawn after
+repeated restore, alongside the live-highest control. Origin: LRZ fight full-registry
+replay, 2026-10-21; this identity bookkeeping is shared across games and is not a ROM
+slot number or a native timing observation.
+
 DDZ children instead retain their creation spawn: do not call a normal parent-derived
 constructor with a null parent during recreation and silently replace that spawn
 with `(0,0)`. Pass `ctx.spawn()` through construction; relink the captured parent
