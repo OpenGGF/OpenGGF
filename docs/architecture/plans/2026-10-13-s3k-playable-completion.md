@@ -23426,3 +23426,166 @@ armed-title/physical-full/incidental-flush capacity defect, now under focused
 correction. SSZ controller qualification on the final production epoch and
 other route/native-publication gaps remain open. Main develop is still c13,
 with its unrelated files/submodules preserved; no integration push is qualified.
+
+
+## Native constructor reset-prefix increment — 2026-10-21
+
+This is a bounded diagnostic implementation, independent of the SSZ controller
+and real-Engine audio workers. The app supplied `t3-861a544b` clean at
+`efd605142603146509995cffbb56a6b48f9c1c1b`, rather than the expected c13 setup.
+That branch and its multiplayer changes remain untouched. The owned nested
+`.worktrees/native-reset-prefix` branch `feature/ai-native-reset-prefix-20261021`
+was created at `c13be267fd06771b982679a5ec840a23c2a26b11` and fast-forwarded only to
+frozen integration `39eca8c35c25433b7405b6bdc724f7c6111b55ec`. No evidence here is
+attributed to efd or later Root cf46. The inherited outer gitlink `4c3d6ba8` was
+preserved in history; the owned TraceChaser branch starts from the explicitly
+requested `322851cbfa2e1c1803332142e11ab74b4eb34eea` and commits the increment as
+`84a7e67ee94d546fc3ff3167240fbe256f4e8e8c` (tree
+`995a741ce8a2aecbad1390eb2166d6e18d474311`). No push or integration was requested.
+
+The exact durable design is the registered
+`composition_integration_delta_audit.native_execution_first_owner_increment_design`,
+with its prior `current_route_frontier_audit` live-RAM/DMA handoff design. The
+implementation adds native patch 0006 and an independent reset-prefix ABI v1,
+an immutable managed binding, a source-checked `--native-reset-prefix` entry in
+the existing harness, focused controls and the existing native build workflow.
+There is no Engine/runtime/fixture/ROM change or trace hydration port.
+
+### Source and actual boundary
+
+At pinned BizHawk `427556b5ef3ac437eba754d90c5e7e9096c9a8df`, the managed source is
+`src/BizHawk.Emulation.Cores/Consoles/Sega/gpgx64/GPGX.cs`. The earlier guessed
+`gpgx/GPGX.cs` URL was wrong. Constructor Waterbox initialization calls
+`Core.gpgx_init`; the native cinterface calls `system_init`, `system_reset`,
+`update_viewport`, then `gpgx_clear_sram`. Constructor completion installs
+services/settings without `FrameAdvance`/`gpgx_advance`. Patch 0006 records actual
+main-CPU reset enter/completion and native-init completion inside those calls;
+any intervening main-CPU fetch makes arming unavailable. Thus the live test
+observes the genuine constructor boundary before first fetch, not an explicit
+post-construction reset relabelled power-on.
+
+GPGX `051d430d3d1b54625f9900c8f152d7f232e06daf` owns `gen_reset`, `io_reset`,
+`system_reset`, and `m68k_pulse_reset`. The compiled main reset table is 40*7
+MCLK; vector 1's separate 4*7 entry is not additionally charged. Reset aligns the
+geometry-derived CPU phase to seven, Z80 phase to fifteen, and derives refresh
+from the actual charged raw clock. Existing v2 enable/current-origin behavior,
+sticky RESET/load rejection, banks and acceptance ledger remain unchanged.
+
+The declared live profile is the stock concatenated locked-on 4 MiB ROM SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`, MD hardware80, autodetect resolving
+USA80/NTSC, 262 lines, BIOS0, hardware versionA0, two normal three-button ports
+(systems0101/devices0), SRAM flags1 (on, not detected/custom). There is no save
+provider or firmware; native fresh SRAM is FF when on. No user save was read or
+written. GPGX's hard-reset zero work/Z80 RAM and fresh register BSS are emulator
+conventions, not physical power-on guarantees.
+
+The captured reset SSP is0, PC0206, SR2704, IRQ0; EntryPoint's actual first LEA
+sets SPFFFFFE00 and retires at020A. Native raw phase is784182, reset cost280,
+completed clock784462, refresh deadline784896, Z80 clock784170, bus/reset state0
+and bank0. The cold IO control tests read zero; the HW-version low nibble takes
+SkipSecurity. There are41 ordered records: three constructor snapshots,12
+fetch/retire pairs and14 logical data reads. The first VDP status read belongs
+to instruction0238 (`3014`), returns7208 at current PC023A/raw785694, and retires
+at023A/raw785750 with refresh deadline785834. This is observed ordering and raw
+state, not a new full instruction-cycle or physical-bus model. Immediate
+prefetch words are not separately claimed bus cycles.
+
+### Commands, controls and bounded result
+
+All commands ran in the owned nested39/TraceChaser322+candidate tree. The durable
+external root is registered under `agents.native_reset_prefix_implementation.scratch`
+in the private task registry; below it is `<root>` (`NATIVE_RESET_TASK_ROOT`).
+The source input is its `source`; `PINNED_GPGX_TOOLCHAIN` names the explicitly
+selected existing pinned toolchain. `BIZHAWK_STOCK_2_11` names the verified stock
+installation. Exact resolved commands and paths remain in that own registry row.
+Build commands use the owned `tools/tracechaser/bizhawk-headless/native/gpgx-audio-observer/`
+entrypoints, never an unqualified prior core:
+
+```bash
+build-reset-prefix-observer.sh --series reset-prefix --source <root>/source \
+  --toolchain <pinned-toolchain> --output <root>/build-qualified
+install-reset-prefix-observer.sh --build <root>/build-qualified \
+  --stock "$BIZHAWK_STOCK_2_11" \
+  --output <root>/install-qualified
+BIZHAWK_HOME=<root>/install-qualified S3K_ROM_PATH=<absolute-stock-ROM> \
+  OPENGGF_GPGX_RESET_PREFIX_EXPECT=present bizhawk-headless/test.sh \
+  --filter GpgxResetPrefixNative --jobs 1
+BIZHAWK_HOME=<root>/install-qualified S3K_ROM_PATH=<absolute-stock-ROM> \
+  OPENGGF_GPGX_STALL2_EXPECT=present bizhawk-headless/test.sh \
+  --filter GpgxM68kStall2Native --jobs 1
+```
+
+The build verifies exact consumed Git objects and the pinned clang/lld bytes,
+runs all prior 0001–0005 native selftests plus the real-M68K prefix harness, and
+passes export/invisible-section checks. Final compressed core SHA256 is
+`b665a2dd91df065f410841c6caa5fb6d322ad6025e02750aae4d14d2f3a83543`;
+raw SHA256 `b9ace4f67f675d645c476a69ccf2c394a8bbbefb4d417a7e7f0d54289b7ab3cd`.
+Patch0006 SHA256 is `7e12337e9e3783d229c0fbe3013e65e4a83bc31a660c7594188afacc5fff63e3`.
+Invisible static state is4105496 bytes, below4 MiB; this is not heap measurement.
+
+The revised focused prefix command completes **12 passed,0 failed,0 skipped**:
+nine unit controls and three live controls. It checks constructor/vector/clock/
+refresh and actual ROM LEA/VDP-read continuation, ordered immutable records,
+ABI/identity/output constraints, capacity and unknown-producer failures,
+unit load-generation rejection before arm/after completion, a live identical-state
+load after arm before first advance, reset, late/repeated arm, and exact
+observer-on/off savestate and RAM/register/video/audio checkpoints over the
+first and next neutral frame. Plain core restore/forward continuation agrees;
+loading intentionally invalidates the invisible provenance session instead of
+resuming its records. Native real-M68K controls separately exercise record/read
+capacity, unsupported bus access and reset discontinuity. Existing v2 focused
+checks complete **5 passed,0 failed,0 skipped**, including actual interval joining
+and load invalidation. After the CLI boundary integration, its three affected
+argument/identity/output units pass without rerunning unchanged native coverage.
+Known Mono xbuild v4.8 toolset warnings remain; builds use the pinned Roslyn.
+
+The actual CLI was then run with `--native-reset-prefix --rom <absolute-stock-ROM>
+--output <root>/capture-on --observer on`, and identically with `capture-off` and
+`off`, using all three ordinary `--tracechaser-root`, `--input-repository-root`
+and `--fixture-root` flags. Both exit0; on reports the41-record prefix, off0
+records with no completion claim. Both report exact savestate SHA256
+`bdd9edb8adac4f2b6d25049ca03276d392dc0898c0ab04a3a74f8c4be1c170cc` and checkpoint
+SHA256 `2c90defb255a59b6998d569ca99692809aa5eb700a01b79558ee3dd13c1133a9`.
+Harness executable SHA256 is
+`13d785b2c79b06d5289720ae9beec3bd05b66de80d421281e16d3d4b3de6a79e`.
+The two small `reset-prefix.json` reports are deliberate diagnostic captures
+outside producer/consumer checkouts; no raw log archive or canonical fixture is
+retained. Native build outputs retain their ordinary workflow provenance.
+
+### Rejected assumptions, preservation and limits
+
+The first live assertion incorrectly expected SR2700. Source and observed2704
+show that reset preserves CCR; `.bss not_z_flag=0` represents Z set. The core was
+not changed to satisfy the assumption. A later native observation exposed an
+actual observer bug: including `shared.h` without `m68kconf.h` compiled a different
+conditional register enum, so its IR getter returned the plausible prefetch
+address023A instead of opcode3014. Patch0006 now includes the owning config first;
+the native harness asserts retirement IR and the ROM-backed live control passes.
+Earlier candidates with compressed core hashes85049893/c8764393 are not qualified
+prefix outputs and are superseded, not retroactively relabelled passing.
+
+The first CLI attempt correctly hit the existing wrapper's explicit-root gate;
+the Program dispatch was connected to that same boundary. An additional overly
+broad any-Git-ancestor guard incorrectly treated the external scratch/dotfiles
+repos as protected source trees. It now protects the actual producer and the
+existing explicit consumer/fixture boundary, retaining no-replace output rules.
+The current on/off CLI pair proves the corrected command works.
+
+TraceChaser index policy and reachable-history audit pass, as do shell syntax,
+project registration, documentation links/mirrors and whitespace checks. Unified
+patch context intentionally preserves upstream CRLF/Makefile tabs under a
+single-file whitespace attribute; ordinary source checks remain intact. No Java
+suite was launched: impact is the native observer/harness only and the focused
+native/harness checks are proportionate. This does not qualify Title frame
+counts, initial synchronous `Kos_Decomp`,11 prepared jobs, AIZ, SSZ, all CPU/device
+paths, physical-console reset or native heap. The next production owner must
+still derive and retire source-backed reset/boot work; these records are only an
+independent oracle and must never hydrate gameplay. Root's historical HCZ/FDF/
+cold results and concurrent workers were not modified.
+
+The complete TraceChaser binary diff from322851 to84a7 has SHA256
+`4b0f3ab00a1b8fac83a85b2023f88e4957e050024c7e5863c8f0d7d0cc1647f3`.
+The source/test/native/project-path diff has SHA256
+`f2068340f8d79a2b62714a4023287d8bed450736a08906bc861c18c8be3ac1fe`.
+Local outer gitlink/documentation commit and cleanup state are reported in the
+parent handoff; all worktree branches remain local for review.

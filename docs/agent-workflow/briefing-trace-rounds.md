@@ -71,6 +71,20 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A reset mask is not a complete reset SR (2026-10-21, native constructor prefix).
+Pinned GPGX main-CPU reset sets supervisor/IRQ mask but preserves CCR. Fresh
+zero-initialized `not_z_flag` represents Z set, so this exact BIOS-off constructor
+profile reports SR2704, not assumed SR2700. Record the actual constructor boundary
+and source-owned flags; neither a post-construction reset nor a ledger enable at
+current cycles establishes reset provenance. See the native-prefix entry in the
+existing S3K playable-completion plan.
+
+Musashi register enums depend on compile configuration (2026-10-21, same probe).
+Include `m68kconf.h` before `m68k.h`: enabling prefetch inserts two enum members
+before IR. An observer compiled without that setting can call `m68k_get_reg(IR)`
+and receive a plausible prefetch address instead. Check decoded fetch and actual
+retirement IR against ROM instructions; register API access alone is not proof.
+
 An ArchUnit field selector can execute the whole class (2026-10-21, composition
 structural remediation). Surefire `-Dtest=TestArchUnitRules#<field>` selected all
 26 ArchUnit rules, alongside five requested Jupiter methods:31 tests, two
