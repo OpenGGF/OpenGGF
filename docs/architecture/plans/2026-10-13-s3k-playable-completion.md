@@ -24320,3 +24320,117 @@ Sonic solo, Tails800, cold CNZ2 Knuckles and origin-copy-contract work continue
 independently. Main develop and unknown files/submodules remain untouched; native
 publication must precede any outer gitlink push. The goal remains active; no
 complete delivery, push or owned-worktree cleanup is claimed.
+
+### CNZ2 native P1 vertical-bound operand — 2026-10-21
+
+This independent local implementation starts at exact outer commit
+`c18506cf39d93f2615ce07aaec1ea16426a36bea`. The app supplied a clean checkout
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-4b926e2e`, branch
+`cnz2-p1-camera-gate`, at `efd605142603146509995cffbb56a6b48f9c1c1b`.
+That setup was retained; the owned nested checkout is
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-4b926e2e/.worktrees/cnz2-p1-gate`,
+branch `feature/ai-cnz2-p1-camera-gate-20261021`, initially clean at exact
+`c18506c`. COW was unavailable, so creation used the helper's ordinary checkout
+fallback. Root's checkout was reference-only. No command used Root or Main as
+its working directory; Main supplied only the existing queue wrapper and ROMs.
+
+The reused independent operand audit was checked against the actual reference
+text: native `CNZ2_ScreenEvent`, `sonic3k.asm:107927..107943`, submodule
+`044fa46725c71187399e13f5ddb70e11d32dc024`, blob
+`0f10a373ff0e3d5c0033ed7d13c678bcb927c7b0`, SHA-256
+`d2ce907d1bad9447fbd11196a498a65a73f744ee8e57153b62c46581b1368ed1`.
+The operand is unsigned `Player_1+x_pos`, not Y or camera focus. The
+[matrix](../validation/levels/s3k-cnz-act2.md#native-p1-vertical-bound-operand--2026-10-21)
+lists the six literal component vectors. Camera focus is publicly mutable
+(`Camera.setFocusedSprite`, `ObjectServices.camera`, `ObjectPlayerQuery.nativeP2OrNull`
+are already pinned in the 0.7 candidate signatures), while the registered main
+identity remains P1. No additional API/version or creator-transaction claim follows.
+
+Only `Sonic3kCNZEvents.updateAct2YStartLock` changes in production: the existing
+`spriteManager().getMainPlayable()` owner replaces camera focus. The null
+guard, unsigned word mask, `$0940/$4600` thresholds, untouched-bound skip and
+conditional camera write are byte-for-byte unchanged. Baseline runtime blob
+`a95869cde3a597637fd4520522bc52caba823b34` / SHA-256
+`0ea7d9fd73cbe88a70d66b31703ddfc4b96b313f2cad0cfe0fad35bfad442b66`
+becomes blob `871eee999c0db71b45d9e102f792b0b17ddb0dfd` / SHA-256
+`0ec660de540e9a0badf50db0ffb4b17fc34b1ef722e178f82fa7c2ce07ba65a0`.
+Final Java-diff SHA-256 is
+`f05e7c2e9763c9214f1510ce8815adbe272dfb0a04f3232f9a18ec5752fdc1f5`.
+
+The existing late-admission focused-P2 control leaves both actors beyond `$4600`,
+so it was rejected as proof of the early gate. Six new declared component rows
+finish actual initial Player2 setup, set positions and initial minY openly,
+select the real registered P2 via the exported camera service, then call the
+ordinary public `events.update(1, 0)`. They assert minY, stable P1/P2 identities
+and positions, retained P2 focus and absence of late capsule/teleporter admission.
+This direct event component does not advance a full level frame. The existing
+scroll-band test now registers its main actor and retains every original bound
+assertion instead of treating an unregistered camera target as P1.
+
+RED session `7871`, with the runtime still original, completed at
+`2026-10-21T03:49:37Z`: **6 tests, 6 failures, 0 errors, 0 skips**, exit1.
+Each row failed only the minY assertion: expected/actual hex respectively
+`0580/0000`, `0000/0580`, `0123/0580`, `0000/0580`, `0123/0580`,
+`0123/0000`. The complete actual XML identities, properties, failure bodies
+and streams were read; every other grouped assertion passed. Queue wait51s;
+Maven displayed01:06min. The exact two consumed RED report files were deleted
+before GREEN; no log archive or pass receipt was created.
+
+GREEN session `50018` completed at `2026-10-21T03:52:26Z`: **81 tests,
+0 failures, 0 errors, 0 skips**, exit0. All six new rows pass within the13-case
+admission-control class; event admission contributes1 and CNZ scroll7. The five
+mandatory controls contribute60: AIZ1 skip8, game-package loading36,
+tests-package loading7, bootstrap6 and decoding3. The8 XMLs/16 reports,81
+distinct case identities, all69 properties per suite and complete streams were
+inspected. All suites have the same actual property set, Java25.0.4.1,
+surfaceless EGL, original absolute S1/S2/S3K ROM paths and own cwd/target.
+The actual80-entry classpath is8105 characters, SHA-256
+`5fe8de9a88d549d001eb79f88a3418966cc514e05c8611ba4b6a0db870b11057`.
+ROM CRC32s were verified as `AFE05EEE`, `7B905383`, `63522553` respectively.
+The null OpenAL driver and absent display variables were explicit launch inputs;
+this is not full-runtime speaker/renderer qualification. Queue wait20s; Maven
+displayed01:16min. Compilation used release25,4174 production/4263 test sources.
+Compiler and parent elapsed intervals were not separately measured.
+
+Streams retain105 FAST/no-manifest fallback warnings and the unchanged
+`TestSonic3kDecodingUtils#readCollisionIndexUsesStrideTwo`'s deliberately
+out-of-bounds table warning. The first XML inspection script incorrectly
+required Surefire's already-removed transient booter jar to exist after exit;
+correcting that diagnostic allowed the same completed reports to be inspected.
+No test run was repeated. Java sources stayed unchanged through execution and
+inspection; only documentation was finished afterward. All exact owned reports,
+test temporaries and native-extraction files were consumed after inspection;
+compiled outputs were retained. No unconsumed dump, log archive or pass receipt
+remains.
+
+Both commands run from the owned nested checkout. Prefix each with
+`env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk ALSOFT_DRIVERS=null`.
+`OPENGGF_MAIN` names the existing Main checkout as the read-only wrapper/ROM source:
+
+```bash
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.tests.TestS3kCnz2KnucklesAdmissionControls#act2YStartUsesNativePrimaryWithContradictoryRegisteredSidekickFocus' \
+  "-Ds3k.rom.path=${OPENGGF_MAIN}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.tests.TestS3kCnz2KnucklesAdmissionControls,com.openggf.tests.TestS3kCnz2KnucklesEventAdmission,com.openggf.game.sonic3k.TestSonic3kCnzScroll,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils' \
+  "-Dsonic1.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_MAIN}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+The separate ownership registry contains the literal returned task/run IDs,
+source epoch, expiry and job checkpoints under only `agents.cnz2_native_p1_gate_fix`.
+The common `state.json.lock` protects fresh strict whole-file reads and private
+same-directory atomic replacement; peer histories and Root records are preserved.
+Expiry is `2026-10-21T13:04:49.177308Z`, checked at creation and checkpoints.
+
+No stock configuration changing focus away from P1 was established; no stock
+cold-route effect or blocker/unblock is claimed. Cold CNZ authoring/inputs,
+observer/controllers, native capture, strict trace, native pixel/timing,
+arbitrary-focus rewind and full-act/product qualification are outside this
+component result. No broad/full suite or unchanged SSZ workload was run. The
+local commit is retained for Root's independent review and consumer qualification;
+no push, integration or owned-worktree cleanup is claimed.

@@ -17,7 +17,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Positioned negative admission controls for native044 loc_5215A/loc_5216C. */
+/** Declared CNZ2 screen-event component controls for native044 Player_1 gates. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kCnz2KnucklesAdmissionControls {
     @AfterEach
@@ -60,6 +60,83 @@ class TestS3kCnz2KnucklesAdmissionControls {
                 () -> assertTrue(objects.activeObjectsOfType(CnzTeleporterInstance.class).isEmpty()),
                 () -> assertTrue(objects.activeObjectsOfType(CnzEggCapsuleInstance.class).isEmpty()),
                 () -> assertFalse(fixture.sprite().isControlLocked()));
+    }
+
+    /**
+     * PUBLIC COMPONENT INLET: native044 CNZ2_ScreenEvent reads unsigned P1 x_pos,
+     * even when the exported object camera service deliberately follows registered P2.
+     * These declared positions/bounds exercise the ordinary public event update only;
+     * they are not cold traversal or a creator transaction/fault-boundary test.
+     */
+    @ParameterizedTest(name = "P1 x={0}, focused P2 x={1}, minY={2} -> {3}")
+    @CsvSource({
+            "0x093F, 0x0940, 0x0000, 0x0580",
+            "0x0940, 0x093F, 0x0580, 0x0000",
+            "0x4600, 0x093F, 0x0123, 0x0123",
+            "0x45FF, 0x4600, 0x0580, 0x0000",
+            "0x8000, 0x093F, 0x0123, 0x0123",
+            "0xFFFF, 0x0940, 0x0123, 0x0123"
+    })
+    void act2YStartUsesNativePrimaryWithContradictoryRegisteredSidekickFocus(
+            int primaryX, int focusedP2X, int initialMinY, int expectedMinY) throws Exception {
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
+        var configuration = GameServices.configuration();
+        configuration.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+        configuration.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        configuration.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, 320);
+        configuration.setSessionOverride(SonicConfiguration.SCREEN_HEIGHT_PIXELS, 224);
+        var fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .startPosition((short) 0x4800, (short) 0x0B40).startPositionIsCentre().build();
+        var sprites = GameServices.sprites();
+        var primary = assertInstanceOf(com.openggf.sprites.playable.Knuckles.class, sprites.getMainPlayable());
+        assertSame(fixture.sprite(), primary);
+        assertEquals(1, sprites.getRegisteredSidekicks().size());
+        var p2 = assertInstanceOf(com.openggf.sprites.playable.Tails.class,
+                sprites.getRegisteredSidekicks().getFirst());
+        assertNotSame(primary, p2);
+        var level = GameServices.level();
+        var objects = level.getObjectManager();
+        var services = objects.getObjectServices();
+        var events = assertInstanceOf(Sonic3kLevelEventManager.class,
+                GameServices.module().getLevelEventProvider()).getCnzEvents();
+        assertNotNull(events);
+        assertEquals(0, events.getForegroundRoutine());
+        int levelFrame = level.getFrameCounter();
+        assertTrue(level.consumePendingInitialProcessSpritesPass(),
+                "finish production Player2 setup before declaring component positions");
+        assertEquals(levelFrame, level.getFrameCounter());
+        assertSame(primary, services.playerQuery().mainPlayerOrNull());
+        assertSame(p2, services.playerQuery().nativeP2OrNull());
+        assertSame(fixture.camera(), services.camera());
+        assertSame(primary, services.camera().getFocusedSprite());
+
+        com.openggf.sprites.NativePositionOps.writeXPosPreserveSubpixel(primary, primaryX);
+        com.openggf.sprites.NativePositionOps.writeYPosPreserveSubpixel(primary, 0x0900);
+        com.openggf.sprites.NativePositionOps.writeXPosPreserveSubpixel(p2, focusedP2X);
+        com.openggf.sprites.NativePositionOps.writeYPosPreserveSubpixel(p2, 0x0900);
+        services.camera().setFocusedSprite(p2);
+        services.camera().setMinY((short) initialMinY);
+
+        // No object/CPU movement or private helper invocation: the real public
+        // ScreenEvent entry consumes these openly declared component inputs.
+        events.update(1, 0);
+
+        assertAll("native Player_1 operand and independent public camera target",
+                () -> assertEquals(expectedMinY, services.camera().getMinY() & 0xFFFF),
+                () -> assertSame(primary, sprites.getMainPlayable()),
+                () -> assertSame(primary, services.playerQuery().mainPlayerOrNull()),
+                () -> assertSame(p2, sprites.getRegisteredSidekicks().getFirst()),
+                () -> assertSame(p2, services.playerQuery().nativeP2OrNull()),
+                () -> assertSame(p2, services.camera().getFocusedSprite()),
+                () -> assertEquals(primaryX, primary.getCentreX() & 0xFFFF),
+                () -> assertEquals(focusedP2X, p2.getCentreX() & 0xFFFF),
+                () -> assertEquals(0x0900, primary.getCentreY() & 0xFFFF),
+                () -> assertEquals(0x0900, p2.getCentreY() & 0xFFFF),
+                () -> assertEquals(levelFrame, level.getFrameCounter()),
+                () -> assertEquals(0, events.getForegroundRoutine()),
+                () -> assertTrue(objects.activeObjectsOfType(CnzTeleporterInstance.class).isEmpty()),
+                () -> assertTrue(objects.activeObjectsOfType(CnzEggCapsuleInstance.class).isEmpty()));
     }
 
     /** PUBLIC COMPONENT INLET: camera focus is deliberately a real registered P2. */

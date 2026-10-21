@@ -923,7 +923,9 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     }
 
     private void updateAct2YStartLock() {
-        AbstractPlayableSprite player = camera().getFocusedSprite();
+        // CNZ2_ScreenEvent reads Player_1+x_pos, independently of camera focus
+        // (native044 sonic3k.asm:107930..107943).
+        AbstractPlayableSprite player = spriteManager().getMainPlayable();
         if (player == null) {
             return;
         }
