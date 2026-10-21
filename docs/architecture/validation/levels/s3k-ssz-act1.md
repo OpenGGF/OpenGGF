@@ -2706,3 +2706,95 @@ complete route/configuration breadth and independent final Root acceptance remai
 open. Local source review addressed preparation failure, exhausted ordinals,
 alternate flush paths, title authority, retained claims and actor-independent
 rewind ownership; it is not Root's final acceptance stamp.
+
+## Incidental producers and armed title backpressure — 2026-10-21
+
+Root's final source review of `c7fdd30471f91678924f096ddd59a4d08e4d0cd1`
+identified `SSZ-C7-INCIDENTAL-ARMED-FULL` (P2). The runtime pump retained an
+armed physical SSZ request while either FIFO was full, but the incidental
+StarPost/explosion flush bypassed that capacity check and translated normal
+rejection into an uncaught exception. This is a source-supported component
+counterexample, not a reproduced natural route or measured timing failure.
+The original commit, its failed first epoch and its final 160-test result above
+remain preserved; none is relabelled as qualification of this followup.
+
+The corrective policy remains the existing bounded engine admission model.
+Pending physical title intent defers when unarmed or when either FIFO lacks
+capacity. An incidental one-shot request can enter its own logical slot; if
+none remains it is rejected without an ordinal, handle or invented retry state.
+If the title consumes the last logical slot, title-first order remains intact.
+The exact title lease, batch fingerprint and pending intent survive backpressure.
+`tryQueueRingExplosionRestoration` keeps its existing actor-owned retry contract.
+Native StarPost `sub_2D3C8` and CNZ `loc_6E778` issue one request without a
+retained failed-request owner. Native `Queue_Kos_Module` scans beyond four slots
+when overfilled; this bounded rejection policy does not claim overflow parity.
+
+`TestSonic3kTitleCardKosQueue#incidentalProducersRespectArmedTitleBackpressureAndReplayBothFifos`
+uses the existing cached-title owner inlet and declared physical-only FIFO setup.
+Both producers cover physical-only full, logical-only full and one logical slot
+remaining. Exact lease/fingerprint, ordinals, FIFO state, distinct incidental
+versus title handles, eventual one-to-one title pairing, provider claims and
+complete registered-world restoration are checked, with two forward/reverse
+cycles. Real timed predecessors recover capacity through ordinary service;
+only declared physical setup is cleared. No readiness or gameplay values are
+supplied by comparison data.
+
+RED was observed on unchanged `c7` production source with regression-only
+source/test diff SHA-256
+`464c75530593f65962cfc386197d7cd0aefd34102292cbee23f008fa12253ecc`:
+6 tests, 6 failures, 0 errors, 0 skips. Cases 1/2 (physical full) and 3/4
+(logical full) threw `Enemy art physical KosM FIFO is full` from
+`queueEnemyKosEntry -> flushAdmittedEnemyKosEntries`; cases 5/6 (last logical
+slot) threw `S3K KosM module FIFO is full` from the subsequent incidental
+submission. Each producer failed its `assertDoesNotThrow` at the callback,
+with the actual cause inspected in Surefire XML. Admission wait was 479s;
+Maven reported 27.351s including test compilation. The Java 25.0.4.1,
+surfaceless EGL and verified absolute S3K ROM properties were present.
+Consumed XML/text reports were removed after inspection without an archive.
+
+The provider-only source correction checks both FIFO capacities before flushing
+an armed physical entry and checks the incidental producer's own logical slot
+after that flush. It adds no snapshot fields, handles, retry state or capacity.
+The GREEN invocation is frozen at source/test delta SHA-256
+`bc1e73c56bd253e6b7fcd7e9d800833c7845a0e49b3443b141066263cb038c70`
+relative to `c7`. No source/test edit occurs while either invocation is live.
+
+GREEN completed on that unchanged `bc1e73c5` delta: **53 tests, 0 failures,
+0 errors, 0 skips**, Maven exit 0. Whole title-card coverage ran 21 cases,
+including all six new counterexamples; whole `TestSszEggRoboClockGates` ran 15
+and `TestSonic3kStarPostInvitationArtAdmission` ran 17. XML testcase identities,
+all six parameter instances, environment properties, failures and skips were
+inspected. Admission wait was 430s; Maven reported 86s including compilation.
+Java 25.0.4.1, surfaceless EGL and the original absolute S3K ROM were verified.
+Consumed reports were removed after inspection; no receipt or archive is kept.
+
+Both invocations used the isolated task checkout, with `OPENGGF_MAIN` denoting
+the existing Main checkout in these repository-safe command examples. Exact
+resolved commands and session/run IDs remain in the existing task registry.
+
+```bash
+# RED, unchanged c7 production plus regression-only delta 464c7553.
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Ds3k.rom.path=$OPENGGF_MAIN/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  '-Dtest=TestSonic3kTitleCardKosQueue#incidentalProducersRespectArmedTitleBackpressureAndReplayBothFifos' test -B
+
+# GREEN, provider correction plus identical regression, frozen delta bc1e73c5.
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Ds3k.rom.path=$OPENGGF_MAIN/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  '-Dtest=TestSonic3kTitleCardKosQueue,TestSszEggRoboClockGates,TestSonic3kStarPostInvitationArtAdmission' test -B
+```
+
+Fingerprints use `git diff --binary c7fdd30471f91678924f096ddd59a4d08e4d0cd1 -- src/main src/test | sha256sum`.
+The complete source/test diff from accepted integration `bf2c7c721` is
+`62b4951dd7eecd1a9cca7d9bab08e5d8f88b76408ef1b8ed305b75d365937ca9`.
+The historical 160 result is reused only for unchanged pair/FIFO/mapping and
+other unaffected inputs, not presented as a fresh full followup run. No broad
+smoke, release-only full suite, guard or controller qualification was launched.
+Root retains the new independent delta review, combined guards and final-source
+SSZ entry/release/controller/route qualification; old e253 route outcomes are
+not adopted as proof. Shared scratch/scaled-art/DMA/presentation-generation
+limits remain exactly as recorded above.

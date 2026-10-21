@@ -1617,6 +1617,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             // Preserve native FIFO order if activation occurs while the
             // title-retired enemy group is waiting to submit.
             flushAdmittedEnemyKosEntries(rom);
+            if (!enemyKosQueue.hasCapacity()) return; // Ordinary bounded one-shot rejection.
             enemyKosHandles.add(enemyKosQueue.queue(
                     rom,
                     sourceAddress,
@@ -1665,6 +1666,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                         S3kRuntimeArtCoordinator.current().moduleQueue();
             }
             flushAdmittedEnemyKosEntries(rom);
+            if (!enemyKosQueue.hasCapacity()) return; // The native producer owns no later retry.
             enemyKosHandles.add(enemyKosQueue.queue(
                     rom,
                     Sonic3kConstants.ART_KOSM_BADNIK_EXPLOSION_ADDR,
@@ -2030,10 +2032,12 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     private void flushAdmittedEnemyKosEntries(Rom rom) throws IOException {
         // An incidental producer owns only its own request. In particular an
         // unretired title's physical batch cannot borrow StarPost/explosion
-        // authority. Keep it pending independently of the incidental handle.
+        // authority. Keep it pending independently of the incidental handle,
+        // including when its owner is armed but either native FIFO is full.
         var deferred = new ArrayList<EnemyKosEntry>();
         for (EnemyKosEntry entry : pendingEnemyKosEntries) {
-            if (entry.physicalPublication() && !enemyKosSubmissionArmed) {
+            if (entry.physicalPublication() && (!enemyKosSubmissionArmed
+                    || !enemyKosQueue.hasCapacity() || !hasPhysicalEnemyKosCapacity())) {
                 deferred.add(entry);
             } else {
                 enemyKosHandles.add(queueEnemyKosEntry(rom, entry));

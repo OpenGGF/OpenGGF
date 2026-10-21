@@ -542,6 +542,141 @@ class TestSonic3kTitleCardKosQueue {
         assertEquals(1, fixture.gameplayMode().getKosinskiModuleQueue().queuedArchiveCount());
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+            "true,0,true", "false,0,true", // Physical-only full; incidental still has room.
+            "true,4,false", "false,4,false", // Logical-only full; neither request may enter.
+            "true,3,false", "false,3,false" // Title owns the final logical slot.
+    })
+    void incidentalProducersRespectArmedTitleBackpressureAndReplayBothFifos(
+            boolean starPost, int logicalPredecessors, boolean physicalFull) throws Exception {
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(10, 0).build();
+        timing = GameServices.hardwareTiming();
+        var provider = (Sonic3kObjectArtProvider) GameServices.module().getObjectArtProvider();
+        provider.prepareRuntimeArtForActTransition(10, RuntimeArtAdmissionPolicy.TITLE_OWNER);
+        installCachedTitleArt();
+        setField(manager, "lastLoadedZone", 10);
+        manager.initializeInLevel(10, 0);
+        prepareExitForCompletion(manager);
+        S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
+        var physical = fixture.gameplayMode().getKosinskiModuleQueue();
+        var queue = S3kRuntimeArtCoordinator.current().moduleQueue();
+        var predecessors = new ArrayList<HardwareWorkHandle>();
+        for (int i = 0; i < logicalPredecessors; i++) {
+            predecessors.add(queue.queue(rom, 0x17FCBA, 0x300 + i * 0x50));
+        }
+        // Declared physical-only setup keeps the title pending while the real
+        // completion callback's following runtime pass arms its exact lease.
+        for (int i = 0; i < 4; i++) assertTrue(physical.enqueue(rom, 0x17B17E, 0xA000));
+        provider.processRuntimeArtQueue();
+        if (!physicalFull) physical.clear();
+        var armed = provider.capture();
+        assertTrue(armed.kosSubmissionArmed());
+        assertTrue(armed.runtimeArtAdmissionConsumed());
+        assertEquals(List.of(new PlcProgressSnapshot.PendingKosModule(0x17B17E, 0x500, true)),
+                armed.pendingKosModules());
+        var physicalBefore = physical.capture();
+        var ordinalBefore = timing.capture().nextOrdinals().getOrDefault(
+                com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE, 0L);
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var before = registry.capture();
+        submitIncidental(provider, starPost);
+        var afterCallback = registry.capture();
+        var after = provider.capture();
+        assertEquals(armed.runtimeArtAdmissionLeaseId(), after.runtimeArtAdmissionLeaseId());
+        assertEquals(armed.runtimeArtAdmissionGeneration(), after.runtimeArtAdmissionGeneration());
+        assertEquals(armed.runtimeArtAdmissionBatchFingerprint(), after.runtimeArtAdmissionBatchFingerprint());
+        assertTrue(after.runtimeArtAdmissionConsumed());
+        boolean titleEntered = logicalPredecessors == 3;
+        boolean incidentalEntered = physicalFull;
+        assertEquals(titleEntered ? List.of() : armed.pendingKosModules(), after.pendingKosModules());
+        assertEquals(ordinalBefore + (titleEntered || incidentalEntered ? 1 : 0),
+                timing.capture().nextOrdinals().getOrDefault(
+                        com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE, 0L));
+        assertEquals(titleEntered || incidentalEntered ? 1 : 0, after.pendingKosOrdinals().size());
+        if (!titleEntered) assertEquals(physicalBefore, physical.capture());
+        if (titleEntered || incidentalEntered) {
+            var last = queue.descriptor(moduleHandles().getLast());
+            assertEquals(titleEntered ? 0x17B17E : starPost
+                    ? Sonic3kConstants.ART_KOSM_STARPOST_STARS1_ADDR
+                    : Sonic3kConstants.ART_KOSM_BADNIK_EXPLOSION_ADDR, last.sourceAddress());
+        }
+        for (int cycle = 0; cycle < 2; cycle++) {
+            registry.restore(before);
+            sameCapacityWorld(before, registry.capture());
+            submitIncidental(provider, starPost);
+            sameCapacityWorld(afterCallback, registry.capture());
+        }
+
+        // Release only the declared physical setup; real timed predecessors
+        // regain capacity by their actual service/completion, never by clearing.
+        if (physicalFull) physical.clear();
+        for (int frame = 0; frame < 4096 && !provider.capture().pendingKosModules().isEmpty(); frame++) {
+            service(HardwareServiceBoundary.POST_OBJECTS);
+            service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            physical.processNativeFrame();
+            provider.processRuntimeArtQueue();
+        }
+        assertTrue(provider.capture().pendingKosModules().isEmpty());
+        var titles = moduleHandles().stream()
+                .filter(h -> queue.descriptor(h).sourceAddress() == 0x17B17E).toList();
+        assertEquals(1, titles.size(), "eventual capacity admits exactly one title handle");
+        var title = titles.getFirst();
+        assertTrue(provider.capture().pendingKosOrdinals().contains(title.ordinal()));
+        assertEquals(1, physical.queuedArchiveCount(), "one retained handle owns one physical entry");
+        assertEquals(0x17B17E, physical.capture().archives().getFirst().archiveAddress());
+        assertEquals(0xA000, physical.capture().archives().getFirst().destinationVramBytes());
+        assertEquals(ordinalBefore + 1 + (incidentalEntered ? 1 : 0),
+                timing.capture().nextOrdinals().getOrDefault(
+                        com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE, 0L));
+        var admitted = registry.capture();
+        drainCapacityRequests(provider, physical);
+        assertTrue(timing.pendingHandles().containsAll(predecessors), "fixture predecessors keep their own claims");
+        assertFalse(timing.pendingHandles().contains(title), "provider retires its one retained claim");
+        assertEquals(1, S3kRuntimeArtCoordinator.current().pendingKosModuleDmaEntries().size());
+        assertEquals(0x4F0, S3kRuntimeArtCoordinator.current().pendingKosModuleDmaEntries().getFirst().words());
+        var completed = registry.capture();
+        for (int cycle = 0; cycle < 2; cycle++) {
+            registry.restore(admitted);
+            sameCapacityWorld(admitted, registry.capture());
+            drainCapacityRequests(provider, physical);
+            sameCapacityWorld(completed, registry.capture());
+            registry.restore(before);
+            sameCapacityWorld(before, registry.capture());
+            registry.restore(completed);
+            sameCapacityWorld(completed, registry.capture());
+        }
+    }
+
+    private static void submitIncidental(Sonic3kObjectArtProvider provider, boolean starPost) {
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> {
+            if (starPost) provider.queueStarPostBonusArt(Sonic3kConstants.ART_KOSM_STARPOST_STARS1_ADDR);
+            else provider.queueBadnikExplosionArt();
+        }, "ordinary physical/logical backpressure cannot become an incidental callback exception");
+    }
+
+    private void drainCapacityRequests(Sonic3kObjectArtProvider provider,
+            com.openggf.level.resources.KosinskiModuleQueue physical) {
+        for (int frame = 0; frame < 4096
+                && (!physical.isIdle() || !provider.capture().pendingKosOrdinals().isEmpty()); frame++) {
+            service(HardwareServiceBoundary.POST_OBJECTS);
+            service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            physical.processNativeFrame();
+            provider.processRuntimeArtQueue();
+        }
+        assertTrue(physical.isIdle());
+        assertTrue(provider.capture().pendingKosOrdinals().isEmpty());
+    }
+
+    private static void sameCapacityWorld(com.openggf.game.rewind.CompositeSnapshot expected,
+            com.openggf.game.rewind.CompositeSnapshot actual) {
+        assertEquals(expected.entries().keySet(), actual.entries().keySet());
+        for (String key : expected.entries().keySet()) {
+            assertTrue(com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
+                    key, expected.get(key), actual.get(key)).isEmpty(), key);
+        }
+    }
+
     private List<HardwareWorkHandle> expectedHandles(
             int[] sources, int[] destinations) throws Exception {
         HardwareTimingService expectedTiming = new HardwareTimingService();
