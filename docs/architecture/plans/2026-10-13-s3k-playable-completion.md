@@ -27528,3 +27528,111 @@ test, qualifying pair, native run, full66282/FBZ/campaign execution, source fix,
 maintained adaptation, push or integration occurred. Root owns any further
 source/ordinary-input question and workload after this bounded result.
 See the [R6 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-reached-ledge-continuation-r6--2026-10-21).
+
+## ICZ2 later-platform exit R5 — four-policy cap, 2026-10-21
+
+The owned `.worktrees/object-vint-test-terminology` starts
+`feature/ai-icz2-sonic-platform-exit-20261021` at exact Root
+`b078214e74ddbcb393cbc0173fd8c74055b0dadb`. Earlier e7, 2b30 and 289d refs and
+worktrees are preserved. Root's composed smoke is not observed or repeated.
+R5 changes no runtime, POM, maintained test/oracle or input resource. The indexed
+native gitlink remains 703bd92d32634ce5ebac60625b48c60ef5500427; this owned
+checkout has no initialized native marker and performs no native invocation.
+
+### Actual checkpoint, input contract and guarded requests
+
+The inlet is the explicit 15-field Settings: title enabled, native 320, solo Sonic,
+donor off, direct 5/1, every gameplay seed null/false. Each request cold-replays
+R4 `r4/attempt01/variant-1.bk2` through input 3370 inclusive (3371 rows), then
+branches through the existing ordinary author pattern. All proposals preserve
+those rows/both pads, the full maintained 2292 prefix and earlier 3265 prefix;
+P2 remains neutral. No unexecuted R4 tail supplies reached state.
+
+After input 3370 P1 is 12491/2739, velocity 1536/0, grounded, standing, alive/unhurt,
+zero rings, camera 12331/2643, A released and logical jump/just-press false.
+Controls/forced mask are clear, mode LEVEL, fade NONE and no pending fresh assembly.
+The actual selected `IczPathFollowPlatformObjectInstance` has complete spawn
+`ObjectSpawn[x=12480,y=2778,objectId=176,subtype=6,renderFlags=0,
+respawnTracked=false,rawYWord=2772,layoutIndex=245,ownerModId=null,objectKey=null]`.
+The public live query returns
+`ObjectRefId[slotIndex=-1,generation=0,spawnId=245,dynamicId=456,kind=DYNAMIC]`.
+The selected spawn and lineage agree after the same-registry prefix restore;
+no class/coordinate equality or static layout 245 substitutes for that identity.
+
+The temporary adapter preserves step→normal render→observation order and the
+external driver's previous input. It checks ModeContext/Level/ObjectManager/mode
+identity, death, pending assembly and callback-bearing fades before any next
+restore, then rechecks actual ground/standing/jump release and receiver lineage.
+No restore crosses mode, load or death; a guard error permits only an untried
+policy to start from a fresh cold prefix. Native `byte_89FB2`/`loc_8A178/192`,
+Java platform update/solid owners and `PlayableSpriteMovement.doJump` remain the
+source basis. No collision reprobe, position/clock/phase write or trace hydration
+chooses a controller input. At input 3371 all four policies produce air1/rolling1 and
+Yvelocity −1664 through ordinary jump dispatch.
+
+| Policy after3370; each1800 inputs maximum | Actual endpoint | Session / original result |
+|---|---|---|
+| `4 R+A;1796 R` | SpecialStage3597 at12712/2908;3598 executed | 92097 /1T/0F/1E/0S |
+| `8 R+A;1792 R` | SpecialStage3600 at12713/2908;3601 executed | 84180 /1T/0F/1E/0S |
+| `12 R+A;1788 R` | LEVEL death3850 at13685/2521;3851 executed | 3759 /1T/0F/1E/0S |
+| `20 R+A;1780 R` | LEVEL death3850 at13685/2522;3851 executed | 12934 /1T/0F/0E/0S |
+
+All four propose 5171 rows. The first three original errors are
+`Previous candidate left the checkpoint world/mode or died; start an untried
+policy from cold rather than restoring across a world/mode/death boundary`
+at adapter `run:114`, before the next candidate restore. The final request has
+only the last untried policy, so its harness completes normally after recording
+death. That 1T pass is not route qualification. Exactly four distinct policies
+execute; none repeats and no fresh uninterrupted qualifier is launched.
+
+All requests use the current Main absolute `tools/testing/maven_queue.py
+--normal`, `-Dmse=off`, exact temporary method
+`com.openggf.tools.TestIcz2BossAdmissionAuthorR5#authorGuardedOrdinaryPolicies`,
+request01..04 inputs and separate target-local report/tmp paths. The as-run
+Java 25.0.4.1/surfaceless-EGL/original absolute S1, S2 REV01, S3K ROM properties,
+nullAL/Lua 5.4 environment and ambient JVM/display/library unsets are recorded in
+the existing owned registry. XML identities, assertions/errors/skips, every
+property and original stream were read before consuming each owned result.
+
+### New reached frontier and retained artifacts
+
+The 12/20 holds pass the ring corridor. Actual public selected receivers retain
+spring259/dynamic465 at3519..3524; monitor272/dynamic469,
+cube271/dynamic468, cube274/dynamic470 and monitor275/dynamic471 within3775..3798.
+The selected tension platform285/dynamic474 is ridden3816..3819, spawn X13632,
+rawY2444/currentY2444→2456, ID$BA/subtype0. Standing is true at3816 and empty
+on the last retained riding row3819. These are complete selected ObjectSpawn/
+ObjectRefId observations in the existing status, not nearby-layout guesses.
+Both longer policies are last alive3849 at13685/2515, airborne/Yvelocity 1624;
+neither sees an active boss row. The actual death/contact writer is unretained.
+Death endpoints do not prove a runtime omission or native cause. A new checkpoint
+before platform285 releases its rider has not yet passed ground, fresh-press or
+restorability checks; no further authoring is authorized by this record.
+
+Under the same external `<owned-task-directory>/icz2-sonic-cold-boss-20261021/`
+artifact convention, useful sources/inputs and already-created normal images remain:
+
+- Best `r5/attempt03/variant-0.{script,bk2}`:5171 proposed/3851 executed, last
+  alive3849/death3850; **3851..5170 is unexecuted**. Script SHA256
+  `31b5866d0e6b87151aaaafb91cffc3858ccd77742c3e9e1e3e7d60df47566e62`, BK2
+  `21da4c40e3eab3baa4971d0ac867166ffe5cbc60e610685c5c5f682f577b960d`.
+- All four `r5/attempt01..04/variant-0.{script,bk2}` and `r5/request01..04.txt`
+  retain the exact finite policies. Production InputLogAuthorTool/Bk2MovieLoader
+  checks roundtrip every row; an independent ZIP input read verifies all 5171 rows,
+  exact 3371/3265/2292 prefixes, intended holds and neutral P2 for each pair.
+- `r5/TestIcz2BossAdmissionAuthorR5.java`:17479B, SHA256
+  `bbb5c7ae19d8164074440a4c8976dafdebda1de275b8c2470d9401a8445b5d35`.
+- Existing normal PNGs `r5/attempt03/variant-0-{3371,3761,3821,3850}.png`
+  show the jump, upper route, pre-death frontier and terminal state. No new
+  capture is launched for this record and no native pixels are inferred.
+
+All four original reports/tmp, raw state/contact/boss CSVs, nearby inventories
+and unnecessary PNGs are consumed. The temporary repository Java and its two
+classes are removed; the worktree is clean at b078 before this documentation-only
+append. No archive/pass receipt, retained snapshot, live job, runtime fix or
+maintained extension remains. The matrix records this exploratory frontier;
+the backlog's placed-boss/full-act obligation is unchanged, so its row is not
+edited. The maintained 2292 movie/oracle/qualification stay byte-exact. Incoming
+history, boss/full-act, roster/donor/viewport breadth and native timing/pixels
+remain open. This local docs commit uses syntax/link/source-identity and normal
+hook checks only, with no JVM/probe/policy repeat; Root owns review and delivery.

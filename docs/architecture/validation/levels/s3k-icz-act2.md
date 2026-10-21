@@ -292,3 +292,43 @@ inlet. No runtime omission or fix is proved. The maintained 2292 partial crossin
 stays qualified; boss/full-act, incoming history, broader products and native
 physical timing/pixels remain open. Useful external proposals, adapter sources
 and existing normal PNGs are named in the Plan; raw diagnostics are consumed.
+
+## Ordinary later-platform fresh jump — R5, 2026-10-21
+
+On `b078214e74ddbcb393cbc0173fd8c74055b0dadb`, four finite ordinary policies
+preserve every row through 3370 of R4's actually reached input and the complete
+2292-row maintained crossing. Each cold-replays the same explicit title-enabled
+native 320 solo Sonic/off direct 5/1 inlet with null/false gameplay seeds and
+normal drawing. Production author/loader roundtrips and all-row checks retain
+neutral P2. This is controller exploration, not a maintained route extension.
+
+The actual checkpoint after input 3370 has P1 `12491,2739`, grounded, standing,
+alive and unhurt, with released jump and controls, LEVEL mode, no pending fresh
+assembly and fade NONE. Its selected sinking platform is now bound by the public
+live query: spawn `12480,2778,$B0,6`, rawY2772/layout 245, and ObjectRefId
+`slot=-1,generation=0,spawnId=245,dynamicId=456,DYNAMIC`. The captured receiver
+record and lineage agree after restore; static placement245 alone is not the
+identity. All four policies genuinely jump at3371, airborne with Yvelocity −1664.
+
+| Right+A hold, then Right | Actual outcome | Original author request |
+|---|---|---|
+| 4 inputs | SpecialStage at3597, `12712,2908`; 3598 rows executed | 1T/0F/1E/0S; mode guard refuses next restore |
+| 8 inputs | SpecialStage at3600, `12713,2908`; 3601 rows executed | 1T/0F/1E/0S; mode guard refuses next restore |
+| 12 inputs | LEVEL death3850, `13685,2521`; 3851 rows executed | 1T/0F/1E/0S; death guard refuses next restore |
+| 20 inputs | LEVEL death3850, `13685,2522`; 3851 rows executed | 1T/0F/0E/0S; final single-policy harness only |
+
+Only untried policies start from fresh cold prefixes after a guard error. No
+restore crosses a real mode/load/death boundary. Every proposal has 5171 rows;
+its unexecuted tail is not reached-state evidence. The longer holds pass the
+ring corridor and retain actual selected spring259, cubes271/274, monitors272/275 and
+tension-platform285 contacts. Both are last alive at3849, `13685,2515`, airborne;
+the actual death writer is unretained. No runtime omission or fix is inferred.
+
+No placed boss is observed and no fresh uninterrupted qualifier is launched.
+The final harness pass is **not route qualification**. The dated
+[completion plan](../../plans/2026-10-13-s3k-playable-completion.md#icz2-later-platform-exit-r5--four-policy-cap-2026-10-21)
+records all inputs, source/hash pins, selected lineage and retained normal images.
+The maintained 2292 movie, strict oracle and its qualification remain unchanged.
+Boss/full-act, incoming history, roster/donor/viewport breadth and native
+timing/pixels remain open. A future checkpoint before platform285 releases its
+rider still needs actual ground, fresh-press and restorability evidence.
