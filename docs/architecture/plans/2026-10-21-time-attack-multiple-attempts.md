@@ -154,6 +154,26 @@ Not verified in this container (no ROMs): the results-exit retry reload for S1, 
 and S3K, the MHZ1 deferred-route retry, and the roughly one-frame full-brightness
 frame an S2 results exit may show between its fade and the retry fade.
 
+Validation of the code at `232e187e` (the smoke run tested `afc5870c`, which adds
+only documentation; Temurin 25.0.4.1, Lua 5.4, PowerShell 7.4.6, no ROMs):
+
+- Focused: every workstream's regression set plus the related network classes, 70
+  classes, 633 tests, 0 failures, 0 errors, 9 ROM skips.
+- Change-based smoke, `run_categories.py --base 388c5e28 --run`: the pin change
+  selected all ten smoke categories, 3,556 candidates in 72 batches. Ordinary lane:
+  25,685 tests, 2 failures, 3 errors, 5,109 skips (ROM-gated). Guards: 718 tests,
+  15 failures.
+- All 20 failing tests reproduce with identical identities on `388c5e28`, run in a
+  separate worktree: `TestMasterClient.brokerPinnedIpv6DirectRoomJoinsOverTls` (no
+  IPv6 loopback), two renderer tests (no `libEGL`), two complete-run audio tests,
+  `TestProductionAwtBlacklistGuard` and two `TestProductionSingletonClosureGuard`
+  checks (`TimeAttackVideoCaptureTool`), two `TestArchUnitRules` rules
+  (`HubMusicController`), `TestNativeImageResourceGuard`, and nine
+  `TestBuildToolingGuard` cases needing history absent from this shallow clone. None
+  is in this delivery's files, and none is new.
+
+This is bounded smoke validation, not a full-suite pass.
+
 ## Effect on the budgeted-replication follow-up
 
 The earlier review called dormancy "mostly free" because finished racers stop
