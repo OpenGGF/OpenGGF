@@ -30,6 +30,37 @@ Read the relevant owner before extending it. Do not launch interactive `Engine`
 just to obtain offscreen frames. `SurfacelessEglContext` is package-private;
 reuse the public owners rather than duplicating its JNI setup.
 
+## Keep audio off desktop devices
+
+Offscreen rendering must not play music or sound effects through desktop audio.
+EGL, hidden windows, and `java.awt.headless` do not isolate audio. Establish a
+known no-device audio backend before anything can start playback; do not open a
+live OpenAL/device backend and rely on volume zero or desktop mute.
+
+- For silent rendering, leave `GameplayCaptureSession` audio disabled (its default)
+  and run in a fresh tool JVM whose `AudioManager` starts with `NullAudioBackend`.
+  A custom/reused host must replace any inherited device backend through
+  `AudioManager.setBackend(new NullAudioBackend())` before boot/playback, and keep
+  `AUDIO_ENABLED=false`. Disabling the setting alone does not retire a prior backend:
+  `HeadlessGameBoot` leaves it installed when audio is disabled.
+- For offline audio evidence, keep synthesis enabled with
+  `HeadlessSmpsAudioBackend`, whose device hooks are no-ops and whose presentation
+  sink is `NoDeviceAudioSink`. `HeadlessGameBoot` installs it before level music
+  when `AUDIO_ENABLED=true`; gameplay capture's `--audio` enables that path before
+  boot. Drain the production capture lease to the output file using the capture
+  tool's existing cadence. Captured PCM does not require speaker playback.
+- Component GL contexts do not configure audio. If a component test also boots
+  audio/gameplay, apply the same no-device ownership rule. Clean up owned audio
+  and capture leases on success and failure; avoid automatic playback of outputs.
+
+Verify the installed backend/sink path, not whether anyone heard sound.
+[TestHeadlessGameBootAudioIdentity](../../../src/test/java/com/openggf/tools/TestHeadlessGameBootAudioIdentity.java)
+provides ROM-backed backend identity, replacement and offline packet checks;
+its disabled-boot case also demonstrates retained ownership. A null-backend
+fallback is silent but cannot prove successful audio synthesis. Unexpected
+speaker output means isolation failed: stop the owned run and fix its audio
+owner rather than muting the user's desktop.
+
 ## Linux: render without a display connection
 
 Select `-Dopenggf.headless.gl=surfaceless-egl` explicitly and unset `DISPLAY` and
