@@ -4191,3 +4191,79 @@ raw output are consumed. The [dated R5 plan](../../plans/2026-10-13-s3k-playable
 records native owners, strong bindings, source verdict and limits. No third request,
 maintained-class/broad/native run, oracle adaptation or current paired800
 MTZ/Mecha/DEZ certification follows this attribution; Main complete remains unknown.
+
+## Wide paired original group2 gate R7 — 2026-10-21
+
+Exactly two ordinary row0 NORMAL-DRAW prefixes use Main `efd605142` and current
+`a49194fd0`, unchanged movie/P2neutral/Settings7 native800 paired/off/titlefalse,
+ending at input7007 inclusive. Each actual XML records7008 inputs/21024 phase rows/
+115 fields/**0JUnit tests/0skips**. All115 fields match the six retained same-arm
+PRE/POST3491,3507,6721 rows; no other full115 R5 public rows through7007 were retained.
+No later endpoint or maintained-class result is added.
+
+The actual layout23 fighter is born6962 in both JVMs, original spawn
+`(1312,2304,$A0,$22,flags1,rawY10496,respawn=false)`. Original raw-reference bindings
+join its gate lookup to the same locally installed SSZ state and registry; the
+state is **non-null** in both arms. These are local bindings, not cross-JVM identity.
+
+| Original layout23 gate | Main | Current |
+|---|---|---|
+| Input of original evaluation | 6962, early movement gate | 7006, initialization after wait |
+| Evaluated word / mask | `$000F` / `$0004` | `$000B` / `$0004` |
+| `eggRoboFlyByPassed(2)` / waiting return | true / false | false / true |
+| Original selected outcome | admission | GONE/delete returns normally |
+
+Both arms construct/install one SSZ state at cold boot. Constructor capture has
+**no evaluated word**; JVM default0 is source knowledge. Original query counts are
+four per arm (one per group3,0,1,2), including exactly one layout23/group2 query.
+There is no whole-word setter, act2 word write, restore write or registry replacement
+before this gate. The only registry clear is explicitly CLOSE after input7007.
+
+The actual group2 publisher is Main's layout30 fly-by, born6792 at
+`(1552,2448,$A0,$20,flags0,rawY2448,respawn=false)`. Its original6819 publication
+reads11, ORs mask4 and writes15 to that exact local state. Current constructs the
+corresponding placed fly-by at6792 but has **no group2 publication through7007**;
+its last preceding write is group1 at6563,9→11. No null lookup, overwrite or state
+replacement explains the measured clear bit.
+
+Shipped `sub_91914` tests group2/mask4 and deletes when clear, matching the observed
+conditional outcomes for the measured operands. Native runtime publication timing
+and the layout30 continuation/flight/exit/lifetime remain unmeasured; this does
+not certify the word11, the trajectory or48 rings as native-correct. That fly-by's
+original exit/publication boundary is the next precise question if needed.
+Expected46, movies/tests/runtime/POM remain unchanged. Whole temporary sources are
+restored and their compiler-created classes/raw outputs consumed; a normal restored
+current compile only accounts for outputs. Useful source/inverses/compact facts
+remain external. The [dated R7 plan](../../plans/2026-10-13-s3k-playable-completion.md#wide-paired-original-group2-gate-r7--2026-10-21)
+records complete ordered write history and limits. Main complete and current
+paired800 MTZ/Mecha/DEZ remain unqualified; no third prefix/native/broad run occurs.
+
+## Wide paired layout30 source disposition R8 — 2026-10-21
+
+Source-only inspection at R7 `31bf738f3`/runtime parent `a49194fd0`, pinned shipped
+skdisasm `044fa467` and bounded original-ROM bytes adds no replay/native result.
+Native `Obj_WaitOffscreen` runs for all EggRobo modes; its retained-bit continuation
+returns without init/draw, and the next own dispatch initializes then moves.
+Native fly-by publication requires negative post-add Y velocity and clear retained
+render bit 7. Current's own wait/flight/publication ordering follows those owners;
+Main's earlier group2 publication is not native evidence.
+
+Two source distinctions are now explicit. First, native Wait saves continuation
+`$0009151E` at `$34`, then fly-by initialization replaces only its high word;
+low word `$36=$151E` survives into the 16.16 Y anchor. Main and current Java both
+start `flyY` with a zero fraction. This is an independently proven shared source
+omission, with no measured route effect or campaign attribution. Second, the live
+manager applies its generic coarse-X retirement after active fly-by updates;
+native `loc_91526` ends at `Draw_Sprite` and has no such shared cull. Java `onUnload`
+does not publish group2. The old commented `syncActiveSpawnsUnload` body is excluded.
+
+R7 did not retain layout30's original manager-unload decision/phase/operands, or
+its post-add Y velocity and consumed render flag at the fly-by exit. These remain
+the actual lifecycle discriminators; this source slice cannot state which
+branch occurred. Submitted-only render-bit refresh uses the copied camera at the
+ordinary loop tail, including the retained flag across the return-only dispatch.
+The [dated R8 plan](../../plans/2026-10-13-s3k-playable-completion.md#wide-paired-layout30-fly-by-source-contract-r8--2026-10-21)
+records active placement, unload, render/scaling writers and exact source limits.
+No JVM/probe, runtime/data fix or oracle adaptation follows. Expected 46 and every
+maintained input/test/runtime/POM stay unchanged; the existing route/native
+qualification gaps remain open.

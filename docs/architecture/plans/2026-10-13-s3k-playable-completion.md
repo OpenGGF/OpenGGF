@@ -26953,3 +26953,199 @@ full-act/breadth/HPZ/campaign, true reset/bootstrap, native terrain-return/d1,
 stock-route causality, native pixels/timing and GC are not certified. Root owns
 independent source review, the combined change-based smoke plan and integration;
 this worker creates only a local reviewable commit.
+
+## Wide paired original group2 gate R7 — 2026-10-21
+
+This distinct bounded operand slice uses owned
+`feature/ai-ssz-group2-operands-20261021` at exact current
+`a49194fd0ae43ad86057cecf0e2e9a3bfc45a21b`, preserving R1–R6 refs and useful external
+methods. Exactly two ordinary cold row0 prefixes compare exact Main
+`efd605142603146509995cffbb56a6b48f9c1c1b` with that current source. They consume the
+original first-movie inputs0..7007 inclusive, P2neutral, Settings7
+`(800,sonic,tails,off,null,null,null)`/titlefalse, normal step then renderFrame.
+There is no restore/import, extra gameplay query, seed, controller authoring,
+9914 endpoint, maintained test, broad sweep or native reference execution in this slice.
+
+Temporary defaultnull carriers use full literal preimages/inverse prepared before
+source edits. Only EggRobo constructor/state lookup/gate/original branch/bit
+publication, the four actual SSZ pairing-word writers and registry install/clear
+are instrumented. `S3kRuntimeStates.currentSsz`, `currentAs`, predicates and original
+providers are not replayed. Original evaluated locals/returns and strong references
+are retained, with1024 fixed event rows/max32 values; overflow fails qualification
+after ordinary execution. Original throw envelopes and once/evaluation order are
+preserved. Ssz constructor capture retains actual state/act/team but **no evaluated
+pairing word**; default0 is source knowledge, separate from later actual reads.
+All temporary source is restored WHOLE byte exact after each arm; exact compiler
+created-file lists and compile status are consumed before switching/final rebuild.
+
+Both requests use the current absolute Main queue wrapper:
+`--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl compile exec:exec -B`,
+with runtime classpath and the same temporary `WideGroup2Projection.java` source
+launcher, original movie, fresh target-local output/temp/native extraction paths.
+Java25.0.4.1, EGL/nullAL/Lua5.4, verified original absolute S1/S2/S3K ROMs and ambient
+JVM/display/library unsets are unchanged. Adapter/probe/POM/JVM-config/movie/config
+pins agree between arms; SSZ state and registry original/instrumented source bytes
+also agree. The current request waited for admission and was kept, not restarted.
+Actual XML/properties and raw streams are read: **7008 inputs,21024 rows,115 fields,
+0JUnit tests,0skips per arm**. All115 fields match PRE/POST3491,3507,6721 in the
+retained same-arm R3 rows, also previously matched by R5. No further full115 R5
+public rows through7007 exist to compare; no prior raw series is reconstructed.
+
+### Actual group2 query and original branch
+
+The actual layout23 body in each JVM is born6962 from the immutable original
+placement argument `(1312,2304,$A0,$22,flags1,rawY10496,respawn=false)`.
+Constructor argument→raw body→original registry argument→returned raw SSZ state→
+original word-query receiver→original gate and branch all join by strong actual
+references within that JVM. LOCAL labels are never native addresses or cross-JVM
+object equality. Static placement/layout establishes correspondence only.
+
+Main's original early movement gate6962 reads non-null state, word15 (`$000F`),
+group2/mask4, passed=true; helper waiting=false and original admission is selected.
+Current's original initialization gate7006 reads non-null state, word11 (`$000B`),
+group2/mask4, passed=false; waiting=true selects GONE and the original delete call
+returns normally. This agrees with R5's retained current retirement at7006; the
+word/receiver/outcome are now measured rather than inferred from that retirement.
+
+Each arm has one actual SSZ constructor and boot registry installation. All gate
+lookups return that same local state. Each has four original word queries (groups
+3,0,1,2 once each), including exactly one layout23/group2 query. Main has eight
+original body state lookups, current seven; additional Main nonfighter helper
+returns execute no word query. There are no whole-word setters, act2 word setters,
+restore writes or pre-gate registry replacements. Registry clear is CLOSE after
+input7007. Carrier totals are55/40 rows, no overflow.
+
+### Original write history and remaining owner
+
+Every recorded bit publisher binds its actual body and immutable original spawn
+to the exact state receiving the write. The original read/mask/OR/assignment and
+normal publisher return are retained once:
+
+| Pairing group / publisher layout | Before→after when invoked | Main input | Current input |
+|---|---|---|---|
+| 3 /31 | 0→8, mask8 | 1928 | 1934 |
+| 0 /140 | 8→9, mask1 | 3028 | 3061 |
+| 1 /86 | 9→11, mask2 | 6491 | 6563 |
+| 2 /30 | 11→15, mask4 | 6819 | no invocation through7007 |
+
+The first actual word-query reads0 at Main1898/current1917, independently of the
+constructor default. Main's group2 publisher is its actual layout30 body, born6792
+at `(1552,2448,$A0,$20,flags0,rawY2448,respawn=false)`. Current constructs the
+corresponding placement at6792 but never publishes group2 within the covered
+prefix. Its last actual pairing-word write remains9→11 at6563. Thus the current
+rejection follows a genuinely clear bit in the same installed state; null lookup,
+whole-word overwrite and replacement are excluded by the covered original history.
+
+Pinned shipped FixBugs0 skdisasm`044fa467` `sub_91914` reads `_unkFA82`, tests the
+subtype's high-nibble bit and returns when set, otherwise discarding the caller
+and deleting before attributes/children. Group2's actual mask4 and the observed
+set/clear outcomes agree with this conditional. Native `loc_91570` owns fly-by
+publication. R7 does **not** observe native RAM/trajectory, or layout30's original
+`Obj_WaitOffscreen` continuation, flight termination or unload operands. The next
+precise question is why that actual fly-by has not reached publication by7006;
+which of those lifecycle/exit boundaries owns the delay remains UNKNOWN. No
+additional seam/run or runtime fix follows here, and48 is not made an oracle.
+
+Raw CSV/events/XML/logs/temp/native extraction are consumed after inspection.
+Useful `WideGroup2OperandProbe`, public adapter, asserted literal instrumentation,
+whole preimages and compact selected `FIRST_GROUP2` facts remain outside the repo.
+A final current-source compile through the same wrapper is build-only output
+accounting, not a third prefix or test result. Final maintained changes are only
+this factual note and the existing SSZ matrix. Expected46, all maintained inputs,
+assertions, runtime and POM remain unchanged; Main complete/current paired800
+MTZ/Mecha/DEZ and native whole-trajectory correctness remain unqualified. Local
+normal-hook documentation commit goes to Root for independent review/composition;
+no push, integration or foreign-worktree cleanup occurs here.
+
+## Wide paired layout30 fly-by source contract R8 — 2026-10-21
+
+This source-only slice uses owned `feature/ai-ssz-layout30-source-20261021` at R7
+`31bf738f3a5c12b0f672c1936001d37e3c4bb2ee`, whose runtime parent is
+`a49194fd0ae43ad86057cecf0e2e9a3bfc45a21b`. R7's measured layout30 birth6792,
+Main publication6819 and current absence of publication through7007 remain the
+only route observations used here. No JVM, replay, native execution or new probe
+is run. Source, tests, movies, POM, config and actual native checkouts stay intact.
+
+The reference is shipped FixBugs0 skdisasm `044fa467`, `sonic3k.asm`:
+`Obj_EggRobo`198540, `Obj_WaitOffscreen`180357–180389,
+`loc_91874`198837–198859, `loc_91526`198547–198571,
+`loc_91570`198573 onward, and `sub_86180`/`sub_8619A`181132–181168.
+Read-only original-ROM bytes at `$91518` are
+`4EB9 0008 5AAE 6100 033E 2250 4ED1 1028 0040 0400`.
+
+### Native lifecycle and shared fixed-point omission
+
+All modes first enter `Obj_WaitOffscreen`. It installs zero-piece `Map_Offscreen`,
+world-coordinate rendering and 32-pixel extents, saves the caller continuation at
+`$34`, then tests the retained render bit 7. When clear, its unsigned 128-aligned
+coarse-X test can delete without pairing publication; otherwise it submits to
+`Draw_Sprite`. When set, it restores the saved continuation and returns without
+initializing, moving or submitting. Only the next own dispatch initializes and
+immediately runs the selected routine. Current's wait/return-only/initial-dispatch
+structure agrees with this source ordering. Main's earlier motion/publication
+does not establish native timing.
+
+There is an independently proven **shared fixed-point omission**. The verified
+six-byte JSR at `$91518` saves continuation `$0009151E` in the long at `$34`.
+`loc_91874` subsequently writes only the Y-position **word** at `$34`; the low
+word `$36` remains `$151E`. `SetUp_ObjAttributes`, the return from `sub_9185E` and
+the fly-by scaling helper do not clear that fraction before `sub_86180` adds the
+signed velocity to the long. Both Main and current Java instead initialize
+`flyY` with a zero low word in their constructors and retain no continuation
+alias. This establishes a source-level shipped-behavior gap shared by the arms;
+its route effect and any relationship to R7's publication difference are unmeasured.
+No seed, formula, correction or new oracle is introduced.
+
+In native `loc_91526`, scale processing precedes the word decrement at `$3C` and
+addition to Y velocity. Only **negative post-add Y velocity plus clear retained
+render bit 7** selects `loc_91570`. Otherwise the two fixed-point/projection helpers
+run and the routine ends at `Draw_Sprite`. Publication ORs the subtype's high-nibble
+bit into `_unkFA82`, queues restoration art and deletes. Current's written
+decrement/add/exit-test order and `leaveTheScreen` publication follow those owners.
+The inherited scaled-art gap is not qualified here.
+
+### Active unload and preceding render-bit owners
+
+The active Java route is S3K two-axis load-then-execute with the LEGACY window:
+`ObjectManager.update` → `runTwoAxisLoadThenExecutePlacement` → `runExecLoop`.
+After each surviving object's update, `unloadCounterBasedOutOfRange` is live even
+for non-counter S3K placement. EggRobo inherits persistent=false, custom-check=false
+and current `getX()` as the unload reference. The check uses the live object-pass
+camera, an unsigned aligned distance and the existing viewport-scaled limit
+(1120 at 800 versus native Wait's 640; width policy is already declared discrepancy14).
+Its selected retirement calls EggRobo `onUnload`, marks respawnable destruction and
+removes the live instance **without publishing the pairing bit**.
+
+This shared check also covers active fly-by dispatches. Native `Process_Sprites`
+36005 and `Draw_Sprite`36171 provide no corresponding post-routine coarse-X cull
+after `loc_91526`. Thus an additional Java retirement path is source-visible;
+whether layout30 actually selected it in R7 is UNKNOWN. Placement cursor trims
+remove load candidates, not live instances. `syncActiveSpawnsUnload` is empty;
+its older commented body around3185–3230 is not an execution owner. Publishing
+unconditionally from `onUnload` would not reproduce the native fly-by exit condition.
+
+Native `Render_Sprites`36358 clears/sets bit 7 for submitted objects using copied
+camera coordinates, setting it even before a zero-piece mapping is rejected.
+Current `LevelFrameStep` captures render-camera copies after scroll and before
+zone events, then its loop tail calls `refreshObjectPostCameraRenderState` before
+CPU sprite-table preparation. EggRobo refreshes its flag only when its object-local
+`drawSubmitted` marker is set, using 32-pixel extents and exclusive upper bounds;
+the return-only continuation retains the preceding flag. This is not observed
+native queue admission or a fresh exit-site geometry query.
+Native `sub_2468A` also contains a scaling-budget-failure bit 7 clear: the fly-by's
+own scaling call resets that budget to 0 and its closed scale range uses table
+entries within the 128-tile budget, so that failure branch supplies no demonstrated
+missing clear on this source path. No sprite-budget or pixel result is inferred.
+
+The smallest remaining route discriminator is layout30's **original post-routine
+manager unload result and lifecycle phase**, with its already-evaluated current-X,
+live-camera, unsigned-distance and limit operands. If it survives that boundary,
+the remaining original exit operands are post-add signed Y velocity and the consumed
+retained render flag, linked to the preceding submitted/copy-camera phase. R7 did
+not retain these values; source alone cannot choose among those actual outcomes.
+No further carrier, prefix or implementation is authorized by this disposition.
+Expected 46 and all maintained runtime/controllers/tests remain unchanged. Main
+complete/current paired800 MTZ/Mecha/DEZ and native whole-trajectory correctness
+remain unqualified. Only this factual appendix and the existing matrix are changed;
+source/config/native pin checks and normal documentation hooks validate the local
+commit, with no Maven or broader run.
