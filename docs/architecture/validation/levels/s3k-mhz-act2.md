@@ -825,3 +825,40 @@ the record completed under Root's explicit15:34 amendment, without restart.
 All observations are0 JUnit/skips N/A. Raw outputs/classes were consumed before
 the local docs commit; useful proposals and compact facts remain external.
 Root reviews before any later ordinary policy, adaptation or qualification.
+
+
+### Knuckles recovered lower-support ordinary coast R10 — 2026-10-21
+
+One fresh ordinary cold lifecycle at exact2d1a7e4432bff3ffc1168aebbc80a54a3a86babd
+reused R9's unchanged43115-row fixed proposal. All42735 previously executed R9
+inputs, R8/R4/Act1 prefixes and neutralP2 were preserved. Before boot, the
+production author/loader checked all rows/booleans/masks/payloads/JUMP0x10;
+after stopping it rechecked every actually executed row. All64 checkpoints42511,
+42634 and42734 matched, including the actual recovered lower Spikes support.
+World/Level/OM/P1/LEVEL7/1, input, pending/fade and released-control guards held.
+
+Exactly77 new constant Right-only inputs42735..42811 ran, with one normal draw
+per step. Actual Spikes slot25 riding ended at42780; all post-step rows through
+42810 were airborne/no onObject/no actual rider. Ring count0→1 at42787 is an
+observed counter change, not pickup-receiver attribution. First ordinary grounded/
+unhurt/free non-object landing at42811 is centre10550/2417, sub59445/6956,
+velocity1308/0/ground1308, angle4,1 ring/3 lives, onObject=false/actual rider none.
+The stale Spikes latch remains recorded separately from actual support.
+
+All77 new rows retain3 lives/no hurt/no death/free controls. This answers the
+bounded coast/drop question and stops immediately; it does not qualify wall
+admission/clearance, a safe onward route, mushroom support/bounce, native cause,
+invulnerability, full-act or FBZ behavior. No named terrain receiver or original
+callback was queried. R5–R9 hurt receiver remains UNKNOWN. There were no seeds,
+snapshots/restores, new observers or maintained data/oracle/count/window edits.
+
+Session33434 exited0,0 JUnit/skips N/A:543s reported queue wait,01:23 Maven time,
+21.823s boot/prefix/tail. Exactly42812 total inputs ran;303 fixed rows remain
+unexecuted. The [R10 Plan](../../plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-recovered-lower-support-ordinary-coast-r10--2026-10-21)
+pins commands, source/inputs/environment, proof and actual executed BK2/script
+hashes, complete selected rows and explicit16:04 R10 scope. R9's old-deadline
+launcher error stays historical; R10 has no command-metadata error. Raw diagnostics/
+classes/roundtrip validation copy were consumed before the local docs commit;
+useful actual inputs/private preimages/compact facts remain external. No second
+attempt, native/broad/maintained-route run, push or integration followed. Root
+owns review and any later controller or qualification scope.
