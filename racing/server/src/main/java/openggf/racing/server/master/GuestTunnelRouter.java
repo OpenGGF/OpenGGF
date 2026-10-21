@@ -1,6 +1,7 @@
 package openggf.racing.server.master;
 
 import com.openggf.net.hub.HubConnection;
+import com.openggf.net.hub.GhostHub;
 import openggf.racing.protocol.ControlCodec;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.GhostPackets;
@@ -61,7 +62,9 @@ public final class GuestTunnelRouter implements RoomBroker.DirectTunnelDirectory
                 rejectGuest(guestId, tunnel, "relay guest text exceeds wrapper frame cap");
                 return;
             }
-            tunnel.host().sendText(wrapped);
+            if (canForwardTo(guestId, tunnel, tunnel.host())) {
+                tunnel.host().sendText(wrapped);
+            }
         }
     }
 
@@ -76,8 +79,22 @@ public final class GuestTunnelRouter implements RoomBroker.DirectTunnelDirectory
                 rejectGuest(guestId, tunnel, "relay guest binary exceeds payload bounds");
                 return;
             }
-            tunnel.host().sendBinary(wrapped);
+            if (canForwardTo(guestId, tunnel, tunnel.host())) {
+                tunnel.host().sendBinary(wrapped);
+            }
         }
+    }
+
+    private boolean canForwardTo(int guestId, Tunnel tunnel, HubConnection receiver) {
+        // Match the hub's strict cutoff. This samples transport occupancy, not
+        // cross-event-loop work or an atomic reservation for the next payload.
+        if (receiver.queuedBytes() > GhostHub.BP_DISCONNECT_BYTES) {
+            // Even when the host is slow, only this guest leaves: the host link
+            // and its other rooms/tunnels retain their registration and ownership.
+            rejectGuest(guestId, tunnel, "relay receiver too slow");
+            return false;
+        }
+        return true;
     }
 
     private void rejectGuest(int guestId, Tunnel tunnel, String reason) {
@@ -101,7 +118,8 @@ public final class GuestTunnelRouter implements RoomBroker.DirectTunnelDirectory
         switch (message) {
             case ControlMessage.RelayGuestText text -> {
                 Tunnel tunnel = tunnels.get(text.guestId());
-                if (ownedBy(tunnel, source)) {
+                if (ownedBy(tunnel, source)
+                        && canForwardTo(text.guestId(), tunnel, tunnel.guest())) {
                     tunnel.guest().sendText(text.text());
                 }
             }
@@ -125,7 +143,8 @@ public final class GuestTunnelRouter implements RoomBroker.DirectTunnelDirectory
             GhostPackets.RelayGuestBinary payload =
                     GhostPackets.decodeRelayGuestBinary(wrapped);
             Tunnel tunnel = tunnels.get(payload.guestId());
-            if (ownedBy(tunnel, source)) {
+            if (ownedBy(tunnel, source)
+                    && canForwardTo(payload.guestId(), tunnel, tunnel.guest())) {
                 tunnel.guest().sendBinary(payload.payload());
             }
         } catch (ProtocolViolationException ignored) {
