@@ -23328,3 +23328,68 @@ structural adoption; no compiled classes were manually deleted or logs archived.
 The actual bf launch-environment category preflight passed Java25, Lua5.4 and
 PowerShell prerequisites without executing engine tests. SSZ route failures,
 SOZ Knuckles completion and combined affected verification remain unresolved.
+
+### Root affected validation after structural adoption (2026-10-21)
+
+At source-stable `7bfb7e8eb316` (bf2 production/tests plus documentation),
+the final change-based dry run against c13 selected3,587 smoke candidates and
+guards. Root used an explicit affected-regression plan rather than editing that
+category selection: the original cf3 broad run had already completed, while the
+subsequent changes were reviewed fixture corrections and bounded structural
+extractions. The coverage inventory contains66 ordinary classes:24 retain the
+worker's separately attributed260-test result;42 were executed fresh here.
+Source, resources, configuration, ROM identity and environment dependencies were
+checked before that reuse. This is not a fresh3,587-class or full-suite pass.
+
+The fresh42 whole classes passed **1,653 tests, zero failures, errors or skips**.
+All19 exact original selected fixture/inventory negative identities are now
+passing. The original SSZ/SOZ route failures are outside this selection and
+remain delivery blockers. Mandatory four S3K controls belong to the qualified
+worker selection; they were not repeated as an unchanged merge ceremony.
+
+The fresh guard request ran nine whole classes: **235 tests, two inherited
+HubMusic failures, zero errors or skips**. All31 declared ArchUnit fields/methods
+executed, including five methods not established by the worker's26-execution
+field-selector result. The only current failures are
+`shared_code_does_not_construct_concrete_sonic_provider_classes` (three
+HubMusicController:118 constructors) and
+`shared_layers_do_not_depend_on_game_specific_packages` (the same constructors
+plus six TITLE/id accesses at120). Their exact identities and complete3/9
+signatures match the qualified c13/b4f baseline; HubMusicController and the
+whole ArchUnit witness are byte-identical to c13. No guard, frozen store,
+authentication or source-size budget changed. The sole-method Coverage guard
+retains its qualified worker result. The two inherited MenuAudio singleton
+failures were not selected again and receive no changed status from this run.
+
+Both requests used the previously recorded Java25/surfaceless/null-audio
+environment and verified absolute S1/S2/S3K ROM properties. Actual tool preflight
+passed. Guards compiled4,168 main and4,252 test sources inside their lifecycle;
+ordinary main compilation was up to date and its lifecycle compiled4,252 tests.
+This is an existing target epoch, not a clean-build claim. Maven reported5:51
+for guards and49.054s for ordinary. The last ordinary queue message reported452s
+waiting; final admission time was not retained, so execution and waiting are
+not added into a delivery-time claim. All18 guard and84 ordinary XML/TXT
+originals were inspected, including failures, all identities and skips, then
+their exact owned report/tmp roots were removed without class deletion or
+archives. Main develop is still unmodified; no integration push is qualified.
+
+The exact focused selectors below use the existing Main queue wrapper and
+three absolute ROM properties recorded above, with unique per-request report
+and temporary paths. Other profile/heap/graphics settings were unchanged.
+
+```bash
+# 42 ordinary classes, source7bfb7e8eb316;1653T/0F/0E/0S.
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal -Dmse=off -Psmoke \
+  '-Dtest=com.openggf.TestEggmansSkyStartupAudio,com.openggf.game.sonic3k.events.TestSonic3kHCZEvents,com.openggf.level.TestInitialProcessSpritesArmingEpoch,com.openggf.game.sonic3k.timing.TestS3kVIntDmaLedgerProduction,com.openggf.mods.TestStockArtOverrideCatalog,com.openggf.mods.TestModCatalogValidator,com.openggf.mods.TestEffectiveCatalogBuilder,com.openggf.game.rewind.TestEveryObjectRewindRoundTrip,com.openggf.game.rewind.TestRemainingRewindTailInventory,com.openggf.game.rewind.TestRewindHarnessCoverageRatchet,com.openggf.game.rewind.TestGraphCoveredIsolatedProbeClassification,com.openggf.game.rewind.TestRewindRoundTripHarnessCoverage,com.openggf.game.rewind.TestS3kHczEndBossGraphRewind,com.openggf.game.sonic3k.objects.bosses.TestHczEndBossRobotnikFlame,com.openggf.game.sonic3k.objects.bosses.TestHczEndBossShipExplosion,com.openggf.tests.TestS3kIczKnucklesArrival,com.openggf.mods.code.TestS3kNativeWorldCallbackDispatch,com.openggf.game.sonic3k.TestSonic3kLevelTitlePlcService,com.openggf.level.TestInitialProcessSpritesCoordinator,com.openggf.level.TestInitialProcessSpritesPartialRewind,com.openggf.tests.TestS3kInitialObjectSetupLifecycle,com.openggf.level.TestLevelManagerModPatternWindows,com.openggf.level.TestHudViewportWiring,com.openggf.configuration.TestConfigCatalog,com.openggf.configuration.TestSettingTiming,com.openggf.game.TestEngineSettingsScreen,com.openggf.game.TestMenuTextEditor,com.openggf.level.objects.TestHudRenderManagerWidescreen,com.openggf.mods.TestModApiReleasePolicy,com.openggf.mods.TestModApiPinPolicy,com.openggf.mods.TestModApiSignatureSurface,com.openggf.mods.TestModApiRuntimePolicy,com.openggf.tests.TestModApiHookPolicy,com.openggf.configuration.TestEngineSettingsDraft,com.openggf.configuration.TestConfigEnumValidation,com.openggf.configuration.TestConfigYamlWriter,com.openggf.configuration.TestConfigServiceYamlRoundTrip,com.openggf.tools.TestRecordingFrameDriverHardwareTiming,com.openggf.TestGameLoopFreshLevelHandoff,com.openggf.TestGameLoopZoneActHandoffS1,com.openggf.TestGameLoopZoneActHandoffS2,com.openggf.tools.TestGameplayCaptureFreshLoad' \
+  "-Dsonic1.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_MAIN}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dkis2.rom.path=${OPENGGF_MAIN}/kis2.gen" test -B
+# Nine whole guard classes;235T/2inheritedF/0E/0S.
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal -Dmse=off -Pguards \
+  '-Dtest=com.openggf.tests.TestBuildToolingGuard,com.openggf.level.objects.TestObjectUpdateClockTerminologyGuard,com.openggf.game.rewind.schema.TestRewindFieldDispositionGuard,com.openggf.game.rewind.coverage.TestHelperStateRewindCoverageGuard,com.openggf.game.rewind.TestRewindRecreateLinkToleranceGuard,com.openggf.game.rewind.TestParentDependentGraphCoverageGuard,com.openggf.game.rewind.TestRewindArchitectureGuard,com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.tests.TestArchUnitRules' \
+  "-Dsonic1.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_MAIN}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dkis2.rom.path=${OPENGGF_MAIN}/kis2.gen" test -B
+```
