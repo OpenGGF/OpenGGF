@@ -28992,3 +28992,31 @@ Owned raw logs/series/checkpoints/decisions/classes/tmp/extraction/palette-round
 Prior histories/refs/native actual322/index703/config and all maintained runtime/POM/tests/movies/oracles/windows remain unchanged; no seeds/restores/native/model/extra agent/push/integration occurred.
 This establishes only the retained ordinary climb-admission inlet. Fluid/reverse/mutation/receiver/invulnerability/native equivalence, climb completion/clearance/full-act/FBZ/history/rewind remain UNKNOWN; no physics omission follows.
 Root owns source/data review and any later workload. See the [R15 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-low-speed-jumpglide-ordinary-admission-r15--2026-10-21).
+
+
+## R16 rotating post and carrier retain positive-control support — 2026-10-21
+
+Base `d05b43df9c92dbd3d012a060a90ab9be7aba45bc`; branch `feature/ai-ssz-rotating-controlled-solids-20261021`.
+Both ID76 owners now opt into existing `allowsObjectControlledSolidContacts`, with no new state/API or generic manager change.
+Pinned disassembly `044fa467`/FixBugs0: `loc_45E90` and `loc_45FE4` write positive `object_control=3`;
+`SolidObjectTop_1P` → `MvSonicOnPtfm`/`loc_1E1CA` permits that control. Signed bit7/new-contact rejection remains inherited.
+`TestSszRotatingPlatformSolidContacts` uses the real ObjectManager/DefaultSolidExecutionRegistry and the post's actual spawned child.
+Public component positioning produces fresh solid landings; owners arm/acquire control themselves, without forced rides, private held-state seeds or mocked checkpoints.
+Post/child × P1/native-query CPU P2 cover eight further held checkpoints, actual rider/OnObject/ground/control, held A versus fresh logical edge, release velocity and upward non-reacquisition.
+All four signed-bit7 new-contact cases remain rejected. These are semantic component fixtures, not ordinary cold/native800 qualification.
+
+| Request / app fingerprint SHA256 | Actual result | Queue / Maven / launcher seconds |
+| --- | --- | --- |
+| Unchanged owners + new test / `d3970fa8d0a3dd554fd6f215041af878af04f3b61f9ca703f0a93d2a9211fdda` | 12T/8F/0E/0S: both owners lose actual rider on first already-controlled checkpoint; acquisition passes. | 58 / 27.357 / 85.698 |
+| Two opt-ins / `eebe1c78d3e916ba7c3e9e26467fc0c9dd49dab7ae8aa22ced05852ea54159b2` | 197T/4F/0E/0S: held support passes; new release test incorrectly expected immediate OnObject=false at line88. | 145 / reported01:28min / 233.997 |
+| Same production, corrected source-backed assertion / `8e8ccc9304a9acd7c3738d23c538d3278d92ac5683c6dd44f0eae7cbc01ae756` | **197T/0F/0E/0S**, all11 actual classes; new regression12 passes. | 157 / 33.768 / 191.746 |
+
+The original jump branches set InAir/Roll/Jumping and clear control without clearing player Status_OnObj; the corrected assertion retains that bit, while requiring actual rider removal and no next-step reacquisition.
+All three requests use current Main's absolute queue wrapper, `--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dtest=<selection> test -B`, unique owned report/tmp namespaces and unchanged R15 Java25/EGL/nullAL/Lua/original verified absolute ROM setup; ambient overrides unset.
+Red selection is `TestSszRotatingPlatformSolidContacts`. Both combined selections are exactly:
+`TestSszRotatingPlatformSolidContacts,TestSszRotatingPlatformPresentation,TestSolidRoutineProfiles,TestObjectSolidContactController,TestSolidObjectManager,TestSolidExecutionRegistry,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+The simple loading selector actually runs both packages (36+7 cases); actual XML identities/properties/assertions/skips and original streams were inspected. Expected hostile-provider logs, deliberate bounds warning, FAST/NONE and missing-WAV shadow warnings are not JUnit errors.
+Fingerprints hash sorted src/main/src/test/POM/.mvn path-NUL-bytes-NUL, including the new test. Exact argv/environment/native/config/ROM pins and returned IDs are in the existing own R16 registry checkpoint; no saved log/receipt cache.
+Only3 of4 authorized focused requests used; no compile/fixture error, ordinary R15 replay, broad/native/model/capture workload or data/oracle edit. Consumed owned raw diagnostics; normal compiled maintained source remains accounted.
+Original input14944 writer/contact/lifetime operands remain UNKNOWN: this independent owner omission/component fix does not retroactively establish its cause or certify future route support.
+Expected46, all movies/windows/counts, negative held-state/lifetime/manual-checkpoint order, supplied refs, actual native322/index703 and config remain unchanged. Root owns fresh composed route-consumer review/qualification; no push/integration here.

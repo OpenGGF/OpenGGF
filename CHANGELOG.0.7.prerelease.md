@@ -347,6 +347,9 @@ Unreleased. The earlier development themes remain in
   Sanctuary), Tails' body again covers his tails as in the native sprite table.
   Its clouds and collapsing columns retain native foreground priority, and
   the HUD RINGS label uses its dedicated ROM R glyph.
+  Rotating SSZ posts and their carriers retain solid support while holding
+  players under positive object control, with fresh-jump release and signed
+  bit-7 contact rejection preserved.
   Title retirement and departing EggRobo fly-bys submit the native enemy-art
   restoration requests, with physical publication and rewind ownership retained
   after the producer disappears. Incidental art producers preserve blocked

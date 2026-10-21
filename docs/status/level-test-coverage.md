@@ -1,5 +1,10 @@
 # Level test coverage backlog
 
+SSZ rotating post/carrier support (2026-10-21): the [ID76 component increment](../architecture/validation/levels/s3k-ssz-act1.md#r16-positive-control-rotating-solid-component-contract--2026-10-21)
+adds real-manager/manual-checkpoint P1 and CPU P2 held-control, fresh-jump release
+and signed-bit7 contact coverage for both owners. Final focused197 checks pass;
+original R15 unseat cause, cold/native800/rewind/route breadth and expected46 remain open.
+
 Knuckles DEZ2 direct cold corridor (2026-10-21): the
 [existing act-2 matrix](../architecture/validation/levels/s3k-dez-act2.md#knuckles-cold-first-gravity-corridor--2026-10-21)
 now binds an ordinary native320 title-enabled solo route to the actual first two
