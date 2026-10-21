@@ -18,7 +18,7 @@ Unreleased. The earlier development themes remain in
   bounds rejection writes before HTTP aggregation, discards further input during
   terminal rejection writes, and releases queued work
   on disconnect or timeout even during executor shutdown. Netty and Jackson use their
-  patched 4.1.139.Final and 2.22.3 releases.
+  patched 4.1.139.Final and 2.22.4 releases.
 
 - **Putt Putt Paradise multiplayer:** Scene admission bounds aggregate clipped
   raster work, lines clip before traversal, and unchanged presentations reuse
