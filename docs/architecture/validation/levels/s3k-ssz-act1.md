@@ -4534,3 +4534,12 @@ ONE freshRight+A15129 publishes air+jumping/free/riderNULL at(4765,1585),VX864/V
 57 new/15186 total, exactlyONE Aedge; no admitted post-nominal-spike free-ground inlet, second jump, release/repress, settle or onward. Terminal raw rider is managed/live with original public spawn layout146/id8/sub0,(4800,1588); this does not bind the damage callback/receiver/native address.
 P2ground/free/NORMAL/manual/flag0fuel0/contextNONE and bound world/pair/focus/managers/LEVEL remain intact; P2 also reports0rings. Same-JVM finite-pad/all-row and independent complete script/ZIP/TWELVE-original-file proofs agree; **0 JUnit/skips N/A**, failed gameplay question rather than passing route coverage.
 Expected46/runtime/POM/maintained data unchanged; private/contact/terrain-freshness/physics/native causes UNKNOWN, no runtime omission established. [Facts, full limits, hashes, command and timing](../../plans/2026-10-13-s3k-playable-completion.md#r22-moving-lower-ground-jump-stops-on-hurt--2026-10-21).
+
+
+## R23 earlier ramp brake first-ground inlet — 2026-10-21
+
+At exact `df2b045d8`, ONE cold ordinary CLI preserves all15024 original R18 pads/held-parent inlet and matches52 unique available R checkpoints plus retained Support/Family/local raw bindings. R19–R22 failed tails/results unchanged; no missing historical-state reconstruction.
+ONE freshRight+A15024 releases the parent, then FIRST cachedXgate15096(4611,1186) selects NEXT Left15097. X4608 is an existing ramp layout-cell transition86→87, NOT the floor start; no fitted frame/overshoot/contact cause.
+73Right+A then32Left/P2Up reach FIRST public free-ground15128: P1(4749,1580),VX733/VY0/G733,airfalse/jumpfalse/riderNULL/unhurt/live; both62rings/3lives. P2ground/free/NORMAL/manual/flag0fuel0/contextNONE and bound world/pair/focus/managers/LEVEL intact.
+105 new/15129 total, ONE Aedge, zero new map queries/neutralsettle/extra groundbrake/groundjump/onward; STOP immediately with actual momentum. Same-JVM finite-pad/all-row and independent full script/ZIP/NINE-original-file proofs agree; **0 JUnit/skips N/A**.
+Moving public inlet only; actual terrain receiver/stored-sensor freshness, stable support, future jump/hazard clearance/physics/native/whole-route correctness UNKNOWN. Expected46/runtime/POM/maintained data unchanged. [Facts, hashes, command, timing and limits](../../plans/2026-10-13-s3k-playable-completion.md#r23-earlier-ramp-braking-reaches-first-moving-ground--2026-10-21).
