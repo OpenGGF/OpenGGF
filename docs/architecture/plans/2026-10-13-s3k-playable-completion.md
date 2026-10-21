@@ -25194,3 +25194,151 @@ does not close VDP/FIFO/open-bus/IRQ, production reset/Title continuity, movie
 row0 or11 actual hardware-job identities. Gameplay climb implementation and
 the retained CNZ grab continuation remain independent. Main delivery and
 owned-worktree cleanup remain pending; the overall goal stays active.
+
+### Cold-entry first VDP status semantic diagnostic (R3) — 2026-10-21
+
+This new opt-in increment starts at frozen Root
+`876037b4c685169f71c69be783b3a85ad9d45912` (tree
+`c34834e51c43f39518d0fd3fc02b40cbc82cce61`) in the same owned checkout
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-861a544b/.worktrees/cold-entry-semantic-control`,
+on new local branch `feature/ai-cold-entry-first-vdp-read-20261021`. The prior
+`feature/ai-cold-entry-semantic-control-20261021` branch retains
+`b9355a1cf80be7f3a3dc240bf66496f98cdbc129`. App outer binding remains the supplied
+efd605142 checkout. Root/Main and the native703 checkout are read-only references;
+Root's subsequent Java climb change and combined smoke are not inputs to this work.
+
+Before edits, the complete28-pin
+`agents.composition_integration_delta_audit.first_vdp_status_next_semantic_source_audit`
+was read, the owning source paths independently inspected, and the bounded design,
+file ownership and exact returned task/run association saved under
+`agents.native_cold_entry_semantic_control.first_vdp_r3`. Registry updates use only
+that new continuation, a fresh strict whole read inside the common `state.json.lock`
+EX lock, and validated0600 same-directory atomic replacement. Expiry remains
+2026-10-21T13:04:49.177308Z. Historical original/R2 results remain unchanged.
+
+**Implementation and source proof.** Only the existing `cold_entry.py`, its focused
+tests, timing README, workflow tool catalogue/hazard and this Plan change. The
+existing interpreter, routine-cost models, `Sources`/`generate`/`compare` defaults,
+trace/native schemas, native sources and Engine have no semantic changes.
+`FirstVDPSources` and `FirstVDPCPU` are separate diagnostic adapters, selected by
+`--first-vdp-status --bizhawk-git <427 object store>`. Default CLI output remains
+38 claimed records, with the three device suffix records checked only for their
+boundary/order; opt-in compares every word of all41 records after execution.
+
+Additional authenticated inputs are GPGX051 `vdp_render.c`, `input_hw/input.c`,
+`loadrom.c` and `macros.h`, and BizHawk427 `GPGX.cs`, `GPGX.IEmulator.cs`,
+`GPGX.ISettable.cs`, `GPGX.IDebuggable.cs`, `GPGXControlConverter.cs`, native
+`cinterface.c` and Makefile. These supplement the original15-file manifest;
+the CLI prints all26 SHA-256 entries. Its sorted-JSON manifest fingerprint is
+`d626e66ded0987483fecb66471dd9d896235284288a7705af6bb6c7f1cc98a91`.
+The exact upstream commits/trees remain GPGX
+`051d430d3d1b54625f9900c8f152d7f232e06daf` /
+`1bb96ca74d660d383e70d9cd56b88906a0773519`, BizHawk
+`427556b5ef3ac437eba754d90c5e7e9096c9a8df` /
+`7281227ed2f3b89c0962b2792b28539e35361c6b`, TraceChaser
+`703bd92d32634ce5ebac60625b48c60ef5500427` /
+`eb61ea653b70b9cab90786014f7deaeb9c2abd6a`. No mutable source working copy is used.
+
+The fixed profile adds Overscan.All=3, managed render=false, native skip=0,
+no memory callbacks, and source-derived PAD3B at device0/4 with unsigned
+NO_DEVICE=FF at all six other slots. Base MD80/USA80/NTSC262/BIOS-off, normal
+three-button controls, neutral input and fresh SRAM/no user save remain exact.
+`vdp_reset` explicitly clears registers/state and then sets reg10=FF; source H32
+geometry is256×192, viewport14/24, VINT770, HBlank[280,860). The adapter follows
+`system_reset` and the first `system_frame_gen(0)` scheduling: FIFO reset, blanking
+flags, no initial VINT, line-end `m68k_run` early returns while raw>=target,
+overscan HC reload/blank clear, then active-line HC updates. This derives first
+CPU admission at VCounter159, line start229×3420 and HC5F; none is imported from
+the report or assigned as a fitted initial value. The unchanged reset formula's
+159 term is the owning `gen_reset` geometry term, not this scheduler's input.
+Display-disabled MD rendering still executes blank/remap without sprite/status
+effects. PAD3B/NO_DEVICE refresh is inert; Z80 remains held reset, with no IRQ.
+Later scheduler handoff or unsupported device/profile/source fails closed.
+
+At actual opcode3014, the inherited fetch/refresh phases run first. Actual
+`mini68k.CPU.step` executes MOVE.W. `vdp_68k_ctrl_r` samples a local
+`raw + current opcode base*7`; raw CPU time remains uncharged at the logical read.
+DMA completion precedes the returned status snapshot; pending=0 and collision/
+overflow clears precede observation. FIFO/display/VINT/HBlank predicates derive
+the low status bits. The open-bus upper bits use the original ROM word at advanced
+PC023A maskedFC00, equivalent to the pinned LSB_FIRST byteswap/direct-word mapping;
+using IR, old PC or a prefetched latch instead was rejected by explicit controls.
+Only after observation does the actual MOVE update D0/CCR. The inherited adapter
+charges base once and emits retirement, then marks the first status instruction
+retired and refuses further execution before fetching MOVEQ at023A.
+
+The normal source-derived boundary raw785694 samples785750, at line-relative2570,
+outside HBlank; VCounter159 differs from height192. Empty FIFO contributes200 and
+disabled display08, with no DMA/VINT/HBlank contribution. ROM word7000 at advanced
+PC contributes7000, yielding7208. These numbers are derived outputs and assertions,
+never initialization seeds. Retirement PC023A/IR3014/D0low7208/SR2700 is compared
+alongside every other claimed word. Three snapshots,12 retirements,14 logical reads
+and41 records are checked only after the actual semantic stop, never a fitted
+count/time/observed-row stopping rule; instruction counts confer no hardware-job identity.
+
+**Qualification.** The initial opt-in test failed because the new independent
+generator was absent, then passed with all41×40 words equal. An affected17-case
+run passed on its recorded intermediate source. Final exact executable sources:
+`cold_entry.py` SHA-256
+`5029e09da47cc2824d51b5b7e8e976437af79e7a1f03f1f32c86158e91d8299f`
+(42,205 bytes); `test_cold_entry.py` SHA-256
+`a82012f854170f50486ab00a3c7894b5492ebe83a8d0581bf50a6d3964b79b42`
+(43,626 bytes). Final focused discovery: **64T/0F/0E/0S**, reported1.105s,
+comprising the original46 controls plus18 new controls. Actual test identities,
+failures/errors/skips and both CLI outputs were inspected in memory.
+
+New controls cover all120 new suffix-word mutations, missing/duplicate/reordered
+records, first-frame admission at equal deadlines, reset/source/profile/ROM/device
+refusals, actual shared MOVE execution, local sample versus raw read/retirement
+clocks, base once, advanced-PC open bus versus IR/prefetch, FIFO empty/full/partial,
+HBlank endpoints, VINT height/threshold/Z80 gating, DMA completion, status/pending
+side-effect order, high D0/X preservation and complete pure continuation replay at
+every exposed phase before/after the read. The opt-in CLI also atomically replaces
+an owned expected pathname with65,537 bytes after its bounded read and still reports
+the original compared buffer's digest; expected data is opened only after the
+semantic stop. Original46 controls, default device-unclaimed behavior and the
+same bounded-buffer/digest handoff remain intact.
+
+Exact commands, run from the owned checkout:
+
+```bash
+export S3K_ROM='<existing original locked-on ROM; absolute path>'
+export GPGX_GIT='<GPGX object store containing exact051; absolute path>'
+export COLD_ENTRY_TRACECHASER='<unchanged native-prefix703 source repository; absolute path>'
+export COLD_ENTRY_EXPECTED='<retained capture-r2-on/reset-prefix.json; absolute path>'
+export BIZHAWK_GIT='<BizHawk object store containing exact427; absolute path>'
+python3 -B -m unittest discover -s tools/timing/s3k-instruction-ledgers/mini68k -p 'test_*.py' -v
+python3 -B tools/timing/s3k-instruction-ledgers/mini68k/cold_entry.py \
+  --rom "$S3K_ROM" --gpgx-git "$GPGX_GIT" --tracechaser "$COLD_ENTRY_TRACECHASER" \
+  --expected "$COLD_ENTRY_EXPECTED" --profile gpgx703-md-usa-ntsc-cold
+python3 -B tools/timing/s3k-instruction-ledgers/mini68k/cold_entry.py \
+  --rom "$S3K_ROM" --gpgx-git "$GPGX_GIT" --tracechaser "$COLD_ENTRY_TRACECHASER" \
+  --expected "$COLD_ENTRY_EXPECTED" --profile gpgx703-md-usa-ntsc-cold \
+  --first-vdp-status --bizhawk-git "$BIZHAWK_GIT"
+```
+
+Both CLI processes exited0 with empty stderr, statusPASS, comparison_only=true
+and production_readiness=false: default38/11/13, opt-in41/12/14. Both identify
+the SAME23,773-byte qualified703 expected buffer SHA-256
+`cc5067948cd9c6c05a0f09899e6827f3203dcd53c6cafda7a862958b1c5f7860`.
+ROM4MiB SHA-1 remainsCFBF98C36C776677290A872547AC47C53D2761D6, SHA-256
+`fba0677fde9f76df93f3e98d6310d8af68b9847bde16e253d73cd4dd8134ed23`.
+SHA/bytes/mode/mtime_ns for both tested Python files, ROM and expected bytes were
+identical before/after final discovery and both CLIs. Existing native source-lock
+`348ffd29471bcd9a0f452b6112a7bed941f0dd43f364a315c5cbd68f918205f9`,
+managed pin0144e6e2…, harnessdad8d30f…, build identityba477ca4… and compressed
+coreb665a2dd… remain the qualified703 identities enforced by the comparator;
+their full hashes and original native qualification remain in the preceding
+historical section. No native capture/build, Java, queue or broad smoke ran.
+
+**Limits and handoff.** VDP/scheduler internals absent from the native record have
+source-unit controls, not new native observations. Complete pure-model snapshots
+cover exposed phase boundaries, not suspension inside CPU.step or native re-arm
+after a load. VRAM/pixels, the next opcode and later device/IRQ/input work, full CPU,
+production boot/Title continuity, movie row0/lag/controller association and all11
+actual hardware-job identities remain open. This is source-qualified diagnostic
+evidence only. Temporary expected copies were consumed/deleted; outputs remained
+in memory, with no raw log archive or pass receipt. Useful existing outside-checkout
+native captures remain unchanged. One owner per job; no live job remains. Root
+reviews this local commit before any composed qualification or integration. No
+push, Root/Main/native edit, new child or worktree cleanup is part of this slice.
