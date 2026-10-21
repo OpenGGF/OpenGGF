@@ -196,7 +196,8 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     /** Draws the multiplayer HUD (countdown, window, standings, votes, minimap) over the run. */
     @Override
     public void drawOverlay(LevelOverlayCanvas canvas, int levelWidth, int localCentreX) {
-        MultiplayerHudRenderer.render(canvas, hudState(), levelWidth, localCentreX, showMinimap);
+        MultiplayerHudRenderer.render(canvas, hudState(), levelWidth, localCentreX, showMinimap,
+                runtime != null && runtime.isAttemptFinished());
     }
 
     /** Called on the engine thread when an attached run's level is ready (launch and retry). */

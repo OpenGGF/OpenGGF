@@ -227,3 +227,124 @@ The recording and selected stills live outside the repository under
 `$CAPTURE_ROOT/timeattack-capacity-video-20261021/`.
 This follow-up leaves its branch local for integration; it does not mutate or
 push the main checkout.
+
+## Mid-pack recording and component analysis follow-up
+
+The first recording at `731307ac4` put the live player ahead of every delayed
+copy. The follow-up records a fresh independent ROM-backed controller playback
+before network setup, then pairs faster/slower cosmetic timelines around the live
+player. Smooth periodic surges exercise production near/far selection and actual
+viewport departures/returns without reversing or jumping the recorded route.
+Ahead poses cannot be derived from the live player's not-yet-observed future;
+this separate playback avoids injecting trace state or moving the live player.
+Bot claims remain synthetic and unverified.
+
+The capture now requires a middle accepted rank and counts rendered-ghost and
+viewport-eligible transitions only during stepped gameplay, including the natural
+completion presentation. An initial counter implementation continued through the
+results tail; read-only review rejected that as evidence of gameplay visibility
+churn, and the counters were restricted before recording. Viewport eligibility
+uses the native camera rectangle with sprite margins; it is not pixel occlusion
+proof. The runtime's actual eight-ghost list supplies the observed identities.
+
+The HUD now reserves the stock upper-left and lives areas, uses a compact right
+column with at most three nearby rows, marks coarse progress as an estimate, and
+moves finished-run panels clear of the stock act card. Pure layout tests check
+containment and phase-specific separation across supported viewport widths.
+
+Component measurements use prebuilt executables under one exclusive test/build
+activity lease. The [component audit](../audits/performance/2026-10-21-multiplayer-component-performance.md)
+records exact workload boundaries, sampling limits, scaling and unmeasured paths.
+In particular, colocated socket/video process CPU cannot establish dedicated
+server or pure-client capacity, and cosmetic accepted finishes do not exercise the
+ROM replay verifier. Raw diagnostic recordings are consumed after interpretation.
+
+Focused verification for this follow-up passed 63 tests, with no failures, errors
+or skips, using Java 25 and the exact selector below:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestGhostPackSchedule,TestMultiplayerHudLayout,TestHudTextLayout,TestMinimapLayout,TestMultiplayerRaceCoordinator,TestRemoteGhostPresentation,TestTimeAttackRuntime,TestTimeAttackRuntimeMultiplayerSeams,TestRacingSocketStress,TestHostRoundEngine' test
+```
+
+Change-based inspection against `731307ac4` selected all 3,525 smoke classes and
+guards because the racing subtree and standalone profiling helper have no narrower
+selection rule. Focused tests and the actual rendered route replace that broad
+selection for this bounded follow-up: no shared gameplay, physics, protocol,
+parser, transport or build contract changes; production behavior changes are HUD
+layout and its existing finished-state argument. The other executable changes are
+capture/scheduling tools and optional diagnostic events.
+
+The first mid-pack capture exposed a scheduler error: a two-pose skip during fast
+vertical movement produced `delta 10,34 exceeds 32`, after which production stream
+contiguity correctly rejected later batches and disconnected the offenders. That
+failed capture is discarded. The scheduler now retains original intermediate
+poses when necessary, using the unchanged global speed ceiling; it never edits
+recorded coordinates or relaxes server admission. A steep-route regression sends
+the resulting frames through `GhostStreamValidator`. A bounded analysis of the
+actual 3,230-pose export found a maximum original one-frame delta of 30, required
+59 intermediate-pose decisions across 255 schedules, and predicted a live finish
+near rank 129 (ties remain production-ordered).
+
+The follow-up regression command passed all three scheduler tests without
+failures, errors or skips:
+
+```sh
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestGhostPackSchedule' test
+```
+
+Read-only review also identified that WebSocket `FrameAssembler` had initially
+been grouped with ghost presentation in the JFR analyzer. The classifier was
+corrected and all five existing recordings were reprocessed. Whole-recording and
+marked-window event counts, Java/native/allocation sample counts and total
+allocation weights were identical before and after; only attribution labels
+changed. No unchanged socket workload was rerun to repair its offline summary.
+
+The corrected recording completed with the live player ranked 130/256, all 256
+accepted unverified finishes, 181 distinct rendered ghost identities, 771 entries
+and 763 exits from the actual runtime ghost list, and 518 viewport entries / 516
+exits / 390 returns during stepped gameplay. Peak rendered remote ghosts stayed
+at eight. It retained 256 connections for 4,935 presentations, completed the live
+route naturally after 3,230 controller inputs, and closed owned resources cleanly.
+The 5,770-presentation video is 96.167 seconds, 1280x720 at 30 fps with synchronized
+48 kHz stereo AAC and chapter markers. Gameplay, stock act-clear card and final
+panels were visually inspected; the latter leave the act card and lives clear.
+Audio initialization was Null then Headless SMPS with exact-owner checks around
+every frame; the offline track is non-silent and peaks at -8.8 dBFS. No desktop
+playback was used for inspection.
+
+The revised video, selected stills, state/chapter CSVs and standalone interpreted
+performance report are under `$CAPTURE_ROOT/timeattack-midpack-20261021/`. The
+[component audit](../audits/performance/2026-10-21-multiplayer-component-performance.md)
+contains the five socket profiles and successful rendered route's bounded JFR
+observations. Raw recordings, expanded diagnostic summaries, temporary scripts,
+PCM, local identities and server data are consumed rather than archived.
+
+Final pixel inspection caught unsupported `#` glyphs in the new compact rank
+labels. The renderer now uses plain local-rank digits and periods in standings
+rows; the existing legacy text-composition API is unchanged. The final focused
+check passed all eight tests without failures, errors or skips:
+
+```sh
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestMultiplayerHudLayout,TestHudTextLayout' test
+```
+
+The demonstration is regenerated after this label-only correction without JFR.
+The performance audit retains the earlier isolated build's exact fingerprint and
+observations; no result is reassigned to the revised wording. Profiled state and
+chapter CSVs remain distinguishable from the final demonstration's metadata.
+
+The final wording capture also completed at rank 130/256 with all 256 finishes
+accepted and clean shutdown. It observed 181 ghost identities, 763 runtime entries
+/ 755 exits and 510 viewport entries / 508 exits / 383 returns, with an eight-ghost
+peak. It contains 5,768 presentations (96.133 seconds); the muxed H.264/AAC streams
+have matching duration, 1280x720/30 fps video and stereo 48 kHz audio. Final rank
+text and stock act-clear separation were inspected in the actual final MP4; the
+audio is non-silent with -9.0 dBFS peak. This is the delivered video. The preceding
+390-return metrics belong specifically to the isolated profiled recording.

@@ -14,6 +14,7 @@ import com.openggf.tools.TimeAttackVideoCaptureTool;
 import java.io.*;
 import java.lang.reflect.Field;
 import java.nio.file.*;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 
@@ -47,8 +48,17 @@ public final class TimeAttackCapacityVideoTool {
     private boolean naturalFinish;
     private Object session;
     private int finishFrame = -1;
+    private Set<String> previousGhosts = Set.of(), previousVisible = Set.of();
+    private final Set<String> seenGhosts = new HashSet<>(), seenVisible = new HashSet<>();
+    private int ghostEntries, ghostExits, ghostReturns, visibleEntries, visibleExits, visibleReturns, peakGhosts;
 
-    private TimeAttackCapacityVideoTool(Path out, Path root, int count) throws Exception {
+    @jdk.jfr.Name("openggf.MultiplayerCaptureWindow")
+    @jdk.jfr.Label("Multiplayer rendered route")
+    @jdk.jfr.StackTrace(false)
+    static final class CaptureWindow extends jdk.jfr.Event { public int players; }
+    private final CaptureWindow captureWindow = new CaptureWindow();
+
+    private TimeAttackCapacityVideoTool(Path out, Path root, int count, Path routeFile) throws Exception {
         this.out = out.toAbsolutePath();
         Files.createDirectories(this.out);
         try {
@@ -58,7 +68,23 @@ public final class TimeAttackCapacityVideoTool {
                 throw new IOException("Sonic 1 REV01 ROM not available");
             fp = new DeterminismFingerprint(AppVersion.get(), rom.calculateChecksum()).asString();
         }
-        peers = new TimeAttackVideoPeers(this.out.resolve("server"), Path.of("identity"), fp, count);
+        if (routeFile == null) {
+            routeFile = this.out.resolve("route.ghost");
+            Process routeProcess = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", "java").toString(),
+                    "--enable-native-access=ALL-UNNAMED", "-Xmx1g", "-Dopenggf.headless.gl=surfaceless-egl",
+                    "-cp", System.getProperty("java.class.path"), TimeAttackRouteTool.class.getName(),
+                    root.toString(), routeFile.toString()).redirectErrorStream(true)
+                    .redirectOutput(this.out.resolve("route-build.log").toFile()).start();
+            try {
+                if (!routeProcess.waitFor(120, TimeUnit.SECONDS)) {
+                    routeProcess.destroyForcibly(); routeProcess.waitFor(5, TimeUnit.SECONDS);
+                    throw new IOException("route preparation timeout");
+                }
+                if (routeProcess.exitValue() != 0) throw new IOException("route preparation failed");
+            } finally { if (routeProcess.isAlive()) { routeProcess.destroyForcibly(); routeProcess.waitFor(5, TimeUnit.SECONDS); } }
+        }
+        peers = new TimeAttackVideoPeers(this.out.resolve("server"), Path.of("identity"), fp, count,
+                TimeAttackRouteTool.read(routeFile));
         peers.fill();
         Path settings = this.out.resolve("profile/saves/mods/time-attack/settings.txt");
         Files.createDirectories(settings.getParent());
@@ -79,7 +105,7 @@ public final class TimeAttackCapacityVideoTool {
         events = Files.newBufferedWriter(this.out.resolve("chapters.csv"));
         states = Files.newBufferedWriter(this.out.resolve("state.csv"));
         events.write("frame,video_seconds,stage\n");
-        states.write("frame,movie_frame,mode,x,y,dead,natural_finish,connected,bot_finishes,received_ghost_entries\n");
+        states.write("frame,movie_frame,mode,x,y,dead,natural_finish,connected,bot_finishes,received_ghost_entries,active_ghosts,viewport_ghosts,ghost_entries,ghost_exits,viewport_entries,viewport_exits,viewport_returns\n");
         started = System.nanoTime();
         capture.beforeFrame(ignored -> before());
         capture.afterFrame(ignored -> after());
@@ -134,6 +160,32 @@ public final class TimeAttackCapacityVideoTool {
                     capture.png("07-level-complete.png");
                 }
             }
+            Set<String> active = new HashSet<>(), visible = new HashSet<>();
+            if (session != null && player != null) {
+                Object runtime = field(session, "runtime");
+                if (runtime != null) {
+                    @SuppressWarnings("unchecked")
+                    var ghosts = (java.util.List<com.openggf.mods.run.GhostPose>) call(runtime, "ghosts");
+                    for (var ghost : ghosts) {
+                        if (!ghost.slotId().startsWith("net:")) continue;
+                        active.add(ghost.slotId());
+                        int x = ghost.pose().centreX(), y = ghost.pose().centreY();
+                        if (x >= camera.getX() - 16 && x < camera.getX() + 336
+                                && y >= camera.getY() - 24 && y < camera.getY() + 248) visible.add(ghost.slotId());
+                    }
+                }
+            }
+            // Count only stepped gameplay presentations, including natural completion.
+            // Delayed bot/results-tail movement cannot satisfy the race visibility gate.
+            if (stepped) {
+                for (String id : active) if (!previousGhosts.contains(id)) { ghostEntries++; if (!seenGhosts.add(id)) ghostReturns++; }
+                for (String id : previousGhosts) if (!active.contains(id)) ghostExits++;
+                for (String id : visible) if (!previousVisible.contains(id)) { visibleEntries++; if (!seenVisible.add(id)) visibleReturns++; }
+                for (String id : previousVisible) if (!visible.contains(id)) visibleExits++;
+                previousGhosts = active; previousVisible = visible;
+                peakGhosts = Math.max(peakGhosts, active.size());
+            }
+            if (peakGhosts > 8) throw new IllegalStateException("renderer ghost cap exceeded");
             int count = audio.drainPresentationFrame(samples) * 2;
             for (int i = 0; i < count; i++) {
                 sampleBytes[2 * i] = (byte) samples[i];
@@ -146,7 +198,10 @@ public final class TimeAttackCapacityVideoTool {
                     + "," + (player == null ? -1 : player.getCentreY())
                     + "," + (player != null && player.getDead()) + "," + naturalFinish
                     + "," + peers.connectedCount() + "," + peers.sentFinishes()
-                    + "," + peers.receivedGhostEntries() + "\n");
+                    + "," + peers.receivedGhostEntries() + "," + active.size() + "," + visible.size()
+                    + "," + ghostEntries + "," + ghostExits + "," + visibleEntries + "," + visibleExits
+                    + "," + visibleReturns + "\n");
+            if (driving && movieFrame > 0 && frame % 600 == 0) capture.png("route-" + frame + ".png");
             // Pace the real server against real engine presentations. This is a
             // demonstration, with encoding/rendering cost, never a benchmark.
             long deadline = started + frame * 1_000_000_000L / 60;
@@ -200,12 +255,20 @@ public final class TimeAttackCapacityVideoTool {
         driving = true;
         await(() -> capture.engine().getCurrentGameMode() == GameMode.LEVEL, 1200, "ROM level");
         chapter("Green Hill Act 1");
+        captureWindow.players = peers.botCount() + 1;
+        captureWindow.begin();
         await(() -> naturalFinish, 6000, "natural level completion");
-        await(() -> peers.sentFinishes() == peers.botCount(), 300, "bot finishes");
+        captureWindow.end(); captureWindow.commit();
+        await(() -> peers.sentFinishes() == peers.botCount(), 1500, "bot finishes");
         capture.frames(60);
         peers.requestAllStandings();
         await(() -> peers.allStandingsReceived(), 1200, "all 256 accepted standings");
         if (!peers.livePlayerFinished()) throw new IllegalStateException("visible player's finish absent");
+        if (peers.botCount() >= 15 && (peers.liveRank() < (peers.botCount() + 1) * 3 / 8
+                || peers.liveRank() > (peers.botCount() + 1) * 5 / 8))
+            throw new IllegalStateException("visible player did not finish mid-pack: " + peers.liveRank());
+        if (peers.botCount() >= 15 && (ghostEntries < 20 || ghostExits < 20 || visibleReturns < 5))
+            throw new IllegalStateException("insufficient real visibility churn: " + ghostEntries + "/" + ghostExits + "/" + visibleReturns);
         chapter("All finishes accepted");
         capture.frames(300);
         capture.png("08-all-finished.png");
@@ -216,6 +279,10 @@ public final class TimeAttackCapacityVideoTool {
                 + "\ntcpUpstreamBytes=" + peers.tcpUpstreamBytes()
                 + "\ntcpDownstreamBytes=" + peers.tcpDownstreamBytes()
                 + "\nrenderedClients=1\nprotocolBots=" + peers.botCount()
+                + "\nliveRank=" + peers.liveRank() + "\nuniqueRenderedGhosts=" + seenGhosts.size()
+                + "\nghostEntries=" + ghostEntries + "\nghostExits=" + ghostExits + "\nghostReturns=" + ghostReturns
+                + "\nviewportEntries=" + visibleEntries + "\nviewportExits=" + visibleExits
+                + "\nviewportReturns=" + visibleReturns + "\npeakRenderedGhosts=" + peakGhosts
                 + "\naudioRate=" + audio.sampleRate() + "\nframes=" + capture.frameNumber() + "\n");
     }
 
@@ -271,11 +338,11 @@ public final class TimeAttackCapacityVideoTool {
     }
 
     public static void main(String[] args) throws Exception {
-        if (args.length < 3 || args.length > 4)
-            throw new IllegalArgumentException("OUTPUT_DIR REPOSITORY_ROOT PLAYERS [WINDOW_SECONDS=180]");
+        if (args.length < 3 || args.length > 5)
+            throw new IllegalArgumentException("OUTPUT_DIR REPOSITORY_ROOT PLAYERS [WINDOW_SECONDS=180] [RECORDED_ROUTE]");
         TimeAttackCapacityVideoTool tool = new TimeAttackCapacityVideoTool(Path.of(args[0]),
-                Path.of(args[1]).toAbsolutePath(), Integer.parseInt(args[2]));
-        try { tool.run(args.length == 4 ? Integer.parseInt(args[3]) : 180); }
+                Path.of(args[1]).toAbsolutePath(), Integer.parseInt(args[2]), args.length == 5 ? Path.of(args[4]) : null);
+        try { tool.run(args.length >= 4 ? Integer.parseInt(args[3]) : 180); }
         finally { tool.close(); }
         Files.writeString(tool.out.resolve("result.txt"), "cleanup=clean\n", StandardOpenOption.APPEND);
     }

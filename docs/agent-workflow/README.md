@@ -366,6 +366,7 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
 - `com.openggf.tools.RuntimeEngineVisualControl`: lossless production-presented framebuffer and PCM qualification with compiled controller plans; separate from runtime acceptance timing (2026-10-12 performance series).
 
 - `tools/performance/run_isolated.py`: OS-leased exclusion of linked-worktree builds/tests plus a bypass-process guard for prebuilt measurements; writes an isolation audit (2026-10-13 P5 timing correction). Exclusive test admission precedes a separate active-build lease; idle retained category worktrees do not block it (2026-10-16 queue liveness correction).
+- `tools/performance/MultiplayerJfrSummary.java`: streams real multiplayer JFR recordings into bounded component/thread attribution, with explicit traffic/capture windows, separate Java/native samples, estimated allocation weights and thresholded socket observations (2026-10-21 Time Attack capacity investigation). Compile before acquiring a measurement lease; run the prebuilt summary class with a bounded heap.
 
 - [Native published-video diagnostic port](../../tools/tracechaser/bizhawk-headless/README.md#diagnostic-rendered-frames): opt-in rendered GPGX frames with owned pixels/VDP domains and stale-generation guards; explicit ROM/movie/scene inputs, no canonical fixture publication (2026-10-14 S3K visual parity task).
 

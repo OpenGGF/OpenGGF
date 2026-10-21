@@ -18,8 +18,8 @@ import java.util.concurrent.*;
 /**
  * Owned loopback peers for the October 2026 full-capacity Time Attack video.
  * One real engine player joins through the ordinary browser. The remaining peers
- * are authenticated protocol clients, publishing delayed cosmetic copies of that
- * player's observed poses, not independent ROM simulations or verified results.
+ * are authenticated protocol clients, retiming a recorded engine route into a
+ * varied pack, not independent ROM simulations or verified results.
  */
 public final class TimeAttackVideoPeers implements AutoCloseable {
     private final MasterServer server;
@@ -29,12 +29,13 @@ public final class TimeAttackVideoPeers implements AutoCloseable {
     private final int players;
     private final List<Peer> peers = new ArrayList<>();
     private final List<MasterClient> masters = new ArrayList<>();
-    private final List<GhostFrame> poses = new ArrayList<>();
+    private final TimeAttackRouteTool.Route route;
     private final Map<Integer, ControlMessage.StandingsRow> standings = new HashMap<>();
     private String room;
     private long countdown;
     private long lastHeartbeat;
-    private boolean finished;
+    private boolean liveFinished;
+    private int elapsed = -1;
     private int peak;
     private int roundEnds;
     private int expectedPages;
@@ -46,23 +47,27 @@ public final class TimeAttackVideoPeers implements AutoCloseable {
     private static final class Peer {
         final RaceConnection connection;
         final GhostStreamPublisher publisher;
-        final int delay;
+        final int index;
         boolean started;
         boolean sentFinish;
         int generated;
+        int sourceFrame;
+        int firstInput = -1;
         int members;
         Peer(RaceConnection connection, int index) {
             this.connection = connection;
             publisher = new GhostStreamPublisher(connection::sendBinary);
-            delay = index % 61;
+            this.index = index;
         }
     }
 
-    public TimeAttackVideoPeers(Path root, Path liveIdentity, String fingerprint, int players) throws Exception {
+    public TimeAttackVideoPeers(Path root, Path liveIdentity, String fingerprint, int players,
+                               TimeAttackRouteTool.Route route) throws Exception {
         if (players < 2 || players > 256) throw new IllegalArgumentException("players 2..256");
         this.root = root;
         this.fingerprint = fingerprint;
         this.players = players;
+        this.route = Objects.requireNonNull(route);
         MasterConfig config = new MasterConfig(0, null, null, true, "identities.db", 0,
                 UUID.randomUUID().toString(), 48, 10, 14, 50, 8, 8, false,
                 2, 4, 30, 20, 30, 10000, 60);
@@ -127,7 +132,7 @@ public final class TimeAttackVideoPeers implements AutoCloseable {
     }
 
     public void onFrame(GhostFrame pose) throws Exception {
-        poses.add(pose);
+        elapsed++;
         publish();
         pump();
     }
@@ -141,18 +146,14 @@ public final class TimeAttackVideoPeers implements AutoCloseable {
                 peer.started = true;
             }
             if (peer.sentFinish) continue;
-            int due = finished ? poses.size() + peer.delay : poses.size();
-            // One source pose per engine frame; delay adds neutral held spawn
-            // frames and then follows the recorded route. No trace state is read.
-            if (peer.generated < due) {
-                int source = Math.clamp(peer.generated - peer.delay, 0, poses.size() - 1);
-                GhostFrame frame = poses.get(source);
-                peer.publisher.onFrame(frame);
-                peer.generated++;
-            }
-            if (finished && peer.generated >= due) {
+            int source = GhostPackSchedule.admittedSourceFrame(peer.index, elapsed, route.frames(), peer.sourceFrame);
+            peer.sourceFrame = source;
+            if (peer.firstInput < 0 && source >= route.firstInput()) peer.firstInput = peer.generated;
+            peer.publisher.onFrame(route.frames().get(source));
+            peer.generated++;
+            if (source == route.frames().size() - 1) {
                 peer.publisher.finishAttempt();
-                int first = Math.min(9, peer.generated - 1);
+                int first = peer.firstInput;
                 int finish = peer.generated - 1;
                 peer.connection.sendControl(new ControlMessage.AttemptFinish(1, finish - first,
                         first, finish, "ab".repeat(32),
@@ -162,11 +163,11 @@ public final class TimeAttackVideoPeers implements AutoCloseable {
         }
     }
 
-    public void finishBots() { finished = true; }
+    public void finishBots() { liveFinished = true; }
 
     /** Continue delayed tails, heartbeats and inbound processing during results. */
     public void tick() throws Exception {
-        if (finished && !poses.isEmpty()) publish();
+        if (liveFinished) { elapsed++; publish(); }
         pump();
     }
 
@@ -222,6 +223,8 @@ public final class TimeAttackVideoPeers implements AutoCloseable {
     public int finishedCount() { return standings.size(); }
     public int sentFinishes() { return (int) peers.stream().filter(peer -> peer.sentFinish).count(); }
     public boolean livePlayerFinished() { return standings.values().stream().anyMatch(row -> row.displayName().equals("Capture Player")); }
+    public int liveRank() { return standings.values().stream().filter(row -> row.displayName().equals("Capture Player"))
+            .mapToInt(ControlMessage.StandingsRow::rank).findFirst().orElse(0); }
     public int peakCount() { return peak; }
     public boolean allStandingsReceived() { return expectedPages > 0 && pages.size() == expectedPages && standings.size() == players; }
     public boolean roundEnded() { return roundEnds > 0; }

@@ -52,6 +52,14 @@ import java.util.function.BooleanSupplier;
  * Production clients, authentication, room actors and transports own all protocol behavior.
  */
 public final class RacingSocketStressTool {
+    /** Optional diagnostic boundary; disabled unless an external JFR recording enables it. */
+    @jdk.jfr.Name("openggf.RacingStressWindow")
+    @jdk.jfr.Label("Measured socket traffic through accepted finishes and standings")
+    @jdk.jfr.StackTrace(false)
+    public static final class TrafficWindow extends jdk.jfr.Event {
+        public String transport;
+        public int players;
+    }
     public enum Transport { RELAY, JDK, NETTY }
     public enum Mix { NORMAL, MIXED }
 
@@ -369,6 +377,10 @@ public final class RacingSocketStressTool {
                 peer.goalFrames = Math.max(30, config.durationSeconds() * (idle ? FPS / 2 : FPS));
             }
             Measurement measurement = new Measurement(proxy);
+            TrafficWindow recordingWindow = new TrafficWindow();
+            recordingWindow.transport = config.transport().name();
+            recordingWindow.players = config.players();
+            recordingWindow.begin();
             totals.measuring = true;
             try {
                 long deadline = started + duration + TimeUnit.SECONDS.toNanos(config.timeoutSeconds());
@@ -405,6 +417,8 @@ public final class RacingSocketStressTool {
             } finally {
                 totals.measuring = false;
                 measurement.finish(proxy, totals);
+                recordingWindow.end();
+                recordingWindow.commit();
             }
         }
 

@@ -34,7 +34,10 @@ Unreleased. The earlier development themes remain in
   expiry and cardinality bounds.
   Capacity reports count completed work and rejections separately from latency and
   colocated process costs. Valid attempts at the published countdown boundary are
-  admitted even when the scheduled host tick has not run yet.
+  admitted even when the scheduled host tick has not run yet. Multiplayer race
+  panels now preserve the stock HUD and act-completion card, with a compact
+  nearby-player list. The capacity recording places the live player mid-pack
+  and checks ghosts leaving and returning to its viewport.
 
 - **Putt Putt Paradise multiplayer:** Scene admission bounds aggregate clipped
   raster work, lines clip before traversal, and unchanged presentations reuse
