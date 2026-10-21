@@ -248,3 +248,47 @@ The original failures and diagnostic remain recorded in the dated
 adds only this partial native 320 solo Sonic/off interaction and same-world replay.
 Boss admission/combat/exit, full act, incoming ICZ1 history, roster/donor/viewport
 breadth and native timing/pixel conformance remain open.
+
+## Ordinary platform continuation capped before boss admission — R3/R4, 2026-10-21
+
+On `8dee30daf3ed58bd8eaf39c52de5c7c0f6bf7942`, eight R3 and four R4 unique
+finite input policies preserve every row and both pads of the qualified 2292-input
+crossing. The explicit title-enabled native 320 solo Sonic/off direct 5/1 inlet,
+null/false gameplay seeds and normal drawing remain unchanged. These are ordinary
+controller proposals, not an extension of the maintained route qualification.
+The exact policies, input/source hashes and original outcomes are in the dated
+[completion plan](../../plans/2026-10-13-s3k-playable-completion.md#icz2-platform-continuation-r3r4--capped-ordinary-frontier-2026-10-21).
+
+R3's best proposal dies after row 3368 at X12085. Its reached prefix 3265 ends after
+row 3264 at `11914,2737`, grounded, alive, unhurt, zero rings, velocity 1536/0,
+camera 11754/2626. R4 cold-replays that prefix and binds the actual selected
+riding/standing receiver to ROM placement 226, ID `$B0`, subtype 6, rawY 2774/current
+Y2776. A is released; the native `Sonic_Jump` press/headroom owner decides the
+fresh jump. `byte_89FB2` selects routine `$0E` for subtype 6; `loc_8A178/192` sinks
+the platform while stood on. No collision query is rerun to choose an input.
+
+R4's 12- and 30-input Right+A holds reach Special Stage mode at rows 3570/3569,
+respectively, without seeing the placed boss. The 12-input proposal has actual
+riding/standing contact with a path-follow platform at X12480 on rows 3363–3375;
+riding ends after 3376. Static ROM placement 245 is `$B0`/subtype 6 at 12480/2772, but that
+later receiver's placement lineage was not retained. Likewise, static giant-ring
+placement 256 at 12736/2888 is source support for the nearby entry branch, **not**
+a retained selected-ring receiver. The best movie proposes 5065 rows but executes
+only 3571; its remaining tail is unqualified. Both pads round-trip through the
+production compiler/writer/loader, with P2 neutral and both prior prefixes exact.
+
+Two author invocations each finish **1T/0F/1E/0S**: the world/mode guard
+refuses the next restore after Special Stage entry. Only the untried policies are
+then run from fresh cold prefixes; no restore crosses the boundary. The final
+single-policy harness passes 1T/0F/0E/0S, not a boss route. All four R4 policies
+are consumed, and no boss-admission qualifier is launched. The delayed two-Right
+policy does not prove a grounded fresh jump.
+
+The next source-supported question is a fresh ordinary jump while still riding
+the later sinking platform, before falling into the giant-ring corridor. A new
+checkpoint's actual ground/standing/press history, lineage and restorability
+must first be measured under new authority; no saved state or fitted frame is an
+inlet. No runtime omission or fix is proved. The maintained 2292 partial crossing
+stays qualified; boss/full-act, incoming history, broader products and native
+physical timing/pixels remain open. Useful external proposals, adapter sources
+and existing normal PNGs are named in the Plan; raw diagnostics are consumed.

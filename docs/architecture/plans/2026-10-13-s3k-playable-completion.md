@@ -26583,3 +26583,162 @@ The public115-field matched projection is now a recurring tool: flag the existin
 promotion obligation for an engine-facing `com.openggf.tools` tool and a one-line
 `docs/agent-workflow/README.md` entry in a separately scoped follow-up. Private
 source-specific carriers remain temporary; no generic observer framework is added.
+
+## ICZ2 platform continuation R3/R4 — capped ordinary frontier, 2026-10-21
+
+Root adopted the maintained partial crossing as `e7d2538e79551bd359fd9db55bec162e9995742e`
+in merge `8dee30daf3ed58bd8eaf39c52de5c7c0f6bf7942`. The same owned
+`.worktrees/object-vint-test-terminology` then starts
+`feature/ai-icz2-sonic-boss-admission-20261021` at that exact merge, preserving
+the e7, `2b30c5c6289c67a511424b063c077ce140b6504b` and earlier refs. R3/R4 leave production, native, POM, maintained tests/oracles and input resources
+unchanged. The explicit
+15-field Settings remain title-enabled native 320 solo Sonic/off, direct 5/1, every
+gameplay seed null/false. Every ordinary input draws normally. The canonical
+2292-row pair remains byte-exact: script SHA-256
+`e44eaf90a6d327c1dbcaef557dabc87281eaad0ef1799f02691a4d33b6fdef96`, BK2
+`e176974a99e1c8d61746149765272c188759deaefbf8f8731d4b00535c58ed55`.
+
+### Exact bounded policies and reached inputs
+
+All rows below are zero-based input rows; counts include the entire cold prefix.
+R3 tries eight unique policies, all proposing 4092 rows. Policies 1–4 append 1800
+rows to the qualified 2292 prefix. Policies 5–8 cold-replay 3181 reached rows of
+policy 1, then append 911; none reuse its unexecuted tail. P2 stays neutral.
+
+| R3 policy | Replayed prefix | Exact new script | Actual outcome |
+| --- | --- | --- | --- |
+| 1 | 2292 | `20 R+A;1780 R` | Death after row 3314, X11785; 3315 executed. |
+| 2 | 2292 | `repeat 30 {15 R+A;45 R}` | Alive through row4091, end9816/2621; maxX10069. |
+| 3 | 2292 | `20 R+A;1780 R+D` | Same death after3314/X11785; 3315 executed. |
+| 4 | 2292 | `repeat 20 {20 R+A;70 R}` | Alive through row4091, end10016/2659; maxX10069. |
+| 5 | 3181 | `10 R+A;901 R` | Death after row 3347, X11932; 3348 executed. |
+| 6 | 3181 | `30 R+A;881 R` | Death after row 3321, X11917; 3322 executed. |
+| 7 | 3181 | `6 R;30 R+A;875 R` | Death after row 3327, X11909; 3328 executed. |
+| 8 | 3181 | `20 R;30 R+A;861 R` | Death after row 3368, X12085; 3369 executed. |
+
+The best reached grounded prefix is 3265 rows of R3 policy 8. After row 3264 P1 is alive,
+unhurt, grounded at 11914/2737, velocity 1536/0, zero rings, camera 11754/2626,
+solo/off in LEVEL. R4 is a distinct reached-edge question, not an extension of
+R3's eight-policy budget. It tries exactly four unique policies, each appending
+1800 rows to that 3265 prefix (5065 proposed rows):
+
+| R4 policy | Exact new script | Actual outcome |
+| --- | --- | --- |
+| 1 | `1 R+A;1799 R` | Death after row 3388, X12252; 3389 executed. |
+| 2 | `12 R+A;1788 R` | Alive at12714/2908, Special Stage mode after3570; 3571 executed. |
+| 3 | `30 R+A;1770 R` | Alive at12712/2908, Special Stage mode after3569; 3570 executed. |
+| 4 | `2 R;12 R+A;1786 R` | Death after row 3368, X12085; 3369 executed. |
+
+The delayed fourth control does not establish a grounded fresh jump: the earlier
+run's last grounded row was3264. No replacement policy or further trial follows.
+No candidate sees the placed end boss or completes its arena/init owner. Thus
+**zero fresh full-row0 qualifiers** run. All proposed rows pass the production
+InputLogAuthorTool compiler/writer/Bk2MovieLoader round-trip for both pads; the
+original 2292 rows and R4's reached 3265 prefix are exact. The best R4 stream's
+rows 3571–5064 are **unexecuted proposal**, not playable-route evidence.
+
+### Actual owner binding and remaining route question
+
+Research uses stock FixBugs=0 Main skdisasm `1a454a0e335137a1a016d1090a9f4528d36944cf`:
+`sonic3k.asm` SHA-256 `57c36a62cd259b21a614e603e5e6b825e76b1774917ddef0b80ae7cde3f971d8`;
+`Levels/ICZ/Object Pos/2.bin` SHA-256
+`ecf4f43e14f4970438c32c745920baffda562e59a06b0cc7047c8cf25cdd42e4`.
+These bytes are controls/references, never gameplay imports. At the R4 checkpoint,
+the actual selected riding/standing receiver has spawn layout 226, ID `$B0`,
+subtype 6, rawY 2774/currentY 2776, X11872. The previous input is Right only and A
+has been released since 3231. `byte_89FB2` (187402–187410) selects routine `$0E`;
+`loc_8A178/192/1AE` (187600–187646) implements standing/sink/rebound after the
+ordinary `SolidObjectFull` (`$2B/$14` radii). Java
+`IczPathFollowPlatformObjectInstance` retains those owners. `Sonic_Jump`
+(23288–23362) reads the fresh logical press and ordinary headroom; Java's normal
+movement dispatch and `doJump` retain that decision. No collision probe selects
+or rescues a policy.
+
+R4 policy 2's retained contact stream reports a selected path-follow receiver at
+X12480, Y2772→2783 on rows 3363–3375; riding is lost after 3376. Raw placement 245 is
+`30c00ad4b006` (12480/2772, `$B0`, subtype 6), but the later receiver's placement
+lineage was **not retained**. At row 3370 P1 is grounded at12491/2739, velocity 1536/0,
+unhurt/alive with zero rings and camera 12331/2643. A future ordinary fresh jump
+while still riding this platform, before dropping into the giant-ring corridor,
+is a source-supported next question. Its actual selected lineage, grounded
+dispatch/press history and restore boundary remain unproved until a newly
+authorized cold replay; a prior LEVEL label alone does not certify restorability.
+
+Raw placement 256 is `31c00b488503` (12736/2888, giant ring `$85`, subtype3).
+`SSEntry_Range`/`loc_6170A/6173A` (128265–128326) and
+`Sonic3kSSEntryRingObjectInstance.checkCollision/onTouched` explain the nearby
+range, ordinary emerald branch, player lock and flash entry. The actual selected
+ring receiver was **UNRETAINED**: static 256 plus matching trajectory is source
+support, not retained contact-writer attribution. No emerald/run-policy seed,
+input lock bypass or restore across stage entry is proposed. The actual boss
+control stays record 340 `449005b8bd00`; `word_71BBE/71BC6` and
+`Obj_ICZEndBoss`/`loc_71C36` (150568–150639) require the original camera/shared
+arena/music gate before real init/descent. Those owners were not reached.
+
+### Original requests, safety outcomes and retained products
+
+All requests use normal admission through the current absolute Main
+`tools/testing/maven_queue.py`, `-Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+test -B`, unique owned reports/tmp, Java 25.0.4.1/EGL/null OpenAL/Lua 5.4 and the
+verified absolute original S3K ROM (CRC 63522553/SHA-1
+`cfbf98c36c776677290a872547ac47c53d2761d6`). No ambient DISPLAY/WAYLAND or inherited
+JVM/library overrides supply behavior. R3's first launch accidentally passes an
+unused S2 path without `(REV01)`; that file does not exist. This is S3K-only,
+donor-off work with the correct verified S3K property, not S2 qualification.
+Subsequent distinct requests use all three correct original ROM properties.
+The unused first-launch property remains an explicit limitation.
+
+| Original command session / request | Selection and actual original | Admission wait | Maven |
+| --- | --- | --- | --- |
+| 19968 / R3 author01 | `TestIcz2BossAdmissionAuthor#authorOrdinaryPolicies`, policies 1–4:1T/0F/0E/0S | 0s | 34.119s |
+| 31567 / R3 author02 | Same method, policies 5–8:1T/0F/0E/0S | 0s | 31.473s |
+| 55285 / R4 author01 | `TestIcz2BossAdmissionAuthorR4#authorGuardedOrdinaryPolicies`, executes 1/2:1T/0F/1E/0S | 7s | 31.468s |
+| 16123 / R4 author02 | Same method, executes only untried 3:1T/0F/1E/0S | 0s | 31.711s |
+| 52366 / R4 author03 | Same method, executes only untried 4:1T/0F/0E/0S | 0s | 30.405s |
+
+These are exploratory harness outcomes, not route passes. The two exact errors
+are `Previous candidate left the checkpoint world or mode; start a fresh probe
+rather than restoring across a load boundary` at temporary adapter `run:111`.
+Both follow actual Special Stage mode entry. R4 preserves the original
+step→normal render→observation order, one complete-registry checkpoint, external
+input-history restoration and existing fresh-assembly/callback-fade guard. Pure
+prefix checks bind ground/standing/jump release and placement226 before capture
+and after restoration; identical Level/ObjectManager/mode are required before
+another restore. The guard errors remain errors. Only untried policies move to
+fresh cold requests, with no cross-world restore or repeated policy.
+
+Useful products remain under the same external
+`<owned-task-directory>/icz2-sonic-cold-boss-20261021/` root; the owning registry
+records its absolute location and all file metadata, not a new receipt:
+
+- R3 `r3/attempt02/variant-3.{script,bk2}`: 355/1049 B, 4092 proposed/3369 executed;
+  script SHA-256 `f8da2f2b4a1808c2dea444e79d9fc17f4b96b1d4d225be1e233987aaa270f9dc`,
+  BK2 `89f6bc90ac4b5d7e0ea70012c471a651d1f120abc514f786baf44d74c6ab3e0c`.
+- Best R4 `r4/attempt01/variant-1.{script,bk2}`: 370/1162 B, 5065 proposed/3571
+  executed; script SHA-256
+  `40e7d51a6256c6252298b90b9f30a494bbfc9934b4ca88bd434a6782f57b0e35`, BK2
+  `b0ab8e46eeca46904d9ab19f91c8241a0cd9369e626beced84655513419dddfa`.
+- All 12 policy input pairs and `r3/request01..02.txt` / `r4/request01..03.txt`
+  retain the exact bounded recipes. Temporary source
+  `r3/TestIcz2BossAdmissionAuthor.java` is SHA-256
+  `3e4f4d5b3eff7d165a17918e9884a6d5f2511c6c12b86b83acca04bca76377f3`.
+  R4 keeps `r4/TestIcz2BossAdmissionAuthorR4-author01.java`
+  (`0b1ee8d9db2e0da3fa449b572abb3cfa45daa1e133adbe4146aae83fc04ab5d1`)
+  and `r4/TestIcz2BossAdmissionAuthorR4.java`
+  (`80af1874f18fc5e2fa3a47622b465c04118068d766fd588922bef7ac8b67a070`):
+  the latter only admits the remaining 1–4 request policies instead of exactly 4;
+  gameplay/restore guards do not weaken.
+- Existing normal PNGs `r3/attempt02/variant-3-{3271,3368}.png` and
+  `r4/attempt01/variant-1-{3355,3570}.png` remain. They are engine images, not
+  native physical-pixel evidence; no new capture was launched for this record.
+
+All five originals' XML/TXT identities, assertions/errors/skips, all 70 properties
+per suite and streams were read. Exact owned reports/tmp, raw CSV/contact/boss
+series and other PNGs are consumed; temporary repository sources/classes are
+removed. No raw archive, pass receipt, retained snapshot or live job remains.
+Only this existing Plan, ICZ2 matrix and backlog row change for the local docs
+commit; syntax/link/identity checks suffice, with no new JVM run. The maintained
+2292-input partial crossing stays qualified. Boss/full-act, incoming history,
+other roster/donor/widths and native bus/timing/pixels remain open. Root owns
+review/adoption/push and any new bounded continuation; no further authoring is
+authorized by this record.
