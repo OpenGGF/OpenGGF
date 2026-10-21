@@ -668,7 +668,9 @@ public class CollisionSystemTest {
         GroundSensor.setLevelManager(null);
 
         GameplayModeContext firstGameplayMode = TestEnvironment.activeGameplayMode();
-        LevelManager firstLevelManager = invokeGroundSensorLevelManager();
+        GroundSensor sensor = new GroundSensor(new GameRulesCollisionTestSprite(),
+                Direction.DOWN, (byte) 0, (byte) 0, true);
+        LevelManager firstLevelManager = invokeGroundSensorLevelManager(sensor);
         assertSame(firstGameplayMode.getLevelManager(), firstLevelManager, "GroundSensor should resolve the current gameplay LevelManager");
 
         SessionManager.clear();
@@ -676,7 +678,7 @@ public class CollisionSystemTest {
 
         try {
             GameplayModeContext secondGameplayMode = TestEnvironment.activeGameplayMode();
-            LevelManager secondLevelManager = invokeGroundSensorLevelManager();
+            LevelManager secondLevelManager = invokeGroundSensorLevelManager(sensor);
 
             assertSame(secondGameplayMode.getLevelManager(), secondLevelManager, "GroundSensor should resolve the recreated gameplay LevelManager");
             assertNotSame(firstLevelManager, secondLevelManager, "GroundSensor should not retain the destroyed gameplay LevelManager");
@@ -867,11 +869,11 @@ public class CollisionSystemTest {
         }
     }
 
-    private static LevelManager invokeGroundSensorLevelManager() {
+    private static LevelManager invokeGroundSensorLevelManager(GroundSensor sensor) {
         try {
             Method method = GroundSensor.class.getDeclaredMethod("getLevelManager");
             method.setAccessible(true);
-            return (LevelManager) method.invoke(null);
+            return (LevelManager) method.invoke(sensor);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Failed to invoke GroundSensor.getLevelManager", e);
         }

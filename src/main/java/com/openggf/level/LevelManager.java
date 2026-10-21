@@ -2284,20 +2284,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Must be called after a level is loaded (dimensions are immutable during gameplay).
      */
     private void cacheLevelDimensions() {
-        if (level != null) {
-            cachedFgWidthPx = getLayerLevelWidthPx((byte) 0);
-            cachedFgHeightPx = getLayerLevelHeightPx((byte) 0);
-            cachedBgWidthPx = getLayerLevelWidthPx((byte) 1);  // Full map width (matches reference)
-            cachedBgContiguousWidthPx = computeActualBgDataWidthPx();  // For bgTilemapBaseX wrapping
-            cachedBgHeightPx = getLayerLevelHeightPx((byte) 1);
-        } else {
-            cachedFgWidthPx = blockPixelSize;
-            cachedFgHeightPx = blockPixelSize;
-            cachedBgWidthPx = blockPixelSize;
-            cachedBgContiguousWidthPx = blockPixelSize;
-            cachedBgHeightPx = blockPixelSize;
-        }
-        blockGrid = new BlockGridIndexer(blockPixelSize);
+        LevelManagerInitializationSupport.cacheLevelDimensions(this,
+                level != null ? computeActualBgDataWidthPx() : blockPixelSize);
         collisionLayoutYMask = resolveCollisionLayoutYMask();
     }
 

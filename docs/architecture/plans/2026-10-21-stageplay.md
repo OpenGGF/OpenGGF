@@ -514,3 +514,98 @@ and the verified S2 path (11.396 seconds Maven execution). It uses the matching
 physics artifact before the landing-callback fix; its S2 UI path is unaffected.
 Actual Puppet inspector, action menu and destination form images were inspected.
 Final engine packaging and broad smoke/guards remain pending.
+
+
+## Puppet foundation completed smoke and bounded repairs
+
+Engine package at `508915e67d6646b03f27a5e41ff5124b2d926799` built successfully,
+including universal SDK and Javadocs. The final revision-four screenplay and
+compiled example now reproduce the reviewed 51-second take: 26 native commands
+(22 destinations, four jumps), seven shots and speaker-specific dialogue. This is
+still detached terrain; the next live-world plan owns placed objects and rings.
+The external film/provenance is under `stageplay-delivery/revision-4` outside Git;
+Editor and Media followups are local commits `10f0de9` and `89bd3f8` respectively.
+
+The unchanged foundation at `508915e67` completed category run
+`20261021T201324Z-6b2c93b4` from pinned destination `ca58b4691bbc92bfee66b4b18dfed8cad68beed6`:
+3,559 candidate classes, all 72 ordinary batches plus guards. Command:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY -u MAVEN_ARGS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  python3 tools/testing/run_categories.py \
+  --base ca58b4691bbc92bfee66b4b18dfed8cad68beed6 \
+  --rom-directory <engine-root> --max-minutes 180 --run
+```
+
+Ordinary: **37,338 tests, two failures, three errors, 93 skips**, 6,267.05 seconds
+recorded lane execution. Guards: **718 tests, ten failures, no errors/skips**,
+271.09 seconds. Preparation took 27.04 seconds. These execution figures exclude
+queue waiting and are not elapsed delivery time. All skips were inspected: optional
+capture/measurement/mod-fixture prerequisites, graphics prerequisites, and routes
+without the required placed objects; no missing-ROM skip was accepted as coverage.
+
+The new collision-test error invokes GroundSensor's now instance-owned resolver
+with a null reflection receiver. Preserve the recreation assertion using the same
+real sensor before and after session replacement. Five new guard failures expose
+stale bootstrap-access approvals, direct WorldSession construction, the two class
+size ratchets, and a temporary-file pattern. Repairs keep session construction in
+GameplaySessionFactory, extract existing geometry caching and boss-state lookup
+into their existing collaborators, update exact audited bootstrap call sites, and
+use JUnit-owned temporary storage. No guard budgets or scope were relaxed.
+
+The five inherited guard failures remain the two HubMusic architecture assertions,
+two MenuAudioProbeTool singleton assertions and missing AuthoredLevelDecoder native
+resource declaration, all matched on the pinned baseline earlier. The ordinary HCZ
+pixel test still has its matched GLFW prerequisite failure. Trace boot's two errors
+and the audio CLI stderr assertion require bounded clean-environment confirmation:
+TestSurfacelessEglContext clears the JVM backend property between tests, and the
+JAVA_TOOL_OPTIONS launcher notice appears in child stderr. Exact focused commands
+use an explicit EGL property and unset JAVA_TOOL_OPTIONS. This is a failed broad
+run followed by focused repairs, not an all-green or full-suite claim.
+
+
+Focused followup (same tree, `508915e67` plus the nine-file bounded repair) used
+Java25, explicit `-Dopenggf.headless.gl=surfaceless-egl`, all three verified absolute
+ROM properties, and unset DISPLAY/WAYLAND_DISPLAY/JAVA_TOOL_OPTIONS/MAVEN_ARGS:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl <three verified absolute ROM properties> \
+  -Dtest=CollisionSystemTest,TestPlayablePuppet,TestPlayablePuppetRom,TestSceneRomLibrary,TestStageplayOfflineSimulationRom,TraceCaptureBootDimensionsTest,TestCompleteRunAudioCli,TestModApiSignatureSurface test -B
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  -Dtest=TestBootstrapModuleProviderCachingGuard,TestArchitecturalSourceGuard,TestNoLeakedTemporaryFiles,TestArchUnitRules test -B
+```
+
+The first attempt stopped during test compilation because the new fixture named a
+nonexistent helper; replacing it with this class's existing concrete sprite fixed
+compilation. No tests executed in that attempt. The retry passed **99 tests, no
+failures/errors/skips**, 45.622 seconds Maven execution and one second queue wait.
+It covers the same sensor across session replacement, native Puppet motion and
+ROM floor/jump/seek, fresh-process offline simulation, ROM library ownership,
+API signatures, both trace boot dimensions and all 13 audio CLI tests.
+
+Affected guards ran **112 tests, two failures, no errors/skips**, 40.422 seconds
+Maven execution. All five new guard failures are repaired. The remaining two are
+exact baseline-matched HubMusic assertions (three concrete constructors and nine
+package dependencies); the twelve reported lines, nine unique violation lines,
+match the pinned baseline without normalizing source locations. No guard rule,
+size budget, singleton allowance or API pin was weakened. The completed broad
+run's diagnostics have been acknowledged and deleted; no broad rerun is needed
+for these bounded extractions and fixture/audit repairs.
+
+
+Final environment attribution on pinned baseline `ca58b4691bbc92bfee66b4b18dfed8cad68beed6`:
+`JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl`, Java25, no desktop display,
+the verified S1/S3K paths, and queued selector
+`-Dtest=TestSurfacelessEglContext,TraceCaptureBootDimensionsTest,TestCompleteRunAudioCli`
+ran **18 tests, one failure, two errors, no skips** (29.210 seconds Maven execution,
+15 seconds queue wait). The two TraceCaptureBootDimensionsTest invocations fail
+with `Unable to initialize GLFW` at their line41 and the audio CLI assertion fails
+at line182, exactly matching the completed foundation run. The backend-selection
+test clears its property for later tests in that JVM. This confirms pre-existing
+order/environment sensitivity; the separate clean-environment followup above passes
+both dimension cases and all audio CLI cases. No unrelated graphics/audio code was
+changed to hide those failures. All observed new failures are resolved; broad
+coverage retains the stated inherited failures and 93 skips.
