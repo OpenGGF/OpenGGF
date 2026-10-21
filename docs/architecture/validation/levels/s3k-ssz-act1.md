@@ -4525,3 +4525,12 @@ Three Left/noABC/P2Up rows reach FIRST public ground15128: P1(4765,1580),VX864/V
 15129 total, zero new actions/neutral/jump/onward; STOP at that moving ground publication. NEWX<4773 is a separate source-bound question, not a green R20X<4752 result.
 Same-JVM finite-pad/all15129-row production proofs and independent full script/ZIP/ELEVEN-original-file proofs agree; **0 JUnit/skips N/A**.
 Actual terrain receiver/stored-sensor freshness, stable ground, spike contact/clearance/protection, next jump/route/native cause remain UNKNOWN. Expected46/runtime/POM/maintained data unchanged. [Facts, limits, hashes, command and timing](../../plans/2026-10-13-s3k-playable-completion.md#r21-first-moving-lower-ground-admission--2026-10-21).
+
+
+## R22 moving lower-ground jump stops on hurt — 2026-10-21
+
+At exact `b724d71d8`, one cold ordinary CLI preserves all15129 R21 pads and matches63 unique available R checkpoints plus all retained Support/Family facts/local raw joins; no missing historical-state reconstruction.
+ONE freshRight+A15129 publishes air+jumping/free/riderNULL at(4765,1585),VX864/VY-1664/G864. SAME heldRight+A/P2Up continues only to FIRST hurt15185: (4797,1552),VX-512/VY-1024/G0,airtrue,public rings62→0/lives3/no death.
+57 new/15186 total, exactlyONE Aedge; no admitted post-nominal-spike free-ground inlet, second jump, release/repress, settle or onward. Terminal raw rider is managed/live with original public spawn layout146/id8/sub0,(4800,1588); this does not bind the damage callback/receiver/native address.
+P2ground/free/NORMAL/manual/flag0fuel0/contextNONE and bound world/pair/focus/managers/LEVEL remain intact; P2 also reports0rings. Same-JVM finite-pad/all-row and independent complete script/ZIP/TWELVE-original-file proofs agree; **0 JUnit/skips N/A**, failed gameplay question rather than passing route coverage.
+Expected46/runtime/POM/maintained data unchanged; private/contact/terrain-freshness/physics/native causes UNKNOWN, no runtime omission established. [Facts, full limits, hashes, command and timing](../../plans/2026-10-13-s3k-playable-completion.md#r22-moving-lower-ground-jump-stops-on-hurt--2026-10-21).
