@@ -28291,3 +28291,51 @@ adapter/preimages/proposals remain external. No maintained runtime/POM/input/
 oracle change, extra agent, native/model run, retry, push or integration occurred.
 Root owns any later hazard/ordinary-controller question and route adaptation.
 See the [R9 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-accepted-hit-ordinary-recovery-r9--2026-10-21).
+
+
+## Reconciled production-graph guards — 2026-10-21
+
+Root ran one fresh complete `-Pguards` selection on exact prepared
+`a11707c6de4e2f59c3dc171a6dc1b10abee52e19`. Main `bd042f080` changed the production
+graph and its CI guard job was skipped; the original smoke continuation remains
+on a different frozen `b078214e7` source. This check closes that current-graph gap,
+without repeating the engine smoke selection or using the release full suite.
+
+Command shape: current absolute Main `tools/testing/maven_queue.py --normal
+-Dmse=off -Pguards -Dopenggf.headless.gl=surfaceless-egl`, all three verified
+absolute original ROM properties, `test -B`, from the prepared worktree. Java25,
+surfaceless EGL, `ALSOFT_DRIVERS=null` and Lua5.4 were explicit; ambient JVM/
+display/library overrides were cleared. One original command/observer owned
+session60357; no retry. The audio environment variable is not backend proof.
+
+Actual terminal result is **718 tests,4 failures,0 errors,0 skips**, Maven exit1.
+All89 XML reports and718 unique case identities were parsed; there were no
+unknown testcase child nodes. The four identities, exception types and COMPLETE
+failure details match the previously read campaign guard baseline exactly:
+
+- `TestProductionSingletonClosureGuard#productionCodeDoesNotUseForbiddenProcessSingletonsOutsideEngineServices` and
+  `productionCodeOnlyUsesRawGetInstanceAtEngineServicesBootstrapBridge` both retain
+  the original `MenuAudioProbeTool.java:41` process-singleton findings.
+- `TestArchUnitRules#shared_code_does_not_construct_concrete_sonic_provider_classes`
+  retains the original three `HubMusicController.openRomSession` provider constructions.
+- `TestArchUnitRules#shared_layers_do_not_depend_on_game_specific_packages`
+  retains all original nine HubMusic provider/field dependencies.
+
+No new or changed failure detail was observed. This is a RED guard result, not a
+green delivery. The repaired `TestObjectUpdateClockTerminologyGuard` method
+actually passes1T/0F/0E/0S here. Every report has Java25.0.4.1, surfaceless EGL and
+the original absolute ROM properties. Their single classpath contains Jackson
+2.22.4 and no2.22.3. Both failing-class TXT reports were read and contain the
+complete XML failure details; success TXT files were regenerable and were not
+independently read.
+
+Printed queue wait1320s and reported Maven07:40 are separate; parent and individual
+compiler elapsed remain UNKNOWN. The earlier180s queue estimate was not duration.
+The POM naming scan found90 candidate source files; actual reports/cases above are
+the observed execution coverage, with no skip inferred from candidate-file counts.
+After inspection and full-detail baseline comparison, all178 owned XML/TXT files
+and the invocation's generated test-tmp directory were consumed. No raw logs,
+archives, pass cache or validation receipt was created. Source stayed clean and
+unchanged throughout the run; later MHZ/doc merges change no executable input.
+The original499-candidate smoke continuation and its exact baseline comparison
+remain pending separately; this guard result does not turn that incomplete run green.
