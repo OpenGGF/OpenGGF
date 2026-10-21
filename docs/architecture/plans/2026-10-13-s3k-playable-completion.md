@@ -24827,3 +24827,83 @@ native/capture/unchanged-boundary checks, integration, push or worktree cleanup.
 This local follow-up has literal parent `947694a8`; Root owns fresh independent
 review round3. Other-platform runtime and concurrent adversarial filesystem
 mutation are not certified; current producer compatibility remains UNKNOWN.
+
+### Knuckles DEZ2 cold gravity corridor — 2026-10-21
+
+New isolated branch `feature/ai-dez2-knuckles-cold-gravity-20261021` at exact
+`8c78e7762b4394b5c5d9a531ccb2b21807491028`, owned worktree
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-1d563f14`, adds only one controller pair,
+one independent short tools-test consumer, and existing coverage/plan prose.
+Previous paired/Sonic history and dirty TraceChaser setup remain intact.
+The [DEZ2 matrix](../validation/levels/s3k-dez-act2.md#knuckles-cold-first-gravity-corridor--2026-10-21)
+records the exact native320 title-true, unseeded direct11/1 inlet, raw placement
+bindings, nine actual event spots and proof limits. No runtime, native fixture,
+POM, helper, API or existing route/assertion was changed.
+
+Five finite fresh controller approaches used production `GameplayCaptureTool`
+with `--title-card --every 1 --no-video`, solo Knuckles and donor off. Neutral240
+then Right stalled at the opening left-facing spring; a fresh A hold360–389
+cleared it. A second fresh A hold750–779 cleared the inverted ceiling step.
+Unbraked travel reached the next vertical shaft rather than a released endpoint;
+twelve Left inputs from854 ended before landing and did not stop that entry.
+Forty Left inputs854–893 brake through the real landing; neutral894–1019 ends
+grounded at3056/997, zero velocity,11 rings/3 lives, beyond both source-bound
+tubes. These were controller choices from ordinary gameplay, not old trajectory
+fitting or evidence of an engine defect. The selected1020-row movie was generated
+and round-tripped with production `InputLogAuthorTool`; both pads match the script
+exactly, and the BK2 contains no state container. Temporary images/state rows
+were inspected and consumed after the useful inputs and compact findings were
+promoted; no raw capture archive or validation receipt is retained.
+
+The exact focused requests were two separate JVM runs of
+`TestDezKnucklesColdGravityRouteCapture#coldKnucklesCrossesTheFirstGravityWritersAndTubesUninterrupted`
+(each 1T0F0E0S), then the whole `TestDezKnucklesColdGravityRouteCapture`
+(2T0F0E0S). Their complete run-local projection hash agrees with the final replay
+method, as recorded in the matrix. Ordinary1: queue 0s, Maven 27.684s,
+wrapper 28.43s; ordinary2: queue 21s, Maven 27.753s, wrapper 49.88s. The first
+safe-window whole class passed 2T0F0E0S (queue 0s, Maven 29.161s, wrapper 30.10s).
+After strengthening world identity, final mode/vertical velocity and per-step
+transition guards, the final class again passes 2T0F0E0S: queue 0s,
+Maven 29.293s, wrapper 30.08s, actual JUnit 3.891s. These intervals are
+separate measurements, not a summed delivery duration. Exact XML identities,
+counts/skips and Java25.0.4.1/absolute-ROM/surfaceless properties were inspected.
+FAST/no-manifest and unmeasured-Kos deterministic-estimate warnings remain;
+none of this is native service/timing or pixel parity evidence.
+
+An initial world-replay request failed 1T1F0E0S: the proposed title40→85 window
+crossed the actual TITLE_CARD→LEVEL release at85. Restoring only the world
+registry left GameLoop's mode at LEVEL, so the READINESS PLC head could not replay
+its title service (`s3k-level-title-plc`: first-forward empty versus replay head
+source1394002/remaining93, five queued entries). `GameLoop.reportRewindModeBoundary`
+marks this release as MODE_ENTER_REWINDABLE; its mode is outside this registry.
+This was an invalid cross-mode window, not a demonstrated PLC/native omission.
+The corrected20→65 window stays wholly inside title mode; every forward/replay
+step now asserts constant mode. The passing final method retains every registered
+key,45 inputs and two restore/replay cycles at all nine semantic spots, ordinary
+drawing and restored external held-input history. No mode/state writes, excluded
+keys or runtime changes were used. Initial rejected request: queue 20s,
+Maven 26.211s, wrapper 47.28s. Live title rewind support is not claimed.
+
+All commands ran in the owned worktree with the current Main wrapper, one
+command/observer at a time, no duplicate validation or extra worker. The existing
+main-checkout root is represented below by `OPENGGF_MAIN`; both wrapper and ROM
+resolve there by absolute path, while cwd/target remain owned. Environment:
+
+```bash
+unset JDK_JAVA_OPTIONS _JAVA_OPTIONS MAVEN_OPTS DISPLAY WAYLAND_DISPLAY LD_LIBRARY_PATH
+export JAVA_HOME=/usr/lib/jvm/java-25-openjdk
+export JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl
+export EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal -Dmse=off \
+  "-Ds3k.rom.path=${OPENGGF_MAIN}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  '-Dtest=TestDezKnucklesColdGravityRouteCapture' test -B
+```
+
+The independent ordinary selector above replaces the final whole-class selector
+for each of its two fresh requests. ROM SHA-1/CRC and direct start/placement bytes
+were verified against the original absolute file; no ROM copies/links or source
+epoch changes. This is a bounded direct Knuckles load/play/invert proof, not a
+campaign continuation, complete act, boss/ending, seamless entry, native scene,
+broad smoke/full-suite or combined-delivery claim. Root owns independent source/data
+review and composed qualification; this branch stays local and the owned worktree
+is preserved for that handoff.

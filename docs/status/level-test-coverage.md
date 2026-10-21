@@ -1,5 +1,16 @@
 # Level test coverage backlog
 
+Knuckles DEZ2 direct cold corridor (2026-10-21): the
+[existing act-2 matrix](../architecture/validation/levels/s3k-dez-act2.md#knuckles-cold-first-gravity-corridor--2026-10-21)
+now binds an ordinary native320 title-enabled solo route to the actual first two
+raw gravity writers and associated tube owners. Two separate fresh drawn
+ordinary witnesses agree, and the final short whole class passes2T0F0E0S with
+nine two-cycle45-input whole-registry replay spots. It ends alive, grounded and
+released beyond both tubes,11 rings/3 lives. This closes one level-select-only
+Knuckles load/play/invert increment on8c78e7762; full act/boss/ending, seamless
+entry, remaining width/donor/roster breadth and native scene acceptance remain
+open. Runtime and all existing route consumers are unchanged.
+
 SSZ MTZ orb allocation/first-dispatch work is tracked in the
 [existing act-1 matrix](../architecture/validation/levels/s3k-ssz-act1.md#mtz-orb-allocation-and-first-dispatch--2026-10-21):
 sparse global/forward slot controls, initializer return, failure prefixes and rewind
