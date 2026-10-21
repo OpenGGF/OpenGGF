@@ -27942,3 +27942,52 @@ its inverse removes the new method/resources and reverts the three doc deltas.
 No production/POM/native/physics/controller edit, old assertion relaxation,
 long-route propagation, full-act/HPZ/campaign/native-pixel/clock/descriptor-d1/
 positive-ring-handoff-reset claim or extra author policy is included.
+
+
+### Composed LRZ first-door and SSZ waiter-fraction consumers — 2026-10-21
+
+- Reviewed leaf `ae025629e971e4ff9616d5a7c400834505741e1d` and its
+  exploration record `ed736fd3b444fc7f7a518a2fccde2f405398fcb0` were
+  composed in `a28dfb0b7714d65c27e2d66376b05c808dffd35a`. Root and an
+  independent source/data reviewer verified the fixed 26635 inputs, neutral P2,
+  accepted prefixes, literal parent-test inverse and unchanged old methods/resources.
+  Append-only Plan/matrix conflicts and the two independent backlog insertions
+  preserve both histories.
+- One queued command in the prepared integration checkout executed
+  `python3 tools/testing/maven_queue.py --normal -Dmse=off
+  '-Dtest=TestSszWidePairedColdRouteCapture,TestLrzKnucklesColdRouteCapture#coldKnucklesReplaysIncomingRouteAndFirstActTwoDoor'
+  '-Ds3k.rom.path=<verified absolute S3K ROM>'
+  test -B`. The launch unset ambient JVM/display/library overrides, used Java25
+  and `JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl`,
+  `EGL_PLATFORM=surfaceless` and `ALSOFT_DRIVERS=null`.
+- Actual XML: **3T/2F/0E/0S**. The new LRZ method passes1T/0F/0E/0S,
+  suite16.943s/case16.655s, with17 destination45-input windows and all60 keys.
+  This is the composed incoming first-door check, not full Act2/HPZ/campaign or
+  native qualification. The original longer movies/assertions remain unchanged.
+- Both SSZ methods remain red: `coldFirstReplicaAndTransportReplayWithRetiredColumnDebris`
+  line87 expects46 rings and observes48; `coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline`
+  line256 reports `FIRST_FORWARD [wide-route-11640] frame=11640 n=24 input=11664`,
+  expectedfalse/actualtrue. The first exact identity/message matches the earlier
+  recorded negative; the second reproduces the known diagnostic death frontier.
+  A direct comparison with the still-running frozen b078 broad result remains
+  pending. No cause, unchanged whole trajectory or native correctness is inferred.
+- The ordinary command compiled4175 production and4268 test sources inside this
+  one lifecycle. Queue wait547s, Maven displayed01:52min; SSZ suite19.257s.
+  Parent/wrapper/individual compiler elapsed time was not measured. Actual selector,
+  three identities, original absolute ROM, Java25.0.4.1, EGL property, skips,
+  full failures/TXT equality and LRZ stdout were read. Exact owned reports and
+  invocation temporary files were consumed; no raw archive or pass receipt.
+- Main advanced to `bd042f08094155a5b7da76e552f25d43d86d98d7`.
+  Source merge `c34d07fb57daf8eaf9ef222081f9e0aa3d73af83` adopts its
+  BK2 streaming/import bounds, Jackson2.22.4 and networking changes in the separate
+  prepared checkout. The sole measurement-hazard conflict preserves the entire
+  task text plus Main's exact racing paragraph. POM/import owners match Main;
+  AGENTS/CLAUDE and skill mirrors match; task API pins remain preserved.
+  This later source merge has not yet passed its composed consumer checks.
+- Main CI run39594989371 is itself red:25583T/3F/6E/5111S on exactbd042,
+  Jackson2.22.4/Temurin25.0.4-1. Its class summaries can establish only matched
+  bounded upstream coverage. No retained XML/artifacts or green guards exist.
+  Reuse requires matching production dependencies, not test-file equality alone.
+  The six initially uncovered/task-modified consumers and any additional changed
+  call-path checks will be qualified locally; no repeat broad/full/native sweep
+  follows merely from that dependency refresh.
