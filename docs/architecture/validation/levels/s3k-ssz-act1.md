@@ -14,6 +14,12 @@ isolation. Sonic solo at 800, intermediate viewport widths, donors, additional
 team shapes and native presentation acceptance remain open.
 Nothing below certifies the act.
 
+Current native320 Sonic + Tails controller evidence on `39eca8c35` restores the
+physical first authored post and the complete 11,051-input upper route. The
+20,720-input complete route still dies at input14554 before Mecha. Earlier
+completion records below remain historical evidence on their stated sources; see
+[the current controller qualification](#native320-controller-qualification--2026-10-21).
+
 Incoming: HPZ teleporter altar ending → `$A00` (`HpzTeleporterRouteHelperObjectInstance`), level
 select, save progression. Outgoing: `StartNewLevel $B00` from the Death Egg launch (`loc_581D2`);
 DEZ presentation and route belong to the DEZ campaign.
@@ -61,6 +67,7 @@ green label, and "implemented" alone never closes a row.
 | BOSS: Mecha Sonic spawner, entry and attack loop | `loc_45A66`-`loc_45AB0`; `Obj_SSZEndBoss` `SSZEndBoss_Index` act-1 entries 0-`$28` (`loc_7B2DC`, `loc_7B308`, `loc_7B3E6`, `loc_7B41C`, `loc_7B44A`, `loc_7B462`, `loc_7B484`, `loc_7B4EC`, `loc_7B544`, `loc_7B57A`, `loc_7B5E8`, `loc_7B63A`-`loc_7B804`); `sub_7D2D8` / `byte_7D2FC`; `sub_7D312`; `sub_7D35A`; `loc_7D216`; `sub_7D236` / `byte_7D24C`; `DPLCPtr_MechaSonic` | 320 | `TestS3kSszMechaSpawnHeadless` | yes | declared restart at the pad's own `($1A40,$670)`: the final arena's lock fires, the camera eases to `$5C0`, and `loc_45A84`'s `Camera_Y == Camera_max_Y` gate allocates the boss through the plain-`AllocateObject` path. Selected cold Sonic + Tails routes at320/800 also reach and defeat this boss | yes: mid-entry, with the two `ChildObjDat_7D47A` after-images relinked | **compared, comparison-only.** The Sonic + Tails run's SSZ **third** segment, `hpz_3` (`zone_id 10`, start `($1880,$968)`), carries the whole fight; the first reading of this row said the `hpz` window ended before the arena, and that was wrong. Camera `($19A0,$5C0)` at the spawn, so `Cam_X + $160 = $1B00` and `Cam_Y + $A0 = $660` are the native spawn exactly, and the routine dump's resting X values `$1AC0` and `$19C0` are `_unkFAB6` and `_unkFAB4` — `loc_7D216`'s two limits. Pad at 358, boss at 402, routine 4 first dispatched 406, pad removed 460 (the boss passes `$1A40` about 426, plus `loc_45AB0`'s `$20`). The graph runs 4 → 8 → `$0A` → `$0C` → `$0E` → `$10` → `$12` → `$14` → `$16` → `$18` → `$0A`, then a long landing straight to `$14` → `$1A` → `$1C`, which is the two `loc_7B484` branches and `byte_7B62E` stepping 0 then 1. Defeat 1310, routine 2 on 1438 and routine 4 plus the `loc_7D056` slot on 1439. **Routine 6 never appears** in the dump because the boss is off screen for it, which is a recorder property and not a ROM fact | `23-ssz-mecha-sonic-entry-and-attacks.mp4` (`raw-38-ssz-mecha-line1`, frames 200/268/330/430/560): the entry from the right, the return along the top and the attack cycle on the arena floor. The pad's own explosion is driven by the test only — at this camera it sits where the column meets the floor — and subsequent `raw-43-mecha-complete-graph` covers implemented defeat/results/launch through DEZ1 | Stages 1 and 2 of slice 7. `loc_7B81A`'s act-1 routines 0/2/4 and `loc_7D056`'s handover are in; the later campaign implements palette/spark/defeat owners. The bare `loc_7B39C` allocation writes no SST and needs no object. Native hit-window/slot-reuse verification remains open |
 | BOSS: Mecha Sonic spawn / fight / defeat, results + save | `loc_45A84`, `sub_868F8`, `Check_TailsEndPose`, `loc_2DCA0` | 320 | `TestS3kSszMechaSpawnHeadless` | partial | declared final-pad checkpoint; real results reaches end flag | yes: real results graph restore and forward replay | ROM source | recording owed | Production results added in campaign; native P2 pose, allocation exhaustion, signed countdown. Save/launch and broader route matrix still open. |
 | EVENT: crumble, hot-swap, Death Egg BG, debris, ramp script, `$B00` request | `SSZ1_ScreenEvent` stages 0/4/8, `Obj_57E96`, `sub_5750C`, `sub_574DC`, `loc_58192`, `loc_581D2` | 320, 400, 800 | `TestS3kSszMechaSpawnHeadless`, `TestSszLaunchState`, `TestSszLaunchBackground` | partial | declared checkpoint and positioned boss hits; production results, first forced jump and neutral-input launch reach actual DEZ1 load | graph recreation and forward replay at four launch boundaries, including retained Plane B | source-backed; native parity not yet measured | clip 24: controller Hyper checkpoint clear, full 4800-frame capture through DEZ1 | Native Sonic 320/400/800, Sonic + Tails 320, Tails 400 and S1 donor 320 pass component handover. Cold320/800 paired and solo-Tails complete routes verify actual-load history isolation. Extra-followers, exhausted slots, other handover configurations and native comparison remain open. |
+| ROUTE: native320 paired physical post + both replicas | Ordinary cold start; physical post2 `($640,$5E8)`; existing GHZ/MTZ owners and transports | Sonic + Tails, donor off,320px | `TestLrzSszCheckpointRoutes#ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost`; `TestSszColdRouteCapture#coldRouteDefeatsBothReplicasAndReplaysTraversalAndTransport` | existing owners; controller-only repair | yes, strict post before7912 and all11051 upper inputs alive | 25 spots, two45-input whole-registry restore/replay cycles each; same world, roster bindings and lives | no new native comparison; actual selected-shot producer chain unknown | ordinary EGL drawing and cloud/pad contact journals; no native pixel claim | Current source39eca8c35; complete method fails14554 before Mecha. Launch/DEZ and later rewind/death/reload limits remain open. |
 | ROUTE: native800px paired all three bosses → released DEZ1 | Ordinary cold entry; GHZ/MTZ/Mecha native health8..0; `loc_7D056` results; `Obj_57E96`/`loc_581D2` launch; `loc_6468` destination assembly | Sonic + Tails, donor off,800px | `TestSszWidePairedColdRouteCapture#coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline` | existing owners; controller-only completion | yes,21014 inputs, no leader death/life loss | two-cycle45 whole-world restore/replay at44 semantic spots; actual full-load history retirement and separate released DEZ window | ROM-backed owners/start/roster; no new native-emulator comparison | independent fully drawn engine capture; no native pixel claim | Qualified first9914 inputs preserved; native CPU Tails recovery allowed. Donor, extra-followers, Sonic solo800, intermediate widths and native acceptance remain open. |
 | LOAD: `$B00` (DEZ) actual destination entry | DEZ campaign; `loc_6468`, `Obj_LevelIntro_PlayerRun`/`loc_44A26`/`loc_44A56` | native selected cold configurations; paired800 detailed below | Complete cold-route checks; `TestSszWidePairedColdRouteCapture#coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline` | yes | actual assembly and native entrance control release | paired800 two-cycle45 intro/released world windows plus actual full-load history retirement | ROM start/floor seating and intro owner; native scene comparison open | independent live DEZ engine still | This row covers destination entry. Full DEZ traversal and later endpoints belong to the DEZ campaign; no native pixel certification. |
 | ORACLE: strict segment replay | `TestS3kSonicTailsHpz{,2,3}SegmentTraceReplay`, `TestS3kTailsFullChainHpz{,2}SegmentTraceReplay` | `-Ptrace-segments` | — | — | — | — | not measured | — | Slice 10 records each frontier |
@@ -2876,3 +2883,102 @@ Root retains the new independent delta review, combined guards and final-source
 SSZ entry/release/controller/route qualification; old e253 route outcomes are
 not adopted as proof. Shared scratch/scaled-art/DMA/presentation-generation
 limits remain exactly as recorded above.
+
+
+## Native320 controller qualification — 2026-10-21
+
+Frozen code: `39eca8c35c25433b7405b6bdc724f7c6111b55ec`, isolated worktree
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-1d563f14`, branch
+`feature/ai-s3k-ssz-native-opening-20261021`. Only the owning complete/upper
+`.script` and `.bk2` resources and this matrix change. The preserved TraceChaser
+setup is outside the commit. Root owns combined checks and adoption.
+
+Both routes use ordinary cold native320 Sonic + Tails, donor off, neutral P2.
+Production `InputLogAuthorTool --script <owning.script> --out <owning.bk2> --game s3k`
+compiled and round-tripped every input and both pads: complete20720, upper11051.
+An independent exact row check agrees with both scripts and proves all11051 upper
+inputs are the complete movie's prefix. Complete inputs after11051 are identical
+to the original committed suffix, including the independent180-input destination
+tail. Input or gameplay clocks, position, health, rings, mode, camera, phase,
+readiness and RNG are never seeded or written by this controller repair.
+No engine, fixture, native source, assertion or test literal changes accompany it.
+
+All input/frame indices here are zero-based. The earlier e253 proposal was replayed
+from an actual cold entry on this final code before suffix editing. It survived7912
+inputs but ended at `(5045,1196)`, which fails the unchanged required `(5157,1004)`.
+The chosen fresh jump7612 reaches the intermediate ledge; braking7662..7671 and
+jumping left7672 lands on the cloud atX4948. Its observed contact7702..7708 and
+normal `-0x700` launch7709 land Sonic on the upper walkway, reaching the existing
+wall stop `(5157,1004)`. Seven finite cloud branches were tried; the other six
+failed to reach that waypoint. No fitted position delta was applied.
+
+The earlier MTZ inputs left five hits, stopped attacking and died10724. The
+maintained `SszBossInputAuthorTool` cold prefix8440 / `mtz` / max1600 authored879
+ordinary inputs, observing the killing hit9318. A separate cold replay reproduced
+that hit and the escape9501. Of three finite pad approaches,12Right/12Left at9319
+followed by neutral433, the existing30A jump9776 and neutral1245 reaches the actual
+receiving platform `(5888,140)`. The other approaches miss the pad's horizontal activation
+window. GHZ's authored fight4400..4782, its real pad landing5151, the shot dodge2190,
+stair turn2950/jump3070 and arena-entry jump4138 are retained in both scripts.
+These production authoring branches are exploration; the independent maintained
+methods below supply the fresh gameplay/rewind evidence.
+
+Final selected-movie command, with the original absolute ROM (SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`). Set `OPENGGF_MAIN` to the
+existing absolute Main checkout containing that ROM; the resolved command remains
+in the task registry:
+
+```bash
+env -u JDK_JAVA_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS -u DISPLAY \
+  -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal \
+  -Dmse=off \
+  "-Ds3k.rom.path=$OPENGGF_MAIN/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  '-Dtest=TestSszColdRouteCapture#coldRouteDefeatsBothReplicasAndReplaysTraversalAndTransport+coldCompleteRouteDefeatsMechaAndLoadsDeathEggWithRewindAtLateEvents,TestReferencePathInputAuthor#recoversTheReferencePathAfterADeliberateDivergenceAndReplaysUninterrupted,TestLrzSszCheckpointRoutes#ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost' \
+  test -B
+```
+
+| Exact maintained method | Result / XML test seconds |
+| --- | --- |
+| `TestLrzSszCheckpointRoutes#ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost` | PASS,2.157s; initially inactive checkpoint becomes index2, savedX`$640`/savedY`$5E8` physically before7912; survival throughout |
+| `TestSszColdRouteCapture#coldRouteDefeatsBothReplicasAndReplaysTraversalAndTransport` | PASS,4.564s; GHZ camera/renderer4472, first receiver`(512,1420)`5826, real elevator-bar hold6300, unchanged`(5157,1004)`7911, both replicas defeated/escaped and released`(5888,140)`11050;25 whole-registry windows, two45-input restore/replay cycles each |
+| `TestReferencePathInputAuthor#recoversTheReferencePathAfterADeliberateDivergenceAndReplaysUninterrupted` | PASS,10.158s; ordinary recovery and independent uninterrupted endpoint replay |
+| `TestSszColdRouteCapture#coldCompleteRouteDefeatsMechaAndLoadsDeathEggWithRewindAtLateEvents` | FAIL,6.838s; death at14554. Authored snapshot windows through14450 complete; Mecha, later windows, results, spiral flip19683, actual DEZ load/assembly, outgoing-history retirement and incoming replay/release are unqualified |
+
+Exact XML inspection:4 tests,1 failure,0 errors,0 skipped. Reported queue waiting0s;
+Maven execution49.833s; wrapper elapsed51.01s. Maven includes build/test execution;
+XML durations measure tests. Initial strict-post diagnostic also passed1/0/0/0
+(2.477s JUnit class,27.729s Maven,0s queue); the first upper attempt failed10724
+(7.474s JUnit class,33.509s Maven,0s queue) before the MTZ controller repair.
+Those earlier results do not replace the final selected-movie checks.
+
+One bounded cold replay of the retained late suffix corroborates the terminal
+fall:14331 starts `(5330,236)`,14450 is `(5997,77)`, then Sonic stalls against the
+wall atX6261 and falls toY1221 at14554 with16 rings. No Mecha was allocated.
+This is a controller-route blocker, with no native-cause or engine-mismatch claim.
+The complete route is not green and is not ready as a complete-route replacement.
+A continuation must author the late upper-gap approach from ordinary input and
+then rerun the affected complete method. Deliberate death/reload, the later live
+history boundary, wider viewports, donors and other teams are not established by
+this bounded opening/upper work.
+
+The native movement/descriptor leaves were independently source-reviewed by Root;
+actual selected-shot producer/birth/charge/release/facing/XY identity remains
+**unknown**. Controller authoring does not establish that chain, native parity,
+native timing or native pixels. Old c13 success is not an oracle. No old baseline
+was rerun or fitted here. No broad smoke/release suite was launched. Consumed
+owned probe images, CSVs and logs are removed after input promotion; useful
+controller inputs are now maintained resources, not retained diagnostic archives.
+
+Final route-resource binary diff SHA-256 against39eca8c35:
+`fe924468da04cd537205ae93076a7a2ade0d58bde3f1a0b54bf210b7d01d3d2e`.
+
+| Resource under `src/test/resources/routes/s3k/` | SHA-256 |
+| --- | --- |
+| `ssz1-sonic-tails-cold-complete-320.script` | `1638d01dfd65defe61e75c40b2a38d4ab18654492164a864bd796ecada681160` |
+| `ssz1-sonic-tails-cold-complete-320.bk2` | `e84a5ee3d85752049c643f8eca15c548bd2472d9d069dae7689dc6eaa9abc7da` |
+| `ssz1-sonic-tails-cold-upper-320.script` | `65dbd58d4729b927873314c283435aedb8527fe22dcf254fc9d826c2ea8b70cf` |
+| `ssz1-sonic-tails-cold-upper-320.bk2` | `221028bc88a32a4c3353b4f47ae6778b198fa1a931aec498d8052362c8e9246c` |
