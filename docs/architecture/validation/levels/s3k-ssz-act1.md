@@ -3975,3 +3975,34 @@ and removes this R3 matrix/plan append. All320, replica, runtime, POM, native/se
 and earlier branch history are independent. Delivery is one local normal-hooks
 commit with seven documentation trailers and the final GPT-6.1-Sol coauthor;
 there is no push, Main/Root integration or worktree cleanup in this lane.
+
+
+## Composed Tails800 completion — 2026-10-21
+
+Root adopted the reviewed controller/data commit
+`c3f39ffcab145ce3eb227a951bb7f798cf6ad1c5` in normal merge
+`8b24afe65b324e09e17a7f225537269163ac7892`. The exact script/BK2 rows,
+8,425-row replica prefix, neutral P2 and six-substitution whole-test inverse
+were independently checked. All49 original800 windows remain, with59 actual
+owner/predecessor additions; the strict45-input full-registry, drawing and
+gameplay predicates are unchanged. All320 and replica inputs/data remain exact.
+
+On composed `f9bb32cce833d4ea9952e88f3f19247cbf85abd1`, one queued Console
+request selected only800 Mecha entry and completion. Both actual XML identities
+are `(int)[2]`, with display name `[2] 800`: **2T/0F/0E/0S**.
+The Console selectors use zero-based iteration `[1]`; the inspected XML, rather
+than that argument alone, establishes the executed width. Suite17.365s and
+Console17.384s are distinct observations; Maven duration and queue waiting are
+unknown. Main was up to date;4,263 test sources compiled at release25 inside
+that sole lifecycle. Java25.0.4.1, required absolute ROMs and surfaceless EGL
+were inspected. The source/configuration fingerprint remained unchanged.
+
+These inputs supersede the two prior Root800 approach-death9560 failures.
+The author's11-case pass and the previous Root checks retain their own tested
+states and coverage; this two-case request is not another whole-class or broad
+suite run. The current contract still checks genuine boss defeats, actual DEZ
+load/assembly and isolated history. The load-producing800 image remains
+destination tiles before deferred player assembly, with no playable-DEZ or
+native-pixel claim. The separate visible Tails320 evidence above is unchanged.
+Exact consumed reports and the command are accounted for in the
+[composition checkpoint](../../plans/2026-10-13-s3k-playable-completion.md#root-tails800-origin-copy-and-knuckles-dez2-composition--2026-10-21).

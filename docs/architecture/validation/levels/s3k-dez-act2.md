@@ -1525,3 +1525,31 @@ are recorded in the existing plan. This closes this direct native320 Knuckles
 load/play/invert slice only. Full act/boss/ending, seamless entry, wider/donor/team
 breadth, native pixels and native timing remain open; no runtime parity repair
 or whole-matrix certification follows.
+
+
+### Root composed corridor check — 2026-10-21
+
+Root adopted independently reviewed `ed910d8c` in normal merge
+`c0ef03c779a769d4de4312def0450726ddaf4793`. On that composed tree, the whole
+`TestDezKnucklesColdGravityRouteCapture` passes **2T/0F/0E/0S**: uninterrupted
+ordinary traversal and complete-world replay. Both actual method identities,
+69 properties, the full8057-byte classpath and exact Surefire duplicate,
+all stdout/stderr and TXT summary were inspected. Java25.0.4.1, required
+absolute ROMs and surfaceless EGL match the intended launch.
+
+Both methods retain title release85, the nine source-bound windows above and
+the same run-local projection
+`86de41e3496a471125f5a11b5bea8a211376a3cb5c39f2514b263f769f527ad9`.
+The observed endpoint is3056/997,11 rings/3 lives; the maintained endpoint
+oracle remains grounded, released continuation beyond the tubes with zero
+velocities and unchanged lives. The replay compares every registered key,
+two45-input cycles per spot, with drawing and restored external input history.
+No state or comparison key was removed.
+
+Maven29.763s; XML suite4.097s; queue waiting and individual compiler intervals
+are unknown. Main was up to date;4,264 test sources compiled at release25 inside
+the sole request. FAST/no-manifest and two unmeasured Kos-profile deterministic
+estimates remain warnings, not native timing observations. Source/configuration
+remained unchanged; exact owned reports and extraction temporary files were
+consumed after inspection. This is the bounded direct-entry corridor scope
+above, not an act, seamless route, boss, ending, breadth or native acceptance.

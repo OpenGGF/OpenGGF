@@ -24907,3 +24907,95 @@ campaign continuation, complete act, boss/ending, seamless entry, native scene,
 broad smoke/full-suite or combined-delivery claim. Root owns independent source/data
 review and composed qualification; this branch stays local and the owned worktree
 is preserved for that handoff.
+
+
+### Root Tails800, origin copy and Knuckles DEZ2 composition — 2026-10-21
+
+Three independently reviewed local increments are now normally merged and
+qualified against their affected consumers. Existing Root documents were kept
+in full; append-only child Plan/matrix sections were appended byte-for-byte.
+The DEZ coverage paragraph was inserted without replacing the existing CNZ
+backlog update. No production Java, POM, native gitlink, immutable consumer
+artifact or unrelated Main file changed in these three merges.
+
+| Increment | Leaf / normal Root merge | Composed verification |
+| --- | --- | --- |
+| Solo Tails800 ordinary complete route | `c3f39ffcab145ce3eb227a951bb7f798cf6ad1c5` / `8b24afe65b324e09e17a7f225537269163ac7892` | On `f9bb32cc`, exact800 entry+complete:2T0F0E0S, actual XML`(int)[2]` and display`[2]800` |
+| Declared immutable-origin consumer copies | `05851d814a4bc13220ea1f72f98aa57414efa157` (three reviewed commits) / `f9bb32cce833d4ea9952e88f3f19247cbf85abd1` | On that merge, one opt-in initialized-checkout method:1T0F0E0S |
+| Knuckles direct DEZ2 first gravity corridor | `ed910d8cfdff46fe6b55f089317b4a83070e9a9a` / `c0ef03c779a769d4de4312def0450726ddaf4793` | On that merge, whole new two-case class:2T0F0E0S |
+
+The Tails source/data review independently matched every one of15,072 inputs,
+the exact8,425-row replica prefix, neutral P2 and all49+59 window identities.
+Six literal inverse substitutions recover the entire parent test. Root's new
+two-case request closes the two former800 approach-death9560 failures using
+the revised ordinary controller, with no runtime tuning or semantic assertion
+change. The author11-case pass and prior Root unchanged-consumer passes are
+reused only within their recorded dependency footprints. No new whole11-case,
+broad smoke, release suite, full-act, roster or native-pixel result is claimed.
+
+The origin contract now compares frozen copies to their declared immutable
+origin9e51, while the separately required initialized producer checkout stays
+pinned703. Review rounds corrected Git environment/process cleanup, ancestor
+symlinks, and provenance containment/regular-leaf checks before JSON parsing.
+The complete three-file chain was read by Root and independently reviewed NMF.
+The author's51 ordinary fixture controls are bounded leaf evidence; Root ran
+the one opt-in consumer method on the composed tree. Existing13 boundary guards
+were unchanged and were not rerun as a ceremony. The older exact-current-producer
+byte-comparison failure remains historical; **current producer compatibility is
+still unknown**. No artifact/provenance/hash replacement or hostile concurrent
+filesystem certificate follows.
+
+The new direct11/1 Knuckles corridor binds the original ROM start and raw
+writer/tube records29/30 and73/74. Root independently read all329 consumer lines,
+the12-line script, container and three documentation deltas; the independent
+review additionally matched every one of1,020 rows and the four ROM records.
+Both composed cases observe gravity writes651/826, tube rides630–673/805–847,
+and released grounded continuation3056/997 with11 rings/3 lives. Nine two-cycle
+45-input complete-registry spots include20→65 wholly within title mode. The
+rejected40→85 title-mode boundary remains documented; the correction retains
+all registered keys and guards each step against mode/fresh-load/fade crossings.
+This does not qualify live title rewind, seamless entry, the act or its ending.
+
+Exact Root requests used the existing absolute Main queue wrapper, owned Root
+cwd/target and the established Java25/absolute-ROM/surfaceless/nullAL environment:
+
+- Tails: `--normal -Dmse=off -Dexec.mainClass=org.junit.platform.console.ConsoleLauncher -Dexec.classpathScope=test`, with
+  `execute --select-iteration=method:com.openggf.tools.TestSszTailsColdRouteCapture#coldMechaEntryRetainsItsNativeWorldBox(int)[1] --select-iteration=method:com.openggf.tools.TestSszTailsColdRouteCapture#coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[1] --reports-dir=target/tails800-c3f-composed-current-20261021-1/console-reports --details=summary --fail-if-no-tests --include-engine=junit-jupiter --disable-banner`,
+  then `test-compile exec:java -B`. The actual launch used the absolute reports path.
+- Origin: `--normal -Dmse=off -Ptracechaser-integration -Dtest=com.openggf.trace.TestTraceChaserV5ConsumerContract#initializedCheckoutPreservesConsumerCopiesFromDeclaredImmutableOrigin test -B`.
+- DEZ: `--normal -Dmse=off -Dtest=com.openggf.tools.TestDezKnucklesColdGravityRouteCapture test -B`.
+
+All three also passed `-Dopenggf.headless.gl=surfaceless-egl`, absolute S1/S2/S3K
+ROM properties, and exact owned report/tmp properties where applicable.
+The existing launch environment and exact argv are in their owned task entries;
+no Maven output was copied into a validation receipt. One observer owned each
+request; observed wrapper/Maven/fork processes were reaped, and no Root jobs
+remain. Source/configuration fingerprints stayed unchanged. Tails Console
+reports have66 properties and the Maven bootstrap classpath rather than a
+Surefire duplicate; the other two reports have69 properties and the full8057-byte
+classpath/duplicate SHA256
+`9c876456c5ab9625f424b5b2dbcc19f9bf6f9b733cfac477957cd78894589610`.
+All actual identities, counts/skips, complete streams and summaries were read.
+Consumed exact report/tmp directories are absent; compiled classes remain.
+
+Tails XML17.365s/Console17.384s, origin Maven26.850s/XML1.452s, and DEZ
+Maven29.763s/XML4.097s are separate intervals. Queue waiting, parent/compiler
+durations and Tails Maven duration are unknown. Main compiled up-to-date;
+4,263/4,263/4,264 test sources compiled at release25 inside these requests.
+The bounded selections follow private test/data impact; no new shared runtime
+or selection-policy change justifies repeating the earlier large smoke run.
+
+Gameplay and diagnostic work continue independently. One unchanged CNZ4140
+prefix observation found no actual flag4 grab in282 whole-step samples;
+no continuation ran in that observation and no internal terrain predicate is
+inferred. A newly bounded jump/glide continuation is retained separately.
+The source audit found independent wall-climb radius, powered/clamp and floor-tail
+defects, now assigned to an isolated implementation. Their effect on the CNZ
+endpoint is unproven: its earlier side-wall return precedes the vertical probe.
+The cold-entry diagnostic's38-record independent prefix remains unadopted while
+a reviewed expected-file digest reread is corrected; VDP/device semantics,
+production continuity, movie row0 and11 actual job identities remain open.
+
+The goal stays active. Main develop, unknown files/submodules and worktree
+branches remain preserved; no outer integration/push/cleanup or full delivery
+is claimed. Native TraceChaser703 publication is already complete.

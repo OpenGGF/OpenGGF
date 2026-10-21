@@ -9,7 +9,10 @@ nine two-cycle45-input whole-registry replay spots. It ends alive, grounded and
 released beyond both tubes,11 rings/3 lives. This closes one level-select-only
 Knuckles load/play/invert increment on8c78e7762; full act/boss/ending, seamless
 entry, remaining width/donor/roster breadth and native scene acceptance remain
-open. Runtime and all existing route consumers are unchanged.
+open. Runtime and all existing route consumers are unchanged. Root subsequently
+qualified the two-case class on composed c0ef03c7, with all nine complete-world
+windows and both actual method identities passing; the same direct-corridor
+limits apply.
 
 SSZ MTZ orb allocation/first-dispatch work is tracked in the
 [existing act-1 matrix](../architecture/validation/levels/s3k-ssz-act1.md#mtz-orb-allocation-and-first-dispatch--2026-10-21):
