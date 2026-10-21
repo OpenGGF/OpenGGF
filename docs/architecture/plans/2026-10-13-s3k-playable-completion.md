@@ -24344,3 +24344,103 @@ or unchanged boundary-guard repeat was run. This is bounded historical-copy
 preservation, not current-producer compatibility or a retroactive pass for
 Root's original failed method. The local commit remains unmerged/unpushed for
 Root's independent review; app/nested/native setup is retained.
+
+### Immutable-origin copy contract: review corrections R2 — 2026-10-21
+
+Independent source review of `2fa1ddfb33b6d3f11ed04cc7d0a4c1edf6a04382`
+(Java blob `2e9edb6a83489de2b1d45615d47eb274c4786445`, parent `cdada405`)
+requested three P2 corrections. It supported the immutable-origin semantics,
+but found inherited Git repository/config selectors could redirect fixture
+writes; executor closure could wait indefinitely after direct-process timeout;
+and leaf-only no-follow checks missed consumer-path ancestor symlinks. R1's
+45/1 passes did not exercise these defects and do not certify those safety
+properties. R1 and Root's original 1F remain unchanged historical evidence.
+The complete review and literal pins are preserved immutably in this lane's
+existing `continuations.review_corrections_r2` registry entry.
+
+New real controls on the predecessor behavior (test blob
+`ed33995efa778bb7133310bc17e738cc365e951a`) produced **XML 4T4F0E0S**:
+
+- Poisoned `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, `GIT_COMMON_DIR` and
+  config environment changed the owned foreign fixture's index, branch ref,
+  reflogs and objects. Only temporary test repositories were involved.
+- Both byte-identical ancestor-link controls (v5 directory and standalone audio
+  copy) incorrectly passed the origin comparison.
+- A real Java child retaining its parent's output pipe exceeded the outer
+  four-second control deadline after the helper's 1.2-second deadline. The
+  control's independent safety cleanup terminated both owned processes; no
+  cleanup failure was suppressed over the primary failure.
+
+The RED run waited 0s; Maven reported 29.999s and XML 4.525s. Its console summary
+said 3T3F, but the XML and TXT contain four actual failing testcase records:
+two dynamic symlink children, environment control and retained-pipe control.
+Counts here follow the completed reports, not the console summary. This is a
+new discriminating RED execution, not an executed baseline or an R1 rerun.
+
+R2 removes inherited `GIT_*` variables from each child environment, resolves
+the explicit checkout as its cwd, and ignores global/system Git configuration.
+Only this test helper suppresses hooks, init templates, fsmonitor and automatic
+maintenance. Actual AI-assisted repository commits still use normal installed
+hooks. The environment control snapshots every foreign file, including HEAD,
+index and configuration, and also checks exact binary Git-object output.
+
+The process reader now has one operation deadline, observes owned descendants,
+and explicitly cancels its reader and shuts down its executor. Descendants and
+the direct process are terminated; stream closure, reader termination and
+process waits share a separate two-second cleanup budget. No unbounded executor
+closure remains. Cleanup errors are suppressed onto the original failure;
+the retained-pipe control requires clean cleanup and dead owned processes
+before returning. This is a bounded private Git helper, not a general detached
+process or hostile-process isolation facility.
+
+Both provenance validation and origin comparison check every component from
+the consumer root through the destination before opening consumer bytes.
+Symbolic-link components and non-directory ancestors fail. Workspace ancestry
+outside the consumer root is unaffected. Only an actual platform inability to
+create temporary symlinks may skip the two link controls; it does not skip the
+contract or other checks.
+
+Declared origin `9e51ff79`, all immutable consumer artifacts/provenance, exact
+initialized gitlink `703bd92d`, all 31 consumer semantic cases, existing tamper
+controls and the renamed opt-in method remain. Current producer compatibility
+remains **UNKNOWN**. R2 changes only this test's private helper/controls and this
+existing plan; no native, production, POM, selection-policy or API changes.
+
+Final R2 checks each ran exactly once on frozen Java blob
+`39af165c991266ba0c1575c86f355409a46ecf18`:
+
+- Ordinary whole class: **49T0F0E0S**, XML 3.352s, printed queue wait 19s,
+  Maven 28.924s. The four new cases passed; the retained-pipe case took 1.356s,
+  with no suppressed cleanup error and both owned processes dead. Both link
+  cases executed on Linux: zero platform skips.
+- Initialized renamed method: **1T0F0E0S**, XML 1.462s, printed queue wait 36s,
+  Maven 27.453s. Actual testcase identity was the single renamed method.
+
+All three jobs used the Main absolute queue wrapper, owned cwd/target, Java
+25.0.4.1, Lua 5.4, surfaceless EGL/null audio and the same original absolute ROM
+arguments/environment as R1. Each had distinct owned report/tmp directories
+(`origin-copy-r2-red-20261021-1`, `origin-copy-r2-ordinary-20261021-1`,
+`origin-copy-r2-initialized-20261021-1`). Exact expanded argv/environment and
+literal current task/run IDs are retained only in the existing R2 registry
+continuation. The executed selections/common flags were:
+
+```bash
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.trace.TestTraceChaserV5ConsumerContract#gitEnvironmentCannotRedirectFixtureWritesIntoTheCallerRepository+gitTimeoutTerminatesAChildHoldingItsOutputPipe+consumerCopiesRejectAncestorSymlinksBeforeReadingTheirTargets' test -B
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.trace.TestTraceChaserV5ConsumerContract' test -B
+python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Ptracechaser-integration -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.trace.TestTraceChaserV5ConsumerContract#initializedCheckoutPreservesConsumerCopiesFromDeclaredImmutableOrigin' test -B
+```
+
+All XML/TXT, 69 properties per job, actual identities, full failures (RED),
+skips/errors and stream nodes were consumed. Final runs had no failures,
+errors, skips or stream nodes. Consumed owned diagnostics were removed without
+an archive or validation receipt. No Root/Main write or workload, extra agent,
+boundary repeat, engine/broad/full/native/C# check, integration, push or worktree
+cleanup occurred in R2. These are Linux focused results; other-platform runtime
+behavior and detached hostile-process isolation are not certified. This local
+follow-up has literal parent R1 `2fa1ddfb`; Root owns a fresh independent review.
