@@ -25665,3 +25665,106 @@ tracked inherited MenuAudioProbeTool singleton violations, and one terminology
 guard repaired by the two unused formal renames. No guard allowlist was relaxed.
 Remaining gameplay failures and parity/coverage gaps keep Main delivery blocked.
 No broad selection was repeated after these bounded fixes.
+
+
+## WidePaired800 current controller frontier (2026-10-21)
+
+This bounded implementation lane uses exact Root commit
+`0e4f7a9f202f477018d4adeb01295316704c0ea1`, whose production runtime is the
+stated7fbc runtime. Main `efd60514` is not the tested runtime. The clean T3
+checkout was supplied at efd on `ssz-wide-paired-route`; the authorized owned
+branch `feature/ai-ssz-wide-paired-route-20261021` was created here at the exact
+Root base. No Main/Root/foreign checkout, branch or production source was changed.
+The supplied TraceChaser nested checkout differs from the base gitlink and is
+preserved unstaged. No extra agent, push or integration was performed.
+
+Only the two existing complete-method forward/replay death messages change:
+`FIRST_FORWARD`/`REPLAY`, existing `pending`, `frame`, `n`, and `frame+n` now
+identify a failure. No query, predicate, input, simulation/draw/capture/restore
+order, window, comparator or gameplay datum changes. Both scripts/BK2s remain
+exactly at the base. Seven-field Settings remains800/Sonic/Tails/off with null
+position/donor-ROM fields and omitted title presentation; it is not title-first.
+
+One diagnostic whole-class invocation used the current Main absolute queue.
+`OPENGGF_MAIN` and `S1_ROM`/`S2_ROM`/`S3K_ROM` below denote the original absolute
+checkout/ROM paths pinned in the task registry; the expanded command is retained
+there. `PWD` is this owned checkout:
+
+```bash
+env -u JDK_JAVA_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS \
+  -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH -u LIBGL_DRIVERS_PATH \
+  -u LIBGL_ALWAYS_SOFTWARE -u MESA_LOADER_DRIVER_OVERRIDE -u LWJGL_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" \
+  --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  -Dtest=TestSszWidePairedColdRouteCapture \
+  "-Dopenggf.surefire.reports=$PWD/target/ssz-wide-current-diag/reports" \
+  "-Dsonic1.rom.path=$S1_ROM" \
+  "-Dsonic2.rom.path=$S2_ROM" \
+  "-Ds3k.rom.path=$S3K_ROM" \
+  test -B
+```
+
+Actual Surefire XML: **2T/2F/0E/0S**, class21.299s, Maven1:41, queue wait0s.
+Java25.0.4.1, POM release25/LWJGL3.4.1 and actual native classifier jars were
+read/pinned; original absolute ROM CRC32/SHA1s match the repository identities.
+The supplied config symlink resolves to Main config SHA256
+`6abd111c03f798dbe2a618cb4985aeb599127f44668edb2a8edbde118d11f7da` and is unchanged.
+Tracked source/resource/POM inputs and the two scripts/BK2s were fingerprinted;
+no duplicate unchanged baseline or broad run was submitted.
+
+- `coldFirstReplicaAndTransportReplayWithRetiredColumnDebris`: line87,
+  expected46 rings, actual48, after its40 full-registry replay windows, eight
+  GHZ hits, health0 and receiving-platform centre512/1420 assertions.
+- `coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline`: line256,
+  `FIRST_FORWARD [wide-route-11640] frame=11640 n=24 input=11664`, dead=true.
+  This is the first forward branch, before restore, not a restored-world failure.
+  Downstream MTZ/Mecha/DEZ assertions are unreached.
+
+An external temporary public-API observer then used ordinary cold inputs and
+`renderFrame()` every tick, with no seeds, trace data, private state, reflection
+or restores. Its first attempt failed in the observer's null-spawn positional
+query after input9913; that interrupted run is not route qualification. After
+correcting only that observation, the uninterrupted maintained complete movie
+also dies at11664: centre4853/2908, rings21, hurt=false, lives3, camera4454/2688,
+native Tails present, main/focus identity intact. The first observed hurt is
+10969, centre2528/1452, rings60→0. The later fall with retained rings is consistent
+with `Player_LevelBound`/`applyPitDeath`; this did not instrument the actual killing
+call or prove the10969 touch receiver. No gameplay omission was established.
+
+Controller search stopped after eight alternatives in two bounded groups:
+
+1. Honest prefix10880; replace120 pads, retain11000..11799. Candidate tails
+   `10 R;24 R+A;86 R`, `30 R;36 R+A;54 R`, `70 R;36 R+A;14 R`, and `120 R`.
+   The first/last reach11799 alive without that hurt, near4277/1594 with68/70
+   rings. The middle candidates die11591/11373. These are exploratory branches.
+2. A fresh uninterrupted cold replay of the no-jump candidate with the whole
+   retained tail reaches a wall near4277, never reaches MTZ, and dies16349 at
+   4850/2908 with24 rings. From that candidate's ordinary prefix11640, the last
+   four exploratory alternatives replace332 pads and retain11972..13999:
+   `1 R;48 R+A;283 R`, `20 L;32 R;48 R+A;232 R`,
+   `40 L;32 R;48 R+A;212 R`, `60 L;36 R;48 R+A;188 R`.
+   All survive to13999 but advance only as far as4583 and finish near3954..3965;
+   none encounters MTZ or Mecha. No further search or boss-policy tuning follows.
+
+All exploratory restores remain in the same SSZ world through the existing
+branch tool. No fade/load/assembly restore was attempted. These candidates are
+rejected as maintained replacements: avoiding one fall does not restore the
+semantic route. The next bounded proposal is to observe actual upper sloped-cloud
+and bouncy-cloud ownership from that approach and navigate it with ordinary pads;
+there is no source-supported production fix. The46-ring oracle stays unchanged:
+this lane supplies no two fresh agreeing full-state/owner-event qualifications
+for a replacement endpoint or complete movie. The three8..0/no-healing/survival,
+native-pair/focus, pad release, launch fade, DEZ assembly/control/movement/earned
+rings and history-retirement goals remain open here; every existing predicate
+and whole-registry45-input two-cycle window is unchanged.
+
+No final passing leaf class is claimed. Its executable diff remains the diagnostic
+message-only diff already run; without an ordinarily qualified replacement,
+an unchanged second whole-class failure run would add no evidence. No broad,
+Root31, unrelated controller, full-suite, full-game, native timing, pixel or true
+boot certification was attempted. Actual XML and owned regenerable probe outputs
+are consumed after inspection; only the compact frontier/proposal and selected
+normal-render evidence remain outside the repository.
