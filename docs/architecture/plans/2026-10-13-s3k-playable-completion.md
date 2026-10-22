@@ -30690,3 +30690,73 @@ directory after inspection. The production-authored chosen script/BK2 and this
 compact result preserve the useful work; no raw archive or validation receipt
 is retained. Normal build outputs may remain. No live job remains, and the
 owned branch/worktree stay available for Root inspection and integration.
+
+
+### Root composed SOZ1 Knuckles qualification — 2026-10-22
+
+Root independently reviewed source/data `922b57765333afd0c16b6f4a38183b04a23f60a2`
+againstfbeb, including every34974 controller row, original0..16699 prefix and
+exact four-part test inverse. Final committed Java/script/BK2 hashes match the
+review. Runtime/POM/other character and Act2 resources remain unchanged by the
+leaf. The final script's only post-launch cleanup removes an extra EOF blank
+line; every controller row and the executed BK2 stay exact.
+
+Root composes the SOZ leaf as `ea01f2c3e`, after HCZ lifetime `1bd037078` and
+R36 docs `1266540c5`. The only cherry-pick conflicts are append-only dated Plan
+suffixes; complete Root history and exact worker suffixes are preserved. No
+executable conflict is resolved or predicate changed.
+
+One composed exact iteration passes **1T/0F/0E/0S**, actual identity
+`com.openggf.tools.TestSozColdRouteCapture#soloColdActCompletesWithTraversalReplayAndPlayableDestination(int, String)[5]`,
+arguments0,knuckles, ready34793/native320/52 replay windows. Four Console engine
+XML files contain exactly one Jupiter case; Java25.0.5/EGL/verified original
+absolute ROM/current cwd are inspected. Case10.018s/Jupiter10.327s; queue53s/
+Maven37.729s are separate intervals. This is not the three-case leaf invocation
+or a whole-class/smoke run. The two unchanged Act2 failures12288/24051 remain
+worker-qualified negatives, without an unnecessary repeated run.
+
+The maintained source reports **4824 draws and34974 skipped draws**. Zero JUnit
+skips does not mean zero skipped drawing. Its52 strict45-input/full-registry
+windows and unchanged drawing policy pass; the worker's two separate ordinary
+full-movie cold witnesses are distinct evidence. No new native pixels/timing,
+onward Act2, unrestricted render-schedule or full-zone certification follows.
+Later neutral-tail death35039 remains beyond the unchanged ready+180 endpoint,
+with actual damage owner unproven and timer-cap hypothesis withdrawn.
+
+Exact composed command: current absolute Main queue `--normal -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl test-compile exec:exec -B`,
+`-Dexec.executable=$JAVA_HOME/bin/java -Dexec.classpathScope=test`, Java child
+`-Xmx2g -Dopenggf.headless.gl=surfaceless-egl`, verified absolute S3K ROM and
+fresh `target/soz-act1-composed` tmp/diagnostic/artifact properties, then
+`-cp %classpath org.junit.platform.console.ConsoleLauncher execute
+--disable-banner --details=summary
+--select-iteration=method:com.openggf.tools.TestSozColdRouteCapture#soloColdActCompletesWithTraversalReplayAndPlayableDestination(int,java.lang.String)[4]
+--reports-dir=target/soz-act1-composed/reports`. Java25/Lua5.4/nullAL and ambient
+JVM/display unsets remain. The JVM child selector is zero-based; actual XML[5]
+is authoritative. All owned original reports/logs were inspected then consumed.
+Main integration and combined current-source smoke remain separately coordinated.
+
+
+This composed case also emits16 distinct current `s3k-kos-v1`
+`KOS_DECOMPRESSION_QUEUE` missing-measured-profile warnings, one per hash below,
+with deterministic fallback. These are actual current warning leads, **not**
+reconstructed historical14 keys or native measured service costs. Source spans,
+per-submission mode/epoch/ordinal and service-boundary descriptors are absent
+from this warning and remain UNKNOWN. A passing route does not close this gap.
+
+- `sha256:513a9a9016d04c5eb13ce66f295beee59f58d0f7b521633e61b4a2d331e0f696`
+- `sha256:d24be13589290e524a4b8bcd45d2b234d35956a6d0c98e8cec93a773405f377b`
+- `sha256:cb1923c98f9bc37f32e9323070a0ff876f8127936698ef7215c88b44b37d068a`
+- `sha256:35ec36e71372cdd969a7cf6f4071a81f39553144a307b4dcaddc72d529bce5a5`
+- `sha256:d8986258e76882ddbd2c1748805dd5ca868ba05ff17402a54d03f32ae4627fdc`
+- `sha256:dafb118f6d509f18e31cb7b4389cd6126ea422dbd50e50b5b117b727a0eaa5ec`
+- `sha256:3c5d98d880b5d37baed25a38a840feea5f2354a0a5ff8e7fa9893b4f2d0506ea`
+- `sha256:55b2f8fed5ea6b2dfef044a4de77730bd59e7f9f26eaa9fc0eec92255ecb38ba`
+- `sha256:fbadd3143cf1ef47bc3a53c2758b0dee766060628b67fc129e66ba7b20a116b8`
+- `sha256:857cb2fe02462caffeb1209b4b125b8562457734233b6bd0231a51771c073e4f`
+- `sha256:cd640bd18e68d6af86e235bfa896b2570844a8078d4b2c7648ef4be5a2b5a4eb`
+- `sha256:ae9180c3ac239da33fc2496c804bfabcfc3a99de903a756d407084266bb46875`
+- `sha256:51e017156912def6ab4a639d7e635abe3a05ef3389c27c78b12cb12fef8e2454`
+- `sha256:0660e6e0853b964f97425239361aafd1b971ee856ea40bee9d497d8047f5d16e`
+- `sha256:5759c48cc4a5bb6711cfd3cc9bb55c92a7d941ba4405253d5123df806c58e058`
+- `sha256:b00341dcb58d739de68d785f41ffa1fe5a0ae0bc78d186de2058c2813fb5addd`

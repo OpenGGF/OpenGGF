@@ -758,3 +758,16 @@ act-1 and act-2 routes are unchanged: ready 28436, 31587, 16626 and 28612.
 | Movie | Old SHA-256 | New SHA-256 | Removed | Frames | Releases |
 |---|---|---|---|---|---|
 | `soz1-cold-knuckles.bk2` | `1f470578c537eb075398b77b0614884efda6deaf8e099d4e243d0be5775f198e` | `f2d6cdccac2a5f1ca7d70c6aa8f62a8803cbb972ba66be3dc71c3b4f28f332d6` | -5 at 3312 (bonus entry), -64 at 3588 (bonus return) | 24005 | bonus 3317, return 3644 |
+
+
+### Root composed Act1 qualification — 2026-10-22
+
+Leaf922b577 is independently source/data reviewed and composed as `ea01f2c3e`,
+after Root's HCZ lifetime correction. One exact native320 solo-Knuckles Act1
+iteration passes **1T/0F/0E/0S**, ready34793/52 strict45-input registry windows,
+Java25.0.5/EGL/original ROM; case10.018s, queue53s/Maven37.729s. Actual four
+Console XML engines contain one Jupiter case, not a whole-class pass.
+Its4824 draws/34974 skipped draws preserve the existing maintained drawing
+policy; worker full ordinary witnesses remain separate. Act2 deaths12288/24051
+and later idle-tail death35039 limits stay open.
+[Exact command, hashes and composition](../../plans/2026-10-13-s3k-playable-completion.md#root-composed-soz1-knuckles-qualification--2026-10-22).
