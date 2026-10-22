@@ -78,6 +78,13 @@ hid the airborne cast. Compare resolved centres with the picture and actual nati
 body pixels in each distinct camera regime. A platform-only pixel check or a
 complete lossless decode does not establish airborne framing.
 
+Grounded telemetry and visible actors do not prove floor alignment (2026-10-22,
+Stageplay ring-spill review). Sprites used director Y while foreground scroll
+retained gameplay Y. Check contact pixels and the priority mask under several
+director offsets; preserve native background phase and restore published state
+after drawing. A transparent native floor-art tile can have valid collision, so
+contact oracles must distinguish missing art from a displaced rendered surface.
+
 A JVM launch property is mutable test state (2026-10-21, Stageplay smoke).
 `TestSurfacelessEglContext` clears `openggf.headless.gl`; a later
 `TraceCaptureBootDimensionsTest` in the same JVM then tries GLFW even when

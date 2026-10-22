@@ -155,6 +155,15 @@ for the intended reveal. LIVE camera controls show the resolved follow view;
 Capture key / Record stores authored framing and clears following at those keys.
 The camera form keeps follow targets and applies position edits as follow offsets.
 
+After vertical pans or follow-target changes, compare visible feet and support
+objects with the rendered foreground and its occlusion mask. Grounded state,
+visible body pixels and complete decoding can all pass while scenery uses a
+different camera origin. Check contact before and after the move; distinguish
+transparent native floor art from a displaced foreground. LIVE backgrounds retain
+the native gameplay camera phase, including intentionally stationary backgrounds;
+arbitrary-view background parallax is not recomputed. Do not alter physics or
+force the background to move like foreground terrain to disguise a rendering fault.
+
 Place explicit `ROM_MUSIC` cues at each shot's local frame zero using verified
 `catalog` IDs. Preview's worker silences automatic level music because the parent
 owns authored cues; exports use the same cues and keep native SFX. A soundtrack

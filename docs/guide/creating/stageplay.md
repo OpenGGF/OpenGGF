@@ -96,7 +96,10 @@ The draft camera stays separate from the evaluated shake, so saving a key never
 accidentally bakes earthquake offsets into it. Switch back to actor mode to direct
 cast movement. LIVE camera keys can follow one actor or a group: set **follow**
 to comma-separated actor IDs, then tune dead zones, look-ahead, smoothing and
-offsets. Follow uses actual native positions and remains at zoom one.
+offsets. Follow uses actual native positions and remains at zoom one. The directed
+foreground, native sprites and priority mask share one view. Background scroll,
+deformation and effects retain the gameplay camera’s native phase; arbitrary-view
+background parallax is not recomputed. Death Egg’s stationary background is intentional.
 
 Both editors expose **Camera effect** and **Scene change** commands with editable
 timeline rows. Camera effects add deterministic seeded shake over a half-open

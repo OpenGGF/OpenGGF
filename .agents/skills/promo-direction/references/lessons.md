@@ -59,6 +59,24 @@ simulation state before rendering and review the resulting movement; never subst
 a fitted position curve for a requested native jump. Code and codec checks alone
 cannot establish creative acceptance.
 
+## Stageplay vertical-camera correction
+
+On 2026-10-22 the user reported “something's wrong with vertical camera movement
+relative the level,” specifically the ring-spill fall in revision five. Native
+actors were grounded, but foreground scroll used a different vertical origin,
+so a landing appeared in empty space. Codec checks, telemetry and the earlier
+bounded agent review all missed it. Revision six aligns foreground, priority
+masks and sprites in the directed view; all 4,860 native state records remain
+unchanged. The exact source and replacement captures are preserved in the
+[Stageplay archive](https://github.com/OpenGGF/OpenGGF-Media/tree/main/projects/stageplay).
+
+Review feet and supporting surfaces through vertical pans and follow handoffs,
+including the landing consequence. Keep native background behavior distinct from
+foreground alignment: Death Egg is intentionally stationary, and current LIVE
+backgrounds retain the native camera phase. A transparent native floor-art tile
+can still have collision. Diagnose the rendered transform and native art before
+changing movement, adding fake terrain or making every background scroll alike.
+
 ## Recurring hazards
 
 - Correct footage does not make good pacing. Count the cuts and compare with

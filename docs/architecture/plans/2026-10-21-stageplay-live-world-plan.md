@@ -741,3 +741,96 @@ API surface changed. Root owns rebuilding external consumers, moving review,
 promo/MP4 replacement, archive and integrated validation/push. This worktree has
 no remaining live job. Temporary consumed diagnostics/QA helper are removed;
 branch/worktree and packaged build are retained for root.
+
+
+### Combined delivery verification — 2026-10-22
+
+The combined source at `1e0f02519117a225b270c8b967ac3dbb9d74f798`
+completed run `20261021T225019Z-88c7aa64`: 3,564 candidate classes,
+all 72 ordinary batches and the separate guard batch. The tree stayed unchanged
+through the run. Preparation took 79.41 seconds. Command:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY -u MAVEN_ARGS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  python3 tools/testing/run_categories.py \
+  --base ca58b4691bbc92bfee66b4b18dfed8cad68beed6 \
+  --rom-directory ../.. \
+  --max-minutes 180 --run
+```
+
+The ROM directory is shown as the equivalent `../..` path from this worktree;
+the executed command used that directory’s absolute path.
+
+Ordinary: **37,365 tests, 2 failures, 2 errors, 93 skips**, 6317.97 seconds recorded lane execution.
+
+Guards: **718 tests, 5 failures, 0 errors, 0 skips**, 269.31 seconds recorded lane execution.
+
+These execution totals exclude queue waiting and are not total delivery time.
+The run remains red for the previously matched baseline failures below; no new
+or worsened failure remains. This is bounded smoke coverage, not a release full
+suite or an all-green claim.
+
+- `com.openggf.game.sonic3k.objects.TestHczMinibossNativeRendering.allOrbitPhasesMatchRomSpriteCompositionInNativePixels` (failure).
+- `com.openggf.tools.TraceCaptureBootDimensionsTest.realBootKeepsNativeGameplayCameraAndWidePresentationCaches(int)[1]` (error).
+- `com.openggf.tools.TraceCaptureBootDimensionsTest.realBootKeepsNativeGameplayCameraAndWidePresentationCaches(int)[2]` (error).
+- `com.openggf.tools.audio.completerun.TestCompleteRunAudioCli.freshJvmBootstrapsTheS1ProfileButItsUnavailableDispatcherEmitsNoStandardOutput` (failure).
+- `com.openggf.game.TestProductionSingletonClosureGuard.productionCodeDoesNotUseForbiddenProcessSingletonsOutsideEngineServices` (failure).
+- `com.openggf.game.TestProductionSingletonClosureGuard.productionCodeOnlyUsesRawGetInstanceAtEngineServicesBootstrapBridge` (failure).
+- `TestArchUnitRules.shared_code_does_not_construct_concrete_sonic_provider_classes` (failure).
+- `TestArchUnitRules.shared_layers_do_not_depend_on_game_specific_packages` (failure).
+- `com.openggf.tests.TestNativeImageResourceGuard.everyRuntimeResourceIsReachableFromTheNativeImageConfig` (failure).
+
+The ordinary failures match the baseline assertion locations: HCZ native pixels
+at line 53, both trace-boot parameters at line 41 and fresh-JVM audio CLI at
+line 182. The latter three reproduce with the baseline's backend-property and
+JAVA_TOOL_OPTIONS environment; the earlier clean-environment focused followup
+passed both boot cases and all audio CLI cases. Guard failures match the existing
+HubMusic constructor/package dependencies, MenuAudioProbeTool singleton calls
+at line 41, and missing AuthoredLevelDecoder native-image resource. The baseline
+evidence and exact focused commands are recorded in the foundation plan.
+
+All 93 ordinary skips were inspected: opt-in measurements/captures/soaks,
+graphics prerequisites, external mod/BizHawk fixtures, absent route placements
+and the CPZ spin-tube prerequisite. There are no missing-ROM skips. Required
+S3K loading/bootstrap/decoding/AIZ checks executed without failure. Guards skip
+none. Consumed category diagnostics are acknowledged and removed before delivery.
+
+After this frozen run, the camera fix and rendered handoff `efa7875f8` /
+`08254a5da` were reconciled without conflict. Its four production-file changes
+are confined to the cinematic projection scope. The 122 companion checks and
+two final pixel regressions above cover affected consumers, state restoration,
+ordinary-render preservation, replay, API pins and architectural source guards.
+That focused evidence covers the bounded post-smoke correction; an unchanged
+broad suite is not repeated on the integration tree. Subsequent edits only
+document foreground alignment, native-phase backgrounds and the review lesson.
+Mirrors, relative links, whitespace and directing scenarios are checked separately.
+
+External Editor source `e4596f00b0e7de058791108ed1db429353fd2c17` passed
+all 22 tests with no failures/errors/skips against the frozen corrected runtime.
+The check used Java 25, Lua 5.4, explicit surfaceless EGL, original absolute S2/S3K
+ROM properties, `-Dopenggf.stageplay.desktopPictures=true`, and the corrected
+`live-air-traffic.stageplay` as `openggf.stageplay.liveScene`, through the queued
+Maven wrapper. Maven execution took 5.264 seconds. Its clean merge into Editor
+main is `dbf9761def66a0223cad508be8f1799a0cd152a1`; tracked source matches
+the tested tree exactly.
+
+Revision-six production sources are published in OpenGGF-Media main at
+`bb503d931af607167acfbbec24487758e61074c6`:
+[Stageplay archive](https://github.com/OpenGGF/OpenGGF-Media/tree/main/projects/stageplay).
+All nine MKV/MP4 files decoded fully at 60 fps; all 4,860 parsed native records
+equal revision five. Normal-speed browser playback reached all four MP4 ends.
+The promo reported two browser presentation drops out of 3,600 frames; companions
+reported zero. Exact source decoding retained every frame. Contact frames 120/239,
+the 16-frame boundary sheet and representative moving snapshots were inspected.
+The 60-second promo measures −18.0 LUFS and −4.8 dB true peak; physical listening
+and creative acceptance are not claimed. Camera contact is corrected without
+changing native physics or inventing art under the transparent native ledge.
+
+Catalog verification passed for 6,896 source files and 14,348 external entries.
+All 17 new source copies, 24 external artifact hashes, JSON/Python syntax,
+index links, original CSV byte prefix and public-exposure checks passed.
+The Media task worktree/branch and owned preview server are cleaned up. Engine
+and Editor final packaging, destination pushes and accounted worktree cleanup
+follow this checkpoint; their resulting commit IDs belong to the delivery reply.

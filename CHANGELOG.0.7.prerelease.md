@@ -14,7 +14,8 @@ Unreleased. The earlier development themes remain in
   positioning, animation and frame selection, including older scenes. Opt-in live ROM
   worlds share moving objects, collision pickups, native hurt and per-actor controllers;
   bounded routes/placement targets, native flight/glide and fixed-scale actor/group
-  camera follow use the production gameplay and rewind owners. Inspect actual state
+  camera follow use the production gameplay and rewind owners. Directed foreground,
+  characters and occlusion stay aligned through camera movement. Inspect actual state
   and events through windowless simulation and placement/capability discovery. Live
   editor previews run in an isolated offscreen worker, preserving the active world.
   Record directed takes, undo edits, save/reopen and export synchronized
