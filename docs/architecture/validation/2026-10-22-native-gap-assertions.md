@@ -1,4 +1,4 @@
-# Native assertion and capsule allocation repairs — 2026-10-22
+# Native assertion, capsule allocation and sprite submission repairs — 2026-10-22
 
 T3 isolated worktree `t3-e5feec78`, branch
 `bugfix/ai-gap-coverage_assertions-20261022`, integration base
@@ -150,3 +150,166 @@ smoke or a full-suite result. No S3K runtime, campaign recipe, shared movement,
 audio, renderer or general allocator changed. Remaining per-act/configuration,
 lifecycle, pressure-at-real-placement and native picture/audio gaps stay explicit
 above; the parent owns combined integration validation.
+
+## Follow-up: native sprite submission backend
+
+The first milestone above is `55c764612a26afbec059a1c57e5228a2ed17436c`.
+This follow-up imports the approved S1 object-retirement dependency
+`52a3469027a0b445903da5bd81969c6320e59fd6`, locally reconciled as
+`767bb2877` without changing its runtime edits. The historical water-clock
+section of its audit remains evidence from that separate S1 branch, not a claim
+that those earlier changes were imported here. The foreign dirty S1 disassembly
+pin is preserved; all references below use the repository's pinned commits.
+
+### Native evidence and rejected shortcuts
+
+Pinned S1 `28872a46`, `DisplaySprite (_incObj/sub DisplaySprite.asm:6-19)`
+admits word-sized SST addresses until the count reaches `$7E`. Each `$80`-byte
+list reserves its first word for the count: **63 admitted calls per bucket**,
+eight independent buckets, not 64 and not the hardware SAT's 80 pieces.
+Duplicate calls, references to subsequently deleted SSTs and ID-zero references
+consume capacity. `DisplaySprite2 (_incObj/sub DisplaySprite.asm:28-41)` has
+the same rule. The supplied S1 REV01 ROM's `$DC92` and `$DCB0` routines contain
+the exact `0C 51 00 7E 64 06` / `0C 52 00 7E 64 06` comparisons and branches.
+Its identity was freshly checked: CRC32 `AFE05EEE`, SHA-1
+`69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`.
+
+`BuildSprites (_inc/BuildSprites.asm:23-38,118-125)` walks each list FIFO,
+loads the current SST contents and skips ID zero only after admission. ROM
+`$DD00` begins `30 74 60 00 4A 10 67 00 00 AC`: load queued address, test current
+ID, branch past drawing. Thus retaining a Java object, deduplicating slots,
+sorting calls by slot, refunding capacity on deletion or freezing attributes
+when the object calls DisplaySprite would each change shipped behavior.
+
+Pinned S2 `34fc7f1`, `DisplaySprite (s2.asm:30358-30373)`, also rejects a full
+selected bucket. Pinned S3K `8b2cf3c`, however, retries later lists:
+`Draw_Sprite / loc_1ABCE / loc_1ABDC (sonic3k.asm:36171-36191)`.
+Locked-on ROM `$1ABC6` begins `43 F8 AC 00 D2 E8 00 08`; `$1ABCE` compares
+`0C 51 00 7E`, and `$1ABDC` is
+`B2 FC AF 80 67 F8 D2 FC 00 80 60 E6` (stop at list7, otherwise advance `$80`
+and retry). The supplied locked-on ROM was freshly verified as CRC32 `63522553`,
+SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`. A universal reject-on-full
+implementation was rejected for S3K after this direct check. The default
+`submit` keeps S1/S2 semantics; the additive caller-selected `submitSpilling`
+models Draw_Sprite and records the bucket actually admitted. No game-name gate
+or new shared GameRules/Mod API field selects this behavior.
+
+### Internal API, frame ownership and rewind
+
+`NativeSpriteSubmissionSource` opts an object into authored calls and suppresses
+all inferred fallback entries, including a fresh routine that calls nothing.
+`NativeSpriteSubmissionAccess.submit(manager, object, bucket)` requires that
+marker and uses the object's owned SST slot. The raw-slot overload and
+`submitSpilling(manager, slot, bucket)` support trusted reserved-slot owners.
+`admissions(manager)` is an immutable accepted-call ledger in global call order;
+each value contains only the raw slot and actual admitted bucket. Its index is
+the global admission ordinal. Rejected calls never enter this ledger.
+
+The manager clears admission at the beginning of an actual object simulation
+pass, including initial Process_Sprites. Rendering reuses the completed frame
+without consuming, clearing or re-admitting it, supporting pause and repeated
+presentation. This is an engine frame-admission cache; the native BuildSprites
+routine itself drains its list counters. Full reset and spawn-list resync clear
+the ledger and unbind external collaborators; per-frame clearing retains them.
+
+The separate rewind adapter key is `object-native-sprite-submissions`.
+`GameplayModeContext.registerLevelAdapters` and
+`rebindActTransitionManagerAdapters` register it immediately after
+`object-manager`; null owners and teardown deregister it. No
+`ObjectManagerSnapshot`, public Mod API signature or ObjectServices method
+changes. State captures immutable raw admission values, never an ObjectInstance,
+RingDTO, resolver or Runnable. Missing older snapshots clear the queue. Graph
+restore precedes queue restore, so capture between update and render, orphan
+pointers and same-pass slot reuse resolve against the restored current graph.
+
+`bindExternalResolver(manager, IntFunction<SpriteSlotEmission>)` binds a live
+lookup, independent of snapshots. Bucket assembly first chooses a real current
+object and its live ID; a real ID-zero owner skips drawing and blocks stale
+external lookup. Otherwise it asks for the current external reserved-slot owner.
+The returned emission freezes draw data only then. Its bucket cannot relocate
+an already admitted call. A render-only facade carries the frozen mask/draw
+through the existing loop without entering object registration, allocation,
+gameplay update or graph snapshots. Rebind/invalidate when presentation inputs
+change after a bucket cache has already been assembled.
+
+`bindExternalSlotDispatch(manager, ExternalSlotDispatch)` supplies `beginPass()`
+and `dispatch(slot, player, vIntRunCount, cameraX)`. Both native slot walkers
+invoke dispatch only at an empty execution position with no real owned SST
+occupant, after recording the player's centre and native retirement for that
+position. The walk limit is checked first. Conversion into the current slot
+does not execute the replacement twice; a later slot can execute in the same
+pass and a past slot waits. `beginPass` runs even with no rings or a truncated
+walk. The callback receives V-int explicitly, not the ring animation clock.
+RingManager owns its unchanged `LevelManager.frameCounter + 1` clock, transient
+late-fallback suppression and restore/rebind behavior in the sprite lane.
+Neither callback identity nor that collaborator's DTO state belongs to this
+adapter. The sprite lane owns actual ring phase/domain and second-movie checks.
+
+### Ordering bridge and remaining migration obligations
+
+Cache lists remain painter order; the existing SAT consumer reverses them.
+The backend appends admitted calls in reverse FIFO after the legacy block, so
+the consumer sees an explicit FIFO prefix followed by the existing legacy SST
+suffix. Slots `70,40,70` stay `70,40,70`. `RenderEntry.slot()` remains the raw
+SST, with `nativeSubmission()` and `admissionOrdinal()` metadata; legacy entries
+use false/-1. The complete ledger retains raw empty/deleted entries even when
+they produce no RenderEntry or SAT pieces.
+
+This deliberately preserves legacy relative behavior, **not** authentic total
+mixed ordering or native capacity accounting for unported objects. In particular
+an unmarked replacement can retain its inferred legacy entry as well as appear
+through an old admitted pointer. S1 Bomb fuse/shrapnel producer calls belong to
+S1chain; ordinary Bomb body rendering remains legacy. Attracted-ring producers,
+live bindings and actual per-slot motion/display belong to the sprite lane.
+Folded `MultiBucketRenderable` owners still select parts by bucket; native
+opt-in or late reuse into a multipart owner needs slot-to-part projection and
+independent regressions before it can claim native closure. No allocator,
+retirement algorithm, ring motion/collection math, draw traversal or shader
+implementation is changed in this backend follow-up.
+
+### Follow-up focused verification
+
+All commands ran in this worktree at local dependency `767bb2877` plus the
+backend changes committed with this section; no fixture, ROM file or submodule
+pin was changed. `LUA_BIN=/usr/bin/lua5.4` was set and DISPLAY/WAYLAND_DISPLAY
+were unset. These are logic/consumer checks with headless GraphicsManager, not
+GPU pixel or whole-ROM output validation.
+
+- `python3 tools/testing/maven_queue.py -v`: Java 25.0.5 and Maven 3.10.0;
+  queue wait318s. No unleased JVM probe was used.
+- Queued lean `-Dmse=off
+  '-Dtest=TestNativeSpriteSubmissionQueue,TestObjectManagerNativeSpriteSubmissions,TestNativeSpriteSubmissionRegistration,TestObjectManagerMultiBucketRenderable,TestBorrowedExecutionSlotRetirement,TestGameplayModeContextRewindRegistry,TestModApiSignatureSurface'
+  test -B`: initial90 cases had two errors in existing tests whose fully mocked
+  ObjectManagers lacked an initialized queue. Their original graph-order probes
+  now wrap a real queue owner and expect object-manager → queue → rings. The
+  rerun passed90/90, no failures/errors/skips, Maven35.611s, queue wait2s.
+- Consumer review then caught missing throwaway-construction rejection. The
+  common admission path now rejects probe construction, including the object
+  overload before marker/slot access. A real probe constructor calls all three
+  ports and proves false results, an unchanged ledger and intact63-call capacity.
+  The callback ordering test also checks an actual participant and captured
+  centre coordinates at the external slot.
+- Final affected queued lean selection
+  `-Dmse=off
+  '-Dtest=TestNativeSpriteSubmissionQueue,TestObjectManagerNativeSpriteSubmissions,TestNativeSpriteSubmissionRegistration,TestGameplayModeContextRewindRegistry'
+  test -B`: 73/73 pass (14 queue,24 manager,6 registration,29 existing context),
+  no failures/errors/skips; Maven1m28s, queue wait49s. The unchanged earlier
+  multipart5, borrowed-retirement2 and Mod API signature11 results remain bounded
+  evidence for their unchanged paths; no public signature pins were edited.
+- Pinned disassembly citation check over this artifact and the queue/tests:
+  exit0,11 exact and1 nearby inherited anchor, no invalid references. Dirty
+  optional reference checkouts were reported and preserved.
+
+- Affected structural guards, separate queued fresh JVM:
+  `-Dmse=off -Pguards
+  '-Dtest=TestObjectPriorityBucketGuard,TestObjectServicesMigrationGuard,TestObjectUpdateClockTerminologyGuard,TestRewindArchitectureGuard,TestRewindTransientGuard,TestNoServicesInObjectConstructors,TestNoRendererCaptureInUnsafeSpawn'
+  test -B`: 34/34 pass, no failures/errors/skips; Maven1m46s, queue wait280s.
+  XML summaries were inspected for every selected class. Independent read-only
+  review also found no actionable mismatch in the new dispatch seams.
+
+Total distinct passing follow-up cases across the focused selections:125
+(91 ordinary including44 new cases,34 guards). Final affected73 and guards34
+ran after the probe rejection fix; the other18 ordinary cases cover unchanged
+paths as described above. No independent broad smoke, exhaustive route,
+second-movie or GPU-output claim is made; those consumer/domain and combined
+integration checks remain coordinated with S1chain, the sprite lane and parent.

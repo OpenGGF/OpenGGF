@@ -25,6 +25,10 @@ Unreleased. The earlier development themes remain in
   Scrap Brain saws retain their original objects while placement re-entry can
   create the shipped duplicate.
 
+- **Native sprite submissions:** an internal queue retains call-time bucket
+  pressure, duplicate slot references and late slot reuse through rewind.
+  Unported objects retain their existing render path.
+
 - **Sonic 1 level entry:** background scrolling starts from each level or credits
   demo's final camera, and lamppost returns retain the original background camera
   words. Scrap Brain Act 3 uses the original Labyrinth background scrolling

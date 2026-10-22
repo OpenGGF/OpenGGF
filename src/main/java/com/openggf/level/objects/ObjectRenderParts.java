@@ -2,6 +2,8 @@ package com.openggf.level.objects;
 
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.game.PlayableEntity;
+import com.openggf.level.render.SpriteSlotEmission;
 
 import java.util.Comparator;
 import java.util.List;
@@ -16,7 +18,11 @@ import java.util.List;
 final class ObjectRenderParts {
 
     /** One display-list entry: the object, the class it draws here, and its ordering slot. */
-    record RenderEntry(ObjectInstance instance, boolean high, int slot) {
+    record RenderEntry(ObjectInstance instance, boolean high, int slot,
+                       boolean nativeSubmission, int admissionOrdinal) {
+        RenderEntry(ObjectInstance instance, boolean high, int slot) {
+            this(instance, high, slot, false, -1);
+        }
     }
 
     /** ROM parity: lower SST slots render later and therefore in front. */
@@ -45,6 +51,41 @@ final class ObjectRenderParts {
                 addParts(parts, bucket, unified, low, high);
             }
         }
+    }
+
+    /** One authenticated call uses its captured bucket, never inferred extra buckets. */
+    static void addNativeToRenderBuckets(ObjectInstance instance, int bucket, int slot, int ordinal,
+                                        List<RenderEntry>[] unified, List<RenderEntry>[] low,
+                                        List<RenderEntry>[] high) {
+        if (instance instanceof MultiBucketRenderable parts) {
+            int classes = parts.partTilePriorities(bucket);
+            if ((classes & MultiBucketRenderable.LOW_PARTS) != 0) {
+                add(new RenderEntry(instance, false, slot, true, ordinal), bucket, unified, low, high);
+            }
+            if ((classes & MultiBucketRenderable.HIGH_PARTS) != 0) {
+                add(new RenderEntry(instance, true, slot, true, ordinal), bucket, unified, low, high);
+            }
+        } else {
+            add(new RenderEntry(instance, instance.isHighPriority(), slot, true, ordinal),
+                    bucket, unified, low, high);
+        }
+    }
+
+    static ObjectInstance externalSprite(SpriteSlotEmission emission) {
+        return new ExternalSprite(emission);
+    }
+
+    /** A presentation-cache value only: never registered, updated, or snapshotted. */
+    private record ExternalSprite(SpriteSlotEmission emission) implements ObjectInstance {
+        @Override public ObjectSpawn getSpawn() {
+            return new ObjectSpawn(0, 0, 1, 0, 0, false, 0);
+        }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { }
+        @Override public void appendRenderCommands(List<GLCommand> commands) { emission.draw().run(); }
+        @Override public boolean isHighPriority() { return emission.tileOcclusionPaletteMask() == 0; }
+        @Override public int getTileOcclusionPaletteMask() { return emission.tileOcclusionPaletteMask(); }
+        @Override public int getPriorityBucket() { return emission.bucket(); }
+        @Override public boolean isDestroyed() { return false; }
     }
 
     private static void addParts(MultiBucketRenderable parts, int bucket, List<RenderEntry>[] unified,
@@ -81,6 +122,10 @@ final class ObjectRenderParts {
         }
     }
     static void appendRenderCommands(RenderEntry entry, List<GLCommand> commands, int bucket, ObjectServices services) {
-        ObjectHeadPresentation.draw(entry.instance(),services,()->appendRenderCommands(entry,commands,bucket));
+        if (entry.instance() instanceof ExternalSprite) {
+            appendRenderCommands(entry, commands, bucket);
+        } else {
+            ObjectHeadPresentation.draw(entry.instance(),services,()->appendRenderCommands(entry,commands,bucket));
+        }
     }
 }

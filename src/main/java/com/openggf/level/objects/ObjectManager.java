@@ -30,6 +30,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.TransitionSstOccupant;
 import com.openggf.level.WaterSystem;
+import com.openggf.level.render.SpriteSlotEmission;
 import com.openggf.level.spawn.AbstractPlacementManager;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
@@ -59,6 +60,7 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.function.IntFunction;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 
@@ -159,6 +161,36 @@ public class ObjectManager {
     @SuppressWarnings("unchecked")
     private final List<ObjectRenderParts.RenderEntry>[] unifiedBuckets = new ArrayList[BUCKET_COUNT];
     private boolean bucketsDirty = true;
+    private final NativeSpriteSubmissionQueue nativeSpriteSubmissions =
+            new NativeSpriteSubmissionQueue(() -> bucketsDirty = true);
+    // Presentation binding only. RingManager owns its live DTOs and rewind state.
+    private IntFunction<SpriteSlotEmission> nativeSpriteExternalResolver;
+    private NativeSpriteSubmissionAccess.ExternalSlotDispatch nativeSpriteExternalSlotDispatch;
+
+    NativeSpriteSubmissionQueue nativeSpriteSubmissions() {
+        return nativeSpriteSubmissions;
+    }
+
+    void bindNativeSpriteExternalResolver(IntFunction<SpriteSlotEmission> resolver) {
+        nativeSpriteExternalResolver = resolver;
+        bucketsDirty = true;
+    }
+
+    void bindNativeSpriteExternalSlotDispatch(NativeSpriteSubmissionAccess.ExternalSlotDispatch dispatch) {
+        nativeSpriteExternalSlotDispatch = dispatch;
+    }
+
+    private void beginNativeSpriteFrame() {
+        nativeSpriteSubmissions.beginFrame();
+        if (nativeSpriteExternalSlotDispatch != null) nativeSpriteExternalSlotDispatch.beginPass();
+    }
+
+    private void dispatchExternalSpriteSlot(int cameraX, PlayableEntity player) {
+        int slot = slotIndexForExec(currentExecSlot);
+        if (nativeSpriteExternalSlotDispatch != null && currentNativeSstOwner(slot) == null) {
+            nativeSpriteExternalSlotDispatch.dispatch(slot, player, vblaCounter, cameraX);
+        }
+    }
     private final ObjectRenderBucketSnapshot renderBucketSnapshot =
             new ObjectRenderBucketSnapshot();
 
@@ -444,6 +476,9 @@ public class ObjectManager {
 
     private void reset(int cameraX, PersistentRespawnState persistentRespawnState,
             boolean materializeInitialWindow) {
+        nativeSpriteSubmissions.beginFrame();
+        nativeSpriteExternalResolver = null;
+        nativeSpriteExternalSlotDispatch = null;
         clearActiveObjects();
         dynamicObjects.clear();
         objectCallbacks.clear();
@@ -550,6 +585,9 @@ public class ObjectManager {
      * the next frame will re-instantiate objects in the camera window.
      */
     public void resyncSpawnList(List<ObjectSpawn> newSpawns) {
+        nativeSpriteSubmissions.beginFrame();
+        nativeSpriteExternalResolver = null;
+        nativeSpriteExternalSlotDispatch = null;
         clearActiveObjects();
         cachedActiveObjects.clear();
         activeObjectsCacheDirty = true;
@@ -693,6 +731,7 @@ public class ObjectManager {
         List<? extends PlayableEntity> activeSidekicks = sidekicks != null ? sidekicks : List.of();
         frameCounter++;
         vblaCounter++;
+        beginNativeSpriteFrame();
         // Inline-physics path: snapshotTouchResponseState() ran earlier this
         // frame and already refreshed the cached camera bounds. The second
         // call here is harmless redundancy (the post-camera-step bounds
@@ -826,6 +865,7 @@ public class ObjectManager {
     SolidExecutionRegistry beginInitialSolidExecution(
             PlayableEntity player, List<? extends PlayableEntity> sidekicks) {
         frameCounter++;
+        beginNativeSpriteFrame();
         updateCameraBounds();
         solidContacts.captureExecStartPlayerCentreY(player, sidekicks);
         SolidExecutionRegistry registry = objectServices.solidExecutionRegistry();
@@ -978,7 +1018,10 @@ public class ObjectManager {
                     objectsRemoved = true;
                 }
                 ObjectInstance instance = execOrder[currentExecSlot];
-                if (instance == null) continue;
+                if (instance == null) {
+                    dispatchExternalSpriteSlot(cameraX, player);
+                    continue;
+                }
 
                 // ROM parity: most S1 objects check out_of_range at the START of
                 // their routine during ExecuteObjects (static scenery / fixed
@@ -1183,7 +1226,10 @@ public class ObjectManager {
                     objectsRemoved = true;
                 }
                 ObjectInstance instance = execOrder[currentExecSlot];
-                if (instance == null) continue;
+                if (instance == null) {
+                    dispatchExternalSpriteSlot(cameraX, player);
+                    continue;
+                }
                 processedInExecLoop.add(instance);
 
                 executeObjectWithSolidContext(
@@ -1507,10 +1553,14 @@ public class ObjectManager {
         // Bucket active and dynamic objects; an owner of inline-drawn ROM children
         // (MultiBucketRenderable) is listed in every bucket its parts occupy.
         for (ObjectInstance instance : activeObjects.values()) {
-            ObjectRenderParts.addToRenderBuckets(instance, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
+            if (!(instance instanceof NativeSpriteSubmissionSource)) {
+                ObjectRenderParts.addToRenderBuckets(instance, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
+            }
         }
         for (ObjectInstance instance : dynamicObjects) {
-            ObjectRenderParts.addToRenderBuckets(instance, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
+            if (!(instance instanceof NativeSpriteSubmissionSource)) {
+                ObjectRenderParts.addToRenderBuckets(instance, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
+            }
         }
 
         // ROM parity: lower sprite-table indices render in front. Objects execute and
@@ -1521,6 +1571,33 @@ public class ObjectManager {
             lowPriorityBuckets[i].sort(ObjectRenderParts.SLOT_DESCENDING);
             highPriorityBuckets[i].sort(ObjectRenderParts.SLOT_DESCENDING);
             unifiedBuckets[i].sort(ObjectRenderParts.SLOT_DESCENDING);
+        }
+
+        // BuildSprites (_inc/BuildSprites.asm:29-38) walks accepted SST pointers
+        // FIFO, resolving current RAM even after deletion/reuse. Cached lists
+        // are painter order, reversed by the SAT consumer: append reverse FIFO
+        // so native calls form its FIFO prefix. Unported legacy objects retain
+        // their old SST ordering as a suffix; that mixed bridge is not evidence
+        // of native DisplaySprite call coverage or capacity for those objects.
+        for (int ordinal = nativeSpriteSubmissions.size() - 1; ordinal >= 0; ordinal--) {
+            int slot = nativeSpriteSubmissions.slotAt(ordinal);
+            AbstractObjectInstance currentObject = currentNativeSstOwner(slot);
+            ObjectInstance occupant = currentObject;
+            if (currentObject != null) {
+                // ID zero consumes the already admitted queue word but emits no
+                // SAT pieces. Do not replace a real cleared owner with a ring.
+                if ((currentObject.getLiveObjectId() & 0xFF) == 0) continue;
+            } else if (nativeSpriteExternalResolver != null) {
+                SpriteSlotEmission emission = nativeSpriteExternalResolver.apply(slot);
+                if (emission != null && emission.slot() == slot) {
+                    occupant = ObjectRenderParts.externalSprite(emission);
+                }
+            }
+            if (occupant != null) {
+                ObjectRenderParts.addNativeToRenderBuckets(occupant,
+                        nativeSpriteSubmissions.bucketAt(ordinal), slot, ordinal,
+                        unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
+            }
         }
 
         renderBucketSnapshot.capture(activeObjects.values(), dynamicObjects);
