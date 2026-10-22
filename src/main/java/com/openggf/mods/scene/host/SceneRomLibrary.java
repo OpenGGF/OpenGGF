@@ -28,6 +28,7 @@ public final class SceneRomLibrary implements AutoCloseable {
     private final Map<String, GameModule> modules = new LinkedHashMap<>();
     private final Map<String, Rom> sourceRoms = new LinkedHashMap<>();
     private final List<Rom> ownedRoms = new ArrayList<>();
+    private final SceneRomAudioSources audioSources = new SceneRomAudioSources(this);
     private boolean closed;
     private final String activeGame;
 
@@ -65,6 +66,37 @@ public final class SceneRomLibrary implements AutoCloseable {
     /** CPU-only supplied-ROM library for offline evaluation; every opened ROM is owned here. */
     public static SceneRomLibrary open(Map<String, java.nio.file.Path> paths) throws IOException {
         return new SceneRomLibrary(paths);
+    }
+
+    /** Exact offline logical-ROM views; this library owns wrappers, while readers remain immutable. */
+    public static SceneRomLibrary openReaders(Map<String, com.openggf.data.RomByteReader> readers) throws IOException {
+        return openReaders(readers,GAMES.stream().filter(readers::containsKey).findFirst().orElse(""));
+    }
+
+    public static SceneRomLibrary openReaders(Map<String, com.openggf.data.RomByteReader> readers, String activeGame) throws IOException {
+        return new SceneRomLibrary(readers,"scene logical ",activeGame);
+    }
+
+    private SceneRomLibrary(Map<String, com.openggf.data.RomByteReader> readers, String description, String activeGame) throws IOException {
+        Objects.requireNonNull(readers);
+        if (readers.isEmpty() || !GAMES.containsAll(readers.keySet()))
+            throw new IllegalArgumentException("Supply one or more named stock ROMs");
+        if (!readers.containsKey(activeGame)) throw new IllegalArgumentException("Supply the active scene ROM: " + activeGame);
+        this.activeGame = activeGame;
+        try {
+            for (String code : GAMES) {
+                if (!readers.containsKey(code)) continue;
+                Rom rom = Rom.fromReader(Objects.requireNonNull(readers.get(code)), description + code);
+                ownedRoms.add(rom);
+                var detector = BuiltInRomDetectors.forGame(GameId.fromCode(code));
+                if (!detector.canHandle(rom)) throw new IOException("ROM does not match requested game " + code);
+                GameModule module = detector.createModule();
+                modules.put(code, module); sourceRoms.put(code, rom);
+                art.put(code, SceneRomArtFactory.forModule(module, rom));
+            }
+        } catch (IOException | RuntimeException failure) {
+            close(); throw failure;
+        }
     }
 
     private SceneRomLibrary(Map<String, java.nio.file.Path> paths) throws IOException {
@@ -124,6 +156,12 @@ public final class SceneRomLibrary implements AutoCloseable {
         return activeGame;
     }
 
+    /** One native route per game and producer epoch; cue/effect leases may close in either order. */
+    public SceneRomAudioSources.Lease acquireAudioSource(com.openggf.audio.AudioManager audio, String game) {
+        requireOpen();
+        return audioSources.acquire(audio,game);
+    }
+
     /** The same supplied-ROM view used by art; borrowed by the scene's audio owner. */
     public Rom sourceRom(String gameId) {
         requireOpen();
@@ -141,11 +179,11 @@ public final class SceneRomLibrary implements AutoCloseable {
     public void close() {
         if (closed) return;
         closed = true;
-        art.clear();
-        sourceRoms.clear();
-        modules.clear();
-        ownedRoms.forEach(Rom::close);
-        ownedRoms.clear();
+        try { audioSources.close(); }
+        finally {
+            art.clear(); sourceRoms.clear(); modules.clear();
+            ownedRoms.forEach(Rom::close); ownedRoms.clear();
+        }
     }
 
     private static RomIdentity identity(String code) {

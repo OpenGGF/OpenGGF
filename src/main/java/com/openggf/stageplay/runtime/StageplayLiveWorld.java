@@ -1,5 +1,7 @@
 package com.openggf.stageplay.runtime;
 
+import static com.openggf.stageplay.StageplayWorldPolicies.usesNativeWorld;
+
 import com.openggf.LevelFrameContext;
 import com.openggf.LevelFrameStep;
 import com.openggf.audio.NullAudioBackend;
@@ -43,6 +45,8 @@ public final class StageplayLiveWorld implements AutoCloseable {
     private Frame last;
     private final List<LiveEvent> events = new ArrayList<>();
     private boolean closed;
+    private java.util.function.Function<SetSource, com.openggf.level.Level> terrainResolver;
+    private final StageplayWorldPresentation presentation = new StageplayWorldPresentation();
 
     /** Logic-only host: fail before touching services if a gameplay/editor session is active. */
     public static StageplayLiveWorld openOffline(SceneRomLibrary library) {
@@ -68,13 +72,22 @@ public final class StageplayLiveWorld implements AutoCloseable {
         this.library = Objects.requireNonNull(library); this.owned = owned;
     }
 
+    void setTerrainResolver(java.util.function.Function<SetSource, com.openggf.level.Level> resolver) {
+        terrainResolver = Objects.requireNonNull(resolver);
+    }
+
+    StageplayDocument document() {
+        if (document == null) throw new IllegalStateException("Resolve the native world first");
+        return document;
+    }
+
     public Frame resolve(StageplayDocument document, Frame authored) {
         if (closed) throw new IllegalStateException("Live world is closed");
         int first = 0; SetSource set = document.set();
         for (var change : document.sceneChanges()) if (change.frame() <= authored.frame()) {
             first = change.frame(); set = change.set();
         }
-        if (set.worldPolicy() != WorldPolicy.LIVE) throw new IllegalArgumentException("Not a LIVE shot");
+        if (!usesNativeWorld(set.worldPolicy())) throw new IllegalArgumentException("Not a native-world shot");
         if (this.document != document && !document.equals(this.document) || start != first) begin(document, set, first);
         if (authored.frame() == cursor) return last;
         boolean replay = authored.frame() < cursor || authored.frame() > cursor + 1;
@@ -108,25 +121,28 @@ public final class StageplayLiveWorld implements AutoCloseable {
         for (var track : document.puppets()) {
             var actor = document.actors().stream().filter(a -> a.id().equals(track.actorId())).findFirst().orElseThrow();
             if (actor.keys().stream().noneMatch(k -> k.frame() >= first && k.frame() < end && k.visible())) continue;
-            if (!actor.gameId().equals(set.gameId()))
+            if (set.worldPolicy() == WorldPolicy.LEGACY_LIVE && !actor.gameId().equals(set.gameId()))
                 throw new IllegalArgumentException("Live performer " + actor.id() + " requires native donor " + set.gameId());
             var anchor = actor.keys().stream().filter(k -> k.frame() == first).findFirst().orElseThrow();
             performers.add(new Performer(actor, track, anchor));
         }
-        if (performers.isEmpty()) throw new IllegalArgumentException("LIVE shot needs at least one Puppet");
+        if (performers.isEmpty() && set.worldPolicy() == WorldPolicy.LEGACY_LIVE)
+            throw new IllegalArgumentException("Legacy LIVE shot needs at least one Puppet");
         var rom = Objects.requireNonNull(library.sourceRom(set.gameId()), "Supply the live world's ROM");
         if (!set.romSha1().isEmpty() && !set.romSha1().equalsIgnoreCase(library.rom(set.gameId()).romSha1()))
             throw new IllegalArgumentException("Live world ROM identity mismatch");
         var services = EngineServices.current();
         var config = services.configuration();
-        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, performers.getFirst().actor.character());
+        boolean legacy = set.worldPolicy() == WorldPolicy.LEGACY_LIVE;
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, legacy ? performers.getFirst().actor.character() : "sonic");
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE,
-                String.join(",", performers.stream().skip(1).map(p -> p.actor.character()).toList()));
+                legacy ? String.join(",", performers.stream().skip(1).map(p -> p.actor.character()).toList()) : "");
         config.setSessionOverride(SonicConfiguration.S3K_SKIP_INTROS, true);
         config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
         config.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         config.setSessionOverride(SonicConfiguration.DEBUG_VIEW_ENABLED, false);
-        config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, document.width());
+        config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, legacy ? document.width() : Math.max(320, document.width()));
+        config.setSessionOverride(SonicConfiguration.SCREEN_HEIGHT_PIXELS, 224);
         closeOwned();
         // Match the production game-entry boundary: sidekick/donor palette banks and CRAM
         // belong to the retired world. Keep the initialized GL atlas/tile renderers alive.
@@ -134,19 +150,52 @@ public final class StageplayLiveWorld implements AutoCloseable {
         services.graphics().clearPaletteTextures();
         try {
             services.roms().setRom(rom);
-            var module = GameModuleRegistry.createStockModule(GameId.fromCode(set.gameId()));
+            GameModule module = GameModuleRegistry.createStockModule(GameId.fromCode(set.gameId()));
+            if (!legacy) {
+                var authored = set.levelProject().isEmpty() ? null : Objects.requireNonNull(terrainResolver,
+                        "Authored native worlds require their bounded terrain resolver").apply(set);
+                module = new StageplayWorldModule(module, authored, set.worldPolicy() == WorldPolicy.TERRAIN_ONLY);
+            }
             owned = SessionManager.openGameplaySession(module, module, StockGameDataSources.pinned(rom, module), null);
             GameplaySessionFactory.attachManagers(owned, services);
             services.graphics().bindRuntimeManagedReferences(owned.getCamera(), owned.getFadeManager());
             var team = GameplayTeamBootstrap.registerActiveTeam(module, owned.getSpriteManager(), config);
             var nativeCast = new ArrayList<AbstractPlayableSprite>(); nativeCast.add(team.mainSprite()); nativeCast.addAll(team.sidekicks());
-            if (nativeCast.size() != performers.size()) throw new IllegalArgumentException("Native module cannot register the requested cast");
+            if (legacy && nativeCast.size() != performers.size()) throw new IllegalArgumentException("Native module cannot register the requested cast");
             owned.getLevelManager().loadZoneAndAct(set.zone(), set.act());
             owned.getLevelManager().skipPendingInitialTitleCardPresentation();
             // Each authored shot is a fresh world, independent of the host's prior seek order.
             owned.getLevelManager().getObjectManager().initVblaCounter(0);
             // Retire the one native assembly scan before authoring initial positions. It is not a story tick.
             LevelFrameStep.admit(LevelFrameContext.from(owned), owned.getLevelManager(), false);
+            if (!legacy) {
+                if (set.worldPolicy() == WorldPolicy.TERRAIN_ONLY) {
+                    // Clear load-created dynamics once, just as clearing a loaded cast. Later
+                    // native event spawns remain native events, rather than a second world model.
+                    var objects = owned.getLevelManager().getObjectManager();
+                    for (var object : List.copyOf(objects.getActiveObjects())) objects.removeDynamicObject(object);
+                }
+                if (performers.isEmpty()) {
+                    var driver = nativeCast.getFirst();
+                    driver.setHidden(true);
+                    driver.setDebugMode(true);
+                    driver.setObjectControlled(true);
+                    var view = StageplayTimeline.sample(document, first).baseCamera();
+                    var level = owned.getLevelManager().getCurrentLevel();
+                    // This invisible, noninteractive driver supplies the native focus owner
+                    // for an empty cast. Extreme camera keys remain valid presentation data.
+                    double x = Math.clamp(view.x() + document.width() / 2.0 / view.zoom(),
+                            Math.max(0, level.getMinX()), Math.min(Short.MAX_VALUE, level.getMaxX() + 320));
+                    double y = Math.clamp(view.y() + document.height() / 2.0 / view.zoom(),
+                            Math.max(Short.MIN_VALUE, level.getMinY()), Math.min(Short.MAX_VALUE, level.getMaxY() + 224));
+                    NativePositionOps.writeXPosResetSubpixel(driver, nativePixel(x, true));
+                    NativePositionOps.writeYPosResetSubpixel(driver, nativePixel(y, false));
+                } else {
+                    nativeCast = new ArrayList<>(StageplayNativeCast.replaceLoadedTeam(library, owned,
+                            performers.stream().map(p -> p.actor).toList()));
+                    config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, nativeCast.getFirst().getCode());
+                }
+            }
             for (int i = 0; i < performers.size(); i++) {
                 var performer = performers.get(i); var sprite = nativeCast.get(i); performer.sprite = sprite;
                 sprite.setCpuController(null); // each participant has its own scripted controller, never follow AI
@@ -203,6 +252,7 @@ public final class StageplayLiveWorld implements AutoCloseable {
         }
         var inputs = new LinkedHashMap<String, PlayerInputState>();
         for (var p : cast) inputs.put(p.sprite.getCode(), input(p, frame));
+        if (cast.isEmpty()) inputs.put(owned.getSpriteManager().getMainPlayable().getCode(), PlayerInputState.neutral());
         var context = LevelFrameContext.from(owned);
         EngineTiming.vIntRunCounter().serviceRepresentedVBlank();
         owned.getSpriteManager().withScriptedInputs(inputs, handler ->
@@ -247,14 +297,24 @@ public final class StageplayLiveWorld implements AutoCloseable {
             if (kind == PuppetCommandKind.CROUCH || kind == PuppetCommandKind.ROLL) held |= AbstractPlayableSprite.INPUT_DOWN;
             if (kind == PuppetCommandKind.LOOK_UP) held |= AbstractPlayableSprite.INPUT_UP;
             if (kind == PuppetCommandKind.FLY_TO || kind == PuppetCommandKind.HOVER) {
-                // Native second jump edge starts flight. Subsequent flaps are ordinary button edges.
-                int age = frame - p.goalStart;
                 double targetY = kind == PuppetCommandKind.HOVER ? p.hoverY : target[1];
-                jump |= !p.sprite.getAir() ? age < 12 : age >= 14 && age % 12 == 2
-                        && (p.sprite.getDoubleJumpFlag() == 0 || p.sprite.getCentreY() > targetY && p.sprite.getYSpeed() >= 0);
+                if (source.worldPolicy() == WorldPolicy.LEGACY_LIVE) {
+                    // Preserve the v5 director's exact controller schedule.
+                    int age = frame - p.goalStart;
+                    jump |= !p.sprite.getAir() ? age < 12 : age >= 14 && age % 12 == 2
+                            && (p.sprite.getDoubleJumpFlag() == 0 || p.sprite.getCentreY() > targetY && p.sprite.getYSpeed() >= 0);
+                } else {
+                    // Readiness follows native state, including a spawn that lands after the
+                    // intent starts. Flight's own controller owns flap acceleration/cooldown.
+                    jump |= p.sprite.getDoubleJumpFlag() == 0 ? airAbilityButton(p)
+                            : p.sprite.getCentreY() > targetY && p.sprite.getYSpeed() >= 0
+                                    && (p.previousHeld & AbstractPlayableSprite.INPUT_JUMP) == 0;
+                }
             } else if (kind == PuppetCommandKind.GLIDE_TO) {
-                int age = frame - p.goalStart;
-                jump |= age < 12 || age >= 14;
+                if (source.worldPolicy() == WorldPolicy.LEGACY_LIVE) {
+                    int age = frame - p.goalStart;
+                    jump |= age < 12 || age >= 14;
+                } else jump |= p.sprite.getDoubleJumpFlag() != 0 || airAbilityButton(p);
             }
             if (kind == PuppetCommandKind.HOVER || kind == PuppetCommandKind.CROUCH || kind == PuppetCommandKind.LOOK_UP) {
                 if (frame - p.goalStart >= goal.holdFrames()) { p.goal = null; jump = false; held = 0; }
@@ -267,6 +327,15 @@ public final class StageplayLiveWorld implements AutoCloseable {
         int pressed = held & ~p.previousHeld; p.previousHeld = held;
         return PlayerInputState.of(held, pressed, jump ? InputActionMasks.ACTION_C : 0,
                 (pressed & AbstractPlayableSprite.INPUT_JUMP) != 0 ? InputActionMasks.ACTION_C : 0, false, false);
+    }
+
+    private static boolean airAbilityButton(Performer performer) {
+        var sprite = performer.sprite;
+        boolean released = (performer.previousHeld & AbstractPlayableSprite.INPUT_JUMP) == 0;
+        if (!sprite.getAir()) return released; // takeoff is a fresh native button edge
+        if (!sprite.isJumping()) return false; // a falling spawn must land before takeoff
+        if (com.openggf.sprites.managers.NativeAirAbilityReadiness.canAttempt(sprite)) return released;
+        return true; // retain ordinary full-height jump until the native ability window opens
     }
 
     private static int steer(AbstractPlayableSprite sprite, double targetX, double urgency) {
@@ -364,11 +433,12 @@ public final class StageplayLiveWorld implements AutoCloseable {
             minY = Math.min(minY, p.sprite.getCentreY()); maxY = Math.max(maxY, p.sprite.getCentreY());
             velocity += p.sprite.getXSpeed() / 256.0;
         }
-        double wantedX = (minX + maxX) / 2 - document.width() / 2.0 + velocity / follow.actors().size() * follow.lookAhead() + follow.offsetX();
-        double wantedY = (minY + maxY) / 2 - document.height() / 2.0 + follow.offsetY();
+        double zoom = authored.baseCamera().zoom();
+        double wantedX = (minX + maxX) / 2 - document.width() / 2.0 / zoom + velocity / follow.actors().size() * follow.lookAhead() + follow.offsetX();
+        double wantedY = (minY + maxY) / 2 - document.height() / 2.0 / zoom + follow.offsetY();
         double x = deadZone(director.x(), wantedX, follow.deadZoneX(), follow.smoothing());
         double y = deadZone(director.y(), wantedY, follow.deadZoneY(), follow.smoothing());
-        director = boundedCamera(new CameraPose(x, y, 1));
+        director = boundedCamera(new CameraPose(x, y, zoom));
     }
     private static double deadZone(double previous, double wanted, double zone, double smoothing) {
         double delta = wanted - previous;
@@ -414,26 +484,36 @@ public final class StageplayLiveWorld implements AutoCloseable {
         var anchor = StageplayTimeline.sample(document, start).baseCamera();
         double panX = key.follow().actors().isEmpty() ? 0 : authored.baseCamera().x() - anchor.x();
         double panY = key.follow().actors().isEmpty() ? 0 : authored.baseCamera().y() - anchor.y();
-        var base = boundedCamera(new CameraPose(director.x() + panX, director.y() + panY, 1));
-        var camera = new CameraPose(base.x() + shakeX, base.y() + shakeY, 1);
+        double zoom = authored.baseCamera().zoom();
+        var base = boundedCamera(new CameraPose(director.x() + panX, director.y() + panY, zoom));
+        var camera = new CameraPose(base.x() + shakeX, base.y() + shakeY, zoom);
         return new Frame(cursor, poses, camera, authored.captions(), source, authored.transition(), base, authored.dialogue(), samples,
                 new WorldSample(owned.getLevelManager().getFrameCounter(), owned.getLevelManager().getObjectManager().getVblaCounter(), actors, objects, rings, events));
     }
 
     /** Draw the native priority renderer with a temporary cinematic camera; activation uses the native camera. */
     public CameraPose boundedCamera(CameraPose view) {
-        if (!Double.isFinite(view.x()) || !Double.isFinite(view.y()) || view.zoom()!=1)
-            throw new IllegalArgumentException("Live cameras need finite coordinates and fixed zoom 1");
+        if (!Double.isFinite(view.x()) || !Double.isFinite(view.y()) || !Double.isFinite(view.zoom()) || view.zoom() <= 0)
+            throw new IllegalArgumentException("Native cameras need finite coordinates and positive zoom");
+        if (source.worldPolicy() == WorldPolicy.LEGACY_LIVE && view.zoom() != 1)
+            throw new IllegalArgumentException("Legacy LIVE cameras require fixed zoom 1");
         var level = owned.getLevelManager().getCurrentLevel();
         // Level bounds are ROM camera origins (maxLeft + 320 is the native right edge),
         // not terrain dimensions. Height stays native; only extra viewport width needs an inset.
-        return new CameraPose(Math.clamp(view.x(),level.getMinX(),Math.max(level.getMinX(),level.getMaxX()-Math.max(0,document.width()-320))),
-                Math.clamp(view.y(),level.getMinY(),Math.max(level.getMinY(),level.getMaxY())),1);
+        double maxX = level.getMaxX() + 320 - document.width() / view.zoom();
+        double maxY = level.getMaxY() + 224 - document.height() / view.zoom();
+        return new CameraPose(Math.clamp(view.x(),level.getMinX(),Math.max(level.getMinX(),maxX)),
+                Math.clamp(view.y(),level.getMinY(),Math.max(level.getMinY(),maxY)),view.zoom());
     }
 
     public void draw(Frame frame) { draw(frame,frame.camera()); }
     public void draw(Frame frame, CameraPose view) {
+        draw(frame, view, (x, y, width, height) -> { });
+    }
+    /** Additional world layers must be drawn before opaque picture resampling, never as UI. */
+    public void draw(Frame frame, CameraPose view, StageplayWorldPresentation.WorldDraw worldLayer) {
         if (last != frame || owned == null) throw new IllegalStateException("Resolve the live frame before drawing");
+        Objects.requireNonNull(worldLayer);
         var hidden = cast.stream().map(p -> p.sprite.isHidden()).toList();
         try {
             for (var p : cast) {
@@ -442,13 +522,21 @@ public final class StageplayLiveWorld implements AutoCloseable {
             }
             // Native fresh-level palette reveal is load presentation. The shot's authored
             // transitions own its reveal; leave native timers/CRAM publication intact for replay.
-            com.openggf.level.LevelSpritePresentation.withCinematicCamera(owned.getLevelManager(),
-                    (int) Math.round(view.x()), (int) Math.round(view.y()), () -> {
+            StageplayWorldPresentation.WorldDraw draw = (x, y, width, height) -> {
                         if (owned.getLevelManager().getAnimatedPaletteManager() instanceof com.openggf.game.internal.LevelPaletteFadeOwner fade
                                 && fade.presentsLevelFadeFromBlack())
                             com.openggf.graphics.PaletteUploadPresentation.withoutDisplayedFade(EngineServices.current().graphics(), this::drawNativeFrame);
                         else drawNativeFrame();
-                    });
+                        worldLayer.draw(x, y, width, height);
+                    };
+            if (source.worldPolicy() == WorldPolicy.LEGACY_LIVE)
+                com.openggf.level.LevelSpritePresentation.withCinematicCamera(owned.getLevelManager(),
+                        (int) Math.round(view.x()), (int) Math.round(view.y()), () -> draw.draw(
+                                (int) Math.round(view.x()), (int) Math.round(view.y()),
+                                com.openggf.level.LevelSpritePresentation.viewportWidth(owned.getLevelManager()),
+                                com.openggf.level.LevelSpritePresentation.viewportHeight(owned.getLevelManager())));
+            else presentation.draw(EngineServices.current().graphics(), owned.getLevelManager(),
+                    (int) Math.round(view.x()), (int) Math.round(view.y()), view.zoom(), document.width(), document.height(), draw);
         } finally {
             for (int i=0; i<cast.size(); i++) cast.get(i).sprite.setHidden(hidden.get(i));
         }
@@ -494,11 +582,12 @@ public final class StageplayLiveWorld implements AutoCloseable {
     private void closeOwned() {
         if (owned != null) {
             if (SessionManager.getCurrentGameplayMode() == owned) {
+                StageplayNativeCast.releaseLoadedTeam(owned);
                 owned.getWorldSession().getGameModule().resetModuleScopedState();
                 SessionManager.closeGameplaySession();
             }
             owned=null;
         }
     }
-    @Override public void close() { if (!closed) { reset(); closed=true; } }
+    @Override public void close() { if (!closed) { try { reset(); } finally { presentation.close(); closed=true; } } }
 }

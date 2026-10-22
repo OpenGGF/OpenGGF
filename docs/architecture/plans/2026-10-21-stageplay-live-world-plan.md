@@ -860,3 +860,188 @@ with unchanged Java/POM/selection policy; the direct content checks replace it.
 No smoke/full-suite pass is claimed, and prior runtime baseline failures remain
 as recorded above. Exact production commands and observed results are retained
 in the revision-seven README, capture/edit drivers and provenance.
+
+
+## Complete-cast continuation — 2026-10-22
+
+Task base: `7d35d4a7b`; engine and separate desktop Editor task branches are both
+`feature/ai-stageplay-complete-cast`. No merge, push or PR belongs to this handoff.
+The native-image decoder service resource is fixed first in
+`eb9b6138ccd182fd05cb6dee3c84d51cd15bdb44`; its exact focused resource guard passes
+1 test, no failures/errors/skips. This removes that recorded baseline failure.
+
+Phase 1 introduces canonical version 6 and screenplay version 4. New LIVE and
+TERRAIN_ONLY scenes share the native world; the latter clears initial objects
+and rings. Strict migrations retain explicit LEGACY_TERRAIN_ONLY/LEGACY_LIVE
+behavior for v1–v5 documents, including original physics/presentation limits.
+Five-argument Java SetSource calls retain legacy terrain semantics. New native
+scenes support supplied-ROM mixed player donors, authored-level decoder snapshots,
+empty/posed-only shots, arbitrary supported film dimensions, fractional held zoom
+and registered native binding. Binding still validates its same-set, same-character,
+unit-scale value handover against the existing visit/lease contract.
+
+Native art, body/tail/dust animation and intrinsic abilities follow each performer's
+donor over shared terrain/clocks/collision. Input edges use observed landing and
+native ability readiness rather than a goal-age guess. Scripted follower flight is
+admitted only for exact shared-world bodies currently owned by scripted input;
+ordinary gameplay and legacy LIVE retain their existing gates. Rewind captures
+the native world plus director and held-input state. Empty scenes retain a hidden,
+non-interacting native focus body; native AI may observe that focus.
+
+Preview/export transmit bounded original logical-ROM window descriptors and
+fingerprints, reconstructing composites without joined-ROM files. Authored sets
+use a confined editor root or original bounded project bytes admitted through the
+registration transaction. Streaming readers reject oversized/unterminated records
+before unbounded allocation; producer and consumer admission bounds agree.
+
+The bounded opaque world presentation pass tiles existing native viewports, keeping
+native 224-line owners unchanged, and filters the completed picture separately from
+text. Posers join the world before sampling. Nested FBO helpers restore their caller
+rather than binding framebuffer zero. Source bounds are 4096 per side and 8 MiPixels.
+The native-sized 1x path preserves the direct picture. Animated zoom, directed
+background phase and activation beyond the native window remain phase 3 work.
+
+Rejected approaches: silently migrating legacy physics; forwarding only whole-image
+paths; writing joined ROMs; global GL_LINEAR; straight-alpha sprite filtering;
+resizing or reticking native deformation/physics owners during rendering; fixed
+goal-age takeoff/repress timing. The ability regression showed an initially falling
+Knuckles lost the first press before landing, then received no native second edge.
+No physics constant or position correction was used.
+
+Focused validation (all from the task worktree, Java 25, queued Maven):
+
+- `python3 tools/testing/maven_queue.py --lean -Dmse=off -Dtest=TestStageplayLiveBinding,TestStageplayPlayback test -B`: 13 pass, no failures/errors/skips.
+- Initial transport/export/capture selector: 15 pass, no failures/errors/skips.
+- EGL Stageplay/API/background/four-required-S3K selector: 302 tests, 3 failures,
+  10 errors, 1 opt-in HUD-picture skip. Failures were stale detached/default fixtures
+  and a leftover fixed-zoom follow check. Corrected fixture checks passed narrowly;
+  the new ability regression initially failed and was diagnosed as described above.
+  Actual native-world, composite-preview, compositor, binding, API and four S3K
+  classes passed without missing-ROM skips. This red run is not a green suite claim.
+- Final combined selector `TestStageplayUnifiedWorldRom,TestPlayableSpriteMovementTailsFlight,TestPlayableSpriteMovement,TestStageplayRomTransport,TestStageplayPreviewAssets,TestStageplayProcessInput,TestStageplayCaptureTool,TestStageplayExportJob`
+  with `-Dmse=off`, explicit absolute S2/S3K ROM properties,
+  `-Dsurefire.forkCount=1 -Dsurefire.reuseForks=true test -B`: **233 pass, zero
+  failures/errors/skips**, 81 seconds execution, zero queue wait.
+- `python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package -B`:
+  package/SDK/Javadoc/bundled-mod validation passes; tests explicitly skipped.
+- Desktop `TestStageplayChrome`: 13 pass, no failures/errors/skips. Picture fixtures
+  were corrected to explicit legacy mode and the real shipped sample path; exact
+  `TestStageplayChromePictures` rerun with opt-in property and EGL passes 2 tests,
+  no failures/errors/skips. The first attempt's failure/error and a fixture method
+  typo compilation failure are recorded as development failures, not baseline.
+
+Evidence root: `$TASK_EVIDENCE/stageplay-complete-cast/`.
+`phase1-unified-world-v2.mkv`, `.mp4` and `.png` come from committed-source candidate
+`examples/stageplay-demo/unified-world.script.json` / `.stageplay`: 384×216, held
+zoom 1.2, three mixed native performers plus one Poser, populated then cleared
+world. Each action has at least 0.5 seconds lead-in/out. FFprobe verifies 60 fps,
+360 frames and 6.000 seconds; complete `ffmpeg -xerror` decode passes. Normal-speed
+browser playback reached the end with 360 frames and zero presentation drops; moving
+performances/transition were inspected. The first take clipped its long caption;
+the revised source shortens it. Desktop offscreen picture evidence is copied below
+the same evidence root. These samples do not certify general ROM parity.
+
+The user explicitly selected native Free boss arena behavior: no object-specific
+spatial adapters. Coverage and both editors must label restrictions exactly
+“Free: native arena position, anchor ignored”, with the owning routine citation.
+Generic factory/context admission rejects unavailable native sets actionably.
+Puppet/Pose must relocate native child relationships together. Phase 2 implementation
+and generated complete registry coverage remain pending.
+
+Final phase hashes, donor effect follow-up validation and combined smoke attribution
+are added at their checkpoints. STATUS.md in the external evidence directory is the
+current handback, including live job handles and remaining work.
+
+Phase 1 desktop commit: `bc8d61ecd02fc9a7f9fdee9c8bd7c932646294ee`.
+Its shared API consumer controls and picture-fixture compatibility are tested as
+above; no merge/push was made. Engine final review additionally found intrinsic
+donor effects need their own ROM factory/art/audio scope. Preparation now precedes
+roster publication, but effect admission follows correct CPU role registration;
+follower overlays use rewindable auxiliary identity and explicit native effect
+recreation. World pickups retain world semantics. Only intrinsic ability audio
+uses the donor route; seek remains silent and close restores previous bindings.
+The native shield routine also needs its structural-parent completion pointer,
+matching Obj_InstaShield_Main rather than the update caller's main-player argument.
+Its focused regression and actual effect pixels are required before phase 1 closes.
+
+### Directed boss decision: visual puppetry, no native side effects
+
+The user selected visual puppetry after the native write audit. **Free alone runs
+the native routine**, including native player forcing, water/palette changes, music
+and arena locks. Puppet/Pose suspend the object and child state machines. Pure
+Animate_Sprite-style ROM scripts and mapping frames supply appearance; child parts
+follow their native spatial relationships as render/transform followers. Any
+state-machine-only appearance falls back visibly to a held/authored frame and
+receives a per-object exclusion with the owning routine citation in coverage.
+A relocated picture with native effects still acting in the shared world is
+explicitly rejected. Capture EHZ's car parts and an S3K composite, including a
+listed fallback, to make this restriction reviewable.
+
+Deferred follow-up: complete isolated native graphs for directed performers.
+A small ObjectServices facade cannot provide this: it exposes concrete writable
+camera, level, sprites, zone runtime, water, palette, hardware and art owners.
+S3K CNZ/LBZ routines directly force player controls and positions, bypassing
+contact gates; HCZ initialization changes flags/music/palettes/camera. EHZ/S1GHZ
+escape changes camera/music/PLC/boss state. A read-only PlayableEntity proxy also
+fails because routines cast it to AbstractPlayableSprite. Continuous isolation
+would need private native managers, players, mutable terrain/runtime state, queues
+and art/palette ownership, sharing only immutable ROM inputs. Restoring a camera
+or flags after drawing cannot retract already-emitted native work. This subsystem
+is deliberately outside the current phase; no spatial adapters or unsafe continuing
+routines are substituted for it.
+
+Final donor/source correction selector passes **358 tests, zero failures/errors/skips**
+(91 seconds Maven execution, 201 seconds queue wait):
+`TestStageplayDonorEffectsRom,TestStageplayUnifiedWorldRom,TestStageplayAudioLifecycle,TestScopedDonorAudio,TestDonorAudioRouting,TestPlayableSpriteMovement,TestInstaShieldHitbox,TestInstaShieldGating,TestShieldRewindRestore,TestShieldRewindPendingRestore,TestShieldPublicationBanks,TestTailsFlightController,TestPlayableSpriteMovementTailsFlight,TestTailsTailsFlightSelection,TestStageplayRomTransport,TestStageplayLivePreviewRom,TestModApiSignatureSurface`.
+The queued command used `-Dmse=off`, explicit absolute S1/S2/S3K ROM properties,
+`-Dopenggf.headless.gl=surfaceless-egl`, one reused fork, and unset display variables.
+Four previously omitted S1 publication cases now execute. The legacy GLFW-only
+Insta-Shield picture class was excluded from this final selector; actual effect
+pixels use the Stageplay EGL capture below, without a desktop fallback.
+
+The first donor attempt failed compilation at an inaccessible manager service;
+reuse the existing spawner construction seam instead of exposing that manager.
+The next attempt reported 111 tests, one failure, three errors and five skips:
+custom donor alias keys lacked native coordination handlers, and the fixture tried
+to jump during initial falling. Rejected: passing an invented donor identity into
+the native sound driver, or changing physics to fit the early edge. Final source
+uses native game keys with library-owned reference-counted leases and profile
+epochs; the fixture has an observed grounded lead-in matching the capture.
+All 17 movement intrinsic sounds use actor-injected donor routing; ordinary bodies
+retain the original captured audio-manager fallback. Normal donor capabilities
+preflight actual ROM sound maps. S3K's powered-wall THUMP has no mapped sound and
+no authored Hyper-state support here; reaching it fails explicitly, without a
+guessed ID or WAV fallback. World pickups/hurt/splash/events retain world ownership.
+
+Source lease regressions cover non-LIFO close, co-owner abandonment, same/cross-game
+producer retirement, actual cue routing after boundaries, once-only forward sounds,
+silent seek and cleanup failures across independently owned sources. Transported
+libraries also retain the explicit opening game rather than map iteration order.
+
+Final phase-1 package (`maven_queue.py -Dmse=off -DskipTests package -B`)
+passes (44.5 seconds; tests intentionally skipped). Final donor evidence is
+`phase1-donor-ability.{stageplay,mkv,mp4,png}` in the external task directory,
+with the screenplay and 150-sample simulation alongside it. Two S3K Sonics on
+an initially cleared S2 set jump after 30 grounded lead-in frames and independently
+trigger their ROM Insta-Shields at frames 45 and 48. The 384×216, 60-fps MP4 has
+150 frames/2.5 seconds, a clean full decode, and at least 0.5 seconds before and
+after the ability. Reviewed moving playback through completion, then slower
+playback through the short shield arcs; frame 49 supplies the still. Frame 53
+was rejected as the representative still because the pure animation has already
+reached its empty mapping frame. The contact sheet at frames 45–57 confirms both
+independent parent attachments. The earlier six-second unified-world clip shows
+mixed S1/S2/S3K performers, the LIVE/initially-cleared boundary, held fractional
+zoom and non-native output dimensions; reviewed through completion as recorded
+above. Smooth animated zoom, directed background phase, distant ensemble
+activation and object casting remain subsequent phases.
+
+Candidate API policy correction at phase-1 commit: the hook rejected a prose edit
+to the release descriptor during ordinary mutable-pin regeneration. The user
+clarified that descriptor and runtime version stay candidate `0.7.0`. The descriptor
+is byte-identical to the base; the compatibility change log records the two additive
+legacy policy enum values. Classification helpers moved out of the annotated enum
+into an unannotated engine utility. Both simple and fully qualified `@ModApi`
+spellings were checked; new runtime helpers are unannotated. The affected queued
+lean selector `TestModApiSignatureSurface,TestStageplayUnifiedWorldContract,TestStageplayDocument,TestStageplayLiveBinding`
+passes 26 tests, zero failures/errors/skips (90 seconds execution, three seconds
+queue wait). No hooks were bypassed.

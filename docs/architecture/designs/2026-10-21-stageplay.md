@@ -258,3 +258,55 @@ state for editor preview, playback, capture and native handover. The pure timeli
 labels physical poses unresolved; it must not present an authored goal as a
 measured position. Seeking restores/replays isolated native state deterministically,
 and repeated reads/draws of one frame do not advance the simulation.
+
+## Native-world and complete-cast continuation (2026-10-22)
+
+New version-six documents use one native session for both LIVE and TERRAIN_ONLY.
+The latter clears initial layout objects and rings before the native load; it is
+a contents choice, not a different physics, camera or renderer. A clear is not a
+permanent ban on later event-created objects. Native world ownership remains in
+the isolated process and production LevelFrameStep; held interactive playback
+uses value poses and the existing visit-bound CourseControl player lease.
+
+Strict v1–v5 migration records LEGACY_TERRAIN_ONLY or LEGACY_LIVE, preserving
+previous choreography, simulation, donor constraints and presentation. Older
+screenplays compile through that same migration. New version-four screenplays
+select the current model. Compatibility is retained explicitly rather than
+silently replacing old detached physics with object/event simulation. Saved sets
+are isolated decoder snapshots; each current native performer has a donor module
+context over the shared world's terrain, collision, clocks and rewind owners.
+
+Editor preview/export transport exact logical-ROM descriptors, including source
+windows and fingerprints. Workers reconstruct immutable readers without joining
+or copying ROM files. Authored sets use a confined editor root or the original
+bounded bytes from the mod registration transaction, never the worker cwd.
+
+Presentation composes native viewport tiles into an opaque world texture, bounded
+to 4096 pixels per side and 8 MiPixels. Fractional sampling operates only on the
+completed world. Posed cast joins that picture before sampling; captions, dialogue
+and transitions follow it at output resolution. No global texture filter changes
+or straight-alpha sprite resampling are admitted. Native 224-line buffers,
+physics, camera dimensions and ordinary rendering keep their owners. Directed
+background phase and separated-ensemble activation are subsequent camera work.
+
+The user confirmed that Free means the real ROM routine, including arena-bound
+boss initialization that ignores a placed anchor. Do not add object-specific
+spatial adapters. Both editors, coverage and authoring diagnostics must display
+“Free: native arena position, anchor ignored” and cite the owning initialization
+routine. An unsupported native set/context fails explicitly. Puppet/Pose
+relocation must preserve composite child relationships; visual direction must
+never be described as relocated Free collision or arena behavior.
+
+Rejected: replacing legacy worlds silently; copying joined ROM images to temporary
+files; forwarding only whole-image paths; a global GL_LINEAR switch; resizing or
+reticking native scroll/physics owners to generate a larger picture; guessing
+object motion from private field names. Verification, evidence and final commit
+hashes are recorded in the live-world plan.
+
+Directed object modes use visual puppetry: only Free runs native routines and
+world effects. Puppet/Pose suspend native parent/child AI, drive position and
+ROM-backed pure animation/mapping presentation, and preserve native part offsets
+as render followers. State-machine-only appearance has an explicit held/authored
+frame fallback and cited per-object coverage exclusion. Never relocate the picture
+while leaving native effects active. Full private native graph ownership is deferred
+with the write-boundary analysis in the live-world plan.

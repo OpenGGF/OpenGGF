@@ -1,5 +1,7 @@
 package com.openggf.stageplay.editor;
 
+import static com.openggf.stageplay.StageplayWorldPolicies.usesNativeWorld;
+
 import com.openggf.audio.AudioManager;
 import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
@@ -71,7 +73,7 @@ public final class StageplayEditorSession implements AutoCloseable {
     private void presentNativeSound(StageplayDocument document, int frame) {
         if (resources == null) return;
         var authored = StageplayTimeline.sample(document, frame);
-        if (authored.set().worldPolicy() != StageplayDocument.WorldPolicy.LIVE) return;
+        if (!usesNativeWorld(authored.set().worldPolicy())) return;
         resources.resolveFrame(document, authored);
         audio.playNativeFrame(frame, resources.previewSound(frame));
     }

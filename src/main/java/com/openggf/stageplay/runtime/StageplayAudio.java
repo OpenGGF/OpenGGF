@@ -20,7 +20,7 @@ public final class StageplayAudio implements AutoCloseable {
     private final Assets assets;
     private final Map<String, SmpsLoader> loaders = new HashMap<>();
     private final Map<String, GameAudioProfile> profiles = new HashMap<>();
-    private final Map<String, ScopedDonorAudio> scopes = new LinkedHashMap<>();
+    private final Map<String, com.openggf.mods.scene.host.SceneRomAudioSources.Lease> scopes = new LinkedHashMap<>();
     private StageplayDocument document;
     private StageplayCueDispatcher cues;
     private AudioManager.SceneAudioSamples samples;
@@ -116,11 +116,11 @@ public final class StageplayAudio implements AutoCloseable {
             case VOICE -> samples.play(cue.asset(), (float) cue.gain());
             case MUSIC_STOP -> audio.stopMusic();
             case ROM_MUSIC, ROM_SFX -> {
-                boolean base = cue.gameId().equals(roms.activeGame());
-                if (!base && !scopes.containsKey(cue.gameId())) {
-                    var loader = loaders.get(cue.gameId()); var profile = profiles.get(cue.gameId());
-                    scopes.put(cue.gameId(), ScopedDonorAudio.register(audio, cue.gameId(), loader, loader.loadDacData(),
-                            profile.getSequencerConfig(), profile));
+                var currentProfile = audio.getAudioProfile();
+                String currentGame = currentProfile == null ? roms.activeGame() : currentProfile.presentationGameId();
+                boolean base = cue.gameId().equals(currentGame);
+                if (!base && (!scopes.containsKey(cue.gameId()) || !scopes.get(cue.gameId()).active())) {
+                    scopes.put(cue.gameId(),roms.acquireAudioSource(audio,cue.gameId()));
                 }
                 if (cue.kind() == StageplayDocument.AudioKind.ROM_MUSIC) {
                     if (base) audio.playMusic(cue.soundId()); else audio.playDonorMusic(cue.gameId(), cue.soundId());
@@ -135,6 +135,7 @@ public final class StageplayAudio implements AutoCloseable {
         entryAudio = null;
         stopNativeSound();
         // These donor routes belonged to the retired producer, as in abandon().
+        for (var scope : scopes.values()) scope.abandon();
         scopes.clear();
         if (samples != null) samples.close();
         samples = audio.prepareSceneSamples(preparedSamples);
@@ -166,6 +167,7 @@ public final class StageplayAudio implements AutoCloseable {
         entryAudio = null;
         // Routes belong to the expired session. Reapplying their saved bindings could overwrite
         // the new visit's donor policy. Normal same-visit close restores them through stop().
+        for (var scope : scopes.values()) scope.abandon();
         scopes.clear();
         close();
     }

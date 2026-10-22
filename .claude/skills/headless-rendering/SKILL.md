@@ -147,9 +147,10 @@ above requires EGL and fails if context creation is unavailable on Linux;
 For gameplay captures, inspect `state.csv` before selecting frames; for trace
 captures, inspect the selected clip and replay reports using `trace-capture`.
 For Stageplay, inspect the screenplay, labelled authored/simulated JSONL and moving
-footage using `stageplay-authoring`. TERRAIN_ONLY `simulate` resolves native puppet
-physics against detached terrain without GL. LIVE simulation advances one shared
-production object/ring/player world; its `sample.world` contains native states/events.
+footage using `stageplay-authoring`. Legacy terrain `simulate` resolves native puppet
+physics against detached terrain without GL. Current LIVE and TERRAIN_ONLY simulation
+advance one shared production object/ring/player world; TERRAIN_ONLY clears initial
+placements and rings; its `sample.world` contains native states/events.
 Pure `timeline` remains authored and leaves puppets `UNRESOLVED`. A selected scene
 simulation is bounded evidence, not certification of a full level or ROM parity. Confirm dimensions, scene/mode, nonblank pixels, and the playable
 sprite when expected. Compare relevant pixels or a deliberately cleared target to reject stale framebuffer

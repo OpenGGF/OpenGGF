@@ -47,20 +47,25 @@ public final class FboHelper {
      * @return handle to the created FBO resources
      */
     public static FboHandle createColorOnly(int width, int height, int wrapMode) {
-        int fboId = glGenFramebuffers();
-        int textureId = createTexture(width, height, wrapMode);
-
-        glBindFramebuffer(GL_FRAMEBUFFER, fboId);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                GL_TEXTURE_2D, textureId, 0);
-        if (!checkStatus("color-only")) {
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            destroy(new FboHandle(fboId, textureId, 0));
-            return null;
+        BindingState saved = new BindingState();
+        FboHandle handle = null;
+        try {
+            int fboId = glGenFramebuffers();
+            int textureId = createTexture(width, height, wrapMode);
+            handle = new FboHandle(fboId, textureId, 0);
+            glBindFramebuffer(GL_FRAMEBUFFER, fboId);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureId, 0);
+            if (!checkStatus("color-only")) {
+                destroy(handle);
+                return null;
+            }
+            return handle;
+        } catch (RuntimeException | Error failure) {
+            destroy(handle);
+            throw failure;
+        } finally {
+            saved.restore();
         }
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-        return new FboHandle(fboId, textureId, 0);
     }
 
     /**
@@ -73,23 +78,29 @@ public final class FboHelper {
      * @return handle to the created FBO resources
      */
     public static FboHandle createWithDepth(int width, int height, int wrapMode) {
-        int fboId = glGenFramebuffers();
-        int textureId = createTexture(width, height, wrapMode);
-
-        int depthId = glGenRenderbuffers();
-        glBindRenderbuffer(GL_RENDERBUFFER, depthId);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, width, height);
-        glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-        glBindFramebuffer(GL_FRAMEBUFFER, fboId);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                GL_TEXTURE_2D, textureId, 0);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                GL_RENDERBUFFER, depthId);
-        checkStatus("color+depth");
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-        return new FboHandle(fboId, textureId, depthId);
+        BindingState saved = new BindingState();
+        FboHandle handle = null;
+        try {
+            int fboId = glGenFramebuffers();
+            int textureId = createTexture(width, height, wrapMode);
+            int depthId = glGenRenderbuffers();
+            handle = new FboHandle(fboId, textureId, depthId);
+            glBindRenderbuffer(GL_RENDERBUFFER, depthId);
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, width, height);
+            glBindFramebuffer(GL_FRAMEBUFFER, fboId);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureId, 0);
+            glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthId);
+            if (!checkStatus("color+depth")) {
+                destroy(handle);
+                return null;
+            }
+            return handle;
+        } catch (RuntimeException | Error failure) {
+            destroy(handle);
+            throw failure;
+        } finally {
+            saved.restore();
+        }
     }
 
     /**
@@ -125,6 +136,24 @@ public final class FboHelper {
     }
 
     // ---- internal helpers ----
+
+    private static final class BindingState {
+        final int draw = glGetInteger(GL_DRAW_FRAMEBUFFER_BINDING);
+        final int read = glGetInteger(GL_READ_FRAMEBUFFER_BINDING);
+        final int texture = glGetInteger(GL_TEXTURE_BINDING_2D);
+        final int renderbuffer = glGetInteger(GL_RENDERBUFFER_BINDING);
+        final int unpackBuffer = glGetInteger(org.lwjgl.opengl.GL21.GL_PIXEL_UNPACK_BUFFER_BINDING);
+        BindingState() {
+            org.lwjgl.opengl.GL15.glBindBuffer(org.lwjgl.opengl.GL21.GL_PIXEL_UNPACK_BUFFER, 0);
+        }
+        void restore() {
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, draw);
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, read);
+            glBindTexture(GL_TEXTURE_2D, texture);
+            glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer);
+            org.lwjgl.opengl.GL15.glBindBuffer(org.lwjgl.opengl.GL21.GL_PIXEL_UNPACK_BUFFER, unpackBuffer);
+        }
+    }
 
     private static int createTexture(int width, int height, int wrapMode) {
         int textureId = glGenTextures();

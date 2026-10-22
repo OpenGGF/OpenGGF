@@ -25,7 +25,7 @@ class TestStageplayPuppetWorkspace {
     private final class PreviewHost implements StageplayWorkspace.Host {
         int reads;
         boolean fail;
-        public StageplayDocument initialDocument() { return StageplayDocument.empty("s2",0,0,0,0,320,224); }
+        public StageplayDocument initialDocument() { return StageplayDocument.empty("s2",0,0,0,0,320,224).withSet(new SetSource("s2",0,0,"","")); }
         public Path initialAssetRoot() { return root; }
         public Frame resolvePreview(StageplayDocument doc,Path assets,int frame) throws IOException {
             reads++;

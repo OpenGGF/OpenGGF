@@ -7,7 +7,8 @@ import com.openggf.mods.scene.host.SceneRomLibrary;
 import com.openggf.stageplay.StageplayTimeline;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -15,10 +16,16 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestStageplayLivePreviewRom {
-    @Test void isolatedEditorWorkerReturnsNativePixelsAndStateWithoutReplacingItsParentWorld() throws Exception {
+    @ParameterizedTest @ValueSource(booleans={false,true})
+    void isolatedEditorWorkerReturnsNativePixelsAndStateWithoutReplacingItsParentWorld(boolean composite) throws Exception {
         GameServices.graphics().initHeadless();
         var path=Path.of(System.getProperty("s3k.rom.path"));
-        GameServices.configuration().setSessionOverride(SonicConfiguration.SONIC_3K_ROM,path.toString());
+        GameServices.configuration().setSessionOverride(SonicConfiguration.SONIC_3K_ROM,composite ? "" : path.toString());
+        if (composite) {
+            GameServices.configuration().setSessionOverride(SonicConfiguration.ROMS_DIRECTORY,path.toAbsolutePath().getParent().toString());
+            GameServices.configuration().setSessionOverride(SonicConfiguration.ROMS_PREFER_COMPOSITE,true);
+            assertTrue(GameServices.rom().resolveLogicalRom(com.openggf.data.RomIdentity.S3K).orElseThrow().isComposite());
+        }
         var parent=SessionManager.getCurrentGameplayMode(); var level=parent.getLevelManager().getCurrentLevel();
         ProcessHandle child;
         try(var library=SceneRomLibrary.open(Map.of("s3k",path));var resources=new StageplayResources(library,false)) {

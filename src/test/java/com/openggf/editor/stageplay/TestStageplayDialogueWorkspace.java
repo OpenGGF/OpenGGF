@@ -24,7 +24,7 @@ class TestStageplayDialogueWorkspace {
 
     private StageplayWorkspace workspace() {
         var workspace = new StageplayWorkspace(new StageplayWorkspace.Host() {
-            public StageplayDocument initialDocument() { return StageplayDocument.empty("s2",0,0,0,0,320,224); }
+            public StageplayDocument initialDocument() { return StageplayDocument.empty("s2",0,0,0,0,320,224).withSet(new SetSource("s2",0,0,"","")); }
             public Path initialAssetRoot() { return root; }
         });
         workspace.activate(); workspace.invoke(ADD_ACTOR); workspace.menu().setValue("name","Sonic");

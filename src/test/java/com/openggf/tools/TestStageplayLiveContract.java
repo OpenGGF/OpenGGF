@@ -29,14 +29,14 @@ class TestStageplayLiveContract {
     }
     @Test void liveContractRoundTripsAndCompilerKeepsBoundedSemanticIntent() throws Exception {
         var scene=compile(SOURCE);
-        assertEquals(StageplayDocument.WorldPolicy.LIVE,scene.set().worldPolicy());
+        assertEquals(StageplayDocument.WorldPolicy.LEGACY_LIVE,scene.set().worldPolicy());
         assertEquals(List.of("pilot"),scene.camera().getFirst().follow().actors());
         assertEquals(60,scene.puppets().getFirst().commands().getFirst().timeoutFrames());
         assertEquals(scene,StageplayStore.decode(StageplayStore.encode(scene)));
     }
-    @Test void liveWorldCannotBorrowOrTeleportTheInteractivePlayers() throws Exception {
+    @Test void liveWorldMayUseTheExistingVisitBoundInteractivePlayerLease() throws Exception {
         var scene=compile(SOURCE);
-        assertThrows(IllegalArgumentException.class,()->new com.openggf.stageplay.StageplayPlayback(scene,"pilot",
+        assertDoesNotThrow(()->new com.openggf.stageplay.StageplayPlayback(scene,"pilot",
                 com.openggf.stageplay.runtime.StageplayNativeBinding.FinishMode.RESTORE_ENTRY));
         assertDoesNotThrow(()->new com.openggf.stageplay.StageplayPlayback(scene));
     }
@@ -52,7 +52,8 @@ class TestStageplayLiveContract {
             assertThrows(IOException.class,()->compile(invalid),invalid);
     }
     @Test void versionFourCanonicalConstructorRemainsCompatibleForCompiledCandidateCallers() {
-        var old=StageplayDocument.empty("s2",0,0,0,0,320,224);
+        var old=StageplayDocument.empty("s2",0,0,0,0,320,224)
+                .withSet(new StageplayDocument.SetSource("s2",0,0,"",""));
         var upgraded=new StageplayDocument(4,old.name(),old.durationFrames(),old.width(),old.height(),old.set(),old.actors(),old.camera(),
                 old.captions(),old.audio(),old.cameraEffects(),old.sceneChanges(),old.dialogueTypers(),old.dialogueSkins(),old.dialogue(),old.puppets());
         assertEquals(old,upgraded);

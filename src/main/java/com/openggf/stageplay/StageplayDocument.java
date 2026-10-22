@@ -1,5 +1,7 @@
 package com.openggf.stageplay;
 
+import static com.openggf.stageplay.StageplayWorldPolicies.usesNativeWorld;
+
 import com.openggf.game.ModApi;
 
 import java.util.HashSet;
@@ -18,7 +20,7 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         List<AudioCue> audio, List<CameraEffect> cameraEffects, List<SceneChange> sceneChanges,
         List<DialogueTyper> dialogueTypers, List<DialogueSkin> dialogueSkins, List<DialogueCue> dialogue,
         List<PuppetTrack> puppets) {
-    public static final int VERSION = 5;
+    public static final int VERSION = 6;
     public static final int FRAMES_PER_SECOND = 60;
     public static final int MAX_DURATION_FRAMES = 36_000;
     private static final int MAX_KEYS = 100_000;
@@ -27,14 +29,19 @@ public record StageplayDocument(int version, String name, int durationFrames, in
     public StageplayDocument {
         // Existing compiled candidate callers may have inlined VERSION=4 at this unchanged constructor.
         if (version == 4) {
-            require(set != null && set.worldPolicy() == WorldPolicy.TERRAIN_ONLY, "Version four cannot opt into LIVE worlds");
-            require(sceneChanges != null && sceneChanges.stream().allMatch(c -> c.set().worldPolicy() == WorldPolicy.TERRAIN_ONLY),
+            require(set != null && (set.worldPolicy() == WorldPolicy.TERRAIN_ONLY || set.worldPolicy() == WorldPolicy.LEGACY_TERRAIN_ONLY), "Version four cannot opt into LIVE worlds");
+            require(sceneChanges != null && sceneChanges.stream().allMatch(c -> c.set().worldPolicy() == WorldPolicy.TERRAIN_ONLY || c.set().worldPolicy() == WorldPolicy.LEGACY_TERRAIN_ONLY),
                     "Version four cannot opt into LIVE worlds");
             require(camera != null && camera.stream().allMatch(c -> c.follow().actors().isEmpty()), "Version four cannot follow actors");
             require(puppets != null && puppets.stream().flatMap(p -> p.commands().stream()).allMatch(c ->
                     (c.kind() == PuppetCommandKind.MOVE_TO || c.kind() == PuppetCommandKind.STOP || c.kind() == PuppetCommandKind.JUMP)
                             && c.target().layoutIndex() == -1 && c.condition() == WaitCondition.NONE && c.timeoutFrames() == 0),
                     "Version four cannot contain live directing intents");
+        }
+        if (version >= 1 && version <= 5) {
+            set = migrateWorld(set);
+            sceneChanges = sceneChanges == null ? null : sceneChanges.stream().map(change -> new SceneChange(
+                    change.id(), change.frame(), migrateWorld(change.set()), change.transition(), change.durationFrames())).toList();
             version = VERSION;
         }
         require(version == VERSION, "Unsupported Stageplay version: " + version);
@@ -53,7 +60,7 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         dialogueSkins = boundedCopy(dialogueSkins, 64, "dialogueSkins");
         dialogue = boundedCopy(dialogue, 1024, "dialogue");
         puppets = boundedCopy(puppets, 32, "puppets");
-        boolean liveDocument = set.worldPolicy() == WorldPolicy.LIVE || sceneChanges.stream().anyMatch(c -> c.set().worldPolicy() == WorldPolicy.LIVE);
+        boolean liveDocument = set.worldPolicy() == WorldPolicy.LEGACY_LIVE || sceneChanges.stream().anyMatch(c -> c.set().worldPolicy() == WorldPolicy.LEGACY_LIVE);
         require(!liveDocument || height == 224 && width >= 320,
                 "LIVE worlds use native height 224 and width at least 320; scale the export for a larger output");
         require(!camera.isEmpty(), "camera must start at frame zero");
@@ -69,8 +76,8 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         for (CameraKey key : camera) {
             SetSource cameraSet = set;
             for (SceneChange change : sceneChanges) if (change.frame() <= key.frame()) cameraSet = change.set();
-            require(cameraSet.worldPolicy() != WorldPolicy.LIVE || key.zoom() == 1, "LIVE cameras require fixed zoom 1");
-            require(key.follow().actors().isEmpty() || cameraSet.worldPolicy() == WorldPolicy.LIVE, "Actor following requires a LIVE world");
+            require(cameraSet.worldPolicy() != WorldPolicy.LEGACY_LIVE || key.zoom() == 1, "Legacy LIVE cameras require fixed zoom 1");
+            require(key.follow().actors().isEmpty() || usesNativeWorld(cameraSet.worldPolicy()), "Actor following requires a native world");
             for (String actor : key.follow().actors()) {
                 require(actors.stream().anyMatch(a -> a.id().equals(actor)), "Unknown camera actor: " + actor);
                 require(puppets.stream().anyMatch(p -> p.actorId().equals(actor)), "Following requires a Puppet actor: " + actor);
@@ -127,7 +134,7 @@ public record StageplayDocument(int version, String name, int durationFrames, in
                 SetSource shotSet = set;
                 for (SceneChange change : sceneChanges) if (change.frame() <= boundary) shotSet = change.set();
                 boolean present = actor.keys().stream().anyMatch(k -> k.frame() == boundary && k.visible());
-                if (present && shotSet.worldPolicy() == WorldPolicy.LIVE)
+                if (present && shotSet.worldPolicy() == WorldPolicy.LEGACY_LIVE)
                     require(actor.gameId().equals(shotSet.gameId()), "Live actors require the world's native donor: " + actor.id());
             }
             ActorKey anchor = actor.keys().getFirst();
@@ -142,11 +149,12 @@ public record StageplayDocument(int version, String name, int durationFrames, in
             for (PuppetCommand command : puppet.commands()) {
                 SetSource commandSet = set;
                 for (SceneChange change : sceneChanges) if (change.frame() <= command.frame()) commandSet = change.set();
-                boolean live = commandSet.worldPolicy() == WorldPolicy.LIVE;
+                boolean live = usesNativeWorld(commandSet.worldPolicy());
                 require(live || command.kind() == PuppetCommandKind.MOVE_TO || command.kind() == PuppetCommandKind.STOP
                         || command.kind() == PuppetCommandKind.JUMP, "This intent requires a LIVE world: " + command.id());
                 require(live || command.target().layoutIndex() == -1, "Object target requires a LIVE world");
-                if (live) require(actor.gameId().equals(commandSet.gameId()), "Live actors require the world's native donor");
+                if (commandSet.worldPolicy() == WorldPolicy.LEGACY_LIVE)
+                    require(actor.gameId().equals(commandSet.gameId()), "Legacy live actors require the world's native donor");
                 if (command.kind() == PuppetCommandKind.FLY_TO || command.kind() == PuppetCommandKind.HOVER)
                     require(actor.gameId().equals("s3k") && actor.character().equals("tails"), "Native flight requires S3K Tails");
                 if (command.kind() == PuppetCommandKind.GLIDE_TO)
@@ -213,14 +221,21 @@ public record StageplayDocument(int version, String name, int durationFrames, in
 
     private static int migratedVersion(int version) {
         require(version >= 1 && version <= VERSION, "Unsupported Stageplay version: " + version);
-        return VERSION;
+        return version;
+    }
+
+    private static SetSource migrateWorld(SetSource source) {
+        if (source == null) return null;
+        if (StageplayWorldPolicies.legacy(source.worldPolicy())) return source;
+        return new SetSource(source.gameId(), source.zone(), source.act(), source.romSha1(), source.levelProject(),
+                source.worldPolicy() == WorldPolicy.LIVE ? WorldPolicy.LEGACY_LIVE : WorldPolicy.LEGACY_TERRAIN_ONLY);
     }
 
     /** A ten-second scene with an empty cast and a stationary camera. */
     public static StageplayDocument empty(String gameId, int zone, int act, double x, double y,
             int width, int height) {
         return new StageplayDocument(VERSION, "Untitled", 600, width, height,
-                new SetSource(gameId, zone, act, "", ""), List.of(),
+                new SetSource(gameId, zone, act, "", "", WorldPolicy.LIVE), List.of(),
                 List.of(new CameraKey(0, x, y, 1, Interpolation.HOLD)), List.of(), List.of());
     }
 
@@ -290,12 +305,12 @@ public record StageplayDocument(int version, String name, int durationFrames, in
     @ModApi
     public record SetSource(String gameId, int zone, int act, String romSha1, String levelProject, WorldPolicy worldPolicy) {
         public SetSource(String gameId, int zone, int act, String romSha1, String levelProject) {
-            this(gameId, zone, act, romSha1, levelProject, WorldPolicy.TERRAIN_ONLY);
+            this(gameId, zone, act, romSha1, levelProject, WorldPolicy.LEGACY_TERRAIN_ONLY);
         }
         public SetSource {
             gameId = game(gameId);
             require(worldPolicy != null, "worldPolicy is required");
-            require(levelProject != null && (worldPolicy != WorldPolicy.LIVE || levelProject.isEmpty()), "Live worlds require stock ROM level data");
+            require(levelProject != null && (worldPolicy != WorldPolicy.LEGACY_LIVE || levelProject.isEmpty()), "Legacy live worlds require stock ROM level data");
             range(zone, 0, 255, "zone");
             range(act, 0, 255, "act");
             require(romSha1 != null && (romSha1.isEmpty() || romSha1.matches("[0-9a-f]{40}")),
@@ -414,7 +429,10 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         }
         public static ObjectTarget none() { return new ObjectTarget(-1, 0, 0, 0, 0); }
     }
-    @ModApi public enum WorldPolicy { TERRAIN_ONLY, LIVE }
+    @ModApi public enum WorldPolicy {
+        TERRAIN_ONLY, LIVE, LEGACY_TERRAIN_ONLY, LEGACY_LIVE;
+
+    }
     @ModApi public enum WaitCondition { NONE, ARRIVED, ON_OBJECT, GROUNDED, AIRBORNE, HURT, RECOVERED, RING_COLLECTED, TARGET_AVAILABLE }
     @ModApi public enum PuppetCommandKind { MOVE_TO, STOP, JUMP, WAIT, FLY_TO, HOVER, GLIDE_TO, RELEASE, CROUCH, LOOK_UP, ROLL }
 
@@ -444,7 +462,6 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         }
         public CameraKey {
             require(follow != null, "Camera follow is required");
-            require(follow.actors().isEmpty() || zoom == 1, "Following requires fixed zoom 1");
             range(frame, 0, MAX_DURATION_FRAMES - 1, "camera frame");
             coordinate(x, "camera x");
             coordinate(y, "camera y");

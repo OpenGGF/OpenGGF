@@ -45,6 +45,10 @@ class TestStageplayCaptureTool {
         assertNull(args.rom());assertNull(args.game());assertEquals(Path.of("locked.gen"),args.suppliedRoms().get("s3k"));
         assertThrows(IllegalArgumentException.class,()->StageplayCaptureTool.Arguments.parse(new String[]{"--scene","s","--out","x.mp4"}));
         assertThrows(IllegalArgumentException.class,()->StageplayCaptureTool.Arguments.parse(new String[]{"--scene","s","--out","x.mkv","--out","y.mkv"}));
+        var described=StageplayCaptureTool.Arguments.parse(new String[]{"--scene","s","--out","x.mkv","--rom-descriptor","roms.json"});
+        assertEquals(Path.of("roms.json"),described.romDescriptor());
+        assertThrows(IllegalArgumentException.class,()->StageplayCaptureTool.Arguments.parse(new String[]{"--scene","s","--out","x.mkv","--rom-descriptor","roms.json","--rom","s.gen"}));
+        assertThrows(IllegalArgumentException.class,()->StageplayCaptureTool.Arguments.parse(new String[]{"--scene","s","--out","x.mkv","--rom-descriptor","roms.json","--s2-rom","s.gen"}));
     }
     @Test void stagingOwnershipRejectsExistingFilesAndSymlinkDirectories() throws Exception {
         Path owned=java.nio.file.Files.createDirectory(temp.resolve("owned"));

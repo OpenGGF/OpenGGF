@@ -568,7 +568,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			} else stageplayInitialAssetRoot = setPath.toAbsolutePath().getParent();
 			var source = document.set();
 			document = document.withSet(new com.openggf.stageplay.StageplayDocument.SetSource(game, zone, act,
-					source.romSha1(), setPath.getFileName().toString()));
+					source.romSha1(), setPath.getFileName().toString(), source.worldPolicy()));
 		}
 		return document;
 	}

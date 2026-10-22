@@ -60,9 +60,9 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
     private static void validateNativeDocument(StageplayDocument document, String boundActor) {
         Objects.requireNonNull(boundActor, "boundActor");
         if (boundActor.isEmpty()) return;
-        if (document.set().worldPolicy() == StageplayDocument.WorldPolicy.LIVE
-                || document.sceneChanges().stream().anyMatch(c -> c.set().worldPolicy() == StageplayDocument.WorldPolicy.LIVE))
-            throw new IllegalArgumentException("LIVE scenes own native players in their isolated world; active-player binding requires terrain-only shots");
+        // The isolated world supplies value poses only. The held interactive player is
+        // still borrowed exclusively through CourseControl's visit-bound lease, so
+        // LIVE and cleared worlds use the same handover contract as legacy scenes.
         var actor = document.actors().stream().filter(value -> value.id().equals(boundActor)).findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Bound actor is missing"));
         if (!document.set().levelProject().isEmpty()
@@ -151,6 +151,9 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
                 throw new IOException("Stageplay assets exceed registration byte budget");
             assets.put(path, encoded);
         }
+        // The isolated native worker decodes the same transaction-loaded authored
+        // terrain bytes. It must never reopen mod paths against a process cwd.
+        assets.putAll(projectBytes);
         var prepared = Map.copyOf(assets);
         // Validate decoration dimensions, slicing and layout before publishing any service.
         // This pass needs neither the native world nor a loaded ROM.

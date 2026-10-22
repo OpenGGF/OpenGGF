@@ -126,7 +126,6 @@ public final class StageplayStore {
             if (sourceVersion <= 3) {
                 if (object.has("puppets")) throw new IOException("Legacy scenes cannot contain puppet tracks");
                 object.putArray("puppets");
-                object.put("version", StageplayDocument.VERSION);
             }
             if (sourceVersion <= 4) {
                 migrateSet((ObjectNode) object.get("set"));
@@ -142,6 +141,10 @@ public final class StageplayStore {
                     cue.set("target", JSON.valueToTree(StageplayDocument.ObjectTarget.none()));
                     cue.put("condition", "NONE").put("timeoutFrames", 0);
                 }
+            }
+            if (sourceVersion <= 5) {
+                migrateWorldPolicy((ObjectNode) object.get("set"));
+                for (var change : object.withArray("sceneChanges")) migrateWorldPolicy((ObjectNode) change.get("set"));
                 object.put("version", StageplayDocument.VERSION);
             }
             return JSON.treeToValue(object, StageplayDocument.class);
@@ -153,6 +156,16 @@ public final class StageplayStore {
     private static void migrateSet(ObjectNode set) throws IOException {
         if (set.has("worldPolicy")) throw new IOException("Legacy scenes cannot contain worldPolicy");
         set.put("worldPolicy", "TERRAIN_ONLY");
+    }
+
+    private static void migrateWorldPolicy(ObjectNode set) throws IOException {
+        var policy = set.get("worldPolicy");
+        if (policy == null || !policy.isTextual()) throw new IOException("worldPolicy must be a string");
+        switch (policy.textValue()) {
+            case "TERRAIN_ONLY" -> set.put("worldPolicy", "LEGACY_TERRAIN_ONLY");
+            case "LIVE" -> set.put("worldPolicy", "LEGACY_LIVE");
+            default -> throw new IOException("Unknown legacy worldPolicy: " + policy.textValue());
+        }
     }
 
     private static ObjectMapper createMapper() {

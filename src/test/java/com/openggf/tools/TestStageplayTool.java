@@ -311,7 +311,7 @@ class TestStageplayTool {
     @Test void helpDocumentsMachineReadableExitCodesAndCurrentSchemaWithoutRomAccess() throws Exception {
         var result = execute();
         assertEquals(0, result.status());
-        assertEquals(3, result.json().path("result").path("screenplayVersion").intValue());
+        assertEquals(4, result.json().path("result").path("screenplayVersion").intValue());
         assertEquals(StageplayDocument.VERSION, result.json().path("result").path("stageplayVersion").intValue());
         assertEquals(60, result.json().path("result").path("fps").intValue());
         assertTrue(result.json().path("result").path("outputs").textValue().contains("never overwritten"));

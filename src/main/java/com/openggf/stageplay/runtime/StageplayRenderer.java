@@ -58,13 +58,24 @@ public final class StageplayRenderer {
     public void drawLiveOverlay(StageplayDocument document, StageplayTimeline.Frame frame, SceneCanvas canvas) {
         resources.prepareDialogue(document);
         canvas.clip(0, 0, document.width(), document.height());
-        drawPerformersAndOverlay(document, frame, canvas, 1, true);
+        drawOverlay(document, frame, canvas);
         canvas.unclip();
+    }
+
+    /** World-space presentation actors join the opaque native picture before resampling. */
+    public void drawLivePosers(StageplayDocument document, StageplayTimeline.Frame frame,
+                               SceneCanvas canvas, StageplayTimeline.CameraPose view) {
+        drawActors(document, frame, canvas, view, 1, true);
     }
 
     private void drawPerformersAndOverlay(StageplayDocument document, StageplayTimeline.Frame frame,
                                          SceneCanvas canvas, float zoom, boolean nativeWorld) {
-        var camera = frame.camera();
+        drawActors(document, frame, canvas, frame.camera(), zoom, nativeWorld);
+        drawOverlay(document, frame, canvas);
+    }
+
+    private void drawActors(StageplayDocument document, StageplayTimeline.Frame frame, SceneCanvas canvas,
+                            StageplayTimeline.CameraPose camera, float zoom, boolean nativeWorld) {
         for (var actor : frame.actors()) {
             if (!actor.visible() || nativeWorld && document.puppets().stream().anyMatch(p -> p.actorId().equals(actor.actorId()))) continue;
             var set = resources.character(actor.gameId(), actor.character());
@@ -79,6 +90,9 @@ public final class StageplayRenderer {
             }
             canvas.draw(sprite, x, y, style);
         }
+    }
+
+    private void drawOverlay(StageplayDocument document, StageplayTimeline.Frame frame, SceneCanvas canvas) {
         for (var caption : frame.captions()) {
             int y = caption.y();
             for (String line : caption.text().split("\n", -1)) {

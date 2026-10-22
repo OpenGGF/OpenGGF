@@ -56,7 +56,7 @@ class TestStageplayTailsRom {
         try (var resources = new StageplayResources(id -> sceneRom, List.of(game)); var surface = new SceneSurface()) {
             var renderer = new StageplayRenderer(resources);
             for (boolean flip : new boolean[]{false, true}) {
-                var document = StageplayDocument.empty(game, 0, 0, 100, 50, 320, 224)
+                var document = legacyScene(game, 0, 0, 100, 50, 320, 224)
                         .withCamera(List.of(new CameraKey(0, 100, 50, 2, Interpolation.HOLD)))
                         .withActors(List.of(new Actor("tails", "Tails", game, "tails", List.of(
                                 new ActorKey(0, 160, 100, 5, idleBody, flip, true, 1.5, Interpolation.HOLD)))));
@@ -103,4 +103,10 @@ class TestStageplayTailsRom {
                 List.of(new SceneBackdrop.Band(0, 224, 0, 0))));
         return kit;
     }
+    /** These fixtures exercise detached art/choreography, independent of a native session. */
+    private static StageplayDocument legacyScene(String gameId, int zone, int act, double x, double y, int width, int height) {
+        return StageplayDocument.empty(gameId, zone, act, x, y, width, height)
+                .withSet(new StageplayDocument.SetSource(gameId, zone, act, "", ""));
+    }
+
 }

@@ -3795,6 +3795,8 @@ FIELD com.openggf.stageplay.StageplayDocument$WaitCondition public,static,final 
 FIELD com.openggf.stageplay.StageplayDocument$WaitCondition public,static,final com.openggf.stageplay.StageplayDocument$WaitCondition RECOVERED
 FIELD com.openggf.stageplay.StageplayDocument$WaitCondition public,static,final com.openggf.stageplay.StageplayDocument$WaitCondition RING_COLLECTED
 FIELD com.openggf.stageplay.StageplayDocument$WaitCondition public,static,final com.openggf.stageplay.StageplayDocument$WaitCondition TARGET_AVAILABLE
+FIELD com.openggf.stageplay.StageplayDocument$WorldPolicy public,static,final com.openggf.stageplay.StageplayDocument$WorldPolicy LEGACY_LIVE
+FIELD com.openggf.stageplay.StageplayDocument$WorldPolicy public,static,final com.openggf.stageplay.StageplayDocument$WorldPolicy LEGACY_TERRAIN_ONLY
 FIELD com.openggf.stageplay.StageplayDocument$WorldPolicy public,static,final com.openggf.stageplay.StageplayDocument$WorldPolicy LIVE
 FIELD com.openggf.stageplay.StageplayDocument$WorldPolicy public,static,final com.openggf.stageplay.StageplayDocument$WorldPolicy TERRAIN_ONLY
 FIELD com.openggf.stageplay.StageplayTimeline$PuppetStatus public,static,final com.openggf.stageplay.StageplayTimeline$PuppetStatus ARRIVED

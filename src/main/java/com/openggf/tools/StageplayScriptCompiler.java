@@ -33,12 +33,14 @@ public final class StageplayScriptCompiler {
             }
             ObjectNode script = object(parsed, "screenplay", "version", "name", "width", "height", "cast", "shots", "dialogueTypers", "dialogueSkins");
             int version = integer(script, "version", -1);
-            if (version != 1 && version != 2 && version != 3) throw new IOException("Unsupported screenplay version");
+            if (version < 1 || version > 4) throw new IOException("Unsupported screenplay version");
             ArrayNode cast = array(script, "cast"), shots = array(script, "shots");
             if (cast.size() > 32 || shots.isEmpty() || shots.size() > 129)
                 throw new IOException("Screenplay needs 1..129 shots and at most 32 cast members");
             ObjectNode document = JSON.createObjectNode();
-            document.put("version", StageplayDocument.VERSION);
+            // Older recipes keep their original world/actor semantics through the same
+            // strict migration as saved canonical documents.
+            document.put("version", version <= 3 ? 5 : StageplayDocument.VERSION);
             document.set("name", required(script, "name"));
             document.put("width", integer(script, "width", 400));
             document.put("height", integer(script, "height", 224));
@@ -95,7 +97,7 @@ public final class StageplayScriptCompiler {
                 ObjectNode set = object(required(shot, "set"), "set", "gameId", "zone", "act", "romSha1", "levelProject", "worldPolicy").deepCopy();
                 defaults(set, "romSha1", ""); defaults(set, "levelProject", "");
                 if (version < 3 && set.has("worldPolicy")) throw new IOException("Live worlds require screenplay version 3");
-                defaults(set, "worldPolicy", "TERRAIN_ONLY");
+                defaults(set, "worldPolicy", version <= 3 ? "TERRAIN_ONLY" : "LIVE");
                 if (offset == 0) {
                     document.set("set", set);
                     if (shot.has("transition")) throw new IOException("The first shot cannot have an incoming transition");

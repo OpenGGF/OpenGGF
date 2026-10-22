@@ -1028,7 +1028,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sprite.setGSpeed((short) 0);
 				sprite.setXSpeed((short) 0);
 				sprite.setYSpeed((short) 0);
-				audioManager.playSfx(GameSound.GLIDE_LAND);
+				com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.GLIDE_LAND, audioManager);
 				int hexAngle = sprite.getAngle() & 0xFF;
 				int adjusted = (hexAngle + 0x20) & 0xC0;
 				if (adjusted == 0) {
@@ -1184,7 +1184,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.setGSpeed((short) 0);
 			sprite.setXSpeed((short) 0);
 			sprite.setYSpeed((short) 0);
-			audioManager.playSfx(GameSound.GLIDE_LAND);
+			com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.GLIDE_LAND, audioManager);
 			int hexAngle = sprite.getAngle() & 0xFF;
 			int adjusted = (hexAngle + 0x20) & 0xC0;
 			if (adjusted == 0) {
@@ -1279,7 +1279,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		setSpindashAnimation();
-		audioManager.playSfx(GameSound.SPINDASH_CHARGE);
+		com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.SPINDASH_CHARGE, audioManager);
 		sprite.setSpindash(true);
 		sprite.setSpindashCounter((short) 0);
 		doLevelBoundaryAndAnglePos();
@@ -1321,7 +1321,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// never see, applied as a rate multiplier rather than a key offset.
 			// That was a fabricated quantity stacked on top of a correct ROM
 			// ladder, so the request goes out plain.
-			audioManager.playSfx(GameSound.SPINDASH_CHARGE);
+			com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.SPINDASH_CHARGE, audioManager);
 			counter = (short) Math.min(sprite.getSpindashCounter() + 0x200, 0x800);
 			sprite.setSpindashCounter(counter);
 		}
@@ -1393,7 +1393,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		sprite.setRolling(true);
 
-		audioManager.playSfx(GameSound.SPINDASH_RELEASE);
+		com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.SPINDASH_RELEASE, audioManager);
 		com.openggf.game.mutators.PlayableAudioEvents.spindashReleased(sprite);
 		short originalX = sprite.getX();
 		short originalY = sprite.getY();
@@ -1460,7 +1460,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		jumpPressed = true;
 		jumpReleasedSinceJump = false;
 		sprite.setStickToConvex(false);
-		audioManager.playSfx(GameSound.JUMP);
+		com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.JUMP, audioManager);
 
 		if (!wasRolling) {
 			int preRollCentreY = sprite.getCentreY();
@@ -1566,7 +1566,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 	}
 
-	private boolean isAirAbilityWindowOpen() {
+	// Internal read-only seam for native input planners; the gameplay gate remains the owner.
+	boolean isAirAbilityWindowOpen() {
 		int threshold = PlayerFluidContextAccess.movementUnderwater(sprite) ? -0x200 : -0x400;
 		return sprite.getDoubleJumpFlag() == 0 && sprite.getYSpeed() >= threshold;
 	}
@@ -1586,7 +1587,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return false;
 		}
 		SidekickCpuController cpu = sprite.getCpuController();
-		if (sprite.isCpuControlled() && (cpu == null || !cpu.isUnderManualControl())) {
+		if (sprite.isCpuControlled() && (cpu == null || !cpu.isUnderManualControl())
+				&& !hasScriptedNativeInput()) {
 			return false;
 		}
 		sprite.getTailsFlightController().activate();
@@ -1617,7 +1619,17 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return false;
 		}
 		SidekickCpuController cpu = sprite.getCpuController();
-		return !sprite.isCpuControlled() || (cpu != null && cpu.isUnderManualControl());
+		return !sprite.isCpuControlled() || (cpu != null && cpu.isUnderManualControl())
+				|| hasScriptedNativeInput();
+	}
+
+	private boolean hasScriptedNativeInput() {
+		// Native shared-world actors may have follower roster roles without AI.
+		// Admission belongs to the exact body in the active frame-scoped input map;
+		// ordinary and legacy playables retain their existing controller gates.
+		var sprites = sprite.currentSpriteManagerOrNull();
+		return com.openggf.sprites.playable.PlayableRuntimeContext.isSharedWorldBound(sprite)
+				&& sprites != null && sprites.ownsScriptedInput(sprite);
 	}
 
 	private int romVisibleLevelFrameCounter() {
@@ -1716,7 +1728,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (instaShield != null) {
 			instaShield.triggerAttack();
 		}
-		audioManager.playSfx(GameSound.INSTA_SHIELD);
+		com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.INSTA_SHIELD, audioManager);
 	}
 
 	private boolean isHyperSonic() {
@@ -1754,7 +1766,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			controller.triggerPoweredAirDashEffects(
 					levelManager != null ? levelManager.getObjectManager() : null);
 		}
-		audioManager.playSfx(GameSound.SPINDASH_RELEASE);
+		com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.SPINDASH_RELEASE, audioManager);
 	}
 
 	/** Fire dash: horizontal burst in facing direction (sonic3k.asm:23446-23465) */
@@ -1777,7 +1789,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (camera != null && camera.getFocusedSprite() == sprite) {
 			camera.setHorizScrollDelay(32);
 		}
-		audioManager.playSfx(GameSound.FIRE_ATTACK);
+		com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.FIRE_ATTACK, audioManager);
 		var shield = sprite.getShieldObject();
 		if (shield != null) shield.onAbilityActivated(1);
 	}
@@ -1792,7 +1804,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setJumping(false);
 		jumpPressed = false;
 		jumpReleasedSinceJump = false;
-		audioManager.playSfx(GameSound.LIGHTNING_ATTACK);
+		com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.LIGHTNING_ATTACK, audioManager);
 		var shield = sprite.getShieldObject();
 		if (shield != null) shield.onAbilityActivated(1);
 	}
@@ -1802,7 +1814,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setXSpeed((short) 0);
 		sprite.setGSpeed((short) 0);
 		sprite.setYSpeed((short) 0x800);
-		audioManager.playSfx(GameSound.BUBBLE_ATTACK);
+		com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.BUBBLE_ATTACK, audioManager);
 		var shield = sprite.getShieldObject();
 		if (shield != null) shield.onAbilityActivated(1);
 	}
@@ -2335,7 +2347,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.applyRollingRadii(false);
 			NativePositionOps.writeXPosPreserveSubpixel(sprite, jumpX);
 			NativePositionOps.writeYPosPreserveSubpixel(sprite, jumpY);
-			audioManager.playSfx(GameSound.JUMP);
+			com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.JUMP, audioManager);
 			return;
 		}
 	}
@@ -2685,9 +2697,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		boolean hyperWallImpact = superState != null
 				&& superState.triggerPoweredWallImpact(preZeroGroundSpeed);
 		if (hyperWallImpact) {
-			audioManager.playSfx(GameSound.THUMP);
+			com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.THUMP, audioManager);
 		} else {
-			audioManager.playSfx(GameSound.GRAB);
+			com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.GRAB, audioManager);
 		}
 
 		// Zero all velocities
@@ -3102,7 +3114,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Player_DoRoll: addq.w #5,y_pos, and subi.w #2*5 under Reverse_gravity_flag
 		// (sonic3k.asm:23298-23303; Tails loc_14FC4 :28540 with +1/-1).
 		applyRollRadiusShift(preRollCentreY, true);
-		audioManager.playSfx(GameSound.ROLLING);
+		com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.ROLLING, audioManager);
 
 		if (sprite.getGSpeed() == 0) {
 			sprite.setGSpeed((short) 0x200);
@@ -4413,7 +4425,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.setRolling(true);
 			applyRollRadiusShift(preBounceCentreY, true);
 		}
-		audioManager.playSfx(GameSound.BUBBLE_ATTACK);
+		com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.BUBBLE_ATTACK, audioManager);
 		var shield = sprite.getShieldObject();
 		if (shield != null) shield.onAbilityActivated(2);
 	}
@@ -4709,7 +4721,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private void handleSkid() {
 		skidAnimationRefreshedThisFrame = true;
 		if (!sprite.getSkidding()) sprite.setSkidding(true);
-		audioManager.playSfx(GameSound.SKID);
+		com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.SKID, audioManager);
 		advanceSkidDustTimer();
 	}
 

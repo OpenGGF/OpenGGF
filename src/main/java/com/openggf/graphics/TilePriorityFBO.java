@@ -30,6 +30,8 @@ public class TilePriorityFBO {
     private int height;
     private boolean initialized = false;
     private int[] savedViewport;
+    private int savedDrawFramebuffer, savedReadFramebuffer;
+    private final float[] savedClearColor = new float[4];
 
     /**
      * Initialize the tile priority FBO.
@@ -77,7 +79,10 @@ public class TilePriorityFBO {
             return;
         }
 
-        // Save current viewport
+        if (savedViewport != null) throw new IllegalStateException("Tile priority pass already open");
+        savedDrawFramebuffer = glGetInteger(GL_DRAW_FRAMEBUFFER_BINDING);
+        savedReadFramebuffer = glGetInteger(GL_READ_FRAMEBUFFER_BINDING);
+        glGetFloatv(GL_COLOR_CLEAR_VALUE, savedClearColor);
         savedViewport = FboHelper.saveViewport();
 
         // Bind FBO and set viewport
@@ -94,13 +99,12 @@ public class TilePriorityFBO {
      * Call this after rendering high-priority foreground tiles.
      */
     public void end() {
-        if (!initialized) {
-            return;
-        }
-
-        // Restore framebuffer and viewport
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        if (savedViewport == null) return;
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, savedDrawFramebuffer);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, savedReadFramebuffer);
         FboHelper.restoreViewport(savedViewport);
+        glClearColor(savedClearColor[0], savedClearColor[1], savedClearColor[2], savedClearColor[3]);
+        savedViewport = null;
     }
 
     /**

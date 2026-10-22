@@ -182,3 +182,12 @@ original whole-image ROM paths; it does not materialize composite ROMs. Keep the
 ensemble in the native camera's activation window; an authored offset does not
 create another activation region. Separated casts fail with an actionable route
 message. Author a closer route or a new shot.
+
+## Unified native world sample
+
+[Screenplay](unified-world.script.json) and [canonical scene](unified-world.stageplay)
+show the current version-six model: S1 Sonic, S2 Tails and S3K Knuckles perform
+native movement together, beside a posed actor. The 384×216 film holds fractional
+zoom 1.2 in both a populated world and the same world with initial objects/rings
+cleared. Supply all three ROMs to simulate or render it with the Stageplay CLI.
+Older examples retain their explicit compatibility policies when migrated.

@@ -17,7 +17,7 @@ import java.util.concurrent.*;
 final class StageplayOfflinePreview implements AutoCloseable {
     private static final ObjectMapper JSON = new ObjectMapper();
     private Process process;
-    private BufferedReader output;
+    private StageplayProcessInput output;
     private BufferedWriter input;
     private StageplayDocument document;
     private StageplayTimeline.Frame sample;
@@ -25,17 +25,19 @@ final class StageplayOfflinePreview implements AutoCloseable {
     private com.openggf.audio.StreamedMusicPort.SfxPcm sound;
     private StageplayTimeline.CameraPose requestedCamera;
     private final ArrayDeque<String> diagnostics = new ArrayDeque<>();
+    private final StageplayPreviewAssets.Source assets;
+
+    StageplayOfflinePreview(StageplayPreviewAssets.Source assets) { this.assets = Objects.requireNonNull(assets); }
 
     StageplayTimeline.Frame resolve(StageplayDocument value, int frame, StageplayTimeline.CameraPose camera) {
         try {
             if (!value.equals(document)) start(value);
-            if (camera != null && camera.zoom() != 1) throw new IOException("LIVE preview uses fixed zoom 1");
             if (sample != null && sample.frame()==frame && (Objects.equals(camera,requestedCamera) || camera != null && camera.equals(sample.camera()))) return sample;
             var requestValue = JSON.createObjectNode().put("frame",frame);
             if (camera != null) requestValue.set("camera",JSON.valueToTree(camera));
             input.write(JSON.writeValueAsString(requestValue)); input.newLine(); input.flush();
             var request = CompletableFuture.supplyAsync(() -> {
-                try { return output.readLine(); } catch(IOException error) { throw new UncheckedIOException(error); }
+                try { return output.readLine(20*1024*1024); } catch(IOException error) { throw new UncheckedIOException(error); }
             });
             String response=request.get(90,TimeUnit.SECONDS);
             if(response==null || response.length()>20*1024*1024) throw new IOException("Live preview worker exited or exceeded response limit: "+String.join(" | ",diagnostics));
@@ -79,13 +81,15 @@ final class StageplayOfflinePreview implements AutoCloseable {
         else if(os.contains("mac")) command.add("-XstartOnFirstThread");
         command.add("-cp"); command.add(System.getProperty("surefire.test.class.path",System.getProperty("java.class.path")));
         command.add("com.openggf.tools.StageplayPreviewTool");
-        var games=new LinkedHashSet<String>(); games.add(value.set().gameId()); value.sceneChanges().forEach(c->games.add(c.set().gameId()));
-        for(String game:games) {
+        command.add("--rom-descriptor");
+        var resolutions=new LinkedHashMap<String,com.openggf.data.RomImageCatalogue.Resolution>();
+        for(String game:StageplayRomTransport.requiredGames(value)) {
             var identity=switch(game) { case "s1"->RomIdentity.S1; case "s2"->RomIdentity.S2; default->RomIdentity.S3K; };
-            Path rom=EngineServices.current().roms().resolveLogicalRom(identity).flatMap(r->r.wholeImagePath())
-                    .orElseThrow(()->new IOException("LIVE preview needs the configured original whole-image "+game+" ROM path"));
-            command.add(game); command.add(rom.toAbsolutePath().toString());
+            resolutions.put(game,EngineServices.current().roms().resolveLogicalRom(identity)
+                    .orElseThrow(()->new IOException("LIVE preview needs the configured logical "+game+" ROM")));
         }
+        String descriptor=StageplayRomTransport.encode(resolutions);
+        String assetDescriptor=assets.encode(value);
         var builder=new ProcessBuilder(command); builder.environment().remove("DISPLAY"); builder.environment().remove("WAYLAND_DISPLAY");
         process=builder.start();
         Process owned=process;
@@ -96,9 +100,11 @@ final class StageplayOfflinePreview implements AutoCloseable {
                 }
             } catch(IOException ignored) { }
         });
-        output=new BufferedReader(new InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8));
+        output=new StageplayProcessInput(new InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8));
         input=new BufferedWriter(new OutputStreamWriter(process.getOutputStream(),StandardCharsets.UTF_8));
-        input.write(Base64.getEncoder().encodeToString(StageplayStore.encode(value))); input.newLine(); input.flush(); document=value;
+        input.write(descriptor); input.newLine();
+        input.write(Base64.getEncoder().encodeToString(StageplayStore.encode(value))); input.newLine();
+        input.write(assetDescriptor); input.newLine(); input.flush(); document=value;
     }
     @Override public void close() {
         if(process!=null) {

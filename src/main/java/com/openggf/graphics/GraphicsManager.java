@@ -1597,6 +1597,24 @@ public class GraphicsManager {
 		this.cachedConfigScreenHeightPx = -1;
 	}
 
+    /** Internal bounded offscreen viewport; restores the host's projection source/override exactly. */
+    void withPresentationViewport(int width, int height, Runnable draw) {
+        int oldX = viewportX, oldY = viewportY, oldWidth = viewportWidth, oldHeight = viewportHeight;
+        int oldProjectionWidth = projectionWidth, oldLogicalHeight = cachedConfigScreenHeightPx;
+        float[] oldProjection = projectionMatrixBuffer;
+        try {
+            setViewport(0, 0, width, height);
+            projectionWidth = width;
+            cachedConfigScreenHeightPx = height;
+            projectionMatrixBuffer = new org.joml.Matrix4f().ortho2D(0, width, 0, height).get(new float[16]);
+            draw.run();
+        } finally {
+            viewportX = oldX; viewportY = oldY; viewportWidth = oldWidth; viewportHeight = oldHeight;
+            projectionWidth = oldProjectionWidth; cachedConfigScreenHeightPx = oldLogicalHeight;
+            projectionMatrixBuffer = oldProjection;
+        }
+    }
+
 	/**
 	 * Returns the configured logical screen height (SCREEN_HEIGHT_PIXELS), cached
 	 * to avoid a config-service lookup per rendered pattern. The cache is

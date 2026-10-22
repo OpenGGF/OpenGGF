@@ -29,10 +29,10 @@ seconds, active set, poses, camera, transition and cues. `--every N` chooses a
 coarser inspection interval; it does not change the movie cadence. This is authored
 directing state: physical actors are explicitly `UNRESOLVED` here. Use `simulate`
 with explicit `--s1-rom`, `--s2-rom` and/or `--s3k-rom` paths to evaluate native
-behavior without a window or audio playback. Under `TERRAIN_ONLY`, this is native
-actor physics against detached static terrain, without placed-object AI, rings or
-zone events. Under `LIVE`, it is one shared native world with actors, placed objects,
-rings and events in `sample.world`. Both simulations report actual positions,
+behavior without a window or audio playback. Current `LIVE` and `TERRAIN_ONLY`
+share native actors, objects, rings and events in `sample.world`; `TERRAIN_ONLY`
+starts with cleared placements and rings. Migrated `LEGACY_TERRAIN_ONLY` retains
+detached static-terrain physics. Both simulation paths report actual positions,
 velocity, grounded state and movement status, advancing every native tick even
 with `--every N`. LIVE shot spawns and cuts remain authored; these observations
 do not alone prove a continuous cold route or ROM parity. Keep bulk timelines
@@ -63,8 +63,11 @@ uninterrupted short.
 
 ## Screenplay format
 
-The current screenplay format is `version:3`; the generated scene uses Stageplay
-version 5. Version-one screenplays retain manual movement; version two retains
+The current screenplay format is `version:4`; the generated scene uses Stageplay
+version 6. New recipes default to a populated native world; TERRAIN_ONLY clears
+its initial objects and rings. Both have the same directing capabilities.
+Versions one through three compile through the strict legacy canonical migration,
+preserving their original simulation and presentation. Version-one screenplays retain manual movement; version two retains
 terrain-only native Puppets. The compatible version-two example below introduces
 the common tracks; see [Live ROM worlds](#live-rom-worlds-screenplay-3-document-5)
 for version-three additions. JSON numbers retain their types: numeric strings, duplicate fields,
@@ -175,18 +178,18 @@ surface; snapping is not a search through the entire level. Once moving, normal
 native collision maintains floor contact or lets the actor fall from an edge.
 `collisionPath` selects terrain path 0 or 1. A destination's Y is part of the
 arrival check, not a vertical movement command: use `JUMP` explicitly when needed.
-There is no automatic route finding or obstacle jump. `TERRAIN_ONLY` omits moving
-platforms and other placed-object simulation; `LIVE` uses native objects and
-collision with explicit routes/targets and bounded waits.
+There is no automatic route finding or obstacle jump. Current native worlds use
+objects and collision with explicit routes/targets and bounded waits. Cleared
+worlds omit the initial population; legacy terrain scenes omit world simulation.
 
-`TERRAIN_ONLY` simulation reports `IDLE`, `MOVING`, `STOPPING`, `ARRIVED` or `BLOCKED` plus the
+Legacy terrain simulation reports `IDLE`, `MOVING`, `STOPPING`, `ARRIVED` or `BLOCKED` plus the
 active movement-command ID. Blocking describes lack of progress and does not
 silently cancel the attempt. Roles hidden for the entire shot report `INACTIVE` and
 do not need a floor spawn in that shot. Inspect actual positions and status before rendering;
 a pure `timeline` sample deliberately reports `UNRESOLVED` for physical actors.
 Scrubbing and repeated drawing resolve the same frame without adding ticks or
-playing historical sounds. `TERRAIN_ONLY` movement effects are silent; place
-explicit ROM cues in the film. LIVE preview/export also includes forward-only
+playing historical sounds. Legacy terrain movement effects are silent; place
+explicit ROM cues in the film. Native preview/export also includes forward-only
 native SFX; distinguish those observed events from authored audio cues.
 
 ## Dialogue profiles and decorations
@@ -243,20 +246,24 @@ The same definitions work in both editors and offline rendering without mod code
 
 ## Pixel stability and performance
 
-Camera positions interpolate. `TERRAIN_ONLY` camera zoom holds its value until
-the next key; `LIVE` cameras use fixed zoom 1, with pans or actor/group follow.
-The renderer does not animate zoom. Use held integer scales for terrain-only
-framing, cuts and pans; a future smooth world-compositing pass would be needed for animated
-fractional zoom. A larger export `--scale` cannot repair aliasing already present
+Camera positions interpolate; zoom holds until its next key. Current native
+worlds support fractional zoom through an opaque world-compositing pass, leaving
+text sharp. Legacy LIVE remains fixed at 1x; legacy terrain preserves its previous
+rendering. Animated zoom remains subsequent presentation work. A larger export `--scale` cannot repair aliasing already present
 in the authored frame. Stage entrances, exits, turns and listener reactions, then
 review the entire movie in motion at its intended output size.
 
-## Live ROM worlds (screenplay 3, document 5)
+## Native ROM worlds (screenplay 4, document 6)
 
-Existing scenes keep `TERRAIN_ONLY`. A shot opts into a living native level with
+New scenes default to `LIVE`. A shot selects a populated native level with
 `"set":{"gameId":"s3k","zone":11,"act":1,"worldPolicy":"LIVE"}`.
-All physical cast in that shot use the set's native donor. LIVE views use native
-height 224 and widths 320–1920; use export scale for a larger output. Films omit
+Legacy version-three recipes retain the original same-donor, native-height-224
+LIVE contract. Version-four recipes use one native-world model in LIVE and
+TERRAIN_ONLY, including saved authored terrain, mixed supplied-game performers
+and camera zoom. Output dimensions are 160–1920 by 112–1080; the source view
+(width/zoom by height/zoom) is bounded to 4096 per side and 8 MiPixels. Extreme
+framing fails resource preflight explicitly. Native physics still uses its
+original viewport and 224-line scroll owners. Films omit
 gameplay HUD/debug overlays, while native ring telemetry remains available. The
 cinematic draw reveals fresh terrain immediately instead of showing the native
 load palette fade; native fade timers and actor/world clocks remain unchanged.
@@ -264,8 +271,10 @@ Authored shot transitions still control the film reveal. Live spawn
 snapping attaches feet near the floor; disable it for an authored fall. Live worlds run in an
 owned offline process; preview never replaces the editor's active world. The
 in-engine workspace uses a persistent offscreen worker for native pixels and the
-same sampled state used by simulate/capture. Whole-image ROM paths must be configured
-for that worker; composite-image worker transport is not implemented. Linux workers
+same sampled state used by simulate/capture. The worker receives exact logical
+ROM descriptors, including original image paths, window bounds and fingerprints,
+and reconstructs composite readers without writing joined ROMs. Authored sets
+use the confined editor asset root or bounded original registration snapshots. Linux workers
 remove desktop display variables and require surfaceless EGL. Failure is visible.
 
 Discover original placements and rings before choosing a route:
@@ -311,8 +320,8 @@ Camera keys optionally include a `follow` object:
  "lookAhead":8,"smoothing":0.15,"offsetX":0,"offsetY":-16}
 ```
 
-One actor follows that performer; several frame their centre bounds at fixed zoom
-one. Empty actors preserve authored camera keys. Handoffs occur at camera keys.
+One actor follows that performer; several frame their centre bounds at authored
+zoom (legacy LIVE retains fixed 1x). Empty actors preserve authored camera keys. Handoffs occur at camera keys.
 The director uses simulated positions and deterministic tick-based smoothing,
 clamps to level bounds, then composes the existing shake. Native camera/focus
 continues to own activation; cinematic camera offsets are temporary render state.

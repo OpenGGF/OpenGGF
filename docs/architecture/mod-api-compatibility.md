@@ -5,16 +5,17 @@ carried by `develop` and `next` after the 0.6 release rollover. No Mod API basel
 has been published yet. The runtime-visible, type-only `com.openggf.game.ModApi`
 annotation marks its roots.
 
-Stageplay keeps the mutable candidate at 0.7.0. Portable document version five
-adds opt-in LIVE worlds, stable ROM-placement targets, bounded waits, native
-ability intents, fixed-scale camera following and sampled native state/events.
-Screenplay version three compiles that contract. Versions one through four retain
-their terrain-only migration; prior record constructors remain available, including
-version-four canonical callers. Puppet/Poser, dialogue/reveal sampling, camera effects
-and accessory poses remain supported. LIVE editor previews use an isolated native
-worker; these ownership/process details are outside the creator API. The normalized
-candidate pin changes with the typed document/timeline surface; published baselines,
-API version and release topology do not.
+Stageplay keeps the mutable candidate at 0.7.0. Portable document version six
+uses one native-world owner for both populated and initially cleared sets.
+`LEGACY_TERRAIN_ONLY` and `LEGACY_LIVE` preserve the execution and presentation
+of strictly migrated versions one through five. Existing record constructors
+remain available; five-argument set references retain detached compatibility.
+New authoring defaults to native worlds. Screenplay versions one through three
+compile through the old canonical contract; version four selects the current
+world model. The candidate pin includes the explicit compatibility policies and
+policies. Preview/export process and ROM-descriptor transport
+remain engine internals. No published baseline, API version or release topology
+changes.
 
 Creator dynamic objects implement `ModRewindRecreatable` and receive
 `ObjectReconstructionContext`: captured spawn and typed payload, restore-time
@@ -886,3 +887,13 @@ act and leader. The normalized mutable `0.7` pin and runtime candidate descripti
 are updated together. The release descriptor was reviewed and remains byte-identical
 at unpublished candidate `0.7.0`: ordinary signature regeneration must not edit
 its publication or branch policy. No published baseline changes.
+
+
+### Stageplay unified worlds (2026-10-22)
+
+The unpublished 0.7.0 candidate adds `LEGACY_TERRAIN_ONLY` and `LEGACY_LIVE`
+to `StageplayDocument.WorldPolicy` so strictly migrated documents preserve their
+prior execution model. New v6 documents share native-world capabilities.
+The mutable `0.7` signature pin is regenerated in place. Policy classification,
+ROM transport, donor ownership and compositing helpers remain engine internals;
+the release descriptor and runtime API version remain candidate `0.7.0`.

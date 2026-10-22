@@ -29,7 +29,7 @@ editors and can be registered by a mod.
   Registry presence alone does not mean that a detached set can be decoded.
   All frame/zone/act numbers are zero-based. Never invent art or copy ROMs to satisfy
   a command. Sprite positions use the sprite origin, not its top-left corner.
-- Author a version-three screenplay JSON for live worlds (version two remains supported). New cast members default to physical puppets;
+- Author a version-four screenplay JSON for the current native world. Versions one through three retain compatibility behavior. New cast members default to physical puppets;
   use `puppet:false` for Poser mode and deliberate manual choreography. Version-one recipes remain manual. Each shot has its own duration, set, camera
   and actor tracks. Local frame zero anchors each present actor and camera. Missing
   cast tracks are hidden for that shot. The compiler creates every scene-boundary
@@ -116,10 +116,11 @@ must be judged by their observed motion, not the apparent smoothness of camera k
 
 ## Boundaries that affect directing
 
-TERRAIN_ONLY sets use detached ROM resources: their scene switches do not run native gameplay loads,
-world-object AI or zone-event simulations. LIVE sets opt into the isolated native world described below. `TERRAIN_ONLY` Puppets run native player
-physics against detached static terrain; that does not prove full-world route completion
-or ROM parity. Camera shake and zoom affect presentation, not collision or
+Current LIVE and TERRAIN_ONLY sets use the same native session. TERRAIN_ONLY
+clears initial placements and rings; it does not disable later native events.
+Strictly migrated legacy terrain scenes retain detached player physics without
+world objects/events. Neither authored shot spawns nor isolated simulation alone
+proves a continuous cold route or ROM parity. Camera shake and zoom affect presentation, not collision or
 native camera state. Native handover requires the same supported native set and resumes
 unshaken positions; cross-game scenery belongs to staged playback. State these limits
 when they affect the requested story. Imported voices are bounded relative WAV/Ogg assets;
@@ -127,7 +128,7 @@ no voice service or fabricated licensing claim is part of this workflow.
 
 ## Live-world route evidence
 
-Opt into `worldPolicy:LIVE` explicitly; legacy documents stay terrain-only. Use the
+New version-four screenplays default to `worldPolicy:LIVE`; choose `TERRAIN_ONLY` to clear its initial object/ring population using the same native owner. Earlier documents preserve their original compatibility policies. Use the
 `level` command to inspect stable ROM placements and rings, and `catalog` for native
 capabilities. Read the live schema in the authoring guide before using object
 targets, WAIT conditions, abilities or camera following. Unsupported donors must
@@ -143,7 +144,7 @@ additional gameplay activation regions. Describe unsupported separated casts hon
 
 LIVE simulate/capture owns an offline gameplay session and delegates to
 LevelFrameStep. Editor preview uses a persistent offscreen worker, with the same
-world sampling and rendering, with no-device native SFX admitted once by forward playback. Seeking stays silent. Never open a new session over the user's active
+world sampling and rendering, exact logical-ROM window/composite transport and confined authored-set assets, with no-device native SFX admitted once by forward playback. Seeking stays silent. Never open a new session over the user's active
 gameplay/editor world. Do not tween placed objects, force runtime positions or
 velocities, assign pickup counters, or substitute a hurt pose. Only initial shot
 placement may set an actor's centre. Save source scenes in the repo and durable
@@ -168,3 +169,14 @@ Place explicit `ROM_MUSIC` cues at each shot's local frame zero using verified
 `catalog` IDs. Preview's worker silences automatic level music because the parent
 owns authored cues; exports use the same cues and keep native SFX. A soundtrack
 heard only in a capture is not evidence of matching preview playback.
+
+## Complete-cast continuation decisions
+
+Free means the object's actual native routine. Arena-bound bosses may ignore
+the placed anchor: do not translate their native coordinates or invent per-object
+spatial adapters. Report and display **Free: native arena position, anchor ignored**
+with the owning initialization routine. Reject incompatible native sets when their
+factory/context cannot support the object. Directed Puppet/Pose relocation must
+include the parent's native child relationships; it must not masquerade as relocated
+Free collision or arena behavior. Coverage distinguishes independent factories,
+parent-created parts, invisible controllers, unavailable art and unsupported contexts.

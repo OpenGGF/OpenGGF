@@ -1,5 +1,7 @@
 package com.openggf.tools;
 
+import static com.openggf.stageplay.StageplayWorldPolicies.usesNativeWorld;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.data.Rom;
 import com.openggf.game.BuiltInRomDetectors;
@@ -68,7 +70,7 @@ public final class StageplayTool {
                         "level --game s3k --rom PATH --zone 11 --act 1",
                         "catalog --game s2 --rom /absolute/game.gen [--character tails] [--zone 0 --act 0]",
                         "render --scene film.stageplay --out film.mkv --s1-rom PATH --s2-rom PATH --s3k-rom PATH"),
-                        "screenplayVersion", 3, "stageplayVersion", StageplayDocument.VERSION,
+                        "screenplayVersion", 4, "stageplayVersion", StageplayDocument.VERSION,
                         "fps", 60, "indices", "Frames, zones and acts are zero-based; every shot uses local frames.",
                         "outputs", "JSON result on stdout; exit 0 success, 2 invalid input/failure. Outputs are never overwritten.",
                         "resources", "catalog and simulate need supplied ROMs; simulate resolves native puppet physics without a window, graphics or audio playback. Render preflights resources and uses offline audio.");
@@ -171,8 +173,8 @@ public final class StageplayTool {
     }
 
     static boolean usesLiveWorld(StageplayDocument document) {
-        return document.set().worldPolicy() == StageplayDocument.WorldPolicy.LIVE
-                || document.sceneChanges().stream().anyMatch(c -> c.set().worldPolicy() == StageplayDocument.WorldPolicy.LIVE);
+        return usesNativeWorld(document.set().worldPolicy())
+                || document.sceneChanges().stream().anyMatch(c -> usesNativeWorld(c.set().worldPolicy()));
     }
 
     private static Object inspectLevel(Map<String, String> flags) throws IOException {
@@ -304,7 +306,7 @@ public final class StageplayTool {
     static String scaffold() {
         return """
                 {
-                  "version": 2, "name": "First take", "width": 400, "height": 224,
+                  "version": 4, "name": "First take", "width": 400, "height": 224,
                   "cast": [{"id":"tails","name":"Tails","gameId":"s2","character":"tails"}],
                   "shots": [{
                     "id":"opening", "durationFrames":300,

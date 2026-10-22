@@ -6,6 +6,10 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.CharacterConstructionScope;
+import com.openggf.game.CharacterKey;
+import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.level.LevelManager;
 import com.openggf.level.WaterSystem;
@@ -29,6 +33,7 @@ public final class PlayableRuntimeContext {
     final TimerManager timers;
     final AudioManager audio;
     final GameRng rng;
+    final GameplayModeContext world;
 
     PlayableRuntimeContext(GameModule module, Camera camera, LevelManager level,
             CollisionSystem collision, WaterSystem water, SpriteManager sprites,
@@ -43,6 +48,38 @@ public final class PlayableRuntimeContext {
         this.timers = timers;
         this.audio = audio;
         this.rng = new GameRng(module.rngFlavour());
+        this.world = null;
+    }
+
+    private PlayableRuntimeContext(GameModule module, GameplayModeContext world) {
+        this.module = Objects.requireNonNull(module);
+        this.world = Objects.requireNonNull(world);
+        this.camera = world.getCamera();
+        this.level = world.getLevelManager();
+        this.collision = world.getCollisionSystem();
+        this.water = world.getWaterSystem();
+        this.sprites = world.getSpriteManager();
+        this.gameState = world.getGameStateManager();
+        this.timers = world.getTimerManager();
+        this.audio = EngineServices.current().audio();
+        // Randomness belongs to the world and is already captured by its rewind registry.
+        this.rng = world.getRng();
+    }
+
+    /**
+     * Constructs one native donor playable over an existing owned world's services. Its
+     * movement/animation rules remain donor-owned, while collision, events and clocks are
+     * world-owned. This does not open or replace a gameplay session.
+     */
+    public static AbstractPlayableSprite constructShared(GameModule actorModule, GameplayModeContext world,
+            String character, String code, int centreX, int centreY) {
+        var key = CharacterKey.parsePersisted(character);
+        var definition = actorModule.getPlayableCharacterRegistry().find(key)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown native character: " + character));
+        var context = new PlayableRuntimeContext(actorModule, world);
+        return context.construct(() -> CharacterConstructionScope.call(key,
+                () -> CharacterConstructionScope.validateFactoryResult(key,
+                        definition.spriteFactory().create(code, centreX, centreY))));
     }
 
     static PlayableRuntimeContext captureConstruction() { return CONSTRUCTION.get(); }
@@ -58,12 +95,19 @@ public final class PlayableRuntimeContext {
         return sprite != null && sprite.runtimeServices != null;
     }
 
+    /** Internal distinction from detached puppets; this does not authorize controller input. */
+    public static boolean isSharedWorldBound(AbstractPlayableSprite sprite) {
+        return isBound(sprite) && sprite.runtimeServices.world != null;
+    }
+
     public static BackgroundPlaneCollisionProvider background(AbstractPlayableSprite sprite) {
-        return isBound(sprite) ? null : GameServices.backgroundPlaneCollisionOrNull();
+        return isBound(sprite) ? sprite.runtimeServices.world == null ? null
+                : sprite.runtimeServices.world.getBackgroundPlaneCollisionProvider() : GameServices.backgroundPlaneCollisionOrNull();
     }
 
     public static ZoneRuntimeRegistry zoneRuntime(AbstractPlayableSprite sprite) {
-        return isBound(sprite) ? null : GameServices.zoneRuntimeRegistryOrNull();
+        return isBound(sprite) ? sprite.runtimeServices.world == null ? null
+                : sprite.runtimeServices.world.getZoneRuntimeRegistry() : GameServices.zoneRuntimeRegistryOrNull();
     }
 
     public static TimerManager timersOrNull(AbstractPlayableSprite sprite) {

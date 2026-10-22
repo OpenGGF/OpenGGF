@@ -25,7 +25,7 @@ class TestStageplayRenderer {
         when(kit.columns()).thenReturn(2);when(kit.rows()).thenReturn(2);when(kit.blockCount()).thenReturn(1);
         when(kit.blockImage(0)).thenReturn(block);
         when(kit.backdrop()).thenReturn(new SceneBackdrop(background,List.of(new SceneBackdrop.Band(0,224,0,0))));
-        var document=StageplayDocument.empty("s2",0,0,128,0,320,224)
+        var document=legacyScene("s2",0,0,128,0,320,224)
                 .withCamera(List.of(new CameraKey(0,128,0,2,Interpolation.HOLD)))
                 .withActors(List.of(new Actor("hero","Hero","s2","sonic",List.of(
                         new ActorKey(0,148,60,0,-1,false,true,1,Interpolation.HOLD)))));
@@ -46,7 +46,7 @@ class TestStageplayRenderer {
         var source=new SetSource("s2",0,0,"a".repeat(40),"set.ogfproject");
         try(var resources=new StageplayResources(game->art,List.of("s2"))) {
             resources.registerSet(source,mock(SceneLevelKit.class));
-            assertThrows(IllegalArgumentException.class,()->resources.set(StageplayDocument.empty("s2",0,0,0,0,320,224).withSet(source)));
+            assertThrows(IllegalArgumentException.class,()->resources.set(legacyScene("s2",0,0,0,0,320,224).withSet(source)));
         }
     }
     @Test void voiceAssetsCannotEscapeTheirSceneRootThroughSymlinks() throws Exception {
@@ -117,7 +117,7 @@ class TestStageplayRenderer {
         when(art.characterAccessorySampleTick("tails", 2, 1, 3)).thenReturn(0L);
         when(art.characterAccessoryPose("tails", 2, 1, 3, false, 2, 0))
                 .thenReturn(new SceneAccessoryPose(tail, false, true));
-        var scene = StageplayDocument.empty("s2", 0, 0, 0, 0, 320, 224).withActors(List.of(
+        var scene = legacyScene("s2", 0, 0, 0, 0, 320, 224).withActors(List.of(
                 new Actor("tails", "Tails", "s2", "tails", List.of(
                         new ActorKey(0, 100, 100, 2, 1, false, true, 1, Interpolation.LINEAR),
                         new ActorKey(2, 104, 100, 2, 1, true, true, 1, Interpolation.LINEAR),
@@ -140,7 +140,7 @@ class TestStageplayRenderer {
         when(art.levelKit(0, 0)).thenReturn(terrain); when(art.character("tails")).thenReturn(sprites);
         when(art.characterAccessory("tails")).thenReturn(sprites);
         when(sprites.frame(1)).thenReturn(body); when(sprites.frame(2)).thenReturn(tail); when(sprites.frameCount()).thenReturn(3);
-        var document = StageplayDocument.empty("s2", 0, 0, 0, 0, 320, 224).withActors(List.of(
+        var document = legacyScene("s2", 0, 0, 0, 0, 320, 224).withActors(List.of(
                 new Actor("tails", "Tails", "s2", "tails", List.of(new ActorKey(0, 100, 100, 0, -1, false, true, 1, Interpolation.HOLD)))))
                 .withPuppets(List.of(new PuppetTrack("tails", true, 0, List.of())));
         var authored = StageplayTimeline.sample(document, 0);
@@ -164,7 +164,7 @@ class TestStageplayRenderer {
     }
 
     private static StageplayDocument twoShots(SetSource incoming, Transition transition) {
-        return StageplayDocument.empty("s2", 0, 0, 0, 0, 320, 224).withDurationFrames(12)
+        return legacyScene("s2", 0, 0, 0, 0, 320, 224).withDurationFrames(12)
                 .withCamera(List.of(new CameraKey(0, 0, 0, 1, Interpolation.HOLD),
                         new CameraKey(6, 100, 40, 2, Interpolation.HOLD)))
                 .withSceneChanges(List.of(new SceneChange("cut", 6, incoming, transition, transition == Transition.CUT ? 0 : 8)));
@@ -175,4 +175,10 @@ class TestStageplayRenderer {
                 List.of(new SceneBackdrop.Band(0, 224, 0, 0))));
         return kit;
     }
+    /** These fixtures exercise detached art/choreography, independent of a native session. */
+    private static StageplayDocument legacyScene(String gameId, int zone, int act, double x, double y, int width, int height) {
+        return StageplayDocument.empty(gameId, zone, act, x, y, width, height)
+                .withSet(new StageplayDocument.SetSource(gameId, zone, act, "", ""));
+    }
+
 }

@@ -48,10 +48,10 @@ class TestStageplayDirectingWorkspace {
         assertEquals(StageplayTimeline.sample(before,20).baseCamera(),workspace.directorCamera());
     }
 
-    @Test void liveCameraKeepsFixedZoomWhilePanningRecordingAndRejectingInvalidFormEdits() {
+    @Test void legacyLiveCameraKeepsFixedZoomWhilePanningRecordingAndRejectingInvalidFormEdits() {
         var workspace = workspace();
         var before = workspace.controller().document().withSet(new StageplayDocument.SetSource(
-                "s2",0,0,"","",StageplayDocument.WorldPolicy.LIVE));
+                "s2",0,0,"","",StageplayDocument.WorldPolicy.LEGACY_LIVE));
         workspace.controller().replace(before); workspace.invoke(CAMERA_MODE);
         workspace.moveCamera(10,-4,2);
         assertEquals(new StageplayTimeline.CameraPose(110,196,1),workspace.directorCamera());
@@ -74,7 +74,7 @@ class TestStageplayDirectingWorkspace {
         var scene=StageplayDocument.empty("s2",0,0,100,200,320,224)
                 .withActors(List.of(new StageplayDocument.Actor("lead","Sonic","s2","sonic",List.of(key))))
                 .withPuppets(List.of(new StageplayDocument.PuppetTrack("lead",true,0,List.of())))
-                .withSet(new StageplayDocument.SetSource("s2",0,0,"","",StageplayDocument.WorldPolicy.LIVE))
+                .withSet(new StageplayDocument.SetSource("s2",0,0,"","",StageplayDocument.WorldPolicy.LEGACY_LIVE))
                 .withCamera(List.of(new StageplayDocument.CameraKey(0,100,200,1,StageplayDocument.Interpolation.HOLD,follow)));
         var view=new StageplayTimeline.CameraPose(700,900,1);
         var workspace=new StageplayWorkspace(new StageplayWorkspace.Host() {
@@ -104,6 +104,23 @@ class TestStageplayDirectingWorkspace {
         workspace.recordCameraStep(1,0,1); workspace.stop();
         assertEquals(702,workspace.controller().document().camera().getFirst().x());
         assertTrue(workspace.controller().document().camera().getFirst().follow().actors().isEmpty());
+    }
+
+    @Test void nativeContentsPoliciesOfferTheSameZoomAndFilmDimensions() {
+        for (var policy : List.of(StageplayDocument.WorldPolicy.LIVE, StageplayDocument.WorldPolicy.TERRAIN_ONLY)) {
+            var workspace = workspace();
+            workspace.controller().replace(workspace.controller().document().withSet(new StageplayDocument.SetSource(
+                    "s2", 0, 0, "", "", policy)).withSize(384, 216));
+            workspace.invoke(CAMERA_MODE);
+            workspace.moveCamera(0, 0, 2);
+            assertEquals(2, workspace.directorCamera().zoom(), policy.name());
+            workspace.invoke(SET_CAMERA_KEY);
+            workspace.invoke(CAMERA_KEY); choose(workspace.menu(), 0);
+            workspace.menu().setValue("zoom", "1.5"); workspace.menu().submit();
+            assertNull(workspace.menu().error(), policy.name());
+            assertEquals(1.5, workspace.controller().document().camera().getFirst().zoom());
+            assertEquals(216, workspace.controller().document().height());
+        }
     }
 
     @Test void cameraRecordingNeedsNoActorAndCommitsOneUndoStep() {

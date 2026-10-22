@@ -34,6 +34,10 @@ public final class LevelSpritePresentation {
         return renderer == null ? null : renderer.backgroundScrollForDraw();
     }
 
+    /** Native drawing dimensions; cinematic composition tiles this viewport without resizing gameplay. */
+    public static int viewportWidth(LevelManager level) { return level.camera.getWidth(); }
+    public static int viewportHeight(LevelManager level) { return level.camera.getHeight(); }
+
     /** Internal directed-render scope. The callback must flush its drawing before returning. */
     public static void withCinematicCamera(LevelManager level, int x, int y, Runnable draw) {
         level.spritePresentationRenderer().withCinematicCamera(x, y, draw);

@@ -16,7 +16,7 @@ class TestStageplayPuppets {
         return new ActorKey(frame, x, 200, 0, -1, false, visible, 1, Interpolation.HOLD);
     }
     private static StageplayDocument manual() {
-        return StageplayDocument.empty("s2", 0, 0, 0, 0, 320, 224).withActors(List.of(
+        return StageplayDocument.empty("s2", 0, 0, 0, 0, 320, 224).withSet(new SetSource("s2",0,0,"","")).withActors(List.of(
                 new Actor("hero", "Hero", "s2", "sonic", List.of(key(0, 100, true)))));
     }
     private static PuppetCommand move(int frame) {

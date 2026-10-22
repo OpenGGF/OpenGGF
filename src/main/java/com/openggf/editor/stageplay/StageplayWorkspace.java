@@ -1,5 +1,7 @@
 package com.openggf.editor.stageplay;
 
+import static com.openggf.stageplay.StageplayWorldPolicies.usesNativeWorld;
+
 import com.openggf.control.InputHandler;
 import com.openggf.editor.project.EditorProjectMenu;
 import com.openggf.game.MenuTextEditor;
@@ -151,7 +153,7 @@ public final class StageplayWorkspace {
                 case PUPPET_ACTIONS -> puppetMenu();
                 case CAMERA_MODE -> {
                     cameraMode = !cameraMode; cameraDraft = null;
-                    status = !cameraMode ? "Actor direction" : liveCamera()
+                    status = !cameraMode ? "Actor direction" : fixedZoom()
                             ? "LIVE camera: WASD / arrows pan, fixed zoom 1, K capture key, R record, C leave camera."
                             : "Camera: WASD / arrows pan, Q / E step integer zoom, K capture key, R record, C leave camera.";
                 }
@@ -397,7 +399,7 @@ public final class StageplayWorkspace {
             throw new IllegalArgumentException("Camera movement and zoom must be finite; zoom must be positive");
         if (screenX == 0 && screenY == 0 && zoomFactor == 1) return;
         var camera = directorCamera();
-        double zoom = liveCamera() ? 1 : zoomFactor == 1 ? camera.zoom() : Math.clamp(Math.round(camera.zoom() * zoomFactor), 1, 64);
+        double zoom = fixedZoom() ? 1 : zoomFactor == 1 ? camera.zoom() : Math.clamp(Math.round(camera.zoom() * zoomFactor), 1, 64);
         // Keep the film centre steady while zooming; movement is measured in visible pixels.
         double x = camera.x() + screenX / camera.zoom() + controller.document().width() * (.5 / camera.zoom() - .5 / zoom);
         double y = camera.y() + screenY / camera.zoom() + controller.document().height() * (.5 / camera.zoom() - .5 / zoom);
@@ -411,7 +413,7 @@ public final class StageplayWorkspace {
         var key = new CameraKey(controller.frame(), camera.x(), camera.y(), camera.zoom(), Interpolation.LINEAR);
         edit(d -> d.withCamera(withCameraKey(d.camera(), key)));
         cameraDraft = null;
-        status = "Camera key captured at frame " + controller.frame() + (liveCamera()
+        status = "Camera key captured at frame " + controller.frame() + (fixedZoom()
                 ? ". Authored LIVE framing at fixed zoom 1; following is cleared at this key." : ". Later keys animate pans; zoom changes cut at their key.");
     }
 
@@ -425,7 +427,7 @@ public final class StageplayWorkspace {
         cameraMode = true; takeBefore = before; takeCameraKeys = keys;
         takeDraft = before.withCamera(keys);
         cameraDraft = null;
-        status = liveCamera() ? "Recording authored LIVE camera: WASD / arrows pan, fixed zoom 1, Space stops. Capture replaces following; one take is one undo."
+        status = fixedZoom() ? "Recording legacy LIVE camera: WASD / arrows pan, fixed zoom 1, Space stops. Capture replaces following; one take is one undo."
                 : "Recording camera: WASD / arrows pan, Q / E step integer zoom, Space stops. One take is one undo.";
     }
 
@@ -464,11 +466,15 @@ public final class StageplayWorkspace {
                 - (input.isKeyDown(GLFW_KEY_W) || input.isKeyDown(GLFW_KEY_UP) ? 1 : 0);
     }
     private boolean liveCamera() {
-        return StageplayTimeline.sample(recordingDocument(), controller.frame()).set().worldPolicy() == WorldPolicy.LIVE;
+        return usesNativeWorld(StageplayTimeline.sample(recordingDocument(), controller.frame()).set().worldPolicy());
+    }
+
+    private boolean fixedZoom() {
+        return StageplayTimeline.sample(recordingDocument(), controller.frame()).set().worldPolicy() == WorldPolicy.LEGACY_LIVE;
     }
 
     private double zoomInput(InputHandler input) {
-        if (liveCamera()) { resetZoomRepeat(); return 1; }
+        if (fixedZoom()) { resetZoomRepeat(); return 1; }
         int direction = (input.isKeyDown(GLFW_KEY_E) ? 1 : 0) - (input.isKeyDown(GLFW_KEY_Q) ? 1 : 0);
         if (direction == 0) { resetZoomRepeat(); return 1; }
         boolean step = direction != zoomHeldDirection;
@@ -587,7 +593,7 @@ public final class StageplayWorkspace {
                 number("width", "Width", doc.width()), number("height", "Height", doc.height()), text("game", "Set game: s1 / s2 / s3k", set.gameId()),
                 number("zone", "Zone (zero based)", set.zone()), number("act", "Act (zero based)", set.act()),
                 text("rom", "Optional ROM SHA-1", set.romSha1()), text("project", "Relative .ogfproject (optional)", set.levelProject()),
-                text("world", "World: TERRAIN_ONLY / LIVE", set.worldPolicy().name())),
+                text("world", "Native world: LIVE / TERRAIN_ONLY (cleared)", set.worldPolicy().name())),
                 "Apply scene", v -> edit(d -> d.withName(v.get("name")).withDurationFrames(integer(v,"duration"))
                         .withSize(integer(v,"width"), integer(v,"height"))
                         .withSet(new SetSource(v.get("game"),integer(v,"zone"),integer(v,"act"),v.get("rom"),v.get("project"),WorldPolicy.valueOf(v.get("world").toUpperCase(java.util.Locale.ROOT))))));
@@ -669,7 +675,7 @@ public final class StageplayWorkspace {
         actions.add(action("Jump",() -> puppetCommandForm(actor,null,PuppetCommandKind.JUMP)));
         actions.add(action("Stop / brake",() -> puppetCommandForm(actor,null,PuppetCommandKind.STOP)));
         var currentSet = StageplayTimeline.sample(controller.document(), controller.frame()).set();
-        if (currentSet.worldPolicy() == WorldPolicy.LIVE) {
+        if (usesNativeWorld(currentSet.worldPolicy())) {
             for (var kind : List.of(PuppetCommandKind.WAIT, PuppetCommandKind.RELEASE, PuppetCommandKind.CROUCH,
                     PuppetCommandKind.LOOK_UP, PuppetCommandKind.ROLL))
                 actions.add(action(kind.name(), () -> puppetCommandForm(actor, null, kind)));
@@ -701,7 +707,7 @@ public final class StageplayWorkspace {
         var pose=selectedActorPose(); int frame=command==null?controller.frame():command.frame();
         boolean move=kind==PuppetCommandKind.MOVE_TO || kind==PuppetCommandKind.FLY_TO || kind==PuppetCommandKind.GLIDE_TO;
         boolean hold=kind==PuppetCommandKind.JUMP || kind==PuppetCommandKind.HOVER || kind==PuppetCommandKind.CROUCH || kind==PuppetCommandKind.LOOK_UP;
-        boolean live=StageplayTimeline.sample(controller.document(),frame).set().worldPolicy()==WorldPolicy.LIVE;
+        boolean live=usesNativeWorld(StageplayTimeline.sample(controller.document(),frame).set().worldPolicy());
         boolean target=live && (move || kind==PuppetCommandKind.WAIT);
         var fields=new ArrayList<EditorProjectMenu.Field>(); fields.add(number("frame","Earliest frame",frame));
         if(move) {
@@ -813,10 +819,10 @@ public final class StageplayWorkspace {
                     if (isSceneBoundary(controller.frame())) throw new IllegalStateException("A scene change needs this camera key. Remove the scene change first.");
                     edit(d -> d.withCamera(d.camera().stream().filter(k -> k.frame()!=controller.frame()).toList()));
                 })));
-        for (int zoom : liveCamera() ? List.of(1) : List.of(1, 2, 3, 4))
+        for (int zoom : fixedZoom() ? List.of(1) : List.of(1, 2, 3, 4))
             actions.add(action("Capture " + zoom + "x pixel framing", () -> captureZoom(zoom)));
         menu.showActions("Camera at frame " + controller.frame(), actions);
-        if (liveCamera()) menu.setSubtitle("LIVE cameras use fixed zoom 1. Use export scale for a larger movie.");
+        if (fixedZoom()) menu.setSubtitle("Compatibility scene: original LIVE framing stays at 1x. Choose LIVE in Scene / set to use current directing capabilities.");
     }
 
     private void captureZoom(int zoom) { moveCamera(0,0,zoom/directorCamera().zoom()); captureCameraKey(); }
@@ -831,14 +837,14 @@ public final class StageplayWorkspace {
         var resolved = live ? resolvePreview(controller.document(), frame).baseCamera() : camera;
         var authored = StageplayTimeline.sample(controller.document(), frame).baseCamera();
         menu.showForm("Camera key at frame " + frame,List.of(number("x","World left X",camera.x()),number("y","World top Y",camera.y()),
-                number("zoom",live ? "Zoom (LIVE fixed at 1)" : "Zoom (integer 1..64)",camera.zoom()),text("interpolation","HOLD / LINEAR / SMOOTH",interpolation.name()),
+                number("zoom",fixedZoom() ? "Zoom (legacy LIVE fixed at 1)" : "Zoom (0.05..64)",camera.zoom()),text("interpolation","HOLD / LINEAR / SMOOTH",interpolation.name()),
                 text("follow","Follow actor IDs (comma separated; empty = authored)",String.join(",",follow.actors())),
                 number("deadX","Horizontal dead zone",follow.deadZoneX()),number("deadY","Vertical dead zone",follow.deadZoneY()),
                 number("ahead","Look ahead (ticks)",follow.lookAhead()),number("smooth","Smoothing (0.001..1)",follow.smoothing()),
                 number("offsetX","Follow offset X",follow.offsetX()),number("offsetY","Follow offset Y",follow.offsetY())),"Set camera",v -> edit(d -> {
             double zoom=decimal(v,"zoom");
-            if (live && zoom != 1) throw new IllegalArgumentException("LIVE cameras require fixed zoom 1. Use export scale for a larger movie.");
-            if ((existing==null || zoom!=existing.zoom()) && (zoom<1 || zoom!=Math.rint(zoom)))
+            if (fixedZoom() && zoom != 1) throw new IllegalArgumentException("Legacy LIVE framing stays at 1x. Choose LIVE in Scene / set to upgrade this shot.");
+            if (!live && (existing==null || zoom!=existing.zoom()) && (zoom<1 || zoom!=Math.rint(zoom)))
                 throw new IllegalArgumentException("New framing uses integer zoom (1..64). Existing fractional values may be kept unchanged.");
             var keys = new ArrayList<>(d.camera()); keys.removeIf(k -> k.frame()==frame);
             double x=decimal(v,"x"), y=decimal(v,"y");
@@ -853,7 +859,7 @@ public final class StageplayWorkspace {
                     Interpolation.valueOf(v.get("interpolation").toUpperCase(java.util.Locale.ROOT)),nextFollow));
             keys.sort(Comparator.comparingInt(CameraKey::frame)); return d.withCamera(keys);
         }));
-        menu.setSubtitle(live ? "LIVE fixed zoom 1. With following, position edits adjust follow offsets; Capture key / Record stores authored framing. Use export scale for a larger movie."
+        menu.setSubtitle(live ? "Native world camera. Following position edits adjust follow offsets; Capture key / Record stores authored framing. Zoom changes presentation only."
                 : "Pan uses the chosen interpolation; zoom is held until the next key. Integer zoom preserves pixel framing. Imported fractional zoom can shimmer while panning.");
     }
 
@@ -919,7 +925,7 @@ public final class StageplayWorkspace {
                 text("game", "Incoming set: s1 / s2 / s3k", set.gameId()), number("zone", "Zone (zero based)", set.zone()),
                 number("act", "Act (zero based)", set.act()), text("rom", "Optional ROM SHA-1", set.romSha1()),
                 text("project", "Relative .ogfproject (optional)", set.levelProject()),
-                text("world", "World: TERRAIN_ONLY / LIVE", set.worldPolicy().name())), "Apply scene change", v -> edit(d -> {
+                text("world", "Native world: LIVE / TERRAIN_ONLY (cleared)", set.worldPolicy().name())), "Apply scene change", v -> edit(d -> {
             String id = change == null ? nextId("scene", d) : change.id();
             var values = new ArrayList<>(d.sceneChanges()); values.removeIf(c -> c.id().equals(id));
             values.add(new SceneChange(id, integer(v,"frame"), new SetSource(v.get("game"), integer(v,"zone"),
