@@ -24,11 +24,15 @@ public enum DynamicArtDmaServiceModel {
      * (sonic.asm:709-715 -> VBlank_Music, sonic.asm:678-684), so
      * {@code f_sonframechg} stays set across a lag frame and the transfer lands
      * on the next real VBlank.
+     * VBlank_PaletteFade (sonic.asm:967-970, retail REV01 $F9A) likewise
+     * omits Sonic's buffer DMA: it calls StandardTransfers and ProcessPLC_9Tiles.
+     * The staged buffer remains pending during that fade.
      */
     SONIC_1_VBLANK_SONIC_GFX(true) {
         @Override
         public boolean services(PlcLifecyclePhase phase) {
-            return phase != null && phase != PlcLifecyclePhase.LAG;
+            return phase != null && phase != PlcLifecyclePhase.LAG
+                    && phase != PlcLifecyclePhase.PALETTE_FADE;
         }
     },
     /**

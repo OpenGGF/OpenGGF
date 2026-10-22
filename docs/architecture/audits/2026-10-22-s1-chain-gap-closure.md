@@ -614,3 +614,137 @@ No passing continuous-chain or complete SAT topology claim follows from those
 focused tests. The original remaining art gaps and terminal attribution must
 be measured on the next actual whole-chain run; the complete62-file native242
 candidate and its literal guard remain uncommitted.
+
+
+## Second composed qualification: exact levels, withheld tail publication
+
+Job46550 ran source `595eb962fd271632d2b77f5afaba03c3db242ee7` with the complete
+uncommitted native242 candidate/literal guard and the approved temporary
+actual-GameLoop observer. Source includes the body, late FZ input, consumed
+fade and lifecycle dependencies above. Queue wait325s, Maven1m13s;12 tests,
+11 pass, one chain assertion fails, zero errors/skips. All six independent
+original BK2 controls, both unchanged prefix cases and all three literal
+artifact cases pass. Both temporary observer changes were removed after the
+completed run; no probe field or callback is committed.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY OPENGGF_S1_TAIL_PROBE=1 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS1CompleteEmeraldRunChain,TestS1CompleteEmeraldRunPrefix,TestS1Slz1CompleteRunTraceReplay,TestS1Slz2CompleteRunTraceReplay,TestS1Slz3CompleteRunTraceReplay,TestS1Sbz2CompleteRunTraceReplay,TestS1Lz2CompleteRunTraceReplay,TestS1Lz3CompleteRunTraceReplay,TestS1CommittedHardwareTimingFixtures' "-Dsonic1.rom.path=$S1_ROM" test -B
+```
+
+All22 current complete level reports have zero comparison/bootstrap errors,
+including FZ's entire5086 rows with zero physics/animation/warning counts.
+The former4735/4736 frontier is closed by the source-backed input dependency;
+this does not certify unobserved ending choreography. The three reported axes
+are now:
+
+| Axis | Current measured result |
+| --- | --- |
+| SBZ2→LZ4 art gap | Expected2 edges, actual4; extra source transfer51519/edges103038–103039 at movie201916/map50; correct destination transfer51520/map1 at202106 follows |
+| LZ4→FZ art gap | Expected2, actual2; mapping/movie/requests match, but ordinals+2, transfer+1 and ledger hashes retain the preceding extra-transfer cascade |
+| Terminal movie | All10943 rows consumed; expected TITLE_SCREEN, actual LEVEL; terminal art comparison remains **not reached** |
+
+The first remaining overall comparison frontier is the source-art gap at
+movie201916, not a level physics mismatch. The extra source transfer requests
+ROM164240/tile732/512bytes and completes RAM C800→VRAM F000/736bytes. Last
+represented SBZ2 row12449/movie201914 has centre2051,05F2,vy0898,anim02/map31hex.
+Its exact later submission caller/phase remains **UNKNOWN** in this run;
+staging followed by a later service is distinct from another gameplay tick.
+No comparison filtering, journal clearing or early Sonic return is justified
+by that evidence. Native source subsequently establishes that the pit's plain
+RTS still reaches Animate/LoadSonicDynPLC; an early-return proposal is rejected.
+A separate proven service-policy question concerns PALETTE_FADE's native VBlank,
+not a permission to erase the pending work. It requires its own regression and
+qualification.
+
+The terminal observation is stronger than finalMode alone. At first tail
+movie214158 and through final225100, actual zone6:0 remains active, with no
+pending exit, inactive=false and fade NONE. ObjectManager executed5087 and
+VInt342AB, and FZ33's last-update VInt342AB, remain held while the movie cursor
+advances. Live FZ state is phase0/14/0, X28FE.C000/Y0521.A000, vx0180/vyFFE8,
+previous render false and endingTransitionRequested=false. Sonic remains
+2793.8D00/05AC.9000, locked LOOK_UP07/map05. Actual loop ending provider is null
+(**UNKNOWN**), with no Obj87/88/89 and dormant ending bootstrap. The next ordinary
+SpeedToPos would reach2900.4000; the current false request obeys the existing
+threshold. This is no evidence of a broken FZ ending gate or choreography.
+
+Read-only caller proof identifies terminal LEVEL suppression: terminal rows
+reach the physical driver, but TraceSessionLauncher.suppressesRunNativeLevelBody
+couples native-body eligibility to ordinary logical playback ownership, which
+correctly remains false for TERMINAL_TAIL. GameLoop then returns before its
+ordinary level body while the driver still advances the physical row. The
+proposed fix separates those decisions, retaining the driver's input/cursor
+ownership, existing admission/fade/pause gates and SHARED_GAP latch. No forced
+extra tick, counter/VInt repair or fixture/frontier condition is authorized.
+First-tail input ownership must be tested with the real loop before touching
+any separate input-owner seam.
+
+This run excludes the aggregate's newer S1 title/input and ClearPLC/Main caller
+leaves `7d3d5a9722a3c4dc958284c70dc83a83ec87eb64` and
+`66fcd1db02ea9ca7e4a0ab2548866f38db72fbf7` (and S2-only `6c2454616`).
+The executed initial entry is the retained-level path: the fixture builds the
+level, TraceReplayDriver.startWithProductionLoadCamera resets/registers/loads
+that level and sets GameMode.LEVEL, and deliberately consumes its initial title
+card. It does not invoke Engine's initializeTitleScreenMode entry or the S1
+TitleScreenManager initialize/SEGA/main transition methods. Manager construction
+is not title initialization. This is caller-path attribution, not a new title
+runtime counter measurement. No row0 intro or aggregate-source qualification
+is claimed; the retained fixture starts at movie860.
+
+Strict timing verification reports no missing/unmatched/late edge, but all62
+candidate files and the independent guard remain uncommitted: the chain's
+comparison/terminal requirements still fail, terminal art was not reached,
+and capture-time Mono/core digests remain UNKNOWN. Prefix pins are unchanged.
+
+
+## S1 palette-fade player-art service policy
+
+The independent native caller investigation rejects skipping Animate/DPLC after
+Sonic_Death's pit restart: its plain RTS returns to that same object's tail.
+The service boundary is a separate, byte-proven issue. Retail REV01 SHA-1
+`69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b` / CRC32 `AFE05EEE` at `$F9A` is
+`61 00 00 D2 3A B8 F6 24 60 00 06 96`. VBlank_PaletteFade
+(`sonic.asm:967-970`, recorded disassembly pin `28872a46`) calls
+StandardTransfers (`sonic.asm:1006-1023`: CRAM, sprite table and hscroll) and
+ProcessPLC_9Tiles, without the per-mode Sonic C800→F000 DMA. PaletteFadeOut
+(`_inc/Palette Fading.asm:134-145`) selects VBlank12 for22 waits. Sonic's staged
+buffer therefore survives a palette-fade service claim; the claim must neither
+publish nor discard it.
+
+The bounded policy changes only
+DynamicArtDmaServiceModel.SONIC_1_VBLANK_SONIC_GFX.services(PALETTE_FADE).
+LAG stays ineligible; NORMAL_PAUSE, title-card, special-stage and every other
+existing phase retain their prior policy. No queue, animation tail, timing
+admission, comparison, load clear, journal filtering, public API or pin changes
+are included. Real ROM mappings32 and1 stage through DynamicArtLifecycleService
+and the production PlcFrameLifecycleCoordinator, independently of any BK2 or
+comparison row. Tests retain exactly the same pending preparation over three
+fade claims with no transfer ID allocation, then consume it once at four
+eligible handler types. A legitimate later map1 preparation replaces the old
+buffer, emitting its exact ROM requests and the full balanced submit/completion
+journal. EVERY_CLAIM remains a positive palette-fade control.
+
+Old-source job21049 ran the two new test classes:17 cases, six phase-policy
+failures, ten terminal test-constructor errors and one passing EVERY_CLAIM
+control. The six phase failures are valid old-production evidence: palette
+service wrongly consumed staging/published edges or returned true. The terminal
+constructor errors are not gameplay/input failure evidence and are handled
+separately. Phase candidate job28147 on source76f3e948 plus this exact policy
+and tests passes39/39, zero failures/errors/skips: new7 ROM-staging cases,
+existing5 model cases and27 coordinator cases. Queue wait107s, Maven1m34s;
+XML inspected. Independent read-only review reproduced the ROM bytes, pinned
+source and all phase boundaries without rerunning Maven.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestSonic1PaletteFadePlayerArtService,TestDynamicArtDmaServiceModel,TestPlcFrameLifecycleCoordinator' "-Dsonic1.rom.path=$S1_ROM" test -B
+```
+
+These focused tests exercise actual prepared-art phase dispatch with no PLC
+queue service; they do not claim Nemesis execution, rendered DMA, entire
+GameLoop/load, or native load-RAM clearing. In particular,
+clearPlayerDplcDedupRegistersForLevelLoad still clears only dedup registers,
+not an existing S1 preparation. Only legitimate overwrite and eligible service
+are proved here. The exact extra map50 caller/phase in46550 remains UNKNOWN;
+source proof alone does not close either art gap. Last whole-chain result is
+still12T/11PASS/1FAIL with all22 level reports exact, three reported axes and
+terminal-art comparison not reached. The complete native242 candidate remains
+uncommitted and prefix pins unchanged.

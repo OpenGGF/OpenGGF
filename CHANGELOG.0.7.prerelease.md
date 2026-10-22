@@ -47,7 +47,8 @@ Unreleased. The earlier development themes remain in
   100-point pickups retain the shipped game's 10-point award and 100-point popup.
   Consumed native level-entry requests hold source gameplay during their
   blocking fade, preserving the completed event pass and the destination's
-  normal load and release.
+  normal load and release. Sonic's prepared art stays pending during palette
+  fades until a native player-art service boundary.
 
 - **Sonic 2 player and entry timing:** Super Sonic control runs between movement
   and animation while its palette advances after objects, including hurt and

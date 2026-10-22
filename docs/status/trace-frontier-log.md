@@ -113242,3 +113242,56 @@ qualification with the late FZ input and consumed-fade fixes.
   evidence on `323239a13` did not cover the independently found dead-player and
   late-spin defects; separate branch regressions now cover them. Fresh guards
   remain a separate delivery obligation.
+
+
+### 2026-10-22 S1 composed46550: all22 level reports exact, three reported axes
+
+Source `595eb962fd271632d2b77f5afaba03c3db242ee7`, isolated `t3-bfcde7c7`,
+includes the native Bomb body, late FZ input, consumed fade and S1 scroll
+lifecycles. Complete native242 candidate remains unpublished. Exact nine-class
+queued replay command/environment is in the existing
+[S1 chain audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#second-composed-qualification-exact-levels-withheld-tail-publication).
+Result12T/11PASS/1chainFAIL/0errors/skips; queue325s, Maven1m13s. Six independent
+original BK2 controls, unchanged prefix2 and literal-artifact3 all pass.
+
+All22 complete level reports have zero comparison/bootstrap errors, including
+all5086 FZ rows (physics/animation/warnings0): prior4735 animation and4736 art
+frontiers close. Three reported axes remain. SBZ2→LZ4 art expected2/actual4,
+first extra movie201916/map50, followed by correct destination202106/map1;
+LZ4→FZ now2/2 with matching mapping/movie/requests but preceding-transfer
+ordinal+2/transfer+1/ledger cascade. Terminal10943 rows end LEVEL/TITLE_SCREEN;
+its art-ledger comparison is **not reached**, so this is not complete tail
+coverage or fixture-publication qualification.
+
+Read-only actual-loop diagnostics prove the terminal native body is held:
+ObjectManager5087/VInt342AB and liveFZ33 X28FE.C000/vx0180 remain unchanged from
+first tail214158 through225100, with no ending request/pending transition/fade.
+Actual loop provider is null/UNKNOWN, actual zone6:0 and ending bootstrap false.
+Native next ordinary movement reaches2900.4000; do not attribute this caller
+boundary to broken object ending choreography. The exact map50 service caller/
+phase remains unknown from this run. No forced tick, fitted boundary, source
+comparison filter or journal clearing was added. Both temporary test observers
+are removed. New aggregate title/input leaves were excluded and the initial
+retained-level load did not traverse the title startup; no aggregate intro
+qualification is claimed.
+
+
+### 2026-10-22 S1 palette-fade DMA policy, route qualification pending
+
+On source76f3e948 plus the bounded S1 phase policy in isolated t3-bfcde7c7,
+queued focused28147 passes39/39 with zero failures/errors/skips (new7 ROM-art
+staging, model5, coordinator27; wait107s/Maven1m34s). Exact command and native
+`VBlank_PaletteFade` byte/source proof are in the
+[S1 chain audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#s1-palette-fade-player-art-service-policy).
+Only PALETTE_FADE stops servicing S1 staged player art; pending preparation is
+retained until genuine overwrite or an eligible handler. NORMAL_PAUSE and all
+other existing phase behavior remain unchanged, with no journal filtering.
+Old-source21049 reproduces six phase failures; its ten unrelated terminal
+constructor errors provide no native gate/input evidence.
+
+No replay was submitted for this source leaf, so46550 remains the measured
+frontier: all22 level reports exact, first extra SBZ2→LZ4 transfer at
+movie201916/map50 (exact caller/phase UNKNOWN), downstream ordinal cascade and
+terminal LEVEL/TITLE_SCREEN, with terminal art comparison not reached. Native
+load-RAM clearing is not qualified by the phase tests. The full242 candidate is
+still unpublished; prefix pins are unchanged.
