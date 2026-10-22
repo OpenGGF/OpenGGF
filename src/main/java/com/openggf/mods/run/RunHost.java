@@ -14,7 +14,10 @@ import java.util.List;
  */
 @ModApi
 public interface RunHost {
-    /** The run's level is loaded and its first step is next (on launch and after every retry). */
+    /**
+     * The run's level is loaded and its first step is next: on launch, after every retry and
+     * after every fast death restart ({@link RunLevelStart#deathRestart()}).
+     */
     default void onLevelReady(RunLevelStart start) {
     }
 

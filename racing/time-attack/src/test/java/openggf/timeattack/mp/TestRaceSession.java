@@ -270,14 +270,14 @@ class TestRaceSession {
         assertEquals(1, hostLaunches.specs.size());
         assertEquals(1, guestLaunches.specs.size());
         RunSpec hostSpec = hostLaunches.specs.get(0);
-        assertEquals(new RunSpec("s2", 0, 0, "sonic", GameplayRunPolicy.isolatedAct()), hostSpec);
+        assertEquals(new RunSpec("s2", 0, 0, "sonic", GameplayRunPolicy.isolatedAct().withFastRestarts()), hostSpec);
         assertEquals("tails", guestLaunches.specs.get(0).character());
         TimeAttackRuntime hostRun = assertInstanceOf(TimeAttackRuntime.class, hostLaunches.hosts.get(0));
         assertSame(hostRun, host.activeRuntime());
         assertTrue(host.coordinator().isRuntimeAttached());
 
         // The host room validates against the act the host actually loaded.
-        hostRun.onLevelReady(new RunLevelStart(hostSpec, FP, false, 4096, 1024));
+        hostRun.onLevelReady(new RunLevelStart(hostSpec, FP, false, 4096, 1024, false));
         JdkRaceHostServer server = host.hostServer();
         CompletableFuture<Object> applied = new CompletableFuture<>();
         server.execute(() -> applied.complete(currentProfile(server.room().hub())));
@@ -517,7 +517,7 @@ class TestRaceSession {
                 new ControlMessage.RoundConfig("s2", 1, 0, 60, "LOCKED", "sonic"), 3_000, 100_000));
         session.poll();
         assertEquals(2, launches.specs.size());
-        assertEquals(new RunSpec("s2", 1, 0, "sonic", GameplayRunPolicy.isolatedAct()), launches.specs.get(1));
+        assertEquals(new RunSpec("s2", 1, 0, "sonic", GameplayRunPolicy.isolatedAct().withFastRestarts()), launches.specs.get(1));
     }
 
     @Test
@@ -600,7 +600,7 @@ class TestRaceSession {
         session.poll();
         assertEquals(RaceSession.State.RACING, session.state());
         TimeAttackRuntime run = assertInstanceOf(TimeAttackRuntime.class, launches.hosts.get(0));
-        run.onLevelReady(new RunLevelStart(launches.specs.get(0), FP, false, 4096, 1024));
+        run.onLevelReady(new RunLevelStart(launches.specs.get(0), FP, false, 4096, 1024, false));
         clock.set(2_000); // RUNNING
         run.admitStep(NO_KEYS);
         assertEquals(0, launches.leaves.get());

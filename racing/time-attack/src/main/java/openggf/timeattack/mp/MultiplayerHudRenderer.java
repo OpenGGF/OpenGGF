@@ -29,13 +29,18 @@ public final class MultiplayerHudRenderer {
         if (panel == null) return;
         HudTextLayout.drawPanel(canvas, panel);
         if (state.remainingCountdownMillis() > 0) {
-            String count = Long.toString(Math.max(1, (state.remainingCountdownMillis() + 999) / 1000));
-            CompactFont.shadowed(canvas, count, (canvas.width() - CompactFont.width(count, 2)) / 2,
-                    88, 2, HudTextLayout.GOLD, 0xC0000000);
+            drawCountdown(canvas, Math.max(1, (state.remainingCountdownMillis() + 999) / 1000));
         }
         if (showMinimap && !localFinished && "RUNNING".equals(state.phase()) && levelWidth > 0) {
             drawProgress(canvas, state, levelWidth, localCentreX);
         }
+    }
+
+    /** The room's countdown digit, centred above the action; also drawn after a fast restart. */
+    public static void drawCountdown(LevelOverlayCanvas canvas, long seconds) {
+        String count = Long.toString(seconds);
+        CompactFont.shadowed(canvas, count, (canvas.width() - CompactFont.width(count, 2)) / 2,
+                88, 2, HudTextLayout.GOLD, 0xC0000000);
     }
 
     /** Pure layout used by the renderer and viewport/phase contract tests. */
@@ -153,7 +158,7 @@ public final class MultiplayerHudRenderer {
         }
     }
 
-    /** A slim start-to-finish strip beside the stock lives counter; the local runner is the gold marker. */
+    /** A slim start-to-finish strip along the bottom, right of the lives counter's area (hidden in Time Attack runs); the local runner is the gold marker. */
     private static void drawProgress(LevelOverlayCanvas canvas, MultiplayerHudState state,
                                      int levelWidth, int localCentreX) {
         int width = Math.min(PROGRESS_MAX_WIDTH, canvas.width() - 108);

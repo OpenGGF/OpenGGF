@@ -20,7 +20,7 @@ class TestTimeAttackRuntime {
         runtime.tickForTest(0x08, false, false, 1, frame(13));
         runtime.tickForTest(0x08, false, true, 1, frame(14));
 
-        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(runtime.runSpec(), "fp", false, 0, 0));
+        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(runtime.runSpec(), "fp", false, 0, 0, false));
         runtime.tickForTest(0x08, false, false, -1, frame(10));
         runtime.tickForTest(0x08, false, false, -1, frame(11));
         runtime.tickForTest(0x08, false, false, 1, frame(12));
@@ -55,6 +55,60 @@ class TestTimeAttackRuntime {
         assertTrue(failed.hudState().finished());assertFalse(failed.hudState().newBest());
         assertEquals("SAVE NOT CONFIRMED",failed.hudState().saveNotice());
     }
+    @Test
+    void aDeathRestartVoidsTheRunningAttemptAndHoldsForTheCountdown(@TempDir Path root) {
+        TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root), root.resolve("identity"), () -> false);
+        runtime.armForLaunch(new TimeAttackLaunchRequest("s1", 0, 0, "sonic", java.util.List.of()));
+        java.util.List<String> events = new java.util.ArrayList<>();
+        runtime.setAttemptListener(new TimeAttackRuntime.AttemptListener() {
+            @Override public void onAttemptBegan(int attempt) { events.add("began " + attempt); }
+            @Override public void onFrameSampled(int attempt, GhostFrame frame) {
+                events.add("frame " + attempt + " x" + frame.x());
+            }
+            @Override public void onAttemptFinished(int attempt, int time, int first, int finish,
+                                                    byte[] hash, AttemptInputRecording recording) {
+                events.add("finished " + attempt + " in " + time);
+            }
+            @Override public void onAttemptVoided(int attempt) { events.add("voided " + attempt); }
+        });
+        var spec = runtime.runSpec();
+        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(spec, "fp", false, 0, 0, false));
+        assertTrue(runtime.admitStep(NO_KEYS), "a launch starts without a countdown");
+        assertEquals(0, runtime.restartCountdownFrames());
+        runtime.afterStep(step(0x08, 10, false));
+        assertTrue(runtime.isAttemptRunning());
+
+        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(spec, "fp", false, 0, 0, true));
+        assertEquals(java.util.List.of("began 1", "frame 1 x10", "voided 1", "began 2"), events,
+                "the death ends the running attempt and the reload begins a fresh one");
+        assertEquals(TimeAttackRuntime.RESTART_COUNTDOWN_FRAMES, runtime.restartCountdownFrames(),
+                "the countdown shows from the reload");
+        assertTrue(runtime.admitStep(NO_KEYS), "the spawn step runs so the act is drawn as it starts");
+        runtime.afterStep(step(0, 80, false));
+        assertEquals(4, events.size(), "the spawn frame waits for the countdown before reaching the room");
+        for (int frame = 0; frame < TimeAttackRuntime.RESTART_COUNTDOWN_FRAMES; frame++) {
+            assertFalse(runtime.admitStep(NO_KEYS), "the countdown holds frame " + frame);
+        }
+        assertEquals("frame 2 x80", events.get(4), "the spawn frame is released when control returns");
+        assertEquals(0, runtime.restartCountdownFrames());
+        assertTrue(runtime.admitStep(NO_KEYS), "control returns when the countdown ends");
+        runtime.afterStep(step(0x08, 81, false));
+        runtime.afterStep(step(0x08, 82, true));
+        assertEquals(java.util.List.of("frame 2 x81", "frame 2 x82", "finished 2 in 1"),
+                events.subList(5, events.size()), "held countdown frames are not part of the attempt");
+    }
+
+    private static com.openggf.mods.run.RunStep step(int heldMask, int x, boolean actComplete) {
+        return new com.openggf.mods.run.RunStep(0, heldMask, false,
+                new com.openggf.mods.run.PlayerPose(x, 100, 1, false, false, 2, false), actComplete, -1, false);
+    }
+
+    private static final com.openggf.mods.run.RunInput NO_KEYS = new com.openggf.mods.run.RunInput() {
+        @Override public com.openggf.control.LogicalInputSnapshot input() { return null; }
+        @Override public boolean keyDown(int key) { return false; }
+        @Override public boolean keyPressed(int key) { return false; }
+    };
+
     private static GhostFrame frame(int x) {
         return new GhostFrame(x, 100, 1, false, false, false, 2, false);
     }
@@ -181,7 +235,7 @@ class TestTimeAttackRuntime {
         assertEquals(1, spec.zone());
         assertEquals(1, spec.act());
         assertEquals("knuckles", spec.character());
-        assertEquals(com.openggf.game.session.GameplayRunPolicy.isolatedAct(), spec.policy());
+        assertEquals(com.openggf.game.session.GameplayRunPolicy.isolatedAct().withFastRestarts(), spec.policy());
     }
 
     @Test
@@ -197,7 +251,7 @@ class TestTimeAttackRuntime {
             @Override public boolean isActive() { return true; }
         });
         runtime.setRetryKey(() -> 82);
-        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(runtime.runSpec(), "fp", false, 0, 0));
+        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(runtime.runSpec(), "fp", false, 0, 0, false));
         assertTrue(runtime.isAttemptActive());
 
         assertTrue(runtime.admitStep(keys(82)));
@@ -220,7 +274,7 @@ class TestTimeAttackRuntime {
             @Override public void afterStep() { }
             @Override public boolean mayRetry() { return mayRetry[0]; }
         });
-        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(runtime.runSpec(), "fp", false, 0, 0));
+        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(runtime.runSpec(), "fp", false, 0, 0, false));
 
         assertTrue(runtime.admitStep(keys(82)));
         assertTrue(runtime.isAttemptActive(), "a refused retry keeps the attempt");
@@ -283,7 +337,7 @@ class TestTimeAttackRuntime {
         GhostStore store = new GhostStore(root);
         TimeAttackRuntime runtime = new TimeAttackRuntime(store, root.resolve("identity"), () -> false);
         runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
-        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(runtime.runSpec(), "fp", true, 0, 0));
+        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(runtime.runSpec(), "fp", true, 0, 0, false));
         com.openggf.mods.run.PlayerPose pose = new com.openggf.mods.run.PlayerPose(10, 20, 0, false, false, 2, false);
         runtime.afterStep(new com.openggf.mods.run.RunStep(0, 0x08, false, pose, false, -1, false));
         runtime.afterStep(new com.openggf.mods.run.RunStep(1, 0x08, false, pose, true, -1, false));

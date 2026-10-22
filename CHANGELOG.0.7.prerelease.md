@@ -77,6 +77,11 @@ Unreleased. The earlier development themes remain in
   reloading racers stop holding nearby ghost slots and show their state in the
   roster, and verifiers keep polling after a failed cycle. Mods can opt into the
   same act-completion retry through `RunHost.retryOnActCompletion()`.
+  Time Attack has no lives counter and unlimited tries: after a death (skippable
+  with jump after half a second) the act reloads at once from its start with no
+  title card, then a 3-2-1 countdown holds control before a fresh attempt.
+  `GameplayRunPolicy.withFastRestarts()` (`DeathRestart.FAST_FROM_START`, hidden
+  lives counter) and `RunLevelStart.deathRestart()` give mods the same restart.
 
 - **Multiplayer services:** The master recording/verifier API bounds outstanding
   requests and copied bodies across connections, closes overlapping HTTP pipelines,

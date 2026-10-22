@@ -489,6 +489,7 @@ CF-ANNOTATION TYPE com.openggf.game.save.SelectedTeam visible @com.openggf.game.
 CF-ANNOTATION TYPE com.openggf.game.session.EngineContext visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.session.GameplayRunPolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.session.GameplayRunPolicy$ActCompletion visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.session.GameplayRunPolicy$DeathRestart visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.session.WorldSession visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.solid.ContactKind visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.solid.ObjectSolidExecutionContext visible @com.openggf.game.ModApi
@@ -1549,7 +1550,7 @@ CONSTRUCTOR com.openggf.game.save.SaveSlotSummary public  <init>(int,com.openggf
 CONSTRUCTOR com.openggf.game.save.SelectedTeam public  <init>(java.lang.String,java.util.List<java.lang.String>)
 CONSTRUCTOR com.openggf.game.session.EngineContext public  <init>(com.openggf.configuration.SonicConfigurationService,com.openggf.graphics.GraphicsManager,com.openggf.audio.AudioManager,com.openggf.data.RomManager,com.openggf.debug.PerformanceProfiler,com.openggf.debug.DebugOverlayManager,com.openggf.debug.playback.PlaybackDebugManager,com.openggf.game.RomDetectionService,com.openggf.game.CrossGameFeatureProvider)
 CONSTRUCTOR com.openggf.game.session.EngineContext public  <init>(com.openggf.configuration.SonicConfigurationService,com.openggf.graphics.GraphicsManager,com.openggf.audio.AudioManager,com.openggf.data.RomManager,com.openggf.debug.PerformanceProfiler,com.openggf.debug.DebugOverlayManager,com.openggf.debug.playback.PlaybackDebugManager,com.openggf.game.RomDetectionService,com.openggf.game.CrossGameFeatureProvider,com.openggf.game.patch.ModuleResolutionService)
-CONSTRUCTOR com.openggf.game.session.GameplayRunPolicy public  <init>(boolean,boolean,com.openggf.game.session.GameplayRunPolicy$ActCompletion,boolean,boolean)
+CONSTRUCTOR com.openggf.game.session.GameplayRunPolicy public  <init>(boolean,boolean,com.openggf.game.session.GameplayRunPolicy$ActCompletion,boolean,boolean,com.openggf.game.session.GameplayRunPolicy$DeathRestart,boolean)
 CONSTRUCTOR com.openggf.game.session.WorldSession public  <init>(com.openggf.game.GameModule)
 CONSTRUCTOR com.openggf.game.session.WorldSession public  <init>(com.openggf.game.GameModule,com.openggf.game.GameModule,com.openggf.game.GameDataSource,com.openggf.game.save.SaveSessionContext)
 CONSTRUCTOR com.openggf.game.session.WorldSession public  <init>(com.openggf.game.GameModule,com.openggf.game.GameModule,com.openggf.game.save.SaveSessionContext)
@@ -1819,7 +1820,7 @@ CONSTRUCTOR com.openggf.mods.mutators.TransportPolicy public  <init>(com.openggf
 CONSTRUCTOR com.openggf.mods.run.GhostPose public  <init>(java.lang.String,java.lang.String,com.openggf.mods.run.PlayerPose,java.lang.String,float)
 CONSTRUCTOR com.openggf.mods.run.GhostPose public  <init>(java.lang.String,java.lang.String,com.openggf.mods.run.PlayerPose,java.lang.String,float,com.openggf.net.identity.PlayerAppearance)
 CONSTRUCTOR com.openggf.mods.run.PlayerPose public  <init>(int,int,int,boolean,boolean,int,boolean)
-CONSTRUCTOR com.openggf.mods.run.RunLevelStart public  <init>(com.openggf.mods.run.RunSpec,java.lang.String,boolean,int,int)
+CONSTRUCTOR com.openggf.mods.run.RunLevelStart public  <init>(com.openggf.mods.run.RunSpec,java.lang.String,boolean,int,int,boolean)
 CONSTRUCTOR com.openggf.mods.run.RunSpec public  <init>(java.lang.String,int,int,java.lang.String,com.openggf.game.session.GameplayRunPolicy)
 CONSTRUCTOR com.openggf.mods.run.RunStep public  <init>(long,int,boolean,com.openggf.mods.run.PlayerPose,boolean,int,boolean)
 CONSTRUCTOR com.openggf.mods.scene.ActLaunch public  <init>(com.openggf.game.ZoneKey$Mod,int,com.openggf.game.CharacterKey,java.util.List<com.openggf.game.CharacterKey>,java.util.OptionalInt,java.util.OptionalInt,int,java.util.Map<java.lang.String,java.lang.String>)
@@ -1980,7 +1981,7 @@ CONSTRUCTOR com.openggf.sprites.managers.PlayableSpriteAnimation public  <init>(
 CONSTRUCTOR com.openggf.sprites.managers.PlayableSpriteAnimation$RewindState public  <init>(int,int)
 CONSTRUCTOR com.openggf.sprites.managers.PlayableSpriteMovement public  <init>(com.openggf.sprites.playable.AbstractPlayableSprite)
 CONSTRUCTOR com.openggf.sprites.managers.PlayableSpriteMovement public  <init>(com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.physics.CollisionSystem,com.openggf.game.GameStateManager)
-CONSTRUCTOR com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  <init>(boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,int,boolean,boolean,int,com.openggf.physics.Direction,int,int)
+CONSTRUCTOR com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  <init>(boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,int,boolean,boolean,int,com.openggf.physics.Direction,int,int,int)
 CONSTRUCTOR com.openggf.sprites.managers.SpindashDustController public  <init>(com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.sprites.render.PlayerSpriteRenderer)
 CONSTRUCTOR com.openggf.sprites.managers.SpindashDustController public  <init>(com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.sprites.render.PlayerSpriteRenderer,int)
 CONSTRUCTOR com.openggf.sprites.managers.SpindashDustController$RewindState public  <init>(int,int,int,boolean)
@@ -2841,8 +2842,11 @@ FIELD com.openggf.game.save.SaveSlotState public,static,final com.openggf.game.s
 FIELD com.openggf.game.save.SaveSlotState public,static,final com.openggf.game.save.SaveSlotState HASH_WARNING
 FIELD com.openggf.game.save.SaveSlotState public,static,final com.openggf.game.save.SaveSlotState UNAVAILABLE
 FIELD com.openggf.game.save.SaveSlotState public,static,final com.openggf.game.save.SaveSlotState VALID
+FIELD com.openggf.game.session.GameplayRunPolicy public,static,final int FAST_RESTART_SKIP_FRAMES
 FIELD com.openggf.game.session.GameplayRunPolicy$ActCompletion public,static,final com.openggf.game.session.GameplayRunPolicy$ActCompletion CONTINUE
 FIELD com.openggf.game.session.GameplayRunPolicy$ActCompletion public,static,final com.openggf.game.session.GameplayRunPolicy$ActCompletion RETURN_TO_HOST
+FIELD com.openggf.game.session.GameplayRunPolicy$DeathRestart public,static,final com.openggf.game.session.GameplayRunPolicy$DeathRestart FAST_FROM_START
+FIELD com.openggf.game.session.GameplayRunPolicy$DeathRestart public,static,final com.openggf.game.session.GameplayRunPolicy$DeathRestart STOCK
 FIELD com.openggf.game.solid.ContactKind public,static,final com.openggf.game.solid.ContactKind BOTTOM
 FIELD com.openggf.game.solid.ContactKind public,static,final com.openggf.game.solid.ContactKind CRUSH
 FIELD com.openggf.game.solid.ContactKind public,static,final com.openggf.game.solid.ContactKind NONE
@@ -8182,10 +8186,14 @@ METHOD com.openggf.game.session.EngineContext public  com.openggf.graphics.Graph
 METHOD com.openggf.game.session.EngineContext public,static  com.openggf.game.session.EngineContext fromLegacySingletonsForBootstrap()
 METHOD com.openggf.game.session.GameplayRunPolicy public  boolean bonusStageEntry()
 METHOD com.openggf.game.session.GameplayRunPolicy public  boolean editorEntry()
+METHOD com.openggf.game.session.GameplayRunPolicy public  boolean fastDeathRestart()
 METHOD com.openggf.game.session.GameplayRunPolicy public  boolean liveRewind()
+METHOD com.openggf.game.session.GameplayRunPolicy public  boolean livesCounter()
 METHOD com.openggf.game.session.GameplayRunPolicy public  boolean returnsToHostOnActCompletion()
 METHOD com.openggf.game.session.GameplayRunPolicy public  boolean specialStageEntry()
+METHOD com.openggf.game.session.GameplayRunPolicy public  com.openggf.game.session.GameplayRunPolicy withFastRestarts()
 METHOD com.openggf.game.session.GameplayRunPolicy public  com.openggf.game.session.GameplayRunPolicy$ActCompletion actCompletion()
+METHOD com.openggf.game.session.GameplayRunPolicy public  com.openggf.game.session.GameplayRunPolicy$DeathRestart deathRestart()
 METHOD com.openggf.game.session.GameplayRunPolicy public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.session.GameplayRunPolicy public,final  int hashCode()
 METHOD com.openggf.game.session.GameplayRunPolicy public,final  java.lang.String toString()
@@ -8193,6 +8201,8 @@ METHOD com.openggf.game.session.GameplayRunPolicy public,static  com.openggf.gam
 METHOD com.openggf.game.session.GameplayRunPolicy public,static  com.openggf.game.session.GameplayRunPolicy stock()
 METHOD com.openggf.game.session.GameplayRunPolicy$ActCompletion public,static  com.openggf.game.session.GameplayRunPolicy$ActCompletion valueOf(java.lang.String)
 METHOD com.openggf.game.session.GameplayRunPolicy$ActCompletion public,static  com.openggf.game.session.GameplayRunPolicy$ActCompletion[] values()
+METHOD com.openggf.game.session.GameplayRunPolicy$DeathRestart public,static  com.openggf.game.session.GameplayRunPolicy$DeathRestart valueOf(java.lang.String)
+METHOD com.openggf.game.session.GameplayRunPolicy$DeathRestart public,static  com.openggf.game.session.GameplayRunPolicy$DeathRestart[] values()
 METHOD com.openggf.game.session.WorldSession public  com.openggf.game.GameDataSource getDataSource()
 METHOD com.openggf.game.session.WorldSession public  com.openggf.game.GameModule getGameModule()
 METHOD com.openggf.game.session.WorldSession public  com.openggf.game.GameModule resolvedGameModule()
@@ -9196,6 +9206,7 @@ METHOD com.openggf.level.LevelManager public  com.openggf.game.resources.Dynamic
 METHOD com.openggf.level.LevelManager public  com.openggf.game.rewind.RewindSnapshottable<?> levelTransitionRewindSnapshottable()
 METHOD com.openggf.level.LevelManager public  com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.LevelSnapshot> levelRewindSnapshottable()
 METHOD com.openggf.level.LevelManager public  com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.LevelTilemapSnapshot> levelTilemapRewindSnapshottable()
+METHOD com.openggf.level.LevelManager public  com.openggf.game.session.GameplayRunPolicy runPolicy()
 METHOD com.openggf.level.LevelManager public  com.openggf.game.session.WorldSession getWorldSession()
 METHOD com.openggf.level.LevelManager public  com.openggf.level.BigRingReturnState getBigRingReturn()
 METHOD com.openggf.level.LevelManager public  com.openggf.level.ChunkDesc getChunkDescAt(byte,int,int)
@@ -9377,6 +9388,7 @@ METHOD com.openggf.level.LevelManager public  void resetTileOffsetPositionEffect
 METHOD com.openggf.level.LevelManager public  void respawnPlayer()
 METHOD com.openggf.level.LevelManager public  void restartCurrentLevelAfterDeath()
 METHOD com.openggf.level.LevelManager public  void restartCurrentLevelFromConfiguration()
+METHOD com.openggf.level.LevelManager public  void restartCurrentLevelFromStartAfterDeath()
 METHOD com.openggf.level.LevelManager public  void restoreBackgroundVdpPlane(byte[])
 METHOD com.openggf.level.LevelManager public  void restoreCheckpointState(com.openggf.game.LevelLoadContext)
 METHOD com.openggf.level.LevelManager public  void restoreCheckpointStateForRewind(com.openggf.game.CheckpointState$RewindState)
@@ -12395,6 +12407,7 @@ METHOD com.openggf.mods.run.RunHost public  void onRunEnded(com.openggf.mods.run
 METHOD com.openggf.mods.run.RunInput public,abstract  boolean keyDown(int)
 METHOD com.openggf.mods.run.RunInput public,abstract  boolean keyPressed(int)
 METHOD com.openggf.mods.run.RunInput public,abstract  com.openggf.control.LogicalInputSnapshot input()
+METHOD com.openggf.mods.run.RunLevelStart public  boolean deathRestart()
 METHOD com.openggf.mods.run.RunLevelStart public  boolean debugAssisted()
 METHOD com.openggf.mods.run.RunLevelStart public  com.openggf.mods.run.RunSpec spec()
 METHOD com.openggf.mods.run.RunLevelStart public  int levelHeight()
@@ -13835,6 +13848,7 @@ METHOD com.openggf.sprites.managers.PlayableSpriteAnimation$RewindState public,f
 METHOD com.openggf.sprites.managers.PlayableSpriteAnimation$RewindState public,final  java.lang.String toString()
 METHOD com.openggf.sprites.managers.PlayableSpriteMovement public  com.openggf.sprites.managers.PlayableSpriteMovement$RewindState captureRewindState()
 METHOD com.openggf.sprites.managers.PlayableSpriteMovement public  int captureLastFixedSkidDustTickFrame()
+METHOD com.openggf.sprites.managers.PlayableSpriteMovement public  int deathElapsedFrames()
 METHOD com.openggf.sprites.managers.PlayableSpriteMovement public  void applyDeferredSpindashAnimationPushClear()
 METHOD com.openggf.sprites.managers.PlayableSpriteMovement public  void applyPostObjectLandingAbilities(com.openggf.sprites.playable.AbstractPlayableSprite,int)
 METHOD com.openggf.sprites.managers.PlayableSpriteMovement public  void clearJumpHeightLatch()
@@ -13862,6 +13876,7 @@ METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  b
 METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  boolean testKeyPressed()
 METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  boolean wasCrouching()
 METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  com.openggf.physics.Direction preMoveBalanceDirection()
+METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  int deathElapsedFrames()
 METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  int latchedNextTilt()
 METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  int latchedTilt()
 METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  int preMoveBalanceState()
@@ -15985,6 +16000,7 @@ NESTED com.openggf.game.rewind.snapshot.SpriteManagerSnapshot com.openggf.game.r
 NESTED com.openggf.game.rewind.snapshot.TimerManagerSnapshot com.openggf.game.rewind.snapshot.TimerManagerSnapshot$TimerState
 NESTED com.openggf.game.rewind.snapshot.WaterSystemSnapshot com.openggf.game.rewind.snapshot.WaterSystemSnapshot$DynamicWaterEntry
 NESTED com.openggf.game.session.GameplayRunPolicy com.openggf.game.session.GameplayRunPolicy$ActCompletion
+NESTED com.openggf.game.session.GameplayRunPolicy com.openggf.game.session.GameplayRunPolicy$DeathRestart
 NESTED com.openggf.game.solid.ObjectSolidExecutionContext com.openggf.game.solid.ObjectSolidExecutionContext$Resolver
 NESTED com.openggf.graphics.FadeManager com.openggf.graphics.FadeManager$FadeState
 NESTED com.openggf.graphics.FadeManager com.openggf.graphics.FadeManager$FadeType
@@ -17371,8 +17387,10 @@ RECORD-COMPONENT com.openggf.game.save.SelectedTeam mainCharacter java.lang.Stri
 RECORD-COMPONENT com.openggf.game.save.SelectedTeam sidekicks java.util.List<java.lang.String>
 RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy actCompletion com.openggf.game.session.GameplayRunPolicy$ActCompletion
 RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy bonusStageEntry boolean
+RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy deathRestart com.openggf.game.session.GameplayRunPolicy$DeathRestart
 RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy editorEntry boolean
 RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy liveRewind boolean
+RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy livesCounter boolean
 RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy specialStageEntry boolean
 RECORD-COMPONENT com.openggf.game.solid.PlayerSolidContactResult kind com.openggf.game.solid.ContactKind
 RECORD-COMPONENT com.openggf.game.solid.PlayerSolidContactResult postContact com.openggf.game.solid.PostContactState
@@ -18231,6 +18249,7 @@ RECORD-COMPONENT com.openggf.mods.run.PlayerPose highPriority boolean
 RECORD-COMPONENT com.openggf.mods.run.PlayerPose mappingFrame int
 RECORD-COMPONENT com.openggf.mods.run.PlayerPose priorityBucket int
 RECORD-COMPONENT com.openggf.mods.run.PlayerPose vFlip boolean
+RECORD-COMPONENT com.openggf.mods.run.RunLevelStart deathRestart boolean
 RECORD-COMPONENT com.openggf.mods.run.RunLevelStart debugAssisted boolean
 RECORD-COMPONENT com.openggf.mods.run.RunLevelStart determinismFingerprint java.lang.String
 RECORD-COMPONENT com.openggf.mods.run.RunLevelStart levelHeight int
@@ -18599,6 +18618,7 @@ RECORD-COMPONENT com.openggf.sprites.art.SpriteArtSet mappingFrames java.util.Li
 RECORD-COMPONENT com.openggf.sprites.art.SpriteArtSet paletteIndex int
 RECORD-COMPONENT com.openggf.sprites.managers.PlayableSpriteAnimation$RewindState lastAnimationId int
 RECORD-COMPONENT com.openggf.sprites.managers.PlayableSpriteAnimation$RewindState lastGroundMovementAnimId int
+RECORD-COMPONENT com.openggf.sprites.managers.PlayableSpriteMovement$RewindState deathElapsedFrames int
 RECORD-COMPONENT com.openggf.sprites.managers.PlayableSpriteMovement$RewindState facingFlipForcesPushClearAfterGroundWall boolean
 RECORD-COMPONENT com.openggf.sprites.managers.PlayableSpriteMovement$RewindState inputDown boolean
 RECORD-COMPONENT com.openggf.sprites.managers.PlayableSpriteMovement$RewindState inputJump boolean
@@ -19847,6 +19867,7 @@ TYPE enum public,static,final com.openggf.game.presentation.PlayerPresentationPo
 TYPE enum public,static,final com.openggf.game.presentation.ScenePresentationFrame$Layer SUPER java.lang.Enum<com.openggf.game.presentation.ScenePresentationFrame$Layer>
 TYPE enum public,static,final com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind SUPER java.lang.Enum<com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind>
 TYPE enum public,static,final com.openggf.game.session.GameplayRunPolicy$ActCompletion SUPER java.lang.Enum<com.openggf.game.session.GameplayRunPolicy$ActCompletion>
+TYPE enum public,static,final com.openggf.game.session.GameplayRunPolicy$DeathRestart SUPER java.lang.Enum<com.openggf.game.session.GameplayRunPolicy$DeathRestart>
 TYPE enum public,static,final com.openggf.graphics.FadeManager$FadeState SUPER java.lang.Enum<com.openggf.graphics.FadeManager$FadeState>
 TYPE enum public,static,final com.openggf.graphics.FadeManager$FadeType SUPER java.lang.Enum<com.openggf.graphics.FadeManager$FadeType>
 TYPE enum public,static,final com.openggf.graphics.GLCommand$BlendType SUPER java.lang.Enum<com.openggf.graphics.GLCommand$BlendType>
@@ -21100,6 +21121,7 @@ TYPE-ANNOTATION com.openggf.game.save.SelectedTeam @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.session.EngineContext @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.session.GameplayRunPolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.session.GameplayRunPolicy$ActCompletion @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.session.GameplayRunPolicy$DeathRestart @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.session.WorldSession @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.solid.ContactKind @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.solid.ObjectSolidExecutionContext @com.openggf.game.ModApi

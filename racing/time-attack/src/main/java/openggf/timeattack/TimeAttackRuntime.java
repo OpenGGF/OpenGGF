@@ -106,6 +106,16 @@ public final class TimeAttackRuntime implements RunHost {
     private Supplier<List<GhostPose>> extraGhostSupplier;
     private int levelWidth;
     private int localCentreX = -1;
+    /** Level frames the post-death countdown still holds the run for; 0 when none is running. */
+    private int restartCountdownFrames;
+    /** A death restart's countdown starts once its spawn step has executed. */
+    private boolean countdownAfterSpawnStep;
+    /**
+     * The spawn step's frame, held back from the attempt listener until the countdown ends so
+     * a room's {@code AttemptStart} (sent with the first frame) and its pacing clock start when
+     * the player regains control.
+     */
+    private GhostFrame deferredSpawnFrame;
     private java.util.function.BiFunction<String, String, com.openggf.net.identity.PlayerAppearance> lookSource =
             (gameId, character) -> com.openggf.net.identity.PlayerAppearance.STOCK;
 
@@ -253,10 +263,38 @@ public final class TimeAttackRuntime implements RunHost {
         this.companion = companion;
     }
 
-    /** The spec the engine runs for the armed launch: one isolated act. */
+    /**
+     * Level frames (60 per second) the 3-2-1 countdown holds the run after a fast death restart.
+     * The reloaded act's spawn step executes first (the engine builds the player's and objects'
+     * sprites only in a step, so the held frames show the act as it starts); the hold follows.
+     * Held frames execute no step, so they are neither recorded nor timed.
+     */
+    public static final int RESTART_COUNTDOWN_FRAMES = 3 * 60;
+
+    /**
+     * The spec the engine runs for the armed launch: one isolated act with fast restarts, so a
+     * death reloads the act from its start as a fresh attempt with no lives and no title card.
+     */
     public RunSpec runSpec() {
         return new RunSpec(launch.gameId(), launch.zone(), launch.act(), launch.character(),
-                GameplayRunPolicy.isolatedAct());
+                GameplayRunPolicy.isolatedAct().withFastRestarts());
+    }
+
+    /**
+     * Level frames the post-death countdown still holds the run for: the whole countdown while
+     * the spawn step is pending, 0 when none is running.
+     */
+    public int restartCountdownFrames() {
+        return countdownAfterSpawnStep ? RESTART_COUNTDOWN_FRAMES : restartCountdownFrames;
+    }
+
+    /** Hands the held-back spawn frame to the listener once the player has control again. */
+    private void releaseDeferredSpawnFrame() {
+        GhostFrame frame = deferredSpawnFrame;
+        deferredSpawnFrame = null;
+        if (frame != null && attemptListener != null && isAttemptActive()) {
+            attemptListener.onFrameSampled(attemptOrdinal, frame);
+        }
     }
 
     /** Voids an ARMED or RUNNING attempt exactly once. */
@@ -289,7 +327,9 @@ public final class TimeAttackRuntime implements RunHost {
         capture.capture(sampledFrame.x(), sampledFrame.y(), sampledFrame.mappingFrame(),
                 sampledFrame.hFlip(), sampledFrame.vFlip(), sampledFrame.priorityBucket(),
                 sampledFrame.highPriority(), attempt.phase() == TimeAttackAttempt.Phase.FINISHED);
-        if (attemptListener != null) {
+        if (countdownAfterSpawnStep) {
+            deferredSpawnFrame = sampledFrame;
+        } else if (attemptListener != null) {
             attemptListener.onFrameSampled(attemptOrdinal, sampledFrame);
         }
         if (before != TimeAttackAttempt.Phase.FINISHED
@@ -344,6 +384,11 @@ public final class TimeAttackRuntime implements RunHost {
     public void onLevelReady(RunLevelStart start) {
         levelWidth = start.levelWidth();
         localCentreX = -1;
+        // A death restart reloads the act under a still-running attempt; it can never finish.
+        voidCurrentAttempt();
+        restartCountdownFrames = 0;
+        countdownAfterSpawnStep = start.deathRestart();
+        deferredSpawnFrame = null;
         beginAttemptForTest(start.determinismFingerprint());
         if (start.debugAssisted()) {
             // An overlay already visible before spawn is as much an advantage as
@@ -365,6 +410,12 @@ public final class TimeAttackRuntime implements RunHost {
                 && (partner == null || partner.mayRetry())) {
             requestRetry();
         }
+        if (restartCountdownFrames > 0) {
+            if (--restartCountdownFrames == 0) {
+                releaseDeferredSpawnFrame();
+            }
+            return false;
+        }
         return admitted;
     }
 
@@ -384,6 +435,10 @@ public final class TimeAttackRuntime implements RunHost {
         tickForTest(step.heldMask(), step.startHeld(), step.actComplete(), step.checkpointIndex(),
                 new GhostFrame(pose.centreX(), pose.centreY(), pose.mappingFrame(), pose.hFlip(),
                         pose.vFlip(), false, pose.priorityBucket(), pose.highPriority()));
+        if (countdownAfterSpawnStep) {
+            countdownAfterSpawnStep = false;
+            restartCountdownFrames = RESTART_COUNTDOWN_FRAMES;
+        }
         if (companion != null) {
             companion.afterStep();
         }
@@ -399,6 +454,10 @@ public final class TimeAttackRuntime implements RunHost {
         TimeAttackHud.draw(canvas, hudState());
         if (companion != null) {
             companion.drawOverlay(canvas, levelWidth, localCentreX);
+        }
+        int countdown = restartCountdownFrames();
+        if (countdown > 0) {
+            openggf.timeattack.mp.MultiplayerHudRenderer.drawCountdown(canvas, (countdown + 59) / 60);
         }
     }
 
@@ -454,6 +513,9 @@ public final class TimeAttackRuntime implements RunHost {
         attempt = null;
         attemptListener = null;
         extraGhostSupplier = null;
+        restartCountdownFrames = 0;
+        countdownAfterSpawnStep = false;
+        deferredSpawnFrame = null;
         handle = null;
         companion = null;
     }

@@ -86,18 +86,19 @@ class TestActPracticeExample {
             assertEquals(1, launched.size());
             RunSpec spec = launched.get(0);
             assertEquals("s2", spec.gameId());
-            assertEquals(new GameplayRunPolicy(true, true, GameplayRunPolicy.ActCompletion.RETURN_TO_HOST, true, false),
+            assertEquals(new GameplayRunPolicy(true, true, GameplayRunPolicy.ActCompletion.RETURN_TO_HOST, true, false,
+                GameplayRunPolicy.DeathRestart.STOCK, true),
                     spec.policy(), "practice keeps stages and rewind but returns after the act");
 
             RunHost run = hosts.get(0);
-            run.onLevelReady(new RunLevelStart(spec, "fp", false, 4096, 1024));
+            run.onLevelReady(new RunLevelStart(spec, "fp", false, 4096, 1024, false));
             for (int i = 0; i < 10; i++) run.afterStep(step(i, i < 3 ? 0 : 0x08, 100 + i * 4, false));
             run.afterStep(step(10, 0x08, 140, true));
             assertTrue(run.ghosts().isEmpty(), "no previous attempt to race on the first run");
 
             assertTrue(run.admitStep(keys(org.lwjgl.glfw.GLFW.GLFW_KEY_R)));
             assertEquals(1, retries[0], "R retries through the run handle");
-            run.onLevelReady(new RunLevelStart(spec, "fp", false, 4096, 1024));
+            run.onLevelReady(new RunLevelStart(spec, "fp", false, 4096, 1024, false));
             run.afterStep(step(0, 0, 100, false));
             run.afterStep(step(1, 0x08, 104, false));
             List<GhostPose> ghosts = run.ghosts();

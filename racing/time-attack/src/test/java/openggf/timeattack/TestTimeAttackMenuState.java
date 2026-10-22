@@ -92,7 +92,7 @@ class TestTimeAttackMenuState {
         var request = state.consumeLaunchRequest();
         TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root), root.resolve("identity"), () -> false);
         runtime.armForLaunch(request);
-        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(runtime.runSpec(), "fp", false, 0, 0));
+        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(runtime.runSpec(), "fp", false, 0, 0, false));
 
         assertEquals(1, runtime.activeGhostsForTest().size(), "the selected act's valid ghost must be raced");
     }

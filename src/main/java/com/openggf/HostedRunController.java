@@ -87,6 +87,11 @@ final class HostedRunController {
 
     /** The run's level is loaded (launch or retry). */
     void onLevelReady(boolean debugAssisted) {
+        onLevelReady(debugAssisted, false);
+    }
+
+    /** The run's level is loaded; {@code deathRestart} marks a fast restart after a death. */
+    void onLevelReady(boolean debugAssisted, boolean deathRestart) {
         if (host == null) {
             return;
         }
@@ -106,7 +111,8 @@ final class HostedRunController {
         stopSpectating();
         actCompleteSeen = false;
         int[] size = levelSize();
-        RunLevelStart start = new RunLevelStart(spec, determinismFingerprint, debugAssisted, size[0], size[1]);
+        RunLevelStart start = new RunLevelStart(spec, determinismFingerprint, debugAssisted, size[0], size[1],
+                deathRestart);
         guarded(() -> host.onLevelReady(start));
     }
 
