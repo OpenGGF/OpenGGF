@@ -1193,7 +1193,19 @@ Get-up retains the turn byte before callbacks while ordinary landing still
 clears it. The affected18-class selection passes462T/0F/0E/0S, including native/
 ordinary callback checks and two complete registered restore/forward cycles for
 each gravity mode. These are declared component controls, not route parity.
-LevelBound/camera-bias prelude, S3K slide audio and live dual-plane breadth remain
-open. The earlier maintained MHZ death37752 was not rerun in this scope; cause
-and matched baseline/current attribution remain pending.
+The separate native prelude/cue and climb callback leaves are now composed as
+source candidates below; live dual-plane and route qualification remain open.
+The maintained source372 consumer failed earlier at death26853 versus prior
+c4 death37752. Its first executed differing owner and cause were not serialized,
+so this remains an unattributed delivery block.
 [Source, command and limits](architecture/plans/2026-10-13-s3k-playable-completion.md#root-knuckles-slide-collision-and-landing-contract--2026-10-22).
+
+
+The aggregate composes original5aef17e87's bounded two-file climb prerequisite,
+37286d6dd's private native camera/LevelBound prelude and installed-profile7E
+GroundSlide cue, and372671811's native climb-floor callback preservation. The
+last leaf skips both pre-callback clears and the late restore, so callback writes
+remain visible; ordinary and ledge landings still clear the byte. Owner604-case
+qualification is bounded component evidence. Aggregate affected qualification
+is pending, and none of these source facts attributes the maintained26853 death.
+[Aggregate source and validation state](architecture/plans/2026-10-22-native-gap-swarm.md).

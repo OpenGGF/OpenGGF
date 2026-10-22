@@ -135,13 +135,14 @@ class TestKis2MovementRules {
             player.setCentreX((short) 0x100);
             player.setCentreY((short) 0x200);
             player.setSubpixelRaw(player.getCentreX() & 0xFFFF, player.getYSubpixelRaw());
+            player.applyCustomRadii(10, 10);
             player.setDoubleJumpFlag(4);
             player.setDoubleJumpProperty((byte) 0);
             player.setMappingFrame(0xB9);
             player.setAir(true);
             input(false, false, false, false, false, false);
-            try (var terrain = mockStatic(ObjectTerrainUtils.class)) {
-                terrain.when(() -> ObjectTerrainUtils.checkFloorDist(0x100, 0x209))
+            try (var terrain = mockStatic(com.openggf.physics.GlideWallGrabTerrain.class)) {
+                terrain.when(() -> com.openggf.physics.GlideWallGrabTerrain.climbVerticalDistance(player, false, false))
                         .thenReturn(new TerrainCheckResult(-3, (byte) 0, 1));
                 invoke("updateWallClimb");
                 if (rules == Kis2Rules.RULES) {

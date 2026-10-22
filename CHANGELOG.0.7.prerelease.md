@@ -299,6 +299,9 @@ Unreleased. The earlier development themes remain in
   reverse-gravity inheritance. Slides apply collision corrections before their
   separate floor scan, preserve the original signed zero-speed boundary and the
   turn byte through landing callbacks; KiS2 keeps its radii across both scans.
+  Glide states run the native camera and level-boundary prelude before movement;
+  climb probes retain signed radii and native floor callbacks preserve changes
+  made by landing handlers. The S3K slide cue uses the installed sound profile.
   Ending reunion loads use measured native decompression
   costs, and the credits start on the original frame. Timing diagnostics distinguish
   verified instruction terms from work that is still unpriced. Giant-ring capture retains

@@ -49,13 +49,15 @@ public final class GlideWallGrabTerrain {
 
     /**
      * Knuckles_Wall_Climb's single vertical probe: up/ledge uses lrb_solid_bit
-     * at eight pixels; down/floor uses top_solid_bit at nine. The reverse
-     * branches swap world direction, not those native offsets or solid bits.
+     * at eight pixels plus signed x_radius; down/floor uses top_solid_bit at
+     * nine plus signed x_radius. These are the caller's pre-radius offsets:
+     * CheckCeilingDist_WithRadius / sub_F828 then subtract/add EXT.W x_radius.
+     * Reverse branches swap world direction, retaining the offsets and bits.
      */
     public static TerrainCheckResult climbVerticalDistance(AbstractPlayableSprite sprite,
                                                             boolean towardsLedge, boolean reversed) {
         boolean upwards = towardsLedge != reversed;
-        int offset = (towardsLedge ? 8 : 9) * (upwards ? -1 : 1);
+        int offset = ((towardsLedge ? 8 : 9) + (byte) sprite.getXRadius()) * (upwards ? -1 : 1);
         GroundSensor sensor = new GroundSensor(sprite, Direction.DOWN, (byte) 0, (byte) 0, true);
         SensorResult result = sensor.scanWorld(upwards ? Direction.UP : Direction.DOWN,
                 (short) 0, (short) offset, (short) 0, (short) 0,

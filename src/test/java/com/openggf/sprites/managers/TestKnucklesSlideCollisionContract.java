@@ -18,7 +18,6 @@ import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -26,8 +25,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.MockedStatic;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,7 +36,8 @@ import static org.mockito.Mockito.*;
  * Literal slide-owner contracts from Knuckles_Sliding (sonic3k.asm:30986-31071,
  * pinned 8b2cf3c) and KiS2 c336fede (s2.asm:38408-38492), FixBugs=0.
  * Declared terrain-port results test real movement/state ordering, not a measured
- * route, real terrain geometry, camera/boundary prelude or slide-audio coverage.
+ * route, real terrain geometry or slide-audio coverage. The canonical public
+ * dispatcher runs the prelude inside explicit synthetic 0..2000 camera bounds.
  */
 @ExtendWith(SingletonResetExtension.class)
 @FullReset
@@ -47,7 +45,6 @@ import static org.mockito.Mockito.*;
 class TestKnucklesSlideCollisionContract {
     private Knuckles player;
     private PlayableSpriteMovement movement;
-    private Method slide;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -62,6 +59,11 @@ class TestKnucklesSlideCollisionContract {
     private void configure(boolean kis2) throws Exception {
         TestEnvironment.configureGameModuleFixture(kis2
                 ? new Kis2SlideModule() : new Sonic3kGameModule());
+        var camera = GameServices.camera();
+        camera.setMinX((short) 0);
+        camera.setMaxX((short) 2000);
+        camera.setMinY((short) 0);
+        camera.setMaxY((short) 2000);
         player = new Knuckles("slide-contract", (short) 0, (short) 0);
         player.setAir(true);
         player.setJumping(true);
@@ -76,16 +78,17 @@ class TestKnucklesSlideCollisionContract {
         player.setCentreX((short) 100);
         player.setCentreY((short) 200);
         player.setSubpixelRaw(0xA500, 0xB600);
-        movement = new PlayableSpriteMovement(player);
-        Field held = PlayableSpriteMovement.class.getDeclaredField("inputJump");
-        held.setAccessible(true);
-        held.setBoolean(movement, true);
-        slide = PlayableSpriteMovement.class.getDeclaredMethod("updateSliding");
-        slide.setAccessible(true);
+        movement = assertInstanceOf(PlayableSpriteMovement.class, player.getMovementManager());
+        assertSame(movement, player.getMovementManager());
     }
 
-    private void step() throws Exception {
-        slide.invoke(movement);
+    private void step() {
+        step(true);
+    }
+
+    private void step(boolean heldJump) {
+        movement.handleMovement(false, false, false, false,
+                heldJump, false, false, false);
     }
 
     @ParameterizedTest
@@ -225,10 +228,7 @@ class TestKnucklesSlideCollisionContract {
         player.applyCustomRadii(10, 0xFF); // declared native byte-field boundary
         player.setCentreY((short) 200);
         player.setSubpixelRaw(0xA500, 0xB600);
-        Field held = PlayableSpriteMovement.class.getDeclaredField("inputJump");
-        held.setAccessible(true);
-        held.setBoolean(movement, false);
-        step();
+        step(false);
         assertEquals(reverse ? 220 : 180, player.getCentreY(),
                 "SUB.B 19 from 255 gives EC, then EXT.W gives -20");
         assertEquals(0xB600, player.getYSubpixelRaw());
@@ -247,9 +247,14 @@ class TestKnucklesSlideCollisionContract {
         observer.setDoubleJumpFlag(3);
         observer.setDoubleJumpProperty((byte) 0x80);
         observer.applyCustomRadii(10, 10);
+        observer.setCentreX((short) 100);
+        observer.setCentreY((short) 200);
         if (nativeFloor) {
-            // Default held input is false: exercise the actual slide get-up owner.
-            slide.invoke(new PlayableSpriteMovement(observer));
+            // Public release dispatch reaches the native slide get-up owner.
+            var observerMovement = assertInstanceOf(PlayableSpriteMovement.class,
+                    observer.getMovementManager());
+            observerMovement.handleMovement(false, false, false, false,
+                    false, false, false, false);
         } else {
             observer.setAir(false);
         }

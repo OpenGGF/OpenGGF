@@ -2152,3 +2152,15 @@ is insufficient: landing callbacks already observed zero. Use the narrow native
 floor-reset entry before publication; ordinary landing keeps its original reset.
 Declared component and registered restore/forward controls cover these branches;
 LevelBound/camera prelude, slide sound and live route qualification remain separate.
+
+
+**Preserve native landing bytes before callbacks, without repairing afterward.**
+Knux_TouchFloor retains double_jump_property on native climb-floor exits. A
+private exit that explicitly clears it before public setAir(false) exposes zero
+to both hooks; restoring the old byte afterward also overwrites a hook's new
+value. Reuse the internal native-floor entry before either clear and omit the
+late restore. Keep ordinary and ledge-completion semantics separate. The14-case
+public-dispatch control observes both hooks and callback-written66, as well as
+ordinary/ledge negatives. Original5aef's47 returned-state checks alone did not
+cover callback timing. See the aggregate's bounded5aef/372/372671811 composition
+in [the swarm plan](plans/2026-10-22-native-gap-swarm.md).

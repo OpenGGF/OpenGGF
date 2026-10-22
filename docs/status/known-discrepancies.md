@@ -3507,3 +3507,11 @@ pieces. Reserved attracted rings submit at their actual object-slot phase, and
 ring visibility is filtered after admission. Explicit native FIFO entries precede
 the existing legacy SST suffix; this mixed bridge does not establish every
 object's native DisplaySprite topology. See the [design and source evidence](../architecture/designs/2026-10-22-native-sprite-scanline-budgets.md).
+
+
+The shared Knuckles climb/prelude source candidates now retain powered native
+vertical probes, signed radius offsets and native-floor callback publication,
+with KiS2's distinct radii and idle-probe rules. Their component qualification
+does not certify the maintained MHZ route: current372 dies at26853 versus the
+prior c4 result37752, and causal attribution remains open. No controller or
+comparison oracle was adapted. See the [aggregate checkpoint](../architecture/plans/2026-10-22-native-gap-swarm.md).

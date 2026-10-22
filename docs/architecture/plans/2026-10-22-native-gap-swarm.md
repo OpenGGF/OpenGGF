@@ -464,3 +464,46 @@ tools.testing.test_release_snapshot_policy -v` passes51/51, exercising installed
 PowerShell as well as sh; both syntax checks and the owned diff check pass. This
 is policy verification, not native-pause runtime qualification. The audio lane
 will import this separate dependency and retain its own already-focused source.
+
+
+The next aggregate movement composition takes ONLY original5aef17e87's two
+runtime climb files/four affected test hunks plus the whole47-case class from
+372, then37286d6dd's three runtime owners and bounded tests, then the separate
+372671811 native-floor callback leaf. The original runtime patch needed only
+one removed-comment citation context adjustment; CameraRules/doRoll, S2 restore,
+Mode seams, explicit player bit/path queries and the earlier8272 slide bridge
+remain intact. Original372's native namespace control follows7E through the
+actual S3K pointer-list4B/header/PSG3 stream. Callback old-source14 cases produced
+eight failures with six ordinary/ledge controls passing; its owning final20
+classes passed604 unique identities, not route parity. Aggregate affected
+selection adds the three cue/audio consumers to those20 classes. Source is
+frozen through that ONE queued normal/EGL/Java25/three-original-ROM request;
+result remains pending. No maintained route or native capture is launched.
+
+Current S1 owning44223 instead has22 complete zero-error level reports but a
+terminal walk exception at223632, `a native blocking fade is already active`.
+Actual FZ reached ending zone7 and credits; terminal completion/art was not
+reached. Two earlier result boundaries now omit native outgoing map9 and49
+transfers; later ordinal differences cascade from them. The S1 lane owns
+separate source-backed results-wait and pending-ending-callback fixes. Neither
+those open causes nor the maintained MHZ26853 death is waived by focused passes.
+
+
+Aggregate request24641 completed the frozen5aef/372/372671811 composition in
+ONE lifecycle: **613T/0F/0E/0S**,613 distinct identities in23 inspected XML suites,
+Java25.0.5/surfaceless EGL/intended cwd and all three original absolute ROM
+properties. Queue wait370s, Maven1:37; compiler and parent elapsed unknown. The
+20-class604-case callback selection from the owning leaf is augmented with
+TestSonic3kGroundSlideSfxNamespace1, TestSonic3kAudioProfile2 and
+TestS3kSfxLifecycleRom6. This includes47 climb,128 prelude,14 callback,27 slide,
+two registered slide cycles,188 movement, paired18 player-solidity queries,
+terrain/rules/API and all required S3K loading/bootstrap keepers. Every selected
+class passed with zero skips. The unchanged doRollSpeed, playerCameraBiasController
+and doLevelBoundary bodies were compared directly against the pre-composition
+source. The declaration-policy51 result is separate, not added to613.
+
+This qualifies the bounded source union locally, not MHZ route parity. The
+maintained372 death26853 versus c4 death37752 remains unattributed and blocks
+delivery. The peer is preparing passive original-evaluation carriers for a
+prospective matched comparison; no pair, route retry, native capture or broad
+smoke is launched by this checkpoint. Main remains untouched.

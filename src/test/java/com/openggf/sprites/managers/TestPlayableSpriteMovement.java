@@ -5109,7 +5109,7 @@ public class TestPlayableSpriteMovement {
                                         assertEquals(!up && distance < 0 ? 0 : 4, mockSprite.getDoubleJumpFlag());
                                         if (!up && distance < 0) {
                                                 assertEquals(8, mockSprite.getAngle());
-                                                assertEquals(5, mockSprite.getForcedAnimationId());
+                                                assertEquals(5, mockSprite.getAnimationId());
                                         }
                                 }
                         }
@@ -5181,8 +5181,8 @@ public class TestPlayableSpriteMovement {
         public void knucklesWallClimbNoInputUsesFloorDistanceAsRetailAnimationDelta() throws Exception {
                 prepareWallClimbProbe(0x0100, 0xB7);
 
-                try (var terrain = org.mockito.Mockito.mockStatic(ObjectTerrainUtils.class)) {
-                        terrain.when(() -> ObjectTerrainUtils.checkFloorDist(0x0100, 0x0109))
+                try (var terrain = org.mockito.Mockito.mockStatic(com.openggf.physics.GlideWallGrabTerrain.class)) {
+                        terrain.when(() -> com.openggf.physics.GlideWallGrabTerrain.climbVerticalDistance(mockSprite, false, false))
                                         .thenReturn(new TerrainCheckResult(3, (byte) 0, 1));
 
                         invokeWallClimbUpdate();
@@ -5200,8 +5200,8 @@ public class TestPlayableSpriteMovement {
                 mockSprite.setJumping(true);
                 int originalY = mockSprite.getY();
 
-                try (var terrain = org.mockito.Mockito.mockStatic(ObjectTerrainUtils.class)) {
-                        terrain.when(() -> ObjectTerrainUtils.checkFloorDist(0x0100, 0x0109))
+                try (var terrain = org.mockito.Mockito.mockStatic(com.openggf.physics.GlideWallGrabTerrain.class)) {
+                        terrain.when(() -> com.openggf.physics.GlideWallGrabTerrain.climbVerticalDistance(mockSprite, false, false))
                                         .thenReturn(new TerrainCheckResult(-3, (byte) 0, 1));
 
                         invokeWallClimbUpdate();
@@ -5215,18 +5215,18 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void knucklesWallClimbNoSurfaceUsesRomEmptyTileDistance() throws Exception {
-                // probeY=$114, so the ROM FindFloor empty-tile path returns
-                // $1F-($114&$F)=$1B. $A0+$1B lands inside the climb-frame range.
+                // Native probeY=$10B+9+10=$11E, so empty FindFloor returns $11.
+                // $A0+$11=$B1 is below the climb loop and clamps to $BC.
                 prepareWallClimbProbe(0x010B, 0xA0);
 
-                try (var terrain = org.mockito.Mockito.mockStatic(ObjectTerrainUtils.class)) {
-                        terrain.when(() -> ObjectTerrainUtils.checkFloorDist(0x0100, 0x0114))
+                try (var terrain = org.mockito.Mockito.mockStatic(com.openggf.physics.GlideWallGrabTerrain.class)) {
+                        terrain.when(() -> com.openggf.physics.GlideWallGrabTerrain.climbVerticalDistance(mockSprite, false, false))
                                         .thenReturn(TerrainCheckResult.noCollision());
 
                         invokeWallClimbUpdate();
                 }
 
-                assertEquals(0xBB, mockSprite.getMappingFrame(),
+                assertEquals(0xBC, mockSprite.getMappingFrame(),
                                 "the engine no-surface sentinel must map back to the ROM's positive d1 distance");
         }
 
@@ -5234,8 +5234,8 @@ public class TestPlayableSpriteMovement {
         public void knucklesWallClimbMappingFrameAddWrapsAsByteBeforeClamp() throws Exception {
                 prepareWallClimbProbe(0x0100, 0xF0);
 
-                try (var terrain = org.mockito.Mockito.mockStatic(ObjectTerrainUtils.class)) {
-                        terrain.when(() -> ObjectTerrainUtils.checkFloorDist(0x0100, 0x0109))
+                try (var terrain = org.mockito.Mockito.mockStatic(com.openggf.physics.GlideWallGrabTerrain.class)) {
+                        terrain.when(() -> com.openggf.physics.GlideWallGrabTerrain.climbVerticalDistance(mockSprite, false, false))
                                         .thenReturn(new TerrainCheckResult(0x20, (byte) 0, 1));
 
                         invokeWallClimbUpdate();
@@ -5383,6 +5383,7 @@ public class TestPlayableSpriteMovement {
         private void prepareWallClimbProbe(int centreY, int mappingFrame) throws Exception {
                 mockSprite.setCentreX((short) 0x0100);
                 mockSprite.setCentreY((short) centreY);
+                mockSprite.applyCustomRadii(10, 10);
                 mockSprite.setSubpixelRaw(mockSprite.getCentreX() & 0xFFFF, mockSprite.getYSubpixelRaw());
                 mockSprite.setDoubleJumpFlag(4);
                 mockSprite.setDoubleJumpProperty((byte) 0);
