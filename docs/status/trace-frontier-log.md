@@ -113145,3 +113145,46 @@ passes the expanded ten-case start-effects class within78 focused checks,
 including destructive restoration, missing/other owner and failure retry;
 seven affected architecture guards pass, all zero skips. Native H32 consumer
 composition remains separate active work.
+### 2026-10-22 — S1 composed native-slot fixes and complete timing candidate
+
+S1 chain worker, isolated `t3-bfcde7c7`, branch
+`bugfix/ai-gap-s1-chain-20261022`, source `2cbcb6e90` plus Bomb fuse/shrapnel
+explicit submissions, the complete uncommitted native242 v5 candidate and new
+S1 literal publication guard. This composes own milestones `dde29476`,
+`52a34690`, `a69971ed`, `a1f10b68`, boss dependencies `d8aca9ad`/`9f7c034f`
+(locally `702f142c`/`ed56906e`) and backend `d89c09e6` (local `2cbcb6e9`).
+
+The exact 17-class focused command is recorded in the
+[S1 chain audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#current-composed-qualification-and-withheld-publication).
+It uses queued Maven, `-Ptrace-replay`, one fork, surfaceless EGL, unset display
+variables, Lua5.4, the absolute verified S1 REV01 ROM and temporary read-only
+row/FZ callbacks. Job38000 completes129 cases:128 pass, one chain assertion
+fails, zero errors/skips. Six original-movie controls (SLZ1/2/3, SBZ2, LZ2/3),
+both retained prefix pins, all three S1 literal artifact cases and focused
+hardware-timing prerequisites pass. Probes are removed before final guards.
+
+The full-chain profile moves11→4 reported axes (initial baseline17). All21
+complete level reports before FZ are exact, including the former MZ2/MZ3/LZ3/LZ4
+prepared-state mismatches, SLZ3's1456 errors and SBZ2's one-row ring mismatch.
+The six special stages and six presentation bridges close without a reported
+axis. SLZ3 first escape now expands on8472 and moves8px; the former8557 clamp
+retains nativeF500 fraction. The independent saw re-entry fix closes SBZ2
+without a shared ring collision change.
+
+FZ now compares all5086 rows, with722 errors:20 physics/dynamic-art and702
+animation. First overall error is4735 player animation native07LOOK_UP/map05,
+engine05WAIT/map01, while physical fields match; first non-camera physics error
+is downstream4736 dynamic_art.edge[0].mapping_frame5/1. Prior354 animation
+and subsequent ownership loss are gone. Remaining gaps are SBZ2→LZ4 art
+(expected2/actual12 edges; first expected movie202106/map1 versus201916/map50)
+and LZ4→FZ art (expected2/actual8;209046/map1 versus208858/map9). The10943-row
+terminal tail is consumed but ends LEVEL instead of TITLE_SCREEN.
+
+Strict run timing verification reports no missing/unmatched/late edge; the
+historical ordinal170 failure does not recur on this composition. Publication
+still requires **all** comparisons and terminal closure: the entire62-file
+candidate and its S1 guard remain uncommitted, capture-time Mono/core digests
+UNKNOWN. No prefix pin is lowered or advanced against unpublished inputs.
+Boss lane owns the native late lookup/object ending cause; S1 chain retains
+transition-art admission and terminal caller attribution. Parent owns combined
+smoke; this is bounded focused evidence, not a passing continuous-chain claim.

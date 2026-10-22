@@ -785,6 +785,12 @@ children instead run `Bom_Main` without moving or animating. Under shipped
 `FixBugs=0`, the caller's `AnimateSprite`/`RememberState` tail still runs after
 `Bom_Shrapnel` returns, including its second display submission; the fixed branch
 skips that return. Motion parity does not by itself prove the sprite queue.
+An explicit DisplaySprite producer must retain both admitted slot references,
+including the first one after RememberState deletes the SST. Opt fresh children
+out of inferred drawing even when their stored mapping frame is zero. Keep
+routine-owned range checks after execution; a manager pre-cull can hide the
+entire display-and-delete branch. Test real-walk admission pressure and graph
+plus queue restore, without storing an object-local display count.
 
 A consolidated staircase owner can execute at a higher child's slot, but native
 `DeleteObject` still clears each SST at its own walk position. Pass the owner's

@@ -8,6 +8,8 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.NativeSpriteSubmissionAccess;
+import com.openggf.level.objects.NativeSpriteSubmissionSource;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -31,7 +33,7 @@ import java.util.List;
  * <p>
  * Animations: Uses fuse animation (Ani_Bomb index 3): frames 8, 9 at speed 3.
  */
-public class Sonic1BombFuseInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class Sonic1BombFuseInstance extends AbstractObjectInstance implements RewindRecreatable, NativeSpriteSubmissionSource {
 
     // Animation speed 3 + 1 = 4 ticks per frame
     private static final int ANIM_SPEED = 3 + 1;
@@ -85,6 +87,14 @@ public class Sonic1BombFuseInstance extends AbstractObjectInstance implements Re
         this.ceilingBomb = ceilingBomb;
         this.animTickCounter = 0;
         this.destroyed = false;
+    }
+
+    @Override
+    public boolean checksOutOfRangeAfterRoutine() {
+        // Bom_Fuse runs its burn/expiry path before its RememberState tail.
+        // A pre-execute manager cull would skip the FixBugs=0 orphan submission.
+        // Bom_Fuse (_incObj/5F Badnik - Walking Bomb.asm:153-158).
+        return true;
     }
 
     @Override
@@ -184,8 +194,17 @@ public class Sonic1BombFuseInstance extends AbstractObjectInstance implements Re
         SubpixelMotion.speedToPos(motionState);
         currentY = motionState.y;
 
-        // Animate
+        // Bom_Fuse returns through AnimateSprite and RememberState, whose
+        // DisplaySprite call exists only on the in-range branch.
+        // Bom_Fuse (_incObj/5F Badnik - Walking Bomb.asm:153-158);
+        // RememberState (_incObj/sub RememberState.asm:9-22).
         animTickCounter++;
+        if (!isInRange()) {
+            destroyed = true;
+            setDestroyedByOffscreen();
+            return;
+        }
+        NativeSpriteSubmissionAccess.submit(services().objectManager(), this, getPriorityBucket());
     }
 
     /**

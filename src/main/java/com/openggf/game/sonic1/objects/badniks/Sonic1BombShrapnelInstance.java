@@ -6,6 +6,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.NativeSpriteSubmissionAccess;
+import com.openggf.level.objects.NativeSpriteSubmissionSource;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnCoordinateZeroPairRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -31,7 +33,8 @@ import java.util.List;
  * Animations: Uses shrapnel animation (Ani_Bomb index 4): frames $A, $B at speed 3.
  */
 public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, SpawnCoordinateZeroPairRewindRecreatable {
+        implements TouchResponseProvider, SpawnCoordinateZeroPairRewindRecreatable,
+        NativeSpriteSubmissionSource {
 
     // From disassembly: move.b #$98,obColType(a1)
     // $80 = HURT category, $18 = size index (width 4, height 4)
@@ -138,8 +141,16 @@ public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
         // It then returns through Bom_Fuse's AnimateSprite/RememberState tail.
         // FixBugs=1 skips that return to avoid display/delete and double-delete bugs.
         // Bom_BurnFuseAndExplode (_incObj/5F Badnik - Walking Bomb.asm:171-220).
+        // Bom_Shrapnel always reaches its first DisplaySprite here because
+        // .firstShrapnel set obRender bit 7. Submit before RememberState can
+        // delete this SST: FixBugs=0 retains that queued slot pointer.
+        NativeSpriteSubmissionAccess.submit(services().objectManager(), this, getPriorityBucket());
         if (!isInRange()) {
             setDestroyedByOffscreen();
+        } else {
+            // The native RTS returns to Bom_Fuse's second AnimateSprite and
+            // RememberState, which queues the same slot again when in range.
+            NativeSpriteSubmissionAccess.submit(services().objectManager(), this, getPriorityBucket());
         }
     }
 
@@ -186,8 +197,10 @@ public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
             return;
         }
 
-        // Animate
+        // Bom_Shrapnel (_incObj/5F Badnik - Walking Bomb.asm:211-220):
+        // the regular pass queues once, after its render-bit deletion test.
         animTickCounter++;
+        NativeSpriteSubmissionAccess.submit(services().objectManager(), this, getPriorityBucket());
     }
 
     /**

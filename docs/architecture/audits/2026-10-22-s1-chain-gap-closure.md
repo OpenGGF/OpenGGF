@@ -298,3 +298,169 @@ identities and allocations. Controls cover tracked 3/4, ordinary pizza types 0�
 and X-pass/Y-fail dormant 3/4. The original/emerald BK2 route checks remain pending
 for the next necessary composed run; 11 focused passes do not claim that the
 row 7821 route comparator is already green.
+
+## Native DisplaySprite producers and authenticated PLC timing candidate
+
+The internal queue dependency `d89c09e660264f242192b82f3caa7600af9e1d00`
+is locally composed as `2cbcb6e90`, after the original own-slot retirement fix.
+Only shared prose required reconciliation. Its native FIFO prefix and legacy
+SST suffix are an explicit bridge: this does not certify all objects' mixed
+order, capacity or multipart slot projection.
+
+The Bomb consumer opts fuse and shrapnel sources into explicit submissions.
+`Bom_Main` returns without a call for fresh subtype 4/6 children
+(`_incObj/5F Badnik - Walking Bomb.asm:22-33`). Retail `Bom_Fuse` calls burn,
+then AnimateSprite and RememberState (`:153-158`). Under `FixBugs=0`, expiry
+retains its return address, enters Bom_Shrapnel in the reused fuse SST, and
+returns through that fuse tail (`:171-220`). It therefore submits the same SST
+twice in range, or once before RememberState deletes it out of range. Fuse
+range retirement must occur after the routine; an earlier manager cull would
+skip the real orphan-pointer path. Fresh shrapnel submits nothing; an ordinary
+subsequent shrapnel pass submits once after its existing render-bit test.
+The normal Bomb body remains unported in the legacy suffix. This change makes
+no whole-object topology or ordinary-body capacity claim.
+
+The supplied REV01 ROM was freshly rehashed as CRC32 `AFE05EEE`, SHA-1
+`69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`. `$12234..12243` is
+`610E 43F9 000122DC 6100 8B64 6000 DAF6`; the shrapnel tail
+`$122A6..122CB` ends `4A28 0001 6A00 BA08 6000 B9C8`.
+`DisplaySprite` at `$DC92` compares its byte count against `$7E`, permitting
+63 word-sized SST references per bucket. Producer regressions use the real
+manager walk, explicit call-order admissions, full-bucket pressure, an actual
+out-of-range conversion and destructive graph/queue restore. No display count
+is stored on the object, and admission success does not gate its gameplay.
+
+The existing external canonical capture is reused, without another emulator
+run: `parity-r3-s1-canonical-timing-20261008/capture-v5` under the authorized
+scratch directory. Its 131-file, 41,932,357-byte sorted inventory has SHA-256
+`3590bd88eb32c644af297fc8175cbe0abdd925a06f1277b86c4c779f2032e6a2`.
+All 34 decoded physics and 34 decoded auxiliary streams equal the committed
+comparison data. The manifest is semantically identical. The candidate adds
+28 compressed timing streams (242 continuous ordinals, 38 distinct ROM-backed
+identities) and updates only the recording date in all 34 metadata files.
+The six special stages have no stream; an empty stream is not invented.
+Publication must be atomic and retain the existing physics, auxiliary, BK2 and
+manifest bytes.
+
+Surviving provenance identifies TraceChaser
+`e0a2443e086ca657a49227c5467eeecd06e40ece`, BizHawk 2.11/GPGX, and canonical
+executable SHA-256
+`ecea6c71c94f7800afe303a76da7d70e2ea98aec56756fbeb33383dece0ae178`.
+Original BK2 SHA-256 is
+`f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`.
+The prior capture/build completed successfully; capture-time Mono version,
+core/shared-library digests and retained canonical executable path are
+unavailable. The separate callback probe executable is not substituted for
+that identity. Current TraceChaser `322851cb` has byte-identical S1 PLC observer
+and run-capture source, but its later host additions do not prove whole-build
+identity.
+
+The authority already exists: the production S1 service parses ROM cue entries,
+submits its own idle FIFO head, and prepares that descriptor at PRE_MAIN_LOOP.
+The timing port matches kind, ordinal, stable fingerprint, prepared payload and
+service boundary before admitting readiness only. Normal production owns the
+payload and subsequent 3/9-pattern service. Comparison rows supply no gameplay
+values, create no job and call no gameplay owner. No runtime or timing-contract
+change accompanies this fixture candidate. Direct callback/ROM evidence shows
+MZ2 row101 and MZ3 row102 arming 18 patterns before the Huffman-tree call, while
+GHZ2_2 row107 holds false until row108 despite the same coarse held-counter
+shape. A global counter-hold removal is consequently rejected.
+
+The earlier candidate's strict unprepared-job failure at ordinal170 remains
+historical blocking evidence. Later source fixes do not retroactively qualify
+it. Current whole-chain strict consumption/terminal comparison, independent
+original-movie controls and a new S1-specific literal publication guard are
+required before committing the complete 62-file candidate. Existing S3K-only
+publication coverage is not counted as S1 evidence. The initial Bomb test
+attempts stopped at production/test compilation due to temporary observer and
+probe-harness omissions; they executed no test cases and establish no coverage.
+
+### Current composed qualification and withheld publication
+
+Completed job 38000 tests `2cbcb6e90` plus the two Bomb producer sources,
+new producer regression, complete 62-file candidate and literal S1 guard.
+Temporary FZ owner callbacks and concrete-test row observers are read-only and
+were removed before affected structural guards. The row hook announces the
+upcoming movie row **before production**; its state is not a post-row sample.
+The selected 17 classes execute 129 cases: 128 pass, one full-chain assertion
+fails, zero errors/skips. Maven execution is 1m13s; queue wait was not separately
+measured. Selection and environment:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY OPENGGF_S1_CHAIN_ROW_PROBE=1 OPENGGF_S1_FZ_SOLID_PROBE=1 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS1CompleteEmeraldRunChain,TestS1CompleteEmeraldRunPrefix,TestS1Slz1CompleteRunTraceReplay,TestS1Slz2CompleteRunTraceReplay,TestS1Slz3CompleteRunTraceReplay,TestS1Sbz2CompleteRunTraceReplay,TestS1Lz2CompleteRunTraceReplay,TestS1Lz3CompleteRunTraceReplay,TestS1CommittedHardwareTimingFixtures,TestSonic1PlcArmTiming,TestHardwareTimingReplayPort,TestHardwareTimingService,TestHardwareTimingRewind,TestHardwareTimingStreamLoader,TestTraceDataHardwareTiming,TestTraceRunHardwareTimingCoordinator,TestTraceV5LoadingContract' "-Dsonic1.rom.path=$S1_ROM" test -B
+```
+
+The six independent original-movie controls pass, as do both unchanged prefix
+pins, all three literal publication cases and the timing tests (6 PLC arm,
+39 port, 25 service, 11 rewind, 19 stream loader, 2 TraceData, 9 run coordinator,
+6 v5 contract). All 21 complete level-comparator reports before FZ are exact,
+including MZ2/MZ3/LZ3/LZ4 prepared state, SLZ3's former 1456 errors and SBZ2's
+one-row ring mismatch. Six special stages and six presentation bridges also
+close without a reported axis, through segment32. The FZ comparator is the
+22nd level report, now complete through all5086 rows. It has 722 errors:
+20 physics (dynamic art), 702 animation. Its first **overall** mismatch is
+row4735, native LOOK_UP07/map05 versus engine WAIT05/map01, with all physical
+fields matching. First non-camera physics mismatch is the downstream DPLC
+mapping5/1 on4736. These are different frontiers; the generic assertion text
+calls all722 errors "physics", so the JSON verification groups and first-error
+console observation are authoritative for that distinction.
+
+Four full-chain axes remain:
+
+| Axis | Current measured result |
+| --- | --- |
+| FZ segment33 | Complete5086 rows; first animation4735, first dynamic-art4736; 20 physics +702 animation errors |
+| SBZ2→LZ4 art gap | Expected2 edges, actual12; first expected movie202106/map1, actual201916/map50 |
+| LZ4→FZ art gap | Expected2 edges, actual8; first expected movie209046/map1, actual208858/map9 |
+| Terminal movie | All remaining10943 rows consumed, expected TITLE_SCREEN, actual LEVEL |
+
+The hardware coordinator closes in the harness `finally` and invokes
+`HardwareTimingReplayPort.verifyRunComplete`; no unmatched, missing or late
+edge failure accompanies this run. The old ordinal170 failure is not reproduced
+on this composition. That strict readiness result does not make the chain or
+fixture publication green: terminal and comparison failures still block the
+complete candidate. All62 files and the independent S1 literal guard remain
+uncommitted; no filtering, partial publication or lower prefix pin is allowed.
+Capture-time Mono/core digests remain **UNKNOWN**.
+
+The boss dependency `9f7c034f` (local `ed56906ef`) is qualified on this route:
+pre-production8284 (after8283) has hitCount0, phase06/timer78;8285 still78 and
+8286 has77. Before8472 it has phase0A/timer2A/x211E/right2000; before8473 it has
+x2126/right2002, proving the native first escape expansion and eight-pixel move.
+Before8557 right20AA preserves the incoming player21CB.C300/vx0526; before8558
+player21D0.F500/vx0532 survives, closing the prior clamp-fraction error. Internal
+phase representation is not asserted identical to the native phase byte during
+its explicitly deferred settle tick. No fallthrough or capsule change is used.
+The saw source fix `a1f10b680` is independently qualified by original SBZ2 and
+its now-exact continuous segment31; no ring/touch threshold was changed.
+
+The FZ354 observation identifies the actual word-write owner. On executed
+VInt3030, controller33 enters with the jumped player anim02/previous02 and
+instance push keys{33,42}. Its pushing-clear callback changes that pair to00/01
+and removes only33. Cylinder42 subsequently clears42 and receives a side/air
+callback without another animation-word change. Native auxiliary status for
+both owners changes20→00 on354, and native animation is00/map2E. This supports
+controller NoCollision then cylinder SideAir as branch **inferences**, not an
+instruction trace. Repeated getSolidParams calls overwrite the probe's saved
+baseline, so its automatic NoCollision label can be absent despite the observed
+word transition. No stale spawn keys appear with the dependency's instance
+latches. The existing attack-suppression approximation was not changed.
+
+Producer-only validation is independent of that route: final eight admission,
+pressure and destructive-restore cases pass (job75166), and all five existing
+motion/animation conversion cases pass on the same production sources
+(job86052). The initial restore harness lacked a constructor supported by the
+generic probe codec; supplying a harmless zero-argument probe fixes the test
+fixture rather than production recreation. The first two attempts executed no
+tests due to diagnostic/test compilation omissions. No broad smoke/full suite
+is claimed; the parent owns combined delivery validation.
+
+After removing all three FZ diagnostic files/edits and the concrete-chain row
+observer, fresh-JVM affected guards pass65 cases (job74205), zero failures,
+errors or skips. These are the nine exact classes below, not every XML left in
+the reports directory and not the full guards profile. Maven execution1m38s;
+queue wait is not separately measured.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS1S2PlcComparisonOnlyGuard,TestHardwareTimingAuthorityGuard,TestTraceReplayInvariantGuard,TestTraceFixtureCompressionGuard,TestTraceFixtureMovieAlignmentGuard,TestTraceFixtureLagPolledInputGuard,TestObjectServicesMigrationGuard,TestRewindCoverageGuard,TestRewindFieldDispositionGuard' test -B
+```

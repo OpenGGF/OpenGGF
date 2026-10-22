@@ -27,7 +27,9 @@ Unreleased. The earlier development themes remain in
 
 - **Native sprite submissions:** an internal queue retains call-time bucket
   pressure, duplicate slot references and late slot reuse through rewind.
-  Unported objects retain their existing render path.
+  Bomb fuses and fragments submit at their native routine calls, including the
+  shipped repeated submission on expiry. Unported objects retain their existing
+  render path.
 
 - **Sonic 1 level entry:** background scrolling starts from each level or credits
   demo's final camera, and lamppost returns retain the original background camera
