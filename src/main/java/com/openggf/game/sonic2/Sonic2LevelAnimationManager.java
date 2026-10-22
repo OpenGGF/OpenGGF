@@ -40,6 +40,11 @@ public final class Sonic2LevelAnimationManager implements AnimatedPatternManager
         paletteCycler.update();
     }
 
+    /** Applies a ROM PalCycle_Timer write without resetting the cycle counters. */
+    public void setPrimaryPaletteCycleTimer(int timer) {
+        paletteCycler.setPrimaryTimer(timer);
+    }
+
     @Override
     public String key() {
         return patternAnimator.key();
