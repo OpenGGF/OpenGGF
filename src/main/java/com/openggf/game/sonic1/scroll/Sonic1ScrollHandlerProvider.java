@@ -1,6 +1,7 @@
 package com.openggf.game.sonic1.scroll;
 
 import com.openggf.data.Rom;
+import com.openggf.game.internal.CheckpointBackgroundScroll;
 import com.openggf.game.ScrollHandlerProvider;
 import com.openggf.level.scroll.ZoneScrollHandler;
 
@@ -15,7 +16,7 @@ import java.util.logging.Logger;
  * <p>Sonic 1 scroll handlers do not require shared ROM data (no ParallaxTables).
  * Each handler manages its own BG camera state using frame deltas.
  */
-public class Sonic1ScrollHandlerProvider implements ScrollHandlerProvider {
+public class Sonic1ScrollHandlerProvider implements ScrollHandlerProvider, com.openggf.game.internal.CheckpointScrollProvider {
     private static final Logger LOGGER = Logger.getLogger(Sonic1ScrollHandlerProvider.class.getName());
 
     private SwScrlGhz ghzHandler;
@@ -27,6 +28,10 @@ public class Sonic1ScrollHandlerProvider implements ScrollHandlerProvider {
     private SwScrlSbz sbzHandler;
     private UniformQuarterSpeedScroll fzHandler;
 
+    // Words unused by a zone's deform routine retain the load/checkpoint bank.
+    // They are constant within a level timeline; full loads reset that timeline.
+    private final CheckpointBackgroundScroll[] entryBackgrounds = new CheckpointBackgroundScroll[8];
+    private int activeAct;
     private boolean loaded = false;
 
     @Override
@@ -68,6 +73,44 @@ public class Sonic1ScrollHandlerProvider implements ScrollHandlerProvider {
             // init (different BG camera starting positions for parallax offset).
             case Sonic1ZoneConstants.ZONE_ENDING -> endHandler;
             default -> null;
+        };
+    }
+
+    @Override
+    public void initForZone(int zoneId, int actId, int cameraX, int cameraY) {
+        ZoneScrollHandler handler = getHandler(zoneId);
+        if (handler != null) {
+            activeAct = actId;
+            entryBackgrounds[zoneId] = new CheckpointBackgroundScroll(
+                    cameraX, cameraY, cameraX, cameraY, cameraX, 0);
+            handler.init(actId, cameraX, cameraY);
+        }
+    }
+
+    @Override
+    public void restoreCheckpointBackground(int zoneId, CheckpointBackgroundScroll checkpoint) {
+        if (checkpoint != null && getHandler(zoneId) instanceof Sonic1CheckpointScrollHandler handler) {
+            entryBackgrounds[zoneId] = checkpoint;
+            handler.restoreBackgroundScroll(checkpoint);
+        }
+    }
+
+    @Override
+    public CheckpointBackgroundScroll captureCheckpointBackground(int zoneId) {
+        if (!(getHandler(zoneId) instanceof Sonic1CheckpointScrollHandler handler)) return null;
+        CheckpointBackgroundScroll current = handler.captureBackgroundScroll();
+        CheckpointBackgroundScroll entry = entryBackgrounds[zoneId];
+        if (entry == null) return current;
+        return switch (zoneId) {
+            case Sonic1ZoneConstants.ZONE_GHZ -> current;
+            case Sonic1ZoneConstants.ZONE_MZ -> new CheckpointBackgroundScroll(
+                    current.bgX(), current.bgY(), current.bg2X(), current.bgY(), current.bg3X(), current.bgY());
+            case Sonic1ZoneConstants.ZONE_SBZ -> new CheckpointBackgroundScroll(
+                    current.bgX(), current.bgY(), current.bg2X(),
+                    activeAct == 0 ? current.bgY() : entry.bg2Y(), current.bg3X(),
+                    activeAct == 0 ? current.bgY() : entry.bg3Y());
+            default -> new CheckpointBackgroundScroll(current.bgX(), current.bgY(),
+                    entry.bg2X(), entry.bg2Y(), entry.bg3X(), entry.bg3Y());
         };
     }
 

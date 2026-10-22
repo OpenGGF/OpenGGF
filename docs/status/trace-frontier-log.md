@@ -112927,3 +112927,24 @@ absolute ROM properties:
 
 The later title-card archive WIP remains outside this composition. Its pending failures, ring/timer reset at
 `loc_63B4`, HCZ and downstream frontiers remain separate obligations. No full-suite run or new trace payload.
+
+## 2026-10-22 — S1 standalone reference-closure validation enabled
+
+Lane `bugfix/ai-gap-s1-lifecycle-20261022`, based on `94c40570a`, enables the
+ordinary standalone S1 replay's captured-reference closure guard. In the lane
+worktree, this command passes one GHZ1 replay integration test (3,905 compared
+frames, zero comparator errors, zero failures/errors/skips; no first-error
+frame/field). It also passes one actual GameLoop credits-load EGL regression:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestSonic1CreditsScrollBoundary,TestS1ReplayReferenceClosureIntegration' \
+  "-Dsonic1.rom.path=$SONIC1_ROM" test -B
+```
+
+The [lifecycle audit](../architecture/audits/2026-10-22-s1-lifecycle-gap-closure.md)
+records the fresh-entry/checkpoint distinction and validation limits. No whole
+chain frontier moved, no broad trace sweep ran, and boss/custom-snapshot or
+unexecuted-route closure is not certified by this fixture.

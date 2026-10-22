@@ -758,3 +758,17 @@ S2 s2.asm Obj0D_Main and Obj0D_Main_State3. The pixel-word rule is cross-game;
 these two native goal owners provide the verified comparisons.
 
 **Originating commit.** 82bf7929c, editor native goal-word regressions.
+
+
+## Lamppost background words are not fresh scroll seeds or rewind snapshots
+
+`Lamp_StoreInfo` / `Lamp_LoadInfo` (`_incObj/79 Lamppost.asm`) bank six integer
+BG camera words. `BgScrollSpeed` (`_inc/LevelSizeLoad & BgScrollSpeed.asm`)
+skips its common foreground-camera seed when a lamppost is active, but still
+runs the zone's setup routine. GHZ retains BG2/BG3 X and clears clouds; LZ
+retains X but replaces Y; REV01 SLZ clears BG1 X even on checkpoint loads.
+Do not restore fractional handler accumulators/cloud epochs as checkpoint RAM,
+or unconditionally reseed X. Rewind separately captures those logical values.
+A same-camera restart can hide a stale entry seed: exercise two different
+entry cameras, then a real checkpoint reload. See the
+[S1 lifecycle audit](../../../docs/architecture/audits/2026-10-22-s1-lifecycle-gap-closure.md).

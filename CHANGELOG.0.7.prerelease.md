@@ -5,6 +5,11 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Sonic 1 level entry:** background scrolling starts from each level or credits
+  demo's final camera, and lamppost returns retain the original background camera
+  words. Rewind restores fractional scroll positions and cloud phase. Hidden
+  100-point pickups retain the shipped game's 10-point award and 100-point popup.
+
 - **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
   OpenGGF Editor's Stageplay workspace. Author actor movement, animation/poses,
   camera movement, held integer zoom, earthquake effects, captions, ROM audio and WAV/Ogg voices;

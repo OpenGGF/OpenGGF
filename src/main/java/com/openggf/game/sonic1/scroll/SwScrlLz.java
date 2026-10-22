@@ -1,6 +1,8 @@
 package com.openggf.game.sonic1.scroll;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.internal.CheckpointBackgroundScroll;
+
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import static com.openggf.level.scroll.M68KMath.*;
@@ -20,7 +22,7 @@ import com.openggf.game.GameServices;
  * Initial BG position: BgScroll_LZ sets bgscreenposy = screenposy &gt;&gt; 1.
  * Uses ScrollBlock1 for per-frame accumulation.
  */
-public class SwScrlLz extends AbstractZoneScrollHandler {
+public class SwScrlLz extends AbstractZoneScrollHandler implements Sonic1CheckpointScrollHandler {
 
     // Persistent BG camera positions (16.16 fixed point)
     private long bgXPos;
@@ -44,6 +46,11 @@ public class SwScrlLz extends AbstractZoneScrollHandler {
         lastCameraX = cameraX;
         lastCameraY = cameraY;
         initialized = true;
+    }
+
+    @Override
+    public void init(int actId, int cameraX, int cameraY) {
+        init(cameraX, cameraY);
     }
 
     @Override
@@ -109,4 +116,39 @@ public class SwScrlLz extends AbstractZoneScrollHandler {
         maxScrollOffset = composer.getMaxScrollOffset();
     }
 
+
+    @Override
+    public Object captureRewindState() {
+        return new State(
+                bgXPos, bgYPos, lastCameraX, lastCameraY, initialized, vscrollFactorBG, minScrollOffset,
+                maxScrollOffset);
+    }
+
+    @Override
+    public void restoreRewindState(Object state) {
+        if (state instanceof State saved) {
+            bgXPos = saved.bgXPos;
+            bgYPos = saved.bgYPos;
+            lastCameraX = saved.lastCameraX;
+            lastCameraY = saved.lastCameraY;
+            initialized = saved.initialized;
+            vscrollFactorBG = saved.vscrollFactorBG;
+            minScrollOffset = saved.minScrollOffset;
+            maxScrollOffset = saved.maxScrollOffset;
+        }
+    }
+
+    private record State(
+                long bgXPos, long bgYPos, int lastCameraX, int lastCameraY, boolean initialized,
+                short vscrollFactorBG, int minScrollOffset, int maxScrollOffset) { }
+
+    @Override
+    public CheckpointBackgroundScroll captureBackgroundScroll() {
+        return new CheckpointBackgroundScroll((int) (bgXPos >> 16), (int) (bgYPos >> 16), 0, 0, 0, 0);
+    }
+
+    @Override
+    public void restoreBackgroundScroll(CheckpointBackgroundScroll state) {
+        bgXPos = (long) state.bgX() << 16;
+    }
 }

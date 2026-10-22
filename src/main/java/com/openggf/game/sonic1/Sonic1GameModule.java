@@ -166,12 +166,15 @@ public class Sonic1GameModule implements GameModule {
         return new Sonic1(rom);
     }
 
+    private final com.openggf.game.sonic1.scroll.Sonic1CheckpointScrollRewindAdapter checkpointScrollRewindAdapter =
+            new com.openggf.game.sonic1.scroll.Sonic1CheckpointScrollRewindAdapter();
+
     @Override
     public List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
         if (plcService == null) {
-            return List.of(switchStateRewindAdapter, stomperDoorSingletonRewindAdapter);
+            return List.of(switchStateRewindAdapter, stomperDoorSingletonRewindAdapter, checkpointScrollRewindAdapter);
         }
-        return List.of(plcService, switchStateRewindAdapter, stomperDoorSingletonRewindAdapter);
+        return List.of(plcService, switchStateRewindAdapter, stomperDoorSingletonRewindAdapter, checkpointScrollRewindAdapter);
     }
 
     @Override
