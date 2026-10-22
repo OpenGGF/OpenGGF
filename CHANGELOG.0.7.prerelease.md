@@ -5,6 +5,10 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Labyrinth water transport:** Sonic 1 wind tunnels and water slides observe the
+  admitted VBlank before player movement, preserving the original suction and
+  waterfall-sound phase across lag and rewind.
+
 - **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
   OpenGGF Editor's Stageplay workspace. Author actor movement, animation/poses,
   camera movement, held integer zoom, earthquake effects, captions, ROM audio and WAV/Ogg voices;

@@ -1264,3 +1264,13 @@ focused GPU/resource checks and exact capture protocol](../architecture/plans/20
 record the bounded result. This repairs the sampled overlap gap without an
 accepted ROM deviation; complete timelines, other native configurations,
 cold/donor/PAL/PCM and strict timing/trace products remain separate obligations.
+
+
+S1 LZ2/LZ3 pre-object water-clock follow-up (2026-10-22): seven independent
+production-frame checks cover the 64-tick suction gate, rollover, lag and
+registry restore/forward; the existing three clock/logical-pad checks and
+both alternate-BK2 complete-run LZ2/LZ3 controls pass without skips. The
+[lane audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md) records
+LZ2's emerald-route 10→0 errors and LZ3's 10,212→three queue-only differences.
+Full-route timing, viewport/donor/team breadth and complete stock act matrices
+remain inherited gaps; these contracts do not certify either whole act.
