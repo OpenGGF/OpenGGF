@@ -88,6 +88,11 @@ public class Sonic1GHZBossInstance extends AbstractS1EggmanBossInstance implemen
     }
 
     @Override
+    protected int getNativeEscapeRoutine() {
+        return STATE_ESCAPE;
+    }
+
+    @Override
     protected int getInitialHitCount() {
         return 8; // obColProp = 8
     }
@@ -134,6 +139,8 @@ public class Sonic1GHZBossInstance extends AbstractS1EggmanBossInstance implemen
 
     @Override
     protected void onDefeatStarted() {
+        // ROM: ReactToItem sets obStatus bit 7; GBall components read it independently.
+        state.renderFlags |= 0x80;
         // ROM: loc_1784C — boss defeated, transition to state 8
         state.routineSecondary = STATE_DEFEAT_WAIT;
         timer = DEFEAT_TIMER; // $B3 = 179 frames
@@ -141,7 +148,6 @@ public class Sonic1GHZBossInstance extends AbstractS1EggmanBossInstance implemen
 
     @Override
     protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state.routineSecondary) {
             case STATE_DESCENT -> updateDescent();
             case STATE_APPROACH -> updateApproach();
@@ -155,11 +161,6 @@ public class Sonic1GHZBossInstance extends AbstractS1EggmanBossInstance implemen
         // Apply sine Y oscillation and update display position (loc_177E6)
         updateSineOscillation();
 
-        // Update face animation based on state
-        updateFaceAnimation(player);
-
-        // Update flame animation based on movement
-        updateFlameAnimation();
     }
 
     // === State 0: DESCENT ===
@@ -317,10 +318,10 @@ public class Sonic1GHZBossInstance extends AbstractS1EggmanBossInstance implemen
      * Update face animation based on boss state.
      * ROM: BGHZ_FaceMain (routine 4)
      */
-    private void updateFaceAnimation(AbstractPlayableSprite player) {
-        if (state.routineSecondary >= STATE_DEFEAT_WAIT) {
-            // After defeat: panic face, then defeat face during ascent/escape
-            if (state.routineSecondary >= STATE_ASCENT) {
+    protected void updateFaceAnimation(AbstractPlayableSprite player) {
+        if (state.routineSecondary >= STATE_ASCENT) {
+            // BGHZ_FaceMain: defeat starts at phase $A, panic only at $C.
+            if (state.routineSecondary == STATE_ESCAPE) {
                 faceAnim = Sonic1BossAnimations.ANIM_FACE_PANIC;
             } else {
                 faceAnim = Sonic1BossAnimations.ANIM_FACE_DEFEAT;
@@ -341,7 +342,7 @@ public class Sonic1GHZBossInstance extends AbstractS1EggmanBossInstance implemen
         }
 
         // Default: normal face (speed 1 during approach, varies)
-        if (state.routineSecondary == STATE_APPROACH &&
+        if (state.routineSecondary == STATE_COMBAT_MOVE &&
                 (state.xFixed >> 16) == APPROACH_TARGET_X) {
             faceAnim = Sonic1BossAnimations.ANIM_FACE_LAUGH;
         } else {
@@ -353,7 +354,7 @@ public class Sonic1GHZBossInstance extends AbstractS1EggmanBossInstance implemen
      * Update flame animation based on movement.
      * ROM: BGHZ_FlameMain (routine 6)
      */
-    private void updateFlameAnimation() {
+    protected void updateFlameAnimation() {
         if (state.routineSecondary == STATE_ESCAPE) {
             flameAnim = Sonic1BossAnimations.ANIM_ESCAPE_FLAME;
         } else if (state.xVel != 0) {
@@ -368,20 +369,23 @@ public class Sonic1GHZBossInstance extends AbstractS1EggmanBossInstance implemen
             return; // Already spawned
         }
         if (services().objectManager() != null) {
-            wreckingBall = spawnFreeChild(() -> new GHZBossWreckingBall(this));
+            GHZBossWreckingBall allocated = spawnChild(() -> new GHZBossWreckingBall(this));
+            if (!allocated.isDestroyed() && allocated.getSlotIndex() >= 0) {
+                wreckingBall = allocated;
+            }
         } else {
             wreckingBall = new GHZBossWreckingBall(this);
         }
-        childComponents.add(wreckingBall);
+
     }
 
     void adoptWreckingBallForRewind(GHZBossWreckingBall ball) {
         wreckingBall = ball;
-        childComponents.removeIf(component ->
-                component instanceof GHZBossWreckingBall existing
-                        && (existing != ball || existing.isDestroyed()));
-        if (ball != null && !childComponents.contains(ball)) {
-            childComponents.add(ball);
+    }
+
+    void forgetWreckingBall(GHZBossWreckingBall ball) {
+        if (wreckingBall == ball) {
+            wreckingBall = null;
         }
     }
 
