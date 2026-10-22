@@ -29967,3 +29967,109 @@ Focused bootstrap/climb/context/audio and conflicting object-owner consumers are
 pending in at most two queued requests. No broad smoke, guards or release full
 suite is launched by this worker; Root retains the exact prior-smoke identities
 and the delivery-wide coverage decision.
+
+### Completed reconciliation qualification — 2026-10-22
+
+Executable source froze at local merge `d454376ea23eaee513837214374be8df46dfb9ea`,
+whose parents are exactly draft e22 and Main 7d35. No compiler/API correction
+was necessary. The first build preceded comment-only citation carry and the
+plan entry; request 1 rebuilt the exact committed tree. Both requests below
+finished with exit 0. All selected XML class identities, counts and skips were
+read, including the ROM-backed audio cases; there were no negative failure
+identities or skipped tests to attribute. Request 1: 315 tests/12 classes, Maven
+1m26s, reported queue wait 0s. Request 2: 274 tests/25 classes, Maven 37.599s,
+reported queue wait 0s. These intervals are separate, not a delivery-time sum.
+
+Both requests used the current Main wrapper from this worktree, in this
+portable form:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME="$JDK25" \
+  python3 "$MAIN_WORKSPACE/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" \
+  "-Ds3k.rom.path=$S3K_ROM" "-Dtest=$SELECTED_CLASSES" test
+```
+
+`SELECTED_CLASSES` selects the complete class set for its group in the table,
+without wildcards or method exclusions. The private task registry retains the
+exact absolute launch arguments and original selector order. Actual Surefire properties show
+Java 25.0.4.1, explicit ROM paths and `surfaceless-egl`. Existing absolute ROMs
+were read without copying or linking: S1 SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`
+(CRC `AFE05EEE`), S2 REV01 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`
+(`7B905383`), locked-on S3K `CFBF98C36C776677290A872547AC47C53D2761D6`
+(`63522553`). Audio tests verify no-device installation/retirement, rather than
+inferring isolation from volume, silence or EGL.
+
+| Group | Complete selected class | Tests | Failures/errors/skips |
+| --- | --- | ---: | --- |
+| 1 | `com.openggf.game.sonic3k.TestSonic3kBootstrapResolver` | 6 | 0/0/0 |
+| 1 | `com.openggf.game.sonic3k.TestSonic3kDecodingUtils` | 3 | 0/0/0 |
+| 1 | `com.openggf.game.sonic3k.TestSonic3kLevelLoading` | 36 | 0/0/0 |
+| 1 | `com.openggf.physics.TestGlideWallGrabTerrain` | 5 | 0/0/0 |
+| 1 | `com.openggf.sprites.managers.TestKnucklesWallClimbVerticalContract` | 47 | 0/0/0 |
+| 1 | `com.openggf.sprites.managers.TestPlayableSpriteMovement` | 188 | 0/0/0 |
+| 1 | `com.openggf.sprites.playable.TestPlayablePuppet` | 9 | 0/0/0 |
+| 1 | `com.openggf.sprites.playable.TestPlayablePuppetRom` | 1 | 0/0/0 |
+| 1 | `com.openggf.tests.TestS3kAiz1SkipHeadless` | 8 | 0/0/0 |
+| 1 | `com.openggf.tests.TestSonic3kLevelLoading` | 7 | 0/0/0 |
+| 1 | `com.openggf.tools.TestHeadlessAudioOwnership` | 2 | 0/0/0 |
+| 1 | `com.openggf.tools.TestHeadlessGameBootAudioIdentity` | 3 | 0/0/0 |
+| 2 | `com.openggf.game.TestTitleInputOwnership` | 8 | 0/0/0 |
+| 2 | `com.openggf.game.TestZoneLayoutMutationPipeline` | 9 | 0/0/0 |
+| 2 | `com.openggf.game.sonic3k.objects.TestAizMinibossCameraUnlock` | 1 | 0/0/0 |
+| 2 | `com.openggf.game.sonic3k.objects.TestAizMinibossSeamlessTransition` | 1 | 0/0/0 |
+| 2 | `com.openggf.game.sonic3k.objects.TestAizMinibossSpecialExplosionOwner` | 16 | 0/0/0 |
+| 2 | `com.openggf.game.sonic3k.objects.TestCnzMinibossDefeatPhase` | 3 | 0/0/0 |
+| 2 | `com.openggf.game.sonic3k.objects.TestCnzMinibossOpeningPhase` | 3 | 0/0/0 |
+| 2 | `com.openggf.game.sonic3k.objects.TestCnzMinibossSwingPhase` | 4 | 0/0/0 |
+| 2 | `com.openggf.game.sonic3k.objects.TestS3kMonitorContentsLifecycle` | 5 | 0/0/0 |
+| 2 | `com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboArtPriority` | 14 | 0/0/0 |
+| 2 | `com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboGunNativeDispatch` | 19 | 0/0/0 |
+| 2 | `com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboJetNativeDispatch` | 12 | 0/0/0 |
+| 2 | `com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboPresentation` | 26 | 0/0/0 |
+| 2 | `com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboShotNativeLifetime` | 22 | 0/0/0 |
+| 2 | `com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboVerticalFlip` | 44 | 0/0/0 |
+| 2 | `com.openggf.game.sonic3k.objects.bosses.TestHczEndBossChildBuckets` | 3 | 0/0/0 |
+| 2 | `com.openggf.game.sonic3k.objects.bosses.TestHczEndBossRobotnikHead` | 12 | 0/0/0 |
+| 2 | `com.openggf.game.sonic3k.objects.bosses.TestHczEndBossRobotnikShip` | 10 | 0/0/0 |
+| 2 | `com.openggf.game.sonic3k.objects.bosses.TestHczEndBossShipExplosion` | 10 | 0/0/0 |
+| 2 | `com.openggf.game.sonic3k.objects.bosses.TestHczEndBossTerminalOwnership` | 9 | 0/0/0 |
+| 2 | `com.openggf.level.TestLevelManagerModPatternWindows` | 1 | 0/0/0 |
+| 2 | `com.openggf.level.TestLevelSeamlessTransitionExecutor` | 13 | 0/0/0 |
+| 2 | `com.openggf.level.TestLevelTilemapManagerRewindReset` | 16 | 0/0/0 |
+| 2 | `com.openggf.tests.TestChunkDescPow2Indexing` | 6 | 0/0/0 |
+| 2 | `com.openggf.widescreen.TestOrdinaryTitleScreenCommandEvidence` | 7 | 0/0/0 |
+
+The enforced audio identities executed are:
+
+- `com.openggf.tools.TestHeadlessAudioOwnership#silentBootRetiresInheritedBackendInsteadOfTrustingTheConfigurationFlag`
+- `com.openggf.tools.TestHeadlessAudioOwnership#synthesisUsesAnOfflineOwnerAndDisablingItRetiresThatOwner`
+- `com.openggf.tools.TestHeadlessGameBootAudioIdentity#audioDisabledBootRetiresAnAlreadyInstalledBackend`
+- `com.openggf.tools.TestHeadlessGameBootAudioIdentity#replacingTheBackendWithTheSameImplementationDoesNotMatchOrReinstallItsOwner`
+- `com.openggf.tools.TestHeadlessGameBootAudioIdentity#nativeBootOwnsItsAudioAndPublishesOnePacketAtTheOrdinaryOuterBoundary`
+
+All eight maintained MHZ/SSZ route test sources are draft-equivalent after
+removing comments. Of 33 draft-added/changed test-resource blobs, all 32 gameplay
+resources are byte-identical; only the separate Mod API signature file composes
+with Main. The original supplied branch still points to exact Main 7d35.
+Native working HEAD remains `322851cbfa2e1c1803332142e11ab74b4eb34eea` while
+the draft evidence gitlink remains `703bd92d32634ce5ebac60625b48c60ef5500427`;
+this foreign checkout difference is intentionally untouched.
+
+The follow-up changes only this record and clarifies headless release-note
+wording; executable code remains exact tested d454. Ordinary build outputs may
+remain in this owned checkout, but consumed compile/focused logs, prepared
+commit messages and all 74 focused XML/text reports are removed after reading.
+No live job remains. The branch and app-owned checkout are retained for Root
+inspection and integration; nothing is pushed by this worker.
+
+These are 589 focused tests, not broad smoke, guards, a full suite or a new
+MHZ/SSZ route replay. The earlier 14 ordinary-smoke failure identities and
+remaining route limits stay with Root for exact attribution; no unrelated
+Main donor/platform/Stageplay behavior is changed. No new/worsened failure was
+observed within these two selections. The final citation check is not a clean
+whole-repository audit: it reported 175 stale and 9 unresolved-file references
+in its bounded existing source selection, alongside 165 ok/60 near/529
+unverifiable citations. Broader composition/guard coverage and delivery remain
+Root obligations, not claims made by this reconciliation.

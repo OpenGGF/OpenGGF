@@ -535,8 +535,8 @@ Unreleased. The earlier development themes remain in
   movie, preserving shared-movie priority and rejecting unsafe source aliases.
   Closing or rebooting a headless capture releases its owned audio ROM reference,
   so a subsequent title and saved-slot launch can read a fresh ROM in the same process.
-  Configured headless startup installs its supplied no-device audio backend through
-  the native title, save selection and first gameplay frame.
+  Configured headless startup keeps no-device audio ownership through the native
+  title, save selection and first gameplay frame.
   A public state projection tool records controller-driven cold Sky Sanctuary
   paired widescreen play before and after each step and normal draw, including
   copied ring state and local player bindings, with explicit inputs and bounded
