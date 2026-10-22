@@ -2125,6 +2125,19 @@ public class SpriteManager implements PlayableSstDispatcher {
 			}
 			playable.getTailsCarryController().updateAfterTailsCollision(mainCarryInput);
 		}
+		// Obj01_Control calls Sonic_Display / Sonic_Super immediately after
+		// movement, before Sonic_RecordPos, Sonic_Water and Sonic_Animate
+		// (s2.asm:36248-36264). Reversion must reset prev_anim before this
+		// frame's animation dispatch. Controllers with other native owners
+		// keep their existing status-tail phase.
+		boolean nativeSuperControlPhase = playable.getSuperStateController() instanceof
+				com.openggf.game.internal.NativeSuperStateBeforeAnimation;
+		if (nativeSuperControlPhase && !hurtAtTickStart && !deadAtTickStart) {
+			playable.tickInvulnerabilityDisplayTimerBeforeTouchResponse();
+			com.openggf.sprites.playable.PlayableSpriteInternalAccess.tickNativeDisplayInvincibility(playable);
+			tickDisplayPhaseTimers(playable);
+			playable.getSuperStateController().update();
+		}
 		playable.recordFollowerHistoryForTick();
 		if (usesInlineSolidResolution && !hurtAtTickStart && !deadAtTickStart) {
 			// S2/S3K run Sonic_Water/Tails_Water after movement and the
@@ -2142,8 +2155,10 @@ public class SpriteManager implements PlayableSstDispatcher {
 		// S3K sonic3k.asm:22031-22058). Sonic_Display decrements
 		// invulnerable_time, and spilled-ring touch checks read that decremented
 		// value in the same object-interaction pass.
-		playable.tickInvulnerabilityDisplayTimerBeforeTouchResponse();
-		tickDisplayPhaseTimers(playable);
+		if (!nativeSuperControlPhase) {
+			playable.tickInvulnerabilityDisplayTimerBeforeTouchResponse();
+			tickDisplayPhaseTimers(playable);
+		}
 		// ROM Obj01_Control: movement runs first, then Sonic_Animate, then
 		// TouchResponse. Special objects like monitors gate on anim(a0), so
 		// ReactToItem must observe the post-movement animation state from the

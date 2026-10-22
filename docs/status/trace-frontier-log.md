@@ -112927,3 +112927,31 @@ absolute ROM properties:
 
 The later title-card archive WIP remains outside this composition. Its pending failures, ring/timer reset at
 `loc_63B4`, HCZ and downstream frontiers remain separate obligations. No full-suite run or new trace payload.
+
+
+## 2026-10-22 — S2 native Super player boundary and live entry milestone
+
+Isolated `bugfix/ai-gap-s2-chain-pacing-20261022` at base
+`94c40570a15a11b70caf7456e9b0d0a8eec8a9b4` plus this change, worktree
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-dcf07b84`. Java25, Lua5.4, original absolute
+S2 ROM, unset DISPLAY/WAYLAND_DISPLAY; every test through `maven_queue.py`.
+No trace payload, comparison tolerance, hydration or timing-port change.
+
+Command: `-Dmse=off -Ptrace-replay -Dsurefire.forkCount=1
+-Dsurefire.reuseForks=true -Dopenggf.headless.gl=surfaceless-egl
+-Dtest=TestS2CompleteEmeraldRunChain,TestS2EhzHalfpipeRoundTripChain test`.
+Both tests still fail, no skips. The complete chain's ARZ1 segment18 moves from
+119 errors (first4213, mapping61/65) to complete/zero. ARZ2 segment19 moves from
+incomplete47450 errors/first2175 x_sub to complete14546 errors/first4920
+`dynamic_art.edge[1].mapping_frame` (194/207). Its next CNZ1 handoff rejects
+cursor113342 against destination113340. All12 structural-gap axes remain.
+The other-movie halfpipe chain matches exact-base Java: two return-gap axes,
+all eight edges65 rows early on each return. This is not full-route parity.
+
+Seven standalone special stages and independent ARZ2 level-select replay passed
+in the prior10-class focused run, no skips. Native Super/control/rewind39 and
+replay/timing-authority guards36 pass. An isolated missing HUD wait was verified
+from ROM and tried, then withheld because it exposed an earlier seventh-return
+TITLE_CARD admission defect; no blanket40-frame delay or copied bootstrap art
+hold landed. Source decisions, rejected evidence and timing/SAT gaps are in
+[the research record](../architecture/research/2026-10-22-s2-chain-pacing.md).

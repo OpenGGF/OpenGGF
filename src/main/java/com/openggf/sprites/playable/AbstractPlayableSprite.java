@@ -2838,9 +2838,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
         }
 
-        public void tickStatus() {
-                refreshRuntimeBoundStateIfNeeded();
-                tickInvulnerabilityDisplayTimer();
+        /** Package-owned Sonic_Display invincibility expiry, before native powered-form writes. */
+        void tickInvincibilityDisplayTimer() {
                 if (invincibleFrames > 0) {
                         invincibleFrames--;
                         if (invincibleFrames == 0) {
@@ -2854,6 +2853,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 restoreLevelMusicAfterInvincibility();
                         }
                 }
+        }
+
+        public void tickStatus() {
+                refreshRuntimeBoundStateIfNeeded();
+                tickInvulnerabilityDisplayTimer();
+                if (!(getSuperStateController() instanceof
+                        com.openggf.game.internal.NativeSuperStateBeforeAnimation)) {
+                        tickInvincibilityDisplayTimer();
+                }
                 if (springingFrames > 0) {
                         springingFrames--;
                         if (springingFrames == 0) {
@@ -2864,7 +2872,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // SpriteManager at the ROM Sonic_Display point.
 
                 // Update Super Sonic state (ring drain, palette cycling, transformation)
-                if (controller != null && controller.getSuperState() != null) {
+                if (controller != null && controller.getSuperState() != null
+                        && !(controller.getSuperState() instanceof
+                                com.openggf.game.internal.NativeSuperStateBeforeAnimation)) {
                         controller.getSuperState().update();
                 }
                 // Lazy-register insta-shield with ObjectManager if not yet done (e.g. created before level load).

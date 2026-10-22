@@ -265,11 +265,9 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
     /** Whether {@code SSInitPalAndData}'s palette upload has happened (see setupPalettes). */
     private boolean stagePalettesUploaded;
     /**
-     * Live reproduction of the masked-interrupt entry load
-     * ({@link Sonic2SpecialStageLagModel#ENTRY_LOAD_LAG_FRAMES}). Only
-     * {@link #armLiveEntryLoadHold()} sets it; neither startup policy does,
-     * so ordinary play skips the span and trace replay takes it from the
-     * recorded lag rows.
+     * Remaining ordinary-play entry-load presentations. The provider arms
+     * these for live entry; recorded playback owns its own timing admission.
+     * This countdown is included in the manager's rewind snapshot.
      */
     private int liveEntryLoadHoldFrames;
 
@@ -1182,19 +1180,20 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         Sonic2SpecialStageIntro.Phase entryPhase = intro != null
                 ? intro.getCurrentPhase()
                 : Sonic2SpecialStageIntro.Phase.GAMEPLAY;
-        if (!stagePalettesUploaded && entryPhase != Sonic2SpecialStageIntro.Phase.PRE_ROLL) {
-            uploadStagePalettes();
-        }
         if (liveEntryLoadHoldFrames > 0
                 && entryPhase == Sonic2SpecialStageIntro.Phase.ROM_STARTUP) {
-            // The masked-interrupt entry load sits between the last
-            // Pal_FadeToWhite wait and the first startup wait (s2.asm:6557-6645):
-            // no V-int runs, so this frame observes nothing, exactly like a
-            // recorded lag row (see ENTRY_LOAD_LAG_FRAMES).
+            // Synchronous load work precedes the first VintID_S2SS wait.
+            // SR=$2300 is restored partway through (s2.asm:6613), so the
+            // provider selects Vint_Lag, with no track/controller/object scan.
+            // SSInitPalAndData belongs after this work, before startup (:6640).
             liveEntryLoadHoldFrames--;
             pressedButtons = 0;
             updateTimingDiagnostics(false, false);
             return;
+        }
+
+        if (!stagePalettesUploaded && entryPhase != Sonic2SpecialStageIntro.Phase.PRE_ROLL) {
+            uploadStagePalettes();
         }
 
         int liveSpeedFactor = trackAnimator != null ? trackAnimator.getSpeedFactor() : 0;
@@ -2760,8 +2759,8 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
     /**
      * Arms the live reproduction of the entry load
      * ({@link Sonic2SpecialStageLagModel#ENTRY_LOAD_LAG_FRAMES}); it elapses
-     * from the first ROM_STARTUP update. Reserved for an accurate
-     * presentation mode: no startup policy arms it today.
+     * from the first ROM_STARTUP update. The provider arms ordinary entry;
+     * recorded startup leaves the load rows to external timing admission.
      */
     public void armLiveEntryLoadHold() {
         liveEntryLoadHoldFrames = Sonic2SpecialStageLagModel.ENTRY_LOAD_LAG_FRAMES;
