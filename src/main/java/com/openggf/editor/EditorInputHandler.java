@@ -83,7 +83,22 @@ public final class EditorInputHandler {
         TOGGLE_SELECTED_RESPAWN,
         TOGGLE_BRUSH_H_FLIP,
         TOGGLE_BRUSH_V_FLIP,
-        TOGGLE_BRUSH_RESPAWN
+        TOGGLE_BRUSH_RESPAWN,
+        PAN_LEFT,
+        PAN_RIGHT,
+        PAN_UP,
+        PAN_DOWN,
+        ZOOM_IN,
+        ZOOM_OUT,
+        RESET_CANVAS_ZOOM,
+        SELECT_REGION_CORNER,
+        COPY_REGION,
+        CUT_REGION,
+        PASTE_REGION,
+        DELETE_REGION,
+        FILL_REGION,
+        FLOOD_FILL,
+        CLEAR_REGION
     }
 
     private static final int WORLD_MOVE_SPEED = 3;
@@ -96,6 +111,9 @@ public final class EditorInputHandler {
     private DragStroke activeStroke;
     private double previousMouseX = Double.NaN;
     private double previousMouseY = Double.NaN;
+    private boolean panningCanvas;
+    private boolean mouseSelectingRegion;
+    private double previousPanX, previousPanY;
 
     public EditorInputHandler(LevelEditorController controller) {
         this(controller, () -> null, () -> null, () -> {});
@@ -135,7 +153,11 @@ public final class EditorInputHandler {
         }
         handleMouseInput(inputHandler);
         var logical = inputHandler.logical();
-        int logicalActions = logical.player1().actionPressedMask();
+        boolean controlDown = inputHandler.isKeyDown(GLFW_KEY_LEFT_CONTROL)
+                || inputHandler.isKeyDown(GLFW_KEY_RIGHT_CONTROL);
+        boolean shiftDown = inputHandler.isKeyDown(GLFW_KEY_LEFT_SHIFT)
+                || inputHandler.isKeyDown(GLFW_KEY_RIGHT_SHIFT);
+        int logicalActions = controlDown ? 0 : logical.player1().actionPressedMask();
         int dx = 0;
         int dy = 0;
         if (inputHandler.isDirectionHeld(GLFW_KEY_LEFT, AbstractPlayableSprite.INPUT_LEFT)) dx -= 1;
@@ -143,21 +165,20 @@ public final class EditorInputHandler {
         if (inputHandler.isDirectionHeld(GLFW_KEY_UP, AbstractPlayableSprite.INPUT_UP)) dy -= 1;
         if (inputHandler.isDirectionHeld(GLFW_KEY_DOWN, AbstractPlayableSprite.INPUT_DOWN)) dy += 1;
         if ((dx != 0 || dy != 0) && activeStroke == null) {
-            if (controller.depth() == EditorHierarchyDepth.WORLD) {
+            if (controlDown && controller.depth() == EditorHierarchyDepth.WORLD) {
+                controller.canvasView().panBy(dx * WORLD_MOVE_SPEED, dy * WORLD_MOVE_SPEED);
+            } else if (controller.depth() == EditorHierarchyDepth.WORLD) {
                 controller.moveWorldCursor(dx * WORLD_MOVE_SPEED, dy * WORLD_MOVE_SPEED);
             } else {
                 controller.moveActiveSelection(dx, dy);
             }
         }
-        boolean controlDown = inputHandler.isKeyDown(GLFW_KEY_LEFT_CONTROL)
-                || inputHandler.isKeyDown(GLFW_KEY_RIGHT_CONTROL);
-        boolean shiftDown = inputHandler.isKeyDown(GLFW_KEY_LEFT_SHIFT)
-                || inputHandler.isKeyDown(GLFW_KEY_RIGHT_SHIFT);
         boolean exportChord = controlDown && shiftDown && inputHandler.isKeyPressed(GLFW_KEY_E);
         boolean rawPrimary = inputHandler.isKeyPressed(GLFW_KEY_SPACE);
         boolean rawEyedrop = !exportChord && inputHandler.isKeyPressed(GLFW_KEY_E);
         boolean rawModeCycle = inputHandler.isKeyPressed(GLFW_KEY_O);
         boolean rawDelete = inputHandler.isKeyPressed(GLFW_KEY_DELETE);
+        boolean regionDelete = rawDelete && controller.regionSelection() != null;
         if (rawPrimary && !controller.isSpawnEditing()) {
             handleAction(Action.APPLY_PRIMARY_ACTION);
         }
@@ -170,24 +191,30 @@ public final class EditorInputHandler {
         if (rawModeCycle || logical.menuStart()) {
             handleAction(Action.CYCLE_SPAWN_EDIT_MODE);
         }
-        if (rawDelete && !controller.isSpawnEditing()) handleAction(Action.ERASE_SELECTION);
+        if (regionDelete) handleAction(Action.DELETE_REGION);
+        else if (rawDelete && !controller.isSpawnEditing()) handleAction(Action.ERASE_SELECTION);
+        if (inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_F6)) handleAction(Action.SELECT_REGION_CORNER);
+        if (controlDown && inputHandler.isKeyPressed(GLFW_KEY_C)) handleAction(Action.COPY_REGION);
+        if (controlDown && inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_X)) handleAction(Action.CUT_REGION);
+        if (controlDown && inputHandler.isKeyPressed(GLFW_KEY_V)) handleAction(Action.PASTE_REGION);
         if(inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_H))handleAction(Action.TOGGLE_H_FLIP);
         if(inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_J))handleAction(Action.TOGGLE_V_FLIP);
         if(inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_G))handleAction(Action.CYCLE_PATTERN_PALETTE);
         if(inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_T))handleAction(Action.TOGGLE_PATTERN_PRIORITY);
-        if(inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_EQUAL))handleAction(Action.INCREMENT_SELECTED_SUBTYPE);
-        if(inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_MINUS))handleAction(Action.DECREMENT_SELECTED_SUBTYPE);
+        if(inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_EQUAL))handleAction(controlDown ? Action.ZOOM_IN : Action.INCREMENT_SELECTED_SUBTYPE);
+        if(inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_MINUS))handleAction(controlDown ? Action.ZOOM_OUT : Action.DECREMENT_SELECTED_SUBTYPE);
+        if(controlDown && inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_0))handleAction(Action.RESET_CANVAS_ZOOM);
         if(inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_R))handleAction(Action.TOGGLE_SELECTED_RESPAWN);
         if (inputHandler.isKeyPressed(GLFW_KEY_M)) {
             handleAction(Action.MOVE_SELECTED_SPAWN_TO_CURSOR);
         }
-        if (inputHandler.isKeyPressed(GLFW_KEY_C)) {
+        if (!controlDown && inputHandler.isKeyPressed(GLFW_KEY_C)) {
             handleAction(Action.TOGGLE_COLLISION_OVERLAY);
         }
         if (inputHandler.isKeyPressed(GLFW_KEY_P)) {
             handleAction(Action.TOGGLE_COLLISION_PATH);
         }
-        if (inputHandler.isKeyPressed(GLFW_KEY_V)) {
+        if (!controlDown && inputHandler.isKeyPressed(GLFW_KEY_V)) {
             handleAction(Action.CYCLE_COLLISION_MODE);
         }
         if (inputHandler.isKeyPressed(GLFW_KEY_RIGHT_BRACKET)) {
@@ -203,7 +230,7 @@ public final class EditorInputHandler {
             if (rawEyedrop || (logicalActions & InputActionMasks.ACTION_B) != 0) {
                 handleAction(Action.PERFORM_EYEDROP);
             }
-            if (rawDelete || (logicalActions & InputActionMasks.ACTION_C) != 0) {
+            if ((rawDelete && !regionDelete) || (logicalActions & InputActionMasks.ACTION_C) != 0) {
                 handleAction(Action.DELETE_SPAWN);
             }
         }
@@ -220,10 +247,13 @@ public final class EditorInputHandler {
             handleAction(Action.REDO);
         }
         if (inputHandler.isKeyPressed(GLFW_KEY_ENTER)) {
-            handleAction(Action.DESCEND);
+            if (controller.isPastePreviewActive()) handleAction(Action.APPLY_PRIMARY_ACTION);
+            else handleAction(Action.DESCEND);
         }
         if (inputHandler.isKeyPressed(GLFW_KEY_ESCAPE)) {
-            handleAction(Action.ASCEND);
+            if (controller.isPastePreviewActive()) controller.cancelPastePreview();
+            else if (controller.regionSelection() != null) handleAction(Action.CLEAR_REGION);
+            else handleAction(Action.ASCEND);
         }
     }
 
@@ -234,7 +264,10 @@ public final class EditorInputHandler {
         switch (action) {
             case DESCEND -> controller.descend();
             case ASCEND -> controller.ascend();
-            case APPLY_PRIMARY_ACTION -> controller.applyPrimaryAction();
+            case APPLY_PRIMARY_ACTION -> {
+                if (controller.isPastePreviewActive()) controller.commitPastePreview();
+                else controller.applyPrimaryAction();
+            }
             case PERFORM_EYEDROP -> controller.performEyedrop();
             case TOGGLE_LAYER -> controller.toggleActiveLayer();
             case SAVE -> saveAction.run();
@@ -265,6 +298,21 @@ public final class EditorInputHandler {
             case TOGGLE_BRUSH_H_FLIP -> controller.objectPalette().toggleRenderFlag(1);
             case TOGGLE_BRUSH_V_FLIP -> controller.objectPalette().toggleRenderFlag(2);
             case TOGGLE_BRUSH_RESPAWN -> controller.objectPalette().toggleRespawnTracked();
+            case PAN_LEFT -> controller.canvasView().panBy(-32, 0);
+            case PAN_RIGHT -> controller.canvasView().panBy(32, 0);
+            case PAN_UP -> controller.canvasView().panBy(0, -32);
+            case PAN_DOWN -> controller.canvasView().panBy(0, 32);
+            case ZOOM_IN -> controller.canvasView().zoomIn();
+            case ZOOM_OUT -> controller.canvasView().zoomOut();
+            case RESET_CANVAS_ZOOM -> controller.canvasView().resetZoom();
+            case SELECT_REGION_CORNER -> controller.toggleRegionCorner();
+            case COPY_REGION -> controller.copyRegion();
+            case CUT_REGION -> controller.cutRegion();
+            case PASTE_REGION -> controller.beginPastePreview();
+            case DELETE_REGION -> controller.deleteRegion();
+            case FILL_REGION -> controller.fillRegion();
+            case FLOOD_FILL -> controller.floodFillAtCursor();
+            case CLEAR_REGION -> controller.clearRegionSelection();
         }
         } catch (IllegalArgumentException | IllegalStateException failure) {
             controller.setStatus(failure.getMessage()==null?failure.getClass().getSimpleName():failure.getMessage());
@@ -292,7 +340,14 @@ public final class EditorInputHandler {
 
     private void handleMouseInput(InputHandler inputHandler) {
         boolean leftDown = inputHandler.isMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT);
-        if (!leftDown) finishActiveStroke();
+        if (!leftDown) {
+            finishActiveStroke();
+            if (mouseSelectingRegion) {
+                controller.finishRegionSelection();
+                mouseSelectingRegion = false;
+            }
+        }
+        if (handleCanvasNavigation(inputHandler)) return;
         if (!inputHandler.hasMouseInputSeen()) return;
         MutableLevel level = controller.currentLevel();
         Camera camera = cameraSupplier.get();
@@ -301,7 +356,7 @@ public final class EditorInputHandler {
         double mouseX = inputHandler.getMouseX(), mouseY = inputHandler.getMouseY();
         boolean moved = mouseX != previousMouseX || mouseY != previousMouseY;
         previousMouseX = mouseX; previousMouseY = mouseY;
-        EditorMouseTransform.Result hover = EditorMouseTransform.toWorldTile(inputHandler,camera,graphics,level);
+        EditorMouseTransform.Result hover = canvasHover(inputHandler, camera, graphics, level);
         if (!hover.inViewport()) return;
         // Composition cells belong to the HUD or desktop workbench, outside the game canvas.
         if (controller.depth() != EditorHierarchyDepth.WORLD) return;
@@ -310,6 +365,21 @@ public final class EditorInputHandler {
         if (moved || click || pick || activeStroke != null)
             controller.setPointerWorldCursor(new com.openggf.game.session.EditorCursorState(hover.worldX(),hover.worldY()));
         if ((click || pick)&&controller.focusRegion()!=EditorFocusRegion.WORLD_CANVAS) controller.focusRegion(EditorFocusRegion.WORLD_CANVAS);
+        boolean shift = inputHandler.isKeyDown(GLFW_KEY_LEFT_SHIFT) || inputHandler.isKeyDown(GLFW_KEY_RIGHT_SHIFT);
+        if (click && shift && !mouseSelectingRegion) {
+            finishActiveStroke();
+            controller.beginRegionAtCursor();
+            mouseSelectingRegion = true;
+            return;
+        }
+        if (controller.isSelectingRegion()) {
+            controller.extendRegionToCursor();
+            return;
+        }
+        if (controller.isPastePreviewActive()) {
+            if (click) handleAction(Action.APPLY_PRIMARY_ACTION);
+            return;
+        }
         if (pick) controller.performEyedrop();
         if (controller.isSpawnEditing()) {
             if (click) handleAction(Action.APPLY_PRIMARY_ACTION);
@@ -318,6 +388,49 @@ public final class EditorInputHandler {
         if (click && activeStroke == null) activeStroke = new DragStroke(level,controller.activeLayer());
         if (leftDown && activeStroke != null)
             activeStroke.record(level,hover.tileX(),hover.tileY(),controller.selectedBlockIndex());
+    }
+
+    /** Front ends that own the tick may call this while the game canvas owns the pointer. */
+    public boolean handleCanvasNavigation(InputHandler input) {
+        GraphicsManager graphics = graphicsSupplier.get();
+        if (graphics == null || controller.currentLevel() == null || controller.depth() != EditorHierarchyDepth.WORLD) {
+            panningCanvas = false;
+            return false;
+        }
+        var view = controller.canvasView();
+        view.setViewportSize(graphics.getProjectionWidth(), Math.max(224, (int) graphics.getScreenHeight()));
+        int[] point = EditorMouseTransform.logicalPoint(input, graphics);
+        int wheel = com.openggf.control.MouseWheel.of(input).takeNotches();
+        boolean middle = input.isMouseButtonDown(org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_MIDDLE);
+        if (!middle) panningCanvas = false;
+        if (point[2] == 0) {
+            panningCanvas = false;
+            return false;
+        }
+        if (wheel != 0) {
+            finishActiveStroke();
+            view.zoomAt(wheel, point[0], point[1]);
+        }
+        if (middle) {
+            finishActiveStroke();
+            if (panningCanvas) view.panBy(previousPanX - point[0], previousPanY - point[1]);
+            previousPanX = point[0];
+            previousPanY = point[1];
+            panningCanvas = true;
+        }
+        return middle || wheel != 0;
+    }
+
+    private EditorMouseTransform.Result canvasHover(InputHandler input, Camera camera,
+                                                     GraphicsManager graphics, MutableLevel level) {
+        int[] point = EditorMouseTransform.logicalPoint(input, graphics);
+        if (point[2] == 0) return new EditorMouseTransform.Result(false, 0, 0, -1, -1);
+        var view = controller.canvasView();
+        int x = Short.toUnsignedInt(camera.getX()) + (int) Math.floor(view.worldOffset(point[0]));
+        int y = camera.getY() + (int) Math.floor(view.worldOffset(point[1]));
+        return new EditorMouseTransform.Result(true, x, y,
+                Math.clamp(x / level.getBlockPixelSize(), 0, level.getMap().getWidth() - 1),
+                Math.clamp(y / level.getBlockPixelSize(), 0, level.getMap().getHeight() - 1));
     }
 
     private static final class DragStroke {

@@ -47,6 +47,15 @@ multi-level contract; art import needs bounded asset installation/undo ownership
 Shipping those before the settings contract decision would leave inconsistent
 round trips. No Stageplay-side hook is introduced by these slices.
 
+At property slice `abe958d76` (desktop `cb5f42f`), two new clipboard regressions
+proved that copy could be changed by reusing an editor-owned block or a cut slot:
+expected first chunk ID 1 became 2 or 3. Allocator pins preserve live clipboard
+references. A copy followed by undo can still restore an old definition, so the
+clipboard also captures its library composition and paste imports missing block/
+chunk definitions into free slots atomically. Rejected index-only clipboard
+snapshots: an immutable list of IDs is not immutable terrain content. Preview
+uses captured composition with the level's current global palette.
+
 ## Verification
 
 Focused command/schema/HUD tests are queued through `tools/testing/maven_queue.py`.

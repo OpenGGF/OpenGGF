@@ -156,6 +156,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private EditorSaveManager editorSaveManager;
 	private final EditorInputHandler editorInputHandler;
 	private final EditorOverlayRenderer editorOverlayRenderer;
+	private final com.openggf.editor.render.EditorCanvasRenderPass editorCanvasRenderPass = new com.openggf.editor.render.EditorCanvasRenderPass();
 	/**
 	 * Window-resolution editor UI: a separate editor build if present, else the built-in
 	 * controller-first HUD; null for the in-game chrome.
@@ -2765,13 +2766,35 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		EditorCursorState cursor = levelEditorController.worldCursor();
 		editorMode.setCursor(cursor);
 
-		if (levelEditorController.consumeCameraNavigationRequest()
-				&& levelEditorController.depth() == EditorHierarchyDepth.WORLD && camera != null) {
-			camera.setX(editorProjects.document() != null || shownEditorProject != null
-					? (short) Math.clamp(cursor.x() - camera.getWidth() / 2, camera.getMinX() & 0xFFFF, camera.getMaxX() & 0xFFFF)
-					: clampCameraAxisWithWrap(cursor.x() - camera.getWidth() / 2, camera.getMinX(), camera.getMaxX()));
-			camera.setY(clampCameraAxisWithWrap(cursor.y() - camera.getHeight() / 2, camera.getMinY(), camera.getMaxY()));
+		boolean followCursor = levelEditorController.consumeCameraNavigationRequest();
+		if (levelEditorController.depth() == EditorHierarchyDepth.WORLD && camera != null) {
+			var view = levelEditorController.canvasView();
+			view.setViewportSize((int) projectionWidth, (int) realHeight);
+			var pan = view.consumePan();
+			if (pan.moved() && levelEditorController.currentLevel() != null) {
+				setEditorCanvasCamera(Short.toUnsignedInt(camera.getX()) + pan.dx(), camera.getY() + pan.dy());
+			} else if (followCursor && view.zoom() > 1 && levelEditorController.currentLevel() != null) {
+				setEditorCanvasCamera(cursor.x() - projectionWidth / (2 * view.zoom()),
+						cursor.y() - realHeight / (2 * view.zoom()));
+			} else if (followCursor) {
+				camera.setX(editorProjects.document() != null || shownEditorProject != null
+						? (short) Math.clamp(cursor.x() - camera.getWidth() / 2, camera.getMinX() & 0xFFFF, camera.getMaxX() & 0xFFFF)
+						: clampCameraAxisWithWrap(cursor.x() - camera.getWidth() / 2, camera.getMinX(), camera.getMaxX()));
+				camera.setY(clampCameraAxisWithWrap(cursor.y() - camera.getHeight() / 2, camera.getMinY(), camera.getMaxY()));
+			}
 		}
+	}
+
+	private void setEditorCanvasCamera(double x, double y) {
+		var level = levelEditorController.currentLevel();
+		var view = levelEditorController.canvasView();
+		// Authoring navigation reaches the map independently of live arena locks.
+		int maxX = (int) Math.max(0, Math.min(0xFFFE,
+				(long) level.getMap().getWidth() * level.getBlockPixelSize() - Math.ceil(projectionWidth / view.zoom())));
+		int maxY = (int) Math.max(0, Math.min(0x7FFF,
+				(long) level.getMap().getHeight() * level.getBlockPixelSize() - Math.ceil(realHeight / view.zoom())));
+		camera.setX((short) Math.clamp(x, 0, maxX));
+		camera.setY((short) Math.clamp(y, 0, maxY));
 	}
 
 	private void repairEditorCursorForResume() {
@@ -4074,9 +4097,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			return;
 		}
 		flushEditorDirtyRegionsForRendering();
-		levelManager.drawWithSpritePriority(spriteManager);
-		editorOverlayRenderer.renderWorldSpaceOverlay();
-		graphicsManager.flush();
+		editorCanvasRenderPass.render(graphicsManager, levelEditorController.canvasView().zoom(),
+				(int) projectionWidth, (int) realHeight, () -> {
+			levelManager.drawWithSpritePriority(spriteManager);
+			editorOverlayRenderer.renderWorldSpaceOverlay();
+			graphicsManager.flush();
+		});
 		graphicsManager.resetForFixedFunction();
 		prepareOverlayState();
 		if (contentImportScreen.isOpen())
@@ -4408,6 +4434,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				masterTitleScreen = null;
 			}
 		});
+		cleanupStep("editor canvas", editorCanvasRenderPass::close);
 		cleanupStep("editor project menu", editorProjectMenuRenderer::close);
 		cleanupStep("content import", contentImportScreen::close);
 		cleanupStep("content import renderer", contentImportRenderer::close);

@@ -27,6 +27,16 @@ public final class LevelEditorController {
     EditorCommandPalette commandPalette() { return commandPalette; }
     private static final int CHUNK_INDEX_MASK = 0x03FF;
 
+    private final EditorCanvasNavigation canvasView = new EditorCanvasNavigation();
+    public EditorCanvasNavigation canvasView() { return canvasView; }
+    private com.openggf.editor.selection.CellRectangle regionSelection;
+    private com.openggf.editor.selection.EditorRegionOperations.Clipboard clipboard;
+    private final java.util.Set<Integer> clipboardBlocks = new java.util.HashSet<>();
+    private final java.util.Set<Integer> clipboardChunks = new java.util.HashSet<>();
+    private boolean selectingRegion;
+    private boolean pastePreview;
+    private int regionAnchorX, regionAnchorY;
+
     private final EditorHistory history = new EditorHistory();
     private EditorHierarchyDepth depth = EditorHierarchyDepth.WORLD;
     private EditorFocusRegion focusRegion = EditorFocusRegion.WORLD_CANVAS;
@@ -91,6 +101,7 @@ public final class LevelEditorController {
     /** Pointer hover never asks the camera to follow itself. */
     public void setPointerWorldCursor(EditorCursorState cursor) {
         worldCursor = clampWorldCursor(cursor.x(), cursor.y());
+        if (selectingRegion) extendRegionToCursor();
     }
     public void focusRegion(EditorFocusRegion region) {
         finishPendingEdits();
@@ -113,6 +124,9 @@ public final class LevelEditorController {
         finishPendingEdits();
         if (this.level == level) return;
         this.level = level;
+        canvasView.reset();
+        regionSelection = null; clipboard = null; selectingRegion = false; pastePreview = false;
+        clipboardBlocks.clear(); clipboardChunks.clear();
         cameraNavigationRequested = true;
         statusText = "Ready";
         lastExportDirectory = null;
@@ -154,6 +168,7 @@ public final class LevelEditorController {
         EditorStockObjectPalette previous=objectPalette;
         objectPalette = new EditorStockObjectPalette(registry, names);
         propertyProvider = registry instanceof com.openggf.editor.properties.ObjectPropertyProvider provider ? provider : null;
+
         if(previous!=null) {
             if(previous.selectedIsKeyed()) {
                 try {objectPalette.setObjectKey(previous.selectedObjectKey());}catch(IllegalArgumentException missing){setStatus("Object brush dependency unavailable");}
@@ -359,6 +374,89 @@ public final class LevelEditorController {
         if (spawnEditMode != expected) throw new IllegalStateException("Editor is not in " + expected + " mode");
     }
 
+    private com.openggf.editor.selection.EditorRegionOperations regionOperations() {
+        return new com.openggf.editor.selection.EditorRegionOperations(requireLevel(), requireSpawnFactory());
+    }
+    private int cellX() { return worldCursor.x() / requireLevel().getBlockPixelSize(); }
+    private int cellY() { return worldCursor.y() / requireLevel().getBlockPixelSize(); }
+    public com.openggf.editor.selection.CellRectangle regionSelection() { return regionSelection; }
+    public com.openggf.level.Level clipboardLibrary() {
+        if (clipboard == null) return null;
+        var library = clipboard.library();
+        // Palette ownership is level-wide; a terrain clipboard shares current colors.
+        for (int line = 0; line < level.getPaletteCount(); line++) for (int color = 0; color < 16; color++) {
+            var rgb = level.getPalette(line).getColor(color);
+            library.getPalette(line).setColor(color, new com.openggf.level.Palette.Color(rgb.r, rgb.g, rgb.b));
+        }
+        return library;
+    }
+    public boolean isSelectingRegion() { return selectingRegion; }
+    public boolean isPastePreviewActive() { return pastePreview; }
+    public void beginRegionAtCursor() {
+        finishPendingEdits();
+        if (depth != EditorHierarchyDepth.WORLD) { setStatus("Select regions in World view"); return; }
+        pastePreview = false; selectingRegion = true; regionAnchorX = cellX(); regionAnchorY = cellY();
+        extendRegionToCursor(); setStatus("Move to the opposite corner, then finish selection");
+    }
+    public void extendRegionToCursor() {
+        if (selectingRegion) regionSelection = com.openggf.editor.selection.CellRectangle.between(regionAnchorX, regionAnchorY, cellX(), cellY());
+    }
+    public void finishRegionSelection() {
+        extendRegionToCursor(); selectingRegion = false;
+        if (regionSelection != null) setStatus("Region " + regionSelection.width() + " x " + regionSelection.height() + " cells selected");
+    }
+    public void toggleRegionCorner() { if (selectingRegion) finishRegionSelection(); else beginRegionAtCursor(); }
+    public void clearRegionSelection() { finishPendingEdits(); selectingRegion = false; regionSelection = null; pastePreview = false; }
+    private com.openggf.editor.selection.CellRectangle requireRegion() {
+        finishRegionSelection();
+        if (regionSelection == null) throw new IllegalStateException("Select two region corners first (F6)");
+        return regionSelection;
+    }
+    private void retainClipboard(com.openggf.editor.selection.EditorRegionOperations.Clipboard copied) {
+        clipboard = copied;
+        clipboardBlocks.clear(); clipboardChunks.clear(); clipboardBlocks.addAll(copied.blocks());
+        for (int index : clipboardBlocks) {
+            Block block = requireLevel().getBlock(index);
+            for (int y = 0; y < block.getGridSide(); y++) for (int x = 0; x < block.getGridSide(); x++)
+                clipboardChunks.add(block.getChunkDesc(x, y).getChunkIndex());
+        }
+    }
+    public void copyRegion() {
+        finishPendingEdits(); retainClipboard(regionOperations().copy(activeLayer, requireRegion()));
+        setStatus("Region copied; paste opens a movable preview");
+    }
+    public void cutRegion() {
+        finishPendingEdits(); var cut = regionOperations().cut(activeLayer, requireRegion());
+        executeCommand(cut.command()); retainClipboard(cut.clipboard()); reconcileSpawnSelection(); setStatus("Region cut");
+    }
+    public void deleteRegion() {
+        executeCommand(regionOperations().delete(activeLayer, requireRegion())); reconcileSpawnSelection(); setStatus("Region deleted");
+    }
+    public void beginPastePreview() {
+        finishPendingEdits();
+        if (clipboard == null) throw new IllegalStateException("Copy or cut a region first");
+        if (depth != EditorHierarchyDepth.WORLD) throw new IllegalStateException("Paste regions in World view");
+        selectingRegion = false; pastePreview = true; setStatus("Paste preview: move, Enter / South to place, Escape / East cancels");
+    }
+    /** Invalid previews are visibly rejected and never mutate the level. */
+    public com.openggf.editor.selection.EditorRegionOperations.Preview pastePreview() {
+        return pastePreview ? regionOperations().preview(clipboard, activeLayer, cellX(), cellY()) : null;
+    }
+    public void commitPastePreview() {
+        if (!pastePreview) return;
+        executeCommand(regionOperations().paste(clipboard, activeLayer, cellX(), cellY()));
+        pastePreview = false; setStatus("Region pasted");
+    }
+    public void cancelPastePreview() { pastePreview = false; setStatus("Paste cancelled"); }
+    public void fillRegion() {
+        if (blockBrushIndex == null) throw new IllegalStateException("Choose a block brush first");
+        executeCommand(regionOperations().rectangleFill(activeLayer, requireRegion(), blockBrushIndex)); setStatus("Region filled");
+    }
+    public void floodFillAtCursor() {
+        if (blockBrushIndex == null) throw new IllegalStateException("Choose a block brush first");
+        executeCommand(regionOperations().floodFill(activeLayer, cellX(), cellY(), blockBrushIndex)); setStatus("Connected cells filled");
+    }
+
     public void placeBlock(int layer, int x, int y, int blockIndex) {
         finishPendingEdits();
         MutableLevel attachedLevel = requireLevel();
@@ -494,13 +592,13 @@ public final class LevelEditorController {
         setStatus("Edited this placement; other placements preserved");
     }
     private int countBlockPlacements(int index) {
-        int count=0;var map=level.getMap();
+        int count=clipboardBlocks.contains(index)?1:0;var map=level.getMap();
         for(int layer=0;layer<map.getLayerCount();layer++)for(int y=0;y<map.getHeight();y++)for(int x=0;x<map.getWidth();x++)
             if(Byte.toUnsignedInt(map.getValue(layer,x,y))==index)count++;
         return count;
     }
     private int countChunkReferences(int index) {
-        int count=0;
+        int count=clipboardChunks.contains(index)?1:0;
         for(int b=0;b<level.getBlockCount();b++) {
             Block block=level.getBlock(b);
             for(int y=0;y<block.getGridSide();y++)for(int x=0;x<block.getGridSide();x++)
@@ -901,6 +999,7 @@ public final class LevelEditorController {
     public void setWorldCursor(EditorCursorState cursor) {
         Objects.requireNonNull(cursor, "cursor");
         this.worldCursor = clampWorldCursor(cursor.x(), cursor.y());
+        if (selectingRegion) extendRegionToCursor();
         cameraNavigationRequested = true;
     }
 
@@ -918,6 +1017,7 @@ public final class LevelEditorController {
 
     public void moveWorldCursor(int dx, int dy) {
         worldCursor = clampWorldCursor(worldCursor.x() + dx, worldCursor.y() + dy);
+        if (selectingRegion) extendRegionToCursor();
         cameraNavigationRequested = true;
     }
 
@@ -1055,18 +1155,18 @@ public final class LevelEditorController {
         return (descriptorRaw & ~CHUNK_INDEX_MASK) | unflaggedChunkDescriptorRaw(chunkIndex);
     }
 
-    private static int findUnreferencedBlockSlot(MutableLevel level, int sourceBlockIndex) {
+    private int findUnreferencedBlockSlot(MutableLevel level, int sourceBlockIndex) {
         for (int blockIndex = 0; blockIndex < Math.min(256,level.getBlockCount()); blockIndex++) {
-            if (blockIndex != sourceBlockIndex && !level.isBlockReferencedInMap(blockIndex)) {
+            if (blockIndex != sourceBlockIndex && !clipboardBlocks.contains(blockIndex) && !level.isBlockReferencedInMap(blockIndex)) {
                 return blockIndex;
             }
         }
         return -1;
     }
 
-    private static int findUnreferencedChunkSlot(MutableLevel level, int sourceChunkIndex) {
+    private int findUnreferencedChunkSlot(MutableLevel level, int sourceChunkIndex) {
         for (int chunkIndex = 0; chunkIndex < Math.min(1024,level.getChunkCount()); chunkIndex++) {
-            if (chunkIndex != sourceChunkIndex && !level.isChunkReferencedInBlocks(chunkIndex)) {
+            if (chunkIndex != sourceChunkIndex && !clipboardChunks.contains(chunkIndex) && !level.isChunkReferencedInBlocks(chunkIndex)) {
                 return chunkIndex;
             }
         }

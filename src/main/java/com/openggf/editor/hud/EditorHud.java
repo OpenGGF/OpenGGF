@@ -161,6 +161,21 @@ public final class EditorHud {
     // ------------------------------------------------------------------ canvas
 
     private boolean updateCanvas(InputHandler input, MutableLevel level, boolean click, boolean rightClick) {
+        if (controller.isPastePreviewActive()) {
+            if (pad.pressed(EAST) || MenuInput.back(input)) { controller.cancelPastePreview(); pad.consumeHeld(); return true; }
+            if (pad.pressed(SOUTH) || input.isKeyPressed(GLFW_KEY_ENTER)) {
+                try { controller.commitPastePreview(); contentChanged = true; }
+                catch (RuntimeException error) { controller.setStatus(error.getMessage()); }
+                pad.consumeHeld(); return true;
+            }
+        }
+        if (controller.depth() == EditorHierarchyDepth.WORLD && pad.held(LB) && pad.held(RB)) {
+            float[] pan = pad.leftStick();
+            controller.canvasView().panBy(pan[0] * 14, pan[1] * 14);
+            if (pad.repeated(DPAD_UP)) controller.canvasView().zoomIn();
+            if (pad.repeated(DPAD_DOWN)) controller.canvasView().zoomOut();
+            return true;
+        }
         if (click || rightClick) {
             Hit hit = hitAt(Modal.NONE);
             if (hit != null && hit.kind() == HIT_HOTBAR) {
@@ -517,6 +532,14 @@ public final class EditorHud {
         items.add(new MenuItem("Editor", "", null));
         items.add(new MenuItem("Resume", "", () -> { }));
         items.add(new MenuItem("Object properties", "F2", this::openProperties));
+        items.add(new MenuItem("Region: set corner / finish", "F6", controller::toggleRegionCorner));
+        items.add(new MenuItem("Copy region", "Ctrl+C", () -> act(Action.COPY_REGION)));
+        items.add(new MenuItem("Cut region", "Ctrl+X", () -> act(Action.CUT_REGION)));
+        items.add(new MenuItem("Paste region preview", "Ctrl+V", () -> act(Action.PASTE_REGION)));
+        items.add(new MenuItem("Delete region", "", () -> act(Action.DELETE_REGION)));
+        items.add(new MenuItem("Fill rectangle", "", () -> act(Action.FILL_REGION)));
+        items.add(new MenuItem("Flood fill at cursor", "", () -> act(Action.FLOOD_FILL)));
+        items.add(new MenuItem("Clear region / cancel paste", "", () -> act(Action.CLEAR_REGION)));
         items.add(new MenuItem("Save project", "Ctrl+S", () -> act(Action.SAVE)));
         Map<String, Runnable> extra = new LinkedHashMap<>();
         for (EditorCommandPalette.HostCommand command : allHostCommands()) extra.put(command.label(), command.action());

@@ -28,6 +28,7 @@ final class EditorHudPainter implements AutoCloseable {
     private static final int SLOT = 40;
     private static final int SLOT_GAP = 4;
     private final EditorTileAtlas atlas = new EditorTileAtlas();
+    private final EditorTileAtlas ghostAtlas = new EditorTileAtlas();
     private List<Hit> hits;
     // Free span of the top bar between the breadcrumb and the chips, for status messages.
     private float topBarFreeLeft;
@@ -48,6 +49,7 @@ final class EditorHudPainter implements AutoCloseable {
         backdrop(c, layout);
         canvasFrame(c, layout.game(), hud.tick);
         if (layout.workbench() == null && level != null && hud.modal != Modal.MENU) worldCursor(c, layout, controller, level, hud.tick);
+        if (level != null && layout.workbench() == null) region(c, layout, controller, level);
         topBar(c, layout, controller);
         if (layout.workbench() != null && level != null) {
             highlightEditedBlock(c, layout, controller, level);
@@ -124,6 +126,7 @@ final class EditorHudPainter implements AutoCloseable {
         boolean modified = controller.isModified();
         right = chip(c, right, modified ? "Unsaved" : "Saved", modified ? GOLD : GOOD, true);
         right = chip(c, right, controller.activeLayer() == 0 ? "FG" : "BG", TEXT, false);
+        right = chip(c, right, "Zoom " + controller.canvasView().zoom() + "x", TEXT, false);
         if (controller.isCollisionOverlayEnabled()) {
             right = chip(c, right, controller.collisionPath().name().startsWith("P") ? "Solid A" : "Solid B", ACCENT, false);
         }
@@ -388,7 +391,7 @@ final class EditorHudPainter implements AutoCloseable {
         var editor = com.openggf.game.session.SessionManager.getCurrentEditorMode();
         if (editor == null || editor.getCamera() == null) return;
         Rect g = layout.game();
-        float unitsPerPixel = layout.gameViewport()[4] / (float) layout.uiScale();
+        float unitsPerPixel = layout.gameViewport()[4] / (float) layout.uiScale() * (float) controller.canvasView().zoom();
         var cursor = controller.worldCursor();
         float cx = g.x() + (cursor.x() - editor.getCamera().getXCopy()) * unitsPerPixel;
         float cy = g.y() + (cursor.y() - editor.getCamera().getYCopy()) * unitsPerPixel;
@@ -413,6 +416,42 @@ final class EditorHudPainter implements AutoCloseable {
         c.unclip();
     }
 
+    private void region(EditorHudCanvas c, EditorHudLayout layout, LevelEditorController controller, MutableLevel level) {
+        var editor = com.openggf.game.session.SessionManager.getCurrentEditorMode();
+        if (editor == null || editor.getCamera() == null) return;
+        Rect g = layout.game();
+        float unit = layout.gameViewport()[4] / (float) layout.uiScale() * (float) controller.canvasView().zoom();
+        int cameraX = Short.toUnsignedInt(editor.getCamera().getXCopy()), cameraY = editor.getCamera().getYCopy();
+        int size = level.getBlockPixelSize();
+        var rect = controller.regionSelection();
+        c.clip(g);
+        try {
+            if (rect != null) c.frame(g.x() + (rect.x() * size - cameraX) * unit,
+                    g.y() + (rect.y() * size - cameraY) * unit, rect.width() * size * unit, rect.height() * size * unit, 2, ACCENT, 1);
+            if (!controller.isPastePreviewActive()) return;
+            try {
+                var ghost = controller.pastePreview();
+                ghostAtlas.refresh(controller.clipboardLibrary(), 0);
+                rect = ghost.rectangle();
+                float cell = size * unit;
+                for (int y = 0; y < rect.height(); y++) for (int x = 0; x < rect.width(); x++) {
+                    float sx = g.x() + ((rect.x() + x) * size - cameraX) * unit;
+                    float sy = g.y() + ((rect.y() + y) * size - cameraY) * unit;
+                    if (sx >= g.right() || sy >= g.bottom() || sx + cell < g.x() || sy + cell < g.y()) continue;
+                    var tile = ghostAtlas.cell(EditorTileAtlas.Kind.BLOCK, ghost.blocks().get(y * rect.width() + x));
+                    if (tile != null) c.image(tile.texture(), sx, sy, cell, cell, tile.u0(), tile.v0(), tile.u1(), tile.v1(), .6f);
+                    c.frame(sx, sy, cell, cell, 1, GOOD, .8f);
+                }
+                for (var object : ghost.objects()) c.frame(g.x() + (object.x() - cameraX) * unit - 4,
+                        g.y() + (object.y() - cameraY) * unit - 4, 8, 8, 1, ACCENT, 1);
+                for (var ring : ghost.rings()) c.frame(g.x() + (ring.x() - cameraX) * unit - 3,
+                        g.y() + (ring.y() - cameraY) * unit - 3, 6, 6, 1, GOLD, 1);
+            } catch (IllegalArgumentException invalid) {
+                c.text("Paste outside bounds or incompatible placement", g.x() + 8, g.y() + 8, Size.SMALL, GOLD, 1);
+            }
+        } finally { c.unclip(); }
+    }
+
     // ------------------------------------------------------------------ workbench
 
     /** In Block/Chunk view, dims the world except the block being edited and outlines it. */
@@ -422,7 +461,7 @@ final class EditorHudPainter implements AutoCloseable {
         if (editor == null || editor.getCamera() == null) return;
         Rect g = layout.game();
         int[] viewport = layout.gameViewport();
-        float unitsPerPixel = viewport[4] / (float) layout.uiScale();
+        float unitsPerPixel = viewport[4] / (float) layout.uiScale() * (float) controller.canvasView().zoom();
         int size = level.getBlockPixelSize();
         var cursor = controller.worldCursor();
         float bx = g.x() + (Math.floorDiv(cursor.x(), size) * size - editor.getCamera().getXCopy()) * unitsPerPixel;
@@ -898,5 +937,6 @@ final class EditorHudPainter implements AutoCloseable {
     @Override
     public void close() {
         atlas.close();
+        ghostAtlas.close();
     }
 }

@@ -169,6 +169,41 @@ Sonic 1 has one collision-profile path. Its primary and secondary assignments
 must agree for a playable export. S2/S3K have separate paths. Assigning a profile
 uses existing collision data; this tool does not draw new height/width profiles.
 
+## Select, copy and fill regions
+
+In World view, **Shift + left drag** selects a rectangle of map cells. For a
+keyboard or controller, move to the first corner, choose **Region: set corner /
+finish** (keyboard **F6**), move to the opposite corner, then choose it again.
+The rectangle covers terrain on the active FG/BG layer and object/ring centres
+inside it. Native object-backed ring groups are indivisible: selecting any member
+includes the whole group, even if other members cross the rectangle edge.
+
+**Ctrl+C**, **Ctrl+X**, and **Ctrl+V** copy, cut, and open a paste preview. The desktop
+World inspector and HUD editor menu expose the same actions, plus **Delete region**,
+**Fill rectangle**, **Flood fill at cursor**, and **Clear region / cancel paste**.
+Choose a block brush before filling. Flood fill uses four-neighbour connectivity
+on the active layer; rectangle fill changes terrain only. Delete/cut use actual
+transparent, noncolliding terrain, and report an error if none exists.
+
+Move the translucent terrain-and-spawn preview to the destination, then press
+**Enter / South** or click to paste. **Escape / East** cancels. Out-of-bounds or
+invalid native placements cannot be committed; no partial paste is published.
+Each cut, paste, delete, rectangle fill or flood fill is one undo step. Copy keeps
+an immutable snapshot, so overlapping pastes are safe. A clipboard belongs to
+one document/library and clears when another level is attached. Shared block and
+chunk definitions stay unchanged; subsequent local composition edits retain the
+existing derived-definition behavior.
+
+### Canvas navigation
+
+Middle-drag pans independently of the editing cursor. The mouse wheel zooms around
+the pointer in integer steps from **1× to 8×**. Keyboard **Ctrl+arrows** pans,
+**Ctrl+= / Ctrl+-** zooms, and **Ctrl+0** resets zoom. Every navigation command is
+also in the command menu. In the HUD, hold **LB+RB**, steer the left stick to pan,
+and use D-pad up/down to zoom. Navigation does not enter undo history or change
+playtest bounds. **1× is the minimum**: zoom magnifies the native world render;
+zooming out to show more terrain is not yet implemented.
+
 ## Named object properties
 
 Pick an object with right click / West, then use **Selected placement** in the

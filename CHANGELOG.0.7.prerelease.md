@@ -139,7 +139,11 @@ Unreleased. The earlier development themes remain in
   Save As; pattern browsing, descriptor controls, local collision edits, erase
   and spawn inspection complete layout authoring. Named spring, monitor and
   floating-platform fields share lossless subtype schemas between desktop inspectors
-  and a controller-navigable HUD property list; other IDs retain raw-byte editing. A controller-first HUD drawn at
+  and a controller-navigable HUD property list; other IDs retain raw-byte editing.
+  World-cell regions copy terrain and native spawn groups, with undoable cut/paste,
+  translucent destination previews, delete and rectangle/flood fill. Independent
+  mouse, keyboard and controller canvas pan and integer 1×–8× magnification keep
+  hit tests aligned. A controller-first HUD drawn at
   window resolution frames the level with a brush hotbar, a full-screen library
   of ROM-art thumbnails, a tools wheel, block and chunk workbenches and button
   prompts for the pad in use. It is the sole built-in editor UI, with world-space

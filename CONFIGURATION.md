@@ -908,6 +908,12 @@ playtest. Editor key/mouse shortcuts are hardcoded and are not configurable in
 | `V` in Block view | Cycle the selected cell's collision mode |
 | `[` / `]` | Decrease / increase the selected chunk's collision-profile index |
 | Left drag in World | Paint terrain as one undoable stroke |
+| `F2` with an object selected | Named property list in HUD; desktop uses its inspector |
+| `Shift` + left drag / `F6` at two corners | Rectangular world-cell selection |
+| `Ctrl+C` / `Ctrl+X` / `Ctrl+V` | Copy / cut / preview paste of region |
+| `Enter` / `Escape` with paste preview | Commit / cancel paste |
+| Middle drag / `Ctrl+arrows` | Pan canvas independently of cursor |
+| Mouse wheel / `Ctrl+=` / `Ctrl+-` / `Ctrl+0` | Integer zoom 1×–8× / reset |
 
 Bindings live in `EditorInputHandler` and are independent of gameplay Key
 Bindings. Library sheets, project forms, and the editor menu own their input
@@ -938,6 +944,8 @@ wheel and `1`–`0` choose a hotbar slot; the other keys above are unchanged.
 | View (hold) | Tools wheel; steer and release, or use the D-pad and South |
 | Menu | Save, playtest, export, project commands and every editor command |
 | L3 / R3 | Toggle FG/BG layer / collision overlay |
+| Hold LB+RB, left stick / D-pad up/down | Pan canvas / zoom 1×–8× |
+| Object properties: up/down / left/right | Choose named field / change value |
 
 #### Projects, playtests, and export
 
