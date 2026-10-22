@@ -166,7 +166,8 @@ contains_mod_api_annotation() {
 # members are implicitly public. Record compact-constructor bodies are excluded:
 # their canonical signature already comes from the component declaration. A class
 # keeps annotations, type declaration
-# lines and public/protected declarations, including their parenthesised
+# lines (excluding non-exported nested types and their bodies) and public/protected
+# declarations, including their parenthesised
 # continuation lines, so method bodies, private members and comments never
 # demand a pin change the snapshot cannot express. TestModApiSignatureSurface
 # remains the exact check; this only decides when the pin must be staged.
@@ -192,7 +193,7 @@ mod_api_surface_text() {
         }
     }
     END {
-        whole = (kind != "class"); depth = 0; compactDepth = 0; quote = ""; escaped = 0
+        whole = (kind != "class"); braces = 0; hidden = 0; hiddenOpened = 0; depth = 0; compactDepth = 0; quote = ""; escaped = 0
         for (i = 1; i <= n; i++) {
             l = lines[i]
             start = 1
@@ -217,6 +218,26 @@ mod_api_surface_text() {
             }
             if (l !~ /[^ \t]/) continue
             if (whole) { print l; continue }
+            # Internal nested types cannot contribute exported signatures, even
+            # when their bodies contain public members or further public types.
+            if (!hidden && braces > 0 &&
+                    match(l, /(^|[ \t])(class|interface|record|enum|@interface)[ \t]+[A-Za-z_]/) &&
+                    substr(l, 1, RSTART - 1) !~ /(^|[^A-Za-z0-9_])(public|protected)([ \t]|$)/) {
+                hidden = 1; hiddenBase = braces; hiddenOpened = 0
+            }
+            suppress = hidden
+            for (j = 1; j <= length(l); j++) {
+                c = substr(l, j, 1)
+                if (quote != "") {
+                    if (escaped) escaped = 0
+                    else if (c == "\\") escaped = 1
+                    else if (c == quote) quote = ""
+                } else if (c == "\"" || c == sprintf("%c", 39)) quote = c
+                else if (c == "{") { braces++; if (hidden) hiddenOpened = 1 }
+                else if (c == "}") braces--
+            }
+            if (hidden && hiddenOpened && braces <= hiddenBase) hidden = 0
+            if (suppress) continue
             if (depth > 0 || l ~ /(^|[^A-Za-z0-9_])(public|protected)[ \t]/ || l ~ /^[ \t]*@/ \
                     || l ~ /(^|[ \t])(class|interface|record|enum|extends|implements)[ \t]/) {
                 print l

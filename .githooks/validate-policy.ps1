@@ -227,7 +227,7 @@ function Get-ModApiSurfaceText([string]$Text) {
         }
     }
     $whole = $kind -ne "class"
-    $depth = 0
+    $depth = 0; $braces = 0; $hidden = $false; $hiddenOpened = $false
     $kept = New-Object System.Collections.Generic.List[string]
     $compactDepth = 0; $quote = [char]0; $escaped = $false
     foreach ($line in $stripped) {
@@ -257,6 +257,25 @@ function Get-ModApiSurfaceText([string]$Text) {
         }
         if ($l -notmatch '[^ \t]') { continue }
         if ($whole) { $kept.Add($l); continue }
+        # Ignore internal nested types, including their public members/types.
+        if (-not $hidden -and $braces -gt 0 -and
+                $l -cmatch '^(.*?)(?:^|[ \t])(?:class|interface|record|enum|@interface)[ \t]+[A-Za-z_]' -and
+                $Matches[1] -cnotmatch '(?:^|[^A-Za-z0-9_])(?:public|protected)(?:[ \t]|$)') {
+            $hidden = $true; $hiddenBase = $braces; $hiddenOpened = $false
+        }
+        $suppress = $hidden
+        for ($j = 0; $j -lt $l.Length; $j++) {
+            $c = $l[$j]
+            if ($quote -ne [char]0) {
+                if ($escaped) { $escaped = $false }
+                elseif ($c -eq '\') { $escaped = $true }
+                elseif ($c -eq $quote) { $quote = [char]0 }
+            } elseif ($c -eq '"' -or $c -eq [char]39) { $quote = $c }
+            elseif ($c -eq '{') { $braces++; if ($hidden) { $hiddenOpened = $true } }
+            elseif ($c -eq '}') { $braces-- }
+        }
+        if ($hidden -and $hiddenOpened -and $braces -le $hiddenBase) { $hidden = $false }
+        if ($suppress) { continue }
         if ($depth -gt 0 -or $l -cmatch '(?:^|[^A-Za-z0-9_])(?:public|protected)[ \t]' -or $l -match '^[ \t]*@' -or
                 $l -cmatch '(?:^|[ \t])(?:class|interface|record|enum|extends|implements)[ \t]') {
             $kept.Add($l)
