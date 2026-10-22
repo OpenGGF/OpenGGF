@@ -136,8 +136,8 @@ ever degrades its own view.
 ### 4.6 Client-side rendering at scale
 
 The renderer draws at most the **nearest 8 ghosts** (configurable), opacity faded
-by distance, nameplates on the nearest 4. Everyone else exists only as roster
-entries in the standings panel. Playback bookkeeping for hundreds of roster
+by distance, with player nameplates on every visible ghost. Everyone else exists
+only as roster entries in the standings panel. Playback bookkeeping for hundreds of roster
 entries is trivial; full playback cursors exist only for near ghosts.
 
 ## 5. Latency model
