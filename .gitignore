@@ -12,6 +12,8 @@
 /config.yaml.example
 /config.json.bak
 *.bin
+# Original, generated Clover Valley mod assets are source inputs to its jar.
+!/examples/emerald-remix/src/main/resources/levels/clover-valley/*.bin
 *.smd
 *.sms
 *.gg
