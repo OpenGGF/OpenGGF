@@ -147,17 +147,12 @@ class TestLiveRewindBoundaryPolicy {
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, true);
         GameplayModeContext context = SessionManager.openGameplaySession(new Sonic2GameModule());
 
-        Camera camera = new Camera();
-        TimerManager timers = new TimerManager();
-        GameStateManager gameState = new GameStateManager();
-        FadeManager fade = new FadeManager();
-        GameRng rng = new GameRng(GameRng.Flavour.S1_S2);
-        DefaultSolidExecutionRegistry solid = new DefaultSolidExecutionRegistry();
-
-        context.attachGameplayManagers(camera, timers, gameState, fade, rng, solid);
+        com.openggf.game.session.GameplaySessionFactory.attachManagers(
+                context, com.openggf.game.session.EngineServices.current());
         context.initializeFreshGameplayState();
 
-        LiveRewindManager manager = new LiveRewindManager(config);
+        LiveRewindManager manager = new LiveRewindManager(config, com.openggf.audio.AudioManager.getInstance());
+        manager.bindOwner(com.openggf.tests.TestEnvironment.activeGameplayMode(), false, com.openggf.game.GameMode.LEVEL);
         manager.handleRealtimeRewindInput(GameMode.LEVEL, false, new InputHandler());
 
         LiveRewindInputSource inputSource = readPrivateField(manager, "inputSource");

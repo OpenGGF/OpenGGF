@@ -221,7 +221,9 @@ class TestGameLoopSpecialStageRewindGate {
 
     @Test
     void heldRewindEngagesWhileSupportedSpecialStageIsActive() throws Exception {
-        setField(loop, "activeSpecialStageProvider", new RewindableSpecialStageProvider());
+        var provider = new RewindableSpecialStageProvider();
+        SessionManager.getCurrentGameplayMode().registerSpecialStageAdapter(provider);
+        setField(loop, "activeSpecialStageProvider", provider);
         loop.changeGameModeWithoutRewindBoundary(GameMode.SPECIAL_STAGE);
 
         LiveRewindManager liveRewindManager = (LiveRewindManager) getField(loop, "liveRewindManager");
@@ -289,7 +291,12 @@ class TestGameLoopSpecialStageRewindGate {
 
     private static void installTestController(LiveRewindManager manager, RewindController controller,
                                               String stepperKind) throws Exception {
-        setField(manager, "installedGameplayMode", SessionManager.getCurrentGameplayMode());
+        var owner = SessionManager.getCurrentGameplayMode();
+        setField(owner, "rewindController", controller);
+        setField(manager, "boundOwner", owner);
+        setField(manager, "installedFade", owner.getFadeManager());
+        setField(manager, "installedSpecialProvider", owner.getRegisteredSpecialStageProvider());
+        setField(manager, "installedGameplayMode", owner);
         setInstalledStepperKind(manager, stepperKind);
         setField(manager, "inputSource", new com.openggf.game.rewind.LiveRewindInputSource());
         setField(manager, "rewindController", controller);

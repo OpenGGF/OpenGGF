@@ -1322,7 +1322,8 @@ class TestPuttPuttParadise {
         var config = GameServices.configuration();
         Object oldEnabled = config.getConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED);
         config.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
-        var manager = new com.openggf.game.rewind.LiveRewindManager(config);
+        var manager = new com.openggf.game.rewind.LiveRewindManager(config, com.openggf.audio.AudioManager.getInstance());
+        manager.bindOwner(f.runtime(), false, GameMode.LEVEL);
         var input = new com.openggf.control.InputHandler();
         var expected = new TreeMap<Integer, RewindExpected>();
         try {

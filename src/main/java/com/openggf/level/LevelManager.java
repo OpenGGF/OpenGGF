@@ -565,11 +565,15 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
 
-    static void markRewindLevelLoadBoundary() {
-        GameplayModeContext gameplayMode = SessionManager.getCurrentGameplayMode();
-        if (gameplayMode != null) {
-            gameplayMode.markRewindBoundary(RewindBoundary.LEVEL_LOAD);
-        }
+    private com.openggf.game.rewind.RewindBoundaryReporter rewindBoundaryReporter =
+            com.openggf.game.rewind.RewindBoundaryReporter.NO_OP;
+
+    void setRewindBoundaryReporter(com.openggf.game.rewind.RewindBoundaryReporter reporter) {
+        rewindBoundaryReporter = java.util.Objects.requireNonNull(reporter, "reporter");
+    }
+
+    void markRewindLevelLoadBoundary() {
+        rewindBoundaryReporter.markBoundary(RewindBoundary.LEVEL_LOAD);
     }
 
     @Override
@@ -4779,10 +4783,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     public void markSynchronousSeamlessTransitionBoundary() {
-        var gameplayMode = SessionManager.getCurrentGameplayMode();
-        if (gameplayMode != null && gameplayMode.getLevelManager() == this) {
-            gameplayMode.markRewindBoundary(RewindBoundary.SEAMLESS_LEVEL_TRANSITION);
-        }
+        rewindBoundaryReporter.markBoundary(RewindBoundary.SEAMLESS_LEVEL_TRANSITION);
     }
 
     private void applySeamlessTransition(SeamlessLevelTransitionRequest request,

@@ -584,7 +584,8 @@ class TestSampleFlappyIntegration {
                 PlayerInputState.of(AbstractPlayableSprite.INPUT_RIGHT, 0,
                         0, 0, false, false),
                 PlayerInputState.neutral()));
-        LiveRewindManager manager = new LiveRewindManager(game.configuration());
+        LiveRewindManager manager = new LiveRewindManager(game.configuration(), com.openggf.audio.AudioManager.getInstance());
+        manager.bindOwner(game.gameplay(), false, GameMode.LEVEL);
         assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
         RewindController controller = game.gameplay().getRewindController();
         assertTrue(controller != null, "live rewind must install its production controller");
