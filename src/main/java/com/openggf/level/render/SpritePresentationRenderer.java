@@ -170,15 +170,16 @@ public final class SpritePresentationRenderer {
         PatternDesc desc = new PatternDesc();
         graphics.beginPatternAtlasBatch();
         try {
-            // Atlas upload copies pixels immediately; one draw-local scratch tile
-            // avoids allocating a Pattern and arrays for every immutable DPLC slot.
-            Pattern scratch = new Pattern();
-            for (var entry : frame.patternVersions().entrySet()) {
-                unpackPattern(entry.getValue(), scratch);
-                graphics.cachePatternTexture(scratch, entry.getKey());
-            }
+            for (var entry : frame.patternVersions().entrySet())
+                com.openggf.graphics.PresentationGraphicsAccess.restoreFrozenPattern(graphics, entry.getValue(), entry.getKey());
         } finally { graphics.endPatternAtlasBatch(); }
+        var viewport = com.openggf.graphics.PresentationGraphicsAccess.viewport(graphics);
         Tile previous = null;
+        boolean previousPictureGeometry = false;
+        var policies = runtime == null ? java.util.List.<com.openggf.game.mutators.TransientMutatorPolicySource.Entry>of()
+                : runtime.spritePolicies();
+        java.util.Map<Body, com.openggf.game.mutators.SpritePictureTransform> transforms = policies.isEmpty()
+                ? java.util.Map.of() : new java.util.HashMap<>();
         graphics.flushPatternBatch();
         try {
             int primitiveIndex = 0;
@@ -197,8 +198,27 @@ public final class SpritePresentationRenderer {
                 if (index == frame.tiles().size()) break;
                 Tile tile = frame.tiles().get(index);
                 if (!visible.test(tile.layer()) || tile.subject().suppressed()) continue;
-                if (previous == null || previous.priorityShader() != tile.priorityShader()
-                        || previous.occlusionMask() != tile.occlusionMask()
+                var body = tile.subject().body();
+                var transform = policies.isEmpty() || body == null
+                        ? com.openggf.game.mutators.SpritePictureTransform.IDENTITY
+                        : transforms.computeIfAbsent(body, ignored ->
+                            com.openggf.game.mutators.SpritePictureTransform.forTile(tile, cameraX, cameraY, policies));
+                boolean pictureGeometry = !transform.identity() || opacity != 1;
+                float[] quad = pictureGeometry ? transform.quad(tile, cameraX, cameraY) : null;
+                if (viewport != null) {
+                    boolean outside;
+                    if (pictureGeometry) outside = viewport.outside(quad, cameraX, cameraY);
+                    else if (tile.rowClipped()) {
+                        // The native row path emits integer-positioned 8-pixel strips.
+                        float left = (int) (tile.x() + cameraX) - cameraX;
+                        float top = (int) (tile.y() + cameraY) - cameraY;
+                        outside = viewport.outside(left, top + tile.rowStart(), left + 8, top + tile.rowEnd());
+                    } else outside = viewport.outside(tile.x(), tile.y(), tile.x() + tile.width(), tile.y() + tile.height());
+                    if (outside) continue;
+                }
+                if (previous == null || previousPictureGeometry != pictureGeometry || previous.priorityShader() != tile.priorityShader()
+                        || (previous.occlusionMask() != tile.occlusionMask()
+                            && !com.openggf.graphics.PresentationGraphicsAccess.maskIsPerInstance(graphics))
                         || previous.ghost() != tile.ghost() || previous.ghostAlpha() != tile.ghostAlpha()) {
                     graphics.flushPatternBatch();
                     graphics.setUseSpritePriorityShader(tile.priorityShader());
@@ -208,6 +228,7 @@ public final class SpritePresentationRenderer {
                     graphics.beginPatternBatch();
                 }
                 previous = tile;
+                previousPictureGeometry = pictureGeometry;
                 graphics.setUseSpritePriorityShader(tile.priorityShader());
                 graphics.setCurrentSpriteTileOcclusionPaletteMask(tile.occlusionMask());
                 if (tile.ghost()) graphics.beginGhostRenderEffect(tile.ghostAlpha());
@@ -217,13 +238,11 @@ public final class SpritePresentationRenderer {
                 desc.setVFlip(tile.vFlip());
                 desc.setPriority(tile.priority());
                 float x = tile.x() + cameraX, y = tile.y() + cameraY;
-                var transform=runtime==null?com.openggf.game.mutators.SpritePictureTransform.IDENTITY:
-                        com.openggf.game.mutators.SpritePictureTransform.forTile(tile,cameraX,cameraY,runtime.spritePolicies());
                 SpritePresentation.withSubject(graphics,tile.subject(),()-> {
-                if(!transform.identity()||opacity!=1) {
+                if(pictureGeometry) {
                     com.openggf.graphics.PresentationGraphicsAccess.render(graphics, tile.patternId(), tile.palette(),
                             tile.hFlip(), tile.vFlip(), tile.priority(), tile.rowStart(), tile.rowEnd(),
-                            transform.quad(tile,cameraX,cameraY),transform.hue(),opacity);
+                            quad,transform.hue(),opacity);
                 } else if (tile.rowClipped()) {
                     SpritePresentation.renderTileRows(graphics, tile, desc, (int) x, (int) y);
                 } else if (tile.width() == 8 && tile.height() == 8 && x == (int) x && y == (int) y) {

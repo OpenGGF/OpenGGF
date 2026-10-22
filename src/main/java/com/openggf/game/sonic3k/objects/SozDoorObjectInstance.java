@@ -29,7 +29,7 @@ public final class SozDoorObjectInstance extends AbstractObjectInstance
     @Override public boolean carriesRiderOnHorizontalMove(PlayableEntity player) { return false; }
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
-    @Override public SolidObjectParams getSolidParams() { return horizontal() ? new SolidObjectParams(75,12,13) : new SolidObjectParams(23,64,65); }
+    @Override public SolidObjectParams getSolidParams() { return horizontal() ? SolidObjectParams.of(75,12,13) : SolidObjectParams.of(23,64,65); }
     @Override public SolidExecutionMode solidExecutionMode() { return SolidExecutionMode.MANUAL_CHECKPOINT; }
     @Override public boolean usesInstanceSolidStateLatchKey() { return true; }
     @Override public int romObjectCodePointerHighWord() { return 4; }

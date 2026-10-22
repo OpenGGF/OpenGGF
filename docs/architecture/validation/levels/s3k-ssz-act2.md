@@ -537,3 +537,20 @@ regression and existing direct-draw/init case pass 2/0/0/0. This is component
 presentation evidence, not a new cold-route or whole-terminal certificate;
 [the ending matrix](s3k-ending.md#knuckles-eyecatch-native-sat-priority--2026-10-17)
 records the inlet and inherited limits.
+
+## Object pipeline optimization — 2026-10-22
+
+SSZ owned-slot parent lookup retains native lifetime/replacement and rewind ownership while
+removing repeated query/order work. See the [performance evidence](../../audits/performance/2026-10-22-object-pipeline-performance.md)
+for exact focused commands, results and structural counts. This local component
+change adds no cold-route, donor/roster, viewport, native-picture or lifecycle
+product beyond the obligations already recorded above.
+
+## Object-pipeline performance follow-up (2026-10-22)
+
+The crane encounter reads its saved carried-object slot with the previous live-occupant predicate. `TestSszCranePlayerRelease`, `TestSszCraneClaw` and `TestSszCraneCameraPan` own the affected encounter boundaries. Native slot ownership remains distinct from execution aliases.
+
+The [query/allocation audit](../../audits/performance/2026-10-22-native-object-query-performance.md)
+and its companion implementation records own exact tested states, commands and
+remaining delivery checks. These local checks do not close inherited viewport,
+donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.

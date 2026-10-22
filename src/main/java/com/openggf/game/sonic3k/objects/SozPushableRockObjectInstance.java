@@ -149,7 +149,7 @@ public final class SozPushableRockObjectInstance extends AbstractObjectInstance
     @Override public void setPlayerPushing(PlayableEntity player, boolean pushing) {
         participants.flag(participants.slot(player), 0, pushing);
     }
-    @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x1B, 0xC, 0xD); }
+    @Override public SolidObjectParams getSolidParams() { return SolidObjectParams.of(0x1B, 0xC, 0xD); }
     @Override public SolidExecutionMode solidExecutionMode() { return SolidExecutionMode.MANUAL_CHECKPOINT; }
     @Override public boolean usesInstanceSolidStateLatchKey() { return true; }
     @Override public boolean carriesRiderOnHorizontalMove(PlayableEntity player) { return carryThisPass; }

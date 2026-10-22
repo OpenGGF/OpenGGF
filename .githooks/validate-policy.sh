@@ -168,6 +168,19 @@ contains_mod_api_annotation() {
 # Non-private type declarations remain conservative; the exact signature snapshot
 # is authoritative for what the pin can express.
 mod_api_surface_text() {
+    # Records have private members and executable bodies too. Use one shared
+    # lexical declaration probe in Bash/PowerShell; other primary kinds fall
+    # back to the visibility-aware lexer. The exact signature pin is authoritative.
+    if command -v python3 >/dev/null 2>&1; then surface_python=python3
+    elif command -v python >/dev/null 2>&1; then surface_python=python
+    else die "Python 3 is required for Mod API record admission."; fi
+    if record_surface=$(printf '%s\n' "$1" | "$surface_python" "$POLICY_DIR/mod_api_record_surface.py"); then
+        printf '%s\n' "$record_surface"
+        return
+    else
+        surface_status=$?
+        [ "$surface_status" -eq 2 ] || die "Cannot inspect Java record declaration."
+    fi
     printf '%s\n' "$1" | awk '
     function append(c, mask) {
         if (bodyDepth == 0) { header = header c; code = code mask }

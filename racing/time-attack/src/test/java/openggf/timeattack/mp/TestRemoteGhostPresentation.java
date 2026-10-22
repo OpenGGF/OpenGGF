@@ -8,17 +8,16 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 class TestRemoteGhostPresentation {
     @Test
-    void nearestFourGetNamesAndFinishedGhostsDim() {
+    void everyRemoteGhostGetsItsPlayerNameAndFinishedGhostsDim() {
         List<com.openggf.mods.run.GhostPose> ghosts = MultiplayerRaceCoordinator.presentRemoteGhosts(List.of(
                 remote(1, "a", 1010, false), remote(2, "b", 1050, true),
                 remote(3, "c", 1100, false), remote(4, "d", 1200, false),
-                remote(5, "e", 1400, false), remote(6, "f", 1900, false)), 1000);
-        assertEquals(4, ghosts.stream().filter(ghost -> ghost.nameplate() != null).count());
-        assertNull(ghosts.get(5).nameplate());
+                remote(5, "e", 1400, false), remote(6, "f", 1900, false)));
+        assertEquals(List.of("a", "b", "c", "d", "e", "f"),
+                ghosts.stream().map(com.openggf.mods.run.GhostPose::nameplate).toList());
         assertEquals(0.55f, ghosts.get(1).opacity());
         assertEquals(1f, ghosts.getFirst().opacity());
     }

@@ -89,7 +89,7 @@ public final class FbzTrapSpringObjectInstance extends AbstractObjectInstance
     @Override public int getX() { return spawn.x(); }
     @Override public int getY() { return spawn.y(); }
     @Override public int getPriorityBucket() { return 1; }
-    @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x1B, 8, 9); }
+    @Override public SolidObjectParams getSolidParams() { return SolidObjectParams.of(0x1B, 8, 9); }
     @Override public boolean isTopSolidOnly() { return true; }
     @Override public SolidRoutineProfile getSolidRoutineProfile() { return SolidRoutineProfile.topSolid(false); }
 

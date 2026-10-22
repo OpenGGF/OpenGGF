@@ -60,7 +60,7 @@ public final class FbzSnakePlatformObjectInstance extends AbstractObjectInstance
     int routeWait(){return wait;} int routeIndex(){return routeIndex;} int xVelocity(){return xVelocity;} int yVelocity(){return yVelocity;}
     @Override public int getX(){return x;} @Override public int getY(){return y;}
     @Override public int getPriorityBucket(){return 5;}
-    @Override public SolidObjectParams getSolidParams(){return new SolidObjectParams(0x17,0x0C,0x0D);}
+    @Override public SolidObjectParams getSolidParams(){return SolidObjectParams.of(0x17,0x0C,0x0D);}
     @Override public boolean isSolidFor(PlayableEntity player){return delayRemaining==0&&!isDestroyed();}
     @Override public SolidRoutineProfile getSolidRoutineProfile(){return SolidRoutineProfile.fullSolid(false);}
     @Override public boolean usesInstanceSolidStateLatchKey() {

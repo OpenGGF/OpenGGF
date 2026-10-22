@@ -348,3 +348,59 @@ have matching duration, 1280x720/30 fps video and stereo 48 kHz audio. Final ran
 text and stock act-clear separation were inspected in the actual final MP4; the
 audio is non-silent with -9.0 dBFS peak. This is the delivered video. The preceding
 390-return metrics belong specifically to the isolated profiled recording.
+
+
+## Nine-player name rendering follow-up (2026-10-22)
+
+A nine-player version of the same real relay/ROM route uses eight named protocol
+peers: `Q`, `Dash`, `A Very Long Player Name`, `[SPEED]+`, `@Miles_99`, `$100%!?`,
+`Δelta×2`, and `雪🚀Runner`. The fixture changes names and screenshot cadence only;
+the live player remains the ordinary GHZ1 movie run, and peer claims remain
+synthetic and unverified. Sources and final media live outside the repository at
+`$CAPTURE_ROOT/timeattack-names-20261022/`.
+
+The first recording at `d59ea164d` admitted all nine participants, accepted all nine
+finishes, completed 3,230 controller inputs naturally, observed all eight ghost
+identities and closed owned resources cleanly. Pixel inspection nevertheless
+showed names in the lobby/HUD without visible overhead labels. The prior
+nearest-four selection fix therefore did not establish visible nameplate rendering.
+`GhostRenderer` drew font quads immediately while preparing deferred world sprite
+commands; the later world draw overwrote the text. Nameplates now collect during
+sprite preparation and draw in the hosted-run overlay after the world, before
+the host HUD. Repeated preparation replaces each slot's pending label, each overlay
+consumes its labels, and unload discards pending labels. This also removes GL font
+drawing from CPU sprite preparation.
+
+Unsupported glyphs in the compact lobby/HUD font display as question marks; the
+nameplate bitmap font has a different supported character set. The Unicode/emoji
+case intentionally exposes that existing font limitation. This task does not
+claim arbitrary Unicode font coverage.
+
+Focused regression verification in `.worktrees/nameplate-demo` (base `d59ea164d`
+with the renderer/overlay changes) passed 23 tests, zero failures/errors/skips:
+
+```sh
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestGhostRendererLayerSelection,TestHostedRunController,TestRemoteGhostPresentation' test
+```
+
+Java 25 / Lua 5.4 preflight also passed. The change-based planner selected all
+3,580 smoke classes because the renderer/racing paths are unclassified. Focused
+nameplate/lifecycle checks and the rendered relay route replace that broad
+selection for this bounded draw-order change; gameplay, physics, transport and
+selection policy are unchanged. This is not a full-suite result.
+
+The corrected recording completed with nine accepted finishes, live rank 5/9,
+all eight rendered ghost identities, 64 viewport returns and an eight-ghost peak.
+The live player completed naturally after 3,230 controller inputs. All 4,980
+presentations retained the no-device audio owner and owned resources closed
+cleanly. Gameplay PNGs at presentations 1620, 1800, 2160, 2520, 3240 and 3600
+show overhead labels after the correction. Crowded labels can still overlap;
+there is no collision-avoidance layout. Missing Unicode/emoji glyphs remain a
+font limitation, not evidence that the name was lost in the protocol.
+
+`nameplate-demo.mp4` is a 45-second gameplay excerpt (source seconds 20–65);
+`full-run.mp4` retains the 83-second startup/lobby/route/results recording.
+Both use native 320x224 production rendering scaled to 960x672 and offline
+stereo 48 kHz audio. `fixture.patch` preserves the name/capture-only edits outside
+Git; those temporary server-tool edits are discarded after recording.

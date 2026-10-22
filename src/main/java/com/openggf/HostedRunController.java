@@ -274,6 +274,7 @@ final class HostedRunController {
     /** Draws the host's screen-space overlay. */
     void drawOverlay(LevelOverlayCanvas canvas) {
         if (host != null && leaveReason == null) {
+            ghostRenderer.drawNameplates();
             guarded(() -> host.drawOverlay(canvas));
         }
     }

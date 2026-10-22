@@ -17,6 +17,7 @@ import com.openggf.sprites.render.PlayerSpriteRenderer;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
@@ -33,7 +34,17 @@ public final class GhostRenderer {
     private static final int FULL_OPACITY_DISTANCE = 32;
 
     private final Map<String, Slot> slots = new HashMap<>();
-    private final PixelFontTextRenderer nameplateRenderer = new PixelFontTextRenderer();
+    private record Nameplate(String text, int centreX, int top) { }
+    private final Map<String, Nameplate> pendingNameplates = new LinkedHashMap<>();
+    private final PixelFontTextRenderer nameplateRenderer;
+
+    public GhostRenderer() {
+        this(new PixelFontTextRenderer());
+    }
+
+    GhostRenderer(PixelFontTextRenderer nameplateRenderer) {
+        this.nameplateRenderer = nameplateRenderer;
+    }
 
     public static boolean layerMatches(GhostFrame frame, int bucket, boolean highPriority) {
         return frame.priorityBucket() == bucket && frame.highPriority() == highPriority;
@@ -74,35 +85,58 @@ public final class GhostRenderer {
                 graphics.endGhostRenderEffect();
                 graphics.setCurrentSpriteHighPriority(previousHighPriority);
             }
-            drawNameplate(ghost);
+            var camera = GameServices.cameraOrNull();
+            if (camera != null) {
+                queueNameplate(ghost, camera.getXWithShake(), camera.getYWithShake());
+            }
         }
     }
 
-    private void drawNameplate(ActiveGhost ghost) {
+    // Sprite rendering only prepares commands. Immediate font drawing here would
+    // be overwritten when those world commands execute later in the frame.
+    void queueNameplate(ActiveGhost ghost, int cameraX, int cameraY) {
         if (ghost.nameplate() == null || ghost.nameplate().isBlank()) {
             return;
         }
-        var camera = GameServices.cameraOrNull();
-        if (camera == null) {
+        pendingNameplates.put(ghost.slotId(), new Nameplate(ghost.nameplate(),
+                ghost.frame().x() - cameraX, ghost.frame().y() - cameraY - 24));
+    }
+
+    /** Draw only labels collected by the sprite pass, after the world has finished. */
+    void drawNameplates() {
+        if (pendingNameplates.isEmpty()) {
             return;
         }
-        int screenX = ghost.frame().x() - camera.getX();
-        int screenY = ghost.frame().y() - camera.getY() - 24;
-        int width = nameplateRenderer.measureWidth(ghost.nameplate(), 0.5f);
-        nameplateRenderer.setProjectionMatrix(
-                GameServices.graphics().getProjectionMatrixBuffer());
-        nameplateRenderer.beginBatch();
+        GraphicsManager graphics = GameServices.graphics();
+        graphics.flushScreenSpace();
+        drawNameplates(graphics.getProjectionMatrixBuffer());
+    }
+
+    void drawNameplates(float[] projection) {
+        if (pendingNameplates.isEmpty()) {
+            return;
+        }
         try {
-            nameplateRenderer.drawShadowedText(ghost.nameplate(), screenX - width / 2,
-                    screenY, DebugColor.WHITE, 0.5f);
+            nameplateRenderer.setProjectionMatrix(projection);
+            nameplateRenderer.beginBatch();
+            try {
+                for (Nameplate nameplate : pendingNameplates.values()) {
+                    int width = nameplateRenderer.measureWidth(nameplate.text(), 0.5f);
+                    nameplateRenderer.drawShadowedText(nameplate.text(), nameplate.centreX() - width / 2,
+                            nameplate.top(), DebugColor.WHITE, 0.5f);
+                }
+            } finally {
+                nameplateRenderer.endBatch();
+            }
         } finally {
-            nameplateRenderer.endBatch();
+            pendingNameplates.clear();
         }
     }
 
     /** Drop cached art slots (call on level unload / time-attack teardown). */
     public void clearSlots() {
         slots.clear();
+        pendingNameplates.clear();
     }
 
     private Slot slotFor(String slotId, String characterCode) {

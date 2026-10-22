@@ -18,9 +18,6 @@ import com.openggf.mods.ui.LevelOverlayCanvas;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
-import java.util.Comparator;
-import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.Objects;
 import java.nio.file.Path;
 import java.util.function.Consumer;
@@ -58,7 +55,6 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     private int localRank = -1;
     private List<ControlMessage.StandingsRow> topStandings = List.of();
     private List<ControlMessage.StandingsRow> aroundYouStandings = List.of();
-    private int lastLocalFrameX;
     private int roundsStarted;
     /** {@link #roundsStarted} when the runtime was attached: the round its run belongs to. */
     private int attachedRound;
@@ -291,7 +287,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
             runtime.voidCurrentAttempt();
         }
         remoteGhosts = presentRemoteGhosts(
-                registry.advanceAll(session.localSlot()), lastLocalFrameX);
+                registry.advanceAll(session.localSlot()));
     }
 
     public List<GhostPose> remoteActiveGhosts() {
@@ -404,7 +400,6 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
             throw new IllegalStateException(
                     "frame sampled for attempt " + attemptOrdinal + " that never began");
         }
-        lastLocalFrameX = frame.x();
         publisher.onFrame(frame);
     }
 
@@ -495,18 +490,12 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     }
 
     static List<GhostPose> presentRemoteGhosts(
-            List<RemoteGhostRegistry.RemoteGhost> ghosts, int localCentreX) {
-        Set<Integer> named = ghosts.stream()
-                .sorted(Comparator.comparingInt(ghost -> Math.abs(
-                        ghost.state().frame().x() - localCentreX)))
-                .limit(4).map(RemoteGhostRegistry.RemoteGhost::slot)
-                .collect(Collectors.toUnmodifiableSet());
+            List<RemoteGhostRegistry.RemoteGhost> ghosts) {
         List<GhostPose> active = new ArrayList<>(ghosts.size());
         for (RemoteGhostRegistry.RemoteGhost ghost : ghosts) {
             float finishedScale = ghost.state().frame().finished() ? 0.55f : 1f;
             active.add(new GhostPose("net:" + ghost.slot(), ghost.character(),
-                    TimeAttackRuntime.poseOf(ghost.state().frame()), named.contains(ghost.slot())
-                    ? ghost.displayName() : null,
+                    TimeAttackRuntime.poseOf(ghost.state().frame()), ghost.displayName(),
                     ghost.state().opacityScale() * finishedScale));
         }
         return List.copyOf(active);
