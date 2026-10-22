@@ -36,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
@@ -370,6 +371,106 @@ class TestLiveRewindOwnerLifetime {
         assertSame(controller, owner.getRewindController());
         assertEquals(0, controller.currentFrame(), "the audit's callback reroots only after recording finishes");
         assertEquals(60, stage.ticks, "audit restores completed live state before the deferred boundary captures it");
+    }
+
+    @Test
+    void deferredRecordAndFloorCannotAlterAReplacementInstallation() {
+        GameplayModeContext owner = privateOwner();
+        CountingStage stage = registerStage(owner, 0);
+        InputHandler input = new InputHandler();
+        bind(owner);
+        RewindController outgoing = owner.getRewindController();
+        owner.plcFrameLifecycle().runLogicalIteration(() -> { }, frame -> {
+            frame.claim(com.openggf.game.resources.PlcLifecyclePhase.SPECIAL_STAGE);
+            stage.update();
+            manager.recordExternalFrame(owner, GameMode.SPECIAL_STAGE, stage, false, input, false);
+            manager.markBoundary(RewindBoundary.LEVEL_LOAD);
+            assertEquals(0, outgoing.currentFrame(), "recording waits for successful publication");
+            CountingStage replacement = registerStage(owner, 30);
+            bind(owner);
+            replacement.update();
+            manager.recordExternalFrame(owner, GameMode.SPECIAL_STAGE, replacement, false, input, false);
+            return null;
+        });
+        assertNotSame(outgoing, owner.getRewindController());
+        assertEquals(0, outgoing.currentFrame());
+        assertEquals(1, owner.getRewindController().currentFrame(),
+                "old callbacks cannot reset or append to the new installation");
+    }
+
+    @Test
+    void failedIterationCannotRecordAndDoesNotCarryItsInputIntoTheNextFrame() {
+        GameplayModeContext owner = privateOwner();
+        CountingStage stage = registerStage(owner, 0);
+        InputHandler input = new InputHandler();
+        bind(owner);
+        RewindController controller = owner.getRewindController();
+        assertThrows(IllegalStateException.class, () ->
+                owner.plcFrameLifecycle().runLogicalIteration(() -> { }, frame -> {
+                    frame.claim(com.openggf.game.resources.PlcLifecyclePhase.SPECIAL_STAGE);
+                    stage.update();
+                    manager.recordExternalFrame(owner, GameMode.SPECIAL_STAGE, stage, false, input, false);
+                    throw new IllegalStateException("failed tick");
+                }));
+        assertEquals(0, controller.currentFrame());
+        record(stage, input, 1);
+        assertEquals(1, controller.currentFrame());
+    }
+
+    @Test
+    void inactiveLevelBindingDoesNotCaptureBeforeAdmissionAndActiveFadeTicksStillRecord() {
+        mode.set(GameMode.LEVEL);
+        GameplayModeContext owner = privateOwner();
+        var captures = new java.util.concurrent.atomic.AtomicInteger();
+        var callbacks = new java.util.concurrent.atomic.AtomicInteger();
+        owner.getRewindRegistry().register(new RewindSnapshottable<Integer>() {
+            @Override public String key() { return "test-inactive-binding"; }
+            @Override public Integer capture() { return captures.incrementAndGet(); }
+            @Override public void restore(Integer state) { }
+        });
+        owner.getLevelManager().setLevelInactiveForTransition(true);
+        owner.getFadeManager().startFadeToBlack(callbacks::incrementAndGet);
+        InputHandler input = new InputHandler();
+
+        manager.bindOwner(owner, false, GameMode.LEVEL);
+        assertNull(owner.getRewindController(), "binding an inactive source cannot capture a history floor");
+        manager.bindOwner(owner, false, GameMode.LEVEL);
+        assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, true, input));
+        assertEquals(0, captures.get());
+        assertEquals(0, callbacks.get());
+        assertTrue(owner.getFadeManager().hasPendingCompletion());
+
+        owner.getLevelManager().setLevelInactiveForTransition(false);
+        manager.bindOwner(owner, false, GameMode.LEVEL);
+        RewindController controller = owner.getRewindController();
+        assertNotNull(controller, "valid binding still captures an immediate frame-zero floor");
+        assertEquals(0, controller.currentFrame());
+        owner.markRewindBoundary(RewindBoundary.MODE_ENTER_REWINDABLE);
+        assertSame(controller, owner.getRewindController());
+        manager.recordExternalFrame(owner, GameMode.LEVEL, null, false, input, false);
+        assertNotNull(owner.getRewindController(), "an admitted completed cosmetic-fade tick still records");
+        assertEquals(1, owner.getRewindController().currentFrame());
+        owner.markRewindBoundary(RewindBoundary.LEVEL_LOAD);
+        assertSame(controller, owner.getRewindController());
+        assertEquals(0, controller.currentFrame(), "explicit load bootstrap still resets the admitted floor");
+        assertTrue(owner.getFadeManager().hasPendingCompletion());
+        assertEquals(0, callbacks.get());
+    }
+
+    @Test
+    void registeredSpecialStageStillInstallsWhileItsOutgoingLevelIsInactive() {
+        GameplayModeContext owner = privateOwner();
+        CountingStage stage = registerStage(owner, 0);
+        owner.getLevelManager().setLevelInactiveForTransition(true);
+        bind(owner);
+        RewindController controller = owner.getRewindController();
+        assertNotNull(controller);
+        assertEquals(0, controller.currentFrame());
+        owner.markRewindBoundary(RewindBoundary.MODE_ENTER_REWINDABLE);
+        record(stage, new InputHandler(), 2);
+        assertSame(controller, owner.getRewindController());
+        controller.seekTo(0);
+        assertEquals(0, stage.ticks);
     }
 
     @Test

@@ -7,6 +7,7 @@ import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
+import com.openggf.game.rewind.RewindController;
 import com.openggf.game.sonic3k.objects.Sonic3kSSEntryFlashObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance;
 import com.openggf.sprites.NativePositionOps;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static com.openggf.GameLoopRewindTestAccess.owner;
 
 /**
  * Independent local MHZ1 forced-ring → sanctuary → Saved2 origin lifecycle.
@@ -223,13 +225,15 @@ class TestS3kSanctuaryOriginReturnLifecycle {
             assertTrue(main.isObjectControlled(), "real giant-ring touch owns control");
             assertTrue(main.isHidden(), "real capture owns hidden presentation");
             assertEquals(1, sourceObjects.activeObjectsOfType(Sonic3kSSEntryFlashObjectInstance.class).size());
-            int sourceHistory = fixture.gameplayMode().getRewindController().currentFrame();
+            var sourceController = requireHistory(loop, "the origin records before its actual ring exit");
+            int sourceHistory = sourceController.currentFrame();
             assertTrue(sourceHistory > 10);
             for (int frame = 0; frame < 320 && GameServices.level().getObjectManager() == sourceObjects; frame++) {
                 tick(loop, lives, 1);
-                sourceHistory = Math.max(sourceHistory, fixture.gameplayMode().getRewindController().currentFrame());
+                sourceHistory = Math.max(sourceHistory, sourceController.currentFrame());
             }
             assertNotSame(sourceObjects, GameServices.level().getObjectManager(), "actual flash destination load");
+            assertRetiredHistory(loop, sourceController, "the actual hub load retires origin replay");
             var saved = GameServices.level().getBigRingReturn();
             assertNotNull(saved, "flash Save_Level_Data2 survives hub assembly");
             assertEquals(ringSpawn.x(), saved.playerX());
@@ -240,7 +244,7 @@ class TestS3kSanctuaryOriginReturnLifecycle {
             waitForReleasedWorld(loop, lives, 0x17, 1, row);
             hub.assertOwners(row);
             assertTrue(GameServices.level().getLevelGamestate().isTimerPaused());
-            assertTrue(fixture.gameplayMode().getRewindController().currentFrame() < sourceHistory,
+            assertTrue(requireHistory(loop, "released hub owns its incoming timeline").currentFrame() < sourceHistory,
                     "actual hub load retires outgoing origin history");
             for (int frame = 0; frame < 220 && GameServices.sprites().getMainPlayable().isObjectControlled(); frame++) {
                 tick(loop, lives, 1);
@@ -270,10 +274,11 @@ class TestS3kSanctuaryOriginReturnLifecycle {
                 assertTrue(main.getCentreX() >= 0x1640 + 24, "ordinary movement arms native exit band");
                 input.setLogicalOverride(RecordedInputSnapshots.fromBk2(new Bk2FrameInput(0,
                         AbstractPlayableSprite.INPUT_LEFT, 0, false, ""), NEUTRAL));
-                hubHistory = fixture.gameplayMode().getRewindController().currentFrame();
+                var hubController = requireHistory(loop, "the hub records before its actual pad exit");
+                hubHistory = hubController.currentFrame();
                 for (int frame = 0; frame < 320 && GameServices.level().getObjectManager() == hubObjects; frame++) {
                     tick(loop, lives, 1);
-                    hubHistory = Math.max(hubHistory, fixture.gameplayMode().getRewindController().currentFrame());
+                    hubHistory = Math.max(hubHistory, hubController.currentFrame());
                     if (GameServices.level().isLevelInactiveForTransition()) {
                         // The actual exit owner has published; destination gets
                         // neutral input rather than another walking command.
@@ -282,6 +287,7 @@ class TestS3kSanctuaryOriginReturnLifecycle {
                 }
                 input.setLogicalOverride(RecordedInputSnapshots.fromBk2(NEUTRAL, NEUTRAL));
                 assertNotSame(hubObjects, GameServices.level().getObjectManager(), "real pad/exit band loads origin");
+                assertRetiredHistory(loop, hubController, "the actual pad exit retires hub replay");
             }
             assertEquals(saved.playerX(), GameServices.sprites().getMainPlayable().getCentreX(),
                     "actual Saved2 assembly position before ordinary destination movement");
@@ -305,7 +311,7 @@ class TestS3kSanctuaryOriginReturnLifecycle {
                     >= Math.max(0, saved.timerFrames() / 60 * 60 - 1), "native Saved2 second/frame bank restored");
             assertTrue(GameServices.camera().isLevelStarted(), "ordinary origin HUD owner resumes");
             if (outcome == null) {
-                assertTrue(fixture.gameplayMode().getRewindController().currentFrame() < hubHistory,
+                assertTrue(requireHistory(loop, "released origin owns its incoming timeline").currentFrame() < hubHistory,
                         "origin reload retires outgoing hub history");
             }
             replayTwice(loop, fixture, origin, row, lives);
@@ -348,11 +354,19 @@ class TestS3kSanctuaryOriginReturnLifecycle {
 
     static void waitForReleasedWorld(GameLoop loop, int lives, int zone, int act,
                                             CanonicalEntryMatrixSupport.Row row) throws Exception {
+        boolean awaitingHistory = owner(loop).getRewindController() == null;
         for (int frame = 0; frame < 400 && (loop.getCurrentGameMode() != GameMode.LEVEL
                 || GameServices.fade().isActive()
                 || GameServices.fade().hasPendingCompletion()
                 || GameServices.level().hasPendingFreshLevelTransitionBoundary()); frame++) {
             tick(loop, lives, 1);
+            if (awaitingHistory && owner(loop).getRewindController() != null) {
+                var incoming = requireHistory(loop, "completed destination assembly installs history");
+                assertEquals(0, incoming.earliestAvailableFrame());
+                assertTrue(incoming.currentFrame() <= 1,
+                        "the first incoming production controller starts at frame zero");
+                awaitingHistory = false;
+            }
         }
         assertEquals(zone, GameServices.level().getCurrentZone());
         assertEquals(act, GameServices.level().getCurrentAct());
@@ -360,6 +374,29 @@ class TestS3kSanctuaryOriginReturnLifecycle {
         assertFalse(GameServices.fade().isActive());
         assertFalse(GameServices.fade().hasPendingCompletion());
         assertFalse(GameServices.level().hasPendingFreshLevelTransitionBoundary());
+        requireHistory(loop, "released destination requires production live history");
+    }
+
+    static RewindController requireHistory(GameLoop loop, String reason) {
+        var context = owner(loop);
+        assertNotNull(context, "the production loop owns a gameplay visit");
+        var controller = context.getRewindController();
+        assertNotNull(controller, reason);
+        return controller;
+    }
+
+    static void assertRetiredHistory(GameLoop loop, RewindController outgoing, String reason) {
+        var context = owner(loop);
+        assertNotSame(outgoing, context.getRewindController(), reason);
+        int historyFrame = outgoing.currentFrame();
+        int worldFrame = context.getLevelManager().getFrameCounter();
+        var objects = context.getLevelManager().getObjectManager();
+        outgoing.step();
+        outgoing.seekTo(0);
+        assertFalse(outgoing.stepBackward(), reason);
+        assertEquals(historyFrame, outgoing.currentFrame(), reason);
+        assertEquals(worldFrame, context.getLevelManager().getFrameCounter(), reason);
+        assertSame(objects, context.getLevelManager().getObjectManager(), reason);
     }
 
     static void replayTwice(GameLoop loop, HeadlessTestFixture fixture,
@@ -367,7 +404,7 @@ class TestS3kSanctuaryOriginReturnLifecycle {
                                     int lives) {
         owner.assertOwners(row);
         assertFalse(GameServices.fade().hasPendingCompletion());
-        var registry = fixture.gameplayMode().getRewindRegistry();
+        var registry = owner(loop).getRewindRegistry();
         var before = registry.capture();
         tick(loop, lives, 45);
         owner.assertOwners(row);

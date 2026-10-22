@@ -3,6 +3,7 @@ package com.openggf.tools;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.RewindController;
 import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.objects.DezEndBossInstance;
@@ -17,6 +18,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static com.openggf.GameLoopRewindTestAccess.owner;
 
 /** Solo Act2 production traversal and boss, preserving the complete cold DEZ1 prefix. */
 @RequiresRom(SonicGame.SONIC_3K)
@@ -49,6 +51,8 @@ class TestDezSoloActTwoColdRouteCapture {
         int lastHealth = 8, hits = 0, loadFrame = -1;
         boolean bossSeen = false;
         long outgoingFrame = 0;
+        RewindController outgoingHistory = null;
+        RewindController incomingHistory = null;
         var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 11, 0, settings);
@@ -62,14 +66,26 @@ class TestDezSoloActTwoColdRouteCapture {
                 assertInstanceOf(Sonic.class, session.player());
                 assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
                 if (GameServices.level().getCurrentZone() == 11) {
-                    if (frame >= 53650) outgoingFrame = Math.max(outgoingFrame,
-                            SessionManager.getCurrentGameplayMode().getRewindController().currentFrame());
+                    if (frame >= 53650) {
+                        var installed = owner(session.loop()).getRewindController();
+                        if (installed != null) outgoingHistory = installed;
+                        assertNotNull(outgoingHistory, "the enabled DEZ route records before its exit");
+                        outgoingFrame = Math.max(outgoingFrame, outgoingHistory.currentFrame());
+                        if (installed == null) assertRetiredHistory(session, outgoingHistory);
+                    }
                 } else if (loadFrame < 0) {
                     loadFrame = frame;
-                    var incoming = SessionManager.getCurrentGameplayMode().getRewindController();
-                    assertEquals(0, incoming.earliestAvailableFrame());
-                    assertTrue(incoming.currentFrame() <= 1,
-                            "the actual full load must begin a new frame-zero history");
+                    assertNotNull(outgoingHistory, "the completed DEZ encounter has an outgoing timeline");
+                    assertRetiredHistory(session, outgoingHistory);
+                }
+                if (loadFrame >= 0 && incomingHistory == null) {
+                    incomingHistory = owner(session.loop()).getRewindController();
+                    if (incomingHistory != null) {
+                        assertNotSame(outgoingHistory, incomingHistory);
+                        assertEquals(0, incomingHistory.earliestAvailableFrame());
+                        assertTrue(incomingHistory.currentFrame() <= 1,
+                                "the first installed destination history starts at frame zero");
+                    }
                 }
                 var boss = GameServices.level().getObjectManager().activeObjectsOfType(DezEndBossInstance.class)
                         .stream().findFirst().orElse(null);
@@ -104,7 +120,9 @@ class TestDezSoloActTwoColdRouteCapture {
             assertEquals(0, GameServices.level().getCurrentAct());
             assertTrue(outgoingFrame > 10);
             // Unlike DEZ1's seamless handoff, StartNewLevel $1700 resets the frame origin.
-            var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
+            assertNotNull(incomingHistory, "the route reaches an installed destination timeline");
+            var rewind = owner(session.loop()).getRewindController();
+            assertNotNull(rewind, "ready destination gameplay requires live history");
             assertEquals(0, rewind.earliestAvailableFrame());
             rewind.seekTo(0);
             assertEquals(0, rewind.currentFrame());
@@ -141,6 +159,8 @@ class TestDezSoloActTwoColdRouteCapture {
         int lastHealth = 8, hits = 0, loadFrame = -1;
         boolean bossSeen = false;
         long outgoingFrame = 0;
+        RewindController outgoingHistory = null;
+        RewindController incomingHistory = null;
         var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 11, 0, settings);
@@ -155,14 +175,26 @@ class TestDezSoloActTwoColdRouteCapture {
                 assertInstanceOf(Sonic.class, session.player());
                 assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
                 if (GameServices.level().getCurrentZone() == 11) {
-                    if (frame >= 53200) outgoingFrame = Math.max(outgoingFrame,
-                            SessionManager.getCurrentGameplayMode().getRewindController().currentFrame());
+                    if (frame >= 53200) {
+                        var installed = owner(session.loop()).getRewindController();
+                        if (installed != null) outgoingHistory = installed;
+                        assertNotNull(outgoingHistory, "the enabled DEZ route records before its exit");
+                        outgoingFrame = Math.max(outgoingFrame, outgoingHistory.currentFrame());
+                        if (installed == null) assertRetiredHistory(session, outgoingHistory);
+                    }
                 } else if (loadFrame < 0) {
                     loadFrame = frame;
-                    var incoming = SessionManager.getCurrentGameplayMode().getRewindController();
-                    assertEquals(0, incoming.earliestAvailableFrame());
-                    assertTrue(incoming.currentFrame() <= 1,
-                            "the actual full load must begin a new frame-zero history");
+                    assertNotNull(outgoingHistory, "the completed DEZ encounter has an outgoing timeline");
+                    assertRetiredHistory(session, outgoingHistory);
+                }
+                if (loadFrame >= 0 && incomingHistory == null) {
+                    incomingHistory = owner(session.loop()).getRewindController();
+                    if (incomingHistory != null) {
+                        assertNotSame(outgoingHistory, incomingHistory);
+                        assertEquals(0, incomingHistory.earliestAvailableFrame());
+                        assertTrue(incomingHistory.currentFrame() <= 1,
+                                "the first installed destination history starts at frame zero");
+                    }
                 }
                 var boss = GameServices.level().getObjectManager().activeObjectsOfType(DezEndBossInstance.class)
                         .stream().findFirst().orElse(null);
@@ -199,7 +231,9 @@ class TestDezSoloActTwoColdRouteCapture {
             assertEquals(0, GameServices.level().getCurrentAct());
             assertTrue(outgoingFrame > 10);
             // Unlike DEZ1's seamless handoff, StartNewLevel $1700 resets the frame origin.
-            var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
+            assertNotNull(incomingHistory, "the route reaches an installed destination timeline");
+            var rewind = owner(session.loop()).getRewindController();
+            assertNotNull(rewind, "ready destination gameplay requires live history");
             assertEquals(0, rewind.earliestAvailableFrame());
             rewind.seekTo(0);
             assertEquals(0, rewind.currentFrame());
@@ -229,6 +263,8 @@ class TestDezSoloActTwoColdRouteCapture {
         int lastHealth = 8, hits = 0, loadFrame = -1;
         boolean bossSeen = false;
         long outgoingFrame = 0;
+        RewindController outgoingHistory = null;
+        RewindController incomingHistory = null;
         var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 11, 0, settings);
@@ -242,14 +278,26 @@ class TestDezSoloActTwoColdRouteCapture {
                 assertInstanceOf(com.openggf.sprites.playable.Tails.class, session.player());
                 assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
                 if (GameServices.level().getCurrentZone() == 11) {
-                    if (frame >= 62360) outgoingFrame = Math.max(outgoingFrame,
-                            SessionManager.getCurrentGameplayMode().getRewindController().currentFrame());
+                    if (frame >= 62360) {
+                        var installed = owner(session.loop()).getRewindController();
+                        if (installed != null) outgoingHistory = installed;
+                        assertNotNull(outgoingHistory, "the enabled DEZ route records before its exit");
+                        outgoingFrame = Math.max(outgoingFrame, outgoingHistory.currentFrame());
+                        if (installed == null) assertRetiredHistory(session, outgoingHistory);
+                    }
                 } else if (loadFrame < 0) {
                     loadFrame = frame;
-                    var incoming = SessionManager.getCurrentGameplayMode().getRewindController();
-                    assertEquals(0, incoming.earliestAvailableFrame());
-                    assertTrue(incoming.currentFrame() <= 1,
-                            "the actual full load must begin a new frame-zero history");
+                    assertNotNull(outgoingHistory, "the completed DEZ encounter has an outgoing timeline");
+                    assertRetiredHistory(session, outgoingHistory);
+                }
+                if (loadFrame >= 0 && incomingHistory == null) {
+                    incomingHistory = owner(session.loop()).getRewindController();
+                    if (incomingHistory != null) {
+                        assertNotSame(outgoingHistory, incomingHistory);
+                        assertEquals(0, incomingHistory.earliestAvailableFrame());
+                        assertTrue(incomingHistory.currentFrame() <= 1,
+                                "the first installed destination history starts at frame zero");
+                    }
                 }
                 var boss = GameServices.level().getObjectManager().activeObjectsOfType(DezEndBossInstance.class)
                         .stream().findFirst().orElse(null);
@@ -284,7 +332,9 @@ class TestDezSoloActTwoColdRouteCapture {
             assertEquals(0, GameServices.level().getCurrentAct());
             assertTrue(outgoingFrame > 10);
             // Unlike DEZ1's seamless handoff, StartNewLevel $1700 resets the frame origin.
-            var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
+            assertNotNull(incomingHistory, "the route reaches an installed destination timeline");
+            var rewind = owner(session.loop()).getRewindController();
+            assertNotNull(rewind, "ready destination gameplay requires live history");
             assertEquals(0, rewind.earliestAvailableFrame());
             rewind.seekTo(0);
             assertEquals(0, rewind.currentFrame());
@@ -341,6 +391,20 @@ class TestDezSoloActTwoColdRouteCapture {
             assertEquals(11, GameServices.level().getCurrentZone());
             assertEquals(1, GameServices.level().getCurrentAct());
         }
+    }
+
+    private static void assertRetiredHistory(GameplayCaptureSession session, RewindController outgoing) {
+        var context = owner(session.loop());
+        assertNotSame(outgoing, context.getRewindController(), "the production exit retires DEZ history");
+        int frame = outgoing.currentFrame();
+        int worldFrame = context.getLevelManager().getFrameCounter();
+        var objects = context.getLevelManager().getObjectManager();
+        outgoing.step();
+        outgoing.seekTo(0);
+        assertFalse(outgoing.stepBackward(), "retired DEZ history rejects replay");
+        assertEquals(frame, outgoing.currentFrame());
+        assertEquals(worldFrame, context.getLevelManager().getFrameCounter());
+        assertSame(objects, context.getLevelManager().getObjectManager());
     }
 
     private static void same(CompositeSnapshot expected, CompositeSnapshot actual, String where) {
