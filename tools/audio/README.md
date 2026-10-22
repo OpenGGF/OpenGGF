@@ -57,6 +57,15 @@ Git, SSH, and dynamic-loader injection variables are rejected.
 uses. `producer-kind-status <REFERENCE|OPENGGF> <profile>` checks one fixed
 producer independently and reports that binding's exact unavailable reason.
 
+`compare_native_pcm_window.py` compares diagnostic final-PCM captures against
+the engine's native-compatible PCM. Supply `--rows` to require the intended
+presentation count; otherwise equality covers only the inferred observed span.
+It validates complete native completion metadata, hashes, counts and per-row
+cadence before accepting a result. PCM hashing and comparison read sequential
+chunks of at most 64 KiB; only the per-row tables grow with capture duration.
+This diagnostic comparison does not install producer identities or publish a
+canonical complete-run reference.
+
 `run_s1_ghz1_gameplay_audio_timeline.sh` has never been exercised end-to-end:
 its hardcoded in-repo `OUTPUT_ROOT` is rejected by TraceChaser's
 `output_policy.py`, which requires probe output to live outside both source

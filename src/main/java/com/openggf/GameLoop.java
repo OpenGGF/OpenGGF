@@ -11,6 +11,7 @@ import com.openggf.editor.EditorInputHandler;
 import com.openggf.game.*;
 
 import com.openggf.control.InputHandler;
+import com.openggf.control.RecordedInputOwnership;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.presentation.OuterFramePresentation;
 import com.openggf.audio.presentation.PresentationMode;
@@ -1506,7 +1507,9 @@ public class GameLoop {
                 currentGameMode, () -> updateTitleCardMode(doFrameStep),
                 () -> titleReleaseResult, levelManager, gameplayMode,
                 !overlayOwnsPause && (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.START))
-                        || playbackDebugManager.isCurrentForcedStartPress()),
+                        || playbackDebugManager.isCurrentForcedStartPress()
+                        || (RecordedInputOwnership.active(inputHandler)
+                            && inputHandler.logical().player1().startPressed())),
                 userRecordingControls,
                 request -> routeHostedRunSeamlessTransitionBeforeApply(
                         request, doFrameStep),

@@ -17,6 +17,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RgbaImage;
 import com.openggf.graphics.ScreenshotCapture;
 import com.openggf.configuration.WidescreenAspect;
+import com.openggf.control.RecordedInputOwnership;
 import com.openggf.graphics.pipeline.UiRenderPipeline;
 import com.openggf.graphics.shaderlib.RewindVhsEffectPass;
 import com.openggf.level.LevelManager;
@@ -291,6 +292,12 @@ public final class GameplayCaptureSession implements AutoCloseable {
     /** Steps one gameplay frame with the given held input ({@code null} = neutral). */
     public void step(Bk2FrameInput input) {
         requireBooted();
+        try (var recordedInput = RecordedInputOwnership.acquire(loop.getInputHandler())) {
+            stepRecordedInput(input);
+        }
+    }
+
+    private void stepRecordedInput(Bk2FrameInput input) {
         Bk2FrameInput current = input != null ? input : neutral(previousInput);
         loop.getInputHandler().setLogicalOverride(RecordedInputSnapshots.fromBk2(current, previousInput));
         previousInput = current;
@@ -334,7 +341,9 @@ public final class GameplayCaptureSession implements AutoCloseable {
     /** Optional interactive owner; one input-log row is one presentation, including menu and hold rows. */
     void stepPresentation(Bk2FrameInput input, MutatorGameplayCaptureTool.PresentationInput driver) {
         requireBooted();
-        driver.step(loop, input, showTitleCard);
+        try (var recordedInput = RecordedInputOwnership.acquire(loop.getInputHandler())) {
+            driver.step(loop, input, showTitleCard);
+        }
         previousInput = input;
         if (startAtTitle) {
             var focused = GameServices.camera().getFocusedSprite();

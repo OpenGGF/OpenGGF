@@ -476,7 +476,9 @@ Unreleased. The earlier development themes remain in
   Silent headless boots also retire inherited audio backends before playback, keeping
   reused capture processes off desktop audio devices. Configured engine startup
   retains the supplied no-device backend through ROM detection and title entry,
-  with synthesis enabled or disabled.
+  with synthesis enabled or disabled. Recorded controller Start reaches native
+  consumers, including gameplay pause, without toggling host pause during a
+  capture or complete-run audio step; physical keyboard pause remains available.
 
 - **Native-compatible PCM output (diagnostics):** An opt-in audio session setting
   feeds the accurate FM chip's own pin sums through a Java port of blip_buf. It
@@ -490,7 +492,8 @@ Unreleased. The earlier development themes remain in
   short of the ROM's hardware frame. The PSG half follows GPGX's integrated
   PSG and also matches its source vectors. The MAME YM2612 core and waveform
   parity are not covered. Native PCM comparisons validate complete selected row
-  spans and capture digests, rejecting truncated-prefix false matches. S1/S2
+  spans and capture digests, rejecting truncated-prefix false matches, and stream
+  PCM in bounded chunks for long captures. S1/S2
   complete-run producer plumbing remains gated by native publication evidence
   and independently installed artifact attestation.
 - **Audio cadence:** Each presented frame now advances the sound chips by exactly
@@ -508,6 +511,8 @@ Unreleased. The earlier development themes remain in
   game, or a reset, still installs fresh hardware, and rewind restores the kept
   chips exactly. The Sonic 3 & Knuckles title screen now opens with the ROM's
   music fade-out request, which silences the PSG on entry as the console does.
+  Sonic 1's SEGA logo begins with its directly loaded ROM palette and native
+  light scan, without an additional generic fade from black.
 
 Rewind verification compares private records and complete captured opaque arrays
 by content, with explicit failures when snapshot inspection cannot complete. It also
