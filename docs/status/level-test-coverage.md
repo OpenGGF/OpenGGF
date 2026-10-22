@@ -1752,3 +1752,12 @@ qualification is closed only for this direct320/off/solo edge and its components
 Full-act, breadth, native and other route failures remain open; Main is unmerged
 and the complete original smoke selection remains red. See the
 [Root evidence and limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#root-icz-cnz-composition-and-smoke-disposition-2026-10-21).
+
+MHZ current-source follow-up (2026-10-22): Root composed native glide correction
+`c4c66c1a0` passes433 affected-owner tests across16 classes, with0 failures/errors/skips.
+The exact maintained Knuckles Act2-to-FBZ case remains1T/1F/0E/0S at death37752;
+no route data or predicate was changed. Matching the author's diagnostic death
+index does not prove identical input/trajectory; the two products first differ
+at35020. Older milestone passes above retain their tested epochs, while current
+route qualification, bounded baseline/current attribution and combined smoke stay
+open. See the [MHZ2 current record](../architecture/validation/levels/s3k-mhz-act2.md#root-native-glide-composition--2026-10-22).

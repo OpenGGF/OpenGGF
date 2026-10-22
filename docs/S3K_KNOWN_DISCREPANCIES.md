@@ -1727,3 +1727,14 @@ Native contact/cause, whole-world lifetime breadth and complete-route parity
 remain open. The rejected first candidate's earlier ownership stop and its
 correction are preserved in the dated plan.
 [Scope and remaining obligations](architecture/validation/levels/s3k-hcz2.md#snake-block-respawn-lifecycle--2026-10-22).
+
+MHZ Knuckles native glide source composition (2026-10-22): the four-quadrant
+collision ordering, S3K floor-first/KiS2 wall-first semantic and inherited reverse
+solidity/path correction are composed at `c4c66c1a0`. The16 affected movement,
+terrain, rules, API and bootstrap classes pass433 tests without failures/errors/skips.
+The unchanged maintained Act2-to-FBZ case remains red at actual death37752.
+Its old complete assertion is not retained here; worsening is unattributed pending
+bounded matched baseline/current checks. The separate ordinary37402 control-owner
+proposal is not a route pass. Combined smoke, sliding/dual-plane breadth and full
+Act2/FBZ qualification remain open; no integration waiver follows.
+[Current source and consumer evidence](architecture/validation/levels/s3k-mhz-act2.md#root-native-glide-composition--2026-10-22).

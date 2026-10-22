@@ -30792,3 +30792,73 @@ Hold existingRA37236..37269 (34 inputs):33 rows retain slide3/airtrue, then FIRS
 FIRST actual control boundary37402:(10028,2060),raw18869/65068,VX/VY/G0,angle−64,flag0/nonair/nonjump/default9x19,object_controlledtrue. Other retained scalars are control_lockedfalse/forced_input0/forceRightfalse/markertrue; marker is not control authority. The current control owner is UNKNOWN: stored Spring slot15/spawn7888/1928 remains stale and actual ridernone does not identify the captor. No37403 step. Later driver rider/action/no-progress checks are UNREACHED after the control stop, although their independently retained public fields remain data.
 Result `actual_control_handoff_boundary`:37403 total/167 new step+normal-draw pairs, no snapshot/restore, ordinary exit0/**0JUnit/skipsN/A**. Queue34s/Maven48.628s/AUTHOR09:44:54.615689..09:45:14.573265Z (19.958s including boot/replay/output) overlap. Actual executed script/BK2/CSV payload/current37236-prefix/P2 proofs and production reload agree: BK2 `07fcedab5c54ba1e4dd0eb7788a62bfaf565cb0cae2fadc85ed966b6cc88b8da`, script `08aa5a42a0d7303a31235999cdbbd0a515d75dd197145cb3ef70057a23ba0793`. All167 complete64 rows/cached decisions/first ground/endpoint/proofs remain at external `$MHZ_TASK_DIR/r33-corrected-slide-followthrough-0/compact-facts.json`, SHA `dd5cf29fe965a8b9de784c816d269dc18c0783e80dc1f95111ea5fb0995346d5`.
 Read full original stream, ordered facts, errors and products before worktree/activity-leased cleanup consumed10 raw files/14509512bytes and3 registered sources/3 SourceFile-proven temporary classes. Maintained compiled normal owners/tests, useful external source/inputs/facts, all old refs/private recorder products/native/config remain; no live owned jobs. Prospective ordinary correction budget is now0; focused1 stays reserved, original six-request history/remaining1 unchanged. Stop Root source/data review: useful unhurt ground-to-control-capture proposal, not free/safe onward, past37752, stable terrain/support, complete Act2/FBZ/history/rewind/native cause/qualification. No maintained movie/oracle/count/window adaptation, runtime change after76bac, integration or push.
+
+
+## Historical red identities for aggregate attribution — 2026-10-22
+
+Historical source: b078214e74ddbcb393cbc0173fd8c74055b0dadb; integration base e3d23e2fa4da78a1035536fed4448f53e9a804be; source fingerprint 0d209a98cc5dea33c55bb976d0f17ca330b7b234d07cb0d801b7515e19e310ec. Original run20261021T112411Z-dd9405e1 plus exact uncompleted suffix20261021T141615Z-b22698ec; original62+suffix10 disjoint batches, 37883T14F0E91S; fresh frozen-original guards718T4F0E0S. Interrupted11cases excluded. Java25, surfaceless EGL, nullAL, Lua5.4, original absolute ROM directory and cleared ambient JVM/display/library overrides. Exact ordinary Java patch is UNKNOWN in the compact record. Guard later separate epoch a11707c6de4e2f59c3dc171a6dc1b10abee52e19 inspected Java25.0.4.1; do not substitute that patch version into the earlier ordinary run.
+
+All ordinary identities below are in `com.openggf.tools`:
+
+```text
+1 TestLrzKnucklesColdRouteCapture#coldKnucklesRestoresActTwoUpperClimbsAndDoorRelease
+2 TestLrzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace
+3 TestLrzKnucklesColdRouteCapture#coldKnucklesRestoresActTwoTraversalToTheMiddleCorridor
+4 TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndIsolatesTheFbzTimeline
+5 TestS3kHpzJoinedColdRouteCapture#coldKnucklesReplaysUpperPadAndTheJoinedSszCraneControlRelease
+6 TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory
+7 TestS3kLrzHpzSszColdCampaign#tailsColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory
+8 TestS3kLrzHpzSszColdCampaign#pairColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory
+9 TestS3kLrzHpzSszColdCampaign#knucklesColdCampaignClearsSkySanctuaryTwoThroughTheEndingAndTitle
+10 TestSozColdRouteCapture#soloColdActCompletesWithTraversalReplayAndPlayableDestination(int, String)[5]
+11 TestSozColdRouteCapture#knucklesColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef
+12 TestSozColdRouteCapture#knucklesWideColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef
+13 TestSszWidePairedColdRouteCapture#coldFirstReplicaAndTransportReplayWithRetiredColumnDebris
+14 TestSszWidePairedColdRouteCapture#coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline
+```
+
+Exact #14 message: `FIRST_FORWARD [wide-route-11640] frame=11640 n=24 input=11664 ==> expected: <false> but was: <true>`. The baseline-to-tested owning-file change only labels unchanged assertFalse(getDead) predicates (4 added/2 removed lines); the old bare message does not prove the earlier input11664. Other13 individual complete assertion strings are UNKNOWN in this compact handback, although the original reader recorded exact identity/type/message equality to its campaign baseline. Do not reconstruct old assertions or locations from current source.
+
+Exact guard identities:
+
+```text
+com.openggf.game.TestProductionSingletonClosureGuard#productionCodeDoesNotUseForbiddenProcessSingletonsOutsideEngineServices
+com.openggf.game.TestProductionSingletonClosureGuard#productionCodeOnlyUsesRawGetInstanceAtEngineServicesBootstrapBridge
+com.openggf.tests.TestArchUnitRules#shared_code_does_not_construct_concrete_sonic_provider_classes
+com.openggf.tests.TestArchUnitRules#shared_layers_do_not_depend_on_game_specific_packages
+Complete old guard failure strings are not copied into this compact handback; the original reader recorded complete equality. Findings were MenuAudioProbeTool process singleton/raw-getInstance and HubMusic concrete-provider construction/dependency. The later 823eda repair and owning89 checks close these four audio findings only.
+```
+
+Existing committed anchor: docs/architecture/plans/2026-10-13-s3k-playable-completion.md, heading 'Completed original smoke continuation and attribution — 2026-10-21' (line28503 in current prepared tree/f004). Existing state.json Root.shared_fix_smoke_remaining_20261021.exact_failure_headers contains13ordinary+4guards; diagnostic_enriched_failure contains #14 and its exact message. Root.four_guard_source_attribution_root_acceptance_20261021 points to ec4d90decd33c49e3cddcc5c025ac290b6dac41b (source a6f2116d0b12588f4c2b0036e928d8dbb3297185 against Mainbd042f08094155a5b7da76e552f25d43d86d98d7). Raw run directories were inspected and acknowledged/removed. No new jobs or raw archives were used to supply this list. Current disputed failures remain for bounded matched baseline/current attribution after combined selection; current SOZ pass does not rewrite historical counts.
+
+
+## Root MHZ native-glide composition and affected checks — 2026-10-22
+
+Root composed reviewed source `76bac7f1b010ddf7d126a9d57600e7786cbf15fe` onto `3ffa42efd9107aa1c181b919fa55ae54acf59f5d` as `c4c66c1a07722a059b4094ffc431a66d7ca496da`. Only the dated Plan conflicted: preserving its complete Root prefix and the child's exact6891-byte appendix resolved it; executable/rules/API/test changes applied without conflict. Independent pinned-source review found no material introduced defect. Existing ordinary R33 records `c79ddf7e` and `6635ac78` were separately read and composed as `fcdc89528` and `b003901b0`; they change only this Plan and the MHZ2 matrix. No maintained movie, predicate, count or rewind window changed.
+
+One new composed focused request (session29100) passed **433T/0F/0E/0S across16 actual suites/433 distinct test identities**. It selects native-glide32, existing wall-climb47, player-owned solidity18, movement188, GroundSensor31/resolution1, KiS2rules21, terrain5, Mod API pin4/release15/signature11 and the60 required AIZ/loading/bootstrap/decoding cases. All actual identities, failures/errors/skips, properties and warning output were inspected. Java25.0.5, surfaceless EGL, nullAL, Lua5.4 and all three original absolute ROM identities were checked. Queue printed0s/estimate34.5s; Maven reported1:30, distinct from unknown parent/individual compiler durations. Ordinary compilation4211 production/4323 test sources occurred inside this lifecycle. This is affected-owner coverage, not a whole-route, heap, native or combined-smoke pass.
+
+Command, with `$ROOT` the original main checkout and `$WT` this prepared tree; `$NS=$WT/target/mhz76-composed-focused-1`:
+```text
+python3 $ROOT/tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dtest=com.openggf.sprites.managers.TestKnucklesGlideCollisionContract,com.openggf.physics.TestGlideWallGrabTerrain,com.openggf.sprites.managers.TestKnucklesWallClimbVerticalContract,com.openggf.sprites.managers.TestKis2MovementRules,com.openggf.mods.TestModApiPinPolicy,com.openggf.mods.TestModApiSignatureSurface,com.openggf.mods.TestModApiReleasePolicy,com.openggf.sprites.managers.TestPlayableSpriteMovement,com.openggf.physics.TestGroundSensor,com.openggf.physics.TestGroundSensorServiceResolution,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils,com.openggf.sprites.managers.TestS3kGlidePlayerSolidityQuery -Dopenggf.surefire.reports=$NS/reports -Dopenggf.test.tmpdir=$NS/tmp -Dopenggf.test.diagnostics=$NS/diagnostics -Dsonic1.rom.path=$S1_ROM -Dsonic2.rom.path=$S2_ROM -Ds3k.rom.path=$S3K_ROM test -B
+```
+The exact argv/environment and suite counts are in existing Root.mhz_76bac_composition_20261022.focused1. Ambient JVM/display/library overrides were cleared; no desktop fallback. The NONE/FAST and synthetic-fixture fallback-SFX warnings do not certify audio/assets or measured timing.
+
+One actual maintained consumer then ran at `b003901b0`, with executable/test/POM bytes unchanged from `c4c66c1a0`: same command/environment, separate `target/mhz76-composed-route-1`, replacing only the selector with `com.openggf.tools.TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndIsolatesTheFbzTimeline`. Session4968 exits1, **1T/1F/0E/0S**, exact AssertionFailedError `cold Knuckles death at 37752 ==> expected: <false> but was: <true>` at line158. Suite21.726s/case21.408s, printed queue91s/estimate30s, Maven49.705s are separate intervals. The actual failure stack, identity, all properties, skips and full case stderr were read.
+
+The unchanged maintained movie has66282 rows; comparison-only InputLog reads locate its first input difference from the37753-row author diagnostic at35020. Thus the matching death index does not prove identical trajectory, cause or native behavior. The historical red identity is the same, but its complete old assertion is UNKNOWN in the compact handback; whether this is worsened remains UNATTRIBUTED pending bounded matched baseline/current checks after combined selection. Current input/semantic/history predicates remain intact. No full-act/FBZ qualification follows.
+
+This maintained run emits three current missing-measured KOS leads: `d24be13589290e524a4b8bcd45d2b234d35956a6d0c98e8cec93a773405f377b`, `513a9a9016d04c5eb13ce66f295beee59f58d0f7b521633e61b4a2d331e0f696`, and `013f94146512ab81ef03b25a40e4bc861e8e699cd62a77f992ceca8399c71488`. The first two also occur in the separately recorded current SOZ case. These are current warnings, not recovered historical14 keys or authentic measurements; spans/epochs/ordinals/service boundaries remain unobserved here.
+
+Both owned diagnostic namespaces were consumed after inspection (focused35files/1850090bytes; maintained6files/1424297bytes); compiled maintained outputs remain. No raw archive, pass cache or receipt was made. All jobs are terminal. Broad shared-algorithm coverage remains with the single coordinated combined-smoke lead; new/worsened negatives block eventual delivery. Main/develop is unchanged and this remains draft-PR source composition, not integration completion.
+
+
+## HCZ row442 native-P2 source disposition — 2026-10-22
+
+Read-only source review at `3ffa42efd` and unchanged P2 owners at `c4c66c1a0`, against pinned skdisasm object `8b2cf3c4178f2382f844da67798de4befc50c5e0`, proves no causal mismatch for the current row442 injury. Fixture `hcz_3` physics rows441/442 carry frame01B9/01BA, gameplay counter01B4/01B5 and VBlank4B4C/4B4D; matching aux labels441/442 carry vfc436/437. Positions/status/camera align; absolute input cursor is not inferred. Both native P2 records have interact0/status40/secondary0/object-control0/i-frame0. Aux contains zero contact-list, decision or velocity/position-write events despite advertising extras.
+
+Native slot8 code85AD2 is `loc_85AD2` inside `Obj_WaitOffscreen` (pinned sonic3k.asm:180362–180394), not a proved hazard. The unrecorded continuation at$34 and missing collision/render flags prevent original-owner/engine-instance attribution. Matching native hurt-tail velocities alone would not identify a caller.
+
+A source-only preparation found boundary hooks sufficient for timing, binding and cleanup, but no existing hook retains applyHurt receiver/arguments/gates/first writes. A future bounded design needs one first accepted actual registered-P2 false→true hurt event at original owner mutation points, nested touch/routine/solid lexical origin scopes, actual existing locals, and post-step draining. Ordinary touch's sampled objX and later actual sourceX read are distinct; raw P2 identity cannot be replaced by CPU ownership or a spy. Active-object identity scans, repeated overlap/provider/terrain queries and late reconstruction are excluded. Direct/global/deferred callbacks cannot be labelled touch decisions merely from a stale execution checkpoint.
+
+Exact source design and native-task result are retained in Root.hcz_p2_442_source_contract_20261022. No observer, API, source edit, probe, test or native workload was authored/executed for this preparation. Binding/cap/partial-error/lease behavior and cross-composition surface ownership need disposition before a future diagnostic. Actual engine caller/receiver decision/first divergent writer/native-instance mapping remain UNKNOWN.
