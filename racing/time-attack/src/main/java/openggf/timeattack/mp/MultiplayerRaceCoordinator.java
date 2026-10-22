@@ -9,6 +9,8 @@ import com.openggf.net.client.GhostStreamPublisher;
 import com.openggf.net.client.RaceClient;
 import com.openggf.net.client.RemoteGhostRegistry;
 import com.openggf.net.hub.HostRoundEngine;
+import com.openggf.net.identity.DisplayNames;
+import com.openggf.net.identity.PlayerAppearance;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.mods.run.GhostPose;
 import com.openggf.mods.run.RunLevelStart;
@@ -287,7 +289,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
             runtime.voidCurrentAttempt();
         }
         remoteGhosts = presentRemoteGhosts(
-                registry.advanceAll(session.localSlot()));
+                registry.advanceAll(session.localSlot()), session::appearance);
     }
 
     public List<GhostPose> remoteActiveGhosts() {
@@ -328,6 +330,15 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
 
     public void sendChat(String text) {
         transport.sendControl(new ControlMessage.Chat(text));
+    }
+
+    /**
+     * Asks the host to rename this player and change its look without a new identity. The
+     * host accepts it only in the lobby; the change arrives back as PlayerUpsert/PlayerLook.
+     */
+    public void updateProfile(String displayName, PlayerAppearance appearance) {
+        transport.sendControl(new ControlMessage.UpdateProfile(DisplayNames.sanitize(displayName),
+                appearance.encode()));
     }
 
     public void sendRoundConfigure(ControlMessage.RoundConfig config) {
@@ -490,13 +501,13 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     }
 
     static List<GhostPose> presentRemoteGhosts(
-            List<RemoteGhostRegistry.RemoteGhost> ghosts) {
+            List<RemoteGhostRegistry.RemoteGhost> ghosts, java.util.function.IntFunction<PlayerAppearance> looks) {
         List<GhostPose> active = new ArrayList<>(ghosts.size());
         for (RemoteGhostRegistry.RemoteGhost ghost : ghosts) {
             float finishedScale = ghost.state().frame().finished() ? 0.55f : 1f;
             active.add(new GhostPose("net:" + ghost.slot(), ghost.character(),
                     TimeAttackRuntime.poseOf(ghost.state().frame()), ghost.displayName(),
-                    ghost.state().opacityScale() * finishedScale));
+                    ghost.state().opacityScale() * finishedScale, looks.apply(ghost.slot())));
         }
         return List.copyOf(active);
     }

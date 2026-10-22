@@ -894,6 +894,7 @@ CF-ANNOTATION TYPE com.openggf.mods.objects.LaunchBaseFactory visible @com.openg
 CF-ANNOTATION TYPE com.openggf.mods.objects.LavaReefFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.objects.MarbleGardenFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.objects.MushroomHillFactory visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.run.CharacterLooks visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.GhostPose visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.PlayerPose visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.RunEndReason visible @com.openggf.game.ModApi
@@ -12350,6 +12351,8 @@ METHOD com.openggf.mods.objects.MarbleGardenFactory public,static  com.openggf.l
 METHOD com.openggf.mods.objects.MarbleGardenFactory public,static  com.openggf.level.objects.AbstractBadnikInstance spiker(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe)
 METHOD com.openggf.mods.objects.MarbleGardenFactory public,static  com.openggf.level.objects.AbstractObjectInstance miniboss(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe)
 METHOD com.openggf.mods.objects.MushroomHillFactory public,static  com.openggf.level.objects.AbstractBadnikInstance cluckoid(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe)
+METHOD com.openggf.mods.run.CharacterLooks public,static  com.openggf.net.identity.PlayerAppearance withBaseColour(java.lang.String,java.lang.String,int)
+METHOD com.openggf.mods.run.CharacterLooks public,static  int[] bodyRamp(java.lang.String,java.lang.String)
 METHOD com.openggf.mods.run.GhostPose public  com.openggf.mods.run.PlayerPose pose()
 METHOD com.openggf.mods.run.GhostPose public  com.openggf.net.identity.PlayerAppearance appearance()
 METHOD com.openggf.mods.run.GhostPose public  float opacity()
@@ -12898,6 +12901,7 @@ METHOD com.openggf.mods.ui.UiPrimitives public,static  void meter(com.openggf.mo
 METHOD com.openggf.net.client.ClientRaceSession public  boolean isWindowOpen()
 METHOD com.openggf.net.client.ClientRaceSession public  boolean needsMoreClockSamples()
 METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.client.ClientRaceSession$Phase phase()
+METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.identity.PlayerAppearance appearance(int)
 METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.protocol.ControlMessage$RoomDescriptor room()
 METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.protocol.ControlMessage$RoundConfig roundConfig()
 METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.protocol.ControlMessage$StandingsRow localStandingsRow()
@@ -19592,6 +19596,7 @@ TYPE class public,final com.openggf.mods.objects.LaunchBaseFactory SUPER java.la
 TYPE class public,final com.openggf.mods.objects.LavaReefFactory SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.objects.MarbleGardenFactory SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.objects.MushroomHillFactory SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.run.CharacterLooks SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneButtons SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneDraw SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneImage SUPER java.lang.Object
@@ -21483,6 +21488,7 @@ TYPE-ANNOTATION com.openggf.mods.objects.LaunchBaseFactory @com.openggf.game.Mod
 TYPE-ANNOTATION com.openggf.mods.objects.LavaReefFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.objects.MarbleGardenFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.objects.MushroomHillFactory @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.run.CharacterLooks @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.GhostPose @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.PlayerPose @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.RunEndReason @com.openggf.game.ModApi

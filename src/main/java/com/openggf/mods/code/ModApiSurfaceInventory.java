@@ -122,6 +122,7 @@ public final class ModApiSurfaceInventory {
             // Optional creator presentation helpers; static utilities need explicit roots.
             "com.openggf.mods.ui.CompactFont",
             "com.openggf.mods.ui.NameFont",
+            "com.openggf.mods.run.CharacterLooks",
             "com.openggf.mods.ui.BitmapFont",
             "com.openggf.mods.ui.AtlasFont",
             "com.openggf.mods.ui.TextLayout",
