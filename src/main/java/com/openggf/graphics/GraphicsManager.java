@@ -154,6 +154,8 @@ public class GraphicsManager {
 	private boolean spriteMaskRequested = false;
 	private SpriteSatMaskPostProcessor.Raster spriteSatRaster;
 	private List<SpriteSatEntry> spriteSatFragments;
+    private boolean submittingNativeSpriteOwnership;
+    private NativeSpriteOwnership nativeSpriteOwnership;
 	private final List<SpriteSatEntry> spriteSatEntries = new ArrayList<>();
 	// Reusable buffers/scratch for endSpriteSatCollectionAndReplay() — avoids per-frame
 	// ArrayList and PatternDesc allocations on the SAT replay hot path.
@@ -2278,7 +2280,7 @@ public class GraphicsManager {
 	}
 
 	public ShaderProgram getShaderProgram() {
-		if (useSpritePriorityShader && spritePriorityShaderProgram != null) {
+		if ((useSpritePriorityShader || nativeSpriteOwnership != null) && spritePriorityShaderProgram != null) {
 			return spritePriorityShaderProgram;
 		}
 		return currentShaderProgram;
@@ -2286,7 +2288,8 @@ public class GraphicsManager {
 
 	/** Priority choice is frozen at picture submission; native water/default intent still resolves at execution. */
 	ShaderProgram presentationShader(boolean priority) {
-		return priority&&spritePriorityShaderProgram!=null?spritePriorityShaderProgram:currentShaderProgram;
+		return (priority || nativeSpriteOwnership != null) && spritePriorityShaderProgram != null
+                ? spritePriorityShaderProgram : currentShaderProgram;
 	}
 
 	/** Immutable local cache sample for ROM-recipe projection; never supplies guest art content. */
@@ -2374,8 +2377,39 @@ public class GraphicsManager {
 	 * Check if sprite priority shader mode is enabled.
 	 */
 	public boolean isUseSpritePriorityShader() {
-		return useSpritePriorityShader;
+		return useSpritePriorityShader || submittingNativeSpriteOwnership;
 	}
+
+    boolean nativeSpriteOwnershipActive() { return nativeSpriteOwnership != null; }
+
+    /** Queues a native coverage scope; all GPU work remains on the command execution thread. */
+    void withNativeSpriteOwnership(Runnable producer) {
+        if (submittingNativeSpriteOwnership) throw new IllegalStateException("Nested native sprite ownership");
+        if (spritePresentationBuilder != null) { producer.run(); return; }
+        boolean previousPriorityShader = useSpritePriorityShader;
+        if (headlessMode) {
+            submittingNativeSpriteOwnership = true;
+            try { producer.run(); }
+            finally {
+                submittingNativeSpriteOwnership = false;
+                useSpritePriorityShader = previousPriorityShader;
+            }
+            return;
+        }
+        flushPatternBatch();
+        var state = new NativeSpriteOwnership.Commands(this, scope -> nativeSpriteOwnership = scope);
+        registerCommand(state.begin);
+        submittingNativeSpriteOwnership = true;
+        try { producer.run(); }
+        finally {
+            try { flushPatternBatch(); }
+            finally {
+                submittingNativeSpriteOwnership = false;
+                useSpritePriorityShader = previousPriorityShader;
+                registerCommand(state.end);
+            }
+        }
+    }
 
 	/**
 	 * Set whether the current sprite being rendered has high priority.
@@ -2469,7 +2503,8 @@ public class GraphicsManager {
 		SpritePieceRenderer.PreparedPiece taggedPiece = presentationSource == null
 				? piece
 				: piece.withDebugSource(presentationSource);
-		SpriteSatEntry entry = SpriteSatEntry.fromPreparedPiece(taggedPiece, currentSpriteSatBucket);
+		SpriteSatEntry entry = SpriteSatEntry.fromPreparedPiece(taggedPiece, currentSpriteSatBucket)
+                .withTileOcclusionPaletteMask(getCurrentSpriteTileOcclusionPaletteMask());
 		(spriteSatFragments == null ? spriteSatEntries : spriteSatFragments).add(
                 spritePresentationSubject == SpritePresentation.Subject.WORLD
 				? entry : entry.withPresentationSubject(spritePresentationSubject));
@@ -2526,6 +2561,7 @@ public class GraphicsManager {
 						if (entry.debugSource() != null)
 							spritePresentationBuilder.layer = SpritePresentation.Layer.valueOf(entry.debugSource());
 						setCurrentSpriteHighPriority(entry.globalHighPriority());
+                        setCurrentSpriteTileOcclusionPaletteMask(entry.tileOcclusionPaletteMask());
 						SpritePresentation.withSubject(this, entry.presentationSubject(),
 								() -> appendBatchedReplayCommands(entry, -1));
 					}
@@ -2547,7 +2583,7 @@ public class GraphicsManager {
 			// instanced batch (flushed before any direct command so order is preserved, with
 			// per-instance VDP priority carried in the instance data), or — when instanced
 			// batching is unavailable — the original direct per-tile commands.
-			flushPatternBatch();
+			withNativeSpriteOwnership(() -> {
 			setCurrentSpriteHighPriority(false);
 			if (canBatchSpriteSatReplay()) {
 				replaySpriteSatEntriesBatched(processedEntries);
@@ -2561,6 +2597,7 @@ public class GraphicsManager {
 				registerCommand(commands.get(i));
 			}
 			reusableReplayCommands.clear();
+            });
 		} finally {
 			spriteSatEntries.clear();
 		}
@@ -2588,26 +2625,20 @@ public class GraphicsManager {
 		if (paletteTextureId == null) {
 			return;
 		}
-		// Parity with the direct path: its PatternRenderCommands resolve the shader at
-		// flush time, when the sprite pass has already cleared useSpritePriorityShader,
-		// so the replay renders with the plain shader. endBatch() captures the flag at
-		// build time instead, so clear it for the duration of the replay batches.
-		boolean savedUseSpritePriorityShader = useSpritePriorityShader;
-		useSpritePriorityShader = false;
 		try {
 			satReplayBatchOpen = false;
 			int paletteTexId = paletteTextureId;
-			for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
-				for (int i = processedEntries.size() - 1; i >= 0; i--) {
+			for (int bucket = RenderPriority.MIN; bucket <= RenderPriority.MAX; bucket++) {
+				for (int i = 0; i < processedEntries.size(); i++) {
 					SpriteSatEntry processedEntry = processedEntries.get(i);
 					if (processedEntry.priorityBucket() == bucket && !processedEntry.presentationSubject().suppressed()) {
+						setCurrentSpriteTileOcclusionPaletteMask(processedEntry.tileOcclusionPaletteMask());
 						appendBatchedReplayCommands(processedEntry, paletteTexId);
 					}
 				}
 			}
 			flushSatReplayBatch();
 		} finally {
-			useSpritePriorityShader = savedUseSpritePriorityShader;
 			// An exception mid-replay must not strand an open instanced batch.
 			instancedPatternRenderer.cancelBatch();
 			satReplayBatchOpen = false;
@@ -2715,10 +2746,11 @@ public class GraphicsManager {
 		if (paletteTextureId == null) {
 			return reusableReplayCommands;
 		}
-		for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
-			for (int i = processedEntries.size() - 1; i >= 0; i--) {
+		for (int bucket = RenderPriority.MIN; bucket <= RenderPriority.MAX; bucket++) {
+			for (int i = 0; i < processedEntries.size(); i++) {
 				SpriteSatEntry processedEntry = processedEntries.get(i);
 				if (processedEntry.priorityBucket() == bucket && !processedEntry.presentationSubject().suppressed()) {
+					setCurrentSpriteTileOcclusionPaletteMask(processedEntry.tileOcclusionPaletteMask());
 					appendDirectReplayCommands(processedEntry, paletteTextureId, reusableReplayCommands);
 				}
 			}

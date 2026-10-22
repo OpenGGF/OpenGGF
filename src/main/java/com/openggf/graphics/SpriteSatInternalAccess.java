@@ -22,4 +22,10 @@ public final class SpriteSatInternalAccess {
         engineCaller();
         graphics.submitSpriteSatGroups(geometry, producer);
     }
+
+    /** Producer emits already-admitted native source order; no creator API can open GPU coverage. */
+    public static void withNativeOwnership(GraphicsManager graphics, Runnable producer) {
+        engineCaller();
+        graphics.withNativeSpriteOwnership(producer);
+    }
 }

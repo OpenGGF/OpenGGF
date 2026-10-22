@@ -74,12 +74,13 @@ public final class SpritePresentationRenderer {
                     if (entry.presentationSubject().head() != null)
                         SpritePresentation.bindPatternVersions(graphics, entry.presentationSubject().head().patterns());
                     graphics.setCurrentSpriteHighPriority(entry.globalHighPriority());
+                    graphics.setCurrentSpriteTileOcclusionPaletteMask(entry.tileOcclusionPaletteMask());
                     SpritePresentation.withSubject(graphics, entry.presentationSubject(), () -> emitter.accept(entry));
                 }
             }
         });
         graphics.setCurrentSpriteHighPriority(false);
-        draw(graphics, frame, 0, 0, layer -> true);
+        drawNative(graphics, frame, 0, 0, layer -> true);
         } finally {
             graphics.setCurrentSpriteHighPriority(false);
             graphics.setUseSpritePriorityShader(priorityShader);
@@ -118,6 +119,43 @@ public final class SpritePresentationRenderer {
     public static void draw(GraphicsManager graphics, Frame frame, int cameraX, int cameraY,
                             Predicate<Layer> visible) {
         draw(graphics,frame,cameraX,cameraY,visible,null);
+    }
+
+    /** Native admitted SAT only: first opaque source wins before terrain priority is resolved. */
+    public static void drawNative(GraphicsManager graphics, Frame frame, int cameraX, int cameraY,
+                                  Predicate<Layer> visible) {
+        drawNative(graphics, frame, cameraX, cameraY, visible, null);
+    }
+
+    /**
+     * Frame tiles are stored in painter order. Native rasterization reverses that order,
+     * retaining the existing presentation projection and transforms. Trails precede the
+     * table; diagnostic primitives follow it in their original order as overlays.
+     * CPU capture retains painter order and never opens a GPU scope.
+     */
+    public static void drawNative(GraphicsManager graphics, Frame frame, int cameraX, int cameraY,
+                                  Predicate<Layer> visible, com.openggf.game.mutators.LivePresentationRuntime runtime) {
+        if (SpritePresentation.isPreparing(graphics)) {
+            draw(graphics, frame, cameraX, cameraY, visible, runtime);
+            return;
+        }
+        try {
+            frame = runtime == null ? com.openggf.level.objects.HudProfileAccess.projectPresentation(graphics, frame)
+                    : com.openggf.level.objects.HudProfileAccess.projectPresentation(runtime.world(), graphics, frame);
+            if (runtime != null && !runtime.trails().isEmpty()) drawTrails(graphics, frame, cameraX, cameraY, visible, runtime);
+            var nativeFrame = new Frame(frame.tiles().reversed(), java.util.List.of(), frame.patternVersions());
+            com.openggf.graphics.SpriteSatInternalAccess.withNativeOwnership(graphics,
+                    () -> drawPicture(graphics, nativeFrame, cameraX, cameraY, visible, runtime, 1));
+            if (!frame.primitives().isEmpty()) {
+                var overlays = frame.primitives().stream()
+                        .map(primitive -> new Primitive(0, primitive.layer(), primitive.primitive(), primitive.subject())).toList();
+                drawPicture(graphics, new Frame(java.util.List.of(), overlays, java.util.Map.of()),
+                        cameraX, cameraY, visible, runtime, 1);
+            }
+        } catch (RuntimeException | Error failure) {
+            if (runtime != null) runtime.releaseTrailArt();
+            throw failure;
+        }
     }
 
     /** Presentation state is sampled by the logical loop; draw consumes immutable values only. */
@@ -197,19 +235,23 @@ public final class SpritePresentationRenderer {
                 if (index == frame.tiles().size()) break;
                 Tile tile = frame.tiles().get(index);
                 if (!visible.test(tile.layer()) || tile.subject().suppressed()) continue;
+                // The native tile priority bit bypasses every terrain palette. The
+                // non-instanced batch has one mask for the whole draw, so a change
+                // in effective priority must also close that batch.
+                int tileMask = tile.priority() ? 0 : tile.occlusionMask();
                 if (previous == null || previous.priorityShader() != tile.priorityShader()
-                        || previous.occlusionMask() != tile.occlusionMask()
+                        || (previous.priority() ? 0 : previous.occlusionMask()) != tileMask
                         || previous.ghost() != tile.ghost() || previous.ghostAlpha() != tile.ghostAlpha()) {
                     graphics.flushPatternBatch();
                     graphics.setUseSpritePriorityShader(tile.priorityShader());
-                    graphics.setCurrentSpriteTileOcclusionPaletteMask(tile.occlusionMask());
+                    graphics.setCurrentSpriteTileOcclusionPaletteMask(tileMask);
                     if (tile.ghost()) graphics.beginGhostRenderEffect(tile.ghostAlpha());
                     else graphics.endGhostRenderEffect();
                     graphics.beginPatternBatch();
                 }
                 previous = tile;
                 graphics.setUseSpritePriorityShader(tile.priorityShader());
-                graphics.setCurrentSpriteTileOcclusionPaletteMask(tile.occlusionMask());
+                graphics.setCurrentSpriteTileOcclusionPaletteMask(tileMask);
                 if (tile.ghost()) graphics.beginGhostRenderEffect(tile.ghostAlpha());
                 else graphics.endGhostRenderEffect();
                 desc.setPaletteIndex(tile.palette());

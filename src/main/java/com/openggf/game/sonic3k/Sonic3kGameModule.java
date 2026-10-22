@@ -91,7 +91,12 @@ import java.util.logging.Logger;
  * <p>Provides audio, zone registry, scroll handlers, object/art providers,
  * data select, special/bonus-stage providers, and level initialization hooks.
  */
-public class Sonic3kGameModule implements GameModule {
+public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.SpriteTableBuildProfile {
+    @Override
+    public PlacedRings placedRingEmission() {
+        return PlacedRings.BEFORE_OBJECT_BUCKETS;
+    }
+
 
     private static final com.openggf.game.common.CommonObjectPlacementEncoding OBJECT_PLACEMENT_ENCODING =
             new com.openggf.game.common.CommonObjectPlacementEncoding();

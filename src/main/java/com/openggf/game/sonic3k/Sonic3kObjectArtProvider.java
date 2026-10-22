@@ -7,6 +7,8 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
 import com.openggf.game.ObjectArtProvider;
+import com.openggf.game.internal.HudSatLayout;
+import com.openggf.game.internal.HudSatLayoutSource;
 import com.openggf.game.RuntimeArtAdmissionLease;
 import com.openggf.game.RuntimeArtAdmissionOwnerKind;
 import com.openggf.game.RuntimeArtAdmissionPolicy;
@@ -60,9 +62,12 @@ import java.util.logging.Logger;
  * after the level has been loaded.
  */
 public class Sonic3kObjectArtProvider implements ObjectArtProvider,
+        HudSatLayoutSource,
         com.openggf.game.internal.RuntimeObjectArtQueue,
         com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.PlcProgressSnapshot> {
     private static final Logger LOG = Logger.getLogger(Sonic3kObjectArtProvider.class.getName());
+    /** Map_HUD, locked-on S&K half; six-byte pieces, including bonus frames four and five. */
+    private static final int HUD_SAT_MAPPING_ADDR = 0xDBB6;
     private static final List<String> FBZ_EXIT_ART_KEYS = List.of(
             Sonic3kObjectArtKeys.FBZ_EXIT_DOOR,
             Sonic3kObjectArtKeys.FBZ_EXIT_HALL_DOOR_SCENERY,
@@ -130,6 +135,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     private Pattern[] hudLivesNumbers;
     private Pattern[] hudHexDigits;
     private HudStaticArt hudStaticArt;
+    private HudSatLayout hudSatLayout;
 
     // Zone-specific animal types (set per loadArtForZone call)
     private int animalTypeA = AnimalType.FLICKY.ordinal();
@@ -274,6 +280,9 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             LOG.warning("ROM not available for HUD art loading");
             return;
         }
+
+        hudSatLayout = new HudSatLayout(S3kSpriteDataLoader.loadMappingFrames(
+                RomByteReader.fromRom(rom), HUD_SAT_MAPPING_ADDR, 6));
 
         // HUD digits (0-9, colon, E) - uncompressed
         hudDigitPatterns = loadUncompressedPatterns(rom,
@@ -2822,6 +2831,11 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     @Override
     public HudStaticArt getHudStaticArt() {
         return hudStaticArt;
+    }
+
+    @Override
+    public HudSatLayout getHudSatLayout() {
+        return hudSatLayout;
     }
 
     @Override

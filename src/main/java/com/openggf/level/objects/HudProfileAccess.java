@@ -20,6 +20,11 @@ public final class HudProfileAccess {
         Objects.requireNonNull(hud, "hud").installProfile(profile);
     }
 
+    /** Internal ROM topology installation; the creator-facing HudStaticArt shape stays unchanged. */
+    public static void installSatLayout(HudRenderManager hud, com.openggf.game.internal.HudSatLayout layout) {
+        Objects.requireNonNull(hud, "hud").setSatLayout(layout);
+    }
+
     public static void setScreenLeftAnchorEnabled(HudRenderManager hud, boolean enabled) {
         Objects.requireNonNull(hud, "hud").setScreenLeftAnchorEnabled(enabled);
     }

@@ -394,6 +394,7 @@ public class PatternRenderCommand implements GLCommandable {
             TilePriorityFBO fbo = graphicsManager.getTilePriorityFBO();
             int tilePriorityTextureId =
                     fbo != null && fbo.isInitialized() ? fbo.getTextureId() : -1;
+            priorityShader.setNativeSpriteOwnership(graphicsManager.nativeSpriteOwnershipActive(), tilePriorityTextureId >= 0);
             int viewportX = graphicsManager.getViewportX();
             int viewportY = graphicsManager.getViewportY();
             int viewportWidth = graphicsManager.getViewportWidth();

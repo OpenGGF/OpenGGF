@@ -79,7 +79,12 @@ import static java.security.MessageDigest.getInstance;
 /**
  * GameModule implementation for Sonic the Hedgehog 1 (Mega Drive/Genesis).
  */
-public class Sonic1GameModule implements GameModule {
+public class Sonic1GameModule implements GameModule, com.openggf.game.internal.SpriteTableBuildProfile {
+    @Override
+    public PlacedRings placedRingEmission() {
+        return PlacedRings.OBJECT_SLOTS;
+    }
+
 
     private static final Sonic1ObjectPlacementEncoding OBJECT_PLACEMENT_ENCODING =
             new Sonic1ObjectPlacementEncoding();

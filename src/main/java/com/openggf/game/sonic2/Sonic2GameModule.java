@@ -82,7 +82,12 @@ import java.util.Optional;
 
 import static java.security.MessageDigest.getInstance;
 
-public class Sonic2GameModule implements GameModule {
+public class Sonic2GameModule implements GameModule, com.openggf.game.internal.SpriteTableBuildProfile {
+    @Override
+    public PlacedRings placedRingEmission() {
+        return PlacedRings.BEFORE_OBJECT_BUCKETS;
+    }
+
 
     private static final com.openggf.game.common.CommonObjectPlacementEncoding OBJECT_PLACEMENT_ENCODING =
             new com.openggf.game.common.CommonObjectPlacementEncoding();

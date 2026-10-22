@@ -55,6 +55,7 @@ no discrepancy entry was added or reclassified by the cutover.
 36. [S2 stopMusic Bypasses the Mailbox While a Compressed Load Blocks It](#s2-stopmusic-bypasses-the-mailbox-while-a-compressed-load-blocks-it)
 37. [Fast FM Register-Level Timing and Output](#fast-fm-register-level-timing-and-output)
 38. [Knuckles in Sonic 2 Runs Tier Two With the Lock-On Dump and Tier One Without It](#knuckles-in-sonic-2-runs-tier-two-with-the-lock-on-dump-and-tier-one-without-it)
+39. [Fixed Native Sprite Capacity in Wider Presentation](#fixed-native-sprite-capacity-in-wider-presentation)
 
 ---
 
@@ -3485,3 +3486,18 @@ stage does not retain an old fade generation after rewind. The independent
 headless failure and complete S3K sanctuary entry/return qualification are
 recorded in the [completion plan](../architecture/plans/2026-10-13-s3k-playable-completion.md#immediate-scene-fade-publication-after-rewind--2026-10-17).
 This shared publication repair does not certify other games' route products.
+
+
+## Fixed Native Sprite Capacity in Wider Presentation
+
+Gameplay SAT evaluation retains H40's native 20 pieces per scanline, 320 fetched
+pixels per scanline and 80 table entries at wider display aspects. Extra side
+pieces compete for the same capacity. Expanded coordinates do not wrap through
+the native nine-bit X field; explicit zero-X mask controls still cover the full
+logical line and exact pixel exhaustion still arms the following line. Native
+H32 consumers use their fixed inner 256-pixel region and 16/256/64 capacity.
+This is a presentation extension, not a claim of native widescreen parity.
+
+The ROM-native HUD footprints participate at the table head, including blank
+art and numeric regions; expanded letters/digits are replay fragments of those
+pieces. See the [design and source evidence](../architecture/designs/2026-10-22-native-sprite-scanline-budgets.md).
