@@ -2413,8 +2413,8 @@ public class GraphicsManager {
 	}
 
 	public void beginSpriteSatCollection() {
-		int rasterWidth = GameServices.configuration().getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
-		int rasterHeight = GameServices.configuration().getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
+		int rasterWidth = getProjectionWidth();
+		int rasterHeight = getConfiguredScreenHeightPx();
 		int rasterX = spritePresentationBuilder != null ? spritePresentationBuilder.cameraX : getCamera().getXWithShake();
 		int rasterY = spritePresentationBuilder != null ? spritePresentationBuilder.cameraY : getCamera().getYWithShake();
 		beginSpriteSatCollection(SpriteSatMaskPostProcessor.Raster.extended(rasterX, rasterY, rasterWidth, rasterHeight));
