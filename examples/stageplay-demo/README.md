@@ -74,7 +74,7 @@ This tutorial sample is opened explicitly.
 For a bounded experiment, change only Sonic's first `JUMP.holdFrames` from 20 to
 8, keeping the approach and camera rules. In this take, both attempts land safely:
 8 frames produces a 20.34375-pixel lower native apex and boards placement 166 at
-frame 285 instead of 293. Compare source frames 180–659 at normal speed. That
+frame 285 instead of 293. Compare source frames 180–449 at normal speed. That
 measured result describes this route, not a general obstacle solver.
 
 The [authoring reference](../../docs/guide/creating/stageplay-authoring.md) provides
@@ -83,7 +83,7 @@ scripted revisions; editor edits save the portable scene, not a screenplay round
 For a film with a separate continuous music bed, make a new take with a supported
 `MUSIC_STOP` cue at frame zero. It retains native SFX; keep the combined music/SFX
 capture for standalone playback. Verify matching world, actors and camera before
-sharing one SFX stem across dialogue/clean views. Editorial cards and track diagrams
+sharing one SFX stem across dialogue/clean views. Editorial notes
 in the tutorial are annotations, not editor UI.
 
 ## Location, Location, Location

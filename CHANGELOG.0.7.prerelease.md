@@ -27,7 +27,8 @@ Unreleased. The earlier development themes remain in
   Mods play the same scenes with held native gameplay and optional explicit
   main-player handover. See the [guide](docs/guide/creating/stageplay.md) and
   [directing examples](examples/stageplay-demo/README.md), including a 26-second
-  beginner scene with a companion conceptual tutorial/promo.
+  beginner scene with a story-first tutorial/promo, native reactions, timed dialogue
+  and a single-setting jump comparison.
 
 - **Recording imports:** copied BK2 recordings are bounded during decompression
   and parsing, including metadata, input rows and verification sidecars. Oversized,
