@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.mutators.LevelMutatorPolicyAccess;
 import com.openggf.audio.GameSound;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageController;
@@ -28,9 +27,7 @@ public final class S3kSlotRingRewardObjectInstance extends AbstractObjectInstanc
     private int framesRemaining = EXPIRY_FRAMES;
     private boolean active;
     private boolean inSparkle;
-    @RewindTransient(reason = "Immutable animation bytes reloaded from the live slot ROM bank")
     private final byte[] spinScript;
-    @RewindTransient(reason = "Immutable animation bytes reloaded from the live slot ROM bank")
     private final byte[] sparkleScript;
     private int animationFrame;
     private int animationTimer;

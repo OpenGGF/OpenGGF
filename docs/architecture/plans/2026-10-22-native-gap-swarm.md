@@ -218,3 +218,90 @@ remain unidentified; 16 current SOZ warnings are separate direct-KOS leads,
 not native-cost closure. The peer retains campaign and glide work; its MHZ source
 433 focused passes do not qualify the maintained route's current death at 37752.
 No Main mutation, broad smoke, integrated push or cleanup has occurred.
+
+
+### Source union and newly exposed blockers — 2026-10-22
+
+Aggregate `e86e537779975c6e0afec010788440aa54672955` completed the exact
+17-selector composition check: 261 tests across 18 classes, zero failures,
+errors or skips. It covered native SAT ownership/gameplay, submission queue and
+registration, S2 transform effects and captured stars, S1 Bomb/FZ input, paired
+player-owned terrain queries, native glide and the independent grounded-roll
+camera gate, API signatures and the four required S3K consumers. Java 25,
+Lua 5.4, surfaceless EGL and all three original absolute ROM properties were
+used. Queue waiting was 257 seconds; Maven execution was 1:27. This is focused
+composition evidence, not combined smoke. The corresponding policy safety
+selection passed 43 Python tests in 31.450 seconds without skips.
+
+The main workspace independently advanced to `8aa692b045c195ef8a42896b6bbc9549158470c0`.
+That upstream asset/policy change was merged only into the aggregate as `e86`;
+this lead did not mutate, pull, switch or push Main. The integration selection
+base remains the pinned pre-task `94c40570a`.
+
+Later leaf composition adds exact shadow intensity `c49b0360b` as `77585092b`,
+ring producer/slot rendering `323239a13` as `a6109cdee`, consumed S1 entry-fade
+hold `ad67d33bc` as `74e8d2806`, and native intro phase/evidence source through
+`dc0682709` as merge `6afa9c6dc`. No Sprite backend aliases were imported.
+Independent review found two concrete ring regressions in `323239`: dead P1
+must not stop existing reserved-ring routines after native fallback suppression,
+and a converted bouncer must copy the shared animation frame at its own SST
+dispatch rather than read it during drawing. Sprite owns a separate repair.
+Prior passing EGL and two-movie checks did not cover these edges. A failed
+scoped-palette release can also orphan its reservation because it removes the
+lease before uploads; Sprite owns the confirmed retry repair and exact nested
+projection-state restoration bridge. Competition and ordinary H32 consumers
+remain gated on their qualified rendering paths.
+
+The S1 owner additionally clarified a censored verification boundary: the
+terminal mode assertion runs before terminal dynamic-art ledger verification.
+The red `LEVEL` result in run 38000 therefore prevented that ledger comparison;
+its four reported axes are not proof that only four causes remain. Strict
+242-edge readiness verification did run independently in cleanup. Publication
+of the complete native timing candidate still requires all comparisons and the
+terminal contract, with no filtering or assertion weakening.
+
+The new swarm slot-reward scripts introduced two inline rewind annotations,
+tripping the unchanged annotation-growth guard on `e86`. The immutable ROM bytes
+are reloaded by live-controller recreation, so the intended repair uses exact
+central transient policies while retaining captured animation state. Its
+registered graph regression also still referenced removed `lastFrameCounter`;
+replace that stale premise with the real cursor/timer/frame state and verify
+script reload plus forward grant, sparkle and deletion. No guard count or
+baseline is raised. The focused slot/fade/intro/API composition request is
+pending on `6afa9c6dc` plus this bounded repair; no result is inferred yet.
+
+Fresh 600-row audio source `6c2454616` still fails sample parity with complete
+441568-frame native cadence for each game. S1 remains byte-identical to its
+previous measured waveform; S2 now plays all 24948 chant bytes, but first differs
+at sample 77285. Earlier first difference is not a parity improvement. Coldboot,
+load/service and elapsed CPU wait costs remain open, and four full native
+captures remain held. S2 source `9854f02b1` separately passed seven special-stage
+movie consumers and independent ARZ2, while its complete chain and halfpipe
+controls retain the same attributed frontiers. Neither result closes full-route
+PCM, measured-cost or publication-trust obligations.
+
+
+The slot repair's focused composition request completed on `6afa9c6dc` plus the
+four repair/test paths: **55 tests, zero failures, errors or skips**. The eight
+selectors were `TestS3kSlotBonusGraphRewind`, `TestRewindPolicyRegistry`,
+`TestS3kSlotRingRewardObjectInstance`, `TestRewindFixS3KSlotCodecs`,
+`TestGameLoopBlockingLevelEntryFadeS1`, the two title/Main-order methods in
+`TestSonic1PlcProducerCoverage`, `TestSonic2IntroInputPhases`, and
+`TestModApiSignatureSurface`. The invocation used `maven_queue.py --normal
+-Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dtest=<those exact selectors>
+test -B`, Java 25, Lua 5.4, unset DISPLAY/WAYLAND and the three original absolute
+ROM properties. Queue wait was 230 seconds and Maven execution was 1:32.
+The new registered destructive-recreation check reloaded fresh script arrays
+and replayed captured cursor/fractional state through grant, sparkle and deletion.
+A separate fresh-JVM request selects the unchanged architecture, coverage and
+field-disposition guards; its result remains pending.
+
+
+The unchanged fresh-JVM `-Pguards` selection completed on the same repair:
+`TestRewindArchitectureGuard` (4), `TestRewindCoverageGuard` (1) and
+`TestRewindFieldDispositionGuard` (1), **6/6 passed, zero failures, errors or
+skips**. Queue wait was 491 seconds, Maven execution 28.080 seconds. The new
+swarm annotation regression is closed without raising a baseline or changing
+animation behavior. The central exclusions retain live-ROM recreation and all
+mutable cursor/timer/frame capture; the repaired registered graph case no
+longer references a removed field. Combined smoke remains outstanding.

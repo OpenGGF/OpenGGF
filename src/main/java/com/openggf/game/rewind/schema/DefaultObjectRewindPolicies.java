@@ -103,6 +103,9 @@ final class DefaultObjectRewindPolicies {
     );
 
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
+            // Immutable ROM scripts are reloaded through the live slot controller on recreation.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kSlotRingRewardObjectInstance", "spinScript"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kSlotRingRewardObjectInstance", "sparkleScript"), RewindFieldPolicy.TRANSIENT),
             // S1 visual SSTs retain their exact ship identity across independent recreation.
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.S1EggmanVisualComponent", "shipOwner"), RewindFieldPolicy.CAPTURED),
             // Fresh title child parent2 is native graph identity, not a nearest owner hint.
