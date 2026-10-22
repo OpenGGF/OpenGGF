@@ -94,7 +94,7 @@ this campaign. October's merged remediation (`4a26a651e`) is not reopened.
   affected architecture guards; no duplicate compatibility conversion path.
 - [x] Compose all lanes, reconcile intentional frozen-identity changes and update
   actual accounting/prose once. Review the composed source before costly checks.
-- [ ] Inspect the category plan against the pinned integration SHA and preflight
+- [x] Inspect the category plan against the pinned integration SHA and preflight
   the actual launch environment. State candidate count, expected execution cost
   and stopping rule before one required combined smoke/guard selection. Focused
   checks do not certify the complete campaign. No routine full-suite run.
@@ -372,3 +372,31 @@ compose it and inspect the new combined category selection. The superseded
 coordinator job is closed and its diagnostics acknowledged; the integration
 lead's focused work is complete and composed. The updated combined run is next;
 no complete smoke/guard pass has been claimed.
+
+The replacement combined run `20261022T181843Z-a6e0e23c` completed all 72
+ordinary batches on clean source `575b3a62d`: 37,719 tests, 151 failures,
+1,018 errors and 93 skips. Separate guards passed 722 cases with no failures,
+errors or skips. Preparation took 81.49 seconds, ordinary execution 5,800.93
+seconds and guards 280.67 seconds; queue waiting is additional and its total is
+not established. This is a completed red smoke run, not a delivery pass.
+
+The earlier HCZ GLFW assertion remains inherited. Newly exposed rewind failures
+include FBZ boundary observation, Slot replay's one-frame dynamic-art diagnostic
+offset, and lifecycle/capture consumers dereferencing a retired context's null
+controller during world replacement. These require root-cause investigation and
+bounded correction before integration. All 93 skip identities/reasons were
+inspected with none omitted: opt-in diagnostics/captures, unavailable graphics
+prerequisites, unsupported route products, optional creator fixtures and one CPZ
+spin-tube capture prerequisite. None reported a missing original ROM. These are
+coverage limits, not passes for the skipped behavior.
+
+Failure details are capped at 1,000 cases; 169 additional failures/errors were
+omitted. Recover their affected identities narrowly rather than infer success
+from aggregate totals. A fresh isolated rewind implementation child starts at
+`575b3a62d`; a separate matched baseline selection checks five representative
+methods at pinned `23a18e2a2`. The coordinator owns bounded recovery of late DEZ
+capture failures and final review. Retain original semantic assertions and
+diagnostic comparison, migrate stale consumers only when ownership evidence
+warrants it, and fix production recording at its owning boundary if reproduced.
+No duplicate broad selection is queued. Main remains unchanged at `213400802`;
+integration, push, diagnostic acknowledgment and accounted cleanup remain open.
