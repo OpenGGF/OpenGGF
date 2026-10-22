@@ -5,6 +5,8 @@ records bounded MTZ3, SCZ and DEZ palette-cycle coverage and the seeded native
 DEZ boss-to-ending/NTSC-PAL credits boundaries. Continuous routes and the wider
 character, donor, team and viewport matrix remain explicit inherited gaps.
 
+Assertion/allocation follow-up (2026-10-22): [bounded evidence](../architecture/validation/2026-10-22-native-gap-assertions.md) distinguishes the repaired HTZ1/CNZ1 local assertions, direct DEZ2 cold-entry contract and shared S2 capsule allocation/dispatch checks from whole-act completion. The per-act capsule table records inherited production contact/route, width/donor/team, lifecycle, rewind and native presentation gaps. The old DEZ comparison matched zero rows; its historical seeded diagnostic is not cold-route evidence.
+
 S3K horizontal spring terrain gate (2026-10-16): focused object fixtures sample
 real collision tiles for positive/zero/negative foot distances and a slope with
 only one penetrating foot; absent services, empty terrain and underwater descent
@@ -351,9 +353,9 @@ matrices; never collapse skipped or unrun into pass.
 | S2 | `CHEMICAL_PLANT_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
 | S2 | `AQUATIC_RUIN_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
 | S2 | `AQUATIC_RUIN_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
-| S2 | `CASINO_NIGHT_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending; [object roll ownership](../architecture/research/2026-10-16-s2-object-roll-ownership.md) adds bounded launcher/flipper/cage release and graph-rewind checks; whole-act breadth remains inherited |
+| S2 | `CASINO_NIGHT_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); [partial Sonic matrix](../architecture/validation/levels/s2-cnz1-sonic.md); [object roll ownership](../architecture/research/2026-10-16-s2-object-roll-ownership.md) adds bounded launcher/flipper/cage release and graph-rewind checks; whole-act breadth remains inherited |
 | S2 | `CASINO_NIGHT_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending. Shared [object roll ownership](../architecture/research/2026-10-16-s2-object-roll-ownership.md) checks cover local launcher/flipper/cage contracts; complete Act 2 route breadth remains inherited |
-| S2 | `HILL_TOP_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
+| S2 | `HILL_TOP_1` | [Partial Sonic matrix](../architecture/validation/levels/s2-htz1-sonic.md): positioned natural-earthquake crossing; cold traversal and configuration/rewind breadth remain open |
 | S2 | `HILL_TOP_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
 | S2 | `MYSTIC_CAVE_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
 | S2 | `MYSTIC_CAVE_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |

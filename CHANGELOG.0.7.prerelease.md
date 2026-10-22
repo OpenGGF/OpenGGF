@@ -246,6 +246,11 @@ Unreleased. The earlier development themes remain in
   is released again on return. Robotnik's ship stays with the beaten boss through
   its defeat pause before flying off, as in the original.
 
+- **S2 capsules:** Buttons, locks and animal-release pieces use the original
+  first-free object slots, including holes below the capsule. Each piece runs
+  in native slot order, preserving launch and release timing under slot pressure
+  and through rewind.
+
 - **Spin dash camera:** While a spin dash charges, and on its release frame, the
   camera eases back toward its normal height as it does when standing, as Sonic 2
   and Sonic 3 & Knuckles do. A look up or down no longer holds until the dash ends.

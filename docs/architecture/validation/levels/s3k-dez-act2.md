@@ -38,6 +38,19 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 Physical starpost activation, rewind and repeated death/reload breadth is now
 covered by the 2026-09-26 follow-up below; other lifecycle obligations remain open.
 
+## Direct-entry assertion correction (2026-10-22)
+
+`TestS3kDezColdRoutes.theColdActTwoEntryUsesItsOwnSpawnAndAcceptsControllerInput`
+checks an ordinary direct DEZ2 load at the ROM's $0140/$03AC spawn, no carried
+rings, a live player and at least64px of controller-driven progress. No position,
+velocity, camera or clock is copied from the native movie. The former test's
+`survived >= 0` passed on its first mismatch: native row18670 was the seamless
+inlet at$01E8/$072C with123 carried rings. It established zero frames of parity.
+The historical seeded free-play diagnostic is explicitly named diagnostic and
+cannot qualify a cold route, bootstrap or incoming act change. This correction
+does not withdraw the independent authored cold completion evidence below.
+[Commands, native bytes and limits](../2026-10-22-native-gap-assertions.md).
+
 ## Five claims
 
 | Claim | State |
