@@ -137,3 +137,82 @@ env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py --lean -D
   delivery validation. No smoke/full suite, trace sweep or frame-time benchmark
   was run by this implementation wave. Broader act/viewport/donor/team coverage
   obligations remain inherited; this work does not certify an entire act.
+
+## Follow-up wave: OOZ snapshots and rejected trig candidates
+
+This independent wave starts at `98fc161d2c0b2bdfbe7a9f694979ab6bf486a1ab`,
+which the lead already integrated locally. It changes only the OOZ platform,
+its multi-sidekick tests, and this audit. No shared query, graphics, solid-param,
+physics, or ROM behavior changes.
+
+**Cadence and structural savings.** Obj33's player-triggered WAIT mode can run
+indefinitely without riders or with an off-center rider. Previously every WAIT
+constructed an `ArrayList`; nonempty waits also allocated its backing storage
+and invoked a stream for the center check. Two distinct instance-owned transient
+stores now reuse standing and locked-player snapshots. Each retains capacity for
+only eight players; this is a memory-retention bound, not a gameplay team limit.
+Oversized teams and nested borrows use independent temporary lists. For an
+ordinary uninterrupted pop, the unchanged fixed-point physics reaches the exact
+apex on rising update 16: the old locked-snapshot helper constructed 16 lists,
+with backing arrays on the 15 nonempty carry updates when all riders remain
+standing until launch. These repeated list constructions are suppressed for
+normal-size teams; WAIT's stream is replaced by the same ordered short-circuit
+check. Indexed snapshot traversal also avoids an explicit list iterator.
+
+The tradeoff is two scratch helpers, two lists and two eight-reference backing
+arrays per platform instance. Allocation counts here describe Java source
+operations, not measured heap bytes: escape analysis can remove some old lists,
+iterators, streams or lambdas. The participant query and omitted-extension copy
+still allocate. Net CPU/GC benefit and game-wide materiality are **unmeasured**;
+no percentages or frame-time claim is made. The recurring WAIT case justifies
+this bounded allocation cleanup; the finite 16-update rise alone would not
+justify a larger redesign. No timing ran alongside the tile worker's isolated
+measurement window.
+
+**Lifetime and behavior evidence.** Full snapshots remain in place before player
+callbacks. Locking a standing snapshot can enter `onUnload`, so standing and
+locked storage are separate. Unload can also nest while a carry snapshot is
+borrowed; that path falls back to independent storage. All borrow sites include
+population and iteration in `try/finally`, clearing references on early returns,
+exceptions and normal completion. Rewind excludes scratch state and clears idle
+storage; an active callback's local snapshot survives until its own finally.
+P1/P2/extension order, identity lock migration, omitted-player release and exact
+apex behavior remain unchanged. The existing mutation-safe
+`List.copyOf(extensionLockedPlayers)` is deliberately retained. Replacing it is
+an unmeasured residual candidate requiring its own materiality assessment, not
+permission to iterate the live set during callbacks.
+
+New focused checks observe the actual reusable storage through 128 empty and
+128 off-center WAIT updates, verify native order during nested unload, separate
+standing/release lifetimes, exception cleanup, a 13-player fallback, and captured
+platform/player restore plus forward replay through all 16 rise updates. Existing
+omitted-player, reordered-launch and native-coordinate/contact checks also run.
+
+**Rejected trig changes.** S1 lamppost twirl computes 33 orbit updates and S2's
+checkpoint dongle 32, each with just two trigonometric calls per update. The
+16-phase byte-angle observation is correct, but these short-lived effects lack
+profile evidence for a material CPU cost. S1 grassy-platform type 5 can repeat
+`calcSine($40)` while held down, but that is one sine call per held update; at
+angle zero its helper already returns before trigonometry. Without profile
+evidence, bounded tables/caches and their exact floating-point equivalence tests
+would add churn without an established payoff. All three remain unchanged; no
+ROM sine table substitution or floating-point evaluation change was attempted.
+
+**Verification.** Java 25 build gate passed. One queued focused invocation:
+
+```bash
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestOOZPoppingPlatformMultiSidekick,TestSonic2TriggerParticipation,TestOOZPlacedObjectGaps' test
+```
+
+Passed 88 tests, zero failures/errors/skips: multi-sidekick 11, trigger
+participation 60, placed-object gaps 17. Queue wait was 38 seconds; Maven
+execution (including compilation) was approximately 1 minute 29 seconds. These
+are validation durations, not performance measurements. No ROM, rendering,
+broad/full-suite or isolated timing run was needed for these bounded state and
+snapshot changes. Lead-owned integration validation remains separate.
+
+The inspected change-based plan (`run_categories.py --base 98fc161d2`) selects
+3,091 smoke classes plus guards. The requested focused checks replace that
+selection for this local snapshot-lifetime change; no shared algorithm or
+participation policy changed. There are no running task-owned jobs.
