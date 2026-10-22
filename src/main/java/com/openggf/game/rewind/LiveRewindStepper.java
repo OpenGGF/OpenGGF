@@ -6,7 +6,6 @@ import com.openggf.LevelFrameStep;
 import com.openggf.control.InputHandler;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.RecordedInputSnapshots;
-import com.openggf.game.GameServices;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.session.GameplayModeContext;
@@ -21,35 +20,29 @@ final class LiveRewindStepper implements RewindSeekAwareEngineStepper {
 
     private final LiveRewindInputSource inputs;
     private final Supplier<InputHandler> inputHandlerSupplier;
-    private final Supplier<LevelFrameContext> frameContextSupplier;
-    private final Supplier<GameplayModeContext> gameplayModeSupplier;
+    private final GameplayModeContext owner;
 
     LiveRewindStepper(LiveRewindInputSource inputs,
                       Supplier<InputHandler> inputHandlerSupplier,
-                      Supplier<LevelFrameContext> frameContextSupplier,
-                      Supplier<GameplayModeContext> gameplayModeSupplier) {
+                      GameplayModeContext owner) {
         this.inputs = Objects.requireNonNull(inputs, "inputs");
         this.inputHandlerSupplier = Objects.requireNonNull(inputHandlerSupplier, "inputHandlerSupplier");
-        this.frameContextSupplier = Objects.requireNonNull(frameContextSupplier, "frameContextSupplier");
-        this.gameplayModeSupplier = Objects.requireNonNull(gameplayModeSupplier, "gameplayModeSupplier");
+        this.owner = Objects.requireNonNull(owner, "owner");
     }
 
     @Override
     public LevelFrameResult step(Bk2FrameInput input) {
-        var sprites = GameServices.spritesOrNull();
-        var level = GameServices.levelOrNull();
-        var camera = GameServices.cameraOrNull();
+        var sprites = owner.getSpriteManager();
+        var level = owner.getLevelManager();
+        var camera = owner.getCamera();
         if (sprites == null || level == null || camera == null) {
-            return LevelFrameResult.PAUSED;
+            throw new IllegalStateException("installed live rewind owner is unavailable");
         }
         InputHandler liveInput = inputHandlerSupplier.get();
         if (liveInput == null) {
-            return LevelFrameResult.PAUSED;
+            throw new IllegalStateException("installed live rewind owner is unavailable");
         }
-        var gameplayMode = gameplayModeSupplier.get();
-        if (gameplayMode == null) {
-            return LevelFrameResult.PAUSED;
-        }
+        var gameplayMode = owner;
         if (com.openggf.game.mode.ControlledFrameRuntime.controller(gameplayMode) != null) {
             var previous = inputs.read(Math.max(inputs.earliestFrame(), input.frameIndex() - 1));
             return com.openggf.game.mode.ControlledFrameRuntime.step(gameplayMode, liveInput,
@@ -57,7 +50,7 @@ final class LiveRewindStepper implements RewindSeekAwareEngineStepper {
         }
         return gameplayMode.plcFrameLifecycle().runReplayedLogicalIteration(
                 gameplayMode.getFadeManager()::update,
-                frame -> step(input, sprites, level, camera, liveInput, frame));
+                frame -> step(input, sprites, level, camera, liveInput, LevelFrameContext.from(owner), frame));
     }
 
     LevelFrameResult step(
@@ -66,9 +59,9 @@ final class LiveRewindStepper implements RewindSeekAwareEngineStepper {
             com.openggf.level.LevelManager level,
             com.openggf.camera.Camera camera,
             InputHandler liveInput,
+            LevelFrameContext context,
             PlcLifecycleFrame lifecycleFrame) {
-        LevelFrameContext context = frameContextSupplier.get();
-        com.openggf.game.internal.BonusStageFrameLifecycle.beforeReplayFrame(gameplayModeSupplier.get());
+        com.openggf.game.internal.BonusStageFrameLifecycle.beforeReplayFrame(owner);
         // Live history contains completed gameplay ticks, not the paused host
         // presentations between them. The first recorded tick after gamepad
         // unpause still holds Start; applying it as another ROM pause would
@@ -90,7 +83,7 @@ final class LiveRewindStepper implements RewindSeekAwareEngineStepper {
         Bk2FrameInput previous =
                 inputs.read(Math.max(inputs.earliestFrame(), input.frameIndex() - 1));
         var metadata = inputs.pacingFrame(input.frameIndex());
-        var gameplayMode = gameplayModeSupplier.get();
+        var gameplayMode = owner;
         var recorded = RecordedInputSnapshots.fromBk2(input, previous);
         liveInput.setLogicalOverride(metadata == null ? recorded : metadata.admitted(recorded, gameplayMode, null));
         try {

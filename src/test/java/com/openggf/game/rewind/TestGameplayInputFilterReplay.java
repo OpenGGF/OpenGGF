@@ -91,8 +91,7 @@ class TestGameplayInputFilterReplay {
 
         RewindController controller = new RewindController(
                 gameplay.getRewindRegistry(), new InMemoryKeyframeStore(), recorded,
-                new LiveRewindStepper(recorded, () -> input,
-                        () -> LevelFrameContext.from(gameplay), () -> gameplay),
+                new LiveRewindStepper(recorded, () -> input, gameplay),
                 10);
 
         driveLiveFrame(input);

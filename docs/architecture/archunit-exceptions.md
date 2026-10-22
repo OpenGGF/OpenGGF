@@ -161,7 +161,7 @@ records intentionally change.
 - `low_level_layers_do_not_depend_on_runtime_layers`: 187
 - `shared_layers_do_not_depend_on_game_specific_packages`: 9
 - `per_game_packages_do_not_cross_depend`: 2
-- `runtime_owned_framework_packages_do_not_access_global_service_roots`: 11
+- `runtime_owned_framework_packages_do_not_access_global_service_roots`: 1
 - `runtime_registry_controllers_are_only_constructed_by_runtime_composition_roots`: 2
 
 For cross-game slices, the same stored records contain **14 member
@@ -171,6 +171,8 @@ labels still say 209, 13, and 4 respectively. Correcting their published counts
 to 184, 11, and 2 records neither removed an allowance nor proved a live violation
 was resolved by that accounting change. The later private audio-source identity
 migration above accounts for the current low-level allowance of 187 records.
+The installed-owner rewind change removes 10 framework-root records, leaving
+the 1 record listed above.
 
 ## Package Cycle Ratchets
 
@@ -295,15 +297,12 @@ Target direction:
 
 Rule: `runtime-owned framework packages should not access GameServices, SessionManager, or EngineServices directly`
 
-The 11 committed records fall into these categories:
-
-- `ScriptFramesApplyStrategy` resolves `GameServices.graphics()` at apply time
-  as a bridge for existing animated tile script paths.
-- `LiveRewindManager` reaches `GameServices.audio()`,
-  `GameServices.fadeOrNull()`, and `SessionManager.getCurrentGameplayMode()`
-  while the live rewind presentation path is still process-service driven.
-- `LiveRewindStepper` reaches `GameServices` optional accessors for the
-  current sprites, level, and camera during replay stepping.
+The 1 committed record is `ScriptFramesApplyStrategy` resolving
+`GameServices.graphics()` at apply time as a bridge for existing animated tile
+script paths. Live rewind now binds its installed gameplay owner, registered
+special-stage provider and fade explicitly, with engine-owned audio injected.
+The 10 former manager/stepper root-access records were removed rather than
+relocated.
 
 Target direction:
 

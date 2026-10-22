@@ -31,7 +31,8 @@ class TestS3kHcz1ReloadRewind {
             var fixture = route.fixture;
             var firstObjects = GameServices.level().getObjectManager();
             config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, true);
-            rewind = new LiveRewindManager(config);
+            rewind = new LiveRewindManager(config, com.openggf.audio.AudioManager.getInstance());
+            rewind.bindOwner(com.openggf.tests.TestEnvironment.activeGameplayMode(), false, com.openggf.game.GameMode.LEVEL);
             fixture.gameplayMode().setRewindBoundaryReporter(rewind::markBoundary);
             var input = new InputHandler();
             rewind.handleRealtimeRewindInput(GameMode.LEVEL, false, input);

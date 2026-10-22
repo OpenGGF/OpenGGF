@@ -1,16 +1,14 @@
 package com.openggf.game.rewind;
 
-import com.openggf.LevelFrameContext;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameMode;
-import com.openggf.game.GameServices;
-import com.openggf.game.NoOpSpecialStageProvider;
+import com.openggf.game.BonusStageProvider;
+import com.openggf.audio.AudioManager;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.session.GameplayModeContext;
-import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.PixelFontTextRenderer;
 
@@ -31,9 +29,17 @@ public final class LiveRewindManager {
 
     private final SonicConfigurationService config;
     private final Supplier<GameMode> modeSupplier;
-    private final Supplier<SpecialStageProvider> specialStageProviderSupplier;
-    private final boolean useModeSupplierForPublicEntries;
-    private final Supplier<ScriptedRewind> scriptedRewindSupplier;
+    private final AudioManager audio;
+    private GameplayModeContext boundOwner;
+    private GameMode boundMode = GameMode.LEVEL;
+    private boolean parked;
+    private SpecialStageProvider installedSpecialProvider;
+    private FadeManager installedFade;
+    private Object installationIdentity = new Object();
+    private boolean retireAfterRelease;
+    private final java.util.ArrayDeque<PendingBoundary> deferredBoundaries = new java.util.ArrayDeque<>();
+
+    private record PendingBoundary(Object installation, RewindBoundary boundary) { }
     private final LiveRewindHudOverlay hudOverlay;
 
     private GameplayModeContext installedGameplayMode;
@@ -50,39 +56,94 @@ public final class LiveRewindManager {
     private RewindBoundary pendingReleaseBoundary;
     private final RewindEffectEnvelope effectEnvelope = new RewindEffectEnvelope();
 
-    public LiveRewindManager(SonicConfigurationService config) {
-        this(config, () -> GameMode.LEVEL, () -> NoOpSpecialStageProvider.INSTANCE, false, () -> null);
+    public LiveRewindManager(SonicConfigurationService config, AudioManager audio) {
+        this(config, audio, null);
     }
 
-    public LiveRewindManager(SonicConfigurationService config,
-                             Supplier<GameMode> modeSupplier,
-                             Supplier<SpecialStageProvider> specialStageProviderSupplier) {
-        this(config, modeSupplier, specialStageProviderSupplier, true, () -> null);
-    }
-
-    /**
-     * @param scriptedRewindSupplier the active module's {@link ScriptedRewind}, or null;
-     *     consulted only in level play
-     */
-    public LiveRewindManager(SonicConfigurationService config,
-                             Supplier<GameMode> modeSupplier,
-                             Supplier<SpecialStageProvider> specialStageProviderSupplier,
-                             Supplier<ScriptedRewind> scriptedRewindSupplier) {
-        this(config, modeSupplier, specialStageProviderSupplier, true, scriptedRewindSupplier);
-    }
-
-    private LiveRewindManager(SonicConfigurationService config,
-                              Supplier<GameMode> modeSupplier,
-                              Supplier<SpecialStageProvider> specialStageProviderSupplier,
-                              boolean useModeSupplierForPublicEntries,
-                              Supplier<ScriptedRewind> scriptedRewindSupplier) {
+    public LiveRewindManager(SonicConfigurationService config, AudioManager audio,
+                             Supplier<GameMode> modeSupplier) {
         this.config = Objects.requireNonNull(config, "config");
-        this.modeSupplier = Objects.requireNonNull(modeSupplier, "modeSupplier");
-        this.specialStageProviderSupplier = Objects.requireNonNull(
-                specialStageProviderSupplier, "specialStageProviderSupplier");
-        this.useModeSupplierForPublicEntries = useModeSupplierForPublicEntries;
-        this.scriptedRewindSupplier = Objects.requireNonNull(scriptedRewindSupplier, "scriptedRewindSupplier");
+        this.audio = Objects.requireNonNull(audio, "audio");
+        this.modeSupplier = modeSupplier;
         this.hudOverlay = new LiveRewindHudOverlay(this::statusLabel);
+    }
+
+    /** Lifecycle facts from the host binding boundary; parking preserves the installed history. */
+    public void bindOwner(GameplayModeContext owner, boolean parked, GameMode mode) {
+        this.parked = parked;
+        this.boundOwner = parked && owner == null ? installedGameplayMode : owner;
+        this.boundMode = Objects.requireNonNull(mode, "mode");
+        if (rewindController != null && rewindController.isApplyingHistory()) return;
+        reconcileBinding();
+        drainBoundaries();
+        if (!parked && !releasePending && ready(boundOwner)) {
+            RewindContext context = rewindContextFromSupplier();
+            if (context.supported() && enabled(scriptedRewind(context))) ensureInstalled(context);
+        }
+    }
+
+    /** A reporter belongs to one installation, including reinstallations of the same owner. */
+    public RewindBoundaryReporter boundaryReporterFor(GameplayModeContext owner) {
+        Object identity = installationIdentity;
+        return boundary -> {
+            if (owner != installedGameplayMode || identity != installationIdentity
+                    || !ready(owner) || owner != boundOwner || parked
+                    || owner.getRewindController() != rewindController
+                    || (boundary != RewindBoundary.MODE_EXIT_TO_NON_REWINDABLE
+                        && installedStepperKind == StepperKind.SPECIAL_STAGE
+                        && installedSpecialProvider != owner.getRegisteredSpecialStageProvider())) return;
+            if (rewindController != null && rewindController.isApplyingHistory()) {
+                deferredBoundaries.addLast(new PendingBoundary(identity, boundary));
+            } else {
+                markBoundary(boundary);
+            }
+        };
+    }
+
+    private static boolean ready(GameplayModeContext owner) {
+        return owner != null && owner.isGameplayRuntimeReady();
+    }
+
+    private void reconcileBinding() {
+        if (rewindController != null && rewindController.isApplyingHistory()) return;
+        if (installedGameplayMode == null) return;
+        boolean replaced = installedGameplayMode != boundOwner || !ready(installedGameplayMode)
+                || installedGameplayMode.getRewindController() != rewindController
+                || (installedStepperKind == StepperKind.SPECIAL_STAGE
+                    && installedSpecialProvider != installedGameplayMode.getRegisteredSpecialStageProvider());
+        if (replaced) {
+            retireAfterRelease = true;
+            clear();
+        } else if (parked) {
+            rewindController.setRewindHistoryArmed(false);
+            com.openggf.game.session.WorldSessionPolicyAccess.setHistoryRecording(
+                    installedGameplayMode.getWorldSession(), false);
+            if (rewinding && !releasePending) {
+                cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX);
+                if (!releasePending) rewinding = false;
+            }
+        }
+    }
+
+    private void drainBoundaries() {
+        if (rewindController != null && rewindController.isApplyingHistory()) return;
+        while (!deferredBoundaries.isEmpty() && !releasePending) {
+            PendingBoundary pending = deferredBoundaries.removeFirst();
+            if (pending.installation() == installationIdentity && installedGameplayMode == boundOwner
+                    && ready(boundOwner) && !parked) markBoundary(pending.boundary());
+        }
+    }
+
+    private boolean replayAdmitted(Object identity) {
+        return identity == installationIdentity && !parked && !releasePending && !retireAfterRelease
+                && ready(installedGameplayMode) && installedGameplayMode == boundOwner
+                && installedGameplayMode.getRewindController() == rewindController
+                && !rewindController.isApplyingHistory()
+                && activeInputHandler != null && deferredBoundaries.isEmpty()
+                && rewindContextFromSupplier().stepperKind() == installedStepperKind
+                && rewindContextFromSupplier().supported()
+                && (installedStepperKind != StepperKind.SPECIAL_STAGE
+                    || installedSpecialProvider == installedGameplayMode.getRegisteredSpecialStageProvider());
     }
 
     private enum StepperKind {
@@ -111,25 +172,29 @@ public final class LiveRewindManager {
      *     must still be rejected. See ssentry-rewind-report.md.
      */
     public boolean handleRealtimeRewindInput(GameMode mode, boolean rewindBlocked, InputHandler input) {
+        reconcileBinding();
+        drainBoundaries();
+        if (releasePending) return retryPendingRelease();
+        if (parked) return false;
         RewindContext context = rewindContextForPublicEntry(mode);
         ScriptedRewind script = scriptedRewind(context);
         if (!context.supported() || rewindBlocked || input == null || !enabled(script)) {
             return !clear();
         }
-        activeInputHandler = input;
         if (!ensureInstalled(context)) {
             effectEnvelope.frameInactive();
-            return false;
+            return releasePending;
         }
         if (releasePending) {
             return retryPendingRelease();
         }
+        activeInputHandler = input;
         // A module's scripted rewind runs the held-key presentation at its own pace.
         boolean scripted = script != null && script.requested();
         int rewindKey = config.getInt(SonicConfiguration.LIVE_REWIND_KEY);
         if (scripted || (keyEnabled() && input.isKeyDown(rewindKey))) {
             if (!rewinding) {
-                GameServices.audio().beginReverseAudioPresentation();
+                audio.beginReverseAudioPresentation();
                 beginReverseFadePresentation();
             }
             rewinding = true;
@@ -143,7 +208,7 @@ public final class LiveRewindManager {
                 steps = speedController.stepsWhileHeld();
             }
             double speed = scripted ? Math.max(1, steps) : speedController.currentSpeed();
-            GameServices.audio().setReversePlaybackRate(speed);
+            audio.setReversePlaybackRate(speed);
             if (scripted) {
                 return stepScripted(script, steps, speed);
             }
@@ -154,7 +219,7 @@ public final class LiveRewindManager {
         int coastSteps = speedController.stepsAfterRelease();
         if (rewinding && coastSteps > 0) {
             if (stepBackward(coastSteps) > 0) {
-                GameServices.audio().setReversePlaybackRate(speedController.currentSpeed());
+                audio.setReversePlaybackRate(speedController.currentSpeed());
                 effectEnvelope.frameActive(speedController.currentSpeed());
                 return true;
             }
@@ -248,33 +313,66 @@ public final class LiveRewindManager {
             boolean nonRewindableTransitionPending,
             InputHandler input,
             boolean seamlessTransitionCompleted) {
+        recordExternalFrame(boundOwner, mode,
+                mode == GameMode.SPECIAL_STAGE && boundOwner != null
+                        ? boundOwner.getRegisteredSpecialStageProvider() : null,
+                nonRewindableTransitionPending, input, seamlessTransitionCompleted);
+    }
+
+    /** Records only into the history of the owner/mode/provider that actually executed the tick. */
+    public void recordExternalFrame(GameplayModeContext executedOwner, GameMode mode,
+            SpecialStageProvider executedProvider, boolean nonRewindableTransitionPending,
+            InputHandler input, boolean seamlessTransitionCompleted) {
+        recordExternalFrame(executedOwner, mode, executedProvider,
+                executedOwner == null ? null : executedOwner.getActiveBonusStageProvider(),
+                nonRewindableTransitionPending, input, seamlessTransitionCompleted);
+    }
+
+    public void recordExternalFrame(GameplayModeContext executedOwner, GameMode mode,
+            SpecialStageProvider executedProvider, BonusStageProvider executedBonusProvider,
+            boolean nonRewindableTransitionPending, InputHandler input, boolean seamlessTransitionCompleted) {
+        reconcileBinding();
+        drainBoundaries();
+        if (releasePending || parked || executedOwner != boundOwner || !ready(executedOwner)
+                || mode != currentMode()
+                || (mode == GameMode.BONUS_STAGE
+                    && executedBonusProvider != executedOwner.getActiveBonusStageProvider())
+                || (mode == GameMode.SPECIAL_STAGE
+                    && executedProvider != executedOwner.getRegisteredSpecialStageProvider())) return;
         RewindContext context = rewindContextForPublicEntry(mode);
         if (!context.supported() || nonRewindableTransitionPending || input == null
                 || !enabled(scriptedRewind(context))) {
-            activeInputHandler = null;
             clear();
             return;
         }
-        activeInputHandler = input;
         if (rewinding) {
             return;
         }
         if (!ensureInstalled(context)) {
             return;
         }
+        activeInputHandler = input;
+        if (!replayAdmitted(installationIdentity)) return;
         inputSource.discardAfter(rewindController.currentFrame());
         inputSource.appendFrame(input, config, LiveRewindPacingFrame.capture(mode, installedGameplayMode,
-                mode == GameMode.SPECIAL_STAGE ? specialStageProviderSupplier.get() : null, input));
+                mode == GameMode.SPECIAL_STAGE ? installedSpecialProvider : null, input));
         if (rewindController.recordExternalStep()) {
             pruneOldHistory();
         }
-        if (seamlessTransitionCompleted) {
+        drainBoundaries();
+        if (seamlessTransitionCompleted && rewindController != null) {
             handleSeamlessLevelTransitionBoundary(context);
         }
     }
 
     public void markBoundary(RewindBoundary boundary) {
-        if (boundary == null) {
+        if (boundary == null) return;
+        if (rewindController != null && rewindController.isApplyingHistory()) {
+            deferredBoundaries.addLast(new PendingBoundary(installationIdentity, boundary));
+            return;
+        }
+        if (releasePending) {
+            if (!retireAfterRelease && boundary == pendingReleaseBoundary) retryPendingRelease();
             return;
         }
         switch (boundary) {
@@ -340,15 +438,15 @@ public final class LiveRewindManager {
     }
 
     private boolean ensureInstalled(RewindContext context) {
-        GameplayModeContext gameplayMode = SessionManager.getCurrentGameplayMode();
-        if (gameplayMode == null) {
-            clear();
-            return false;
-        }
+        GameplayModeContext gameplayMode = boundOwner;
+        if (parked || releasePending || !ready(gameplayMode)) return false;
         StepperKind requiredKind = context.stepperKind();
         if (gameplayMode == installedGameplayMode
                 && installedStepperKind == requiredKind
                 && rewindController != null
+                && gameplayMode.getRewindController() == rewindController
+                && (requiredKind != StepperKind.SPECIAL_STAGE
+                    || installedSpecialProvider == gameplayMode.getRegisteredSpecialStageProvider())
                 && inputSource != null) {
             // A caller already confirmed this rewind context and the feature
             // is enabled this frame, so live rewind could be used — arm PCM
@@ -358,18 +456,16 @@ public final class LiveRewindManager {
             com.openggf.game.session.WorldSessionPolicyAccess.setHistoryRecording(gameplayMode.getWorldSession(),true);
             return true;
         }
-        if(installedGameplayMode!=null)
-            com.openggf.game.session.WorldSessionPolicyAccess.setHistoryRecording(installedGameplayMode.getWorldSession(),false);
+        if (installedGameplayMode != null && !clear()) return false;
         inputSource = new LiveRewindInputSource();
         EngineStepper stepper = requiredKind == StepperKind.SPECIAL_STAGE
                 ? new SpecialStageStepper(
                         inputSource, () -> activeInputHandler,
-                        specialStageProviderSupplier, () -> gameplayMode)
+                        gameplayMode.getRegisteredSpecialStageProvider(), gameplayMode)
                 : new LiveRewindStepper(
                         inputSource,
                         () -> activeInputHandler,
-                        () -> LevelFrameContext.from(gameplayMode),
-                        () -> gameplayMode);
+                        gameplayMode);
         gameplayMode.installPlaybackController(
                 inputSource,
                 stepper,
@@ -384,6 +480,13 @@ public final class LiveRewindManager {
         }
         installedGameplayMode = gameplayMode;
         installedStepperKind = requiredKind;
+        installedSpecialProvider = requiredKind == StepperKind.SPECIAL_STAGE
+                ? gameplayMode.getRegisteredSpecialStageProvider() : null;
+        installedFade = gameplayMode.getFadeManager();
+        installationIdentity = new Object();
+        Object identity = installationIdentity;
+        rewindController.setReplayAdmission(() -> replayAdmitted(identity));
+        gameplayMode.setRewindBoundaryReporter(boundaryReporterFor(gameplayMode));
         speedController = RewindSpeedController.fromConfig(config);
         rewinding = false;
         if (rewindController != null) {
@@ -451,18 +554,22 @@ public final class LiveRewindManager {
     }
 
     private RewindContext rewindContextForPublicEntry(GameMode mode) {
-        return rewindContext(useModeSupplierForPublicEntries ? modeSupplier.get() : mode);
+        return rewindContext(modeSupplier == null ? mode : currentMode());
     }
 
     private RewindContext rewindContextFromSupplier() {
-        return rewindContext(modeSupplier.get());
+        return rewindContext(currentMode());
+    }
+
+    private GameMode currentMode() {
+        return modeSupplier == null ? boundMode : modeSupplier.get();
     }
 
     private RewindContext rewindContext(GameMode mode) {
         if (mode != GameMode.SPECIAL_STAGE) {
             return new RewindContext(isRewindableMode(mode), StepperKind.LEVEL_FRAME);
         }
-        SpecialStageProvider provider = specialStageProviderSupplier.get();
+        SpecialStageProvider provider = boundOwner == null ? null : boundOwner.getRegisteredSpecialStageProvider();
         if (provider != null && provider.supportsRewind()) {
             return new RewindContext(true, StepperKind.SPECIAL_STAGE);
         }
@@ -476,7 +583,9 @@ public final class LiveRewindManager {
                 break;
             }
             completed++;
+            if (!deferredBoundaries.isEmpty()) break;
         }
+        drainBoundaries();
         return completed;
     }
 
@@ -494,6 +603,11 @@ public final class LiveRewindManager {
                 break;
             }
             reached = script.reachedTarget();
+            if (!deferredBoundaries.isEmpty()) break;
+        }
+        if (!deferredBoundaries.isEmpty()) {
+            drainBoundaries();
+            return true;
         }
         if (!reached && !floor) {
             effectEnvelope.frameActive(speed);
@@ -512,10 +626,11 @@ public final class LiveRewindManager {
     /** The module's scripted rewind in level play; never in bonus or special stages. */
     private ScriptedRewind scriptedRewind(RewindContext context) {
         if (!context.supported() || context.stepperKind() != StepperKind.LEVEL_FRAME
-                || modeSupplier.get() != GameMode.LEVEL) {
+                || currentMode() != GameMode.LEVEL || boundOwner == null) {
             return null;
         }
-        return scriptedRewindSupplier.get();
+        var module = boundOwner.getWorldSession().getGameModule();
+        return module == null ? null : module.scriptedRewind();
     }
 
     private boolean enabled() {
@@ -541,7 +656,7 @@ public final class LiveRewindManager {
     private boolean cleanupAudioAfterRealtimeRewind(
             AudioPresentationPolicy policy) {
         if (rewindController == null) {
-            return GameServices.audio().endReverseAudioPresentation();
+            return audio.endReverseAudioPresentation();
         }
         // Land the single deferred logical restore at the committed frame
         // before the presentation cleanup acts on backend logical state.
@@ -550,7 +665,7 @@ public final class LiveRewindManager {
     }
 
     private void beginReverseFadePresentation() {
-        FadeManager fadeManager = GameServices.fadeOrNull();
+        FadeManager fadeManager = installedFade;
         if (fadeManager != null) {
             fadeManager.beginReversePresentation();
         }
@@ -563,7 +678,7 @@ public final class LiveRewindManager {
             pendingReleasePolicy = policy;
             return false;
         }
-        FadeManager fadeManager = GameServices.fadeOrNull();
+        FadeManager fadeManager = installedFade;
         if (fadeManager != null) {
             fadeManager.endReversePresentation();
         }
@@ -595,7 +710,10 @@ public final class LiveRewindManager {
         }
         pendingReleaseBoundary = null;
         rewinding = false;
-        if (boundary == RewindBoundary.LEVEL_LOAD) {
+        if (retireAfterRelease || !ready(installedGameplayMode)
+                || installedGameplayMode != boundOwner) {
+            clear();
+        } else if (boundary == RewindBoundary.LEVEL_LOAD) {
             handleLevelLoadBoundary(rewindContextFromSupplier());
         } else if (boundary == RewindBoundary.SEAMLESS_LEVEL_TRANSITION) {
             handleSeamlessLevelTransitionBoundary(rewindContextFromSupplier());
@@ -626,6 +744,10 @@ public final class LiveRewindManager {
     }
 
     private boolean clear() {
+        if (releasePending) {
+            retireAfterRelease = true;
+            return false;
+        }
         if(installedGameplayMode!=null)
             com.openggf.game.session.WorldSessionPolicyAccess.setHistoryRecording(installedGameplayMode.getWorldSession(),false);
         if (rewinding && rewindController != null) {
@@ -643,8 +765,14 @@ public final class LiveRewindManager {
             // above.
             rewindController.setRewindHistoryArmed(false);
         }
+        if (installedGameplayMode != null) installedGameplayMode.uninstallPlaybackController(rewindController);
+        installationIdentity = new Object();
         installedGameplayMode = null;
         installedStepperKind = null;
+        installedSpecialProvider = null;
+        installedFade = null;
+        retireAfterRelease = false;
+        deferredBoundaries.clear();
         inputSource = null;
         rewindController = null;
         activeInputHandler = null;

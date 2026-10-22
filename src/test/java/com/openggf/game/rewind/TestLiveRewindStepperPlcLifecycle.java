@@ -77,12 +77,12 @@ class TestLiveRewindStepperPlcLifecycle {
                 PlayerInputState.of(0, 0, 0, 0, true, true), PlayerInputState.neutral()));
         inputs.appendFrame(input, SonicConfigurationService.getInstance());
         input.clearLogicalOverride();
-        var stepper = new LiveRewindStepper(inputs, () -> input, () -> context, () -> null);
+        var stepper = new LiveRewindStepper(inputs, () -> input, mock(GameplayModeContext.class));
         var frame = lifecycle.latchBeforeFadeUpdate();
         try {
             assertEquals(LevelFrameResult.GAMEPLAY_FRAME, stepper.step(inputs.read(1),
                     sprites, mock(LevelManager.class), mock(com.openggf.camera.Camera.class),
-                    input, frame), "a recorded completed gameplay row must execute its body");
+                    input, context, frame), "a recorded completed gameplay row must execute its body");
         } finally {
             frame.finish();
         }
@@ -135,13 +135,13 @@ class TestLiveRewindStepperPlcLifecycle {
                 sprites, state, null, null, null, new HardwareTimingService(), null,
                 RuntimeArtCoordinator.NONE);
         var stepper = new LiveRewindStepper(new LiveRewindInputSource(),
-                InputHandler::new, () -> context, () -> mode);
+                InputHandler::new, mode);
         var frame = lifecycle.latchBeforeFadeUpdate();
         try {
             assertEquals(LevelFrameResult.GAMEPLAY_FRAME, stepper.step(
                     new Bk2FrameInput(1, 0, 0, false, 0, 0, false, "ordinary bonus row"),
                     sprites, mock(LevelManager.class), mock(com.openggf.camera.Camera.class),
-                    new InputHandler(), frame));
+                    new InputHandler(), context, frame));
         } finally {
             frame.finish();
         }
@@ -150,6 +150,46 @@ class TestLiveRewindStepperPlcLifecycle {
         assertEquals(type != BonusStageType.SLOT_MACHINE, player.isHighPriority());
         assertEquals(type != BonusStageType.SLOT_MACHINE, follower.isHighPriority());
         assertEquals(false, objectOwned.isHighPriority());
+    }
+
+    @Test
+    void replayUsesInstalledManagersAndResamplesTheOwnersRestoredBonusProvider() {
+        var ambient = com.openggf.tests.TestEnvironment.activeGameplayMode();
+        SpriteManager installedSprites = mock(SpriteManager.class);
+        LevelManager installedLevel = mock(LevelManager.class);
+        var installedCamera = mock(com.openggf.camera.Camera.class);
+        GameplayModeContext owner = mock(GameplayModeContext.class);
+        WorldSession world = mock(WorldSession.class);
+        GameModule module = mock(GameModule.class);
+        when(world.getGameModule()).thenReturn(module);
+        when(owner.getWorldSession()).thenReturn(world);
+        when(owner.getSpriteManager()).thenReturn(installedSprites);
+        when(owner.getLevelManager()).thenReturn(installedLevel);
+        when(owner.getCamera()).thenReturn(installedCamera);
+        when(owner.getGameStateManager()).thenReturn(new GameStateManager());
+        when(owner.hardwareTiming()).thenReturn(new HardwareTimingService());
+        when(owner.getFadeManager()).thenReturn(new com.openggf.graphics.FadeManager());
+        when(owner.plcFrameLifecycle()).thenReturn(new PlcFrameLifecycleCoordinator((PlcLifecycleService) null));
+        BonusStageProvider first = mock(BonusStageProvider.class);
+        BonusStageProvider restored = mock(BonusStageProvider.class);
+        when(first.getActiveType()).thenReturn(BonusStageType.GUMBALL);
+        when(restored.getActiveType()).thenReturn(BonusStageType.GUMBALL);
+        when(owner.getActiveBonusStageProvider()).thenReturn(first);
+        LiveRewindInputSource inputs = new LiveRewindInputSource();
+        InputHandler input = new InputHandler();
+        inputs.appendFrame(input, SonicConfigurationService.getInstance());
+        var stepper = new LiveRewindStepper(inputs, () -> input, owner);
+
+        assertEquals(LevelFrameResult.GAMEPLAY_FRAME, stepper.step(inputs.read(1)));
+        when(owner.getActiveBonusStageProvider()).thenReturn(restored);
+        assertEquals(LevelFrameResult.GAMEPLAY_FRAME, stepper.step(inputs.read(1)));
+
+        org.mockito.Mockito.verify(installedSprites, org.mockito.Mockito.times(2)).update(input);
+        org.mockito.Mockito.verify(first).onFrameUpdate();
+        org.mockito.Mockito.verify(restored).onFrameUpdate();
+        org.junit.jupiter.api.Assertions.assertSame(ambient,
+                com.openggf.game.session.SessionManager.getCurrentGameplayMode());
+        com.openggf.game.session.SessionManager.clear();
     }
 
     private static Fixture fixture(boolean remainsPaused) {
@@ -167,7 +207,7 @@ class TestLiveRewindStepperPlcLifecycle {
         LevelManager level = mock(LevelManager.class);
         LiveRewindInputSource inputs = new LiveRewindInputSource();
         LiveRewindStepper stepper = new LiveRewindStepper(
-                inputs, InputHandler::new, () -> context, () -> null);
+                inputs, InputHandler::new, mock(GameplayModeContext.class));
         return new Fixture(
                 stepper, coordinator, context, level,
                 mock(SpriteManager.class), events);
@@ -205,7 +245,7 @@ class TestLiveRewindStepperPlcLifecycle {
                     new Bk2FrameInput(
                             1, 0, 0, startPressed, 0, 0, false, "row"),
                     sprites, level, mock(com.openggf.camera.Camera.class),
-                    new InputHandler(), frame);
+                    new InputHandler(), context, frame);
             frame.finish();
             return result;
         }
