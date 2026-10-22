@@ -114597,3 +114597,50 @@ paths and added six pre-absent source-bound outputs. Current17226 class inventor
 is accounting, not behavior inferred from hashes. No repeated run, native
 invocation, commit, integration or push followed. This focus does not replace
 the remaining original-route evidence or close native caller/CPU-water/+21/-94.
+
+### 2026-10-22 — Current draft AIZ2/HCZ chain refresh
+
+One unchanged production chain at `823eda5f4cd30d8b5654bc5182377c84f5cd9c3d`,
+in Root's owned parity integration worktree, ends **1T/1F/0E/0S**. Command:
+
+```bash
+env -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS \
+  -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null \
+  python3 "$MAIN_WORKSPACE/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Ptrace-replay \
+  '-Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds' \
+  "-Ds3k.rom.path=$S3K_ROM" \
+  -Dopenggf.surefire.reports=target/s3k-chain-current-823eda/reports \
+  -Dopenggf.trace.reports=target/s3k-chain-current-823eda/trace-reports \
+  -Dopenggf.test.tmpdir=target/s3k-chain-current-823eda/tmp test -B
+```
+
+Java25.0.5, original locked-ROM SHA1 and actual properties were verified.
+Queue wait370s; Maven56.315s; XML suite28.159s/case27.854s. Compiler/parent
+intervals are unmeasured. All actual failures/suppression, report/owner trees,
+available comparator tables and stderr were read before consuming owned output.
+
+Relative to audit `1a5ae4ad`, the earlier segment8 X mismatch and segment11
+ownership stop are absent in this invocation. Segment8 is complete with0errors;
+this does not attribute the difference to a particular change. Segment11 is
+complete with62errors (11physics/51animation), first overall error at row6640
+`player_animation_id`0013/0005, also present for the sidekick. The report retains
+no first non-camera physics mismatch for segment11.
+
+The walk now loses production ownership in segment13, HCZ2, LEVEL/loadgen10 at
+BK2cursor88306. Its partial report has63316errors (54642physics/8674animation),
+first non-camera mismatch row287 `y`06D4/06DA. At that row X2811/subF600 and
+YsubC000 match, while Yspeed0000/08D0, Gspeed0046/020C, air0/1 and rolling0/1
+differ. The nearby snake-block list is evidence for investigation, not a contact
+owner or cause certificate. Four unmatched hardware completions remain
+suppressed;13 dynamic-art gaps report0failures. No current chain/native parity,
+all-writer, route or timing-measurement closure follows.
+
+No missing-profile warnings occurred under this recorded-completion replay.
+That supplies no measured costs. The separate audit's52warnings/14distinct
+fingerprints have UNKNOWN unretained keys/addresses and per-test manifest mode;
+the historical count remains open rather than reconstructed. A current external
+GameOver-focused log supplies two exact warning keys as leads only. Native
+publication still requires authentic exact FIFO service measurements and the
+existing strict source/movie/setup provenance contract.

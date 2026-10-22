@@ -30243,3 +30243,39 @@ Final test source SHA256 `c224a072de2aabc64116349d2b7081a0fd5684e4a68755f208e501
 Optional onward attempts use the corrected InputLog block (closing marker after all18460 original rows), production-loaded before boot and all-row author/loader/script/ZIP/20-prefix proofs afterward. First flight activates18462/fuel240 but P1Y492/P2Y463 publishes gap29, outside the source32..47 pickup window; no MANUAL carry before fuel0 at18941/18942 total. Second stops its180-input alignment bound18639/18640 total at P1/P2 X2903, ground/unhurt/18rings/3lives; no flight/carry starts. Both are **0 JUnit/skips N/A**, no snapshot/restore, no useful onward inlet qualification.
 Original ROM nominal ring monitors layout78/79 at2896/496 and2928/496 (1F92C2/1F92C8, id01/sub03), and the open-strip/floor source geometry, can guide a later ordinary jump proposal; actual blocking contact/receiver/ceiling/private cooldown remain UNOBSERVED. No runtime omission/native cause follows from the public stops or normal images. Both optional attempts and all three focused requests are exhausted; no unchanged plain cold replay, baseline/broad smoke/native/model or extra agent was launched.
 Maintained source/data are concrete regression coverage, not a passing old first/complete class, full route, Mecha/DEZ/load-history isolation, native pixels/timing or whole-zone certification. Original46/48 and FIRST_FORWARD11664 negatives stay undisposed. Useful specific source/preimages/controller inputs/compact facts/selected normal images remain in external `$R35_PRODUCTS` recorded by the existing own registry; owned original XML/logs/series/helper classes/extraction/tmp were read then consumed under leases. Native322/703, skdisasm044/8b2, config, old refs and foreign work preserved; local normal-hook leaf only, Root owns review/integration/push.
+
+### Root current chain and SSZ leaf intake — 2026-10-22
+
+The unchanged chain refresh on pushed `823eda5f4` is **1T1F0E0S**. Relative to
+the independent `1a5ae4ad` audit, segment8 now completes without comparator
+errors and the segment11 ownership stop is absent. The current stop is HCZ2
+segment13/cursor88306, first retained non-camera mismatch row287 Y06D4/06DA;
+segment11 still has62 aggregate errors. The
+[frontier record](../../status/trace-frontier-log.md#2026-10-22--current-draft-aiz2hcz-chain-refresh)
+preserves exact command, fields, counts, timing and suppression limits. No
+causal attribution, chain pass or measured load-cost closure follows.
+
+Root independently reviewed R34/R35 commits `7919a48d5` and `9bfdae0fc`, then
+composed them as `60f19e30a` and `372bcd27e`. The sole conflict was an append-only
+Plan suffix; both complete records remain. A second read-only review independently
+expanded548 script runs into all17546 two-pad rows and checked the exact9914
+prefix and67 old SSZ consumers/resources against both leaf and runtime base.
+It found no material defect. Existing telemetry/cosmetic exclusions in the shared
+snapshot comparator remain; every-key comparison is not raw byte equality.
+
+The original route/oracles and all runtime sources remain unchanged by this
+intake. Root's one composed focused execution of the new second-replica case
+passes **1T0F0E0S**, actual XML method25.793s/suite26.091s, Java25.0.5/EGL and
+verified absolute S3K ROM. The actual output confirms46 local windows and23846
+normal draws. Queue92s and Maven54.337s are separate; compiler time is unknown.
+Command: the current absolute queue wrapper with `--normal -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl
+-Dtest=TestSszWidePairedSecondReplicaColdRouteCapture#coldSecondReplicaAndReceiverReplayEveryRegistryKey`,
+the absolute S3K ROM property, fresh `target/ssz-r35-composed-current` report/tmp
+properties, ambient JVM/display options unset and `test -B`.
+Actual XML identity/properties/assertions/skips/system streams were read before
+consuming owned diagnostics. Two FAST/NONE and one exact missing-profile warning
+(`sha256:c2db2fda975f758607b601f686bc782c7ebe55e2413f540f23b193ba2b6f1741`)
+remain observed; a passing route is not native timing measurement. This does not
+replace the red old first/complete cases or certify Mecha/DEZ. Main integration
+remains separately coordinated.
