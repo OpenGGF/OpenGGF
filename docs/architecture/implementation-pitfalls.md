@@ -593,6 +593,24 @@ ordinary-suite check outside `-Pguards`. Run its real round-trip sweep and updat
 the test/resource totals only after verifying the new class passes or has honest
 graph coverage. A passing coverage guard alone does not check those totals.
 
+**A completed gameplay tick may precede completed publication.** The outer PLC
+frame publishes dynamic-art diagnostics in `finish()`, after the gameplay body
+returns. Live floor/checkpoint capture before that boundary differed from replay
+by one diagnostic row even when world coordinates agreed. Retain input/pacing
+before host input updates, capture after successful publication, and revalidate
+installation/controller/level/provider identity before mutation. Failed ticks and
+stale completions must not record. Pre-tick assembly remains a separate boundary.
+
+**Binding an owner does not admit a closed object world.** The Tails DEZ route
+exposed eager floor construction while the source level was inactive for
+transition, before existing entry gates could reject it. Both matched baselines
+passed. Reject that opportunistic object-world capture; preserve explicit entry,
+special-provider bootstrap and allowed cosmetic-fade recording. A null controller
+can represent the retired-source window until the destination's real assembly
+and native fade release complete. Require its fresh history at readiness and
+prove old handles cannot replay; do not patch an inadmissible snapshot's boss
+references. See the [paydown evidence](plans/2026-10-22-architecture-debt-paydown.md).
+
 **A “this frame” contact flag may cross snapshots.** In split object/solid phases,
 callbacks can run after the object's update. A manual codec must capture those
 pending flags, even if update clears them each pass. DEZ gravity pads cleared

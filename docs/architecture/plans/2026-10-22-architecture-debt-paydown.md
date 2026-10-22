@@ -488,3 +488,20 @@ selection is planned to resolve the omitted-case gap. The dry-run still selects
 guards. Expect roughly two hours of execution plus unknown queue delay; retain
 the 120-minute execution and ten-minute no-output limits. A bounded stop is
 incomplete validation, not a pass. No new broad request has been launched yet.
+
+The final gate selection completed three controls/routes, 54 affected cases
+(correcting the planned count of 53: the fade gate has five cases) and four
+architecture guards, all with zero failures, errors or skips. The 54-case run
+used 1:55 of Maven time after one second of admission wait; four guards used
+26.954 seconds after 116 seconds waiting. Consumed reports were inspected and
+removed. The unchanged PLC/input/API and full-matrix evidence is reused with
+its earlier source limits; these are not independent unique-case totals.
+
+The child committed `80c37a7273048e140c3da97b0aa0c6bc1177e85b` through normal
+hooks with all policy/co-author trailers verified. The coordinator composed it
+without conflicts and checked that production, tests and tooling match the
+tested child exactly; only existing engineering prose differed. A fresh fetch
+confirmed main and origin develop both remain at `213400802`. Unrelated main
+submodule/untracked work is preserved. Final guide/release/pitfall prose records
+the landed behavior. The complete corrected-source smoke/guard selection is next;
+the original omitted-case gap and integration/push/cleanup remain open.

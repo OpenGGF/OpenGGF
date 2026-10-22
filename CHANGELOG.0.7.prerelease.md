@@ -474,8 +474,9 @@ Unreleased. The earlier development themes remain in
 - **Runtime ownership:** Live rewind retains its gameplay owner and outgoing
   input, audio and fade cleanup through suspension and replacement. Destination
   history starts after deferred title-card assembly, and replay cannot mutate a
-  replacement owner's history. Audio's installed source stays in one immutable,
-  typed tuple. Sonic 1 and Sonic 2 selected-slot images use the shared data-select
+  replacement owner's history. Floors and checkpoints include completed frame
+  publication; inactive outgoing worlds cannot seed new history. Audio's installed
+  source stays in one immutable, typed tuple. Sonic 1 and Sonic 2 selected-slot images use the shared data-select
   converter and payload validators; Sonic 3 & Knuckles keeps explicit host ROM
   donation while consuming the same patterns, palette and mapping contract.
 
