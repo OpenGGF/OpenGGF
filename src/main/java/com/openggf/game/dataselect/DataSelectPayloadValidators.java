@@ -1,4 +1,4 @@
-package com.openggf.game.sonic1.dataselect;
+package com.openggf.game.dataselect;
 
 import java.util.List;
 import java.util.Map;

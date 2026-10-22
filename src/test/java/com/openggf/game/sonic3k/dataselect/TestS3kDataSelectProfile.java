@@ -79,6 +79,26 @@ class TestS3kDataSelectProfile {
     }
 
     @Test
+    void payloadValidation_combinesCommonEmeraldRulesWithRegistryActLimits() {
+        ZoneRegistry zones = org.mockito.Mockito.mock(ZoneRegistry.class);
+        org.mockito.Mockito.when(zones.getActCount(0)).thenReturn(2);
+        S3kDataSelectProfile profile = new S3kDataSelectProfile(() -> zones);
+        var payload = validPayload();
+        payload.put("act", 1);
+        payload.put("chaosEmeralds", List.of(6));
+        payload.put("superEmeralds", List.of(6));
+        assertTrue(profile.isPayloadValid(payload));
+        payload.put("act", 2);
+        assertFalse(profile.isPayloadValid(payload));
+        payload.put("act", 1);
+        payload.put("superEmeralds", List.of(0));
+        assertFalse(profile.isPayloadValid(payload));
+        payload.put("superEmeralds", List.of());
+        payload.put("chaosEmeralds", List.of(7));
+        assertFalse(profile.isPayloadValid(payload));
+    }
+
+    @Test
     void builtInTeams_containsExpectedCharacters() {
         S3kDataSelectProfile profile = new S3kDataSelectProfile();
         List<SelectedTeam> teams = profile.builtInTeams();

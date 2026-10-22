@@ -31,7 +31,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 |------|------------------------------|---------------------|---------|
 | `low_level_layers_do_not_depend_on_runtime_layers` | 184 records | <=150 records | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 9 records | 0 records | Master-title ROM preview mapping moves behind provider contracts (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
-| `per_game_packages_do_not_cross_depend` | 34 member dependencies in 3 grouped slice records | <=20 member dependencies | Data-select preview loading, payload validation, and menu animation helpers extracted out of per-game packages |
+| `per_game_packages_do_not_cross_depend` | 14 member dependencies in 2 grouped slice records | <=20 member dependencies | Shared selected-slot conversion and payload validation extracted; remaining host donation and menu animation dependencies stay explicit |
 
 2026-09-03: the two `AudioManager -> Rom.readBytes` SEGA-boot PCM edges were
 solved and the frozen entry pruned. `GameAudioProfile.loadSegaPcm(Object)` now
@@ -41,10 +41,13 @@ may depend on `com.openggf.data`. The rule description keeps its original
 baseline wording because the freeze store is keyed by that full text.
 
 The historical cross-game count of 37 counted physical lines: 3 slice headers
-plus 34 member dependencies. The target is now explicitly <=20 **member
-dependencies**. Three grouped records does not satisfy that target. Neither
-physical lines nor grouped records can be substituted for member dependencies
-when evaluating this migration.
+plus 34 member dependencies. The target uses <=20 **member dependencies**.
+Shared selected-slot conversion, its result type, and common payload validation
+moved to `game.dataselect` on 2026-10-22, removing 20 member dependencies and
+the entire S2-to-S1 group.
+The remaining allowance is 14 members in 2 groups. Neither physical lines nor
+grouped records can be substituted for member dependencies when evaluating
+this migration.
 
 ## Source Ratchets
 
@@ -148,12 +151,12 @@ records intentionally change.
 
 - `low_level_layers_do_not_depend_on_runtime_layers`: 184
 - `shared_layers_do_not_depend_on_game_specific_packages`: 9
-- `per_game_packages_do_not_cross_depend`: 3
+- `per_game_packages_do_not_cross_depend`: 2
 - `runtime_owned_framework_packages_do_not_access_global_service_roots`: 11
 - `runtime_registry_controllers_are_only_constructed_by_runtime_composition_roots`: 2
 
-For cross-game slices, the same stored records contain **34 member
-dependencies** (37 physical lines including headers); the decay target above
+For cross-game slices, the same stored records contain **14 member
+dependencies** (16 physical lines including headers); the decay target above
 uses member dependencies. Low-level, framework-root, and registry-construction
 labels still say 209, 13, and 4 respectively. Correcting their published counts
 to 184, 11, and 2 records neither removes an allowance nor proves a live violation
@@ -259,20 +262,22 @@ Target direction:
 
 Rule: `per-game packages should not cross-depend`
 
-The 3 committed grouped records contain 34 member dependencies across these
-categories (the live graph has not been remeasured here):
+The 2 committed grouped records contain 14 member dependencies across these
+categories:
 
-- S2 data-select preview loading reuses S1 preview loader and common payload
-  validator code.
-- S3K data-select and host-preview presentation reuses S1/S2 preview loaders,
-  cached preview managers, S1 special-stage palette extraction, and S2 selected
-  slot previews.
+- S3K host-preview presentation uses the S1/S2 cached preview managers and S1
+  special-stage palette extraction for explicit host ROM donation.
 - S3K level select reuses the S2 menu background animator.
+
+The selected-slot converter, `LoadedPreview` result, and common payload validator
+now belong to `com.openggf.game.dataselect`. Both host paths consume that converter
+directly; the pass-through S2 preview loader was deleted. This removes 7 S2-to-S1,
+11 S3K-to-S1, and 2 S3K-to-S2 member dependencies without adding replacement
+cross-game allowances. ROM title previews remain outside this migration.
 
 Target direction:
 
-- Extract shared data-select preview loading, payload validation, and menu
-  animation helpers out of per-game packages.
+- Extract the shared menu animation helper out of the remaining per-game path.
 - Keep cross-game donation explicit when reuse is intentional and ROM-accurate
   host presentation depends on older-game assets.
 

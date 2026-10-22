@@ -10,6 +10,7 @@ import com.openggf.game.dataselect.AbstractDataSelectProvider;
 import com.openggf.game.dataselect.DataSelectActionType;
 import com.openggf.game.dataselect.DataSelectPresentationProvider;
 import com.openggf.game.dataselect.DataSelectSessionController;
+import com.openggf.game.dataselect.SelectedSlotPreviewLoader;
 import com.openggf.game.sonic1.dataselect.S1DataSelectImageCacheManager;
 import com.openggf.game.sonic1.dataselect.S1DataSelectProfile;
 import com.openggf.game.sonic2.dataselect.S2DataSelectProfile;
@@ -687,15 +688,38 @@ class TestS3kDataSelectPresentation {
                 assets.loadData();
 
                 var selected = new S3kSaveScreenObjectState.SelectedSlotIcon(0, 0x110, 0x108, 0, false, 0, 0x17);
-                SpriteMappingFrame frame = assets.getSelectedSlotIconFrame(selected);
+                assertGeneratedHostPreview(assets, selected);
+                org.mockito.Mockito.verify(cacheManager).awaitGenerationIfRunning();
+                org.mockito.Mockito.verify(cacheManager).loadCachedPreviews();
+            }
+        }
+    }
 
-                assertNotNull(frame);
-                assertEquals(70, frame.pieces().size(),
-                        "runtime S2 preview should use the 80x56 PNG-backed tile grid instead of the 12-tile ROM icon");
-                assertTrue(frame.pieces().stream().allMatch(piece -> piece.paletteIndex() == 2),
-                        "runtime generated host previews should use palette line 2 so S2 purple can keep line 3");
-                assertTrue(assets.useScaledSelectedSlotIconFrame(selected));
-                assertEquals(70, assets.getSlotIconPatterns(0).length);
+    @Test
+    void donorAssets_loadHostPreviewAssets_usesRuntimeS1PreviewCache() throws Exception {
+        File s3kRomFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(s3kRomFile != null && s3kRomFile.exists(), "Sonic 3K ROM not available");
+
+        try (Rom s3kRom = new Rom()) {
+            assumeTrue(s3kRom.open(s3kRomFile.getPath()), "Failed to open Sonic 3K ROM");
+
+            S1DataSelectImageCacheManager cacheManager = org.mockito.Mockito.mock(S1DataSelectImageCacheManager.class);
+            org.mockito.Mockito.when(cacheManager.loadCachedPreviews())
+                    .thenReturn(Map.of(0, solidPreviewImage(0xFF3366CC)));
+            com.openggf.game.GameModule module = org.mockito.Mockito.mock(com.openggf.game.GameModule.class);
+            org.mockito.Mockito.when(module.getGameService(S1DataSelectImageCacheManager.class)).thenReturn(cacheManager);
+
+            try (var services = org.mockito.Mockito.mockStatic(GameServices.class)) {
+                services.when(GameServices::module).thenReturn(module);
+                services.when(GameServices::rom).thenReturn(null);
+
+                S3kDataSelectAssetSource assets = newLoaderBackedAssets(s3kRom, "s1");
+                assets.loadData();
+
+                var selected = new S3kSaveScreenObjectState.SelectedSlotIcon(0, 0x110, 0x108, 0, false, 0, 0x17);
+                assertGeneratedHostPreview(assets, selected);
+                org.mockito.Mockito.verify(cacheManager).awaitGenerationIfRunning();
+                org.mockito.Mockito.verify(cacheManager).loadCachedPreviews();
             }
         }
     }
@@ -2460,6 +2484,46 @@ class TestS3kDataSelectPresentation {
     }
 
     @Test
+    void render_selectedOccupiedSlotUsesGeneratedHostSelectedIconFrame() {
+        RecordingGraphics graphics = new RecordingGraphics();
+        HostSelectedSlotIconAssets assets = new HostSelectedSlotIconAssets(
+                new SelectedSlotPreviewLoader().load(solidPreviewImage(0xFF3366CC)));
+        S3kDataSelectRenderer renderer = new S3kDataSelectRenderer();
+
+        renderer.draw(graphics,
+                assets,
+                new S3kSaveScreenObjectState(
+                        assets.getSaveScreenLayoutObjects(),
+                        new S3kSaveScreenSelectorState(ignored -> {}),
+                        visualState(assets.getSaveScreenLayoutObjects(), 4, 0xD,
+                                S3kSaveScreenObjectState.SlotVisualKind.EMPTY,
+                                S3kSaveScreenObjectState.SlotVisualKind.EMPTY,
+                                S3kSaveScreenObjectState.SlotVisualKind.EMPTY,
+                                S3kSaveScreenObjectState.SlotVisualKind.EMPTY,
+                                S3kSaveScreenObjectState.SlotVisualKind.EMPTY,
+                                S3kSaveScreenObjectState.SlotVisualKind.EMPTY,
+                                S3kSaveScreenObjectState.SlotVisualKind.EMPTY,
+                                S3kSaveScreenObjectState.SlotVisualKind.EMPTY),
+                        new S3kSaveScreenObjectState.SelectedSlotIcon(0, 0x110, 0x108, 0, false, 0, 0x17)));
+
+        assertEquals(70, graphics.scaledRenderCalls().size(),
+                "host-selected previews should render the canonical 80x56 tile grid");
+        // Mapping pieces are submitted in reverse order to preserve sprite overlap priority.
+        RecordingGraphics.ScaledRenderCall firstTile = graphics.scaledRenderCalls().getFirst();
+        RecordingGraphics.ScaledRenderCall lastTile = graphics.scaledRenderCalls().getLast();
+        assertEquals(0x50000 + Sonic3kConstants.ARTTILE_SAVE_MISC + 0x360, firstTile.patternId());
+        assertEquals(176f, firstTile.x(), 0.01f);
+        assertEquals(64f, firstTile.y(), 0.01f);
+        assertEquals(8f, firstTile.width(), 0.01f);
+        assertEquals(8f, firstTile.height(), 0.01f);
+        assertEquals(0x50000 + Sonic3kConstants.ARTTILE_SAVE_MISC + 0x31B, lastTile.patternId());
+        assertEquals(104f, lastTile.x(), 0.01f);
+        assertEquals(16f, lastTile.y(), 0.01f);
+        assertNotNull(graphics.cachedPalette(2),
+                "host-selected previews should cache their host palette into line 2 to avoid the S2 purple emerald on line 3");
+    }
+
+    @Test
     void render_selectedOccupiedSlotZoneImageRendersAboveStaticCardOverlay() {
         RecordingGraphics graphics = new RecordingGraphics();
         SelectedIconOverStaticOverlayAssets assets = new SelectedIconOverStaticOverlayAssets();
@@ -3424,15 +3488,27 @@ class TestS3kDataSelectPresentation {
     }
 
     private static final class HostSelectedSlotIconAssets extends RecordingAssets {
-        private final Pattern[] slotIconPatterns = new Pattern[12];
-        private final SpriteMappingFrame customFrame = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-40, -120, 4, 3, 0x31B, false, false, 2, false)));
+        private final Pattern[] slotIconPatterns;
+        private final SpriteMappingFrame customFrame;
+        private final Palette palette;
 
         private HostSelectedSlotIconAssets() {
             super(0x2A);
+            slotIconPatterns = new Pattern[12];
+            customFrame = new SpriteMappingFrame(List.of(
+                    new SpriteMappingPiece(-40, -120, 4, 3, 0x31B, false, false, 2, false)));
+            palette = new Palette();
             for (int i = 0; i < slotIconPatterns.length; i++) {
                 slotIconPatterns[i] = new Pattern();
             }
+            loadData();
+        }
+
+        private HostSelectedSlotIconAssets(SelectedSlotPreviewLoader.LoadedPreview preview) {
+            super(0x2A);
+            slotIconPatterns = preview.patterns();
+            customFrame = preview.frame();
+            palette = preview.palette();
             loadData();
         }
 
@@ -3463,7 +3539,7 @@ class TestS3kDataSelectPresentation {
 
         @Override
         public Palette getSelectedSlotIconPalette(S3kSaveScreenObjectState.SelectedSlotIcon selectedSlotIcon) {
-            return new Palette();
+            return palette;
         }
 
         @Override
@@ -4009,6 +4085,31 @@ class TestS3kDataSelectPresentation {
 
     private static int saveExtraPatternId(int tileOffset) {
         return 0x50000 + Sonic3kConstants.ARTTILE_SAVE_EXTRA + tileOffset;
+    }
+
+    private static void assertGeneratedHostPreview(S3kDataSelectAssetSource assets,
+                                                   S3kSaveScreenObjectState.SelectedSlotIcon selected) {
+        SpriteMappingFrame frame = assets.getSelectedSlotIconFrame(selected);
+        assertSame(SelectedSlotPreviewLoader.frame(), frame);
+        assertEquals(70, frame.pieces().size());
+        assertTrue(frame.pieces().stream().allMatch(piece -> piece.paletteIndex() == 2));
+        assertTrue(assets.useScaledSelectedSlotIconFrame(selected));
+        Pattern[] patterns = assets.getSlotIconPatterns(selected.iconIndex());
+        assertEquals(70, patterns.length);
+        for (Pattern pattern : patterns) {
+            for (int y = 0; y < 8; y++) {
+                for (int x = 0; x < 8; x++) {
+                    assertEquals(1, pattern.getPixel(x, y));
+                }
+            }
+        }
+        Palette palette = assets.getSelectedSlotIconPalette(selected);
+        assertNotNull(palette);
+        for (int i = 0; i < 16; i++) {
+            assertEquals(i == 1 ? 36 : 0, palette.getColor(i).r & 0xFF);
+            assertEquals(i == 1 ? 73 : 0, palette.getColor(i).g & 0xFF);
+            assertEquals(i == 1 ? 182 : 0, palette.getColor(i).b & 0xFF);
+        }
     }
 
     private static RgbaImage solidPreviewImage(int argb) {
