@@ -28,6 +28,7 @@ import static org.mockito.Mockito.*;
 class TestSpriteTileReuse {
     private static final HeadSatReplay HEAD_REPLAY = (host, entries, emitter) -> { };
     private static final PaletteReplay PALETTE_REPLAY = (host, palette) -> palette;
+    private static final HeadMask HEAD_MASK = new HeadMask(0, 2, Set.of(1), List.of(new MaskPoint(0, 0)));
     private GraphicsManager graphics;
 
     @BeforeEach void setup() {
@@ -116,7 +117,7 @@ class TestSpriteTileReuse {
     }
 
     private static Tile seed() {
-        var head = new HeadTransform(new HeadMask(0, 2, Set.of(1), List.of(new MaskPoint(0, 0))),
+        var head = new HeadTransform(HEAD_MASK,
                 1, 10, 20, false, false, 150, 30000, Map.of(42, new PatternVersion(1, 0, 0, 0)),
                 HEAD_REPLAY);
         return new Tile(Layer.OBJECT, 42, 2, false, false, false, 20, 40, 8, 8,
@@ -168,6 +169,51 @@ class TestSpriteTileReuse {
             assertNotEquals(positiveZero, negativeZero);
             assertNotSame(zero.tiles().getFirst(), raw(negativeZero, zero).tiles().getFirst(), field);
         }
+    }
+
+    @Test void equalOpaqueHeadCallbacksMustKeepTheirIdentityAndBehavior() {
+        var oldCalls = new java.util.concurrent.atomic.AtomicInteger();
+        var newCalls = new java.util.concurrent.atomic.AtomicInteger();
+        HeadSatReplay oldReplay = new EqualHeadReplay(oldCalls), newReplay = new EqualHeadReplay(newCalls);
+        Tile before = replace(seed(), "subject", replace(seed().subject(), "head",
+                replace(seed().subject().head(), "replay", oldReplay)));
+        Tile input = replace(before, "subject", replace(before.subject(), "head",
+                replace(before.subject().head(), "replay", newReplay)));
+        assertEquals(before, input, "opaque callback equality can deliberately ignore behavior");
+        Frame original = raw(before, null);
+        assertSame(original.tiles().getFirst(), raw(before, original).tiles().getFirst());
+        Tile prepared = raw(input, original).tiles().getFirst();
+        assertNotSame(original.tiles().getFirst(), prepared);
+        assertSame(newReplay, prepared.subject().head().replay());
+        prepared.subject().head().replay().replay(graphics, List.of(), entry -> { });
+        assertEquals(0, oldCalls.get()); assertEquals(1, newCalls.get());
+    }
+
+    @Test void equalOpaquePaletteCallbacksMustKeepTheirIdentityAndBehaviorWithoutAHead() {
+        PaletteReplay oldReplay = new EqualPaletteReplay(2), newReplay = new EqualPaletteReplay(3);
+        Subject subject = new Subject("palette-owner", Part.WORLD, false, 100, null, null, oldReplay);
+        Tile before = replace(seed(), "subject", subject);
+        Tile input = replace(before, "subject", replace(subject, "paletteReplay", newReplay));
+        assertEquals(before, input, "opaque callback equality can deliberately ignore behavior");
+        Frame original = raw(before, null);
+        assertSame(original.tiles().getFirst(), raw(before, original).tiles().getFirst());
+        Tile prepared = raw(input, original).tiles().getFirst();
+        assertNotSame(original.tiles().getFirst(), prepared);
+        assertSame(newReplay, prepared.subject().paletteReplay());
+        assertEquals(3, prepared.subject().paletteReplay().palette(graphics, 0));
+    }
+
+    private record EqualHeadReplay(java.util.concurrent.atomic.AtomicInteger calls) implements HeadSatReplay {
+        @Override public void replay(GraphicsManager graphics, List<SpriteSatEntry> entries,
+                                     java.util.function.Consumer<SpriteSatEntry> emitter) { calls.incrementAndGet(); }
+        @Override public boolean equals(Object other) { return other instanceof EqualHeadReplay; }
+        @Override public int hashCode() { return 1; }
+    }
+
+    private record EqualPaletteReplay(int result) implements PaletteReplay {
+        @Override public int palette(GraphicsManager graphics, int nativePalette) { return result; }
+        @Override public boolean equals(Object other) { return other instanceof EqualPaletteReplay; }
+        @Override public int hashCode() { return 1; }
     }
 
     @Test void rowClippingAndFlipsReuseOnlyTheirExactVisibleRows() {

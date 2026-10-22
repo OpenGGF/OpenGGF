@@ -196,13 +196,23 @@ public final class SpritePresentation {
                         && previous.priorityShader() == priorityShader && previous.occlusionMask() == mask
                         && previous.ghost() == ghost && Float.compare(previous.ghostAlpha(), alpha) == 0
                         && previous.rowStart() == rowStart && previous.rowEnd() == rowEnd
-                        && previous.subject().equals(subject)) {
+                        && sameSubjectForReuse(previous.subject(), subject)) {
                     tiles.add(previous);
                     return;
                 }
             }
             tiles.add(new Tile(layer, id, desc.palette(), desc.hFlip(), desc.vFlip(), desc.priority(),
                     x, y, width, height, priorityShader, mask, ghost, alpha, rowStart, rowEnd, subject));
+        }
+        private static boolean sameSubjectForReuse(Subject previous, Subject subject) {
+            if (previous == subject) return true;
+            if (subject == null || previous.paletteReplay() != subject.paletteReplay()) return false;
+            HeadTransform oldHead = previous.head(), head = subject.head();
+            // Composition groups native draw occurrences by mask identity, not mask value.
+            // Opaque callbacks can also implement equals without preserving their behavior.
+            return (oldHead == head || oldHead != null && head != null
+                    && oldHead.mask() == head.mask() && oldHead.replay() == head.replay())
+                    && previous.equals(subject);
         }
     }
 
