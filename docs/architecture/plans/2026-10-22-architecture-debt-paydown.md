@@ -323,6 +323,35 @@ The coordinator will inspect the actual updated selection and validate the
 changed candidate. This is a source change requiring new coverage, not repeated
 unchanged baseline/development/integrated ceremony.
 
+The reconciled integration head is `085cf2b6f8f00e02ea024deab7f29963ffa53578`
+(tree `5bc055fd3de8625f74b7ea9b9a071d39462497ce`), composed at coordinator
+`e53b1051`. Only the two hook files conflicted with upstream. Both keep its
+primary-record probe and the byte-identical `526098af0` fallback. A reproduced
+record/nested-annotation array-default omission caused four incorrect admissions
+across the two mirrors; a bounded probe correction retains declaration values
+while excluding default-method bodies. API pins, capabilities, caps and frozen
+records are unchanged. The lead reviewed the complete correction and verified
+that all executable and test source matches the focused-tested child exactly.
+
+Focused verification on that settled source passed with zero failures, errors
+or skips: 132 integration cases across eleven hosted-run/ghost/rewind/native-index/
+snapshot classes; one separately enabled HCZ reload case; 296 cases across eight
+structural/signature/policy classes; and 42 Python policy cases. The Python command
+was `python3 -m unittest tools.testing.test_release_snapshot_policy`; Maven used
+the shared queue, verified absolute ROM paths and the same display-unset EGL
+environment. Consumed reports were removed. Exact selectors remain in the owned
+integration checkpoint. These selections overlap earlier focused evidence and
+are not a complete smoke result.
+
+The new change-based plan from pinned `23a18e2a2` selects 3,594 candidate classes,
+all ten smoke categories and separate guards, still in 72 ordinary batches.
+Retain the 120-minute execution budget, excluding queue waits, and allow roughly
+one to two hours of execution plus unknown admission delay. Clean obsolete build
+output before preparing this changed source. No second unchanged broad run is
+planned after integration; repeat affected checks only for new changes, failures
+or unresolved risk. Final destination ancestry and source identity will be checked
+before integration and push.
+
 The coordinator's actual launch-environment preflight passed with no tests:
 
 ```bash
@@ -341,5 +370,5 @@ under `~/.local/state/temporary-agents/` owns exact task IDs, workspaces, tested
 source, job handles and expiry. Next: inspect the reconciled integration handoff,
 compose it and inspect the new combined category selection. The superseded
 coordinator job is closed and its diagnostics acknowledged; the integration
-lead owns only its focused work in a separate checkout. No complete combined
-smoke/guard pass has been claimed.
+lead's focused work is complete and composed. The updated combined run is next;
+no complete smoke/guard pass has been claimed.
