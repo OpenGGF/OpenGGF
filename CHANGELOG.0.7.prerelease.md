@@ -420,7 +420,9 @@ Unreleased. The earlier development themes remain in
   Silent headless boots also retire inherited audio backends before playback, keeping
   reused capture processes off desktop audio devices. Configured engine startup
   retains the supplied no-device backend through ROM detection and title entry,
-  with synthesis enabled or disabled.
+  with synthesis enabled or disabled. Recorded controller Start reaches native
+  consumers without toggling host pause during a capture or complete-run audio
+  step; physical keyboard pause remains available.
 
 - **Native-compatible PCM output (diagnostics):** An opt-in audio session setting
   feeds the accurate FM chip's own pin sums through a Java port of blip_buf. It

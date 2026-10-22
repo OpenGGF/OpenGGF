@@ -238,6 +238,36 @@ ownership correction before attributing the silent intervals to native audio.
 Parent and the native-menu owner received the measured cause and proposed
 interface reservation. This diagnosis does not make the measured comparison
 pass or attribute its earlier waveform difference to the sound-test remap.
+
+The accepted correction is `RecordedInputOwnership`, an engine-internal lease
+attached to the exact `InputHandler`. Acquisition is nonnested and both query
+and release require the acquiring thread. It changes ownership only: recorded
+controller edges remain intact for native consumers; no mode, frame clock,
+gameplay state or comparison row enters through it. `GameLoopPauseInput`
+excludes an active recorded owner only from the logical-Start host-pause
+branch. The physical keyboard pause branch is unchanged. Capture steps and
+the fixed production audio runner hold the lease around input publication and
+the production step, then release it even when that step fails. This lease is
+separate from foreign frame/input owners, so the runner still rejects foreign
+drivers without rejecting its own recorded input. It is temporary host state
+and is not part of gameplay rewind snapshots.
+
+The exact affected queued Java selection passed **71 tests, zero skipped**
+on `6211f4fc7` plus this correction (43 seconds queue wait, 93 seconds Maven).
+It selected `TestRecordedInputOwnership`, `TestRecordedInputHostPause`,
+`TestS2NativePcmPresentationClock`, `TestProductionBk2AudioRunner`,
+`TestCompleteRunAudioAuthorityGuard`, `TestGameLoopTitleCardPause`,
+`TestModApiSignatureSurface`, `TestMutatorGameplayCaptureTool`,
+`TestGameplayCaptureSkippedTitles`,
+`TestGameplayCaptureFrameRendering#interactiveCaptureUsesTheProductionPresentationCallbackOncePerFrame`
+and `TestGameplayCaptureFadeOwnership`, with Java 25, unset display variables,
+`LUA_BIN=/usr/bin/lua5.4`, `-Dmse=off`, the surfaceless-EGL property and all three
+verified absolute ROM properties. Independent contracts cover handler/thread
+isolation, nonnested acquisition, exception cleanup, physical versus recorded
+Start, and foreign-driver refusal. The actual S2 route now commits 600 forward
+presentations and the independently calculated NTSC PCM cadence on every row,
+441568 stereo frames in one session. This closes the measured missing-clock
+symptom; it is not a waveform match or complete-route proof.
 The S2 command is the S1 command above with `--game s2 --zone ehz --sidekick tails`
 and the verified S2 ROM/movie/output. Its comparator command is identical with
 S2 directories and the same explicit 600-row target.
