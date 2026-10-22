@@ -64,7 +64,9 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
     private static final int FADE_DURATION = SegaPaletteFade.ROM_FADE_FRAMES;
 
     // Intro text timing: the "SONIC TEAM PRESENTS" screen uses the same
-    // PaletteFadeIn / PaletteFadeOut pair (22 frames each) and holds for 96 frames.
+    // PaletteFadeIn / PaletteFadeOut pair (22 frames each). The 96-update hold
+    // is still an approximation of GM_Title's interrupt-disabled asset loading,
+    // not a ROM timer; its CPU/VDP service cost remains unmodeled.
     private int introTextTimer = 0;
     private static final int INTRO_TEXT_FADE_DURATION = SegaPaletteFade.ROM_FADE_FRAMES;
     private static final int INTRO_TEXT_HOLD_DURATION = 96;
@@ -338,7 +340,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
 
         switch (state) {
             case SEGA_LOGO:
-                updateSegaLogo(input, startKey);
+                updateSegaLogo(input);
                 break;
 
             case INTRO_TEXT_FADE_IN:
@@ -346,10 +348,6 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
                 if (introTextTimer >= INTRO_TEXT_FADE_DURATION) {
                     state = State.INTRO_TEXT_HOLD;
                     introTextTimer = 0;
-                }
-                // Skip intro on Start/Jump press
-                if (confirmPressed(input, startKey)) {
-                    skipToMainScreen();
                 }
                 break;
 
@@ -359,18 +357,12 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
                     state = State.INTRO_TEXT_FADE_OUT;
                     introTextTimer = 0;
                 }
-                if (confirmPressed(input, startKey)) {
-                    skipToMainScreen();
-                }
                 break;
 
             case INTRO_TEXT_FADE_OUT:
                 introTextTimer++;
                 if (introTextTimer >= INTRO_TEXT_FADE_DURATION) {
                     transitionToMainScreen();
-                }
-                if (confirmPressed(input, startKey)) {
-                    skipToMainScreen();
                 }
                 break;
 
@@ -400,10 +392,6 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         }
     }
 
-    private void skipToMainScreen() {
-        transitionToMainScreen();
-    }
-
     /**
      * Keyboard Start/Jump press or gamepad confirm (Start / any face action button),
      * matching {@link com.openggf.game.MasterTitleScreen}'s gamepad-aware confirm gate.
@@ -412,7 +400,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         return input.isKeyPressed(startKey) || input.logical().menuAccept();
     }
 
-    private void updateSegaLogo(InputHandler input, int startKey) {
+    private void updateSegaLogo(InputHandler input) {
         if (updateSegaLogoFadeOut()) {
             return;
         }
@@ -429,7 +417,12 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
             segaPcmStarted = true;
             GameServices.audio().playMusic(com.openggf.game.sonic1.audio.Sonic1SmpsConstants.CMD_SEGA);
         }
-        if (segaLogoTimer >= autoEnd || (segaLogoTimer >= skipWindowStart && confirmPressed(input, startKey))) {
+        // Sega_WaitEnd (sonic.asm:1871-1883) reads only P1's pressed Start bit.
+        // GM_Title's subsequent STP fade/load/fade has no input-driven exit.
+        // The existing fixed chant wait above is not the native 68000 busy-work
+        // completion boundary; narrowing this input gate does not certify it.
+        if (segaLogoTimer >= autoEnd
+                || (segaLogoTimer >= skipWindowStart && input.logical().player1().startPressed())) {
             beginSegaLogoFadeOut();
         }
     }
