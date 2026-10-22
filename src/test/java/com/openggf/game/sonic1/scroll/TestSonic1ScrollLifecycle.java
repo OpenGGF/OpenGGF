@@ -120,6 +120,22 @@ class TestSonic1ScrollLifecycle {
         }
     }
 
+    @Test
+    void scrapBrainThreeHasAnIndependentLabyrinthOwnerAndDoesNotLeakItsSelection() throws Exception {
+        var provider = provider();
+        provider.initForZone(Sonic1ZoneConstants.ZONE_SBZ, 2, 0xAE0, 0);
+        var alias = provider.getHandler(Sonic1ZoneConstants.ZONE_SBZ);
+        assertInstanceOf(SwScrlLz.class, alias);
+        assertNotSame(provider.getHandler(Sonic1ZoneConstants.ZONE_LZ), alias);
+        provider.initForZone(Sonic1ZoneConstants.ZONE_SBZ, 1, 0x200, 0x100);
+        assertInstanceOf(SwScrlSbz.class, provider.getHandler(Sonic1ZoneConstants.ZONE_SBZ));
+        provider.initForZone(Sonic1ZoneConstants.ZONE_SBZ, 0, 0x200, 0x100);
+        assertInstanceOf(SwScrlSbz.class, provider.getHandler(Sonic1ZoneConstants.ZONE_SBZ));
+        provider.initForZone(Sonic1ZoneConstants.ZONE_LZ, 2, 0x200, 0x100);
+        assertInstanceOf(SwScrlSbz.class, provider.getHandler(Sonic1ZoneConstants.ZONE_SBZ),
+                "another zone's act index must not select the inactive SBZ3 alias");
+    }
+
     private static Sonic1ScrollHandlerProvider provider() throws Exception {
         Sonic1ScrollHandlerProvider provider = new Sonic1ScrollHandlerProvider();
         provider.load(null);
