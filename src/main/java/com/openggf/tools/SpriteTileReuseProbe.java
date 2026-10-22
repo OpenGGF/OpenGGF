@@ -1,8 +1,5 @@
 package com.openggf.tools;
 
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
-import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.SpritePresentation;
 import com.openggf.graphics.SpritePresentation.*;
@@ -189,9 +186,9 @@ public final class SpriteTileReuseProbe {
         if (!THREADS.isThreadAllocatedMemorySupported() || !THREADS.isCurrentThreadCpuTimeSupported())
             throw new IllegalStateException("CPU/allocation counters unavailable");
         THREADS.setThreadAllocatedMemoryEnabled(true); THREADS.setThreadCpuTimeEnabled(true);
-        GraphicsManager.destroyForReinit();
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        GraphicsManager graphics = GraphicsManager.getInstance(); graphics.initHeadless();
+        // Preparation only uses this explicit host; the probe owns no gameplay services.
+        GraphicsManager graphics = new GraphicsManager();
+        graphics.initHeadless();
         try {
             Source[] sources = java.util.Arrays.stream(Scene.values()).map(scene -> new Source(graphics, scene)).toArray(Source[]::new);
             for (Source source : sources) verify(source);
@@ -213,6 +210,6 @@ public final class SpriteTileReuseProbe {
                 print(fork, pair, source.scene, !hintFirst, false, frames, second);
             }
             if (escaped == null || consumed == 0) throw new AssertionError("outputs were not consumed");
-        } finally { SessionManager.clear(); GraphicsManager.destroyForReinit(); }
+        } finally { graphics.cleanup(); }
     }
 }

@@ -274,15 +274,21 @@ absent. No second timing batch is needed to establish removal of the losing
 optimization. Consumed raw measurements/isolation reports are removed after
 retaining this bounded summary, source pins and reproducible protocol.
 
-### Final production state and diagnostic portability
+### Worker removal state and diagnostic portability
 
-The four production files affected by the experiment (`SpritePresentation`,
+At worker removal `b322716c7`, the four production files affected by the experiment (`SpritePresentation`,
 `LevelSpritePresentation`, `LevelRenderer`, `SpritePresentationRenderer`) are
-restored byte-for-byte to task base `8aa692b045c195ef8a42896b6bbc9549158470c0`.
+were restored byte-for-byte to task base `8aa692b045c195ef8a42896b6bbc9549158470c0`.
 The previous-frame overloads, builder comparison and level/counter hint wiring
 are removed together. There is no dormant hint cache or head-map equality tax.
 Only the new diagnostic CLI remains as production tool code; no Mod API surface
 or public gameplay contract was changed to support it.
+
+The lead's combined candidate retains the independently accepted
+`SpritePresentationRenderer` changes from `0741d27cf`; the other three files
+still equal the pinned base. The independent renderer batching/culling work is
+recorded in the [pipeline audit](2026-10-22-object-pipeline-performance.md).
+None of the rejected previous-frame hint paths remains in that composition.
 
 The final probe resolves the historical hint with a MethodHandle once. If the
 hint is absent it accepts only `--verify-only`, checking all seven fresh-frame
@@ -307,7 +313,7 @@ branch were then removed normally. No foreign worktree, session, queued job,
 resource setting or lock file was changed. The task implementation worktree and
 branch remain for lead integration; no push or main-workspace edit was made.
 
-### Final focused verification
+### Worker focused verification
 
 ```bash
 JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestSpritePreparationSnapshots,TestSpritePreparationHeadComposition,TestLevelSpritePreparationOwnership,TestSpriteTileReuseProbe,TestSpritePresentation,TestLevelSpritePresentation,TestLevelSpritePresentationLifecycle,TestModApiSignatureSurface#candidateZeroSevenSurfaceIsPinnedToTheCurrentSurface+engineInternalTerminalsArePinnedAndStayOutOfTheSurface,TestArchitecturalSourceGuard#lowLevelGraphicsAndAudioDoNotGainGameplayServiceLookups' '-Ds3k.rom.path=<absolute path to existing main-workspace s3k.gen>' test -B
@@ -324,10 +330,46 @@ validation, not broad smoke or a full suite.
 
 Tested source is evidence commit `8a7c903af` plus the four-file production
 removal, portable probe and renamed/fresh preparation regressions committed
-with this final record. No executable input changed after the pass. Final probe
+with this final record. No executable input changed before the worker handoff.
+At `b322716c7`, the portable probe
 source SHA-256 is
 `fbfe1529e42fa1bce60ec6e36a90dbb61ec3b3f6dc7063f6e5d9f06ebd409b6e`.
 Direct byte comparison confirms all four original production files equal the
 pinned pre-task source. `git diff --check` passes; all local commit messages
 were checked with `git interpret-trailers --parse` for the exact final model
 co-author. Combined validation and integration remain owned by the lead.
+
+### Lead diagnostic ownership correction
+
+The composed candidate `de0bda7da` exposed three source-guard failures in the
+portable diagnostic bootstrap: a legacy context bridge, a raw graphics singleton
+and the corresponding raw-singleton rule. The exact singleton guard ran 42 tests
+with three failures, zero errors/skips; admission waited 437 seconds and Maven
+took 29.554 seconds. This is a newly found diagnostic violation, not a baseline
+exception or a performance result.
+
+The probe now owns a new headless `GraphicsManager` and cleans that host; it does
+not configure engine services or clear gameplay sessions. Its verification test
+also retains the caller's engine-service identity, graphics identity and graphics
+mode. Seven-scene equality/ownership controls and absent-hint timing refusal
+remain intact. No guard allowlist was expanded and no runtime reuse was restored.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  '-Dtest=TestProductionSingletonClosureGuard,TestSpriteTileReuseProbe' test
+```
+
+Session `80055` passed all 44 tests (42 guards, two probe checks), zero
+failures/errors/skips, at `de0bda7da` plus this two-file ownership correction.
+Admission waited 835 seconds; Maven including compilation took 1:21. The 25
+remaining raw XML reports from the final focused and guard checks were inspected
+with zero failures/errors/skips and removed; native extraction directories were
+preserved. Corrected probe SHA-256:
+`0eadfbb4b9187d3e33bf018ce5f5e86c8c053e4fd0c0f48663e5fb3a7c43d87e`.
+
+This correction is outside timed loops and no timing was repeated. The original
+direct-call source `9f602132...` in `8a7c903af` and its measured runtime pin remain
+the authority for the earlier experiment; the corrected portable tool is not
+claimed as its exact measured source.
