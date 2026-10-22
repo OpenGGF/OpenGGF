@@ -87,7 +87,7 @@ class TestActPracticeExample {
             RunSpec spec = launched.get(0);
             assertEquals("s2", spec.gameId());
             assertEquals(new GameplayRunPolicy(true, true, GameplayRunPolicy.ActCompletion.RETURN_TO_HOST, true, false,
-                GameplayRunPolicy.DeathRestart.STOCK, true),
+                GameplayRunPolicy.DeathRestart.STOCK, true, true),
                     spec.policy(), "practice keeps stages and rewind but returns after the act");
 
             RunHost run = hosts.get(0);

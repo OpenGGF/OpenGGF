@@ -34,6 +34,32 @@ setting was in the first brief and was dropped before implementation; there is n
 - HUD: `LevelManager.installHudProfile` installs `HudProfileAccess.forRunPolicy`, which hides
   the lives rows when `livesCounter` is false.
 
+## Follow-up decisions (2026-10-22, second slice)
+
+- **Fade, then count.** After a fast reload the lead-in runs with the player's input held:
+  the spawn step, then every step while `RunInput.levelFadingIn()` reports the level's own
+  palette fade (S3K `Level/loc_64DC` arms `Palette_fade_timer` = $16, sonic3k.asm:7906-7910;
+  the fade is untouched; read through `LevelPaletteFadeOwner`). S1/S2 report no fade, so their
+  lead-in is the spawn step alone. The 3-2-1 then holds over the visible level.
+  `RunHost.holdsPlayerInput()` makes `HostedRunController` suppress player 1's input for the
+  admitted step (only a suppression it set is cleared) and record no buttons. Lead-in steps
+  are part of the attempt with empty masks (untimed: the clock starts at first input), so the
+  verifier, which replays recorded masks from the act start, reproduces them.
+- **Paced release.** Lead-in frames reach a room only when control returns, with
+  `AttemptStart`. An S3K lead-in is about 23 frames, above the hub's 12-frame stream lead, so
+  the runtime hands over 9 at once and then one extra per 12 steps (5 per second above play,
+  inside the hub's 66-per-second refill) until the backlog is gone (about 3 s); a finish
+  flushes it.
+- **No intros.** `GameplayRunPolicy.zoneIntros`; Time Attack runs `withoutZoneIntros()`. The S3K
+  bootstrap resolver and initial title-card suppression treat it like the existing skip-intros
+  setting, so AIZ1 as Sonic starts at the intro-skip start on launch and on every reload. The
+  verifier replays attempts under `TimeAttackRuntime.runPolicy()` so its act starts match.
+  Knuckles and Tails already take that start (`Sonic3kBootstrapResolver`'s non-Sonic branch).
+- **First launch.** A solo launch has no countdown, so nothing changes. A room launch shows its
+  title card and then the room countdown; whether the S3K fade overlaps that countdown depends
+  on load time, and running steps then would void the attempt (`afterLevelFrame` voids
+  outside the window), so room launches are unchanged.
+
 ## Timing decision
 
 Every fast restart is a new attempt: `TimeAttackRuntime.onLevelReady` voids the running
@@ -66,12 +92,9 @@ host's pacing clock start when the player regains control. Host finish validatio
 
 ## Known limits
 
-- S3K fades lines 1-3 of the level palette in during its first LevelLoop frames
-  (`Level/loc_64DC`, sonic3k.asm:7906-7910); the hold follows the spawn step, so an S3K
-  countdown shows the player and HUD line over a black act, which fades in as control returns.
-  Skipping that fade would change `Palette_fade_timer`, which zone events read.
-- S3K AIZ1 as Sonic (or Sonic and Tails) replays the plane intro on every restart from the
-  start, as the ROM does without a star post (`SpawnLevelMainSprites`, sonic3k.asm:8143-8158).
+- First slice (superseded by the follow-up above): the S3K countdown showed the player over a
+  black act, and AIZ1 as Sonic replayed the plane intro on every restart, as the ROM does
+  without a star post (`SpawnLevelMainSprites`, sonic3k.asm:8143-8158).
 
 ## Verification
 

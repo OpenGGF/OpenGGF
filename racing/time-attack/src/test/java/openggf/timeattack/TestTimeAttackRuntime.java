@@ -84,19 +84,74 @@ class TestTimeAttackRuntime {
         assertEquals(TimeAttackRuntime.RESTART_COUNTDOWN_FRAMES, runtime.restartCountdownFrames(),
                 "the countdown shows from the reload");
         assertTrue(runtime.admitStep(NO_KEYS), "the spawn step runs so the act is drawn as it starts");
+        assertTrue(runtime.holdsPlayerInput(), "lead-in steps run with the player's input held");
         runtime.afterStep(step(0, 80, false));
-        assertEquals(4, events.size(), "the spawn frame waits for the countdown before reaching the room");
+        assertTrue(runtime.admitStep(FADING), "a level still fading in keeps the lead-in going");
+        assertTrue(runtime.holdsPlayerInput());
+        runtime.afterStep(step(0, 81, false));
+        assertEquals(4, events.size(), "lead-in frames wait for control before reaching the room");
         for (int frame = 0; frame < TimeAttackRuntime.RESTART_COUNTDOWN_FRAMES; frame++) {
             assertFalse(runtime.admitStep(NO_KEYS), "the countdown holds frame " + frame);
+            assertFalse(runtime.holdsPlayerInput());
         }
-        assertEquals("frame 2 x80", events.get(4), "the spawn frame is released when control returns");
+        assertEquals(java.util.List.of("frame 2 x80", "frame 2 x81"), events.subList(4, 6),
+                "the lead-in frames are released when control returns");
         assertEquals(0, runtime.restartCountdownFrames());
         assertTrue(runtime.admitStep(NO_KEYS), "control returns when the countdown ends");
-        runtime.afterStep(step(0x08, 81, false));
-        runtime.afterStep(step(0x08, 82, true));
-        assertEquals(java.util.List.of("frame 2 x81", "frame 2 x82", "finished 2 in 1"),
-                events.subList(5, events.size()), "held countdown frames are not part of the attempt");
+        assertFalse(runtime.holdsPlayerInput());
+        runtime.afterStep(step(0x08, 82, false));
+        runtime.afterStep(step(0x08, 83, true));
+        assertEquals(java.util.List.of("frame 2 x82", "frame 2 x83", "finished 2 in 1"),
+                events.subList(6, events.size()),
+                "lead-in steps carry no input and held countdown frames execute nothing: untimed");
     }
+
+    @Test
+    void aLongLeadInDrainsIntoTheRoomInsideTheHostStreamLimits(@TempDir Path root) {
+        TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root), root.resolve("identity"), () -> false);
+        runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
+        java.util.List<Integer> delivered = new java.util.ArrayList<>();
+        runtime.setAttemptListener(new TimeAttackRuntime.AttemptListener() {
+            @Override public void onAttemptBegan(int attempt) { }
+            @Override public void onFrameSampled(int attempt, GhostFrame frame) { delivered.add(frame.x()); }
+            @Override public void onAttemptFinished(int attempt, int time, int first, int finish,
+                                                    byte[] hash, AttemptInputRecording recording) { }
+            @Override public void onAttemptVoided(int attempt) { }
+        });
+        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(runtime.runSpec(), "fp", false, 0, 0, true));
+        int x = 0;
+        assertTrue(runtime.admitStep(NO_KEYS));
+        runtime.afterStep(step(0, x++, false));
+        for (int i = 0; i < 22; i++) {
+            assertTrue(runtime.admitStep(FADING));
+            runtime.afterStep(step(0, x++, false));
+        }
+        while (runtime.restartCountdownFrames() > 0 || runtime.inRestartLeadIn()) {
+            assertFalse(runtime.admitStep(NO_KEYS));
+        }
+        assertEquals(TimeAttackRuntime.STREAM_RELEASE_BURST, delivered.size(),
+                "control returns with one burst below the host's frame lead");
+        int steps = 0;
+        while (delivered.size() < x + steps) {
+            assertTrue(runtime.admitStep(NO_KEYS));
+            runtime.afterStep(step(0x08, x + steps, false));
+            steps++;
+            int expectedMax = TimeAttackRuntime.STREAM_RELEASE_BURST + steps
+                    + steps / TimeAttackRuntime.STREAM_CATCH_UP_INTERVAL;
+            assertTrue(delivered.size() <= expectedMax, "at most 5 frames per second above play");
+            assertTrue(steps < 600, "the backlog drains");
+        }
+        for (int i = 0; i < delivered.size(); i++) {
+            assertEquals(i, delivered.get(i), "frames reach the room in order");
+        }
+    }
+
+    private static final com.openggf.mods.run.RunInput FADING = new com.openggf.mods.run.RunInput() {
+        @Override public com.openggf.control.LogicalInputSnapshot input() { return null; }
+        @Override public boolean keyDown(int key) { return false; }
+        @Override public boolean keyPressed(int key) { return false; }
+        @Override public boolean levelFadingIn() { return true; }
+    };
 
     private static com.openggf.mods.run.RunStep step(int heldMask, int x, boolean actComplete) {
         return new com.openggf.mods.run.RunStep(0, heldMask, false,
@@ -235,7 +290,7 @@ class TestTimeAttackRuntime {
         assertEquals(1, spec.zone());
         assertEquals(1, spec.act());
         assertEquals("knuckles", spec.character());
-        assertEquals(com.openggf.game.session.GameplayRunPolicy.isolatedAct().withFastRestarts(), spec.policy());
+        assertEquals(com.openggf.game.session.GameplayRunPolicy.isolatedAct().withFastRestarts().withoutZoneIntros(), spec.policy());
     }
 
     @Test

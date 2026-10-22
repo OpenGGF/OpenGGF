@@ -14,4 +14,14 @@ public interface RunInput {
 
     /** True on the frame a key went down ({@code SceneKeys} code). */
     boolean keyPressed(int key);
+
+    /**
+     * True while the loaded level is still fading its own palette in from black over its first
+     * gameplay steps (S3K's {@code Level} arms that fade; S1 and S2 levels never do). A host
+     * that holds the run to show the level, such as a countdown, can run those steps with the
+     * player's input held ({@link RunHost#holdsPlayerInput()}) and hold once this clears.
+     */
+    default boolean levelFadingIn() {
+        return false;
+    }
 }

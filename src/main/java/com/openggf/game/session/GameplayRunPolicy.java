@@ -25,6 +25,9 @@ import java.util.Objects;
  * @param editorEntry       whether the level editor may be opened during the run
  * @param deathRestart      what a death of the main player leads to
  * @param livesCounter      whether the HUD draws the lives counter
+ * @param zoneIntros        whether an act opens with its shipped intro cutscene (S3K Angel
+ *                          Island 1's plane intro); false starts where the intro would hand
+ *                          the player control, as the engine's skip-intros start does
  */
 @ModApi
 public record GameplayRunPolicy(boolean specialStageEntry,
@@ -33,7 +36,8 @@ public record GameplayRunPolicy(boolean specialStageEntry,
                                 boolean liveRewind,
                                 boolean editorEntry,
                                 DeathRestart deathRestart,
-                                boolean livesCounter) {
+                                boolean livesCounter,
+                                boolean zoneIntros) {
 
     /** What the engine does when a run's act is complete. */
     @ModApi
@@ -76,7 +80,7 @@ public record GameplayRunPolicy(boolean specialStageEntry,
     /** The campaign: everything the shipped game allows. */
     public static GameplayRunPolicy stock() {
         return new GameplayRunPolicy(true, true, ActCompletion.CONTINUE, true, true,
-                DeathRestart.STOCK, true);
+                DeathRestart.STOCK, true, true);
     }
 
     /**
@@ -85,7 +89,7 @@ public record GameplayRunPolicy(boolean specialStageEntry,
      */
     public static GameplayRunPolicy isolatedAct() {
         return new GameplayRunPolicy(false, false, ActCompletion.RETURN_TO_HOST, false, false,
-                DeathRestart.STOCK, true);
+                DeathRestart.STOCK, true, true);
     }
 
     /**
@@ -94,7 +98,16 @@ public record GameplayRunPolicy(boolean specialStageEntry,
      */
     public GameplayRunPolicy withFastRestarts() {
         return new GameplayRunPolicy(specialStageEntry, bonusStageEntry, actCompletion, liveRewind,
-                editorEntry, DeathRestart.FAST_FROM_START, false);
+                editorEntry, DeathRestart.FAST_FROM_START, false, zoneIntros);
+    }
+
+    /**
+     * This policy with acts starting where their intro cutscene would hand the player control,
+     * on the first load and on every reload: a timed run then measures the act alone.
+     */
+    public GameplayRunPolicy withoutZoneIntros() {
+        return new GameplayRunPolicy(specialStageEntry, bonusStageEntry, actCompletion, liveRewind,
+                editorEntry, deathRestart, livesCounter, false);
     }
 
     /** True when a death reloads the act at once instead of following the shipped game. */

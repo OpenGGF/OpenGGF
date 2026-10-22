@@ -270,7 +270,7 @@ class TestRaceSession {
         assertEquals(1, hostLaunches.specs.size());
         assertEquals(1, guestLaunches.specs.size());
         RunSpec hostSpec = hostLaunches.specs.get(0);
-        assertEquals(new RunSpec("s2", 0, 0, "sonic", GameplayRunPolicy.isolatedAct().withFastRestarts()), hostSpec);
+        assertEquals(new RunSpec("s2", 0, 0, "sonic", GameplayRunPolicy.isolatedAct().withFastRestarts().withoutZoneIntros()), hostSpec);
         assertEquals("tails", guestLaunches.specs.get(0).character());
         TimeAttackRuntime hostRun = assertInstanceOf(TimeAttackRuntime.class, hostLaunches.hosts.get(0));
         assertSame(hostRun, host.activeRuntime());
@@ -517,7 +517,7 @@ class TestRaceSession {
                 new ControlMessage.RoundConfig("s2", 1, 0, 60, "LOCKED", "sonic"), 3_000, 100_000));
         session.poll();
         assertEquals(2, launches.specs.size());
-        assertEquals(new RunSpec("s2", 1, 0, "sonic", GameplayRunPolicy.isolatedAct().withFastRestarts()), launches.specs.get(1));
+        assertEquals(new RunSpec("s2", 1, 0, "sonic", GameplayRunPolicy.isolatedAct().withFastRestarts().withoutZoneIntros()), launches.specs.get(1));
     }
 
     @Test

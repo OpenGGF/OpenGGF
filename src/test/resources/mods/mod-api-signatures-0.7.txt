@@ -1550,7 +1550,7 @@ CONSTRUCTOR com.openggf.game.save.SaveSlotSummary public  <init>(int,com.openggf
 CONSTRUCTOR com.openggf.game.save.SelectedTeam public  <init>(java.lang.String,java.util.List<java.lang.String>)
 CONSTRUCTOR com.openggf.game.session.EngineContext public  <init>(com.openggf.configuration.SonicConfigurationService,com.openggf.graphics.GraphicsManager,com.openggf.audio.AudioManager,com.openggf.data.RomManager,com.openggf.debug.PerformanceProfiler,com.openggf.debug.DebugOverlayManager,com.openggf.debug.playback.PlaybackDebugManager,com.openggf.game.RomDetectionService,com.openggf.game.CrossGameFeatureProvider)
 CONSTRUCTOR com.openggf.game.session.EngineContext public  <init>(com.openggf.configuration.SonicConfigurationService,com.openggf.graphics.GraphicsManager,com.openggf.audio.AudioManager,com.openggf.data.RomManager,com.openggf.debug.PerformanceProfiler,com.openggf.debug.DebugOverlayManager,com.openggf.debug.playback.PlaybackDebugManager,com.openggf.game.RomDetectionService,com.openggf.game.CrossGameFeatureProvider,com.openggf.game.patch.ModuleResolutionService)
-CONSTRUCTOR com.openggf.game.session.GameplayRunPolicy public  <init>(boolean,boolean,com.openggf.game.session.GameplayRunPolicy$ActCompletion,boolean,boolean,com.openggf.game.session.GameplayRunPolicy$DeathRestart,boolean)
+CONSTRUCTOR com.openggf.game.session.GameplayRunPolicy public  <init>(boolean,boolean,com.openggf.game.session.GameplayRunPolicy$ActCompletion,boolean,boolean,com.openggf.game.session.GameplayRunPolicy$DeathRestart,boolean,boolean)
 CONSTRUCTOR com.openggf.game.session.WorldSession public  <init>(com.openggf.game.GameModule)
 CONSTRUCTOR com.openggf.game.session.WorldSession public  <init>(com.openggf.game.GameModule,com.openggf.game.GameModule,com.openggf.game.GameDataSource,com.openggf.game.save.SaveSessionContext)
 CONSTRUCTOR com.openggf.game.session.WorldSession public  <init>(com.openggf.game.GameModule,com.openggf.game.GameModule,com.openggf.game.save.SaveSessionContext)
@@ -8191,7 +8191,9 @@ METHOD com.openggf.game.session.GameplayRunPolicy public  boolean liveRewind()
 METHOD com.openggf.game.session.GameplayRunPolicy public  boolean livesCounter()
 METHOD com.openggf.game.session.GameplayRunPolicy public  boolean returnsToHostOnActCompletion()
 METHOD com.openggf.game.session.GameplayRunPolicy public  boolean specialStageEntry()
+METHOD com.openggf.game.session.GameplayRunPolicy public  boolean zoneIntros()
 METHOD com.openggf.game.session.GameplayRunPolicy public  com.openggf.game.session.GameplayRunPolicy withFastRestarts()
+METHOD com.openggf.game.session.GameplayRunPolicy public  com.openggf.game.session.GameplayRunPolicy withoutZoneIntros()
 METHOD com.openggf.game.session.GameplayRunPolicy public  com.openggf.game.session.GameplayRunPolicy$ActCompletion actCompletion()
 METHOD com.openggf.game.session.GameplayRunPolicy public  com.openggf.game.session.GameplayRunPolicy$DeathRestart deathRestart()
 METHOD com.openggf.game.session.GameplayRunPolicy public,final  boolean equals(java.lang.Object)
@@ -12398,12 +12400,14 @@ METHOD com.openggf.mods.run.RunHandle public,abstract  void leave()
 METHOD com.openggf.mods.run.RunHandle public,abstract  void retry()
 METHOD com.openggf.mods.run.RunHandle public,abstract  void spectate(boolean,int,int)
 METHOD com.openggf.mods.run.RunHost public  boolean admitStep(com.openggf.mods.run.RunInput)
+METHOD com.openggf.mods.run.RunHost public  boolean holdsPlayerInput()
 METHOD com.openggf.mods.run.RunHost public  boolean retryOnActCompletion()
 METHOD com.openggf.mods.run.RunHost public  java.util.List<com.openggf.mods.run.GhostPose> ghosts()
 METHOD com.openggf.mods.run.RunHost public  void afterStep(com.openggf.mods.run.RunStep)
 METHOD com.openggf.mods.run.RunHost public  void drawOverlay(com.openggf.mods.ui.LevelOverlayCanvas)
 METHOD com.openggf.mods.run.RunHost public  void onLevelReady(com.openggf.mods.run.RunLevelStart)
 METHOD com.openggf.mods.run.RunHost public  void onRunEnded(com.openggf.mods.run.RunEndReason)
+METHOD com.openggf.mods.run.RunInput public  boolean levelFadingIn()
 METHOD com.openggf.mods.run.RunInput public,abstract  boolean keyDown(int)
 METHOD com.openggf.mods.run.RunInput public,abstract  boolean keyPressed(int)
 METHOD com.openggf.mods.run.RunInput public,abstract  com.openggf.control.LogicalInputSnapshot input()
@@ -17392,6 +17396,7 @@ RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy editorEntry boolean
 RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy liveRewind boolean
 RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy livesCounter boolean
 RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy specialStageEntry boolean
+RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy zoneIntros boolean
 RECORD-COMPONENT com.openggf.game.solid.PlayerSolidContactResult kind com.openggf.game.solid.ContactKind
 RECORD-COMPONENT com.openggf.game.solid.PlayerSolidContactResult postContact com.openggf.game.solid.PostContactState
 RECORD-COMPONENT com.openggf.game.solid.PlayerSolidContactResult preContact com.openggf.game.solid.PreContactState

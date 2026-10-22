@@ -58,6 +58,7 @@ RunHandle handle = ctx.gameplay().launch(spec, myHost);
 | `editorEntry` | yes | no |
 | `deathRestart` | `STOCK` | `STOCK` |
 | `livesCounter` | yes | yes |
+| `zoneIntros` (S3K Angel Island 1's plane intro as Sonic) | yes | yes |
 
 `withFastRestarts()` turns any policy into one with unlimited attempts (Time Attack uses
 `isolatedAct().withFastRestarts()`): `deathRestart` becomes `FAST_FROM_START` and the lives
@@ -68,8 +69,14 @@ short. The act then reloads at once from its start, star-post progress cleared a
 title card, and `onLevelReady` follows with `RunLevelStart.deathRestart()` set so the host can
 show a countdown (hold steps from `admitStep`). Hold after the first step if the act should be
 visible during the countdown: the reloaded act's player and objects are drawn from its first
-step. The skip counts the player's own dead steps, so
+step, and an S3K act also fades its own palette in over its first steps, which
+`RunInput.levelFadingIn()` reports. Return `true` from `RunHost.holdsPlayerInput()` to run such
+lead-in steps with the player's controller released; their `RunStep` reports no buttons. The skip counts the player's own dead steps, so
 it lands on the same step when the same inputs are replayed.
+
+`withoutZoneIntros()` starts acts where their intro cutscene would hand the player control,
+on the first load and every reload (the engine's skip-intros start); Time Attack uses
+`isolatedAct().withFastRestarts().withoutZoneIntros()`.
 
 Objects consult the policy where the shipped game would enter a stage or leave the act, and the
 player's death routine where it would take a life, before any of their own state changes;

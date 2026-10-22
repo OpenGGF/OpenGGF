@@ -24,7 +24,7 @@ public final class PracticeScene implements ModScene {
     /** Practice keeps stages and rewind but hands control back when the act is done. */
     static GameplayRunPolicy practicePolicy() {
         return new GameplayRunPolicy(true, true, GameplayRunPolicy.ActCompletion.RETURN_TO_HOST, true, false,
-                GameplayRunPolicy.DeathRestart.STOCK, true);
+                GameplayRunPolicy.DeathRestart.STOCK, true, true);
     }
 
     @Override

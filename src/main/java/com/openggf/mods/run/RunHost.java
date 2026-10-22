@@ -29,6 +29,15 @@ public interface RunHost {
         return true;
     }
 
+    /**
+     * Asked when {@link #admitStep} admitted a step: true runs it with player 1's controller
+     * released, so the player cannot act and the {@link RunStep} reports no buttons. The world
+     * still advances (a lead-in while the level fades in).
+     */
+    default boolean holdsPlayerInput() {
+        return false;
+    }
+
     /** The step just executed. */
     default void afterStep(RunStep step) {
     }
