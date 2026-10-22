@@ -138,10 +138,14 @@ load/respawn and native audiovisual gaps. Component/graph checks do not certify
 those products. No trace fixture or frontier moved. Combined change-based smoke,
 integration, push and worktree cleanup belong to the lead.
 
-Discovery overlap, intentionally deferred: instanced mask-only flushes and
-restoring frozen DPLC banks before world/HUD visibility filtering share the
-presentation owner but are not altered here. Other live-slot scans require their
-own owned-slot/lifetime audit; this patch changes only the original HCZ/SSZ sites.
+The subsequent bounded rendering wave below owns the mask-only and frozen-art
+restore overlaps. Other live-slot consumers and the later primitive-slot index
+repair have a separate lead-owned audit; the original foundation here changes
+only the HCZ/SSZ sites. The consolidated release entry also records the lead's
+combined CPU wave (FBZ squeeze/projection reuse, SOZ vine work reuse, signed
+surface sampling with defensive bulk reads, bounded solid parameters and the
+CNZ/LRZ/DEZ/SSZ/SOZ owned-slot migrations). Its focused validation and coverage
+notes belong to those owners.
 
 ## Local commit gate correction
 
@@ -158,3 +162,67 @@ machine-local evidence paths were replaced with portable `ROM_ROOT` notation.
 
 The lead authorized the subsequent bounded mask, physical-residency and final
 emission-culling work; its evidence follows in later sections of this same record.
+
+
+## Bounded rendering follow-up
+
+The initial remainder and policy correction landed as
+`306b960af2be7cea46dc8d1358d6c4507962fa40`. The follow-up starts there and leaves
+native indexing and the independently owned Tile/prepare reuse unchanged.
+
+- **Mask boundaries:** the internal presentation bridge asks whether the actual
+  instanced batch is active, rather than inferring that from GPU support or a
+  preference. Mask 15 then 0 on one physical page yields one instanced command;
+  the stored per-instance mask floats retain 15 and 0. The legacy uniform backend
+  keeps two commands. Object bucket rendering and immutable picture replay use
+  this rule. Shader, ghost, atlas-page and transformed/direct boundaries remain
+  in their existing owners; no public Mod API signature was added.
+- **Frozen art:** restore compares all 64 desired nibble bytes against the exact
+  physical slot in the CPU atlas mirror. Matching bytes skip unpacking, mirror
+  writes and dirty marking. Scene sampling still publishes the immutable version.
+  Headless/preinitialization sampling alone never proves residency; aliases and
+  recycled slots read the current physical bytes. Changed bytes write directly
+  from the packed version and mark dirty before any upload attempt. Equality
+  never clears pending full-page or failed-upload dirty state, so retries remain
+  possible. Ordinary mutable `cachePattern` semantics remain unchanged. A virtual
+  ID/version cache was rejected: samples can exist before textures, and an alias
+  can replace physical bytes without changing that ID's sample.
+- **Final emission culling:** replay captures supported axis-aligned orthographic
+  logical bounds from the current projection, including centered safe area and
+  FBO display height. Missing, nonfinite, sheared or perspective matrices fail
+  open; preparation always fails open. The test is against the final transformed
+  visible-row quad, or the actual integer native strip/scaled geometry. It runs
+  after pattern publication/native SAT admission and before any batch-state
+  change. Partial and boundary-touching geometry remains. An untransformed actor
+  bound was rejected because rotation can bring an initially offscreen tile back
+  into view. No update, lifetime or SAT allocation path changes.
+
+Structural evidence is command/byte work, not measured FPS or CPU improvement.
+The frozen-art seam observes one 64-byte tile upload for unchanged A/A, three for
+A/B/A, no new upload for an equal physical-slot reuse, and retained full-page or
+failed-upload retries. The cull seam keeps one visible batch across an invisible
+shader/ghost tile instead of submitting that tile and splitting visible work.
+
+Follow-up focused checks (base `306b960af` plus the changes in this section):
+
+- `python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestFrozenPatternResidency,TestPresentationViewport,TestPresentationPatternBatching,TestPatternAtlasDirtyUploads,TestGraphicsManagerPatternAtlasPageOrdering,TestModApiSignatureSurface' test`
+  — 47 passed, no failures/errors/skips. This includes nine existing page/order
+  checks, ten ordinary dirty-upload checks and eleven unchanged API signature
+  checks. Subsequent test-only assertions inspect the actual instance mask floats
+  and scene sample publication; the EGL selection below includes those classes.
+- `env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestPresentationSpritePixels,TestPresentationPatternBatching,TestFrozenPatternResidency,TestScopedPalettePresentationRewind,TestGraphicsManagerReinit,TestPooledRenderCommandDiscard,TestPlayerHeadPresentation,TestObjectHeadPresentation,TestSpritePictureTransform' "-Ds3k.rom.path=${ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test`
+  — 43 passed, no failures/errors/skips. The five actual-pixel tests include a
+  byte-for-byte comparison of culled replay with unknown-projection fail-open
+  replay at 320/640, cropped edge rows and rotation bringing outside geometry
+  onscreen. Both images must contain visible pixels. Existing scoped palette
+  rewind, head fragments, trail versions, transformed pixels, command discard
+  and render-host recreation checks also passed. The strengthened eight-test
+  batching seam verifies actual mask floats 15/0 in the same instance buffer;
+  the six frozen-art checks verify scene publication alongside physical bytes.
+
+Both follow-up commands used one retained request/session each. Admission waited
+at least the reported 60/120-second milestones respectively; precise admission
+durations were not recorded, so no exact waiting or execution-time comparison is
+claimed. No failed or skipped follow-up checks remain. These are bounded focused
+checks; the lead still owns combined change-based smoke after integration. No
+remaining render candidate from this bounded follow-up was rejected or deferred.

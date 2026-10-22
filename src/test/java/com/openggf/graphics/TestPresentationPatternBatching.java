@@ -103,6 +103,45 @@ class TestPresentationPatternBatching {
         }
     }
 
+    @Test void maskOnlyBoundaryUsesActualInstancingAndLegacyKeepsUniformBoundary() throws Exception {
+        drawTiles(tile(10, 10, 15, false, false, 0, 8), tile(20, 10, 0, false, false, 0, 8));
+        assertEquals(1, graphics.commands.size());
+        assertEquals("InstancedBatchCommand", graphics.commands.getFirst().getClass().getSimpleName());
+        var bufferField = graphics.commands.getFirst().getClass().getDeclaredField("instanceBuffer");
+        bufferField.setAccessible(true);
+        var instances = (java.nio.FloatBuffer) bufferField.get(graphics.commands.getFirst());
+        assertEquals(15f, instances.get(9)); assertEquals(0f, instances.get(19));
+        graphics.commands.forEach(GLCommandable::discard); graphics.commands.clear();
+        graphics.setInstancedBatchingEnabled(false);
+        drawTiles(tile(10, 10, 15, false, false, 0, 8), tile(20, 10, 0, false, false, 0, 8));
+        assertEquals(2, graphics.commands.size(), "legacy masks are batch uniforms");
+    }
+
+    @Test void shaderGhostAndPageBoundariesSurviveMaskOptimization() {
+        drawTiles(tile(10, 10, 15, false, false, 0, 8), tile(20, 10, 0, true, false, 0, 8),
+                tile(30, 10, 0, true, true, 0, 8));
+        assertEquals(3, graphics.commands.size());
+    }
+
+    @Test void emissionCullSkipsInvisibleStateChangesAndKeepsPartialRows() {
+        graphics.setProjectionMatrixBuffer(new org.joml.Matrix4f().ortho(0, 320, 0, 224, -1, 1).get(new float[16]));
+        drawTiles(tile(10, 10, 15, false, false, 0, 8), tile(321, 10, 0, true, true, 0, 8),
+                tile(20, 10, 0, false, false, 0, 8), tile(30, -8, 15, true, true, 0, 7));
+        assertEquals(1, graphics.commands.size(), "invisible shader/ghost/cropped rows cannot break a visible batch");
+        graphics.commands.forEach(GLCommandable::discard); graphics.commands.clear();
+        drawTiles(tile(319, 10, 15, false, false, 0, 8), tile(20, -7, 15, false, false, 0, 8));
+        assertEquals(1, graphics.commands.size(), "both partly visible edge tiles survive");
+    }
+
+    private SpritePresentation.Tile tile(float x, float y, int mask, boolean shader, boolean ghost, int first, int end) {
+        return new SpritePresentation.Tile(SpritePresentation.Layer.OBJECT, patternId, 0, false, false, false,
+                x, y, 8, 8, shader, mask, ghost, .5f, first, end);
+    }
+    private void drawTiles(SpritePresentation.Tile... tiles) {
+        com.openggf.level.render.SpritePresentationRenderer.draw(graphics,
+                new SpritePresentation.Frame(List.of(tiles), List.of(), java.util.Map.of()), 0, 0, ignored -> true);
+    }
+
     private void submit(int x, float hue, float opacity) {
         PresentationGraphicsAccess.render(graphics, patternId, 0, false, false, false, 2, 7,
                 new float[]{x, 12, x + 8, 12, x + 8, 17, x, 17}, hue, opacity);

@@ -23,6 +23,59 @@ import static org.lwjgl.opengl.GL11.*;
 @Isolated
 class TestPresentationSpritePixels {
     @Test
+    void finalCroppedQuadCullMatchesUnculledPixelsAtNativeAndWideEdges() throws Exception {
+        assumeTrue(com.openggf.tools.PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");
+        try (var offscreen = com.openggf.tools.PresentationOffscreenTestContext.open(640, 224)) {
+            var graphics = new GraphicsManager();
+            try {
+                glDisable(GL_DITHER);
+                graphics.init("shaders/shader_the_hedgehog.glsl");
+                var palette = new Palette(); palette.setColor(1, new Palette.Color((byte)255, (byte)100, (byte)40));
+                graphics.cachePaletteTexture(palette, 0);
+                for (int width : new int[]{320, 640}) {
+                    graphics.setViewport(0, 0, width, 224); graphics.setProjectionWidth(width);
+                    float[] projection = new Matrix4f().ortho(0, width, 0, 224, -1, 1).get(new float[16]);
+                    graphics.setProjectionMatrixBuffer(projection);
+                    var source = picture(10, 20, false, false, 1);
+                    var tiles = new ArrayList<Tile>();
+                    for (int[] point : new int[][]{{width+4,30,width-4,30}, {width-1,60,width-1,60},
+                            {-6,90,0,90}, {40,-8,44,0}, {width+40,150,width+44,150}}) {
+                        var subject = new Subject("edge-" + tiles.size(), Part.BODY, false, 100, null,
+                                new Body(Role.BADNIK, point[2], point[3]));
+                        tiles.add(new Tile(Layer.OBJECT, source.tiles().getFirst().patternId(), 0, false, false, false,
+                                point[0],point[1],8,8,false,tiles.size()%2==0?15:0,false,1,2,7,subject));
+                    }
+                    var frame = new Frame(tiles, List.of(), source.patternVersions());
+                    var runtime = mock(LivePresentationRuntime.class);
+                    when(runtime.trails()).thenReturn(List.of());
+                    when(runtime.spritePolicies()).thenReturn(List.of(new TransientMutatorPolicySource.Entry("test", 1,
+                            new SpritePresentationPolicy(SpritePresentationPolicy.Mode.ROTATE,
+                                    SpritePresentationPolicy.Target.BADNIKS,100,120),60,100,false)));
+                    // Unknown projection at emission deliberately exercises the fail-open reference path.
+                    byte[] reference = renderWithEmissionProjection(graphics,frame,runtime,width,projection,false);
+                    assertArrayEquals(reference, renderWithEmissionProjection(graphics,frame,runtime,width,projection,true));
+                    assertTrue(java.util.stream.IntStream.range(0,reference.length/4).anyMatch(i -> (reference[i*4]&255)!=0));
+                }
+                assertEquals(GL_NO_ERROR, glGetError());
+            } finally { graphics.cleanup(); RenderContext.reset(); }
+        }
+    }
+
+    private static byte[] renderWithEmissionProjection(GraphicsManager graphics, Frame frame, LivePresentationRuntime runtime,
+                                                       int width, float[] projection, boolean cull) {
+        glViewport(0,0,width,224); glClearColor(0,0,0,1); glClear(GL_COLOR_BUFFER_BIT);
+        graphics.executeCapturedCommands(() -> {
+            graphics.setProjectionMatrixBuffer(cull ? projection : null);
+            try { SpritePresentationRenderer.draw(graphics,frame,0,0,l -> true,runtime); }
+            finally { graphics.setProjectionMatrixBuffer(projection); }
+        },0,0,width,224);
+        glFinish(); ByteBuffer pixels = MemoryUtil.memAlloc(width*224*4);
+        try { glReadPixels(0,0,width,224,GL_RGBA,GL_UNSIGNED_BYTE,pixels);
+            byte[] result=new byte[pixels.remaining()];pixels.get(result);return result; }
+        finally { MemoryUtil.memFree(pixels); }
+    }
+
+    @Test
     void adjacentTransformedOverlappingTilesMatchUnbatchedPixels() throws Exception {
         assumeTrue(com.openggf.tools.PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");
         try (var offscreen = com.openggf.tools.PresentationOffscreenTestContext.open(320, 224)) {
