@@ -2,8 +2,10 @@
 
 Task base: `8aa692b045c195ef8a42896b6bbc9549158470c0` (develop).
 Implementation workspace: `t3-ddec71b5`,
-branch `bugfix/ai-sprite-tile-reuse-20261022`. This is a bounded allocation
-experiment within the authorized CPU/GPU investigation, not a timing benchmark.
+branch `bugfix/ai-sprite-tile-reuse-20261022`. The initial structural experiment
+was followed by the isolated CPU/allocation comparison below. **Decision: reject
+the production reuse optimization.** Allocation savings came with consistently
+higher preparation CPU and wall time on representative normal inputs.
 
 ## Decision and ownership
 
@@ -159,3 +161,113 @@ and removed. Queue wait was 369 seconds; Maven execution including recompilation
 1:21. Tested production is `da2d53023` plus the identity helper/gate; test inputs
 are the fixed-mask scalar matrix, two callback boundaries and new composition
 class committed with this correction. Probe timing is separate from these checks.
+
+## Isolated CPU/allocation protocol
+
+The lead authorized a quiet measurement window, holding later validation while
+existing jobs finish normally. Dedicated measurement branch
+`bugfix/ai-sprite-tile-measure-20261022`, workspace
+`t3-ddec71b5/.worktrees/sprite-tile-measure-20261022`, starts at exact safe commit
+`44d11628a9c881d0d24c37e3b3c19629759590d6`. Cowtree reported
+`fallback=yes reason=copy-on-write-unavailable`; the checkout hook installed its
+ordinary shared resource links. Its own `target/` was built with
+`JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py
+-Dmse=off compile -B` (exit 0, 1:02); no build tree was copied or shared.
+
+The engine-facing probe is `com.openggf.tools.SpriteTileReuseProbe`, outside the
+Mod API. It calls the existing public internal preparation overload directly in
+both arms; no reflective access or signature change is needed. Probe prebuild
+used Java 25 `javac --release 25 -cp <own target/classes plus resolved dependency
+jars> -d target/classes src/main/java/com/openggf/tools/SpriteTileReuseProbe.java`
+under this worktree's build lock and shared build-activity lease. Only resolved
+dependency jar paths were reused from the inspected focused run, never compiled
+classes from another worktree.
+
+Pinned SHA-256 inputs before launch:
+
+- Probe source: `9f60213286cec20aa21a1a6f01002d7a3e893eef4baea66d79c40d8e10592b0c`.
+- Probe main class: `7df3ab9f0941a9ce6b3858b39f3396574feddbed2fb0a7d75bd25530a49c6703`.
+- `SpritePresentation.java`: `5babcf91f58f5a3d1336cc14e6fbec0ff2943b94f2faa5451dc410c88cd781e7`.
+- POM: `9d5f877837d473a7fa9fec1f62528abe1b724753bae1d2f1b4a71be5c9bcd5d8`.
+
+The only source beyond that commit in the measurement checkout is the probe
+above, identical to the source retained with the final evidence. Admission:
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/performance/run_isolated.py --worktree . --cwd . --audit-report target/sprite-probe-isolation.json --estimate-seconds 180 -- python3 target/run-sprite-probe.py
+```
+
+The temporary launcher sequentially starts three fresh Java 25 JVMs with
+`-Xms1g -Xmx1g --enable-native-access=ALL-UNNAMED -Djava.awt.headless=true`, quiet
+test logging and their own runtime classpath, invoking
+`com.openggf.tools.SpriteTileReuseProbe <fork:1..3> 4096 8192 6`. Every JVM first
+checks 16 complete hinted/no-hint frame pairs per scene, exact expected identity
+counts, and consumed-output equality. All seven cases then warm both arms for
+three rounds of 4,096 frames. Six measured pairs per case each run 8,192
+preparations per arm, alternate arm order independently of rotated scene order,
+and check equal consumed checksums. Frames are published to a volatile escape
+sink and sampled during consumption. The launcher bounds each JVM to 180 seconds.
+
+All scenes emit 128 world tiles plus 32 screen-anchored HUD tiles. Cases are
+WORLD idle/scroll, rebuilt equal Subject/Body idle/scroll, head-bearing shared
+mask with rebuilt equal eight-pattern maps, rebuilt equal head masks while idle,
+and rebuilt masks while scrolling. Head producers bind their 128 referenced
+immutable art versions. This exercises value-equality costs and identity-gated
+misses, rather than assuming all subjects are the WORLD singleton.
+
+Each measured boundary includes input/Subject/map production, ordinary immutable
+preparation, one initial no-hint seed frame and 8,192 output escapes/sample
+consumptions. Allocation uses the executing thread's allocated-byte counter;
+CPU uses that thread's CPU-time counter. Wall time and JVM GC counts/milliseconds
+are observed separately. Whole-process GC/JIT work, GPU rendering, head anatomy
+composition, ROM loading and full game-loop cost are outside this CPU boundary.
+The no-hint arm is the current implementation's legacy delegate path, not a
+separately rebuilt historical algorithm. This is a bounded paired synthetic
+comparison, not a JMH or live-route/FPS result. Host activity outside linked
+worktrees and sampling gaps in bypass detection remain limitations.
+
+### Measured result and rejection
+
+Session `60125` exited 0. Exclusive admission waited **311 seconds**; the
+three-JVM command then ran **13.248 seconds**, 2026-10-22 11:54:07.661 to
+11:54:20.909 UTC. The isolation audit confirms exclusive test and build-activity
+leases, 0.5-second bypass sampling, exit 0 and no observed interference. The
+launcher completed all three JVMs. All **252 observations** (18 paired samples
+per scene) and paired checksums were inspected; there were no missing pairs,
+verification failures or skips. This is 2,064,384 measured preparations plus
+their 252 initial seed frames; warmup and equality controls are separate.
+
+CPU nanoseconds and allocated bytes below are per-preparation medians. Ratio is
+the median of the 18 individual paired hinted/no-hint CPU ratios, not the ratio
+of the two displayed medians. Positive CPU change is a regression.
+
+| Scene | CPU no hint / hint (ns) | Paired CPU change | Allocated no hint / hint (bytes) |
+| --- | ---: | ---: | ---: |
+| WORLD idle | 1496.7 / 1891.0 | +27.6% | 19354.4 / 7834.4 |
+| WORLD scroll | 1495.9 / 1611.7 | +7.6% | 19354.4 / 17050.4 |
+| Equal Subject/Body idle | 1599.0 / 2460.1 | +57.2% | 21146.6 / 9626.6 |
+| Equal Subject/Body scroll | 1607.4 / 1708.5 | +6.9% | 21146.6 / 18842.6 |
+| Shared head mask, equal rebuilt art maps | 6882.9 / 11448.1 | +66.3% | 53278.5 / 41758.5 |
+| Rebuilt equal head mask, idle | 6981.6 / 7792.2 | +12.2% | 56606.9 / 54302.9 |
+| Rebuilt head mask, scroll | 7041.5 / 7143.8 | +3.4% | 56606.9 / 54302.9 |
+
+All three fresh-JVM median CPU ratios were above 1 for every case. WORLD idle
+fork medians: **1.2120, 1.2949, 1.2939**; WORLD scroll: **1.0601, 1.0892,
+1.0899**. Every individual pair was slower for both normal WORLD cases, despite
+11,520 bytes/frame saved on full hits and 2,304 on HUD-only hits. Median wall
+time also worsened in every case (WORLD idle 1512.9 to 1912.3 ns; WORLD scroll
+1536.6 to 1634.8 ns). GC collection counts were observed but do not make the
+executing-thread CPU counter a whole-process GC/JIT cost measurement. No FPS
+claim follows from these synthetic results.
+
+The rejection is based on the common paths as well as head-map comparison cost;
+special-casing head reuse would leave the normal idle/scroll regressions. The
+bounded implementation is therefore removed rather than broadened into packed
+storage, pooling or caching. Initial reuse fractions remain structural counts,
+not performance success. The safe identity fix is `44d11628a`; its measured
+implementation is kept in Git history with this exact probe source. The final
+tree keeps fresh immutable preparation, ownership/composition regressions and
+a diagnostic probe that explicitly refuses timing when the rejected hint is
+absent. No second timing batch is needed to establish removal of the losing
+optimization. Consumed raw measurements/isolation reports are removed after
+retaining this bounded summary, source pins and reproducible protocol.
