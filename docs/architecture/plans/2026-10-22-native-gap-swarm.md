@@ -388,3 +388,24 @@ passes46 behavior and five guards, but its next existing chain check retains
 the same14 axes. H32 and actual competition consumers are still being qualified.
 One combined smoke lead remains; no Main integration, push or worktree cleanup
 is complete.
+
+The original terminal/input leaf `d90cc4160` then composed without runtime
+conflicts over `bee54dce5`; the existing recorded-input lease field and native
+Start admission remained intact. Aggregate request50800 passed **67/67**, zero
+failures/errors/skips, in ten inspected XML suites on Java25.0.5/EGL with the
+three original ROM properties. Queue wait362 seconds, Maven1:16. Selectors:
+`TestNativeTerminalLevelAdmission`10, `TestPlaybackInputBridgeOwnership`7,
+`TestRecordedInputOwnership`3, `TestRecordedInputHostPause`6,
+`TestRecordedInputNativePause`1, `TestInGamePause`5,
+`TestGameLoopFreezeContractWiring`8, `TestPlaybackDebugManagerPreparedInput`8,
+`TestVisualTraceRunTerminalTail`8 and `TestModApiSignatureSurface`11. The command
+uses the same queued normal/EGL/Java/ROM environment as86712 above with exactly
+that selector list. This closes the aggregate lease-compatibility check for the
+new identity cleanup; it is not native SMPS pause or a passing whole S1 tail.
+
+The separate full-load readiness leaf `70728afb0` has79 owner passes after an
+old-service control reproduced two failures. Its only runtime edit clears old
+unpublished S1 preparation and tail bookkeeping at the existing full-load
+dedup clear, preserving published journal/IDs, S2 queues, snapshots and midgame
+refresh. Aggregate composition and affected checks remain next. The original
+native242 publication restrictions and the newer MHZ earlier-stop block remain.

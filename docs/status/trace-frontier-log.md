@@ -113295,3 +113295,25 @@ movie201916/map50 (exact caller/phase UNKNOWN), downstream ordinal cascade and
 terminal LEVEL/TITLE_SCREEN, with terminal art comparison not reached. Native
 load-RAM clearing is not qualified by the phase tests. The full242 candidate is
 still unpublished; prefix pins are unchanged.
+
+
+### 2026-10-22 Terminal LEVEL caller and input handoff, focused qualification
+
+Isolated t3-bfcde7c7 sourcea839af474 plus the narrow launcher/input-owner repair
+passes60/60 focused cases, zero failures/errors/skips (96319; wait27s/Maven1m37s).
+Exact eight-class command, old-source44503 six valid failures and76155 three
+independent input replacement failures are recorded in the
+[S1 chain audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#terminal-native-body-admission-and-exact-input-owner-handoff).
+Actual loop/launcher and driver-only paths execute ordinary terminal native
+LEVEL passes with first input edge once; pause, consumed entry fade and the
+SHARED_GAP latch retain their existing gates. Ordinary logical playback remains
+disabled for terminal rows. Cleanup compares raw override reference identity,
+so native-stage samples and equal-valued replacements cannot confuse owners.
+
+No whole-chain replay follows this focused result yet. Last observed46550
+frontier is still all22 level reports exact, extra SBZ2→LZ4 movie201916/map50,
+downstream art ordinal cascade and terminal LEVEL/TITLE_SCREEN; terminal art
+comparison was not reached. Final-mode/ending choreography and aggregate
+recorded-input lease compatibility remain unqualified here. No fixture values,
+forced ticks, comparison filters or prefix changes were introduced; the full242
+candidate remains unpublished.

@@ -748,3 +748,73 @@ source proof alone does not close either art gap. Last whole-chain result is
 still12T/11PASS/1FAIL with all22 level reports exact, three reported axes and
 terminal-art comparison not reached. The complete native242 candidate remains
 uncommitted and prefix pins unchanged.
+
+
+## Terminal native-body admission and exact input-owner handoff
+
+The46550 held FZ observation identified a caller boundary, not an object ending
+failure. Native Level_MainLoop (`sonic.asm:2998-3006`) still performs PauseGame,
+VBlank and ExecuteObjects until its actual mode/restart branch leaves that
+loop. Closing an engine comparison lease does not perform that native exit.
+TraceSessionLauncher.suppressesRunNativeLevelBody had coupled LEVEL body
+eligibility to allowsRunLogicalGameplayInput, which intentionally remains false
+for TERMINAL_TAIL. The bounded repair admits only that actual disposition to
+the existing native LEVEL body. A private disposition predicate reads either
+the active launcher's current disposition or the installed driver-only frame
+context. Ordinary logical ownership, all other dispositions, SHARED_GAP's
+one-source-pass latch, native admission, pause, title/load, fade and inactive
+checks remain unchanged. No body call, counter/VInt repair or closure tick is
+manufactured.
+
+Corrected old-production job44503 executes the actual loop, driver and launcher
+paths:10 cases, six failures, zero errors/skips; wait91s/Maven30.169s. In both
+paths, terminal native body stays at one executed pass instead of two, and an
+actual pending entry request is never consumed. An independent input-only
+production hook proves a second defect without relying on body admission:
+after the driver's first tail-row override is installed, the prior ordinary
+PlaybackInputBridge.sync(false) clears it. Pause and SHARED_GAP controls pass.
+The earlier21049 ten constructor errors precede all these assertions and remain
+explicitly excluded from production evidence.
+
+The approved input repair stores the bridge's actual published
+(InputHandler, LogicalInputSnapshot reference) pair. The package-private
+InputHandler helper compares the current **raw logicalOverride** by identity;
+the existing unannotated InputHandlerInternalAccess exposes only that host
+operation. A successful clear refreshes the owned handler; a replaced snapshot
+or handler is never cleared. Moving publication to another handler releases
+only the previous owned handler. Native-stage publication may replace the
+visible logical sample without changing the raw override, so that sample must
+not select ownership. Public InputHandler methods, ModApi signatures, physical
+input, Mode P2 normalization and native-stage publisher behavior are unchanged.
+
+Seven independent ROM-free public-boundary controls cover ordinary stop,
+missing sprites, different/equal-valued-distinct replacement snapshots,
+native-stage publication, cleanup-once and handler identity (including reuse
+of the same snapshot instance on a different handler). Old bridge job76155
+passes four cleanup/native-sample controls and fails exactly three replacement
+controls, zero errors/skips; wait49s/Maven1m31s.
+
+Candidate96319 on sourcea839af474 plus the exact launcher/identity diff passes
+60/60 with zero failures/errors/skips; wait27s/Maven1m37s. XML inspected:
+terminal10, independent ownership7, scheduled-level input6, advance-only input5,
+iteration admission5, freeze wiring8, frame driver8 and API signature11.
+Independent source review found no material issue and made no edits or rerun.
+The two-row actual-loop cases observe one native object pass/VInt per ordinary
+tail row, actual driver held/press input (first C edge once, held second row no
+repeat), no ordinary logical-playback second owner, and one physical publisher.
+Pause, consumed entry fade and SHARED_GAP remain frozen at their native gates.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestNativeTerminalLevelAdmission,TestPlaybackInputBridgeOwnership,TestScheduledLevelPlaybackInput,TestPlaybackAdvanceOnlyInputBridge,TestLevelIterationAdmissionController,TestGameLoopFreezeContractWiring,TestTraceRunFrameDriver,TestModApiSignatureSurface' "-Dsonic1.rom.path=$S1_ROM" "-Ds3k.rom.path=$S3K_ROM" test -B
+```
+
+The regression's tiny synthetic comparison lease is closed through the real
+launcher action path; its dummy row never reaches bootstrap, comparison or a
+gameplay owner. Only synthetic BK2 controller input drives the actual ROM
+level. The coordinator is mocked, so these cases do not qualify coordinator
+topology, destination title release, final mode, rewind, rendering or hardware
+readiness. Local source lacks the parent's RecordedInputOwnership prerequisite;
+no extra dependency is imported, and lease/host/native-pause compatibility is
+reserved for the parent's aggregate checks. No whole-chain run has yet qualified
+this leaf.46550 remains the recorded three-axis frontier, terminal art not
+reached; native242 stays unpublished and prefix pins unchanged.
