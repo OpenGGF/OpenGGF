@@ -36,6 +36,11 @@ enum PostTitleCardDestination {
             setupOnly |= levelManager.consumePendingInitialProcessSpritesPass();
         }
         exitTitleCard.run();
+        if (!levelManager.hasPendingFreshLevelTransitionBoundary()) {
+            // Mode entry can seed history before exitTitleCard finishes the
+            // destination provider/player setup. Its floor belongs after assembly.
+            com.openggf.level.LevelRewindBoundaryAccess.initialAssemblyCompleted(levelManager);
+        }
         return setupOnly ? LevelFrameResult.SETUP_ONLY : LevelFrameResult.GAMEPLAY_FRAME;
     }
 }

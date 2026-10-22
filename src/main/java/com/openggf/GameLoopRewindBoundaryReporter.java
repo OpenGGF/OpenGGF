@@ -1,6 +1,7 @@
 package com.openggf;
 
 import com.openggf.game.rewind.LiveRewindManager;
+import com.openggf.game.GameMode;
 import com.openggf.game.rewind.RewindBoundary;
 import com.openggf.game.session.GameplayModeContext;
 
@@ -25,6 +26,15 @@ final class GameLoopRewindBoundaryReporter {
 
     void refresh(GameplayModeContext context) {
         if (context != installedContext || override != null) install(context);
+    }
+
+    void initialAssemblyCompleted(GameplayModeContext assembled, GameplayModeContext current, GameMode mode) {
+        if (assembled == null || assembled != current || !liveRuntime.getAsBoolean()) return;
+        // Pending fresh assembly blocks engagement and retires its old reporter.
+        // Rebind at this native completion before the first gameplay tick.
+        rewind.bindOwner(assembled, false, mode);
+        install(assembled);
+        assembled.markRewindBoundary(RewindBoundary.LEVEL_LOAD);
     }
 
     void install(GameplayModeContext context, Consumer<RewindBoundary> consumer) {

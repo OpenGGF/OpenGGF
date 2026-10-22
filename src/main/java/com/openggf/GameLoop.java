@@ -277,8 +277,7 @@ public class GameLoop {
 
     private PostTitleCardDestination postTitleCardDestination = PostTitleCardDestination.LEVEL;
     private LevelFrameResult titleReleaseResult = LevelFrameResult.GAMEPLAY_FRAME;
-    private final LevelIterationAdmissionController levelIterationAdmission =
-            new LevelIterationAdmissionController();
+    private final LevelIterationAdmissionController levelIterationAdmission;
 
     // Deferred bonus stage setup — applied when title card exits with BONUS_STAGE destination
     private BonusStageProvider deferredBonusProvider;
@@ -331,6 +330,8 @@ public class GameLoop {
                 configService, audioManager, () -> currentGameMode);
         this.liveRewindBoundaryReporter = new GameLoopRewindBoundaryReporter(
                 liveRewindManager, () -> TraceSessionLauncher.active() == null);
+        this.levelIterationAdmission = new LevelIterationAdmissionController(context ->
+                liveRewindBoundaryReporter.initialAssemblyCompleted(context, resolveGameplayModeContext(), currentGameMode));
         this.userRecordingSessionLauncher = new UserRecordingSessionLauncher(this);
         this.userRecordingControls = new UserRecordingRuntimeControls(
                 new LiveUserRecordingRuntime(configService, userRecordingSessionLauncher, playbackDebugManager,
