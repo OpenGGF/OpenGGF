@@ -9,18 +9,11 @@ import com.openggf.capture.GlReadPixelsGrabber;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
-import com.openggf.data.RomManager;
-import com.openggf.debug.DebugOverlayManager;
-import com.openggf.debug.PerformanceProfiler;
-import com.openggf.debug.playback.PlaybackDebugManager;
-import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameMode;
-import com.openggf.game.RomDetectionService;
 import com.openggf.game.session.EngineContext;
-import com.openggf.graphics.GraphicsManager;
+import com.openggf.io.PixelImage;
+import com.openggf.io.PngCodec;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -68,8 +61,11 @@ public final class TimeAttackVideoCaptureTool implements AutoCloseable {
         Files.createDirectories(this.output);
         System.setProperty("openggf.headless.gl", "surfaceless-egl");
         System.setProperty("openggf.saveRoot", this.output.resolve("profile/saves").toString());
+        // The capture is a headless composition root, like HeadlessGameBoot: take the
+        // process owners from the bootstrap bridge and replace only the configuration.
+        EngineContext process = EngineContext.fromLegacySingletonsForBootstrap();
         // Retire any inherited device owner before boot or external content can play.
-        audio = AudioManager.getInstance();
+        audio = process.audio();
         audio.setBackend(new NullAudioBackend());
         SonicConfigurationService config = SonicConfigurationService.createStandalone(this.output.resolve("profile"));
         config.setSessionOverride(SonicConfiguration.AUDIO_ENABLED, true);
@@ -82,9 +78,9 @@ public final class TimeAttackVideoCaptureTool implements AutoCloseable {
         config.setSessionOverride(SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP, true);
         config.setSessionOverride(SonicConfiguration.SHOW_LEGAL_DISCLAIMER_ON_STARTUP, true);
         config.setSessionOverride(SonicConfiguration.DEBUG_VIEW_ENABLED, false);
-        EngineContext context = new EngineContext(config, GraphicsManager.getInstance(), audio,
-                RomManager.getInstance(), PerformanceProfiler.getInstance(), DebugOverlayManager.getInstance(),
-                PlaybackDebugManager.getInstance(), RomDetectionService.getInstance(), CrossGameFeatureProvider.getInstance());
+        EngineContext context = new EngineContext(config, process.graphics(), audio,
+                process.roms(), process.profiler(), process.debugOverlay(),
+                process.playbackDebug(), process.romDetection(), process.crossGameFeatures());
         try {
             glBoot = new HeadlessGameBoot(width, height, context);
             engine = new Engine(context);
@@ -153,16 +149,15 @@ public final class TimeAttackVideoCaptureTool implements AutoCloseable {
 
     public void capture(Path destination) throws IOException {
         byte[] rgba = pixels();
-        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        int[] argb = new int[width * height];
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 int index = ((height - 1 - y) * width + x) * 4;
-                int argb = ((rgba[index + 3] & 255) << 24) | ((rgba[index] & 255) << 16)
+                argb[y * width + x] = ((rgba[index + 3] & 255) << 24) | ((rgba[index] & 255) << 16)
                         | ((rgba[index + 1] & 255) << 8) | (rgba[index + 2] & 255);
-                image.setRGB(x, y, argb);
             }
         }
-        ImageIO.write(image, "png", destination.toFile());
+        PngCodec.write(destination, new PixelImage(width, height, argb));
     }
 
     /** Ordinary fresh-start route; every transition is driven by the actual input handler. */
