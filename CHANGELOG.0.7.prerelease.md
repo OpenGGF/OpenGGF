@@ -45,7 +45,12 @@ Unreleased. The earlier development themes remain in
   while launching a level, and resumes its owning scene after a run or load failure.
   Every visible multiplayer ghost shows its player name above the sprite,
   including ghosts beyond the four nearest racers. Nameplates draw after the world
-  so deferred level rendering cannot overwrite them.
+  so deferred level rendering cannot overwrite them, in the HUD's crisp 5x7 type on
+  a small backing plate; bunched names stack instead of overlapping and fade with
+  their ghost. The in-run HUD is a narrower, translucent right-hand column that
+  shrinks to its text: one rival ahead and one behind instead of three, and a slim
+  progress strip with a finish flag beside the lives counter. `CompactFont` gains
+  `@`, `$` and `#`, which are common in player names.
 
 - **Time Attack multiple attempts:** players can submit several runs inside one
   round window, and the best valid run counts. While the window is open a finish's

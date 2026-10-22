@@ -11,13 +11,19 @@ import java.util.function.Function;
 
 /** Pure text composition for the multiplayer HUD. */
 public final class HudTextLayout {
-    public static final int PANEL_WIDTH = 176;
-    public static final int ROOM_TOP = 44;
+    /** Widest right-hand panel: 21 compact-font columns, about 44% of a native 320-pixel view. */
+    public static final int PANEL_WIDTH = 140;
+    public static final int LINE_HEIGHT = 9;
+    /** Below the run clock's tallest (three-line, 4 + 3 * 9 pixel) panel at y=4, with a three-pixel gap. */
+    public static final int ROOM_TOP = 4 + (4 + 3 * LINE_HEIGHT) + 3;
     public static final int WHITE = 0xFFF5F8FF;
     public static final int MUTED = 0xFFB9CADC;
     public static final int ACCENT = 0xFF67DDF5;
     public static final int GOLD = 0xFFFFDD67;
-    public static final int LINE_HEIGHT = 10;
+    /** Translucent enough to keep the level readable behind the white text. */
+    public static final int FILL = 0xC8122032;
+    private static final int TEXT_INSET = 6;
+    private static final int TEXT_TOP = 3;
 
     public record Line(String text, int color) { }
     /** Right-anchored, measured panel. Every text line is fitted before drawing. */
@@ -25,22 +31,54 @@ public final class HudTextLayout {
         public Panel { lines = List.copyOf(lines); }
     }
 
+    /** Shrinks to the widest fitted line, never wider than {@code desiredWidth}. */
     public static Panel panel(int viewportWidth, int top, int desiredWidth,
                               List<Line> lines, int accent) {
         // Reserve the left 100 pixels for the stock SCORE/TIME/RINGS and lives HUD.
-        int width = Math.max(1, Math.min(desiredWidth, viewportWidth - 104));
+        int maximum = Math.max(1, Math.min(desiredWidth, viewportWidth - 104));
         List<Line> fitted = lines.stream().map(line -> new Line(
-                CompactFont.fit(line.text(), width - 12, 1), line.color())).toList();
+                CompactFont.fit(line.text(), maximum - 12, 1), line.color())).toList();
+        int text = fitted.stream().mapToInt(line -> CompactFont.width(line.text(), 1)).max().orElse(0);
+        int width = Math.min(maximum, text + 12);
         return new Panel(viewportWidth - width - 4, top, width,
-                8 + LINE_HEIGHT * fitted.size(), fitted, accent);
+                panelHeight(fitted.size()), fitted, accent);
+    }
+
+    public static int panelHeight(int lines) {
+        return 4 + LINE_HEIGHT * lines;
+    }
+
+    /** Top of the one-line strip the run clock collapses to after the act is cleared. */
+    public static int finishStripTop(int viewportHeight) {
+        return viewportHeight - 4 - panelHeight(1);
+    }
+
+    /** Top of a panel stacked just above the finish strip, clear of the stock act-clear card. */
+    public static int aboveFinishStrip(int viewportHeight, int lines) {
+        return finishStripTop(viewportHeight) - 3 - panelHeight(lines);
+    }
+
+    /** Compact-font columns available to text inside a panel no wider than {@code desiredWidth}. */
+    public static int columns(int viewportWidth, int desiredWidth) {
+        int maximum = Math.max(1, Math.min(desiredWidth, viewportWidth - 104));
+        return Math.max(0, (maximum - 12 + 1) / 6);
+    }
+
+    /** Left text and a right-aligned suffix in a monospaced row; the left text is truncated first. */
+    public static String aligned(String left, String right, int columns) {
+        String clean = left.replaceAll("[\\r\\n\\t]", " ");
+        int room = Math.max(0, columns - right.length() - 1);
+        String fitted = clean.length() <= room ? clean
+                : room <= 3 ? ".".repeat(room) : clean.substring(0, room - 3) + "...";
+        return fitted + " ".repeat(Math.max(1, columns - fitted.length() - right.length())) + right;
     }
 
     public static void drawPanel(LevelOverlayCanvas canvas, Panel panel) {
-        canvas.fill(panel.x(), panel.y(), panel.width(), panel.height(), 0xE5122032);
+        canvas.fill(panel.x(), panel.y(), panel.width(), panel.height(), FILL);
         canvas.fill(panel.x(), panel.y(), 2, panel.height(), panel.accent());
-        int y = panel.y() + 5;
+        int y = panel.y() + TEXT_TOP;
         for (Line line : panel.lines()) {
-            CompactFont.draw(canvas, line.text(), panel.x() + 6, y, 1, line.color());
+            CompactFont.draw(canvas, line.text(), panel.x() + TEXT_INSET, y, 1, line.color());
             y += LINE_HEIGHT;
         }
     }

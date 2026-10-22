@@ -33,6 +33,23 @@ class TestMultiplayerHudLayout {
     }
 
     @Test
+    void runningColumnLeavesMostOfTheNativeViewClear() {
+        var clock = TimeAttackHud.layout(320, 224, new TimeAttackHudState(true, 3210, 3500, -120, false, false));
+        var ranked = MultiplayerHudRenderer.layout(320, 224, state("RUNNING", 129), 8192, false);
+        var unranked = MultiplayerHudRenderer.layout(320, 224, state("RUNNING", -1), 8192, false);
+        for (var panel : List.of(clock, ranked, unranked)) {
+            assertTrue(panel.width() <= HudTextLayout.PANEL_WIDTH, "right column stays under half the view");
+        }
+        assertTrue(clock.width() < ranked.width(), "short clock text shrinks its panel");
+        assertTrue(ranked.y() + ranked.height() <= 96, "both panels end in the top ~40% of the view");
+        assertEquals(4, unranked.lines().size(), "header, position, one rival ahead and one behind");
+        // Standings keep the time in a right-aligned column, whatever the name length.
+        int columns = (ranked.width() - 12 + 1) / 6;
+        ranked.lines().stream().filter(line -> line.text().matches("[0-9]+[.] .*"))
+                .forEach(line -> assertEquals(columns, line.text().length(), line.text()));
+    }
+
+    @Test
     void finishRoundAndVoteStayBelowTheActClearCardAndAboveTheRunStrip() {
         for (int width : new int[]{320, 800}) {
             var clock = TimeAttackHud.layout(width, 224,
