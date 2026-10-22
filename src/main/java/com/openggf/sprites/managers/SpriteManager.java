@@ -504,6 +504,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 * Returns empty list when sidekicks are suppressed for the current zone.
 	 */
 	public List<AbstractPlayableSprite> getSidekicks() {
+		var roster = nativeCompetitionRoster();
+		if (roster != null) return roster.player(1) == null ? List.of() : List.of(roster.player(1));
 		if (isCpuSidekickSuppressed()) {
 			return List.of();
 		}
@@ -516,6 +518,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 * sidekick state without mutating it.
 	 */
 	public List<AbstractPlayableSprite> getRegisteredSidekicks() {
+		var roster = nativeCompetitionRoster();
+		if (roster != null) return roster.player(1) == null ? List.of() : List.of(roster.player(1));
 		return Collections.unmodifiableList(sidekicks);
 	}
 
@@ -523,6 +527,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 * Returns the character name for a sidekick (e.g. "tails", "sonic", "knuckles").
 	 */
 	public String getSidekickCharacterName(AbstractPlayableSprite sidekick) {
+		var roster = nativeCompetitionRoster();
+		if (roster != null && roster.slotOf(sidekick) == 1) return sidekick.characterKey().persisted();
 		return sidekickCharacterNames.get(sidekick);
 	}
 
@@ -541,6 +547,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 
 	/** Returns the active session/configured main playable participant. */
 	public AbstractPlayableSprite getMainPlayable() {
+		var roster = nativeCompetitionRoster();
+		if (roster != null) return roster.player(0);
 		String mainCode = ActiveGameplayTeamResolver.resolveMainCharacterCode(configService);
 		Sprite namedMain = sprites.get(mainCode);
 		if (namedMain instanceof AbstractPlayableSprite playable && !playable.isCpuControlled()) {
@@ -630,7 +638,15 @@ public class SpriteManager implements PlayableSstDispatcher {
 		boolean right = (p1Held & AbstractPlayableSprite.INPUT_RIGHT) != 0;
 		for (Sprite sprite : getAllSprites()) {
 			if (sprite instanceof AbstractPlayableSprite playable && !playable.isCpuControlled()) {
-				playable.setDirectionalInputPressed(up, down, left, right);
+				var roster = nativeCompetitionRoster();
+				if (roster != null && roster.slotOf(playable) == 1) {
+					int held = suppressInput ? 0 : p2.heldMask();
+					playable.setDirectionalInputPressed(
+							(held & AbstractPlayableSprite.INPUT_UP) != 0,
+							(held & AbstractPlayableSprite.INPUT_DOWN) != 0,
+							(held & AbstractPlayableSprite.INPUT_LEFT) != 0,
+							(held & AbstractPlayableSprite.INPUT_RIGHT) != 0);
+				} else playable.setDirectionalInputPressed(up, down, left, right);
 			}
 		}
 	}
@@ -699,10 +715,12 @@ public class SpriteManager implements PlayableSstDispatcher {
 		// trigger, while the manual-control timer uses controller2Held.
 		int p2Held = 0;
 		int p2Logical = 0;
+		int p2ActionPressedMask = 0;
 		if (!suppressInput) {
 			PlayerInputState p2 = handler.logical().player2();
 			p2Held = p2.heldMask();
 			p2Logical = p2.pressedMask();
+			p2ActionPressedMask = p2.actionPressedMask();
 			if (p2.startPressed()) {
 				p2Logical |= 0x20;
 			}
@@ -745,7 +763,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 						frameCounter,
 						currentObjectDispatchOrdinal()),
 				new InitialPlayableInput(
-						p1Held, p1Pressed, p1ActionPressedMask, p2Held, p2Logical, true),
+						p1Held, p1Pressed, p1ActionPressedMask, p2Held, p2Logical, p2ActionPressedMask, true),
 				testButton,
 				speedUp,
 				slowDown,
@@ -806,6 +824,14 @@ public class SpriteManager implements PlayableSstDispatcher {
 		List<AbstractPlayableSprite> playables = buildPlayableUpdateOrderInto(
 				sprites, sidekicks, isCpuSidekickSuppressed(),
 				playableOrderScratch, playableScheduledScratch, playableAvailableScratch);
+		var nativeRoster = nativeCompetitionRoster();
+		if (nativeRoster != null) {
+			// Native SST player slots execute in controller order, independent of
+			// map iteration, selected character, or ordinary CPU-follow ordering.
+			playables.clear();
+			if (nativeRoster.player(0) != null) playables.add(nativeRoster.player(0));
+			if (nativeRoster.player(1) != null) playables.add(nativeRoster.player(1));
+		}
 		beginPlayableFrame(playables);
 
 		InitialPlayableInput input = context.input();
@@ -918,13 +944,18 @@ public class SpriteManager implements PlayableSstDispatcher {
                         PlayerInputState actorInput = scriptedActorInputs == null ? null : scriptedActorInputs.get(playable.getCode());
                         if (scriptedActorInputs != null && actorInput == null)
                             throw new IllegalArgumentException("Missing scripted controller: " + playable.getCode());
-                        int actorHeld = actorInput == null ? p1Held : actorInput.heldMask();
+                        boolean nativeSecondController = scriptedActorInputs == null && nativeRoster != null
+                                && nativeRoster.slotOf(playable) == 1;
+                        int actorHeld = actorInput != null ? actorInput.heldMask()
+                                : nativeSecondController ? input.p2Held() : p1Held;
                         up = (actorHeld & AbstractPlayableSprite.INPUT_UP) != 0;
                         down = (actorHeld & AbstractPlayableSprite.INPUT_DOWN) != 0;
                         left = (actorHeld & AbstractPlayableSprite.INPUT_LEFT) != 0;
                         right = (actorHeld & AbstractPlayableSprite.INPUT_RIGHT) != 0;
                         jump = (actorHeld & AbstractPlayableSprite.INPUT_JUMP) != 0;
-                        rawJumpPress = ((actorInput == null ? input.p1Pressed() : actorInput.pressedMask()) & AbstractPlayableSprite.INPUT_JUMP) != 0;
+                        rawJumpPress = ((actorInput != null ? actorInput.pressedMask()
+                                : nativeSecondController ? input.p2Pressed() : input.p1Pressed())
+                                & AbstractPlayableSprite.INPUT_JUMP) != 0;
                         // Player-controlled sprite, or the historical
 						// updateWithoutInput path where CPU dispatch is intentionally skipped.
 						boolean controlLocked = playable.isControlLocked();
@@ -943,7 +974,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 							effectiveJump = (!controlLocked && jump) || forcedJump;
 							effectiveTest = !controlLocked && context.testButton();
 							recordedLogicalJumpPress = !controlLocked
-									&& (actorInput == null ? input.p1ActionPressedMask() : actorInput.actionPressedMask()) != 0;
+                                    && (actorInput != null ? actorInput.actionPressedMask()
+                                        : nativeSecondController ? input.p2ActionPressedMask() : input.p1ActionPressedMask()) != 0;
 						} else {
 							effectiveRight = false;
 							effectiveLeft = false;
@@ -1074,16 +1106,18 @@ public class SpriteManager implements PlayableSstDispatcher {
 		cpu.suppressInitialLevelEventPresentationIfNeeded();
 	}
 
-	private static void publishInitialAssemblyInput(
+	private void publishInitialAssemblyInput(
 			AbstractPlayableSprite playable,
 			InitialPlayableInput input) {
-		int held = playable.isCpuControlled() ? input.p2Held() : input.p1Held();
+		var roster = nativeCompetitionRoster();
+		boolean secondController = playable.isCpuControlled() || roster != null && roster.slotOf(playable) == 1;
+		int held = secondController ? input.p2Held() : input.p1Held();
 		boolean rawUp = (held & AbstractPlayableSprite.INPUT_UP) != 0;
 		boolean rawDown = (held & AbstractPlayableSprite.INPUT_DOWN) != 0;
 		boolean rawLeft = (held & AbstractPlayableSprite.INPUT_LEFT) != 0;
 		boolean rawRight = (held & AbstractPlayableSprite.INPUT_RIGHT) != 0;
 		boolean rawJump = (held & AbstractPlayableSprite.INPUT_JUMP) != 0;
-		boolean rawJumpPress = ((playable.isCpuControlled() ? input.p2Pressed() : input.p1Pressed())
+		boolean rawJumpPress = ((secondController ? input.p2Pressed() : input.p1Pressed())
 				& AbstractPlayableSprite.INPUT_JUMP) != 0;
 		boolean controlLocked = playable.isControlLocked();
 		boolean forcedRight = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT)
@@ -1852,6 +1886,12 @@ public class SpriteManager implements PlayableSstDispatcher {
 		return levelManager;
 	}
 
+	private com.openggf.game.competition.NativeCompetitionRoster nativeCompetitionRoster() {
+		var gameplay = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+		return gameplay != null && gameplay.getSpriteManager() == this
+				? com.openggf.game.competition.NativeCompetitionRoster.from(gameplay.getWorldSession()) : null;
+	}
+
 	private GameStateManager currentGameStateManager() {
 		return GameServices.gameState();
 	}
@@ -2449,6 +2489,10 @@ public class SpriteManager implements PlayableSstDispatcher {
 							aps.restoreRewindState(perSprite);
 						}
 					}
+				}
+				var gameplay = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+				if (gameplay != null && gameplay.getSpriteManager() == SpriteManager.this) {
+					com.openggf.game.session.WorldSessionPolicyAccess.bindRoster(gameplay.getWorldSession(), SpriteManager.this);
 				}
 			}
 		};

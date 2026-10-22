@@ -47,6 +47,7 @@ import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpawn> {
+    private NativeCompetitionObjectStreaming nativeCompetitionStreaming;
     private static final Logger LOGGER = Logger.getLogger(ObjectPlacementController.class.getName());
     // ROM: ObjectsManager_GoingForward (s2.asm) uses addi.w #$280,d6 for forward load range.
     // Behind-window unload range is one chunk ($80) for forward movement.
@@ -275,7 +276,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     boolean reallocateToFirstFreeDynamicSlot(AbstractObjectInstance object,
             SlotAllocator slotAllocator, ObjectSlotLayout slotLayout,
             ObjectInstance[] execOrder, boolean updating,
-            BitSet slotsFreedDuringObjectPass) {
+            BitSet slotsFreedDuringObjectPass, java.util.function.IntSupplier plainAllocator) {
         if (object == null || !slotLayout.isDynamicSlot(object.getSlotIndex())) {
             return false;
         }
@@ -284,7 +285,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             slotsFreedDuringObjectPass.set(oldSlot);
         }
         slotAllocator.release(oldSlot);
-        int newSlot = slotAllocator.allocate();
+        int newSlot = plainAllocator.getAsInt();
         if (newSlot < 0) {
             slotAllocator.reserve(oldSlot);
             return false;
@@ -709,6 +710,59 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         bwdCounter = 1;
         Arrays.fill(objState, 0);
         spawnToCounter.clear();
+    }
+
+    void configureNativeCompetitionStreaming(NativeCompetitionObjectStreaming streaming) {
+        nativeCompetitionStreaming = java.util.Objects.requireNonNull(streaming);
+        execThenLoadPlacement = true;
+    }
+
+    boolean hasNativeCompetitionStreaming() { return nativeCompetitionStreaming != null; }
+
+    void resetNativeCompetitionStreaming(int cameraX) {
+        active.clear();
+        pendingCursorLoad.clear();
+        pendingCursorLoadOrder.clear();
+        nativeCompetitionStreaming.reset(spawns, cameraX);
+    }
+
+    void updateNativeCompetitionStreaming(int firstX, int secondX,
+            NativeCompetitionObjectStreaming.Loader loader) {
+        nativeCompetitionStreaming.update(firstX, secondX, loader);
+    }
+
+    int nativeCompetitionGeneralAllocationSlotLimitExclusive() {
+        return nativeCompetitionStreaming.generalAllocationSlotLimitExclusive();
+    }
+
+    Object captureNativeCompetitionStreaming() { return nativeCompetitionStreaming.capture(); }
+    void restoreNativeCompetitionStreaming(Object snapshot) { nativeCompetitionStreaming.restore(snapshot); }
+    void swapNativeCompetitionStreamingSlots() { nativeCompetitionStreaming.swapSlots(); }
+
+    boolean loadNativeCompetitionSpawn(ObjectSpawn spawn, int counter, java.util.function.BooleanSupplier load) {
+        // ChkLoadObj_2P bset precedes allocation, including failure. Preserve
+        // the shipped latch when no instance can be created (s2.asm:33631-33649).
+        if (counter >= 0) {
+            boolean alreadyLoaded = (objState[counter] & 0x80) != 0;
+            objState[counter] |= 0x80;
+            if (alreadyLoaded) return true;
+            spawnToCounter.put(spawn, counter);
+        }
+        if (!load.getAsBoolean()) {
+            spawnToCounter.remove(spawn);
+            return false;
+        }
+        active.add(spawn);
+        int index = getSpawnIndex(spawn);
+        if (index >= 0) {
+            dormant.clear(index);
+            destroyedInWindow.clear(index);
+        }
+        return true;
+    }
+
+    void clearNativeCompetitionRespawnLatch(int counter) {
+        if (counter > 0 && counter < objState.length) objState[counter] &= ~0x80;
     }
 
     void reset(int cameraX) {

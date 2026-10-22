@@ -3,6 +3,8 @@ package com.openggf.level.rings;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameModule;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.competition.NativeCompetitionRoster;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.RingRules;
 import com.openggf.game.rewind.RewindTransient;
@@ -72,6 +74,10 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     private boolean romRenderFlagForFloorProbe = true;
     private boolean deferFirstPhysicsUpdate;
     private boolean clearMainPlayerRingsOnFirstUpdate;
+    // Native SST parent identity is a stable human slot, not the object-pass player.
+    // Scalar capture restores both latches after generic object/actor recreation.
+    private int nativeLossOwnerSlot = -1;
+    private int nativeCollectorSlot = -1;
     private boolean touchStateAlreadyPostMovement;
     private boolean deferFirstUpdateUntilOwnerPass;
     // Temporary pickup owners keep their own lifetime; native hurt-spill rings retain the shared ROM owner.
@@ -204,6 +210,29 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      */
     public void clearMainPlayerRingsOnFirstUpdate() {
         clearMainPlayerRingsOnFirstUpdate = true;
+        nativeLossOwnerSlot = -1;
+    }
+
+    void clearMainPlayerRingsOnFirstUpdate(AbstractPlayableSprite owner) {
+        clearMainPlayerRingsOnFirstUpdate();
+        nativeLossOwnerSlot = nativeSlotOf(owner);
+    }
+
+    private static int nativeSlotOf(PlayableEntity actor) {
+        if (!(actor instanceof AbstractPlayableSprite playable)) return -1;
+        var level = playable.currentLevelManagerIfAvailable();
+        var roster = level != null ? NativeCompetitionRoster.from(level.getWorldSession()) : null;
+        return roster != null ? roster.slotOf(playable) : -1;
+    }
+
+    private NativeCompetitionRoster nativeRosterForCapturedSlot() {
+        var services = servicesOrNull();
+        var world = services != null ? services.worldSession() : null;
+        if (world == null && services != null && services.levelManager() != null)
+            world = services.levelManager().getWorldSession();
+        var roster = NativeCompetitionRoster.from(world);
+        if (roster == null) throw new IllegalStateException("Native lost-ring owner world is unavailable");
+        return roster;
     }
 
     @Override
@@ -352,7 +381,9 @@ public class LostRingObjectInstance extends AbstractObjectInstance
             return;
         }
         if (clearMainPlayerRingsOnFirstUpdate) {
-            if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite playable) {
+            if (nativeLossOwnerSlot >= 0) {
+                nativeRosterForCapturedSlot().levelState(nativeLossOwnerSlot).resetRingsForLoss();
+            } else if (player instanceof AbstractPlayableSprite playable) {
                 playable.setRingCount(0);
             }
             clearMainPlayerRingsOnFirstUpdate = false;
@@ -374,19 +405,23 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         // skipping ahead to another overlapping ring.
         if (collected && !collectionRoutineStarted
                 && com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(servicesOrNull())) {
+            var collectorRoster = nativeCollectorSlot >= 0 ? nativeRosterForCapturedSlot() : null;
             collectionRoutineStarted = true;
             // ROM Touch_ChkValue only writes routine=4. GiveRing runs when this
             // Obj37 slot next executes (loc_1A7C2), which can be later in the
             // same object pass or on the following frame depending on slot order.
             ObjectServices services = servicesOrNull();
-            if (services != null && services.levelGamestate() != null) {
+            if (collectorRoster != null) {
+                collectorRoster.levelState(nativeCollectorSlot).addRings(1);
+            } else if (services != null && services.levelGamestate() != null) {
                 services.levelGamestate().addRings(1);
             } else if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite playable) {
                 playable.addRings(1);
             }
             if (services != null) {
                 var policies = com.openggf.game.mutators.NativeObjectPolicyAccess.port(services);
-                if (policies != null) policies.ringAcquired(player);
+                if (policies != null) policies.ringAcquired(collectorRoster != null
+                        ? collectorRoster.player(nativeCollectorSlot) : player);
                 services.playSfx(com.openggf.audio.GameSound.RING);
             }
             sparkleStartFrame = executedFrame;
@@ -708,7 +743,14 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     }
 
     public void markCollected(int frameCounter) {
-        if (pickupDelayTicks>0 || !com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(servicesOrNull())) return;
+        markCollected(frameCounter, null);
+    }
+
+    /** Internal touch ingress: ROM Touch_ChkValue retains the first touching actor in parent(a1). */
+    public void markCollected(int frameCounter, PlayableEntity collector) {
+        if (collected || pickupDelayTicks>0
+                || !com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(servicesOrNull())) return;
+        nativeCollectorSlot = nativeSlotOf(collector);
         collected = true;
     }
 

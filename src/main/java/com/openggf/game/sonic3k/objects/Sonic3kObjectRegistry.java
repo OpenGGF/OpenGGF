@@ -33,6 +33,9 @@ import com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.ToxomisterBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance;
 import com.openggf.game.sonic3k.constants.S3kZoneSet;
+import com.openggf.game.sonic3k.competition.objects.CompetitionArenaObjectInstance;
+import com.openggf.game.sonic3k.competition.objects.CompetitionGoalObjectInstance;
+import com.openggf.game.sonic3k.competition.objects.CompetitionItemObjectInstance;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.Sonic3kLevel;
@@ -1802,7 +1805,43 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA,
                 (spawn, registry) -> new HPZSSEntryControlObjectInstance(spawn));
 
+        registerCompetitionFactories();
         factories.forEach(this::registerSetOnly);
+    }
+
+    /**
+     * Native arena placements use Sprite_Listing3, including IDs shared with
+     * campaign objects. Restrict miniature consumers to the five real ROM arenas;
+     * the campaign and custom-zone factories retain their own participant contract.
+     */
+    private void registerCompetitionFactories() {
+        for (int zone = 0x0E; zone <= 0x12; zone++) {
+            registerCompetitionArenaObject(zone, 0x02, CompetitionArenaObjectInstance.Kind.PATH_SWAP);
+            registerCompetitionArenaObject(zone, 0x05, CompetitionArenaObjectInstance.Kind.ROCK);
+            registerCompetitionArenaObject(zone, 0x07, CompetitionArenaObjectInstance.Kind.SPRING);
+            registerCompetitionArenaObject(zone, 0x28, CompetitionArenaObjectInstance.Kind.INVISIBLE_PLATFORM);
+            registerCompetitionArenaObject(zone, 0x33, CompetitionArenaObjectInstance.Kind.FLOOR_BUTTON);
+            registerCompetitionArenaObject(zone, 0x38, CompetitionArenaObjectInstance.Kind.FAN);
+            registerCompetitionArenaObject(zone, 0x4A, CompetitionArenaObjectInstance.Kind.BUMPER);
+            registerCompetitionArenaObject(zone, 0x4F, CompetitionArenaObjectInstance.Kind.MUD);
+            registerCompetitionArenaObject(zone, 0x5D, CompetitionArenaObjectInstance.Kind.TRIANGLE);
+            registerCompetitionArenaObject(zone, 0x5E, CompetitionArenaObjectInstance.Kind.BLADE);
+            registerCompetitionArenaObject(zone, 0x5F, CompetitionArenaObjectInstance.Kind.RETRACTING_SPRING);
+            registerCompetitionArenaObject(zone, 0x60, CompetitionArenaObjectInstance.Kind.ELEPHANT);
+            registerCompetitionArenaObject(zone, 0x61, CompetitionArenaObjectInstance.Kind.BALLOON);
+            registerCompetitionArenaObject(zone, 0x62, CompetitionArenaObjectInstance.Kind.SAND_BAR);
+            registerCompetitionArenaObject(zone, 0x63, CompetitionArenaObjectInstance.Kind.BUTTON);
+            registerStockRomZoneBound(0x64, S3kZoneSet.S3KL, zone,
+                    (spawn, registry) -> new CompetitionItemObjectInstance(spawn));
+            registerStockRomZoneBound(0x65, S3kZoneSet.S3KL, zone,
+                    (spawn, registry) -> new CompetitionGoalObjectInstance(spawn));
+            registerCompetitionArenaObject(zone, 0x66, CompetitionArenaObjectInstance.Kind.DRIPPER);
+        }
+    }
+
+    private void registerCompetitionArenaObject(int zone, int id, CompetitionArenaObjectInstance.Kind kind) {
+        registerStockRomZoneBound(id, S3kZoneSet.S3KL, zone,
+                (spawn, registry) -> new CompetitionArenaObjectInstance(spawn, kind));
     }
 
     @Override

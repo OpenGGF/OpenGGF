@@ -69,6 +69,7 @@ public class ObjectManager {
     static final int ANIM_SPINDASH = 0x09;
     private final ObjectPlacementController placement;
     private final ObjectPlacementAdmission placementAdmission;
+    private final ObjectManagerInternalAccess.Streaming competitionStreaming;
     private final ObjectRegistry registry;
     private final GraphicsManager graphicsManager;
     private final Camera camera;
@@ -309,6 +310,13 @@ public class ObjectManager {
                 slotLayout.twoAxisCursorPlacement()
                         ? SlotEmptyPredicate.ROUTINE_POINTER
                         : SlotEmptyPredicate.ID_BYTE);
+        this.competitionStreaming = new ObjectManagerInternalAccess.Streaming(placement, placementAdmission,
+                registry, slotAllocator, slotLayout, objectServices, objectCallbacks, activeObjects,
+                instanceToSpawn, dynamicObjects, this::registerActiveObject, this::removeActiveObject,
+                this::removeDynamicObjectInstance, this::releaseSlot, () -> {
+                    bucketsDirty = true;
+                    activeObjectsCacheDirty = true;
+                });
         this.populationView = new ObjectManagerPopulationView(objectCallbacks, slotLayout,
                 slotAllocator, reservedChildSlots, activeObjects, dynamicObjects,
                 postPlayerHooksScratch);
@@ -505,6 +513,7 @@ public class ObjectManager {
         s2LatchedObjectManagerCameraX = cameraX;
         twoAxisCameraYCoarse = Integer.MIN_VALUE;
         placement.reset(cameraX, persistentRespawnState);
+        if (competitionStreaming.active()) placement.resetNativeCompetitionStreaming(cameraX);
         if (registry != null) {
             registry.reportCoverage(placement.getAllSpawns());
         }
@@ -817,7 +826,7 @@ public class ObjectManager {
         // post-camera placement pass, while S2 keeps its single exec->load pass.
         if (!counterBased) {
             if (!execThenLoad || !slotLayout.twoAxisCursorPlacement()) {
-                placement.update(cameraX);
+                if (!competitionStreaming.active()) placement.update(cameraX);
             }
             if (execThenLoad && !slotLayout.twoAxisCursorPlacement()) {
                 cleanupDestroyedDynamicObjects();
@@ -1407,6 +1416,7 @@ public class ObjectManager {
      * @param postCameraX camera X position after the camera update step
      */
     public void postCameraPlacementUpdate(int postCameraX) {
+        if (competitionStreaming.active()) return;
         if (slotLayout == ObjectSlotLayout.SONIC_2) {
             s2LatchedObjectManagerCameraX = postCameraX;
         }
@@ -2012,7 +2022,7 @@ public class ObjectManager {
 
     /** ROM {@code AllocateObject} availability for allocations deferred past the object load. */
     public boolean hasFreeDynamicSlotForDeferredAllocation(int alreadyDeferred) {
-        return slotAllocator.freeSlotCount() > alreadyDeferred;
+        return competitionStreaming.hasFreeDynamicSlotForDeferredAllocation(alreadyDeferred);
     }
 
     void flushPostExecDynamicSpawns() {
@@ -2201,6 +2211,10 @@ public class ObjectManager {
      * Returns -1 if all slots are in use (overflow).
      */
     private int allocateSlot() {
+        // Shipped S2 AllocateObject shortens only its plain scan in competition;
+        // AllocateObjectAfterCurrent retains its separate end-of-RAM bound
+        // (AllocateObject, s2.asm:33680-33694).
+        if (firstFreeDynamicSlot() < 0) return -1;
         return slotAllocator.allocate();
     }
 
@@ -2212,11 +2226,13 @@ public class ObjectManager {
      * (docs/s1disasm/_incObj/0A LZ Drowning Countdown.asm:283-284).
      */
     public boolean hasFreeDynamicSlot() {
-        return slotAllocator.hasFreeSlot();
+        return firstFreeDynamicSlot() >= 0;
     }
 
     /** Non-mutating {@code FindFreeObj} result for ROM owner-boundary decisions. */
-    public int firstFreeDynamicSlot() { return slotAllocator.firstFreeSlot(); }
+    public int firstFreeDynamicSlot() {
+        return competitionStreaming.firstFreeDynamicSlot();
+    }
 
     /**
      * Reserves the next available dynamic slot for non-ObjectInstance systems
@@ -2225,7 +2241,7 @@ public class ObjectManager {
      * by {@code RingManager} rather than {@code ObjectManager}.
      */
     public int allocateDynamicSlot() {
-        return slotAllocator.allocate();
+        return allocateSlot();
     }
 
     /**
@@ -2251,7 +2267,7 @@ public class ObjectManager {
     public void reallocateToFirstFreeDynamicSlot(AbstractObjectInstance object) {
         if (placement.reallocateToFirstFreeDynamicSlot(
                 object, slotAllocator, slotLayout, execOrder,
-                updating, slotsFreedDuringObjectPass)) {
+                updating, slotsFreedDuringObjectPass, this::allocateSlot)) {
             bucketsDirty = true;
             activeObjectsCacheDirty = true;
         }
@@ -3276,6 +3292,8 @@ public class ObjectManager {
      * never a sprite top-left bound, so the window is not shifted by half-width.
      */
     private boolean isObjectOutOfRange(ObjectInstance instance, ObjectSpawn spawn, int cameraX) {
+        // Native block ownership replaces MarkObjGone in competition.
+        if (competitionStreaming.active()) return false;
         int referenceX = outOfRangeReferenceX(instance, spawn);
         if (windowingStrategy.overridesUnloadWindow()) {
             if (windowingStrategy instanceof ViewportAwareObjectWindowingStrategy viewportAware) return viewportAware.isOutsideUnloadWindow(referenceX, cameraX, camera.getWidth());
@@ -3456,6 +3474,10 @@ public class ObjectManager {
      * the following frame's ExecuteObjects.
      */
     private void syncActiveSpawnsLoad(boolean allowVerticalLoadBypassForS2) {
+        if (competitionStreaming.active()) {
+            competitionStreaming.update();
+            return;
+        }
         Collection<ObjectSpawn> activeSpawns = placement.getActiveSpawns();
         boolean changed = false;
 
@@ -3584,6 +3606,10 @@ public class ObjectManager {
             bucketsDirty = true;
             activeObjectsCacheDirty = true;
         }
+    }
+
+    ObjectManagerInternalAccess.Streaming nativeCompetitionStreaming() {
+        return competitionStreaming;
     }
 
     private int currentCameraYCoarseForTwoAxisPlacement() {

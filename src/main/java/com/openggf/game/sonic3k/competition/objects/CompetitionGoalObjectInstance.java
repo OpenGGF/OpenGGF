@@ -1,0 +1,72 @@
+package com.openggf.game.sonic3k.competition.objects;
+
+import com.openggf.game.PlayableEntity;
+import com.openggf.game.session.WorldSessionPolicyAccess;
+import com.openggf.game.sonic3k.competition.S3kCompetitionSession;
+import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
+
+import java.util.List;
+
+/** S3KL $65, Obj_2PGoalMarker (sonic3k.asm:73950-74207). */
+public final class CompetitionGoalObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+    public static final String ART_KEY = "competition_goal";
+    private int animationFrame;
+    private int animationTimer;
+    private int mappingFrame;
+    private boolean initialized;
+
+    public CompetitionGoalObjectInstance(ObjectSpawn spawn) { super(spawn, "CompetitionGoalMarker"); }
+
+    @Override public void update(int vIntRunCount, PlayableEntity ignored) {
+        S3kCompetitionSession session = WorldSessionPolicyAccess.getService(
+                services().worldSession(), S3kCompetitionSession.class);
+        if (session != null) updateNative(session);
+    }
+
+    public void updateNative(S3kCompetitionSession session) {
+        if (!initialized) {
+            initialized = true;
+            session.beginGoalHud();
+            // Obj_2PGoalMarker falls through after the first failed allocation.
+            // Every call scans after the current GOAL SST, not after the last child.
+            var kinds = new CompetitionHudObjectInstance.Kind[]{
+                    CompetitionHudObjectInstance.Kind.ITEM_ICON, CompetitionHudObjectInstance.Kind.ITEM_ICON,
+                    CompetitionHudObjectInstance.Kind.LAP, CompetitionHudObjectInstance.Kind.LAP,
+                    CompetitionHudObjectInstance.Kind.NEON,
+                    CompetitionHudObjectInstance.Kind.TIMER, CompetitionHudObjectInstance.Kind.TIMER,
+                    CompetitionHudObjectInstance.Kind.RESERVED};
+            int[] slots = {0, 1, 0, 1, 0, 0, 1, 0};
+            for (int i = 0; i < kinds.length; i++) {
+                var kind = kinds[i];
+                int slot = slots[i];
+                if (session.allocateAfter(this, () -> new CompetitionHudObjectInstance(kind, slot)) == null) break;
+                if (kind == CompetitionHudObjectInstance.Kind.TIMER) session.installGoalTimer(slot);
+            }
+        }
+        if (!session.tickGoalHold()) session.observeGoal(getX(), getY(), spawn.subtype(), this);
+        // Animate_Sprite reads the ROM script, including its native six-tick cadence.
+        animationTimer = (animationTimer - 1) & 0xFF;
+        if ((byte) animationTimer >= 0) return;
+        int script = (session.goalAnimationByte(0) << 8) | session.goalAnimationByte(1);
+        animationTimer = session.goalAnimationByte(script);
+        int next = session.goalAnimationByte(script + 1 + animationFrame);
+        if (next == 0xFF) { animationFrame = 0; next = session.goalAnimationByte(script + 1); }
+        mappingFrame = next;
+        animationFrame = (animationFrame + 1) & 0xFF;
+    }
+
+    public int mappingFrame() { return mappingFrame; }
+    @Override public boolean isPersistent() { return true; } // Native has no out-of-range tail.
+    @Override public boolean isHighPriority() { return false; }
+    @Override public int getPriorityBucket() {
+        return RenderPriority.fromS3kWord(0x280); // Obj_2PGoalMarker, sonic3k.asm:73955.
+    }
+    @Override public void appendRenderCommands(List<GLCommand> commands) {
+        var renderer = getRenderer(ART_KEY);
+        if (renderer != null && renderer.isReady()) renderer.drawFrameIndex(mappingFrame, getX(), getY(), false, false);
+    }
+}

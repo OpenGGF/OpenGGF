@@ -1657,7 +1657,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return PlayableSpriteRuntimeServices.resolveAnimationId(currentGameModule(), animation);
         }
 
-        public final LevelState currentLevelState() { return PlayableSpriteRuntimeServices.levelState(currentLevelManagerIfAvailable()); }
+        public final LevelState currentLevelState() { return PlayableSpriteRuntimeServices.levelState(this); }
         public final TimerManager currentTimerManager() { return PlayableSpriteRuntimeServices.timers(this); }
         public final GameStateManager currentGameState() { return PlayableSpriteRuntimeServices.gameState(this); }
         public final GameStateManager currentGameStateOrNull() { return PlayableSpriteRuntimeServices.gameStateOrNull(this); }

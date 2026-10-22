@@ -19,7 +19,7 @@ S3K competition selects Grand Prix, Match Race, or Time Attack through
 response are separate native paths. Arena IDs $0E-$12 use S3KL object
 dispatch; the same table-selection correction applies through zone $15.
 
-Current source reproduces the audit: `GameLoop` rejects `TWO_PLAYER`, sends
+The initial base reproduced the audit: `GameLoop` rejects `TWO_PLAYER`, sends
 `OPTIONS` to ordinary gameplay, and has no native competition session;
 `GameplayTeamBootstrap` constructs CPU secondaries; `SpriteManager` supplies
 P1 input to ordinary non-CPU playables. One camera and global player counters
@@ -119,3 +119,57 @@ title-card boundary, not a runtime transition failure. After waiting for the
 actual LEVEL mode, `TestSonic2NativeMenuLaunch` passed with no skips (91 seconds
 queue waiting, 28.729 seconds Maven execution). These checks do not certify native
 competition, attract demos, or startup timing.
+
+## Human world and rewind prerequisite milestone
+
+On `1d5ad54e6` plus this milestone, `NativeCompetitionWorld` composes a pinned
+ROM world with an explicit supplied human roster and native world policy. It
+validates the participants before retiring the outgoing context and publishes
+the resulting managers through the existing Engine owner. This remains an
+internal composition seam; neither competition provider is activated.
+
+The factory now installs supplied humans before policy roster binding. Slot
+identity determines both controller inputs, including independent ABC edges,
+and P1/P2 execution order; ordinary CPU bootstrap and scripted input remain
+separate owners. The canonical level update advances each present bank once.
+Actor restore relinks the policy roster before object reconstruction, and a
+second camera adapter plus final reference repair keeps both captured views
+while focusing reconstructed participants. This proves registry behavior, not
+the still-pending live competition rewind controls or load-history isolation.
+
+S2 plain AllocateObject now consumes the streaming provider's semantic general
+slot limit; native placement banks, explicit reservations and AllocateAfterCurrent
+keep their own ranges. The collector-aware lost-ring call carries the actual
+actor. The native bumper skips its ordinary moving-endpoint unload, while
+ordinary play retains it. Replacing a ring spawn list also clears its active
+indices, preventing an empty editor resync from retaining invalid indices.
+
+`LevelAnimationInternalAccess.installNativeAnimatedPatternManager(context,
+manager)` installs a rewindable native pattern owner with its own key. It retains
+the existing palette manager and its original adapter: S3K's combined manager
+still owns palette cycles/fades after competition replaces AniPLC. Domain state
+is removed at ordinary animation initialization/reset and refreshed on native
+replacement. The independent regression restores and replays both owners and
+rejects a replacement that aliases the palette key or has no rewind state.
+
+Focused evidence, all queued with Java 25 and Lua 5.4:
+
+- Required S3K keep-green loading/bootstrap/decoding and participant/input/API
+  selection: 86 passed, zero failures/errors/skips, 96 seconds execution with
+  zero queue wait, absolute locked-on ROM and surfaceless EGL selected.
+- Allocation/touch/loss/API selection: 123 tests, one error in an old bumper
+  fixture missing injected services; the remaining 122 passed. Correcting that
+  fixture yielded four bumper and 36 ring checks passing in the next selection.
+- That 46-test selection had one new camera-registry fixture error because its
+  mocked collision system returned a null snapshot; the fixture now uses the real
+  collision owner. No runtime workaround was added for either fixture error.
+- Final affected command `maven_queue.py --lean -Dmse=off
+  -Dtest=TestNativeCompetitionParticipantDispatch,TestNativePatternOwnerReplacement,TestModApiSignatureSurface
+  test -B`: 20 passed, zero failures/errors/skips, 88 seconds execution, zero
+  queue wait. Includes both-camera full-registry restore and native pattern/palette
+  ownership. Source was frozen for that run. An independent read-only review
+  found no material issues in this bounded prerequisite layer.
+
+The complete product acceptance matrix above remains open for live world,
+S2 interlace/halfpipe/teleport, both native session/render/result products and
+actual route capture/restore coverage. Domain-only tests do not close those rows.

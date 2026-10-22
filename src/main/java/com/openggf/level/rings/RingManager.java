@@ -1,6 +1,7 @@
 package com.openggf.level.rings;
 
 import com.openggf.game.ModApi;
+import com.openggf.game.competition.NativeCompetitionRoster;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameSound;
 import com.openggf.game.GameModule;
@@ -55,6 +56,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     private static final int ATTRACT_TOUCH_RADIUS = 6;
 
     private final RingPlacement placement;
+    private NativeCompetitionRingStreaming nativeCompetitionStreaming;
     private final RingRenderer renderer;
     private final LostRingPool lostRings;
     private final LevelManager levelManager;
@@ -115,12 +117,52 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         bindNativeSlots();
     }
 
+    private NativeCompetitionRoster nativeCompetitionRoster() {
+        return NativeCompetitionRoster.from(mutatorWorld);
+    }
+
+    private boolean nativeCompetitionStreamingActive() {
+        return nativeCompetitionStreaming != null && nativeCompetitionRoster() != null;
+    }
+
+    void enableNativeCompetitionStreaming(NativeCompetitionRingStreaming streaming) {
+        if (nativeCompetitionRoster() == null) {
+            throw new IllegalStateException("Native ring streaming requires an active explicit roster");
+        }
+        nativeCompetitionStreaming = java.util.Objects.requireNonNull(streaming);
+    }
+
+    Object captureNativeCompetitionStreaming() { return nativeCompetitionStreaming.capture(); }
+    void restoreNativeCompetitionStreaming(Object snapshot) {
+        nativeCompetitionStreaming.restore(snapshot);
+        refreshNativeCompetitionRingInterest();
+    }
+
+    void swapNativeCompetitionStreamingSlots() {
+        if (!nativeCompetitionStreamingActive()) throw new IllegalStateException("Native ring streaming is inactive");
+        nativeCompetitionStreaming.swapSlots();
+        refreshNativeCompetitionRingInterest();
+    }
+
+    private void refreshNativeCompetitionRingInterest() {
+        placement.clearActiveIndices();
+        for (int slot = 0; slot < 2; slot++) {
+            for (int index = nativeCompetitionStreaming.start(slot); index < nativeCompetitionStreaming.end(slot); index++) {
+                placement.addActiveIndex(index);
+            }
+        }
+    }
+
     private boolean ringsAllowed() {
         return com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(mutatorWorld, acquisitionDomain);
     }
 
     public void reset(int cameraX) {
         placement.reset(cameraX);
+        if (nativeCompetitionStreamingActive()) {
+            nativeCompetitionStreaming.reset(placement.getAllSpawns(), cameraX);
+            refreshNativeCompetitionRingInterest();
+        }
         lostRings.reset();
         spinBounds = null;
         releaseAttractedRingSlots();
@@ -151,7 +193,19 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
     public void update(int cameraX, AbstractPlayableSprite player, int frameCounter,
                        boolean collectStageRingsInUpdate) {
-        placement.update(cameraX);
+        if (nativeCompetitionStreamingActive()) {
+            var roster = nativeCompetitionRoster();
+            nativeCompetitionStreaming.update(roster.camera(0).getX(), roster.camera(1).getX());
+            refreshNativeCompetitionRingInterest();
+        } else placement.update(cameraX);
+        if (nativeCompetitionStreamingActive()) {
+            if (collectStageRingsInUpdate && !stageRingsUseObjectTouchCollection) {
+                // Native RunObjects reaches MainCharacter before Sidekick.
+                collectStageRings(nativeCompetitionRoster().player(0), frameCounter);
+                collectStageRings(nativeCompetitionRoster().player(1), frameCounter);
+            }
+            return;
+        }
         if (player == null || player.getDead()) {
             return;
         }
@@ -306,7 +360,10 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 && player.getInvulnerableFrames() >= RING_INVULNERABLE_BLOCK_THRESHOLD) {
             return;
         }
-        int activeCount = placement.activeIndexCount();
+        int slot = nativeCompetitionStreamingActive() ? nativeCompetitionRoster().slotOf(player) : -1;
+        if (nativeCompetitionStreamingActive() && slot < 0) return;
+        int rangeStart = slot >= 0 ? nativeCompetitionStreaming.start(slot) : 0;
+        int activeCount = slot >= 0 ? nativeCompetitionStreaming.end(slot) - rangeStart : placement.activeIndexCount();
         if (activeCount == 0) {
             return;
         }
@@ -341,7 +398,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         int ringHeight = ringRules != null ? ringRules.ringCollisionHeight() : RING_COLLISION_HALF;
 
         for (int i = 0; i < activeCount; i++) {
-            int index = placement.activeIndexAt(i);
+            int index = slot >= 0 ? rangeStart + i : placement.activeIndexAt(i);
             if (index < 0 || placement.isCollected(index)) {
                 continue;
             }
@@ -430,6 +487,11 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         if (index < 0 || placement.isCollected(index)) {
             return false;
         }
+        if (nativeCompetitionStreamingActive()) {
+            int slot = nativeCompetitionRoster().slotOf(player);
+            if (slot < 0 || index < nativeCompetitionStreaming.start(slot)
+                    || index >= nativeCompetitionStreaming.end(slot)) return false;
+        }
         // S1 Obj25 collection is triggered from Sonic's ReactToItem slot, after
         // this engine has already run the ring object's update for the frame.
         // Start the Obj25 Ring_Sparkle/DeleteObject cadence on the next object
@@ -451,7 +513,12 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             placement.setSparkleStartFrame(index, frameCounter);
         }
         playRingAcquisitionSound();
-        player.addRings(1);
+        var roster = nativeCompetitionStreamingActive() ? nativeCompetitionRoster() : null;
+        if (roster != null) {
+            int slot = roster.slotOf(player);
+            if (slot < 0) throw new IllegalArgumentException("Ring collector is not a native slot");
+            roster.levelState(slot).addRings(1);
+        } else player.addRings(1);
         notifyNativeRingPickup(player);
     }
 
@@ -1581,6 +1648,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         /** Replaces spawns and resets all collection/sparkle state. */
         private void replaceSpawnsAndReset(List<RingSpawn> newSpawns) {
             replaceSpawns(sortedByX(newSpawns));
+            clearActiveIndices();
             collected.clear();
             sparkleStartFrames = new int[this.spawns.size()];
             Arrays.fill(sparkleStartFrames, NO_SPARKLE);
@@ -2036,13 +2104,20 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             // ROM Obj37_Init (s2.asm:25127-25130): cap spilled rings at $20 (32).
             // Ringfall's full-inventory choice (beyondNativeLimit) is the only path past it.
             int toSpawn = Math.min(ringCount, beyondNativeLimit ? MAX_FULL_INVENTORY_RINGS : MAX_LOST_RINGS);
+            LevelManager playerLevel = player.currentLevelManagerIfAvailable();
+            var nativeRoster = playerLevel != null
+                    ? com.openggf.game.competition.NativeCompetitionRoster.from(playerLevel.getWorldSession()) : null;
+            int nativeSlot = nativeRoster != null ? nativeRoster.slotOf(player) : -1;
             int angle = 0x288;
             int xVel = 0;
             int yVel = 0;
-            reset();
-            // ROM: Ring_spill_anim_counter = $FF, accumulator reset (s2.asm Obj37_Init).
-            // Reset the shared spin owner that feeds every live ring's render frame.
-            spillAnimation.reset();
+            // HurtCharacter's failed owner allocation never enters Obj37_Init
+            // (s2.asm:85615-85623), so leave existing native spills untouched.
+            boolean spillInitialized = nativeSlot < 0;
+            if (spillInitialized) {
+                reset();
+                spillAnimation.reset();
+            }
             ObjectManager objectManager = levelManager != null ? levelManager.getObjectManager() : null;
             // Atomic stop-on-(-1) slot-allocation contract (ROM Obj37_Init s2.asm:25143-25144:
             // `bsr.w AllocateObject; bne.w +++` — a failed AllocateObject branches PAST the
@@ -2121,6 +2196,13 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                     break;
                 }
 
+                if (!spillInitialized) {
+                    reset();
+                    // Obj37_Init resets the shared lifetime and spin owner.
+                    spillAnimation.reset();
+                    spillInitialized = true;
+                }
+
                 // Process_Sprites' d7 countdown supplies both animation phase and
                 // floor-probe cadence. Continue that countdown across virtual entries;
                 // using -1 would collapse every overflow ring onto the same phase.
@@ -2145,7 +2227,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                         // An owner allocated behind the live Process_Sprites
                         // cursor remains routine 0 until the following pass
                         // (docs/skdisasm/sonic3k.asm:21101-21124,35589-35656).
-                        ringObject.clearMainPlayerRingsOnFirstUpdate();
+                        ringObject.clearMainPlayerRingsOnFirstUpdate(player);
                     }
                     if (i > 0 && ownerWaitsForNextPass
                             && !objectManager.reservedSlotWaitsForNextObjectPass(slotIndex)) {
@@ -2197,17 +2279,23 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 angle = -angle;
             }
 
-            if (!deferRingCountClear) {
+            // HurtCharacter (s2.asm:85604-85623) leaves the native bank intact
+            // when AllocateObject cannot produce an Obj37 owner. Ordinary callers
+            // retain their existing shared-bank path.
+            if (!deferRingCountClear && (nativeSlot < 0 || spawned > 0)) {
                 // S3K Obj_Bouncing_Ring clears Ring_count and Extra_life_flags in
                 // the owner init (sonic3k.asm:35657-35661).
-                LevelState levelState = levelManager != null ? levelManager.getLevelGamestate() : null;
+                LevelState levelState = nativeSlot >= 0 ? nativeRoster.levelState(nativeSlot)
+                        : levelManager != null ? levelManager.getLevelGamestate() : null;
                 if (levelState != null) {
                     levelState.resetRingsForLoss();
                 } else {
                     player.setRingCount(0);
                 }
             }
-            audioManager.playSfx(GameSound.RING_SPILL);
+            if (spillInitialized) {
+                audioManager.playSfx(GameSound.RING_SPILL);
+            }
         }
 
         /**

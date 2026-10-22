@@ -322,6 +322,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     HudRenderManager hudRenderManager;
     private HudProfile activeHudProfile = HudProfile.stock();
     AnimatedPatternManager animatedPatternManager;
+    LevelAnimationInternalAccess.Binding nativePatternBinding;
     AnimatedPaletteManager animatedPaletteManager;
     private ModZoneRuntimeProfile activeModZoneRuntimeProfile;
     final LevelContributedZoneRuntime contributedZoneRuntime;
@@ -1212,7 +1213,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     public void initPlayerAndCheckpoint() {
         resetPlayerState();
         checkpointCoordinator.prepareForLevelStart();
-        levelGamestate = gameModule.createLevelState();
+        var roster = com.openggf.game.competition.NativeCompetitionRoster.from(worldSession);
+        levelGamestate = roster == null ? gameModule.createLevelState() : roster.levelState(0);
     }
 
     /**
@@ -1647,14 +1649,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (zoneFeatureProvider != null && level != null) {
             zoneFeatureProvider.update(playable, camera.getX(), getFeatureZoneId());
         }
-        if (levelGamestate != null) {
-            if (!isHudSuppressed()) {
-                levelGamestate.update();
-            }
-            if (levelGamestate.isTimeOver() && playable != null && !playable.getDead()) {
-                playable.applyHurtOrDeath(0, DamageCause.TIME_OVER, false);
-            }
-        }
+        frameRuntimeUpdater.updateLevelState(playable, worldSession);
 
         frameRuntimeUpdater.updateParallaxAndAnimatedContent();
 
@@ -1967,6 +1962,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     private void initAnimatedPatterns() {
+        LevelAnimationInternalAccess.clearNativePatternOwner(this);
         animatedPatternManager = null;
         if (activeModZoneRuntimeProfile != null
                 && !activeModZoneRuntimeProfile.animatedTiles()) {
@@ -4585,6 +4581,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         activeModZoneRuntimeProfile = null;
         contributedZoneRuntime.clear();
         activeCustomZonePaletteBridge = null;
+        LevelAnimationInternalAccess.clearNativePatternOwner(this);
         animatedPatternManager = null;
         animatedPaletteManager = null;
         checkpointCoordinator.resetState();

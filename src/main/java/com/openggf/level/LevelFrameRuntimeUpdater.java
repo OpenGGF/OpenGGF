@@ -27,6 +27,31 @@ final class LevelFrameRuntimeUpdater {
         OscillationManager.update(levelManager.frameCounter);
     }
 
+    void updateLevelState(com.openggf.sprites.playable.AbstractPlayableSprite playable,
+            com.openggf.game.session.WorldSession worldSession) {
+        if (levelManager.levelGamestate != null) {
+            var roster = com.openggf.game.competition.NativeCompetitionRoster.from(worldSession);
+            if (roster == null) {
+                if (!levelManager.isHudSuppressed()) levelManager.levelGamestate.update();
+                if (levelManager.levelGamestate.isTimeOver() && playable != null && !playable.getDead()) {
+                    playable.applyHurtOrDeath(0, com.openggf.game.DamageCause.TIME_OVER, false);
+                }
+            } else {
+                // One canonical world tick owns both native timer banks. Split
+                // rendering never advances either timer or global animation.
+                for (int slot = 0; slot < 2; slot++) {
+                    var actor = roster.player(slot);
+                    var state = roster.levelState(slot);
+                    if (actor == null || state == null) continue;
+                    if (!levelManager.isHudSuppressed()) state.update();
+                    if (state.isTimeOver() && !actor.getDead()) {
+                        actor.applyHurtOrDeath(0, com.openggf.game.DamageCause.TIME_OVER, false);
+                    }
+                }
+            }
+        }
+    }
+
     void updateParallaxAndAnimatedContent() {
         if (levelManager.parallaxManager != null) {
             levelManager.parallaxManager.update(

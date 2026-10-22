@@ -71,6 +71,13 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Method selectors may not narrow ArchUnit field rules (2026-10-22, native-mode
+foundation guards). Surefire's two named architecture selectors ran all26
+ArchUnit field identities; adjacent Jupiter method tests were not selected.
+Read actual XML identities and totals before reporting a projected three-test
+run or scheduling another copy. The owning size test plus those26 rules passed;
+see the [foundation composition evidence](../architecture/plans/2026-10-22-native-gap-swarm.md).
+
 An end-of-frame oracle can hide the pre-object writer it intends to test
 (2026-10-22, S1 water clock). Positioned LZ3 checks all ended three pixels lower
 because later physics/radius work replaced the observed Y. The existing

@@ -674,3 +674,234 @@ Its expired peer-registry update was rejected before mutation; this finding is
 recorded in durable T3 handoff messages, not that unchanged registry. No paired
 execution gate was opened. NativeModes source/activation, physical-video permit,
 S3K pause upper-RAM projection and the remaining parity frontiers stay open.
+
+
+## Renewed Root foundation composition, 2026-10-22 16:54 UTC
+
+A new bounded Root source window replaces the expired local work slices: source
+cutoff17:40Z, cleanup18:00Z, expiry18:15Z. It permits build-only compilation,
+two focused requests and fresh affected guards. It does not open Main integration,
+provider activation, broad smoke, native capture or the MHZ paired observations.
+The aggregate starts at `d05648a7b88de2b073a757de072ed45b0e7edbc9`; the original
+integration base remains `94c40570a15a11b70caf7456e9b0d0a8eec8a9b4`.
+
+The ordered original source leaves are:
+
+1. `592301bbaaea4eb27ebdbc84deb4514375d075dc`: S2 domain/session/assets.
+2. `b1caee5e2f01febdece220f5fa54d50a1286330f`: S3K miniature domain/session.
+3. `6e67d8b985bedd34d0269c453a4dda941601ac6e`: independent S2 object/ring cursors.
+4. `63d5e1fe66b1113d72a376e66edf95f76eefb45b`: only its seven runtime/test
+   paths; its three policy files are excluded because Root has the newer policy.
+5. `d4f63d5a7dbc28da02c7bdfb4b45bfe33a772f18`: explicit human world, cameras,
+   bootstrap, touch and participant dispatch.
+
+No compatibility alias, later Host/Views/reconstruction leaf or unrelated ancestry
+is imported to compile these foundations. The two new domain designs and the
+original owned human-world design section accompany the source. Existing Root
+prose remains intact. The incoming S3K design's two stale label ranges are aligned
+to pinned `8b2cf3c4178f`; the described native branches are unchanged.
+
+The literal third patch did not match the already-composed draw/ring source.
+Its failed apply wrote nothing. A shell sequence nevertheless advanced to the
+fourth source subset; that owned subset was reversed before any build or test.
+The three remaining source deltas were then applied in order with checked,
+byte-preserving three-way applications. All applied cleanly. No partial state was
+validated or presented as a union pass.
+
+The five foundations raise ObjectManager from3051 to3150 effective lines.
+A bounded extraction moves only their new streaming implementation and two
+allocation-query bodies into package-private `ObjectManagerInternalAccess.Streaming`.
+The helper retains the original placement/allocator/maps/lists/router/services
+identities and binds private callbacks once during manager construction. Roster
+lookup stays live. Constructor code invokes no callback. Public manager allocation
+entry points remain, including virtual `firstFreeDynamicSlot()` dispatch from
+allocation and availability paths. Respawn/eviction/release/registration/cache
+order is unchanged. Word2C, native queue, drawing, ordinary allocator, movement
+and power-up restore ownership are untouched. Independent read-only comparison
+found all13 moved/query bodies equivalent after those substitutions. Static
+count3072 leaves14 lines below3086; the owning JUnit guard is recorded below.
+
+Focused validation replaces a broad run for this bounded inactive foundation
+composition: new native behavior requires an explicit supplied roster/policy;
+ordinary placement, native queue/SAT, rings, all three real EGL game consumers,
+rewind and the four required S3K keepers are exercised together. This does not
+replace the delivery-wide smoke plan before eventual integration or qualify the
+later concrete Hosts, video pipeline or competition activation.
+
+Build-only request49719 passed `test-compile` with Java25, Maven1:16, on the first
+two source leaves. Focused58416 then passed227 tests in23 XML suites, zero
+failures/errors/skips, queue9s/Maven38.604s. Its22 selectors include the existing
+two packages named TestSonic3kLevelLoading; both ran. First-two source fingerprint
+`36bb266b7898cd5516a1ed57d34af52756e05d6c1019afff597924ade008e613`
+matched through that run. This is earlier-source component evidence, not a claim
+that227 tests ran on the later five-leaf composition.
+
+After all five leaves and extraction, build-only45392 passed `test-compile`,
+Maven1:21, Java release25. Current focused3024 passed299 unique tests in27 XML
+suites, zero failures/errors/skips, queue0s/Maven38.756s. All XML identities,
+streams, skip elements and Java25.0.5/EGL/cwd/absolute-original-ROM properties were
+inspected. Frozen Java/racing/POM content fingerprint
+`2815787684a0fb7d449bd5293f14f9f8d387ec18b47ab1afb24197a48dfb7e34`
+matched through completion. Neither result is an exhaustive route or full-suite
+pass. The earlier and current test counts are not added as distinct coverage.
+
+Both focused commands use the following environment; the first substitutes the
+first-two selector list, report namespace and source state stated above:
+
+```bash
+rom_root=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
+env -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS \
+  -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH -u LIBGL_DRIVERS_PATH \
+  -u LIBGL_ALWAYS_SOFTWARE -u MESA_LOADER_DRIVER_OVERRIDE \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=${rom_root}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${rom_root}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${rom_root}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  '-Dopenggf.surefire.reports=target/root-modes-streaming-focused/reports' \
+  '-Dopenggf.test.tmpdir=target/root-modes-streaming-focused/tmp' \
+  '-Dopenggf.test.diagnostics=target/root-modes-streaming-focused/diagnostics' \
+  '-Dtest=TestNativeCompetitionObjectStreaming,TestNativeCompetitionRingStreaming,Sonic2ObjectPlacementTest,TestNativeParticipantLostRingOwnership,TestPlayableSpriteNativeParticipantServices,TestNativeCompetitionParticipantDispatch,TestNativePatternOwnerReplacement,TestHexBumperObjectInstance,TestRingManager,TestObjectManagerNativeSpriteSubmissions,TestNativeSstWord2C,TestModApiSignatureSurface,TestObjectDrawSlotEmissions,TestObjectManagerMultiBucketRenderable,TestRingNativeSlotDispatch,TestLostRingRenderState,TestNativeSpriteSatGameplay,TestSonic2CompetitionSession,TestSonic2CompetitionProduct,TestS3kCompetitionBinding,TestS3kCompetitionSession,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestNativeSpriteSubmissionRegistration' \
+  test -B
+```
+
+The first focus uses namespace `target/root-modes-foundations-focused` and
+selectors TestSonic2CompetitionAssets, TestSonic2CompetitionLevelProfile,
+TestSonic2CompetitionPresentation, TestSonic2CompetitionProduct,
+TestSonic2CompetitionSession, TestS3kCompetitionArenaObjects,
+TestS3kCompetitionAssets, TestS3kCompetitionBinding, TestS3kCompetitionDispatch,
+TestS3kCompetitionGoalAndItems, TestS3kCompetitionHud, TestS3kCompetitionPlayer,
+TestS3kCompetitionRecords, TestS3kCompetitionScreen, TestS3kCompetitionSession,
+TestSonic2CompetitionBoundary, TestGameLoopNativeMenus, TestModApiSignatureSurface,
+TestS3kAiz1SkipHeadless, TestSonic3kLevelLoading, TestSonic3kBootstrapResolver and
+TestSonic3kDecodingUtils, joined by commas in the same `-Dtest` argument.
+
+Fresh affected guard20813 completed39 tests:38 passed, one failed, zero errors/skips; queue82s/Maven36.537s. Its exact
+selection is TestArchUnitRules, TestRewindArchitectureGuard,
+TestRewindFieldDispositionGuard and
+TestArchitecturalSourceGuard#objectManagerFacadeStaysWithinExtractedCollaboratorBudget+releaseCriticalLargeClassesDoNotGrowWithoutExtraction,
+with `-Pguards -Dmse=off`, separate `target/root-modes-foundations-guards`
+reports/tmp and a fresh JVM. It retains the same Java/Lua/null/EGL values and
+unsets JDK_JAVA_OPTIONS/JAVA_TOOL_OPTIONS/_JAVA_OPTIONS/MAVEN_OPTS/DISPLAY/
+WAYLAND_DISPLAY; the guard is ROM-free and does not add focus-only flags.
+No size baseline, API pin or selection-policy file is changed.
+
+
+The exact failing identity is
+`TestArchitecturalSourceGuard#releaseCriticalLargeClassesDoNotGrowWithoutExtraction`:
+LevelManager3157 exceeds3144. ObjectManager's separate size guard passed;
+all32 ArchUnit identities and all five rewind guards passed. This is a new
+composition obligation, not an inherited baseline failure or an all-green guard
+run. The new source is not committed on that red result.
+
+The incoming canonical ordinary/roster timer block is moved without new state
+into existing `LevelFrameRuntimeUpdater.updateLevelState`, at the same phase
+after zone-feature updates and before parallax/animation. It receives the actual
+private-final worldSession argument, not a virtual getter. Each original
+levelGamestate reread and per-actor HUD check remains on the same receiver; P1/P2
+order and time-over callbacks remain unchanged. No animation-install, snapshot,
+API or policy shape changes. Independent comparison found the19-effective-line
+block replaced by one call; projected LevelManager3139 is below3144. This
+projection is not yet the fresh owning JUnit result.
+
+The newly discovered guard failure prospectively adds one necessary changed-source
+focused request plus the exact affected size/architecture checks. The17:40Z
+source cutoff and all no-route/no-Main boundaries remain unchanged. No unchanged
+299-test repeat is requested merely for this extraction.
+
+Citation check of the exact imported S3K runtime reports inherited original
+limits (near8/ok17/stale9/unverifiable4), reproduced on byte-identical original
+b1 runtime paths. It is not a strict-clean claim or evidence that those native
+ranges were newly verified. The two corrected new design ranges give7 resolved
+citations and one unverifiable anchor on pinned8b2. No disassembly pin changes.
+
+
+Corrected-source build51470 passed `test-compile`, Maven1:24, Java release25.
+Affected focus91338 passed89 unique tests in11 XML suites, zero
+failures/errors/skips, queue0s/Maven40.781s. Exact XML identities, source/ROM/cwd/
+Java25.0.5/EGL properties and streams were inspected. Its selectors are
+TestNativeCompetitionParticipantDispatch, TestNativePatternOwnerReplacement,
+TestPlayableSpriteNativeParticipantServices, TestS3kAiz1SkipHeadless,
+TestSonic3kLevelLoading (both packages), TestSonic3kBootstrapResolver,
+TestSonic3kDecodingUtils, TestNativeSpriteSatGameplay,
+TestS3kBossDefeatStopsLevelTimer and TestModApiSignatureSurface. Command/environment
+are the same lean shape above with `target/root-modes-level-state-focused`
+reports/tmp/diagnostics. Corrected Java/racing/POM fingerprint
+`a23b8b16a2eddea0114912baec6727a2491feed16ddf283ea8673b2f95b0fd53`
+matched through89. The299-test source differed only by this subsequent timer
+extraction; unchanged component results are reused within those stated limits,
+not relabeled as a single current-source invocation.
+
+The streams include FAST-without-manifest fallback warnings, the decoding test's
+collision-index warning and the existing S1 mapping-load warning; the299 selection
+also logs missing WAV-supplier shadow rejections. No native timing-profile,
+S1 mapping completeness or audio-fidelity closure is inferred from these passes.
+
+Fresh66541 runs only
+`TestArchitecturalSourceGuard#releaseCriticalLargeClassesDoNotGrowWithoutExtraction`
+and
+`TestArchUnitRules#low_level_layers_do_not_depend_on_runtime_layers+shared_layers_do_not_depend_on_game_specific_packages`
+in the same ROM-free `-Pguards` shape with
+`target/root-modes-level-state-guards` reports/tmp. The unchanged ObjectManager
+size identity, other30 architecture identities and five rewind identities are
+reused from20813; none is claimed as rerun on the timer-extraction source.
+
+
+Fresh66541 passed27 tests in two XML suites, zero failures/errors/skips,
+queue23s/Maven35.599s. The requested two ArchUnit selectors expanded to all26
+ArchUnit field-rule identities; the release-critical size identity is the27th.
+The initial readback script's expected-three assertion was wrong and was
+corrected from the actual XML, without another Maven request. All26 field
+identities, the owning size test and Java25.0.5 properties were inspected.
+Six separate Jupiter architecture/snapshot method identities, five rewind
+identities and the unchanged ObjectManager size identity retain20813 evidence;
+no current-source rerun is claimed for those. The corrected fingerprint matches
+through89+27. LevelManager's projected3139/3144 and ObjectManager3072/3086 now
+have passing owning structural assertions; no cap or baseline was changed.
+
+The bounded composition is ready for a local commit. All competition providers
+remain inactive; later original Host/Views/reconstruction milestones are not
+included in this five-leaf source cohort. Main integration/push, delivery smoke,
+full route closure, physical video and native S3K audio stay open. No Main
+workspace branch/ref or foreign worktree state was changed.
+
+
+### Root MHZ source-only review disposition, 17:26 UTC
+
+The renewed peer source-only scopes published separate environment-corrected
+and close-corrected generations without changing the historical packages.
+The environment generation removes JAVA_TOOL_OPTIONS, retains the explicit CLI
+GL property and requires Lua5.4/null-audio/surfaceless-EGL values. Root review
+then found a genuine observer failure path: transport.close swallowed an output
+close error after the driver had already made its final success check and the
+trace scope had closed. A c4 test could falsely pass with an alive footer.
+
+The close-corrected generation's contract SHA256 is
+`5681a9ba2f8a3d95d4a091feac5eebfa9ca22bad2b446930730b678d941881fc`;
+minimal two-file patch SHA256 is
+`2881bd26cd8126c6d5c9b6500e02cc3adca17779a224f42675a16d686f687b54`.
+Root accepts this generation as frozen SOURCE PREPARATION ONLY after its own
+critical-path read and completed read-only fix verification. Physical close now
+runs inside the active trace scope; success checks finalization/close-success and
+retained faults before returning. Original-failure cleanup rethrows the same
+Throwable without added suppression, and installation refusal cannot mark a
+foreign trace as failed.
+
+Exact contract/source/argv/manifest pins, minimal/complete inverses, all20
+predecessor whole-metadata records and49 external pin paths were checked.
+The manifests have10952/10956 rows including self-pins. Only argv19/20 change
+manifest references; corrected environment, caps, pads, oracles and other
+carriers remain unchanged. One foreign Main policy-test source pin explicitly
+changes4fc6caf to f711cf, clean against306b960; three raw patch index headers
+expand without changing payloads. Neither difference is hidden as unchanged.
+
+No remaining blocker was found within this source correction. This is not a
+compilation, injected I/O-failure test or runtime/ABI/cap-fit result. JVM binaries/
+libraries and PATH Python/Maven identity remain unqualified. A372 expected-death
+footer plus its deliberately unchanged original assertion cannot certify
+successful physical close. Parser digest still covers consumed bytes only.
+No5-gap gameplay fix or later callback source replaces the historical pair.
+Execution remains explicitly false; no paired observation, build, JVM, native
+or Lua permission/job is opened by this disposition. Main remains protected.

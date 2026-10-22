@@ -10,6 +10,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.LevelState;
+import com.openggf.game.competition.NativeCompetitionRoster;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
 import com.openggf.level.LevelManager;
@@ -22,7 +23,16 @@ final class PlayableSpriteRuntimeServices {
         private PlayableSpriteRuntimeServices() {
         }
 
-        static Camera camera(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.camera : GameServices.camera(); }
+        private static NativeCompetitionRoster competitionRoster(AbstractPlayableSprite sprite) {
+                LevelManager owner = levelOrNull(sprite);
+                return owner != null ? NativeCompetitionRoster.from(owner.getWorldSession()) : null;
+        }
+        static Camera camera(AbstractPlayableSprite sprite) {
+                NativeCompetitionRoster roster = competitionRoster(sprite);
+                int slot = roster != null ? roster.slotOf(sprite) : -1;
+                return slot >= 0 ? roster.camera(slot)
+                                : sprite.runtimeServices != null ? sprite.runtimeServices.camera : GameServices.camera();
+        }
         static LevelManager level(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.level : GameServices.level(); }
         static LevelManager levelOrNull(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.level : GameServices.levelOrNull(); }
         static GameModule currentOrBootstrapGameModule(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.module : GameServices.currentOrBootstrapGameModule(); }
@@ -45,12 +55,27 @@ final class PlayableSpriteRuntimeServices {
         static LevelState levelState(LevelManager levelManager) {
                 return levelManager != null ? levelManager.getLevelGamestate() : null;
         }
+        static LevelState levelState(AbstractPlayableSprite sprite) {
+                NativeCompetitionRoster roster = competitionRoster(sprite);
+                int slot = roster != null ? roster.slotOf(sprite) : -1;
+                return slot >= 0 ? roster.levelState(slot) : levelState(levelOrNull(sprite));
+        }
         static int resolveAnimationId(GameModule module, CanonicalAnimation animation) {
                 return module != null ? module.resolveAnimationId(animation) : -1;
         }
         static TimerManager timers(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.timers : GameServices.timers(); }
-        static GameStateManager gameState(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.gameState : GameServices.gameState(); }
-        static GameStateManager gameStateOrNull(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.gameState : GameServices.gameStateOrNull(); }
+        static GameStateManager gameState(AbstractPlayableSprite sprite) {
+                NativeCompetitionRoster roster = competitionRoster(sprite);
+                int slot = roster != null ? roster.slotOf(sprite) : -1;
+                return slot >= 0 ? roster.gameState(slot)
+                                : sprite.runtimeServices != null ? sprite.runtimeServices.gameState : GameServices.gameState();
+        }
+        static GameStateManager gameStateOrNull(AbstractPlayableSprite sprite) {
+                NativeCompetitionRoster roster = competitionRoster(sprite);
+                int slot = roster != null ? roster.slotOf(sprite) : -1;
+                return slot >= 0 ? roster.gameState(slot)
+                                : sprite.runtimeServices != null ? sprite.runtimeServices.gameState : GameServices.gameStateOrNull();
+        }
         static CollisionSystem collision(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.collision : GameServices.collision(); }
         static CollisionSystem collisionOrNull(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.collision : GameServices.collisionOrNull(); }
         static AudioManager audio(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.audio : GameServices.audio(); }
