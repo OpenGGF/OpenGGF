@@ -38,11 +38,12 @@ with another controller that already owns native frame admission.
 
 ## Your first scene: Wait for me
 
-Start with the [26-second screenplay](src/main/resources/scenes/wait-for-me.screenplay.json)
-or [portable scene](src/main/resources/scenes/wait-for-me.stageplay). Sonic races
-onto the other lift, realizes he has left Tails behind, returns, and counts them
-into a crossing together. Every move changes the situation; the goal is a shared
-arrival, rather than a collection of unrelated abilities.
+Start with the [screenplay](src/main/resources/scenes/wait-for-me.screenplay.json)
+or [portable scene](src/main/resources/scenes/wait-for-me.stageplay): a 26-second
+story followed by eight seconds of continued native platform riding for an end card.
+Sonic races onto the other lift, hears Tails' objection, returns, and counts them
+into a crossing together. Tails points out that he could fly; Sonic chooses to cross
+with him. Companionship gives the shared arrival its purpose.
 
 Supply your S3&K ROM. In the in-engine level editor, press **F4**, choose **Open
 scene**, and select `wait-for-me.stageplay`; the same file opens in OpenGGF Editor's
@@ -56,22 +57,34 @@ This tutorial sample is opened explicitly.
    166 with offset X −16 / Y −35, and requests urgency 0.65. `JUMP` at frame 241
    holds the button for 20 frames. These are native inputs, not a position curve.
 3. **Wait and react:** `WAIT: ON_OBJECT` gates `STOP` until landing, with a finite
-   180-frame timeout. Sonic returns at frame 660; the pair set off at 1140/1145.
-   Inspect the result: a target is an attempt, and there is no automatic pathfinder.
-4. **Camera:** follow both actors, smoothing 0.2 and zoom 1. Keep their separation
-   visible so the mistake and return read without an explanatory cut.
-5. **Dialogue:** named speakers, pointers, distinct blue/gold skins, and a shared
-   two-frame text reveal. Leave time to read and let the response motivate an action.
-6. **Preview and save:** watch the entire 26 seconds, including platform contact,
-   camera travel and the last reply. Save a new take. Try changing one line or the
-   timing of Sonic's return, then preview again before exporting.
+   180-frame timeout. Tails looks up at frame 390; Sonic crouches at 535 for 45
+   frames before returning at 660. The pair set off at 1140/1145 and board the
+   other lift at 1199/1204. A target is an attempt, with no automatic pathfinder.
+4. **Camera:** follow both actors, smoothing 0.2, offset Y zero and zoom one.
+   Keep their separation visible so the mistake and return read without a cut.
+5. **Dialogue:** named speakers, pointers and blue/gold skins identify each turn.
+   Top-band panels leave both supporting lifts visible. The first boast ends before
+   takeoff; explicit `revealFrames` begin “Three!” at 1135 and complete it at 1140,
+   immediately before Sonic leaves the platform at 1141. Check the full jump arc
+   when changing placement or timing, including Tails' accessory animation.
+6. **Preview and save:** watch all 34 seconds, including reactions, platform
+   contact and the last reply. The story ends at frame 1560; the remaining 480
+   frames continue the ride on placement 166. Save a new take before experimenting.
+
+For a bounded experiment, change only Sonic's first `JUMP.holdFrames` from 20 to
+8, keeping the approach and camera rules. In this take, both attempts land safely:
+8 frames produces a 20.34375-pixel lower native apex and boards placement 166 at
+frame 285 instead of 293. Compare source frames 180–659 at normal speed. That
+measured result describes this route, not a general obstacle solver.
 
 The [authoring reference](../../docs/guide/creating/stageplay-authoring.md) provides
 compile, simulate and render commands. Keep screenplay JSON as the source for
 scripted revisions; editor edits save the portable scene, not a screenplay round-trip.
-The [tutorial production](https://github.com/OpenGGF/OpenGGF-Media/tree/main/projects/stageplay/sources/media/revision-7)
-contains the conceptual walkthrough, full short, exact edit and rebuild instructions.
-Its explanatory cards and track diagram are editorial annotations, not editor UI.
+For a film with a separate continuous music bed, make a new take with a supported
+`MUSIC_STOP` cue at frame zero. It retains native SFX; keep the combined music/SFX
+capture for standalone playback. Verify matching world, actors and camera before
+sharing one SFX stem across dialogue/clean views. Editorial cards and track diagrams
+in the tutorial are annotations, not editor UI.
 
 ## Location, Location, Location
 
