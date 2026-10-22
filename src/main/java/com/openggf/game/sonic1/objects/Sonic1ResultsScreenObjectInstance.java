@@ -710,15 +710,25 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
             }
         }
 
-        // Write time bonus digits at index 0, ring bonus digits at index 8
-        writeBonusValue(patterns, 0, timeBonus, digitPatterns);
-        writeBonusValue(patterns, Sonic1Constants.S1_RESULTS_BONUS_DIGIT_GROUP_TILES, ringBonus, digitPatterns);
-        writeScoreValue(patterns, scoreValue, digitPatterns);
-
-        // Push updated digit patterns to GPU
         var graphicsManager = services().graphicsManager();
-        renderer.updatePatternRange(graphicsManager, 0, Sonic1Constants.S1_RESULTS_BONUS_DIGIT_TILES);
-        renderer.updatePatternRange(graphicsManager, SCORE_DIGITS_START_INDEX, SCORE_DIGIT_TILES);
+        int group = Sonic1Constants.S1_RESULTS_BONUS_DIGIT_GROUP_TILES;
+        graphicsManager.beginPatternAtlasBatch();
+        try {
+            if (timeBonus != lastTimeBonus) {
+                writeBonusValue(patterns, 0, timeBonus, digitPatterns);
+                renderer.updatePatternRange(graphicsManager, 0, group);
+            }
+            if (ringBonus != lastRingBonus) {
+                writeBonusValue(patterns, group, ringBonus, digitPatterns);
+                renderer.updatePatternRange(graphicsManager, group, group);
+            }
+            if (scoreValue != lastScoreValue) {
+                writeScoreValue(patterns, scoreValue, digitPatterns);
+                renderer.updatePatternRange(graphicsManager, SCORE_DIGITS_START_INDEX, SCORE_DIGIT_TILES);
+            }
+        } finally {
+            graphicsManager.endPatternAtlasBatch();
+        }
 
         lastTimeBonus = timeBonus;
         lastRingBonus = ringBonus;
