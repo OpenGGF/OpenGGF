@@ -4596,3 +4596,12 @@ At exact `9bca169b6`, ONE cold ordinary CLI preserves all15297 actualR28 pads/in
 15349 total, exactly one new Aedge; both64rings/3lives/unhurt/live. All52 newPOST rows remain airborne/free/noactualrider; no landing/ground goal/bridge admission/P2state change/refuel observed. Ring gains15309/15312 and public motion change15331 retain unknown collector/writer/contact; no avoidance/native/terrain/cause qualification.
 Same-JVM unchanged five-pad gate plus actual previousRight→RA logical0x10 proof, all-row author/reload and independent full script/ZIP/FIFTEEN wholemovie-prefix proofs agree; **0 JUnit/skips N/A**. All52 complete78-field facts retained losslessly; owned raw outputs consumed under leases.
 Expected46/runtime/POM/maintained data unchanged; no input15349 or automatic next phase. [Facts, exact limits, hashes, command and timing](../../plans/2026-10-13-s3k-playable-completion.md#r29-fresh-ground-jump-stops-at-the-nominal-bridge-gap--2026-10-22).
+
+
+## R30 held jump nominal bridge-seam stop — 2026-10-22
+
+At exact `2b9cf5433`, ONE cold ordinary CLI preserves all15349 actualR29 pads/inlet and377 available comparisons; all325 old gates plus52 fullR29 pairs exact. Original query/helpers/safeties/domains literal; separate cached64-ring wrapper and same-JVM no-fresh-edge held-input proof only.
+11 unchanged heldRight+A/P2Up inputs stop15359 at nominal flat172east/diagonal176west5440: P1(5444,999),VX1536/VY1568/G0,air+jumping/free/riderNULL/logicalAfalse; P2(5348,875),V0/recovery/manual-windowtrue/locked/controlled/nativeCPU/flag0fuel0/contextNONE.
+15360 total, zero new Aedges; both64rings/3lives/unhurt/live. All11 newPOST rows airborne/free/noactualrider; no support/ground/P2state/refuel publication or bridge admission observed before seam. Current bridge lifetime/phase/width/contact/terrain receiver/native/cause UNKNOWN; no omission established/no input15360.
+Same-JVM five-pad positiveJUMP/no-fresh-edge/all-row author-loader and independent entire script/ZIP/SIXTEEN wholemovie-prefix proofs agree; **0 JUnit/skips N/A**. All11 complete78-field records retained losslessly; owned raw outputs consumed under leases.
+Expected46/runtime/POM/maintained data unchanged; no automatic next phase. [Facts, exact limits, hashes, command and timing](../../plans/2026-10-13-s3k-playable-completion.md#r30-held-jump-reaches-the-nominal-flat-to-diagonal-bridge-seam-airborne--2026-10-22).
