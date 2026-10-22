@@ -113140,5 +113140,8 @@ The next transform-start correction is validated locally with6 new focused
 cases (within the final11-case two-class pass),0 skips. Stars at fixed129,
 invincibility clear and semantic Super audio now publish at the native start;
 ordinary engine93/Title96 namespaces remain unchanged. No chain measurement on
-that new source is claimed yet; normal-star Super rewind restoration and native
-H32 consumer composition remain separate active obligations.
+that new source is claimed yet. The subsequent normal-star Super rewind fix
+passes the expanded ten-case start-effects class within78 focused checks,
+including destructive restoration, missing/other owner and failure retry;
+seven affected architecture guards pass, all zero skips. Native H32 consumer
+composition remains separate active work.

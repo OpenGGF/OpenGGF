@@ -95,6 +95,14 @@ public class Sonic2SuperStateController extends SuperStateController
     }
 
     @Override
+    public boolean preserveExistingInvincibilityStars() {
+        // Obj35_Layer0Update (s2.asm:42494-42503), FixBugs=0: only the
+        // secondary invincibility bit gates deletion. The fixed branch would
+        // delete on Super_Sonic_flag; the shipped ROM keeps existing stars.
+        return player.isSuperSonic();
+    }
+
+    @Override
     public void updateNativeGlobalPaletteAfterObjects() {
         // Level_MainLoop calls PalCycle_Load AFTER RunObjects (s2.asm:5095-5106).
         // Hurt/death omit Sonic_Super, but neither suppresses this global owner.

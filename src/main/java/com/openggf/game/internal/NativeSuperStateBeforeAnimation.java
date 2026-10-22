@@ -10,4 +10,9 @@ public interface NativeSuperStateBeforeAnimation {
 
     /** Global palette work follows the complete object pass, including hurt/death. */
     void updateNativeGlobalPaletteAfterObjects();
+
+    /** Native secondary invincibility can outlive the cleared monitor timer. */
+    default boolean preserveExistingInvincibilityStars() {
+        return false;
+    }
 }

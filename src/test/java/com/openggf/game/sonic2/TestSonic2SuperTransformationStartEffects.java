@@ -20,9 +20,15 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.InvincibilityStarsObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectConstructionContext;
+import com.openggf.level.objects.DefaultPowerUpSpawner;
+import com.openggf.level.objects.PlayerBoundPowerUpRestoreAccess;
+import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.sprites.playable.SuperState;
+import com.openggf.sprites.playable.Sonic;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -175,6 +181,165 @@ class TestSonic2SuperTransformationStartEffects {
         assertEquals(before, ordinary.captureRewindState(), "the ID-only $D040 write cannot change $D200");
         assertFalse(ordinary.isDestroyed());
         assertNotSame(ordinary, stars());
+    }
+
+    @Test
+    void capturedMonitorStarsRecreateAfterDestructiveSuperRestoreAndReplayForward() {
+        var fixture = ready();
+        var player = fixture.sprite();
+        player.giveInvincibility(321);
+        var old = assertInstanceOf(InvincibilityStarsObjectInstance.class, player.getInvincibilityObject());
+        for (int tick = 0; tick < 3; tick++) old.update(tick, player);
+        owner(fixture).checkTransformationBeforeMove();
+        assertStarted(fixture);
+        var beforeState = old.captureRewindState();
+        var entry = capturedEntry(objects(), player);
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var saved = registry.capture();
+        old.destroy();
+        objects().removeDynamicObject(old);
+        assertFalse(objects().getActiveObjects().contains(old));
+        Object expectedState = null;
+        Object expectedController = null;
+        for (int replay = 0; replay < 2; replay++) {
+            var requests = new ArrayList<String>();
+            try (var lease = GameServices.audio().acquireDiagnosticObservers(observe(requests, () -> { }))) {
+                registry.restore(saved);
+                assertTrue(requests.isEmpty(), "relinking captured stars is not a power-up grant or transform");
+            }
+            var restored = assertInstanceOf(InvincibilityStarsObjectInstance.class, player.getInvincibilityObject());
+            assertNotSame(old, restored, "Obj35 recreation was pending-only in the destructive manager restore");
+            assertTrue(objects().getActiveObjects().contains(restored));
+            assertSame(player, restored.boundPlayer());
+            assertEquals(136, restored.getSlotIndex());
+            assertEquals(beforeState, restored.captureRewindState());
+            var restoredEntry = capturedEntry(objects(), player);
+            assertEquals(entry.objectId(), restoredEntry.objectId());
+            assertEquals(entry.ownerModId(), restoredEntry.ownerModId());
+            assertNotNull(stars(), "fixed Obj7E at129 remains a separate captured owner");
+            assertEquals(0, player.getInvincibleFrames());
+            for (int tick = 0; tick < 5; tick++) fixture.stepFrame(false, false, false, false, false);
+            assertFalse(restored.isDestroyed(), "shipped Obj35 tests the secondary latch, not timer0");
+            if (replay == 0) {
+                expectedState = restored.captureRewindState();
+                expectedController = owner(fixture).captureRewindState();
+            } else {
+                assertEquals(expectedState, restored.captureRewindState());
+                assertEquals(expectedController, owner(fixture).captureRewindState());
+            }
+        }
+    }
+
+    @Test
+    void superRestoreWithNoCapturedMonitorOwnerDoesNotMintStarsFromAStaleReference() {
+        var fixture = ready();
+        owner(fixture).checkTransformationBeforeMove();
+        assertNull(fixture.sprite().getInvincibilityObject());
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var noMonitorStars = registry.capture();
+        fixture.sprite().giveInvincibility(100);
+        var stale = fixture.sprite().getInvincibilityObject();
+        assertNotNull(stale);
+        registry.restore(noMonitorStars);
+        assertEquals(0, fixture.sprite().getInvincibleFrames());
+        assertEquals(SuperState.TRANSFORMING, owner(fixture).getState());
+        assertNull(fixture.sprite().getInvincibilityObject());
+        assertTrue(objects().activeObjectsOfType(InvincibilityStarsObjectInstance.class).isEmpty());
+        assertNotNull(stars());
+        fixture.stepFrame(false, false, false, false, false);
+        assertNull(fixture.sprite().getInvincibilityObject());
+    }
+
+    private static com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry capturedEntry(
+            ObjectManager manager, PlayableEntity owner) {
+        return manager.rewindSnapshottable().capture().dynamicObjects().stream()
+                .filter(entry -> entry.playerOwner() == owner
+                        && entry.className().equals(InvincibilityStarsObjectInstance.class.getName()))
+                .findFirst().orElseThrow();
+    }
+
+    private static void pending(ObjectManager manager,
+            com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
+        new RewindRecreateContext(entry.spawn(), entry.state(), null, manager, entry)
+                .enqueuePendingPlayerBoundEntry(InvincibilityStarsObjectInstance.class);
+    }
+
+    @Test
+    void pendingRestoreMatchesTheCapturedOwnerAndRejectsUnsupportedSpawnerWithoutConsuming() {
+        var fixture = ready();
+        var player = fixture.sprite();
+        player.giveInvincibility(321);
+        var primary = assertInstanceOf(InvincibilityStarsObjectInstance.class, player.getInvincibilityObject());
+        var other = new Sonic("other", (short) 0x200, (short) 0x100);
+        var foreign = ObjectConstructionContext.construct(TestEnvironment.objectServices(),
+                () -> new InvincibilityStarsObjectInstance(other));
+        ObjectLifetimeOps.addDynamicAtReservedSlot(objects(), foreign, 140);
+        var primaryEntry = capturedEntry(objects(), player);
+        var foreignEntry = capturedEntry(objects(), other);
+        objects().removeDynamicObject(primary);
+        objects().removeDynamicObject(foreign);
+        pending(objects(), foreignEntry);
+        pending(objects(), primaryEntry);
+        var unsupported = new DefaultPowerUpSpawner(objects()) {
+            @Override public com.openggf.game.PowerUpObject spawnInvincibilityStars(PlayableEntity owner) {
+                fail("an unsupported spawner must never be invoked");
+                return null;
+            }
+        };
+        assertNull(PlayerBoundPowerUpRestoreAccess.restoreCapturedInvincibilityStars(objects(), unsupported, player));
+        var occupied = new PoolOccupant();
+        ObjectLifetimeOps.addDynamicAtReservedSlot(objects(), occupied, 136);
+        assertNull(PlayerBoundPowerUpRestoreAccess.restoreCapturedInvincibilityStars(
+                objects(), player.getPowerUpSpawner(), player), "a foreign live SST is never overwritten");
+        assertTrue(objects().getActiveObjects().contains(occupied));
+        assertFalse(occupied.isDestroyed());
+        objects().removeDynamicObject(occupied);
+        var restored = assertInstanceOf(InvincibilityStarsObjectInstance.class,
+                PlayerBoundPowerUpRestoreAccess.restoreCapturedInvincibilityStars(objects(), player.getPowerUpSpawner(), player));
+        assertEquals(136, restored.getSlotIndex());
+        assertSame(player, restored.boundPlayer());
+        var restoredOther = assertInstanceOf(InvincibilityStarsObjectInstance.class,
+                PlayerBoundPowerUpRestoreAccess.restoreCapturedInvincibilityStars(objects(), player.getPowerUpSpawner(), other));
+        assertEquals(140, restoredOther.getSlotIndex(), "the first, other-owner pending entry was not consumed");
+        assertSame(other, restoredOther.boundPlayer());
+        assertEquals(foreignEntry.state(), restoredOther.captureRewindState());
+        assertNull(PlayerBoundPowerUpRestoreAccess.restoreCapturedInvincibilityStars(objects(), player.getPowerUpSpawner(), player));
+    }
+
+    @Test
+    void overriddenFactoryAndConstructionFailurePreservePendingNativeEntryWithoutFallbackMint() {
+        var fixture = ready();
+        var player = fixture.sprite();
+        player.giveInvincibility(321);
+        var entry = capturedEntry(objects(), player);
+        com.openggf.game.GameModule[] module = {new com.openggf.game.sonic3k.Sonic3kGameModule()};
+        boolean[] failConstruction = {false};
+        var services = new StubObjectServices() {
+            @Override public com.openggf.game.GameModule gameModule() { return module[0]; }
+            @Override public com.openggf.level.objects.ObjectRenderManager renderManager() {
+                if (failConstruction[0]) throw new IllegalStateException("injected native constructor failure");
+                return null;
+            }
+        };
+        var isolated = new ObjectManager(List.of(), null, 0, null, null,
+                GameServices.graphics(), GameServices.camera(), services);
+        var stock = new DefaultPowerUpSpawner(isolated);
+        pending(isolated, entry);
+        assertNull(PlayerBoundPowerUpRestoreAccess.restoreCapturedInvincibilityStars(isolated, stock, player),
+                "an S3K/custom factory must not substitute a different concrete class");
+        assertTrue(isolated.getActiveObjects().isEmpty());
+        module[0] = new Sonic2GameModule();
+        failConstruction[0] = true;
+        assertThrows(IllegalStateException.class,
+                () -> PlayerBoundPowerUpRestoreAccess.restoreCapturedInvincibilityStars(isolated, stock, player));
+        assertTrue(isolated.getActiveObjects().isEmpty());
+        failConstruction[0] = false;
+        var restored = assertInstanceOf(InvincibilityStarsObjectInstance.class,
+                PlayerBoundPowerUpRestoreAccess.restoreCapturedInvincibilityStars(isolated, stock, player));
+        assertEquals(entry.state(), restored.captureRewindState());
+        assertNull(PlayerBoundPowerUpRestoreAccess.restoreCapturedInvincibilityStars(isolated, stock, player),
+                "the pending entry survived exactly once, never a fresh-spawn fallback");
+        assertEquals(1, isolated.getActiveObjects().size());
     }
 
     @Test

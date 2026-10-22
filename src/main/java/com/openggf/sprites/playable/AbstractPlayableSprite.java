@@ -1383,6 +1383,40 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         private void refreshInvincibilityStarsAfterRewindRestore() {
+                if (invincibleFrames <= 0
+                                && getSuperStateController() instanceof
+                                        com.openggf.game.internal.NativeSuperStateBeforeAnimation nativeSuper
+                                && nativeSuper.preserveExistingInvincibilityStars()) {
+                        // Obj35_Layer0Update, FixBugs=0 (s2.asm:42494-42503),
+                        // reads secondary invincibility, not the cleared timer.
+                        // Rebind only an existing/captured native owner graph.
+                        ObjectManager objectManager = currentObjectManagerIfAvailable();
+                        PowerUpObject liveStars = null;
+                        if (objectManager != null) {
+                                for (ObjectInstance object : objectManager.getActiveObjects()) {
+                                        if (object.getClass() == com.openggf.level.objects.InvincibilityStarsObjectInstance.class
+                                                        && object instanceof PowerUpObject candidate
+                                                        && candidate.boundPlayer() == this
+                                                        && !com.openggf.level.objects.ObjectCallbackDispatch.call(
+                                                                objectManager, object, object::isDestroyed)) {
+                                                liveStars = candidate;
+                                                break;
+                                        }
+                                }
+                                if (liveStars == null) {
+                                        liveStars = com.openggf.level.objects.PlayerBoundPowerUpRestoreAccess
+                                                .restoreCapturedInvincibilityStars(objectManager, powerUpSpawner, this);
+                                }
+                        }
+                        invincibilityObject = liveStars;
+                        if (liveStars != null) {
+                                liveStars.refreshArtAfterRewindRestore();
+                        }
+                        if (shieldObject != null) {
+                                shieldObject.setVisible(liveStars == null);
+                        }
+                        return;
+                }
                 if (invincibleFrames <= 0) {
                         if (invincibilityObject != null) {
                                 invincibilityObject.destroy();

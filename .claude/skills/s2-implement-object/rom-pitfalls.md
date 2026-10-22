@@ -3685,6 +3685,14 @@ fade releases obj_control after Sonic_Animate and keeps its timer reload of 3;
 only the next normal cycle reloads 7. Separate control/ring/revert from global
 palette/completion, and never advance the latter during rewind output refresh.
 
+Obj35's retail lifetime tests secondary invincibility, not invincibility_time;
+the optional Super deletion is FixBugs=1 (s2.asm:42494-42503). Transform start
+clears the timer while keeping existing normal stars. Destructive rewind first
+queues their captured player-bound entry, so a live-only search loses them and
+a blind spawner call can invent an absent owner. Match the exact captured stock
+class and player identity, preserving its slot/scalars/identity through the
+existing pending-entry path; missing or unsupported ownership must not mint one.
+
 Sonic_CheckGoSuper unconditionally writes dry speed constants even when already
 underwater (s2.asm:37481-37483). Sonic_Water's already-underwater return
 (s2.asm:36379-36382) leaves those words intact. Keep their last-writer latch

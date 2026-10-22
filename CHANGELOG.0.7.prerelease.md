@@ -39,7 +39,8 @@ Unreleased. The earlier development themes remain in
 - **Sonic 2 player and entry timing:** Super Sonic control runs between movement
   and animation while its palette advances after objects, including hurt and
   death. Transformation stars, timed-invincibility clear and audio requests occur
-  at transform start. It preserves native balance, reversion animation and invincibility timing, and
+  at transform start, and captured normal stars survive Super rewind restoration.
+  It preserves native balance, reversion animation and invincibility timing, and
   keeps the speed constants written by an underwater transformation until their
   next native writer. Ordinary special-stage entry presents its loading hold
   without duplicating replay timing.

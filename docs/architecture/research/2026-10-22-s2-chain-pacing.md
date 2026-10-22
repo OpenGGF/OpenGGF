@@ -97,12 +97,31 @@ production source. Start-effects coverage includes failed eligibility,
 exhausted general allocation, live ordinary stars at136, retained nonempty129,
 world restoration and five forward ticks, with no restore-time audio replay.
 
-One shared restore gap remains identified separately: timer-only
-`refreshInvincibilityStarsAfterRewindRestore` can delete captured normal stars
-after Super has cleared their timer. Retail Obj35 tests the secondary invincible
-bit; its Super deletion is under `fixBugs=1` (s2.asm:42494-42503), which is not
-the shipped branch. A bounded internal semantic restore hook is requested from
-the shared owner; no unapproved workaround is included here.
+The subsequently approved restore correction keeps captured normal stars after
+Super has cleared their timer. Retail Obj35 tests the secondary invincible bit;
+its Super deletion is under `fixBugs=1` (s2.asm:42494-42503), which is not the
+shipped branch. An internal marker selects that lifetime only for the S2
+controller while Super. The private playable refresh rebinds an exact live Obj35
+or restores the matching captured pending entry through a non-ModApi bridge.
+Destructive manager restoration deliberately recreates player-bound stars later,
+so a live-only search would lose the graph. The bridge requires matching owner
+identity and stock concrete class, retains captured identity/scalars/slot/callback
+ownership, and never invokes a spawner for an absent entry. Unsupported spawners,
+overridden factories and foreign live SSTs leave the pending entry untouched;
+construction failure restores it exactly once. No ObjectManager, allocator,
+published API or capture shape changes.
+
+The combined nine-class queued command selecting the expanded start-effects
+class, native sprite assembly, S2 donor/S3K/generic Super controls, playable
+capture, normal Obj35 and Mod API signatures passed78/78, zero skips
+(Maven94s,queue0s), on `f85bb8746` plus these changes. The ten start-effects
+cases now include destructive136→129 restoration and forward replay, another
+owner's pending entry, truly missing owner despite a stale pointer, unsupported
+factory/spawner and construction-failure retry. Seven assembly cases include
+the native63-owner bucket cap and asymmetric both-axis flips. The assembler
+remains unwired pending the qualified shadow backdrop contract.
+Fresh affected `-Pguards -Dtest=TestPerGameRuleArchitectureGuard,TestRewindArchitectureGuard`
+passed7/7, zero skips (Maven30.59s,queue65s), on the same production source.
 
 Ordinary `Sonic2SpecialStageProvider.initializeStage` now arms the existing live
 104-presentation load hold. `TRACE_ACCURATE` leaves it unarmed because recorded
