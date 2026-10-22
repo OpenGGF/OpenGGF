@@ -905,3 +905,84 @@ successful physical close. Parser digest still covers consumed bytes only.
 No5-gap gameplay fix or later callback source replaces the historical pair.
 Execution remains explicitly false; no paired observation, build, JVM, native
 or Lua permission/job is opened by this disposition. Main remains protected.
+
+
+## Renewed MHZ test-setup qualification, 2026-10-22 18:02 UTC
+
+Farrell explicitly resumed coordination and requested correction of the test
+setup. New ownership records were opened instead of reviving the expired source
+windows. The peer retained historical maintained-test/driver boot, settings,
+drawing, assertions and dynamic rewind parity. Root independently audited the
+frozen launcher, POM, Surefire selector and property handoff, source API references
+and timing defaults. No concrete source/setup mismatch was found. The historical
+maintained and prepared methods use the same seven-argument settings and MHZ1
+boot. The exact untagged Jupiter class/method exists and is not excluded by the
+ordinary POM. @RequiresRom can still disable it before driver preflight; a future
+observation requires the actual single executed identity and zero skips, never
+just a Maven exit or output-directory presence.
+
+Headless boot supplies LIVE admission by its original default; the configuration
+registers FAST and the pinned config files do not override that key. WorldSession
+resolves it once on the original constructor path. The observer must still
+confirm actual constructor/resource identity; these source facts do not certify
+historical mode or authorize forcing a profile.
+
+After the source-only audits, a separately coordinated Root-owned build-only
+scope allowed at most two sequential test-compile requests, stop on the first
+compiler failure, no retry. Work cutoff18:25Z, cleanup18:40Z, expiry18:50Z.
+This permits compiler/build JVMs only; it does not change the source package's
+false observation gate or open tests, gameplay, native capture or Lua execution.
+All source/package inputs remain frozen at accepted contract SHA256
+`5681a9ba2f8a3d95d4a091feac5eebfa9ca22bad2b446930730b678d941881fc`.
+Main remains closed. The exact command is run from each retained historical
+worktree, first c4c66c1a07722a059b4094ffc431a66d7ca496da then failing
+37286d6dd91ca0c40307c53f4de61eb259495f93:
+
+```bash
+rom_root=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
+env -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS \
+  -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH -u LIBGL_DRIVERS_PATH \
+  -u LIBGL_ALWAYS_SOFTWARE -u MESA_LOADER_DRIVER_OVERRIDE \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 "${rom_root}/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl test-compile -B \
+  > target/mhz-setup-build-preflight/compile.log 2>&1
+```
+
+The fresh log parent is created after frozen HEAD/input checks and before each
+command. The absolute Main-workspace wrapper is the same pinned tool used by the
+package; Main is read, not modified. Test-compile legitimately holds the worktree
+build/test lock and shared build activity, without requesting test admission.
+No test selector, test goal, Surefire execution or observation launcher is used.
+Test-queue wait is not applicable; build-activity wait was not separately
+measured. Maven durations are not summed into delivery elapsed time.
+
+- c4 build67728: EXIT0/BUILD SUCCESS, Maven1:24,4212 main plus4327 test sources.
+- failing372 build99153: EXIT0/BUILD SUCCESS, Maven1:25,4212 main plus4331 test
+  sources. Both compiler phases target Java release25.
+
+Both outputs contain the five prepared driver/transport/preflight/projection/
+carrier classfiles with major69, and the copied FAST manifest has the expected
+c9a0e04c SHA256. All10953/10957 frozen file pins, including manifest self-pins,
+match after compilation. These are10952/10956 source-manifest rows plus the
+self-pin. All20 predecessor whole-metadata records also remain intact.
+No source fix or replacement generation was justified by the successful builds.
+Runtime-loaded classpath/native ABI, actual profile selection, capacity fit,
+I/O-fault behavior and372 physical-close proof remain unqualified. The actual
+cold-route frontiers have not been rerun.
+
+One Root readback assertion incorrectly required report directories to be absent.
+The POM's initialize phase creates empty surefire/trace directories even for
+build-only goals. That assertion was corrected to verify empty reports and no
+Surefire/test-execution markers; no Maven retry occurred. Fail-closed shell
+ordering prevented premature second submission while that readback was corrected.
+Both fresh JVM launches also warn that java.io.tmpdir does not yet exist; the POM
+then creates the owned temporary directories and compilation succeeds. No warning
+was hidden or converted into a gameplay result.
+
+Targets now contain ordinary compiler outputs; observation namespaces remain
+absent. The old package's target-absence and zero-JVM records describe its freeze
+time and are preserved, not rewritten as current build state. Only consumed
+build logs are removed after readback; useful source packages and historical
+worktrees remain. No test, native, Lua or observation result is claimed.
