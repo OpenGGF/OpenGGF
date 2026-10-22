@@ -2,6 +2,8 @@ package com.openggf.tests;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -48,6 +50,98 @@ class TestModApiHookPolicy {
         write(repo, CLASS_API, "import com.openggf.game.ModApi;\n/** Changed documentation. */\n@ModApi\npublic class ExampleClass {\n    public int value(int input) {\n        // a different body\n        return input * 2;\n    }\n    private void helper() { value(3); }\n}\n");
         git(repo, "add", CLASS_API);
         assertStagedPasses(repo);
+    }
+
+    @Test void removingAnnotatedPrivateFieldsNeedsNoSignaturePinChange() throws Exception {
+        Path repo = fixtureWithClassMembers("""
+                    @SuppressWarnings("unused")
+                    private final Object rom = null;
+                    @Deprecated private int sameLine;
+                """);
+        write(repo, CLASS_API, annotatedClass(""));
+        git(repo, "add", CLASS_API);
+        assertStagedPasses(repo);
+    }
+
+    @Test void privateRecordHeadersAndTheirPublicMembersNeedNoSignaturePinChange() throws Exception {
+        Path repo = fixtureWithClassMembers("""
+                    @SuppressWarnings("unused")
+                    private record Source(
+                            Object rom,
+                            String name) implements java.io.Serializable {
+                        public Source { if (name == null) { throw new IllegalArgumentException("}"); } }
+                        public Object value() { return rom; }
+                        public record Nested(int value) {}
+                    } public int visible() { return 1; }
+                """);
+        write(repo, CLASS_API, annotatedClass("""
+                    private record Source(
+                            String rom,
+                            long generation,
+                            String name) {
+                        public Source { if (generation < 0) throw new IllegalArgumentException("{ // /*"); }
+                        public String value(int ignored) { return rom; }
+                        public record Nested(long value) {}
+                    } public int visible() { return 2; }
+                """));
+        git(repo, "add", CLASS_API);
+        assertStagedPasses(repo);
+    }
+
+    @Test void annotationsOnPrivateConstructorsAndMethodsStayWithTheirDeclarations() throws Exception {
+        Path repo = fixtureWithClassMembers("""
+                    @SuppressWarnings(
+                            "unused")
+                    private ExampleClass(Object source) { String braces = "{ } // /*"; }
+                    @Deprecated private void helper(
+                            Object source) { }
+                    public int visible() { return 1; }
+                """);
+        write(repo, CLASS_API, annotatedClass("""
+                    private ExampleClass(String source) { String braces = "}"; }
+                    @SuppressWarnings("unused") private void helper(String source, int count) { }
+                    public int visible() { return 1; }
+                """));
+        git(repo, "add", CLASS_API);
+        assertStagedPasses(repo);
+    }
+
+    @Test void promotingPrivateNestedRecordsStillRequiresTheSignaturePin() throws Exception {
+        Path repo = fixtureWithClassMembers("private record Source(\n    Object rom) {}\n");
+        write(repo, CLASS_API, annotatedClass("public record Source(\n    Object rom) {}\n"));
+        git(repo, "add", CLASS_API);
+        assertStagedFails(repo);
+        write(repo, PIN, "newly exposed Source record\n");
+        git(repo, "add", PIN);
+        assertStagedPasses(repo);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"public", "protected"})
+    void visibleNestedRecordHeadersAndComponentsStillRequireTheSignaturePin(String visibility) throws Exception {
+        Path repo = fixtureWithClassMembers(visibility + " record Source(\n    Object rom) {}\n");
+        write(repo, CLASS_API, annotatedClass(visibility
+                + " record Source(\n    String rom,\n    long generation) implements java.io.Serializable {}\n"));
+        git(repo, "add", CLASS_API);
+        assertStagedFails(repo);
+        write(repo, PIN, "changed exposed Source components and interfaces\n");
+        git(repo, "add", PIN);
+        assertStagedPasses(repo);
+    }
+
+    @Test void sameLineVisibleMembersAfterPrivateTypesStillRequireTheSignaturePin() throws Exception {
+        String privateType = "private record Source(Object rom) { public String ignored() { return \"} // /*\"; } } ";
+        Path repo = fixtureWithClassMembers(privateType + "public int visible() { return 1; }\n");
+        write(repo, CLASS_API, annotatedClass(privateType + "public long visible() { return 1; }\n"));
+        git(repo, "add", CLASS_API);
+        assertStagedFails(repo);
+    }
+
+    @Test void annotationsOnVisibleDeclarationsStillRequireTheSignaturePin() throws Exception {
+        Path repo = fixtureWithClassMembers("@SuppressWarnings(\"private record Hidden { } // /*\") public int visible() { return 1; }\n");
+        write(repo, CLASS_API, annotatedClass("public int visible() { return 1; }\n"));
+        git(repo, "add", CLASS_API);
+        assertStagedFails(repo);
     }
 
     @Test void recordCompactConstructorBodyEditsNeedNoSignaturePinChange() throws Exception {
@@ -281,6 +375,19 @@ class TestModApiHookPolicy {
         git(repo, "add", ".");
         commit(repo);
         return repo;
+    }
+
+    private Path fixtureWithClassMembers(String members) throws Exception {
+        Path repo = fixture();
+        write(repo, CLASS_API, annotatedClass(members));
+        write(repo, PIN, "baseline with class members\n");
+        git(repo, "add", ".");
+        commit(repo);
+        return repo;
+    }
+
+    private static String annotatedClass(String members) {
+        return "@ModApi\npublic class ExampleClass {\n" + members + "}\n";
     }
 
     private Path fixture() throws Exception {
