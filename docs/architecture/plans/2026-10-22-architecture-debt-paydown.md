@@ -139,8 +139,86 @@ This is bounded guard evidence, not smoke or full-suite validation. XML cases
 were inspected by the worker and consumed reports removed; no receipt/archive
 was added. The coordinator did not duplicate unchanged focused coverage.
 
+Fresh isolated requests now running from coordinator commit `15163c5d2`:
+`architecture-paydown-rewind-20261022-r1`,
+`architecture-paydown-audio-20261022-r1` and
+`architecture-paydown-preview-20261022-r1`. Rewind may use fresh bounded entry
+audit and regression-authoring helpers; each lane lead owns focused checks.
+Earlier review agents are not reused for implementation.
+
+Preview commit `f201a784d22e7834ac4abb16eea72fb121b0ba6a` is complete on
+`bugfix/ai-shared-selected-preview-20261022`, retained clean at
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-8076f2d7`. The lead inspected its
+production, test and frozen-record diffs. A fresh independent read-only reviewer
+found no actionable defects, confirmed unchanged conversion/validation bodies,
+complete consumer migration and exact freeze pruning, and ran `git diff --check`.
+It did not repeat Maven or independently exercise interactive presentation.
+Moving the converter/result/validator into `game.dataselect` removes
+20 cross-game member dependencies, leaving 14 in two grouped records. The
+conversion and validation bodies are unchanged. The worker's clean post-move
+check covered 60 converter/validator/profile cases and 13 presentation cases;
+one new rendering expectation incorrectly assumed forward piece submission.
+Only that assertion was corrected to the unchanged reverse traversal, then all
+13 affected presentation cases passed. The other 60 retained their passing
+evidence. The 114 architecture guard cases also passed. All completed checks
+reported zero errors/skips; the initial rendering expectation was the sole
+failure. Exact commands remain in the delegated task handoff.
+
+Audio has five staged lane files at
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-096b49e7` on
+`bugfix/ai-audio-source-typing-20261022`, based on `15163c5d2`. Its 152
+guard/API-pin cases and 88 focused audio cases passed with no failures, errors
+or skips. Its deliberate unchanged-store check rejected the exact private
+identity migration. The low-level record change is 184 to 187: deleting the
+dummy `AudioManager.rom` sentinel and typing the actual immutable tuple adds
+real constructor/field/accessor/helper dependencies. This is honest typing and
+accounting, not debt removal. Publication, generation and audio behavior remain
+unchanged.
+
+The normal audio commit exposed a policy-hook false positive: its textual API
+projection includes an annotation on the deleted private sentinel and the
+private record's component declaration. The exact candidate API snapshot
+passes and cannot express those private changes. A bounded coordinator helper
+owned only both hook mirrors and `TestModApiHookPolicy`. Correction
+`fdddd710e0f929dc8bf3a227dd1613e27d3b58c5` keeps annotations with their
+declarations and excludes private type subtrees. The original projection failed
+three intended regressions in a 29-case run. Both mirrors then passed 152
+`TestModApiHookPolicy,TestBuildToolingGuard` cases with zero failures/errors/skips,
+including visible-signature, annotation and promotion controls; shell/PowerShell
+syntax checks passed. The actual staged audio projections now match the base
+exactly. The lead reviewed the complete mirrored correction. Audio is composing
+this commit through normal hooks; no public pin or declaration disguise is used.
+
+Rewind commit `10544b1ca0fee4395d6bf666cb45309b8dbcff04` is complete at
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-34d24551`, with fresh independent review
+pending. Its 36 owned files are committed; two inherited dirty disassembly
+submodules remain untouched. Ten framework-root records were removed, with no
+replacement allowances; `ScriptFramesApplyStrategy` remains. Focused selections
+reported 167/118/14/162 cases with zero failures/errors after implementation
+corrections. These overlap and must not be added as unique coverage. The 118-case
+selection skipped one opt-in checkpoint performance measurement; the follow-up
+explicitly ran HCZ's slow reload and the InfiniteSonic scripted-rewind scenario.
+No baseline runtime failure was reproduced. An initial public level-boundary
+setter was rejected by policy and replaced with the internal access bridge;
+reporter installation was extracted after the unchanged GameLoop size cap
+rejected the first candidate. Neither API pins nor source budgets were raised.
+No combined smoke has run.
+
+The coordinator's actual launch-environment preflight passed with no tests:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl python3 tools/testing/run_categories.py --base 23a18e2a232d38cca4a541be586041e9b7b01163 --rom-directory "$OPENGGF_MAIN_WORKTREE" --preflight
+```
+
+Here `OPENGGF_MAIN_WORKTREE` names the existing main checkout recorded in the
+external task registry. Existing main-root `s1.gen`, `s2.gen` and `s3k.gen` hashes match the required
+original ROM identities. No ROM links/copies were made. Required graphics flags
+will be retained; launcher notices and reused-JVM property changes remain the
+documented attribution hazards rather than reasons to strip those flags.
+
 Main remains `develop` at the pinned base; no integration push has occurred.
 Coordinator hooks are installed. The registry under
 `~/.local/state/temporary-agents/` owns task IDs, workspaces and expiry. Next:
-launch fresh rewind, audio and conversion lanes from the composed accounting
-base. No live Maven job belongs to the coordinator.
+inspect completed lane diffs, compose and review, then inspect the actual
+combined category selection before running it. No live Maven job belongs to
+the coordinator; no combined suite has run.
