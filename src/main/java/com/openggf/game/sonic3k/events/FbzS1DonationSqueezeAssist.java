@@ -37,30 +37,35 @@ final class FbzS1DonationSqueezeAssist {
         GameRules rules = player.getGameRules();
         if (rules == null || rules.playerCapability() == null) return;
 
-        var episode = FbzMovingSqueezeTraversal.findEpisode(objects, player);
-        boolean exactEpisodeActive = episode.isPresent();
-        boolean beforeLaunchFrontier = episode
-                .map(value -> FbzMovingSqueezeTraversal.beforeLaunchFrontier(value, player))
-                .orElse(false);
-        boolean currentProjectionSafe = episode
-                .filter(value -> player.getGSpeed() > 0)
-                .map(value -> FbzMovingSqueezeTraversal
-                        .project(value, player, player.getGSpeed()).clears())
-                .orElse(false);
-        boolean nativeFloorProjectionSafe = episode
-                .map(value -> FbzMovingSqueezeTraversal.project(value, player,
-                        NATIVE_SPINDASH_RELEASE_SPEED).clears())
-                .orElse(false);
+        var state = runtime.s1DonationSqueezeAssistState();
+        // CONSUMED rearming depends only on the same exact live episode search,
+        // even after donor, capability, input or speed changes.
+        if (state == S1DonationSqueezeAssistState.CONSUMED) {
+            if (FbzMovingSqueezeTraversal.findEpisode(objects, player).isEmpty()) {
+                runtime.setS1DonationSqueezeAssistState(S1DonationSqueezeAssistState.ARMED);
+            }
+            return;
+        }
+        boolean donationActive = CrossGameFeatureProvider.isActive();
+        boolean spindashEnabled = rules.playerCapability().spindashEnabled();
         boolean ordinaryRightDownRolling = !player.getAir()
                 && player.getRolling() && !player.getSpindash()
                 && player.isRightPressed() && player.isDownPressed();
         int currentSpeed = player.getGSpeed();
-        Decision decision = resolve(runtime.s1DonationSqueezeAssistState(),
-                CrossGameFeatureProvider.isActive(),
-                rules.playerCapability().spindashEnabled(),
-                exactEpisodeActive, ordinaryRightDownRolling,
-                beforeLaunchFrontier, currentProjectionSafe,
-                nativeFloorProjectionSafe, currentSpeed);
+        // These ARMED cases cannot apply a floor. Nonpositive speed also makes
+        // exact episode discovery empty; the native floor is an exclusive ceiling.
+        if (!donationActive || spindashEnabled || !ordinaryRightDownRolling
+                || currentSpeed <= 0 || currentSpeed >= NATIVE_SPINDASH_RELEASE_SPEED) {
+            return;
+        }
+        var projected = FbzMovingSqueezeTraversal.findProjectedEpisode(objects, player);
+        boolean beforeLaunchFrontier = projected
+                .map(value -> FbzMovingSqueezeTraversal.beforeLaunchFrontier(value.episode(), player))
+                .orElse(false);
+        Decision decision = resolve(state, donationActive, spindashEnabled,
+                projected.isPresent(), ordinaryRightDownRolling, beforeLaunchFrontier,
+                projected.map(value -> value.current().clears()).orElse(false),
+                projected.map(value -> value.nativeFloor().clears()).orElse(false), currentSpeed);
         if (decision.nextState() != runtime.s1DonationSqueezeAssistState()) {
             runtime.setS1DonationSqueezeAssistState(decision.nextState());
         }

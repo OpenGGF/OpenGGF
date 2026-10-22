@@ -4,6 +4,7 @@ import com.openggf.game.GroundMode;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -44,29 +45,50 @@ public final class FbzMovingSqueezeTraversal {
         }
     }
 
+    /** Engine-only discovery result; keep the winning simulations for the event consumer. */
+    public record ProjectedEpisode(Episode episode, Projection current, Projection nativeFloor) {
+        public ProjectedEpisode {
+            Objects.requireNonNull(episode, "episode");
+            Objects.requireNonNull(current, "current");
+            Objects.requireNonNull(nativeFloor, "nativeFloor");
+        }
+    }
+
     private record ProjectedGap(boolean safe, int dangerEdge, int minimumGap) {
     }
 
     /** Finds the nearest exact live terrain-launch pair, failing closed on ties. */
     public static Optional<Episode> findEpisode(ObjectManager objects,
                                                 AbstractPlayableSprite player) {
+        return findProjectedEpisode(objects, player).map(ProjectedEpisode::episode);
+    }
+
+    /** Same exact selection as {@link #findEpisode}, retaining its winning projections. */
+    public static Optional<ProjectedEpisode> findProjectedEpisode(ObjectManager objects,
+                                                                 AbstractPlayableSprite player) {
         if (objects == null || !hasLaunchFloorAuthority(player)
                 || player.getGSpeed() <= 0) {
             return Optional.empty();
         }
         int playerX = player.getCentreX() & 0xFFFF;
         Episode nearest = null;
+        Projection nearestCurrent = null;
+        Projection nearestNativeFloor = null;
         int nearestDanger = Integer.MAX_VALUE;
         boolean unresolvedTie = false;
-        for (Sonic3kInvisibleBlockObjectInstance candidate
-                : objects.activeObjectsOfType(Sonic3kInvisibleBlockObjectInstance.class)) {
+        var blocks = objects.activeObjectsOfType(Sonic3kInvisibleBlockObjectInstance.class);
+        if (blocks.isEmpty()) return Optional.empty();
+        // Query once, and only if a live block lies ahead of the launch point.
+        // The live population is unchanged throughout this synchronous projection.
+        List<FbzElevatorObjectInstance.Car> cars = null;
+        for (Sonic3kInvisibleBlockObjectInstance candidate : blocks) {
             if (!isLiveNormalInvisibleSolid(candidate, player)) continue;
             var params = candidate.getSolidParams();
             int anchorX = candidate.getX() + params.offsetX();
             int blockLeft = anchorX - params.halfWidth();
             if (playerX >= blockLeft) continue;
-            for (FbzElevatorObjectInstance.Car car
-                    : objects.activeObjectsOfType(FbzElevatorObjectInstance.Car.class)) {
+            if (cars == null) cars = objects.activeObjectsOfType(FbzElevatorObjectInstance.Car.class);
+            for (FbzElevatorObjectInstance.Car car : cars) {
                 Episode episode = new Episode(candidate, car);
                 if (!isActive(episode, player)) continue;
                 Projection nativeFloor = project(episode, player, NATIVE_RELEASE_SPEED);
@@ -79,6 +101,8 @@ public final class FbzMovingSqueezeTraversal {
                 if (danger <= playerX) continue;
                 if (danger < nearestDanger) {
                     nearest = episode;
+                    nearestCurrent = current;
+                    nearestNativeFloor = nativeFloor;
                     nearestDanger = danger;
                     unresolvedTie = false;
                 } else if (danger == nearestDanger && nearest != null
@@ -87,7 +111,8 @@ public final class FbzMovingSqueezeTraversal {
                 }
             }
         }
-        return nearest == null || unresolvedTie ? Optional.empty() : Optional.of(nearest);
+        return nearest == null || unresolvedTie ? Optional.empty()
+                : Optional.of(new ProjectedEpisode(nearest, nearestCurrent, nearestNativeFloor));
     }
 
     public static boolean isActive(Episode episode, AbstractPlayableSprite player) {
