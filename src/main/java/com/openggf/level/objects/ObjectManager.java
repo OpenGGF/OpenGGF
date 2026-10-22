@@ -2,7 +2,6 @@ package com.openggf.level.objects;
 
 import com.openggf.game.ModApi;
 import com.openggf.game.session.EngineServices;
-import static org.lwjgl.opengl.GL11.GL_LINES;
 import com.openggf.camera.Camera;
 import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.DebugOverlayToggle;
@@ -21,8 +20,6 @@ import com.openggf.game.solid.PreContactState;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.game.session.SessionManager;
-import com.openggf.graphics.GLCommand;
-import com.openggf.graphics.GLCommandGroup;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
@@ -90,7 +87,7 @@ public class ObjectManager {
     // Cached spawn-order comparators (built lazily; placement is constructor-set).
     private Comparator<ObjectSpawn> forwardSpawnOrder;
     private Comparator<ObjectSpawn> backwardSpawnOrder;
-    private final List<GLCommand> renderCommands = new ArrayList<>();
+    private final ObjectRenderParts objectRenderParts;
     private int frameCounter;
     private int vblaCounter;
     private boolean updating;
@@ -258,6 +255,7 @@ public class ObjectManager {
         this.objectServices = objectServices;
         this.placementAdmission = new ObjectPlacementAdmission(registry, objectServices);
         this.objectCallbacks = new ObjectCallbackRouter(registry);
+        this.objectRenderParts = new ObjectRenderParts(objectCallbacks, objectServices, graphicsManager);
         this.slotLayout = registry != null ? registry.objectSlotLayout() : ObjectSlotLayout.SONIC_1;
         this.windowingStrategy = registry != null
                 ? registry.objectWindowingStrategy()
@@ -1562,20 +1560,7 @@ public class ObjectManager {
 
         enableVerticalWrapIfNeeded();
         try {
-            renderCommands.clear();
-            for (ObjectRenderParts.RenderEntry entry : entries) {
-                if (callback != null) {
-                    callback.beforeDraw(entry.instance(), entry.high());
-                }
-                objectCallbacks.run(entry.instance(),
-                        () -> ObjectRenderParts.appendRenderCommands(entry, renderCommands, bucket, objectServices));
-            }
-
-            if (!renderCommands.isEmpty()) {
-                graphicsManager.enqueueDebugLineState();
-                graphicsManager.registerCommand(new GLCommandGroup(GL_LINES, renderCommands));
-                graphicsManager.enqueueDefaultShaderState();
-            }
+            objectRenderParts.drawBucket(entries, bucket, callback);
         } finally {
             graphicsManager.disableVerticalWrapAdjust();
         }
@@ -1608,12 +1593,6 @@ public class ObjectManager {
         ensureBucketsPopulated();
         int idx = RenderPriority.clamp(bucket) - RenderPriority.MIN;
 
-        // The BatchedPatternRenderer uses a single tile-occlusion uniform for
-        // the entire batch — it cannot vary per-instance. The helper flushes
-        // at every mask transition while retaining SST slot order.
-        // (The InstancedPatternRenderer bakes priority per-instance and doesn't
-        // need the flush, but it's harmless — empty flushes are no-ops.)
-
         drawBucketInstancesWithPriority(unifiedBuckets[idx], idx + RenderPriority.MIN, gfx);
     }
 
@@ -1625,29 +1604,7 @@ public class ObjectManager {
 
         enableVerticalWrapIfNeeded();
         try {
-            renderCommands.clear();
-            // Draw_Sprite / Render_Sprites consume SST order; masks affect later entries.
-            // The cached lists use reverse order for ordinary painter drawing.
-            boolean collectingSat = gfx.isSpriteSatCollectionActive();
-            for (int i = 0; i < entries.size(); i++) {
-                ObjectRenderParts.RenderEntry entry = entries.get(collectingSat ? entries.size() - 1 - i : i);
-                objectCallbacks.run(entry.instance(), () -> {
-                    int mask = ObjectRenderParts.tileOcclusionPaletteMask(entry);
-                    if (gfx.getCurrentSpriteTileOcclusionPaletteMask() != mask) {
-                        boolean perInstance = com.openggf.graphics.PresentationGraphicsAccess.maskIsPerInstance(gfx);
-                        if (!perInstance) gfx.flushPatternBatch();
-                        gfx.setCurrentSpriteTileOcclusionPaletteMask(mask);
-                        if (!perInstance) gfx.beginPatternBatch();
-                    }
-                    ObjectRenderParts.appendRenderCommands(entry, renderCommands, bucket, objectServices);
-                });
-            }
-
-            if (!renderCommands.isEmpty()) {
-                graphicsManager.enqueueDebugLineState();
-                graphicsManager.registerCommand(new GLCommandGroup(GL_LINES, renderCommands));
-                graphicsManager.enqueueDefaultShaderState();
-            }
+            objectRenderParts.drawBucketWithPriority(entries, bucket, gfx);
         } finally {
             graphicsManager.disableVerticalWrapAdjust();
         }
