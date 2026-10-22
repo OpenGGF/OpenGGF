@@ -360,7 +360,8 @@ final class HostedRunController {
         PlayerPose p = pose.pose();
         GhostFrame frame = new GhostFrame(p.centreX(), p.centreY(), p.mappingFrame(), p.hFlip(), p.vFlip(),
                 false, p.priorityBucket(), p.highPriority());
-        return new ActiveGhost(pose.slotId(), pose.characterCode(), frame, pose.nameplate(), pose.opacity());
+        return new ActiveGhost(pose.slotId(), pose.characterCode(), frame, pose.nameplate(), pose.opacity(),
+                pose.appearance());
     }
 
     /** Runs a host callback; a failure aborts the run at the next boundary instead of the engine. */

@@ -39,9 +39,14 @@ public sealed interface ControlMessage {
                        String routing, boolean verified) {
     }
 
+    /**
+     * Join request. {@code appearance} is the canonical {@link
+     * com.openggf.net.identity.PlayerAppearance} wire form for the player's current character
+     * ({@code ""} for the stock look); it is part of the signed transcript.
+     */
     @com.openggf.game.ModApi
     record Hello(int protocolVersion, String pubKeyBase64, String displayName,
-                 String determinismFingerprint) implements ControlMessage {
+                 String determinismFingerprint, String appearance) implements ControlMessage {
     }
 
     @com.openggf.game.ModApi
@@ -82,6 +87,24 @@ public sealed interface ControlMessage {
 
     @com.openggf.game.ModApi
     record SelectCharacter(String character) implements ControlMessage {
+    }
+
+    /**
+     * Client to host, lobby only: replaces the sender's display name and look without a new
+     * identity. Both fields are canonical ({@link com.openggf.net.identity.DisplayNames},
+     * {@link com.openggf.net.identity.PlayerAppearance}); the host answers with
+     * {@link PlayerUpsert} and {@link PlayerLook}.
+     */
+    @com.openggf.game.ModApi
+    record UpdateProfile(String displayName, String appearance) implements ControlMessage {
+    }
+
+    /**
+     * Host to clients: one player's look. Sent per player rather than inside {@link RoomState},
+     * which must hold a full 256-player roster in one frame; a stock look is {@code ""}.
+     */
+    @com.openggf.game.ModApi
+    record PlayerLook(int slot, String appearance) implements ControlMessage {
     }
 
     @com.openggf.game.ModApi

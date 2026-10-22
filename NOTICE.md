@@ -74,4 +74,27 @@ its large-argument path). `tools/audio/native-pcm/musl_sin.c` reproduces the
 "3 Band EQ", (c) Neil C / Etanza Systems 2K6, after Paul Kellet's filter. The
 author placed it in the public domain.
 
+## Name fonts: Fusion Pixel and GNU Unifont
+
+`com.openggf.mods.ui.NameFont` draws player-chosen text (display names) from two
+bundled bitmap fonts in `src/main/resources/fonts/`. Neither is modified; the
+BDF is only gzip-compressed and the Unifont file is the upstream `.hex.gz`.
+
+- `fusion-pixel-10px-proportional-ja.bdf.gz`: Fusion Pixel Font 10px
+  proportional (Japanese glyph forms), release 2026.10.16, from
+  https://github.com/TakWolf/fusion-pixel-font (uncompressed BDF sha256
+  `29e86234c5c3f571a588a974868e72574400a936396f46e4ba69d0e33bb886cd`).
+  Copyright (c) 2022, TakWolf. It incorporates Ark Pixel Font (Copyright (c)
+  2021, TakWolf), BoutiqueBitmap9x9 (Copyright 2026 fancy type foundry /
+  Cen-cyun, Liu) and Galmuri (Copyright (c) 2019-2025 Lee Minseo). Licence:
+  SIL Open Font License 1.1, with no Reserved Font Names; texts in
+  `LICENSES/OFL-1.1-Fusion-Pixel.txt`, `LICENSES/OFL-1.1-Ark-Pixel.txt`,
+  `LICENSES/OFL-1.1-BoutiqueBitmap9x9.txt` and `LICENSES/OFL-1.1-Galmuri.txt`.
+- `unifont-18.0.01.hex.gz`: GNU Unifont 18.0.01, from https://unifoundry.com/unifont/
+  (sha256 `e66385c79a0b8b24a466f3129930e08a966a935b4bf3b28c6bb17a9df9bf791d`).
+  Originally by Roman Czyborra, maintained by Paul Hardy with many glyph
+  contributors (upstream `README`). Licence: SIL Open Font License 1.1, or GNU GPL 2.0 or later with the GNU
+  font embedding exception; the upstream `COPYING` is
+  `LICENSES/Unifont-OFL-1.1-GPL-2.0-font-exception.txt`.
+
 Full contributor and third-party acknowledgements are in `CREDITS.md`.

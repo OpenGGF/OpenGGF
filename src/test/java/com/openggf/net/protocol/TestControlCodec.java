@@ -12,7 +12,7 @@ class TestControlCodec {
     @Test
     void roundTripsHelloWithToken() {
         ControlMessage.Hello hello = new ControlMessage.Hello(
-                Protocol.VERSION, "cHVia2V5", "Farrell", "0.6:cafe1234");
+                Protocol.VERSION, "cHVia2V5", "Farrell", "0.6:cafe1234", "0E6.20E6");
         String wire = ControlCodec.encode("tok123", hello);
         ControlCodec.DecodedControl back = ControlCodec.decode(wire);
         assertEquals("tok123", back.token());
@@ -38,7 +38,7 @@ class TestControlCodec {
         List<ControlMessage.StandingsRow> rows =
                 List.of(new ControlMessage.StandingsRow(0, "A", "sonic", 3600, 1, "NONE"));
         List<ControlMessage> all = List.of(
-                new ControlMessage.Hello(Protocol.VERSION, "a", "b", "c"),
+                new ControlMessage.Hello(Protocol.VERSION, "a", "b", "c", ""),
                 new ControlMessage.Welcome(Protocol.VERSION, "bm9uY2U=", "serverfp"),
                 new ControlMessage.AuthProof("c2ln"),
                 new ControlMessage.JoinRejected("room full"),
