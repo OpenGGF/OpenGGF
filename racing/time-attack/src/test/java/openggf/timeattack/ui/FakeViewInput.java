@@ -16,6 +16,7 @@ public final class FakeViewInput implements ViewInput {
     public boolean back;
     public final Set<Integer> pressed = new HashSet<>();
     public final Set<Integer> held = new HashSet<>();
+    public String typed = "";
 
     @Override public boolean up() { return up; }
     @Override public boolean down() { return down; }
@@ -25,9 +26,11 @@ public final class FakeViewInput implements ViewInput {
     @Override public boolean back() { return back; }
     @Override public boolean keyPressed(int key) { return pressed.contains(key); }
     @Override public boolean keyDown(int key) { return held.contains(key) || pressed.contains(key); }
+    @Override public String typedText() { return typed; }
 
     public void clear() {
         up = down = left = right = accept = back = false;
+        typed = "";
         pressed.clear();
         held.clear();
     }
@@ -73,36 +76,21 @@ public final class FakeViewInput implements ViewInput {
         idle(view);
     }
 
-    /** Types {@code text} one key per tap on a US layout. */
+    /** Types {@code text} one code point per tick, as the platform delivers characters, each followed by an idle tick. */
     public void type(Consumer<ViewInput> view, String text) {
-        for (char c : text.toCharArray()) {
-            int[] key = keyFor(c);
-            tapKey(view, key[0], key[1] != 0);
-        }
+        text.codePoints().forEach(codePoint -> {
+            clear();
+            typed = new String(Character.toChars(codePoint));
+            view.accept(this);
+            idle(view);
+        });
     }
 
-    /** The {@code SceneKeys} code and whether Shift is held for {@code c} on a US layout. */
-    public static int[] keyFor(char c) {
-        if (c >= 'a' && c <= 'z') return new int[] {SceneKeys.A + c - 'a', 0};
-        if (c >= 'A' && c <= 'Z') return new int[] {SceneKeys.A + c - 'A', 1};
-        if (c >= '0' && c <= '9') return new int[] {SceneKeys.DIGIT_0 + c - '0', 0};
-        return switch (c) {
-            case ' ' -> new int[] {SceneKeys.SPACE, 0};
-            case '-' -> new int[] {SceneKeys.MINUS, 0};
-            case '_' -> new int[] {SceneKeys.MINUS, 1};
-            case '.' -> new int[] {SceneKeys.PERIOD, 0};
-            case ',' -> new int[] {SceneKeys.COMMA, 0};
-            case '\'' -> new int[] {SceneKeys.APOSTROPHE, 0};
-            case ';' -> new int[] {SceneKeys.SEMICOLON, 0};
-            case ':' -> new int[] {SceneKeys.SEMICOLON, 1};
-            case '/' -> new int[] {SceneKeys.SLASH, 0};
-            case '?' -> new int[] {SceneKeys.SLASH, 1};
-            case '+' -> new int[] {SceneKeys.EQUAL, 1};
-            case '!' -> new int[] {SceneKeys.DIGIT_1, 1};
-            case '#' -> new int[] {SceneKeys.DIGIT_3, 1};
-            case '[' -> new int[] {SceneKeys.LEFT_BRACKET, 0};
-            case ']' -> new int[] {SceneKeys.RIGHT_BRACKET, 0};
-            default -> throw new IllegalArgumentException("No key types '" + c + "'");
-        };
+    /** Delivers {@code text} in one tick, as an input method commits a whole word. */
+    public void commit(Consumer<ViewInput> view, String text) {
+        clear();
+        typed = text;
+        view.accept(this);
+        idle(view);
     }
 }

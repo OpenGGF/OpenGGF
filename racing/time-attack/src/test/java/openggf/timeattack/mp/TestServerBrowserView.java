@@ -111,8 +111,10 @@ class TestServerBrowserView {
         for (int i = 0; i < 13; i++) input.tapDown(view::update);
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         view.draw(canvas);
-        assertTrue(canvas.lines.stream().anyMatch(line -> line.startsWith("Room13-")), canvas.joined());
-        assertFalse(canvas.lines.stream().anyMatch(line -> line.startsWith("Room0-")), canvas.joined());
+        // Room names are player-chosen and drawn with the name font.
+        assertTrue(canvas.drewName("Room13-", 12, 0xFFFFFFFF));
+        assertFalse(canvas.drewName("Room0-", 12, 0xFFFFFFFF));
+        canvas.assertFillsOnScreen();
     }
 
     @Test
@@ -132,7 +134,9 @@ class TestServerBrowserView {
         transport.join();
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         view.draw(canvas);
-        assertTrue(canvas.lines.indexOf("a") < canvas.lines.indexOf("b"), "Drawing must not consume transport results");
+        int aTop = canvas.nameTop("a", 12, 0xFFFFFFFF);
+        int bTop = canvas.nameTop("b", 12, 0xFFFFFFFF);
+        assertTrue(aTop != Integer.MIN_VALUE && aTop < bTop, "Drawing must not consume transport results");
         input.tapEnter(view::update);
         assertEquals(List.of(b), actions.joined);
     }

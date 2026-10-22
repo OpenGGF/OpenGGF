@@ -4,6 +4,7 @@ import com.openggf.control.InputActionMasks;
 import com.openggf.audio.StreamedMusicPort;
 import com.openggf.control.InputHandler;
 import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.control.MenuInput;
 import com.openggf.control.MenuRepeat;
 import com.openggf.control.MouseWheel;
 import com.openggf.control.PlayerInputState;
@@ -281,6 +282,7 @@ public final class ModSceneHost {
         private LogicalInputSnapshot logical = LogicalInputSnapshot.neutral();
         private SceneMouse mouse = SceneMouse.none();
         private PhysicalInput physical = PhysicalInput.neutral();
+        private String typed = "";
         private ManagedSceneMusic music;
         private SceneDonorMusic donorMusic;
         private final ManagedSceneNetwork network = new ManagedSceneNetwork();
@@ -411,6 +413,7 @@ public final class ModSceneHost {
 
         void resetInput() {
             input = null; logical = LogicalInputSnapshot.neutral(); physical = PhysicalInput.neutral();
+            typed = "";
             heldButtons = pressedButtons = repeatedButtons = 0;
             repeat = new MenuRepeat(); mouse = SceneMouse.none();
         }
@@ -427,6 +430,9 @@ public final class ModSceneHost {
         void beginTick(InputHandler handler) {
             input = handler;
             physical = handler == null ? PhysicalInput.neutral() : handler.capturePhysicalInput();
+            // GLFW character events since the last frame edge; nothing else reads the menu text
+            // buffer while a scene is the active mode, and InputHandler.update() clears it anyway.
+            typed = handler == null ? "" : MenuInput.consumeText(handler);
             LogicalInputSnapshot raw = handler == null ? LogicalInputSnapshot.neutral() : handler.logical();
             heldButtons = buttons(raw.player1(), true);
             pressedButtons = buttons(raw.player1(), false);
@@ -572,6 +578,11 @@ public final class ModSceneHost {
         @Override
         public boolean keyPressed(int key) {
             return input != null && input.isKeyPressed(key);
+        }
+
+        @Override
+        public String typedText() {
+            return typed;
         }
 
         @Override

@@ -2,7 +2,8 @@ package openggf.timeattack.mp;
 
 import openggf.timeattack.TimeAttackTimeFormat;
 import com.openggf.mods.ui.CompactFont;
-import com.openggf.mods.ui.LevelOverlayCanvas;
+import com.openggf.mods.ui.PixelCanvas;
+import com.openggf.mods.ui.NameFont;
 import com.openggf.net.protocol.ControlMessage;
 
 import java.util.ArrayList;
@@ -14,6 +15,8 @@ public final class HudTextLayout {
     /** Widest right-hand panel: 21 compact-font columns, about 44% of a native 320-pixel view. */
     public static final int PANEL_WIDTH = 140;
     public static final int LINE_HEIGHT = 9;
+    /** Rows that show a player's name use the name font's taller line, so any script fits. */
+    public static final int NAME_LINE_HEIGHT = NameFont.LINE_HEIGHT;
     /** Below the run clock's tallest (three-line, 4 + 3 * 9 pixel) panel at y=4, with a three-pixel gap. */
     public static final int ROOM_TOP = 4 + (4 + 3 * LINE_HEIGHT) + 3;
     public static final int WHITE = 0xFFF5F8FF;
@@ -25,7 +28,52 @@ public final class HudTextLayout {
     private static final int TEXT_INSET = 6;
     private static final int TEXT_TOP = 3;
 
-    public record Line(String text, int color) { }
+    /**
+     * One panel row in the compact font. A name row also shows a player's name in the name font
+     * and their colour after {@code text}, with {@code suffix} (a time or AHEAD/BEHIND) right-aligned
+     * in the compact font, so the column stays put whatever script or length the name has.
+     *
+     * @param name      the player's name, or null for a plain row
+     * @param nameColor the name's {@code 0xAARRGGBB}
+     */
+    public record Line(String text, int color, String name, int nameColor, String suffix) {
+        public Line(String text, int color) {
+            this(text, color, null, 0, "");
+        }
+
+        public Line {
+            suffix = suffix == null ? "" : suffix;
+        }
+
+        /** A row showing {@code prefix}, then {@code name} in {@code nameColor}, then {@code suffix} on the right. */
+        public static Line named(String prefix, String name, int nameColor, String suffix, int color) {
+            return new Line(prefix, color, name.replaceAll("[\\r\\n\\t]", " "), nameColor, suffix);
+        }
+
+        public boolean hasName() {
+            return name != null;
+        }
+
+        public int height() {
+            return hasName() ? NAME_LINE_HEIGHT : LINE_HEIGHT;
+        }
+
+        /** Everything the row shows, as one string (tests and logs). */
+        public String plain() {
+            return hasName() ? text + name + (suffix.isEmpty() ? "" : " " + suffix) : text;
+        }
+
+        /** Pixels the row needs, with a gap before a right-aligned suffix. */
+        public int width() {
+            if (!hasName()) return CompactFont.width(text, 1);
+            int width = text.isEmpty() ? 0 : CompactFont.width(text, 1) + 1;
+            width += NameFont.width(name);
+            return suffix.isEmpty() ? width : width + SUFFIX_GAP + CompactFont.width(suffix, 1);
+        }
+    }
+
+    private static final int SUFFIX_GAP = 6;
+
     /** Right-anchored, measured panel. Every text line is fitted before drawing. */
     public record Panel(int x, int y, int width, int height, List<Line> lines, int accent) {
         public Panel { lines = List.copyOf(lines); }
@@ -36,12 +84,26 @@ public final class HudTextLayout {
                               List<Line> lines, int accent) {
         // Reserve the left 100 pixels for the stock SCORE/TIME/RINGS and lives HUD.
         int maximum = Math.max(1, Math.min(desiredWidth, viewportWidth - 104));
-        List<Line> fitted = lines.stream().map(line -> new Line(
-                CompactFont.fit(line.text(), maximum - 12, 1), line.color())).toList();
-        int text = fitted.stream().mapToInt(line -> CompactFont.width(line.text(), 1)).max().orElse(0);
+        List<Line> fitted = lines.stream().map(line -> fit(line, maximum - 12)).toList();
+        int text = fitted.stream().mapToInt(Line::width).max().orElse(0);
         int width = Math.min(maximum, text + 12);
         return new Panel(viewportWidth - width - 4, top, width,
-                panelHeight(fitted.size()), fitted, accent);
+                4 + fitted.stream().mapToInt(Line::height).sum(), fitted, accent);
+    }
+
+    /** Fits a row into {@code pixels}: plain rows by characters, name rows by cutting the name (whole graphemes). */
+    private static Line fit(Line line, int pixels) {
+        if (!line.hasName()) return new Line(CompactFont.fit(line.text(), pixels, 1), line.color());
+        String prefix = CompactFont.fit(line.text(), pixels, 1);
+        String suffix = line.suffix();
+        int fixed = (prefix.isEmpty() ? 0 : CompactFont.width(prefix, 1) + 1)
+                + (suffix.isEmpty() ? 0 : SUFFIX_GAP + CompactFont.width(suffix, 1));
+        if (fixed > pixels) {
+            suffix = "";
+            fixed = prefix.isEmpty() ? 0 : CompactFont.width(prefix, 1) + 1;
+        }
+        return new Line(prefix, line.color(), NameFont.fit(line.name(), Math.max(0, pixels - fixed)),
+                line.nameColor(), suffix);
     }
 
     public static int panelHeight(int lines) {
@@ -58,43 +120,41 @@ public final class HudTextLayout {
         return finishStripTop(viewportHeight) - 3 - panelHeight(lines);
     }
 
-    /** Compact-font columns available to text inside a panel no wider than {@code desiredWidth}. */
-    public static int columns(int viewportWidth, int desiredWidth) {
-        int maximum = Math.max(1, Math.min(desiredWidth, viewportWidth - 104));
-        return Math.max(0, (maximum - 12 + 1) / 6);
+    /** {@link #aboveFinishStrip(int, int)} for rows of mixed height (name rows are taller). */
+    public static int aboveFinishStrip(int viewportHeight, List<Line> lines) {
+        return finishStripTop(viewportHeight) - 3 - (4 + lines.stream().mapToInt(Line::height).sum());
     }
 
-    /** Left text and a right-aligned suffix in a monospaced row; the left text is truncated first. */
-    public static String aligned(String left, String right, int columns) {
-        String clean = left.replaceAll("[\\r\\n\\t]", " ");
-        int room = Math.max(0, columns - right.length() - 1);
-        String fitted = clean.length() <= room ? clean
-                : room <= 3 ? ".".repeat(room) : clean.substring(0, room - 3) + "...";
-        return fitted + " ".repeat(Math.max(1, columns - fitted.length() - right.length())) + right;
-    }
-
-    public static void drawPanel(LevelOverlayCanvas canvas, Panel panel) {
+    public static void drawPanel(PixelCanvas canvas, Panel panel) {
         canvas.fill(panel.x(), panel.y(), panel.width(), panel.height(), FILL);
         canvas.fill(panel.x(), panel.y(), 2, panel.height(), panel.accent());
         int y = panel.y() + TEXT_TOP;
         for (Line line : panel.lines()) {
-            CompactFont.draw(canvas, line.text(), panel.x() + TEXT_INSET, y, 1, line.color());
-            y += LINE_HEIGHT;
+            int x = panel.x() + TEXT_INSET;
+            if (!line.hasName()) {
+                CompactFont.draw(canvas, line.text(), x, y, 1, line.color());
+                y += LINE_HEIGHT;
+                continue;
+            }
+            // The name's baseline (row 10 of its 13-row box) lines up with the compact glyphs' last row.
+            int boxTop = y - 1;
+            int compactY = boxTop + NameFont.BASELINE - 7;
+            if (!line.text().isEmpty()) {
+                CompactFont.draw(canvas, line.text(), x, compactY, 1, line.color());
+                x += CompactFont.width(line.text(), 1) + 1;
+            }
+            NameFont.draw(canvas, line.name(), x, boxTop, line.nameColor());
+            if (!line.suffix().isEmpty()) {
+                CompactFont.draw(canvas, line.suffix(), panel.x() + panel.width() - TEXT_INSET
+                        - CompactFont.width(line.suffix(), 1), compactY, 1, line.color());
+            }
+            y += NAME_LINE_HEIGHT;
         }
     }
 
     public static String clock(long millis) {
         long seconds = Math.max(0, millis) / 1000;
         return "%d:%02d".formatted(seconds / 60, seconds % 60);
-    }
-
-    /** Preserve rank/time columns when a server name is longer than the available row. */
-    public static String compactStanding(ControlMessage.StandingsRow row, int pixels) {
-        String rank = row.rank() + ". ";
-        String suffix = " " + TimeAttackTimeFormat.frames(row.bestTimeFrames());
-        String name = row.displayName().replaceAll("[\\r\\n\\t]", " ");
-        return rank + CompactFont.fit(name,
-                pixels - CompactFont.width(rank + suffix, 1) - 1, 1) + suffix;
     }
 
     public static List<ControlMessage.StandingsRow> nearbyStandings(

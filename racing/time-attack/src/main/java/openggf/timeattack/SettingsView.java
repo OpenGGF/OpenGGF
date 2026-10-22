@@ -1,6 +1,7 @@
 package openggf.timeattack;
 
 import com.openggf.mods.scene.SceneCanvas;
+import com.openggf.mods.ui.NameFont;
 import com.openggf.mods.ui.TextLayout;
 import openggf.timeattack.ui.MenuCue;
 import openggf.timeattack.ui.TextEntry;
@@ -10,8 +11,10 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
- * The Time Attack settings page: multiplayer display name, host port, master server URL, the
- * development-only master TLS switch and the multiplayer minimap. Every change attempts immediate checked publication; failed saves remain active and retry.
+ * The Time Attack settings page: multiplayer display name and look ({@link ProfileView}), host
+ * port, master server URL, the development-only master TLS switch, the multiplayer minimap and
+ * the retry key. Every change attempts immediate checked publication; failed saves remain active
+ * and retry.
  */
 public final class SettingsView {
     private static final int BACKGROUND = 0x101830;
@@ -22,13 +25,16 @@ public final class SettingsView {
     private static final int FOCUS = 0x803060C0;
     private static final int HINT = 0xFF8090B0;
     private static final int FIRST_ROW_Y = 44;
-    private static final int ROW_HEIGHT = 20;
+    private static final int ROW_HEIGHT = 18;
 
-    enum Row { DISPLAY_NAME, HOST_PORT, MASTER_URL, MASTER_TLS, MINIMAP, RETRY_KEY, BACK }
+    enum Row { DISPLAY_NAME, LOOK, HOST_PORT, MASTER_URL, MASTER_TLS, MINIMAP, RETRY_KEY, BACK }
 
     private final TimeAttackSettings settings;
     private final Runnable changed;
     private final Consumer<MenuCue> cues;
+    private final String gameId;
+    private final String character;
+    private ProfileView profile;
     private Row focus = Row.DISPLAY_NAME;
     private TextEntry editor;
     private Row editing;
@@ -40,12 +46,30 @@ public final class SettingsView {
      * @param changed runs after every change (the owner saves and applies the settings)
      */
     public SettingsView(TimeAttackSettings settings, Runnable changed, Consumer<MenuCue> cues) {
+        this(settings, changed, cues, null, null);
+    }
+
+    /**
+     * @param gameId    the game chosen in the menu, whose character the look's palette is for (may be null)
+     * @param character the character chosen in the menu (may be null)
+     */
+    public SettingsView(TimeAttackSettings settings, Runnable changed, Consumer<MenuCue> cues,
+                        String gameId, String character) {
         this.settings = Objects.requireNonNull(settings, "settings");
         this.changed = Objects.requireNonNull(changed, "changed");
         this.cues = Objects.requireNonNull(cues, "cues");
+        this.gameId = gameId;
+        this.character = character;
     }
 
     public void update(ViewInput input) {
+        if (profile != null) {
+            profile.update(input);
+            if (profile.consumeCloseRequested()) {
+                profile = null;
+            }
+            return;
+        }
         if (capturingKey) {
             if (input.keyPressed(com.openggf.mods.scene.SceneKeys.ESCAPE)) {
                 capturingKey = false;
@@ -100,6 +124,12 @@ public final class SettingsView {
                     changed();
                 }
             }
+            case LOOK -> {
+                if (input.accept()) {
+                    profile = new ProfileView(settings, gameId, character, this::changed, cues);
+                    cues.accept(MenuCue.CONFIRM);
+                }
+            }
             case RETRY_KEY -> {
                 if (input.accept()) {
                     capturingKey = true;
@@ -124,8 +154,8 @@ public final class SettingsView {
     private void openEditor(Row row) {
         editing = row;
         editor = switch (row) {
-            case DISPLAY_NAME -> new TextEntry("DISPLAY NAME", settings.displayName(),
-                    TimeAttackSettings.MAX_DISPLAY_NAME_LENGTH, " -_.");
+            case DISPLAY_NAME -> TextEntry.name("DISPLAY NAME", settings.displayName())
+                    .withPrompt("Shown to other racers, in any script");
             case HOST_PORT -> new TextEntry("HOST PORT (1-65535)", Integer.toString(settings.hostPort()), 5, "");
             case MASTER_URL -> new TextEntry("MASTER SERVER URL", settings.masterUrl(),
                     TimeAttackSettings.MAX_TEXT_LENGTH, ".:/-_");
@@ -139,7 +169,7 @@ public final class SettingsView {
         editor = null;
         editing = null;
         switch (row) {
-            case DISPLAY_NAME -> settings.setDisplayName(value);
+            case DISPLAY_NAME -> settings.setDisplayName(value); // canonical: the field only accepts valid names
             case MASTER_URL -> settings.setMasterUrl(value);
             case HOST_PORT -> {
                 int port;
@@ -172,7 +202,7 @@ public final class SettingsView {
 
     /** True while a text field (name, port, master URL) takes keyboard text. */
     public boolean isEditingText() {
-        return editor != null || capturingKey;
+        return editor != null || capturingKey || (profile != null && profile.isEditingText());
     }
 
     Row focusedRow() {
@@ -191,12 +221,23 @@ public final class SettingsView {
             editor.draw(canvas);
             return;
         }
+        if (profile != null) {
+            profile.draw(canvas);
+            return;
+        }
         int width = canvas.width();
         canvas.clear(BACKGROUND);
         canvas.text("TIME ATTACK SETTINGS", 10, 10, TITLE);
         canvas.text("Run controls and multiplayer", 10, 24, HINT);
-        row(canvas, Row.DISPLAY_NAME, "Name",
-                settings.displayName().isBlank() ? "(identity prefix)" : settings.displayName(), VALUE);
+        if (settings.displayName().isBlank()) {
+            row(canvas, Row.DISPLAY_NAME, "Name", "(identity prefix)", VALUE);
+        } else {
+            row(canvas, Row.DISPLAY_NAME, "Name", "", VALUE);
+            NameFont.draw(canvas, NameFont.fit(settings.displayName(), width - 132), 120,
+                    FIRST_ROW_Y + Row.DISPLAY_NAME.ordinal() * ROW_HEIGHT - 2,
+                    settings.appearanceFor(gameId, character).nameArgb());
+        }
+        row(canvas, Row.LOOK, "Look", LookPresets.label(settings, gameId, character), VALUE);
         row(canvas, Row.HOST_PORT, "Host port", Integer.toString(settings.hostPort()), VALUE);
         row(canvas, Row.MASTER_URL, "Master",
                 settings.masterUrl().isBlank() ? "(not set)" : settings.masterUrl(), VALUE);
@@ -211,7 +252,7 @@ public final class SettingsView {
         String outcome = settings.publicationNotice();
         // Validation feedback takes precedence; publication feedback survives navigation and retry.
         String message = status.startsWith("Port ") || outcome.isEmpty() ? status : outcome;
-        if (!message.isEmpty()) canvas.text(message, 10, 190, TITLE);
+        if (!message.isEmpty()) canvas.text(message, 10, 194, TITLE);
         canvas.text(TextLayout.ellipsis("Up/Down select  Enter edit  B back", width - 20, canvas::textWidth),
                 10, 208, HINT);
     }

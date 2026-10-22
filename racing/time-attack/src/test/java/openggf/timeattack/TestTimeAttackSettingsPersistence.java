@@ -56,6 +56,7 @@ class TestTimeAttackSettingsPersistence {
     @Test
     void exitFlushesDirtySettingsAndSettingsPageDoesNotClaimSavedOnRefusal() throws Exception {
         Storage storage = new Storage();
+        storage.files.put(TimeAttackSettings.FILE_NAME, "displayName=Racer\n"); // past the first-run name prompt
         TimeAttackScene scene = new TimeAttackScene(root.resolve("ghosts"), root.resolve("identity"));
         SceneContext context = context(storage, 0, false);
         scene.enter(context);
@@ -115,6 +116,7 @@ class TestTimeAttackSettingsPersistence {
                     case "height" -> 224;
                     case "ticks" -> 0L;
                     case "keyPressed" -> pressed != 0 && (int) args[0] == pressed;
+                    case "typedText" -> "";
                     case "buttonRepeated" -> down && ((int) args[0] & SceneButtons.DOWN) != 0;
                     default -> method.getReturnType() == boolean.class ? false : null;
                 });

@@ -40,6 +40,82 @@ class TestRaceLobbyView {
                 leaves::incrementAndGet, cues::add);
     }
 
+    private RaceLobbyView viewWithProfile(ClientRaceSession session, openggf.timeattack.TimeAttackSettings settings) {
+        RaceTransport transport = new RaceTransport() {
+            @Override public List<RaceClient.InboundEvent> drainInbound() { return List.of(); }
+            @Override public void sendControl(ControlMessage message) { sent.add(message); }
+            @Override public void sendBinary(byte[] bytes) { }
+            @Override public int playerSlot() { return 0; }
+            @Override public boolean isOpen() { return true; }
+            @Override public void close() { }
+        };
+        return new RaceLobbyView(new MultiplayerRaceCoordinator(transport, session), false, ROUND, null,
+                leaves::incrementAndGet, cues::add,
+                () -> new openggf.timeattack.ProfileView(settings, "s2", "tails", () -> { }, cues::add));
+    }
+
+    @Test
+    void profileRenamesAndRecoloursThroughTheRoomWhileInTheLobby() {
+        openggf.timeattack.TimeAttackSettings settings = new openggf.timeattack.TimeAttackSettings();
+        settings.setDisplayName("Ray");
+        ClientRaceSession session = new ClientRaceSession(() -> 0);
+        RaceLobbyView lobby = viewWithProfile(session, settings);
+        input.tapDown(lobby::update); // guest: chat -> profile
+        input.tapEnter(lobby::update);
+        assertTrue(lobby.isShowingProfile());
+        input.tapRight(lobby::update); // Classic -> Crimson
+        for (int i = 0; i < 5; i++) input.tapDown(lobby::update); // SAVE
+        input.tapEnter(lobby::update);
+        assertFalse(lobby.isShowingProfile());
+        var look = settings.appearanceFor("s2", "tails");
+        assertEquals(0x022E, look.baseColour());
+        assertEquals(List.of(new ControlMessage.UpdateProfile("Ray", look.encode())), sent);
+    }
+
+    @Test
+    void profileWaitsForTheLobbyPhase() {
+        ClientRaceSession session = new ClientRaceSession(() -> 0);
+        RaceLobbyView lobby = viewWithProfile(session, new openggf.timeattack.TimeAttackSettings());
+        session.onControl(new ControlMessage.RoundStart(ROUND, 1000, 10_000));
+        input.tapDown(lobby::update);
+        cues.clear();
+        input.tapEnter(lobby::update);
+        assertFalse(lobby.isShowingProfile());
+        assertEquals(List.of(MenuCue.ERROR), cues);
+        assertTrue(sent.isEmpty());
+    }
+
+    @Test
+    void internationalNamesAreDrawnInEachPlayersColour() {
+        ClientRaceSession session = new ClientRaceSession(() -> 0);
+        session.onControl(new ControlMessage.RoomState(List.of(
+                new ControlMessage.PlayerInfo(0, "abcdef", "ブラック・ノヴァ", "sonic"),
+                new ControlMessage.PlayerInfo(1, "123456", "Nguyễn Thị Hoa", "tails", true))));
+        session.onControl(new ControlMessage.PlayerLook(1, "0E6.20E6.30C4"));
+        session.onControl(new ControlMessage.ChatBroadcast(1, "Nguyễn Thị Hoa", "xin chào"));
+        int guest = session.appearance(1).nameArgb();
+        for (int width : new int[] {320, 400}) {
+            RecordingSceneCanvas canvas = new RecordingSceneCanvas(width);
+            view(session, true, null).draw(canvas);
+            canvas.assertFillsOnScreen();
+            assertTrue(canvas.drewName("ブラック・ノヴァ", 12, com.openggf.net.identity.PlayerAppearance.STOCK.nameArgb()));
+            assertTrue(canvas.drewName("Nguyễn Thị Hoa", 12, guest), "the guest's name in its colour");
+            int[] runs = {0};
+            com.openggf.mods.ui.NameFont.glyphs("Nguyễn Thị Hoa", 0, 0, (x, y, w, h) -> runs[0]++);
+            assertTrue(canvas.fillsIn(guest).size() >= 2 * runs[0], "the chat sender is coloured too");
+            assertTrue(canvas.joined().contains("#1234 NEW"), canvas.joined());
+        }
+    }
+
+    @Test
+    void chatTakesAnyScript() {
+        RaceLobbyView lobby = view(new ClientRaceSession(() -> 0), false, null);
+        input.tapEnter(lobby::update);
+        input.commit(lobby::update, "Привет, 你好!");
+        input.tapKey(lobby::update, SceneKeys.ENTER);
+        assertTrue(sent.contains(new ControlMessage.Chat("Привет, 你好!")), sent.toString());
+    }
+
     @Test
     void explicitHostStartAndLeaveActionsRemainReachable() {
         RaceLobbyView lobby = view(new ClientRaceSession(() -> 0), true, null);

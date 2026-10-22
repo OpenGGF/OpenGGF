@@ -15,6 +15,7 @@ import openggf.timeattack.ui.MenuCue;
 import openggf.timeattack.ui.TextEntry;
 import openggf.timeattack.ui.ViewInput;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -42,6 +43,8 @@ public final class TimeAttackScene implements ModScene {
     private static final int FIRST_ROW_Y = 44;
     /** Characters accepted in a LAN invite besides letters and digits (IPv6 brackets included). */
     private static final String INVITE_CHARACTERS = ".:/#-_[]";
+    /** {@code PlayerIdentity}'s key file: its absence means this player has never raced online. */
+    private static final String IDENTITY_KEY_FILE = "player-identity.key";
 
     private final GhostStore ghostStore;
     private final Path identityDir;
@@ -55,6 +58,7 @@ public final class TimeAttackScene implements ModScene {
     private String status = "";
     private String joinInvite = "";
     private TextEntry inviteEditor;
+    private TextEntry namePrompt;
     private SettingsView settingsView;
     private ServerBrowserView browser;
     private RaceLobbyView lobby;
@@ -87,6 +91,13 @@ public final class TimeAttackScene implements ModScene {
         List<String> games = ctx.gameplay().availableGames();
         if (!games.isEmpty()) {
             state = new TimeAttackMenuState(games, games.get(0), ghostStore);
+        }
+        // A new player names themselves before anything else. Profiles from before names were
+        // asked for (an identity but no name) keep racing under their identity prefix.
+        if (state != null && settings.displayName().isEmpty()
+                && !Files.exists(identityDir.resolve(IDENTITY_KEY_FILE))) {
+            namePrompt = TextEntry.name("CHOOSE YOUR NAME", "")
+                    .withPrompt("Other racers see it. Any script works.");
         }
     }
 
@@ -124,6 +135,18 @@ public final class TimeAttackScene implements ModScene {
         if (state == null) {
             if (input.back() || input.accept()) {
                 ctx.exitToMasterTitle();
+            }
+            return;
+        }
+        if (namePrompt != null) {
+            switch (namePrompt.update(input)) {
+                case ACCEPTED -> {
+                    settings.setDisplayName(namePrompt.acceptedName());
+                    namePrompt = null;
+                    settingsChanged();
+                }
+                case CANCELLED -> ctx.exitToMasterTitle(); // no skipping: the prompt returns next time
+                case NONE -> { }
             }
             return;
         }
@@ -174,7 +197,8 @@ public final class TimeAttackScene implements ModScene {
                 inviteEditor = new TextEntry("LAN INVITE", joinInvite, TimeAttackSettings.MAX_TEXT_LENGTH,
                         INVITE_CHARACTERS);
             } else if (focus == settingsRow) {
-                settingsView = new SettingsView(settings, this::settingsChanged, this::cue);
+                settingsView = new SettingsView(settings, this::settingsChanged, this::cue,
+                        state.currentGameId(), state.currentCharacter());
             } else {
                 focus = Math.min(focus + 1, go);
             }
@@ -239,8 +263,13 @@ public final class TimeAttackScene implements ModScene {
         }
         boolean inRoom = current == RaceSession.State.LOBBY || current == RaceSession.State.RACING;
         if (inRoom && (lobby == null || lobbyCoordinator != session.coordinator())) {
+            RaceSession raceSession = session;
             lobby = new RaceLobbyView(session.coordinator(), session.isHosting(), session.roundConfig(),
-                    session.lanInvite(), session::leave, this::cue);
+                    session.lanInvite(), session::leave, this::cue,
+                    () -> new ProfileView(settings,
+                            raceSession.roundConfig() == null ? null : raceSession.roundConfig().gameId(),
+                            raceSession.character(),
+                            this::settingsChanged, this::cue));
             lobbyCoordinator = session.coordinator();
         } else if (!inRoom) {
             lobby = null;
@@ -273,8 +302,9 @@ public final class TimeAttackScene implements ModScene {
             return false;
         }
         return switch (session.state()) {
-            case LOBBY -> lobby != null && lobby.isEditingChat();
-            case IDLE -> inviteEditor != null || (settingsView != null && settingsView.isEditingText());
+            case LOBBY -> lobby != null && lobby.isEditingText();
+            case IDLE -> namePrompt != null || inviteEditor != null
+                    || (settingsView != null && settingsView.isEditingText());
             case CONNECTING, BROWSING, RACING -> false;
         };
     }
@@ -335,6 +365,10 @@ public final class TimeAttackScene implements ModScene {
                 return;
             }
             case IDLE -> { }
+        }
+        if (namePrompt != null && state != null) {
+            namePrompt.draw(canvas);
+            return;
         }
         if (settingsView != null) {
             settingsView.draw(canvas);
@@ -437,6 +471,11 @@ public final class TimeAttackScene implements ModScene {
     /** The menu's status line (tests). */
     String status() {
         return status;
+    }
+
+    /** True while the first-run name prompt is shown (tests). */
+    boolean isPromptingForName() {
+        return namePrompt != null;
     }
 
     /** The scene's settings (tests). */
