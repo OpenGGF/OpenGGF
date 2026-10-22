@@ -7,18 +7,19 @@ was followed by the isolated CPU/allocation comparison below. **Decision: reject
 the production reuse optimization.** Allocation savings came with consistently
 higher preparation CPU and wall time on representative normal inputs.
 
-## Decision and ownership
+## Rejected implementation and ownership
 
 `SpritePresentation.Builder.add/addRows` previously constructed one escaping
-immutable `Tile` per emitted tile on every preparation. The builder now checks
+immutable `Tile` per emitted tile on every preparation. The experiment checked
 the caller's preceding immutable frame at the same ordinal **before** its sole
 `new Tile` expression. A hit appends that existing Tile; a miss constructs the
 replacement. Position compares first to reject moving-world inputs cheaply.
 The comparison covers every Tile component, including complete Subject record
 equality (head mask/transform/art/replay, body role/anchor, palette replay and
 unknown producer IDs), with stricter mask/callback identity gates described
-below. `Float.compare` matches record equality for NaNs and signed zero. There
-are no scans, maps or matching searches for reuse.
+below. `Float.compare` matched record equality for NaNs and signed zero. There
+were no scans, maps or matching searches for reuse. This whole production path
+was subsequently removed after the paired result below.
 
 The existing public preparation signatures delegate with no hint. New overloads
 are engine-internal bridges, on unannotated classes, not creator API additions.
@@ -37,7 +38,7 @@ its tile boundaries are unchanged. Head composition runs after native emission;
 its expanded/reordered previous frame remains only an ordinal hint. Correct
 reuse also preserves identities observed by composition and opaque callbacks.
 
-## Focused evidence
+## Initial structural evidence
 
 The ROM-free `TestSpriteTileReuse` uses actual headless preparation for scenes,
 clips, frozen art, primitives, composition and failure cleanup. Its scalar
@@ -100,7 +101,8 @@ none skipped for prerequisites. Queue waiting was 307 seconds; Maven reported
 measurements. Consumed focused reports are removed after inspection;
 `git diff --check` also passes. No category run/results cache was created.
 
-No broad smoke, full suite, visual capture or performance timing ran here.
+At that initial checkpoint, no broad smoke, full suite, visual capture or
+performance timing had run.
 The lead owns combined smoke/guards, consolidated release prose, integration,
 push and workspace cleanup. Concurrent production ownership is preserved:
 GraphicsManager, PatternAtlas, PatternRenderCommand and
@@ -190,8 +192,8 @@ Pinned SHA-256 inputs before launch:
 - `SpritePresentation.java`: `5babcf91f58f5a3d1336cc14e6fbec0ff2943b94f2faa5451dc410c88cd781e7`.
 - POM: `9d5f877837d473a7fa9fec1f62528abe1b724753bae1d2f1b4a71be5c9bcd5d8`.
 
-The only source beyond that commit in the measurement checkout is the probe
-above, identical to the source retained with the final evidence. Admission:
+The only source beyond that commit in the measurement checkout was the probe
+above, preserved exactly in evidence commit `8a7c903af`. Admission:
 
 ```bash
 JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/performance/run_isolated.py --worktree . --cwd . --audit-report target/sprite-probe-isolation.json --estimate-seconds 180 -- python3 target/run-sprite-probe.py
@@ -271,3 +273,61 @@ a diagnostic probe that explicitly refuses timing when the rejected hint is
 absent. No second timing batch is needed to establish removal of the losing
 optimization. Consumed raw measurements/isolation reports are removed after
 retaining this bounded summary, source pins and reproducible protocol.
+
+### Final production state and diagnostic portability
+
+The four production files affected by the experiment (`SpritePresentation`,
+`LevelSpritePresentation`, `LevelRenderer`, `SpritePresentationRenderer`) are
+restored byte-for-byte to task base `8aa692b045c195ef8a42896b6bbc9549158470c0`.
+The previous-frame overloads, builder comparison and level/counter hint wiring
+are removed together. There is no dormant hint cache or head-map equality tax.
+Only the new diagnostic CLI remains as production tool code; no Mod API surface
+or public gameplay contract was changed to support it.
+
+The final probe resolves the historical hint with a MethodHandle once. If the
+hint is absent it accepts only `--verify-only`, checking all seven fresh-frame
+scenes and zero reused identities; timed comparisons fail explicitly before
+warmup. If used against a historical checkout, both arms use that same
+pre-resolved handle. Such a future rerun includes its fixed invocation cost in
+both arms and is **not** the original direct-call measurement. For exact original
+reproduction, use the source hash above from `8a7c903af` with `44d11628a` runtime
+sources. No timing was repeated with the portable wrapper.
+
+The retained tests are renamed for immutable preparation snapshots, independent
+world/counter ownership and head composition. They keep the scalar/float/art,
+callback identity/behavior, two-tile equal-mask grouping, failure, reset and
+rewind checks without depending on rejected reuse. A focused probe test checks
+the seven non-timing controls and refusal to report a comparison without the
+hint.
+
+After verifying the only untracked measurement source exactly matched committed
+probe `8a7c903af`, consumed measurements, isolation report and launcher were
+removed. The owned measurement worktree and fully accounted local measurement
+branch were then removed normally. No foreign worktree, session, queued job,
+resource setting or lock file was changed. The task implementation worktree and
+branch remain for lead integration; no push or main-workspace edit was made.
+
+### Final focused verification
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestSpritePreparationSnapshots,TestSpritePreparationHeadComposition,TestLevelSpritePreparationOwnership,TestSpriteTileReuseProbe,TestSpritePresentation,TestLevelSpritePresentation,TestLevelSpritePresentationLifecycle,TestModApiSignatureSurface#candidateZeroSevenSurfaceIsPinnedToTheCurrentSurface+engineInternalTerminalsArePinnedAndStayOutOfTheSurface,TestArchitecturalSourceGuard#lowLevelGraphicsAndAudioDoNotGainGameplayServiceLookups' '-Ds3k.rom.path=<absolute path to existing main-workspace s3k.gen>' test -B
+```
+
+Session `99891` completed 2026-10-22 13:09:18 BST: **84 tests, zero
+failures/errors/skips**. Counts: snapshot fields/callbacks/float/art 47,
+independent owners 3, two-tile head composition 2, non-timing probe/refusal 2,
+existing SpritePresentation 14, LevelSpritePresentation 7, S3K lifecycle 6,
+API pin/internal terminals 2 and exact graphics service-lookup guard 1. All
+nine XML reports were inspected and removed. Queue waiting was 429 seconds;
+Maven execution including compilation was 1:13. This is bounded focused
+validation, not broad smoke or a full suite.
+
+Tested source is evidence commit `8a7c903af` plus the four-file production
+removal, portable probe and renamed/fresh preparation regressions committed
+with this final record. No executable input changed after the pass. Final probe
+source SHA-256 is
+`fbfe1529e42fa1bce60ec6e36a90dbb61ec3b3f6dc7063f6e5d9f06ebd409b6e`.
+Direct byte comparison confirms all four original production files equal the
+pinned pre-task source. `git diff --check` passes; all local commit messages
+were checked with `git interpret-trailers --parse` for the exact final model
+co-author. Combined validation and integration remain owned by the lead.

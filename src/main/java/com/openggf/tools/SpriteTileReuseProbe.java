@@ -9,6 +9,9 @@ import com.openggf.graphics.SpritePresentation.*;
 import com.openggf.level.PatternDesc;
 
 import java.lang.management.ManagementFactory;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -32,8 +35,19 @@ public final class SpriteTileReuseProbe {
     };
     private static final com.sun.management.ThreadMXBean THREADS =
             (com.sun.management.ThreadMXBean) ManagementFactory.getThreadMXBean();
+    private static final MethodHandle HINT_PREPARE = hintPrepare();
     private static volatile Frame escaped;
     private static volatile long consumed;
+
+    /** Optional historical experiment: never add a production signature just to run this probe. */
+    private static MethodHandle hintPrepare() {
+        try {
+            return MethodHandles.publicLookup().findStatic(SpritePresentation.class, "prepare",
+                    MethodType.methodType(Frame.class, GraphicsManager.class, int.class, int.class,
+                            Runnable.class, java.util.function.Function.class, Frame.class));
+        } catch (NoSuchMethodException absent) { return null; }
+        catch (IllegalAccessException failure) { throw new ExceptionInInitializerError(failure); }
+    }
 
     private enum Scene {
         WORLD_IDLE(false, false, false, false), WORLD_SCROLL(true, false, false, false),
@@ -68,7 +82,12 @@ public final class SpriteTileReuseProbe {
         }
         Frame prepare(int frame, Frame previous) {
             this.frame = frame;
-            return SpritePresentation.prepare(graphics, cameraX(), 200, this, DECODER, previous);
+            if (HINT_PREPARE == null) return SpritePresentation.prepare(graphics, cameraX(), 200, this, DECODER);
+            try {
+                // Pre-resolved and identical in both arms; later reruns include this fixed invocation cost.
+                return (Frame) HINT_PREPARE.invokeExact(graphics, cameraX(), 200, (Runnable) this, DECODER, previous);
+            } catch (RuntimeException | Error failure) { throw failure; }
+            catch (Throwable failure) { throw new IllegalStateException("Historical preparation failed", failure); }
         }
         private int cameraX() { return 100 + (scene.scroll ? frame : 0); }
         @Override public void run() {
@@ -123,7 +142,7 @@ public final class SpriteTileReuseProbe {
             if (!fresh.equals(hinted)) throw new AssertionError("Frame mismatch: " + source.scene + "/" + i);
             int reused = 0;
             for (int j = 0; j < 160; j++) if (previous.tiles().get(j) == hinted.tiles().get(j)) reused++;
-            int expected = source.scene.rebuildMask || source.scene.scroll ? 32 : 160;
+            int expected = HINT_PREPARE == null ? 0 : source.scene.rebuildMask || source.scene.scroll ? 32 : 160;
             if (reused != expected) throw new AssertionError("Reuse mismatch: " + source.scene + ": " + reused);
             previous = hinted;
         }
@@ -165,6 +184,8 @@ public final class SpriteTileReuseProbe {
         int frames = verifyOnly ? 4096 : Integer.parseInt(args[2]), pairs = verifyOnly ? 4 : Integer.parseInt(args[3]);
         if (warmup < 4096 || warmup > 65536 || frames < 4096 || frames > 65536 || pairs < 4 || pairs > 12)
             throw new IllegalArgumentException("bounded inputs: 4096..65536 warmup/measurement frames; 4..12 pairs");
+        if (!verifyOnly && HINT_PREPARE == null)
+            throw new IllegalStateException("Rejected reuse hint is absent; use --verify-only, or the pinned historical experiment");
         if (!THREADS.isThreadAllocatedMemorySupported() || !THREADS.isCurrentThreadCpuTimeSupported())
             throw new IllegalStateException("CPU/allocation counters unavailable");
         THREADS.setThreadAllocatedMemoryEnabled(true); THREADS.setThreadCpuTimeEnabled(true);
