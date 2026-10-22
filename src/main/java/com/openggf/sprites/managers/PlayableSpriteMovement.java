@@ -2538,62 +2538,111 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private void doGlideCollisionWithRadii() {
-		int cx = sprite.getCentreX();
-		int cy = sprite.getCentreY();
-		int xRad = sprite.getXRadius();
-		int yRad = sprite.getYRadius();
-
-		// Knuckles_DoLevelCollision2 uses player FindWall with the live LRB bit,
-		// including secondary solidity and signed widths. Corrections are word writes.
-		// Check wall in movement direction
-		// Save the movement direction BEFORE zeroing velocity (needed by glideHitWall)
-		int xVel = sprite.getXSpeed();
-		boolean movingRight = xVel >= 0;
-
-		if (xVel > 0) {
-			var result = com.openggf.physics.GlideWallGrabTerrain.glideWallDistance(sprite, true);
-			if (result != null && result.distance() < 0) {
-				NativePositionOps.addXPosPreserveSubpixel(sprite, result.distance());
-				sprite.setXSpeed((short) 0);
-				glideHitWall(movingRight);
-				return;
+		// Knux_DoLevelCollision_CheckRet (skdisasm044:32665-32854) and KiS2
+		// Knuckles_DoLevelCollision2 (c336fede s2.asm:40587-40744). Dispatch once
+		// from the ORIGINAL velocities; earlier wall corrections can zero X.
+		int quadrant = TrigLookupTable.calcMovementQuadrant(sprite.getXSpeed(), sprite.getYSpeed());
+		boolean reversed = isReverseGravityActive();
+		boolean secondary = (sprite.getTopSolidBit() & 0xFF) != 0x0C;
+		int solidityBit = sprite.getLrbSolidBit() & 0xFF; // native d5
+		boolean pushed = false;
+		boolean landed = false;
+		switch (quadrant) {
+			case 0x00 -> {
+				pushed = correctGlideWall(false, solidityBit, secondary);
+				pushed |= correctGlideWall(true, solidityBit, secondary);
+				landed = correctGlideFloor(solidityBit, secondary, reversed);
 			}
-		} else if (xVel < 0) {
-			var result = com.openggf.physics.GlideWallGrabTerrain.glideWallDistance(sprite, false);
-			if (result != null && result.distance() < 0) {
-				NativePositionOps.addXPosPreserveSubpixel(sprite, -result.distance());
-				sprite.setXSpeed((short) 0);
-				glideHitWall(movingRight);
-				return;
+			case 0x80 -> {
+				pushed = correctGlideWall(false, solidityBit, secondary);
+				pushed |= correctGlideWall(true, solidityBit, secondary);
+				int ceilingBit = reversed ? sprite.getTopSolidBit() & 0xFF : solidityBit;
+				boolean ceilingPath = reversed ? ceilingBit != 0x0C : secondary;
+				var ceiling = checkGlideCeilingDist(ceilingBit, ceilingPath, reversed);
+				if (ceiling != null && ceiling.distance() < 0) {
+					NativePositionOps.addYPosPreserveSubpixel(sprite,
+							ReverseGravity.mirrorYDelta(reversed, -ceiling.distance()));
+					sprite.setYSpeed((short) 0); // upward quadrant stops Y unconditionally
+				}
 			}
+			case 0x40, 0xC0 -> {
+				boolean right = quadrant == 0xC0;
+				pushed = correctGlideWall(right, solidityBit, secondary);
+				// Reverse sub_11FEE calls Sonic_CheckFloor: it replaces BOTH d5
+				// and Collision_addr. A following reverse floor (ceiling) or the
+				// left deep-ceiling opposite-wall fallback inherits those values.
+				if (reversed) {
+					solidityBit = sprite.getTopSolidBit() & 0xFF;
+					secondary = solidityBit != 0x0C;
+				}
+				var ceiling = checkGlideCeilingDist(solidityBit, secondary, reversed);
+				if (ceiling != null && ceiling.distance() < 0) {
+					int penetration = (short) -ceiling.distance(); // NEG.W, then BHS
+					if (!right && (penetration & 0xFFFF) >= 0x14) {
+						pushed |= correctGlideWall(true, solidityBit, secondary);
+					} else {
+						NativePositionOps.addYPosPreserveSubpixel(sprite,
+								ReverseGravity.mirrorYDelta(reversed, penetration));
+						if (sprite.getYSpeed() < 0) sprite.setYSpeed((short) 0);
+					}
+				} else if (sprite.getYSpeed() >= 0) {
+					landed = correctGlideFloor(solidityBit, secondary, reversed);
+				}
+			}
+			default -> throw new IllegalStateException("Invalid native movement quadrant " + quadrant);
 		}
 
-		// Check floor (only when descending or level)
-		if (sprite.getYSpeed() >= 0) {
-			var result = checkGlideFloorDist(cx, cy, xRad, yRad);
-			if (result != null && result.distance() < 0) {
-				NativePositionOps.addYPosPreserveSubpixel(sprite,
-						ReverseGravity.mirrorYDelta(isReverseGravityActive(), result.distance()));
-				sprite.setAngle(result.angle());
-				sprite.setYSpeed((short) 0);
-				glideHitFloor();
-				return;
-			}
+		// The temporary native flags are local outcomes, not status(a0). KiS2
+		// GlideControl checks Push before restoring standing radii/InAir
+		// (s2.asm:38177-38188); S3K checks InAir before Push (30739-30746).
+		PlayerMovementRules rules = playerMovementRulesOrNull();
+		boolean floorFirst = rules == null || rules.air().glideFloorContactPrecedesWallGrab();
+		if (landed && (floorFirst || !pushed)) {
+			if (glideUsesTemporaryCollisionRadii()) sprite.restoreDefaultRadii();
+			glideHitFloor();
+		} else if (pushed) {
+			// HitWall chooses facing from the signed BYTE property+$40, even
+			// at zero velocity or a turn boundary (skdisasm044:30816-30819).
+			glideHitWall((byte) (sprite.getDoubleJumpProperty() + 0x40) >= 0);
 		}
+	}
 
-		// Check opposite wall too (ROM checks both walls in some quadrants)
-		if (xVel <= 0) {
-			var result = com.openggf.physics.GlideWallGrabTerrain.glideWallDistance(sprite, true);
-			if (result != null && result.distance() < 0) {
-				NativePositionOps.addXPosPreserveSubpixel(sprite, result.distance());
-			}
-		}
-		if (xVel >= 0) {
-			var result = com.openggf.physics.GlideWallGrabTerrain.glideWallDistance(sprite, false);
-			if (result != null && result.distance() < 0) {
-				NativePositionOps.addXPosPreserveSubpixel(sprite, -result.distance());
-			}
-		}
+	private boolean correctGlideWall(boolean right, int solidityBit, boolean secondary) {
+		var result = com.openggf.physics.GlideWallGrabTerrain
+				.glideWallDistance(sprite, right, solidityBit, secondary);
+		if (result == null || result.distance() >= 0) return false;
+		NativePositionOps.addXPosPreserveSubpixel(sprite, right ? result.distance() : -result.distance());
+		sprite.setXSpeed((short) 0);
+		return true;
+	}
+
+	private boolean correctGlideFloor(int inheritedBit, boolean secondary, boolean reversed) {
+		// Normal Sonic_CheckFloor reloads TOP/path; reverse Sonic_CheckCeiling
+		// retains d5/Collision_addr from whichever original probe preceded it.
+		int bit = reversed ? inheritedBit : sprite.getTopSolidBit() & 0xFF;
+		boolean path = reversed ? secondary : bit != 0x0C;
+		var floor = checkGlideFloorDist(sprite.getCentreX(), sprite.getCentreY(),
+				sprite.getXRadius(), sprite.getYRadius(), bit, path, reversed);
+		if (floor == null || floor.distance() >= 0) return false;
+		NativePositionOps.addYPosPreserveSubpixel(sprite,
+				ReverseGravity.mirrorYDelta(reversed, floor.distance()));
+		sprite.setAngle(floor.angle());
+		sprite.setYSpeed((short) 0);
+		return true;
+	}
+
+	private TerrainCheckResult checkGlideCeilingDist(int solidityBit, boolean secondary, boolean reversed) {
+		int cx = sprite.getCentreX(), cy = sprite.getCentreY();
+		int xr = sprite.getXRadius(), yr = sprite.getYRadius();
+		var right = reversed
+				? ObjectTerrainUtils.checkPlayerFloorDistWithFlipAwareAngle(cx + xr, cy + yr, solidityBit, secondary)
+				: ObjectTerrainUtils.checkPlayerCeilingDistWithFlipAwareAngle(cx + xr, cy, yr, solidityBit, secondary);
+		var left = reversed
+				? ObjectTerrainUtils.checkPlayerFloorDistWithFlipAwareAngle(cx - xr, cy + yr, solidityBit, secondary)
+				: ObjectTerrainUtils.checkPlayerCeilingDistWithFlipAwareAngle(cx - xr, cy, yr, solidityBit, secondary);
+		if (left == null) return right;
+		if (right == null) return left;
+		return left.distance() <= right.distance() ? left : right;
 	}
 
 	/**
@@ -2616,16 +2665,29 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * segment.
 	 */
 	private TerrainCheckResult checkGlideFloorDist(int cx, int cy, int xRad, int yRad) {
+		boolean reversed = isReverseGravityActive();
+		int topBit = sprite.getTopSolidBit() & 0xFF;
+		return checkGlideFloorDist(cx, cy, xRad, yRad,
+				reversed ? sprite.getLrbSolidBit() & 0xFF : topBit, topBit != 0x0C, reversed);
+	}
+
+	private TerrainCheckResult checkGlideFloorDist(int cx, int cy, int xRad, int yRad,
+			int solidityBit, boolean secondaryCollisionPath, boolean reversed) {
 		// sub_11FD6 selects Sonic_CheckCeiling under Reverse_gravity_flag.
 		// Both feet still compete by signed distance; only the world-facing
 		// probe and the final angle change, not the returned distance's sign.
-		boolean reversed = isReverseGravityActive();
+		// Sonic_CheckFloor selects Collision_addr from this player's top bit.
+		// Reverse sub_11FD6 keeps its caller's current bit, including inherited TOP.
 		var right = reversed
-				? ObjectTerrainUtils.checkCeilingDistWithFlipAwareAngle(cx + xRad, cy, yRad)
-				: ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(cx + xRad, cy + yRad);
+				? ObjectTerrainUtils.checkPlayerCeilingDistWithFlipAwareAngle(
+						cx + xRad, cy, yRad, solidityBit, secondaryCollisionPath)
+				: ObjectTerrainUtils.checkPlayerFloorDistWithFlipAwareAngle(
+						cx + xRad, cy + yRad, solidityBit, secondaryCollisionPath);
 		var left = reversed
-				? ObjectTerrainUtils.checkCeilingDistWithFlipAwareAngle(cx - xRad, cy, yRad)
-				: ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(cx - xRad, cy + yRad);
+				? ObjectTerrainUtils.checkPlayerCeilingDistWithFlipAwareAngle(
+						cx - xRad, cy, yRad, solidityBit, secondaryCollisionPath)
+				: ObjectTerrainUtils.checkPlayerFloorDistWithFlipAwareAngle(
+						cx - xRad, cy + yRad, solidityBit, secondaryCollisionPath);
 		TerrainCheckResult chosen;
 		if (left == null) {
 			chosen = right;

@@ -9,5 +9,15 @@ public record PlayerAirMovementRules(
         /** Probe below an idle wall climber, including the shipped animation-delta clobber. */
         boolean idleWallClimbChecksFloor,
         /** Air abilities consume a fresh A/B/C edge without requiring all buttons released. */
-        boolean airAbilityAcceptsOverlappingJumpPress) {
+        boolean airAbilityAcceptsOverlappingJumpPress,
+        /** Resolve a simultaneous glide floor contact before the wall-grab response (S3K). */
+        boolean glideFloorContactPrecedesWallGrab) {
+    /** Retains wall-first behavior for callers of the original candidate constructor. */
+    public PlayerAirMovementRules(boolean airSuperspeedPreserved,
+                                  boolean glideRestoresStandingRadiiAfterCollision,
+                                  boolean idleWallClimbChecksFloor,
+                                  boolean airAbilityAcceptsOverlappingJumpPress) {
+        this(airSuperspeedPreserved, glideRestoresStandingRadiiAfterCollision,
+                idleWallClimbChecksFloor, airAbilityAcceptsOverlappingJumpPress, false);
+    }
 }
