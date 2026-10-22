@@ -806,3 +806,26 @@ S2 `s2.asm:37074-37084`; S3K `sonic3k.asm:23038-23047`.
 
 **Origin.** S1 chain gap closure, 2026-10-22; verified ROM bytes and independent
 bias/restore checks in `docs/architecture/audits/2026-10-22-s1-chain-gap-closure.md`.
+
+
+## P36 — A surviving untracked SST does not suppress a native placement reload
+
+**Symptom.** Visible objects appear plausible, but one missing dormant copy
+shifts later FindFreeObj allocations and spilled-ring bounce phases.
+
+**What to check.** `OPL_SpawnObj` loads untracked entries on each cursor re-entry
+without consulting a live-instance map. Shipped `Saw_Type3/4 .hide` pops the
+caller return and skips normal deletion on X failure. Thus the old SST can live
+outside its placement window while a later cursor crossing loads another copy.
+A one-instance-per-placement admission rule needs its existing ownership-release
+semantic at that native skipped-delete boundary, preserving the old SST/identity.
+Do not delete the survivor or relax all placement deduplication. Tracked entries,
+in-range hidden objects, ordinary saws and Y-failure paths are distinct controls.
+
+**ROM citation.** `_inc/ObjPosLoad.asm:257-275` (`OPL_SpawnObj`) and
+`_incObj/6A SBZ Saws and Pizza Cutters.asm:131-160,181-207` (ground-saw hide).
+The branch is `FixBugs=0`; the fixed branch adds the missing deletion.
+
+**Origin.** S1 chain gap closure, 2026-10-22; native bytes, real cursor/lower-hole
+and destructive-restore cases in
+`docs/architecture/audits/2026-10-22-s1-chain-gap-closure.md`.

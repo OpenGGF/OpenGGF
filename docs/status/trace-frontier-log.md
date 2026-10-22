@@ -113002,3 +113002,18 @@ remain; its incomplete report still has 3203 errors beginning at non-camera 356
 `dynamic_art.edges`. No coverage is claimed past that loss. Temporary probes
 identify a late SLZ killing-hit window and an untracked SBZ2 saw-copy allocation
 cause; those source-backed follow-ups have separate owners/tests.
+
+
+## 2026-10-22 — S1 dormant saw placement follow-up
+
+On `bugfix/ai-gap-s1-chain-20261022`, HEAD `a69971edf` plus the S1-only saw
+ownership release, `TestSonic1SawPlacementReentry` passes 11 independent real-loader
+cases, 0 errors/failures/skips via the queued lean command in the
+[lane audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#untracked-dormant-saw-re-entry).
+The old continuous profile remains the measured profile: 11 axes, earliest
+segment 12 row 101 queue prepared true/false; SBZ2 still last measured 1 rings
+error at 7821. Its native cause is now identified as the suppressed second
+untracked dormant saw, shifting the spilled-ring SST index. Source-only evidence
+and focused loader/restore tests do not claim a new route result; original and
+emerald BK2 qualification will use the next necessary composed run. No shared
+manager, ring threshold, trace row or comparison changes.

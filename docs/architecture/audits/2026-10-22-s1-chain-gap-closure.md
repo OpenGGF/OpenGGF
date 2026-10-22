@@ -249,3 +249,52 @@ placement. Native has one additional type 6A both at 7397 (7/6) and before ring 
 row 7821 pickup difference. Original ROM `$70ED4` contains `1080 06C0 6A03` with
 tracking bit clear. This source-backed follow-up remains independent of shared
 ring collision thresholds; no ring/touch behavior was fitted.
+
+
+## Untracked dormant saw re-entry
+
+The SBZ2 inventory disagreement is a second live copy, not a missing pizza-cutter
+implementation. Native untracked placement `$1080,$06C0`, subtype 03, retains its
+first saw in slot 47 and reloads another into 70 at the later cursor crossing.
+`OPL_SpawnObj` bypasses the respawn-bit gate for untracked entries
+(`_inc/ObjPosLoad.asm:257-275`). In shipped `FixBugs=0`, the ground saw's X-hide
+branch pops the caller's return, bypassing the ordinary delete tail
+(`_incObj/6A SBZ Saws and Pizza Cutters.asm:131-160,181-207`). The existing
+engine placement map's one-instance key therefore suppresses a valid native
+second load even while the first SST correctly survives.
+
+The S1-only correction uses existing `ObjectLifetimeOps.releaseSpawnForRespawn`
+at that skipped-delete boundary: only untracked hidden type 3/4 with unsigned
+chunk distance greater than `$280` relinquish placement ownership. The actual
+SST, slot and rewind identity become a dynamic survivor. No placement/allocator,
+ring, shared clock or collision code changes. In-range hidden saws retain their
+ownership; tracked entries retain their respawn gate; Y-failure paths still return
+through ordinary deletion. Releasing on first execution was rejected in favor
+of the owning native skipped-delete/out-of-range condition. The existing release
+operation is idempotent and compares the owning instance, so a detached old saw
+cannot release its newer placement copy.
+
+Direct original-ROM checks: `$70ED4` is `1080 06C0 6A03`; `$E0CA` is
+`4A28 0004 6A0E`, branching untracked entries to `$E0DE` (`6100 003A`, FindFreeObj)
+instead of the respawn-bit operation at `$E0D0`. Saw X-hide at `$1626A` and
+`$162DC` is `588F 4E75` (pop return, RTS); normal range-tail `$16148..16162`
+reads original X, masks `$FF80`, subtracts camera minus `$80`, and compares
+`$0280` with unsigned BHI. Previously quoted loader addresses from another
+revision were rejected; these bytes come from verified REV01.
+
+The focused command passes 11 cases, 0 failures/errors/skips on `a69971edf` plus
+the two saw files:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestSonic1SawPlacementReentry' test -B
+```
+
+Synthetic placements drive the actual S1 counter loader and object execution,
+without trace input: type 3/4 at viewport 320/528, inclusive distance `$280`
+versus outside `$300`, a genuinely freed lower slot 32 and original slot 33,
+real cursor retreat/re-entry, two live moving saws, no third without another
+crossing, and destructive restore before re-entry preserving both distinct
+identities and allocations. Controls cover tracked 3/4, ordinary pizza types 0–2,
+and X-pass/Y-fail dormant 3/4. The original/emerald BK2 route checks remain pending
+for the next necessary composed run; 11 focused passes do not claim that the
+row 7821 route comparator is already green.
