@@ -43,8 +43,9 @@ Unreleased. The earlier development themes remain in
   transport backpressure.
   Time Attack opens directly from a fresh boot, retains its lobby and connections
   while launching a level, and resumes its owning scene after a run or load failure.
-  Every visible multiplayer ghost can show its player name above the sprite,
-  including ghosts beyond the four nearest racers.
+  Every visible multiplayer ghost shows its player name above the sprite,
+  including ghosts beyond the four nearest racers. Nameplates draw after the world
+  so deferred level rendering cannot overwrite them.
 
 - **Time Attack multiple attempts:** players can submit several runs inside one
   round window, and the best valid run counts. While the window is open a finish's
