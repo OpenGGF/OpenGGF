@@ -260,6 +260,55 @@ class TestModApiHookPolicy {
         assertStagedPasses(repo);
     }
 
+    @ParameterizedTest
+    @CsvSource(value = {
+            "String[] value() default {\"old\"};|String[] value() default {\"new\"};",
+            "int[] value() default {};|int[] value() default {1, 2};"
+    }, delimiter = '|')
+    void primaryRecordAnnotationArrayDefaultsRequireAndAcceptTheSignaturePin(String before, String after) throws Exception {
+        Path repo = fixtureWithAnnotatedRecord();
+        String prefix = "@ModApi public record ExampleClass(int value) { public @interface Contract { ";
+        String suffix = " } }\n";
+        write(repo, CLASS_API, prefix + before + suffix);
+        write(repo, PIN, "baseline record annotation default\n");
+        git(repo, "add", CLASS_API, PIN);
+        commit(repo);
+
+        write(repo, CLASS_API, prefix + after + suffix);
+        git(repo, "add", CLASS_API);
+        assertStagedFails(repo);
+        write(repo, PIN, "updated record annotation default\n");
+        git(repo, "add", PIN);
+        assertStagedPasses(repo);
+    }
+
+    @Test void primaryRecordDefaultInterfaceMethodBodyEditsNeedNoSignaturePinChange() throws Exception {
+        Path repo = fixtureWithAnnotatedRecord();
+        String before = "@ModApi public record ExampleClass(int value) { "
+                + "public interface Nested { @SuppressWarnings(\"unused\") default String text() { return \"old\"; } } }\n";
+        write(repo, CLASS_API, before);
+        write(repo, PIN, "baseline record interface default method\n");
+        git(repo, "add", CLASS_API, PIN);
+        commit(repo);
+
+        write(repo, CLASS_API, before.replace("\"old\"", "\"new { //\""));
+        git(repo, "add", CLASS_API);
+        assertStagedPasses(repo);
+    }
+
+    @Test void primaryRecordPrivateArrayInitializersAndExecutableBodiesNeedNoSignaturePinChange() throws Exception {
+        Path repo = fixtureWithAnnotatedRecord();
+        write(repo, CLASS_API, """
+                @ModApi public record ExampleClass(int value) {
+                    private static int[] extra = {1, 2};
+                    public ExampleClass { if (value < -1) throw new IllegalArgumentException("new { }"); }
+                    private static class Hidden { public int changed() { return extra[0]; } }
+                }
+                """);
+        git(repo, "add", CLASS_API);
+        assertStagedPasses(repo);
+    }
+
     @Test void privateAnnotationArrayDefaultsNeedNoSignaturePinChange() throws Exception {
         Path repo = fixtureWithClassMembers("private @interface Hidden { String[] value() default {\"old\"}; }\n");
         write(repo, CLASS_API, annotatedClass("private @interface Hidden { String[] value() default {\"new\"}; }\n"));

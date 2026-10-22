@@ -45,7 +45,10 @@ def member_surface(ts, owner, implicit=False):
                 if t == '=': initializer = True
                 if t == '{':
                     stop = closing(ts, end)
-                    if initializer:
+                    # Annotation-element array defaults are declaration values.
+                    # A default interface method's body follows its parameter list,
+                    # not the default keyword, and must still be omitted.
+                    if initializer or (end > start and ts[end - 1] == 'default'):
                         end = stop + 1
                         continue
                     header = ts[start:end]
