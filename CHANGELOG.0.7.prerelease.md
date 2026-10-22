@@ -18,7 +18,10 @@ Unreleased. The earlier development themes remain in
   ordinary recentering resuming in the air.
   Boss faces, flames and accessories occupy real slots and play their ROM
   scripts. Green Hill's six-piece wrecking ball can hurt while deploying;
-  defeat bursts use Sonic 1's original allocation, art and lifetime.
+  defeat bursts use Sonic 1's original allocation, art and lifetime. Star Light's
+  spikeballs accept native edge contact, and its escaping ship retains both
+  movement calls. Final Zone's panels, launcher and cylinders dispatch in their
+  native slots with independent animation and rewind state.
 
 - **Sonic 1 level entry:** background scrolling starts from each level or credits
   demo's final camera, and lamppost returns retain the original background camera
@@ -30,11 +33,9 @@ Unreleased. The earlier development themes remain in
 - **Sonic 2 player and entry timing:** Super Sonic control runs between movement
   and animation while its palette advances after objects, including hurt and
   death. It preserves native balance, reversion animation and invincibility timing, and
-
   keeps the speed constants written by an underwater transformation until their
   next native writer. Ordinary special-stage entry presents its loading hold
   without duplicating replay timing.
-
 
 - **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
   OpenGGF Editor's Stageplay workspace. Author actor movement, animation/poses,
