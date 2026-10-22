@@ -89,8 +89,8 @@ class TestS3kSlotRewardObjects {
         assertEquals(1, player.liveRingDelta);
         assertEquals(1, controller.rewardCount());
 
-        // Sparkle phase (8 frames) then destroyed
-        stepFrames(reward, 8, player);
+        // Retained cursor starts at sparkle mapping 5; $FC draws once before deletion.
+        stepFrames(reward, 19, player);
         assertTrue(reward.isDestroyed());
     }
 
@@ -316,7 +316,7 @@ class TestS3kSlotRewardObjects {
 
         reward.appendRenderCommands(new ArrayList<>());
 
-        verify(ringManager).drawRingAt(reward.getInterpolatedX(), reward.getInterpolatedY(), 7);
+        verify(ringManager).drawRingFrameAt(reward.getInterpolatedX(), reward.getInterpolatedY(), 0);
     }
 
     @Test

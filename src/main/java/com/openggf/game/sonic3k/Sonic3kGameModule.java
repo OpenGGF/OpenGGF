@@ -140,6 +140,7 @@ public class Sonic3kGameModule implements GameModule {
     private final Sonic3kBonusStageCoordinator bonusStageCoordinator = new Sonic3kBonusStageCoordinator();
     private Sonic3k activeGame;
     private Sonic3kLevelTitlePlcService levelTitlePlcService;
+    private Sonic3kGameOverPlcService gameOverPlcService;
 
     @Override
     public String getIdentifier() {
@@ -155,11 +156,14 @@ public class Sonic3kGameModule implements GameModule {
     public Game createGame(Rom rom) {
         try {
             activeGame = new Sonic3k(rom, globalAnimationState);
-            levelTitlePlcService = new Sonic3kLevelTitlePlcService(rom);
+            var nemesisQueue = new com.openggf.level.resources.NemesisPlcServiceQueue();
+            gameOverPlcService = new Sonic3kGameOverPlcService(rom, nemesisQueue);
+            levelTitlePlcService = new Sonic3kLevelTitlePlcService(rom, nemesisQueue, gameOverPlcService);
             return activeGame;
         } catch (java.io.IOException e) {
             activeGame = null;
             levelTitlePlcService = null;
+            gameOverPlcService = null;
             LOGGER.severe("Failed to create S3K game: " + e.getMessage());
             return null;
         }
@@ -517,8 +521,9 @@ public class Sonic3kGameModule implements GameModule {
             // second lives piece ($210E), which selects palette line 1.
             return (T) (com.openggf.game.internal.HudLivesNumberPaletteProvider) () -> 1;
         }
-        if (type == Sonic3kLevelTitlePlcService.class
-                || type == com.openggf.game.resources.PlcLifecycleService.class)
+        if (type == Sonic3kLevelTitlePlcService.class) return (T) levelTitlePlcService;
+        if (type == Sonic3kGameOverPlcService.class) return (T) gameOverPlcService;
+        if (type == com.openggf.game.resources.PlcLifecycleService.class)
             return (T) levelTitlePlcService;
         if (type == com.openggf.game.LevelInputOverlay.class) {
             return (T) (com.openggf.game.LevelInputOverlay) input -> {

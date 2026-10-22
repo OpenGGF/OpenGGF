@@ -679,3 +679,15 @@ The re-timed `soz1-cold-knuckles` movie, which crosses an entry and a return, is
 | `TestS3kTitleCardHoldRoutes` (bonus entry and return among its 5 cases); `TestSonic3kBonusTitleCard`; `TestPachinkoTitleCardIntegration`; `TestS3kBonusStageHeadlessBoot` | 5, 6, 2 and 3 run, 0 failed, 0 errors, 0 skipped (Maven finished 2026-10-16T19:14:59+01:00, 18:26:52+01:00 and 18:31:58+01:00) |
 | `TestS3kBonusPortalMechanismProducts`, `TestS3kBonusStageReturnProducts`, `TestS3kGumballPachinkoRewardMechanics` | 568, 425 and 723 run, 0 failed, 0 errors, 0 skipped (Maven finished 2026-10-16T18:51:47+01:00) |
 | `TestSecondStrikeInvitationGameplay` (opt-in candidate jar `1f6bfedd…`) | gumball case passes. The glowing-spheres case fails at line 300 ("ordinary bonus play must earn a positive native award before exit"). It fails with the same assertion on the pre-task `d3fb0625e` sources and on `6405313ce`, so the failure is inherited, not caused by this change |
+
+
+## Slot reward animation and interpolation — 2026-10-22
+
+The [narrow native audit](../../audits/2026-10-07-s3k-parity-gap-verification.md#narrow-native-object-fidelity-follow-up--2026-10-22)
+records ROM script pointers, retained animation cursor, exact deletion pass and
+signed-long interpolation. `TestS3kSlotRingRewardObjectInstance` exercises the
+production reward render consumer, altered ROM script bytes, both reward
+children's fractional/wrapped positions and restore/forward replay through
+grant and deletion. Existing slot runtime and generic recreation checks cover
+its consumer boundary. These are bounded reward checks, not additional full
+entry/return products or whole-scene native picture/audio certification.

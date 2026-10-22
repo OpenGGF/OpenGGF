@@ -113029,3 +113029,30 @@ remain. Segment 33's incomplete report has 3,203 errors (first non-camera 356
 dynamic art), not a completed segment result. The [lane audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md)
 records native bytes, exact scope and coordinated dependencies. Temporary boundary
 instrumentation was removed; no comparisons, timing edges or fixture rows changed.
+
+### 2026-10-22 — narrow slot reward fidelity controls
+
+Candidate: `94c40570a15a11b70caf7456e9b0d0a8eec8a9b4` plus the lane changes in
+`${OPENGGF_WORKTREE_ROOT}/t3-a1d6305f`, local branch
+`bugfix/ai-gap-s3k-narrow-fidelity-20261022`. The
+[native audit](../architecture/audits/2026-10-07-s3k-parity-gap-verification.md#narrow-native-object-fidelity-follow-up--2026-10-22)
+records ROM-backed reward scripts, signed-long interpolation, event PLC3 and
+HCZ2 floor branches. General campaign integration and smoke remain lead-owned.
+
+Command prefix: `env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4
+python3 tools/testing/maven_queue.py -Dmse=off -P<profile>
+-Dsurefire.forkCount=1 -Dsurefire.reuseForks=true
+-Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kSlotsBonusTraceReplay*'
+"-Ds3k.rom.path=${OPENGGF_S3K_ROM}" test -B`, with the existing absolute
+locked-on ROM, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`.
+
+| Profile / actual case | Maven completed (BST) | Observed JUnit / default ALL gate | Queue wait / Maven |
+| --- | --- | --- | --- |
+| `trace-replay` / `TestS3kSlotsBonusTraceReplay$SonicAndTails$Segment1` | 2026-10-22 10:36:37 | 1/0/0/0; zero-divergence gate passes | 315s / 31.597s |
+| `trace-replay-r7` / `TestS3kSlotsBonusTraceReplay$Knuckles$Segment1` | 2026-10-22 10:42:47 | 1/0/0/0; zero-divergence gate passes | 307s / 28.376s |
+
+The default ALL gate rejects every report error/warning: neither completed
+control has a first-error frame/field. Raw successful diagnostics are retired
+automatically, so no compared-row count is inferred from fixture length or
+zero-test nested-container summaries. This is two focused slot controls, not a
+trace sweep, whole-scene native image check or campaign qualification.
