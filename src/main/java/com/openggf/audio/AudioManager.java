@@ -2688,6 +2688,14 @@ public class AudioManager implements MusicRestoreSink {
     private AudioCommand commandForNativeRequest(
             BaseAudioSource source, int nativeId, float pitch) {
         Objects.requireNonNull(source.profile(), "audio profile");
+        if (source.profile() instanceof NativeMailboxMusicRoutes routes) {
+            int musicId = routes.musicForNativeRequest(nativeId);
+            if (musicId >= 0) {
+                // Translate only raw driver requests. Ordinary playMusic already receives an
+                // engine id, which can name a different song at the same numeric value.
+                return commandForNativeMusicRequest(source, musicId);
+            }
+        }
         if (nativeId >= 0xA0 && nativeId <= 0xF7) {
             return new AudioCommand.PlaySfx(nativeId, null,
                     AudioCommand.SfxRoute.BASE_SMPS_ID, pitch, null);
