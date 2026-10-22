@@ -48,6 +48,7 @@ public final class LevelSpritePresentation {
         private SpritePresentation.Frame published = SpritePresentation.Frame.empty();
         private SpritePresentation.Frame counters = SpritePresentation.Frame.empty();
         private LevelScrollPresentation preparedScroll, publishedScroll;
+        SpritePresentation.Frame prepared() { return prepared; }
         void prepare(SpritePresentation.Frame frame) { prepare(frame, null); }
         void prepare(SpritePresentation.Frame frame, LevelScrollPresentation scroll) {
             prepared = frame;
