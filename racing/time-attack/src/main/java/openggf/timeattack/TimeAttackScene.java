@@ -6,6 +6,8 @@ import com.openggf.mods.ModStorage;
 import com.openggf.mods.scene.ModScene;
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneContext;
+import com.openggf.mods.scene.SceneRomArt;
+import com.openggf.net.identity.PlayerAppearance;
 import com.openggf.mods.ui.TextLayout;
 import com.openggf.net.protocol.ControlMessage;
 import openggf.timeattack.mp.RaceLobbyView;
@@ -59,6 +61,7 @@ public final class TimeAttackScene implements ModScene {
     private String joinInvite = "";
     private TextEntry inviteEditor;
     private TextEntry namePrompt;
+    private SceneContext context;
     private SettingsView settingsView;
     private ServerBrowserView browser;
     private RaceLobbyView lobby;
@@ -77,6 +80,7 @@ public final class TimeAttackScene implements ModScene {
 
     @Override
     public void enter(SceneContext ctx) {
+        context = ctx;
         storage = ctx.storage();
         try {
             settings = LegacyTimeAttackSettings.loadOrImport(storage, legacyConfigDirectory);
@@ -88,6 +92,8 @@ public final class TimeAttackScene implements ModScene {
         joinInvite = settings.lastJoinAddress();
         session = new RaceSession(identityDir, ghostStore, settings, storage,
                 (spec, host) -> ctx.gameplay().launch(spec, host), this::newRuntime, System::currentTimeMillis);
+        // Every join (Hello) and lobby entry announces the look the settings hold for that game/character.
+        session.setLookSource(settings::appearanceFor);
         List<String> games = ctx.gameplay().availableGames();
         if (!games.isEmpty()) {
             state = new TimeAttackMenuState(games, games.get(0), ghostStore);
@@ -198,7 +204,8 @@ public final class TimeAttackScene implements ModScene {
                         INVITE_CHARACTERS);
             } else if (focus == settingsRow) {
                 settingsView = new SettingsView(settings, this::settingsChanged, this::cue,
-                        state.currentGameId(), state.currentCharacter());
+                        state.currentGameId(), state.currentCharacter(),
+                        stockLine(state.currentGameId(), state.currentCharacter()));
             } else {
                 focus = Math.min(focus + 1, go);
             }
@@ -266,10 +273,11 @@ public final class TimeAttackScene implements ModScene {
             RaceSession raceSession = session;
             lobby = new RaceLobbyView(session.coordinator(), session.isHosting(), session.roundConfig(),
                     session.lanInvite(), session::leave, this::cue,
-                    () -> new ProfileView(settings,
-                            raceSession.roundConfig() == null ? null : raceSession.roundConfig().gameId(),
-                            raceSession.character(),
-                            this::settingsChanged, this::cue));
+                    () -> {
+                        String game = raceSession.roundConfig() == null ? null : raceSession.roundConfig().gameId();
+                        return new ProfileView(settings, game, raceSession.character(),
+                                stockLine(game, raceSession.character()), this::settingsChanged, this::cue);
+                    });
             lobbyCoordinator = session.coordinator();
         } else if (!inRoom) {
             lobby = null;
@@ -284,6 +292,22 @@ public final class TimeAttackScene implements ModScene {
                 status = notice;
             }
         }
+    }
+
+    /**
+     * The character's stock palette line as Mega Drive colour words, read through the ROM pipeline,
+     * or null when that game's ROM art is unavailable.
+     */
+    private int[] stockLine(String gameId, String character) {
+        if (context == null || gameId == null || character == null) return null;
+        // The scene ROM path has no KiS2 Knuckles line; it would return the Sonic/Tails one.
+        if (gameId.equals("s2") && character.equalsIgnoreCase("knuckles")) return null;
+        SceneRomArt rom = context.art().rom(gameId);
+        int[] argb = rom == null ? null : rom.characterPalette(character);
+        if (argb == null || argb.length < 16) return null;
+        int[] line = new int[16];
+        for (int i = 0; i < 16; i++) line[i] = PlayerAppearance.fromRgb(argb[i] & 0xFFFFFF);
+        return line;
     }
 
     private void settingsChanged() {

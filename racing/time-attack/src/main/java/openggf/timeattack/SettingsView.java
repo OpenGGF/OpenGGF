@@ -34,6 +34,7 @@ public final class SettingsView {
     private final Consumer<MenuCue> cues;
     private final String gameId;
     private final String character;
+    private final int[] stockLine;
     private ProfileView profile;
     private Row focus = Row.DISPLAY_NAME;
     private TextEntry editor;
@@ -55,6 +56,13 @@ public final class SettingsView {
      */
     public SettingsView(TimeAttackSettings settings, Runnable changed, Consumer<MenuCue> cues,
                         String gameId, String character) {
+        this(settings, changed, cues, gameId, character, null);
+    }
+
+    /** @param stockLine the character's ROM palette line for the look page ({@link ProfileView}), or null */
+    public SettingsView(TimeAttackSettings settings, Runnable changed, Consumer<MenuCue> cues,
+                        String gameId, String character, int[] stockLine) {
+        this.stockLine = stockLine;
         this.settings = Objects.requireNonNull(settings, "settings");
         this.changed = Objects.requireNonNull(changed, "changed");
         this.cues = Objects.requireNonNull(cues, "cues");
@@ -126,7 +134,7 @@ public final class SettingsView {
             }
             case LOOK -> {
                 if (input.accept()) {
-                    profile = new ProfileView(settings, gameId, character, this::changed, cues);
+                    profile = new ProfileView(settings, gameId, character, stockLine, this::changed, cues);
                     cues.accept(MenuCue.CONFIRM);
                 }
             }

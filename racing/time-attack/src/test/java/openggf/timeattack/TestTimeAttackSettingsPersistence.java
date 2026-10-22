@@ -117,6 +117,8 @@ class TestTimeAttackSettingsPersistence {
                     case "ticks" -> 0L;
                     case "keyPressed" -> pressed != 0 && (int) args[0] == pressed;
                     case "typedText" -> "";
+                    case "art" -> Proxy.newProxyInstance(SceneContext.class.getClassLoader(),
+                            new Class<?>[]{com.openggf.mods.scene.SceneArt.class}, (art, call, values) -> null);
                     case "buttonRepeated" -> down && ((int) args[0] & SceneButtons.DOWN) != 0;
                     default -> method.getReturnType() == boolean.class ? false : null;
                 });

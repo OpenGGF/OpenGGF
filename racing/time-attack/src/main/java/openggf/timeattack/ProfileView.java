@@ -53,6 +53,8 @@ public final class ProfileView {
     private final Runnable saved;
     private final Consumer<MenuCue> cues;
     private final int[] ramp;
+    /** The character's ROM palette line as Mega Drive colour words, or null when the ROM cannot supply it. */
+    private final int[] stockLine;
     private String name;
     private int base;
     /** Entry index to colour; null while the palette follows the base colour. */
@@ -71,6 +73,17 @@ public final class ProfileView {
      */
     public ProfileView(TimeAttackSettings settings, String gameId, String character,
                        Runnable saved, Consumer<MenuCue> cues) {
+        this(settings, gameId, character, null, saved, cues);
+    }
+
+    /**
+     * @param stockLine the character's 16-entry ROM palette line as Mega Drive colour words, shown
+     *                  for entries without an override and used as the starting colour when one is
+     *                  edited; null when the ROM cannot supply it (stock entries then show as dots)
+     */
+    public ProfileView(TimeAttackSettings settings, String gameId, String character, int[] stockLine,
+                       Runnable saved, Consumer<MenuCue> cues) {
+        this.stockLine = stockLine == null || stockLine.length != 16 || character == null ? null : stockLine.clone();
         this.settings = Objects.requireNonNull(settings, "settings");
         this.gameId = gameId;
         this.character = gameId == null ? null : character;
@@ -178,7 +191,7 @@ public final class ProfileView {
             default -> 9;
         };
         if (base == PlayerAppearance.NO_BASE_COLOUR) base = DEFAULT_BASE;
-        int colour = target < 0 ? base : appearance().colourAt(target, base);
+        int colour = target < 0 ? base : appearance().colourAt(target, stockLine != null ? stockLine[target] : base);
         int level = (colour >> shift) & 7;
         int moved = Math.clamp(level + delta, 0, 7);
         if (moved == level) return false;
@@ -282,7 +295,7 @@ public final class ProfileView {
         row(canvas, Row.PRESET, "Look", "< " + lookLabel() + " >", VALUE);
         String editing = target < 0 ? "NAME COLOUR" : "ENTRY " + target + (inRamp(target) ? " BODY" : "");
         row(canvas, Row.EDIT, "Edit", character == null ? "NAME COLOUR" : "< " + editing + " >", VALUE);
-        int colour = target < 0 ? base : look.colourAt(target, -1);
+        int colour = target < 0 ? base : look.colourAt(target, stock(target));
         String[] channels = {"Red", "Green", "Blue"};
         int[] shifts = {1, 5, 9};
         for (int c = 0; c < 3; c++) {
@@ -310,11 +323,15 @@ public final class ProfileView {
         int x0 = Math.max(8, (canvas.width() - 16 * 18) / 2);
         for (int index = 0; index < 16; index++) {
             int x = x0 + index * 18;
-            int colour = index == 0 ? -1 : look.colourAt(index, -1);
+            int override = index == 0 ? -1 : look.colourAt(index, -1);
+            int colour = override >= 0 ? override : index == 0 ? -1 : stock(index);
             if (index == target) canvas.fill(x - 2, SWATCH_Y - 2, 18, 16, VALUE);
             canvas.fill(x - 1, SWATCH_Y - 1, 16, 14, 0xFF000000);
             canvas.fill(x, SWATCH_Y, 14, 12, colour < 0 ? STOCK_SWATCH : swatch(colour));
-            if (colour < 0 && index > 0) canvas.fill(x + 6, SWATCH_Y + 5, 2, 2, DIM); // follows the ROM
+            if (override < 0 && index > 0) {
+                canvas.fill(x + 5, SWATCH_Y + 4, 4, 4, 0xFF000000); // follows the ROM
+                canvas.fill(x + 6, SWATCH_Y + 5, 2, 2, DIM);
+            }
             if (inRamp(index)) canvas.fill(x + 3, SWATCH_Y + 14, 8, 2, RAMP_MARK);
         }
         canvas.text(fit(canvas, "dot = ROM colour  gold = body", canvas.width() - 20), 10, SWATCH_Y + 19, DIM);
@@ -325,6 +342,10 @@ public final class ProfileView {
         if (custom != null) return "Custom palette";
         LookPresets.Preset preset = LookPresets.forBase(base);
         return preset != null ? preset.name() : "Custom colour";
+    }
+
+    private int stock(int index) {
+        return stockLine == null ? -1 : stockLine[index];
     }
 
     private boolean inRamp(int index) {

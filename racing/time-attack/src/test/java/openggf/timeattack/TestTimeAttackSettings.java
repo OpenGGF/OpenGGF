@@ -328,6 +328,26 @@ class TestTimeAttackSettings {
         assertTrue(canvas.drewName("Ray", 16, settings.appearanceFor("s2", "tails").nameArgb()));
     }
 
+    @Test
+    void profilePageStartsEntryEditsFromTheRomColourWhenTheLineIsKnown() {
+        TimeAttackSettings settings = new TimeAttackSettings();
+        int[] stock = new int[16];
+        for (int i = 0; i < 16; i++) stock[i] = (i & 7) << 1; // reds 0..7: distinct, valid words
+        stock[9] = 0x0444;
+        ProfileView view = new ProfileView(settings, "s3k", "sonic", stock, () -> { }, cue -> { });
+        FakeViewInput input = new FakeViewInput();
+        input.tapDown(view::update); // edit target
+        for (int i = 0; i < 9; i++) input.tapRight(view::update); // entry 9
+        input.tapDown(view::update); // red
+        input.tapRight(view::update);
+        assertEquals(0x0446, view.appearance().colourAt(9, -1), "one red step from the ROM's 0x444");
+        RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
+        view.draw(canvas);
+        canvas.assertFillsOnScreen();
+        int stockSwatch = 0xFF000000 | com.openggf.net.identity.PlayerAppearance.rgb(stock[5]);
+        assertFalse(canvas.fillsIn(stockSwatch).isEmpty(), "entries without an override show the ROM colour");
+    }
+
     private static String label(ProfileView view) {
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         view.draw(canvas);
