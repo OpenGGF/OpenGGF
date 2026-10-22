@@ -631,4 +631,16 @@ class TestRaceSession {
             throw new AssertionError(e);
         }
     }
+
+    @org.junit.jupiter.api.Test
+    void roomNamesStayInsideTheDescriptorLimitWithoutSplittingCharacters() {
+        String longName = "疾風".repeat(10); // 60 UTF-8 bytes
+        String room = RaceSession.roomName(longName);
+        org.junit.jupiter.api.Assertions.assertTrue(room.endsWith("'s room"));
+        org.junit.jupiter.api.Assertions.assertTrue(
+                room.getBytes(java.nio.charset.StandardCharsets.UTF_8).length <= 64, room);
+        org.junit.jupiter.api.Assertions.assertEquals(room, new String(
+                room.getBytes(java.nio.charset.StandardCharsets.UTF_8), java.nio.charset.StandardCharsets.UTF_8));
+        org.junit.jupiter.api.Assertions.assertEquals("Ana's room", RaceSession.roomName("Ana"));
+    }
 }

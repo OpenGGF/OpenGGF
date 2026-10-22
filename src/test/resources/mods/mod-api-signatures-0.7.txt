@@ -1027,6 +1027,8 @@ CF-ANNOTATION TYPE com.openggf.net.hub.RoomHostConfig visible @com.openggf.game.
 CF-ANNOTATION TYPE com.openggf.net.hub.RoomHostHooks visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.hub.RoomHostHooks$ChatGate visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.hub.RoomHostHooks$ChatGate visible @java.lang.FunctionalInterface
+CF-ANNOTATION TYPE com.openggf.net.hub.RoomHostHooks$ProfileListener visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.hub.RoomHostHooks$ProfileListener visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.net.hub.RoomHostHooks$VerificationHooks visible @com.openggf.game.ModApi
@@ -1883,6 +1885,7 @@ CONSTRUCTOR com.openggf.net.hub.RoomHostConfig public  <init>(java.lang.String,j
 CONSTRUCTOR com.openggf.net.hub.RoomHostHooks public  <init>(boolean,com.openggf.net.hub.RoomHostHooks$ChatGate,com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener,java.lang.String,java.util.function.Predicate<java.lang.String>)
 CONSTRUCTOR com.openggf.net.hub.RoomHostHooks public  <init>(boolean,com.openggf.net.hub.RoomHostHooks$ChatGate,com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener,java.lang.String,java.util.function.Predicate<java.lang.String>,java.util.function.Predicate<java.lang.String>)
 CONSTRUCTOR com.openggf.net.hub.RoomHostHooks public  <init>(boolean,com.openggf.net.hub.RoomHostHooks$ChatGate,com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener,java.lang.String,java.util.function.Predicate<java.lang.String>,java.util.function.Predicate<java.lang.String>,java.lang.String,com.openggf.net.hub.RoomHostHooks$VerificationHooks)
+CONSTRUCTOR com.openggf.net.hub.RoomHostHooks public  <init>(boolean,com.openggf.net.hub.RoomHostHooks$ChatGate,com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener,java.lang.String,java.util.function.Predicate<java.lang.String>,java.util.function.Predicate<java.lang.String>,java.lang.String,com.openggf.net.hub.RoomHostHooks$VerificationHooks,com.openggf.net.hub.RoomHostHooks$ProfileListener)
 CONSTRUCTOR com.openggf.net.hub.TrackValidationProfile public  <init>(int,int,int,int)
 CONSTRUCTOR com.openggf.net.identity.PlayerAppearance public  <init>(int,java.util.List<com.openggf.net.identity.PlayerAppearance$Entry>)
 CONSTRUCTOR com.openggf.net.identity.PlayerAppearance$Entry public  <init>(int,int)
@@ -3552,6 +3555,7 @@ FIELD com.openggf.net.protocol.Protocol public,static,final int MAX_PLAYERS_RELA
 FIELD com.openggf.net.protocol.Protocol public,static,final int ROOM_LIST_RATE_LIMITED
 FIELD com.openggf.net.protocol.Protocol public,static,final int VERSION
 FIELD com.openggf.net.protocol.Protocol public,static,final long CHAT_MIN_INTERVAL_MILLIS
+FIELD com.openggf.net.protocol.Protocol public,static,final long PROFILE_MIN_INTERVAL_MILLIS
 FIELD com.openggf.physics.BackgroundPlaneCollisionProvider public,static,final com.openggf.physics.BackgroundPlaneCollisionProvider FOREGROUND_ONLY
 FIELD com.openggf.physics.BackgroundPlaneCollisionProvider$State public,static,final com.openggf.physics.BackgroundPlaneCollisionProvider$State INACTIVE
 FIELD com.openggf.physics.CollisionEvent$EventType public,static,final com.openggf.physics.CollisionEvent$EventType POST_ADJUSTMENT
@@ -12945,6 +12949,7 @@ METHOD com.openggf.net.client.MasterClient public  com.openggf.net.client.RaceCo
 METHOD com.openggf.net.client.MasterClient public  java.lang.String masterSessionToken()
 METHOD com.openggf.net.client.MasterClient public  java.util.List<com.openggf.net.client.RaceClient$InboundEvent> drainInbound()
 METHOD com.openggf.net.client.MasterClient public  java.util.concurrent.CompletableFuture<com.openggf.net.client.RaceConnection> joinRoom(java.lang.String,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String)
+METHOD com.openggf.net.client.MasterClient public  java.util.concurrent.CompletableFuture<com.openggf.net.client.RaceConnection> joinRoom(java.lang.String,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String,java.lang.String)
 METHOD com.openggf.net.client.MasterClient public  java.util.concurrent.CompletableFuture<com.openggf.net.protocol.ControlMessage$RoomCreated> createRoom(com.openggf.net.protocol.ControlMessage$RoomDescriptor,java.lang.String,int,java.lang.String)
 METHOD com.openggf.net.client.MasterClient public  java.util.concurrent.CompletableFuture<com.openggf.net.protocol.ControlMessage$RoomCreated> createRoom(com.openggf.net.protocol.ControlMessage$RoomDescriptor,java.lang.String,int,java.lang.String,java.util.List<java.lang.String>)
 METHOD com.openggf.net.client.MasterClient public  java.util.concurrent.CompletableFuture<com.openggf.net.protocol.ControlMessage$RoomJoinResult> requestJoin(java.lang.String)
@@ -12968,6 +12973,7 @@ METHOD com.openggf.net.client.RaceClient public  void sendBinary(byte[])
 METHOD com.openggf.net.client.RaceClient public  void sendControl(com.openggf.net.protocol.ControlMessage)
 METHOD com.openggf.net.client.RaceClient public,static  java.util.concurrent.CompletableFuture<com.openggf.net.client.RaceClient> connect(java.net.URI,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String)
 METHOD com.openggf.net.client.RaceClient public,static  java.util.concurrent.CompletableFuture<com.openggf.net.client.RaceClient> connect(java.net.URI,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String,java.lang.String,java.lang.String)
+METHOD com.openggf.net.client.RaceClient public,static  java.util.concurrent.CompletableFuture<com.openggf.net.client.RaceClient> connect(java.net.URI,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)
 METHOD com.openggf.net.client.RaceClient$Control public  com.openggf.net.protocol.ControlMessage message()
 METHOD com.openggf.net.client.RaceClient$Control public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.client.RaceClient$Control public,final  int hashCode()
@@ -13158,6 +13164,7 @@ METHOD com.openggf.net.hub.RoomHostConfig public,final  int hashCode()
 METHOD com.openggf.net.hub.RoomHostConfig public,final  java.lang.String toString()
 METHOD com.openggf.net.hub.RoomHostHooks public  boolean relevanceFiltering()
 METHOD com.openggf.net.hub.RoomHostHooks public  com.openggf.net.hub.RoomHostHooks$ChatGate chatGate()
+METHOD com.openggf.net.hub.RoomHostHooks public  com.openggf.net.hub.RoomHostHooks$ProfileListener profileListener()
 METHOD com.openggf.net.hub.RoomHostHooks public  com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener roundOutcomeListener()
 METHOD com.openggf.net.hub.RoomHostHooks public  com.openggf.net.hub.RoomHostHooks$VerificationHooks verificationHooks()
 METHOD com.openggf.net.hub.RoomHostHooks public  java.lang.String roomId()
@@ -13169,6 +13176,7 @@ METHOD com.openggf.net.hub.RoomHostHooks public,final  int hashCode()
 METHOD com.openggf.net.hub.RoomHostHooks public,final  java.lang.String toString()
 METHOD com.openggf.net.hub.RoomHostHooks public,static  com.openggf.net.hub.RoomHostHooks none()
 METHOD com.openggf.net.hub.RoomHostHooks$ChatGate public,abstract  boolean mayChat(java.lang.String,long)
+METHOD com.openggf.net.hub.RoomHostHooks$ProfileListener public,abstract  void onDisplayNameChanged(java.lang.String,java.lang.String)
 METHOD com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener public,abstract  void onRoundComplete(java.lang.String,boolean)
 METHOD com.openggf.net.hub.RoomHostHooks$VerificationHooks public  void onPendingExpired(java.lang.String,int,int)
 METHOD com.openggf.net.hub.RoomHostHooks$VerificationHooks public,abstract  void onFinishNeedingVerification(java.lang.String,int,java.lang.String,com.openggf.net.protocol.ControlMessage$AttemptFinish,java.lang.String,java.lang.String,java.lang.String,boolean)
@@ -16132,6 +16140,7 @@ NESTED com.openggf.net.hub.GhostHub com.openggf.net.hub.GhostHub$HubViolationRec
 NESTED com.openggf.net.hub.HostRoundEngine com.openggf.net.hub.HostRoundEngine$FinishOutcome
 NESTED com.openggf.net.hub.HostRoundEngine com.openggf.net.hub.HostRoundEngine$Phase
 NESTED com.openggf.net.hub.RoomHostHooks com.openggf.net.hub.RoomHostHooks$ChatGate
+NESTED com.openggf.net.hub.RoomHostHooks com.openggf.net.hub.RoomHostHooks$ProfileListener
 NESTED com.openggf.net.hub.RoomHostHooks com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener
 NESTED com.openggf.net.hub.RoomHostHooks com.openggf.net.hub.RoomHostHooks$VerificationHooks
 NESTED com.openggf.net.identity.PlayerAppearance com.openggf.net.identity.PlayerAppearance$Entry
@@ -18376,6 +18385,7 @@ RECORD-COMPONENT com.openggf.net.hub.RoomHostConfig zone int
 RECORD-COMPONENT com.openggf.net.hub.RoomHostHooks chatGate com.openggf.net.hub.RoomHostHooks$ChatGate
 RECORD-COMPONENT com.openggf.net.hub.RoomHostHooks isNewPlayer java.util.function.Predicate<java.lang.String>
 RECORD-COMPONENT com.openggf.net.hub.RoomHostHooks knownVoteTrack java.util.function.Predicate<java.lang.String>
+RECORD-COMPONENT com.openggf.net.hub.RoomHostHooks profileListener com.openggf.net.hub.RoomHostHooks$ProfileListener
 RECORD-COMPONENT com.openggf.net.hub.RoomHostHooks relevanceFiltering boolean
 RECORD-COMPONENT com.openggf.net.hub.RoomHostHooks roomId java.lang.String
 RECORD-COMPONENT com.openggf.net.hub.RoomHostHooks roundOutcomeListener com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener
@@ -20094,6 +20104,7 @@ TYPE interface public,abstract,static com.openggf.net.client.GhostStreamPublishe
 TYPE interface public,abstract,static com.openggf.net.host.HostMasterLink$MessageSink SUPER <none>
 TYPE interface public,abstract,static com.openggf.net.hub.GhostHub$HubViolationRecorder SUPER <none>
 TYPE interface public,abstract,static com.openggf.net.hub.RoomHostHooks$ChatGate SUPER <none>
+TYPE interface public,abstract,static com.openggf.net.hub.RoomHostHooks$ProfileListener SUPER <none>
 TYPE interface public,abstract,static com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener SUPER <none>
 TYPE interface public,abstract,static com.openggf.net.hub.RoomHostHooks$VerificationHooks SUPER <none>
 TYPE interface public,abstract,static com.openggf.sprites.managers.SpriteManager$SpriteDrawCallback SUPER <none>
@@ -21621,6 +21632,8 @@ TYPE-ANNOTATION com.openggf.net.hub.RoomHostConfig @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.hub.RoomHostHooks @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.hub.RoomHostHooks$ChatGate @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.hub.RoomHostHooks$ChatGate @java.lang.FunctionalInterface
+TYPE-ANNOTATION com.openggf.net.hub.RoomHostHooks$ProfileListener @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.hub.RoomHostHooks$ProfileListener @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.net.hub.RoomHostHooks$VerificationHooks @com.openggf.game.ModApi

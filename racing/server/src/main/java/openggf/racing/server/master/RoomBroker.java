@@ -6,6 +6,7 @@ import com.openggf.net.hub.SessionTokenIssuer;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.identity.ProofOfWork;
 import openggf.racing.protocol.ControlCodec;
+import com.openggf.net.identity.DisplayNames;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.Protocol;
 import com.openggf.net.protocol.ProtocolViolationException;
@@ -320,6 +321,11 @@ public final class RoomBroker {
     }
 
     private void afterAdmit(Member member, HostHandshake.Admit admit) {
+        if (!admit.displayName().isEmpty() && !DisplayNames.isCanonical(admit.displayName())) {
+            // Clients send canonical names; anything else would persist unsafe text in the store.
+            reject(member, "invalid display name");
+            return;
+        }
         member.fingerprint = admit.fingerprint();
         member.displayNameClaimed = !admit.displayName().isBlank();
         member.displayName = admit.displayName().isBlank()

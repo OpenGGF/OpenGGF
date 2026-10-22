@@ -22,8 +22,9 @@ public final class HostHandshake {
     public record Reject(String reason) implements Step {
     }
 
+    /** @param appearance the signed Hello's look, in its unchecked wire form */
     public record Admit(String fingerprint, String displayName, byte[] publicKeyEncoded,
-                        String determinismFingerprint)
+                        String determinismFingerprint, String appearance)
             implements Step {
         public Admit {
             publicKeyEncoded = publicKeyEncoded.clone();
@@ -48,6 +49,7 @@ public final class HostHandshake {
     private byte[] transcript;
     private byte[] publicKeyEncoded;
     private String displayName;
+    private String appearance;
     private String determinismFingerprint;
 
     public HostHandshake(String serverId, String requiredDeterminismFingerprint) {
@@ -80,6 +82,7 @@ public final class HostHandshake {
             return reject("invalid public key");
         }
         displayName = hello.displayName() == null ? "" : hello.displayName();
+        appearance = hello.appearance() == null ? "" : hello.appearance();
         determinismFingerprint = hello.determinismFingerprint();
         nonce = new byte[32];
         random.nextBytes(nonce);
@@ -108,7 +111,7 @@ public final class HostHandshake {
         }
         state = State.DONE;
         return new Admit(sha256Hex(publicKeyEncoded), displayName, publicKeyEncoded,
-                determinismFingerprint);
+                determinismFingerprint, appearance);
     }
 
     private static String sha256Hex(byte[] data) {
