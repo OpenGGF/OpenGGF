@@ -449,3 +449,18 @@ contracts and exact hook agreement. Arbitrary unrelated objects remain open:
 another prize aliases2C as the low word of its LONG counter address at2A,
 requiring real address and alignment semantics. No hidden value map, stale
 parent reference or default-zero projection certifies that case.
+
+
+The native-pause lane exposed one remaining declaration-scanner false positive
+after original bccb34a88: inserting a private nested HistoryEvent into the
+annotated AudioCommandTimeline changed the hook's approximation despite unchanged
+reflected signatures. The bounded mirrored shell/PowerShell repair removes the
+complete private type declaration/body from that approximation, retains exposed
+nested declarations and implicitly public interface members, and ignores quoted
+annotation text when identifying type modifiers. No candidate pin or API version
+was changed. The actual audio committed/working timeline extracts identically.
+The exact Python policy suite `python3 -m unittest
+tools.testing.test_release_snapshot_policy -v` passes51/51, exercising installed
+PowerShell as well as sh; both syntax checks and the owned diff check pass. This
+is policy verification, not native-pause runtime qualification. The audio lane
+will import this separate dependency and retain its own already-focused source.

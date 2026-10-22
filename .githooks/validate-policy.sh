@@ -165,6 +165,7 @@ contains_mod_api_annotation() {
 # the exporter records field types/modifiers/annotations, never their values.
 # Strip implementations before selecting public/protected declaration lines, so
 # multiline initializer calls cannot leak parentheses into signature continuations.
+# Private nested types are implementation details, including their exposed members.
 # Other implicitly public type forms retain their conservative text comparison.
 # TestModApiSignatureSurface remains the exact signature check.
 mod_api_surface_text() {
@@ -203,8 +204,9 @@ mod_api_surface_text() {
         # field values (the normalized exporter records field type/modifiers only).
         # Strip those first, so initializer calls cannot open continuation depth.
         source = ""; for (i = 1; i <= n; i++) source = source lines[i] "\n"
-        if (kind == "class" || kind == "record") {
-            clean = ""; segment = ""; parens = 0; body = 0; initializer = 0
+        if (kind != "") {
+            stripBodies = (kind == "class" || kind == "record")
+            clean = ""; segment = ""; typeTokens = ""; parens = 0; body = 0; initializer = 0
             initParens = 0; initBraces = 0; initBrackets = 0; quote = ""; escaped = 0
             for (j = 1; j <= length(source); j++) {
                 c = substr(source, j, 1)
@@ -221,12 +223,12 @@ mod_api_surface_text() {
                 }
                 if (substr(source, j, 3) == "\"\"\"") {
                     quote = "text"
-                    if (!body && !initializer) { clean = clean "\"\"\""; segment = segment "\"\"\"" }
+                    if (!body && !initializer) { clean = clean "\"\"\""; segment = segment "\"\"\""; typeTokens = typeTokens " " }
                     j += 2; continue
                 }
                 if (c == "\"" || c == sprintf("%c", 39)) {
                     quote = c
-                    if (!body && !initializer) { clean = clean c; segment = segment c }
+                    if (!body && !initializer) { clean = clean c; segment = segment c; typeTokens = typeTokens " " }
                     continue
                 }
                 if (body) {
@@ -246,30 +248,61 @@ mod_api_surface_text() {
                         continue
                     }
                 }
-                if (c == "=" && parens == 0) { initializer = 1; continue }
+                if (stripBodies && c == "=" && parens == 0) { initializer = 1; continue }
                 if (c == "{" && parens == 0) {
-                    if (segment !~ /(^|[ \t\n])(class|interface|record|enum|@interface)[ \t\n]+[A-Za-z_]/) {
-                        clean = clean "{}"; segment = ""; body = 1; continue
+                    isType = typeTokens ~ /(^|[ \t\n])(class|interface|record|enum|@interface)[ \t\n]+[A-Za-z_]/
+                    if (isType && typeTokens ~ /(^|[ \t\n])private[ \t\n]/) {
+                        # Drop the complete declaration as well as its body. Public
+                        # members inside a private enclosing type are not exported.
+                        clean = substr(clean, 1, length(clean) - length(segment))
+                        segment = ""; typeTokens = ""; body = 1; continue
                     }
-                    segment = ""
-                } else if (c == ";" || c == "}") segment = ""
-                else segment = segment c
+                    if (!isType && stripBodies) {
+                        clean = clean "{}"; segment = ""; typeTokens = ""; body = 1; continue
+                    }
+                    segment = ""; typeTokens = ""
+                } else if (c == ";" || c == "}") { segment = ""; typeTokens = "" }
+                else { segment = segment c; typeTokens = typeTokens c }
                 clean = clean c
                 if (c == "(") parens++
                 else if (c == ")") parens--
             }
             n = split(clean, lines, "\n")
         }
-        whole = (kind != "class"); depth = 0
+        whole = (kind != "class"); depth = 0; braces = 0; interfaceDepth = 0; interfacePending = 0
+        quote = ""; escaped = 0
         for (i = 1; i <= n; i++) {
             l = lines[i]
             if (l !~ /[^ \t]/) continue
             if (whole) { print l; continue }
-            if (depth > 0 || l ~ /(^|[^A-Za-z0-9_])(public|protected)[ \t]/ || l ~ /^[ \t]*@/ \
+            if (l ~ /(^|[ \t])(@interface|interface)[ \t]+[A-Za-z_]/) interfacePending = 1
+            if (interfaceDepth > 0 || depth > 0 || l ~ /(^|[^A-Za-z0-9_])(public|protected)[ \t]/ || l ~ /^[ \t]*@/ \
                     || l ~ /(^|[ \t])(class|interface|record|enum|extends|implements)[ \t]/) {
                 print l
                 t = l; opens = gsub(/\(/, "(", t); closes = gsub(/\)/, ")", t)
                 depth += opens - closes; if (depth < 0) depth = 0
+            }
+            # Nested interface methods are implicitly public. Track their type
+            # scope after body stripping, without treating literal braces as scope.
+            for (j = 1; j <= length(l); j++) {
+                c = substr(l, j, 1)
+                if (quote != "") {
+                    if (escaped) escaped = 0
+                    else if (c == "\\") escaped = 1
+                    else if (c == quote) quote = ""
+                    continue
+                }
+                if (c == "\"" || c == sprintf("%c", 39)) { quote = c; continue }
+                if (c == "{") {
+                    braces++
+                    if (interfacePending) {
+                        if (interfaceDepth == 0) interfaceDepth = braces
+                        interfacePending = 0
+                    }
+                } else if (c == "}") {
+                    braces--
+                    if (braces < interfaceDepth) interfaceDepth = 0
+                }
             }
         }
     }'

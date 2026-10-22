@@ -286,6 +286,130 @@ public class Rules {
                                      .replace('publicLookingCall(1)', 'publicLookingCall(2)')
                                      .replace('return 1', 'return 2'), None)
 
+    def test_private_nested_type_insertions_do_not_require_pin(self):
+        old = """@ModApi
+public final class Rules {
+    public int value() { return 1; }
+}
+"""
+        declarations = [
+            'private static final class Hidden { private final int x = 1; }',
+            'private record Hidden(int x) { public int twice() { return x * 2; } }',
+            'private enum Hidden { ONE; public int value() { return 1; } }',
+            'private interface Hidden { int value(); }',
+            '@Deprecated\n    private static class Hidden { public interface Exposed { int value(); } }',
+        ]
+        path = 'src/main/java/example/Rules.java'
+        self.write(path, old); self.base = self.commit('existing exposed class')
+        for declaration in declarations:
+            with self.subTest(declaration=declaration):
+                self.write(path, old.replace('    public int value()',
+                                             '    ' + declaration + '\n    public int value()'))
+                self.assert_api_commit_policy(None)
+
+    def test_private_nested_type_removal_does_not_require_pin(self):
+        old = """@ModApi
+public final class Rules {
+    private static final class Hidden {
+        public Hidden(int x) { }
+        public int value() { return 1; }
+    }
+    public int value() { return 1; }
+}
+"""
+        start = old.index('    private static final class Hidden')
+        end = old.index('    public int value()', old.index('    }', start))
+        self.check_api_source_change(old, old[:start] + old[end:], None)
+
+    def test_private_nested_type_members_annotations_and_bodies_do_not_require_pin(self):
+        old = """@ModApi
+public record Rules(int x) {
+    @Deprecated
+    private static final class Hidden {
+        public int value() { return 1; }
+        public interface Nested { int size(); }
+    }
+    public int value() { return x; }
+}
+"""
+        new = old.replace('@Deprecated', '@Deprecated(since="2")')
+        new = new.replace('public int value() { return 1; }',
+                          'public long renamed() { if (true) { return 2; } return 3; }')
+        new = new.replace('int size()', 'long size()')
+        self.check_api_source_change(old, new, None)
+
+    def test_private_nested_types_in_enum_remain_implementation_details(self):
+        old = """@ModApi
+public enum Rules {
+    ONE;
+    public int value() { return 1; }
+}
+"""
+        self.check_api_source_change(old, old.replace('    public int value()',
+            '    private static class Hidden { public int size() { return 1; } }\n    public int value()'), None)
+
+    def test_exposed_nested_type_insertion_and_removal_still_require_pin(self):
+        old = """@ModApi
+public class Rules {
+    protected static class Nested { public int value() { return 1; } }
+    public int value() { return 1; }
+}
+"""
+        self.check_api_source_change(old, old.replace('    protected static class Nested { public int value() { return 1; } }\n', ''),
+                                     'candidate signature pin')
+        self.write('src/main/java/example/Rules.java', old.replace('    public int value()',
+            '    public interface Extra { int size(); }\n    public int value()'))
+        self.assert_api_commit_policy('candidate signature pin')
+
+    def test_exposed_nested_types_and_members_still_require_pin(self):
+        old = """@ModApi
+public class Rules {
+    private static class Hidden { public int ignored() { return 1; } }
+    public static class Nested {
+        protected int size() { return 1; }
+    }
+    public int value() { return 1; }
+}
+"""
+        self.check_api_source_change(old, old.replace('protected int size()', 'protected long size()'),
+                                     'candidate signature pin')
+        for changed in [old.replace('public static class Nested', 'protected static class Nested'),
+                        old.replace('public static class Nested', 'public static final class Nested'),
+                        old.replace('private static class Hidden', 'public static class Hidden'),
+                        old.replace('public int value()', 'public long value()')]:
+            with self.subTest(changed=changed):
+                self.write('src/main/java/example/Rules.java', changed)
+                self.assert_api_commit_policy('candidate signature pin')
+
+    def test_quoted_private_type_words_cannot_hide_exposed_nested_api(self):
+        old = """@ModApi
+public class Rules {
+    @Label("private class Hidden")
+    public static class Nested {
+        public int value() { return 1; }
+    }
+}
+"""
+        self.check_api_source_change(old, old.replace('public int value()', 'public long value()'),
+                                     'candidate signature pin')
+
+    def test_class_nested_interface_implicit_members_still_require_pin(self):
+        old = """@ModApi
+public class Rules {
+    public interface Nested {
+        String TEXT = "{";
+        int size();
+    }
+    private void implementation() { }
+    public int value() { return 1; }
+}
+"""
+        self.check_api_source_change(old, old.replace('int size()', 'long size()'),
+                                     'candidate signature pin')
+        self.write('src/main/java/example/Rules.java', old.replace('private void implementation() { }',
+            'private void implementation() { different(); }'))
+        self.assert_api_commit_policy(None)
+
     def test_record_public_declaration_changes_still_require_candidate_pin(self):
         old = """@ModApi
 public record Rules(int value) {

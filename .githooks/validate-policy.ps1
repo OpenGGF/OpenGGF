@@ -239,10 +239,14 @@ function Get-ModApiSurfaceText([string]$Text) {
     }
     # Remove class/record implementation text before declaration selection.
     # Field initializer values are absent from the normalized signature exporter.
-    if ($kind -eq "class" -or $kind -eq "record") {
+    # All type forms exclude private nested declarations and their entire bodies.
+    # Other type forms retain their existing conservative declaration comparison.
+    if ($kind -ne "") {
+        $stripBodies = $kind -eq "class" -or $kind -eq "record"
         $source = $stripped -join "`n"
         $clean = New-Object System.Text.StringBuilder
         $segment = New-Object System.Text.StringBuilder
+        $typeTokens = New-Object System.Text.StringBuilder
         $parens = 0; $body = 0; $initializer = $false
         $initParens = 0; $initBraces = 0; $initBrackets = 0
         $quote = [char]0; $escaped = $false
@@ -262,12 +266,12 @@ function Get-ModApiSurfaceText([string]$Text) {
             }
             if ($triple) {
                 $quote = 'text'
-                if (-not $body -and -not $initializer) { [void]$clean.Append('"""'); [void]$segment.Append('"""') }
+                if (-not $body -and -not $initializer) { [void]$clean.Append('"""'); [void]$segment.Append('"""'); [void]$typeTokens.Append(' ') }
                 $j += 2; continue
             }
             if ($c -eq '"' -or $c -eq [char]39) {
                 $quote = $c
-                if (-not $body -and -not $initializer) { [void]$clean.Append($c); [void]$segment.Append($c) }
+                if (-not $body -and -not $initializer) { [void]$clean.Append($c); [void]$segment.Append($c); [void]$typeTokens.Append(' ') }
                 continue
             }
             if ($body) {
@@ -287,14 +291,20 @@ function Get-ModApiSurfaceText([string]$Text) {
                     continue
                 }
             }
-            if ($c -eq '=' -and $parens -eq 0) { $initializer = $true; continue }
+            if ($stripBodies -and $c -eq '=' -and $parens -eq 0) { $initializer = $true; continue }
             if ($c -eq '{' -and $parens -eq 0) {
-                if ($segment.ToString() -cnotmatch '(?:^|[ \t\n])(?:class|interface|record|enum|@interface)[ \t\n]+[A-Za-z_]') {
-                    [void]$clean.Append('{}'); [void]$segment.Clear(); $body = 1; continue
+                $isType = $typeTokens.ToString() -cmatch '(?:^|[ \t\n])(?:class|interface|record|enum|@interface)[ \t\n]+[A-Za-z_]'
+                if ($isType -and $typeTokens.ToString() -cmatch '(?:^|[ \t\n])private[ \t\n]') {
+                    # Exposed members of a private enclosing type are not exported.
+                    $clean.Length -= $segment.Length
+                    [void]$segment.Clear(); [void]$typeTokens.Clear(); $body = 1; continue
                 }
-                [void]$segment.Clear()
-            } elseif ($c -eq ';' -or $c -eq '}') { [void]$segment.Clear() }
-            else { [void]$segment.Append($c) }
+                if (-not $isType -and $stripBodies) {
+                    [void]$clean.Append('{}'); [void]$segment.Clear(); [void]$typeTokens.Clear(); $body = 1; continue
+                }
+                [void]$segment.Clear(); [void]$typeTokens.Clear()
+            } elseif ($c -eq ';' -or $c -eq '}') { [void]$segment.Clear(); [void]$typeTokens.Clear() }
+            else { [void]$segment.Append($c); [void]$typeTokens.Append($c) }
             [void]$clean.Append($c)
             if ($c -eq '(') { $parens++ }
             elseif ($c -eq ')') { $parens-- }
@@ -302,16 +312,40 @@ function Get-ModApiSurfaceText([string]$Text) {
         $stripped = $clean.ToString() -split "`n"
     }
     $whole = $kind -ne "class"
-    $depth = 0
+    $depth = 0; $braces = 0; $interfaceDepth = 0; $interfacePending = $false
+    $quote = [char]0; $escaped = $false
     $kept = New-Object System.Collections.Generic.List[string]
     foreach ($l in $stripped) {
         if ($l -notmatch '[^ \t]') { continue }
         if ($whole) { $kept.Add($l); continue }
-        if ($depth -gt 0 -or $l -cmatch '(?:^|[^A-Za-z0-9_])(?:public|protected)[ \t]' -or $l -match '^[ \t]*@' -or
+        if ($l -cmatch '(?:^|[ \t])(?:@interface|interface)[ \t]+[A-Za-z_]') { $interfacePending = $true }
+        if ($interfaceDepth -gt 0 -or $depth -gt 0 -or $l -cmatch '(?:^|[^A-Za-z0-9_])(?:public|protected)[ \t]' -or $l -match '^[ \t]*@' -or
                 $l -cmatch '(?:^|[ \t])(?:class|interface|record|enum|extends|implements)[ \t]') {
             $kept.Add($l)
             $depth += ([regex]::Matches($l, '\(')).Count - ([regex]::Matches($l, '\)')).Count
             if ($depth -lt 0) { $depth = 0 }
+        }
+        # Nested interface methods are implicitly public; literal braces do not
+        # change their enclosing type scope.
+        for ($j = 0; $j -lt $l.Length; $j++) {
+            $c = $l[$j]
+            if ($quote -ne [char]0) {
+                if ($escaped) { $escaped = $false }
+                elseif ($c -eq '\') { $escaped = $true }
+                elseif ($c -eq $quote) { $quote = [char]0 }
+                continue
+            }
+            if ($c -eq '"' -or $c -eq [char]39) { $quote = $c; continue }
+            if ($c -eq '{') {
+                $braces++
+                if ($interfacePending) {
+                    if ($interfaceDepth -eq 0) { $interfaceDepth = $braces }
+                    $interfacePending = $false
+                }
+            } elseif ($c -eq '}') {
+                $braces--
+                if ($braces -lt $interfaceDepth) { $interfaceDepth = 0 }
+            }
         }
     }
     return ($kept -join "`n")
