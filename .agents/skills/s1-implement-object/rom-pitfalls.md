@@ -772,3 +772,31 @@ or unconditionally reseed X. Rewind separately captures those logical values.
 A same-camera restart can hide a stale entry seed: exercise two different
 entry cameras, then a real checkpoint reload. See the
 [S1 lifecycle audit](../../../docs/architecture/audits/2026-10-22-s1-lifecycle-gap-closure.md).
+
+## P34 — In-place conversion keeps the native SST and its current call stack
+
+**Symptom.** A fragment appears a pass late or loses fractional motion; later
+ring bounces differ after an object unload even though visible objects match.
+
+**What to check.** `Bom_BurnFuseAndExplode` writes only the integer Y word and
+reuses a0 for the first shrapnel. Keep the fuse's position fractions and status,
+then execute the fallthrough `SpeedToPos` in that same pass. Fresh higher-slot
+children instead run `Bom_Main` without moving or animating. Under shipped
+`FixBugs=0`, the caller's `AnimateSprite`/`RememberState` tail still runs after
+`Bom_Shrapnel` returns, including its second display submission; the fixed branch
+skips that return. Motion parity does not by itself prove the sprite queue.
+
+A consolidated staircase owner can execute at a higher child's slot, but native
+`DeleteObject` still clears each SST at its own walk position. Pass the owner's
+own slot to its retirement operation and preserve the deferred child releases.
+Test a lower hole, intervening allocation, a new forward-slot update, and
+destructive restore; an end-of-pass object count alone can hide leaked bits.
+
+**ROM citation.** `Bom_BurnFuseAndExplode` / `Bom_Shrapnel`
+(`docs/s1disasm/_incObj/5F Badnik - Walking Bomb.asm:171-220`), `Staircase`
+(`docs/s1disasm/_incObj/5B SLZ Staircase.asm:6-12`), and `DeleteObject`
+(`docs/s1disasm/_incObj/sub DeleteObject.asm:10-18`).
+
+**Origin.** S1 chain gap closure, 2026-10-22; exact native bytes, regressions and
+remaining display obligations are recorded in
+`docs/architecture/audits/2026-10-22-s1-chain-gap-closure.md`.

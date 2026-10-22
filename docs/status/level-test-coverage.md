@@ -1279,3 +1279,14 @@ both alternate-BK2 complete-run LZ2/LZ3 controls pass without skips. The
 LZ2's emerald-route 10→0 errors and LZ3's 10,212→three queue-only differences.
 Full-route timing, viewport/donor/team breadth and complete stock act matrices
 remain inherited gaps; these contracts do not certify either whole act.
+
+S1 native object-lifetime follow-up (2026-10-22): a real folded staircase now
+checks lower-hole/own-slot reuse, forward execution, deferred child release
+before final cleanup, and destructive restore in both manager loops. Bomb fuse
+conversion retains native fractions/status and first-pass movement under full
+and partial slot pressure; manual and timeout pole release replay after restore.
+All 23 focused cases and the original-BK2 SLZ1/2/3 controls pass without skips;
+emerald SLZ1 becomes exact in the continuous chain. [Evidence and limits](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#native-sst-retirement-and-bomb-conversion)
+include remaining native Bomb display-queue/initialization, SLZ3 boss boundary,
+SYZ3 camera and later campaign frontiers. These checks do not replace complete
+act/viewport/donor/character matrices or certify a green continuous route.

@@ -113004,3 +113004,28 @@ from ROM and tried, then withheld because it exposed an earlier seventh-return
 TITLE_CARD admission defect; no blanket40-frame delay or copied bootstrap art
 hold landed. Source decisions, rejected evidence and timing/SAT gaps are in
 [the research record](../architecture/research/2026-10-22-s2-chain-pacing.md).
+
+## 2026-10-22 — S1 native object slots and conversion
+
+`bugfix/ai-gap-s1-chain-20261022`, HEAD `dde29476` plus the narrowly approved
+borrowed-owner retirement argument and S1 Bomb/Pole edits: 23 focused cases pass
+after independently reproducing old-source failures. Destructive restore/forward
+covers parent/child allocation and native conversion/release. The combined route
+selection completes 29 cases, 28 passes, 1 inherited chain assertion failure,
+0 errors/skips. Original-BK2 SLZ1/2/3 and both existing prefix tests pass.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY OPENGGF_S1_BOUND_PROBE=1 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestSonic1BombFuseConversion,TestSonic1PoleThatBreaksObjectInstance,TestBorrowedExecutionSlotRetirement,TestS1Slz1CompleteRunTraceReplay,TestS1Slz2CompleteRunTraceReplay,TestS1Slz3CompleteRunTraceReplay,TestS1CompleteEmeraldRunChain,TestS1CompleteEmeraldRunPrefix' "-Dsonic1.rom.path=$S1_ROM" test -B
+```
+
+Full chain 15→12 axes (original base 17). SLZ1 segment 27 becomes exact, eliminating
+3,880 errors beginning at 1771 rings 1/0. Both following SLZ art gaps close.
+Earliest remaining error is segment 12 row 101 `queue.s1_nemesis_plc.prepared`
+true/false. Segment 15 has 6 queue errors; 22 has 44 camera errors; 26 has 3 queue
+errors; 29 has 1,456 errors beginning with non-camera row 8557 X fraction
+`$F500/$0000`; 31 has 1 rings 9/10 error at 7821; 32 has 12 queue errors.
+Four later art gaps and segment 33 TITLE_CARD ownership loss at cursor 210396
+remain. Segment 33's incomplete report has 3,203 errors (first non-camera 356
+dynamic art), not a completed segment result. The [lane audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md)
+records native bytes, exact scope and coordinated dependencies. Temporary boundary
+instrumentation was removed; no comparisons, timing edges or fixture rows changed.

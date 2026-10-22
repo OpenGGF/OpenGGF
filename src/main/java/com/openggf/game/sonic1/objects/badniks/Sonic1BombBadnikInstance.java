@@ -489,12 +489,13 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
      *     bset    #7,obRender(a1)
      * </pre>
      */
-    void spawnShrapnel(int fuseX, int fuseY, int fuseSlot) {
+    Sonic1BombShrapnelInstance spawnShrapnel(int fuseX, int fuseY, int fuseSlot) {
         final ObjectManager objectManager = services().objectManager();
         if (objectManager == null) {
-            return;
+            return null;
         }
 
+        Sonic1BombShrapnelInstance firstShrapnel = null;
         for (int i = 0; i < SHRAPNEL_VELOCITIES.length; i++) {
             final int vx = SHRAPNEL_VELOCITIES[i][0];
             final int vy = SHRAPNEL_VELOCITIES[i][1];
@@ -537,7 +538,7 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
             } else {
                 assignedSlot = -1;
             }
-            spawnFreeChild(() -> {
+            Sonic1BombShrapnelInstance child = spawnFreeChild(() -> {
                 Sonic1BombShrapnelInstance shrapnel = new Sonic1BombShrapnelInstance(
                         fuseX, fuseY, vx, vy, deferFirstMove);
                 if (assignedSlot >= 0) {
@@ -545,7 +546,11 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
                 }
                 return shrapnel;
             });
+            if (firstPiece) {
+                firstShrapnel = child;
+            }
         }
+        return firstShrapnel;
     }
 
     private void setAnimation(int newAnim) {

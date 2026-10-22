@@ -1539,6 +1539,18 @@ Replace each embedded table with ROM-backed loaders or generated mappings
 through the normal user-supplied ROM pipeline, then reduce or remove the
 `sonic1EmbeddedRuntimeDataExceptionsStayDocumentedAndBounded` ratchet.
 
+## S1 Bomb conversion display queue
+
+Shipped `FixBugs=0` returns from `Bom_Shrapnel`'s `DisplaySprite` through
+`Bom_Fuse`'s `AnimateSprite`/`RememberState` tail, submitting the reused SST
+twice on the conversion tick. If the second path deletes it, the first queued
+pointer still exists. The engine's ordinary object render collection emits one
+part and suppresses destroyed objects, so this queue behavior remains unmodeled.
+Fresh child `Bom_Main` also leaves frame 0 untouched until its first animation
+call; the simplified shrapnel animation currently starts at frameA immediately.
+Motion/fraction/status and allocator regressions do not certify these visual
+paths. See the [native source and route evidence](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#native-sst-retirement-and-bomb-conversion).
+
 ## Batch-2 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)
 
 `Sonic1MotobugSmokeInstance` is intentionally **not** captured/recreated across a

@@ -58,6 +58,8 @@ public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
     private final SubpixelMotion.State motionState;
     private int animTickCounter;
     private boolean destroyed;
+    private boolean renderXFlip;
+    private boolean renderYFlip;
     // Non-final so the generic rewind field capturer records it like the other
     // scalar state; it is only read by skipsSameFrameUpdateAfterSpawn() at spawn
     // scheduling and is inert afterwards.
@@ -118,6 +120,37 @@ public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
         return deferFirstMove;
     }
 
+    /** Complete the native in-place fuse-to-shrapnel fallthrough in the current SST. */
+    void continueFromFuse(int xFraction, int yFraction, boolean xFlip, boolean yFlip) {
+        motionState.xSub = xFraction;
+        motionState.ySub = yFraction;
+        renderXFlip = xFlip;
+        renderYFlip = yFlip;
+        advanceMotion();
+        animTickCounter++;
+        clearAwaitingFirstTouchExecution();
+
+        // FixBugs=0: .firstShrapnel forces obRender bit 7 before Bom_Shrapnel,
+        // so its initial render-bit deletion test passes even outside the viewport.
+        // It then returns through Bom_Fuse's AnimateSprite/RememberState tail.
+        // FixBugs=1 skips that return to avoid display/delete and double-delete bugs.
+        // Bom_BurnFuseAndExplode (_incObj/5F Badnik - Walking Bomb.asm:171-220).
+        if (!isInRange()) {
+            setDestroyedByOffscreen();
+        }
+    }
+
+    private void advanceMotion() {
+        motionState.x = currentX;
+        motionState.y = currentY;
+        motionState.xVel = xVelocity;
+        motionState.yVel = yVelocity;
+        SubpixelMotion.speedToPos(motionState);
+        currentX = motionState.x;
+        currentY = motionState.y;
+        yVelocity = (short) (yVelocity + GRAVITY);
+    }
+
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
@@ -133,16 +166,7 @@ public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
         // bra.w DisplaySprite
 
         // SpeedToPos + gravity: apply velocity then add gravity
-        motionState.x = currentX;
-        motionState.y = currentY;
-        motionState.xVel = xVelocity;
-        motionState.yVel = yVelocity;
-        SubpixelMotion.moveSprite2(motionState);
-        currentX = motionState.x;
-        currentY = motionState.y;
-
-        // Apply gravity
-        yVelocity += GRAVITY;
+        advanceMotion();
 
         // ROM Bom_Shrapnel deletes via the render flag, not a raw camera margin:
         //   tst.b obRender(a0) / bpl.w DeleteObject
@@ -223,8 +247,8 @@ public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
         if (renderer == null) return;
 
         int frame = getMappingFrame();
-        // Shrapnel does not flip based on facing direction
-        renderer.drawFrameIndex(frame, currentX, currentY, false, false);
+        // Fresh child SSTs have clear status; the in-place fuse retains its flags.
+        renderer.drawFrameIndex(frame, currentX, currentY, renderXFlip, renderYFlip);
     }
 
     @Override
