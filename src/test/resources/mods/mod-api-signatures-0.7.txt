@@ -12529,6 +12529,7 @@ METHOD com.openggf.mods.scene.SceneContext public  com.openggf.control.PhysicalI
 METHOD com.openggf.mods.scene.SceneContext public  com.openggf.mods.scene.SceneGameplay gameplay()
 METHOD com.openggf.mods.scene.SceneContext public  com.openggf.mods.scene.SceneMusic music()
 METHOD com.openggf.mods.scene.SceneContext public  com.openggf.mods.scene.SceneNetwork network()
+METHOD com.openggf.mods.scene.SceneContext public  java.lang.String typedText()
 METHOD com.openggf.mods.scene.SceneContext public  void startAct(com.openggf.mods.scene.ActLaunch)
 METHOD com.openggf.mods.scene.SceneContext public,abstract  boolean buttonDown(int)
 METHOD com.openggf.mods.scene.SceneContext public,abstract  boolean buttonPressed(int)

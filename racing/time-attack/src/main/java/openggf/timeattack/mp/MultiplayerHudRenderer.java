@@ -54,12 +54,9 @@ public final class MultiplayerHudRenderer {
             top = HudTextLayout.aboveFinishStrip(height, 1);
         } else if ("ROUND_END".equals(state.phase())) {
             lines.add(new HudTextLayout.Line("ROUND OVER  " + result(state), HudTextLayout.GOLD));
-            int available = Math.min(220, width - 104) - 12;
-            state.podiumRows().stream().limit(3).forEach(row -> lines.add(
-                    new HudTextLayout.Line(HudTextLayout.compactStanding(row, available),
-                            row.rank() == state.localRank() ? HudTextLayout.WHITE : HudTextLayout.MUTED)));
+            state.podiumRows().stream().limit(3).forEach(row -> lines.add(standing(state, row)));
             desiredWidth = 220;
-            top = HudTextLayout.aboveFinishStrip(height, lines.size());
+            top = HudTextLayout.aboveFinishStrip(height, lines);
         } else if ("VOTE".equals(state.phase())) {
             lines.add(new HudTextLayout.Line("VOTE 1-3  " + HudTextLayout.clock(state.voteRemainingMillis()),
                     HudTextLayout.GOLD));
@@ -75,7 +72,7 @@ public final class MultiplayerHudRenderer {
                 lines.add(new HudTextLayout.Line(prefix + label + suffix, HudTextLayout.WHITE));
             }
             desiredWidth = 220;
-            top = HudTextLayout.aboveFinishStrip(height, lines.size());
+            top = HudTextLayout.aboveFinishStrip(height, lines);
         } else if (localFinished) {
             lines.add(new HudTextLayout.Line(result(state) + "  ROOM "
                     + HudTextLayout.clock(state.remainingWindowMillis()), HudTextLayout.WHITE));
@@ -85,20 +82,19 @@ public final class MultiplayerHudRenderer {
             lines.add(new HudTextLayout.Line("ROOM " + HudTextLayout.clock(state.remainingWindowMillis()),
                     HudTextLayout.ACCENT));
             lines.add(new HudTextLayout.Line(progressPosition(state, localCentreX), HudTextLayout.WHITE));
-            int columns = HudTextLayout.columns(width, desiredWidth);
             if (state.localRank() > 0) {
                 for (var row : HudTextLayout.nearbyStandings(state.standings(), state.localRank())) {
-                    lines.add(new HudTextLayout.Line(HudTextLayout.aligned(row.rank() + ". " + row.displayName(),
-                            TimeAttackTimeFormat.frames(row.bestTimeFrames()), columns),
-                            row.rank() == state.localRank() ? HudTextLayout.WHITE : HudTextLayout.MUTED));
+                    lines.add(standing(state, row));
                 }
             } else if (localCentreX >= 0) {
                 // Positions are coarse, transient network observations, never official standings.
                 // One rival either side is enough; the progress strip carries the rest of the field.
-                nearestRival(state, localCentreX, true).ifPresent(player -> lines.add(new HudTextLayout.Line(
-                        HudTextLayout.aligned(player.displayName(), "AHEAD", columns), HudTextLayout.MUTED)));
-                nearestRival(state, localCentreX, false).ifPresent(player -> lines.add(new HudTextLayout.Line(
-                        HudTextLayout.aligned(player.displayName(), "BEHIND", columns), HudTextLayout.MUTED)));
+                nearestRival(state, localCentreX, true).ifPresent(player -> lines.add(HudTextLayout.Line.named("",
+                        player.displayName(), state.nameColour(player.slot(), HudTextLayout.MUTED), "AHEAD",
+                        HudTextLayout.MUTED)));
+                nearestRival(state, localCentreX, false).ifPresent(player -> lines.add(HudTextLayout.Line.named("",
+                        player.displayName(), state.nameColour(player.slot(), HudTextLayout.MUTED), "BEHIND",
+                        HudTextLayout.MUTED)));
             }
         } else {
             lines.add(new HudTextLayout.Line("ROOM " + state.totalPlayers() + " PLAYERS", HudTextLayout.ACCENT));
@@ -109,6 +105,13 @@ public final class MultiplayerHudRenderer {
             }
         }
         return HudTextLayout.panel(width, top, desiredWidth, lines, accent);
+    }
+
+    /** A ranked row: rank, the player's name in their colour, and the time in a right-aligned column. */
+    private static HudTextLayout.Line standing(MultiplayerHudState state, ControlMessage.StandingsRow row) {
+        int colour = row.rank() == state.localRank() ? HudTextLayout.WHITE : HudTextLayout.MUTED;
+        return HudTextLayout.Line.named(row.rank() + ". ", row.displayName(), state.nameColour(row.slot(), colour),
+                TimeAttackTimeFormat.frames(row.bestTimeFrames()), colour);
     }
 
     private static java.util.Optional<RemoteGhostRegistry.FarPlayer> nearestRival(

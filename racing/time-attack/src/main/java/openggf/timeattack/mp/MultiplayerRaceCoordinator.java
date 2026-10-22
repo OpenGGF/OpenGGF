@@ -321,7 +321,17 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                 config == null ? null : config.characterPolicy(),
                 session.voteOptions(), session.voteCounts(), session.voteRemainingMillis(),
                 session.lastVoteResultTrackKey(), session.podiumTop(3),
-                local == null ? localRank : local.rank());
+                local == null ? localRank : local.rank(), nameColours());
+    }
+
+    /** Name colours of the players whose look is not stock, by slot. */
+    private java.util.Map<Integer, Integer> nameColours() {
+        java.util.Map<Integer, Integer> colours = new java.util.HashMap<>();
+        for (ControlMessage.PlayerInfo player : session.players()) {
+            PlayerAppearance look = session.appearance(player.slot());
+            if (!look.isStock()) colours.put(player.slot(), look.nameArgb());
+        }
+        return colours;
     }
 
     public ClientRaceSession session() {
