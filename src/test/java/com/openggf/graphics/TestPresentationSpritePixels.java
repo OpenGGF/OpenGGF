@@ -23,6 +23,60 @@ import static org.lwjgl.opengl.GL11.*;
 @Isolated
 class TestPresentationSpritePixels {
     @Test
+    void adjacentTransformedOverlappingTilesMatchUnbatchedPixels() throws Exception {
+        assumeTrue(com.openggf.tools.PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");
+        try (var offscreen = com.openggf.tools.PresentationOffscreenTestContext.open(320, 224)) {
+            var graphics = new GraphicsManager();
+            try {
+                glDisable(GL_DITHER);
+                graphics.init("shaders/shader_the_hedgehog.glsl");
+                graphics.setViewport(0, 0, 320, 224);
+                graphics.setProjectionWidth(320);
+                graphics.setProjectionMatrixBuffer(new Matrix4f().ortho(0, 320, 0, 224, -1, 1).get(new float[16]));
+                var palette = new Palette();
+                palette.setColor(1, new Palette.Color((byte)255, (byte)40, (byte)80));
+                palette.setColor(2, new Palette.Color((byte)20, (byte)255, (byte)80));
+                palette.setColor(3, new Palette.Color((byte)40, (byte)80, (byte)255));
+                palette.setColor(4, new Palette.Color((byte)255, (byte)255, (byte)255));
+                graphics.cachePaletteTexture(palette, 0);
+                var source = picture(20, 30, false, false, 0);
+                var tiles = new ArrayList<Tile>();
+                for (int i = 0; i < 23; i++) {
+                    var t = source.tiles().getFirst();
+                    tiles.add(new Tile(t.layer(), t.patternId(), 0, (i & 1) != 0, (i & 2) != 0, t.priority(),
+                            20 + i * 3, 30 + i % 3, 8, 8, false, 5, true, .6f,
+                            i % 3, 8 - i % 2, t.subject()));
+                }
+                var frame = new Frame(tiles, List.of(), source.patternVersions());
+                var runtime = mock(LivePresentationRuntime.class);
+                when(runtime.trails()).thenReturn(List.of());
+                var policy = new TransientMutatorPolicySource.Entry("test", 1,
+                        new SpritePresentationPolicy(SpritePresentationPolicy.Mode.ROTATE,
+                                SpritePresentationPolicy.Target.BADNIKS, 100, 120), 13, 100, false);
+                var iterations = new java.util.concurrent.atomic.AtomicInteger();
+                List<TransientMutatorPolicySource.Entry> policies = new AbstractList<>() {
+                    @Override public int size() { return 1; }
+                    @Override public TransientMutatorPolicySource.Entry get(int index) { return List.of(policy).get(index); }
+                    @Override public Iterator<TransientMutatorPolicySource.Entry> iterator() {
+                        iterations.incrementAndGet(); return List.of(policy).iterator();
+                    }
+                };
+                when(runtime.spritePolicies()).thenReturn(policies);
+                graphics.setBatchingEnabled(false);
+                byte[] expected = render(graphics, frame, runtime, 320);
+                graphics.setBatchingEnabled(true);
+                assertArrayEquals(expected, render(graphics, frame, runtime, 320),
+                        "overlapping translucent triangles must preserve native painter order, crop and flips");
+                verify(runtime, times(2)).spritePolicies();
+                assertEquals(2, iterations.get(), "23 tiles share one actor policy/transform computation per picture");
+                assertTrue(java.util.stream.IntStream.range(0, expected.length / 4)
+                        .anyMatch(i -> (expected[i * 4] & 255) != 0), "a cleared/blank image cannot certify batching");
+                assertEquals(GL_NO_ERROR, glGetError());
+            } finally { graphics.cleanup(); RenderContext.reset(); }
+        }
+    }
+
+    @Test
     void savedExpansionReuploadsResidentPaletteAndChangesActualFramebufferPixels() throws Exception {
         assumeTrue(com.openggf.tools.PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");
         try (var offscreen = com.openggf.tools.PresentationOffscreenTestContext.open(320, 224)) {

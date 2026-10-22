@@ -229,7 +229,13 @@ Unreleased. The earlier development themes remain in
   verified instruction terms from work that is still unpriced. Giant-ring capture retains
   the original blank-frame ownership and art-reload state; ordinary animation
   is released again on return. Robotnik's ship stays with the beaten boss through
-  its defeat pause before flying off, as in the original.
+  its defeat pause before flying off, as in the original. Boss water/effect
+  children use less repeated population and ordering work while retaining native
+  slots and rewind. Optional sprite transforms share picture calculations and
+  batch compatible geometry in painter order; results/snowboard pattern updates
+  batch atlas writes and results refresh only changed counter ranges. Stable
+  touch configurations reuse immutable profiles while dynamic provider flags
+  remain live.
 
 - **Spin dash camera:** While a spin dash charges, and on its release frame, the
   camera eases back toward its normal height as it does when standing, as Sonic 2

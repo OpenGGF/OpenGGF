@@ -69,3 +69,11 @@ Corrected qualification, all on `0197c5a5a` plus this commit's test-only deltas 
 - Revised input test with the fix: 02:05:15–02:05:44 UTC, 1 test / 0 failures / 0 errors / 0 skips.
 
 Death/reload products, combined smoke and integration were not rerun here. This requalifies the held-Right entry floor only; it is not act certification.
+
+## Object pipeline optimization — 2026-10-22
+
+HCZ column selection retains native lifetime/replacement and rewind ownership while
+removing repeated query/order work. See the [performance evidence](../../audits/performance/2026-10-22-object-pipeline-performance.md)
+for exact focused commands, results and structural counts. This local component
+change adds no cold-route, donor/roster, viewport, native-picture or lifecycle
+product beyond the obligations already recorded above.

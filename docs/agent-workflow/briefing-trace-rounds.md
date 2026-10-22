@@ -71,6 +71,12 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Different virtual pattern IDs do not imply different physical atlas pages
+(2026-10-22, object-pipeline batching). A page-barrier seam incorrectly expected
+separate commands for two IDs that the allocator placed on the same page. Use
+`PatternAtlas.Entry.atlasIndex()` as the oracle and a deliberately small atlas
+when the test needs forced physical page transitions.
+
 A live scene can simulate correctly and render valid scenery while every actor is
 outside the picture (2026-10-21, Stageplay live-world review). ROM level maxima
 are camera-origin limits, not terrain dimensions; subtracting the viewport again

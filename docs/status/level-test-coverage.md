@@ -1,5 +1,14 @@
 # Level test coverage backlog
 
+Object pipeline optimization (2026-10-22): the [bounded performance record](../architecture/audits/performance/2026-10-22-object-pipeline-performance.md)
+qualifies HCZ water-column selection/replacement, ICZ frost execution/painter
+order and graph restoration, and SSZ owned-slot dereferences. Existing
+[HCZ2](../architecture/validation/levels/s3k-hcz2.md),
+[ICZ2](../architecture/validation/levels/s3k-icz-act2.md) and
+[SSZ2](../architecture/validation/levels/s3k-ssz-act2.md) obligations retain their
+inherited route, viewport/donor/roster, native presentation and lifecycle gaps;
+these local semantics-preserving checks certify no new act product.
+
 S3K horizontal spring terrain gate (2026-10-16): focused object fixtures sample
 real collision tiles for positive/zero/negative foot distances and a slope with
 only one penetrating foot; absent services, empty terrain and underwater descent

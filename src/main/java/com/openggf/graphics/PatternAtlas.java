@@ -88,6 +88,7 @@ public class PatternAtlas {
     private int[] dirtyMaxTileX;
     private int[] dirtyMaxTileY;
     private boolean batchMode = false;
+    private int batchDepth;
     private byte[] patternUploadScratch;
     private final Map<Integer, SpritePresentation.PatternVersion> scenePatternSamples = new HashMap<>();
     private final PerformanceProfiler profiler;
@@ -611,6 +612,7 @@ public class PatternAtlas {
     private void cleanupCommon() {
         initialized = false;
         batchMode = false;
+        batchDepth = 0;
         Arrays.fill(fastEntries, null);
         Arrays.fill(rangeEntries, null);
         sparseFallback.clear();
@@ -724,6 +726,7 @@ public class PatternAtlas {
      */
     public void beginBatch() {
         ensureCpuMirror();
+        batchDepth++;
         batchMode = true;
     }
 
@@ -734,7 +737,7 @@ public class PatternAtlas {
      * otherwise one upload of the dirty tiles' bounding rectangle.
      */
     public void endBatch() {
-        if (!batchMode) {
+        if (!batchMode || --batchDepth > 0) {
             return;
         }
         batchMode = false;

@@ -386,7 +386,12 @@ public class GraphicsManager {
 		flushPatternBatch();
 		var command=PatternRenderCommand.obtainRows(entry,palette,paletteIndex,hFlip,vFlip,priority,0,0,rowStart,rowEnd,this);
 		command.presentation(quad,hue,opacity);
-		registerCommand(command);
+        // The queue is the painter-order boundary, including captured commands.
+        // Never merge across a primitive, normal instance batch, or state command.
+        List<GLCommandable> target = commandCaptureTarget != null ? commandCaptureTarget : commands;
+        if (!batchingEnabled || target.isEmpty()
+                || !(target.getLast() instanceof PatternRenderCommand previous)
+                || !previous.appendPresentation(command)) registerCommand(command);
 	}
 
 	private final java.util.IdentityHashMap<Object,Integer> presentationTrailBanks=new java.util.IdentityHashMap<>();

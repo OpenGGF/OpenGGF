@@ -162,8 +162,8 @@ contains_mod_api_annotation() {
 
 # Declaration text of a Java source that can change the normalized signature pin.
 # Comments are removed. A file whose first type declaration is not a class
-# (interface, record, enum, annotation) keeps all remaining text, because its
-# members are implicitly public. Record compact-constructor bodies are excluded:
+# (interface, enum, annotation) keeps all remaining text conservatively. Records
+# use the shared declaration probe below; compact-constructor bodies are excluded:
 # their canonical signature already comes from the component declaration. A class
 # keeps annotations, type declaration
 # lines and public/protected declarations, including their parenthesised
@@ -171,6 +171,19 @@ contains_mod_api_annotation() {
 # demand a pin change the snapshot cannot express. TestModApiSignatureSurface
 # remains the exact check; this only decides when the pin must be staged.
 mod_api_surface_text() {
+    # Records have private members and executable bodies too. Use one shared
+    # lexical declaration probe in Bash/PowerShell; preserve legacy handling of
+    # the other kinds until the compiled signature guard decides exact exposure.
+    if command -v python3 >/dev/null 2>&1; then surface_python=python3
+    elif command -v python >/dev/null 2>&1; then surface_python=python
+    else die "Python 3 is required for Mod API record admission."; fi
+    if record_surface=$(printf '%s\n' "$1" | "$surface_python" "$POLICY_DIR/mod_api_record_surface.py"); then
+        printf '%s\n' "$record_surface"
+        return
+    else
+        surface_status=$?
+        [ "$surface_status" -eq 2 ] || die "Cannot inspect Java record declaration."
+    fi
     printf '%s\n' "$1" | awk '
     BEGIN { inblock = 0; kind = ""; typeName = ""; n = 0 }
     {
