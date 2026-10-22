@@ -305,3 +305,86 @@ swarm annotation regression is closed without raising a baseline or changing
 animation behavior. The central exclusions retain live-ROM recreation and all
 mutable cursor/timer/frame capture; the repaired registered graph case no
 longer references a removed field. Combined smoke remains outstanding.
+
+### Focused composition, native terminal ownership and remaining route blocks — 2026-10-22
+
+The aggregate now contains the original ring repair `287c79e736` as
+`5185ae3d0`, projection and palette-release retry `efc61c63`/`61171cb7` as
+`9c1de218a`, Bomb body and exact fuse ledger `ba3c704e`/`595eb962` as
+`6d79f2652`, and the bounded slide leaf `8272a540` as `6cc0c7dde`.
+These are source compositions, not certification of the incomplete competition
+or complete campaigns. No Sprite dependency aliases were imported.
+
+The first union check on `6cc0c7dde` plus its reverse-slide fixture correction
+ran 423 tests: 420 passed, two failed and one errored, zero skips; queue wait
+320 seconds, Maven 40.371 seconds. All three failures belonged to the existing
+`TestPlayableSpriteMovement`. Two fixtures still mocked legacy object terrain
+queries, whereas the native player path now carries its own solidity bit and
+collision path. They now mock and verify both actual player-owned feet, retaining
+their winning-distance and transformed-angle assertions. The S2 jump fixture
+installed only a level state and no object manager; start-time Obj7E publication
+therefore failed before its old assertion. It now installs a real S2-registry
+manager and additionally verifies the actual owner at fixed slot129. Full loaded
+Super activation already required that manager; no production null bypass was
+added. An earlier compile-only failure came from this aggregate's reverse-slide
+receiver conflict resolution, not the peer's qualified source.
+
+Request86712 on the same runtime plus original shadow correction `f8f485128`,
+S1 palette-phase leaf `a839af474` and those test-only repairs completed
+**291 tests, zero failures, errors or skips**. All twelve actual XML suites were
+inspected: movement188, paired player queries18, S2 start effects10,
+shadow11/ROM1, graphics replay3/batching5/ownership5, API11, and S1 phase7/model5/
+coordinator27. Java25.0.5, surfaceless EGL, Lua5.4 and all three original absolute
+ROM properties were used. Queue wait469 seconds; Maven1:28.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestPlayableSpriteMovement,TestS3kGlidePlayerSolidityQuery,TestSonic2SuperTransformationStartEffects,TestNativeShadow15Pixels,TestNativeShadow15Rom,TestGraphicsManagerSpriteSatReplay,TestSatReplayBatching,TestNativeSpriteOwnershipPixels,TestModApiSignatureSurface,TestSonic1PaletteFadePlayerArtService,TestDynamicArtDmaServiceModel,TestPlcFrameLifecycleCoordinator' "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" test -B
+```
+
+The shadow correction replaces only the new typed convenience call with an
+internal Runnable scope through existing normal intake. Selected immutable
+graphics entries retain clipping, intensity and first-opaque ownership; no
+PreparedPiece or Mod API shape changes. Its owning architecture class still
+requires the fresh aggregate check; the worker's low-level rule passed while
+two parent-owned HubMusic identities remained red in that isolated tree. The
+separate missing native-image AuthoredLevelDecoder service is source-equivalent
+on94c, Main8aa and this aggregate; that is not an executed baseline JUnit pass.
+
+The S1 chain's completed46550 run compared all22 represented levels exactly,
+including FZ5086 rows after the native input correction. Its12 cases were11pass/
+one chain failure, zero errors/skips; queue325 seconds, Maven1:13. Three axes
+were reported: one extra SBZ2-to-LZ4 transfer, downstream ordinal cascade and
+terminal LEVEL instead of TITLE_SCREEN. Terminal art verification was not
+reached. The actual terminal object walk stayed held while10943 movie rows
+advanced; the live FZ boss obeyed its existing threshold at28FE.C000. No object
+ending workaround is justified. The phase leaf retains unpublished S1 art
+during PALETTE_FADE, leaving other phases and the journal intact; its exact
+effect on the extra map50 transfer remains unqualified until a new route.
+
+The next independent terminal leaf `d90cc416` passes60 owner checks. It separates
+native LEVEL body eligibility from terminal logical input ownership and clears
+only the raw override reference actually published by PlaybackInputBridge.
+Actual old-source controls proved both body suppression and loss of the first
+driver-owned input. Aggregate RecordedInputOwnership/host/native-pause checks
+remain required after composition. A separate reserved full-load service leaf
+will invalidate only unpublished S1 preparation at the existing native readiness
+clear; it must retain published history, buffer representation and S2 behavior.
+The complete62-file native242 candidate and its guard remain uncommitted and
+unpublished until all comparisons, terminal mode and terminal art qualify.
+
+Native SMPS pause implementation is now assigned to the audio owner: injected
+internal ingress, typed transactional session commands, captured latch/history,
+distinct profile service behavior and physical writes with continuing DAC/chip
+clock. Host PCM pause is not that implementation. S3K's shipped upper-RAM resume
+reads remain an explicit representation gap; mirrored addresses are not missing
+zeros. Startup600 waveform failures and four held full native captures remain.
+
+The next peer prelude leaf `37286d6dd` needs the original bounded climb
+prerequisite `5aef17e87`, not a wholesale earlier branch import. Its current
+maintained MHZ route now dies at26853, earlier than the c4 candidate's37752.
+That new/worsened stop is delivery-blocking and unattributed;599 focused passes
+and native source proof do not waive it. Current S2 bubble source `d489be60`
+passes46 behavior and five guards, but its next existing chain check retains
+the same14 axes. H32 and actual competition consumers are still being qualified.
+One combined smoke lead remains; no Main integration, push or worktree cleanup
+is complete.

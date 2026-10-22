@@ -13,6 +13,7 @@ import com.openggf.game.sonic3k.objects.FbzMagneticPlatformObjectInstance;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.Sonic2SuperStateController;
+import com.openggf.game.sonic2.objects.SuperSonicStarsObjectInstance;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.LevelManager;
@@ -867,6 +868,11 @@ public class TestPlayableSpriteMovement {
                 setGameRulesForTest(GameRules.SONIC_2);
                 mockSprite.setSuperStateController(new Sonic2SuperStateController(mockSprite));
                 installCurrentModuleLevelState();
+                ObjectManager objects = new ObjectManager(List.of(),
+                                GameModuleRegistry.getCurrent().createObjectRegistry(), 0, null, null);
+                Field objectManagerField = LevelManager.class.getDeclaredField("objectManager");
+                objectManagerField.setAccessible(true);
+                objectManagerField.set(GameServices.level(), objects);
                 collectAllChaosEmeralds();
                 mockSprite.setRingCount(50);
                 mockSprite.setAir(true);
@@ -880,6 +886,10 @@ public class TestPlayableSpriteMovement {
                                 "S2 should still start Super Sonic from the normal airborne jump trigger");
                 assertTrue(mockSprite.isSuperSonic(),
                                 "S2 Super Sonic activation should set the player super flag immediately");
+                var stars = objects.activeObjectsOfType(SuperSonicStarsObjectInstance.class);
+                assertEquals(1, stars.size(), "native transform start writes its fixed Obj7E owner");
+                assertEquals(129, stars.getFirst().getSlotIndex());
+                assertTrue(stars.getFirst().isOwnedBy(mockSprite));
         }
 
         @Test
@@ -4885,10 +4895,14 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void glideFloorKeepsTheTransformedAngleOfTheWinningFoot() throws Exception {
+                int solidityBit = mockSprite.getTopSolidBit() & 0xFF;
+                boolean secondaryCollisionPath = solidityBit != 0x0C;
                 try (var terrain = org.mockito.Mockito.mockStatic(ObjectTerrainUtils.class)) {
-                        terrain.when(() -> ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(110, 210))
+                        terrain.when(() -> ObjectTerrainUtils.checkPlayerFloorDistWithFlipAwareAngle(
+                                        110, 210, solidityBit, secondaryCollisionPath))
                                         .thenReturn(new TerrainCheckResult(-2, (byte) 8, 1));
-                        terrain.when(() -> ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(90, 210))
+                        terrain.when(() -> ObjectTerrainUtils.checkPlayerFloorDistWithFlipAwareAngle(
+                                        90, 210, solidityBit, secondaryCollisionPath))
                                         .thenReturn(new TerrainCheckResult(4, (byte) 0, 2));
                         Method method = PlayableSpriteMovement.class.getDeclaredMethod(
                                         "checkGlideFloorDist", int.class, int.class, int.class, int.class);
@@ -4897,6 +4911,10 @@ public class TestPlayableSpriteMovement {
                         assertNotNull(hit);
                         assertEquals(-2, hit.distance());
                         assertEquals(8, hit.angle(), "FindFloor applies the tile flips before returning its angle");
+                        terrain.verify(() -> ObjectTerrainUtils.checkPlayerFloorDistWithFlipAwareAngle(
+                                        110, 210, solidityBit, secondaryCollisionPath));
+                        terrain.verify(() -> ObjectTerrainUtils.checkPlayerFloorDistWithFlipAwareAngle(
+                                        90, 210, solidityBit, secondaryCollisionPath));
                 }
         }
 
@@ -4904,10 +4922,14 @@ public class TestPlayableSpriteMovement {
         public void invertedGlideProbesBothCeilingFeetAndMirrorsTheWinningAngle() throws Exception {
                 GameModuleRegistry.setCurrent(new Sonic3kGameModule());
                 GameServices.gameState().setReverseGravityActive(true);
+                int solidityBit = mockSprite.getLrbSolidBit() & 0xFF;
+                boolean secondaryCollisionPath = (mockSprite.getTopSolidBit() & 0xFF) != 0x0C;
                 try (var terrain = org.mockito.Mockito.mockStatic(ObjectTerrainUtils.class)) {
-                        terrain.when(() -> ObjectTerrainUtils.checkCeilingDistWithFlipAwareAngle(110, 200, 10))
+                        terrain.when(() -> ObjectTerrainUtils.checkPlayerCeilingDistWithFlipAwareAngle(
+                                        110, 200, 10, solidityBit, secondaryCollisionPath))
                                         .thenReturn(new TerrainCheckResult(-3, (byte) 0x78, 1));
-                        terrain.when(() -> ObjectTerrainUtils.checkCeilingDistWithFlipAwareAngle(90, 200, 10))
+                        terrain.when(() -> ObjectTerrainUtils.checkPlayerCeilingDistWithFlipAwareAngle(
+                                        90, 200, 10, solidityBit, secondaryCollisionPath))
                                         .thenReturn(new TerrainCheckResult(4, (byte) 0x80, 2));
                         Method method = PlayableSpriteMovement.class.getDeclaredMethod(
                                         "checkGlideFloorDist", int.class, int.class, int.class, int.class);
@@ -4916,7 +4938,10 @@ public class TestPlayableSpriteMovement {
                         assertNotNull(hit);
                         assertEquals(-3, hit.distance());
                         assertEquals(8, hit.angle(), "sub_11FD6 mirrors $78 to $08");
-                        terrain.verify(() -> ObjectTerrainUtils.checkCeilingDistWithFlipAwareAngle(90, 200, 10));
+                        terrain.verify(() -> ObjectTerrainUtils.checkPlayerCeilingDistWithFlipAwareAngle(
+                                        110, 200, 10, solidityBit, secondaryCollisionPath));
+                        terrain.verify(() -> ObjectTerrainUtils.checkPlayerCeilingDistWithFlipAwareAngle(
+                                        90, 200, 10, solidityBit, secondaryCollisionPath));
                 } finally {
                         GameServices.gameState().setReverseGravityActive(false);
                 }
@@ -4935,7 +4960,7 @@ public class TestPlayableSpriteMovement {
                 int solidityBit = mockSprite.getTopSolidBit() & 0xFF;
                 boolean secondaryCollisionPath = (mockSprite.getTopSolidBit() & 0xFF) != 0x0C;
                 try (var terrain = org.mockito.Mockito.mockStatic(ObjectTerrainUtils.class)) {
-                        terrain.when(() -> ObjectTerrainUtils.checkCeilingDistWithFlipAwareAngle(
+                        terrain.when(() -> ObjectTerrainUtils.checkPlayerCeilingDistWithFlipAwareAngle(
                                         org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt(),
                                         org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.eq(solidityBit),
                                         org.mockito.ArgumentMatchers.eq(secondaryCollisionPath)))
@@ -4947,6 +4972,14 @@ public class TestPlayableSpriteMovement {
                         Method method = PlayableSpriteMovement.class.getDeclaredMethod("updateSliding");
                         method.setAccessible(true);
                         method.invoke(manager);
+                        terrain.verify(() -> ObjectTerrainUtils.checkPlayerCeilingDistWithFlipAwareAngle(
+                                        org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.eq(200),
+                                        org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.eq(solidityBit),
+                                        org.mockito.ArgumentMatchers.eq(secondaryCollisionPath)), org.mockito.Mockito.times(2));
+                        terrain.verify(() -> ObjectTerrainUtils.checkPlayerCeilingDistWithFlipAwareAngle(
+                                        org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.eq(203),
+                                        org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.eq(solidityBit),
+                                        org.mockito.ArgumentMatchers.eq(secondaryCollisionPath)), org.mockito.Mockito.times(2));
                         assertEquals(203, mockSprite.getCentreY(), "Knuckles_Sliding negates d1 under reverse gravity");
                         assertEquals(0xA500, mockSprite.getYSubpixelRaw());
                         assertEquals(0, mockSprite.getAngle());
