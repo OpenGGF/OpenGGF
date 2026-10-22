@@ -48,12 +48,14 @@ class TestTimeAttackScene {
     /** A run handle that records the commands a lobby level receives. */
     private static final class FakeHandle implements RunHandle {
         boolean held;
+        boolean covered;
         int holdChanges;
         boolean left;
         @Override public void retry() { }
         @Override public void leave() { left = true; }
         @Override public void spectate(boolean active, int dx, int dy) { }
         @Override public void holdControls(boolean hold) { held = hold; holdChanges++; }
+        @Override public void setLevelCovered(boolean cover) { covered = cover; }
         @Override public boolean isActive() { return true; }
     }
 
@@ -414,6 +416,7 @@ class TestTimeAttackScene {
             assertInstanceOf(openggf.timeattack.mp.LobbyRun.class, hosts.getLast());
             FakeHandle lobbyLevel = behindHandles.getFirst();
             assertTrue(lobbyLevel.held, "the menu owns the controller while shown");
+            assertTrue(lobbyLevel.covered, "and covers the stock HUD and nameplates");
             assertTrue(raceSession.lobbyMenuShown());
 
             // Not ready yet: Enter is the menu's confirm (on READY UP), not the toggle.
@@ -425,6 +428,7 @@ class TestTimeAttackScene {
             tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER); // ready: Enter hides the menu
             assertFalse(raceSession.lobbyMenuShown());
             assertFalse(lobbyLevel.held, "the character has the controller");
+            assertFalse(lobbyLevel.covered, "with the stock HUD back");
             tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);  // the hidden menu takes no input
             tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE);
             assertEquals(openggf.timeattack.mp.RaceSession.State.LOBBY, raceSession.state());

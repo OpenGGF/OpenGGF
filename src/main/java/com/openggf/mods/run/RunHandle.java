@@ -38,6 +38,14 @@ public interface RunHandle {
      */
     default void holdControls(boolean held) { }
 
+    /**
+     * While {@code covered}, a menu your scene draws over the run ({@code SceneGameplay.launchBehind})
+     * covers the level: the engine stops drawing the stock HUD and ghost nameplates, which would
+     * otherwise read through a translucent menu. The level, its sprites and the ghosts keep
+     * drawing. Presentation only. The engine's handle implements this; the default ignores it.
+     */
+    default void setLevelCovered(boolean covered) { }
+
     /** True until the run has ended. */
     boolean isActive();
 }

@@ -1956,6 +1956,14 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                     && owner.foregroundDescriptorRevision() != 0 && owner.foregroundDescriptorRingRows() > 0);
     }
 
+    /**
+     * A hosted run's scene covers the level with its menu (RunHandle#setLevelCovered): the stock
+     * HUD is not drawn. Presentation only, unlike isHudSuppressed, which also stops the timer.
+     */
+    private boolean hudCoveredByHost;
+    public void setHudCoveredByHost(boolean covered) { hudCoveredByHost = covered; }
+    public boolean isHudCoveredByHost() { return hudCoveredByHost; }
+
     boolean isHudSuppressed() {
         return transitions.isForceHudSuppressed()
                 || (zoneFeatureProvider != null

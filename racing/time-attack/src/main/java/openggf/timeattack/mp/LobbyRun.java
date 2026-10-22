@@ -37,6 +37,7 @@ public final class LobbyRun implements RunHost {
         if (handle != null) {
             handle.setPlayerAppearance(look);
             handle.holdControls(menuShown);
+            handle.setLevelCovered(menuShown);
         }
     }
 
@@ -45,6 +46,7 @@ public final class LobbyRun implements RunHost {
         menuShown = shown;
         if (handle != null) {
             handle.holdControls(shown);
+            handle.setLevelCovered(shown);
         }
     }
 

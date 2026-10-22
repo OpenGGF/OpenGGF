@@ -66,7 +66,10 @@ keyboard, and its `draw` paints over the level, the HUD and your host's overlay 
 size of the run's screen. Do not `clear` the canvas if the level should show through. Start and
 the pause key never pause such a run; they reach your scene. `RunHandle.holdControls(true)` gives
 the run's characters a released controller while your menu owns it (the level keeps running), and
-`holdControls(false)` hands it back. When the run ends, `resumed` follows as usual; launching the
+`holdControls(false)` hands it back. While your menu covers the level,
+`RunHandle.setLevelCovered(true)` stops the engine drawing the stock HUD and ghost nameplates,
+which would otherwise read through a translucent menu; it is presentation only (the act's timer
+and everything else keep running). When the run ends, `resumed` follows as usual; launching the
 next run from `resumed` keeps the screen black between the two loads. Time Attack's lobby level is
 built this way.
 

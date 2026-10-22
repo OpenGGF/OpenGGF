@@ -71,7 +71,8 @@ Unreleased. The earlier development themes remain in
   starts), the start of Green Hill 1 (S1) or Emerald Hill 1 (S2), so nobody needs a ROM
   the room does not race. Players ready up from the menu; once ready, Start or Enter
   hides the menu and hands the controller to the character, and pressing it again
-  brings the menu back. Other players walk the lobby as named ghosts in their looks
+  brings the menu back. The menu sits on a dark translucent panel with the level
+  still moving behind it; the stock HUD and ghost nameplates are hidden under it. Other players walk the lobby as named ghosts in their looks
   (presence is streamed between rounds only, and relay rooms send each player its
   nearest eight). The room owner chooses whether the round start waits for everyone
   to be ready: always, never, or (the default) only with five or fewer players
@@ -79,8 +80,8 @@ Unreleased. The earlier development themes remain in
   the lobby level straight to the race through one black load, and the lobby level
   returns after the round. HPZ is a sprite-masking zone, which does not draw ghosts
   yet. Protocol version 5. Mods get `RunArea` (a fenced spawn for a run),
-  `RunHandle.holdControls` and `SceneGameplay.launchBehind` (a run that plays behind
-  its still-active scene).
+  `RunHandle.holdControls`, `RunHandle.setLevelCovered` and `SceneGameplay.launchBehind`
+  (a run that plays behind its still-active scene).
 
 - **Time Attack multiple attempts:** players can submit several runs inside one
   round window, and the best valid run counts. While the window is open a finish's

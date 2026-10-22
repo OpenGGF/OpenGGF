@@ -10,12 +10,18 @@ import java.util.Optional;
 
 /**
  * A scene canvas for views drawn over a running level (the lobby menu over the lobby level): a
- * view's full-screen {@link #clear} becomes a translucent panel, so the level stays visible
- * behind the menu. Everything else draws as on the underlying canvas.
+ * view's full-screen {@link #clear} becomes a dark translucent backing panel in the multiplayer
+ * HUD's panel style, so the level stays visibly alive behind the menu while its text reads. The
+ * panel dims everything drawn before the scene, including the stock HUD and ghost nameplates, so
+ * they recede under the menu instead of competing with its text. Everything else draws as on the
+ * underlying canvas.
  */
 public final class OverLevelCanvas implements SceneCanvas {
-    /** Panel opacity over the level (0-255). */
-    public static final int PANEL_ALPHA = 0x88;
+    /**
+     * Panel opacity over the level (0-255): the multiplayer HUD panel's alpha
+     * ({@code HudTextLayout.FILL}), leaving about a fifth of the level showing through.
+     */
+    public static final int PANEL_ALPHA = 0xC8;
 
     private final SceneCanvas canvas;
 
@@ -26,7 +32,7 @@ public final class OverLevelCanvas implements SceneCanvas {
     @Override public int width() { return canvas.width(); }
     @Override public int height() { return canvas.height(); }
 
-    /** A translucent panel in {@code rgb} instead of an opaque fill. */
+    /** A dark translucent backing panel in {@code rgb} instead of an opaque fill. */
     @Override public void clear(int rgb) {
         canvas.fill(0, 0, canvas.width(), canvas.height(), (PANEL_ALPHA << 24) | (rgb & 0xFFFFFF));
     }

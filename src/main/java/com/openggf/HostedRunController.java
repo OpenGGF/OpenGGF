@@ -70,6 +70,7 @@ final class HostedRunController {
     private SceneOverlay overlay;
     private boolean controlsHeld;
     private boolean controlsHoldApplied;
+    private boolean levelCovered;
 
     HostedRunController(SonicConfigurationService configuration) {
         this.configuration = Objects.requireNonNull(configuration, "configuration");
@@ -97,6 +98,7 @@ final class HostedRunController {
         overlay = null;
         controlsHeld = false;
         controlsHoldApplied = false;
+        levelCovered = false;
         return handle;
     }
 
@@ -143,6 +145,19 @@ final class HostedRunController {
         if (camera.getMaxX() != area.maxX() || camera.getMaxXTarget() != area.maxX()) camera.setMaxX((short) area.maxX());
         if (camera.getMinY() != area.minY() || camera.getMinYTarget() != area.minY()) camera.setMinY((short) area.minY());
         if (camera.getMaxY() != area.maxY() || camera.getMaxYTarget() != area.maxY()) camera.setMaxY((short) area.maxY());
+    }
+
+    /** Hides the stock HUD while the host's scene covers the level (the flag is re-applied each frame). */
+    private void applyLevelCover() {
+        var level = GameServices.levelOrNull();
+        if (level != null && level.isHudCoveredByHost() != levelCovered) {
+            level.setHudCoveredByHost(levelCovered);
+        }
+    }
+
+    /** True while the host's scene covers the level (tests). */
+    boolean levelCovered() {
+        return levelCovered;
     }
 
     /** Gives the run's characters a released controller while the host holds them. */
@@ -253,6 +268,7 @@ final class HostedRunController {
             }
             holdArea();
             applyControlHold();
+            applyLevelCover();
             boolean admitted = host.admitStep(new FrameInput(input));
             applySpectate();
             refreshLocalLook();
@@ -366,7 +382,9 @@ final class HostedRunController {
         if (host != null && leaveReason == null) {
             // Also runs on paused and held frames, so a look set then shows from the next frame.
             refreshLocalLook();
-            ghostRenderer.drawNameplates(canvas);
+            applyLevelCover();
+            // Covered by the host's menu: the nameplate clock still runs, but nothing is drawn.
+            ghostRenderer.drawNameplates(levelCovered ? new HiddenCanvas(canvas.width(), canvas.height()) : canvas);
             guarded(() -> host.drawOverlay(canvas));
             if (overlay != null && leaveReason == null) {
                 // Scene drawing renders at once; finish the queued rectangles beneath it first.
@@ -387,6 +405,8 @@ final class HostedRunController {
         overlay = null;
         controlsHeld = false;
         applyControlHold();
+        levelCovered = false;
+        applyLevelCover();
         detachRenderer();
         ghostRenderer.clearSlots();
         localLook.request(com.openggf.net.identity.PlayerAppearance.STOCK);
@@ -560,8 +580,22 @@ final class HostedRunController {
         }
 
         @Override
+        public void setLevelCovered(boolean covered) {
+            if (active) {
+                levelCovered = covered;
+            }
+        }
+
+        @Override
         public boolean isActive() {
             return active;
+        }
+    }
+
+    /** A canvas of the run's screen size that draws nothing (nameplates under a covering menu). */
+    private record HiddenCanvas(int width, int height) implements com.openggf.mods.ui.PixelCanvas {
+        @Override
+        public void fill(int x, int y, int w, int h, int argb) {
         }
     }
 

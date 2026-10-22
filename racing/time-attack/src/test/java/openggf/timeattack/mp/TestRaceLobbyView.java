@@ -306,4 +306,17 @@ class TestRaceLobbyView {
         assertFalse(canvas.joined().contains("READY RULE"), "the rule action is the owner's");
         canvas.assertFillsOnScreen();
     }
+
+    @Test
+    void overTheLobbyLevelTheMenuDrawsOnADarkBackingPanelThatDimsTheLevel() {
+        RaceLobbyView lobby = view(new ClientRaceSession(() -> 0), true, null);
+        RecordingSceneCanvas level = new RecordingSceneCanvas(320);
+        lobby.draw(new openggf.timeattack.ui.OverLevelCanvas(level));
+        int[] backing = level.fills.getFirst();
+        assertEquals(List.of(0, 0, 320, 224), List.of(backing[0], backing[1], backing[2], backing[3]),
+                "one full-screen panel under every line of the menu");
+        assertEquals(HudTextLayout.FILL >>> 24, backing[4] >>> 24, "the multiplayer HUD panel's opacity");
+        assertTrue((backing[4] & 0xFFFFFF) == 0x101830, "the menu's own dark background colour");
+        assertTrue(level.joined().contains("RACE LOBBY"), "drawn over the level, not cleared");
+    }
 }

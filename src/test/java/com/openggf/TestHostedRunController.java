@@ -382,4 +382,16 @@ class TestHostedRunController {
         assertEquals(area, new RunSpec("s1", 0, 0, "sonic", GameplayRunPolicy.isolatedAct(), area).area());
         assertNull(SPEC.area(), "the five-component spec plays the whole act");
     }
+
+    @Test
+    void aCoveringMenuIsHeldForTheRunAndClearedWithIt() {
+        RunHandle handle = controller.begin(SPEC, new RunHost() { });
+        assertFalse(controller.levelCovered());
+        handle.setLevelCovered(true);
+        assertTrue(controller.levelCovered());
+        controller.end(RunEndReason.LEFT);
+        assertFalse(controller.levelCovered(), "the cover ends with its run");
+        handle.setLevelCovered(true);
+        assertFalse(controller.levelCovered(), "an ended run's handle no longer covers the level");
+    }
 }

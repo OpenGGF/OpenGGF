@@ -81,7 +81,10 @@ and restarts its act on completion; deaths use the act's own death reload (no fa
 so losing every life or the 10-minute time-over still ends in the stock game-over flow). A
 room's lobby that cannot load or faults falls back to the menu on its own for that room.
 
-The menu owns the controller while it is shown (`RunHandle.holdControls`). **READY UP** marks the
+The menu owns the controller while it is shown (`RunHandle.holdControls`). It draws on a dark
+translucent backing panel in the multiplayer HUD's panel style (`HudTextLayout.FILL` alpha), so
+the level stays visibly alive behind it, and covers the level (`RunHandle.setLevelCovered`): the
+stock HUD and ghost nameplates are not drawn under it (presentation only; the timer runs). **READY UP** marks the
 player ready (`SetReady`; the room shows a READY badge and a ready line). Once ready, Start or Enter
 on the lobby's own page hides the menu and hands the controller to the character; pressing it
 again brings the menu back, like a pause menu. While ready, A (Space) confirms menu actions,
