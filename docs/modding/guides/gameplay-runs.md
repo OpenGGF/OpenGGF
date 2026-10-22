@@ -70,7 +70,7 @@ A thrown exception ends the run with `ABORTED` instead of crashing the engine.
 | `onLevelReady(RunLevelStart)` | after the level loads, on launch and every retry; carries the spec, a determinism fingerprint (engine build + ROM), whether a debug aid was already on, and the act's size |
 | `admitStep(RunInput)` | before every level step; return `false` to hold the run this frame (countdowns, lobby waits). `RunInput` exposes the logical controller state and `SceneKeys` key state |
 | `afterStep(RunStep)` | after every executed step: admitted player-1 buttons, Start, the player's pose, the act-completion signal, the last star post and a debug-assist flag. Held, paused, setup-only and lag-skipped frames produce no step |
-| `ghosts()` | each frame: up to eight `GhostPose`s the engine draws translucently with stock character art in the correct sprite layer |
+| `ghosts()` | each frame: up to eight `GhostPose`s the engine draws translucently with stock character art in the correct sprite layer. A stock `appearance` draws a desaturated ghost; any other look draws it in that player's palette. A `nameplate` floats above it in the player's name colour (`NameFont`) and fades with it |
 | `drawOverlay(LevelOverlayCanvas)` | screen-space drawing above the level and HUD (use `CompactFont`) |
 | `retryOnActCompletion()` | when a `RETURN_TO_HOST` run completes its act; return `true` to restart the act as a retry (`onLevelReady` follows) instead of ending the run. Defaults to `false` |
 | `onRunEnded(RunEndReason)` | once, just before control returns to your scene |
@@ -82,6 +82,11 @@ At act completion a pending `leave()` or host failure still ends the run (a fail
 and clears star-post progress, `leave()` ends the run, and `spectate(active, dx, dy)` pans the
 camera within the level bounds — honoured only after the act's completion signal, so it can
 never move the camera during play.
+`setPlayerAppearance(PlayerAppearance)` draws the run's own character in a player's look from
+the next frame: its palette line with the look's entries applied wherever the live colour is
+still the stock one, so Super/Hyper cycles still show. Only that sprite changes; rings, the HUD
+and objects keep their colours, and the simulation is untouched. `CharacterLooks.withBaseColour`
+builds a look from one colour; `PlayerAppearance.STOCK` restores the stock palette.
 
 ## Determinism and fairness
 

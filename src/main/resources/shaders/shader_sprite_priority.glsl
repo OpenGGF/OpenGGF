@@ -105,6 +105,9 @@ void main()
     if (GhostMode == 1) {
         float gray = dot(indexedColor.rgb, vec3(0.299, 0.587, 0.114));
         FragColor = vec4(vec3(gray), indexedColor.a * clamp(GhostAlpha, 0.0, 1.0));
+    } else if (GhostMode == 2) {
+        // A player's chosen look: keep the palette colours, fade only.
+        FragColor = vec4(indexedColor.rgb, indexedColor.a * clamp(GhostAlpha, 0.0, 1.0));
     } else {
         FragColor = indexedColor; // Output the final color
     }

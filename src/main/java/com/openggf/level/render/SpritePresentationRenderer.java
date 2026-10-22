@@ -153,7 +153,8 @@ public final class SpritePresentationRenderer {
                 versions.put(id,pose.frame().patternVersions().get(tile.patternId()));
                 tiles.add(new Tile(tile.layer(),id,tile.palette(),tile.hFlip(),tile.vFlip(),tile.priority(),
                         tile.x()+pose.cameraX()-cameraX,tile.y()+pose.cameraY()-cameraY,tile.width(),tile.height(),
-                        tile.priorityShader(),tile.occlusionMask(),tile.ghost(),tile.ghostAlpha(),tile.rowStart(),tile.rowEnd(),tile.subject()));
+                        tile.priorityShader(),tile.occlusionMask(),tile.ghost(),tile.ghostAlpha(),tile.rowStart(),tile.rowEnd(),tile.subject(),
+                        tile.ghostColour()));
             }
             // Every retained actor stays clearly readable; the newest echoes are nearly opaque.
             float opacity=.65f+.30f*poseIndex++/Math.max(1,poses.size()-1);
@@ -166,6 +167,7 @@ public final class SpritePresentationRenderer {
         boolean priority = graphics.isUseSpritePriorityShader();
         int mask = graphics.getCurrentSpriteTileOcclusionPaletteMask();
         boolean ghost = graphics.isGhostRenderEffectActive();
+        boolean ghostColour = graphics.isGhostRenderColourPreserved();
         float alpha = graphics.getGhostRenderAlpha();
         PatternDesc desc = new PatternDesc();
         graphics.beginPatternAtlasBatch();
@@ -199,18 +201,19 @@ public final class SpritePresentationRenderer {
                 if (!visible.test(tile.layer()) || tile.subject().suppressed()) continue;
                 if (previous == null || previous.priorityShader() != tile.priorityShader()
                         || previous.occlusionMask() != tile.occlusionMask()
-                        || previous.ghost() != tile.ghost() || previous.ghostAlpha() != tile.ghostAlpha()) {
+                        || previous.ghost() != tile.ghost() || previous.ghostAlpha() != tile.ghostAlpha()
+                        || previous.ghostColour() != tile.ghostColour()) {
                     graphics.flushPatternBatch();
                     graphics.setUseSpritePriorityShader(tile.priorityShader());
                     graphics.setCurrentSpriteTileOcclusionPaletteMask(tile.occlusionMask());
-                    if (tile.ghost()) graphics.beginGhostRenderEffect(tile.ghostAlpha());
+                    if (tile.ghost()) graphics.beginGhostRenderEffect(tile.ghostAlpha(), tile.ghostColour());
                     else graphics.endGhostRenderEffect();
                     graphics.beginPatternBatch();
                 }
                 previous = tile;
                 graphics.setUseSpritePriorityShader(tile.priorityShader());
                 graphics.setCurrentSpriteTileOcclusionPaletteMask(tile.occlusionMask());
-                if (tile.ghost()) graphics.beginGhostRenderEffect(tile.ghostAlpha());
+                if (tile.ghost()) graphics.beginGhostRenderEffect(tile.ghostAlpha(), tile.ghostColour());
                 else graphics.endGhostRenderEffect();
                 desc.setPaletteIndex(tile.palette());
                 desc.setHFlip(tile.hFlip());
@@ -237,7 +240,7 @@ public final class SpritePresentationRenderer {
             graphics.flushPatternBatch();
             graphics.setUseSpritePriorityShader(priority);
             graphics.setCurrentSpriteTileOcclusionPaletteMask(mask);
-            if (ghost) graphics.beginGhostRenderEffect(alpha); else graphics.endGhostRenderEffect();
+            if (ghost) graphics.beginGhostRenderEffect(alpha, ghostColour); else graphics.endGhostRenderEffect();
         }
     }
 }
