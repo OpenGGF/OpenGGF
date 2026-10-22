@@ -133,3 +133,14 @@ export or stock gameplay save. It retains exact RGB/native library data and
 unavailable keyed records. Export applies the tighter Genesis format limits,
 canonical placement encoding, palette ownership, and selected game-host checks;
 a successful project save alone does not establish that it can be exported.
+
+
+## Editor palette authoring
+
+The level editor edits creator-owned palette cells using exact Genesis 9-bit
+colors, with eight values per RGB channel. Existing projects keep their complete
+RGB data; edits and undo preserve the save/reopen contract. Baked v1 exports retain
+`palettes.bin`, while v2 retains sparse `paletteClaims` with the ownership rules
+above. No fields or format versions are added by palette editing. Stock scroll
+sources, authored water height and allowed character/team restrictions require a
+separate versioned contract and are not silently written into v1/v2.

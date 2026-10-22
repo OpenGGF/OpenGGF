@@ -259,6 +259,26 @@ mean different things; validate the result with a fresh playtest.
 Choose a row to edit it, then scroll to **Apply properties**. S3K projects also
 show the object-family field.*
 
+### Palette colors
+
+The desktop inspector's **Level palette / Genesis 9-bit** section shows four
+palette lines and sixteen colors per line. Choose a swatch, then select exact
+red, green and blue values: **0, 36, 73, 109, 146, 182, 219, 255**. Each color
+change is one undo step; preview textures refresh on apply, undo and redo.
+
+The HUD editor menu exposes **Level palette (Genesis colors)**. LB/RB (Page
+Up/Down) chooses a color, up/down chooses the RGB channel, and left/right changes
+its native value. All three channels of an edited cell become Genesis colors;
+legacy arbitrary RGB remains untouched until that cell is edited, and undo
+restores its original bytes. Character line 0 is host-owned in all games; S3K
+also locks its reserved HUD cells. Project saves retain palette edits and the
+existing v1/v2 exporter carries them through its strict palette validation.
+
+Stock scroll/deformation source, authored water height and allowed character/team
+settings are not part of the current portable level contract. These remain
+pending a versioned format/API extension; existing levels retain flat scrolling,
+dry runtime and their existing launch behavior.
+
 ## Save and reopen safely
 
 `Ctrl+S` saves the current project; **Save project as** chooses a new path.

@@ -143,7 +143,8 @@ Unreleased. The earlier development themes remain in
   World-cell regions copy terrain and native spawn groups, with undoable cut/paste,
   translucent destination previews, delete and rectangle/flood fill. Independent
   mouse, keyboard and controller canvas pan and integer 1×–8× magnification keep
-  hit tests aligned. A controller-first HUD drawn at
+  hit tests aligned. Creator-owned palette cells use exact Genesis RGB values and
+  preserve colors through undo, project saves and existing exports. A controller-first HUD drawn at
   window resolution frames the level with a brush hotbar, a full-screen library
   of ROM-art thumbnails, a tools wheel, block and chunk workbenches and button
   prompts for the pad in use. It is the sole built-in editor UI, with world-space

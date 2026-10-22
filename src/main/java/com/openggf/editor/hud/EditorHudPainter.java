@@ -63,6 +63,7 @@ final class EditorHudPainter implements AutoCloseable {
             case WHEEL -> wheel(c, layout, hud);
             case MENU -> menu(c, layout, hud);
             case PROPERTIES -> properties(c, layout, hud);
+            case PALETTE -> palette(c, layout, hud);
             case NONE -> { }
         }
         hud.hits = List.copyOf(hits);
@@ -787,6 +788,30 @@ final class EditorHudPainter implements AutoCloseable {
     }
 
     // ------------------------------------------------------------------ menu
+
+    private void palette(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
+        float w = Math.min(500, layout.width() - 24), h = 236;
+        float x = (layout.width() - w) / 2, y = (layout.height() - h) / 2;
+        c.panel(x, y, w, h, PANEL, .99f);
+        c.text("Level palette / Genesis 9-bit", x + 12, y + 10, Size.BODY, TEXT, 1);
+        var level = hud.controller().currentLevel();
+        for (int line = 0; line < 4; line++) for (int color = 0; color < 16; color++) {
+            var rgb = level.getPalette(line).getColor(color);
+            int value = Byte.toUnsignedInt(rgb.r) << 16 | Byte.toUnsignedInt(rgb.g) << 8 | Byte.toUnsignedInt(rgb.b);
+            float cx = x + 12 + color * 25, cy = y + 34 + line * 25;
+            c.rect(cx, cy, 23, 23, value, 1);
+            if (line * 16 + color == hud.paletteCell) c.frame(cx - 1, cy - 1, 25, 25, 2, GOLD, 1);
+        }
+        int line = hud.paletteCell / 16, color = hud.paletteCell % 16;
+        var rgb = level.getPalette(line).getColor(color);
+        c.text("Line " + line + " / color " + color + (hud.controller().isPaletteCellEditable(line, color) ? "" : " / host owned"),
+                x + 12, y + 142, Size.BODY, TEXT, 1);
+        int[] components = {Byte.toUnsignedInt(rgb.r), Byte.toUnsignedInt(rgb.g), Byte.toUnsignedInt(rgb.b)};
+        String[] names = {"Red", "Green", "Blue"};
+        for (int i = 0; i < 3; i++) c.text((i == hud.paletteComponent ? "> " : "  ") + names[i] + "  " + components[i],
+                x + 12 + i * 135, y + 170, Size.BODY, i == hud.paletteComponent ? ACCENT : TEXT, 1);
+        c.text("Bumpers: color   Up/down: channel   Left/right: value", x + 12, y + 204, Size.SMALL, TEXT_DIM, 1);
+    }
 
     private void properties(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
         var spawn = hud.controller().selectedObjectSpawn();

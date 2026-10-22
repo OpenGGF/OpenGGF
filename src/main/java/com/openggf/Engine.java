@@ -375,6 +375,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				finding -> LOGGER.warning(finding.code() + ": " + finding.message()));
 		this.graphicsManager.setPerformanceProfiler(profiler);
 		this.editorOverlayRenderer = new EditorOverlayRenderer(levelEditorController, graphicsManager);
+		this.levelEditorController.setPaletteRefresh(line -> {
+			if (graphicsManager.isGlInitialized() && levelEditorController.currentLevel() != null)
+				graphicsManager.cachePaletteTexture(levelEditorController.currentLevel().getPalette(line), line);
+		});
 		this.gameLoop = new GameLoop(engineServices);
 		this.gameLoop.setCharacterAvailabilitySupplier(() -> modRuntime.characterAvailability());
 		this.gameLoop.setEditorStateSyncHandler(this::syncEditorState);

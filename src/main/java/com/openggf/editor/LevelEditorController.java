@@ -61,6 +61,18 @@ public final class LevelEditorController {
     private EditorPlacementIdAllocator placementIds;
     private ObjectSpawn selectedObjectSpawn;
     private com.openggf.editor.properties.ObjectPropertyProvider propertyProvider;
+    private java.util.function.BiPredicate<Integer, Integer> paletteEditable = (line, color) -> false;
+    private java.util.function.IntConsumer paletteRefresh = line -> { };
+    public void setPaletteRefresh(java.util.function.IntConsumer refresh) { paletteRefresh = Objects.requireNonNull(refresh); }
+    public boolean isPaletteCellEditable(int line, int color) { return paletteEditable.test(line, color); }
+    public void editPaletteColor(int line, int color, int redStep, int greenStep, int blueStep) {
+        executeCommand(com.openggf.editor.palette.EditorPaletteEditing.command(requireLevel(), line, color,
+                com.openggf.editor.palette.EditorPaletteEditing.componentFromStep(redStep),
+                com.openggf.editor.palette.EditorPaletteEditing.componentFromStep(greenStep),
+                com.openggf.editor.palette.EditorPaletteEditing.componentFromStep(blueStep), paletteEditable, paletteRefresh));
+        setStatus("Palette color updated");
+    }
+
     private RingSpawn selectedRingSpawn;
     private ObjectSpawn selectedRingBackingObject;
     private boolean collisionOverlayEnabled;
@@ -149,6 +161,7 @@ public final class LevelEditorController {
         spawnEditMode = EditorSpawnEditMode.TILES;
         objectPalette = null;
         propertyProvider = null;
+        paletteEditable = (line, color) -> false;
         spawnFactory = null;
         placementIds = null;
         selectedObjectSpawn = null;
@@ -168,7 +181,8 @@ public final class LevelEditorController {
         EditorStockObjectPalette previous=objectPalette;
         objectPalette = new EditorStockObjectPalette(registry, names);
         propertyProvider = registry instanceof com.openggf.editor.properties.ObjectPropertyProvider provider ? provider : null;
-
+        paletteEditable = registry instanceof com.openggf.editor.palette.EditorPalettePolicyProvider provider
+                ? provider::isPaletteCellEditable : (line, color) -> false;
         if(previous!=null) {
             if(previous.selectedIsKeyed()) {
                 try {objectPalette.setObjectKey(previous.selectedObjectKey());}catch(IllegalArgumentException missing){setStatus("Object brush dependency unavailable");}

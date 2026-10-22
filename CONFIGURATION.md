@@ -946,6 +946,7 @@ wheel and `1`–`0` choose a hotbar slot; the other keys above are unchanged.
 | L3 / R3 | Toggle FG/BG layer / collision overlay |
 | Hold LB+RB, left stick / D-pad up/down | Pan canvas / zoom 1×–8× |
 | Object properties: up/down / left/right | Choose named field / change value |
+| Level palette: LB/RB, up/down, left/right | Choose color, RGB channel, native value |
 
 #### Projects, playtests, and export
 

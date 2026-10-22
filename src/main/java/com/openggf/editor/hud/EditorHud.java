@@ -35,7 +35,7 @@ import static org.lwjgl.glfw.GLFW.*;
  */
 public final class EditorHud {
     public enum LibraryKind { BLOCK, CHUNK, PATTERN, OBJECT, NONE }
-    enum Modal { NONE, LIBRARY, WHEEL, MENU, PROPERTIES }
+    enum Modal { NONE, LIBRARY, WHEEL, MENU, PROPERTIES, PALETTE }
 
     /** Which control a prompt names; drawn as a pad glyph or a keyboard keycap. */
     enum Glyph { SOUTH, EAST, WEST, NORTH, LB, RB, LT, RT, VIEW, MENU, DPAD, LSTICK, BUMPERS }
@@ -82,6 +82,7 @@ public final class EditorHud {
     List<MenuItem> menuItems = List.of();
     int menuIndex;
     int propertyIndex;
+    int paletteCell = 16, paletteComponent;
     float menuScroll;
     // Status toast
     String toast;
@@ -139,6 +140,7 @@ public final class EditorHud {
             case WHEEL -> { updateWheel(input, click); yield true; }
             case MENU -> { updateMenu(input, click); yield true; }
             case PROPERTIES -> { updateProperties(input); yield true; }
+            case PALETTE -> { updatePalette(input); yield true; }
             case NONE -> updateCanvas(input, level, click, rightClick);
         };
     }
@@ -504,6 +506,28 @@ public final class EditorHud {
 
     private static String onOff(boolean on) { return on ? "On > Off" : "Off > On"; }
 
+    void openPalette() { finishPendingEdits(); modal = Modal.PALETTE; pad.consumeHeld(); }
+    private void updatePalette(InputHandler input) {
+        int dy = pad.navY(), dx = pad.navX();
+        if (MenuInput.up(input)) dy--;
+        if (MenuInput.down(input)) dy++;
+        if (MenuInput.left(input)) dx--;
+        if (MenuInput.right(input)) dx++;
+        paletteComponent = Math.floorMod(paletteComponent + dy, 3);
+        if (pad.repeated(LB) || input.isKeyPressed(GLFW_KEY_PAGE_UP)) paletteCell = Math.floorMod(paletteCell - 1, 64);
+        if (pad.repeated(RB) || input.isKeyPressed(GLFW_KEY_PAGE_DOWN)) paletteCell = (paletteCell + 1) % 64;
+        if (dx != 0) {
+            int line = paletteCell / 16, color = paletteCell % 16;
+            var rgb = controller.currentLevel().getPalette(line).getColor(color);
+            int[] steps = {(Byte.toUnsignedInt(rgb.r) * 7 + 127) / 255, (Byte.toUnsignedInt(rgb.g) * 7 + 127) / 255,
+                    (Byte.toUnsignedInt(rgb.b) * 7 + 127) / 255};
+            steps[paletteComponent] = Math.floorMod(steps[paletteComponent] + Integer.signum(dx), 8);
+            try { controller.editPaletteColor(line, color, steps[0], steps[1], steps[2]); contentChanged = true; }
+            catch (IllegalArgumentException invalid) { controller.setStatus(invalid.getMessage()); }
+        }
+        if (pad.pressed(EAST) || MenuInput.back(input)) closeModal();
+    }
+
     void openProperties() {
         finishPendingEdits();
         if (controller.selectedObjectSpawn() == null) { controller.setStatus("Pick an object before opening properties"); return; }
@@ -532,6 +556,7 @@ public final class EditorHud {
         items.add(new MenuItem("Editor", "", null));
         items.add(new MenuItem("Resume", "", () -> { }));
         items.add(new MenuItem("Object properties", "F2", this::openProperties));
+        items.add(new MenuItem("Level palette (Genesis colors)", "", this::openPalette));
         items.add(new MenuItem("Region: set corner / finish", "F6", controller::toggleRegionCorner));
         items.add(new MenuItem("Copy region", "Ctrl+C", () -> act(Action.COPY_REGION)));
         items.add(new MenuItem("Cut region", "Ctrl+X", () -> act(Action.CUT_REGION)));
@@ -781,6 +806,12 @@ public final class EditorHud {
                 prompts.add(new Prompt(Glyph.LSTICK, "Arrows", "Choose"));
                 prompts.add(new Prompt(Glyph.SOUTH, "Enter", "Apply"));
                 prompts.add(new Prompt(Glyph.EAST, "Esc", "Cancel"));
+            }
+            case PALETTE -> {
+                prompts.add(new Prompt(Glyph.BUMPERS, "PgUp/PgDn", "Color"));
+                prompts.add(new Prompt(Glyph.DPAD, "Up/Down", "RGB channel"));
+                prompts.add(new Prompt(Glyph.DPAD, "Left/Right", "Value"));
+                prompts.add(new Prompt(Glyph.EAST, "Esc", "Close"));
             }
             case PROPERTIES -> {
                 prompts.add(new Prompt(Glyph.DPAD, "Up/Down", "Field"));
