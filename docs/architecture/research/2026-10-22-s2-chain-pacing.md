@@ -32,6 +32,29 @@ ARZ2 second transformation's `$30` acceleration deficit without a frame exceptio
 The old sibling bubble patch `0d8905611` is already subsumed by base
 `431a8f7f4`; it was not imported.
 
+Independent parent review of milestone `44c1d674` found that moving the whole
+controller also moved global palette work into the control-only hurt/death gate.
+That candidate froze reversion palettes during hurt/death and released the final
+transformation animation too early. `Level_MainLoop` runs `RunObjects` then
+`PalCycle_Load` (s2.asm:5095-5106); `PalCycle_Load` calls `PalCycle_SuperSonic`
+(s2.asm:2689-2690). The corrected ownership splits control/ring drain/reversion
+from global fade/cycle/completion. The latter runs once in the world updater,
+after objects and before zone palette work, including hurt/death. Derived-output
+rewind refresh does not enter that updater. Package-private controller operations
+and a non-ModApi bridge preserve the existing published signatures and captured
+RAM. The final fade retains its reload of 3 (s2.asm:3129-3139), so the first
+cycling entry follows four global calls; subsequent cycling reloads 7.
+
+The next ARZ2 frontier is a separate existing semantic: ordinary balance chooses
+four poses, but `SuperSonic_BalanceOnObjRight/Left` (s2.asm:36712-36729) always
+faces the edge and selects animation 6, for both objects and terrain. At route
+row 4920 all position, velocity and flags match; native animation 6 / mapping
+`$C2` differs from the engine's animation `$1E` / mapping `$CF`. The existing
+`SONIC_2_SUPER_SONIC.singleFacingBalance` field selects exactly this behavior;
+only that constant changes. Other profiles and shared movement definitions stay
+unchanged. REV01 animation 6 points through `$1B7C6` to `$1B82A`, beginning
+`09 C2 C3 C4 C3 C5 C6 C7 C6 FF`.
+
 ## Entry and title ownership
 
 Ordinary `Sonic2SpecialStageProvider.initializeStage` now arms the existing live
@@ -76,6 +99,7 @@ with module ownership, rewind and cancellation. It must cost actual
 water/player setup and device work. `ConvertCollisionArray` immediately returns
 in retail S2 and must not be priced as executed work. No shared timing-port or
 run-harness change is included in this milestone.
+
 
 Ordinary recurring special-stage pacing still uses the existing empirical
 speed/segment buckets. An accurate replacement must price the current ROM
@@ -192,3 +216,39 @@ cursor113342 versus destination113340. The12 structural-gap failure axes remain.
 The independent halfpipe chain exactly retains its matched baseline's two
 65-row-early gap axes; no new failure identity was introduced there. This is
 bounded frontier progress, not a green chain. Maven100s, measured queue149s.
+
+
+The parent review correction and native Super balance change were validated with
+`-Dtest=TestSonic2SuperGlobalPalettePhase,TestSonic2SuperBalance,TestSonic2SuperReversionAnimation,TestSonic2SuperSpeedConstantOwnership,TestSonic2DonorSuperStateRewind,TestSonic3kSuperStateRewind,TestSuperStateController,TestCrossGameSuperSonic,TestSpecialStageMappingArtTranslation,Sonic2SpecialStageDataLoaderTest,TestKis2SpecialStageDataLoader,TestModApiSignatureSurface`.
+The first run completed 108 tests: 107 passed, one new last-fade test failed
+because its grounded debug arrangement cleared forced animation before the
+ordinary airborne transformation path. The final production code was unchanged;
+the test now uses the native emerald/apex gate. Its next run passed the final
+fade/control ordering and active-Super death cases, but two damage cases
+correctly re-transformed on their still-eligible apex after debug reversion.
+Those cases now use actual paused-HUD-timer reversion and assert the native
+one-frame grace before applying real damage/death. The final narrow
+`TestSonic2SuperGlobalPalettePhase` run passed all four cases, zero skips.
+The other 104 cases passed on the same production source, including 33 independent
+object/terrain balance, normal controls and world restore/forward cases, and all
+11 Mod API signature checks. Final narrow Maven time 29.5 seconds, queue wait
+4 seconds. A fresh `-Pguards` batch selecting
+`TestPerGameRuleArchitectureGuard,TestRewindArchitectureGuard,TestHardwareTimingAuthorityGuard,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault`
+passed 43 checks, zero skips; Maven 35.5 seconds, queue wait 147 seconds.
+These are focused results, not a green chain or broad smoke result.
+
+
+The post-correction three-class trace command selected
+`TestS2CompleteEmeraldRunChain,TestS2EhzHalfpipeRoundTripChain,TestS2Arz2LevelSelectTraceReplay`
+with the same trace profile/single-fork/absolute-ROM/EGL flags. It completed
+3 tests, 2 failures, zero skips: independent ARZ2 level-select passed; the
+halfpipe retained its exact matched-baseline two gap axes, all edges65 early.
+Full-chain segment18 remains complete/0 errors. Segment19 now has13495 errors,
+first5084 sidekick_y native `$48A` versus engine `$489`; the row4920 balance
+mismatch is closed. CNZ1 admission remains cursor113342 versus113340 and all12
+structural gap axes remain. Maven45.47 seconds, queue wait35 seconds. Tested
+source was `364088d93` plus staged phase/balance and unstaged mapping-loader
+translation; no timing/fixture/hydration changes. The local policy hook rejected
+that record initializer as a surface delta despite11 normalized-signature checks
+passing; parent coordinates the existing policy correction rather than a pin
+change or hook bypass.
