@@ -23,11 +23,16 @@ public final class SpriteSatInternalAccess {
         graphics.submitSpriteSatGroups(geometry, producer);
     }
 
-    /** Palette-3/color-15-only operators use ordinary admission, clipping and frozen fragments. */
-    public static void submitShadowPiece(GraphicsManager graphics,
-                                         com.openggf.level.render.SpritePieceRenderer.PreparedPiece piece) {
+    /**
+     * Submits palette-3/color-15-only prepared pieces through the existing normal
+     * SAT intake, with ordinary admission, clipping and frozen fragments. The
+     * producer submits pieces synchronously; it must not render an unbudgeted prepass
+     * or mutate the collection lifecycle. Begin/replay attempts fail before table
+     * mutation. Lexically nested operator scopes restore their prior operation.
+     */
+    public static void submitShadowPieces(GraphicsManager graphics, Runnable preparedSubmissions) {
         engineCaller();
-        graphics.submitShadowPiece(piece);
+        graphics.submitShadowPieces(preparedSubmissions);
     }
 
     public static void submitShadowGroups(GraphicsManager graphics, List<SpriteSatEntry> geometry, Runnable producer) {

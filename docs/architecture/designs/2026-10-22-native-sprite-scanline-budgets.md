@@ -365,3 +365,78 @@ found no concrete lifecycle defect. Projection and palette cleanup publish as
 separate local leaves; this is composed focused validation, not standalone S2
 consumer validation or combined smoke. Fresh affected guards are recorded in the
 final handoff separately.
+
+
+## Neutral native-operator submission boundary
+
+Fresh affected guards on `61171cb7a` (job96044:54 tests, four failures, no
+errors/skips) exposed four new low-level dependency edges introduced by `c49`'s
+typed shadow convenience methods. They were not accepted as frozen-baseline debt.
+The correction removes those new graphics→level types/calls without loosening the
+architecture rule or changing `PreparedPiece`/Mod API signatures. The existing
+normal intake still constructs the immutable graphics-owned `SpriteSatEntry`;
+operator validation then inspects that entry's selected source columns and rows,
+with column-major pattern addresses and resident immutable indexed bytes.
+
+Engine callers replace `submitShadowPiece(graphics, piece)` with:
+
+```java
+SpriteSatInternalAccess.submitShadowPieces(graphics,
+        () -> graphics.submitSpriteSatPiece(piece));
+```
+
+`submitShadowGroups(graphics, wholeNativeGeometry, preparedSubmissions)` remains
+unchanged. The callback only submits prepared pieces through the existing intake;
+it owns no direct/prepass GL or table lifecycle. Operation scopes restore their
+previous value after success, rejection or producer exception and may nest
+lexically. Begin/end attempts while preparing an operator fail before mutating
+the outer table; ordinary collector behavior outside that scope is unchanged.
+The plain scope is lexical tagging, not a transaction: successful normal-intake
+admissions remain if a later callback statement throws. Groups retain their staged
+fragment rollback and nested-fragment rejection. Admission, source rows,
+flips, masks, ownership, subject and operation metadata retain their normal path.
+An asymmetric 3×3 source crop selects offsets3,4,6,7 while excluded source tiles
+contain native highlight14, so a row-major or whole-footprint validator fails the
+independent control; selected14 still rejects.
+
+The other96044 failures are separately attributed. Two HubMusic architecture
+identities are parent-owned, already repaired in peer823eda. The native-image
+missing service is source-equivalent to base `94c40570a`, not a new executed
+baseline JUnit pass: the actual guard/config/service blobs are identical at base,
+`61171cb7a` and the working tree. A read-only guard-equivalent inventory/Java-regex
+comparison returns the same sole missing
+`META-INF/services/com.openggf.level.resources.AuthoredLevelDecoder` from both
+Git trees and the physical current resources. The new shadow shader is covered.
+Unchanged paths/blobs:
+
+- `src/test/java/com/openggf/tests/TestNativeImageResourceGuard.java`:
+  `d161575707073531fac8aa56b0d357defc3eb32a`.
+- `src/main/resources/META-INF/native-image/com.openggf/OpenGGF/resource-config.json`:
+  `6128f9b73943b16025fca7d1af077d10b61f9a98`.
+- `src/main/resources/META-INF/services/com.openggf.level.resources.AuthoredLevelDecoder`:
+  `61f6891454d9c0ebbf921ce2a54a362696e6807a`.
+
+No unrelated resource/provider or guard-baseline edits belong to this correction.
+
+
+The corrected operator source passed focused job94450:36 tests, zero
+failures/errors/skips, queue22s/Maven1m36s. Exact selection:
+`TestNativeShadow15Pixels,TestNativeShadow15Rom,TestGraphicsManagerSpriteSatReplay,TestSatReplayBatching,TestNativeSpriteOwnershipPixels,TestModApiSignatureSurface`;
+command `python3 tools/testing/maven_queue.py --lean -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl '-Dtest=<selection above>' test -B`, with
+the same original absolute ROM properties, Java25/Lua5.4/no-display/null-audio
+environment above. All six exact-selection XML reports were inspected. The owning
+architecture rule is qualified separately before this correction is published;
+existing HubMusic/resource debt is not described as a green guard run.
+
+
+Owning guard job67704 used the same environment with
+`python3 tools/testing/maven_queue.py --normal -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl -Pguards '-Dtest=TestArchUnitRules' test -B`.
+Result:32 tests, two failures, zero errors/skips; queue42s/Maven36.794s.
+`low_level_layers_do_not_depend_on_runtime_layers` passed, proving the four owned
+shadow edges are removed. Exact remaining failures are the already parent-owned
+`shared_code_does_not_construct_concrete_sonic_provider_classes` and
+`shared_layers_do_not_depend_on_game_specific_packages`, both in HubMusicController.
+Their repair is composed by the coordinator; this isolated result is not a green
+full guard run. No unchanged broad/resource/clock selection was repeated.

@@ -2437,10 +2437,10 @@ public class GraphicsManager {
         finally { currentShadow15Backdrop = previous; }
     }
 
-    void submitShadowPiece(SpritePieceRenderer.PreparedPiece piece) {
+    void submitShadowPieces(Runnable preparedSubmissions) {
         if (!spriteSatCollectionActive) throw new IllegalStateException("Shadow pieces require an active native SAT collection");
-        java.util.Objects.requireNonNull(piece, "shadow piece");
-        withSpritePixelOperation(SpriteSatEntry.PixelOperation.SHADOW_15, () -> submitSpriteSatPiece(piece));
+        java.util.Objects.requireNonNull(preparedSubmissions, "shadow submissions");
+        withSpritePixelOperation(SpriteSatEntry.PixelOperation.SHADOW_15, preparedSubmissions);
     }
 
     void submitShadowGroups(List<SpriteSatEntry> geometry, Runnable producer) {
@@ -2463,9 +2463,17 @@ public class GraphicsManager {
         }
     }
 
-    private void validateShadowPiece(SpritePieceRenderer.PreparedPiece piece) {
-        SpritePieceRenderer.renderPreparedPiece(piece,
-                (pattern, hFlip, vFlip, palette, x, y) -> validateShadowPattern(pattern, palette));
+    private void validateShadowEntry(SpriteSatEntry entry) {
+        // Clipped columns/rows name source tiles; flips move those tiles on screen,
+        // without changing their column-major source pattern addresses.
+        for (int ty = 0; ty < entry.rowCountTiles(); ty++) {
+            int row = entry.startRowTile() + ty;
+            for (int tx = 0; tx < entry.colCountTiles(); tx++) {
+                int col = entry.startColTile() + tx;
+                validateShadowPattern(entry.firstPatternIndex() + col * entry.heightTiles() + row,
+                        entry.paletteIndex());
+            }
+        }
     }
 
     /** Published native operators retain the same immutable source row crop and final quad. */
@@ -2567,6 +2575,8 @@ public class GraphicsManager {
 
 	/** Explicit native inner raster, e.g. fixed H32 inside a wider special-stage presentation. */
 	void beginSpriteSatCollection(SpriteSatMaskPostProcessor.Raster raster) {
+        if (currentSpritePixelOperation != SpriteSatEntry.PixelOperation.NORMAL)
+            throw new IllegalStateException("Shadow submissions may only submit prepared pieces, not begin a SAT table");
 		spriteSatRaster = java.util.Objects.requireNonNull(raster, "SAT raster");
 		spriteSatCollectionActive = true;
 		spriteMaskRequested = false;
@@ -2614,10 +2624,10 @@ public class GraphicsManager {
 		SpritePieceRenderer.PreparedPiece taggedPiece = presentationSource == null
 				? piece
 				: piece.withDebugSource(presentationSource);
-        if (currentSpritePixelOperation == SpriteSatEntry.PixelOperation.SHADOW_15) validateShadowPiece(taggedPiece);
 		SpriteSatEntry entry = SpriteSatEntry.fromPreparedPiece(taggedPiece, currentSpriteSatBucket)
                 .withTileOcclusionPaletteMask(getCurrentSpriteTileOcclusionPaletteMask())
                 .withPixelOperation(currentSpritePixelOperation);
+        if (entry.pixelOperation() == SpriteSatEntry.PixelOperation.SHADOW_15) validateShadowEntry(entry);
 		(spriteSatFragments == null ? spriteSatEntries : spriteSatFragments).add(
                 spritePresentationSubject == SpritePresentation.Subject.WORLD
 				? entry : entry.withPresentationSubject(spritePresentationSubject));
@@ -2647,6 +2657,8 @@ public class GraphicsManager {
 		if (!spriteSatCollectionActive) {
 			return;
 		}
+        if (currentSpritePixelOperation != SpriteSatEntry.PixelOperation.NORMAL)
+            throw new IllegalStateException("Shadow submissions may only submit prepared pieces, not replay a SAT table");
 
 		boolean applyMask = spriteMaskRequested;
 

@@ -36,7 +36,7 @@ class TestNativeShadow15Pixels {
                     int opaqueX = hFlip ? 46 : 41, holeX = hFlip ? 41 : 46;
                     int opaqueY = vFlip ? 46 : 41, holeY = vFlip ? 41 : 46;
                     fixture.draw(() -> {
-                        SpriteSatInternalAccess.submitShadowPiece(fixture.graphics, piece(3, 3, false, hFlip, vFlip));
+                        submitShadowPiece(fixture.graphics, piece(3, 3, false, hFlip, vFlip));
                         fixture.normal(true);
                     });
                     pixel(opaqueX, opaqueY, 18, 55, 91);
@@ -44,12 +44,12 @@ class TestNativeShadow15Pixels {
                     pixel(opaqueX, holeY, 0, 255, 0);
                     fixture.draw(() -> {
                         fixture.normal(true);
-                        SpriteSatInternalAccess.submitShadowPiece(fixture.graphics, piece(3, 3, false, hFlip, vFlip));
+                        submitShadowPiece(fixture.graphics, piece(3, 3, false, hFlip, vFlip));
                     });
                     pixel(opaqueX, opaqueY, 0, 255, 0);
                     fixture.draw(() -> {
-                        SpriteSatInternalAccess.submitShadowPiece(fixture.graphics, piece(3, 3, false, hFlip, vFlip));
-                        SpriteSatInternalAccess.submitShadowPiece(fixture.graphics, piece(3, 3, false, hFlip, vFlip));
+                        submitShadowPiece(fixture.graphics, piece(3, 3, false, hFlip, vFlip));
+                        submitShadowPiece(fixture.graphics, piece(3, 3, false, hFlip, vFlip));
                     });
                     pixel(opaqueX, opaqueY, 18, 55, 91); // one winning source selects the same intensity
                     pixel(holeX, opaqueY, 204, 204, 204);
@@ -67,25 +67,25 @@ class TestNativeShadow15Pixels {
                 fixture.batching(instanced ? 2 : 0);
                 fixture.terrain(true, 0);
                 fixture.draw(() -> {
-                    SpriteSatInternalAccess.submitShadowPiece(fixture.graphics, piece(3, 3, false, false, false));
+                    submitShadowPiece(fixture.graphics, piece(3, 3, false, false, false));
                     fixture.normal(true);
                 });
                 pixel(41, 41, 204, 204, 204);
                 pixel(46, 41, 0, 255, 0);
                 fixture.draw(() -> {
                     fixture.normal(false);
-                    SpriteSatInternalAccess.submitShadowPiece(fixture.graphics, piece(3, 3, true, false, false));
+                    submitShadowPiece(fixture.graphics, piece(3, 3, true, false, false));
                 });
                 pixel(41, 41, 204, 204, 204); // hidden earlier ordinary sprite also excludes the operator
                 fixture.draw(() -> {
-                    SpriteSatInternalAccess.submitShadowPiece(fixture.graphics, piece(3, 3, true, false, false));
+                    submitShadowPiece(fixture.graphics, piece(3, 3, true, false, false));
                     fixture.normal(true);
                 });
                 pixel(41, 41, 18, 55, 91);
                 fixture.terrain(true, 3);
                 fixture.draw(() -> {
                     fixture.graphics.setCurrentSpriteTileOcclusionPaletteMask(0b0111);
-                    SpriteSatInternalAccess.submitShadowPiece(fixture.graphics, piece(3, 3, false, false, false));
+                    submitShadowPiece(fixture.graphics, piece(3, 3, false, false, false));
                     fixture.graphics.setCurrentSpriteTileOcclusionPaletteMask(0xF);
                     fixture.normal(true);
                 });
@@ -150,7 +150,7 @@ class TestNativeShadow15Pixels {
                     false, 200, head);
             fixture.draw(() -> {
                 SpritePresentation.withSubject(fixture.graphics, subject, () ->
-                        SpriteSatInternalAccess.submitShadowPiece(fixture.graphics,
+                        submitShadowPiece(fixture.graphics,
                                 piece(3, 3, false, false, false)));
                 fixture.normal(true);
             });
@@ -169,7 +169,7 @@ class TestNativeShadow15Pixels {
             for (boolean instanced : new boolean[]{false, true}) {
                 fixture.batching(instanced ? 2 : 0);
                 fixture.draw(() -> {
-                    SpriteSatInternalAccess.submitShadowPiece(fixture.graphics, piece(3, 3, false, false, false));
+                    submitShadowPiece(fixture.graphics, piece(3, 3, false, false, false));
                     fixture.normal(true); // ordinary art cannot render without a palette
                 });
                 pixel(41, 41, 18, 55, 91);
@@ -206,7 +206,7 @@ class TestNativeShadow15Pixels {
                     fixture.graphics.executeCapturedCommands(() -> SpriteSatInternalAccess.withShadow15Backdrop(
                             fixture.graphics, fixture.backdrop.textureId(), origin[0], origin[1], 640, 448, () -> {
                                 fixture.graphics.beginSpriteSatCollection(SpriteSatMaskPostProcessor.Raster.h32(0, 0, 224));
-                                SpriteSatInternalAccess.submitShadowPiece(fixture.graphics, piece(3, 3, false, false, false));
+                                submitShadowPiece(fixture.graphics, piece(3, 3, false, false, false));
                                 fixture.normal(true);
                                 fixture.graphics.endSpriteSatCollectionAndReplay();
                             }), 0, 0, 320, 224);
@@ -236,7 +236,7 @@ class TestNativeShadow15Pixels {
             fixture.clear();
             Runnable table = () -> {
                 fixture.graphics.beginSpriteSatCollection(SpriteSatMaskPostProcessor.Raster.h32(0, 0, 224));
-                SpriteSatInternalAccess.submitShadowPiece(fixture.graphics, piece(3, 3, false, false, false));
+                submitShadowPiece(fixture.graphics, piece(3, 3, false, false, false));
                 fixture.graphics.endSpriteSatCollectionAndReplay();
             };
             int foreignSampler = glGenSamplers();
@@ -268,7 +268,7 @@ class TestNativeShadow15Pixels {
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, fixture.backdrop.textureId());
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-                fixture.draw(() -> SpriteSatInternalAccess.submitShadowPiece(fixture.graphics, piece(3, 3, false, false, false)));
+                fixture.draw(() -> submitShadowPiece(fixture.graphics, piece(3, 3, false, false, false)));
                 pixel(41, 41, 18, 55, 91);
                 assertEquals(foreignSampler, glGetIntegeri(GL_SAMPLER_BINDING, 6));
                 assertEquals(GL_LINEAR_MIPMAP_LINEAR, glGetSamplerParameteri(foreignSampler, GL_TEXTURE_MIN_FILTER));
@@ -318,24 +318,136 @@ class TestNativeShadow15Pixels {
             // The resident immutable sample, rather than this later-mutated object, owns validation.
             for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) art.setPixel(x, y, (byte) 15);
             graphics.cachePatternTexture(solid(1), 4);
+            assertThrows(IllegalStateException.class, () -> SpriteSatInternalAccess.submitShadowPieces(graphics, () -> {}));
             graphics.beginSpriteSatCollection(SpriteSatMaskPostProcessor.Raster.h32(0, 0, 224));
+            assertThrows(NullPointerException.class, () -> SpriteSatInternalAccess.submitShadowPieces(graphics, null));
+            assertEquals(SpriteSatEntry.PixelOperation.NORMAL, graphics.currentSpritePixelOperation);
             assertTrue(assertThrows(IllegalArgumentException.class, () ->
-                    SpriteSatInternalAccess.submitShadowPiece(graphics, piece(3, 3, false, false, false)))
+                    submitShadowPiece(graphics, piece(3, 3, false, false, false)))
                     .getMessage().contains("color 14"));
             assertThrows(IllegalArgumentException.class, () ->
-                    SpriteSatInternalAccess.submitShadowPiece(graphics, piece(4, 3, false, false, false)));
+                    submitShadowPiece(graphics, piece(4, 3, false, false, false)));
             assertThrows(IllegalArgumentException.class, () ->
-                    SpriteSatInternalAccess.submitShadowPiece(graphics, piece(99, 3, false, false, false)));
+                    submitShadowPiece(graphics, piece(99, 3, false, false, false)));
             graphics.updatePatternTexture(art, 3);
             assertThrows(IllegalArgumentException.class, () ->
-                    SpriteSatInternalAccess.submitShadowPiece(graphics, piece(3, 0, false, false, false)));
-            SpriteSatInternalAccess.submitShadowPiece(graphics, piece(3, 3, false, false, false));
+                    submitShadowPiece(graphics, piece(3, 0, false, false, false)));
+            submitShadowPiece(graphics, piece(3, 3, false, false, false));
             assertEquals(SpriteSatEntry.PixelOperation.NORMAL, graphics.currentSpritePixelOperation,
                     "successful and rejected submissions restore the operation scope");
         } finally {
             graphics.cancelSpritePresentationCollection();
             graphics.cleanup();
         }
+    }
+
+    @Test
+    void croppedColumnMajorShadowSourcesIgnoreExcludedColor14AcrossFlipsAndRestoreAfterProducerFailure() {
+        GraphicsManager graphics = new GraphicsManager();
+        graphics.initHeadless();
+        try {
+            // A 3x3 source cropped to columns 1..2 and rows 0..1 selects offsets
+            // 3,4,6,7. A row-major validator would instead select 1,2,4,5. All five excluded source tiles intentionally contain color14.
+            for (int offset = 0; offset < 9; offset++) {
+                graphics.cachePatternTexture(solid(offset == 3 || offset == 4 || offset == 6 || offset == 7 ? 15 : 14),
+                        32 + offset);
+            }
+            for (boolean hFlip : new boolean[]{false, true}) for (boolean vFlip : new boolean[]{false, true}) {
+                var cropped = new SpritePieceRenderer.PreparedPiece(40, 40, 3, 3, 32, 32, 3, hFlip, vFlip,
+                        true, false, SpriteMaskReplayRole.NORMAL, 1, 2, 0, 2, "cropped operator");
+                var frame = SpritePresentationRenderer.prepare(graphics, 0, 0, () -> {
+                    graphics.beginSpriteSatCollection(SpriteSatMaskPostProcessor.Raster.h32(0, 0, 224));
+                    submitShadowPiece(graphics, cropped);
+                    graphics.endSpriteSatCollectionAndReplay();
+                });
+                assertEquals(java.util.Set.of(35, 36, 38, 39), frame.tiles().stream()
+                        .map(SpritePresentation.Tile::patternId).collect(java.util.stream.Collectors.toSet()));
+                assertEquals(4, frame.tiles().size());
+                for (var tile : frame.tiles()) {
+                    assertEquals(SpriteSatEntry.PixelOperation.SHADOW_15, tile.pixelOperation());
+                    assertEquals(hFlip, tile.hFlip()); assertEquals(vFlip, tile.vFlip());
+                    assertEquals(tile.patternId() >= 38 ? hFlip ? 40f : 56f : 48f, tile.x());
+                    assertEquals(tile.patternId() == 35 || tile.patternId() == 38 ? vFlip ? 56f : 40f : 48f, tile.y());
+                }
+                graphics.updatePatternTexture(solid(14), 39);
+                graphics.beginSpriteSatCollection(SpriteSatMaskPostProcessor.Raster.h32(0, 0, 224));
+                assertTrue(assertThrows(IllegalArgumentException.class,
+                        () -> submitShadowPiece(graphics, cropped))
+                        .getMessage().contains("source 39 contains unsupported color 14"));
+                assertEquals(SpriteSatEntry.PixelOperation.NORMAL, graphics.currentSpritePixelOperation);
+                graphics.cancelSpritePresentationCollection();
+                graphics.updatePatternTexture(solid(15), 39);
+            }
+            RuntimeException injected = new IllegalStateException("shadow group producer failed");
+            var geometry = SpriteSatEntry.of(40, 40, 3, 3, 32, 3, true, true, true, false);
+            var cropped = new SpritePieceRenderer.PreparedPiece(40, 40, 3, 3, 32, 32, 3, true, true,
+                    true, false, SpriteMaskReplayRole.NORMAL, 1, 2, 0, 2, null);
+            var frame = SpritePresentationRenderer.prepare(graphics, 0, 0, () -> {
+                graphics.beginSpriteSatCollection(SpriteSatMaskPostProcessor.Raster.h32(0, 0, 224));
+                assertSame(injected, assertThrows(IllegalStateException.class,
+                        () -> SpriteSatInternalAccess.submitShadowPieces(graphics, () -> { throw injected; })));
+                assertEquals(SpriteSatEntry.PixelOperation.NORMAL, graphics.currentSpritePixelOperation);
+                assertSame(injected, assertThrows(IllegalStateException.class,
+                        () -> SpriteSatInternalAccess.submitShadowGroups(graphics, List.of(geometry), () -> {
+                            graphics.submitSpriteSatPiece(cropped);
+                            throw injected;
+                        })));
+                assertEquals(SpriteSatEntry.PixelOperation.NORMAL, graphics.currentSpritePixelOperation);
+                // A source14 ordinary sprite is legal and must not inherit the failed group's operation.
+                graphics.submitSpriteSatPiece(piece(32, 0, false, false, false));
+                graphics.endSpriteSatCollectionAndReplay();
+            });
+            assertEquals(1, frame.tiles().size(), "a failed group admitted no geometry or fragments");
+            assertEquals(32, frame.tiles().getFirst().patternId());
+            assertEquals(SpriteSatEntry.PixelOperation.NORMAL, frame.tiles().getFirst().pixelOperation());
+        } finally {
+            graphics.cancelSpritePresentationCollection();
+            graphics.cleanup(); RenderContext.reset();
+        }
+    }
+
+    @Test
+    void shadowSubmissionCallbacksRejectTableMutationAndPreserveOuterEntriesAndNestedOperationScopes() {
+        GraphicsManager graphics = new GraphicsManager();
+        graphics.initHeadless();
+        try {
+            graphics.cachePatternTexture(solid(15), 3);
+            graphics.cachePatternTexture(solid(1), 4);
+            var frame = SpritePresentationRenderer.prepare(graphics, 0, 0, () -> {
+                var raster = SpriteSatMaskPostProcessor.Raster.h32(0, 0, 224);
+                graphics.beginSpriteSatCollection(raster);
+                graphics.submitSpriteSatPiece(piece(4, 0, false, false, false));
+                assertThrows(IllegalStateException.class, () -> SpriteSatInternalAccess.submitShadowPieces(graphics,
+                        () -> SpriteSatInternalAccess.beginCollection(graphics, raster)));
+                assertTrue(graphics.isSpriteSatCollectionActive());
+                assertEquals(SpriteSatEntry.PixelOperation.NORMAL, graphics.currentSpritePixelOperation);
+                assertThrows(IllegalStateException.class, () -> SpriteSatInternalAccess.submitShadowPieces(graphics,
+                        graphics::endSpriteSatCollectionAndReplay));
+                assertTrue(graphics.isSpriteSatCollectionActive());
+                assertEquals(SpriteSatEntry.PixelOperation.NORMAL, graphics.currentSpritePixelOperation);
+                SpriteSatInternalAccess.submitShadowPieces(graphics, () -> {
+                    assertEquals(SpriteSatEntry.PixelOperation.SHADOW_15, graphics.currentSpritePixelOperation);
+                    submitShadowPiece(graphics, piece(3, 3, false, false, false));
+                    assertEquals(SpriteSatEntry.PixelOperation.SHADOW_15, graphics.currentSpritePixelOperation);
+                });
+                assertEquals(SpriteSatEntry.PixelOperation.NORMAL, graphics.currentSpritePixelOperation);
+                graphics.submitSpriteSatPiece(piece(4, 0, false, false, false));
+                graphics.endSpriteSatCollectionAndReplay();
+            });
+            assertEquals(3, frame.tiles().size(), "failed lifecycle callbacks cannot clear the original or later entries");
+            assertEquals(2, frame.tiles().stream().filter(tile -> tile.patternId() == 4
+                    && tile.pixelOperation() == SpriteSatEntry.PixelOperation.NORMAL).count());
+            assertEquals(1, frame.tiles().stream().filter(tile -> tile.patternId() == 3
+                    && tile.pixelOperation() == SpriteSatEntry.PixelOperation.SHADOW_15).count());
+            assertFalse(graphics.isSpriteSatCollectionActive());
+        } finally {
+            graphics.cancelSpritePresentationCollection();
+            graphics.cleanup(); RenderContext.reset();
+        }
+    }
+
+    private static void submitShadowPiece(GraphicsManager graphics, SpritePieceRenderer.PreparedPiece piece) {
+        SpriteSatInternalAccess.submitShadowPieces(graphics, () -> graphics.submitSpriteSatPiece(piece));
     }
 
     private static SpritePieceRenderer.PreparedPiece piece(int pattern, int palette, boolean high,
