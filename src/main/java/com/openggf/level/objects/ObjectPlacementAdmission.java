@@ -21,6 +21,7 @@ final class ObjectPlacementAdmission {
                 && !placement.isDormant(spawn);
     }
     boolean allows(ObjectSpawn spawn) {
+        if (spawn != null && com.openggf.level.objects.authored.AuthoredGizmos.handlesKey(spawn.objectKey())) return false;
         if (classifier == null || spawn == null || spawn.ownerModId() != null) return true;
         var content = classifier.monitorContent(spawn);
         return (content == null || !policy.removedMonitorContents().contains(content))

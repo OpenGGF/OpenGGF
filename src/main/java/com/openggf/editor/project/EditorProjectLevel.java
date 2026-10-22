@@ -106,11 +106,17 @@ public final class EditorProjectLevel extends AbstractLevel implements RingObjec
         int chunkCount = source.chunkCount < 1024 ? Math.min(1024, source.chunkCount + 64) : source.chunkCount;
         int blockCount = Math.min(256, source.blockCount + 16);
         EditorProjectState base = EditorProjectState.capture(source);
+        // Native libraries can contain additional sprite-only art beyond the terrain
+        // descriptor's 11-bit address space. Retain it; only append authoring slots
+        // when there is still addressable capacity, and never overwrite stock art.
+        int patternCount = base.patterns().length < 2048 ? Math.min(2048, base.patterns().length + 256) : base.patterns().length;
+        byte[][] patterns = Arrays.copyOf(base.patterns(), patternCount);
+        for (int i = base.patterns().length; i < patterns.length; i++) patterns[i] = new byte[64];
         int[][] chunks = Arrays.copyOf(base.chunks(), chunkCount);
         for (int i = base.chunks().length; i < chunks.length; i++) chunks[i] = new int[6];
         int[][] blocks = Arrays.copyOf(base.blocks(), blockCount);
         for (int i = base.blocks().length; i < blocks.length; i++) blocks[i] = new int[source.side * source.side];
-        return new EditorProjectLevel(new EditorProjectState(base.zoneIndex(), base.blockGridSide(), base.patterns(), chunks, blocks,
+        return new EditorProjectLevel(new EditorProjectState(base.zoneIndex(), base.blockGridSide(), patterns, chunks, blocks,
                 base.solids(), base.palettes(), base.layers(), base.width(), base.height(), base.map(), base.objects(), base.rings(), base.ringBacking(),
                 base.minX(), base.maxX(), base.minY(), base.maxY()), source.ringSpriteSheet);
     }

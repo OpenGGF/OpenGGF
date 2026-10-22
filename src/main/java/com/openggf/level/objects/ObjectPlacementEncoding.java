@@ -22,7 +22,7 @@ public interface ObjectPlacementEncoding {
                 spawn.respawnTracked(), spawn.layoutIndex());
         return new ObjectSpawn(moved.x(), moved.y(), moved.objectId(), moved.subtype(),
                 moved.renderFlags(), moved.respawnTracked(), moved.rawYWord(), moved.layoutIndex(),
-                spawn.ownerModId(), spawn.objectKey());
+                spawn.ownerModId(), spawn.objectKey(), spawn.authoredProperties());
     }
 
     /** Returns an object backing for a newly-authored stage ring, or {@code null}. */

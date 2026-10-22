@@ -18,7 +18,8 @@ public record ModManifest(int formatVersion, String id, String name,
                           VersionRange engineApiRange, ModType type,
                           String baseGame, String entrypoint, List<ModDependency> dependencies,
                           Map<Integer, String> audioOverrides, Map<String, String> artOverrides,
-                          String insertAfter, OptionalInt patternWindows, ModCompositionMetadata composition) {
+                          String insertAfter, OptionalInt patternWindows, ModCompositionMetadata composition,
+                          String campaign) {
     private static final Pattern ENTRYPOINT = Pattern.compile(
             "[A-Za-z_$][A-Za-z0-9_$]*(?:\\.[A-Za-z_$][A-Za-z0-9_$]*)+");
     private static final Pattern INSERT_AFTER = Pattern.compile("[a-z0-9][a-z0-9-]{0,31}");
@@ -43,6 +44,11 @@ public record ModManifest(int formatVersion, String id, String name,
         Objects.requireNonNull(type, "type");
         requireBaseGame(type, baseGame);
         entrypoint = requireEntrypoint(entrypoint);
+        if (campaign != null) {
+            campaign = requireArtPath(campaign, ModInputLimits.DEFAULT_MAX_ENTRY_NAME_BYTES);
+            if (type != ModType.PATCH || "any".equals(baseGame) || entrypoint != null || insertAfter != null)
+                throw new IllegalArgumentException("Data-only campaigns require an explicit stock patch host, no Java entrypoint and no stock insertion anchor");
+        }
         dependencies = List.copyOf(Objects.requireNonNull(dependencies, "dependencies"));
         Set<String> dependencyIds = new HashSet<>();
         for (ModDependency dependency : dependencies) {
@@ -73,6 +79,16 @@ public record ModManifest(int formatVersion, String id, String name,
             throw new IllegalArgumentException(
                     "baseGame any requires a compiled shared scene or typed mutator catalogue without stock overrides, progression or pattern windows");
         }
+    }
+
+    public ModManifest(int formatVersion, String id, String name, SemanticVersion version,
+            List<String> authors, String description, VersionRange engineApiRange, ModType type,
+            String baseGame, String entrypoint, List<ModDependency> dependencies,
+            Map<Integer,String> audioOverrides, Map<String,String> artOverrides,
+            String insertAfter, OptionalInt patternWindows, ModCompositionMetadata composition) {
+        this(formatVersion, id, name, version, authors, description, engineApiRange, type,
+                baseGame, entrypoint, dependencies, audioOverrides, artOverrides,
+                insertAfter, patternWindows, composition, null);
     }
 
     /** Compatibility constructor: existing manifests carry no optional composition declarations. */

@@ -8,7 +8,7 @@ indices are never persisted.
 
 ## Format v1: Sonic 1, Sonic 2, and standalone levels
 
-Format v1 is unchanged. It is the format for flat authored Sonic 1 levels,
+Format v1 is the current unpublished format for authored Sonic 1 levels,
 additive Sonic 2 zones, and game-agnostic standalone levels. Sonic 1 uses
 `blockGridSide: 16`; Sonic 2 uses `blockGridSide: 8`. Its exact inventory is:
 
@@ -57,6 +57,7 @@ minimal exact definition is:
   "bounds": {"minX": 0, "maxX": 127, "minY": -32, "maxY": 96},
   "start": {"x": 32, "y": 48},
   "music": {"stockId": 129},
+  "settings": {"background": null, "waterHeight": null, "team": null},
   "assets": {
     "patterns": "patterns.bin",
     "chunks": "chunks.bin",
@@ -141,6 +142,45 @@ The level editor edits creator-owned palette cells using exact Genesis 9-bit
 colors, with eight values per RGB channel. Existing projects keep their complete
 RGB data; edits and undo preserve the save/reopen contract. Baked v1 exports retain
 `palettes.bin`, while v2 retains sparse `paletteClaims` with the ownership rules
-above. No fields or format versions are added by palette editing. Stock scroll
-sources, authored water height and allowed character/team restrictions require a
-separate versioned contract and are not silently written into v1/v2.
+above. Environment and typed placements extend these unpublished formats directly;
+there are no new format versions or migration branches.
+
+
+## Authored environment and typed placements
+
+Both baked versions accept optional `settings` (omitting it gives the default):
+
+```json
+"settings": {
+  "background": {"zone": 0, "act": 0},
+  "waterHeight": 512,
+  "team": {"main": "sonic", "sidekicks": ["tails"]}
+}
+```
+
+Each member may be null. `background` uses an unsigned-byte stock zone/act from
+the target host's `ModLevelSettingsProvider` catalogue. No arbitrary handler class
+is loaded. `waterHeight` is a signed 16-bit fixed surface, using the host's ROM
+water palette provider. `team` uses persisted character keys and at most 16
+sidekicks; unavailable characters and unsupported required sidekick teams fail
+rather than falling back. Unknown members,
+coercions and unsupported sources fail. Default settings preserve flat/dry,
+unrestricted launches. Explicit runtime factories cannot also own scroll/water
+when these settings supply those services.
+
+A keyed host gizmo additionally carries `authoredProperties`, with a `kind` of
+`camera-zone`, `music-zone`, `warp` or `stageplay-trigger` and the exact record
+fields from `AuthoredObjectProperties`. Common `width`/`height` describe a world
+region. Camera bounds/release conditions, stock/owned music, warp link/twoWay and
+Stageplay resource/trigger/blocking/once/consume values are typed and validated.
+A property kind must match its `openggf:` object key. Numeric placements cannot
+carry authored properties. Warp links require exactly two distinct stable
+placements with matching two-way mode; Stageplay resources must be normalized
+relative `.stageplay` paths. Non-blocking playback currently fails explicitly.
+
+The current `.ogfproject` payload metadata retains `settings` plus `campaign`, an
+ordered array of relative `.ogfproject` paths. Its assets state retains reserved
+imported pattern slots, and keyed object states retain nullable typed properties.
+These are direct changes to the unpublished format, without migration/version
+branches. Project checksums cover all fields. Baked art contains the installed
+native patterns, rather than source PNG/YAML paths.

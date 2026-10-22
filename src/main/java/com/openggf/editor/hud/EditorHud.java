@@ -35,7 +35,7 @@ import static org.lwjgl.glfw.GLFW.*;
  */
 public final class EditorHud {
     public enum LibraryKind { BLOCK, CHUNK, PATTERN, OBJECT, NONE }
-    enum Modal { NONE, LIBRARY, WHEEL, MENU, PROPERTIES, PALETTE }
+    enum Modal { NONE, LIBRARY, WHEEL, MENU, PROPERTIES, PALETTE, SETTINGS }
 
     /** Which control a prompt names; drawn as a pad glyph or a keyboard keycap. */
     enum Glyph { SOUTH, EAST, WEST, NORTH, LB, RB, LT, RT, VIEW, MENU, DPAD, LSTICK, BUMPERS }
@@ -82,6 +82,7 @@ public final class EditorHud {
     List<MenuItem> menuItems = List.of();
     int menuIndex;
     int propertyIndex;
+    int settingsIndex;
     int paletteCell = 16, paletteComponent;
     float menuScroll;
     // Status toast
@@ -132,6 +133,7 @@ public final class EditorHud {
             pointerX = input.getMouseX() * pointerUnits;
             pointerY = input.getMouseY() * pointerUnits;
         }
+        if (modal == Modal.NONE && input.isKeyPressed(GLFW_KEY_F3)) { openSettings(); return true; }
         if (modal == Modal.NONE && input.isKeyPressed(GLFW_KEY_F2)) { openProperties(); return true; }
         boolean click = input.isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
         boolean rightClick = input.isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT);
@@ -141,6 +143,7 @@ public final class EditorHud {
             case MENU -> { updateMenu(input, click); yield true; }
             case PROPERTIES -> { updateProperties(input); yield true; }
             case PALETTE -> { updatePalette(input); yield true; }
+            case SETTINGS -> { updateSettings(input); yield true; }
             case NONE -> updateCanvas(input, level, click, rightClick);
         };
     }
@@ -506,6 +509,25 @@ public final class EditorHud {
 
     private static String onOff(boolean on) { return on ? "On > Off" : "Off > On"; }
 
+    void openSettings() {
+        if (controller.projects() == null || controller.projects().document() == null) {
+            controller.setStatus("Open or create an authored project to edit level settings"); return;
+        }
+        finishPendingEdits(); settingsIndex = 0; modal = Modal.SETTINGS; pad.consumeHeld();
+    }
+    private void updateSettings(InputHandler input) {
+        var workspace = controller.projects();
+        if (workspace == null || workspace.document() == null) { closeModal(); return; }
+        int dy = pad.navY() + (MenuInput.down(input) ? 1 : 0) - (MenuInput.up(input) ? 1 : 0);
+        int dx = pad.navX() + (MenuInput.right(input) ? 1 : 0) - (MenuInput.left(input) ? 1 : 0);
+        settingsIndex = Math.floorMod(settingsIndex + Integer.signum(dy), workspace.settingsRows().size());
+        if (dx != 0) {
+            try { workspace.stepSetting(settingsIndex, Integer.signum(dx)); contentChanged = true; }
+            catch (RuntimeException error) { controller.setStatus(error.getMessage()); }
+        }
+        if (pad.pressed(EAST) || MenuInput.back(input) || input.isKeyPressed(GLFW_KEY_F3)) closeModal();
+    }
+
     void openPalette() { finishPendingEdits(); modal = Modal.PALETTE; pad.consumeHeld(); }
     private void updatePalette(InputHandler input) {
         int dy = pad.navY(), dx = pad.navX();
@@ -539,13 +561,18 @@ public final class EditorHud {
     private void updateProperties(InputHandler input) {
         if (controller.selectedObjectSpawn() == null) { closeModal(); return; }
         var fields = controller.selectedObjectProperties().editableFields();
+        var gizmoFields = controller.selectedGizmoFields();
         int dy = pad.navY(), dx = pad.navX();
         if (MenuInput.up(input)) dy--;
         if (MenuInput.down(input)) dy++;
         if (MenuInput.left(input)) dx--;
         if (MenuInput.right(input)) dx++;
-        propertyIndex = Math.floorMod(propertyIndex + dy, fields.size());
-        if (dx != 0) { controller.stepSelectedObjectProperty(propertyIndex, Integer.signum(dx)); contentChanged = true; }
+        propertyIndex = Math.floorMod(propertyIndex + dy, gizmoFields.isEmpty() ? fields.size() : gizmoFields.size());
+        try {
+            if (!gizmoFields.isEmpty() && (dx != 0 || pad.pressed(SOUTH) || MenuInput.accept(input))) {
+                controller.stepSelectedGizmoProperty(propertyIndex, dx == 0 ? 1 : Integer.signum(dx)); contentChanged = true;
+            } else if (dx != 0) { controller.stepSelectedObjectProperty(propertyIndex, Integer.signum(dx)); contentChanged = true; }
+        } catch (RuntimeException failure) { controller.setStatus(failure.getMessage()); }
         if (pad.pressed(EAST) || MenuInput.back(input) || input.isKeyPressed(GLFW_KEY_F2)) closeModal();
     }
 
@@ -556,6 +583,7 @@ public final class EditorHud {
         items.add(new MenuItem("Editor", "", null));
         items.add(new MenuItem("Resume", "", () -> { }));
         items.add(new MenuItem("Object properties", "F2", this::openProperties));
+        items.add(new MenuItem("Level settings", "F3", this::openSettings));
         items.add(new MenuItem("Level palette (Genesis colors)", "", this::openPalette));
         items.add(new MenuItem("Region: set corner / finish", "F6", controller::toggleRegionCorner));
         items.add(new MenuItem("Copy region", "Ctrl+C", () -> act(Action.COPY_REGION)));
@@ -813,7 +841,7 @@ public final class EditorHud {
                 prompts.add(new Prompt(Glyph.DPAD, "Left/Right", "Value"));
                 prompts.add(new Prompt(Glyph.EAST, "Esc", "Close"));
             }
-            case PROPERTIES -> {
+            case PROPERTIES, SETTINGS -> {
                 prompts.add(new Prompt(Glyph.DPAD, "Up/Down", "Field"));
                 prompts.add(new Prompt(Glyph.DPAD, "Left/Right", "Value"));
                 prompts.add(new Prompt(Glyph.EAST, "Esc", "Close"));

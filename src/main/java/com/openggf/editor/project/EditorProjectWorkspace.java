@@ -46,6 +46,9 @@ public final class EditorProjectWorkspace {
         void execute(EditorCommand command);
         void status(String message);
         default void metadataChanged(EditorProjectDocument document) { }
+        default boolean isPaletteCellEditable(int line, int color) { return false; }
+        default void refreshPalette(int line) { }
+        default void artImported(EditorProjectDocument document, List<Integer> patternIndices) { }
     }
 
     private final Host host;
@@ -56,6 +59,105 @@ public final class EditorProjectWorkspace {
     public EditorProjectWorkspace(Host host) { this.host = Objects.requireNonNull(host); }
     public EditorProjectDocument document() { return document; }
     public EditorProjectMenu menu() { return menu; }
+
+    public List<com.openggf.game.modzone.ModLevelSettingsProvider.StockScrollOption> backgroundOptions() {
+        return host.currentModule().getModLevelSettingsProvider().stockScrollSources();
+    }
+    public boolean supportsWater() { return host.currentModule().getModLevelSettingsProvider().supportsWater(); }
+    public List<EditorLevelTeams.Choice> teamChoices() {
+        boolean sidekicks = host.currentModule().supportsSidekick();
+        return EditorLevelTeams.choices().stream().filter(choice -> sidekicks
+                || choice.team() == null || choice.team().sidekicks().isEmpty()).toList();
+    }
+
+    /** One settings edit is one ordinary undo command; a queued edit cannot cross documents. */
+    public void applySettings(EditorProjectDocument expected, com.openggf.game.modzone.ModLevelSettings settings) {
+        var current = requireDocument();
+        if (current != expected) throw new IllegalStateException("The edited project changed before applying settings");
+        com.openggf.game.modzone.ModLevelSettingsValidation.validate(host.currentModule(), settings);
+        var previous = current.metadata();
+        var replacement = previous.withSettings(settings);
+        if (previous.equals(replacement)) return;
+        host.finishPendingEdits();
+        host.execute(new EditorCommand() {
+            @Override public void apply() { changeMetadata(current, replacement); }
+            @Override public void undo() { changeMetadata(current, previous); }
+        });
+        host.status("Level settings updated. Playtest to preview the runtime environment.");
+    }
+
+    public record SettingRow(String label, String value) { }
+    public List<SettingRow> settingsRows() {
+        var settings = requireDocument().metadata().settings();
+        String background = settings.background() == null ? "Flat" : backgroundOptions().stream()
+                .filter(option -> option.source().equals(settings.background())).map(option -> option.label())
+                .findFirst().orElse("Unavailable source");
+        return List.of(new SettingRow("Background", background),
+                new SettingRow("Liquid", settings.waterHeight() == null ? "Off" : "Water"),
+                new SettingRow("Water height", settings.waterHeight() == null ? "Disabled" : settings.waterHeight().toString()),
+                new SettingRow("Allowed team", EditorLevelTeams.label(settings.team())));
+    }
+
+    public void stepSetting(int row, int direction) {
+        var current = requireDocument();
+        var value = current.metadata().settings();
+        switch (row) {
+            case 0 -> {
+                var choices = backgroundOptions();
+                int index = -1;
+                for (int i = 0; i < choices.size(); i++) if (choices.get(i).source().equals(value.background())) index = i;
+                index = Math.floorMod(index + 1 + Integer.signum(direction), choices.size() + 1) - 1;
+                value = value.withBackground(index < 0 ? null : choices.get(index).source());
+            }
+            case 1 -> value = value.withWaterHeight(value.waterHeight() == null
+                    ? Math.clamp(current.metadata().startY() + 128, (int) Short.MIN_VALUE, (int) Short.MAX_VALUE) : null);
+            case 2 -> value = value.withWaterHeight(Math.clamp((value.waterHeight() == null
+                    ? current.metadata().startY() : value.waterHeight()) + direction * 16,
+                    (int) Short.MIN_VALUE, (int) Short.MAX_VALUE));
+            case 3 -> {
+                var choices = teamChoices();
+                int index = 0;
+                for (int i = 0; i < choices.size(); i++) if (Objects.equals(choices.get(i).team(), value.team())) index = i;
+                value = value.withTeam(choices.get(Math.floorMod(index + Integer.signum(direction), choices.size())).team());
+            }
+            default -> throw new IllegalArgumentException("Unknown level setting");
+        }
+        applySettings(current, value);
+    }
+
+    /** Import sources are bounded to the selected folder and never become runtime dependencies. */
+    public void importArt(EditorProjectDocument expected, Path folder, Path png, Path sheet,
+            boolean importPalette) throws IOException {
+        var current = requireDocument();
+        if (current != expected) throw new IllegalStateException("The edited project changed before importing art");
+        host.finishPendingEdits();
+        var prepared = current.prepareArtImport(folder, png, sheet, importPalette,
+                host::isPaletteCellEditable, host::refreshPalette, indices -> host.artImported(current, indices));
+        host.execute(new EditorCommand() {
+            private void requireCurrent() {
+                if (document != current) throw new IllegalStateException("The imported project is no longer active");
+            }
+            @Override public void apply() { requireCurrent(); prepared.command().apply(); }
+            @Override public void undo() { requireCurrent(); prepared.command().undo(); }
+        });
+        host.status("Imported " + prepared.patternIndices().size() + " tiles from " + prepared.frameCount()
+                + " frames. First tile: " + prepared.patternIndices().getFirst());
+    }
+
+    public void importArtForm() {
+        var current = requireDocument();
+        String folder = current.path() == null ? "projects/" : current.path().getParent().toString();
+        menu.showForm("Import art", List.of(path("folder", "Art folder", folder),
+                path("png", "PNG within folder", "art.png"), path("sheet", "Sheet YAML within folder", "sheet.yaml"),
+                integer("palette", "Import palette (0/1)", 0)), "Import tiles", values -> io(() -> {
+                    int palette = number(values, "palette");
+                    if (palette != 0 && palette != 1) throw new IllegalArgumentException("Import palette must be 0 or 1");
+                    importArt(current, Path.of(values.get("folder")), Path.of(values.get("png")),
+                            Path.of(values.get("sheet")), palette == 1);
+                    menu.close();
+                }));
+        menu.setSubtitle("PNG and sheet YAML must both be inside the chosen folder. Imported tiles are saved in the project.");
+    }
 
     /** A shared import can stage another host before validation; cancellation restores this document's view. */
     public void restoreView() { if (!menu.isOpen()) host.menuClosed(document); }
@@ -72,6 +174,9 @@ public final class EditorProjectWorkspace {
                 new EditorCommandPalette.HostCommand("Save project as", this::saveAs),
                 new EditorCommandPalette.HostCommand("Level properties", this::properties),
                 new EditorCommandPalette.HostCommand("Resize level", this::resize),
+                new EditorCommandPalette.HostCommand("Campaign levels", this::campaign),
+                new EditorCommandPalette.HostCommand("Export playable campaign", this::exportCampaign),
+                new EditorCommandPalette.HostCommand("Import art", this::importArtForm),
                 new EditorCommandPalette.HostCommand("Playtest from level start", () -> playtest(false)),
                 new EditorCommandPalette.HostCommand("Playtest from cursor", () -> playtest(true)),
                 new EditorCommandPalette.HostCommand("Close project", this::requestClose));
@@ -90,7 +195,10 @@ public final class EditorProjectWorkspace {
             actions.add(action("Level properties", this::properties));
             actions.add(action("Resize level", this::resize));
             actions.add(action("Export level", this::export));
+            actions.add(action("Campaign levels", this::campaign));
+            actions.add(action("Export playable campaign", this::exportCampaign));
             actions.add(action("Close project", this::requestClose));
+            actions.add(action("Import art", this::importArtForm));
         }
         menu.showActions("Editor projects", actions);
         if (document != null) menu.setSubtitle(document.metadata().name()
@@ -165,8 +273,8 @@ public final class EditorProjectWorkspace {
     private void cloneCurrent() {
         var source = requireDocument();
         menu.showForm("Clone layout", List.of(text("name", "Name", source.metadata().name() + " Copy")),
-                "Create copy", values -> io(() -> replaceDocument(EditorProjectDocument.create(
-                        source.metadata().withName(values.get("name")), source.snapshot()))));
+                "Create copy", values -> io(() -> replaceDocument(source.duplicate(
+                        source.metadata().withName(values.get("name"))))));
     }
 
     private void openProjectForm() {
@@ -208,7 +316,7 @@ public final class EditorProjectWorkspace {
         var metadata = new EditorProjectMetadata(game, parsed.zoneName(), 0, 0, host.sourceFingerprint(),
                 parsed.start().x(), parsed.start().y(), parsed.bounds().minX(), parsed.bounds().maxX(),
                 parsed.bounds().minY(), parsed.bounds().maxY(), music,
-                parsed.hostMetadata().map(m -> m.objectZoneSet()).orElse(null));
+                parsed.hostMetadata().map(m -> m.objectZoneSet()).orElse(null), parsed.settings());
         replaceDocument(EditorProjectDocument.cloneLevel(metadata, level));
         host.status("Imported " + parsed.zoneName() + ". Save it as a new editor project.");
     }
@@ -277,7 +385,7 @@ public final class EditorProjectWorkspace {
             var replacement = new EditorProjectMetadata(m.gameId(), values.get("name"), m.sourceZone(), m.sourceAct(), m.sourceFingerprint(),
                     number(values, "x"), number(values, "y"), number(values, "minX"), number(values, "maxX"),
                     number(values, "minY"), number(values, "maxY"), parseMusic(values.get("music")),
-                    m.gameId() == GameId.S3K ? ModObjectZoneSet.valueOf(values.get("family").strip().toUpperCase(java.util.Locale.ROOT)) : null);
+                    m.gameId() == GameId.S3K ? ModObjectZoneSet.valueOf(values.get("family").strip().toUpperCase(java.util.Locale.ROOT)) : null, m.settings(), m.campaign());
             boolean newBounds = replacement.minX() != m.minX() || replacement.maxX() != m.maxX()
                     || replacement.minY() != m.minY() || replacement.maxY() != m.maxY();
             if (newBounds) {
@@ -325,6 +433,72 @@ public final class EditorProjectWorkspace {
                     Path.of(values.get("path")), m.startX(), m.startY()));
             host.status("Exported " + result.directory());
         }));
+    }
+
+    public void applyCampaign(EditorProjectDocument expected, EditorCampaign value) {
+        var current = requireDocument();
+        if (current != expected) throw new IllegalStateException("The edited project changed");
+        var before = current.metadata(); var after = before.withCampaign(value);
+        if (before.equals(after)) return;
+        host.finishPendingEdits();
+        host.execute(new EditorCommand() {
+            @Override public void apply() { changeMetadata(current, after); }
+            @Override public void undo() { changeMetadata(current, before); }
+        });
+    }
+
+    public void campaign() {
+        var current = requireDocument();
+        var actions = new ArrayList<EditorProjectMenu.Action>();
+        var paths = current.metadata().campaign().projectPaths();
+        actions.add(action("Add level to sequence", () -> menu.showForm("Add campaign level", List.of(
+                path("level", "Relative project path", current.path() == null ? "level.ogfproject" : current.path().getFileName().toString())),
+                "Append level", values -> {
+                    var list = new ArrayList<>(paths); list.add(values.get("level"));
+                    applyCampaign(current, new EditorCampaign(list)); campaign();
+                })));
+        for (int i = 0; i < paths.size(); i++) { int index = i;
+            actions.add(action((i + 1) + ". " + paths.get(i), () -> campaignLevel(current, index)));
+        }
+        actions.add(action("Export playable campaign", this::exportCampaign));
+        menu.showActions("Campaign levels", actions);
+        menu.setSubtitle("Ordered relative .ogfproject files. Empty uses this level. Last level ends the campaign.");
+    }
+    private void campaignLevel(EditorProjectDocument current, int index) {
+        var paths = current.metadata().campaign().projectPaths();
+        var actions = new ArrayList<EditorProjectMenu.Action>();
+        if (index > 0) actions.add(action("Move earlier", () -> {
+            var list = new ArrayList<>(paths); java.util.Collections.swap(list, index, index - 1);
+            applyCampaign(current, new EditorCampaign(list)); campaign();
+        }));
+        if (index + 1 < paths.size()) actions.add(action("Move later", () -> {
+            var list = new ArrayList<>(paths); java.util.Collections.swap(list, index, index + 1);
+            applyCampaign(current, new EditorCampaign(list)); campaign();
+        }));
+        actions.add(action("Remove level", () -> {
+            var list = new ArrayList<>(paths); list.remove(index);
+            applyCampaign(current, new EditorCampaign(list)); campaign();
+        }));
+        menu.showActions(paths.get(index), actions);
+    }
+    public void exportCampaign() {
+        host.finishPendingEdits();
+        var current = requireDocument();
+        if (current.path() == null) { saveAsThen(this::exportCampaign); return; }
+        menu.showForm("Export playable campaign", List.of(
+                path("path", "New mod JAR", "exports/" + slug(current.metadata().name()) + ".jar"),
+                text("id", "Mod ID", "editor-" + slug(current.metadata().name())),
+                text("name", "Campaign title", current.metadata().name()),
+                text("version", "Content version", "1.0.0"), text("author", "Author", "Level author")),
+                "Save and export campaign", values -> io(() -> {
+                    if (document != current) throw new IllegalStateException("The edited project changed");
+                    store.save(current.path(), current);
+                    var request = new EditorCampaignExportService.Request(Path.of(values.get("path")), values.get("id"),
+                            values.get("name"), values.get("version"), values.get("author"), "campaign");
+                    var result = new EditorCampaignExportService().export(current.metadata().campaign().resolve(current.path()), request, host.currentModule());
+                    host.status("Exported " + result.levels() + " campaign levels to " + result.outputJar());
+                }));
+        menu.setSubtitle("Other projects use their saved state. Every level must use the same game and required team.");
     }
 
     public void requestClose() { beforeReplace(() -> { host.closeDocument(); document = null; }); }

@@ -909,6 +909,7 @@ playtest. Editor key/mouse shortcuts are hardcoded and are not configurable in
 | `[` / `]` | Decrease / increase the selected chunk's collision-profile index |
 | Left drag in World | Paint terrain as one undoable stroke |
 | `F2` with an object selected | Named property list in HUD; desktop uses its inspector |
+| `F3` | Authored level settings: background scroll source, water height and allowed team |
 | `Shift` + left drag / `F6` at two corners | Rectangular world-cell selection |
 | `Ctrl+C` / `Ctrl+X` / `Ctrl+V` | Copy / cut / preview paste of region |
 | `Enter` / `Escape` with paste preview | Commit / cancel paste |
@@ -951,7 +952,7 @@ wheel and `1`–`0` choose a hotbar slot; the other keys above are unchanged.
 #### Projects, playtests, and export
 
 **Save project as** creates a complete `.ogfproject`; `Ctrl+S` saves to that path.
-Projects retain art, palettes, collision profiles, both layouts, placements and ring
+Projects retain environment/team settings, campaign order, imported-art reservations, art, palettes, collision profiles, both layouts, typed gizmo placements and ring
 groups, game/source identity, and launch properties. They are independent of
 stock gameplay saves and legacy sidecars. Failed saves preserve the preceding
 project. Missing object keys remain in the document and block playtest until

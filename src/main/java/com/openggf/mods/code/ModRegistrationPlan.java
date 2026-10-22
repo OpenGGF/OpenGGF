@@ -119,6 +119,7 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                         || !declared.localKey().equals(prepared.localKey())
                         || !Objects.equals(declared.insertAfter(), prepared.insertAfter())
                         || (declared.gameStart() && act == 0) != prepared.gameStart()
+                        || declared.terminalCampaign() != prepared.terminalCampaign()
                         || prepared.actIndex() != act
                         || declared.runtimeFactory() != prepared.runtimeFactory()) {
                     throw new IllegalArgumentException("Prepared acts must exactly match declarations");

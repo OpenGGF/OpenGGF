@@ -46,7 +46,7 @@ public final class EditorSpawnFactory {
         // (e.g. S2 Y-word bit 12) without assuming another game's flag layout.
         int raw = spawn.rawYWord() ^ nativeBefore.rawYWord() ^ changed.rawYWord();
         return new ObjectSpawn(changed.x(), changed.y(), changed.objectId(), changed.subtype(), changed.renderFlags(),
-                changed.respawnTracked(), raw, changed.layoutIndex(), changed.ownerModId(), changed.objectKey());
+                changed.respawnTracked(), raw, changed.layoutIndex(), changed.ownerModId(), changed.objectKey(), spawn.authoredProperties());
     }
 
     public RingSpawn createRingSpawn(int x, int y) {

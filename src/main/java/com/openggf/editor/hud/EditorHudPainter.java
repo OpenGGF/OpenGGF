@@ -64,6 +64,7 @@ final class EditorHudPainter implements AutoCloseable {
             case MENU -> menu(c, layout, hud);
             case PROPERTIES -> properties(c, layout, hud);
             case PALETTE -> palette(c, layout, hud);
+            case SETTINGS -> settings(c, layout, hud);
             case NONE -> { }
         }
         hud.hits = List.copyOf(hits);
@@ -813,22 +814,48 @@ final class EditorHudPainter implements AutoCloseable {
         c.text("Bumpers: color   Up/down: channel   Left/right: value", x + 12, y + 204, Size.SMALL, TEXT_DIM, 1);
     }
 
+    private void settings(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
+        var workspace = hud.controller().projects();
+        if (workspace == null || workspace.document() == null) return;
+        dim(c, layout, .6f);
+        var rows = workspace.settingsRows();
+        float w = Math.min(500, layout.width() - 24), h = 76 + rows.size() * 26;
+        float x = (layout.width() - w) / 2, y = (layout.height() - h) / 2;
+        c.panel(x, y, w, h, PANEL, .99f);
+        c.text("Level settings", x + 12, y + 10, Size.BODY, TEXT, 1);
+        for (int i = 0; i < rows.size(); i++) {
+            float rowY = y + 34 + i * 26;
+            if (i == hud.settingsIndex) c.rect(x + 6, rowY - 3, w - 12, 24, ACCENT_DARK, 1);
+            c.text(rows.get(i).label(), x + 12, rowY, Size.BODY, TEXT, 1);
+            c.text(EditorHudCanvas.fit("< " + rows.get(i).value() + " >", w * .60f - 16, Size.BODY),
+                    x + w * .40f, rowY, Size.BODY, ACCENT, 1);
+        }
+        c.text("Up/down: field   Left/right: change   Esc: close", x + 12, y + h - 32, Size.SMALL, TEXT_DIM, 1);
+        c.text("Each change is undoable. Playtest applies the environment.", x + 12, y + h - 18, Size.SMALL, TEXT_DIM, 1);
+    }
+
     private void properties(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
         var spawn = hud.controller().selectedObjectSpawn();
         if (spawn == null) return;
         var fields = hud.controller().selectedObjectProperties().editableFields();
-        float w = Math.min(500, layout.width() - 24), h = 64 + fields.size() * 24;
+        var gizmos = hud.controller().selectedGizmoFields();
+        int count = gizmos.isEmpty() ? fields.size() : gizmos.size();
+        int visible = Math.min(count, Math.max(3, (layout.height() - 100) / 24));
+        int first = Math.clamp(hud.propertyIndex - visible / 2, 0, Math.max(0, count - visible));
+        float w = Math.min(500, layout.width() - 24), h = 64 + visible * 24;
         float x = (layout.width() - w) / 2, y = (layout.height() - h) / 2;
         c.panel(x, y, w, h, PANEL, .99f);
         c.text("Object properties", x + 12, y + 10, Size.BODY, TEXT, 1);
-        for (int i = 0; i < fields.size(); i++) {
-            var field = fields.get(i);
-            float rowY = y + 34 + i * 24;
+        for (int i = first; i < first + visible; i++) {
+            String label = gizmos.isEmpty() ? fields.get(i).label() : gizmos.get(i).label();
+            String value = gizmos.isEmpty() ? fields.get(i).display(spawn.subtype())
+                    : gizmos.get(i).value(spawn.authoredProperties()).toString();
+            float rowY = y + 34 + (i - first) * 24;
             if (i == hud.propertyIndex) c.rect(x + 6, rowY - 3, w - 12, 22, ACCENT_DARK, 1);
-            c.text(field.label(), x + 12, rowY, Size.BODY, TEXT, 1);
-            c.text("< " + field.display(spawn.subtype()) + " >", x + w * .46f, rowY, Size.BODY, ACCENT, 1);
+            c.text(EditorHudCanvas.fit(label, w * .46f - 18, Size.BODY), x + 12, rowY, Size.BODY, TEXT, 1);
+            c.text(EditorHudCanvas.fit("< " + value + " >", w * .54f - 12, Size.BODY), x + w * .46f, rowY, Size.BODY, ACCENT, 1);
         }
-        c.text("Up/down: field     Left/right: value     Esc: close", x + 12, y + h - 20, Size.SMALL, TEXT_DIM, 1);
+        c.text("Up/down: field   Left/right: value   A/Enter: edit text", x + 12, y + h - 20, Size.SMALL, TEXT_DIM, 1);
     }
 
     private void menu(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {

@@ -463,7 +463,20 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			public void execute(com.openggf.editor.EditorCommand command) { levelEditorController.executeCommand(command); }
 			public void status(String message) { levelEditorController.setStatus(message); }
 			public void metadataChanged(EditorProjectDocument document) { configureEditorProjectSpawnEditing(document); }
+            public boolean isPaletteCellEditable(int line, int color) { return levelEditorController.isPaletteCellEditable(line, color); }
+            public void refreshPalette(int line) {
+                var level = levelEditorController.currentLevel();
+                if (level != null) graphicsManager.cachePaletteTexture(level.getPalette(line), line);
+            }
+            public void artImported(EditorProjectDocument document, java.util.List<Integer> patterns) {
+                if (document != editorProjects.document()) throw new IllegalStateException("The imported project changed");
+                graphicsManager.beginPatternAtlasBatch();
+                try { for (int index : patterns) graphicsManager.cachePatternTexture(document.level().getPattern(index), index); }
+                finally { graphicsManager.endPatternAtlasBatch(); }
+                if (!patterns.isEmpty()) levelEditorController.selectPattern(patterns.getFirst());
+            }
 		});
+		levelEditorController.setProjects(editorProjects);
 		levelEditorController.setModifiedStateSupplier(() -> editorProjects.document() != null
 				? editorProjects.document().isModified()
 				: levelEditorController.currentLevel() != null && levelEditorController.currentLevel().isModifiedSinceLastSave());
@@ -2074,7 +2087,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				: new EditorCursorState(document.metadata().startX(), document.metadata().startY());
 		var module = EditorProjectRuntimeModule.prepare(editorProjectBaseModule, document, cursor.x(), cursor.y());
 		try {
-		var gameplay = SessionManager.openGameplaySession(editorProjectRootModule, module, editorProjectDataSource, null);
+		var gameplay = SessionManager.openGameplaySession(editorProjectRootModule, module, editorProjectDataSource, module.launchContext());
 		initializeGameplayRuntime(gameplay, false);
 		levelManager.setEditorSaveManager(null);
 		var policy = new com.openggf.game.session.GameplayRunPolicy(false, false,

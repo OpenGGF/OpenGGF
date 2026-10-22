@@ -109,14 +109,14 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                                 Predicate<S3kObjectCreationContext> compatibility) {}
 
     @Override public boolean hasObjectKey(String key) { return hasHostObjectKey(key); }
-    @Override public boolean hasHostObjectKey(String key) { return S3kAuthoredGoalInstance.OBJECT_KEY.equals(key); }
+    @Override public boolean hasHostObjectKey(String key) { return S3kAuthoredGoalInstance.OBJECT_KEY.equals(key) || super.hasHostObjectKey(key); }
     @Override public boolean ownsHostObject(ObjectSpawn spawn,ObjectInstance instance) {
-        return spawn!=null && hasHostObjectKey(spawn.objectKey())
+        return super.ownsHostObject(spawn, instance) || spawn!=null && hasHostObjectKey(spawn.objectKey())
                 && instance instanceof S3kAuthoredGoalInstance
                 && instance.getClass().getClassLoader()==Sonic3kObjectRegistry.class.getClassLoader()
                 && spawn.equals(instance.getSpawn());
     }
-    @Override public List<String> browsableObjectKeys() { return List.of(S3kAuthoredGoalInstance.OBJECT_KEY); }
+    @Override public List<String> browsableObjectKeys() { return java.util.stream.Stream.concat(super.browsableObjectKeys().stream(), java.util.stream.Stream.of(S3kAuthoredGoalInstance.OBJECT_KEY)).toList(); }
     @Override public java.util.Optional<String> editorPreviewArtKey(String key) {
         return hasHostObjectKey(key)?java.util.Optional.of(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.END_SIGN):java.util.Optional.empty();
     }
@@ -1815,7 +1815,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
     public ObjectInstance create(ObjectSpawn spawn) {
         if(spawn.objectKey()!=null) {
             if(!hasHostObjectKey(spawn.objectKey())) throw new IllegalArgumentException("No host factory registered for "+spawn.objectKey());
-            return new S3kAuthoredGoalInstance(spawn);
+            return com.openggf.level.objects.authored.AuthoredGizmos.handlesKey(spawn.objectKey())
+                    ? com.openggf.level.objects.authored.AuthoredGizmos.create(spawn) : new S3kAuthoredGoalInstance(spawn);
         }
         ensureLoaded();
         S3kObjectCreationContext context = currentCreationContext();

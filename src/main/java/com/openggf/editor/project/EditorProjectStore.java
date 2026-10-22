@@ -51,7 +51,7 @@ public final class EditorProjectStore {
         Objects.requireNonNull(document, "document");
         EditorProjectMetadata metadata = document.metadata();
         EditorProjectLevel level = document.snapshot();
-        Payload payload = new Payload(MetadataState.capture(metadata), EditorProjectState.capture(level));
+        Payload payload = new Payload(MetadataState.capture(metadata), EditorProjectState.capture(level), document.assets());
         byte[] payloadBytes = mapper.writeValueAsBytes(payload);
         byte[] bytes = mapper.writeValueAsBytes(new Envelope(FORMAT, VERSION, payload, checksum(payloadBytes)));
         if (bytes.length > MAX_BYTES) throw new IOException("Project exceeds the 64 MiB storage limit");
@@ -97,6 +97,7 @@ public final class EditorProjectStore {
                     || !checksum(mapper.writeValueAsBytes(rawPayload)).equals(node.path("checksum").textValue())) {
                 throw new IOException("Project checksum does not match its complete payload");
             }
+            EditorProjectAssets.validateJson(rawPayload.get("assets"));
             Payload payload = mapper.treeToValue(rawPayload, Payload.class);
             payload.level().validate();
             EditorProjectMetadata metadata = payload.metadata().metadata();
@@ -105,7 +106,9 @@ public final class EditorProjectStore {
                     || metadata.minY() != level.getMinY() || metadata.maxY() != level.getMaxY()) {
                 throw new IOException("Project metadata and level bounds disagree");
             }
-            return EditorProjectDocument.create(metadata, level);
+            var document = EditorProjectDocument.create(metadata, level);
+            document.restoreAssets(payload.assets());
+            return document;
         } catch (IllegalArgumentException | NullPointerException error) {
             throw new IOException("Invalid project data: " + error.getMessage(), error);
         }
@@ -134,17 +137,19 @@ public final class EditorProjectStore {
     }
 
     record Envelope(String format, int version, Payload payload, String checksum) {}
-    record Payload(MetadataState metadata, EditorProjectState level) {}
+    record Payload(MetadataState metadata, EditorProjectState level, EditorProjectAssets assets) {}
     record MetadataState(String gameCode, String name, int sourceZone, int sourceAct, String sourceFingerprint,
-            int startX, int startY, int minX, int maxX, int minY, int maxY, MusicState music, String objectZoneSet) {
+            int startX, int startY, int minX, int maxX, int minY, int maxY, MusicState music, String objectZoneSet, JsonNode settings, java.util.List<String> campaign) {
         static MetadataState capture(EditorProjectMetadata value) {
             return new MetadataState(value.gameId().code(), value.name(), value.sourceZone(), value.sourceAct(), value.sourceFingerprint(),
                     value.startX(), value.startY(), value.minX(), value.maxX(), value.minY(), value.maxY(), MusicState.capture(value.music()),
-                    value.objectZoneSet() == null ? null : value.objectZoneSet().name());
+                    value.objectZoneSet() == null ? null : value.objectZoneSet().name(),
+                    com.openggf.game.modzone.ModLevelSettingsJson.toJson(value.settings()), value.campaign().projectPaths());
         }
-        EditorProjectMetadata metadata() {
+        EditorProjectMetadata metadata() throws IOException {
             return new EditorProjectMetadata(GameId.fromCode(gameCode), name, sourceZone, sourceAct, sourceFingerprint,
-                    startX, startY, minX, maxX, minY, maxY, music.music(), objectZoneSet == null ? null : ModObjectZoneSet.valueOf(objectZoneSet));
+                    startX, startY, minX, maxX, minY, maxY, music.music(), objectZoneSet == null ? null : ModObjectZoneSet.valueOf(objectZoneSet),
+                    com.openggf.game.modzone.ModLevelSettingsJson.parse(settings), new EditorCampaign(campaign));
         }
     }
     record MusicState(Integer stockId, String owner, String localName) {

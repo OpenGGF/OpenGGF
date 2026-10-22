@@ -13,7 +13,7 @@ import java.util.Optional;
 @ModApi
 public record ModZoneContribution(String localKey, BakedLevelRef level,
         String insertAfter, ZoneEventFactory eventFactory, boolean gameStart,
-        List<BakedLevelRef> additionalActs, ModZoneRuntimeFactory runtimeFactory) {
+        List<BakedLevelRef> additionalActs, ModZoneRuntimeFactory runtimeFactory, boolean terminalCampaign) {
     public ModZoneContribution {
         localKey = ModKeySyntax.requireLocalName(localKey);
         Objects.requireNonNull(level, "level");
@@ -21,6 +21,13 @@ public record ModZoneContribution(String localKey, BakedLevelRef level,
         additionalActs = List.copyOf(additionalActs);
         if (additionalActs.size() >= com.openggf.io.ModInputLimits.DEFAULT_MAX_COLLECTION_ENTRIES)
             throw new IllegalArgumentException("Too many authored acts");
+        if (terminalCampaign && insertAfter != null)
+            throw new IllegalArgumentException("A terminal campaign cannot be inserted into stock progression");
+    }
+    public ModZoneContribution(String localKey, BakedLevelRef level, String insertAfter,
+            ZoneEventFactory events, boolean gameStart, List<BakedLevelRef> additionalActs,
+            ModZoneRuntimeFactory runtimeFactory) {
+        this(localKey, level, insertAfter, events, gameStart, additionalActs, runtimeFactory, false);
     }
     /** A single authored act; use {@link #multiAct} for an ordered campaign. */
     public static ModZoneContribution singleAct(String localKey, BakedLevelRef level,
@@ -43,13 +50,18 @@ public record ModZoneContribution(String localKey, BakedLevelRef level,
     }
     public ModZoneContribution withRuntime(ModZoneRuntimeFactory factory) {
         return new ModZoneContribution(localKey, level, insertAfter, eventFactory,
-                gameStart, additionalActs, Objects.requireNonNull(factory, "factory"));
+                gameStart, additionalActs, Objects.requireNonNull(factory, "factory"), terminalCampaign);
+    }
+    /** Ends after its final authored act and does not inherit a stock insertion anchor. */
+    public ModZoneContribution asTerminalCampaign() {
+        return new ModZoneContribution(localKey, level, null, eventFactory, gameStart,
+                additionalActs, runtimeFactory, true);
     }
     public Optional<ZoneEventFactory> optionalEventFactory() { return Optional.ofNullable(eventFactory); }
     ModZoneContribution withDefaultAnchor(String fallback) {
         return insertAfter == null ? new ModZoneContribution(localKey, level,
                 Objects.requireNonNull(fallback, "default insertAfter"), eventFactory,
-                gameStart, additionalActs, runtimeFactory) : this;
+                gameStart, additionalActs, runtimeFactory, terminalCampaign) : this;
     }
     private static String requireAnchor(String value) {
         if (!value.matches("[a-z0-9][a-z0-9-]{0,63}"))

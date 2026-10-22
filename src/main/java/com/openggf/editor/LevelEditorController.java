@@ -60,6 +60,9 @@ public final class LevelEditorController {
     private EditorSpawnFactory spawnFactory;
     private EditorPlacementIdAllocator placementIds;
     private ObjectSpawn selectedObjectSpawn;
+    private com.openggf.editor.project.EditorProjectWorkspace projects;
+    public void setProjects(com.openggf.editor.project.EditorProjectWorkspace value) { projects = value; }
+    public com.openggf.editor.project.EditorProjectWorkspace projects() { return projects; }
     private com.openggf.level.metadata.ObjectPropertyProvider propertyProvider;
     private java.util.function.BiPredicate<Integer, Integer> paletteEditable = (line, color) -> false;
     private java.util.function.IntConsumer paletteRefresh = line -> { };
@@ -237,6 +240,9 @@ public final class LevelEditorController {
                         objectPalette().selectedObjectKey(), objectPalette().selectedSubtype(), objectPalette().renderFlags(), objectPalette().respawnTracked())
                 : requireSpawnFactory().createObjectSpawn(worldCursor.x(), worldCursor.y(),
                         objectPalette().selectedObjectId(), objectPalette().selectedSubtype(), objectPalette().renderFlags(), objectPalette().respawnTracked());
+        if (com.openggf.level.objects.authored.AuthoredGizmos.handlesKey(spawn.objectKey()))
+            spawn = com.openggf.editor.properties.EditorGizmoPlacements.initialize(
+                    requireSpawnFactory().withProperties(spawn, spawn.subtype(), spawn.renderFlags(), true), requireLevel());
         history.execute(new PlaceObjectSpawnCommand(requireLevel(), spawn));
         selectedObjectSpawn = spawn;
     }
@@ -344,6 +350,56 @@ public final class LevelEditorController {
         var fields = selectedObjectProperties().editableFields();
         var field = fields.get(Math.floorMod(fieldIndex, fields.size()));
         setSelectedObjectProperty(field.id(), field.decode(field.step(selectedObjectSpawn.subtype(), delta)));
+    }
+    public java.util.List<com.openggf.editor.properties.AuthoredGizmoPropertyFields.Field> selectedGizmoFields() {
+        return selectedObjectSpawn == null || selectedObjectSpawn.authoredProperties() == null ? java.util.List.of()
+                : com.openggf.editor.properties.AuthoredGizmoPropertyFields.fields(selectedObjectSpawn.authoredProperties());
+    }
+    public void setSelectedGizmoProperty(String key, Object value) {
+        if (selectedObjectSpawn == null || selectedObjectSpawn.authoredProperties() == null) return;
+        var previous = selectedObjectSpawn;
+        var properties = com.openggf.editor.properties.AuthoredGizmoPropertyFields.withValue(previous.authoredProperties(), key, value);
+        if (properties.equals(previous.authoredProperties())) return;
+        if (properties instanceof com.openggf.level.objects.authored.AuthoredObjectProperties.StageplayTrigger trigger && !trigger.blocking())
+            throw new IllegalArgumentException("The public Stageplay player currently requires blocking playback");
+        var replacement = com.openggf.editor.properties.EditorGizmoPlacements.withProperties(previous, properties);
+        var commands = new java.util.ArrayList<EditorCommand>();
+        commands.add(new MoveObjectSpawnCommand(requireLevel(), previous, replacement));
+        if (key.equals("twoWay") && properties instanceof com.openggf.level.objects.authored.AuthoredObjectProperties.Warp warp) {
+            for (var other : requireLevel().getObjects()) if (other.layoutIndex() != previous.layoutIndex()
+                    && other.authoredProperties() instanceof com.openggf.level.objects.authored.AuthoredObjectProperties.Warp endpoint
+                    && endpoint.link().equals(warp.link()))
+                commands.add(new MoveObjectSpawnCommand(requireLevel(), other,
+                        com.openggf.editor.properties.EditorGizmoPlacements.withProperties(other,
+                                new com.openggf.level.objects.authored.AuthoredObjectProperties.Warp(endpoint.width(), endpoint.height(), endpoint.link(), warp.twoWay()))));
+        }
+        executeCommand(new EditorCommand() {
+            @Override public void apply() { commands.forEach(EditorCommand::apply); }
+            @Override public void undo() { commands.reversed().forEach(EditorCommand::undo); }
+        });
+        selectedObjectSpawn = replacement;
+    }
+    public void stepSelectedGizmoProperty(int index, int delta) {
+        var fields = selectedGizmoFields();
+        if (fields.isEmpty()) return;
+        var field = fields.get(Math.floorMod(index, fields.size()));
+        Object current = field.value(selectedObjectSpawn.authoredProperties());
+        switch (field.kind()) {
+            case BOOL -> setSelectedGizmoProperty(field.key(), !(Boolean) current);
+            case INT -> setSelectedGizmoProperty(field.key(), Math.clamp((long)(Integer)current + delta, field.min(), field.max()));
+            case ENUM -> setSelectedGizmoProperty(field.key(), field.choices().get(Math.floorMod(field.choices().indexOf(current) + delta, field.choices().size())));
+            case TEXT -> openGizmoTextField(field);
+        }
+    }
+    public void openGizmoTextField(com.openggf.editor.properties.AuthoredGizmoPropertyFields.Field field) {
+        if (projects == null) { setStatus("Open an authored project to edit text properties"); return; }
+        var expected = selectedObjectSpawn;
+        projects.menu().showForm(field.label(), java.util.List.of(new com.openggf.editor.project.EditorProjectMenu.Field(
+                "value", field.label(), (String)field.value(expected.authoredProperties()), com.openggf.game.MenuTextEditor.Mode.TEXT, field.max())),
+                "Apply property", values -> {
+                    if (selectedObjectSpawn != expected) throw new IllegalStateException("Selected object changed");
+                    setSelectedGizmoProperty(field.key(), values.get("value"));
+                });
     }
     public RingSpawn selectedRingSpawn() {return selectedRingSpawn;}
     public void editSelectedSpawnProperties(int subtype,int flags,boolean respawn) {

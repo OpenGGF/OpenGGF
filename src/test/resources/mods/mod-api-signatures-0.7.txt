@@ -328,6 +328,10 @@ CF-ANNOTATION TYPE com.openggf.game.mode.CourseControl$DirectedPlayerState visib
 CF-ANNOTATION TYPE com.openggf.game.mode.CourseControl$PlayerState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.mode.GameplayFrameController visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.mode.GameplayFrameDisposition visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.modzone.ModLevelSettings visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.modzone.ModLevelSettings$StockScrollSource visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.modzone.ModLevelSettingsProvider visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.modzone.ModLevelSettingsProvider$StockScrollOption visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.modzone.ModObjectZoneSet visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.modzone.ModPaletteClaim visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.modzone.ModZoneAdapter visible @com.openggf.game.ModApi
@@ -745,6 +749,15 @@ CF-ANNOTATION TYPE com.openggf.level.objects.TouchResponseTable visible @com.ope
 CF-ANNOTATION TYPE com.openggf.level.objects.TouchShieldDeflectCapability visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.art.ObjectArtBundle visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.art.ObjectArtBundle$Builder visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.authored.AuthoredObjectProperties visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.authored.AuthoredObjectProperties$MusicZone visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.authored.AuthoredObjectProperties$ReleaseCondition visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.authored.AuthoredObjectProperties$StageplayTrigger visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.authored.AuthoredObjectProperties$Trigger visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.authored.AuthoredObjectProperties$Warp visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.authored.AuthoredStageplayService visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.authored.AuthoredStageplayService visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.level.objects.boss.BossChildComponent visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.render.BackgroundRenderer visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.render.PatternSpriteRenderer visible @com.openggf.game.ModApi
@@ -1399,9 +1412,13 @@ CONSTRUCTOR com.openggf.game.dataselect.DataSelectSessionController public  <ini
 CONSTRUCTOR com.openggf.game.dataselect.HostSlotPreview public  <init>(com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType,java.lang.String)
 CONSTRUCTOR com.openggf.game.dataselect.HostSlotPreview public  <init>(com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType,java.lang.String,java.lang.Integer)
 CONSTRUCTOR com.openggf.game.mode.CourseControl$PlayerState public  <init>(java.lang.String,int,int,int,int,int,int,boolean,boolean,boolean,boolean,boolean,int,int,int,int,int)
+CONSTRUCTOR com.openggf.game.modzone.ModLevelSettings public  <init>(com.openggf.game.modzone.ModLevelSettings$StockScrollSource,java.lang.Integer,com.openggf.game.GameplayLaunchTeam)
+CONSTRUCTOR com.openggf.game.modzone.ModLevelSettings$StockScrollSource public  <init>(int,int)
+CONSTRUCTOR com.openggf.game.modzone.ModLevelSettingsProvider$StockScrollOption public  <init>(com.openggf.game.modzone.ModLevelSettings$StockScrollSource,java.lang.String)
 CONSTRUCTOR com.openggf.game.modzone.ModPaletteClaim public  <init>(int,int,int)
 CONSTRUCTOR com.openggf.game.modzone.ModZoneHostMetadata public  <init>(com.openggf.game.modzone.ModObjectZoneSet)
 CONSTRUCTOR com.openggf.game.modzone.ModZoneLevelData public  <init>(int,int,int,int,int,int,int,int,int,byte[],byte[],byte[],byte[],byte[],byte[],byte[],byte[],int[],int[],byte[][],java.util.Optional<com.openggf.game.modzone.ModZoneHostMetadata>,java.util.List<com.openggf.game.modzone.ModPaletteClaim>,java.util.List<com.openggf.level.objects.ObjectSpawn>,java.util.List<com.openggf.level.rings.RingSpawn>,int,int,int)
+CONSTRUCTOR com.openggf.game.modzone.ModZoneLevelData public  <init>(int,int,int,int,int,int,int,int,int,byte[],byte[],byte[],byte[],byte[],byte[],byte[],byte[],int[],int[],byte[][],java.util.Optional<com.openggf.game.modzone.ModZoneHostMetadata>,java.util.List<com.openggf.game.modzone.ModPaletteClaim>,java.util.List<com.openggf.level.objects.ObjectSpawn>,java.util.List<com.openggf.level.rings.RingSpawn>,int,int,int,com.openggf.game.modzone.ModLevelSettings)
 CONSTRUCTOR com.openggf.game.modzone.ModZoneRuntimeContext public  <init>(com.openggf.game.ZoneKey$Mod,java.lang.String,int,int,com.openggf.level.Level)
 CONSTRUCTOR com.openggf.game.modzone.ModZoneRuntimeContribution public  <init>(java.lang.String,java.lang.String,com.openggf.game.modzone.ModZoneLevelData,com.openggf.game.modzone.ModZoneRuntimeProfile)
 CONSTRUCTOR com.openggf.game.modzone.ModZoneRuntimeContribution public  <init>(java.lang.String,java.lang.String,com.openggf.game.modzone.ModZoneLevelData,com.openggf.game.modzone.ModZoneRuntimeProfile,com.openggf.game.modzone.ModZoneRuntimeFactory)
@@ -1650,6 +1667,7 @@ CONSTRUCTOR com.openggf.level.objects.ObjectSlotLayout public  <init>(int,int,in
 CONSTRUCTOR com.openggf.level.objects.ObjectSpawn public  <init>(int,int,int,int,int,boolean,int)
 CONSTRUCTOR com.openggf.level.objects.ObjectSpawn public  <init>(int,int,int,int,int,boolean,int,int)
 CONSTRUCTOR com.openggf.level.objects.ObjectSpawn public  <init>(int,int,int,int,int,boolean,int,int,java.lang.String,java.lang.String)
+CONSTRUCTOR com.openggf.level.objects.ObjectSpawn public  <init>(int,int,int,int,int,boolean,int,int,java.lang.String,java.lang.String,com.openggf.level.objects.authored.AuthoredObjectProperties)
 CONSTRUCTOR com.openggf.level.objects.ObjectSpriteSheet public  <init>(com.openggf.level.Pattern[],java.util.List<com.openggf.level.render.SpriteMappingFrame>,int,int)
 CONSTRUCTOR com.openggf.level.objects.PatrolMovementHelper$PatrolResult public  <init>(int,int,int,boolean)
 CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot public  <init>(boolean,boolean,boolean,int,int,int,int,boolean,int,boolean,boolean,int,int,com.openggf.level.objects.PerObjectRewindSnapshot$BadnikRewindExtra,com.openggf.level.objects.PerObjectRewindSnapshot$BadnikSubclassRewindExtra,com.openggf.level.objects.PerObjectRewindSnapshot$ObjectSubclassRewindExtra,com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra,com.openggf.game.rewind.snapshot.GenericObjectSnapshot)
@@ -1701,6 +1719,10 @@ CONSTRUCTOR com.openggf.level.objects.TouchResponseResult public  <init>(int,int
 CONSTRUCTOR com.openggf.level.objects.TouchResponseTable public  <init>(com.openggf.data.RomByteReader,int,int)
 CONSTRUCTOR com.openggf.level.objects.art.ObjectArtBundle public  <init>(java.util.Map<java.lang.String,com.openggf.level.objects.ObjectSpriteSheet>,java.util.Map<java.lang.String,com.openggf.sprites.animation.SpriteAnimationSet>,java.util.Map<java.lang.String,java.lang.Integer>,com.openggf.level.Pattern[],com.openggf.level.Pattern[],com.openggf.level.Pattern[],com.openggf.level.Pattern[],com.openggf.level.Pattern[])
 CONSTRUCTOR com.openggf.level.objects.art.ObjectArtBundle$Builder public  <init>()
+CONSTRUCTOR com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone public  <init>(int,int,int,int,int,int,com.openggf.level.objects.authored.AuthoredObjectProperties$ReleaseCondition,int)
+CONSTRUCTOR com.openggf.level.objects.authored.AuthoredObjectProperties$MusicZone public  <init>(int,int,com.openggf.game.MusicReference,boolean)
+CONSTRUCTOR com.openggf.level.objects.authored.AuthoredObjectProperties$StageplayTrigger public  <init>(int,int,java.lang.String,com.openggf.level.objects.authored.AuthoredObjectProperties$Trigger,boolean,boolean,boolean)
+CONSTRUCTOR com.openggf.level.objects.authored.AuthoredObjectProperties$Warp public  <init>(int,int,java.lang.String,boolean)
 CONSTRUCTOR com.openggf.level.render.BackgroundRenderer public  <init>()
 CONSTRUCTOR com.openggf.level.render.BackgroundRenderer public  <init>(com.openggf.graphics.GraphicsManager)
 CONSTRUCTOR com.openggf.level.render.PatternSpriteRenderer public  <init>(com.openggf.level.render.SpriteSheet<? extends com.openggf.level.render.SpriteFrame<? extends com.openggf.level.render.SpriteFramePiece>>)
@@ -1741,12 +1763,14 @@ CONSTRUCTOR com.openggf.mods.code.ModInputFilterContribution public  <init>(com.
 CONSTRUCTOR com.openggf.mods.code.ModLaunchTeamContribution public  <init>(com.openggf.game.ZoneKey,com.openggf.game.CharacterKey,java.util.List<com.openggf.game.CharacterKey>)
 CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$Bounds public  <init>(int,int,int,int)
 CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn public  <init>(int,int,int,java.lang.String,int,int,boolean,int)
+CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn public  <init>(int,int,int,java.lang.String,int,int,boolean,int,com.openggf.level.objects.authored.AuthoredObjectProperties)
 CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$RingEntry public  <init>(int,int,int)
 CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$Start public  <init>(int,int)
 CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$StockMusic public  <init>(int)
 CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn public  <init>(int,int,int,int,int,int,boolean,int)
 CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$TrackMusic public  <init>(com.openggf.mods.TrackKey)
 CONSTRUCTOR com.openggf.mods.code.ModZoneContribution public  <init>(java.lang.String,com.openggf.mods.code.BakedLevelRef,java.lang.String,com.openggf.mods.code.ZoneEventFactory,boolean,java.util.List<com.openggf.mods.code.BakedLevelRef>,com.openggf.game.modzone.ModZoneRuntimeFactory)
+CONSTRUCTOR com.openggf.mods.code.ModZoneContribution public  <init>(java.lang.String,com.openggf.mods.code.BakedLevelRef,java.lang.String,com.openggf.mods.code.ZoneEventFactory,boolean,java.util.List<com.openggf.mods.code.BakedLevelRef>,com.openggf.game.modzone.ModZoneRuntimeFactory,boolean)
 CONSTRUCTOR com.openggf.mods.code.RomArtRequest public  <init>(int,com.openggf.mods.code.RomArtCompression,int,int,int,int,int)
 CONSTRUCTOR com.openggf.mods.code.RomArtRequest public  <init>(int,com.openggf.mods.code.RomArtCompression,int,int,int,int,int,com.openggf.game.patch.LogicalRom)
 CONSTRUCTOR com.openggf.mods.mutators.AudioEffectPolicy public  <init>(com.openggf.mods.mutators.AudioEffectPolicy$Mode,int,int)
@@ -2724,6 +2748,8 @@ FIELD com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType public,sta
 FIELD com.openggf.game.mode.GameplayFrameDisposition public,static,final com.openggf.game.mode.GameplayFrameDisposition ADVANCE_CONTROLLED
 FIELD com.openggf.game.mode.GameplayFrameDisposition public,static,final com.openggf.game.mode.GameplayFrameDisposition ADVANCE_NATIVE_INPUT
 FIELD com.openggf.game.mode.GameplayFrameDisposition public,static,final com.openggf.game.mode.GameplayFrameDisposition HOLD
+FIELD com.openggf.game.modzone.ModLevelSettings public,static,final com.openggf.game.modzone.ModLevelSettings DEFAULT
+FIELD com.openggf.game.modzone.ModLevelSettingsProvider public,static,final com.openggf.game.modzone.ModLevelSettingsProvider UNSUPPORTED
 FIELD com.openggf.game.modzone.ModObjectZoneSet public,static,final com.openggf.game.modzone.ModObjectZoneSet S3KL
 FIELD com.openggf.game.modzone.ModObjectZoneSet public,static,final com.openggf.game.modzone.ModObjectZoneSet SKL
 FIELD com.openggf.game.modzone.ModZoneRuntimeProfile$ScrollPolicy public,static,final com.openggf.game.modzone.ModZoneRuntimeProfile$ScrollPolicy FLAT
@@ -3144,6 +3170,11 @@ FIELD com.openggf.level.objects.TouchOverlapStopPolicy public,static,final com.o
 FIELD com.openggf.level.objects.TouchOverlapStopPolicy public,static,final com.openggf.level.objects.TouchOverlapStopPolicy STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY
 FIELD com.openggf.level.objects.TouchShieldDeflectCapability public,static,final com.openggf.level.objects.TouchShieldDeflectCapability NONE
 FIELD com.openggf.level.objects.TouchShieldDeflectCapability public,static,final com.openggf.level.objects.TouchShieldDeflectCapability SHIELD_DEFLECT
+FIELD com.openggf.level.objects.authored.AuthoredObjectProperties$ReleaseCondition public,static,final com.openggf.level.objects.authored.AuthoredObjectProperties$ReleaseCondition CROSS_X
+FIELD com.openggf.level.objects.authored.AuthoredObjectProperties$ReleaseCondition public,static,final com.openggf.level.objects.authored.AuthoredObjectProperties$ReleaseCondition CROSS_Y
+FIELD com.openggf.level.objects.authored.AuthoredObjectProperties$ReleaseCondition public,static,final com.openggf.level.objects.authored.AuthoredObjectProperties$ReleaseCondition NONE
+FIELD com.openggf.level.objects.authored.AuthoredObjectProperties$Trigger public,static,final com.openggf.level.objects.authored.AuthoredObjectProperties$Trigger BUTTON
+FIELD com.openggf.level.objects.authored.AuthoredObjectProperties$Trigger public,static,final com.openggf.level.objects.authored.AuthoredObjectProperties$Trigger PROXIMITY
 FIELD com.openggf.level.render.BackgroundRenderer public,static,final int SCREEN_HEIGHT
 FIELD com.openggf.level.render.BackgroundRenderer public,static,final int SCREEN_WIDTH
 FIELD com.openggf.level.resources.CompressionType public,static,final com.openggf.level.resources.CompressionType KOSINSKI
@@ -3919,6 +3950,10 @@ INTERFACE com.openggf.level.objects.PerObjectRewindSnapshot$MonitorRewindExtra c
 INTERFACE com.openggf.level.objects.PlayerBoundShieldRewindRecreatable com.openggf.level.objects.RewindRecreatable
 INTERFACE com.openggf.level.objects.ShieldObjectInstance com.openggf.game.PowerUpObject
 INTERFACE com.openggf.level.objects.ShieldObjectInstance com.openggf.level.objects.PlayerBoundShieldRewindRecreatable
+INTERFACE com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone com.openggf.level.objects.authored.AuthoredObjectProperties
+INTERFACE com.openggf.level.objects.authored.AuthoredObjectProperties$MusicZone com.openggf.level.objects.authored.AuthoredObjectProperties
+INTERFACE com.openggf.level.objects.authored.AuthoredObjectProperties$StageplayTrigger com.openggf.level.objects.authored.AuthoredObjectProperties
+INTERFACE com.openggf.level.objects.authored.AuthoredObjectProperties$Warp com.openggf.level.objects.authored.AuthoredObjectProperties
 INTERFACE com.openggf.level.objects.boss.BossChildComponent com.openggf.level.objects.ObjectInstance
 INTERFACE com.openggf.level.render.SpriteMappingFrame com.openggf.level.render.SpriteFrame<com.openggf.level.render.SpriteMappingPiece>
 INTERFACE com.openggf.level.render.SpriteMappingPiece com.openggf.level.render.SpriteFramePiece
@@ -5751,6 +5786,7 @@ METHOD com.openggf.game.GameModule public  com.openggf.game.ZoneArtProvider getZ
 METHOD com.openggf.game.GameModule public  com.openggf.game.dataselect.DataSelectHostProfile getDataSelectHostProfile()
 METHOD com.openggf.game.GameModule public  com.openggf.game.dataselect.DataSelectPresentationProvider getDataSelectPresentationProvider()
 METHOD com.openggf.game.GameModule public  com.openggf.game.mode.GameplayFrameController gameplayFrameController()
+METHOD com.openggf.game.GameModule public  com.openggf.game.modzone.ModLevelSettingsProvider getModLevelSettingsProvider()
 METHOD com.openggf.game.GameModule public  com.openggf.game.modzone.ModZoneAdapter getModZoneAdapter()
 METHOD com.openggf.game.GameModule public  com.openggf.game.palette.CustomZonePaletteBridge createCustomZonePaletteBridge(com.openggf.game.modzone.ModZoneRuntimeContribution,com.openggf.level.Level,com.openggf.game.ObjectArtProvider)
 METHOD com.openggf.game.GameModule public  com.openggf.game.profiles.trace.TracePlaybackProfile getTracePlaybackProfile()
@@ -6922,6 +6958,29 @@ METHOD com.openggf.game.mode.GameplayFrameController public,abstract  boolean be
 METHOD com.openggf.game.mode.GameplayFrameController public,abstract  void afterTick(com.openggf.game.mode.CourseControl,boolean)
 METHOD com.openggf.game.mode.GameplayFrameDisposition public,static  com.openggf.game.mode.GameplayFrameDisposition valueOf(java.lang.String)
 METHOD com.openggf.game.mode.GameplayFrameDisposition public,static  com.openggf.game.mode.GameplayFrameDisposition[] values()
+METHOD com.openggf.game.modzone.ModLevelSettings public  com.openggf.game.GameplayLaunchTeam team()
+METHOD com.openggf.game.modzone.ModLevelSettings public  com.openggf.game.modzone.ModLevelSettings withBackground(com.openggf.game.modzone.ModLevelSettings$StockScrollSource)
+METHOD com.openggf.game.modzone.ModLevelSettings public  com.openggf.game.modzone.ModLevelSettings withTeam(com.openggf.game.GameplayLaunchTeam)
+METHOD com.openggf.game.modzone.ModLevelSettings public  com.openggf.game.modzone.ModLevelSettings withWaterHeight(java.lang.Integer)
+METHOD com.openggf.game.modzone.ModLevelSettings public  com.openggf.game.modzone.ModLevelSettings$StockScrollSource background()
+METHOD com.openggf.game.modzone.ModLevelSettings public  java.lang.Integer waterHeight()
+METHOD com.openggf.game.modzone.ModLevelSettings public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.modzone.ModLevelSettings public,final  int hashCode()
+METHOD com.openggf.game.modzone.ModLevelSettings public,final  java.lang.String toString()
+METHOD com.openggf.game.modzone.ModLevelSettings$StockScrollSource public  int act()
+METHOD com.openggf.game.modzone.ModLevelSettings$StockScrollSource public  int zone()
+METHOD com.openggf.game.modzone.ModLevelSettings$StockScrollSource public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.modzone.ModLevelSettings$StockScrollSource public,final  int hashCode()
+METHOD com.openggf.game.modzone.ModLevelSettings$StockScrollSource public,final  java.lang.String toString()
+METHOD com.openggf.game.modzone.ModLevelSettingsProvider public  boolean supportsWater()
+METHOD com.openggf.game.modzone.ModLevelSettingsProvider public  com.openggf.game.modzone.ModZoneRuntimeServices create(com.openggf.game.modzone.ModLevelSettings,com.openggf.data.Rom) THROWS java.io.IOException
+METHOD com.openggf.game.modzone.ModLevelSettingsProvider public  java.util.List<com.openggf.game.modzone.ModLevelSettingsProvider$StockScrollOption> stockScrollSources()
+METHOD com.openggf.game.modzone.ModLevelSettingsProvider public  void validate(com.openggf.game.modzone.ModLevelSettings)
+METHOD com.openggf.game.modzone.ModLevelSettingsProvider$StockScrollOption public  com.openggf.game.modzone.ModLevelSettings$StockScrollSource source()
+METHOD com.openggf.game.modzone.ModLevelSettingsProvider$StockScrollOption public  java.lang.String label()
+METHOD com.openggf.game.modzone.ModLevelSettingsProvider$StockScrollOption public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.modzone.ModLevelSettingsProvider$StockScrollOption public,final  int hashCode()
+METHOD com.openggf.game.modzone.ModLevelSettingsProvider$StockScrollOption public,final  java.lang.String toString()
 METHOD com.openggf.game.modzone.ModObjectZoneSet public,static  com.openggf.game.modzone.ModObjectZoneSet valueOf(java.lang.String)
 METHOD com.openggf.game.modzone.ModObjectZoneSet public,static  com.openggf.game.modzone.ModObjectZoneSet[] values()
 METHOD com.openggf.game.modzone.ModPaletteClaim public  int color()
@@ -6945,6 +7004,7 @@ METHOD com.openggf.game.modzone.ModZoneLevelData public  byte[] solidAngles()
 METHOD com.openggf.game.modzone.ModZoneLevelData public  byte[] solidHeights()
 METHOD com.openggf.game.modzone.ModZoneLevelData public  byte[] solidWidths()
 METHOD com.openggf.game.modzone.ModZoneLevelData public  byte[][] paletteLines()
+METHOD com.openggf.game.modzone.ModZoneLevelData public  com.openggf.game.modzone.ModLevelSettings settings()
 METHOD com.openggf.game.modzone.ModZoneLevelData public  int blockCount()
 METHOD com.openggf.game.modzone.ModZoneLevelData public  int blockGridSide()
 METHOD com.openggf.game.modzone.ModZoneLevelData public  int chunkCount()
@@ -7141,6 +7201,7 @@ METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.Zone
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.dataselect.DataSelectHostProfile getDataSelectHostProfile()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.dataselect.DataSelectPresentationProvider getDataSelectPresentationProvider()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.mode.GameplayFrameController gameplayFrameController()
+METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.modzone.ModLevelSettingsProvider getModLevelSettingsProvider()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.modzone.ModZoneAdapter getModZoneAdapter()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.palette.CustomZonePaletteBridge createCustomZonePaletteBridge(com.openggf.game.modzone.ModZoneRuntimeContribution,com.openggf.level.Level,com.openggf.game.ObjectArtProvider)
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.profiles.trace.TracePlaybackProfile getTracePlaybackProfile()
@@ -10600,6 +10661,7 @@ METHOD com.openggf.level.objects.ObjectSlotLayout public,final  int hashCode()
 METHOD com.openggf.level.objects.ObjectSlotLayout public,final  java.lang.String toString()
 METHOD com.openggf.level.objects.ObjectSpawn public  boolean respawnTracked()
 METHOD com.openggf.level.objects.ObjectSpawn public  com.openggf.level.objects.ObjectSpawn withPosition(int,int)
+METHOD com.openggf.level.objects.ObjectSpawn public  com.openggf.level.objects.authored.AuthoredObjectProperties authoredProperties()
 METHOD com.openggf.level.objects.ObjectSpawn public  int layoutIndex()
 METHOD com.openggf.level.objects.ObjectSpawn public  int objectId()
 METHOD com.openggf.level.objects.ObjectSpawn public  int rawFlags()
@@ -11412,6 +11474,49 @@ METHOD com.openggf.level.objects.art.ObjectArtBundle$Builder public  com.openggf
 METHOD com.openggf.level.objects.art.ObjectArtBundle$Builder public  com.openggf.level.objects.art.ObjectArtBundle$Builder hudTextPatterns(com.openggf.level.Pattern[])
 METHOD com.openggf.level.objects.art.ObjectArtBundle$Builder public  com.openggf.level.objects.art.ObjectArtBundle$Builder sheets(java.util.Map<java.lang.String,com.openggf.level.objects.ObjectSpriteSheet>)
 METHOD com.openggf.level.objects.art.ObjectArtBundle$Builder public  com.openggf.level.objects.art.ObjectArtBundle$Builder zoneData(java.lang.String,int)
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties public  java.lang.String objectKey()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties public,abstract  int height()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties public,abstract  int width()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone public  com.openggf.level.objects.authored.AuthoredObjectProperties$ReleaseCondition releaseCondition()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone public  int height()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone public  int maxX()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone public  int maxY()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone public  int minX()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone public  int minY()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone public  int releaseAt()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone public  int width()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone public,final  int hashCode()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone public,final  java.lang.String toString()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$MusicZone public  boolean once()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$MusicZone public  com.openggf.game.MusicReference music()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$MusicZone public  int height()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$MusicZone public  int width()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$MusicZone public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$MusicZone public,final  int hashCode()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$MusicZone public,final  java.lang.String toString()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$ReleaseCondition public,static  com.openggf.level.objects.authored.AuthoredObjectProperties$ReleaseCondition valueOf(java.lang.String)
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$ReleaseCondition public,static  com.openggf.level.objects.authored.AuthoredObjectProperties$ReleaseCondition[] values()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$StageplayTrigger public  boolean blocking()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$StageplayTrigger public  boolean consume()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$StageplayTrigger public  boolean once()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$StageplayTrigger public  com.openggf.level.objects.authored.AuthoredObjectProperties$Trigger trigger()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$StageplayTrigger public  int height()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$StageplayTrigger public  int width()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$StageplayTrigger public  java.lang.String resource()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$StageplayTrigger public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$StageplayTrigger public,final  int hashCode()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$StageplayTrigger public,final  java.lang.String toString()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$Trigger public,static  com.openggf.level.objects.authored.AuthoredObjectProperties$Trigger valueOf(java.lang.String)
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$Trigger public,static  com.openggf.level.objects.authored.AuthoredObjectProperties$Trigger[] values()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$Warp public  boolean twoWay()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$Warp public  int height()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$Warp public  int width()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$Warp public  java.lang.String link()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$Warp public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$Warp public,final  int hashCode()
+METHOD com.openggf.level.objects.authored.AuthoredObjectProperties$Warp public,final  java.lang.String toString()
+METHOD com.openggf.level.objects.authored.AuthoredStageplayService public,abstract  boolean play(java.lang.String,boolean)
 METHOD com.openggf.level.objects.boss.BossChildComponent public,abstract  boolean isDestroyed()
 METHOD com.openggf.level.objects.boss.BossChildComponent public,abstract  void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand>)
 METHOD com.openggf.level.objects.boss.BossChildComponent public,abstract  void setDestroyed(boolean)
@@ -11819,6 +11924,7 @@ METHOD com.openggf.mods.code.ModLevelDefinition public  byte[] solidAngles()
 METHOD com.openggf.mods.code.ModLevelDefinition public  byte[] solidHeights()
 METHOD com.openggf.mods.code.ModLevelDefinition public  byte[] solidWidths()
 METHOD com.openggf.mods.code.ModLevelDefinition public  byte[][] paletteLines()
+METHOD com.openggf.mods.code.ModLevelDefinition public  com.openggf.game.modzone.ModLevelSettings settings()
 METHOD com.openggf.mods.code.ModLevelDefinition public  com.openggf.mods.code.ModLevelDefinition$Bounds bounds()
 METHOD com.openggf.mods.code.ModLevelDefinition public  com.openggf.mods.code.ModLevelDefinition$Music music()
 METHOD com.openggf.mods.code.ModLevelDefinition public  com.openggf.mods.code.ModLevelDefinition$Start start()
@@ -11848,6 +11954,7 @@ METHOD com.openggf.mods.code.ModLevelDefinition$Bounds public,final  boolean equ
 METHOD com.openggf.mods.code.ModLevelDefinition$Bounds public,final  int hashCode()
 METHOD com.openggf.mods.code.ModLevelDefinition$Bounds public,final  java.lang.String toString()
 METHOD com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn public  boolean respawnTracked()
+METHOD com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn public  com.openggf.level.objects.authored.AuthoredObjectProperties authoredProperties()
 METHOD com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn public  int placementId()
 METHOD com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn public  int rawYWord()
 METHOD com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn public  int renderFlags()
@@ -11858,6 +11965,7 @@ METHOD com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn public  java.la
 METHOD com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn public,final  int hashCode()
 METHOD com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn public,final  java.lang.String toString()
+METHOD com.openggf.mods.code.ModLevelDefinition$ObjectEntry public  com.openggf.level.objects.authored.AuthoredObjectProperties authoredProperties()
 METHOD com.openggf.mods.code.ModLevelDefinition$ObjectEntry public,abstract  boolean respawnTracked()
 METHOD com.openggf.mods.code.ModLevelDefinition$ObjectEntry public,abstract  int placementId()
 METHOD com.openggf.mods.code.ModLevelDefinition$ObjectEntry public,abstract  int rawYWord()
@@ -11896,8 +12004,10 @@ METHOD com.openggf.mods.code.ModLevelDefinition$TrackMusic public,final  boolean
 METHOD com.openggf.mods.code.ModLevelDefinition$TrackMusic public,final  int hashCode()
 METHOD com.openggf.mods.code.ModLevelDefinition$TrackMusic public,final  java.lang.String toString()
 METHOD com.openggf.mods.code.ModZoneContribution public  boolean gameStart()
+METHOD com.openggf.mods.code.ModZoneContribution public  boolean terminalCampaign()
 METHOD com.openggf.mods.code.ModZoneContribution public  com.openggf.game.modzone.ModZoneRuntimeFactory runtimeFactory()
 METHOD com.openggf.mods.code.ModZoneContribution public  com.openggf.mods.code.BakedLevelRef level()
+METHOD com.openggf.mods.code.ModZoneContribution public  com.openggf.mods.code.ModZoneContribution asTerminalCampaign()
 METHOD com.openggf.mods.code.ModZoneContribution public  com.openggf.mods.code.ModZoneContribution withRuntime(com.openggf.game.modzone.ModZoneRuntimeFactory)
 METHOD com.openggf.mods.code.ModZoneContribution public  com.openggf.mods.code.ZoneEventFactory eventFactory()
 METHOD com.openggf.mods.code.ModZoneContribution public  java.lang.String insertAfter()
@@ -15856,6 +15966,8 @@ NESTED com.openggf.game.ZoneProgressionPlan com.openggf.game.ZoneProgressionPlan
 NESTED com.openggf.game.dataselect.HostSlotPreview com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType
 NESTED com.openggf.game.mode.CourseControl com.openggf.game.mode.CourseControl$DirectedPlayerState
 NESTED com.openggf.game.mode.CourseControl com.openggf.game.mode.CourseControl$PlayerState
+NESTED com.openggf.game.modzone.ModLevelSettings com.openggf.game.modzone.ModLevelSettings$StockScrollSource
+NESTED com.openggf.game.modzone.ModLevelSettingsProvider com.openggf.game.modzone.ModLevelSettingsProvider$StockScrollOption
 NESTED com.openggf.game.modzone.ModZoneRuntimeProfile com.openggf.game.modzone.ModZoneRuntimeProfile$ScrollPolicy
 NESTED com.openggf.game.modzone.ModZoneRuntimeServices com.openggf.game.modzone.ModZoneRuntimeServices$Builder
 NESTED com.openggf.game.mutators.NativeObjectFieldTarget com.openggf.game.mutators.NativeObjectFieldTarget$Kind
@@ -15954,6 +16066,12 @@ NESTED com.openggf.level.objects.TerrainSurface com.openggf.level.objects.Terrai
 NESTED com.openggf.level.objects.TerrainSurface com.openggf.level.objects.TerrainSurface$Path
 NESTED com.openggf.level.objects.TouchResponseProvider com.openggf.level.objects.TouchResponseProvider$TouchRegion
 NESTED com.openggf.level.objects.art.ObjectArtBundle com.openggf.level.objects.art.ObjectArtBundle$Builder
+NESTED com.openggf.level.objects.authored.AuthoredObjectProperties com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone
+NESTED com.openggf.level.objects.authored.AuthoredObjectProperties com.openggf.level.objects.authored.AuthoredObjectProperties$MusicZone
+NESTED com.openggf.level.objects.authored.AuthoredObjectProperties com.openggf.level.objects.authored.AuthoredObjectProperties$ReleaseCondition
+NESTED com.openggf.level.objects.authored.AuthoredObjectProperties com.openggf.level.objects.authored.AuthoredObjectProperties$StageplayTrigger
+NESTED com.openggf.level.objects.authored.AuthoredObjectProperties com.openggf.level.objects.authored.AuthoredObjectProperties$Trigger
+NESTED com.openggf.level.objects.authored.AuthoredObjectProperties com.openggf.level.objects.authored.AuthoredObjectProperties$Warp
 NESTED com.openggf.level.render.PatternSpriteRenderer com.openggf.level.render.PatternSpriteRenderer$FrameBounds
 NESTED com.openggf.level.resources.DeferredLevelResourceDescriptor com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind
 NESTED com.openggf.level.resources.KosinskiModuleQueue com.openggf.level.resources.KosinskiModuleQueue$ArchiveState
@@ -16259,6 +16377,10 @@ PERMITS com.openggf.io.ModAssetRoot com.openggf.io.AbstractModAssetRoot
 PERMITS com.openggf.io.ModAssetRoot com.openggf.io.PackedModAssetRoot
 PERMITS com.openggf.io.ModAssetRoot com.openggf.io.SnapshotModAssetRoot
 PERMITS com.openggf.io.PackedModAssetRoot com.openggf.io.JarModAssetRoot
+PERMITS com.openggf.level.objects.authored.AuthoredObjectProperties com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone
+PERMITS com.openggf.level.objects.authored.AuthoredObjectProperties com.openggf.level.objects.authored.AuthoredObjectProperties$MusicZone
+PERMITS com.openggf.level.objects.authored.AuthoredObjectProperties com.openggf.level.objects.authored.AuthoredObjectProperties$StageplayTrigger
+PERMITS com.openggf.level.objects.authored.AuthoredObjectProperties com.openggf.level.objects.authored.AuthoredObjectProperties$Warp
 PERMITS com.openggf.mods.code.ModLevelDefinition$Music com.openggf.mods.code.ModLevelDefinition$StockMusic
 PERMITS com.openggf.mods.code.ModLevelDefinition$Music com.openggf.mods.code.ModLevelDefinition$TrackMusic
 PERMITS com.openggf.mods.code.ModLevelDefinition$ObjectEntry com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn
@@ -16796,6 +16918,13 @@ RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState x int
 RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState xSpeed int
 RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState y int
 RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState ySpeed int
+RECORD-COMPONENT com.openggf.game.modzone.ModLevelSettings background com.openggf.game.modzone.ModLevelSettings$StockScrollSource
+RECORD-COMPONENT com.openggf.game.modzone.ModLevelSettings team com.openggf.game.GameplayLaunchTeam
+RECORD-COMPONENT com.openggf.game.modzone.ModLevelSettings waterHeight java.lang.Integer
+RECORD-COMPONENT com.openggf.game.modzone.ModLevelSettings$StockScrollSource act int
+RECORD-COMPONENT com.openggf.game.modzone.ModLevelSettings$StockScrollSource zone int
+RECORD-COMPONENT com.openggf.game.modzone.ModLevelSettingsProvider$StockScrollOption label java.lang.String
+RECORD-COMPONENT com.openggf.game.modzone.ModLevelSettingsProvider$StockScrollOption source com.openggf.game.modzone.ModLevelSettings$StockScrollSource
 RECORD-COMPONENT com.openggf.game.modzone.ModPaletteClaim color int
 RECORD-COMPONENT com.openggf.game.modzone.ModPaletteClaim line int
 RECORD-COMPONENT com.openggf.game.modzone.ModPaletteClaim segaColor int
@@ -17446,6 +17575,7 @@ RECORD-COMPONENT com.openggf.level.objects.ObjectSlotLayout lostRingRemainderAll
 RECORD-COMPONENT com.openggf.level.objects.ObjectSlotLayout preallocatesLostRingOwnerSlot boolean
 RECORD-COMPONENT com.openggf.level.objects.ObjectSlotLayout processSlotCount int
 RECORD-COMPONENT com.openggf.level.objects.ObjectSlotLayout twoAxisCursorPlacement boolean
+RECORD-COMPONENT com.openggf.level.objects.ObjectSpawn authoredProperties com.openggf.level.objects.authored.AuthoredObjectProperties
 RECORD-COMPONENT com.openggf.level.objects.ObjectSpawn layoutIndex int
 RECORD-COMPONENT com.openggf.level.objects.ObjectSpawn objectId int
 RECORD-COMPONENT com.openggf.level.objects.ObjectSpawn objectKey java.lang.String
@@ -17875,6 +18005,29 @@ RECORD-COMPONENT com.openggf.level.objects.art.ObjectArtBundle hudLivesPatterns 
 RECORD-COMPONENT com.openggf.level.objects.art.ObjectArtBundle hudTextPatterns com.openggf.level.Pattern[]
 RECORD-COMPONENT com.openggf.level.objects.art.ObjectArtBundle sheets java.util.Map<java.lang.String,com.openggf.level.objects.ObjectSpriteSheet>
 RECORD-COMPONENT com.openggf.level.objects.art.ObjectArtBundle zoneData java.util.Map<java.lang.String,java.lang.Integer>
+RECORD-COMPONENT com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone height int
+RECORD-COMPONENT com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone maxX int
+RECORD-COMPONENT com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone maxY int
+RECORD-COMPONENT com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone minX int
+RECORD-COMPONENT com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone minY int
+RECORD-COMPONENT com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone releaseAt int
+RECORD-COMPONENT com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone releaseCondition com.openggf.level.objects.authored.AuthoredObjectProperties$ReleaseCondition
+RECORD-COMPONENT com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone width int
+RECORD-COMPONENT com.openggf.level.objects.authored.AuthoredObjectProperties$MusicZone height int
+RECORD-COMPONENT com.openggf.level.objects.authored.AuthoredObjectProperties$MusicZone music com.openggf.game.MusicReference
+RECORD-COMPONENT com.openggf.level.objects.authored.AuthoredObjectProperties$MusicZone once boolean
+RECORD-COMPONENT com.openggf.level.objects.authored.AuthoredObjectProperties$MusicZone width int
+RECORD-COMPONENT com.openggf.level.objects.authored.AuthoredObjectProperties$StageplayTrigger blocking boolean
+RECORD-COMPONENT com.openggf.level.objects.authored.AuthoredObjectProperties$StageplayTrigger consume boolean
+RECORD-COMPONENT com.openggf.level.objects.authored.AuthoredObjectProperties$StageplayTrigger height int
+RECORD-COMPONENT com.openggf.level.objects.authored.AuthoredObjectProperties$StageplayTrigger once boolean
+RECORD-COMPONENT com.openggf.level.objects.authored.AuthoredObjectProperties$StageplayTrigger resource java.lang.String
+RECORD-COMPONENT com.openggf.level.objects.authored.AuthoredObjectProperties$StageplayTrigger trigger com.openggf.level.objects.authored.AuthoredObjectProperties$Trigger
+RECORD-COMPONENT com.openggf.level.objects.authored.AuthoredObjectProperties$StageplayTrigger width int
+RECORD-COMPONENT com.openggf.level.objects.authored.AuthoredObjectProperties$Warp height int
+RECORD-COMPONENT com.openggf.level.objects.authored.AuthoredObjectProperties$Warp link java.lang.String
+RECORD-COMPONENT com.openggf.level.objects.authored.AuthoredObjectProperties$Warp twoWay boolean
+RECORD-COMPONENT com.openggf.level.objects.authored.AuthoredObjectProperties$Warp width int
 RECORD-COMPONENT com.openggf.level.render.PatternSpriteRenderer$FrameBounds maxX int
 RECORD-COMPONENT com.openggf.level.render.PatternSpriteRenderer$FrameBounds maxY int
 RECORD-COMPONENT com.openggf.level.render.PatternSpriteRenderer$FrameBounds minX int
@@ -17964,6 +18117,7 @@ RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$Bounds maxX int
 RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$Bounds maxY int
 RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$Bounds minX int
 RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$Bounds minY int
+RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn authoredProperties com.openggf.level.objects.authored.AuthoredObjectProperties
 RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn objectKey java.lang.String
 RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn placementId int
 RECORD-COMPONENT com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn rawYWord int
@@ -17994,6 +18148,7 @@ RECORD-COMPONENT com.openggf.mods.code.ModZoneContribution insertAfter java.lang
 RECORD-COMPONENT com.openggf.mods.code.ModZoneContribution level com.openggf.mods.code.BakedLevelRef
 RECORD-COMPONENT com.openggf.mods.code.ModZoneContribution localKey java.lang.String
 RECORD-COMPONENT com.openggf.mods.code.ModZoneContribution runtimeFactory com.openggf.game.modzone.ModZoneRuntimeFactory
+RECORD-COMPONENT com.openggf.mods.code.ModZoneContribution terminalCampaign boolean
 RECORD-COMPONENT com.openggf.mods.code.RomArtRequest artAddress int
 RECORD-COMPONENT com.openggf.mods.code.RomArtRequest bankSize int
 RECORD-COMPONENT com.openggf.mods.code.RomArtRequest compression com.openggf.mods.code.RomArtCompression
@@ -19740,6 +19895,8 @@ TYPE enum public,static,final com.openggf.level.objects.ObjectPresentationMetada
 TYPE enum public,static,final com.openggf.level.objects.ObjectRenderManager$SpringVariant SUPER java.lang.Enum<com.openggf.level.objects.ObjectRenderManager$SpringVariant>
 TYPE enum public,static,final com.openggf.level.objects.TerrainSurface$Layer SUPER java.lang.Enum<com.openggf.level.objects.TerrainSurface$Layer>
 TYPE enum public,static,final com.openggf.level.objects.TerrainSurface$Path SUPER java.lang.Enum<com.openggf.level.objects.TerrainSurface$Path>
+TYPE enum public,static,final com.openggf.level.objects.authored.AuthoredObjectProperties$ReleaseCondition SUPER java.lang.Enum<com.openggf.level.objects.authored.AuthoredObjectProperties$ReleaseCondition>
+TYPE enum public,static,final com.openggf.level.objects.authored.AuthoredObjectProperties$Trigger SUPER java.lang.Enum<com.openggf.level.objects.authored.AuthoredObjectProperties$Trigger>
 TYPE enum public,static,final com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind SUPER java.lang.Enum<com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind>
 TYPE enum public,static,final com.openggf.level.resources.KosinskiModuleQueue$Phase SUPER java.lang.Enum<com.openggf.level.resources.KosinskiModuleQueue$Phase>
 TYPE enum public,static,final com.openggf.mods.mutators.AudioEffectPolicy$Mode SUPER java.lang.Enum<com.openggf.mods.mutators.AudioEffectPolicy$Mode>
@@ -19852,6 +20009,7 @@ TYPE interface public,abstract com.openggf.game.animation.PhaseSource SUPER <non
 TYPE interface public,abstract com.openggf.game.dataselect.DataSelectGameProfile SUPER <none>
 TYPE interface public,abstract com.openggf.game.dataselect.DataSelectHostProfile SUPER <none>
 TYPE interface public,abstract com.openggf.game.mode.GameplayFrameController SUPER <none>
+TYPE interface public,abstract com.openggf.game.modzone.ModLevelSettingsProvider SUPER <none>
 TYPE interface public,abstract com.openggf.game.modzone.ModZoneAdapter SUPER <none>
 TYPE interface public,abstract com.openggf.game.modzone.ModZoneRuntimeFactory SUPER <none>
 TYPE interface public,abstract com.openggf.game.mutation.LayoutMutationIntent SUPER <none>
@@ -19895,6 +20053,7 @@ TYPE interface public,abstract com.openggf.level.objects.RingObjectPlacementMapp
 TYPE interface public,abstract com.openggf.level.objects.SolidObjectProvider SUPER <none>
 TYPE interface public,abstract com.openggf.level.objects.TouchResponseAttackable SUPER <none>
 TYPE interface public,abstract com.openggf.level.objects.TouchResponseProvider SUPER <none>
+TYPE interface public,abstract com.openggf.level.objects.authored.AuthoredStageplayService SUPER <none>
 TYPE interface public,abstract com.openggf.level.objects.boss.BossChildComponent SUPER <none>
 TYPE interface public,abstract com.openggf.level.render.SpriteFrame<P extends com.openggf.level.render.SpriteFramePiece> SUPER <none>
 TYPE interface public,abstract com.openggf.level.render.SpriteFramePiece SUPER <none>
@@ -19955,6 +20114,7 @@ TYPE interface public,abstract,sealed com.openggf.game.patch.PatchOwner SUPER <n
 TYPE interface public,abstract,sealed com.openggf.game.patch.ResolutionResult SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.io.ModAssetRoot SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.io.PackedModAssetRoot SUPER <none>
+TYPE interface public,abstract,sealed com.openggf.level.objects.authored.AuthoredObjectProperties SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.mods.mutators.MutatorOption SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.mods.mutators.MutatorPolicy SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.net.protocol.ControlMessage SUPER <none>
@@ -20028,6 +20188,7 @@ TYPE record public,final com.openggf.game.dataselect.DataSelectAction SUPER java
 TYPE record public,final com.openggf.game.dataselect.DataSelectDestination SUPER java.lang.Record
 TYPE record public,final com.openggf.game.dataselect.DataSelectExitTransition SUPER java.lang.Record
 TYPE record public,final com.openggf.game.dataselect.HostSlotPreview SUPER java.lang.Record
+TYPE record public,final com.openggf.game.modzone.ModLevelSettings SUPER java.lang.Record
 TYPE record public,final com.openggf.game.modzone.ModPaletteClaim SUPER java.lang.Record
 TYPE record public,final com.openggf.game.modzone.ModZoneHostMetadata SUPER java.lang.Record
 TYPE record public,final com.openggf.game.modzone.ModZoneRuntimeContext SUPER java.lang.Record
@@ -20241,6 +20402,8 @@ TYPE record public,static,final com.openggf.game.ZoneKey$Stock SUPER java.lang.R
 TYPE record public,static,final com.openggf.game.ZoneProgressionPlan$Successor SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.ZoneProgressionPlan$ZoneMetadata SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.mode.CourseControl$PlayerState SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.modzone.ModLevelSettings$StockScrollSource SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.modzone.ModLevelSettingsProvider$StockScrollOption SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.patch.ModuleResolutionService$MainCharacterAvailability SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.patch.ModuleResolutionService$PatchPlan SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.patch.PatchOwner$BuiltIn SUPER java.lang.Record
@@ -20293,6 +20456,10 @@ TYPE record public,static,final com.openggf.level.objects.PlayableSheetReader$Me
 TYPE record public,static,final com.openggf.level.objects.PlayableSheetReader$PlayableSheet SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.objects.ShieldProjectileMotion$Velocity SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.objects.TouchResponseProvider$TouchRegion SUPER java.lang.Record
+TYPE record public,static,final com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone SUPER java.lang.Record
+TYPE record public,static,final com.openggf.level.objects.authored.AuthoredObjectProperties$MusicZone SUPER java.lang.Record
+TYPE record public,static,final com.openggf.level.objects.authored.AuthoredObjectProperties$StageplayTrigger SUPER java.lang.Record
+TYPE record public,static,final com.openggf.level.objects.authored.AuthoredObjectProperties$Warp SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.render.PatternSpriteRenderer$FrameBounds SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.render.SpritePieceRenderer$FrameBounds SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.render.SpritePieceRenderer$PreparedPiece SUPER java.lang.Record
@@ -20811,6 +20978,10 @@ TYPE-ANNOTATION com.openggf.game.mode.CourseControl$DirectedPlayerState @com.ope
 TYPE-ANNOTATION com.openggf.game.mode.CourseControl$PlayerState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.mode.GameplayFrameController @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.mode.GameplayFrameDisposition @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.modzone.ModLevelSettings @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.modzone.ModLevelSettings$StockScrollSource @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.modzone.ModLevelSettingsProvider @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.modzone.ModLevelSettingsProvider$StockScrollOption @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.modzone.ModObjectZoneSet @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.modzone.ModPaletteClaim @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.modzone.ModZoneAdapter @com.openggf.game.ModApi
@@ -21228,6 +21399,15 @@ TYPE-ANNOTATION com.openggf.level.objects.TouchResponseTable @com.openggf.game.M
 TYPE-ANNOTATION com.openggf.level.objects.TouchShieldDeflectCapability @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.art.ObjectArtBundle @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.art.ObjectArtBundle$Builder @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.authored.AuthoredObjectProperties @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.authored.AuthoredObjectProperties$CameraZone @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.authored.AuthoredObjectProperties$MusicZone @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.authored.AuthoredObjectProperties$ReleaseCondition @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.authored.AuthoredObjectProperties$StageplayTrigger @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.authored.AuthoredObjectProperties$Trigger @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.authored.AuthoredObjectProperties$Warp @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.authored.AuthoredStageplayService @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.authored.AuthoredStageplayService @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.level.objects.boss.BossChildComponent @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.render.BackgroundRenderer @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.render.PatternSpriteRenderer @com.openggf.game.ModApi

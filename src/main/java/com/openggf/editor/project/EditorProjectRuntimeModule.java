@@ -28,6 +28,7 @@ public final class EditorProjectRuntimeModule extends DelegatingGameModule {
     public static final int DATA_ZONE_INDEX = 0x40;
     private final ModZoneLevelData data;
     private final ZoneRegistry zones;
+    private final com.openggf.mods.code.AuthoredStageplayServices.Prepared scenes;
 
     public static EditorProjectRuntimeModule prepare(GameModule base, EditorProjectDocument document,
                                                      int spawnX, int spawnY) throws IOException {
@@ -36,7 +37,10 @@ public final class EditorProjectRuntimeModule extends DelegatingGameModule {
         if (base.getGameId() != metadata.gameId())
             throw new IOException("Project game does not match the active host");
         metadata.validateAgainst(document.level());
+        com.openggf.game.modzone.ModLevelSettingsValidation.validate(base, metadata.settings());
         for (var object : document.level().getObjects()) {
+            if (object.authoredProperties() instanceof com.openggf.level.objects.authored.AuthoredObjectProperties.StageplayTrigger trigger && !trigger.blocking())
+                throw new IOException("The public Stageplay player currently requires blocking playback");
             if (object.objectKey() != null && !base.createObjectRegistry().hasObjectKey(object.objectKey()))
                 throw new IOException("Project requires unavailable object " + object.objectKey()
                         + ". Enable its dependency before playtesting; the saved object is retained.");
@@ -46,20 +50,28 @@ public final class EditorProjectRuntimeModule extends DelegatingGameModule {
         var exporter = new FullLevelExporter(new ModLevelExportStagingValidator(base));
         ModZoneLevelData data = exporter.prepareHostData(MutableLevel.snapshot(document.snapshot()), request);
         base.getModZoneAdapter().validate(OWNER, data);
-        return new EditorProjectRuntimeModule(base, metadata, data, spawnX, spawnY);
+        var resources = document.level().getObjects().stream().map(com.openggf.level.objects.ObjectSpawn::authoredProperties)
+                .filter(properties -> properties instanceof com.openggf.level.objects.authored.AuthoredObjectProperties.StageplayTrigger)
+                .map(properties -> ((com.openggf.level.objects.authored.AuthoredObjectProperties.StageplayTrigger)properties).resource()).distinct().toList();
+        if (!resources.isEmpty() && document.path() == null) throw new IOException("Save the project to resolve Stageplay resources");
+        var scenes = resources.isEmpty() ? null : com.openggf.mods.code.AuthoredStageplayServices.prepareForEditor(
+                document.path().getParent(), metadata.gameId().code(), resources);
+        return new EditorProjectRuntimeModule(base, metadata, data, spawnX, spawnY, scenes);
     }
 
     public static FullLevelExporter.ExportRequest request(EditorProjectDocument document, Path output,
                                                            int startX, int startY) {
         var m = document.metadata();
         return new FullLevelExporter.ExportRequest(output, m.name(), DATA_ZONE_INDEX, LEVEL_INDEX,
-                startX, startY, m.music(), m.gameId(), m.objectZoneSet());
+                startX, startY, m.music(), m.gameId(), m.objectZoneSet(), m.settings());
     }
 
     private EditorProjectRuntimeModule(GameModule base, EditorProjectMetadata metadata,
-                                       ModZoneLevelData data, int startX, int startY) {
+                                       ModZoneLevelData data, int startX, int startY,
+                                       com.openggf.mods.code.AuthoredStageplayServices.Prepared scenes) {
         super(base, "editor-project");
         this.data = data;
+        this.scenes = scenes;
         var descriptor = new ProjectAct(LEVEL_INDEX, startX, startY);
         var contribution = new ModZoneRuntimeContribution(OWNER, "project", data,
                 base.getModZoneAdapter().runtimeProfile(OWNER, data));
@@ -95,7 +107,42 @@ public final class EditorProjectRuntimeModule extends DelegatingGameModule {
         };
     }
 
+    /** Session-local required team; no configuration or durable save is rewritten. */
+    public com.openggf.game.save.SaveSessionContext launchContext() {
+        var team = data.settings().team();
+        return team == null ? null : com.openggf.game.save.SaveSessionContext.noSave(getGameId().code(),
+                new com.openggf.game.save.SelectedTeam(team.main().persisted(),
+                        team.sidekicks().stream().map(com.openggf.game.CharacterKey::persisted).toList()), 0, 0);
+    }
+
+    @Override public <T> T getGameService(Class<T> type) {
+        return scenes != null && type == com.openggf.level.objects.authored.AuthoredStageplayService.class
+                ? type.cast(scenes.service()) : super.getGameService(type);
+    }
+    @Override public com.openggf.game.mode.GameplayFrameController gameplayFrameController() {
+        return scenes == null ? super.gameplayFrameController() : scenes.controller();
+    }
+    @Override public java.util.List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
+        if (scenes == null) return super.rewindAdapters();
+        return java.util.stream.Stream.concat(super.rewindAdapters().stream(), scenes.adapters().stream()).toList();
+    }
+
     @Override public ZoneRegistry getZoneRegistry() { return zones; }
+    @Override public com.openggf.game.GameplayPolicyProvider getGameplayPolicyProvider() {
+        var inherited = super.getGameplayPolicyProvider();
+        return new com.openggf.game.GameplayPolicyProvider() {
+            @Override public java.util.Optional<com.openggf.game.GameplayLaunchTeam> launchTeam(ZoneKey destination) {
+                return KEY.equals(destination) && data.settings().team() != null
+                        ? java.util.Optional.of(data.settings().team()) : inherited.launchTeam(destination);
+            }
+            @Override public java.util.Optional<com.openggf.game.GameplayInputFilter> inputFilter(ZoneKey destination) {
+                return inherited.inputFilter(destination);
+            }
+            @Override public java.util.Optional<com.openggf.level.objects.HudProfile> hudProfile(ZoneKey destination) {
+                return inherited.hudProfile(destination);
+            }
+        };
+    }
     // This act owns a flat authored layout. Its logical zone zero is not the
     // base game's campaign zone zero and must not initialize stock cutscenes.
     @Override public com.openggf.game.LevelEventProvider getLevelEventProvider() { return null; }

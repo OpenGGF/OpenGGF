@@ -43,6 +43,7 @@ import java.util.logging.Logger;
  * </ol>
  */
 public class SignpostObjectInstance extends BoxObjectInstance implements PostPlayerUpdateHook, RewindRecreatable {
+    public static final String AUTHORED_GOAL_KEY = "openggf:authored-goal";
     private static final Logger LOGGER = Logger.getLogger(SignpostObjectInstance.class.getName());
 
     // Routine states (matching ROM)
@@ -104,7 +105,7 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
         }
         initialized = true;
 
-        // ROM: Obj0D_Init (s2.asm:34412-34418)
+        // ROM: loc_19208 (s2.asm:34650-34656)
         // Signpost is disabled in Act 2+ except for MTZ Act 2
         // ROM sets x_pos to 0, causing MarkObjGone to delete it and clear respawn bit
         int currentAct = services().currentAct();
@@ -112,7 +113,9 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
 
         // ROM check: if (Current_Act != 0 && Current_ZoneAndAct != metropolis_zone_act_2)
         // metropolis_zone_act_2 = (7 << 8) | 1 = 0x0701
-        if (currentAct > 0) {
+        // A host-owned authored goal explicitly chooses completion in this
+        // campaign slot; numeric stock signposts keep the native act gate.
+        if (!AUTHORED_GOAL_KEY.equals(spawn.objectKey()) && currentAct > 0) {
             boolean isMTZAct2 = (currentZone == Sonic2ZoneConstants.ROM_ZONE_MTZ && currentAct == 1);
             if (!isMTZAct2) {
                 // Mark as remembered to prevent respawning, then destroy
@@ -174,7 +177,7 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
     }
 
     /**
-     * ROM: Obj0D_Main (s2.asm:34449-34456)
+     * ROM: Obj0D_Main (s2.asm:34671-34678)
      * move.w x_pos(a1),d0 ; player center X
      * sub.w  x_pos(a0),d0 ; d0 = player_center - signpost_center
      * bcs.s  ...           ; skip if negative (player left of signpost)
@@ -313,7 +316,7 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
     }
 
     /**
-     * ROM: Obj0D_Main_State3 (s2.asm:34593-34621)
+     * ROM: Obj0D_Main_State3 (s2.asm:34815-34843)
      * <p>
      * Each frame:
      * 1. If player is airborne, skip the Control_Locked / forced-right writes

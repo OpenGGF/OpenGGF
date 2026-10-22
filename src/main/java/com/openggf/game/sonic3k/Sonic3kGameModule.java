@@ -170,6 +170,10 @@ public class Sonic3kGameModule implements GameModule {
         return modZoneAdapter;
     }
 
+    @Override public com.openggf.game.modzone.ModLevelSettingsProvider getModLevelSettingsProvider() {
+        return new Sonic3kModLevelSettingsProvider();
+    }
+
     @Override
     public com.openggf.game.palette.CustomZonePaletteBridge createCustomZonePaletteBridge(
             com.openggf.game.modzone.ModZoneRuntimeContribution contribution,

@@ -163,12 +163,16 @@ public final class EditorRegionOperations {
             requirePixel(px, py);
             rings.add(factory.moveRingSpawn(ring, px, py));
         }
+        com.openggf.level.objects.authored.AuthoredGizmos.validateBounds(objects,
+                Math.multiplyExact(level.getMap().getWidth(), level.getBlockPixelSize()),
+                Math.multiplyExact(level.getMap().getHeight(), level.getBlockPixelSize()));
         return new Preview(target, clipboard.blocks, objects, rings);
     }
 
     /** Overlapping paste reads the clipboard snapshot, never the cells being written. */
     public EditorCommand paste(Clipboard clipboard, int layer, int x, int y) {
         Preview preview = preview(clipboard, layer, x, y);
+        validateClipboardPatterns(clipboard);
         ImportPlan imports = planImports(clipboard);
         List<Cell> cells = rectangleCells(layer, preview.rectangle, imports.blocks);
         var before = level.snapshotObjectBackedRingState();
@@ -176,6 +180,25 @@ public final class EditorRegionOperations {
         List<RingSpawn> rings = new ArrayList<>(before.rings());
         java.util.Map<Integer, ObjectSpawn> pastedObjects = new HashMap<>();
         java.util.Map<Integer, RingSpawn> pastedRings = new HashMap<>();
+        java.util.Map<String, Integer> pastedLinkCounts = new HashMap<>();
+        Set<String> occupiedLinks = new HashSet<>();
+        for (ObjectSpawn existing : objects) if (existing.authoredProperties() instanceof com.openggf.level.objects.authored.AuthoredObjectProperties.Warp warp)
+            occupiedLinks.add(warp.link());
+        for (ObjectSpawn copied : preview.objects) if (copied.authoredProperties() instanceof com.openggf.level.objects.authored.AuthoredObjectProperties.Warp warp)
+            pastedLinkCounts.merge(warp.link(), 1, Integer::sum);
+        java.util.Map<String, String> copiedLinks = new HashMap<>();
+        for (var entry : pastedLinkCounts.entrySet()) if (entry.getValue() == 2) {
+            int suffix = 1;
+            String candidate;
+            do {
+                String ending = "-copy" + (suffix == 1 ? "" : "-" + suffix);
+                candidate = entry.getKey().substring(0, Math.min(entry.getKey().length(), 64 - ending.length())) + ending;
+                suffix++;
+            } while (occupiedLinks.contains(candidate));
+            copiedLinks.put(entry.getKey(), candidate);
+            occupiedLinks.add(candidate);
+        }
+        Set<String> changedLinks = new HashSet<>();
         for (ObjectSpawn object : preview.objects) {
             ObjectSpawn created = object.objectKey() == null
                     ? factory.createObjectSpawn(object.x(), object.y(), object.objectId(), object.subtype(),
@@ -183,9 +206,19 @@ public final class EditorRegionOperations {
                     : factory.createKeyedObjectSpawn(object.x(), object.y(), object.objectKey(), object.subtype(),
                             object.renderFlags(), object.respawnTracked());
             created = preserveEnvelope(object, created);
+            if (created.authoredProperties() instanceof com.openggf.level.objects.authored.AuthoredObjectProperties.Warp warp) {
+                String link = copiedLinks.getOrDefault(warp.link(), warp.link());
+                changedLinks.add(link);
+                var properties = new com.openggf.level.objects.authored.AuthoredObjectProperties.Warp(warp.width(), warp.height(), link, warp.twoWay());
+                created = new ObjectSpawn(created.x(), created.y(), created.objectId(), created.subtype(), created.renderFlags(),
+                        created.respawnTracked(), created.rawYWord(), created.layoutIndex(), created.ownerModId(), created.objectKey(), properties);
+            }
             pastedObjects.put(object.layoutIndex(), created);
             objects.add(created);
         }
+        if (!changedLinks.isEmpty()) com.openggf.level.objects.authored.AuthoredGizmos.validatePlacements(objects.stream()
+                .filter(object -> object.authoredProperties() instanceof com.openggf.level.objects.authored.AuthoredObjectProperties.Warp warp
+                        && changedLinks.contains(warp.link())).toList());
         for (RingSpawn ring : preview.rings) {
             RingSpawn created = factory.createRingSpawn(ring.x(), ring.y());
             pastedRings.put(ring.placementId(), created);
@@ -199,7 +232,7 @@ public final class EditorRegionOperations {
                 rs.stream().map(r -> pastedRings.get(r.placementId())).toList()));
         var after = state(objects, rings, groups);
         validateIds(after);
-        return new RegionCommand(cells, before, after, imports.definitions);
+        return new RegionCommand(cells, before, after, imports.definitions, clipboard);
     }
 
     public EditorCommand rectangleFill(int layer, CellRectangle rectangle, int block) {
@@ -314,7 +347,7 @@ public final class EditorRegionOperations {
     private static ObjectSpawn preserveEnvelope(ObjectSpawn source, ObjectSpawn target) {
         return new ObjectSpawn(target.x(), target.y(), target.objectId(), target.subtype(), target.renderFlags(),
                 target.respawnTracked(), source.rawFlags() | target.y(), target.layoutIndex(),
-                target.ownerModId(), target.objectKey());
+                target.ownerModId(), target.objectKey(), source.authoredProperties());
     }
 
     private static java.util.Map<ObjectSpawn, List<RingSpawn>> immutableGroups(
@@ -353,6 +386,27 @@ public final class EditorRegionOperations {
                 // Zero is the native no-collision profile, including libraries without profiles.
                 if (state[i] < 0 || (state[i] != 0 && state[i] >= level.getSolidTileCount())) {
                     throw new IllegalArgumentException("Clipboard collision profile exceeds this library");
+                }
+            }
+        }
+    }
+
+    /** Imported art may have been undone or its released slot reused since the copy. */
+    private void validateClipboardPatterns(Clipboard clipboard) {
+        BitSet checked = new BitSet();
+        for (int[] state : clipboard.chunkStates.values()) {
+            for (int i = 0; i < Chunk.PATTERNS_PER_CHUNK; i++) {
+                int index = new PatternDesc(state[i]).getPatternIndex();
+                if (checked.get(index)) continue;
+                checked.set(index);
+                if (index >= level.getPatternCount())
+                    throw new IllegalStateException("Copied tile " + index + " is unavailable; restore its original art or re-copy the region");
+                var copied = clipboard.library.getPattern(index);
+                var current = level.getPattern(index);
+                for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
+                    if (copied.getPixel(x, y) != current.getPixel(x, y))
+                        throw new IllegalStateException("Copied tile " + index
+                                + " changed after copying; restore its original imported art or re-copy the region before pasting");
                 }
             }
         }
@@ -431,12 +485,18 @@ public final class EditorRegionOperations {
         private final List<Cell> cells;
         private final MutableLevel.ObjectBackedRingState before, after;
         private final List<Definition> definitions;
+        private final Clipboard patternGuard;
         private RegionCommand(List<Cell> cells, MutableLevel.ObjectBackedRingState before,
                               MutableLevel.ObjectBackedRingState after) {
             this(cells, before, after, List.of());
         }
         private RegionCommand(List<Cell> cells, MutableLevel.ObjectBackedRingState before,
                               MutableLevel.ObjectBackedRingState after, List<Definition> definitions) {
+            this(cells, before, after, definitions, null);
+        }
+        private RegionCommand(List<Cell> cells, MutableLevel.ObjectBackedRingState before,
+                              MutableLevel.ObjectBackedRingState after, List<Definition> definitions, Clipboard patternGuard) {
+            this.patternGuard = patternGuard;
             this.cells = List.copyOf(cells);
             this.before = before;
             this.after = after;
@@ -488,6 +548,7 @@ public final class EditorRegionOperations {
             }
         }
         private void write(boolean undo) {
+            if (!undo && patternGuard != null) validateClipboardPatterns(patternGuard);
             var expected = undo ? after : before;
             var replacement = undo ? before : after;
             for (Cell cell : cells) {

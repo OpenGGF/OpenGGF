@@ -208,7 +208,8 @@ zooming out to show more terrain is not yet implemented.
 
 Pick an object with right click / West, then use **Selected placement** in the
 desktop inspector. Springs expose orientation and strength, monitors expose
-contents, and Sonic 2 floating platforms expose movement, shape/width and solidity.
+contents; spikes, checkpoints, platform types and badnik variants have per-game fields.
+The current inventory covers 52 IDs (19 Sonic 1, 20 Sonic 2, 13 Sonic 3&K).
 Each typed edit is one undo step. Inspection preserves every subtype bit, including
 unknown values. **Raw subtype** remains available for every object and preserves
 unsupported or unusual data. Flips and respawn tracking remain separate controls;
@@ -274,10 +275,69 @@ restores its original bytes. Character line 0 is host-owned in all games; S3K
 also locks its reserved HUD cells. Project saves retain palette edits and the
 existing v1/v2 exporter carries them through its strict palette validation.
 
-Stock scroll/deformation source, authored water height and allowed character/team
-settings are not part of the current portable level contract. These remain
-pending a versioned format/API extension; existing levels retain flat scrolling,
-dry runtime and their existing launch behavior.
+### Environment and allowed team
+
+Open **Level settings** in the desktop inspector, or **F3 / Level settings** in
+the HUD. Up/down selects a row and left/right changes it. Each change has one
+undo step. Choose Flat or a stock background scroll source, enable water and set
+its signed height, and choose an unrestricted or required playable team. The
+properties form also edits the title, music, start and camera bounds. Settings
+persist in the project, baked export and campaign; playtest applies them without
+rewriting gameplay saves or user configuration. Unsupported required sidekicks
+are rejected; their presets are omitted for hosts that cannot create them.
+
+The provider catalogue intentionally lists handlers that can run independently:
+Sonic 1 Green Hill acts and Final Zone, Sonic 2 Emerald Hill acts, and Sonic 3&K
+Flying Battery indoor bands / Death Egg acts. These reuse native scroll handlers
+with the selected stock act. They scroll your background layout; choosing a source
+does not import that zone's art. Water uses existing ROM-backed underwater palette
+providers with a fixed authored surface, without stock-zone water events.
+
+### Semantic gizmos
+
+Place `openggf:authored-goal` to finish any authored act through its native results
+flow, including later campaign acts where stock signposts retire.
+
+In the object library select an `openggf:` camera-zone, music-zone, warp or
+stageplay-trigger. Place its origin, pick it and edit the typed inspector or F2
+property list. Regions appear as outlines. HUD text fields open the shared
+controller keyboard; desktop fields use the same project form and path browser.
+
+Camera zones set bounds until leaving the region or crossing a configured X/Y
+threshold. Music zones select a stock ID or mod track and can fire once. Place a
+Warp source, then a second Warp for its exit; both share a link, and two-way mode
+updates the pair in one undo step. A pasted complete pair receives a fresh link.
+An incomplete pair must be repaired before playtest/export.
+
+Stageplay triggers reference a project-relative `.stageplay` resource, activate on
+entry or a fresh **Up** press, and can fire once or consume themselves. Playback
+uses the public registered Stageplay player and participates in rewind. Its current
+public API supports blocking playback only; non-blocking requests are rejected.
+Campaign export includes bounded referenced scenes/assets. No Stageplay workspace
+or package changes are required.
+
+### Campaigns and art import
+
+Open **Campaign levels** from the settings panel or project menu. Append relative
+`.ogfproject` files, then move or remove entries to set their order. Include the
+current project explicitly when the list is nonempty. An empty list exports this
+level alone. **Export playable campaign** saves this document and packages the
+saved sequence into a mod JAR, with no Java entrypoint. All levels must use the same
+game and required team; the last level ends the campaign. Native title/results
+art supports the original act glyphs (1–3); longer logical sequences retain their
+progression but do not gain new number artwork. Campaign acts also share the
+native zone title; individual saved project names remain in their exports.
+
+**Import art** opens PNG and sheet-YAML path fields with a file browser. Save the
+project to establish an asset folder, or choose a separate import folder; keep both inputs inside that folder. Conversion uses the existing
+`ggfmod convert art` path and bounded typed asset loading. Tile dimensions, colour
+counts, free pattern slots and palette ownership are checked before applying one
+undoable command. If copied terrain references art whose slots have since been reused, paste fails
+before changing the level; restore that art or copy again. Imported art occupies
+blank unreferenced slots; transparent
+imports reserve their slots too. Optional palette installation obeys host locks.
+Choose the imported patterns in Chunk view to compose your terrain. Projects retain
+imported pixels and reservations, and exports contain the resulting native art.
 
 ## Save and reopen safely
 

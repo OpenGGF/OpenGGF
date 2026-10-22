@@ -58,6 +58,24 @@ import java.util.Set;
 import java.util.logging.Logger;
 
 public class Sonic2ObjectRegistry extends AbstractObjectRegistry implements com.openggf.level.objects.MutatorPlacementClassifier , com.openggf.level.metadata.ObjectPropertyProvider, com.openggf.level.metadata.EditorPalettePolicyProvider {
+    @Override public boolean hasHostObjectKey(String key) {
+        return SignpostObjectInstance.AUTHORED_GOAL_KEY.equals(key) || super.hasHostObjectKey(key);
+    }
+    @Override public java.util.List<String> browsableObjectKeys() {
+        return java.util.stream.Stream.concat(super.browsableObjectKeys().stream(),
+                java.util.stream.Stream.of(SignpostObjectInstance.AUTHORED_GOAL_KEY)).toList();
+    }
+    @Override public boolean ownsHostObject(ObjectSpawn spawn, ObjectInstance instance) {
+        return super.ownsHostObject(spawn, instance) || spawn != null
+                && SignpostObjectInstance.AUTHORED_GOAL_KEY.equals(spawn.objectKey())
+                && instance instanceof SignpostObjectInstance
+                && instance.getClass().getClassLoader() == Sonic2ObjectRegistry.class.getClassLoader()
+                && spawn.equals(instance.getSpawn());
+    }
+    @Override public java.util.Optional<String> editorPreviewArtKey(String key) {
+        return SignpostObjectInstance.AUTHORED_GOAL_KEY.equals(key)
+                ? java.util.Optional.of(com.openggf.level.objects.ObjectArtKeys.SIGNPOST) : java.util.Optional.empty();
+    }
     @Override public boolean isPaletteCellEditable(int line, int color) {
         return com.openggf.game.sonic2.Sonic2EditorPalettePolicy.isEditable(line, color);
     }
@@ -88,6 +106,8 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry implements com.
 
     @Override
     public ObjectInstance create(ObjectSpawn spawn) {
+        if (SignpostObjectInstance.AUTHORED_GOAL_KEY.equals(spawn.objectKey())) return new SignpostObjectInstance(spawn, "AuthoredGoal");
+        if (spawn.objectKey() != null) return super.create(spawn);
         ensureLoaded();
         int id = spawn.objectId();
         ObjectFactory factory = factories.get(id);

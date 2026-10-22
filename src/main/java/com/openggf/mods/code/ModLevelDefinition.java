@@ -28,6 +28,7 @@ public final class ModLevelDefinition {
     public sealed interface ObjectEntry permits StockObjectSpawn, KeyedObjectSpawn {
         int placementId(); int x(); int y(); int subtype(); int renderFlags();
         boolean respawnTracked(); int rawYWord();
+        default com.openggf.level.objects.authored.AuthoredObjectProperties authoredProperties() { return null; }
     }
     @com.openggf.game.ModApi
     public record StockObjectSpawn(int placementId, int x, int y, int stockObjectId,
@@ -36,12 +37,24 @@ public final class ModLevelDefinition {
     @com.openggf.game.ModApi
     public record KeyedObjectSpawn(int placementId, int x, int y, String objectKey,
                                    int subtype, int renderFlags, boolean respawnTracked,
-                                   int rawYWord) implements ObjectEntry {
-        public KeyedObjectSpawn { Objects.requireNonNull(objectKey, "objectKey"); }
+                                   int rawYWord,
+                                   com.openggf.level.objects.authored.AuthoredObjectProperties authoredProperties) implements ObjectEntry {
+        public KeyedObjectSpawn {
+            Objects.requireNonNull(objectKey, "objectKey");
+            if (authoredProperties != null && (!objectKey.equals(authoredProperties.objectKey())
+                    || (long) x + authoredProperties.width() > 0x10000L
+                    || (long) y + authoredProperties.height() > 0x1000L))
+                throw new IllegalArgumentException("Authored properties do not match keyed object identity or geometry");
+        }
+        public KeyedObjectSpawn(int placementId, int x, int y, String objectKey, int subtype,
+                                int renderFlags, boolean respawnTracked, int rawYWord) {
+            this(placementId, x, y, objectKey, subtype, renderFlags, respawnTracked, rawYWord, null);
+        }
     }
     @com.openggf.game.ModApi
     public record RingEntry(int placementId, int x, int y) {}
 
+    private final com.openggf.game.modzone.ModLevelSettings settings;
     private final int formatVersion;
     private final String zoneName;
     private final int zoneIndex;
@@ -96,6 +109,19 @@ public final class ModLevelDefinition {
                        byte[][] paletteLines, int patternCount, int chunkCount, int blockCount,
                        int solidProfileCount, ModZoneHostMetadata hostMetadata,
                        List<ModPaletteClaim> paletteClaims) {
+        this(formatVersion, zoneName, zoneIndex, levelIndex, blockGridSide, width, height, bounds, start, music, objects, rings, patterns, chunks, blocks, foregroundMap, backgroundMap, solidHeights, solidWidths, solidAngles, primaryCollision, secondaryCollision, paletteLines, patternCount, chunkCount, blockCount, solidProfileCount, hostMetadata, paletteClaims, com.openggf.game.modzone.ModLevelSettings.DEFAULT);
+    }
+
+    ModLevelDefinition(int formatVersion, String zoneName, int zoneIndex, int levelIndex,
+                       int blockGridSide, int width, int height, Bounds bounds, Start start,
+                       Music music, List<ObjectEntry> objects, List<RingEntry> rings,
+                       byte[] patterns, byte[] chunks, byte[] blocks, byte[] foregroundMap,
+                       byte[] backgroundMap, byte[] solidHeights, byte[] solidWidths,
+                       byte[] solidAngles, int[] primaryCollision, int[] secondaryCollision,
+                       byte[][] paletteLines, int patternCount, int chunkCount, int blockCount,
+                       int solidProfileCount, ModZoneHostMetadata hostMetadata,
+                       List<ModPaletteClaim> paletteClaims, com.openggf.game.modzone.ModLevelSettings settings) {
+        this.settings = Objects.requireNonNull(settings, "settings");
         this.formatVersion = formatVersion;
         this.zoneName = Objects.requireNonNull(zoneName, "zoneName");
         this.zoneIndex = zoneIndex;
@@ -127,6 +153,7 @@ public final class ModLevelDefinition {
         this.solidProfileCount = solidProfileCount;
     }
 
+    public com.openggf.game.modzone.ModLevelSettings settings() { return settings; }
     public int formatVersion() { return formatVersion; }
     public String zoneName() { return zoneName; }
     public int zoneIndex() { return zoneIndex; }

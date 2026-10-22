@@ -152,7 +152,12 @@ public class EditorWorldOverlayRenderer {
         List<GLCommand> markers = new ArrayList<>();
         List<SpawnLabel> labels = new ArrayList<>();
         for (ObjectSpawn spawn : level.getObjects()) {
-            if (!isVisible(spawn.x(), spawn.y(), cameraX, cameraY, cameraWidth, cameraHeight)) {
+            var region = spawn.authoredProperties();
+            if (region != null) {
+                if (spawn.x() + region.width() < cameraX || spawn.x() > cameraX + cameraWidth
+                        || spawn.y() + region.height() < cameraY || spawn.y() > cameraY + cameraHeight) continue;
+                appendRectOutline(markers, spawn.x(), spawn.y(), spawn.x() + region.width(), spawn.y() + region.height(), .4f, .85f, 1f);
+            } else if (!isVisible(spawn.x(), spawn.y(), cameraX, cameraY, cameraWidth, cameraHeight)) {
                 continue;
             }
             appendCross(markers, cameraDomainCoordinate(spawn.x(), cameraX),

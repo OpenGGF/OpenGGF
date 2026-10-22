@@ -115,3 +115,26 @@ an incomplete authoring reference.
 
 For complete Mod API 0.7 examples, see [Content mods](content-mods.md),
 [Playable characters](characters.md), and [Standalone games](standalone-games.md).
+
+
+## Data-only editor campaigns
+
+The editor's **Export playable campaign** emits a normal mod JAR with optional
+manifest `campaign: campaign.json`, an explicit `baseGame` (`s1`, `s2`, `s3k`),
+patch kind and no Java entrypoint. `insertAfter` is forbidden for these terminal
+campaigns. The strict JSON declaration has this shape:
+
+```json
+{"name":"Two acts","game":"s2","localKey":"campaign","levels":[
+  {"id":"act-1","level":"levels/act-1/level.json","next":"act-2"},
+  {"id":"act-2","level":"levels/act-2/level.json","next":null}
+]}
+```
+
+There are 1–256 unique IDs and normalized baked-definition paths. Every next link
+must name the following entry and the last must be null. Unknown fields, mixed
+hosts and different required teams are errors. Normal mod scanning validates the
+assets and registers the existing multi-act contribution in the owner's transaction;
+no code trust or generated Java is needed. Completion ends at credits. Built-in
+host gizmos and bounded Stageplay dependencies are included; external creator
+object/track dependencies still require a separately authored package.

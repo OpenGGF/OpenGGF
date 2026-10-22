@@ -32,10 +32,10 @@ import java.util.Set;
 public final class ModLevelDefinitionParser {
     private static final Set<String> ROOT_V1 = Set.of("formatVersion", "zoneName", "zoneIndex",
             "levelIndex", "blockGridSide", "width", "height", "bounds", "start", "music",
-            "assets", "objects", "rings");
+            "assets", "objects", "rings", "settings");
     private static final Set<String> ROOT_V2 = Set.of("formatVersion", "zoneName", "zoneIndex",
             "levelIndex", "blockGridSide", "width", "height", "bounds", "start", "music",
-            "assets", "hostMetadata", "paletteClaims", "objects", "rings");
+            "assets", "hostMetadata", "paletteClaims", "objects", "rings", "settings");
     private static final Set<String> BOUNDS = Set.of("minX", "maxX", "minY", "maxY");
     private static final Set<String> START = Set.of("x", "y");
     private static final Set<String> MUSIC = Set.of("stockId", "trackKey");
@@ -52,7 +52,7 @@ public final class ModLevelDefinitionParser {
     private static final Set<String> STOCK_OBJECT = Set.of("placementId", "x", "y",
             "stockObjectId", "subtype", "renderFlags", "respawnTracked", "rawYWord");
     private static final Set<String> KEYED_OBJECT = Set.of("placementId", "x", "y",
-            "objectKey", "subtype", "renderFlags", "respawnTracked", "rawYWord");
+            "objectKey", "subtype", "renderFlags", "respawnTracked", "rawYWord", "authoredProperties");
     private static final Set<String> RING = Set.of("placementId", "x", "y");
 
     private ModLevelDefinitionParser() {}
@@ -124,7 +124,8 @@ public final class ModLevelDefinitionParser {
                 blocks.payload(), foreground.cells(), background == null ? null : background.cells(),
                 heights.payload(), widths.payload(), angles.payload(), primary.indices(),
                 secondary.indices(), palettes, patterns.count(), chunks.count(), blocks.count(),
-                heights.count(), hostMetadata, paletteClaims);
+                heights.count(), hostMetadata, paletteClaims,
+                com.openggf.game.modzone.ModLevelSettingsJson.parse(metadata.get("settings")));
     }
 
     /** Validates generated editor metadata through the same production JSON bounds as disk imports. */
@@ -304,7 +305,8 @@ public final class ModLevelDefinitionParser {
                 try { key = ModKeySyntax.requireDisplayKey(key); }
                 catch (IllegalArgumentException error) { throw new IOException("Invalid objectKey", error); }
                 result.add(new ModLevelDefinition.KeyedObjectSpawn(placement, x, y, key,
-                        subtype, render, respawn, rawY));
+                        subtype, render, respawn, rawY,
+                        com.openggf.level.objects.authored.AuthoredObjectPropertiesJson.parse(value.get("authoredProperties"))));
             }
         }
         return List.copyOf(result);

@@ -14,8 +14,11 @@ Integration/push belong to the lead. Stageplay namespaces/panels are excluded.
    and canvas navigation. A clipboard is tied to its source library; native S1 ring
    groups are indivisible. Local compositions still derive definitions through the
    existing controller path.
-3. Exact Genesis palette authoring through existing project/export fields. Other
-   persistent settings are blocked pending approval for the pinned API contract.
+3. Exact Genesis palette authoring and, following the user ruling below, provider-backed
+   background/water/team settings in the unpublished project/export contracts.
+4. Typed semantic gizmos, data-only ordered campaigns and bounded in-editor art import.
+   Blocking Stageplay uses the public playback API; zoom-out and non-blocking playback
+   remain explicitly deferred for the reasons below.
 
 ## Decisions and rejected approaches
 
@@ -67,10 +70,81 @@ the pinned creator API.
 ## Verification
 
 Focused command/schema/HUD tests are queued through `tools/testing/maven_queue.py`.
-Combined validation uses `run_categories.py --base 8aa692b04 --run` once after all
+Combined validation uses `run_categories.py --base 8aa692b04 --run --max-minutes 150` once after all
 source edits; inspect exact results/skips and acknowledge diagnostics. Engine/render
 changes require separate structural guards. Desktop builds/tests use the task
 engine JAR in its own private `.m2`; no main checkout is modified.
 
 See the implementation handoff and external task checkpoint for tested SHAs,
 completed commands and remaining coverage limits.
+
+
+## Approved continuation, 2026-10-22
+
+After round-one heads `9fb61c7ed` / desktop `71a5cfb`, the user clarified that the
+API/editor formats are unpublished and approved changing them directly. The
+previous migration/version decision gate is superseded: no new migrations or
+version branches, no independent ModApiVersion bump. Regenerate the candidate
+signature pin while retaining the engine-pegged release descriptor. The hook
+explicitly rejects unnecessary descriptor changes accompanying ordinary candidate
+surface growth; changing the descriptor for this feature was rejected on that
+contract evidence.
+
+Settings use safe per-game scroll catalogues and existing native palette providers.
+Rejected listing every stock handler: many assume live native events, dynamic art
+or water state. Required teams are launch context/policy, never user configuration.
+Gizmos are eager rewind-owned auxiliary objects, so region origins outside native
+streaming windows still work without altering ROM slot pressure. Typed JSON and
+copy paths preserve the properties. Data-only campaigns reuse owner transactions
+and multi-act runtime topology with an explicit terminal contribution.
+
+Rejected treating a clipboard warp link as a permanent identity: copying a full
+pair into the same level creates four endpoints. Paste remaps complete pairs to
+fresh links. Rejected toggling raw respawn bits in shared gizmo creation: S1 uses a
+different native encoding; the per-game placement codec owns those flags.
+
+Zoom-out remains deferred after inspecting rendering at `9fb61c7ed`: widening the
+visible world needs larger foreground/background/priority render targets and
+correct culling/scroll composition. Tiling the existing camera view repeats native
+background phase and causes seams; magnification remains 1×–8×. Non-blocking
+Stageplay is also deferred: the existing public player requires exclusive control
+and holds native simulation. Registration/multiplexing consumes the public API
+from mods code; no Stageplay package or workspace changes are made.
+
+
+The narrow architecture allowlists admit only the new art converter/publisher and
+scene resource/composition owners, with negative assertions for unrelated callers.
+The fixed 16-slice cluster and frozen violations remain unchanged. This is an
+explicit ownership addition for the requested public API consumption, not a broad
+Stageplay or tools exemption.
+
+
+Expanded 52-ID schema coverage is committed at `a3228f79a` after 11 focused
+schema tests and scoped strict citation checks. Review also rejected silently
+substituting imported pixels when a clipboard outlives undo/reuse of its source
+pattern slots: paste now rejects stale art before mutation, including redo.
+Required teams are validated against host sidekick capability as well as keys;
+Sonic 1 cannot silently drop a required sidekick. Cached authored scene service
+controllers retire their players on close and recreate them through the already
+prepared public registration factories on reuse; stable rewind adapters follow
+the current generation.
+
+
+Campaign review found stock signpost retirement beyond native act limits. The
+reserved authored goal now selects native signpost/results behavior in S1/S2 as
+well as S3K; only that named factory bypasses retirement. Rejected rewriting
+numeric stock gating or remapping logical act identity to zero: both change ROM
+behavior or break sequence progression. Native results artwork beyond acts 1–3
+remains a presentation limitation; the renderer bounds-checks absent frames and
+logical progression is preserved.
+
+
+Before combined smoke, focused verification passed 72 affected persistence/clipboard/
+gizmo cases and 34 final settings, campaign, validator and authored-goal cases,
+all without skips. The structural/render selection ran 132 cases: 60 S3K regressions,
+HUD captures, API pins and new owner/lifecycle checks passed. Its two unchanged
+HubMusicController architecture failures match the earlier bounded baseline check;
+a third failure was invalid test fixture art, corrected and passed in the final
+focused run. The final smoke selection is 3,591 candidate classes plus guards,
+with a 150-minute execution limit. This remains smoke coverage, not release-only
+full-suite validation. Offscreen desktop build/captures follow with the task JAR.

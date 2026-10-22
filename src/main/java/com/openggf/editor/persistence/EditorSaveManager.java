@@ -233,7 +233,8 @@ public final class EditorSaveManager {
         List<ObjectSpawnStateV3> objects = level.getObjects().stream().map(spawn ->
                 new ObjectSpawnStateV3(spawn.layoutIndex(), spawn.x(), spawn.y(),
                         spawn.objectKey() == null ? spawn.objectId() : null, spawn.objectKey(),
-                        spawn.subtype(), spawn.renderFlags(), spawn.respawnTracked(), spawn.rawYWord())).toList();
+                        spawn.subtype(), spawn.renderFlags(), spawn.respawnTracked(), spawn.rawYWord(),
+                        spawn.authoredProperties() == null ? null : com.openggf.level.objects.authored.AuthoredObjectPropertiesJson.toJson(spawn.authoredProperties()))).toList();
         return new EditorSavePayloadV3(base.blocks(), base.chunks(), base.mapCells(), objects, base.rings());
     }
 
@@ -288,6 +289,9 @@ public final class EditorSaveManager {
                 }
                 ObjectSpawn spawn = encoding.createKeyed(state.x(), state.y(), state.objectKey(), state.subtype(),
                         state.renderFlags(), state.respawnTracked(), state.placementId());
+                if (state.properties() != null) spawn = new ObjectSpawn(spawn.x(), spawn.y(), spawn.objectId(),
+                        spawn.subtype(), spawn.renderFlags(), spawn.respawnTracked(), spawn.rawYWord(), spawn.layoutIndex(),
+                        spawn.ownerModId(), spawn.objectKey(), state.properties());
                 if (spawn.rawYWord() != state.rawYWord()) {
                     throw new IllegalArgumentException("Object placement raw word does not match encoded fields for id "
                             + state.placementId());
@@ -303,6 +307,7 @@ public final class EditorSaveManager {
                 objects.add(spawn); objectsById.put(spawn.layoutIndex(), spawn);
             }
         }
+        com.openggf.level.objects.authored.AuthoredGizmos.validatePlacements(objects);
         List<RingSpawn> rings = new ArrayList<>();
         Set<Integer> ringIds = new HashSet<>();
         Map<ObjectSpawn, List<RingSpawn>> mapping = new LinkedHashMap<>();

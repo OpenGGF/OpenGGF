@@ -40,6 +40,28 @@ import java.util.Map;
  * Uses factory-based registration following the Sonic 2 pattern.
  */
 public class Sonic1ObjectRegistry extends AbstractObjectRegistry implements com.openggf.level.objects.MutatorPlacementClassifier , com.openggf.level.metadata.ObjectPropertyProvider, com.openggf.level.metadata.EditorPalettePolicyProvider {
+    @Override public boolean hasHostObjectKey(String key) {
+        return Sonic1SignpostObjectInstance.AUTHORED_GOAL_KEY.equals(key) || super.hasHostObjectKey(key);
+    }
+    @Override public java.util.List<String> browsableObjectKeys() {
+        return java.util.stream.Stream.concat(super.browsableObjectKeys().stream(),
+                java.util.stream.Stream.of(Sonic1SignpostObjectInstance.AUTHORED_GOAL_KEY)).toList();
+    }
+    @Override public boolean ownsHostObject(ObjectSpawn spawn, com.openggf.level.objects.ObjectInstance instance) {
+        return super.ownsHostObject(spawn, instance) || spawn != null
+                && Sonic1SignpostObjectInstance.AUTHORED_GOAL_KEY.equals(spawn.objectKey())
+                && instance instanceof Sonic1SignpostObjectInstance
+                && instance.getClass().getClassLoader() == Sonic1ObjectRegistry.class.getClassLoader()
+                && spawn.equals(instance.getSpawn());
+    }
+    @Override public java.util.Optional<String> editorPreviewArtKey(String key) {
+        return Sonic1SignpostObjectInstance.AUTHORED_GOAL_KEY.equals(key)
+                ? java.util.Optional.of(com.openggf.level.objects.ObjectArtKeys.SIGNPOST) : java.util.Optional.empty();
+    }
+    @Override public com.openggf.level.objects.ObjectInstance create(ObjectSpawn spawn) {
+        return Sonic1SignpostObjectInstance.AUTHORED_GOAL_KEY.equals(spawn.objectKey())
+                ? new Sonic1SignpostObjectInstance(spawn) : super.create(spawn);
+    }
     @Override public boolean isPaletteCellEditable(int line, int color) {
         return com.openggf.game.sonic1.Sonic1EditorPalettePolicy.isEditable(line, color);
     }

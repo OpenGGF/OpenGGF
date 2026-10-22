@@ -13,7 +13,7 @@ remains future scope; `next` has no separate 0.8 implementation line yet.
 
 ## Release files
 
-- [0.7 prerelease / current development snapshot](CHANGELOG.0.7.prerelease.md) — current campaign work and the linked earlier development themes.
+- [0.7 prerelease / current development snapshot](CHANGELOG.0.7.prerelease.md) — current campaign and editor authoring work, with the linked earlier development themes.
 
 - [0.6.20260911](CHANGELOG.0.6.md)
 - [0.5.20260411](CHANGELOG.0.5.md)

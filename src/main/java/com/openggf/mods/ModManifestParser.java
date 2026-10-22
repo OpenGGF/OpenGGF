@@ -41,7 +41,7 @@ public final class ModManifestParser {
     private static final Set<String> ROOT_FIELDS = Set.of(
             "formatVersion", "id", "name", "version", "authors", "description",
             "engineApiRange", "type", "baseGame", "entrypoint", "dependencies",
-            "audioOverrides", "artOverrides", "insertAfter", "patternWindows", "composition");
+            "audioOverrides", "artOverrides", "insertAfter", "patternWindows", "composition", "campaign");
     private static final Set<String> DEPENDENCY_FIELDS = Set.of("id", "versionRange");
     private static final Pattern CANONICAL_NONNEGATIVE_INT = Pattern.compile("0|[1-9][0-9]*");
     private static final Pattern NUMERIC_TOKEN = Pattern.compile(
@@ -126,7 +126,7 @@ public final class ModManifestParser {
         OptionalInt patternWindows = parsePatternWindows(root);
         return new ModManifest(formatVersion, id, name, version, authors, description,
                 engineApiRange, type, baseGame, entrypoint, dependencies, audioOverrides,
-                artOverrides, insertAfter, patternWindows, parseComposition(root.get("composition")));
+                artOverrides, insertAfter, patternWindows, parseComposition(root.get("composition")), optionalText(root, "campaign"));
     }
 
     private ModCompositionMetadata parseComposition(JsonNode node) throws ModManifestException {

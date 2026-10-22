@@ -9,8 +9,24 @@ import java.util.Objects;
 /** Authored identity and launch properties, independent of stock gameplay saves. */
 public record EditorProjectMetadata(GameId gameId, String name, int sourceZone, int sourceAct,
         String sourceFingerprint, int startX, int startY, int minX, int maxX, int minY, int maxY,
-        FullLevelExporter.ExportMusic music, ModObjectZoneSet objectZoneSet) {
+        FullLevelExporter.ExportMusic music, ModObjectZoneSet objectZoneSet,
+        com.openggf.game.modzone.ModLevelSettings settings, EditorCampaign campaign) {
+    public EditorProjectMetadata(GameId gameId, String name, int sourceZone, int sourceAct,
+            String sourceFingerprint, int startX, int startY, int minX, int maxX, int minY, int maxY,
+            FullLevelExporter.ExportMusic music, ModObjectZoneSet objectZoneSet) {
+        this(gameId, name, sourceZone, sourceAct, sourceFingerprint, startX, startY, minX, maxX, minY, maxY,
+                music, objectZoneSet, com.openggf.game.modzone.ModLevelSettings.DEFAULT);
+    }
+    public EditorProjectMetadata(GameId gameId, String name, int sourceZone, int sourceAct,
+            String sourceFingerprint, int startX, int startY, int minX, int maxX, int minY, int maxY,
+            FullLevelExporter.ExportMusic music, ModObjectZoneSet objectZoneSet,
+            com.openggf.game.modzone.ModLevelSettings settings) {
+        this(gameId, name, sourceZone, sourceAct, sourceFingerprint, startX, startY, minX, maxX, minY, maxY,
+                music, objectZoneSet, settings, EditorCampaign.EMPTY);
+    }
     public EditorProjectMetadata {
+        Objects.requireNonNull(campaign, "campaign");
+        Objects.requireNonNull(settings, "settings");
         Objects.requireNonNull(gameId, "gameId");
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(sourceFingerprint, "sourceFingerprint");
@@ -34,23 +50,33 @@ public record EditorProjectMetadata(GameId gameId, String name, int sourceZone, 
 
     public EditorProjectMetadata withName(String value) {
         return new EditorProjectMetadata(gameId, value, sourceZone, sourceAct, sourceFingerprint,
-                startX, startY, minX, maxX, minY, maxY, music, objectZoneSet);
+                startX, startY, minX, maxX, minY, maxY, music, objectZoneSet, settings, campaign);
     }
 
     public EditorProjectMetadata withStart(int x, int y) {
         return new EditorProjectMetadata(gameId, name, sourceZone, sourceAct, sourceFingerprint,
-                x, y, minX, maxX, minY, maxY, music, objectZoneSet);
+                x, y, minX, maxX, minY, maxY, music, objectZoneSet, settings, campaign);
     }
 
     /** Resizing keeps the start valid by clamping it to the new bounds. */
     public EditorProjectMetadata withBounds(int x0, int x1, int y0, int y1) {
         return new EditorProjectMetadata(gameId, name, sourceZone, sourceAct, sourceFingerprint,
-                Math.clamp(startX, x0, x1), Math.clamp(startY, y0, y1), x0, x1, y0, y1, music, objectZoneSet);
+                Math.clamp(startX, x0, x1), Math.clamp(startY, y0, y1), x0, x1, y0, y1, music, objectZoneSet, settings, campaign);
     }
 
     public EditorProjectMetadata withMusic(FullLevelExporter.ExportMusic value) {
         return new EditorProjectMetadata(gameId, name, sourceZone, sourceAct, sourceFingerprint,
-                startX, startY, minX, maxX, minY, maxY, value, objectZoneSet);
+                startX, startY, minX, maxX, minY, maxY, value, objectZoneSet, settings, campaign);
+    }
+
+    public EditorProjectMetadata withSettings(com.openggf.game.modzone.ModLevelSettings value) {
+        return new EditorProjectMetadata(gameId, name, sourceZone, sourceAct, sourceFingerprint,
+                startX, startY, minX, maxX, minY, maxY, music, objectZoneSet, value, campaign);
+    }
+
+    public EditorProjectMetadata withCampaign(EditorCampaign value) {
+        return new EditorProjectMetadata(gameId, name, sourceZone, sourceAct, sourceFingerprint,
+                startX, startY, minX, maxX, minY, maxY, music, objectZoneSet, settings, value);
     }
 
     public void validateAgainst(Level level) {

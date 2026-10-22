@@ -136,8 +136,8 @@ in the same commit.
 ## Package Cycle Ratchets
 
 `package_slices_are_free_of_cycles`: 1 frozen top-level package cycle cluster.
-`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 127 current
-top-level dependency edges inside or adjacent to that cluster.
+`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 160 accepted
+top-level dependency edge pairs inside or adjacent to that cluster.
 
 - `cycle:core-runtime`: 16 top-level slices (`audio`, `camera`, `control`,
   `data`, `debug`, `editor`, `game`, `graphics`, `level`, `physics`, `sprites`,
@@ -164,18 +164,43 @@ top-level dependency edges inside or adjacent to that cluster.
   bounded baked-level import and destination-host export validation. The existing
   `ModAssetRoot`/`ModInputLimits` and strict parser remain authoritative; copying
   that parser into the editor would create a second safety contract.
-  `editor_host_data_dependencies_use_only_explicit_owners` restricts the IO edge
-  to `EditorProjectWorkspace` and the three asset-root/access/limit types. Its mod
-  edge permits only that workspace's baked-level references, immutable definition
-  values and `TrackKey`, strict parser, loader and staging validator;
-  `EditorProjectRuntimeModule` may use the staging validator, and
-  `FullLevelExporter` may use the strict metadata parser. Creator execution,
-  registration and unrelated editor owners remain forbidden. These two adjacent
-  edges do not change the frozen cycle count, cluster membership or cycle ignores.
+  `editor_host_data_dependencies_use_only_explicit_owners` restricts these
+  dependencies to exact named bridge owners and targets. `EditorProjectWorkspace`
+  retains the three asset-root/access/limit types, baked-level references,
+  immutable definition values and `TrackKey`, strict parser, loader and staging
+  validator; `EditorProjectRuntimeModule` may use the staging validator and
+  `AuthoredStageplayServices/Prepared` for bounded playtest composition, and
+  `FullLevelExporter` may use the strict metadata parser. The art import owner
+  `EditorArtImport` and scene-resource export owner `EditorCampaignResources`
+  may use only the same three bounded IO contracts. `EditorCampaign` uses the
+  normalized path contract and canonical campaign limit. `EditorCampaignExportService`
+  uses only the input budget, API/version values, campaign limit and staging
+  validator. Nested records/callbacks inherit their named owner's exact target set.
+  Creator execution, registration and unrelated editor owners remain forbidden.
+  These IO/data edges do not change the frozen cycle count or cluster membership.
   Stock host construction stays in `GameModuleRegistry`, an existing composition
   root; offline creation changes neither bootstrap nor active session ownership.
-  Decay these edges only through a canonical lower shared baked-data boundary,
+  Decay these data edges only through a canonical lower shared baked-data boundary,
   rather than duplicating the loader or moving editor behavior into gameplay.
+- Editor authoring also adds `editor -> tools` solely to reuse
+  `EditorArtImport -> ArtConverter/Result` and
+  `EditorCampaignExportService -> JarPackager`. The same data owner guard rejects
+  any other editor/tool pairing, preserving one canonical conversion and
+  no-clobber publication path rather than copying those implementations.
+- Authored scene registration deliberately composes the existing public
+  `StageplayPlayback` and `StageplayControl` contracts through
+  `mods.code.AuthoredStageplayServices` and its nested router. The cycle rule
+  ignores only this exact owner to those public targets; no complete package edge
+  or frozen cycle member is added. `stageplay_boundaries_have_explicit_owners`
+  rejects this adapter's dependencies on Stageplay runtime implementation types,
+  and rejects all other mod owners entering the player. This is an intentional
+  registration/control callback pair with Stageplay's existing mod registration
+  dependency, not a new legacy cycle cluster.
+  `EditorCampaignResources` alone may read `StageplayDocument` values,
+  `StageplayStore` and `runtime.StageplayAssets` to copy declared dependencies
+  through the bounded IO loader; it cannot enter playback. Decay these bridges
+  only if the canonical public registration or dependency-manifest contract moves
+  to a lower shared owner.
 
 If a temporary package-cycle cluster is accepted later, document it as
 ``cycle:<name>`` with current count, owner package, intended direction, and first

@@ -106,7 +106,25 @@ public final class ModJarValidator {
                     inventory.stream().anyMatch(name -> name.endsWith(".class")), List.of());
             validateManifest(manifest, findings);
             validateDeclaredArt(assets, inventory, manifest, findings);
-            validateLevels(assets, inventory, manifest.id(), findings);
+            validateLevels(assets, inventory, manifest.id(), manifest.baseGame(), findings);
+            if (manifest.campaign() != null) {
+                try {
+                    var campaign = com.openggf.mods.code.ModCampaignDefinition.read(assets,
+                            manifest.campaign(), manifest.baseGame());
+                    var definitions = campaign.validateLevels(assets);
+                    var scenes = new java.util.LinkedHashSet<String>();
+                    for (var definition : definitions) for (var object : definition.objects()) {
+                        if (object.authoredProperties() instanceof com.openggf.level.objects.authored.AuthoredObjectProperties.StageplayTrigger trigger) {
+                            if (!trigger.blocking()) throw new IOException("Authored Stageplay requires blocking playback: " + trigger.resource());
+                            scenes.add(trigger.resource());
+                        }
+                    }
+                    com.openggf.mods.code.AuthoredStageplayServices.validateAssets(assets,
+                            manifest.baseGame(), List.copyOf(scenes));
+                } catch (IOException | IllegalArgumentException invalid) {
+                    findings.add(error("CAMPAIGN_INVALID", manifest.campaign(), "", safeMessage(invalid)));
+                }
+            }
 
             ModCatalogValidator.PackedValidation audio = new ModCatalogValidator(
                     snapshotPath.getParent(), limits, StockMusicDomains::containsSupported)
@@ -164,14 +182,21 @@ public final class ModJarValidator {
     }
 
     private static void validateLevels(PackedModAssetRoot assets, List<String> inventory,
-                                       String manifestId, List<Finding> findings) {
+                                       String manifestId, String baseGame, List<Finding> findings) {
+        com.openggf.level.objects.HostObjectKeyRegistry hostKeys = null;
+        if (baseGame != null && !baseGame.equals("any")) {
+            var module = com.openggf.game.GameModuleRegistry.createStockModule(com.openggf.game.GameId.fromCode(baseGame));
+            hostKeys = com.openggf.level.objects.HostObjectKeyRegistry.trusted(module.createObjectRegistry());
+        }
+        var allowedHostKeys = hostKeys;
         inventory.stream().filter(name -> name.equals("level.json") || name.endsWith("/level.json"))
                 .sorted().forEach(path -> {
                     try {
                         ModLevelDefinition level = ModLevelDefinitionParser.read(assets, new BakedLevelRef(path));
                         for (ModLevelDefinition.ObjectEntry object : level.objects()) {
                             if (object instanceof ModLevelDefinition.KeyedObjectSpawn keyed
-                                    && !keyed.objectKey().startsWith(manifestId + ":")) {
+                                    && !keyed.objectKey().startsWith(manifestId + ":")
+                                    && (allowedHostKeys == null || !allowedHostKeys.hasHostObjectKey(keyed.objectKey()))) {
                                 findings.add(error("LEVEL_OWNER_MISMATCH", path,
                                         "object:" + keyed.placementId(),
                                         "objectKey must be owned by declaring mod " + manifestId));
