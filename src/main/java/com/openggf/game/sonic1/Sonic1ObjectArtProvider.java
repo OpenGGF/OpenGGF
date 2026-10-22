@@ -3117,13 +3117,20 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             registerSheet(ObjectArtKeys.BOSS_BALL, ballSheet);
         }
 
-        // Boss defeat explosions use getBossExplosionRenderer() which looks for the S2 key.
-        // Register S1's standard explosion art under that key so BossExplosionObjectInstance works.
-        // S1 explosion has 5 frames (vs S2's 7); frames 5-6 will be no-ops (graceful bounds check).
+        loadBossExplosionArt();
+    }
+
+    private void loadBossExplosionArt() {
         ObjectSpriteSheet explosionSheet = sheets.get(ObjectArtKeys.EXPLOSION);
         if (explosionSheet != null) {
-            registerSheet(ObjectArtKeys.BOSS_EXPLOSION,
-                    explosionSheet);
+            // Expl_Main's move.l #Map_ExplodeBomb,obMap (REV01 $948A).
+            // Unlike Map_ExplodeItem, this five-frame table references shared
+            // frames BEFORE the table and uses fiery tiles $40/$50 in frames1/2.
+            int mappingAddress = romReader.readU32BE(0x948C);
+            List<SpriteMappingFrame> mappings = S1SpriteDataLoader.loadMappingFramesWithSignedOffsets(
+                    romReader, mappingAddress, 5);
+            registerSheet(ObjectArtKeys.BOSS_EXPLOSION, new ObjectSpriteSheet(
+                    explosionSheet.getPatterns(), mappings, explosionSheet.getPaletteIndex(), 1));
         }
     }
 

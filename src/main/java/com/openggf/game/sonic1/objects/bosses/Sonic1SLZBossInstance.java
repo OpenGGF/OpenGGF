@@ -3,15 +3,11 @@ package com.openggf.game.sonic1.objects.bosses;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.audio.Sonic1Music;
 import com.openggf.game.sonic1.objects.Sonic1SeesawObjectInstance;
-import com.openggf.graphics.GLCommand;
 
-import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectInstance;
-import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -34,7 +30,7 @@ import java.util.List;
  *   8: EXIT_JUMP    — Multi-stage upward bounce, play zone music
  *  10: ESCAPE       — X vel 0x400, Y vel -0x40, extend camera right, delete when off-screen
  *
- * Face, flame, and tube are rendered as overlays on the ship (not separate object instances).
+ * Face, flame, and tube execute independently in their native object slots.
  */
 public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implements RewindRecreatable {
 
@@ -93,23 +89,6 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
     // Target seesaw index for ball spawn (obSubtype stores seesaw index 0-2)
     private int targetSeesawIndex;
 
-    // ROM BossStarLight_Main builds the boss from a 4-entry table
-    // (BossStarLight_ObjData) with `moveq #3,d1` / `dbf d1,BossStarLight_Loop`
-    // (docs/s1disasm/_incObj/"7A, 7B Boss - SLZ Main and Spike Balls.asm":30-74).
-    // The first pass writes into the boss's own slot (movea.l a0,a1); the three
-    // remaining passes each call FindNextFreeObj and claim a further object RAM
-    // slot -- the face (routine 4), flame (routine 6) and pipe (routine 8).
-    // This engine draws face/flame/pipe as overlays on the single ship instance,
-    // so those three slots would otherwise stay free and every later dynamically
-    // allocated object would sit three slots low. Slot number is observable
-    // behaviour: RLoss_Bounce probes the floor only when
-    // (v_vblank_byte + d7) & 3 == 0 with d7 = 127 - slot
-    // (docs/s1disasm/_incObj/"25, 37 Rings.asm":334-339,
-    // docs/s1disasm/_inc/ExecuteObjects.asm:10-30), so a shifted slot changes
-    // each spilled ring's bounce cadence and the frame it is collected on.
-    private static final int ROM_CHILD_OBJECT_COUNT = 3;
-    private boolean childSlotsReserved;
-
     public Sonic1SLZBossInstance(ObjectSpawn spawn) {
         super(spawn, "SLZ Boss");
     }
@@ -133,6 +112,11 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
         timer = 0;
         faceAnim = Sonic1BossAnimations.ANIM_FACE_NORMAL_1;
         flameAnim = Sonic1BossAnimations.ANIM_FLAME_1;
+    }
+
+    @Override
+    protected int getNativeEscapeRoutine() {
+        return STATE_ESCAPE;
     }
 
     @Override
@@ -193,34 +177,8 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
         timer = DEFEAT_TIMER; // $78 = 120 frames
     }
 
-    /**
-     * Claims the three sub-object RAM slots BossStarLight_Main allocates on its
-     * first pass. The ROM uses FindNextFreeObj -- an ascending scan starting at
-     * the parent's own slot (docs/s1disasm/_incObj/"sub FindFreeObj.asm":36-51)
-     * -- restarted from the parent for each of the three children; because each
-     * child fills the slot it found, that is the same sequence as chaining the
-     * scan from the previous child, which is what allocateChildSlotsAfter does.
-     * A full object RAM aborts the loop in both.
-     */
-    private void reserveChildSlots() {
-        if (childSlotsReserved) {
-            return;
-        }
-        childSlotsReserved = true;
-        com.openggf.level.objects.ObjectServices svc = tryServices();
-        if (getSpawn() == null || svc == null || svc.objectManager() == null) {
-            return;
-        }
-        svc.objectManager().allocateChildSlotsAfter(
-                getSpawn(), ROM_CHILD_OBJECT_COUNT, getSlotIndex());
-    }
-
     @Override
     protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        // ROM BossStarLight_Main runs once, on the boss's first ExecuteObjects
-        // pass, and claims its three sub-object slots there.
-        reserveChildSlots();
         // Lazy seesaw scanning — ensures seesaws are loaded before scanning.
         // Re-scan whenever the cache is empty (not a separate "already
         // scanned" flag) so a rewind-recreated instance repopulates it
@@ -268,11 +226,6 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
             updatePositionNoSine();
         }
 
-        // Update face animation based on state
-        updateFaceAnimation(player);
-
-        // Update flame animation based on state
-        updateFlameAnimation();
     }
 
     // === State 0: ENTRANCE ===
@@ -470,7 +423,7 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
      * Update face animation based on boss state.
      * ROM: BossStarLight_FaceMain (routine 4)
      */
-    private void updateFaceAnimation(AbstractPlayableSprite player) {
+    protected void updateFaceAnimation(AbstractPlayableSprite player) {
         if (state.routineSecondary >= STATE_DEFEAT_WAIT) {
             // ROM: ob2ndRout >= 6: anim = $A (facedefeat)
             // Then: if ob2ndRout == $A (ESCAPE): anim = 6 (facepanic)
@@ -506,7 +459,7 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
      * If ob2ndRout == $A (ESCAPE): anim = $B (escape flame).
      * If ob2ndRout >= 4 AND ob2ndRout <= 8: anim = 7 (blank) — flame OFF.
      */
-    private void updateFlameAnimation() {
+    protected void updateFlameAnimation() {
         if (state.routineSecondary == STATE_ESCAPE) {
             flameAnim = Sonic1BossAnimations.ANIM_ESCAPE_FLAME;
         } else if (state.routineSecondary >= STATE_BALL_SPAWN
@@ -622,26 +575,12 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
 
     @Override
     public int getPriorityBucket() {
-        return 3; // ROM: obPriority = 3
+        return 4; // Native ship/face/flame priority; pipe uses 3
     }
 
     @Override
-    public void appendRenderCommands(List<GLCommand> commands) {
-        renderEggmanShip();
-
-        // Draw tube/jet pipe (Map_BossItems frame 3 = .widepipe) — SLZ-specific overlay
-        // ROM: BossStarLight_TubeMain — uses Map_BossItems with ArtTile_Eggman_Weapons
-        if (state.routineSecondary != STATE_ESCAPE || isBossOnScreen()) {
-            ObjectRenderManager renderManager = services().renderManager();
-            if (renderManager == null) {
-                return;
-            }
-            boolean flipped = (state.renderFlags & 1) != 0;
-            PatternSpriteRenderer weaponsRenderer = renderManager.getRenderer(ObjectArtKeys.BOSS_WEAPONS);
-            if (weaponsRenderer != null && weaponsRenderer.isReady()) {
-                weaponsRenderer.drawFrameIndex(3, state.x, state.y, flipped, false);
-            }
-        }
+    protected int getAccessoryMappingFrame() {
+        return 3;
     }
 
     @Override

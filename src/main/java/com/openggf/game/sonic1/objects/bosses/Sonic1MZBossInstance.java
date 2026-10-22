@@ -4,17 +4,12 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.objects.Sonic1LavaBallObjectInstance;
 import com.openggf.game.sonic1.audio.Sonic1Music;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
-import com.openggf.graphics.GLCommand;
 
-import com.openggf.level.objects.ObjectArtKeys;
-import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnConstructionContextRewindRecreatable;
-import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
-import java.util.List;
 
 /**
  * Object 0x73 — Marble Zone Boss (Eggman dropping lava balls).
@@ -102,6 +97,11 @@ public class Sonic1MZBossInstance extends AbstractS1EggmanBossInstance
     }
 
     @Override
+    protected int getNativeEscapeRoutine() {
+        return STATE_ESCAPE;
+    }
+
+    @Override
     protected int getInitialHitCount() {
         return 8; // obColProp = 8
     }
@@ -159,7 +159,6 @@ public class Sonic1MZBossInstance extends AbstractS1EggmanBossInstance
 
     @Override
     protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state.routineSecondary) {
             case STATE_DESCENT -> updateDescent();
             case STATE_COMBAT -> updateCombat();
@@ -172,9 +171,6 @@ public class Sonic1MZBossInstance extends AbstractS1EggmanBossInstance
         state.x = state.xFixed >> 16;
         state.y = state.yFixed >> 16;
 
-        // Update face and flame animations
-        updateFaceAnimation(player);
-        updateFlameAnimation();
     }
 
     // === State 0: DESCENT ===
@@ -450,13 +446,20 @@ public class Sonic1MZBossInstance extends AbstractS1EggmanBossInstance
         bossMove();
     }
 
-    private void updateFaceAnimation(AbstractPlayableSprite player) {
+    protected void updateFaceAnimation(AbstractPlayableSprite player) {
         if (state.routineSecondary >= STATE_DEFEAT_WAIT) {
-            if (state.routineSecondary >= STATE_ASCENT) {
+            if (state.routineSecondary == STATE_ESCAPE) {
                 faceAnim = Sonic1BossAnimations.ANIM_FACE_PANIC;
             } else {
                 faceAnim = Sonic1BossAnimations.ANIM_FACE_DEFEAT;
             }
+            return;
+        }
+        // BMZ face's return-to-centre laugh branches straight to writeAnim,
+        // before the hit check, so it wins even while collision is disabled.
+        if (state.routineSecondary == STATE_COMBAT
+                && (combatSubtype & 2) != 0 && state.yVel == 0) {
+            faceAnim = Sonic1BossAnimations.ANIM_FACE_LAUGH;
             return;
         }
         if (state.invulnerable) {
@@ -467,16 +470,10 @@ public class Sonic1MZBossInstance extends AbstractS1EggmanBossInstance
             faceAnim = Sonic1BossAnimations.ANIM_FACE_LAUGH;
             return;
         }
-        // ROM: Laugh during return-to-center when yVel == 0 (waiting)
-        if (state.routineSecondary == STATE_COMBAT
-                && (combatSubtype & 2) != 0 && state.yVel == 0) {
-            faceAnim = Sonic1BossAnimations.ANIM_FACE_LAUGH;
-            return;
-        }
         faceAnim = Sonic1BossAnimations.ANIM_FACE_NORMAL_1;
     }
 
-    private void updateFlameAnimation() {
+    protected void updateFlameAnimation() {
         if (state.routineSecondary == STATE_ESCAPE) {
             flameAnim = Sonic1BossAnimations.ANIM_ESCAPE_FLAME;
         } else if (state.xVel != 0) {
@@ -495,23 +492,12 @@ public class Sonic1MZBossInstance extends AbstractS1EggmanBossInstance
 
     @Override
     public int getPriorityBucket() {
-        return 3;
+        return 4;
     }
 
     @Override
-    public void appendRenderCommands(List<GLCommand> commands) {
-        renderEggmanShip();
-
-        // Exhaust tube (Boss Items frame 4) — MZ-specific overlay
-        ObjectRenderManager renderManager = services().renderManager();
-        if (renderManager == null) {
-            return;
-        }
-        boolean flipped = (state.renderFlags & 1) != 0;
-        PatternSpriteRenderer weaponsRenderer = renderManager.getRenderer(ObjectArtKeys.BOSS_WEAPONS);
-        if (weaponsRenderer != null && weaponsRenderer.isReady()) {
-            weaponsRenderer.drawFrameIndex(4, state.x, state.y, flipped, false);
-        }
+    protected int getAccessoryMappingFrame() {
+        return 4;
     }
 
     @Override
