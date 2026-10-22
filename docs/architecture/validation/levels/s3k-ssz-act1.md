@@ -4615,3 +4615,13 @@ SAMEPOST P1(5456,1007),VX1536/VY0/G1536,airfalse/jumpfalse/free/radii9x19; P2(53
 Supportguard precedes later action/air/geometric checks, terminal predicate outcomes UNEVALUATED; ground flags are observed data only. No stable continued support, collapse/width/contact callback/native/physics/next-phase qualification; no omission established.
 Same-JVM literal five-pad/held-input/all-row author-loader plus independent entire script/ZIP/SEVENTEEN wholemovie-prefix proofs agree; **0 JUnit/skips N/A**. Both complete78-field records retained losslessly; owned raw diagnostics consumed under leases.
 Expected46/runtime/POM/maintained data unchanged. [Facts, exact descriptor, limits, hashes, command and timing](../../plans/2026-10-13-s3k-playable-completion.md#r31-first-managed-diagonal-bridge-support-publication--2026-10-22).
+
+
+## R32 admitted diagonal support identity stop — 2026-10-22
+
+At exact `d9226a263`, ONE cold ordinary CLI preserves all15362 R31 pads/inlet and390 comparisons:388 old plus2 fullR31 pairs exact. Original78-field/query helpers/Target134/safeties/domains/step-draw-read literal; new cached-only phase binds the actual inlet raw support once.
+16 SAMEheldRA/P2Up inputs produce15 original REACHED/SAMEtrue records15362..15376, then15377 FIRST_ADMITTED_BRIDGE_IDENTITY_LOSS/SAMEfalse. Lasttrue P1(5562,1034); terminalP1(5568,1035),VX/G1536,VY0,ground/notjumping/free/9x19; P2(5456,893),V0/recovery/manual-windowtrue/locked/controlled/flag0fuel0/contextNONE. Both64rings/3lives/unhurt/live;15378 total/0 new Aedges.
+Terminal current rider differs from admitted176: copied layout180/id0x7B/sub0/X5632/Y1080/flags1/rawY0x2438 metadata. Current180 member/live data do not qualify admitted176 after identity loss. Later liveness/ground/body/geometry predicates UNEVALUATED; terminalX5568 is not nominal east reached while SAMEtrue. No adoption/input15378.
+Admitted176 postloss lifetime/phase/width/contact/unload/native cause UNKNOWN; same postdraw references do not prove uninterrupted inner contact. All auxiliary comparisons reached; UNREACHED/null source path unexercised. No omission or traversal/native qualification established.
+Same-JVM five-pad/held-input/all-row production author-loader and independent entire script/ZIP/EIGHTEEN wholemovie-prefix proofs agree; **0 JUnit/skips N/A**. All16 complete78-field facts plus separate original identity records retained losslessly; owned raw diagnostics consumed under leases.
+Expected46/runtime/POM/maintained data unchanged. [Facts, descriptor, guard order, limits, hashes, command and timing](../../plans/2026-10-13-s3k-playable-completion.md#r32-actual-diagonal-support-identity-changes-at-the-nominal-east-seam--2026-10-22).
