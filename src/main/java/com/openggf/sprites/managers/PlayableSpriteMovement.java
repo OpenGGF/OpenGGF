@@ -2479,12 +2479,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	/** Native .reachedFloor / Knux_TouchFloor tail, distinct from ledge completion. */
 	private void landFromWallClimb(byte angle) {
-		byte property = sprite.getDoubleJumpProperty();
 		sprite.setAngle(angle); // raw Primary_Angle, not the helper's filtered d3
-		exitWallClimbToGround();
-		// Neither Knux_TouchFloor nor KiS2 ResetOnFloor writes this byte.
-		// Restore it after both the generic exit and setAir(false) landing effects.
-		sprite.setDoubleJumpProperty(property);
+		// Knux_TouchFloor / KiS2 ResetOnFloor retain the turn byte even while
+		// synchronous landing callbacks run; do not repair it after publication.
+		exitWallClimbToGround(true);
 		sprite.setPushing(false);
 		sprite.setRollingJump(false);
 		sprite.setFlipAngle(0);
@@ -2495,15 +2493,25 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	/** Common ground exit, also used by ledge completion. */
 	private void exitWallClimbToGround() {
+		exitWallClimbToGround(false);
+	}
+
+	private void exitWallClimbToGround(boolean nativeTouchFloor) {
 		sprite.setGSpeed((short) 0);
 		sprite.setXSpeed((short) 0);
 		sprite.setYSpeed((short) 0);
 		sprite.restoreDefaultRadii();
 		sprite.setAbilityMappingFrameControl(false);
 		sprite.setDoubleJumpFlag(0);
-		sprite.setDoubleJumpProperty((byte) 0);
+		if (!nativeTouchFloor) {
+			sprite.setDoubleJumpProperty((byte) 0);
+		}
 		sprite.setForcedAnimationId(-1);
-		sprite.setAir(false);
+		if (nativeTouchFloor) {
+			com.openggf.sprites.playable.PlayableSpriteInternalAccess.landForNativeFloorReset(sprite);
+		} else {
+			sprite.setAir(false);
+		}
 		sprite.setJumping(false);
 	}
 

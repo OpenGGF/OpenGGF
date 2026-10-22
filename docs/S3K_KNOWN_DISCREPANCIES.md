@@ -1774,10 +1774,12 @@ remain open. [Evidence and limits](architecture/plans/2026-10-13-s3k-playable-co
 Current MHZ consumer372 is delivery-blocking (2026-10-22): exact unchanged
 complete test fails at death26853,1T/1F/0E/0S, earlier than priorc4 death37752.
 First divergent executed owner and death world/receiver/writer/cause are unknown.
-599 component passes do not waive this route. The earlier5aef wall-climb
-prerequisite also retains a confirmed open callback-order gap: .reachedFloor calls
-Knux_TouchFloor without clearing the turn property, whereas landFromWallClimb
-restores it only AFTER generic exit/landing callbacks saw0. The47 returned-state
-controls do not certify callback timing;8272's bridge is currently slide-only.
-A bounded climb-only follow-up must preserve default ledge/ordinary landing.
+599 component passes do not waive this route. A separate climb-only follow-up
+now preserves double_jump_property through both landing hooks by using the
+existing native floor bridge and skipping the private exit's explicit clear.
+It removes the late restore so callback-written values survive. The604 affected
+cases pass, including14 callback controls and all47 climb cases. Ordinary and
+ledge landing retain their zero semantics. No maintained route was rerun on this
+callback source; death26853 remains an independent unattributed delivery block.
 [Current route, exact prerequisite and source proof](architecture/plans/2026-10-13-s3k-playable-completion.md#current372-maintained-mhz-consumer-block-and-climb-source-closure--2026-10-22).
+[Callback correction and limits](architecture/plans/2026-10-13-s3k-playable-completion.md#root-climb-native-floor-callback-correction--2026-10-22).

@@ -538,6 +538,9 @@ Get-up uses byte subtraction then sign extension for the radius correction and
 leaves double_jump_property intact. A late restore after ordinary setAir(false)
 is insufficient: landing callbacks already observed zero. Use the narrow native
 floor-reset entry before publication; ordinary landing keeps its original reset.
+The climb floor tail must also skip its own earlier explicit clear. Do not restore
+the saved byte afterward: that overwrites changes deliberately made by callbacks.
+Keep ledge completion on its distinct ordinary landing path.
 Declared component and registered restore/forward controls cover these branches;
 live route qualification remains separate.
 

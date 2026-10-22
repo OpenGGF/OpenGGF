@@ -3502,8 +3502,11 @@ route breadth or prior-source MHZ37752 attribution. See the
 The unchanged complete MHZ consumer on372 stops at death26853, earlier than
 prior-source37752. Cause/first executed divergent owner are unexposed and the
 new frontier blocks delivery; focused599 coverage does not certify the route.
-The earlier native climb landing helper also restores the turn byte after
-callbacks rather than before them. Its returned-state tests do not close this
-gap; the existing native floor bridge is used by slide only. Keep ordinary and
-ledge-completion semantics when addressing the bounded climb tail.
+The separate native climb callback gap is now corrected through the existing
+native floor bridge before either landing hook, with no late overwrite of
+callback writes. All604 affected component cases pass, including14 direct
+callback controls; ledge completion and ordinary landing still clear the byte.
+This independent component correction has no new maintained MHZ qualification
+and does not attribute or waive the death26853 delivery blocker.
 [Evidence and source boundary](../architecture/plans/2026-10-13-s3k-playable-completion.md#current372-maintained-mhz-consumer-block-and-climb-source-closure--2026-10-22).
+[Callback correction and limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#root-climb-native-floor-callback-correction--2026-10-22).

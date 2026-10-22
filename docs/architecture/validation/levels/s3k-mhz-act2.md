@@ -1254,3 +1254,19 @@ by this failed case. Historical completion and599 component checks stay at their
 own scope/source, not a waiver. Exact command, environment, timing, bounded5aef
 climb prerequisite and confirmed open climb landing-callback gap are in the
 [dated current result](../../plans/2026-10-13-s3k-playable-completion.md#current372-maintained-mhz-consumer-block-and-climb-source-closure--2026-10-22).
+
+
+### Native climb landing callbacks — 2026-10-22
+
+A separate private floor/idle exit correction preserves the native turn byte
+before both synchronous landing hooks and retains callback-written66. The actual
+last ledge row and ordinary public landing still clear it. Old source14T/8F/0E/0S
+exposes the gap while all6 negative controls pass; corrected source passes all
+604 affected cases across20 classes, including14 callback controls,47 climb
+cases and the existing two full-registry slide replay cases. Terrain ports are
+declared component inputs; KiS2 reverse controls are shared-engine inlets.
+
+The unchanged runtime372 MHZ death26853 remains delivery-blocking/unattributed.
+No maintained route, input, predicate or count changed or was rerun for this
+callback leaf. The new runtime has no new Act2/FBZ qualification.
+[Review, source boundary, exact command and limits](../../plans/2026-10-13-s3k-playable-completion.md#root-climb-native-floor-callback-correction--2026-10-22).

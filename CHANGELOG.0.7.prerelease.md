@@ -259,7 +259,8 @@ Unreleased. The earlier development themes remain in
   Sonic 3 & Knuckles ground slides also queue their ROM sound on the level clock.
   Wall climbs
   include the native radius in vertical probes, powered speed and upper bound;
-  floor landings preserve the native angle, animation and climb timer. The native
+  floor landings preserve the native angle, animation and turn byte before landing
+  callbacks, including values written by those callbacks. The native
   second player keeps its ringless hurt response under human control.
   Hydrocity solid blocks retain underside and side contacts while offscreen.
   Snake blocks use their saved origin for camera culling and can reload when the
