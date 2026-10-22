@@ -1351,7 +1351,9 @@ public class GameLoop {
             updateNonGameplayAudio(doFrameStep);
         }
 
-        if (!playbackDebugManager.isCurrentGameplayTickSuppressed()) {
+        // Master-title Extras can open a MOD_SCENE before the first gameplay
+        // session. Its menu has no world timers until a run actually loads.
+        if (timerManager != null && !playbackDebugManager.isCurrentGameplayTickSuppressed()) {
             profiler.beginSection("timers");
             timerManager.update();
             profiler.endSection("timers");
@@ -1750,7 +1752,7 @@ public class GameLoop {
             // defeat -> credits, and the S3K seamless cross-act reload).
             if (levelManager.consumeHostReturnRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-                endHostedRun(RunEndReason.ACT_COMPLETED);
+                completeHostedRunAct();
                 levelIterationAdmission.finishPlaybackBoundary(
                         false, playbackDebugManager, userRecordingControls);
                 updateNonGameplayAudio(doFrameStep);
@@ -1758,9 +1760,9 @@ public class GameLoop {
             }
             if (levelManager.consumeNextActRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-                // A host-returning run ends instead of bleeding into the next act.
+                // A host-returning run ends (or retries) instead of bleeding into the next act.
                 if (runPolicy().returnsToHostOnActCompletion()) {
-                    endHostedRun(RunEndReason.ACT_COMPLETED);
+                    completeHostedRunAct();
                 } else {
                     startNextActFade();
                 }
@@ -1771,9 +1773,9 @@ public class GameLoop {
             }
             if (levelManager.consumeNextZoneRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-                // A host-returning run ends instead of bleeding into the next zone.
+                // A host-returning run ends (or retries) instead of bleeding into the next zone.
                 if (runPolicy().returnsToHostOnActCompletion()) {
-                    endHostedRun(RunEndReason.ACT_COMPLETED);
+                    completeHostedRunAct();
                 } else {
                     startNextZoneFade();
                 }
@@ -1793,9 +1795,9 @@ public class GameLoop {
             }
             if (levelManager.consumeCreditsRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-                // A host-returning run ends instead of bleeding into the credits.
+                // A host-returning run ends (or retries) instead of bleeding into the credits.
                 if (runPolicy().returnsToHostOnActCompletion()) {
-                    endHostedRun(RunEndReason.ACT_COMPLETED);
+                    completeHostedRunAct();
                 } else if (GameServices.module().getGameId() == GameId.STANDALONE) {
                     masterTitleExitCoordinator.startStandaloneCompletion();
                 } else {
@@ -1816,9 +1818,7 @@ public class GameLoop {
                 return false;
             }
             if (hostedRuns.consumeRetry()) {
-                RunSpec retrySpec = hostedRuns.spec();
-                levelManager.getCheckpointState().clear();
-                levelManager.getTransitions().requestZoneAndAct(retrySpec.zone(), retrySpec.act());
+                requestHostedRunRetry(false);
                 levelIterationAdmission.finishPlaybackBoundary(
                         false, playbackDebugManager, userRecordingControls);
                 updateNonGameplayAudio(doFrameStep);
@@ -2000,9 +2000,20 @@ public class GameLoop {
     }
 
     /**
-     * Ends a host-returning run on a cross-act seamless request before the admission owner
-     * applies its destination. Mid-act seamless requests remain owned by the ordinary
-     * transition path.
+     * Completes a host-returning run's act on a cross-act seamless request before the admission
+     * owner applies its destination: the run ends or, like the other act-completion sites,
+     * retries. Mid-act seamless requests remain owned by the ordinary transition path.
+     *
+     * <p>Only a deferred request reaches this route. The S3K events that reload in place inside
+     * their own event pass (AIZ1's fire finish, CNZ1, HCZ1, MGZ1 and others once a level is
+     * loaded) never queue one, so their act completes later through the results exit's
+     * host-return request. MHZ1 queues its reload while the act-1 tally is still running, so
+     * the run completes here, a few frames into the tally.
+     *
+     * <p>The request is dropped either way, so its single-use resource handoff is released
+     * rather than left in the session registry holding the outgoing level. Everything else its
+     * zone event armed for the reload (per-zone event handlers, queued art) belongs to the act
+     * that a retry's fresh load replaces, as it does for a retry pressed mid-act.
      */
     private boolean routeHostedRunSeamlessTransitionBeforeApply(
             SeamlessLevelTransitionRequest request, boolean doFrameStep) {
@@ -2011,9 +2022,44 @@ public class GameLoop {
                 run.getRunZone(), run.getRunAct(), request.type(), request.targetZone(), request.targetAct())) {
             return false;
         }
-        endHostedRun(RunEndReason.ACT_COMPLETED);
+        var handoffs = run.seamlessTransitionResourceHandoffs();
+        if (request.resourceHandoffId() != null && !handoffs.hasFailedTransfer(request.resourceHandoffId())) {
+            handoffs.claim(request.resourceHandoffId());
+        }
+        completeHostedRunAct();
         updateNonGameplayAudio(doFrameStep);
         return true;
+    }
+
+    /**
+     * A host-returning run completed its act: it restarts the act as a retry or ends, as
+     * {@link HostedRunController#resolveActCompletion} decides.
+     */
+    private void completeHostedRunAct() {
+        RunEndReason ended = hostedRuns.resolveActCompletion();
+        if (ended == null) {
+            requestHostedRunRetry(true);
+        } else {
+            endHostedRun(ended);
+        }
+    }
+
+    /**
+     * Reloads the hosted run's act from its start with star posts cleared (a retry). A
+     * completed act stays frozen under the reload fade, as the level reload that follows a
+     * shipped results exit fades out with no object pass (S1 {@code f_restart}, S2
+     * {@code Level_Inactive_flag}); an S2 results exit has already frozen it for its own fade,
+     * and nothing left in it may raise another completion. A retry pressed mid-act keeps
+     * playing under the fade as before.
+     */
+    private void requestHostedRunRetry(boolean actCompleted) {
+        RunSpec retrySpec = hostedRuns.spec();
+        levelManager.getCheckpointState().clear();
+        if (actCompleted) {
+            levelManager.getTransitions().requestZoneAndAct(retrySpec.zone(), retrySpec.act(), true);
+        } else {
+            levelManager.getTransitions().requestZoneAndAct(retrySpec.zone(), retrySpec.act());
+        }
     }
 
     /** Ends the session's hosted run and hands control back to its host. */
@@ -4473,6 +4519,15 @@ public class GameLoop {
             // last so the old fade cannot win the handoff.
             if (postLoadMusicId >= 0) {
                 levelManager.setSuppressNextMusicChange(true);
+            }
+            // A mid-act retry keeps the replaced act playing under its fade, so its results
+            // object can still finish there. This load satisfies any act completion raised
+            // before it, as HostedRunController.onLevelReady does a retry request.
+            if (hostedRuns.isActive()) {
+                levelManager.consumeHostReturnRequest();
+                levelManager.consumeNextActRequest();
+                levelManager.consumeNextZoneRequest();
+                levelManager.consumeCreditsRequest();
             }
             // Only a title owner that models the native fresh title/terrain loop
             // (S3K Level/loc_6310-loc_64DC) holds players behind the title card.

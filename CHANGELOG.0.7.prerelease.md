@@ -41,6 +41,21 @@ Unreleased. The earlier development themes remain in
   including recording uploads. Master challenge solving is serial, cancellable and
   limited to 24 bits and 30 seconds, with one coalesced pending proof write under
   transport backpressure.
+  Time Attack opens directly from a fresh boot, retains its lobby and connections
+  while launching a level, and resumes its owning scene after a run or load failure.
+
+- **Time Attack multiple attempts:** players can submit several runs inside one
+  round window, and the best valid run counts. While the window is open a finish's
+  results tally is followed by a fresh attempt; the retry key still restarts mid-run.
+  Retried attempts and late joiners no longer trip the host's pacing check, a retry
+  after the deadline or a second retry press during the reload no longer aborts the
+  run, and an unfinished run returns to the lobby when the host closes its round.
+  Verified rooms keep superseded claims as fallbacks, so a failed or voided later run
+  no longer erases an earlier run that passed. Deadline clock skew no longer kicks
+  players, a player pushed out of the top ten sees its new rank, finished and
+  reloading racers stop holding nearby ghost slots and show their state in the
+  roster, and verifiers keep polling after a failed cycle. Mods can opt into the
+  same act-completion retry through `RunHost.retryOnActCompletion()`.
 
 - **Multiplayer services:** The master recording/verifier API bounds outstanding
   requests and copied bodies across connections, closes overlapping HTTP pipelines,
@@ -56,7 +71,27 @@ Unreleased. The earlier development themes remain in
   Creation-proof reconnect stamps and one-use room-attach grants have explicit
   expiry and cardinality bounds.
   Capacity reports count completed work and rejections separately from latency and
-  colocated process costs.
+  colocated process costs. A multi-process scale harness now isolates one to four
+  full 256-player relay rooms from their load generators and records room/broker
+  latency, traffic, CPU, memory and lifecycle evidence. Recording quota checks,
+  verifier input reads and client proof solving avoid scale-dependent allocation
+  or directory scans; verifier heartbeats preserve long-running job authorization,
+  and live SQLite sanction/identity cleanup predicates are indexed. Protocol v3
+  replaces repeated whole-room membership snapshots with incremental joins/leaves,
+  while packet-local ghost deltas reduce steady relay traffic without cross-packet
+  state; at four full rooms these cut admission traffic 98.5% and steady traffic
+  about 24%. Valid attempts at the published countdown boundary are
+  admitted even when the scheduled host tick has not run yet. Multiplayer race
+  panels now preserve the stock HUD and act-completion card, with a compact
+  nearby-player list. The capacity recording places the live player mid-pack
+  and checks ghosts leaving and returning to its viewport. Nearby ghost
+  routing bounds selected-sender work and avoids redundant copies and standings
+  sorting. Slow-consumer removal remains safe within an aggregation tick.
+  Valid rapid-attempt backlogs split into ordered packets within both the binary
+  and fallback-envelope caps. Fallback host downlink quotas are isolated per
+  guest, and coalesced broker fanout is bounded by frame count and retained bytes,
+  so healthy multi-tunnel fanout no longer retires the shared broker link and an
+  oversized unclassified backlog has a fixed memory ceiling.
 
 - **Putt Putt Paradise multiplayer:** Scene admission bounds aggregate clipped
   raster work, lines clip before traversal, and unchanged presentations reuse

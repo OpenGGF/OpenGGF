@@ -14,9 +14,9 @@ class TestControlCodecAdversarial {
     void protocolVersionCannotAliasTheSupportedVersionByIntegerTruncation() {
         String valid = codec.encode(null, new ControlMessage.Ping(7));
         assertEquals(new ControlMessage.Ping(7), codec.decode(valid).message());
-        for (String version : List.of("4294967298", "-4294967294",
-                "18446744073709551618", "2.0", "\"2\"", "null", "true")) {
-            String mutated = valid.replace("\"v\":2", "\"v\":" + version);
+        for (String version : List.of("4294967299", "-4294967293",
+                "18446744073709551619", "3.0", "\"3\"", "null", "true")) {
+            String mutated = valid.replace("\"v\":3", "\"v\":" + version);
             assertNotEquals(valid, mutated);
             assertThrows(ProtocolViolationException.class, () -> codec.decode(mutated),
                     "version=" + version);
@@ -43,5 +43,17 @@ class TestControlCodecAdversarial {
             assertThrows(ProtocolViolationException.class, () -> codec.decode(mutated),
                     "attemptId=" + value);
         }
+    }
+
+    @Test
+    void membershipDeltaSlotsRejectExplicitNull() {
+        String left = codec.encode("session", new ControlMessage.PlayerLeft(4));
+        assertThrows(ProtocolViolationException.class,
+                () -> codec.decode(left.replace("\"slot\":4", "\"slot\":null")));
+
+        String upsert = codec.encode("session", new ControlMessage.PlayerUpsert(
+                new ControlMessage.PlayerInfo(4, "identity", "Player", "sonic")));
+        assertThrows(ProtocolViolationException.class,
+                () -> codec.decode(upsert.replace("\"slot\":4", "\"slot\":null")));
     }
 }

@@ -49,7 +49,7 @@ class TestPhase3Protocol {
                 new ControlMessage.RelayAttach("room-1"),
                 new ControlMessage.RelayGuestOpen(7),
                 new ControlMessage.RelayGuestClose(7, "gone"),
-                new ControlMessage.RelayGuestText(7, "{\"v\":2}"),
+                new ControlMessage.RelayGuestText(7, "{\"v\":3}"),
                 new ControlMessage.StandingsPageRequest(2),
                 new ControlMessage.StandingsPage(List.of(new ControlMessage.StandingsRow(
                         0, "A", "sonic", 3600, 41, "NONE")), 2, 16),

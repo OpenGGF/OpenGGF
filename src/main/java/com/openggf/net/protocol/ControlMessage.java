@@ -70,6 +70,16 @@ public sealed interface ControlMessage {
     record RoomState(List<PlayerInfo> players) implements ControlMessage {
     }
 
+    /** Replaces metadata for one occupied slot after the initial RoomState. */
+    @com.openggf.game.ModApi
+    record PlayerUpsert(PlayerInfo player) implements ControlMessage {
+    }
+
+    /** Removes one occupied slot after the initial RoomState. */
+    @com.openggf.game.ModApi
+    record PlayerLeft(int slot) implements ControlMessage {
+    }
+
     @com.openggf.game.ModApi
     record SelectCharacter(String character) implements ControlMessage {
     }

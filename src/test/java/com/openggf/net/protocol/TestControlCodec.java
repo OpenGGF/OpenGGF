@@ -45,6 +45,8 @@ class TestControlCodec {
                 new ControlMessage.Kick("protocol violation"),
                 new ControlMessage.RoomState(
                         List.of(new ControlMessage.PlayerInfo(0, "fp", "A", "sonic", false))),
+                new ControlMessage.PlayerUpsert(new ControlMessage.PlayerInfo(0, "fp", "A", "tails")),
+                new ControlMessage.PlayerLeft(0),
                 new ControlMessage.SelectCharacter("tails"),
                 new ControlMessage.Chat("hi"),
                 new ControlMessage.ChatBroadcast(0, "A", "hi"),
@@ -67,8 +69,32 @@ class TestControlCodec {
     }
 
     @Test
+    void rejectsMalformedMembershipUpdatesAndAmbiguousSnapshots() {
+        for (ControlMessage message : List.of(
+                new ControlMessage.PlayerUpsert(null),
+                new ControlMessage.PlayerUpsert(new ControlMessage.PlayerInfo(-1, "fp", "A", "sonic")),
+                new ControlMessage.PlayerUpsert(new ControlMessage.PlayerInfo(0, "fp", null, "sonic")),
+                new ControlMessage.PlayerLeft(-1),
+                new ControlMessage.PlayerLeft(Protocol.MAX_PLAYERS_RELAY),
+                new ControlMessage.RoomState(List.of(
+                        new ControlMessage.PlayerInfo(0, "a", "A", "sonic"),
+                        new ControlMessage.PlayerInfo(0, "b", "B", "tails"))),
+                new ControlMessage.RoomState(List.of(
+                        new ControlMessage.PlayerInfo(0, "same", "A", "sonic"),
+                        new ControlMessage.PlayerInfo(1, "same", "B", "tails"))))) {
+            assertThrows(ProtocolViolationException.class,
+                    () -> ControlCodec.decode(ControlCodec.encode(null, message)), message.toString());
+        }
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(
+                "{\"v\":" + Protocol.VERSION + ",\"token\":null,\"msg\":{\"type\":\"PlayerLeft\"}}"));
+        String current = ControlCodec.encode(null, new ControlMessage.Ping(1));
+        assertThrows(ProtocolViolationException.class,
+                () -> ControlCodec.decode(current.replace("\"v\":" + Protocol.VERSION, "\"v\":2")));
+    }
+
+    @Test
     void rejectsOversizedText() {
-        String big = "{\"v\":2,\"msg\":{\"type\":\"Chat\",\"text\":\""
+        String big = "{\"v\":3,\"msg\":{\"type\":\"Chat\",\"text\":\""
                 + "x".repeat(Protocol.MAX_CONTROL_BYTES) + "\"}}";
         assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(big));
     }
@@ -76,41 +102,41 @@ class TestControlCodec {
     @Test
     void rejectsUnknownTypeWrongVersionAndGarbage() {
         assertThrows(ProtocolViolationException.class,
-                () -> ControlCodec.decode("{\"v\":2,\"msg\":{\"type\":\"Nope\"}}"));
+                () -> ControlCodec.decode("{\"v\":3,\"msg\":{\"type\":\"Nope\"}}"));
         assertThrows(ProtocolViolationException.class,
                 () -> ControlCodec.decode(
                         "{\"v\":1,\"msg\":{\"type\":\"Ping\",\"t0ClientMillis\":1}}"));
         assertThrows(ProtocolViolationException.class,
-                () -> ControlCodec.decode("{\"v\":2}"));
+                () -> ControlCodec.decode("{\"v\":3}"));
         assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode("not json at all"));
     }
 
     @Test
     void rejectsUnknownEnvelopeAndMessageFields() {
         assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(
-                "{\"v\":2,\"token\":null,\"futureField\":true,"
+                "{\"v\":3,\"token\":null,\"futureField\":true,"
                         + "\"msg\":{\"type\":\"Ping\",\"t0ClientMillis\":7}}"));
         assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(
-                "{\"v\":2,\"token\":null,\"msg\":{\"type\":\"Ping\","
+                "{\"v\":3,\"token\":null,\"msg\":{\"type\":\"Ping\","
                         + "\"t0ClientMillis\":7,\"futureField\":true}}"));
     }
 
     @Test
     void rejectsDuplicateSecuritySensitiveFields() {
         assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(
-                "{\"v\":2,\"token\":\"first\",\"token\":\"second\","
+                "{\"v\":3,\"token\":\"first\",\"token\":\"second\","
                         + "\"msg\":{\"type\":\"Ping\",\"t0ClientMillis\":7}}"));
         assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(
-                "{\"v\":2,\"token\":null,\"msg\":{\"type\":\"Ping\","
+                "{\"v\":3,\"token\":null,\"msg\":{\"type\":\"Ping\","
                         + "\"t0ClientMillis\":7,\"t0ClientMillis\":8}}"));
     }
 
     @Test
     void rejectsMissingOrNullRoomStatePlayers() {
         assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(
-                "{\"v\":1,\"token\":null,\"msg\":{\"type\":\"RoomState\"}}"));
+                "{\"v\":3,\"token\":null,\"msg\":{\"type\":\"RoomState\"}}"));
         assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(
-                "{\"v\":1,\"token\":null,\"msg\":{\"type\":\"RoomState\",\"players\":null}}"));
+                "{\"v\":3,\"token\":null,\"msg\":{\"type\":\"RoomState\",\"players\":null}}"));
     }
 
     @Test

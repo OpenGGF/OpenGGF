@@ -34,6 +34,31 @@ class TestProofOfWork {
     }
 
     @Test
+    void solveReusesHashingStorageAcrossNonceTrials() {
+        byte[] payload = "openggf-scale-probe-v1".getBytes(StandardCharsets.UTF_8);
+        ProofOfWork.solve(payload, 0);
+        var bean = (com.sun.management.ThreadMXBean)
+                java.lang.management.ManagementFactory.getThreadMXBean();
+        org.junit.jupiter.api.Assumptions.assumeTrue(bean.isThreadAllocatedMemorySupported());
+        if (!bean.isThreadAllocatedMemoryEnabled()) {
+            bean.setThreadAllocatedMemoryEnabled(true);
+        }
+        long thread = Thread.currentThread().threadId();
+        org.junit.jupiter.api.Assumptions.assumeTrue(
+                bean.isThreadAllocatedMemoryEnabled()
+                        && bean.getThreadAllocatedBytes(thread) >= 0);
+
+        long before = bean.getThreadAllocatedBytes(thread);
+        long nonce = ProofOfWork.solve(payload, 18);
+        long allocated = bean.getThreadAllocatedBytes(thread) - before;
+
+        assertEquals(55_088, nonce);
+        assertTrue(ProofOfWork.verify(payload, nonce, 18));
+        assertTrue(allocated < 256 * 1024,
+                "proof solve allocated " + allocated + " bytes");
+    }
+
+    @Test
     void identityCreationStampPersistsAndReloads(@TempDir Path dir) throws Exception {
         PlayerIdentity identity = PlayerIdentity.loadOrCreate(dir);
         long nonce = identity.creationPowNonce(10);

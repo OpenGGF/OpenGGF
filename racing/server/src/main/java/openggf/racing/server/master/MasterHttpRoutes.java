@@ -379,6 +379,11 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
                 return response(HttpResponseStatus.UNAUTHORIZED);
             }
         }
+        if (request.method().equals(HttpMethod.POST)
+                && request.path().equals("/verifier/heartbeat")) {
+            // authenticateWorker above refreshed this worker without leasing another job.
+            return response(HttpResponseStatus.NO_CONTENT);
+        }
         if (request.method().equals(HttpMethod.GET)
                 && request.path().equals("/verifier/jobs")) {
             return jobs.lease(worker.orElseThrow().workerId(),

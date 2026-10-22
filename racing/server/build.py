@@ -7,6 +7,7 @@ Usage:
   target/racing-server/racing-server master --config master.yaml
   target/racing-server/racing-server verifier --master https://host:27900 --registration-token T --rom s3k.gen --data ./verifier-data
   target/racing-server/racing-server load-test --n 256 --duration 30 --mix adversarial
+  target/racing-server/racing-server scale-test --rooms 4 --players 256 --duration 10 --warmup 3
 
 The server is not part of the engine artifact. It compiles the Time Attack replay
 implementation (racing/time-attack) and racing/server against the engine's shared networking
@@ -31,6 +32,8 @@ TOOLS = {
     "verifier": "openggf.racing.server.verifier.VerifierMain",
     "load-test": "openggf.racing.server.tools.GhostLoadTestTool",
     "socket-stress": "openggf.racing.server.tools.RacingSocketStressTool",
+    "scale-test": "openggf.racing.server.tools.RacingScaleTool",
+    "capture-video": "openggf.racing.server.tools.TimeAttackCapacityVideoTool",
     "track-profiles": "openggf.racing.server.tools.TrackProfileExportTool",
 }
 

@@ -71,6 +71,13 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+An injected offline audio backend can be replaced at a later launch boundary
+(2026-10-21, full Time Attack capture). EGL and `java.awt.headless` isolate no
+audio devices. Ordinary Engine launch preparation previously replaced the supplied
+headless backend with LWJGL. Verify exact backend and no-device sink ownership
+through startup, level launch and return, and check the production PCM packets;
+startup identity alone does not establish isolation for the recording.
+
 A live scene can simulate correctly and render valid scenery while every actor is
 outside the picture (2026-10-21, Stageplay live-world review). ROM level maxima
 are camera-origin limits, not terrain dimensions; subtracting the viewport again

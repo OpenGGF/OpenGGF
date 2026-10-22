@@ -54,6 +54,19 @@ public final class TimeAttackRuntime implements RunHost {
         default void drawOverlay(com.openggf.mods.ui.LevelOverlayCanvas canvas, int levelWidth,
                                  int localCentreX) {
         }
+
+        /**
+         * Asked when the act is complete and the run would return to its host: true restarts the
+         * act as a fresh attempt instead (a round window that is still open).
+         */
+        default boolean continueAfterActCompletion() {
+            return false;
+        }
+
+        /** Whether the retry key may restart the act now; false ignores it (a closed window). */
+        default boolean mayRetry() {
+            return true;
+        }
     }
 
     /** Multiplayer bridge for spawn-anchored attempt lifecycle and frame streaming. */
@@ -205,6 +218,13 @@ public final class TimeAttackRuntime implements RunHost {
         this.handle = handle;
     }
 
+    /** Asks the engine to end the run and return to the host at the next safe boundary. */
+    public void leaveRun() {
+        if (handle != null) {
+            handle.leave();
+        }
+    }
+
     /** Key (GLFW/SceneKeys code) that retries the attempt. */
     public void setRetryKey(java.util.function.IntSupplier retryKey) {
         this.retryKey = retryKey;
@@ -325,10 +345,21 @@ public final class TimeAttackRuntime implements RunHost {
 
     @Override
     public boolean admitStep(RunInput input) {
-        if (retryKey != null && input.keyPressed(retryKey.getAsInt())) {
+        // The companion drains the network first, so a window that closed this frame refuses
+        // the retry key.
+        FrameCompanion partner = companion;
+        boolean admitted = partner == null || partner.admit(input);
+        if (retryKey != null && input.keyPressed(retryKey.getAsInt())
+                && (partner == null || partner.mayRetry())) {
             requestRetry();
         }
-        return companion == null || companion.admit(input);
+        return admitted;
+    }
+
+    /** Solo runs return to their host; a multiplayer companion may keep an open window going. */
+    @Override
+    public boolean retryOnActCompletion() {
+        return companion != null && companion.continueAfterActCompletion();
     }
 
     @Override

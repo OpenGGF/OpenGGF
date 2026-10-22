@@ -3,16 +3,20 @@ package com.openggf.net.hub;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.ControlJsonCodec;
 import com.openggf.net.protocol.ControlMessage;
+import com.openggf.net.protocol.GhostPackets;
 import com.openggf.net.protocol.Protocol;
 import com.openggf.net.protocol.ProtocolViolationException;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.LongSupplier;
+import java.util.stream.Collectors;
 
 /** Single-threaded room protocol driver and owner of its hub and round state. */
 @com.openggf.game.ModApi
@@ -35,6 +39,7 @@ public final class RoomHost {
         String fingerprint;
         String displayName;
         String character;
+        ControlMessage.PlayerInfo publishedInfo;
         long memberSinceMillis;
         long lastChatMillis = Long.MIN_VALUE;
         long lastStandingsPageMillis = Long.MIN_VALUE;
@@ -43,6 +48,9 @@ public final class RoomHost {
         boolean finishedThisRound;
         int activeAttemptId = -1;
         int lastAttemptId = -1;
+        // Latest start refused only because the window was not open. Its in-flight
+        // frames, reset and finish are dropped quietly rather than counted.
+        int refusedAttemptId = -1;
 
         Member(HubConnection connection, HostHandshake handshake, long connectedAt) {
             this.connection = connection;
@@ -61,9 +69,12 @@ public final class RoomHost {
     private final ControlJsonCodec codec;
     private final Map<HubConnection, Member> members = new LinkedHashMap<>();
     private final Map<HubConnection, String> expectedFingerprints = new LinkedHashMap<>();
+    // Slots in the last broadcast top ten, for private rank updates on push-out.
+    private Set<Integer> broadcastTopSlots = Set.of();
     private String roomGameId;
     private int roomZone;
     private int roomAct;
+    private boolean closing;
 
     public RoomHost(RoomHostConfig config, PlayerIdentity hostIdentity,
                     LongSupplier wallClockMillis,
@@ -161,7 +172,9 @@ public final class RoomHost {
         }
         if (round.phase() != HostRoundEngine.Phase.RUNNING
                 || member.activeAttemptId < 0) {
-            recordAttemptViolation(member, "binary outside active attempt");
+            if (!isRefusedAttemptBatch(member, data)) {
+                recordAttemptViolation(member, "binary outside active attempt");
+            }
             return;
         }
         hub.onBinary(member.slot, data);
@@ -172,7 +185,7 @@ public final class RoomHost {
         Member member = members.remove(connection);
         if (member != null && member.admitted) {
             removeAdmittedMember(member);
-            broadcast(new ControlMessage.RoomState(players()));
+            publishDeparture(member);
         }
     }
 
@@ -216,6 +229,7 @@ public final class RoomHost {
             member.finishedThisRound = false;
             member.activeAttemptId = -1;
             member.lastAttemptId = -1;
+            member.refusedAttemptId = -1;
         }
         hub.setTrack(roundConfig.gameId(), roundConfig.zone(), roundConfig.act());
         roomGameId = roundConfig.gameId();
@@ -234,23 +248,31 @@ public final class RoomHost {
 
     /** Closes every transport currently owned by this ephemeral room. */
     public void close(String reason) {
-        for (Member member : List.copyOf(members.values())) {
-            drop(member, reason);
+        closing = true;
+        try {
+            for (Member member : List.copyOf(members.values())) {
+                drop(member, reason);
+            }
+            expectedFingerprints.clear();
+        } finally {
+            closing = false;
         }
-        expectedFingerprints.clear();
     }
 
     public List<ControlMessage.PlayerInfo> players() {
         List<ControlMessage.PlayerInfo> result = new ArrayList<>();
         for (Member member : members.values()) {
             if (member.admitted) {
-                result.add(new ControlMessage.PlayerInfo(member.slot, member.fingerprint,
-                        member.displayName, member.character,
-                        hooks.isNewPlayer() != null
-                                && hooks.isNewPlayer().test(member.fingerprint)));
+                result.add(playerInfo(member));
             }
         }
         return List.copyOf(result);
+    }
+
+    private ControlMessage.PlayerInfo playerInfo(Member member) {
+        return new ControlMessage.PlayerInfo(member.slot, member.fingerprint,
+                member.displayName, member.character, hooks.isNewPlayer() != null
+                        && hooks.isNewPlayer().test(member.fingerprint));
     }
 
     public HostRoundEngine round() {
@@ -361,10 +383,16 @@ public final class RoomHost {
                 new ControlMessage.JoinAccepted(member.token, slot, descriptor(),
                         round.snapshot())));
         round.sendVoteState(message -> send(member, message));
-        broadcast(new ControlMessage.RoomState(players()));
+        send(member, new ControlMessage.RoomState(players()));
+        publishPlayerChanges(member);
     }
 
     private void dispatch(Member member, ControlMessage message) {
+        if (message instanceof ControlMessage.AttemptFinish finish
+                && isRefusedAttempt(member, finish.attemptId())) {
+            // The window was closed when this attempt started: nothing to score.
+            return;
+        }
         long now = wallClockMillis.getAsLong();
         switch (message) {
             case ControlMessage.Chat chat -> handleChat(member, chat, now);
@@ -373,11 +401,12 @@ public final class RoomHost {
             case ControlMessage.SelectCharacter select -> {
                 if (round.phase() == HostRoundEngine.Phase.LOBBY
                         && !"LOCKED".equals(config.characterPolicy())
-                        && boundedLabel(select.character(), MAX_CHARACTER_BYTES)) {
+                        && boundedLabel(select.character(), MAX_CHARACTER_BYTES)
+                        && !select.character().equals(member.character)) {
                     String previous = member.character;
                     member.character = select.character();
                     if (roomStateFits()) {
-                        broadcast(new ControlMessage.RoomState(players()));
+                        publishPlayerChanges(null);
                     } else {
                         member.character = previous;
                     }
@@ -407,6 +436,10 @@ public final class RoomHost {
                                 finish.attemptId(), finish.finishFrame(),
                                 finish.ghostStreamHashHex()));
                 clearActiveAttempt(member);
+                // After the reset clearActiveAttempt reported, a finish ends FINISHED
+                // even when uncredited: roster status is coarse course progress (a
+                // sender's own finished frame bit also reports it), not standings.
+                hub.onAttemptFinished(member.slot, finish.attemptId());
                 member.finishedThisRound = round.hasBestForParticipant(member.participantId);
                 if (outcome != null && outcome.outsideBroadcastCap()) {
                     send(member, new ControlMessage.RankUpdate(
@@ -456,22 +489,47 @@ public final class RoomHost {
     }
 
     private void startAttempt(Member member, int attemptId) {
-        if (!round.mayStartAttempt()
-                || member.activeAttemptId >= 0 || attemptId <= member.lastAttemptId) {
+        if (member.activeAttemptId >= 0 || attemptId <= member.lastAttemptId) {
             recordAttemptViolation(member, "invalid attempt start " + attemptId);
             return;
         }
-        member.activeAttemptId = attemptId;
+        // Clock skew near the countdown or deadline is not misbehaviour. Keep the
+        // id so ordering stays strict and its trailing traffic can be recognised.
         member.lastAttemptId = attemptId;
+        if (!round.mayStartAttempt()) {
+            member.refusedAttemptId = attemptId;
+            return;
+        }
+        member.refusedAttemptId = -1;
+        member.activeAttemptId = attemptId;
         hub.onAttemptStart(member.slot, attemptId);
     }
 
     private void resetAttempt(Member member, int attemptId) {
+        if (isRefusedAttempt(member, attemptId)) {
+            return;
+        }
         if (attemptId != member.activeAttemptId) {
             recordAttemptViolation(member, "reset outside matching active attempt");
             return;
         }
         clearActiveAttempt(member);
+    }
+
+    private static boolean isRefusedAttempt(Member member, int attemptId) {
+        return member.refusedAttemptId >= 0 && member.activeAttemptId < 0
+                && attemptId == member.refusedAttemptId;
+    }
+
+    private static boolean isRefusedAttemptBatch(Member member, byte[] data) {
+        if (member.refusedAttemptId < 0) {
+            return false;
+        }
+        try {
+            return isRefusedAttempt(member, GhostPackets.decodeFrames(data).attemptId());
+        } catch (ProtocolViolationException malformed) {
+            return false;
+        }
     }
 
     private void clearActiveAttempt(Member member) {
@@ -493,10 +551,38 @@ public final class RoomHost {
     }
 
     private void broadcast(ControlMessage message) {
+        if (closing) return;
         String encoded = codec.encode(null, message);
         for (Member member : members.values()) {
             if (member.admitted) {
                 member.connection.sendText(encoded);
+            }
+        }
+        switch (message) {
+            case ControlMessage.RoundStart ignored -> broadcastTopSlots = Set.of();
+            case ControlMessage.StandingsDelta delta -> notifyPushedOut(delta.rows());
+            default -> { }
+        }
+    }
+
+    /**
+     * Clients learn their own rank from the top-ten broadcast. A participant
+     * pushed out of it gets its new rank privately, or it would keep showing its
+     * last top-ten rank and never page the standings around itself.
+     */
+    private void notifyPushedOut(List<ControlMessage.StandingsRow> top) {
+        Set<Integer> pushedOut = new HashSet<>(broadcastTopSlots);
+        broadcastTopSlots = top.stream().map(ControlMessage.StandingsRow::slot)
+                .collect(Collectors.toUnmodifiableSet());
+        pushedOut.removeAll(broadcastTopSlots);
+        if (pushedOut.isEmpty()) {
+            return;
+        }
+        // A slot without a row lost its only result and has no rank to report.
+        for (ControlMessage.StandingsRow row : round.standings()) {
+            Member member = pushedOut.remove(row.slot()) ? memberForSlot(row.slot()) : null;
+            if (member != null) {
+                send(member, new ControlMessage.RankUpdate(row.rank(), row.bestTimeFrames()));
             }
         }
     }
@@ -541,8 +627,32 @@ public final class RoomHost {
             removeAdmittedMember(member);
         }
         member.connection.close(reason);
-        if (member.admitted) {
-            broadcast(new ControlMessage.RoomState(players()));
+        if (member.admitted && !closing) {
+            publishDeparture(member);
+        }
+    }
+
+    private void publishDeparture(Member member) {
+        if (!closing) {
+            broadcast(new ControlMessage.PlayerLeft(member.slot));
+            publishPlayerChanges(null);
+        }
+    }
+
+    /** Refresh dynamic metadata at the same membership events that used to send snapshots. */
+    private void publishPlayerChanges(Member snapshotRecipient) {
+        for (Member changed : members.values()) {
+            if (!changed.admitted) continue;
+            ControlMessage.PlayerInfo info = playerInfo(changed);
+            if (!info.equals(changed.publishedInfo)) {
+                String encoded = codec.encode(null, new ControlMessage.PlayerUpsert(info));
+                for (Member recipient : members.values()) {
+                    if (recipient.admitted && recipient != snapshotRecipient) {
+                        recipient.connection.sendText(encoded);
+                    }
+                }
+                changed.publishedInfo = info;
+            }
         }
     }
 
