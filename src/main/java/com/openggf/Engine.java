@@ -2336,7 +2336,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private boolean preparePresentationForLaunch(GameModule module, String standaloneOwner) {
 		try {
-			if (configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
+			// Configured headless startup already validated its caller-owned no-device backend.
+			if (!configuredHeadlessSession && configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
 				audioManager.setBackendForLaunch(new LWJGLAudioBackend(configService, profiler));
 			}
 			ModSubsystem subsystem = ModSubsystem.current();
