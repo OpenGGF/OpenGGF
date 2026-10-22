@@ -264,7 +264,8 @@ public final class FullLevelExporter {
 
     private ObjectNode metadata(MutableLevel level, ExportRequest r) {
         ObjectNode root = JSON.createObjectNode();
-        root.set("settings", ModLevelSettingsJson.toJson(r.settings()));
+        if (!r.settings().equals(ModLevelSettings.DEFAULT))
+            root.set("settings", ModLevelSettingsJson.toJson(r.settings()));
         root.put("formatVersion", r.gameId()==GameId.S3K ? 2 : 1); root.put("zoneName", r.zoneName());
         root.put("zoneIndex", r.zoneIndex()); root.put("levelIndex", r.levelIndex());
         root.put("blockGridSide", level.getChunksPerBlockSide());

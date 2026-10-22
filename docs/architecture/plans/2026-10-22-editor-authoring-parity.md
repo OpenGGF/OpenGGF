@@ -148,3 +148,41 @@ a third failure was invalid test fixture art, corrected and passed in the final
 focused run. The final smoke selection is 3,591 candidate classes plus guards,
 with a 150-minute execution limit. This remains smoke coverage, not release-only
 full-suite validation. Offscreen desktop build/captures follow with the task JAR.
+
+## Complete smoke and recovery
+
+At `4aff4b8fd`, run `20261022T173137Z-8c14482f` completed all 72 ordinary
+batches and guards: 38,239 tests, 23 failures, 11 errors and 93 skips. All details
+were inspected and the run acknowledged. Six cases match the earlier bounded
+baseline comparisons: the HCZ GLFW pixel fixture, two HubMusic architecture
+violations, two MenuAudioProbe singleton violations, and the native-image
+AuthoredLevelDecoder service include. These unrelated failures remain inherited.
+
+The other 28 failing/errored cases exposed editor compatibility and inventory
+gaps. Rejected serializing empty settings into otherwise unchanged exports:
+omitting defaults preserves the original golden bytes. Rejected consulting new
+environment providers when no background/water is selected, and inserting new
+menu actions before the existing Close action. Native art remains byte-exact;
+new transparent import capacity is checked separately from missing native art.
+
+The new gizmo is now an executed isolated rewind identity. Review also found
+that generic spawn-based recreation first constructs a probe: an anonymous spawn
+rejects typed properties before the real recreation hook runs. Captured placement
+data must reach that probe. A first recovery attempt required every marker to
+have a spawn; two focused failures identified S3kSignpostSparkleChild, whose
+coordinate-only constructor deliberately stores none. Keep the neutral probe
+fallback for absent placements. No game/class exception or guard allowance is
+needed. Immutable sealed placement properties are explicitly classified by the
+in-place restore audit.
+
+The full guard run also rejected one raw destruction call and a new provisional
+ModZoneContribution constructor overload. Use ObjectLifetimeOps for consuming
+triggers and retain only the canonical contribution constructor, updating the
+unpublished candidate signature pin without a separate API version change.
+
+Recovery validation ran 1,648 cases with no skips: all original task failures
+were repaired; only the two null-spawn probe cases failed. After correcting that
+fallback, all 1,401 affected rewind/architecture cases passed with no skips.
+The preceding selection also passed the settings/export/project/mod-zone cases,
+lifecycle/no-shim/API guards and all 60 required S3K cases. No unchanged broad
+smoke coverage was repeated after these bounded corrections.

@@ -19,7 +19,9 @@ public final class ModLevelSettingsValidation {
     public static void validateCapabilities(GameModule module, ModLevelSettings settings) {
         Objects.requireNonNull(module, "module");
         Objects.requireNonNull(settings, "settings");
-        module.getModLevelSettingsProvider().validate(settings);
+        // Unused environment settings retain the host's existing validation path.
+        if (settings.background() != null || settings.waterHeight() != null)
+            module.getModLevelSettingsProvider().validate(settings);
         if (settings.team() != null && !settings.team().sidekicks().isEmpty() && !module.supportsSidekick())
             throw new IllegalArgumentException("This host does not support required sidekicks in authored level settings");
     }

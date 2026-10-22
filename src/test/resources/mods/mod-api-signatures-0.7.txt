@@ -1769,7 +1769,6 @@ CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$Start public  <init>(int,in
 CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$StockMusic public  <init>(int)
 CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn public  <init>(int,int,int,int,int,int,boolean,int)
 CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$TrackMusic public  <init>(com.openggf.mods.TrackKey)
-CONSTRUCTOR com.openggf.mods.code.ModZoneContribution public  <init>(java.lang.String,com.openggf.mods.code.BakedLevelRef,java.lang.String,com.openggf.mods.code.ZoneEventFactory,boolean,java.util.List<com.openggf.mods.code.BakedLevelRef>,com.openggf.game.modzone.ModZoneRuntimeFactory)
 CONSTRUCTOR com.openggf.mods.code.ModZoneContribution public  <init>(java.lang.String,com.openggf.mods.code.BakedLevelRef,java.lang.String,com.openggf.mods.code.ZoneEventFactory,boolean,java.util.List<com.openggf.mods.code.BakedLevelRef>,com.openggf.game.modzone.ModZoneRuntimeFactory,boolean)
 CONSTRUCTOR com.openggf.mods.code.RomArtRequest public  <init>(int,com.openggf.mods.code.RomArtCompression,int,int,int,int,int)
 CONSTRUCTOR com.openggf.mods.code.RomArtRequest public  <init>(int,com.openggf.mods.code.RomArtCompression,int,int,int,int,int,com.openggf.game.patch.LogicalRom)

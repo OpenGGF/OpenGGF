@@ -31,9 +31,10 @@ final class LevelContributedZoneRuntime {
         var animatedTiles = GameServices.animatedTileChannelGraphOrNull();
         if (zoneRuntime != null) zoneRuntime.clear();
         if (animatedTiles != null) animatedTiles.clear();
-        var settingsProvider = levelManager.gameModule.getModLevelSettingsProvider();
-        var builtIn = settingsProvider.create(contribution.levelData().settings(),
-                levelManager.worldDataSource().rom().orElse(null));
+        var settings = contribution.levelData().settings();
+        var builtIn = settings.background() == null && settings.waterHeight() == null ? null
+                : levelManager.gameModule.getModLevelSettingsProvider().create(settings,
+                        levelManager.worldDataSource().rom().orElse(null));
         var factory = contribution.runtimeFactory();
         var explicit = factory == null ? null : factory.create(new ModZoneRuntimeContext(
                 new ZoneKey.Mod(contribution.ownerModId(), contribution.localKey()),

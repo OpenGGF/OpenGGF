@@ -24,23 +24,18 @@ public record ModZoneContribution(String localKey, BakedLevelRef level,
         if (terminalCampaign && insertAfter != null)
             throw new IllegalArgumentException("A terminal campaign cannot be inserted into stock progression");
     }
-    public ModZoneContribution(String localKey, BakedLevelRef level, String insertAfter,
-            ZoneEventFactory events, boolean gameStart, List<BakedLevelRef> additionalActs,
-            ModZoneRuntimeFactory runtimeFactory) {
-        this(localKey, level, insertAfter, events, gameStart, additionalActs, runtimeFactory, false);
-    }
     /** A single authored act; use {@link #multiAct} for an ordered campaign. */
     public static ModZoneContribution singleAct(String localKey, BakedLevelRef level,
             String insertAfter, ZoneEventFactory eventFactory, boolean gameStart) {
         return new ModZoneContribution(localKey, level, insertAfter, eventFactory,
-                gameStart, List.of(), null);
+                gameStart, List.of(), null, false);
     }
     public static ModZoneContribution multiAct(String localKey, List<BakedLevelRef> acts,
             String insertAfter, ZoneEventFactory events, boolean gameStart) {
         List<BakedLevelRef> ordered = List.copyOf(acts);
         if (ordered.isEmpty()) throw new IllegalArgumentException("A zone needs at least one act");
         return new ModZoneContribution(localKey, ordered.getFirst(), insertAfter, events,
-                gameStart, ordered.subList(1, ordered.size()), null);
+                gameStart, ordered.subList(1, ordered.size()), null, false);
     }
     public List<BakedLevelRef> acts() {
         ArrayList<BakedLevelRef> acts = new ArrayList<>(additionalActs.size() + 1);

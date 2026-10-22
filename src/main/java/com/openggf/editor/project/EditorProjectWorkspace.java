@@ -195,9 +195,9 @@ public final class EditorProjectWorkspace {
             actions.add(action("Level properties", this::properties));
             actions.add(action("Resize level", this::resize));
             actions.add(action("Export level", this::export));
+            actions.add(action("Close project", this::requestClose));
             actions.add(action("Campaign levels", this::campaign));
             actions.add(action("Export playable campaign", this::exportCampaign));
-            actions.add(action("Close project", this::requestClose));
             actions.add(action("Import art", this::importArtForm));
         }
         menu.showActions("Editor projects", actions);

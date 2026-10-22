@@ -1768,6 +1768,17 @@ new carrier replayed beside stale entries for the old one (`headroomSnapshots`
 9 vs 10 in MHZ1). Re-admit the departed instance with its structural links and
 clear only uncaptured deletion markers on restore (2026-10-16, `f07a25bf9`).
 
+### Spawn-based rewind probes must retain placement data
+
+Generic recreation constructs a probe before invoking the object's recreation
+hook. A typed object can reject an anonymous spawn before the hook ever sees its
+captured properties. Use the captured spawn for SpawnRewindRecreatable probes
+when present. Coordinate-only native effects such as S3kSignpostSparkleChild
+deliberately have no spawn; retain the neutral probe fallback and restore their
+coordinates from captured scalar state. Check the real ObjectManager codec path,
+not only a direct recreation-hook call or an in-place restore.
+Origin: [editor authoring parity recovery](plans/2026-10-22-editor-authoring-parity.md#complete-smoke-and-recovery).
+
 ### A recreated effect must keep the owner its spawner supplied
 
 `SkidDustObjectInstance` received its owner's dust renderer from its spawner;

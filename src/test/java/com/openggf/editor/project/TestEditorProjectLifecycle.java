@@ -87,7 +87,12 @@ class TestEditorProjectLifecycle {
         var document = workspace.document();
         assertEquals(GameMode.EDITOR, engine.getCurrentGameMode());
         assertEquals(game, document.metadata().gameId());
-        assertEquals(fixture.library.getPatternCount(), document.level().getPatternCount());
+        assertTrue(document.level().getPatternCount() >= fixture.library.getPatternCount(),
+                "authoring capacity retains every native pattern");
+        assertTrue(document.level().getPatternCount() <= 2048, "import slots stay within native terrain capacity");
+        for (int i = fixture.library.getPatternCount(); i < document.level().getPatternCount(); i++)
+            for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++)
+                assertEquals(0, document.level().getPattern(i).getPixel(x, y), "new import slots start transparent");
         assertEquals(fixture.library.getChunksPerBlockSide(), document.level().getChunksPerBlockSide());
         assertTrue(document.level().getObjects().isEmpty());
         assertTrue(document.level().getRings().isEmpty());

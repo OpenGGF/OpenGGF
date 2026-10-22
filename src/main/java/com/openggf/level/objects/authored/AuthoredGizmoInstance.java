@@ -6,6 +6,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -67,7 +68,7 @@ public final class AuthoredGizmoInstance extends AbstractObjectInstance implemen
                     if (playback.play(trigger.resource(), trigger.blocking())) {
                         pendingStageplay = false;
                         fired = true;
-                        if (trigger.consume()) setDestroyed(true);
+                        if (trigger.consume()) ObjectLifetimeOps.destroyLatched(this);
                     }
                 }
             }
