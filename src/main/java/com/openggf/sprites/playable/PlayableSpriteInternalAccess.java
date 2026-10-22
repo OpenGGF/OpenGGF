@@ -21,6 +21,22 @@ public final class PlayableSpriteInternalAccess {
         return controller.activateFromScript();
     }
 
+    /** Runs the native display expiry before Sonic_Super can install a fresh timer. */
+    public static void tickNativeDisplayInvincibility(AbstractPlayableSprite sprite) {
+        sprite.tickInvincibilityDisplayTimer();
+    }
+
+    /**
+     * Publishes the fluid bank selected by a native speed-constant writer.
+     * Status_Underwater, gravity, jump force and water-transition history are
+     * independent: a routine can overwrite the speed words while submerged.
+     * The existing playable snapshot captures this latch.
+     */
+    public static void publishNativeSpeedConstantsWaterState(
+            AbstractPlayableSprite sprite, boolean underwater) {
+        sprite.waterPhysicsActive = underwater;
+    }
+
     /** Internal palette-context construction for native scene controllers. */
     public static SuperStateController.PaletteTarget nativePaletteTarget(com.openggf.level.Palette palette,int line) {
         return new SuperStateController.PaletteTarget(palette,line);

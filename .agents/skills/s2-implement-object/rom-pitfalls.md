@@ -3668,3 +3668,20 @@ Never test signed-negativity of S3's packed tier; companion bytes can legitimate
 set its sign. Native ending bindings also need a constructor-RAM baseline for
 fresh re-entry from an inactive snapshot, rather than a cached future scene.
 See the dated S3K completion record's matching-controller qualification.
+
+## Native powered-form writes precede animation and survive fluid status (2026-10-22)
+
+Sonic_Super runs after movement/display and before history, water and animation
+(Obj01_Control, s2.asm:36248-36264). A signpost can pause Update_HUD_timer and
+trigger reversion before ring drain, even while many rings remain. Reversion
+writes prev_anim=Run, not a generic invalid sentinel: Roll restarts its script,
+whereas an already selected Run retains its phase. Its newly written
+invincibility_time=1 expires on the NEXT Sonic_Display, not the same status tail.
+
+Sonic_CheckGoSuper unconditionally writes dry speed constants even when already
+underwater (s2.asm:37481-37483). Sonic_Water's already-underwater return
+(s2.asm:36379-36382) leaves those words intact. Keep their last-writer latch
+separate from in-water status/gravity; real entry/exit and reversion select the
+next native bank. The existing captured speed-bank latch can represent this
+without another rewind field. Evidence and rejected broad-delay approach are in
+`docs/architecture/research/2026-10-22-s2-chain-pacing.md`.

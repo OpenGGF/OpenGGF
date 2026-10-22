@@ -14,6 +14,12 @@ Unreleased. The earlier development themes remain in
   words. Rewind restores fractional scroll positions and cloud phase. Hidden
   100-point pickups retain the shipped game's 10-point award and 100-point popup.
 
+- **Sonic 2 player and entry timing:** Super Sonic updates between movement and
+  animation, preserves native reversion animation and invincibility timing, and
+  keeps the speed constants written by an underwater transformation until their
+  next native writer. Ordinary special-stage entry presents its loading hold
+  without duplicating replay timing.
+
 - **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
   OpenGGF Editor's Stageplay workspace. Author actor movement, animation/poses,
   camera movement, held integer zoom, earthquake effects, captions, ROM audio and WAV/Ogg voices;

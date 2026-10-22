@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.specialstage;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
+import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.SpecialStageStartupPolicy;
 import com.openggf.game.sonic2.Sonic2SpecialStageProvider;
 import com.openggf.graphics.GraphicsManager;
@@ -53,7 +54,7 @@ class Sonic2SpecialStageStartupPolicyTest {
 
     @ParameterizedTest
     @ValueSource(doubles = {0.0, 1.0})
-    void defaultInitializationStepsPalFadeToWhiteThenStartsUpWithoutALoadHold(double lagFactor)
+    void defaultInitializationStepsPalFadeToWhiteThenSpendsTheLiveLoadHold(double lagFactor)
             throws Exception {
         Sonic2SpecialStageProvider provider = new Sonic2SpecialStageProvider();
         provider.setLagCompensation(lagFactor);
@@ -64,7 +65,8 @@ class Sonic2SpecialStageStartupPolicyTest {
         assertEquals(Sonic2SpecialStageIntro.Phase.PRE_ROLL, manager.getIntro().getCurrentPhase());
         assertFalse(provider.isEntryPresentationReady());
         assertTrue(provider.isEntryFadeToWhiteActive());
-        assertEquals(0, manager.getLiveEntryLoadHoldFrames());
+        assertEquals(Sonic2SpecialStageLagModel.ENTRY_LOAD_LAG_FRAMES,
+                manager.getLiveEntryLoadHoldFrames());
 
         // Pal_FadeToWhite rows never lag: exactly 22 updates leave PRE_ROLL
         // even with the live lag model armed.
@@ -77,8 +79,24 @@ class Sonic2SpecialStageStartupPolicyTest {
         assertEquals(Sonic2SpecialStageIntro.Phase.ROM_STARTUP,
                 manager.getIntro().getCurrentPhase());
 
-        // The masked-interrupt load is not reproduced in normal play: startup
-        // proceeds at once through the ordinary update path to the reveal.
+        // SpecialStage's synchronous load precedes the first VintID_S2SS
+        // wait (s2.asm:6557-6645). No track/player tick can run during it.
+        int drawingIndexAtLoad = manager.getDrawingIndex();
+        var beforeLoad = manager.captureComparisonState();
+        long samplesBeforeLoad = manager.pacingOwner().captureSamples();
+        for (int row = 0; row < 104; row++) {
+            assertEquals(PlcLifecyclePhase.LAG, provider.specialStagePlcLifecyclePhase(),
+                    "load interrupts must not service special-stage DMA/DPLC");
+            manager.update();
+            assertEquals(Sonic2SpecialStageIntro.Phase.ROM_STARTUP,
+                    manager.getIntro().getCurrentPhase(), "load row " + row);
+            assertEquals(drawingIndexAtLoad, manager.getDrawingIndex(), "load row " + row);
+            assertEquals(beforeLoad.sonic(), manager.captureComparisonState().sonic());
+            assertEquals(beforeLoad.tails(), manager.captureComparisonState().tails());
+            assertEquals(samplesBeforeLoad, manager.pacingOwner().captureSamples());
+        }
+        assertEquals(0, manager.getLiveEntryLoadHoldFrames());
+        assertEquals(PlcLifecyclePhase.SPECIAL_STAGE, provider.specialStagePlcLifecyclePhase());
         int updates = 0;
         while (!provider.isEntryPresentationReady() && updates < 256) {
             manager.update();
@@ -90,23 +108,27 @@ class Sonic2SpecialStageStartupPolicyTest {
     }
 
     @Test
-    void neitherPolicyArmsTheLiveEntryLoadHold() throws Exception {
+    void onlyExternallyPacedStartupOmitsTheLiveEntryLoadHold() throws Exception {
         for (SpecialStageStartupPolicy policy : SpecialStageStartupPolicy.values()) {
             Sonic2SpecialStageProvider provider = new Sonic2SpecialStageProvider();
             provider.initializeStage(0, policy);
             provider.setLagCompensation(0);
             Sonic2SpecialStageManager manager = provider.getManager();
 
-            assertEquals(0, manager.getLiveEntryLoadHoldFrames(), policy.name());
+            assertEquals(policy == SpecialStageStartupPolicy.FAST ? 104 : 0,
+                    manager.getLiveEntryLoadHoldFrames(), policy.name());
             for (int update = 0; update < Sonic2SpecialStageIntro.PRE_ROLL_FRAMES; update++) {
                 manager.update();
             }
-            assertEquals(Sonic2SpecialStageIntro.Phase.ROM_STARTUP,
-                    manager.getIntro().getCurrentPhase(), policy.name());
             int drawingIndexAtStartup = manager.getDrawingIndex();
             manager.update();
-            assertNotEquals(drawingIndexAtStartup, manager.getDrawingIndex(),
-                    policy + " startup must not insert a load hold");
+            if (policy == SpecialStageStartupPolicy.FAST) {
+                assertEquals(drawingIndexAtStartup, manager.getDrawingIndex());
+                assertEquals(103, manager.getLiveEntryLoadHoldFrames());
+            } else {
+                assertNotEquals(drawingIndexAtStartup, manager.getDrawingIndex(),
+                        "recorded timing owns the load rows, so do not insert another hold");
+            }
             provider.reset();
         }
     }
@@ -182,7 +204,8 @@ class Sonic2SpecialStageStartupPolicyTest {
 
         provider.initializeStage(0);
 
-        assertEquals(0, provider.getManager().getLiveEntryLoadHoldFrames());
+        assertEquals(104, provider.getManager().getLiveEntryLoadHoldFrames(),
+                "the new live entry gets its own complete load hold");
         assertEquals(Sonic2SpecialStageIntro.Phase.PRE_ROLL,
                 provider.getManager().getIntro().getCurrentPhase());
     }

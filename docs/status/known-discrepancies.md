@@ -84,6 +84,13 @@ it, and a recorded `lag_state.lagged` outcome admits the already-existing
 `VBlank_Lag` loop through the separate scheduling-only contract. That outcome
 supplies no gameplay value or work.
 
+Ordinary entry now spends the existing measured104-presentation NTSC load hold
+after fade-to-white and before track/player work; recorded startup does not add
+it again. This closes the unwired live entry presentation, while its full CPU/
+device derivation and PAL duration remain unqualified. The recurring bucket
+approximation above is still present; this hold is not evidence of exact live
+hardware pacing. See the [current source and validation record](../architecture/research/2026-10-22-s2-chain-pacing.md).
+
 ---
 
 ## Gloop Sound Toggle

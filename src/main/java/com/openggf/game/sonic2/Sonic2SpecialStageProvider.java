@@ -99,10 +99,17 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider, com.ope
     @Override
     public PlcLifecyclePhase specialStagePlcLifecyclePhase() {
         Sonic2SpecialStageIntro intro = manager != null ? manager.getIntro() : null;
-        return intro != null
-                && intro.getCurrentPhase() == Sonic2SpecialStageIntro.Phase.PRE_ROLL
-                ? PlcLifecyclePhase.PALETTE_FADE
-                : PlcLifecyclePhase.SPECIAL_STAGE;
+        if (intro != null && intro.getCurrentPhase() == Sonic2SpecialStageIntro.Phase.PRE_ROLL) {
+            return PlcLifecyclePhase.PALETTE_FADE;
+        }
+        // SpecialStage restores SR=$2300 before its synchronous loaders
+        // (s2.asm:6613), but Vint_routine remains zero until :6644. Those
+        // interrupts take Vint_Lag, which services no DPLC/DMA queue.
+        if (intro != null && intro.getCurrentPhase() == Sonic2SpecialStageIntro.Phase.ROM_STARTUP
+                && manager.getLiveEntryLoadHoldFrames() > 0) {
+            return PlcLifecyclePhase.LAG;
+        }
+        return PlcLifecyclePhase.SPECIAL_STAGE;
     }
 
     @Override
@@ -151,21 +158,20 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider, com.ope
     }
 
     /**
-     * Sonic 2's entry ({@code SpecialStage}, docs/s2disasm/s2.asm:6538-6672) is
-     * a fixed sequence of blocking waits: 22 {@code Pal_FadeToWhite} V-ints,
-     * the masked-interrupt load, the two startup loops and one
-     * {@code VintID_CtrlDMA} wait before {@code MusID_SpecStage} and
-     * {@code Pal_FadeFromWhite}. The manager steps every V-int wait through
-     * its ordinary update path under both policies. The load itself (104
-     * lag rows in every recorded stage, s2.asm:6557-6645) is only reproduced
-     * under TRACE_ACCURATE, where the timing port admits the recorded rows;
-     * FAST skips it, so normal play goes straight from the fade to startup.
+     * Steps the native fade and startup waits under both policies. Ordinary
+     * play also spends the synchronous load span before the first
+     * {@code VintID_S2SS} wait ({@code SpecialStage}, s2.asm:6557-6645).
+     * Recorded playback owns those load rows through its timing port and must
+     * not receive a second hold from the provider.
      */
     @Override
     public void initializeStage(int stageIndex, SpecialStageStartupPolicy policy) throws IOException {
         Objects.requireNonNull(policy, "policy");
         manager.reset();
         manager.initialize(stageIndex);
+        if (policy == SpecialStageStartupPolicy.FAST) {
+            manager.armLiveEntryLoadHold();
+        }
     }
 
     @Override

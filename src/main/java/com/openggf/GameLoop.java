@@ -2525,18 +2525,10 @@ public class GameLoop {
     }
 
     /**
-     * FAST skips the ROM's masked-interrupt entry load, which is right for
-     * ordinary interactive play where nothing supplies those frames. When a
-     * {@link PlaybackDebugManager} BK2 session is actively driving playback
-     * -- the dev movie-playback hotkeys, or a headless multi-stage trace-run
-     * chain drive (see {@code AbstractRunChainTest}) -- the recorded lag rows
-     * are admitted by the timing port, so the provider must add nothing or
-     * recorded per-frame input would skew against the stage's own ticks. {@code TraceSessionLauncher}'s own dedicated special-stage trace
-     * session already calls {@code TRACE_ACCURATE} directly for the same
-     * reason (it owns its transition trigger); this generalizes the same
-     * ROM-state predicate (a BK2 session is playing) to the organic
-     * giant-ring/checkpoint-star entry path used by ordinary gameplay AND by
-     * any other BK2-driven session that reaches this transition.
+     * Ordinary startup leaves entry-load presentation with the provider. A
+     * BK2 session supplies recorded row admission instead, so it selects
+     * TRACE_ACCURATE and the provider must not add another load hold. This
+     * ownership choice does not supply any gameplay state.
      */
     private SpecialStageStartupPolicy defaultSpecialStageStartupPolicy() {
         return LevelIterationAdmissionController.specialStageStartupPolicy(

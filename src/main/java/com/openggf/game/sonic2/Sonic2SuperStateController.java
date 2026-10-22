@@ -15,6 +15,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Palette;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.PlayableSpriteInternalAccess;
 import com.openggf.sprites.playable.SuperStateController;
 
 import java.util.logging.Logger;
@@ -40,7 +41,8 @@ import com.openggf.game.GameServices;
  *   <li>2 = fading out (reverting to normal) - frames decrement, timer 3</li>
  * </ul>
  */
-public class Sonic2SuperStateController extends SuperStateController {
+public class Sonic2SuperStateController extends SuperStateController
+        implements com.openggf.game.internal.NativeSuperStateBeforeAnimation {
     private static final Logger LOGGER = Logger.getLogger(Sonic2SuperStateController.class.getName());
 
     /** Palette fade state: 0=off, 1=fading in, -1=cycling, 2=fading out. */
@@ -162,6 +164,12 @@ public class Sonic2SuperStateController extends SuperStateController {
     @Override
     protected void onTransformationStarted() {
         normalAnimSet = player.getAnimationSet();
+        // Sonic_CheckGoSuper unconditionally writes $A00/$30/$100
+        // (s2.asm:37481-37483), including when Status_Underwater is already set.
+        // Sonic_Water then returns at its already-underwater branch without
+        // replacing those words (s2.asm:36379-36382). Only a later native speed
+        // writer, such as a fresh water entry, selects the reduced bank again.
+        PlayableSpriteInternalAccess.publishNativeSpeedConstantsWaterState(player, false);
         paletteState = 1;
         // ROM Sonic_CheckGoSuper (s2.asm:37476-37477) writes Super_Sonic_palette and
         // Palette_timer but deliberately does NOT write Palette_frame; the same holds
@@ -295,6 +303,16 @@ public class Sonic2SuperStateController extends SuperStateController {
         // ROM: move.w #$28,(Palette_frame).w on revert
         paletteFrame = 0x28;
         paletteTimer = 3;
+        // Sonic_RevertToNormal writes prev_anim=Run before Sonic_Animate
+        // (s2.asm:37529-37535; REV01 $1AC04: 117C 0001 001D). Preserve the
+        // exact sentinel: Roll must restart, while an already selected Run
+        // must keep its script phase because anim still equals prev_anim.
+        player.publishRunAsPreviousAnimation();
+        // Unlike transformation, Sonic_RevertToNormal checks Status_Underwater
+        // after installing normal speeds and writes $300/$6/$40 when set
+        // (s2.asm:37536-37545). This changes the speed bank without changing
+        // water status or applying another entry/exit velocity adjustment.
+        PlayableSpriteInternalAccess.publishNativeSpeedConstantsWaterState(player, player.isInWater());
         // ROM: move.w #1,invincibility_time(a0). Besides the one-frame grace
         // period, this is how Sonic_RevertToNormal restores the zone music: it
         // plays none itself and lets Obj01_ChkInvin re-issue Level_Music when
