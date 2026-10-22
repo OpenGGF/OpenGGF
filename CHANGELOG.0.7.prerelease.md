@@ -247,7 +247,11 @@ Unreleased. The earlier development themes remain in
   Its removal preserves Sonic and Tails' held state, as in the original, while
   ordinary launches still release them.
   Knuckles' glide foot probes use his own live solidity bits and collision array,
-  including inverted ceiling contacts, independently of camera focus. Wall climbs
+  including inverted ceiling contacts, independently of camera focus. Glide collision
+  follows the original velocity quadrant through wall, ceiling and floor checks;
+  simultaneous contacts use S3K's floor-first response and KiS2's wall-first response.
+  Reverse probes retain the solidity bit and collision path left by preceding checks.
+  Wall climbs
   include the native radius in vertical probes, powered speed and upper bound;
   floor landings preserve the native angle, animation and climb timer. The native
   second player keeps its ringless hurt response under human control.

@@ -47,7 +47,7 @@ public final class Kis2Rules {
                 movement.inputAlwaysCapsGroundSpeed(),
                 movement.angleDiffCardinalSnap(),
                 new PlayerGroundPoseRules(movement.groundPose().movingCrouchThreshold(), true, true),
-                new PlayerAirMovementRules(true, true, false, true),
+                new PlayerAirMovementRules(true, true, false, true, false),
                 movement.slopeResistStartsFromRest(),
                 movement.slopeRepelChecksOnObject(),
                 movement.slopeRepelUsesS3kSlipKick(),

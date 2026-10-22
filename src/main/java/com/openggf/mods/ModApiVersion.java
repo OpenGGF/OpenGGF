@@ -35,7 +35,9 @@ public final class ModApiVersion {
      * retired-choice preference migration, semantic placement,
      * checkpoint, ring-award, stage-entry, defeat-knockback and pacing policies;
      * explicit assembly causes and common
-     * modal configuration presentation. The unpublished candidate remains 0.7.0.
+     * modal configuration presentation. Air movement rules independently select native
+     * glide floor/wall response priority; the original air-rule constructor keeps its
+     * wall-first default. The unpublished candidate remains 0.7.0.
      * Detached scene backgrounds reuse stock scanline scroll handlers with independent state.
      * Full-song and selected-part synthesis expose cancellable host jobs with
      * progress, a ten-minute duration cap and a 256 MiB stereo PCM budget.

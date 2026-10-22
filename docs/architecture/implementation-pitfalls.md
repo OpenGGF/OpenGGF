@@ -515,6 +515,19 @@ and writing the ROM animation word changes both current and previous animation.
 The [KiS2 wall investigation](research/trace/2026-09-14-kis2-chain-frontier.md#wall-contact-continuation-2026-09-15-base-b8d0ae91b)
 records independent geometry, position-word and animation-restart regressions.
 
+**Glide collision order is a native temporary-state contract.** `Knux_DoLevelCollision_CheckRet`
+(skdisasm044:32665–32854) selects the movement quadrant once from the original
+velocities. Walls may correct the centre and zero X before the subsequent ceiling
+or floor probes. Preserve those updated integer anchors and the fractional words;
+zero distance is clear. S3K resolves a simultaneous floor before Push, whereas
+KiS2 `Knuckles_GlideControl` (c336fede:38177–38188) checks Push before restoring
+radii/InAir. Keep that response policy independent of the radius policy. Reverse
+ceiling wrappers can replace d5/Collision_addr with TOP, which later reverse
+floor/opposite-wall calls inherit; reloading LRB changes the ROM query. Wall-grab
+facing comes from signed-byte(property+$40), not X after collision zeroed it.
+The2026-10-22 MHZ correction's component tests cover these distinctions; changed
+cold input history remains a separate route obligation, not evidence to fit physics.
+
 **Climb offsets precede the radius.** S3K `Knuckles_Wall_Climb` and KiS2
 `Knuckles_Climbing_Wall` pass `Y-8` / `Y+9` to the vertical helpers;
 `CheckCeilingDist_WithRadius` / `sub_F828` then subtract/add the sign-extended

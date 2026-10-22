@@ -1525,6 +1525,7 @@ CONSTRUCTOR com.openggf.game.rules.GameRules public  <init>(com.openggf.game.rul
 CONSTRUCTOR com.openggf.game.rules.GameRules public  <init>(com.openggf.game.rules.PlayerMovementRules,com.openggf.game.rules.PlayerCapabilityRules,com.openggf.game.rules.CollisionRules,com.openggf.game.rules.PlayerAnimationRules,com.openggf.game.rules.CameraRules,com.openggf.game.rules.RingRules,com.openggf.game.rules.ObjectInteractionRules,com.openggf.game.rules.SidekickCpuRules,com.openggf.game.rules.PowerUpRules,com.openggf.game.rules.DrowningBubbleRules,com.openggf.game.rules.DynamicArtDmaServiceModel,com.openggf.game.rules.PaletteWhiteFadeModel)
 CONSTRUCTOR com.openggf.game.rules.ObjectInteractionRules public  <init>(boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerAirMovementRules public  <init>(boolean,boolean,boolean,boolean)
+CONSTRUCTOR com.openggf.game.rules.PlayerAirMovementRules public  <init>(boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerAnimationRules public  <init>(boolean,boolean,boolean,boolean,boolean,boolean,com.openggf.game.rules.TailsTailPushDetection)
 CONSTRUCTOR com.openggf.game.rules.PlayerCapabilityRules public  <init>(boolean,short[],boolean,boolean,boolean,boolean,boolean,short[],boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerGroundPoseRules public  <init>(short,boolean,boolean)
@@ -7962,6 +7963,7 @@ METHOD com.openggf.game.rules.PaletteWhiteFadeModel public,static  com.openggf.g
 METHOD com.openggf.game.rules.PaletteWhiteFadeModel public,static  com.openggf.game.rules.PaletteWhiteFadeModel[] values()
 METHOD com.openggf.game.rules.PlayerAirMovementRules public  boolean airAbilityAcceptsOverlappingJumpPress()
 METHOD com.openggf.game.rules.PlayerAirMovementRules public  boolean airSuperspeedPreserved()
+METHOD com.openggf.game.rules.PlayerAirMovementRules public  boolean glideFloorContactPrecedesWallGrab()
 METHOD com.openggf.game.rules.PlayerAirMovementRules public  boolean glideRestoresStandingRadiiAfterCollision()
 METHOD com.openggf.game.rules.PlayerAirMovementRules public  boolean idleWallClimbChecksFloor()
 METHOD com.openggf.game.rules.PlayerAirMovementRules public,final  boolean equals(java.lang.Object)
@@ -17176,6 +17178,7 @@ RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules touchResponseUses
 RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules touchResponseUsesRenderFlagYGate boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerAirMovementRules airAbilityAcceptsOverlappingJumpPress boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerAirMovementRules airSuperspeedPreserved boolean
+RECORD-COMPONENT com.openggf.game.rules.PlayerAirMovementRules glideFloorContactPrecedesWallGrab boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerAirMovementRules glideRestoresStandingRadiiAfterCollision boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerAirMovementRules idleWallClimbChecksFloor boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerAnimationRules airLandingPublishesTiltAngles boolean

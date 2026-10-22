@@ -36,6 +36,17 @@ public final class GlideWallGrabTerrain {
         return scanWall(sprite, facingRight, facingRight ? 10 : -10, 0);
     }
 
+    /** Knuckles' collision dispatcher retains Collision_addr and the current d5 across probes. */
+    public static TerrainCheckResult glideWallDistance(AbstractPlayableSprite sprite, boolean facingRight,
+                                                       int solidityBit, boolean secondaryCollisionPath) {
+        GroundSensor sensor = new GroundSensor(sprite, Direction.DOWN, (byte) 0, (byte) 0,
+                true, secondaryCollisionPath);
+        SensorResult result = sensor.scanWorld(facingRight ? Direction.RIGHT : Direction.LEFT,
+                (short) (facingRight ? 10 : -10), (short) 0, (short) 0, (short) 0, solidityBit);
+        return result == null ? TerrainCheckResult.noCollision()
+                : new TerrainCheckResult(result.distance(), result.angle(), result.tileId());
+    }
+
     /**
      * Knuckles_Wall_Climb's single vertical probe: up/ledge uses lrb_solid_bit
      * at eight pixels plus signed x_radius; down/floor uses top_solid_bit at
