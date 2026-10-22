@@ -863,18 +863,24 @@ public class GraphicsManager {
 				&& RenderContext.scopedPaletteBankValid(lease.token(),base);
 	}
 	void releaseScopedPaletteBank(Object owner) {
-		var lease=scopedPaletteOwners.remove(owner);if(lease==null) return;
-		if(RenderContext.scopedPaletteBankValid(lease.token(),lease.base())) {
-			for(int line=lease.base();line<lease.base()+4;line++) {
-				uploadPaletteLine(ScopedUnderwaterBasis.blankLine(),line);paletteTextureMap.remove("palette_"+line);
-				if(line<lastCachedPaletteLines.length)lastCachedPaletteLines[line]=null;
-				pendingPaletteUploads[line]=false;
+		var lease=scopedPaletteOwners.get(owner);if(lease==null) return;
+        try {
+			if(RenderContext.scopedPaletteBankValid(lease.token(),lease.base())) {
+				for(int line=lease.base();line<lease.base()+4;line++) {
+					uploadPaletteLine(ScopedUnderwaterBasis.blankLine(),line);paletteTextureMap.remove("palette_"+line);
+					if(line<lastCachedPaletteLines.length)lastCachedPaletteLines[line]=null;
+					pendingPaletteUploads[line]=false;
+				}
+				RenderContext.releaseScopedPaletteBank(lease.token());
 			}
-			RenderContext.releaseScopedPaletteBank(lease.token());
-		}
-		underwaterPaletteContentKeyValid=false;
-        PatternRenderCommand.resetFrameState();
-        scopedUnderwaterDirty=true;
+            // Keep the exact lease reserved until every row and its cached inputs clear.
+            // A failed upload may be retried through the same public Bank handle.
+            scopedPaletteOwners.remove(owner,lease);
+        } finally {
+			underwaterPaletteContentKeyValid=false;
+            PatternRenderCommand.resetFrameState();
+            scopedUnderwaterDirty=true;
+        }
 	}
     void bindScopedPaletteWorld(Object world) {
         if(scopedPaletteWorld!=null && scopedPaletteWorld!=world)clearScopedUnderwaterBasis();
@@ -973,7 +979,7 @@ public class GraphicsManager {
 		}
 	}
 
-	private void uploadPaletteLine(PaletteView palette, int paletteId) {
+	void uploadPaletteLine(PaletteView palette, int paletteId) {
 		if (headlessMode) {
 			// In headless mode, just record that the palette was cached
 			paletteTextureMap.put("palette_" + paletteId, -1);
@@ -2346,6 +2352,9 @@ public class GraphicsManager {
 	public void setProjectionMatrixBuffer(float[] buffer) {
 		this.projectionMatrixBuffer = buffer;
 	}
+
+	/** Exact nullable local override; scoped engine projections must not capture source fallback. */
+	float[] rawProjectionMatrixBuffer() { return projectionMatrixBuffer; }
 
 	/**
 	 * Get the projection matrix buffer for shader-based rendering.

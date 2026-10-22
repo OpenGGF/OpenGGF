@@ -296,3 +296,72 @@ using the task-owned transient-effects subrange corrected the test harness.
 S3K boot could retire a dynamic probe during native entry; the final check
 inserts it after neutral entry steps and exercises real table capture,
 publication, restore and framebuffer replay without a gameplay fixture seed.
+
+
+## Scoped companion projection ownership
+
+The internal `GraphicsProjectionAccess.openProjection(GraphicsManager,
+RenderProjection)` returns an engine-only `AutoCloseable` scope. It captures the
+exact source and nullable local matrix override separately, installs the temporary
+source with a null local override, and restores the original two references by
+identity. Capturing `getProjectionMatrixBuffer()` was rejected: that effective
+getter can materialize a source fallback where the host's actual override was
+null, hiding later source changes. One package-private raw nullable getter is the
+only new GraphicsManager accessor; the Mod API surface is unchanged.
+
+Scopes close on their opening thread in strict LIFO order. Invalid foreign-thread,
+out-of-order or repeated closes fail before mutation. Nested scopes and exceptions
+restore the exact saved tuple. No GL/FBO stack, viewport, frame upload or command
+flushing belongs to this bridge; the renderer consumer owns those lifetimes.
+
+Commands bake logical height when obtained; plain and instanced batches capture it
+at batch begin. Shader matrices resolve at execution. Therefore callers must end
+existing batches and drain queued commands under their owning projection before a
+transition, and complete scoped batches before closing. Retained construction and
+execution are distinct: reopening the matching source for deferred BEGIN/batch/END
+is required. Scope close never flushes or rebakes queued art. CPU controls retain
+old-batch row0 Y216 after a 224→256 source switch, then obtain Y248 only after
+restarting the batch under 256. Real EGL controls distinguish the matrix-only
+Y216 defect, premature scope-close loss, correct Y248 and restored 224/256 hosts.
+The S2 lane owns static-background/companion FBO consumers and their qualified
+adoption; the shared bridge alone does not certify that rendering pipeline.
+
+
+## Scoped palette cleanup retry
+
+S2 companion fault review exposed an existing ownership leak: `Bank.release`
+called a GraphicsManager cleanup that removed its exact owner lease before blanking
+four GPU rows. A second-row exception left the RenderContext token reserved while
+the retained Bank failed validity; retry then marked the handle released without
+freeing the token. The corrected cleanup retains the lease through all row/cache
+cleanup and context-token release, then conditionally removes that exact lease.
+A retry deliberately repeats all four blank uploads. Derived underwater state and
+pattern tracking invalidate in `finally` because a failed attempt can already have
+changed rows or texture bindings. RenderContext release itself is a simple identity
+map removal; this change makes no concurrent/reentrant cleanup guarantee.
+
+The existing upload helper becomes package-private solely for a same-package
+failure-injection subclass that otherwise calls the production helper. No public
+GraphicsManager signature, Mod API or alternate cleanup path is added. Tests enter
+the real owner/generation-checked `Bank.release`, fail its second blank upload,
+retain a valid handle and reservation, preserve an unrelated owner's cache/pending
+rows, then retry all four rows and reuse the released bank. A stale unreleased
+same-owner alias cannot clear its replacement generation. Both attempts invalidate
+derived state. Injection covers Java/headless failure bookkeeping, not a simulated
+GPU-driver failure; separate EGL shadow/companion controls exercise live rendering.
+
+
+The composed projection/palette candidate over `287c79e73` passed queued job46042:
+46 tests, zero failures/errors/skips; projection9, existing projection4, scoped
+palette5, native intensity5, live EGL shadow9, registered scoped rewind3 and Mod
+API11. Queue wait429s; Maven execution1m33s. Exact selection:
+`TestGraphicsProjectionScope,TestRenderProjection,TestScopedPaletteGraphicsAccess,TestNativeIntensityPalette,TestNativeShadow15Pixels,TestScopedPalettePresentationRewind,TestModApiSignatureSurface`.
+The queue command used `--lean -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl '-Dtest=<selection above>' test -B` and
+the same Java25/Lua5.4/no-display/null-audio/original-ROM environment and absolute
+ROM properties recorded for36034. Exact-selector XML inspection excluded older
+reports. Source and tests froze before submission. Independent read-only review
+found no concrete lifecycle defect. Projection and palette cleanup publish as
+separate local leaves; this is composed focused validation, not standalone S2
+consumer validation or combined smoke. Fresh affected guards are recorded in the
+final handoff separately.
