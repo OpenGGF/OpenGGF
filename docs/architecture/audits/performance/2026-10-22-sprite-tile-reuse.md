@@ -277,7 +277,7 @@ retaining this bounded summary, source pins and reproducible protocol.
 ### Worker removal state and diagnostic portability
 
 At worker removal `b322716c7`, the four production files affected by the experiment (`SpritePresentation`,
-`LevelSpritePresentation`, `LevelRenderer`, `SpritePresentationRenderer`) are
+`LevelSpritePresentation`, `LevelRenderer`, `SpritePresentationRenderer`)
 were restored byte-for-byte to task base `8aa692b045c195ef8a42896b6bbc9549158470c0`.
 The previous-frame overloads, builder comparison and level/counter hint wiring
 are removed together. There is no dormant hint cache or head-map equality tax.
