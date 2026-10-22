@@ -649,6 +649,7 @@ public class BatchedPatternRenderer {
 
                 // Bind tile priority FBO texture to unit 5 (avoid conflict with TilemapGpuRenderer which uses 0-4)
                 TilePriorityFBO fbo = gm.getTilePriorityFBO();
+                priorityShader.setNativeSpriteOwnership(gm.nativeSpriteOwnershipActive(), fbo != null && fbo.isInitialized());
                 if (fbo != null && fbo.isInitialized()) {
                     glActiveTexture(GL_TEXTURE5);
                     glBindTexture(GL_TEXTURE_2D, fbo.getTextureId());
