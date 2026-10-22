@@ -66,6 +66,8 @@ public final class StageplayController {
     public boolean canUndo() { return !undo.isEmpty(); }
     public boolean canRedo() { return !redo.isEmpty(); }
     public void markSaved() { savedDocument = document; }
+    /** An imported source has no saved canonical counterpart; history and transport stay untouched. */
+    public void markUnsaved() { savedDocument = null; }
     public boolean dirty() { return !document.equals(savedDocument); }
     /** Host resource roots must remain valid for every reachable undo/redo revision. */
     public boolean anyRevision(java.util.function.Predicate<StageplayDocument> predicate) {

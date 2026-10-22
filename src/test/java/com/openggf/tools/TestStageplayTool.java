@@ -208,6 +208,43 @@ class TestStageplayTool {
         assertEquals(Set.of("asset-free.stageplay"), entries(elsewhere));
     }
 
+    @Test void decompileRoundTripsAndNeverReplacesItsCanonicalSource() throws Exception {
+        var document = StageplayScriptCompiler.compile(StageplayTool.scaffold().getBytes(StandardCharsets.UTF_8));
+        Path scene = directory.resolve("source.stageplay"), screenplay = directory.resolve("round-trip.json");
+        StageplayStore.write(scene, document);
+        byte[] original = Files.readAllBytes(scene);
+        var result = execute("decompile", "--scene", scene.toString(), "--out", screenplay.toString());
+        assertEquals(0, result.status());
+        assertEquals(6, result.json().path("result").path("screenplayVersion").intValue());
+        assertEquals(document, StageplayScriptCompiler.compile(Files.readAllBytes(screenplay)));
+        byte[] exported = Files.readAllBytes(screenplay);
+        assertEquals(2, execute("decompile", "--scene", scene.toString(), "--out", screenplay.toString()).status());
+        assertArrayEquals(exported, Files.readAllBytes(screenplay));
+        assertEquals(2, execute("decompile", "--scene", scene.toString(), "--out", scene.toString()).status());
+        assertArrayEquals(original, Files.readAllBytes(scene));
+        assertEquals(Set.of("source.stageplay", "round-trip.json"), entries(directory));
+    }
+
+    @Test void decompilePreservesRelativeAssetRootAndAllowsAssetFreeOutputElsewhere() throws Exception {
+        Path elsewhere = Files.createDirectory(directory.resolve("elsewhere"));
+        var recipe = recipe();
+        ((ObjectNode) shot(recipe).path("dialogue").get(0)).put("portraitAsset", "portraits/tails.png");
+        var document = StageplayScriptCompiler.compile(JSON.writeValueAsBytes(recipe));
+        Path scene = directory.resolve("relative.stageplay"); StageplayStore.write(scene, document);
+        Path invalid = elsewhere.resolve("relative.json");
+        var result = execute("decompile", "--scene", scene.toString(), "--out", invalid.toString());
+        assertEquals(2, result.status());
+        assertTrue(result.json().path("error").textValue().contains("beside their canonical scene"));
+        assertFalse(Files.exists(invalid));
+        Path sibling = directory.resolve("relative.json");
+        assertEquals(0, execute("decompile", "--scene", scene.toString(), "--out", sibling.toString()).status());
+        assertEquals(document, StageplayScriptCompiler.compile(Files.readAllBytes(sibling)));
+        StageplayStore.write(directory.resolve("free.stageplay"),
+                StageplayScriptCompiler.compile(StageplayTool.scaffold().getBytes(StandardCharsets.UTF_8)));
+        assertEquals(0, execute("decompile", "--scene", directory.resolve("free.stageplay").toString(),
+                "--out", elsewhere.resolve("free.json").toString()).status());
+    }
+
     @Test void publicationFailsIfOutputExistsAndNeverTruncatesOrLeavesStagingFiles() throws Exception {
         Path output = directory.resolve("existing.stageplay");
         byte[] original = "preserve this exact content".getBytes(StandardCharsets.UTF_8);
@@ -285,11 +322,16 @@ class TestStageplayTool {
         assertEquals(2, execute("compile", "--script", oversized.toString(), "--out",
                 directory.resolve("oversized.stageplay").toString()).status());
         assertFalse(Files.exists(directory.resolve("oversized.stageplay")));
+        Path expanded = directory.resolve("expanded.json");
+        try (var file = new RandomAccessFile(expanded.toFile(), "rw")) { file.setLength(StageplayScriptCompiler.MAX_BYTES + 1L); }
+        assertEquals(2, execute("compile", "--script", expanded.toString(), "--out",
+                directory.resolve("expanded.stageplay").toString()).status());
+        assertFalse(Files.exists(directory.resolve("expanded.stageplay")));
         Path empty = directory.resolve("empty.json"); Files.write(empty, new byte[0]);
         assertEquals(2, execute("compile", "--script", empty.toString(), "--out",
                 directory.resolve("empty.stageplay").toString()).status());
         assertFalse(Files.exists(directory.resolve("empty.stageplay")));
-        assertEquals(Set.of("oversized.json", "empty.json"), entries(directory));
+        assertEquals(Set.of("oversized.json", "expanded.json", "empty.json"), entries(directory));
     }
 
     @Test void simulateRequiresExplicitRomsAndNeverPublishesUnresolvedOrPartialState() throws Exception {
@@ -311,7 +353,7 @@ class TestStageplayTool {
     @Test void helpDocumentsMachineReadableExitCodesAndCurrentSchemaWithoutRomAccess() throws Exception {
         var result = execute();
         assertEquals(0, result.status());
-        assertEquals(5, result.json().path("result").path("screenplayVersion").intValue());
+        assertEquals(6, result.json().path("result").path("screenplayVersion").intValue());
         assertEquals(StageplayDocument.VERSION, result.json().path("result").path("stageplayVersion").intValue());
         assertEquals(60, result.json().path("result").path("fps").intValue());
         assertTrue(result.json().path("result").path("outputs").textValue().contains("never overwritten"));

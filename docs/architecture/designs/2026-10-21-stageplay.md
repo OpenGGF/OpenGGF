@@ -195,7 +195,8 @@ global frames or navigate menus. ROM catalog queries expose actual scripts and s
 bounds. Compilation and inspection require no ROM; capture validates resources and
 uses the existing no-device headless host. Rejected: a second playback evaluator,
 implicit cross-game native loads, copying ROM art into production sources, and
-schema coercions which could silently move cues. No round-trip decompiler is claimed.
+schema coercions which could silently move cues. This initial one-way limitation
+is superseded by the lossless screenplay revision below.
 
 
 ### Dialogue and visual feedback revision
@@ -379,3 +380,19 @@ are cleared or posed, project the native counter from both held loader cursors,
 and preserve lower bits plus loaded/kill/remember state. Counter aliases or shipped
 FixBugs=0 cursor drift fail explicitly rather than renumbering native identities.
 Only geometric culls admit supplemental windows; semantic retirement remains native.
+
+## Lossless screenplay revision (phase 4)
+
+Canonical version seven remains the sole playback contract. Screenplay version six
+adds literal cue/command/transition IDs, typed exact track-order permutations and
+whole cross-shot intervals owned by their starting shot. A deterministic decompiler
+emits ordinary shot-local fields and verifies recompiled document equality. It
+preserves unused profiles and legacy execution policies as well as current object
+casts. Original source formatting/comments/shot names are not document data.
+
+The screenplay input cap grows to 32 MiB for this expansion; old screenplay versions
+retain 8 MiB and canonical files remain 8 MiB. Reject opaque canonical blobs, splitting
+intervals (which would restart reveal/phase) and generated prefixes on already valid
+64-character IDs. Both frontends share import/export actions and relative-asset
+semantics. Import creates an unsaved canonical document; export preserves save and
+undo state. This adds no public Mod API surface or playback ownership change.

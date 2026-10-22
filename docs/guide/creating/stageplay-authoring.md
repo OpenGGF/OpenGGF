@@ -1,7 +1,7 @@
 # Author Stageplay from a terminal
 
 `tools/stageplay/stageplay.py` exposes the directing framework without opening editor
-menus. It compiles a shot-local screenplay into the same `.stageplay` document used
+menus. It compiles a shot-local screenplay into, and decompiles from, the same `.stageplay` document used
 by the in-engine editor, OpenGGF Editor and mod registration. Java 25 is required;
 movie capture additionally needs FFmpeg and the platform's headless GL prerequisites.
 
@@ -10,6 +10,7 @@ python3 tools/stageplay/stageplay.py --build help
 python3 tools/stageplay/stageplay.py init --out /your/production/first.script.json
 python3 tools/stageplay/stageplay.py catalog --game s2 --rom /your/existing-s2.gen --character tails --zone 0 --act 0
 python3 tools/stageplay/stageplay.py compile --script /your/production/first.script.json --out /your/production/first.stageplay
+python3 tools/stageplay/stageplay.py decompile --scene /your/production/first.stageplay --out /your/production/refined.script.json
 python3 tools/stageplay/stageplay.py inspect --scene /your/production/first.stageplay --frame 120
 python3 tools/stageplay/stageplay.py simulate --scene /your/production/first.stageplay --out /your/production/state.jsonl --s2-rom /your/existing-s2.gen
 python3 tools/stageplay/stageplay.py render --scene /your/production/first.stageplay --out /your/production/first.mkv --s2-rom /your/existing-s2.gen
@@ -50,6 +51,32 @@ nearest-neighbour scaling (the default is 1).
 Linux uses surfaceless EGL with desktop display variables removed. Other platforms
 use the capture host's hidden native context; macOS uses Java's first thread.
 
+## Return editor changes to a screenplay
+
+`decompile --scene PATH --out PATH` reads and strictly migrates the canonical scene,
+then writes deterministic version-six shot-local JSON. Recompile it to recover the
+same complete document, including legacy policies, unused profiles, object parts,
+cue ordering and exact IDs. Decompilation changes the source layout and formatting;
+it does not reconstruct comments or the original shot names. It does not need ROMs.
+Both editors expose the same import/export commands. Import starts an unsaved
+canonical scene; export does not mark the current scene saved or clear undo history.
+
+Version six adds optional literal `id` fields to actions/cues and `transition.id`.
+Omitting them retains generated IDs. The optional root `order` object has only
+`puppets` (actor IDs), `captions`, `audio`, `cameraEffects` and `dialogue`: each
+provided list must be an exact permutation of that track's IDs. This preserves
+canonical list order when shot grouping would otherwise reorder it. Unknown keys,
+duplicate IDs, missing IDs and foreign IDs fail explicitly. Decompilation emits
+neutral `shot0`, `shot1`, … names independently of transition IDs.
+
+A caption, effect or dialogue interval belongs to the shot containing its start.
+Its local `endFrame` may extend into a later shot, bounded by the complete scene;
+the interval is retained whole so reveal, animation phase and effect seeds survive.
+Versions one through five retain their original shot-local interval restrictions.
+Commands at the same frame retain their authored order. Decompile scenes with
+relative assets beside their canonical file; compile beside the screenplay. Neither
+command overwrites existing outputs. No hidden canonical payload is embedded.
+
 ## Learn with a complete small scene
 
 [Wait for me](../../../examples/stageplay-demo/README.md#your-first-scene-wait-for-me)
@@ -63,7 +90,7 @@ uninterrupted short.
 
 ## Screenplay format
 
-The current screenplay format is `version:5`; the generated scene uses Stageplay
+The current screenplay format is `version:6`; the generated scene uses Stageplay
 version 7. New recipes default to a populated native world; TERRAIN_ONLY clears
 its initial objects and rings. Both have the same directing capabilities.
 Version four retains canonical-six native worlds. Versions one through three
@@ -72,7 +99,9 @@ preserving their original simulation and presentation. Version-one screenplays r
 terrain-only native Puppets. The compatible version-two example below introduces
 the common tracks; see [Live ROM worlds](#live-rom-worlds-screenplay-3-document-5)
 for version-three additions. JSON numbers retain their types: numeric strings, duplicate fields,
-unknown fields and trailing input are rejected. Maximum input size is 8 MiB.
+unknown fields and trailing input are rejected. Versions one through five retain their
+8-MiB input bound. Version six permits up to 32 MiB to accommodate lossless shot-local
+expansion of an 8-MiB canonical document; the canonical bound stays unchanged.
 
 ```json
 {

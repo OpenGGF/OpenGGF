@@ -46,6 +46,52 @@ import static org.lwjgl.opengl.GL11.*;
 @Isolated
 class TestStageplayHudPictures {
     @Test
+    void captureScreenplayImportRefineAndExportForms() throws Exception {
+        assumeTrue(Boolean.getBoolean("openggf.stageplay.hudPictures"), "Explicit Stageplay HUD picture refresh only");
+        assumeTrue(PresentationOffscreenTestContext.requested(), "Stageplay HUD pictures require display-free EGL");
+        TestEnvironment.resetAll();
+        try (var fixture = TestEditorProjectLifecycle.Fixture.open(GameId.S2);
+             var context = PresentationOffscreenTestContext.open(1280, 720);
+             var renderer = new EditorProjectMenuRenderer()) {
+            Path output = Path.of("target", "stageplay-hud").toAbsolutePath(); Files.createDirectories(output);
+            Path source = output.resolve("screenplay-source.json");
+            Files.writeString(source, """
+                    {"version":5,"name":"Two-way take","width":320,"height":224,
+                     "cast":[{"id":"hero","name":"Sonic","gameId":"s2","character":"sonic","puppet":false}],
+                     "shots":[{"id":"opening","durationFrames":120,
+                     "set":{"gameId":"s2","zone":0,"act":0,"worldPolicy":"TERRAIN_ONLY"},
+                     "camera":[{"frame":0,"x":0,"y":500}],"actors":{"hero":[
+                     {"frame":0,"x":128,"y":648,"animation":5},{"frame":30,"x":128,"y":648,"animation":5},
+                     {"frame":90,"x":256,"y":648,"animation":5},{"frame":119,"x":256,"y":648,"animation":5}]},
+                     "audio":[{"frame":0,"kind":"ROM_MUSIC","gameId":"s2","soundId":129}]}]}
+                    """);
+            var workspace = new StageplayWorkspace(() -> StageplayDocument.empty("s2",0,0,0,500,320,224));
+            workspace.activate(); workspace.invoke(StageplayWorkspace.Action.IMPORT_SCREENPLAY);
+            workspace.menu().setValue("path", "target/stageplay-hud/screenplay-source.json");
+            renderObjectMenu(renderer,workspace); capture("screenplay-import-form",1280,720);
+            workspace.menu().setValue("path",source.toString()); workspace.menu().submit();
+            assertNull(workspace.menu().error()); assertNull(workspace.path()); assertTrue(workspace.controller().dirty());
+            workspace.selectActor("hero"); workspace.seek(90); workspace.invoke(StageplayWorkspace.Action.SET_KEY);
+            workspace.menu().setValue("x","240"); workspace.menu().submit(); assertNull(workspace.menu().error());
+            workspace.seek(119); workspace.invoke(StageplayWorkspace.Action.SET_KEY);
+            workspace.menu().setValue("x","240"); workspace.menu().submit(); assertNull(workspace.menu().error());
+            var refined = workspace.controller().document();
+            assertEquals(240, refined.actors().getFirst().keys().stream().filter(k -> k.frame()==90).findFirst().orElseThrow().x());
+            Path exported = output.resolve("ui-refined.screenplay.json"); Files.deleteIfExists(exported);
+            workspace.invoke(StageplayWorkspace.Action.EXPORT_SCREENPLAY);
+            workspace.menu().setValue("path","target/stageplay-hud/ui-refined.screenplay.json");
+            renderObjectMenu(renderer,workspace); capture("screenplay-export-form",1280,720);
+            workspace.menu().setValue("path",exported.toString()); workspace.menu().submit(); assertNull(workspace.menu().error());
+            assertEquals(refined,com.openggf.tools.StageplayScriptCompiler.compile(Files.readAllBytes(exported)));
+            assertTrue(workspace.controller().dirty()); assertTrue(workspace.controller().canUndo());
+            workspace.saveTo(output.resolve("ui-refined.stageplay"));
+        } finally {
+            SessionManager.clear(); RomManager.getInstance().setRom(null); Engine.clearGlobalInstance();
+            TestEnvironment.resetAll(); SonicConfigurationService.getInstance().resetToDefaults(); GameModuleRegistry.reset();
+        }
+    }
+
+    @Test
     void captureAnimatedCameraFormForBothNativeContentsPolicies() throws Exception {
         assumeTrue(Boolean.getBoolean("openggf.stageplay.hudPictures"), "Explicit Stageplay HUD picture refresh only");
         assumeTrue(PresentationOffscreenTestContext.requested(), "Stageplay HUD pictures require display-free EGL");

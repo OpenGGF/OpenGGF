@@ -29,13 +29,20 @@ editors and can be registered by a mod.
   Registry presence alone does not mean that a detached set can be decoded.
   All frame/zone/act numbers are zero-based. Never invent art or copy ROMs to satisfy
   a command. Sprite positions use the sprite origin, not its top-left corner.
-- Author a version-five screenplay JSON for the current native world and object cast. Version four retains canonical-six behavior. Versions one through three retain compatibility behavior. New cast members default to physical puppets;
+- Author a version-six screenplay JSON for the current native world and object cast. Version five retains canonical-seven object support. Version four retains canonical-six behavior. Versions one through three retain compatibility behavior. New cast members default to physical puppets;
   use `puppet:false` for Poser mode and deliberate manual choreography. Version-one recipes remain manual. Each shot has its own duration, set, camera
   and actor tracks. Local frame zero anchors each present actor and camera. Missing
   cast tracks are hidden for that shot. The compiler creates every scene-boundary
   key and preserves explicit cross-game art/audio references. It never interpolates
   across a set switch. An incoming transition straddles the boundary, so leave enough
   room on both sides and avoid dialogue under its opaque midpoint.
+- After editor refinements, use `decompile --scene PATH --out PATH` or either editor's
+  **Export screenplay**, then recompile version-six JSON to preserve every supported
+  canonical field and exact ID/order. Import starts an unsaved canonical scene; export
+  preserves save/undo state. Decompile beside the scene when assets are relative.
+  Do not hand-edit generated IDs or split cross-shot intervals to fit a shot: version
+  six supports literal IDs, typed exact `order` permutations and whole intervals.
+  Original source comments, formatting and shot names are not reconstructed.
 - Compile beside the screenplay when it uses relative voice/level/PNG decoration or portrait assets. The compiler
   rejects unknown/duplicate fields and invalid timing and never overwrites outputs.
   Use a new take filename for revisions. `validate` checks structure; `inspect --frame N`

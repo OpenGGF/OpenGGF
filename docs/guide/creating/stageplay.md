@@ -135,8 +135,10 @@ and aspect ratio, letterboxed inside the available preview area.
 
 For agent-driven authoring, [the screenplay tool](stageplay-authoring.md) discovers
 ROM resources, compiles shot-local scripts, samples frames and renders without
-opening editor menus. Keep the screenplay as the programmatic source; either editor
-can subsequently refine its generated canonical scene.
+opening editor menus. Both editors offer **Import screenplay** and **Export screenplay**.
+Import creates an unsaved canonical scene; refine it, save the `.stageplay`, then
+export a version-six screenplay and recompile without losing supported document
+data. Export leaves the current save state and undo history intact.
 
 ## Speakers, typing and dialogue skins
 

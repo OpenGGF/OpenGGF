@@ -1499,3 +1499,70 @@ Final helper extraction check: queued normal selection
 ROM plus surfaceless EGL, passed 13/13 with zero failures/errors/skips (88 seconds
 execution, ten seconds queue). This preserves the captured pixel implementation
 while keeping all new residency helpers outside the annotated API type.
+
+## Complete-cast phase 4: two-way authoring
+
+Phase 3 engine commit `74691157e`; Editor `d446650`. This closes the
+previously one-way screenplay limit. Canonical version seven stays unchanged;
+screenplay version six preserves literal IDs, exact typed track permutations and
+whole cross-shot intervals. A deterministic decompiler checks compilation equality
+before publication. Versions one through five keep their old migration, ID and
+interval behavior. Version-six input is bounded at 32 MiB to allow expansion from
+a canonical file still capped at 8 MiB.
+
+Rejected: a canonical payload blob inside screenplay (not authorable), splitting
+intervals at cuts (restarts reveal/phase), prefixes on supplied IDs (breaks legal
+64-character IDs), and relying on sorted cue lists (loses supported document order).
+Both frontends share import/export; import starts an unsaved canonical document,
+export preserves save/undo state, and relative assets retain their root. Public
+playback and candidate API shapes are unchanged.
+
+Planned focused qualification: all eight shipped canonical examples and seven
+shipped screenplay examples, strict malformed-v6 rejection, old-version behavior,
+arbitrary IDs/order/cross-shot cues, editor refinement round trips and failure
+atomicity. CLI tests cover bounded no-overwrite publication and relative roots.
+Offscreen evidence will render the editor-refined canonical document and its
+export/recompile result, compare complete decoded pixels/audio, and review moving
+footage plus both frontend forms. Final results follow after execution.
+
+First Phase 4 qualification: queued lean exact selection
+`TestStageplayScriptCompiler,TestStageplayScriptDecompiler,TestStageplayScriptRoundTrip,TestStageplayTool,TestStageplayWorkspace,TestStageplayController,TestStageplayStore`
+with `-Dmse=off test -B` passed all 96 tests, zero failures/errors/skips
+(89 seconds execution, 841 seconds queue). This includes all eight canonical and
+seven screenplay examples, stable second-generation export, typed ordering,
+cross-shot intervals and frontend-independent import/export history contracts.
+
+Final Phase 4 qualification and evidence:
+
+- Normal exact HUD picture selector
+  `TestStageplayHudPictures#captureScreenplayImportRefineAndExportForms`,
+  `-Dopenggf.stageplay.hudPictures=true`, surfaceless EGL and absolute S2 ROM:
+  one pass, zero failures/errors/skips (28.102 seconds execution, 75 seconds queue).
+- Build-only `python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package -B`:
+  success, 45.833 seconds; tests intentionally skipped. Installed the dependency
+  jar into the owned Editor's private Maven repository before its checks.
+- Editor normal exact selection
+  `TestStageplayChrome,TestStageplayChromePictures#captureScreenplayImportRefineAndExportForms`,
+  `-Dopenggf.stageplay.desktopPictures=true`, EGL and absolute S2 ROM:
+  16 passes, zero failures/errors/skips (3.091 seconds, no queue wait).
+
+Both actual UI flows import a version-five screenplay, edit actor keys at frames
+90 and 119, export version-six JSON, and save the refined canonical scene. Their
+canonical files match byte for byte. Recompilation retains the complete document.
+The refined and exported/recompiled scenes were rendered separately through the
+production offscreen capture host: all 120 RGBA frames and all 384,000 decoded PCM
+bytes match. Both movies pass complete lossless decoding. The two-second film is
+60 fps, with 48-kHz stereo audio and 30-frame lead-in/out. Normal and quarter-speed
+playback was reviewed, including six intermediate samples during continuous slow
+playback; all 120 callbacks were observed in the slow pass. UI forms and boundary
+stills were inspected.
+
+Evidence: `$STAGEPLAY_EVIDENCE/phase4/`, including
+`{hud,desktop}/ui-refined.stageplay`, `ui-refined.screenplay.json`,
+`recompiled.stageplay`, both import/export form PNGs,
+`editor-refined.mkv`, `export-recompiled.{mkv,mp4}`, frame 15/60/105 PNGs,
+`roundtrip-comparison.json`, film metadata and `capture-source.json`.
+The driver `capture_roundtrip.py` records the exact production tool invocations.
+The main-player playback API and hand-back semantics remain as in Phase 1; this
+phase adds no candidate Mod API surface. Final combined smoke remains pending
+after Phase 5.

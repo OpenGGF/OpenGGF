@@ -10,6 +10,8 @@ import com.openggf.stageplay.StageplayDocument;
 import com.openggf.stageplay.StageplayDialogue;
 import com.openggf.stageplay.StageplayStore;
 import com.openggf.stageplay.StageplayTimeline;
+import com.openggf.tools.StageplayScriptCompiler;
+import com.openggf.tools.StageplayScriptDecompiler;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -46,7 +48,8 @@ public final class StageplayWorkspace {
     }
 
     public enum Action {
-        NEW("New scene"), OPEN("Open scene"), SAVE("Save"), SAVE_AS("Save as"),
+        NEW("New scene"), OPEN("Open scene"), IMPORT_SCREENPLAY("Import screenplay"),
+        EXPORT_SCREENPLAY("Export screenplay"), SAVE("Save"), SAVE_AS("Save as"),
         SCENE("Scene / set"), ADD_ACTOR("Add actor"), EDIT_ACTOR("Actor properties"),
         DELETE_ACTOR("Remove actor"), SET_KEY("Direct actor / set key"), DELETE_KEY("Remove actor key / action"),
         PUPPET_ACTIONS("Puppet actions"), OBJECTS("ROM object cast / clear"),
@@ -138,11 +141,16 @@ public final class StageplayWorkspace {
 
     public void invoke(Action action) {
         try {
-            host.finishPendingEdits();
-            if (action != Action.PLAY && action != Action.RECORD && action != Action.RECORD_CAMERA) stop();
+            // Screenplay IO parses before replacing a scene and exports without committing a take.
+            if (action != Action.IMPORT_SCREENPLAY && action != Action.EXPORT_SCREENPLAY) {
+                host.finishPendingEdits();
+                if (action != Action.PLAY && action != Action.RECORD && action != Action.RECORD_CAMERA) stop();
+            }
             switch (action) {
                 case NEW -> beforeReplace(this::newDocument);
                 case OPEN -> beforeReplace(this::openForm);
+                case IMPORT_SCREENPLAY -> importScreenplayForm();
+                case EXPORT_SCREENPLAY -> exportScreenplayForm();
                 case SAVE -> save(null);
                 case SAVE_AS -> saveAs(null);
                 case SCENE -> sceneForm();
@@ -532,6 +540,57 @@ public final class StageplayWorkspace {
         host.refreshResources();
         invalidatePreview();
         initialized = true; active = true; status = "Opened " + absolute;
+    }
+
+    private void importScreenplayForm() {
+        menu.showForm("Import screenplay", List.of(file("path", "Screenplay JSON", assetRoot.toString())),
+                "Import", values -> io(() -> importScreenplay(Path.of(values.get("path")))));
+        menu.setSubtitle("Read a shot-local screenplay as a new unsaved scene. Existing edits stay protected.");
+    }
+
+    /** Parse completely before stopping playback, releasing a live lease or replacing authoring state. */
+    public void importScreenplay(Path source) throws IOException {
+        Path absolute = source.toAbsolutePath().normalize();
+        if (!Files.isRegularFile(absolute, java.nio.file.LinkOption.NOFOLLOW_LINKS)
+                || Files.size(absolute) > StageplayScriptCompiler.MAX_BYTES)
+            throw new IOException("Screenplay input must be a regular file no larger than 32 MiB");
+        StageplayDocument candidate;
+        try (var input = Files.newInputStream(absolute, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+            candidate = StageplayScriptCompiler.compile(input.readNBytes(StageplayScriptCompiler.MAX_BYTES + 1));
+        }
+        host.finishPendingEdits();
+        stop(); // A pending take becomes an ordinary protected edit before asking to replace it.
+        beforeReplace(() -> {
+            controller.replace(candidate); controller.markUnsaved();
+            path = null; assetRoot = absolute.getParent();
+            cameraDraft = null; cameraMode = false;
+            host.refreshResources(); invalidatePreview();
+            initialized = true; active = true;
+            status = "Imported " + absolute + ". Save creates a separate .stageplay scene.";
+        });
+    }
+
+    private void exportScreenplayForm() {
+        Path suggested = assetRoot.resolve(slug(controller.document().name()) + ".screenplay.json");
+        menu.showForm("Export screenplay", List.of(file("path", "New screenplay JSON", suggested.toString())),
+                "Export", values -> io(() -> exportScreenplay(Path.of(values.get("path")))));
+        menu.setSubtitle("Writes a new screenplay without replacing files or changing this scene's save and undo state.");
+    }
+
+    /** Export the current authored preview without moving its assets or marking the scene saved. */
+    public void exportScreenplay(Path destination) throws IOException {
+        Path target = destination.toAbsolutePath().normalize();
+        if (target.getParent() == null) throw new IOException("Screenplay destination directory is missing");
+        StageplayDocument candidate = rebase(recordingDocument(), assetRoot, target.getParent());
+        byte[] bytes = StageplayScriptDecompiler.decompile(candidate);
+        Files.createDirectories(target.getParent());
+        Path staged = Files.createTempFile(target.getParent(), ".stageplay-screenplay-", ".tmp");
+        try {
+            Files.write(staged, bytes);
+            // Fail-if-existing atomic publication: no truncation, symlink following or source overwrite.
+            Files.createLink(target, staged);
+        } finally { Files.deleteIfExists(staged); }
+        status = "Exported screenplay " + target;
     }
 
     private void save(Runnable next) {
