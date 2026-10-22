@@ -310,6 +310,12 @@ panel is appropriate and does not need to fly on and off with each speaking turn
   gradient (`Shade`, header shades) when a full line sits over busy art.
 - Use a wide-tracked small kicker (`tracking=8–12`) sparingly, above a
   display line.
+- Keep editorial graphics off the native HUD. A header tab cutting through
+  `TIME`, or a split label beside two stacked HUDs, reads as an accident. Place
+  the labels on the side away from the HUD, or crop the HUD out deliberately.
+- A native bitmap font shows its construction at display scale. Sonic 2's
+  title-card diagonals are split strokes, which can read as "E/MERALD" at 9×.
+  Judge every word at final size, and choose the scale or the word accordingly.
 - Hero logos are redrawn from the game's or mod's own font at integer scale,
   with an outline, a drop and a sweeping shine. Banners come from the ROM's
   own title-card art, dumped by tests, never from the disassembly.
