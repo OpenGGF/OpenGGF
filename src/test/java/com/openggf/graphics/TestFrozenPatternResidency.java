@@ -2,6 +2,8 @@ package com.openggf.graphics;
 
 import com.openggf.level.Pattern;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import static org.junit.jupiter.api.Assertions.*;
 
 /** Physical bytes, rather than a virtual-ID version cache, own frozen art residency. */
@@ -94,6 +96,32 @@ class TestFrozenPatternResidency {
         atlas.cleanupHeadless(); resident();
         atlas.restoreFrozenPattern(new SpritePresentation.PatternVersion(1, 0, 0, 0), 0, false);
         assertEquals(4, sink.uploads.size());
+        atlas.cleanupHeadless();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1, 2})
+    void frozenRestoreRetriesFailedOrdinaryUpload(int failurePhase) {
+        resident();
+        atlas.restoreFrozenPattern(version(1), 0, false);
+        sink.reset();
+        atlas.setUploadSink(new PatternAtlas.AtlasUploadSink() {
+            public void begin(int texture) { if (failurePhase == 0) throw new IllegalStateException("begin failed"); }
+            public void upload(byte[] bytes, int offset, int stride, int x, int y, int width, int height) {
+                if (failurePhase == 1) throw new IllegalStateException("upload failed");
+            }
+            public void end() { if (failurePhase == 2) throw new IllegalStateException("end failed"); }
+        });
+        var pattern = new Pattern();
+        for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) pattern.setPixel(x, y, (byte) 9);
+        assertThrows(IllegalStateException.class, () -> atlas.uploadPattern(pattern, atlas.getEntry(0)));
+        atlas.setUploadSink(sink);
+        atlas.restoreFrozenPattern(version(9), 0, false);
+        assertEquals(1, sink.uploads.size(), "failed ordinary write must remain physically dirty");
+        byte[] expected = new byte[64]; java.util.Arrays.fill(expected, (byte) 9);
+        assertArrayEquals(expected, sink.uploads.getFirst().pixels());
+        atlas.restoreFrozenPattern(version(9), 0, false);
+        assertEquals(1, sink.uploads.size(), "successful recovery restores the unchanged-version fast path");
         atlas.cleanupHeadless();
     }
 }

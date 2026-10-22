@@ -873,11 +873,18 @@ public class PatternAtlas {
 
         // Immediate upload (non-batch path): bind, upload one tile, unbind.
         int textureId = getTextureId(entry.atlasIndex());
-        uploadSink.begin(textureId);
         try {
-            uploadSink.upload(patternPixels, 0, TILE_SIZE, pixelX, pixelY, TILE_SIZE, TILE_SIZE);
-        } finally {
-            uploadSink.end();
+            uploadSink.begin(textureId);
+            try {
+                uploadSink.upload(patternPixels, 0, TILE_SIZE, pixelX, pixelY, TILE_SIZE, TILE_SIZE);
+            } finally {
+                uploadSink.end();
+            }
+        } catch (RuntimeException | Error failure) {
+            // The CPU mirror already changed. Equal frozen replay must retry the
+            // physical write even when bind, upload or unbind failed.
+            markTileDirty(entry.atlasIndex(), entry.slot(), entry.tileX(), entry.tileY());
+            throw failure;
         }
         return version;
     }
