@@ -62,6 +62,21 @@ public final class GameModuleRegistry {
         };
     }
 
+    /** Menu-only stock source; creating it never changes a gameplay or bootstrap module. */
+    static StockMenuAudio createStockMenuAudio(GameId gameId) {
+        return switch (java.util.Objects.requireNonNull(gameId, "gameId")) {
+            case S1 -> new StockMenuAudio(new com.openggf.game.sonic1.audio.Sonic1AudioProfile(),
+                    com.openggf.game.sonic1.audio.Sonic1Music.TITLE.id);
+            case S2 -> new StockMenuAudio(new com.openggf.game.sonic2.audio.Sonic2AudioProfile(),
+                    com.openggf.game.sonic2.audio.Sonic2Music.TITLE.id);
+            case S3K -> new StockMenuAudio(new com.openggf.game.sonic3k.audio.Sonic3kAudioProfile(),
+                    com.openggf.game.sonic3k.audio.Sonic3kMusic.TITLE.id);
+            case STANDALONE -> throw new IllegalArgumentException("Standalone has no stock title theme");
+        };
+    }
+
+    record StockMenuAudio(com.openggf.audio.GameAudioProfile profile, int titleMusicId) { }
+
     /**
      * Returns the bootstrap default module without consulting session state.
      * Use this only for construction paths that intentionally run before a

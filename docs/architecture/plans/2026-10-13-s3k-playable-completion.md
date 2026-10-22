@@ -3648,3 +3648,55 @@ show the leased wrapper command for independent version checks, and the existing
 measurement hazard records the manual path and multiple-JVM launcher. This is a
 documentation correction only, with mirror, whitespace, link and command-routing
 scenario checks; no new JVM, engine tests or scheduler implementation is needed.
+
+### Menu audio composition and ownership guard repair — 2026-10-22
+
+On draft parent `4b51657396dd435a620f81186dbf8ed11676619d`, the earlier four
+structural failures still belonged to two unchanged sources: the menu diagnostic
+read `AudioManager.getInstance()`, and the shared hub controller constructed and
+imported concrete stock Sonic audio providers. Root reused that existing failure
+evidence rather than rerunning an unchanged red selection.
+
+The diagnostic now obtains the installed audio owner through `EngineServices`.
+The existing `GameModuleRegistry` composition root supplies a package-private
+stock profile/title-cue pair; constructing it never installs a game module or
+changes a world. The hub keeps its existing ROM identity selection, isolated
+playback host, restart, volume, cleanup and no-device paths. Concrete profiles,
+PAL behavior, public Mod API, gameplay audio, drivers and chips are unchanged.
+The three real-ROM theme tests also check bootstrap and current-world identity
+after closing their preview. No guard exception, ratchet or assertion was relaxed.
+An independent read-only review found no concrete regression. Its test-coverage
+limit is retained: the identity checks observe the existing current-world value;
+they do not arrange a non-null suspended world. The factory's lack of world or
+bootstrap mutation is established by the source review, not that stronger test.
+
+Both queued requests tested the same four source-file bytes before this prose
+update. Actual XML identities, assertions, failures, errors, skips and Java/GL
+properties were read. Java was 25.0.5; behavior tests received all three verified
+original absolute ROM paths and surfaceless EGL with null audio.
+
+| Selection | Tests / failures / errors / skips | Queue wait | Maven reported |
+| --- | --- | ---: | ---: |
+| Hub controller, ROM themes, presentation sink, headless ownership and boot identity: five classes | 14 / 0 / 0 / 0 | 15s | 1:20 min |
+| Production singleton closure, whole ArchUnit class and registry usage: three classes, fresh JVM | 75 / 0 / 0 / 0 | 154s | 41.444s |
+
+The behavior selection was `TestHubMusicController,TestHubMusicRomThemes,TestHubMusicPresentationSink,TestHeadlessAudioOwnership,TestHeadlessGameBootAudioIdentity`.
+The structural selection was `TestProductionSingletonClosureGuard,TestArchUnitRules,TestGameModuleRegistryUsageGuard` with `-Pguards`.
+Both used the current main checkout's absolute queue wrapper with `--normal
+-Dmse=off -Dopenggf.headless.gl=surfaceless-egl`, separate owned report/tmp
+namespaces and ambient JVM/display options unset. Required ROM properties were
+passed only to the behavior selection. The second queue estimate of 30.6s was
+not elapsed runtime; parent and individual compiler durations are unknown.
+
+This bounded composition change is covered by its actual audio consumers and
+owning architectural checks. The change-based planner selects all 3650 smoke
+classes because these shared owners lack narrower file rules. Running unrelated
+physics, network and rendering coverage for a pure package-private profile
+factory relocation is disproportionate; the focused consumer and structural
+selections replace that broad run for this fix. These 89 cases close the four recorded audio-owner
+guard failures in those classes; they are not a rerun of all guards, broad smoke,
+physical speaker/window diagnostics, native capture or campaign qualification.
+No route inputs, oracles or the earlier 14 ordinary failure identities change.
+Consumed XML, temporary directories and logs are removed after inspection while
+ordinary compiled outputs remain in the owned worktree. Main integration remains
+coordinated separately with the other gameplay swarm.
