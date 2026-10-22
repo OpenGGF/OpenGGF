@@ -620,6 +620,10 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
         contributedHandler = handler;
     }
 
+    ScrollHandlerProvider checkpointScrollProvider() {
+        return currentZone == contributedZone ? null : scrollProvider;
+    }
+
     private ZoneScrollHandler activeHandler() {
         return getHandler(currentZone);
     }

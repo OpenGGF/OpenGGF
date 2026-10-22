@@ -265,7 +265,8 @@ public abstract class AbstractTraceReplayTest {
     }
 
     static boolean shouldValidateRewindReferenceClosure(SonicGame game) {
-        return game == SonicGame.SONIC_2 || game == SonicGame.SONIC_3K;
+        return game == SonicGame.SONIC_1 || game == SonicGame.SONIC_2
+                || game == SonicGame.SONIC_3K;
     }
 
     /**

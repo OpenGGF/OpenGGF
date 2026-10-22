@@ -106,6 +106,15 @@ public class Sonic1LevelInitProfile extends AbstractLevelInitProfile {
             steps.add(spawnPlayerStep(ctx));
             steps.add(resetPlayerStateStep(ctx));
             steps.add(initCameraStep());
+            steps.add(new InitStep("InitBackgroundScroll", "S1: BgScrollSpeed after LevSz_InitCameraPositions",
+                    () -> {
+                        var camera = GameServices.camera();
+                        var parallax = GameServices.parallax();
+                        com.openggf.level.ParallaxCheckpointAccess.initialize(parallax,
+                                GameServices.level().getCurrentZone(), GameServices.level().getCurrentAct(),
+                                camera.getX(), camera.getY(), ctx.hasCheckpoint()
+                                        ? com.openggf.game.CheckpointBackgroundScrollAccess.saved(ctx) : null);
+                    }));
             steps.add(initLevelEventsStep());
             if (!isPreviewCapture(ctx)) {
                 steps.add(requestTitleCardStep(ctx));

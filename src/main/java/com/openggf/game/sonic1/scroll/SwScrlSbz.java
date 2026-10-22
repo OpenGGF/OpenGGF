@@ -2,6 +2,8 @@ package com.openggf.game.sonic1.scroll;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.GameServices;
+import com.openggf.game.internal.CheckpointBackgroundScroll;
+
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 
@@ -10,7 +12,7 @@ import java.util.Arrays;
 import static com.openggf.level.scroll.M68KMath.*;
 
 /** REV01 Deform_SBZ: four cloud words and three independently moving building bands. */
-public final class SwScrlSbz extends AbstractZoneScrollHandler {
+public final class SwScrlSbz extends AbstractZoneScrollHandler implements Sonic1CheckpointScrollHandler {
     // v_bgscroll_buffer is $200 bytes. Deform_SBZ writes its first 32 words.
     private final short[] scrollBuffer = new short[0x100];
     private final ScrollEffectComposer composer = new ScrollEffectComposer();
@@ -158,4 +160,16 @@ public final class SwScrlSbz extends AbstractZoneScrollHandler {
     private record State(long bg1X, long bg2X, long bg3X, long bgY,
                          int cameraX, int cameraY, int act, boolean initialized,
                          short vscroll, int minOffset, int maxOffset) { }
+
+    @Override
+    public CheckpointBackgroundScroll captureBackgroundScroll() {
+        return new CheckpointBackgroundScroll((int) (bg1X >> 16), (int) (bgY >> 16), (int) (bg2X >> 16), 0, (int) (bg3X >> 16), 0);
+    }
+
+    @Override
+    public void restoreBackgroundScroll(CheckpointBackgroundScroll state) {
+        bg1X = (long) state.bgX() << 16;
+        bg2X = (long) state.bg2X() << 16;
+        bg3X = (long) state.bg3X() << 16;
+    }
 }

@@ -106,6 +106,7 @@ final class LevelCheckpointCoordinator {
         // bonus/big-ring returns separately restore their captured high-water afterward.
         checkpointState.restoreStarPostActivationMark(ctx.getCheckpointIndex());
         if (checkpointState instanceof CheckpointState cs) {
+            com.openggf.game.CheckpointBackgroundScrollAccess.restore(ctx, cs);
             cs.saveRingState(ctx.getCheckpointRings(), ctx.getCheckpointRingExtraLifeFlags());
             if (ctx.hasWaterState()) {
                 cs.saveWaterState(ctx.getCheckpointWaterLevel(), ctx.getCheckpointWaterRoutine());
