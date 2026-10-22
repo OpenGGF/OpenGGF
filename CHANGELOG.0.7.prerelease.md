@@ -14,6 +14,9 @@ Unreleased. The earlier development themes remain in
   during unloading while child slots await their turn in the object walk.
   Exploding Bomb fuses retain position fractions and status in the reused slot,
   moving that first fragment immediately while fresh fragments initialize.
+  Boss faces, flames and accessories occupy real slots and play their ROM
+  scripts. Green Hill's six-piece wrecking ball can hurt while deploying;
+  defeat bursts use Sonic 1's original allocation, art and lifetime.
 
 - **Sonic 1 level entry:** background scrolling starts from each level or credits
   demo's final camera, and lamppost returns retain the original background camera

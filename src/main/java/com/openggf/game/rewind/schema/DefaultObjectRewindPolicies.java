@@ -103,6 +103,8 @@ final class DefaultObjectRewindPolicies {
     );
 
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
+            // S1 visual SSTs retain their exact ship identity across independent recreation.
+            Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.S1EggmanVisualComponent", "shipOwner"), RewindFieldPolicy.CAPTURED),
             // Fresh title child parent2 is native graph identity, not a nearest owner hint.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kFreshTitleCardElementObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kInLevelTitleCardElementObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),

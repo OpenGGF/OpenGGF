@@ -1,5 +1,11 @@
 # Level test coverage backlog
 
+The [S1 boss mechanics matrix](../architecture/audits/2026-10-22-s1-boss-components.md#bounded-verification-and-inherited-gaps)
+records native component, allocation, animation, contact and recreation checks
+for GHZ3, MZ3, SYZ3, LZ3 and SLZ3, plus ROM explosion pixels. Continuous boss
+routes, FZ topology, SLZ escape timing and broader roster/presentation coverage
+remain open; these local mechanics do not certify any complete act.
+
 The [2026-10-22 S2 presentation matrix](../architecture/validation/2026-10-22-s2-presentation.md)
 records bounded MTZ3, SCZ and DEZ palette-cycle coverage and the seeded native
 DEZ boss-to-ending/NTSC-PAL credits boundaries. Continuous routes and the wider

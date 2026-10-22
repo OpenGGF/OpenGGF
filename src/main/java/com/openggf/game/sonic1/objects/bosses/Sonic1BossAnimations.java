@@ -60,17 +60,12 @@ final class Sonic1BossAnimations {
     // Ani_FZEgg (Post-defeat Eggman in damaged ship) animation IDs
     static final int ANIM_FZEGG_DEFAULT = 0;
 
-    private static final SpriteAnimationSet EGGMAN_ANIMATIONS = createEggmanAnimations();
     private static final SpriteAnimationSet SEGG_ANIMATIONS = createSEggAnimations();
     private static final SpriteAnimationSet PLAUNCH_ANIMATIONS = createPLaunchAnimations();
     private static final SpriteAnimationSet PLASMA_ANIMATIONS = createPlasmaAnimations();
     private static final SpriteAnimationSet FZEGG_ANIMATIONS = createFZEggAnimations();
 
     private Sonic1BossAnimations() {
-    }
-
-    static SpriteAnimationSet getEggmanAnimations() {
-        return EGGMAN_ANIMATIONS;
     }
 
     static SpriteAnimationSet getSEggAnimations() {
@@ -87,61 +82,6 @@ final class Sonic1BossAnimations {
 
     static SpriteAnimationSet getFZEggAnimations() {
         return FZEGG_ANIMATIONS;
-    }
-
-    private static SpriteAnimationSet createEggmanAnimations() {
-        SpriteAnimationSet set = new SpriteAnimationSet();
-
-        // 0: ship - dc.b $F, 0, afEnd
-        set.addScript(ANIM_SHIP, new SpriteAnimationScript(
-                0x0F, List.of(0), SpriteAnimationEndAction.LOOP, 0));
-
-        // 1: facenormal1 - dc.b 5, 1, 2, afEnd
-        set.addScript(ANIM_FACE_NORMAL_1, new SpriteAnimationScript(
-                0x05, List.of(1, 2), SpriteAnimationEndAction.LOOP, 0));
-
-        // 2: facenormal2 - dc.b 3, 1, 2, afEnd
-        set.addScript(ANIM_FACE_NORMAL_2, new SpriteAnimationScript(
-                0x03, List.of(1, 2), SpriteAnimationEndAction.LOOP, 0));
-
-        // 3: facenormal3 - dc.b 1, 1, 2, afEnd
-        set.addScript(ANIM_FACE_NORMAL_3, new SpriteAnimationScript(
-                0x01, List.of(1, 2), SpriteAnimationEndAction.LOOP, 0));
-
-        // 4: facelaugh - dc.b 4, 3, 4, afEnd
-        set.addScript(ANIM_FACE_LAUGH, new SpriteAnimationScript(
-                0x04, List.of(3, 4), SpriteAnimationEndAction.LOOP, 0));
-
-        // 5: facehit - dc.b $1F, 5, 1, afEnd
-        set.addScript(ANIM_FACE_HIT, new SpriteAnimationScript(
-                0x1F, List.of(5, 1), SpriteAnimationEndAction.LOOP, 0));
-
-        // 6: facepanic - dc.b 3, 6, 1, afEnd
-        set.addScript(ANIM_FACE_PANIC, new SpriteAnimationScript(
-                0x03, List.of(6, 1), SpriteAnimationEndAction.LOOP, 0));
-
-        // 7: blank - dc.b $F, $A, afEnd (frame 10 = blank)
-        set.addScript(ANIM_BLANK, new SpriteAnimationScript(
-                0x0F, List.of(10), SpriteAnimationEndAction.LOOP, 0));
-
-        // 8: flame1 - dc.b 3, 8, 9, afEnd
-        set.addScript(ANIM_FLAME_1, new SpriteAnimationScript(
-                0x03, List.of(8, 9), SpriteAnimationEndAction.LOOP, 0));
-
-        // 9: flame2 - dc.b 1, 8, 9, afEnd
-        set.addScript(ANIM_FLAME_2, new SpriteAnimationScript(
-                0x01, List.of(8, 9), SpriteAnimationEndAction.LOOP, 0));
-
-        // 10: facedefeat - dc.b $F, 7, afEnd
-        set.addScript(ANIM_FACE_DEFEAT, new SpriteAnimationScript(
-                0x0F, List.of(7), SpriteAnimationEndAction.LOOP, 0));
-
-        // 11: escapeflame - dc.b 2, 9, 8, $B, $C, $B, $C, 9, 8, afBack, 2
-        set.addScript(ANIM_ESCAPE_FLAME, new SpriteAnimationScript(
-                0x02, List.of(9, 8, 11, 12, 11, 12, 9, 8),
-                SpriteAnimationEndAction.LOOP_BACK, 2));
-
-        return set;
     }
 
     /**
