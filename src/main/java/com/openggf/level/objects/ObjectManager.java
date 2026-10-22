@@ -1632,9 +1632,10 @@ public class ObjectManager {
                 objectCallbacks.run(entry.instance(), () -> {
                     int mask = ObjectRenderParts.tileOcclusionPaletteMask(entry);
                     if (gfx.getCurrentSpriteTileOcclusionPaletteMask() != mask) {
-                        gfx.flushPatternBatch();
+                        boolean perInstance = com.openggf.graphics.PresentationGraphicsAccess.maskIsPerInstance(gfx);
+                        if (!perInstance) gfx.flushPatternBatch();
                         gfx.setCurrentSpriteTileOcclusionPaletteMask(mask);
-                        gfx.beginPatternBatch();
+                        if (!perInstance) gfx.beginPatternBatch();
                     }
                     ObjectRenderParts.appendRenderCommands(entry, renderCommands, bucket, objectServices);
                 });

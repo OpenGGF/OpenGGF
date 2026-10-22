@@ -743,6 +743,16 @@ public class GraphicsManager {
 		patternAtlas.cachePattern(pattern, patternId);
 	}
 
+    void restoreFrozenPattern(SpritePresentation.PatternVersion version, int patternId) {
+        ensurePatternAtlas();
+        patternAtlas.restoreFrozenPattern(version, patternId, headlessMode || !glInitialized);
+    }
+
+    boolean presentationMaskIsPerInstance() {
+        return !headlessMode && spritePresentationBuilder == null && batchingEnabled
+                && instancedBatchActive && instancedPatternRenderer != null;
+    }
+
 	public void updatePatternTexture(Pattern pattern, int patternId) {
 		// Native null uploads allocate residency but leave existing GPU bytes intact.
 		ensurePatternAtlas();
