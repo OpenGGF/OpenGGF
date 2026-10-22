@@ -615,3 +615,143 @@ corruption, identity-first rejection and incomplete/error CLI contracts. Running
 `python3 tools/audio/s1_startup_instruction_audit.py --rom` with the original
 absolute REV01 path returned INCOMPLETE/exit2 with five components and null
 whole-startup total/frame conversion. No generated report or ROM copy is stored.
+
+
+## S2 startup source attribution after the input-ownership correction
+
+The preserved S2 engine control starts writing the correct ROM chant bytes
+`7B8789828E` in packet126; the first differing PCM sample92739 is in that
+packet. The native control first leaves its post-boot zero run at sample183298,
+packet249. No matching native FA execute callback was captured, so these output
+boundaries do not establish a native FA request timestamp.
+
+Actual REV01 ROM `$0338:D258B08864FA` is the checksum ADD.W/CMP.L/BHS loop;
+header end `$01A4` is `$000FFFFF`. It scans524032 words from `$0200` and
+costs12576766 Motorola instruction-only cycles. Production begins at an
+initialized title manager, with no cold-reset checksum/VDP/Z80 owner. Neither
+the instruction budget nor the PCM gap authorizes a fitted startup delay.
+
+SegaScreen (`s2.asm:4095-4170`) fades the previous screen, loads art/map and
+scaling work, then loads the active palette directly. At `$0038CE`,
+`70006100EE5C` is the palette selection and PalLoad_Now call; a later generic
+fade-in is unsupported. ObjB0's movement/palette-script owner is separate
+(`s2.asm:78399-78620`); actual script headers `$03A49E/$03A514` begin
+`040710FFFB10` / `040710FFFB00`. The existing106-update visual approximation
+has not been certified as that state machine.
+
+In the shipped fixBugs=0 path, both ObjB0 and its caller requestFA; the single
+sound mailbox prevents duplicate playback. The caller's second FA is
+`$003928:103C00FA`, followed by PlaySound at `$00392C:6100DA42`, SEGA VInt
+selection at `$003930`, WaitForVint at `$003936`, and the180 timer at
+`$00393A`. Only the subsequent PCM VInt end loop tests Start from either pad
+(Sega_WaitPalette/Sega_WaitEnd, `s2.asm:4177-4201`). This is not S1's 68000
+busy loop: S2 keeps waiting through VBlanks, and its screen wait is independent
+of PCM exhaustion. The source also has no input exit during the text screen's
+fade/load/fade. The existing96 hold remains a load-cost approximation.
+
+These disjoint S2 SEGA/STP phase methods were coordinated with NativeModes
+before mutation. No ordinary music namespace, native request remap, ACTIVE
+menu control, attract routing, Super caller or shared audio service is changed
+by that reservation. Handoff validation must exercise real production
+presentation admission: a source WaitForVint cannot be replaced by a diagnostic
+counter, sample count or a successful-music query. S2 startup waveform and load
+costs remain open until remeasured at the resulting runtime identity.
+
+
+## S1 title PLC caller ordering
+
+After parent approval and S1-chain acknowledgment of the exact two caller
+methods and title coverage cases, initialization now uses the existing
+`Sonic1PlcService.clearQueued()`. Main0 is submitted only after the title's
+object/background initialization and Title music request in
+`transitionToMainScreen()`, before its palette fade. The private pending
+operation distinguishes CLEAR from MAIN, so a rejected clear cannot later
+publish Main at SEGA entry; Main retry cannot replay title objects or music.
+Reset clears that caller-owned pending operation. Service/queue decoder policy,
+arm ordinals, scheduling and hardware admission were not changed.
+
+This order is verified directly in REV01 ROM: `$002DDA:6100E7FA` calls
+ClearPLC `$0015D6` before prior fade; `$0030DC:103C008A6100E2B2` requests
+Title music; `$00312A:4EB90000D9C6` executes title objects and
+`$003134:4EB90000DCEC` builds their sprites; then
+`$00313A:70006100E46C` selects Main0 and calls NewPLC `$0015AA`.
+GM_Title (`sonic.asm:2021-2054`) explains those owners. The actual service
+continues to reject clear/replacement during an active decoder; tests preserve
+that state and retry the same operation after its normal completion.
+
+The revised ROM-backed caller tests seed distinct real PLC descriptors and
+compare the queue at each operation boundary. They check genuine clearing,
+no Main submission during SEGA palette work, title-object/music-before-Main
+ordering, active-decoder preservation, Clear-versus-Main retry identity, and
+no repeated Main or music after success. They do not infer a whole title queue
+is empty from an elapsed number of presentations. This corrects submission
+ownership; direct logo/STP loading and coldboot elapsed timing remain open.
+
+
+First focused PLC check on `7d3d5a972` plus the caller/test diff:
+`TestSonic1PlcProducerCoverage,TestPlcProducerCoverageGuard,TestSonic1SegaScreenNativePhases`
+executed25 cases: 24 passed, one guard assertion failed, zero errors/skips;
+queue139s and Maven78s. All19 ROM-backed producer cases and both native phase
+cases passed. The sole failure was the registry's old S1_TITLE method anchor,
+not a queue/value mismatch. Parent approved changing only that test-registry
+anchor to `titleScreenClearsPriorWorkAndPublishesMainAfterObjectsAndMusic`;
+route keys/cardinality/source owners/submission-token requirements remain intact.
+The affected guard plus renamed case are rerun together; unchanged ROM producer
+and phase results are reused rather than launching a broader repeat.
+
+
+The registry update plus renamed ROM case passed5/5, zero skips (queue59s,
+Maven88s). A subsequent independent source review caught an over-specific wrong
+assertion in the new case: native music at `$30DC/$30E0` precedes objects at
+`$312A`, deformation `$3130` and sprite build `$3134`. The existing manager ran
+objects before music, and the new assertion had entrenched that order. The
+caller now queues music first, then executes the first object/background pass,
+then submits Main. The regression observes pre-object routine0 at the music
+request and routine2 after title setup. The earlier5-pass result predates this
+order correction; the affected music/order/retry cases are validated again.
+
+S2's approved local handoff now models VISUAL → FA submission/EXTRA_VINT →
+END_WAIT, with a return at each native wait boundary. The next admitted title
+iteration consumes the extra SEGA VInt and seeds180; the following PCM iteration
+decrements the timer and tests P1/P2 pressed Start. The visual counter freezes
+at106. No audio-success, PCM-exhaustion or diagnostic counter supplies authority;
+muted, SILENT and unavailable-chant paths still progress through game-loop
+admission. The entry palette is active directly, and the three text phases no
+longer accept input skips. New state resets at initialize/reset/text entry.
+ACTIVE/options/attract/title-VInt timer logic and every shared audio service are
+unchanged. The native16-VBlank controller polling cadence remains a separate
+unclosed obligation.
+
+
+The final source-phase selection passed **17 tests, zero failures/errors/skips**,
+immediate admission and Maven74s. It ran the two changed S1 music/order/retry
+cases plus all three new actual-Engine S2 admission cases, six S2 data cases and
+six S2 fade/intro cases. Exact invocation (original verified absolute ROMs were
+supplied; placeholders below avoid machine-local paths):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dsonic1.rom.path=<absolute existing S1 World REV01 ROM>' \
+  '-Dsonic2.rom.path=<absolute existing S2 World REV01 ROM>' \
+  '-Dtest=TestSonic1PlcProducerCoverage#titleScreenClearsPriorWorkAndPublishesMainAfterObjectsAndMusic+mainTitleRetriesOnlyMainWithoutReplayingObjectsOrMusic,TestSonic2IntroInputPhases,TestSonic2SegaScreenFadeTiming,TestSonic2SegaScreenData' test
+```
+
+The S2 production cases use the configured headless Engine and a no-device
+backend with a physical-device construction trap. Real GameLoop steps under
+recorded-input ownership and real outer audio presentations show FA's first
+five DAC bytes equal the native ROM sample before cancellation is allowed.
+They cover the separate extra-VInt iteration, each pad's Start edge, held Start,
+A/B/C negatives, natural text/twinkle progression, reset, SILENT/muted operation
+and an unavailable sample. Diagnostic observations belong only to assertions;
+production phase behavior reads no diagnostic stream or sample clock.
+
+Citation checking of the changed S2 file still reports the inherited untouched
+DeleteObject anchor at the flashing-star handler (old source line832, now838;
+its citation `s2.asm:26748-26750` is a caller site, while the checker finds the
+DeleteObject label at30330). The line and behavior are byte-identical in
+`7d3d5a972`; this is outside the reserved SEGA/STP methods. New phase references
+were checked against actual pinned source and ROM. No S3K/disassembly pin was
+changed, no native capture was launched, and no full-route proof is claimed.

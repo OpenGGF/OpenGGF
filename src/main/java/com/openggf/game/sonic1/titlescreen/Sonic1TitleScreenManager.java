@@ -190,7 +190,8 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
     // Palette cycling (water animation)
     private int palCycleTimer = 0;
     private int palCycleFrame = 0;
-    private boolean titlePlcPending;
+    private enum TitlePlcOperation { CLEAR, MAIN }
+    private TitlePlcOperation pendingTitlePlcOperation;
     private static final int PAL_CYCLE_SPEED = 6; // Update every 6 frames (from disassembly)
     private static final int PAL_CYCLE_FRAMES = 4; // 4 cycle frames (32 bytes / 8 bytes per frame)
 
@@ -270,7 +271,10 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
             return;
         }
 
-        titlePlcPending = !queueTitlePlc();
+        // GM_Sega clears prior queued work. Main is not submitted until the
+        // assembled title's objects and music, before its PaletteFadeIn.
+        pendingTitlePlcOperation = TitlePlcOperation.CLEAR;
+        retryTitlePlc();
 
         // Reset all state
         frameCounter = 0;
@@ -311,12 +315,17 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         LOGGER.info("Sonic 1 Title Screen initialized");
     }
 
-    private boolean queueTitlePlc() {
+    private boolean retryTitlePlc() {
+        if (pendingTitlePlcOperation == null) return true;
         try {
             Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
             if (plcService != null) {
-                plcService.replaceQueued(0);
+                switch (pendingTitlePlcOperation) {
+                    case CLEAR -> plcService.clearQueued();
+                    case MAIN -> plcService.replaceQueued(0);
+                }
             }
+            pendingTitlePlcOperation = null;
             return true;
         } catch (Exception ignored) {
             // The presentation renderer also runs without a gameplay module in focused tests.
@@ -329,10 +338,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         if (state == State.INACTIVE) {
             return;
         }
-        if (titlePlcPending) {
-            titlePlcPending = !queueTitlePlc();
-            if (titlePlcPending) return;
-        }
+        if (!retryTitlePlc()) return;
 
         frameCounter++;
 
@@ -462,6 +468,9 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         palCycleFrame = 0;
         scrollHandler = new SwScrlGhz();
 
+        // QueueSound2(Title) precedes the first title object pass in GM_Title.
+        GameServices.audio().playMusic(Sonic1Music.TITLE.id);
+
         // GM_Title runs ExecuteObjects, DeformLayers and BuildSprites exactly once
         // before PaletteFadeIn, so the fade-in shows the already-built first frame:
         // TSon_Main advances to TSon_Delay and falls straight through into its first
@@ -469,8 +478,11 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         updateTitleSonic();
         scrollHandler.update(horizScrollBuf, bgCameraX, 0, frameCounter, 0);
 
-        // Play title music
-        GameServices.audio().playMusic(Sonic1Music.TITLE.id);
+        // GM_Title (sonic.asm:2050-2054): ExecuteObjects/DeformLayers/BuildSprites
+        // and QueueSound2 precede NewPLC(Main). Keep this operation distinct
+        // from the earlier GM_Sega ClearPLC if the decoder rejects it for now.
+        pendingTitlePlcOperation = TitlePlcOperation.MAIN;
+        retryTitlePlc();
 
         LOGGER.info("S1 Title Screen: transitioning to main screen");
     }
@@ -1123,6 +1135,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
     @Override
     public void reset() {
         GameServices.audio().stopSegaPcm();
+        pendingTitlePlcOperation = null;
         state = State.INACTIVE;
         frameCounter = 0;
         fadeTimer = 0;
