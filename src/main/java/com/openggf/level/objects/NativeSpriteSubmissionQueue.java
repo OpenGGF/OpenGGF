@@ -23,9 +23,11 @@ final class NativeSpriteSubmissionQueue {
     private final int[] counts = new int[BUCKET_COUNT];
     private final Runnable invalidate;
     private int size;
+    private boolean nativePassPresent;
 
-    record State(List<NativeSpriteSubmissionAccess.Admission> admissions) {
+    record State(List<NativeSpriteSubmissionAccess.Admission> admissions, boolean nativePassPresent) {
         State { admissions = List.copyOf(admissions); }
+        State(List<NativeSpriteSubmissionAccess.Admission> admissions) { this(admissions, false); }
     }
 
     NativeSpriteSubmissionQueue(Runnable invalidate) {
@@ -57,11 +59,21 @@ final class NativeSpriteSubmissionQueue {
     }
 
     void beginFrame() {
+        reset(true);
+    }
+
+    void clear() {
+        reset(false);
+    }
+
+    private void reset(boolean passPresent) {
         size = 0;
         Arrays.fill(counts, 0);
+        nativePassPresent = passPresent;
         invalidate.run();
     }
 
+    boolean nativePassPresent() { return nativePassPresent; }
     int size() { return size; }
     int slotAt(int index) { return slots[index]; }
     int bucketAt(int index) { return buckets[index]; }
@@ -74,7 +86,7 @@ final class NativeSpriteSubmissionQueue {
         return List.copyOf(result);
     }
 
-    State capture() { return new State(admissions()); }
+    State capture() { return new State(admissions(), nativePassPresent); }
 
     void restore(State state) {
         Objects.requireNonNull(state);
@@ -91,6 +103,7 @@ final class NativeSpriteSubmissionQueue {
             buckets[size++] = (byte) entry.bucket();
         }
         System.arraycopy(restoredCounts, 0, counts, 0, BUCKET_COUNT);
+        nativePassPresent = state.nativePassPresent();
         invalidate.run();
     }
 
@@ -99,7 +112,7 @@ final class NativeSpriteSubmissionQueue {
             @Override public String key() { return NativeSpriteSubmissionAccess.REWIND_KEY; }
             @Override public State capture() { return NativeSpriteSubmissionQueue.this.capture(); }
             @Override public void restore(State state) { NativeSpriteSubmissionQueue.this.restore(state); }
-            @Override public void resetForMissingSnapshot() { beginFrame(); }
+            @Override public void resetForMissingSnapshot() { clear(); }
         };
     }
 }

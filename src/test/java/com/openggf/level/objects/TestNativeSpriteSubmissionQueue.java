@@ -11,6 +11,7 @@ import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -27,6 +28,154 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * global call chronology; the rendering consumer owns the bucket traversal.
  */
 class TestNativeSpriteSubmissionQueue {
+    @Test
+    void emptyBegunAndNeverBegunPassSnapshotsRemainDistinctAcrossRestore() {
+        NativeSpriteSubmissionQueue queue = new NativeSpriteSubmissionQueue(() -> { });
+        var noPass = queue.capture();
+        assertFalse(noPass.nativePassPresent());
+        assertEquals(List.of(), noPass.admissions());
+
+        queue.beginFrame();
+        var emptyPass = queue.capture();
+
+        assertTrue(queue.nativePassPresent(), "A native pass can finish without admitting any sprite");
+        assertTrue(emptyPass.nativePassPresent());
+        assertEquals(List.of(), emptyPass.admissions());
+        assertNotEquals(noPass, emptyPass, "Empty admission lists do not establish whether a native pass ran");
+        queue.restore(noPass);
+        assertFalse(queue.nativePassPresent());
+        assertEquals(List.of(), queue.admissions());
+        queue.restore(emptyPass);
+        assertTrue(queue.nativePassPresent());
+        assertEquals(List.of(), queue.admissions());
+    }
+
+    @Test
+    void rawAdmissionsDoNotClaimThatANativePassHasRun() {
+        NativeSpriteSubmissionQueue queue = new NativeSpriteSubmissionQueue(() -> { });
+        assertFalse(NativeSpriteSubmissionAccess.nativePassPresent(null));
+        assertTrue(queue.submit(32, 3));
+        assertFalse(queue.nativePassPresent());
+        assertTrue(queue.submitSpilling(40, 7));
+        var admittedWithoutPass = queue.capture();
+        assertFalse(admittedWithoutPass.nativePassPresent(), "Admission is not evidence of an object pass");
+
+        queue.beginFrame();
+        assertTrue(queue.nativePassPresent());
+        queue.restore(admittedWithoutPass);
+
+        assertFalse(queue.nativePassPresent());
+        assertEquals(List.of(new Admission(32, 3), new Admission(40, 7)), queue.admissions());
+    }
+
+    @Test
+    void clearRemovesPassPresenceEvenWhenTheBegunPassHadNoAdmissions() {
+        AtomicInteger invalidations = new AtomicInteger();
+        NativeSpriteSubmissionQueue queue = new NativeSpriteSubmissionQueue(invalidations::incrementAndGet);
+        queue.beginFrame();
+        int beforeClear = invalidations.get();
+
+        queue.clear();
+
+        assertFalse(queue.nativePassPresent());
+        assertFalse(queue.capture().nativePassPresent());
+        assertEquals(List.of(), queue.admissions());
+        assertTrue(invalidations.get() > beforeClear, "Removing an empty pass changes its presentation contract");
+
+        queue.beginFrame();
+        for (int call = 0; call < 63; call++) assertTrue(queue.submit(32, 3));
+        queue.clear();
+        assertFalse(queue.nativePassPresent());
+        assertEquals(List.of(), queue.admissions());
+        for (int call = 0; call < 63; call++) assertTrue(queue.submit(40, 3));
+        assertFalse(queue.submit(41, 3), "Clear must restore admission capacity independently of pass presence");
+        assertFalse(queue.nativePassPresent(), "Repopulating a cleared queue must not invent a pass");
+    }
+
+    @Test
+    void legacySnapshotConstructorDefaultsToNoPassEvenWithAdmissions() {
+        NativeSpriteSubmissionQueue queue = new NativeSpriteSubmissionQueue(() -> { });
+        var legacy = new NativeSpriteSubmissionQueue.State(List.of(new Admission(32, 3)));
+        assertFalse(legacy.nativePassPresent());
+        queue.beginFrame();
+
+        queue.restore(legacy);
+
+        assertFalse(queue.nativePassPresent());
+        assertEquals(List.of(new Admission(32, 3)), queue.admissions());
+        queue.beginFrame();
+        queue.restore(new NativeSpriteSubmissionQueue.State(List.of()));
+        assertFalse(queue.nativePassPresent());
+        assertEquals(List.of(), queue.admissions());
+    }
+
+    @Test
+    void missingOlderRegistrySnapshotResetsToNoPassRatherThanAnEmptyBegunPass() {
+        NativeSpriteSubmissionQueue queue = new NativeSpriteSubmissionQueue(() -> { });
+        RewindRegistry registry = new RewindRegistry();
+        var olderWithoutQueue = registry.capture();
+        registry.register(queue.rewindAdapter());
+        queue.beginFrame();
+        var emptyBegunPass = registry.capture();
+
+        registry.restore(olderWithoutQueue);
+
+        assertFalse(queue.nativePassPresent(), "An absent historical owner cannot certify a native pass");
+        assertEquals(List.of(), queue.admissions());
+        registry.restore(emptyBegunPass);
+        assertTrue(queue.nativePassPresent(), "A captured empty pass must still restore as present");
+        assertEquals(List.of(), queue.admissions());
+        assertTrue(queue.submit(32, 7));
+        registry.restore(olderWithoutQueue);
+        assertFalse(queue.nativePassPresent());
+        assertEquals(List.of(), queue.admissions());
+    }
+
+    @Test
+    void allRejectedCallsStillLeaveAnEmptyBegunPassPresentAndRestorable() {
+        AtomicInteger invalidations = new AtomicInteger();
+        NativeSpriteSubmissionQueue queue = new NativeSpriteSubmissionQueue(invalidations::incrementAndGet);
+        queue.beginFrame();
+        int beforeRejectedCalls = invalidations.get();
+
+        assertFalse(queue.submit(-1, 3));
+        assertFalse(queue.submitSpilling(-1, 7));
+
+        assertTrue(queue.nativePassPresent());
+        assertEquals(List.of(), queue.admissions());
+        assertEquals(beforeRejectedCalls, invalidations.get());
+        var rejectedPass = queue.capture();
+        queue.clear();
+        queue.restore(rejectedPass);
+        assertTrue(queue.nativePassPresent());
+        assertEquals(List.of(), queue.admissions());
+    }
+
+    @Test
+    void fullBucketRejectionsPreserveThePassAndItsRestoredAdmissionCapacity() {
+        NativeSpriteSubmissionQueue queue = new NativeSpriteSubmissionQueue(() -> { });
+        queue.beginFrame();
+        for (int call = 0; call < 63; call++) assertTrue(queue.submit(32, 7));
+        assertFalse(queue.submit(40, 7));
+        assertFalse(queue.submitSpilling(40, 7));
+        assertTrue(queue.nativePassPresent());
+        var fullPass = queue.capture();
+        queue.clear();
+        assertFalse(queue.nativePassPresent());
+        assertTrue(queue.submit(90, 6));
+
+        queue.restore(fullPass);
+
+        assertTrue(queue.nativePassPresent());
+        assertEquals(java.util.Collections.nCopies(63, new Admission(32, 7)), queue.admissions());
+        assertFalse(queue.submit(40, 7));
+        assertFalse(queue.submitSpilling(40, 7), "Restoring pass presence must not lose the full bucket's count");
+        assertEquals(List.of(), slotsInBucket(queue, 6), "Restoration discards later raw admissions");
+        for (int call = 0; call < 63; call++) assertTrue(queue.submit(40, 6));
+        assertFalse(queue.submit(41, 6));
+        assertTrue(queue.nativePassPresent());
+    }
+
     @Test
     void drawSpriteSpillsToFirstAvailableLaterBucketAndKeepsItsActualAdmissionBucket() {
         NativeSpriteSubmissionQueue queue = new NativeSpriteSubmissionQueue(() -> { });

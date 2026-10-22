@@ -476,7 +476,7 @@ public class ObjectManager {
 
     private void reset(int cameraX, PersistentRespawnState persistentRespawnState,
             boolean materializeInitialWindow) {
-        nativeSpriteSubmissions.beginFrame();
+        nativeSpriteSubmissions.clear();
         nativeSpriteExternalResolver = null;
         nativeSpriteExternalSlotDispatch = null;
         clearActiveObjects();
@@ -585,7 +585,7 @@ public class ObjectManager {
      * the next frame will re-instantiate objects in the camera window.
      */
     public void resyncSpawnList(List<ObjectSpawn> newSpawns) {
-        nativeSpriteSubmissions.beginFrame();
+        nativeSpriteSubmissions.clear();
         nativeSpriteExternalResolver = null;
         nativeSpriteExternalSlotDispatch = null;
         clearActiveObjects();
@@ -1553,12 +1553,12 @@ public class ObjectManager {
         // Bucket active and dynamic objects; an owner of inline-drawn ROM children
         // (MultiBucketRenderable) is listed in every bucket its parts occupy.
         for (ObjectInstance instance : activeObjects.values()) {
-            if (!(instance instanceof NativeSpriteSubmissionSource)) {
+            if (!NativeSpriteSubmissionAccess.authoritative(instance)) {
                 ObjectRenderParts.addToRenderBuckets(instance, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
             }
         }
         for (ObjectInstance instance : dynamicObjects) {
-            if (!(instance instanceof NativeSpriteSubmissionSource)) {
+            if (!NativeSpriteSubmissionAccess.authoritative(instance)) {
                 ObjectRenderParts.addToRenderBuckets(instance, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
             }
         }

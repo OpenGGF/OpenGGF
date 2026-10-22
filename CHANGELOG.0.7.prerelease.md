@@ -29,7 +29,8 @@ Unreleased. The earlier development themes remain in
   pressure, duplicate slot references and late slot reuse through rewind.
   Bomb fuses and fragments submit at their native routine calls, including the
   shipped repeated submission on expiry. Unported objects retain their existing
-  render path.
+  render path. Rewind also retains empty or rejected native passes, and converted
+  sources can exclude inferred drawing independently of accepted admissions.
 
 - **Sonic 1 level entry:** background scrolling starts from each level or credits
   demo's final camera, and lamppost returns retain the original background camera

@@ -286,12 +286,16 @@ class TestObjectManagerNativeSpriteSubmissions {
     @Test void fullResetAndSpawnResyncClearAdmissionsAndExternalBindingUntilRebound() {
         for (boolean resync : new boolean[] {false, true}) {
             ObjectManager manager = manager();
+            manager.update(0, null, List.of(), 1, false);
+            assertTrue(nativePassPresent(manager));
             bindExternalResolver(manager, slot -> emission(slot, 3, 1));
             assertTrue(submit(manager, 60, 3));
             assertEquals(List.of(1), drawSat(manager, 3));
             if (resync) manager.resyncSpawnList(List.of()); else manager.reset(0);
+            assertFalse(nativePassPresent(manager));
             assertEquals(List.of(), admissions(manager));
             assertTrue(submit(manager, 60, 3));
+            assertFalse(nativePassPresent(manager), "A raw call must not manufacture an object pass");
             assertEquals(List.of(), drawSat(manager, 3));
             bindExternalResolver(manager, slot -> emission(slot, 3, 2));
             assertEquals(List.of(2), drawSat(manager, 3));
@@ -453,6 +457,200 @@ class TestObjectManagerNativeSpriteSubmissions {
         for (int call = 1; call < 63; call++) assertTrue(submit(manager, 32, 3));
         assertFalse(submit(manager, 32, 3));
         assertEquals(63, admissions(manager).size());
+        assertFalse(nativePassPresent(manager));
+    }
+
+    @ParameterizedTest @ValueSource(booleans = {false, true})
+    void completedEmptyPassSurvivesDestructiveRegisteredRestoreAndRepeatedRendering(boolean initial) {
+        ObjectManager manager = manager();
+        Probe original = add(manager, 32, 1);
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        RewindRegistry registry = registry(manager);
+        assertFalse(nativePassPresent(manager));
+        if (initial) {
+            try (var scope = manager.beginInitialProcessSprites(0, null, List.of())) {
+                assertTrue(nativePassPresent(manager), "Even an empty initial dispatch has occurred");
+                manager.processInitialDynamicSlots(scope);
+                manager.finishInitialProcessSprites(scope);
+            }
+        } else {
+            manager.update(0, null, List.of(), 1, false);
+        }
+        assertTrue(nativePassPresent(manager));
+        assertEquals(List.of(), admissions(manager));
+        var completed = registry.capture();
+
+        manager.reset(0);
+        assertFalse(nativePassPresent(manager));
+        bindExternalResolver(manager, slot -> slot == 60 ? emission(slot, 3, 9) : null);
+        registry.restore(completed);
+
+        assertNotSame(original, manager.currentNativeSstOwner(32));
+        assertNotNull(manager.currentNativeSstOwner(32));
+        assertTrue(nativePassPresent(manager), "An empty restored ledger still belongs to a completed native pass");
+        assertEquals(List.of(), admissions(manager));
+        for (int repeat = 0; repeat < 2; repeat++) {
+            assertEquals(List.of(), drawSat(manager, 3), "An active external slot without admission must not draw");
+            assertTrue(nativePassPresent(manager), "Presentation must not consume the pass marker");
+        }
+        manager.update(0, null, List.of(), 2, false);
+        assertTrue(nativePassPresent(manager));
+        assertEquals(List.of(), admissions(manager));
+    }
+
+    @Test void rejectedExternalCallsRemainUnadmittedAfterDestructiveRegisteredRestore() {
+        ObjectManager manager = manager();
+        Probe filler = add(manager, 32, 1);
+        filler.liveId = 0; // All accepted entries skip drawing, while retaining capacity.
+        filler.calls = 63;
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        boolean[] rejected = {false};
+        bindExternalSlotDispatch(manager, new ExternalSlotDispatch() {
+            @Override public void beginPass() { rejected[0] = false; }
+            @Override public void dispatch(int slot, PlayableEntity player, int vIntRunCount, int cameraX) {
+                if (slot == 60) rejected[0] = !submit(manager, slot, 3);
+            }
+        });
+        RewindRegistry registry = registry(manager);
+        manager.update(0, null, List.of(), 1, false);
+        assertTrue(rejected[0], "The actual reserved-slot call must encounter the full native bucket");
+        assertTrue(nativePassPresent(manager));
+        assertEquals(63, admissions(manager).size());
+        var completed = registry.capture();
+
+        manager.reset(0);
+        rejected[0] = false; // Models external-owner restore clearing its transient dispatch sentinel.
+        bindExternalResolver(manager, slot -> slot == 60 ? emission(slot, 3, 9) : null);
+        registry.restore(completed);
+
+        assertNotSame(filler, manager.currentNativeSstOwner(32));
+        assertTrue(nativePassPresent(manager));
+        assertEquals(List.of(), drawSat(manager, 3), "No resolved accepted entry may draw the rejected external slot");
+        assertFalse(submit(manager, 60, 3), "The restored completed pass still has a full bucket");
+        assertFalse(rejected[0], "The pass marker comes from queue state, not the old callback sentinel");
+    }
+
+    @Test void truncatedEmptyPassDoesNotExposeAnUnvisitedExternalTailAfterDestructiveRestore() {
+        ObjectManager manager = manager();
+        Probe limiter = add(manager, 32, 1);
+        limiter.remainingSlots = 0;
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        boolean[] tailVisited = {false};
+        bindExternalSlotDispatch(manager, new ExternalSlotDispatch() {
+            @Override public void beginPass() { tailVisited[0] = false; }
+            @Override public void dispatch(int slot, PlayableEntity player, int vIntRunCount, int cameraX) {
+                if (slot == 60) {
+                    tailVisited[0] = true;
+                    submit(manager, slot, 3);
+                }
+            }
+        });
+        RewindRegistry registry = registry(manager);
+        manager.update(0, null, List.of(), 1, false);
+        assertFalse(tailVisited[0]);
+        assertTrue(nativePassPresent(manager));
+        assertEquals(List.of(), admissions(manager));
+        var completed = registry.capture();
+
+        manager.reset(0);
+        bindExternalResolver(manager, slot -> slot == 60 ? emission(slot, 3, 9) : null);
+        registry.restore(completed);
+
+        assertNotSame(limiter, manager.currentNativeSstOwner(32));
+        assertTrue(nativePassPresent(manager));
+        assertEquals(List.of(), admissions(manager));
+        assertEquals(List.of(), drawSat(manager, 3));
+        assertFalse(tailVisited[0], "Restoring/rendering must not execute a skipped native tail");
+    }
+
+    @Test void rawSubmissionsWithoutAnObjectPassRestoreTheirLedgerWithoutManufacturingPresence() {
+        ObjectManager manager = manager();
+        assertFalse(nativePassPresent(null));
+        assertFalse(nativePassPresent(manager));
+        assertTrue(submit(manager, 40, 3));
+        assertTrue(submitSpilling(manager, 60, 3));
+        assertFalse(nativePassPresent(manager));
+        RewindRegistry registry = registry(manager);
+        var noPass = registry.capture();
+        manager.update(0, null, List.of(), 1, false);
+        assertTrue(nativePassPresent(manager));
+
+        registry.restore(noPass);
+
+        assertFalse(nativePassPresent(manager));
+        assertEquals(List.of(new Admission(40, 3), new Admission(60, 3)), admissions(manager));
+    }
+
+    @Test void conditionalZeroCallSourceUsesLegacyOnlyWhileFalseAndRefreshDetectsAuthorityChanges() {
+        ObjectManager manager = manager();
+        ConditionalProbe conditional = new ConditionalProbe(spawn(6));
+        manager.addDynamicObjectAtSlot(conditional, 40);
+        Probe defaultSource = add(manager, 50, 5);
+        assertTrue(defaultSource.nativeSpriteSubmissionsAuthoritative(), "The original marker defaults remain authoritative");
+        assertFalse(conditional.nativeSpriteSubmissionsAuthoritative());
+        assertEquals(List.of(6), drawSat(manager, 2));
+        assertEquals(List.of(), drawSat(manager, 3), "Default marker still suppresses zero-call fallback");
+        assertEquals(List.of(), admissions(manager));
+
+        conditional.authoritative = true;
+        manager.refreshRenderBucketsIfChanged();
+        assertEquals(List.of(), drawSat(manager, 2));
+        conditional.authoritative = false;
+        manager.refreshRenderBucketsIfChanged();
+        assertEquals(List.of(6), drawSat(manager, 2));
+        assertEquals(List.of(), admissions(manager), "Changing fallback policy must never infer a native admission");
+    }
+
+    @ParameterizedTest @ValueSource(booleans = {false, true})
+    void fullNativeListsSuppressRejectedConditionalSourceOnlyWhenAuthoritative(boolean authoritative) {
+        ObjectManager manager = manager();
+        ConditionalProbe conditional = new ConditionalProbe(spawn(6));
+        conditional.authoritative = authoritative;
+        manager.addDynamicObjectAtSlot(conditional, 60);
+        manager.update(0, null, List.of(), 1, false);
+        for (int bucket = 2; bucket <= 7; bucket++) {
+            for (int call = 0; call < 63; call++) assertTrue(submit(manager, 32, bucket));
+        }
+        assertFalse(submitSpilling(manager, 60, 2), "No selected or later native list has capacity");
+        assertFalse(submit(manager, conditional, 2));
+        assertEquals(378, admissions(manager).size());
+        assertEquals(authoritative ? List.of() : List.of(6), drawSat(manager, 2),
+                "Only an explicitly authoritative converted state may suppress legacy fallback");
+        for (int bucket = 3; bucket <= 7; bucket++) assertEquals(List.of(), drawSat(manager, bucket));
+        assertTrue(nativePassPresent(manager));
+    }
+
+    @Test void conditionalAuthorityRestoresWithTheCurrentRecreatedOwnerWithoutAnyAcceptedEntry() {
+        ObjectManager manager = manager();
+        ConditionalProbe original = new ConditionalProbe(spawn(6));
+        manager.addDynamicObjectAtSlot(original, 60);
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        RewindRegistry registry = registry(manager);
+        manager.update(0, null, List.of(), 1, false);
+        var ordinary = registry.capture();
+        assertEquals(List.of(6), drawSat(manager, 2));
+        original.authoritative = true;
+        manager.refreshRenderBucketsIfChanged();
+        var converted = registry.capture();
+        assertEquals(List.of(), drawSat(manager, 2));
+        manager.reset(0);
+
+        registry.restore(converted);
+
+        ConditionalProbe restored = (ConditionalProbe) manager.currentNativeSstOwner(60);
+        assertNotSame(original, restored);
+        assertTrue(restored.nativeSpriteSubmissionsAuthoritative());
+        assertTrue(nativePassPresent(manager));
+        assertEquals(List.of(), admissions(manager));
+        assertEquals(List.of(), drawSat(manager, 2));
+        registry.restore(ordinary);
+        ConditionalProbe restoredOrdinary = (ConditionalProbe) manager.currentNativeSstOwner(60);
+        assertNotSame(restored, restoredOrdinary);
+        assertFalse(restoredOrdinary.nativeSpriteSubmissionsAuthoritative());
+        assertTrue(nativePassPresent(manager));
+        assertEquals(List.of(6), drawSat(manager, 2));
+        registry.restore(converted);
+        assertEquals(List.of(), drawSat(manager, 2));
     }
 
     private ObjectManager manager() {
@@ -530,6 +728,15 @@ class TestObjectManagerNativeSpriteSubmissions {
                 replaceSlot = -1;
             }
         }
+        @Override public void appendRenderCommands(List<GLCommand> commands) { DRAWS.get().add(getSpawn().subtype()); }
+    }
+
+    public static final class ConditionalProbe extends AbstractObjectInstance
+            implements NativeSpriteSubmissionSource, SpawnRewindRecreatable {
+        boolean authoritative;
+        public ConditionalProbe(ObjectSpawn spawn) { super(spawn, "conditional-submission-probe"); }
+        @Override public boolean nativeSpriteSubmissionsAuthoritative() { return authoritative; }
+        @Override public int getPriorityBucket() { return 2; }
         @Override public void appendRenderCommands(List<GLCommand> commands) { DRAWS.get().add(getSpawn().subtype()); }
     }
 

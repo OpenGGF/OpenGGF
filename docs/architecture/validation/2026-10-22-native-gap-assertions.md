@@ -196,8 +196,11 @@ or new shared GameRules/Mod API field selects this behavior.
 
 ### Internal API, frame ownership and rewind
 
-`NativeSpriteSubmissionSource` opts an object into authored calls and suppresses
-all inferred fallback entries, including a fresh routine that calls nothing.
+`NativeSpriteSubmissionSource` opts an object into authored calls. Its internal
+`nativeSpriteSubmissionsAuthoritative()` default is true, suppressing all inferred
+fallback entries, including a fresh routine that calls nothing. A conditional
+port may return a captured false flag until its native state is transcribed;
+false retains the legacy path and never manufactures an admission.
 `NativeSpriteSubmissionAccess.submit(manager, object, bucket)` requires that
 marker and uses the object's owned SST slot. The raw-slot overload and
 `submitSpilling(manager, slot, bucket)` support trusted reserved-slot owners.
@@ -217,8 +220,9 @@ The separate rewind adapter key is `object-native-sprite-submissions`.
 `rebindActTransitionManagerAdapters` register it immediately after
 `object-manager`; null owners and teardown deregister it. No
 `ObjectManagerSnapshot`, public Mod API signature or ObjectServices method
-changes. State captures immutable raw admission values, never an ObjectInstance,
-RingDTO, resolver or Runnable. Missing older snapshots clear the queue. Graph
+changes. State captures immutable raw admission values and whether an actual
+object pass occurred, never an ObjectInstance, RingDTO, resolver or Runnable.
+Missing older snapshots clear the queue and the pass-present flag. Graph
 restore precedes queue restore, so capture between update and render, orphan
 pointers and same-pass slot reuse resolve against the restored current graph.
 
@@ -313,3 +317,64 @@ ran after the probe rejection fix; the other18 ordinary cases cover unchanged
 paths as described above. No independent broad smoke, exhaustive route,
 second-movie or GPU-output claim is made; those consumer/domain and combined
 integration checks remain coordinated with S1chain, the sprite lane and parent.
+
+## Follow-up: empty-pass restore and conditional producer authority
+
+The original backend is `d89c09e660264f242192b82f3caa7600af9e1d00`; this
+correction is a new descendant, not a rewrite of that tested commit. A cleared
+transient RingManager dispatch sentinel cannot distinguish a restored actual
+pass with no admitted ring from a legacy frame without a pass. Inferring pass
+presence from a nonempty ledger therefore exposes unadmitted external sprites
+after empty, rejected or truncated passes. The queue now captures a boolean
+alongside its value-only ledger, exposed internally by
+`NativeSpriteSubmissionAccess.nativePassPresent(ObjectManager)` (null is false).
+Actual terminal update and initial dispatch begin set it even with zero calls;
+raw submissions alone do not. Full reset, spawn resync and missing historical
+adapter state set false. The one-argument internal State constructor defaults
+false for metadata without a pass. Restore and repeated rendering retain the
+captured value; callback and DTO identity still never enter this snapshot.
+
+A second edge concerns attracted-to-bouncing conversion when every native list
+from bucket2 through7 is full. No admitted pointer exists for the converted
+LostRing, so accepted-entry duplicate suppression alone cannot stop its inferred
+legacy draw. The marker's exact additive method is
+`default boolean nativeSpriteSubmissionsAuthoritative() { return true; }`.
+The backend excludes inferred fallback only while it is true. Existing Bomb
+and simple-source defaults remain true. Sprite owns the LostRing captured
+converted-render flag, ordinary-factory false behavior and genuine native tail
+calls. This field belongs to the current object, not a guessed attempt ledger.
+`ObjectRenderBucketSnapshot` includes one private authority bit so state-only
+changes invalidate the lazy bucket cache. Accepted FIFO, ordinals, late slot
+resolution and multipart selection are unchanged. Sprite alone owns traversal
+suppression of inferred duplicates when an accepted native entry exists.
+
+The new independent manager controls restore through a registered object graph
+and queue adapter after erasing the original graph: empty ordinary/initial
+passes, a full bucket whose external call is rejected, and a truncated walk
+whose external tail never ran. Rendering after restore must emit none of those
+unadmitted sprites while the pass bit remains true. Additional controls cover
+raw submissions without a pass, reset/resync, default-true compatibility,
+conditional false/true with zero calls and full2..7 capacity, state-only cache
+refresh, and repeated destructive restore between conditional authority states.
+Queue controls distinguish empty true/false snapshots, old/missing state and
+restored capacity. Consumer-specific RingManager restore/render and converted
+LostRing callsite tests remain in the sprite lane.
+
+Queued focused checks used Java25, `env -u DISPLAY -u WAYLAND_DISPLAY` and
+`LUA_BIN=/usr/bin/lua5.4`; no broad selection was submitted:
+
+- Preliminary pass-presence implementation:
+  `python3 tools/testing/maven_queue.py --lean -Dmse=off
+  '-Dtest=TestObjectManagerNativeSpriteSubmissions,TestNativeSpriteSubmissionRegistration,TestModApiSignatureSurface'
+  test -B`: 46/46 pass, zero failures/errors/skips; Maven1m33s, no queue wait.
+- Final combined source, including the conditional marker and cache-key bit:
+  `python3 tools/testing/maven_queue.py --lean -Dmse=off
+  '-Dtest=TestNativeSpriteSubmissionQueue,TestObjectManagerNativeSpriteSubmissions,TestNativeSpriteSubmissionRegistration,TestModApiSignatureSurface'
+  test -B`: 71/71 pass (queue21, manager33, registration6, signature11),
+  zero failures/errors/skips; Maven1m36s, queue wait5s. XML summaries were
+  inspected. This includes16 new independent cases relative to d89.
+
+No registration, callback or public snapshot/Mod API shape changed. The
+unchanged d89 guards are not represented as a new guard run here. This does
+not migrate legacy producers or close mixed ordering/multipart obligations;
+Sprite's real RingManager/LostRing consumer composition remains separate.

@@ -22,6 +22,11 @@ public final class NativeSpriteSubmissionAccess {
 
     private NativeSpriteSubmissionAccess() { }
 
+    static boolean authoritative(ObjectInstance source) {
+        return source instanceof NativeSpriteSubmissionSource nativeSource
+                && nativeSource.nativeSpriteSubmissionsAuthoritative();
+    }
+
     public static boolean submit(ObjectManager manager, ObjectInstance source, int priorityBucket) {
         if (ObjectConstructionContext.isProbeConstruction()
                 || manager == null || !(source instanceof AbstractObjectInstance object)) return false;
@@ -63,6 +68,15 @@ public final class NativeSpriteSubmissionAccess {
     /** Immutable call-order view, including orphan references and duplicates. */
     public static List<Admission> admissions(ObjectManager manager) {
         return manager == null ? List.of() : manager.nativeSpriteSubmissions().admissions();
+    }
+
+    /**
+     * An actual object pass occurred in the captured frame, even if it admitted
+     * no sprites. Consumers use this after rewind to suppress legacy fallback
+     * for rejected or unvisited external slots. Submitting alone does not set it.
+     */
+    public static boolean nativePassPresent(ObjectManager manager) {
+        return manager != null && manager.nativeSpriteSubmissions().nativePassPresent();
     }
 
     /** Register after the object graph so restored slot references resolve against that graph. */
