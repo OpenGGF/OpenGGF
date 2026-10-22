@@ -85,6 +85,14 @@ public class RenderContext {
     static void releaseScopedPaletteBank(Object token) { scopedPaletteReservations.remove(token); }
 
     /**
+     * An unregistered context over a reserved bank whose rows its owner composes and uploads
+     * itself ({@link AppearancePalettes}); donor/sidekick lookups never see it.
+     */
+    static RenderContext privateBlock(GameId gameId, int base) {
+        return new RenderContext(gameId, base);
+    }
+
+    /**
      * Returns the total number of palette lines needed (base + all donors).
      */
     public static int getTotalPaletteLines() {

@@ -40,6 +40,7 @@ final class HostedRunController {
 
     private final SonicConfigurationService configuration;
     private final GhostRenderer ghostRenderer = new GhostRenderer();
+    private final LocalPlayerLook localLook = new LocalPlayerLook();
     private final GhostRenderRegistry.GhostLayerRenderer layerRenderer = this::renderGhostsForLayer;
     private GhostRenderRegistry registeredRegistry;
 
@@ -78,6 +79,7 @@ final class HostedRunController {
         this.spec = Objects.requireNonNull(spec, "spec");
         this.host = Objects.requireNonNull(host, "host");
         this.handle = new Handle();
+        localLook.request(com.openggf.net.identity.PlayerAppearance.STOCK);
         retryRequested = false;
         leaveReason = null;
         return handle;
@@ -98,6 +100,8 @@ final class HostedRunController {
         // (LevelPlayableArtInitializer), so cached ghost slots hold stale bank
         // bases; clear them before the new level's first render.
         ghostRenderer.clearSlots();
+        // The load built fresh player renderers; point them at the look before the first draw.
+        refreshLocalLook();
         attachRenderer(GameServices.ghostRenderRegistryOrNull());
         stopSpectating();
         actCompleteSeen = false;
@@ -167,6 +171,7 @@ final class HostedRunController {
         try {
             boolean admitted = host.admitStep(new FrameInput(input));
             applySpectate();
+            refreshLocalLook();
             return admitted;
         } catch (RuntimeException failure) {
             abort(failure);
@@ -274,6 +279,8 @@ final class HostedRunController {
     /** Draws the host's screen-space overlay. */
     void drawOverlay(LevelOverlayCanvas canvas) {
         if (host != null && leaveReason == null) {
+            // Also runs on paused and held frames, so a look set then shows from the next frame.
+            refreshLocalLook();
             ghostRenderer.drawNameplates(canvas);
             guarded(() -> host.drawOverlay(canvas));
         }
@@ -288,6 +295,8 @@ final class HostedRunController {
         stopSpectating();
         detachRenderer();
         ghostRenderer.clearSlots();
+        localLook.request(com.openggf.net.identity.PlayerAppearance.STOCK);
+        localLook.clear();
         handle.active = false;
         host = null;
         spec = null;
@@ -353,7 +362,31 @@ final class HostedRunController {
                 active.add(toActiveGhost(pose));
             }
         }
-        ghostRenderer.renderForLayer(active, bucket, highPriority, player.getCentreX(), player.getCentreY());
+        ghostRenderer.renderForLayer(active, bucket, highPriority, player.getCentreX(), player.getCentreY(),
+                spec.character());
+    }
+
+    /** Points the run's own character at the requested look (or back at its stock rows). */
+    private void refreshLocalLook() {
+        if (host == null) {
+            return;
+        }
+        var sprites = GameServices.spritesOrNull();
+        if (sprites == null) {
+            return;
+        }
+        AbstractPlayableSprite player;
+        try {
+            player = RecordingMainPlayerResolver.resolve(configuration, sprites);
+        } catch (IllegalStateException e) {
+            return;
+        }
+        localLook.refresh(player, spec.character());
+    }
+
+    /** The look requested for the run's own character; for tests. */
+    com.openggf.net.identity.PlayerAppearance localLook() {
+        return localLook.requested();
     }
 
     static ActiveGhost toActiveGhost(GhostPose pose) {
@@ -414,6 +447,14 @@ final class HostedRunController {
                 spectateActive = on;
                 spectateDx = on ? dx : 0;
                 spectateDy = on ? dy : 0;
+            }
+        }
+
+        @Override
+        public void setPlayerAppearance(com.openggf.net.identity.PlayerAppearance appearance) {
+            Objects.requireNonNull(appearance, "appearance");
+            if (active) {
+                localLook.request(appearance);
             }
         }
 
