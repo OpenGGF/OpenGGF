@@ -160,7 +160,17 @@ public class Sonic1BombFuseInstance extends AbstractObjectInstance implements Re
             // does not free it; spawnShrapnel hands it to shrapnel #0.
             currentY = origY;
             int fuseSlot = ObjectLifetimeOps.detachSlotForTransfer(this);
-            parent.spawnShrapnel(currentX, currentY, fuseSlot);
+            Sonic1BombShrapnelInstance firstShrapnel = parent.spawnShrapnel(
+                    currentX, currentY, fuseSlot);
+            if (firstShrapnel != null) {
+                // Bom_BurnFuseAndExplode (_incObj/5F Badnik - Walking Bomb.asm:177-220)
+                // writes only obY's integer word, retaining the fuse's fractions and
+                // status in the reused SST, then falls straight into Bom_Shrapnel.
+                // The object walk has already reached this slot, so merely adding
+                // a replacement would defer that first SpeedToPos until next pass.
+                firstShrapnel.continueFromFuse(
+                        motionState.xSub, motionState.ySub, !facingLeft, ceilingBomb);
+            }
 
             // Destroy the fuse
             destroyed = true;
@@ -171,7 +181,7 @@ public class Sonic1BombFuseInstance extends AbstractObjectInstance implements Re
         // SpeedToPos: apply Y velocity
         motionState.y = currentY;
         motionState.yVel = yVelocity;
-        SubpixelMotion.moveSprite2(motionState);
+        SubpixelMotion.speedToPos(motionState);
         currentY = motionState.y;
 
         // Animate

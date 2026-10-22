@@ -7,7 +7,13 @@ Unreleased. The earlier development themes remain in
 
 - **Labyrinth water transport:** Sonic 1 wind tunnels and water slides observe the
   admitted VBlank before player movement, preserving the original suction and
-  waterfall-sound phase across lag and rewind.
+  waterfall-sound phase across lag and rewind. Jumping from a breakable pole
+  preserves its intact pose; its timeout still breaks it.
+
+- **Sonic 1 object execution:** folded staircases release their own native slots
+  during unloading while child slots await their turn in the object walk.
+  Exploding Bomb fuses retain position fractions and status in the reused slot,
+  moving that first fragment immediately while fresh fragments initialize.
 
 - **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
   OpenGGF Editor's Stageplay workspace. Author actor movement, animation/poses,

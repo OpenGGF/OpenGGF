@@ -401,7 +401,8 @@ public class ObjectManager {
             return false;
         }
         ObjectSpawn spawn = instanceToSpawn.get(owner);
-        if (!unloadCounterBasedOutOfRange(owner, spawn, execSlot, cameraX)) {
+        int ownSlot = objectCallbacks.call(object, object::getSlotIndex);
+        if (!unloadCounterBasedOutOfRange(owner, spawn, ownSlot, cameraX)) {
             return false;
         }
         execOrder[execIndexForSlot(execSlot)] = null;
