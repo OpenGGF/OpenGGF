@@ -51,11 +51,40 @@ final class GameplayTeamBootstrapContext {
             EngineContext engineServices, SonicConfigurationService configuration,
             int zone, int act, Consumer<GameplayModeContext> publishMode,
             com.openggf.mods.scene.ActLaunch launch) throws java.io.IOException {
+        return openAndLoad(rootModule, module, engineServices, configuration,
+                zone, act, publishMode, launch, null, null);
+    }
+
+    GameplayModeContext openNativeMenuLaunch(GameModule rootModule, GameModule module,
+            EngineContext services, SonicConfigurationService configuration,
+            int zone, int act, Consumer<GameplayModeContext> publishMode,
+            com.openggf.game.GameplayLaunchTeam team,
+            com.openggf.game.rewind.snapshot.GameStateSnapshot retainedProgress) throws IOException {
+        Objects.requireNonNull(team, "team");
+        GameplayTeamBootstrap.requireExactTeam(module.getPlayableCharacterRegistry(), team);
+        var selection = new com.openggf.game.save.SelectedTeam(team.main().persisted(),
+                team.sidekicks().stream().map(com.openggf.game.CharacterKey::persisted).toList());
+        var save = com.openggf.game.save.SaveSessionContext.noSave(
+                module.getGameId().code(), selection, zone, act);
+        return openAndLoad(rootModule, module, services, configuration, zone, act,
+                publishMode, null, save, retainedProgress);
+    }
+
+    private GameplayModeContext openAndLoad(GameModule rootModule, GameModule module,
+            EngineContext engineServices, SonicConfigurationService configuration,
+            int zone, int act, Consumer<GameplayModeContext> publishMode,
+            com.openggf.mods.scene.ActLaunch launch,
+            com.openggf.game.save.SaveSessionContext save,
+            com.openggf.game.rewind.snapshot.GameStateSnapshot retainedProgress) throws IOException {
         Objects.requireNonNull(publishMode, "publishMode");
         GameplayModeContext gameplayMode = SessionManager.openGameplaySession(
                 rootModule, module,
-                StockGameDataSources.pinned(engineServices.roms().getRom(), rootModule), null);
+                StockGameDataSources.pinned(engineServices.roms().getRom(), rootModule), save);
         GameplaySessionFactory.attachManagers(gameplayMode, engineServices);
+        if (retainedProgress != null) {
+            com.openggf.game.nativemenu.NativeMenuProgress.retainSpecialStageProgress(
+                    gameplayMode.getGameStateManager(), retainedProgress);
+        }
         SpriteManager sprites = gameplayMode.getSpriteManager();
         PlayableCharacterRegistry characters = gameplayMode.getWorldSession()
                 .getPlayableCharacterRegistry();

@@ -522,6 +522,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
             // Resolve module-selected dimensions before the title hands off.
 			projectionWidth = realWidth;
 		});
+        gameLoop.setNativeGameplayModePublisher(this::bindGameplayMode);
 		gameLoop.setEditorInputHandler(editorInputHandler);
 		gameLoop.setEditorProjectInputHandler(this::updateEditorProjectMenus);
 		gameLoop.setEditorProjectPlaytestSupplier(() -> editorProjectPlaytestActive);
@@ -3323,8 +3324,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			case LEVEL, TITLE_CARD, SPECIAL_STAGE, SPECIAL_STAGE_RESULTS,
 					TITLE_SCREEN, CONTINUE_SCREEN, DATA_SELECT, LEVEL_SELECT, EDITOR, CREDITS_TEXT,
 					CREDITS_DEMO, MASTER_TITLE_SCREEN, LEGAL_DISCLAIMER, TRY_AGAIN_END,
-					ENDING_CUTSCENE, BONUS_STAGE, NATIVE_MOD_NOTICE, MOD_SCENE,
-					OPTIONS, COMPETITION_MENU, COMPETITION, COMPETITION_RESULTS -> true;
+                    ENDING_CUTSCENE, BONUS_STAGE, NATIVE_MOD_NOTICE, MOD_SCENE,
+                    OPTIONS, COMPETITION_MENU, COMPETITION, COMPETITION_RESULTS -> true;
 		};
 		boolean renderedState = switch (Objects.requireNonNull(state, "state")) {
 			case NORMAL, MODAL_SHADER_PICKER, PAUSED, FRAME_STEP, REWIND -> true;
@@ -3606,6 +3607,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		@Override public void specialStage() { applySpecialStageClearColor(); }
 		@Override public void specialStageResults() { applySpecialStageResultsClearColor(); }
 		@Override public void titleScreen() { applyTitleScreenClearColor(); }
+        @Override public void nativeMenu() {
+            var screen = gameLoop.getNativeMenuScreen();
+            if (screen != null) screen.setClearColor();
+            else applyBlackClearColor();
+        }
 		@Override public void levelSelect() { applyLevelSelectClearColor(); }
 		@Override public void dataSelect() { applyDataSelectClearColor(); }
 		@Override public void ending() { applyEndingClearColor(); }
@@ -3621,6 +3627,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		@Override public void specialStage() { drawSpecialStage(); }
 		@Override public void specialStageResults() { drawSpecialStageResults(); }
 		@Override public void titleScreen() { drawTitleScreen(); }
+        @Override public void nativeMenu() {
+            resetCameraForScreenSpace();
+            var screen = gameLoop.getNativeMenuScreen();
+            if (screen != null) screen.draw();
+        }
 		@Override public void continueScreen() {
 			resetCameraForScreenSpace();
 			var provider = gameLoop.getContinueScreenProvider();

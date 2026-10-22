@@ -289,6 +289,10 @@ public class GameLoop {
     // Game-agnostic ending/credits provider (wraps S1 CreditsManager, S2 credits, etc.)
     private EndingProvider endingProvider;
 
+    private final com.openggf.game.nativemenu.NativeMenuController nativeMenus =
+            new com.openggf.game.nativemenu.NativeMenuController();
+    private Consumer<GameplayModeContext> nativeGameplayModePublisher = this::setGameplayMode;
+
     // Listener for game mode changes (used by Engine to update projection)
     GameModeChangeListener gameModeChangeListener;
 
@@ -439,6 +443,7 @@ public class GameLoop {
     }
 
     public void resetModuleScopedProviders() {
+        nativeMenus.close();
         continueScreen.reset();
         titleCardProvider = null;
     }
@@ -640,6 +645,8 @@ public class GameLoop {
      */
     public void setGameMode(GameMode mode) {
         if (mode == GameMode.MASTER_TITLE_SCREEN) retireModScene();
+        if (com.openggf.game.nativemenu.NativeMenuController.handles(currentGameMode)
+                && !com.openggf.game.nativemenu.NativeMenuController.handles(mode)) nativeMenus.close();
         GameMode oldMode = changeGameModeForBoundary(mode);
         if (gameModeChangeListener != null) {
             gameModeChangeListener.onGameModeChanged(oldMode, mode);
@@ -1391,6 +1398,11 @@ public class GameLoop {
         } else if (currentGameMode == GameMode.TITLE_SCREEN) {
             GameLoopPlcLifecycle.runPhase(activePlcLifecycleFrame,
                     PlcLifecyclePhase.TITLE_SCREEN, this::updateTitleScreenMode);
+            profiler.endSection("input");
+            return;
+        } else if (com.openggf.game.nativemenu.NativeMenuController.handles(currentGameMode)) {
+            GameLoopPlcLifecycle.runPhase(activePlcLifecycleFrame,
+                    com.openggf.game.nativemenu.NativeMenuController.phase(currentGameMode), this::updateNativeMenuMode);
             profiler.endSection("input");
             return;
         } else if (currentGameMode == GameMode.LEVEL_SELECT) {
@@ -4048,18 +4060,87 @@ public class GameLoop {
         switch (route) {
             case DATA_SELECT -> initializeDataSelectMode();
             case LEVEL_SELECT -> doEnterLevelSelect();
-            case TWO_PLAYER -> {
-                // The action token does not provide a competition session owner.
-                // S2 TitleScreen_CheckIfChose2P enters its dedicated 2P level
-                // select with Two_player_mode set, rather than a one-player level.
-                LOGGER.warning("Two-player competition is unavailable; returning to the title screen");
-                TitleScreenProvider titleScreen = getTitleScreenProviderLazy();
-                if (titleScreen != null) {
-                    titleScreen.initialize();
+            case TWO_PLAYER -> openNativeTitleMode(false);
+            case OPTIONS -> openNativeTitleMode(true);
+            case LEVEL, OTHER -> startLevelFromTitleScreenImmediate(zone, act);
+        }
+    }
+
+    private void openNativeTitleMode(boolean options) {
+        var module = GameServices.module();
+        var provider = module == null ? null : module.getGameService(
+                com.openggf.game.nativemenu.NativeTitleModeProvider.class);
+        var screen = provider == null ? null
+                : options ? provider.optionsScreen() : provider.competitionScreen();
+        if (!nativeMenus.open(screen)) {
+            // An action token is not permission to boot an ordinary one-player
+            // world as competition. Only a connected native provider can launch it.
+            setGameMode(GameMode.TITLE_SCREEN);
+            var title = getTitleScreenProviderLazy();
+            if (title != null) title.initialize();
+            return;
+        }
+        camera.setX((short) 0);
+        camera.setY((short) 0);
+        setGameMode(screen.mode());
+    }
+
+    com.openggf.game.nativemenu.NativeMenuScreen getNativeMenuScreen() {
+        return nativeMenus.screen();
+    }
+
+    void setNativeGameplayModePublisher(Consumer<GameplayModeContext> publisher) {
+        nativeGameplayModePublisher = Objects.requireNonNull(publisher, "publisher");
+    }
+
+    void publishNativeGameplayMode(GameplayModeContext context) {
+        nativeGameplayModePublisher.accept(context);
+    }
+
+    private void updateNativeMenuMode() {
+        var exit = nativeMenus.update(inputHandler, resolveFadeManager().isActive());
+        var screen = nativeMenus.screen();
+        if (screen == null) return;
+        switch (exit.destination()) {
+            case NONE -> {
+                if (screen.mode() != currentGameMode) setGameMode(screen.mode());
+            }
+            case TITLE_SCREEN -> {
+                nativeMenus.close();
+                initializeTitleScreenMode();
+            }
+            case COMPETITION -> {
+                var module = GameServices.module();
+                var provider = module == null ? null : module.getGameService(
+                        com.openggf.game.nativemenu.NativeTitleModeProvider.class);
+                var competition = provider == null ? null : provider.competitionScreen();
+                if (competition == null) {
+                    screen.initialize();
+                } else if (nativeMenus.open(competition)) {
+                    setGameMode(competition.mode());
                 }
             }
-            case LEVEL, OPTIONS, OTHER -> startLevelFromTitleScreenImmediate(zone, act);
+            case LEVEL -> startNativeMenuLevel(exit);
         }
+    }
+
+    private void startNativeMenuLevel(com.openggf.game.nativemenu.NativeMenuScreen.Exit exit) {
+        var world = SessionManager.getCurrentWorldSession();
+        if (world == null || exit.team() == null) {
+            throw new IllegalStateException("Native level launch requires a world and exact team");
+        }
+        var progress = exit.resetProgress() ? null : GameServices.gameState().capture();
+        var root = world.rootGameModule();
+        var module = world.getGameModule();
+        nativeMenus.close();
+        try {
+            gameplayTeamBootstrapContext.openNativeMenuLaunch(root, module, engineServices,
+                    configService, 0, 0, this::publishNativeGameplayMode, exit.team(), progress);
+        } catch (IOException failure) {
+            throw new IllegalStateException("Failed to load native menu launch", failure);
+        }
+        setGameMode(GameMode.LEVEL);
+        GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
     }
 
     // ==================== Data Select Methods ====================

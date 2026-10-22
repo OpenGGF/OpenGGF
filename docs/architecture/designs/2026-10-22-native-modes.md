@@ -75,3 +75,31 @@ Workers run focused tests only through the queue, with absolute ROM paths.
 The parent owns combined smoke against the pinned pre-task integration base.
 No broad/full suite belongs to a consumer. Each milestone records exact tested
 source, failure/skip identities, active jobs and remaining matrix rows.
+
+## Native host milestone
+
+The host now routes options through a typed native screen, keeps unavailable
+competition at the title, and accepts menu/arena/results phase changes from the
+native owner. Launches pin an exact no-save team without writing persistent
+configuration; the S2 options path copies only emerald inventory and special
+stage cursor into fresh managers. Input edges advance after the screen consumes
+its command. Mode exit/module replacement retires the active screen.
+
+A bounded review rejected loop-only publication of a replacement runtime: Engine
+would retain its retired level/sprite/camera managers for rendering. The native
+launcher now publishes through Engine's existing binding owner; a focused
+manager-identity regression covers the handoff. This is separate from the
+required full rendered options-to-level evidence after the consumer is wired.
+
+The initial focused selection passed 39 tests with zero failures, errors or
+skips on `3c711d86c` plus the host worktree changes. The exact queued command was
+`maven_queue.py --lean -Dmse=off -Dtest=TestNativeMenuController,TestNativeMenuProgress,TestGameLoopNativeMenus,TestNativeMenuRenderDispatch,TestMenuScreenModeController,TestEngineRenderDispatcher,TestGameplayTeamBootstrapContext,TestModApiSignatureSurface test`.
+Subsequent publication/PLC-phase edits receive affected focused checks before
+commit. This is host validation, not competition gameplay or ROM parity proof.
+
+The affected follow-up command
+`maven_queue.py --lean -Dmse=off -Dtest=TestNativeMenuController,TestGameLoopNativeMenus test`
+passed 9 tests, zero failures/errors/skips, after 342 seconds of queue waiting
+and 88 seconds of Maven execution. It includes Engine/loop manager identity
+publication and separate ordinary-level/results PLC phase authority. Source was
+`b8807b95a` plus this host change; no broad suite or rendering proof is implied.
