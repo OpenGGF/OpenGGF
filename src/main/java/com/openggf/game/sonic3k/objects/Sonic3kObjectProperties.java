@@ -1,8 +1,8 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.editor.properties.ObjectPropertySchema;
+import com.openggf.level.metadata.ObjectPropertySchema;
 import java.util.List;
-import static com.openggf.editor.properties.ObjectPropertySchema.*;
+import static com.openggf.level.metadata.ObjectPropertySchema.*;
 
 /** Common IDs shared by S3KL and SKL; family-specific IDs deliberately use raw fallback. */
 public final class Sonic3kObjectProperties {

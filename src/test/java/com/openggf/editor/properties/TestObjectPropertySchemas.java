@@ -1,6 +1,6 @@
 package com.openggf.editor;
 
-import com.openggf.editor.properties.*;
+import com.openggf.level.metadata.*;
 
 import com.openggf.game.common.CommonObjectPlacementEncoding;
 import com.openggf.game.sonic1.objects.Sonic1ObjectProperties;

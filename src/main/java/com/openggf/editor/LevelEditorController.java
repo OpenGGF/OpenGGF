@@ -60,7 +60,7 @@ public final class LevelEditorController {
     private EditorSpawnFactory spawnFactory;
     private EditorPlacementIdAllocator placementIds;
     private ObjectSpawn selectedObjectSpawn;
-    private com.openggf.editor.properties.ObjectPropertyProvider propertyProvider;
+    private com.openggf.level.metadata.ObjectPropertyProvider propertyProvider;
     private java.util.function.BiPredicate<Integer, Integer> paletteEditable = (line, color) -> false;
     private java.util.function.IntConsumer paletteRefresh = line -> { };
     public void setPaletteRefresh(java.util.function.IntConsumer refresh) { paletteRefresh = Objects.requireNonNull(refresh); }
@@ -180,8 +180,8 @@ public final class LevelEditorController {
         MutableLevel attachedLevel = requireLevel();
         EditorStockObjectPalette previous=objectPalette;
         objectPalette = new EditorStockObjectPalette(registry, names);
-        propertyProvider = registry instanceof com.openggf.editor.properties.ObjectPropertyProvider provider ? provider : null;
-        paletteEditable = registry instanceof com.openggf.editor.palette.EditorPalettePolicyProvider provider
+        propertyProvider = registry instanceof com.openggf.level.metadata.ObjectPropertyProvider provider ? provider : null;
+        paletteEditable = registry instanceof com.openggf.level.metadata.EditorPalettePolicyProvider provider
                 ? provider::isPaletteCellEditable : (line, color) -> false;
         if(previous!=null) {
             if(previous.selectedIsKeyed()) {
@@ -328,9 +328,9 @@ public final class LevelEditorController {
                         .thenComparingInt(RingSpawn::placementId)).orElse(null);
     }
     public ObjectSpawn selectedObjectSpawn() {return selectedObjectSpawn;}
-    public com.openggf.editor.properties.ObjectPropertySchema selectedObjectProperties() {
+    public com.openggf.level.metadata.ObjectPropertySchema selectedObjectProperties() {
         return selectedObjectSpawn == null || propertyProvider == null
-                ? com.openggf.editor.properties.ObjectPropertySchema.FALLBACK : propertyProvider.objectProperties(selectedObjectSpawn);
+                ? com.openggf.level.metadata.ObjectPropertySchema.FALLBACK : propertyProvider.objectProperties(selectedObjectSpawn);
     }
     public void setSelectedObjectProperty(String fieldId, int value) {
         if (selectedObjectSpawn == null) { setStatus("Pick an object before changing its properties"); return; }

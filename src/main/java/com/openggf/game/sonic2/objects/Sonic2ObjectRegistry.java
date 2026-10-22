@@ -57,11 +57,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
-public class Sonic2ObjectRegistry extends AbstractObjectRegistry implements com.openggf.level.objects.MutatorPlacementClassifier , com.openggf.editor.properties.ObjectPropertyProvider, com.openggf.editor.palette.EditorPalettePolicyProvider {
+public class Sonic2ObjectRegistry extends AbstractObjectRegistry implements com.openggf.level.objects.MutatorPlacementClassifier , com.openggf.level.metadata.ObjectPropertyProvider, com.openggf.level.metadata.EditorPalettePolicyProvider {
     @Override public boolean isPaletteCellEditable(int line, int color) {
         return com.openggf.game.sonic2.Sonic2EditorPalettePolicy.isEditable(line, color);
     }
-    @Override public com.openggf.editor.properties.ObjectPropertySchema objectProperties(int stockObjectId) {
+    @Override public com.openggf.level.metadata.ObjectPropertySchema objectProperties(int stockObjectId) {
         return Sonic2ObjectProperties.schema(stockObjectId);
     }
     @Override public java.util.Optional<String> editorPreviewArtKey(int objectId) {

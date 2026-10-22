@@ -1,6 +1,6 @@
 package com.openggf.tools.editor;
 
-import com.openggf.editor.properties.ObjectPropertySchema;
+import com.openggf.level.metadata.ObjectPropertySchema;
 import com.openggf.game.sonic1.objects.Sonic1ObjectProperties;
 import com.openggf.game.sonic2.objects.Sonic2ObjectProperties;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectProperties;

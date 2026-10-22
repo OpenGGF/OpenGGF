@@ -1,4 +1,4 @@
-package com.openggf.editor.properties;
+package com.openggf.level.metadata;
 
 import com.openggf.level.objects.ObjectSpawn;
 

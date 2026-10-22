@@ -1,8 +1,8 @@
 package com.openggf.game.sonic2.objects;
 
-import com.openggf.editor.properties.ObjectPropertySchema;
+import com.openggf.level.metadata.ObjectPropertySchema;
 import java.util.List;
-import static com.openggf.editor.properties.ObjectPropertySchema.*;
+import static com.openggf.level.metadata.ObjectPropertySchema.*;
 
 public final class Sonic2ObjectProperties {
     private Sonic2ObjectProperties() { }

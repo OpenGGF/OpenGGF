@@ -1,9 +1,9 @@
 package com.openggf.game.sonic1.objects;
 
-import com.openggf.editor.properties.ObjectPropertySchema;
+import com.openggf.level.metadata.ObjectPropertySchema;
 import java.util.List;
 import java.util.Map;
-import static com.openggf.editor.properties.ObjectPropertySchema.*;
+import static com.openggf.level.metadata.ObjectPropertySchema.*;
 
 /** Shipped-ROM subtype meanings; unsupported values remain lossless and visible as raw. */
 public final class Sonic1ObjectProperties {

@@ -56,6 +56,14 @@ chunk definitions into free slots atomically. Rejected index-only clipboard
 snapshots: an immutable list of IDs is not immutable terrain content. Preview
 uses captured composition with the level's current global palette.
 
+At `08cf4c7d4`, the guard run rejected placing the shared property and palette
+capabilities under `editor`: game registries, the mod decorator and coverage tool
+created new `game -> editor`, `mods -> editor` and `tools -> editor` edges and
+package cycles. Rejected widening the architectural ratchet. The capability
+contracts and schema now live under `level.metadata`; editor implementations
+remain under `editor`. This changes package ownership, not serialized data or
+the pinned creator API.
+
 ## Verification
 
 Focused command/schema/HUD tests are queued through `tools/testing/maven_queue.py`.

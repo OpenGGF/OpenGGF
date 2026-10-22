@@ -1,4 +1,4 @@
-package com.openggf.editor.palette;
+package com.openggf.level.metadata;
 
 /** Internal authoring capability; creator API and ownership contracts remain unchanged. */
 public interface EditorPalettePolicyProvider {
