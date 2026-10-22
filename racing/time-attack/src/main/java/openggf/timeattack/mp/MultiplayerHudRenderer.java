@@ -145,7 +145,7 @@ public final class MultiplayerHudRenderer {
         try {
             int zone = Integer.parseInt(parts[1]);
             int act = Integer.parseInt(parts[2]);
-            return TimeAttackTrackCatalog.tracksFor(parts[0]).stream()
+            return TimeAttackTrackCatalog.eligibleFor(parts[0]).stream()
                     .filter(track -> track.zone() == zone && track.act() == act)
                     .map(TimeAttackTrackCatalog.Track::label).findFirst().orElse(key);
         } catch (NumberFormatException ignored) {

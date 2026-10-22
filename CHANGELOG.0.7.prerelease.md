@@ -77,6 +77,12 @@ Unreleased. The earlier development themes remain in
   reloading racers stop holding nearby ghost slots and show their state in the
   roster, and verifiers keep polling after a failed cycle. Mods can opt into the
   same act-completion retry through `RunHost.retryOnActCompletion()`.
+  Round-end votes can draw from a custom pool: the room owner starts from the game's
+  default pool, adds or removes any act that ends in a results tally (signpost acts
+  and boss/capsule acts, never special or bonus stages), names it and chooses it when
+  hosting a LAN or master-listed room. Pools hold 3-32 acts of the room's own game.
+  The master and the host reject a malformed, foreign or ineligible act with the reason.
+  S1 and S2 boss acts now finish a timed run at the capsule switch, where the ROM clock stops.
 
 - **Multiplayer services:** The master recording/verifier API bounds outstanding
   requests and copied bodies across connections, closes overlapping HTTP pipelines,

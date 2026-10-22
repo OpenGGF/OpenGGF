@@ -69,6 +69,24 @@ the body ramp follows the base colour. Unreadable look values fall back to the s
 the preset ramp. The canonical look sent on join comes from
 `TimeAttackSettings.appearanceFor(game, character)`.
 
+Round-end votes offer three acts from the room's vote pool. Each game's default pool is
+the curated signpost list. With **Host LAN** or **Browse**, the menu's **Vote pool** row
+chooses the default pool or a custom pool with Left/Right; Enter opens the pool editor.
+The editor shows the menu's game only, so only games whose ROM is available. NEW POOL and
+the default row start from the default pool's acts. Any act that ends in a results tally
+can be added: signpost acts and boss/capsule acts, never special or bonus stages (see
+`TimeAttackTrackCatalog.eligibleFor`). A pool holds 3-32 acts of one game; 32 is the room
+protocol's vote-pool limit, and three leave a choice after any race. `settings.txt` keeps up
+to eight pools per game as `votePool.<game>.<n>=<zone>:<act>,...|<name>`, for example
+`votePool.s2.1=0:1,1:1,7:2|Boss acts`. The acts are the engine zone/act ints, `n` counts from
+1 in creation order, and the name is display text of at most 20 code points after the first
+`|`. `votePoolChoice.<game>=<name>` records the chosen pool; if it is absent or names no saved
+pool, rooms use the default pool. Unreadable pool lines are dropped. Before creating a room,
+the chosen pool is checked against the eligible catalog, including the locked character's
+acts. The master checks it again, and either one rejects a bad act with the reason. In S3K the
+Lava Reef boss act, Sky Sanctuary and Death Egg 1 are Sonic/Tails acts. When a vote picks an
+act the player's character cannot race, that round uses the act's first permitted character.
+
 Settings edits and successful LAN joins keep their accepted values when storage refuses or throws
 on publication. The settings page reports a pending save, retries every 60 scene ticks, and flushes
 pending settings and LAN invite text on resume or exit. Imported legacy values follow the same

@@ -13,6 +13,8 @@ import com.openggf.net.protocol.ControlMessage;
 import openggf.timeattack.mp.RaceLobbyView;
 import openggf.timeattack.mp.RaceSession;
 import openggf.timeattack.mp.ServerBrowserView;
+import openggf.timeattack.mp.VoteTrackPools;
+import com.openggf.mods.ui.NameFont;
 import openggf.timeattack.ui.MenuCue;
 import openggf.timeattack.ui.TextEntry;
 import openggf.timeattack.ui.ViewInput;
@@ -41,7 +43,7 @@ public final class TimeAttackScene implements ModScene {
     private static final int VALUE = 0xFFFFFFFF;
     private static final int FOCUS = 0x803060C0;
     private static final int HINT = 0xFF8090B0;
-    private static final int ROW_HEIGHT = 16;
+    private static final int ROW_HEIGHT = 15;
     private static final int FIRST_ROW_Y = 44;
     /** Characters accepted in a LAN invite besides letters and digits (IPv6 brackets included). */
     private static final String INVITE_CHARACTERS = ".:/#-_[]";
@@ -63,6 +65,7 @@ public final class TimeAttackScene implements ModScene {
     private TextEntry namePrompt;
     private SceneContext context;
     private SettingsView settingsView;
+    private VotePoolEditorView poolEditor;
     private ServerBrowserView browser;
     private RaceLobbyView lobby;
     private Object lobbyCoordinator;
@@ -96,7 +99,7 @@ public final class TimeAttackScene implements ModScene {
         session.setLookSource(settings::appearanceFor);
         List<String> games = ctx.gameplay().availableGames();
         if (!games.isEmpty()) {
-            state = new TimeAttackMenuState(games, games.get(0), ghostStore);
+            state = new TimeAttackMenuState(games, games.get(0), ghostStore, poolChoices());
         }
         // A new player names themselves before anything else. Profiles from before names were
         // asked for (an identity but no name) keep racing under their identity prefix.
@@ -105,6 +108,28 @@ public final class TimeAttackScene implements ModScene {
             namePrompt = TextEntry.name("CHOOSE YOUR NAME", "")
                     .withPrompt("Other racers see it. Any script works.");
         }
+    }
+
+    /** The menu's vote-pool row, backed by the saved custom pools and the per-game choice. */
+    private TimeAttackMenuState.PoolChoices poolChoices() {
+        return new TimeAttackMenuState.PoolChoices() {
+            @Override public List<String> names(String gameId) {
+                return settings.votePools(gameId).stream().map(VotePool::name).toList();
+            }
+            @Override public String chosen(String gameId) { return settings.votePoolChoice(gameId); }
+            @Override public void choose(String gameId, String name) {
+                settings.setVotePoolChoice(gameId, name);
+                settingsChanged();
+            }
+        };
+    }
+
+    /** The vote pool a room hosted for {@code gameId} carries: the chosen custom pool or the default. */
+    private List<String> hostedVotePool(String gameId) {
+        String chosen = state.currentPoolName();
+        return chosen.isEmpty() ? VoteTrackPools.forGame(gameId)
+                : settings.votePool(gameId, chosen).map(pool -> VoteTrackPools.keysOf(gameId, pool))
+                        .orElseGet(() -> VoteTrackPools.forGame(gameId));
     }
 
     private TimeAttackRuntime newRuntime() {
@@ -164,6 +189,13 @@ public final class TimeAttackScene implements ModScene {
             }
             return;
         }
+        if (poolEditor != null) {
+            poolEditor.update(input);
+            if (poolEditor.consumeCloseRequested()) {
+                poolEditor = null;
+            }
+            return;
+        }
         if (inviteEditor != null) {
             switch (inviteEditor.update(input)) {
                 case ACCEPTED -> {
@@ -207,6 +239,8 @@ public final class TimeAttackScene implements ModScene {
                 settingsView = new SettingsView(settings, this::settingsChanged, this::cue,
                         state.currentGameId(), state.currentCharacter(),
                         stockLine(state.currentGameId(), state.currentCharacter()));
+            } else if (focus < rows && state.visibleRows().get(focus) == TimeAttackMenuState.Row.POOL) {
+                poolEditor = new VotePoolEditorView(settings, state.currentGameId(), this::settingsChanged, this::cue);
             } else {
                 focus = Math.min(focus + 1, go);
             }
@@ -232,10 +266,18 @@ public final class TimeAttackScene implements ModScene {
             status = "The " + request.gameId().toUpperCase() + " ROM is not available for racing";
             return;
         }
+        List<String> votePool = hostedVotePool(request.gameId());
+        if (mode != TimeAttackMenuState.Mode.JOIN_LAN) {
+            Optional<String> rejected = VoteTrackPools.rejection(request.gameId(), votePool, state.lockedCharacter());
+            if (rejected.isPresent()) {
+                status = rejected.get();
+                return;
+            }
+        }
         status = "";
         RaceSession.RoundSetup setup = new RaceSession.RoundSetup(request.gameId(), request.zone(),
                 request.act(), request.character(), state.characterPolicy(), state.lockedCharacter(),
-                state.windowSeconds());
+                state.windowSeconds(), votePool);
         switch (mode) {
             case HOST_LAN -> session.hostLan(setup, fingerprint.get());
             case JOIN_LAN -> session.joinLan(joinInvite, request.character(), fingerprint.get());
@@ -329,7 +371,8 @@ public final class TimeAttackScene implements ModScene {
         return switch (session.state()) {
             case LOBBY -> lobby != null && lobby.isEditingText();
             case IDLE -> namePrompt != null || inviteEditor != null
-                    || (settingsView != null && settingsView.isEditingText());
+                    || (settingsView != null && settingsView.isEditingText())
+                    || (poolEditor != null && poolEditor.isEditingText());
             case CONNECTING, BROWSING, RACING -> false;
         };
     }
@@ -399,6 +442,10 @@ public final class TimeAttackScene implements ModScene {
             settingsView.draw(canvas);
             return;
         }
+        if (poolEditor != null) {
+            poolEditor.draw(canvas);
+            return;
+        }
         if (inviteEditor != null) {
             inviteEditor.draw(canvas);
             return;
@@ -433,6 +480,21 @@ public final class TimeAttackScene implements ModScene {
                 case MODE -> { label = "Mode"; value = state.mode().name().replace('_', ' '); }
                 case POLICY -> { label = "Policy"; value = state.characterPolicy().equals("OPEN") ? "OPEN" : "LOCKED " + state.currentCharacter().toUpperCase(); }
                 case WINDOW -> { label = "Window"; value = (state.windowSeconds() / 60) + " minutes"; }
+                case POOL -> {
+                    String pool = state.currentPoolName();
+                    if (!pool.isEmpty()) {
+                        // Pool names are display text in any script.
+                        drawRow(canvas, "Vote pool", "", index);
+                        int y = FIRST_ROW_Y + index * ROW_HEIGHT;
+                        canvas.text("<", 112, y, VALUE);
+                        NameFont.draw(canvas, NameFont.fit(pool, canvas.width() - 150), 122, y - 2, VALUE);
+                        canvas.text(">", 124 + NameFont.width(NameFont.fit(pool, canvas.width() - 150)), y, VALUE);
+                        index++;
+                        continue;
+                    }
+                    label = "Vote pool";
+                    value = "DEFAULT";
+                }
                 default -> throw new IllegalStateException("Unexpected row " + row);
             }
             drawRow(canvas, label, "< " + value + " >", index++);
@@ -453,8 +515,10 @@ public final class TimeAttackScene implements ModScene {
         if (!status.isEmpty()) {
             canvas.text(fit(canvas, status, canvas.width() - 20), 10, 194, TITLE);
         }
-        canvas.text(fit(canvas, "Up/Down select  Left/Right change  Start go  B back", canvas.width() - 20),
-                10, 210, HINT);
+        String hint = state.focusedRow() == TimeAttackMenuState.Row.POOL && focus < state.visibleRows().size()
+                ? "Left/Right pool  Enter edit"
+                : "Up/Down select  Left/Right change  Start go  B back";
+        canvas.text(fit(canvas, hint, canvas.width() - 20), 10, 210, HINT);
     }
 
     private void drawRow(SceneCanvas canvas, String label, String value, int index) {

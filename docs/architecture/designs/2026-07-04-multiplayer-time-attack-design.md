@@ -30,7 +30,7 @@ latency can never affect a recorded time or race outcome.
 | Discovery | Master server: server browser + lobby system |
 | Master server role | Directory + relay. Player-hosted direct-connect only for small rooms (≤8); larger rooms are always relay-routed |
 | Race format | Trackmania rounds: host sets a time window on a track, unlimited instant retries, best time in window counts |
-| Track definition (v1) | Full act: spawn → end-of-act signpost. Finish detection goes through a typed per-track finish provider (v1 implementation: signpost touch). Acts that terminate in a boss/capsule instead of a signpost are **excluded from the v1 track list** — camera locks are generic level-event behavior (minibosses, cutscenes, mid-act locks) and must not be treated as a finish semantic. Boss-act finish predicates are future work on the same provider |
+| Track definition (v1) | Full act: spawn → end-of-act signpost. Finish detection goes through a typed per-track finish provider (v1 implementation: signpost touch). Acts that terminate in a boss/capsule instead of a signpost are **excluded from the v1 track list** — camera locks are generic level-event behavior (minibosses, cutscenes, mid-act locks) and must not be treated as a finish semantic. Boss-act finish predicates are future work on the same provider. *0.7: the curated list is still the default; vote pools may also use boss/capsule acts that end in a results tally (§6.4)* |
 | Characters | Host picks per-room policy: locked (everyone plays the host-chosen character) or open (any character; standings badge the character) |
 | Transport | WebSocket (TCP) everywhere — lobby, browser, relay, ghost streams. Binary frames for ghost data, JSON text frames for control |
 | Trust model (v1) | **All v1 rooms are casual/untrusted.** Times are client-reported and unverified; the server browser and standings UI label them as such ("unverified times"). This is an explicit, surfaced limitation, not an implicit one: a modified client can report an arbitrary time, and v1 makes no ranked/competitive claim. Hooks for later verification: rewind/debug/editor disabled during timed attempts; `AttemptFinish` reserves an `inputRecordingRef` field so times are verifiable by deterministic replay. Verification cannot run on the master server by design — the master is engine-free and ROM-free — so verified/ranked play requires a separate engine+ROM-equipped verifier service. The full defense posture (keypair identity, trust ladder, pacing validation, hub hardening, DDoS posture, verifier service) is designed in the companion spec `2026-07-04-time-attack-security-design.md`; its §11 table dictates which pieces land in which phase here |
@@ -214,6 +214,36 @@ position and either the three standings around you or one unranked rival ahead a
 one behind. A 9-pixel progress strip sits beside the stock lives counter.
 Podium shows top 3 + your rank; next-track vote offers 3 options.
 
+### 6.4 Track votes and custom pools
+
+At round end the host offers three tracks from the room's vote pool, rotating
+through it and skipping the act just raced (`HostRoundEngine`). A room carries at
+most 32 keys (`game:zone:act`, `RoomCreate`). Each game's default pool is the
+curated signpost list (`TimeAttackTrackCatalog.tracksFor`). The room owner can
+replace it with a custom pool saved per game in the mod settings
+(`votePool.<game>.<n>`, see `racing/README.md`) and chosen on the menu's vote-pool row
+when hosting a LAN room or creating a master-listed room. The pool editor only offers
+games whose ROM is available, and only acts of the room's own game.
+
+A pool may contain any act in `TimeAttackTrackCatalog.eligibleFor`: every act a
+hosted run can finish, meaning every act that ends in the game's results tally. That
+covers signpost acts and boss/capsule acts, but not special/bonus stages or acts that
+end in a cutscene, ending or seamless reload with no tally. The catalog Javadoc cites
+the ROM evidence. S1 has 17 eligible acts (SBZ3 and FZ excluded), S2 has 17 (SCZ, WFZ
+and DEZ excluded), and S3K has 22 (LRZ2, HPZ, SSZ act 2, DEZ2, the Death Egg boss act
+and DDZ excluded; the Lava Reef boss act, SSZ act 1 and DEZ1 are Sonic/Tails only).
+S1/S2 boss acts finish at the capsule switch, where the ROM stops the clock. They
+raise the same act-completion signal as the signpost.
+
+Pools are validated where they are used and never trusted from the wire. The mod
+checks the chosen pool before it creates a room (`VoteTrackPools.rejection`): 3-32
+acts, well-formed keys of the room's game, eligible acts, no duplicates, and for a
+locked room acts its character can race. The master rejects `RoomCreate` pools whose
+keys are malformed, from another game, duplicated, or not eligible acts with bundled
+bounds, and states the reason. Its relay rooms vote only among those keys. If a vote
+selects an act the player's character cannot race (S3K routes differ by character),
+that round uses the act's first permitted character.
+
 ## 7. Protocol
 
 Versioned; JSON text frames for control, compact binary frames for ghost data.
@@ -335,10 +365,24 @@ Only the verifier service and verified-room enforcement are post-v1.
   operator supplies their own ROM) — it cannot run on the deliberately
   engine-free, ROM-free master. Until it exists, all rooms remain labeled
   casual/unverified (§2).
-- Boss/capsule-act finish predicates (additional implementations of the typed
-  per-track finish provider; v1 track list is signpost acts only).
+- Boss/capsule-act finish predicates for the curated default list. Vote pools
+  already admit boss/capsule acts (§6.4), and those runs finish on the act-completion
+  signal. The default pools stay the signpost list.
 - Custom track segments via the level editor (track abstraction is already
   (level, spawn, finish-trigger) shaped; the editor can emit segments later
   without protocol changes).
 - Account/OAuth binding beyond pseudonymous keypair identity (keypairs and the
   trust ladder are in scope — security spec §3–§4; accounts would layer on top).
+
+## 13. Future work (recorded decisions)
+
+Recorded from the user's decisions when custom vote pools were added (2026-10-22):
+
+- **Pools that mix games.** A custom pool contains acts from the room's own game only.
+  Allowing several games would need each player to prove at join that they have every
+  pooled game's ROM (per-game determinism fingerprints), and the room to switch games
+  between rounds.
+- **Mods in Time Attack.** Mods must not run in Time Attack unless the lobby enables them.
+- **Joining with mods enabled.** A player who lacks any mod the lobby enabled cannot join.
+- **Getting missing mods.** Later, players could download a lobby's missing mods from a
+  common, safe repository.

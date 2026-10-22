@@ -12,6 +12,12 @@
     "maxSpeedPxPerFrame" : 32,
     "maxFramesPerSecond" : 60
   }, {
+    "key" : "s1:0:2",
+    "levelWidthPx" : 12288,
+    "levelHeightPx" : 1536,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
     "key" : "s1:1:0",
     "levelWidthPx" : 6656,
     "levelHeightPx" : 1536,
@@ -21,6 +27,12 @@
     "key" : "s1:1:1",
     "levelWidthPx" : 6912,
     "levelHeightPx" : 1536,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
+    "key" : "s1:1:2",
+    "levelWidthPx" : 7168,
+    "levelHeightPx" : 2048,
     "maxSpeedPxPerFrame" : 32,
     "maxFramesPerSecond" : 60
   }, {
@@ -36,6 +48,12 @@
     "maxSpeedPxPerFrame" : 32,
     "maxFramesPerSecond" : 60
   }, {
+    "key" : "s1:2:2",
+    "levelWidthPx" : 12544,
+    "levelHeightPx" : 1792,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
     "key" : "s1:3:0",
     "levelWidthPx" : 8192,
     "levelHeightPx" : 2048,
@@ -44,6 +62,12 @@
   }, {
     "key" : "s1:3:1",
     "levelWidthPx" : 8192,
+    "levelHeightPx" : 2048,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
+    "key" : "s1:3:2",
+    "levelWidthPx" : 8960,
     "levelHeightPx" : 2048,
     "maxSpeedPxPerFrame" : 32,
     "maxFramesPerSecond" : 60
@@ -60,13 +84,31 @@
     "maxSpeedPxPerFrame" : 32,
     "maxFramesPerSecond" : 60
   }, {
+    "key" : "s1:4:2",
+    "levelWidthPx" : 8960,
+    "levelHeightPx" : 2048,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
     "key" : "s1:5:0",
     "levelWidthPx" : 9216,
     "levelHeightPx" : 2048,
     "maxSpeedPxPerFrame" : 32,
     "maxFramesPerSecond" : 60
   }, {
+    "key" : "s1:5:1",
+    "levelWidthPx" : 15360,
+    "levelHeightPx" : 2048,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
     "key" : "s2:0:0",
+    "levelWidthPx" : 16384,
+    "levelHeightPx" : 2048,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
+    "key" : "s2:0:1",
     "levelWidthPx" : 16384,
     "levelHeightPx" : 2048,
     "maxSpeedPxPerFrame" : 32,
@@ -78,7 +120,19 @@
     "maxSpeedPxPerFrame" : 32,
     "maxFramesPerSecond" : 60
   }, {
+    "key" : "s2:1:1",
+    "levelWidthPx" : 16384,
+    "levelHeightPx" : 2048,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
     "key" : "s2:2:0",
+    "levelWidthPx" : 16384,
+    "levelHeightPx" : 2048,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
+    "key" : "s2:2:1",
     "levelWidthPx" : 16384,
     "levelHeightPx" : 2048,
     "maxSpeedPxPerFrame" : 32,
@@ -90,7 +144,19 @@
     "maxSpeedPxPerFrame" : 32,
     "maxFramesPerSecond" : 60
   }, {
+    "key" : "s2:3:1",
+    "levelWidthPx" : 16384,
+    "levelHeightPx" : 2048,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
     "key" : "s2:4:0",
+    "levelWidthPx" : 16384,
+    "levelHeightPx" : 2048,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
+    "key" : "s2:4:1",
     "levelWidthPx" : 16384,
     "levelHeightPx" : 2048,
     "maxSpeedPxPerFrame" : 32,
@@ -102,7 +168,19 @@
     "maxSpeedPxPerFrame" : 32,
     "maxFramesPerSecond" : 60
   }, {
+    "key" : "s2:5:1",
+    "levelWidthPx" : 16384,
+    "levelHeightPx" : 2048,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
     "key" : "s2:6:0",
+    "levelWidthPx" : 16384,
+    "levelHeightPx" : 2048,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
+    "key" : "s2:6:1",
     "levelWidthPx" : 16384,
     "levelHeightPx" : 2048,
     "maxSpeedPxPerFrame" : 32,
@@ -120,14 +198,32 @@
     "maxSpeedPxPerFrame" : 32,
     "maxFramesPerSecond" : 60
   }, {
+    "key" : "s2:7:2",
+    "levelWidthPx" : 16384,
+    "levelHeightPx" : 2048,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
     "key" : "s3k:0:0",
     "levelWidthPx" : 12416,
     "levelHeightPx" : 1664,
     "maxSpeedPxPerFrame" : 32,
     "maxFramesPerSecond" : 60
   }, {
+    "key" : "s3k:0:1",
+    "levelWidthPx" : 19584,
+    "levelHeightPx" : 2688,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
     "key" : "s3k:1:0",
     "levelWidthPx" : 14336,
+    "levelHeightPx" : 3072,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
+    "key" : "s3k:1:1",
+    "levelWidthPx" : 18432,
     "levelHeightPx" : 3072,
     "maxSpeedPxPerFrame" : 32,
     "maxFramesPerSecond" : 60
@@ -138,9 +234,33 @@
     "maxSpeedPxPerFrame" : 32,
     "maxFramesPerSecond" : 60
   }, {
+    "key" : "s3k:2:1",
+    "levelWidthPx" : 16384,
+    "levelHeightPx" : 3200,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
     "key" : "s3k:3:0",
     "levelWidthPx" : 14336,
     "levelHeightPx" : 3200,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
+    "key" : "s3k:3:1",
+    "levelWidthPx" : 19456,
+    "levelHeightPx" : 3200,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
+    "key" : "s3k:4:0",
+    "levelWidthPx" : 17408,
+    "levelHeightPx" : 3072,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
+    "key" : "s3k:4:1",
+    "levelWidthPx" : 16128,
+    "levelHeightPx" : 3456,
     "maxSpeedPxPerFrame" : 32,
     "maxFramesPerSecond" : 60
   }, {
@@ -150,9 +270,69 @@
     "maxSpeedPxPerFrame" : 32,
     "maxFramesPerSecond" : 60
   }, {
+    "key" : "s3k:5:1",
+    "levelWidthPx" : 18688,
+    "levelHeightPx" : 3072,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
+    "key" : "s3k:6:0",
+    "levelWidthPx" : 20480,
+    "levelHeightPx" : 3072,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
+    "key" : "s3k:6:1",
+    "levelWidthPx" : 19712,
+    "levelHeightPx" : 3072,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
     "key" : "s3k:7:0",
     "levelWidthPx" : 17920,
     "levelHeightPx" : 2944,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
+    "key" : "s3k:7:1",
+    "levelWidthPx" : 18432,
+    "levelHeightPx" : 2688,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
+    "key" : "s3k:8:0",
+    "levelWidthPx" : 17664,
+    "levelHeightPx" : 3200,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
+    "key" : "s3k:8:1",
+    "levelWidthPx" : 23040,
+    "levelHeightPx" : 2048,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
+    "key" : "s3k:9:0",
+    "levelWidthPx" : 11776,
+    "levelHeightPx" : 3072,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
+    "key" : "s3k:22:0",
+    "levelWidthPx" : 4096,
+    "levelHeightPx" : 2048,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
+    "key" : "s3k:10:0",
+    "levelWidthPx" : 6912,
+    "levelHeightPx" : 4096,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60
+  }, {
+    "key" : "s3k:11:0",
+    "levelWidthPx" : 15616,
+    "levelHeightPx" : 4096,
     "maxSpeedPxPerFrame" : 32,
     "maxFramesPerSecond" : 60
   } ]

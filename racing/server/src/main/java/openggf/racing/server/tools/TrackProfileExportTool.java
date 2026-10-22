@@ -15,7 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Exports pure numeric validation bounds from user-supplied ROM-backed levels. */
+/** Exports pure numeric validation bounds for every eligible Time Attack act from user-supplied ROM-backed levels. */
 public final class TrackProfileExportTool {
     private static final Map<String, String> ROM_PROPERTIES = Map.of(
             "s1", "s1.rom.path", "s2", "s2.rom.path", "s3k", "s3k.rom.path");
@@ -33,7 +33,7 @@ public final class TrackProfileExportTool {
                 continue;
             }
             List<TimeAttackTrackCatalog.Track> tracks =
-                    TimeAttackTrackCatalog.tracksFor(gameId);
+                    TimeAttackTrackCatalog.eligibleFor(gameId);
             if (tracks.isEmpty()) {
                 continue;
             }

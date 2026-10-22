@@ -146,4 +146,42 @@ class TestTimeAttackMenuState {
         assertEquals(TimeAttackMenuState.Row.POLICY, state.focusedRow());
     }
 
+    @Test
+    void hostedModesShowThePoolRowWhichCyclesSavedPoolsAndOpensTheEditor(@TempDir Path root) {
+        TimeAttackSettings settings = new TimeAttackSettings();
+        settings.putVotePool("s2", null, new VotePool("Bosses", List.of("0:1", "1:1", "2:1")));
+        settings.putVotePool("s2", null, new VotePool("Mixed", List.of("0:0", "0:1", "7:2")));
+        TimeAttackMenuState state = new TimeAttackMenuState(List.of("s1", "s2"), "s2", new GhostStore(root),
+                new TimeAttackMenuState.PoolChoices() {
+                    @Override public List<String> names(String gameId) {
+                        return settings.votePools(gameId).stream().map(VotePool::name).toList();
+                    }
+                    @Override public String chosen(String gameId) { return settings.votePoolChoice(gameId); }
+                    @Override public void choose(String gameId, String name) { settings.setVotePoolChoice(gameId, name); }
+                });
+        assertFalse(state.visibleRows().contains(TimeAttackMenuState.Row.POOL), "solo races have no vote");
+        while (state.focusedRow() != TimeAttackMenuState.Row.MODE) state.moveFocus(1);
+        state.adjust(1); // SOLO -> HOST_LAN
+        assertTrue(state.visibleRows().contains(TimeAttackMenuState.Row.POOL));
+        while (state.focusedRow() != TimeAttackMenuState.Row.POOL) state.moveFocus(1);
+
+        assertEquals("", state.currentPoolName(), "the default pool until one is chosen");
+        state.adjust(1);
+        assertEquals("Bosses", state.currentPoolName());
+        state.adjust(1);
+        assertEquals("Mixed", state.currentPoolName());
+        assertEquals("Mixed", settings.votePoolChoice("s2"));
+        state.adjust(1);
+        assertEquals("", state.currentPoolName(), "wraps back to the default pool");
+        state.adjust(-1);
+        assertEquals("Mixed", state.currentPoolName());
+
+        state.update(new TimeAttackMenuState.MenuKeys(false, false, false, false, true, false));
+        assertTrue(state.consumePoolEditorRequested());
+        assertNull(state.consumeLaunchRequest(), "confirming the pool row opens the editor, not a race");
+
+        while (state.focusedRow() != TimeAttackMenuState.Row.GAME) state.moveFocus(1);
+        state.adjust(-1); // s2 -> s1: pools are per game
+        assertEquals("", state.currentPoolName());
+    }
 }
