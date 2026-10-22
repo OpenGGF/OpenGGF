@@ -44,6 +44,7 @@ public final class ClientRaceSession {
     public void applyJoin(ControlMessage.JoinAccepted accepted) {
         room = accepted.room();
         localSlot = accepted.playerSlot();
+        players = List.of();
         ControlMessage.RoundSnapshot snapshot = accepted.round();
         if (snapshot != null) {
             basePhase = Phase.valueOf(snapshot.phase());
@@ -57,7 +58,16 @@ public final class ClientRaceSession {
 
     public void onControl(ControlMessage message) {
         switch (message) {
-            case ControlMessage.RoomState state -> players = List.copyOf(state.players());
+            case ControlMessage.RoomState state -> players = sortedPlayers(state.players());
+            case ControlMessage.PlayerUpsert upsert -> {
+                List<ControlMessage.PlayerInfo> updated = new ArrayList<>(players);
+                updated.removeIf(player -> player.slot() == upsert.player().slot()
+                        || player.fingerprint().equals(upsert.player().fingerprint()));
+                updated.add(upsert.player());
+                players = sortedPlayers(updated);
+            }
+            case ControlMessage.PlayerLeft left -> players = players.stream()
+                    .filter(player -> player.slot() != left.slot()).toList();
             case ControlMessage.RoundStart start -> {
                 basePhase = Phase.COUNTDOWN;
                 roundConfig = start.config();
@@ -108,6 +118,11 @@ public final class ClientRaceSession {
             }
             default -> { }
         }
+    }
+
+    private static List<ControlMessage.PlayerInfo> sortedPlayers(List<ControlMessage.PlayerInfo> values) {
+        return values.stream().sorted(java.util.Comparator.comparingInt(
+                ControlMessage.PlayerInfo::slot)).toList();
     }
 
     public long clockOffsetMillis() {

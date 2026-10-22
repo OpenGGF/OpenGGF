@@ -81,4 +81,33 @@ class TestAttemptInputRecording {
         encoded[lengthOffset] = (byte) 0x7F; // claim ~2 billion frames
         assertThrows(java.io.UncheckedIOException.class, () -> AttemptInputRecording.decode(encoded));
     }
+
+    @Test
+    void heldMaskReadsDoNotAllocateARecordingCopyPerFrame() {
+        AttemptInputRecording rec = new AttemptInputRecording(start());
+        for (int frame = 0; frame < 8_192; frame++) {
+            rec.appendFrame(frame, (frame & 32) != 0);
+        }
+        var bean = (com.sun.management.ThreadMXBean)
+                java.lang.management.ManagementFactory.getThreadMXBean();
+        org.junit.jupiter.api.Assumptions.assumeTrue(bean.isThreadAllocatedMemorySupported());
+        if (!bean.isThreadAllocatedMemoryEnabled()) {
+            bean.setThreadAllocatedMemoryEnabled(true);
+        }
+        long thread = Thread.currentThread().threadId();
+        org.junit.jupiter.api.Assumptions.assumeTrue(
+                bean.isThreadAllocatedMemoryEnabled()
+                        && bean.getThreadAllocatedBytes(thread) >= 0);
+
+        int checksum = 0;
+        long before = bean.getThreadAllocatedBytes(thread);
+        for (int frame = 0; frame < rec.frameCount(); frame++) {
+            checksum += rec.heldMaskAt(frame);
+        }
+        long allocated = bean.getThreadAllocatedBytes(thread) - before;
+
+        assertTrue(checksum > 0);
+        assertTrue(allocated < 64 * 1024,
+                "sequential verifier reads allocated " + allocated + " bytes");
+    }
 }

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 /** ROM theme decoders and isolated final-PCM production; no desktop/audio device required. */
 class TestHubMusicRomThemes {
@@ -27,6 +28,8 @@ class TestHubMusicRomThemes {
     }
     private void present(String gameId, SonicConfiguration key, File image) throws Exception {
         assertNotNull(image, "Required ROM path must resolve");
+        var bootstrap = GameModuleRegistry.getBootstrapDefault();
+        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
         SonicConfigurationService config = SonicConfigurationService.createStandalone();
         config.setConfigValue(key, image.getAbsolutePath());
         config.setConfigValue(SonicConfiguration.AUDIO_FM_CORE, "fast");
@@ -36,5 +39,8 @@ class TestHubMusicRomThemes {
             session.volume(10, true);
             session.frame();
         }
+        assertSame(bootstrap, GameModuleRegistry.getBootstrapDefault(), "Hub preview preserves the bootstrap owner");
+        assertSame(world, com.openggf.game.session.SessionManager.getCurrentWorldSession(),
+                "Hub preview preserves a suspended gameplay world");
     }
 }

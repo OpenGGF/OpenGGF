@@ -1049,6 +1049,8 @@ CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$JoinRejected visible 
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$Kick visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$Ping visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$PlayerInfo visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$PlayerLeft visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$PlayerUpsert visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$Pong visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$PowChallenge visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$PowSolution visible @com.openggf.game.ModApi
@@ -1890,6 +1892,8 @@ CONSTRUCTOR com.openggf.net.protocol.ControlMessage$Kick public  <init>(java.lan
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$Ping public  <init>(long)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$PlayerInfo public  <init>(int,java.lang.String,java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$PlayerInfo public  <init>(int,java.lang.String,java.lang.String,java.lang.String,boolean)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$PlayerLeft public  <init>(int)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$PlayerUpsert public  <init>(com.openggf.net.protocol.ControlMessage$PlayerInfo)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$Pong public  <init>(long,long)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$PowChallenge public  <init>(java.lang.String,java.lang.String,int)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$PowSolution public  <init>(java.lang.String,long)
@@ -3996,6 +4000,8 @@ INTERFACE com.openggf.net.protocol.ControlMessage$JoinAccepted com.openggf.net.p
 INTERFACE com.openggf.net.protocol.ControlMessage$JoinRejected com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$Kick com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$Ping com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$PlayerLeft com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$PlayerUpsert com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$Pong com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$PowChallenge com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$PowSolution com.openggf.net.protocol.ControlMessage
@@ -12348,6 +12354,7 @@ METHOD com.openggf.mods.run.RunHandle public,abstract  void leave()
 METHOD com.openggf.mods.run.RunHandle public,abstract  void retry()
 METHOD com.openggf.mods.run.RunHandle public,abstract  void spectate(boolean,int,int)
 METHOD com.openggf.mods.run.RunHost public  boolean admitStep(com.openggf.mods.run.RunInput)
+METHOD com.openggf.mods.run.RunHost public  boolean retryOnActCompletion()
 METHOD com.openggf.mods.run.RunHost public  java.util.List<com.openggf.mods.run.GhostPose> ghosts()
 METHOD com.openggf.mods.run.RunHost public  void afterStep(com.openggf.mods.run.RunStep)
 METHOD com.openggf.mods.run.RunHost public  void drawOverlay(com.openggf.mods.ui.LevelOverlayCanvas)
@@ -12966,6 +12973,8 @@ METHOD com.openggf.net.client.RemoteGhostPlayback$RenderState public,final  java
 METHOD com.openggf.net.client.RemoteGhostRegistry public  java.util.List<com.openggf.net.client.RemoteGhostRegistry$FarPlayer> farPlayers(int)
 METHOD com.openggf.net.client.RemoteGhostRegistry public  java.util.List<com.openggf.net.client.RemoteGhostRegistry$RemoteGhost> advanceAll(int)
 METHOD com.openggf.net.client.RemoteGhostRegistry public  void onAggregate(com.openggf.net.protocol.GhostPackets$Aggregate)
+METHOD com.openggf.net.client.RemoteGhostRegistry public  void onPlayerLeft(int)
+METHOD com.openggf.net.client.RemoteGhostRegistry public  void onPlayerUpsert(com.openggf.net.protocol.ControlMessage$PlayerInfo)
 METHOD com.openggf.net.client.RemoteGhostRegistry public  void onRoomState(java.util.List<com.openggf.net.protocol.ControlMessage$PlayerInfo>)
 METHOD com.openggf.net.client.RemoteGhostRegistry public  void onRoster(java.util.List<com.openggf.net.protocol.GhostPackets$RosterEntry>)
 METHOD com.openggf.net.client.RemoteGhostRegistry public  void reset()
@@ -13042,6 +13051,7 @@ METHOD com.openggf.net.hub.GhostHub public  boolean isAttemptFlagged(int)
 METHOD com.openggf.net.hub.GhostHub public  int tickCount()
 METHOD com.openggf.net.hub.GhostHub public  void addPlayer(int,java.lang.String,com.openggf.net.hub.HubConnection)
 METHOD com.openggf.net.hub.GhostHub public  void applyProfile(com.openggf.net.hub.TrackValidationProfile)
+METHOD com.openggf.net.hub.GhostHub public  void onAttemptFinished(int,int)
 METHOD com.openggf.net.hub.GhostHub public  void onAttemptReset(int,int)
 METHOD com.openggf.net.hub.GhostHub public  void onAttemptStart(int,int)
 METHOD com.openggf.net.hub.GhostHub public  void onBinary(int,byte[])
@@ -13226,6 +13236,14 @@ METHOD com.openggf.net.protocol.ControlMessage$PlayerInfo public  java.lang.Stri
 METHOD com.openggf.net.protocol.ControlMessage$PlayerInfo public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$PlayerInfo public,final  int hashCode()
 METHOD com.openggf.net.protocol.ControlMessage$PlayerInfo public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$PlayerLeft public  int slot()
+METHOD com.openggf.net.protocol.ControlMessage$PlayerLeft public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$PlayerLeft public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$PlayerLeft public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$PlayerUpsert public  com.openggf.net.protocol.ControlMessage$PlayerInfo player()
+METHOD com.openggf.net.protocol.ControlMessage$PlayerUpsert public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$PlayerUpsert public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$PlayerUpsert public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$Pong public  long hubMillis()
 METHOD com.openggf.net.protocol.ControlMessage$Pong public  long t0ClientMillis()
 METHOD com.openggf.net.protocol.ControlMessage$Pong public,final  boolean equals(java.lang.Object)
@@ -16067,6 +16085,8 @@ NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlM
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Kick
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Ping
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PlayerInfo
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PlayerLeft
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PlayerUpsert
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Pong
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PowChallenge
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PowSolution
@@ -16313,6 +16333,8 @@ PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.Control
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$JoinRejected
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Kick
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Ping
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PlayerLeft
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PlayerUpsert
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Pong
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PowChallenge
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PowSolution
@@ -18328,6 +18350,8 @@ RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$PlayerInfo displayName 
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$PlayerInfo fingerprint java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$PlayerInfo newPlayer boolean
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$PlayerInfo slot int
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$PlayerLeft slot int
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$PlayerUpsert player com.openggf.net.protocol.ControlMessage$PlayerInfo
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$Pong hubMillis long
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$Pong t0ClientMillis long
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$PowChallenge difficultyBits int
@@ -20359,6 +20383,8 @@ TYPE record public,static,final com.openggf.net.protocol.ControlMessage$JoinReje
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$Kick SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$Ping SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$PlayerInfo SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$PlayerLeft SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$PlayerUpsert SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$Pong SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$PowChallenge SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$PowSolution SUPER java.lang.Record
@@ -21532,6 +21558,8 @@ TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$JoinRejected @com.opengg
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$Kick @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$Ping @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$PlayerInfo @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$PlayerLeft @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$PlayerUpsert @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$Pong @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$PowChallenge @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$PowSolution @com.openggf.game.ModApi

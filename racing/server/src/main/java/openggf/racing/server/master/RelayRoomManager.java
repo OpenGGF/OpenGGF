@@ -224,10 +224,15 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
         for (Map.Entry<String, RoomAccess> entry : rooms.entrySet()) {
             String roomId = entry.getKey();
             RoomAccess access = entry.getValue();
+            long queuedAt = RelayTimingEvents.roomEnabled() ? System.nanoTime() : 0;
             access.loop().execute(() -> {
                 com.openggf.net.hub.HostRoundEngine.Phase previous =
                         access.room().round().phase();
-                access.room().tick();
+                if (queuedAt == 0) {
+                    access.room().tick();
+                } else {
+                    RelayTimingEvents.roomTick(roomId, queuedAt, access.room()::tick);
+                }
                 if (previous == com.openggf.net.hub.HostRoundEngine.Phase.RUNNING
                         && access.room().round().phase()
                         == com.openggf.net.hub.HostRoundEngine.Phase.ROUND_END) {
@@ -419,14 +424,20 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
                         && entry.getValue().recordingHash().equals(recordingHash)
                         && !entry.getValue().spotCheck())
                 .findFirst().ifPresent(entry -> {
+                    // A superseded claim can expire at the round-end linger while its
+                    // recording is already uploaded and queued or leased; only a job
+                    // still awaiting upload is voided for want of an upload.
+                    boolean uploaded = verificationJobs.stateOf(entry.getKey())
+                            != VerificationJobQueue.State.AWAITING_UPLOAD;
                     VerificationJobQueue.Job job = verificationJobs
                             .voidJob(entry.getKey()).orElse(null);
                     verificationRoutes.remove(entry.getKey());
                     if (job != null && verdictConsequences != null) {
                         verdictConsequences.apply(new IdentityStore.VerdictRecord(
                                 job.identityFingerprint(), job.attemptRef(),
-                                job.inputRecordingHashHex(),
-                                VerdictCodec.RESULT_VOID_NO_UPLOAD, null,
+                                job.inputRecordingHashHex(), uploaded
+                                ? VerdictCodec.RESULT_VOID_VERIFIER_UNAVAILABLE
+                                : VerdictCodec.RESULT_VOID_NO_UPLOAD, null,
                                 clock.getAsLong()), "master");
                     }
                 });

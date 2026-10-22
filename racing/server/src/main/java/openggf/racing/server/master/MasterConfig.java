@@ -44,6 +44,7 @@ public record MasterConfig(
         String publicBaseUrl,
         long maxRecordingStorageBytes,
         long recordingUploadMinIntervalMillis) {
+    private static final long MIN_VERIFIER_STALE_SECONDS = 120;
 
     public MasterConfig {
         port = port == null ? 27_900 : port;
@@ -73,6 +74,10 @@ public record MasterConfig(
         verdictGraceMillis = verdictGraceMillis <= 0 ? 10_000 : verdictGraceMillis;
         spotCheckTopTimes = spotCheckTopTimes <= 0 ? 1 : spotCheckTopTimes;
         verifierStaleSeconds = verifierStaleSeconds <= 0 ? 120 : verifierStaleSeconds;
+        if (verifierStaleSeconds < MIN_VERIFIER_STALE_SECONDS) {
+            throw new IllegalArgumentException("verifierStaleSeconds must be at least "
+                    + MIN_VERIFIER_STALE_SECONDS);
+        }
         verifierLeaseSeconds = verifierLeaseSeconds <= 0 ? 300 : verifierLeaseSeconds;
         publicBaseUrl = publicBaseUrl == null ? "" : publicBaseUrl;
         maxRecordingStorageBytes = maxRecordingStorageBytes <= 0

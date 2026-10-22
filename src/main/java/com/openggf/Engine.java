@@ -137,6 +137,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private final AudioManager audioManager;
 	private boolean audioBackendInitialized;
 	private boolean configuredHeadlessSession;
+	private com.openggf.audio.AudioBackend configuredHeadlessBackend;
 	private final RomManager romManager;
 	private final RomDetectionService romDetectionService;
 	private final CrossGameFeatureProvider crossGameFeatureProvider;
@@ -845,6 +846,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 					"the supplied headless audio backend was not installed");
 		}
 		audioBackendInitialized = true;
+		configuredHeadlessBackend = backend;
 		configuredHeadlessSession = true;
 		initializeConfiguredStartup();
 	}
@@ -861,6 +863,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		}
 		audioBackendInitialized = false;
 		configuredHeadlessSession = false;
+		configuredHeadlessBackend = null;
 	}
 
 	private Throwable cleanupConfiguredHeadlessResources() {
@@ -1683,6 +1686,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private void resetForGameplayFromMasterTitle() {
 		if (stageplay != null) stageplay.deactivate();
 		if (stageplaySession != null) stageplaySession.release();
+		gameLoop.retireModScene();
+		resetGameplayRuntime();
+	}
+
+	/** Clears a game's runtime while retaining the scene that owns a hosted run. */
+	private void resetGameplayRuntime() {
 		if (suspendedGame != null) {
 			suspendedGame = null;
 			gameLoop.suspension.discard();
@@ -1691,7 +1700,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			gameLoop.stopEditorHostedRun();
 			editorProjectPlaytestActive = false;
 		}
-		gameLoop.retireModScene();
 		var worldSession = SessionManager.getCurrentWorldSession();
 		if (worldSession != null) {
 			worldSession.getGameModule().resetModuleScopedState();
@@ -2336,7 +2344,13 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private boolean preparePresentationForLaunch(GameModule module, String standaloneOwner) {
 		try {
-			if (configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
+			if (configuredHeadlessSession) {
+				if (!audioManager.hasInstalledBackend(configuredHeadlessBackend)) {
+					throw new IllegalStateException("Configured headless audio backend was replaced");
+				}
+				// A runtime reset closes the sink, not the caller-owned offline backend.
+				audioManager.ensurePresentationSink();
+			} else if (configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
 				audioManager.setBackendForLaunch(new LWJGLAudioBackend(configService, profiler));
 			}
 			ModSubsystem subsystem = ModSubsystem.current();
@@ -2480,7 +2494,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			masterTitleScreen.cleanup();
 			masterTitleScreen = null;
 		}
-		resetForGameplayFromMasterTitle();
+		resetGameplayRuntime();
 
 		GameModule rootModule;
 		GameDataSource dataSource;
@@ -2547,7 +2561,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	 */
 	void returnToHostScene(com.openggf.mods.run.RunEndReason reason) {
 		gameLoop.tearDownGameplayForReturn();
-		resetForGameplayFromMasterTitle();
+		resetGameplayRuntime();
 		gameLoop.setGameplayMode(null);
 		this.gameplayMode = null;
 		refreshLaunchSessionCachedConfig();
@@ -3628,7 +3642,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		@Override public void levelSelect() { drawLevelSelect(); }
 		@Override public void dataSelect() { drawDataSelect(); }
 		@Override public void modScene() {
-			resetCameraForScreenSpace();
+			resetCameraForScreenSpaceIfPresent();
 			ModSceneLauncher.draw(gameLoop, graphicsManager, getProjectionMatrixBuffer());
 		}
 		@Override public void endingCutscene() { drawEndingCutscene(); }

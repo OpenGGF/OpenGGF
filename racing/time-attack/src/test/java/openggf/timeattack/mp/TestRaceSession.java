@@ -1,7 +1,10 @@
 package openggf.timeattack.mp;
 
+import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.mods.run.RunEndReason;
 import com.openggf.mods.run.RunHandle;
 import com.openggf.mods.run.RunHost;
+import com.openggf.mods.run.RunInput;
 import com.openggf.mods.run.RunLevelStart;
 import com.openggf.mods.run.RunSpec;
 import com.openggf.game.session.GameplayRunPolicy;
@@ -585,6 +588,39 @@ class TestRaceSession {
         session.hostLan(SETUP, FP);
         assertEquals(RaceSession.State.IDLE, session.state(), "a closed session starts nothing");
     }
+
+    @Test
+    void anUnfinishedRunLeavesAtRoundEndAndReturnsToTheLobbyStillConnected() {
+        AtomicLong clock = new AtomicLong();
+        Launches launches = new Launches();
+        RaceSession session = session("guest", settings(27888), new MemoryModStorage(), launches, clock::get);
+        FakeConnection connection = new FakeConnection();
+        session.enterLobbyForTest(connection, false, ROUND, "sonic");
+        connection.control(new ControlMessage.RoundStart(ROUND, 1_000, 100_000));
+        session.poll();
+        assertEquals(RaceSession.State.RACING, session.state());
+        TimeAttackRuntime run = assertInstanceOf(TimeAttackRuntime.class, launches.hosts.get(0));
+        run.onLevelReady(new RunLevelStart(launches.specs.get(0), FP, false, 4096, 1024));
+        clock.set(2_000); // RUNNING
+        run.admitStep(NO_KEYS);
+        assertEquals(0, launches.leaves.get());
+
+        connection.control(new ControlMessage.RoundEnd(List.of()));
+        run.admitStep(NO_KEYS);
+        assertEquals(1, launches.leaves.get(), "the run leaves its ended round");
+        run.onRunEnded(RunEndReason.LEFT); // the engine ends the run, then resumes the scene
+        session.runEnded();
+        assertEquals(RaceSession.State.LOBBY, session.state());
+        assertTrue(connection.open, "leaving the run keeps the room");
+        session.poll();
+        assertEquals(1, launches.specs.size(), "the ended round is not relaunched");
+    }
+
+    private static final RunInput NO_KEYS = new RunInput() {
+        @Override public LogicalInputSnapshot input() { return LogicalInputSnapshot.neutral(); }
+        @Override public boolean keyDown(int key) { return false; }
+        @Override public boolean keyPressed(int key) { return false; }
+    };
 
     private static Object currentProfile(GhostHub hub) {
         try {
