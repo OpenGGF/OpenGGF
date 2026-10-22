@@ -128,6 +128,20 @@ public class TestGraphicsManagerSpriteSatReplay {
         assertEquals(4f, heights[1]);
     }
 
+    @Test
+    public void nativeBudgetAppliesWithoutRequestingSpriteMask() {
+        graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), 0);
+        graphicsManager.beginSpriteSatCollection();
+        for (int index = 0; index < 21; index++) {
+            graphicsManager.submitSpriteSatPiece(new SpritePieceRenderer.PreparedPiece(
+                    10 + index * 8, 20, 1, 1, 0, 0, 0,
+                    false, false, false, false, SpriteMaskReplayRole.NORMAL,
+                    0, 1, 0, 1, null));
+        }
+        graphicsManager.endSpriteSatCollectionAndReplay();
+        assertEquals(20, graphicsManager.commands.size(), "H40 admits only the first twenty pieces on a line");
+    }
+
     private static boolean getBooleanField(Object target, String fieldName) throws Exception {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
