@@ -6,4 +6,8 @@ package com.openggf.game.internal;
  * Other controllers retain their status-tail dispatch.
  */
 public interface NativeSuperStateBeforeAnimation {
+    void updateNativeControlBeforeAnimation();
+
+    /** Global palette work follows the complete object pass, including hurt/death. */
+    void updateNativeGlobalPaletteAfterObjects();
 }

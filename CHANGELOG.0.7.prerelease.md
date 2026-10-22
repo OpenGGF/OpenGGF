@@ -27,8 +27,10 @@ Unreleased. The earlier development themes remain in
   positions and cloud phase. Hidden
   100-point pickups retain the shipped game's 10-point award and 100-point popup.
 
-- **Sonic 2 player and entry timing:** Super Sonic updates between movement and
-  animation, preserves native reversion animation and invincibility timing, and
+- **Sonic 2 player and entry timing:** Super Sonic control runs between movement
+  and animation while its palette advances after objects, including hurt and
+  death. It preserves native balance, reversion animation and invincibility timing, and
+
   keeps the speed constants written by an underwater transformation until their
   next native writer. Ordinary special-stage entry presents its loading hold
   without duplicating replay timing.

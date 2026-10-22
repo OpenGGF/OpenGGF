@@ -113077,3 +113077,38 @@ remain; its incomplete report still has 3203 errors beginning at non-camera 356
 `dynamic_art.edges`. No coverage is claimed past that loss. Temporary probes
 identify a late SLZ killing-hit window and an untracked SBZ2 saw-copy allocation
 cause; those source-backed follow-ups have separate owners/tests.
+
+## 2026-10-22 — S2 Super balance and global palette owner correction
+
+Isolated `bugfix/ai-gap-s2-chain-pacing-20261022`, candidate over `364088d93`
+(with implementation milestone `44c1d674` and approved H32 dependencies).
+The last qualified chain remains red: segment18 complete/0 errors; segment19
+complete/14546 errors, first4920 `dynamic_art.edge[1].mapping_frame` C2/CF;
+CNZ1 handoff cursor113342/destination113340. No new chain pass is claimed.
+
+ROM analysis identifies that first ARZ2 animation mismatch as the existing
+Super single-facing balance semantic; normal poses/positions agree at4920.
+The existing S2 Super profile now selects that branch. Parent review also
+corrected the milestone's whole-controller phase move: control/ring work stays
+before animation, global palette/completion follows objects even during
+hurt/death. Neither comparison rows nor timing admission changed.
+
+Focused command `python3 tools/testing/maven_queue.py -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl -Dtest=<12 classes listed in the dated S2
+chain research artifact> <three original absolute ROM properties> test`
+completed108 cases with one new fixture-arrangement failure; the final narrow
+`--lean -Dtest=TestSonic2SuperGlobalPalettePhase` run passed4/4,0 skips, and the
+other104 checks passed on unchanged production source (including33 balance and
+11 API checks). Fresh affected five-class `-Pguards` batch passed43/43,0 skips.
+The chain and second-movie route will be measured again after this local fix;
+return-load and recurring ordinary SS pacing remain open.
+
+
+Post-correction measurement: the queued three-class trace selection
+`TestS2CompleteEmeraldRunChain,TestS2EhzHalfpipeRoundTripChain,TestS2Arz2LevelSelectTraceReplay`
+completed3 cases/2 failures/0 skips at `364088d93` plus staged native phase/balance
+and unstaged mapping-loader translation. Independent ARZ2 passed; second-movie
+halfpipe retained exactly its matched-baseline two65-row-early gap axes.
+Main-chain ARZ1 stays0 errors; ARZ2 first mismatch advances4920 animation→5084
+sidekick_y `$48A/$489`,13495 errors. CNZ1 admission+2 and12 structural gap axes
+remain unchanged. Maven45.47s, measured queue35s. No green-chain claim.

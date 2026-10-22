@@ -2136,7 +2136,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 			playable.tickInvulnerabilityDisplayTimerBeforeTouchResponse();
 			com.openggf.sprites.playable.PlayableSpriteInternalAccess.tickNativeDisplayInvincibility(playable);
 			tickDisplayPhaseTimers(playable);
-			playable.getSuperStateController().update();
+            ((com.openggf.game.internal.NativeSuperStateBeforeAnimation)
+                    playable.getSuperStateController()).updateNativeControlBeforeAnimation();
 		}
 		playable.recordFollowerHistoryForTick();
 		if (usesInlineSolidResolution && !hurtAtTickStart && !deadAtTickStart) {

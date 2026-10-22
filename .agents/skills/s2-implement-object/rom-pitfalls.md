@@ -3678,6 +3678,13 @@ writes prev_anim=Run, not a generic invalid sentinel: Roll restarts its script,
 whereas an already selected Run retains its phase. Its newly written
 invincibility_time=1 expires on the NEXT Sonic_Display, not the same status tail.
 
+Do not move the entire Super controller with Sonic_Super: PalCycle_Load calls
+PalCycle_SuperSonic globally after RunObjects (s2.asm:5095-5106,2689-2690).
+Its fade/cycle continues during Hurt/Dead, which omit Sonic_Super. The final
+fade releases obj_control after Sonic_Animate and keeps its timer reload of 3;
+only the next normal cycle reloads 7. Separate control/ring/revert from global
+palette/completion, and never advance the latter during rewind output refresh.
+
 Sonic_CheckGoSuper unconditionally writes dry speed constants even when already
 underwater (s2.asm:37481-37483). Sonic_Water's already-underwater return
 (s2.asm:36379-36382) leaves those words intact. Keep their last-writer latch

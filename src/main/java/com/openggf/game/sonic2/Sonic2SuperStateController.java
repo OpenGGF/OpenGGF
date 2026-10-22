@@ -17,6 +17,7 @@ import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.PlayableSpriteInternalAccess;
 import com.openggf.sprites.playable.SuperStateController;
+import com.openggf.sprites.playable.SuperStateInternalAccess;
 
 import java.util.logging.Logger;
 import com.openggf.game.GameServices;
@@ -78,6 +79,31 @@ public class Sonic2SuperStateController extends SuperStateController
 
     public Sonic2SuperStateController(AbstractPlayableSprite player) {
         super(player);
+    }
+
+    /** Existing direct consumers represent one complete control-plus-global frame. */
+    @Override
+    public void update() {
+        updateNativeControlBeforeAnimation();
+        updateNativeGlobalPaletteAfterObjects();
+    }
+
+    @Override
+    public void updateNativeControlBeforeAnimation() {
+        SuperStateInternalAccess.updateNativeControlFrame(this);
+    }
+
+    @Override
+    public void updateNativeGlobalPaletteAfterObjects() {
+        // Level_MainLoop calls PalCycle_Load AFTER RunObjects (s2.asm:5095-5106).
+        // Hurt/death omit Sonic_Super, but neither suppresses this global owner.
+        // The final fade therefore leaves this tick's Sonic_Animate transformed
+        // and releases obj_control only after every object has executed.
+        if (paletteState == -1) updateSuperPalette();
+        else if (paletteState != 0) updatePaletteFade();
+        if (paletteState == -1) {
+            SuperStateInternalAccess.finishNativeTransformationAfterPalette(this);
+        }
     }
 
     @Override
@@ -218,7 +244,9 @@ public class Sonic2SuperStateController extends SuperStateController
     @Override
     protected void onSuperActivated() {
         paletteState = -1;
-        paletteTimer = 7;
+        // PalCycle_SuperSonic reloads 3 before the final fade step, then writes
+        // state=-1/obj_control=0 (s2.asm:3129-3139). Keep that timer: the first
+        // normal-cycle entry follows four ticks later; only that entry reloads 7.
         // Play Super Sonic music (overrides zone music)
         try {
             if (CrossGameFeatureProvider.isActive()) {

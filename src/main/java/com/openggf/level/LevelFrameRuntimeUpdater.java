@@ -40,6 +40,18 @@ final class LevelFrameRuntimeUpdater {
             levelManager.animatedPatternManager.update();
         }
         levelManager.updateContributedAnimatedTiles();
+        // Native powered-form palettes are world logic, after RunObjects and
+        // before the zone palette owner. Rewind's derived-output refresh below
+        // never enters this method and must not advance these captured timers.
+        if (levelManager.spriteManager != null) {
+            for (var sprite : levelManager.spriteManager.getAllSprites()) {
+                if (sprite instanceof com.openggf.sprites.playable.AbstractPlayableSprite playable
+                        && playable.getSuperStateController() instanceof
+                        com.openggf.game.internal.NativeSuperStateBeforeAnimation nativeOwner) {
+                    nativeOwner.updateNativeGlobalPaletteAfterObjects();
+                }
+            }
+        }
         if (levelManager.animatedPaletteManager != null
                 && levelManager.animatedPaletteManager != levelManager.animatedPatternManager) {
             levelManager.animatedPaletteManager.update();
