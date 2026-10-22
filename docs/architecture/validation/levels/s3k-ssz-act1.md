@@ -4605,3 +4605,13 @@ At exact `2b9cf5433`, ONE cold ordinary CLI preserves all15349 actualR29 pads/in
 15360 total, zero new Aedges; both64rings/3lives/unhurt/live. All11 newPOST rows airborne/free/noactualrider; no support/ground/P2state/refuel publication or bridge admission observed before seam. Current bridge lifetime/phase/width/contact/terrain receiver/native/cause UNKNOWN; no omission established/no input15360.
 Same-JVM five-pad positiveJUMP/no-fresh-edge/all-row author-loader and independent entire script/ZIP/SIXTEEN wholemovie-prefix proofs agree; **0 JUnit/skips N/A**. All11 complete78-field records retained losslessly; owned raw outputs consumed under leases.
 Expected46/runtime/POM/maintained data unchanged; no automatic next phase. [Facts, exact limits, hashes, command and timing](../../plans/2026-10-13-s3k-playable-completion.md#r30-held-jump-reaches-the-nominal-flat-to-diagonal-bridge-seam-airborne--2026-10-22).
+
+
+## R31 first managed diagonal support — 2026-10-22
+
+At exact `6c5a4e0c5`, ONE cold ordinary CLI preserves all15360 actualR30 pads/inlet and388 comparisons;377 old gates plus11 fullR30 pairs exact. Original helpers/safeties/heldproof/domains literal; no new live query.
+2 SAMEheldRA/P2Up inputs stop15361 on actual managed live rider: descriptor layout176/id0x7B/sub0/X5504/Y1048/flags1/rawY0x2418, same bound manager raw-reference membership/riderLive true/destroyedfalse; kind metadata diagonal bridge. No class/XY-only or native identity inference.
+SAMEPOST P1(5456,1007),VX1536/VY0/G1536,airfalse/jumpfalse/free/radii9x19; P2(5360,877),V0/recovery/manual-windowtrue/locked/controlled/flag0fuel0/contextNONE. Both64rings/3lives/unhurt/live.15362 total/0newAedges/no input15362.
+Supportguard precedes later action/air/geometric checks, terminal predicate outcomes UNEVALUATED; ground flags are observed data only. No stable continued support, collapse/width/contact callback/native/physics/next-phase qualification; no omission established.
+Same-JVM literal five-pad/held-input/all-row author-loader plus independent entire script/ZIP/SEVENTEEN wholemovie-prefix proofs agree; **0 JUnit/skips N/A**. Both complete78-field records retained losslessly; owned raw diagnostics consumed under leases.
+Expected46/runtime/POM/maintained data unchanged. [Facts, exact descriptor, limits, hashes, command and timing](../../plans/2026-10-13-s3k-playable-completion.md#r31-first-managed-diagonal-bridge-support-publication--2026-10-22).
