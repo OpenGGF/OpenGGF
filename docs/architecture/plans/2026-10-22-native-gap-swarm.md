@@ -167,3 +167,54 @@ Start, not a producer-clock failure; native Start delivery needs its own read
 gate regression. Native competition, exact sprite queues/operators, later boss
 and route frontiers, empirical stage/load costs, native publication trust and
 the peer's campaign/load evidence remain active obligations.
+
+
+### Composed behavior checkpoint — 2026-10-22
+
+On aggregate `1d9bf604b`, the exact seven-selector command in the lead checkpoint
+(`TestModApiSignatureSurface`, native menus, S2 native ending, S1 SBZ3 scroll,
+recorded native pause, S2 global Super palette, and S3K native PLC recreation)
+completed 24 tests with zero failures, errors or skips. It used Java 25,
+Lua 5.4, surfaceless EGL and the three original absolute ROM properties via
+`maven_queue.py --normal -Dmse=off`. Queue wait was 371 seconds; Maven execution
+including compilation was 1:22. This is focused composition evidence, not smoke.
+
+Subsequent local composition adds S1 boss follow-up `9f7c034f1` as `eeaad171f`,
+Saw re-entry `a1f10b680` as `456337c7f`, native submission backend `d89c09e66`
+as `dbdc7c609`, SAT pixel ownership/HUD/ring drawing `5ad9da893` and `46dd78395`
+as `32475a9d3`, ring visibility-layer correction `377860415` as `4dd9c72d5`,
+and S2 transform-start effects `f85bb8746` as `53c16e925`. The native queue's
+original retirement prerequisite is already present. The Sprite worker's
+reconciled backend alias was not imported as another deliverable. Shared SAT
+entry/accessor conflicts retain per-entry terrain masks and frozen fragments;
+source-equal additions and formatting are reconciled without losing either
+owner. Independent read-only reviews found no introduced defect in the scoped
+SLZ/FZ follow-up or simple native submission/rewind backend.
+
+The S1 owner's composed run at `2cbcb6e90` plus Bomb calls and the complete
+uncommitted native timing candidate completed 129 tests: 128 passed, one full
+chain assertion failed, no errors or skips. All **21 pre-Final Zone** level
+reports compare without errors; Final Zone is the 22nd. Its earliest remaining
+mismatch is animation at row 4735, with downstream art at 4736. Two late load-art
+gaps and terminal `LEVEL` instead of `TITLE_SCREEN` remain. All 242 timing edges
+closed strictly without the old secondary edge-170 failure, but the complete
+62-file candidate and literal guard remain uncommitted while comparisons and
+the terminal contract are red. This is not publication or whole-chain closure.
+S1 owns consumed-entry fade admission; the boss owner owns native final-flight
+input and the chain owns terminal caller attribution. Rewind timing authority,
+comparison payloads and journal edges are not weakened.
+
+Actual 600-row production audio at `70de3bfe` now has exact per-row cadence and
+441568 stereo frames for each game, but both waveforms still differ: S1 first
+55205, S2 first 92739. The audio artifact records the observations and native
+namespace proof, including why native Super request 96 must not replace the
+ordinary engine Super key 93. Startup instruction/service costs, full routes and
+publication trust remain open. Four full native captures remain held.
+
+Native competition remains gated until actual world/view/session/results flows
+qualify. Reserved-ring phase/capacity restoration and exact shadow intensity are
+active sprite dependencies. Historical 14 missing S3K measured fingerprints
+remain unidentified; 16 current SOZ warnings are separate direct-KOS leads,
+not native-cost closure. The peer retains campaign and glide work; its MHZ source
+433 focused passes do not qualify the maintained route's current death at 37752.
+No Main mutation, broad smoke, integrated push or cleanup has occurred.

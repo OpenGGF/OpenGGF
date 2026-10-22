@@ -5,6 +5,34 @@ Scope: audio evidence lane of the native gap closure swarm, isolated branch
 No complete-game or all-route parity is asserted. Reference rows never supply
 engine gameplay values or audio requests in gameplay integration.
 
+## Final bounded outcome
+
+Both final production captures ran from clean `70de3bfe04120306d35c5a2c75ee9534c294e5ad`,
+with a compile phase refreshing build identity before the ordinary capture
+entry point. They reused the unchanged native controls and original movies,
+with no later mode forced. Each has 600 presentations, 441568 stereo frames,
+one native stage session and exactly the native per-row sample cadence.
+Both strict `--start-row 0 --rows 600` comparisons remain **DIFFERENT**, with
+`SAMPLE_MISMATCH` only. There is no sample-count or frame-shape mismatch.
+
+| Final production window | First different stereo frame | Native / engine value | Equal stereo frames | Production modes | Queue / Maven seconds |
+| --- | ---: | --- | ---: | --- | --- |
+| S1, `s1-engine-600-final-entry` | 55205 | `(0,0)` / `(1,1)` | 135382 | `TITLE_SCREEN` throughout | 365 / 21.545 |
+| S2, `s2-engine-600-final-input` | 92739 | `(0,0)` / `(1,1)` | 173162 | Title screen 0..498, title card 499..583, level 584..599 | 319 / 21.948 |
+
+Final engine PCM SHA-256 values are S1
+`1491f62e5553d7e0270bd7feca92a8ea8b9d9189eac8b3e8388c541b9e65ea46`
+and S2 `f8ed5cea80d5bd884db3d4c6b335f7fd256e426b621a88118c0e147c3c863bf2`.
+S2's PCM is byte-identical before and after the separately verified native
+pause read correction over this particular prefix. S1's first engine DAC
+write is now row 75 instead of 96; the supported phase-order correction moves
+the first waveform difference earlier than the original 70660. This is not
+an overall startup parity improvement: authentic power-on, prior fade,
+loading and native chant-wait costs remain open. No offset was fitted to
+hide those missing owners. Both captures still print the existing exec-plugin
+Discord worker shutdown warning before Maven exits successfully; no process
+or owned validation job remains running.
+
 ## Source and capture identities
 
 The current emerald movies are the run-local recordings, not the legacy movies
@@ -342,7 +370,7 @@ S1 terminal frontiers or permission to enable either unavailable binding.
 | Obligation | S1 | S2 |
 | --- | --- | --- |
 | Current emerald movie native startup PCM, rows 0..599 | Duplicate native capture verified | Duplicate native capture verified |
-| Matched production startup PCM and exact first divergence | 600 rows compared; first PCM difference at stereo frame 70660 | 600 rows compared; first cadence difference at presentation 506, first PCM difference at stereo frame 92739 |
+| Paired production startup PCM and exact first divergence | Final 600 rows compared; cadence matches, first PCM difference at stereo frame 55205 | Final 600 rows compared; former missing cadence repaired, first PCM difference remains at stereo frame 92739 |
 | Continuous boss, underwater, speed shoes, special stage, results and credits state/register/PCM | Open | Open |
 | Canonical complete-run reference publication | Unavailable: native raw terminal/frontier and installed identity evidence remain required | Unavailable: reviewed full duplicate raw capture and installed identities remain required |
 | Authenticated production publication | Unavailable: independently provisioned artifact attestation trust root absent | Same |
@@ -360,6 +388,54 @@ Retained-row trace-chain execution starts from its own certified boundary; it
 cannot establish natural production startup from row zero. Later integrated
 phases depend on the S1/S2 chain owners' current production frontiers and on
 native reference publication. No later mode was forced to manufacture proof.
+
+## S2 Super request and engine playlist namespaces
+
+The native CheckGoSuper request is `$96`: verified REV01 bytes at `$01AB9A`
+are `30 3C 00 96`. That does not make `$96` the ordinary engine music key.
+An independent read-only ROM audit decompressed the driver from `$0EC0E8`,
+length `$0F64`, matching the load operands at `$0EC04A`
+(`4D FA 00 9C 3E 3C 0F 64`). Its `zMasterPlaylist` begins at Z80 `$11F5`.
+`zBGMLoad (s2.sounddriver.asm:1738-1778)` translates the native request through
+that playlist before masking the engine key with `$1F` and indexing the ROM
+pointer table. Actual decoded bytes and little-endian ROM pointers are:
+
+| Native request | Playlist byte | ROM pointer bytes | Selected music |
+| --- | --- | --- | --- |
+| `$96` | `$93` at Z80 `$120A` | `$0F8026: BC CB` | Super, `$0FCBBC` |
+| `$93` | `$8D` at Z80 `$1207` | `$0F801A: 1E B8` | Boss, `$0FB81E` |
+| `$99` | `$96` at Z80 `$120D` | `$0F802C: 93 D1` | Title, `$0FD193` |
+
+Thus `GameMusic.SUPER -> Sonic2Music.SUPER_SONIC.id == $93` is correct for the
+existing engine loader. Replacing it with `$96`, or passing native `$96` to
+ordinary `playMusic(int)`, would select Title. The distinguished existing
+`playMusicMailboxNativeRequest(int)` ingress retains observed native `$96`
+while the separately owned native mailbox adapter resolves content to engine
+`$93`. Ordinary enum music and donor-specific semantic resolution must retain
+their existing namespaces; raw S2 `$96` cannot be sent unchanged to arbitrary
+donor loaders. No profile-wide alias change was justified or made. The S2
+chain owner retains the source-backed immediate Super caller/stars/invincibility
+correction; this audit did not duplicate it or claim later Super PCM coverage.
+
+Later production Super audio measurements must include caller commit
+`f85bb87469f4552f2338e77d1ef44ccfbda307fd` in their recorded integrated source.
+Inspection of that separate lane's committed code confirms fixed Obj7E slot
+129 publication and timed-invincibility clearing at transformation start,
+before `SPECIAL_SFX $DF` and semantic `GameMusic.SUPER` (engine `$93`).
+Palette completion no longer repeats those requests. Ordinary/donor music
+namespaces and the audio loader/profile/adapter are unchanged by that commit.
+The caller owner reports six focused actual-ROM cases passing with zero
+skips, including Super/Title loader-pointer distinction, full general dynamic
+allocation, independent normal stars at 136, retained same-owner stars at 129
+and restore/forward behavior. Those tests were not rerun by the audio lane,
+and no PCM capture accompanied the caller change.
+
+The final 600-row startup measurements above use `70de3bfe` and predate this
+caller commit. They cannot certify its later Super boundary. A separate
+normal-star timer-zero world-restore gap remains with the caller/shared-hook
+owners, pending parent coordination. Root composition and real route
+prerequisites must be recorded before any later production Super state,
+register or PCM result is attributed to the corrected caller.
 
 ## Verification
 
