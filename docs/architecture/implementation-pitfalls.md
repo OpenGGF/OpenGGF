@@ -52,6 +52,13 @@ isolation falls back to silence. The two-context regression uses OpenAL's null
 driver and checks that opening, pumping and closing the hub leaves gameplay's
 context and AL dispatch intact (October 15 menu polish).
 
+**Immediate text does not follow deferred sprite commands.** Ghost sprite passes
+prepare queued world draws; drawing `PixelFontTextRenderer` there writes text
+before the world, which later overwrites it. Collect nameplates during preparation
+and draw them in the hosted-run overlay after the world, before its HUD. A name
+present in the ghost pose or HUD does not prove an overhead label was displayed;
+inspect actual gameplay pixels (2026-10-22 nine-player name test).
+
 **Capture long filenames on a fresh menu font.** The immediate full-size
 `PixelFont` path's `ensureBatchCapacity` replaces its vertex array without copying
 already-added glyphs when it grows within a string. A fresh ROM-picker capture
