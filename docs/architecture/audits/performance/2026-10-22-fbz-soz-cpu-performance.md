@@ -216,3 +216,38 @@ The inspected change-based plan (`run_categories.py --base 98fc161d2`) selects
 3,091 smoke classes plus guards. The requested focused checks replace that
 selection for this local snapshot-lifetime change; no shared algorithm or
 participation policy changed. There are no running task-owned jobs.
+
+## Java transient scalar comparison correction
+
+Root's frozen combined smoke at `3055eb336` exposed `generatedPivot: 96 -> -1`
+in the SOZ object probe and identity ratchet. Inspection of the owning runtime
+path found that `AbstractObjectInstance.captureRewindState(context)` uses
+`GenericFieldCapturer` (generic or compact sidecar), then restoration applies
+that sidecar before `afterGenericRewindStateRestored`. Java transient fields
+are explicitly excluded by `GenericFieldCapturer.isSkipped`,
+`RewindSchemaRegistry.policyFor`, and the documented
+`RewindCoverageAnalyzer.isUncapturedFinalScalar` contract. Invalidating the SOZ
+cache after restoring authoritative surface RAM is valid.
+
+The harness scalar walker skipped static/synthetic fields but compared Java
+transients. It now also skips Java transient fields uniformly, with no class or
+field-name exceptions. Production SOZ cache shape and invalidation are unchanged;
+root's independent display-query/direct-sample changes need no conflicting edit.
+A real round-trip control invalidates a transient cache and passes. A deliberately
+broken fixture drops its authoritative sidecar and restores a zeroed scalar;
+the same harness still reports exactly its non-transient `authoritative` field
+as `37 -> 0` (`isFinal=false`). No authoritative exclusion was introduced.
+
+Queued focused verification (existing external ROM directory substituted below):
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestEveryObjectRewindRoundTrip,TestRewindHarnessCoverageRatchet,TestSozSpringVine,TestRewindRoundTripHarnessFailures' \
+  "-Dsonic1.rom.path=${ROM_ROOT}/s1.gen" "-Dsonic2.rom.path=${ROM_ROOT}/s2.gen" \
+  "-Ds3k.rom.path=${ROM_ROOT}/s3k.gen" test
+```
+
+Passed 1,349 tests, zero failures/errors/skips (1,331 object sweep, one ratchet,
+four failure/contract controls, 13 SOZ). Ratchet: 1,086 isolated executions,
+243 graph declarations, zero unavailable prerequisites. Queue wait 17 seconds;
+Maven execution 30.342 seconds. Root's live smoke source/job was untouched.
