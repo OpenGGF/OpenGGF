@@ -200,68 +200,89 @@ function Test-ContainsModApiAnnotation([string]$Text) {
     return $Text -match '(?m)^\s*@(?:com\.openggf\.game\.)?ModApi(?:[.(\s]|$)'
 }
 
-# Mirrors mod_api_surface_text in validate-policy.sh.
+# Mirrors the conservative declaration projection in mod_api_surface_text.
+# Annotations travel with their declaration; private enclosing types hide their
+# entire subtree. The exact signature snapshot remains authoritative.
 function Get-ModApiSurfaceText([string]$Text) {
-    $inBlock = $false
-    $kind = ""
-    $typeName = ""
-    $stripped = New-Object System.Collections.Generic.List[string]
-    foreach ($raw in ($Text -split "\r?\n")) {
-        $line = $raw
-        $out = ""
-        while ($true) {
-            if ($inBlock) {
-                $e = $line.IndexOf("*/", [StringComparison]::Ordinal)
-                if ($e -lt 0) { $line = ""; break }
-                $line = $line.Substring($e + 2); $inBlock = $false
-            }
-            $s = $line.IndexOf("/*", [StringComparison]::Ordinal)
-            $c = $line.IndexOf("//", [StringComparison]::Ordinal)
-            if ($c -ge 0 -and ($s -lt 0 -or $c -lt $s)) { $out += $line.Substring(0, $c); break }
-            if ($s -lt 0) { $out += $line; break }
-            $out += $line.Substring(0, $s); $line = $line.Substring($s + 2); $inBlock = $true
-        }
-        $stripped.Add($out)
-        if ($kind -eq "" -and $out -cmatch '(?:^|[ \t])(class|interface|record|enum|@interface)[ \t]+([A-Za-z_][A-Za-z0-9_]*)') {
-            $kind = $Matches[1]; $typeName = $Matches[2]
-        }
-    }
-    $whole = $kind -ne "class"
-    $depth = 0
     $kept = New-Object System.Collections.Generic.List[string]
-    $compactDepth = 0; $quote = [char]0; $escaped = $false
-    foreach ($line in $stripped) {
-        $l = $line; $start = 0
-        # A compact constructor adds no signature beyond the record components.
-        if ($compactDepth -eq 0 -and $kind -eq "record" -and
-                $l -cmatch ("^[ \t]*(?:public[ \t]+|protected[ \t]+|private[ \t]+)?" + [regex]::Escape($typeName) + "[ \t]*\{")) {
-            $start = $l.IndexOf("{") + 1; $compactDepth = 1
-            $kept.Add($l.Substring(0, $start))
+    $visible = @{}; $implicit = @{}
+    $top = 0; $parens = 0; $bodyDepth = 0
+    $header = ""; $code = ""; $quote = ""; $escaped = $false
+    $inLine = $false; $inBlock = $false
+    for ($i = 0; $i -lt $Text.Length; $i++) {
+        $c = $Text[$i]
+        $pair = if ($i + 1 -lt $Text.Length) { $Text.Substring($i, 2) } else { "" }
+        $triple = if ($i + 2 -lt $Text.Length) { $Text.Substring($i, 3) } else { "" }
+        if ($inLine) { if ($c -eq "`n") { $inLine = $false } else { continue } }
+        if ($inBlock) {
+            if ($pair -eq "*/") { $inBlock = $false; $i++ }
+            continue
         }
-        if ($compactDepth -gt 0) {
-            for ($j = $start; $j -lt $l.Length; $j++) {
-                $c = $l[$j]
-                if ($quote -ne [char]0) {
-                    if ($escaped) { $escaped = $false }
-                    elseif ($c -eq '\') { $escaped = $true }
-                    elseif ($c -eq $quote) { $quote = [char]0 }
-                } elseif ($c -eq '"' -or $c -eq [char]39) { $quote = $c }
-                elseif ($c -eq '{') { $compactDepth++ }
-                elseif ($c -eq '}') {
-                    $compactDepth--
-                    if ($compactDepth -eq 0) { $kept.Add("}"); break }
-                }
+        if ($quote -ne "") {
+            if ($bodyDepth -eq 0) { $header += $c; $code += " " }
+            if ($escaped) { $escaped = $false }
+            elseif ($c -eq '\') { $escaped = $true }
+            elseif ($quote -eq '"""' -and $triple -eq $quote) {
+                if ($bodyDepth -eq 0) { $header += '""'; $code += "  " }
+                $i += 2; $quote = ""
+            } elseif ([string]$c -ceq $quote) { $quote = "" }
+            continue
+        }
+        if ($pair -eq "//" -or $pair -eq "/*") {
+            if ($bodyDepth -eq 0 -and -not $header.EndsWith(" ")) { $header += " "; $code += " " }
+            if ($pair -eq "//") { $inLine = $true } else { $inBlock = $true }
+            $i++; continue
+        }
+        if ($c -eq '"' -or $c -eq [char]39) {
+            $quote = [string]$c
+            if ($triple -eq '"""') {
+                $quote = $triple
+                if ($bodyDepth -eq 0) { $header += '""'; $code += "  " }
+                $i += 2
             }
-            if ($compactDepth -gt 0) { continue }
-            $l = $l.Substring($j + 1)
+            if ($bodyDepth -eq 0) { $header += $c; $code += " " }
+            continue
         }
-        if ($l -notmatch '[^ \t]') { continue }
-        if ($whole) { $kept.Add($l); continue }
-        if ($depth -gt 0 -or $l -cmatch '(?:^|[^A-Za-z0-9_])(?:public|protected)[ \t]' -or $l -match '^[ \t]*@' -or
-                $l -cmatch '(?:^|[ \t])(?:class|interface|record|enum|extends|implements)[ \t]') {
-            $kept.Add($l)
-            $depth += ([regex]::Matches($l, '\(')).Count - ([regex]::Matches($l, '\)')).Count
-            if ($depth -lt 0) { $depth = 0 }
+        if ($bodyDepth -gt 0) {
+            if ($c -eq '{') { $bodyDepth++ }
+            elseif ($c -eq '}') { $bodyDepth-- }
+            continue
+        }
+        if ($c -match '[ \t\r\n]') {
+            if (-not $header.EndsWith(" ")) { $header += " "; $code += " " }
+            continue
+        }
+        if ($c -eq '{') {
+            if ($parens -gt 0) { $header += $c; $code += $c; continue }
+            $kind = ""
+            if ($code -cmatch '(?:^|[ \t])(class|interface|record|enum|@interface)[ \t]+[A-Za-z_][A-Za-z0-9_]*') { $kind = $Matches[1] }
+            $memberVisible = $top -gt 0 -and $visible[$top] -and $code -cnotmatch '(?:^|[^A-Za-z0-9_])private[ \t]' -and
+                    ($implicit[$top] -or $code -cmatch '(?:^|[^A-Za-z0-9_])(?:public|protected)[ \t]')
+            $header += $c; $code += $c
+            if ($kind -ne "") {
+                $allowed = ($top -eq 0 -or $visible[$top]) -and $code -cnotmatch '(?:^|[^A-Za-z0-9_])private[ \t]'
+                if ($allowed) { $kept.Add($header.Trim()) }
+                $top++; $visible[$top] = $allowed; $implicit[$top] = $kind -cne "class"
+            } else {
+                if ($memberVisible) { $kept.Add($header.Trim()) }
+                $bodyDepth = 1
+            }
+            $header = ""; $code = ""; continue
+        }
+        if ($c -eq '}' -and $parens -eq 0) {
+            if ($top -gt 0) {
+                if ($visible[$top]) { $kept.Add("}") }
+                $visible.Remove($top); $implicit.Remove($top); $top--
+            }
+            $header = ""; $code = ""; continue
+        }
+        $header += $c; $code += $c
+        if ($c -eq '(') { $parens++ }
+        elseif ($c -eq ')') { $parens-- }
+        elseif ($c -eq ';' -and $parens -eq 0) {
+            if ($top -gt 0 -and $visible[$top] -and $code -cnotmatch '(?:^|[^A-Za-z0-9_])private[ \t]' -and
+                    ($implicit[$top] -or $code -cmatch '(?:^|[^A-Za-z0-9_])(?:public|protected)[ \t]')) { $kept.Add($header.Trim()) }
+            $header = ""; $code = ""
         }
     }
     return ($kept -join "`n")
