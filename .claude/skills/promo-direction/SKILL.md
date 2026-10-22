@@ -57,6 +57,25 @@ Being bold does not mean being busy. The two most common rejections were
 "very rushed" (Putt-Putt Paradise v5) and "rapid cuts / cluttered audio"
 (Mutator Lab).
 
+Being restrained does not mean being safe, either. A coached plan that avoided
+every rejection above still came out flat:
+
+- The footage was inset in a frame over a blurred copy of itself for the whole
+  film. Full-bleed `game_view` is the default canvas. An inset frame is a
+  layout for a particular beat.
+- The title drop had no flash, no stinger and no camera move, and the
+  plan said to "avoid zoom punches".
+- Editorial type re-announced a zone that the game's own title card
+  announces better.
+- The opening showed establishing scenery and held the hero shot back until 13 s.
+- Shots named "keep the momentum" and "leave room for discovery" sold nothing.
+- Requirements and caveats (Java version, ROM revision) crowded the end card.
+
+For a gameplay showcase, the treatments in this skill are the **defaults**:
+a cold open from the hero footage, a title drop with flash, stinger and slam,
+ROM title-card headers, banded wipes at chapter changes, full-bleed footage and
+splits for comparisons. If your plan drops one, the brief says why in one line.
+
 These are recorded problems with particular promo drafts. Preserve the preference
 for crafted type, readable action and deliberate rhythm; do not turn it into a
 ban on a stable dialogue panel, a purposeful reaction hold or a quiet story beat.
@@ -83,6 +102,10 @@ grid, title drop or chapter structure.
 
 ### 2. Write the brief at the top of the edit file
 
+The plan is this brief, in the docstring of `edit.py` from `promo_kit.py template`,
+plus the beat sheet. Do not write separate essays, storyboard sites or
+rejected-alternative surveys. Give each choice its reason in one clause.
+
 Write one line each:
 
 - **Audience.** For example: general Sonic fans, or modders.
@@ -94,30 +117,43 @@ Write one line each:
   "Configurable" is shown by toggling, then by the result. It is never shown
   by an options page. For a story, describe the action, speaking turns and reactions
   that make the premise clear.
+- **Proof.** For each selling point, name what the viewer will *see* that
+  proves it. A claim that something changed (a remix, a fix, a new version,
+  "now with") is a comparison, so plan the stock version beside the new one in a
+  split. Shown alone, a remixed level just looks like the level.
 - **Hero moment.** The single shot people will remember. Plan the climax
-  around it.
+  around it, and cut a one- or two-second fragment of it into the cold open.
 - **Sound.** Music structure and, where relevant, BPM/first beat; dialogue,
   effects and intended pauses. A jingle or separate end-card track is a choice,
   not a requirement.
 - **Palette.** Three or four colours *sampled from the game itself*: its title
   card, logo or HUD.
 - **Title face.** Prefer the game's or mod's own letterforms: a ROM title-card
-  font, or a mod `art/font.txt` drawn with `BitmapFont`. Otherwise use a heavy
-  condensed TTF.
+  font, or a mod `art/font.txt` drawn with `BitmapFont`. A mod without a font
+  still has the base game's letters. The simplest native type is the game's
+  own presentation, filmed: a title card, a results tally or a menu reveal in one
+  take into play. Do not cover a native card with an editorial copy of it.
+  Use a heavy condensed TTF only for lines the game cannot supply.
 - **End card.** Logo, one line, URL, status line, and the disclaimer "Fan-made
-  and free. Not affiliated with SEGA. Requires your own ROM."
+  and free. Not affiliated with SEGA. Requires your own ROM." Nothing else.
+  Build requirements and ROM revisions belong in the linked README.
 
 ### 3. Storyboard to the film's rhythm
 
 For a music-led showcase, choose the music first and build a beat sheet:
 
-1. Render the bed through OpenGGF's own SMPS driver from the ROM. See Slay's
-   `render_audio.py`. Never use unlicensed external music.
+1. Render the bed through OpenGGF's own SMPS driver from the ROM with
+   `com.openggf.tools.audio.FmSfxRenderTool --game s2 --rom <rom> --music 91
+   --rate 48000 --max-seconds 80 --out <dir>`. `--sfx <id>` renders a stinger
+   the same way. Never use unlicensed external music. The chip output starts
+   on a DC offset, so high-pass it before checking the first onset.
 2. Run `python3 tools/media/promo_kit.py beats bed.wav` to get the BPM, beat
    phase and section changes. Confirm the phase by ear or against a known
    onset.
 3. Write a beat sheet before capturing: chapter, beats, layout, type, sound
-   cue. Put chapter changes, header wipes and the title drop on **section
+   cue, and **what the shot proves**. A shot whose purpose is "keep the
+   momentum", "breathe" or "leave room" is padding. Cut it, or spend its bars on
+   a comparison or the hero. Put chapter changes, header wipes and the title drop on **section
    changes**. Put ordinary cuts on bar lines (every four beats) or phrase
    lines (every eight). An effect's arrival or a contact should land *on* a
    beat where that preserves a readable complete action.
@@ -158,7 +194,9 @@ Read the Stageplay first-creator lesson before choosing the teaching sequence.
 - Prefer one take across a natural chain over cutting it up. Good chains are
   menu → title card → level, or map → node → fight → victory.
 - Preserve lossless source frames where the capture workflow supports them.
-  For gameplay clips under an editorial bed, capture SFX separately from music.
+  `GameplayCaptureTool --audio` records music and SFX as one mix, and there is
+  no SFX-only stem. Under an editorial bed, capture silently and add ROM
+  stingers rendered with `FmSfxRenderTool --sfx`.
   Stageplay exports combine authored cues with native SFX in LIVE shots; avoid mixing that soundtrack
   with a second unplanned bed in the compositor.
 - Gameplay start positions must be real for the act; disclose debug jumps and
@@ -202,7 +240,8 @@ python3 tools/media/promo_kit.py template /task/promo/edit.py
 python3 tools/media/promo_kit.py demo /task/kit-demo   # shows every move on synthetic footage
 ```
 
-Keep fonts in the task directory, never in a repository. `DejaVu` in the
+`promo_kit` needs numpy and Pillow. If the system Python lacks them, use a venv
+under the checkout's `target/`. Keep fonts in the task directory, never in a repository. `DejaVu` in the
 `fonts` report means the result will look flat. Fix the fonts before
 composing.
 
