@@ -35,7 +35,7 @@ import static org.lwjgl.glfw.GLFW.*;
  */
 public final class EditorHud {
     public enum LibraryKind { BLOCK, CHUNK, PATTERN, OBJECT, NONE }
-    enum Modal { NONE, LIBRARY, WHEEL, MENU }
+    enum Modal { NONE, LIBRARY, WHEEL, MENU, PROPERTIES }
 
     /** Which control a prompt names; drawn as a pad glyph or a keyboard keycap. */
     enum Glyph { SOUTH, EAST, WEST, NORTH, LB, RB, LT, RT, VIEW, MENU, DPAD, LSTICK, BUMPERS }
@@ -81,6 +81,7 @@ public final class EditorHud {
     // Menu
     List<MenuItem> menuItems = List.of();
     int menuIndex;
+    int propertyIndex;
     float menuScroll;
     // Status toast
     String toast;
@@ -130,12 +131,14 @@ public final class EditorHud {
             pointerX = input.getMouseX() * pointerUnits;
             pointerY = input.getMouseY() * pointerUnits;
         }
+        if (modal == Modal.NONE && input.isKeyPressed(GLFW_KEY_F2)) { openProperties(); return true; }
         boolean click = input.isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
         boolean rightClick = input.isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT);
         return switch (modal) {
             case LIBRARY -> { updateLibrary(input, click); yield true; }
             case WHEEL -> { updateWheel(input, click); yield true; }
             case MENU -> { updateMenu(input, click); yield true; }
+            case PROPERTIES -> { updateProperties(input); yield true; }
             case NONE -> updateCanvas(input, level, click, rightClick);
         };
     }
@@ -422,6 +425,7 @@ public final class EditorHud {
         List<WheelItem> items = new ArrayList<>(8);
         items.add(new WheelItem("Undo", "Last edit", () -> act(Action.UNDO)));
         items.add(new WheelItem("Redo", "", () -> act(Action.REDO)));
+        if (controller.selectedObjectSpawn() != null) items.add(new WheelItem("Properties", "Named fields", this::openProperties));
         if (controller.depth() == EditorHierarchyDepth.BLOCK) {
             items.add(new WheelItem("Flip H", "This cell", () -> act(Action.TOGGLE_H_FLIP)));
             items.add(new WheelItem("Flip V", "This cell", () -> act(Action.TOGGLE_V_FLIP)));
@@ -485,12 +489,34 @@ public final class EditorHud {
 
     private static String onOff(boolean on) { return on ? "On > Off" : "Off > On"; }
 
+    void openProperties() {
+        finishPendingEdits();
+        if (controller.selectedObjectSpawn() == null) { controller.setStatus("Pick an object before opening properties"); return; }
+        propertyIndex = 0;
+        modal = Modal.PROPERTIES;
+        pad.consumeHeld();
+    }
+
+    private void updateProperties(InputHandler input) {
+        if (controller.selectedObjectSpawn() == null) { closeModal(); return; }
+        var fields = controller.selectedObjectProperties().editableFields();
+        int dy = pad.navY(), dx = pad.navX();
+        if (MenuInput.up(input)) dy--;
+        if (MenuInput.down(input)) dy++;
+        if (MenuInput.left(input)) dx--;
+        if (MenuInput.right(input)) dx++;
+        propertyIndex = Math.floorMod(propertyIndex + dy, fields.size());
+        if (dx != 0) { controller.stepSelectedObjectProperty(propertyIndex, Integer.signum(dx)); contentChanged = true; }
+        if (pad.pressed(EAST) || MenuInput.back(input) || input.isKeyPressed(GLFW_KEY_F2)) closeModal();
+    }
+
     // ------------------------------------------------------------------ menu
 
     void openMenu() {
         List<MenuItem> items = new ArrayList<>();
         items.add(new MenuItem("Editor", "", null));
         items.add(new MenuItem("Resume", "", () -> { }));
+        items.add(new MenuItem("Object properties", "F2", this::openProperties));
         items.add(new MenuItem("Save project", "Ctrl+S", () -> act(Action.SAVE)));
         Map<String, Runnable> extra = new LinkedHashMap<>();
         for (EditorCommandPalette.HostCommand command : allHostCommands()) extra.put(command.label(), command.action());
@@ -732,6 +758,11 @@ public final class EditorHud {
                 prompts.add(new Prompt(Glyph.LSTICK, "Arrows", "Choose"));
                 prompts.add(new Prompt(Glyph.SOUTH, "Enter", "Apply"));
                 prompts.add(new Prompt(Glyph.EAST, "Esc", "Cancel"));
+            }
+            case PROPERTIES -> {
+                prompts.add(new Prompt(Glyph.DPAD, "Up/Down", "Field"));
+                prompts.add(new Prompt(Glyph.DPAD, "Left/Right", "Value"));
+                prompts.add(new Prompt(Glyph.EAST, "Esc", "Close"));
             }
             case MENU -> {
                 prompts.add(new Prompt(Glyph.DPAD, "Arrows", "Select"));

@@ -169,6 +169,24 @@ Sonic 1 has one collision-profile path. Its primary and secondary assignments
 must agree for a playable export. S2/S3K have separate paths. Assigning a profile
 uses existing collision data; this tool does not draw new height/width profiles.
 
+## Named object properties
+
+Pick an object with right click / West, then use **Selected placement** in the
+desktop inspector. Springs expose orientation and strength, monitors expose
+contents, and Sonic 2 floating platforms expose movement, shape/width and solidity.
+Each typed edit is one undo step. Inspection preserves every subtype bit, including
+unknown values. **Raw subtype** remains available for every object and preserves
+unsupported or unusual data. Flips and respawn tracking remain separate controls;
+changing a placement leaves the future-placement brush unchanged.
+
+In the HUD, press **F2** or choose **Object properties** from the editor menu or
+**Properties** from the selected object's tools wheel. Up/down chooses a field;
+left/right changes its value. East / Escape closes the list. Enums cycle through
+named choices; an imported unknown value is shown without changing it until edited.
+The [coverage inventory](../../status/editor-object-property-coverage.md) lists every
+numeric ID and identifies raw fallback. A named schema does not imply that a stock
+object is portable to a flat authored level.
+
 ## Properties and resizing
 
 Start X/Y and object/ring positions use their centers in level pixels. Bounds

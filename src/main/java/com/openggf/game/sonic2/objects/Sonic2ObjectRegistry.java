@@ -57,7 +57,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
-public class Sonic2ObjectRegistry extends AbstractObjectRegistry implements com.openggf.level.objects.MutatorPlacementClassifier {
+public class Sonic2ObjectRegistry extends AbstractObjectRegistry implements com.openggf.level.objects.MutatorPlacementClassifier , com.openggf.editor.properties.ObjectPropertyProvider {
+    @Override public com.openggf.editor.properties.ObjectPropertySchema objectProperties(int stockObjectId) {
+        return Sonic2ObjectProperties.schema(stockObjectId);
+    }
     @Override public java.util.Optional<String> editorPreviewArtKey(int objectId) {
         return switch(objectId) {
             case Sonic2ObjectIds.MONITOR -> java.util.Optional.of(com.openggf.level.objects.ObjectArtKeys.MONITOR);

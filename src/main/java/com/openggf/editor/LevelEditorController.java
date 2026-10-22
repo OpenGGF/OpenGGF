@@ -50,6 +50,7 @@ public final class LevelEditorController {
     private EditorSpawnFactory spawnFactory;
     private EditorPlacementIdAllocator placementIds;
     private ObjectSpawn selectedObjectSpawn;
+    private com.openggf.editor.properties.ObjectPropertyProvider propertyProvider;
     private RingSpawn selectedRingSpawn;
     private ObjectSpawn selectedRingBackingObject;
     private boolean collisionOverlayEnabled;
@@ -133,6 +134,7 @@ public final class LevelEditorController {
         activeLayer = 0;
         spawnEditMode = EditorSpawnEditMode.TILES;
         objectPalette = null;
+        propertyProvider = null;
         spawnFactory = null;
         placementIds = null;
         selectedObjectSpawn = null;
@@ -151,6 +153,7 @@ public final class LevelEditorController {
         MutableLevel attachedLevel = requireLevel();
         EditorStockObjectPalette previous=objectPalette;
         objectPalette = new EditorStockObjectPalette(registry, names);
+        propertyProvider = registry instanceof com.openggf.editor.properties.ObjectPropertyProvider provider ? provider : null;
         if(previous!=null) {
             if(previous.selectedIsKeyed()) {
                 try {objectPalette.setObjectKey(previous.selectedObjectKey());}catch(IllegalArgumentException missing){setStatus("Object brush dependency unavailable");}
@@ -296,6 +299,23 @@ public final class LevelEditorController {
                         .thenComparingInt(RingSpawn::placementId)).orElse(null);
     }
     public ObjectSpawn selectedObjectSpawn() {return selectedObjectSpawn;}
+    public com.openggf.editor.properties.ObjectPropertySchema selectedObjectProperties() {
+        return selectedObjectSpawn == null || propertyProvider == null
+                ? com.openggf.editor.properties.ObjectPropertySchema.FALLBACK : propertyProvider.objectProperties(selectedObjectSpawn);
+    }
+    public void setSelectedObjectProperty(String fieldId, int value) {
+        if (selectedObjectSpawn == null) { setStatus("Pick an object before changing its properties"); return; }
+        var field = selectedObjectProperties().editableFields().stream().filter(f -> f.id().equals(fieldId))
+                .findFirst().orElseThrow(() -> new IllegalArgumentException("Unknown object property: " + fieldId));
+        int subtype = field.encode(selectedObjectSpawn.subtype(), value);
+        if (subtype != selectedObjectSpawn.subtype()) editSelectedSpawnProperties(subtype, selectedObjectSpawn.renderFlags(), selectedObjectSpawn.respawnTracked());
+    }
+    public void stepSelectedObjectProperty(int fieldIndex, int delta) {
+        if (selectedObjectSpawn == null) return;
+        var fields = selectedObjectProperties().editableFields();
+        var field = fields.get(Math.floorMod(fieldIndex, fields.size()));
+        setSelectedObjectProperty(field.id(), field.decode(field.step(selectedObjectSpawn.subtype(), delta)));
+    }
     public RingSpawn selectedRingSpawn() {return selectedRingSpawn;}
     public void editSelectedSpawnProperties(int subtype,int flags,boolean respawn) {
         finishPendingEdits();

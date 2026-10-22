@@ -39,7 +39,10 @@ import java.util.Map;
  * Object registry for Sonic the Hedgehog 1.
  * Uses factory-based registration following the Sonic 2 pattern.
  */
-public class Sonic1ObjectRegistry extends AbstractObjectRegistry implements com.openggf.level.objects.MutatorPlacementClassifier {
+public class Sonic1ObjectRegistry extends AbstractObjectRegistry implements com.openggf.level.objects.MutatorPlacementClassifier , com.openggf.editor.properties.ObjectPropertyProvider {
+    @Override public com.openggf.editor.properties.ObjectPropertySchema objectProperties(int stockObjectId) {
+        return Sonic1ObjectProperties.schema(stockObjectId);
+    }
     @Override public java.util.Optional<String> editorPreviewArtKey(int objectId) {
         return switch(objectId) {
             case com.openggf.game.sonic1.constants.Sonic1ObjectIds.MONITOR -> java.util.Optional.of(com.openggf.level.objects.ObjectArtKeys.MONITOR);

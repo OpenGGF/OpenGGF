@@ -60,6 +60,7 @@ final class EditorHudPainter implements AutoCloseable {
             case LIBRARY -> library(c, layout, hud, level);
             case WHEEL -> wheel(c, layout, hud);
             case MENU -> menu(c, layout, hud);
+            case PROPERTIES -> properties(c, layout, hud);
             case NONE -> { }
         }
         hud.hits = List.copyOf(hits);
@@ -747,6 +748,24 @@ final class EditorHudPainter implements AutoCloseable {
     }
 
     // ------------------------------------------------------------------ menu
+
+    private void properties(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
+        var spawn = hud.controller().selectedObjectSpawn();
+        if (spawn == null) return;
+        var fields = hud.controller().selectedObjectProperties().editableFields();
+        float w = Math.min(500, layout.width() - 24), h = 64 + fields.size() * 24;
+        float x = (layout.width() - w) / 2, y = (layout.height() - h) / 2;
+        c.panel(x, y, w, h, PANEL, .99f);
+        c.text("Object properties", x + 12, y + 10, Size.BODY, TEXT, 1);
+        for (int i = 0; i < fields.size(); i++) {
+            var field = fields.get(i);
+            float rowY = y + 34 + i * 24;
+            if (i == hud.propertyIndex) c.rect(x + 6, rowY - 3, w - 12, 22, ACCENT_DARK, 1);
+            c.text(field.label(), x + 12, rowY, Size.BODY, TEXT, 1);
+            c.text("< " + field.display(spawn.subtype()) + " >", x + w * .46f, rowY, Size.BODY, ACCENT, 1);
+        }
+        c.text("Up/down: field     Left/right: value     Esc: close", x + 12, y + h - 20, Size.SMALL, TEXT_DIM, 1);
+    }
 
     private void menu(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
         dim(c, layout, .6f);

@@ -14,7 +14,7 @@ import java.util.Objects;
 
 /** Routes tagged mod spawns by namespaced key while leaving stock registry behavior untouched. */
 public final class ModDecoratedObjectRegistry implements ObjectRegistry, MutatorPlacementClassifier,
-        java.util.function.Supplier<Object>, com.openggf.level.objects.HostObjectKeyRegistry {
+        java.util.function.Supplier<Object>, com.openggf.level.objects.HostObjectKeyRegistry, com.openggf.editor.properties.ObjectPropertyProvider {
     private final ObjectRegistry base;
     private final ModObjectKeyRegistry modKeys;
     private final java.util.Map<String,String> previewArtKeys;
@@ -59,6 +59,11 @@ public final class ModDecoratedObjectRegistry implements ObjectRegistry, Mutator
         ObjectFactory factory = modKeys.requireFactory(owner, spawn.objectKey());
         if (boundary == null) return factory.create(spawn, this);
         return boundary.call(owner, () -> ownerLookup.remember(owner, factory.create(spawn, this)));
+    }
+
+    @Override public com.openggf.editor.properties.ObjectPropertySchema objectProperties(int stockObjectId) {
+        return base instanceof com.openggf.editor.properties.ObjectPropertyProvider provider
+                ? provider.objectProperties(stockObjectId) : com.openggf.editor.properties.ObjectPropertySchema.FALLBACK;
     }
 
     @Override public MonitorContent monitorContent(ObjectSpawn spawn) {
