@@ -1771,3 +1771,42 @@ proof.
 This partial route is independent of the longer failing methods, not Act2
 completion or HPZ/campaign/native pixel/clock/terrain-d1/positive-ring-handoff
 reset coverage.
+
+## Current Knuckles stair and lower-tube proposals — 2026-10-22
+
+Root continued the qualified 26,635-input first-door movie on reconciled
+`d454376ea23eaee513837214374be8df46dfb9ea`, then `fbeb962da` (only documentation
+and four unrelated comment changes). Six queued `GameplayInputBranchTool`
+requests tried 25 ordinary proposals, with normal drawing after every input.
+These are controller-authoring observations, **zero JUnit tests; skips N/A**.
+
+The first three requests died beside the oscillating blocks and stairs. An
+independent source review identified a fresh stair jump that the held-Right
+proposal had never tried. From the reached prefix26851, `35 R+A;48 R;35 R+A`
+clears that section: the fourth request reached X4250 alive. The fifth request
+jumped from actual grounded input27122 at4248/1836, entered the placed
+AutomaticTunnel path21 and reached X4784, then its lower west exit. Its selected
+complete partial movie ended29657 at4245/1868,14rings, alive and unhurt throughout
+that new tail. Holding Right subsequently re-entered the tube; this is not an
+attributed physics defect.
+
+The sixth request tested the actual west exit at input27274,4456/2287 with
+VX/G−3944. All five complete tails stayed alive and unhurt. Neutral coasting
+before Left reached X3923; continued Left settled near4162/2334. None reached the
+maintained middle endpoint6678/1132, upper endpoint or HPZ. Existing three long
+route negatives and all semantic/rewind assertions remain unchanged.
+
+Full 21-column prefixes were compared across every proposal in requests3–6.
+Their engine-owned exploration restores are not strict whole-registry/45-input
+certification or two fresh uninterrupted final-route replays. The source-supported
+full-solid squash path is only a possible explanation for the early deaths:
+actual side/bottom contact owner and platform Y were not retained. Empty
+standing/riding columns do not exclude those contacts. No native trajectory,
+terrain descriptor, pixel, positive-ring handoff or full-act claim follows.
+
+Useful proposal scripts/BK2 and reproducible launchers remain under
+`$TASK_ARTIFACT_ROOT/lrz-current-completion-20261022/`.
+Consumed CSV/PNG/log/temp outputs were removed from the owned target namespaces;
+compiled output and foreign native/ROM/configuration files were preserved. See
+the [dated plan](../../plans/2026-10-13-s3k-playable-completion.md#current-lrz-stair-and-tube-authoring--2026-10-22)
+for commands, measured intervals and remaining coverage.

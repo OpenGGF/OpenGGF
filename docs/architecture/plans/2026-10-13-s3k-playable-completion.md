@@ -30086,3 +30086,54 @@ gun `loc_916EE` through `loc_91750` to `198704-198738`, and shot `loc_91756`
 through `loc_917B4` to `198741-198776`. These four same-line comment changes
 leave executable code and all route/test inputs unchanged. The earlier broad
 citation-warning totals remain historical and are not relabelled as a clean audit.
+
+### Current LRZ stair and tube authoring — 2026-10-22
+
+Root's prepared integration worktree executed six separate queued ordinary
+controller requests, one session/observer each. Request1 used executable
+`d454376ea`; requests2–6 used `fbeb962da`, with unchanged executable route owners.
+The original first-door BK2 remains byte-exact; no maintained test, oracle or
+runtime source was changed. The [Act2 matrix](../validation/levels/s3k-lrz-act2.md#current-knuckles-stair-and-lower-tube-proposals--2026-10-22)
+records the actual stair hop and lower-tube frontier. These requests run zero
+JUnit tests, so test skips are N/A.
+
+| Request | Cold prefix inputs | Ordinary proposals | Maven reported | Queue wait | Java exploration interval |
+| --- | ---: | ---: | --- | ---: | ---: |
+| 1 | 26635 | 3 | 1:11 min | 12s | 20.287s |
+| 2 | 26746 | 3 | 1:17 min | 0s | 19.918s |
+| 3 | 26851 | 4 | 26.930s | 15s | 25.767s |
+| 4 | 26934 | 5 | 26.166s | 9s | 25.125s |
+| 5 | 27123 | 5 | 30.449s | 0s | 29.312s |
+| 6 | 27275 | 5 | 28.118s | 0s | 27.007s |
+
+Intervals overlap other workers; their sum is not elapsed delivery time.
+The queue's 900-second estimate is not measured runtime. Parent/compiler time
+was not measured separately. Each command used Java25, null audio and explicit
+surfaceless EGL, with no ambient display or injected gameplay state:
+
+```bash
+env -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS \
+  -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null \
+  python3 "$MAIN_WORKSPACE/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl compile exec:exec \
+  -Dexec.executable=/usr/bin/python3 -Dexec.classpathScope=runtime \
+  "-Dexec.args=$TASK_ARTIFACT_ROOT/lrz-current-completion-20261022/launch-r6.py %classpath" -B
+```
+
+Earlier calls used `launch.py`, then `launch-r2.py` through `launch-r5.py` in
+the same owned task directory. The variables denote the original absolute main
+checkout, external task directory and verified original ROM location. Launchers
+pin `$S3K_ROM`, the cold inlet and full ordinary
+controller prefix. Selected prefixes never include a previous proposal's death.
+Full actual CSV tails, boss/contact projections, normal-drawn sampled PNGs and
+terminal logs were read before consuming the owned raw namespaces. Useful
+controller proposals remain external; no log archive or validation receipt was
+created. One preparation accidentally invoked a Python helper as shell: its
+owned processes were stopped before any file/registry/gameplay mutation, then
+the same preparation ran correctly; no gameplay request was repeated.
+
+No long-route, whole-registry, native contact/cause or Main-integration
+qualification follows. MHZ's independently proven glide collision correction
+is in a separate worker tree and was not silently adopted. Resuming LRZ after
+that correction must identify the new source epoch and check its actual prefix.
