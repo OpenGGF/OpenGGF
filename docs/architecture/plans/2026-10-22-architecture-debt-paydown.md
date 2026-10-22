@@ -278,6 +278,51 @@ request alive; after results, attribute disputed failures with matched narrow
 baseline/current identities and fix only introduced regressions. No unchanged
 baseline/development/integrated broad repetition is planned.
 
+The first combined run at `d8424987434505b4b17e393af6f7dfdbcc99fefa`
+was deliberately superseded after 52 of 72 ordinary batches: 21,158 tests,
+two failures, zero errors and 84 skips. It is incomplete evidence, not a smoke
+pass; guards had not started. Preparation took 84.67 seconds and the completed
+ordinary batches used 1,951.16 seconds of execution. Admission waiting is
+additional; total queue time is not established here.
+
+The scene-act failure reproduced at the original assertion: mode entry replaces
+a context-installed observer when it installs its history reporter. Test-only
+correction `09514d823a411c0d30b4ec64cce7c576764a37a7` observes through the
+loop, preserves the original exit assertion, and adds a production-reporter
+scenario proving real owned history, retirement on scene return and rejection of
+retained playback handles. Four affected scene/course restore cases passed with
+zero failures/errors/skips. No production admission behavior was weakened.
+
+`TestHczMinibossNativeRendering#allOrbitPhasesMatchRomSpriteCompositionInNativePixels`
+failed at line 53 because direct GLFW initialization requires a display. The
+unchanged test reproduced the identical assertion on both pinned `23a18e2a2`
+and candidate `d84249874`, each one test/one failure/zero errors/skips under the
+same display-unset EGL environment and verified original ROMs. Neither reached
+pixel verification. This is an inherited coverage limitation, not a pixel pass.
+All 84 recorded skip reasons were inspected with no omitted cases: opt-in
+diagnostics, unavailable graphics prerequisites, inapplicable route cases and
+absent optional Second Strike JAR fixtures. No original-ROM skip was present.
+Consumed category diagnostics were acknowledged and deleted.
+
+The reason to stop this task-owned run was materially changed destination source,
+not admission delay. `develop` first advanced to `1c7e412f4` with ghost-label and
+promo changes, then to `21340080222077c92ebe868eb97979e4e232ed1e` with 114
+additional object/render/index, rewind-comparison and policy files. In particular,
+upstream added a shared primary-record declaration probe and edits to both hooks,
+overlapping this campaign's private-ownership correction. Finishing the old
+source's remaining batches would not validate this reconciled candidate.
+
+An isolated integration lead composed `09514d823` at `49a40158` and is now
+reconciling immutable upstream `213400802`. Preserve the upstream record probe
+and this campaign's fallback ownership/enum/default handling. Reproduce the
+public-record/nested-annotation array-default interaction before correcting it;
+preserve record private-array and executable-body exclusion. Focused hosted-run,
+ghost, owned-rewind, native-object-index and snapshot checks plus structural,
+signature, hook and Python release-policy checks precede the new combined run.
+The coordinator will inspect the actual updated selection and validate the
+changed candidate. This is a source change requiring new coverage, not repeated
+unchanged baseline/development/integrated ceremony.
+
 The coordinator's actual launch-environment preflight passed with no tests:
 
 ```bash
@@ -290,9 +335,11 @@ original ROM identities. No ROM links/copies were made. Required graphics flags
 will be retained; launcher notices and reused-JVM property changes remain the
 documented attribution hazards rather than reasons to strip those flags.
 
-Main remains `develop` at the pinned base; no integration push has occurred.
-Coordinator hooks are installed. The registry under
-`~/.local/state/temporary-agents/` owns task IDs, workspaces and expiry. Next:
-inspect completed lane diffs, compose and review, then inspect the actual
-combined category selection before running it. No live Maven job belongs to
-the coordinator; no combined suite has run.
+Main remains on `develop`, now at observed upstream `213400802`; no campaign
+integration push has occurred. Coordinator hooks are installed. The registry
+under `~/.local/state/temporary-agents/` owns exact task IDs, workspaces, tested
+source, job handles and expiry. Next: inspect the reconciled integration handoff,
+compose it and inspect the new combined category selection. The superseded
+coordinator job is closed and its diagnostics acknowledged; the integration
+lead owns only its focused work in a separate checkout. No complete combined
+smoke/guard pass has been claimed.
