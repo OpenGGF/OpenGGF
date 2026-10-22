@@ -58,5 +58,17 @@ public enum GameMode {
     BONUS_STAGE,
 
     /** A full-screen mod scene ({@code com.openggf.mods.scene.ModScene}) drawn on a scene canvas. */
-    MOD_SCENE
+    MOD_SCENE,
+
+    /** Native retail options and sound-test screen. */
+    OPTIONS,
+
+    /** Native competition mode, arena and participant selection. */
+    COMPETITION_MENU,
+
+    /** Native competition gameplay with independently controlled participants and views. */
+    COMPETITION,
+
+    /** Native competition act, arena, series or record results. */
+    COMPETITION_RESULTS
 }

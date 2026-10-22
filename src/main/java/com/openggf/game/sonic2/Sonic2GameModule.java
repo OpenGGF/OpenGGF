@@ -106,6 +106,8 @@ public class Sonic2GameModule implements GameModule {
             levelEventManager, playerArtModeAuthority, levelMusicScheduler);
     private final TitleCardManager titleCardProvider = new TitleCardManager();
     private final TitleScreenManager titleScreenProvider = new TitleScreenManager();
+    private final com.openggf.game.sonic2.options.Sonic2NativeModeProvider nativeModes =
+            new com.openggf.game.sonic2.options.Sonic2NativeModeProvider();
     private final LevelSelectManager levelSelectProvider = new LevelSelectManager();
     private final S2DataSelectProfile dataSelectHostProfile = new S2DataSelectProfile(this::getZoneRegistry);
     private final CrossGameDonorProvider donorProvider = new Sonic2CrossGameDonorProvider();
@@ -327,6 +329,8 @@ public class Sonic2GameModule implements GameModule {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.nativemenu.NativeTitleModeProvider.class
+                || type == com.openggf.game.sonic2.options.Sonic2NativeModeProvider.class) return type.cast(nativeModes);
         if (type == com.openggf.level.render.ZonePictureSource.Factory.class) {
             // Public ZoneRegistry zone 1 / act 0 is CPZ1. Level index 2 resolves ROM zone $0D.
             return (T) (com.openggf.level.render.ZonePictureSource.Factory) rom ->
@@ -400,6 +404,7 @@ public class Sonic2GameModule implements GameModule {
 
     @Override
     public TitleScreenProvider getTitleScreenProvider() {
+        titleScreenProvider.setNativeMenuAvailability(nativeModes.competitionScreen() != null);
         return titleScreenProvider;
     }
 

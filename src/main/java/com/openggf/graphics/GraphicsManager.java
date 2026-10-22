@@ -152,6 +152,8 @@ public class GraphicsManager {
 	private float ghostRenderAlpha = 1.0f;
 	private boolean spriteSatCollectionActive = false;
 	private boolean spriteMaskRequested = false;
+	private SpriteSatMaskPostProcessor.Raster spriteSatRaster;
+	private List<SpriteSatEntry> spriteSatFragments;
 	private final List<SpriteSatEntry> spriteSatEntries = new ArrayList<>();
 	// Reusable buffers/scratch for endSpriteSatCollectionAndReplay() — avoids per-frame
 	// ArrayList and PatternDesc allocations on the SAT replay hot path.
@@ -2241,6 +2243,7 @@ public class GraphicsManager {
 		spriteMaskRequested = false;
 		satReplayBatchOpen = false;
 		spriteSatEntries.clear();
+		spriteSatFragments = null;
 		currentSpriteSatDebugSource = null;
 		spritePresentationSubject = SpritePresentation.Subject.WORLD;
         objectHeadFragmentBanks.reset();
@@ -2404,14 +2407,26 @@ public class GraphicsManager {
 		spriteSatCollectionActive = false;
 		spriteMaskRequested = false;
 		spriteSatEntries.clear();
+		spriteSatFragments = null;
 		currentSpriteSatDebugSource = null;
 		currentSpriteSatBucket = RenderPriority.MIN;
 	}
 
 	public void beginSpriteSatCollection() {
+		int rasterWidth = getProjectionWidth();
+		int rasterHeight = getConfiguredScreenHeightPx();
+		int rasterX = spritePresentationBuilder != null ? spritePresentationBuilder.cameraX : getCamera().getXWithShake();
+		int rasterY = spritePresentationBuilder != null ? spritePresentationBuilder.cameraY : getCamera().getYWithShake();
+		beginSpriteSatCollection(SpriteSatMaskPostProcessor.Raster.extended(rasterX, rasterY, rasterWidth, rasterHeight));
+	}
+
+	/** Explicit native inner raster, e.g. fixed H32 inside a wider special-stage presentation. */
+	void beginSpriteSatCollection(SpriteSatMaskPostProcessor.Raster raster) {
+		spriteSatRaster = java.util.Objects.requireNonNull(raster, "SAT raster");
 		spriteSatCollectionActive = true;
 		spriteMaskRequested = false;
 		spriteSatEntries.clear();
+		spriteSatFragments = null;
 		currentSpriteSatDebugSource = null;
 		currentSpriteSatBucket = RenderPriority.MIN;
 	}
@@ -2455,9 +2470,30 @@ public class GraphicsManager {
 				? piece
 				: piece.withDebugSource(presentationSource);
 		SpriteSatEntry entry = SpriteSatEntry.fromPreparedPiece(taggedPiece, currentSpriteSatBucket);
-		spriteSatEntries.add(spritePresentationSubject == SpritePresentation.Subject.WORLD
+		(spriteSatFragments == null ? spriteSatEntries : spriteSatFragments).add(
+                spritePresentationSubject == SpritePresentation.Subject.WORLD
 				? entry : entry.withPresentationSubject(spritePresentationSubject));
 	}
+
+    /**
+     * Admit native geometry once while retaining scattered resident art as immutable
+     * fragments. Used by the HUD: its native SAT pieces include several digits, whose
+     * engine pattern addresses need not be contiguous. The producer submits prepared
+     * pieces, never direct GL commands. Geometry with no art still consumes its budget.
+     */
+    void submitSpriteSatGroups(List<SpriteSatEntry> geometry, Runnable producer) {
+        if (!spriteSatCollectionActive || spriteSatFragments != null) {
+            throw new IllegalStateException("SAT groups require an active, unnested collection");
+        }
+        var fragments = new ArrayList<SpriteSatEntry>();
+        spriteSatFragments = fragments;
+        try { producer.run(); }
+        finally { spriteSatFragments = null; }
+        List<SpriteSatEntry> frozen = List.copyOf(fragments);
+        for (SpriteSatEntry group : geometry) {
+            spriteSatEntries.add(group.withReplayFragments(frozen));
+        }
+    }
 
 	public void endSpriteSatCollectionAndReplay() {
 		if (!spriteSatCollectionActive) {
@@ -2466,13 +2502,11 @@ public class GraphicsManager {
 
 		boolean applyMask = spriteMaskRequested;
 
-		// processReusable(...) never retains the input reference: with masking on it
-		// reuses thread-owned scratch; with masking off it returns
-		// `spriteSatEntries` itself (no defensive copy). The replay below consumes
-		// the processed list synchronously, so the live buffer is cleared in the
-		// finally block only after the replay finished with it.
-		// Lower SAT indices win overlap: mask in native order, replay in reverse painter order.
-		List<SpriteSatEntry> processedEntries = SpriteSatMaskPostProcessor.processReusable(spriteSatEntries, applyMask);
+		// Evaluation always runs, including zones without S3K's marker rewrite.
+		// Use logical display dimensions: a wide trace can retain a native-width camera.
+		// Results are thread-owned scratch, consumed synchronously before collection clears.
+		List<SpriteSatEntry> processedEntries = SpriteSatMaskPostProcessor.processReusable(
+                spriteSatEntries, applyMask, spriteSatRaster);
 
 		spriteSatCollectionActive = false;
 		spriteMaskRequested = false;

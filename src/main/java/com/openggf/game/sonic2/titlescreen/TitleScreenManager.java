@@ -17,7 +17,11 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteFramePiece;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpritePieceRenderer;
+import com.openggf.level.render.SpriteMappingPiece;
+import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -112,6 +116,20 @@ public class TitleScreenManager implements TitleScreenProvider {
     private List<SpriteMappingFrame> titleMappingFrames;
     private boolean spritesInitialized = false;
     private boolean titlePlcPending;
+    private boolean competitionMenuReady;
+    private int titleSelection;
+    private TitleScreenAction exitAction = TitleScreenAction.OTHER;
+
+    /** Parent activates the retail three-selection menu only after competition is playable. */
+    public void setNativeMenuAvailability(boolean competitionReady) {
+        competitionMenuReady = competitionReady;
+        if (!competitionReady && titleSelection == 1) {
+            titleSelection = 0;
+        }
+    }
+
+    /** Retail Title_screen_option: 0=one player, 1=competition, 2=options. */
+    public int getNativeMenuSelection() { return titleSelection; }
 
     // --- Intro animation state ---
     private boolean introComplete = false;
@@ -335,6 +353,12 @@ public class TitleScreenManager implements TitleScreenProvider {
         rippleIndex = 0;
         starCycleIndex = 0;
         spritesInitialized = false;
+        // Obj0F_Init (s2.asm:27194-27202) discards a retained OPTIONS selection.
+        titleSelection &= 1;
+        if (!competitionMenuReady) {
+            titleSelection = 0;
+        }
+        exitAction = TitleScreenAction.OTHER;
 
         // Reset all animated sprites
         sonicSprite.reset();
@@ -487,11 +511,15 @@ public class TitleScreenManager implements TitleScreenProvider {
     }
 
     /**
-     * Keyboard Jump press or gamepad confirm (Start / any face action button),
-     * matching {@link com.openggf.game.MasterTitleScreen}'s gamepad-aware confirm gate.
+     * Preserve the host's introductory text/SEGA shortcut. Obj0F uses nativeStartPressed instead.
      */
     private static boolean confirmPressed(InputHandler input, int jumpKey) {
-        return input.isKeyPressed(jumpKey) || input.logical().menuAccept();
+        return input.isKeyPressed(jumpKey) || input.logical().menuAccept()
+                || input.logical().player2().startPressed();
+    }
+
+    private static boolean nativeStartPressed(InputHandler input) {
+        return input.logical().player1().startPressed() || input.logical().player2().startPressed();
     }
 
     private void skipIntroText() {
@@ -580,15 +608,42 @@ public class TitleScreenManager implements TitleScreenProvider {
         cameraX++;
         frameCounter++;
 
+        boolean skippedIntro = !introComplete && nativeStartPressed(input);
         updateIntroAnimation(input);
 
-        // Check for jump/start press to exit (only after intro completes)
+        // Obj0F is spawned only once the intro completes. The Start edge that skips the
+        // intro cannot also launch a game in this host iteration.
         if (introComplete) {
-            int jumpKey = configuration().getInt(SonicConfiguration.JUMP);
-            if (confirmPressed(input, jumpKey)) {
+            updateMenuSelection(input.logical());
+            if (!skippedIntro && nativeStartPressed(input)) {
+                exitAction = switch (titleSelection) {
+                    case 0 -> TitleScreenAction.ONE_PLAYER;
+                    case 1 -> TitleScreenAction.TWO_PLAYER;
+                    default -> TitleScreenAction.OPTIONS;
+                };
                 state = State.EXITING;
                 LOGGER.info("Title screen exiting");
             }
+        }
+    }
+
+    /** Obj0F_Main (s2.asm:27205-27235), both pad press bytes ORed before ordered tests. */
+    private void updateMenuSelection(LogicalInputSnapshot input) {
+        int pressed = input.player1().pressedMask() | input.player2().pressedMask();
+        if ((pressed & AbstractPlayableSprite.INPUT_UP) != 0) {
+            titleSelection = Math.floorMod(titleSelection - 1, 3);
+            if (!competitionMenuReady && titleSelection == 1) {
+                titleSelection = 0;
+            }
+        }
+        if ((pressed & AbstractPlayableSprite.INPUT_DOWN) != 0) {
+            titleSelection = (titleSelection + 1) % 3;
+            if (!competitionMenuReady && titleSelection == 1) {
+                titleSelection = 2;
+            }
+        }
+        if ((pressed & (AbstractPlayableSprite.INPUT_UP | AbstractPlayableSprite.INPUT_DOWN)) != 0) {
+            GameServices.audio().playSfx(Sonic2Sfx.BLIP.id);
         }
     }
 
@@ -598,8 +653,7 @@ public class TitleScreenManager implements TitleScreenProvider {
     private void updateIntroAnimation(InputHandler input) {
         // Check for skip (Start pressed before frame 288)
         if (!introComplete) {
-            int jumpKey = configuration().getInt(SonicConfiguration.JUMP);
-            if (confirmPressed(input, jumpKey)) {
+            if (nativeStartPressed(input)) {
                 skipToFinalState();
                 return;
             }
@@ -1104,6 +1158,9 @@ public class TitleScreenManager implements TitleScreenProvider {
         gm.flushPatternBatch();
 
         // Global fade overlay (for FADE_IN state at startup)
+        if (introComplete) {
+            drawNativeMenu(gm);
+        }
         if (state == State.FADE_IN) {
             float fadeAmount = 1.0f - (float) fadeTimer / FADE_DURATION;
             if (fadeAmount > 0.0f) {
@@ -1116,6 +1173,54 @@ public class TitleScreenManager implements TitleScreenProvider {
                 ));
             }
         }
+    }
+
+    /** Full native frames when enabled; otherwise show only the two supported destinations. */
+    List<SpriteMappingPiece> nativeMenuPieces() {
+        List<SpriteMappingFrame> frames = dataLoader.getMenuMappingFrames();
+        if (frames == null || frames.size() != 3) {
+            return List.of();
+        }
+        if (competitionMenuReady) {
+            return frames.get(titleSelection).pieces();
+        }
+        List<SpriteMappingPiece> pieces = new ArrayList<>();
+        // Retain native ONE PLAYER art and move the ROM OPTIONS/arrow to the second row.
+        // No TWO PLAYER text is advertised until the parent enables its actual product.
+        for (SpriteMappingPiece piece : frames.get(0).pieces()) {
+            if (piece.yOffset() == -12 && piece.tileIndex() != 0x3FA) {
+                pieces.add(menuPiece(piece, piece.yOffset(), titleSelection == 0 ? 3 : 0));
+            }
+        }
+        for (SpriteMappingPiece piece : frames.get(2).pieces()) {
+            if (piece.tileIndex() != 0x3FA) {
+                pieces.add(menuPiece(piece, 4, titleSelection == 2 ? 3 : 0));
+            }
+        }
+        SpriteMappingPiece arrow = frames.get(2).pieces().getLast();
+        pieces.add(menuPiece(arrow, titleSelection == 0 ? -12 : 4, 3));
+        return pieces;
+    }
+
+    private static SpriteMappingPiece menuPiece(SpriteMappingPiece source, int y, int palette) {
+        return new SpriteMappingPiece(source.xOffset(), y, source.widthTiles(), source.heightTiles(),
+                source.tileIndex(), source.hFlip(), source.vFlip(), palette, source.priority());
+    }
+
+    void drawNativeMenu(GraphicsManager gm) {
+        List<SpriteMappingPiece> pieces = nativeMenuPieces();
+        gm.beginPatternBatch();
+        // Native SAT ownership is first-piece-first; reverse for painter submission.
+        for (int i = pieces.size() - 1; i >= 0; i--) {
+            SpriteMappingPiece piece = pieces.get(i);
+            SpritePieceRenderer.renderPiece(piece, xOffset() + 168, 204, 0, -1, false, false,
+                    (tile, hFlip, vFlip, palette, x, y) -> {
+                        reusableDesc.set(tile | (palette << 13) | (hFlip ? 0x800 : 0)
+                                | (vFlip ? 0x1000 : 0) | (piece.priority() ? 0x8000 : 0));
+                        gm.renderPatternWithId(TitleScreenDataLoader.PATTERN_BASE + tile, reusableDesc, x, y);
+                    });
+        }
+        gm.flushPatternBatch();
     }
 
     private void drawSegaLogo(GraphicsManager gm) {
@@ -1819,6 +1924,7 @@ public class TitleScreenManager implements TitleScreenProvider {
         musicPlaying = false;
         sonicPaletteLoaded = false;
         spritesInitialized = false;
+        exitAction = TitleScreenAction.OTHER;
         LOGGER.info("Title screen reset to inactive");
     }
 
@@ -1839,7 +1945,9 @@ public class TitleScreenManager implements TitleScreenProvider {
 
     @Override
     public TitleScreenAction consumeExitAction() {
-        return TitleScreenAction.ONE_PLAYER;
+        TitleScreenAction action = exitAction;
+        exitAction = TitleScreenAction.OTHER;
+        return action;
     }
 
     /**

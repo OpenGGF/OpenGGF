@@ -530,12 +530,13 @@ human P2 can use it in the native competition mode.
 
 ### Engine Implementation
 
-S2 has no competition session or human-P2 playable slot. The generic
-`TitleActionRoute.TWO_PLAYER` token is not a capability owner: the shared title
-router rejects that unsupported action, reinitializes the existing title provider
-and remains in `TITLE_SCREEN` without loading an ordinary level. Stock S2's
-title currently emits only `ONE_PLAYER`; S3K and creator providers can emit the
-generic two-player action. `GameplayTeamBootstrap`
+S2 has no connected competition world or human-P2 playable slot. The generic
+`TitleActionRoute.TWO_PLAYER` token is not a capability owner: absent a native
+competition provider, the shared title router reinitializes the title and remains
+in `TITLE_SCREEN` without loading an ordinary level. Stock S2 exposes its ROM
+one-player and options rows while that capability remains unavailable. The
+options screen selects the exact campaign team in a fresh no-save world and
+retains emerald progress on its direct level exit. `GameplayTeamBootstrap`
 constructs every configured secondary as a CPU sidekick, controller-2 bindings
 feed that sidekick's manual-input path, and
 `ObjectPlayerQuery.nativeP2OrNull()` names the first sidekick rather than a

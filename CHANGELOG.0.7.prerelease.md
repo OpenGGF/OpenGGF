@@ -231,6 +231,13 @@ Unreleased. The earlier development themes remain in
   digits use the original mapping positions and trailing zero, and overlapping
   labels and sphere icons follow the console's sprite priority.
 
+- **S2 retail options:** The title opens the original ROM options screen, with
+  Sonic and Tails, Sonic alone, or Tails alone; the two-player item setting;
+  and the native sound test. Both controllers can operate the menu. Direct
+  options launches retain emerald progress, while returning through the title
+  starts a new game with the selected team. Competition stays unavailable until
+  its complete native session is connected.
+
 - **S3K SEGA screen:** The title opens as the ROM's does: 22 frames of fade to
   black, then the SEGA logo fades in over 22 frames in the console's own palette
   steps, and the chant starts as the fade ends. Pressing Start during the logo
