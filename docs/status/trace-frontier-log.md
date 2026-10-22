@@ -113217,3 +113217,28 @@ terminal LEVEL/TITLE_SCREEN. Its terminal-mode assertion prevented the terminal
 art-ledger comparison; four reported axes are not a completeness claim. The
 complete native242 candidate remains uncommitted pending actual whole-chain
 qualification with the late FZ input and consumed-fade fixes.
+
+
+## 2026-10-22 - Bounded S3K attracted-ring native-slot qualification
+
+- Isolated `bugfix/ai-gap-sprite-limits-20261022`, repaired candidate over
+  `323239a13`: native reserved rings continue through P1 death, and converted
+  bouncers retain the frame copied at their own SST dispatch before late global
+  spin. Ordinary legacy spill presentation remains outside this native claim.
+- Exact movie selector:
+  `TestS3kAttractedRingMoviePhase#standaloneMgzAttractionThroughSlotDeletion+completeMovieMgzAttractionThroughSlotDeletion`.
+  Queued Java25/EGL focused command 36034 also selected
+  `TestRingNativeSlotDispatch,TestLostRingRenderState,TestNativeSpriteSatGameplay,TestGraphicsProjectionScope,TestRenderProjection,TestModApiSignatureSurface`:
+  48 tests / 0 failures / 0 errors / 0 skips, including both movie methods.
+  Environment and exact Maven arguments are in the
+  [native SAT evidence](../architecture/designs/2026-10-22-native-sprite-scanline-budgets.md#ring-repair-and-two-movie-qualification).
+- Actual standalone MGZ rows0–650 (BK2 offset2602) and independent complete-movie
+  MGZ rows0–500 (offset58653) acquire LIGHTNING naturally and exercise reserved
+  ring flight, queue admission, GiveRing/award, sparkle deletion and registered
+  restore/forward. ROM entry and BK2 inputs own gameplay; comparison rows supply
+  expectations and the restricted hardware timing/input contract only.
+- No full-trace frontier moves or whole-act/campaign parity claim. There is no
+  failing checkpoint/first-error field in these bounded tests. Earlier 2/2 movie
+  evidence on `323239a13` did not cover the independently found dead-player and
+  late-spin defects; separate branch regressions now cover them. Fresh guards
+  remain a separate delivery obligation.

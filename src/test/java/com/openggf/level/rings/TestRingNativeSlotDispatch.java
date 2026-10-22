@@ -6,6 +6,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.ShieldType;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rewind.RewindRegistry;
+import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.rewind.snapshot.RingSnapshot;
 import com.openggf.graphics.*;
 import com.openggf.level.LevelManager;
@@ -64,6 +65,51 @@ class TestRingNativeSlotDispatch {
     }
 
     @AfterEach void cleanup() { TestEnvironment.resetAll(); }
+
+    @Test void deadPlayerStillAllowsFlyingAndSparklingNativeSlotsToExecuteAndRewind() {
+        restoreRings(attracted(0, 6, 144, false, 0, 0, 0),
+                attracted(1, 9, 160, true, 6, 0, 3));
+        player.setDead(true);
+        RewindRegistry registry = new RewindRegistry();
+        registry.register(objects.rewindSnapshottable());
+        registry.register(rings);
+        registerRewind(objects, registry);
+        var before = registry.capture();
+
+        step();
+        var moved = rings.capture().attractedRings();
+        assertEquals(-0xC0, moved[0].xVel(), "loc_1A88C moves toward P1 even while P1 is dead");
+        assertEquals(143, moved[0].x());
+        assertEquals(4, moved[1].sparkleAnimationFrame(), "$FC still executes in the dead-player pass");
+        assertEquals(List.of(new Admission(6, 2), new Admission(9, 1)), admissions(objects));
+        var firstPicture = draw();
+        assertEquals(2, firstPicture.tiles().size());
+
+        nextClock(); step();
+        var forward = registry.capture();
+        var forwardRings = rings.capture().attractedRings();
+        var forwardCalls = admissions(objects);
+        var forwardPicture = draw();
+        assertEquals(1, forwardRings.length, "loc_1A934 deletes on the following actual SST invocation");
+        assertEquals(1, objects.getAllocatedSlotCount());
+        assertEquals(List.of(new Admission(6, 2)), forwardCalls);
+        assertEquals(1, forwardPicture.tiles().size());
+
+        registry.restore(before);
+        levelClock.set(100);
+        step();
+        assertArrayEquals(moved, rings.capture().attractedRings());
+        assertEquals(firstPicture, draw());
+        nextClock(); step();
+        assertArrayEquals(forwardRings, rings.capture().attractedRings());
+        assertEquals(forwardCalls, admissions(objects));
+        assertEquals(forwardPicture, draw());
+        var replayed = registry.capture();
+        for (String key : List.of("rings", "object-manager", REWIND_KEY)) {
+            var differences = RewindSnapshotDiff.diffKey(key, forward.get(key), replayed.get(key));
+            assertTrue(differences.isEmpty(), key + ": " + differences);
+        }
+    }
 
     @Test void actualSlotTargetsAndLateClockSuppressExactlyOneFallbackStep() {
         restoreRings(attracted(0, 6, 128, false, 0, 0, 0),
@@ -352,6 +398,57 @@ class TestRingNativeSlotDispatch {
         assertEquals(2, converted.getPriorityBucket(), "touch alone does not execute GiveRing");
         nextClock(); step();
         assertEquals(1, converted.getPriorityBucket());
+    }
+
+    @Test void convertedBouncerLatchesMappingBeforeLateGlobalSpinAndRestoresItsDisplayedFrame() {
+        restoreRings(attracted(0, 6, 144, false, 0, 0, 0));
+        player.giveShield(ShieldType.FIRE);
+        step();
+        assertEquals(List.of(BASE + 1), draw().tiles().stream().map(SpritePresentation.Tile::patternId).toList(),
+                "the code-pointer conversion still displays its own attracted spin");
+        var animation = rings.getSpillAnimationState();
+        animation.restore(new int[]{255, 0x501, 2});
+        nextClock(); step(); // loc_1A75C copies frame2 into this SST before MoveSprite2
+        rings.updateLostRingPhysics(102); // LevelLoop ChangeRingFrame then changes GLOBAL frame2 ->3
+        assertArrayEquals(new int[]{254, 0x600, 3}, animation.snapshot());
+        for (int pausedDraw = 0; pausedDraw < 3; pausedDraw++) {
+            assertEquals(List.of(BASE + 2), draw().tiles().stream().map(SpritePresentation.Tile::patternId).toList(),
+                    "BuildSprites reads this SST's mapping word, not the newer global frame");
+        }
+        // Advance the global owner to frame0 without another execution of this
+        // ring. This makes the captured SST frame differ from the captured global.
+        for (int tick = 0; tick < 3; tick++) rings.updateLostRingPhysics(102 + tick);
+        assertEquals(0, animation.frame());
+        assertEquals(List.of(BASE + 2), draw().tiles().stream().map(SpritePresentation.Tile::patternId).toList());
+
+        RewindRegistry registry = new RewindRegistry();
+        registry.register(objects.rewindSnapshottable());
+        registry.register(rings);
+        registerRewind(objects, registry);
+        var displayed = registry.capture();
+        var displayedPicture = draw();
+        var original = objects.activeObjectsOfType(LostRingObjectInstance.class).getFirst();
+        nextClock(); step(); // next genuine bouncer invocation latches the CURRENT frame0
+        rings.updateLostRingPhysics(103);
+        var forward = registry.capture();
+        var forwardPicture = draw();
+        assertEquals(List.of(BASE), forwardPicture.tiles().stream().map(SpritePresentation.Tile::patternId).toList());
+        objects.setRewindInPlaceRestoreEnabledForTest(false);
+        registry.restore(displayed);
+        levelClock.set(101);
+        var restored = objects.activeObjectsOfType(LostRingObjectInstance.class).getFirst();
+        assertNotSame(original, restored);
+        assertEquals(2, restored.getPriorityBucket());
+        assertEquals(0, animation.frame());
+        assertEquals(displayedPicture, draw(), "generic capture retains the copied per-SST mapping scalar");
+        nextClock(); step();
+        rings.updateLostRingPhysics(103);
+        assertEquals(forwardPicture, draw());
+        var replayed = registry.capture();
+        for (String key : List.of("rings", "object-manager", REWIND_KEY)) {
+            var differences = RewindSnapshotDiff.diffKey(key, forward.get(key), replayed.get(key));
+            assertTrue(differences.isEmpty(), key + ": " + differences);
+        }
     }
 
     @Test void queuedRingUsesRealReplacementAndResetRebindsFreshStateWithoutReleasingItsSlot() {

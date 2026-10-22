@@ -32,9 +32,10 @@ import java.util.List;
  * s2.asm Obj37 RLoss_Move): each frame {@code xSubpixel += xVel; ySubpixel += yVel;
  * yVel += gravity}, then a per-game-cadence floor/ceiling probe (Stage 5).
  * <p>
- * The decelerating spin animation is NOT per-ring — it lives in the shared
- * {@link SpillAnimationState} owner; the displayed mapping frame is
- * {@code sharedSpillAnimFrame + phaseOffset}.
+ * The decelerating spin animation is NOT per-ring -- it lives in the shared
+ * {@link SpillAnimationState} owner. Ordinary legacy rings display
+ * {@code sharedSpillAnimFrame + phaseOffset}; native converted SSTs copy the
+ * shared frame when their own movement routine executes.
  * <p>
  * Collision flags are {@code 0x47} (category $40 SPECIAL + size index $07) while
  * uncollected, mirroring {@code Sonic1RingInstance.java:167}. The
@@ -78,6 +79,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     private int independentInitialLifetime;
     private int pickupDelayTicks;
     private int displayPriorityBucket = 3;
+    // Native mapping word: conversion retains it, then each routine2 dispatch copies the global.
     private int retainedMappingFrame = -1;
     private boolean retainedArtPriority;
     private boolean hasRetainedArtPriority;
@@ -400,9 +402,22 @@ public class LostRingObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // loc_1A75C writes Ring_spill_anim_frame only when routine2 actually
-        // executes. Drawing or pausing never consumes the conversion mapping.
-        if (!collected) retainedMappingFrame = -1;
+        // loc_1A75C (sonic3k.asm:35664-35667) and loc_1A7E8
+        // (sonic3k.asm:35715-35718) copy the GLOBAL spin into this SST before
+        // movement. ChangeRingFrame runs later, so BuildSprites must retain
+        // that scalar through late global animation, paused draws and rewind.
+        if (!collected) {
+            if (nativeDisplaySubmissions) {
+                SpillAnimationState animation = spillAnimation;
+                ObjectServices services = servicesOrNull();
+                if (animation == null && services != null && services.ringManager() != null) {
+                    animation = services.ringManager().getSpillAnimationState();
+                }
+                retainedMappingFrame = animation != null ? animation.frame() : 0;
+            } else {
+                retainedMappingFrame = -1;
+            }
+        }
         boolean checksBoundary = stepPhysics(0x18 /* GRAVITY */, true);
 
         // S1/S2 reach this from every movement branch; S3K reaches it only while

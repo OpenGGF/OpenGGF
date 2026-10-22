@@ -33,7 +33,9 @@ Unreleased. The earlier development themes remain in
   render path. Rewind also retains empty or rejected native passes, and converted
   sources can exclude inferred drawing independently of accepted admissions. Attracted
   rings submit at their actual object slots and retain native conversion art,
-  priority and independent visibility through rewind.
+  priority and independent visibility through rewind. Existing rings continue
+  during player death; converted bouncers retain the animation frame copied at
+  their own dispatch through late global animation and rewind.
 
 - **Sonic 1 level entry:** background scrolling starts from each level or credits
   demo's final camera, and lamppost returns retain the original background camera

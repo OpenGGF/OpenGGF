@@ -662,7 +662,10 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     }
 
     void dispatchNativeSlot(int slot, com.openggf.game.PlayableEntity target, int cameraX) {
-        if (!(target instanceof AbstractPlayableSprite player) || player.getDead()) return;
+        if (!(target instanceof AbstractPlayableSprite player)) return;
+        // loc_1A88C (sonic3k.asm:35763-35787) and loc_1A920
+        // (sonic3k.asm:35821-35830) have no P1-dead gate: existing SSTs keep
+        // moving, drawing and deleting while the player's death routine runs.
         for (AttractedRing ring : attractedRings) {
             if (!ring.active || ring.slotAllocationPending || ring.objectSlotIndex != slot) continue;
             int bucket = ring.collected ? 1 : 2;

@@ -5968,3 +5968,20 @@ low-priority far-sphere/overlap behavior as a separate remaining gap. Never
 reshape the reference or fit the asset mapping to hide it. This table is S3K;
 the pointer-alias versus inferred-geometry lesson applies across games.
 Origin: Root Blue Sphere original-RGB mapping comparison,2026-10-17.
+
+
+## Shared animation owners can advance after an SST copied their frame
+
+`loc_1A75C` (sonic3k.asm:35664–35667) and `loc_1A7E8`
+(sonic3k.asm:35715–35718) copy `Ring_spill_anim_frame` into `mapping_frame(a0)`
+before motion. `LevelLoop` later calls `ChangeRingFrame` before `Render_Sprites`.
+A converted attracted ring must retain its conversion mapping until its first
+actual bouncer dispatch, then capture the shared scalar on every such dispatch.
+Reading the live shared owner while drawing selects the following animation
+phase. Advancing global spin without another SST dispatch, paused drawing and
+registered destructive restore must all preserve the copied frame. Ordinary
+legacy approximations are a separate contract. Neither existing attracted-ring
+routine has a P1-dead gate; do not copy a host helper's early return into the
+native per-slot producer without checking that branch.
+Origin: native sprite/ring phase follow-up to `323239a13`, 2026-10-22; both ROM
+copy instructions independently verified as `11 78 FE B7 00 22`.

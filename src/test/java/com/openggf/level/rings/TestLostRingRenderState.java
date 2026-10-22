@@ -60,7 +60,7 @@ class TestLostRingRenderState {
         RingManager rings = new RingManager(List.of(), TestRingNativeSlotDispatch.sheet(), null, null, null);
         rings.ensurePatternsCached(graphics, 300);
         SpillAnimationState animation = rings.getSpillAnimationState();
-        animation.restore(new int[]{255, 0, 2});
+        animation.restore(new int[]{255, 0x501, 2});
         var services = new StubObjectServices() {
             @Override public GraphicsManager graphicsManager() { return graphics; }
             @Override public RingManager ringManager() { return rings; }
@@ -74,8 +74,34 @@ class TestLostRingRenderState {
         for (int draw = 0; draw < 3; draw++) assertEquals(301, picture(graphics, ring));
         assertEquals(2, ring.getPriorityBucket());
         ring.update(2, null);
+        animation.tick(); // native late ChangeRingFrame: the global becomes3 AFTER this SST copied2
+        assertArrayEquals(new int[]{254, 0x600, 3}, animation.snapshot());
         assertEquals(302, picture(graphics, ring), "only an actual routine2 invocation replaces retained mapping1");
+        for (int pausedDraw = 0; pausedDraw < 3; pausedDraw++) assertEquals(302, picture(graphics, ring));
         assertEquals(2, ring.getPriorityBucket(), "skipping Init permanently retains priority$100");
+        ring.update(3, null);
+        assertEquals(303, picture(graphics, ring), "each actual routine2 copies the then-current global frame");
+    }
+
+    @Test void ordinaryLegacySpillStillUsesTheLiveSharedFramePlusItsPhase() {
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
+        GraphicsManager graphics = GraphicsManager.getInstance();
+        graphics.initHeadless();
+        RingManager rings = new RingManager(List.of(), TestRingNativeSlotDispatch.sheet(), null, null, null);
+        rings.ensurePatternsCached(graphics, 300);
+        SpillAnimationState animation = rings.getSpillAnimationState();
+        animation.restore(new int[]{255, 0x501, 2});
+        var services = new StubObjectServices() {
+            @Override public GraphicsManager graphicsManager() { return graphics; }
+            @Override public RingManager ringManager() { return rings; }
+        };
+        var ring = LostRingObjectInstance.spawn(128, 64, 0, 0, 1, 255, animation);
+        ring.setServices(services);
+        assertFalse(ring.nativeSpriteSubmissionsAuthoritative());
+        ring.update(1, null);
+        assertEquals(303, picture(graphics, ring));
+        animation.tick();
+        assertEquals(300, picture(graphics, ring), "the legacy phase-added draw path remains live");
     }
 
     private static int picture(GraphicsManager graphics, LostRingObjectInstance ring) {

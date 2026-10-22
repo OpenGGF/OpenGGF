@@ -173,8 +173,26 @@ converted frames from falling back to inferred sprites; ordinary lost-ring
 factories retain their existing legacy path. Their injected render profile
 selects low tile priority for S1/S2 and high for S3K. Accepted native slots also
 suppress inferred duplicates across buckets without removing repeated FIFO calls.
-The converted path copies the shared native spill frame directly; the ordinary
-legacy path's inherited phase-added mapping is not certified by this change.
+The converted path copies the shared native spill frame at each genuine routine-2
+SST dispatch and retains that scalar through rendering, pause and rewind. Native
+`loc_1A75C` (sonic3k.asm:35664–35667) and `loc_1A7E8`
+(sonic3k.asm:35715–35718) contain the same byte copy (`1178 FEB7 0022` in the
+locked-on ROM). `LevelLoop` calls `ChangeRingFrame` after `Process_Sprites` and
+before `Render_Sprites` (`Level_NotLRZ`, sonic3k.asm:7937–7943); reading the shared owner at draw time was an introduced
+ordering defect in `323239a13` and is corrected by the follow-up. The existing
+captured mapping scalar owns this copy; no GPU or callback identity is captured.
+The ordinary legacy path's inherited phase-added mapping remains outside this
+native converted-path claim.
+
+The same review found that the native reserved-slot callback incorrectly copied
+a late-helper P1-dead guard. Neither `loc_1A88C` nor `loc_1A920` has that guard:
+live ring movement, sparkle `$FC`, submission and deletion continue during P1's
+death routine. Only the native callback's dead-player rejection is removed;
+missing/non-playable targets retain their existing separate handling. New controls
+cover both branches, exact admitted FIFO, no-execution redraws, destructive
+registered recreation and forward replay. The previously green movie intervals
+do not cover dead P1 or a shield-loss bouncer's late global spin, so those old
+passes were not accepted as proof of either repair.
 
 Native `loc_1A88C` (sonic3k.asm:35763–35787) resets the spill counter after motion
 and before spin/range testing. The consumer stages that side effect at the same
@@ -191,6 +209,48 @@ conversion, rejected capacity, the sparkle `$FC` invocation and next-pass delete
 replacement precedence, native range boundaries and spill-state restore/forward.
 Actual ROM/EGL scene controls also exercise queued S3K lightning attraction and
 orthogonal ring/object visibility through the public production renderer.
+
+## Ring repair and two-movie qualification
+
+Independent review of `323239a13` found the dead-P1 rejection and draw-time
+shared-frame read described above. Earlier green movie intervals did not exercise
+those branches. The repaired source over that commit passed queued job 36034:
+48 tests, zero failures/errors/skips, including 17 native-slot cases, three
+lost-ring render cases, two actual movie intervals, four S1/S2/S3K EGL gameplay
+controls, seven projection-scope controls, four existing projection controls and
+11 Mod API checks. Queue wait was 183 seconds; Maven execution was 1m32s. The
+separate projection bridge remains a separately published dependency.
+
+Exact selection:
+`TestRingNativeSlotDispatch,TestLostRingRenderState,TestS3kAttractedRingMoviePhase#standaloneMgzAttractionThroughSlotDeletion+completeMovieMgzAttractionThroughSlotDeletion,TestNativeSpriteSatGameplay,TestGraphicsProjectionScope,TestRenderProjection,TestModApiSignatureSurface`.
+Command: `python3 tools/testing/maven_queue.py --normal -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl '-Dtest=<selection above>'
+'-Dsonic1.rom.path=<original absolute REV01 ROM>'
+'-Dsonic2.rom.path=<original absolute REV01 ROM>'
+'-Ds3k.rom.path=<original absolute locked-on ROM>' test -B`, from the isolated
+sprite worktree with Java 25, `LUA_BIN=/usr/bin/lua5.4`, `ALSOFT_DRIVERS=null`
+and DISPLAY/WAYLAND_DISPLAY unset. Surefire XML was filtered by the exact
+selection; stale reports were excluded. Fresh affected guards are tracked
+separately by the integration handoff.
+
+`TestS3kAttractedRingMoviePhase` starts MGZ1 through production ROM entry with
+native-320 Sonic plus CPU Tails. The standalone BK2 uses offset 2602 and rows
+0–650; the independent complete-movie MGZ interval uses offset 58653 and rows
+0–500. Natural monitor gameplay must acquire LIGHTNING at row 374/316; missing
+shield, live reserved-slot flight, native bucket-2 submission, GiveRing bucket 1,
+award or sparkle deletion fails the test. Registry windows 534→550 and 447→465
+restore ring DTOs, SST reservations, native queue/pass metadata, players, camera,
+hardware timing and replay input port, then compare forward execution.
+
+Comparison rows select checkpoints and assert expected motion/awards only. No
+trace pose, camera, RNG, counters, bootstrap state or synthetic shield is installed.
+Only matching production hardware-readiness/input admission uses the existing
+restricted timing contract. BK2 cursor restoration re-arms input transport, not
+gameplay. These are two bounded semantic intervals, not complete physics/art
+trace replays, whole-campaign arrival proof, donor/wide/other-character breadth or
+act certification. The ordinary legacy spill approximation and mixed FIFO/SST
+bridge remain explicit limits. The cancelled stale guard request 52459 never
+executed and supplies no pass/fail evidence.
 
 ## Explicit remaining integration boundaries
 
