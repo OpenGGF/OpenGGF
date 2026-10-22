@@ -1887,5 +1887,34 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     }
 
 
+    /** Extra performer windows share native SST admission without moving the camera cursors. */
+    boolean activateStageplayWindows(List<ObjectSpawn> sourceSpawns, Set<ObjectSpawn> active,
+            Camera camera, java.util.function.Predicate<ObjectSpawn> allows,
+            java.util.function.BooleanSupplier hasFreeSlot,
+            java.util.function.Predicate<ObjectSpawn> load) {
+        if (stageplayActivation == null) return false;
+        boolean changed = false;
+        var considered = new java.util.HashSet<Integer>();
+        for (var spawn : sourceSpawns) {
+            int index = getSpawnIndex(spawn);
+            if (!stageplayActivation.loads(spawn)) continue;
+            considered.add(index);
+            boolean entered = stageplayActivation.entered(index);
+            if (!allows.test(spawn) || active.contains(spawn) || isDestroyedInWindow(index)) continue;
+            // Keep original-window timing native. Supplemental windows only fill its gaps.
+            if (camera != null && spawn.x() >= camera.getX() - 128
+                    && spawn.x() < camera.getX() + camera.getWidth() + 320
+                    && isNonCounterSpawnVerticallyEligible(spawn, camera.getY(), camera.getMinY(),
+                            camera.isVerticalWrapEnabled() ? camera.getVerticalWrapRange() : 0)) continue;
+            if (!admitStageplayPlacement(spawn, entered)) continue;
+            if (!hasFreeSlot.getAsBoolean()) throw new IllegalStateException(
+                    "Stageplay ensemble exceeds the native object slot budget near layout "
+                            + spawn.layoutIndex() + "; clear objects, reduce the cast or split the shot");
+            if (load.test(spawn)) changed = true;
+        }
+        stageplayActivation.considered(considered);
+        return changed;
+    }
+
 }
 

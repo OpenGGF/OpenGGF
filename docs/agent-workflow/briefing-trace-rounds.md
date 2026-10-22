@@ -95,6 +95,13 @@ launcher notice to child stderr and breaks exact CLI-output assertions. Attribut
 these cases with bounded matched tests and preserve their coverage limits; a
 launch setting alone does not prove which backend a later test used.
 
+A mock-only OpenGL test can terminate the JVM when a helper adds an unmocked
+GL owner (2026-10-22, Stageplay smoke). `FboHelper` began preserving unpack-PBO
+bindings through GL15; `TestFboReleaseFailure` still mocked only GL11/GL30 and
+crashed natively without a context. Extend the fixture's GL boundary and verify
+the caller's nonzero bindings survive failure. A process exit with no JUnit
+failure report is incomplete coverage, not evidence that the test passed.
+
 An inverse-affine pixel oracle can disagree with valid GPU edge ownership
 (2026-10-21, sprite presentation smoke). A clipped quad whose edge passes through
 a fragment center has an implementation-defined ownership rule, as explained in

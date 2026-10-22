@@ -212,7 +212,7 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry implements com.
     @Override
     protected void registerDefaultFactories() {
         namesById.putAll(Sonic2ObjectRegistryData.NAMES_BY_ID);
-        // LayerSwitcher (0x03) behavior is handled by ObjectManager.PlaneSwitchers,
+        // LayerSwitcher (0x03) behavior is handled by ObjectPlaneSwitcherController,
         // but the ROM still allocates Obj03 into an SST slot before MarkObjGone3.
         registerFactory(Sonic2ObjectIds.LAYER_SWITCHER,
                 (spawn, registry) -> new Sonic2LayerSwitcherObjectInstance(

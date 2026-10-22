@@ -45,6 +45,21 @@ public final class ObjectDirectionAccess {
                                         () -> factory.create(spawn, manager.services())));
     }
 
+    static boolean playerAttachmentOrRing(ObjectManager manager, ObjectRegistry registry,
+            ObjectInstance object) {
+        return object instanceof com.openggf.game.PowerUpObject
+                || object instanceof SkidDustObjectInstance
+                || object instanceof com.openggf.level.rings.LostRingObjectInstance
+                || registry instanceof MutatorPlacementClassifier classifier && classifier.isRingInstance(object)
+                || manager.isStageplayRingPlacement(object.getSpawn());
+    }
+
+    static java.util.Collection<ObjectInstance> routineObjects(ObjectManager manager,
+            java.util.Collection<ObjectInstance> active) {
+        return manager.stageplayDirection == null || !manager.stageplayDirection.hasSuspension()
+                ? active : active.stream().filter(o -> !manager.stageplayDirection.suspended(o)).toList();
+    }
+
     static boolean suspended(ObjectManager manager, ObjectInstance object) {
         return manager != null
                 && manager.stageplayDirection != null

@@ -162,7 +162,7 @@ class TestStageplayObjectCast {
                 public ObjectInstance create(ObjectSpawn source) {
                     constructors.incrementAndGet(); constructed.set(source);
                     return new AbstractObjectInstance(source, "Side effect probe") {
-                        public void update(int clock, PlayableEntity player) { updates.incrementAndGet(); }
+                        public void update(int vIntRunCount, PlayableEntity player) { updates.incrementAndGet(); }
                         public void appendRenderCommands(List<GLCommand> commands) { }
                     };
                 }

@@ -1738,3 +1738,274 @@ metadata and source/jar fingerprints are retained beside the film.
 No new candidate Mod API surface is exposed. The descriptor, candidate version and
 signature pin remain unchanged in this phase. The main-player register/play shapes
 and Phase 1 hand-back semantics remain unchanged. Final combined smoke is pending.
+
+
+### Complete-cast phase commits and combined validation (2026-10-22)
+
+Phase 5 is committed as engine `c0a4c2060f11affa645a273dbde2bc5e11fc9746`
+and Editor `6c604e151e90310feae79875547b633a24d55d6f`. These follow
+phase 0 `eb9b6138ccd182fd05cb6dee3c84d51cd15bdb44`, phase 1
+`bb9e30002`, phase 2 `70f0e910d0ea7cab10a6c31371b293816ea1a0ff`,
+phase 3 `74691157eb1a885f327efe158e68f409d0f76f3a`, and phase 4
+`e544f1587c5e10359bb58ef486ac08857cd95e71`. Editor phase commits are
+`bc8d61ecd02fc9a7f9fdee9c8bd7c932646294ee` plus `f64acb8`, `dcd54cf`,
+`d446650`, and `a1899436ca4ceda4c7998d91047f331d01393f0f` respectively.
+Both branches remain `feature/ai-stageplay-complete-cast`; no merge, push or PR.
+
+Before the required once-only combined smoke, the change-based plan selected
+3,614 ordinary candidate classes across all ten smoke categories, partitioned into
+73 batches of at most 50, then guards. Expected execution was about two hours
+from the recorded baseline, plus unknown queue time. The stopping bounds were
+180 minutes per invocation and ten minutes without output. Preflight passed
+Java 25, Lua 5.4 and PowerShell in the actual launch environment. Exact launch:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u MAVEN_ARGS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  python3 tools/testing/run_categories.py --base 7d35d4a7b \
+  --rom-directory /mnt/LinuxData/T3/worktrees/OpenGGF/t3-d68f46c5 --max-minutes 180 --run
+```
+
+Run `20261022T173512Z-2da8e553` tested engine `c0a4c2060f11affa645a273dbde2bc5e11fc9746`
+with working-tree fingerprint
+`58f24f42855d7c2f63f58fd38de177e99145a44b7d27f1978bf117a4cd73ce5c`.
+Preparation passed in 28.88 seconds. The runner records 44 completed batches,
+but batch 44 crashed during its third class. Reported tests: **17,264 total,
+17,239 passed, one failure, zero errors, 24 skipped**; aggregate execution
+934.95 seconds. This excludes queue intervals and the crashed test's unreported
+work. The JVM exited 134; the runner exited 1 with incomplete status, before
+29 remaining ordinary batches and guards. It did not hit either timeout. This is
+an incomplete smoke result, not a green delivery or a full-suite run.
+
+The assertion failure is the exact recorded baseline case:
+`TestHczMinibossNativeRendering.allOrbitPhasesMatchRomSpriteCompositionInNativePixels`,
+line 53, GLFW initialization expected true/was false. All 24 skips were inspected:
+18 are explicit capture/benchmark/soak/route opt-ins or isolation prerequisites;
+six require unavailable graphics/visual environments. None is a missing-ROM skip.
+The actual argv contained all three verified absolute original-game ROM paths
+and the existing KIS2 ROM discovered by the runner. Root symlinks resolved to
+read-only ROM paths in the main checkout; no main-checkout file was changed.
+
+The new abort belongs to `TestFboReleaseFailure`, whose mock-only fixture covered
+GL11 and GL30 but not the new GL15 unpack-buffer preservation used by `FboHelper`.
+This leaves a real native call without a GL context and can terminate the JVM,
+so it cannot appear in the JUnit failure totals. Extend the mock boundary to
+GL15 and assert that nonzero caller draw/read framebuffer, texture, renderbuffer
+and unpack-buffer bindings are restored even when FBO creation fails. The stale
+expectation of binding framebuffer zero is replaced with the actual caller-state
+contract. No production rendering change is required. Affected graphics checks
+and the previously unreached guard lane are qualified separately; the broad
+selection is not repeated after this red run.
+
+Consumed diagnostics were removed with
+`python3 tools/testing/run_categories.py --acknowledge 20261022T173512Z-2da8e553`.
+No raw logs, XML or validation receipt were archived. Focused repair and guard
+results follow below.
+
+The later cross-thread unpublished-content ruling arrived after all strict
+v1–v5 migrations were already implemented and committed under this brief. No
+additional migration work is proposed. The lead can reconcile future policy;
+this task retains its explicitly requested compatibility behavior. Candidate
+0.7.0 metadata follows the earlier explicit hook ruling: descriptor/version stay
+unchanged, the mutable pin changes only for actual additive surface. Phase 5
+adds no candidate surface. Playback register/play signatures remain unchanged;
+only the leased player result transfers on hand-back, not wholesale isolated
+world mutations. The parallel level-editor trigger lane must preserve those
+source/visit/lease checks.
+
+
+Focused FBO-fixture repair qualification passed all ten tests, zero failures,
+errors or skips (34.376 seconds execution, 155 seconds queue). Exact command:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestFboReleaseFailure,TestStageplayWorldPresentation,TestStageplayDirectedBackgroundRendering' \
+  '-Dsonic1.rom.path=/mnt/LinuxData/T3/worktrees/OpenGGF/t3-d68f46c5/Sonic The Hedgehog (W) (REV01) [!].gen' \
+  '-Dsonic2.rom.path=/mnt/LinuxData/T3/worktrees/OpenGGF/t3-d68f46c5/Sonic The Hedgehog 2 (W) (REV01) [!].gen' \
+  '-Ds3k.rom.path=/mnt/LinuxData/T3/worktrees/OpenGGF/t3-d68f46c5/Sonic and Knuckles & Sonic 3 (W) [!].gen' test -B
+```
+
+The independently queued guard lane selects 90 candidate classes. Expected cost
+was the baseline's roughly 4.5 minutes plus unknown queue wait. Exact command:
+`env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B`.
+Results are pending. Remaining ordinary smoke coverage is explicitly incomplete;
+the repaired fixture is not grounds to claim the unexecuted batches passed.
+
+
+The separate guard lane completed 718 tests: **709 passed, nine failures,
+zero errors/skips**, 4 minutes 45 seconds execution and 782 seconds queue.
+The native-image resource guard now passes. Four failures exactly match the
+recorded baseline: both `TestProductionSingletonClosureGuard` methods naming
+`MenuAudioProbeTool.java:41`, and the two HubMusic provider/package ArchUnit rules.
+Five failures are new and require correction, not baseline attribution:
+
+- `TestObjectUpdateClockTerminologyGuard.objectUpdateClockUsesVIntRunCountTerminologyAcrossBoundaryAndFrameworkHooks`:
+  four new object update arguments were called `clock` rather than `vIntRunCount`.
+- `TestArchitecturalSourceGuard.objectManagerFacadeStaysWithinExtractedCollaboratorBudget`:
+  3,327 effective lines exceeds the existing 3,086 budget.
+- `TestArchUnitRules.low_level_layers_do_not_depend_on_runtime_layers`:
+  two GraphicsManager SAT-control notifications called level-owned ObjectSpriteCapture.
+- `TestArchUnitRules.core_runtime_cycle_cluster_does_not_gain_top_level_edges`:
+  editor -> tools (the pure screenplay codecs) and stageplay -> util (the FBO helper).
+- `TestArchUnitRules.stageplay_boundaries_have_explicit_owners`: the registry,
+  donor, native-cast, worker, route and presentation adapters were absent from the
+  original named-owner rule. This is an executable architecture contract, so
+  every new adapter and its service boundary must be reviewed and named.
+
+The correction keeps the size and frozen-violation budgets unchanged. Move the
+existing stateful plane-switcher controller out of ObjectManager into a package
+private collaborator, including capture/restore. Its body compares exactly after
+class-name/deindent normalization and qualifying the unchanged shared spawn-order
+function. That portable ordering moves to ObjectRewindOrdering for both snapshot
+owners. Extra ensemble-window admission belongs to ObjectPlacementController;
+retain the per-success bucket/cache invalidation at the manager callback. Ring
+classification and suspended-routine filtering move to ObjectDirectionAccess.
+These helpers remain outside annotated API types and add no candidate surface.
+
+SAT-control observation becomes a graphics-owned scoped callback with exception
+cleanup; ObjectSpriteCapture delegates to it. Graphics no longer depends on a
+level capture renderer. The explicit Stageplay adapter allowlists name each owner
+and its permitted slices; they never admit runtime -> editor/tools. The two new
+top-level edges are explained and checked by exact owners, including only
+StageplayWorkspace -> StageplayScriptCompiler/StageplayScriptDecompiler for the
+pure screenplay codecs. Reject loosening whole packages, raising frozen counts,
+or increasing ObjectManager's size budget.
+
+The first affected qualification build (session 16826) stopped at compilation:
+plane-switcher sorting still referenced the former outer private stableSpawnKey.
+Zero tests ran (56.246 seconds execution, nine seconds queue). Extract its unchanged
+implementation as the shared internal ObjectRewindOrdering function; rerun the
+same 21-class focused selection, including all four mandatory S3K classes and
+native route/render/rewind/API consumers. Current session: 23456. Results follow.
+
+
+Final affected qualification (session 23456) completed **259 tests: 257 passed,
+two failures, zero errors/skips**, 2 minutes 48 seconds execution, two seconds
+queue. Both failures are the unchanged HubMusic provider/package ArchUnit cases
+already recorded above. All five new guard failures are resolved; no baseline
+budget was raised. All 72 architectural source checks pass, along with the
+V-int terminology guard, the three repaired ArchUnit rules, cast/direction,
+ensemble admission, plane-switcher/player isolation, object rewind, SAT capture,
+all eight native route checks, both directed-background pixel checks, six world
+presentation checks, 11 candidate API signature checks and all 60 mandatory S3K
+cases. Exact command:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestObjectUpdateClockTerminologyGuard,TestArchitecturalSourceGuard,TestArchUnitRules,TestObjectSpriteCapture,TestStageplayObjectDirection,TestStageplayActivationPolicy,TestStageplayObjectCast,TestPlaneSwitcherStateIsolation,TestSlotOwnedPlaneSwitcherDispatch,TestLevelManagerPlaneSwitcherDispatch,TestObjectManagerRewindSnapshot,TestStageplayPlayerRouteRom,TestStageplayObjectRouteRom,TestStageplayObjectClearingRom,TestStageplayWorldPresentation,TestStageplayDirectedBackgroundRendering,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestModApiSignatureSurface' \
+  '-Dsonic1.rom.path=/mnt/LinuxData/T3/worktrees/OpenGGF/t3-d68f46c5/Sonic The Hedgehog (W) (REV01) [!].gen' \
+  '-Dsonic2.rom.path=/mnt/LinuxData/T3/worktrees/OpenGGF/t3-d68f46c5/Sonic The Hedgehog 2 (W) (REV01) [!].gen' \
+  '-Ds3k.rom.path=/mnt/LinuxData/T3/worktrees/OpenGGF/t3-d68f46c5/Sonic and Knuckles & Sonic 3 (W) [!].gen' test -B
+```
+
+Build-only packaging then passed in 1 minute 39 seconds:
+`python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package -B`.
+Tests were intentionally skipped. Only two stale owner comments changed after
+the focused run; all executable code stayed frozen. The final fat jar was
+installed in the owned Editor's private repository (0.215 seconds, zero queue)
+with the absolute engine wrapper and `-Dmse=off install:install-file`,
+`-Dfile=<engine worktree>/target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar`,
+`-DgroupId=com.openggf -DartifactId=OpenGGF -Dversion=0.7.prerelease -Dpackaging=jar -DgeneratePom=true -B`.
+Its dependency `compile -B` passed in 1.090 seconds, zero queue. There is no
+frontend/API behavior change, so its already-passing UI checks are not repeated.
+
+Final extraction evidence is in `$STAGEPLAY_EVIDENCE/final-qualification/`.
+`compare_route.py` renders the accepted Phase 5 routed canonical document through
+the packaged EGL host and simulates it afresh, then compares complete decoded
+streams with the already moving-reviewed Phase 5 film. All **330 RGBA frames
+(189,235,200 bytes)** and **1,056,000 PCM bytes** match exactly; all **330 parsed
+state records** match. The initial raw JSONL byte comparison rejected object-key
+order differences across JVM launches; no state value differs. Record both byte
+inequality and semantic equality in `comparison.json`; do not hide the distinction.
+The final still was inspected. Identical decoded footage retains the previous
+normal/quarter-speed moving review, lead-in/out and contact/braking observations.
+Capture, state, still, driver and production/jar fingerprints are preserved.
+Production source SHA-256:
+`3570b783f8980de472a71669308d587fe4f197539bddb2a25adbe9c329a3b7f5`;
+fat jar SHA-256:
+`fc99a34433f8f2c7db74d6191eb467fb963d8de6fb5c1aea036981678053c735`.
+
+Final status: Phases 0–5 are committed with reviewed offscreen evidence; all
+newly discovered focused/guard defects are repaired. The combined ordinary smoke
+remains incomplete: part of batch 44 and all 29 later batches did not execute.
+The independently completed guard lane retains four exact baseline failures;
+the affected rerun retains only its two selected baseline ArchUnit cases.
+Do not add overlapping run totals or claim a complete green smoke/full suite.
+No merge, push, PR, main-checkout mutation or unknown Editor-file cleanup occurs.
+
+
+### Stopping condition: candidate hook false positive needs lead decision
+
+All six numbered phases remain committed. The additional verified ownership/test
+corrections above are **staged, not committed**. The final commit attempt exited
+1 because `.githooks/validate-policy.sh:296` reports:
+
+> detectable @ModApi surface changes require updating the current candidate signature pin.
+
+The exact normalized signature checks passed all 11 cases on the corrected
+compiled production source; the candidate pin has no actual change. Running the
+hook's read-only declaration extractor against HEAD and INDEX isolates its entire
+detected difference to these two removed lines in ObjectManager:
+
+```java
+    static final class PlaneSwitchers {
+        private static final class PlaneSwitcherState {
+```
+
+The parser includes non-public nested type declarations as possible API surface,
+although this extraction changes no exported signature. Neither descriptor,
+version nor pin was modified to satisfy this false positive. The hook scripts
+were not edited or bypassed. All job sessions have ended; the owned Editor is
+unchanged except for its refreshed private dependency and the preserved unknown
+untracked config.yaml.example.
+
+**Decision needed from the lead:** permit a bounded shell/PowerShell hook-parser
+correction with regression tests for internal nested-type extraction (while still
+rejecting public/protected API changes without the mutable pin), or choose a
+different extraction. A fabricated pin change is rejected. This is a concrete,
+fully staged implementation with focused/native/render qualification and final
+capture parity, ready for review. Preserve its worktree/index until that decision.
+The outside-repository STATUS.md records the commit list, tested state, exact
+commands, results, evidence and this blocker before handback.
+
+
+### Approved candidate-hook correction and qualification (2026-10-22)
+
+The user approved the bounded hook correction. Commit
+`9aec4bce0e12815a0548cea1a59c2fb8205a5e3c` excludes non-public/protected nested
+type declarations and their bodies from class surface extraction in both shell
+and PowerShell. Exported nested types, top-level declarations, annotations and
+public/protected members remain detectable; non-class whole-text handling is
+unchanged. No descriptor, version or signature pin changed. The original 18-file
+staged correction diff remained byte-identical through the restricted hook
+commit (SHA-256 `85ca7ab28b0814a7d38e10e8093dfc873653e431c3f9fc82e6ebcd223c0477f0`);
+this entry is the only subsequent addition to that correction set.
+
+Focused checks ran only in `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-d68f46c5`,
+with `PATH="$HOME/.local/bin:$PATH"` and Maven
+`JAVA_HOME=/usr/lib/jvm/java-25-openjdk`. PowerShell was found at
+`$HOME/.local/bin/pwsh`; both hook variants actually executed.
+
+- `python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestModApiHookPolicy,TestModApiSignatureSurface,TestBuildToolingGuard' test`:
+  157 tests, 156 passed, one new hook regression failed, zero errors/skips.
+  Signature surface passed 11/11 and build-tooling passed 123/123. The regression
+  exposed visibility-prefix matching that discarded the space before `interface`;
+  preserve an end-of-prefix visibility boundary in both implementations.
+- `python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestModApiHookPolicy' test`:
+  corrected hook passed 23/23; final rerun with all expanded exported-type cases
+  compiled passed 23/23, zero failures/errors/skips (44.590 seconds execution,
+  three seconds queue). Tests cover adding/removing private/package-private
+  nested helpers, their public members/types, one-line bodies, brace literals,
+  continuation declarations, and public/protected exported types/public methods.
+- `python3 -m unittest discover -s tools/testing -p test_release_snapshot_policy.py`:
+  final run passed 36/36, zero failures/errors/skips.
+- `bash -n .githooks/validate-policy.sh` and PowerShell
+  `System.Management.Automation.Language.Parser.ParseFile` syntax checks passed.
+  Both hooks also accepted `commit-msg target/stageplay-correction-message.txt`
+  against the actual staged correction set without a pin edit.
+
+These bounded checks resolve the candidate-hook blocker; the earlier incomplete
+combined smoke coverage and recorded baseline failures remain as documented.

@@ -6,7 +6,6 @@ import java.util.function.Consumer;
 /** Engine-internal, scoped observation of native mapping draws. Never executes object routines. */
 public final class ObjectSpriteCapture {
     private static final ThreadLocal<Consumer<Draw>> CURRENT = new ThreadLocal<>();
-    private static final ThreadLocal<Consumer<String>> CONTROL = new ThreadLocal<>();
 
     private ObjectSpriteCapture() {}
 
@@ -54,10 +53,7 @@ public final class ObjectSpriteCapture {
 
     /** Notify before SAT-only early guards, so CPU visual capture cannot silently drop controls. */
     public static void control(String description) {
-        Consumer<String> observer = CONTROL.get();
-        if (observer != null) {
-            observer.accept(description);
-        }
+        com.openggf.graphics.SpriteCaptureControl.control(description);
     }
 
     public static void observe(Consumer<Draw> observer, Runnable draw) {
@@ -74,12 +70,10 @@ public final class ObjectSpriteCapture {
             throw new IllegalStateException("Nested object visual capture");
         }
         CURRENT.set(observer);
-        CONTROL.set(control);
         try {
-            draw.run();
+            com.openggf.graphics.SpriteCaptureControl.observe(control, draw);
         } finally {
             CURRENT.remove();
-            CONTROL.remove();
         }
     }
 

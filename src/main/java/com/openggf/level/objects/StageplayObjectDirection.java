@@ -265,7 +265,7 @@ public final class StageplayObjectDirection implements AutoCloseable {
             return new ObjectSpawn(0, 0, 0, 0, 0, false, 0);
         }
 
-        public void update(int clock, com.openggf.game.PlayableEntity player) {}
+        public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) {}
 
         public void appendRenderCommands(List<GLCommand> commands) {}
 

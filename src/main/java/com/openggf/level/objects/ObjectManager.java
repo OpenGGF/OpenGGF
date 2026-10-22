@@ -34,7 +34,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.logging.Logger;
 
 @ModApi
 public class ObjectManager {
@@ -217,7 +216,7 @@ public class ObjectManager {
     private final List<AbstractObjectInstance> rewindReconstructionChildren = new ArrayList<>();
     private boolean rewindReconstructionChildCapture;
     private final FixedSstObjectInstaller fixedSstObjects;
-    private final PlaneSwitchers planeSwitchers;
+    private final ObjectPlaneSwitcherController planeSwitchers;
     private final ObjectSolidContactController solidContacts;
     private final ObjectTouchResponseController touchResponses;
 
@@ -284,7 +283,7 @@ public class ObjectManager {
                 registry, objectServices, slotLayout, slotAllocator,
                 this::addDynamicObject, this::releaseSlot);
         this.planeSwitchers = planeSwitcherConfig != null
-                ? new PlaneSwitchers(placement, planeSwitcherObjectId, planeSwitcherConfig)
+                ? new ObjectPlaneSwitcherController(placement, planeSwitcherObjectId, planeSwitcherConfig)
                 : null;
         this.solidContacts = new ObjectSolidContactController(this);
         this.touchResponses = touchResponseTable != null
@@ -3963,31 +3962,31 @@ public class ObjectManager {
     }
 
     public static int decodePlaneSwitcherHalfSpan(int subtype) {
-        return PlaneSwitchers.decodeHalfSpan(subtype);
+        return ObjectPlaneSwitcherController.decodeHalfSpan(subtype);
     }
 
     public static boolean isPlaneSwitcherHorizontal(int subtype) {
-        return PlaneSwitchers.isHorizontal(subtype);
+        return ObjectPlaneSwitcherController.isHorizontal(subtype);
     }
 
     public static int decodePlaneSwitcherPath(int subtype, int side) {
-        return PlaneSwitchers.decodePath(subtype, side);
+        return ObjectPlaneSwitcherController.decodePath(subtype, side);
     }
 
     public static boolean decodePlaneSwitcherPriority(int subtype, int side) {
-        return PlaneSwitchers.decodePriority(subtype, side);
+        return ObjectPlaneSwitcherController.decodePriority(subtype, side);
     }
 
     public static boolean planeSwitcherGroundedOnly(int subtype) {
-        return PlaneSwitchers.onlySwitchWhenGrounded(subtype);
+        return ObjectPlaneSwitcherController.onlySwitchWhenGrounded(subtype);
     }
 
     public static char formatPlaneSwitcherLayer(byte layer) {
-        return PlaneSwitchers.formatLayer(layer);
+        return ObjectPlaneSwitcherController.formatLayer(layer);
     }
 
     public static char formatPlaneSwitcherPriority(boolean highPriority) {
-        return PlaneSwitchers.formatPriority(highPriority);
+        return ObjectPlaneSwitcherController.formatPriority(highPriority);
     }
 
     // -------------------------------------------------------------------------
@@ -4065,7 +4064,7 @@ public class ObjectManager {
                 slots.sort(Comparator
                         .comparingInt(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry::slotIndex)
                         .thenComparing(entry -> slotSpawnKeys.computeIfAbsent(
-                                entry, e -> stableSpawnKey(entry.spawn()))));
+                                entry, e -> ObjectRewindOrdering.spawnKey(entry.spawn()))));
 
                 // Capture reservedChildSlots
                 List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.ChildSpawnEntry> childSpawns = new ArrayList<>();
@@ -4081,7 +4080,7 @@ public class ObjectManager {
                 childSpawns.sort(Comparator
                         .comparing((com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.ChildSpawnEntry entry) ->
                                 childParentKeys.computeIfAbsent(
-                                        entry, e -> stableSpawnKey(entry.parentSpawn())))
+                                        entry, e -> ObjectRewindOrdering.spawnKey(entry.parentSpawn())))
                         .thenComparing(entry -> childSlotKeys.computeIfAbsent(
                                 entry, e -> Arrays.toString(entry.reservedSlots()))));
 
@@ -4685,19 +4684,6 @@ public class ObjectManager {
         }
     }
 
-    private static String stableSpawnKey(ObjectSpawn spawn) {
-        if (spawn == null) {
-            return "";
-        }
-        return spawn.layoutIndex()
-                + ":" + spawn.objectId()
-                + ":" + spawn.x()
-                + ":" + spawn.y()
-                + ":" + spawn.subtype()
-                + ":" + spawn.renderFlags()
-                + ":" + spawn.rawYWord();
-    }
-
     static boolean isRewindRestorableDynamicObject(ObjectInstance inst) {
         return isRewindRestorableDynamicObject(inst, null);
     }
@@ -4731,18 +4717,11 @@ public class ObjectManager {
     }
 
     boolean isStageplayPlayerAttachmentOrRing(ObjectInstance object) {
-        return object instanceof com.openggf.game.PowerUpObject
-                || object instanceof SkidDustObjectInstance
-                || object instanceof com.openggf.level.rings.LostRingObjectInstance
-                || registry instanceof MutatorPlacementClassifier classifier && classifier.isRingInstance(object)
-                || isStageplayRingPlacement(object.getSpawn());
+        return ObjectDirectionAccess.playerAttachmentOrRing(this, registry, object);
     }
 
     private Collection<ObjectInstance> stageplayActiveRoutineObjects() {
-        var active = getActiveObjects();
-        return stageplayDirection == null || !stageplayDirection.hasSuspension()
-                ? active
-                : active.stream().filter(o -> !stageplayDirection.suspended(o)).toList();
+        return ObjectDirectionAccess.routineObjects(this, getActiveObjects());
     }
 
     private void noteStageplayFactorySuppression(ObjectSpawn spawn) {
@@ -4756,36 +4735,14 @@ public class ObjectManager {
         return stageplayDirection == null || stageplayDirection.allowsPlacement(spawn);
     }
 
-    /** Extra performer windows share the native SST and all existing removal/creator gates.
-     * Native camera cursors are never moved to another performer or traversed repeatedly.
-     */
     private void activateStageplayWindows() {
         if (stageplayActivation == null) return;
-        var considered = new java.util.HashSet<Integer>();
-        for (var spawn : stageplaySourceSpawns) {
-            int index = placement.getSpawnIndex(spawn);
-            if (!stageplayActivation.loads(spawn)) continue;
-            considered.add(index);
-            boolean entered = stageplayActivation.entered(index);
-            if (!stageplayAllowsPlacement(spawn)
-                    || activeObjects.containsKey(spawn)
-                    || placement.isDestroyedInWindow(index)) continue;
-            // Keep admission/timing in the original camera window native. Supplemental
-            // windows supply only the objects that its single cursor cannot reach.
-            if (camera != null && spawn.x() >= camera.getX() - 128
-                    && spawn.x() < camera.getX() + camera.getWidth() + 320
-                    && ObjectPlacementController.isNonCounterSpawnVerticallyEligible(
-                            spawn, camera.getY(), camera.getMinY(),
-                            camera.isVerticalWrapEnabled() ? camera.getVerticalWrapRange() : 0)) continue;
-            if (!placement.admitStageplayPlacement(spawn, entered)) continue;
-            if (!hasFreeDynamicSlot()) throw new IllegalStateException(
-                    "Stageplay ensemble exceeds the native object slot budget near layout "
-                            + spawn.layoutIndex() + "; clear objects, reduce the cast or split the shot");
-            if (tryLoadPlacementSpawn(spawn, false)) {
-                bucketsDirty = activeObjectsCacheDirty = true;
-            }
-        }
-        stageplayActivation.considered(considered);
+        placement.activateStageplayWindows(stageplaySourceSpawns, activeObjects.keySet(), camera,
+                this::stageplayAllowsPlacement, this::hasFreeDynamicSlot, spawn -> {
+                    if (!tryLoadPlacementSpawn(spawn, false)) return false;
+                    bucketsDirty = activeObjectsCacheDirty = true;
+                    return true;
+                });
     }
 
     void suspendStageplayContacts(ObjectInstance object) {
@@ -5091,253 +5048,5 @@ public class ObjectManager {
     }
 
 
-    static final class PlaneSwitchers {
-        private static final Logger LOGGER = Logger.getLogger(PlaneSwitchers.class.getName());
-        private static final int[] HALF_SPANS = new int[]{0x20, 0x40, 0x80, 0x100};
-        private static final int MASK_SIZE = 0x03;
-        private static final int MASK_HORIZONTAL = 0x04;
-        private static final int MASK_PATH_SIDE1 = 0x08;
-        private static final int MASK_PATH_SIDE0 = 0x10;
-        private static final int MASK_PRIORITY_SIDE1 = 0x20;
-        private static final int MASK_PRIORITY_SIDE0 = 0x40;
-        private static final int MASK_GROUNDED_ONLY = 0x80;
 
-        private final ObjectPlacementController placement;
-        private final int objectId;
-        private final PlaneSwitcherConfig config;
-        private final Map<ObjectSpawn, PlaneSwitcherState> states = new HashMap<>();
-
-        PlaneSwitchers(ObjectPlacementController placement, int objectId, PlaneSwitcherConfig config) {
-            this.placement = placement;
-            this.objectId = objectId & 0xFF;
-            this.config = config;
-        }
-
-        void reset() {
-            states.clear();
-        }
-
-        com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlaneSwitcherSnapshot captureRewindState() {
-            List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlaneSwitcherEntry> entries =
-                    new ArrayList<>();
-            for (Map.Entry<ObjectSpawn, PlaneSwitcherState> entry : states.entrySet()) {
-                PlaneSwitcherState state = entry.getValue();
-                List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlaneSwitcherPlayerSideEntry>
-                        playerSides = new ArrayList<>();
-                for (Map.Entry<PlayableEntity, Byte> sideEntry : state.sideStates.entrySet()) {
-                    playerSides.add(
-                            new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlaneSwitcherPlayerSideEntry(
-                                    sideEntry.getKey(),
-                                    sideEntry.getValue() & 0xFF));
-                }
-                playerSides.sort(Comparator
-                        .comparing((com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlaneSwitcherPlayerSideEntry e)
-                                -> stablePlayerKey(e.player()))
-                        .thenComparingInt(e -> e.sideState()));
-                entries.add(new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlaneSwitcherEntry(
-                        entry.getKey(),
-                        state.getLastSideState(),
-                        state.hasLastSideState(),
-                        List.copyOf(playerSides)));
-            }
-            entries.sort(Comparator.comparing(entry -> stableSpawnKey(entry.spawn())));
-            return new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlaneSwitcherSnapshot(
-                    List.copyOf(entries));
-        }
-
-        void restoreRewindState(
-                com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlaneSwitcherSnapshot snapshot) {
-            states.clear();
-            if (snapshot == null) {
-                return;
-            }
-            for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlaneSwitcherEntry entry
-                    : snapshot.entries()) {
-                ObjectSpawn spawn = entry.spawn();
-                if (spawn == null) {
-                    continue;
-                }
-                PlaneSwitcherState state = new PlaneSwitcherState(decodeHalfSpan(spawn.subtype()));
-                if (entry.hasLastSideState()) {
-                    state.setLastSideState(entry.lastSideState());
-                }
-                for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlaneSwitcherPlayerSideEntry side
-                        : entry.playerSides()) {
-                    if (side.player() != null) {
-                        state.setSideState(side.player(), side.sideState());
-                    }
-                }
-                states.put(spawn, state);
-            }
-        }
-
-        private static String stablePlayerKey(PlayableEntity player) {
-            if (player instanceof AbstractPlayableSprite sprite) {
-                return sprite.getCode();
-            }
-            return player == null ? "" : player.getClass().getName();
-        }
-
-        void update(PlayableEntity player, java.util.function.Predicate<ObjectSpawn> skipSpawn) {
-            if (placement == null || player == null || config == null) {
-                return;
-            }
-            Collection<ObjectSpawn> active = placement.getActiveSpawns();
-            if (active.isEmpty()) {
-                return;
-            }
-
-            int playerX = player.getCentreX();
-            int playerY = player.getCentreY();
-
-            for (ObjectSpawn spawn : active) {
-                if (spawn.objectId() != objectId || skipSpawn.test(spawn)) {
-                    continue;
-                }
-
-                updateSpawn(spawn, player);
-            }
-
-            states.keySet().removeIf(spawn -> spawn.objectId() == objectId && !active.contains(spawn));
-        }
-
-        void updateSpawn(ObjectSpawn spawn, PlayableEntity player) {
-            if (spawn == null || player == null || spawn.objectId() != objectId) {
-                return;
-            }
-
-            int playerX = player.getCentreX();
-            int playerY = player.getCentreY();
-            int subtype = spawn.subtype();
-            PlaneSwitcherState state = states.computeIfAbsent(spawn,
-                    key -> new PlaneSwitcherState(decodeHalfSpan(subtype)));
-
-            boolean horizontal = isHorizontal(subtype);
-            int sideNow = horizontal
-                    ? (playerY >= spawn.y() ? 1 : 0)
-                    : (playerX >= spawn.x() ? 1 : 0);
-            int previousSide = state.getSideState(player);
-            if (previousSide < 0) {
-                state.setSideState(player, sideNow);
-                state.setLastSideState(sideNow);
-                return;
-            }
-
-            int half = state.halfSpanPixels;
-            boolean inSpan = horizontal
-                    ? (playerX >= spawn.x() - half && playerX < spawn.x() + half)
-                    : (playerY >= spawn.y() - half && playerY < spawn.y() + half);
-            boolean groundedGate = onlySwitchWhenGrounded(subtype) && player.getAir();
-
-            if (inSpan && !groundedGate && sideNow != previousSide) {
-                boolean skipCollisionChange = (spawn.renderFlags() & 0x1) != 0;
-                if (!skipCollisionChange) {
-                    int path = decodePath(subtype, sideNow);
-                    player.setLayer((byte) path);
-                    if (path == 0) {
-                        player.setTopSolidBit(config.getPath0TopSolidBit());
-                        player.setLrbSolidBit(config.getPath0LrbSolidBit());
-                    } else {
-                        player.setTopSolidBit(config.getPath1TopSolidBit());
-                        player.setLrbSolidBit(config.getPath1LrbSolidBit());
-                    }
-                    LOGGER.fine(
-                            () ->
-                                    String.format(
-                                            "PlaneSwitcher path=%d: player(%d,%d) obj(%d,%d)"
-                                                    + " sub=0x%02X side=%d→%d air=%b mode=%s",
-                                            path,
-                                            player.getCentreX(),
-                                            player.getCentreY(),
-                                            spawn.x(),
-                                            spawn.y(),
-                                            subtype,
-                                            previousSide,
-                                            sideNow,
-                                            player.getAir(),
-                                            player.getGroundMode()));
-                }
-                boolean highPriority = decodePriority(subtype, sideNow);
-                player.setHighPriority(highPriority);
-            }
-
-            state.setSideState(player, sideNow);
-            state.setLastSideState(sideNow);
-        }
-
-        int getSideState(ObjectSpawn spawn) {
-            PlaneSwitcherState state = states.get(spawn);
-            if (state == null || !state.hasLastSideState()) {
-                return -1;
-            }
-            return state.getLastSideState();
-        }
-
-        static int decodeHalfSpan(int subtype) {
-            int index = subtype & MASK_SIZE;
-            if (index < 0 || index >= HALF_SPANS.length) {
-                index = 0;
-            }
-            return HALF_SPANS[index];
-        }
-
-        static boolean isHorizontal(int subtype) {
-            return (subtype & MASK_HORIZONTAL) != 0;
-        }
-
-        static int decodePath(int subtype, int side) {
-            int mask = side == 1 ? MASK_PATH_SIDE1 : MASK_PATH_SIDE0;
-            return (subtype & mask) != 0 ? 1 : 0;
-        }
-
-        static boolean decodePriority(int subtype, int side) {
-            int mask = side == 1 ? MASK_PRIORITY_SIDE1 : MASK_PRIORITY_SIDE0;
-            return (subtype & mask) != 0;
-        }
-
-        static boolean onlySwitchWhenGrounded(int subtype) {
-            return (subtype & MASK_GROUNDED_ONLY) != 0;
-        }
-
-        static char formatLayer(byte layer) {
-            return layer == 0 ? 'A' : 'B';
-        }
-
-        static char formatPriority(boolean highPriority) {
-            return highPriority ? 'H' : 'L';
-        }
-
-        private static final class PlaneSwitcherState {
-            private final int halfSpanPixels;
-            private final IdentityHashMap<PlayableEntity, Byte> sideStates = new IdentityHashMap<>();
-            private byte lastSideState = 0;
-            private boolean hasLastSideState = false;
-
-            private PlaneSwitcherState(int halfSpanPixels) {
-                this.halfSpanPixels = halfSpanPixels;
-            }
-
-            private int getSideState(PlayableEntity player) {
-                Byte value = sideStates.get(player);
-                return value != null ? value & 0xFF : -1;
-            }
-
-            private void setSideState(PlayableEntity player, int sideState) {
-                sideStates.put(player, (byte) sideState);
-            }
-
-            private void setLastSideState(int sideState) {
-                this.lastSideState = (byte) sideState;
-                this.hasLastSideState = true;
-            }
-
-            private boolean hasLastSideState() {
-                return hasLastSideState;
-            }
-
-            private int getLastSideState() {
-                return lastSideState & 0xFF;
-            }
-        }
-    }
 }

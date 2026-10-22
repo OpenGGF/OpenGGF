@@ -1042,7 +1042,7 @@ class TestStageplayObjectDirection {
         }
 
         @Override
-        public void update(int clock, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             updates++;
         }
 

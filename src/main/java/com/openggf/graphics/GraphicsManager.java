@@ -2484,7 +2484,7 @@ public class GraphicsManager {
 	}
 
     public void requestSpriteMask() {
-        com.openggf.level.render.ObjectSpriteCapture.control(
+        SpriteCaptureControl.control(
                 "SAT sprite-mask controls require native display-list replay");
         if (spriteSatCollectionActive) {
             spriteMaskRequested = true;
@@ -2494,7 +2494,7 @@ public class GraphicsManager {
     /** Submits one non-drawable SAT control entry while collection is active. */
     public void submitSpriteSatControlEntry(
             int x, int y, int widthTiles, int heightTiles, int rawTileWordLow11) {
-        com.openggf.level.render.ObjectSpriteCapture.control(
+        SpriteCaptureControl.control(
                 "SAT control entries require native display-list replay");
         if (!spriteSatCollectionActive) return;
         spriteSatEntries.add(

@@ -251,7 +251,7 @@ class TestStageplayActivationPolicy {
     private static class NativeObject extends AbstractObjectInstance {
         int updates, draws;
         NativeObject(ObjectSpawn spawn) { super(spawn, "native test"); }
-        public void update(int clock, PlayableEntity player) { updates++; }
+        public void update(int vIntRunCount, PlayableEntity player) { updates++; }
         void cull() { coarseXCullViewport(getX()); }
         public void appendRenderCommands(List<GLCommand> commands) { draws++; }
     }
