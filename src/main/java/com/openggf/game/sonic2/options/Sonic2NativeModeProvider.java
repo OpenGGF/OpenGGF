@@ -6,6 +6,7 @@ import com.openggf.game.nativemenu.NativeTitleModeProvider;
 public final class Sonic2NativeModeProvider implements NativeTitleModeProvider {
     private final Sonic2OptionsState optionsState = new Sonic2OptionsState();
     private final Sonic2OptionsScreen optionsScreen;
+    private boolean optionsOpened;
 
     public Sonic2NativeModeProvider() { this(true); }
 
@@ -15,7 +16,20 @@ public final class Sonic2NativeModeProvider implements NativeTitleModeProvider {
     }
 
     @Override
-    public Sonic2OptionsScreen optionsScreen() { return optionsScreen; }
+    public Sonic2OptionsScreen optionsScreen() {
+        optionsOpened = true;
+        return optionsScreen;
+    }
+
+    @Override
+    public com.openggf.game.nativemenu.NativeMenuScreen.Exit singlePlayerTitleExit() {
+        if (!optionsOpened) return com.openggf.game.nativemenu.NativeMenuScreen.Exit.NONE;
+        // TitleScreen's one-player branch clears emerald progress; the direct
+        // OptionScreen_Select path deliberately retains it (shipped fixBugs=0).
+        return new com.openggf.game.nativemenu.NativeMenuScreen.Exit(
+                com.openggf.game.nativemenu.NativeMenuScreen.Destination.LEVEL,
+                optionsState.launchTeam(), true);
+    }
 
     public Sonic2OptionsState optionsState() { return optionsState; }
 

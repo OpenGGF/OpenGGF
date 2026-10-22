@@ -4062,7 +4062,17 @@ public class GameLoop {
             case LEVEL_SELECT -> doEnterLevelSelect();
             case TWO_PLAYER -> openNativeTitleMode(false);
             case OPTIONS -> openNativeTitleMode(true);
-            case LEVEL, OTHER -> startLevelFromTitleScreenImmediate(zone, act);
+            case LEVEL -> {
+                var module = GameServices.module();
+                var modes = module == null ? null : module.getGameService(
+                        com.openggf.game.nativemenu.NativeTitleModeProvider.class);
+                var nativeExit = modes == null ? com.openggf.game.nativemenu.NativeMenuScreen.Exit.NONE
+                        : modes.singlePlayerTitleExit();
+                if (nativeExit.destination() == com.openggf.game.nativemenu.NativeMenuScreen.Destination.LEVEL) {
+                    startNativeMenuLevel(nativeExit);
+                } else startLevelFromTitleScreenImmediate(zone, act);
+            }
+            case OTHER -> startLevelFromTitleScreenImmediate(zone, act);
         }
     }
 

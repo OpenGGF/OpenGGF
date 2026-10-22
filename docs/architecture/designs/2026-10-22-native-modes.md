@@ -60,8 +60,8 @@ This is a delivery ledger, not a claim that rows are implemented.
 
 | Product boundary | Required independent acceptance | Initial state |
 | --- | --- | --- |
-| S2 retail title menu | Both controllers, three selections, wrap, native art and exit actions | Missing |
-| S2 options/sound test | Three teams, two item policies, $00-$7F sound IDs, shipped A bug, Start destinations, ROM boxes/text/background | Missing |
+| S2 retail title menu | Both controllers, three selections, wrap, native art and exit actions | Options/one-player connected; competition row remains gated |
+| S2 options/sound test | Three teams, two item policies, $00-$7F sound IDs, shipped A bug, Start destinations, ROM boxes/text/background | Implemented; consumer ROM checks and production launch verified |
 | S2 idle attract | Native 640-frame ownership, four-demo rotation, ROM input playback, abort/end return and EHZ competition demo | Missing |
 | S2 first arena | EHZ both human controllers, independent state/cameras/HUD, compressed art, dual object/ring lifetime, finish and original act results | Missing |
 | S2 remaining competition | EHZ2, MCZ1/2, CNZ1/2 including native layout, item/teleport, death/checkpoint, act/zone/game results and ties | Missing |
@@ -103,3 +103,19 @@ passed 9 tests, zero failures/errors/skips, after 342 seconds of queue waiting
 and 88 seconds of Maven execution. It includes Engine/loop manager identity
 publication and separate ordinary-level/results PLC phase authority. Source was
 `b8807b95a` plus this host change; no broad suite or rendering proof is implied.
+
+The options consumer `1774ae03d` (lane pick `a1ee57fea`) passed 62 focused checks,
+including four complete ROM-RGB screen comparisons and native music-mailbox
+service integration. Module wiring now retains the options owner across fresh
+worlds. A production `GameplayCaptureSession` regression drives title → options
+→ Tails-only gameplay, renders ROM menu pixels and visible Tails, checks fresh
+manager/participant identity, and verifies direct-launch emerald retention versus
+the SEGA/title new-game reset. It also checks that persistent team configuration
+is untouched and the actual audio backend is no-device `NullAudioBackend`.
+
+On `d0290b7f3` plus module wiring, the host/controller/API checks passed 20 tests.
+The rendered launch initially exposed a premature test expectation at the native
+title-card boundary, not a runtime transition failure. After waiting for the
+actual LEVEL mode, `TestSonic2NativeMenuLaunch` passed with no skips (91 seconds
+queue waiting, 28.729 seconds Maven execution). These checks do not certify native
+competition, attract demos, or startup timing.

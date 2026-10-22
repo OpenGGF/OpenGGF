@@ -314,6 +314,13 @@ public final class GameplayCaptureSession implements AutoCloseable {
             loop.debugCompleteSpecialStageWithEmerald();
         }
         loop.step();
+        // Native menu launches replace the entire runtime. Capture state must
+        // follow the same current participant the renderer and GameLoop use.
+        var currentSprites = GameServices.spritesOrNull();
+        if (currentSprites != null) {
+            var currentPlayer = currentSprites.getMainPlayable();
+            if (currentPlayer != null) player = currentPlayer;
+        }
         // After the frame, not before it: the sidekick's own registration re-places him at the
         // level's start position on the step after the first seed lands, so a seed applied at
         // the top of step() is visible in that frame's state line and gone from the next one.
@@ -387,6 +394,18 @@ public final class GameplayCaptureSession implements AutoCloseable {
             graphics.resetForFixedFunction();
             dataSelect.draw(); graphics.flushScreenSpace();
             if (graphics.getUiRenderPipeline()!=null) graphics.getUiRenderPipeline().renderFadePass();
+            loop.renderHostedRunOverlay();
+            glFinish(); return;
+        }
+        if (com.openggf.game.nativemenu.NativeMenuController.handles(loop.getCurrentGameMode())) {
+            var nativeScreen = com.openggf.NativeMenuPresentationAccess.screen(loop);
+            if (nativeScreen == null) throw new IllegalStateException("Native mode has no screen");
+            nativeScreen.setClearColor();
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            graphics.resetForFixedFunction();
+            nativeScreen.draw();
+            graphics.flushScreenSpace();
+            if (graphics.getUiRenderPipeline() != null) graphics.getUiRenderPipeline().renderFadePass();
             loop.renderHostedRunOverlay();
             glFinish(); return;
         }
