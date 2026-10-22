@@ -7,31 +7,39 @@ engine gameplay values or audio requests in gameplay integration.
 
 ## Final bounded outcome
 
-Both final production captures ran from clean `70de3bfe04120306d35c5a2c75ee9534c294e5ad`,
-with a compile phase refreshing build identity before the ordinary capture
-entry point. They reused the unchanged native controls and original movies,
-with no later mode forced. Each has 600 presentations, 441568 stereo frames,
-one native stage session and exactly the native per-row sample cadence.
-Both strict `--start-row 0 --rows 600` comparisons remain **DIFFERENT**, with
-`SAMPLE_MISMATCH` only. There is no sample-count or frame-shape mismatch.
+Both latest production captures ran from clean
+`6c245461628f365e30402947fe7548b7146beef7`, with a compile phase refreshing
+build identity before the ordinary capture entry point. They reused unchanged
+native controls and original movies, with no later mode forced. Each has600
+presentations,441568 stereo frames, one native stage session and exactly the
+native per-row sample cadence. Both strict `--start-row 0 --rows 600`
+comparisons remain **DIFFERENT / SAMPLE_MISMATCH** only; sample counts and frame
+shapes match.
 
-| Final production window | First different stereo frame | Native / engine value | Equal stereo frames | Production modes | Queue / Maven seconds |
+| Latest production window | First different stereo frame | Native / engine value | Equal stereo frames | Production modes | Queue / Maven seconds |
 | --- | ---: | --- | ---: | --- | --- |
-| S1, `s1-engine-600-final-entry` | 55205 | `(0,0)` / `(1,1)` | 135382 | `TITLE_SCREEN` throughout | 365 / 21.545 |
-| S2, `s2-engine-600-final-input` | 92739 | `(0,0)` / `(1,1)` | 173162 | Title screen 0..498, title card 499..583, level 584..599 | 319 / 21.948 |
+| S1, `s1-engine-600-source-phases` | 55205 | `(0,0)` / `(1,1)` | 135382 | `TITLE_SCREEN` throughout | 69 / 21.566 |
+| S2, `s2-engine-600-source-phases` | 77285 | `(0,0)` / `(3,3)` | 197665 | Title screen0..498, title card499..583, level584..599 | 5 / 22.443 |
 
-Final engine PCM SHA-256 values are S1
+Latest engine PCM SHA-256 values are S1
 `1491f62e5553d7e0270bd7feca92a8ea8b9d9189eac8b3e8388c541b9e65ea46`
-and S2 `f8ed5cea80d5bd884db3d4c6b335f7fd256e426b621a88118c0e147c3c863bf2`.
-S2's PCM is byte-identical before and after the separately verified native
-pause read correction over this particular prefix. S1's first engine DAC
-write is now row 75 instead of 96; the supported phase-order correction moves
-the first waveform difference earlier than the original 70660. This is not
-an overall startup parity improvement: authentic power-on, prior fade,
-loading and native chant-wait costs remain open. No offset was fitted to
-hide those missing owners. Both captures still print the existing exec-plugin
-Discord worker shutdown warning before Maven exits successfully; no process
-or owned validation job remains running.
+and S2 `02443927a8abf9e85ed1ac3ac65aefa589ba07f6bd3f364ff08e000ba2e04f36`.
+S1 is byte-identical to its prior clean70de3bfe capture. S2's first waveform
+difference moved earlier from92739 after removing its unsupported entry fade;
+this is not an overall startup timing improvement. Its chant now completes:
+the earlier capture emitted3819 SEGA DAC bytes in rows126..139 before the
+movie's face-button input canceled it; the latest emits all24948 native sample
+bytes in rows105..196. Both begin with actual ROM bytes `7B8789828E`. That
+repairs input ownership and truncation without aligning absolute power-on time.
+
+S1 still emits its27000 chant bytes in rows75..174. Authentic coldboot,
+prior-screen fades, direct loading, S1 CPU-wait elapsed cost and S2 visual/input
+polling details remain open. No offset was fitted to hide missing owners. The
+prior70de3bfe S2 PCM was byte-identical before/after the native-pause read fix;
+that old control remains attributed to its original source. Both latest
+captures print the existing exec-plugin Discord worker shutdown warning before
+Maven exits successfully; their owning command session is closed. No new
+native capture or full-route certificate was produced.
 
 ## Source and capture identities
 
@@ -755,3 +763,26 @@ DeleteObject label at30330). The line and behavior are byte-identical in
 `7d3d5a972`; this is outside the reserved SEGA/STP methods. New phase references
 were checked against actual pinned source and ROM. No S3K/disassembly pin was
 changed, no native capture was launched, and no full-route proof is claimed.
+
+
+## Source-phase production remeasurement
+
+The two latest source-phase captures above use the same fixed title-startup
+command as the earlier production measurements, now including `compile` before
+`exec:java` to refresh the clean source identity. Inputs are the unchanged
+verified ROMs and run-local emerald BK2s; output directories are
+`s1-engine-600-source-phases` and `s2-engine-600-source-phases` under the same
+external task directory. Both invocations use Java25, Lua5.4, no DISPLAY or
+WAYLAND_DISPLAY, surfaceless EGL, ordinary GameplayCaptureSession and the
+production no-device audio backend. They recorded rows0..599 from real startup,
+with no positioned setup, forced later mode or trace-supplied gameplay state.
+
+Each strict comparator invocation used its game's preserved `*-native-600`
+control and `--start-row 0 --rows 600`; both returned exit3 for a valid sample
+mismatch, rather than incomplete/invalid evidence. S1's complete PCM digest is
+unchanged by the caller fix. S2's correct24948-byte chant delivery replaces the
+former3819-byte truncation at the movie's row140 A input; Start-only admission
+prevents that unsupported cancellation. This is measured single-chant behavior
+on the original input, not full-route audio parity. Native FA timing is still
+not inferred from PCM onset. The four full native captures remain held behind
+production-route, clock and publication/trust prerequisites.
