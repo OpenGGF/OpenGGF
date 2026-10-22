@@ -24,7 +24,13 @@ cannot replace its class IDs or register implementations. Each profile pins
 REFERENCE and OPENGGF independently and returns `PRODUCER_UNAVAILABLE` without
 output for an unpinned kind. Built-in producers must write a fresh canonical
 capture directory. Only the reference producer receives the separately
-installed BizHawk home.
+installed reference bundle. Its root is the authenticated BizHawk installation
+(`EmuHawk.exe`, `dll/`) together with the source-owned `bizhawk-headless/`
+launcher, harness and pinned fixtures. The complete tree is covered by the
+installation digest; adding a launcher to an already pinned installation
+requires fresh review and a new digest. The fixed subprocess exports that exact
+root as `BIZHAWK_HOME`, so it cannot silently load an unmeasured nested
+`.dependencies` installation.
 
 V2 keeps ten evidence layers independent. Each producer declares what it
 observed, while the shared comparison inventory separately declares what may be

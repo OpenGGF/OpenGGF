@@ -459,7 +459,9 @@ Unreleased. The earlier development themes remain in
   Closing or rebooting a headless capture releases its owned audio ROM reference,
   so a subsequent title and saved-slot launch can read a fresh ROM in the same process.
   Silent headless boots also retire inherited audio backends before playback, keeping
-  reused capture processes off desktop audio devices.
+  reused capture processes off desktop audio devices. Configured engine startup
+  retains the supplied no-device backend through ROM detection and title entry,
+  with synthesis enabled or disabled.
 
 - **Native-compatible PCM output (diagnostics):** An opt-in audio session setting
   feeds the accurate FM chip's own pin sums through a Java port of blip_buf. It
@@ -472,7 +474,10 @@ Unreleased. The earlier development themes remain in
   A first real window measured the presentation clock running 1.29 per mille
   short of the ROM's hardware frame. The PSG half follows GPGX's integrated
   PSG and also matches its source vectors. The MAME YM2612 core and waveform
-  parity are not covered.
+  parity are not covered. Native PCM comparisons validate complete selected row
+  spans and capture digests, rejecting truncated-prefix false matches. S1/S2
+  complete-run producer plumbing remains gated by native publication evidence
+  and independently installed artifact attestation.
 - **Audio cadence:** Each presented frame now advances the sound chips by exactly
   one NTSC hardware frame (3420 x 262 master clocks) instead of 1/60 s of chip
   time. Previously 600 frames completed only 599 hardware frames. The
