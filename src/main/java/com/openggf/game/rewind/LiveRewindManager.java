@@ -78,6 +78,11 @@ public final class LiveRewindManager {
         drainBoundaries();
         if (!parked && !releasePending && ready(boundOwner)) {
             RewindContext context = rewindContextFromSupplier();
+            // Binding precedes the loop's entry admission. A stopped source
+            // world cannot supply a floor; explicit boundaries and completed
+            // ticks retain their own admission, as do registered special stages.
+            if (context.stepperKind() == StepperKind.LEVEL_FRAME
+                    && boundOwner.getLevelManager().isLevelInactiveForTransition()) return;
             if (context.supported() && enabled(scriptedRewind(context))) ensureInstalled(context);
         }
     }
@@ -353,16 +358,31 @@ public final class LiveRewindManager {
         }
         activeInputHandler = input;
         if (!replayAdmitted(installationIdentity)) return;
-        inputSource.discardAfter(rewindController.currentFrame());
-        inputSource.appendFrame(input, config, LiveRewindPacingFrame.capture(mode, installedGameplayMode,
-                mode == GameMode.SPECIAL_STAGE ? installedSpecialProvider : null, input));
-        if (rewindController.recordExternalStep()) {
-            pruneOldHistory();
-        }
-        drainBoundaries();
-        if (seamlessTransitionCompleted && rewindController != null) {
-            handleSeamlessLevelTransitionBoundary(context);
-        }
+        // The host still owns its input edges and pacing here. PLC publication
+        // completes later, after InputHandler.update() has consumed those edges.
+        var capturedInput = LiveRewindInputSource.captureFrame(input, config);
+        var pacing = LiveRewindPacingFrame.capture(mode, installedGameplayMode,
+                mode == GameMode.SPECIAL_STAGE ? installedSpecialProvider : null, input);
+        Object identity = installationIdentity;
+        RewindController controller = rewindController;
+        LiveRewindInputSource recordedInputs = inputSource;
+        var level = executedOwner.getLevelManager().getCurrentLevel();
+        executedOwner.plcFrameLifecycle().afterConsumedIteration(() -> {
+            if (!replayAdmitted(identity) || rewindController != controller || inputSource != recordedInputs
+                    || executedOwner.getLevelManager().getCurrentLevel() != level || mode != currentMode()
+                    || (mode == GameMode.BONUS_STAGE
+                        && executedBonusProvider != executedOwner.getActiveBonusStageProvider())
+                    || (mode == GameMode.SPECIAL_STAGE
+                        && executedProvider != executedOwner.getRegisteredSpecialStageProvider())) return;
+            recordedInputs.discardAfter(controller.currentFrame());
+            recordedInputs.appendFrame(capturedInput, pacing);
+            if (controller.recordExternalStep()) pruneOldHistory();
+            drainBoundaries();
+            if (seamlessTransitionCompleted && rewindController == controller
+                    && identity == installationIdentity) {
+                handleSeamlessLevelTransitionBoundary(context);
+            }
+        });
     }
 
     public void markBoundary(RewindBoundary boundary) {
@@ -510,17 +530,28 @@ public final class LiveRewindManager {
                 AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC)) {
             return;
         }
-        inputSource.resetToFrameZero();
-        rewindController.resetToFrameZero();
-        // The raw PCM rewind-history ring is a fixed-duration buffer that is
-        // not gated by the logical rewind reset above: without this, a held
-        // rewind that reaches the new level's frame-zero floor can keep
-        // draining the ring backward into audio recorded before this level
-        // loaded. ensureInstalled() above returned true, so rewindController
-        // is non-null here.
-        rewindController.clearPcmHistory();
-        rewinding = false;
-        effectEnvelope.reset();
+        GameplayModeContext owner = installedGameplayMode;
+        Object identity = installationIdentity;
+        RewindController controller = rewindController;
+        var level = owner.getLevelManager().getCurrentLevel();
+        var special = installedSpecialProvider;
+        var bonus = owner.getActiveBonusStageProvider();
+        owner.plcFrameLifecycle().afterConsumedIteration(() -> {
+            if (identity != installationIdentity || owner != installedGameplayMode || owner != boundOwner
+                    || parked || releasePending || retireAfterRelease || !ready(owner)
+                    || controller != rewindController || controller != owner.getRewindController()
+                    || owner.getLevelManager().getCurrentLevel() != level
+                    || (installedStepperKind == StepperKind.SPECIAL_STAGE
+                        && special != owner.getRegisteredSpecialStageProvider())
+                    || bonus != owner.getActiveBonusStageProvider()) return;
+            inputSource.resetToFrameZero();
+            controller.resetToFrameZero();
+            // A fresh logical floor also retires PCM from the outgoing level;
+            // held rewind must not drain audio older than that floor.
+            controller.clearPcmHistory();
+            rewinding = false;
+            effectEnvelope.reset();
+        });
     }
 
     private void handleSeamlessLevelTransitionBoundary(RewindContext context) {

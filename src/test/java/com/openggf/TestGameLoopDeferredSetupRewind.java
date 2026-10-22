@@ -5,6 +5,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameMode;
 import com.openggf.game.rewind.RewindController;
+import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusPlayer;
@@ -72,6 +73,38 @@ class TestGameLoopDeferredSetupRewind {
         assertFalse(f.owner.getLevelManager().hasPendingFreshLevelTransitionBoundary(),
                 "rewinding gameplay must not resurrect the pre-assembly title boundary");
         assertEquals(first, observe(f.owner));
+    }
+
+    @Test
+    void slotLiveHistoryCapturesCompletedPlcPublicationAtFloorAndCheckpoints() {
+        Fixture f = fixture();
+        f.input.handleKeyEvent(GLFW_KEY_LEFT_ALT, GLFW_PRESS);
+        f.input.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
+        f.loop.step();
+        f.input.handleKeyEvent(GLFW_KEY_B, GLFW_RELEASE);
+        f.input.handleKeyEvent(GLFW_KEY_LEFT_ALT, GLFW_RELEASE);
+        awaitTitleCardAndRelease(f, GameMode.BONUS_STAGE);
+        RewindController controller = assertNotNullController(f.owner);
+        assertEquals(0, controller.currentFrame());
+        var floor = f.owner.dynamicArtLifecycle().capture();
+        f.loop.step();
+        var first = f.owner.dynamicArtLifecycle().capture();
+        for (int frame = 1; frame < 12; frame++) f.loop.step();
+        var last = f.owner.dynamicArtLifecycle().capture();
+        for (int cycle = 0; cycle < 2; cycle++) {
+            controller.seekTo(0);
+            assertDynamicArtEquals(floor, f.owner.dynamicArtLifecycle().capture());
+            controller.step();
+            assertDynamicArtEquals(first, f.owner.dynamicArtLifecycle().capture());
+            controller.seekTo(10);
+            while (controller.currentFrame() < 12) controller.step();
+            assertDynamicArtEquals(last, f.owner.dynamicArtLifecycle().capture());
+        }
+    }
+
+    private static void assertDynamicArtEquals(Object expected, Object actual) {
+        assertTrue(RewindSnapshotDiff.keyEquals("dynamic-art-diagnostics", expected, actual),
+                () -> RewindSnapshotDiff.diffKey("dynamic-art-diagnostics", expected, actual).toString());
     }
 
     private static void assertFirstNonKeyframeRoundTrip(Fixture f) {
