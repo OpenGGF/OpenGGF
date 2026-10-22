@@ -81,19 +81,28 @@ class TestTimeAttackRuntime {
         runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(spec, "fp", false, 0, 0, true));
         assertEquals(java.util.List.of("began 1", "frame 1 x10", "voided 1", "began 2"), events,
                 "the death ends the running attempt and the reload begins a fresh one");
-        assertEquals(TimeAttackRuntime.RESTART_COUNTDOWN_FRAMES, runtime.restartCountdownFrames(),
-                "the countdown shows from the reload");
+        assertTrue(runtime.inRestartLeadIn());
+        assertEquals(0, runtime.countdownDigit(), "no countdown is drawn over the black reload");
         assertTrue(runtime.admitStep(NO_KEYS), "the spawn step runs so the act is drawn as it starts");
         assertTrue(runtime.holdsPlayerInput(), "lead-in steps run with the player's input held");
         runtime.afterStep(step(0, 80, false));
+        assertEquals(0, runtime.countdownDigit(), "no countdown is drawn during the fade-in lead-in");
         assertTrue(runtime.admitStep(FADING), "a level still fading in keeps the lead-in going");
         assertTrue(runtime.holdsPlayerInput());
         runtime.afterStep(step(0, 81, false));
+        assertEquals(0, runtime.countdownDigit());
         assertEquals(4, events.size(), "lead-in frames wait for control before reaching the room");
+        java.util.List<Integer> digits = new java.util.ArrayList<>();
         for (int frame = 0; frame < TimeAttackRuntime.RESTART_COUNTDOWN_FRAMES; frame++) {
             assertFalse(runtime.admitStep(NO_KEYS), "the countdown holds frame " + frame);
             assertFalse(runtime.holdsPlayerInput());
+            assertFalse(runtime.inRestartLeadIn());
+            digits.add(runtime.countdownDigit());
         }
+        assertEquals(3, digits.get(0), "3 appears once the level is visible and frozen");
+        assertEquals(java.util.List.of(3, 2, 1), digits.subList(0, digits.size() - 1).stream().distinct().toList());
+        assertEquals(0, digits.get(digits.size() - 1), "the frame that releases control draws no digit");
+        assertEquals(0, runtime.countdownDigit(), "no digit once control returns");
         assertEquals(java.util.List.of("frame 2 x80", "frame 2 x81"), events.subList(4, 6),
                 "the lead-in frames are released when control returns");
         assertEquals(0, runtime.restartCountdownFrames());

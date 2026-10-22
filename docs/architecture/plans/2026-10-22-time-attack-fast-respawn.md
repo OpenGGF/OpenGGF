@@ -40,7 +40,8 @@ setting was in the first brief and was dropped before implementation; there is n
   the spawn step, then every step while `RunInput.levelFadingIn()` reports the level's own
   palette fade (S3K `Level/loc_64DC` arms `Palette_fade_timer` = $16, sonic3k.asm:7906-7910;
   the fade is untouched; read through `LevelPaletteFadeOwner`). S1/S2 report no fade, so their
-  lead-in is the spawn step alone. The 3-2-1 then holds over the visible level.
+  lead-in is the spawn step alone. No digit is drawn during the lead-in; the 3-2-1 appears and
+  holds only once the level is visible and frozen (`TimeAttackRuntime.countdownDigit`).
   `RunHost.holdsPlayerInput()` makes `HostedRunController` suppress player 1's input for the
   admitted step (only a suppression it set is cleared) and record no buttons. Lead-in steps
   are part of the attempt with empty masks (untimed: the clock starts at first input), so the

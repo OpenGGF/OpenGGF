@@ -313,11 +313,19 @@ public final class TimeAttackRuntime implements RunHost {
     }
 
     /**
-     * Level frames the post-death countdown still holds the run for: the whole countdown during
-     * the lead-in, 0 when none is running.
+     * Level frames the post-death countdown still holds the run for; 0 during the lead-in (the
+     * countdown has not started) and when none is running.
      */
     public int restartCountdownFrames() {
-        return restartLeadIn ? RESTART_COUNTDOWN_FRAMES : restartCountdownFrames;
+        return restartCountdownFrames;
+    }
+
+    /**
+     * The countdown digit on screen (3, 2 or 1), or 0 for none. Nothing is drawn during the
+     * lead-in: the digits appear only once the reloaded level is visible and frozen.
+     */
+    public int countdownDigit() {
+        return restartCountdownFrames > 0 ? (restartCountdownFrames + 59) / 60 : 0;
     }
 
     /** True while a death restart's lead-in steps run with the player's input held. */
@@ -543,9 +551,9 @@ public final class TimeAttackRuntime implements RunHost {
         if (companion != null) {
             companion.drawOverlay(canvas, levelWidth, localCentreX);
         }
-        int countdown = restartCountdownFrames();
-        if (countdown > 0) {
-            openggf.timeattack.mp.MultiplayerHudRenderer.drawCountdown(canvas, (countdown + 59) / 60);
+        int digit = countdownDigit();
+        if (digit > 0) {
+            openggf.timeattack.mp.MultiplayerHudRenderer.drawCountdown(canvas, digit);
         }
     }
 
