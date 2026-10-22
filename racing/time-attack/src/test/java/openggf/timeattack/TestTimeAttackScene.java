@@ -49,7 +49,16 @@ class TestTimeAttackScene {
     private Optional<String> fingerprint = Optional.empty();
     private TimeAttackScene scene;
 
+    /** Opens the scene and answers the first-run name prompt, as a new player does. */
     private void open(List<String> games) {
+        openFresh(games);
+        if (scene.isPromptingForName()) {
+            type("Tester");
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        }
+    }
+
+    private void openFresh(List<String> games) {
         SceneGameplay gameplay = new SceneGameplay() {
             @Override public List<String> availableGames() { return games; }
             @Override public Optional<String> determinismFingerprint(String gameId) { return fingerprint; }
@@ -143,6 +152,46 @@ class TestTimeAttackScene {
         assertEquals(2, launched.size(), "the menu returns focused on START RUN");
     }
 
+    @Test
+    void aNewPlayerNamesThemselvesBeforeAnyModeAndTheNameIsSaved() throws Exception {
+        openFresh(List.of("s2"));
+        assertTrue(scene.isPromptingForName());
+        assertTrue(host.capturesTextInput(), "the name prompt takes text");
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        assertTrue(scene.isPromptingForName(), "an empty name cannot skip the prompt");
+        assertTrue(launched.isEmpty());
+        type("Nguyễn ");
+        com.openggf.control.MenuInput.handleCharEvent(input, ' ');
+        type("花子"); // an IME commits 花子 as two characters
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        assertFalse(scene.isPromptingForName());
+        assertEquals("Nguyễn 花子", scene.settings().displayName(), "canonical: single spaces, NFC");
+        Path saved;
+        try (var files = java.nio.file.Files.walk(temp)) {
+            saved = files.filter(p -> p.getFileName().toString().equals(TimeAttackSettings.FILE_NAME))
+                    .findFirst().orElseThrow();
+        }
+        assertTrue(java.nio.file.Files.readString(saved).contains("displayName=Nguyễn 花子"));
+        for (int i = 0; i < 5; i++) press(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        assertEquals(1, launched.size(), "the menu works once the name is chosen");
+    }
+
+    @Test
+    void escapeAtTheNamePromptLeavesInsteadOfSkippingIt() {
+        openFresh(List.of("s2"));
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE);
+        assertEquals(List.of("master"), exits);
+        assertTrue(scene.isPromptingForName());
+    }
+
+    @Test
+    void anExistingIdentityWithoutANameIsNotPrompted() throws Exception {
+        java.nio.file.Files.createDirectories(temp.resolve("identity"));
+        java.nio.file.Files.writeString(temp.resolve("identity").resolve("player-identity.key"), "legacy");
+        openFresh(List.of("s2"));
+        assertFalse(scene.isPromptingForName(), "legacy profiles keep the identity-prefix name");
+    }
+
     // ── Multiplayer through the scene ────────────────────────────────────
 
     private static final String FP = "0.8:cafe1234";
@@ -169,11 +218,12 @@ class TestTimeAttackScene {
         input.update();
     }
 
+    /** Types {@code text} as GLFW delivers it: one character event per code point, one tick each. */
     private void type(String text) {
-        for (char c : text.toCharArray()) {
-            int[] key = openggf.timeattack.ui.FakeViewInput.keyFor(c);
-            tap(key[0], key[1] != 0);
-        }
+        text.codePoints().forEach(codePoint -> {
+            com.openggf.control.MenuInput.handleCharEvent(input, codePoint);
+            idle();
+        });
     }
 
     private void idleUntil(String what, java.util.function.BooleanSupplier condition) throws InterruptedException {
@@ -237,7 +287,8 @@ class TestTimeAttackScene {
         assertTrue(host.capturesTextInput(), "display name field");
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
         assertFalse(host.capturesTextInput(), "display name accepted");
-        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // look
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // host port
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // master URL
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
         assertTrue(host.capturesTextInput(), "master URL field");
@@ -250,7 +301,8 @@ class TestTimeAttackScene {
         open(List.of("s2"));
         for (int i = 0; i < 5; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // SETTINGS
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
-        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER); // display name editor
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER); // display name editor, holding the prompt's name
+        for (int i = 0; i < "Tester".length(); i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSPACE);
         type("Ray");
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
         assertEquals("Ray", scene.settings().displayName());

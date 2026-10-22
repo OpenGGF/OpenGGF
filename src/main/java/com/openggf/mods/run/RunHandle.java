@@ -1,6 +1,7 @@
 package com.openggf.mods.run;
 
 import com.openggf.game.ModApi;
+import com.openggf.net.identity.PlayerAppearance;
 
 /** Commands a host may issue to its running run. They take effect at the next safe boundary. */
 @ModApi
@@ -18,6 +19,16 @@ public interface RunHandle {
      * can never move the camera during play.
      */
     void spectate(boolean active, int dx, int dy);
+
+    /**
+     * Draws the run's own character in {@code appearance} from the next frame on: the
+     * character's palette line with the look's entries applied (each only while the live colour
+     * is still the stock one, so Super/Hyper cycles still show). Only that sprite changes; rings,
+     * the HUD and objects keep their colours. {@link PlayerAppearance#STOCK} restores the stock
+     * palette. Presentation only: the simulation is unchanged. The engine's handle implements
+     * this; the default ignores the request.
+     */
+    default void setPlayerAppearance(PlayerAppearance appearance) { }
 
     /** True until the run has ended. */
     boolean isActive();

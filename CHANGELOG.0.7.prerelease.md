@@ -45,7 +45,25 @@ Unreleased. The earlier development themes remain in
   while launching a level, and resumes its owning scene after a run or load failure.
   Every visible multiplayer ghost shows its player name above the sprite,
   including ghosts beyond the four nearest racers. Nameplates draw after the world
-  so deferred level rendering cannot overwrite them.
+  so deferred level rendering cannot overwrite them, on a small backing plate;
+  bunched names stack instead of overlapping and fade with their ghost. The in-run HUD is a narrower, translucent right-hand column that
+  shrinks to its text: one rival ahead and one behind instead of three, and a slim
+  progress strip with a finish flag beside the lives counter. `CompactFont` gains
+  `@`, `$` and `#`, which are common in player names.
+
+- **Time Attack player names and looks:** names can be written in any left-to-right
+  script (accented Latin, Vietnamese, Greek, Cyrillic, Japanese, Chinese, Korean and
+  more) and are drawn with bundled Fusion Pixel 10px and GNU Unifont glyphs in the
+  lobby, browser, chat, standings, HUD and above ghosts. Text fields accept typed
+  characters from any keyboard layout or input method. A new player chooses a name
+  before their identity is created, and can rename later in Settings or from the
+  lobby without a new identity. A look editor offers ten presets or a custom palette:
+  pick a base colour (the name's colour) and edit the character's Mega Drive colours.
+  Others see the ghost in those colours, and the player's own character uses them
+  too; rings, the HUD and other sprites keep their stock colours, and Super palette
+  cycling still shows. Only the colours that differ from the ROM palette are sent
+  when joining. Hosts reject names with hidden or direction-changing characters.
+  Protocol version 4; right-to-left reordering and script shaping are not yet done.
 
 - **Time Attack multiple attempts:** players can submit several runs inside one
   round window, and the best valid run counts. While the window is open a finish's

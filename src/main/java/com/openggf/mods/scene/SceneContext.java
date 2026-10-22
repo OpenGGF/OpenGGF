@@ -58,6 +58,16 @@ public interface SceneContext {
     /** True on the tick a key went down ({@link SceneKeys} code). */
     boolean keyPressed(int key);
 
+    /**
+     * The text typed since the previous tick, as Unicode code points in the order they arrived:
+     * keyboard characters after the player's layout, dead keys and Shift are applied, and text
+     * an input method (IME) has committed, so any script can be entered. Uncommitted IME
+     * composition is not reported, nor are control characters; read Enter, Escape and Backspace
+     * with {@link #keyPressed}. Empty on most ticks. Text fields should use this rather than
+     * mapping key codes to characters, which only works for one keyboard layout.
+     */
+    default String typedText() { return ""; }
+
     /** The mouse, in logical screen pixels. */
     SceneMouse mouse();
 

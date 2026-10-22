@@ -52,6 +52,23 @@ numbered backups. Live configuration values take precedence over backup values. 
 `settings.txt` in the mod's owner storage without changing the source files or replacing
 existing mod settings. Configuration files are limited to 1 MiB for this import.
 
+A new player (no saved name and no `identity/player-identity.key`) chooses a display name
+before any mode starts; Escape returns to the master title instead of skipping. Names may use
+any left-to-right script, typed through the platform's keyboard layout or input method, and are
+stored canonical (`DisplayNames`: NFC, single spaces, at most 20 code points and 64 UTF-8
+bytes). Profiles that already have an identity but no name keep the identity-prefix name. The
+settings page and the lobby's PROFILE action rename the player and edit their look without a
+new identity; the lobby announces the change with `UpdateProfile` while the room is in its
+lobby phase. Addresses, ports and URLs stay ASCII; chat accepts visible text in any script.
+
+`settings.txt` keys for the look: `lookBase` is the base colour (three hex digits `BGR`, the
+Mega Drive colour word; empty for the stock "Classic" look) used for the player's name and
+ghost. `lookPalette.<game>:<character>` (for example `lookPalette.s3k:tails=2EEE.900E`) holds a
+custom palette as `.`-separated `IBGR` entries of that character's 16-colour line; without one
+the body ramp follows the base colour. Unreadable look values fall back to the stock look or
+the preset ramp. The canonical look sent on join comes from
+`TimeAttackSettings.appearanceFor(game, character)`.
+
 Settings edits and successful LAN joins keep their accepted values when storage refuses or throws
 on publication. The settings page reports a pending save, retries every 60 scene ticks, and flushes
 pending settings and LAN invite text on resume or exit. Imported legacy values follow the same

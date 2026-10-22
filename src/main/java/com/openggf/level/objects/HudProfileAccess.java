@@ -102,7 +102,8 @@ public final class HudProfileAccess {
                     tile.width() * scale, tile.height() * scale, tile.priorityShader(), tile.occlusionMask(),
                     tile.ghost(), tile.ghostAlpha(), tile.rowStart(), tile.rowEnd(),
                     new SpritePresentation.Subject("projected-" + tile.subject().id(), tile.subject().part(),
-                            tile.subject().suppressed(), tile.subject().headScalePercent(), tile.subject().head())));
+                            tile.subject().suppressed(), tile.subject().headScalePercent(), tile.subject().head()),
+                    tile.ghostColour()));
         }
         if (!changed) return frame;
         retainedBefore[frame.tiles().size()] = tiles.size();

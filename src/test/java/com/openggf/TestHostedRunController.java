@@ -39,6 +39,22 @@ class TestHostedRunController {
     }
 
     @Test
+    void playerAppearanceIsHeldForTheRunAndResetByTheNextOne() {
+        var red = new com.openggf.net.identity.PlayerAppearance(0x00E, List.of());
+        RunHandle handle = controller.begin(SPEC, new RunHost() { });
+        assertEquals(com.openggf.net.identity.PlayerAppearance.STOCK, controller.localLook());
+        handle.setPlayerAppearance(red);
+        assertEquals(red, controller.localLook());
+        assertThrows(NullPointerException.class, () -> handle.setPlayerAppearance(null));
+        controller.end(RunEndReason.LEFT);
+        handle.setPlayerAppearance(red);
+        assertEquals(com.openggf.net.identity.PlayerAppearance.STOCK, controller.localLook(),
+                "an ended run's handle no longer changes the look");
+        controller.begin(SPEC, new RunHost() { });
+        assertEquals(com.openggf.net.identity.PlayerAppearance.STOCK, controller.localLook());
+    }
+
+    @Test
     void retryOnActCompletionDefaultsToFalse() {
         assertFalse(controller.retryOnActCompletion(), "no run, nothing to retry");
         controller.begin(SPEC, new RunHost() { });

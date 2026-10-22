@@ -308,4 +308,26 @@ class TestTimeAttackRuntime {
             @Override public boolean keyPressed(int key) { return key == pressedKey; }
         };
     }
+
+    @org.junit.jupiter.api.Test
+    void attachedRunRecoloursTheLocalCharacterWithTheSavedLook(@org.junit.jupiter.api.io.TempDir java.nio.file.Path root) {
+        TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root), root.resolve("identity"), () -> false);
+        runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "knuckles", java.util.List.of()));
+        java.util.List<String> asked = new java.util.ArrayList<>();
+        runtime.setLookSource((game, character) -> {
+            asked.add(game + ":" + character);
+            return com.openggf.mods.run.CharacterLooks.withBaseColour(game, character, 0x0E0);
+        });
+        java.util.List<com.openggf.net.identity.PlayerAppearance> applied = new java.util.ArrayList<>();
+        runtime.attachHandle(new com.openggf.mods.run.RunHandle() {
+            @Override public void retry() { }
+            @Override public void leave() { }
+            @Override public void spectate(boolean active, int dx, int dy) { }
+            @Override public boolean isActive() { return true; }
+            @Override public void setPlayerAppearance(com.openggf.net.identity.PlayerAppearance look) { applied.add(look); }
+        });
+        org.junit.jupiter.api.Assertions.assertEquals(java.util.List.of("s3k:knuckles"), asked);
+        org.junit.jupiter.api.Assertions.assertEquals(1, applied.size());
+        org.junit.jupiter.api.Assertions.assertEquals(0x0E0, applied.getFirst().baseColour());
+    }
 }

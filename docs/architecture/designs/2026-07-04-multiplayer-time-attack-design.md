@@ -139,7 +139,10 @@ The renderer draws at most the **nearest 8 ghosts** (configurable), opacity fade
 by distance, with player nameplates on every visible ghost. Everyone else exists
 only as roster entries in the standings panel. Sprite preparation collects nameplates;
 the hosted-run overlay draws them after the world and before the multiplayer HUD,
-so deferred world commands cannot overwrite the text. Playback bookkeeping for hundreds of roster
+so deferred world commands cannot overwrite the text. Nameplates use the HUD's
+`CompactFont` at scale 1 on a translucent plate (eleven glyphs at most), fade with
+their ghost's opacity, and step upward when they would overlap another tag. The
+half-scale debug pixel font used before was illegible at native resolution. Playback bookkeeping for hundreds of roster
 entries is trivial; full playback cursors exist only for near ghosts.
 
 ## 5. Latency model
@@ -205,6 +208,10 @@ Master title → "Time Attack" → server browser → lobby → in-round. Track 
 reuses the data-select zone/act grid. In-round HUD adds the standings panel
 (top 10 + 5 rows around you + your rank — never the full list pushed to
 hundreds of clients; full list is paged on demand) and the solo/best delta timer.
+During a run the HUD is one translucent right-hand column at most 140 native pixels
+wide that shrinks to its text: the run clock, then the room clock, estimated
+position and either the three standings around you or one unranked rival ahead and
+one behind. A 9-pixel progress strip sits beside the stock lives counter.
 Podium shows top 3 + your rank; next-track vote offers 3 options.
 
 ## 7. Protocol

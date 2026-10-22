@@ -14,9 +14,12 @@ class TestControlCodecAdversarial {
     void protocolVersionCannotAliasTheSupportedVersionByIntegerTruncation() {
         String valid = codec.encode(null, new ControlMessage.Ping(7));
         assertEquals(new ControlMessage.Ping(7), codec.decode(valid).message());
-        for (String version : List.of("4294967299", "-4294967293",
-                "18446744073709551619", "3.0", "\"3\"", "null", "true")) {
-            String mutated = valid.replace("\"v\":3", "\"v\":" + version);
+        java.math.BigInteger supported = java.math.BigInteger.valueOf(Protocol.VERSION);
+        for (String version : List.of(supported.add(java.math.BigInteger.ONE.shiftLeft(32)).toString(),
+                supported.subtract(java.math.BigInteger.ONE.shiftLeft(32)).toString(),
+                supported.add(java.math.BigInteger.ONE.shiftLeft(64)).toString(),
+                Protocol.VERSION + ".0", "\"" + Protocol.VERSION + "\"", "null", "true")) {
+            String mutated = valid.replace("\"v\":" + Protocol.VERSION, "\"v\":" + version);
             assertNotEquals(valid, mutated);
             assertThrows(ProtocolViolationException.class, () -> codec.decode(mutated),
                     "version=" + version);
