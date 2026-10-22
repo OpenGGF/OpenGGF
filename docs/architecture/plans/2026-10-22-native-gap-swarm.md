@@ -548,3 +548,16 @@ and28 disjoint candidate pin lines. The future aggregate merge must retain
 Main's stronger configured-headless backend identity/sink recovery, both hosted
 retry and native menu/fade flows, and sorted union of Main28 plus Root10 pin
 additions. No Main window, integration, push or cleanup has occurred.
+
+
+Observed Main23a is now reconciled ONLY into the aggregate branch. The two
+conflicts preserve both measurement-hazard paragraphs and Main's stronger
+configured-headless backend identity/ensurePresentationSink path while retaining
+Root native menus. GameLoop's incoming hosted retry/completion additions merge
+separately from the S1/terminal/native ownership paths. The candidate signature
+pin is the sorted unique union, exactly38 added lines versus8aa (Main28/Root10),
+with unchanged descriptor/version authority. Incoming authored-decoder service
+include is a real source fix; its resource guard and this merge's launch/API
+consumers remain untested here. No Main branch, worktree state or remote was
+changed. Root's existing GameLoop size block will be addressed in a separate
+focused extraction before integration; Main's new facade growth is not exempt.

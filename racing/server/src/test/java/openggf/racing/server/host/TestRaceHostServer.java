@@ -443,14 +443,14 @@ class TestRaceHostServer {
         assertInstanceOf(ControlMessage.JoinAccepted.class, doomed.join(
                 PlayerIdentity.loadOrCreate(dir.resolve("doomed")), "Doomed", FP));
         awaitEvent(watcher, event -> event instanceof RaceClient.Control control
-                && control.message() instanceof ControlMessage.RoomState state
-                && state.players().size() == 2);
+                && control.message() instanceof ControlMessage.PlayerUpsert upsert
+                && upsert.player().displayName().equals("Doomed"));
 
         doomed.abortWithReset();
 
         awaitEvent(watcher, event -> event instanceof RaceClient.Control control
-                && control.message() instanceof ControlMessage.RoomState state
-                && state.players().size() == 1);
+                && control.message() instanceof ControlMessage.PlayerLeft left
+                && left.slot() != watcher.joinAccepted().playerSlot());
         assertEquals(1, onRoomThread(() -> server.room().playerCount()));
         watcher.close();
     }

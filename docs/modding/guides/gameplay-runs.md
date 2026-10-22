@@ -72,7 +72,11 @@ A thrown exception ends the run with `ABORTED` instead of crashing the engine.
 | `afterStep(RunStep)` | after every executed step: admitted player-1 buttons, Start, the player's pose, the act-completion signal, the last star post and a debug-assist flag. Held, paused, setup-only and lag-skipped frames produce no step |
 | `ghosts()` | each frame: up to eight `GhostPose`s the engine draws translucently with stock character art in the correct sprite layer |
 | `drawOverlay(LevelOverlayCanvas)` | screen-space drawing above the level and HUD (use `CompactFont`) |
+| `retryOnActCompletion()` | when a `RETURN_TO_HOST` run completes its act; return `true` to restart the act as a retry (`onLevelReady` follows) instead of ending the run. Defaults to `false` |
 | `onRunEnded(RunEndReason)` | once, just before control returns to your scene |
+
+At act completion a pending `leave()` or host failure still ends the run (a failure as
+`ABORTED`), and a `retry()` requested on that frame restarts the act without asking.
 
 `RunHandle` commands take effect at the next safe boundary: `retry()` reloads the starting act
 and clears star-post progress, `leave()` ends the run, and `spectate(active, dx, dy)` pans the

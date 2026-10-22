@@ -65,8 +65,10 @@ public final class ModApiVersion {
      * Hub preferences include optional title music, its volume, last focused game,
      * and per-game last-act/leader history for zone-start Continue.
      * Shared network contracts include direct/relay room clients, JDK room hosting,
-     * identity, bounded ghost transport and protocol messages/codecs. Operator servers
-     * and verifier tools remain separate and outside the creator API.
+     * identity, bounded ghost transport and protocol messages/codecs. Protocol v3 uses
+     * explicit player upsert/leave deltas after the joining client's initial room snapshot;
+     * remote ghost registries expose the same incremental membership operations. Operator
+     * servers and verifier tools remain separate and outside the creator API.
      * Broker-pinned direct-room TLS wire fields are part of the race protocol.
      * A session-scoped gameplay run policy governs special/bonus stage entry, act
      * completion handing control back to the run's host, live rewind and editor entry.

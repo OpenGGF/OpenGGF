@@ -207,6 +207,78 @@ class TestTimeAttackRuntime {
     }
 
     @Test
+    void retryKeyIsIgnoredWhileTheCompanionRefusesRetries(@TempDir Path root) {
+        TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root),
+                root.resolve("identity"), () -> false);
+        runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
+        int[] retries = new int[1];
+        runtime.attachHandle(handle(retries, new int[1]));
+        runtime.setRetryKey(() -> 82);
+        boolean[] mayRetry = {false};
+        runtime.setFrameCompanion(new TimeAttackRuntime.FrameCompanion() {
+            @Override public boolean admit(com.openggf.mods.run.RunInput input) { return true; }
+            @Override public void afterStep() { }
+            @Override public boolean mayRetry() { return mayRetry[0]; }
+        });
+        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(runtime.runSpec(), "fp", false, 0, 0));
+
+        assertTrue(runtime.admitStep(keys(82)));
+        assertTrue(runtime.isAttemptActive(), "a refused retry keeps the attempt");
+        assertEquals(0, retries[0]);
+
+        mayRetry[0] = true;
+        runtime.admitStep(keys(82));
+        assertFalse(runtime.isAttemptActive());
+        assertEquals(1, retries[0]);
+    }
+
+    @Test
+    void onlyACompanionThatContinuesRetriesOnActCompletion(@TempDir Path root) {
+        TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root),
+                root.resolve("identity"), () -> false);
+        runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
+        assertFalse(runtime.retryOnActCompletion(), "solo runs return to their host");
+
+        TimeAttackRuntime.FrameCompanion stock = new TimeAttackRuntime.FrameCompanion() {
+            @Override public boolean admit(com.openggf.mods.run.RunInput input) { return true; }
+            @Override public void afterStep() { }
+        };
+        runtime.setFrameCompanion(stock);
+        assertFalse(runtime.retryOnActCompletion());
+        assertTrue(stock.mayRetry());
+
+        runtime.setFrameCompanion(new TimeAttackRuntime.FrameCompanion() {
+            @Override public boolean admit(com.openggf.mods.run.RunInput input) { return true; }
+            @Override public void afterStep() { }
+            @Override public boolean continueAfterActCompletion() { return true; }
+        });
+        assertTrue(runtime.retryOnActCompletion());
+        runtime.onRunEnded(com.openggf.mods.run.RunEndReason.ACT_COMPLETED);
+        assertFalse(runtime.retryOnActCompletion(), "an ended run drops its companion");
+    }
+
+    @Test
+    void leaveRunAsksTheAttachedHandleToEndTheRun(@TempDir Path root) {
+        TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root),
+                root.resolve("identity"), () -> false);
+        runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
+        assertDoesNotThrow(runtime::leaveRun, "no run is hosted yet");
+        int[] leaves = new int[1];
+        runtime.attachHandle(handle(new int[1], leaves));
+        runtime.leaveRun();
+        assertEquals(1, leaves[0]);
+    }
+
+    private static com.openggf.mods.run.RunHandle handle(int[] retries, int[] leaves) {
+        return new com.openggf.mods.run.RunHandle() {
+            @Override public void retry() { retries[0]++; }
+            @Override public void leave() { leaves[0]++; }
+            @Override public void spectate(boolean active, int dx, int dy) { }
+            @Override public boolean isActive() { return true; }
+        };
+    }
+
+    @Test
     void debugAssistedLevelStartTaintsTheAttempt(@TempDir Path root) throws Exception {
         GhostStore store = new GhostStore(root);
         TimeAttackRuntime runtime = new TimeAttackRuntime(store, root.resolve("identity"), () -> false);

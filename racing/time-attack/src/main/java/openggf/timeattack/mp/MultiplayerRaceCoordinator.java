@@ -60,6 +60,14 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     private List<ControlMessage.StandingsRow> aroundYouStandings = List.of();
     private int lastLocalFrameX;
     private int roundsStarted;
+    /** {@link #roundsStarted} when the runtime was attached: the round its run belongs to. */
+    private int attachedRound;
+    /**
+     * The host has closed the latest round ({@code RoundEnd}, a vote offer or a vote result).
+     * Unlike {@link ClientRaceSession#phase()}, this never comes from the estimated hub clock.
+     */
+    private boolean latestRoundClosed;
+    private boolean leaveRequested;
     private boolean showMinimap = true;
     private Consumer<RunLevelStart> levelReadyHook;
     /** Spectator pan speed in pixels per held frame after the local attempt has finished. */
@@ -95,6 +103,8 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         detachRuntime();
         this.runtime = runtime;
         this.publisher = new GhostStreamPublisher(transport::sendBinary);
+        attachedRound = roundsStarted;
+        leaveRequested = false;
         runtime.setAttemptListener(this);
         runtime.setExtraGhostSupplier(this::remoteActiveGhosts);
         runtime.setFrameCompanion(this);
@@ -115,6 +125,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         }
         publisherActive = false;
         pendingAttemptOrdinal = -1;
+        leaveRequested = false;
         publisher = null;
         remoteGhosts = List.of();
     }
@@ -131,19 +142,32 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                     session.onControl(control.message());
                     if (control.message() instanceof ControlMessage.RoomState state) {
                         registry.onRoomState(state.players());
+                    } else if (control.message() instanceof ControlMessage.PlayerUpsert upsert) {
+                        registry.onPlayerUpsert(upsert.player());
+                    } else if (control.message() instanceof ControlMessage.PlayerLeft left) {
+                        registry.onPlayerLeft(left.slot());
                     } else if (control.message() instanceof ControlMessage.RoundStart) {
                         roundsStarted++;
+                        latestRoundClosed = false;
                         registry.reset();
                         remoteGhosts = List.of();
                         localRank = -1;
                         topStandings = List.of();
                         aroundYouStandings = List.of();
                     } else if (control.message() instanceof ControlMessage.StandingsDelta delta) {
+                        boolean wasInTop = topStandings.stream()
+                                .anyMatch(row -> row.slot() == session.localSlot());
                         topStandings = List.copyOf(delta.rows());
-                        delta.rows().stream()
+                        var localRow = delta.rows().stream()
                                 .filter(row -> row.slot() == session.localSlot())
-                                .findFirst()
-                                .ifPresent(row -> localRank = row.rank());
+                                .findFirst();
+                        if (localRow.isPresent()) {
+                            localRank = localRow.get().rank();
+                        } else if (wasInTop) {
+                            // Pushed out of the top ten (the host's RankUpdate follows on
+                            // this ordered connection) or the only result was removed.
+                            localRank = -1;
+                        }
                         maybeRequestAroundYouPage();
                     } else if (control.message() instanceof ControlMessage.RankUpdate rank) {
                         localRank = rank.rank();
@@ -151,7 +175,11 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                     } else if (control.message() instanceof ControlMessage.StandingsPage page) {
                         applyAroundYouPage(page.rows());
                     } else if (control.message() instanceof ControlMessage.RoundEnd) {
+                        latestRoundClosed = true;
                         recordingVault.onRoundEnd();
+                    } else if (control.message() instanceof ControlMessage.TrackVoteOffer
+                            || control.message() instanceof ControlMessage.TrackVoteResult) {
+                        latestRoundClosed = true;
                     } else if (control.message() instanceof ControlMessage.RecordingRequest request) {
                         uploadRequestedRecording(request);
                     }
@@ -161,7 +189,6 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                 case RaceClient.Disconnected ignored -> connectionLost = true;
             }
         }
-        activatePendingAttemptIfRunning();
         maybePing();
         recordingVault.evictExpired();
     }
@@ -170,15 +197,56 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         pump();
     }
 
+    /**
+     * Holds the attached run during its own round's countdown and once it has asked to leave. A
+     * newer round's countdown never freezes an older run, such as its finished results tally.
+     */
     public boolean holdGameplay() {
-        return runtime != null && session.phase() == ClientRaceSession.Phase.COUNTDOWN;
+        return runtime != null && (leaveRequested || (roundsStarted == attachedRound
+                && session.phase() == ClientRaceSession.Phase.COUNTDOWN));
     }
 
     @Override
     public boolean admit(com.openggf.mods.run.RunInput input) {
         pump();
+        leaveIfRoundOver();
         pollLocalInput(input);
         return !holdGameplay();
+    }
+
+    /** An open window turns a completed act into the next attempt; a closed one ends the run. */
+    @Override
+    public boolean continueAfterActCompletion() {
+        return runtime != null && isAttachedRoundCurrent() && session.isWindowOpen();
+    }
+
+    /** Retries restart the act only while the attached round can still take an attempt. */
+    @Override
+    public boolean mayRetry() {
+        return runtime != null && isAttachedRoundCurrent()
+                && (session.phase() == ClientRaceSession.Phase.COUNTDOWN || session.isWindowOpen());
+    }
+
+    private boolean isAttachedRoundCurrent() {
+        return !leaveRequested && roundsStarted == attachedRound;
+    }
+
+    /**
+     * An unfinished run outlives its round once the host has closed it or a newer one has
+     * started: leave it so the lobby can take over. Only the host's messages count here: the
+     * lobby never relaunches a round, so leaving on the estimated deadline would lock out a
+     * player whose clock runs ahead of the hub, while that estimate only voids the attempt. A
+     * finished attempt keeps its results tally; the run then ends when the tally exits because
+     * the window is closed.
+     */
+    private void leaveIfRoundOver() {
+        if (runtime == null || leaveRequested || runtime.isAttemptFinished()) {
+            return;
+        }
+        if (roundsStarted != attachedRound || latestRoundClosed) {
+            leaveRequested = true;
+            runtime.leaveRun();
+        }
     }
 
     @Override
@@ -196,7 +264,8 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     /** Draws the multiplayer HUD (countdown, window, standings, votes, minimap) over the run. */
     @Override
     public void drawOverlay(LevelOverlayCanvas canvas, int levelWidth, int localCentreX) {
-        MultiplayerHudRenderer.render(canvas, hudState(), levelWidth, localCentreX, showMinimap);
+        MultiplayerHudRenderer.render(canvas, hudState(), levelWidth, localCentreX, showMinimap,
+                runtime != null && runtime.isAttemptFinished());
     }
 
     /** Called on the engine thread when an attached run's level is ready (launch and retry). */
@@ -302,23 +371,38 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         transport.close();
     }
 
+    /**
+     * Records the attempt as pending. Its {@code AttemptStart} waits for the first sampled frame,
+     * so the reload fade and title card never count against the host's pacing check.
+     */
     @Override
     public void onAttemptBegan(int attemptOrdinal) {
         requirePublisher();
-        if (session.phase() == ClientRaceSession.Phase.RUNNING) {
-            startPublisher(attemptOrdinal);
-        } else {
-            pendingAttemptOrdinal = attemptOrdinal;
+        if (publisherActive) {
+            // The runtime voids before every reload, so this is defensive: never throw here.
+            int stale = publisher.currentAttemptId();
+            LOGGER.warning("Attempt " + attemptOrdinal + " began while attempt " + stale
+                    + " was still published; resetting it");
+            publisher.abandonAttempt();
+            publisherActive = false;
+            transport.sendControl(new ControlMessage.AttemptReset(stale));
         }
+        pendingAttemptOrdinal = attemptOrdinal;
     }
 
     @Override
     public void onFrameSampled(int attemptOrdinal, GhostFrame frame) {
         requirePublisher();
-        activatePendingAttemptIfRunning();
+        if (!publisherActive && pendingAttemptOrdinal == attemptOrdinal) {
+            if (session.phase() != ClientRaceSession.Phase.RUNNING) {
+                // Outside the window the attempt can never count; afterLevelFrame voids it.
+                return;
+            }
+            startPublisher(attemptOrdinal);
+        }
         if (!publisherActive || publisher.currentAttemptId() != attemptOrdinal) {
             throw new IllegalStateException(
-                    "attempt frame sampled before authoritative RUNNING phase");
+                    "frame sampled for attempt " + attemptOrdinal + " that never began");
         }
         lastLocalFrameX = frame.x();
         publisher.onFrame(frame);
@@ -330,6 +414,11 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                                   byte[] inputRecordingSha256,
                                   AttemptInputRecording recording) {
         requirePublisher();
+        if (!publisherActive && pendingAttemptOrdinal == attemptOrdinal) {
+            // Every frame was dropped outside the window, so the host never saw this attempt.
+            pendingAttemptOrdinal = -1;
+            return;
+        }
         publisher.finishAttempt();
         publisherActive = false;
         String recordingHash = HexFormat.of().formatHex(inputRecordingSha256);
@@ -360,13 +449,6 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
             throw new IllegalStateException("no runtime attached");
         }
         return publisher;
-    }
-
-    private void activatePendingAttemptIfRunning() {
-        if (pendingAttemptOrdinal >= 0
-                && session.phase() == ClientRaceSession.Phase.RUNNING) {
-            startPublisher(pendingAttemptOrdinal);
-        }
     }
 
     private void startPublisher(int attemptOrdinal) {

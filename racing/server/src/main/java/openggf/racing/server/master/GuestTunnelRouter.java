@@ -1,5 +1,6 @@
 package openggf.racing.server.master;
 
+import com.openggf.net.host.ConnectionHygiene;
 import com.openggf.net.hub.HubConnection;
 import com.openggf.net.hub.GhostHub;
 import openggf.racing.protocol.ControlCodec;
@@ -15,7 +16,8 @@ import java.nio.charset.StandardCharsets;
 
 /** Master-side pairing and routing for direct-room fallback guests. */
 public final class GuestTunnelRouter implements RoomBroker.DirectTunnelDirectory {
-    private record Tunnel(String roomId, HubConnection guest, HubConnection host) { }
+    private record Tunnel(String roomId, HubConnection guest, HubConnection host,
+                          ConnectionHygiene.RateBucket hostRate) { }
 
     private final Map<String, HubConnection> hostsByRoom = new HashMap<>();
     private final Map<Integer, Tunnel> tunnels = new HashMap<>();
@@ -39,7 +41,8 @@ public final class GuestTunnelRouter implements RoomBroker.DirectTunnelDirectory
         if (guestId < 0) {
             return OptionalInt.empty();
         }
-        tunnels.put(guestId, new Tunnel(roomId, guestConnection, host));
+        tunnels.put(guestId, new Tunnel(roomId, guestConnection, host,
+                new ConnectionHygiene.RateBucket()));
         host.sendText(ControlCodec.encode(null,
                 new ControlMessage.RelayGuestOpen(guestId)));
         return OptionalInt.of(guestId);
@@ -114,18 +117,32 @@ public final class GuestTunnelRouter implements RoomBroker.DirectTunnelDirectory
         onHostControl(null, message);
     }
 
+    /** Broker-loop-only check before exempting a wrapper from its socket's broker quota. */
+    boolean ownsTunnel(HubConnection source, int guestId) {
+        return source != null && ownedBy(tunnels.get(guestId), source);
+    }
+
+    private boolean consumeHostQuota(int guestId, Tunnel tunnel) {
+        if (!tunnel.hostRate().consume()) {
+            rejectGuest(guestId, tunnel, "relay host tunnel message rate exceeded");
+            return false;
+        }
+        return true;
+    }
+
     public void onHostControl(HubConnection source, ControlMessage message) {
         switch (message) {
             case ControlMessage.RelayGuestText text -> {
                 Tunnel tunnel = tunnels.get(text.guestId());
                 if (ownedBy(tunnel, source)
+                        && consumeHostQuota(text.guestId(), tunnel)
                         && canForwardTo(text.guestId(), tunnel, tunnel.guest())) {
                     tunnel.guest().sendText(text.text());
                 }
             }
             case ControlMessage.RelayGuestClose close -> {
                 Tunnel tunnel = tunnels.get(close.guestId());
-                if (ownedBy(tunnel, source)) {
+                if (ownedBy(tunnel, source) && consumeHostQuota(close.guestId(), tunnel)) {
                     tunnels.remove(close.guestId());
                     tunnel.guest().close(close.reason());
                 }
@@ -144,6 +161,7 @@ public final class GuestTunnelRouter implements RoomBroker.DirectTunnelDirectory
                     GhostPackets.decodeRelayGuestBinary(wrapped);
             Tunnel tunnel = tunnels.get(payload.guestId());
             if (ownedBy(tunnel, source)
+                    && consumeHostQuota(payload.guestId(), tunnel)
                     && canForwardTo(payload.guestId(), tunnel, tunnel.guest())) {
                 tunnel.guest().sendBinary(payload.payload());
             }

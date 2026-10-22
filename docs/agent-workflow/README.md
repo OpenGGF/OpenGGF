@@ -381,11 +381,14 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
 - `com.openggf.tools.RuntimeEngineVisualControl`: lossless production-presented framebuffer and PCM qualification with compiled controller plans; separate from runtime acceptance timing (2026-10-12 performance series).
 
 - `tools/performance/run_isolated.py`: OS-leased exclusion of linked-worktree builds/tests plus a bypass-process guard for prebuilt measurements; writes an isolation audit (2026-10-13 P5 timing correction). Exclusive test admission precedes a separate active-build lease; idle retained category worktrees do not block it (2026-10-16 queue liveness correction).
+- `tools/performance/MultiplayerJfrSummary.java`: streams real multiplayer JFR recordings into bounded component/thread attribution, with explicit traffic/capture windows, separate Java/native samples, estimated allocation weights and thresholded socket observations (2026-10-21 Time Attack capacity investigation). Compile before acquiring a measurement lease; run the prebuilt summary class with a bounded heap.
 
 - [Native published-video diagnostic port](../../tools/tracechaser/bizhawk-headless/README.md#diagnostic-rendered-frames): opt-in rendered GPGX frames with owned pixels/VDP domains and stale-generation guards; explicit ROM/movie/scene inputs, no canonical fixture publication (2026-10-14 S3K visual parity task).
 
 - [Positioned S3K ending sampler](../../src/main/java/com/openggf/tools/S3kEndingSamplerTool.java) and [fail-closed native RGB comparator](../../tools/bizhawk/compare_native_rgb.py): explicit nine Sonic/Tails/team NTSC 320×224 title-owner products with declared progress, spot-bound or title completion, complete raw RGB pairs and explicit native filename padding/mapping/crops (2026-10-17 recurring ending parity); [protocol, commands and limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#2026-10-17-nine-declared-ntsc-ending-products).
 - [Passive ending queue probe](../../src/main/java/com/openggf/tools/S3kEndingQueueProbeTool.java): two explicit solo/+2/NTSC products, bounded LF metadata, actual production handles/child fingerprints and LIVE service/readiness projections without payloads or timing writes; [causality evidence and budget blocker](../architecture/plans/2026-10-13-s3k-playable-completion.md#2026-10-17-passive-reunion-queue-causality).
+
+- `TimeAttackCapacityVideoTool` (`racing-server capture-video`): display-free actual first boot, master browser, full relay lobby and ROM-backed natural GHZ1 completion beside authenticated simulated peers; video/PCM, chapters and observed state are written to an owned external capture directory (2026-10-21 capacity demonstration).
 
 Stageplay's `level`, `catalog`, `simulate` and live offscreen preview/capture owners
 support reproducible native ensemble routes; see the [authoring guide](../guide/creating/stageplay-authoring.md#live-rom-worlds-screenplay-3-document-5)

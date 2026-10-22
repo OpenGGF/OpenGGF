@@ -25,9 +25,17 @@ import java.util.concurrent.Executor;
 /** Netty adapter routing one master socket between broker, relay room, and tunnel modes. */
 final class MasterChannelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
     private enum Mode { BROKER, ROOM, TUNNEL_GUEST }
-    private sealed interface PendingFrame { }
-    private record PendingText(String text) implements PendingFrame { }
-    private record PendingBinary(byte[] data) implements PendingFrame { }
+    private sealed interface PendingFrame { long retainedBytes(); }
+    private record PendingText(String text, long retainedBytes) implements PendingFrame { }
+    private record PendingBinary(byte[] data, long retainedBytes) implements PendingFrame { }
+    private record PendingIgnored(long retainedBytes) implements PendingFrame { }
+    // Classification has not yet identified the recipient: allow one burst for
+    // each supported direct-room player while keeping unvalidated work bounded.
+    private static final int MAX_PENDING_BROKER_FRAMES =
+            ConnectionHygiene.MESSAGE_RATE_BURST * Protocol.MAX_PLAYERS_DIRECT;
+    // One full-size binary burst for all eight supported direct-room guests fits.
+    // Text can retain more memory than its UTF-8 payload, so account it at 2x.
+    private static final long MAX_PENDING_BROKER_BYTES = 4L * 1024 * 1024;
 
     private final RoomBroker broker;
     private final RelayRoomManager relays;
@@ -45,6 +53,7 @@ final class MasterChannelHandler extends SimpleChannelInboundHandler<WebSocketFr
     private int guestId = -1;
     private boolean brokerInFlight;
     private final ArrayDeque<PendingFrame> pendingFrames = new ArrayDeque<>();
+    private long pendingBrokerBytes;
 
     MasterChannelHandler(RoomBroker broker, RelayRoomManager relays,
                          GuestTunnelRouter tunnels, Executor brokerLoop,
@@ -85,56 +94,96 @@ final class MasterChannelHandler extends SimpleChannelInboundHandler<WebSocketFr
 
     @Override
     protected void channelRead0(ChannelHandlerContext context, WebSocketFrame frame) {
-        if (connection == null || !rateBucket.consume()) {
+        if (connection == null) {
             context.close();
             return;
         }
-        if (frame instanceof TextWebSocketFrame text) {
-            if (brokerInFlight) {
-                pendingFrames.addLast(new PendingText(text.text()));
-                return;
-            }
-            routeText(context, text.text());
-        } else if (frame instanceof BinaryWebSocketFrame binary) {
-            if (binary.content().readableBytes() > Protocol.MAX_MASTER_FRAME_BYTES) {
+        long retainedBytes = 0;
+        if (mode == Mode.BROKER) {
+            int readableBytes = frame.content().readableBytes();
+            // Broker binary is always a RelayGuestBinary wrapper, whose outer cap
+            // is 4 KiB. Reject larger data before copying it into the backlog.
+            if (frame instanceof BinaryWebSocketFrame
+                    && readableBytes > Protocol.MAX_BINARY_BYTES) {
+                clearPendingFrames();
                 context.close();
                 return;
             }
-            byte[] data = ByteBufUtil.getBytes(binary.content());
-            if (brokerInFlight) {
-                pendingFrames.addLast(new PendingBinary(data));
+            retainedBytes = frame instanceof TextWebSocketFrame
+                    ? 2L * readableBytes : readableBytes;
+            if (brokerInFlight && (pendingFrames.size() >= MAX_PENDING_BROKER_FRAMES
+                    || retainedBytes > MAX_PENDING_BROKER_BYTES - pendingBrokerBytes)) {
+                clearPendingFrames();
+                context.close();
                 return;
             }
-            routeBinary(context, data);
+        } else if (frame instanceof BinaryWebSocketFrame binary
+                && binary.content().readableBytes() > Protocol.MAX_MASTER_FRAME_BYTES) {
+            context.close();
+            return;
         }
+        PendingFrame pending;
+        if (frame instanceof TextWebSocketFrame text) {
+            pending = new PendingText(text.text(), retainedBytes);
+        } else if (frame instanceof BinaryWebSocketFrame binary) {
+            pending = new PendingBinary(ByteBufUtil.getBytes(binary.content()), retainedBytes);
+        } else {
+            pending = new PendingIgnored(retainedBytes);
+        }
+        if (brokerInFlight) {
+            // Auto-read pauses new socket reads; frames already decoded by the pipeline
+            // still need a bound while authentication/ownership runs on the broker loop.
+            pendingFrames.addLast(pending);
+            pendingBrokerBytes += pending.retainedBytes();
+            return;
+        }
+        routeFrame(context, pending);
     }
 
-    private void routeText(ChannelHandlerContext context, String text) {
+    private void routeFrame(ChannelHandlerContext context, PendingFrame frame) {
         HubConnection current = connection;
+        if (mode == Mode.BROKER) {
+            brokerInFlight = true;
+            context.channel().config().setAutoRead(false);
+            brokerLoop.execute(() -> routeBrokerFrame(context, current, frame));
+            return;
+        }
+        // After attachment, the channel carries one guest's traffic again. Its
+        // previous broker task has completed before this IO-loop mode transition.
+        if (!rateBucket.consume()) {
+            context.close();
+            return;
+        }
         switch (mode) {
-            case ROOM -> roomAccess.loop().execute(() ->
-                    roomAccess.room().onText(current, text));
-            case TUNNEL_GUEST -> brokerLoop.execute(() -> tunnels.guestText(guestId, text));
-            case BROKER -> {
-                brokerInFlight = true;
-                context.channel().config().setAutoRead(false);
-                brokerLoop.execute(() -> routeBrokerText(context, current, text));
+            case ROOM -> {
+                switch (frame) {
+                    case PendingText text -> roomAccess.loop().execute(() ->
+                            roomAccess.room().onText(current, text.text()));
+                    case PendingBinary binary -> roomAccess.loop().execute(() ->
+                            roomAccess.room().onBinary(current, binary.data()));
+                    case PendingIgnored ignored -> { }
+                }
             }
+            case TUNNEL_GUEST -> {
+                switch (frame) {
+                    case PendingText text -> brokerLoop.execute(() -> tunnels.guestText(guestId, text.text()));
+                    case PendingBinary binary -> brokerLoop.execute(() -> tunnels.guestBinary(guestId, binary.data()));
+                    case PendingIgnored ignored -> { }
+                }
+            }
+            case BROKER -> throw new IllegalStateException("broker frames require serialized dispatch");
         }
     }
 
-    private void routeBrokerText(ChannelHandlerContext context, HubConnection current,
-                                 String text) {
+    private void routeBrokerFrame(ChannelHandlerContext context, HubConnection current,
+                                  PendingFrame frame) {
         try {
-            ControlCodec.DecodedControl decoded = ControlCodec.decode(
-                    text, Protocol.MAX_MASTER_FRAME_BYTES);
-            if ((decoded.message() instanceof ControlMessage.RelayGuestText
-                    || decoded.message() instanceof ControlMessage.RelayGuestClose)
-                    && broker.acceptsToken(current, decoded.token())) {
-                tunnels.onHostControl(current, decoded.message());
-            } else {
-                broker.onText(current, text);
-            }
+            boolean accepted = switch (frame) {
+                case PendingText text -> routeBrokerText(context, current, text.text());
+                case PendingBinary binary -> routeBrokerBinary(context, current, binary.data());
+                case PendingIgnored ignored -> consumeBrokerQuota(context);
+            };
+            if (!accepted) return;
             var attach = broker.takeAttachResult(current);
             context.executor().execute(() -> {
                 brokerInFlight = false;
@@ -142,7 +191,7 @@ final class MasterChannelHandler extends SimpleChannelInboundHandler<WebSocketFr
                     // The broker may hand off ownership before the IO loop observes
                     // it. Inactive ran in BROKER mode, so release that new owner here.
                     attach.ifPresent(result -> releaseAttach(current, result));
-                    pendingFrames.clear();
+                    clearPendingFrames();
                     return;
                 }
                 attach.ifPresent(result -> applyAttach(context, result));
@@ -157,6 +206,59 @@ final class MasterChannelHandler extends SimpleChannelInboundHandler<WebSocketFr
         }
     }
 
+    private boolean consumeBrokerQuota(ChannelHandlerContext context) {
+        if (!rateBucket.consume()) {
+            context.executor().execute(context::close);
+            return false;
+        }
+        return true;
+    }
+
+    private boolean routeBrokerText(ChannelHandlerContext context, HubConnection current,
+                                    String text) {
+        final ControlCodec.DecodedControl decoded;
+        try {
+            decoded = ControlCodec.decode(text, Protocol.MAX_MASTER_FRAME_BYTES);
+        } catch (ProtocolViolationException invalid) {
+            if (!consumeBrokerQuota(context)) return false;
+            throw invalid;
+        }
+        int target = switch (decoded.message()) {
+            case ControlMessage.RelayGuestText relay -> relay.guestId();
+            case ControlMessage.RelayGuestClose relay -> relay.guestId();
+            default -> -1;
+        };
+        if (target >= 0 && broker.acceptsToken(current, decoded.token())
+                && tunnels.ownsTunnel(current, target)) {
+            tunnels.onHostControl(current, decoded.message());
+        } else {
+            if (!consumeBrokerQuota(context)) return false;
+            broker.onText(current, text);
+        }
+        return true;
+    }
+
+    private boolean routeBrokerBinary(ChannelHandlerContext context, HubConnection current,
+                                      byte[] data) {
+        if (data.length == 0 || (data[0] & 0xFF) != GhostPackets.TYPE_RELAY_GUEST_BINARY) {
+            if (!consumeBrokerQuota(context)) return false;
+            context.executor().execute(context::close);
+            return false;
+        }
+        GhostPackets.RelayGuestBinary wrapped = null;
+        try {
+            wrapped = GhostPackets.decodeRelayGuestBinary(data);
+        } catch (ProtocolViolationException ignored) {
+            // Malformed wrappers never receive the host fan-out quota exemption.
+        }
+        if (wrapped != null && broker.isAdmitted(current)
+                && tunnels.ownsTunnel(current, wrapped.guestId())) {
+            tunnels.onHostBinary(current, data);
+            return true;
+        }
+        return consumeBrokerQuota(context);
+    }
+
     private void releaseAttach(HubConnection current, RoomBroker.AttachResult result) {
         if (result.mode() == RoomBroker.AttachMode.ROOM) {
             relays.find(result.roomId()).ifPresent(access -> access.loop().execute(
@@ -169,11 +271,15 @@ final class MasterChannelHandler extends SimpleChannelInboundHandler<WebSocketFr
     private void drainPending(ChannelHandlerContext context) {
         while (!brokerInFlight && !pendingFrames.isEmpty()
                 && context.channel().isActive()) {
-            switch (pendingFrames.removeFirst()) {
-                case PendingText text -> routeText(context, text.text());
-                case PendingBinary binary -> routeBinary(context, binary.data());
-            }
+            PendingFrame pending = pendingFrames.removeFirst();
+            pendingBrokerBytes -= pending.retainedBytes();
+            routeFrame(context, pending);
         }
+    }
+
+    private void clearPendingFrames() {
+        pendingFrames.clear();
+        pendingBrokerBytes = 0;
     }
 
     private void applyAttach(ChannelHandlerContext context, RoomBroker.AttachResult result) {
@@ -190,26 +296,9 @@ final class MasterChannelHandler extends SimpleChannelInboundHandler<WebSocketFr
         }
     }
 
-    private void routeBinary(ChannelHandlerContext context, byte[] data) {
-        HubConnection current = connection;
-        switch (mode) {
-            case ROOM -> roomAccess.loop().execute(() ->
-                    roomAccess.room().onBinary(current, data));
-            case TUNNEL_GUEST -> brokerLoop.execute(() ->
-                    tunnels.guestBinary(guestId, data));
-            case BROKER -> {
-                if (data.length == 0 || (data[0] & 0xFF) != GhostPackets.TYPE_RELAY_GUEST_BINARY) {
-                    context.close();
-                    return;
-                }
-                brokerLoop.execute(() -> tunnels.onHostBinary(current, data));
-            }
-        }
-    }
-
     @Override
     public void channelInactive(ChannelHandlerContext context) throws Exception {
-        pendingFrames.clear();
+        clearPendingFrames();
         if (connection != null) {
             HubConnection disconnected = connection;
             RelayRoomManager.RoomAccess disconnectedRoom = roomAccess;

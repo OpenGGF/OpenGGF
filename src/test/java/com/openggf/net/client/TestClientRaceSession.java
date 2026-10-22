@@ -45,6 +45,37 @@ class TestClientRaceSession {
     }
 
     @Test
+    void membershipDeltasReplaceBySlotAndFreshJoinClearsTheOldMirror() {
+        var session = session();
+        var a = new ControlMessage.PlayerInfo(0, "a", "A", "sonic");
+        var b = new ControlMessage.PlayerInfo(2, "b", "B", "tails");
+        session.onControl(new ControlMessage.RoomState(List.of(b, a)));
+        var c = new ControlMessage.PlayerInfo(0, "c", "Replacement", "knuckles");
+        session.onControl(new ControlMessage.PlayerUpsert(c));
+        assertEquals(List.of(c, b), session.players());
+        session.onControl(new ControlMessage.PlayerLeft(2));
+        assertEquals(List.of(c), session.players());
+        session.applyJoin(new ControlMessage.JoinAccepted("new-token", 1, session.room(),
+                new ControlMessage.RoundSnapshot("LOBBY", null, 0, 0, List.of())));
+        assertTrue(session.players().isEmpty());
+        session.onControl(new ControlMessage.RoomState(List.of(b)));
+        assertEquals(List.of(b), session.players());
+    }
+
+    @Test
+    void membershipUpsertMovesAnIdentityInsteadOfDuplicatingIt() {
+        var session = session();
+        var original = new ControlMessage.PlayerInfo(0, "identity", "A", "sonic");
+        var other = new ControlMessage.PlayerInfo(1, "other", "B", "tails");
+        session.onControl(new ControlMessage.RoomState(List.of(original, other)));
+
+        var moved = new ControlMessage.PlayerInfo(2, "identity", "A", "knuckles");
+        session.onControl(new ControlMessage.PlayerUpsert(moved));
+
+        assertEquals(List.of(other, moved), session.players());
+    }
+
+    @Test
     void clockOffsetIsMedianOfSamples() {
         ClientRaceSession session = session();
         assertEquals(0, session.clockOffsetMillis());

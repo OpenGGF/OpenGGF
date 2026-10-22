@@ -6,7 +6,9 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Binary ghost packets using the canonical seven-byte ghost-frame encoding. */
+/** Binary ghost packets with packet-local compression of canonical seven-byte frames.
+ * Every entry starts from an absolute frame; decoding never depends on another packet.
+ */
 @com.openggf.game.ModApi
 public final class GhostPackets {
     public static final int TYPE_GHOST_FRAMES = 0x01;
@@ -22,6 +24,15 @@ public final class GhostPackets {
     public static final int MAX_AGGREGATE_FRAMES_PER_ENTRY = 30;
 
     private static final int FRAME_BYTES = GhostFrameCodec.BYTES;
+    // Low five bits retain the count (1..30). Bits 5 and 6 are reserved.
+    private static final int COMPRESSED = 0x80;
+    private static final int COUNT_MASK = 0x1F;
+    private static final int RESERVED_COUNT_BITS = 0x60;
+    // Each subsequent frame has x/y modes in bits 0..3, changed bytes in 4..6.
+    // Coordinate modes: 0 = same, 1 = signed-byte delta, 2 = absolute unsigned short.
+    private static final int SAME = 0;
+    private static final int DELTA = 1;
+    private static final int ABSOLUTE = 2;
     private static final int FRAMES_HEADER = 1 + 4 + 4 + 1;
     private static final int ENTRY_HEADER = 1 + 4 + 4 + 1;
     private static final int AGGREGATE_HEADER = 1 + 4 + 1;
@@ -80,12 +91,10 @@ public final class GhostPackets {
 
     public static byte[] encodeFrames(int attemptId, int startFrameIndex, byte[] frameData) {
         int count = validFrameCount(frameData, MAX_UPSTREAM_FRAMES_PER_PACKET);
-        ByteBuffer out = ByteBuffer.allocate(FRAMES_HEADER + frameData.length);
-        out.put((byte) TYPE_GHOST_FRAMES)
-                .putInt(attemptId)
-                .putInt(startFrameIndex)
-                .put((byte) count)
-                .put(frameData);
+        int encodedBytes = encodedFrameBytes(frameData);
+        ByteBuffer out = ByteBuffer.allocate(FRAMES_HEADER + encodedBytes);
+        out.put((byte) TYPE_GHOST_FRAMES).putInt(attemptId).putInt(startFrameIndex);
+        putFrameData(out, count, frameData, encodedBytes);
         return out.array();
     }
 
@@ -93,11 +102,9 @@ public final class GhostPackets {
         ByteBuffer in = checked(packet, TYPE_GHOST_FRAMES, FRAMES_HEADER);
         int attemptId = in.getInt();
         int startFrameIndex = in.getInt();
-        int count = in.get() & 0xFF;
-        if (count < 1 || count > MAX_UPSTREAM_FRAMES_PER_PACKET) {
-            throw new ProtocolViolationException("frames batch count " + count);
-        }
-        byte[] frameData = takeExactly(in, count);
+        int countByte = in.get() & 0xFF;
+        int count = decodeFrameCount(countByte, MAX_UPSTREAM_FRAMES_PER_PACKET);
+        byte[] frameData = takeFrameData(in, count, countByte);
         requireExhausted(in, "frames packet");
         return new FramesBatch(attemptId, startFrameIndex, count, frameData);
     }
@@ -107,17 +114,21 @@ public final class GhostPackets {
             throw new ProtocolViolationException("aggregate entry count");
         }
         int size = AGGREGATE_HEADER;
+        int canonicalSize = AGGREGATE_HEADER;
         for (AggregateEntry entry : entries) {
+            // The enclosing codec can read the record's frozen internal array.
+            // Its public constructor and accessor still copy at caller boundaries.
             int count = validFrameCount(
-                    entry.frameData(), MAX_AGGREGATE_FRAMES_PER_ENTRY);
+                    entry.frameData, MAX_AGGREGATE_FRAMES_PER_ENTRY);
             if (entry.frameCount() != count) {
                 throw new ProtocolViolationException("aggregate frame count mismatch");
             }
             if (entry.playerSlot() < 0 || entry.playerSlot() > 255) {
                 throw new ProtocolViolationException("aggregate player slot " + entry.playerSlot());
             }
-            size += ENTRY_HEADER + entry.frameData().length;
-            if (size > Protocol.MAX_BINARY_BYTES) {
+            size += ENTRY_HEADER + encodedFrameBytes(entry.frameData);
+            canonicalSize += ENTRY_HEADER + entry.frameData.length;
+            if (canonicalSize > Protocol.MAX_BINARY_BYTES) {
                 throw new ProtocolViolationException("aggregate exceeds binary cap");
             }
         }
@@ -126,9 +137,9 @@ public final class GhostPackets {
         for (AggregateEntry entry : entries) {
             out.put((byte) entry.playerSlot())
                     .putInt(entry.attemptId())
-                    .putInt(entry.startFrameIndex())
-                    .put((byte) entry.frameCount())
-                    .put(entry.frameData());
+                    .putInt(entry.startFrameIndex());
+            putFrameData(out, entry.frameCount(), entry.frameData,
+                    encodedFrameBytes(entry.frameData));
         }
         return out.array();
     }
@@ -138,6 +149,7 @@ public final class GhostPackets {
         int hubTick = in.getInt();
         int entryCount = in.get() & 0xFF;
         List<AggregateEntry> entries = new ArrayList<>(entryCount);
+        int canonicalSize = AGGREGATE_HEADER;
         for (int i = 0; i < entryCount; i++) {
             if (in.remaining() < ENTRY_HEADER) {
                 throw new ProtocolViolationException("aggregate truncated at entry " + i);
@@ -145,12 +157,14 @@ public final class GhostPackets {
             int slot = in.get() & 0xFF;
             int attemptId = in.getInt();
             int startFrameIndex = in.getInt();
-            int count = in.get() & 0xFF;
-            if (count < 1 || count > MAX_AGGREGATE_FRAMES_PER_ENTRY) {
-                throw new ProtocolViolationException("aggregate entry count " + count);
+            int countByte = in.get() & 0xFF;
+            int count = decodeFrameCount(countByte, MAX_AGGREGATE_FRAMES_PER_ENTRY);
+            canonicalSize += ENTRY_HEADER + count * FRAME_BYTES;
+            if (canonicalSize > Protocol.MAX_BINARY_BYTES) {
+                throw new ProtocolViolationException("aggregate exceeds canonical binary cap");
             }
-            entries.add(new AggregateEntry(
-                    slot, attemptId, startFrameIndex, count, takeExactly(in, count)));
+            entries.add(new AggregateEntry(slot, attemptId, startFrameIndex, count,
+                    takeFrameData(in, count, countByte)));
         }
         requireExhausted(in, "aggregate");
         return new Aggregate(hubTick, entries);
@@ -247,6 +261,112 @@ public final class GhostPackets {
         ByteBuffer in = ByteBuffer.wrap(packet);
         in.get();
         return in;
+    }
+
+    private static int decodeFrameCount(int countByte, int maximum) {
+        int count = countByte & COUNT_MASK;
+        if ((countByte & RESERVED_COUNT_BITS) != 0 || count < 1 || count > maximum) {
+            throw new ProtocolViolationException("frame count/flags " + countByte);
+        }
+        return count;
+    }
+
+    private static int coordinate(byte[] data, int offset) {
+        return ((data[offset] & 0xFF) << 8) | (data[offset + 1] & 0xFF);
+    }
+
+    private static int coordinateMode(byte[] data, int offset) {
+        int difference = (short) (coordinate(data, offset) - coordinate(data, offset - FRAME_BYTES));
+        return difference == 0 ? SAME : difference >= -128 && difference <= 127 ? DELTA : ABSOLUTE;
+    }
+
+    private static int control(byte[] data, int offset) {
+        int mask = coordinateMode(data, offset) | (coordinateMode(data, offset + 2) << 2);
+        for (int field = 4; field < FRAME_BYTES; field++) {
+            if (data[offset + field] != data[offset + field - FRAME_BYTES]) {
+                mask |= 1 << field;
+            }
+        }
+        return mask;
+    }
+
+    private static int encodedFrameBytes(byte[] data) {
+        int size = FRAME_BYTES;
+        for (int offset = FRAME_BYTES; offset < data.length; offset += FRAME_BYTES) {
+            int mask = control(data, offset);
+            size += 1 + (mask & 3) + ((mask >>> 2) & 3) + Integer.bitCount(mask & 0x70);
+        }
+        return Math.min(size, data.length);
+    }
+
+    private static void putFrameData(ByteBuffer out, int count, byte[] data, int encodedBytes) {
+        boolean compressed = encodedBytes < data.length;
+        out.put((byte) (count | (compressed ? COMPRESSED : 0)));
+        if (!compressed) {
+            out.put(data);
+            return;
+        }
+        out.put(data, 0, FRAME_BYTES);
+        for (int offset = FRAME_BYTES; offset < data.length; offset += FRAME_BYTES) {
+            int mask = control(data, offset);
+            out.put((byte) mask);
+            for (int field = 0; field <= 2; field += 2) {
+                int mode = (mask >>> field) & 3;
+                if (mode == DELTA) {
+                    out.put((byte) (coordinate(data, offset + field)
+                            - coordinate(data, offset + field - FRAME_BYTES)));
+                } else if (mode == ABSOLUTE) {
+                    out.put(data, offset + field, 2);
+                }
+            }
+            for (int field = 4; field < FRAME_BYTES; field++) {
+                if ((mask & (1 << field)) != 0) {
+                    out.put(data[offset + field]);
+                }
+            }
+        }
+    }
+
+    private static byte[] takeFrameData(ByteBuffer in, int count, int countByte) {
+        if ((countByte & COMPRESSED) == 0) {
+            return takeExactly(in, count);
+        }
+        requireRemaining(in, FRAME_BYTES);
+        byte[] data = new byte[count * FRAME_BYTES];
+        in.get(data, 0, FRAME_BYTES);
+        for (int offset = FRAME_BYTES; offset < data.length; offset += FRAME_BYTES) {
+            requireRemaining(in, 1);
+            int mask = in.get() & 0xFF;
+            int xMode = mask & 3;
+            int yMode = (mask >>> 2) & 3;
+            if ((mask & 0x80) != 0 || xMode == 3 || yMode == 3) {
+                throw new ProtocolViolationException("reserved frame compression mode " + mask);
+            }
+            requireRemaining(in, xMode + yMode + Integer.bitCount(mask & 0x70));
+            System.arraycopy(data, offset - FRAME_BYTES, data, offset, FRAME_BYTES);
+            for (int field = 0; field <= 2; field += 2) {
+                int mode = (mask >>> field) & 3;
+                if (mode == DELTA) {
+                    int value = coordinate(data, offset + field) + in.get();
+                    data[offset + field] = (byte) (value >>> 8);
+                    data[offset + field + 1] = (byte) value;
+                } else if (mode == ABSOLUTE) {
+                    in.get(data, offset + field, 2);
+                }
+            }
+            for (int field = 4; field < FRAME_BYTES; field++) {
+                if ((mask & (1 << field)) != 0) {
+                    data[offset + field] = in.get();
+                }
+            }
+        }
+        return data;
+    }
+
+    private static void requireRemaining(ByteBuffer in, int bytes) {
+        if (in.remaining() < bytes) {
+            throw new ProtocolViolationException("truncated compressed frame data");
+        }
     }
 
     private static byte[] takeExactly(ByteBuffer in, int frameCount) {

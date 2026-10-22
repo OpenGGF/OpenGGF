@@ -4,11 +4,37 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
+import java.sql.DriverManager;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSqliteIdentityStore {
+    @Test
+    void installsHotPathIndexesOnLegacyDatabaseAndReopen(@TempDir Path dir) throws Exception {
+        Path db = dir.resolve("ids.db");
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + db.toAbsolutePath());
+             var statement = connection.createStatement()) {
+            statement.execute("CREATE TABLE identities (fingerprint TEXT PRIMARY KEY, first_seen INTEGER, "
+                    + "last_seen INTEGER, display_name TEXT, tier TEXT, clean_rounds INTEGER)");
+            statement.execute("CREATE TABLE sanctions (id INTEGER PRIMARY KEY AUTOINCREMENT, fingerprint TEXT, "
+                    + "type TEXT, reason TEXT, issuer TEXT, issued_at INTEGER, expiry INTEGER)");
+            statement.execute("CREATE TABLE verdicts (id INTEGER PRIMARY KEY AUTOINCREMENT, fingerprint TEXT, "
+                    + "attempt_ref TEXT, input_recording_hash TEXT, result TEXT, verifier_signature TEXT, timestamp INTEGER)");
+        }
+        try (SqliteIdentityStore ignored = new SqliteIdentityStore(db)) { }
+        try (SqliteIdentityStore ignored = new SqliteIdentityStore(db);
+             var connection = DriverManager.getConnection("jdbc:sqlite:" + db.toAbsolutePath());
+             var statement = connection.createStatement();
+             var rows = statement.executeQuery(
+                     "SELECT name FROM sqlite_master WHERE type='index'")) {
+            var names = new java.util.HashSet<String>();
+            while (rows.next()) names.add(rows.getString(1));
+            assertTrue(names.contains("sanctions_fingerprint_expiry"));
+            assertTrue(names.contains("identities_new_last_seen"));
+        }
+    }
+
     @Test
     void writeOnMeritPersistsAndFinds(@TempDir Path dir) throws Exception {
         try (SqliteIdentityStore store = new SqliteIdentityStore(dir.resolve("ids.db"))) {

@@ -70,7 +70,7 @@ class TestRoomHost {
     }
 
     @Test
-    void admitsPlayersAssignsSlotsAndBroadcastsRoomState() throws Exception {
+    void admitsPlayersWithSnapshotAndOnlyBroadcastsMembershipDelta() throws Exception {
         FakeHubConnection a = new FakeHubConnection();
         FakeHubConnection b = new FakeHubConnection();
         ControlMessage.JoinAccepted joinA = admit(a, "A", dir.resolve("a"));
@@ -79,8 +79,72 @@ class TestRoomHost {
         assertEquals(1, joinB.playerSlot());
         assertFalse(joinA.room().verified());
         assertEquals("LOBBY", joinA.round().phase());
-        assertEquals(2, ((ControlMessage.RoomState) lastMessage(a)).players().size());
+        assertEquals(1, a.text.stream().map(text -> ControlCodec.decode(text).message())
+                .filter(ControlMessage.RoomState.class::isInstance).count());
+        assertEquals(joinB.playerSlot(), ((ControlMessage.PlayerUpsert) lastMessage(a)).player().slot());
+        assertEquals(2, ((ControlMessage.RoomState) lastMessage(b)).players().size());
         assertEquals(2, room.playerCount());
+    }
+
+    @Test
+    void characterChangesPublishOnlyOneUpsertAndNoOpSelectionPublishesNothing() throws Exception {
+        FakeHubConnection a = new FakeHubConnection();
+        FakeHubConnection b = new FakeHubConnection();
+        var join = admit(a, "A", dir.resolve("a"));
+        admit(b, "B", dir.resolve("b"));
+        a.text.clear();
+        b.text.clear();
+        room.onText(a, ControlCodec.encode(join.sessionToken(), new ControlMessage.SelectCharacter("sonic")));
+        assertTrue(a.text.isEmpty());
+        assertTrue(b.text.isEmpty());
+        room.onText(a, ControlCodec.encode(join.sessionToken(), new ControlMessage.SelectCharacter("tails")));
+        assertEquals(1, a.text.size());
+        assertEquals(1, b.text.size());
+        var changed = (ControlMessage.PlayerUpsert) lastMessage(b);
+        assertEquals(join.playerSlot(), changed.player().slot());
+        assertEquals("tails", changed.player().character());
+    }
+
+    @Test
+    void reconnectGetsFreshSnapshotAndBulkCloseDoesNotBroadcastDepartures() throws Exception {
+        FakeHubConnection a = new FakeHubConnection();
+        FakeHubConnection b = new FakeHubConnection();
+        var oldJoin = admit(a, "A", dir.resolve("a"));
+        admit(b, "B", dir.resolve("b"));
+        room.onDisconnected(a);
+        FakeHubConnection replacement = new FakeHubConnection();
+        var newJoin = admit(replacement, "A2", dir.resolve("a"));
+        assertEquals(oldJoin.playerSlot(), newJoin.playerSlot());
+        assertNotEquals(oldJoin.sessionToken(), newJoin.sessionToken());
+        var snapshot = (ControlMessage.RoomState) lastMessage(replacement);
+        assertEquals(2, snapshot.players().size());
+        assertTrue(snapshot.players().stream().anyMatch(player -> player.displayName().equals("A2")));
+        b.text.clear();
+        replacement.text.clear();
+        room.close("done");
+        assertTrue(b.text.isEmpty());
+        assertTrue(replacement.text.isEmpty());
+        assertEquals("done", b.closedReason);
+        assertEquals(0, room.playerCount());
+    }
+
+    @Test
+    void membershipEventsRefreshChangedNewPlayerBadgeWithoutBroadcastingSnapshot() throws Exception {
+        boolean[] newPlayer = {true};
+        room = new RoomHost(new RoomHostConfig("LAN", "s3k", 0, 0, "OPEN", null, 8, FP),
+                hostIdentity, () -> now, TrackValidationProfileSource.none(),
+                new RoomHostHooks(false, null, null, null, ignored -> newPlayer[0]));
+        FakeHubConnection a = new FakeHubConnection();
+        admit(a, "A", dir.resolve("a"));
+        a.text.clear();
+        newPlayer[0] = false;
+        FakeHubConnection b = new FakeHubConnection();
+        admit(b, "B", dir.resolve("b"));
+        var messages = a.text.stream().map(text -> ControlCodec.decode(text).message()).toList();
+        assertEquals(2, messages.size());
+        assertTrue(messages.stream().allMatch(ControlMessage.PlayerUpsert.class::isInstance));
+        assertTrue(messages.stream().map(ControlMessage.PlayerUpsert.class::cast)
+                .noneMatch(update -> update.player().newPlayer()));
     }
 
     @Test
@@ -113,7 +177,7 @@ class TestRoomHost {
     void maximalTwoHundredFiftySixPlayerRosterFitsClientFrame() {
         List<ControlMessage.PlayerInfo> players = new ArrayList<>();
         for (int slot = 0; slot < Protocol.MAX_PLAYERS_RELAY; slot++) {
-            players.add(new ControlMessage.PlayerInfo(slot, "f".repeat(64),
+            players.add(new ControlMessage.PlayerInfo(slot, String.format("%064x", slot),
                     "n".repeat(64), "c".repeat(32), false));
         }
         String wire = ControlCodec.encode(null, new ControlMessage.RoomState(players));
@@ -374,7 +438,7 @@ class TestRoomHost {
         admit(b, "B", dir.resolve("b"));
         room.onDisconnected(a);
         assertEquals(1, room.playerCount());
-        assertEquals(1, ((ControlMessage.RoomState) lastMessage(b)).players().size());
+        assertEquals(new ControlMessage.PlayerLeft(0), lastMessage(b));
         room.onText(a, ControlCodec.encode(tokenA, new ControlMessage.Chat("ghost of a")));
         assertTrue(b.text.stream().map(text -> ControlCodec.decode(text).message())
                 .noneMatch(message -> message instanceof ControlMessage.ChatBroadcast));

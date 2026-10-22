@@ -21,7 +21,7 @@ public final class RemoteGhostRegistry {
     public record FarPlayer(int slot, String displayName, String character,
                             int cellX, int cellY, int status) { }
 
-    private record Roster(String displayName, String character) {
+    private record Roster(String fingerprint, String displayName, String character) {
     }
 
     // Allow short jitter stalls, then return to the current coarse roster position.
@@ -43,14 +43,34 @@ public final class RemoteGhostRegistry {
         }
     }
 
+    /** A connection's initial snapshot establishes a fresh playback baseline. */
     public void onRoomState(List<ControlMessage.PlayerInfo> players) {
+        reset();
         roster.clear();
         for (ControlMessage.PlayerInfo player : players) {
-            roster.put(player.slot(), new Roster(player.displayName(), player.character()));
+            onPlayerUpsert(player);
         }
-        playbacks.keySet().removeIf(slot -> !roster.containsKey(slot));
-        quietFrames.keySet().retainAll(playbacks.keySet());
-        rosterState.keySet().removeIf(slot -> !roster.containsKey(slot));
+    }
+
+    public void onPlayerUpsert(ControlMessage.PlayerInfo player) {
+        roster.entrySet().stream()
+                .filter(entry -> entry.getKey() != player.slot()
+                        && entry.getValue().fingerprint().equals(player.fingerprint()))
+                .map(Map.Entry::getKey)
+                .toList()
+                .forEach(this::onPlayerLeft);
+        Roster previous = roster.get(player.slot());
+        if (previous != null && !previous.fingerprint().equals(player.fingerprint())) {
+            onPlayerLeft(player.slot());
+        }
+        roster.put(player.slot(), new Roster(player.fingerprint(), player.displayName(), player.character()));
+    }
+
+    public void onPlayerLeft(int slot) {
+        roster.remove(slot);
+        playbacks.remove(slot);
+        quietFrames.remove(slot);
+        rosterState.remove(slot);
     }
 
     public void reset() {
@@ -62,6 +82,7 @@ public final class RemoteGhostRegistry {
     public void onRoster(List<GhostPackets.RosterEntry> entries) {
         rosterState.clear();
         for (GhostPackets.RosterEntry entry : entries) {
+            if (!roster.containsKey(entry.playerSlot())) continue;
             rosterState.put(entry.playerSlot(), entry);
         }
     }
@@ -73,7 +94,7 @@ public final class RemoteGhostRegistry {
             if (slot == excludeSlot || playbacks.containsKey(slot)) {
                 continue;
             }
-            Roster info = roster.getOrDefault(slot, new Roster("?", "sonic"));
+            Roster info = roster.getOrDefault(slot, new Roster("", "?", "sonic"));
             GhostPackets.RosterEntry coarse = entry.getValue();
             far.add(new FarPlayer(slot, info.displayName(), info.character(),
                     coarse.cellX(), coarse.cellY(), coarse.status()));
@@ -83,7 +104,8 @@ public final class RemoteGhostRegistry {
 
     public List<RemoteGhost> advanceAll(int excludeSlot) {
         quietFrames.replaceAll((slot, age) -> age + 1);
-        playbacks.keySet().removeIf(slot -> quietFrames.getOrDefault(slot, 0) > STALE_PLAYBACK_FRAMES);
+        playbacks.entrySet().removeIf(entry -> quietFrames.getOrDefault(entry.getKey(), 0)
+                > STALE_PLAYBACK_FRAMES || attemptEnded(entry.getKey(), entry.getValue()));
         quietFrames.keySet().retainAll(playbacks.keySet());
         List<RemoteGhost> ghosts = new ArrayList<>();
         for (Map.Entry<Integer, RemoteGhostPlayback> entry : playbacks.entrySet()) {
@@ -92,11 +114,23 @@ public final class RemoteGhostRegistry {
             }
             Optional<RemoteGhostPlayback.RenderState> state = entry.getValue().advance();
             if (state.isPresent()) {
-                Roster info = roster.getOrDefault(entry.getKey(), new Roster("?", "sonic"));
+                Roster info = roster.getOrDefault(entry.getKey(), new Roster("", "?", "sonic"));
                 ghosts.add(new RemoteGhost(entry.getKey(), info.displayName(),
                         info.character(), state.get()));
             }
         }
         return List.copyOf(ghosts);
+    }
+
+    /**
+     * A stalled ghost whose roster status left RUNNING has finished or reset,
+     * so it returns to the coarse roster instead of freezing at half opacity
+     * until the quiet cutoff. A playback still draining frames is never dropped,
+     * including one whose late tail arrived after it stalled.
+     */
+    private boolean attemptEnded(int slot, RemoteGhostPlayback playback) {
+        GhostPackets.RosterEntry status = rosterState.get(slot);
+        return playback.isStalled() && !playback.hasPendingFrames() && status != null
+                && status.status() != GhostPackets.ROSTER_STATUS_RUNNING;
     }
 }

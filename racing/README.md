@@ -175,3 +175,36 @@ The older `load-test` remains an in-process diagnostic: it times only hub ticks 
 reports the largest emitted packet, not transport queue depth. It cannot establish
 socket throughput. The [design and delivery record](../docs/architecture/plans/2026-10-21-racing-stress-system.md)
 records the architecture, validation and remaining coverage limits.
+
+### Recording a capacity demonstration
+
+`racing-server capture-video OUTPUT REPOSITORY_ROOT 256 [WINDOW_SECONDS] [RECORDED_ROUTE]` records
+the actual Engine's fresh-start legal screen, master title, Extras, Time Attack,
+browser, full relay lobby, countdown and natural Green Hill Act 1 finish. Build
+the engine and its bundled Time Attack mod before the server CLI; set
+`-Dopenggf.installDir` to the engine install directory containing `bundled/` when
+running from class directories. FFmpeg and Linux surfaceless EGL are required.
+Launch from a fresh owned directory outside the repository, with `DISPLAY` and
+`WAYLAND_DISPLAY` unset. The supplied repository root provides the original S1
+World REV01 ROM and maintained `ghz1_fullrun.bk2` controller input (offset 840).
+
+The visible player runs the real ROM-backed engine from its ordinary start. The
+other 255 authenticated protocol clients retime poses from a separate fresh
+ROM-backed playback of the same controller movie, with paired faster/slower
+timelines and smooth surges. The visible player finishes near the middle, while
+ghosts enter, leave and return to its viewport. Their finish claims remain
+synthetic and unverified; this does not run 256 engine simulations. The route
+export subprocess uses no-device audio and never supplies state to gameplay. Established admission identities and a low-cost creation
+proof are seeded only for this loopback demonstration; the normal per-address and
+256-player limits remain enabled. The production renderer still limits visible
+nearby ghosts. The tool requires natural player completion and every accepted
+standings row, a middle finish, and actual rendered-ghost/viewport churn, then
+verifies owned socket/proxy shutdown. The compact multiplayer HUD reserves the
+stock score/time/rings and lives areas, shows only three nearby rows, and keeps
+completion panels clear of the act card.
+
+Outputs are `gameplay-silent.mp4` (30 fps), stereo `audio.pcm`, `chapters.csv`,
+`state.csv` (including rendered and viewport-eligible ghost transitions), stills
+and `result.txt` (including the audio rate, final rank and churn totals). Mux the PCM as
+signed 16-bit little-endian stereo at that rate with the MP4 using FFmpeg. The
+capture includes rendering, encoding and client work, and is not a benchmark.

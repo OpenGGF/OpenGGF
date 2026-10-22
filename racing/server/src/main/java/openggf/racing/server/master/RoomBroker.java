@@ -296,6 +296,12 @@ public final class RoomBroker {
                 && member.fingerprint.equals(tokenFingerprints.get(token));
     }
 
+    /** Binary tunnel wrappers authenticate by their admitted transport and exact tunnel owner. */
+    boolean isAdmitted(HubConnection connection) {
+        Member member = members.get(connection);
+        return member != null && member.state == State.ADMITTED;
+    }
+
     public java.util.Optional<String> fingerprintForSessionToken(String token) {
         return java.util.Optional.ofNullable(tokenFingerprints.get(token));
     }
@@ -505,7 +511,7 @@ public final class RoomBroker {
                     room.routing(), descriptor.verified()));
         }
         send(member, new ControlMessage.RoomListResult(summaries, page,
-                registry.totalPages(request.gameFilter())));
+                registry.totalPagesForCount(all.size())));
     }
 
     private void joinRoom(Member member, ControlMessage.RoomJoinRequest request) {
