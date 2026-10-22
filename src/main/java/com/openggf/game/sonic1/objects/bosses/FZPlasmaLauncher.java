@@ -14,9 +14,9 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.boss.BossExplosionObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 
@@ -62,18 +62,42 @@ public class FZPlasmaLauncher extends AbstractBossChild implements SolidObjectPr
     // Balls spawned tracking
     private final List<FZPlasmaBall> activeBalls = new ArrayList<>();
     private boolean explodedOnDefeat;
+    private boolean initialized;
+    private boolean renderedLastPass;
+    private boolean displayThisPass;
+    private int explosionFrame;
+    private int explosionDuration = -1;
 
     public FZPlasmaLauncher(Sonic1FZBossInstance parent) {
         super(parent, "FZ Plasma Launcher", 3, Sonic1ObjectIds.BOSS_PLASMA);
         
-        this.currentX = LAUNCHER_X;
-        this.currentY = LAUNCHER_Y;
+        // BossFinal_Skip writes only ID and parent pointer. A FindFreeObj result
+        // below the controller cannot initialize coordinates until its next pass.
+        this.currentX = 0;
+        this.currentY = 0;
         this.launcherState = 0;
         this.activated = false;
         this.activeBallCount = 0;
         this.animFrame = 0;
         this.animTimer = 0;
         this.explodedOnDefeat = false;
+    }
+
+    @Override
+    protected boolean tracksViaChildComponents() { return false; }
+
+    @Override
+    protected boolean destroyWhenParentDestroyed() { return false; }
+
+    @Override
+    public boolean isPersistent() { return true; }
+
+    @Override
+    public ObjectSpawn getSpawn() {
+        ObjectSpawn nativeSpawn = super.getSpawn();
+        return explodedOnDefeat ? new ObjectSpawn(nativeSpawn.x(), nativeSpawn.y(), Sonic1ObjectIds.EXPLOSION,
+                nativeSpawn.subtype(), nativeSpawn.renderFlags(), nativeSpawn.respawnTracked(), nativeSpawn.rawYWord())
+                : nativeSpawn;
     }
 
     @Override
@@ -126,6 +150,17 @@ public class FZPlasmaLauncher extends AbstractBossChild implements SolidObjectPr
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!beginUpdate(vIntRunCount)) return;
+        displayThisPass = true;
+        if (explodedOnDefeat) {
+            updateExplosion();
+            return;
+        }
+        if (!initialized) {
+            initialized = true;
+            currentX = LAUNCHER_X;
+            currentY = LAUNCHER_Y;
+            renderedLastPass = true; // BossPlasma_Main seeds bit7 before Generator.
+        }
 
         Sonic1FZBossInstance fzParent = (Sonic1FZBossInstance) parent;
 
@@ -134,11 +169,41 @@ public class FZPlasmaLauncher extends AbstractBossChild implements SolidObjectPr
             case 1 -> updateMakeBalls(fzParent);
             case 2 -> updateWaitForBalls(fzParent);
         }
+        if (explodedOnDefeat) return; // Native conversion skips SolidObject and animation this pass.
+
+        if (player != null && (short) (player.getCentreX() - currentX) >= 320 && !renderedLastPass) {
+            setDestroyed(true);
+            return;
+        }
 
         // Update animation
         updateAnimation();
 
         updateDynamicSpawn();
+    }
+
+    private void updateExplosion() {
+        if (explosionDuration < 0) {
+            explosionDuration = 7;
+            displayThisPass = false; // Expl_Main jumps to QueueSound2, without DisplaySprite.
+            services().playSfx(Sonic1Sfx.BOSS_EXPLOSION.id);
+            return;
+        }
+        if (--explosionDuration < 0) {
+            explosionDuration = 7;
+            if (++explosionFrame == 5) setDestroyed(true);
+        }
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (!displayThisPass) return;
+        var camera = services().camera();
+        int width = getOnScreenHalfWidth();
+        int sx = (short) (currentX - camera.getX());
+        int sy = (short) (currentY - camera.getY());
+        renderedLastPass = sx >= -width && sx < camera.getWidth() + width
+                && sy >= -32 && sy < camera.getHeight() + 32;
     }
 
     /**
@@ -148,17 +213,10 @@ public class FZPlasmaLauncher extends AbstractBossChild implements SolidObjectPr
      */
     private void updateGenerator(Sonic1FZBossInstance fzParent) {
         // ROM: cmpi.b #6,objoff_34(a1) — if boss defeated, become explosion
-        if (fzParent.isBossDefeated()) {
-            if (!explodedOnDefeat) {
-                ObjectRenderManager renderManager = services().renderManager();
-                if (renderManager != null && services().objectManager() != null) {
-                    spawnFreeChild(() -> new BossExplosionObjectInstance(
-                            currentX, currentY, Sonic1ObjectIds.EXPLOSION, Sonic1Sfx.BOSS_EXPLOSION.id,
-                            BossExplosionObjectInstance.S1_PRIORITY_BUCKET));
-                }
-                explodedOnDefeat = true;
-            }
-            setDestroyed(true);
+        if (fzParent.getState().routineSecondary == 6) {
+            // BossPlasma_Generator changes ID to Obj3F in the SAME SST. The old
+            // mappings survive this DisplaySprite; Expl_Main starts next pass.
+            explodedOnDefeat = true;
             return;
         }
 
@@ -194,9 +252,6 @@ public class FZPlasmaLauncher extends AbstractBossChild implements SolidObjectPr
             // sees objoff_38 == 0 on the following ExecuteObjects pass.
             FZPlasmaBall ball = spawnChild(
                     () -> new FZPlasmaBall(this, LAUNCHER_X, LAUNCHER_Y, fTargetX));
-            // Boss children are also dispatched from their parent's update, where
-            // ObjectManager's live cursor still names the boss slot. Anchor the
-            // FindNextFreeObj scan to the launcher's actual SST slot explicitly.
             activeBalls.add(ball);
         }
 
@@ -246,6 +301,11 @@ public class FZPlasmaLauncher extends AbstractBossChild implements SolidObjectPr
         return SOLID_PARAMS;
     }
 
+    @Override
+    public boolean isSolidFor(PlayableEntity player) {
+        return initialized && !explodedOnDefeat;
+    }
+
     /**
      * The launcher's ROM {@code obActWid}, which is zero.
      *
@@ -280,13 +340,20 @@ public class FZPlasmaLauncher extends AbstractBossChild implements SolidObjectPr
      */
     @Override
     public int getOnScreenHalfWidth() {
-        return ACT_WIDTH;
+        return explodedOnDefeat && explosionDuration >= 0 ? 12 : ACT_WIDTH;
     }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        if (!displayThisPass || isDestroyed()) return;
         ObjectRenderManager renderManager = services().renderManager();
         if (renderManager == null) return;
+
+        if (explodedOnDefeat && explosionDuration >= 0) {
+            var renderer = renderManager.getBossExplosionRenderer();
+            if (renderer != null && renderer.isReady()) renderer.drawFrameIndex(explosionFrame, currentX, currentY, false, false);
+            return;
+        }
 
         PatternSpriteRenderer renderer = renderManager.getRenderer(ObjectArtKeys.FZ_PLASMA_LAUNCHER);
         if (renderer == null || !renderer.isReady()) return;
@@ -297,6 +364,6 @@ public class FZPlasmaLauncher extends AbstractBossChild implements SolidObjectPr
 
     @Override
     public int getPriorityBucket() {
-        return 3;
+        return explodedOnDefeat && explosionDuration >= 0 ? 1 : 3;
     }
 }

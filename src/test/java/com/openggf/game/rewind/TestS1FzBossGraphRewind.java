@@ -5,6 +5,7 @@ import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
+import com.openggf.game.sonic1.objects.bosses.FZBossVisualComponent;
 import com.openggf.game.sonic1.objects.bosses.FZCylinder;
 import com.openggf.game.sonic1.objects.bosses.FZPlasmaBall;
 import com.openggf.game.sonic1.objects.bosses.FZPlasmaLauncher;
@@ -141,11 +142,11 @@ class TestS1FzBossGraphRewind {
         Sonic1FZBossInstance boss = only(objectManager, Sonic1FZBossInstance.class);
         boss.update(0, player);
         FZPlasmaLauncher launcher = only(objectManager, FZPlasmaLauncher.class);
-        FZCylinder earlierCylinder = liveObjects(objectManager, FZCylinder.class).stream()
-                .filter(cylinder -> cylinder.getSlotIndex() < launcher.getSlotIndex())
+        FZBossVisualComponent earlierVisual = liveObjects(objectManager, FZBossVisualComponent.class).stream()
+                .filter(visual -> visual.getSlotIndex() < launcher.getSlotIndex())
                 .findFirst()
                 .orElseThrow();
-        objectManager.removeDynamicObject(earlierCylinder);
+        objectManager.removeDynamicObject(earlierVisual);
         harness.camera().setX((short) Sonic1Constants.BOSS_FZ_X);
 
         writeInt(launcher, "launcherState", 1);
@@ -254,6 +255,10 @@ class TestS1FzBossGraphRewind {
     }
 
     private static void assertRestoredChildrenAreFresh(FzGraph before, FzGraph restored) {
+        for (int i = 0; i < before.visuals().size(); i++) {
+            assertNotSame(before.visuals().get(i), restored.visuals().get(i),
+                    "restore must recreate removed FZ visual SST " + i);
+        }
         for (int i = 0; i < 4; i++) {
             assertNotSame(before.cylinders().get(i), restored.cylinders().get(i),
                     "restore must recreate removed FZ cylinder " + i);
@@ -269,6 +274,10 @@ class TestS1FzBossGraphRewind {
     private static void assertRestoredChildrenPointAtLiveParents(FzGraph before, FzGraph restored) {
         assertNotSame(before.boss(), restored.boss(),
                 "test harness disables in-place restore so stale parent refs are observable");
+        for (FZBossVisualComponent visual : restored.visuals()) {
+            assertSame(restored.boss(), readObject(visual, "parent"),
+                    "restored visual SST must point at restored live FZ boss");
+        }
         for (FZCylinder cylinder : restored.cylinders()) {
             assertSame(restored.boss(), readObject(cylinder, "parent"),
                     "restored cylinder must point at restored live FZ boss");
@@ -301,15 +310,9 @@ class TestS1FzBossGraphRewind {
         assertTrue(readBoolean(graph.boss(), "childComponentsSpawned"),
                 "FZ boss childComponentsSpawned must stay true after graph restore");
 
-        List<BossChildComponent> children = childComponents(graph.boss());
-        assertEquals(5, children.size(),
-                "FZ boss childComponents must contain four cylinders and one launcher exactly once");
-        for (FZCylinder cylinder : graph.cylinders()) {
-            assertEquals(1, identityFrequency(children, cylinder),
-                    "restored cylinder must be present exactly once in childComponents");
-        }
-        assertEquals(1, identityFrequency(children, graph.launcher()),
-                "restored launcher must be present exactly once in childComponents");
+        assertTrue(childComponents(graph.boss()).isEmpty(),
+                "native FZ SSTs must dispatch in their own slots rather than through the parent");
+        assertEquals(5, graph.visuals().size(), "all five native visual SSTs must survive restore");
     }
 
     private static void assertLauncherLinks(FzGraph graph) {
@@ -418,17 +421,21 @@ class TestS1FzBossGraphRewind {
 
     private record FzGraph(
             Sonic1FZBossInstance boss,
+            List<FZBossVisualComponent> visuals,
             List<FZCylinder> cylinders,
             FZPlasmaLauncher launcher,
             List<FZPlasmaBall> balls) {
 
         static FzGraph fromLiveObjects(ObjectManager objectManager) {
+            List<FZBossVisualComponent> visuals = new ArrayList<>(liveObjects(objectManager, FZBossVisualComponent.class));
+            visuals.sort((a, b) -> Integer.compare(a.getSpawn().subtype(), b.getSpawn().subtype()));
             List<FZCylinder> cylinders = new ArrayList<>(liveObjects(objectManager, FZCylinder.class));
             cylinders.sort((a, b) -> Integer.compare(readInt(a, "subtype"), readInt(b, "subtype")));
             List<FZPlasmaBall> balls = new ArrayList<>(liveObjects(objectManager, FZPlasmaBall.class));
             balls.sort((a, b) -> Integer.compare(readInt(a, "targetX"), readInt(b, "targetX")));
             return new FzGraph(
                     only(objectManager, Sonic1FZBossInstance.class),
+                    List.copyOf(visuals),
                     List.copyOf(cylinders),
                     only(objectManager, FZPlasmaLauncher.class),
                     List.copyOf(balls));
@@ -437,6 +444,7 @@ class TestS1FzBossGraphRewind {
         Map<Class<?>, Integer> counts() {
             Map<Class<?>, Integer> counts = new LinkedHashMap<>();
             counts.put(Sonic1FZBossInstance.class, 1);
+            counts.put(FZBossVisualComponent.class, visuals.size());
             counts.put(FZCylinder.class, cylinders.size());
             counts.put(FZPlasmaLauncher.class, 1);
             counts.put(FZPlasmaBall.class, balls.size());
@@ -446,6 +454,9 @@ class TestS1FzBossGraphRewind {
         Map<String, ObjectRefId> ids(ObjectManager objectManager) {
             Map<String, ObjectRefId> ids = new LinkedHashMap<>();
             ids.put("boss", objectId(objectManager, boss));
+            for (int i = 0; i < visuals.size(); i++) {
+                ids.put("visual" + i, objectId(objectManager, visuals.get(i)));
+            }
             for (int i = 0; i < cylinders.size(); i++) {
                 ids.put("cylinder" + i, objectId(objectManager, cylinders.get(i)));
             }
@@ -458,6 +469,13 @@ class TestS1FzBossGraphRewind {
 
         Map<String, Integer> scalarSnapshot() {
             Map<String, Integer> scalars = new LinkedHashMap<>();
+            for (FZBossVisualComponent visual : visuals) {
+                String prefix = "visual" + visual.getSpawn().subtype() + ".";
+                scalars.put(prefix + "routine", readInt(visual, "routine"));
+                scalars.put(prefix + "mappingFrame", readInt(visual, "mappingFrame"));
+                scalars.put(prefix + "nextFrame", readInt(visual, "nextFrame"));
+                scalars.put(prefix + "animationTimer", readInt(visual, "animationTimer"));
+            }
             for (FZCylinder cylinder : cylinders) {
                 String prefix = "c" + readInt(cylinder, "subtype") + ".";
                 scalars.put(prefix + "subtype", readInt(cylinder, "subtype"));
@@ -489,6 +507,9 @@ class TestS1FzBossGraphRewind {
         }
 
         void removeDynamicChildren(ObjectManager objectManager) {
+            for (FZBossVisualComponent visual : visuals) {
+                objectManager.removeDynamicObject(visual);
+            }
             for (FZCylinder cylinder : cylinders) {
                 objectManager.removeDynamicObject(cylinder);
             }
@@ -510,6 +531,7 @@ class TestS1FzBossGraphRewind {
             ObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
                 @Override public Camera camera() { return camera; }
+                @Override public com.openggf.data.RomByteReader romReader() { return null; }
             };
             ObjectManager objectManager = new ObjectManager(
                     spawns,

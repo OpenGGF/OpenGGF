@@ -152,3 +152,133 @@ with `-Pguards`, the same environment, and the absolute S1 ROM. All 12 tests
 passed with zero failures/errors/skips (8-second queue wait; 1 minute 20 seconds
 Maven execution). No other policy entries were changed.
 No broad smoke/full-suite or continuous-route pass is asserted here.
+
+## SLZ escape follow-up
+
+After milestone `d8aca9ad72607af7381cf7771cbbb629481c3d5e`, the chain worker
+reported a one-update difference in SLZ's expanding right bound. Native aux
+records independently establish the dispatch boundaries: row 8283 first sets
+status bit 7 while the ship still has routine-secondary 2; row 8284 selects 6
+with timer 120; row 8405 selects Recover with timer -24; row 8471 selects Escape
+with timer 42 without moving; row 8472 first runs Escape. These are comparison
+observations, never gameplay inputs. The earlier post-events bound probe could
+not identify which owner was late. The coordinated unchanged-super probe in the
+chain worker's completed job 19061 showed the killing hit arriving after the
+engine boss's row 8284 update; its next update consumed the defeat settle pass
+at 8285. The one-update offset therefore already existed before Recover.
+
+Source inspection separately exposed a definite omitted movement call. Shipped
+REV01's Escape `.flee` at `0x19398` calls `BossMove` at `0x18050`, then branches
+from `0x1939C` to ShipUpdate at `0x1917A`, which calls `BossMove` again. Thus
+each active Escape pass advances X by eight pixels and fixed Y by -128/256 pixel
+before the sine copy. Recover's exit at `0x19372` instead branches to MoveUpdate
+at `0x1919E`: it does not fall through to Escape. The short regression pins the
+complete branch/call bytes and verifies independent motion/clock and rewind.
+
+This movement omission does not explain a missing early +2 bound update:
+below `0x2160`, the native and engine Escape branches expand unconditionally;
+the previous rendered flag is consulted only at or beyond that bound. No
+capsule width or Recover-to-Escape fallthrough adjustment is justified.
+
+The killing-hit cause is the boss spikeball's strict `<32` distance test.
+`BossSpikeball_CheckCollision` instead performs four unsigned word endpoint
+comparisons, rejecting only `BLO`, so touching endpoints count. The shipped
+comparisons/branches are at `0x19694`, `0x196A4`, `0x196B4`, `0x196C4`; cumulative
+signed hitbox deltas at `0x197D2` are `-24,+48,-24,+48` for the boss and
+`+8,-16,+8,-16` for the ball. Each endpoint wraps to 16 bits before comparison.
+Native row 8282 leaves the ball at `(0x211A,0x0244)`. In row 8283 the ship moves
+to `(0x211E,0x0224)` before that later ball slot runs: the Y separation is
+exactly 32. Native accepts it and clears the killing ball's velocity before
+ObjectFall; the old engine test rejects it and hits one pass later. The fix uses
+the native endpoint arithmetic. Independent tests use arbitrary centres and
+cover all four edges, corners, wrap, pre-physics contact and recreated forward
+execution; no route values select runtime behavior.
+
+## FZ independent components and animation follow-up
+
+`BossFinal_ObjData` at `0x1A524` contains six rows, not a controller plus six
+visuals. Row zero is the visible/controller Eggman at `(0x0100,0x0100)`; rows
+one through five are panel, legs, cockpit, empty ship and flame. ObjData2 at
+`0x1A560` assigns routines 2/4/6/8/10/12 and priorities 4/1/3/3/3/3. Shipped
+FixBugs=0 leaves the legs/cockpit/flame active widths zero; these are preserved.
+The controller allocates its five later visual rows with FindNextFreeObj, then
+the launcher with FindFreeObj, then four cylinders with FindNextFreeObj anchored
+to the controller. A native route's occupied slot 34 consequently produces
+controller 33, visuals 35–39, launcher 40, cylinders 41–44. Native aux slot 35
+is the panel (routine 4/frame 11), not the visible Eggman controller.
+
+Every component now owns its dispatch, previous post-camera render flag,
+animation cursor and lifetime. The parent renders only its current mapping.
+The launcher converts to Obj3F in its own SST even at full RAM; initialization
+then skips display and five eight-pass frames release that same slot. Its
+earlier lower-slot FindFreeObj result waits until the next execution pass to
+initialize coordinates. Native per-owner deletion gates are retained rather
+than substituting parent destruction or generic object culling.
+
+Ani_SEgg (`0x1A1B2`), Ani_Eggman (`0x18468`) and Ani_FZEgg (`0x1AB8A`) are read
+from the injected ROM reader. WAIT and PLASMA do not advance the controller's
+animation; Crush advances it only on its active-child path; Fall writes mapping
+frame 6 directly. The damaged cockpit runs its own ROM script and burst clock.
+Its bursts use the same allocation-before-RNG/downward-offset Obj3F behavior
+as the standard bosses. Cylinder frame selection also advances at exactly -8
+and +39 pixels: native `BCS` rejects negative displacement after subtraction,
+not equality (`0x1ACFA`, `0x1AD06`, `0x1AD0A`).
+
+FZ's controller must retain its solid pushing bit in its live SST while its
+engine placement record changes. It now uses the existing instance-latch
+policy, as its cylinder already did. A short production contact test establishes
+push, moves the controller, then jumps away: shipped Solid_NoCollision writes
+the word `0x0001` across animation/previous-animation while preserving the
+already selected mapping. The ROM call at `0x1A6EE` targets SolidObject at
+`0x10062`; its push-bit test and word-write sequence is pinned at `0x1021E`.
+This proves ownership independently of the full route.
+
+The chain's row 354 `00/02` discrepancy is Sonic's animation byte, with the
+mapping/physics still exact. The topology mismatch alone does not establish its
+cause. Existing map-frame-based roll suppression remains an explicit inherited
+contact approximation pending the next coordinated per-owner solid probe;
+this change does not manufacture another animation correction or claim the
+continuous FZ frontier is closed. Launcher attack saturation/RNG and broader
+campaign/audio parity are outside this bounded component follow-up.
+
+### Follow-up bounded validation
+
+The first queued attempt stopped at test compilation: an anonymous
+StubObjectServices override's unqualified `rom()` selected its inherited Rom
+method instead of the enclosing harness's RomByteReader method. Qualifying the
+call corrected the test without changing production bytes. It executed no tests.
+
+The completed focused command was (`SONIC1_ROM_PATH` denotes the existing,
+verified absolute S1 REV01 ROM path):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestS1SlzEscapeNative,TestS1SlzSpikeballNativeContact,TestS1FzNativeComponents,TestS1FzNativePushLatch,TestS1FzBossGraphRewind,TestS1EggmanNativeComponents,TestS1SlzBossSpikeballGraphRewind,TestSonic1FzBossCombatContact,TestSonic1FZBossDamageFlash,TestSonic1FzBossEscapeHitCue,TestFZCylinderCadence,TestFZPlasmaBallAnimation,TestSonic1FZBalanceWidth,TestSonic1FzWidescreenAndTeamSafety,TestSonic1FzRomMappings,TestSonic1FzSeggMappingRemap' \
+  "-Dsonic1.rom.path=$SONIC1_ROM_PATH" test -B
+```
+
+Session 47099 waited 93 seconds and executed in 28.565 seconds: 78 tests,
+74 passed, one failure, three errors, zero skips. The three errors exposed the
+new FZ visual's constructor reading ROM services during generic reconstruction,
+which runs outside its normal construction context. Its recreate hook now
+constructs without asset reads, binds the unique FZ controller, and restores
+captured ROM-derived metadata and animation state. It allocates no SSTs.
+
+The SLZ failure exposed an unintended second test ball: timer 40 ran the real
+drop branch while initializing visuals, so the test's first-ball lookup updated
+the falling ball rather than its intended flying ball. The fixture now uses
+timer 39 and requires one boss, one seesaw, one ball and exactly six managed
+slots. Production collision bytes were unchanged by that fixture correction.
+
+The affected rerun selected
+`TestS1SlzSpikeballNativeContact,TestS1FzNativeComponents,TestS1FzBossGraphRewind,TestRewindFieldDispositionGuard,TestRewindCoverageGuard,TestObjectPriorityBucketGuard,TestRewindRecreateLinkToleranceGuard,TestObjectServicesMigrationGuard,TestObjectUpdateClockTerminologyGuard`
+with `-Pguards` and the same environment/ROM flags. Session 79076 waited 386
+seconds and executed in 2 minutes 32 seconds. All 41 tests passed: 22 affected
+behavior/restore tests plus 19 structural guard tests, zero failures/errors/skips.
+Thus all 78 focused behavior test identities pass across the completed original
+and affected rerun; the original invocation remains recorded above as red.
+Already passing unrelated selections were not repeated. No smoke or continuous
+route result is claimed by this lane; the chain owner qualifies these commits
+in its next necessary production replay and owns shared frontier prose.

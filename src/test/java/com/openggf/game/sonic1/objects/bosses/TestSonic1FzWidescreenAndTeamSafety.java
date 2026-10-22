@@ -16,6 +16,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -54,10 +55,18 @@ class TestSonic1FzWidescreenAndTeamSafety {
         BossStateContext state = state(boss);
         state.x = width - 1;
         state.xFixed = state.x << 16;
+        boss.update(1, main);
+        boss.refreshPostCameraRenderState();
 
         Method method = Sonic1FZBossInstance.class.getDeclaredMethod("isBossOnScreen");
         method.setAccessible(true);
         assertTrue((boolean) method.invoke(boss));
+
+        state.x = width + boss.getOnScreenHalfWidth();
+        state.xFixed = state.x << 16;
+        boss.update(2, main);
+        boss.refreshPostCameraRenderState();
+        assertFalse((boolean) method.invoke(boss), "native right-edge render culling is exclusive");
     }
 
     private static Sonic1FZBossInstance boss(TestPlayableSprite main,
@@ -67,7 +76,9 @@ class TestSonic1FzWidescreenAndTeamSafety {
         when(camera.getX()).thenReturn((short) 0);
         Sonic1FZBossInstance boss = new Sonic1FZBossInstance(
                 new ObjectSpawn(0, 0, Sonic1ObjectIds.FZ_BOSS, 0, 0, false, 0));
-        boss.setServices(new TestObjectServices().withSidekicks(sidekicks)
+        boss.setServices(new TestObjectServices() {
+            @Override public com.openggf.data.RomByteReader romReader() { return null; }
+        }.withSidekicks(sidekicks)
                 .withCamera(camera));
         BossStateContext state = state(boss);
         state.routineSecondary = 14;

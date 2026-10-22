@@ -392,8 +392,13 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
         state.xVel = ESCAPE_X_VEL;  // $400
         state.yVel = ESCAPE_Y_VEL;  // -$40
 
-        runCameraExpandEscape(BOSS_SLZ_END);
-        // BossMove + sine called centrally after state handler
+        if (!runCameraExpandEscape(BOSS_SLZ_END)) {
+            // BSLZ_Escape.flee calls BossMove, then branches to
+            // BSLZ_ShipUpdate, which calls BossMove a second time before sine.
+            // REV01: the BSR at $19398 and BSR at $1917A both target $18050.
+            bossMove();
+        }
+        // The second BossMove + sine run centrally after this state handler.
     }
 
     /**
