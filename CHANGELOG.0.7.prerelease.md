@@ -294,7 +294,10 @@ Unreleased. The earlier development themes remain in
   Hydrocity fan timing. Knuckles glide collisions retain the native velocity
   quadrant and corrected probe anchors, with S3K floor-first and KiS2 wall-first
   response. Probes use the player's solidity bits and collision path, including
-  reverse-gravity inheritance. Ending reunion loads use measured native decompression
+  reverse-gravity inheritance. Slides apply collision corrections before their
+  separate floor scan, preserve the original signed zero-speed boundary and the
+  turn byte through landing callbacks; KiS2 keeps its radii across both scans.
+  Ending reunion loads use measured native decompression
   costs, and the credits start on the original frame. Timing diagnostics distinguish
   verified instruction terms from work that is still unpriced. Giant-ring capture retains
   the original blank-frame ownership and art-reload state; ordinary animation

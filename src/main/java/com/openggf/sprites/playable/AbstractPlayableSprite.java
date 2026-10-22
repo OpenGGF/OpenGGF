@@ -2033,6 +2033,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public void setAir(boolean air) {
+                setAir(air, false);
+        }
+
+        /** Knuckles' native floor-reset owner leaves its ability turn byte intact. */
+        void landForNativeFloorReset() {
+                setAir(false, true);
+        }
+
+        private void setAir(boolean air, boolean preserveAbilityProperty) {
                 boolean changed = air != this.air;
                 boolean landed = !air && this.air;
                 // HurtCharacter/HurtStop do not write art_tile. Preserve any priority bit
@@ -2065,7 +2074,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 forcedAnimationId = -1;
                         }
                         doubleJumpFlag = 0;
-                        doubleJumpProperty = 0;
+                        if (!preserveAbilityProperty) doubleJumpProperty = 0;
                         // S1 ROM parity (Sonic_ResetOnFloor):
                         // move.w #0,(v_itembonus).w ; clear enemy/block score chain.
                         currentGameState().resetItemBonus();

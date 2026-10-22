@@ -3389,7 +3389,10 @@ the owning KiS2 routine in the catalogue):
   superspeed, gates wall pushing on facing, keeps the full signed inertia word
   for skid thresholds, restarts the balance script at index 4 on facing flips,
   temporarily uses 10/10 radii during glide/climb terrain checks and restores
-  standing radii for later touch checks. Its idle climb omits the S3K floor-below
+  standing radii for later touch checks. Slide continuation retains 10/10 through
+  collision correction and the separate floor scan; get-up preserves its turn byte
+  before callbacks. These component contracts do not qualify a complete KiS2 route.
+  Its idle climb omits the S3K floor-below
   detach probe. Near-edge/inside-bottom solid contacts use the existing matching
   rules; multi-sprite boss touch keeps $4D while normal duck touch uses $9C.
   Wall grabs now test both wall ends and the ROM ledge-fit range; glide floor

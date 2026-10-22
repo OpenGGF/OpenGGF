@@ -2139,3 +2139,16 @@ Keep initialized atlas/tile renderers. `GraphicsManager.resetState()` drops the
 GL terrain renderers without recreating them and can leave valid bodies over
 black scenery. Verify visible terrain as a positive control, plus a return to an
 earlier act after changing cast; body-only and equal-blank-image checks can pass.
+
+**Slide collision flags are not glide responses.** Native `Knuckles_Sliding`
+(S3K:31032–31049; KiS2:38449–38469) calls collision-only correction and then a
+second independent floor scan at corrected coordinates. Keep KiS2's 10/10 radii
+through both scans and the writes, and carry the effective scanner bit/path out
+of the first call. Do not dispatch glide landing/wall-grab responses from the
+slide's temporary flags. Signed BPL makes +32→0 continue while −32→0 gets up.
+Get-up uses byte subtraction then sign extension for the radius correction and
+leaves double_jump_property intact. A late restore after ordinary setAir(false)
+is insufficient: landing callbacks already observed zero. Use the narrow native
+floor-reset entry before publication; ordinary landing keeps its original reset.
+Declared component and registered restore/forward controls cover these branches;
+LevelBound/camera prelude, slide sound and live route qualification remain separate.

@@ -1184,3 +1184,16 @@ focused GPU/resource checks and exact capture protocol](architecture/plans/2026-
 record the bounded result. This repairs the sampled overlap gap without an
 accepted ROM deviation; complete timelines, other native configurations,
 cold/donor/PAL/PCM and strict timing/trace products remain separate obligations.
+
+
+Knuckles slide continuation correction (2026-10-22): collision-only correction
+now precedes its independent second floor scan, with native signed-zero and
+byte-radius semantics, reverse scanner continuation and KiS2 radii lifetime.
+Get-up retains the turn byte before callbacks while ordinary landing still
+clears it. The affected18-class selection passes462T/0F/0E/0S, including native/
+ordinary callback checks and two complete registered restore/forward cycles for
+each gravity mode. These are declared component controls, not route parity.
+LevelBound/camera-bias prelude, S3K slide audio and live dual-plane breadth remain
+open. The earlier maintained MHZ death37752 was not rerun in this scope; cause
+and matched baseline/current attribution remain pending.
+[Source, command and limits](architecture/plans/2026-10-13-s3k-playable-completion.md#root-knuckles-slide-collision-and-landing-contract--2026-10-22).

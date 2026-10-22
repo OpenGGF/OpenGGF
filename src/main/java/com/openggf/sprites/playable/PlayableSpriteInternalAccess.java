@@ -62,6 +62,11 @@ public final class PlayableSpriteInternalAccess {
         sprite.setPreventTailsRespawn(false);
     }
 
+    /** Native slide get-up floor reset, preserving the turn byte before landing callbacks. */
+    public static void landForNativeFloorReset(AbstractPlayableSprite sprite) {
+        sprite.landForNativeFloorReset();
+    }
+
     /** {@code object_control} bit 1 alone; a player ability's raw frames are not an object owner. */
     public static boolean objectOwnsMappingFrame(AbstractPlayableSprite sprite) {
         return sprite.objectMappingFrameControl;

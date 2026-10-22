@@ -659,3 +659,27 @@ Focused correction coverage is415 unique passing cases after repairing two new-f
 Corrected ordinary prefix FIRST dies37752:37753 actual step/draw pairs,0 new tail,0 reached retained gates (first42511). Endpoint10581/2298,VX0/VY−1792,0rings/3lives/dead, actual ridernone; stale mushroom latch is not receiver proof. Original earlier terrain returns/first divergence/native cause remain UNKNOWN. This new negative does not reuse the prior1344-match admission.
 All executed pads preserve the original prefix/all30000 Act1 rows, with same-JVM production author/reload and independent script/BK2/payload/P2 proof. BK2 `c21e770df17407c0d27f031de4ee3196a64619045d1368472c8b3a921ba9266b`; script `b47859a5be1f0af6f317e31b0c0cf7b3cb21462731f7774d44859561bc98f7e5`.0JUnit/skipsN/A; queue165s/Maven51.388s/AUTHOR20.903s overlap. Raw diagnostics consumed after full read, useful inputs/source/compact facts retained externally.
 Root accepts isolated source/controller continuation only: local source/test/API/docs commit first, then at most one ordinary corrected safe-prefix proposal. Maintained whole movie/oracles/counts/rewind windows remain byteexact; no safe onward/whole-act/FBZ/native/physics-cause qualification or integration/push.
+
+
+### Root slide collision and native landing component — 2026-10-22
+
+A source-backed correction separates slide collision-only collection from
+active-glide responses, then probes the floor again at corrected coordinates.
+It retains the scanner byte/path and KiS2 radii across both operations, moves both
+original velocity words, preserves the positive-zero BPL branch and signed-byte
+get-up adjustment, and retains the turn byte before landing callbacks. Ordinary
+landing behavior and the exported API/snapshot shape remain unchanged.
+
+Old executable source produced25 intended failures with0errors/skips. The new
+affected18-class selection passes462/0F/0E/0S, including all27 slide controls and
+two real-registry normal/reverse controls, each comparing every key through two
+restore/forward cycles. Independent source review found no material introduced
+defect. Queue320s/Maven1:33 are distinct; all actual XML identities/properties/
+skips were inspected and owned diagnostics consumed.
+
+No maintained movie, predicate, count or rewind window changed, and no new route
+was run. Earlier death37752 is retained at its original source epoch; cause and
+baseline/current attribution remain open. This does not qualify Act2/FBZ or the
+separate LevelBound/camera prelude and slide sound obligations. The
+[dated record](../../plans/2026-10-13-s3k-playable-completion.md#root-knuckles-slide-collision-and-landing-contract--2026-10-22)
+contains native pins, exact command and the fixture correction rationale.
