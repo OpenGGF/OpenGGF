@@ -3495,3 +3495,15 @@ attributed camera-bound fixture repair, without changing any climb expectation
 or maintained route data. This does not close native waveform, live dual-plane
 route breadth or prior-source MHZ37752 attribution. See the
 [MHZ matrix](../architecture/validation/levels/s3k-mhz-act2.md#native-glide-prelude-and-groundslide-component-closure--2026-10-22).
+
+
+### Current Knuckles MHZ delivery block and climb callbacks (2026-10-22)
+
+The unchanged complete MHZ consumer on372 stops at death26853, earlier than
+prior-source37752. Cause/first executed divergent owner are unexposed and the
+new frontier blocks delivery; focused599 coverage does not certify the route.
+The earlier native climb landing helper also restores the turn byte after
+callbacks rather than before them. Its returned-state tests do not close this
+gap; the existing native floor bridge is used by slide only. Keep ordinary and
+ledge-completion semantics when addressing the bounded climb tail.
+[Evidence and source boundary](../architecture/plans/2026-10-13-s3k-playable-completion.md#current372-maintained-mhz-consumer-block-and-climb-source-closure--2026-10-22).

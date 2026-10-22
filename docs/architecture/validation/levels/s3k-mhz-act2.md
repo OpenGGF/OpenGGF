@@ -1235,3 +1235,22 @@ remain unchanged, with cause/worsening attribution open. Live dual-plane terrain
 native audio waveform and Act2/FBZ remain separate. Exact commands, native pins,
 namespace proof, fixture rationale and timings are in the
 [dated qualification](../../plans/2026-10-13-s3k-playable-completion.md#root-native-glide-prelude-and-groundslide-qualification--2026-10-22).
+
+
+### Current372 maintained consumer is delivery-blocking — 2026-10-22
+
+ONE unchanged complete consumer on37286d6dd returns1T/1F/0E/0S:
+`cold Knuckles death at 26853 ==> expected: <false> but was: <true>`,
+TestMhzKnucklesColdRouteCapture.java:158. This earlier frontier relative to the
+prior c4 death37752 is delivery-blocking and unattributed. POM/test/both BK2
+resources are exact across those sources; first differing executed production
+owner, death world/receiver/writer/state and cause remain UNKNOWN. No retiming,
+predicate change, retry or new native/broad request was made.
+
+The66282-input resource still preserves the30000-input Act1 prefix. This is
+input proof, not fresh Act1 runtime certification. None of13 fixed Act2 windows
+(first30050), the final22-label set or terminal/handoff assertions is qualified
+by this failed case. Historical completion and599 component checks stay at their
+own scope/source, not a waiver. Exact command, environment, timing, bounded5aef
+climb prerequisite and confirmed open climb landing-callback gap are in the
+[dated current result](../../plans/2026-10-13-s3k-playable-completion.md#current372-maintained-mhz-consumer-block-and-climb-source-closure--2026-10-22).

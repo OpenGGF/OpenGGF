@@ -1769,3 +1769,15 @@ No source physics or assertion was changed to fit that fixture. These controls
 do not qualify native waveform/death-plane WORD wrapping, live dual-plane routes
 or the maintained MHZ37752 negative. Combined smoke and matched source attribution
 remain open. [Evidence and limits](architecture/plans/2026-10-13-s3k-playable-completion.md#root-native-glide-prelude-and-groundslide-qualification--2026-10-22).
+
+
+Current MHZ consumer372 is delivery-blocking (2026-10-22): exact unchanged
+complete test fails at death26853,1T/1F/0E/0S, earlier than priorc4 death37752.
+First divergent executed owner and death world/receiver/writer/cause are unknown.
+599 component passes do not waive this route. The earlier5aef wall-climb
+prerequisite also retains a confirmed open callback-order gap: .reachedFloor calls
+Knux_TouchFloor without clearing the turn property, whereas landFromWallClimb
+restores it only AFTER generic exit/landing callbacks saw0. The47 returned-state
+controls do not certify callback timing;8272's bridge is currently slide-only.
+A bounded climb-only follow-up must preserve default ledge/ordinary landing.
+[Current route, exact prerequisite and source proof](architecture/plans/2026-10-13-s3k-playable-completion.md#current372-maintained-mhz-consumer-block-and-climb-source-closure--2026-10-22).

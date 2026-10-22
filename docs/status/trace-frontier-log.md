@@ -114702,3 +114702,21 @@ reported at this HCZ closure. That is bounded completion, not all-hardware or
 whole-chain parity. All current failure/streams/JSON-owner trees were inspected
 and owned raw diagnostics consumed. The prior isolated-candidate regression is
 superseded, while current red coverage and separate Main integration remain open.
+
+
+## 2026-10-22 — Current372 maintained MHZ consumer stops earlier
+
+This is a maintained controller consumer, not a trace replay or restart of the
+excluded MHZ strict-trace campaign. Exact unchanged TestMhzKnucklesColdRouteCapture
+complete method on37286d6dd returns1T/1F/0E/0S: death26853 atJava158. Priorc4
+actual37752 remains historical. Original POM/test/both BK2 bytes are unchanged;
+first differing executed production owner and death world/receiver/writer/cause
+are UNKNOWN. This earlier delivery-blocking frontier is not waived by599 focused
+component passes, native source correctness or historical completion.
+
+ONE queued request: wait48s/estimate30s/Maven41.712s, suite14.468s/case14.180s,
+Java25.0.5/EGL/original absolute3ROM paths. Full failure/69properties/312B stderr
+read; owned6files1422215B consumed. No controller/assertion/source edit, retry,
+broad/native job or Main integration. Exact portable command and the independent
+oracle audit/source limits are in the
+[completion plan](../architecture/plans/2026-10-13-s3k-playable-completion.md#current372-maintained-mhz-consumer-block-and-climb-source-closure--2026-10-22).
