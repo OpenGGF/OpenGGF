@@ -196,6 +196,77 @@ public class LevelTilemapManager {
         this.gameState = gameState;
     }
 
+    /** Snapshot native residency before directing another view; never mutate its descriptor arrays. */
+    LevelTilemapManager cinematicBackgroundCopy() {
+        var copy = new LevelTilemapManager(geometry, graphicsManager, gameState);
+        copy.cinematicBackground = true;
+        copy.backgroundDescriptorRevision = backgroundDescriptorRevision;
+        copy.backgroundTilemapWidthTiles = backgroundTilemapWidthTiles;
+        copy.backgroundTilemapHeightTiles = backgroundTilemapHeightTiles;
+        copy.backgroundTilemapDirty = backgroundTilemapDirty;
+        copy.lastRequiresFullWidthBgTilemap = lastRequiresFullWidthBgTilemap;
+        copy.lastBackgroundWrap = lastBackgroundWrap;
+        copy.backgroundVdpWrapHeightTiles = backgroundVdpWrapHeightTiles;
+        copy.bgTilemapBaseX = bgTilemapBaseX;
+        copy.bgLoopBandBaseY = bgLoopBandBaseY;
+        copy.currentBgPeriodWidth = currentBgPeriodWidth;
+        copy.bgLastBuildValid = bgLastBuildValid;
+        copy.retainedBackgroundPlaneAuthoritative = retainedBackgroundPlaneAuthoritative;
+        copy.bgLastBuildLevel = bgLastBuildLevel;
+        copy.bgLastBuildBlockPixelSize = bgLastBuildBlockPixelSize;
+        copy.bgLastBuildBgContiguousWidthPx = bgLastBuildBgContiguousWidthPx;
+        copy.bgLastBuildParams = bgLastBuildParams;
+        copy.persistentBgOriginXTiles = persistentBgOriginXTiles;
+        copy.persistentBgOriginYTiles = persistentBgOriginYTiles;
+        copy.persistentBgAlignedX = persistentBgAlignedX;
+        copy.persistentBgAlignedY = persistentBgAlignedY;
+        copy.persistentBgBaselineValid = persistentBgBaselineValid;
+        copy.lastBgTilemapUpdateMode = lastBgTilemapUpdateMode;
+        copy.patternLookupSize = patternLookupSize;
+        copy.patternLookupDirty = patternLookupDirty;
+        copy.backgroundTilemapData = backgroundTilemapData == null ? null : backgroundTilemapData.clone();
+        copy.persistentBgRing = persistentBgRing == null ? null : persistentBgRing.clone();
+        if (persistentBgRing == backgroundTilemapData) copy.backgroundTilemapData = copy.persistentBgRing;
+        copy.persistentBgPublishedData = copy.backgroundTilemapData;
+        copy.patternLookupData = patternLookupData;
+        copy.foregroundTilemapData = foregroundTilemapData == null ? null : foregroundTilemapData.clone();
+        copy.foregroundTilemapWidthTiles = foregroundTilemapWidthTiles;
+        copy.foregroundTilemapHeightTiles = foregroundTilemapHeightTiles;
+        copy.foregroundTilemapDirty = foregroundTilemapDirty;
+        copy.foregroundDescriptorRevision = foregroundDescriptorRevision;
+        copy.lastForegroundWrap = lastForegroundWrap;
+        copy.foregroundRingSeeded = foregroundRingSeeded;
+        copy.foregroundRingCameraX = foregroundRingCameraX;
+        copy.foregroundRingScreenWidthPx = foregroundRingScreenWidthPx;
+        copy.foregroundRingWorldWrapOffset = foregroundRingWorldWrapOffset;
+        copy.foregroundRingLastLeftCol = foregroundRingLastLeftCol;
+        copy.foregroundRingLastRightCol = foregroundRingLastRightCol;
+        return copy;
+    }
+
+    private boolean cinematicBackground;
+
+    private BackgroundBuildParameters cinematicParameters;
+
+    void setCinematicBackgroundParameters(BackgroundBuildParameters parameters) {
+        if (!cinematicBackground) throw new IllegalStateException("Background policy requires private residency");
+        cinematicParameters = java.util.Objects.requireNonNull(parameters,
+                "Native scroll has no captured background build policy");
+    }
+
+    /** Seed only the private GPU texture from the exact captured physical native image. */
+    void publishCinematicBackgroundBaseline() {
+        var renderer = graphicsManager.getTilemapGpuRenderer();
+        if (renderer == null) return;
+        if (foregroundTilemapData != null) uploadForegroundTilemap();
+        if (backgroundTilemapData == null) return;
+        renderer.setBackgroundTilemapDataPhysical(backgroundTilemapData,
+                backgroundTilemapWidthTiles, backgroundTilemapHeightTiles,
+                persistentBgBaselineValid ? persistentBgOriginXTiles : 0,
+                persistentBgBaselineValid ? persistentBgOriginYTiles : 0);
+        renderer.setBgVdpWrapHeight(backgroundVdpWrapHeightTiles);
+    }
+
     // -----------------------------------------------------------------------
     // Geometry updates
     // -----------------------------------------------------------------------
@@ -269,8 +340,9 @@ public class LevelTilemapManager {
             return;
         }
 
-        long descriptorRevision = zoneFeatureProvider instanceof com.openggf.game.internal.BackgroundDescriptorOverride owner
-                ? owner.backgroundDescriptorRevision() : 0;
+        long descriptorRevision = cinematicParameters != null ? cinematicParameters.projection().descriptorRevision()
+                : zoneFeatureProvider instanceof com.openggf.game.internal.BackgroundDescriptorOverride owner
+                        ? owner.backgroundDescriptorRevision() : 0;
         if (descriptorRevision != backgroundDescriptorRevision) {
             backgroundDescriptorRevision = descriptorRevision;
             backgroundTilemapDirty = true;
@@ -278,8 +350,8 @@ public class LevelTilemapManager {
         }
 
         boolean requiresFullWidthBgTilemap = zoneRuntimeRequiresFullWidthBgTilemap();
-        boolean backgroundWrap = zoneFeatureProvider != null
-                && zoneFeatureProvider.bgWrapsHorizontally()
+        boolean backgroundWrap = (cinematicParameters != null ? cinematicParameters.wraps()
+                : zoneFeatureProvider != null && zoneFeatureProvider.bgWrapsHorizontally())
                 && !requiresFullWidthBgTilemap;
         if (lastRequiresFullWidthBgTilemap != null
                 && lastRequiresFullWidthBgTilemap != requiresFullWidthBgTilemap) {
@@ -369,7 +441,8 @@ public class LevelTilemapManager {
                                             int currentZone,
                                             ParallaxManager parallaxManager,
                                             boolean verticalWrapEnabled) {
-        long descriptorRevision = zoneFeatureProvider instanceof com.openggf.game.internal.ForegroundDescriptorOverride owner
+        long descriptorRevision = cinematicParameters != null ? cinematicParameters.foregroundRevision()
+                : zoneFeatureProvider instanceof com.openggf.game.internal.ForegroundDescriptorOverride owner
                 ? owner.foregroundDescriptorRevision() : 0;
         if (descriptorRevision != foregroundDescriptorRevision) {
             foregroundDescriptorRevision = descriptorRevision;
@@ -381,7 +454,8 @@ public class LevelTilemapManager {
         // canopy in); instead it is a persistent $200 ring whose leading-edge
         // column is filled incrementally as the camera advances (natural reveal),
         // with all other cells retained (seamless $200 wrap).
-        boolean fgWrap = zoneFeatureProvider != null && zoneFeatureProvider.foregroundWrapsHorizontally();
+        boolean fgWrap = cinematicParameters != null ? cinematicParameters.foregroundWraps()
+                : zoneFeatureProvider != null && zoneFeatureProvider.foregroundWrapsHorizontally();
         if (lastForegroundWrap != null && lastForegroundWrap != fgWrap) {
             foregroundTilemapDirty = true;
             foregroundRingSeeded = false;
@@ -483,6 +557,19 @@ public class LevelTilemapManager {
                 * LevelConstants.CHUNK_HEIGHT;
         long deltaX = (long) alignedX - persistentBgAlignedX;
         long deltaY = (long) alignedY - persistentBgAlignedY;
+        if (cinematicBackground && persistentBgBaselineValid
+                && (Math.abs(deltaX) > LevelConstants.CHUNK_WIDTH || Math.abs(deltaY) > LevelConstants.CHUNK_HEIGHT)) {
+            // Retain event-authored cells while walking only this private ring to the
+            // requested source window. Entering strips use the normal ROM layout pipeline.
+            while (persistentBgAlignedX != alignedX || persistentBgAlignedY != alignedY) {
+                int nextX = persistentBgAlignedX + Integer.signum(alignedX - persistentBgAlignedX)
+                        * Math.min(LevelConstants.CHUNK_WIDTH, Math.abs(alignedX - persistentBgAlignedX));
+                int nextY = persistentBgAlignedY + Integer.signum(alignedY - persistentBgAlignedY)
+                        * Math.min(LevelConstants.CHUNK_HEIGHT, Math.abs(alignedY - persistentBgAlignedY));
+                reconcilePersistentBgNametable(blockLookup, zoneFeatureProvider, currentZone, nextX, nextY);
+            }
+            return;
+        }
         TilemapGpuRenderer renderer = graphicsManager.getTilemapGpuRenderer();
         boolean rendererBaselineLost = persistentBgBaselineValid && renderer != null
                 && (persistentBgPublishedData == null
@@ -660,12 +747,15 @@ public class LevelTilemapManager {
         backgroundTilemapWidthTiles = data.widthTiles;
         backgroundTilemapHeightTiles = data.heightTiles;
         retainedBackgroundPlaneAuthoritative = false;
-        if (backgroundDescriptorRevision != 0
-                && zoneFeatureProvider instanceof com.openggf.game.internal.BackgroundDescriptorOverride owner) {
+        if (backgroundDescriptorRevision != 0 && (cinematicParameters != null
+                || zoneFeatureProvider instanceof com.openggf.game.internal.BackgroundDescriptorOverride)) {
             for (int y = 0; y < data.heightTiles; y++) for (int x = 0; x < data.widthTiles; x++) {
                 int offset = (y * data.widthTiles + x) * 4;
-                int descriptor = owner.backgroundDescriptorAt(params.xQueryOffset() + x * 8,
-                        params.yQueryOffset() + y * 8);
+                int descriptor = cinematicParameters != null
+                        ? cinematicParameters.projection().descriptors().applyAsInt(params.xQueryOffset() + x * 8,
+                                params.yQueryOffset() + y * 8)
+                        : ((com.openggf.game.internal.BackgroundDescriptorOverride) zoneFeatureProvider)
+                                .backgroundDescriptorAt(params.xQueryOffset() + x * 8, params.yQueryOffset() + y * 8);
                 writeTilemapDescriptor(backgroundTilemapData, offset, descriptor);
             }
         }
@@ -814,7 +904,8 @@ public class LevelTilemapManager {
                                             boolean verticalWrapEnabled) {
         TilemapData data = buildTilemapData((byte) 0, blockLookup, zoneFeatureProvider,
                 currentZone, parallaxManager, verticalWrapEnabled);
-        int ringRows = foregroundDescriptorRevision != 0
+        int ringRows = cinematicParameters != null ? cinematicParameters.foregroundRingRows()
+                : foregroundDescriptorRevision != 0
                 && zoneFeatureProvider instanceof com.openggf.game.internal.ForegroundDescriptorOverride ring
                 ? ring.foregroundDescriptorRingRows() : 0;
         if (ringRows > 0) {
@@ -825,16 +916,20 @@ public class LevelTilemapManager {
         foregroundTilemapData = data.data;
         foregroundTilemapWidthTiles = data.widthTiles;
         foregroundTilemapHeightTiles = data.heightTiles;
-        if (foregroundDescriptorRevision != 0
-                && zoneFeatureProvider instanceof com.openggf.game.internal.ForegroundDescriptorOverride owner) {
+        if (foregroundDescriptorRevision != 0) {
+            var descriptors = cinematicParameters != null ? cinematicParameters.foregroundDescriptors()
+                    : zoneFeatureProvider instanceof com.openggf.game.internal.ForegroundDescriptorOverride owner
+                    ? (java.util.function.IntBinaryOperator) owner::foregroundDescriptorAt : null;
+            if (descriptors == null) throw new IllegalStateException("Missing frozen foreground descriptors");
             for (int y = 0; y < data.heightTiles; y++) for (int x = 0; x < data.widthTiles; x++) {
                 writeTilemapDescriptor(foregroundTilemapData, (y * data.widthTiles + x) * 4,
-                        owner.foregroundDescriptorAt(x * 8, y * 8));
+                        descriptors.applyAsInt(x * 8, y * 8));
             }
         }
     }
 
-    private static boolean zoneRuntimeRequiresFullWidthBgTilemap() {
+    private boolean zoneRuntimeRequiresFullWidthBgTilemap() {
+        if (cinematicParameters != null) return cinematicParameters.fullWidthRequired();
         ZoneRuntimeRegistry registry = GameServices.zoneRuntimeRegistryOrNull();
         if (registry == null) {
             return false;
@@ -855,11 +950,11 @@ public class LevelTilemapManager {
         // are rendered as a direct overlay between FG-low and FG-high passes, and they span the
         // full BG map. The FBO/parallax path still caps its period at 512px.
         boolean bgWrap = layerIndex == 1
-                && zoneFeatureProvider != null
-                && zoneFeatureProvider.bgWrapsHorizontally()
+                && (cinematicParameters != null ? cinematicParameters.wraps()
+                        : zoneFeatureProvider != null && zoneFeatureProvider.bgWrapsHorizontally())
                 && !zoneRuntimeRequiresFullWidthBgTilemap();
-        boolean bgLinearRowOverflow = bgWrap
-                && zoneFeatureProvider.useLinearBackgroundLayoutOverflow(currentZone);
+        boolean bgLinearRowOverflow = bgWrap && (cinematicParameters != null ? cinematicParameters.linearOverflow()
+                : zoneFeatureProvider.useLinearBackgroundLayoutOverflow(currentZone));
 
         // FOREGROUND (Plane A) horizontal wrap at the VDP plane width ($200). Used
         // by AIZ2's post-bombing ship loop. The texture is allocated $200-wide
@@ -867,9 +962,8 @@ public class LevelTilemapManager {
         // seed + per-frame leading-edge fill (see ensureForegroundTilemapData),
         // NOT by this full build (which would snap the whole canopy in). The
         // engine analog of the ROM's $200 Plane A nametable ring; s3.asm:71012.
-        boolean fgWrap = layerIndex == 0
-                && zoneFeatureProvider != null
-                && zoneFeatureProvider.foregroundWrapsHorizontally();
+        boolean fgWrap = layerIndex == 0 && (cinematicParameters != null ? cinematicParameters.foregroundWraps()
+                : zoneFeatureProvider != null && zoneFeatureProvider.foregroundWrapsHorizontally());
 
         // Use the currently selected BG period width. LevelManager may widen this
         // beyond the scroll handler's nominal period when the renderer needs the

@@ -48,6 +48,8 @@ public class SwScrlDdz extends SwScrlS3kDefault implements com.openggf.level.scr
     private final ScrollEffectComposer composer = new ScrollEffectComposer();
     private final ScrollValueTable hScrollTable = ScrollValueTable.ofLength(SPEED_WORDS + 1);
     private short foregroundVscroll;
+    private boolean presentationNative;
+    private int presentationBackgroundScroll;
 
     @Override
     public void update(int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter, int actId) {
@@ -64,6 +66,7 @@ public class SwScrlDdz extends SwScrlS3kDefault implements com.openggf.level.scr
         DdzZoneRuntimeState ddz = GameServices.hasRuntime()
                 ? S3kRuntimeStates.currentDdz(GameServices.zoneRuntimeRegistry()).orElse(null)
                 : null;
+        presentationNative = ddz != null;
         if (ddz == null) {
             foregroundVscroll = 0;
             super.update(horizScrollBuf, cameraX, cameraY, frameCounter, actId);
@@ -79,7 +82,8 @@ public class SwScrlDdz extends SwScrlS3kDefault implements com.openggf.level.scr
 
         short bgY = (short) (((short) cameraY) >> 1);
         composer.setVscrollFactorBG(bgY);
-        buildSpeedTable(hScrollTable, ddz.backgroundScroll());
+        presentationBackgroundScroll = ddz.backgroundScroll();
+        buildSpeedTable(hScrollTable, presentationBackgroundScroll);
         DeformationPlan.applyTableBands(composer, bgY, (short) negWord(ddz.displayedForegroundX()),
                 hScrollTable, DDZ_BG_DEFORM, 0, NEGATE_WORD);
         foregroundVscroll = (short) ddz.displayedForegroundY();
@@ -186,4 +190,25 @@ public class SwScrlDdz extends SwScrlS3kDefault implements com.openggf.level.scr
     public short getVscrollFactorFG() {
         return foregroundVscroll;
     }
+    @Override
+    public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        if (!presentationNative) return super.captureProjection(context);
+        int backgroundScroll = presentationBackgroundScroll;
+        short nativeForeground = (short) (context.nativeOutput().horizontal()[0] >> 16);
+        return view -> {
+            var output = new ScrollEffectComposer(view.height());
+            var table = ScrollValueTable.ofLength(SPEED_WORDS + 1);
+            short bgY = (short) (((short) view.cameraY()) >> 1);
+            output.setVscrollFactorBG(bgY);
+            buildSpeedTable(table, backgroundScroll);
+            short fg = (short) (nativeForeground - (view.cameraX() - context.cameraX()));
+            DeformationPlan.applyTableBands(output, bgY, fg, table, DDZ_BG_DEFORM, 0, NEGATE_WORD);
+            return new com.openggf.level.scroll.ScrollProjection(output.packedScrollWords(), null, null, null,
+                    (short) (context.nativeOutput().foregroundY() + view.cameraY() - context.cameraY()),
+                    bgY, context.nativeOutput().backgroundX(), context.nativeOutput().backgroundPeriod(),
+                    context.nativeOutput().shakeX(), context.nativeOutput().shakeY(), context.nativeOutput().tilemapMode());
+        };
+    }
+
 }

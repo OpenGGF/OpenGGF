@@ -2,6 +2,9 @@ package com.openggf.game.sonic1.scroll;
 
 import com.openggf.camera.Camera;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.ScrollProjectionContext;
+import com.openggf.level.scroll.ScrollProjectionPhase;
+import com.openggf.level.scroll.ScrollProjectionSource;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import static com.openggf.level.scroll.M68KMath.*;
 import com.openggf.game.GameServices;
@@ -20,7 +23,7 @@ import com.openggf.game.GameServices;
  * Initial BG position: BgScroll_LZ sets bgscreenposy = screenposy &gt;&gt; 1.
  * Uses ScrollBlock1 for per-frame accumulation.
  */
-public class SwScrlLz extends AbstractZoneScrollHandler {
+public class SwScrlLz extends AbstractZoneScrollHandler implements ScrollProjectionSource {
 
     // Persistent BG camera positions (16.16 fixed point)
     private long bgXPos;
@@ -107,6 +110,29 @@ public class SwScrlLz extends AbstractZoneScrollHandler {
         vscrollFactorBG = composer.getVscrollFactorBG();
         minScrollOffset = composer.getMinScrollOffset();
         maxScrollOffset = composer.getMaxScrollOffset();
+    }
+
+
+    @Override
+    public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) {
+        long capturedX = bgXPos, capturedY = bgYPos;
+        boolean wrap = GameServices.camera().isVerticalWrapEnabled();
+        int wrapRange = GameServices.camera().getVerticalWrapRange();
+        int wrapMask = Camera.getVerticalWrapBgMask();
+        return view -> {
+            int dx = view.cameraX() - context.cameraX(), dy = view.cameraY() - context.cameraY();
+            if (wrap) {
+                if (dy > wrapRange / 2) dy -= wrapRange;
+                else if (dy < -wrapRange / 2) dy += wrapRange;
+            }
+            int bgX = (int) ((capturedX + (long) dx * 32768) >> 16);
+            int bgY = (int) ((capturedY + (long) dy * 32768) >> 16);
+            if (wrap) bgY &= wrapMask;
+            var output = new ScrollEffectComposer(view.height());
+            output.setVscrollFactorBG((short) bgY);
+            output.fillPackedScrollWords(0, view.height(), negWord(view.cameraX()), negWord(bgX));
+            return Sonic1ProjectionOutput.finish(context, view, output, context.nativeOutput().backgroundX(), context.nativeOutput().backgroundPeriod());
+        };
     }
 
 }

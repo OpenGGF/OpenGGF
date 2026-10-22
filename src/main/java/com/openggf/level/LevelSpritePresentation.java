@@ -43,6 +43,28 @@ public final class LevelSpritePresentation {
         level.spritePresentationRenderer().withCinematicCamera(x, y, draw);
     }
 
+    /** One immutable full-raster projection; native-size tiles consume slices inside this scope. */
+    public static void withCinematicView(LevelManager level, com.openggf.level.scroll.ScrollView view,
+                                         Runnable draw) {
+        level.spritePresentationRenderer().withCinematicView(view.cameraX(), view.cameraY(), view.width(), view.height(), draw);
+    }
+
+    public static void withCinematicView(LevelManager level, int x, int y, int width, int height,
+                                         Runnable draw) {
+        withCinematicView(level, new com.openggf.level.scroll.ScrollView(x, y, width, height), draw);
+    }
+
+    public static void withCinematicTile(LevelManager level, int left, int top, int width, int height,
+                                         Runnable draw) {
+        level.spritePresentationRenderer().withCinematicTile(left, top, width, height, draw);
+    }
+
+    /** Draw-only adjunct from the active directed background phase; null preserves native drawing. */
+    public static com.openggf.level.scroll.ScrollSpritePosition spritePositionForDraw(LevelManager level,
+            com.openggf.level.scroll.ScrollSpriteKey key) {
+        return level == null ? null : level.spritePresentationRenderer().spritePositionForDraw(key);
+    }
+
     static final class Tables implements RewindSnapshottable<Tables.State> {
         record State(SpritePresentation.Frame prepared, SpritePresentation.Frame published,
                      SpritePresentation.Frame counters, LevelScrollPresentation preparedScroll,

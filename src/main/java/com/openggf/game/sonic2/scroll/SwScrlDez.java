@@ -2,6 +2,9 @@ package com.openggf.game.sonic2.scroll;
 
 import com.openggf.game.GameServices;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.ScrollProjectionContext;
+import com.openggf.level.scroll.ScrollProjectionPhase;
+import com.openggf.level.scroll.ScrollProjectionSource;
 import com.openggf.level.scroll.M68KMath;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 
@@ -24,7 +27,7 @@ import com.openggf.level.scroll.compose.ScrollEffectComposer;
  * Earth edge has 3 rows (3, 5, 8 lines) plus a 16-line transition.
  * Sky is 3 rows of 128 lines each (far more than needed).
  */
-public class SwScrlDez extends AbstractZoneScrollHandler {
+public class SwScrlDez extends AbstractZoneScrollHandler implements ScrollProjectionSource {
 
     private final ParallaxTables tables;
     private final BackgroundCamera bgCamera;
@@ -136,7 +139,10 @@ public class SwScrlDez extends AbstractZoneScrollHandler {
         updateTempArray(cameraX, frameCounter);
 
         // ==================== Step 3: Fill hscroll buffer ====================
-        fillScrollBuffer(horizScrollBuf, cameraX, effectiveBgY);
+        fillScrollBuffer(composer, rowHeights, tempArray, cameraX, effectiveBgY);
+        composer.copyPackedScrollWordsTo(horizScrollBuf);
+        minScrollOffset = composer.getMinScrollOffset();
+        maxScrollOffset = composer.getMaxScrollOffset();
     }
 
     /**
@@ -236,7 +242,7 @@ public class SwScrlDez extends AbstractZoneScrollHandler {
      * FG scroll = negWord(cameraX) for all lines
      * BG scroll = negWord(tempArray[segmentIndex]) for each segment
      */
-    private void fillScrollBuffer(int[] horizScrollBuf, int cameraX, int effectiveBgY) {
+    private static void fillScrollBuffer(ScrollEffectComposer composer, int[] rowHeights, int[] tempArray, int cameraX, int effectiveBgY) {
         int[] heights = rowHeights;
         int numSegments = Math.min(heights.length, tempArray.length);
 
@@ -280,11 +286,11 @@ public class SwScrlDez extends AbstractZoneScrollHandler {
         segIdx++;
 
         // Fill 224 lines (dbf d2,.rowLoop with d2 starting at 223)
-        for (int line = 0; line < M68KMath.VISIBLE_LINES; line++) {
+        for (int line = 0; line < composer.visibleLineCount(); line++) {
             composer.writePackedScrollWord(line, fgScroll, bgScroll);
 
             linesInSegment--;
-            if (linesInSegment == 0 && line < M68KMath.VISIBLE_LINES - 1) {
+            if (linesInSegment == 0 && line < composer.visibleLineCount() - 1) {
                 // Fetch new segment
                 if (segIdx < numSegments) {
                     linesInSegment = heights[segIdx] & 0xFF;
@@ -294,9 +300,6 @@ public class SwScrlDez extends AbstractZoneScrollHandler {
             }
         }
 
-        composer.copyPackedScrollWordsTo(horizScrollBuf);
-        minScrollOffset = composer.getMinScrollOffset();
-        maxScrollOffset = composer.getMaxScrollOffset();
     }
 
     /**
@@ -347,4 +350,20 @@ public class SwScrlDez extends AbstractZoneScrollHandler {
     public int[] getTempArray() {
         return tempArray.clone();
     }
+
+    @Override
+    public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) {
+        int[] captured = tempArray.clone(), heights = rowHeights.clone();
+        int unshakenY = (context.nativeOutput().backgroundY() - context.nativeOutput().shakeY()) & 0xFFFF;
+        return view -> {
+            int[] values = captured.clone();
+            values[0] = values[33] = values[34] = values[35] = view.cameraX() & 0xFFFF;
+            int bgY = (unshakenY + view.cameraY() - context.cameraY()) & 0xFFFF;
+            var output = new ScrollEffectComposer(view.height());
+            output.setVscrollFactorBG((short) (bgY + context.nativeOutput().shakeY()));
+            fillScrollBuffer(output, heights, values, view.cameraX(), bgY);
+            return Sonic2ProjectionOutput.finish(context, view, output);
+        };
+    }
+
 }

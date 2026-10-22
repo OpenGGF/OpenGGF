@@ -46,6 +46,31 @@ import static org.lwjgl.opengl.GL11.*;
 @Isolated
 class TestStageplayHudPictures {
     @Test
+    void captureAnimatedCameraFormForBothNativeContentsPolicies() throws Exception {
+        assumeTrue(Boolean.getBoolean("openggf.stageplay.hudPictures"), "Explicit Stageplay HUD picture refresh only");
+        assumeTrue(PresentationOffscreenTestContext.requested(), "Stageplay HUD pictures require display-free EGL");
+        TestEnvironment.resetAll();
+        try (var fixture = TestEditorProjectLifecycle.Fixture.open(GameId.S2);
+             var context = PresentationOffscreenTestContext.open(1280,720);
+             var renderer = new EditorProjectMenuRenderer()) {
+            for (var policy : List.of(StageplayDocument.WorldPolicy.LIVE, StageplayDocument.WorldPolicy.TERRAIN_ONLY)) {
+                var scene = StageplayDocument.empty("s2",0,0,0,500,320,224)
+                        .withSet(new StageplayDocument.SetSource("s2",0,0,"","",policy));
+                var workspace = new StageplayWorkspace(() -> scene);
+                workspace.activate(); workspace.invoke(StageplayWorkspace.Action.CAMERA_KEY);
+                objectMenuChoose(workspace,0);
+                workspace.menu().setValue("zoom","1.5");
+                workspace.menu().setValue("interpolation","SMOOTH");
+                renderObjectMenu(renderer,workspace);
+                capture("camera-animated-"+policy.name().toLowerCase(java.util.Locale.ROOT),1280,720);
+            }
+        } finally {
+            SessionManager.clear(); RomManager.getInstance().setRom(null); Engine.clearGlobalInstance();
+            TestEnvironment.resetAll(); SonicConfigurationService.getInstance().resetToDefaults(); GameModuleRegistry.reset();
+        }
+    }
+
+    @Test
     void captureObjectCastArenaRestrictionAndModeForm() throws Exception {
         assumeTrue(Boolean.getBoolean("openggf.stageplay.hudPictures"), "Explicit Stageplay HUD picture refresh only");
         assumeTrue(PresentationOffscreenTestContext.requested(), "Stageplay HUD pictures require display-free EGL");

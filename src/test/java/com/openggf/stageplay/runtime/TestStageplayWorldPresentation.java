@@ -31,7 +31,7 @@ class TestStageplayWorldPresentation {
         assertThrows(IllegalArgumentException.class, () -> StageplayWorldPresentation.validate(320, 224, 0));
     }
 
-    @Test void fractionalZoomFiltersOnlyTheCompletedOpaqueWorldAcrossTileEdges() {
+    @Test void fractionalZoomIntegratesOnlyCompletedOpaqueWorldPixelsAcrossTileEdges() {
         try (var context = PresentationOffscreenTestContext.open(24, 16)) {
             var graphics = new GraphicsManager();
             var target = FboHelper.createColorOnly(20, 12, GL_CLAMP_TO_EDGE);
@@ -92,6 +92,41 @@ class TestStageplayWorldPresentation {
         }
     }
 
+    @Test void crossingIntegerZoomIsContinuousAndMinificationAveragesWorldPixels() {
+        try (var context = PresentationOffscreenTestContext.open(24, 16)) {
+            var graphics = new GraphicsManager();
+            var target = FboHelper.createColorOnly(12, 6, GL_CLAMP_TO_EDGE);
+            assertNotNull(target);
+            try (var presentation = new StageplayWorldPresentation()) {
+                glBindFramebuffer(GL_FRAMEBUFFER, target.fboId()); glViewport(0, 0, 12, 6);
+                int[][] previous = null;
+                for (double zoom : new double[]{1.999, 2, 2.001}) {
+                    presentation.drawTiles(graphics, 0, 0, zoom, 12, 6, 4, 3, TestStageplayWorldPresentation::paintWorld);
+                    glBindFramebuffer(GL_READ_FRAMEBUFFER, target.fboId());
+                    int[][] row = new int[12][];
+                    for (int x = 0; x < 12; x++) {
+                        row[x] = pixel(x, 5);
+                        if (previous != null) for (int channel : new int[]{0, 2})
+                            assertEquals(previous[x][channel], row[x][channel], 2,
+                                    "An integer crossing must not change the sampling rule");
+                    }
+                    previous = row;
+                }
+                presentation.drawTiles(graphics, 0, 0, .5, 12, 6, 4, 3, TestStageplayWorldPresentation::paintWorld);
+                glBindFramebuffer(GL_READ_FRAMEBUFFER, target.fboId());
+                for (int x = 0; x < 12; x++) {
+                    var value = pixel(x, 5);
+                    assertEquals(128, value[0], 1, "Alternating world pixels must not alias at half scale");
+                    assertEquals(128, value[2], 1);
+                    assertEquals(255, value[3]);
+                }
+                assertEquals(GL_NO_ERROR, glGetError());
+            } finally {
+                glBindFramebuffer(GL_FRAMEBUFFER, 0); FboHelper.destroy(target);
+            }
+        }
+    }
+
     @Test void restoresSeparateTargetsProjectionAndNativeGlStateAfterSuccessAndFailure() {
         try (var context = PresentationOffscreenTestContext.open(24, 16)) {
             var graphics = new GraphicsManager();
@@ -109,12 +144,15 @@ class TestStageplayWorldPresentation {
                     glActiveTexture(GL_TEXTURE3); glBindTexture(GL_TEXTURE_2D, texture);
                     glEnable(GL_BLEND); glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA);
                     glEnable(GL_SCISSOR_TEST); glScissor(1, 2, 4, 5);
+                    glDepthMask(false);
                     glClearColor(.25f, .5f, .75f, 1);
                     Runnable action = () -> presentation.drawTiles(graphics, 0, 0, 1.5, 12, 6, 4, 3, (cx, cy, w, h) -> {
                         assertEquals(4, graphics.getViewportWidth()); assertEquals(3, graphics.getConfiguredScreenHeightPx());
                         assertNotSame(projection, graphics.getProjectionMatrixBuffer());
+                        assertTrue(glGetBoolean(GL_DEPTH_WRITEMASK), "Every private tile must clear writable depth");
                         if (fail) throw new IllegalStateException("world producer failed");
                         paintWorld(cx, cy, w, h);
+                        glDepthMask(false); // The next tile still owns a complete clear.
                     });
                     if (fail) assertEquals("world producer failed", assertThrows(IllegalStateException.class, action::run).getMessage());
                     else action.run();
@@ -125,6 +163,7 @@ class TestStageplayWorldPresentation {
                     assertEquals(GL_TEXTURE3, glGetInteger(GL_ACTIVE_TEXTURE));
                     assertEquals(texture, glGetInteger(GL_TEXTURE_BINDING_2D));
                     assertTrue(glIsEnabled(GL_BLEND)); assertTrue(glIsEnabled(GL_SCISSOR_TEST));
+                    assertFalse(glGetBoolean(GL_DEPTH_WRITEMASK), "Host depth-write state survives success and failure");
                     assertEquals(GL_ONE, glGetInteger(GL_BLEND_SRC_RGB)); assertEquals(GL_ZERO, glGetInteger(GL_BLEND_DST_RGB));
                     assertEquals(GL_ONE_MINUS_SRC_ALPHA, glGetInteger(GL_BLEND_SRC_ALPHA));
                     assertEquals(GL_SRC_ALPHA, glGetInteger(GL_BLEND_DST_ALPHA));
@@ -186,14 +225,21 @@ class TestStageplayWorldPresentation {
     }
 
     private static int expectedRed(int x, double zoom, int sourceWidth) {
-        double source = Math.clamp((x + .5) / zoom - .5, 0, sourceWidth - 1);
-        int first = (int) Math.floor(source), second = Math.min(first + 1, sourceWidth - 1);
-        double fraction = source - first;
-        return (int) Math.round(255 * ((first % 2 == 0 ? 1 : 0) * (1 - fraction) + (second % 2 == 0 ? 1 : 0) * fraction));
+        return integratedPixel(x, zoom, sourceWidth, index -> index % 2 == 0 ? 255 : 0);
     }
 
     private static int expectedGreen(int y, double zoom, int sourceHeight) {
-        return (int) Math.round(32 * Math.clamp((y + .5) / zoom - .5, 0, sourceHeight - 1));
+        return integratedPixel(y, zoom, sourceHeight, index -> index * 32);
+    }
+
+    /** Independent geometric oracle: sum the area of each unit source strip under an output pixel. */
+    private static int integratedPixel(int coordinate, double zoom, int size, java.util.function.IntUnaryOperator color) {
+        double start = coordinate / zoom, end = (coordinate + 1) / zoom, value = 0;
+        for (int index = (int) Math.floor(start); index < Math.ceil(end); index++) {
+            double covered = Math.max(0, Math.min(end, index + 1) - Math.max(start, index));
+            value += covered * color.applyAsInt(Math.clamp(index, 0, size - 1));
+        }
+        return (int) Math.round(value / (end - start));
     }
 
     private static int[] pixel(int x, int y) {

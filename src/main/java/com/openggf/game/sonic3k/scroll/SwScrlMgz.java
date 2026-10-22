@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.scroll;
 
+import static com.openggf.level.scroll.M68KMath.negWord;
+
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
@@ -9,34 +11,33 @@ import com.openggf.level.scroll.compose.ScatterFillPlan;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import com.openggf.level.scroll.compose.ScrollValueTable;
 
-import static com.openggf.level.scroll.M68KMath.negWord;
-
 /**
  * Marble Garden Zone (MGZ) scroll handler for Sonic 3K.
  *
- * Ports MGZ1_Deform / MGZ2_BGDeform (normal path) from the S3K disassembly to
- * produce real per-line parallax rather than a flat fallback ratio.
+ * <p>Ports MGZ1_Deform / MGZ2_BGDeform (normal path) from the S3K disassembly to produce real
+ * per-line parallax rather than a flat fallback ratio.
  */
-public class SwScrlMgz extends AbstractZoneScrollHandler {
+public class SwScrlMgz extends AbstractZoneScrollHandler
+        implements com.openggf.level.scroll.ScrollProjectionSource {
     // Screen shake support (ROM: Screen_shake_flag, used by Tunnelbot / MGZ Miniboss).
     // Applied to FG and BG VScroll, while getShakeOffsetY() propagates the same
     // vertical delta to sprites. MGZ2_BGDeform compensates BG parallax math so
     // the shake lands 1:1 on the plane instead of being scaled away.
     private int screenShakeOffset;
     private int pendingScreenShakeOffset;
+
     /**
-     * ROM {@code Screen_shake_offset}. {@code ShakeScreen_Setup} runs at the
-     * tail of the zone's background event ({@code MGZ1BGE_Normal},
-     * docs/skdisasm/sonic3k.asm:106354; routine at :104234-104256), while
-     * {@code MGZ1_ScreenEvent}/{@code MGZ2_ScreenEvent} add the offset into
-     * {@code Camera_Y_pos_copy} at the *start* of the same
-     * {@code ScreenEvents} pass (sonic3k.asm:102278-102299, :106303-106306,
-     * :106436-106438). The value {@code Render_Sprites} sees on a frame is
-     * therefore the one this routine computed on the previous frame, which is
-     * what {@link #screenShakeOffset} publishes; this field holds the freshly
-     * computed sample waiting for the next frame.
+     * ROM {@code Screen_shake_offset}. {@code ShakeScreen_Setup} runs at the tail of the zone's
+     * background event ({@code MGZ1BGE_Normal}, docs/skdisasm/sonic3k.asm:106354; routine at
+     * :104234-104256), while {@code MGZ1_ScreenEvent}/{@code MGZ2_ScreenEvent} add the offset into
+     * {@code Camera_Y_pos_copy} at the *start* of the same {@code ScreenEvents} pass
+     * (sonic3k.asm:102278-102299, :106303-106306, :106436-106438). The value {@code Render_Sprites}
+     * sees on a frame is therefore the one this routine computed on the previous frame, which is
+     * what {@link #screenShakeOffset} publishes; this field holds the freshly computed sample
+     * waiting for the next frame.
      */
     private int nextScreenShakeOffset;
+
     private short vscrollFactorFG;
 
     // ROM: MGZ2_BGDeform (Lockon S3/Screen Events.asm:1090-1145) switches the BG
@@ -48,34 +49,35 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
     private static final int BG_RISE_NORMAL_STATE = 0;
     private static final int BG_RISE_SONIC_STATE = 8;
     private static final int BG_RISE_AFTER_MOVE_STATE = 0xC;
+
     /** ROM: loc_23D1EA — d1 = $8F0, d2 = $3200 for Sonic rise. */
     private static final int MGZ2_SONIC_RISE_Y_BASE = 0x8F0;
+
     private static final int MGZ2_SONIC_RISE_X_BASE = 0x3200;
     private static final int MGZ2_AFTER_MOVE_Y_BASE = 0x500;
 
     private int bgRiseRoutine;
     private int bgRiseOffset;
     private int bossBgScrollOffset = Integer.MIN_VALUE;
+
     /**
-     * Cached BG camera X for {@link #getBgCameraX()}. {@link Integer#MIN_VALUE}
-     * means "no override" — the dual-path collision uses the FG cameraX as the
-     * BG reference, which is the correct default for normal MGZ play. During
-     * state 8 this is set to {@code cameraX - $3200} so ground collision probes
-     * land inside the 24-col BG layout.
+     * Cached BG camera X for {@link #getBgCameraX()}. {@link Integer#MIN_VALUE} means "no override"
+     * — the dual-path collision uses the FG cameraX as the BG reference, which is the correct
+     * default for normal MGZ play. During state 8 this is set to {@code cameraX - $3200} so ground
+     * collision probes land inside the 24-col BG layout.
      */
     private int lastBgCameraX = Integer.MIN_VALUE;
 
     /**
-     * ROM {@code ScreenShakeArray2} (docs/skdisasm/sonic3k.asm:104279-104282) —
-     * the 64-entry table {@code ShakeScreen_Setup} indexes with
-     * {@code Level_frame_counter & $3F} while {@code Screen_shake_flag} is
-     * negative (sonic3k.asm:104246-104255).
+     * ROM {@code ScreenShakeArray2} (docs/skdisasm/sonic3k.asm:104279-104282) — the 64-entry table
+     * {@code ShakeScreen_Setup} indexes with {@code Level_frame_counter & $3F} while {@code
+     * Screen_shake_flag} is negative (sonic3k.asm:104246-104255).
      */
     private static final int[] SCREEN_SHAKE_CONTINUOUS = {
-            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
-            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3,
-            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
-            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
+        1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
+        2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3,
+        1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
+        2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
     };
 
     public void setScreenShakeOffset(int offset) {
@@ -98,12 +100,11 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
     }
 
     /**
-     * Syncs the local cache fields from the events-class state (the canonical
-     * {@code Events_bg+$00 / +$02} source) without running a full parallax
-     * update. Called by {@link com.openggf.game.sonic3k.events.Sonic3kMGZEvents}
-     * after its state machine mutates the routine so collision probes that read
-     * {@link #getBgCameraX()} and {@link #getVscrollFactorBG()} between event
-     * tick and the next render see the post-transition state.
+     * Syncs the local cache fields from the events-class state (the canonical {@code Events_bg+$00
+     * / +$02} source) without running a full parallax update. Called by {@link
+     * com.openggf.game.sonic3k.events.Sonic3kMGZEvents} after its state machine mutates the routine
+     * so collision probes that read {@link #getBgCameraX()} and {@link #getVscrollFactorBG()}
+     * between event tick and the next render see the post-transition state.
      */
     public void syncBgRiseFromEvents() {
         MgzZoneRuntimeState runtimeState = currentRuntimeState();
@@ -111,7 +112,8 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
             return;
         }
         int newRoutine = runtimeState.bgRiseRoutine();
-        if (this.bgRiseRoutine != BG_RISE_AFTER_MOVE_STATE && newRoutine == BG_RISE_AFTER_MOVE_STATE) {
+        if (this.bgRiseRoutine != BG_RISE_AFTER_MOVE_STATE
+                && newRoutine == BG_RISE_AFTER_MOVE_STATE) {
             mgz2CloudsFrozen = true;
         }
         this.bgRiseRoutine = newRoutine;
@@ -120,11 +122,10 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
     }
 
     /**
-     * ROM: MGZ2SE_MoveBG advances Events_bg+$0C after the boss floor collapse
-     * and MGZ2_BGDeform substitutes it for Camera_X_pos_copy only while
-     * building HScroll_table (loc_23D24C). Camera_X_pos_BG_copy remains owned
-     * by the normal BG deformation path, so this must not relocate the
-     * background tilemap or collision window.
+     * ROM: MGZ2SE_MoveBG advances Events_bg+$0C after the boss floor collapse and MGZ2_BGDeform
+     * substitutes it for Camera_X_pos_copy only while building HScroll_table (loc_23D24C).
+     * Camera_X_pos_BG_copy remains owned by the normal BG deformation path, so this must not
+     * relocate the background tilemap or collision window.
      */
     public void setBossBgScrollOffset(int offset) {
         bossBgScrollOffset = offset & 0xFFFF;
@@ -164,12 +165,14 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
         if (runtimeState != null && runtimeState.actIndex() == actId) {
             bgRiseRoutine = runtimeState.bgRiseRoutine();
             bgRiseOffset = runtimeState.bgRiseOffset();
-            bossBgScrollOffset = runtimeState.hasBossBgScrollOffset()
-                    ? runtimeState.bossBgScrollOffset()
-                    : Integer.MIN_VALUE;
+            bossBgScrollOffset =
+                    runtimeState.hasBossBgScrollOffset()
+                            ? runtimeState.bossBgScrollOffset()
+                            : Integer.MIN_VALUE;
             if (bgRiseRoutine == BG_RISE_SONIC_STATE) {
                 lastBgCameraX = ((short) cameraX) - MGZ2_SONIC_RISE_X_BASE;
-                vscrollFactorBG = (short) (((short) cameraY) - MGZ2_SONIC_RISE_Y_BASE + bgRiseOffset);
+                vscrollFactorBG =
+                        (short) (((short) cameraY) - MGZ2_SONIC_RISE_Y_BASE + bgRiseOffset);
             } else if (bgRiseRoutine == BG_RISE_AFTER_MOVE_STATE) {
                 mgz2CloudsFrozen = true;
                 lastBgCameraX = 0;
@@ -182,36 +185,44 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
 
     // MGZ1_BGDeformArray
     private static final int[] MGZ1_BG_DEFORM = {
-            0x10, 0x04, 0x04, 0x08, 0x08, 0x08, 0x0D, 0x13, 0x08, 0x08, 0x08, 0x08, 0x18, 0x7FFF
+        0x10, 0x04, 0x04, 0x08, 0x08, 0x08, 0x0D, 0x13, 0x08, 0x08, 0x08, 0x08, 0x18, 0x7FFF
     };
 
     // MGZ2_BGDeformArray
     private static final int[] MGZ2_BG_DEFORM = {
-            0x10, 0x10, 0x10, 0x10, 0x10, 0x18, 0x08, 0x10, 0x08, 0x08, 0x10, 0x08,
-            0x08, 0x08, 0x05, 0x2B, 0x0C, 0x06, 0x06, 0x08, 0x08, 0x18, 0xD8, 0x7FFF
+        0x10, 0x10, 0x10, 0x10, 0x10, 0x18, 0x08, 0x10, 0x08, 0x08, 0x10, 0x08,
+        0x08, 0x08, 0x05, 0x2B, 0x0C, 0x06, 0x06, 0x08, 0x08, 0x18, 0xD8, 0x7FFF
     };
 
     // MGZ2_BGDeformIndex
     private static final int[] MGZ2_BG_DEFORM_INDEX = {
-            0x1C, 0x18, 0x1A, 0x0C, 0x06, 0x14, 0x02, 0x10, 0x16, 0x12, 0x0A, 0x00, 0x08, 0x04, 0x0E
+        0x1C, 0x18, 0x1A, 0x0C, 0x06, 0x14, 0x02, 0x10, 0x16, 0x12, 0x0A, 0x00, 0x08, 0x04, 0x0E
     };
 
     // MGZ2_BGDeformOffset
     private static final int[] MGZ2_BG_DEFORM_OFFSET = {
-            -5, -8, 9, 10, 2, -12, 3, 16, -1, 13, -15, 6, -11, -4, 14,
-            -8, 16, 8, 0, -8, 16, 8, 0
+        -5, -8, 9, 10, 2, -12, 3, 16, -1, 13, -15, 6, -11, -4, 14, -8, 16, 8, 0, -8, 16, 8, 0
     };
 
-    private static final ScatterFillPlan MGZ2_SCATTER_FILL = new ScatterFillPlan(
-            18, 16, 17, 10, 7, 14, 5, 12, 15, 13, 9, 4, 8, 6, 11
-    );
+    private static final ScatterFillPlan MGZ2_SCATTER_FILL =
+            new ScatterFillPlan(18, 16, 17, 10, 7, 14, 5, 12, 15, 13, 9, 4, 8, 6, 11);
     private static final DeformationPlan.ScrollValueTransform NEGATE_WORD = value -> negWord(value);
 
     // ROM accumulators that live in HScroll_table longwords and persist frame-to-frame.
-    private final ScrollEffectComposer composer = new ScrollEffectComposer();
+    private final ScrollEffectComposer composer;
+
+    public SwScrlMgz() {
+        this(224);
+    }
+
+    private SwScrlMgz(int lines) {
+        composer = new ScrollEffectComposer(lines);
+    }
+
     private final ScrollValueTable mgz1HScrollTable = ScrollValueTable.ofLength(HSCROLL_WORD_COUNT);
     private final ScrollValueTable mgz2HScrollTable = ScrollValueTable.ofLength(HSCROLL_WORD_COUNT);
-    private final ScrollValueTable mgz2ScatterSource = ScrollValueTable.ofLength(MGZ2_BG_DEFORM_INDEX.length);
+    private final ScrollValueTable mgz2ScatterSource =
+            ScrollValueTable.ofLength(MGZ2_BG_DEFORM_INDEX.length);
     // Cloud auto-scroll accumulators, derived from the frame counter (not the
     // update-call count) so they rewind correctly. MGZ1 advances every act-1
     // frame (offset 0, read-then-increment). MGZ2 advances only while the clouds
@@ -227,11 +238,8 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
     private boolean mgz2CloudsFrozen;
 
     @Override
-    public void update(int[] horizScrollBuf,
-                       int cameraX,
-                       int cameraY,
-                       int frameCounter,
-                       int actId) {
+    public void update(
+            int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter, int actId) {
         if (frameCounter == 0 || actId != lastActId) {
             resetActState(actId);
         }
@@ -239,9 +247,10 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
         if (runtimeState != null) {
             bgRiseRoutine = runtimeState.bgRiseRoutine();
             bgRiseOffset = runtimeState.bgRiseOffset();
-            bossBgScrollOffset = runtimeState.hasBossBgScrollOffset()
-                    ? runtimeState.bossBgScrollOffset()
-                    : Integer.MIN_VALUE;
+            bossBgScrollOffset =
+                    runtimeState.hasBossBgScrollOffset()
+                            ? runtimeState.bossBgScrollOffset()
+                            : Integer.MIN_VALUE;
         }
 
         composer.reset();
@@ -253,9 +262,11 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
         // per-object one, so the requesters only raise the flag.
         int computedShakeOffset;
         if (runtimeState != null) {
-            computedShakeOffset = runtimeState.consumeContinuousScreenShakeRequest()
-                    ? SCREEN_SHAKE_CONTINUOUS[frameCounter & (SCREEN_SHAKE_CONTINUOUS.length - 1)]
-                    : runtimeState.consumeScreenShakeOffset();
+            computedShakeOffset =
+                    runtimeState.consumeContinuousScreenShakeRequest()
+                            ? SCREEN_SHAKE_CONTINUOUS[
+                                    frameCounter & (SCREEN_SHAKE_CONTINUOUS.length - 1)]
+                            : runtimeState.consumeScreenShakeOffset();
         } else {
             computedShakeOffset = pendingScreenShakeOffset;
             pendingScreenShakeOffset = 0;
@@ -271,13 +282,7 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
             composer.setVscrollFactorBG((short) 0);
             buildMgz1HScrollTable(cameraX, frameCounter, mgz1HScrollTable);
             DeformationPlan.applyTableBands(
-                    composer,
-                    0,
-                    fgScroll,
-                    mgz1HScrollTable,
-                    MGZ1_BG_DEFORM,
-                    0,
-                    NEGATE_WORD);
+                    composer, 0, fgScroll, mgz1HScrollTable, MGZ1_BG_DEFORM, 0, NEGATE_WORD);
         } else if (bgRiseRoutine == BG_RISE_SONIC_STATE) {
             // State 8 (Sonic rise): MGZ2_BGDeform still runs the cloud/scatter
             // parallax builder, but it seeds the final deform slot with the
@@ -291,44 +296,43 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
             // translate into the BG layout's populated 0..23 range.
             lastBgCameraX = bgScrollBaseX;
             composer.setVscrollFactorBG((short) bgY);
-            buildMgz2StateEightHScrollTable(parallaxCameraX, bgScrollBaseX, shouldAutoMoveMgz2Clouds(),
-                    frameCounter, mgz2HScrollTable, mgz2ScatterSource);
-            DeformationPlan.applyTableBands(
-                    composer,
-                    bgY,
-                    fgScroll,
+            buildMgz2StateEightHScrollTable(
+                    parallaxCameraX,
+                    bgScrollBaseX,
+                    shouldAutoMoveMgz2Clouds(),
+                    frameCounter,
                     mgz2HScrollTable,
-                    MGZ2_BG_DEFORM,
-                    4,
-                    NEGATE_WORD);
+                    mgz2ScatterSource);
+            DeformationPlan.applyTableBands(
+                    composer, bgY, fgScroll, mgz2HScrollTable, MGZ2_BG_DEFORM, 4, NEGATE_WORD);
         } else {
             // State 0 (normal MGZ2 play) uses the drifting cloud parallax.
             // State C (after-move) freezes cloud movement and shifts the
             // parallax origin by $500, matching MGZ2_BGDeform's d1 preload.
-            int bgY = bgRiseRoutine == BG_RISE_AFTER_MOVE_STATE
-                    ? computeMgz2BgY(cameraY - MGZ2_AFTER_MOVE_Y_BASE)
-                    : computeMgz2BgY(cameraY);
+            int bgY =
+                    bgRiseRoutine == BG_RISE_AFTER_MOVE_STATE
+                            ? computeMgz2BgY(cameraY - MGZ2_AFTER_MOVE_Y_BASE)
+                            : computeMgz2BgY(cameraY);
             // loc_23D220 clears Camera_X_pos_BG_copy in both normal state 0
             // and after-move state $C. The foreground/boss cursor still feeds
             // HScroll_table separately through getMgz2ParallaxCameraX().
             lastBgCameraX = 0;
             composer.setVscrollFactorBG((short) bgY);
-            buildMgz2HScrollTable(getMgz2ParallaxCameraX(cameraX), shouldAutoMoveMgz2Clouds(),
-                    frameCounter, mgz2HScrollTable, mgz2ScatterSource);
-            DeformationPlan.applyTableBands(
-                    composer,
-                    bgY,
-                    fgScroll,
+            buildMgz2HScrollTable(
+                    getMgz2ParallaxCameraX(cameraX),
+                    shouldAutoMoveMgz2Clouds(),
+                    frameCounter,
                     mgz2HScrollTable,
-                    MGZ2_BG_DEFORM,
-                    4,
-                    NEGATE_WORD);
+                    mgz2ScatterSource);
+            DeformationPlan.applyTableBands(
+                    composer, bgY, fgScroll, mgz2HScrollTable, MGZ2_BG_DEFORM, 4, NEGATE_WORD);
         }
 
         // Screen shake: apply the same camera rumble offset to both planes so the
         // BG cloud/floor strip tracks the shaken viewport instead of staying fixed.
         if (screenShakeOffset != 0) {
-            composer.setVscrollFactorBG((short) (composer.getVscrollFactorBG() + screenShakeOffset));
+            composer.setVscrollFactorBG(
+                    (short) (composer.getVscrollFactorBG() + screenShakeOffset));
             composer.setVscrollFactorFG((short) (cameraY + screenShakeOffset));
         }
 
@@ -364,10 +368,12 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
         return !mgz2CloudsFrozen && bgRiseRoutine != BG_RISE_AFTER_MOVE_STATE;
     }
 
-    /**
-     * Port of MGZ1_Deform's HScroll_table generation.
-     */
+    /** Port of MGZ1_Deform's HScroll_table generation. */
     private void buildMgz1HScrollTable(int cameraX, int frameCounter, ScrollValueTable table) {
+        composeMgz1Table(cameraX, mgz1CloudAccumulator.valueAt(frameCounter), table);
+    }
+
+    private static void composeMgz1Table(int cameraX, int cloudPhase, ScrollValueTable table) {
         table.clear();
         int d0 = ((short) cameraX) << 16;
         d0 >>= 2;
@@ -380,7 +386,7 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
             d0 -= d1;
         }
 
-        int d2 = mgz1CloudAccumulator.valueAt(frameCounter);
+        int d2 = cloudPhase;
 
         d0 >>= 1;
         a1 = 0;
@@ -397,14 +403,22 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
         table.set(8, swap);
     }
 
-    /**
-     * Port of MGZ2_BGDeform normal-path HScroll_table generation.
-     */
-    private void buildMgz2HScrollTable(int cameraX,
-                                       boolean autoMoveClouds,
-                                       int frameCounter,
-                                       ScrollValueTable table,
-                                       ScrollValueTable scatterSource) {
+    /** Port of MGZ2_BGDeform normal-path HScroll_table generation. */
+    private void buildMgz2HScrollTable(
+            int cameraX,
+            boolean autoMoveClouds,
+            int frameCounter,
+            ScrollValueTable table,
+            ScrollValueTable scatterSource) {
+        composeMgz2Table(
+                cameraX,
+                autoMoveClouds ? mgz2CloudAccumulator.valueAt(frameCounter) : 0,
+                table,
+                scatterSource);
+    }
+
+    private static void composeMgz2Table(
+            int cameraX, int cloudPhase, ScrollValueTable table, ScrollValueTable scatterSource) {
         table.clear();
         scatterSource.clear();
         int d0 = ((short) cameraX) << 16;
@@ -421,7 +435,7 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
 
         // While auto-moving, the accumulator advances with the frame counter;
         // on the BG-rise freeze the ROM zeroes it, so the frozen value is 0.
-        int cloudAcc = autoMoveClouds ? mgz2CloudAccumulator.valueAt(frameCounter) : 0;
+        int cloudAcc = cloudPhase;
         int d0Cloud = d2;
         int d2Step = d2 >> 1;
         for (int i = 0; i < MGZ2_BG_DEFORM_INDEX.length; i++) {
@@ -440,18 +454,18 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
     }
 
     /**
-     * ROM: MGZ2_BGDeform state 8 still executes the cloud/scatter fill from
-     * {@code loc_23D24C..loc_23D2B4}, but the state-8 prelude seeds
-     * {@code HScroll_table+$036} with {@code Camera_X_pos_BG_copy}. That final
-     * slot feeds the locked terrain band while the earlier slots retain the
-     * normal cloud parallax.
+     * ROM: MGZ2_BGDeform state 8 still executes the cloud/scatter fill from {@code
+     * loc_23D24C..loc_23D2B4}, but the state-8 prelude seeds {@code HScroll_table+$036} with {@code
+     * Camera_X_pos_BG_copy}. That final slot feeds the locked terrain band while the earlier slots
+     * retain the normal cloud parallax.
      */
-    private void buildMgz2StateEightHScrollTable(int cameraX,
-                                                 int bgScrollBaseX,
-                                                 boolean autoMoveClouds,
-                                                 int frameCounter,
-                                                 ScrollValueTable table,
-                                                 ScrollValueTable scatterSource) {
+    private void buildMgz2StateEightHScrollTable(
+            int cameraX,
+            int bgScrollBaseX,
+            boolean autoMoveClouds,
+            int frameCounter,
+            ScrollValueTable table,
+            ScrollValueTable scatterSource) {
         buildMgz2HScrollTable(cameraX, autoMoveClouds, frameCounter, table, scatterSource);
         table.set(27, (short) bgScrollBaseX);
     }
@@ -472,12 +486,83 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
         }
         if (bgRiseRoutine == BG_RISE_SONIC_STATE) {
             lastBgCameraX = ((short) camera.getX()) - MGZ2_SONIC_RISE_X_BASE;
-            vscrollFactorBG = (short) ((((short) camera.getY()) - MGZ2_SONIC_RISE_Y_BASE) + bgRiseOffset);
+            vscrollFactorBG =
+                    (short) ((((short) camera.getY()) - MGZ2_SONIC_RISE_Y_BASE) + bgRiseOffset);
             return;
         }
         lastBgCameraX = 0;
-        vscrollFactorBG = (short) (bgRiseRoutine == BG_RISE_AFTER_MOVE_STATE
-                ? computeMgz2BgY(camera.getY() - MGZ2_AFTER_MOVE_Y_BASE)
-                : computeMgz2BgY(camera.getY()));
+        vscrollFactorBG =
+                (short)
+                        (bgRiseRoutine == BG_RISE_AFTER_MOVE_STATE
+                                ? computeMgz2BgY(camera.getY() - MGZ2_AFTER_MOVE_Y_BASE)
+                                : computeMgz2BgY(camera.getY()));
+    }
+
+    @Override
+    public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        int rise = bgRiseRoutine, riseY = bgRiseOffset, parallaxOverride = bossBgScrollOffset;
+        int shake = screenShakeOffset;
+        int cloud =
+                context.act() == 0
+                        ? mgz1CloudAccumulator.currentValue()
+                        : shouldAutoMoveMgz2Clouds() ? mgz2CloudAccumulator.currentValue() : 0;
+        return view -> {
+            SwScrlMgz scratch = new SwScrlMgz(view.height());
+            int bgX, bgY;
+            short foreground = negWord(view.cameraX());
+            if (context.act() == 0) {
+                bgX = Integer.MIN_VALUE;
+                bgY = 0;
+                composeMgz1Table(view.cameraX(), cloud, scratch.mgz1HScrollTable);
+                DeformationPlan.applyTableBands(
+                        scratch.composer,
+                        bgY,
+                        foreground,
+                        scratch.mgz1HScrollTable,
+                        MGZ1_BG_DEFORM,
+                        0,
+                        NEGATE_WORD);
+            } else {
+                int sourceX =
+                        parallaxOverride == Integer.MIN_VALUE
+                                ? view.cameraX()
+                                : parallaxOverride + view.cameraX() - context.cameraX();
+                if (rise == BG_RISE_SONIC_STATE) {
+                    bgX = ((short) view.cameraX()) - MGZ2_SONIC_RISE_X_BASE;
+                    bgY = ((short) view.cameraY()) - MGZ2_SONIC_RISE_Y_BASE + riseY;
+                } else {
+                    bgX = 0;
+                    bgY =
+                            scratch.computeMgz2BgY(
+                                    rise == BG_RISE_AFTER_MOVE_STATE
+                                            ? view.cameraY() - MGZ2_AFTER_MOVE_Y_BASE
+                                            : view.cameraY());
+                }
+                composeMgz2Table(
+                        sourceX, cloud, scratch.mgz2HScrollTable, scratch.mgz2ScatterSource);
+                if (rise == BG_RISE_SONIC_STATE) scratch.mgz2HScrollTable.set(27, (short) bgX);
+                DeformationPlan.applyTableBands(
+                        scratch.composer,
+                        bgY,
+                        foreground,
+                        scratch.mgz2HScrollTable,
+                        MGZ2_BG_DEFORM,
+                        4,
+                        NEGATE_WORD);
+            }
+            return new com.openggf.level.scroll.ScrollProjection(
+                    scratch.composer.packedScrollWords(),
+                    null,
+                    null,
+                    null,
+                    (short) (view.cameraY() + shake),
+                    (short) (bgY + shake),
+                    bgX,
+                    context.nativeOutput().backgroundPeriod(),
+                    context.nativeOutput().shakeX(),
+                    shake,
+                    context.nativeOutput().tilemapMode());
+        };
     }
 }

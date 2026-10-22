@@ -120,6 +120,7 @@ public class ObjectManager {
 
     private final ObjectServices objectServices;
     StageplayObjectDirection stageplayDirection;
+    final StageplayActivationPolicy stageplayActivation;
     private final List<ObjectSpawn> stageplaySourceSpawns;
     private final ObjectCallbackRouter objectCallbacks;
     private final ObjectManagerPopulationView populationView;
@@ -234,22 +235,31 @@ public class ObjectManager {
         this.graphicsManager = graphicsManager;
         this.camera = camera;
         this.objectServices = objectServices;
-        this.stageplaySourceSpawns = List.copyOf(spawns);
+        this.stageplayActivation = objectServices == null ? null
+                : com.openggf.game.session.WorldSessionPolicyAccess.getService(
+                        objectServices.worldSession(), StageplayActivationPolicy.class);
+        var nativeSource = objectServices == null || objectServices.worldSession() == null ? null
+                : objectServices.worldSession().getGameModule().getGameService(NativePlacementSource.class);
+        var nativeSpawns = nativeSource == null ? spawns : List.copyOf(nativeSource.placements());
+        this.stageplaySourceSpawns = List.copyOf(nativeSpawns);
         var directionPolicy =
                 objectServices == null
                         ? null
                         : com.openggf.game.session.WorldSessionPolicyAccess.getService(
                                 objectServices.worldSession(), StageplayObjectLoadPolicy.class);
-        if (directionPolicy != null)
+        if (directionPolicy != null) {
+            directionPolicy.seedInitialLayout(nativeSpawns);
             stageplayDirection = new StageplayObjectDirection(this, directionPolicy);
+        }
         this.placementAdmission = new ObjectPlacementAdmission(registry, objectServices);
         this.objectCallbacks = new ObjectCallbackRouter(registry);
         this.slotLayout = registry != null ? registry.objectSlotLayout() : ObjectSlotLayout.SONIC_1;
         this.windowingStrategy = registry != null
                 ? registry.objectWindowingStrategy()
                 : ObjectWindowingStrategy.LEGACY;
-        this.placement = new ObjectPlacementController(spawns,
+        this.placement = new ObjectPlacementController(nativeSpawns,
                 camera != null ? camera::getWidth : com.openggf.level.spawn.PlacementViewportWidth::current);
+        this.placement.setStageplayActivation(stageplayActivation);
         this.placement.setTwoAxisCursorPlacement(slotLayout.twoAxisCursorPlacement());
         this.placement.setWindowingStrategy(windowingStrategy);
         // Indexed by execution slot, which spans the process slots (next's fixed
@@ -702,6 +712,7 @@ public class ObjectManager {
         // than the fan, so the fan would otherwise read the already-seated Y.
         // Objects that need ROM's "player position when my slot ran, before
         // later-slot objects moved him" read this via getPlayerCentreYAtExecStart.
+        activateStageplayWindows();
         solidContacts.captureExecStartPlayerCentreY(player, activeSidekicks);
         SolidExecutionRegistry solidExecutionRegistry = objectServices.solidExecutionRegistry();
         solidExecutionRegistry.beginFrame(
@@ -1395,10 +1406,10 @@ public class ObjectManager {
      * arriving 1px behind, s2.asm:58759-58799).
      */
     private boolean inlineCreateObject(ObjectSpawn spawn, int counterValue) {
-        if (activeObjects.containsKey(spawn)
-                || !placementAdmission.allows(spawn)
-                || !stageplayAllowsPlacement(spawn)) {
-            return true; // Already exists or intentionally excluded from this load
+        if (activeObjects.containsKey(spawn) || !placementAdmission.allows(spawn)) return true;
+        if (!stageplayAllowsPlacement(spawn)) {
+            noteStageplayFactorySuppression(spawn);
+            return true; // Loader state advances, but authoring admission forbids native AI.
         }
         if (!isSpawnVerticallyEligibleForLoad(spawn, true)) {
             return false;
@@ -1451,7 +1462,7 @@ public class ObjectManager {
         // Sonic 2 Obj03 tracks separate crossover state for MainCharacter and
         // Sidekick (objoff_34 / objoff_35) and updates both each frame.
         if (planeSwitchers != null) {
-            planeSwitchers.update(player, this::hasInlinePlaneSwitcher);
+            planeSwitchers.update(player, spawn -> !stageplayAllowsPlacement(spawn) || hasInlinePlaneSwitcher(spawn));
         }
     }
 
@@ -3363,6 +3374,7 @@ public class ObjectManager {
      * never a sprite top-left bound, so the window is not shifted by half-width.
      */
     private boolean isObjectOutOfRange(ObjectInstance instance, ObjectSpawn spawn, int cameraX) {
+        if (stageplayActivation != null && stageplayActivation.keepsOutsideNativeView(instance, camera)) return false;
         int referenceX = outOfRangeReferenceX(instance, spawn);
         if (windowingStrategy.overridesUnloadWindow()) {
             if (windowingStrategy instanceof ViewportAwareObjectWindowingStrategy viewportAware) return viewportAware.isOutsideUnloadWindow(referenceX, cameraX, camera.getWidth());
@@ -3435,6 +3447,11 @@ public class ObjectManager {
 
     private boolean unloadCounterBasedOutOfRange(ObjectInstance instance, ObjectSpawn spawn,
             int expectedSlotIndex, int cameraX) {
+        // Authoring may bind a placed actor outside the primary window between ticks.
+        // Its already-published native kill must reach the destruction dispatcher; a
+        // geometric pre-routine unload must not clear its respawn byte first.
+        if (stageplayActivation != null && objectCallbacks.call(instance, instance::isDestroyed)) return false;
+        if (stageplayActivation != null && stageplayActivation.keepsOutsideNativeView(instance, camera)) return false;
         ObjectSpawn positionSpawn = spawn != null ? spawn
                 : objectCallbacks.call(instance, instance::getSpawn);
         // Fallback dynamic children may exist briefly without any spawn-backed
@@ -3596,6 +3613,8 @@ public class ObjectManager {
         List<ObjectSpawn> sortedNewSpawns = newSpawnsScratch;
         sortedNewSpawns.clear();
         for (ObjectSpawn spawn : activeSpawns) {
+            if (!stageplayAllowsPlacement(spawn) && !activeObjects.containsKey(spawn))
+                noteStageplayFactorySuppression(spawn);
             if (stageplayAllowsPlacement(spawn)
                     && placementAdmission.allowsNewSpawn(spawn, activeObjects, placement)) {
                 sortedNewSpawns.add(spawn);
@@ -3776,6 +3795,7 @@ public class ObjectManager {
 
 
         private boolean isSpawnVerticallyEligibleForLoad(ObjectSpawn spawn, boolean allowVerticalLoadBypassForS2) {
+            if (stageplayActivation != null && stageplayActivation.loads(spawn)) return true;
             if (spawn == null || placement.isCounterBasedRespawn() || camera == null) {
                 return true;
             }
@@ -4725,8 +4745,47 @@ public class ObjectManager {
                 : active.stream().filter(o -> !stageplayDirection.suspended(o)).toList();
     }
 
+    private void noteStageplayFactorySuppression(ObjectSpawn spawn) {
+        if (stageplayActivation != null && placement.isCounterBasedRespawn()
+                && placement.getCounterForSpawn(spawn) >= 0 && !placement.isRemembered(spawn)
+                && !placement.isDestroyedInWindow(placement.getSpawnIndex(spawn)))
+            stageplayActivation.skippedFactory(placement.getSpawnIndex(spawn));
+    }
+
     private boolean stageplayAllowsPlacement(ObjectSpawn spawn) {
         return stageplayDirection == null || stageplayDirection.allowsPlacement(spawn);
+    }
+
+    /** Extra performer windows share the native SST and all existing removal/creator gates.
+     * Native camera cursors are never moved to another performer or traversed repeatedly.
+     */
+    private void activateStageplayWindows() {
+        if (stageplayActivation == null) return;
+        var considered = new java.util.HashSet<Integer>();
+        for (var spawn : stageplaySourceSpawns) {
+            int index = placement.getSpawnIndex(spawn);
+            if (!stageplayActivation.loads(spawn)) continue;
+            considered.add(index);
+            boolean entered = stageplayActivation.entered(index);
+            if (!stageplayAllowsPlacement(spawn)
+                    || activeObjects.containsKey(spawn)
+                    || placement.isDestroyedInWindow(index)) continue;
+            // Keep admission/timing in the original camera window native. Supplemental
+            // windows supply only the objects that its single cursor cannot reach.
+            if (camera != null && spawn.x() >= camera.getX() - 128
+                    && spawn.x() < camera.getX() + camera.getWidth() + 320
+                    && ObjectPlacementController.isNonCounterSpawnVerticallyEligible(
+                            spawn, camera.getY(), camera.getMinY(),
+                            camera.isVerticalWrapEnabled() ? camera.getVerticalWrapRange() : 0)) continue;
+            if (!placement.admitStageplayPlacement(spawn, entered)) continue;
+            if (!hasFreeDynamicSlot()) throw new IllegalStateException(
+                    "Stageplay ensemble exceeds the native object slot budget near layout "
+                            + spawn.layoutIndex() + "; clear objects, reduce the cast or split the shot");
+            if (tryLoadPlacementSpawn(spawn, false)) {
+                bucketsDirty = activeObjectsCacheDirty = true;
+            }
+        }
+        stageplayActivation.considered(considered);
     }
 
     void suspendStageplayContacts(ObjectInstance object) {
@@ -4773,7 +4832,10 @@ public class ObjectManager {
         return materializeStageplayPlacement(spawn);
     }
 
-    ObjectInstance materializeStageplayPlacement(ObjectSpawn spawn) {
+    ObjectInstance materializeStageplayPlacement(ObjectSpawn requested) {
+        ObjectSpawn spawn = stageplaySourceSpawns.stream().filter(value -> value.layoutIndex() == requested.layoutIndex()
+                && value.objectId() == requested.objectId() && value.subtype() == requested.subtype())
+                .findFirst().orElse(requested);
         if (spawn.layoutIndex() < 0)
             throw new IllegalArgumentException("Placed object requires portable layout identity");
         ObjectInstance existing =
@@ -4786,7 +4848,20 @@ public class ObjectManager {
                         .map(Map.Entry::getValue)
                         .findFirst()
                         .orElse(null);
-        if (existing != null) return existing;
+        if (existing != null) {
+            if (objectCallbacks.call(existing, existing::isDestroyed))
+                throw new IllegalStateException("Placed object is retired by native state; "
+                        + "cast a fresh unplaced object to start another native routine");
+            return existing;
+        }
+        if (placement.isCounterBasedRespawn()) {
+            if (stageplayActivation == null || placement.getSpawnIndex(spawn) < 0)
+                throw new IllegalStateException("Placed object has no canonical native respawn context; "
+                        + "retain the level layout or cast a fresh unplaced object");
+            if (!placement.admitStageplayPlacement(spawn, true))
+                throw new IllegalStateException("Placed object is retired or remembered by native state; "
+                        + "cast a fresh unplaced object to start another native routine");
+        }
         // Explicit actor readmission preserves the removal filter for native placement scans.
         int slot = allocateSlot();
         if (slot < 0) throw new IllegalStateException("Native object activation window is full");
@@ -4819,6 +4894,10 @@ public class ObjectManager {
         if (instance instanceof AbstractObjectInstance object) {
             object.setServices(objectServices);
             if (object.getSlotIndex() < 0) object.setSlotIndex(slot);
+            if (placement.isCounterBasedRespawn()) {
+                int counter = placement.getCounterForSpawn(spawn);
+                if (counter >= 0) object.setRespawnStateIndex(counter);
+            }
         } else releaseSlot(slot);
         // Explicit cast ownership must exist before the persistent clear admission gate.
         // Keep vanilla placement scans filtered while permitting this authored readmission.

@@ -59,8 +59,13 @@ public final class StageplayTimeline {
         CameraKey camera = cameraKeys.get(cameraIndex);
         CameraKey nextCamera = cameraKeys.get(Math.min(cameraIndex + 1, cameraKeys.size() - 1));
         double weight = nextCamera.frame() == nextScene ? 0 : weight(camera.interpolation(), camera.frame(), nextCamera.frame(), frame);
+        // Imported v1-v5 shots keep their held zoom. Current native worlds use the
+        // same authored easing for all three camera coordinates; only the completed
+        // opaque world picture is resampled by StageplayWorldPresentation.
+        double zoom = StageplayWorldPolicies.legacy(set.worldPolicy()) ? camera.zoom()
+                : lerp(camera.zoom(), nextCamera.zoom(), weight);
         CameraPose baseCamera = new CameraPose(lerp(camera.x(), nextCamera.x(), weight),
-                lerp(camera.y(), nextCamera.y(), weight), camera.zoom());
+                lerp(camera.y(), nextCamera.y(), weight), zoom);
         double shakeX = 0, shakeY = 0;
         for (CameraEffect effect : document.cameraEffects()) {
             if (frame < effect.startFrame() || frame >= effect.endFrame()) continue;

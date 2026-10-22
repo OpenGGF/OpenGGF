@@ -1,5 +1,8 @@
 package com.openggf.game.sonic3k.scroll;
 
+import static com.openggf.level.scroll.M68KMath.VISIBLE_LINES;
+import static com.openggf.level.scroll.M68KMath.negWord;
+
 import com.openggf.camera.NativeViewportFraming;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
@@ -7,19 +10,25 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 
-import static com.openggf.level.scroll.M68KMath.VISIBLE_LINES;
-import static com.openggf.level.scroll.M68KMath.negWord;
-
 /**
  * Mushroom Hill Zone scroll handler.
  *
- * <p>Ports the shared {@code MHZ_Deform} routine used by MHZ1 and normal MHZ2
- * play, plus the MHZ2 ship/end-boss H-int foreground overrides driven by
- * event/runtime state.
+ * <p>Ports the shared {@code MHZ_Deform} routine used by MHZ1 and normal MHZ2 play, plus the MHZ2
+ * ship/end-boss H-int foreground overrides driven by event/runtime state.
  */
-public class SwScrlMhz extends AbstractZoneScrollHandler {
+public class SwScrlMhz extends AbstractZoneScrollHandler
+        implements com.openggf.level.scroll.ScrollProjectionSource {
 
-    private final ScrollEffectComposer composer = new ScrollEffectComposer();
+    private final ScrollEffectComposer composer;
+
+    public SwScrlMhz() {
+        this(224);
+    }
+
+    private SwScrlMhz(int lines) {
+        composer = new ScrollEffectComposer(lines);
+    }
+
     private int bgCameraX = Integer.MIN_VALUE;
     private int band1CameraX;
     private int band2CameraX;
@@ -35,19 +44,19 @@ public class SwScrlMhz extends AbstractZoneScrollHandler {
     }
 
     @Override
-    public void update(int[] horizScrollBuf,
-                       int cameraX,
-                       int cameraY,
-                       int frameCounter,
-                       int actId) {
+    public void update(
+            int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter, int actId) {
         resetScrollTracking();
         composer.reset();
 
         short fgScroll = negWord(cameraX);
         MhzZoneRuntimeState state = currentRuntimeState();
-        DeformOutputs outputs = computeMhzDeform(adjustBgDuringLoop(cameraX), cameraY,
-                state == null ? 0 : state.screenShakeOffset(),
-                state != null && state.isBossAreaBackgroundDeformActive());
+        DeformOutputs outputs =
+                computeMhzDeform(
+                        adjustBgDuringLoop(cameraX),
+                        cameraY,
+                        state == null ? 0 : state.screenShakeOffset(),
+                        state != null && state.isBossAreaBackgroundDeformActive());
         bgCameraX = outputs.bgCameraX();
         band1CameraX = outputs.band1CameraX();
         band2CameraX = outputs.band2CameraX();
@@ -67,7 +76,7 @@ public class SwScrlMhz extends AbstractZoneScrollHandler {
         maxScrollOffset = composer.getMaxScrollOffset();
     }
 
-    private record LoopScrollState(boolean initialized, int actualX, int adjustedX) { }
+    private record LoopScrollState(boolean initialized, int actualX, int adjustedX) {}
 
     @Override
     public Object captureRewindState() {
@@ -75,14 +84,15 @@ public class SwScrlMhz extends AbstractZoneScrollHandler {
     }
 
     /**
-     * MHZ1_BackgroundEvent rebases Camera_X_pos_copy and Events_fg_0 by $4200,
-     * but retains Events_fg_1, the loop-adjusted background accumulator. The
-     * engine replaces the act's scroll initialization, so carry the accumulator
-     * and rebase only its last physical-camera sample.
+     * MHZ1_BackgroundEvent rebases Camera_X_pos_copy and Events_fg_0 by $4200, but retains
+     * Events_fg_1, the loop-adjusted background accumulator. The engine replaces the act's scroll
+     * initialization, so carry the accumulator and rebase only its last physical-camera sample.
      */
     public Object captureForActTransition(int cameraOffsetX) {
-        return new LoopScrollState(loopScrollInitialized,
-                (loopActualCameraX + cameraOffsetX) & 0xFFFF, loopAdjustedCameraX);
+        return new LoopScrollState(
+                loopScrollInitialized,
+                (loopActualCameraX + cameraOffsetX) & 0xFFFF,
+                loopAdjustedCameraX);
     }
 
     @Override
@@ -136,11 +146,12 @@ public class SwScrlMhz extends AbstractZoneScrollHandler {
         return loopAdjustedCameraX;
     }
 
-    private static DeformOutputs computeMhzDeform(int cameraX, int cameraY, int screenShakeOffset,
-                                                   boolean bossAreaDeformActive) {
-        short bgY = bossAreaDeformActive
-                ? computeBgY(cameraY, 0x280, 0x180)
-                : computeBgY(cameraY, 0, 0x76);
+    private static DeformOutputs computeMhzDeform(
+            int cameraX, int cameraY, int screenShakeOffset, boolean bossAreaDeformActive) {
+        short bgY =
+                bossAreaDeformActive
+                        ? computeBgY(cameraY, 0x280, 0x180)
+                        : computeBgY(cameraY, 0, 0x76);
         int adjustedCameraX = cameraX - screenShakeOffset;
         int d0 = ((short) adjustedCameraX) << 16;
         d0 >>= 1;
@@ -206,8 +217,10 @@ public class SwScrlMhz extends AbstractZoneScrollHandler {
         // pillar ramp and its collision helpers. Widescreen moves only the
         // displayed origin; feeding that origin into the ROM math changes
         // the pillars' world positions and their collision surfaces.
-        int inset = state.centerNativeArenaCamera()
-                ? NativeViewportFraming.inset(GameServices.camera().getWidth()) : 0;
+        int inset =
+                state.centerNativeArenaCamera()
+                        ? NativeViewportFraming.inset(GameServices.camera().getWidth())
+                        : 0;
         int nativeCameraX = (cameraXCopy + inset) & 0xFFFF;
         int lineCount = Math.min(VISIBLE_LINES, 0x30);
         if ((short) (nativeCameraX - 0x4180) < -0x140) {
@@ -229,7 +242,8 @@ public class SwScrlMhz extends AbstractZoneScrollHandler {
         publishEndBossArenaHelperXPositions(state, nativeCameraX, inset);
     }
 
-    private void publishEndBossArenaHelperXPositions(MhzZoneRuntimeState state, int cameraX, int inset) {
+    private void publishEndBossArenaHelperXPositions(
+            MhzZoneRuntimeState state, int cameraX, int inset) {
         int[] spikeX = new int[6];
         spikeX[0] = computeEndBossArenaHelperX(cameraX, 40, inset);
         spikeX[1] = spikeX[0];
@@ -237,7 +251,8 @@ public class SwScrlMhz extends AbstractZoneScrollHandler {
         spikeX[3] = spikeX[2];
         spikeX[4] = computeEndBossArenaHelperX(cameraX, 17, inset);
         spikeX[5] = spikeX[4];
-        state.publishEndBossArenaHelperXPositions(computeEndBossArenaHelperX(cameraX, 47, inset), spikeX);
+        state.publishEndBossArenaHelperXPositions(
+                computeEndBossArenaHelperX(cameraX, 47, inset), spikeX);
     }
 
     private int computeEndBossArenaHelperX(int cameraX, int hScrollLine, int inset) {
@@ -280,6 +295,71 @@ public class SwScrlMhz extends AbstractZoneScrollHandler {
         return S3kRuntimeStates.currentMhz(GameServices.zoneRuntimeRegistry()).orElse(null);
     }
 
-    private record DeformOutputs(short bgCameraY, short bgCameraX, short band1CameraX, short band2CameraX) {
+    private record DeformOutputs(
+            short bgCameraY, short bgCameraX, short band1CameraX, short band2CameraX) {}
+
+    @Override
+    public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        MhzZoneRuntimeState state = currentRuntimeState();
+        int adjustedX = loopScrollInitialized ? loopAdjustedCameraX : context.cameraX() & 0xffff;
+        int shake = state == null ? 0 : state.screenShakeOffset();
+        boolean bossArea = state != null && state.isBossAreaBackgroundDeformActive();
+        boolean ship = state != null && state.isShipSequenceActive();
+        int shipScroll = state == null ? 0 : state.shipPrimaryHScroll();
+        int shipLines = state == null ? 0 : state.shipHIntCounter() & 0xffff;
+        boolean arena = state != null && state.isEndBossArenaBackgroundActive();
+        boolean pillars = state != null && state.isEndBossArenaForegroundRefreshActive();
+        int inset =
+                state != null && state.centerNativeArenaCamera()
+                        ? NativeViewportFraming.inset(context.viewportWidth())
+                        : 0;
+        return view -> {
+            SwScrlMhz scratch = new SwScrlMhz(view.height());
+            int dx = view.cameraX() - context.cameraX();
+            DeformOutputs outputs =
+                    computeMhzDeform((adjustedX + dx) & 0xffff, view.cameraY(), shake, bossArea);
+            scratch.composer.setVscrollFactorBG(outputs.bgCameraY());
+            scratch.composer.fillPackedScrollWords(
+                    0, view.height(), negWord(view.cameraX()), negWord(outputs.bgCameraX()));
+            int lines = Math.min(view.height(), ship ? shipLines : arena ? 0x30 : 0);
+            for (int line = 0; line < lines; line++) {
+                short background = (short) scratch.composer.packedScrollWordAt(line);
+                scratch.composer.writePackedScrollWord(
+                        line,
+                        ship ? (short) (negWord(shipScroll) - dx) : negWord(outputs.bgCameraX()),
+                        background);
+            }
+            if (!ship && arena && pillars) {
+                // loc_55552/loc_555A4 compositor only: collision helpers remain native-owned.
+                int nativeX = (view.cameraX() + inset) & 0xffff;
+                int accumulator = (negWord(nativeX - 0x80) & 0xffff) << 16;
+                int step = computeEndBossPillarRampStep(nativeX);
+                boolean clear = (short) (nativeX - 0x4180) < -0x140;
+                for (int line = 0; line < Math.min(view.height(), 0x30); line++) {
+                    short foreground = (short) (scratch.composer.packedScrollWordAt(line) >>> 16);
+                    scratch.composer.writePackedScrollWord(
+                            line,
+                            foreground,
+                            clear ? (short) inset : (short) ((accumulator >> 16) + inset));
+                    accumulator += step;
+                }
+            }
+            return new com.openggf.level.scroll.ScrollProjection(
+                    scratch.composer.packedScrollWords(),
+                    null,
+                    null,
+                    null,
+                    (short)
+                            (context.nativeOutput().foregroundY()
+                                    + view.cameraY()
+                                    - context.cameraY()),
+                    outputs.bgCameraY(),
+                    outputs.bgCameraX(),
+                    context.nativeOutput().backgroundPeriod(),
+                    context.nativeOutput().shakeX(),
+                    context.nativeOutput().shakeY(),
+                    context.nativeOutput().tilemapMode());
+        };
     }
 }

@@ -101,18 +101,13 @@ a transition's opaque midpoint. Listener reactions help the exchange read as act
 
 ## Keep pixel-art camera motion stable
 
-Camera zoom now holds until its next key; the current renderer does not animate
-zoom. Use zoom one or held integer pixel scales. Create variation with pans, composition and shot cuts. Do not animate
-fractional nearest-neighbour zoom: changing pixel sizes creates stepping and
-shimmer in sprites and scenery. Hold the same zoom during a pan and use a shot cut to change integer framing.
-Imported fractional values are retained for compatibility; choose integer framing
-for newly authored shots.
-
-Animated fractional zoom is appropriate only with a smooth rendering implementation
-that has been reviewed on moving footage at the intended output size and cadence.
-Review sprites, scenery and captions through the entire move, not just its endpoints.
-A new smoothing implementation is separate engine work; existing rendering options
-must be judged by their observed motion, not the apparent smoothness of camera keys.
+Current native worlds animate camera position and zoom with HOLD / LINEAR /
+SMOOTH easing. The bounded world-compositing pass filters the completed opaque
+world picture, then draws text separately. Use held integer framing when the
+shot calls for pixel-stable pauses; review every animated zoom in motion at the
+intended output size and cadence. A larger export scale cannot repair an alias
+already present in the authored frame. Migrated legacy worlds retain held zoom
+(and legacy LIVE fixed1x) until upgraded.
 
 ## Boundaries that affect directing
 
@@ -139,8 +134,11 @@ collection, hazard hurt/recovery and native airborne abilities. A picture of a
 platform, counter value, animation or compile pass is insufficient. Verify native
 contact/displacement, once-only ring disappearance, ring loss and recovery, ability
 state/timer and landing. Compare backward seek + forward replay across those events.
-Keep actors in the native activation window; the cinematic camera does not create
-additional gameplay activation regions. Describe unsupported separated casts honestly.
+Current worlds activate separate native-sized windows around performers; distant
+cast members can share a shot without activating the entire gap. They share the
+native object slot budget. An exhaustion message requires clearing unnecessary
+objects or splitting the shot. Native damage/destruction remains active; migrated
+legacy LIVE retains its single-window restriction until upgraded.
 
 LIVE simulate/capture owns an offline gameplay session and delegates to
 LevelFrameStep. Editor preview uses a persistent offscreen worker, with the same
@@ -160,10 +158,12 @@ After vertical pans or follow-target changes, compare visible feet and support
 objects with the rendered foreground and its occlusion mask. Grounded state,
 visible body pixels and complete decoding can all pass while scenery uses a
 different camera origin. Check contact before and after the move; distinguish
-transparent native floor art from a displaced foreground. LIVE backgrounds retain
-the native gameplay camera phase, including intentionally stationary backgrounds;
-arbitrary-view background parallax is not recomputed. Do not alter physics or
-force the background to move like foreground terrain to disguise a rendering fault.
+transparent native floor art from a displaced foreground. Current backgrounds
+compose their owning handler's immutable native phase at the directed camera,
+including parallax, line/column deformation and deliberately stationary regions.
+They never retick a native handler while drawing. Review AIZ pans and S3K DEZ
+stationary framing; do not alter physics or force uniform foreground-speed
+background movement to disguise a rendering fault.
 
 Place explicit `ROM_MUSIC` cues at each shot's local frame zero using verified
 `catalog` IDs. Preview's worker silences automatic level music because the parent

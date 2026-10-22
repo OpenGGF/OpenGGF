@@ -1,6 +1,9 @@
 package com.openggf.game.sonic2.scroll;
 
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.ScrollProjectionContext;
+import com.openggf.level.scroll.ScrollProjectionPhase;
+import com.openggf.level.scroll.ScrollProjectionSource;
 import com.openggf.level.scroll.M68KMath;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 
@@ -32,7 +35,7 @@ import java.util.Arrays;
  * 10. Medium clouds (8 lines) - BG = BGX >> 3
  * 11. Empty sky (72 lines) - BG = BGX (full speed)
  */
-public class SwScrlOoz extends AbstractZoneScrollHandler {
+public class SwScrlOoz extends AbstractZoneScrollHandler implements ScrollProjectionSource {
 
     private final ParallaxTables tables;
 
@@ -138,74 +141,9 @@ public class SwScrlOoz extends AbstractZoneScrollHandler {
         // the counter's low byte, so it decrements when the count is a multiple of 8.
         updateHeatHazePhase(frameCounter);
 
-        // ==================== Step 4: Calculate factory height ====================
-        // The factory height is based on Camera_BG_Y_pos with specific threshold logic
-        int factoryHeight = calculateFactoryHeight(cameraBgYPos);
-
-        // ==================== Step 5: Calculate scroll values ====================
-        // FG scroll is constant: -Camera_X_pos
-        short fgScroll = M68KMath.negWord(cameraX);
-
-        // BGX = -Camera_BG_X_pos (the tracked BG camera position)
-        // "Full BG speed" = BGX (factory/sky regions)
-        // Cloud layers apply additional shifts to BGX for slower parallax
-        short bgxFull = M68KMath.negWord(cameraBgXPos);               // Full BG speed (factory/sky)
-        short bgxShift2 = M68KMath.negWord((short)(cameraBgXPos >> 2)); // BGX >> 2 (fast clouds)
-        short bgxShift3 = M68KMath.negWord((short)(cameraBgXPos >> 3)); // BGX >> 3 (medium clouds)
-        short bgxShift4 = M68KMath.negWord((short)(cameraBgXPos >> 4)); // BGX >> 4 (slow clouds)
-
-        // ==================== Step 6: Fill buffer from bottom upward ====================
-        // We track remaining lines (starts at 223, counts down)
-        // But we fill the array in the correct order (final result)
-
-        // Clear pre-allocated buffer for bottom-to-top order fill
-        Arrays.fill(bgScrollValues, (short) 0);
-        int lineFromBottom = 0;  // 0 = bottom line (screen line 223)
-
-        // Segment 0: Factory (variable height)
-        lineFromBottom = fillSegment(bgScrollValues, lineFromBottom, factoryHeight, bgxFull);
-
-        // Segment 1: Medium clouds (8 lines)
-        lineFromBottom = fillSegment(bgScrollValues, lineFromBottom, MEDIUM_CLOUDS_HEIGHT, bgxShift3);
-
-        // Segment 2: Slow clouds (8 lines)
-        lineFromBottom = fillSegment(bgScrollValues, lineFromBottom, SLOW_CLOUDS_HEIGHT, bgxShift4);
-
-        // Segment 3: Fast clouds (8 lines)
-        lineFromBottom = fillSegment(bgScrollValues, lineFromBottom, FAST_CLOUDS_HEIGHT, bgxShift2);
-
-        // Segment 4: Slow clouds (7 lines)
-        lineFromBottom = fillSegment(bgScrollValues, lineFromBottom, SLOW_CLOUDS_2_HEIGHT, bgxShift4);
-
-        // Segment 5: Sun heat-haze (33 lines)
-        lineFromBottom = fillSunHazeSegment(bgScrollValues, lineFromBottom);
-
-        // Segment 6: Medium clouds (8 lines)
-        lineFromBottom = fillSegment(bgScrollValues, lineFromBottom, MEDIUM_CLOUDS_HEIGHT, bgxShift3);
-
-        // Segment 7: Slow clouds (8 lines)
-        lineFromBottom = fillSegment(bgScrollValues, lineFromBottom, SLOW_CLOUDS_HEIGHT, bgxShift4);
-
-        // Segment 8: Fast clouds (8 lines)
-        lineFromBottom = fillSegment(bgScrollValues, lineFromBottom, FAST_CLOUDS_HEIGHT, bgxShift2);
-
-        // Segment 9: Slow clouds (8 lines)
-        lineFromBottom = fillSegment(bgScrollValues, lineFromBottom, SLOW_CLOUDS_HEIGHT, bgxShift4);
-
-        // Segment 10: Medium clouds (8 lines)
-        lineFromBottom = fillSegment(bgScrollValues, lineFromBottom, MEDIUM_CLOUDS_HEIGHT, bgxShift3);
-
-        // Segment 11: Empty sky (72 lines) - fills remainder
-        lineFromBottom = fillSegment(bgScrollValues, lineFromBottom, EMPTY_SKY_HEIGHT, bgxFull);
-
-        // ==================== Step 7: Convert to screen order and pack ====================
-        // bgScrollValues is in bottom-to-top order, need to reverse to top-to-bottom
-        for (int screenLine = 0; screenLine < M68KMath.VISIBLE_LINES; screenLine++) {
-            int fromBottom = M68KMath.VISIBLE_LINES - 1 - screenLine;
-            short bgScroll = (fromBottom < bgScrollValues.length) ? bgScrollValues[fromBottom] : bgxFull;
-
-            composer.writePackedScrollWord(screenLine, fgScroll, bgScroll);
-        }
+        compose(composer, bgScrollValues, cameraX, cameraBgXPos, cameraBgYPos, heatHazePhaseCounter,
+                tables == null ? null : tables::getRippleSigned,
+                tables == null ? 0 : tables.getRippleDataLength());
 
         composer.copyPackedScrollWordsTo(horizScrollBuf);
         vscrollFactorBG = composer.getVscrollFactorBG();
@@ -235,7 +173,7 @@ public class SwScrlOoz extends AbstractZoneScrollHandler {
      * @param cameraBgYPos Current background Y position (word)
      * @return Number of factory lines to output (0 to 224)
      */
-    int calculateFactoryHeight(int cameraBgYPos) {
+    static int calculateFactoryHeight(int cameraBgYPos) {
         // Treat as unsigned 16-bit word
         int d1 = cameraBgYPos & 0xFFFF;
 
@@ -278,7 +216,7 @@ public class SwScrlOoz extends AbstractZoneScrollHandler {
      * @param bgScroll BG scroll value
      * @return Next line index from bottom
      */
-    private int fillSegment(short[] buffer, int startLine, int height, short bgScroll) {
+    private static int fillSegment(short[] buffer, int startLine, int height, short bgScroll) {
         int linesToFill = Math.min(height, M68KMath.VISIBLE_LINES - startLine);
         for (int i = 0; i < linesToFill; i++) {
             buffer[startLine + i] = bgScroll;
@@ -296,13 +234,13 @@ public class SwScrlOoz extends AbstractZoneScrollHandler {
      * @param startLine Starting line index from bottom
      * @return Next line index from bottom
      */
-    private int fillSunHazeSegment(short[] buffer, int startLine) {
+    private static int fillSunHazeSegment(short[] buffer, int startLine, int heatHazePhaseCounter, java.util.function.IntUnaryOperator ripple) {
         int phase = heatHazePhaseCounter & 0x1F;  // 0..31
         int linesToFill = Math.min(SUN_HAZE_HEIGHT, M68KMath.VISIBLE_LINES - startLine);
 
         for (int i = 0; i < linesToFill; i++) {
             int rippleIndex = phase + i;
-            int rippleValue = getRippleSigned(rippleIndex);
+            int rippleValue = ripple.applyAsInt(rippleIndex);
             buffer[startLine + i] = (short) rippleValue;
         }
 
@@ -387,4 +325,97 @@ public class SwScrlOoz extends AbstractZoneScrollHandler {
     public int getRippleValueForTest(int index) {
         return getRippleSigned(index);
     }
+    private static void compose(ScrollEffectComposer composer, short[] bgScrollValues, int cameraX,
+                                int cameraBgXPos, int cameraBgYPos, int heatHazePhaseCounter,
+                                java.util.function.IntUnaryOperator romRipple, int rippleLength) {
+        java.util.function.IntUnaryOperator ripple = index -> romRipple != null && index < rippleLength
+                ? romRipple.applyAsInt(index)
+                : index >= 0 && index < DEFAULT_RIPPLE_DATA.length ? DEFAULT_RIPPLE_DATA[index] : 0;
+        // ==================== Step 4: Calculate factory height ====================
+        // The factory height is based on Camera_BG_Y_pos with specific threshold logic
+        int factoryHeight = calculateFactoryHeight(cameraBgYPos);
+
+        // ==================== Step 5: Calculate scroll values ====================
+        // FG scroll is constant: -Camera_X_pos
+        short fgScroll = M68KMath.negWord(cameraX);
+
+        // BGX = -Camera_BG_X_pos (the tracked BG camera position)
+        // "Full BG speed" = BGX (factory/sky regions)
+        // Cloud layers apply additional shifts to BGX for slower parallax
+        short bgxFull = M68KMath.negWord(cameraBgXPos);               // Full BG speed (factory/sky)
+        short bgxShift2 = M68KMath.negWord((short)(cameraBgXPos >> 2)); // BGX >> 2 (fast clouds)
+        short bgxShift3 = M68KMath.negWord((short)(cameraBgXPos >> 3)); // BGX >> 3 (medium clouds)
+        short bgxShift4 = M68KMath.negWord((short)(cameraBgXPos >> 4)); // BGX >> 4 (slow clouds)
+
+        // ==================== Step 6: Fill buffer from bottom upward ====================
+        // We track remaining lines (starts at 223, counts down)
+        // But we fill the array in the correct order (final result)
+
+        // Clear pre-allocated buffer for bottom-to-top order fill
+        Arrays.fill(bgScrollValues, (short) 0);
+        int lineFromBottom = 0;  // 0 = bottom line (screen line 223)
+
+        // Segment 0: Factory (variable height)
+        lineFromBottom = fillSegment(bgScrollValues, lineFromBottom, factoryHeight, bgxFull);
+
+        // Segment 1: Medium clouds (8 lines)
+        lineFromBottom = fillSegment(bgScrollValues, lineFromBottom, MEDIUM_CLOUDS_HEIGHT, bgxShift3);
+
+        // Segment 2: Slow clouds (8 lines)
+        lineFromBottom = fillSegment(bgScrollValues, lineFromBottom, SLOW_CLOUDS_HEIGHT, bgxShift4);
+
+        // Segment 3: Fast clouds (8 lines)
+        lineFromBottom = fillSegment(bgScrollValues, lineFromBottom, FAST_CLOUDS_HEIGHT, bgxShift2);
+
+        // Segment 4: Slow clouds (7 lines)
+        lineFromBottom = fillSegment(bgScrollValues, lineFromBottom, SLOW_CLOUDS_2_HEIGHT, bgxShift4);
+
+        // Segment 5: Sun heat-haze (33 lines)
+        lineFromBottom = fillSunHazeSegment(bgScrollValues, lineFromBottom, heatHazePhaseCounter, ripple);
+
+        // Segment 6: Medium clouds (8 lines)
+        lineFromBottom = fillSegment(bgScrollValues, lineFromBottom, MEDIUM_CLOUDS_HEIGHT, bgxShift3);
+
+        // Segment 7: Slow clouds (8 lines)
+        lineFromBottom = fillSegment(bgScrollValues, lineFromBottom, SLOW_CLOUDS_HEIGHT, bgxShift4);
+
+        // Segment 8: Fast clouds (8 lines)
+        lineFromBottom = fillSegment(bgScrollValues, lineFromBottom, FAST_CLOUDS_HEIGHT, bgxShift2);
+
+        // Segment 9: Slow clouds (8 lines)
+        lineFromBottom = fillSegment(bgScrollValues, lineFromBottom, SLOW_CLOUDS_HEIGHT, bgxShift4);
+
+        // Segment 10: Medium clouds (8 lines)
+        lineFromBottom = fillSegment(bgScrollValues, lineFromBottom, MEDIUM_CLOUDS_HEIGHT, bgxShift3);
+
+        // Segment 11: Empty sky (72 lines) - fills remainder
+        lineFromBottom = fillSegment(bgScrollValues, lineFromBottom, EMPTY_SKY_HEIGHT, bgxFull);
+
+        // ==================== Step 7: Convert to screen order and pack ====================
+        // bgScrollValues is in bottom-to-top order, need to reverse to top-to-bottom
+        for (int screenLine = 0; screenLine < composer.visibleLineCount(); screenLine++) {
+            int fromBottom = M68KMath.VISIBLE_LINES - 1 - screenLine;
+            short bgScroll = (fromBottom >= 0 && fromBottom < bgScrollValues.length) ? bgScrollValues[fromBottom] : bgxFull;
+
+            composer.writePackedScrollWord(screenLine, fgScroll, bgScroll);
+        }
+
+    }
+
+    @Override
+    public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) {
+        long capturedX = bgXPos;
+        int phase = heatHazePhaseCounter;
+        var ripple = Sonic2ProjectionOutput.captureRipple(tables);
+        int rippleLength = tables == null ? 0 : tables.getRippleDataLength();
+        return view -> {
+            int bgX = (int) ((capturedX + ((long) (view.cameraX() - context.cameraX()) << 14)) >> 16);
+            int bgY = (view.cameraY() >> 3) + 0x50;
+            var output = new ScrollEffectComposer(view.height());
+            output.setVscrollFactorBG((short) bgY);
+            compose(output, new short[M68KMath.VISIBLE_LINES], view.cameraX(), bgX, bgY, phase, ripple, rippleLength);
+            return Sonic2ProjectionOutput.finish(context, view, output);
+        };
+    }
+
 }

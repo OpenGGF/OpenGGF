@@ -137,6 +137,14 @@ its teardown; retaining shader/atlas handles after context destruction can make
 the next session render black. Keep test reset/property restoration scoped to
 the test, including failure paths.
 
+`HeadlessGameBoot` alone is a foundation: it closes its session/ROM/context but
+leaves process-owned graphics caches to its caller. A custom host or test that
+initializes `GraphicsManager` must retire those owned resources while EGL is still
+current, after its world/private textures close and before `boot.close()`.
+`initHeadless()` is a logic-mode reset, not GL resource cleanup. Otherwise a second
+context can reuse stale ArenaMaskRenderer program/VAO handles even when two pictures
+compare equal. Higher-level capture sessions own their documented teardown.
+
 ## Verify the evidence
 
 Check executed tests and skips, not just exit status: `@RequiresRom` and some GL

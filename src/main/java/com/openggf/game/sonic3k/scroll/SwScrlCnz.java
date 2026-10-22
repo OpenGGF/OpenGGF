@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.scroll;
 
+import static com.openggf.level.scroll.M68KMath.negWord;
+
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
@@ -8,20 +10,18 @@ import com.openggf.level.scroll.compose.DeformationPlan;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import com.openggf.level.scroll.compose.ScrollValueTable;
 
-import static com.openggf.level.scroll.M68KMath.VISIBLE_LINES;
-import static com.openggf.level.scroll.M68KMath.negWord;
-
 /**
  * Carnival Night Zone scroll handler for S3K.
  *
- * <p>Ports the shared CNZ1 deform logic used by both acts and switches to the
- * boss/background scroll path when the CNZ event layer reports a boss refresh
- * phase.
+ * <p>Ports the shared CNZ1 deform logic used by both acts and switches to the boss/background
+ * scroll path when the CNZ event layer reports a boss refresh phase.
  */
-public class SwScrlCnz extends AbstractZoneScrollHandler {
+public class SwScrlCnz extends AbstractZoneScrollHandler
+        implements com.openggf.level.scroll.ScrollProjectionSource {
 
     /** CNZ1_BGDeformArray: four finite bands followed by the remainder band. */
     private static final int[] CNZ1_BG_DEFORM = {0x80, 0x30, 0x60, 0xC0, 0x7FFF};
+
     private static final DeformationPlan.ScrollValueTransform NEGATE_WORD = value -> negWord(value);
 
     /** Boss arena BG X offset from CNZ1_BossLevelScroll2. */
@@ -30,17 +30,23 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
     /** Boss arena BG Y offset from CNZ1_BossLevelScroll2. */
     private static final int BOSS_BG_Y_OFFSET = 0x100;
 
-    private final ScrollEffectComposer composer = new ScrollEffectComposer();
+    private final ScrollEffectComposer composer;
+
+    public SwScrlCnz() {
+        this(224);
+    }
+
+    private SwScrlCnz(int height) {
+        composer = new ScrollEffectComposer(height);
+    }
+
     private final ScrollValueTable hScrollTable = ScrollValueTable.ofLength(5);
     private int bossBgCameraX = Integer.MIN_VALUE;
     private short foregroundVscroll;
 
     @Override
-    public void update(int[] horizScrollBuf,
-                       int cameraX,
-                       int cameraY,
-                       int frameCounter,
-                       int actId) {
+    public void update(
+            int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter, int actId) {
         resetScrollTracking();
         composer.reset();
 
@@ -72,20 +78,19 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
         return state.bossBackgroundScrollActive();
     }
 
-    private void writeBossScroll(int[] horizScrollBuf,
-                                 short fgScroll,
-                                 int cameraX,
-                                 int cameraY,
-                                 int shakeY) {
+    private void writeBossScroll(
+            int[] horizScrollBuf, short fgScroll, int cameraX, int cameraY, int shakeY) {
         // ROM CNZ1_BossLevelScroll2 writes Camera_X_pos_BG_copy = Camera_X_pos_copy - $2F80;
-        // background collision probes use that copy through Camera_X_diff (sonic3k.asm:107767-107771).
+        // background collision probes use that copy through Camera_X_diff
+        // (sonic3k.asm:107767-107771).
         bossBgCameraX = cameraX - BOSS_BG_X_OFFSET;
         short bgScroll = negWord(bossBgCameraX);
         CnzZoneRuntimeState state = cnzRuntimeState();
         int bossScrollOffsetY = state != null ? state.bossScrollOffsetY() : 0;
-        composer.setVscrollFactorBG((short) (cameraY - BOSS_BG_Y_OFFSET + bossScrollOffsetY + shakeY));
+        composer.setVscrollFactorBG(
+                (short) (cameraY - BOSS_BG_Y_OFFSET + bossScrollOffsetY + shakeY));
 
-        composer.fillPackedScrollWords(0, VISIBLE_LINES, fgScroll, bgScroll);
+        composer.fillPackedScrollWords(0, composer.visibleLineCount(), fgScroll, bgScroll);
         composer.copyPackedScrollWordsTo(horizScrollBuf);
         vscrollFactorBG = composer.getVscrollFactorBG();
         minScrollOffset = composer.getMinScrollOffset();
@@ -107,10 +112,7 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
         return bossBgCameraX;
     }
 
-    /**
-     * CNZ1_Deform BG Y is approximately 13/128 of camera Y with screen shake
-     * folded in.
-     */
+    /** CNZ1_Deform BG Y is approximately 13/128 of camera Y with screen shake folded in. */
     private short cnzBgY(int cameraY, int shakeY) {
         // The engine passes raw Camera_Y_pos. Native Camera_Y_pos_copy already
         // contains shake here, then CNZ1_Deform subtracts it before scaling.
@@ -120,10 +122,9 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
     /**
      * Publishes the CNZ normal-deform outputs that later tile animation reads.
      *
-     * <p>ROM-side CNZ derives the phase source from {@code Events_bg+$10} and
-     * the BG X copy from {@code Camera_X_pos_BG_copy}. The current engine keeps
-     * the same values in the zone runtime state so animated tiles can consume
-     * them without reopening the event object boundary.
+     * <p>ROM-side CNZ derives the phase source from {@code Events_bg+$10} and the BG X copy from
+     * {@code Camera_X_pos_BG_copy}. The current engine keeps the same values in the zone runtime
+     * state so animated tiles can consume them without reopening the event object boundary.
      */
     private void publishNormalDeformOutputs(int cameraX) {
         CnzZoneRuntimeState state = cnzRuntimeState();
@@ -137,8 +138,8 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
     /**
      * ROM-equivalent CNZ phase source used by AnimateTiles_CNZ.
      *
-     * <p>This is the 5/16 camera-X fraction the disassembly reads from
-     * {@code Events_bg+$10} when deriving the animated tile phase.
+     * <p>This is the 5/16 camera-X fraction the disassembly reads from {@code Events_bg+$10} when
+     * deriving the animated tile phase.
      */
     private int cnzPhaseSource(int cameraX) {
         // CNZ1_Deform extracts this after subtracting three 1/16 steps from
@@ -149,8 +150,8 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
     /**
      * ROM-equivalent published BG camera X copy.
      *
-     * <p>CNZ keeps this as the 7/16 camera-X fraction that later animation
-     * logic treats as {@code Camera_X_pos_BG_copy}.
+     * <p>CNZ keeps this as the 7/16 camera-X fraction that later animation logic treats as {@code
+     * Camera_X_pos_BG_copy}.
      */
     private int cnzPublishedBgCameraX(int cameraX) {
         // As above, preserve the ROM's single 16.16 rounding operation.
@@ -158,8 +159,8 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
     }
 
     /**
-     * Builds the five CNZ1_Deform HScroll_table words in their ROM order:
-     * 1/32, 1/8, 1/4, 7/16, and 1/2 camera speed.
+     * Builds the five CNZ1_Deform HScroll_table words in their ROM order: 1/32, 1/8, 1/4, 7/16, and
+     * 1/2 camera speed.
      */
     private void buildNormalHScrollTable(int cameraX) {
         int d0 = ((short) cameraX) << 16;
@@ -184,13 +185,7 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
 
     private void applyDeformation(int[] horizScrollBuf, short fgScroll, short bgY) {
         DeformationPlan.applyTableBands(
-                composer,
-                bgY,
-                fgScroll,
-                hScrollTable,
-                CNZ1_BG_DEFORM,
-                0,
-                NEGATE_WORD);
+                composer, bgY, fgScroll, hScrollTable, CNZ1_BG_DEFORM, 0, NEGATE_WORD);
         composer.copyPackedScrollWordsTo(horizScrollBuf);
         vscrollFactorBG = composer.getVscrollFactorBG();
         minScrollOffset = composer.getMinScrollOffset();
@@ -205,11 +200,11 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
     }
 
     /**
-     * CNZ vertical screen-shake offset (ROM {@code Screen_shake_flag}). Sourced
-     * from the CNZ event layer so it is in sync for the BG/FG scroll fold-in here
-     * and the {@code ParallaxManager} -> {@code Camera} propagation (which moves
-     * the foreground and sprites). The CNZ event {@code update()} ticks the shake
-     * before rendering each frame, so reading it twice in one frame is stable.
+     * CNZ vertical screen-shake offset (ROM {@code Screen_shake_flag}). Sourced from the CNZ event
+     * layer so it is in sync for the BG/FG scroll fold-in here and the {@code ParallaxManager} ->
+     * {@code Camera} propagation (which moves the foreground and sprites). The CNZ event {@code
+     * update()} ticks the shake before rendering each frame, so reading it twice in one frame is
+     * stable.
      */
     private int resolveShakeOffsetY() {
         CnzZoneRuntimeState state = cnzRuntimeState();
@@ -224,5 +219,45 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
     @Override
     public short getVscrollFactorFG() {
         return foregroundVscroll;
+    }
+
+    @Override
+    public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        CnzZoneRuntimeState state = cnzRuntimeState();
+        boolean boss = state != null && state.bossBackgroundScrollActive();
+        int bossY = state == null ? 0 : state.bossScrollOffsetY();
+        int shake = context.nativeOutput().shakeY();
+        return view -> {
+            SwScrlCnz scratch = new SwScrlCnz(view.height());
+            int[] words = new int[view.height()];
+            short foreground = negWord(view.cameraX());
+            int backgroundX = Integer.MIN_VALUE;
+            if (boss) {
+                backgroundX = view.cameraX() - BOSS_BG_X_OFFSET;
+                scratch.composer.setVscrollFactorBG(
+                        (short) (view.cameraY() - BOSS_BG_Y_OFFSET + bossY + shake));
+                scratch.composer.fillPackedScrollWords(
+                        0, view.height(), foreground, negWord(backgroundX));
+                scratch.composer.copyPackedScrollWordsTo(words);
+            } else {
+                short backgroundY = scratch.cnzBgY(view.cameraY(), shake);
+                scratch.composer.setVscrollFactorBG(backgroundY);
+                scratch.buildNormalHScrollTable(view.cameraX());
+                scratch.applyDeformation(words, foreground, backgroundY);
+            }
+            return new com.openggf.level.scroll.ScrollProjection(
+                    words,
+                    null,
+                    null,
+                    null,
+                    (short) (view.cameraY() + shake),
+                    scratch.composer.getVscrollFactorBG(),
+                    backgroundX,
+                    context.nativeOutput().backgroundPeriod(),
+                    context.nativeOutput().shakeX(),
+                    shake,
+                    context.nativeOutput().tilemapMode());
+        };
     }
 }

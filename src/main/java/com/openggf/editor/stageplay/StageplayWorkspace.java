@@ -841,7 +841,11 @@ public final class StageplayWorkspace {
         var resolved = live ? resolvePreview(controller.document(), frame).baseCamera() : camera;
         var authored = StageplayTimeline.sample(controller.document(), frame).baseCamera();
         menu.showForm("Camera key at frame " + frame,List.of(number("x","World left X",camera.x()),number("y","World top Y",camera.y()),
-                number("zoom",fixedZoom() ? "Zoom (legacy LIVE fixed at 1)" : "Zoom (0.05..64)",camera.zoom()),text("interpolation","HOLD / LINEAR / SMOOTH",interpolation.name()),
+                number("zoom",fixedZoom() ? "Zoom (legacy LIVE fixed at 1)" : "Zoom (0.05..64)",camera.zoom()),
+                text("interpolation",com.openggf.stageplay.StageplayWorldPolicies.legacy(
+                        StageplayTimeline.sample(controller.document(), frame).set().worldPolicy())
+                        ? "Position easing; zoom held"
+                        : "Position + zoom (HOLD/LINEAR/SMOOTH)",interpolation.name()),
                 text("follow","Follow actor IDs (comma separated; empty = authored)",String.join(",",follow.actors())),
                 number("deadX","Horizontal dead zone",follow.deadZoneX()),number("deadY","Vertical dead zone",follow.deadZoneY()),
                 number("ahead","Look ahead (ticks)",follow.lookAhead()),number("smooth","Smoothing (0.001..1)",follow.smoothing()),

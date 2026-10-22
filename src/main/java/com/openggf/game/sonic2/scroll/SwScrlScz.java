@@ -2,6 +2,9 @@ package com.openggf.game.sonic2.scroll;
 
 import com.openggf.camera.Camera;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.ScrollProjectionContext;
+import com.openggf.level.scroll.ScrollProjectionPhase;
+import com.openggf.level.scroll.ScrollProjectionSource;
 import com.openggf.level.scroll.CameraDrivenScrollHandler;
 import com.openggf.level.scroll.M68KMath;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
@@ -27,7 +30,7 @@ import com.openggf.level.scroll.compose.ScrollEffectComposer;
  *   Phase 2 (descend): when cameraY >= $500 -> velX=1, velY=0
  *   Phase 3 (resume right): when cameraX >= $1400 -> velX=0, velY=0
  */
-public class SwScrlScz extends AbstractZoneScrollHandler implements CameraDrivenScrollHandler {
+public class SwScrlScz extends AbstractZoneScrollHandler implements CameraDrivenScrollHandler, ScrollProjectionSource {
 
     // Tornado velocity (pixels per frame), controlled by level events
     private int tornadoVelocityX = 0;
@@ -196,4 +199,16 @@ public class SwScrlScz extends AbstractZoneScrollHandler implements CameraDriven
             routineIndex = s.routineIndex();
         }
     }
+
+    @Override
+    public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) {
+        int backgroundX = bgXPos32;
+        return view -> {
+            var output = new ScrollEffectComposer(view.height());
+            output.fillPackedScrollWords(0, view.height(), M68KMath.negWord(view.cameraX()),
+                    M68KMath.negWord((short) (backgroundX >> 16)));
+            return Sonic2ProjectionOutput.finish(context, view, output);
+        };
+    }
+
 }

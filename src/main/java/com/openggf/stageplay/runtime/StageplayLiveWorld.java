@@ -13,6 +13,8 @@ import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.session.*;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectDirectionAccess;
+import com.openggf.level.objects.StageplayActivationPolicy;
 import com.openggf.mods.scene.host.SceneRomLibrary;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.NativePositionOps;
@@ -278,12 +280,7 @@ public final class StageplayLiveWorld implements AutoCloseable {
         var audio = EngineServices.current().audio();
         audio.beginGameplayAudioFrame(audio.commandTimeline().currentFrame() + 1);
         if (objectCast != null) objectCast.beforeTick(frame);
-        for (var p : cast) {
-            int x = p.sprite.getCentreX(), cameraX = owned.getCamera().getX();
-            if (x < cameraX - 128 || x > cameraX + owned.getCamera().getWidth() + 128)
-                throw new IllegalStateException("Live cast left the native activation window: " + p.actor.id()
-                        + "; author a closer route or a shot boundary");
-        }
+        refreshActivationWindows();
         var inputs = new LinkedHashMap<String, PlayerInputState>();
         for (var p : cast) inputs.put(p.sprite.getCode(), input(p, frame));
         if (cast.isEmpty()) inputs.put(owned.getSpriteManager().getMainPlayable().getCode(), PlayerInputState.neutral());
@@ -299,6 +296,33 @@ public final class StageplayLiveWorld implements AutoCloseable {
         if (objectCast != null) objectCast.afterTick();
         for (var p : cast) observe(p, frame);
         follow(StageplayTimeline.sample(document, frame));
+    }
+
+    private void refreshActivationWindows() {
+        if (com.openggf.stageplay.StageplayWorldPolicies.legacy(source.worldPolicy())) {
+            for (var p : cast) {
+                int x = p.sprite.getCentreX(), cameraX = owned.getCamera().getX();
+                if (x < cameraX - 128 || x > cameraX + owned.getCamera().getWidth() + 128)
+                    throw new IllegalStateException("Live cast left the native activation window: " + p.actor.id()
+                            + "; choose the current LIVE policy to enable ensemble activation");
+            }
+            return;
+        }
+        int width = owned.getCamera().getWidth(), height = owned.getCamera().getHeight();
+        var windows = new ArrayList<StageplayActivationPolicy.Window>();
+        for (var performer : cast) windows.add(new StageplayActivationPolicy.Window(
+                performer.sprite.getCentreX() - width / 2, performer.sprite.getCentreY() - height / 2,
+                width, height));
+        if (objectCast != null) windows.addAll(objectCast.activationWindows(width, height));
+        // The ordinary focus window retains its native admission and retirement
+        // timing. Publish only performers that the single native window cannot cover.
+        int cameraX = owned.getCamera().getX(), cameraY = owned.getCamera().getY();
+        windows.removeIf(w -> {
+            int x = w.left() + w.width() / 2, y = w.top() + w.height() / 2;
+            return x >= cameraX - 128 && x <= cameraX + width + 128
+                    && y >= cameraY - 128 && y <= cameraY + height + 128;
+        });
+        ObjectDirectionAccess.activationWindows(owned.getLevelManager().getObjectManager(), windows);
     }
 
     private PlayerInputState input(Performer p, int frame) {

@@ -710,7 +710,11 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @return true if the object is within the camera viewport
      */
     protected boolean isOnScreen() {
-        return cameraBounds.contains(getX(), getY());
+        return cameraBounds.contains(getX(), getY()) || stageplayVisible(getX(), getY(), 0, 0);
+    }
+
+    private boolean stageplayVisible(int x, int y, int xMargin, int yMargin) {
+        return ObjectDirectionAccess.activationContains(tryServices(), x, y, xMargin, yMargin);
     }
 
     protected static boolean isWithinBuildSpritesBounds(
@@ -756,7 +760,8 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         // that set render_flags bit 7. The extra previous-frame snapshot lags
         // the ROM gate by two frames in inline object order.
         return cameraBounds.containsRenderSpriteBounds(
-                getX(), getY(), getOnScreenHalfWidth(), getOnScreenHalfHeight());
+                getX(), getY(), getOnScreenHalfWidth(), getOnScreenHalfHeight())
+                || stageplayVisible(getX(), getY(), getOnScreenHalfWidth(), getOnScreenHalfHeight());
     }
 
     /**
@@ -883,6 +888,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         // awaitingFirstTouchExecution (docs/s1disasm/_incObj/sub ReactToItem.asm:50-51).
         if (awaitingFirstTouchExecution) return false;
         if (!preUpdateValid) return false; // No snapshot → first frame, skip
+        if (stageplayVisible(preUpdateX, preUpdateY, getOnScreenHalfWidth(), getOnScreenHalfHeight())) return true;
         if (resolveTouchResponseUsesRenderFlagYGate()) {
             if (usesCustomRenderHeight()) {
                 // S1 BuildSprites custom-height path (btst #4 set,
@@ -931,11 +937,11 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * Use this for detection checks where Y proximity is handled separately.
      */
     protected boolean isOnScreenX() {
-        return cameraBounds.containsX(getX());
+        return cameraBounds.containsX(getX()) || stageplayVisible(getX(), getY(), 0, 0);
     }
 
     protected boolean isOnScreenX(int margin) {
-        return cameraBounds.containsX(getX(), margin);
+        return cameraBounds.containsX(getX(), margin) || stageplayVisible(getX(), getY(), margin, margin);
     }
 
     /**
@@ -946,7 +952,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @return true if the object is within the extended camera viewport
      */
     protected boolean isOnScreen(int margin) {
-        return cameraBounds.contains(getX(), getY(), margin);
+        return cameraBounds.contains(getX(), getY(), margin) || stageplayVisible(getX(), getY(), margin, margin);
     }
 
     /** ROM-style unsigned, 128-pixel-aligned X distance used by delete-touch routines. */
@@ -974,6 +980,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
 
     /** Applies a coarse-X delete-touch check when an object has a camera service. */
     protected final void coarseXCull(int anchorX, int maximumDistance) {
+        if (stageplayVisible(anchorX, getY(), 128, 128)) return;
         if (services().camera() != null
                 && isCoarseXOutOfRange(anchorX, services().camera().getX(), maximumDistance)) {
             setDestroyedByOffscreen();
@@ -986,7 +993,8 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * render_flags on-screen bit rather than MarkObjGone's inclusive point test.
      */
     protected boolean isWithinRenderSpriteBounds(int xMargin, int yMargin) {
-        return cameraBounds.containsRenderSpriteBounds(getX(), getY(), xMargin, yMargin);
+        return cameraBounds.containsRenderSpriteBounds(getX(), getY(), xMargin, yMargin)
+                || stageplayVisible(getX(), getY(), xMargin, yMargin);
     }
 
     /**
@@ -1024,8 +1032,9 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     protected boolean isPreUpdateWithinRenderSpriteBounds(int xMargin, int yMargin) {
-        return preUpdateValid && cameraBounds.containsRenderSpriteBounds(
-                preUpdateX, preUpdateY, xMargin, yMargin);
+        return preUpdateValid && (cameraBounds.containsRenderSpriteBounds(
+                preUpdateX, preUpdateY, xMargin, yMargin)
+                || stageplayVisible(preUpdateX, preUpdateY, xMargin, yMargin));
     }
 
     /**
@@ -1057,6 +1066,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @return true if the coordinate is within range (should NOT be deleted)
      */
     protected boolean isInRangeAt(int objectX) {
+        if (stageplayVisible(objectX, getY(), 128, 128)) return true;
         int objAligned = objectX & 0xFF80;
         int screenAligned = (cameraBounds.left() - 128) & 0xFF80;
         // ROM does a 16-bit sub.w followed by unsigned bhi, so preserve wrap semantics.
@@ -1110,6 +1120,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * Reference: docs/s1disasm/_incObj/sub ChkObjectVisible.asm
      */
     protected boolean isChkObjectVisible() {
+        if (stageplayVisible(getX(), getY(), 0, 0)) return true;
         int dx = getX() - cameraBounds.left();
         if (dx < 0 || dx >= viewportWidth()) return false;
         int dy = getY() - cameraBounds.top();
@@ -1165,6 +1176,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @return true if in range under the signed window (should NOT be deleted)
      */
     protected boolean isInRangeAtSigned(int objectX) {
+        if (stageplayVisible(objectX, getY(), 128, 128)) return true;
         int objAligned = objectX & 0xFF80;
         int screenAligned = (cameraBounds.left() - 128) & 0xFF80;
         short dist = (short) (objAligned - screenAligned);

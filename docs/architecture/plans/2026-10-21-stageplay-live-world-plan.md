@@ -1325,3 +1325,177 @@ The final desktop dependency recheck first installed the thin jar by mistake:
 14 tests had five passes and nine missing-Jackson errors. Installing the packaged
 jar restored14/14 passes, zero skips (1.453 seconds, no queue wait). This was local
 consumer setup, not a source regression; the owned editor repository is repaired.
+
+## Complete-cast phase 3 implementation checkpoint (2026-10-22)
+
+Phase 2 committed engine `70f0e910d0ea7cab10a6c31371b293816ea1a0ff`, Editor
+`dcd54cf`. Its final inventory contains 89 contexts, 22784 ID-context rows and
+27 supplied-ROM role/mode observations. ICZ final cast evidence is take 4;
+take 2 cropped the Free ship, take 3 overlapped foreground occlusion. Those
+framing changes did not change native routines or the production fingerprint.
+
+Phase 3 supersedes the earlier camera-correction Bound for current native policies,
+while preserving it for legacy imports. Pure game-owned composition covers all
+39 stock scroll kernels. Native updates freeze animation/event phase; drawing
+samples that phase once for the complete bounded raster and slices the result.
+Rejected approaches: reticking live handlers, inferred parallax ratios, cloning
+mutable worlds, repeating a 224-line phase, and changing global texture filters.
+Persistent native descriptor history and physical ring origins are retained in
+private FG/BG CPU and GPU residency. Stateless reconstruction would discard event
+history; using native FG residency would advance AIZ2's retained forest ring.
+Success and aborted drawing must preserve native histories, textures, dirty
+versions, queued uploads, scroll publications and ordinary picture bytes.
+
+An internal Stageplay module service opts into phase/descriptor capture. Ordinary
+gameplay returns before querying these snapshot owners or allocating their images.
+Descriptor snapshots are bounded to 2097152 integer cells (8 MiB) per plane.
+The completed-world framebuffer retains its 4096-side/8-MiPixel bound. Magnified
+output pixels integrate their coverage of opaque world texels, keeping aligned
+integer scales crisp without switching filters at integer crossings. Minification
+uses a mip chain only on that completed-world texture; its additional storage is
+bounded by one third of the base image. UI and native art sampling stay separate.
+Independent EGL pixel oracles cover coverage integration, integer crossings,
+half-scale averaging, opacity and sharp subsequently drawn UI.
+
+Ensemble activation uses captured, disjoint performer windows and the existing
+native factories/SST. The canonical layout remains available separately from
+filtered initial contents, preserving S1 respawn-counter order when objects are
+cleared or posed. Supplemental admission projects the ROM counter from both held
+loader cursors and preserves lower bits, loaded/kill and remembered state.
+Counter aliases or shipped FixBugs=0 loader-counter drift produce an actionable
+bound rather than renumbering identities or clearing native bytes. Geometric
+visibility/culling admits the extra windows. Intercepting
+`setDestroyedByOffscreen` was rejected because native routines also use it for
+semantic part cleanup; semantic retirement stays unconditional. Native process
+owners with no spatial spawn retain their native lifetime.
+
+A bounded source review found that the separate ending-background publisher could
+retain an older directed snapshot. It now invalidates phase/build/column snapshots
+without changing native ending words. Its regression requires explicit unsupported
+failure for directed ending presentation rather than stale sampling. Diagnostic
+`LevelScrollPresentation` equality still omits function-valued directed metadata;
+rewind retains the complete immutable publication reference, with no observed
+restore loss from that diagnostic limit.
+
+Validation checkpoints (no full suite):
+
+- Build 38758 failed after 59.275 seconds: the CPZ ripple-reader parameter collided
+  with a local integer. Renaming the reader preserved native arithmetic. No tests ran.
+- Build 12283 failed after 59.821 seconds: detached LBZ code used nonexistent
+  `PlayerCharacter.SONIC`. Production and fixtures now use `SONIC_ALONE`. No tests ran.
+- Submission 74736 waited 172 seconds and executed 82 seconds. Production compiled;
+  three test-compilation arguments used int instead of Camera's short API. Corrected;
+  no tests ran.
+- First behavioral submission 47457 selected 17 classes with all three absolute ROM
+  properties and surfaceless EGL. It completed 183 tests: 155 passed, one failed,
+  27 errored, zero skipped; 96 seconds execution after 863 seconds queue.
+  New findings: ripple mock boxed Byte instead of Integer (15 errors), nested Mockito
+  session construction (seven), unassembled fixture's null base module (three), and
+  querying coordinates on a non-spatial native process (two). The projection failure
+  exposed SSZ Act 1 cloud mode using Act 2's 8192-pixel period instead of native 512.
+  These findings are implementation/fixture defects, not inherited baseline failures.
+- Revalidation 76839 selects those five affected classes plus the new HUD animated
+  camera-form capture, with the same ROM/backend flags. It completed 75 tests:
+  73 passed, two failed, zero errored/skipped; 87 seconds execution after 618 seconds
+  queue. All projection/publication cases passed. One remaining activation case
+  exposed geometric unloading clearing a far actor's already-published kill before
+  native destruction dispatch. Stageplay now preserves that dispatch and rejects
+  rematerializing dead owners; the regression checks native byte `0x88` before and
+  after cleanup. The other failure was GL error 1281 at the end of AIZ2 drawing;
+  all ownership and ordinary-picture comparisons passed. Scoped, bounded GL debug
+  diagnostics and stage assertions now localize the owning operation.
+- Submission 71714 combines those affected checks with the required S3K families,
+  affected native scroll/placement consumers and cast clearing. The compositor
+  also now owns writable depth for each private tile clear and restores the host
+  depth-write mask, with an extended pixel regression. The prior compiler had
+  already read the old compositor when this late edit landed; class-byte inspection
+  confirmed it absent, so source timestamps were refreshed after completion and
+  this submission performs fresh compilation. No depth-mask-fix pass is claimed yet.
+  Unchanged passing projections and API checks are not repeated without a reason.
+
+Ordinary gameplay comparison inputs were captured from the committed Phase 2 fatjar
+(SHA256 `b3f665d43e4b71b74a65e89a93426da1d12805240db1e773c330c2fa948f0994`):
+150 neutral frames each for S1 GHZ1, S2 EHZ1, S3K AIZ1 and S3K DEZ1, using original
+absolute ROM paths and surfaceless EGL. All four captures exited zero, retaining
+per-frame PNG/state and 2.5-second, 60-fps MP4s. These are before-comparison inputs;
+no Phase 3 gameplay-preservation or moving-visual pass is claimed yet.
+
+Pending-phase preparation, read-only during queue waits: screenplay v6 can preserve
+literal supplied IDs and transition IDs, plus a typed optional order object of
+exact ID permutations for puppets/captions/audio/effects/dialogue. Canonical documents
+already require boundary keys, so decompile those directly. An interval belongs to
+its start shot but retains its full end time across later shots. Versions 1–5 keep
+their generated IDs and interval bounds. Account for bounded screenplay expansion
+beyond an 8-MiB canonical document; do not embed a canonical payload blob.
+
+Route preparation found that `StageplayLiveWorld.Saved` captures the world registry,
+director/controllers and object cast, but not `AudioLogicalSnapshot`. Speculative
+LIVE branching must restore producer/timeline logical state too; `beginRewindReplay`
+changes suppression, not that cursor. Detached `PlayablePuppet` can propose terrain
+edges but cannot certify live objects, events or water. A dedicated route process
+must cold-replay emitted intents in a fresh real LIVE world, bind the result to the
+source document/assets/ROMs, and reject stale editor results before one undoable edit.
+Object Puppet terrain routes remain visual floor/headroom paths with AI suspended;
+no synthetic jump or controller claim.
+
+Phase 3 qualification completed: combined submission 71714 ran 157 tests,
+156 passed with one GL failure, zero errors/skips (86 seconds execution, 419 seconds
+queue). All mandatory S3K checks passed: AIZ eight, loading 36 plus seven, bootstrap
+six, decoding three. Native scroll/placement, cast clearing/ring provenance,
+workspace and six EGL world-sampling regressions passed, including the new depth
+write-mask success/failure checks. The remaining GL failure was precisely localized
+to the first ordinary AIZ2 draw before directed sampling: ArenaMaskRenderer retained
+a retired context's program/VAO. Fixture-owned graphics cleanup now occurs between
+world retirement and EGL teardown. Final two-case rerun 88811 passed both cases,
+zero skips/errors/failures (29.891 seconds execution, 1069 seconds queue). Native
+RAM, pending/published scroll/SAT, FG/BG residency and ordinary picture assertions
+pass for both successful and aborted multi-tile AIZ1/AIZ2 draws.
+
+Packaging with `python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package -B`
+passed in 45.034 seconds. The packaged dependency was installed into the owned
+Editor's private repository. Its normal-lane Chrome plus animated-camera-picture
+selection passed all 15 tests, zero skips (2.953 seconds, no queue wait). Explicit
+lean mode was rejected before execution because the Editor has custom Maven
+configuration; no flags or admission rules were bypassed.
+
+Final evidence is outside the repository at
+`$STAGEPLAY_EVIDENCE/phase3/` (the task’s external evidence directory):
+`zoom-ramp.{mkv,mp4}` plus `aiz-directed-pan-take2`,
+`dez-stationary-background-take2` and `ensemble-activation-take2` films, matching
+canonical scenes/recipes, state JSONL, stills and UI images under `hud/` and
+`desktop/`. The zoom film is 600 frames/10 seconds; AIZ and DEZ are 360 frames/six
+seconds; ensemble is 300 frames/five seconds. All are 60 fps with 48-kHz offline
+audio, at least half a second lead-in/out, and complete lossless decode checks.
+Normal and quarter-speed browser playback was reviewed with intermediate/boundary
+stills. AIZ shows separate foreground/background movement; DEZ's city backdrop
+stays fixed; both separated native performers jump and land. Captions stay crisp
+through the zoom ramp. The first AIZ waterfall-dominated view, DEZ foreground-wall
+view and overly tall ensemble were rejected framing; their drafts and the AIZ
+framing survey remain identifiable, not final certificates.
+
+All 600 decoded RGBA frames from four ordinary 150-frame gameplay captures
+(S1 GHZ1, S2 EHZ1, S3K AIZ1, S3K DEZ1) match the Phase 2 build byte for byte;
+all four state CSVs also match exactly. Compare every RGBA byte: an RGBA
+`ImageChops.getbbox()` can miss RGB changes when the alpha-difference channel is
+zero. `ordinary-comparison.json` records the actual comparison and both source
+fingerprints. Captured production fingerprint is
+`7bf07978ac1c7cdb9862cce5cebf361515f4b62498cf93addfde5bf7b94f2cb8`;
+packaged jar SHA256 is
+`becc3f0c99fc333860d9466b7c56ef2e249504d5b7a9ccffe94ffa456bc91ac4`.
+No production source changed during captures. Final change-based smoke remains
+pending after phases 4 and 5; these focused results are not a full-suite claim.
+
+Before committing Phase 3, the policy hook detected declaration-only differences
+that the normalized signature test did not consider API changes: reformatted
+existing overloads and private residency records inside an annotated renderer.
+Restore the overload formatting and keep the two snapshots in an unannotated
+package-private helper. No public declaration changes, candidate-pin regeneration
+or release-descriptor edit is required. Captures above retain their exact prior
+source fingerprint; this mechanical extraction is qualified separately with the
+full directed-background ownership/pixel regressions and normalized API test.
+
+Final helper extraction check: queued normal selection
+`TestStageplayDirectedBackgroundRendering,TestModApiSignatureSurface`, absolute S3K
+ROM plus surfaceless EGL, passed 13/13 with zero failures/errors/skips (88 seconds
+execution, ten seconds queue). This preserves the captured pixel implementation
+while keeping all new residency helpers outside the annotated API type.

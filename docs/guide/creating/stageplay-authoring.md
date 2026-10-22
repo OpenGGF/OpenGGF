@@ -247,14 +247,15 @@ The same definitions work in both editors and offline rendering without mod code
 
 ## Pixel stability and performance
 
-Camera positions interpolate; zoom holds until its next key. Current native
-worlds support fractional zoom through an opaque world-compositing pass, leaving
-text sharp. Legacy LIVE remains fixed at 1x; legacy terrain preserves its previous
-rendering. Animated zoom remains subsequent presentation work. A larger export `--scale` cannot repair aliasing already present
+Current camera keys interpolate position and zoom together using their
+`interpolation` easing. Fractional zoom filters only the completed opaque world
+picture; captions and dialogue remain sharp. Legacy LIVE remains fixed at 1x;
+legacy terrain preserves held zoom and its previous rendering. A larger export
+`--scale` cannot repair aliasing already present
 in the authored frame. Stage entrances, exits, turns and listener reactions, then
 review the entire movie in motion at its intended output size.
 
-## Native ROM worlds (screenplay 4, document 6)
+## Native ROM worlds (screenplay 5, document 7)
 
 New scenes default to `LIVE`. A shot selects a populated native level with
 `"set":{"gameId":"s3k","zone":11,"act":1,"worldPolicy":"LIVE"}`.
@@ -325,14 +326,21 @@ One actor follows that performer; several frame their centre bounds at authored
 zoom (legacy LIVE retains fixed 1x). Empty actors preserve authored camera keys. Handoffs occur at camera keys.
 The director uses simulated positions and deterministic tick-based smoothing,
 clamps to level bounds, then composes the existing shake. Native camera/focus
-continues to own activation; cinematic camera offsets are temporary render state.
+continues to own gameplay camera state; directed rendering samples immutable native
+scroll phases without advancing them. Background camera ratios, deformation and
+stationary regions come from the owning game handler, with private background
+residency for the complete bounded view.
 The shared camera controls start from the resolved LIVE follow view. Capture key
 and Record camera store authored framing, clearing following at the captured keys.
 The camera form preserves follow targets: editing its displayed position adjusts
 follow offsets while preserving the authored smoothing seed. An unchanged form
 submission does not bake the current follow result into that seed.
-Keep the ensemble within the native activation window; wide separated routes are
-not independently activated by a cinematic group camera.
+Current scenes activate separate native-sized windows around players and explicit
+object roles, including vertically separated performers. The gap between windows
+is not activated. All windows share native object slots and removal/remember
+state; exhaustion reports which placement needs space and suggests clearing
+objects or splitting the shot. Native damage/destruction still applies. Migrated
+legacy LIVE scenes keep their original single-window restriction until upgraded.
 
 `simulate` emits `sample.world`: native clocks, ring population/collection state,
 placed-object positions, actor ring deltas, hurt, support placement, ability state,

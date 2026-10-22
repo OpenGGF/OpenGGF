@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.scroll;
 
+import static com.openggf.level.scroll.M68KMath.negWord;
+
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusStageRuntime;
@@ -13,16 +15,15 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static com.openggf.level.scroll.M68KMath.negWord;
-
 /**
  * ROM-shaped Slot Machine bonus-stage screen/background handler.
  *
- * <p>This ports the state owned by Slots_ScreenInit/Event and
- * Slots_BackgroundInit/Event into the engine scroll handler rather than
- * synthesizing a new wobble model in the runtime.
+ * <p>This ports the state owned by Slots_ScreenInit/Event and Slots_BackgroundInit/Event into the
+ * engine scroll handler rather than synthesizing a new wobble model in the runtime.
  */
-public final class SwScrlSlots extends AbstractZoneScrollHandler implements com.openggf.level.scroll.ScrollOutputRebuilder {
+public final class SwScrlSlots extends AbstractZoneScrollHandler
+        implements com.openggf.level.scroll.ScrollOutputRebuilder,
+                com.openggf.level.scroll.ScrollProjectionSource {
     private static final int VISIBLE_LINES = 224;
     private static final int SCREEN_ORIGIN = 0x400;
     private static final int SCREEN_STEP_LIMIT = 0x20;
@@ -36,7 +37,9 @@ public final class SwScrlSlots extends AbstractZoneScrollHandler implements com.
     private int[] deformHeights;
     private BandConfig[] bandConfigs;
 
-    public SwScrlSlots() { suppliedRom = null; }
+    public SwScrlSlots() {
+        suppliedRom = null;
+    }
 
     SwScrlSlots(com.openggf.data.Rom rom) {
         suppliedRom = java.util.Objects.requireNonNull(rom);
@@ -51,17 +54,34 @@ public final class SwScrlSlots extends AbstractZoneScrollHandler implements com.
         if (bandConfigs != null) return;
         if (resources == null) {
             try {
-                resources = com.openggf.game.sonic3k.bonusstage.slots.S3kSlotResources.fromRom(
-                        com.openggf.data.RomByteReader.fromRom(suppliedRom != null ? suppliedRom : GameServices.rom().getRom()));
+                resources =
+                        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotResources.fromRom(
+                                com.openggf.data.RomByteReader.fromRom(
+                                        suppliedRom != null
+                                                ? suppliedRom
+                                                : GameServices.rom().getRom()));
             } catch (java.io.IOException | RuntimeException failure) {
-                throw new IllegalStateException("Slot background requires its ROM resource bank", failure);
+                throw new IllegalStateException(
+                        "Slot background requires its ROM resource bank", failure);
             }
         }
         deformHeights = resources.backgroundDeformHeights();
-        bandConfigs = resources.backgroundBands().stream().map(row -> new BandConfig(row.stepWord(),
-                row.deltaLong(), row.resetCountdown(), row.phaseLimit(), row.destVramAddress(),
-                row.oddPhaseDestDelta(), row.doubleRow(), row.sourceY(), row.longWordCount(),
-                row.destVramAddress() != 0)).toArray(BandConfig[]::new);
+        bandConfigs =
+                resources.backgroundBands().stream()
+                        .map(
+                                row ->
+                                        new BandConfig(
+                                                row.stepWord(),
+                                                row.deltaLong(),
+                                                row.resetCountdown(),
+                                                row.phaseLimit(),
+                                                row.destVramAddress(),
+                                                row.oddPhaseDestDelta(),
+                                                row.doubleRow(),
+                                                row.sourceY(),
+                                                row.longWordCount(),
+                                                row.destVramAddress() != 0))
+                        .toArray(BandConfig[]::new);
     }
 
     private final short[] perLineVScroll = new short[VISIBLE_LINES];
@@ -84,29 +104,37 @@ public final class SwScrlSlots extends AbstractZoneScrollHandler implements com.
     private int lastBackgroundOriginY;
 
     @Override
-    public void update(int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter, int actId) {
+    public void update(
+            int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter, int actId) {
         applyScrollState(horizScrollBuf, cameraX, cameraY, activeSlotRuntime());
     }
 
-    void updateForTest(S3kSlotBonusStageRuntime runtime, int cameraX, int cameraY, int frameCounter) {
+    void updateForTest(
+            S3kSlotBonusStageRuntime runtime, int cameraX, int cameraY, int frameCounter) {
         applyScrollState(null, cameraX, cameraY, runtime);
     }
 
-    void updateForTest(S3kSlotBonusStageRuntime runtime, int[] horizScrollBuf, int cameraX, int cameraY,
-                       int frameCounter) {
+    void updateForTest(
+            S3kSlotBonusStageRuntime runtime,
+            int[] horizScrollBuf,
+            int cameraX,
+            int cameraY,
+            int frameCounter) {
         applyScrollState(horizScrollBuf, cameraX, cameraY, runtime);
     }
 
-    private void applyScrollState(int[] horizScrollBuf, int cameraX, int cameraY, S3kSlotBonusStageRuntime runtime) {
+    private void applyScrollState(
+            int[] horizScrollBuf, int cameraX, int cameraY, S3kSlotBonusStageRuntime runtime) {
         ensureResources();
         resetScrollTracking();
         composer.reset();
         lastBgPlaneRowUpdates.clear();
         ensureRuntimeState(runtime, cameraX, cameraY);
 
-        S3kSlotBonusStageRuntime.SlotVisualState visualState = runtime != null
-                ? runtime.slotVisualState()
-                : new S3kSlotBonusStageRuntime.SlotVisualState(0x10, 0x2D, 0x40, false);
+        S3kSlotBonusStageRuntime.SlotVisualState visualState =
+                runtime != null
+                        ? runtime.slotVisualState()
+                        : new S3kSlotBonusStageRuntime.SlotVisualState(0x10, 0x2D, 0x40, false);
 
         int targetX = (SCREEN_ORIGIN - visualState.eventsBgX()) + cameraX;
         int targetY = (SCREEN_ORIGIN - visualState.eventsBgY()) + cameraY;
@@ -139,55 +167,120 @@ public final class SwScrlSlots extends AbstractZoneScrollHandler implements com.
         }
     }
 
-    private record BandRam(int accumulator, int countdown, int phase, int baseScroll, boolean pending) { }
-    private record RewindState(boolean runtimeAttached, boolean screenInitialized, boolean backgroundInitialized,
-            int foregroundX, int foregroundY, int backgroundVelocity, int backgroundYFixed,
-            int lastForegroundX, int lastForegroundY, int lastBackgroundX, int lastBackgroundY,
-            int[] bandScroll, int[] expandedScroll, List<BandRam> bands, List<BgPlaneRowUpdate> planeUpdates) {
+    private record BandRam(
+            int accumulator, int countdown, int phase, int baseScroll, boolean pending) {}
+
+    private record RewindState(
+            boolean runtimeAttached,
+            boolean screenInitialized,
+            boolean backgroundInitialized,
+            int foregroundX,
+            int foregroundY,
+            int backgroundVelocity,
+            int backgroundYFixed,
+            int lastForegroundX,
+            int lastForegroundY,
+            int lastBackgroundX,
+            int lastBackgroundY,
+            int[] bandScroll,
+            int[] expandedScroll,
+            List<BandRam> bands,
+            List<BgPlaneRowUpdate> planeUpdates) {
         RewindState {
-            bandScroll=bandScroll.clone();expandedScroll=expandedScroll.clone();
-            bands=List.copyOf(bands);planeUpdates=List.copyOf(planeUpdates);
+            bandScroll = bandScroll.clone();
+            expandedScroll = expandedScroll.clone();
+            bands = List.copyOf(bands);
+            planeUpdates = List.copyOf(planeUpdates);
         }
-        @Override public int[] bandScroll() { return bandScroll.clone(); }
-        @Override public int[] expandedScroll() { return expandedScroll.clone(); }
+
+        @Override
+        public int[] bandScroll() {
+            return bandScroll.clone();
+        }
+
+        @Override
+        public int[] expandedScroll() {
+            return expandedScroll.clone();
+        }
     }
+
     @Override
     public Object captureRewindState() {
-        var bands=new ArrayList<BandRam>(bandStates.length);
-        for(var band:bandStates) bands.add(new BandRam(band.accumulator,band.countdown,band.phase,
-                band.baseScroll,band.pendingAdvance));
-        return new RewindState(activeRuntime!=null,screenInitialized,backgroundInitialized,
-                foregroundOriginX,foregroundOriginY,backgroundVelocity,backgroundCameraYFixed,
-                lastForegroundOriginX,lastForegroundOriginY,lastBackgroundOriginX,lastBackgroundOriginY,
-                bandScrollValues,expandedBandScrollValues,bands,lastBgPlaneRowUpdates);
+        var bands = new ArrayList<BandRam>(bandStates.length);
+        for (var band : bandStates)
+            bands.add(
+                    new BandRam(
+                            band.accumulator,
+                            band.countdown,
+                            band.phase,
+                            band.baseScroll,
+                            band.pendingAdvance));
+        return new RewindState(
+                activeRuntime != null,
+                screenInitialized,
+                backgroundInitialized,
+                foregroundOriginX,
+                foregroundOriginY,
+                backgroundVelocity,
+                backgroundCameraYFixed,
+                lastForegroundOriginX,
+                lastForegroundOriginY,
+                lastBackgroundOriginX,
+                lastBackgroundOriginY,
+                bandScrollValues,
+                expandedBandScrollValues,
+                bands,
+                lastBgPlaneRowUpdates);
     }
+
     @Override
     public void restoreRewindState(Object captured) {
-        if(!(captured instanceof RewindState state)) throw new IllegalArgumentException("Expected Slot scroll RAM");
-        var runtime=state.runtimeAttached()?activeSlotRuntime():null;
-        if(state.runtimeAttached()&&runtime==null) throw new IllegalStateException("Slot scroll owner has retired");
-        activeRuntime=runtime;screenInitialized=state.screenInitialized();backgroundInitialized=state.backgroundInitialized();
-        foregroundOriginX=state.foregroundX();foregroundOriginY=state.foregroundY();
-        backgroundVelocity=state.backgroundVelocity();backgroundCameraYFixed=state.backgroundYFixed();
-        lastForegroundOriginX=state.lastForegroundX();lastForegroundOriginY=state.lastForegroundY();
-        lastBackgroundOriginX=state.lastBackgroundX();lastBackgroundOriginY=state.lastBackgroundY();
-        System.arraycopy(state.bandScroll(),0,bandScrollValues,0,bandScrollValues.length);
-        System.arraycopy(state.expandedScroll(),0,expandedBandScrollValues,0,expandedBandScrollValues.length);
-        for(int i=0;i<bandStates.length;i++) {
-            var value=state.bands().get(i);var band=bandStates[i];
-            band.accumulator=value.accumulator();band.countdown=value.countdown();band.phase=value.phase();
-            band.baseScroll=value.baseScroll();band.pendingAdvance=value.pending();
+        if (!(captured instanceof RewindState state))
+            throw new IllegalArgumentException("Expected Slot scroll RAM");
+        var runtime = state.runtimeAttached() ? activeSlotRuntime() : null;
+        if (state.runtimeAttached() && runtime == null)
+            throw new IllegalStateException("Slot scroll owner has retired");
+        activeRuntime = runtime;
+        screenInitialized = state.screenInitialized();
+        backgroundInitialized = state.backgroundInitialized();
+        foregroundOriginX = state.foregroundX();
+        foregroundOriginY = state.foregroundY();
+        backgroundVelocity = state.backgroundVelocity();
+        backgroundCameraYFixed = state.backgroundYFixed();
+        lastForegroundOriginX = state.lastForegroundX();
+        lastForegroundOriginY = state.lastForegroundY();
+        lastBackgroundOriginX = state.lastBackgroundX();
+        lastBackgroundOriginY = state.lastBackgroundY();
+        System.arraycopy(state.bandScroll(), 0, bandScrollValues, 0, bandScrollValues.length);
+        System.arraycopy(
+                state.expandedScroll(),
+                0,
+                expandedBandScrollValues,
+                0,
+                expandedBandScrollValues.length);
+        for (int i = 0; i < bandStates.length; i++) {
+            var value = state.bands().get(i);
+            var band = bandStates[i];
+            band.accumulator = value.accumulator();
+            band.countdown = value.countdown();
+            band.phase = value.phase();
+            band.baseScroll = value.baseScroll();
+            band.pendingAdvance = value.pending();
         }
-        lastBgPlaneRowUpdates.clear();lastBgPlaneRowUpdates.addAll(state.planeUpdates());
+        lastBgPlaneRowUpdates.clear();
+        lastBgPlaneRowUpdates.addAll(state.planeUpdates());
     }
+
     @Override
-    public void rebuildOutput(int[] horizontal, int cameraX, int cameraY, int frameCounter, int actId) {
+    public void rebuildOutput(
+            int[] horizontal, int cameraX, int cameraY, int frameCounter, int actId) {
         // Slots_ScreenEvent/BackgroundEvent own movement, accumulator increments
         // and plane writes. Restore reconstructs their last completed output only.
         ensureResources();
-        resetScrollTracking();composer.reset();
-        composer.setVscrollFactorBG((short)lastBackgroundOriginY);
-        Arrays.fill(perLineVScroll,(short)0);
+        resetScrollTracking();
+        composer.reset();
+        composer.setVscrollFactorBG((short) lastBackgroundOriginY);
+        Arrays.fill(perLineVScroll, (short) 0);
         fillPackedScrollBuffer(horizontal);
     }
 
@@ -265,11 +358,13 @@ public final class SwScrlSlots extends AbstractZoneScrollHandler implements com.
 
         boolean backgroundEventLatched = false;
         for (int i = 0; i < BAND_COUNT; i++) {
-            backgroundEventLatched = tickBand(bandStates[i], bandConfigs[i], backgroundEventLatched);
+            backgroundEventLatched =
+                    tickBand(bandStates[i], bandConfigs[i], backgroundEventLatched);
             // ROM loc_5997C copies word 0 of each $C-byte band state plus
             // word 8 into the deformation table. Word 0 is the high word of
             // the long accumulator updated at loc_598B4.
-            bandScrollValues[i] = toSignedWord(bandStates[i].accumulatorHighWord() + bandStates[i].baseScroll);
+            bandScrollValues[i] =
+                    toSignedWord(bandStates[i].accumulatorHighWord() + bandStates[i].baseScroll);
         }
         expandBandScrollTable();
     }
@@ -278,7 +373,8 @@ public final class SwScrlSlots extends AbstractZoneScrollHandler implements com.
         short fgScroll = negWord(foregroundOriginX);
         int segmentIndex = 0;
         int segmentOffset = backgroundCameraY();
-        while (segmentIndex < DEFORM_HEIGHT_COUNT - 1 && segmentOffset >= deformHeights[segmentIndex]) {
+        while (segmentIndex < DEFORM_HEIGHT_COUNT - 1
+                && segmentOffset >= deformHeights[segmentIndex]) {
             segmentOffset -= deformHeights[segmentIndex];
             segmentIndex++;
         }
@@ -309,6 +405,39 @@ public final class SwScrlSlots extends AbstractZoneScrollHandler implements com.
         vscrollFactorBG = composer.getVscrollFactorBG();
         minScrollOffset = composer.getMinScrollOffset();
         maxScrollOffset = composer.getMaxScrollOffset();
+    }
+
+    @Override
+    public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        int[] heights = deformHeights.clone();
+        int[] scrolls = expandedBandScrollValues.clone();
+        int originX = foregroundOriginX, originY = foregroundOriginY;
+        int bgY = backgroundCameraY();
+        return view -> {
+            int[] horizontal = new int[view.height()];
+            short fg = negWord(originX + view.cameraX() - context.cameraX());
+            int band = 0, skip = bgY;
+            while (band < heights.length - 1 && skip >= heights[band]) skip -= heights[band++];
+            int remaining = heights[band] - skip;
+            for (int line = 0; line < horizontal.length; line++) {
+                horizontal[line] = ((fg & 65535) << 16) | negWord(scrolls[band]) & 65535;
+                if (--remaining == 0 && band < heights.length - 1) remaining = heights[++band];
+            }
+            var output = context.nativeOutput();
+            return new com.openggf.level.scroll.ScrollProjection(
+                    horizontal,
+                    new short[view.height()],
+                    null,
+                    null,
+                    (short) (originY + view.cameraY() - context.cameraY()),
+                    (short) bgY,
+                    output.backgroundX(),
+                    output.backgroundPeriod(),
+                    output.shakeX(),
+                    output.shakeY(),
+                    output.tilemapMode());
+        };
     }
 
     private void expandBandScrollTable() {
@@ -364,11 +493,16 @@ public final class SwScrlSlots extends AbstractZoneScrollHandler implements com.
             destVramAddress += config.oddPhaseDestDelta;
         }
         int sourceX = toSignedWord(state.phase * config.stepWord);
-        lastBgPlaneRowUpdates.add(new BgPlaneRowUpdate(sourceX, config.sourceY,
-                destVramAddress, config.longWordCount));
+        lastBgPlaneRowUpdates.add(
+                new BgPlaneRowUpdate(
+                        sourceX, config.sourceY, destVramAddress, config.longWordCount));
         if (config.doubleRow) {
-            lastBgPlaneRowUpdates.add(new BgPlaneRowUpdate(sourceX, config.sourceY + 0x10,
-                    destVramAddress + 0x100, config.longWordCount));
+            lastBgPlaneRowUpdates.add(
+                    new BgPlaneRowUpdate(
+                            sourceX,
+                            config.sourceY + 0x10,
+                            destVramAddress + 0x100,
+                            config.longWordCount));
         }
     }
 
@@ -384,8 +518,12 @@ public final class SwScrlSlots extends AbstractZoneScrollHandler implements com.
             }
             boolean changed = false;
             for (BgPlaneRowUpdate update : lastBgPlaneRowUpdates) {
-                changed |= levelManager.copyBackgroundTileRowFromWorldToVdpPlane(update.sourceX, update.sourceY,
-                        update.destVramAddress, update.longWordCount);
+                changed |=
+                        levelManager.copyBackgroundTileRowFromWorldToVdpPlane(
+                                update.sourceX,
+                                update.sourceY,
+                                update.destVramAddress,
+                                update.longWordCount);
             }
             if (changed) {
                 levelManager.uploadBackgroundTilemap();
@@ -429,7 +567,8 @@ public final class SwScrlSlots extends AbstractZoneScrollHandler implements com.
     }
 
     private S3kSlotBonusStageRuntime activeSlotRuntime() {
-        if (!(GameServices.module().getBonusStageProvider() instanceof Sonic3kBonusStageCoordinator coordinator)) {
+        if (!(GameServices.module().getBonusStageProvider()
+                instanceof Sonic3kBonusStageCoordinator coordinator)) {
             return null;
         }
         return coordinator.activeSlotRuntime();
@@ -459,12 +598,19 @@ public final class SwScrlSlots extends AbstractZoneScrollHandler implements com.
         }
     }
 
-    record BgPlaneRowUpdate(int sourceX, int sourceY, int destVramAddress, int longWordCount) {
-    }
+    record BgPlaneRowUpdate(int sourceX, int sourceY, int destVramAddress, int longWordCount) {}
 
-    private record BandConfig(int stepWord, int deltaLong, int resetCountdown, int phaseLimit,
-                              int destVramAddress, int oddPhaseDestDelta, boolean doubleRow,
-                              int sourceY, int longWordCount, boolean usesFrameLatch) {
+    private record BandConfig(
+            int stepWord,
+            int deltaLong,
+            int resetCountdown,
+            int phaseLimit,
+            int destVramAddress,
+            int oddPhaseDestDelta,
+            boolean doubleRow,
+            int sourceY,
+            int longWordCount,
+            boolean usesFrameLatch) {
         private boolean hasPlaneUpdate() {
             return destVramAddress != 0 && longWordCount > 0;
         }

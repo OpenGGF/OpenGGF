@@ -174,6 +174,55 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     // Maps active spawn (identity) → counter value assigned during load.
     // Used to clear objState bit when the object is normally unloaded.
     private final IdentityHashMap<ObjectSpawn, Integer> spawnToCounter = new IdentityHashMap<>();
+    private StageplayActivationPolicy stageplayActivation;
+    void setStageplayActivation(StageplayActivationPolicy policy) { stageplayActivation = policy; }
+
+    /** Supplemental cursor entry uses the same ROM d2 and bset-before-create semantics.
+     * OPL_Main (_inc/ObjPosLoad.asm:20-35), OPL_MovedRight (_inc/ObjPosLoad.asm:185-203),
+     * and OPL_MovedLeft (_inc/ObjPosLoad.asm:123-151).
+     * Both held cursor anchors must predict the same byte. FixBugs=0 failed-forward
+     * allocation can drift the forward counter; that state is rejected, never repaired.
+     */
+    boolean admitStageplayPlacement(ObjectSpawn spawn, boolean entered) {
+        int index = getSpawnIndex(spawn);
+        if (index < 0 || destroyedInWindow.get(index)
+                || (remembered.get(index) && !stayActive.get(index))) return false;
+        if (dormant.get(index)) {
+            if (!entered) return false;
+            dormant.clear(index);
+        }
+        if (!counterBasedRespawn || !spawn.respawnTracked()) return true;
+        int counter = projectedCounter(cursorIndex, fwdCounter, index);
+        if (counter != projectedCounter(leftCursorIndex, bwdCounter, index))
+            throw StageplayActivationPolicy.counterConflict(index, "native cursor anchors disagree (FixBugs=0 counter drift)");
+        stageplayActivation.checkCounter(index, counter);
+        Integer assigned = spawnToCounter.get(spawn);
+        if (assigned != null && assigned != counter)
+            throw StageplayActivationPolicy.counterConflict(index, "existing native respawn identity disagrees");
+        for (var entry : spawnToCounter.entrySet())
+            if (entry.getKey() != spawn && entry.getValue() == counter)
+                throw StageplayActivationPolicy.counterConflict(index, "respawn byte belongs to another native placement");
+        if (assigned == null && objState[counter] != 0 && !stageplayActivation.ownsCounter(index, counter))
+            throw StageplayActivationPolicy.counterConflict(index, "nonzero native respawn byte has no matching owner");
+        stageplayActivation.reserveCounter(index, counter);
+        // OPL_SpawnObj (_inc/ObjPosLoad.asm:257-270): shipped FixBugs=0
+        // TESTS AND SETS before FindFreeObj. Never clear the native loaded/kill bit.
+        boolean wasSet = (objState[counter] & 0x80) != 0;
+        objState[counter] |= 0x80;
+        boolean deliberatelyUnconstructed = stageplayActivation.consumeSkippedFactory(index);
+        if (wasSet && !deliberatelyUnconstructed) return false;
+        spawnToCounter.put(spawn, counter);
+        active.add(spawn);
+        return true;
+    }
+
+    private int projectedCounter(int anchorIndex, int anchorCounter, int targetIndex) {
+        int value = anchorCounter;
+        for (int i = Math.min(anchorIndex, targetIndex); i < Math.max(anchorIndex, targetIndex); i++)
+            if (spawns.get(i).respawnTracked()) value += targetIndex >= anchorIndex ? 1 : -1;
+        return value & 0xFF;
+    }
+
 
     ObjectPlacementController(List<ObjectSpawn> spawns, java.util.function.IntSupplier widthSupplier) {
         super(spawns, EXTRA_AHEAD, UNLOAD_BEHIND, widthSupplier);
@@ -1624,6 +1673,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
      * @return true if the object was added to the active set
      */
     private boolean trySpawnCountered(int index, int counter) {
+        if (stageplayActivation != null) stageplayActivation.checkCounter(index, counter & 0xFF);
         ObjectSpawn spawn = spawns.get(index);
         if (remembered.get(index) && !stayActive.get(index)) {
             return true;

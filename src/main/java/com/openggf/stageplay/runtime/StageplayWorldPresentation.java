@@ -63,15 +63,19 @@ public final class StageplayWorldPresentation implements AutoCloseable {
         validate(width, height, zoom);
         int nativeWidth = LevelSpritePresentation.viewportWidth(level);
         int nativeHeight = LevelSpritePresentation.viewportHeight(level);
-        if (zoom == 1 && width == nativeWidth && height == nativeHeight) {
-            // Preserve the existing native-size picture, including its exact pixel admission.
-            LevelSpritePresentation.withCinematicCamera(level, x, y,
-                    () -> worldDraw.draw(x, y, nativeWidth, nativeHeight));
-            return;
-        }
-        drawTiles(graphics, x, y, zoom, width, height, nativeWidth, nativeHeight,
-                (cx, cy, w, h) -> LevelSpritePresentation.withCinematicCamera(level, cx, cy,
-                        () -> worldDraw.draw(cx, cy, w, h)));
+        int rasterWidth = (int) Math.ceil(width / zoom);
+        int rasterHeight = (int) Math.ceil(height / zoom);
+        LevelSpritePresentation.withCinematicView(level, x, y, rasterWidth, rasterHeight, () -> {
+            if (zoom == 1 && width == nativeWidth && height == nativeHeight) {
+                // Native-size output still uses the one full-view directed scroll sample.
+                LevelSpritePresentation.withCinematicTile(level, 0, 0, nativeWidth, nativeHeight,
+                        () -> worldDraw.draw(x, y, nativeWidth, nativeHeight));
+                return;
+            }
+            drawTiles(graphics, x, y, zoom, width, height, nativeWidth, nativeHeight,
+                    (cx, cy, w, h) -> LevelSpritePresentation.withCinematicTile(level, cx - x, cy - y, w, h,
+                            () -> worldDraw.draw(cx, cy, w, h)));
+        });
     }
 
     /** Component seam also used by the EGL pixel regression; no alternate renderer or world simulation. */
@@ -95,6 +99,7 @@ public final class StageplayWorldPresentation implements AutoCloseable {
                         glViewport(0, 0, nativeWidth, nativeHeight);
                         glDisable(GL_SCISSOR_TEST);
                         glColorMask(true, true, true, true);
+                        glDepthMask(true);
                         glClearColor(0, 0, 0, 1);
                         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
                         PatternRenderCommand.resetFrameState();
@@ -131,9 +136,10 @@ public final class StageplayWorldPresentation implements AutoCloseable {
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, source.textureId());
             // Texture-local state, never the palette atlas, sprite art, or text textures.
-            int filter = zoom == Math.rint(zoom) ? GL_NEAREST : GL_LINEAR;
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
+            boolean minifying = width / zoom > saved.viewport[2] || height / zoom > saved.viewport[3];
+            if (minifying) glGenerateMipmap(GL_TEXTURE_2D);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minifying ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             glUniform1i(glGetUniformLocation(program, "World"), 0);
             glBindVertexArray(vao);
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -187,6 +193,7 @@ public final class StageplayWorldPresentation implements AutoCloseable {
         final boolean[] colorMask = new boolean[4];
         final boolean blend = glIsEnabled(GL_BLEND), depth = glIsEnabled(GL_DEPTH_TEST), scissor = glIsEnabled(GL_SCISSOR_TEST),
                 stencil = glIsEnabled(GL_STENCIL_TEST), cull = glIsEnabled(GL_CULL_FACE);
+        final boolean depthWrite = glGetBoolean(GL_DEPTH_WRITEMASK);
         final int srcRgb = glGetInteger(GL_BLEND_SRC_RGB), dstRgb = glGetInteger(GL_BLEND_DST_RGB),
                 srcAlpha = glGetInteger(GL_BLEND_SRC_ALPHA), dstAlpha = glGetInteger(GL_BLEND_DST_ALPHA),
                 eqRgb = glGetInteger(GL_BLEND_EQUATION_RGB), eqAlpha = glGetInteger(GL_BLEND_EQUATION_ALPHA);
@@ -211,6 +218,7 @@ public final class StageplayWorldPresentation implements AutoCloseable {
             glScissor(scissorBox[0], scissorBox[1], scissorBox[2], scissorBox[3]);
             glClearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
             glColorMask(colorMask[0], colorMask[1], colorMask[2], colorMask[3]);
+            glDepthMask(depthWrite);
             glBindVertexArray(vao); glBindBuffer(GL_ARRAY_BUFFER, arrayBuffer); glUseProgram(program);
             glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer); glBindBuffer(GL_PIXEL_UNPACK_BUFFER, unpackBuffer);
             graphics.setUseWaterShader(waterShader); graphics.setUseUnderwaterPaletteForBackground(underwaterBackground);

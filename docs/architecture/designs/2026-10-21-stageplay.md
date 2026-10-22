@@ -347,3 +347,35 @@ exclusion citing `Obj_SpriteMask / loc_86308`; the S3KL alias does not inherit i
 Templates retain child creation paths across rewind, including ordinal gaps left
 by deleted children. Draw-owned visual counters remain read-only during capture.
 Ordinary Free rendering and native SAT behavior keep their existing path.
+
+### Directed camera presentation and ensemble activation (complete-cast phase3)
+
+Current native worlds interpolate zoom with camera position using HOLD/LINEAR/SMOOTH.
+Only the completed opaque world framebuffer is filtered; text/dialogue/transitions
+remain outside that pass. Existing4096-side/8MiPixel bounds remain preflight gates.
+Legacy policies retain their previous held/fixed zoom and native-phase backgrounds.
+
+A game handler captures immutable animation/event phase at the real native update.
+A pure projection composes that phase for a directed camera and complete bounded
+raster. It never initializes, updates or restores a gameplay handler while drawing.
+The world pass samples once and slices that result across native viewport tiles;
+line/column origins remain global, including partial16pixel columns. Cinematic
+foreground/background CPU descriptors and GPU residency are private, preserving actual native
+persistent cells/ring origins and extending exposed regions through the ROM level
+pipeline. The internal Stageplay module opts into snapshot capture; ordinary modules
+never allocate these directed phase/descriptor snapshots. Descriptor images are
+bounded to 2097152 cells (8 MiB) per plane. Ordinary gameplay retains its native
+publication, physics and picture.
+
+A session-owned, rewind-captured activation policy supplies disjoint native-sized
+windows around performers. Supplemental layout admissions use portable identity,
+the existing native factories/SST, creator/removal gates and remembered destruction
+state. Standard visibility/contact/retirement helpers admit those windows without
+moving the gameplay camera. Free routines keep their native state machines and
+world effects; native damage/destruction is never suppressed. Object slot exhaustion
+fails explicitly and suggests clearing unnecessary objects or splitting the shot.
+S1 supplemental admissions retain the canonical layout even when initial contents
+are cleared or posed, project the native counter from both held loader cursors,
+and preserve lower bits plus loaded/kill/remember state. Counter aliases or shipped
+FixBugs=0 cursor drift fail explicitly rather than renumbering native identities.
+Only geometric culls admit supplemental windows; semantic retirement remains native.

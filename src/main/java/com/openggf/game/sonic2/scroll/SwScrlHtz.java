@@ -3,6 +3,9 @@ package com.openggf.game.sonic2.scroll;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.runtime.HtzRuntimeState;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.ScrollProjectionContext;
+import com.openggf.level.scroll.ScrollProjectionPhase;
+import com.openggf.level.scroll.ScrollProjectionSource;
 import com.openggf.level.scroll.M68KMath;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 
@@ -27,12 +30,15 @@ import com.openggf.level.scroll.compose.ScrollEffectComposer;
  * - 15 lines at scroll value 6
  * - 48 lines in 3 groups of 16 at values 7, 8, 9
  */
-public class SwScrlHtz extends AbstractZoneScrollHandler {
+public class SwScrlHtz extends AbstractZoneScrollHandler implements ScrollProjectionSource {
 
     private final ParallaxTables tables;
     private final BackgroundCamera bgCamera;
 
     private short vscrollFactorFG;
+    // Derived presentation values paired with the last native output, never advanced by sampling.
+    private short presentationCloud;
+    private boolean presentationEarthquake;
 
     // Screen shake offsets for FG/sprite rendering (calculated during updateScreenShake)
     private int shakeOffsetX = 0;
@@ -121,7 +127,8 @@ public class SwScrlHtz extends AbstractZoneScrollHandler {
         shakeOffsetY = 0;
 
         // ROM: SwScrl_HTZ branches on Screen_Shaking_Flag_HTZ, not Screen_Shaking_Flag.
-        if (htzRuntimeState().earthquakeActive()) {
+        presentationEarthquake = htzRuntimeState().earthquakeActive();
+        if (presentationEarthquake) {
             updateEarthquakeMode(horizScrollBuf, cameraX, cameraY, frameCounter);
         } else {
             updateNormal(horizScrollBuf, cameraX, cameraY, frameCounter);
@@ -135,6 +142,97 @@ public class SwScrlHtz extends AbstractZoneScrollHandler {
      * This is a line-by-line translation of the 68000 assembly.
      */
     private void updateNormal(int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter) {
+        presentationCloud = (short) cloudCounter.valueAt(frameCounter);
+        composeNormal(composer, tempArrayLayerDef, cameraX, presentationCloud);
+
+        composer.copyPackedScrollWordsTo(horizScrollBuf);
+        vscrollFactorBG = composer.getVscrollFactorBG();
+        minScrollOffset = composer.getMinScrollOffset();
+        maxScrollOffset = composer.getMaxScrollOffset();
+    }
+
+    /**
+     * Swap high and low words of a 32-bit value.
+     * Equivalent to 68000 SWAP instruction.
+     */
+    private static long swap32(long value) {
+        int v = (int) value;
+        return ((v & 0xFFFF) << 16) | ((v >> 16) & 0xFFFF);
+    }
+
+    /**
+     * HTZ earthquake mode scrolling.
+     * Reference: s2.asm HTZ_Screen_Shake lines 15975-16029
+     *
+     * ROM uses absolute Camera_BG_Y/X_pos for scroll factors:
+     *   Vscroll_Factor_BG = Camera_BG_Y_pos (≈ Camera_Y_pos - Camera_BG_Y_offset)
+     *   Horiz_Scroll_Buf BG = -Camera_BG_X_pos
+     *
+     * Our tilemap contains the full BG map, so these absolute positions correctly
+     * address BG map rows 0-1 containing lava/cave tile data (256px); VDP wraps vertically.
+     */
+    private void updateEarthquakeMode(int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter) {
+        HtzRuntimeState htzState = htzRuntimeState();
+        int bgYOffset = htzState.cameraBgYOffset();
+        int bgXOffset = htzState.cameraBgXOffset();
+
+        // Camera_BG positions used by HTZ_Screen_Shake.
+        int bgXPos = cameraX - bgXOffset;
+        int bgYPos = cameraY - bgYOffset;
+
+        int shakeOffsetV = 0;
+        int shakeOffsetH = 0;
+
+        // Ripple is gated by general Screen_Shaking_Flag while HTZ mode remains active.
+        if (GameServices.gameState().isScreenShakeActive() && tables != null) {
+            int rippleIndex = frameCounter & 0x3F;
+            shakeOffsetV = tables.getRippleSigned(rippleIndex);
+            if (rippleIndex + 1 < tables.getRippleDataLength()) {
+                shakeOffsetH = tables.getRippleSigned(rippleIndex + 1);
+            }
+        }
+
+        // Store shake offsets for Camera to use for FG tiles and sprites.
+        this.shakeOffsetX = shakeOffsetH;
+        this.shakeOffsetY = shakeOffsetV;
+
+        // Vscroll_Factor_FG = Camera_Y_pos (+ optional ripple)
+        vscrollFactorFG = (short) (cameraY + shakeOffsetV);
+        // Vscroll_Factor_BG = Camera_BG_Y_pos (+ optional ripple)
+        composer.setVscrollFactorBG((short) (bgYPos + shakeOffsetV));
+
+        // Horizontal scroll uses Camera_X_pos and Camera_BG_X_pos (+ optional ripple).
+        short fgScroll = M68KMath.negWord(cameraX + shakeOffsetH);
+        short bgScroll = M68KMath.negWord(bgXPos + shakeOffsetH);
+
+        // Fill all 224 lines with same value (no parallax during earthquake mode).
+        composer.fillPackedScrollWords(0, VISIBLE_LINES, fgScroll, bgScroll);
+
+        composer.copyPackedScrollWordsTo(horizScrollBuf);
+        vscrollFactorBG = composer.getVscrollFactorBG();
+        minScrollOffset = composer.getMinScrollOffset();
+        maxScrollOffset = composer.getMaxScrollOffset();
+    }
+
+    public short getVscrollFactorFG() {
+        return vscrollFactorFG;
+    }
+
+    /**
+     * @return Horizontal shake offset for this frame (pixels)
+     */
+    public int getShakeOffsetX() {
+        return shakeOffsetX;
+    }
+
+    /**
+     * @return Vertical shake offset for this frame (pixels)
+     */
+    public int getShakeOffsetY() {
+        return shakeOffsetY;
+    }
+    private static void composeNormal(ScrollEffectComposer composer, short[] tempArrayLayerDef,
+                                      int cameraX, short cloudScrollValue) {
         // Line 15795-15800: move.w (Camera_X_pos).w,d0 / neg.w d0 / move.w d0,d2 / swap d0 / move.w d2,d0 / asr.w #3,d0
         short d0 = (short) -cameraX;
         short d2 = d0;  // d2 = -Camera_X_pos (FG scroll)
@@ -149,7 +247,7 @@ public class SwScrlHtz extends AbstractZoneScrollHandler {
 
         // Line 15809-15810: Read cloud counter and increment by 4
         // move.w (TempArray_LayerDef+$22).w,d0 / addq.w #4,(TempArray_LayerDef+$22).w
-        short cloudScrollValue = (short) cloudCounter.valueAt(frameCounter);
+
 
         // Line 15813: sub.w d0,d2 (delta = -cameraX - cloudScrollValue)
         d2 = (short) (d2 - cloudScrollValue);
@@ -262,7 +360,7 @@ public class SwScrlHtz extends AbstractZoneScrollHandler {
         // Lines 15888-15900: Do 8 lines (3 + 5)
         // move.w d3,d4; move.l d4,(a1)+ (3 times)
         d4 = (d4 & 0xFFFF0000) | ((int) d3 & 0xFFFF);
-        for (int i = 0; i < 3 && line < VISIBLE_LINES; i++, line++) {
+        for (int i = 0; i < 3 && line < composer.visibleLineCount(); i++, line++) {
             composer.writePackedScrollWord(line, d4);
         }
         // swap d3; add.l d0,d3; swap d3; move.w d3,d4; move.l d4,(a1)+ (5 times)
@@ -270,7 +368,7 @@ public class SwScrlHtz extends AbstractZoneScrollHandler {
         d3 = (d3 + d0_ext) & 0xFFFFFFFFL;
         d3 = swap32(d3);
         d4 = (d4 & 0xFFFF0000) | ((int) d3 & 0xFFFF);
-        for (int i = 0; i < 5 && line < VISIBLE_LINES; i++, line++) {
+        for (int i = 0; i < 5 && line < composer.visibleLineCount(); i++, line++) {
             composer.writePackedScrollWord(line, d4);
         }
 
@@ -279,7 +377,7 @@ public class SwScrlHtz extends AbstractZoneScrollHandler {
         d3 = (d3 + d0_ext) & 0xFFFFFFFFL;
         d3 = swap32(d3);
         d4 = (d4 & 0xFFFF0000) | ((int) d3 & 0xFFFF);
-        for (int i = 0; i < 7 && line < VISIBLE_LINES; i++, line++) {
+        for (int i = 0; i < 7 && line < composer.visibleLineCount(); i++, line++) {
             composer.writePackedScrollWord(line, d4);
         }
 
@@ -289,7 +387,7 @@ public class SwScrlHtz extends AbstractZoneScrollHandler {
         d3 = (d3 + d0_ext) & 0xFFFFFFFFL;
         d3 = swap32(d3);
         d4 = (d4 & 0xFFFF0000) | ((int) d3 & 0xFFFF);
-        for (int i = 0; i < 8 && line < VISIBLE_LINES; i++, line++) {
+        for (int i = 0; i < 8 && line < composer.visibleLineCount(); i++, line++) {
             composer.writePackedScrollWord(line, d4);
         }
 
@@ -299,7 +397,7 @@ public class SwScrlHtz extends AbstractZoneScrollHandler {
         d3 = (d3 + d0_ext) & 0xFFFFFFFFL;
         d3 = swap32(d3);
         d4 = (d4 & 0xFFFF0000) | ((int) d3 & 0xFFFF);
-        for (int i = 0; i < 10 && line < VISIBLE_LINES; i++, line++) {
+        for (int i = 0; i < 10 && line < composer.visibleLineCount(); i++, line++) {
             composer.writePackedScrollWord(line, d4);
         }
 
@@ -310,7 +408,7 @@ public class SwScrlHtz extends AbstractZoneScrollHandler {
         d3 = (d3 + d0_ext) & 0xFFFFFFFFL;
         d3 = swap32(d3);
         d4 = (d4 & 0xFFFF0000) | ((int) d3 & 0xFFFF);
-        for (int i = 0; i < 15 && line < VISIBLE_LINES; i++, line++) {
+        for (int i = 0; i < 15 && line < composer.visibleLineCount(); i++, line++) {
             composer.writePackedScrollWord(line, d4);
         }
 
@@ -323,7 +421,7 @@ public class SwScrlHtz extends AbstractZoneScrollHandler {
 
         for (int group = 0; group < 3; group++) {
             d4 = (d4 & 0xFFFF0000) | ((int) d3 & 0xFFFF);
-            for (int i = 0; i < 16 && line < VISIBLE_LINES; i++, line++) {
+            for (int i = 0; i < 16 && line < composer.visibleLineCount(); i++, line++) {
                 composer.writePackedScrollWord(line, d4);
             }
             // 4 adds between groups
@@ -335,90 +433,30 @@ public class SwScrlHtz extends AbstractZoneScrollHandler {
             d3 = swap32(d3);
         }
 
-        composer.copyPackedScrollWordsTo(horizScrollBuf);
-        vscrollFactorBG = composer.getVscrollFactorBG();
-        minScrollOffset = composer.getMinScrollOffset();
-        maxScrollOffset = composer.getMaxScrollOffset();
+        // Additional raster rows continue the last native band; resizing must
+        // not re-anchor the native128-line sky or its shipped cloud gradient.
+        while (line < composer.visibleLineCount()) composer.writePackedScrollWord(line++, d4);
     }
 
-    /**
-     * Swap high and low words of a 32-bit value.
-     * Equivalent to 68000 SWAP instruction.
-     */
-    private long swap32(long value) {
-        int v = (int) value;
-        return ((v & 0xFFFF) << 16) | ((v >> 16) & 0xFFFF);
-    }
-
-    /**
-     * HTZ earthquake mode scrolling.
-     * Reference: s2.asm HTZ_Screen_Shake lines 15975-16029
-     *
-     * ROM uses absolute Camera_BG_Y/X_pos for scroll factors:
-     *   Vscroll_Factor_BG = Camera_BG_Y_pos (≈ Camera_Y_pos - Camera_BG_Y_offset)
-     *   Horiz_Scroll_Buf BG = -Camera_BG_X_pos
-     *
-     * Our tilemap contains the full BG map, so these absolute positions correctly
-     * address BG map rows 0-1 containing lava/cave tile data (256px); VDP wraps vertically.
-     */
-    private void updateEarthquakeMode(int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter) {
-        HtzRuntimeState htzState = htzRuntimeState();
-        int bgYOffset = htzState.cameraBgYOffset();
-        int bgXOffset = htzState.cameraBgXOffset();
-
-        // Camera_BG positions used by HTZ_Screen_Shake.
-        int bgXPos = cameraX - bgXOffset;
-        int bgYPos = cameraY - bgYOffset;
-
-        int shakeOffsetV = 0;
-        int shakeOffsetH = 0;
-
-        // Ripple is gated by general Screen_Shaking_Flag while HTZ mode remains active.
-        if (GameServices.gameState().isScreenShakeActive() && tables != null) {
-            int rippleIndex = frameCounter & 0x3F;
-            shakeOffsetV = tables.getRippleSigned(rippleIndex);
-            if (rippleIndex + 1 < tables.getRippleDataLength()) {
-                shakeOffsetH = tables.getRippleSigned(rippleIndex + 1);
+    @Override
+    public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) {
+        boolean earthquake = presentationEarthquake;
+        short cloud = presentationCloud;
+        int nativeBgY = context.nativeOutput().backgroundY();
+        int shakeX = shakeOffsetX, shakeY = shakeOffsetY;
+        int bgXOffset = earthquake ? htzRuntimeState().cameraBgXOffset() : 0;
+        return view -> {
+            var output = new ScrollEffectComposer(view.height());
+            if (earthquake) {
+                output.setVscrollFactorBG((short) (nativeBgY + view.cameraY() - context.cameraY()));
+                output.fillPackedScrollWords(0, view.height(), M68KMath.negWord(view.cameraX() + shakeX),
+                        M68KMath.negWord(view.cameraX() - bgXOffset + shakeX));
+            } else {
+                output.setVscrollFactorBG((short) nativeBgY);
+                composeNormal(output, new short[16], view.cameraX(), cloud);
             }
-        }
-
-        // Store shake offsets for Camera to use for FG tiles and sprites.
-        this.shakeOffsetX = shakeOffsetH;
-        this.shakeOffsetY = shakeOffsetV;
-
-        // Vscroll_Factor_FG = Camera_Y_pos (+ optional ripple)
-        vscrollFactorFG = (short) (cameraY + shakeOffsetV);
-        // Vscroll_Factor_BG = Camera_BG_Y_pos (+ optional ripple)
-        composer.setVscrollFactorBG((short) (bgYPos + shakeOffsetV));
-
-        // Horizontal scroll uses Camera_X_pos and Camera_BG_X_pos (+ optional ripple).
-        short fgScroll = M68KMath.negWord(cameraX + shakeOffsetH);
-        short bgScroll = M68KMath.negWord(bgXPos + shakeOffsetH);
-
-        // Fill all 224 lines with same value (no parallax during earthquake mode).
-        composer.fillPackedScrollWords(0, VISIBLE_LINES, fgScroll, bgScroll);
-
-        composer.copyPackedScrollWordsTo(horizScrollBuf);
-        vscrollFactorBG = composer.getVscrollFactorBG();
-        minScrollOffset = composer.getMinScrollOffset();
-        maxScrollOffset = composer.getMaxScrollOffset();
+            return Sonic2ProjectionOutput.finish(context, view, output);
+        };
     }
 
-    public short getVscrollFactorFG() {
-        return vscrollFactorFG;
-    }
-
-    /**
-     * @return Horizontal shake offset for this frame (pixels)
-     */
-    public int getShakeOffsetX() {
-        return shakeOffsetX;
-    }
-
-    /**
-     * @return Vertical shake offset for this frame (pixels)
-     */
-    public int getShakeOffsetY() {
-        return shakeOffsetY;
-    }
 }

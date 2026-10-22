@@ -1,6 +1,9 @@
 package com.openggf.game.sonic2.scroll;
 
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.ScrollProjectionContext;
+import com.openggf.level.scroll.ScrollProjectionPhase;
+import com.openggf.level.scroll.ScrollProjectionSource;
 import com.openggf.level.scroll.M68KMath;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 
@@ -24,7 +27,7 @@ import com.openggf.level.scroll.compose.ScrollEffectComposer;
  * - Values 7-8: X >> 4 (1/16 speed)
  * - Value 9: X >> 3 (1/8 speed)
  */
-public class SwScrlCnz extends AbstractZoneScrollHandler {
+public class SwScrlCnz extends AbstractZoneScrollHandler implements ScrollProjectionSource {
 
     private final ParallaxTables tables;
 
@@ -72,69 +75,8 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
         resetScrollTracking();
         composer.reset();
 
-        // ==================== Step 1: Vertical Scroll ====================
-        // CNZ: Camera_BG_Y_pos = Camera_Y_pos >>> 6 (unsigned logical shift)
-        // Treat cameraY as 16-bit unsigned, then logical shift right 6
-        int cameraBgYPos = (cameraY & 0xFFFF) >>> 6;
-        composer.setVscrollFactorBG((short) cameraBgYPos);
-
-        // ==================== Step 2: Generate 10 Scroll Values ====================
-        generateScrollValues((short) cameraX);
-
-        // ==================== Step 3: Determine Starting Segment ====================
-        // Use Camera_BG_Y_pos to find which segment is at the top of screen
-        int bgY = cameraBgYPos;
-        int segmentIndex = 0;
-
-        // Find starting segment by subtracting heights
-        // Loop until y goes negative (meaning we're partway through current segment)
-        while (segmentIndex < rowHeights.length) {
-            int height = getSegmentHeight(segmentIndex);
-            if (bgY < height) {
-                break;
-            }
-            bgY -= height;
-            segmentIndex++;
-        }
-
-        // bgY now contains how many lines into current segment we are
-        // So lines remaining in this segment = height - bgY
-        int currentSegment = segmentIndex % rowHeights.length;
-        int linesRemainingInSegment = getSegmentHeight(currentSegment) - bgY;
-        if (linesRemainingInSegment <= 0) {
-            // Move to next segment
-            currentSegment = (currentSegment + 1) % rowHeights.length;
-            linesRemainingInSegment = getSegmentHeight(currentSegment);
-        }
-
-        // ==================== Step 4: Fill Scroll Buffer ====================
-        short fgScroll = M68KMath.negWord(cameraX);
-        int currentLine = 0;
-
-        while (currentLine < M68KMath.VISIBLE_LINES) {
-            int height = rowHeights[currentSegment];
-
-            if (height == 0) {
-                // Special rippling segment (16 lines)
-                fillRippleSegment(currentLine, fgScroll,
-                        scrollValues[currentSegment], frameCounter);
-                currentLine += 16;
-                linesRemainingInSegment = 0;
-            } else {
-                // Normal segment - use the scroll value for this segment
-                short bgScroll = M68KMath.negWord(scrollValues[currentSegment]);
-                int linesToFill = Math.min(linesRemainingInSegment, M68KMath.VISIBLE_LINES - currentLine);
-                composer.fillPackedScrollWords(currentLine, linesToFill, fgScroll, bgScroll);
-                currentLine += linesToFill;
-                linesRemainingInSegment -= linesToFill;
-            }
-
-            // Move to next segment if we've exhausted current one
-            if (linesRemainingInSegment <= 0) {
-                currentSegment = (currentSegment + 1) % rowHeights.length;
-                linesRemainingInSegment = getSegmentHeight(currentSegment);
-            }
-        }
+        compose(composer, scrollValues, rowHeights, cameraX, cameraY, frameCounter,
+                tables == null ? null : tables::getRippleSigned);
 
         composer.copyPackedScrollWordsTo(horizScrollBuf);
         vscrollFactorBG = composer.getVscrollFactorBG();
@@ -145,7 +87,7 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
     /**
      * Get the actual height for a segment (0 means ripple segment, still 16 lines).
      */
-    private int getSegmentHeight(int index) {
+    private static int getSegmentHeight(int[] rowHeights, int index) {
         int h = rowHeights[index % rowHeights.length];
         return (h == 0) ? 16 : h;
     }
@@ -169,7 +111,7 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
      *
      * @param cameraX Camera X position (16-bit signed)
      */
-    private void generateScrollValues(short cameraX) {
+    private static void generateScrollValues(short[] scrollValues, short cameraX) {
         // Step 1: d0 = (X >> 3) - X (signed arithmetic)
         short xShift3 = (short) (cameraX >> 3);  // asr.w #3,d0
         int d0 = (short) (xShift3 - cameraX);     // sub.w d2,d0 (result is signed word)
@@ -232,7 +174,7 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
      * @param baseScrollValue Base scroll value for this segment
      * @param frameCounter Current frame counter (Vint_runcount)
      */
-    private void fillRippleSegment(int startLine,
+    private static void fillRippleSegment(ScrollEffectComposer composer, java.util.function.IntUnaryOperator ripple, int startLine,
                                     short fgScroll, short baseScrollValue,
                                     int frameCounter) {
         // Base background scroll (negated)
@@ -245,12 +187,12 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
         int idx = (-((frameCounter & 0xFF) >>> 3)) & 0x1F;
 
         // Fill 16 lines with ripple effect
-        int linesToFill = Math.min(16, M68KMath.VISIBLE_LINES - startLine);
+        int linesToFill = Math.min(16, composer.visibleLineCount() - startLine);
         for (int i = 0; i < linesToFill; i++) {
             int rippleOffset = 0;
-            if (tables != null) {
+            if (ripple != null) {
                 // Read signed byte from ripple data
-                rippleOffset = tables.getRippleSigned((idx + i) & 0x3F);  // Mask to stay in bounds
+                rippleOffset = ripple.applyAsInt((idx + i) & 0x3F);  // Mask to stay in bounds
             }
 
             // Add ripple offset to BG scroll
@@ -274,7 +216,7 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
      * For testing purposes.
      */
     public short[] generateScrollValuesForTest(short cameraX) {
-        generateScrollValues(cameraX);
+        generateScrollValues(scrollValues, cameraX);
         return scrollValues.clone();
     }
 
@@ -284,4 +226,83 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
     public int[] getRowHeights() {
         return rowHeights.clone();
     }
+    private static void compose(ScrollEffectComposer composer, short[] scrollValues, int[] rowHeights,
+                                int cameraX, int cameraY, int frameCounter, java.util.function.IntUnaryOperator ripple) {
+        // ==================== Step 1: Vertical Scroll ====================
+        // CNZ: Camera_BG_Y_pos = Camera_Y_pos >>> 6 (unsigned logical shift)
+        // Treat cameraY as 16-bit unsigned, then logical shift right 6
+        int cameraBgYPos = (cameraY & 0xFFFF) >>> 6;
+        composer.setVscrollFactorBG((short) cameraBgYPos);
+
+        // ==================== Step 2: Generate 10 Scroll Values ====================
+        generateScrollValues(scrollValues, (short) cameraX);
+
+        // ==================== Step 3: Determine Starting Segment ====================
+        // Use Camera_BG_Y_pos to find which segment is at the top of screen
+        int bgY = cameraBgYPos;
+        int segmentIndex = 0;
+
+        // Find starting segment by subtracting heights
+        // Loop until y goes negative (meaning we're partway through current segment)
+        while (segmentIndex < rowHeights.length) {
+            int height = getSegmentHeight(rowHeights, segmentIndex);
+            if (bgY < height) {
+                break;
+            }
+            bgY -= height;
+            segmentIndex++;
+        }
+
+        // bgY now contains how many lines into current segment we are
+        // So lines remaining in this segment = height - bgY
+        int currentSegment = segmentIndex % rowHeights.length;
+        int linesRemainingInSegment = getSegmentHeight(rowHeights, currentSegment) - bgY;
+        if (linesRemainingInSegment <= 0) {
+            // Move to next segment
+            currentSegment = (currentSegment + 1) % rowHeights.length;
+            linesRemainingInSegment = getSegmentHeight(rowHeights, currentSegment);
+        }
+
+        // ==================== Step 4: Fill Scroll Buffer ====================
+        short fgScroll = M68KMath.negWord(cameraX);
+        int currentLine = 0;
+
+        while (currentLine < composer.visibleLineCount()) {
+            int height = rowHeights[currentSegment];
+
+            if (height == 0) {
+                // Special rippling segment (16 lines)
+                fillRippleSegment(composer, ripple, currentLine, fgScroll,
+                        scrollValues[currentSegment], frameCounter);
+                currentLine += 16;
+                linesRemainingInSegment = 0;
+            } else {
+                // Normal segment - use the scroll value for this segment
+                short bgScroll = M68KMath.negWord(scrollValues[currentSegment]);
+                int linesToFill = Math.min(linesRemainingInSegment, composer.visibleLineCount() - currentLine);
+                composer.fillPackedScrollWords(currentLine, linesToFill, fgScroll, bgScroll);
+                currentLine += linesToFill;
+                linesRemainingInSegment -= linesToFill;
+            }
+
+            // Move to next segment if we've exhausted current one
+            if (linesRemainingInSegment <= 0) {
+                currentSegment = (currentSegment + 1) % rowHeights.length;
+                linesRemainingInSegment = getSegmentHeight(rowHeights, currentSegment);
+            }
+        }
+
+    }
+
+    @Override
+    public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) {
+        int[] heights = rowHeights.clone();
+        var ripple = Sonic2ProjectionOutput.captureRipple(tables);
+        return view -> {
+            var output = new ScrollEffectComposer(view.height());
+            compose(output, new short[10], heights, view.cameraX(), view.cameraY(), context.frameCounter(), ripple);
+            return Sonic2ProjectionOutput.finish(context, view, output);
+        };
+    }
+
 }

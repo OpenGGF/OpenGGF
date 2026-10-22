@@ -197,6 +197,16 @@ projection width/buffer and batching state in the capture's `finally`, including
 failed captures. The later focus-loss case passed after that restoration was
 added, even while the capture still exposed a separate editor-context error.
 
+A closed EGL context does not retire process-owned renderer caches (2026-10-22,
+Stageplay directed backgrounds). A custom HeadlessGameBoot fixture closed its
+world/context, then called initHeadless; ArenaMaskRenderer retained the previous
+program/VAO. The next context's first ordinary draw produced GL_INVALID_VALUE at
+glGetUniformLocation and GL_INVALID_OPERATION at glBindVertexArray. Its before/after
+pictures could still compare equal. Retire the fixture's GraphicsManager resources
+while the old context is current, after closing the world and before boot.close.
+Use stage-specific GL checks to distinguish boot, ordinary drawing and directed
+sampling; do not clear an unexplained GL error to make the final check green.
+
 Snapshot equality and its diagnostic walker must inspect the same captured
 content (2026-10-14, AIZ retained-scene qualification). Cross-package private
 record access was silently skipped by the walker, while top-level arrays and

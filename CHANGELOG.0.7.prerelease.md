@@ -7,7 +7,7 @@ Unreleased. The earlier development themes remain in
 
 - **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
   OpenGGF Editor's Stageplay workspace. Author actor movement, animation/poses,
-  camera movement, held integer zoom, earthquake effects, captions, ROM audio and WAV/Ogg voices;
+  camera movement, smooth animated zoom, earthquake effects, captions, ROM audio and WAV/Ogg voices;
   direct scene changes across locations, acts and games with cuts, fades and wipes.
   Puppet mode follows destinations and urgency through native acceleration, terrain
   collision and jump physics; floor snapping defaults on. Poser mode retains manual
@@ -15,9 +15,12 @@ Unreleased. The earlier development themes remain in
   one native world with populated or initially cleared objects/rings, supplied-game
   performers, authored terrain and common camera framing. Older scenes retain strict
   compatibility behavior. Native ROM worlds share moving objects, collision pickups, native hurt and per-actor controllers;
-  bounded routes/placement targets, native flight/glide and fixed-scale actor/group
+  bounded routes/placement targets, native flight/glide and actor/group
   camera follow use the production gameplay and rewind owners. Directed foreground,
-  characters and occlusion stay aligned through camera movement. Inspect actual state
+  characters and occlusion stay aligned through camera movement. Current native
+  scenes project background parallax/deformation at the directed camera without
+  advancing native effect phases; separated performers share native object slots
+  through independent activation windows. Inspect actual state
   and events through windowless simulation and placement/capability discovery. Live
   editor previews run in an isolated offscreen worker, preserving the active world;
   preview and export preserve logical-ROM windows and composite images.

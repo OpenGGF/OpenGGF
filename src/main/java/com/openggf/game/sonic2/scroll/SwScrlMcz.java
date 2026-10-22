@@ -2,6 +2,9 @@ package com.openggf.game.sonic2.scroll;
 
 import com.openggf.game.GameServices;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.ScrollProjectionContext;
+import com.openggf.level.scroll.ScrollProjectionPhase;
+import com.openggf.level.scroll.ScrollProjectionSource;
 import com.openggf.level.scroll.M68KMath;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 
@@ -41,7 +44,7 @@ import com.openggf.level.scroll.compose.ScrollEffectComposer;
  * 22:452..475 (23) x0.8
  * 23:475..512 (37) x0.9
  */
-public class SwScrlMcz extends AbstractZoneScrollHandler {
+public class SwScrlMcz extends AbstractZoneScrollHandler implements ScrollProjectionSource {
 
     /** MCZ segment cycle height (sum of all 24 segment heights). */
     private static final int MCZ_CYCLE_HEIGHT = 512;
@@ -128,83 +131,8 @@ public class SwScrlMcz extends AbstractZoneScrollHandler {
         composer.setVscrollFactorBG((short) (bgY + this.shakeOffsetY));
         vscrollFactorFG = (short) (cameraY + this.shakeOffsetY);
 
-        // ==================== Step 3: Build 24 Segment Scroll Values
-        // ====================
-        // Uses fixed-point accumulation matching 68000 behavior
-        // base = floorSigned( ( (int32)cameraX << 4 ) / 10 )
-        // baseFixed = base << 12
-        buildSegmentScrollValues(cameraX);
-
-        // ==================== Step 4: Expand to Scanlines ====================
-        if (tables == null) {
-            fillFallback(horizScrollBuf, cameraX);
-            return;
-        }
-
-        byte[] rowHeights = tables.getMczRowHeights();
-        if (rowHeights == null || rowHeights.length < 24) {
-            fillFallback(horizScrollBuf, cameraX);
-            return;
-        }
-
-        // Foreground X scroll (constant per scanline, includes horizontal shake)
-        short fgScroll = M68KMath.negWord(cameraX + this.shakeOffsetX);
-
-        // Treat bgY as vertical position in 512-pixel cycle
-        // The parallax bands are based on the UNSHAKEN camera Y.
-        //
-        // fixBugs (s2.asm:27 `fixBugs = 0`): this is the SHIPPED (fixBugs=0) branch.
-        // The three conditionals at s2.asm:16474-16479, 16492-16495 and 16581-16584
-        // together introduce a d3 that carries the shake's Y component into the
-        // row-segment search (`add.w d3,d1`). On the shipped ROM d3 does not exist, the
-        // segment walk uses the unshaken Camera_BG_Y_pos, and the background parallax
-        // visibly distorts during the boss's screen shake. That distortion is the
-        // behaviour to reproduce; only the Vscroll factors and the camera copies take
-        // the shake.
-        int yInCycle = bgY % MCZ_CYCLE_HEIGHT;
-        if (yInCycle < 0) {
-            yInCycle += MCZ_CYCLE_HEIGHT;
-        }
-
-        // Find the starting segment by walking through segment heights
-        int seg = 0;
-        while (seg < 24) {
-            int h = rowHeights[seg] & 0xFF;
-            if (yInCycle < h) {
-                break;
-            }
-            yInCycle -= h;
-            seg++;
-        }
-
-        // Safety clamp (shouldn't happen if heights sum to 512)
-        if (seg >= 24) {
-            seg = 0;
-            yInCycle = 0;
-        }
-
-        // remainingInSeg = how many pixels left in current segment
-        int remainingInSeg = (rowHeights[seg] & 0xFF) - yInCycle;
-
-        // Fill 224 screen lines
-        for (int screenLine = 0; screenLine < M68KMath.VISIBLE_LINES; screenLine++) {
-            // BG scroll = -(segScroll[seg])
-            // Note: We track segScroll as the camera-relative offset, so
-            // bgScroll = fgScroll + (cameraX - segScroll[seg])
-            short segScrollVal = segScroll[seg];
-            short bgScroll = (short) (fgScroll + (cameraX - segScrollVal));
-
-            composer.writePackedScrollWord(screenLine, fgScroll, bgScroll);
-
-            remainingInSeg--;
-            if (remainingInSeg == 0) {
-                seg++;
-                if (seg >= 24) {
-                    seg = 0; // Wrap around
-                }
-                remainingInSeg = rowHeights[seg] & 0xFF;
-            }
-        }
+        compose(composer, segScroll, tables == null ? null : tables.getMczRowHeights(),
+                cameraX, bgY, shakeOffsetX);
 
         composer.copyPackedScrollWordsTo(horizScrollBuf);
         vscrollFactorBG = composer.getVscrollFactorBG();
@@ -230,7 +158,7 @@ public class SwScrlMcz extends AbstractZoneScrollHandler {
      * step8 -> segScroll[22], segScroll[1], segScroll[10], segScroll[12]
      * step9 -> segScroll[23], segScroll[0], segScroll[11]
      */
-    private void buildSegmentScrollValues(int cameraX) {
+    private static void buildSegmentScrollValues(short[] segScroll, int cameraX) {
         // base = floorSigned( (cameraX << 4) / 10 )
         // Java integer division truncates toward zero for positive, floors for negative
         // which matches 68000 DIVS behavior
@@ -315,15 +243,11 @@ public class SwScrlMcz extends AbstractZoneScrollHandler {
         return (dividend - divisor + 1) / divisor;
     }
 
-    private void fillFallback(int[] horizScrollBuf, int cameraX) {
+    private static void fillFallback(ScrollEffectComposer composer, int cameraX) {
         short fgScroll = M68KMath.negWord(cameraX);
         short bgScroll = M68KMath.asrWord(cameraX, 1); // 0.5x scroll as fallback
 
-        composer.fillPackedScrollWords(0, M68KMath.VISIBLE_LINES, fgScroll, bgScroll);
-        composer.copyPackedScrollWordsTo(horizScrollBuf);
-        vscrollFactorBG = composer.getVscrollFactorBG();
-        minScrollOffset = composer.getMinScrollOffset();
-        maxScrollOffset = composer.getMaxScrollOffset();
+        composer.fillPackedScrollWords(0, composer.visibleLineCount(), fgScroll, bgScroll);
     }
 
     public short getVscrollFactorFG() {
@@ -353,7 +277,7 @@ public class SwScrlMcz extends AbstractZoneScrollHandler {
      * Does not require full update().
      */
     public short[] buildAndGetSegScroll(int cameraX) {
-        buildSegmentScrollValues(cameraX);
+        buildSegmentScrollValues(segScroll, cameraX);
         return segScroll.clone();
     }
 
@@ -370,4 +294,86 @@ public class SwScrlMcz extends AbstractZoneScrollHandler {
     public int getShakeOffsetY() {
         return shakeOffsetY;
     }
+    private static void compose(ScrollEffectComposer composer, short[] segScroll, byte[] rowHeights,
+                                int cameraX, int bgY, int shakeX) {
+        buildSegmentScrollValues(segScroll, cameraX);
+        if (rowHeights == null || rowHeights.length < 24) {
+            fillFallback(composer, cameraX);
+            return;
+        }
+        // Foreground X scroll (constant per scanline, includes horizontal shake)
+        short fgScroll = M68KMath.negWord(cameraX + shakeX);
+
+        // Treat bgY as vertical position in 512-pixel cycle
+        // The parallax bands are based on the UNSHAKEN camera Y.
+        //
+        // fixBugs (s2.asm:27 `fixBugs = 0`): this is the SHIPPED (fixBugs=0) branch.
+        // The three conditionals at s2.asm:16474-16479, 16492-16495 and 16581-16584
+        // together introduce a d3 that carries the shake's Y component into the
+        // row-segment search (`add.w d3,d1`). On the shipped ROM d3 does not exist, the
+        // segment walk uses the unshaken Camera_BG_Y_pos, and the background parallax
+        // visibly distorts during the boss's screen shake. That distortion is the
+        // behaviour to reproduce; only the Vscroll factors and the camera copies take
+        // the shake.
+        int yInCycle = bgY % MCZ_CYCLE_HEIGHT;
+        if (yInCycle < 0) {
+            yInCycle += MCZ_CYCLE_HEIGHT;
+        }
+
+        // Find the starting segment by walking through segment heights
+        int seg = 0;
+        while (seg < 24) {
+            int h = rowHeights[seg] & 0xFF;
+            if (yInCycle < h) {
+                break;
+            }
+            yInCycle -= h;
+            seg++;
+        }
+
+        // Safety clamp (shouldn't happen if heights sum to 512)
+        if (seg >= 24) {
+            seg = 0;
+            yInCycle = 0;
+        }
+
+        // remainingInSeg = how many pixels left in current segment
+        int remainingInSeg = (rowHeights[seg] & 0xFF) - yInCycle;
+
+        // Fill 224 screen lines
+        for (int screenLine = 0; screenLine < composer.visibleLineCount(); screenLine++) {
+            // BG scroll = -(segScroll[seg])
+            // Note: We track segScroll as the camera-relative offset, so
+            // bgScroll = fgScroll + (cameraX - segScroll[seg])
+            short segScrollVal = segScroll[seg];
+            short bgScroll = (short) (fgScroll + (cameraX - segScrollVal));
+
+            composer.writePackedScrollWord(screenLine, fgScroll, bgScroll);
+
+            remainingInSeg--;
+            if (remainingInSeg == 0) {
+                seg++;
+                if (seg >= 24) {
+                    seg = 0; // Wrap around
+                }
+                remainingInSeg = rowHeights[seg] & 0xFF;
+            }
+        }
+
+    }
+
+    @Override
+    public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) {
+        byte[] rows = tables == null || tables.getMczRowHeights() == null ? null : tables.getMczRowHeights().clone();
+        int shakeX = shakeOffsetX, shakeY = shakeOffsetY;
+        return view -> {
+            int bgY = context.act() == 0 ? floorUnsignedDiv(view.cameraY(), 3) - 320
+                    : floorUnsignedDiv(view.cameraY(), 6) - 16;
+            var output = new ScrollEffectComposer(view.height());
+            output.setVscrollFactorBG((short) (bgY + shakeY));
+            compose(output, new short[24], rows, view.cameraX(), bgY, shakeX);
+            return Sonic2ProjectionOutput.finish(context, view, output);
+        };
+    }
+
 }

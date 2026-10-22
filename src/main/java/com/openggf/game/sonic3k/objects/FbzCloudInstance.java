@@ -47,14 +47,19 @@ public final class FbzCloudInstance extends AbstractObjectInstance implements Sp
     }
 
     @Override public void appendRenderCommands(List<GLCommand> commands) {
+        var projected = com.openggf.level.LevelSpritePresentation.spritePositionForDraw(
+                services().levelManager(), new com.openggf.level.scroll.ScrollSpriteKey("s3k/fbz-cloud", addressSlot));
         // CloudDeform runs after object updates. Resolve here as well so the first
         // rendered frame (and a rewind-render without an intervening update) uses
         // the current HScroll/address-table output rather than yesterday's cache.
-        resolveWorldPosition();
+        // A cinematic projection owns only this draw's coordinates. In particular,
+        // never publish the temporary director camera into the object's native RAM.
+        if (projected == null) resolveWorldPosition();
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.FBZ_CLOUD);
         if (renderer != null && renderer.isReady()) {
             // FBZ_CLOUD filters native frames 1/2/3 into sheet indices 0/1/2.
-            renderer.drawFrameIndex(mappingFrame - 1, worldX, worldY, false, false);
+            renderer.drawFrameIndex(mappingFrame - 1, projected == null ? worldX : projected.x(),
+                    projected == null ? worldY : projected.y(), false, false);
         }
     }
 

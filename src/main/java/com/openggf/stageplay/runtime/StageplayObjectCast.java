@@ -337,6 +337,17 @@ final class StageplayObjectCast implements AutoCloseable {
         if (distance <= speed) return new double[]{targetX, targetY};
         return new double[]{x + dx / distance * speed, y + dy / distance * speed};
     }
+
+    List<com.openggf.level.objects.StageplayActivationPolicy.Window> activationWindows(int width, int height) {
+        var windows = new ArrayList<com.openggf.level.objects.StageplayActivationPolicy.Window>();
+        for (var role : roles) if (role.visible && !role.removed && role.instantiated) {
+            double x = role.root != null && !role.synthetic ? role.root.getX() : role.x;
+            double y = role.root != null && !role.synthetic ? role.root.getY() : role.y;
+            windows.add(new com.openggf.level.objects.StageplayActivationPolicy.Window(
+                    (int) Math.round(x) - width / 2, (int) Math.round(y) - height / 2, width, height));
+        }
+        return windows;
+    }
     private static double weight(Interpolation interpolation, int first, int last, int frame) {
         if (first == last || interpolation == Interpolation.HOLD) return 0;
         double t = Math.clamp((double) (frame - first) / (last - first), 0, 1);

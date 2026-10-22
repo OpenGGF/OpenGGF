@@ -91,9 +91,10 @@ from captions and dialogue. Native viewport tiles retain the engine's 224-line
 rendering contract; physics and native camera dimensions remain unchanged. The
 source view is bounded to 4096 pixels per side and 8 MiPixels in total, so extreme
 combinations of output size and zoom fail preflight with an actionable message.
-Legacy LIVE shots retain their original 224-high, fixed-1x presentation until upgraded. Keep the cast
-within the native camera's object activation window. A widely separated actor
-fails with an actionable route message; use closer blocking or a new shot.
+Legacy LIVE shots retain their original 224-high, fixed-1x presentation until upgraded.
+Current scenes activate a separate native-sized region around each performer,
+including objects near distant cast members. They share the native object slot
+budget; clear unnecessary objects or split a shot if that budget is exhausted.
 The [examples](../../../examples/stageplay-demo/README.md) include platform
 transfers, flight/glide, rings/hurt and the 60-second **One More Take** rehearsal.
 
@@ -102,17 +103,21 @@ transfers, flight/glide, rings/hurt and the 60-second **One More Take** rehearsa
 Press **C** for camera directing mode. WASD/arrows pan, Q/E zoom in current native
 shots, **K** places a
 camera key and **R** records a camera take; Space finishes. A take is one undo edit.
-Zoom holds until the next key. Numeric camera properties accept fractional zoom
-in current native scenes; only the completed world picture is filtered. Pans retain their chosen interpolation.
+Current scenes animate position and zoom with the camera key's **HOLD**,
+**LINEAR** or **SMOOTH** easing. Numeric properties accept fractional zoom;
+only the completed opaque world picture is filtered, leaving text sharp.
+Migrated legacy scenes keep held zoom until their world policy is upgraded.
 The draft camera stays separate from the evaluated shake, so saving a key never
 accidentally bakes earthquake offsets into it. Switch back to actor mode to direct
 cast movement. LIVE camera keys can follow one actor or a group: set **follow**
 to comma-separated actor IDs, then tune dead zones, look-ahead, smoothing and
 offsets. Follow uses actual native positions. Current native shots retain authored zoom;
 legacy LIVE shots remain at zoom one. The directed
-foreground, native sprites and priority mask share one view. Background scroll,
-deformation and effects retain the gameplay camera’s native phase; arbitrary-view
-background parallax is not recomputed. Death Egg’s stationary background is intentional.
+foreground, native sprites and priority mask share one view. In current scenes,
+background parallax and deformation follow that directed view while their native
+animation/event phase stays frozen to the displayed gameplay generation.
+S3K Death Egg's deliberately stationary background stays stationary.
+Migrated legacy scenes retain their previous background framing.
 
 Both editors expose **Camera effect** and **Scene change** commands with editable
 timeline rows. Camera effects add deterministic seeded shake over a half-open
