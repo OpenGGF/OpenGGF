@@ -143,7 +143,13 @@ changes their subsequent sparkle submission to bucket 1 (`_incObj/25, 37 Rings.a
 `RingDrawInternalAccess` separates the placed list from reserved attracted-ring
 emissions, retaining frozen art callbacks and draw-only state. Lost rings already
 emit through their individual object owners. Rendering no longer clears expired
-placement sparkle state.
+placement sparkle state. Ring producers also freeze their semantic `RINGS` layer
+inside object-slot traversal: `includeRings` and `includeObjectSprites` remain
+orthogonal after admission. Hidden rings still compete for native capacity.
+Actual S1/S2/S3K EGL controls compare objects-only, rings-only and neither,
+including a surviving lower ring row beneath a full upper scanline. The native
+entry fade is scoped out only for this displayed-palette control; no gameplay
+or fade clock advances.
 
 The external slot bridge preserves the existing entry list, including repeated
 or inverted DisplaySprite FIFO entries. It can anchor legacy external emissions

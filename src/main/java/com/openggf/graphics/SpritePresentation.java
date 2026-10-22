@@ -274,6 +274,16 @@ public final class SpritePresentation {
         if (graphics.spritePresentationBuilder != null) graphics.spritePresentationBuilder.layer = layer;
     }
 
+    /** A producer's semantic layer survives SAT admission independently of its object-slot owner. */
+    public static void withLayer(GraphicsManager graphics, Layer layer, Runnable producer) {
+        Builder builder = graphics == null ? null : graphics.spritePresentationBuilder;
+        if (builder == null) { producer.run(); return; }
+        Layer previous = builder.layer;
+        builder.layer = java.util.Objects.requireNonNull(layer, "layer");
+        try { producer.run(); }
+        finally { builder.layer = previous; }
+    }
+
     /** Engine presentation bridge; atlas residency is not part of the creator API. */
     public static PatternVersion patternSample(GraphicsManager graphics, int patternId) {
         return graphics.scenePatternSample(patternId);

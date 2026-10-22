@@ -564,6 +564,13 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
     /** Object-slot emission uses the same resident art/collection state without a second list draw. */
     void drawPlacedObject(RingSpawn ring, int frameCounter) {
+        if (renderer == null) return;
+        com.openggf.graphics.SpritePresentation.withLayer(renderer.graphics,
+                com.openggf.graphics.SpritePresentation.Layer.RINGS,
+                () -> drawPlacedArt(ring, frameCounter));
+    }
+
+    private void drawPlacedArt(RingSpawn ring, int frameCounter) {
         if (!ringsAllowed() || renderer == null) return;
         int index = placement.getSpawnIndex(ring);
         if (index < 0) return;
@@ -599,11 +606,12 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     }
 
     private void drawAttractedFrame(int mapping, int x, int y) {
-        GraphicsManager graphics = GameServices.graphics();
+        GraphicsManager graphics = renderer.graphics;
         boolean high = graphics.getCurrentSpriteHighPriority();
         int mask = graphics.getCurrentSpriteTileOcclusionPaletteMask();
         graphics.setCurrentSpriteHighPriority(true);
-        try { renderer.drawFrameIndex(mapping, x, y); }
+        try { com.openggf.graphics.SpritePresentation.withLayer(graphics,
+                com.openggf.graphics.SpritePresentation.Layer.RINGS, () -> renderer.drawFrameIndex(mapping, x, y)); }
         finally {
             graphics.setCurrentSpriteHighPriority(high);
             graphics.setCurrentSpriteTileOcclusionPaletteMask(mask);
@@ -1676,12 +1684,14 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
     private static final class RingRenderer {
         private final RingSpriteSheet spriteSheet;
+        private final GraphicsManager graphics;
         private final PatternSpriteRenderer renderer;
         private PatternSpriteRenderer.FrameBounds spinBoundsCache;
 
         private RingRenderer(RingSpriteSheet spriteSheet) {
             this.spriteSheet = spriteSheet;
-            this.renderer = new PatternSpriteRenderer(spriteSheet);
+            this.graphics = GameServices.graphics();
+            this.renderer = new PatternSpriteRenderer(spriteSheet, graphics);
         }
 
         private void ensurePatternsCached(GraphicsManager graphicsManager, int basePatternIndex) {

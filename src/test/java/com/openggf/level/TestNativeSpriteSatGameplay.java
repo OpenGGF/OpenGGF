@@ -104,10 +104,46 @@ class TestNativeSpriteSatGameplay {
             assertEquals(placedListBeforeBuckets ? 16 : 17,
                     withRing.tiles().stream().filter(t -> t.patternId() >= BASE && t.patternId() < BASE + 21).count(),
                     "S2/S3K BuildRings precedes every bucket; S1 Ring priority2 follows the priority0 probe");
-            assertTrue(withRing.tiles().stream().anyMatch(t -> t.x() < 120 && t.x() + t.width() > 112
+            assertTrue(withRing.tiles().stream().anyMatch(t -> t.layer() == SpritePresentation.Layer.RINGS
+                            && t.x() < 120 && t.x() + t.width() > 112
                             && t.y() < 24 && t.y() + t.height() > 16),
                     "ring art is submitted through the production table");
+            renderer.spriteTables.prepare(withRing); renderer.spriteTables.publish();
+            var blank = renderOptions(new LevelManager.LevelRenderOptions(false, false, false, false, false, false, false));
+            var objectsOnly = renderOptions(new LevelManager.LevelRenderOptions(false, true, false, false, false, false, false));
+            var ringsOnly = renderOptions(new LevelManager.LevelRenderOptions(false, false, true, false, false, false, false));
+            assertEquals(0, differences(objectsOnly, blank, 112, 16, 16, 8),
+                    "includeRings=false hides object-slot rings independently of object sprites");
+            assertTrue(differences(ringsOnly, blank, 112, 16, 16, 8) > 0,
+                    () -> "includeObjectSprites=false retains rings emitted through object slots: "
+                            + withRing.tiles().stream().filter(t -> t.layer() == SpritePresentation.Layer.RINGS).toList());
+            assertTrue(differences(objectsOnly, blank, 144, 8, 8, 8) > 0);
+            assertEquals(0, differences(ringsOnly, blank, 144, 8, 8, 8), "rings-only excludes the ordinary object probe");
+            int overflowX = 144 + (placedListBeforeBuckets ? 16 : 17) * 8;
+            assertEquals(0, differences(objectsOnly, blank, overflowX, 8, 8, 8),
+                    "hiding rings filters presentation after their native budget admission");
+            assertEquals(withRing, renderer.captureSceneSpriteTable(GameServices.sprites()),
+                    "orthogonal filters neither mutate nor rebuild a different admitted table");
         }
+    }
+
+    private static RgbaImage renderOptions(LevelManager.LevelRenderOptions options) {
+        // Native entry fade may make ROM ring palette pixels black. Scope only its
+        // presentation for these orthogonal visibility controls; do not advance gameplay/fade clocks.
+        PaletteUploadPresentation.withoutDisplayedFade(GameServices.graphics(), () -> {
+            GameServices.level().setClearColor();
+            org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT | org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT);
+            GameServices.level().drawWithRenderOptions(GameServices.sprites(), options);
+            GameServices.graphics().flush();
+        });
+        return ScreenshotCapture.captureFramebuffer(320, 224);
+    }
+
+    private static int differences(RgbaImage a, RgbaImage b, int x, int y, int width, int height) {
+        int count = 0;
+        for (int row = y; row < y + height; row++) for (int column = x; column < x + width; column++)
+            if (a.argb(column, row) != b.argb(column, row)) count++;
+        return count;
     }
 
     private static final class Probe extends AbstractObjectInstance {
