@@ -81,9 +81,9 @@ this campaign. October's merged remediation (`4a26a651e`) is not reopened.
 
 ## Execution and validation
 
-- [ ] Accounting: meaningful grouped-record/historical-label regressions,
+- [x] Accounting: meaningful grouped-record/historical-label regressions,
   proportional queued guard checks, local tested commit and lead review.
-- [ ] Compose accounting before starting new implementation workers, so their
+- [x] Compose accounting before starting new implementation workers, so their
   isolated bases include it. No task branch is pushed.
 - [ ] Rewind: discriminating owner/release/park/provider/callback/recording tests
   and native pause/setup/PLC behavior, then bounded implementation and focused
@@ -116,11 +116,31 @@ do not repeat unchanged baseline/development/integrated smoke ceremonially.
 
 ## Checkpoint
 
-Coordinator HEAD: `23a18e2a2`; only this plan is uncommitted. Hooks installed.
-Accounting delegated request `architecture-paydown-accounting-20261022-r1` is
-running in an app-owned isolated worktree; no result or test pass is claimed.
-The registry under `~/.local/state/temporary-agents/` owns task IDs, workspaces
-and expiry. No fresh rewind/audio/preview agent has started yet, preserving the
-requested accounting-first dependency. Next: inspect accounting result, compose
-its commit and launch the fresh independent lanes. No live Maven job belongs to
-the coordinator.
+Accounting commit `f24c05a1f1395f3fa854a478aac1fec4e6329727` is composed at
+`0eb27d87503decca64b0b68af86d83ffd4545e77`; the lead reviewed both changed
+files. The patch changes only `TestArchitecturalReviewGuard.java` and the existing
+exception guide. Production code, predicates, frozen records and POM are
+unchanged. The accounting worktree is clean and retained on
+`bugfix/ai-architecture-accounting-20261022` at
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-93ebe5be`.
+
+The worker's admitted Java probe reported Java 25.0.5. Its two new accounting
+cases failed against original accounting, with two intended failures and no
+errors/skips. Final focused verification at `f24c05a1f` executed 114 cases with
+zero failures, errors or skips:
+
+```bash
+python3 tools/testing/maven_queue.py -v
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards '-Dtest=TestArchitecturalReviewGuard#frozenRecordCountsIgnoreHistoricalDescriptionLabels+frozenRecordCountsKeepEscapedMultilineRecordsGrouped' test -B
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards '-Dtest=TestArchitecturalReviewGuard,TestArchitecturalSourceGuard,TestArchUnitRules,TestArchUnitTestRules' test -B
+```
+
+This is bounded guard evidence, not smoke or full-suite validation. XML cases
+were inspected by the worker and consumed reports removed; no receipt/archive
+was added. The coordinator did not duplicate unchanged focused coverage.
+
+Main remains `develop` at the pinned base; no integration push has occurred.
+Coordinator hooks are installed. The registry under
+`~/.local/state/temporary-agents/` owns task IDs, workspaces and expiry. Next:
+launch fresh rewind, audio and conversion lanes from the composed accounting
+base. No live Maven job belongs to the coordinator.
