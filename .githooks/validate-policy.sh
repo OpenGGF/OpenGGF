@@ -161,30 +161,37 @@ contains_mod_api_annotation() {
 }
 
 # Declaration text of a Java source that can change the normalized signature pin.
-# Comments are removed. A file whose first type declaration is not a class
-# (interface, record, enum, annotation) keeps all remaining text, because its
-# members are implicitly public. Record compact-constructor bodies are excluded:
-# their canonical signature already comes from the component declaration. A class
-# keeps annotations, type declaration
-# lines and public/protected declarations, including their parenthesised
-# continuation lines, so method bodies, private members and comments never
-# demand a pin change the snapshot cannot express. TestModApiSignatureSurface
-# remains the exact check; this only decides when the pin must be staged.
+# Classes and records exclude executable bodies and field initializer values;
+# the exporter records field types/modifiers/annotations, never their values.
+# Strip implementations before selecting public/protected declaration lines, so
+# multiline initializer calls cannot leak parentheses into signature continuations.
+# Other implicitly public type forms retain their conservative text comparison.
+# TestModApiSignatureSurface remains the exact signature check.
 mod_api_surface_text() {
     printf '%s\n' "$1" | awk '
     BEGIN { inblock = 0; kind = ""; typeName = ""; n = 0 }
     {
         line = $0; out = ""
-        while (1) {
+        for (k = 1; k <= length(line); k++) {
+            c = substr(line, k, 1); pair = substr(line, k, 2)
             if (inblock) {
-                e = index(line, "*/")
-                if (e == 0) { line = ""; break }
-                line = substr(line, e + 2); inblock = 0
+                if (pair == "*/") { inblock = 0; k++ }
+                continue
             }
-            s = index(line, "/*"); c = index(line, "//")
-            if (c > 0 && (s == 0 || c < s)) { out = out substr(line, 1, c - 1); break }
-            if (s == 0) { out = out line; break }
-            out = out substr(line, 1, s - 1); line = substr(line, s + 2); inblock = 1
+            if (stripQuote != "") {
+                out = out c
+                if (stripEscaped) stripEscaped = 0
+                else if (c == "\\") stripEscaped = 1
+                else if (stripQuote == "text" && substr(line, k, 3) == "\"\"\"") {
+                    out = out "\"\""; k += 2; stripQuote = ""
+                } else if (c == stripQuote) stripQuote = ""
+                continue
+            }
+            if (pair == "//") break
+            if (pair == "/*") { inblock = 1; out = out " "; k++; continue }
+            if (substr(line, k, 3) == "\"\"\"") { stripQuote = "text"; out = out "\"\"\""; k += 2; continue }
+            if (c == "\"" || c == sprintf("%c", 39)) stripQuote = c
+            out = out c
         }
         lines[++n] = out
         if (kind == "" && match(out, /(^|[ \t])(class|interface|record|enum|@interface)[ \t]+[A-Za-z_][A-Za-z0-9_]*/)) {
@@ -192,29 +199,70 @@ mod_api_surface_text() {
         }
     }
     END {
-        whole = (kind != "class"); depth = 0; compactDepth = 0; quote = ""; escaped = 0
+        # Class/record members need declaration text, not executable bodies or
+        # field values (the normalized exporter records field type/modifiers only).
+        # Strip those first, so initializer calls cannot open continuation depth.
+        source = ""; for (i = 1; i <= n; i++) source = source lines[i] "\n"
+        if (kind == "class" || kind == "record") {
+            clean = ""; segment = ""; parens = 0; body = 0; initializer = 0
+            initParens = 0; initBraces = 0; initBrackets = 0; quote = ""; escaped = 0
+            for (j = 1; j <= length(source); j++) {
+                c = substr(source, j, 1)
+                if (quote != "") {
+                    if (!body && !initializer) { clean = clean c; segment = segment c }
+                    if (quote == "text" && !escaped && substr(source, j, 3) == "\"\"\"") {
+                        if (!body && !initializer) { clean = clean "\"\""; segment = segment "\"\"" }
+                        j += 2; quote = ""; continue
+                    }
+                    if (escaped) escaped = 0
+                    else if (c == "\\") escaped = 1
+                    else if (c == quote) quote = ""
+                    continue
+                }
+                if (substr(source, j, 3) == "\"\"\"") {
+                    quote = "text"
+                    if (!body && !initializer) { clean = clean "\"\"\""; segment = segment "\"\"\"" }
+                    j += 2; continue
+                }
+                if (c == "\"" || c == sprintf("%c", 39)) {
+                    quote = c
+                    if (!body && !initializer) { clean = clean c; segment = segment c }
+                    continue
+                }
+                if (body) {
+                    if (c == "{") body++
+                    else if (c == "}") body--
+                    continue
+                }
+                if (initializer) {
+                    if (initParens == 0 && initBraces == 0 && initBrackets == 0 && (c == ";" || c == ",")) initializer = 0
+                    else {
+                        if (c == "(") initParens++
+                        else if (c == ")") initParens--
+                        else if (c == "{") initBraces++
+                        else if (c == "}") initBraces--
+                        else if (c == "[") initBrackets++
+                        else if (c == "]") initBrackets--
+                        continue
+                    }
+                }
+                if (c == "=" && parens == 0) { initializer = 1; continue }
+                if (c == "{" && parens == 0) {
+                    if (segment !~ /(^|[ \t\n])(class|interface|record|enum|@interface)[ \t\n]+[A-Za-z_]/) {
+                        clean = clean "{}"; segment = ""; body = 1; continue
+                    }
+                    segment = ""
+                } else if (c == ";" || c == "}") segment = ""
+                else segment = segment c
+                clean = clean c
+                if (c == "(") parens++
+                else if (c == ")") parens--
+            }
+            n = split(clean, lines, "\n")
+        }
+        whole = (kind != "class"); depth = 0
         for (i = 1; i <= n; i++) {
             l = lines[i]
-            start = 1
-            if (compactDepth == 0 && kind == "record" &&
-                    l ~ ("^[ \t]*(public[ \t]+|protected[ \t]+|private[ \t]+)?" typeName "[ \t]*\{")) {
-                start = index(l, "{") + 1; compactDepth = 1
-                print substr(l, 1, start - 1)
-            }
-            if (compactDepth > 0) {
-                for (j = start; j <= length(l); j++) {
-                    c = substr(l, j, 1)
-                    if (quote != "") {
-                        if (escaped) escaped = 0
-                        else if (c == "\\") escaped = 1
-                        else if (c == quote) quote = ""
-                    } else if (c == "\"" || c == sprintf("%c", 39)) quote = c
-                    else if (c == "{") compactDepth++
-                    else if (c == "}" && --compactDepth == 0) { print "}"; break }
-                }
-                if (compactDepth > 0) continue
-                l = substr(l, j + 1)
-            }
             if (l !~ /[^ \t]/) continue
             if (whole) { print l; continue }
             if (depth > 0 || l ~ /(^|[^A-Za-z0-9_])(public|protected)[ \t]/ || l ~ /^[ \t]*@/ \
