@@ -82,6 +82,19 @@ remaining native rows. Exit status is 0 for equality, 3 for a valid difference,
 and 2 for invalid capture evidence. It applies no shifts, fitted tolerances,
 gain changes or normalization.
 
+Before longer native captures, PCM comparison was changed to sequential reads
+of at most 64 KiB rather than complete-file byte strings and sample arrays.
+The complete native stream is still hashed, including unselected prefix and
+tail bytes; selected common samples are compared exactly. Integer sums of
+squares preserve the existing descriptive RMS calculation across chunk
+boundaries. Per-row TSV inventories remain retained, so memory still grows
+with the number of rows rather than the much larger PCM sample count.
+The exact Python selection passed **37 tests** (27 existing and ten new),
+zero failures or skips, including chunk-boundary/final-sample mutations,
+unselected-byte corruption, truncated streams and independently calculated
+statistics across six chunk sizes. Both preserved 600-row comparison reports
+remained field-for-field identical and `DIFFERENT` after this change.
+
 ## Production S1 startup measurement
 
 The actual `GameplayCaptureTool --title-screen --audio --native-pcm` ran the

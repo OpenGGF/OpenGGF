@@ -436,7 +436,8 @@ Unreleased. The earlier development themes remain in
   short of the ROM's hardware frame. The PSG half follows GPGX's integrated
   PSG and also matches its source vectors. The MAME YM2612 core and waveform
   parity are not covered. Native PCM comparisons validate complete selected row
-  spans and capture digests, rejecting truncated-prefix false matches. S1/S2
+  spans and capture digests, rejecting truncated-prefix false matches, and stream
+  PCM in bounded chunks for long captures. S1/S2
   complete-run producer plumbing remains gated by native publication evidence
   and independently installed artifact attestation.
 - **Audio cadence:** Each presented frame now advances the sound chips by exactly
