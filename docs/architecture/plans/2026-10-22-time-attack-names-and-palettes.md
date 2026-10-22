@@ -58,4 +58,89 @@ headless own-character recolour still. Change-based smoke selection is expected 
 
 ## Record
 
-(Filled in at delivery: what landed, rejected approaches, measurements.)
+Delivered to `develop` on 2026-10-23 from `feature/ai-timeattack-names-palettes`
+(smoke-tested at f1f43c6fd, which already contained develop 213400802; guard fix 9f70b0660).
+
+### What landed
+
+| Commit | Lane | Content |
+|---|---|---|
+| 95bc86418 | lead | Smaller translucent multiplayer HUD (140-pixel panels, 9-pixel lines, progress bar) and legible CompactFont nameplates; the base the names work builds on |
+| 7f759cb52 | A contracts | `NameFont` (Fusion Pixel 10px + GNU Unifont fallback, OFL texts in `LICENSES/`), `DisplayNames`, `PlayerAppearance`, protocol v4 (`Hello.appearance`, `UpdateProfile`, `PlayerLook`), ghost poses carry the look |
+| 26745b22b | A | `ClientRaceSession` per-slot looks, `UpdateProfile` from the coordinator, `CharacterLooks` base-colour presets |
+| 8d894a4fa | A | Hosts and master accept only canonical names, validate signed looks, broadcast looks per player, persist lobby renames |
+| 288ee9488 (merged ddec69386) | B rendering | `AppearancePalettes` private rows (4 per recoloured sprite) composed from the live line, alpha-only ghost mode in the sprite/water shaders, `NameFont` nameplates in the base colour, `RunHandle.setPlayerAppearance` for the run's own character, cited body ramps |
+| 55ee3f8e8, aae04c806 (merged 0afc73be4) | C UI | `SceneContext.typedText()`, Unicode `TextEntry`, first-run name prompt, settings/lobby rename, look editor with presets, 512-colour picker and ROM stock colours, `NameFont` in lobby/browser/HUD/podium |
+| c229692fa | lead | Guides, configuration, changelog and README text for names, looks and protocol v4 |
+| f1f43c6fd | lead | Merge of develop 213400802 |
+| 9f70b0660 | delivery | Guard fixes: `AppearancePalettes` keeps its own colour lines and takes plain colours plus an entry mask (no `level`/`game`/`net` types in `graphics`); `ActiveGhost` moves into the engine shell beside its only producer and consumer, so `sprites` gains no `net` edge and `net` stays dependency-free; NameFont fonts added to the native-image resource config; the tooling text scan treats `.gz` as binary |
+
+### Rejected approaches
+
+- **Fonts A–D** from the five-way mock-up (one GHZ still with the same fourteen names
+  per option, 2026-10-22): A Fusion 12px + Unifont fallback and B Unifont alone at
+  16px had no missing glyphs but taller, wider plates (B's 16-pixel line takes four
+  rows for what E fits in three); C Fusion 12px alone and D Fusion 10px alone each
+  left 12 glyphs missing (the Arabic, Devanagari and Thai samples). The user chose E,
+  Fusion 10px with Unifont fallback: the most compact option with no missing glyphs in
+  the sample (scripts that need shaping still draw unshaped).
+- **Per-tile palette override in `PaletteReplay`** (substitute colours per drawn tile at
+  replay time): rejected for batching cost; every recoloured sprite would break the
+  sprite batch. Private palette rows keep the ordinary indexed path and batch normally.
+- **Looks inside `RoomState`**: rejected because a 256-player roster with looks does not
+  fit the 64 KiB control frame. Looks travel per player (`Hello`, `PlayerLook`).
+- **Allowlisting `graphics -> net` / `sprites -> net` in the ArchUnit edge ratchet**
+  (delivery guard failure): rejected. `net` imports nothing outside itself, so moving
+  `PlayerAppearance` out of it was also rejected; the renderer takes plain colours instead.
+
+### Evidence
+
+The task directory `$SCRATCH/agent-tmp/claude/ta-names-delivery/` (outside the repo, not committed) holds the
+nine-player relay capture of the real S1 GHZ1 route (`full-run.mp4`,
+`nameplate-demo.mp4`, native stills in `run2/`, 3x enlargements in `x3/`) with
+international peer names and looks from a fixture-only patch (`fixture.patch`, not
+committed). Seen: coloured ghosts with matching coloured nameplates in Japanese,
+Vietnamese (stacked marks and dot below), Cyrillic, Greek, Hangul, Polish and Turkish;
+a stock look as the grey ghost with a white plate truncated with an ellipsis at 20 code
+points; the live player's own Sonic recoloured yellow; HUD rival rows and the lobby list
+in each player's colour; a Cyrillic room name in the browser and lobby. The HUD life icon
+keeps stock colours by design (line 0 is not recoloured). Not seen: podium rows. A run
+with an 80-second room window (`run3/`) showed the in-level `ROUND OVER  YOU 5/9` panel
+for about three video frames before the client faded to the lobby, before `RoundEnd`
+standings arrived. This branch did not change that flow; it is open, not attributed.
+
+Capture tool note: no first-run-prompt fix was needed in `TimeAttackCapacityVideoTool`.
+`TimeAttackVideoPeers` creates the live identity key before the scene opens (master
+admission), so the scene treats the profile as existing and never prompts; the tool
+also keys its live-finish check on the display name "Capture Player", so the seeded
+`displayName` must stay.
+
+### Validation
+
+- Plan: `python3 tools/testing/run_categories.py --base origin/develop` selected all ten
+  smoke categories, 3,597 classes in 72 batches plus guards (shared/unclassified paths:
+  fonts, licences, racing, shaders). `--preflight` passed (Java 25, Lua 5.4, PowerShell).
+- Smoke run `--run --max-minutes 150` at f1f43c6fd (2026-10-22 19:29–23:51 UTC; 93 min of
+  execution, the rest queue wait). Ordinary: 72/72 batches, 37,711 tests, 1 failure,
+  85 skips. Guards: 718 tests, 3 failures and 1 error.
+- Guard failures were all this branch's: `TestArchUnitRules` (45 frozen graphics-to-runtime
+  violations; new `graphics -> net` and `sprites -> net` edges),
+  `TestNativeImageResourceGuard` (fonts missing from `resource-config.json`) and
+  `TestBuildToolingGuard` (read `.bdf.gz` as text). They were fixed in 9f70b0660, then checked
+  with `-Pguards test` (718 tests, 0 failures) and focused `TestArchUnitRules`,
+  `TestNativeImageResourceGuard`, `TestBuildToolingGuard`, `TestAppearancePalettes`,
+  `TestLocalPlayerLook`, `TestGhostRendererLayerSelection`, `TestHostedRunController`,
+  `TestModApiSignatureSurface` and `TestMultiplayerRaceCoordinator` (226 tests, pass).
+- Ordinary failure `TestDirectConnectEndToEnd.fullRoundWithLatencyProxiedGuest[2]`
+  ("latency-proxied guest never rendered host ghost", 15-second wall-clock wait under a
+  loaded queue). It did not reproduce: the class alone and its exact 50-class batch passed
+  on origin/develop 213400802 and on 9f70b0660 (396/396 each). It is unattributed and was
+  not seen again.
+- The skips are opt-in measurements, captures, native GL, soak runs and missing mod jars,
+  plus 32 `TestInfiniteSonic` act assumptions and 11 pixel tests that need surfaceless EGL.
+  The pixel tests touched by the shader changes (`TestPresentationSpritePixels`,
+  `TestS3kSpecialStageSpritePixels`, `TestCaptureColourExpansion`) were rerun on 9f70b0660
+  with `-Dopenggf.headless.gl=surfaceless-egl` and passed with no skips.
+- Limits: bounded smoke selection, not the full suite; no trace sweep. Smoke coverage is of
+  f1f43c6fd. 9f70b0660 was checked by guards, the focused classes, the matched batch and
+  the EGL pixel tests.
