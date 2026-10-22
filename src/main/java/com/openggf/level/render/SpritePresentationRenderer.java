@@ -16,10 +16,15 @@ public final class SpritePresentationRenderer {
     public static SpritePresentation.HeadSatReplay headSatReplay() { return HEAD_SAT_REPLAY; }
 
     public static Frame prepare(GraphicsManager graphics, int cameraX, int cameraY, Runnable producer) {
+        return prepare(graphics, cameraX, cameraY, producer, null);
+    }
+
+    /** Internal caller-owned reuse hint; composition and native publication retain their existing order. */
+    public static Frame prepare(GraphicsManager graphics, int cameraX, int cameraY, Runnable producer, Frame previous) {
         return PlayerHeadPresentation.compose(SpritePresentation.prepare(graphics, cameraX, cameraY, producer, descriptor -> {
             PatternDesc desc = (PatternDesc) descriptor;
             return new Attributes(desc.getPaletteIndex(), desc.getHFlip(), desc.getVFlip(), desc.getPriority());
-        }), cameraX, cameraY);
+        }, previous), cameraX, cameraY);
     }
 
     public static void bindPatternBank(GraphicsManager graphics, int base, Pattern[] patterns) {
