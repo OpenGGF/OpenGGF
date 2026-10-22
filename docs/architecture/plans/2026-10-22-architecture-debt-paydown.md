@@ -400,3 +400,91 @@ diagnostic comparison, migrate stale consumers only when ownership evidence
 warrants it, and fix production recording at its owning boundary if reproduced.
 No duplicate broad selection is queued. Main remains unchanged at `213400802`;
 integration, push, diagnostic acknowledgment and accounted cleanup remain open.
+
+The fresh remediation child reproduced two narrow failures on the original
+runtime: the FBZ observer assertion and a new Slot diagnostic floor comparison
+(`latestFrame` 87 versus 86; logical frame 88 versus 87). Its bounded production
+correction defers live recording and consumed-frame floor capture until successful
+PLC publication, retaining immutable input/pacing and revalidating installation,
+controller, input source, level and providers. Pre-tick assembly stays immediate.
+Body/publication failures discard queued captures. Independent read-only review
+found no current-consumer blocker in the three-file correction. A coordinator
+reset cannot cancel a queue already detached for draining; current teardown marks
+its owner unavailable first, so callback admission rejects history mutation.
+Do not generalize that into a blanket cancellation guarantee.
+
+Lifecycle tests now distinguish retired windows from ready destination history,
+retain route/Saved2/floor/replay assertions, and prove stale handles cannot mutate
+the live world. FBZ observes the loop-installed reporter and waits for completed
+fresh assembly. The D01 ending is native LEVEL; its reveal retains a completion
+callback after title/fresh flags clear. Preserve composition/position/actor checks
+at their original point, then wait bounded neutral frames for the first admitted
+production controller before requiring its distinct frame-zero history. Later
+rescue, recording, full replay, credits and terminal Start assertions remain.
+Neither migration warrants a boss or general snapshot-reference repair.
+
+Corrected-source focused evidence now includes complete Portal/LRZ/Sanctuary
+Origin/Pedestal matrices (568/4/580/1,426 cases), all seven DEZ Incoming cases,
+60 runtime cases (Deferred Setup 3, PLC 30, Owner Lifetime 14, Input Source 13),
+one FBZ replay case and 15 architecture/API guards, all with zero failures,
+errors or skips. These counts combine unchanged passing methods with exact
+failed-method reruns; they overlap earlier checks and are not a new combined
+smoke pass. One attempt failed test compilation with no tests executed; two
+new harness errors were repaired without changing the reviewed production
+correction. Passing methods were not repeated solely for those repairs.
+
+Matched original-baseline verification at `23a18e2a2` passed eight invocations
+across five existing FBZ/Slot/LRZ/Sanctuary/DEZ methods with no skips; their test
+files were byte-identical to `575b3a62d`. Separate original-source DEZ recovery
+passed all eleven Cold Route cases and exposed four Incoming failures, now
+corrected. Nine short SSZ/SOZ gap checks also passed with no skips, but do not
+identify the original omitted cases.
+
+Three DEZ Solo cases pass; the Tails case fails initial controller construction
+because an escape object's captured parent is absent. Its exact original-baseline
+method passed one case with no failures, errors or skips; the test file matches
+`575b3a62d` and pre-enable stimuli are unchanged. Source comparison confirms an
+admission bypass: owner binding eagerly installs/captures before the loop checks
+transition gates, whereas the baseline installs after admission or recording.
+An exact current-source probe confirms the first installation at level frame
+62,359 is ready and unblocked. The failing same-owner reinstallation at 62,455
+is ready but rewind-blocked, non-rewindable, fading with pending completion and
+inactive for transition; its eager constructor immediately captures the absent
+parent. The exact Tails method also passed one case with no failures, errors or
+skips on reconciled destination `213400802`, after a clean build. Neither baseline
+reproduces the exception. This attributes the early capture to the campaign;
+upstream snapshot changes are not a reason for a boss-reference repair.
+
+Removing eager installation wholesale was considered and rejected: explicit
+initial mode-entry and completed-assembly callers rely on binding before an
+identity-scoped reporter, which cannot bootstrap an absent installation. Simple
+deletion would silently drop their boundaries. The bounded correction under
+verification instead rejects opportunistic object-world binding while the actual
+level body is inactive for transition. Preserve valid bootstrap, special-provider
+entry, stale-reporter rejection, frame-zero contracts and allowed cosmetic-fade
+completed-tick recording; do not add blanket fade/pending-exit guards. The probe
+is temporary and must be removed before commit. The original
+omitted three failures/three errors remain unattributed. Final scope, local
+commit, composition, adequate final coverage, integration, push and cleanup remain
+open; no green campaign delivery is claimed.
+
+The ROM-free inactive-binding control reproduced one intended failure before
+the five-line gate. With the gate, that control, an inactive-outgoing-level special
+provider control and the exact Tails route all passed: three tests, no failures,
+errors or skips. Temporary probes are removed. Independent incremental review
+found no blocker in production diff `c3b458d8`; reconciliation/deferred-boundary
+draining still precedes the gate, and only `LEVEL_FRAME` opportunistic binding
+is gated. The child is verifying 53 affected owner/entry/fresh-assembly/fade/
+portal/D01 cases and four architecture guards. Unchanged PLC/input code and the
+full matrix are not repeated solely for this gate.
+
+All seven DEZ Incoming cases are now green through three unchanged passing
+branches plus four exact reruns after the native-fade wait correction; the four
+reruns exercised original composition and later rescue/replay/terminal assertions.
+These remain bounded focused results. After the child's remaining checks, local
+commit and exact-source composition, one complete changed-source smoke/guard
+selection is planned to resolve the omitted-case gap. The dry-run still selects
+3,594 candidate classes, all ten smoke categories, 72 ordinary batches and separate
+guards. Expect roughly two hours of execution plus unknown queue delay; retain
+the 120-minute execution and ten-minute no-output limits. A bounded stop is
+incomplete validation, not a pass. No new broad request has been launched yet.
