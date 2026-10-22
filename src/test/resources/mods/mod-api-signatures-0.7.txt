@@ -2599,6 +2599,9 @@ FIELD com.openggf.game.GameId public,static,final com.openggf.game.GameId S2
 FIELD com.openggf.game.GameId public,static,final com.openggf.game.GameId S3K
 FIELD com.openggf.game.GameId public,static,final com.openggf.game.GameId STANDALONE
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode BONUS_STAGE
+FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode COMPETITION
+FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode COMPETITION_MENU
+FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode COMPETITION_RESULTS
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode CONTINUE_SCREEN
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode CREDITS_DEMO
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode CREDITS_TEXT
@@ -2611,6 +2614,7 @@ FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode LE
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode MASTER_TITLE_SCREEN
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode MOD_SCENE
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode NATIVE_MOD_NOTICE
+FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode OPTIONS
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode SPECIAL_STAGE
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode SPECIAL_STAGE_RESULTS
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode TITLE_CARD

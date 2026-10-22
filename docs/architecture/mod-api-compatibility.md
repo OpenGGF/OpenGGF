@@ -886,3 +886,12 @@ act and leader. The normalized mutable `0.7` pin and runtime candidate descripti
 are updated together. The release descriptor was reviewed and remains byte-identical
 at unpublished candidate `0.7.0`: ordinary signature regeneration must not edit
 its publication or branch policy. No published baseline changes.
+
+The October 22 native-mode host adds four `GameMode` enum values: `OPTIONS`,
+`COMPETITION_MENU`, `COMPETITION`, and `COMPETITION_RESULTS`. They are appended
+so existing enum positions remain stable. The internal menu, launch and native
+participant services are outside the creator surface. The exact mutable `0.7`
+pin gains only those four fields, checked against the compiled surface. The
+candidate remains `0.7.0`; descriptor topology/status and published baselines
+are unchanged. Competition activation still requires a connected native session,
+arena and results provider; the mode names alone expose no playable product.

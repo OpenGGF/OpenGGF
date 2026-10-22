@@ -5,6 +5,7 @@ import com.openggf.game.GameplayLaunchTeam;
 
 /** Internal host contract for a ROM-native menu outside the title provider. */
 public interface NativeMenuScreen {
+    default com.openggf.game.GameMode mode() { return com.openggf.game.GameMode.OPTIONS; }
     void initialize();
     void update(InputHandler input);
     void draw();
