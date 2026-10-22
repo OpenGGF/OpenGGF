@@ -69,3 +69,16 @@ Corrected qualification, all on `0197c5a5a` plus this commit's test-only deltas 
 - Revised input test with the fix: 02:05:15–02:05:44 UTC, 1 test / 0 failures / 0 errors / 0 skips.
 
 Death/reload products, combined smoke and integration were not rerun here. This requalifies the held-Right entry floor only; it is not act certification.
+
+
+## Cutscene floor contacts — 2026-10-22
+
+The [narrow native audit](../../audits/2026-10-07-s3k-parity-gap-verification.md#narrow-native-object-fidelity-follow-up--2026-10-22)
+records `loc_620AA` / `loc_620D8`, native stock contact positions and the exact
+first/second-contact contract. `TestHcz2CutsceneFloorContacts` drives actual
+`update()` through injected terrain, including optional background translation,
+negative/zero/positive/missing floor distances, the post-gravity signed gate,
+word overflow and both contacts. Fresh-instance restore replays the 42-pass
+window across both contacts. This is an independent cutscene component gate;
+actual button/bridge effects, whole-scene pixels and the existing route,
+preset/donor/roster obligations remain inherited gaps.

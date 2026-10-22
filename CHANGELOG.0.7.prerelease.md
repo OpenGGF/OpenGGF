@@ -273,7 +273,9 @@ Unreleased. The earlier development themes remain in
   deformation and cell animations load from the runtime ROM, with no copied asset
   fallback; panel publication retains its allocation-free path. The Slot Machine
   now rewinds completely, and its dedicated sprite uses the host mappings, pattern
-  banks and a fresh tail, so the goal fade shows the native Sonic roll tiles on
+  banks and a fresh tail. Reward rings and spikes retain native signed interpolation;
+  ring payouts play the ROM sparkle script with its retained animation cursor and
+  sprite priority. The goal fade shows the native Sonic roll tiles on
   Knuckles and keeps Tails' last body tiles; the configured donor art returns on exit.
   Its rotating layout is now displayed with the sprite table of its own frame,
   behind the player, cage and rewards, and the goal starts its wind-down on the
@@ -307,7 +309,11 @@ Unreleased. The earlier development themes remain in
   identity for leaders and followers. Sonic clears the rolling state; Tails
   and Knuckles retain it with the ROM's literal radii and position adjustment.
 
-- **S3K objects:** Monkey Dude retains five independent arm and hand objects,
+- **S3K objects:** GAME OVER and TIME OVER wait for the event-owned ROM PLC3
+  job before the cards initialize or GAME saves lives/continues; ordinary level
+  service and partial-work rewind retain the native queue ordering. Hydrocity 2
+  cutscene Knuckles probes actual terrain, retaining penetration and facing on
+  the first bounce and correcting only the second floor contact. Monkey Dude retains five independent arm and hand objects,
   their physical predecessor links, native dispatch and retirement order, and
   the body's explosion state before initialization. The complete graph restores
   and replays without creating duplicate children. Its body preserves the ROM

@@ -4,6 +4,9 @@ import com.openggf.game.DamageCause;
 import com.openggf.game.GameOverExit;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.rewind.snapshot.NemesisPlcQueueSnapshot;
+import com.openggf.game.save.SaveReason;
+import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.objects.S3kGameOverCardObjectInstance;
 import com.openggf.level.LevelManager;
@@ -20,11 +23,15 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mockStatic;
 
 /**
  * Sonic 3&amp;K game over and time over from a live AIZ1: {@code loc_12432}
@@ -80,6 +87,7 @@ class TestSonic3kGameOverFlowHeadless {
         assertEquals(AbstractGameOverCardObjectInstance.FRAME_GAME, word.getMappingFrame());
         assertEquals(AbstractGameOverCardObjectInstance.FRAME_OVER_GAME, over.getMappingFrame());
 
+        assertNativeArtGate(word, over);
         stepUntilConjoined(word, over);
         assertEquals(S3kGameOverCardObjectInstance.WAIT_FRAMES, word.getWaitTimer());
         assertNull(level.getGameOverExitRequested());
@@ -126,10 +134,100 @@ class TestSonic3kGameOverFlowHeadless {
         assertEquals(AbstractGameOverCardObjectInstance.FRAME_TIME, word.getMappingFrame());
         assertEquals(AbstractGameOverCardObjectInstance.FRAME_OVER_TIME, over.getMappingFrame());
 
+        assertNativeArtGate(word, over);
         stepUntilConjoined(word, over);
         fixture.stepFrame(false, false, false, false, true);
         assertTrue(level.isRespawnRequestedForRewind(), "Time_over_flag set: loc_2D680 restarts");
         assertNull(level.getGameOverExitRequested());
+    }
+
+    @Test
+    void pendingQueueAndCardReconstructionPreserveGameSaveOrdering() {
+        GameStateManager gameState = GameServices.gameState();
+        while (gameState.getLives() > 1) gameState.loseLife();
+        var plc = GameServices.level().getGameModule().getGameService(Sonic3kGameOverPlcService.class);
+        var queueOwner = GameServices.level().getGameModule().getGameService(Sonic3kLevelTitlePlcService.class);
+        assertNotNull(plc);
+        assertNotNull(queueOwner);
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var saves = new ArrayList<SavePoint>();
+        try (var requests = mockStatic(SessionSaveRequests.class)) {
+            requests.when(() -> SessionSaveRequests.requestCurrentSessionSave(SaveReason.LIVES_CONTINUES_SAVE))
+                    .thenAnswer(invocation -> {
+                        var word = cardAt(Sonic3kConstants.SST_SLOT_GAME_OVER_WORD);
+                        saves.add(new SavePoint(word.getRoutine(), word.getVdpX(),
+                                plc.isBusy(), gameState.getLives()));
+                        return null;
+                    });
+            killAndCross();
+            fixture.stepIdleFrames(5);
+            assertEquals(19, queueOwner.capture().activeEntry().remainingPatterns());
+            var pendingQueue = queueOwner.capture();
+            var pending = registry.capture();
+            assertEquals(pendingQueue, pending.get(queueOwner.key()));
+            assertEquals(1, pending.entries().values().stream()
+                    .filter(NemesisPlcQueueSnapshot.class::isInstance).count(),
+                    "the production rewind registry captures the shared Nemesis FIFO once");
+            assertTrue(saves.isEmpty());
+
+            fixture.stepIdleFrames(6);
+            assertEquals(1, queueOwner.capture().activeEntry().remainingPatterns());
+            assertEquals(0, cardAt(Sonic3kConstants.SST_SLOT_GAME_OVER_WORD).getRoutine());
+            assertTrue(saves.isEmpty());
+            fixture.stepIdleFrames(1);
+            var released = registry.capture();
+            assertEquals(List.of(new SavePoint(0, 0, false, 0)), saves,
+                    "GAME saves zero lives only after the native queue drains, before setup");
+            assertEquals(0x60, cardAt(Sonic3kConstants.SST_SLOT_GAME_OVER_WORD).getVdpX());
+
+            registry.restore(pending);
+            assertEquals(pendingQueue, queueOwner.capture());
+            assertEquals(0, cardAt(Sonic3kConstants.SST_SLOT_GAME_OVER_WORD).getRoutine());
+            assertFalse(cardAt(Sonic3kConstants.SST_SLOT_GAME_OVER_WORD).isDisplayedThisFrame());
+            assertEquals(1, saves.size(), "reconstruction must not request another save");
+            fixture.stepIdleFrames(7);
+            assertEquals(List.of(new SavePoint(0, 0, false, 0), new SavePoint(0, 0, false, 0)), saves);
+            assertEquals(0x60, cardAt(Sonic3kConstants.SST_SLOT_GAME_OVER_WORD).getVdpX());
+            assertEquals(0x1E0, cardAt(Sonic3kConstants.SST_SLOT_GAME_OVER_OVER).getVdpX());
+
+            registry.restore(released);
+            assertFalse(plc.isBusy());
+            assertEquals(2, cardAt(Sonic3kConstants.SST_SLOT_GAME_OVER_WORD).getRoutine());
+            fixture.stepIdleFrames(1);
+            assertEquals(0x70, cardAt(Sonic3kConstants.SST_SLOT_GAME_OVER_WORD).getVdpX());
+            assertEquals(2, saves.size(), "restoring an initialized card must not repeat its save");
+        }
+    }
+
+    private record SavePoint(int routine, int x, boolean pending, int lives) { }
+
+    private void assertNativeArtGate(S3kGameOverCardObjectInstance word,
+                                     S3kGameOverCardObjectInstance over) {
+        var plc = GameServices.level().getGameModule().getGameService(Sonic3kGameOverPlcService.class);
+        var queueOwner = GameServices.level().getGameModule().getGameService(Sonic3kLevelTitlePlcService.class);
+        assertNotNull(plc);
+        assertNotNull(queueOwner);
+        assertEquals(new NemesisPlcQueueSnapshot.Entry(0x191DE4, 0x79C, 34, 34),
+                queueOwner.capture().activeEntry(), "the death producer submitted and prepared ROM PLC3");
+        assertTrue(queueOwner.capture().queuedEntries().isEmpty());
+        for (int frame = 1; frame <= 12; frame++) {
+            assertTrue(plc.isBusy());
+            assertEquals(0, word.getRoutine());
+            assertEquals(0, over.getRoutine());
+            assertFalse(word.isDisplayedThisFrame());
+            assertFalse(over.isDisplayedThisFrame());
+            fixture.stepIdleFrames(1);
+            if (frame < 12) {
+                assertEquals(34 - frame * 3, queueOwner.capture().activeEntry().remainingPatterns());
+            }
+        }
+        assertFalse(plc.isBusy());
+        assertEquals(2, word.getRoutine());
+        assertEquals(2, over.getRoutine());
+        assertEquals(0x60, word.getVdpX());
+        assertEquals(0x1E0, over.getVdpX());
+        assertTrue(word.isDisplayedThisFrame());
+        assertTrue(over.isDisplayedThisFrame());
     }
 
     private void waitForPlayerControl() {

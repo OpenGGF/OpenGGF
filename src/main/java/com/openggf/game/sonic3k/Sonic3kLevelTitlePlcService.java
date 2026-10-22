@@ -18,15 +18,23 @@ import java.util.Objects;
 /**
  * The Nemesis FIFO drained by fresh-zone Level/loc_62CC and results loc_2E0C4 waits.
  * Assets are decoded by the ROM resource plan; this owner preserves the
- * independent readiness gate. It does not model later event-owned PLCs.
+ * independent readiness gate. Later event PLCs share this physical FIFO through
+ * their own service owner; this adapter captures that FIFO exactly once.
  */
 public final class Sonic3kLevelTitlePlcService
         implements PlcLifecycleService, RewindSnapshottable<NemesisPlcQueueSnapshot> {
     private final Rom rom;
-    private final NemesisPlcServiceQueue queue = new NemesisPlcServiceQueue();
+    private final NemesisPlcServiceQueue queue;
+    private final Sonic3kGameOverPlcService event;
 
     public Sonic3kLevelTitlePlcService(Rom rom) {
+        this(rom, new NemesisPlcServiceQueue(), null);
+    }
+
+    Sonic3kLevelTitlePlcService(Rom rom, NemesisPlcServiceQueue queue, Sonic3kGameOverPlcService event) {
         this.rom = Objects.requireNonNull(rom);
+        this.queue = Objects.requireNonNull(queue);
+        this.event = event;
     }
 
     /** Level: clears the queue, appends the primary level PLC, then the character PLC. */
@@ -75,20 +83,28 @@ public final class Sonic3kLevelTitlePlcService
         } else if (phase == PlcLifecyclePhase.SPECIAL_STAGE_RESULTS) {
             // VInt_1E -> Process_Nem_Queue_2: three patterns per prepared head.
             queue.servicePatterns(3);
+        } else if (event != null) {
+            // Keep the published lifecycle service identical to its rewind adapter.
+            // Exactly one owner services the shared FIFO for each native opportunity.
+            event.serviceVBlank(phase);
         }
     }
 
     @Override
     public boolean hasPreparationBoundary(PlcLifecyclePhase phase) {
         return phase == PlcLifecyclePhase.LEVEL_TITLE_CARD
-                || phase == PlcLifecyclePhase.SPECIAL_STAGE_RESULTS;
+                || phase == PlcLifecyclePhase.SPECIAL_STAGE_RESULTS
+                || (event != null && event.hasPreparationBoundary(phase));
     }
 
     @Override
     public void prepareAfterLoop(PlcLifecyclePhase phase) {
-        if (hasPreparationBoundary(phase)) {
+        if (phase == PlcLifecyclePhase.LEVEL_TITLE_CARD
+                || phase == PlcLifecyclePhase.SPECIAL_STAGE_RESULTS) {
             // loc_62CC and loc_2E0C4 call Process_Nem_Queue_Init after VBlank.
             queue.prepareHead();
+        } else if (event != null) {
+            event.prepareAfterLoop(phase);
         }
     }
 

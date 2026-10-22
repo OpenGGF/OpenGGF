@@ -1,5 +1,12 @@
 # Level test coverage backlog
 
+S3K narrow object fidelity (2026-10-22): the [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#cutscene-floor-contacts--2026-10-22)
+and [bonus matrix](../architecture/validation/levels/s3k-bonus-stage-transitions.md#slot-reward-animation-and-interpolation--2026-10-22)
+record independent terrain-contact and reward animation/interpolation/rewind
+checks. The [native audit](../architecture/audits/2026-10-07-s3k-parity-gap-verification.md#narrow-native-object-fidelity-follow-up--2026-10-22)
+records event PLC3 phase/readiness/save ordering and remaining presentation and
+route breadth. These local repairs do not certify either act or stage.
+
 S3K horizontal spring terrain gate (2026-10-16): focused object fixtures sample
 real collision tiles for positive/zero/negative foot distances and a slope with
 only one penetrating foot; absent services, empty terrain and underwater descent

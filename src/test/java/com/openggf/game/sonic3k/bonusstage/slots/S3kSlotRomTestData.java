@@ -148,6 +148,10 @@ public final class S3kSlotRomTestData {
         System.arraycopy(BUMPER_BOUNCE_FRAMES, 0, image, 0x4B622, BUMPER_BOUNCE_FRAMES.length);
         System.arraycopy(SPIKE_ANIMATION_FRAMES, 0, image, 0x4B656, SPIKE_ANIMATION_FRAMES.length);
         System.arraycopy(SLOT_WALL_COLOR_FRAMES, 0, image, 0x4B688, SLOT_WALL_COLOR_FRAMES.length);
+        byte[] ringSpin = {0, 2, 1, 0, 1, 2, 3, (byte) 0xFF};
+        byte[] ringSparkle = {0, 2, 5, 4, 5, 6, 7, (byte) 0xFC};
+        System.arraycopy(ringSpin, 0, image, 0x1AA66, ringSpin.length);
+        System.arraycopy(ringSparkle, 0, image, 0x1A992, ringSparkle.length);
         return image;
     }
 
