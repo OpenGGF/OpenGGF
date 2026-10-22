@@ -29,7 +29,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 
 | Rule | Committed allowance and unit | Target in that unit | Trigger |
 |------|------------------------------|---------------------|---------|
-| `low_level_layers_do_not_depend_on_runtime_layers` | 184 records | <=150 records | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
+| `low_level_layers_do_not_depend_on_runtime_layers` | 187 records | <=150 records | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 9 records | 0 records | Master-title ROM preview mapping moves behind provider contracts (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
 | `per_game_packages_do_not_cross_depend` | 14 member dependencies in 2 grouped slice records | <=20 member dependencies | Shared selected-slot conversion and payload validation extracted; remaining host donation and menu animation dependencies stay explicit |
 
@@ -39,6 +39,15 @@ declares the read and the per-game profiles perform it through
 `com.openggf.game.audio.SegaPcmRomReader`, which lives in the runtime layer and
 may depend on `com.openggf.data`. The rule description keeps its original
 baseline wording because the freeze store is keyed by that full text.
+
+2026-10-22: private audio-source typing replaces the null `AudioManager.rom`
+sentinel allowance with the actual `BaseAudioSource` ROM field, constructor
+parameter and accessor return type, plus the private same-source helper's ROM
+parameter. This reviewed identity migration changes 184 committed records to
+187; it does not demonstrate semantic debt growth or removal. The immutable
+tuple remains the single volatile publication, and the public
+`GameAudioProfile.loadSegaPcm(Object)` interface and game-owned ROM reads are
+unchanged.
 
 The historical cross-game count of 37 counted physical lines: 3 slice headers
 plus 34 member dependencies. The target uses <=20 **member dependencies**.
@@ -149,7 +158,7 @@ keys; they are not the accounting source. These counts do not evaluate the live
 production dependency graph. Update the matching documentation when committed
 records intentionally change.
 
-- `low_level_layers_do_not_depend_on_runtime_layers`: 184
+- `low_level_layers_do_not_depend_on_runtime_layers`: 187
 - `shared_layers_do_not_depend_on_game_specific_packages`: 9
 - `per_game_packages_do_not_cross_depend`: 2
 - `runtime_owned_framework_packages_do_not_access_global_service_roots`: 11
@@ -159,8 +168,9 @@ For cross-game slices, the same stored records contain **14 member
 dependencies** (16 physical lines including headers); the decay target above
 uses member dependencies. Low-level, framework-root, and registry-construction
 labels still say 209, 13, and 4 respectively. Correcting their published counts
-to 184, 11, and 2 records neither removes an allowance nor proves a live violation
-was resolved by this accounting change.
+to 184, 11, and 2 records neither removed an allowance nor proved a live violation
+was resolved by that accounting change. The later private audio-source identity
+migration above accounts for the current low-level allowance of 187 records.
 
 ## Package Cycle Ratchets
 

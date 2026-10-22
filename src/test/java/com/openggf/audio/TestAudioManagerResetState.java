@@ -740,11 +740,20 @@ public class TestAudioManagerResetState {
         Class<?> sourceType = publication.getType();
         assertTrue(sourceType.isRecord(),
                 "the base source publication must remain immutable");
+        assertTrue(Modifier.isPrivate(sourceType.getModifiers()),
+                "the source tuple is private manager state");
         assertEquals(List.of("rom", "profile", "loader", "dac", "config",
                         "generation"),
                 Arrays.stream(sourceType.getRecordComponents())
                         .map(RecordComponent::getName)
                         .toList());
+        assertEquals(List.of(Rom.class, GameAudioProfile.class,
+                        SmpsLoader.class, DacData.class,
+                        SmpsSequencerConfig.class, long.class),
+                Arrays.stream(sourceType.getRecordComponents())
+                        .map(RecordComponent::getType)
+                        .toList(),
+                "the published source must retain its dependency types");
 
         RecordingRom publishedRom = new RecordingRom((byte) 0x31);
         PcmSwitchingProfile profile = new PcmSwitchingProfile();
@@ -752,15 +761,11 @@ public class TestAudioManagerResetState {
         am.setRom(publishedRom);
 
         assertSame(publishedRom, baseSourceComponent("rom"));
-        Field frozenDependencyShape = AudioManager.class.getDeclaredField(
-                "rom");
-        frozenDependencyShape.setAccessible(true);
-        assertTrue(Modifier.isFinal(frozenDependencyShape.getModifiers()),
-                "the historical AudioManager -> Rom field may only remain "
-                        + "as a non-effective architecture sentinel");
-        assertFalse(Modifier.isVolatile(frozenDependencyShape.getModifiers()));
-        assertNull(frozenDependencyShape.get(am),
-                "the frozen dependency-shape sentinel must never publish ROM state");
+        assertSame(profile, baseSourceComponent("profile"));
+        assertSame(profile.loader, baseSourceComponent("loader"));
+        assertSame(profile.loader.loadDacData(), baseSourceComponent("dac"));
+        assertSame(profile.getSequencerConfig(), baseSourceComponent("config"));
+        assertTrue((long) baseSourceComponent("generation") > 0);
     }
 
     @Test
