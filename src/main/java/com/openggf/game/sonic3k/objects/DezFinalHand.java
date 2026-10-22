@@ -153,13 +153,8 @@ final class DezFinalHand extends DezFinalBossSprite implements RewindRecreatable
             updateDynamicSpawn(getX(), getY());
         }
         private void trackDyingSlot() {
-            ObjectInstance occupant = null;
-            for (var candidate : services().objectManager().getActiveObjects()) {
-                if (candidate instanceof AbstractObjectInstance object
-                        && !object.isDestroyed() && object.getSlotIndex() == parentSlot) {
-                    occupant = object; break;
-                }
-            }
+            var occupant = NativeObjectQueries.liveAtSlot(services().objectManager(), parentSlot,
+                    AbstractObjectInstance.class);
             writeX((occupant == null ? 0 : occupant.getX()) + dx);
             writeY((occupant == null ? 0 : occupant.getY()) - 0x10);
         }

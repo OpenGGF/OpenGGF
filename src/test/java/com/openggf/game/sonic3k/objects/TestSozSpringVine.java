@@ -129,4 +129,123 @@ class TestSozSpringVine {
         assertEquals(v.isCustomOutOfRange(0x2000),child.isCustomOutOfRange(0x2000));
         assertTrue(child.isCustomOutOfRange(0x2000));
     }
+    @Test void unchangedSurfaceSkipsGenerationAndDisplayWritesWithoutSuppressingCrossing() throws Exception {
+        var v=vine(0); var p=player(24);
+        var services=new StubObjectServices().withPlayerQuery(new ObjectPlayerQuery(() -> p,List::of))
+                .withIsolatedObjectManager();
+        v.setServices(services); services.objectManager().addDynamicObject(v); stand(v,p);
+        for(int i=0;i<4;i++) v.update(i,p);
+        var child=display(services);
+        byte[] settled=v.getSlopeData();
+        for(int i=4;i<260;i++) {
+            v.update(i,p);
+            assertFalse(rebuild(v), "unchanged pivot/tension must bypass the 96-byte generator");
+            assertFalse(distribute(child,settled,24,-0x100), "unchanged child inputs must bypass eight Y writes");
+            assertArrayEquals(settled,v.getSlopeData());
+        }
+        assertDisplaySurface(child,settled);
+        assertSame(v.getSolidParams(),v.getSolidParams());
+        byte[] external=v.getSlopeData(); external[12]^=0x7F;
+        assertArrayEquals(settled,v.getSlopeData(),"slope queries remain defensive");
+        p.setCentreX((short)(0x200+12)); v.update(260,p);
+        assertEquals(-0xEF0,p.getYSpeed()); assertTrue(p.getAir());
+    }
+
+    @Test void replacementDisplayInSavedSlotReceivesUnchangedSurface() throws Exception {
+        var v=vine(0); var p=player(24);
+        var services=new StubObjectServices().withPlayerQuery(new ObjectPlayerQuery(() -> p,List::of))
+                .withIsolatedObjectManager();
+        v.setServices(services); services.objectManager().addDynamicObject(v); stand(v,p);
+        for(int i=0;i<4;i++) v.update(i,p);
+        var previous=display(services); int slot=previous.getSlotIndex();
+        services.objectManager().removeDynamicObject(previous);
+        var replacement=new SozSpringVineObjectInstance.Display(previous.getSpawn());
+        replacement.setServices(services); services.objectManager().addDynamicObject(replacement);
+        assertEquals(slot,replacement.getSlotIndex());
+        v.update(4,p);
+        assertDisplaySurface(replacement,v.getSlopeData());
+        assertFalse(distribute(replacement,v.getSlopeData(),24,-0x100));
+    }
+
+    @Test void pendingDeletionDisplayStillReceivesOwnedSlotWrites() throws Exception {
+        var v=vine(0); var p=player(24);
+        var services=new StubObjectServices().withPlayerQuery(new ObjectPlayerQuery(() -> p,List::of))
+                .withIsolatedObjectManager();
+        v.setServices(services); services.objectManager().addDynamicObject(v); stand(v,p);
+        v.update(0,p);
+        var child=display(services);
+        child.setDestroyed(true);
+        v.update(1,p);
+        assertDisplaySurface(child,v.getSlopeData());
+    }
+
+    @Test void directSamplesKeepSignedBoundsAndAvoidDefensiveBulkCopies() throws Exception {
+        var v=org.mockito.Mockito.spy(vine(0));
+        var field=SozSpringVineObjectInstance.class.getDeclaredField("surface");
+        field.setAccessible(true);
+        byte[] nativeSurface=(byte[])field.get(v);
+        nativeSurface[1]=(byte)0x80;
+        nativeSurface[95]=(byte)0xFF;
+        for(int i=0;i<nativeSurface.length;i++) assertEquals((int)nativeSurface[i],v.sampleSlopeByte(i));
+        assertNull(v.sampleSlopeByte(-1));
+        assertNull(v.sampleSlopeByte(96));
+        assertNull(v.sampleSlopeByte(Integer.MAX_VALUE));
+        org.mockito.Mockito.verify(v,org.mockito.Mockito.never()).getSlopeData();
+        byte[] external=v.getSlopeData(); external[1]=0;
+        assertEquals(-128,v.sampleSlopeByte(1));
+        var state=v.captureRewindState();
+        nativeSurface[1]=0;
+        v.restoreRewindState(state);
+        assertEquals(-128,v.sampleSlopeByte(1));
+    }
+
+    @Test void rewindInvalidatesDerivedCachesButPivotZeroKeepsCapturedSurfaceAndChildYs() throws Exception {
+        var v=vine(0); var p=player(24);
+        var services=new StubObjectServices().withPlayerQuery(new ObjectPlayerQuery(() -> p,List::of))
+                .withIsolatedObjectManager();
+        v.setServices(services); services.objectManager().addDynamicObject(v); stand(v,p);
+        for(int i=0;i<4;i++) v.update(i,p);
+        var child=display(services); byte[] surface=v.getSlopeData();
+        var standing=v.captureRewindState(); var childState=child.captureRewindState();
+        p.setCentreX((short)(0x200-0x30)); v.update(4,p);
+        var zero=v.captureRewindState(); int[] childYs=displayYs(child).clone();
+        p.setCentreX((short)(0x200-0x30+48)); v.update(5,p);
+        assertFalse(java.util.Arrays.equals(surface,v.getSlopeData()));
+        v.restoreRewindState(zero); child.restoreRewindState(childState);
+        p.setCentreX((short)(0x200-0x30)); v.update(6,p);
+        assertFalse(rebuild(v));
+        assertArrayEquals(surface,v.getSlopeData()); assertArrayEquals(childYs,displayYs(child));
+        v.restoreRewindState(standing);
+        assertArrayEquals(surface,v.getSlopeData());
+        assertTrue(rebuild(v),"restore invalidates generation even when cached future inputs happened to match");
+        assertArrayEquals(surface,v.getSlopeData()); assertFalse(rebuild(v));
+        assertTrue(distribute(child,surface,24,-0x100),"child restore invalidates its derived input cache");
+        assertFalse(distribute(child,surface,24,-0x100));
+        assertDisplaySurface(child,surface);
+    }
+
+    private static SozSpringVineObjectInstance.Display display(StubObjectServices services) {
+        return services.objectManager().getActiveObjects().stream()
+                .filter(SozSpringVineObjectInstance.Display.class::isInstance)
+                .map(SozSpringVineObjectInstance.Display.class::cast).findFirst().orElseThrow();
+    }
+    // Invoke the actual work methods to observe deterministic suppression, without timing or counters in gameplay.
+    private static boolean rebuild(SozSpringVineObjectInstance vine) throws Exception {
+        var method=SozSpringVineObjectInstance.class.getDeclaredMethod("rebuildSurface");
+        method.setAccessible(true); return (boolean)method.invoke(vine);
+    }
+    private static boolean distribute(SozSpringVineObjectInstance.Display child,byte[] surface,
+                                      int pivot,int tension) throws Exception {
+        var method=SozSpringVineObjectInstance.Display.class.getDeclaredMethod(
+                "updateSurface",byte[].class,boolean.class,int.class,int.class);
+        method.setAccessible(true); return (boolean)method.invoke(child,surface,false,pivot,tension);
+    }
+    private static int[] displayYs(SozSpringVineObjectInstance.Display child) throws Exception {
+        var field=SozSpringVineObjectInstance.Display.class.getDeclaredField("ys");
+        field.setAccessible(true); return (int[])field.get(child);
+    }
+    private static void assertDisplaySurface(SozSpringVineObjectInstance.Display child,byte[] heights) throws Exception {
+        for(int i=0;i<8;i++) assertEquals((0x300+40+6-heights[6+i*12])&0xFFFF,displayYs(child)[i]);
+    }
+
 }

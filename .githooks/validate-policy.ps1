@@ -202,6 +202,11 @@ function Test-ContainsModApiAnnotation([string]$Text) {
 
 # Mirrors mod_api_surface_text in validate-policy.sh.
 function Get-ModApiSurfaceText([string]$Text) {
+    $python = Get-Command python3, python -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($null -eq $python) { Fail "Python 3 is required for Mod API record admission." }
+    $surface = $Text | & $python.Source (Join-Path $PSScriptRoot "mod_api_record_surface.py")
+    if ($LASTEXITCODE -eq 0) { return ($surface -join "`n") }
+    if ($LASTEXITCODE -ne 2) { Fail "Cannot inspect Java record declaration." }
     $inBlock = $false
     $kind = ""
     $typeName = ""

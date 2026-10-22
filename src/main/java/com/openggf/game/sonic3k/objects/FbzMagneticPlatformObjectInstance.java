@@ -147,7 +147,7 @@ public final class FbzMagneticPlatformObjectInstance extends AbstractObjectInsta
     @Override public SolidObjectParams getSolidParams() {
         // loc_3B462 calls SolidObjectFull_Offset with d2=$8 and d3=-9.
         // d3 shifts the collision anchor; continued riding still subtracts d2.
-        return new SolidObjectParams(0x23, 8, 8, 0, -9);
+        return SolidObjectParams.of(0x23, 8, 8, 0, -9);
     }
     @Override public boolean fullSolidBottomOverlapUsesCurrentYRadiusOnly(PlayableEntity player) {
         // SolidObjectFull_Offset_1P doubles d2 + live y_radius, unlike

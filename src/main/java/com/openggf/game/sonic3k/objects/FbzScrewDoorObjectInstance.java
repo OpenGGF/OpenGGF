@@ -98,7 +98,7 @@ public final class FbzScrewDoorObjectInstance extends AbstractObjectInstance
   boolean negativeDirection() { return negative; }
   public int getPriorityBucket() { return 5; }
   public SolidObjectParams getSolidParams() {
-    return new SolidObjectParams(width + 0xB, height, height + 1);
+    return SolidObjectParams.of(width + 0xB, height, height + 1);
   }
   public SolidRoutineProfile getSolidRoutineProfile() {
     return SolidRoutineProfile.fullSolid(false);

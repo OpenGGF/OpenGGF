@@ -13,6 +13,36 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSszDeathEggCutscene {
+    @Test void trailRefreshReadsPendingAndReplacementOwnedSlotOccupants() {
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(10, 0).build();
+        fixture.stepIdleFrames(2);
+        var manager = GameServices.level().getObjectManager();
+        var egg = new SszDeathEggSmallObjectInstance(new ObjectSpawn(0x200, 0xC68, 0, 0, 0, false, 0));
+        egg.setServices(TestEnvironment.objectServices());
+        manager.addDynamicObject(egg);
+        egg.update(1, null);
+        var trail = manager.activeObjectsOfType(SszDeathEggChild.class).get(2);
+        int parentSlot = egg.getSlotIndex();
+
+        egg.setDestroyed(true);
+        trail.update(1, null);
+        assertEquals(0x1E0, trail.getX(), "a pending deletion still exposes the parent's SST position");
+        assertEquals((egg.getY() + 0x1D) & 0xFFFF, trail.getY(),
+                "the trail reads the SST position after the parent's first movement, not its spawn Y");
+
+        manager.removeDynamicObject(egg);
+        trail.update(2, null);
+        assertEquals(0xFFE0, trail.getX(), "the cleared SST supplies zero until replacement");
+        assertEquals(0x1D, trail.getY());
+
+        var replacement = LrzBossPlatformObjectInstance.floating(0x300);
+        manager.addDynamicObjectAtSlot(replacement, parentSlot);
+        trail.update(3, null);
+        assertEquals(0x2E0, trail.getX(), "native slot pointers follow a replacement of any object type");
+        assertEquals(0x1D, trail.getY());
+        assertFalse(trail.isDestroyed(), "its animation owns deletion, independently of the original parent");
+    }
+
     @Test void cameraTrackerSuppliesSignedHalfDeltaToEggAndStationaryChildren() {
         HeadlessTestFixture.builder().withZoneAndAct(10, 0).build();
         var services = TestEnvironment.objectServices();

@@ -70,7 +70,7 @@ public final class FbzMissileLauncherCompanionObjectInstance
     return true;
   }
   public SolidObjectParams getSolidParams() {
-    return new SolidObjectParams(0x2B, 8, 9);
+    return SolidObjectParams.of(0x2B, 8, 9);
   }
   public SolidRoutineProfile getSolidRoutineProfile() {
     return SolidRoutineProfile.fullSolid(false);

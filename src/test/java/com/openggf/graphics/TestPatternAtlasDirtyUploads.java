@@ -125,6 +125,24 @@ public class TestPatternAtlasDirtyUploads {
     }
 
     @Test
+    void nestedRangeUploadsRemainDeferredUntilTheOuterOwnerEnds() {
+        Fixture f = newFixture(1024, 4);
+        f.atlas().beginBatch();
+        f.writePattern(0);
+        f.atlas().beginBatch();
+        f.writePattern(1);
+        f.atlas().endBatch();
+        assertEquals(0, f.sink().uploads.size(), "an inner renderer may not flush its owner's batch");
+        f.writePattern(2);
+        f.atlas().endBatch();
+        assertEquals(1, f.sink().begins);
+        assertEquals(3, f.sink().uploads.size());
+        for (var upload : f.sink().uploads) assertUploadMatchesExpected(f.expectedPage(), f.pageWidth(), upload);
+        f.atlas().endBatch();
+        assertEquals(1, f.sink().ends, "a redundant end remains harmless");
+    }
+
+    @Test
     public void scatteredTilesUploadIndividuallyUnderOneBind() {
         Fixture f = newFixture(1024, 60);
         int[] dirty = {0, 25, 59}; // non-contiguous slots in the page
