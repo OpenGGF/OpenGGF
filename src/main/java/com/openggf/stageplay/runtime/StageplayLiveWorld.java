@@ -434,24 +434,23 @@ public final class StageplayLiveWorld implements AutoCloseable {
     public void draw(Frame frame) { draw(frame,frame.camera()); }
     public void draw(Frame frame, CameraPose view) {
         if (last != frame || owned == null) throw new IllegalStateException("Resolve the live frame before drawing");
-        var camera = owned.getCamera(); var saved = camera.capture();
         var hidden = cast.stream().map(p -> p.sprite.isHidden()).toList();
         try {
             for (var p : cast) {
                 boolean visible = frame.actors().stream().anyMatch(a -> a.actorId().equals(p.actor.id()) && a.visible());
                 p.sprite.setHidden(p.sprite.isHidden() || !visible);
             }
-            camera.setX((short) Math.round(view.x())); camera.setY((short) Math.round(view.y()));
-            camera.setXCopy(camera.getX()); camera.setYCopy(camera.getY());
             // Native fresh-level palette reveal is load presentation. The shot's authored
             // transitions own its reveal; leave native timers/CRAM publication intact for replay.
-            if (owned.getLevelManager().getAnimatedPaletteManager() instanceof com.openggf.game.internal.LevelPaletteFadeOwner fade
-                    && fade.presentsLevelFadeFromBlack())
-                com.openggf.graphics.PaletteUploadPresentation.withoutDisplayedFade(EngineServices.current().graphics(), this::drawNativeFrame);
-            else drawNativeFrame();
+            com.openggf.level.LevelSpritePresentation.withCinematicCamera(owned.getLevelManager(),
+                    (int) Math.round(view.x()), (int) Math.round(view.y()), () -> {
+                        if (owned.getLevelManager().getAnimatedPaletteManager() instanceof com.openggf.game.internal.LevelPaletteFadeOwner fade
+                                && fade.presentsLevelFadeFromBlack())
+                            com.openggf.graphics.PaletteUploadPresentation.withoutDisplayedFade(EngineServices.current().graphics(), this::drawNativeFrame);
+                        else drawNativeFrame();
+                    });
         } finally {
             for (int i=0; i<cast.size(); i++) cast.get(i).sprite.setHidden(hidden.get(i));
-            camera.restore(saved, camera.getFocusedSprite());
         }
     }
 

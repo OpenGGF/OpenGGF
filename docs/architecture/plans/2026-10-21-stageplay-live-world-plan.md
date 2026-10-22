@@ -559,3 +559,185 @@ identical native samples while reflecting the added authored music cues. Preserv
 the former review set under a clearly superseded external subdirectory; leave
 root-created MP4s/scripts/layout review intact. Root may merge the frozen commit
 and begin combined ordinary smoke independently while this worktree captures.
+
+### Final support handoff — capture completion
+
+Frozen engine/example source is `bd4feec2f17b883766145bf01e7f27ec6d699a51`;
+root received it before captures and is integrating/validating independently.
+No further engine, test, schema or example-source edits followed that freeze.
+The build-only queued `-Dmse=off -DskipTests package -B` passed (44.509 s).
+
+All four revised `-review.mkv`, `-final.jsonl` and `-qa.png` outputs are published
+at their original names under `$STAGEPLAY_OUT`. The twelve former artifacts are
+retained under `$STAGEPLAY_OUT/superseded-before-bd4feec/`. Root-created viewing
+MP4s, scripts, metadata and layout review remain untouched. Root owns refreshing
+those views, complete moving/audio review, the edited promo and Media archive.
+
+Every one of the **4,860** regenerated `sample` values is exactly equal to the
+corresponding preceding sample, including native world clocks, actors, objects,
+rings, events and resolved cameras. The added top-level authored music cues are
+the only JSONL differences (1/1/1/5 cues). Thus no native outcome was substituted
+or moved by the presentation repairs. All four movies passed complete
+`ffmpeg -v error -xerror -i MOVIE -f null -` decoding and exact `ffprobe`
+frame/dimension/audio inspection: 640×448, 60 fps, 480/540/240/3600 video frames,
+48 kHz stereo FLAC. Half-second decoded PCM windows at each shot's first 0.1 s
+were nonzero (RMS 934–2175; peaks 3969–7858). This is synthesis evidence, not a
+claim of complete listening review.
+
+All four QA sheets were inspected. First-frame terrain is visible, HUD glyphs
+are absent, and actor/terrain/palette return remains intact. The film's black
+frame at 960 is its authored FADE_BLACK cover, not an uninitialized level.
+Short-sheet frame selections are relay 0/35/100/190/374/479, air
+0/95/115/300/360/440, rings 0/15/29/31/119/239. The film sheet uses frames
+0..3480 at stride 120 plus 3599. Contact sheets supplement the pixel regressions;
+root still owns the complete moving creative review.
+
+No live job remains in this worktree. Its branch remains local and retained for
+root; no main branch, external repository or push was touched. This final
+checkpoint is documentation only and does not change the frozen tested source.
+The five baseline guard identities above remain reported; combined ordinary
+smoke/integration/release claims belong to root's completed runs, not this slice.
+
+### Ring-spill vertical-camera review — 2026-10-22
+
+The user spotted the vertical defect in the delivered preview from frozen
+`bd4feec2f`; root then reproduced grounded Tails/skid dust floating above absent
+terrain at recovery and the final landing (frames 120/239).
+This follow-up is isolated in the retained feature worktree at `154cb7fb8`;
+root's unchanged combined smoke continues independently. Revision-5 media is
+frozen. Root prepared `revision-6` for corrected captures and owns promo/archive.
+
+Hypothesis: LIVE draw changes camera X/Y and sprite projection but foreground
+VScroll/mask still consumes ParallaxManager output computed for native focus.
+The camera centres and native simulation can both be correct while those two
+coordinate spaces disagree. DEZ's background is intentionally stationary:
+`SwScrlS3kDez` documents and implements zero background scroll. Do not fit the
+screenplay, force physics, retick native scroll handlers or turn that backdrop
+into a foreground plane to hide the fault.
+
+A ROM/EGL pixel regression uses the existing ring-run source at two independent
+native grounded contacts. It checks decoded foreground art below actual native
+feet and the real GPU priority mask against ROM tile/pattern/palette pixels,
+with multiple directed vertical offsets. It also checks full camera register,
+native scroll/presentation preservation and backward replay after repeated draws.
+The exact focused selector is `TestStageplayCinematicCameraRendering`, with
+Java25/Lua5.4, absolute original S3K path, explicit surfaceless EGL and launcher/
+display environment removed. The first floor oracle incorrectly included an
+off-screen performer and assumed visible floor art beneath every grounded actor;
+it failed its own positive control and was not renderer proof. The corrected test includes the
+former camera-only draw as a negative control. That path demonstrably disagrees
+with the decoded world-coordinate priority mask at both contacts. The first
+candidate run passed all frame-239 obligations; frame 120 reached/passed the
+floor comparison, then exposed over-strict oracles: Sonic was in native
+post-hurt blinking, and the ROM foreground is transparent directly beneath
+Tails' footprint at frame 120. The oracle now requires decoded art at a native
+grounded contact and a visible grounded body in each view, compares every decoded
+contact-art pixel, and checks the whole viewport's priority mask. It neither
+invents art beyond the ROM's visible ledge nor overrides native blinking.
+The final focused rerun passed.
+
+Implementation: an internal LevelSpritePresentation bridge scopes the camera and
+a private immutable LevelScrollPresentation. Rebase foreground scalar/active
+override Y and packed foreground HScroll words by the director/native delta;
+retain shake and deformation. Column scroll values are deltas, not another
+absolute origin. The visible foreground and its GPU priority mask consume the
+same sample. Restore camera registers/copies and prior draw scroll/render mode
+in finally, including callback failure; discard aborted queued drawing.
+Published/pending SAT, scroll, CRAM, native parallax owners and gameplay stepping
+are untouched. Advanced render policy resolves under the native camera before
+projection; retain an owned copy because controller results are double-buffered.
+
+Bound: background registers, line/column deformation and effect phase remain
+anchored to the native gameplay camera in every zone. In AIZ a manual pan or
+secondary-actor follow reframes terrain and sprites against that native-phase
+backdrop. This is intentional for this bounded correction, not arbitrary-view
+parallax recomputation; no background handler is reticked or inferred from one
+sample. DEZ's deliberately stationary background stays stationary. Script,
+physics, native camera following and movement constants are unchanged.
+
+The bounded verification selector adds TestLevelSpritePresentation,
+TestLevelRendererBackgroundViewport, TestStageplayLiveWorldRendering,
+TestStageplayLiveWorldRom, TestStageplayLiveDemosRom, TestModApiSignatureSurface,
+TestModApiPinPolicy and TestArchitecturalSourceGuard. No ordinary broad run or
+guard-policy/pin relaxation is requested. Root owns combined smoke attribution.
+
+Source-freeze verification: the eight companion classes passed **122 tests,
+0 failures/errors/skips** on the final production patch (the combined invocation
+was red only for the contact-oracle assumption subsequently corrected). The
+final exact pixel selector passed **2 tests, 0 failures/errors/skips** in 27.850 s
+Maven execution after 500 s queue wait. No production source changed between
+those checks. API signatures/pins and 72 architectural-source guards passed;
+the new bridge is internal and does not change the Mod API descriptor/version.
+
+Reproducible commands, from this worktree with Java25/Lua5.4 and original ROM:
+
+```sh
+env -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u MAVEN_ARGS -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$STAGEPLAY_ROM" \
+  '-Dtest=TestStageplayCinematicCameraRendering,TestLevelSpritePresentation,TestLevelRendererBackgroundViewport,TestStageplayLiveWorldRendering,TestStageplayLiveWorldRom,TestStageplayLiveDemosRom,TestModApiSignatureSurface,TestModApiPinPolicy,TestArchitecturalSourceGuard' test -B
+# After the test-only contact oracle refinements, rerun that exact class:
+env -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u MAVEN_ARGS -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$STAGEPLAY_ROM" \
+  '-Dtest=TestStageplayCinematicCameraRendering' test -B
+```
+
+Cause/evidence: native/director/foreground Y is 2228/2193/2228 at frame 120,
+and 2316/2547/2316 at frame 239. The old camera-only path produces **1914/8689**
+wrong priority-mask samples. The corrected path has zero mismatches across
+**104280** viewport samples over six views (Y offsets 0/-32/+32 paired with X
+offsets 0/-16/+16). Frame 120 Sonic's 33 contact-art pixels all match;
+Tails shows 205–206 body pixels but zero decoded art below his footprint.
+Both of his native floor sensors report tile 255, distance 0: a native
+collision/art distinction, not missing renderer output to fabricate.
+Frame 239 Tails has **231/231** floor pixels and **201** body pixels at every
+offset. Camera copies/registers, native parallax, pending/published SAT/scroll/
+CRAM remain equal after repeated draws and an exception with queued commands.
+Ordinary gameplay pictures remain byte-identical, and backward seek/replay
+reproduces the same frame and actor/terrain picture.
+
+Remaining at freeze: commit this bounded source/test/plan change locally; notify
+root before rendering; package without tests; regenerate four MKVs/JSONL/QA
+images under revision-6, compare state with revision-5, decode and inspect them.
+Revision-5, root-owned scripts, MP4s, promo and external repositories stay owned
+by root. No ordinary broad run, integration or push in this worktree.
+
+### Camera correction — rendered handoff
+
+Frozen runtime/test source is **efa7875f8c60885dad0458a2cfbe77c0cd49a4de**.
+The build-only queued `-Dmse=off -DskipTests package -B` passed in 43.689 s;
+the packaged `version.properties` reports `app.commit=efa7875f8`,
+`app.dirty=false`, built with Java25. Jar SHA-256:
+`2c93d2a1bd3a1d19f63ab4b372e9f964399593260582e2aec1af4125b6f396cb`.
+No runtime/test/example changes followed the freeze. This checkpoint is prose only.
+
+Root's unchanged revision-6 `capture.py` generated all four takes with this jar,
+original S3K ROM and a fresh external subdirectory. Canonical compilation matched
+all four retained scenes. After successful completion, the eight MKV/JSONL files
+were moved to the requested revision-6 top-level names; identical temporary source
+copies were removed. Four newly labelled `-qa.png` sheets complete the twelve
+requested outputs. No revision-5 or root-owned input/script/MP4 was overwritten.
+
+Every one of **4860 parsed JSONL records** equals revision-5, including authored
+camera/audio cues and all sampled native actors, objects, rings/events and clocks.
+Raw bytes differ only in JSON object key ordering; do not mistake map iteration
+order for changed native behavior. All four MKVs passed complete
+`ffmpeg -v error -xerror -i MOVIE -f null -` decoding and `ffprobe -count_frames`
+checks: 640×448, 60 fps, 480/540/240/3600 frames respectively, 48 kHz stereo FLAC.
+The QA extraction uses `select` plus nearest-neighbour scale to 320×224 and
+`-fps_mode passthrough`, with labelled native frame numbers. Short sheets select
+relay 0/35/100/190/374/479, air 0/95/115/300/360/440, rings 0/15/29/31/120/239;
+the film selects 0..3480 at stride 120 plus 3599. All four sheets were inspected.
+The frame-239 landing now meets its rendered foreground floor; frame-120's
+native collision/art distinction above remains visible. Frame 960 is authored
+black transition cover. Background anchoring remains as bounded above.
+
+The retained package and shared StageplayLiveWorld draw path supply capture,
+worker preview and registered playback; no Editor/Media repository or creator
+API surface changed. Root owns rebuilding external consumers, moving review,
+promo/MP4 replacement, archive and integrated validation/push. This worktree has
+no remaining live job. Temporary consumed diagnostics/QA helper are removed;
+branch/worktree and packaged build are retained for root.
