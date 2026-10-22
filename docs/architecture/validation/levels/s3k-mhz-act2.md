@@ -1193,3 +1193,21 @@ baseline/current attribution remain open. This does not qualify Act2/FBZ or the
 separate LevelBound/camera prelude and slide sound obligations. The
 [dated record](../../plans/2026-10-13-s3k-playable-completion.md#root-knuckles-slide-collision-and-landing-contract--2026-10-22)
 contains native pins, exact command and the fixture correction rationale.
+
+
+### Remaining glide-dispatch prelude and slide sound source audit — 2026-10-22
+
+Read-only pinned-source review after8272 shows remaining camera/boundary prelude
+omissions in states3–5; states4/5 also lack the native pre-handler velocity move.
+State3 already moves locally, so a future common prelude must remove that local
+move. State4's separate post-climb top/reverse clamps stay. State1 omits the speed
+owner's camera tail, while state2 has one existing later tail but lacks its separate
+native pre-boundary tail. A blanket once-per-frame easing does not close cadence.
+
+Native unsigned word bias is unclamped (97→95,95→97); existing signed/clamped
+camera easing is insufficient. GroundSlide is S3K-only after successful second
+floor correction, low Level_frame_counter&7==0; KiS2 omits it. Current completed
+component462 pass does not certify those unauthored gaps. The
+[full source contract](../../plans/2026-10-13-s3k-playable-completion.md#root-glide-dispatch-prelude-and-slide-audio-source-contract--2026-10-22)
+records exact native pins/labels, existing per-state owners and proposed semantic
+cue/actor/registered controls. No new route or source change, no37752 cause claim.
