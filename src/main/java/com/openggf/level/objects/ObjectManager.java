@@ -1708,6 +1708,16 @@ public class ObjectManager {
             GraphicsManager gfx, List<com.openggf.level.render.SpriteSlotEmission> external) {
         if (entries.isEmpty() && external.isEmpty()) return;
 
+        // Native queue entries already resolve reserved ring slots through the live resolver.
+        // Legacy anchoring cannot emit those slots twice or sort an explicit FIFO by SST.
+        var nativeSlots = new java.util.HashSet<Integer>();
+        for (var cachedBucket : unifiedBuckets) {
+            for (var entry : cachedBucket) if (entry.nativeSubmission()) nativeSlots.add(entry.slot());
+        }
+        if (!nativeSlots.isEmpty()) {
+            external = external.stream().filter(emission -> !nativeSlots.contains(emission.slot())).toList();
+        }
+
         enableVerticalWrapIfNeeded();
         try {
             renderCommands.clear();
@@ -1720,7 +1730,9 @@ public class ObjectManager {
                         ? entries.get(collectingSat ? entries.size() - 1 - ordinary : ordinary) : null;
                 var next = extra < external.size()
                         ? external.get(collectingSat ? extra : external.size() - 1 - extra) : null;
-                if (next != null && (entry == null || (collectingSat ? next.slot() < entry.slot() : next.slot() > entry.slot()))) {
+                if (next != null && (entry == null || (collectingSat
+                        ? !entry.nativeSubmission() && next.slot() < entry.slot()
+                        : entry.nativeSubmission() || next.slot() > entry.slot()))) {
                     if (gfx.getCurrentSpriteTileOcclusionPaletteMask() != next.tileOcclusionPaletteMask()) {
                         gfx.flushPatternBatch();
                         gfx.setCurrentSpriteTileOcclusionPaletteMask(next.tileOcclusionPaletteMask());
@@ -1731,6 +1743,9 @@ public class ObjectManager {
                     continue;
                 }
                 ordinary++;
+                // A queued pointer owns this slot's presentation even when conversion/reuse
+                // changes the current object's inferred bucket. Preserve every native repeat.
+                if (!entry.nativeSubmission() && nativeSlots.contains(entry.slot())) continue;
                 objectCallbacks.run(entry.instance(), () -> {
                     int mask = ObjectRenderParts.tileOcclusionPaletteMask(entry);
                     if (gfx.getCurrentSpriteTileOcclusionPaletteMask() != mask) {

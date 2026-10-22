@@ -67,6 +67,46 @@ class TestRingDrawEmission {
         assertEquals(10, rings.getSparkleStartFrame(placed));
     }
 
+    @Test void nativePlacedRingTopEdgeDistinguishesShippedMaskOrderAndScreenWrap() {
+        var above = new RingSpawn(64, -4);
+        for (SonicGame game : List.of(SonicGame.SONIC_2, SonicGame.SONIC_3K)) {
+            RingManager manager = managerFor(game, List.of(above));
+            var frame = prepare(() -> RingDrawInternalAccess.drawPlaced(manager, 0, 0, 0xFFFF));
+            assertEquals(game == SonicGame.SONIC_3K, !frame.tiles().isEmpty(),
+                    "S2 FixBugs=0 masks before +8; S3K adds8 before Screen_Y_wrap_value");
+        }
+        RingManager wrapped = managerFor(SonicGame.SONIC_3K, List.of(new RingSpawn(64, 2044)));
+        assertTrue(prepare(() -> RingDrawInternalAccess.drawPlaced(wrapped, 0, 0, 0xFFFF)).tiles().isEmpty());
+        assertFalse(prepare(() -> RingDrawInternalAccess.drawPlaced(wrapped, 0, 0, 0x7FF)).tiles().isEmpty(),
+                "the native wrap mask relocates admitted art as well as testing visibility");
+    }
+
+    @Test void verticallyCulledStageListDoesNotConsumeTheHardwareTableBeforeVisibleObjects() {
+        var remote = new java.util.ArrayList<RingSpawn>();
+        for (int i = 0; i < 81; i++) remote.add(new RingSpawn(32 + i * 2, 512));
+        for (SonicGame game : List.of(SonicGame.SONIC_2, SonicGame.SONIC_3K)) {
+            RingManager manager = managerFor(game, remote);
+            var frame = prepare(() -> {
+                RingDrawInternalAccess.drawPlaced(manager, 0, 0, 0xFFFF);
+                graphics.submitSpriteSatPiece(new com.openggf.level.render.SpritePieceRenderer.PreparedPiece(
+                        144, 64, 1, 1, 200, 0, 1, false, false, false, false,
+                        SpriteMaskReplayRole.NORMAL, 0, 1, 0, 1, null));
+            });
+            assertEquals(List.of(144f), frame.tiles().stream().map(SpritePresentation.Tile::x).toList(),
+                    "BuildRings/Render_Rings culls before writing SAT, independently of VDP vertical evaluation");
+        }
+    }
+
+    private RingManager managerFor(SonicGame game, List<RingSpawn> spawns) {
+        TestEnvironment.configureGameModuleFixture(game);
+        var sheet = new RingSpriteSheet(new Pattern[]{new Pattern()}, List.of(
+                new RingFrame(List.of(new RingFramePiece(0, 0, 1, 1, 0, false, false, 0)))), 1, 8, 1, 0);
+        var manager = new RingManager(spawns, sheet, null, null, null);
+        manager.ensurePatternsCached(graphics, 200);
+        manager.reset(0);
+        return manager;
+    }
+
     private SpritePresentation.Frame prepare(Runnable producer) {
         return SpritePresentationRenderer.prepare(graphics, 0, 0, () -> {
             SpriteSatInternalAccess.beginCollection(graphics, SpriteSatMaskPostProcessor.Raster.h40(0, 0, 224));

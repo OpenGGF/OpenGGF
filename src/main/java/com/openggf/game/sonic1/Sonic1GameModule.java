@@ -85,6 +85,8 @@ public class Sonic1GameModule implements GameModule, com.openggf.game.internal.S
         return PlacedRings.OBJECT_SLOTS;
     }
 
+    @Override public boolean lostRingHighPriority() { return false; }
+
 
     private static final Sonic1ObjectPlacementEncoding OBJECT_PLACEMENT_ENCODING =
             new Sonic1ObjectPlacementEncoding();

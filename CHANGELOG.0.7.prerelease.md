@@ -31,7 +31,9 @@ Unreleased. The earlier development themes remain in
   Bomb fuses and fragments submit at their native routine calls, including the
   shipped repeated submission on expiry. Unported objects retain their existing
   render path. Rewind also retains empty or rejected native passes, and converted
-  sources can exclude inferred drawing independently of accepted admissions.
+  sources can exclude inferred drawing independently of accepted admissions. Attracted
+  rings submit at their actual object slots and retain native conversion art,
+  priority and independent visibility through rewind.
 
 - **Sonic 1 level entry:** background scrolling starts from each level or credits
   demo's final camera, and lamppost returns retain the original background camera

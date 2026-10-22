@@ -36,6 +36,48 @@ class TestNativeSpriteSatGameplay {
         check(RomTestUtils.ensureSonic3kRomAvailable().toPath(), true);
     }
 
+    @Test @RequiresRom(SonicGame.SONIC_3K)
+    void sonic3kQueuedAttractedRingKeepsRingVisibilityAndAdmissionThroughRealGameplay() throws Exception {
+        assumeTrue(PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");
+        var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, null, null);
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 0, 0, settings);
+            session.step(null); session.step(null);
+            var level = GameServices.level();
+            var player = GameServices.sprites().getMainPlayable();
+            var rings = level.getRingManager();
+            var camera = GameServices.camera();
+            var source = new com.openggf.level.rings.RingSpawn(player.getCentreX() + 40, player.getCentreY());
+            rings.resyncSpawnList(List.of(source));
+            rings.reset(camera.getXWithShake());
+            rings.update(camera.getXWithShake(), null, level.getFrameCounter());
+            player.giveShield(com.openggf.game.ShieldType.LIGHTNING);
+            rings.attractStageRings(player);
+            assertEquals(1, rings.capture().attractedRings().length, "actual shield touch creates a reserved SST ring");
+            session.step(null);
+            var attracted = rings.capture().attractedRings();
+            assertEquals(1, attracted.length);
+            assertTrue(com.openggf.level.objects.NativeSpriteSubmissionAccess.admissions(level.getObjectManager())
+                    .stream().anyMatch(call -> call.slot() == attracted[0].objectSlotIndex()),
+                    "actual slot dispatch submits Draw_Sprite rather than inferred render fallback");
+            var renderer = level.spritePresentationRenderer();
+            var picture = renderer.captureSceneSpriteTable(GameServices.sprites());
+            var art = picture.tiles().stream().filter(tile -> tile.layer() == SpritePresentation.Layer.RINGS).toList();
+            assertFalse(art.isEmpty());
+            assertTrue(art.stream().allMatch(SpritePresentation.Tile::priority));
+            renderer.spriteTables.prepare(picture); renderer.spriteTables.publish();
+            var blank = renderOptions(new LevelManager.LevelRenderOptions(false, false, false, false, false, false, false));
+            var objectsOnly = renderOptions(new LevelManager.LevelRenderOptions(false, true, false, false, false, false, false));
+            var ringsOnly = renderOptions(new LevelManager.LevelRenderOptions(false, false, true, false, false, false, false));
+            int x = attracted[0].x() - camera.getXWithShake() - 8;
+            int y = attracted[0].y() - camera.getYWithShake() - 8;
+            assertEquals(0, differences(objectsOnly, blank, x, y, 16, 16));
+            assertTrue(differences(ringsOnly, blank, x, y, 16, 16) > 0,
+                    "real queued attracted art survives objects-off and disappears with rings-off");
+            assertEquals(picture, renderer.captureSceneSpriteTable(GameServices.sprites()));
+        }
+    }
+
     private void check(Path rom, boolean placedListBeforeBuckets) throws Exception {
         assumeTrue(PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, null, null);

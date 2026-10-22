@@ -1087,6 +1087,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     public void initRings() {
         ringManager = LevelManagerInitializationSupport.initializeRings(this, touchResponseTable,
                 audioManager, camera, graphicsManager, transitions.bigRingReturnRingStatusTable());
+        com.openggf.level.rings.RingDrawInternalAccess.bindNativeSlots(ringManager);
     }
 
     /**
@@ -2608,6 +2609,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             return;
         }
         objectManager.resyncSpawnList(level.getObjects());
+        com.openggf.level.rings.RingDrawInternalAccess.bindNativeSlots(ringManager);
     }
 
     public void resyncRingSpawnListFromLevel() {
@@ -3180,6 +3182,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                     objectManager.reset(camera.getX(), persistentRespawnState);
                 }
             }
+            com.openggf.level.rings.RingDrawInternalAccess.bindNativeSlots(ringManager);
             // ROM parity: only when Get_LevelSizeStart had to clamp the camera
             // Y down to Camera_max_Y_pos does the immediately-following
             // DeformBgLayer call advance Camera_Y_pos past maxY. Levels whose
@@ -4137,6 +4140,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             ringManager.reset(cameraX);
         }
         ringManager.ensurePatternsCached(graphicsManager, level.getPatternCount());
+        com.openggf.level.rings.RingDrawInternalAccess.bindNativeSlots(ringManager);
         var gameplayMode = SessionManager.getCurrentGameplayMode();
         if (gameplayMode != null) {
             gameplayMode.registerRingAdapter(ringManager);

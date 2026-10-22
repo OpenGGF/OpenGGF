@@ -7,9 +7,12 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.RingRules;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.NativeSpriteSubmissionAccess;
+import com.openggf.level.objects.NativeSpriteSubmissionSource;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -40,7 +43,7 @@ import java.util.List;
  * listener path.
  */
 public class LostRingObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, RewindRecreatable, NativeSpriteSubmissionSource {
 
     /** ROM Obj37 collision_flags while uncollected: $40 SPECIAL + size index $07. */
     public static final int LOST_RING_COLLISION_FLAGS = 0x47;
@@ -74,6 +77,12 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     private boolean independentLifetime;
     private int independentInitialLifetime;
     private int pickupDelayTicks;
+    private int displayPriorityBucket = 3;
+    private int retainedMappingFrame = -1;
+    private boolean retainedArtPriority;
+    private boolean hasRetainedArtPriority;
+    private boolean directSharedSpillFrame;
+    private boolean nativeDisplaySubmissions;
 
     /**
      * Shared spin owner; the displayed frame = owner.frame() + phaseOffset. This is
@@ -152,6 +161,22 @@ public class LostRingObjectInstance extends AbstractObjectInstance
                 xPixel, yPixel, xVel, yVel, phaseOffset, 0xFF, spillAnimation);
         ring.xSubpixel = (xPixel << 8) | ((xFraction >>> 8) & 0xFF);
         ring.ySubpixel = (yPixel << 8) | ((yFraction >>> 8) & 0xFF);
+        return ring;
+    }
+
+    /** Internal conversion shape: native routine2 skips init and retains the SST render words. */
+    static LostRingObjectInstance fromAttractedRing(
+            int xPixel, int yPixel, int xFraction, int yFraction,
+            int xVel, int yVel, int phaseOffset, SpillAnimationState spillAnimation,
+            LostRingRenderState renderState) {
+        LostRingObjectInstance ring = fromAttractedRing(xPixel, yPixel, xFraction, yFraction,
+                xVel, yVel, phaseOffset, spillAnimation);
+        ring.displayPriorityBucket = renderState.priorityBucket();
+        ring.retainedMappingFrame = renderState.mappingFrame();
+        ring.retainedArtPriority = renderState.highPriority();
+        ring.hasRetainedArtPriority = true;
+        ring.directSharedSpillFrame = true;
+        ring.nativeDisplaySubmissions = true;
         return ring;
     }
 
@@ -371,9 +396,13 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         if (deferFirstPhysicsUpdate) {
             deferFirstPhysicsUpdate = false;
             refreshRomRenderFlagForFloorProbe();
+            queueNativeDisplaySprite();
             return;
         }
 
+        // loc_1A75C writes Ring_spill_anim_frame only when routine2 actually
+        // executes. Drawing or pausing never consumes the conversion mapping.
+        if (!collected) retainedMappingFrame = -1;
         boolean checksBoundary = stepPhysics(0x18 /* GRAVITY */, true);
 
         // S1/S2 reach this from every movement branch; S3K reaches it only while
@@ -402,7 +431,21 @@ public class LostRingObjectInstance extends AbstractObjectInstance
             }
         }
 
+        queueNativeDisplaySprite();
     }
+
+    @Override
+    public boolean nativeSpriteSubmissionsAuthoritative() { return nativeDisplaySubmissions; }
+
+    private void queueNativeDisplaySprite() {
+        if (!nativeDisplaySubmissions) return;
+        ObjectServices services = servicesOrNull();
+        // The converted S3K routine's genuine successful tails call Draw_Sprite.
+        // Its deleted/deferred-owner branches return above without submitting.
+        NativeSpriteSubmissionAccess.submitSpilling(services == null ? null : services.objectManager(),
+                getSlotIndex(), getPriorityBucket());
+    }
+
     /**
      * ROM {@code Level_MainLoop} runs the object pass, then the camera step, then
      * BuildSprites (s2.asm:5088-5112), and BuildSprites is what latches
@@ -722,29 +765,47 @@ public class LostRingObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        GraphicsManager graphics = services != null ? services.graphicsManager() : null;
+        if (graphics == null) {
+            appendRingArt(ringManager);
+        } else {
+            com.openggf.graphics.SpritePresentation.withLayer(graphics,
+                    com.openggf.graphics.SpritePresentation.Layer.RINGS, () -> appendRingArt(ringManager));
+        }
+    }
+
+    private void appendRingArt(RingManager ringManager) {
         if (collected) {
             drawSparkle(ringManager);
+            return;
+        }
+        if (retainedMappingFrame >= 0) {
+            ringManager.drawRingFrameAt(getX(), getY(), retainedMappingFrame);
             return;
         }
 
         SpillAnimationState animation = spillAnimation != null
                 ? spillAnimation
                 : ringManager.getSpillAnimationState();
-        int spinFrame = (independentLifetime ? (independentInitialLifetime-lifetime)/4
-                : animation != null ? animation.frame() : 0) + phaseOffset;
+        int spinFrame = independentLifetime ? (independentInitialLifetime-lifetime)/4 + phaseOffset
+                : (animation != null ? animation.frame() : 0) + (directSharedSpillFrame ? 0 : phaseOffset);
         ringManager.drawRingFrameAt(getX(), getY(), spinFrame);
     }
 
     @Override
     public boolean isHighPriority() {
-        // ROM loc_1A6B6: make_art_tile(ArtTile_Ring,1,1).
-        return true;
+        if (hasRetainedArtPriority) return retainedArtPriority;
+        ObjectServices services = servicesOrNull();
+        GameModule module = services != null ? services.gameModule() : null;
+        return !(module instanceof com.openggf.game.internal.SpriteTableBuildProfile profile)
+                || profile.lostRingHighPriority();
     }
 
     @Override
     public int getPriorityBucket() {
-        // ROM loc_1A6B6: priority $180, one $80-wide display-list bucket per step.
-        return RenderPriority.clamp(3);
+        // GiveRing's own slot writes priority$80. A converted attracted ring
+        // bypasses Init and keeps priority$100 for its entire uncollected life.
+        return RenderPriority.clamp(collectionRoutineStarted ? 1 : displayPriorityBucket);
     }
 
     private void drawSparkle(RingManager ringManager) {

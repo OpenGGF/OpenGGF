@@ -88,6 +88,9 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
         return PlacedRings.BEFORE_OBJECT_BUCKETS;
     }
 
+    @Override public PlacedRingY placedRingY() { return PlacedRingY.MASK_11_BEFORE_BIAS; }
+    @Override public boolean lostRingHighPriority() { return false; }
+
 
     private static final com.openggf.game.common.CommonObjectPlacementEncoding OBJECT_PLACEMENT_ENCODING =
             new com.openggf.game.common.CommonObjectPlacementEncoding();

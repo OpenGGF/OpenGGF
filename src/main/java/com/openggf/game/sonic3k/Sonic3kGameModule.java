@@ -97,6 +97,8 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
         return PlacedRings.BEFORE_OBJECT_BUCKETS;
     }
 
+    @Override public PlacedRingY placedRingY() { return PlacedRingY.BIAS_BEFORE_SCREEN_WRAP; }
+
 
     private static final com.openggf.game.common.CommonObjectPlacementEncoding OBJECT_PLACEMENT_ENCODING =
             new com.openggf.game.common.CommonObjectPlacementEncoding();

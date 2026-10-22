@@ -155,12 +155,42 @@ The external slot bridge preserves the existing entry list, including repeated
 or inverted DisplaySprite FIFO entries. It can anchor legacy external emissions
 between entries without sorting or deduplicating that list. This is a documented
 mixed bridge, not proof of complete native queue topology. The generic queue
-backend belongs to the coverage lane; its admitted slot/bucket values, live slot
-resolution and per-slot dispatch are a coordinated dependency. Ring motion must
-run at its actual reserved slot before submitting a genuine `Draw_Sprite` call;
-guessed early admission and a late slot sort were rejected because they change
-capacity and call order. The ring consumer follow-up must retain native deletion,
-creation-after-current and restore phases without double advancement.
+backend belongs to the coverage lane; `d89c09e6` supplies admitted slot/bucket
+values, live resolution and actual per-slot dispatch, and `c89fd18a` adds captured
+pass presence and conditional source authority. Attracted-ring motion now runs
+at its actual reserved slot and submits only genuine `Draw_Sprite` tails.
+Guessed early admission and a late slot sort were rejected because they change
+capacity and call order. Initial, empty, rejected and truncated passes suppress
+legacy rescue; live real owners precede external ring lookup. A stale external
+DTO cannot free a replacement's slot. Reset and restore rebind live callbacks,
+while queue snapshots retain only admissions and pass metadata. The existing
+late helper is used only when no actual pass ran for its LevelManager ring clock.
+
+Converted bouncers retain bucket 2 throughout routine 2, plus the attracted art
+and mapping until their first actual bouncer dispatch. GiveRing changes the
+bucket to 1. Captured conditional native authority prevents rejected or zero-call
+converted frames from falling back to inferred sprites; ordinary lost-ring
+factories retain their existing legacy path. Their injected render profile
+selects low tile priority for S1/S2 and high for S3K. Accepted native slots also
+suppress inferred duplicates across buckets without removing repeated FIFO calls.
+The converted path copies the shared native spill frame directly; the ordinary
+legacy path's inherited phase-added mapping is not certified by this change.
+
+Native `loc_1A88C` (sonic3k.asm:35763–35787) resets the spill counter after motion
+and before spin/range testing. The consumer stages that side effect at the same
+point even when the same invocation deletes out of range; surviving conversions
+retain the newly advanced mapping. Existing lightning capability owns this native
+branch, while non-native field attraction keeps its prior conversion behavior.
+S2 placed rings retain the shipped mask-before-bias top-edge bug; S3K biases
+before its screen wrap. Vertical producer rejection precedes table admission,
+so distant stage rings cannot consume all hardware entries. These are ordinary
+stage-list rules, not a substitute for competition-specific producers.
+
+Independent slot-walk controls cover future/past allocation, current-slot
+conversion, rejected capacity, the sparkle `$FC` invocation and next-pass delete,
+replacement precedence, native range boundaries and spill-state restore/forward.
+Actual ROM/EGL scene controls also exercise queued S3K lightning attraction and
+orthogonal ring/object visibility through the public production renderer.
 
 ## Explicit remaining integration boundaries
 

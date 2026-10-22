@@ -1772,7 +1772,8 @@ public final class LevelRenderer {
             if (ringManager != null && lm.gameModule instanceof com.openggf.game.internal.SpriteTableBuildProfile profile
                     && profile.placedRingEmission() == com.openggf.game.internal.SpriteTableBuildProfile.PlacedRings.BEFORE_OBJECT_BUCKETS) {
                 SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.RINGS);
-                com.openggf.level.rings.RingDrawInternalAccess.drawPlaced(ringManager, lm.frameCounter);
+                com.openggf.level.rings.RingDrawInternalAccess.drawPlaced(ringManager, lm.frameCounter,
+                        lm.camera.getYWithShake(), lm.camera.screenYWrapValue());
             }
             // SAT collection must follow sprite-table order, not painter order.
             // Draw_Sprite inserts into Sprite_table_input by ascending priority bucket,

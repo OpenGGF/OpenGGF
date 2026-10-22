@@ -9,8 +9,16 @@ public final class RingDrawInternalAccess {
             throw new SecurityException("Native ring emission belongs to the engine renderer");
         }
     }
+    /** Rebind the live external SST lookup after object-manager replacement/reset. */
+    public static void bindNativeSlots(RingManager manager) {
+        engineCaller();
+        manager.bindNativeSlots();
+    }
     public static void drawPlaced(RingManager manager, int frameCounter) {
         engineCaller(); manager.drawPlaced(frameCounter);
+    }
+    public static void drawPlaced(RingManager manager, int frameCounter, int cameraY, int screenYWrapMask) {
+        engineCaller(); manager.drawPlaced(frameCounter, cameraY, screenYWrapMask);
     }
     public static void drawAttracted(RingManager manager, int frameCounter) {
         engineCaller(); manager.drawAttracted(frameCounter);
@@ -20,7 +28,7 @@ public final class RingDrawInternalAccess {
     }
     public static java.util.List<com.openggf.level.render.SpriteSlotEmission> slottedAttracted(
             RingManager manager, int bucket) {
-        engineCaller(); return manager.attractedRenderEntries().stream().filter(e -> e.bucket() == bucket).toList();
+        engineCaller(); return manager.legacyAttractedRenderEntries().stream().filter(e -> e.bucket() == bucket).toList();
     }
 
 }

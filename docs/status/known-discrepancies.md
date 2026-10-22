@@ -3500,4 +3500,7 @@ This is a presentation extension, not a claim of native widescreen parity.
 
 The ROM-native HUD footprints participate at the table head, including blank
 art and numeric regions; expanded letters/digits are replay fragments of those
-pieces. See the [design and source evidence](../architecture/designs/2026-10-22-native-sprite-scanline-budgets.md).
+pieces. Reserved attracted rings submit at their actual object-slot phase, and
+ring visibility is filtered after admission. Explicit native FIFO entries precede
+the existing legacy SST suffix; this mixed bridge does not establish every
+object's native DisplaySprite topology. See the [design and source evidence](../architecture/designs/2026-10-22-native-sprite-scanline-budgets.md).
