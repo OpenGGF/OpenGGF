@@ -113494,3 +113494,39 @@ No coordinator, phase service, readiness, journal or shared load change is made.
 No new route has run:44223's five reported axes and terminal-art-not-reached
 status remain the measured frontier until parent-composed qualification. The
 full native242 candidate stays unpublished and prefix pins unchanged.
+
+
+### 2026-10-22 S1 owner753/8530: terminal and all33 gaps reached; comparison closure remains red
+
+The sole authorized same-nine-selector command in the
+[existing chain audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#owner753-route8530-full-terminal-reached-comparisons-remain-red)
+ran on owner `753413aa00f71c1856cac37a4fbe43045b52e47a` plus unchanged full
+native242/literal guard and the approved temporary observer. Frozen source
+fingerprint matched before/after; both observer hunks were immediately removed.
+Result12T/11PASS/1chainFAIL/0E/0S, wait345s/Maven1m13s. All10943 tail rows finish
+at cursor225100/TITLE_SCREEN; terminal-art comparison is reached, not censored.
+All33 structural gaps match, closing the previous missing map9/map49 pairs,
+subsequent counter cascades and ending-return exception.
+
+The reported six axes are five final-row `dynamic_art.frame` errors plus
+terminal art. Full report inspection adds omitted segment0: six complete level
+reports each have one +1 art-frame stamp, at segment/local/movie0=
+0/4114/4974,3/3605/13346,8/8683/39769,12/16206/63240,16/9535/87701,
+19/8453/102278. Thus movie4974 is the earliest actual compared error. The other
+16 of22 level reports have zero errors; all22 have zero animation/bootstrap
+errors/warnings. Existing boundary-only assertion registration omits initial0;
+both nominally passing prefix tests also contain that same report error, so
+prefix pins and strict prefix qualification do not advance. No harness change.
+Six full SS DPLC reports compare21838 rows without mismatches; existing SS
+physics and presentation-bridge coverage limits are detailed in the audit.
+All six original BK2 controls and three literal guards pass with no skips.
+
+Terminal art expects4704 edges/actual4784, with10334 errors and4704 timing
+warnings. First pair native map30/movie214287 versus engine32/movie214203;
+its second ROM request differs154640 versus155408. Engine-only indices4704..4783
+add80 edges. Exact field histogram/last aligned pair are recorded in the audit;
+producer/clock cause remains unknown. Native242 remains entirely unpublished,
+Mono/core UNKNOWN and required trust gates unchanged. This qualifies owner753
+only, excludes initial intros/newer aggregate sources, and authorizes no retry,
+new probe, runtime fix or capture after the15Z cutoff. Consumed diagnostics
+are cleaned after exact readback; candidate and foreign state remain preserved.

@@ -561,3 +561,116 @@ include is a real source fix; its resource guard and this merge's launch/API
 consumers remain untested here. No Main branch, worktree state or remote was
 changed. Root's existing GameLoop size block will be addressed in a separate
 focused extraction before integration; Main's new facade growth is not exempt.
+
+### Root complete-source recovery and native-menu extraction checkpoint
+
+The first Main23a reconciliation was defective: its conflict-resolution helper
+retained both selected insertions but dropped the remaining file tails. Request
+98574 acquired admission after1211s, then failed compilation in Engine.java
+(`reached end of file while parsing`, `try without catch/finally`), Maven2.619s,
+**zero tests and zero XML**. The still-queued obsolete guard9810 was interrupted
+with exit130 before execution. Neither is passing or runtime-regression evidence.
+Independent complete-file review also found the same truncation in the briefing:
+the two hazard paragraphs survived while the rest of that document was absent.
+
+Recovery reconstructs Engine from the complete observed Main23a file and applies
+exactly four original Root native-menu hunks, excluding Root's older headless
+condition. The result differs from Main by13 additions/1 deletion; the complete
+headless launch method remains byte-identical to Main. Independent reconstruction
+matched SHA256 `d6733d1105b20dbd0ed2eae50e06414e332a06994f7a1f77b9ecda05dca8b5a0`.
+The briefing is all4643 Main lines plus the exact11-line Root water-clock hazard;
+removing that paragraph reproduces the complete Main document byte for byte.
+Presence of both conflict markers' intended paragraphs was insufficient evidence
+of a complete resolution; compare the whole desired file against both parents.
+
+GameLoopNativeMenus is a package-private collaborator for title destination
+selection and native menu dispatch. GameLoop retains its controller, publisher,
+all13 existing private wrapper declarations and public/protected declarations.
+Bootstrap/input/current-mode reads remain live suppliers; camera, configuration,
+fade, provider, module and publisher resolution retains its prior operation
+points. Its constructor stores references without invoking the incomplete loop.
+Parent and independent source reviews found no concrete semantic mismatch.
+Effective GameLoop size falls3412→3255 against the unchanged3313 budget. The
+extraction was authored before15:00Z; subsequent corrections restore omitted
+already-authorized source, without adding a feature or opening a new route scope.
+
+Build-only26989 passed `test-compile`, Java25, Maven1:23. Corrected-source focus
+21928 passed **102T/0F/0E/0S**,102 distinct identities in all14 selected XML suites;
+queue164s/Maven34.197s. Every suite reports Java25.0.5, intended Root cwd,
+surfaceless EGL and the three original absolute ROM properties. Their CRC32/SHA1
+identities were independently rechecked. The exact affected selection was:
+
+```text
+TestEngineConfiguredHeadlessStartup,TestEngineConfiguredHeadlessStartupRom,TestFirstBootModScene,TestHostedRunActCompletionWiring,TestHostedRunController,TestGameLoopNativeMenus,TestNativeMenuRenderDispatch,TestNativeMenuProgress,TestNativeMenuController,TestStartupRouteResolver,TestEndingReturnFadeOwnership,TestGameLoopBlockingLevelEntryFadeS1,TestNativeTerminalLevelAdmission,TestModApiSignatureSurface
+```
+
+Portable rendering of the recorded command from the Root worktree; `rom_root`
+resolves the same existing Main ROM directory rather than embedding a user home:
+
+```bash
+rom_root=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
+env -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS \
+  -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH -u LIBGL_DRIVERS_PATH \
+  -u LIBGL_ALWAYS_SOFTWARE -u MESA_LOADER_DRIVER_OVERRIDE \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=${rom_root}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${rom_root}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${rom_root}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  '-Dopenggf.surefire.reports=target/root-main23-menu-corrected/reports' \
+  '-Dopenggf.test.tmpdir=target/root-main23-menu-corrected/tmp' \
+  '-Dopenggf.test.diagnostics=target/root-main23-menu-corrected/diagnostics' \
+  '-Dtest=TestEngineConfiguredHeadlessStartup,TestEngineConfiguredHeadlessStartupRom,TestFirstBootModScene,TestHostedRunActCompletionWiring,TestHostedRunController,TestGameLoopNativeMenus,TestNativeMenuRenderDispatch,TestNativeMenuProgress,TestNativeMenuController,TestStartupRouteResolver,TestEndingReturnFadeOwnership,TestGameLoopBlockingLevelEntryFadeS1,TestNativeTerminalLevelAdmission,TestModApiSignatureSurface' \
+  test -B
+```
+
+No release/full-suite profile ran.
+
+Fresh corrected-source guard73578 passed **3T/0F/0E/0S**, queue24s/Maven27.877s:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  '-Dopenggf.surefire.reports=target/root-main23-menu-corrected-guards/reports' \
+  '-Dopenggf.test.tmpdir=target/root-main23-menu-corrected-guards/tmp' \
+  '-Dtest=TestArchitecturalSourceGuard#objectManagerFacadeStaysWithinExtractedCollaboratorBudget+releaseCriticalLargeClassesDoNotGrowWithoutExtraction,TestNativeImageResourceGuard' test -B
+```
+
+The guard environment retains the same Java/Lua/null-audio/EGL values and unsets
+JDK_JAVA_OPTIONS, JAVA_TOOL_OPTIONS, _JAVA_OPTIONS, MAVEN_OPTS, DISPLAY and
+WAYLAND_DISPLAY; it does not add the focus-only driver-override unsets or ROM
+properties. Its resource and size assertions are ROM-free.
+
+All three XML identities passed. This closes the measured ObjectManager,
+AbstractPlayable, S1Art and GameLoop size obligations on the composed source and
+executes the actual decoder-service resource include check. It is not a native
+image build, broad smoke result, competition activation or maintained route pass.
+All three frozen Java SHA256 values matched through102+3. AGENTS/CLAUDE match.
+
+Original S1 docs leafd39c51edd5db8393702b59e815863df55146720e is appended by owned
+section only to the existing audit/frontier, preserving Root's complete prefix.
+Its source753 owner8530 result is12T/11P/1 chain failure/0E/0S, queue345s/Maven1:13.
+All10943 terminal rows reach cursor225100/TITLE_SCREEN, and terminal-art comparison
+is now reached. All33 structural gaps match. All22 level reports are complete:
+16 are error-free, six retain one final-row dynamic_art.frame+1 error. Earliest
+actual error is segment0/GHZ1 row4114/movie4974; the harness omits that initial
+segment from assertedPhysicsSegmentIndices, so its nominal prefix passes also
+retain this report error. No harness/oracle edit was made. Terminal art compares
+4704 native versus4784 engine edges,15038 differing fields, first native
+map30@214287 versus engine32@214203. Six independent BK2 reports are clean; six
+SS DPLC reports contain21838 comparisons with zero mismatch. Native242 remains
+unpublished; Mono/core provenance remains UNKNOWN. This is owner753 evidence,
+not a Root-union or natural-intro qualification.
+
+The dry-run category plan against pinned94c40570 selects3691 smoke classes and
+guards across all ten categories. It was not executed; actual environment
+preflight and the combined validation window remain pending. No release-only
+full suite, new MHZ observation, native capture, Main mutation or push occurred.
+The MHZ historical passive pair remains uncompiled/unexecuted, with a known
+frozen-command environment mismatch: JAVA_TOOL_OPTIONS must be unset, with
+explicit Lua5.4/null-audio/surfaceless-EGL environment in a future bounded scope.
+Its expired peer-registry update was rejected before mutation; this finding is
+recorded in durable T3 handoff messages, not that unchanged registry. No paired
+execution gate was opened. NativeModes source/activation, physical-video permit,
+S3K pause upper-RAM projection and the remaining parity frontiers stay open.

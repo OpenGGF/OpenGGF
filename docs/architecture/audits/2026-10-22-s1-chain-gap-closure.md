@@ -1140,3 +1140,126 @@ actual player's two required final-art producers, the full terminal caller and
 terminal-art comparison.44223's five-axis profile is the last measured route.
 No partial/filtered fixture publication, prefix pin advance, capture-provenance
 upgrade, comparison mutation or source-fitted timing is included.
+
+
+## Owner753 route8530: full terminal reached, comparisons remain red
+
+Parent's committed composition `187c9f719c8afb7d3eb4c1c1d4e180e280763d0d`
+acknowledged the two ready leaves and authorized exactly one unchanged
+nine-selector replay on this isolated owner's runtime, not on the aggregate's
+newer S2/pause/word-kernel or upstream Main source. The run was queued at
+14:51:02Z before the15Z work-launch cutoff. It waited345s and executed for
+Maven1m13s, returning12 tests:11PASS, one continuous-chainFAIL, zero errors/skips.
+No retry, separate probe, capture, native job or subsequent implementation was
+launched. This checkpoint is readback/cleanup only.
+
+Tested runtime is `753413aa00f71c1856cac37a4fbe43045b52e47a` plus the unchanged
+full62 native242 candidate files/literal guard and only the approved temporary
+two-file observer. The deterministic SHA256 freeze fingerprint was
+`f74a902e2a50124f01272988856c737ec93bd7ead6a2fb943f6029617f5ba88b`
+at queueing and again at terminal. Its method hashes HEAD plus newline, binary
+HEAD diff and sorted untracked paths/bytes. The candidate62+guard inventory
+(path, NUL, file bytes in sorted metadata/timing order then guard) is
+`7d5bc5755cb1d7b7d5361b05882ffe4cbc98ae0544812cce0998fde2e27c8a6b`.
+The original movie remains SHA256
+`f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`;
+original S1 ROM CRC32AFE05EEE/SHA1
+69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b was independently rechecked. All68
+comparison hashes pass the independent literal guard. No production source,
+comparison, movie or manifest changed during the run.
+
+The observer emitted160 lines with zero observer errors, using the actual
+locally constructed loop and existing provider reads. Both temporary hunks
+were removed immediately when the process terminated, with exact HEAD diff0
+before report inspection. Its cached final observation is announced movie
+row0=225100/row1=225101, actual cursor225100, outer TITLE_SCREEN, context LEVEL,
+zone0:0, no pending level exit, inactive=false and fade NONE. The loop's actual
+provider is null, so its phase remains UNKNOWN; no replacement provider was
+constructed. The retained FZ owner is destroyed with ending request=true, not a
+live object. All10943 terminal rows (214158..225100 inclusive) were consumed;
+the manifest final-mode assertion passed and terminal-art verification was
+actually reached. There is no censored terminal-art claim on this run. The
+initial retained entry still excludes intros; this does not qualify natural
+coldboot, startup waveform timing or the newer aggregate source.
+
+All33 structural dynamic-art gaps compare exactly. In particular the required
+SLZ3→SBZ1 map9 and SBZ1→SBZ2 map49 uploads and the subsequent counter cascades
+are closed in this measurement. The previous post-credits nested-fade exception
+is absent. The reported six-axis failure comprises five asserted segment art
+frame-stamp errors plus the newly reached terminal-art axis. **All-report
+inspection adds a sixth segment frame-stamp error at segment0 which the
+headline does not assert.** All22 full-chain level reports are complete, with
+zero animation errors, bootstrap errors and warnings;16 have zero errors and
+the following six each have exactly one error, solely `dynamic_art.frame`:
+
+| Segment | Directory | Local row | Movie row0 | Native frame | Engine frame |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 0 | ghz1 | 4114 | 4974 | 4114 | 4115 |
+| 3 | ghz2_2 | 3605 | 13346 | 3605 | 3606 |
+| 8 | mz1_2 | 8683 | 39769 | 8683 | 8684 |
+| 12 | mz2_3 | 16206 | 63240 | 16206 | 16207 |
+| 16 | syz1 | 9535 | 87701 | 9535 | 9536 |
+| 19 | syz2_2 | 8453 | 102278 | 8453 | 8454 |
+
+Each is its descriptor's last row. The earliest actual compared error is now
+movie4974, not the first error printed in the assertion. These six stamp
+errors are new relative to44223's zero level-report errors. Their production
+publication/closure cause remains unqualified; no clock repair, filtering,
+normalization, rollback or weakened comparison is authorized or applied.
+The16 zero-error indices are6,7,11,15 and22..33, including all5086 FZ rows.
+
+Segment0 attribution was proved from the existing output-owner algorithm,
+not filename recency: full-chain `ghz1ToScrapBrainAcrossEverySpecialStage` hashes
+to owner `5dd19fbc77e1231f`; prefix methods `ghz1ToFirstSpecialStageRow` and
+`specialStageReturnThroughGhz2PresentationBridge` hash to `a5b62767ee2d8749`
+and `221a1b2b9b976887`. Each of those three fresh seg0 reports has the same
+one-row error. `assertSegmentPhysics` currently returns unless its boundary
+attachment set `assertedPhysicsSegmentIndices` contains the segment; initial0
+is never added. This explains both the omitted headline axis and nominally
+passing prefix JUnit cases despite their report error. No shared harness edit
+was made. Prefix pins remain unchanged and no strict prefix qualification is
+claimed from those nominal passes.
+
+The fresh inventory is40 data JSON reports plus40 owner sidecars:24 level
+reports (22 full plus two prefix seg0 duplicates), seven special-stage DPLC
+reports (six full plus one prefix duplicate), three gap reports (full33-gap
+plus prefix1/2-gap) and six independent BK2 reports. All six full special-stage
+DPLC reports have zero mismatches across21838 comparisons: SS3728, SS2=4337,
+SS3=2536, SS4=2329, SS5=5079, SS6=3829. The existing interior policy does not
+compare special-stage gameplay physics. The six level-presentation bridge
+descriptors2,5,10,14,18,21 also produce no separate level physics report; these
+are existing policy limits, not skipped JUnit tests or newly truncated input.
+Six original independent BK2s pass with zero comparison/bootstrap errors or
+warnings: LZ2=10173 rows, LZ3=19107, SBZ2=9594, SLZ1=6411, SLZ2=5894,
+SLZ3=13732. The three literal inventory/hash/range cases pass. No nested
+throwable is hidden in the continuous-chain assertion.
+
+Terminal art is substantially red:4704 native edges versus4784 engine edges.
+Parsing all15038 divergent fields yields10334 ERRORs and4704 WARNINGs. The
+field histogram is count1, mapping4102, movie-row4704 (warnings), requests2049,
+after-ledger2051, before-ledger2051 and extra-present80. All4784 edge indices
+have at least one divergent field; extra indices4704..4783 are engine-only.
+The earliest pair, indices0/1, is native mapping30 (`$1E`) at movie214287 versus
+engine mapping32 (`$20`) at214203,84 rows earlier. Native submission requests
+are ROM`$25B50`/tile426→VRAM`$F000`/192 bytes and ROM`$25C10`/tile432→`$F0C0`/384;
+engine uses the same first request but ROM`$25F10`/tile456 for the second.
+Index0 after-ledger fingerprints and index1 before-ledger fingerprints also
+differ. The last aligned pair4702/4703 is native map47/movie222291 versus
+engine map50/movie221630; requests differ at4702 (native ROM162704/tile684,
+engine164240/tile732, both VRAM61440/512 bytes). Source producer/caller causality
+for this tail remains UNKNOWN; the observed edge-count delta alone is not a
+native timer or transfer-count prescription.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk OPENGGF_S1_TAIL_PROBE=1 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS1CompleteEmeraldRunChain,TestS1CompleteEmeraldRunPrefix,TestS1Slz1CompleteRunTraceReplay,TestS1Slz2CompleteRunTraceReplay,TestS1Slz3CompleteRunTraceReplay,TestS1Sbz2CompleteRunTraceReplay,TestS1Lz2CompleteRunTraceReplay,TestS1Lz3CompleteRunTraceReplay,TestS1CommittedHardwareTimingFixtures' "-Dsonic1.rom.path=$S1_ROM" test -B
+```
+
+Native242 publication remains wholly withheld: all comparisons are not green,
+and capture-time Mono/core digests remain UNKNOWN under the existing required
+trust gates. No descriptor/service/provenance retro-qualification follows from
+reaching the endpoint. Parent received the exact report profile before the
+consumed owned logs/XML/trace reports were removed; no pass cache, receipt or
+raw-log archive is retained. Candidate62 files, literal guard, all comparison
+payloads and foreign disassembly state are preserved. No source or validation
+work was launched after the cutoff; remaining work requires a later authorized
+owner investigation, not a retry of this unchanged state.

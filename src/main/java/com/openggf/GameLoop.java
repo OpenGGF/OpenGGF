@@ -293,6 +293,7 @@ public class GameLoop {
     private final com.openggf.game.nativemenu.NativeMenuController nativeMenus =
             new com.openggf.game.nativemenu.NativeMenuController();
     private Consumer<GameplayModeContext> nativeGameplayModePublisher = this::setGameplayMode;
+    private final GameLoopNativeMenus nativeMenuFlow;
 
     // Listener for game mode changes (used by Engine to update projection)
     GameModeChangeListener gameModeChangeListener;
@@ -332,6 +333,11 @@ public class GameLoop {
         this.profiler = this.engineServices.profiler();
         this.playbackDebugManager = this.engineServices.playbackDebug();
         this.moduleResolutionService = this.engineServices.moduleResolutionService();
+        this.nativeMenuFlow = new GameLoopNativeMenus(this, nativeMenus, this.engineServices,
+                this.audioManager, startupRouteResolver, () -> gameplayTeamBootstrapContext,
+                this::getDataSelectProviderLazy, this::initializeDataSelectMode, this::doEnterLevelSelect,
+                this::doEnterLevelSelectFromTitleScreen, this::startLevelFromTitleScreenImmediate,
+                this::publishNativeGameplayMode, () -> inputHandler, () -> currentGameMode);
         this.liveRewindManager = new LiveRewindManager(
                 configService,
                 () -> currentGameMode,
@@ -3877,38 +3883,7 @@ public class GameLoop {
      * fade-to-black / fade-from-black handoff.
      */
     private void exitTitleScreen() {
-        TitleScreenProvider titleScreen = getTitleScreenProviderLazy();
-        if (titleScreen == null) {
-            return;
-        }
-
-        TitleActionRoute route = resolveTitleActionRoute(titleScreen);
-
-        // Sonic 1 level select: immediate transition, no fade, music continues.
-        // The original game loads Pal_LevelSel and clears the BG plane instantly.
-        // Title screen art data is kept loaded so it can be rendered behind the
-        // level select text with the brown/sepia palette tint.
-        if (route == TitleActionRoute.LEVEL_SELECT && titleScreen.supportsLevelSelectOverlay()) {
-            doEnterLevelSelectFromTitleScreen();
-            return;
-        }
-
-        if (shouldFadeTitleScreenExit(route) && fadeManager.isActive()) {
-            return;
-        }
-
-        // Fade out title music
-        audioManager.fadeOutMusic();
-
-        if (shouldFadeTitleScreenExit(route)) {
-            GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), fadeManager,
-                    () -> doExitTitleScreen(route));
-            LOGGER.info("Title screen exit fading to " + route);
-            return;
-        }
-
-        doExitTitleScreen(route);
-        LOGGER.info("Title screen exit routed directly to " + route);
+        nativeMenuFlow.exitTitleScreen();
     }
 
     /**
@@ -3946,21 +3921,11 @@ public class GameLoop {
      * Actually performs the title screen exit after fade-to-black completes.
      */
     private void doExitTitleScreen() {
-        TitleScreenProvider titleScreen = getTitleScreenProviderLazy();
-        doExitTitleScreen(resolveTitleActionRoute(titleScreen));
+        nativeMenuFlow.doExitTitleScreen();
     }
 
     private void doExitTitleScreen(TitleActionRoute route) {
-        TitleScreenProvider titleScreen = getTitleScreenProviderLazy();
-        // reset() may discard a creator title's selection. Resolve the complete
-        // destination while the exiting provider still owns that selection.
-        int zone = titleStartZone();
-        int act = titleStartAct(zone);
-        if (titleScreen != null) {
-            titleScreen.reset();
-        }
-
-        executeTitleActionRoute(route, zone, act);
+        nativeMenuFlow.doExitTitleScreen(route);
     }
 
     /**
@@ -3994,146 +3959,35 @@ public class GameLoop {
     }
 
     private int titleStartAct(int zone) {
-        var provider = getTitleScreenProviderLazy();
-        var module = GameServices.module();
-        var registry = module != null ? module.getZoneRegistry() : null;
-        if (provider == null || registry == null) {
-            return 0;
-        }
-        int count = Math.max(1, registry.getActCount(zone));
-        return Math.clamp(provider.startActIndex(), 0, count - 1);
+        return nativeMenuFlow.titleStartAct(zone);
     }
 
     private int titleStartZone() {
-        TitleScreenProvider titleScreen = getTitleScreenProviderLazy();
-        var module = GameServices.module();
-        var registry = module != null ? module.getZoneRegistry() : null;
-        if (titleScreen == null || registry == null) {
-            return 0;
-        }
-        int zone = titleScreen.startZoneIndex();
-        return zone >= 0 && zone < registry.getZoneCount() ? zone : 0;
+        return nativeMenuFlow.titleStartZone();
     }
 
     private void handleTitleScreenExitFromProvider() {
-        TitleScreenProvider titleScreen = getTitleScreenProviderLazy();
-        if (titleScreen == null) {
-            return;
-        }
-
-        TitleActionRoute route = resolveTitleActionRoute(titleScreen);
-        // Provider callbacks fire after the provider has already finished its
-        // own staged exit, so this path must hand off directly.
-        if (route == TitleActionRoute.LEVEL_SELECT && titleScreen.supportsLevelSelectOverlay()) {
-            doEnterLevelSelectFromTitleScreen();
-            return;
-        }
-
-        if (shouldFadeTitleScreenExit(route) && fadeManager.isActive()) {
-            return;
-        }
-
-        if (shouldFadeTitleScreenExit(route)) {
-            GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), fadeManager,
-                    () -> doExitTitleScreen(route));
-            return;
-        }
-
-        doExitTitleScreen(route);
+        nativeMenuFlow.handleTitleScreenExitFromProvider();
     }
 
     private TitleActionRoute resolveTitleActionRoute(TitleScreenProvider titleScreen) {
-        var gameModule = GameServices.module();
-        if (gameModule == null || titleScreen == null) {
-            return TitleActionRoute.LEVEL;
-        }
-        TitleScreenProvider.TitleScreenAction exitAction = titleScreen.consumeExitAction();
-        if (exitAction == null) {
-            exitAction = TitleScreenProvider.TitleScreenAction.OTHER;
-        }
-        boolean levelSelectAllowed = !gameModule.suppressesLevelSelect();
-        if (!levelSelectAllowed && exitAction == TitleScreenProvider.TitleScreenAction.LEVEL_SELECT) {
-            exitAction = TitleScreenProvider.TitleScreenAction.ONE_PLAYER;
-        }
-        return startupRouteResolver.resolveTitleAction(
-                gameModule,
-                resolveDataSelectPresentation(),
-                true,
-                levelSelectAllowed && configService.getBoolean(SonicConfiguration.LEVEL_SELECT_ON_STARTUP),
-                exitAction);
+        return nativeMenuFlow.resolveTitleActionRoute(titleScreen);
     }
 
     private DataSelectPresentationResolution resolveDataSelectPresentation() {
-        var gameModule = GameServices.module();
-        if (gameModule == null) {
-            return new DataSelectPresentationResolution(false, null);
-        }
-
-        DataSelectProvider dataSelectProvider = getDataSelectProviderLazy();
-        boolean dataSelectEligible = dataSelectProvider != null
-                && !(dataSelectProvider instanceof NoOpDataSelectProvider);
-        boolean crossGameEnabled = configService.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED);
-        boolean s3kConfiguredDonor = "s3k".equalsIgnoreCase(
-                configService.getString(SonicConfiguration.CROSS_GAME_SOURCE));
-        // All modules that expose a DataSelectPresentationProvider use the
-        // S3K presentation manager as their delegate. Resolve the presentation
-        // game as S3K so the startup router recognises the donated screen for
-        // S1/S2 hosts.
-        GameId presentationId = gameModule.getGameId();
-        if (dataSelectEligible
-                && dataSelectProvider instanceof com.openggf.game.dataselect.DataSelectPresentationProvider) {
-            boolean nativeS3kDataSelect = gameModule.getGameId() == GameId.S3K;
-            boolean donatedS3kDataSelect = crossGameEnabled && s3kConfiguredDonor;
-            if (nativeS3kDataSelect || donatedS3kDataSelect) {
-                presentationId = GameId.S3K;
-            } else {
-                dataSelectEligible = false;
-            }
-        }
-        return new DataSelectPresentationResolution(dataSelectEligible, presentationId);
+        return nativeMenuFlow.resolveDataSelectPresentation();
     }
 
     private boolean shouldFadeTitleScreenExit(TitleActionRoute route) {
-        return route == TitleActionRoute.DATA_SELECT || route == TitleActionRoute.LEVEL;
+        return nativeMenuFlow.shouldFadeTitleScreenExit(route);
     }
 
     private void executeTitleActionRoute(TitleActionRoute route, int zone, int act) {
-        switch (route) {
-            case DATA_SELECT -> initializeDataSelectMode();
-            case LEVEL_SELECT -> doEnterLevelSelect();
-            case TWO_PLAYER -> openNativeTitleMode(false);
-            case OPTIONS -> openNativeTitleMode(true);
-            case LEVEL -> {
-                var module = GameServices.module();
-                var modes = module == null ? null : module.getGameService(
-                        com.openggf.game.nativemenu.NativeTitleModeProvider.class);
-                var nativeExit = modes == null ? com.openggf.game.nativemenu.NativeMenuScreen.Exit.NONE
-                        : modes.singlePlayerTitleExit();
-                if (nativeExit.destination() == com.openggf.game.nativemenu.NativeMenuScreen.Destination.LEVEL) {
-                    startNativeMenuLevel(nativeExit);
-                } else startLevelFromTitleScreenImmediate(zone, act);
-            }
-            case OTHER -> startLevelFromTitleScreenImmediate(zone, act);
-        }
+        nativeMenuFlow.executeTitleActionRoute(route, zone, act);
     }
 
     private void openNativeTitleMode(boolean options) {
-        var module = GameServices.module();
-        var provider = module == null ? null : module.getGameService(
-                com.openggf.game.nativemenu.NativeTitleModeProvider.class);
-        var screen = provider == null ? null
-                : options ? provider.optionsScreen() : provider.competitionScreen();
-        if (!nativeMenus.open(screen)) {
-            // An action token is not permission to boot an ordinary one-player
-            // world as competition. Only a connected native provider can launch it.
-            setGameMode(GameMode.TITLE_SCREEN);
-            var title = getTitleScreenProviderLazy();
-            if (title != null) title.initialize();
-            return;
-        }
-        camera.setX((short) 0);
-        camera.setY((short) 0);
-        setGameMode(screen.mode());
+        nativeMenuFlow.openNativeTitleMode(options);
     }
 
     com.openggf.game.nativemenu.NativeMenuScreen getNativeMenuScreen() {
@@ -4149,49 +4003,11 @@ public class GameLoop {
     }
 
     private void updateNativeMenuMode() {
-        var exit = nativeMenus.update(inputHandler, resolveFadeManager().isActive());
-        var screen = nativeMenus.screen();
-        if (screen == null) return;
-        switch (exit.destination()) {
-            case NONE -> {
-                if (screen.mode() != currentGameMode) setGameMode(screen.mode());
-            }
-            case TITLE_SCREEN -> {
-                nativeMenus.close();
-                initializeTitleScreenMode();
-            }
-            case COMPETITION -> {
-                var module = GameServices.module();
-                var provider = module == null ? null : module.getGameService(
-                        com.openggf.game.nativemenu.NativeTitleModeProvider.class);
-                var competition = provider == null ? null : provider.competitionScreen();
-                if (competition == null) {
-                    screen.initialize();
-                } else if (nativeMenus.open(competition)) {
-                    setGameMode(competition.mode());
-                }
-            }
-            case LEVEL -> startNativeMenuLevel(exit);
-        }
+        nativeMenuFlow.updateNativeMenuMode();
     }
 
     private void startNativeMenuLevel(com.openggf.game.nativemenu.NativeMenuScreen.Exit exit) {
-        var world = SessionManager.getCurrentWorldSession();
-        if (world == null || exit.team() == null) {
-            throw new IllegalStateException("Native level launch requires a world and exact team");
-        }
-        var progress = exit.resetProgress() ? null : GameServices.gameState().capture();
-        var root = world.rootGameModule();
-        var module = world.getGameModule();
-        nativeMenus.close();
-        try {
-            gameplayTeamBootstrapContext.openNativeMenuLaunch(root, module, engineServices,
-                    configService, 0, 0, this::publishNativeGameplayMode, exit.team(), progress);
-        } catch (IOException failure) {
-            throw new IllegalStateException("Failed to load native menu launch", failure);
-        }
-        setGameMode(GameMode.LEVEL);
-        GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
+        nativeMenuFlow.startNativeMenuLevel(exit);
     }
 
     // ==================== Data Select Methods ====================
