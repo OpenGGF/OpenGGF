@@ -68,7 +68,7 @@ dialogue typer.
 | `Counter(f0, f1, 139, "CARDS", cx)` | A count-up number with a label. Stagger several by 8 frames. |
 | `Typed(f0, f1, lines, x, y, title="HelloSceneMod.java")` | A code panel typed on, with light syntax colouring. |
 | `chip(label)` | A yellow pill label. |
-| `BitmapFont(path).render(word, scale, fill, outline, drop, upscale)` | A game- or mod-native logo word, drawn crisp at integer scale. |
+| `BitmapFont(path).render(word, scale, fill, outline, drop, shades=, drop_dx=)` | A game- or mod-native logo word. Glyphs and every effect are drawn on the glyph grid, then enlarged by `scale`. For ROM type, pass its extra colours in `shades` and the shadow colour/offset sampled from a native frame, with `outline=None` unless the game outlines it. |
 
 Word stack on beats:
 
@@ -119,4 +119,4 @@ AAC true peak as well.
 `sheet EDIT [step first last]`, `frames EDIT N...`, `audio EDIT`,
 `render EDIT`. Each edit command prints `check()` warnings and a `pacing:`
 summary: shot count, mean shot length, the busiest 20 s window and the cuts in
-the final 20 s.
+the final 20 s, and the longest bare gameplay stretch (warned over 4 s).

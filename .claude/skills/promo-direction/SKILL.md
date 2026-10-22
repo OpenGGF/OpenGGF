@@ -76,6 +76,29 @@ a cold open from the hero footage, a title drop with flash, stinger and slam,
 ROM title-card headers, banded wipes at chapter changes, full-bleed footage and
 splits for comparisons. If your plan drops one, the brief says why in one line.
 
+**Long takes need accompaniment.** The next coached draft fixed every point above
+and was rejected as "very... boring... very lazy with long stretches of level
+showcased without any accompaniment". It held 14 s of a new zone with nothing
+on it. The fix for "rushed" is a longer take with something editorial happening on
+it, never bare level. About every bar or two, give the viewer something new:
+
+- a caption beat that advances the pitch ("Same hill." → "New route.");
+- a callout, arrow or counter tied to what is on screen (rings collected, crests
+  passed, "NEW" on a feature as it enters);
+- a punch-in or stinger synced to an in-game event: a spring, a ring burst, a
+  badnik pop or a landing;
+- a change of layout: a split opening, a picture-in-picture, a map strip.
+
+`promo_kit.py check` flags any full-screen gameplay stretch over 4 s with no cut,
+overlay, stinger, punch or camera move. Treat that warning like the rushed one.
+
+**A small mod needs an idea, not just footage.** When the change is modest (a
+remixed act, a new tileset), the level alone won't sell it. Sell how it was made,
+and make the viewer play along. For example, a remix built from strips can show
+the strips flying into place on a map before the run. A generated zone can show
+its tiles drawing themselves. A "spot the difference" beat asks the viewer to
+look. Find the cleverest true thing about the mod and give it a beat.
+
 These are recorded problems with particular promo drafts. Preserve the preference
 for crafted type, readable action and deliberate rhythm; do not turn it into a
 ban on a stable dialogue panel, a purposeful reaction hold or a quiet story beat.
@@ -316,9 +339,20 @@ panel is appropriate and does not need to fly on and off with each speaking turn
 - A native bitmap font shows its construction at display scale. Sonic 2's
   title-card diagonals are split strokes, which can read as "E/MERALD" at 9×.
   Judge every word at final size, and choose the scale or the word accordingly.
+- **Give a native font the game's own treatment.** The stroke-and-shadow row
+  in the table above is for TTF type. A coached draft reduced Sonic 2's
+  title-card glyphs to one colour, then added a navy outline and a red drop
+  a third of a game pixel thick. The user called its "use of palettes with the
+  text... horrible, particularly around the drop shadow". Instead:
+  - Keep the glyph's palette indices when you extract it ('#' face, other
+    characters for the extra colours, passed as `shades=`).
+  - Sample the face, edge and shadow colours, and the shadow's offset, from a
+    native frame of the game's own card.
+  - Let `BitmapFont.render` draw every effect in whole glyph pixels.
+  - Add an outline only if the game's type has one.
 - Hero logos are redrawn from the game's or mod's own font at integer scale,
-  with an outline, a drop and a sweeping shine. Banners come from the ROM's
-  own title-card art, dumped by tests, never from the disassembly.
+  with the game's own treatment and an optional sweeping shine. Banners come
+  from the ROM's own title-card art, dumped by tests, never from the disassembly.
 
 ### Composition: show several things at once instead of cutting fast
 

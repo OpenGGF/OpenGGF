@@ -32,6 +32,8 @@ may need stable speech panels, longer reactions and intentional silence.
 | Sitar Hero edit-v1 | A 1.5 s silent count-in | Dead air removed. |
 | Starpost Valley first cuts | 800×448, uniform crossfades, a caption on nearly every shot | Larger cards, cinema crops, the diagonal gallery and a slower bed. |
 | Chaos Mode revision 3 | "retain a coherent HCZ soundtrack…; do not fade into the ghost source's DEZ music… omit minigames and related challenge/chat spoilers" | One bed throughout, curated effects and no spoilers. |
+| Emerald Remix rough cut (coached Sol draft, 2026-10-22, 41 s) | "it's use of palettes with the text is horrible, particularly around the drop shadow" | Keep the ROM glyph's own colours, and sample the shadow from the native card. Effects go in whole glyph pixels, with no invented outline. `BitmapFont` now enforces the grid. |
+| Same draft | "the video is just very... boring... very lazy with long stretches of level showcased without any accompaniment" (14 s of bare Clover Valley) | Pending at the time of writing. Accompany each bar or two (caption beat, callout, counter, event-synced punch or stinger), and sell the mod's idea, not only its levels. `promo_kit.py check` flags bare stretches over 4 s. |
 | Second Strike reels (flat reference) | DejaVu `drawtext` at `x=40`, a solid pad, hard concat, a text-only end card | Use this as the counter-example when choosing type and composition. |
 
 ## Stageplay dialogue revision

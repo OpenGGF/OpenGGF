@@ -115,6 +115,21 @@ class Typography(unittest.TestCase):
         self.assertIn(kit.WHITE, colours)
         self.assertIn(kit.NAVY, colours)
 
+    def test_bitmap_font_effects_stay_on_the_glyph_grid(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / 'font.txt'
+            p.write_text('= A\n.#+\n#.+\n###\n')
+            f = kit.BitmapFont(p)
+        img = f.render('A', scale=9, outline=(0, 0, 0), outline_px=1, drop=(10, 10, 10), drop_px=1, drop_dx=1,
+                       shades={'+': (182, 182, 182)})
+        h, w = img.shape[:2]
+        self.assertEqual((h % 9, w % 9), (0, 0))
+        blocks = img.reshape(h // 9, 9, w // 9, 9, 4)
+        self.assertTrue((blocks == blocks[:, :1, :, :1]).all(), 'every effect is whole glyph pixels')
+        colours = {tuple(c) for c in img[img[..., 3] > 0][:, :3].astype(int)}
+        self.assertIn((182, 182, 182), colours)
+        self.assertIn(kit.WHITE, colours)
+
     @unittest.skipUnless(has_font(), 'no TTF installed')
     def test_tracking_widens_text_and_stroke_adds_ink(self):
         plain = kit.text('KICKER', 'sub', 40)
@@ -155,6 +170,26 @@ class EditChecks(unittest.TestCase):
         self.assertEqual(stats['shots'], 30)
         self.assertTrue(any('rushed' in w for w in warn))
         self.assertTrue(any('mean shot' in w for w in warn))
+
+    def test_bare_gameplay_is_flagged_and_continuation_cuts_do_not_hide_it(self):
+        with tempfile.TemporaryDirectory() as d:
+            clip = self.frames(d)
+            e = SmallEdit()
+            e.S(kit.Game(0, 300, clip, hold=0))
+            e.S(kit.Game(300, 900, clip, src=300, hold=0))
+            stats, warn = e.pacing()
+        self.assertTrue(any('boring' in w for w in warn))
+        self.assertEqual(stats['longest_bare_s'], 15.0)
+
+    def test_accompanied_gameplay_is_not_bare(self):
+        with tempfile.TemporaryDirectory() as d:
+            clip = self.frames(d)
+            e = SmallEdit()
+            e.S(kit.Game(0, 900, clip, hold=0))
+            for k in range(0, 900, 200):
+                e.O(kit.Flash(k, 6))
+            stats, warn = e.pacing()
+        self.assertFalse(any('boring' in w for w in warn))
 
     def test_render_frame_composites_shot_overlay_and_transition(self):
         with tempfile.TemporaryDirectory() as d:
