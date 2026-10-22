@@ -186,10 +186,10 @@ class TestRoomHostAdversarial {
     private static void apply(Harness harness, Peer bad, Peer witness, Attack attack) {
         String token = bad.join == null ? "unadmitted" : bad.join.sessionToken();
         switch (attack) {
-            case MALFORMED -> harness.text(bad, "{\"v\":3,\"token\":null,\"msg\":null}");
+            case MALFORMED -> harness.text(bad, "{\"v\":" + Protocol.VERSION + ",\"token\":null,\"msg\":null}");
             case TRAILING_ROOT -> harness.text(bad, CODEC.encode(token, new ControlMessage.Ping(1)) + " {}");
             case WRAPPED_VERSION -> harness.text(bad, CODEC.encode(token, new ControlMessage.Ping(1))
-                    .replace("\"v\":3", "\"v\":4294967299"));
+                    .replace("\"v\":" + Protocol.VERSION, "\"v\":" + ((1L << 32) + Protocol.VERSION)));
             case PROOF_REPLAY -> harness.control(bad, bad.proof == null
                     ? new ControlMessage.AuthProof("AA==") : bad.proof);
             case HELLO_REPLAY -> harness.control(bad, bad.handshake.hello());
