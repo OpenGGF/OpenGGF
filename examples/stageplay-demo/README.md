@@ -36,6 +36,43 @@ See the [Stageplay guide](../../docs/guide/creating/stageplay.md) for audio asse
 native player binding and trigger-based playback. The example cannot be combined
 with another controller that already owns native frame admission.
 
+## Your first scene: Wait for me
+
+Start with the [26-second screenplay](src/main/resources/scenes/wait-for-me.screenplay.json)
+or [portable scene](src/main/resources/scenes/wait-for-me.stageplay). Sonic races
+onto the other lift, realizes he has left Tails behind, returns, and counts them
+into a crossing together. Every move changes the situation; the goal is a shared
+arrival, rather than a collection of unrelated abilities.
+
+Supply your S3&K ROM. In the in-engine level editor, press **F4**, choose **Open
+scene**, and select `wait-for-me.stageplay`; the same file opens in OpenGGF Editor's
+Stageplay workspace. The original S2 opening remains the mod's registered scene.
+This tutorial sample is opened explicitly.
+
+1. **Set and cast:** Death Egg act 2, `LIVE`, Sonic and Tails in Puppet mode. The
+   moving lifts come from the ROM's level data. Initial floor snapping is disabled
+   for their short drop onto the starting lift; native contact controls the ride.
+2. **Movement:** Sonic's first `MOVE_TO` starts at frame 240, aims at placement
+   166 with offset X −16 / Y −35, and requests urgency 0.65. `JUMP` at frame 241
+   holds the button for 20 frames. These are native inputs, not a position curve.
+3. **Wait and react:** `WAIT: ON_OBJECT` gates `STOP` until landing, with a finite
+   180-frame timeout. Sonic returns at frame 660; the pair set off at 1140/1145.
+   Inspect the result: a target is an attempt, and there is no automatic pathfinder.
+4. **Camera:** follow both actors, smoothing 0.2 and zoom 1. Keep their separation
+   visible so the mistake and return read without an explanatory cut.
+5. **Dialogue:** named speakers, pointers, distinct blue/gold skins, and a shared
+   two-frame text reveal. Leave time to read and let the response motivate an action.
+6. **Preview and save:** watch the entire 26 seconds, including platform contact,
+   camera travel and the last reply. Save a new take. Try changing one line or the
+   timing of Sonic's return, then preview again before exporting.
+
+The [authoring reference](../../docs/guide/creating/stageplay-authoring.md) provides
+compile, simulate and render commands. Keep screenplay JSON as the source for
+scripted revisions; editor edits save the portable scene, not a screenplay round-trip.
+The [tutorial production](https://github.com/OpenGGF/OpenGGF-Media/tree/main/projects/stageplay/sources/media/revision-7)
+contains the conceptual walkthrough, full short, exact edit and rebuild instructions.
+Its explanatory cards and track diagram are editorial annotations, not editor UI.
+
 ## Location, Location, Location
 
 The 51-second [screenplay](src/main/resources/scenes/location-remote.screenplay.json)

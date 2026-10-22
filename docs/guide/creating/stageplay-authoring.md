@@ -50,6 +50,17 @@ nearest-neighbour scaling (the default is 1).
 Linux uses surfaceless EGL with desktop display variables removed. Other platforms
 use the capture host's hidden native context; macOS uses Java's first thread.
 
+## Learn with a complete small scene
+
+[Wait for me](../../../examples/stageplay-demo/README.md#your-first-scene-wait-for-me)
+is a 26-second beginner example with a clear goal, a mistake and a changed choice.
+It uses two physical actors, actual moving platforms, finite landing waits, a group
+camera and named dialogue. Open its `.stageplay` in either editor, or revise the
+screenplay and use the commands above. Change one choice, preview its consequence,
+then watch the whole scene before exporting. The accompanying production archive
+shows each directing concept beside the resulting performance, followed by the
+uninterrupted short.
+
 ## Screenplay format
 
 The current screenplay format is `version:3`; the generated scene uses Stageplay

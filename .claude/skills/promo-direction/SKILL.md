@@ -139,6 +139,12 @@ An example 60–90 s showcase shape at 120–175 BPM, not a required narrative f
 | Climax | 10–20 s | The hero moment, in one take into the victory, under a jingle. |
 | End card | 5–7 s | Over blurred gameplay. Fade to black. |
 
+For a tutorial/promo, teach a small set of choices through one coherent example.
+Show choice → visible result, then let the finished scene play without instruction.
+Use real values, distinguish explanatory graphics from actual editor UI, and give
+viewers an editable source and a clear first step. Read the Stageplay first-creator
+lesson in the reference before repeating a feature-check montage as a story.
+
 ### 4. Shot list and capture
 
 - For a gameplay feature showcase, the archive's ≥80% moving gameplay and

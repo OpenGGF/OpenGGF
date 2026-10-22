@@ -112,3 +112,21 @@ changing movement, adding fake terrain or making every background scroll alike.
   entry method. Authored spawns, positioned starts and cuts cannot establish a
   continuous cold completion, and none of these alone proves ROM parity. Keep
   those evidence kinds distinct and retain the required source archive.
+
+## Stageplay first-creator tutorial
+
+On 2026-10-22 the user was pleased with the working features but rejected the
+story as making little sense and consisting of characters jumping around. They
+requested a tutorial/promo for first-time creators. Revision seven therefore uses
+one small conflict: Sonic rushes ahead, leaves Tails behind, comes back, and crosses
+with him. Movement needs a reason and a consequence; a sequence of native ability
+checks is not automatically a story. The earlier technical checks remain valid
+within their scope and do not establish creative acceptance.
+
+For a conceptual tutorial, connect each directing choice to its visible result.
+Use a coherent sample, show the actual settings and allow time to read them while
+the performance continues. Label editorial notes and track diagrams honestly; do
+not imitate controls the editor does not have. Finish with the complete scene so
+viewers can judge the relationships and pacing without instructional interruptions.
+Keep an editable sample and a direct path from the lesson to opening it. A first
+lesson does not need every available ability or a second unrelated showcase.

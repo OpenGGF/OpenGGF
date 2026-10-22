@@ -834,3 +834,29 @@ index links, original CSV byte prefix and public-exposure checks passed.
 The Media task worktree/branch and owned preview server are cleaned up. Engine
 and Editor final packaging, destination pushes and accounted worktree cleanup
 follow this checkpoint; their resulting commit IDs belong to the delivery reply.
+
+
+## First-creator tutorial follow-up — 2026-10-22
+
+The user accepted the working features but found the earlier story incoherent and
+requested a tutorial/promo for first-time creators. The new `wait-for-me` sample
+uses one 26-second LIVE shot: Sonic crosses alone, responds to Tails, returns and
+counts them into a shared crossing. A 124-second film explains actual directing
+choices before playing the complete short. Editorial notes are not editor UI.
+Production sources and rejected takes live in the existing Stageplay media archive,
+revision seven; no Java runtime or editor behavior changes in this follow-up.
+
+The first tutorial cut clipped Sonic's return-jump apex (centre Y 7.71 at frame
+687). Raising the group camera by 15 pixels and ending his line before takeoff
+keeps the movement readable. Keep full moving review and frame-specific checks: a
+successful native landing alone cannot certify the framing.
+
+Validation uses the delivered runtime `efa7875f8c60885dad0458a2cfbe77c0cd49a4de`
+(integrated as `38c2736ccf1a0372cf3df3edbd7ba1d6393e5340`). Compile, native simulation,
+lossless rendering, generator equivalence and full encoded-media checks validate
+the new content. The change-based plan selected 3,565 smoke classes because the
+example paths are unclassified. That is disproportionate for scene data and prose
+with unchanged Java/POM/selection policy; the direct content checks replace it.
+No smoke/full-suite pass is claimed, and prior runtime baseline failures remain
+as recorded above. Exact production commands and observed results are retained
+in the revision-seven README, capture/edit drivers and provenance.
