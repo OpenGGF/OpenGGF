@@ -3483,3 +3483,15 @@ stage does not retain an old fade generation after rewind. The independent
 headless failure and complete S3K sanctuary entry/return qualification are
 recorded in the [completion plan](../architecture/plans/2026-10-13-s3k-playable-completion.md#immediate-scene-fade-publication-after-rewind--2026-10-17).
 This shared publication repair does not certify other games' route products.
+
+
+### Knuckles glide dispatcher and slide cue components (2026-10-22)
+
+Shared glide dispatch now preserves the native unsigned camera tail, existing
+non-CPU camera owner, boundary-before-move order and states3–5 early-return
+prelude. S3K supplies the optional ROM GroundSlide cue; other profiles default
+absent. The affected22 classes qualify599 unique cases after an independently
+attributed camera-bound fixture repair, without changing any climb expectation
+or maintained route data. This does not close native waveform, live dual-plane
+route breadth or prior-source MHZ37752 attribution. See the
+[MHZ matrix](../architecture/validation/levels/s3k-mhz-act2.md#native-glide-prelude-and-groundslide-component-closure--2026-10-22).

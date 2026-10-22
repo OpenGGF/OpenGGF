@@ -1211,3 +1211,27 @@ component462 pass does not certify those unauthored gaps. The
 [full source contract](../../plans/2026-10-13-s3k-playable-completion.md#root-glide-dispatch-prelude-and-slide-audio-source-contract--2026-10-22)
 records exact native pins/labels, existing per-state owners and proposed semantic
 cue/actor/registered controls. No new route or source change, no37752 cause claim.
+
+### Native glide prelude and GroundSlide component closure — 2026-10-22
+
+The next source unit restores the common camera/boundary/no-gravity move before
+states3–5, removes the former slide-local move, and supplies the native unsigned
+camera tail in all states, twice in state2. The established non-CPU actor gate and
+separate climb clamps stay unchanged. An optional internal installed-profile cue
+adds S3K GroundSlide only after successful second-floor Y/angle writes on the
+actual level-clock cadence; KiS2 remains absent.
+
+Old source gives129T/105 intended failures/0errors/skips while the actual ROM
+pointer/header/PSG3 target test passes. The affected22 classes initially give
+599T/36F, all in an old climb fixture whose default maxY0 killed its synthetic
+Y512 inlet before the handler. Explicit safe bounds/canonical controller repair
+preserves all47 expectations and passes47/0F/E/S. Combined with the unchanged
+other21 classes'552 passes, this qualifies599 unique cases across22 classes,
+not one green lifecycle. Both full-registry slide replay controls now dispatch
+publicly, with all keys/two cycles/orientations retained.
+
+No maintained route was rerun or adapted; prior death37752 and its source epoch
+remain unchanged, with cause/worsening attribution open. Live dual-plane terrain,
+native audio waveform and Act2/FBZ remain separate. Exact commands, native pins,
+namespace proof, fixture rationale and timings are in the
+[dated qualification](../../plans/2026-10-13-s3k-playable-completion.md#root-native-glide-prelude-and-groundslide-qualification--2026-10-22).

@@ -1751,3 +1751,21 @@ LevelBound/camera-bias prelude, S3K slide audio and live dual-plane breadth rema
 open. The earlier maintained MHZ death37752 was not rerun in this scope; cause
 and matched baseline/current attribution remain pending.
 [Source, command and limits](architecture/plans/2026-10-13-s3k-playable-completion.md#root-knuckles-slide-collision-and-landing-contract--2026-10-22).
+
+
+Knuckles glide prelude/audio component update (2026-10-22): the common native
+camera/boundary/no-gravity move now runs before states3–5 early handlers, without
+double-moving sliding; state2 owns both native unsigned camera tails. The
+existing non-CPU actor camera gate remains. S3K GroundSlide is an optional
+installed-profile cue after second-floor correction on Level_frame_counter;
+KiS2 omits it. A real-ROM test verifies7E's actual pointer/header/PSG3 stream,
+not just an observed request integer.
+
+599 unique affected cases across22 classes pass after a fixture-only correction:
+the first request passed552 other identities while36 of47 old climb fixtures
+hit their undeclared maxY0 death plane; explicit component bounds/canonical
+controller preserve all47 expectations and the final47-case request passes.
+No source physics or assertion was changed to fit that fixture. These controls
+do not qualify native waveform/death-plane WORD wrapping, live dual-plane routes
+or the maintained MHZ37752 negative. Combined smoke and matched source attribution
+remain open. [Evidence and limits](architecture/plans/2026-10-13-s3k-playable-completion.md#root-native-glide-prelude-and-groundslide-qualification--2026-10-22).

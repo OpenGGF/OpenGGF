@@ -34,6 +34,7 @@ import com.openggf.physics.TerrainCheckResult;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameSound;
+import com.openggf.audio.NativeAudioEffectCues;
 import com.openggf.level.objects.SkidDustObjectInstance;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -369,6 +370,20 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// ground/air routines do not run that reset/pan path
 		// (docs/skdisasm/sonic3k.asm:25781-25786,25937-25977).
 		return camera != null && !sprite.isCpuControlled() ? camera : null;
+	}
+
+	/**
+	 * Knuckles_Move_Glide camera tail: unsigned WORD compare and two-unit step,
+	 * including overshoot across $60. Keep the established non-CPU actor owner.
+	 * S3K 8b2cf3c sonic3k.asm:31747-31757; KiS2 c336fede s2.asm:39005-39014.
+	 */
+	private void easeNativeKnucklesGlideCameraBias() {
+		Camera camera = playerCameraBiasController();
+		if (camera == null) return;
+		int bias = camera.getYPosBias() & 0xFFFF;
+		if (bias != 0x60) {
+			camera.setYPosBias((short) (bias < 0x60 ? bias + 2 : bias - 2));
+		}
 	}
 
 	private LevelManager levelManager() {
@@ -733,6 +748,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		int glideState = sprite.getDoubleJumpFlag();
 		if (glideState >= 3 && glideState <= 5
 				&& sprite.getSecondaryAbility() == SecondaryAbility.GLIDE) {
+			// Knux_Glide_Freespace / KiS2 GlideControl run the common prelude
+			// before sliding, climbing and ledge-handler early returns. Flags !=1
+			// take only Move_Glide's camera tail, not its active speed controls.
+			// sonic3k.asm:30715-30737; KiS2 s2.asm:38147-38170.
+			easeNativeKnucklesGlideCameraBias();
+			doLevelBoundary();
+			if (isCpuLevelBoundaryKillActive()) return;
+			moveSpriteTestGravity(sprite.getXSpeed(), sprite.getYSpeed());
 			updateKnucklesGlide();
 			// Direction is managed by glide code, not updateFacingDirection
 			sprite.updateSensors(originalX, originalY);
@@ -978,6 +1001,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// (velocity), Player_LevelBound, MoveSprite2, then Knuckles_Glide
 			// (collision + jump-release check).
 			updateKnucklesGlide();  // Knuckles_Move_Glide (velocity only, flag stays 1)
+			easeNativeKnucklesGlideCameraBias();
 			doLevelBoundary();
 			if (isCpuLevelBoundaryKillActive()) {
 				return;
@@ -998,8 +1022,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// Knuckles_Fall_From_Glide (double_jump_flag == 2). ROM dispatches this
 		// via Knux_Glide_Freespace (sonic3k.asm:30715-30722): Knuckles_Move_Glide
-		// is a no-op for flag != 1, then MoveSprite_TestGravity2 (== MoveSprite2
-		// under normal gravity: move by the CURRENT velocity, NO gravity) runs
+		// skips speed control for flag != 1 but keeps its camera tail; then
+		// MoveSprite_TestGravity2 moves the CURRENT velocity without gravity
 		// BEFORE Knuckles_Fall_From_Glide. Knuckles_Fall_From_Glide
 		// (sonic3k.asm:30935-30983) then runs Knux_ChgJumpDir (air control),
 		// applies +$38 gravity, and lands via collision. This move-then-control
@@ -1009,13 +1033,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// giant-ride-vine approach). The hurt variant keeps the shared airborne
 		// path below (its own recoil ordering).
 		if (inGlide && glideState == 2 && !sprite.isHurt()) {
+			easeNativeKnucklesGlideCameraBias();
 			doLevelBoundary();                    // Player_LevelBound
 			if (isCpuLevelBoundaryKillActive()) {
 				return;
 			}
 			// MoveSprite2 (no gravity): move by the pre-control velocity first.
 			moveSpriteTestGravity(sprite.getXSpeed(), sprite.getYSpeed());
-			doChgJumpDir();                       // Knux_ChgJumpDir (air control)
+			doChgJumpDir(true);                   // Knux_ChgJumpDir owns a second camera tail
 			applyGravity();                       // addi.w #$38,y_vel(a0)
 			applyUnderwaterAirGravityReduction(); // btst Status_Underwater; subi #$28
 			sprite.updateSensors(originalX, originalY);
@@ -2037,11 +2062,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * button released or velocity crosses zero.
 	 */
 	private void updateSliding() {
-		// Knux_Glide_Freespace / KiS2 GlideControl move BOTH original velocity
-		// words without gravity before dispatch (sonic3k.asm:30715-30737;
-		// KiS2 c336fede s2.asm:38126-38170). Reverse gravity mirrors Y.
-		moveSpriteTestGravity(sprite.getXSpeed(), sprite.getYSpeed());
-
 		if (!inputJump) {
 			slideGetUp();
 			return;
@@ -2098,6 +2118,18 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				NativePositionOps.addYPosPreserveSubpixel(sprite,
 						ReverseGravity.mirrorYDelta(reversed, floorResult.distance()));
 				sprite.setAngle(floorResult.angle());
+				// S3K Knuckles_Sliding.continueSliding (31050-31058) queues
+				// GroundSlide AFTER the successful second-floor Y/angle writes.
+				// KiS2 removes this block; the installed profile defaults absent.
+				if (audioManager.getAudioProfile() instanceof NativeAudioEffectCues cues) {
+					int cue = cues.groundSlideSfxId();
+					if (cue >= 0) {
+						LevelManager level = levelManager();
+						if (level != null && (level.getFrameCounter() & 7) == 0) {
+							audioManager.playSfx(cue);
+						}
+					}
+				}
 			}
 		} finally {
 			if (restoreTemporaryRadii) sprite.restoreDefaultRadii();
@@ -3475,6 +3507,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	/** Sonic_ChgJumpDir: Air control and drag (s2.asm:36815) */
 	private void doChgJumpDir() {
+		doChgJumpDir(false);
+	}
+
+	private void doChgJumpDir(boolean nativeGlideCameraBias) {
 		short xSpeed = sprite.getXSpeed();
 		short ySpeed = sprite.getYSpeed();
 		short runAccel = sprite.getRunAccel();
@@ -3513,9 +3549,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			}
 		}
 
-		Camera camera = playerCameraBiasController();
-		if (camera != null) {
-			camera.easeYBiasToDefault();
+		if (nativeGlideCameraBias) {
+			// Knux_ChgJumpDir repeats the literal tail after the common prelude.
+			// S3K sonic3k.asm:32455-32465; KiS2 s2.asm:39801-39806.
+			easeNativeKnucklesGlideCameraBias();
+		} else {
+			Camera camera = playerCameraBiasController();
+			if (camera != null) camera.easeYBiasToDefault();
 		}
 
 		// Air drag near apex (-1024 <= ySpeed < 0)

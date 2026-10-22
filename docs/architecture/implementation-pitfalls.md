@@ -539,7 +539,25 @@ leaves double_jump_property intact. A late restore after ordinary setAir(false)
 is insufficient: landing callbacks already observed zero. Use the narrow native
 floor-reset entry before publication; ordinary landing keeps its original reset.
 Declared component and registered restore/forward controls cover these branches;
-LevelBound/camera prelude, slide sound and live route qualification remain separate.
+live route qualification remains separate.
+
+**Native glide prelude can be skipped by a correct local handler.** All five
+Knuckles glide states run the speed owner's unsigned WORD camera tail before
+LevelBound and no-gravity movement; flags3–5 skip active speed controls, not that
+tail. Move once before their handlers, including climb/ledge early returns, and
+remove any prior slide-local move. State2 also calls ChgJumpDir's second tail.
+Native bias95/97 oscillates, and high-bit words compare unsigned; shared signed,
+clamped easing is not equivalent. Preserve the existing actor ownership gate.
+When adding this prelude to component controls, declare coherent camera bounds:
+a Y512 inlet with default maxY0 dies before any climb probe. Keep original terrain
+expectations and death-plane implementation intact instead of disabling the gate.
+
+**A native sound ID needs its actual loader namespace.** S3K GroundSlide7E
+resolves pointer-list entry4B after native ID_BASE33; assert the actual ROM target
+and PSG3 stream, not merely7E at an observer. Queue it only after successful
+second-floor Y/angle writes on the actual Level_frame_counter low3-bit cadence.
+KiS2 removes this sound block; an optional installed-profile cue preserves absence.
+The component request and ROM-target proof do not establish native waveforms.
 
 **Climb offsets precede the radius.** S3K `Knuckles_Wall_Climb` and KiS2
 `Knuckles_Climbing_Wall` pass `Y-8` / `Y+9` to the vertical helpers;

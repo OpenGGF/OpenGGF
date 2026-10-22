@@ -43,6 +43,9 @@ import static org.mockito.Mockito.*;
  * Declared climb-state components, not wall-admission or route replays. Real Knuckles,
  * public movement, descriptors, height/width profiles and GroundSensor scans run.
  * Only layout/profile ownership is supplied by the LevelManager fixture.
+ * Explicit camera bounds keep the declared Y512 climb inlet alive through the
+ * common native prelude; signed/wrapping local-clamp cases are handler controls,
+ * not death-plane arithmetic or route qualification.
  * Literal results are hand-derived from skdisasm044 Knuckles_Wall_Climb,
  * sub_F828 / CheckCeilingDist_WithRadius / FindFloor and KiS2 c336fede's port.
  */
@@ -323,9 +326,17 @@ class TestKnucklesWallClimbVerticalContract {
         player.getAnimationManager().publishPreviousAnimationId(0x20);
         player.setForcedAnimationId(0x20);
         player.setAbilityMappingFrameControl(true);
-        GameServices.camera().setMinY((short) 0);
-        GameServices.camera().setFocusedSprite(player);
-        movement = new PlayableSpriteMovement(player);
+        var camera = GameServices.camera();
+        camera.setMinX((short) 0);
+        camera.setMaxX((short) 2000);
+        camera.setMinY((short) 0);
+        // Keep every declared signed-word Y inlet inside the synthetic lower
+        // bound. The default maxY=0 would kill Y512 before the climb handler.
+        camera.setMaxY(Short.MAX_VALUE);
+        camera.setFocusedSprite(player);
+        movement = assertInstanceOf(PlayableSpriteMovement.class, player.getMovementManager());
+        assertEquals(0, player.getXSpeed());
+        assertEquals(0, player.getYSpeed());
         assertSame(kis2 ? Kis2Rules.RULES : GameRules.SONIC_3K, player.getGameRules());
     }
 

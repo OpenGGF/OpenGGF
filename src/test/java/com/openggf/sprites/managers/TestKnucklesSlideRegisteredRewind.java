@@ -17,15 +17,16 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Registered restore/forward control for the slide get-up turn byte. The player,
  * controller and registry are production-booted; the slide inlet is declared
- * synthetic component state. This does not qualify an ordinary gameplay route,
- * terrain collision, rendering or native-ROM equivalence.
+ * synthetic component state inside explicit 0..2000 camera bounds. Release
+ * replays through the canonical controller's public dispatcher. This does not
+ * qualify an ordinary gameplay route, terrain collision, rendering or
+ * native-ROM equivalence.
  */
 @RequiresRom(SonicGame.SONIC_3K)
 @Isolated
@@ -50,10 +51,13 @@ class TestKnucklesSlideRegisteredRewind {
 
             Field heldJump = PlayableSpriteMovement.class.getDeclaredField("inputJump");
             heldJump.setAccessible(true);
-            Method slide = PlayableSpriteMovement.class.getDeclaredMethod("updateSliding");
-            slide.setAccessible(true);
 
             // Declared component inlet, not a trace row or an input-authored route.
+            var camera = GameServices.camera();
+            camera.setMinX((short) 0);
+            camera.setMaxX((short) 2000);
+            camera.setMinY((short) 0);
+            camera.setMaxY((short) 2000);
             GameServices.gameState().setReverseGravityActive(reverseGravity);
             player.setAir(true);
             player.setJumping(true);
@@ -74,7 +78,7 @@ class TestKnucklesSlideRegisteredRewind {
             var inlet = registry.capture();
             assertTrue(inlet.entries().containsKey("sprites"), "the registered player must be captured");
             assertWorld(inlet, registry.capture(), "repeated inlet capture");
-            slide.invoke(movement);
+            release(movement);
             assertGetUp(player);
             var forward = registry.capture();
             assertFalse(RewindSnapshotDiff.keyEquals("sprites", inlet.get("sprites"), forward.get("sprites")),
@@ -95,7 +99,7 @@ class TestKnucklesSlideRegisteredRewind {
                 assertEquals(3, player.getDoubleJumpFlag());
                 assertWorld(inlet, registry.capture(), "inlet restore " + cycle);
 
-                slide.invoke(movement);
+                release(movement);
                 assertGetUp(player);
                 assertWorld(forward, registry.capture(), "get-up replay " + cycle);
 
@@ -105,6 +109,11 @@ class TestKnucklesSlideRegisteredRewind {
                 assertWorld(forward, registry.capture(), "get-up restore " + cycle);
             }
         }
+    }
+
+    private static void release(PlayableSpriteMovement movement) {
+        movement.handleMovement(false, false, false, false,
+                false, false, false, false);
     }
 
     private static void assertGetUp(Knuckles player) {
