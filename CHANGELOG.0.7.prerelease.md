@@ -7,7 +7,9 @@ Unreleased. The earlier development themes remain in
 
 - **Sonic 1 level entry:** background scrolling starts from each level or credits
   demo's final camera, and lamppost returns retain the original background camera
-  words. Rewind restores fractional scroll positions and cloud phase. Hidden
+  words. Scrap Brain Act 3 uses the original Labyrinth background scrolling
+  while keeping its Scrap Brain progression. Rewind restores fractional scroll
+  positions and cloud phase. Hidden
   100-point pickups retain the shipped game's 10-point award and 100-point popup.
 
 - **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and

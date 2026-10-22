@@ -127,7 +127,87 @@ execution. These overlapping job intervals are not elapsed delivery time.
 
 Remaining scope is explicit: actual later-zone ordinary lamppost routes,
 complete act matrices, donor/team/wider-viewport breadth and full-campaign rewind
-remain inherited. A separate source-only concern was sent to the lead: SBZ3's
-progression zone 5/act 2 appears to select the ordinary SBZ nonzero-act scroll
-handler despite its ROM LZ4 identity. It was not reproduced or changed by this
-bounded lifecycle deliverable.
+remain inherited. The initial commit left a source-only SBZ3 scroll-alias concern. The bounded
+follow-up below reproduces and closes that concern; the other coverage limits
+above remain unchanged.
+
+
+## SBZ3 native scroll alias follow-up
+
+The follow-up starts from local commit
+`6d5c41e4b73fceeb2fdb99fef4e8c4445a0fd00f`. A production full load and
+`advanceToNextLevel()` from SBZ2 both preserve progression zone **5/act 2**
+while loading terrain from native **LZ/act 4** (`LevelData` index `0x91`).
+The previous scroll provider incorrectly selected `Deform_SBZ2` from the
+progression identity, although the native scroll dispatch reads `v_zone` alone.
+
+Direct REV01 bytes establish the owning routines:
+
+| ROM location | Verified bytes | Meaning |
+| --- | --- | --- |
+| `0x629E` | `7000 1038FE10 D040 303B0006 4EFB0002` | Dispatch by `v_zone` |
+| `0x62AE` | `000E 0108 029A 0392 0462 050E 000E` | LZ entry points to `0x63B6` |
+| `0x63B6` | `3838F73A 48C4 EF84 3A38F73C 48C5 EF85 610006FC` | Half-speed X/Y camera shifts |
+| `0x61D4` | `000E 002A 0032 0034 0044 005A 0068` | LZ background setup points to `0x61FE` |
+| `0x61FE` | `E280 31C0F70C 4E75` | Initial BG Y = camera Y / 2 |
+
+Before changing production code, the actual EGL load/render probe started at
+camera `(0x0AE0, 0)` and moved it by `(32, 16)`. The engine produced BG
+`(0x0AE8, 3)` instead of native LZ `(0x0AF0, 8)`. Comparing the same terrain,
+foreground camera and render with independent LZ scroll inputs gave **10,571
+pixel differences**. The deliberate SBZ2 negative control differed by the
+same count, proving the background was visible to this probe. The independent
+SBZ2-to-SBZ3 progression regression also failed BG X `2800` versus `2792`.
+These two tests failed by assertion, with zero errors/skips, on the unchanged
+production source of `6d5c41e4b`.
+
+The fix stays inside `Sonic1ScrollHandlerProvider`. It resolves the native
+scroll zone separately from terrain/progression identity, with one dedicated
+LZ handler for SBZ3. Initialization selects the zone/act **before** resolving
+that handler. Checking the global act alone was rejected because an ordinary
+LZ act-3 load could then change an inactive SBZ handler query. Sharing the
+ordinary LZ instance was also avoided so the two routes retain independent
+entry anchors. The resolved native scroll zone also selects checkpoint word
+capture, preserving LZ's otherwise-unused BG2/BG3 X words rather than taking
+zeros from the SBZ branch. Initialization, active-handler rewind and checkpoint
+capture/restore consequently select the same owner. No public API, game loop,
+level-manager, terrain, progression or comparison-trace contract changes.
+
+`TestSonic1Sbz3ScrollAlias` checks direct ROM opcode/table bytes, actual full
+load and rendered output with a visible wrong-routine control, actual SBZ2
+progression, a real lamppost activation/death reload, retained BG words,
+fractional restore/forward replay, and return to ordinary SBZ2 scrolling.
+Provider isolation and existing SBZ1 band/SBZ2 uniform controls remain separate
+short checks. No full SBZ3 route, trace frontier or wider-view/donor/team
+coverage is claimed.
+
+The corrected-source focused run passes **38 tests**, zero failures/errors/skips.
+The identical render probe now gives actual BG `(0x0AF0, 8)`, zero pixel
+differences from the LZ reference and the same 10,571-pixel difference from the
+SBZ2 negative control. The command uses the existing supplied absolute ROM via
+`SONIC1_ROM`:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestSonic1Sbz3ScrollAlias,TestSonic1ScrollLifecycle,TestSonic1ScrollLoadBoundary,TestSwScrlSbz' \
+  "-Dsonic1.rom.path=$SONIC1_ROM" test -B
+```
+
+The pre-fix command used only `-Dtest=TestSonic1Sbz3ScrollAlias`, with the same
+ROM, environment and graphics flag. Java 25/Lua 5.4/PowerShell preflight also
+passed for the follow-up. The focused selection's queue wait exceeded 60s;
+Maven execution took 1m17s, separately from waiting.
+
+The two affected rewind guards pass, zero failures/errors/skips (27.966s Maven
+execution):
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  '-Dtest=TestRewindCoverageGuard,TestRewindFieldDispositionGuard' test -B
+```
+
+The original unchanged public-API checks were not repeated for this private
+provider alias. No broad smoke, full suite or trace replay was launched by this
+follow-up. Source whitespace and new audit link checks also pass.

@@ -22,6 +22,7 @@ public class Sonic1ScrollHandlerProvider implements ScrollHandlerProvider, com.o
     private SwScrlGhz ghzHandler;
     private SwScrlEnd endHandler;
     private SwScrlLz lzHandler;
+    private SwScrlLz sbz3Handler;
     private SwScrlMz mzHandler;
     private SwScrlSlz slzHandler;
     private SwScrlSyz syzHandler;
@@ -31,6 +32,7 @@ public class Sonic1ScrollHandlerProvider implements ScrollHandlerProvider, com.o
     // Words unused by a zone's deform routine retain the load/checkpoint bank.
     // They are constant within a level timeline; full loads reset that timeline.
     private final CheckpointBackgroundScroll[] entryBackgrounds = new CheckpointBackgroundScroll[8];
+    private int activeZone = -1;
     private int activeAct;
     private boolean loaded = false;
 
@@ -45,6 +47,7 @@ public class Sonic1ScrollHandlerProvider implements ScrollHandlerProvider, com.o
         ghzHandler = new SwScrlGhz();
         endHandler = new SwScrlEnd();
         lzHandler = new SwScrlLz();
+        sbz3Handler = new SwScrlLz();
         mzHandler = new SwScrlMz();
         slzHandler = new SwScrlSlz();
         syzHandler = new SwScrlSyz();
@@ -61,9 +64,10 @@ public class Sonic1ScrollHandlerProvider implements ScrollHandlerProvider, com.o
             return null;
         }
 
-        return switch (zoneIndex) {
+        return switch (scrollZone(zoneIndex)) {
             case Sonic1ZoneConstants.ZONE_GHZ -> ghzHandler;
-            case Sonic1ZoneConstants.ZONE_LZ -> lzHandler;
+            case Sonic1ZoneConstants.ZONE_LZ -> zoneIndex == Sonic1ZoneConstants.ZONE_SBZ
+                    ? sbz3Handler : lzHandler;
             case Sonic1ZoneConstants.ZONE_MZ -> mzHandler;
             case Sonic1ZoneConstants.ZONE_SLZ -> slzHandler;
             case Sonic1ZoneConstants.ZONE_SYZ -> syzHandler;
@@ -78,9 +82,10 @@ public class Sonic1ScrollHandlerProvider implements ScrollHandlerProvider, com.o
 
     @Override
     public void initForZone(int zoneId, int actId, int cameraX, int cameraY) {
+        activeZone = zoneId;
+        activeAct = actId;
         ZoneScrollHandler handler = getHandler(zoneId);
         if (handler != null) {
-            activeAct = actId;
             entryBackgrounds[zoneId] = new CheckpointBackgroundScroll(
                     cameraX, cameraY, cameraX, cameraY, cameraX, 0);
             handler.init(actId, cameraX, cameraY);
@@ -101,7 +106,7 @@ public class Sonic1ScrollHandlerProvider implements ScrollHandlerProvider, com.o
         CheckpointBackgroundScroll current = handler.captureBackgroundScroll();
         CheckpointBackgroundScroll entry = entryBackgrounds[zoneId];
         if (entry == null) return current;
-        return switch (zoneId) {
+        return switch (scrollZone(zoneId)) {
             case Sonic1ZoneConstants.ZONE_GHZ -> current;
             case Sonic1ZoneConstants.ZONE_MZ -> new CheckpointBackgroundScroll(
                     current.bgX(), current.bgY(), current.bg2X(), current.bgY(), current.bg3X(), current.bgY());
@@ -112,6 +117,15 @@ public class Sonic1ScrollHandlerProvider implements ScrollHandlerProvider, com.o
             default -> new CheckpointBackgroundScroll(current.bgX(), current.bgY(),
                     entry.bg2X(), entry.bg2Y(), entry.bg3X(), entry.bg3Y());
         };
+    }
+
+    private int scrollZone(int progressionZone) {
+        // SBZ3 is native LZ act 4: Deform_Index ($62AE) and BgScroll_Index
+        // ($61D4) dispatch by v_zone alone. Keep progression 5/2 intact while
+        // resolving the same LZ owner for init, update, checkpoint and rewind.
+        return progressionZone == Sonic1ZoneConstants.ZONE_SBZ
+                && activeZone == progressionZone && activeAct == 2
+                ? Sonic1ZoneConstants.ZONE_LZ : progressionZone;
     }
 
     @Override
