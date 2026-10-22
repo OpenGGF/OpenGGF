@@ -17,7 +17,7 @@ import java.util.List;
  * ARZ Bubble (Object 0x24 routine 4) - Rising breathable bubble.
  * Spawned by BubbleGeneratorObjectInstance.
  * <p>
- * Based on Obj24_Rising from s2.asm (lines 44868-44987).
+ * Based on loc_1F924 through loc_1F99E (s2.asm:45231-45285).
  * <p>
  * Physics:
  * - Rises upward at -0x88 velocity (8.8 fixed point = ~0.53 pixels/frame)
@@ -34,18 +34,9 @@ public class BubbleObjectInstance extends AbstractObjectInstance
     // Rise velocity in 8.8 fixed point (-0x88 = ~-0.53 pixels/frame upward)
     private static final int RISE_VELOCITY = -0x88;
 
-    // Wobble data table (128 bytes, signed) - matches ROM Obj24_WobbleData
-    // This creates a smooth horizontal oscillation as the bubble rises
-    private static final int[] WOBBLE_DATA = {
-        0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
-        2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-        3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2,
-        2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
-        0, -1, -1, -1, -1, -1, -2, -2, -2, -2, -2, -3, -3, -3, -3, -3,
-        -3, -3, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4,
-        -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -3,
-        -3, -3, -3, -3, -3, -3, -2, -2, -2, -2, -2, -1, -1, -1, -1, -1
-    };
+    // Obj0A_WobbleData and Ani_obj24, stock S2 REV01. Runtime bytes stay ROM-owned.
+    private static final int WOBBLE_DATA_ADDRESS = 0x1D4C0;
+    private static final int ANIMATION_TABLE_ADDRESS = 0x1FBCC;
 
     // Touch collision half-sizes for breathable bubbles (ROM Touch_Sizes entry)
     private static final int COLLISION_HALF_WIDTH = 16;
@@ -59,22 +50,10 @@ public class BubbleObjectInstance extends AbstractObjectInstance
      */
     private static final int BREATHABLE_FRAME_THRESHOLD = 6;
 
-    /**
-     * {@code Ani_obj24} (docs/s2disasm/s2.asm:45478-45496). Each entry is the
-     * ROM script: element 0 is the frame duration byte, the rest are mapping
-     * frames, and the script ends at the ROM's {@code $FC} (advance routine) --
-     * after which {@code mapping_frame} simply holds its last value.
-     * <p>
-     * Only script 2 -- the large bubble, the one the maker's
-     * {@code move.b #2,subtype(a1)} override produces -- runs up to frame 6, and
-     * it takes four frame steps at {@code $E} to get there. That climb is the
-     * ROM's entire inhalable delay; there is no timer anywhere that encodes it.
-     */
-    private static final int[][] ANI_OBJ24 = {
-            {0x0E, 0, 1, 2},          // 0: small
-            {0x0E, 1, 2, 3, 4},       // 1: medium
-            {0x0E, 2, 3, 4, 5, 6},    // 2: large / inhalable
-    };
+    // Native routine starts at 2 after Obj24_Init; 4 rises without inflating,
+    // 6 runs the pop animation, and 8 deletes on the following own slot pass.
+    private int routine = 2;
+    private int previousAnim = -1;
 
     // Position as 16.16 fixed point
     private int posX16;
@@ -93,7 +72,7 @@ public class BubbleObjectInstance extends AbstractObjectInstance
 
     /**
      * ROM {@code anim(a0)}, written from {@code subtype} by
-     * {@code loc_1F90A} ({@code move.b d0,anim(a0)}, docs/s2disasm/s2.asm:45217).
+     * {@code loc_1F90A} ({@code move.b d0,anim(a0)}, docs/s2disasm/s2.asm:45225-45230).
      * 0 = small, 1 = medium, 2 = large. This is the ROM's own subtype byte, not
      * a size scale.
      */
@@ -161,7 +140,7 @@ public class BubbleObjectInstance extends AbstractObjectInstance
         // mapping_frame from the script on the bubble's first animation tick,
         // and every script's first frame equals its own index.
         this.animFrameIndex = 0;
-        this.mappingFrame = script()[1];
+        this.mappingFrame = 0;
         this.animTimer = 0;
 
         // Initial display position
@@ -177,88 +156,71 @@ public class BubbleObjectInstance extends AbstractObjectInstance
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         boolean observedRomRenderOnScreen = romRenderOnScreen;
-        if (breathed) {
+        if (routine == 8) {
             setDestroyed(true);
             return;
         }
-
         if (wobbleAnglePendingRng) {
-            // Obj24_Init consumes RandomNumber for the child bubble's angle on
-            // the child's own object pass, not in the generator that allocated it.
             wobbleAngle = services().rng().nextByte();
             wobbleAnglePendingRng = false;
         }
-
-        // ROM routine 2 IS loc_1F924: AnimateSprite over Ani_obj24 and then the
-        // cmpi.b #6,mapping_frame test that sets objoff_2E
-        // (docs/s2disasm/s2.asm:45231-45236). It runs FIRST, before the water
-        // check, the wobble and the collect box at loc_1F956, so the pass that
-        // lifts mapping_frame to 6 is also the pass whose
-        // `tst.b objoff_2E(a0) / beq` (:45257-45258) can already see it. Running
-        // it at the end of update() instead delayed every inhale by one frame.
-        animateSprite();
-
-        // ROM loc_1F93E (docs/s2disasm/s2.asm:45238-45244) tests the water
-        // surface against y_pos BEFORE the wobble and BEFORE ObjectMove, so the
-        // value compared is the position the bubble held on entry to this pass.
-        // Use getFeatureZoneId/ActId to match the keys WaterSystem stores configs
-        // under (important for S1 SBZ3 which remaps from LZ).
-        if (services().currentLevel() != null) {
-            WaterSystem waterSystem = services().waterSystem();
-            int zoneId = services().featureZoneId();
-            int actId = services().featureActId();
-
-            if (waterSystem.hasWater(zoneId, actId)) {
-                int waterY = waterSystem.getWaterLevelY(zoneId, actId);
-                if (displayY <= waterY) {
-                    // Bubble reached surface - pop it
-                    setDestroyed(true);
-                    return;
-                }
-            }
-        }
-
-        // Apply wobble to X position
-        // ROM loc_1F956 (docs/s2disasm/s2.asm:45247-45256):
-        //   move.b angle(a0),d0 / addq.b #1,angle(a0) / andi.w #$7F,d0
-        //   lea (Obj0A_WobbleData).l,a1 / move.b (a1,d0.w),d0 / ext.w d0
-        //   add.w objoff_30(a0),d0 / move.w d0,x_pos(a0)
-        // The table is indexed with the angle the pass STARTED with; the
-        // increment lands in the SST for the next pass. Incrementing first put
-        // every bubble one wobble step ahead of the ROM for its whole life.
-        int wobbleIndex = wobbleAngle & 0x7F; // 128-entry table
-        wobbleAngle = (wobbleAngle + 1) & 0xFF;
-        int wobbleOffset = WOBBLE_DATA[wobbleIndex];
-        displayX = baseX + wobbleOffset;
-
-        if (!observedRomRenderOnScreen) {
-            setDestroyed(true);
+        if (routine == 6) {
+            animateSprite();
+            displayOrDelete(observedRomRenderOnScreen);
             return;
         }
-
-        // ROM loc_1F956 (docs/s2disasm/s2.asm:45257-45259) runs the collect box
-        // -- tst.b objoff_2E(a0) / beq.s loc_1F988 / bsr.w loc_1FB02 -- while
-        // y_pos still holds this pass's entry position. ObjectMove only runs
-        // afterwards, at loc_1F988 (:45263-45264), so the box the ROM tests is
-        // always one rise step behind the position the frame ends on. Applying
-        // the rise first made every inhale one frame late.
-        if (player != null && isBreathable()) {
-            checkPlayerCollision(player);
+        // loc_1F924 falls through even when FC advances routine 2 to 4.
+        if (routine == 2) {
+            animateSprite();
+            if (mappingFrame == BREATHABLE_FRAME_THRESHOLD) inhalable = true;
         }
-
-        // ROM loc_1F988: jsrto JmpTo3_ObjectMove (docs/s2disasm/s2.asm:45263-45264).
-        // ROM: move.w y_vel(a0),d0 / ext.l d0 / asl.l #8,d0 / add.l d0,y_pos(a0)
-        if (!isDestroyed() && !breathed) {
-            posY16 += RISE_VELOCITY << 8;
-
-            // Calculate display Y from 16.16 fixed point
-            displayY = posY16 >> 16;
+        if (atOrAboveWater()) {
+            beginPop();
+            animateSprite();
+            displayOrDelete(observedRomRenderOnScreen);
+            return;
         }
+        int wobbleIndex = wobbleAngle & 0x7F;
+        wobbleAngle = (wobbleAngle + 1) & 0xFF;
+        displayX = baseX + (byte) romByte(WOBBLE_DATA_ADDRESS + wobbleIndex);
+        // Native collect precedes ObjectMove AND the render-bit delete gate.
+        if (player != null && isBreathable()) checkPlayerCollision(player);
+        if (routine == 6) {
+            animateSprite();
+            displayOrDelete(observedRomRenderOnScreen);
+            return;
+        }
+        posY16 += RISE_VELOCITY << 8;
+        displayY = posY16 >> 16;
+        displayOrDelete(observedRomRenderOnScreen);
+    }
 
-        // ROM loc_1F988 reaches DisplaySprite only on a pass that survived the
-        // render_flags test (:45265-45267); that queueing is what lets the next
-        // BuildSprites rewrite the bit.
-        romDisplayedLastPass = true;
+    private boolean atOrAboveWater() {
+        if (services().currentLevel() == null) return false;
+        WaterSystem water = services().waterSystem();
+        int zone = services().featureZoneId(), act = services().featureActId();
+        return water.hasWater(zone, act) && displayY <= water.getWaterLevelY(zone, act);
+    }
+
+    private void beginPop() {
+        if (routine != 6) {
+            routine = 6;
+            animId = (animId + 3) & 0xFF;
+        }
+    }
+
+    private void displayOrDelete(boolean observedRomRenderOnScreen) {
+        if (!observedRomRenderOnScreen) setDestroyed(true);
+        else romDisplayedLastPass = true;
+    }
+
+    @Override
+    public boolean usesCustomOutOfRangeCheck() { return true; }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        // Obj24 has no MarkObjGone: own render-bit/surface routines own lifetime.
+        return false;
     }
 
     /**
@@ -287,11 +249,6 @@ public class BubbleObjectInstance extends AbstractObjectInstance
                 getOnScreenHalfWidth(), getOnScreenHalfHeight());
     }
 
-    /** The bubble's {@code Ani_obj24} script, clamped to the defined entries. */
-    private int[] script() {
-        return ANI_OBJ24[animId >= 0 && animId < ANI_OBJ24.length ? animId : 0];
-    }
-
     /**
      * ROM {@code objoff_2E}. Set by {@code loc_1F924} when AnimateSprite has
      * advanced {@code mapping_frame} to 6 (docs/s2disasm/s2.asm:45231-45236), and
@@ -309,36 +266,40 @@ public class BubbleObjectInstance extends AbstractObjectInstance
         return inhalable;
     }
 
-    /**
-     * {@code AnimateSprite} over {@code Ani_obj24}
-     * (docs/s2disasm/s2.asm:45232). The duration byte is reloaded when the
-     * counter runs out and the frame index advances; the ROM's {@code $FC}
-     * terminator advances the routine to {@code loc_1F93E}, which no longer
-     * animates, so the engine simply holds the last frame.
-     */
+    /** AnimateSprite/Anim_End_FC, s2.asm:30422-30488; Ani_obj24:45471-45496. */
     private void animateSprite() {
-        int[] anim = script();
-        // Anim_Run: subq.b #1,anim_frame_duration / bpl Anim_Wait
-        // (docs/s2disasm/s2.asm:45xxx -> AnimateSprite, s2.asm:22867-22884).
-        if (--animTimer >= 0) {
+        if (previousAnim != animId) {
+            previousAnim = animId;
+            animFrameIndex = animTimer = 0;
+        }
+        animTimer = (byte) (animTimer - 1);
+        if (animTimer >= 0) return;
+        int script = ANIMATION_TABLE_ADDRESS + romWord(ANIMATION_TABLE_ADDRESS + animId * 2);
+        animTimer = (byte) romByte(script);
+        int command = romByte(script + 1 + animFrameIndex);
+        if (command == 0xFC) {
+            routine = (routine + 2) & 0xFF;
+            animTimer = 0;
+            animFrameIndex = (animFrameIndex + 1) & 0xFF;
             return;
         }
-        // move.b (a1),anim_frame_duration(a0) -- reload from the script head.
-        animTimer = anim[0];
-        // move.b 1(a1,d1.w),d0 with d1 = anim_frame: the frame list starts at
-        // script byte 1, so anim_frame indexes from there.
-        int idx = 1 + animFrameIndex;
-        if (idx >= anim.length) {
-            // The ROM's $FC terminator advances routine(a0) to loc_1F93E, which
-            // no longer animates, so mapping_frame holds its last value.
-            return;
+        if (command == 0xFF) {
+            animFrameIndex = 0;
+            command = romByte(script + 1);
         }
-        mappingFrame = anim[idx];
-        // addq.b #1,anim_frame(a0)
-        animFrameIndex++;
-        if (mappingFrame >= BREATHABLE_FRAME_THRESHOLD) {
-            inhalable = true;
-        }
+        if (command >= 0x80) throw new IllegalStateException("Unsupported Obj24 animation command " + command);
+        mappingFrame = command & 0x7F;
+        animFrameIndex = (animFrameIndex + 1) & 0xFF;
+    }
+
+    private int romByte(int address) {
+        try { return services().romReader().readU8(address); }
+        catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
+    }
+
+    private int romWord(int address) {
+        try { return services().romReader().readS16BE(address); }
+        catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
     }
 
     /**
@@ -397,24 +358,21 @@ public class BubbleObjectInstance extends AbstractObjectInstance
                 // Don't let audio failure break game logic
             }
 
-            // Mark bubble as breathed (will be destroyed next frame)
             breathed = true;
+            beginPop();
         }
     }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (isDestroyed() || breathed) {
+        if (isDestroyed()) {
             return;
         }
 
         PatternSpriteRenderer renderer = getRenderer(Sonic2ObjectArtKeys.BUBBLES);
         if (renderer == null) return;
 
-        // Clamp frame to valid range (0-5 for visual bubbles)
-        int frameToRender = Math.min(mappingFrame, 5);
-
-        renderer.drawFrameIndex(frameToRender, displayX, displayY, false, false);
+        renderer.drawFrameIndex(mappingFrame, displayX, displayY, false, false);
     }
 
     @Override

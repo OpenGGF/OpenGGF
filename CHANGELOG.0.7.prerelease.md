@@ -16,6 +16,9 @@ Unreleased. The earlier development themes remain in
   moving that first fragment immediately while fresh fragments initialize before
   animating. Grounded rolling preserves the camera's vertical look bias, with
   ordinary recentering resuming in the air.
+  Ending returns preserve a pending fade callback until it hands off to the title.
+  Results waits finish before the following object routine starts the next level
+  or special stage, retaining the final ordinary player-art upload.
   Boss faces, flames and accessories occupy real slots and play their ROM
   scripts. Green Hill's six-piece wrecking ball can hurt while deploying;
   defeat bursts use Sonic 1's original allocation, art and lifetime. Star Light's
@@ -58,7 +61,18 @@ Unreleased. The earlier development themes remain in
   It preserves native balance, reversion animation and invincibility timing, and
   keeps the speed constants written by an underwater transformation until their
   next native writer. Ordinary special-stage entry presents its loading hold
-  without duplicating replay timing.
+  without duplicating replay timing. Special-stage player pieces use ROM mappings
+  and resolve each tile through their DPLC requests, preserving whole native
+  sprite footprints even when the source art is scattered. Curved-track player
+  and fixed-shadow offsets retain the native gated writer across rewind, and
+  special-stage palettes follow the session ROM with canonical CRAM channels.
+  Ordinary special-stage bodies, objects and UI share the native H32 sprite
+  table and fixed scanline limits across viewport widths. Native shadow-family
+  pixels use projected terrain intensity through fades and display profiles,
+  and stage drawing retires inherited underwater rendering.
+  Leaf generators retain the native touch phase after slow contact. ARZ bubbles
+  preserve their native slot lifetime, pop animations and generator allocation
+  order, including the final out-of-range spawn and a full object pool.
 
 - **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
   OpenGGF Editor's Stageplay workspace. Author actor movement, animation/poses,

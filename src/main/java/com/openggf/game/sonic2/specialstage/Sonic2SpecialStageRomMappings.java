@@ -115,6 +115,30 @@ public final class Sonic2SpecialStageRomMappings {
     }
 
     /**
+     * BuildSprites also indexes past the declared table for retail malformed
+     * BCD digits. Preserve its signed count-minus-one test, and read at most the
+     * hardware's remaining table capacity. No reference asset substitutes for
+     * a pointer outside the supplied ROM.
+     */
+    static Frame readNativeFrame(RomByteReader reader, Family family, int frame, int capacity) {
+        if (frame < 0 || frame > 0xFF || capacity < 0 || capacity > 64) {
+            throw new IllegalArgumentException("Native mapping byte/capacity out of range");
+        }
+        int table = family.tableAddress();
+        int address = table + reader.readS16BE(table + frame * 2);
+        int counter = (short) (reader.readU16BE(address) - 1);
+        if (counter < 0) return new Frame(address, List.of());
+        int count = Math.min(counter + 1, capacity);
+        List<Piece> pieces = new ArrayList<>(count);
+        for (int piece = 0; piece < count; piece++) {
+            int cursor = address + 2 + piece * PIECE_BYTES;
+            pieces.add(new Piece(reader.readS16BE(cursor + 6), (byte) reader.readU8(cursor),
+                    reader.readU8(cursor + 1), reader.readU16BE(cursor + 2), reader.readU16BE(cursor + 4)));
+        }
+        return new Frame(address, pieces);
+    }
+
+    /**
      * Reads an explicit number of stock S2 mapping pointers. Offsets may be
      * negative, reordered or shared; a zero piece count is an empty frame.
      * Truncated tables or records fail bounds checking rather than substituting

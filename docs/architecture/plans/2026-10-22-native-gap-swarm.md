@@ -507,3 +507,44 @@ maintained372 death26853 versus c4 death37752 remains unattributed and blocks
 delivery. The peer is preparing passive original-evaluation carriers for a
 prospective matched comparison; no pair, route retry, native capture or broad
 smoke is launched by this checkpoint. Main remains untouched.
+
+
+The next ready-source union takes originalS2 leaves8dc/e3a2/648/493/99e7/9854/
+5395/d489/ccfb/f57, then3c0 private restore extraction,5d3 draw/HUD extraction,
+420 physical-word kernel, a072 ending callback guard,753 results wait and06f7
+native S2 pause. Originalc746 mapping-reader files were already byte-identical
+and were not re-added. No local aliases/foreign ancestry were imported. All
+runtime/test/tool deltas applied without conflicts; prose retained both owned
+additions, exact frontier prefix and byte-equal S1/S2 pitfall mirrors. Native CPU
+oracles remain analysis-only, not runtime readiness authority. Audio2ff/a0/cd9/
+5b source audits accompany06f7 without inventing S3K resume RAM.
+
+Build-only request16538 passed test-compile on Java25 in1:38. One subsequent
+normal/EGL request56672 passed **435T/0F/0E/0S**,435 distinct identities across
+48 inspected suites, Java25.0.5/intended cwd/all three original absolute ROMs.
+Queue wait648s, Maven41.006s; compiler/parent elapsed unknown. It selected all
+28 changed test classes plus API, native FIFO/multipart/EGL gameplay, three
+HUD consumers, recorded-input ownership, actual rewind pruning/suppression,
+shield/playable capture/pending restore, S2/S3K session-star restore, power-up
+music, native terminal/input handoff and S2 Super start. These coupled checks
+cover both actual320/528 H32 cases, native-word destructive restore, three-game
+callback mutations, native pause/held-history and S1 results/ending behavior.
+No whole route, PCM parity or competition activation follows.
+
+The separate fresh-guard request14309 completed **80T/79P/1F/0E/0S** in five
+suites, queue599s/Maven49.211s. Audio presentation38, SMPS session4, rewind4 and
+ArchUnit32 passed. ObjectManager's exact facade-size method passed; the release-
+critical size method now reports NO AbstractPlayable/S1Art violation. It instead
+finds GameLoop3387 effective lines against3313. That file is byte-identical to
+pre-unionf95 and was not modified by these104 paths, so this is an earlier Root
+integration size gap, not a waived baseline. Root will extract focused menu/
+transition orchestration without raising ratchets or packing lines. Delivery
+remains blocked until that guard and required broader checks close.
+
+Main independently advanced from8aa to23a18e2a232d38cca4a541be586041e9b7b01163
+on develop; Root only read it. Incoming121 paths include an actual authored-
+decoder service-resource fix, a source-equivalent four-file HubMusic repair
+and28 disjoint candidate pin lines. The future aggregate merge must retain
+Main's stronger configured-headless backend identity/sink recovery, both hosted
+retry and native menu/fade flows, and sorted union of Main28 plus Root10 pin
+additions. No Main window, integration, push or cleanup has occurred.

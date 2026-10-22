@@ -216,8 +216,8 @@ public class Sonic2SpecialStageRendererDeterminismTest {
         mappings[1] = 0;
         fixture.manager.draw();
         fixture.graphics.executeQueued();
-        assertEquals(List.of("beginTilePass", "mappingBatch", "endTilePass", "shader"),
-                fixture.graphics.events);
+        assertEquals(List.of("beginTilePass", "endTilePass", "shader"),
+                fixture.graphics.events, "an empty mapping still clears the target but emits no tile batch");
         assertEquals(0, getField(fixture.renderer, "cachedBackgroundPaletteRowMask"));
         assertSame(paletteContent, getField(fixture.renderer, "cachedBackgroundPaletteContent"),
                 "palette contribution storage stays bounded and reusable as the mask changes");
@@ -571,6 +571,7 @@ public class Sonic2SpecialStageRendererDeterminismTest {
     private static final class QueueRecordingGraphicsManager extends GraphicsManager {
         final List<GLCommandable> queued = new ArrayList<>();
         final List<String> events = new ArrayList<>();
+        private boolean pendingMappingPieces;
 
         @Override
         public void registerCommand(GLCommandable command) {
@@ -583,11 +584,17 @@ public class Sonic2SpecialStageRendererDeterminismTest {
 
         @Override
         public void flushPatternBatch() {
-            registerCommand((cameraX, cameraY, cameraWidth, cameraHeight) -> events.add("mappingBatch"));
+            // Production queues no command for an empty batch. Projection and
+            // scene boundaries may flush even when no mapping has been emitted.
+            if (pendingMappingPieces) {
+                pendingMappingPieces = false;
+                registerCommand((cameraX, cameraY, cameraWidth, cameraHeight) -> events.add("mappingBatch"));
+            }
         }
 
         @Override
         public void renderPatternWithId(int patternId, PatternDesc desc, int x, int y) {
+            pendingMappingPieces = true;
         }
 
         void executeQueued() {

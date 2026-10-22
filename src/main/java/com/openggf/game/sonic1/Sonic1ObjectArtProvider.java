@@ -42,8 +42,6 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
     private static final int RESULTS_SCORE_DIGIT_PAIR_COUNT = 8;
     private static final int RESULTS_SCORE_DIGIT_TILE_COUNT = RESULTS_SCORE_DIGIT_PAIR_COUNT * 2;
     private static final int HUD_TEXT_E_PAIR_INDEX = 22;
-    /** Map_HUD / Map_HUD_internal, World REV01; byte counts and five-byte pieces. */
-    private static final int HUD_SAT_MAPPING_ADDR = 0x1CD6A;
     private static final int MZ_LAVA_WALL_OBGFX_WORD = 0x63A8;
     /**
      * Remaps S3K Knuckles life-icon tile indices onto the native merged S1 HUD palette.
@@ -111,7 +109,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
         RomByteReader reader = RomByteReader.fromRom(rom);
         this.romReader = reader;
         Sonic1ObjectArt art = new Sonic1ObjectArt(rom, reader);
-        hudSatLayout = new HudSatLayout(S1SpriteDataLoader.loadMappingFrames(reader, HUD_SAT_MAPPING_ADDR, 4));
+        hudSatLayout = Sonic1HudStaticArtFactory.loadSatLayout(reader);
 
         hudDigitPatterns = art.loadUncompressedPatterns(
                 Sonic1Constants.ART_UNC_HUD_NUMBERS_ADDR,
@@ -3602,21 +3600,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
     }
 
     static Palette buildS1KnucklesLivesHudPaletteOverride(Palette basePalette) {
-        if (basePalette == null) {
-            return null;
-        }
-        Palette override = basePalette.deepCopy();
-        setColor(override, 12, 255, 73, 109);
-        setColor(override, 13, 219, 0, 36);
-        setColor(override, 14, 109, 0, 36);
-        return override;
-    }
-
-    private static void setColor(Palette palette, int index, int r, int g, int b) {
-        Palette.Color color = palette.getColor(index);
-        color.r = (byte) r;
-        color.g = (byte) g;
-        color.b = (byte) b;
+        return Sonic1HudStaticArtFactory.createKnucklesLivesPalette(basePalette);
     }
 
     // ========================================================================

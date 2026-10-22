@@ -113337,3 +113337,160 @@ and service phase remain UNKNOWN; that measured three-axis frontier and the
 not-reached terminal-art comparison are unchanged. Full native242 candidate is
 unpublished, prefix pins unchanged. Next necessary tail composition includes
 the already-ready S1 title/input caller prerequisites before qualification.
+
+
+## 2026-10-22 — S2 native geometry/ROM-palette milestone, chain frontier unchanged
+
+Source `9854f02b146a8cbe1a4d656f54778a5918ee2852`, worktree
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-dcf07b84`, includes the corrected Super
+control/global phases, start effects and captured normal-star restoration, native
+SS slot/counter owners, native curve registers, injected-ROM palettes and the
+source-proven slow-touch leaf phase reseed. No trace comparison or timing
+authority was weakened.
+
+Command (Java25, Lua5.4, DISPLAY/WAYLAND unset, original absolute S2 REV01 ROM):
+`python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay
+-Dsurefire.forkCount=1 -Dsurefire.reuseForks=true
+-Dopenggf.headless.gl=surfaceless-egl
+-Dtest=TestS2SpecialStage1TraceReplay,TestS2SpecialStage2TraceReplay,TestS2SpecialStage3TraceReplay,TestS2SpecialStage4TraceReplay,TestS2SpecialStage5TraceReplay,TestS2SpecialStage6TraceReplay,TestS2SpecialStage7TraceReplay,TestS2CompleteEmeraldRunChain,TestS2EhzHalfpipeRoundTripChain,TestS2Arz2LevelSelectTraceReplay
+-Dsonic2.rom.path=<original absolute REV01 path> test`. Completed session41514:
+10 tests,8 passed,2 failed,0 errors/skips; measured queue331s, Maven53.088s.
+
+All seven standalone native SS regressions and independent ARZ2 pass. The main
+chain retains exactly14 failing axes: ARZ1 segment18 completes with0 errors;
+ARZ2 segment19 completes with13495 errors, first5084 `sidekick_y`
+`$048A/$0489`, then CNZ1 admission sees cursor113342 instead of113340. The12
+dynamic-art gap axes remain, first SS return10308 expected/10268 actual
+(40 early). The second movie retains its matched-baseline two65-row-early gap
+axes. The leaf correction did not move this frontier; it must not be presented
+as closure of the14-extra-RNG-producer discrepancy. Retained start769 does not
+certify natural row0 startup, later-route completion or audio PCM.
+
+The corresponding focused source selection covered100 unchanged-production
+cases plus the final20-case native geometry pass, all zero skips; initial new
+rewind-test oracle/setup failures and their corrections are recorded in the
+[dated S2 research artifact](../architecture/research/2026-10-22-s2-chain-pacing.md).
+Native H32 renderer/intensity-companion wiring and ordinary recurring/return
+timing remain active work.
+
+
+## 2026-10-22 — S2 Obj24 native lifecycle correction, route measurement pending
+
+Isolated `t3-dcf07b84`, parent source `d53e035d3` plus only the two Obj24
+production files and focused tests. The actual second read-only RNG observation
+completed one unchanged chain with14 failing axes (session24942,0 skips); both
+temporary GameRng/fixed-controller hunks were exactly removed before commits.
+Correct native aux slots and native callbacks attribute premature engine child
+slot reuse to generic coarse culling. Native generator timer/allocation work also
+precedes its range tail. The correction preserves those lifetimes, ROM scripts
+and full-pool draw branches without changing RNG or comparison authority.
+
+Queued focused selector
+`TestSonic2BubbleNativeLifecycle,TestBubbleObjectInstance,TestSonic2Rng,TestS2SelfContainedTransientRewind,TestRewindFixS2Batch4Codecs,TestModApiSignatureSurface,TestArchitecturalSourceGuard#migratedObjectChildSpawnsStayOnManagedHelpers`
+with `--lean -Dmse=off -Dsonic2.rom.path=<original absolute REV01 path> test`
+passed46/46,0 skips (session69339,queue38s,Maven93s). Fresh affected rewind
+architecture/field guards passed5/5,0 skips (session74227,queue9s,Maven29.805s).
+These include20 independent ROM/lifecycle/slot/allocation/pop/restore cases;
+initial test-fixture failures are recorded in the dated research artifact.
+
+New chain and independent ARZ2 measurement are still pending. The last completed
+route result remains source9854: main14 axes, ARZ2 first5084 `sidekick_y`
+`$048A/$0489`,13495 errors, CNZ1 admission+2,12 art-gap axes; independent
+ARZ2 and seven native stages pass. No closure of the14 extra RNG draws or new
+route frontier is inferred from these component checks.
+
+Completed follow-up session21181 on clean committed
+`d489be60add071e398da2eb8261c9ca58832b8f4` in `t3-dcf07b84` used
+`env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3
+tools/testing/maven_queue.py -Dmse=off -Ptrace-replay
+-Dsurefire.forkCount=1 -Dsurefire.reuseForks=true
+-Dopenggf.headless.gl=surfaceless-egl
+-Dtest=TestS2CompleteEmeraldRunChain,TestS2Arz2LevelSelectTraceReplay
+-Dsonic2.rom.path=<original absolute REV01 path> test`, Java25.0.5.
+Two tests completed, one pass/one failure, zero errors/skips; queue18s,
+Maven approximately97s. Independent ARZ2 passes. The main chain's14 axes are
+unchanged: ARZ1 exact; ARZ2 complete with13495 errors, first row5084
+`sidekick_y` `$048A/$0489`; CNZ1 admission+2;12 return/art-gap axes with first40
+and later36–40-frame early edges and one-frame gaps. Native component fixes
+therefore do not establish route/RNG closure. No new RNG draw count was
+measured. Consumed diagnostics were removed. Next owned work is the actual H32
+SAT/terrain/SHADOW consumer; native return service admission remains open.
+
+
+## 2026-10-22 — S2 H32 consumer: seven stages retained; return timing still open
+
+Isolated `t3-dcf07b84`, H32 candidate after `ccfb02562116b9d5321c26de810d6d967e2a2780`.
+Session77123 used `env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay
+-Dsurefire.forkCount=1 -Dsurefire.reuseForks=true
+-Dopenggf.headless.gl=surfaceless-egl
+-Dtest=TestS2SpecialStage1TraceReplay,TestS2SpecialStage2TraceReplay,TestS2SpecialStage3TraceReplay,TestS2SpecialStage4TraceReplay,TestS2SpecialStage5TraceReplay,TestS2SpecialStage6TraceReplay,TestS2SpecialStage7TraceReplay,TestS2EhzHalfpipeRoundTripChain,TestS2Arz2LevelSelectTraceReplay
+-Dsonic2.rom.path=<original absolute REV01 path> test`, Java25.0.5.
+Nine tests completed:8 passes,1 failure,0 errors/skips; queue315s, Maven95s.
+Seven native stages and independent ARZ2 pass. Halfpipe's two known-baseline
+return-art axes remain65 frames early on every edge (first expected9675,
+actual9610); no new gameplay axis. The main chain was not repeated after its
+21181/d48914-axis result. These renderer/derived-resource changes do not close
+ordinary pacing, native return admission or the route's RNG frontier. Actual
+320/528 live entry/input/draw/restore/water checks pass, and an effective-palette3
+ROM inventory finds no14/15 operators in ordinary non-shadow submitted art;
+those bounded source/pixel limits and inherited size-guard failures are in the
+[dated research](../architecture/research/2026-10-22-s2-chain-pacing.md).
+Consumed reports were removed; no comparison or timing ratchet changed.
+
+### 2026-10-22 Reachable S1 title prerequisites composed before tail qualification
+
+The isolated chain tree now contains the approved6211 native-SEGA phase blobs,
+then original7d intro-input and66 title-PLC caller semantics, with final manager
+source exactly matching66. Necessary focus21929 passes43/43, zero
+failures/errors/skips; wait249s/Maven1m30s. The imported instruction tool's19
+Python unit tests pass separately. Exact command/source/limits are in the
+[S1 chain audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#reachable-title-prerequisites-for-the-next-tail).
+This enables qualification of title methods newly reachable from the repaired
+terminal caller; it does not establish natural coldboot/startup parity. No
+additional route or capture ran for these consumers.46550 remains the measured
+three-axis frontier, full native242 publication withheld pending the next actual
+whole-chain/terminal-art comparison; prefix pins remain unchanged.
+
+
+### 2026-10-22 S1 composed44223: exact22 levels; result-art clock and terminal callback frontier
+
+At isolated chain HEAD `37a6b260d199f39cb87fc24c889da64f055d6cb8` plus the full
+unpublished native242 candidate/literal guard, the sole composed command in the
+[S1 chain audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#composed-route44223-exact-levels-missing-final-result-art-and-terminal-fade-re-entry)
+returns12 tests:11PASS, one chainFAIL, zero errors/skips; wait534s/Maven1m15s.
+All22 complete level reports compare exactly, including FZ, and six independent
+BK2s/prefix2/literal3 pass. Five reported axes remain: earliest missing source
+map9 at SLZ3→SBZ1 movie180850, then source map49 at SBZ1→SBZ2 movie189245;
+two later art gaps retain matching edges but cascade ordinal-4/transfer-2.
+The fifth axis is nested native fade rejection at terminal movie223632,
+TRY_AGAIN_END/actual POST_CREDITS provider, caused by repeated ending return
+bypassing its still-pending outgoing callback. The terminal naturally reached
+zone7/credits/post-credits; no FZ-ending repair or forced tick is indicated.
+Terminal-art comparison was not reached. Both temporary observer hunks were
+removed and diffs checked empty. Native242 publication and prefix advancement
+remain withheld; no natural startup claim or capture-provenance upgrade.
+
+
+The approved ending-helper repair now passes all53 focused ending/fade
+identities in44265, including six independent new cases that had five valid
+old-source failures. The complete59-test invocation remains red solely in
+three separate old-source S1 results-wait baseline cases; exact identities,
+commands and limits are in the audit. No new route ran, so44223's five-axis
+frontier/terminal-art-not-reached status is retained until composed replay.
+
+
+### 2026-10-22 Native S1 results routine boundary qualified independently
+
+The S1-only `Got_Wait`→`Got_NextLevel` split now passes39/39 focused cases in
+63147, zero failures/errors/skips, wait277s/Maven1m28s. The new six-case class
+had three valid old-source failures (normal map9/map49 and special exit early)
+in44265; both full-journal art transfers now pass through actual GameLoop and
+destructive registered restore. Special/SBZ2 canonical-frame, host policy and
+retail-byte controls pass, with existing entry/fade/load/results and composed
+ending controls. Exact command/source/limits are in the
+[chain audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#s1-results-wait-expires-before-the-next-routines-exit-writes).
+No coordinator, phase service, readiness, journal or shared load change is made.
+No new route has run:44223's five reported axes and terminal-art-not-reached
+status remain the measured frontier until parent-composed qualification. The
+full native242 candidate stays unpublished and prefix pins unchanged.

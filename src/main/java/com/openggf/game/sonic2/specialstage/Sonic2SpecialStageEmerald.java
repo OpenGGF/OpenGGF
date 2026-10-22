@@ -101,6 +101,26 @@ public class Sonic2SpecialStageEmerald extends Sonic2SpecialStageObject {
         this.manager = manager;
     }
 
+    @Override
+    public void initializeNativeOwner() {
+        // Obj59_Init only initializes mappings/priority/depth and calls
+        // loc_3529C after its timer reaches -$3C. No shadow occupies RAM
+        // during the preceding 59 passes (s2.asm:72435-72457).
+        if (phase != EmeraldPhase.INITIALIZING) {
+            super.initializeNativeOwner();
+        }
+    }
+
+    @Override
+    protected int getNativeRoutine() {
+        return switch (phase) {
+            case INITIALIZING -> 0;
+            case APPROACHING -> 2;
+            case FAILED -> 6;
+            case COLLECTED -> 8;
+        };
+    }
+
     /**
      * Override screen position calculation to use emerald-specific 0.75 radius scaling.
      *
@@ -110,6 +130,9 @@ public class Sonic2SpecialStageEmerald extends Sonic2SpecialStageObject {
      */
     @Override
     public void updateScreenPosition(Sonic2PerspectiveData perspectiveData, int currentTrackFrame, boolean trackFlipped) {
+        if (phase == EmeraldPhase.INITIALIZING) {
+            return; // Obj59_Init returns before geometry/DisplaySprite until pass sixty.
+        }
         int depth = getDepth();
         if (depth <= 0) {
             onScreen = false;
@@ -143,6 +166,7 @@ public class Sonic2SpecialStageEmerald extends Sonic2SpecialStageObject {
         // The emerald floats above the track (due to 0.75 radius scaling),
         // but the shadow goes on the actual track surface.
         trackFloorY = entry.yBase + entry.yRadius;
+        updateNativeShadowScreenPosition(entry, trackFlipped);
 
         // Determine animation index based on depth
         animIndex = calculateAnimIndex();
@@ -197,7 +221,7 @@ public class Sonic2SpecialStageEmerald extends Sonic2SpecialStageObject {
                     // Obj59_Init does not return on the -$3C tick: after
                     // selecting routine 2 it falls through to loc_36022 and
                     // performs the first approach step in the same RunObjects
-                    // pass (s2.asm:72279-72306).
+                    // pass (Obj59_Init, s2.asm:72435-72462).
                     updateApproaching(speedFactor, drawingIndex4);
                 }
                 break;
@@ -219,6 +243,7 @@ public class Sonic2SpecialStageEmerald extends Sonic2SpecialStageObject {
         if (phaseTimer >= INIT_DELAY_FRAMES) {
             phase = EmeraldPhase.APPROACHING;
             phaseTimer = 0;
+            initializeNativeOwner();
             LOGGER.fine("Emerald initialization complete, starting approach");
             return true;
         }
@@ -227,7 +252,7 @@ public class Sonic2SpecialStageEmerald extends Sonic2SpecialStageObject {
 
     private void updateApproaching(int speedFactor, boolean drawingIndex4) {
         // loc_36022 checks the animation published by the preceding projection
-        // before loc_3512A advances depth for this pass (s2.asm:72306-72312).
+        // before depth advances for this pass (loc_36022, s2.asm:72456-72462).
         int anim = animIndex;
 
         // At anim 3+: Fade out music
@@ -244,8 +269,8 @@ public class Sonic2SpecialStageEmerald extends Sonic2SpecialStageObject {
             if (ringsCollected < ringRequirement) {
                 // loc_36142 writes SS_New_Speed_Factor=0 for the following
                 // Vint, selects routine 6/$4F, then returns through loc_36022's
-                // movement tail in this same pass (s2.asm:72306-72312,
-                // 72417-72423).
+                // movement tail in this same pass (loc_36142,
+                // s2.asm:72567-72573).
                 if (manager != null) {
                     manager.requestSpeedFactor(0);
                 }
@@ -262,7 +287,7 @@ public class Sonic2SpecialStageEmerald extends Sonic2SpecialStageObject {
         decrementDepth(drawingIndex4, speedFactor);
 
         // Check if emerald has passed the player
-        if (getDepth() <= 0 && phase == EmeraldPhase.APPROACHING) {
+        if (depthFixed <= 0 && phase == EmeraldPhase.APPROACHING) {
             // Should not happen - emerald stops at closest position
             markForRemoval();
         }
@@ -336,7 +361,7 @@ public class Sonic2SpecialStageEmerald extends Sonic2SpecialStageObject {
      * Obj59 sets {@code SS_Pause_Only_flag} at the start of its first routine-0
      * execution, before advancing its 60-pass initialization delay. The marker
      * allocation itself happens earlier and must not lock the controls yet
-     * (s2.asm:6679-6688, 72279-72291).
+     * (Obj59_Init, s2.asm:72435-72441).
      */
     boolean restrictsControlsToStart() {
         return phase != EmeraldPhase.INITIALIZING || phaseTimer > 0;

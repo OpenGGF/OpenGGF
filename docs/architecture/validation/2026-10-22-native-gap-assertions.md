@@ -318,6 +318,99 @@ paths as described above. No independent broad smoke, exhaustive route,
 second-movie or GPU-output claim is made; those consumer/domain and combined
 integration checks remain coordinated with S1chain, the sprite lane and parent.
 
+## Bounded physical SST word at offset $2C
+
+The source-only follow-up inspected Mode's native SST contracts and the frozen
+PointPokey draft at `25afa09cdece7ee9e901223cfcbbcdaad0a8f0dc` plus its owned
+uncommitted producer changes. The existing minimum dependency is original
+`ae632fe2a6eec9bece7cafb4f2643c74365565c3`, already present in this lane. No
+Mode branch aliases or unrelated mode ancestry are required for the backend.
+
+At pinned S2 reference `34fc7f130a96db171e1a1c43e28e0bad81cd6ca7`,
+`ObjDC_Main` (s2.asm:25489-25494) and `ObjD3` (s2.asm:58849-58852) decrement the
+WORD at the LONG address stored in child `$2A` before awarding/debiting rings.
+`loc_2BC86` (s2.asm:59258-59262) and `loc_2BD4E` (s2.asm:59302-59306) construct
+that address with `lea objoff_2C(a0),a2`; it is a physical address, not an
+object identity. `DeleteObject2` (s2.asm:30334-30345) clears the whole slot,
+whereas `AllocateObject` (s2.asm:33681-33698) only tests the ID. `ObjD6_Init`
+(s2.asm:59142-59149) does not write `$2C`. An orphan settlement after deletion
+therefore changes known zero to `$FFFF`, and another changes it to `$FFFE`;
+ordinary allocation cannot erase this residue.
+
+The accepted bounded prerequisite is one unsigned word plus knownness per
+physical SST, independent of Java occupancy, with a typed writable projection
+for proven live receivers and a separate copied-value rewind adapter. The
+existing ten-field `NativeSstState` is a partial live projection, not arbitrary
+object RAM. Unknown empty residue must remain unknown; unsupported live
+receivers must remain explicitly unsupported. Actual native clear operations
+must establish zero, rather than allocator release or generic Java teardown.
+Factory failure must precede any preservation mutation; a successful partial
+replacement samples the old owner before detachment and publishes the new
+typed projection afterwards. Probe and rewind reconstruction do not execute
+these gameplay writes.
+
+Mode owns PointPokey/prize projection and producer calls, real birth importing
+retained `$2C`, and the actual load-clear semantic caller. This backend does not
+certify foreign layouts. In particular, another prize's `$2C` is the low WORD
+of its own LONG counter pointer at `$2A`; changing it can alter the target and
+alignment. The current fixed-offset `counterSlot` representation cannot express
+that alias. It remains open pending a local receiver/address transcription.
+
+The implementation adds `ObjectNativeSstWord2C`, the exact internal projection
+`NativeSstWord2CSource.nativeWord2C()` / `writeNativeWord2C(int)`, and
+`NativeSstSlotAccess.readWord2C`, `writeWord2C`, `addWord2C`, `clearWord2C`,
+`preserveWord2C` and `invalidateWord2C`. The separate adapter key is
+`object-native-sst-word2c`; `GameplayModeContext` registers it after the object
+graph and retires/rebinds it with that manager. Its immutable snapshot contains
+only copied `(slot, unsignedWord)` values; absent cells are unknown. Existing
+`ObjectManagerSnapshot` and public Mod API signatures are unchanged.
+
+New typed publication must match already-known retained memory; unexplained
+constructor zero cannot overwrite orphan `$FFFF`. An existing registered
+identity instead samples its current proven field during capture. Partial
+replacement preserves the old field only after a non-null factory succeeds,
+before detachment; its existing physical identity remains unchanged and no
+`onUnload` runs. Gameplay access rejects
+`ObjectConstructionContext.isProbeConstruction()`, `isRewindActiveRestore()`
+and the existing `ObjectManager.rewindReconstructionChildCapture` phase. These
+are existing reconstruction predicates, not a new gameplay clock or scope flag.
+
+Shared hunks and exact API were agreed before editing. Native MarkObjGone and
+full-load clear integration remain separately coordinated. Generic reset,
+resync, removal and slot release do not acquire a native memory-clear meaning.
+External/folded SST producers without an `ObjectInstance` must explicitly
+invalidate knowledge on an actual unprojected `$2C` write/creation, or later
+provide a proven projection. Allocator bits cannot distinguish such owners from
+real birth's legitimate reserved-but-unpublished import. This backend therefore
+does not infer occupancy from those bits or certify arbitrary SST bytes.
+
+Bounded ROM-free checks on `c89fd18` plus this leaf:
+
+- Queued selection `TestNativeSstWord2C,TestNativeSpriteSubmissionRegistration,TestObjectManagerNativeSpriteSubmissions,TestModApiSignatureSurface`:
+  69 tests, zero failures/errors/skips; queue748s, Maven1m33s. The four XML
+  summaries were inspected. This includes16 new word cases and3 new session
+  registration cases, alongside unchanged queue-consumer and API checks.
+- Final focused `TestNativeSstWord2C`:18 tests, zero failures/errors/skips;
+  queue33s, Maven30.581s. Two additional independent controls require preservation
+  after successful construction and receiver-owned read/write/verification
+  callbacks; failed/null factories execute no word-preservation callback.
+  Production source is identical to the first focused run. Total distinct
+  ordinary cases across these selections is71, including21 new cases.
+
+Both used the queued wrapper, Java25.0.5, Lua5.4 and unset DISPLAY/WAYLAND;
+no ROM, native capture, route or broad smoke ran. The build-only `test-compile`
+also passed (Maven1m25s). The version probe passed after328s admission wait.
+The queued fresh-JVM affected guard selection
+`TestObjectServicesMigrationGuard,TestObjectUpdateClockTerminologyGuard,TestRewindArchitectureGuard,TestRewindTransientGuard,TestHelperStateRewindCoverageGuard,com.openggf.tests.TestNoServicesInObjectConstructors,TestNoRendererCaptureInUnsafeSpawn`
+with `-Dmse=off -Pguards` passed34 tests, zero failures/errors/skips; queue409s,
+Maven1m35s. All seven XML summaries were inspected. Total distinct passing
+cases across the three bounded selections is105. The local source-budget
+dependency is explicit: ObjectManager was3147 effective lines at `c89fd18` and
+is3152 here, against3086. The separately owned draw extraction must close this
+before composed structural qualification; neither a budget increase nor source
+padding is part of this leaf. Actual PointPokey adoption, native delete/load
+callers and the foreign LONG alias remain outside this validation.
+
 ## Follow-up: empty-pass restore and conditional producer authority
 
 The original backend is `d89c09e660264f242192b82f3caa7600af9e1d00`; this

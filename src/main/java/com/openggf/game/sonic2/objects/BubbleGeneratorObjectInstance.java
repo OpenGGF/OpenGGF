@@ -10,7 +10,6 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
 
@@ -19,7 +18,7 @@ import java.util.List;
  * Invisible stationary object positioned in water that periodically spawns
  * rising bubble objects. Large bubbles can be breathed by the player.
  * <p>
- * Based on Obj24 (loc_1F9C0) from s2.asm (lines 44828-44927).
+ * Based on loc_1F9C0 through loc_1FACE (s2.asm:45292-45384).
  * <p>
  * ROM State Machine:
  * The generator uses a complex state machine with multiple counters:
@@ -43,21 +42,10 @@ import java.util.List;
  * </ol>
  */
 public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
-    private static final int GENERATOR_ANIMATION_TICKS = 16;
-    private static final int[] GENERATOR_FRAMES = {14, 15};
-
-    // Bubble sequence table (byte_1FAF0 from ROM, line 45055 of s2.asm)
-    // 18-entry overlapping table with 4 sequences at offsets 0, 4, 8, 12
-    // ROM uses: andi.w #$C,d1 to select offset (0, 4, 8, or 12)
-    // Each sequence provides 6 bubble subtypes (0=tiny, 1=small, 2=large)
-    // Sequences overlap by 2 entries to save ROM space:
-    //   Seq0 @ offset 0:  positions 0-5   = {0, 1, 0, 0, 0, 0}
-    //   Seq1 @ offset 4:  positions 4-9   = {0, 0, 1, 0, 0, 0}
-    //   Seq2 @ offset 8:  positions 8-13  = {0, 0, 0, 1, 0, 1}
-    //   Seq3 @ offset 12: positions 12-17 = {0, 1, 0, 0, 1, 0}
-    private static final int[] BUBBLE_SEQUENCE_TABLE = {
-        0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0
-    };
+    private static final int ANIMATION_TABLE_ADDRESS = 0x1FBCC;
+    private static final int BUBBLE_SEQUENCE_ADDRESS = 0x1FAF0;
+    private int animFrameIndex;
+    private int animTimer;
 
     // ROM objoff_32: Burst counter (decrements each burst, triggers large bubble mode on underflow)
     private int burstCounter;
@@ -78,7 +66,7 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
 
     // ROM objoff_3C: Current sequence table offset (0, 4, 8, or 12)
     private int sequenceOffset;
-    private int displayFrame = GENERATOR_FRAMES[0];
+    private int displayFrame;
     private boolean visible;
     private boolean romRenderOnScreen;
 
@@ -121,7 +109,6 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         visible = false;
 
         // ROM Level_MainLoop (docs/s2disasm/s2.asm:5088-5111) runs RunObjects
@@ -140,77 +127,79 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
         romDisplayedLastPass = false;
         boolean observedRomRenderOnScreen = romRenderOnScreen;
 
-        // ROM: Check if generator is above water (only spawn when underwater)
-        if (services().currentLevel() != null) {
-            WaterSystem waterSystem = services().waterSystem();
-            int zoneId = services().currentLevel().getZoneIndex();
-            int actId = services().currentAct();
-
-            if (waterSystem.hasWater(zoneId, actId)) {
-                int waterY = waterSystem.getWaterLevelY(zoneId, actId);
-                // ROM: cmp.w y_pos(a0),d0 / bhs.w loc_1FACE
-                if (spawn.y() <= waterY) {
-                    // Generator is above or at water level - don't spawn
-                    return;
-                }
+        // loc_1F9C0 gates water/render visibility ONLY while the burst is idle.
+        // Every branch still reaches loc_1FACE; only timer/active paths animate.
+        if ((stateFlags & FLAG_ACTIVE_BURST) == 0) {
+            if (!isUnderwater() || !observedRomRenderOnScreen) {
+                finishGeneratorPass(false);
+                return;
             }
+            frameTimer = (short) (frameTimer - 1);
+            if (frameTimer < 0) startNewBurst();
+        } else {
+            frameTimer = (short) (frameTimer - 1);
+            if (frameTimer < 0) spawnNextBubble();
         }
+        finishGeneratorPass(true);
+    }
 
-        // ROM loc_1FACE: Obj24 generator deletes by the standard chunk-aligned
-        // out_of_range window, then DisplaySprite refreshes render_flags bit 7.
+    private boolean isUnderwater() {
+        if (services().currentLevel() == null) return true;
+        WaterSystem water = services().waterSystem();
+        int zone = services().currentLevel().getZoneIndex(), act = services().currentAct();
+        return !water.hasWater(zone, act) || spawn.y() > water.getWaterLevelY(zone, act);
+    }
+
+    private void finishGeneratorPass(boolean animate) {
+        if (animate) animateGenerator();
         if (!isInRangeAt(spawn.x())) {
             setDestroyed(true);
             return;
         }
-
-        displayFrame = GENERATOR_FRAMES[(vIntRunCount / GENERATOR_ANIMATION_TICKS) & 1];
-
-        // ROM state machine logic (loc_1F9C0)
-        if ((stateFlags & FLAG_ACTIVE_BURST) == 0) {
-            // No active burst - check if timer expired to start new burst
-            // ROM gates the ready-state timer on render_flags.on_screen from the
-            // previous DisplaySprite pass. An off-screen generator still displays
-            // this frame, but it does not count down or start a burst until the
-            // refreshed render flag is observable on a later object pass.
-            if (!observedRomRenderOnScreen) {
-                refreshRomRenderFlag();
-                return;
-            }
-            // ROM: tst.w objoff_36(a0) / bne.s loc_1FA22,
-            //      subq.w #1,objoff_38(a0) / bpl.w loc_1FAC2.
-            // A zero timer spends one frame counting down to -1 before a burst starts.
-            frameTimer--;
-            if (frameTimer >= 0) {
-                refreshRomRenderFlag();
-                return;
-            }
-            // Timer expired, start new burst
-            startNewBurst();
-        } else {
-            // Active burst - continue spawning
-            // ROM: loc_1FA22: subq.w #1,objoff_38(a0) / bpl.w loc_1FAC2
-            frameTimer--;
-            if (frameTimer >= 0) {
-                refreshRomRenderFlag();
-                return;
-            }
-            // Timer expired, spawn next bubble
-            spawnNextBubble();
+        // Above-water tail returns without queueing, preserving render_flags.
+        if (isUnderwater()) {
+            romDisplayedLastPass = true;
+            visible = isWithinRenderSpriteBounds(getOnScreenHalfWidth(), getOnScreenHalfHeight());
         }
-        refreshRomRenderFlag();
     }
 
-    // ROM loc_1FACE falls through to DisplaySprite while the generator is under
-    // water (docs/s2disasm/s2.asm:45368-45376); the paths that return before it
-    // leave render_flags untouched, so only this one arms next frame's refresh.
-    private void refreshRomRenderFlag() {
-        romDisplayedLastPass = true;
-        visible = isWithinRenderSpriteBounds(getOnScreenHalfWidth(), getOnScreenHalfHeight());
+    private void animateGenerator() {
+        animTimer = (byte) (animTimer - 1);
+        if (animTimer >= 0) return;
+        int script = ANIMATION_TABLE_ADDRESS + romWord(ANIMATION_TABLE_ADDRESS + 6 * 2);
+        animTimer = (byte) romByte(script);
+        int command = romByte(script + 1 + animFrameIndex);
+        if (command == 0xFF) {
+            animFrameIndex = 0;
+            command = romByte(script + 1);
+        }
+        if (command >= 0x80) throw new IllegalStateException("Unsupported Obj24 generator animation command " + command);
+        displayFrame = command;
+        animFrameIndex = (animFrameIndex + 1) & 0xFF;
+    }
+
+    private int romByte(int address) {
+        try { return services().romReader().readU8(address); }
+        catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
+    }
+
+    private int romWord(int address) {
+        try { return services().romReader().readS16BE(address); }
+        catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
+    }
+
+    @Override
+    public boolean usesCustomOutOfRangeCheck() { return true; }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        // Own loc_1FACE tail uses DeleteObject, not MarkObjGone/respawn-bit clear.
+        return false;
     }
 
     /**
      * Starts a new bubble burst sequence.
-     * ROM: loc_1F9E8 (lines 44844-44867)
+     * ROM: loc_1F9E8 (s2.asm:45304-45322)
      */
     private void startNewBurst() {
         // ROM: jsr (RandomNumber).l / move.w d0,d1 / andi.w #7,d0 / cmpi.w #6,d0 / bhs.s loc_1F9E8
@@ -241,7 +230,7 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
 
     /**
      * Spawns the next bubble in the current burst.
-     * ROM: loc_1FA2A (lines 44870-44919)
+     * ROM: loc_1FA2A (s2.asm:45329-45369)
      */
     private void spawnNextBubble() {
         if (services().objectManager() == null) {
@@ -253,53 +242,25 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
         // Set timer for next bubble (0-31 frames)
         frameTimer = rng.nextBits(0x1F);
 
-        // ROM: Calculate spawn position with random X offset
-        // jsr (RandomNumber).l / andi.w #$F,d0 / subq.w #8,d0 / add.w d0,x_pos(a1)
-        int spawnX = spawn.x() + Sonic2Rng.nextMaskedOffset(rng, 0x0F, -8);
-        int spawnY = spawn.y();
-
-        // ROM: Get subtype from sequence table
-        // moveq #0,d0 / move.b objoff_34(a0),d0 / movea.l objoff_3C(a0),a2 / move.b (a2,d0.w),subtype(a1)
-        int tableIndex = sequenceOffset + bubblesRemainingInBurst;
-        if (tableIndex >= BUBBLE_SEQUENCE_TABLE.length) {
-            tableIndex = tableIndex % BUBBLE_SEQUENCE_TABLE.length;
-        }
-        int bubbleSubtype = BUBBLE_SEQUENCE_TABLE[tableIndex];
-
-        // ROM: Check for large bubble mode (bit 7 of objoff_36)
-        // btst #7,objoff_36(a0) / beq.s loc_1FAA6
-        if ((stateFlags & FLAG_LARGE_MODE) != 0) {
-            // ROM: 25% chance to spawn large breathable bubble
-            // jsr (RandomNumber).l / andi.w #3,d0 / bne.s loc_1FA92
-            if (rng.nextBits(3) == 0) {
-                // ROM: bset #6,objoff_36(a0) / bne.s loc_1FAA6 / move.b #2,subtype(a1)
-                if ((stateFlags & FLAG_LARGE_SPAWNED) == 0) {
+        // AllocateObject precedes BOTH child-X and large-chance draws. The
+        // ordinary spawnFreeChild supplier is eager, so reserve before executing it.
+        services().objectManager().createDynamicObjectWithReservedSlot(() -> {
+            int spawnX = spawn.x() + Sonic2Rng.nextMaskedOffset(rng, 0x0F, -8);
+            int bubbleSubtype = romByte(BUBBLE_SEQUENCE_ADDRESS + sequenceOffset + bubblesRemainingInBurst);
+            if ((stateFlags & FLAG_LARGE_MODE) != 0) {
+                if (rng.nextBits(3) == 0) {
+                    if ((stateFlags & FLAG_LARGE_SPAWNED) == 0) {
+                        stateFlags |= FLAG_LARGE_SPAWNED;
+                        bubbleSubtype = 2;
+                    }
+                }
+                if (bubblesRemainingInBurst == 0 && (stateFlags & FLAG_LARGE_SPAWNED) == 0) {
                     stateFlags |= FLAG_LARGE_SPAWNED;
-                    bubbleSubtype = 2; // Large breathable bubble
+                    bubbleSubtype = 2;
                 }
             }
-
-            // ROM: Extra chance for large bubble on last bubble of burst
-            // tst.b objoff_34(a0) / bne.s loc_1FAA6
-            if (bubblesRemainingInBurst == 0) {
-                // ROM: bset #6,objoff_36(a0) / bne.s loc_1FAA6 / move.b #2,subtype(a1)
-                if ((stateFlags & FLAG_LARGE_SPAWNED) == 0) {
-                    stateFlags |= FLAG_LARGE_SPAWNED;
-                    bubbleSubtype = 2; // Large breathable bubble
-                }
-            }
-        }
-
-        // ROM loc_1FA2A writes the byte_1FAF0 type list entry (or the large
-        // override's #2) straight into subtype(a1), and Obj24_Init copies that
-        // to anim(a0) (docs/s2disasm/s2.asm:45217). Pass the ROM subtype through
-        // unchanged: the old translation of subtype 2 to a size of 5 existed only
-        // to satisfy BubbleObjectInstance's since-removed `bubbleSize >= 3`
-        // breathable test, and it discarded the very byte that selects the
-        // Ani_obj24 script.
-        int finalBubbleSize = bubbleSubtype;
-
-        spawnFreeChild(() -> new BubbleObjectInstance(spawnX, spawnY, finalBubbleSize, 0, true));
+            return new BubbleObjectInstance(spawnX, spawn.y(), bubbleSubtype, 0, true);
+        });
 
         // ROM: Decrement bubble counter
         // subq.b #1,objoff_34(a0) / bpl.s loc_1FAC2

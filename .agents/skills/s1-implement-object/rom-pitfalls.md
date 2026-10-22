@@ -883,3 +883,20 @@ clear, journal filtering, or skipping Sonic's pit Animate/DPLC tail would model
 a different native boundary. Test real staging through fade, an actual full
 load/title/release prelude, fresh mapping-1 art, and registered restore/forward.
 See the [S1 chain audit](../../../docs/architecture/audits/2026-10-22-s1-chain-gap-closure.md).
+
+
+## Results wait expiry and its next routine are separate object passes
+
+S1 `Got_Wait` (`docs/s1disasm/_incObj/3A Got Through Card.asm:112-119`) only
+advances the routine and displays on expiry. `Got_NextLevel` (`:175-211`)
+performs restart/special-stage writes on the following object pass, after the
+next ordinary VBlank has serviced pending Sonic graphics. Calling the exit
+callback on expiry can accidentally turn that required upload into a palette
+fade, which has no Sonic DMA. Fix the caller's routine boundary; do not relax
+the fade service policy or flush/drop pending art to compensate.
+
+Check what each existing callback represents before adding a delay. SBZ2's
+callback already only arms `Got_SBZ2_MoveOut` (`:227-236`); its movement starts
+the next pass, so another delay would be incorrect. Capture/restore the existing
+state/timer before the exit callback, and test ordinary art service plus the
+special-stage and SBZ2 branches independently. See the S1 chain gap-closure audit.

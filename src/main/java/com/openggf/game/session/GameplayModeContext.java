@@ -925,6 +925,7 @@ public final class GameplayModeContext implements ModeContext {
         rewindRegistry.deregister("level-tilemap");
         rewindRegistry.deregister("object-manager");
         com.openggf.level.objects.NativeSpriteSubmissionAccess.unregisterRewind(rewindRegistry);
+        com.openggf.level.objects.NativeSstSlotAccess.unregisterWord2CRewind(rewindRegistry);
         rewindRegistry.deregister("level-event");
         rewindRegistry.deregister("solid-execution");
         rewindRegistry.deregisterPostRestoreCallback("level-tilemap-event-reconcile");
@@ -945,6 +946,7 @@ public final class GameplayModeContext implements ModeContext {
             rewindRegistry.register(levelManager.getObjectManager().rewindSnapshottable());
             com.openggf.level.objects.NativeSpriteSubmissionAccess.registerRewind(
                     levelManager.getObjectManager(), rewindRegistry);
+            com.openggf.level.objects.NativeSstSlotAccess.registerWord2CRewind(levelManager.getObjectManager(), rewindRegistry);
         }
         // Re-registration must preserve the allocator dependency even when rings
         // survived a seamless act transition: objects rebuild their owned SSTs,
@@ -1050,10 +1052,12 @@ public final class GameplayModeContext implements ModeContext {
         }
         rewindRegistry.deregister("object-manager");
         com.openggf.level.objects.NativeSpriteSubmissionAccess.unregisterRewind(rewindRegistry);
+        com.openggf.level.objects.NativeSstSlotAccess.unregisterWord2CRewind(rewindRegistry);
         rewindRegistry.deregister("rings");
         if (objectManager != null) {
             rewindRegistry.register(objectManager.rewindSnapshottable());
             com.openggf.level.objects.NativeSpriteSubmissionAccess.registerRewind(objectManager, rewindRegistry);
+            com.openggf.level.objects.NativeSstSlotAccess.registerWord2CRewind(objectManager, rewindRegistry);
         }
         if (ringManager != null) {
             rewindRegistry.register(ringManager);
@@ -1334,6 +1338,7 @@ public final class GameplayModeContext implements ModeContext {
 
     private void clearManagerReferences() {
         com.openggf.level.objects.NativeSpriteSubmissionAccess.unregisterRewind(rewindRegistry);
+        com.openggf.level.objects.NativeSstSlotAccess.unregisterWord2CRewind(rewindRegistry);
         zoneLayoutMutationPipeline = null;
         advancedRenderModeController = null;
         specialRenderEffectRegistry = null;

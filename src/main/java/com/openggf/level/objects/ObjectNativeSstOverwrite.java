@@ -15,7 +15,8 @@ final class ObjectNativeSstOverwrite {
             Map<ObjectSpawn,ObjectInstance> active,Map<ObjectInstance,ObjectSpawn> inverse,
             List<ObjectInstance> dynamic,ObjectCallbackRouter callbacks,DynamicObjectOwnership ownership,
             Map<ObjectInstance,ObjectRefId> identities,Set<ObjectInstance> deferred,ObjectInstance[] exec,
-            IntUnaryOperator execIndex,boolean updating,int currentExec,Consumer<ObjectInstance> add,Runnable dirty) { }
+            IntUnaryOperator execIndex,boolean updating,int currentExec,Consumer<ObjectInstance> add,Runnable dirty,
+            ObjectNativeSstWord2C word2C) { }
     static <T extends AbstractObjectInstance> T create(Surface s,Function<NativeSstState,T> writer) {
         int free=s.allocator().firstFreeSlot();
         int slot=free>=0?free:s.layout().lastDynamicSlotExclusive()-1;
@@ -23,6 +24,7 @@ final class ObjectNativeSstOverwrite {
         NativeSstState residue=old==null?NativeSstState.CLEARED:s.callbacks().call(old,()->residue(old));
         T next=ObjectConstructionContext.with(s.services(),slot,()->writer.apply(residue));
         if(next==null)throw new IllegalStateException("Native partial writer returned no dispatch owner");
+        s.word2C().preserve(slot);
         ObjectSpawn placed=old==null?null:s.inverse().remove(old);
         ObjectRefId identity=old==null?null:s.identities().remove(old);
         if(old!=null){

@@ -1383,71 +1383,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         private void refreshInvincibilityStarsAfterRewindRestore() {
-                if (invincibleFrames <= 0
-                                && getSuperStateController() instanceof
-                                        com.openggf.game.internal.NativeSuperStateBeforeAnimation nativeSuper
-                                && nativeSuper.preserveExistingInvincibilityStars()) {
-                        // Obj35_Layer0Update, FixBugs=0 (s2.asm:42494-42503),
-                        // reads secondary invincibility, not the cleared timer.
-                        // Rebind only an existing/captured native owner graph.
-                        ObjectManager objectManager = currentObjectManagerIfAvailable();
-                        PowerUpObject liveStars = null;
-                        if (objectManager != null) {
-                                for (ObjectInstance object : objectManager.getActiveObjects()) {
-                                        if (object.getClass() == com.openggf.level.objects.InvincibilityStarsObjectInstance.class
-                                                        && object instanceof PowerUpObject candidate
-                                                        && candidate.boundPlayer() == this
-                                                        && !com.openggf.level.objects.ObjectCallbackDispatch.call(
-                                                                objectManager, object, object::isDestroyed)) {
-                                                liveStars = candidate;
-                                                break;
-                                        }
-                                }
-                                if (liveStars == null) {
-                                        liveStars = com.openggf.level.objects.PlayerBoundPowerUpRestoreAccess
-                                                .restoreCapturedInvincibilityStars(objectManager, powerUpSpawner, this);
-                                }
-                        }
-                        invincibilityObject = liveStars;
-                        if (liveStars != null) {
-                                liveStars.refreshArtAfterRewindRestore();
-                        }
-                        if (shieldObject != null) {
-                                shieldObject.setVisible(liveStars == null);
-                        }
-                        return;
-                }
-                if (invincibleFrames <= 0) {
-                        if (invincibilityObject != null) {
-                                invincibilityObject.destroy();
-                                invincibilityObject = null;
-                        }
-                        if (shieldObject != null) {
-                                shieldObject.setVisible(true);
-                        }
-                        return;
-                }
-
-                PowerUpObject liveStars = resolveLiveInvincibilityObjectAfterRewindRestore();
-                if (liveStars != null) {
-                        invincibilityObject = liveStars;
-                        invincibilityObject.refreshArtAfterRewindRestore();
-                } else {
-                        if (invincibilityObject != null && !invincibilityObject.isDestroyed()) {
-                                invincibilityObject.destroy();
-                        }
-                        invincibilityObject = null;
-                        if (powerUpSpawner != null) {
-                                invincibilityObject = powerUpSpawner.spawnInvincibilityStars(this);
-                                if (invincibilityObject != null) {
-                                        invincibilityObject.refreshArtAfterRewindRestore();
-                                }
-                        }
-                }
-
-                if (shieldObject != null) {
-                        shieldObject.setVisible(false);
-                }
+                boolean preserve = invincibleFrames <= 0 && getSuperStateController() instanceof
+                                com.openggf.game.internal.NativeSuperStateBeforeAnimation nativeSuper
+                                && nativeSuper.preserveExistingInvincibilityStars();
+                com.openggf.level.objects.PlayerBoundPowerUpRestoreAccess.refreshInvincibilityStarsAfterRewindRestore(
+                                currentObjectManagerIfAvailable(), () -> powerUpSpawner, this, invincibleFrames,
+                                preserve, () -> invincibilityObject, () -> shieldObject,
+                                value -> invincibilityObject = value);
         }
 
         /** Restores the persistent insta-shield graph immediately after a manager rebuild. */
@@ -1508,21 +1450,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                         && isMatchingLiveShield(objectManager, candidate)) {
                                 return candidate;
                         }
-                }
-                return null;
-        }
-
-        private PowerUpObject resolveLiveInvincibilityObjectAfterRewindRestore() {
-                ObjectManager objectManager = currentObjectManagerIfAvailable();
-                if (invincibilityObject != null
-                                && (invincibilityObject instanceof ObjectInstance instance
-                                                && objectManager != null
-                                        ? !com.openggf.level.objects.ObjectCallbackDispatch.call(
-                                                        objectManager, instance, instance::isDestroyed)
-                                        : !invincibilityObject.isDestroyed())
-                                && (objectManager == null
-                                                || isObjectManagerLivePowerUp(objectManager, invincibilityObject))) {
-                        return invincibilityObject;
                 }
                 return null;
         }

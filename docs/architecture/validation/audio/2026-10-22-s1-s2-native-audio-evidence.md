@@ -438,12 +438,33 @@ allocation, independent normal stars at 136, retained same-owner stars at 129
 and restore/forward behavior. Those tests were not rerun by the audio lane,
 and no PCM capture accompanied the caller change.
 
-The final 600-row startup measurements above use `70de3bfe` and predate this
-caller commit. They cannot certify its later Super boundary. A separate
-normal-star timer-zero world-restore gap remains with the caller/shared-hook
-owners, pending parent coordination. Root composition and real route
-prerequisites must be recorded before any later production Super state,
-register or PCM result is attributed to the corrected caller.
+The latest 600-row startup measurements above use `6c2454616` and do not
+include this separate caller composition. They cannot certify its later Super
+boundary. The caller lane's subsequent normal-star world-restore correction
+`0f595ef8833d1e52cb00ab0a23b90de1fb6469ba` is now included with the caller in
+the route-owner source reported below. These source dependencies do not supply
+later Super state/register/PCM observations or certify a natural row-zero route.
+
+The S2 chain owner reports retained-chain job41514 on
+`9854f02b146a8cbe1a4d656f54778a5918ee2852`: ten required trace cases executed,
+eight passed, two failed, zero skipped. Seven special-stage cases and the
+independent ARZ2 case passed. Starting from retained cursor769, the emerald
+chain naturally completed ARZ1 segment18 with zero errors, then completed ARZ2
+segment19 with13495 errors, first at frame5084 `sidekick_y` (reported pair
+`048A/0489`). The following CNZ handoff had cursor113342 against first113340,
+blocking the next admission. The owner reports the twelve special-stage
+return/level-art axes unchanged. These are owner-observed route results; the
+audio lane did not rerun the job.
+
+Read-only inspection of the reported source's commit ancestry confirms
+`f85bb8746`, `0f595ef88` and graphics dependency bundle `91f3fd4bb` precede
+`9854f02b1`. The owner also identifies the composed special-stage geometry,
+ROM-palette and leaf-phase work in that source. Semantic
+`GameMusic.SUPER` remains engine93. This updates the real retained-route
+frontier for future audio evidence; it provides no new row-zero prefix,
+startup waveform, effects capture or later Super audio result. No audio or
+native job was requested or launched for this handoff. All four full native
+captures remain held behind the existing route, clock and publication gates.
 
 ## Verification
 
@@ -786,3 +807,362 @@ prevents that unsupported cancellation. This is measured single-chant behavior
 on the original input, not full-route audio parity. Native FA timing is still
 not inferred from PCM onset. The four full native captures remain held behind
 production-route, clock and publication/trust prerequisites.
+
+
+## Prior GM_Sega fade: conditional local feasibility and required seam
+
+The next bounded slice inspected clean `2ff5e37c4` for a genuine prior-screen
+PaletteFadeOut using existing admitted title iterations and palette ownership.
+The conditional implementation is **not supported by the current local owner**.
+No runtime source, test, timing, audio or asset loader was changed. No Maven,
+600-row repeat, native or full capture was run for this source-only decision.
+The four full native captures remain held.
+
+The native work is unambiguous and is distinct from the removed logo fade-in:
+GM_Sega (`sonic.asm:1808-1813`) and SegaScreen (`s2.asm:4095-4100`) stop sound,
+ClearPLC and fade the **previous** palette/picture before screen clearing,
+direct logo loading and PalLoad. PaletteFadeOut
+(`_inc/Palette Fading.asm:134-170`) and Pal_FadeToBlack
+(`s2.asm:3370-3420`) perform22 admitted VInt waits with red, then green, then
+blue decrements of all64 normal and underwater colors. RunPLC/RunPLC_RAM is
+inside each native loop. Their first action is publication/wait, followed by
+one color pass; the final all-black pass is a no-op, not permission to skip a
+native iteration. No absolute boot offset follows from this work.
+Read-only verification of the original pinned ROMs confirms S1
+`$2DD2:103C00E4`, sound call `$2DD6:6100E5BC` → `$1394`, ClearPLC
+`$2DDA:6100E7FA` → `$15D6`, prior fade `$2DDE:6100F06A` → `$1E4A`;
+S2 `$37B8:103C00FD`, sound call `$37BC:6100DBA0` → `$135E`, ClearPLC
+`$37C0:6100DEBA` → `$167C`, prior fade `$37C4:6100ECA4` → `$246A`.
+
+The precise missing ownership is visible in the production path:
+
+- `GraphicsManager.setPaletteFadePresentation()` and `PaletteFadePresentation`
+  already provide native per-channel arithmetic and re-upload cached rows. The
+  remembered palette views are private, potentially mutable aliases. The API
+  neither acquires a frozen prior native palette pair nor retains a prior
+  indexed scene. `clearPaletteFadePresentation()` re-uploads the old owners,
+  so clearing it before the setup handoff can reveal those old colors again.
+- S1 `drawSegaLogo()` calls `cacheSegaLogoToGpu()`; S2 also calls
+  `applySegaLogoPaletteForFrame()`. Every SEGA draw replaces the prior palette
+  and draws the new logo. Applying the shared transform there would fade the
+  newly loaded logo, which is the wrong native owner.
+- `Engine.resetForGameplayFromMasterTitle()` clears the old session and ROM,
+  resets RenderContext and calls `clearPaletteTextures()`. New configured boot
+  likewise supplies no previous native palette/scene owner. An empty cache or
+  a host hub picture is not an authentic reset palette.
+- `GameLoop.initializeTitleScreenMode()` changes mode and zeros the camera
+  before calling provider initialization. Engine then clears and draws through
+  the new title provider. A manager cannot recover the previous scene after
+  that boundary using the permitted init/reset/update hunks.
+- `GameLoopTitleEntryFade` / `TitleEntryFadeSource` retain a level picture only
+  through a zone-runtime owner. That existing path does not supply a general
+  native prior-scene handoff to fresh S1/S2 SEGA entry.
+- `FadeManager.startFadeToBlack()` is an alpha-overlay black fade. It does not
+  supply the missing native palette mutation or retained indexed scene.
+
+Consequently, a manager-only22-update phase would either be a blind hold,
+apply native color arithmetic to the new logo, or fail to preserve what those
+colors belong to. None was installed. S1's existing ClearPLC/Main split remains
+intact. S2's current early Std1 submission and data-cache setup would also need
+to be deferred as part of the eventual owner-correct lifecycle; the existing
+`Sonic2PlcService.clearOperation()` can express its native clear without a
+service/queue contract change. Std1 belongs to its actual main-title boundary
+(TitleScreen, `s2.asm:4415-4421`), not to a manufactured prior fade.
+
+The concrete proposed seam is an **engine-internal retained native presentation
+lease**, provisionally `com.openggf.game.internal.NativeTitlePriorPresentation`.
+It is a proposal, not an implemented API or an approved shared mutation:
+
+```java
+interface NativeTitlePriorPresentation extends AutoCloseable {
+    void publishPaletteAtAdmittedVInt();
+    void fadeToBlackOnePass();
+    void setRetainedClearColor();
+    void drawRetained();
+    @Override void close();
+}
+```
+
+Entry composition must acquire and inject this lease **before**
+`Engine.resetForGameplayFromMasterTitle()` discards the previous session/ROM/
+palette resources and before `GameLoop.initializeTitleScreenMode()` changes
+mode/camera. Its input is an actual previous native indexed scene, backdrop,
+normal/underwater64-color basis and displayed publication generation. An
+actual reset-palette owner may instead explicitly declare the native blank
+scene/buffers. Missing ownership must stay unavailable; never infer this from
+an empty cache, host RGB image, fixture or a guessed coldboot-ready time.
+
+The graphics/palette owner must detach the native color basis from mutable old
+writers, retain indexed scene resources through the lease, and apply the
+existing RGB decrement algorithm to **both logical native buffers**. The
+publication method uses the existing VInt palette path. Draw/backdrop remain
+those of the retained owner; a filtered RGB screenshot/overlay is not a
+substitute for indexed scene plus native palette. Logical colors, fade-pass
+state and owner/publication identity need a registered rewind adapter with
+resource rebinding; GPU names and live old-world references must not become
+logical rewind state. Reset, cancel and teardown release only the lease's own
+resources and cannot leave a global transform on another scene.
+
+The game-local lifecycle then owns the22 source iterations, each consuming one
+already-admitted title VInt: existing sound stop, existing ClearPLC, retain the
+prior scene, publish previous colors, perform one native fade pass and service
+the existing fade-loop PLC boundary. No SEGA upload, logo palette scan, FA/E1
+request, new-scene object update or skip-input branch runs during that phase.
+After its final pass, setup/PalLoad takes ownership exactly once, with atomic
+palette/scene handoff so releasing the prior lease cannot re-upload old colors.
+The source-backed logo palcycle and chant phases begin afterward. No host-wall
+clock, PCM-success predicate, new CPU timing kind or checksum delay is involved.
+
+Required shared reservations are concrete: the retained-presentation acquisition/
+release hunk around the two named Engine/GameLoop entry methods; an internal
+palette/scene lease implementation beside `GraphicsManager` /
+`PaletteUploadPresentation`; and its existing gameplay-mode rewind registration.
+The title managers then need only prior-phase fields/init/reset/update and
+retained drawing dispatch. This is broader than the approved game-local scope;
+no such shared file was edited or reservation assumed. No SMPS/chip/audio
+producer or ROM loader expansion is proposed for this seam.
+
+Acceptance must use a distinct real prior scene and native color basis, proving
+old-scene visibility and R→G→B changes through22 admitted production iterations,
+including underwater colors and the first-publication/final-no-op boundaries.
+It must reject new-logo/PalLoad/palcycle/chant work before handoff, verify
+ClearPLC/stop-before-fade and one setup afterward, ignore both pads' skip
+inputs, and cover mute/unavailable audio plus reset/cancel/restore-forward and
+foreign-owner isolation. Old source should fail those **owner/visibility/color**
+assertions; a test that only observes22 elapsed updates is insufficient. Those
+regressions were not claimed executed while the needed capability is absent.
+Coldboot checksum/reset readiness, direct logo load elapsed cost, CPU chant
+wait and the existing98/96/106 approximations remain open independently.
+
+## Native pause: verified missing ingress and service semantics
+
+The competition pause caller requested an injected native-audio port. A bounded
+read-only audit at `a0b1b73955a944b884542b1be241ac6da984f826` confirms that
+host `AudioManager.pause()` / `resume()` cannot supply it: they pause/resume
+the speaker and scene PCM source. Native pause instead leaves the physical
+chip/DAC clock running and changes driver service plus chip registers. No
+shared runtime edit, regression execution or new native capture was performed
+for this audit. Shared mutation reservations were sent to the parent and S3K
+audio owner; this section records a proposed contract, not implemented closure.
+
+The existing S2 `Sonic2SoundRequestPipeline.bridgeMusic()` converts FE to
+`stopMusic=7F` and FF to80, and its snapshot retains that byte. However,
+`Sonic2SoundRequestService.ForwardBoundary.service()` ignores the music bridge
+kind, continues queue dispatch and advances spindash state. No runtime consumer
+reads `stopMusic()`. `TestSonic2SoundRequestPipeline` checks only that logical
+conversion; it does not establish physical silence, service suspension or
+resume behavior. The FE/FF `StopMusic` values in
+`AudioManager.commandForMusicOrSystemRequest()` are expressly placeholders that
+the bridge intercepts, rather than an implemented native pause consequence.
+
+An independent read-only S2 audit verified the existing REV01 ROM identity and
+decoded the source-owned Saxman archive in memory: LEA at `$EC04A` selects
+`$EC0E8`, compressed length `$0F64`, decompressed4872 bytes, SHA-256
+`5fd429a9e64fe5b2975dae05bb44ced601f1662df1006dd5a8d1c8e505d79e75`.
+The decoded zVInt (`s2.sounddriver.asm:393-408`) at `$0038` reads `StopMusic`
+at `$1B83`; nonzero calls
+zPauseMusic (`s2.sounddriver.asm:1422-1463`) at `$0600` and then jumps to the
+DAC loop at `$00CC`. First
+pause sets the separate `$1307` latch toFF, calls FM silence at `$0B36`
+and PSG silence at `$05F4`. FM silence keys off all six channels and writes
+FF through registers `$30..$8F` on both FM parts, as zFMSilenceAll
+(`s2.sounddriver.asm:2518-2541`) specifies; PSG silence writes all four
+volume latches. Repeated pause does not repeat these writes. Resume at `$0613`
+clears both flags and restores voices/panning only for active, non-overridden
+music FM/DAC and SFX FM tracks. **The resume invocation also skips ordinary
+sequencing.** Its following invocation resumes normal work. The original
+PauseGame (`s2.asm:1571-1639`) overwrites Music0 directly; ordinary PlayMusic's alternate
+mailbox fallback is not an exact replacement for that caller operation.
+
+S3K uses a different native latch. Pause_Game (`sonic3k.asm:1550-1627`)
+writes1 on entry and80 on resume or slow-frame advance. The verified locked
+ROM SHA-1 `cfbf98c36c776677290a872547ac47c53d2761d6` contains
+`13FC000100A01C10` at `$1420`, and `13FC008000A01C10` at `$14A4` and
+`$14D4`; these are the S&K-half writes to `$A01C10`. They were read from
+the existing absolute ROM, without copying it. Source-owned Kosinski decoding
+of `$F6960` in memory consumes3580 bytes and produces4459 bytes, SHA-256
+`ec9cd3c080d0be6d29bf39b1fedcdc907e34b82e285d47a79291092643d5163f`.
+The decoded `$07FF` starts `21101C7EB7C8FA1008D13DC03602C38D09`,
+corroborating the flag pointer, zero/negative branches, removed service return,
+and1→2 transition before pause writes at `$098D`.
+
+zUpdateEverything (`Sound/Z80 Sound Driver.asm:653-701`) calls zPauseUnpause
+before SFX, music fades and request consumption. zPauseUnpause
+(`Sound/Z80 Sound Driver.asm:2232-2301`) changes1 to2 and skips the remaining
+service;2 skips without repeating physical writes. Negative80 clears the
+flag, restores panning, then **continues that same service**. A pending fade
+instead takes its native global-stop branch. zPauseAudio
+(`Sound/Z80 Sound Driver.asm:2541-2592`) silences all four PSG channels both
+before and after its FM writes under shipped `fix_sndbugs=0`, clears FM1..5
+panning and sends the native key-off selectors including the channel gap.
+FM6/DAC remains outside that pause path. zVInt
+(`Sound/Z80 Sound Driver.asm:470-529`) still returns to digital audio after
+the driver service; a host PCM pause would suppress the wrong clock.
+
+The shipped resume traversal must not be silently replaced with its fixed
+branch. It includes the extra PSG slot in the music walk, whose writes still
+pass through zWriteFMIorII's voice/override checks, and starts seven SFX reads
+at `$1F40`, the **end** of the SFX table, with `$30` stride. The existing
+ownership projection describes live tracks, not this tail/address space or
+raw Z80 memory. No missing byte is assumed zero, and no claim is made here
+about the resulting out-of-table writes. The S3K owner must resolve the
+required native-memory projection before exact shipped resume is certified.
+The source comments alone do not prove an audible pan defect.
+
+A preserved primary-source check resolves the address mapping, without
+supplying missing runtime values. GPGX `core/memz80.c:120-127`,
+`z80_memory_r()`, maps both `$0000..$1FFF` and `$2000..$3FFF` to
+`zram[address & 0x1FFF]`; `core/genesis.c:143-152`, `gen_init()`, installs
+that handler and the matching fetch mirror. Thus the final three slot bases
+`$2000/$2030/$2060` alias `$0000/$0030/$0060`. The earlier four bases still
+read actual upper RAM. The preserved source is under the external
+`native-reset-prefix-20261021/source/waterbox/gpgx/Genesis-Plus-GX` task tree;
+its install-qualified source-lock/identity pair names GPGX
+`051d430d3d1b54625f9900c8f152d7f232e06daf` and BizHawk
+`427556b5ef3ac437eba754d90c5e7e9096c9a8df`. The export has no `.git`, so
+that revision attribution comes from its lock, not a local Git checkout.
+This source observation does not attest the complete native runtime or
+measure pause PCM, and the mirror is not permission to invent upper-RAM bytes.
+
+The proposed injected port is non-Mod-API `AudioNativePauseAccess` bound to
+the caller's injected AudioManager, exposing `requestPause()` and
+`requestResume()`. Domain code owns its native previous-input planner and
+pause/frame-advance call order. Game-owned policy translates those semantics
+to S2's mailbox/latches or S3K's1/80 flag; shared code must not branch on a
+game name. Internal typed presentation/session consequences belong inside the
+existing composite forward transaction, including rollback and held-rewind
+staging. Adding an ordinary public `AudioCommand`, calling host pause/resume,
+muting a sink or installing a no-op port would not close this contract.
+
+Required reservations cover the internal AudioManager ingress/staging,
+presentation command/applier and forward-service consequence bridge, session
+command/service and snapshot, driver service gate/projection and snapshot,
+plus the game-owned policies and S2 bridge consumer. The existing native
+music alias adapter, sequencer and chip core need no proposed mutation.
+Pending/held/resume latch state and chip state must capture/restore together;
+request retention and source load/SEGA transport ordering require explicit
+tests rather than a blanket early return. Acceptance needs exact first-pause
+register writes, idempotent hold, each game's distinct resume service rule,
+active/overridden voice selection, queued-request retention, continuing
+non-device PCM/DAC time, and snapshot/rollback/forward equivalence. These
+regressions remain unexecuted until the shared implementation is reserved.
+The original startup600 failures and all full-route/publication dependencies
+remain unchanged; all four full native captures remain held.
+
+
+## Native pause implementation checkpoint
+
+The parent subsequently reserved the internal pause ingress, session transaction,
+source bridge, private timeline and exact prune-owner hunks. The implementation
+adds `com.openggf.audio.AudioNativePauseAccess.bind(AudioManager)` returning an
+injected `Port` with `void requestPause()` / `void requestResume()`. These calls
+accept a pending native mailbox write; they do not claim immediate service,
+pause a speaker, alter PCM rate or use an AudioManager singleton. Unsupported
+host profiles reject before mutation. No public Mod API command, timeline entry,
+logical snapshot signature or GameAudioProfile shape is expanded.
+
+S2's port overwrites Music0 directly with FE/FF. Its normal bridge still owns
+whether that source can transfer; blocked compressed loads retain the unbridged
+write. After transfer, StopMusic gates queue/priority/spindash work while the
+session retains its pending/held latch. The session emits the native202-write
+mute once, idles without sequencing while held, and emits validated native
+resume voice writes before skipping that resume invocation. Chip/DAC rendering
+continues independently. PCM transport completion is not a pause acknowledgement:
+only an actual session service receipt lets the source clear a consumed80.
+Queued commands, native request state and physical state share the existing
+composite forward rollback boundary. A native event enters history only when
+that consumed service and its source outcome commit.
+
+`Sonic2NativePausePolicy` supplies ordered writes from the current foreground
+logical program and track state: six descending native key-off selectors, both
+FM parts' register clear, four PSG attenuations; then DAC/music FM and SFX FM
+resume slots in native order. Active non-overridden resting tracks remain
+eligible; PSG and saved overrides are not restored. A null FM/DAC cache resolves
+its native current/default instrument index from the selected ROM-backed
+program. Missing voices and ambiguous native owners reject the complete plan
+before writes. This preserves the shipped eight-bit TL add and duplicated pan
+writes. Existing snapshots omit reserved raw pan bits, so arbitrary script
+values using those unrepresented bits are outside the verified resume projection.
+
+The existing AudioCommandTimeline has one private ordered tagged history.
+Internal events retain the committed source snapshot and do not alter public
+command indices, orders or counts. The non-Mod-API session snapshot carries its
+internal cursor. Keyframe replay traverses both kinds in service order; held
+replay borrows the selected session/source state, captures a detached result,
+then rolls live state back before publishing the selection. Replacing that
+selection invalidates an older prepared restore. Reverse release restores the
+selected source state before the irreversible producer commit and rolls it back
+on a pre-commit failure. Pruning uses the same earliest retained audio
+snapshot's exact internal cursor after the original public prune; a public
+command count cannot identify native events in a command-free interval.
+
+S3K exact native pause/resume remains **unsupported**, not a no-op binding or
+a fixed-branch approximation. The parent's independent ROM/source audit narrows
+the missing projection: `$1F40/$1F70` are the actual retained1-up backup
+PSG2/PSG3 slots, whereas `$1FA0/$1FD0` fall in the Z80 stack region. The
+resume walk conditionally reads playing at00, voice at01 and pan at0A; its FM
+write helper rechecks00/01. The twelve upper-RAM bytes therefore need immutable
+values **and knownness** at the actual service, captured with driver state.
+Backup bytes must derive from the actual retained save, never current live PSG.
+Stack bytes need actual writer tracking or a proved non-write bound, not
+zero-filled fields. The existing mirror handles the remaining slot bases.
+
+The native audit corroborates cold RAM clear through `$1FFF`, SP=`$2000`, and
+StopAllSound's shipped over-clear through `$1FD3`; `$1FDA` is outside that
+clear. A normal1-up save clears bit7 on its saved tracks, but unchecked indexed
+writers were not proved unable to change them. CALL/PUSH/interrupt history at
+resume remains unrepresented. Source identity remains the verified locked ROM
+and driver digest above. This missing projection is a concrete separate seam;
+no stack bytes, paused gameplay values or native callback attestation were
+invented. Domain caller composition belongs to Mode/parent and is not part of
+this audio commit. Startup600 comparisons remain failures and four full native
+captures remain held.
+
+Qualification used Java25.0.5, Lua5.4, no DISPLAY/WAYLAND and the original
+absolute S2 REV01 ROM. All commands used `maven_queue.py --lean -Dmse=off`.
+The first exact15-class run reported158 tests:152 passed,2 failed,4 errored,
+0 skipped (queue283s, Maven56.261s). It compiled before the final rewind-stage
+corrections and is **not** a current-source pass. The new policy's19 cases,
+private timeline's7 cases, existing public timeline/index/keyframe cases,
+Mod API signature check and session/presentation architecture guards passed.
+Native pause was initially sent to a registry that owns voice metadata rather
+than control; the applier now leaves that registry intact for this command.
+
+The six-class affected run used
+`-Dtest=TestAudioNativePause,TestSmpsNativePauseSession,TestAudioPresentationSnapshotParity,TestAudioKeyframeReplay,TestSmpsSessionSnapshot,TestSonic2RequestConsequencesRom`
+and the absolute `-Dsonic2.rom.path` documented above. It reported49 tests:
+47 passed,2 failed,0 errors/skips (queue390s, Maven86s). This run tested the
+final production source: actual-ROM mailbox/voice writes, blocked transport
+and compressed-load retention, failed forward commit, selected reverse staging,
+both sides of reverse release, native-only history floor/prune/rebranch and
+existing snapshot/keyframe/request consequences. The remaining failures were
+new test observations: a capture drain counts requested consumer frames even
+without fresh producer PCM, and chip snapshot/strobe flush can preclock the
+core and fill its output cache. Neither establishes new core-clock progress.
+
+Only those observations changed afterward. The manager fixture now requires
+an actual fresh producer packet before draining it. The DAC fixture drains the
+finite cached PCM until actual DAC index progress, while requiring nonzero PCM
+and unchanged logical sequencing. The exact final selection was
+`-Dtest=com.openggf.audio.TestAudioNativePause#actualMailboxPauseHoldsSequencingAndResumeSkipsExactlyItsOwnInvocation+failedForwardCommitKeepsPendingRequestWithoutPublishingHistoryOrPcm,com.openggf.audio.session.TestSmpsNativePauseSession#heldNativePauseContinuesDacClockAndProducesPcmWithoutAdvancingTracks`
+with the same original ROM:3 passed,0 failures/errors/skips (queue335s,
+Maven31.119s). Production source was unchanged between these two runs.
+
+The actual prune-owner check used
+`-Dtest=com.openggf.game.rewind.TestRewindControllerAudioSuppression,com.openggf.game.rewind.TestRewindController#pruneHistoryAlignsToEarlierKeyframeBoundary+pruneHistoryDoesNotDiscardWhenWithinRetentionWindow`:
+10 passed,0 failures/errors/skips (queue355s, Maven29.152s). Earlier unaffected
+passes are reused by their tested source, rather than claiming one all-green
+combined run. `git diff --check` passed. The citation check retains one
+inherited, byte-identical stale zUpdateEverything anchor in SmpsDriverSession's
+pre-existing load comment; the new policy/document citations add no stale
+anchor. No new native, full-capture, broad smoke or release-suite run was
+launched. Parent owns combined composition validation.
+
+The first commit attempt correctly stopped at the installed policy gate: its
+source approximation treated the new private HistoryEvent declaration as
+exposed API despite the passing exact signature check. Parent-owned bccb34a88
+and4d9a63a57 dependencies were imported as bd934e15f and97cf08bfc, respectively;
+the latter import contains only the two mirrored hooks and Python regressions,
+excluding the parent's plan. The parent qualified the final repair with51
+Python safety cases including installed PowerShell. No signature pin, version,
+public API or runtime behavior was changed to satisfy this false positive.

@@ -15,8 +15,24 @@ public record SmpsDriverSessionSnapshot(
         boolean ringLeft,
         int musicFmDacTrackCount,
         SmpsSegaPcmTransportSnapshot segaPcmTransport,
-        SmpsPhysicalDevice.Snapshot physical) {
+        SmpsPhysicalDevice.Snapshot physical,
+        SmpsNativePauseState nativePause,
+        int nativeHistoryCursor) {
+    public SmpsDriverSessionSnapshot(
+            boolean initialized, SmpsPendingGlobalCommand pendingGlobalCommand,
+            SmpsSessionProfileFingerprint profile, SmpsSourceDescriptor selectedDacSource,
+            boolean speedShoesEnabled, int speedMultiplier, int musicTempoPercent,
+            boolean ringLeft, int musicFmDacTrackCount,
+            SmpsSegaPcmTransportSnapshot segaPcmTransport,
+            SmpsPhysicalDevice.Snapshot physical) {
+        this(initialized, pendingGlobalCommand, profile, selectedDacSource,
+                speedShoesEnabled, speedMultiplier, musicTempoPercent, ringLeft,
+                musicFmDacTrackCount, segaPcmTransport, physical, SmpsNativePauseState.RUNNING, 0);
+    }
+
     public SmpsDriverSessionSnapshot {
+        Objects.requireNonNull(nativePause, "nativePause");
+        if (nativeHistoryCursor < 0) throw new IllegalArgumentException("negative native history cursor");
         com.openggf.audio.MusicTempoPercent.requireValid(musicTempoPercent);
         Objects.requireNonNull(pendingGlobalCommand,
                 "pendingGlobalCommand");

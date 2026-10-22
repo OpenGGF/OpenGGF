@@ -7,10 +7,75 @@ import com.openggf.game.PowerUpSpawner;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /** Internal reconstruction of an already-captured native Obj35 owner graph. */
 public final class PlayerBoundPowerUpRestoreAccess {
     private PlayerBoundPowerUpRestoreAccess() { }
+
+    /** Rebuilds visual ownership, publishing each cached-field write before its existing callbacks. */
+    public static void refreshInvincibilityStarsAfterRewindRestore(
+            ObjectManager manager, Supplier<PowerUpSpawner> spawner, PlayableEntity owner, int invincibleFrames,
+            boolean preserveExisting, Supplier<PowerUpObject> currentStars, Supplier<PowerUpObject> shield,
+            Consumer<PowerUpObject> publishStars) {
+        // Callbacks can rebind these private player fields. Reread them where
+        // the original player method did, rather than freezing entry values.
+        if (invincibleFrames <= 0 && preserveExisting) {
+            // Obj35_Layer0Update, FixBugs=0 (s2.asm:42494-42503), reads
+            // secondary invincibility, not the cleared timer. Never mint a graph.
+            PowerUpObject liveStars = null;
+            if (manager != null) {
+                for (ObjectInstance object : manager.getActiveObjects()) {
+                    if (object.getClass() == InvincibilityStarsObjectInstance.class
+                            && object instanceof PowerUpObject candidate && candidate.boundPlayer() == owner
+                            && !ObjectCallbackDispatch.call(manager, object, object::isDestroyed)) {
+                        liveStars = candidate;
+                        break;
+                    }
+                }
+                if (liveStars == null) liveStars = restoreCapturedInvincibilityStars(manager, spawner.get(), owner);
+            }
+            publishStars.accept(liveStars);
+            if (liveStars != null) liveStars.refreshArtAfterRewindRestore();
+            if (shield.get() != null) shield.get().setVisible(liveStars == null);
+            return;
+        }
+        if (invincibleFrames <= 0) {
+            if (currentStars.get() != null) {
+                currentStars.get().destroy();
+                publishStars.accept(null);
+            }
+            if (shield.get() != null) shield.get().setVisible(true);
+            return;
+        }
+        PowerUpObject liveStars = resolveLiveInvincibilityObjectAfterRewindRestore(manager, currentStars);
+        if (liveStars != null) {
+            publishStars.accept(liveStars);
+            currentStars.get().refreshArtAfterRewindRestore();
+        } else {
+            if (currentStars.get() != null && !currentStars.get().isDestroyed()) currentStars.get().destroy();
+            publishStars.accept(null);
+            if (spawner.get() != null) {
+                publishStars.accept(spawner.get().spawnInvincibilityStars(owner));
+                if (currentStars.get() != null) currentStars.get().refreshArtAfterRewindRestore();
+            }
+        }
+        if (shield.get() != null) shield.get().setVisible(false);
+    }
+
+    private static PowerUpObject resolveLiveInvincibilityObjectAfterRewindRestore(
+            ObjectManager manager, Supplier<PowerUpObject> currentStars) {
+        if (currentStars.get() != null
+                && (currentStars.get() instanceof ObjectInstance instance && manager != null
+                        ? !ObjectCallbackDispatch.call(manager, instance, instance::isDestroyed)
+                        : !currentStars.get().isDestroyed())
+                && (manager == null || currentStars.get() instanceof ObjectInstance instance
+                        && manager.getActiveObjects().contains(instance))) {
+            return currentStars.get();
+        }
+        return null;
+    }
 
     public static PowerUpObject restoreCapturedInvincibilityStars(
             ObjectManager manager, PowerUpSpawner spawner, PlayableEntity owner) {

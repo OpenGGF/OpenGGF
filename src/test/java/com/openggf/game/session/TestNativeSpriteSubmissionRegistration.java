@@ -15,6 +15,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.LevelTilemapManager;
 import com.openggf.level.objects.NativeSpriteSubmissionAccess;
+import com.openggf.level.objects.NativeSstSlotAccess;
 import com.openggf.level.objects.NativeSpriteSubmissionAccess.Admission;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
@@ -43,6 +44,58 @@ import static org.mockito.Mockito.when;
 @FullReset
 class TestNativeSpriteSubmissionRegistration {
     private static final String QUEUE_KEY = NativeSpriteSubmissionAccess.REWIND_KEY;
+
+    @Test
+    void levelRegistrationOwnsIndependentWordResidueAfterObjectReconstruction() {
+        GameplayModeContext context = attachedContext();
+        ObjectManager objects = objectManager();
+        NativeSstSlotAccess.clearWord2C(objects, 40);
+        NativeSstSlotAccess.addWord2C(objects, 40, -1);
+        context.registerLevelAdapters(levelWith(objects));
+        RewindRegistry registry = context.getRewindRegistry();
+        CompositeSnapshot frame = registry.capture();
+        List<String> keys = List.copyOf(frame.entries().keySet());
+        assertTrue(keys.indexOf(NativeSstSlotAccess.WORD_2C_REWIND_KEY) > keys.indexOf("object-manager"));
+        NativeSstSlotAccess.writeWord2C(objects, 40, 12);
+        registry.restore(frame);
+        assertEquals(0xFFFF, NativeSstSlotAccess.readWord2C(objects, 40));
+        assertEquals(frame.get(NativeSstSlotAccess.WORD_2C_REWIND_KEY),
+                registry.capture().get(NativeSstSlotAccess.WORD_2C_REWIND_KEY));
+    }
+
+    @Test
+    void replacementAndNullRebindRetireThePreviousWordAdapter() {
+        GameplayModeContext context = attachedContext();
+        ObjectManager old = objectManager();
+        NativeSstSlotAccess.writeWord2C(old, 40, 0xFFFF);
+        context.registerLevelAdapters(levelWith(old));
+        RewindRegistry registry = context.getRewindRegistry();
+        CompositeSnapshot oldFrame = registry.capture();
+        ObjectManager next = objectManager();
+        context.rebindActTransitionManagerAdapters(next, null);
+        NativeSstSlotAccess.writeWord2C(next, 40, 12);
+        registry.restore(oldFrame);
+        assertEquals(0xFFFF, NativeSstSlotAccess.readWord2C(next, 40));
+        NativeSstSlotAccess.addWord2C(old, 40, -1);
+        assertEquals(0xFFFE, NativeSstSlotAccess.readWord2C(old, 40));
+        context.rebindActTransitionManagerAdapters(null, null);
+        assertFalse(registry.capture().containsKey(NativeSstSlotAccess.WORD_2C_REWIND_KEY));
+        registry.restore(oldFrame);
+        assertEquals(0xFFFE, NativeSstSlotAccess.readWord2C(old, 40));
+    }
+
+    @Test
+    void nullLevelAndContextTeardownUnregisterTheWordAdapter() {
+        GameplayModeContext context = attachedContext();
+        RewindRegistry registry = context.getRewindRegistry();
+        context.registerLevelAdapters(levelWith(objectManager()));
+        assertTrue(registry.capture().containsKey(NativeSstSlotAccess.WORD_2C_REWIND_KEY));
+        context.registerLevelAdapters(levelWith(null));
+        assertFalse(registry.capture().containsKey(NativeSstSlotAccess.WORD_2C_REWIND_KEY));
+        context.registerLevelAdapters(levelWith(objectManager()));
+        context.tearDownManagers();
+        assertFalse(registry.capture().containsKey(NativeSstSlotAccess.WORD_2C_REWIND_KEY));
+    }
 
     @BeforeEach
     void configureServicesAndGraphics() {

@@ -134,11 +134,14 @@ public class LeavesGeneratorObjectInstance extends AbstractObjectInstance
     }
 
     private void maybeSpawnLeaves(AbstractPlayableSprite player, int frameCounter) {
-        if (!hasMinimumSpeed(player)) {
+        if (hasMinimumSpeed(player)) {
+            spawnLeaves(player);
+        } else {
+            // Obj2C_CreateLeaves takes loc_261C2 on a slow touch, clearing
+            // objoff_2E. Its caller still reseeds that word below after the
+            // subroutine returns (s2.asm:52103-52106,52117-52138).
             touchPhaseFrame = 0;
-            return;
         }
-        spawnLeaves(player);
         if (touchPhaseFrame == 0) {
             touchPhaseFrame = frameCounter;
         }
@@ -146,11 +149,10 @@ public class LeavesGeneratorObjectInstance extends AbstractObjectInstance
 
     private int levelFrameCounter(int vIntRunCount) {
         var levelManager = services().levelManager();
-        // Obj2C_Main reads the ROM Level_frame_counter during object execution
-        // (s2.asm:52090, 52109, 52116). LevelManager still stores the previous
-        // completed frame until its late-frame update, so object code observes
-        // the next visible level counter here.
-        return levelManager != null ? levelManager.getFrameCounter() : vIntRunCount;
+        // Obj2C_Main reads the Level_frame_counter word, not V_int_run_count
+        // (s2.asm:52096,52106,52120). LevelFrameStep advances the injected
+        // level clock before RunObjects; pause/lag rows do not advance it.
+        return (levelManager != null ? levelManager.getFrameCounter() : vIntRunCount) & 0xFFFF;
     }
 
     private AbstractPlayableSprite mainPlayer() {

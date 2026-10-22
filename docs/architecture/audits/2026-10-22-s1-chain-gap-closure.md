@@ -887,3 +887,256 @@ the S2 negative control uses a synthetic descriptor rather than an S2 route.
 46550's first extra map50 caller/phase remains historically UNKNOWN. No new
 whole-chain result follows from79 focused passes. Native242 publication and
 prefix advancement remain withheld pending all comparisons and terminal art.
+
+
+
+## Reachable title prerequisites for the next tail
+
+The next tail can now naturally reach the title methods that46550 never ran.
+Before the single bounded title-consumer qualification, compose the original
+S1 intro/PLC leaves7d3d5a972 and66fcd1db0. Their earlier native SEGA phase
+prerequisite6211f4fc75ebc3ebcc12e578a09cff3d62655b14 was absent locally: this
+branch still inserted a generic22-update fade over the newly loaded logo,
+while root6afa already uses the native direct Pal_SegaBG/PalCycle_Sega entry.
+The first7d cherry-pick was therefore cleanly aborted; all62 unpublished
+candidate files, the literal guard and foreign disassembly were hash-preserved.
+
+Parent approved importing only6211's three exact code/test blobs: title manager,
+existing SegaScreenFadeTiming and new SegaScreenNativePhases. Each blob hash
+matches the original commit. Its semantic removes that extra entry fade;
+GM_Sega directly loads the palette before Sega_WaitPal (`sonic.asm:1847-1865`)
+and PalCycle_Sega owns its51 scan calls/five5-call boundaries
+(`sonic.asm:1605-1643`). No unrelated audio implementation or wholesale audio
+audit is imported with this prerequisite. Active prerelease prose is folded
+above. The one necessary composition check will include NativePhases,
+FadeTiming, IntroInputPhases and PlcProducerCoverage after7d then66; no fresh
+startup/native600 capture or natural coldboot/intro qualification is intended.
+
+
+The ordered source composition is now complete: exact6211 code/test blobs in
+local `cbfa8d8ab8c0cd14a086a371f743181a2c110613`, original7d in
+`f854d3655cf060f41c74ff63c7154fafabd746c4`, and original66 in
+`7cf0ebee4e19db4472e282cff2002e068b196d48`. The final title-manager blob matches
+original66 byte for byte. The only7d conflict was its absent upstream audio
+audit; this tree retains the selected new causal section with explicit upstream
+attribution and a local-audit link, not earlier unrelated audio history.66's
+additional evidence appends cleanly. No S2-only6c runtime is imported.
+
+Necessary bounded title-consumer job21929 passes43/43, zero failures/errors/skips:
+NativePhases2, FadeTiming3, IntroInputPhases19 and PlcProducerCoverage19. Queue
+wait249s, Maven1m30s; XML inspected. The imported instruction-audit tool's19
+Python unit tests also pass (`python3 -m unittest discover -s tools/audio/tests
+-p test_s1_startup_instruction_audit.py`), without native capture or startup run.
+This proves actual manager input phases and PLC caller/relative-operation
+boundaries on this composition, not natural power-on timing or waveform parity.
+The chant's fixed wait and interrupt-disabled loading remain honest source
+limits documented by the original owner. Parent separately reported67 aggregate
+input-lease/host/native-pause cases passing; that prerequisite is deliberately
+not imported or claimed as a local test result.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestSonic1SegaScreenNativePhases,TestSonic1SegaScreenFadeTiming,TestSonic1IntroInputPhases,TestSonic1PlcProducerCoverage' "-Dsonic1.rom.path=$S1_ROM" test -B
+```
+
+All bounded input/load/title prerequisites are now green for the sole next
+necessary composed S1 route. Parent confirmed reuse of the exact temporary
+actual-loop test observer, with bounded output and pure existing state reads;
+both temporary files must be restored immediately after that run. No comparison
+or terminal-art ordering changes, native/provider construction, forced ticks or
+new input authority are included.46550 remains the last completed chain result;
+native242 stays wholly unpublished until all comparisons and terminal art pass.
+
+
+## Composed route44223: exact levels, missing final result art and terminal fade re-entry
+
+The sole necessary composed route on `37a6b260d199f39cb87fc24c889da64f055d6cb8`
+plus the full unpublished native242 candidate and literal guard completed with
+12 tests:11 passing, one continuous-chain failure, zero errors/skips. Queue
+wait534s; Maven1m15s. All22 complete level reports have zero comparison,
+bootstrap or warning errors, including FZ's5086 represented rows. The six
+independent original SLZ1/2/3, SBZ2 and LZ2/3 BK2s, both prefix cases and all
+three literal timing/inventory guards pass. This is not a green chain: five
+reported axes remain, and terminal-art comparison was not reached.
+
+The approved temporary actual-loop observer emitted160 bounded records. Both
+test-only observer hunks were restored immediately after completion and their
+diffs verified empty. There was no module-factory provider lookup, global-loop
+guess, forced tick, modified input, comparison change or terminal-art reorder.
+The retained initial entry still bypasses title initialization; the terminal
+now naturally reaches ending actors, credits/demos and post-credits instead.
+This does not qualify row0 or a natural coldboot.
+
+The first art error is now SLZ3→SBZ1: four expected edges versus two actual,
+missing the final source map9 submit/completion at movie180850; destination
+map1 remains at181043. SBZ1→SBZ2 similarly misses source map49 at189245 while
+retaining destination map1 at189439. Native source edges name ordinary upload
+callback PCs `$0D20/$0D50`, not the palette-fade handler. The subsequent
+SBZ2→LZ4 and LZ4→FZ gaps each have the expected two mapping/time/request edges,
+but ordinal-4/transfer-2 counter cascades from those two missing transfers.
+The old extra SBZ2 map50 transfer no longer appears; this does not establish its
+previous exact producer/phase. Do not restore its old invalid fade upload to
+hide the two newly exposed missing ordinary uploads.
+
+The fifth axis is a walk exception at movie223632 before production, after9474
+successful terminal rows of10943: `a native blocking fade is already active`.
+Actual outer mode is TRY_AGAIN_END and the actual loop's existing provider is
+`Sonic1EndingProvider:POST_CREDITS`; its outgoing fade is FADING_TO_BLACK/frame0.
+The native FZ object did cross `$2900`, request zone7 and run ending choreography;
+the old held `$28FE.C000` frontier is closed. The immediate cause is repeated
+ending-return entry: `startEndingReturn` runs its `onBlack` inline when a fade
+is already active, bypassing the still-pending wrapper and starting the title
+reveal against its outgoing lease. `NativeBlockingFade.wrapCompletion` already
+closes the lease before the callback; the nesting guard correctly rejects this.
+The approved next fix is idempotent waiting in that helper, not weakening the
+coordinator or adding a harness tick. Broader palette-owned mode-body admission
+remains the native-mode owner's separate scope.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY OPENGGF_S1_TAIL_PROBE=1 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS1CompleteEmeraldRunChain,TestS1CompleteEmeraldRunPrefix,TestS1Slz1CompleteRunTraceReplay,TestS1Slz2CompleteRunTraceReplay,TestS1Slz3CompleteRunTraceReplay,TestS1Sbz2CompleteRunTraceReplay,TestS1Lz2CompleteRunTraceReplay,TestS1Lz3CompleteRunTraceReplay,TestS1CommittedHardwareTimingFixtures' "-Dsonic1.rom.path=$S1_ROM" test -B
+```
+
+The full native242 candidate remains uncommitted/unpublished, with all68
+physics/aux hashes, BK2, manifest and prefix pins unchanged. Capture-time Mono
+and core digests remain UNKNOWN; no retrospective trust claim is made. No
+new route is warranted until the relevant independent source fixes qualify.
+
+
+## Ending return retains its pending completion owner
+
+Parent reserved only `GameLoopGameOverExit.startEndingReturn`, leaving native
+mode admission and coordinator ownership unchanged. The exact native
+`TryAg_MainLoop`/`TryAg_Exit` caller (`sonic.asm:4018-4036` at recorded pin28872)
+checks Start/timer, writes Sega mode and returns once. Independently verified
+REV01 bytes at `$59D2` are `02380080F605660E4A78F61467080C38001CF60067D0`;
+`$59E8` is `11FC0000F6004E75`. CRC32AFE05EEE and SHA1
+69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b match the supplied original ROM.
+There is no native second independent departure completion while its successor
+palette routine is still pending.
+
+Old-source4327 on37a6 plus the independent new
+`TestEndingReturnFadeOwnership` produced6 tests, five failures, zero
+errors/skips: the actual GameLoop/real session PLC lease repeats the same
+nested-fade exception in POST_CREDITS, CUTSCENE and FINISHED; pending to-black
+and from-black callback controls observe repeated cleanup; completed HOLD_BLACK
+with no callback already passes. Queue wait742s, Maven32.599s. The test's
+synthetic provider and title are deliberately generic control boundaries;
+there is no trace input, comparison value or replay row in these regressions.
+
+The fix returns immediately while `FadeManager.hasPendingCompletion()` is
+true, before cleanup or music fade can repeat. The original wrapper remains in
+charge and closes its lease before title initialization/reveal. Idle entry and
+a completed hold without a pending callback keep their existing paths. There
+is no new latch, forced cancellation, token clear, coordinator/nesting change,
+rewind shape, public API, input or generic gameplay-admission gate. Forced
+restore across a live transient callback remains unsupported; the existing
+rewind blocker already excludes that window. The broader completion-row mode
+body policy remains outside this helper reservation.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestEndingReturnFadeOwnership' "-Dsonic1.rom.path=$S1_ROM" test -B
+```
+
+The candidate affected focus also establishes the separate S1 results-wait
+old-source baseline in the same invocation. Its identities must be reported
+separately; an expected red in that unmodified owner cannot be presented as a
+passing complete Maven invocation or as terminal-route qualification.
+
+
+Candidate44265 completed with59 tests,56 passing, three failures, zero
+errors/skips; wait0s/Maven1m30s. Exact fresh XML identities separate two
+purposes: all53 ending/affected fade checks pass (new6, coordinator27,
+provider-owned S1/S2 fade1 each, Continue clock3/exit3/actual all-three-game
+roundtrips3, native owner coverage2, fade rewind7). The separate still-unmodified
+S1 results owner contributes six baseline tests: normal map9/map49 and special
+mode request fail because exit happens on wait expiry; SBZ2 slide timing,
+isolated host-return priority and independent retail bytes pass. Thus the
+complete invocation is intentionally red, not a59-test pass. The ending leaf
+is qualified by its53 exact passing identities, with its new six previously
+red at the same boundaries. A read-only independent source review found no
+material issue; it confirms actual-loop identity and the preserved no-pending
+path. No terminal replay ran on this leaf.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestEndingReturnFadeOwnership,TestPlcFrameLifecycleCoordinator,TestPlcProviderOwnedFadeLifecycle,TestContinueClockLifecycle,TestContinueExitLifecycle,TestContinueScreenRoundTrip,TestNativePlcFadeOwnerCoverage,TestFadeManagerRewindSnapshot,TestSonic1ResultsNativeWaitBoundary' "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" test -B
+```
+
+
+## S1 results wait expires before the next routine's exit writes
+
+Parent reserved only `Sonic1ResultsScreenObjectInstance` and independent
+regressions. Source/native evidence explains the first two44223 art gaps:
+`Got_Wait` (`_incObj/3A Got Through Card.asm:112-119`, recorded pin28872) decrements
+the wait word, advances routine on zero, then branches to DisplaySprite. It
+never runs `Got_NextLevel` on that pass. REV01 `$CCC2` independently reads
+`5368001E66045428002460000FC4`. The next `Level_MainLoop` arms VBlank08 at
+`$3AE2` (`11FC0008F62A6100EEB65278`) before ExecuteObjects; only the following
+card routine writes restart at `$CD78` (`31FC0001FE02`). The immediate
+post-object restart branch then enters GM_Level without another ordinary
+VBlank. This ordering lets the last ordinary Sonic_LoadGfx preparation upload
+before the fade, while correctly withholding work prepared after a later
+native restart event.
+
+The frozen native gap edges corroborate the owning routine, not just a row
+offset: submitted/completed callback PCs are `$0D20/$0D50`, the ordinary
+Sonic graphics upload handler. Final SLZ3 map8→9 at movie180849 uploads at
+180850; final SBZ1 map48→49 at189244 uploads at189245. The Java S1 card inherited
+`AbstractResultsScreen.updateWait`, which called its exit callback on expiry;
+that immediately made the level inactive and installed native palette-fade
+ownership before either ordinary upload. The palette policy and load RAM-clear
+fixes remain independently byte-proven; no service eligibility or readiness
+clear is reversed to compensate for the early caller.
+
+The game-local override defers actual normal/special Got_NextLevel side effects
+to the following pass, using only existing captured state/timer. SBZ2 is
+intentionally different: its current callback merely arms slide-out, and the
+following pass already performs `Got_SBZ2_MoveOut` (`:227-236`). An unconditional
+extra wait would delay SBZ2 movement incorrectly, so its existing expiry arm is
+preserved. The non-native isolated host-return policy also keeps its existing
+expiry boundary and branch precedence. `onExitReady`, fade-marker creation,
+transition flags, coordinator, phase model, readiness, journal, load boundary,
+public API and snapshot shape are untouched.
+
+Independent `TestSonic1ResultsNativeWaitBoundary` uses the actual S1 fixed card
+slot23, routine-zero PLC readiness, GameLoop and ordinary LevelFrameStep. At
+wait179 it proves expiry has no native exit side effect; a valid real-ROM map9
+or49 job staged at the production port then uploads as one exact full-journal
+pair before the following object pass starts its unchanged fade. Destructive
+registered object-manager/art adapter restore recreates the card and replays
+that edge, before any transient fade callback exists. Separate canonical
+production-frame controls cover special request publication and immediate
+next-pass SBZ2 movement. A direct-object policy control preserves host-return
+priority; an independent ROM-byte control checks the retail instructions. These unit
+jobs stage independent ROM work; the continuous movie still owns qualification
+of the actual player's mapping producer and the resulting gap topology.
+
+The same44265 invocation established this owner's old source: six tests, three
+valid failures (both normal art cases exit early; special mode request is early)
+and three passing controls (SBZ2, host, native bytes), zero errors/skips. The
+new executable source comment ranges are checked against the recorded pin. A
+whole-file strict citation scan also reports one existing ClearPLC call-anchor
+finding; its exact comment is unchanged from a072/earlier source, so no foreign
+pin or unrelated citation is rewritten.
+
+
+Candidate63147 passes39/39 tests with zero failures/errors/skips; queue
+wait277s, Maven1m28s. Exact fresh XML: new results boundary6, existing results
+PLC3, special-results PLC3/screen6, actual blocking-entry fade5, palette service7,
+registered full-load readiness3 and composed ending return6. Both normal art
+cases now reach destructive registered restore and reproduce their exact whole
+journal suffix before the unchanged fade; the previously red special branch
+also passes. SBZ2/host/native-byte controls remain passing. Independent
+read-only source review found no material code/test issue, and identified only
+audit wording corrected to distinguish canonical frames from the direct-object
+host control and ROM reads. Mirrored pitfall files are byte-identical and
+`git diff --check` passes. No additional Java change followed the tested source.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestSonic1ResultsNativeWaitBoundary,TestSonic1ResultsPlcReadiness,TestSonic1SpecialStageResultsPlcReadiness,Sonic1SpecialStageResultsScreenTest,TestGameLoopBlockingLevelEntryFadeS1,TestSonic1PaletteFadePlayerArtService,TestSonic1LevelLoadPlayerArtReadiness,TestEndingReturnFadeOwnership' "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" test -B
+```
+
+These independent source fixes are now qualified bounded leaves. The next
+continuous replay remains pending parent composition; it must still prove the
+actual player's two required final-art producers, the full terminal caller and
+terminal-art comparison.44223's five-axis profile is the last measured route.
+No partial/filtered fixture publication, prefix pin advance, capture-provenance
+upgrade, comparison mutation or source-fitted timing is included.

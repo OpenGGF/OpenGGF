@@ -440,3 +440,62 @@ shadow edges are removed. Exact remaining failures are the already parent-owned
 `shared_layers_do_not_depend_on_game_specific_packages`, both in HubMusicController.
 Their repair is composed by the coordinator; this isolated result is not a green
 full guard run. No unchanged broad/resource/clock selection was repeated.
+
+## Draw and HUD collaborator extraction
+
+The ordinary S2 consumer's source-size guards exposed an omitted validation
+obligation in the original native HUD/draw bridge. On composed source
+`81a0bc1fe8bf56ba74da678727992ed360c9c588`, ObjectManager had 3180 effective
+lines against 3086; Sonic1ObjectArtProvider had 2060 against 2047. The latter
+includes six separately owned boss-art lines absent from the sprite lane.
+The remedy extracts responsibilities into existing collaborators without
+changing the guard budgets or native submission lifecycle.
+
+`ObjectDrawInternalAccess.Drawing` retains the manager's graphics, camera,
+callback router, services, scratch commands and bucket arrays. Owner lookup and
+live external-resolver suppliers are allocated once; `ObjectRenderParts` reads
+the resolver anew for each unresolved admission. Dirty clearing and snapshot
+capture remain in the manager at their original positions. ID-zero owners never
+fall through to external rings, explicit submissions retain reverse-FIFO cache
+order, and accepted native slots still suppress inferred duplicates across all
+buckets. Wrap/debug cleanup continues to use the owned graphics manager while
+SAT and mask transitions use the supplied graphics manager.
+
+A first copied-loop version would have bypassed subclasses overriding the public
+`ObjectManager.drawPriorityBucket` method. Read-only review rejected it before
+validation. The collaborator retains the original manager receiver for those
+virtual calls, with independent subclass controls. Callback-created objects in
+a later bucket also verify that both the outer and per-bucket refresh remain;
+a throwing external emission verifies graphics identity and wrap cleanup.
+The reflected private four-argument forwarding method and unified array remain.
+
+The existing S1 HUD factory now owns the unchanged four-frame ROM layout loader
+and donor palette construction. Provider load order, donor selection, package
+forwarding method, deep-copy behavior and public HUD shape are preserved.
+The exact source counter yields ObjectManager 3046, leaving 33 lines after a
+seven-line future 2C addition; the provider becomes 2040 in the sprite tree,
+equivalent to 2046 with the composed tree's six boss-art lines. Queue, allocator,
+retirement, dispatch, gameplay, and rewind ownership are unchanged.
+
+The frozen extraction passed focused job21995: 75 tests, zero failures, errors
+or skips; queue273s and Maven1m40. Command: `python3 tools/testing/maven_queue.py
+--lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+'-Dtest=TestObjectDrawSlotEmissions,TestObjectManagerNativeSpriteSubmissions,TestObjectManagerMultiBucketRenderable,TestModApiSignatureSurface,TestHudSatLayoutRom#sonic1ProviderLoadsTenNativePiecesAndPaletteOnlyWarningVariants,TestHudStaticArtLivesFrameMappings,TestSonic1LivesHudDonation,TestNativeSpriteSatGameplay'
+'-Dsonic1.rom.path=<original absolute REV01 ROM>'
+'-Dsonic2.rom.path=<original absolute REV01 ROM>'
+'-Ds3k.rom.path=<original absolute locked-on ROM>' test -B`, with Java25,
+`LUA_BIN=/usr/bin/lua5.4`, `ALSOFT_DRIVERS=null` and DISPLAY/WAYLAND_DISPLAY unset.
+All eight exact-selection XML reports were inspected: draw10, manager33,
+multipart5, API11, S1 HUD ROM1, static HUD7, donation4 and real EGL gameplay4.
+The five new cases cover virtual overrides, callback-created next-bucket objects
+for both priority classes, and graphics-identity cleanup on an emission failure.
+No unchanged movies, emulator/native checks or broad smoke were repeated.
+
+Exact size-guard job23297 passed both selected methods with zero failures,
+errors or skips: `python3 tools/testing/maven_queue.py -Dmse=off -Pguards
+'-Dtest=TestArchitecturalSourceGuard#objectManagerFacadeStaysWithinExtractedCollaboratorBudget+releaseCriticalLargeClassesDoNotGrowWithoutExtraction'
+test -B`. Queue456s; Maven27.070s; exact two-method XML inspected, Java25.0.5.
+No guard baseline changed. This isolated result does not certify the independent
+S2 AbstractPlayable extraction or later composed-root growth; Parent owns that
+composition and combined validation. Only one affected request plus these two
+exact guards was used, with no second affected run needed.

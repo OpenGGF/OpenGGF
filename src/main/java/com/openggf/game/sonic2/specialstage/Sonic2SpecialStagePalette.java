@@ -46,6 +46,42 @@ public class Sonic2SpecialStagePalette {
         }
     }
 
+    /** Session-ROM path: no process-global cache or substitute palette. */
+    static Palette[] createPalettes(Rom rom, int stageIndex) throws IOException {
+        int stage = Math.max(0, Math.min(stageIndex, Sonic2SpecialStageConstants.SPECIAL_STAGE_COUNT - 1));
+        byte[] main = readExact(rom, Sonic2SpecialStageConstants.PALETTE_MAIN_OFFSET,
+                Sonic2SpecialStageConstants.PALETTE_MAIN_SIZE);
+        byte[] stageColours = readExact(rom, Sonic2SpecialStageConstants.PALETTE_STAGE_OFFSETS[stage],
+                Sonic2SpecialStageConstants.PALETTE_STAGE_SIZE);
+        Palette[] result = new Palette[4];
+        for (int line = 0; line < result.length; line++) {
+            result[line] = new Palette();
+            loadPaletteLineFromBytes(result[line], line == 3 ? stageColours : main,
+                    line == 3 ? 0 : line * 32);
+        }
+        return result;
+    }
+
+    static int[] getEmeraldColors(Rom rom, int stageIndex) throws IOException {
+        int stage = Math.max(0, Math.min(stageIndex, Sonic2SpecialStageConstants.SPECIAL_STAGE_COUNT - 1));
+        byte[] data = readExact(rom, Sonic2SpecialStageConstants.PALETTE_EMERALD_OFFSET,
+                Sonic2SpecialStageConstants.PALETTE_EMERALD_SIZE);
+        int[] result = new int[3];
+        for (int color = 0; color < result.length; color++) {
+            int offset = stage * 6 + color * 2;
+            result[color] = ((data[offset] & 0xFF) << 8) | (data[offset + 1] & 0xFF);
+        }
+        return result;
+    }
+
+    private static byte[] readExact(Rom rom, long offset, int size) throws IOException {
+        byte[] result = rom.readBytes(offset, size);
+        if (result == null || result.length != size) {
+            throw new IOException("Incomplete special-stage palette at ROM $" + Long.toHexString(offset));
+        }
+        return result;
+    }
+
     /**
      * Loads palette data from ROM and creates palette objects.
      */
@@ -113,14 +149,15 @@ public class Sonic2SpecialStagePalette {
 
     /**
      * Converts a Genesis 9-bit color (----BBB0GGG0RRR0 format) to RGB.
-     * Each component is 0-7, scaled to 0-252 for 8-bit RGB.
+     * Preserve the shared canonical encoding of each native three-bit channel.
      */
     private static Palette.Color genesisColorToRgb(int genesis) {
-        // Genesis color format: ----BBB0GGG0RRR0
-        int r = ((genesis >> 1) & 0x7) * 36;  // Bits 1-3
-        int g = ((genesis >> 5) & 0x7) * 36;  // Bits 5-7
-        int b = ((genesis >> 9) & 0x7) * 36;  // Bits 9-11
-        return new Palette.Color((byte) r, (byte) g, (byte) b);
+        // Native-intensity palette views must retain the same canonical input
+        // as ordinary CRAM lines, before profile/output conversion. n*36 loses
+        // that encoding (white252 instead of255; level2=72 instead of73).
+        Palette.Color color = new Palette.Color();
+        color.fromSegaFormat(genesis);
+        return color;
     }
 
     /**

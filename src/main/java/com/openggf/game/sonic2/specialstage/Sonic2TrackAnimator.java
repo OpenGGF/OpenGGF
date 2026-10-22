@@ -37,6 +37,9 @@ public class Sonic2TrackAnimator {
     private int frameDelayCounter;
     /** ROM RAM byte {@code SS_player_anim_frame_timer} ($FFDB21). */
     private int playerAnimFrameTimer;
+    /** SSTrack_mapping_frame, distinct from the already-advanced animation cursor. */
+    private int nativeMappingFrame;
+    private boolean nativeOrientationFlipped;
     private int currentSegmentType;
     private boolean currentSegmentFlipped;
 
@@ -81,6 +84,8 @@ public class Sonic2TrackAnimator {
         currentFrameInSegment = 0;
         frameDelayCounter = 0;
         playerAnimFrameTimer = 0;
+        nativeMappingFrame = 0;
+        nativeOrientationFlipped = false;
         stageComplete = false;
         // SS_Cur_Speed_Factor remains zero until Vint_S2SS promotes the new
         // factor written by SpecialStage (s2.asm:6640, 960-975).
@@ -119,6 +124,8 @@ public class Sonic2TrackAnimator {
         currentFrameInSegment = 0;
         frameDelayCounter = 0;
         playerAnimFrameTimer = 0;
+        nativeMappingFrame = 0;
+        nativeOrientationFlipped = false;
         speedFactor = 0;
         speedChangePending = false;
         stageComplete = false;
@@ -155,10 +162,32 @@ public class Sonic2TrackAnimator {
      * {@code SSTrack_Draw}. Non-zero drawing slices continue the same frame.
      */
     public boolean drawTrackFrame(int drawingIndex) {
-        if (stageComplete || layoutLength == 0 || drawingIndex != 0) {
+        if (stageComplete || layoutLength == 0) {
             return false;
         }
-        return advanceFrame();
+        boolean advanced = false;
+        if (drawingIndex == 0) {
+            // SSTrack_Draw stores the mapping byte before incrementing the
+            // animation/segment cursor (s2.asm:7041-7053,7085-7090).
+            nativeMappingFrame = getCurrentTrackFrameIndex();
+            advanced = advanceFrame();
+        }
+        // SSTrackSetOrientation also runs for non-drawing slices >=4. It reads
+        // the displayed mapping and the post-increment layout segment
+        // (s2.asm:7027-7030,7102,9028-9073).
+        if (nativeMappingFrame == TRIGGER_STRAIGHT2 || nativeMappingFrame == TRIGGER_RISE14
+                || nativeMappingFrame == TRIGGER_DROP6) {
+            nativeOrientationFlipped = currentSegmentFlipped;
+        }
+        return advanced;
+    }
+
+    int getNativeMappingFrame() {
+        return nativeMappingFrame;
+    }
+
+    boolean isNativeOrientationFlipped() {
+        return nativeOrientationFlipped;
     }
 
     /**
@@ -390,6 +419,8 @@ public class Sonic2TrackAnimator {
                 currentFrameInSegment,
                 frameDelayCounter,
                 playerAnimFrameTimer,
+                nativeMappingFrame,
+                nativeOrientationFlipped,
                 currentSegmentType,
                 currentSegmentFlipped,
                 speedFactor,
@@ -406,6 +437,8 @@ public class Sonic2TrackAnimator {
         currentFrameInSegment = snapshot.currentFrameInSegment();
         frameDelayCounter = snapshot.frameDelayCounter();
         playerAnimFrameTimer = snapshot.playerAnimFrameTimer();
+        nativeMappingFrame = snapshot.nativeMappingFrame();
+        nativeOrientationFlipped = snapshot.nativeOrientationFlipped();
         currentSegmentType = snapshot.currentSegmentType();
         currentSegmentFlipped = snapshot.currentSegmentFlipped();
         speedFactor = snapshot.speedFactor();

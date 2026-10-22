@@ -2,7 +2,6 @@ package com.openggf.level.objects;
 
 import com.openggf.game.ModApi;
 import com.openggf.game.session.EngineServices;
-import static org.lwjgl.opengl.GL11.GL_LINES;
 import com.openggf.camera.Camera;
 import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.DebugOverlayToggle;
@@ -22,7 +21,6 @@ import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GLCommand;
-import com.openggf.graphics.GLCommandGroup;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
@@ -93,6 +91,7 @@ public class ObjectManager {
     private Comparator<ObjectSpawn> forwardSpawnOrder;
     private Comparator<ObjectSpawn> backwardSpawnOrder;
     private final List<GLCommand> renderCommands = new ArrayList<>();
+    private final ObjectDrawInternalAccess.Drawing objectDrawing;
     private int frameCounter;
     private int vblaCounter;
     private boolean updating;
@@ -161,6 +160,7 @@ public class ObjectManager {
     @SuppressWarnings("unchecked")
     private final List<ObjectRenderParts.RenderEntry>[] unifiedBuckets = new ArrayList[BUCKET_COUNT];
     private boolean bucketsDirty = true;
+    private final ObjectNativeSstWord2C nativeSstWord2C;
     private final NativeSpriteSubmissionQueue nativeSpriteSubmissions =
             new NativeSpriteSubmissionQueue(() -> bucketsDirty = true);
     // Presentation binding only. RingManager owns its live DTOs and rewind state.
@@ -290,6 +290,7 @@ public class ObjectManager {
         this.placementAdmission = new ObjectPlacementAdmission(registry, objectServices);
         this.objectCallbacks = new ObjectCallbackRouter(registry);
         this.slotLayout = registry != null ? registry.objectSlotLayout() : ObjectSlotLayout.SONIC_1;
+        this.nativeSstWord2C = new ObjectNativeSstWord2C(slotLayout.lastProcessSlotExclusive(), this::currentNativeSstOwner, objectCallbacks, () -> rewindReconstructionChildCapture);
         this.windowingStrategy = registry != null
                 ? registry.objectWindowingStrategy()
                 : ObjectWindowingStrategy.LEGACY;
@@ -332,6 +333,9 @@ public class ObjectManager {
             highPriorityBuckets[i] = new ArrayList<>();
             unifiedBuckets[i] = new ArrayList<>();
         }
+        this.objectDrawing = new ObjectDrawInternalAccess.Drawing(this, graphicsManager, camera, objectServices,
+                objectCallbacks, renderCommands, lowPriorityBuckets, highPriorityBuckets, unifiedBuckets,
+                this::ensureBucketsPopulated, this::currentNativeSstOwner, () -> nativeSpriteExternalResolver);
     }
 
     public ObjectManager(List<ObjectSpawn> spawns, ObjectRegistry registry,
@@ -366,7 +370,6 @@ public class ObjectManager {
     private boolean isManagedDynamicSlot(int slotIndex) {
         return slotLayout.isDynamicSlot(slotIndex);
     }
-
 
     void runObjectCallback(ObjectInstance instance, Runnable callback) { objectCallbacks.run(instance, callback); }
 
@@ -1524,17 +1527,11 @@ public class ObjectManager {
     }
 
     public void drawLowPriority() {
-        ensureBucketsPopulated();
-        for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
-            drawPriorityBucket(bucket, false);
-        }
+        objectDrawing.drawLowPriority();
     }
 
     public void drawHighPriority() {
-        ensureBucketsPopulated();
-        for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
-            drawPriorityBucket(bucket, true);
-        }
+        objectDrawing.drawHighPriority();
     }
 
     private void ensureBucketsPopulated() {
@@ -1542,73 +1539,12 @@ public class ObjectManager {
             return;
         }
         bucketsDirty = false;
-
-        // Clear all buckets
-        for (int i = 0; i < BUCKET_COUNT; i++) {
-            lowPriorityBuckets[i].clear();
-            highPriorityBuckets[i].clear();
-            unifiedBuckets[i].clear();
-        }
-
-        // Bucket active and dynamic objects; an owner of inline-drawn ROM children
-        // (MultiBucketRenderable) is listed in every bucket its parts occupy.
-        for (ObjectInstance instance : activeObjects.values()) {
-            if (!NativeSpriteSubmissionAccess.authoritative(instance)) {
-                ObjectRenderParts.addToRenderBuckets(instance, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
-            }
-        }
-        for (ObjectInstance instance : dynamicObjects) {
-            if (!NativeSpriteSubmissionAccess.authoritative(instance)) {
-                ObjectRenderParts.addToRenderBuckets(instance, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
-            }
-        }
-
-        // ROM parity: lower sprite-table indices render in front. Objects execute and
-        // call Draw_Sprite in slot order, so lower SST slots must be drawn later in
-        // painter's-algorithm order. Sort each bucket descending by slot so lower
-        // slot indices appear on top.
-        for (int i = 0; i < BUCKET_COUNT; i++) {
-            lowPriorityBuckets[i].sort(ObjectRenderParts.SLOT_DESCENDING);
-            highPriorityBuckets[i].sort(ObjectRenderParts.SLOT_DESCENDING);
-            unifiedBuckets[i].sort(ObjectRenderParts.SLOT_DESCENDING);
-        }
-
-        // BuildSprites (_inc/BuildSprites.asm:29-38) walks accepted SST pointers
-        // FIFO, resolving current RAM even after deletion/reuse. Cached lists
-        // are painter order, reversed by the SAT consumer: append reverse FIFO
-        // so native calls form its FIFO prefix. Unported legacy objects retain
-        // their old SST ordering as a suffix; that mixed bridge is not evidence
-        // of native DisplaySprite call coverage or capacity for those objects.
-        for (int ordinal = nativeSpriteSubmissions.size() - 1; ordinal >= 0; ordinal--) {
-            int slot = nativeSpriteSubmissions.slotAt(ordinal);
-            AbstractObjectInstance currentObject = currentNativeSstOwner(slot);
-            ObjectInstance occupant = currentObject;
-            if (currentObject != null) {
-                // ID zero consumes the already admitted queue word but emits no
-                // SAT pieces. Do not replace a real cleared owner with a ring.
-                if ((currentObject.getLiveObjectId() & 0xFF) == 0) continue;
-            } else if (nativeSpriteExternalResolver != null) {
-                SpriteSlotEmission emission = nativeSpriteExternalResolver.apply(slot);
-                if (emission != null && emission.slot() == slot) {
-                    occupant = ObjectRenderParts.externalSprite(emission);
-                }
-            }
-            if (occupant != null) {
-                ObjectRenderParts.addNativeToRenderBuckets(occupant,
-                        nativeSpriteSubmissions.bucketAt(ordinal), slot, ordinal,
-                        unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
-            }
-        }
-
+        objectDrawing.populateBuckets(activeObjects.values(), dynamicObjects, nativeSpriteSubmissions);
         renderBucketSnapshot.capture(activeObjects.values(), dynamicObjects);
     }
 
     public void drawPriorityBucket(int bucket, boolean highPriority) {
-        ensureBucketsPopulated();
-        int targetBucket = RenderPriority.clamp(bucket);
-        int idx = targetBucket - RenderPriority.MIN;
-        List<ObjectRenderParts.RenderEntry>[] buckets = highPriority ? highPriorityBuckets : lowPriorityBuckets;
-        drawBucketInstancesWithPriority(buckets[idx], targetBucket, graphicsManager);
+        objectDrawing.drawPriorityBucket(bucket, highPriority);
     }
 
     /**
@@ -1622,38 +1558,7 @@ public class ObjectManager {
      * @param callback Called before each object draw with (object, isHighPriority)
      */
     public void drawUnifiedBucket(int bucket, ObjectDrawCallback callback) {
-        ensureBucketsPopulated();
-        int targetBucket = RenderPriority.clamp(bucket);
-        int idx = targetBucket - RenderPriority.MIN;
-
-        drawBucketInstances(unifiedBuckets[idx], targetBucket, callback);
-    }
-
-    private void drawBucketInstances(List<ObjectRenderParts.RenderEntry> entries, int bucket,
-                                     ObjectDrawCallback callback) {
-        if (entries.isEmpty()) {
-            return;
-        }
-
-        enableVerticalWrapIfNeeded();
-        try {
-            renderCommands.clear();
-            for (ObjectRenderParts.RenderEntry entry : entries) {
-                if (callback != null) {
-                    callback.beforeDraw(entry.instance(), entry.high());
-                }
-                objectCallbacks.run(entry.instance(),
-                        () -> ObjectRenderParts.appendRenderCommands(entry, renderCommands, bucket, objectServices));
-            }
-
-            if (!renderCommands.isEmpty()) {
-                graphicsManager.enqueueDebugLineState();
-                graphicsManager.registerCommand(new GLCommandGroup(GL_LINES, renderCommands));
-                graphicsManager.enqueueDefaultShaderState();
-            }
-        } finally {
-            graphicsManager.disableVerticalWrapAdjust();
-        }
+        objectDrawing.drawUnifiedBucket(bucket, callback);
     }
 
     /**
@@ -1680,91 +1585,17 @@ public class ObjectManager {
      * @param gfx    The graphics manager to use for priority state
      */
     public void drawUnifiedBucketWithPriority(int bucket, GraphicsManager gfx) {
-        ensureBucketsPopulated();
-        int idx = RenderPriority.clamp(bucket) - RenderPriority.MIN;
-
-        // The BatchedPatternRenderer uses a single tile-occlusion uniform for
-        // the entire batch — it cannot vary per-instance. The helper flushes
-        // at every mask transition while retaining SST slot order.
-        // (The InstancedPatternRenderer bakes priority per-instance and doesn't
-        // need the flush, but it's harmless — empty flushes are no-ops.)
-
-        drawBucketInstancesWithPriority(unifiedBuckets[idx], idx + RenderPriority.MIN, gfx);
+        objectDrawing.drawUnifiedBucketWithPriority(bucket, gfx);
     }
 
     void drawBucketWithSlotEmissions(int bucket, GraphicsManager graphics,
             List<com.openggf.level.render.SpriteSlotEmission> external) {
-        ensureBucketsPopulated();
-        int index = RenderPriority.clamp(bucket) - RenderPriority.MIN;
-        drawBucketInstancesWithPriority(unifiedBuckets[index], index + RenderPriority.MIN, graphics, external);
-    }
-
-    private void drawBucketInstancesWithPriority(List<ObjectRenderParts.RenderEntry> entries, int bucket,
-                                                 GraphicsManager gfx) {
-        drawBucketInstancesWithPriority(entries, bucket, gfx, List.of());
+        objectDrawing.drawBucketWithSlotEmissions(bucket, graphics, external);
     }
 
     private void drawBucketInstancesWithPriority(List<ObjectRenderParts.RenderEntry> entries, int bucket,
             GraphicsManager gfx, List<com.openggf.level.render.SpriteSlotEmission> external) {
-        if (entries.isEmpty() && external.isEmpty()) return;
-
-        // Native queue entries already resolve reserved ring slots through the live resolver.
-        // Legacy anchoring cannot emit those slots twice or sort an explicit FIFO by SST.
-        var nativeSlots = new java.util.HashSet<Integer>();
-        for (var cachedBucket : unifiedBuckets) {
-            for (var entry : cachedBucket) if (entry.nativeSubmission()) nativeSlots.add(entry.slot());
-        }
-        if (!nativeSlots.isEmpty()) {
-            external = external.stream().filter(emission -> !nativeSlots.contains(emission.slot())).toList();
-        }
-
-        enableVerticalWrapIfNeeded();
-        try {
-            renderCommands.clear();
-            // Draw_Sprite / Render_Sprites consume SST order; masks affect later entries.
-            // The cached lists use reverse order for ordinary painter drawing.
-            boolean collectingSat = gfx.isSpriteSatCollectionActive();
-            int ordinary = 0, extra = 0;
-            while (ordinary < entries.size() || extra < external.size()) {
-                ObjectRenderParts.RenderEntry entry = ordinary < entries.size()
-                        ? entries.get(collectingSat ? entries.size() - 1 - ordinary : ordinary) : null;
-                var next = extra < external.size()
-                        ? external.get(collectingSat ? extra : external.size() - 1 - extra) : null;
-                if (next != null && (entry == null || (collectingSat
-                        ? !entry.nativeSubmission() && next.slot() < entry.slot()
-                        : entry.nativeSubmission() || next.slot() > entry.slot()))) {
-                    if (gfx.getCurrentSpriteTileOcclusionPaletteMask() != next.tileOcclusionPaletteMask()) {
-                        gfx.flushPatternBatch();
-                        gfx.setCurrentSpriteTileOcclusionPaletteMask(next.tileOcclusionPaletteMask());
-                        gfx.beginPatternBatch();
-                    }
-                    next.draw().run();
-                    extra++;
-                    continue;
-                }
-                ordinary++;
-                // A queued pointer owns this slot's presentation even when conversion/reuse
-                // changes the current object's inferred bucket. Preserve every native repeat.
-                if (!entry.nativeSubmission() && nativeSlots.contains(entry.slot())) continue;
-                objectCallbacks.run(entry.instance(), () -> {
-                    int mask = ObjectRenderParts.tileOcclusionPaletteMask(entry);
-                    if (gfx.getCurrentSpriteTileOcclusionPaletteMask() != mask) {
-                        gfx.flushPatternBatch();
-                        gfx.setCurrentSpriteTileOcclusionPaletteMask(mask);
-                        gfx.beginPatternBatch();
-                    }
-                    ObjectRenderParts.appendRenderCommands(entry, renderCommands, bucket, objectServices);
-                });
-            }
-
-            if (!renderCommands.isEmpty()) {
-                graphicsManager.enqueueDebugLineState();
-                graphicsManager.registerCommand(new GLCommandGroup(GL_LINES, renderCommands));
-                graphicsManager.enqueueDefaultShaderState();
-            }
-        } finally {
-            graphicsManager.disableVerticalWrapAdjust();
-        }
+        objectDrawing.drawBucketInstancesWithPriority(entries, bucket, gfx, external);
     }
 
     public Collection<ObjectInstance> getActiveObjects() {
@@ -2007,6 +1838,8 @@ public class ObjectManager {
         });
     }
 
+    ObjectNativeSstWord2C nativeSstWord2C() { return nativeSstWord2C; }
+
     AbstractObjectInstance currentNativeSstOwner(int slot) {
         return ObjectNativeSstOverwrite.currentOwner(activeObjects.values(),dynamicObjects,objectCallbacks,slot);
     }
@@ -2016,7 +1849,7 @@ public class ObjectManager {
         return ObjectNativeSstOverwrite.create(new ObjectNativeSstOverwrite.Surface(objectServices,
                 slotLayout,slotAllocator,activeObjects,instanceToSpawn,dynamicObjects,objectCallbacks,
                 dynamicOwnership,rewindObjectIds,deferredDynamicExecThisFrame,execOrder,this::execIndexForSlot,
-                updating,currentExecSlot,this::addDynamicObject,this::markRewindAdoptionDirty),partialWriter);
+                updating,currentExecSlot,this::addDynamicObject,this::markRewindAdoptionDirty,nativeSstWord2C),partialWriter);
     }
 
     public ObjectRewindDynamicCodecs.ExactAdoptionSurface exactRewindAdoptionSurface() {
@@ -3851,7 +3684,6 @@ public class ObjectManager {
                 spawn, previousYCoarse, currentYCoarse, camera);
     }
 
-
         private boolean isSpawnVerticallyEligibleForLoad(ObjectSpawn spawn, boolean allowVerticalLoadBypassForS2) {
             if (spawn == null || placement.isCounterBasedRespawn() || camera == null) {
                 return true;
@@ -3880,17 +3712,6 @@ public class ObjectManager {
             return ObjectPlacementController.isNonCounterSpawnVerticallyEligible(
                     spawn, cameraY, cameraMinY, verticalWrapRange);
         }
-
-    /**
-     * Enables vertical wrap Y adjustment on GraphicsManager if the camera has
-     * vertical wrapping active. Called before object rendering to ensure objects
-     * on the "wrong side" of a wrap boundary render at correct screen positions.
-     */
-    private void enableVerticalWrapIfNeeded() {
-        if (camera.isVerticalWrapEnabled()) {
-            graphicsManager.enableVerticalWrapAdjust(camera.getVerticalWrapRange(), camera.getY());
-        }
-    }
 
     private void registerActiveObject(ObjectSpawn spawn, ObjectInstance instance) {
         objectCallbacks.register(instance, spawn);
@@ -3951,7 +3772,8 @@ public class ObjectManager {
      * dynamic entry carries that identity through recreation.
      */
     private void assignRewindObjectId(ObjectInstance instance, ObjectSpawn spawn) {
-        if (!rewindObjectIds.containsKey(instance)) {
+        boolean firstIdentity = !rewindObjectIds.containsKey(instance);
+        if (firstIdentity) {
             if (spawn != null) {
                 SpawnRefId spawnRef = SpawnRefId.fromSpawn(spawn);
                 rewindObjectIds.put(
@@ -3963,6 +3785,7 @@ public class ObjectManager {
                         instance, ObjectRefId.dynamic(slot, 0, dynamicObjectIdCounter++));
             }
         }
+        nativeSstWord2C.projectPublished(instance, firstIdentity);
     }
 
     private void populateDynamicFallbackScratch() {
@@ -4943,7 +4766,6 @@ public class ObjectManager {
         int execIdx = execIndexForSlot(slotIndex);
         return execIdx >= 0 && execIdx < execOrder.length ? execOrder[execIdx] : null;
     }
-
 
     static final class PlaneSwitchers {
         private static final Logger LOGGER = Logger.getLogger(PlaneSwitchers.class.getName());

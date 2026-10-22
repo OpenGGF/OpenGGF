@@ -13,6 +13,7 @@ import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic2.debug.Sonic2SpecialStageSpriteDebug;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PatternRenderCommand;
 import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
@@ -97,6 +98,10 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
     public static final int H32_HEIGHT = 224;
 
     private Sonic2TrackAnimator trackAnimator;
+    // SpecialStage's initial writes persist until the gated recurring service
+    // reaches SSSetGeometryOffsets (s2.asm:6635-6636,6679-6683,10076-10099).
+    private int geometryOffsetX = 0x80;
+    private int geometryOffsetY = 0x36;
     // Vint_S2SS copies SS_New_Speed_Factor into SS_Cur_Speed_Factor. The
     // initial request is 12; Obj59 later requests zero on failure
     // (s2.asm:960-975, 6640, 72417-72423). Zero is a value, not a sentinel.
@@ -129,6 +134,7 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
 
     private Sonic2SpecialStageRenderer renderer;
     private SpecialStageBackgroundRenderer bgRenderer;
+    private Sonic2SpecialStageTerrainPass terrainPass;
     private SpecialStageViewport specialStageViewport = SpecialStageViewport.nativeViewport();
     private long backgroundStageGeneration;
     private int frameCounter = 0;
@@ -205,6 +211,9 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
     private int tailsTextPatternBase;
 
     // Object system (Phase 4)
+    private final Sonic2SpecialStageSlotPool nativeSlotPool = new Sonic2SpecialStageSlotPool();
+    private final Sonic2SpecialStageNativePlayerPresentation nativePlayerPresentation =
+            new Sonic2SpecialStageNativePlayerPresentation();
     private Sonic2SpecialStageObjectManager objectManager;
     private Sonic2PerspectiveData perspectiveData;
     private int ringPatternBase;
@@ -247,6 +256,8 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
     // Current ring requirement for the active checkpoint (for "rings to go"
     // display)
     private int currentRingRequirement = 0;
+    // UI number owner reads the native requirement, advanced by HAND expiry.
+    private int nativeRingRequirement;
 
     // Frame timing diagnostics
     private long lastFrameTime = 0;
@@ -479,10 +490,12 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
             ringReq = 30; // Default fallback
         }
 
+        intro.attachNativeSlotPool(nativeSlotPool);
         intro.initialize(currentStage, ringReq);
 
         // Store current ring requirement for "rings to go" display
         currentRingRequirement = ringReq;
+        nativeRingRequirement = ringReq;
 
         // Pass intro to renderer
         renderer.setIntro(intro);
@@ -496,12 +509,13 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
     private void setupObjectSystem() throws IOException {
         GraphicsManager graphicsManager = graphicsManager();
 
+        nativePlayerPresentation.bindRom(rom);
         // Load perspective data
         perspectiveData = new Sonic2PerspectiveData();
         perspectiveData.load(dataLoader);
 
         // Initialize object manager
-        objectManager = new Sonic2SpecialStageObjectManager(dataLoader);
+        objectManager = new Sonic2SpecialStageObjectManager(dataLoader, nativeSlotPool);
         objectManager.initialize(currentStage);
 
         // Load ring and bomb art
@@ -591,11 +605,27 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         LOGGER.fine("Object system initialized");
     }
 
+    private void bindNativeCheckpointTopology() {
+        checkpoint.attachNativeSlotPool(nativeSlotPool);
+        checkpoint.setOnNativeMessageVisibility(hidden -> {
+            objectManager.noCheckpointMsgFlag = hidden;
+            intro.setNativeCheckpointMessageHidden(hidden);
+        });
+        checkpoint.setOnNativeRingRequirementMessage(source -> {
+            // Obj5A_Handshake owns SS_TriggerRingsToGo and the next requirement
+            // at its hand expiry, before it allocates the new message children.
+            objectManager.resetRingsToGoEnabled();
+            nativeRingRequirement = currentRingRequirement;
+            intro.showNativeRingRequirementMessage(currentRingRequirement, source);
+        });
+    }
+
     /**
      * Sets up the checkpoint system and callback.
      */
     private void setupCheckpointSystem() {
         checkpoint = new Sonic2SpecialStageCheckpoint();
+        bindNativeCheckpointTopology();
         renderer.setCheckpoint(checkpoint);
 
         // Set up music fade callback for when checkpoint fails
@@ -660,6 +690,7 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         // Is this the final checkpoint (checkpoint 4 / quarter 3)?
         boolean isFinalCheckpoint = (checkpointNumber >= 4);
 
+        checkpoint.queueNativeMarker(objectManager.checkpointMarker());
         pendingCheckpoint = true;
         pendingCheckpointNumber = checkpointNumber;
         pendingRingRequirement = ringRequirement;
@@ -705,7 +736,7 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
             return;
         }
 
-        int[] emeraldColors = Sonic2SpecialStagePalette.getEmeraldColors(currentStage);
+        int[] emeraldColors = dataLoader.getEmeraldColors(currentStage);
         if (emeraldColors == null || emeraldColors.length != 3) {
             LOGGER.warning("Failed to load emerald palette colors for stage " + (currentStage + 1));
             return;
@@ -824,6 +855,11 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
     private void tryStartPendingCheckpoint() {
         if (!pendingCheckpoint || checkpoint == null || checkpoint.isActive() || trackAnimator == null) {
             return;
+        }
+
+        if (checkpoint.hasNativeSlotPool()
+                && !nativeSlotPool.isLive(checkpoint.getNativeMarkerHandle())) {
+            return; // Only the live marker's RunObjects turn can create its rainbow.
         }
 
         if (trackAnimator.getCurrentSegmentType() != SEGMENT_STRAIGHT) {
@@ -1085,6 +1121,9 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
             LOGGER.fine("Special Stage: Sonic alone");
         }
 
+        for (Sonic2SpecialStagePlayer player : players) {
+            player.setProjectionOwner(this);
+        }
         if (renderer != null) {
             renderer.setPlayers(players);
         }
@@ -1096,7 +1135,22 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         }
     }
 
+    private void initializeNativeFixedOwners() {
+        // SpecialStage (s2.asm:6622-6634) writes fixed IDs before its track waits.
+        // Tails remains Sidekick/$B040 even in a Tails-alone game.
+        if (sonicPlayer != null && nativeSlotPool.entryAt(0) == null) {
+            nativeSlotPool.claimFixed(0, Sonic2SpecialStageSlotPool.Kind.SONIC, 0x09, 0, 0, null);
+        }
+        if (tailsPlayer != null && nativeSlotPool.entryAt(1) == null) {
+            nativeSlotPool.claimFixed(1, Sonic2SpecialStageSlotPool.Kind.TAILS, 0x10, 0, 0, null);
+        }
+        if (intro != null) {
+            intro.initializeNativeFixedOwners(sonicPlayer != null && tailsPlayer != null, false);
+        }
+    }
+
     private void initializePlayerScalarStateFromRomObjectRoutines() {
+        initializeNativeFixedOwners();
         // RunObjects scans the main-character slot before the sidekick slot
         // (s2.asm:29805-29846).
         if (sonicPlayer != null) {
@@ -1106,7 +1160,46 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         if (tailsPlayer != null) {
             tailsPlayer.initializeScalarStateFromRomObjectRoutine();
         }
+        if (sonicPlayer != null) {
+            initializeNativePlayerChildren(sonicPlayer, 0, 5);
+        }
+        if (tailsPlayer != null) {
+            initializeNativePlayerChildren(tailsPlayer, 1, 6);
+        }
+        updateNativePlayerPriorities();
+        nativePlayerPresentation.update(nativeSlotPool, sonicPlayer, tailsPlayer,
+                geometryOffsetX, geometryOffsetY);
         primeDynamicArtDedupBaselines();
+    }
+
+    private void initializeNativePlayerChildren(Sonic2SpecialStagePlayer player, int slot, int shadowSlot) {
+        Sonic2SpecialStageSlotPool.Handle parent = nativeSlotPool.entryAt(slot).handle();
+        nativeSlotPool.setRoutine(parent, 2);
+        // Obj09_Init / Obj10_Init write these literal slots; they do not allocate.
+        if (nativeSlotPool.entryAt(shadowSlot) == null) {
+            nativeSlotPool.claimFixed(shadowSlot,
+                    slot == 0 ? Sonic2SpecialStageSlotPool.Kind.SONIC_SHADOW
+                            : Sonic2SpecialStageSlotPool.Kind.TAILS_SHADOW,
+                    0x63, 4, 0, parent);
+        }
+        if (slot == 1 && nativeSlotPool.entryAt(7) == null) {
+            nativeSlotPool.claimFixed(7, Sonic2SpecialStageSlotPool.Kind.TAILS_TAIL,
+                    0x88, player.getPriority() - 1, 0, parent);
+        }
+    }
+
+    private void updateNativePlayerPriorities() {
+        for (Sonic2SpecialStagePlayer player : players) {
+            int slot = player.getPlayerType() == Sonic2SpecialStagePlayer.PlayerType.SONIC ? 0 : 1;
+            Sonic2SpecialStageSlotPool.Entry entry = nativeSlotPool.entryAt(slot);
+            if (entry != null) {
+                nativeSlotPool.setPriority(entry.handle(), player.getPriority());
+            }
+        }
+        Sonic2SpecialStageSlotPool.Entry tail = nativeSlotPool.entryAt(7);
+        if (tail != null && tailsPlayer != null) {
+            nativeSlotPool.setPriority(tail.handle(), tailsPlayer.getPriority() - 1);
+        }
     }
 
     /**
@@ -1160,7 +1253,13 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
 
     /** Completes the player-slot portion of the ordered final bootstrap pass. */
     void completePlayerScalarInitializationBootstrap() {
+        if (intro != null) {
+            intro.initializeRingsToGoOwners();
+        }
         initializePlayerScalarStateFromRomObjectRoutines();
+        if (intro != null) {
+            intro.initializeNativeFixedOwnerChildren();
+        }
         playerBootstrapPhase = PlayerBootstrapPhase.INITIALIZED;
     }
 
@@ -1341,6 +1440,7 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
             // whose SSObjectsManager allocated this iteration's objects, so a
             // freshly streamed object takes its first depth decrement here.
             executePendingRecurringMainPass();
+            updateGeometryOffsetsAfterTrackDraw();
             scheduleRecurringMainPass(currentTrackFrameChanged);
             if (introFirstRecurringPassDeferred) {
                 // The first post-fade wait-loop iteration is the slow one: its
@@ -1393,6 +1493,7 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         if (intro != null) {
             intro.update();
         }
+        executeNativePlayerCounter();
         executeActiveSpecialStageObjects();
 
         tryStartPendingCheckpoint();
@@ -1410,6 +1511,30 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         pendingMainP2LogicalButtons = 0;
         pendingMainCheckpointStep = false;
     }
+
+    /**
+     * The pending previous RunObjects pass must finish with its prepared globals
+     * before this iteration writes the next pair. Startup/fade loops omit this
+     * service altogether (s2.asm:6644-6663,6679-6683,6700-6703).
+     */
+    void updateGeometryOffsetsAfterTrackDraw() {
+        if ((drawingIndex & 0xFF) != trackAnimator.getPlayerAnimFrameTimer()) {
+            return;
+        }
+        try {
+            var offset = dataLoader.getGeometryOffset(trackAnimator.getNativeMappingFrame());
+            // The ROM uses NEG.B before EXT.W, including the -128 wrap.
+            int x = trackAnimator.isNativeOrientationFlipped() ? (byte) -offset.x() : offset.x();
+            geometryOffsetX = (short) (0x80 + x);
+            geometryOffsetY = (short) (0x36 + offset.y());
+        } catch (IOException e) {
+            throw new java.io.UncheckedIOException("Cannot read S2 special-stage geometry offsets", e);
+        }
+    }
+
+    int getGeometryOffsetX() { return geometryOffsetX; }
+
+    int getGeometryOffsetY() { return geometryOffsetY; }
 
     /**
      * Completes an ordinary pre-start object pass at the end of its displayed
@@ -1622,7 +1747,7 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
             }
 
             // Show "GET XX RINGS" message for the next checkpoint
-            if (intro != null && currentRingRequirement > 0) {
+            if (intro != null && !intro.hasNativeSlotPool() && currentRingRequirement > 0) {
                 intro.showRingRequirementMessage(currentRingRequirement);
                 LOGGER.info("Checkpoint animation complete - PASSED, showing next requirement: " +
                         currentRingRequirement + " rings");
@@ -1635,6 +1760,8 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         if (objectManager == null || trackAnimator == null) {
             return;
         }
+
+        initializeNativeFixedOwners();
 
         // this.drawingIndex was advanced by this iteration's VInt above, exactly
         // as SSObjectsManager reads SSTrack_drawing_index after WaitForVint. The
@@ -1650,6 +1777,14 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         lastDrawingIndex = this.drawingIndex;
     }
 
+    /** Fixed Obj87 slot 4 follows Obj5F slot 3 and precedes all dynamic owners. */
+    private void executeNativePlayerCounter() {
+        if (intro != null) {
+            intro.setNativeCounterInputs(currentRingHudState());
+            intro.executeNativeChildSlot(nativeSlotPool.entryAt(4));
+        }
+    }
+
     /** Later-slot RunObjects-equivalent active object execution. */
     private void executeActiveSpecialStageObjects() {
         if (objectManager == null || trackAnimator == null) {
@@ -1661,16 +1796,55 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         boolean flipped = trackAnimator.getEffectiveFlipState();
         int speedFactor = trackAnimator.getSpeedFactor();
         boolean drawingIndex4 = (this.drawingIndex == 4);
-        objectManager.update(currentFrame, flipped, speedFactor, drawingIndex4);
-
-        // Update screen positions using perspective data
-        if (perspectiveData != null) {
-            for (Sonic2SpecialStageObject obj : objectManager.getActiveObjects()) {
-                obj.updateScreenPosition(perspectiveData, currentFrame, flipped);
-            }
+        updateNativePlayerPriorities();
+        nativePlayerPresentation.update(nativeSlotPool, sonicPlayer, tailsPlayer,
+                geometryOffsetX, geometryOffsetY);
+        if (intro != null) {
+            intro.setNativeCheckpointMessageHidden(objectManager.noCheckpointMsgFlag);
+            intro.setNativeRingsToGoDisplay(nativeRingRequirement - getRingsCollected(),
+                    objectManager.isRingsToGoEnabled(),
+                    com.openggf.game.session.EngineTiming.vIntRunCounter().lowByte());
         }
-
-        checkObjectCollisions();
+        objectManager.update(currentFrame, flipped, speedFactor, drawingIndex4, this,
+                entry -> {
+                    if (intro != null) {
+                        intro.setNativeCounterInputs(currentRingHudState());
+                        intro.setNativeCheckpointMessageHidden(objectManager.noCheckpointMsgFlag);
+                        intro.setNativeRingsToGoDisplay(nativeRingRequirement - getRingsCollected(),
+                                objectManager.isRingsToGoEnabled(),
+                                com.openggf.game.session.EngineTiming.vIntRunCounter().lowByte());
+                    }
+                    if (entry.kind() == Sonic2SpecialStageSlotPool.Kind.CHECKPOINT_MARKER) {
+                        // Both stream bytes create Obj5A routine0. Obj5A_Init
+                        // reads the GLOBAL flag at its own slot, not its stream
+                        // provenance (s2.asm:71524-71527). An earlier deferred
+                        // marker can consume the flag a later $FC set.
+                        if (objectManager.noCheckpointFlag) {
+                            objectManager.executeNoCheckpointMarker(entry.handle());
+                            if (intro != null) {
+                                intro.executeNativeRingsMessageInit();
+                            }
+                        } else if (checkpoint != null) {
+                            checkpoint.queueNativeMarker(entry.handle());
+                            tryStartPendingCheckpoint();
+                        }
+                    } else if (intro == null || !intro.executeNativeChildSlot(entry)) {
+                        if (checkpoint != null) {
+                            checkpoint.executeNativeSlot(entry, drawingIndex4);
+                        }
+                    }
+                },
+                object -> {
+                    if (perspectiveData != null) {
+                        object.updateScreenPosition(perspectiveData, currentFrame, flipped);
+                    }
+                    checkObjectCollisions(List.of(object));
+                    object.updateNativeTopology();
+                });
+        if (isFinished()) {
+            // Obj59's terminal routines and Obj5A_RingCheckTrigger own SSClearObjs.
+            objectManager.clearNativeObjectRam();
+        }
     }
 
     /**
@@ -2089,7 +2263,11 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         if (!player.isHurt() || player.getHurtTimer() != 8) {
             return;
         }
-        objectManager.loseRingsFromBombHit(player);
+        int slot = player.getPlayerType() == Sonic2SpecialStagePlayer.PlayerType.SONIC ? 0 : 1;
+        Sonic2SpecialStageSlotPool.Entry parent = objectManager.slotPool.entryAt(slot);
+        if (parent != null && player.getRings() != 0) {
+            objectManager.queueRingSpill(parent.handle());
+        }
     }
 
     private void publishPlayerDynamicArt() {
@@ -2408,6 +2586,7 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         }
 
         GraphicsManager graphicsManager = graphicsManager();
+        queueNativeNoWaterPresentation(graphicsManager);
 
         if (alignmentTestMode) {
             drawAlignmentTest();
@@ -2417,6 +2596,9 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         boolean renderPlaneB = planeDebugMode.renderPlaneB();
         boolean renderPlaneA = planeDebugMode.renderPlaneA();
         renderer.setFrameCounter(renderFrameCounter);
+        Sonic2SpecialStageTerrainPass terrain = prepareNativeTerrain(graphicsManager);
+        int trackFrameIndex = renderPlaneA && decodedTrackFrame != null && decodedTrackFrame.length > 0
+                ? trackAnimator.getCurrentTrackFrameIndex() : -1;
 
         if (renderPlaneB) {
             // Use shader-based background rendering if available
@@ -2438,43 +2620,58 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         }
 
         if (renderPlaneA && decodedTrackFrame != null && decodedTrackFrame.length > 0) {
-            int trackFrameIndex = trackAnimator.getCurrentTrackFrameIndex();
             renderer.renderTrack(trackFrameIndex, decodedTrackFrame);
         }
 
-        // Render objects (rings, bombs) between track and players
-        renderer.renderObjects();
-
-        renderer.renderPlayers();
-
-        // Render intro UI (banner and messages) on top
-        if (intro != null && !intro.isComplete()) {
-            renderer.renderIntroUI();
-        }
-
-        // Render ring counter HUD (after intro completes)
-        if (intro == null || intro.isComplete()) {
-            renderer.renderRingCounter(currentRingHudState());
-
-            // Render "rings to go" counter if:
-            // 1. Not in checkpoint animation
-            // 2. The display has been enabled (by encountering a $FC marker)
-            if ((checkpoint == null || !checkpoint.isActive()) &&
-                    objectManager != null && objectManager.isRingsToGoEnabled()) {
-                int ringsCollected = objectManager.getRingsCollected();
-                int ringsToGo = currentRingRequirement - ringsCollected;
-                renderer.renderRingsToGoHUD(ringsToGo, renderFrameCounter);
-            }
-        }
-
-        // Render checkpoint UI (messages and hand) when active
-        if (checkpoint != null && checkpoint.isActive()) {
-            renderer.renderCheckpointUI();
+        // The live ROM owners supply one SAT for objects, bodies, tails, UI and
+        // color-15 shadow operators. Draw-time composition never creates owners.
+        Runnable nativeTable = () -> renderer.renderNativeSprites(getNativeRenderStates(), currentRingHudState());
+        if (terrain != null) {
+            terrain.queueBackdrop(combinedBackgroundMappings, palettes, skydomeScrollX, vScrollBG,
+                    trackFrameIndex, decodedTrackFrame, renderPlaneB, renderPlaneA);
+            terrain.withBackdrop(nativeTable);
+        } else {
+            nativeTable.run();
         }
     }
 
+    private static void queueNativeNoWaterPresentation(GraphicsManager graphics) {
+        // SpecialStage disables H-INT with VDP register $8004 (s2.asm:6560;
+        // REV01 ROM $004FAA: 3C BC 80 04), and Vint_S2SS uploads Normal_palette
+        // unconditionally (s2.asm:843). This owns alignment preview as well.
+        graphics.flushPatternBatch();
+        publishNativeNoWaterPresentation(graphics);
+        // An already queued level WATER publication may execute after CPU draw
+        // construction. Reassert the stage owner before any of its GPU commands.
+        graphics.registerCommand((x, y, width, height) -> publishNativeNoWaterPresentation(graphics));
+    }
+
+    private static void publishNativeNoWaterPresentation(GraphicsManager graphics) {
+        graphics.setUseWaterShader(false);
+        graphics.setUseSpritePriorityShader(false);
+        graphics.setCurrentSpriteHighPriority(false);
+        graphics.setWaterEnabled(false);
+        graphics.setUseUnderwaterPaletteForBackground(false);
+        PatternRenderCommand.resetFrameState();
+    }
+
+    private Sonic2SpecialStageTerrainPass prepareNativeTerrain(GraphicsManager graphics) {
+        if (graphics.isHeadlessMode() || !graphics.isGlInitialized()) return null;
+        if (terrainPass == null) terrainPass = new Sonic2SpecialStageTerrainPass(graphics);
+        terrainPass.configure(specialStageViewport, backgroundPatternBase, trackPatternBase,
+                backgroundStageGeneration);
+        int shadowBank = terrainPass.preparePaletteBank(palettes);
+        renderer.useNativeIntensity(shadowBank, false);
+        renderer.refreshNativePalettePresentation();
+        terrainPass.queueNativeBackdropFill(shadowBank);
+        return terrainPass;
+    }
+
     public void setSpecialStageViewport(SpecialStageViewport viewport) {
-        this.specialStageViewport = java.util.Objects.requireNonNull(viewport, "viewport");
+        java.util.Objects.requireNonNull(viewport, "viewport");
+        if (terrainPass != null) terrainPass.configure(viewport, backgroundPatternBase,
+                trackPatternBase, backgroundStageGeneration);
+        this.specialStageViewport = viewport;
         if (renderer != null) renderer.setSpecialStageViewport(viewport);
         if (bgRenderer != null) bgRenderer.setSpecialStageViewport(viewport);
     }
@@ -2487,6 +2684,7 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         GraphicsManager graphicsManager = graphicsManager();
         boolean renderPlaneB = planeDebugMode.renderPlaneB();
         boolean renderPlaneA = planeDebugMode.renderPlaneA();
+        prepareNativeTerrain(graphicsManager);
 
         if (renderPlaneB) {
             if (bgRenderer != null && bgRenderer.isInitialized()) {
@@ -2520,10 +2718,27 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         // Set up the FBO projection before creating the batch so its Y coordinates
         // are calculated for the static 256x256 target.
         bgRenderer.beginFBOProjection();
-        graphicsManager.registerCommand(backgroundCommandPool.obtainBegin(bgRenderer));
-        renderer.rebuildBackgroundToFBO(combinedBackgroundMappings, palettes);
-        bgRenderer.endFBOProjection();
-        graphicsManager.registerCommand(backgroundCommandPool.obtainEnd(bgRenderer));
+        Throwable failure = null;
+        try {
+            graphicsManager.registerCommand(backgroundCommandPool.obtainBegin(bgRenderer));
+            renderer.rebuildBackgroundToFBO(combinedBackgroundMappings, palettes);
+        } catch (RuntimeException | Error next) {
+            failure = next;
+        } finally {
+            try { bgRenderer.endFBOProjection(); }
+            catch (RuntimeException | Error next) {
+                if (failure == null) failure = next; else if (failure != next) failure.addSuppressed(next);
+            }
+            try {
+                graphicsManager.registerCommand(backgroundCommandPool.obtainEnd(bgRenderer,
+                        renderer::invalidateStaticBackground));
+            } catch (RuntimeException | Error next) {
+                if (failure == null) failure = next; else if (failure != next) failure.addSuppressed(next);
+            }
+        }
+        if (failure != null) renderer.invalidateStaticBackground();
+        if (failure instanceof RuntimeException runtime) throw runtime;
+        if (failure instanceof Error error) throw error;
     }
 
     /** Bounded owner for deferred Plane-B background commands. */
@@ -2545,8 +2760,13 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         }
 
         BackgroundCommand obtainEnd(SpecialStageBackgroundRenderer renderer) {
+            return obtainEnd(renderer, null);
+        }
+
+        BackgroundCommand obtainEnd(SpecialStageBackgroundRenderer renderer, Runnable abortedBuild) {
             BackgroundCommand command = obtain();
             command.configure(renderer, BackgroundCommand.Kind.END);
+            command.abortedBuild = abortedBuild;
             return command;
         }
 
@@ -2587,6 +2807,7 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         private int hScroll;
         private float vScroll;
         private boolean leased;
+        private Runnable abortedBuild;
 
         private BackgroundCommand(BackgroundCommandPool owner) {
             this.owner = owner;
@@ -2602,6 +2823,7 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         private void configure(SpecialStageBackgroundRenderer renderer, Kind kind) {
             this.renderer = renderer;
             this.kind = kind;
+            this.abortedBuild = null;
         }
 
         @Override
@@ -2625,6 +2847,7 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
                     case END -> {
                         renderer.endTilePass();
                         owner.disarmTilePass(renderer);
+                        abortedBuild = null;
                         completed = true;
                     }
                 }
@@ -2637,6 +2860,9 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
 
         @Override
         public void unwindAfterFailure(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+            // A mapping command may have failed after the FBO was cleared. A
+            // successful scope unwind cannot certify that partially built image.
+            abortBuild();
             if (kind == Kind.END && owner.isTilePassArmed(renderer)) {
                 execute(cameraX, cameraY, cameraWidth, cameraHeight);
             } else {
@@ -2649,9 +2875,16 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
             if (!leased) {
                 return;
             }
+            abortBuild();
             leased = false;
             renderer = null;
             owner.release(this);
+        }
+
+        private void abortBuild() {
+            Runnable invalidate = abortedBuild;
+            abortedBuild = null;
+            if (invalidate != null) invalidate.run();
         }
 
         int hScroll() {
@@ -2836,6 +3069,7 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
      * Resets the Special Stage manager state.
      */
     public void reset() {
+        cleanupRenderOwnershipBeforeReset();
         pacingOwner.beginEntry();
         // Audio is owned by the transition that resets this manager: the entry
         // has already queued SndID_SpecStageEntry and MusID_FadeOut
@@ -2852,6 +3086,8 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         Sonic2TrackFrameDecoder.invalidateDecodedFrameCache();
         currentStage = 0;
         trackAnimator = null;
+        geometryOffsetX = 0x80;
+        geometryOffsetY = 0x36;
         speedPromotionPending = false;
         pendingSpeedFactor = 0;
         initialPlayerSpawnPending = false;
@@ -2910,6 +3146,8 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
             objectManager.reset();
         }
         objectManager = null;
+        nativeSlotPool.clear();
+        nativePlayerPresentation.clear();
         perspectiveData = null;
         ringPatternBase = 0;
         bombPatternBase = 0;
@@ -2943,27 +3181,13 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         alignmentDrawingIndex = 0;
         alignmentTestSavedRainbowPalette = false;
         currentRingRequirement = 0;
+        nativeRingRequirement = 0;
 
         resultState = ResultState.RUNNING;
         emeraldCollected = false;
         diagnosticDone = false;
         flipDiagnosticDone = false;
         clearDiagnosticTimingState();
-
-        // Shader-based background renderer cleanup retains failed ownership for
-        // the next reset attempt; deferred GL teardown must be retryable.
-        Throwable cleanupFailure = null;
-        SpecialStageBackgroundRenderer background = bgRenderer;
-        if (background != null) {
-            try {
-                background.cleanup();
-            } catch (RuntimeException | Error failure) {
-                cleanupFailure = failure;
-            }
-            if (!background.hasCleanupPendingOwnership()) {
-                bgRenderer = null;
-            }
-        }
 
         // Skydome scroll state
         skydomeScrollX = 0;
@@ -2973,8 +3197,36 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         drawingIndex = 0;
         lastAnimFrame = 0;
         planeDebugMode = PlaneDebugMode.BOTH;
-        if (cleanupFailure instanceof RuntimeException runtime) throw runtime;
-        if (cleanupFailure instanceof Error error) throw error;
+    }
+
+    private void cleanupRenderOwnershipBeforeReset() {
+        // These commands belong to the stage's current draw, including SAT
+        // borrowers of the companion. Retire them together before deleting its
+        // target or changing stage generation; a failed cleanup retains owners.
+        GraphicsManager graphics;
+        try { graphics = graphicsManager(); }
+        catch (IllegalStateException noGraphicsHost) { graphics = null; }
+        if ((terrainPass != null || bgRenderer != null) && graphics != null)
+            graphics.discardQueuedCommands();
+        Throwable failure = null;
+        if (terrainPass != null) {
+            try { terrainPass.cleanup(); }
+            catch (RuntimeException | Error next) { failure = next; }
+            if (!terrainPass.hasCleanupPendingOwnership()) terrainPass = null;
+        }
+        if (bgRenderer != null) {
+            try { bgRenderer.cleanup(); }
+            catch (RuntimeException | Error next) {
+                if (failure == null) failure = next;
+                else if (failure != next) failure.addSuppressed(next);
+            }
+            if (!bgRenderer.hasCleanupPendingOwnership()) {
+                backgroundCommandPool.disarmTilePass(bgRenderer);
+                bgRenderer = null;
+            }
+        }
+        if (failure instanceof RuntimeException runtime) throw runtime;
+        if (failure instanceof Error error) throw error;
     }
 
     public void cyclePlaneDebugMode() {
@@ -3050,6 +3302,7 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
                 pendingRingsCollected,
                 pendingFinalCheckpoint,
                 currentRingRequirement,
+                nativeRingRequirement,
                 spriteDebugMode,
                 planeDebugMode,
                 alignmentTestMode,
@@ -3075,6 +3328,8 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
                 alternateScrollBuffer,
                 lastAlternateScrollBuffer,
                 drawingIndex,
+                geometryOffsetX,
+                geometryOffsetY,
                 speedPromotionPending,
                 pendingSpeedFactor,
                 initialPlayerSpawnPending,
@@ -3091,10 +3346,14 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
                 intro != null ? intro.captureRewindSnapshot() : null,
                 objectManager != null ? objectManager.captureRewindSnapshot() : null,
                 checkpoint != null ? checkpoint.captureRewindSnapshot() : null,
-                alignmentCheckpoint != null ? alignmentCheckpoint.captureRewindSnapshot() : null);
+                alignmentCheckpoint != null ? alignmentCheckpoint.captureRewindSnapshot() : null,
+                nativeSlotPool.snapshot(),
+                nativePlayerPresentation.capture());
     }
 
     void restoreRewindSnapshot(Sonic2SpecialStageSnapshot snapshot) {
+        nativeSlotPool.restore(snapshot.nativeSlots);
+        nativePlayerPresentation.restore(snapshot.nativePlayerPresentation);
         initialized = snapshot.initialized;
         currentStage = snapshot.currentStage;
         resultState = snapshot.resultState;
@@ -3129,6 +3388,7 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         pendingRingsCollected = snapshot.pendingRingsCollected;
         pendingFinalCheckpoint = snapshot.pendingFinalCheckpoint;
         currentRingRequirement = snapshot.currentRingRequirement;
+        nativeRingRequirement = snapshot.nativeRingRequirement;
         spriteDebugMode = snapshot.spriteDebugMode;
         if (debugSprites != null) {
             debugSprites.setEnabled(spriteDebugMode);
@@ -3160,6 +3420,8 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         alternateScrollBuffer = snapshot.alternateScrollBuffer;
         lastAlternateScrollBuffer = snapshot.lastAlternateScrollBuffer;
         drawingIndex = snapshot.drawingIndex;
+        geometryOffsetX = snapshot.geometryOffsetX;
+        geometryOffsetY = snapshot.geometryOffsetY;
         speedPromotionPending = snapshot.speedPromotionPending;
         pendingSpeedFactor = snapshot.pendingSpeedFactor;
         initialPlayerSpawnPending = snapshot.initialPlayerSpawnPending;
@@ -3179,12 +3441,14 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         }
         restorePlayerTopologyForRewind(snapshot.playerTopology, snapshot.players);
         if (intro != null && snapshot.intro != null) {
+            intro.attachNativeSlotPool(nativeSlotPool);
             intro.restoreRewindSnapshot(snapshot.intro);
         }
         if (objectManager != null && snapshot.objectManager != null) {
             objectManager.restoreRewindSnapshot(snapshot.objectManager, this);
         }
         if (checkpoint != null && snapshot.checkpoint != null) {
+            checkpoint.attachNativeSlotPool(nativeSlotPool);
             checkpoint.restoreRewindSnapshot(snapshot.checkpoint);
         }
         if (snapshot.alignmentCheckpoint != null) {
@@ -3239,6 +3503,7 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         for (int i = 0; i < players.size(); i++) {
             Sonic2SpecialStagePlayer player = players.get(i);
             player.setSwapPositionsOwner(this);
+            player.setProjectionOwner(this);
             Sonic2SpecialStageSnapshot.PlayerSlotSnapshot slot = topology.slots().get(i);
             if (player.getPlayerType() != slot.type() || player.isMainCharacter() != slot.mainCharacter()) {
                 throw new IllegalStateException("Sonic 2 special-stage player topology changed during rewind restore");
@@ -3356,6 +3621,60 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
     /**
      * Gets the object manager.
      */
+    /** Live SST identities in address order; snapshots contain no gameplay owner references. */
+    public List<Sonic2SpecialStageSlotPool.Entry> getNativeSlotTopology() {
+        return nativeSlotPool.entries();
+    }
+
+    /** One immutable native owner group per occupied slot, ready for bucket/slot ordering. */
+    public List<Sonic2SpecialStageSlotPool.RenderState> getNativeRenderStates() {
+        java.util.Map<Sonic2SpecialStageSlotPool.Handle, Sonic2SpecialStageSlotPool.RenderState> states =
+                new java.util.HashMap<>();
+        java.util.function.Consumer<Sonic2SpecialStageSlotPool.RenderState> add = state -> {
+            if (!nativeSlotPool.isLive(state.identity().handle())) {
+                return;
+            }
+            Sonic2SpecialStageSlotPool.RenderState previous = states.putIfAbsent(state.identity().handle(), state);
+            if (previous != null && !previous.equals(state)) {
+                throw new IllegalStateException("Conflicting native render owners at slot " + state.identity().slot());
+            }
+        };
+        nativePlayerPresentation.capture().forEach(add);
+        if (intro != null) {
+            intro.nativeRenderStates().forEach(add);
+        }
+        if (checkpoint != null) {
+            checkpoint.nativeRenderStates().forEach(add);
+        }
+        if (objectManager != null) {
+            objectManager.nativeRenderStates().forEach(add);
+        }
+        // Fixed IDs are installed before their first RunObjects. Their object
+        // RAM still has zero geometry/flags, hence no DisplaySprite submission.
+        for (int slot : new int[] {0, 1}) {
+            Sonic2SpecialStageSlotPool.Entry entry = nativeSlotPool.entryAt(slot);
+            if (entry != null && entry.routine() == 0 && !states.containsKey(entry.handle())) {
+                add.accept(new Sonic2SpecialStageSlotPool.RenderState(entry, 0, 0, 0,
+                        false, false, false, slot == 0 ? Sonic2SpecialStageSlotPool.ArtRole.SONIC
+                                : Sonic2SpecialStageSlotPool.ArtRole.TAILS));
+            }
+        }
+        if (states.size() != nativeSlotPool.size()) {
+            List<Sonic2SpecialStageSlotPool.Entry> unaccounted = nativeSlotPool.entries().stream()
+                    .filter(entry -> !states.containsKey(entry.handle())).toList();
+            throw new IllegalStateException("Unaccounted native special-stage owners: " + unaccounted);
+        }
+        return states.values().stream().sorted(java.util.Comparator.comparingInt(state -> state.identity().slot()))
+                .toList();
+    }
+
+    public List<NativeSpilledRing> getNativeSpilledRings() {
+        return objectManager == null ? List.of() : objectManager.nativeSpilledRings();
+    }
+
+    public record NativeSpilledRing(Sonic2SpecialStageSlotPool.Handle handle,
+                                    int x, int y, int mappingFrame, int priorityBucket) { }
+
     public Sonic2SpecialStageObjectManager getObjectManager() {
         return objectManager;
     }
@@ -3509,6 +3828,8 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         private static final int[] SEGMENT_ANIM_LENGTHS = { 24, 24, 12, 16, 11 };
 
         private final Sonic2SpecialStageDataLoader dataLoader;
+        private final Sonic2SpecialStageSlotPool slotPool;
+        private final List<SpilledRing> spilledRings = new ArrayList<>();
 
         /** Raw object location data (decompressed from ROM) */
         private byte[] objectLocationData;
@@ -3566,7 +3887,13 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         private CheckpointCallback checkpointCallback;
 
         public Sonic2SpecialStageObjectManager(Sonic2SpecialStageDataLoader dataLoader) {
+            this(dataLoader, new Sonic2SpecialStageSlotPool());
+        }
+
+        Sonic2SpecialStageObjectManager(Sonic2SpecialStageDataLoader dataLoader,
+                                       Sonic2SpecialStageSlotPool slotPool) {
             this.dataLoader = dataLoader;
+            this.slotPool = slotPool;
         }
 
         /**
@@ -3589,7 +3916,9 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
             this.noCheckpointFlag = false;
             this.noCheckpointMsgFlag = false;
             this.emeraldSpawned = false;
+            this.ringsToGoEnabled = false;
             activeObjects.clear();
+            spilledRings.clear();
 
             // Load object location data
             objectLocationData = dataLoader.getObjectLocations();
@@ -3654,49 +3983,37 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
             LOGGER.fine("Processing segment " + segmentIndex +
                        " (type=" + segmentType + ", depthOffset=" + depthOffset + ")");
 
-            // Read objects until we hit a marker
-            while (currentPosition < objectLocationData.length) {
-                int firstByte = objectLocationData[currentPosition] & 0xFF;
-
-                // Check for negative value (marker)
+            // SSObjectsManager (s2.asm:6951-6984) probes free RAM BEFORE
+            // reading even a marker. Its global stream pointer is committed only
+            // at a marker, not after each object. A full pool leaves it unchanged.
+            int cursor = currentPosition;
+            while (cursor < objectLocationData.length && slotPool.hasFreeDynamicSlot()) {
+                int firstByte = objectLocationData[cursor++] & 0xFF;
                 if ((firstByte & 0x80) != 0) {
-                    // This is a marker byte
-                    currentPosition++;
+                    currentPosition = cursor;
                     handleMarker(firstByte, newObjects);
-                    break; // Exit after processing marker
+                    break;
                 }
-
-                // Regular object entry
-                currentPosition++;
-                if (currentPosition >= objectLocationData.length) break;
-
-                int angleByte = objectLocationData[currentPosition] & 0xFF;
-                currentPosition++;
-
-                // Parse object type and distance
+                if (cursor >= objectLocationData.length) {
+                    break;
+                }
+                int angleByte = objectLocationData[cursor++] & 0xFF;
                 boolean isBomb = (firstByte & OBJECT_TYPE_BOMB_BIT) != 0;
-                int distanceIndex = firstByte & DISTANCE_MASK;
-
-                // Calculate depth value (objoff_30)
-                int depth = (distanceIndex * 4) + depthOffset;
-
-                // Create and add the object
-                Sonic2SpecialStageObject obj;
-                if (isBomb) {
-                    obj = new Sonic2SpecialStageBomb();
-                } else {
-                    obj = new Sonic2SpecialStageRing();
+                int depth = (firstByte & DISTANCE_MASK) * 4 + depthOffset;
+                Sonic2SpecialStageObject obj = isBomb
+                        ? new Sonic2SpecialStageBomb() : new Sonic2SpecialStageRing();
+                Sonic2SpecialStageSlotPool.Handle handle = slotPool.allocate(
+                        isBomb ? Sonic2SpecialStageSlotPool.Kind.BOMB : Sonic2SpecialStageSlotPool.Kind.RING,
+                        isBomb ? 0x61 : 0x60, 0, 0, null);
+                if (!isBomb) {
                     perfectRingsTotal++;
                 }
-
                 obj.initialize(depth, angleByte);
+                obj.attachNativeSlot(slotPool, handle);
                 activeObjects.add(obj);
                 newObjects.add(obj);
-
-                LOGGER.fine("Spawned " + (isBomb ? "bomb" : "ring") +
-                           " at angle=" + angleByte + ", depth=" + depth);
             }
-
+            sortActiveObjects();
             return newObjects;
         }
 
@@ -3714,6 +4031,8 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
             if (marker == MARKER_CHECKPOINT) {
                 // $FE: Checkpoint marker
                 LOGGER.info("Checkpoint marker ($FE) - act " + currentSpecialAct);
+                slotPool.allocate(Sonic2SpecialStageSlotPool.Kind.CHECKPOINT_MARKER,
+                        0x5A, 0, marker, null);
                 handleCheckpoint();
                 return;
             }
@@ -3730,9 +4049,11 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
             LOGGER.fine("No-checkpoint marker (0x" + Integer.toHexString(marker) + ")");
             noCheckpointFlag = true;
             noCheckpointMsgFlag = false;
+            slotPool.allocate(Sonic2SpecialStageSlotPool.Kind.CHECKPOINT_MARKER,
+                    0x5A, 0, marker, null);
 
-            // Enable the "rings to go" display (matches Obj5A_RingsMessageInit clearing flags)
-            ringsToGoEnabled = true;
+            // Obj5A_RingsMessageInit, not streaming, enables the retained text.
+
             LOGGER.fine("Rings to go display enabled");
             // NOTE: Unlike $FE, this does NOT call handleCheckpoint() - it just sets flags
         }
@@ -3757,11 +4078,17 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
          * Spawns the emerald object that appears at the end of the stage.
          */
         private void handleEmerald(List<Sonic2SpecialStageObject> newObjects) {
+            Sonic2SpecialStageSlotPool.Handle handle = slotPool.allocate(
+                    Sonic2SpecialStageSlotPool.Kind.EMERALD, 0x59, 0, 0, null);
+            if (handle == null) {
+                return;
+            }
             emeraldSpawned = true;
 
             // Create emerald object at depth 54 ($36), angle 0x40 (bottom center)
             Sonic2SpecialStageEmerald emerald = new Sonic2SpecialStageEmerald();
             emerald.initialize(54, 0x40);  // Initial values from disassembly
+            emerald.attachNativeSlot(slotPool, handle);
             activeObjects.add(emerald);  // Add to active list so it gets updated
             newObjects.add(emerald);
 
@@ -3805,15 +4132,291 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
          * @param drawingIndex4 True if SSTrack_drawing_index == 4 (affects depth decrement rate)
          */
         public void update(int currentTrackFrame, boolean trackFlipped, int speedFactor, boolean drawingIndex4) {
-            // Update each active object
-            for (int i = activeObjects.size() - 1; i >= 0; i--) {
-                Sonic2SpecialStageObject obj = activeObjects.get(i);
-                obj.update(currentTrackFrame, trackFlipped, speedFactor, drawingIndex4);
+            update(currentTrackFrame, trackFlipped, speedFactor, drawingIndex4, null,
+                    entry -> { }, object -> { });
+        }
 
-                // Remove objects that are done (collected or off-screen)
-                if (obj.shouldRemove()) {
-                    activeObjects.remove(i);
+        void update(int currentTrackFrame, boolean trackFlipped, int speedFactor, boolean drawingIndex4,
+                    Sonic2SpecialStageManager owner,
+                    java.util.function.Consumer<Sonic2SpecialStageSlotPool.Entry> executeUiSlot,
+                    java.util.function.Consumer<Sonic2SpecialStageObject> afterObjectUpdate) {
+            // Legacy focused tests may add an object directly. Production allocation
+            // always attaches its slot at the ROM owner; never invent render ordinals.
+            for (Sonic2SpecialStageObject object : activeObjects) {
+                if (object.getNativeHandle() == null) {
+                    Sonic2SpecialStageSlotPool.Handle handle = slotPool.allocate(
+                            object.isBomb() ? Sonic2SpecialStageSlotPool.Kind.BOMB
+                                    : object.isEmerald() ? Sonic2SpecialStageSlotPool.Kind.EMERALD
+                                    : Sonic2SpecialStageSlotPool.Kind.RING,
+                            object.isBomb() ? 0x61 : object.isEmerald() ? 0x59 : 0x60, 0, 0, null);
+                    if (handle == null) {
+                        throw new IllegalStateException("Unallocated special-stage object with full native RAM");
+                    }
+                    object.attachNativeSlot(slotPool, handle);
                 }
+            }
+            // RunObjects (s2.asm:29805-29846): revisit live RAM at each address.
+            // Children allocated above the current slot execute this pass; reused
+            // holes below it wait. Deletion frees capacity at the actual owner's turn.
+            for (int slot = 8; slot < Sonic2SpecialStageSlotPool.SLOT_COUNT; slot++) {
+                Sonic2SpecialStageSlotPool.Entry entry = slotPool.entryAt(slot);
+                if (entry == null) {
+                    continue;
+                }
+                if (entry.kind() == Sonic2SpecialStageSlotPool.Kind.OBJECT_SHADOW) {
+                    if (entry.deletionPending()) {
+                        slotPool.release(entry.handle());
+                    }
+                    continue;
+                }
+                if (entry.kind() == Sonic2SpecialStageSlotPool.Kind.SPILLED_RING) {
+                    executeSpilledRing(entry.handle(), owner);
+                    continue;
+                }
+                Sonic2SpecialStageObject object = findObject(entry.handle());
+                if (object == null) {
+                    executeUiSlot.accept(entry);
+                    continue;
+                }
+                if (object instanceof Sonic2SpecialStageEmerald emerald
+                        && emerald.getPhase() == Sonic2SpecialStageEmerald.EmeraldPhase.INITIALIZING) {
+                    // Obj59_Init sets the global message suppression on every
+                    // initializer turn, including the terminal fallthrough turn.
+                    noCheckpointMsgFlag = true;
+                }
+                object.initializeNativeOwner();
+                object.update(currentTrackFrame, trackFlipped, speedFactor, drawingIndex4);
+                object.updateNativeTopology();
+                if (!object.shouldRemove()) {
+                    afterObjectUpdate.accept(object);
+                }
+                if (object.shouldRemove()) {
+                    slotPool.release(object.getNativeHandle());
+                    activeObjects.remove(object);
+                }
+                if (owner != null && owner.isFinished()) {
+                    clearNativeObjectRam();
+                    break;
+                }
+            }
+            activeObjects.removeIf(object -> !slotPool.isLive(object.getNativeHandle()));
+            spilledRings.removeIf(ring -> !slotPool.isLive(ring.handle));
+            sortActiveObjects();
+        }
+
+        private Sonic2SpecialStageObject findObject(Sonic2SpecialStageSlotPool.Handle handle) {
+            for (Sonic2SpecialStageObject object : activeObjects) {
+                if (handle.equals(object.getNativeHandle())) {
+                    return object;
+                }
+            }
+            return null;
+        }
+
+        private void sortActiveObjects() {
+            activeObjects.sort(java.util.Comparator.comparingInt(Sonic2SpecialStageObject::getNativeSlot));
+        }
+
+        Sonic2SpecialStageSlotPool.Handle checkpointMarker() {
+            for (Sonic2SpecialStageSlotPool.Entry entry : slotPool.entries()) {
+                if (entry.kind() == Sonic2SpecialStageSlotPool.Kind.CHECKPOINT_MARKER
+                        && entry.component() == MARKER_CHECKPOINT) {
+                    return entry.handle();
+                }
+            }
+            return null;
+        }
+
+        void executeNoCheckpointMarker(Sonic2SpecialStageSlotPool.Handle handle) {
+            noCheckpointFlag = false;
+            ringsToGoEnabled = true;
+            slotPool.release(handle);
+        }
+
+        void queueRingSpill(Sonic2SpecialStageSlotPool.Handle parent) {
+            Sonic2SpecialStageSlotPool.Handle handle = slotPool.allocate(
+                    Sonic2SpecialStageSlotPool.Kind.SPILLED_RING, 0x5B, 0, 0, parent);
+            if (handle != null) {
+                spilledRings.add(new SpilledRing(handle, parent));
+            }
+        }
+
+        private void executeSpilledRing(Sonic2SpecialStageSlotPool.Handle handle,
+                                        Sonic2SpecialStageManager owner) {
+            SpilledRing ring = spilledRings.stream().filter(r -> r.handle.equals(handle)).findFirst().orElseThrow();
+            if (!ring.initialized) {
+                Sonic2SpecialStagePlayer player = owner == null || !slotPool.isLive(ring.parent) ? null
+                        : ring.parent.slot() == 0 ? owner.sonicPlayer : owner.tailsPlayer;
+                if (player == null) {
+                    throw new IllegalStateException("Native ring spill lost its owning player");
+                }
+                // Obj5B_Init (s2.asm:71383-71478) debits even if later child
+                // allocations fail. With no initial free slot SSHurt_Animation
+                // never creates Obj5B, so no debit occurs at all.
+                int lost = loseRingsFromBombHit(player);
+                if (lost == 0) {
+                    slotPool.release(handle);
+                    spilledRings.remove(ring);
+                    return;
+                }
+                int[] angles = (lost & 1) == 0 ? SPILL_EVEN_ANGLES : SPILL_ODD_ANGLES;
+                initializeSpilledRing(ring, player, angles[0]);
+                for (int i = 1; i < lost; i++) {
+                    Sonic2SpecialStageSlotPool.Handle child = slotPool.allocate(
+                            Sonic2SpecialStageSlotPool.Kind.SPILLED_RING, 0x5B, 5, i, ring.parent);
+                    if (child != null) {
+                        SpilledRing spill = new SpilledRing(child, ring.parent);
+                        initializeSpilledRing(spill, player, angles[i]);
+                        spilledRings.add(spill);
+                    }
+                }
+                // Obj5B_Init ends with RTS. The first ring does not move here;
+                // higher-slot children already contain routine2 when scanned.
+                return;
+            }
+            ring.displayed = true;
+            ring.xFixed = (ring.xFixed + ((long) ring.xVelocity << 8)) & 0xFFFFFFFFL;
+            ring.yFixed = (ring.yFixed + ((long) ring.yVelocity << 8)) & 0xFFFFFFFFL;
+            ring.yVelocity = (short) (ring.yVelocity + 0x38 + 0x80);
+            int x = (short) (ring.xFixed >>> 16);
+            int y = (short) (ring.yFixed >>> 16);
+            if (x < 0 || x >= 256 || y > 224) {
+                slotPool.release(handle);
+                spilledRings.remove(ring);
+                return;
+            }
+            if (ring.yVelocity >= 0) {
+                slotPool.setPriority(handle, 0);
+                ring.animationIndex = 9;
+            }
+            // loc_3551C selects anim9 at the velocity sign edge; AnimateSprite
+            // resets its cursor/duration immediately on this change, rather than
+            // waiting for the old spin phase (s2.asm:71483-71501,30422-30438).
+            if (ring.animationIndex != ring.previousAnimationIndex) {
+                ring.previousAnimationIndex = ring.animationIndex;
+                ring.animationFrame = 0;
+                ring.animationTimer = 0;
+            }
+            if (--ring.animationTimer < 0) {
+                ring.animationTimer = 5;
+                // byte_36318 / byte_3631E (s2.asm:72755-72757): four frames, $FF loops.
+                int[] spin = {0, 10, 20, 10};
+                ring.mappingFrame = ring.animationIndex + spin[ring.animationFrame];
+                ring.animationFrame = (ring.animationFrame + 1) % spin.length;
+            }
+        }
+
+        private static final int[] SPILL_EVEN_ANGLES = {0x38,0x48,0x2A,0x56,0x1C,0x64,0x0E,0x72,0,0x80};
+        private static final int[] SPILL_ODD_ANGLES = {0x40,0x30,0x50,0x20,0x60,0x10,0x70,0,0x80,0};
+
+        private void initializeSpilledRing(SpilledRing ring, Sonic2SpecialStagePlayer player, int angleOffset) {
+            ring.initialized = true;
+            ring.xFixed = (long) player.getXPos() << 16;
+            ring.yFixed = (long) player.getYPos() << 16;
+            int angle = (player.getAngle() + 0x40 + angleOffset) & 0xFF;
+            ring.xVelocity = (com.openggf.physics.TrigLookupTable.cosHex(angle) * 0x400) >> 8;
+            ring.yVelocity = (com.openggf.physics.TrigLookupTable.sinHex(angle) * 0x1000) >> 8;
+            ring.animationIndex = 8;
+            ring.mappingFrame = 0; // cleared RAM until AnimateSprite runs routine2
+            slotPool.setPriority(ring.handle, 5);
+            slotPool.setRoutine(ring.handle, 2);
+        }
+
+        List<NativeSpilledRing> nativeSpilledRings() {
+            return spilledRings.stream().filter(r -> slotPool.isLive(r.handle))
+                    .sorted(java.util.Comparator.comparingInt(r -> r.handle.slot()))
+                    .map(r -> new NativeSpilledRing(r.handle, (short) (r.xFixed >>> 16),
+                            (short) (r.yFixed >>> 16), r.mappingFrame,
+                            slotPool.entry(r.handle).priorityBucket())).toList();
+        }
+
+        List<Sonic2SpecialStageSlotPool.RenderState> nativeRenderStates() {
+            List<Sonic2SpecialStageSlotPool.RenderState> states = new ArrayList<>();
+            for (Sonic2SpecialStageSlotPool.Entry entry : slotPool.entries()) {
+                Sonic2SpecialStageObject object = findObject(entry.kind() == Sonic2SpecialStageSlotPool.Kind.OBJECT_SHADOW
+                        ? entry.parent() : entry.handle());
+                if (object != null) {
+                    if (entry.kind() == Sonic2SpecialStageSlotPool.Kind.OBJECT_SHADOW) {
+                        states.add(new Sonic2SpecialStageSlotPool.RenderState(entry,
+                                object.getNativeShadowScreenX(), object.getNativeShadowScreenY(),
+                                object.getNativeShadowMappingFrame(), object.isNativeShadowXFlip(),
+                                object.isNativeShadowYFlip(), object.isNativeShadowVisible(),
+                                Sonic2SpecialStageSlotPool.ArtRole.SHADOW));
+                    } else {
+                        int mappingFrame = object instanceof Sonic2SpecialStageRing ring ? ring.getMappingFrame()
+                                : object instanceof Sonic2SpecialStageBomb bomb ? bomb.getMappingFrame()
+                                : object.getAnimIndex();
+                        Sonic2SpecialStageSlotPool.ArtRole role = object instanceof Sonic2SpecialStageRing ring
+                                ? ring.isSparkle() ? Sonic2SpecialStageSlotPool.ArtRole.STARS
+                                    : Sonic2SpecialStageSlotPool.ArtRole.RING
+                                : object instanceof Sonic2SpecialStageBomb bomb
+                                ? bomb.isExploding() ? Sonic2SpecialStageSlotPool.ArtRole.EXPLOSION
+                                    : Sonic2SpecialStageSlotPool.ArtRole.BOMB
+                                : Sonic2SpecialStageSlotPool.ArtRole.EMERALD;
+                        states.add(new Sonic2SpecialStageSlotPool.RenderState(entry, object.getScreenX(),
+                                object.getScreenY(), mappingFrame, false, false, object.isOnScreen(), role));
+                    }
+                } else if (entry.kind() == Sonic2SpecialStageSlotPool.Kind.SPILLED_RING) {
+                    SpilledRing ring = spilledRings.stream().filter(r -> r.handle.equals(entry.handle()))
+                            .findFirst().orElseThrow();
+                    states.add(new Sonic2SpecialStageSlotPool.RenderState(entry,
+                            (short) (ring.xFixed >>> 16), (short) (ring.yFixed >>> 16),
+                            ring.mappingFrame, false, false, ring.displayed,
+                            Sonic2SpecialStageSlotPool.ArtRole.RING));
+                } else if (entry.kind() == Sonic2SpecialStageSlotPool.Kind.CHECKPOINT_MARKER) {
+                    // Obj5A_Init has no DisplaySprite before its straight gate.
+                    states.add(new Sonic2SpecialStageSlotPool.RenderState(entry, 0, 0, 0,
+                            false, false, false, Sonic2SpecialStageSlotPool.ArtRole.MESSAGES));
+                }
+            }
+            return List.copyOf(states);
+        }
+
+        void clearNativeObjectRam() {
+            slotPool.clear();
+            activeObjects.clear();
+            spilledRings.clear();
+        }
+
+        private static final class SpilledRing {
+            final Sonic2SpecialStageSlotPool.Handle handle;
+            final Sonic2SpecialStageSlotPool.Handle parent;
+            boolean initialized;
+            long xFixed;
+            long yFixed;
+            int xVelocity;
+            int yVelocity;
+            int mappingFrame;
+            int animationFrame;
+            int animationTimer;
+            int animationIndex;
+            int previousAnimationIndex;
+            boolean displayed;
+
+            SpilledRing(Sonic2SpecialStageSlotPool.Handle handle, Sonic2SpecialStageSlotPool.Handle parent) {
+                this.handle = handle;
+                this.parent = parent;
+            }
+
+            Sonic2SpecialStageSnapshot.SpilledRingSnapshot snapshot() {
+                return new Sonic2SpecialStageSnapshot.SpilledRingSnapshot(handle, parent, initialized,
+                        xFixed, yFixed, xVelocity, yVelocity, mappingFrame, animationFrame, animationTimer,
+                        animationIndex, previousAnimationIndex, displayed);
+            }
+
+            SpilledRing(Sonic2SpecialStageSnapshot.SpilledRingSnapshot snapshot) {
+                this(snapshot.handle(), snapshot.parent());
+                initialized = snapshot.initialized();
+                xFixed = snapshot.xFixed();
+                yFixed = snapshot.yFixed();
+                xVelocity = snapshot.xVelocity();
+                yVelocity = snapshot.yVelocity();
+                mappingFrame = snapshot.mappingFrame();
+                animationFrame = snapshot.animationFrame();
+                animationTimer = snapshot.animationTimer();
+                animationIndex = snapshot.animationIndex();
+                previousAnimationIndex = snapshot.previousAnimationIndex();
+                displayed = snapshot.displayed();
             }
         }
 
@@ -3904,11 +4507,18 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
                     noCheckpointMsgFlag,
                     ringsToGoEnabled,
                     emeraldSpawned,
-                    objects);
+                    objects,
+                    slotPool.snapshot(),
+                    spilledRings.stream().map(SpilledRing::snapshot).toList());
         }
 
         void restoreRewindSnapshot(Sonic2SpecialStageSnapshot.ObjectManagerSnapshot snapshot,
                                    Sonic2SpecialStageManager owner) {
+            slotPool.restore(snapshot.nativeSlots());
+            spilledRings.clear();
+            for (Sonic2SpecialStageSnapshot.SpilledRingSnapshot ring : snapshot.spilledRings()) {
+                spilledRings.add(new SpilledRing(ring));
+            }
             objectLocationData = Sonic2SpecialStageSnapshot.cloneByteArray(snapshot.objectLocationData());
             stageOffsets = Sonic2SpecialStageSnapshot.cloneIntArray(snapshot.stageOffsets());
             currentPosition = snapshot.currentPosition();
@@ -3941,8 +4551,10 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
                         yield emerald;
                     }
                 };
+                object.bindNativePoolAfterRestore(slotPool);
                 activeObjects.add(object);
             }
+            sortActiveObjects();
         }
 
         /**
@@ -3958,7 +4570,7 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
             noCheckpointMsgFlag = false;
             ringsToGoEnabled = false;
             emeraldSpawned = false;
-            activeObjects.clear();
+            clearNativeObjectRam();
         }
     }
 }

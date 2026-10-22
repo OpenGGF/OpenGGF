@@ -7,12 +7,15 @@ import com.openggf.level.render.SpriteSlotEmission;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 /** Render traversal must never turn explicit DisplaySprite FIFO back into SST sort order. */
@@ -82,6 +85,66 @@ class TestObjectDrawSlotEmissions {
         draw(entries, external);
         graphics.endSpriteSatCollectionAndReplay();
         assertEquals(List.of(40, 50, 60), observed);
+    }
+
+    @ParameterizedTest @ValueSource(booleans = {false, true})
+    void wholePriorityTraversalRetainsPublicBucketOverrideDispatch(boolean high) {
+        var custom = new ObjectManager(List.of(), null, 0, null, null,
+                graphics, mock(Camera.class), new StubObjectServices()) {
+            @Override public void drawPriorityBucket(int bucket, boolean highPriority) {
+                observed.add((highPriority ? 100 : 0) + bucket);
+            }
+        };
+        if (high) custom.drawHighPriority();
+        else custom.drawLowPriority();
+        int offset = high ? 100 : 0;
+        assertEquals(List.of(offset + 7, offset + 6, offset + 5, offset + 4,
+                offset + 3, offset + 2, offset + 1, offset), observed);
+    }
+
+    @ParameterizedTest @ValueSource(booleans = {false, true})
+    void callbackCreatedObjectIsVisibleInTheNextBucketOfTheSameTraversal(boolean high) {
+        var later = new AbstractObjectInstance(new ObjectSpawn(128, 128, 1, 0, 0, false, 0), "later bucket") {
+            @Override public int getPriorityBucket() { return 6; }
+            @Override public boolean isHighPriority() { return high; }
+            @Override public void appendRenderCommands(List<GLCommand> commands) { observed.add(6); }
+        };
+        var first = new AbstractObjectInstance(new ObjectSpawn(128, 128, 1, 0, 0, false, 0), "first bucket") {
+            @Override public int getPriorityBucket() { return 7; }
+            @Override public boolean isHighPriority() { return high; }
+            @Override public void appendRenderCommands(List<GLCommand> commands) {
+                observed.add(7);
+                manager.addDynamicObject(later);
+            }
+        };
+        manager.addDynamicObject(first);
+        if (high) manager.drawHighPriority();
+        else manager.drawLowPriority();
+        assertEquals(List.of(7, 6), observed,
+                "a callback invalidation must be observed before the following priority bucket");
+    }
+
+    @Test void externalFailureRestoresOwnedWrapWhileMaskChangesUseSuppliedGraphics() {
+        GraphicsManager owner = mock(GraphicsManager.class);
+        GraphicsManager supplied = mock(GraphicsManager.class);
+        Camera camera = mock(Camera.class);
+        when(camera.isVerticalWrapEnabled()).thenReturn(true);
+        when(camera.getVerticalWrapRange()).thenReturn(2048);
+        when(camera.getY()).thenReturn((short) 128);
+        var separate = new ObjectManager(List.of(), null, 0, null, null,
+                owner, camera, new StubObjectServices());
+        var failure = new IllegalStateException("emission failure");
+        assertEquals(failure, assertThrows(IllegalStateException.class,
+                () -> ObjectDrawInternalAccess.drawBucket(separate, 2, supplied,
+                        List.of(new SpriteSlotEmission(50, 2, 2, () -> { throw failure; })))));
+        verify(owner).enableVerticalWrapAdjust(2048, (short) 128);
+        verify(owner).disableVerticalWrapAdjust();
+        verify(supplied).flushPatternBatch();
+        verify(supplied).setCurrentSpriteTileOcclusionPaletteMask(2);
+        verify(supplied).beginPatternBatch();
+        verify(owner, never()).setCurrentSpriteTileOcclusionPaletteMask(anyInt());
+        verify(supplied, never()).disableVerticalWrapAdjust();
+        verify(supplied, never()).enableVerticalWrapAdjust(anyInt(), anyInt());
     }
 
     private ObjectRenderParts.RenderEntry entry(int slot) {

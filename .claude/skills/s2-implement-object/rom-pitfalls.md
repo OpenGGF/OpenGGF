@@ -3700,3 +3700,51 @@ separate from in-water status/gravity; real entry/exit and reversion select the
 next native bank. The existing captured speed-bank latch can represent this
 without another rewind field. Evidence and rejected broad-delay approach are in
 `docs/architecture/research/2026-10-22-s2-chain-pacing.md`.
+
+## Special-stage pool capacity precedes even stream markers (2026-10-22)
+
+`SSObjectsManager` probes its shared dynamic object RAM before reading the next
+stream byte and commits the stream pointer only at a marker. A full pool can
+therefore leave a created prefix without advancing the committed pointer.
+Hidden UI, independent flyout letters, shadows and spilled rings share that RAM;
+creation ordinals and visible-only reservations cannot reproduce hole reuse.
+Execute the current live slot in address order and retain parent/child handles
+through rewind, including a shadow's deletion flag until its own slot runs.
+
+Source: `SSObjectsManager` (s2.asm:6935-7001), `SSAllocateObject` /
+`SSAllocateObjectAfterCurrent` (s2.asm:9450-9483). See
+`docs/architecture/designs/2026-10-22-s2-special-stage-slot-topology.md`.
+
+Obj87 digits are also owned by the executing slot. Fixed slot 4 copies both
+players' cached digit bytes before dynamic collection; the total counter copies
+them at its own later slot and can observe an intervening collection or spill.
+Capture each owner's ordered digit frames/centers there and rewind that payload.
+Rebuilding both groups from draw-time ring counts erases their distinct reads.
+Source: `loc_7480` / `loc_74EA` (s2.asm:9851-9929), `loc_753E`
+(s2.asm:9933-10017). This is a counter-publication boundary, not another gameplay pass.
+
+
+## ARZ bubble children own deletion; generator range is a tail (2026-10-22)
+
+Obj24 children use the previous BuildSprites on-screen bit after ObjectMove,
+without a coarse MarkObjGone check. A newly initialized offscreen child keeps
+its initial `$84` until its own display pass publishes the next verdict. A
+shared range unload can release its slot before a lower-address producer's next
+allocation, changing later slot order and RNG producer order. Use the existing
+custom range contract for this self-culling object; transition persistence is a
+separate decision. Surface/pop scripts still display on the `$FC` turn that
+advances routine6 to8; deletion belongs to the following own slot pass.
+
+The generator's idle water/render gates jump to its common range tail. An active
+burst bypasses those gates, and timer/allocation work precedes range deletion.
+Its timer draw precedes AllocateObject, while X/large-bubble draws require a
+successful allocation; the last-bubble delay still runs after allocation failure.
+An eager construction supplier cannot model this failure branch. Reserve the
+existing native slot before those child writes and keep the generator's ROM
+animation on its own executed turns rather than indexing it from VInt.
+
+Source: `loc_1F988` / `loc_1F99E` (s2.asm:45263-45285), `loc_1F9C0`
+(s2.asm:45297-45305), `loc_1FA2A` / `loc_1FAA6` (s2.asm:45329-45369),
+`loc_1FACE` (s2.asm:45375-45384), `Ani_obj24` (s2.asm:45479-45499).
+Evidence and independent checks belong to
+`docs/architecture/research/2026-10-22-s2-chain-pacing.md`.

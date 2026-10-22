@@ -25,7 +25,12 @@ public final class AudioPresentationSessionCommandApplier {
         Objects.requireNonNull(registry, "registry");
         Objects.requireNonNull(command, "command");
 
-        if (command instanceof AudioPresentationCommand.ReplaceMusic replace) {
+        if (command instanceof AudioPresentationCommand.NativePause pause) {
+            session.applyCommand(new SmpsSessionCommand.NativePause(pause.paused()));
+            // This mutates only native driver state. The voice registry owns
+            // no pause metadata and must neither stop nor replace its voices.
+            return;
+        } else if (command instanceof AudioPresentationCommand.ReplaceMusic replace) {
             if (replace.music().voiceDescriptor()
                     instanceof AudioPresentationCommand.SmpsVoiceDescriptor smps
                     && smps.activation() != null) {
