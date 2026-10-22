@@ -34,7 +34,8 @@ import java.io.IOException;
  * @see <a href="docs/plans/2026-02-27-rom-driven-init-profiles-design.md">
  *      Design doc: Sonic 1 Level Init Profile (44 steps)</a>
  */
-public class Sonic1LevelInitProfile extends AbstractLevelInitProfile {
+public class Sonic1LevelInitProfile extends AbstractLevelInitProfile
+        implements com.openggf.game.internal.BlockingLevelEntryFade {
     private final Sonic1LevelEventManager levelEventManager;
     private final Sonic1SwitchManager switchManager;
     private final Sonic1ConveyorState conveyorState;

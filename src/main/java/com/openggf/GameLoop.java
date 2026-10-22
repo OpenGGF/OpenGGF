@@ -4541,6 +4541,15 @@ public class GameLoop {
         boolean white = GameLoopPlcLifecycle.usesWhiteLevelEntry(GameServices.module(), zone, act);
         LOGGER.info("Starting fade-to-" + (white ? "white" : "black") + " for zone " + zone + " act " + act);
 
+        // GM_Level enters its blocking PaletteFadeOut after the request's
+        // completed level iteration, not when an event first writes f_restart
+        // (S1 REV01 sonic.asm:3016-3017,2710-2712). Other entry profiles retain
+        // their caller-selected deactivation policy and ordinary fade behavior.
+        if (GameServices.module().getLevelInitProfile()
+                instanceof com.openggf.game.internal.BlockingLevelEntryFade) {
+            levelManager.setLevelInactiveForTransition(true);
+        }
+
         audioManager.fadeOutMusic();
 
         GameLoopPlcLifecycle.startToLevelEntry(resolveGameplayModeContext(), fadeManager, white,

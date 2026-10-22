@@ -405,7 +405,7 @@ mapping5/1 on4736. These are different frontiers; the generic assertion text
 calls all722 errors "physics", so the JSON verification groups and first-error
 console observation are authoritative for that distinction.
 
-Four full-chain axes remain:
+Four full-chain axes were reported:
 
 | Axis | Current measured result |
 | --- | --- |
@@ -421,6 +421,10 @@ on this composition. That strict readiness result does not make the chain or
 fixture publication green: terminal and comparison failures still block the
 complete candidate. All62 files and the independent S1 literal guard remain
 uncommitted; no filtering, partial publication or lower prefix pin is allowed.
+The terminal expected-mode assertion precedes the terminal dynamic-art ledger
+comparison, so that ledger was **not reached** in job38000. Four reported axes
+are not proof of four remaining causes; zero JUnit skips does not establish
+terminal-art coverage.
 Capture-time Mono/core digests remain **UNKNOWN**.
 
 The boss dependency `9f7c034f` (local `ed56906ef`) is qualified on this route:
@@ -463,4 +467,99 @@ queue wait is not separately measured.
 
 ```sh
 env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS1S2PlcComparisonOnlyGuard,TestHardwareTimingAuthorityGuard,TestTraceReplayInvariantGuard,TestTraceFixtureCompressionGuard,TestTraceFixtureMovieAlignmentGuard,TestTraceFixtureLagPolledInputGuard,TestObjectServicesMigrationGuard,TestRewindCoverageGuard,TestRewindFieldDispositionGuard' test -B
+```
+
+
+## Consumed native level-entry fade boundary
+
+The two remaining transition-art gaps start immediately after their source
+segments: SBZ2 ends movie201914 and LZ4 ends208851, while engine extra uploads
+start201916/map50 and208858/map9. This is a source-loop scheduling hypothesis,
+not a permission to filter the comparison journal. Parent approved ownership of
+only GameLoop.startZoneActFade's consumed boundary, a new non-ModApi internal
+BlockingLevelEntryFade capability, S1 profile opt-in and focused tests. Event
+writers, shared timing/queue/journal code, audio admission and other GameLoop
+regions remain untouched.
+
+Retail REV01 Level_MainLoop tests f_restart after ExecuteObjects, before
+DeformLayers (sonic.asm:3006,3011-3017). Dynamic events can set restart later in
+DeformLayers; marking the event write itself inactive would collapse valid
+source work. The engine therefore retains the existing request publication and
+only sets its already-rewind-captured inactive flag when GameLoop consumes the
+zone/act request and starts the profile's native blocking entry fade.
+
+Direct original-ROM bytes: $3AFE is 4A78 FE02 6600 FC9A, testing restart and
+branching to GM_Level at$379E. The pit intercept at$13A2E is
+4238 FE30 31FC 0001 FE02 31FC 0103 FE10 4E75; DLE_SBZ3 at$75C0 is
+4238 FE30 31FC 0001 FE02 31FC 0502 FE10 11FC 0001 F7C8 4E75.
+GM_Level calls ClearPLC at$37B2 (6100 DE22 ->$15D6), then PaletteFadeOut
+at$37B6 (6100 E692 ->$1E4A). That routine begins
+31FC 003F F626 383C 0015 and its loop runs WaitForVBlank/FadeOut_ToBlack/RunPLC,
+then DBF22 (51CC FFEE), without ExecuteObjects (_inc/Palette Fading.asm:134-145).
+These observations explain the capability; no row/frame measurement supplies
+its selection or duration.
+
+A positive preLevelFadeOutFrames is deliberately not used as a proxy. S2 also
+returns22 and creator profiles may supply a duration. Only the explicitly
+opted S1 native profile receives the new consumed-entry hold. Unopted profiles,
+ordinary callback, respawn and act-completion fades keep their existing policy.
+Actual owner-bound callback proxies collect public interfaces; they do not
+magically erase an inherited internal marker. An unopted creator profile stays
+unopted, while an unchanged inherited native S1 profile retains its native
+capability. No new ModApi method, signature pin, state field or rewind adapter
+is introduced.
+
+The independent production regression uses both real S1 event producers:
+SBZ2 pit interception and SBZ3's upper exit. Each source pass reaches camera,
+fixed objects and its ordinary oscillator tail with inactivity still false.
+The next GameLoop consumption holds player pose/animation and object dispatch
+while the fade progresses, then loads the ROM destination, clears inactivity,
+runs its real title and player/object release prelude, and resumes ordinary
+execution. Destructive restore uses only the existing transition adapter before
+and after consumption; it does not claim whole-registry restoration of an
+in-flight callback token. Negative controls retain live gameplay for an unopted
+22-frame profile, an ordinary S1 callback fade, and an actual consumed S2 request
+with caller deactivation false.
+
+Old-consumer job70556 executed3 cases, with both native source cases failing at
+consumed inactivity (expected true, actual false); the unopted control passed.
+Initial compile attempts23089/24013 executed no tests; the actual helper's checked
+IOException declaration was repaired before build-only test-compile47302 passed.
+Candidate32837 executed40 cases:38 passed and both native source cases reached
+the destination but failed the new title-seen assertion. That was an intentional
+positioned-headless presentation omission in LevelManager.requestTitleCardIfNeeded,
+not a production fade defect. The final harness uses a scoped, all-neutral
+synthetic input movie through scheduleSessionAtNextLevelLoad, the same existing
+production boundary used by continuous replay to request the destination title.
+It writes no reentry flag or graphics mode and supplies no trace gameplay data.
+All destination/title/prelude assertions remain intact. Corrected job30119 passes
+all5 cases, zero failures/errors/skips, queue wait1s and Maven29.790s. The37 cases in the other six
+unchanged classes from32837 remain passing (including11 signature cases);
+no additional production edits followed those checks.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestGameLoopBlockingLevelEntryFadeS1' "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" test -B
+```
+
+Fresh-JVM affected guards71219 pass40 cases (25 hardware timing authority,
+10 trace invariants,1 rewind coverage,1 rewind field disposition,3 rule placement),
+zero failures/errors/skips, Maven35.239s. The selection is bounded to the new
+internal capability, existing captured flag and shared consumption boundary;
+parent owns combined smoke. Route qualification of both art-gap hypotheses and
+the terminal tail remains pending, so this record claims no continuous-chain
+improvement or fixture publication.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestHardwareTimingAuthorityGuard,TestTraceReplayInvariantGuard,TestRewindCoverageGuard,TestRewindFieldDispositionGuard,TestPerGameRuleArchitectureGuard' test -B
+```
+
+Owner-bound provider and native PLC fade-owner controls70657 pass23 cases
+(21 owner-bound,2 fade-owner), zero failures/errors/skips; queue wait0s and
+Maven30.865s. These complement the42 distinct behavioral/signature cases and
+40 affected guards, for105 distinct passing focused cases on the unchanged
+production gate. Self-review found no source conflict with reserved GameLoop
+regions and re-read the ROM bytes above independently of the regression.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestOwnerBoundGamePatch,TestNativePlcFadeOwnerCoverage' test -B
 ```

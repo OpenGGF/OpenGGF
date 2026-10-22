@@ -113188,3 +113188,32 @@ UNKNOWN. No prefix pin is lowered or advanced against unpublished inputs.
 Boss lane owns the native late lookup/object ending cause; S1 chain retains
 transition-art admission and terminal caller attribution. Parent owns combined
 smoke; this is bounded focused evidence, not a passing continuous-chain claim.
+
+
+### 2026-10-22 S1 consumed entry fade: focused fix, route qualification pending
+
+Worktree `t3-bfcde7c7`, branch `bugfix/ai-gap-s1-chain-20261022`, source
+`65d7ee3a1` plus the internal S1 blocking-entry capability and the nine-line
+`GameLoop.startZoneActFade` consumption gate. Native REV01 `$3AFE` returns to
+`GM_Level`, whose `$37B6` call enters the22-VBlank palette/PLC loop without
+object execution. Preserve the event-producing pass; hold only on request
+consumption. No comparison/timing authority changes or event-write freeze.
+
+Focused old-consumer70556:3 cases,2 failures at consumed inactive false and
+1 unopted-profile pass. Final30119:5/5 pass, including both actual SBZ source
+events, destination title/player-object prelude, adapter restore and forward,
+plus unopted22-frame, ordinary S1 callback and S2 false-deactivation controls.
+Command: `maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+-Dtest=TestGameLoopBlockingLevelEntryFadeS1 -Dsonic1.rom.path=<absolute-original-S1>
+-Dsonic2.rom.path=<absolute-original-S2> test -B`, with display variables unset
+and Lua5.4. Existing matched controls37/37, fresh affected guards40/40 and
+owner/fade-owner controls23/23 pass, all zero errors/skips. Exact selections
+and the intentional headless-title harness correction are in the existing
+[S1 chain audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md).
+
+No new chain result is claimed. Last composed38000 still reports four axes,
+first FZ4735 animation07/05, then4736 DPLC5/1, two late transition-art gaps and
+terminal LEVEL/TITLE_SCREEN. Its terminal-mode assertion prevented the terminal
+art-ledger comparison; four reported axes are not a completeness claim. The
+complete native242 candidate remains uncommitted pending actual whole-chain
+qualification with the late FZ input and consumed-fade fixes.
