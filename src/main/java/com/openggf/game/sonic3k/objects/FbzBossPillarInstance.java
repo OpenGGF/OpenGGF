@@ -69,7 +69,7 @@ public final class FbzBossPillarInstance extends AbstractObjectInstance
     // Obj_FBZBossPillar ends in SolidObjectFull + Draw_Sprite and has no native
     // out_of_range, MarkObjGone, or DeleteObject tail during the boss sequence.
     @Override public boolean isPersistent() { return true; }
-    @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x2B, 0x100, 0x100); }
+    @Override public SolidObjectParams getSolidParams() { return SolidObjectParams.of(0x2B, 0x100, 0x100); }
     @Override public boolean allowsObjectControlledSolidContacts() { return true; }
     @Override public boolean rejectsBit7ObjectControlSideContact(PlayableEntity player) { return true; }
     @Override public boolean rejectsBit7ObjectControlNewSolidContact(PlayableEntity player) { return true; }

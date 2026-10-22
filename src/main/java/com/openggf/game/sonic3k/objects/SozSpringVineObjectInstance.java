@@ -74,12 +74,9 @@ public final class SozSpringVineObjectInstance extends AbstractObjectInstance
         rebuildSurface();
         var manager = services().objectManager();
         if (manager != null && displaySlot >= 0 && pivot != 0) {
-            for (var object : manager.getActiveObjects()) {
-                if (object instanceof Display display && display.getSlotIndex() == displaySlot) {
-                    display.updateSurface(surface, flipped(), generatedPivot, generatedTension);
-                    break;
-                }
-            }
+            // The saved SST address still receives writes while awaiting deletion.
+            var display = NativeObjectQueries.atSlot(manager, displaySlot, Display.class);
+            if (display != null) display.updateSurface(surface, flipped(), generatedPivot, generatedTension);
         }
     }
 
@@ -154,6 +151,9 @@ public final class SozSpringVineObjectInstance extends AbstractObjectInstance
     @Override public boolean usesInstanceSolidStateLatchKey() { return true; }
     @Override public boolean clearsStandingBitOnContinuedRideExit(PlayableEntity p) { return true; }
     @Override public byte[] getSlopeData() { return surface.clone(); }
+    @Override public Integer sampleSlopeByte(int sampleIndex) {
+        return sampleIndex < 0 || sampleIndex >= surface.length ? null : (int) surface[sampleIndex];
+    }
     @Override public int getSlopeBaseline() { return 0; }
     @Override public int getSlopeSampleShift() { return 0; }
     // loc_1E45A cmpi.w #-$10 / blo admits overlaps 1..16, but rejects zero.

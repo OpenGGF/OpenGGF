@@ -115,12 +115,117 @@ class TestNativeObjectQueries {
         var noise = new OtherOccupant();
         manager.addDynamicObjectAtSlot(noise, 30);
         assertSame(target, NativeObjectQueries.firstLive(manager, Occupant.class));
+        assertSame(target, NativeObjectQueries.liveAtSlot(manager, 40, Occupant.class));
         noise.slotReads = 0;
         for (int i = 0; i < 23; i++) {
             assertSame(target, NativeObjectQueries.firstLive(manager, Occupant.class));
             assertSame(target, NativeObjectQueries.liveAtSlot(manager, 40, Occupant.class));
         }
         assertEquals(0, noise.slotReads, "unchanged population is indexed once rather than rescanned per child");
+    }
+
+    @Test void typeOnlyQueriesAvoidUnrelatedSlotCallbacksDuringMembershipChurn() throws Exception {
+        var manager = new StubObjectServices().withIsolatedObjectManager().objectManager();
+        var target = new Occupant(1, 1);
+        manager.addDynamicObjectAtSlot(target, 40);
+        var noise = new OtherOccupant();
+        manager.addDynamicObjectAtSlot(noise, 30);
+        var dirty = ObjectManager.class.getDeclaredField("activeObjectsCacheDirty");
+        dirty.setAccessible(true);
+        for (int i = 0; i < 19; i++) {
+            var transientNoise = new OtherOccupant();
+            manager.addDynamicObjectAtSlot(transientNoise, 31);
+            noise.slotReads = transientNoise.slotReads = 0;
+            assertSame(target, NativeObjectQueries.firstLive(manager, Occupant.class));
+            assertEquals(0, noise.slotReads);
+            assertEquals(0, transientNoise.slotReads);
+            assertTrue(dirty.getBoolean(manager), "native lookup must not service the general caches");
+            manager.removeDynamicObject(transientNoise);
+            noise.slotReads = 0;
+            assertSame(target, NativeObjectQueries.firstLive(manager, Occupant.class));
+            assertEquals(0, noise.slotReads);
+        }
+    }
+
+    @Test void slotStorageIsReusedAcrossBoundedMembershipChurn() throws Exception {
+        var manager = new StubObjectServices().withIsolatedObjectManager().objectManager();
+        var target = new Occupant(1, 1);
+        manager.addDynamicObjectAtSlot(target, 40);
+        var other = new OtherOccupant();
+        manager.addDynamicObjectAtSlot(other, 30);
+        assertSame(target, NativeObjectQueries.atSlot(manager, 40, Occupant.class));
+        var index = manager.nativeObjectIndex();
+        var storage = NativeObjectIndex.class.getDeclaredField("slots");
+        storage.setAccessible(true);
+        Object preparedStorage = storage.get(index);
+        for (int i = 0; i < 19; i++) {
+            manager.removeDynamicObject(other);
+            other = new OtherOccupant();
+            manager.addDynamicObjectAtSlot(other, 30);
+            assertSame(target, NativeObjectQueries.atSlot(manager, 40, Occupant.class));
+            assertSame(other, NativeObjectQueries.liveAtSlot(manager, 30, OtherOccupant.class));
+            assertSame(preparedStorage, storage.get(index), "same-sized rebuilds reuse primitive storage");
+        }
+    }
+
+    @Test void resetAndSpawnResyncReleaseRetainedOwnersWithoutAnotherQuery() throws Exception {
+        var manager = new StubObjectServices().withIsolatedObjectManager().objectManager();
+        for (boolean resync : new boolean[]{false, true}) {
+            var target = new Occupant(1, 1);
+            manager.addDynamicObjectAtSlot(target, 40);
+            assertSame(target, NativeObjectQueries.firstLive(manager, Occupant.class));
+            assertSame(target, NativeObjectQueries.atSlot(manager, 40, Occupant.class));
+            var index = manager.nativeObjectIndex();
+            if (resync) manager.resyncSpawnList(java.util.List.of());
+            else manager.reset(0);
+            for (String name : new String[]{"population", "typed"}) {
+                var field = NativeObjectIndex.class.getDeclaredField(name);
+                field.setAccessible(true);
+                assertTrue(((java.util.List<?>) field.get(index)).isEmpty(), name + " releases owners");
+            }
+            for (String name : new String[]{"type", "callbacks"}) {
+                var field = NativeObjectIndex.class.getDeclaredField(name);
+                field.setAccessible(true);
+                assertNull(field.get(index), name + " is released without another query");
+            }
+        }
+    }
+
+    @Test void duplicateOwnedSlotsKeepStableSourceOrderAndLiveFiltering() {
+        var index = new NativeObjectIndex();
+        var first = new Occupant(1, 1);
+        var second = new Occupant(2, 2);
+        first.setSlotIndex(40);
+        second.setSlotIndex(40);
+        index.prepare(java.util.List.of(first), java.util.List.of(second), new ObjectCallbackRouter(null));
+        assertSame(first, index.firstLive(Occupant.class));
+        assertSame(first, index.atSlot(40, Occupant.class));
+        first.setDestroyed(true);
+        assertSame(first, index.atSlot(40, Occupant.class));
+        assertSame(second, index.liveAtSlot(40, Occupant.class));
+        assertSame(second, index.firstLive(Occupant.class));
+    }
+
+    @Test void slotPreparationUsesSnapshotWhenRoutedSlotCallbackRetiresAnotherObject() {
+        var manager = new StubObjectServices().withIsolatedObjectManager().objectManager();
+        var retired = new OtherOccupant();
+        var target = new Occupant(1, 1) {
+            boolean retire;
+            @Override public int getSlotIndex() {
+                if (retire) {
+                    retire = false;
+                    manager.removeDynamicObject(retired);
+                }
+                return super.getSlotIndex();
+            }
+            @Override public void update(int vIntRunCount, PlayableEntity player) { retire = true; }
+        };
+        manager.addDynamicObjectAtSlot(target, 40);
+        manager.addDynamicObjectAtSlot(retired, 30);
+        target.update(0, null);
+        assertSame(target, NativeObjectQueries.atSlot(manager, 40, Occupant.class));
+        assertNull(NativeObjectQueries.atSlot(manager, 30, OtherOccupant.class),
+                "callback retirement invalidates the next query without mutating its snapshot walk");
     }
 
     public static class Occupant extends AbstractObjectInstance implements SpawnCoordinateRewindRecreatable, NativeSstStateSource {

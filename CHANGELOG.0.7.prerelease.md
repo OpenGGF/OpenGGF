@@ -236,7 +236,8 @@ Unreleased. The earlier development themes remain in
   and reuses winning projections; unchanged SOZ vine surfaces and displays reuse
   their cached work. Direct signed surface sampling avoids bulk copies while
   bulk reads remain defensive; FBZ/SOZ solid getters reuse bounded immutable
-  parameters. Optional sprite
+  parameters. Oil Ocean popping platforms reuse bounded player snapshots while
+  retaining native order, callback isolation and rewind. Optional sprite
   transforms share picture calculations and batch compatible geometry in painter
   order. Instanced masks share batches, frozen art restores compare physical atlas
   bytes, and final offscreen geometry skips submission after native admission.

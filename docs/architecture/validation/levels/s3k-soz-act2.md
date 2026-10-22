@@ -879,3 +879,12 @@ and the independent Bubbler owner fix; production SOZ is unchanged. Exact
 selectors/hashes and command environment are recorded in the completion plan.
 This upgrades the prior physical-post lifecycle floor rather than inventing
 new cold traversal, every mechanism/team product or native pixel/audio credit.
+
+## Object-pipeline performance follow-up (2026-10-22)
+
+SOZ solid getters retain complete dimensions/offsets through the existing immutable parameter factory. Failed end-boss particle allocation still checks the raw terminal SST flag, including pending deletion, through a native slot query; direct terminal references and unrelated-slot behavior are unchanged. `TestSozEndBoss` covers allocation prefixes and terminal publication.
+
+The [query/allocation audit](../../audits/performance/2026-10-22-native-object-query-performance.md)
+and its companion implementation records own exact tested states, commands and
+remaining delivery checks. These local checks do not close inherited viewport,
+donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.

@@ -167,6 +167,38 @@ class TestSozSpringVine {
         assertFalse(distribute(replacement,v.getSlopeData(),24,-0x100));
     }
 
+    @Test void pendingDeletionDisplayStillReceivesOwnedSlotWrites() throws Exception {
+        var v=vine(0); var p=player(24);
+        var services=new StubObjectServices().withPlayerQuery(new ObjectPlayerQuery(() -> p,List::of))
+                .withIsolatedObjectManager();
+        v.setServices(services); services.objectManager().addDynamicObject(v); stand(v,p);
+        v.update(0,p);
+        var child=display(services);
+        child.setDestroyed(true);
+        v.update(1,p);
+        assertDisplaySurface(child,v.getSlopeData());
+    }
+
+    @Test void directSamplesKeepSignedBoundsAndAvoidDefensiveBulkCopies() throws Exception {
+        var v=org.mockito.Mockito.spy(vine(0));
+        var field=SozSpringVineObjectInstance.class.getDeclaredField("surface");
+        field.setAccessible(true);
+        byte[] nativeSurface=(byte[])field.get(v);
+        nativeSurface[1]=(byte)0x80;
+        nativeSurface[95]=(byte)0xFF;
+        for(int i=0;i<nativeSurface.length;i++) assertEquals((int)nativeSurface[i],v.sampleSlopeByte(i));
+        assertNull(v.sampleSlopeByte(-1));
+        assertNull(v.sampleSlopeByte(96));
+        assertNull(v.sampleSlopeByte(Integer.MAX_VALUE));
+        org.mockito.Mockito.verify(v,org.mockito.Mockito.never()).getSlopeData();
+        byte[] external=v.getSlopeData(); external[1]=0;
+        assertEquals(-128,v.sampleSlopeByte(1));
+        var state=v.captureRewindState();
+        nativeSurface[1]=0;
+        v.restoreRewindState(state);
+        assertEquals(-128,v.sampleSlopeByte(1));
+    }
+
     @Test void rewindInvalidatesDerivedCachesButPivotZeroKeepsCapturedSurfaceAndChildYs() throws Exception {
         var v=vine(0); var p=player(24);
         var services=new StubObjectServices().withPlayerQuery(new ObjectPlayerQuery(() -> p,List::of))

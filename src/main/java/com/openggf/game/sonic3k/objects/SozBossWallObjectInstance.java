@@ -40,7 +40,7 @@ public final class SozBossWallObjectInstance extends AbstractObjectInstance
     }
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
-    @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x4B, 8, 8); }
+    @Override public SolidObjectParams getSolidParams() { return SolidObjectParams.of(0x4B, 8, 8); }
     @Override public boolean usesInstanceSolidStateLatchKey() { return true; }
     // loc_56A7E loads d4 with the already-updated x_pos, so MvSonicOnPtfm moves riders by zero.
     @Override public boolean carriesRiderOnHorizontalMove(PlayableEntity player) { return false; }

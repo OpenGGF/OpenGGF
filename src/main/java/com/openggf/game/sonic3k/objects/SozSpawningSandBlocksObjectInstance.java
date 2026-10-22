@@ -80,7 +80,7 @@ public final class SozSpawningSandBlocksObjectInstance extends AbstractObjectIns
                 ? 0x1F - (getY() & 0xF) : distance;
     }
     private void move() { xFixed += (short) xVelocity << 8; yFixed += (short) yVelocity << 8; }
-    @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x18, 0xC, 0xD); }
+    @Override public SolidObjectParams getSolidParams() { return SolidObjectParams.of(0x18, 0xC, 0xD); }
     @Override public boolean isTopSolidOnly() { return true; }
     @Override public SolidExecutionMode solidExecutionMode() { return SolidExecutionMode.MANUAL_CHECKPOINT; }
     @Override public boolean isSolidFor(PlayableEntity player) { return child; }
