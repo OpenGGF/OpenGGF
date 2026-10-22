@@ -603,7 +603,22 @@ class TestLevelEditorController {
                         EditorInputHandler.Action.TOGGLE_SELECTED_RESPAWN,
                         EditorInputHandler.Action.TOGGLE_BRUSH_H_FLIP,
                         EditorInputHandler.Action.TOGGLE_BRUSH_V_FLIP,
-                        EditorInputHandler.Action.TOGGLE_BRUSH_RESPAWN
+                        EditorInputHandler.Action.TOGGLE_BRUSH_RESPAWN,
+                        EditorInputHandler.Action.PAN_LEFT,
+                        EditorInputHandler.Action.PAN_RIGHT,
+                        EditorInputHandler.Action.PAN_UP,
+                        EditorInputHandler.Action.PAN_DOWN,
+                        EditorInputHandler.Action.ZOOM_IN,
+                        EditorInputHandler.Action.ZOOM_OUT,
+                        EditorInputHandler.Action.RESET_CANVAS_ZOOM,
+                        EditorInputHandler.Action.SELECT_REGION_CORNER,
+                        EditorInputHandler.Action.COPY_REGION,
+                        EditorInputHandler.Action.CUT_REGION,
+                        EditorInputHandler.Action.PASTE_REGION,
+                        EditorInputHandler.Action.DELETE_REGION,
+                        EditorInputHandler.Action.FILL_REGION,
+                        EditorInputHandler.Action.FLOOD_FILL,
+                        EditorInputHandler.Action.CLEAR_REGION
                 },
                 EditorInputHandler.Action.values());
     }
