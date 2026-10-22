@@ -31,7 +31,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 |------|------------------------------|---------------------|---------|
 | `low_level_layers_do_not_depend_on_runtime_layers` | 187 records | <=150 records | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 9 records | 0 records | Master-title ROM preview mapping moves behind provider contracts (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
-| `per_game_packages_do_not_cross_depend` | 14 member dependencies in 2 grouped slice records | <=20 member dependencies | Shared selected-slot conversion and payload validation extracted; remaining host donation and menu animation dependencies stay explicit |
+| `per_game_packages_do_not_cross_depend` | 14 member dependencies in 2 grouped slice records | <=10 member dependencies | Initial <=20 target reached by shared preview/validation extraction; next extract the four menu-animator members while preserving ten explicit host-donation members |
 
 2026-09-03: the two `AudioManager -> Rom.readBytes` SEGA-boot PCM edges were
 solved and the frozen entry pruned. `GameAudioProfile.loadSegaPcm(Object)` now
@@ -50,13 +50,14 @@ tuple remains the single volatile publication, and the public
 unchanged.
 
 The historical cross-game count of 37 counted physical lines: 3 slice headers
-plus 34 member dependencies. The target uses <=20 **member dependencies**.
+plus 34 member dependencies. The initial target used <=20 **member dependencies**.
 Shared selected-slot conversion, its result type, and common payload validation
 moved to `game.dataselect` on 2026-10-22, removing 20 member dependencies and
 the entire S2-to-S1 group.
 The remaining allowance is 14 members in 2 groups. Neither physical lines nor
 grouped records can be substituted for member dependencies when evaluating
-this migration.
+this migration. The next target is <=10 members, closing the four shared
+menu-animator dependencies while preserving explicit host-ROM donation.
 
 ## Source Ratchets
 

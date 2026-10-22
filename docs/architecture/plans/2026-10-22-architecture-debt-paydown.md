@@ -85,14 +85,14 @@ this campaign. October's merged remediation (`4a26a651e`) is not reopened.
   proportional queued guard checks, local tested commit and lead review.
 - [x] Compose accounting before starting new implementation workers, so their
   isolated bases include it. No task branch is pushed.
-- [ ] Rewind: discriminating owner/release/park/provider/callback/recording tests
+- [x] Rewind: discriminating owner/release/park/provider/callback/recording tests
   and native pause/setup/PLC behavior, then bounded implementation and focused
   verification. Record reproduced failures separately from structural risks.
-- [ ] Audio: source publication and generation/rollback regressions plus affected
+- [x] Audio: source publication and generation/rollback regressions plus affected
   low-level architecture guards; no public signature or broad rule weakening.
-- [ ] Preview: exact conversion output and migrated consumer regressions plus
+- [x] Preview: exact conversion output and migrated consumer regressions plus
   affected architecture guards; no duplicate compatibility conversion path.
-- [ ] Compose all lanes, reconcile intentional frozen-identity changes and update
+- [x] Compose all lanes, reconcile intentional frozen-identity changes and update
   actual accounting/prose once. Review the composed source before costly checks.
 - [ ] Inspect the category plan against the pinned integration SHA and preflight
   the actual launch environment. State candidate count, expected execution cost
@@ -113,6 +113,28 @@ the admitted preflight. Existing absolute main-workspace ROM paths are used;
 never create or copy ROM links. Offscreen graphics retain the required EGL flag.
 Build trees stay local to each worktree. Compare disputed failures narrowly;
 do not repeat unchanged baseline/development/integrated smoke ceremonially.
+
+## Following bounded cuts
+
+After this campaign, use each ratchet as a migration queue with a named owner
+boundary and behavior evidence, rather than treating a passing cap as progress.
+Review and prune only the identities actually solved by each cut.
+
+- The single remaining framework-root record belongs to
+  `ScriptFramesApplyStrategy`. A separate graphics-owner injection cut can close
+  that rule's frozen debt without reopening live rewind.
+- The remaining cross-game allowance separates ten host-ROM donation members
+  from four shared menu-animator members. The initial <=20-member target has
+  been reached. Choose <=10 members next by extracting the animator in its own
+  bounded change while preserving explicit donation.
+- Low-level audio/graphics and the nine shared-to-concrete title-preview records
+  need their own caller-first boundaries. The private audio tuple correction
+  deliberately does not claim to solve these. Keep the existing low-level target
+  and review ROM-title preview capabilities separately before implementation.
+
+Package-pair permissions and source-size caps remain enforcement budgets. Measure
+actual dependencies before choosing the next removal, and do not infer an
+acyclic graph from the empty cycle store after explicit ignores.
 
 ## Checkpoint
 
@@ -203,6 +225,58 @@ setter was rejected by policy and replaced with the internal access bridge;
 reporter installation was extracted after the unchanged GameLoop size cap
 rejected the first candidate. Neither API pins nor source budgets were raised.
 No combined smoke has run.
+
+Fresh rewind review of `10544b1ca` found one integration defect: eager
+`bindOwner` installation captures frame zero when title-card exit changes to
+bonus mode, before deferred bonus assembly finishes. S3K's slot coordinator then
+rejects restoring that pre-assembly snapshot into its assembled runtime. The
+original lead is reproducing the real title-card path and correcting the
+installation boundary. Review found no other concrete lifetime/admission gaps;
+it ran no Maven. Do not compose this candidate until the correction is verified.
+
+Audio completed normally at `aa62f72fd8d3c38fda0191ff29346e852089306e`,
+with prerequisite `2056713d6d7ad118c9e45d8a6a74e8cffcefdb58` cherry-picked
+from `fdddd710e`. Its five-file diff stayed byte-identical through that
+composition; normal hooks passed and the checkout is clean. The 240 unchanged
+focused cases were not repeated. A fresh audio/policy reviewer found a new hook
+counterexample: an enum constant list without a trailing semicolon is discarded
+when closing the type, missing a visible API edit and rejecting its valid pin as
+pin-only. The same reviewer reproduced annotation array defaults being skipped
+as bodies even though the exact signature snapshot includes those values.
+No audio defect was found. The original hook helper owns a bounded mirrored
+correction and red regressions for both declaration cases. These are introduced
+behaviors to fix before delivery, not reasons to weaken pin coupling. Preview is
+composed at `2ea26c3c6`.
+
+Both follow-ups are now composed and lead-reviewed. Rewind correction
+`a5562b6cbc5ef4da78119524a500d91c72cbae82` reproduced the real slot exception
+and fresh HCZ entry restoring world frame two at rewind frame one. It roots
+history after completed destination assembly, verifies the assembled owner still
+owns the loop, and preserves native setup cadence. Its changed-source selection
+passed 139 cases with zero failures/errors/skips, including both regressions,
+title-card/admission behavior, capabilities, API signatures and architecture.
+Policy correction `526098af0f9b6b3671fa43b65637cb4e3a640778` reproduced four
+enum failures in 35 cases and two annotation-array failures in five targeted
+cases. Final hook/build-tooling coverage passed 163 cases with zero
+failures/errors/skips across both mirrors. Its measured queue wait was 701
+seconds and Maven execution 98 seconds. No duplicate request was submitted.
+
+Composition at `b242c9db8` preserves both tested policy-fix blobs and all lane
+source. Audio's duplicated earlier hook prerequisite conflicted with the later
+policy correction; exact blob comparison confirmed its prerequisite matched
+`fdddd710e`, and the three conflicts kept the tested `526098af0` files. The
+exception-guide conflict reconciles low-level 187, framework-root 1 and cross-game
+14 members in two groups. No rule keys, predicates or source budgets changed.
+Combined prose also picks the next cross-game target of <=10 members.
+
+The dry-run selection against pinned `23a18e2a2` includes 3,583 candidate classes
+across all ten smoke categories and separate guards because loop/shared/policy
+changes cross subsystem boundaries. This is routine smoke, not the release-only
+full suite. Allow roughly one to two hours of execution plus unknown queue delay,
+with a 120-minute execution budget excluding admission waits. Keep the existing
+request alive; after results, attribute disputed failures with matched narrow
+baseline/current identities and fix only introduced regressions. No unchanged
+baseline/development/integrated broad repetition is planned.
 
 The coordinator's actual launch-environment preflight passed with no tests:
 
