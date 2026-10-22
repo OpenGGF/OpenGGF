@@ -548,57 +548,70 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     }
 
     public void draw(int frameCounter) {
-        if (!ringsAllowed() || renderer == null) {
-            return;
-        }
+        drawPlaced(frameCounter);
+        drawAttracted(frameCounter);
+    }
 
-        int spinFrameIndex = stageRingFrame(frameCounter);
+    /** Placed stage-list emission; callers choose its native position in the SAT. */
+    void drawPlaced(int frameCounter) {
+        if (!ringsAllowed() || renderer == null) return;
         int activeCount = placement.activeIndexCount();
         for (int i = 0; i < activeCount; i++) {
             int index = placement.activeIndexAt(i);
-            if (index < 0) {
-                continue;
-            }
-            RingSpawn ring = placement.getSpawn(index);
-            if (!placement.isCollected(index)) {
-                renderer.drawFrameIndex(spinFrameIndex, ring.x(), ring.y());
-                continue;
-            }
-
-            int sparkleStartFrame = placement.getSparkleStartFrame(index);
-            if (sparkleStartFrame < 0 || renderer.getSparkleFrameCount() <= 0) {
-                continue;
-            }
-
-            int elapsed = frameCounter - sparkleStartFrame;
-            if (elapsed < 0) {
-                elapsed = 0;
-            }
-            int sparkleFrameOffset = elapsed / renderer.getSparkleFrameDelay();
-            if (sparkleFrameOffset >= renderer.getSparkleFrameCount()) {
-                if (isCollectedAndSparkleDone(index, frameCounter)) {
-                    placement.clearSparkle(index);
-                }
-                continue;
-            }
-            int sparkleFrameIndex = renderer.getSparkleStartIndex() + sparkleFrameOffset;
-            renderer.drawFrameIndex(sparkleFrameIndex, ring.x(), ring.y());
+            if (index >= 0) drawPlacedObject(placement.getSpawn(index), frameCounter);
         }
+    }
 
-        // Draw attracted rings and their collected sparkle phase.
-        for (AttractedRing ar : attractedRings) {
-            if (!ar.active) {
-                continue;
-            }
-            if (ar.collected) {
-                int sparkleFrame = attractedSparkleFrame(ar, frameCounter);
-                if (sparkleFrame >= 0) {
-                    renderer.drawFrameIndex(sparkleFrame, ar.x, ar.y);
-                }
-            } else {
-                renderer.drawFrameIndex(ar.mappingFrame, ar.x, ar.y);
-            }
+    /** Object-slot emission uses the same resident art/collection state without a second list draw. */
+    void drawPlacedObject(RingSpawn ring, int frameCounter) {
+        if (!ringsAllowed() || renderer == null) return;
+        int index = placement.getSpawnIndex(ring);
+        if (index < 0) return;
+        if (!placement.isCollected(index)) {
+            renderer.drawFrameIndex(stageRingFrame(frameCounter), ring.x(), ring.y());
+            return;
         }
+        int started = placement.getSparkleStartFrame(index);
+        if (started < 0 || renderer.getSparkleFrameCount() <= 0) return;
+        int elapsed = Math.max(0, frameCounter - started);
+        int offset = elapsed / renderer.getSparkleFrameDelay();
+        if (offset < renderer.getSparkleFrameCount()) {
+            renderer.drawFrameIndex(renderer.getSparkleStartIndex() + offset, ring.x(), ring.y());
+        }
+        // Rendering never clears placement state; its object/collection owner controls lifetime.
+    }
+
+    /** Frozen native object-slot emissions; no placement or animation state changes while drawing. */
+    List<com.openggf.level.render.SpriteSlotEmission> attractedRenderEntries() {
+        if (!ringsAllowed() || renderer == null) return List.of();
+        var entries = new ArrayList<com.openggf.level.render.SpriteSlotEmission>();
+        for (AttractedRing ar : activeAttractedRingsInSlotOrder()) {
+            int mapping = ar.collected ? attractedSparkleFrame(ar, 0) : ar.mappingFrame;
+            if (mapping < 0) continue;
+            int x = ar.x, y = ar.y;
+            int slot = ar.objectSlotIndex >= 0 ? ar.objectSlotIndex : Integer.MAX_VALUE;
+            // Obj_Attracted_Ring priority $100; AttractedRing_GiveRing changes it to $80.
+            // art_tile remains high-priority in both phases (sonic3k.asm, Obj_Attracted_Ring).
+            entries.add(new com.openggf.level.render.SpriteSlotEmission(slot, ar.collected ? 1 : 2, 0,
+                    () -> drawAttractedFrame(mapping, x, y)));
+        }
+        return entries;
+    }
+
+    private void drawAttractedFrame(int mapping, int x, int y) {
+        GraphicsManager graphics = GameServices.graphics();
+        boolean high = graphics.getCurrentSpriteHighPriority();
+        int mask = graphics.getCurrentSpriteTileOcclusionPaletteMask();
+        graphics.setCurrentSpriteHighPriority(true);
+        try { renderer.drawFrameIndex(mapping, x, y); }
+        finally {
+            graphics.setCurrentSpriteHighPriority(high);
+            graphics.setCurrentSpriteTileOcclusionPaletteMask(mask);
+        }
+    }
+
+    void drawAttracted(int frameCounter) {
+        for (var entry : attractedRenderEntries()) entry.draw().run();
     }
 
     public void drawLostRings(int frameCounter) {

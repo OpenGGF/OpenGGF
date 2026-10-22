@@ -1614,11 +1614,21 @@ public class ObjectManager {
         drawBucketInstancesWithPriority(unifiedBuckets[idx], idx + RenderPriority.MIN, gfx);
     }
 
+    void drawBucketWithSlotEmissions(int bucket, GraphicsManager graphics,
+            List<com.openggf.level.render.SpriteSlotEmission> external) {
+        ensureBucketsPopulated();
+        int index = RenderPriority.clamp(bucket) - RenderPriority.MIN;
+        drawBucketInstancesWithPriority(unifiedBuckets[index], index + RenderPriority.MIN, graphics, external);
+    }
+
     private void drawBucketInstancesWithPriority(List<ObjectRenderParts.RenderEntry> entries, int bucket,
                                                  GraphicsManager gfx) {
-        if (entries.isEmpty()) {
-            return;
-        }
+        drawBucketInstancesWithPriority(entries, bucket, gfx, List.of());
+    }
+
+    private void drawBucketInstancesWithPriority(List<ObjectRenderParts.RenderEntry> entries, int bucket,
+            GraphicsManager gfx, List<com.openggf.level.render.SpriteSlotEmission> external) {
+        if (entries.isEmpty() && external.isEmpty()) return;
 
         enableVerticalWrapIfNeeded();
         try {
@@ -1626,8 +1636,23 @@ public class ObjectManager {
             // Draw_Sprite / Render_Sprites consume SST order; masks affect later entries.
             // The cached lists use reverse order for ordinary painter drawing.
             boolean collectingSat = gfx.isSpriteSatCollectionActive();
-            for (int i = 0; i < entries.size(); i++) {
-                ObjectRenderParts.RenderEntry entry = entries.get(collectingSat ? entries.size() - 1 - i : i);
+            int ordinary = 0, extra = 0;
+            while (ordinary < entries.size() || extra < external.size()) {
+                ObjectRenderParts.RenderEntry entry = ordinary < entries.size()
+                        ? entries.get(collectingSat ? entries.size() - 1 - ordinary : ordinary) : null;
+                var next = extra < external.size()
+                        ? external.get(collectingSat ? extra : external.size() - 1 - extra) : null;
+                if (next != null && (entry == null || (collectingSat ? next.slot() < entry.slot() : next.slot() > entry.slot()))) {
+                    if (gfx.getCurrentSpriteTileOcclusionPaletteMask() != next.tileOcclusionPaletteMask()) {
+                        gfx.flushPatternBatch();
+                        gfx.setCurrentSpriteTileOcclusionPaletteMask(next.tileOcclusionPaletteMask());
+                        gfx.beginPatternBatch();
+                    }
+                    next.draw().run();
+                    extra++;
+                    continue;
+                }
+                ordinary++;
                 objectCallbacks.run(entry.instance(), () -> {
                     int mask = ObjectRenderParts.tileOcclusionPaletteMask(entry);
                     if (gfx.getCurrentSpriteTileOcclusionPaletteMask() != mask) {

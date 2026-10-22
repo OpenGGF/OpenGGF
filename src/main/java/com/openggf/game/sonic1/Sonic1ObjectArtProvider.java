@@ -4,6 +4,8 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
 import com.openggf.game.ObjectArtProvider;
+import com.openggf.game.internal.HudSatLayout;
+import com.openggf.game.internal.HudSatLayoutSource;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.level.objects.HudStaticArt;
 import com.openggf.level.objects.AnimalType;
@@ -34,12 +36,14 @@ import java.util.logging.Logger;
  * ObjectArtProvider for Sonic 1.
  * Loads HUD art and game object art (lamppost, etc.) from the Sonic 1 ROM.
  */
-public class Sonic1ObjectArtProvider implements ObjectArtProvider {
+public class Sonic1ObjectArtProvider implements ObjectArtProvider, HudSatLayoutSource {
     private static final Logger LOGGER = Logger.getLogger(Sonic1ObjectArtProvider.class.getName());
     private static final int ANIMAL_TILE_BANK_SIZE = 18;
     private static final int RESULTS_SCORE_DIGIT_PAIR_COUNT = 8;
     private static final int RESULTS_SCORE_DIGIT_TILE_COUNT = RESULTS_SCORE_DIGIT_PAIR_COUNT * 2;
     private static final int HUD_TEXT_E_PAIR_INDEX = 22;
+    /** Map_HUD / Map_HUD_internal, World REV01; byte counts and five-byte pieces. */
+    private static final int HUD_SAT_MAPPING_ADDR = 0x1CD6A;
     private static final int MZ_LAVA_WALL_OBGFX_WORD = 0x63A8;
     /**
      * Remaps S3K Knuckles life-icon tile indices onto the native merged S1 HUD palette.
@@ -74,6 +78,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
     private Pattern[] hudLivesNumbers;
     private Pattern[] hudHexDigits;
     private HudStaticArt hudStaticArt;
+    private HudSatLayout hudSatLayout;
     private int animalTypeA = AnimalType.RABBIT.ordinal();
     private int animalTypeB = AnimalType.FLICKY.ordinal();
     private int currentZoneIndex = Integer.MIN_VALUE;
@@ -106,6 +111,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         RomByteReader reader = RomByteReader.fromRom(rom);
         this.romReader = reader;
         Sonic1ObjectArt art = new Sonic1ObjectArt(rom, reader);
+        hudSatLayout = new HudSatLayout(S1SpriteDataLoader.loadMappingFrames(reader, HUD_SAT_MAPPING_ADDR, 4));
 
         hudDigitPatterns = art.loadUncompressedPatterns(
                 Sonic1Constants.ART_UNC_HUD_NUMBERS_ADDR,
@@ -3458,6 +3464,11 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
     @Override
     public HudStaticArt getHudStaticArt() {
         return hudStaticArt;
+    }
+
+    @Override
+    public HudSatLayout getHudSatLayout() {
+        return hudSatLayout;
     }
 
     private void overrideLivesArtFromDonor() {

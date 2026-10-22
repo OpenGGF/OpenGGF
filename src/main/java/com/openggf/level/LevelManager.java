@@ -1851,6 +1851,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 hudRenderManager.setDigitPatternIndex(hudBaseIndex);
 
                 int nextHudIndex = hudBaseIndex + hudDigits.length;
+                com.openggf.level.objects.HudProfileAccess.installSatLayout(hudRenderManager,
+                        provider instanceof com.openggf.game.internal.HudSatLayoutSource nativeHud
+                                ? nativeHud.getHudSatLayout() : null);
                 HudStaticArt staticHudArt = provider.getHudStaticArt();
                 if (staticHudArt != null && staticHudArt.patterns() != null) {
                     LOGGER.info("Cached " + staticHudArt.patterns().length

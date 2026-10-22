@@ -1080,6 +1080,15 @@ frozen architecture violations despite passing pixel checks. Detached RGB bytes
 preserve publication/value equality and pending writes without adding runtime
 layer dependencies; verify the architecture rule as well as actual water pixels.
 
+**SAT capacity belongs to mapping pieces, not expanded tiles.** HUD letters and
+numeric art can have scattered cache addresses while sharing one native SAT
+footprint; blank columns still consume its declared width. Transparent,
+offscreen and already masked pieces also consume count/width. Preserve the
+native footprint through admission, then clip immutable replay fragments.
+Art-version tests must place the compared mapping inside the evaluated raster:
+a missing offscreen tile version after admission does not prove lost resident
+art. See [native sprite budgets](designs/2026-10-22-native-sprite-scanline-budgets.md).
+
 **CPU sprite state is not the presented SAT.** S3K `VInt_8_Cont` uploads
 `Sprite_table` to VRAM `$F800`; the resumed `LevelLoop` then runs objects and
 later `Render_Sprites` builds the next table. An emulator-frame screenshot can

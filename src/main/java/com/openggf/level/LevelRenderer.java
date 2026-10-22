@@ -919,12 +919,14 @@ public final class LevelRenderer {
     final LevelSpritePresentation.Tables spriteTables = new LevelSpritePresentation.Tables();
     final LevelBoundsMaskTransition boundsMask = new LevelBoundsMaskTransition();
     private boolean preparingSpritePresentation;
+    private SpritePresentation.Frame liveSpriteFrame;
     private LevelScrollPresentation currentScrollPresentation;
     /** One draw's {@link LevelHudUnderlay}; cleared once painted. */
     Runnable hudUnderlay;
 
     /** Capture the same full player/object/ring pass used for gameplay, before any GPU submission.
-     * This deliberately excludes HUD and never resolves deformation/camera-follow/world events.
+     * Includes native HUD admission; consumers may hide it after evaluation. Never resolves
+     * deformation/camera-follow/world events.
      */
     SpritePresentation.Frame captureSceneSpriteTable(SpriteManager sprites) {
         if (lm.graphicsManager == null || lm.camera == null) throw new IllegalStateException("Renderer not attached");
@@ -1043,13 +1045,6 @@ public final class LevelRenderer {
             spriteTables.prepare(com.openggf.level.render.SpritePresentationRenderer.prepare(lm.graphicsManager,
                     lm.camera.getXWithShake(), lm.camera.getYWithShake(), () -> {
                         renderSpriteObjectPass(sprites, false);
-                        if (lm.hudRenderManager != null && !lm.isHudSuppressed()) {
-                            SpritePresentation.layer(lm.graphicsManager,
-                                    SpritePresentation.Layer.HUD);
-                            com.openggf.level.objects.HudProfileAccess.bindWorld(lm.hudRenderManager, lm.getWorldSession());
-                            prepareHudForDraw(lm.hudRenderManager, lm.graphicsManager);
-                            lm.hudRenderManager.draw(lm.levelGamestate, lm.camera.getFocusedSprite());
-                        }
                     }), scroll);
         } finally {
             preparingSpritePresentation = false;
@@ -1069,13 +1064,14 @@ public final class LevelRenderer {
     }
 
     private void drawPublishedSprites(java.util.function.Predicate<SpritePresentation.Layer> visible) {
-        com.openggf.level.render.SpritePresentationRenderer.draw(lm.graphicsManager, spriteTables.published(),
+        com.openggf.level.render.SpritePresentationRenderer.drawNative(lm.graphicsManager, spriteTables.published(),
                 lm.camera.getXWithShake(), lm.camera.getYWithShake(), visible, presentationRuntime());
     }
 
     /** Resets per-frame derived state (used when the level is unloaded). */
     void resetState() {
         spriteTables.reset();
+        liveSpriteFrame = null;
         if (lm != null && lm.graphicsManager != null && lm.graphicsManager.isGlInitialized()) scenePresentationPass.cleanup();
         boundsMask.reset();
         currentScrollPresentation = null;
@@ -1216,6 +1212,7 @@ public final class LevelRenderer {
         cacheViewportForFrame();
 
         Camera camera = lm.camera;
+        liveSpriteFrame = null;
         resolvePendingPaletteOwnershipWrites();
         currentScrollPresentation = scrollForDraw();
         if (currentScrollPresentation == null) resolveAdvancedRenderFrameState(lm.frameCounter);
@@ -1262,15 +1259,15 @@ public final class LevelRenderer {
             if (LevelSpritePresentation.enabled(lm)) {
                 drawPublishedSprites(layer -> layer == SpritePresentation.Layer.HUD);
                 if (spriteTables.published().tiles().stream().anyMatch(tile -> tile.layer().isHud())) {
-                    com.openggf.level.render.SpritePresentationRenderer.draw(lm.graphicsManager, spriteTables.counters(),
+                    com.openggf.level.render.SpritePresentationRenderer.drawNative(lm.graphicsManager, spriteTables.counters(),
                             camera.getXWithShake(), camera.getYWithShake(),
                             layer -> layer == SpritePresentation.Layer.HUD_COUNTERS, presentationRuntime());
                 }
             } else {
-                AbstractPlayableSprite focusedPlayer = camera.getFocusedSprite();
-                com.openggf.level.objects.HudProfileAccess.bindWorld(lm.hudRenderManager, lm.getWorldSession());
-                prepareHudForDraw(lm.hudRenderManager, lm.graphicsManager);
-                lm.hudRenderManager.draw(lm.levelGamestate, focusedPlayer);
+                if (liveSpriteFrame == null) liveSpriteFrame = captureSceneSpriteTable(spriteManager);
+                com.openggf.level.render.SpritePresentationRenderer.drawNative(lm.graphicsManager, liveSpriteFrame,
+                        camera.getXWithShake(), camera.getYWithShake(), SpritePresentation.Layer::isHud,
+                        presentationRuntime());
             }
         }
         profiler.endSection("render.hud");
@@ -1700,10 +1697,19 @@ public final class LevelRenderer {
     public void renderSpriteObjectPass(SpriteManager spriteManager, boolean includeWaterSurface) {
         if (!preparingSpritePresentation && LevelSpritePresentation.enabled(lm) && !cinematicDraw) {
             drawPublishedSprites(layer -> !layer.isHud());
-        } else {
+        } else if (preparingSpritePresentation) {
             prepareOrDrawLiveSprites(spriteManager);
+        } else {
+            liveSpriteFrame = captureSceneSpriteTable(spriteManager);
+            com.openggf.level.render.SpritePresentationRenderer.drawNative(lm.graphicsManager, liveSpriteFrame,
+                    lm.camera.getXWithShake(), lm.camera.getYWithShake(), layer -> !layer.isHud(), presentationRuntime());
         }
         if (preparingSpritePresentation) return;
+        // Ghosts are presentation overlays, outside the native hardware budget.
+        for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
+            renderGhostsForLayer(bucket, false);
+            renderGhostsForLayer(bucket, true);
+        }
         GraphicsManager graphicsManager = lm.graphicsManager;
         ZoneFeatureProvider zoneFeatureProvider = lm.zoneFeatureProvider;
 
@@ -1742,23 +1748,32 @@ public final class LevelRenderer {
         graphicsManager.setCurrentSpriteHighPriority(false);
         graphicsManager.beginPatternBatch();
 
-        boolean useSpriteSatMasking = zoneFeatureProvider != null
-                && zoneFeatureProvider.useSpriteSatMasking(lm.currentZone);
-        TraceGhostHook.GhostLayerRenderer traceGhostHook = selectGhostLayerHook(
-                currentTraceVisibility, TraceGhostHook.active());
-        GhostRenderRegistry gameplayGhosts = resolveGameplayGhostRegistry();
-        TraceGhostHook.GhostLayerRenderer ghostLayerHook =
-                (traceGhostHook != null || (gameplayGhosts != null && !gameplayGhosts.isEmpty()))
-                        ? layeredGhostHook
-                        : null;
         if (spriteManager != null) spriteManager.prepareRenderBucketsForPass();
         // Render_Sprites lets a zone splice its own sprites into the end of a priority level
         // (Lava Reef's rocks at Render_Sprites_NextLevel). Sprite-table order is behaviour.
         com.openggf.level.render.PriorityBucketSpriteSource bucketSpriteSource =
                 zoneFeatureProvider instanceof com.openggf.level.render.PriorityBucketSpriteSource source
                         ? source : null;
-        if (useSpriteSatMasking) {
-            graphicsManager.beginSpriteSatCollection();
+        {
+            com.openggf.graphics.SpriteSatInternalAccess.beginCollection(graphicsManager,
+                    com.openggf.graphics.SpriteSatMaskPostProcessor.Raster.extended(
+                            lm.camera.getXWithShake(), lm.camera.getYWithShake(),
+                            lm.cachedScreenWidth, lm.cachedScreenHeight));
+            // BuildHUD/Render_HUD occupy the table head, before ordinary object buckets.
+            // Its decoded native footprints compete once, even though digits have scattered art.
+            if (lm.hudRenderManager != null && !lm.isHudSuppressed()) {
+                SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.HUD);
+                com.openggf.level.objects.HudProfileAccess.bindWorld(lm.hudRenderManager, lm.getWorldSession());
+                prepareHudForDraw(lm.hudRenderManager, graphicsManager);
+                graphicsManager.setCurrentSpriteHighPriority(true);
+                lm.hudRenderManager.draw(lm.levelGamestate, lm.camera.getFocusedSprite());
+                graphicsManager.setCurrentSpriteHighPriority(false);
+            }
+            if (ringManager != null && lm.gameModule instanceof com.openggf.game.internal.SpriteTableBuildProfile profile
+                    && profile.placedRingEmission() == com.openggf.game.internal.SpriteTableBuildProfile.PlacedRings.BEFORE_OBJECT_BUCKETS) {
+                SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.RINGS);
+                com.openggf.level.rings.RingDrawInternalAccess.drawPlaced(ringManager, lm.frameCounter);
+            }
             // SAT collection must follow sprite-table order, not painter order.
             // Draw_Sprite inserts into Sprite_table_input by ascending priority bucket,
             // and lower sprite slots end up in front later during rasterization.
@@ -1771,9 +1786,12 @@ public final class LevelRenderer {
                 }
                 if (objectManager != null) {
                     SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
-                    objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
+                    com.openggf.level.objects.ObjectDrawInternalAccess.drawBucket(objectManager, bucket, graphicsManager,
+                            ringManager == null ? java.util.List.of()
+                                    : com.openggf.level.rings.RingDrawInternalAccess.slottedAttracted(ringManager, bucket));
                 }
-                drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);
+                if (!(lm.gameModule instanceof com.openggf.game.internal.SpriteTableBuildProfile))
+                    drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);
                 if (bucketSpriteSource != null) {
                     // Appended after this level's own entries, exactly as the ROM does.
                     SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
@@ -1781,24 +1799,6 @@ public final class LevelRenderer {
                 }
             }
             graphicsManager.endSpriteSatCollectionAndReplay();
-        } else {
-            for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
-                // Painter order reverses the native SAT: objects before players, and the spliced
-                // sprites - last in their level's table region - are drawn first within it.
-                if (bucketSpriteSource != null) {
-                    SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
-                    bucketSpriteSource.appendSpritesAfterPriorityBucket(bucket);
-                }
-                if (objectManager != null) {
-                    SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
-                    objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
-                }
-                if (spriteManager != null) {
-                    SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.PLAYER);
-                    spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, ghostLayerHook);
-                }
-                drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);
-            }
         }
         graphicsManager.flushPatternBatch();
         graphicsManager.setUseSpritePriorityShader(false);
@@ -1843,30 +1843,14 @@ public final class LevelRenderer {
                 case HUD, HUD_COUNTERS -> false;
             });
         } else {
-            if (objectManager != null && options.includeObjectSprites()) {
-                objectManager.refreshRenderBucketsIfChanged();
-            }
-
-            graphicsManager.setUseSpritePriorityShader(true);
-            graphicsManager.setCurrentSpriteHighPriority(false);
-            graphicsManager.beginPatternBatch();
-
-            if (spriteManager != null && options.includePlayerSprites()) {
-                spriteManager.prepareRenderBucketsForPass();
-            }
-
-            for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
-                if (spriteManager != null && options.includePlayerSprites()) {
-                    SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.PLAYER);
-                    spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, null);
-                }
-                if (objectManager != null && options.includeObjectSprites()) {
-                    SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
-                    objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
-                }
-                drawStageRingsForBucket(ringManager, graphicsManager, bucket, options.includeRings());
-            }
-
+            liveSpriteFrame = captureSceneSpriteTable(spriteManager);
+            com.openggf.level.render.SpritePresentationRenderer.drawNative(graphicsManager, liveSpriteFrame,
+                    lm.camera.getXWithShake(), lm.camera.getYWithShake(), layer -> switch (layer) {
+                        case PLAYER -> options.includePlayerSprites();
+                        case OBJECT -> options.includeObjectSprites();
+                        case RINGS -> options.includeRings();
+                        case HUD, HUD_COUNTERS -> false;
+                    }, presentationRuntime());
         }
         graphicsManager.flushPatternBatch();
         graphicsManager.setUseSpritePriorityShader(false);
