@@ -203,58 +203,108 @@ function Test-ContainsModApiAnnotation([string]$Text) {
 # Mirrors mod_api_surface_text in validate-policy.sh.
 function Get-ModApiSurfaceText([string]$Text) {
     $inBlock = $false
+    $stripQuote = ""; $stripEscaped = $false
     $kind = ""
     $typeName = ""
     $stripped = New-Object System.Collections.Generic.List[string]
     foreach ($raw in ($Text -split "\r?\n")) {
         $line = $raw
         $out = ""
-        while ($true) {
+        for ($k = 0; $k -lt $line.Length; $k++) {
+            $c = $line[$k]
+            $pair = if ($k + 1 -lt $line.Length) { $line.Substring($k, 2) } else { "" }
+            $triple = $k + 2 -lt $line.Length -and $line.Substring($k, 3) -eq '"""'
             if ($inBlock) {
-                $e = $line.IndexOf("*/", [StringComparison]::Ordinal)
-                if ($e -lt 0) { $line = ""; break }
-                $line = $line.Substring($e + 2); $inBlock = $false
+                if ($pair -eq '*/') { $inBlock = $false; $k++ }
+                continue
             }
-            $s = $line.IndexOf("/*", [StringComparison]::Ordinal)
-            $c = $line.IndexOf("//", [StringComparison]::Ordinal)
-            if ($c -ge 0 -and ($s -lt 0 -or $c -lt $s)) { $out += $line.Substring(0, $c); break }
-            if ($s -lt 0) { $out += $line; break }
-            $out += $line.Substring(0, $s); $line = $line.Substring($s + 2); $inBlock = $true
+            if ($stripQuote) {
+                $out += $c
+                if ($stripEscaped) { $stripEscaped = $false }
+                elseif ($c -eq '\') { $stripEscaped = $true }
+                elseif ($stripQuote -eq 'text' -and $triple) { $out += '""'; $k += 2; $stripQuote = "" }
+                elseif ([string]$c -eq $stripQuote) { $stripQuote = "" }
+                continue
+            }
+            if ($pair -eq '//') { break }
+            if ($pair -eq '/*') { $inBlock = $true; $out += ' '; $k++; continue }
+            if ($triple) { $stripQuote = 'text'; $out += '"""'; $k += 2; continue }
+            if ($c -eq '"' -or $c -eq [char]39) { $stripQuote = [string]$c }
+            $out += $c
         }
         $stripped.Add($out)
         if ($kind -eq "" -and $out -cmatch '(?:^|[ \t])(class|interface|record|enum|@interface)[ \t]+([A-Za-z_][A-Za-z0-9_]*)') {
             $kind = $Matches[1]; $typeName = $Matches[2]
         }
     }
+    # Remove class/record implementation text before declaration selection.
+    # Field initializer values are absent from the normalized signature exporter.
+    if ($kind -eq "class" -or $kind -eq "record") {
+        $source = $stripped -join "`n"
+        $clean = New-Object System.Text.StringBuilder
+        $segment = New-Object System.Text.StringBuilder
+        $parens = 0; $body = 0; $initializer = $false
+        $initParens = 0; $initBraces = 0; $initBrackets = 0
+        $quote = [char]0; $escaped = $false
+        for ($j = 0; $j -lt $source.Length; $j++) {
+            $c = $source[$j]
+            $triple = $j + 2 -lt $source.Length -and $source.Substring($j, 3) -eq '"""'
+            if ($quote -ne [char]0) {
+                if (-not $body -and -not $initializer) { [void]$clean.Append($c); [void]$segment.Append($c) }
+                if ($quote -eq 'text' -and -not $escaped -and $triple) {
+                    if (-not $body -and -not $initializer) { [void]$clean.Append('""'); [void]$segment.Append('""') }
+                    $j += 2; $quote = [char]0; continue
+                }
+                if ($escaped) { $escaped = $false }
+                elseif ($c -eq '\') { $escaped = $true }
+                elseif ($c -eq $quote) { $quote = [char]0 }
+                continue
+            }
+            if ($triple) {
+                $quote = 'text'
+                if (-not $body -and -not $initializer) { [void]$clean.Append('"""'); [void]$segment.Append('"""') }
+                $j += 2; continue
+            }
+            if ($c -eq '"' -or $c -eq [char]39) {
+                $quote = $c
+                if (-not $body -and -not $initializer) { [void]$clean.Append($c); [void]$segment.Append($c) }
+                continue
+            }
+            if ($body) {
+                if ($c -eq '{') { $body++ }
+                elseif ($c -eq '}') { $body-- }
+                continue
+            }
+            if ($initializer) {
+                if ($initParens -eq 0 -and $initBraces -eq 0 -and $initBrackets -eq 0 -and ($c -eq ';' -or $c -eq ',')) { $initializer = $false }
+                else {
+                    if ($c -eq '(') { $initParens++ }
+                    elseif ($c -eq ')') { $initParens-- }
+                    elseif ($c -eq '{') { $initBraces++ }
+                    elseif ($c -eq '}') { $initBraces-- }
+                    elseif ($c -eq '[') { $initBrackets++ }
+                    elseif ($c -eq ']') { $initBrackets-- }
+                    continue
+                }
+            }
+            if ($c -eq '=' -and $parens -eq 0) { $initializer = $true; continue }
+            if ($c -eq '{' -and $parens -eq 0) {
+                if ($segment.ToString() -cnotmatch '(?:^|[ \t\n])(?:class|interface|record|enum|@interface)[ \t\n]+[A-Za-z_]') {
+                    [void]$clean.Append('{}'); [void]$segment.Clear(); $body = 1; continue
+                }
+                [void]$segment.Clear()
+            } elseif ($c -eq ';' -or $c -eq '}') { [void]$segment.Clear() }
+            else { [void]$segment.Append($c) }
+            [void]$clean.Append($c)
+            if ($c -eq '(') { $parens++ }
+            elseif ($c -eq ')') { $parens-- }
+        }
+        $stripped = $clean.ToString() -split "`n"
+    }
     $whole = $kind -ne "class"
     $depth = 0
     $kept = New-Object System.Collections.Generic.List[string]
-    $compactDepth = 0; $quote = [char]0; $escaped = $false
-    foreach ($line in $stripped) {
-        $l = $line; $start = 0
-        # A compact constructor adds no signature beyond the record components.
-        if ($compactDepth -eq 0 -and $kind -eq "record" -and
-                $l -cmatch ("^[ \t]*(?:public[ \t]+|protected[ \t]+|private[ \t]+)?" + [regex]::Escape($typeName) + "[ \t]*\{")) {
-            $start = $l.IndexOf("{") + 1; $compactDepth = 1
-            $kept.Add($l.Substring(0, $start))
-        }
-        if ($compactDepth -gt 0) {
-            for ($j = $start; $j -lt $l.Length; $j++) {
-                $c = $l[$j]
-                if ($quote -ne [char]0) {
-                    if ($escaped) { $escaped = $false }
-                    elseif ($c -eq '\') { $escaped = $true }
-                    elseif ($c -eq $quote) { $quote = [char]0 }
-                } elseif ($c -eq '"' -or $c -eq [char]39) { $quote = $c }
-                elseif ($c -eq '{') { $compactDepth++ }
-                elseif ($c -eq '}') {
-                    $compactDepth--
-                    if ($compactDepth -eq 0) { $kept.Add("}"); break }
-                }
-            }
-            if ($compactDepth -gt 0) { continue }
-            $l = $l.Substring($j + 1)
-        }
+    foreach ($l in $stripped) {
         if ($l -notmatch '[^ \t]') { continue }
         if ($whole) { $kept.Add($l); continue }
         if ($depth -gt 0 -or $l -cmatch '(?:^|[^A-Za-z0-9_])(?:public|protected)[ \t]' -or $l -match '^[ \t]*@' -or
