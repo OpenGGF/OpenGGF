@@ -24,6 +24,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -726,7 +727,8 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
 
         // ROM: Player control lock when player X >= boss_fz_end + $90
         for (AbstractPlayableSprite participant : finalFlightParticipants(player)) {
-            int playerX = participant.getCentreX() & 0xFFFF;
+            // Both native player-X comparisons branch with signed BLT.
+            int playerX = participant.getCentreX();
 
             // ROM: loc_1A216 — lock player controls past threshold
             if (playerX >= BOSS_FZ_END + 0x90) {
@@ -736,17 +738,26 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
                 // x_speed (FZ trace f4200: ROM x_speed stays 0x0255). The prior
                 // setXSpeed(0) zeroed it and diverged.
                 participant.setControlLocked(true);
+                participant.setForcedInputMask(0);
+                participant.writeLogicalInputAndCurrentFollowerHistory(0, false);
                 participant.setGSpeed((short) 0);
 
-                // ROM: tst.w obVelY(a0) / bpl loc_1A248 — only when the boss is still
-                // rising (velY < 0, i.e. Eggman escaped un-hit) does ROM force btnUp to
-                // make Sonic look up. On a successful-hit run the boss is defeated and
-                // falls (velY=$60), so velY >= 0 here and ROM takes no extra action.
+                // BossFinal_Eggman_Escape .watchEggman (REV01 $1A9E4):
+                // tst.w obVelY / bpl.s .ending skips BOTH the Up write and the
+                // ledge clamp when the ship is no longer rising. Keep the forced
+                // mask as the next player dispatch's logical-controller owner;
+                // the late word write also replaces this pass's held/press history.
+                if ((short) state.yVel >= 0) {
+                    continue;
+                }
+                participant.setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
+                participant.writeLogicalInputAndCurrentFollowerHistory(
+                        AbstractPlayableSprite.INPUT_UP, false);
             }
 
             // ROM: Cap player X at boss_fz_end + $E0
             if (playerX >= BOSS_FZ_END + 0xE0) {
-                participant.setCentreX((short) (BOSS_FZ_END + 0xE0));
+                NativePositionOps.writeXPosPreserveSubpixel(participant, BOSS_FZ_END + 0xE0);
             }
         }
 

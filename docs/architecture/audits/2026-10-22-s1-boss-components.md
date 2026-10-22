@@ -282,3 +282,95 @@ and affected rerun; the original invocation remains recorded above as red.
 Already passing unrelated selections were not repeated. No smoke or continuous
 route result is claimed by this lane; the chain owner qualifies these commits
 in its next necessary production replay and owns shared frontier prose.
+
+## Composed qualification and late FZ input follow-up
+
+The chain owner's composed job 38000 included applied `9f7c034f1` alongside
+independently owned loading, Saw and Bomb changes. It completed 129 cases:
+128 passed, one continuous-chain comparison failed, zero errors/skips. All
+22 compared level segments before FZ completed with zero differences; SLZ's
+previous 1,456 differences were gone. The before-production row hook identifies
+the upcoming row rather than its post-state. In that alignment the SLZ killing
+hit, timer settle, first +2 escape expansion, eight-pixel movement and the later
+player X fraction all match native. These are composed observations, not a claim
+of a whole-run pass or isolated attribution for other lanes' changes.
+
+The FZ probe also supports the moving-controller latch correction. On V-int
+`0x3030` (row 354 execution), the controller's own push latch changes from true
+to false while Sonic's animation/previous-animation changes from `02/02` to
+`00/01`, retaining mapping `0x2E`. The occupied cylinder subsequently clears its
+separate latch without another observed animation-word change. Both keys are
+the live instances, with no stale placement key. Paired callbacks support the
+controller's Solid_NoCollision interpretation; callback labels alone are not
+instruction traces. Native object status bits and compared player bytes agree.
+The pre-existing map-frame suppression remains unchanged.
+
+FZ now compares exactly through row 4734. Its first overall difference at row
+4735 is Sonic's LOOK_UP animation 7/mapping 5 versus engine WAIT 5/mapping 1;
+all compared position/fraction/velocity/camera fields still match at that row.
+The first non-camera physics-group difference at 4736 is a dynamic-art mapping
+edge downstream of that animation. The completed 5,086-row FZ report has 722
+differences (20 physics-group, 702 animation), not a successful qualification.
+
+Native row 4734 crosses player X `0x2790`, clears inertia after Sonic's movement,
+and leaves that row's selected walking animation intact. Native row 4735 then
+looks up despite the movie continuing to hold Right. Shipped BossFinal Escape's
+branch at `0x1A9CC` locks control, clears the logical held/pressed word, and writes
+Up held with no pressed bits when the ship's signed Y velocity is negative.
+The engine implemented the lock/inertia writes but only commented the input
+writes. Existing forced-input and late logical/follower-history ports express
+this object-owned command; no gameplay state comes from the comparison rows.
+
+The native nonnegative-Y-velocity branch after control lock skips the ledge
+clamp. When the clamp runs, its `move.w` changes only the X pixel word and
+preserves the fraction. These independently source-proven branches accompany
+the missing-input repair; they are not claimed as the observed 4735 cause.
+Both player-X comparisons use signed `blt` branches: negative X words skip the
+control lock and clamp. This boundary differs from the inherited unsigned X
+view, even though the positive-coordinate FZ route cannot exercise it.
+
+Ending eligibility itself matches shipped ROM: X at least `0x2900` and the
+parent's previous rendered bit clear (`0x1A9FE`/`0x1AA06`) precede the ending
+mode write at `0x1AA0C`. The existing injected zone-7 request enters an ending
+level that deliberately remains in engine LEVEL mode until its choreography
+requests credits. Thus the composed tail's final LEVEL mode alone does not
+identify a missing FZ request. The chain owner retains terminal attribution and
+will read request/zone/fade/choreography state in its next necessary job.
+
+The first focused input qualification used `9f7c034f1` plus the escape-input,
+conditional-clamp, test and audit changes. Command (with the supplied absolute
+ROM path in `$SONIC1_ROM_PATH`):
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 \
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestS1FzEscapeNativeInput,TestSonic1FzWidescreenAndTeamSafety,TestSonic1FzBossEscapeHitCue,TestS1FzNativeComponents,TestS1FzBossGraphRewind,TestLogicalInputControlLockLatch,TestSpriteManagerGameplayInputFilter,TestObjectServicesMigrationGuard,TestObjectUpdateClockTerminologyGuard' \
+  "-Dsonic1.rom.path=$SONIC1_ROM_PATH" test -B
+```
+
+Session 38357 waited 337 seconds and executed in 2 minutes 17 seconds. All
+71 tests passed, zero failures/errors/skips: 12 new escape-input cases,
+10 width/team cases, 19 existing FZ component/rewind/hit-cue cases,
+15 shared input cases and 15 structural guard cases. The production-player
+case consumes the boss's command through SpriteManager on a real ROM-backed
+floor, keeps raw Left/action input intact, and restores then reproduces the
+Look Up result. It is independent of the continuous FZ movie.
+
+The subsequent signed-X boundary correction and direct Ani_Sonic Look Up
+mapping assertion affect the two escape/width classes. Shared input and guard
+contracts do not change, so their completed checks are reused rather than
+repeated; the final affected run is recorded below. Continuous route
+qualification remains with the chain owner.
+
+Final session 76469 used the same ROM/environment flags with `--lean`, no
+profile, and
+`-Dtest=TestS1FzEscapeNativeInput,TestSonic1FzWidescreenAndTeamSafety`.
+It waited 109 seconds and executed in 1 minute 23 seconds: all 22 tests passed,
+zero failures/errors/skips. This includes the signed-X boundary cases and the
+independently read `Ani_Sonic` index-7 script (`3F 05 FF`) matching the next
+production player's mapping frame 5. The remaining 49 checks from session
+38357 cover unchanged component, rewind, input and structural contracts; this
+is bounded validation across two runs, not a single final-source 71-case run
+or a continuous-route pass. Only the four owned source/test/audit files enter
+this follow-up commit; the foreign dirty disassembly pin is preserved.

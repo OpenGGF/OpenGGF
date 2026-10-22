@@ -31,12 +31,13 @@ class TestSonic1FzWidescreenAndTeamSafety {
 
     @ParameterizedTest
     @ValueSource(ints = {320, 352, 400, 528, 800})
-    void finalFlightContainsAndLocksMainAndThreeSidekicksAtEveryWidth(int width) throws Exception {
+    void risingFinalFlightContainsAndLocksMainAndThreeSidekicksAtEveryWidth(int width) throws Exception {
         TestPlayableSprite main = player(0x2791);
         TestPlayableSprite p2 = player(0x27E1);
         TestPlayableSprite p3 = player(0x2800);
         TestPlayableSprite p4 = player(0x2900);
         Sonic1FZBossInstance boss = boss(main, List.of(p2, p3, p4), width);
+        state(boss).yVel = -0x18;
 
         invokeFinalFlight(boss, main);
 
@@ -44,6 +45,8 @@ class TestSonic1FzWidescreenAndTeamSafety {
             assertTrue(player.isControlLocked());
             assertEquals(0, player.getGSpeed());
             assertTrue((player.getCentreX() & 0xFFFF) <= 0x27E0);
+            assertEquals(com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_UP,
+                    player.getForcedInputMask(), "rising ship publishes the native Up hold");
         }
     }
 
