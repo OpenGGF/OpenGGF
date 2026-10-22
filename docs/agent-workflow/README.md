@@ -72,6 +72,8 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 - [Sitar Hero S3K song probe](../../src/main/java/com/openggf/tools/SitarHeroS3kSongProbe.java): executes both locked-on ROM music tables through the production S3K driver and reports complete jump candidates, tempo boundaries, real channel/sample attacks and natural stops; input is an absolute ROM path and optional hex music IDs (2026-10-07 full song catalogue).
 
+- [Sonic 1 startup instruction audit](../../tools/audio/s1_startup_instruction_audit.py): verifies supplied REV01 ROM checksum, RAM-clear and SEGA CPU-wait instruction components; reports INCOMPLETE rather than treating instruction cycles or PCM exhaustion as presentation-time authority (2026-10-22 audio evidence); [cause and limits](../architecture/validation/audio/2026-10-22-s1-s2-native-audio-evidence.md#s1-startup-causal-slice-instruction-work-is-not-presentation-time).
+
 - [Sonic 1 song-form survey](../../tools/audio/s1_song_forms.py): independently
   walks a supplied REV01 ROM's SMPS calls, counted loops, native tempo/divider
   changes and track stops to report complete forms and natural endings. Origin:

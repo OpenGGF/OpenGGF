@@ -7,31 +7,39 @@ engine gameplay values or audio requests in gameplay integration.
 
 ## Final bounded outcome
 
-Both final production captures ran from clean `70de3bfe04120306d35c5a2c75ee9534c294e5ad`,
-with a compile phase refreshing build identity before the ordinary capture
-entry point. They reused the unchanged native controls and original movies,
-with no later mode forced. Each has 600 presentations, 441568 stereo frames,
-one native stage session and exactly the native per-row sample cadence.
-Both strict `--start-row 0 --rows 600` comparisons remain **DIFFERENT**, with
-`SAMPLE_MISMATCH` only. There is no sample-count or frame-shape mismatch.
+Both latest production captures ran from clean
+`6c245461628f365e30402947fe7548b7146beef7`, with a compile phase refreshing
+build identity before the ordinary capture entry point. They reused unchanged
+native controls and original movies, with no later mode forced. Each has600
+presentations,441568 stereo frames, one native stage session and exactly the
+native per-row sample cadence. Both strict `--start-row 0 --rows 600`
+comparisons remain **DIFFERENT / SAMPLE_MISMATCH** only; sample counts and frame
+shapes match.
 
-| Final production window | First different stereo frame | Native / engine value | Equal stereo frames | Production modes | Queue / Maven seconds |
+| Latest production window | First different stereo frame | Native / engine value | Equal stereo frames | Production modes | Queue / Maven seconds |
 | --- | ---: | --- | ---: | --- | --- |
-| S1, `s1-engine-600-final-entry` | 55205 | `(0,0)` / `(1,1)` | 135382 | `TITLE_SCREEN` throughout | 365 / 21.545 |
-| S2, `s2-engine-600-final-input` | 92739 | `(0,0)` / `(1,1)` | 173162 | Title screen 0..498, title card 499..583, level 584..599 | 319 / 21.948 |
+| S1, `s1-engine-600-source-phases` | 55205 | `(0,0)` / `(1,1)` | 135382 | `TITLE_SCREEN` throughout | 69 / 21.566 |
+| S2, `s2-engine-600-source-phases` | 77285 | `(0,0)` / `(3,3)` | 197665 | Title screen0..498, title card499..583, level584..599 | 5 / 22.443 |
 
-Final engine PCM SHA-256 values are S1
+Latest engine PCM SHA-256 values are S1
 `1491f62e5553d7e0270bd7feca92a8ea8b9d9189eac8b3e8388c541b9e65ea46`
-and S2 `f8ed5cea80d5bd884db3d4c6b335f7fd256e426b621a88118c0e147c3c863bf2`.
-S2's PCM is byte-identical before and after the separately verified native
-pause read correction over this particular prefix. S1's first engine DAC
-write is now row 75 instead of 96; the supported phase-order correction moves
-the first waveform difference earlier than the original 70660. This is not
-an overall startup parity improvement: authentic power-on, prior fade,
-loading and native chant-wait costs remain open. No offset was fitted to
-hide those missing owners. Both captures still print the existing exec-plugin
-Discord worker shutdown warning before Maven exits successfully; no process
-or owned validation job remains running.
+and S2 `02443927a8abf9e85ed1ac3ac65aefa589ba07f6bd3f364ff08e000ba2e04f36`.
+S1 is byte-identical to its prior clean70de3bfe capture. S2's first waveform
+difference moved earlier from92739 after removing its unsupported entry fade;
+this is not an overall startup timing improvement. Its chant now completes:
+the earlier capture emitted3819 SEGA DAC bytes in rows126..139 before the
+movie's face-button input canceled it; the latest emits all24948 native sample
+bytes in rows105..196. Both begin with actual ROM bytes `7B8789828E`. That
+repairs input ownership and truncation without aligning absolute power-on time.
+
+S1 still emits its27000 chant bytes in rows75..174. Authentic coldboot,
+prior-screen fades, direct loading, S1 CPU-wait elapsed cost and S2 visual/input
+polling details remain open. No offset was fitted to hide missing owners. The
+prior70de3bfe S2 PCM was byte-identical before/after the native-pause read fix;
+that old control remains attributed to its original source. Both latest
+captures print the existing exec-plugin Discord worker shutdown warning before
+Maven exits successfully; their owning command session is closed. No new
+native capture or full-route certificate was produced.
 
 ## Source and capture identities
 
@@ -506,3 +514,275 @@ S1 child worktree `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-ae08be7b` deliberately
 retains five authorized temporary copies of the parent's support/metadata,
 preflight, registry and S2 producer files, excluded from its commit. Parent owns
 lifecycle accounting; no worktree or local branch was removed by this lane.
+
+
+## S1 startup causal slice: instruction work is not presentation time
+
+The follow-up on `6bae77249` reused the original stock-core 600-row controls
+and the inert `s1-sega-probe` callbacks above. No new native capture was run.
+Both startup waveform comparisons remain failures at their recorded source
+identities. In particular, this work does not replace a missing boot phase with
+an absolute 70/90-row delay or replace the chant wait with the observed 134 rows.
+
+| Phase | Native cause and clock | Existing production owner | Remaining authority gap |
+| --- | --- | --- | --- |
+| Cold reset through first GM_Sega | EntryPoint hardware setup, checksum over ROM header's inclusive end, RAM clears, VDP setup, DACDriverLoad and JoypadInit; CPU instructions plus bus, reset and peripheral work | Engine opens the ROM/session; GameLoop.initializeTitleScreenMode immediately initializes the title provider | There is no production cold-reset CPU job or native reset/frontier clock. Host ROM loading time is not that clock. Native GM_Sega callback row62 is an observation, not an admissible duration. |
+| Prior-screen fade | GM_Sega queues Stop, ClearPLC, then PaletteFadeOut: 22 WaitForVBlank/fade/RunPLC iterations on the previous palette | GameLoopTitleEntryFade covers a retained level-exit picture; SegaPaletteFade supplies palette arithmetic | Fresh title initialization does not retain/execute this GM_Sega entry lifecycle. The existing exit-picture owner is not evidence that cold entry has run the fade. First/last callbacks62/83 do not authorize a21-row offset. |
+| SEGA art/map load | ClearScreen, direct NemDec, EniDec and tilemap/VDP writes with interrupts disabled, then PalLoad into the active palette | Sonic1TitleScreenDataLoader synchronously reads and decompresses real ROM data, then the manager starts the logo scan | This correct data pipeline has no admitted direct-load CPU/VDP service cost. Generic TITLE_SCREEN PLC servicing is not this direct NemDec/EniDec job. Native after-fade83 to first Sega_WaitPal90 is a boundary interval, not a replacement seven-row timer. |
+| Logo scan | WaitForVBlank/VBlank02 then PalCycle_Sega; 51 scan calls plus five five-call boundaries | Manager and ROM-backed SegaLogoPaletteCycleState | Phase-relative palette progression is covered. Absolute row-zero alignment is not. |
+| Chant request and CPU wait | E1 is serviced by UpdateMusic inside VBlank14; PlaySegaSound queues Z80 sample88 and blocks the 68000 in its own NOP/DBF loop | Manager submits E1; AudioManager/resolver/voice registry starts SmpsDriverSession's ROM PCM transport | The session tracks PCM exhaustion, but has no separate S1 CPU-busy completion identity. The manager's fixed98 updates are not this loop. Native E1 request165 to return299 includes unclosed overhead. |
+| Post-chant | The return from that VBlank permits writing generic timer30; subsequent VBlank02 decrements it; Sega_WaitEnd tests only P1 pressed Start | Manager currently counts30 after its approximate98 wait | The30-loop cause is known, but its start still depends on the unmodeled CPU completion, not on PCM exhaustion. |
+| STP and main title | GM_Title stops sound/clears PLC, fades SEGA out, reloads DAC driver and STP assets, fades STP in, loads main-title assets with interrupts disabled, fades STP out, then assembles the title | Manager's exit fade and intro phases; DataLoader loads all assets up front | The fixed96 hold approximates real asset work. No source timer or input-skip branch owns it. Relative fades do not certify the intervening load cost. |
+
+Owning source: EntryPoint and CheckSumCheck (`sonic.asm:213-423`),
+DACDriverLoad (`sonic.asm:1225-1242`), VBlank_Sega/VBlank_SegaPCM
+(`sonic.asm:756-771`), GM_Sega (`sonic.asm:1808-1887`), and GM_Title
+(`sonic.asm:1893-2006`). PaletteFadeOut (`_inc/Palette Fading.asm:134-146`)
+waits for VBlank, changes both palette buffers, and runs PLC once per iteration.
+This is shipped REV01 with FixBugs=0 and its checksum enabled.
+
+The reusable read-only `tools/audio/s1_startup_instruction_audit.py` verifies
+REV01 identity and opcode/control-flow shapes before reporting instruction-only
+components. It uses the existing Motorola-table decoder, not measured rows or
+waveform shifts. A valid report is deliberately **INCOMPLETE**, exit2: reset,
+DMA/FIFO, Z80 bus contention, refresh, dispatch and exact VInt endpoints are not
+closed by these components, and none of its output is runtime readiness input.
+
+Actual checksum instructions at `$031C` start at `$0200`, read the inclusive
+end from header `$01A4` (`$0007FFFF`), and add 261888 words. The independently
+summed/stored checksum is `$AFC7`. ADD.W `(A0)+,D1` at `$032C` costs8,
+CMP.L `A0,D0` at `$032E` costs6, and BHS at `$0330` costs10 taken/8 falling
+through: the loop alone costs6285310 no-wait 68000 cycles. RAM-clear iterations
+are sourced separately from ROM operands; they are not inferred from callback62.
+
+The chant handler begins `$071FAC: 13FC008800A01FFF`, queuing sample88.
+After starting Z80, `$071FBC:323C0011` seeds18 outer passes;
+`$071FC0:303CFFFF4E7151C8FFFC51C9FFF4` loads65536 inner iterations of
+NOP/DBF per pass. The nested loop costs16515472 cycles; the initial D1 load
+adds8. At `$071FCE:584F4E75`, ADDQ skips the sound caller's stack return before
+RTS. This is CPU work rather than a poll of sample completion
+(PlaySegaSound, `s1.sounddriver.asm:733-747`). No-wait instruction cycles alone
+must not be rounded to a presentation count.
+
+The independent Z80 sample path is ROM DACDriver at `$072E7C`; the decoded
+loop contains `$00B9:1188962178690E2A` and `$00C8:060B10FE`. Sample88 is
+27000 bytes at `$079688`, SHA-256
+`bc99efa76997dfa715127b974d55451a7ef5373e517bbeda62cbd3cf61feb3e5`.
+Its220-Z80-cycle byte cadence is distinct from the 68000 busy loop. The current
+`SmpsDriverSession.serviceForward()` blocks while transport exists, then becomes
+eligible after exhaustion; it has no longer-lived S1 CPU-wait state. Therefore
+using `segaPcmTransportActive()` as the title's release condition was rejected.
+Changing the shared session, snapshots, request admission or clock contract
+requires a separate concrete reservation and proof of that boundary; no such
+shared mutation was made in this slice.
+
+The independently justified game-local correction removes input branches that
+the ROM does not execute: Sega_WaitEnd accepts only P1 Start, and the three STP
+fade/load/fade phases have no input-triggered jump to the main title. ACTIVE
+title confirmation is unchanged. This does not repair fixed98/fixed96 timing.
+The new ROM-free input tests were run with the manager reverted to clean
+`6bae77249`: 19 executed, eight assertion failures, zero errors/skips (immediate
+queue admission, Maven81s). The failures distinguish all three STP phases plus
+A/B/C, keyboard Jump and host menu accept at the SEGA post-wait boundary.
+
+
+With the corrected manager, the exact affected selection passed **29 tests,
+zero failures/errors/skips**, immediate queue admission and Maven85s:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dsonic1.rom.path=<absolute existing S1 World REV01 ROM>' \
+  '-Dtest=TestSonic1IntroInputPhases,TestSonic1SegaScreenFadeTiming,TestSonic1SegaScreenNativePhases,TestSonic1SegaLogoScanMap,TestSonic1TitleScreenPaletteFade' test
+```
+
+This selection includes the real-ROM palette/chant-request progression and
+reset tests. It is bounded validation of these input branches and existing
+phase-relative palette behavior. The current S1 movie has no Start or action
+press in its first600 rows, so this patch does not claim to move either observed
+waveform frontier. The preserved captures remain attributed to their original
+runtime source70de3bfe, rather than being relabeled as a capture of this patch.
+
+A further source-only caller discrepancy is reserved for coordination:
+`initialize()` currently queues Main PLC0 before SEGA, while native GM_Sega and
+GM_Title begin with ClearPLC, and NewPLC(Main) occurs only at
+`GM_Title (sonic.asm:2053-2054)` before main-title PaletteFadeIn. The existing
+producer test expects the premature initialization boundary. Neither that test
+nor the caller/service was changed in this input-only slice. A follow-up needs
+operation-specific retry state and agreement with the S1 chain owner; moving a
+call does not itself close direct NemDec/EniDec load timing.
+
+
+The audit's exact ROM-free selection
+`python3 -m unittest discover -s tools/audio/tests -p test_s1_startup_instruction_audit.py`
+passed19 tests, zero skips. Independent counter interpreters and checksum vectors
+cover wrap/bounds, unsigned BHS outcomes, nested DBF terminal branches, opcode
+corruption, identity-first rejection and incomplete/error CLI contracts. Running
+`python3 tools/audio/s1_startup_instruction_audit.py --rom` with the original
+absolute REV01 path returned INCOMPLETE/exit2 with five components and null
+whole-startup total/frame conversion. No generated report or ROM copy is stored.
+
+
+## S2 startup source attribution after the input-ownership correction
+
+The preserved S2 engine control starts writing the correct ROM chant bytes
+`7B8789828E` in packet126; the first differing PCM sample92739 is in that
+packet. The native control first leaves its post-boot zero run at sample183298,
+packet249. No matching native FA execute callback was captured, so these output
+boundaries do not establish a native FA request timestamp.
+
+Actual REV01 ROM `$0338:D258B08864FA` is the checksum ADD.W/CMP.L/BHS loop;
+header end `$01A4` is `$000FFFFF`. It scans524032 words from `$0200` and
+costs12576766 Motorola instruction-only cycles. Production begins at an
+initialized title manager, with no cold-reset checksum/VDP/Z80 owner. Neither
+the instruction budget nor the PCM gap authorizes a fitted startup delay.
+
+SegaScreen (`s2.asm:4095-4170`) fades the previous screen, loads art/map and
+scaling work, then loads the active palette directly. At `$0038CE`,
+`70006100EE5C` is the palette selection and PalLoad_Now call; a later generic
+fade-in is unsupported. ObjB0's movement/palette-script owner is separate
+(`s2.asm:78399-78620`); actual script headers `$03A49E/$03A514` begin
+`040710FFFB10` / `040710FFFB00`. The existing106-update visual approximation
+has not been certified as that state machine.
+
+In the shipped fixBugs=0 path, both ObjB0 and its caller requestFA; the single
+sound mailbox prevents duplicate playback. The caller's second FA is
+`$003928:103C00FA`, followed by PlaySound at `$00392C:6100DA42`, SEGA VInt
+selection at `$003930`, WaitForVint at `$003936`, and the180 timer at
+`$00393A`. Only the subsequent PCM VInt end loop tests Start from either pad
+(Sega_WaitPalette/Sega_WaitEnd, `s2.asm:4177-4201`). This is not S1's 68000
+busy loop: S2 keeps waiting through VBlanks, and its screen wait is independent
+of PCM exhaustion. The source also has no input exit during the text screen's
+fade/load/fade. The existing96 hold remains a load-cost approximation.
+
+These disjoint S2 SEGA/STP phase methods were coordinated with NativeModes
+before mutation. No ordinary music namespace, native request remap, ACTIVE
+menu control, attract routing, Super caller or shared audio service is changed
+by that reservation. Handoff validation must exercise real production
+presentation admission: a source WaitForVint cannot be replaced by a diagnostic
+counter, sample count or a successful-music query. S2 startup waveform and load
+costs remain open until remeasured at the resulting runtime identity.
+
+
+## S1 title PLC caller ordering
+
+After parent approval and S1-chain acknowledgment of the exact two caller
+methods and title coverage cases, initialization now uses the existing
+`Sonic1PlcService.clearQueued()`. Main0 is submitted only after the title's
+object/background initialization and Title music request in
+`transitionToMainScreen()`, before its palette fade. The private pending
+operation distinguishes CLEAR from MAIN, so a rejected clear cannot later
+publish Main at SEGA entry; Main retry cannot replay title objects or music.
+Reset clears that caller-owned pending operation. Service/queue decoder policy,
+arm ordinals, scheduling and hardware admission were not changed.
+
+This order is verified directly in REV01 ROM: `$002DDA:6100E7FA` calls
+ClearPLC `$0015D6` before prior fade; `$0030DC:103C008A6100E2B2` requests
+Title music; `$00312A:4EB90000D9C6` executes title objects and
+`$003134:4EB90000DCEC` builds their sprites; then
+`$00313A:70006100E46C` selects Main0 and calls NewPLC `$0015AA`.
+GM_Title (`sonic.asm:2021-2054`) explains those owners. The actual service
+continues to reject clear/replacement during an active decoder; tests preserve
+that state and retry the same operation after its normal completion.
+
+The revised ROM-backed caller tests seed distinct real PLC descriptors and
+compare the queue at each operation boundary. They check genuine clearing,
+no Main submission during SEGA palette work, title-object/music-before-Main
+ordering, active-decoder preservation, Clear-versus-Main retry identity, and
+no repeated Main or music after success. They do not infer a whole title queue
+is empty from an elapsed number of presentations. This corrects submission
+ownership; direct logo/STP loading and coldboot elapsed timing remain open.
+
+
+First focused PLC check on `7d3d5a972` plus the caller/test diff:
+`TestSonic1PlcProducerCoverage,TestPlcProducerCoverageGuard,TestSonic1SegaScreenNativePhases`
+executed25 cases: 24 passed, one guard assertion failed, zero errors/skips;
+queue139s and Maven78s. All19 ROM-backed producer cases and both native phase
+cases passed. The sole failure was the registry's old S1_TITLE method anchor,
+not a queue/value mismatch. Parent approved changing only that test-registry
+anchor to `titleScreenClearsPriorWorkAndPublishesMainAfterObjectsAndMusic`;
+route keys/cardinality/source owners/submission-token requirements remain intact.
+The affected guard plus renamed case are rerun together; unchanged ROM producer
+and phase results are reused rather than launching a broader repeat.
+
+
+The registry update plus renamed ROM case passed5/5, zero skips (queue59s,
+Maven88s). A subsequent independent source review caught an over-specific wrong
+assertion in the new case: native music at `$30DC/$30E0` precedes objects at
+`$312A`, deformation `$3130` and sprite build `$3134`. The existing manager ran
+objects before music, and the new assertion had entrenched that order. The
+caller now queues music first, then executes the first object/background pass,
+then submits Main. The regression observes pre-object routine0 at the music
+request and routine2 after title setup. The earlier5-pass result predates this
+order correction; the affected music/order/retry cases are validated again.
+
+S2's approved local handoff now models VISUAL → FA submission/EXTRA_VINT →
+END_WAIT, with a return at each native wait boundary. The next admitted title
+iteration consumes the extra SEGA VInt and seeds180; the following PCM iteration
+decrements the timer and tests P1/P2 pressed Start. The visual counter freezes
+at106. No audio-success, PCM-exhaustion or diagnostic counter supplies authority;
+muted, SILENT and unavailable-chant paths still progress through game-loop
+admission. The entry palette is active directly, and the three text phases no
+longer accept input skips. New state resets at initialize/reset/text entry.
+ACTIVE/options/attract/title-VInt timer logic and every shared audio service are
+unchanged. The native16-VBlank controller polling cadence remains a separate
+unclosed obligation.
+
+
+The final source-phase selection passed **17 tests, zero failures/errors/skips**,
+immediate admission and Maven74s. It ran the two changed S1 music/order/retry
+cases plus all three new actual-Engine S2 admission cases, six S2 data cases and
+six S2 fade/intro cases. Exact invocation (original verified absolute ROMs were
+supplied; placeholders below avoid machine-local paths):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dsonic1.rom.path=<absolute existing S1 World REV01 ROM>' \
+  '-Dsonic2.rom.path=<absolute existing S2 World REV01 ROM>' \
+  '-Dtest=TestSonic1PlcProducerCoverage#titleScreenClearsPriorWorkAndPublishesMainAfterObjectsAndMusic+mainTitleRetriesOnlyMainWithoutReplayingObjectsOrMusic,TestSonic2IntroInputPhases,TestSonic2SegaScreenFadeTiming,TestSonic2SegaScreenData' test
+```
+
+The S2 production cases use the configured headless Engine and a no-device
+backend with a physical-device construction trap. Real GameLoop steps under
+recorded-input ownership and real outer audio presentations show FA's first
+five DAC bytes equal the native ROM sample before cancellation is allowed.
+They cover the separate extra-VInt iteration, each pad's Start edge, held Start,
+A/B/C negatives, natural text/twinkle progression, reset, SILENT/muted operation
+and an unavailable sample. Diagnostic observations belong only to assertions;
+production phase behavior reads no diagnostic stream or sample clock.
+
+Citation checking of the changed S2 file still reports the inherited untouched
+DeleteObject anchor at the flashing-star handler (old source line832, now838;
+its citation `s2.asm:26748-26750` is a caller site, while the checker finds the
+DeleteObject label at30330). The line and behavior are byte-identical in
+`7d3d5a972`; this is outside the reserved SEGA/STP methods. New phase references
+were checked against actual pinned source and ROM. No S3K/disassembly pin was
+changed, no native capture was launched, and no full-route proof is claimed.
+
+
+## Source-phase production remeasurement
+
+The two latest source-phase captures above use the same fixed title-startup
+command as the earlier production measurements, now including `compile` before
+`exec:java` to refresh the clean source identity. Inputs are the unchanged
+verified ROMs and run-local emerald BK2s; output directories are
+`s1-engine-600-source-phases` and `s2-engine-600-source-phases` under the same
+external task directory. Both invocations use Java25, Lua5.4, no DISPLAY or
+WAYLAND_DISPLAY, surfaceless EGL, ordinary GameplayCaptureSession and the
+production no-device audio backend. They recorded rows0..599 from real startup,
+with no positioned setup, forced later mode or trace-supplied gameplay state.
+
+Each strict comparator invocation used its game's preserved `*-native-600`
+control and `--start-row 0 --rows 600`; both returned exit3 for a valid sample
+mismatch, rather than incomplete/invalid evidence. S1's complete PCM digest is
+unchanged by the caller fix. S2's correct24948-byte chant delivery replaces the
+former3819-byte truncation at the movie's row140 A input; Start-only admission
+prevents that unsupported cancellation. This is measured single-chant behavior
+on the original input, not full-route audio parity. Native FA timing is still
+not inferred from PCM onset. The four full native captures remain held behind
+production-route, clock and publication/trust prerequisites.

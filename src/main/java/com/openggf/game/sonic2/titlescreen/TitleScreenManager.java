@@ -75,9 +75,14 @@ public class TitleScreenManager implements TitleScreenProvider {
     private boolean creditTextCached = false;
     private int segaLogoTimer = 0;
     private boolean segaPcmStarted = false;
-    private SegaLogoFadePhase segaLogoFadePhase = SegaLogoFadePhase.FADING_IN;
+    private SegaLogoPhase segaLogoPhase = SegaLogoPhase.VISUAL;
+    private int segaEndWaitTimer = 0;
+    // SegaScreen loads PalID_SEGA directly with PalLoad_Now before ObjB0
+    // (s2.asm:4158-4170). Its earlier fade belongs to the previous screen.
+    private SegaLogoFadePhase segaLogoFadePhase = SegaLogoFadePhase.ACTIVE;
     private int segaLogoFadeTimer = 0;
     private static final int SEGA_LOGO_FADE_FRAMES = 22;
+    // Existing visual approximation; native ObjB0/load costs remain separate.
     private static final int SEGA_LOGO_VISUAL_FRAMES = 106;
     private static final int SEGA_LOGO_PCM_WINDOW_FRAMES = 180;
     private static final int SEGA_SONIC_RUN_LEFT_FRAMES = 12;
@@ -86,9 +91,14 @@ public class TitleScreenManager implements TitleScreenProvider {
     private static final int SEGA_SONIC_RUN_RIGHT_FRAMES = 12;
 
     private enum SegaLogoFadePhase {
-        FADING_IN,
         ACTIVE,
         FADING_OUT
+    }
+
+    private enum SegaLogoPhase {
+        VISUAL,
+        EXTRA_VINT,
+        END_WAIT
     }
 
     record SegaGiantSonicPose(int localFrame, int centerX, boolean hFlip) {
@@ -342,7 +352,9 @@ public class TitleScreenManager implements TitleScreenProvider {
         introTextTimer = 0;
         segaLogoTimer = 0;
         segaPcmStarted = false;
-        segaLogoFadePhase = SegaLogoFadePhase.FADING_IN;
+        segaLogoPhase = SegaLogoPhase.VISUAL;
+        segaEndWaitTimer = 0;
+        segaLogoFadePhase = SegaLogoFadePhase.ACTIVE;
         segaLogoFadeTimer = 0;
         creditTextCached = false;
         cameraX = -0x280;  // From disassembly: move.w #-$280,(Camera_X_pos).w
@@ -446,11 +458,32 @@ public class TitleScreenManager implements TitleScreenProvider {
     }
 
     private void updateSegaLogo(InputHandler input) {
-        int jumpKey = configuration().getInt(SonicConfiguration.JUMP);
-        if (updateSegaLogoFadeIn()) {
+        if (updateSegaLogoFadeOut()) {
             return;
         }
-        if (updateSegaLogoFadeOut()) {
+
+        if (segaLogoPhase == SegaLogoPhase.EXTRA_VINT) {
+            // SegaScreen waits through one more Vint_SEGA after ObjB0 submits
+            // the chant, then seeds the end timer (s2.asm:4189-4191). This is
+            // the next admitted title iteration, not a PCM completion query:
+            // muted or unavailable audio cannot hold the native screen loop.
+            segaLogoPhase = SegaLogoPhase.END_WAIT;
+            segaEndWaitTimer = SEGA_LOGO_PCM_WINDOW_FRAMES;
+            return;
+        }
+        if (segaLogoPhase == SegaLogoPhase.END_WAIT) {
+            // The following iteration belongs to Vint_PCM, whose first pass
+            // decrements the freshly seeded timer before Sega_WaitEnd tests it.
+            if (segaEndWaitTimer > 0) {
+                segaEndWaitTimer--;
+            }
+            // Sega_WaitEnd tests Start from either controller, never face
+            // buttons (s2.asm:4198-4201). Menu confirmation is independent.
+            boolean startPressed = input.logical().player1().startPressed()
+                    || input.logical().player2().startPressed();
+            if (segaEndWaitTimer == 0 || startPressed) {
+                beginSegaLogoFadeOut();
+            }
             return;
         }
 
@@ -458,25 +491,8 @@ public class TitleScreenManager implements TitleScreenProvider {
         if (!segaPcmStarted && segaLogoTimer >= SEGA_LOGO_VISUAL_FRAMES) {
             segaPcmStarted = true;
             GameServices.audio().playMusic(Sonic2SmpsConstants.CMD_SEGA);
+            segaLogoPhase = SegaLogoPhase.EXTRA_VINT;
         }
-        boolean skipable = segaLogoTimer >= SEGA_LOGO_VISUAL_FRAMES;
-        boolean autoEnd = segaLogoTimer >= SEGA_LOGO_VISUAL_FRAMES + SEGA_LOGO_PCM_WINDOW_FRAMES;
-        if (autoEnd || (skipable && confirmPressed(input, jumpKey))) {
-            beginSegaLogoFadeOut();
-        }
-    }
-
-    private boolean updateSegaLogoFadeIn() {
-        if (segaLogoFadePhase != SegaLogoFadePhase.FADING_IN) {
-            return false;
-        }
-        segaLogoFadeTimer++;
-        if (segaLogoFadeTimer < SEGA_LOGO_FADE_FRAMES) {
-            return true;
-        }
-        segaLogoFadePhase = SegaLogoFadePhase.ACTIVE;
-        segaLogoFadeTimer = 0;
-        return false;
     }
 
     private boolean updateSegaLogoFadeOut() {
@@ -488,7 +504,7 @@ public class TitleScreenManager implements TitleScreenProvider {
             return true;
         }
         beginIntroTextScreen();
-        segaLogoFadePhase = SegaLogoFadePhase.FADING_IN;
+        segaLogoFadePhase = SegaLogoFadePhase.ACTIVE;
         segaLogoFadeTimer = 0;
         return true;
     }
@@ -505,6 +521,8 @@ public class TitleScreenManager implements TitleScreenProvider {
     private void beginIntroTextScreen() {
         segaLogoTimer = 0;
         segaPcmStarted = false;
+        segaLogoPhase = SegaLogoPhase.VISUAL;
+        segaEndWaitTimer = 0;
         introTextTimer = 0;
         state = State.INTRO_TEXT_FADE_IN;
         LOGGER.info("SEGA screen complete, entering INTRO_TEXT_FADE_IN state");
@@ -532,11 +550,9 @@ public class TitleScreenManager implements TitleScreenProvider {
     }
 
     private void updateIntroTextFadeIn(InputHandler input) {
-        int jumpKey = configuration().getInt(SonicConfiguration.JUMP);
-        if (confirmPressed(input, jumpKey)) {
-            skipIntroText();
-            return;
-        }
+        // TitleScreen fades the text, loads assets with interrupts disabled,
+        // then fades out; none of those owners tests controller input
+        // (s2.asm:4289-4330). The existing hold approximation is separate.
         introTextTimer++;
         if (introTextTimer >= INTRO_TEXT_FADE_DURATION) {
             introTextTimer = 0;
@@ -546,11 +562,6 @@ public class TitleScreenManager implements TitleScreenProvider {
     }
 
     private void updateIntroTextHold(InputHandler input) {
-        int jumpKey = configuration().getInt(SonicConfiguration.JUMP);
-        if (confirmPressed(input, jumpKey)) {
-            skipIntroText();
-            return;
-        }
         introTextTimer++;
         if (introTextTimer >= INTRO_TEXT_HOLD_DURATION) {
             introTextTimer = 0;
@@ -560,11 +571,6 @@ public class TitleScreenManager implements TitleScreenProvider {
     }
 
     private void updateIntroTextFadeOut(InputHandler input) {
-        int jumpKey = configuration().getInt(SonicConfiguration.JUMP);
-        if (confirmPressed(input, jumpKey)) {
-            skipIntroText();
-            return;
-        }
         introTextTimer++;
         if (introTextTimer >= INTRO_TEXT_FADE_DURATION) {
             introTextTimer = 0;
@@ -1252,9 +1258,6 @@ public class TitleScreenManager implements TitleScreenProvider {
     }
 
     private SegaPaletteFade.Mode segaLogoFadeMode() {
-        if (segaLogoFadePhase == SegaLogoFadePhase.FADING_IN) {
-            return SegaPaletteFade.Mode.FROM_BLACK;
-        }
         if (segaLogoFadePhase == SegaLogoFadePhase.FADING_OUT) {
             return SegaPaletteFade.Mode.TO_BLACK;
         }
@@ -1917,7 +1920,9 @@ public class TitleScreenManager implements TitleScreenProvider {
         introTextTimer = 0;
         segaLogoTimer = 0;
         segaPcmStarted = false;
-        segaLogoFadePhase = SegaLogoFadePhase.FADING_IN;
+        segaLogoPhase = SegaLogoPhase.VISUAL;
+        segaEndWaitTimer = 0;
+        segaLogoFadePhase = SegaLogoFadePhase.ACTIVE;
         segaLogoFadeTimer = 0;
         creditTextCached = false;
         introComplete = false;

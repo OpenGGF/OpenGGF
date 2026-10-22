@@ -904,6 +904,14 @@ loads `SharedLevel` masks this omission. `TestModSceneLauncherAudio` opens throu
 the production launcher without loading a title or level and checks final PCM for
 music and an isolated effect. Origin: Eggman's Sky bug reports, 2026-10-08.
 
+**PCM exhaustion need not release a native caller.** S1 PlaySegaSound starts
+Z80 sample88, then blocks the 68000 in a separate nested NOP/DBF loop inside
+VBlank. The sample's byte clock and the caller's CPU-work completion are distinct;
+a transport-active getter cannot substitute for the latter. Instruction-only
+cycles also omit bus/refresh/peripheral costs and cannot be rounded into an
+absolute startup delay. Preserve each owner and require a service boundary before
+starting the post-chant timer. See the [S1 startup causal evidence](validation/audio/2026-10-22-s1-s2-native-audio-evidence.md#s1-startup-causal-slice-instruction-work-is-not-presentation-time).
+
 **Audio accuracy:** the FM core is the Nuked-OPN2 port (`audio.synth.nuked`); its only
 reference is the pinned `ym3438.c`, and `Ym2612Chip` is engine glue over it. For the PSG
 reference the libvgm cores, for the sequencer the SMPSPlay source, rather than simplified
