@@ -69,6 +69,40 @@ the body ramp follows the base colour. Unreadable look values fall back to the s
 the preset ramp. The canonical look sent on join comes from
 `TimeAttackSettings.appearanceFor(game, character)`.
 
+### The lobby level
+
+In a room, the lobby menu draws over a short level of the room's own game that every player
+spawns into (`LobbyAreas`): the Hidden Palace arena where Knuckles fights Sonic for S3K (engine
+zone 22 act 1, fenced left of the fight trigger so the fight never starts), the start of Green
+Hill 1 for S1 and of Emerald Hill 1 for S2. The fence is a `RunArea`: every load (launch, act
+restart, death reload) places the character at its spawn and the engine holds the camera inside
+it each frame, after the act's own level events. The lobby run is `GameplayRunPolicy.isolatedAct()`
+and restarts its act on completion; deaths use the act's own death reload (no fast respawn yet,
+so losing every life or the 10-minute time-over still ends in the stock game-over flow). A
+room's lobby that cannot load or faults falls back to the menu on its own for that room.
+
+The menu owns the controller while it is shown (`RunHandle.holdControls`). **READY UP** marks the
+player ready (`SetReady`; the room shows a READY badge and a ready line). Once ready, Start or Enter
+on the lobby's own page hides the menu and hands the controller to the character; pressing it
+again brings the menu back, like a pause menu. While ready, A (Space) confirms menu actions,
+because Start/Enter is the toggle; text editors keep Enter. The run plays behind the still-active
+Time Attack scene (`SceneGameplay.launchBehind`), so Start and the pause key never pause it.
+
+The room owner's **READY RULE** is `REQUIRED` (the owner's START ROUND is refused until every
+present player is ready), `AUTO` (everyone counts as ready on joining) or the default
+`DEFAULT_BY_SIZE` (required with five or fewer players present, `AUTO` with six or more,
+re-evaluated as players join and leave; an auto-readied player keeps it unless they unready).
+Nothing auto-starts. Ready clears at each round start and in `AUTO` is re-applied at once. The
+owner's last choice is `readyRule` in `settings.txt` and is re-sent when they open a room.
+
+Other players appear as named ghosts in their looks. Each client streams its lobby pose between
+rounds (`TYPE_LOBBY_FRAMES`, three frames a packet) and the host relays nearby poses every tick
+(`TYPE_LOBBY_AGGREGATE`; relay rooms send each recipient its eight nearest senders). Hosts accept
+lobby frames only in the lobby, results and vote phases, keep streams forward-only, cap their
+rate and per-frame movement, skip congested recipients and close a member after repeated
+violations. Hidden Palace is a sprite-masking zone, which does not draw ghosts yet; the poses
+still arrive.
+
 Settings edits and successful LAN joins keep their accepted values when storage refuses or throws
 on publication. The settings page reports a pending save, retries every 60 scene ticks, and flushes
 pending settings and LAN invite text on resume or exit. Imported legacy values follow the same
@@ -192,6 +226,18 @@ The older `load-test` remains an in-process diagnostic: it times only hub ticks 
 reports the largest emitted packet, not transport queue depth. It cannot establish
 socket throughput. The [design and delivery record](../docs/architecture/plans/2026-10-21-racing-stress-system.md)
 records the architecture, validation and remaining coverage limits.
+
+### Recording a lobby demonstration
+
+`racing-server capture-lobby OUTPUT REPOSITORY_ROOT GAME` (GAME `s1`, `s2` or `s3k`) drives the
+same display-free Engine through Extras > Time Attack, hosts a LAN room for GAME, and records its
+lobby level: three loopback protocol peers with international names and looks join, ready up and
+walk beside the player (replaying the player's own recent poses at an offset, so their animation
+is the game's own); the player readies, hides the menu, runs both ways, brings the menu back and
+starts the round. Same launch rules as below (fresh owned directory, `DISPLAY`/`WAYLAND_DISPLAY`
+unset, bundled mod built). Outputs PNG stills, `lobby.mp4` (with FFmpeg) and `state.csv`
+(mode, position, menu state and the received lobby ghosts' positions). The peers' poses are
+synthetic.
 
 ### Recording a capacity demonstration
 

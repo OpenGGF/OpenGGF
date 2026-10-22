@@ -65,6 +65,15 @@ class TestRoomHost {
                 .findFirst().orElseThrow();
     }
 
+    private static <T extends ControlMessage> T lastOfType(FakeHubConnection connection, Class<T> type) {
+        ControlMessage found = null;
+        for (String text : connection.text) {
+            ControlMessage message = ControlCodec.decode(text).message();
+            if (type.isInstance(message)) found = message;
+        }
+        return type.cast(java.util.Objects.requireNonNull(found, "no " + type.getSimpleName()));
+    }
+
     private static ControlMessage lastMessage(FakeHubConnection connection) {
         return ControlCodec.decode(connection.text.get(connection.text.size() - 1)).message();
     }
@@ -81,8 +90,8 @@ class TestRoomHost {
         assertEquals("LOBBY", joinA.round().phase());
         assertEquals(1, a.text.stream().map(text -> ControlCodec.decode(text).message())
                 .filter(ControlMessage.RoomState.class::isInstance).count());
-        assertEquals(joinB.playerSlot(), ((ControlMessage.PlayerUpsert) lastMessage(a)).player().slot());
-        assertEquals(2, ((ControlMessage.RoomState) lastMessage(b)).players().size());
+        assertEquals(joinB.playerSlot(), lastOfType(a, ControlMessage.PlayerUpsert.class).player().slot());
+        assertEquals(2, lastOfType(b, ControlMessage.RoomState.class).players().size());
         assertEquals(2, room.playerCount());
     }
 
@@ -116,7 +125,7 @@ class TestRoomHost {
         var newJoin = admit(replacement, "A2", dir.resolve("a"));
         assertEquals(oldJoin.playerSlot(), newJoin.playerSlot());
         assertNotEquals(oldJoin.sessionToken(), newJoin.sessionToken());
-        var snapshot = (ControlMessage.RoomState) lastMessage(replacement);
+        var snapshot = lastOfType(replacement, ControlMessage.RoomState.class);
         assertEquals(2, snapshot.players().size());
         assertTrue(snapshot.players().stream().anyMatch(player -> player.displayName().equals("A2")));
         b.text.clear();
@@ -282,6 +291,12 @@ class TestRoomHost {
         assertEquals(HostRoundEngine.Phase.LOBBY, room.round().phase());
         FakeHubConnection host = new FakeHubConnection();
         String hostToken = admit(host, "Host", dir.resolve("host")).sessionToken();
+        room.onText(host,
+                ControlCodec.encode(hostToken, new ControlMessage.RoundConfigure(config)));
+        // Two players under the default rule: the owner's start waits until both are ready.
+        assertEquals(HostRoundEngine.Phase.LOBBY, room.round().phase());
+        room.onText(guest, ControlCodec.encode(guestToken, new ControlMessage.SetReady(true)));
+        room.onText(host, ControlCodec.encode(hostToken, new ControlMessage.SetReady(true)));
         room.onText(host,
                 ControlCodec.encode(hostToken, new ControlMessage.RoundConfigure(config)));
         assertEquals(HostRoundEngine.Phase.COUNTDOWN, room.round().phase());

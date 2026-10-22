@@ -160,6 +160,8 @@ final class RacingScaleLoad implements AutoCloseable {
             Thread.sleep(10);
         }
         window = RacingScaleTool.JSON.readValue(run.resolve("window.json").toFile(), RacingScaleTool.Window.class);
+        // Load peers never ready up; nobody waits under AUTO.
+        peers.getFirst().connection.sendControl(new ControlMessage.SetReadyRule("AUTO"));
         peers.getFirst().connection.sendControl(new ControlMessage.RoundConfigure(roundConfig()));
         await(() -> peers.stream().allMatch(peer -> peer.roundStarted), "all round starts");
         long countdown = peers.getFirst().countdown;
@@ -358,6 +360,8 @@ final class RacingScaleLoad implements AutoCloseable {
 
     private void reconnect() throws Exception {
         peers.forEach(peer -> peer.roundStarted = false);
+        // Load peers never ready up; nobody waits under AUTO.
+        peers.getFirst().connection.sendControl(new ControlMessage.SetReadyRule("AUTO"));
         peers.getFirst().connection.sendControl(new ControlMessage.RoundConfigure(roundConfig()));
         await(() -> peers.stream().allMatch(peer -> peer.roundStarted), "next round reset");
         Peer old = peers.removeLast();
@@ -412,6 +416,7 @@ final class RacingScaleLoad implements AutoCloseable {
                             if (measuring()) receivedGhostFrames += entry.frameCount();
                         }
                     }
+                    case RaceClient.LobbyGhostData ignored -> { }
                     case RaceClient.Roster roster -> check(roster.entries().stream().map(GhostPackets.RosterEntry::playerSlot)
                             .distinct().count() == roster.entries().size(), "duplicate binary roster slots");
                     case RaceClient.Disconnected disconnected -> check(allowDisconnect || peer.intentionallyClosed,

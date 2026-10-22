@@ -30,6 +30,14 @@ public interface RunHandle {
      */
     default void setPlayerAppearance(PlayerAppearance appearance) { }
 
+    /**
+     * While {@code held}, the run's characters see a released controller (no buttons, no Start)
+     * but the level keeps running, unlike holding steps in {@link RunHost#admitStep}: a menu
+     * drawn over the run owns the controller meanwhile. Releasing hands the controller back from
+     * the next step. The engine's handle implements this; the default ignores the request.
+     */
+    default void holdControls(boolean held) { }
+
     /** True until the run has ended. */
     boolean isActive();
 }

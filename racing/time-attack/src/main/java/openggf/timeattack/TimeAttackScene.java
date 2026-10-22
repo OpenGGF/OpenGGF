@@ -14,6 +14,7 @@ import openggf.timeattack.mp.RaceLobbyView;
 import openggf.timeattack.mp.RaceSession;
 import openggf.timeattack.mp.ServerBrowserView;
 import openggf.timeattack.ui.MenuCue;
+import openggf.timeattack.ui.OverLevelCanvas;
 import openggf.timeattack.ui.TextEntry;
 import openggf.timeattack.ui.ViewInput;
 
@@ -94,6 +95,8 @@ public final class TimeAttackScene implements ModScene {
                 (spec, host) -> ctx.gameplay().launch(spec, host), this::newRuntime, System::currentTimeMillis);
         // Every join (Hello) and lobby entry announces the look the settings hold for that game/character.
         session.setLookSource(settings::appearanceFor);
+        // Each room's lobby is a short level of its game, playing behind the lobby menu.
+        session.setLobbyLauncher((spec, host) -> ctx.gameplay().launchBehind(spec, host));
         List<String> games = ctx.gameplay().availableGames();
         if (!games.isEmpty()) {
             state = new TimeAttackMenuState(games, games.get(0), ghostStore);
@@ -131,7 +134,7 @@ public final class TimeAttackScene implements ModScene {
                 return;
             }
             case LOBBY -> {
-                if (lobby != null) lobby.update(input);
+                if (lobby != null) updateLobby(input);
                 return;
             }
             case RACING -> {
@@ -176,6 +179,30 @@ public final class TimeAttackScene implements ModScene {
             return;
         }
         updateMenu(ctx, input);
+    }
+
+    /**
+     * The lobby menu, over the lobby level when it plays. Once ready, Start or Enter on the
+     * lobby's own page hides the menu and hands the controller to the character; pressing it
+     * again brings the menu back, like a pause menu. While hidden the menu takes no input.
+     */
+    private void updateLobby(ViewInput input) {
+        boolean overLevel = session.lobbyRunActive();
+        lobby.setLevelBehind(overLevel);
+        if (overLevel && !session.lobbyMenuShown()) {
+            if (input.start()) {
+                session.setLobbyMenuShown(true);
+                cue(MenuCue.CONFIRM);
+            }
+            return;
+        }
+        if (overLevel && input.start() && lobby.isOnMainPage()
+                && session.coordinator().session().isLocalReady()) {
+            session.setLobbyMenuShown(false);
+            cue(MenuCue.CONFIRM);
+            return;
+        }
+        lobby.update(input);
     }
 
     private void updateMenu(SceneContext ctx, ViewInput input) {
@@ -279,6 +306,10 @@ public final class TimeAttackScene implements ModScene {
                         return new ProfileView(settings, game, raceSession.character(),
                                 stockLine(game, raceSession.character()), this::settingsChanged, this::cue);
                     });
+            lobby.setReadyRuleListener(rule -> {
+                settings.setReadyRule(rule);
+                settingsChanged();
+            });
             lobbyCoordinator = session.coordinator();
         } else if (!inRoom) {
             lobby = null;
@@ -344,11 +375,19 @@ public final class TimeAttackScene implements ModScene {
     @Override
     public void resumed(SceneContext ctx, RunEndReason reason) {
         session.flushPendingPublications();
+        // Polling here launches the next run (the round after the lobby level, the lobby level
+        // after a round) before the screen fades back in, so the hand-over stays black.
+        if (session.lobbyRunEnded(reason)) {
+            session.poll();
+            syncViews();
+            return;
+        }
         if (session.state() == RaceSession.State.RACING) {
             session.runEnded();
             if (reason == RunEndReason.LOAD_FAILED && lobby != null) {
                 lobby.showStatus("The round could not be loaded");
             }
+            session.poll();
             return;
         }
         runtime = null;
@@ -385,8 +424,10 @@ public final class TimeAttackScene implements ModScene {
                 return;
             }
             case LOBBY, RACING -> {
-                if (lobby != null) lobby.draw(canvas);
-                else drawConnecting(canvas);
+                if (lobby == null) drawConnecting(canvas);
+                else if (!session.lobbyRunActive()) lobby.draw(canvas);
+                else if (session.lobbyMenuShown()) lobby.draw(new OverLevelCanvas(canvas));
+                else drawPlayHint(canvas);
                 return;
             }
             case IDLE -> { }
@@ -404,6 +445,14 @@ public final class TimeAttackScene implements ModScene {
             return;
         }
         drawMenu(canvas);
+    }
+
+    /** The lobby level with the menu hidden: only a reminder of how to bring it back. */
+    private void drawPlayHint(SceneCanvas canvas) {
+        String hint = "START  LOBBY MENU";
+        int x = canvas.width() - 8 - canvas.textWidth(hint);
+        canvas.fill(x - 4, 206, canvas.textWidth(hint) + 8, 14, 0x80101830);
+        canvas.text(hint, x, 208, HINT);
     }
 
     private void drawConnecting(SceneCanvas canvas) {

@@ -137,6 +137,7 @@ public final class ModApiSurfaceInventory {
             "com.openggf.net.client.DirectJoinAddress",
             "com.openggf.net.client.DirectRoomRegistration",
             "com.openggf.net.client.GhostStreamPublisher",
+            "com.openggf.net.client.LobbyPosePublisher",
             "com.openggf.net.client.MasterClient",
             "com.openggf.net.client.RaceClient",
             "com.openggf.net.client.RaceConnection",
@@ -164,6 +165,7 @@ public final class ModApiSurfaceInventory {
             "com.openggf.net.protocol.GhostPackets",
             "com.openggf.net.protocol.Protocol",
             "com.openggf.net.protocol.ProtocolViolationException",
+            "com.openggf.net.protocol.ReadyRules",
             // ROM-qualified art recipes and optional scene utilities.
             "com.openggf.mods.scene.art.StockSceneArt",
             "com.openggf.mods.scene.art.PaletteAssembly",

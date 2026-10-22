@@ -333,4 +333,53 @@ class TestHostedRunController {
         assertEquals("ME", active.nameplate());
         assertEquals(0.5f, active.opacityScale());
     }
+
+    @Test
+    void aSceneOverlayOwnsStartAndTicksBeforeTheHostDecides() {
+        List<String> order = new ArrayList<>();
+        controller.begin(SPEC, new RunHost() {
+            @Override public boolean admitStep(com.openggf.mods.run.RunInput input) {
+                order.add("host");
+                return true;
+            }
+        });
+        assertFalse(controller.ownsStart(com.openggf.game.GameMode.LEVEL), "a plain run keeps host pause");
+        controller.setSceneOverlay(new HostedRunController.SceneOverlay() {
+            @Override public void update(com.openggf.control.InputHandler input) { order.add("scene"); }
+            @Override public void draw(int width, int height) { }
+        });
+        assertTrue(controller.ownsStart(com.openggf.game.GameMode.LEVEL));
+        assertFalse(controller.ownsStart(com.openggf.game.GameMode.TITLE_CARD));
+        assertTrue(controller.admitStep(new com.openggf.control.InputHandler()));
+        assertEquals(List.of("scene", "host"), order);
+        controller.end(RunEndReason.LEFT);
+        assertFalse(controller.ownsStart(com.openggf.game.GameMode.LEVEL), "the overlay ends with its run");
+    }
+
+    @Test
+    void aFailingSceneOverlayAbortsTheRunInsteadOfTheEngine() {
+        controller.begin(SPEC, new RunHost() { });
+        controller.setSceneOverlay(new HostedRunController.SceneOverlay() {
+            @Override public void update(com.openggf.control.InputHandler input) {
+                throw new IllegalStateException("scene bug");
+            }
+            @Override public void draw(int width, int height) { }
+        });
+        assertTrue(controller.admitStep(new com.openggf.control.InputHandler()));
+        assertEquals(RunEndReason.ABORTED, controller.consumeLeave());
+        assertThrows(IllegalStateException.class, () -> new HostedRunController(
+                mock(SonicConfigurationService.class)).setSceneOverlay(new HostedRunController.SceneOverlay() {
+                    @Override public void update(com.openggf.control.InputHandler input) { }
+                    @Override public void draw(int width, int height) { }
+                }), "an overlay needs a run");
+    }
+
+    @Test
+    void runAreasValidateTheirFence() {
+        assertThrows(IllegalArgumentException.class, () -> new com.openggf.mods.run.RunArea(0x50, 0x50, 0x100, 0x80, 0, 0));
+        assertThrows(IllegalArgumentException.class, () -> new com.openggf.mods.run.RunArea(-1, 0, 0, 0, 0, 0));
+        var area = new com.openggf.mods.run.RunArea(0x50, 0x3B0, 0, 0x280, 0x300, 0x300);
+        assertEquals(area, new RunSpec("s1", 0, 0, "sonic", GameplayRunPolicy.isolatedAct(), area).area());
+        assertNull(SPEC.area(), "the five-component spec plays the whole act");
+    }
 }

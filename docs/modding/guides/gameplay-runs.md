@@ -45,6 +45,31 @@ RunHandle handle = ctx.gameplay().launch(spec, myHost);
   not any other enabled mod's — so its simulation is the shipped game's. Your code takes part only
   through the `RunHost` callbacks and the `GameplayRunPolicy`.
 
+### A fenced part of the act
+
+`new RunSpec(game, zone, act, character, policy, area)` holds the run in a `RunArea`: every load
+of the act (launch, retry and a death reload) places the character at the area's spawn (ROM
+centre coordinates), and the engine holds the camera inside the area's bounds (the camera's
+top-left corner) on every frame, after the act's own level events, so the character cannot leave,
+as at a boss arena. The character's walls follow the camera as in the shipped game: 16 pixels
+inside the left bound, near the right edge of a native 320-pixel screen at the right bound, and a
+fall below the screen at the bottom bound is a death. The act's own events still run against the
+held bounds; Sonic 1's `SignpostArtLoad`, for one, locks the left boundary once the camera is
+within `$100` of the right bound, so keep a Sonic 1 area's camera X range at most `$100` wide.
+The five-argument constructor plays the whole act from its usual start.
+
+### A run behind your scene
+
+`ctx.gameplay().launchBehind(spec, host)` starts the run without suspending your scene: it keeps
+receiving `update` once per level frame (before `admitStep`) with the live controller and
+keyboard, and its `draw` paints over the level, the HUD and your host's overlay on a canvas the
+size of the run's screen. Do not `clear` the canvas if the level should show through. Start and
+the pause key never pause such a run; they reach your scene. `RunHandle.holdControls(true)` gives
+the run's characters a released controller while your menu owns it (the level keeps running), and
+`holdControls(false)` hands it back. When the run ends, `resumed` follows as usual; launching the
+next run from `resumed` keeps the screen black between the two loads. Time Attack's lobby level is
+built this way.
+
 ## The run policy
 
 `GameplayRunPolicy` is fixed when the run starts and survives retries:

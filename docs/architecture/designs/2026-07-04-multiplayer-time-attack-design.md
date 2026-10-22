@@ -214,6 +214,28 @@ position and either the three standings around you or one unranked rival ahead a
 one behind. A 9-pixel progress strip sits beside the stock lives counter.
 Podium shows top 3 + your rank; next-track vote offers 3 options.
 
+**Lobby level (2026-10-22).** Between rounds the lobby menu draws, translucent, over a
+short fenced level of the room's own game that every player spawns into: the Hidden
+Palace arena where Knuckles fights Sonic (S3K; fenced at camera X `0xEB0`-`0xFD0`, left of
+`word_63CEC` so the fight never starts), the start of Green Hill 1 (S1; camera X range exactly
+`0x100` so `SignpostArtLoad` sees an already-locked left boundary) and of Emerald Hill 1 (S2).
+The fences are `RunArea`s held by the engine each frame after the act's own level events, and
+every load (including a death reload) spawns at the fence's spawn. The run plays behind the
+still-active Time Attack scene (`SceneGameplay.launchBehind`), which keeps ticking and drawing
+over the level and owns Start and the pause key; while its menu shows, the character's
+controls are held (`RunHandle.holdControls`). Players ready up from the menu; once ready,
+Start/Enter on the lobby's own page hides the menu and hands over the controller, and again
+brings it back. A round start leaves the lobby run; the scene, resumed behind the still-black
+fade, launches the round at once, and after the round it relaunches the lobby run the same way.
+Rejected along the way: drawing the menu on a `LevelOverlayCanvas` with code-drawn fonts (the
+views draw scene text and full-screen pages; the scene renderer composited after the
+overlay pass keeps every view unchanged), and a GHZ1 fence wider than `0x100` (the ROM's
+signpost-art lock would fire every frame against the fence and re-queue its PLC; seen as
+"cannot mutate queued PLC entries while the decoder is active" in the headless lobby test).
+Known gaps: Hidden Palace is a sprite-masking zone, whose render path does not draw ghosts yet
+(presence still arrives); lobby deaths use the act's stock death reload, so losing every life or
+reaching time over ends in the stock game-over flow until a lobby respawn policy exists.
+
 ## 7. Protocol
 
 Versioned; JSON text frames for control, compact binary frames for ghost data.
@@ -239,7 +261,17 @@ security spec §11.
 
 Binary: `GhostFrames` (client → hub, 3 × 7-byte frames + attemptId/frameIndex
 header), `GhostAggregate` (hub → client, all near ghosts' frames for one tick),
-`Roster` (hub → client, 1 Hz coarse state for all players).
+`Roster` (hub → client, 1 Hz coarse state for all players), and between rounds
+`LobbyFrames`/`LobbyAggregate` (protocol 5): the same layouts for the lobby level's
+presence, where `attemptId` names a lobby stream (a new one per lobby load or teleport).
+The host accepts lobby frames only in the lobby, results and vote phases (silently
+dropping late ones), keeps each stream forward-only (a gap is dropped frames), caps the
+sustained rate and per-frame movement, closes a member after repeated violations, relays
+each tick to each recipient's eight nearest senders in relay rooms and skips congested
+recipients. Control adds readiness: `SetReady`/`PlayerReady`/`ReadyReset` and the room
+owner's `SetReadyRule`/`ReadyRule` (`REQUIRED`, `AUTO`, `DEFAULT_BY_SIZE` = required with
+five or fewer players present). A required rule refuses the owner's `RoundConfigure` until
+every present player is ready; nothing ever auto-starts a round.
 
 **Ghost frames carry final render state, not animation state.** Frame layout:
 x (16-bit), y (16-bit), resolved sprite mapping frame (8-bit), flip/status

@@ -2526,6 +2526,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		initializeGameplayRuntime(gameplay, false);
 		// The run policy is fixed before the level loads so every object sees it.
 		gameplay.beginGameplayRun(spec.policy(), spec.zone(), spec.act());
+		gameLoop.hostedRuns.armAreaSpawn(levelManager);
 		loadLevelFromDataSelect(spec.zone(), spec.act());
 		gameLoop.setGameMode(GameMode.LEVEL);
 
@@ -2581,7 +2582,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			return;
 		}
 		FadeManager fadeManager = graphicsManager.getFadeManager();
-		if (fadeManager != null) {
+		// A scene that launched its next run while resuming keeps the screen black for it.
+		if (fadeManager != null && !gameLoop.hostedRunLaunchPending()) {
 			fadeManager.startFadeFromBlack(null);
 		}
 	}

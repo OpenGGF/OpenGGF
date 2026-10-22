@@ -37,4 +37,20 @@ public interface SceneGameplay {
      *                               its visit has ended, or the caller is not on the engine thread
      */
     RunHandle launch(RunSpec spec, RunHost host);
+
+    /**
+     * Starts {@code spec} behind this scene: the scene is not suspended. While the run plays the
+     * scene keeps receiving {@code update} once per level frame (before the host's
+     * {@link RunHost#admitStep}) with the live controller and keyboard, and {@code draw} paints
+     * over the level, its HUD and the host's overlay; the canvas is the run's screen size, and a
+     * scene that wants the level visible must not {@link SceneCanvas#clear} it. Start and the
+     * pause key never pause a run behind a scene: they reach the scene as ordinary input. Use
+     * {@link RunHandle#holdControls} while the scene's menu owns the controller. When the run
+     * ends the scene is resumed as after {@link #launch}.
+     *
+     * @throws IllegalStateException as {@link #launch}
+     */
+    default RunHandle launchBehind(RunSpec spec, RunHost host) {
+        throw new UnsupportedOperationException("This scene host cannot run gameplay behind a scene");
+    }
 }
