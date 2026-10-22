@@ -107,7 +107,10 @@ public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
         this.xVelocity = xVel;
         this.yVelocity = yVel;
         this.motionState = new SubpixelMotion.State(x, y, 0, 0, xVel, yVel);
-        this.animTickCounter = 0;
+        // Bom_Main returns without AnimateSprite for fresh higher-slot children.
+        // Keep their cleared obFrame until the first Bom_Shrapnel pass; the
+        // in-place fuse instead enters its animation immediately below.
+        this.animTickCounter = deferFirstMove ? -1 : 0;
         this.destroyed = false;
         this.deferFirstMove = deferFirstMove;
     }
@@ -192,6 +195,9 @@ public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
      * From Ani_Bomb .shrapnel: dc.b 3, $A, $B, afEnd
      */
     private int getMappingFrame() {
+        if (animTickCounter < 0) {
+            return 0;
+        }
         int step = (animTickCounter / ANIM_SPEED) % SHRAPNEL_FRAMES.length;
         return SHRAPNEL_FRAMES[step];
     }

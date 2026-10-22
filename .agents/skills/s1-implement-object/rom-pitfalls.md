@@ -800,3 +800,22 @@ destructive restore; an end-of-pass object count alone can hide leaked bits.
 **Origin.** S1 chain gap closure, 2026-10-22; exact native bytes, regressions and
 remaining display obligations are recorded in
 `docs/architecture/audits/2026-10-22-s1-chain-gap-closure.md`.
+
+
+## P35 — A FixBugs block may omit an entire retail camera write
+
+**Symptom.** Grounded rolling recenters the vertical look bias even though all
+player physics match, then the native camera catches up only after jumping.
+
+**What to check.** S1 `Sonic_AngledRollSpeed` puts its bias reset entirely inside
+`if FixBugs`; shipped zero omits it. S2 `Obj01_Roll_ResetScr` and S3K `loc_115C6`
+always reset toward `$60`. Keep that distinction in the narrow camera semantic;
+do not gate air movement or infer it from a route's observed look direction.
+Exercise both sides of the default bias and restore the actual camera/player
+owners. A six-argument `CameraRules` caller retains the prior true default.
+
+**ROM citation.** S1 `_incObj/01 Sonic.asm:829-842` and airborne reset `:974-982`;
+S2 `s2.asm:37074-37084`; S3K `sonic3k.asm:23038-23047`.
+
+**Origin.** S1 chain gap closure, 2026-10-22; verified ROM bytes and independent
+bias/restore checks in `docs/architecture/audits/2026-10-22-s1-chain-gap-closure.md`.

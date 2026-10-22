@@ -1303,3 +1303,14 @@ emerald SLZ1 becomes exact in the continuous chain. [Evidence and limits](../arc
 include remaining native Bomb display-queue/initialization, SLZ3 boss boundary,
 SYZ3 camera and later campaign frontiers. These checks do not replace complete
 act/viewport/donor/character matrices or certify a green continuous route.
+
+
+S1 grounded-roll camera follow-up (2026-10-22): 21 independent cases cover
+retail S1 held bias 50/80, S2/S3K recentering, roll-stop dispatch, air resumption
+and destructive restore. Existing rolling/camera tests, original SLZ/SYZ movie
+controls, 60 selected S3K cases and 54 affected guards pass without skips. SYZ3's
+continuous emerald segment now compares exactly. Fresh Bomb fragment animation
+also preserves native cleared-frame initialization and replays after forced
+recreation. [Exact selection and limitations](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#retail-grounded-roll-camera-and-fresh-fragment-animation)
+retain the remaining PLC, later-route, queue and API pin obligations; this does
+not certify a complete act matrix or complete emerald chain.
