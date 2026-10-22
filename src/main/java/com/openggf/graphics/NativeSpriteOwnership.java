@@ -8,6 +8,8 @@ import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL30.*;
 import static org.lwjgl.opengl.GL32.GL_TEXTURE_2D_MULTISAMPLE;
 import static org.lwjgl.opengl.GL32.GL_TEXTURE_BINDING_2D_MULTISAMPLE;
+import static org.lwjgl.opengl.GL33.GL_SAMPLER_BINDING;
+import static org.lwjgl.opengl.GL33.glBindSampler;
 
 /**
  * One native SAT draw's opaque-source coverage. Owns all temporary GL objects and
@@ -51,6 +53,7 @@ final class NativeSpriteOwnership implements AutoCloseable {
     private final int vertexArray = glGetInteger(GL_VERTEX_ARRAY_BINDING);
     private final int arrayBuffer = glGetInteger(GL_ARRAY_BUFFER_BINDING);
     private final int activeTexture = glGetInteger(GL_ACTIVE_TEXTURE);
+    private final int shadowSampler = glGetIntegeri(GL_SAMPLER_BINDING, 6);
     private final int[] textures = new int[7];
     private final int[] viewport = integers(GL_VIEWPORT, 4);
     private final int[] scissor = integers(GL_SCISSOR_BOX, 4);
@@ -192,6 +195,7 @@ final class NativeSpriteOwnership implements AutoCloseable {
             glBindVertexArray(vertexArray);
             glBindBuffer(GL_ARRAY_BUFFER, arrayBuffer);
             glUseProgram(program);
+            glBindSampler(6, shadowSampler);
             for (int unit = 0; unit < textures.length; unit++) {
                 glActiveTexture(GL_TEXTURE0 + unit);
                 glBindTexture(GL_TEXTURE_2D, textures[unit]);

@@ -191,7 +191,7 @@ public final class SpritePresentationRenderer {
                 versions.put(id,pose.frame().patternVersions().get(tile.patternId()));
                 tiles.add(new Tile(tile.layer(),id,tile.palette(),tile.hFlip(),tile.vFlip(),tile.priority(),
                         tile.x()+pose.cameraX()-cameraX,tile.y()+pose.cameraY()-cameraY,tile.width(),tile.height(),
-                        tile.priorityShader(),tile.occlusionMask(),tile.ghost(),tile.ghostAlpha(),tile.rowStart(),tile.rowEnd(),tile.subject()));
+                        tile.priorityShader(),tile.occlusionMask(),tile.ghost(),tile.ghostAlpha(),tile.rowStart(),tile.rowEnd(),tile.subject(),tile.pixelOperation()));
             }
             // Every retained actor stays clearly readable; the newest echoes are nearly opaque.
             float opacity=.65f+.30f*poseIndex++/Math.max(1,poses.size()-1);
@@ -240,6 +240,7 @@ public final class SpritePresentationRenderer {
                 // in effective priority must also close that batch.
                 int tileMask = tile.priority() ? 0 : tile.occlusionMask();
                 if (previous == null || previous.priorityShader() != tile.priorityShader()
+                        || previous.pixelOperation() != tile.pixelOperation()
                         || (previous.priority() ? 0 : previous.occlusionMask()) != tileMask
                         || previous.ghost() != tile.ghost() || previous.ghostAlpha() != tile.ghostAlpha()) {
                     graphics.flushPatternBatch();
@@ -262,7 +263,10 @@ public final class SpritePresentationRenderer {
                 var transform=runtime==null?com.openggf.game.mutators.SpritePictureTransform.IDENTITY:
                         com.openggf.game.mutators.SpritePictureTransform.forTile(tile,cameraX,cameraY,runtime.spritePolicies());
                 SpritePresentation.withSubject(graphics,tile.subject(),()-> {
-                if(!transform.identity()||opacity!=1) {
+                if (tile.pixelOperation() == com.openggf.graphics.SpriteSatEntry.PixelOperation.SHADOW_15) {
+                    com.openggf.graphics.SpriteSatInternalAccess.renderShadowTile(graphics, tile, cameraX, cameraY,
+                            transform.quad(tile, cameraX, cameraY), opacity);
+                } else if(!transform.identity()||opacity!=1) {
                     com.openggf.graphics.PresentationGraphicsAccess.render(graphics, tile.patternId(), tile.palette(),
                             tile.hFlip(), tile.vFlip(), tile.priority(), tile.rowStart(), tile.rowEnd(),
                             transform.quad(tile,cameraX,cameraY),transform.hue(),opacity);

@@ -137,7 +137,7 @@ transitions now use the effective mask in all three rendering modes.
 
 The internal `SpriteTableBuildProfile` selects placed rings independently of
 game names: S2 `BuildSprites` (`s2.asm:30523–30535`) and S3K `Render_Sprites`
-(`sonic3k.asm:36318–36333`) emit HUD, then placed rings, then object buckets.
+(`sonic3k.asm:36358–36373`) emit HUD, then placed rings, then object buckets.
 S1 rings emit through their actual object slots in bucket 2; `Ring_Collect`
 changes their subsequent sparkle submission to bucket 1 (`_incObj/25, 37 Rings.asm:148–165`).
 `RingDrawInternalAccess` separates the placed list from reserved attracted-ring
@@ -174,9 +174,29 @@ S2 special-stage shadows require operation metadata alongside admitted geometry.
 Its owner independently decoded the original ROM's flat/diagonal/side Nemesis
 families and found only indices 0 and 15. Pinned GPGX's `make_lut_bgobj_ste`
 selects shadow for palette-3 index 15 and intensity increment for index 14;
-the old shader comment calling any nonzero index a shadow was rejected. A bounded
-`SHADOW_15` follow-up is coordinated: exact row clipping and SAT ownership,
-explicit rejection of other nonzero indices, and no generic shadow/highlight claim.
+the old shader comment calling any nonzero index a shadow was rejected. A first
+`SHADOW_15` implementation preserved row clipping, frozen fragments and first-pixel
+ownership, but its final-RGB multiplication was rejected before publication.
+Synthetic 204-to-102 readback proved multiplication, not native intensity. GPGX
+`palette_init` selects shadow intensity `n` versus normal `2*n` before output
+conversion; low-priority background pixels already at shadow intensity must not
+be darkened again. Canonical FULL output rounding and the nonlinear display
+profiles also make post-conversion halving incorrect.
+
+The bounded replacement samples a producer-owned shadow-intensity color target
+made from the same native background mappings, track strips and scroll projection.
+`withShadow15Backdrop` supplies its live texture and bottom-left pixel rectangle;
+no GPU identity enters the admitted frame or rewind state. Missing input fails
+explicitly. `NativeIntensityPalette.shadow` carries the original palette and
+native source-line ownership so fades run before intensity and display conversion.
+RAW output uses `round(255*n/14)` for FULL and `17*n` for LIMITED. Analog and soft
+profiles extend their existing normal ramps by interpolating the intermediate
+four-bit levels before cross-channel mixing and output gain; that is explicit
+presentation policy. Source index 0 discards, index 15 selects this target, and
+other nonzero indices are rejected. Index 14 remains a source-proven highlight
+operator outside this bounded contract, rather than silently becoming a shadow.
+The S2 renderer owns companion production and low/high plane intensity choice;
+this shared seam does not certify its consumer until composed checks pass.
 
 Rejected validation interpretations: offscreen Tails mappings at origin (0,0)
 losing unused presentation versions did not prove lost ROM art; moving the

@@ -85,6 +85,7 @@ final class PlayerHeadPresentation {
         HeadTransform x = a.subject().head(), y = b.subject().head();
         return a.layer() == b.layer() && a.priority() == b.priority()
                 && a.priorityShader() == b.priorityShader() && a.occlusionMask() == b.occlusionMask()
+                && a.pixelOperation() == b.pixelOperation()
                 && a.subject().id().equals(b.subject().id())
                 && x.mask() == y.mask() && x.fragmentBase() == y.fragmentBase()
                 && x.originX() == y.originX() && x.originY() == y.originY()
@@ -98,6 +99,6 @@ final class PlayerHeadPresentation {
                              int rowStart, int rowEnd, Subject subject) {
         return new Tile(source.layer(), id, source.palette(), source.hFlip(), source.vFlip(), source.priority(),
                 x, y, width, height, source.priorityShader(), source.occlusionMask(), source.ghost(), source.ghostAlpha(),
-                rowStart, rowEnd, subject);
+                rowStart, rowEnd, subject, source.pixelOperation());
     }
 }
