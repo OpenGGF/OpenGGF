@@ -204,6 +204,11 @@ function Test-ContainsModApiAnnotation([string]$Text) {
 # Annotations travel with their declaration; private enclosing types hide their
 # entire subtree. The exact signature snapshot remains authoritative.
 function Get-ModApiSurfaceText([string]$Text) {
+    $python = Get-Command python3, python -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($null -eq $python) { Fail "Python 3 is required for Mod API record admission." }
+    $surface = $Text | & $python.Source (Join-Path $PSScriptRoot "mod_api_record_surface.py")
+    if ($LASTEXITCODE -eq 0) { return ($surface -join "`n") }
+    if ($LASTEXITCODE -ne 2) { Fail "Cannot inspect Java record declaration." }
     $kept = New-Object System.Collections.Generic.List[string]
     $visible = @{}; $implicit = @{}
     $top = 0; $parens = 0; $bodyDepth = 0; $defaultDepth = 0

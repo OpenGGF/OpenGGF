@@ -835,3 +835,12 @@ load (14 live frames before the native 22-frame fade-out). Rows still red there 
 not fade timing and are owned elsewhere: the Knuckles act-2 restore at 37130 and the
 LRZ boss sidekick overlap parity at 47471 (rewind-snapshot rows) and solo Tails' SSZ1
 opening camera (behaviour row). No skips.
+
+## Object-pipeline performance follow-up (2026-10-22)
+
+Beam particles, fireball emitters/fragments and dying fingers use live owned-slot dereferences, preserving empty-slot zero positions, replacement occupants, animation/lifetime and rewind behavior. The affected focused owners are `TestDezFinalMouthSequence`, `TestDezFinalFireball` and `TestDezFinalHand`.
+
+The [query/allocation audit](../../audits/performance/2026-10-22-native-object-query-performance.md)
+and its companion implementation records own exact tested states, commands and
+remaining delivery checks. These local checks do not close inherited viewport,
+donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.

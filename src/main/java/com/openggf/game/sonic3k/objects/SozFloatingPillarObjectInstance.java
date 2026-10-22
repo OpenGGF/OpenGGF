@@ -67,7 +67,7 @@ public final class SozFloatingPillarObjectInstance extends AbstractObjectInstanc
     }
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
-    @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(width+11,height,height+1); }
+    @Override public SolidObjectParams getSolidParams() { return SolidObjectParams.of(width+11,height,height+1); }
     // SolidObject_cont loc_1E042 branches on x_vel < 0, so zero velocity
     // still clears ground_vel on left-side penetration (including wall running).
     @Override public boolean zeroXSpeedStopsOnLeftSideContact() { return true; }

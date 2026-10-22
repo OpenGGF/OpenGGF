@@ -53,7 +53,7 @@ public final class FbzEndEggCapsuleButtonInstance extends AbstractObjectInstance
     // Obj_EggCapsule and its button loc_86754 remain in ROM code bank $0008.
     @Override public int romObjectCodePointerHighWord() { return 0x0008; }
 
-    @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x1B, 4, 6); }
+    @Override public SolidObjectParams getSolidParams() { return SolidObjectParams.of(0x1B, 4, 6); }
     @Override public SolidExecutionMode solidExecutionMode() { return SolidExecutionMode.MANUAL_CHECKPOINT; }
     @Override public int getX() { return spawn.x(); }
     // The press changes only mapping_frame ($0C); the native child never writes y_pos.

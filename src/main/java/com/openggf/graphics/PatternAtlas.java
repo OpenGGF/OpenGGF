@@ -88,6 +88,7 @@ public class PatternAtlas {
     private int[] dirtyMaxTileX;
     private int[] dirtyMaxTileY;
     private boolean batchMode = false;
+    private int batchDepth;
     private byte[] patternUploadScratch;
     private final Map<Integer, SpritePresentation.PatternVersion> scenePatternSamples = new HashMap<>();
     private final PerformanceProfiler profiler;
@@ -611,6 +612,7 @@ public class PatternAtlas {
     private void cleanupCommon() {
         initialized = false;
         batchMode = false;
+        batchDepth = 0;
         Arrays.fill(fastEntries, null);
         Arrays.fill(rangeEntries, null);
         sparseFallback.clear();
@@ -724,6 +726,7 @@ public class PatternAtlas {
      */
     public void beginBatch() {
         ensureCpuMirror();
+        batchDepth++;
         batchMode = true;
     }
 
@@ -734,7 +737,7 @@ public class PatternAtlas {
      * otherwise one upload of the dirty tiles' bounding rectangle.
      */
     public void endBatch() {
-        if (!batchMode) {
+        if (!batchMode || --batchDepth > 0) {
             return;
         }
         batchMode = false;
@@ -803,6 +806,46 @@ public class PatternAtlas {
         clearDirtyState(atlasIndex);
     }
 
+    /** Frozen replay compares the physical slot, including aliases and slot reuse.
+     * Sample-only publication never certifies GPU residency. Pending dirty state is
+     * retained even when bytes match (new textures and failed uploads need retry).
+     */
+    void restoreFrozenPattern(SpritePresentation.PatternVersion version, int patternId, boolean headless) {
+        Entry entry = ensureEntry(patternId, headless);
+        if (entry == null) return;
+        scenePatternSamples.put(patternId, version);
+        if (headless && cpuPixels == null) return;
+        ensureCpuMirror();
+        byte[] page = cpuPixels[entry.atlasIndex()];
+        int start = entry.tileY() * TILE_SIZE * atlasWidth + entry.tileX() * TILE_SIZE;
+        boolean changed = false;
+        for (int word = 0; word < 4 && !changed; word++) {
+            long packed = frozenWord(version, word);
+            for (int n = 0; n < 16; n++) {
+                int pixel = word * 16 + n;
+                if (page[start + pixel / TILE_SIZE * atlasWidth + pixel % TILE_SIZE]
+                        != (byte) ((packed >>> (n * 4)) & 15)) { changed = true; break; }
+            }
+        }
+        if (changed) {
+            for (int word = 0; word < 4; word++) {
+                long packed = frozenWord(version, word);
+                for (int n = 0; n < 16; n++) {
+                    int pixel = word * 16 + n;
+                    page[start + pixel / TILE_SIZE * atlasWidth + pixel % TILE_SIZE] = (byte) ((packed >>> (n * 4)) & 15);
+                }
+            }
+            markTileDirty(entry.atlasIndex(), entry.slot(), entry.tileX(), entry.tileY());
+        }
+        int texture = getTextureId(entry.atlasIndex());
+        if (!headless && !batchMode && dirtyPages[entry.atlasIndex()] && texture != 0)
+            flushDirtyPage(entry.atlasIndex(), texture);
+    }
+
+    private static long frozenWord(SpritePresentation.PatternVersion version, int word) {
+        return switch (word) { case 0 -> version.a(); case 1 -> version.b(); case 2 -> version.c(); default -> version.d(); };
+    }
+
     /** A null entry samples CPU art without touching GL (headless or pre-initialization). */
     SpritePresentation.PatternVersion uploadPattern(Pattern pattern, Entry entry) {
         byte[] patternPixels = ensurePatternUploadScratch();
@@ -830,11 +873,18 @@ public class PatternAtlas {
 
         // Immediate upload (non-batch path): bind, upload one tile, unbind.
         int textureId = getTextureId(entry.atlasIndex());
-        uploadSink.begin(textureId);
         try {
-            uploadSink.upload(patternPixels, 0, TILE_SIZE, pixelX, pixelY, TILE_SIZE, TILE_SIZE);
-        } finally {
-            uploadSink.end();
+            uploadSink.begin(textureId);
+            try {
+                uploadSink.upload(patternPixels, 0, TILE_SIZE, pixelX, pixelY, TILE_SIZE, TILE_SIZE);
+            } finally {
+                uploadSink.end();
+            }
+        } catch (RuntimeException | Error failure) {
+            // The CPU mirror already changed. Equal frozen replay must retry the
+            // physical write even when bind, upload or unbind failed.
+            markTileDirty(entry.atlasIndex(), entry.slot(), entry.tileX(), entry.tileY());
+            throw failure;
         }
         return version;
     }

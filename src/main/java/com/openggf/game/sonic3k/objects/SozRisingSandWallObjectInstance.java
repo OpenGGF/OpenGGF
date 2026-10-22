@@ -67,7 +67,7 @@ public final class SozRisingSandWallObjectInstance extends AbstractObjectInstanc
     @Override public void setPlayerPushing(PlayableEntity player, boolean value) {
         pushing.flag(pushing.slot(player), 0, value);
     }
-    @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x17, 0x34, 0x35); }
+    @Override public SolidObjectParams getSolidParams() { return SolidObjectParams.of(0x17, 0x34, 0x35); }
     @Override public SolidExecutionMode solidExecutionMode() { return SolidExecutionMode.MANUAL_CHECKPOINT; }
     @Override public boolean isSolidFor(PlayableEntity player) { return phase != 3; }
     @Override public boolean usesInstanceSolidStateLatchKey() { return true; }

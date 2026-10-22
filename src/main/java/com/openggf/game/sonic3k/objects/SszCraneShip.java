@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.NativeObjectQueries;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -149,11 +150,7 @@ public final class SszCraneShip extends AbstractObjectInstance implements SpawnR
     }
 
     private AbstractObjectInstance occupant(int slot) {
-        for (var object : services().objectManager().getActiveObjects()) {
-            if (object instanceof AbstractObjectInstance candidate
-                    && candidate.getSlotIndex() == slot && !candidate.isDestroyed()) return candidate;
-        }
-        return null;
+        return NativeObjectQueries.liveAtSlot(services().objectManager(), slot, AbstractObjectInstance.class);
     }
 
     private boolean inRange(AbstractObjectInstance other, int height) {

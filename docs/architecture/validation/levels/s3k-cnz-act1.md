@@ -138,3 +138,12 @@ Corrected qualification, all on `0197c5a5a` plus this commit's test-only deltas 
 - Revised input test with the fix: 02:05:15–02:05:44 UTC, 1 test / 0 failures / 0 errors / 0 skips.
 
 Death/reload products, combined smoke and integration were not rerun here. This requalifies the held-Right entry floor only; it is not act certification.
+
+## Object-pipeline performance follow-up (2026-10-22)
+
+CNZ fan execution setup now reads the adjacent owned SSTs, including every typed occupant sharing a slot. Pending deletion, layout order and overlapping lift windows retain their previous predicates. `TestCnzHoverFanNativeSlotQueries` adds pending-deletion/replacement, steady-state and duplicate-slot checks; `TestCnzHoverFanObjectInstance` retains movement/landing coverage.
+
+The [query/allocation audit](../../audits/performance/2026-10-22-native-object-query-performance.md)
+and its companion implementation records own exact tested states, commands and
+remaining delivery checks. These local checks do not close inherited viewport,
+donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.

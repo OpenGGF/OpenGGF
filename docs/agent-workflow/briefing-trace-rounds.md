@@ -71,6 +71,12 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Different virtual pattern IDs do not imply different physical atlas pages
+(2026-10-22, object-pipeline batching). A page-barrier seam incorrectly expected
+separate commands for two IDs that the allocator placed on the same page. Use
+`PatternAtlas.Entry.atlasIndex()` as the oracle and a deliberately small atlas
+when the test needs forced physical page transitions.
+
 An injected offline audio backend can be replaced at a later launch boundary
 (2026-10-21, full Time Attack capture). EGL and `java.awt.headless` isolate no
 audio devices. Ordinary Engine launch preparation previously replaced the supplied
