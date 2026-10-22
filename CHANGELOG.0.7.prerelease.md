@@ -28,8 +28,10 @@ Unreleased. The earlier development themes remain in
 
 - **Native sprite submissions:** an internal queue retains call-time bucket
   pressure, duplicate slot references and late slot reuse through rewind.
-  Bomb fuses and fragments submit at their native routine calls, including the
-  shipped repeated submission on expiry. Unported objects retain their existing
+  Bomb bodies, fuses and fragments submit at their native routine calls,
+  including the shipped repeated fuse submission on expiry. A body keeps its
+  Bomb pose through its in-place explosion handoff; explosion initialization
+  draws nothing before the fiery animation begins. Unported objects retain their existing
   render path. Rewind also retains empty or rejected native passes, and converted
   sources can exclude inferred drawing independently of accepted admissions. Attracted
   rings submit at their actual object slots and retain native conversion art,

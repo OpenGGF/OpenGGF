@@ -792,6 +792,22 @@ routine-owned range checks after execution; a manager pre-cull can hide the
 entire display-and-delete branch. Test real-walk admission pressure and graph
 plus queue restore, without storing an object-local display count.
 
+A code-pointer write also preserves the **caller**: the body's
+`Bom_Action_WaitAndExplode` writes ID3F/routine0, then returns through
+`Bom_Action`'s Bomb animation and in-range bucket3 display. Only the next SST
+dispatch runs `Expl_Main`, switching to fiery mappings/bucket1, playing C4 and
+returning without display. Later `ExItem_Animate` passes submit once even when
+holding a mapping frame; frame5 deletes before display. Keep the same live SST
+owner, original placement identity and value-only captured state. The body
+expires one pass before its fuse, so destructive restore at ID3F/fuse timer0
+must recreate that still-live relationship before fuse-to-shrapnel allocation.
+Neither replacing the owner with a disposed-body callback nor blanket
+whole-update submission preserves these branches. See `Bom_Action`
+(`docs/s1disasm/_incObj/5F Badnik - Walking Bomb.asm:41-49`),
+`Bom_Action_WaitAndExplode` (`docs/s1disasm/_incObj/5F Badnik - Walking Bomb.asm:90-97`),
+`Expl_Main` (`docs/s1disasm/_incObj/27, 3F Explosions.asm:72-84`) and
+`ExItem_Animate` (`docs/s1disasm/_incObj/27, 3F Explosions.asm:44-53`).
+
 A consolidated staircase owner can execute at a higher child's slot, but native
 `DeleteObject` still clears each SST at its own walk position. Pass the owner's
 own slot to its retirement operation and preserve the deferred child releases.

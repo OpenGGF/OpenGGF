@@ -39,8 +39,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * RememberState deletion. A cleared obFrame is not permission to draw it.
  * DisplaySprite (_incObj/sub DisplaySprite.asm:6-19) admits 63 FIFO slot words
  * per native bucket; it neither deduplicates nor removes an orphan address.
- * Scope is the explicit Fuse/Shrapnel producers. The unmarked normal body
- * remains in the legacy render suffix, outside admissions and capacity here.
+ * The in-range body at slot32 submits first, followed by explicit Fuse/Shrapnel
+ * calls and the tail capacity observer in the same native SST walk.
  */
 class TestSonic1BombNativeSpriteSubmission {
     private static final int BUCKET = 3;
@@ -71,13 +71,15 @@ class TestSonic1BombNativeSpriteSubmission {
         assertTrue(fuse instanceof NativeSpriteSubmissionSource);
         assertEquals(List.of(), callsForSlot(manager, fuse.getSlotIndex()),
                 "fresh Bom_Main returns without DisplaySprite or RememberState");
-        assertEquals(63, tail(manager).accepted,
-                "the fresh fuse makes no explicit call; the unmarked body stays legacy");
+        assertEquals(62, tail(manager).accepted,
+                "the body submits once; the fresh fuse makes no call");
+        assertEquals(expectedQueue(62, 32), NativeSpriteSubmissionAccess.admissions(manager));
 
         manager.update(0, player, List.of(), 2);
 
         assertEquals(List.of(new Admission(33, BUCKET)), callsForSlot(manager, 33));
-        assertEquals(62, tail(manager).accepted, "one ordinary fuse submission");
+        assertEquals(61, tail(manager).accepted, "one body and one ordinary fuse submission");
+        assertEquals(expectedQueue(61, 32, 33), NativeSpriteSubmissionAccess.admissions(manager));
     }
 
     @Test
@@ -96,7 +98,9 @@ class TestSonic1BombNativeSpriteSubmission {
             assertEquals(List.of(), callsForSlot(manager, child.getSlotIndex()),
                     "fresh Bom_Main does not submit even though its stored frame is zero");
         }
-        assertEquals(61, tail(manager).accepted);
+        assertEquals(60, tail(manager).accepted);
+        assertEquals(expectedQueue(60, 32, FUSE_SLOT, FUSE_SLOT),
+                NativeSpriteSubmissionAccess.admissions(manager));
 
         manager.update(0, null, List.of(), 2);
 
@@ -105,7 +109,9 @@ class TestSonic1BombNativeSpriteSubmission {
                     callsForSlot(manager, fragment.getSlotIndex()),
                     "a regular Bom_Shrapnel pass submits exactly once");
         }
-        assertEquals(59, tail(manager).accepted, "four regular shrapnel calls");
+        assertEquals(58, tail(manager).accepted, "one body plus four regular shrapnel calls");
+        assertEquals(expectedQueue(58, 32, 40, 41, 42, 43),
+                NativeSpriteSubmissionAccess.admissions(manager));
     }
 
     @ParameterizedTest
@@ -120,7 +126,9 @@ class TestSonic1BombNativeSpriteSubmission {
                 callsForSlot(manager, FUSE_SLOT));
         assertEquals(inRange ? 1 : 0,
                 manager.activeObjectsOfType(Sonic1BombFuseInstance.class).size());
-        assertEquals(inRange ? 62 : 63, tail(manager).accepted);
+        assertEquals(inRange ? 61 : 62, tail(manager).accepted);
+        assertEquals(inRange ? expectedQueue(61, 32, FUSE_SLOT) : expectedQueue(62, 32),
+                NativeSpriteSubmissionAccess.admissions(manager));
     }
 
     @Test
@@ -134,26 +142,34 @@ class TestSonic1BombNativeSpriteSubmission {
         assertEquals(List.of(new Admission(FUSE_SLOT, BUCKET)), callsForSlot(manager, FUSE_SLOT),
                 "Bom_Shrapnel queues first; the later deletion cannot undo that word");
         assertTrue(fragments(manager).stream().noneMatch(piece -> piece.getSlotIndex() == FUSE_SLOT));
-        assertEquals(62, tail(manager).accepted,
-                "the orphan still consumes one explicit queue word after deletion");
+        assertEquals(61, tail(manager).accepted,
+                "body plus orphan consume two explicit queue words despite deletion");
+        assertEquals(expectedQueue(61, 32, FUSE_SLOT), NativeSpriteSubmissionAccess.admissions(manager));
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {60, 63})
+    @ValueSource(ints = {59, 63})
     void finiteBucketAdmitsCallsAtTheirExecutionTimeWithoutChangingGameplay(int prefixCalls) {
         ObjectManager manager = withFuse(0, 160, false, prefixCalls);
 
         manager.update(0, null, List.of(), 1);
 
-        List<Admission> expected = IntStream.range(0, prefixCalls)
-                .mapToObj(ignored -> new Admission(34, BUCKET)).toList();
-        expected = Stream.concat(expected.stream(), prefixCalls == 60
+        // Body (1) + prefix (59) + conversion (2) leaves one of 63 words for tail.
+        // Body (1) + the first 62 of 63 prefix attempts fills it before the fuse.
+        int acceptedPrefix = prefixCalls == 59 ? 59 : 62;
+        List<Admission> expected = Stream.concat(Stream.of(new Admission(32, BUCKET)),
+                IntStream.range(0, acceptedPrefix)
+                        .mapToObj(ignored -> new Admission(34, BUCKET))).toList();
+        expected = Stream.concat(expected.stream(), prefixCalls == 59
                 ? Stream.of(new Admission(FUSE_SLOT, BUCKET), new Admission(FUSE_SLOT, BUCKET),
                         new Admission(TAIL_SLOT, BUCKET))
                 : Stream.empty()).toList();
         assertEquals(expected, NativeSpriteSubmissionAccess.admissions(manager),
                 "63 admitted words retain execution order, including repeated slot references");
-        assertEquals(prefixCalls == 60 ? 1 : 0, tail(manager).accepted);
+        assertEquals(prefixCalls == 59 ? 1 : 0, tail(manager).accepted);
+        assertEquals(acceptedPrefix, manager.activeObjectsOfType(QueueFillProbe.class).stream()
+                .filter(probe -> probe.getSlotIndex() == 34).findFirst().orElseThrow().accepted,
+                "the body consumes the first word before prefix admission");
         assertEquals(4, fragments(manager).size(), "display admission does not gate shrapnel creation");
         assertEquals(158, fragments(manager).getFirst().getX());
         assertEquals(93, fragments(manager).getFirst().getY());
@@ -166,6 +182,7 @@ class TestSonic1BombNativeSpriteSubmission {
         manager.update(0, null, List.of(), 1);
         Sonic1BombShrapnelInstance first = fragments(manager).getFirst();
         List<Admission> convertedQueue = NativeSpriteSubmissionAccess.admissions(manager);
+        assertEquals(expectedQueue(60, 32, FUSE_SLOT, FUSE_SLOT), convertedQueue);
         List<Flight> convertedFlight = flight(manager);
         RewindRegistry registry = new RewindRegistry();
         registry.register(manager.rewindSnapshottable());
@@ -174,6 +191,7 @@ class TestSonic1BombNativeSpriteSubmission {
 
         manager.update(0, null, List.of(), 2);
         List<Admission> forwardQueue = NativeSpriteSubmissionAccess.admissions(manager);
+        assertEquals(expectedQueue(58, 32, 40, 41, 42, 43), forwardQueue);
         List<Flight> forwardFlight = flight(manager);
         assertNotEquals(convertedQueue, forwardQueue, "the later pass destroys the duplicate-call queue");
         assertNotEquals(convertedFlight, forwardFlight, "the later pass advances actual Bomb motion");
@@ -224,6 +242,12 @@ class TestSonic1BombNativeSpriteSubmission {
         }
         manager.createDynamicObjectAtSlot(() -> new QueueFillProbe(63), TAIL_SLOT);
         return manager;
+    }
+
+    /** Exact independent expected FIFO; every number comes from native calls/capacity. */
+    private static List<Admission> expectedQueue(int tailCalls, int... precedingSlots) {
+        return Stream.concat(IntStream.of(precedingSlots).mapToObj(slot -> new Admission(slot, BUCKET)),
+                IntStream.range(0, tailCalls).mapToObj(ignored -> new Admission(TAIL_SLOT, BUCKET))).toList();
     }
 
     private static List<Admission> callsForSlot(ObjectManager manager, int slot) {

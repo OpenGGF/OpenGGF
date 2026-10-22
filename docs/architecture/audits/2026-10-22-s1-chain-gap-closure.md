@@ -563,3 +563,54 @@ regions and re-read the ROM bytes above independently of the regression.
 ```sh
 env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestOwnerBoundGamePatch,TestNativePlcFadeOwnerCoverage' test -B
 ```
+
+
+## Bomb body and Fuse/Shrapnel composition
+
+Lifecycle producer `ba3c704e264ee41deba97bfc78eda608426375ae` imports locally
+as `5f0ebaffde6e361ad04dbdf505a3dad7ec4389d1`, following original lifecycle
+`6d5c41e4b`/`47170cf7d` (local `8b133d763`/`53167d886`). Only the original
+commits are integration dependencies; the local equivalents reconcile shared
+prose. The consumed-fade milestone is `ad67d33bcc1992688236a75f6b701c4d9c79920c`.
+The local prerelease prose resolution was repaired immediately in `dcab9f95f`
+after a diff-size check caught a dropped suffix; the final net content retains
+all existing sections plus the intended S1 lifecycle/body/fade descriptions.
+
+The body contract is now explicit: construction makes zero calls; the first
+real in-range body dispatch admits slot32/bucket3 before manual fuse40. At
+native ID3F handoff the same SST/Java owner retains its old Bomb map and one
+bucket3 call; following fiery initialization makes zero calls,39 subsequent
+animation passes display in bucket1, and deletion makes zero calls. Its actual
+timer0 surviving fuse is preserved through destructive registered restore,
+as independently tested by the body lane. No Fuse/Shrapnel production change
+or manager edit belongs to this composition. The body lane's S3K annotation
+guard failure was matched to its unchanged aggregate; the parent owns repair,
+and this lane makes no S3K or guard-baseline edit.
+
+All eight owned admission cases now assert complete FIFO contents, including
+the leading body call, rather than excluding its admission. Each unpressured
+tail loses exactly one word: fresh fuse62, ordinary fuse61, converted duplicate60,
+four moving fragments58 and orphan61. The two pressure controls use59 and63
+prefix attempts: body1+prefix59+duplicate2+tail1=63; body1+accepted prefix62=63
+before either fuse call. Prefix accepted counts59/62 are independently asserted.
+These values derive from the native63-word capacity and actual routine calls;
+no gameplay fixture or observed-capacity fill heuristic supplies them. Motion,
+allocation, deletion and destructive graph/queue restore assertions remain,
+with full converted/forward FIFO expectations added.
+
+Composed focused job45587 passes45 cases:8 Fuse/Shrapnel queue,12 body,
+5 existing Fuse motion,5 consumed-fade/negative controls,12 FZ scripted input,
+2 SBZ3 alias/load-pixels and1 real GameLoop credits scroll boundary. Zero
+failures/errors/skips; queue wait250s, Maven1m29s. This requalifies the actual
+composition of body, late input, fade and lifecycle dependencies before the
+next necessary route. The test source gains no behavior change, and no source
+or timing/fixture authority changes follow this selection.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestSonic1BombNativeSpriteSubmission,TestSonic1BombBodyNativeSubmission,TestSonic1BombFuseConversion,TestGameLoopBlockingLevelEntryFadeS1,TestS1FzEscapeNativeInput,TestSonic1Sbz3ScrollAlias,TestSonic1CreditsScrollBoundary' "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" test -B
+```
+
+No passing continuous-chain or complete SAT topology claim follows from those
+focused tests. The original remaining art gaps and terminal attribution must
+be measured on the next actual whole-chain run; the complete62-file native242
+candidate and its literal guard remain uncommitted.
