@@ -1592,6 +1592,19 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 
 	@Override
 	public void restore(CameraSnapshot snapshot) {
+		restoreValues(snapshot);
+		// Live rewind may have recreated the main player in the active roster.
+		rebindFocusedSprite();
+	}
+
+	/** Restores an isolated camera with its explicit owner; never consults the active session. */
+	public void restore(CameraSnapshot snapshot, AbstractPlayableSprite focusedSprite) {
+		java.util.Objects.requireNonNull(focusedSprite, "focusedSprite");
+		restoreValues(snapshot);
+		this.focusedSprite = focusedSprite;
+	}
+
+	private void restoreValues(CameraSnapshot snapshot) {
 		viewportMaxX = snapshot.viewportMaxX();
 		x = snapshot.x();
 		y = snapshot.y();
@@ -1621,10 +1634,6 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		yPosBias = snapshot.yPosBias();
 		fastScrollCap = snapshot.fastScrollCap();
 		customMaxXBoundaryEasingClaimed = snapshot.customMaxXBoundaryEasingClaimed();
-		// Re-resolve focused sprite via SpriteManager after restore. Object instances
-		// are rebuilt during rewind; this ensures Camera tracks the live main player
-		// sprite rather than a stale or null reference (Track C / H.1).
-		rebindFocusedSprite();
 	}
 
 	/**

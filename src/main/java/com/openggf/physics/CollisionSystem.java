@@ -494,7 +494,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
     public boolean hasFatalPostMovementBackgroundFloorOverlap(
             FrameCollisionPlan plan, AbstractPlayableSprite sprite) {
         requireTerrainOnlyPlan(plan, "hasFatalPostMovementBackgroundFloorOverlap");
-        var background = GameServices.backgroundPlaneCollisionOrNull();
+        var background = com.openggf.sprites.playable.PlayableRuntimeContext.background(sprite);
         // Sonic_MdNormal / Tails_Stand_Path test the same native flag that
         // FindFloor/FindWall consume. A zone runtime may own that state instead
         // of the legacy GameStateManager mirror, so both paths use its provider.
@@ -516,7 +516,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
     public void resolvePostMovementBackgroundWallClamp(
             FrameCollisionPlan plan, AbstractPlayableSprite sprite) {
         requireTerrainOnlyPlan(plan, "resolvePostMovementBackgroundWallClamp");
-        var background = GameServices.backgroundPlaneCollisionOrNull();
+        var background = com.openggf.sprites.playable.PlayableRuntimeContext.background(sprite);
         // Sonic_MdNormal / Tails_Stand_Path test the same native flag that
         // FindFloor/FindWall consume. A zone runtime may own that state instead
         // of the legacy GameStateManager mirror, so both paths use its provider.
@@ -794,7 +794,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         if (rules != null && rules.rightWallDeepProbePreservesPenetration()) {
             return true;
         }
-        var registry = GameServices.zoneRuntimeRegistryOrNull();
+        var registry = com.openggf.sprites.playable.PlayableRuntimeContext.zoneRuntime(sprite);
         return registry != null && registry.current().rightWallDeepProbePreservesPenetration();
     }
 
@@ -1191,7 +1191,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         if (support == null || support.distance() != 0) {
             return false;
         }
-        com.openggf.level.LevelManager levelManager = GameServices.levelOrNull();
+        com.openggf.level.LevelManager levelManager = sprite.currentLevelManagerIfAvailable();
         if (levelManager == null) {
             return false;
         }

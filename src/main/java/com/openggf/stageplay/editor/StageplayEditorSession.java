@@ -60,20 +60,41 @@ public final class StageplayEditorSession implements AutoCloseable {
     public void play(StageplayDocument document, Path root, int frame) throws IOException {
         ensure(root);
         if (!document.equals(prepared)) validate(document,root);
-        audio.seek(frame - 1); audio.playFrame(document,frame);
+        audio.seek(frame - 1); audio.playFrame(document,frame); presentNativeSound(document,frame);
     }
 
-    public void present(StageplayDocument document, int frame) { if (audio != null) audio.playFrame(document,frame); }
+    public void present(StageplayDocument document, int frame) {
+        if (audio != null) { audio.playFrame(document,frame); presentNativeSound(document,frame); }
+    }
     public void stop() { if (audio != null) audio.stop(); }
+
+    private void presentNativeSound(StageplayDocument document, int frame) {
+        if (resources == null) return;
+        var authored = StageplayTimeline.sample(document, frame);
+        if (authored.set().worldPolicy() != StageplayDocument.WorldPolicy.LIVE) return;
+        resources.resolveFrame(document, authored);
+        audio.playNativeFrame(frame, resources.previewSound(frame));
+    }
+
+    /** Random-access native physics preview; repeated reads never advance its simulation. */
+    public StageplayTimeline.Frame resolvePreview(StageplayDocument document, Path root, int frame) throws IOException {
+        ensure(root);
+        return resources.resolveFrame(document, StageplayTimeline.sample(document, frame));
+    }
 
     /** Draws in the engine's current offscreen viewport; no desktop focus or window is created. */
     public void draw(StageplayDocument document, int frame, Path root, Consumer<Throwable> onFailure) {
+        draw(document,StageplayTimeline.sample(document,frame),root,onFailure);
+    }
+
+    /** The shared workspace can supply transient camera framing without adding document keys. */
+    public void draw(StageplayDocument document, StageplayTimeline.Frame frame, Path root, Consumer<Throwable> onFailure) {
         Objects.requireNonNull(document); Objects.requireNonNull(onFailure);
         if (surface == null) surface = new SceneSurface();
         try {
             ensure(root);
-            surface.record(document.width(),document.height(), canvas -> renderer.draw(document,
-                    StageplayTimeline.sample(document,frame),canvas));
+            var resolved = resources.resolveFrame(document, frame);
+            surface.record(document.width(),document.height(), canvas -> renderer.draw(document,resolved,canvas));
         } catch (IOException | RuntimeException failure) {
             stop(); onFailure.accept(failure);
             surface.record(document.width(),document.height(),canvas -> {
@@ -82,12 +103,17 @@ public final class StageplayEditorSession implements AutoCloseable {
             });
         }
         int[] viewport = new int[4]; glGetIntegerv(GL_VIEWPORT,viewport);
-        double fit = Math.min(viewport[2]/(double)document.width(),viewport[3]/(double)document.height());
-        int width = Math.max(1,(int)Math.round(document.width()*fit)), height = Math.max(1,(int)Math.round(document.height()*fit));
-        int[] fitted = {viewport[0]+(viewport[2]-width)/2,viewport[1]+(viewport[3]-height)/2,width,height};
+        int[] fitted = fitViewport(viewport,document.width(),document.height());
         glViewport(fitted[0],fitted[1],fitted[2],fitted[3]);
         try { surface.render(SceneSurface.projection(document.width(),document.height()),fitted); }
         finally { glViewport(viewport[0],viewport[1],viewport[2],viewport[3]); }
+    }
+
+    /** Fit film pixels to a host viewport without changing the film or gameplay aspect. */
+    public static int[] fitViewport(int[] viewport, int filmWidth, int filmHeight) {
+        double fit = Math.min(viewport[2]/(double)filmWidth,viewport[3]/(double)filmHeight);
+        int width = Math.max(1,(int)Math.round(filmWidth*fit)), height = Math.max(1,(int)Math.round(filmHeight*fit));
+        return new int[] {viewport[0]+(viewport[2]-width)/2,viewport[1]+(viewport[3]-height)/2,width,height};
     }
 
     public void export(StageplayDocument document, Path source, Path output) throws IOException {

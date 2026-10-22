@@ -50,6 +50,11 @@ public final class PaletteUploadPresentation {
         }
     }
 
+    /** Cinematic entry reveal, scoped through the completed draw without advancing the native fade. */
+    public static void withoutDisplayedFade(GraphicsManager graphics, Runnable draw) {
+        graphics.withoutDisplayedPaletteFade(draw);
+    }
+
     /** Uploads anything pending and returns to immediate uploads. */
     public static void release(GraphicsManager graphics) {
         if (graphics != null) {

@@ -418,7 +418,7 @@ public class DrowningController {
 
     /** ROM: {@code tst.b (Boss_flag).w} at sonic3k.asm:33721. */
     private boolean bossOwnsMusic() {
-        return PlayableSpriteRuntimeServices.levelEventsOrNull()
+        return PlayableSpriteRuntimeServices.levelEventsOrNull(player)
                 instanceof AbstractLevelEventManager events
                 && events.isBossActive();
     }

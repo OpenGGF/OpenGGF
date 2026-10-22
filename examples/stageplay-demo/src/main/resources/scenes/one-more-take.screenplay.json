@@ -1,0 +1,1510 @@
+{
+  "version": 3,
+  "name": "One More Take",
+  "width": 320,
+  "height": 224,
+  "cast": [
+    {
+      "id": "sonic",
+      "name": "Sonic",
+      "gameId": "s3k",
+      "character": "sonic",
+      "snapToFloor": false
+    },
+    {
+      "id": "tails",
+      "name": "Tails",
+      "gameId": "s3k",
+      "character": "tails",
+      "snapToFloor": false
+    },
+    {
+      "id": "knuckles",
+      "name": "Knuckles",
+      "gameId": "s3k",
+      "character": "knuckles",
+      "snapToFloor": false
+    }
+  ],
+  "shots": [
+    {
+      "id": "relay",
+      "durationFrames": 960,
+      "set": {
+        "gameId": "s3k",
+        "zone": 11,
+        "act": 1,
+        "worldPolicy": "LIVE"
+      },
+      "camera": [
+        {
+          "frame": 0,
+          "x": 5268,
+          "y": 1824,
+          "interpolation": "HOLD",
+          "follow": {
+            "actors": [
+              "sonic",
+              "tails"
+            ],
+            "deadZoneX": 12,
+            "deadZoneY": 12,
+            "lookAhead": 4,
+            "smoothing": 0.2,
+            "offsetX": 0,
+            "offsetY": 0
+          }
+        }
+      ],
+      "actors": {
+        "sonic": [
+          {
+            "frame": 0,
+            "x": 5428,
+            "y": 1936
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "x": 5452,
+            "y": 1936
+          }
+        ]
+      },
+      "actions": {
+        "sonic": [
+          {
+            "frame": 0,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 90,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 1,
+            "kind": "STOP"
+          },
+          {
+            "frame": 110,
+            "kind": "MOVE_TO",
+            "x": 0,
+            "y": 0,
+            "urgency": 0.65,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 111,
+            "kind": "JUMP",
+            "holdFrames": 20
+          },
+          {
+            "frame": 112,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 150,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 113,
+            "kind": "STOP"
+          },
+          {
+            "frame": 300,
+            "kind": "MOVE_TO",
+            "x": 0,
+            "y": 0,
+            "urgency": 0.65,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 301,
+            "kind": "JUMP",
+            "holdFrames": 20
+          },
+          {
+            "frame": 302,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 150,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 303,
+            "kind": "STOP"
+          },
+          {
+            "frame": 560,
+            "kind": "MOVE_TO",
+            "x": 0,
+            "y": 0,
+            "urgency": 0.65,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 561,
+            "kind": "JUMP",
+            "holdFrames": 20
+          },
+          {
+            "frame": 562,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 150,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 563,
+            "kind": "STOP"
+          },
+          {
+            "frame": 760,
+            "kind": "MOVE_TO",
+            "x": 0,
+            "y": 0,
+            "urgency": 0.65,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 761,
+            "kind": "JUMP",
+            "holdFrames": 20
+          },
+          {
+            "frame": 762,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 150,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 763,
+            "kind": "STOP"
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 90,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 1,
+            "kind": "STOP"
+          },
+          {
+            "frame": 115,
+            "kind": "MOVE_TO",
+            "x": 0,
+            "y": 0,
+            "urgency": 0.65,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 116,
+            "kind": "JUMP",
+            "holdFrames": 20
+          },
+          {
+            "frame": 117,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 150,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 118,
+            "kind": "STOP"
+          },
+          {
+            "frame": 305,
+            "kind": "MOVE_TO",
+            "x": 0,
+            "y": 0,
+            "urgency": 0.65,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 306,
+            "kind": "JUMP",
+            "holdFrames": 20
+          },
+          {
+            "frame": 307,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 150,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 308,
+            "kind": "STOP"
+          },
+          {
+            "frame": 565,
+            "kind": "MOVE_TO",
+            "x": 0,
+            "y": 0,
+            "urgency": 0.65,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 566,
+            "kind": "JUMP",
+            "holdFrames": 20
+          },
+          {
+            "frame": 567,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 150,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 568,
+            "kind": "STOP"
+          },
+          {
+            "frame": 765,
+            "kind": "MOVE_TO",
+            "x": 0,
+            "y": 0,
+            "urgency": 0.65,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 766,
+            "kind": "JUMP",
+            "holdFrames": 20
+          },
+          {
+            "frame": 767,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 150,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 768,
+            "kind": "STOP"
+          }
+        ]
+      },
+      "dialogue": [
+        {
+          "startFrame": 75,
+          "endFrame": 205,
+          "speakerActor": "sonic",
+          "text": "One more take. Keep it moving.",
+          "x": 8,
+          "y": 170,
+          "width": 304,
+          "height": 48,
+          "typerId": "pace"
+        },
+        {
+          "startFrame": 220,
+          "endFrame": 345,
+          "speakerActor": "tails",
+          "text": "I will hold the mark.",
+          "x": 8,
+          "y": 170,
+          "width": 304,
+          "height": 48,
+          "typerId": "pace"
+        },
+        {
+          "startFrame": 420,
+          "endFrame": 545,
+          "speakerActor": "sonic",
+          "text": "Trade places on my cue.",
+          "x": 8,
+          "y": 170,
+          "width": 304,
+          "height": 48,
+          "typerId": "pace"
+        },
+        {
+          "startFrame": 640,
+          "endFrame": 745,
+          "speakerActor": "tails",
+          "text": "Again. We are getting this.",
+          "x": 8,
+          "y": 170,
+          "width": 304,
+          "height": 48,
+          "typerId": "pace"
+        },
+        {
+          "startFrame": 850,
+          "endFrame": 945,
+          "speakerActor": "sonic",
+          "text": "Got it. Now the ring run.",
+          "x": 8,
+          "y": 170,
+          "width": 304,
+          "height": 48,
+          "typerId": "pace"
+        }
+      ],
+      "captions": [
+        {
+          "startFrame": 0,
+          "endFrame": 72,
+          "text": "ONE MORE TAKE",
+          "x": 8,
+          "y": 206
+        }
+      ],
+      "audio": [
+        {
+          "frame": 0,
+          "kind": "ROM_MUSIC",
+          "gameId": "s3k",
+          "soundId": 23
+        }
+      ]
+    },
+    {
+      "id": "mishap",
+      "durationFrames": 300,
+      "set": {
+        "gameId": "s3k",
+        "zone": 11,
+        "act": 0,
+        "worldPolicy": "LIVE"
+      },
+      "camera": [
+        {
+          "frame": 0,
+          "x": 1736,
+          "y": 1760,
+          "interpolation": "HOLD",
+          "follow": {
+            "actors": [
+              "sonic",
+              "tails"
+            ],
+            "deadZoneX": 12,
+            "deadZoneY": 12,
+            "lookAhead": 4,
+            "smoothing": 0.2,
+            "offsetX": 0,
+            "offsetY": 0
+          }
+        },
+        {
+          "frame": 130,
+          "x": 1736,
+          "y": 1760,
+          "interpolation": "HOLD",
+          "follow": {
+            "actors": [
+              "tails"
+            ],
+            "deadZoneX": 16,
+            "deadZoneY": 12,
+            "lookAhead": 5,
+            "smoothing": 0.18,
+            "offsetX": 0,
+            "offsetY": 0
+          }
+        }
+      ],
+      "actors": {
+        "sonic": [
+          {
+            "frame": 0,
+            "x": 1896,
+            "y": 1872
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "x": 1928,
+            "y": 1872
+          }
+        ]
+      },
+      "actions": {
+        "sonic": [
+          {
+            "frame": 0,
+            "kind": "MOVE_TO",
+            "x": 1960,
+            "y": 1960,
+            "urgency": 0.25
+          },
+          {
+            "frame": 1,
+            "kind": "WAIT",
+            "condition": "HURT",
+            "timeoutFrames": 180
+          },
+          {
+            "frame": 2,
+            "kind": "STOP"
+          },
+          {
+            "frame": 3,
+            "kind": "WAIT",
+            "condition": "RECOVERED",
+            "timeoutFrames": 180
+          },
+          {
+            "frame": 125,
+            "kind": "MOVE_TO",
+            "x": 2200,
+            "y": 2360,
+            "urgency": 0.4
+          },
+          {
+            "frame": 126,
+            "kind": "JUMP",
+            "holdFrames": 12
+          },
+          {
+            "frame": 127,
+            "kind": "WAIT",
+            "condition": "GROUNDED",
+            "timeoutFrames": 110
+          },
+          {
+            "frame": 128,
+            "kind": "STOP"
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "kind": "MOVE_TO",
+            "x": 1960,
+            "y": 1960,
+            "urgency": 0.25
+          },
+          {
+            "frame": 1,
+            "kind": "WAIT",
+            "condition": "HURT",
+            "timeoutFrames": 180
+          },
+          {
+            "frame": 2,
+            "kind": "STOP"
+          },
+          {
+            "frame": 3,
+            "kind": "WAIT",
+            "condition": "RECOVERED",
+            "timeoutFrames": 180
+          },
+          {
+            "frame": 125,
+            "kind": "MOVE_TO",
+            "x": 2200,
+            "y": 2360,
+            "urgency": 0.4
+          },
+          {
+            "frame": 126,
+            "kind": "JUMP",
+            "holdFrames": 12
+          },
+          {
+            "frame": 127,
+            "kind": "WAIT",
+            "condition": "GROUNDED",
+            "timeoutFrames": 110
+          },
+          {
+            "frame": 128,
+            "kind": "STOP"
+          }
+        ]
+      },
+      "dialogue": [
+        {
+          "startFrame": 20,
+          "endFrame": 115,
+          "speakerActor": "sonic",
+          "text": "That was the wrong floor.",
+          "x": 184,
+          "y": 8,
+          "width": 128,
+          "height": 60,
+          "typerId": "pace"
+        },
+        {
+          "startFrame": 150,
+          "endFrame": 285,
+          "speakerActor": "tails",
+          "text": "Air route!",
+          "x": 8,
+          "y": 8,
+          "width": 128,
+          "height": 60,
+          "typerId": "pace"
+        }
+      ],
+      "transition": {
+        "kind": "FADE_BLACK",
+        "durationFrames": 12
+      },
+      "audio": [
+        {
+          "frame": 0,
+          "kind": "ROM_MUSIC",
+          "gameId": "s3k",
+          "soundId": 22
+        }
+      ]
+    },
+    {
+      "id": "regroup",
+      "durationFrames": 960,
+      "set": {
+        "gameId": "s3k",
+        "zone": 0,
+        "act": 0,
+        "worldPolicy": "LIVE"
+      },
+      "camera": [
+        {
+          "frame": 0,
+          "x": 5040,
+          "y": 928,
+          "interpolation": "HOLD",
+          "follow": {
+            "actors": [
+              "tails",
+              "knuckles"
+            ],
+            "deadZoneX": 12,
+            "deadZoneY": 12,
+            "lookAhead": 4,
+            "smoothing": 0.2,
+            "offsetX": 0,
+            "offsetY": 0
+          }
+        }
+      ],
+      "actors": {
+        "tails": [
+          {
+            "frame": 0,
+            "x": 5200,
+            "y": 1040
+          }
+        ],
+        "knuckles": [
+          {
+            "frame": 0,
+            "x": 5232,
+            "y": 1040
+          }
+        ]
+      },
+      "actions": {
+        "tails": [
+          {
+            "frame": 0,
+            "kind": "WAIT",
+            "condition": "GROUNDED",
+            "timeoutFrames": 90
+          },
+          {
+            "frame": 1,
+            "kind": "MOVE_TO",
+            "x": 5250,
+            "y": 1040,
+            "urgency": 0.4
+          },
+          {
+            "frame": 80,
+            "kind": "FLY_TO",
+            "x": 5330,
+            "y": 940,
+            "urgency": 0.3
+          },
+          {
+            "frame": 260,
+            "kind": "HOVER",
+            "holdFrames": 100
+          },
+          {
+            "frame": 360,
+            "kind": "RELEASE"
+          },
+          {
+            "frame": 361,
+            "kind": "WAIT",
+            "condition": "GROUNDED",
+            "timeoutFrames": 240
+          },
+          {
+            "frame": 460,
+            "kind": "MOVE_TO",
+            "x": 5480,
+            "y": 1050,
+            "urgency": 0.4
+          },
+          {
+            "frame": 540,
+            "kind": "FLY_TO",
+            "x": 5520,
+            "y": 960,
+            "urgency": 0.25
+          },
+          {
+            "frame": 700,
+            "kind": "HOVER",
+            "holdFrames": 80
+          },
+          {
+            "frame": 780,
+            "kind": "RELEASE"
+          },
+          {
+            "frame": 781,
+            "kind": "WAIT",
+            "condition": "GROUNDED",
+            "timeoutFrames": 170
+          }
+        ],
+        "knuckles": [
+          {
+            "frame": 0,
+            "kind": "WAIT",
+            "condition": "GROUNDED",
+            "timeoutFrames": 90
+          },
+          {
+            "frame": 1,
+            "kind": "MOVE_TO",
+            "x": 5260,
+            "y": 1040,
+            "urgency": 0.4
+          },
+          {
+            "frame": 100,
+            "kind": "GLIDE_TO",
+            "x": 5380,
+            "y": 1020,
+            "urgency": 0.4
+          },
+          {
+            "frame": 180,
+            "kind": "RELEASE"
+          },
+          {
+            "frame": 181,
+            "kind": "WAIT",
+            "condition": "GROUNDED",
+            "timeoutFrames": 180
+          },
+          {
+            "frame": 460,
+            "kind": "MOVE_TO",
+            "x": 5470,
+            "y": 1050,
+            "urgency": 0.4
+          },
+          {
+            "frame": 560,
+            "kind": "GLIDE_TO",
+            "x": 5520,
+            "y": 1030,
+            "urgency": 0.25
+          },
+          {
+            "frame": 650,
+            "kind": "RELEASE"
+          },
+          {
+            "frame": 651,
+            "kind": "WAIT",
+            "condition": "GROUNDED",
+            "timeoutFrames": 170
+          }
+        ]
+      },
+      "dialogue": [
+        {
+          "startFrame": 20,
+          "endFrame": 78,
+          "speakerActor": "tails",
+          "text": "I will take the high mark.",
+          "x": 8,
+          "y": 8,
+          "width": 304,
+          "height": 48,
+          "typerId": "pace"
+        },
+        {
+          "startFrame": 265,
+          "endFrame": 355,
+          "speakerActor": "tails",
+          "text": "Hold here.",
+          "x": 184,
+          "y": 8,
+          "width": 128,
+          "height": 48,
+          "typerId": "pace"
+        },
+        {
+          "startFrame": 435,
+          "endFrame": 530,
+          "speakerActor": "knuckles",
+          "text": "Glide, release, land. Easy.",
+          "x": 8,
+          "y": 8,
+          "width": 304,
+          "height": 48,
+          "typerId": "pace"
+        },
+        {
+          "startFrame": 710,
+          "endFrame": 810,
+          "speakerActor": "tails",
+          "text": "One more pass.",
+          "x": 184,
+          "y": 8,
+          "width": 128,
+          "height": 48,
+          "typerId": "pace"
+        },
+        {
+          "startFrame": 850,
+          "endFrame": 945,
+          "speakerActor": "knuckles",
+          "text": "Back to the platform marks.",
+          "x": 8,
+          "y": 8,
+          "width": 304,
+          "height": 48,
+          "typerId": "pace"
+        }
+      ],
+      "transition": {
+        "kind": "FADE_BLACK",
+        "durationFrames": 12
+      },
+      "audio": [
+        {
+          "frame": 0,
+          "kind": "ROM_MUSIC",
+          "gameId": "s3k",
+          "soundId": 1
+        }
+      ]
+    },
+    {
+      "id": "retry",
+      "durationFrames": 840,
+      "set": {
+        "gameId": "s3k",
+        "zone": 11,
+        "act": 1,
+        "worldPolicy": "LIVE"
+      },
+      "camera": [
+        {
+          "frame": 0,
+          "x": 5268,
+          "y": 1824,
+          "interpolation": "HOLD",
+          "follow": {
+            "actors": [
+              "sonic",
+              "tails"
+            ],
+            "deadZoneX": 12,
+            "deadZoneY": 12,
+            "lookAhead": 4,
+            "smoothing": 0.2,
+            "offsetX": 0,
+            "offsetY": 0
+          }
+        }
+      ],
+      "actors": {
+        "sonic": [
+          {
+            "frame": 0,
+            "x": 5428,
+            "y": 1936
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "x": 5452,
+            "y": 1936
+          }
+        ]
+      },
+      "actions": {
+        "sonic": [
+          {
+            "frame": 0,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 90,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 1,
+            "kind": "STOP"
+          },
+          {
+            "frame": 110,
+            "kind": "MOVE_TO",
+            "x": 0,
+            "y": 0,
+            "urgency": 0.65,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 111,
+            "kind": "JUMP",
+            "holdFrames": 20
+          },
+          {
+            "frame": 112,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 150,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 113,
+            "kind": "STOP"
+          },
+          {
+            "frame": 300,
+            "kind": "MOVE_TO",
+            "x": 0,
+            "y": 0,
+            "urgency": 0.65,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 301,
+            "kind": "JUMP",
+            "holdFrames": 20
+          },
+          {
+            "frame": 302,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 150,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 303,
+            "kind": "STOP"
+          },
+          {
+            "frame": 560,
+            "kind": "MOVE_TO",
+            "x": 0,
+            "y": 0,
+            "urgency": 0.65,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 561,
+            "kind": "JUMP",
+            "holdFrames": 20
+          },
+          {
+            "frame": 562,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 150,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 563,
+            "kind": "STOP"
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 90,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 1,
+            "kind": "STOP"
+          },
+          {
+            "frame": 115,
+            "kind": "MOVE_TO",
+            "x": 0,
+            "y": 0,
+            "urgency": 0.65,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 116,
+            "kind": "JUMP",
+            "holdFrames": 20
+          },
+          {
+            "frame": 117,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 150,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 118,
+            "kind": "STOP"
+          },
+          {
+            "frame": 305,
+            "kind": "MOVE_TO",
+            "x": 0,
+            "y": 0,
+            "urgency": 0.65,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 306,
+            "kind": "JUMP",
+            "holdFrames": 20
+          },
+          {
+            "frame": 307,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 150,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 308,
+            "kind": "STOP"
+          },
+          {
+            "frame": 565,
+            "kind": "MOVE_TO",
+            "x": 0,
+            "y": 0,
+            "urgency": 0.65,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 566,
+            "kind": "JUMP",
+            "holdFrames": 20
+          },
+          {
+            "frame": 567,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 150,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 568,
+            "kind": "STOP"
+          }
+        ]
+      },
+      "dialogue": [
+        {
+          "startFrame": 20,
+          "endFrame": 105,
+          "speakerActor": "sonic",
+          "text": "Same marks. New take.",
+          "x": 8,
+          "y": 170,
+          "width": 304,
+          "height": 48,
+          "typerId": "pace"
+        },
+        {
+          "startFrame": 190,
+          "endFrame": 290,
+          "speakerActor": "tails",
+          "text": "This time, keep the rings.",
+          "x": 8,
+          "y": 170,
+          "width": 304,
+          "height": 48,
+          "typerId": "pace"
+        },
+        {
+          "startFrame": 400,
+          "endFrame": 525,
+          "speakerActor": "sonic",
+          "text": "Clean transfer. Keep going.",
+          "x": 8,
+          "y": 170,
+          "width": 304,
+          "height": 48,
+          "typerId": "pace"
+        },
+        {
+          "startFrame": 660,
+          "endFrame": 825,
+          "speakerActor": "tails",
+          "text": "That is the take. Meet outside!",
+          "x": 8,
+          "y": 170,
+          "width": 304,
+          "height": 48,
+          "typerId": "pace"
+        }
+      ],
+      "transition": {
+        "kind": "FADE_BLACK",
+        "durationFrames": 12
+      },
+      "audio": [
+        {
+          "frame": 0,
+          "kind": "ROM_MUSIC",
+          "gameId": "s3k",
+          "soundId": 23
+        }
+      ]
+    },
+    {
+      "id": "closing",
+      "durationFrames": 540,
+      "set": {
+        "gameId": "s3k",
+        "zone": 0,
+        "act": 0,
+        "worldPolicy": "LIVE"
+      },
+      "transition": {
+        "kind": "FADE_BLACK",
+        "durationFrames": 12
+      },
+      "camera": [
+        {
+          "frame": 0,
+          "x": 5040,
+          "y": 944,
+          "interpolation": "HOLD",
+          "follow": {
+            "actors": [
+              "sonic",
+              "tails",
+              "knuckles"
+            ],
+            "deadZoneX": 16,
+            "deadZoneY": 12,
+            "lookAhead": 5,
+            "smoothing": 0.2,
+            "offsetX": 0,
+            "offsetY": 0
+          }
+        }
+      ],
+      "actors": {
+        "sonic": [
+          {
+            "frame": 0,
+            "x": 5200,
+            "y": 1040
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "x": 5220,
+            "y": 1040
+          }
+        ],
+        "knuckles": [
+          {
+            "frame": 0,
+            "x": 5240,
+            "y": 1040
+          }
+        ]
+      },
+      "actions": {
+        "sonic": [
+          {
+            "frame": 0,
+            "kind": "WAIT",
+            "condition": "GROUNDED",
+            "timeoutFrames": 90
+          },
+          {
+            "frame": 1,
+            "kind": "MOVE_TO",
+            "x": 5540,
+            "y": 1050,
+            "urgency": 0.5
+          },
+          {
+            "frame": 160,
+            "kind": "MOVE_TO",
+            "x": 5830,
+            "y": 1020,
+            "urgency": 0.5
+          },
+          {
+            "frame": 175,
+            "kind": "JUMP",
+            "holdFrames": 14
+          },
+          {
+            "frame": 350,
+            "kind": "MOVE_TO",
+            "x": 5570,
+            "y": 1050,
+            "urgency": 0.5
+          },
+          {
+            "frame": 410,
+            "kind": "JUMP",
+            "holdFrames": 12
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "kind": "WAIT",
+            "condition": "GROUNDED",
+            "timeoutFrames": 90
+          },
+          {
+            "frame": 1,
+            "kind": "MOVE_TO",
+            "x": 5556,
+            "y": 1050,
+            "urgency": 0.5
+          },
+          {
+            "frame": 160,
+            "kind": "MOVE_TO",
+            "x": 5842,
+            "y": 1020,
+            "urgency": 0.5
+          },
+          {
+            "frame": 179,
+            "kind": "JUMP",
+            "holdFrames": 14
+          },
+          {
+            "frame": 350,
+            "kind": "MOVE_TO",
+            "x": 5586,
+            "y": 1050,
+            "urgency": 0.5
+          },
+          {
+            "frame": 414,
+            "kind": "JUMP",
+            "holdFrames": 12
+          }
+        ],
+        "knuckles": [
+          {
+            "frame": 0,
+            "kind": "WAIT",
+            "condition": "GROUNDED",
+            "timeoutFrames": 90
+          },
+          {
+            "frame": 1,
+            "kind": "MOVE_TO",
+            "x": 5572,
+            "y": 1050,
+            "urgency": 0.5
+          },
+          {
+            "frame": 160,
+            "kind": "MOVE_TO",
+            "x": 5854,
+            "y": 1020,
+            "urgency": 0.5
+          },
+          {
+            "frame": 183,
+            "kind": "JUMP",
+            "holdFrames": 14
+          },
+          {
+            "frame": 350,
+            "kind": "MOVE_TO",
+            "x": 5602,
+            "y": 1050,
+            "urgency": 0.5
+          },
+          {
+            "frame": 418,
+            "kind": "JUMP",
+            "holdFrames": 12
+          }
+        ]
+      },
+      "dialogue": [
+        {
+          "startFrame": 25,
+          "endFrame": 145,
+          "speakerActor": "knuckles",
+          "text": "All three. One moving shot.",
+          "x": 8,
+          "y": 170,
+          "width": 304,
+          "height": 48,
+          "typerId": "pace"
+        },
+        {
+          "startFrame": 215,
+          "endFrame": 340,
+          "speakerActor": "tails",
+          "text": "No more takes?",
+          "x": 8,
+          "y": 170,
+          "width": 304,
+          "height": 48,
+          "typerId": "pace"
+        },
+        {
+          "startFrame": 400,
+          "endFrame": 525,
+          "speakerActor": "sonic",
+          "text": "One more run.",
+          "x": 8,
+          "y": 170,
+          "width": 304,
+          "height": 48,
+          "typerId": "pace"
+        }
+      ],
+      "captions": [
+        {
+          "startFrame": 500,
+          "endFrame": 540,
+          "text": "ONE MORE RUN",
+          "x": 8,
+          "y": 84
+        }
+      ],
+      "audio": [
+        {
+          "frame": 0,
+          "kind": "ROM_MUSIC",
+          "gameId": "s3k",
+          "soundId": 1
+        }
+      ]
+    }
+  ],
+  "dialogueTypers": [
+    {
+      "id": "pace",
+      "framesPerGrapheme": 1,
+      "punctuationPauseFrames": 2,
+      "spacePauseFrames": 0
+    }
+  ]
+}

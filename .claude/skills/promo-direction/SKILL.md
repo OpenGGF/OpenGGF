@@ -1,22 +1,35 @@
 ---
 name: promo-direction
-description: Creative direction for OpenGGF promos, trailers and mod showcases. Covers the brief, beat-grid storyboard, typography, split and slice layouts, directional motion, transitions, soundtrack, pacing and the self-review that keeps a promo from going flat. Use with gameplay-highlights, which covers evidence reels, provenance and archiving.
+description: Creative direction for OpenGGF promos, trailers, mod showcases and staged story films. Choose gameplay or Stageplay sources, then direct performance, typography, composition, motion, sound and pacing. Use with gameplay-highlights for provenance, verification and required archiving.
 ---
 
 # Promo direction
 
-A promo sells one idea through gameplay, on the music, with type that looks like it
-belongs to the game. Correct footage cut together with plain captions is a work
-log, not a promo. This skill is about the creative layer. Capture footage with
-[gameplay-capture](../gameplay-capture/SKILL.md),
-[bk2-input-authoring](../bk2-input-authoring/SKILL.md) or
-[trace-capture](../trace-capture/SKILL.md). Then follow
-[gameplay-highlights](../gameplay-highlights/SKILL.md) for provenance, honest
-labelling, verification and the required OpenGGF-Media archive.
+A promo sells one idea through visible action, deliberate pacing and type that
+belongs to the game. Choose the source workflow from what the film must show:
 
-Compose with [`tools/media/promo_kit.py`](../../../tools/media/promo_kit.py). It
-is a tested beat-grid compositor, so you write creative decisions rather than
-maths. Its moves are catalogued in [references/moves.md](references/moves.md).
+- For staged stories, animatics and choreographed promotional scenes, use
+  [stageplay-authoring](../stageplay-authoring/SKILL.md) and its shared offline
+  `tools/stageplay/stageplay.py` compiler, timeline inspection and renderer.
+- For ordinary gameplay, continuous routes and gameplay feature captures, use
+  [gameplay-capture](../gameplay-capture/SKILL.md), with
+  [bk2-input-authoring](../bk2-input-authoring/SKILL.md) when inputs need scripting.
+  Use [trace-capture](../trace-capture/SKILL.md) for an existing trace replay.
+- A hybrid can combine these, with provenance identifying each source. Stageplay
+  `timeline` samples describe authored intent; physical actors remain `UNRESOLVED`.
+  `simulate` with `TERRAIN_ONLY` measures native actor physics on detached static
+  terrain, without placed-object AI, rings or zone events. With `LIVE`, it measures
+  a shared native world: actors, placed objects, rings and observed native events.
+  LIVE evidence supports the interactions actually observed from authored shot
+  setups; it does not establish a continuous cold route or ROM parity.
+
+Follow [gameplay-highlights](../gameplay-highlights/SKILL.md) for honest labelling,
+verification and the **required OpenGGF-Media archive** in every promo workflow.
+
+Use [`tools/media/promo_kit.py`](../../../tools/media/promo_kit.py) when the edit
+needs a beat-grid compositor. A staged story can remain a direct Stageplay render;
+it does not need an added montage. The compositor's moves are catalogued in
+[references/moves.md](references/moves.md); they are not Stageplay engine features.
 What the archive teaches, including what the user rejected, is in
 [references/lessons.md](references/lessons.md). Read the lessons once before you
 storyboard.
@@ -44,38 +57,48 @@ Being bold does not mean being busy. The two most common rejections were
 "very rushed" (Putt-Putt Paradise v5) and "rapid cuts / cluttered audio"
 (Mutator Lab).
 
+These are recorded problems with particular promo drafts. Preserve the preference
+for crafted type, readable action and deliberate rhythm; do not turn it into a
+ban on a stable dialogue panel, a purposeful reaction hold or a quiet story beat.
+
 ## Workflow
 
-### 1. Study two prior promos before writing anything
+### 1. Choose a relevant production reference
 
 Read the edit code of
 [Slay the Robotnik](https://github.com/OpenGGF/OpenGGF-Media/tree/main/projects/slay-the-robotnik/sources/promo):
-its `tools/promo.py` `build()` is a whole 86 s promo in about 140 lines. Also
-read one of the following:
+its `tools/promo.py` `build()` is a whole 86 s promo in about 140 lines. For a
+music-led showcase it is a useful model. Choose another reference when its
+treatment serves the brief:
 
 - Putt-Putt Paradise `promo-opus-20261006/final-verified/render_promo.py`,
   for its Sonic 2 title-card captions and cup iris.
 - Flappy Tails `promo_plan.py`, for trailer slams.
 - Starpost Valley `promo-polish/edit.py`, for its diagonal season gallery.
 
-The finished videos are external. Their contact sheets and chapter lists are
-your reference. State in the brief which reference you are following and what
-you will do differently.
+The finished videos are external. Contact sheets, chapter lists and edit code
+help study composition; they do not establish motion quality. State which
+treatment you are drawing on. A narrative dialogue film need not copy a showcase's
+grid, title drop or chapter structure.
 
 ### 2. Write the brief at the top of the edit file
 
 Write one line each:
 
 - **Audience.** For example: general Sonic fans, or modders.
+- **Form and evidence.** Gameplay showcase, staged story or hybrid; identify
+  which claims require native gameplay footage.
 - **Promise.** One sentence. For example: "a Sonic deck-building roguelike,
   read from your own ROM".
-- **Selling points.** Three to six, each something you can *show in motion*.
+- **Selling points or story beats.** For a showcase, choose a few things you can *show in motion*.
   "Configurable" is shown by toggling, then by the result. It is never shown
-  by an options page.
+  by an options page. For a story, describe the action, speaking turns and reactions
+  that make the premise clear.
 - **Hero moment.** The single shot people will remember. Plan the climax
   around it.
-- **Music.** Bed track, BPM and first beat, jingle for the climax, calmer
-  track for the end card.
+- **Sound.** Music structure and, where relevant, BPM/first beat; dialogue,
+  effects and intended pauses. A jingle or separate end-card track is a choice,
+  not a requirement.
 - **Palette.** Three or four colours *sampled from the game itself*: its title
   card, logo or HUD.
 - **Title face.** Prefer the game's or mod's own letterforms: a ROM title-card
@@ -84,7 +107,9 @@ Write one line each:
 - **End card.** Logo, one line, URL, status line, and the disclaimer "Fan-made
   and free. Not affiliated with SEGA. Requires your own ROM."
 
-### 3. Choose the music first and storyboard in beats
+### 3. Storyboard to the film's rhythm
+
+For a music-led showcase, choose the music first and build a beat sheet:
 
 1. Render the bed through OpenGGF's own SMPS driver from the ROM. See Slay's
    `render_audio.py`. Never use unlicensed external music.
@@ -95,9 +120,14 @@ Write one line each:
    cue. Put chapter changes, header wipes and the title drop on **section
    changes**. Put ordinary cuts on bar lines (every four beats) or phrase
    lines (every eight). An effect's arrival or a contact should land *on* a
-   beat.
+   beat where that preserves a readable complete action.
 
-A typical 60–90 s shape at 120–175 BPM:
+For a staged dialogue film, block the performance and reading time first. Use
+music and effects to support turns, reactions and changes of scene; do not shorten
+a line or force every cut onto the beat. Record shot-local frame timings in the
+screenplay and inspect the compiled timeline with Stageplay's shared offline tool.
+
+An example 60–90 s showcase shape at 120–175 BPM, not a required narrative formula:
 
 | Part | Length | Purpose |
 |---|---|---|
@@ -109,22 +139,59 @@ A typical 60–90 s shape at 120–175 BPM:
 | Climax | 10–20 s | The hero moment, in one take into the victory, under a jingle. |
 | End card | 5–7 s | Over blurred gameplay. Fade to black. |
 
+For a tutorial/promo, teach a small set of choices through one coherent example.
+Show choice → visible result, then let the finished scene play without instruction.
+Use real values, distinguish explanatory graphics from actual editor UI, and give
+viewers an editable source and a clear first step. Read the Stageplay first-creator
+lesson in the reference before repeating a feature-check montage as a story.
+
 ### 4. Shot list and capture
 
-- At least 80% of the film should be moving gameplay. Menus take ≤15% and
-  only appear as the cause of something you then show.
-- Each shot shows the approach, the interaction *and* the consequence. Do
-  not cut away from the result.
+- For a gameplay feature showcase, the archive's ≥80% moving gameplay and
+  ≤15% menus are useful defaults: menus appear as the cause of something shown.
+  A staged story has no gameplay quota. Its action and dialogue must carry the
+  story, and its source remains labelled as authored performance.
+- Let an action and its consequence read before cutting. Reaction shots can
+  complete that exchange; every shot need not repeat the whole approach.
 - Prefer one take across a natural chain over cutting it up. Good chains are
   menu → title card → level, or map → node → fight → victory.
-- Capture lossless PNG every tick. For a mod scene, capture with music
-  stopped so the clip audio is SFX only and the bed is laid separately.
-- Start positions must be real for the act, and the setup must be honest.
-  Note debug jumps and positioned starts in the provenance.
+- Preserve lossless source frames where the capture workflow supports them.
+  For gameplay clips under an editorial bed, capture SFX separately from music.
+  Stageplay exports combine authored cues with native SFX in LIVE shots; avoid mixing that soundtrack
+  with a second unplanned bed in the compositor.
+- Gameplay start positions must be real for the act; disclose debug jumps and
+  positioned starts. Stageplay shots have authored spawns and cuts under either
+  `TERRAIN_ONLY` or `LIVE`; retain the screenplay, canonical scene, per-shot world
+  policy and labelled timeline/simulation JSONL. Normal gameplay CSV records a
+  gameplay run with its actual input and entry method. Do not imply uninterrupted
+  gameplay from staged native interactions or positioned excerpts.
 - Make a contact sheet of each clip, for example Slay's `sheet.py` or
   `strips.py`, and pick in-points by frame number.
 
-### 5. Compose with promo_kit
+For Stageplay blocking, give characters purposeful entrances, approaches, turns,
+gestures, reactions and exits as the scene needs. Prefer physical puppets for player
+movement: destinations/urgency and jump button holds drive native acceleration,
+terrain collision, animation and landing. Do not draw a fake jump arc with position
+keys. Inspect `simulate` JSONL for actual arrival/blocked state, then review feet,
+facing and accessories in motion. Poser mode is for deliberate nonphysical staging;
+there is no universal pathfinder. `TERRAIN_ONLY` omits placed-object AI, rings and
+zone events; `LIVE` runs the shared native world through production owners. Author
+routes and bounded waits, then check native world telemetry for support, pickups,
+hurt and abilities. A listening character should visibly react where
+the line calls for it; an entire idle cast weakens a story about their interaction.
+
+Identify the speaker when the line first appears. Prefer the dialogue track's
+actor or named offscreen speaker, readable nameplate and optional pointer,
+supported by framing and facing. Color alone is insufficient, especially when
+roles share a sprite. Use reusable typers for reveal cadence and pauses and skins
+for panel appearance/decorations; keep captions for titles and overlays. Leave
+time after reveal to read and react, keep lines clear of transition cover, and
+review the supported features of the build used to render. See stageplay-authoring
+for the schema, resource bounds and commands rather than duplicating them here.
+
+### 5. Add editorial composition where it serves the film
+
+For a `promo_kit` edit:
 
 ```bash
 python3 tools/media/promo_kit.py fonts                 # every role must say ok, not FALLBACK
@@ -137,29 +204,40 @@ Keep fonts in the task directory, never in a repository. `DejaVu` in the
 `fonts` report means the result will look flat. Fix the fonts before
 composing.
 
-Apply the screen grammar below in `build(e)`. Iterate with `sheet` and
-`frames`, not full renders.
+Apply the relevant screen grammar in `build(e)`. Iterate composition with `sheet`
+and `frames`, then render short moving previews for camera, animation, dialogue
+and transition timing. Contact sheets cannot reveal shimmer or an idle performance.
 
 ### 6. Review like an editor, then verify like an engineer
 
 Do the steps in this order:
 
-1. `promo_kit.py sheet edit.py 30`: a five-column sheet, one frame every half
-   second.
-2. `promo_kit.py frames edit.py N…`: render the middle of every transition,
-   every header at full extension, and every grid once it is full.
-3. Read the `pacing:` line. Fix anything at or beyond 10 cuts in 20 s, or a
-   mean shot under 2 s, unless that rhythm was asked for.
-4. Run the **flatness test** below, and fix every "no".
+1. For a compositor edit, `promo_kit.py sheet edit.py 30` makes a five-column
+   sheet, one frame every half second. For Stageplay, inspect authored timeline
+   samples, policy-specific simulation JSONL and source frames at the action,
+   speaking and transition boundaries. LIVE claims need `sample.world` evidence.
+2. Render transition midpoints and full layouts, then watch their complete motion
+   at the intended output size and cadence. Include camera travel, character and
+   accessory animation, entrances/exits, dialogue reveal and listener reactions.
+3. Read the compositor's `pacing:` line when used. Ten cuts in 20 s or a mean
+   shot under 2 s flags a potentially rushed showcase; dialogue reading and
+   performance timing matter more than fitting a numerical target.
+4. Apply the **editorial review** below to the chosen form.
 5. Render. Then run the measurements from gameplay-highlights: `ffprobe`, a
    full decode, chapters, true peak *after* AAC encode, and a full 1×
    playback.
-6. Archive in OpenGGF-Media as gameplay-highlights requires: the edit file,
-   brief, beat sheet, capture scripts and chapters.
+6. Archive in OpenGGF-Media as gameplay-highlights requires: applicable edit file,
+   brief, beat/shot sheet, capture scripts and chapters, plus Stageplay screenplay,
+   canonical scene and labelled authored/policy-specific simulation JSONL when used. A direct Stageplay render does
+   not waive the promo archive requirement.
 
 ## Screen grammar
 
-### Typography: three tiers, always outlined, always moving
+### Promotional typography: game-native, outlined and deliberately animated
+
+These tiers describe editorial titles and sales copy. Dialogue names, dialogue
+body text and accessibility subtitles need stable, readable placement; a styled
+panel is appropriate and does not need to fly on and off with each speaking turn.
 
 | Tier | Role and size at 1080p | Treatment |
 |---|---|---|
@@ -171,9 +249,9 @@ Do the steps in this order:
 - At most one idea on screen at a time, in ≤8 words. A caption is a story
   beat ("One hit…" → "…every ring comes out"), not a label for what is
   plainly visible.
-- Every text element enters and leaves. Entrances take 10–16 frames with an
+- Promotional text enters and leaves. Entrances take 10–16 frames with an
   ease-out or overshoot. Exits take 8 frames and are faster than entrances.
-- Use stroke plus a hard shadow over gameplay instead of a box. Use a shade
+- For promotional overlays, use stroke plus a hard shadow over gameplay. Use a shade
   gradient (`Shade`, header shades) when a full line sits over busy art.
 - Use a wide-tracked small kicker (`tracking=8–12`) sparingly, above a
   display line.
@@ -182,6 +260,9 @@ Do the steps in this order:
   own title-card art, dumped by tests, never from the disassembly.
 
 ### Composition: show several things at once instead of cutting fast
+
+Use these layouts for comparison or breadth. A dialogue scene can stay full-screen
+to preserve eyelines, speaker identity and the timing of a reaction.
 
 - **Slanted split (2–3 slices).** For comparisons and "all three games". The
   dividers lean like title-card speed lines (slant ≈0.22), each slice drops in
@@ -206,12 +287,26 @@ Do the steps in this order:
 - A push transition travels the way the action moves. If Sonic runs right,
   the next shot pushes in from the right, using `tdir="left"`.
 - Divider lean, stripe angle and wipe slant agree with each other.
-- The camera drifts slowly, from zoom 1.0 to 1.15 or a small pan, over a take.
-  The title slams out from 1.3. A punch zoom of 0.08–0.10 marks a hit.
-- Always use nearest-neighbour integer scaling (`game_view`). Never scale
-  pixel art bilinearly. Never stretch the aspect ratio.
+- In Stageplay `TERRAIN_ONLY`, camera x/y can pan while zoom holds until its next
+  key. Author stable integer framing and use cuts to change it. Imported static
+  fractional values remain compatible. `LIVE` uses fixed zoom 1 with authored pans
+  or actor/group follow; use export scale for larger output. Do not animate
+  fractional nearest-neighbour source zoom.
+- The compositor's `cam_move`, `cam_slam` and punch zooms are editorial effects
+  on captured frames. `game_view` uses an integer nearest-neighbour enlargement
+  followed by a BOX area filter, so its fractional framing is filtered, not
+  pixel-exact integer-only scaling. Review the whole move for blur or shimmer;
+  a catalogued effect is not proof that a particular clip looks good.
+- Keep aspect ratio intact. Final frame upscaling or filtering cannot repair
+  stepping already baked into source sprites/scenery by changing nearest-neighbour
+  zoom. Re-render stable source framing, or undertake a separately reviewed smooth
+  rendering implementation before relying on animated zoom.
 
 ### Transitions are punctuation
+
+The following are compositor choices. Stageplay's set transitions are cuts,
+black/white fades and left/right wipes; an iris, whip or branded banded wipe below
+does not imply an equivalent Stageplay setting.
 
 | Move | Use for | Budget |
 |---|---|---|
@@ -228,52 +323,74 @@ signature move is what makes it a brand.
 
 ### Pacing
 
-- Mean shot is 3–5 s. No more than 10 cuts in any 20 s window. After a busy
-  passage, leave an 8-beat rest on one full-screen take.
-- Start the music on frame 0. There is no dead air anywhere, and no frozen
-  frames used to pad time. If a section is too short, choose a longer take.
-- Loading waits, idle stands and debug UI are cut, and never described as
-  real time.
+- For a music-led showcase, aim around 3–5 s per shot, watch the 10-cuts-in-20-s
+  warning and give the eye a rest after a busy passage. A dialogue take can be
+  longer to complete the exchange; do not force it into a grid or cut quota.
+- Give the opening an intentional sound and visual cue. Remove accidental dead
+  air and frozen padding. A deliberate silence, held pose or listening pause
+  can serve a story when performance and context make its purpose clear.
+- Cut loading waits, accidental idle stands and debug UI from promo takes.
+  Never describe authored or edited time as real-time gameplay evidence.
 - Curate rather than catalogue. Twenty representative effects beat 48, and
   the film ran 106 s instead of 241 s. Avoid spoilers (minigames, the final
   boss's secrets) unless they are asked for.
 
 ### Sound
 
-- Use one bed with chapter changes on its sections, a jingle under the
-  climax, and a calmer track under the end card. Do not splice in another
-  zone's music because a clip happened to contain it.
-- Use ROM sound effects only as punctuation: a ring on a pop, a spin dash
-  before a wipe, a Giant Ring under an iris, a boss hit on a punch.
-- Clip audio is SFX only, with one audio owner per moment. Duck menu
+- For a showcase, one coherent bed with chapters on its sections is a strong
+  default; a climax jingle or calmer end card can support its arc. A staged story
+  can use scene-led music, ambience, voice and silence. Make changes intentional,
+  never incidental switches to music embedded in the next source clip.
+- Use editorial stingers as punctuation: a ring on a pop, a spin dash before
+  a wipe, a Giant Ring under an iris, a boss hit on a punch. A staged story can
+  retain sounds motivated by its action as well as deliberate musical accents.
+- Under an editorial bed, clip audio is SFX only, with one owner for each intended
+  music/effect layer. Keep speech intelligible and avoid duplicating Stageplay's
+  authored audio in the edit. Duck menu
   stretches. Keep genuine native audio when it is the subject, for example a
   speed effect or an announcer.
-- Master to about −16 LUFS (`master()`). Then measure the true peak of the
-  AAC-encoded file, not only of the PCM.
+- `master()` targets about −16 dBFS RMS, not measured −16 LUFS. Measure integrated
+  loudness as needed and the true peak of the AAC-encoded file, not only the PCM.
 
-## Flatness test (answer every item before delivery)
+## Editorial review before delivery
 
-1. Does the first second move, and does the promise land by 6 s?
+Use the questions for the chosen form. Showcase defaults are diagnostic aids,
+not mandatory ingredients for a narrative film.
+
+1. Does the opening establish its subject promptly? A showcase should move from
+   the first second and land its promise by about 6 s; a story opening needs a
+   deliberate action or dramatic question rather than accidental waiting.
 2. Is the title face game-native or heavy condensed, never a regular system
    sans?
-3. Does every text element have stroke and shadow, and enter and leave?
-4. Is there at least one split or grid where several things play at once?
-5. Do cuts land on beats, and chapters on music sections? Check the beat
-   sheet against the frames.
-6. Is there one consistent direction for sweeps, pushes and dividers?
-7. Is there a signature transition used only at chapter changes?
-8. Is the mean shot 3–5 s, with rest beats after busy passages, and no
-   stretch that would read as rushed?
-9. Is it ≥80% moving gameplay, with every selling point *shown* happening?
-10. Is there one coherent soundtrack, stingers only on punctuation, and no
-    dead air?
-11. Does the end card have a logo, a promise, the URL, the status and the
-    disclaimer, held for 5–7 s?
-12. Is it honest? Positioned or debug setups are labelled in the provenance,
+3. Is promotional type crafted and animated, and dialogue stably readable with
+   an immediately identifiable speaker and enough reveal/reading time?
+4. Where comparison matters, would a split or grid show it more clearly?
+   Where character interaction matters, do framing and eyelines preserve it?
+5. Does a music-led edit respect beats and section changes? Does a story edit
+   give actions, lines and reactions their intended time?
+6. Where used, do sweeps, pushes and dividers share a consistent direction?
+7. Are transitions consistent punctuation rather than an assortment of effects?
+8. Does moving footage feel readable rather than rushed or padded? Check
+   reactions and whole camera moves, not only shot-length averages or stills.
+9. Are gameplay claims shown in actual gameplay? For staged scenes, do deliberate
+   blocking and named dialogue carry the story rather than an idle cast?
+10. Is the soundtrack coherent, speech clear and every silence intentional?
+11. Does the closing identification provide the logo, promise, URL, status and
+    disclaimer? A showcase end card typically needs 5–7 s; a story's closing
+    treatment still needs enough time to read its information.
+12. Is it honest? Staged, positioned or debug setups are labelled in the provenance,
     nothing claims to be online or real time when it is not, and any "reviews"
     are obviously in-character jokes, never presented as real quotes.
+13. Are sprites, scenery and text stable through motion at final cadence and size?
+    Distinguish compositor filtering from Stageplay's held zoom. No final upscale
+    can serve as a substitute for correcting shimmer in the source render.
 
 When the user gives feedback, change the cause, not the symptom. If they say
 "rushed", fewer and longer takes are the fix; a faster cut with more captions
 is not. Record their words and the response in the production README, as the
 archive does for every revision.
+
+For Stageplay LIVE promos, require native world telemetry beside the source:
+boarding/riding/leaving support, collision pickups, hazard hurt/ring loss/recovery,
+and flight/glide/landing. Do not advertise an animation, placement or counter as an
+interaction without that evidence. Keep zoom one and watch complete moving footage.

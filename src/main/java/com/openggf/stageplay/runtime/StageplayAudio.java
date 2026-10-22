@@ -9,7 +9,6 @@ import com.openggf.mods.PcmDecoder;
 import com.openggf.mods.scene.host.SceneRomLibrary;
 import com.openggf.stageplay.StageplayDocument;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
@@ -25,7 +24,10 @@ public final class StageplayAudio implements AutoCloseable {
     private StageplayDocument document;
     private StageplayCueDispatcher cues;
     private AudioManager.SceneAudioSamples samples;
+    private Map<String, StreamedMusicPort.SfxPcm> preparedSamples = Map.of();
     private com.openggf.audio.rewind.AudioLogicalSnapshot entryAudio;
+    private final ArrayDeque<AudioManager.SceneAudioSamples> nativeVoices = new ArrayDeque<>();
+    private int nativeSoundFrame = -1;
     private boolean closed;
 
     public StageplayAudio(AudioManager audio, SceneRomLibrary roms, Path projectRoot) {
@@ -38,25 +40,14 @@ public final class StageplayAudio implements AutoCloseable {
 
     /** Bounded, real-path-confined project asset read; symlinks cannot escape the project root. */
     public static byte[] readAsset(Path projectRoot, String relativePath) throws IOException {
-        com.openggf.io.ModAssetRoot.requireNormalizedEntry(relativePath);
-        if (projectRoot == null) throw new IOException("Save the scene before loading relative voice assets");
-        Path root = projectRoot.toRealPath();
-        Path file = root.resolve(relativePath).toRealPath();
-        if (!file.startsWith(root) || !Files.isRegularFile(file)) throw new IOException("Voice asset escapes scene directory");
-        long maximum = Math.min(ModInputLimits.production().maxAssetBytes(), 32L * 1024 * 1024);
-        if (Files.size(file) > maximum) throw new IOException("Voice asset exceeds encoded size limit");
-        try (var input = Files.newInputStream(file)) {
-            byte[] bytes = input.readNBytes(Math.toIntExact(maximum + 1));
-            if (bytes.length > maximum) throw new IOException("Voice asset exceeds encoded size limit");
-            return bytes;
-        }
+        return StageplayAssets.read(projectRoot, relativePath);
     }
 
     /** Validates every cue before changing playback; missing assets never silently disappear. */
     public void prepare(StageplayDocument next) throws IOException {
         requireOpen(); Objects.requireNonNull(next);
         if (audio.presentationFrameRate() != StageplayDocument.FRAMES_PER_SECOND)
-            throw new IOException("Stageplay version 1 requires 60 Hz audio presentation");
+            throw new IOException("Stageplay requires 60 Hz audio presentation");
         if (next.equals(document)) return;
         var prepared = new LinkedHashMap<String, StreamedMusicPort.SfxPcm>();
         long retained = 0;
@@ -86,7 +77,7 @@ public final class StageplayAudio implements AutoCloseable {
         var replacement = audio.prepareSceneSamples(prepared);
         stop();
         if (samples != null) samples.close();
-        samples = replacement; document = next; cues = new StageplayCueDispatcher(next);
+        samples = replacement; preparedSamples = Map.copyOf(prepared); document = next; cues = new StageplayCueDispatcher(next);
     }
 
     private SmpsLoader loader(String game) throws IOException {
@@ -104,6 +95,20 @@ public final class StageplayAudio implements AutoCloseable {
         if (!source.equals(document)) throw new IllegalStateException("Prepare this scene's audio before playback");
         if (entryAudio == null) entryAudio = audio.captureLogicalSnapshot();
         cues.advance(frame, this::dispatch);
+    }
+
+    /** Admits an isolated world's current native packet once during forward playback, never on draw/seek. */
+    public void playNativeFrame(int frame, StreamedMusicPort.SfxPcm pcm) {
+        requireOpen();
+        if (frame <= nativeSoundFrame || pcm == null || pcm.samples().length == 0) return;
+        while (nativeVoices.size() >= 2) nativeVoices.removeFirst().close();
+        var voice = audio.prepareSceneSamples(Map.of("native", pcm));
+        try { voice.play("native", 1); nativeVoices.addLast(voice); nativeSoundFrame = frame; }
+        catch (RuntimeException | Error failure) { voice.close(); throw failure; }
+    }
+    private void stopNativeSound() {
+        while (!nativeVoices.isEmpty()) nativeVoices.removeFirst().close();
+        nativeSoundFrame = -1;
     }
 
     private void dispatch(StageplayDocument.AudioCue cue) {
@@ -124,6 +129,18 @@ public final class StageplayAudio implements AutoCloseable {
         }
     }
 
+    /** A LIVE shot replaced its native audio producer; renew bounded voices without replaying earlier cues. */
+    public void refreshAfterNativeBoundary(int frame) {
+        requireOpen();
+        entryAudio = null;
+        stopNativeSound();
+        // These donor routes belonged to the retired producer, as in abandon().
+        scopes.clear();
+        if (samples != null) samples.close();
+        samples = audio.prepareSceneSamples(preparedSamples);
+        cues.seek(frame - 1);
+    }
+
     /** The borrowed entry soundtrack is part of a cutscene's rewind state. */
     public com.openggf.audio.rewind.AudioLogicalSnapshot captureEntry() { return entryAudio; }
     public void restoreEntry(com.openggf.audio.rewind.AudioLogicalSnapshot entry) { requireOpen(); entryAudio = entry; }
@@ -131,11 +148,12 @@ public final class StageplayAudio implements AutoCloseable {
     /** No ROM commands or old cues are emitted by a seek. Voice tails are silenced. */
     public void seek(int frame) {
         requireOpen(); if (cues == null) throw new IllegalStateException("No prepared scene");
-        cues.seek(frame); samples.stop();
+        cues.seek(frame); samples.stop(); stopNativeSound();
     }
     /** Restores the borrowed soundtrack and drops owned voice tails. */
     public void stop() {
         requireOpen();
+        stopNativeSound();
         if (samples != null) samples.stop();
         var borrowed = new ArrayList<>(scopes.values()); scopes.clear();
         for (int i = borrowed.size() - 1; i >= 0; i--) borrowed.get(i).close();
@@ -153,6 +171,6 @@ public final class StageplayAudio implements AutoCloseable {
     }
     @Override public void close() {
         if (closed) return;
-        try { stop(); } finally { closed = true; if (samples != null) samples.close(); loaders.clear(); profiles.clear(); }
+        try { stop(); } finally { closed = true; if (samples != null) samples.close(); loaders.clear(); profiles.clear(); preparedSamples = Map.of(); }
     }
 }

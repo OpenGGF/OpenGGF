@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.cfg.CoercionAction;
 import com.fasterxml.jackson.databind.cfg.CoercionInputShape;
 import com.fasterxml.jackson.databind.json.JsonMapper;
@@ -100,12 +101,58 @@ public final class StageplayStore {
         Objects.requireNonNull(bytes, "bytes");
         if (bytes.length == 0 || bytes.length > MAX_BYTES) throw new IOException("Stageplay input must contain 1 byte to 8 MiB");
         try {
-            StageplayDocument document = JSON.readValue(bytes, StageplayDocument.class);
-            if (document == null) throw new IOException("Stageplay document is required");
-            return document;
+            var tree = JSON.readTree(bytes);
+            if (!(tree instanceof ObjectNode object)) throw new IOException("Stageplay document must be an object");
+            var version = object.get("version");
+            if (version == null || !version.isIntegralNumber() || !version.canConvertToInt())
+                throw new IOException("Stageplay version must be an integer");
+            int sourceVersion = version.intValue();
+            if (sourceVersion < 1 || sourceVersion > StageplayDocument.VERSION)
+                throw new IOException("Unsupported Stageplay version: " + sourceVersion);
+            if (sourceVersion == 1) {
+                // Exact legacy shapes remain authoritative: later fields cannot masquerade as old data.
+                if (object.has("cameraEffects") || object.has("sceneChanges"))
+                    throw new IOException("Version one cannot contain version two tracks");
+                object.putArray("cameraEffects");
+                object.putArray("sceneChanges");
+            }
+            if (sourceVersion <= 2) {
+                if (object.has("dialogueTypers") || object.has("dialogueSkins") || object.has("dialogue"))
+                    throw new IOException("Version " + sourceVersion + " cannot contain dialogue tracks");
+                object.putArray("dialogueTypers");
+                object.putArray("dialogueSkins");
+                object.putArray("dialogue");
+            }
+            if (sourceVersion <= 3) {
+                if (object.has("puppets")) throw new IOException("Legacy scenes cannot contain puppet tracks");
+                object.putArray("puppets");
+                object.put("version", StageplayDocument.VERSION);
+            }
+            if (sourceVersion <= 4) {
+                migrateSet((ObjectNode) object.get("set"));
+                for (var change : object.withArray("sceneChanges")) migrateSet((ObjectNode) change.get("set"));
+                for (var key : object.withArray("camera")) {
+                    if (key.has("follow")) throw new IOException("Legacy scenes cannot contain camera following");
+                    ((ObjectNode) key).set("follow", JSON.valueToTree(StageplayDocument.CameraFollow.none()));
+                }
+                for (var track : object.withArray("puppets")) for (var command : track.withArray("commands")) {
+                    var cue = (ObjectNode) command;
+                    if (cue.has("target") || cue.has("condition") || cue.has("timeoutFrames"))
+                        throw new IOException("Legacy scenes cannot contain live intents");
+                    cue.set("target", JSON.valueToTree(StageplayDocument.ObjectTarget.none()));
+                    cue.put("condition", "NONE").put("timeoutFrames", 0);
+                }
+                object.put("version", StageplayDocument.VERSION);
+            }
+            return JSON.treeToValue(object, StageplayDocument.class);
         } catch (IllegalArgumentException error) {
             throw new IOException("Invalid Stageplay document", error);
         }
+    }
+
+    private static void migrateSet(ObjectNode set) throws IOException {
+        if (set.has("worldPolicy")) throw new IOException("Legacy scenes cannot contain worldPolicy");
+        set.put("worldPolicy", "TERRAIN_ONLY");
     }
 
     private static ObjectMapper createMapper() {

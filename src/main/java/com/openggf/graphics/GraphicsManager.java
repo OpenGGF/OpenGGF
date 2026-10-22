@@ -1103,6 +1103,20 @@ public class GraphicsManager {
 		}
 	}
 
+    /** Draw-only reveal: preserve native fade requests, publication gates and rewind state. */
+    void withoutDisplayedPaletteFade(Runnable draw) {
+        var saved = captureDisplayedPaletteFade();
+        boolean held = displayedPaletteFadeHeld;
+        try {
+            restoreDisplayedPaletteFade(new PaletteUploadPresentation.DisplayedFade(
+                    PaletteFadePresentation.Mode.NONE, 0, 0, saved.pending()));
+            draw.run();
+        } finally {
+            restoreDisplayedPaletteFade(saved);
+            displayedPaletteFadeHeld = held;
+        }
+    }
+
 	private void publishRequestedPaletteFade() {
         var previousMode = publishedPaletteFade.mode();
 		int previousMask = publishedPaletteFade.lineMask();

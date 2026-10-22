@@ -14,6 +14,13 @@ frame by frame from a BizHawk input log, and writes PNG frames, `state.csv`, and
 MP4 when `ffmpeg` is on `PATH`. Use it to show a user what happens at a location, to
 check a visual change, or to reproduce a route failure with real rendering.
 
+For choreographed dialogue, directed performances or staged promo scenes, use
+[stageplay-authoring](../stageplay-authoring/SKILL.md). Its timeline JSONL describes
+authored presentation; `simulate` JSONL adds native puppet motion against detached
+terrain, without world objects/events. This capture's state CSV describes executed
+gameplay. Use
+this workflow when the actual gameplay behavior is the subject of the footage.
+
 Use `--interactive-pacing` for title menus, gameplay observers and presentation-timed
 effects such as Chaos Mode. It uses the production `GameLoop.stepPresentationFrame`
 owner: each input row represents one presentation, which may admit zero or several
@@ -135,3 +142,8 @@ exit/relaunch. Never label a black end frame as observed hub recovery.
   eight positions swept across the act, because the foreground is opaque almost everywhere.
   Sweep several positions before concluding either way, and confirm the plane is on screen
   at the one you film.
+
+Stageplay LIVE shots use the Stageplay offline world host and native priority
+renderer. Use its simulate world events to corroborate contact, rings, hurt and
+abilities; a detached Puppet capture does not demonstrate placed-world interaction.
+See [stageplay-authoring](../stageplay-authoring/SKILL.md).

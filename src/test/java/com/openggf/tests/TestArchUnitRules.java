@@ -192,11 +192,15 @@ class TestArchUnitRules {
             "editor -> stageplay",
             "tools -> stageplay",
             "stageplay -> audio",
+            "stageplay -> camera",
+            "stageplay -> configuration",
+            "stageplay -> physics",
             "stageplay -> control",
             "stageplay -> data",
             "stageplay -> game",
             "stageplay -> graphics",
             "stageplay -> level",
+            "stageplay -> sprites",
             "game -> architecture",
             "game -> audio",
             "game -> camera",
@@ -709,7 +713,7 @@ class TestArchUnitRules {
     }
 
     private static boolean stageplayCoreType(String name) {
-        return Set.of("StageplayDocument", "StageplayTimeline", "StageplayController", "StageplayStore", "StageplayControl")
+        return Set.of("StageplayDocument", "StageplayTimeline", "StageplayController", "StageplayStore", "StageplayControl", "StageplayDialogue")
                 .stream().anyMatch(owner -> typeOrNested(name, "com.openggf.stageplay." + owner));
     }
 
@@ -718,20 +722,39 @@ class TestArchUnitRules {
             return stageplayCoreType(target) && !typeOrNested(target, "com.openggf.stageplay.StageplayControl");
         if (typeOrNested(origin, "com.openggf.editor.hud.StageplayHud"))
             return typeOrNested(target, "com.openggf.stageplay.StageplayDocument")
-                    || typeOrNested(target, "com.openggf.stageplay.StageplayController");
+                    || typeOrNested(target, "com.openggf.stageplay.StageplayController")
+                    || typeOrNested(target, "com.openggf.stageplay.StageplayDialogue")
+                    || typeOrNested(target, "com.openggf.stageplay.StageplayTimeline$CameraPose");
+        if ((typeOrNested(origin, "com.openggf.tools.StageplayTool") || typeOrNested(origin, "com.openggf.tools.StageplayPreviewTool"))
+                && (typeOrNested(target, "com.openggf.stageplay.runtime.StageplayResources")
+                || typeOrNested(target, "com.openggf.stageplay.runtime.StageplayLiveWorld"))) return true;
+        if (typeOrNested(origin, "com.openggf.tools.StageplayTool")
+                || typeOrNested(origin, "com.openggf.tools.StageplayScriptCompiler")
+                || typeOrNested(origin, "com.openggf.tools.StageplayPreviewTool"))
+            return Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayStore",
+                            "com.openggf.stageplay.StageplayTimeline")
+                    .stream().anyMatch(owner -> typeOrNested(target, owner));
         if (typeOrNested(origin, "com.openggf.tools.StageplayCaptureTool"))
             return Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayStore",
                             "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.runtime.StageplayAudio",
-                            "com.openggf.stageplay.runtime.StageplayResources", "com.openggf.stageplay.runtime.StageplayRenderer")
+                            "com.openggf.stageplay.runtime.StageplayResources", "com.openggf.stageplay.runtime.StageplayRenderer",
+                            "com.openggf.stageplay.runtime.StageplayLiveWorld")
                     .stream().anyMatch(owner -> typeOrNested(target, owner));
         return false;
     }
 
     private static boolean approvedStageplayRuntimeDependency(String origin, String targetSlice) {
+        if (typeOrNested(origin, "com.openggf.stageplay.runtime.StageplayLiveWorld"))
+            return Set.of("audio", "camera", "configuration", "control", "data", "game", "graphics", "level", "mods", "physics", "sprites").contains(targetSlice);
+        if (typeOrNested(origin, "com.openggf.stageplay.runtime.StageplayOfflinePreview"))
+            return Set.of("audio", "data", "game", "mods").contains(targetSlice);
         var owners = java.util.Map.of(
                 "com.openggf.stageplay.StageplayPlayback", Set.of("audio", "control", "data", "game", "graphics", "io", "level", "mods"),
                 "com.openggf.stageplay.runtime.StageplayAudio", Set.of("audio", "data", "game", "io", "mods"),
-                "com.openggf.stageplay.runtime.StageplayResources", Set.of("level", "mods"),
+                "com.openggf.stageplay.runtime.StageplayResources", Set.of("audio", "level", "mods", "io", "game", "sprites"),
+                "com.openggf.stageplay.runtime.StageplayPuppets", Set.of("sprites"),
+                "com.openggf.stageplay.runtime.StageplayAssets", Set.of("io"),
+                "com.openggf.stageplay.runtime.StageplayDialogueRenderer", Set.of("mods"),
                 "com.openggf.stageplay.runtime.StageplayRenderer", Set.of("mods"),
                 "com.openggf.stageplay.runtime.StageplayNativeBinding", Set.of("game"),
                 "com.openggf.stageplay.editor.StageplayEditorSession", Set.of("audio", "data", "game", "mods"),
@@ -746,6 +769,8 @@ class TestArchUnitRules {
                 "com.openggf.stageplay.StageplayPlayback"));
         assertTrue(!approvedStageplayConsumer("com.openggf.editor.stageplay.StageplayWorkspace",
                 "com.openggf.stageplay.runtime.StageplayAudio"));
+        assertTrue(!approvedStageplayConsumer("com.openggf.editor.stageplay.StageplayWorkspace",
+                "com.openggf.stageplay.runtime.StageplayAssets"));
         assertTrue(!approvedStageplayRuntimeDependency("com.openggf.stageplay.StageplayPlayback", "editor"));
         assertTrue(!approvedStageplayRuntimeDependency("com.openggf.stageplay.editor.StageplayEditorSession", "tools"));
         Set<String> violations = new TreeSet<>();

@@ -38,6 +38,7 @@ class TestSceneRomLibrary {
             assertEquals(expected, library.availableGames(), "subset " + subset);
             assertEquals(codes.get(active), library.activeGame());
             assertSame(borrowed, library.sourceRom(codes.get(active)));
+            assertSame(module, library.module(codes.get(active)), "physics retains the exact active module");
             for (int i = 0; i < 3; i++) {
                 if ((subset & 1 << i) != 0) {
                     assertEquals(i + 1, library.rom(codes.get(i)).read(0, 1)[0]);
@@ -58,6 +59,16 @@ class TestSceneRomLibrary {
             verify(roms, never()).getSecondaryRom(anyString());
             borrowed.close();
         }
+    }
+
+    @Test
+    void offlineLibraryRejectsUnknownGamesAndWrongRomIdentity(
+            @org.junit.jupiter.api.io.TempDir java.nio.file.Path temporaryDirectory) throws Exception {
+        assertThrows(IllegalArgumentException.class, () -> SceneRomLibrary.open(java.util.Map.of()));
+        assertThrows(IllegalArgumentException.class, () -> SceneRomLibrary.open(java.util.Map.of("other", java.nio.file.Path.of("unused"))));
+        var file = temporaryDirectory.resolve("invalid.gen");
+        java.nio.file.Files.write(file, new byte[1024]);
+        assertThrows(java.io.IOException.class, () -> SceneRomLibrary.open(java.util.Map.of("s2", file)));
     }
 
     @Test

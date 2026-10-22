@@ -41,6 +41,7 @@ class TestStageplayHud {
         press(BUTTON_Y);
         assertEquals("Add actor", workspace.menu().title());
         workspace.menu().setValue("name", "Hero");
+        workspace.menu().setValue("mode", "POSER");
         workspace.menu().submit();
         assertEquals("Hero", workspace.controller().document().actors().getFirst().name());
 
@@ -71,6 +72,9 @@ class TestStageplayHud {
         press(BUTTON_START);
         assertEquals(StageplayWorkspace.Action.values().length, hud.rows().size());
         assertTrue(hud.rows().stream().anyMatch(row -> row.label().equals("Audio cues")));
+        assertTrue(hud.rows().stream().anyMatch(row -> row.label().equals("Dialogue lines")));
+        assertTrue(hud.rows().stream().anyMatch(row -> row.label().equals("Dialogue typers")));
+        assertTrue(hud.rows().stream().anyMatch(row -> row.label().equals("Dialogue decorations")));
         assertTrue(hud.rows().stream().anyMatch(row -> row.label().equals("Export film")));
     }
 
@@ -107,6 +111,36 @@ class TestStageplayHud {
     }
 
     @Test
+    void dialogueTimelineIdentifiesSpeakerAndSelectsThemAtTheLineStart() {
+        workspace.invoke(StageplayWorkspace.Action.ADD_ACTOR); workspace.menu().setValue("name","Sonic"); workspace.menu().submit();
+        String actor=workspace.controller().selectedActorId();
+        workspace.controller().replace(workspace.controller().document().withDialogue(List.of(new StageplayDocument.DialogueCue(
+                "speech",20,100,actor,"","Hello!","","",8,140,304,72,"",List.of()))));
+        input.handleKeyEvent(GLFW_KEY_TAB,GLFW_PRESS); tick();
+        var line=hud.rows().stream().filter(r -> r.label().equals("Dialogue / Sonic")).findFirst().orElseThrow();
+        assertEquals("Hello!",line.detail()); line.action().run();
+        assertEquals(20,workspace.controller().frame()); assertEquals(actor,workspace.controller().selectedActorId());
+    }
+
+    @Test
+    void physicalActorUsesActionMenuAndTimelineSelectsItsInstructions() {
+        press(BUTTON_Y); workspace.menu().submit();
+        String actor=workspace.controller().selectedActorId();
+        assertTrue(workspace.selectedActorIsPuppet());
+        hud.reactivated(); tick(); press(BUTTON_X);
+        assertEquals("Direct Sonic",workspace.menu().title()); workspace.menu().close();
+        var doc=workspace.controller().document();
+        workspace.controller().replace(doc.withPuppets(List.of(new StageplayDocument.PuppetTrack(actor,true,0,List.of(
+                new StageplayDocument.PuppetCommand("move",10,StageplayDocument.PuppetCommandKind.MOVE_TO,300,112,.5,0),
+                new StageplayDocument.PuppetCommand("jump",20,StageplayDocument.PuppetCommandKind.JUMP,0,0,0,12))))));
+        input.handleKeyEvent(GLFW_KEY_TAB,GLFW_PRESS); tick();
+        assertEquals(List.of(0,0,10,20),hud.rows().stream().map(StageplayHud.Row::frame).toList());
+        var move=hud.rows().stream().filter(r -> r.label().endsWith("MOVE_TO")).findFirst().orElseThrow();
+        assertTrue(move.detail().contains("50%")); move.action().run();
+        assertEquals(10,workspace.controller().frame()); assertEquals(actor,workspace.controller().selectedActorId());
+    }
+
+    @Test
     void scrubMappingIncludesBothEndpointsAndClampsOutsideTheTrack() {
         var track = new EditorHudLayout.Rect(20, 10, 100, 18);
         assertEquals(0, StageplayHud.frameAt(-20, track, 101));
@@ -124,6 +158,40 @@ class TestStageplayHud {
         assertTrue(layout.game().y() >= layout.topBar().bottom());
         assertTrue(layout.game().bottom() <= layout.dock().y());
         assertTrue(layout.workbench().right() <= layout.width());
+    }
+
+    @Test
+    void cameraModeOwnsArrowsCapturesKeysAndKeepsActorCommandsSeparate() {
+        input.handleKeyEvent(GLFW_KEY_C,GLFW_PRESS); tick();
+        assertTrue(workspace.cameraMode());
+        input.handleKeyEvent(GLFW_KEY_C,GLFW_RELEASE);
+        input.handleKeyEvent(GLFW_KEY_RIGHT,GLFW_PRESS);
+        input.refreshLogicalSnapshot(); assertTrue(hud.update(input)); workspace.tick(input); input.update();
+        assertEquals(0,workspace.controller().frame()); assertEquals(2,workspace.directorCamera().x());
+        assertEquals(0,workspace.controller().document().camera().getFirst().x());
+        input.handleKeyEvent(GLFW_KEY_RIGHT,GLFW_RELEASE);
+        input.handleKeyEvent(GLFW_KEY_K,GLFW_PRESS); tick();
+        assertFalse(workspace.menu().isOpen()); assertEquals(2,workspace.controller().document().camera().getFirst().x());
+        input.handleKeyEvent(GLFW_KEY_K,GLFW_RELEASE);
+        input.handleKeyEvent(GLFW_KEY_ESCAPE,GLFW_PRESS); tick();
+        assertFalse(workspace.cameraMode()); assertTrue(workspace.active());
+    }
+
+    @Test
+    void effectsAndSceneChangesAppearInTimelineAndCommands() {
+        var doc = workspace.controller().document();
+        doc = doc.withCamera(List.of(doc.camera().getFirst(),new StageplayDocument.CameraKey(100,20,30,1,StageplayDocument.Interpolation.HOLD)))
+                .withCameraEffects(List.of(new StageplayDocument.CameraEffect("quake",20,60,2,4,8,1)))
+                .withSceneChanges(List.of(new StageplayDocument.SceneChange("shot",100,doc.set(),StageplayDocument.Transition.FADE_BLACK,30)));
+        workspace.controller().replace(doc);
+        input.handleKeyEvent(GLFW_KEY_TAB,GLFW_PRESS); tick();
+        assertEquals(List.of(0,20,100,100),hud.rows().stream().map(StageplayHud.Row::frame).toList());
+        assertTrue(hud.rows().stream().anyMatch(row -> row.label().equals("Camera shake")));
+        assertTrue(hud.rows().stream().anyMatch(row -> row.label().equals("Scene change")));
+        input.handleKeyEvent(GLFW_KEY_TAB,GLFW_RELEASE);
+        input.handleKeyEvent(GLFW_KEY_F1,GLFW_PRESS); tick();
+        assertTrue(hud.rows().stream().anyMatch(row -> row.label().equals("Camera shake / quake")));
+        assertTrue(hud.rows().stream().anyMatch(row -> row.label().equals("Scene changes / transitions")));
     }
 
     private void tick() {

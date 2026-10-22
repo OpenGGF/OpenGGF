@@ -161,3 +161,100 @@ The tested runtime implementation is `d74015656`;
 final candidate commit, combined smoke results and delivery are recorded in the
 [implementation plan](../plans/2026-10-21-stageplay.md). Media review artifacts are
 outside the repository, under the task's `stageplay-delivery` directory.
+
+## Directing extension (2026-10-21)
+
+The follow-up adds sampled accessory poses, camera directing/shake/zoom, temporary
+window constraints, scene transitions, and a noninteractive authoring workflow.
+Version 2 appends `cameraEffects` and `sceneChanges`; strict version-1 reads migrate
+with empty lists, and the original Java constructor remains available. Every scene
+boundary has actor and camera keys. The evaluator holds the outgoing segment before
+a boundary and restarts animation phase after it. Shake is deterministic from frame,
+frequency and seed; the unshaken camera remains available for native handover.
+
+A transition is a cut or a bounded fade/wipe straddling the switch. At its midpoint
+the incoming set is selected beneath full coverage. Rendering overlays transitions
+after captions. All sets preflight before playback; mod-authored levels and voices
+share a 64 MiB encoded asset budget and typed LoadOps. A native binding rejects
+cross-set handover before capturing native state. Staged scenery can cross games
+without loading or mutating the held native world.
+
+S2 Obj05 reuses Tails' body art, so testing only for a separate tail bank was wrong.
+The ROM provider now samples accessory relationships using shared native selection
+and animation tables. Stageplay consumes a generic pose/latch API; it has no new
+game-name branch. Fixed mapping holds infer an accessory from a matching ROM script.
+
+Both frontends expose camera mode, effect/scene CRUD and atomic boundary insertion.
+The host owns temporary 16:9/minimum sizing, monitor fallback and restoration; the
+scene's pixel dimensions remain independent and letterboxed. Gameplay configuration
+is not rewritten.
+
+The authoring tool compiles shot-local JSON into the canonical v2 document. It adds
+boundary anchors and hides absent roles, rather than requiring agents to calculate
+global frames or navigate menus. ROM catalog queries expose actual scripts and set
+bounds. Compilation and inspection require no ROM; capture validates resources and
+uses the existing no-device headless host. Rejected: a second playback evaluator,
+implicit cross-game native loads, copying ROM art into production sources, and
+schema coercions which could silently move cues. No round-trip decompiler is claimed.
+
+
+### Dialogue and visual feedback revision
+
+User review rejected fractional nearest-neighbour zoom, idle performances and
+unclear speakers in the first short. Camera zoom now holds until its next key;
+position interpolation remains independent. New editor keys use integer framing.
+The revised production uses zoom one, entrances, reactions, movement and exits.
+Rejected: a global GL_LINEAR switch, which would blur text and risks straight-alpha
+sprite fringes; smooth animated zoom needs a separate bounded world presentation pass.
+
+Version 3 appends document-owned dialogue, typer and skin lists. Strict v1/v2
+migration inserts empty lists; legacy constructors remain. Speaker identity is a
+real actor reference or explicit offscreen name, independent of caption text.
+Typing samples a grapheme reveal schedule from scene time; full-text wrapping
+precedes reveal, and names appear immediately. It adds no mutable clock or draw
+side effects. Profiles and optional nine-slice/portrait PNGs are portable to both
+editors, mod registration and offline export. PNG headers and decoded aggregate
+pixels are bounded before allocation, and creator assets retain the existing
+ModAssetRoot/typed LoadOp ownership and shared budget.
+
+Chosen over a new executable provider registry: portable data meets the requested
+speaker styles, text reveal and dialogue decoration without loading mod code in
+the external editor/exporter. Programmable glyph callbacks, custom fonts and
+automatic typing audio remain outside this surface; timed sound cues remain available.
+There is no creator-reported owner or failure-swallowing fallback. Missing resources
+and overflowing dialogue fail preflight. The corrected promo skills distinguish
+authored timeline evidence from observed gameplay and require moving-footage review.
+
+
+### Physical puppets and intent direction
+
+Follow-up review rejected the hand-keyed jump and requested default floor support,
+real jumping, and players directed toward a destination at a chosen urgency. The
+new performance owner uses the production playable tick, movement, animation and
+terrain collision. It does not fit a parabola or write destination coordinates
+into each frame. Move-to and stop cues produce controller inputs; jump cues hold
+and release the native jump button. Urgency is a desired fraction of the native
+maximum speed, expressed through acceleration/coasting/braking inputs. A target
+is an intention, not guaranteed pathfinding: actual arrival and lack of progress
+are visible to authoring tools, and a blocked character never teleports.
+
+Each puppet owns a construction-bound runtime context and private collision,
+camera, timer, state and silent-audio peers over detached ROM/authored terrain.
+The existing gameplay context remains the default for ordinary characters. A
+collision-only level initializer avoids gameplay boot, art/events initialization
+and global session swapping. The actor's module supplies native movement rules
+and art; the set's module supplies terrain layout semantics. Initial placement
+snaps to a nearby valid floor by default, with native radii, headroom and explicit
+collision path; subsequent floor following and airborne landing use real sensors.
+
+Canonical schema 4 adds document-owned puppet tracks without redefining legacy
+ActorKey meaning. Version 1–3 documents migrate with no puppet tracks, preserving
+old choreography. New actors and version-two screenplays default to physical
+puppets; manual choreography remains an explicit option. Existing boundary keys
+place actors at shot starts; interior physical position tweening is rejected.
+Move-to/stop commands and independent jump edges are portable data. One shared
+runtime resolver produces actual mapping frames, flips, velocities and accessory
+state for editor preview, playback, capture and native handover. The pure timeline
+labels physical poses unresolved; it must not present an authored goal as a
+measured position. Seeking restores/replays isolated native state deterministically,
+and repeated reads/draws of one frame do not advance the simulation.

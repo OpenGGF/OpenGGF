@@ -34,6 +34,11 @@ public final class LevelSpritePresentation {
         return renderer == null ? null : renderer.backgroundScrollForDraw();
     }
 
+    /** Internal directed-render scope. The callback must flush its drawing before returning. */
+    public static void withCinematicCamera(LevelManager level, int x, int y, Runnable draw) {
+        level.spritePresentationRenderer().withCinematicCamera(x, y, draw);
+    }
+
     static final class Tables implements RewindSnapshottable<Tables.State> {
         record State(SpritePresentation.Frame prepared, SpritePresentation.Frame published,
                      SpritePresentation.Frame counters, LevelScrollPresentation preparedScroll,

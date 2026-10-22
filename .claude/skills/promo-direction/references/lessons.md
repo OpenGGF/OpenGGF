@@ -5,6 +5,11 @@ Paths are relative to the
 directory. The finished videos are external; the edit code and READMEs are in
 the archive.
 
+These examples record particular briefs and feedback. Preserve their craft
+lessons without turning the ≥80% gameplay mix, a single bed, moving sales copy or
+3–5 s showcase rhythm into requirements for a staged dialogue film. A narrative
+may need stable speech panels, longer reactions and intentional silence.
+
 ## Reference productions
 
 | Production | What to copy | Where |
@@ -29,6 +34,49 @@ the archive.
 | Chaos Mode revision 3 | "retain a coherent HCZ soundtrack…; do not fade into the ghost source's DEZ music… omit minigames and related challenge/chat spoilers" | One bed throughout, curated effects and no spoilers. |
 | Second Strike reels (flat reference) | DejaVu `drawtext` at `x=40`, a solid pad, hard concat, a text-only end card | Use this as the counter-example when choosing type and composition. |
 
+## Stageplay dialogue revision
+
+The 2026-10-21 Stageplay review identified visibly poor fractional
+nearest-neighbour zoom, an idle cast and unclear speaker identity. The response
+is to author purposeful movement and reactions, identify speakers with named
+dialogue and use stable held zoom, pans and cuts. The dialogue work adds reusable
+reveal typers and skins rather than relying on plain caption overlays.
+
+Revision three is a rendered 51-second short with fourteen named lines, held
+zoom one, active blocking and original panel skins. Its complete playback and
+transition sequences received bounded agent review; decoded exports contain
+3,060 frames with no reported browser drops. Production sources and review limits
+are preserved in [OpenGGF-Media](https://github.com/OpenGGF/OpenGGF-Media/tree/main/projects/stageplay).
+The user subsequently rejected the implausible manually positioned jump and asked
+for default floor contact and native physical direction. Revision three is therefore
+a superseded take, despite its successful decoding and bounded agent review.
+The terrain follow-up uses `TERRAIN_ONLY` Puppet mode: destination/urgency and
+jump commands feed native inputs, with actual terrain collision, gravity and
+landing. The later `LIVE` policy runs actors, placed objects, rings and events in
+one native world, with authored shot spawns, routes and bounded waits. Poser mode retains manual
+position, animation and frame control for intentional nonphysical staging. Inspect
+simulation state before rendering and review the resulting movement; never substitute
+a fitted position curve for a requested native jump. Code and codec checks alone
+cannot establish creative acceptance.
+
+## Stageplay vertical-camera correction
+
+On 2026-10-22 the user reported “something's wrong with vertical camera movement
+relative the level,” specifically the ring-spill fall in revision five. Native
+actors were grounded, but foreground scroll used a different vertical origin,
+so a landing appeared in empty space. Codec checks, telemetry and the earlier
+bounded agent review all missed it. Revision six aligns foreground, priority
+masks and sprites in the directed view; all 4,860 native state records remain
+unchanged. The exact source and replacement captures are preserved in the
+[Stageplay archive](https://github.com/OpenGGF/OpenGGF-Media/tree/main/projects/stageplay).
+
+Review feet and supporting surfaces through vertical pans and follow handoffs,
+including the landing consequence. Keep native background behavior distinct from
+foreground alignment: Death Egg is intentionally stationary, and current LIVE
+backgrounds retain the native camera phase. A transparent native floor-art tile
+can still have collision. Diagnose the rendered transform and native art before
+changing movement, adding fake terrain or making every background scroll alike.
+
 ## Recurring hazards
 
 - Correct footage does not make good pacing. Count the cuts and compare with
@@ -43,3 +91,42 @@ the archive.
   hard to read (ring repulsion, an invisible boss). Reframe or recapture.
 - Cutting every shot from the same idle point makes the reel look like "the
   same jump with a new label". Vary the entry points.
+- Staged performance needs direction. `TERRAIN_ONLY` Puppets run native player
+  physics against detached static terrain without placed-object AI, rings or zone
+  events. `LIVE` runs those production world owners together; destinations can
+  still be blocked and do not add universal pathfinding. Author explicit jumps,
+  ability intents and bounded waits. Poser mode keeps manual choreography.
+  Check actual entrances, exits, floor contact, facing and reactions in motion.
+- Names and consistent placement identify a speaker; color alone does not,
+  particularly when several roles use the same stock sprite. Give reveal,
+  reading and response their own time instead of forcing each line onto a beat.
+- Do not confuse the compositor's filtered camera with engine world rendering.
+  `promo_kit.game_view` enlarges with integer nearest-neighbour and applies a BOX
+  area filter. `TERRAIN_ONLY` zoom holds between keys; `LIVE` keeps zoom 1. Avoid animated fractional
+  nearest-neighbour source zoom. Scaling the finished frame cannot reconstruct
+  stable edges that were lost to changing pixel steps in the source.
+- Authored `timeline` JSONL describes directing intent with physical actors
+  `UNRESOLVED`. `simulate` JSONL resolves either `TERRAIN_ONLY` native actor motion
+  on static terrain or `LIVE` native world state/events in `sample.world`. Normal
+  gameplay CSV describes an observed gameplay run; retain its input and actual
+  entry method. Authored spawns, positioned starts and cuts cannot establish a
+  continuous cold completion, and none of these alone proves ROM parity. Keep
+  those evidence kinds distinct and retain the required source archive.
+
+## Stageplay first-creator tutorial
+
+On 2026-10-22 the user was pleased with the working features but rejected the
+story as making little sense and consisting of characters jumping around. They
+requested a tutorial/promo for first-time creators. Revision seven therefore uses
+one small conflict: Sonic rushes ahead, leaves Tails behind, comes back, and crosses
+with him. Movement needs a reason and a consequence; a sequence of native ability
+checks is not automatically a story. The earlier technical checks remain valid
+within their scope and do not establish creative acceptance.
+
+For a conceptual tutorial, connect each directing choice to its visible result.
+Use a coherent sample, show the actual settings and allow time to read them while
+the performance continues. Label editorial notes and track diagrams honestly; do
+not imitate controls the editor does not have. Finish with the complete scene so
+viewers can judge the relationships and pacing without instructional interruptions.
+Keep an editable sample and a direct path from the lesson to opening it. A first
+lesson does not need every available ability or a second unrelated showcase.

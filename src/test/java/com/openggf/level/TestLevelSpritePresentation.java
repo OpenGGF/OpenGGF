@@ -8,6 +8,36 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestLevelSpritePresentation {
+    @Test void cinematicViewRebasesOnlyForegroundOriginsKeepingDeformationAndBackgroundPhase() {
+        var mask = new com.openggf.graphics.ArenaMaskState(0, 320, 7);
+        var registers = new LevelScrollPresentation.Registers(100, 200, 103,
+                (short) 203, (short) -7, 17, 1024, true, true, true,
+                true, (short) 211, true, (short) 19, mask);
+        int[] horizontal = {(-100 << 16) | 0xfff9, (-94 << 16) | 15};
+        short[] columns = {-3, 12};
+        var nativeView = new LevelScrollPresentation(registers, horizontal, columns, columns, columns, columns);
+        var moved = nativeView.forCinematicCamera(140, 168, mask);
+        assertEquals(143, moved.registers().cameraXWithShake());
+        assertEquals(171, moved.registers().foregroundY());
+        assertEquals(179, moved.renderMode().foregroundVScrollOverride(), "Rebase an active override exactly once");
+        assertArrayEquals(new int[] {(-140 << 16) | 0xfff9, (-134 << 16) | 15}, moved.horizontal(),
+                "Rebase packed foreground words, retaining deformation and both signed background words");
+        assertEquals(-7, moved.registers().backgroundY());
+        assertEquals(19, moved.renderMode().backgroundVScrollOverride());
+        assertEquals(17, moved.registers().backgroundX());
+        assertEquals(1024, moved.registers().backgroundPeriod());
+        assertArrayEquals(columns, moved.backgroundLines());
+        assertArrayEquals(columns, moved.backgroundColumns());
+        assertArrayEquals(columns, moved.foregroundColumns());
+        assertArrayEquals(columns, moved.renderMode().foregroundPerColumnVScrollOverride(),
+                "Per-column values are deltas, not another absolute origin");
+        assertTrue(moved.renderMode().reversePlaneAssignment());
+        assertTrue(moved.renderMode().enableForegroundHeatHaze());
+        assertTrue(moved.renderMode().enablePerLineForegroundScroll());
+        assertEquals(nativeView, moved.forCinematicCamera(100, 200, mask), "Reframing is reversible without owner updates");
+        assertArrayEquals(horizontal, nativeView.horizontal());
+    }
+
     @Test void registrationBeforeRendererAttachmentRemovesStalePresentationAdapters() {
         var registry = new com.openggf.game.rewind.RewindRegistry();
         registry.register(new LevelBoundsMaskTransition());
