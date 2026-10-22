@@ -817,6 +817,32 @@ def slanted_split(edit, f, panes, slant=0.22, divider=YELLOW, divider_px=14, dro
     return c
 
 
+def stacked_split(edit, f, panes, divider=YELLOW, divider_px=10, slide_frames=16, bg=None):
+    """Full-width strips stacked top to bottom, for comparing horizontal routes. A slanted split
+    crops each pane to a narrow slice; a strip keeps the whole run in view, so two 800x224
+    captures (--width 800) fill 1920x1080 at 2.4x. panes: (start_frame, clip, src, label, cam)
+    with cam=(cx, cy, zoom) or None. Each strip slides in from the left on its start frame."""
+    c = stripes(edit, f) if bg is None else bg.copy()
+    n = len(panes)
+    sh = (edit.H - (n - 1) * divider_px) // n
+    for i, (t0, clip, src, label, cam) in enumerate(panes):
+        if f < t0:
+            continue
+        cx, cy, z = cam if cam else (None, None, 1.0)
+        strip = arr(game_view(clip.frame(src + f - t0), cx, cy, z, edit.W, sh))
+        x = int(round(-(1 - ease_out((f - t0) / slide_frames)) * edit.W))
+        y = i * (sh + divider_px)
+        vis = edit.W + x
+        if vis > 0:
+            c[y:y + sh, :vis] = strip[:, -x:]
+            if i > 0:
+                c[y - divider_px:y, :vis] = np.array(divider, np.float32)
+        if label:
+            pill = chip(label)
+            paste(c, pill, 40 + x, y + sh - pill.shape[0] - 24, clamp((f - t0 - 8) / 8))
+    return c
+
+
 def pop_panel(c, img, x, y, f, t0, label=None, border=5, colour=SKY, dur=10):
     """A picture in a coloured frame that pops (overshoot scale) into place at t0, with an
     optional label fading in beneath."""

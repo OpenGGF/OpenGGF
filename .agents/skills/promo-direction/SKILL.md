@@ -131,7 +131,7 @@ Write one line each:
 - **Title face.** Prefer the game's or mod's own letterforms: a ROM title-card
   font, or a mod `art/font.txt` drawn with `BitmapFont`. A mod without a font
   still has the base game's letters. The simplest native type is the game's
-  own presentation, filmed: a title card, a results tally or a menu reveal in one
+  own presentation as it ships, filmed: a title card, a results tally or a menu reveal in one
   take into play. Do not cover a native card with an editorial copy of it.
   Use a heavy condensed TTF only for lines the game cannot supply.
 - **End card.** Logo, one line, URL, status line, and the disclaimer "Fan-made
@@ -207,6 +207,20 @@ Read the Stageplay first-creator lesson before choosing the teaching sequence.
   gameplay from staged native interactions or positioned excerpts.
 - Make a contact sheet of each clip, for example Slay's `sheet.py` or
   `strips.py`, and pick in-points by frame number.
+- **Frame the claim.** If it is a count, a shape or a length (three
+  corkscrews, a longer route), the frame has to be able to show it. When only one
+  hump fits on screen, the viewer can't count to three. `--width 800` shows
+  twice the native view, and `stacked_split` compares horizontal routes without
+  cropping them to slices.
+- **Check the hero's pose, not just its path.** The CSV proves the route, and the
+  frames have to show the character at its best. For example, a spindash
+  carried through a corkscrew rolls as a ball and hides the corkscrew tumble.
+  Build the speed so the character runs through, for instance by landing from a
+  jump, and check the CSV's roll column across the feature.
+- **Film presentation as it ships.** A native card or screen that needs a
+  non-default preference, a debug option or an engine repair is not what players
+  see. Use editorial type in the game's letterforms, and record the gap.
+  Don't turn a promo into engine work.
 
 For Stageplay blocking, give characters purposeful entrances, approaches, turns,
 gestures, reactions and exits as the scene needs. Prefer physical puppets for player

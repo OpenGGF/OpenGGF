@@ -55,6 +55,30 @@ class PixelScaling(unittest.TestCase):
         self.assertEqual(out.size, (1920, 1080))
 
 
+class Layouts(unittest.TestCase):
+    class Solid:
+        def __init__(self, colour, size=(800, 224)):
+            self.img = Image.new('RGB', size, colour)
+
+        def frame(self, i):
+            return self.img
+
+    def test_stacked_split_shows_full_width_strips_after_sliding_in(self):
+        e = SmallEdit()
+        panes = [(0, self.Solid((200, 0, 0)), 0, None, None), (0, self.Solid((0, 0, 200)), 0, None, None)]
+        out = kit.stacked_split(e, 16, panes, divider_px=4, bg=np.zeros((90, 160, 3), np.float32))
+        sh = (90 - 4) // 2
+        np.testing.assert_allclose(out[:sh, :, 0], 200, atol=1)
+        np.testing.assert_allclose(out[sh + 4:sh + 4 + sh, :, 2], 200, atol=1)
+        np.testing.assert_allclose(out[sh:sh + 4], np.broadcast_to(np.array(kit.YELLOW, np.float32), (4, 160, 3)), atol=1)
+
+    def test_stacked_split_strip_is_off_screen_before_its_start(self):
+        e = SmallEdit()
+        panes = [(0, self.Solid((200, 0, 0)), 0, None, None), (30, self.Solid((0, 0, 200)), 0, None, None)]
+        out = kit.stacked_split(e, 10, panes, divider_px=4, bg=np.zeros((90, 160, 3), np.float32))
+        self.assertEqual(out[50:, :, 2].max(), 0)
+
+
 class Transitions(unittest.TestCase):
     def setUp(self):
         self.e = SmallEdit()
