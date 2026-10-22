@@ -27,8 +27,40 @@ public record SpriteSatEntry(
         String debugSource,
         int visibleTopY,
         int visibleBottomY,
-        SpritePresentation.Subject presentationSubject
+        SpritePresentation.Subject presentationSubject,
+        Ghost ghost
 ) {
+    /**
+     * A gameplay ghost's draw style. Ghosts are not ROM sprites: a sprite mask clips them like
+     * any later SAT entry, but they never arm one (see {@link SpriteSatMaskPostProcessor}).
+     *
+     * @param alpha          ghost opacity
+     * @param preserveColour keep palette colours (a player's look) instead of desaturating
+     */
+    public record Ghost(float alpha, boolean preserveColour) { }
+
+    /** A real (ROM) sprite entry. */
+    public SpriteSatEntry(int priorityBucket, int x, int y, int widthTiles, int heightTiles,
+            int firstPatternIndex, int rawTileWordLow11, int paletteIndex, boolean hFlip, boolean vFlip,
+            boolean piecePriority, boolean globalHighPriority, SpriteMaskReplayRole maskReplayRole,
+            int startColTile, int colCountTiles, int startRowTile, int rowCountTiles, String debugSource,
+            int visibleTopY, int visibleBottomY, SpritePresentation.Subject presentationSubject) {
+        this(priorityBucket, x, y, widthTiles, heightTiles, firstPatternIndex, rawTileWordLow11, paletteIndex,
+                hFlip, vFlip, piecePriority, globalHighPriority, maskReplayRole, startColTile, colCountTiles,
+                startRowTile, rowCountTiles, debugSource, visibleTopY, visibleBottomY, presentationSubject, null);
+    }
+
+    public boolean isGhost() {
+        return ghost != null;
+    }
+
+    public SpriteSatEntry withGhost(Ghost style) {
+        return new SpriteSatEntry(priorityBucket, x, y, widthTiles, heightTiles, firstPatternIndex,
+                rawTileWordLow11, paletteIndex, hFlip, vFlip, piecePriority, globalHighPriority,
+                maskReplayRole, startColTile, colCountTiles, startRowTile, rowCountTiles, debugSource,
+                visibleTopY, visibleBottomY, presentationSubject, style);
+    }
+
     /** Visible-scanline bound meaning "no sprite-mask clip on this side". */
     public static final int UNCLIPPED_TOP = Integer.MIN_VALUE;
     public static final int UNCLIPPED_BOTTOM = Integer.MAX_VALUE;
@@ -67,7 +99,7 @@ public record SpriteSatEntry(
         return new SpriteSatEntry(priorityBucket, x, y, widthTiles, heightTiles, firstPatternIndex,
                 rawTileWordLow11, paletteIndex, hFlip, vFlip, piecePriority, globalHighPriority,
                 maskReplayRole, startColTile, colCountTiles, startRowTile, rowCountTiles, debugSource,
-                visibleTopY, visibleBottomY, subject);
+                visibleTopY, visibleBottomY, subject, ghost);
     }
 
     /** Pre-scanline-clip shape, kept for producers that never clip. */
@@ -216,7 +248,8 @@ public record SpriteSatEntry(
                 debugSource,
                 visibleTopY,
                 visibleBottomY,
-                presentationSubject);
+                presentationSubject,
+                ghost);
     }
 
     public SpriteSatEntry clipRows(int clippedStartRowTile, int clippedRowCountTiles) {
@@ -245,7 +278,8 @@ public record SpriteSatEntry(
                 debugSource,
                 visibleTopY,
                 visibleBottomY,
-                presentationSubject);
+                presentationSubject,
+                ghost);
     }
 
     /** Copy restricted to screen scanlines {@code [top, bottom)}; tile rows are left whole. */
@@ -253,7 +287,7 @@ public record SpriteSatEntry(
         return new SpriteSatEntry(priorityBucket, x, y, widthTiles, heightTiles, firstPatternIndex,
                 rawTileWordLow11, paletteIndex, hFlip, vFlip, piecePriority, globalHighPriority,
                 maskReplayRole, startColTile, colCountTiles, startRowTile, rowCountTiles, debugSource,
-                top, bottom, presentationSubject);
+                top, bottom, presentationSubject, ghost);
     }
 
     /**

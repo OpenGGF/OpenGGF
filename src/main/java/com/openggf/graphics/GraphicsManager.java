@@ -2527,8 +2527,14 @@ public class GraphicsManager {
 				? piece
 				: piece.withDebugSource(presentationSource);
 		SpriteSatEntry entry = SpriteSatEntry.fromPreparedPiece(taggedPiece, currentSpriteSatBucket);
-		spriteSatEntries.add(spritePresentationSubject == SpritePresentation.Subject.WORLD
-				? entry : entry.withPresentationSubject(spritePresentationSubject));
+		if (spritePresentationSubject != SpritePresentation.Subject.WORLD) {
+			entry = entry.withPresentationSubject(spritePresentationSubject);
+		}
+		if (ghostRenderEffectActive) {
+			// The SAT replay runs after the ghost renderer has ended its effect; carry it.
+			entry = entry.withGhost(new SpriteSatEntry.Ghost(ghostRenderAlpha, ghostRenderPreservesColour));
+		}
+		spriteSatEntries.add(entry);
 	}
 
 	public void endSpriteSatCollectionAndReplay() {
@@ -2653,6 +2659,34 @@ public class GraphicsManager {
 	}
 
 	private void appendBatchedReplayCommands(SpriteSatEntry entry, int paletteTextureId) {
+		withSatEntryGhost(entry, () -> appendBatchedReplayTiles(entry, paletteTextureId));
+	}
+
+	/**
+	 * Replays {@code entry} under its gameplay-ghost style, if it has one. Every replay sink
+	 * (presentation tiles, instanced batches, direct commands) captures the ghost state when a
+	 * tile is added, and a batch never mixes states, so a ghost keeps its translucency and
+	 * colour mode inside the SAT order.
+	 */
+	private void withSatEntryGhost(SpriteSatEntry entry, Runnable replay) {
+		if (!entry.isGhost()) {
+			replay.run();
+			return;
+		}
+		boolean active = ghostRenderEffectActive;
+		boolean colour = ghostRenderPreservesColour;
+		float alpha = ghostRenderAlpha;
+		beginGhostRenderEffect(entry.ghost().alpha(), entry.ghost().preserveColour());
+		try {
+			replay.run();
+		} finally {
+			ghostRenderEffectActive = active;
+			ghostRenderPreservesColour = colour;
+			ghostRenderAlpha = alpha;
+		}
+	}
+
+	private void appendBatchedReplayTiles(SpriteSatEntry entry, int paletteTextureId) {
 		SpritePieceRenderer.renderPreparedPiece(entry.toPreparedPiece(),
 				(patternIndex, pieceHFlip, pieceVFlip, paletteIndex, drawX, drawY) -> {
 					// CPU preparation uses this same tile decoder before any atlas lookup.
@@ -2785,6 +2819,11 @@ public class GraphicsManager {
 		if (entry == null || replayCommands == null) {
 			return;
 		}
+		withSatEntryGhost(entry, () -> appendDirectReplayTiles(entry, paletteTextureId, replayCommands));
+	}
+
+	private void appendDirectReplayTiles(SpriteSatEntry entry, int paletteTextureId,
+			List<PatternRenderCommand> replayCommands) {
 		SpritePieceRenderer.renderPreparedPiece(entry.toPreparedPiece(),
 				(patternIndex, pieceHFlip, pieceVFlip, paletteIndex, drawX, drawY) -> {
 					PatternAtlas.Entry atlasEntry = patternAtlas != null ? patternAtlas.getEntry(patternIndex) : null;

@@ -1767,7 +1767,9 @@ public final class LevelRenderer {
                 graphicsManager.setCurrentSpriteSatBucket(bucket);
                 if (spriteManager != null) {
                     SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.PLAYER);
-                    spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, null);
+                    // Ghosts join the table behind their layer's players; a sprite mask clips
+                    // them like the players they stand for but never arms on them.
+                    spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, ghostLayerHook);
                 }
                 if (objectManager != null) {
                     SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
