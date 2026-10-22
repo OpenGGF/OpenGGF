@@ -10,39 +10,35 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 
 class TestSonic2SegaScreenFadeTiming {
-    private static final int SEGA_ACTIVE_FRAMES = 106 + 180;
     private static final int FADE_FRAMES = 22;
     private static final int INTRO_TEXT_FADE_FRAMES = 22;
     private static final int INTRO_TEXT_HOLD_FRAMES = 96;
 
     @Test
-    void segaLogoTimerWaitsUntilFadeFromBlackCompletes() throws Exception {
+    void segaLogoTimerStartsWithTheDirectActivePaletteEntry() throws Exception {
         TitleScreenManager manager = managerInSegaState();
         InputHandler input = new InputHandler();
-
-        for (int i = 0; i < FADE_FRAMES - 1; i++) {
-            manager.update(input);
-            assertEquals(0, intField(manager, "segaLogoTimer"),
-                    "S2 SEGA animation must not advance during fade-from-black");
-            assertEquals(TitleScreenProvider.State.SEGA_LOGO, manager.getState());
-        }
 
         manager.update(input);
 
         assertEquals(1, intField(manager, "segaLogoTimer"),
-                "S2 SEGA animation starts on the first frame after fade-from-black");
+                "PalLoad_Now enters the SEGA animation without a generic fade-in");
+        assertEquals(TitleScreenProvider.State.SEGA_LOGO, manager.getState());
     }
 
     @Test
     void segaLogoFadesToBlackBeforeIntroText() throws Exception {
         TitleScreenManager manager = managerInSegaState();
-        setIntField(manager, "segaLogoTimer", SEGA_ACTIVE_FRAMES - 1);
+        setIntField(manager, "segaLogoTimer", 106);
         setBooleanField(manager, "segaPcmStarted", true);
+        setEnumField(manager, "segaLogoPhase", "END_WAIT");
+        setIntField(manager, "segaEndWaitTimer", 1);
         setEnumField(manager, "segaLogoFadePhase", "ACTIVE");
         InputHandler input = new InputHandler();
 
@@ -50,7 +46,8 @@ class TestSonic2SegaScreenFadeTiming {
 
         assertEquals(TitleScreenProvider.State.SEGA_LOGO, manager.getState(),
                 "S2 must hold the SEGA screen while it fades to black");
-        assertEquals(SEGA_ACTIVE_FRAMES, intField(manager, "segaLogoTimer"));
+        assertEquals(106, intField(manager, "segaLogoTimer"),
+                "the end wait owns its timer separately from the visual sequence");
 
         for (int i = 0; i < FADE_FRAMES - 1; i++) {
             manager.update(input);
@@ -64,16 +61,16 @@ class TestSonic2SegaScreenFadeTiming {
     }
 
     @Test
-    void giantSonicIsHiddenUntilSegaLogoFadeInCompletes() throws Exception {
+    void giantSonicIsVisibleOnTheFirstActiveVisualUpdate() throws Exception {
         TitleScreenManager manager = managerInSegaState();
 
         assertNull(manager.resolveSegaGiantSonicPose(),
-                "ObjB0 runner should not display during Pal_FadeFromBlack");
+                "the runner has not executed its first object update");
 
-        setEnumField(manager, "segaLogoFadePhase", "ACTIVE");
-        setIntField(manager, "segaLogoTimer", 1);
+        manager.update(new InputHandler());
 
         TitleScreenManager.SegaGiantSonicPose pose = manager.resolveSegaGiantSonicPose();
+        assertNotNull(pose);
         assertEquals(0, pose.localFrame());
         assertEquals(328, pose.centerX(),
                 "first active frame has already applied the ROM -$20 leftward step from screen_width+$28");
@@ -117,7 +114,7 @@ class TestSonic2SegaScreenFadeTiming {
     }
 
     @Test
-    void skippingIntroTextStillPlaysTheInitSparkleOnce() throws Exception {
+    void introTextInputDoesNotSkipToTheInitSparkle() throws Exception {
         TitleScreenManager manager = managerInSegaState();
         setField(manager, "state", TitleScreenProvider.State.INTRO_TEXT_HOLD);
         InputHandler input = new InputHandler();
@@ -125,9 +122,10 @@ class TestSonic2SegaScreenFadeTiming {
 
         manager.update(input);
 
-        assertEquals(TitleScreenProvider.State.FADE_IN, manager.getState());
-        assertEquals(true, sparklePlayed(manager, 0),
-                "skipping the intro text enters the same Obj0E_Sonic_Init frame");
+        assertEquals(TitleScreenProvider.State.INTRO_TEXT_HOLD, manager.getState());
+        assertEquals(1, intField(manager, "introTextTimer"));
+        assertEquals(false, sparklePlayed(manager, 0),
+                "input cannot bypass the text's loading owner or start the title twinkle");
     }
 
     private static boolean sparklePlayed(TitleScreenManager manager, int index) throws Exception {
