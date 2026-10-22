@@ -70,17 +70,22 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
     private static final int INTRO_TEXT_HOLD_DURATION = 96;
     private int segaLogoTimer = 0;
     private boolean segaPcmStarted = false;
-    private SegaLogoFadePhase segaLogoFadePhase = SegaLogoFadePhase.FADING_IN;
+    // GM_Sega loads Pal_SegaBG directly into the active palette, then enters
+    // Sega_WaitPal (sonic.asm:1847-1865). Its prior PaletteFadeOut belongs to
+    // the previous screen, before SEGA art/map loading; there is no generic
+    // fade-from-black over this already-loaded logo.
+    private SegaLogoFadePhase segaLogoFadePhase = SegaLogoFadePhase.ACTIVE;
     private int segaLogoFadeTimer = 0;
     private final Sonic1TitleScreenDataLoader.SegaLogoPaletteCycleState segaLogoPaletteCycle =
             new Sonic1TitleScreenDataLoader.SegaLogoPaletteCycleState();
     private static final int SEGA_LOGO_FADE_FRAMES = 22;
+    // PalCycle_Sega: 51 light-scan calls, then five 5-call boundaries for its
+    // own four palette sets and terminal return (sonic.asm:1605-1643).
     private static final int SEGA_LOGO_PALETTE_FRAMES = 76;
     private static final int SEGA_LOGO_PCM_FRAMES = 98;
     private static final int SEGA_LOGO_POST_CHANT_FRAMES = 30;
 
     private enum SegaLogoFadePhase {
-        FADING_IN,
         ACTIVE,
         FADING_OUT
     }
@@ -271,7 +276,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         introTextTimer = 0;
         segaLogoTimer = 0;
         segaPcmStarted = false;
-        segaLogoFadePhase = SegaLogoFadePhase.FADING_IN;
+        segaLogoFadePhase = SegaLogoFadePhase.ACTIVE;
         segaLogoFadeTimer = 0;
         segaLogoPaletteCycle.reset();
         creditTextCached = false;
@@ -408,9 +413,6 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
     }
 
     private void updateSegaLogo(InputHandler input, int startKey) {
-        if (updateSegaLogoFadeIn()) {
-            return;
-        }
         if (updateSegaLogoFadeOut()) {
             return;
         }
@@ -432,19 +434,6 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         }
     }
 
-    private boolean updateSegaLogoFadeIn() {
-        if (segaLogoFadePhase != SegaLogoFadePhase.FADING_IN) {
-            return false;
-        }
-        segaLogoFadeTimer++;
-        if (segaLogoFadeTimer < SEGA_LOGO_FADE_FRAMES) {
-            return true;
-        }
-        segaLogoFadePhase = SegaLogoFadePhase.ACTIVE;
-        segaLogoFadeTimer = 0;
-        return false;
-    }
-
     private boolean updateSegaLogoFadeOut() {
         if (segaLogoFadePhase != SegaLogoFadePhase.FADING_OUT) {
             return false;
@@ -457,7 +446,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         introTextTimer = 0;
         segaLogoTimer = 0;
         segaPcmStarted = false;
-        segaLogoFadePhase = SegaLogoFadePhase.FADING_IN;
+        segaLogoFadePhase = SegaLogoFadePhase.ACTIVE;
         segaLogoFadeTimer = 0;
         return true;
     }
@@ -856,9 +845,6 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
     }
 
     private SegaPaletteFade.Mode segaLogoFadeMode() {
-        if (segaLogoFadePhase == SegaLogoFadePhase.FADING_IN) {
-            return SegaPaletteFade.Mode.FROM_BLACK;
-        }
         if (segaLogoFadePhase == SegaLogoFadePhase.FADING_OUT) {
             return SegaPaletteFade.Mode.TO_BLACK;
         }
@@ -1150,7 +1136,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         introTextTimer = 0;
         segaLogoTimer = 0;
         segaPcmStarted = false;
-        segaLogoFadePhase = SegaLogoFadePhase.FADING_IN;
+        segaLogoFadePhase = SegaLogoFadePhase.ACTIVE;
         segaLogoFadeTimer = 0;
         segaLogoPaletteCycle.reset();
         creditTextCached = false;

@@ -452,6 +452,8 @@ Unreleased. The earlier development themes remain in
   game, or a reset, still installs fresh hardware, and rewind restores the kept
   chips exactly. The Sonic 3 & Knuckles title screen now opens with the ROM's
   music fade-out request, which silences the PSG on entry as the console does.
+  Sonic 1's SEGA logo begins with its directly loaded ROM palette and native
+  light scan, without an additional generic fade from black.
 
 Rewind verification compares private records and complete captured opaque arrays
 by content, with explicit failures when snapshot inspection cannot complete. It also

@@ -114,6 +114,86 @@ python3 tools/audio/compare_native_pcm_window.py \
   --engine-dir '<task>/s1-engine-600'
 ```
 
+## S1 SEGA entry phase corroboration and bounded correction
+
+On plumbing commit `1243fa2ed`, one additional 600-row stock-core pass registered
+read-only 68000 execute callbacks around `GM_Sega`; it applied only the original
+movie buttons and made no RAM, register or savestate writes. The temporary
+external probe is `$AUDIO_EVIDENCE_ROOT/s1-sega-probe/S1SegaPhaseProbe.cs`;
+`capture/events.tsv`, `capture/frames.tsv`, `capture/pcm.s16` and
+`capture/completed.txt` contain its observations under the external
+`$AUDIO_EVIDENCE_ROOT` task directory.
+The capture reproduced the uninstrumented S1 PCM SHA-256
+`b1d76d71294b1616d48c6f8953dfd881cbe28855d4c7300c15c02720550e90d7`,
+441568 stereo frames and 312 lag rows. Thus these callbacks preserved the
+previously observed waveform over this bounded pass.
+
+| Native callback | Count | Original BK2 row and observed state |
+| --- | ---: | --- |
+| `GM_Sega`, `$002DD2` | 1 | 62 |
+| Before `PaletteFadeOut`, `$002DDE` | 1 | 62 |
+| After fade, before logo setup, `$002DE2` | 1 | 83 |
+| `Sega_WaitPal`, `$002EAC` | 76 | First: 90, `v_pcyc_num=-10`, `v_pcyc_time=$0000`; last: 164, position 36, timer `$0001` |
+| Chant queue call, `$002EC0` | 1 | 165, `D0=$E1`, position 36, timer `$0401` |
+| Return after PCM wait, `$002ECE` | 1 | 299 |
+| Set title mode, `$002EEC` | 1 | 329 |
+
+There are 82 callback events. The first two `Sega_WaitPal` entries occur in row
+90; its count is not a claim of 76 distinct BK2 rows. The command observation
+at row 165 independently precedes the waveform onset measured in row 166.
+
+The existing listing offsets were checked against the verified REV01 ROM:
+`$002DDE: 61 00 F0 6A` calls `PaletteFadeOut`; `$002E80: 70 00 61 00 F2 8C`
+selects and loads the active palette; `$002E86: 31 FC FF F6 F6 32` and
+`$002E8C: 31 FC 00 00 F6 34` initialize the palette position and timer;
+`$002EAC: 11 FC 00 02 F6 2A` enters the ordinary SEGA VBlank loop;
+`$002EBC: 10 3C 00 E1 61 00 E4 D2` loads E1 and calls `QueueSound2`.
+`GM_Sega (sonic.asm:1808-1867)` fades the previous screen out before loading
+the SEGA art and active palette. It has no separate generic fade-in after
+that setup. `PalCycle_Sega (sonic.asm:1565-1643)` supplies the logo's own
+light scan and subsequent palette fade: positions start at -10, advance by
+two, skip transparent colors, and reach `$64` after 51 calls. The next five
+five-call boundaries select palette byte offsets 0/12/24/36 and then return
+zero at the exclusive `$30` end: 76 calls in total.
+
+The bounded implementation correction removes only the manager's unsupported
+generic entry fade, which previously delayed the first real palette update
+by 21 updates because its 22nd fade update fell through. Initialization and
+reset now select the directly loaded active palette. The existing 76-call
+palette sequence, 98-update chant wait, 30-update post-chant wait and exit
+fade ownership remain intact. This fixes a phase-order discrepancy; it does
+not align power-on row zero or assert end-to-end waveform parity. Cold boot,
+the preceding fade, loading costs and the observed native PCM-wait interval
+165..299 still need their owning runtime model. No constant delay was fitted
+from these rows.
+
+The new ROM-backed manager regressions inspect the first actual scan color
+and all four fade sets against independently addressed ROM palette bytes,
+then require exactly one E1 submission at the native palette terminal. They
+also exercise reset/reinitialization. The four exact affected S1 title classes
+passed ten tests with zero skips in the combined production-clock diagnostic
+run described below; the native probe itself did not launch Maven.
+
+Probe compile and invocation (the same existing ROM and run-local BK2 paths
+shown above, no recorder rebuild or pin change):
+
+```bash
+mcs -out:"$AUDIO_EVIDENCE_ROOT/s1-sega-probe/S1SegaPhaseProbe.exe" \
+  -r:/usr/lib/mono/4.7.2-api/Facades/netstandard.dll \
+  -r:"$PWD/tools/tracechaser/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.exe" \
+  -r:"$BIZHAWK_HOME/dll/BizHawk.Emulation.Cores.dll" \
+  -r:"$BIZHAWK_HOME/dll/Newtonsoft.Json.dll" \
+  "$AUDIO_EVIDENCE_ROOT/s1-sega-probe/S1SegaPhaseProbe.cs"
+env -u DISPLAY -u WAYLAND_DISPLAY BIZHAWK_HOME="$BIZHAWK_HOME" \
+  MONO_PATH="$PWD/tools/tracechaser/bizhawk-headless/bin/Release:$BIZHAWK_HOME/dll" \
+  LD_LIBRARY_PATH="$BIZHAWK_HOME/dll" \
+  mono "$AUDIO_EVIDENCE_ROOT/s1-sega-probe/S1SegaPhaseProbe.exe" \
+  '<absolute verified S1 REV01 ROM>' \
+  "$PWD/src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2" \
+  "$BIZHAWK_HOME/dll/gpgx.wbx.zst" \
+  "$AUDIO_EVIDENCE_ROOT/s1-sega-probe/capture"
+```
+
 ## Production S2 startup measurement
 
 The same production title-first path replayed the S2 emerald movie from row
@@ -139,10 +219,25 @@ were written.
 A candidate shared owner is the transactional typed-request failure path in
 `AudioPresentationProducer.presentSessionForward`: it can return
 `REQUEST_REJECTED` before chip rendering, restoring the presentation clock.
-This is **not a causal attribution** without admission evidence. Parent and
-the S3K audio coordinator received the exact interval before any proposed
-shared driver/sequencer/chip edit; the S2 native-title/request-remap owner also
-needs to reconcile this boundary. No shared SMPS behavior was changed here.
+That hypothesis was subsequently **disproved** on `1243fa2ed` plus the S1
+entry-phase correction. A production-only 600-row diagnostic sampled each
+resolved presentation mode, parity counters and producer clock before and
+after presentation. It reproduced 404771 native stereo frames and the exact
+50 zero-drain rows. Every zero-drain row resolved to `SILENT`; every producer
+clock advanced by 800 ordinary samples. The totals were 600 committed
+presentations, 550 forward, 50 silent and 480000 ordinary stereo frames, with
+one native stage session. No rejected-request clock rollback accounts for
+these gaps, and no shared SMPS behavior was changed.
+
+`GameplayCaptureSession.step` supplies recorded logical input directly, while
+`GameLoopPauseInput.nextUserPaused` excludes only the existing trace/playback
+owners from its logical-Start host-pause branch. Repeated recorded Start
+presses in `TITLE_CARD` therefore toggle host pause in this capture. This
+contaminates the startup comparison and requires a scoped recorded-input
+ownership correction before attributing the silent intervals to native audio.
+Parent and the native-menu owner received the measured cause and proposed
+interface reservation. This diagnosis does not make the measured comparison
+pass or attribute its earlier waveform difference to the sound-test remap.
 The S2 command is the S1 command above with `--game s2 --zone ehz --sidekick tails`
 and the verified S2 ROM/movie/output. Its comparator command is identical with
 S2 directories and the same explicit 600-row target.
