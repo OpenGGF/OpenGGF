@@ -136,6 +136,7 @@ class SnapshotPolicyTests(unittest.TestCase):
         directory = self.root / 'policy'; directory.mkdir(exist_ok=True)
         for name in ['validate-policy.sh', 'validate-policy.ps1', 'audit-release-tree.py',
                      'authored_fixture_policy.py', 'authored-fixtures.json',
+                     'authored-clover-valley-assets.json',
                      'machine-local-path-grandfather.sha256']:
             text = (ROOT / '.githooks' / name).read_text().replace(BASELINE, baseline)
             text = text.replace(NEXT_BASELINE, getattr(self, 'next_baseline', NEXT_BASELINE))

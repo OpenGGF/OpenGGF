@@ -260,16 +260,17 @@ Do not stage generated-resource entries. The policy rejects symlinks at
 `config.yaml`, any path ending in `.gen`, and `docs/s1disasm`,
 `docs/s2disasm`, `docs/kis2disasm`, `docs/scddisasm`, or `docs/skdisasm`.
 Separately, the repository-wide ROM-like asset rule rejects added or modified
-paths ending in `.gen`, `.smd`, `.bin`, `.sms`, `.gg`, or `.32x`. The sole
-reviewed authored-content exception is the two-act Tide fixture's 22 original
-assets, pinned by exact canonical path, mode `100644`, byte length and SHA-256 in
-[the authored-fixture manifest](../../.githooks/authored-fixtures.json).
+paths ending in `.gen`, `.smd`, `.bin`, `.sms`, `.gg`, or `.32x`. The reviewed
+authored-content exceptions are Tide Circuit's 22 original assets and Clover
+Valley's 11 original assets, pinned by exact canonical path, mode `100644`, byte
+length and SHA-256 in [the Tide manifest](../../.githooks/authored-fixtures.json)
+and [the Clover Valley manifest](../../.githooks/authored-clover-valley-assets.json).
 [The shared verifier](../../.githooks/authored_fixture_policy.py) checks Git blobs
 in staged, historical-commit and delivered-snapshot admission; it never runs a
 candidate generator. Changed bytes, moved/case-varied paths, other binaries,
 executable files and symlinks receive no exception. Prefer the existing
 `binary-assets.properties` text-source convention for future authored fixtures;
-this manifest is not a directory or filename-pattern exemption.
+neither manifest is a directory or filename-pattern exemption.
 
 The policy also rejects absolute symlink targets anywhere in the repository. If a broad
 `git add` includes one, unstage it, keep or recreate the local link only in the
