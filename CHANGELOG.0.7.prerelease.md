@@ -21,7 +21,9 @@ Unreleased. The earlier development themes remain in
   defeat bursts use Sonic 1's original allocation, art and lifetime. Star Light's
   spikeballs accept native edge contact, and its escaping ship retains both
   movement calls. Final Zone's panels, launcher and cylinders dispatch in their
-  native slots with independent animation and rewind state.
+  native slots with independent animation and rewind state. Dormant untracked
+  Scrap Brain saws retain their original objects while placement re-entry can
+  create the shipped duplicate.
 
 - **Sonic 1 level entry:** background scrolling starts from each level or credits
   demo's final camera, and lamppost returns retain the original background camera
