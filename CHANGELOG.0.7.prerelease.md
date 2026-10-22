@@ -179,6 +179,12 @@ Unreleased. The earlier development themes remain in
   palette colours, and the main palette reloads at the original camera position for
   every start without the plane intro.
 
+- **Sonic 2 palette and ending timing:** Metropolis Act 3, Sky Chase and
+  Death Egg now run their original palette cycles. The Death Egg Robot keeps
+  following and exploding while its own colours fade to white, and hands the
+  ending its palette and music without an extra transition. Credit slides use
+  the original PAL or NTSC waits and the final fade before the closing logo.
+
 - **S3K special stage presentation:** Blue Sphere players and their tails use
   the original perspective projection through jumps, with fixed ground shadows
   under the players. Distant spheres retain the original shared mapping frames

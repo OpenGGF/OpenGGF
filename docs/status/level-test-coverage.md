@@ -1,5 +1,10 @@
 # Level test coverage backlog
 
+The [2026-10-22 S2 presentation matrix](../architecture/validation/2026-10-22-s2-presentation.md)
+records bounded MTZ3, SCZ and DEZ palette-cycle coverage and the seeded native
+DEZ boss-to-ending/NTSC-PAL credits boundaries. Continuous routes and the wider
+character, donor, team and viewport matrix remain explicit inherited gaps.
+
 S3K horizontal spring terrain gate (2026-10-16): focused object fixtures sample
 real collision tiles for positive/zero/negative foot distances and a slope with
 only one penetrating foot; absent services, empty terrain and underwater descent

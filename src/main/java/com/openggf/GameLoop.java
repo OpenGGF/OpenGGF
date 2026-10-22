@@ -4633,6 +4633,11 @@ public class GameLoop {
             provider.saveReasonOnEndingStart().ifPresent(this::requestSessionSave);
         }
         endingTransitionPending = true;
+        if (provider instanceof com.openggf.game.internal.EndingEntryPresentation nativeEntry
+                && nativeEntry.ownsEntryPresentation()) {
+            doEnterEnding();
+            return;
+        }
         audioManager.fadeOutMusic();
         GameLoopPlcLifecycle.startToWhite(resolveGameplayModeContext(), fadeManager, this::doEnterEnding);
     }
@@ -4665,7 +4670,11 @@ public class GameLoop {
         // already start one during initialize() (e.g., S1 credits starts its own
         // fade-from-black with a state-advancing callback that must not be overwritten).
         FadeManager fadeManager = this.fadeManager;
-        if (!fadeManager.isActive() || fadeManager.getState() == FadeManager.FadeState.HOLD_WHITE) {
+        boolean providerOwnsEntry = endingProvider instanceof
+                com.openggf.game.internal.EndingEntryPresentation nativeEntry
+                && nativeEntry.ownsEntryPresentation();
+        if (!providerOwnsEntry
+                && (!fadeManager.isActive() || fadeManager.getState() == FadeManager.FadeState.HOLD_WHITE)) {
             // Screen is currently white from startEndingFade's fade-to-white.
             // ROM: Normal_palette starts all $0EEE (white), display enabled.
             GameLoopPlcLifecycle.startFromWhite(resolveGameplayModeContext(), fadeManager, null);

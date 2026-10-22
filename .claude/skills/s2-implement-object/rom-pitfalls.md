@@ -3604,6 +3604,25 @@ these two native goal owners provide the verified comparisons.
 
 **Originating commit.** 82bf7929c, editor native goal-word regressions.
 
+## P89 -- Native palette timer writes must reach every replica of that timer
+
+**Symptom.** A boss fades the scene white, but a few cycling colours keep
+reappearing, or only one of several otherwise synchronized streams stops.
+
+**Owning routine.** `PalCycle_CPZ` (s2.asm:2951-2984) decrements one
+`PalCycle_Timer`; its early return gates all three writes. The Java CPZ/DEZ
+cycler represents those streams separately. `loc_3D9BE` (s2.asm:83185-83191)
+writes `$7FFF` to that shared timer before the Death Egg ending countdown.
+Freezing only the first Java stream does not reproduce that write. MTZ and
+WFZ use genuinely independent secondary timers and must keep them independent.
+
+**Check.** Find the native timer's branch and every write it gates before
+exposing a timer mutation. Preserve cycle frame counters and snapshot every
+mutable replica. `TestSonic2PaletteCycleAliases` checks direct-ROM cadence,
+primary holds and forward replay; `TestSonic2NativeEndingEntry` checks the
+production boss-to-palette-manager boundary. Origin: the 2026-10-22 S2
+presentation audit lane, based on `94c40570a15a`.
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

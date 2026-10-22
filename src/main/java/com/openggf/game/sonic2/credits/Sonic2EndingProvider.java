@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.credits;
 
+import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.EndingPhase;
 import com.openggf.game.EndingProvider;
 import com.openggf.game.GameId;
@@ -35,7 +36,8 @@ import java.util.logging.Logger;
  * The internal state machine uses finer-grained states than EndingPhase to
  * track fade-in/display/fade-out timing for each credit slide.
  */
-public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycleAware {
+public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycleAware,
+        com.openggf.game.internal.EndingEntryPresentation {
     private static final Logger LOGGER = Logger.getLogger(Sonic2EndingProvider.class.getName());
 
     /**
@@ -53,6 +55,8 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
         CREDITS_TEXT,
         /** Fade-out after a credit text slide. */
         CREDITS_FADE_OUT,
+        /** Second black fade after the credits pointer-table sentinel. */
+        CREDITS_FINAL_FADE_OUT,
         /** Initializing the logo flash manager. */
         LOGO_LOADING,
         /** Logo flash animation and hold. */
@@ -99,6 +103,13 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
     // ========================================================================
     // EndingProvider lifecycle
     // ========================================================================
+
+    @Override
+    public boolean ownsEntryPresentation() {
+        // ObjC7 completes its white palette fade and sound request before the
+        // mode changes; ObjCA then owns the photo reveal in the ending itself.
+        return true;
+    }
 
     @Override
     public Optional<SaveReason> saveReasonOnEndingStart() {
@@ -167,7 +178,9 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
             }
             case CREDITS_TEXT -> {
                 slideTimer++;
-                if (slideTimer >= Sonic2CreditsData.SLIDE_DURATION_60FPS) {
+                // EndgameCredits (s2.asm:13216-13224): DBF includes the zero
+                // iteration, so $18E/$144 means 399/325 displayed V-blanks.
+                if (slideTimer > creditsSlideWait()) {
                     // ROM: PaletteFadeOut after each credit slide
                     slideTimer = 0;
                     state = InternalState.CREDITS_FADE_OUT;
@@ -179,14 +192,24 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
                 if (slideTimer >= Sonic2CreditsData.FADE_DURATION) {
                     currentSlide++;
                     if (currentSlide >= Sonic2CreditsData.TOTAL_CREDITS) {
-                        // All 21 slides complete -- transition to logo flash
-                        transitionToLogoLoading();
+                        // EndgameCredits (s2.asm:13227-13233): the sentinel
+                        // runs a second Pal_FadeToBlack, even though CRAM is
+                        // already black, before loading the ending logo.
+                        slideTimer = 0;
+                        state = InternalState.CREDITS_FINAL_FADE_OUT;
+                        fadeManager().startFadeToBlack(nativeCompletion(() -> { }));
                     } else {
                         // ROM: PaletteFadeIn for next credit slide
                         slideTimer = 0;
                         state = InternalState.CREDITS_FADE_IN;
-                        fadeManager().startFadeFromBlack(nativeCompletion(() -> { }));
+                        fadeManager().startFadeFromBlack(nativeCompletion(() -> { }), 1);
                     }
+                }
+            }
+            case CREDITS_FINAL_FADE_OUT -> {
+                slideTimer++;
+                if (slideTimer >= Sonic2CreditsData.FADE_DURATION) {
+                    transitionToLogoLoading();
                 }
             }
             case LOGO_LOADING -> {
@@ -231,7 +254,7 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
                     logoFlashManager.draw();
                 }
             }
-            case FINISHED -> {
+            case CREDITS_FINAL_FADE_OUT, FINISHED -> {
                 // Nothing to draw
             }
         }
@@ -255,7 +278,8 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
     public EndingPhase getCurrentPhase() {
         return switch (state) {
             case CUTSCENE, CUTSCENE_FADE_OUT -> EndingPhase.CUTSCENE;
-            case CREDITS_FADE_IN, CREDITS_TEXT, CREDITS_FADE_OUT -> EndingPhase.CREDITS_TEXT;
+            case CREDITS_FADE_IN, CREDITS_TEXT, CREDITS_FADE_OUT,
+                    CREDITS_FINAL_FADE_OUT -> EndingPhase.CREDITS_TEXT;
             case LOGO_LOADING, LOGO_FLASH -> EndingPhase.POST_CREDITS;
             case FINISHED -> EndingPhase.FINISHED;
         };
@@ -334,7 +358,7 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
     }
 
     /**
-     * Returns the current credit slide index (0-20).
+     * Returns the current credit slide index (0-20), or 21 after the last slide.
      * Useful for debugging/testing.
      */
     public int getCurrentSlide() {
@@ -363,7 +387,9 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
         state = InternalState.CREDITS_FADE_IN;
 
         // ROM: PaletteFadeIn to reveal first credit slide
-        fadeManager().startFadeFromBlack(nativeCompletion(() -> { }));
+        // Pal_FadeFromBlack (s2.asm:3275-3282) services all 22 V-blanks,
+        // including its terminal no-op, before the credits display wait.
+        fadeManager().startFadeFromBlack(nativeCompletion(() -> { }), 1);
 
         LOGGER.info("Sonic2EndingProvider: cutscene complete, starting credits text");
     }
@@ -372,10 +398,16 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
         return injectedFadeManager != null ? injectedFadeManager : GameServices.fade();
     }
 
+    private int creditsSlideWait() {
+        return "PAL".equalsIgnoreCase(GameServices.configuration().getString(SonicConfiguration.REGION))
+                ? Sonic2CreditsData.SLIDE_DURATION_50FPS
+                : Sonic2CreditsData.SLIDE_DURATION_60FPS;
+    }
+
     void beginCreditsTextExitForLifecycleTest() {
         state = InternalState.CREDITS_TEXT;
         currentSlide = 0;
-        slideTimer = Sonic2CreditsData.SLIDE_DURATION_60FPS - 1;
+        slideTimer = creditsSlideWait();
     }
 
     /**
