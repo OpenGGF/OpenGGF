@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "description": "Exact original Clover Valley art and geometry generated from authored constants; no ROM or disassembly input.",
+  "generator": {
+    "path": "examples/emerald-remix/tools/generate_clover_valley.py",
+    "sha256": "b92d5977c8551af2e218c9b40fe1e14cca5d5d8e08c351e95cbdc2dc768cda85"
+  },
+  "assets": [
+    {
+      "path": "examples/emerald-remix/src/main/resources/levels/clover-valley/bg-map.bin",
+      "mode": "100644",
+      "size": 256,
+      "sha256": "1cba1595604b0296097949468e87feda9a2f7052acb42757f001dbc4e9342439"
+    },
+    {
+      "path": "examples/emerald-remix/src/main/resources/levels/clover-valley/blocks.bin",
+      "mode": "100644",
+      "size": 8460,
+      "sha256": "ef2ff480ebbdc44ea731b5b6c6d0e5bf9180bdd59640da0594f591dbb4bf3df9"
+    },
+    {
+      "path": "examples/emerald-remix/src/main/resources/levels/clover-valley/chunks.bin",
+      "mode": "100644",
+      "size": 3268,
+      "sha256": "72fff454e8b07ad89dc0a04c0dd83de09cb7e0acd42d9e5d5f22f4c53d39e7ca"
+    },
+    {
+      "path": "examples/emerald-remix/src/main/resources/levels/clover-valley/collision-primary.bin",
+      "mode": "100644",
+      "size": 826,
+      "sha256": "030a62fbc982efcb7604738eac0d8291a0cfdd5f61527dfc5958a149b80283bd"
+    },
+    {
+      "path": "examples/emerald-remix/src/main/resources/levels/clover-valley/collision-secondary.bin",
+      "mode": "100644",
+      "size": 826,
+      "sha256": "1dc26d67db884b7991e02cb1d7a289e27493dc8aadb5d5f70cd86a323c0ad4dd"
+    },
+    {
+      "path": "examples/emerald-remix/src/main/resources/levels/clover-valley/fg-map.bin",
+      "mode": "100644",
+      "size": 256,
+      "sha256": "1271aa9e1812a0ccdeba0b4412da304ee57179b1907997bb1c42e3774869d379"
+    },
+    {
+      "path": "examples/emerald-remix/src/main/resources/levels/clover-valley/palettes.bin",
+      "mode": "100644",
+      "size": 140,
+      "sha256": "4328c965c6a13b257045ba7880428145fdc985215f42a9b1660775629aeb08ca"
+    },
+    {
+      "path": "examples/emerald-remix/src/main/resources/levels/clover-valley/patterns.bin",
+      "mode": "100644",
+      "size": 22604,
+      "sha256": "a56a0302e1ccc8d8e71c0e019601efe0b9149efbfabc55a7cd18ca88208b085b"
+    },
+    {
+      "path": "examples/emerald-remix/src/main/resources/levels/clover-valley/solid-angles.bin",
+      "mode": "100644",
+      "size": 20,
+      "sha256": "0bcb9d063df4fac8768869b33783f42ab421ab90d6e29db2b51ea3a1d430f633"
+    },
+    {
+      "path": "examples/emerald-remix/src/main/resources/levels/clover-valley/solid-heights.bin",
+      "mode": "100644",
+      "size": 140,
+      "sha256": "b08959c203e5af415f40377f50eb93d77ce36c351987e8df433c0bf7fd25f4fb"
+    },
+    {
+      "path": "examples/emerald-remix/src/main/resources/levels/clover-valley/solid-widths.bin",
+      "mode": "100644",
+      "size": 140,
+      "sha256": "62c3485080ee3b91d3adfaf64843c3ebf99ab1b5365cc85afa829aa7396ca686"
+    }
+  ]
+}

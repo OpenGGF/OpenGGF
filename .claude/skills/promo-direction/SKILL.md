@@ -140,10 +140,12 @@ An example 60–90 s showcase shape at 120–175 BPM, not a required narrative f
 | End card | 5–7 s | Over blurred gameplay. Fade to black. |
 
 For a tutorial/promo, teach a small set of choices through one coherent example.
-Show choice → visible result, then let the finished scene play without instruction.
-Use real values, distinguish explanatory graphics from actual editor UI, and give
-viewers an editable source and a clear first step. Read the Stageplay first-creator
-lesson in the reference before repeating a feature-check montage as a story.
+Give the complete scene room to establish its premise, then connect each directing
+choice to a visible result in a continuous annotated pass when that serves the
+lesson. Avoid restarting the same action for every concept. Use real values and a
+measured single-setting comparison where useful; distinguish explanatory graphics
+from actual editor UI. Give viewers an editable source and a clear first step.
+Read the Stageplay first-creator lesson before choosing the teaching sequence.
 
 ### 4. Shot list and capture
 
@@ -350,7 +352,9 @@ signature move is what makes it a brand.
   stretches. Keep genuine native audio when it is the subject, for example a
   speed effect or an announcer.
 - `master()` targets about −16 dBFS RMS, not measured −16 LUFS. Measure integrated
-  loudness as needed and the true peak of the AAC-encoded file, not only the PCM.
+  and sectional loudness across story/tutorial boundaries and the true peak of the
+  AAC-encoded file, not only the PCM. A whole-film average can hide an abrupt level
+  step; continuous music needs genuine SFX-only stems beneath it.
 
 ## Editorial review before delivery
 

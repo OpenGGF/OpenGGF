@@ -27,7 +27,8 @@ Unreleased. The earlier development themes remain in
   Mods play the same scenes with held native gameplay and optional explicit
   main-player handover. See the [guide](docs/guide/creating/stageplay.md) and
   [directing examples](examples/stageplay-demo/README.md), including a 26-second
-  beginner scene with a companion conceptual tutorial/promo.
+  beginner scene with a story-first tutorial/promo, native reactions, timed dialogue
+  and a single-setting jump comparison.
 
 - **Recording imports:** copied BK2 recordings are bounded during decompression
   and parsing, including metadata, input rows and verification sidecars. Oversized,
@@ -105,6 +106,13 @@ Unreleased. The earlier development themes remain in
   centered native-frame position or align to the screen's left edge. Native
   4:3 positioning is unchanged.
 
+- **Emerald Remix:** a new example mod for Sonic 2 with two level changes. Emerald Hill
+  Act 1 is rebuilt at load time from column strips of the player's own ROM, using a small
+  text recipe: an Act 2 stretch, a triple corkscrew made from Act 1's pieces, and an
+  authored monitor. Clover Valley, an original act with generated tiles and a parallax
+  background, plays between Emerald Hill and Chemical Plant. Both levels open in the
+  level editor.
+
 - **Super Sonic Bros.:** a new example mod, a platform fighter for one to four
   players (people or CPUs) on Sonic 3 & Knuckles. Sonic, Tails, Knuckles, Robotnik,
   Mecha Sonic, Egg Robo and Rhinobot each have a full move set (tilts, chargeable
@@ -169,7 +177,10 @@ Unreleased. The earlier development themes remain in
   of ROM-art thumbnails, a tools wheel, block and chunk workbenches and button
   prompts for the pad in use. It is the sole built-in editor UI, with world-space
   editing guides underneath; a separate OpenGGF-Editor provider can replace it
-  through the window-chrome extension.
+  through the window-chrome extension. Stock Emerald Hill can be adopted, playtested
+  and exported. A full clone keeps unplaced library chunks whose art lies outside the
+  decoded pattern table, drawing them transparent; placed ones still fail. Sonic 2
+  placements may carry the Y-word bit 12 that the ROM's object loader never reads.
 
 - **S3K save slots:** A file saved by the native SaveGame (act results, Knuckles'
   Lava Reef exit and both Hidden Palace exits) now resumes at the level that exit

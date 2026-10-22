@@ -133,7 +133,7 @@ public final class FullLevelExporter {
                     || spawn.objectId() < 0 || spawn.objectId() > 0xFF
                     || spawn.subtype() < 0 || spawn.subtype() > 0xFF
                     || spawn.renderFlags() < 0 || spawn.renderFlags() > 3
-                    || spawn.rawYWord() != nativeRawY(spawn, request.gameId()))
+                    || !matchesNativeRawY(spawn, request.gameId()))
                 throw new IllegalArgumentException("object spawn does not match the selected native placement encoding");
             if (spawn.objectKey() != null) ModKeySyntax.requireDisplayKey(spawn.objectKey());
         }
@@ -192,6 +192,15 @@ public final class FullLevelExporter {
     private static int nativeRawY(ObjectSpawn spawn, GameId game) {
         return game==GameId.S1 ? spawn.y() | (spawn.renderFlags()<<14)
                 : spawn.y() | (spawn.renderFlags()<<13) | (spawn.respawnTracked()?0x8000:0);
+    }
+
+    /**
+     * Sonic 2 ChkLoadObj (s2.asm) keeps y with andi.w #$FFF and the render flags from bits 13-14,
+     * so bit 12 is never read; stock EHZ Buzzers set it. Export re-encodes it away canonically.
+     */
+    private static boolean matchesNativeRawY(ObjectSpawn spawn, GameId game) {
+        int ignored = game==GameId.S2 ? 0x1000 : 0;
+        return (spawn.rawYWord() & ~ignored) == nativeRawY(spawn, game);
     }
 
     private static List<ObjectSpawn> canonicalObjects(MutableLevel level) {

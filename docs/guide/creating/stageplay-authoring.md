@@ -58,8 +58,8 @@ It uses two physical actors, actual moving platforms, finite landing waits, a gr
 camera and named dialogue. Open its `.stageplay` in either editor, or revise the
 screenplay and use the commands above. Change one choice, preview its consequence,
 then watch the whole scene before exporting. The accompanying production archive
-shows each directing concept beside the resulting performance, followed by the
-uninterrupted short.
+opens with the uninterrupted short, then shows directing choices beside one
+continuous performance and compares a single changed setting.
 
 ## Screenplay format
 
