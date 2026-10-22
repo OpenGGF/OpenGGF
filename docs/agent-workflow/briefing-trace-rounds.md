@@ -71,6 +71,17 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+An end-of-frame oracle can hide the pre-object writer it intends to test
+(2026-10-22, S1 water clock). Positioned LZ3 checks all ended three pixels lower
+because later physics/radius work replaced the observed Y. The existing
+RecordingFrameDriver physics wrapper samples after the real water callback and
+then still executes the full original frame. That boundary reproduced six gate
+failures and one control before the correction, including lag and rollover;
+restore/forward and another BK2 then passed. Read the actual clock publisher:
+ObjectManager increments after this callback, although native VBlank_Exit has
+already incremented before LZWaterFeatures. See the
+[water-clock evidence](../architecture/audits/2026-10-22-s1-chain-gap-closure.md).
+
 A live scene can simulate correctly and render valid scenery while every actor is
 outside the picture (2026-10-21, Stageplay live-world review). ROM level maxima
 are camera-origin limits, not terrain dimensions; subtracting the viewport again

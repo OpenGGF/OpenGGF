@@ -112927,3 +112927,32 @@ absolute ROM properties:
 
 The later title-card archive WIP remains outside this composition. Its pending failures, ring/timer reset at
 `loc_63B4`, HCZ and downstream frontiers remain separate obligations. No full-suite run or new trace payload.
+
+
+## 2026-10-22 — S1 pre-object water clock
+
+Isolated `bugfix/ai-gap-s1-chain-20261022`, based on
+`94c40570a15a11b70caf7456e9b0d0a8eec8a9b4`, corrects the S1 water reader's
+pre-object publication phase without moving the shared clock. The seven-case
+production boundary regression first reproduces six gate failures and one
+passing control, then passes after the fix, including lag, byte/word rollover
+and restore/forward replay. Three existing logical-pad/clock checks and both
+second-BK2 LZ2/LZ3 complete-run controls pass. No errors or skips.
+
+Exact focused command, with `S1_ROM` denoting the existing original REV01 image:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY OPENGGF_S1_RING_PROBE=1 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestSonic1LZWaterPreObjectClock,TestSonic1LZWaterEventsClock,TestS1Lz3CompleteRunTraceReplay,TestS1Lz2CompleteRunTraceReplay,TestS1CompleteEmeraldRunChain' "-Dsonic1.rom.path=$S1_ROM" test -B
+```
+
+Completed 13 tests, one chain assertion failure, zero errors/skips. Baseline full
+chain: 17 axes. Candidate: 15 axes; segment 25 LZ2 10 errors → 0, segment 26 LZ3
+10,212 errors at row3838 Y `$0655/$0653` → three queue-only errors at row10185
+`queue.s1_nemesis_plc.prepared` true/false. LZ3→SLZ1 art gap also closes. Earliest
+remaining segment12 row101 queue prepared true/false; all later physics/art
+frontiers remain explicit. Segment33 still loses production ownership in
+TITLE_CARD at BK2 cursor210396. Temporary read-only diagnostics were removed
+before commit. No fixture payload, timing authority or comparison was changed;
+this is bounded validation, not a green complete chain. The
+[lane audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md) retains
+native bytes, rejected end-of-frame oracle and full before/after profile.
