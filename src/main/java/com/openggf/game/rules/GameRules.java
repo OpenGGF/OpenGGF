@@ -130,7 +130,8 @@ public record GameRules(
                     16,
                     true,
                     false,
-                    false
+                    false,
+                    false // groundedRollRecentersCameraBias: shipped FixBugs=0
             ),
             new RingRules(
                     3,
@@ -290,7 +291,8 @@ public record GameRules(
                     16,
                     false,
                     false,
-                    true
+                    true,
+                    true // groundedRollRecentersCameraBias
             ),
             new RingRules(
                     7,
@@ -444,7 +446,8 @@ public record GameRules(
                     24,
                     false,
                     true,
-                    true
+                    true,
+                    true // groundedRollRecentersCameraBias
             ),
             new RingRules(
                     7,

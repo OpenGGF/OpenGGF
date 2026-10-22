@@ -112,6 +112,44 @@ class TestSonic1BombFuseConversion {
     }
 
     @Test
+    void freshChildrenWaitForTheirFirstAnimationAndRestoreAfterConversion() throws Exception {
+        Harness harness = newHarness(40, 0, true, true);
+        ObjectManager manager = harness.manager();
+        manager.update(0, null, List.of(), 1);
+        assertEquals(List.of(10, 0, 0, 0), mappingFrames(manager),
+                "Bom_Main leaves fresh SST frames clear; only the reused fuse animates");
+
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        RewindRegistry registry = new RewindRegistry();
+        registry.register(manager.rewindSnapshottable());
+        CompositeSnapshot converted = registry.capture();
+        List<FragmentState> convertedState = state(manager);
+
+        // Ani_Bomb .shrapnel is duration3, A,B,FF. Fresh children first call
+        // AnimateSprite on pass2; the FixBugs=0 reused fuse calls it twice on
+        // conversion, leaving its A timer at2 rather than the fresh timer3.
+        List<List<Integer>> expected = List.of(
+                List.of(10, 10, 10, 10), List.of(10, 10, 10, 10),
+                List.of(11, 10, 10, 10), List.of(11, 10, 10, 10),
+                List.of(11, 11, 11, 11));
+        for (int i = 0; i < expected.size(); i++) {
+            manager.update(0, null, List.of(), i + 2);
+            assertEquals(expected.get(i), mappingFrames(manager));
+        }
+        List<FragmentState> forward = state(manager);
+
+        registry.restore(converted);
+        assertEquals(convertedState, state(manager),
+                "post-conversion restore retains cleared frames, fractions and ceiling flips");
+        assertEquals(List.of(10, 0, 0, 0), mappingFrames(manager));
+        for (int i = 0; i < expected.size(); i++) {
+            manager.update(0, null, List.of(), i + 2);
+            assertEquals(expected.get(i), mappingFrames(manager));
+        }
+        assertEquals(forward, state(manager));
+    }
+
+    @Test
     void partialTailUsesOnlyForwardSlotsAndFreshChildrenKeepTheirOwnState() throws Exception {
         Harness harness = newHarness(124, 0, true, true);
         ObjectManager manager = harness.manager();
@@ -178,6 +216,18 @@ class TestSonic1BombFuseConversion {
                         motion.xSub, motion.ySub, readInt(fragment, "xVelocity"),
                         readInt(fragment, "yVelocity"), readInt(fragment, "animTickCounter"),
                         readBoolean(fragment, "renderXFlip"), readBoolean(fragment, "renderYFlip"));
+            } catch (ReflectiveOperationException e) {
+                throw new AssertionError(e);
+            }
+        }).toList();
+    }
+
+    private static List<Integer> mappingFrames(ObjectManager manager) throws Exception {
+        var mapping = Sonic1BombShrapnelInstance.class.getDeclaredMethod("getMappingFrame");
+        mapping.setAccessible(true);
+        return fragments(manager).stream().map(fragment -> {
+            try {
+                return (Integer) mapping.invoke(fragment);
             } catch (ReflectiveOperationException e) {
                 throw new AssertionError(e);
             }

@@ -112981,3 +112981,24 @@ remain. Segment 33's incomplete report has 3,203 errors (first non-camera 356
 dynamic art), not a completed segment result. The [lane audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md)
 records native bytes, exact scope and coordinated dependencies. Temporary boundary
 instrumentation was removed; no comparisons, timing edges or fixture rows changed.
+
+
+## 2026-10-22 — S1 retail rolling camera
+
+`bugfix/ai-gap-s1-chain-20261022`, HEAD `702f142c5` plus the coordinated camera
+semantic and fresh Bomb animation: the exact 104-case combined selector recorded
+in the [lane audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#retail-grounded-roll-camera-and-fresh-fragment-animation)
+completes 103 passes, 1 inherited complete-chain failure, 0 errors/skips. Original
+SLZ1/2/3 and SYZ3 movies, prefix 2, and required S3K checks pass. Independent
+bias 50/80, air and destructive restore checks pass; separate affected guards 54
+pass without errors/skips. No comparison/fixture/timing change.
+
+SYZ3 segment 22's 44 camera errors become 0. Chain 12→11 reported axes (original 17).
+Earliest remaining error is segment 12 row 101 prepared true/false; segment 15 has 6
+queue errors, 26 has 3 queue errors, 29 has 1456 errors (first non-camera 8557 X
+fraction `$F500/$0000`), 31 has 1 rings 9/10 error at 7821, 32 has 12 queue errors.
+Four later art gaps and segment 33's TITLE_CARD ownership loss at cursor 210396
+remain; its incomplete report still has 3203 errors beginning at non-camera 356
+`dynamic_art.edges`. No coverage is claimed past that loss. Temporary probes
+identify a late SLZ killing-hit window and an untracked SBZ2 saw-copy allocation
+cause; those source-backed follow-ups have separate owners/tests.

@@ -168,3 +168,84 @@ call; shipped `FixBugs=0` also submits the reused fragment twice to `DisplaySpri
 on conversion. The latter belongs to the shared sprite-queue owner; these motion
 and slot regressions do not certify that queue behavior. The SYZ3 grounded-roll
 camera reset is likewise coordinated with the shared movement/rules owner.
+
+
+## Retail grounded-roll camera and fresh fragment animation
+
+The coordinated `CameraRules.groundedRollRecentersCameraBias` semantic disables
+only S1 grounded-roll recentering. The existing six-argument constructor defaults
+to true, preserving callers' prior behavior; S1/S2/S3K construction explicitly
+selects false/true/true. `doRollSpeed` gates only its existing bias reset. Air,
+normal-ground, glide, participant ownership and movement-rule definitions are
+unchanged. `CameraRules` is published API: its new canonical seven-argument
+constructor/accessor require the aggregate native-modes owner's candidate pin
+reconciliation. The local hook required a same-commit pin update, so the parent
+and native-modes owner explicitly delegated only three additions to the current
+0.7 candidate: the canonical constructor, accessor and record component. No other
+pin, descriptor or version changed. `TestModApiSignatureSurface` then passed all
+11 cases without errors/skips; the final aggregate owner will compose its other
+API changes separately.
+
+Retail `Sonic_AngledRollSpeed` omits its recenter block because it is inside
+`if FixBugs` (`_incObj/01 Sonic.asm:829-842`); the shipped branch is zero.
+`Sonic_RollJumpLock` retains ordinary air recentering (`:974-982`). S2
+`Obj01_Roll_ResetScr` (`s2.asm:37074-37084`) and S3K `loc_115C6`
+(`sonic3k.asm:23038-23047`) always step toward `$60`. Original verified ROMs:
+S1 `$138A0` begins `1028 0026 4EB9 000029D2 C1E8 0014 E080 3140 0012`
+with no bias reset; S2 `$1A85A` contains `0C78 0060 EED8 670A 6404 5878 EED8 5578 EED8`;
+S3K `$115C6` contains `0C55 0060 6706 6402 5855 5555`.
+
+Twenty-one independent production-routine cases use biases `$50` and `$80`,
+not the fixture's `$58`: S1 holds each bias during rolling, S2/S3K ease by two,
+zero-inertia unrolling keeps that dispatch's camera branch, S1 air resumes
+recentring, and destructive player/movement/camera restore repeats the result.
+All pass, as do seven existing rolling-speed and four camera-rewind cases.
+
+Fresh shrapnel's native `Bom_Main` does not animate or submit a display pointer
+(`_incObj/5F Badnik - Walking Bomb.asm:22-33`). Its stored obFrame remains zero;
+first animation occurs on its next pass. The reused fuse calls `AnimateSprite`
+twice under `FixBugs=0`, leaving its first A duration at two rather than three.
+Verified REV01 `$122F8` is `03 0A 0B FF`. A fifth Bomb regression checks native
+stored frames on conversion `[A,0,0,0]`, then `[A,A,A,A]` twice,
+`[B,A,A,A]` twice and `[B,B,B,B]`. Forced recreation after conversion also
+checks retained ceiling flips, fractions, allocation and the full forward
+sequence. This tests SST animation state; frame 0 is not permission to draw.
+The coordinated queue backend/consumer still owns the display-call obligation.
+
+The necessary combined run starts from `702f142c5` (the authorized `d8aca9ad7`
+boss component dependency applied after `52a346902`) plus these camera/animation
+changes. It completes 104 cases: 103 pass, 1 inherited complete-chain assertion
+failure, 0 errors/skips. Original-movie SLZ1/2/3 and SYZ3, both prefix cases,
+and all 60 selected S3K loading/bootstrap/decoding/AIZ checks pass. SYZ3 segment 22
+is now exact, removing 44 camera errors and reducing the full chain 12→11 reported
+axes. Other completed segment counts and segment 33's incomplete 3203-error
+report/ownership loss remain unchanged from the previous table. Temporary
+SLZ/SBZ2 diagnostics were removed before the next checks.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY OPENGGF_S1_SBZ2_INVENTORY=1 OPENGGF_S1_BOSS_TRANSITION_PROBE=1 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestGroundedRollCameraBias,TestPlayableSpriteRollSpeed,TestCameraRewindSnapshot,TestSonic1BombFuseConversion,TestS1Slz1CompleteRunTraceReplay,TestS1Slz2CompleteRunTraceReplay,TestS1Slz3CompleteRunTraceReplay,TestS1Syz3CompleteRunTraceReplay,TestS1CompleteEmeraldRunChain,TestS1CompleteEmeraldRunPrefix,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' "-Dsonic1.rom.path=$S1_ROM" "-Ds3k.rom.path=$S3K_ROM" test -B
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestPerGameRuleArchitectureGuard,TestRewindCoverageGuard,TestRewindFieldDispositionGuard,TestTraceReplayInvariantGuard,TestHardwareTimingAuthorityGuard,TestObjectServicesMigrationGuard' test -B
+```
+
+The separate fresh-JVM affected guards pass 54 cases, 0 errors/failures/skips:
+rule architecture 3, rewind coverage 1, field disposition 1, trace invariant 10,
+hardware authority 25, and injected object services 14. This is focused validation;
+the parent owns combined smoke and final aggregate API pin validation.
+
+The same necessary run gives the boss owner causal SLZ evidence: engine own-slot
+updates still have hitCount1/defeatedfalse through row 8284, then enter row 8285
+with phase 06/timer 78 and consume the deferral. Native's final hit sets status80
+on 8283, enters phase 06/timer 78 on 8284, and decrements on 8285. Engine recovers on 8406
+instead of 8405 and enters escape on 8472 instead of 8471. Previous ship-render flag
+is true throughout; no Recover→Escape fallthrough or capsule-width change is
+justified. The independent later escape movement gap and exact collision endpoint
+cause belong to the boss lane. Player/row/VInt alignment remains explicit.
+
+The SBZ2 slot observer independently finds a missing second untracked dormant
+saw at `$1080,$06C0`, subtype 03. Native retains slot 47 from row 7107, then cursor
+re-entry creates another at 70 on 7397; engine retains only 47 and dedupes the second
+placement. Native has one additional type 6A both at 7397 (7/6) and before ring spill
+7584 (4/3). The resulting native 92/engine 91 ring phase accounts for the single
+row 7821 pickup difference. Original ROM `$70ED4` contains `1080 06C0 6A03` with
+tracking bit clear. This source-backed follow-up remains independent of shared
+ring collision thresholds; no ring/touch behavior was fitted.
