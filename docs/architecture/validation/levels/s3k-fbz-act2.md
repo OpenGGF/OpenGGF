@@ -382,3 +382,12 @@ qualified physical contact/death scope; other unchanged checks were not repeated
 [Exact selectors and source hashes](../../plans/2026-10-13-s3k-playable-completion.md#existing-checkpoint-driver-qualification-2026-10-14)
 are in the completion plan. Further roster, per-mechanic and cold-route products remain open. No native pixel/audio, overall act
 certification, full-suite or combined delivery claim follows.
+
+## Object-pipeline performance follow-up (2026-10-22)
+
+FBZ solid collision getters share immutable parameter values through the existing bounded factory. State-dependent dimensions, offset expressions, collision flags and execution profiles are unchanged; this changes allocation rather than geometry or encounter timing.
+
+The [query/allocation audit](../../audits/performance/2026-10-22-native-object-query-performance.md)
+and its companion implementation records own exact tested states, commands and
+remaining delivery checks. These local checks do not close inherited viewport,
+donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.

@@ -285,7 +285,20 @@ Unreleased. The earlier development themes remain in
   verified instruction terms from work that is still unpriced. Giant-ring capture retains
   the original blank-frame ownership and art-reload state; ordinary animation
   is released again on return. Robotnik's ship stays with the beaten boss through
-  its defeat pause before flying off, as in the original.
+  its defeat pause before flying off, as in the original. Boss water/effect
+  children use less repeated population and ordering work while retaining native
+  slots and rewind. CNZ, LRZ, DEZ, SSZ and SOZ consumers replace repeated scans
+  with native-owned-slot queries. FBZ squeeze discovery skips ineligible actors
+  and reuses winning projections; unchanged SOZ vine surfaces and displays reuse
+  their cached work. Direct signed surface sampling avoids bulk copies while
+  bulk reads remain defensive; FBZ/SOZ solid getters reuse bounded immutable
+  parameters. Optional sprite
+  transforms share picture calculations and batch compatible geometry in painter
+  order. Instanced masks share batches, frozen art restores compare physical atlas
+  bytes, and final offscreen geometry skips submission after native admission.
+  Results/snowboard pattern updates batch atlas writes and results refresh only
+  changed counter ranges. Stable touch configurations reuse immutable profiles
+  while dynamic provider flags remain live.
 
 - **Spin dash camera:** While a spin dash charges, and on its release frame, the
   camera eases back toward its normal height as it does when standing, as Sonic 2

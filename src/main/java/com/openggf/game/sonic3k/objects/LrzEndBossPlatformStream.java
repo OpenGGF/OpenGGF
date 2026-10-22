@@ -26,10 +26,9 @@ public final class LrzEndBossPlatformStream extends AbstractObjectInstance imple
             try { lastX=services().rom().read16BitAddr(0x10); }
             catch(IOException failure) { throw new UncheckedIOException(failure); }
         } else {
-            for(var object:services().objectManager().getActiveObjects())
-                if(object instanceof AbstractObjectInstance a && a.getSlotIndex()==lastSlot && !a.isDestroyed()) {
-                    lastX=a.getX(); break;
-                }
+            var occupant=NativeObjectQueries.liveAtSlot(services().objectManager(), lastSlot,
+                    AbstractObjectInstance.class);
+            if(occupant!=null) lastX=occupant.getX();
             // Delete_Current_Sprite clears the SST; a later occupant supplies its own X.
         }
         int distance=(short)(lastX-x);

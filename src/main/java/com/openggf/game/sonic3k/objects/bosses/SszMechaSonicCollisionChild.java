@@ -48,17 +48,8 @@ public final class SszMechaSonicCollisionChild extends AbstractObjectInstance
             ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
-        SszMechaSonicObjectInstance parent = null;
-        var manager = services().objectManager();
-        if (manager != null) {
-            for (var object : manager.getActiveObjects()) {
-                if (object instanceof SszMechaSonicObjectInstance mecha
-                        && mecha.getSlotIndex() == parentSlot && !mecha.isDestroyed()) {
-                    parent = mecha;
-                    break;
-                }
-            }
-        }
+        SszMechaSonicObjectInstance parent = com.openggf.level.objects.NativeObjectQueries.liveAtSlot(
+                services().objectManager(), parentSlot, SszMechaSonicObjectInstance.class);
         if (parent == null) {
             collisionFlags = 0;
             pendingDelete = true;

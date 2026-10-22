@@ -388,7 +388,12 @@ public class GraphicsManager {
 		flushPatternBatch();
 		var command=PatternRenderCommand.obtainRows(entry,palette,paletteIndex,hFlip,vFlip,priority,0,0,rowStart,rowEnd,this);
 		command.presentation(quad,hue,opacity);
-		registerCommand(command);
+        // The queue is the painter-order boundary, including captured commands.
+        // Never merge across a primitive, normal instance batch, or state command.
+        List<GLCommandable> target = commandCaptureTarget != null ? commandCaptureTarget : commands;
+        if (!batchingEnabled || target.isEmpty()
+                || !(target.getLast() instanceof PatternRenderCommand previous)
+                || !previous.appendPresentation(command)) registerCommand(command);
 	}
 
 	private final java.util.IdentityHashMap<Object,Integer> presentationTrailBanks=new java.util.IdentityHashMap<>();
@@ -739,6 +744,16 @@ public class GraphicsManager {
 		}
 		patternAtlas.cachePattern(pattern, patternId);
 	}
+
+    void restoreFrozenPattern(SpritePresentation.PatternVersion version, int patternId) {
+        ensurePatternAtlas();
+        patternAtlas.restoreFrozenPattern(version, patternId, headlessMode || !glInitialized);
+    }
+
+    boolean presentationMaskIsPerInstance() {
+        return !headlessMode && spritePresentationBuilder == null && batchingEnabled
+                && instancedBatchActive && instancedPatternRenderer != null;
+    }
 
 	public void updatePatternTexture(Pattern pattern, int patternId) {
 		// Native null uploads allocate residency but leave existing GPU bytes intact.

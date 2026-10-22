@@ -53,10 +53,8 @@ final class HczEndBossWaterSprayChild extends AbstractBossChild implements Rewin
     }
 
     private HczEndBossWaterColumn activeColumn() {
-        return services().objectManager().activeObjectsOfType(HczEndBossWaterColumn.class).stream()
-                .filter(column -> !column.isDestroyed())
-                .findFirst()
-                .orElse(null);
+        return com.openggf.level.objects.NativeObjectQueries.firstLive(
+                services().objectManager(), HczEndBossWaterColumn.class);
     }
 
     @Override

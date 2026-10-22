@@ -46,7 +46,7 @@ public final class FbzEggPrisonButtonInstance extends AbstractObjectInstance
         parentRef.triggerFromButton(player);
     }
 
-    @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x1B, 4, 6); }
+    @Override public SolidObjectParams getSolidParams() { return SolidObjectParams.of(0x1B, 4, 6); }
     @Override public SolidRoutineProfile getSolidRoutineProfile() {
         // sub_86A3E is another direct S3K SolidObjectFull caller and retains
         // contact at relX == d1*2 (unsigned BHI rejection only).

@@ -37,7 +37,7 @@ public final class FbzPlatformBlocksObjectInstance
   }
   public int getPriorityBucket() { return 5; }
   public SolidObjectParams getSolidParams() {
-    return new SolidObjectParams(width + 0xB, 0x10, 0x11);
+    return SolidObjectParams.of(width + 0xB, 0x10, 0x11);
   }
   public SolidRoutineProfile getSolidRoutineProfile() {
     return SolidRoutineProfile.fullSolid(false);
