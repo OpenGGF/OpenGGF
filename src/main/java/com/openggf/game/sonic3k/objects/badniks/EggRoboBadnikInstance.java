@@ -361,7 +361,7 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
         }
     }
 
-    /** {@code Swing_UpAndDown} (sonic3k.asm:177861-177895). */
+    /** {@code Swing_UpAndDown} (sonic3k.asm:177947-177976). */
     private void swingUpAndDown() {
         int acceleration = swingAcceleration;
         int velocity = yVelocity;

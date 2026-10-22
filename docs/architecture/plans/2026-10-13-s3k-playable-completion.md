@@ -30073,3 +30073,16 @@ whole-repository audit: it reported 175 stale and 9 unresolved-file references
 in its bounded existing source selection, alongside 165 ok/60 near/529
 unverifiable citations. Broader composition/guard coverage and delivery remain
 Root obligations, not claims made by this reconciliation.
+
+### Independent reconciliation review: EggRobo citation correction — 2026-10-22
+
+The independent source review found four incorrect owning-routine ranges in
+conflict-resolved EggRobo comments. The mechanical pin remap preserved earlier
+draft citation errors; it did not establish that the cited ranges owned the code.
+Against pinned `8b2cf3c4178f2382f844da67798de4befc50c5e0`, Root read the actual
+label-to-return blocks and corrected `Swing_UpAndDown` to
+`sonic3k.asm:177947-177976`, jet `loc_916A8`/`loc_916CC` to `198676-198701`,
+gun `loc_916EE` through `loc_91750` to `198704-198738`, and shot `loc_91756`
+through `loc_917B4` to `198741-198776`. These four same-line comment changes
+leave executable code and all route/test inputs unchanged. The earlier broad
+citation-warning totals remain historical and are not relabelled as a clean audit.

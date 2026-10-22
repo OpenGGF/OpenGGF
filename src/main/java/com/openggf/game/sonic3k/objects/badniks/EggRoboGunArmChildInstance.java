@@ -17,7 +17,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code loc_916EE}-{@code loc_91750} (sonic3k.asm:198602-198636): the EggRobo's gun arm,
+ * ROM {@code loc_916EE}-{@code loc_91750} (sonic3k.asm:198704-198738): the EggRobo's gun arm,
  * the second row of {@code ChildObjDat_919D0} at {@code (-$1C,-4)}.
  *
  * <p>INIT loads {@code word_919C4} and returns without following, firing or drawing. MAIN's
