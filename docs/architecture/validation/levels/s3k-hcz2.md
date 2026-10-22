@@ -16,6 +16,7 @@ The initial native/default binding covers all three solo mains at 320; the finit
 | ENTRY / CAMERA: normal character start and current focus | `Sonic_Start_Locations` / `Knux_Start_Locations`; [`TestS3kHcz2EntryMatrix#normalEntryAppliesTheProductionPresetAndEveryDeclaredParticipantThenReplaysTwice`](../../../../src/test/java/com/openggf/tests/TestS3kHcz2EntryMatrix.java) | 140 supported products: actual host-ROM start table, all resolved production widths, typed admitted roster/ordered CPU leaders/current native P2 and camera focus, decoded current mappings and unchanged P1 lives. This is a fresh entry floor, not every intro/alternate-entry mechanism. |
 | REWIND: normal entry world | Complete registered-world capture/restore and 45 ordinary Right-input frames twice; all title-card pattern bytes compared by content | Qualified for all 140 finite products. Held Right is requalified by the 2026-10-17 input correction below; the 2026-10-14 runs held Down. No P1 death or hidden life loss is permitted. This does not certify later event/interaction/child lifetimes or cross-load history policy. |
 | OBJECT / EVENT / CAMERA: raised floor, wall and twisting loop | `TestS3kHcz2RaisedFloorWallCollisionHeadless`, `TestS3kHcz2TwistingLoopRegression`, `TestS3kHcz2SpindashStuckRegression`, `TestSonic3kHCZEvents` | Positioned/event regressions; cold traversal and five-preset/donor/roster interaction products remain open. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
+| OBJECT / LIFETIME: snake-block coarse cull and camera return | [`TestObjectManagerVerticalPlacement#snakeCoarseCullReleasesPlacementForCameraReturnAndRewind`](../../../../src/test/java/com/openggf/level/objects/TestObjectManagerVerticalPlacement.java) | The actual snake retires through manager execution, releases its allocated slot, avoids the permanent placement latch and reloads as a fresh instance on camera return, including two restores of the post-cull manager boundary. This is component lifecycle coverage, not cold traversal or complete-world replay; see the qualification below. |
 | BOSS / REWIND: end boss and water columns | `TestS3kHczEndBossGraphRewind`, `TestHczEndBossInstance`, `TestHczEndBossWaterColumnControlPolicy` | Component/arena graph checks; actual arena admission, completion and outgoing lifecycle breadth remain separate. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
 | LIFE / LOAD: physical post, actual death/restart and incoming/outgoing worlds | Native checkpoint/death/reload owners and the edges listed above | All 140 supported preset/donor/main/roster products are qualified by `TestS3kHcz2EntryMatrix#actualDeathReloadPreservesTheSupportedProductAndReplaysEachIncomingWorldTwice`: two actual deaths/reloads, exactly one life lost per restart, new world owners, outgoing live-history retirement, restored current roster/camera and two complete-world 45-frame restore/replay cycles after each released destination. Physical post activation and incoming/outgoing route edges remain separate obligations. |
 | PRESENT: actual viewport, palette/scroll/plane and audio | Act-owned ROM art/AniPLC/AnPal/event and music/SFX owners | Decoded playable source is checked at entry. Scene pixels, native audiovisual timing and viewport-edge parity require their own bounded native/GPU evidence. |
@@ -692,3 +693,41 @@ overall is240T/1F/0E/0S because of a separate synthetic solid fixture. These
 terminal checks retain declared FLEE/results/STATE_EXIT component inlets; they
 do not prove a natural eight-hit fight, native resource causality, native pixels,
 the old strict trace's four axes or complete HCZ route closure.
+
+
+## Snake-block respawn lifecycle — 2026-10-22
+
+Root base `f0047378d9c326829aeaf38ffab59a2b70973769` plus this correction
+uses the existing respawnable-offscreen operation at the unchanged saved-base
+range predicate, and declares that predicate authoritative instead of applying a
+second manager animated-X gate. Pinned skdisasm
+`8b2cf3c4178f2382f844da67798de4befc50c5e0`, `HCZSnakeBlocks_Main` /
+`HCZSnakeBlocks_DeleteAndClearRespawn` (`sonic3k.asm:50949–50964`), reads saved
+baseX then clears placement bit7 before deletion. Motion, collision order, range
+arithmetic, slot policy and public APIs are unchanged.
+
+The real snake/S3K manager regression enables permanent destruction and isolates
+a320×224 camera. Base2848/flags1/subD8 at camera2600 has admitted base-distance
+0280 but animated-distance0300; the prior generic gate incorrectly removed it.
+A separate old-source counterexample latched permanent destruction after actual
+coarse culling. The final case checks allocator release, clear latch, fresh
+camera-return instances and two restores of the post-cull manager boundary.
+Coordinate replay occurs during corner wait and has limited moving-phase
+discrimination; this is component lifecycle coverage, not whole-world rewind.
+
+The final runtime passes **92T/0F/0E/0S** across eight affected classes, including
+motion/permanent-destruction controls and required S3K loading/bootstrap checks;
+its fresh owning structural guard passes **33T/0F/0E/0S** without ratchet changes.
+After test-only viewport isolation, all17 owning manager cases pass separately.
+No unchanged broader coverage or production chain is repeated for that fixture.
+
+The unchanged campaign completes HCZ2 segment13 with37930 aggregate errors.
+Its first non-camera mismatch moves from287 Y06D4/06DA to442 P2 horizontal
+speed01C7/−0100; P1's entire emitted comparison matches at442. The original
+HCZ ownership stops are absent and the walk reaches SS7 results at97208, where
+it remains red. The nearby output includes the middle five snake blocks, without
+a native/engine instance or slot alias proof. Contact/writer cause, native
+pixels/timing, full-route and remaining lifecycle products stay open.
+The [dated plan](../../plans/2026-10-13-s3k-playable-completion.md#root-hcz2-snake-coarse-cull-respawn-correction--2026-10-22)
+preserves commands, original counterexamples, the rejected partial correction and
+actual terminal comparisons. This is focused validation, not smoke certification.

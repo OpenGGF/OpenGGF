@@ -252,6 +252,8 @@ Unreleased. The earlier development themes remain in
   floor landings preserve the native angle, animation and climb timer. The native
   second player keeps its ringless hurt response under human control.
   Hydrocity solid blocks retain underside and side contacts while offscreen.
+  Snake blocks use their saved origin for camera culling and can reload when the
+  camera returns.
   Spinning columns use cached sprite visibility to release and recapture riders
   while preserving platform attachment. Airborne releases retain the movement
   lock through the next player update.

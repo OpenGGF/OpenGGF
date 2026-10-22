@@ -1711,3 +1711,19 @@ consumers and required S3K checks. This is a local uncommitted tested source epo
 It does not certify H-int rendering, an actual complete route or native caller,
 and does not waive the earlier HCZ/FDF/Cold residuals or +21/-94 limits.
 [Exact command, original report accounting and source limits](architecture/plans/2026-10-13-s3k-playable-completion.md).
+
+
+HCZ2 snake-block lifetime (2026-10-22): the snake's native saved-base range
+predicate now owns culling, without the manager's additional animated-X gate.
+Its offscreen deletion also clears respawn ownership before removal. Actual
+manager counterexamples cover the valid-base/invalid-animated fringe and the
+permanent latch;92 affected cases and33 fresh owning guards pass without skips.
+The final native-viewport fixture separately passes all17 owning manager cases.
+
+The unchanged original chain now completes HCZ2 segment13 and moves its first
+non-camera mismatch from row287 Y to row442 P2 horizontal speed01C7/−0100.
+It remains red with later HCZ errors and an SS7 results-boundary stop at97208.
+Native contact/cause, whole-world lifetime breadth and complete-route parity
+remain open. The rejected first candidate's earlier ownership stop and its
+correction are preserved in the dated plan.
+[Scope and remaining obligations](architecture/validation/levels/s3k-hcz2.md#snake-block-respawn-lifecycle--2026-10-22).

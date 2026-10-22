@@ -114644,3 +114644,61 @@ the historical count remains open rather than reconstructed. A current external
 GameOver-focused log supplies two exact warning keys as leads only. Native
 publication still requires authentic exact FIFO service measurements and the
 existing strict source/movie/setup provenance contract.
+
+
+## 2026-10-22 — HCZ snake respawn correction leaves campaign blocked
+
+Tested source: `f0047378d9c326829aeaf38ffab59a2b70973769` plus the bounded
+HCZSnakeBlocks coarse-cull lifetime call and its real manager regression. The
+original chain selector/fixtures/environment are unchanged from the preceding
+823eda refresh; current absolute queue command uses `--normal -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl -Ptrace-replay
+-Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds`,
+verified original absolute `-Ds3k.rom.path`, fresh
+`target/hcz-snake-cull-chain` report/trace/tmp properties and `test -B`; Java25,
+Lua5.4/nullAL and ambient JVM/display unsets remain unchanged.
+
+Actual **1T/1F/0E/0S**, suite28.657s/case28.340s, queue54s/Maven57.412s.
+Segments0/2/4/6/8/9 complete with0errors;11 complete62=11physics+51animation.
+Segment13 remains partial,57753=49997physics+7756animation errors/lag6. Its first
+non-camera mismatch is unchanged row287 Y06D4/06DA, with VY0000/08D0,
+G0046/020C, air0/1 and rolling0/1; P2 fields match there. The nearby live output
+still omits the middle snake family. Original ownership loss is HCZ2/LEVEL/
+loadGeneration10, **cursor88067 versus88306 previously**,239 inputs earlier.
+This is a new/worsened stop and blocks Main integration pending attribution.
+Censored lower totals and fewer final aggregate labels are not improvement.
+
+The four unmatched hardware descriptors remain unchanged;13 dynamic-art gaps
+have0failures. Full actual XML/TXT/errors/suppression, case stderr and18 JSON/
+owner trees were read before owned raw cleanup. The lifecycle counterexample
+and repaired92 focused+33 fresh structural passes establish the native clear-bit7
+behavior locally; they do not identify prior admission/cull history or certify a
+route, native caller, timing-cost inventory or whole-world rewind.
+[Source, rejected fixture assertion and exact validation scope](../architecture/plans/2026-10-13-s3k-playable-completion.md#root-hcz2-snake-coarse-cull-respawn-correction--2026-10-22).
+
+
+## 2026-10-22 — saved-base snake lifetime completes the HCZ ownership interval
+
+Source: basef004 plus the respawnable deletion and existing custom-range owner
+declaration. The second counterexample proves that saved-base distance0280 may
+be valid while animated-X distance0300 would trigger an erroneous extra manager
+unload. No generic range algorithm, motion or collision order changes.
+
+The same original production command/fixtures/environment as above, using fresh
+`target/hcz-snake-lifetime-chain` reports/trace/tmp, returns **1T/1F/0E/0S**.
+Queue266s/Maven58.136s; XML suite28.767s/case28.430s. Segment13 now completes:
+37930=33300physics+4630animation errors, lag7. First non-camera mismatch moves
+from287 Y06D4/06DA to **442 sidekick_x_speed01C7/−0100**. P1's entire emitted
+comparison matches at442; the same row also differs in P2 VY/G/air/routine/
+status/animation. Actual hurt receiver, decision and writer remain unexposed.
+The nearby live output now contains the middle five snake blocks, without a
+native/engine instance or slot-equivalence certificate.
+
+The88067/88306 ownership stops are absent. The current walk fails at
+**SS7/SPECIAL_STAGE_RESULTS cursor97208**, exceeding the uncompared-interior
+destination. Segment11 remains62 errors;0/2/4/6/8/9 remain complete0errors.
+Dynamic-art gaps14/0failures; earlier unmatched hardware suppressions are not
+reported at this HCZ closure. That is bounded completion, not all-hardware or
+whole-chain parity. All current failure/streams/JSON-owner trees were inspected
+and owned raw diagnostics consumed. The prior isolated-candidate regression is
+superseded, while current red coverage and separate Main integration remain open.

@@ -30279,3 +30279,182 @@ consuming owned diagnostics. Two FAST/NONE and one exact missing-profile warning
 remain observed; a passing route is not native timing measurement. This does not
 replace the red old first/complete cases or certify Mecha/DEZ. Main integration
 remains separately coordinated.
+
+
+### Root HCZ2 snake coarse-cull respawn correction — 2026-10-22
+
+Source base `f0047378d9c326829aeaf38ffab59a2b70973769`. The previous original
+campaign on `823eda5f4` stopped in HCZ2 at cursor88306/segment13, first retained
+non-camera row287 Y06D4/06DA. Its nearby formatter has no count cap; the middle
+family is absent from that actual live-object output. Committed native auxiliary
+row011F identifies slot25/type-code25724/subtypeD8 at2808/06F8, with P1's
+interaction slot25. These are serialized type/interaction observations, not an
+execution-PC or native-to-engine instance identity. Original ROM placement
+entries277..281 at1E700E..1E7026 have base2848/0738, flags1, id67 and subtypes
+80/96/AC/C2/D8. They support investigating the owner; prior engine admission/cull
+history and chain causality remain unobserved.
+
+Pinned skdisasm `8b2cf3c4178f2382f844da67798de4befc50c5e0`,
+`HCZSnakeBlocks_DeleteAndClearRespawn` (`sonic3k.asm:50957–50964`), clears
+respawn bit7 before deletion. The old engine's `setDestroyed(true)` permanently
+latched this layout entry. The first candidate changes only this coarse-cull call to the existing
+named respawnable-offscreen operation; shared placement, motion, collision order,
+culling arithmetic and APIs remain unchanged. The second owner correction below
+removes an additional generic lifetime gate.
+
+A new real `HCZSnakeBlocksObjectInstance`/S3K `ObjectManager` regression first
+executes coarse culling with permanent destruction enabled, checks allocated-slot
+release and latch state, then returns the camera and repeats from two restored
+post-cull manager boundaries. The initial old-source request failed on an invalid
+test assumption that a retired Java object's historical slot field must be−1;
+actual allocator ownership is the relevant authority. That fixture assertion was
+corrected, without changing the old runtime, to `getAllocatedSlotCount()==0`.
+The next old-source request failed at the intended latch assertion:
+`expected false but was true`. Queue93s/Maven29.609s are separate intervals.
+
+With the named owner correction, the exact seven simple selectors resolve to
+eight actual classes (both `TestSonic3kLevelLoading` packages): snake13, vertical
+placement17, persistent-respawn2, AIZ-skip8, level-loading36+7, bootstrap6 and
+decoding3. Actual result **92T/0F/0E/0S**, Java25.0.5/EGL/original absolute S3K
+ROM, queue79s and printed Maven1m25s; individual compiler elapsed is unknown.
+Every actual case identity, assertion/error/skip and original case stream was
+read. FAST/NONE warnings and the deliberate collision-index bounds warning are
+not native timing qualifications. The independent source review found no material
+issue, with a limit that coordinate replay occurs during corner wait and is not
+a strong independent moving-phase oracle. Component manager replay is not
+complete-world or cold-route certification.
+
+Command: current absolute Main `tools/testing/maven_queue.py --normal -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl
+-Dtest=TestS3kHczSnakeBlocksObject,TestObjectManagerVerticalPlacement,TestPersistentRespawnDestroyLatchRoundTrip,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`,
+original absolute `-Ds3k.rom.path`, fresh `target/hcz-snake-cull-fixed` reports/tmp
+and `test -B`; Java25, Lua5.4, null OpenAL, ambient JVM/display options unset.
+Original diagnostics were consumed after inspection; compiled outputs remain.
+The fresh owning `TestObjectPhysicsStandardizationGuard` request passes
+**33T/0F/0E/0S**, suite2.091s, queue35s/Maven30.156s. It changes no allowlist,
+raw-call budget or guard source. Exact command: current absolute Main queue
+`--normal -Dmse=off -Pguards -Dtest=TestObjectPhysicsStandardizationGuard`,
+fresh `target/hcz-snake-cull-guard` report/tmp properties and `test -B`.
+
+The one unchanged production chain is **1T/1F/0E/0S**, XML suite28.657s/
+case28.340s, queue54s/Maven57.412s, Java25.0.5/EGL and the same original ROM,
+selector, fixture and environment as the earlier823eda command. Only the fresh
+namespace changes to `target/hcz-snake-cull-chain`. Segment8 remains complete
+with0errors; segment11 remains complete62=11physics+51animation errors.
+Segment13 is partial57753=49997physics+7756animation, lag6. Its first non-camera
+error remains row287 Y06D4/06DA, with the same full P1/P2 comparison and missing
+middle-family output. The original ownership stop is now BK2cursor88067,
+**239 inputs earlier** than88306. Lower censored totals are not improvement.
+The final exception exposes two aggregate axes while the separately owned partial
+segment13 payload still contains its errors; absent aggregate labels do not erase
+that payload. The four unmatched hardware completion identities/descriptors
+remain as before, and13 dynamic-art gaps have0failures.
+
+Actual case/error/skip identities, environment properties, full failure/
+suppression, original case stderr and all18 JSON/owner trees were read; TXT contains the XML failure once.
+Original diagnostics were consumed, compiled outputs preserved. The earlier
+ownership stop is a new/worsened outcome and **blocks Main integration pending
+attribution**. This native-backed local lifecycle fix is not campaign closure.
+No further unchanged chain request was submitted.
+
+The change-based planner at basef004 selects3176 smoke classes plus guards from
+the broad object/doc ownership categories. That selection is disproportionate to
+a single object-local named lifetime call: no shared algorithm, public contract,
+range, motion, collision order or policy changes. The real manager regression,
+motion/permanent-destruction consumers, required bootstrap checks, fresh owning
+guard and unchanged production chain address this bounded risk. This is focused
+validation, not smoke. The global citation scan remains red on inherited stale/
+missing references; it does not mutate foreign disassembly checkouts. The two
+changed executable files' targeted scan passes (one resolved citation, five
+unverifiable older forms); the new native branch was independently verified from
+the exact pinned git object. No Main integration or aggregate green claim follows.
+
+
+#### Second owner correction: saved base versus animated range
+
+The next read-only source check found a separate mismatch: native
+`HCZSnakeBlocks_Main` (`sonic3k.asm:50949–50954`) checks saved base X `$44`
+only, but `ObjectManager.runExecLoop` also used its generic animated-X unload
+because the object had not declared its custom lifetime owner. No shared range
+algorithm changes are justified. The corrected declaration lets the existing
+`update()` base-range/delete path own this object, instead of adding another
+current-position decision.
+
+The source-derived counterexample uses the same real placement: base2848,
+flags1/subD8 first motionX2888. At camera2600, saved-base bucket distance0280
+is admitted while animated-X distance0300 would be rejected. The extended
+regression verifies actual motion and survival through the object's own check,
+then fails on active object count `expected1/actual0` before the declaration
+change (**1T/1F/0E/0S**, queue46s/Maven30.016s). It still retains the earlier
+real cull/latch/re-entry/two-restore checks. This is a source counterexample,
+not a reconstruction of the campaign's actual earlier camera/phase operands.
+
+RawY2738 versus0738 does not alter vertical eligibility: the X pass bypasses
+only bit15, and both native and Java otherwise mask low12 Y bits; flag1 seeds
+quadrant and can affect animated-X lifetime indirectly. Actual decoded Y0738
+versus neighbors0670/0780 can still lie in different load-time camera strips.
+Do not substitute row287's camera words for those missing earlier operands.
+
+If needed after the corrected production comparison, the smallest next useful
+original-time observation is a sparse lifecycle journal for canonical layout
+277..281: reset/persistent seed, admission/register/remove edges, and one raw-map
+snapshot at first error. It must separate canonical map keys/managedSpawn from
+`getSpawn()`'s moved coordinates, ObjectRefId from physical slot, actual BK2
+cursor/phase from native clocks, and active/reverse/dynamic/exec/cache membership.
+No such observer, per-frame all-object log or new native capture is authored here.
+
+
+The revised source with both lifetime corrections passes the same eight actual
+classes **92T/0F/0E/0S** after strengthening the existing real manager case.
+Actual identities match the preceding selection; this is a necessary new-source
+run, not additive unique coverage. Queue193s/printed Maven1m22s; Java25.0.5/EGL
+and original ROM properties remain. The fresh owning guard then passes
+**33T/0F/0E/0S**, suite2.168s, queue20s/Maven30.335s. No guard exception,
+raw-call budget, shared range algorithm, public API or diagnostic observer was
+added. Original reports/case streams were inspected and consumed. The revised
+source's sole unchanged production-chain comparison is accounted below.
+
+
+The final production comparison is **1T/1F/0E/0S**, suite28.767s/case28.430s,
+queue266s/Maven58.136s. The exact original selector/fixtures/Java25.0.5/EGL/ROM/
+environment remain; only namespace `target/hcz-snake-lifetime-chain` changes.
+HCZ2 segment13 now **completes** with37930=33300physics+4630animation errors,
+lag7. Its first non-camera mismatch moves from row287 Y to **row442
+sidekick_x_speed**, native01C7/engine−0100; P1's entire emitted comparison matches
+there. P2 Yspeed0000/−0200, G01C7/0000, air0/1, routine02/04, status40/42 and
+animation00/1A also differ at that same original row; no damage receiver or
+first-writer cause is established. The nearby live output now includes the five
+middle snake objects in slots21..25, without proving a native/engine slot alias
+or reconstructing earlier admission operands.
+
+The previous HCZ ownership stops88067/88306 are absent. The walk reaches
+**SS7/SPECIAL_STAGE_RESULTS at cursor97208**, where the uncompared-interior
+physical walk exceeds its declared destination. Segment11 remains62 errors;
+segments0/2/4/6/8/9 remain complete0errors. Four unmatched hardware-completion
+suppressions from the earlier censored source are not reported in this complete
+HCZ closure; this is not an exhaustive hardware certificate. Dynamic-art
+coverage now observes14 gaps/0failures. The chain is still red, with its exact
+three-axis exception and later comparator errors preserved.
+
+Actual XML/TXT identity/errors/skips/environment, full exception/suppressed tree,
+962-line89223-byte case stderr (35 complete distinct lines), both full emitted
+comparisons,18 nearby actors and all18 current JSON/owner trees were read before
+owned raw cleanup. The isolated first-candidate earlier-stop blocker is
+superseded by this later complete-HCZ result; broader parity and separately
+coordinated Main delivery remain open. No new observer, trace hydration, altered
+fixture, cap, expected value or gameplay admission was introduced.
+
+A final test-only arrangement binds the camera constructor to320×224 through
+a local configuration mock, instead of inheriting process configuration. This
+keeps a future widescreen setting from masking the animated-fringe regression.
+Production source is unchanged after the final chain; only the17-case owning
+manager class is rerun for this fixture change. No further chain is repeated.
+
+The final test-only native viewport arrangement passes **17T/0F/0E/0S**,
+XML suite0.583s/Maven29.359s, with all actual identities and no skips. It changes
+no process configuration or production source. Exact command is the focused
+`TestObjectManagerVerticalPlacement` class through the same normal queue/env,
+fresh `target/hcz-snake-final-fixture` report/tmp and `test -B`. The final
+compiled owning test/source matches the recorded file hashes; owned reports/log
+are consumed. Candidate is ready as a local milestone, with current SS7/P2
+frontiers and separate composed/Main qualification still open.
