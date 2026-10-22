@@ -417,6 +417,26 @@ donor loaders. No profile-wide alias change was justified or made. The S2
 chain owner retains the source-backed immediate Super caller/stars/invincibility
 correction; this audit did not duplicate it or claim later Super PCM coverage.
 
+Later production Super audio measurements must include caller commit
+`f85bb87469f4552f2338e77d1ef44ccfbda307fd` in their recorded integrated source.
+Inspection of that separate lane's committed code confirms fixed Obj7E slot
+129 publication and timed-invincibility clearing at transformation start,
+before `SPECIAL_SFX $DF` and semantic `GameMusic.SUPER` (engine `$93`).
+Palette completion no longer repeats those requests. Ordinary/donor music
+namespaces and the audio loader/profile/adapter are unchanged by that commit.
+The caller owner reports six focused actual-ROM cases passing with zero
+skips, including Super/Title loader-pointer distinction, full general dynamic
+allocation, independent normal stars at 136, retained same-owner stars at 129
+and restore/forward behavior. Those tests were not rerun by the audio lane,
+and no PCM capture accompanied the caller change.
+
+The final 600-row startup measurements above use `70de3bfe` and predate this
+caller commit. They cannot certify its later Super boundary. A separate
+normal-star timer-zero world-restore gap remains with the caller/shared-hook
+owners, pending parent coordination. Root composition and real route
+prerequisites must be recorded before any later production Super state,
+register or PCM result is attributed to the corrected caller.
+
 ## Verification
 
 The first focused Java run, from `94c40570` plus the lane changes, executed 65
