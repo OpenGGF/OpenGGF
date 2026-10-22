@@ -83,8 +83,8 @@ Use a task directory outside the repository for captures the user should keep.
 | `--rings <n>` | unchanged | Declared ring count the route carried in; a boss filmed from a positioned start otherwise begins on 0 rings, where the first touch is fatal |
 | `--title-screen` | off | Initialize the production title before first assembly; first zone/act only, no positioned/checkpoint/clock/donor seeds |
 | `--interactive-pacing` | off | Use production presentation/input pacing, including menus and gameplay observer callbacks; P1 controller input only, fps 60, no debug stage completion |
-| `--audio` | off | Write `audio.wav` from one final SMPS PCM packet per outer frame; every=1, capture-from=0, matching 60-Hz presentation. Video remains silent until muxed |
-| `--title-card` | off | Keep and draw title-card presentations instead of omitting them |
+| `--audio` | off | Write `audio.wav` from one final SMPS PCM packet per outer frame; every=1, capture-from=0, matching 60-Hz presentation. Video remains silent until muxed. Music and SFX are one mix; there is no SFX-only stem |
+| `--title-card` | off | Keep and draw title-card presentations instead of omitting them. Additive mod zones skip their card by default (`mods.skipModZoneTitleCards`); custom zone-name cards are unsupported |
 | `--complete-special-stage` | off | Request the debug special-stage completion while a special stage runs (awards its emerald with 50 rings; no key binding is involved), so the capture continues into the results screen; results frames render as `Engine` draws them, including the S3K Super Emerald sanctuary backdrop. Special-stage frames do too: the level during the entry fade-to-white, then the stage's own provider draw |
 | `--frames <n>` | settle + log length | Total frames to step |
 | `--capture-from`, `--every` | `0`, `1` | First captured frame and PNG stride |
