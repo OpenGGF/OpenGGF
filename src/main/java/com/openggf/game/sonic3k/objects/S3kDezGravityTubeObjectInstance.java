@@ -117,6 +117,13 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        var query = services().playerQuery();
+        if (query.mainPlayerOrNull() instanceof AbstractPlayableSprite player) releaseControl(player, playerOneState);
+        if (query.nativeP2OrNull() instanceof AbstractPlayableSprite player) releaseControl(player, playerTwoState);
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ObjectServices objectServices = tryServices();
         AbstractPlayableSprite playerOne = asSprite(objectServices == null
@@ -295,11 +302,7 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
         int dy = (player.getCentreY() - getY() + halfSpan) & 0xFFFF;
         if (dy >= halfSpan * 2) {
             // loc_49142's exit (:95466-95474). No reverse-gravity row here.
-            ObjectControlState.none().applyTo(player);
-            player.setObjectMappingFrameControl(false);
-            player.setOnObject(false);
-            releaseRide(player);
-            state.riding = false;
+            releaseControl(player, state);
             player.setFlipAngle(1);
             player.setFlipsRemaining(0);
             player.setFlipSpeed(EXIT_FLIP_SPEED);
@@ -315,6 +318,15 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
         player.setMappingFrame(SWING_FRAMES[Math.min(frameIndex, SWING_FRAMES.length - 1)]);
         state.angle = (state.angle + SWING_ANGLE_STEP) & 0xFF;
         playTunnelSfx(vIntRunCount);
+    }
+
+    private void releaseControl(AbstractPlayableSprite player, RiderState state) {
+        if (!state.riding) return;
+        ObjectControlState.none().applyTo(player);
+        player.setObjectMappingFrameControl(false);
+        player.setOnObject(false);
+        releaseRide(player);
+        state.riding = false;
     }
 
     // ---- shared ----

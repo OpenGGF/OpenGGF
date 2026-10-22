@@ -53,6 +53,11 @@ public final class MhzSwingBarHorizontalObjectInstance extends AbstractObjectIns
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : List.copyOf(hangingPlayers.keySet())) releaseCommon(player);
+    }
+
+    @Override
     protected void afterGenericRewindStateRestored(RewindCaptureContext context) {
         // ROM sub_3ED6E uses one a2 record per player: loc_3EE2C/loc_3EE8C
         // clear its held flag and write the cooldown later read by loc_3EECE.

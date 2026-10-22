@@ -1,7 +1,5 @@
 package com.openggf.tools;
 
-import static com.openggf.stageplay.StageplayWorldPolicies.usesNativeWorld;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.data.Rom;
 import com.openggf.game.BuiltInRomDetectors;
@@ -83,7 +81,7 @@ public final class StageplayTool {
                         "level --game s3k --rom PATH --zone 11 --act 1",
                         "catalog --game s2 --rom /absolute/game.gen [--character tails] [--zone 0 --act 0]",
                         "render --scene film.stageplay --out film.mkv --s1-rom PATH --s2-rom PATH --s3k-rom PATH"),
-                        "screenplayVersion", 6, "stageplayVersion", StageplayDocument.VERSION,
+                        "screenplayVersion", StageplayScriptCompiler.VERSION, "stageplayVersion", StageplayDocument.VERSION,
                         "fps", 60, "indices", "Frames, zones and acts are zero-based; every shot uses local frames.",
                         "outputs", "JSON result on stdout; exit 0 success, 2 invalid input/failure. Outputs are never overwritten.",
                         "resources", "catalog and simulate need supplied ROMs; simulate resolves native puppet physics without a window, graphics or audio playback. Render preflights resources and uses offline audio.");
@@ -106,7 +104,7 @@ public final class StageplayTool {
                 StageplayDocument document = StageplayStore.read(input);
                 requireAssetRoot(document, input, out, "Decompile scenes with relative assets beside their canonical scene");
                 publish(out, StageplayScriptDecompiler.decompile(document));
-                yield Map.of("screenplay", out.toAbsolutePath().toString(), "screenplayVersion", 6,
+                yield Map.of("screenplay", out.toAbsolutePath().toString(), "screenplayVersion", StageplayScriptCompiler.VERSION,
                         "scene", summary(document));
             }
             case "validate", "inspect" -> {
@@ -164,7 +162,7 @@ public final class StageplayTool {
              var resources = new StageplayResources(library, false)) {
             resources.setProjectRoot(scene.getParent());
             resources.validate(document);
-            if (usesLiveWorld(document)) resources.setLiveWorld(com.openggf.stageplay.runtime.StageplayLiveWorld.openOffline(library));
+            resources.setLiveWorld(com.openggf.stageplay.runtime.StageplayLiveWorld.openOffline(library));
             publish(out, staged -> {
                 try (var writer = Files.newBufferedWriter(staged, java.nio.charset.StandardCharsets.UTF_8)) {
                     for (int frame = 0; frame < document.durationFrames(); frame++) {
@@ -183,12 +181,7 @@ public final class StageplayTool {
         }
         return Map.of("timeline", out.toAbsolutePath().toString(), "every", every,
                 "samples", (document.durationFrames() + every - 1) / every,
-                "kind", usesLiveWorld(document) ? "native shared live-world gameplay" : "native player physics against detached terrain; no live gameplay objects or events");
-    }
-
-    static boolean usesLiveWorld(StageplayDocument document) {
-        return usesNativeWorld(document.set().worldPolicy())
-                || document.sceneChanges().stream().anyMatch(c -> usesNativeWorld(c.set().worldPolicy()));
+                "kind", "native shared live-world gameplay");
     }
 
     private static Object inspectLevel(Map<String, String> flags) throws IOException {

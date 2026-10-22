@@ -40,8 +40,8 @@ public record StageplayRouteRequest(
                 || maxMillis < 1
                 || maxMillis > 120_000)
             throw new IllegalArgumentException(
-                    "Route budgets require frames1..3600, nodes1..4096, ticks1..500000 and"
-                            + " milliseconds1..120000");
+                    "Route budgets require frames 1..3600, nodes 1..4096, ticks 1..500000 and"
+                            + " milliseconds 1..120000");
         if (!Double.isFinite(urgency)
                 || urgency <= 0
                 || urgency > 1
@@ -49,7 +49,7 @@ public record StageplayRouteRequest(
                 || objectSpeed <= 0
                 || objectSpeed > 16)
             throw new IllegalArgumentException(
-                    "Route urgency must be0..1 exclusive of0; visual object speed must be0..16"
-                            + " exclusive of0");
+                    "Route urgency must be 0..1 exclusive of 0; visual object speed must be 0..16"
+                            + " exclusive of 0");
     }
 }

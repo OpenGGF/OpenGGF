@@ -73,9 +73,6 @@ class TestStageplayObjectCastRom {
     @Test void clearBadniksRemovesEveryMatchingInactivePortablePlacementAndKeepsOtherObjects() throws Exception {
         try (var library = SceneRomLibrary.open(Map.of("s2", Path.of(System.getProperty("sonic2.rom.path"))));
              var world = world(library)) {
-            var scene = StageplayDocument.empty("s2", 0, 0, 0, 500, 320, 224).withDurationFrames(30)
-                    .withWorldCommands(List.of(new WorldCommand("clear", 1, WorldCommandKind.CLEAR_BADNIKS,
-                            "", ObjectTarget.none())));
             var registry = library.module("s2").createObjectRegistry();
             var catalog = com.openggf.level.objects.ObjectRegistryCatalog.entries(registry,
                     new com.openggf.level.objects.ObjectRegistryCatalog.Context(0, 0));
@@ -83,15 +80,27 @@ class TestStageplayObjectCastRom {
                     catalog.get(spawn.objectId()).semantics().role()
                             == com.openggf.level.objects.ObjectRegistryCatalog.Role.BADNIK).toList();
             assertFalse(badniks.isEmpty());
+            var anchor = badniks.getFirst();
+            var scene = StageplayDocument.empty("s2", 0, 0, Math.max(0, anchor.x() - 100),
+                    Math.max(0, anchor.y() - 100), 320, 224).withDurationFrames(30)
+                    .withWorldCommands(List.of(new WorldCommand("clear", 1, WorldCommandKind.CLEAR_BADNIKS,
+                            "", ObjectTarget.none())));
             var before = world.resolve(scene, StageplayTimeline.sample(scene, 0));
             assertTrue(before.world().objects().stream().anyMatch(object -> badniks.stream().anyMatch(spawn ->
                     object.layoutIndex() == spawn.layoutIndex() && object.objectId() == spawn.objectId()
                             && object.subtype() == spawn.subtype())));
             var after = world.resolve(scene, StageplayTimeline.sample(scene, 20));
-            assertTrue(after.world().objects().stream().noneMatch(object -> badniks.stream().anyMatch(spawn ->
+            var remaining = after.world().objects().stream().filter(object -> badniks.stream().anyMatch(spawn ->
                     object.layoutIndex() == spawn.layoutIndex() && object.objectId() == spawn.objectId()
-                            && object.subtype() == spawn.subtype())));
-            assertTrue(after.world().objects().stream().anyMatch(object -> object.objectId() == Sonic2ObjectIds.MONITOR));
+                            && object.subtype() == spawn.subtype())).toList();
+            assertTrue(remaining.isEmpty(), () -> "Badnik placements survived clearing: " + remaining);
+            var direction = com.openggf.level.objects.ObjectDirectionAccess.forManager(
+                    SessionManager.getCurrentGameplayMode().getLevelManager().getObjectManager());
+            for (var spawn : badniks) assertFalse(direction.allowsPlacement(spawn),
+                    "Clear must suppress inactive badnik placements as well as active roots");
+            var monitor = library.level("s2", 0, 0).getObjects().stream()
+                    .filter(spawn -> spawn.objectId() == Sonic2ObjectIds.MONITOR).findFirst().orElseThrow();
+            assertTrue(direction.allowsPlacement(monitor), "Machinery retains ordinary placement admission");
             assertEquals(before, world.resolve(scene, StageplayTimeline.sample(scene, 0)));
             assertEquals(after, world.resolve(scene, StageplayTimeline.sample(scene, 20)));
         }
@@ -104,7 +113,7 @@ class TestStageplayObjectCastRom {
             var role = new ObjectActor("loaded", "Loaded", "s2", 0, 0, spawn.objectId(), spawn.subtype(), spawn.layoutIndex(), List.of(
                     new ObjectKey(0, spawn.x(), spawn.y(), 0, -1, false, true, Interpolation.HOLD, ObjectMode.FREE)), List.of());
             var scene = StageplayDocument.empty("s2", 0, 0, Math.max(0, spawn.x() - 100), Math.max(0, spawn.y() - 100), 320, 224).withDurationFrames(20)
-                    .withSet(new SetSource("s2", 0, 0, "", "", WorldPolicy.TERRAIN_ONLY)).withObjectActors(List.of(role));
+                    .withWorldCommands(List.of(new WorldCommand("clear", 0, WorldCommandKind.CLEAR_OBJECTS, "", ObjectTarget.none()))).withObjectActors(List.of(role));
             var frame = world.resolve(scene, StageplayTimeline.sample(scene, 0));
             assertEquals(1, frame.world().objects().stream().filter(o -> o.layoutIndex() == spawn.layoutIndex()
                     && o.objectId() == spawn.objectId() && o.subtype() == spawn.subtype()).count(), () -> {
@@ -115,7 +124,8 @@ class TestStageplayObjectCastRom {
                                 + "@" + object.getX() + "," + object.getY()).toList();
                 return "Explicit portable placement " + spawn + "; native camera=" + camera.getX() + "," + camera.getY() + "; active=" + active + "; sampled=" + frame.world().objects();
             });
-            assertTrue(SessionManager.getCurrentGameplayMode().getLevelManager().getCurrentLevel().getObjects().isEmpty());
+            assertFalse(SessionManager.getCurrentGameplayMode().getLevelManager().getCurrentLevel().getObjects().isEmpty(),
+                    "Clearing uses admission policy; the native source layout stays intact");
             var ending = world.resolve(scene, StageplayTimeline.sample(scene, 10));
             assertEquals(1, ending.world().objects().stream().filter(o -> o.layoutIndex() == spawn.layoutIndex()
                     && o.objectId() == spawn.objectId() && o.subtype() == spawn.subtype()).count());
@@ -130,7 +140,7 @@ class TestStageplayObjectCastRom {
             var spawn = library.level("s2", 0, 0).getObjects().stream()
                     .filter(s -> s.objectId() == Sonic2ObjectIds.MONITOR).findFirst().orElseThrow();
             var scene = StageplayDocument.empty("s2", 0, 0, spawn.x() - 100, spawn.y() - 100, 320, 224)
-                    .withSet(new SetSource("s2", 0, 0, "", "", WorldPolicy.TERRAIN_ONLY));
+                    .withWorldCommands(List.of(new WorldCommand("clear", 0, WorldCommandKind.CLEAR_OBJECTS, "", ObjectTarget.none())));
             world.resolve(scene, StageplayTimeline.sample(scene, 0));
             var objects = SessionManager.getCurrentGameplayMode().getLevelManager().getObjectManager();
             var direction = com.openggf.level.objects.ObjectDirectionAccess.forManager(objects);
@@ -160,25 +170,26 @@ class TestStageplayObjectCastRom {
         }
     }
 
-    @Test void initiallyDirectedAndHiddenPlacementsAreAbsentBeforeNativeAssemblyButRemainPortable() throws Exception {
+    @Test void suppressedPlacementsRetainCanonicalNativeLayoutAndPolicyOwnsAdmission() throws Exception {
         try (var library = SceneRomLibrary.open(Map.of("s2", Path.of(System.getProperty("sonic2.rom.path"))))) {
             var source = library.level("s2", 0, 0);
             var target = source.getObjects().getFirst();
-            var identity = com.openggf.level.objects.StageplayObjectDirection.PlacementIdentity.of(target);
-            for (boolean clearPlacements : List.of(false, true)) {
-                var module = new StageplayWorldModule(com.openggf.game.GameModuleRegistry.createStockModule(com.openggf.game.GameId.S2),
-                        null, clearPlacements, Set.of(identity));
-                for (int load = 0; load < 2; load++) {
-                    var isolated = (com.openggf.level.MutableLevel) module.transformDecodedLevel(source);
-                    assertTrue(source.getObjects().contains(target), "Source ROM layout remains immutable");
-                    assertFalse(isolated.getObjects().contains(target), "Suppression precedes ObjectManager construction/initial dispatch");
-                    assertTrue(module.originalObjects().contains(target), "Portable original placement is retained for explicit Free admission");
-                    assertEquals(clearPlacements ? List.of() : source.getRings(), isolated.getRings(),
-                            "Individual suppression preserves rings; terrain-only clears initial placements");
-                    assertFalse(isolated.consumeObjectsDirty(), "Initial decoded placement state must not schedule an editor resync");
-                    assertFalse(isolated.consumeRingsDirty(), "Initial decoded ring state must not schedule an editor resync");
-                }
+            var identity = com.openggf.level.objects.StageplayObjectDirection.PlacementIdentity.of("s2", 0, 0, target);
+            var module = new StageplayWorldModule(com.openggf.game.GameModuleRegistry.createStockModule(com.openggf.game.GameId.S2),
+                    null, Set.of(identity));
+            for (int load = 0; load < 2; load++) {
+                var isolated = module.transformDecodedLevel(source);
+                assertTrue(source.getObjects().contains(target), "Source ROM layout remains immutable");
+                assertTrue(isolated.getObjects().contains(target), "Native layout is retained; one admission policy owns suppression");
+                assertTrue(module.originalObjects().contains(target));
+                assertEquals(source.getRings(), isolated.getRings());
+                assertSame(source, isolated, "Suppression must not wrap or rewrite the native decoded level");
             }
+            var session = new com.openggf.game.session.WorldSession(module);
+            var policy = com.openggf.game.session.WorldSessionPolicyAccess.getService(session,
+                    com.openggf.level.objects.StageplayObjectLoadPolicy.class);
+            assertEquals(Set.of(identity), policy.rewindAdapter().capture().removed());
+            assertFalse(policy.rewindAdapter().capture().clearObjects());
         }
     }
 

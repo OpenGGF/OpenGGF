@@ -45,6 +45,11 @@ public final class MhzSwingBarVerticalObjectInstance extends AbstractObjectInsta
      * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
+    public void releasePlayersForVisualDirection() {
+        for (var entry : playerStates.entrySet()) if (entry.getValue().hanging) releaseControl(entry.getKey(), entry.getValue());
+    }
+
+    @Override
     public int romObjectCodePointerHighWord() {
         return 0x0003;
     }
@@ -241,12 +246,16 @@ public final class MhzSwingBarVerticalObjectInstance extends AbstractObjectInsta
         player.setMappingFrame(hangingFrameFor(state.phase));
     }
 
-    private void releaseWithJump(AbstractPlayableSprite player, BarState state) {
-        player.setYSpeed((short) (player.isInWater() ? UNDERWATER_RELEASE_Y_SPEED : NORMAL_RELEASE_Y_SPEED));
+    private void releaseControl(AbstractPlayableSprite player, BarState state) {
         state.hanging = false;
         state.cooldown = player.isInWater() ? 60 : 30;
         ObjectControlState.none().applyTo(player);
         player.setObjectMappingFrameControl(false);
+    }
+
+    private void releaseWithJump(AbstractPlayableSprite player, BarState state) {
+        player.setYSpeed((short) (player.isInWater() ? UNDERWATER_RELEASE_Y_SPEED : NORMAL_RELEASE_Y_SPEED));
+        releaseControl(player, state);
         player.setAir(true);
         player.setJumping(true);
         player.setRolling(true);

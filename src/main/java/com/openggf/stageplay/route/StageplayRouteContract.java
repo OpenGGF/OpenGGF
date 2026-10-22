@@ -41,11 +41,6 @@ public final class StageplayRouteContract {
         if ((long) request.startFrame() + request.maxFrames()
                 > shotEnd(document, request.startFrame()))
             return "The route window must fit entirely within its shot";
-        var policy = source(document, request.startFrame()).worldPolicy();
-        if (policy != StageplayDocument.WorldPolicy.LIVE
-                && policy != StageplayDocument.WorldPolicy.TERRAIN_ONLY)
-            return "Basic route verification requires a current native world; migrate compatibility"
-                       + " worlds explicitly";
         return "";
     }
 

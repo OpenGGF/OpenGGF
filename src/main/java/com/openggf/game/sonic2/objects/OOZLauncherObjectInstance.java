@@ -453,6 +453,25 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
      * State 2: Tracking (ROM: loc_25036 / Obj3D_MoveCharacter).
      * Moves the player along their velocity until off-screen or captured by LauncherBall.
      */
+    private void releaseTrackedPlayer(AbstractPlayableSprite player) {
+        ObjectControlState.none().applyTo(player);
+        player.setControlLocked(false);
+        player.setAir(true);
+        player.setOnObject(false);
+        activeLaunchers.remove(player, this);
+    }
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var entry : playerStates.entrySet()) {
+            if (entry.getValue().launcherState != 0 && activeLaunchers.get(entry.getKey()) == this) {
+                releaseTrackedPlayer(entry.getKey());
+                recentLauncherMoves.remove(entry.getKey());
+                entry.getValue().launcherState = 0;
+            }
+        }
+    }
+
     private int processTracking(AbstractPlayableSprite player, int frameCounter) {
         // If player is no longer on-object (captured by LauncherBall or released), stop tracking
         if (!player.isOnObject() || !player.isObjectControlled()) {
@@ -461,12 +480,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
 
         // Check if player is off-screen (ROM: btst #render_flags.on_screen)
         if (!isPlayerOnScreen(player)) {
-            // Release player
-            ObjectControlState.none().applyTo(player);
-            player.setControlLocked(false);
-            player.setAir(true);
-            player.setOnObject(false);
-            activeLaunchers.remove(player, this);
+            releaseTrackedPlayer(player);
             return 0;
         }
 

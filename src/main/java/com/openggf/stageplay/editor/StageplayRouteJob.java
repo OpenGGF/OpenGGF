@@ -91,7 +91,7 @@ public final class StageplayRouteJob implements AutoCloseable {
         command.add(Path.of(System.getProperty("java.home"),"bin","java").toString());
         command.add("--enable-native-access=ALL-UNNAMED"); command.add("-Xmx1g");
         command.add("-Djava.awt.headless=true"); command.add("-cp");
-        command.add(System.getProperty("surefire.test.class.path",System.getProperty("java.class.path")));
+        command.add(System.getProperty("java.class.path"));
         command.add("com.openggf.tools.StageplayRouteTool"); command.add("--worker");
         Process child=launcher.start(List.copyOf(command));
         synchronized(this) {

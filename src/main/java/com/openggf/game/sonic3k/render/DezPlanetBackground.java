@@ -28,51 +28,9 @@ public final class DezPlanetBackground {
         Level level = manager.getCurrentLevel();
         if (level == null || width <= 320) return null;
         if (sourceLevel == level && sourceWidth == width && sourceEndY == endY) return columns;
-        int[] horizon = new int[320];
-        int minimum = 224, first = 0, last = 0;
-        for (int x = 0; x < 320; x++) {
-            // Read the indexed art, not live RGB: a palette fade must not
-            // change the inferred silhouette or get cached as another shape.
-            int space = paletteIndex(manager, level, x, 0);
-            while (horizon[x] < 224 && paletteIndex(manager, level, x, horizon[x]) == space)
-                horizon[x]++;
-            if (horizon[x] < minimum) {
-                minimum = horizon[x];
-                first = x;
-            }
-            if (horizon[x] == minimum) last = x;
-        }
-        // Three authored silhouette points determine the circle. The centre of
-        // the flat, pixel-rounded apex avoids selecting its first lit column.
-        double apexX = (first + last) / 2.0;
-        double leftY = horizon[0], rightY = horizon[319];
-        double a = 2 * apexX, b = 2 * (minimum - leftY);
-        double c = apexX * apexX + minimum * minimum - leftY * leftY;
-        double d = 638, e = 2 * (rightY - leftY);
-        double f = 319 * 319 + rightY * rightY - leftY * leftY;
-        double determinant = a * e - d * b;
-        if (minimum == 224 || determinant == 0) return null;
-        double centreX = (c * e - f * b) / determinant;
-        double centreY = (a * f - d * c) / determinant;
-        double radius = Math.hypot(centreX, centreY - leftY);
-        short[] xs = new short[width], ys = new short[width];
-        for (int x = 0; x < width; x++) {
-            int local = x - (width - 320) / 2;
-            int sourceX = local;
-            if (local < 0 || local >= 320) {
-                boolean left = local < 0;
-                int reflected = Math.floorMod(left ? -local - 1 : local - 320, 128);
-                sourceX = reflected < 64 ? reflected : 127 - reflected;
-                if (!left) sourceX = 319 - sourceX;
-                int edge = left ? 0 : 319;
-                double curve = height(local, centreX, centreY, radius);
-                double boundary = height(edge, centreX, centreY, radius);
-                int target = horizon[edge] + (int) Math.round(curve - boundary);
-                ys[x] = (short) (target - horizon[sourceX]);
-            }
-            xs[x] = (short) sourceX;
-        }
-        columns = new Columns(view(xs), view(ys), endY);
+        var captured = captureProjection(manager, endY);
+        columns = captured == null ? null : captured.sample(
+                new com.openggf.level.scroll.ScrollView(0, 0, width, 224));
         sourceLevel = level;
         sourceWidth = width;
         sourceEndY = endY;

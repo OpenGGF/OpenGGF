@@ -113,7 +113,7 @@ public final class StageplayCaptureTool {
                      var grabber = new GlReadPixelsGrabber(document.width(), document.height())) {
                     resources.setProjectRoot(arguments.scene().toAbsolutePath().getParent());
                     resources.validate(document);
-                    if (StageplayTool.usesLiveWorld(document)) resources.setLiveWorld(StageplayLiveWorld.adoptOffline(
+                    resources.setLiveWorld(StageplayLiveWorld.adoptOffline(
                             library, com.openggf.game.session.SessionManager.getCurrentGameplayMode()));
                     resources.resolveFrame(document, StageplayTimeline.sample(document, 0));
                     cues.prepare(document);
@@ -127,19 +127,18 @@ public final class StageplayCaptureTool {
                         int[] viewport = {0, 0, document.width(), document.height()};
                         renderFrames(document, staged, rate, encoder, frame -> {
                             boolean boundary = frame > 0 && document.sceneChanges().stream().anyMatch(c -> c.frame() == frame);
-                            if (boundary && StageplayTool.usesLiveWorld(document)) audio.endCaptureMode();
+                            if (boundary) audio.endCaptureMode();
                             var actual = resources.resolveFrame(document, StageplayTimeline.sample(document, frame));
-                            if (boundary && StageplayTool.usesLiveWorld(document)) {
+                            if (boundary) {
                                 cues.refreshAfterNativeBoundary(frame);
                                 audio.beginCaptureMode(rate, StageplayDocument.FRAMES_PER_SECOND);
                             }
                             cues.playFrame(document, frame);
                             HeadlessGameBoot.presentHeadlessOuterAudioFrame();
                             int frames = audio.drainCaptureFrame(pcm);
-                            if (actual.world() != null) resources.drawLiveWorld(actual);
+                            resources.drawLiveWorld(actual);
                             surface.record(document.width(), document.height(), canvas -> {
-                                if (actual.world() != null) renderer.drawLiveOverlay(document, actual, canvas);
-                                else renderer.draw(document, actual, canvas);
+                                renderer.drawLiveOverlay(document, actual, canvas);
                             });
                             org.lwjgl.opengl.GL11.glViewport(0, 0, document.width(), document.height());
                             surface.render(projection, viewport);

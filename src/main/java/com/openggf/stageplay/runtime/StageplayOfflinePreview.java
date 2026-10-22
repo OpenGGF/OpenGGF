@@ -83,7 +83,7 @@ final class StageplayOfflinePreview implements AutoCloseable {
         String os=System.getProperty("os.name","").toLowerCase(Locale.ROOT);
         if(os.contains("linux")) command.add("-Dopenggf.headless.gl=surfaceless-egl");
         else if(os.contains("mac")) command.add("-XstartOnFirstThread");
-        command.add("-cp"); command.add(System.getProperty("surefire.test.class.path",System.getProperty("java.class.path")));
+        command.add("-cp"); command.add(System.getProperty("java.class.path"));
         command.add("com.openggf.tools.StageplayPreviewTool");
         command.add("--rom-descriptor");
         var resolutions=new LinkedHashMap<String,com.openggf.data.RomImageCatalogue.Resolution>();

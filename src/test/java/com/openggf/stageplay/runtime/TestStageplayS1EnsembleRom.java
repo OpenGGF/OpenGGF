@@ -76,7 +76,7 @@ class TestStageplayS1EnsembleRom {
                     new ObjectKey(0, monitor.x(), monitor.y(), 0, -1, false, true, Interpolation.HOLD, ObjectMode.POSE),
                     new ObjectKey(10, monitor.x(), monitor.y(), 0, -1, false, true, Interpolation.HOLD, ObjectMode.FREE)), List.of());
             var scene = StageplayDocument.empty("s1", 0, 0, 0, 0, 320, 224).withDurationFrames(30)
-                    .withSet(new SetSource("s1", 0, 0, "", "", WorldPolicy.TERRAIN_ONLY))
+                    .withSet(new SetSource("s1", 0, 0, "", "", WorldPolicy.LIVE))
                     .withObjectActors(List.of(actor));
             var posed = world.resolve(scene, StageplayTimeline.sample(scene, 5));
             assertTrue(posed.world().objects().stream().anyMatch(o -> o.type().equals("Stageplay:monitor:POSE")));

@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestStageplayObjectScriptCompiler {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final String SCRIPT = """
-            {"version":5,"name":"Complete cast","cast":[],
+            {"version":6,"name":"Complete cast","cast":[],
              "objectCast":[
               {"id":"crab","name":"Crab","gameId":"s2","objectId":146},
               {"id":"loaded","name":"Loaded","gameId":"s2","objectId":146,"subtype":3,"layoutIndex":5}],
@@ -65,7 +65,7 @@ class TestStageplayObjectScriptCompiler {
         assertEquals(List.of(new ObjectPartPose("root/0", 1, 4)), crab.keys().get(2).parts());
         assertEquals(List.of(10, 20, 60), crab.commands().stream().map(ObjectCommand::frame).toList());
         assertEquals("opening.crab.objectAction0", crab.commands().getFirst().id());
-        assertEquals("opening.crab.halt", crab.commands().get(1).id());
+        assertEquals("halt", crab.commands().get(1).id());
         assertEquals(1, crab.commands().getFirst().speed()); assertEquals(2.5, crab.commands().getLast().speed());
         var loaded = document.objectActors().getLast();
         assertEquals(5, loaded.layoutIndex()); assertEquals(146, loaded.objectId()); assertEquals(3, loaded.subtype());
@@ -107,9 +107,9 @@ class TestStageplayObjectScriptCompiler {
         }
     }
 
-    @Test void oldScreenplayVersionsRejectEvenEmptyNewFieldsAndVersionFourKeepsNativeSemantics() throws Exception {
+    @Test void unsupportedScreenplayVersionsRejectAllShapesAndCurrentDefaultsToNative() throws Exception {
         var nativeRecipe = (ObjectNode) JSON.readTree("""
-                {"version":4,"name":"Existing native","cast":[],"shots":[
+                {"version":6,"name":"Existing native","cast":[],"shots":[
                  {"id":"old","durationFrames":60,"set":{"gameId":"s2","zone":0,"act":0},
                   "camera":[{"frame":0,"x":0,"y":500}]}]}
                 """);

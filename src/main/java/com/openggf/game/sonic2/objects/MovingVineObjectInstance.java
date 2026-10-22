@@ -183,6 +183,15 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        if (player1Grabbed && player1Owner instanceof AbstractPlayableSprite player) releasePlayer(player, 0, false);
+        if (player2Grabbed && player2Owner instanceof AbstractPlayableSprite player) releasePlayer(player, 1, false);
+        for (var entry : extraPlayerGrabbed.entrySet()) releaseOwnedPlayer(entry.getKey(), Boolean.TRUE.equals(entry.getValue()));
+        extraPlayerGrabbed.clear();
+        extraPlayerReleaseDelay.clear();
+    }
+
+    @Override
     public MovingVineObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new MovingVineObjectInstance(ctx.spawn(), "MovingVine");
     }

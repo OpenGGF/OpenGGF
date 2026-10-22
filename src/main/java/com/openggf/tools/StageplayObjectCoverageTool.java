@@ -142,20 +142,18 @@ public final class StageplayObjectCoverageTool {
                 throw new IllegalArgumentException("Sample context has no released-animal native factory");
         }
         var grouped = new LinkedHashMap<GroupKey, List<Context>>();
-        boolean observed = false;
         for (var catalog : catalogs) {
             grouped.computeIfAbsent(new GroupKey(catalog.gameId(), catalog.entries(), catalog.auxiliaryEntries()), ignored -> new ArrayList<>())
                     .add(catalog.context());
-            observed |= catalog.entries().stream().anyMatch(entry -> entry.free().readiness() == StageplayObjectCatalog.Readiness.AVAILABLE);
         }
         var groups = grouped.entrySet().stream()
                 .map(entry -> new Group(entry.getKey().gameId(), entry.getValue(), entry.getKey().entries(), entry.getKey().auxiliaryEntries())).toList();
         var reasons = new LinkedHashMap<String, String>();
         for (var reason : StageplayObjectCatalog.Reason.values()) reasons.put(reason.name(), reason.description());
         return new Report(2, sourceRevision, !observations.isEmpty() ? "REGISTRY_METADATA_WITH_SAMPLE_OBSERVATIONS"
-                        : observed ? "REGISTRY_METADATA_WITH_LOADED_OBSERVATIONS" : "REGISTRATION_ONLY",
+                        : "REGISTRATION_ONLY",
                 catalogs.size(), Math.multiplyExact((long) catalogs.size(), 256), reasons, List.of(
-                        "AVAILABLE, NEEDS_PREFLIGHT and UNAVAILABLE are distinct; registration alone never certifies a castable object.",
+                        "NEEDS_PREFLIGHT and UNAVAILABLE report registration metadata; actual captures require sample evidence.",
                         "Registered factories with unobserved visual graphs need preflight, not exclusion: capture a constructor-ready visual, or initialize Free in its native set before capturing the complete appearance. Puppet/Pose never execute those routines.",
                         "All byte IDs 0..255 are included per source context. Dynamic/event-only routines are not falsely declared absent from the ROM.",
                         "Native released-animal factories are separate auxiliary entries, never invented layout IDs. Their native-zone/art-variant tables list provider choices, not proof that all variants are loaded in the selected source.",

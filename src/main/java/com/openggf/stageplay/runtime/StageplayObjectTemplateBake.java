@@ -47,8 +47,7 @@ final class StageplayObjectTemplateBake {
         GameModule module =
                 new StageplayWorldModule(
                         GameModuleRegistry.createStockModule(GameId.fromCode(actor.gameId())),
-                        null,
-                        true);
+                        null, java.util.Set.of(), true);
         // The disposable source may load music or construct objects that request SFX. Keep
         // those requests silent through retirement; the final scene installs its own audio profile.
         try (var ignored =

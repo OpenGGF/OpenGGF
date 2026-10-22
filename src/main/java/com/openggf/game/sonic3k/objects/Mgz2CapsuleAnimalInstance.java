@@ -22,7 +22,7 @@ import java.util.List;
  * when the results flag clears and the fade-out/fly-off sequence begins.
  */
 public class Mgz2CapsuleAnimalInstance extends AbstractObjectInstance
-        implements SpawnDefaultArgsRewindRecreatable {
+        implements com.openggf.level.objects.ObjectVisualAnimationSource, SpawnDefaultArgsRewindRecreatable {
     private static final int FRAMES_PER_MAPPING = 3;
     private static final int ART_VARIANT_COUNT = 2;
 
@@ -55,6 +55,15 @@ public class Mgz2CapsuleAnimalInstance extends AbstractObjectInstance
 
     private Mgz2CapsuleAnimalInstance() {
         this(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), 0, 0, 0);
+    }
+
+    @Override
+    public java.util.Optional<com.openggf.level.objects.ObjectVisualAnimationSource.Cycle> visualAnimationCycle(int mappingFrame) {
+        // The native draw already selects these frames from a fixed clock bit;
+        // playback of the picture cycle has no terrain, player or routine effects.
+        int base = mappingFrame / 3 * 3;
+        return java.util.Optional.of(new com.openggf.level.objects.ObjectVisualAnimationSource.Cycle(
+                3, java.util.List.of(base + 1, base + 2)));
     }
 
     @Override

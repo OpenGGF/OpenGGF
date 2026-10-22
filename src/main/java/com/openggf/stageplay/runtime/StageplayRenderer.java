@@ -27,31 +27,12 @@ public final class StageplayRenderer {
                 || document.puppets().stream().anyMatch(track -> frame.puppets().stream()
                     .noneMatch(value -> value.actorId().equals(track.actorId()))))
             throw new IllegalArgumentException("Resolve physics puppet frames before rendering");
-        if (frame.world() != null) {
-            var image = resources.livePreviewImage();
-            if (image == null) throw new IllegalStateException("The offline host must draw the native world before its overlay");
-            canvas.draw(image, 0, 0, SceneDraw.plain());
-            drawLiveOverlay(document, frame, canvas);
-            return;
-        }
-        resources.prepareDialogue(document);
-        var camera = frame.camera(); var kit = resources.set(frame.set() == null ? document.set() : frame.set());
-        float zoom = (float) camera.zoom();
-        canvas.clear(kit.palette()[0]);
-        canvas.clip(0, 0, document.width(), document.height());
-        backdrop(canvas, kit.backdrop(), camera.x(), camera.y(), zoom, frame.frame());
-        int size = kit.blockSize();
-        int left = Math.max(0, (int) Math.floor(camera.x() / size));
-        int top = Math.max(0, (int) Math.floor(camera.y() / size));
-        int right = Math.min(kit.columns(), (int) Math.ceil((camera.x() + document.width() / zoom) / size));
-        int bottom = Math.min(kit.rows(), (int) Math.ceil((camera.y() + document.height() / zoom) / size));
-        for (int y = top; y < bottom; y++) for (int x = left; x < right; x++) {
-            int id = kit.block(x, y);
-            if (id >= 0 && id < kit.blockCount()) canvas.draw(kit.blockImage(id), (float) ((x * size - camera.x()) * zoom),
-                    (float) ((y * size - camera.y()) * zoom), SceneDraw.plain().withScale(zoom));
-        }
-        drawPerformersAndOverlay(document, frame, canvas, zoom, false);
-        canvas.unclip();
+        if (frame.world() == null)
+            throw new IllegalArgumentException("Resolve the native world before rendering");
+        var image = resources.livePreviewImage();
+        if (image == null) throw new IllegalStateException("The offline host must draw the native world before its overlay");
+        canvas.draw(image, 0, 0, SceneDraw.plain());
+        drawLiveOverlay(document, frame, canvas);
     }
 
     /** Native world already drew terrain/objects/physical cast through the priority renderer. */
@@ -66,12 +47,6 @@ public final class StageplayRenderer {
     public void drawLivePosers(StageplayDocument document, StageplayTimeline.Frame frame,
                                SceneCanvas canvas, StageplayTimeline.CameraPose view) {
         drawActors(document, frame, canvas, view, 1, true);
-    }
-
-    private void drawPerformersAndOverlay(StageplayDocument document, StageplayTimeline.Frame frame,
-                                         SceneCanvas canvas, float zoom, boolean nativeWorld) {
-        drawActors(document, frame, canvas, frame.camera(), zoom, nativeWorld);
-        drawOverlay(document, frame, canvas);
     }
 
     private void drawActors(StageplayDocument document, StageplayTimeline.Frame frame, SceneCanvas canvas,
@@ -162,21 +137,4 @@ public final class StageplayRenderer {
         }
     }
 
-    private static void backdrop(SceneCanvas canvas, SceneBackdrop backdrop, double cameraX,
-                                 double cameraY, float zoom, int tick) {
-        var image = backdrop.image();
-        // Repeat the detached background vertically, applying its ROM-provided horizontal bands.
-        int firstY = (int) Math.floor(cameraY / image.height()) * image.height();
-        double endY = cameraY + canvas.height() / zoom;
-        for (int repeat = firstY; repeat < endY; repeat += image.height()) {
-            for (var band : backdrop.bands()) {
-                int sourceX = backdrop.column(band, cameraX, tick);
-                float y = (float) ((repeat + band.top() - cameraY) * zoom);
-                if (y >= canvas.height() || y + band.height() * zoom <= 0) continue;
-                for (float x = -sourceX * zoom; x < canvas.width(); x += image.width() * zoom)
-                    canvas.drawRegion(image, 0, band.top(), image.width(), band.height(), x, y,
-                            image.width() * zoom, band.height() * zoom, SceneDraw.plain());
-            }
-        }
-    }
 }

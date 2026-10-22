@@ -3822,10 +3822,7 @@ FIELD com.openggf.stageplay.StageplayDocument$WaitCondition public,static,final 
 FIELD com.openggf.stageplay.StageplayDocument$WorldCommandKind public,static,final com.openggf.stageplay.StageplayDocument$WorldCommandKind CLEAR_BADNIKS
 FIELD com.openggf.stageplay.StageplayDocument$WorldCommandKind public,static,final com.openggf.stageplay.StageplayDocument$WorldCommandKind CLEAR_OBJECTS
 FIELD com.openggf.stageplay.StageplayDocument$WorldCommandKind public,static,final com.openggf.stageplay.StageplayDocument$WorldCommandKind REMOVE_OBJECT
-FIELD com.openggf.stageplay.StageplayDocument$WorldPolicy public,static,final com.openggf.stageplay.StageplayDocument$WorldPolicy LEGACY_LIVE
-FIELD com.openggf.stageplay.StageplayDocument$WorldPolicy public,static,final com.openggf.stageplay.StageplayDocument$WorldPolicy LEGACY_TERRAIN_ONLY
 FIELD com.openggf.stageplay.StageplayDocument$WorldPolicy public,static,final com.openggf.stageplay.StageplayDocument$WorldPolicy LIVE
-FIELD com.openggf.stageplay.StageplayDocument$WorldPolicy public,static,final com.openggf.stageplay.StageplayDocument$WorldPolicy TERRAIN_ONLY
 FIELD com.openggf.stageplay.StageplayTimeline$PuppetStatus public,static,final com.openggf.stageplay.StageplayTimeline$PuppetStatus ARRIVED
 FIELD com.openggf.stageplay.StageplayTimeline$PuppetStatus public,static,final com.openggf.stageplay.StageplayTimeline$PuppetStatus BLOCKED
 FIELD com.openggf.stageplay.StageplayTimeline$PuppetStatus public,static,final com.openggf.stageplay.StageplayTimeline$PuppetStatus DEAD
@@ -10199,6 +10196,7 @@ METHOD com.openggf.level.objects.ObjectInstance public  void onCarriedAcrossSeam
 METHOD com.openggf.level.objects.ObjectInstance public  void onCarriedAcrossSeamlessTransition(int,int,com.openggf.level.CarriedTitlePublicationTiming)
 METHOD com.openggf.level.objects.ObjectInstance public  void onUnload()
 METHOD com.openggf.level.objects.ObjectInstance public  void refreshPostCameraRenderState()
+METHOD com.openggf.level.objects.ObjectInstance public  void releasePlayersForVisualDirection()
 METHOD com.openggf.level.objects.ObjectInstance public  void snapshotPreUpdatePosition()
 METHOD com.openggf.level.objects.ObjectInstance public  void snapshotTouchResponseState()
 METHOD com.openggf.level.objects.ObjectInstance public,abstract  boolean isDestroyed()
@@ -14521,6 +14519,7 @@ METHOD com.openggf.sprites.playable.SidekickCpuController public  void adoptLeve
 METHOD com.openggf.sprites.playable.SidekickCpuController public  void applyFlyingCarryVerticalVelocity()
 METHOD com.openggf.sprites.playable.SidekickCpuController public  void applyLevelEventDormantMarkerForBootstrap()
 METHOD com.openggf.sprites.playable.SidekickCpuController public  void applyLevelStartSidekickPlacementForBootstrap()
+METHOD com.openggf.sprites.playable.SidekickCpuController public  void cancelQueuedNativeEndingPose()
 METHOD com.openggf.sprites.playable.SidekickCpuController public  void captureLevelStartLeaderAnchor(int,int)
 METHOD com.openggf.sprites.playable.SidekickCpuController public  void captureLevelStartLeaderAnchorFromLeaderPosition()
 METHOD com.openggf.sprites.playable.SidekickCpuController public  void clearController2LogicalLatch()

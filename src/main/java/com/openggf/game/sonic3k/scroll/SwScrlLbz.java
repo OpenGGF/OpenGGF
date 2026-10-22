@@ -82,6 +82,7 @@ public class SwScrlLbz extends AbstractZoneScrollHandler implements com.openggf.
     private int deathEggYOffset;
     private DeathEggFrame lastDeathEggFrame;
     private short deathEggBgY;
+
     private LaunchProjectionInput lastLaunchProjectionInput;
     private boolean presentationLaunch;
 

@@ -354,7 +354,7 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
         Sonic3kZoneEvents.loadPaletteFromPalPointers(Sonic3kConstants.PAL_POINTERS_LBZ1_INDEX);
     }
 
-    private static void releasePlayer(AbstractPlayableSprite player) {
+    static void releasePlayer(AbstractPlayableSprite player) {
         ObjectControlState.none().applyTo(player);
         // loc_6278A clears the whole object_control byte, including bit 1.
         player.setObjectMappingFrameControl(false);

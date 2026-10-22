@@ -172,12 +172,31 @@ class TestStageplayObjectCaptureRom {
                                                     ObjectTarget.none())));
             world.resolve(scene, StageplayTimeline.sample(scene, 0));
             assertFalse(EngineServices.current().graphics().isGlInitialized());
+            world.resolve(scene, StageplayTimeline.sample(scene, switchFrame - 1));
+            var level = SessionManager.getCurrentGameplayMode().getLevelManager().getCurrentLevel();
+            var nativePalettes = new java.util.ArrayList<java.util.List<Integer>>();
+            for (int line = 0; line < level.getPaletteCount(); line++) {
+                var palette = level.getPalette(line);
+                var colors = new java.util.ArrayList<Integer>();
+                for (int color = 0; color < 16; color++) colors.add((color == 0 ? 0 : 0xff000000)
+                        | (palette.red(color) & 255) << 16 | (palette.green(color) & 255) << 8 | (palette.blue(color) & 255));
+                nativePalettes.add(colors);
+            }
             if (evictPaletteCache) {
-                // Decoded Level palettes remain authoritative; GPU/CPU upload residency may be
-                // absent in a logic-only scene and must not determine whether direction works.
+                // Capture uses the palette at entry to this tick, before native cycling advances.
+                // Cache eviction must still resolve the authoritative decoded native palette.
                 EngineServices.current().graphics().clearPaletteTextures();
             }
             int endingFrame = switchFrame + 6;
+            world.resolve(scene, StageplayTimeline.sample(scene, switchFrame));
+            var manager = SessionManager.getCurrentGameplayMode().getLevelManager().getObjectManager();
+            var picture = com.openggf.level.objects.ObjectDirectionAccess.forManager(manager)
+                    .rewindSnapshottable().capture().directed().getFirst().template();
+            assertFalse(picture.palettes().isEmpty());
+            for (var palette : picture.palettes()) assertTrue(nativePalettes.contains(palette.argb()),
+                    "Captured pre-tick palette " + palette.argb() + " must match native pre-tick palettes " + nativePalettes);
+            assertTrue(picture.palettes().stream().flatMap(palette -> palette.argb().stream())
+                    .anyMatch(argb -> (argb & 0xffffff) != 0), "Blank palettes do not establish native color capture");
             var ending = world.resolve(scene, StageplayTimeline.sample(scene, endingFrame));
             var inspection = world.objectInspection().getFirst();
             assertFalse(inspection.parts().isEmpty());

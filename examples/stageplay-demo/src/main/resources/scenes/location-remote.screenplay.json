@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 6,
   "name": "Location, Location, Location",
   "width": 400,
   "height": 224,
@@ -51,19 +51,22 @@
       "id": "sonic",
       "name": "Sonic",
       "gameId": "s2",
-      "character": "sonic"
+      "character": "sonic",
+      "puppet": true
     },
     {
       "id": "tails",
       "name": "Tails",
       "gameId": "s2",
-      "character": "tails"
+      "character": "tails",
+      "puppet": true
     },
     {
       "id": "knuckles",
       "name": "Knuckles",
       "gameId": "s3k",
-      "character": "knuckles"
+      "character": "knuckles",
+      "puppet": true
     }
   ],
   "shots": [
@@ -73,7 +76,8 @@
       "set": {
         "gameId": "s2",
         "zone": 0,
-        "act": 0
+        "act": 0,
+        "worldPolicy": "LIVE"
       },
       "camera": [
         {
@@ -218,7 +222,14 @@
             "urgency": 0.35
           }
         ]
-      }
+      },
+      "worldCommands": [
+        {
+          "id": "clear-objects-0",
+          "frame": 0,
+          "kind": "CLEAR_OBJECTS"
+        }
+      ]
     },
     {
       "id": "closer",
@@ -226,7 +237,8 @@
       "set": {
         "gameId": "s2",
         "zone": 0,
-        "act": 0
+        "act": 0,
+        "worldPolicy": "LIVE"
       },
       "camera": [
         {
@@ -337,7 +349,14 @@
             "urgency": 0.3
           }
         ]
-      }
+      },
+      "worldCommands": [
+        {
+          "id": "clear-objects-480",
+          "frame": 0,
+          "kind": "CLEAR_OBJECTS"
+        }
+      ]
     },
     {
       "id": "acttwo",
@@ -345,7 +364,8 @@
       "set": {
         "gameId": "s2",
         "zone": 0,
-        "act": 1
+        "act": 1,
+        "worldPolicy": "LIVE"
       },
       "camera": [
         {
@@ -471,7 +491,14 @@
             "holdFrames": 8
           }
         ]
-      }
+      },
+      "worldCommands": [
+        {
+          "id": "clear-objects-840",
+          "frame": 0,
+          "kind": "CLEAR_OBJECTS"
+        }
+      ]
     },
     {
       "id": "greenhill",
@@ -479,7 +506,8 @@
       "set": {
         "gameId": "s1",
         "zone": 0,
-        "act": 0
+        "act": 0,
+        "worldPolicy": "LIVE"
       },
       "camera": [
         {
@@ -603,7 +631,14 @@
             "urgency": 0.3
           }
         ]
-      }
+      },
+      "worldCommands": [
+        {
+          "id": "clear-objects-1260",
+          "frame": 0,
+          "kind": "CLEAR_OBJECTS"
+        }
+      ]
     },
     {
       "id": "island",
@@ -611,7 +646,8 @@
       "set": {
         "gameId": "s3k",
         "zone": 0,
-        "act": 0
+        "act": 0,
+        "worldPolicy": "LIVE"
       },
       "camera": [
         {
@@ -775,7 +811,14 @@
             "urgency": 0.35
           }
         ]
-      }
+      },
+      "worldCommands": [
+        {
+          "id": "clear-objects-1740",
+          "frame": 0,
+          "kind": "CLEAR_OBJECTS"
+        }
+      ]
     },
     {
       "id": "home",
@@ -783,7 +826,8 @@
       "set": {
         "gameId": "s2",
         "zone": 0,
-        "act": 0
+        "act": 0,
+        "worldPolicy": "LIVE"
       },
       "camera": [
         {
@@ -891,7 +935,14 @@
             "urgency": 0.3
           }
         ]
-      }
+      },
+      "worldCommands": [
+        {
+          "id": "clear-objects-2340",
+          "frame": 0,
+          "kind": "CLEAR_OBJECTS"
+        }
+      ]
     },
     {
       "id": "mostly",
@@ -899,7 +950,8 @@
       "set": {
         "gameId": "s1",
         "zone": 0,
-        "act": 0
+        "act": 0,
+        "worldPolicy": "LIVE"
       },
       "camera": [
         {
@@ -991,7 +1043,14 @@
             "urgency": 0.9
           }
         ]
-      }
+      },
+      "worldCommands": [
+        {
+          "id": "clear-objects-2760",
+          "frame": 0,
+          "kind": "CLEAR_OBJECTS"
+        }
+      ]
     }
   ]
 }

@@ -51,11 +51,6 @@ public final class ObjectSpriteCapture {
         return CURRENT.get() != null;
     }
 
-    /** Notify before SAT-only early guards, so CPU visual capture cannot silently drop controls. */
-    public static void control(String description) {
-        com.openggf.graphics.SpriteCaptureControl.control(description);
-    }
-
     public static void observe(Consumer<Draw> observer, Runnable draw) {
         observe(
                 observer,

@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 6,
   "name": "One world, complete framing",
   "width": 384,
   "height": 216,
@@ -8,19 +8,22 @@
       "id": "classic",
       "name": "Classic Sonic",
       "gameId": "s1",
-      "character": "sonic"
+      "character": "sonic",
+      "puppet": true
     },
     {
       "id": "tails",
       "name": "Tails",
       "gameId": "s2",
-      "character": "tails"
+      "character": "tails",
+      "puppet": true
     },
     {
       "id": "knuckles",
       "name": "Knuckles",
       "gameId": "s3k",
-      "character": "knuckles"
+      "character": "knuckles",
+      "puppet": true
     },
     {
       "id": "pose",
@@ -161,7 +164,7 @@
         "gameId": "s2",
         "zone": 0,
         "act": 0,
-        "worldPolicy": "TERRAIN_ONLY"
+        "worldPolicy": "LIVE"
       },
       "camera": [
         {
@@ -279,7 +282,14 @@
       "transition": {
         "kind": "FADE_BLACK",
         "durationFrames": 30
-      }
+      },
+      "worldCommands": [
+        {
+          "id": "clear-objects-180",
+          "frame": 0,
+          "kind": "CLEAR_OBJECTS"
+        }
+      ]
     }
   ]
 }

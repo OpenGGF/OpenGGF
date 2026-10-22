@@ -32,7 +32,7 @@ class TestStageplayDialogueRendering {
             resources.validate(document); var renderer = new StageplayRenderer(resources);
             var decoration = resources.dialogueImage("panel.png"); var portraitImage = resources.dialogueImage("portrait.png");
             for (int at : new int[]{0, 20, 0}) {
-                surface.record(320, 224, canvas -> renderer.draw(document, StageplayTimeline.sample(document, at), canvas));
+                surface.record(320, 224, canvas -> renderer.drawLiveOverlay(document, StageplayTimeline.sample(document, at), canvas));
                 var ops = surface.recordedFrame();
                 var slices = ops.stream().filter(op -> op.image() == decoration).toList(); assertEquals(9, slices.size());
                 var corner = slices.getFirst(); assertEquals(12, corner.x0()); assertEquals(130, corner.y0());

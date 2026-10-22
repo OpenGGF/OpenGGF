@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestStageplayLiveContract {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final String SOURCE = """
-            {"version":3,"name":"Native intent","width":320,"height":224,
+            {"version":6,"name":"Native intent","width":320,"height":224,
              "cast":[{"id":"pilot","name":"Tails","gameId":"s3k","character":"tails"}],
              "shots":[{"id":"flight","durationFrames":600,
                "set":{"gameId":"s3k","zone":0,"act":0,"worldPolicy":"LIVE"},
@@ -29,7 +29,7 @@ class TestStageplayLiveContract {
     }
     @Test void liveContractRoundTripsAndCompilerKeepsBoundedSemanticIntent() throws Exception {
         var scene=compile(SOURCE);
-        assertEquals(StageplayDocument.WorldPolicy.LEGACY_LIVE,scene.set().worldPolicy());
+        assertEquals(StageplayDocument.WorldPolicy.LIVE,scene.set().worldPolicy());
         assertEquals(List.of("pilot"),scene.camera().getFirst().follow().actors());
         assertEquals(60,scene.puppets().getFirst().commands().getFirst().timeoutFrames());
         assertEquals(scene,StageplayStore.decode(StageplayStore.encode(scene)));
@@ -43,34 +43,14 @@ class TestStageplayLiveContract {
 
     @Test void rejectsUnsupportedUnboundedAndUnknownReferences() {
         for(String invalid:List.of(SOURCE.replace("\"timeoutFrames\":60","\"timeoutFrames\":0"),
-                SOURCE.replace("\"height\":224","\"height\":112"),
                 SOURCE.replace("\"gameId\":\"s3k\",\"character\":\"tails\"","\"gameId\":\"s2\",\"character\":\"tails\""),
                 SOURCE.replace("\"actors\":[\"pilot\"]","\"actors\":[\"missing\"]"),
                 SOURCE.replace("\"worldPolicy\":\"LIVE\"","\"worldPolicy\":\"TERRAIN_ONLY\""),
-                SOURCE.replace("\"x\":5000","\"zoom\":2,\"x\":5000"),
                 SOURCE.replace("\"condition\":\"GROUNDED\"","\"condition\":\"TARGET_AVAILABLE\"")))
             assertThrows(IOException.class,()->compile(invalid),invalid);
     }
-    @Test void versionFourCanonicalConstructorRemainsCompatibleForCompiledCandidateCallers() {
-        var old=StageplayDocument.empty("s2",0,0,0,0,320,224)
-                .withSet(new StageplayDocument.SetSource("s2",0,0,"",""));
-        var upgraded=new StageplayDocument(4,old.name(),old.durationFrames(),old.width(),old.height(),old.set(),old.actors(),old.camera(),
-                old.captions(),old.audio(),old.cameraEffects(),old.sceneChanges(),old.dialogueTypers(),old.dialogueSkins(),old.dialogue(),old.puppets());
-        assertEquals(old,upgraded);
-    }
-
-    @Test void exactVersionFourShapeMigratesToTerrainOnly() throws Exception {
-        var old=compile("""
-                {"version":2,"name":"Old terrain","cast":[],"shots":[{"id":"old","durationFrames":60,
-                 "set":{"gameId":"s2","zone":0,"act":0},"camera":[{"frame":0,"x":0,"y":0}]}]}
-                """);
-        ObjectNode encoded=(ObjectNode)JSON.readTree(StageplayStore.encode(old));
-        encoded.remove(java.util.List.of("objectActors", "worldCommands"));
-        encoded.put("version",4); ((ObjectNode)encoded.get("set")).remove("worldPolicy");
-        for(var key:encoded.withArray("camera")) ((ObjectNode)key).remove("follow");
-        var migrated=StageplayStore.decode(JSON.writeValueAsBytes(encoded));
-        assertEquals(old,migrated);
-        ((ObjectNode)encoded.get("set")).put("worldPolicy","LIVE");
-        assertThrows(IOException.class,()->StageplayStore.decode(JSON.writeValueAsBytes(encoded)),"Legacy shape cannot smuggle LIVE policy");
+    @Test void allNativeWorldSizesAndZoomsUseTheSameIntentContract() {
+        assertDoesNotThrow(() -> compile(SOURCE.replace("\"height\":224", "\"height\":384")
+                .replace("\"x\":5000", "\"zoom\":2,\"x\":5000")));
     }
 }

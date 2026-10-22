@@ -31,6 +31,29 @@ import java.util.List;
  */
 public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
+    @com.openggf.game.rewind.RewindTransient(reason = "Captured as stable PlayerRefIds in DirectedControlSnapshot")
+    private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
+            new com.openggf.level.objects.PlayerControlOwners();
+
+    private record DirectedControlSnapshot(
+            java.util.List<com.openggf.game.rewind.identity.PlayerRefId> ownedPlayers)
+            implements com.openggf.level.objects.PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
+
+    @Override
+    public com.openggf.level.objects.PerObjectRewindSnapshot captureRewindState(
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        return super.captureRewindState(context).withObjectSubclassExtra(
+                new DirectedControlSnapshot(directedControlPlayers.capture(context)));
+    }
+
+    @Override
+    public void restoreRewindState(com.openggf.level.objects.PerObjectRewindSnapshot snapshot,
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        directedControlPlayers.restore(snapshot.objectSubclassExtra() instanceof DirectedControlSnapshot saved
+                ? saved.ownedPlayers() : java.util.List.of(), context);
+    }
+
     private static final int TRIGGER_X = 0x4728;
     private static final int CAMERA_RANGE_MIN_X = 0x45C0;
     private static final int CAMERA_RANGE_MAX_X = 0x46E0;
@@ -158,6 +181,17 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
         }
     }
 
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (AbstractPlayableSprite player : directedControlPlayers.players()) {
+            ObjectControlState.none().applyTo(player);
+            player.setControlLocked(false);
+            player.clearForcedInputMask();
+            player.clearLogicalInputState();
+        }
+        directedControlPlayers.clear();
+    }
+
     private void routineInit(AbstractPlayableSprite player) {
         AizIntroArtLoader.loadAllIntroArt(services());
         AizIntroArtLoader.applyKnucklesPalette(services());
@@ -167,6 +201,7 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
         if (player != null) {
             player.clearLogicalInputState();
             player.clearForcedInputMask();
+            directedControlPlayers.add(player);
             player.setControlLocked(true);
             // loc_62528 writes object_control=$80. Obj01_Control gates normal
             // movement on bit 0, so the player must keep falling while bit 7
@@ -190,6 +225,7 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
         if (player == null) {
             return;
         }
+        directedControlPlayers.add(player);
         player.setControlLocked(true);
         player.setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
         if ((player.getCentreX() & 0xFFFF) < WALK_RIGHT_STOP_X) {
@@ -279,6 +315,7 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
             // ROM loc_625E2 clears object_control but leaves Ctrl_1_locked set
             // through the forced-left drop-shaft walk in loc_6261A.
             ObjectControlState.none().applyTo(player);
+            directedControlPlayers.add(player);
             player.setControlLocked(true);
             player.clearForcedInputMask();
         }
@@ -304,12 +341,14 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
             return;
         }
 
+        directedControlPlayers.add(player);
         player.setControlLocked(true);
         player.setForcedInputMask(AbstractPlayableSprite.INPUT_LEFT);
         Camera camera = services().camera();
         if (camera.getY() + 0x160 < currentY) {
             player.setControlLocked(false);
             player.clearForcedInputMask();
+            directedControlPlayers.remove(player);
             activeInstance = null;
             setDestroyed(true);
         }

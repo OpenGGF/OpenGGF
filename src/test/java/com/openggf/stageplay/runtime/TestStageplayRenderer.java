@@ -14,7 +14,7 @@ import static org.mockito.Mockito.*;
 
 class TestStageplayRenderer {
     @TempDir Path temp;
-    @Test void cameraTransformsOriginsAndDrawsAuthoredBlockZeroWithoutAdvancingAnimation() {
+    @Test void poserOriginsAndAnimationUseTheNativeWorldRasterWithoutAdvancingTime() {
         var art=mock(SceneRomArt.class);var kit=mock(SceneLevelKit.class);var sprites=mock(SceneSpriteSet.class);
         var block=new SceneImage(128,128,new int[128*128]);var background=new SceneImage(320,224,new int[320*224]);
         var pose=new SceneSprite(new SceneImage(8,8,new int[64]),2,3);
@@ -25,7 +25,7 @@ class TestStageplayRenderer {
         when(kit.columns()).thenReturn(2);when(kit.rows()).thenReturn(2);when(kit.blockCount()).thenReturn(1);
         when(kit.blockImage(0)).thenReturn(block);
         when(kit.backdrop()).thenReturn(new SceneBackdrop(background,List.of(new SceneBackdrop.Band(0,224,0,0))));
-        var document=legacyScene("s2",0,0,128,0,320,224)
+        var document=scene("s2",0,0,128,0,320,224)
                 .withCamera(List.of(new CameraKey(0,128,0,2,Interpolation.HOLD)))
                 .withActors(List.of(new Actor("hero","Hero","s2","sonic",List.of(
                         new ActorKey(0,148,60,0,-1,false,true,1,Interpolation.HOLD)))));
@@ -34,10 +34,9 @@ class TestStageplayRenderer {
             var sample=StageplayTimeline.sample(document,3);
             assertEquals(1,renderer.mappingFrame(sample.actors().getFirst()));
             for(int repeat=0;repeat<2;repeat++) {
-                surface.record(320,224,canvas->renderer.draw(document,sample,canvas));
-                assertEquals(1,surface.recordedFrame().stream().filter(op->op.image()==block).count(),"block zero may contain authored terrain");
+                surface.record(320,224,canvas->renderer.drawLivePosers(document,sample,canvas,sample.camera()));
                 var draw=surface.recordedFrame().stream().filter(op->op.image()==pose.image()).findFirst().orElseThrow();
-                assertEquals(36f,draw.x0());assertEquals(114f,draw.y0());assertEquals(52f,draw.x1());
+                assertEquals(18f,draw.x0());assertEquals(57f,draw.y0());assertEquals(26f,draw.x1());
             }
         }
     }
@@ -46,7 +45,7 @@ class TestStageplayRenderer {
         var source=new SetSource("s2",0,0,"a".repeat(40),"set.ogfproject");
         try(var resources=new StageplayResources(game->art,List.of("s2"))) {
             resources.registerSet(source,mock(SceneLevelKit.class));
-            assertThrows(IllegalArgumentException.class,()->resources.set(legacyScene("s2",0,0,0,0,320,224).withSet(source)));
+            assertThrows(IllegalArgumentException.class,()->resources.set(scene("s2",0,0,0,0,320,224).withSet(source)));
         }
     }
     @Test void voiceAssetsCannotEscapeTheirSceneRootThroughSymlinks() throws Exception {
@@ -69,7 +68,8 @@ class TestStageplayRenderer {
         }
         var missing = new SetSource("s2", 1, 0, "", "");
         try (var resources = new StageplayResources(game -> art, List.of("s2"))) {
-            assertThrows(IllegalArgumentException.class, () -> resources.validate(twoShots(missing, Transition.CUT)));
+            assertDoesNotThrow(() -> resources.validate(twoShots(missing, Transition.CUT)),
+                    "Native load checks act availability; it does not depend on detached level-kit support");
         }
     }
 
@@ -86,9 +86,8 @@ class TestStageplayRenderer {
                 resources.validate(scene);
                 for (int at : new int[]{4, 6, 8}) {
                     var frame = StageplayTimeline.sample(scene, at);
-                    surface.record(320, 224, canvas -> renderer.draw(scene, frame, canvas));
+                    surface.record(320, 224, canvas -> renderer.drawLiveOverlay(scene, frame, canvas));
                     var ops = surface.recordedFrame();
-                    assertEquals(at < 6 ? 0xff112233 : 0xff332211, ops.getFirst().tint());
                     if (transition == Transition.CUT) continue;
                     var mask = ops.getLast(); assertNull(mask.image(), "the screen mask follows every caption glyph");
                     assertEquals(0, mask.y0()); assertEquals(224, mask.y1());
@@ -117,14 +116,14 @@ class TestStageplayRenderer {
         when(art.characterAccessorySampleTick("tails", 2, 1, 3)).thenReturn(0L);
         when(art.characterAccessoryPose("tails", 2, 1, 3, false, 2, 0))
                 .thenReturn(new SceneAccessoryPose(tail, false, true));
-        var scene = legacyScene("s2", 0, 0, 0, 0, 320, 224).withActors(List.of(
+        var scene = scene("s2", 0, 0, 0, 0, 320, 224).withActors(List.of(
                 new Actor("tails", "Tails", "s2", "tails", List.of(
                         new ActorKey(0, 100, 100, 2, 1, false, true, 1, Interpolation.LINEAR),
                         new ActorKey(2, 104, 100, 2, 1, true, true, 1, Interpolation.LINEAR),
                         new ActorKey(4, 104, 104, 2, 1, true, true, 1, Interpolation.HOLD)))));
         try (var resources = new StageplayResources(game -> art, List.of("s2")); var surface = new SceneSurface()) {
             var renderer = new StageplayRenderer(resources);
-            surface.record(320, 224, canvas -> renderer.draw(scene, StageplayTimeline.sample(scene, 3), canvas));
+            surface.record(320, 224, canvas -> renderer.drawLivePosers(scene, StageplayTimeline.sample(scene, 3), canvas, StageplayTimeline.sample(scene, 3).camera()));
             verify(art).characterAccessoryPose("tails", 2, 1, 3, false, 2, 0);
             var draw = surface.recordedFrame().stream().filter(op -> op.image() == tail.image()).findFirst().orElseThrow();
             assertTrue(draw.v0() > draw.v1()); assertTrue(draw.u0() < draw.u1());
@@ -132,39 +131,18 @@ class TestStageplayRenderer {
         }
     }
 
-    @Test void physicsRenderingRequiresResolvedFramesAndUsesNativeBodyAndTailFlips() {
-        var art = mock(SceneRomArt.class); var sprites = mock(SceneSpriteSet.class);
-        var body = new SceneSprite(new SceneImage(8, 8, new int[64]), 4, 4);
-        var tail = new SceneSprite(new SceneImage(16, 8, new int[128]), 8, 4);
-        var terrain = emptySet(0);
-        when(art.levelKit(0, 0)).thenReturn(terrain); when(art.character("tails")).thenReturn(sprites);
-        when(art.characterAccessory("tails")).thenReturn(sprites);
-        when(sprites.frame(1)).thenReturn(body); when(sprites.frame(2)).thenReturn(tail); when(sprites.frameCount()).thenReturn(3);
-        var document = legacyScene("s2", 0, 0, 0, 0, 320, 224).withActors(List.of(
-                new Actor("tails", "Tails", "s2", "tails", List.of(new ActorKey(0, 100, 100, 0, -1, false, true, 1, Interpolation.HOLD)))))
-                .withPuppets(List.of(new PuppetTrack("tails", true, 0, List.of())));
-        var authored = StageplayTimeline.sample(document, 0);
-        var resolved = new StageplayTimeline.Frame(0, List.of(new StageplayTimeline.ActorPose(
-                "tails", "s2", "tails", 120, 90, 2, 0, 1, false, true, 1, true)), authored.camera(),
-                authored.captions(), authored.set(), authored.transition(), authored.baseCamera(), authored.dialogue(),
-                List.of(new StageplayTimeline.PuppetSample("tails", "", StageplayTimeline.PuppetStatus.IDLE,
-                        2, -3, 0, true, 0, 0, new StageplayTimeline.PuppetAccessory(2, true, false))));
-        try (var resources = new StageplayResources(game -> art, List.of("s2")); var surface = new SceneSurface()) {
+    @Test void renderingRequiresAResolvedNativeWorldEvenForAnEmptyCast() {
+        var document = StageplayDocument.empty("s2", 0, 0, 0, 0, 320, 224);
+        try (var resources = new StageplayResources(game -> mock(SceneRomArt.class), List.of("s2"));
+             var surface = new SceneSurface()) {
             var renderer = new StageplayRenderer(resources);
-            assertThrows(IllegalArgumentException.class, () -> surface.record(320, 224, canvas -> renderer.draw(document, authored, canvas)));
-            for (int repeat = 0; repeat < 2; repeat++) {
-                surface.record(320, 224, canvas -> renderer.draw(document, resolved, canvas));
-                var bodyDraw = surface.recordedFrame().stream().filter(op -> op.image() == body.image()).findFirst().orElseThrow();
-                var tailDraw = surface.recordedFrame().stream().filter(op -> op.image() == tail.image()).findFirst().orElseThrow();
-                assertTrue(bodyDraw.v0() > bodyDraw.v1()); assertTrue(tailDraw.u0() > tailDraw.u1());
-                assertTrue(tailDraw.v0() < tailDraw.v1()); assertEquals(116, bodyDraw.x0());
-            }
-            verify(art, never()).characterAccessorySampleTick(anyString(), anyInt(), anyInt(), anyLong());
+            assertThrows(IllegalArgumentException.class, () -> surface.record(320, 224,
+                    canvas -> renderer.draw(document, StageplayTimeline.sample(document, 0), canvas)));
         }
     }
 
     private static StageplayDocument twoShots(SetSource incoming, Transition transition) {
-        return legacyScene("s2", 0, 0, 0, 0, 320, 224).withDurationFrames(12)
+        return scene("s2", 0, 0, 0, 0, 320, 224).withDurationFrames(12)
                 .withCamera(List.of(new CameraKey(0, 0, 0, 1, Interpolation.HOLD),
                         new CameraKey(6, 100, 40, 2, Interpolation.HOLD)))
                 .withSceneChanges(List.of(new SceneChange("cut", 6, incoming, transition, transition == Transition.CUT ? 0 : 8)));
@@ -175,8 +153,8 @@ class TestStageplayRenderer {
                 List.of(new SceneBackdrop.Band(0, 224, 0, 0))));
         return kit;
     }
-    /** These fixtures exercise detached art/choreography, independent of a native session. */
-    private static StageplayDocument legacyScene(String gameId, int zone, int act, double x, double y, int width, int height) {
+    /** These fixtures exercise the pure Poser and overlay layers inside native-world composition. */
+    private static StageplayDocument scene(String gameId, int zone, int act, double x, double y, int width, int height) {
         return StageplayDocument.empty(gameId, zone, act, x, y, width, height)
                 .withSet(new StageplayDocument.SetSource(gameId, zone, act, "", ""));
     }

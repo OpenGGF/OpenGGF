@@ -1888,12 +1888,11 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
 
 
     /** Extra performer windows share native SST admission without moving the camera cursors. */
-    boolean activateStageplayWindows(List<ObjectSpawn> sourceSpawns, Set<ObjectSpawn> active,
+    void activateStageplayWindows(List<ObjectSpawn> sourceSpawns, Set<ObjectSpawn> active,
             Camera camera, java.util.function.Predicate<ObjectSpawn> allows,
             java.util.function.BooleanSupplier hasFreeSlot,
             java.util.function.Predicate<ObjectSpawn> load) {
-        if (stageplayActivation == null) return false;
-        boolean changed = false;
+        if (stageplayActivation == null) return;
         var considered = new java.util.HashSet<Integer>();
         for (var spawn : sourceSpawns) {
             int index = getSpawnIndex(spawn);
@@ -1910,10 +1909,9 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             if (!hasFreeSlot.getAsBoolean()) throw new IllegalStateException(
                     "Stageplay ensemble exceeds the native object slot budget near layout "
                             + spawn.layoutIndex() + "; clear objects, reduce the cast or split the shot");
-            if (load.test(spawn)) changed = true;
+            load.test(spawn);
         }
         stageplayActivation.considered(considered);
-        return changed;
     }
 
 }

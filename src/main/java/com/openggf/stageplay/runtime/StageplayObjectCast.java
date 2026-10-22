@@ -26,18 +26,18 @@ final class StageplayObjectCast implements AutoCloseable {
     private StageplayObjectDirection direction;
     private ObjectRegistry registry;
     private int commandIndex;
-    private boolean clearedObjects, clearedBadniks;
-    private final Set<PlacementIdentity> removedPlacements = new HashSet<>();
+    private final Map<String, Boolean> badnikRoles = new HashMap<>();
 
     StageplayObjectCast(GameplayModeContext context, StageplayDocument document, SetSource source,
                         int start, int end, List<ObjectSpawn> originalObjects,
                         Map<String, VisualTemplate> templates) {
         this.context = Objects.requireNonNull(context); this.source = source; this.start = start; this.end = end;
-        for (var spawn : originalObjects) if (spawn.layoutIndex() >= 0) placements.put(PlacementIdentity.of(spawn), spawn);
+        for (var spawn : originalObjects) if (spawn.layoutIndex() >= 0) placements.put(PlacementIdentity.of(source.gameId(), source.zone(), source.act(), spawn), spawn);
+        Set<PlacementIdentity> initiallyRemoved = new HashSet<>();
         for (var actor : document.objectActors()) {
             ObjectKey anchor = actor.keys().stream().filter(k -> k.frame() == start).findFirst().orElseThrow();
             if (actor.layoutIndex() >= 0 && sameSource(actor, source) && !anchor.visible())
-                removedPlacements.add(identity(actor));
+                initiallyRemoved.add(identity(actor));
             if (actor.keys().stream().noneMatch(k -> k.frame() >= start && k.frame() < end && k.visible())) continue;
             if (actor.layoutIndex() >= 0 && !placements.containsKey(identity(actor)))
                 throw new IllegalArgumentException("Unknown portable placed object for " + actor.id() + ": " + identity(actor));
@@ -48,7 +48,7 @@ final class StageplayObjectCast implements AutoCloseable {
         commands = document.worldCommands();
         while (commandIndex < commands.size() && commands.get(commandIndex).frame() < start) commandIndex++;
         bindManager();
-        removedPlacements.forEach(direction::remove);
+        initiallyRemoved.forEach(direction::remove);
         // Registered after native object snapshots: pointer identities have been restored
         // before suspended graphs and controller-only visual handles are reconstructed.
         context.getRewindRegistry().register(new RewindSnapshottable<StageplayObjectDirection.Snapshot>() {
@@ -68,12 +68,19 @@ final class StageplayObjectCast implements AutoCloseable {
         registry = ObjectDirectionAccess.registry(objects);
     }
 
+    private void requireCurrentSource() {
+        var level = context.getLevelManager();
+        var game = context.getWorldSession().getGameModule().getGameId().code();
+        if (!source.gameId().equals(game) || source.zone() != level.getCurrentZone() || source.act() != level.getCurrentAct())
+            throw new IllegalStateException("Stageplay shot source changed from " + source.gameId() + "/"
+                    + source.zone() + "/" + source.act() + "; use a new shot for the destination set");
+    }
+
     private void ensureManager() {
+        requireCurrentSource();
         if (objects == context.getLevelManager().getObjectManager()) return;
+        requireCurrentSource();
         direction.close(); bindManager();
-        if (clearedObjects) direction.clearObjects();
-        if (clearedBadniks) direction.clearBadniks();
-        removedPlacements.forEach(direction::remove);
         for (var role : roles) {
             role.root = null; role.synthetic = false; role.goal = null;
             // Reassemble surviving authored roles at their native shot anchors. Explicit
@@ -113,7 +120,7 @@ final class StageplayObjectCast implements AutoCloseable {
         if (!key.visible()) {
             if (role.root != null) retire(role);
             else if (changed && role.actor.layoutIndex() >= 0 && sameSource(role.actor, source)) {
-                var identity = identity(role.actor); removedPlacements.add(identity); direction.remove(identity);
+                var identity = identity(role.actor); direction.remove(identity);
             }
             role.visible = false; role.mode = key.mode(); role.goal = null;
             while (role.commandIndex < role.actor.commands().size() && role.actor.commands().get(role.commandIndex).frame() <= frame)
@@ -168,7 +175,7 @@ final class StageplayObjectCast implements AutoCloseable {
                 }
                 // Native loading is suppressed for this portable tuple. Directed admission
                 // consumes only a privately prepared picture; no shared factory is invoked.
-                removedPlacements.add(identity); direction.remove(identity);
+                direction.remove(identity);
             }
             if (role.template == null) throw new IllegalArgumentException("No prepared native visual for " + role.actor.id()
                     + "; start as Free in its native set, then switch once appearance initializes");
@@ -213,27 +220,22 @@ final class StageplayObjectCast implements AutoCloseable {
 
     private void apply(WorldCommand command) {
         if (command.kind() == WorldCommandKind.CLEAR_OBJECTS) {
-            clearedObjects = true; direction.clearObjects();
+            direction.clearObjects();
             for (var role : roles) {
                 role.root = null; role.synthetic = false; role.removed = true; role.goal = null;
             }
         } else if (command.kind() == WorldCommandKind.CLEAR_BADNIKS) {
-            clearedBadniks = true;
-            for (var entry : ObjectRegistryCatalog.entries(registry, new ObjectRegistryCatalog.Context(source.zone(), source.act())))
-                if (entry.semantics().role() == ObjectRegistryCatalog.Role.BADNIK)
-                    placements.keySet().stream().filter(p -> p.objectId() == entry.objectId()).forEach(removedPlacements::add);
             for (var role : roles) if (isBadnik(role)) removeRole(role);
             direction.clearBadniks();
-            removedPlacements.forEach(direction::remove);
         } else if (!command.actorId().isEmpty()) {
             roles.stream().filter(role -> role.actor.id().equals(command.actorId())).findFirst().ifPresent(role -> {
                 removeRole(role); role.removalFrame = command.frame();
             });
         } else {
             var target = command.target();
-            var identity = new PlacementIdentity(target.layoutIndex(), target.objectId(), target.subtype());
+            var identity = new PlacementIdentity(source.gameId(), source.zone(), source.act(), target.layoutIndex(), target.objectId(), target.subtype());
             if (!placements.containsKey(identity)) throw new IllegalArgumentException("Unknown removal placement for " + command.id() + ": " + identity);
-            removedPlacements.add(identity); direction.remove(identity);
+            direction.remove(identity);
             for (var role : roles) if (role.actor.layoutIndex() >= 0 && identity(role.actor).equals(identity)) {
                 removeRole(role); role.removalFrame = command.frame();
             }
@@ -244,9 +246,9 @@ final class StageplayObjectCast implements AutoCloseable {
         if (role.root != null && !role.synthetic && (role.root instanceof AbstractBadnikInstance
                 || role.root.headPresentationRole() == ObjectHeadRole.BADNIK)) return true;
         if (role.actor.sourceKind() != ObjectSourceKind.LAYOUT_OBJECT) return false;
-        var sourceRegistry = com.openggf.game.GameModuleRegistry.createStockModule(com.openggf.game.GameId.fromCode(role.actor.gameId())).createObjectRegistry();
-        return ObjectRegistryCatalog.entry(sourceRegistry, new ObjectRegistryCatalog.Context(role.actor.zone(), role.actor.act()),
-                role.actor.objectId()).semantics().role() == ObjectRegistryCatalog.Role.BADNIK;
+        return badnikRoles.computeIfAbsent(role.actor.id(), ignored ->
+                com.openggf.stageplay.StageplayObjectCatalog.entry(role.actor.gameId(), role.actor.zone(), role.actor.act(),
+                        role.actor.objectId()).role() == ObjectRegistryCatalog.Role.BADNIK);
     }
 
     private void removeRole(Role role) { retire(role); role.removed = true; role.goal = null; }
@@ -254,7 +256,7 @@ final class StageplayObjectCast implements AutoCloseable {
     private void retire(Role role) {
         if (role.root != null) direction.removeDynamic(role.root);
         if (role.actor.layoutIndex() >= 0 && sameSource(role.actor, source)) {
-            var identity = identity(role.actor); removedPlacements.add(identity); direction.remove(identity);
+            var identity = identity(role.actor); direction.remove(identity);
         }
         role.root = null; role.synthetic = false;
     }
@@ -292,7 +294,7 @@ final class StageplayObjectCast implements AutoCloseable {
 
     Snapshot capture() {
         ensureManager();
-        return new Snapshot(commandIndex, clearedObjects, clearedBadniks, Set.copyOf(removedPlacements), roles.stream().map(role ->
+        return new Snapshot(commandIndex, roles.stream().map(role ->
                 new RoleSnapshot(role.actor.id(), role.synthetic, role.root == null || role.synthetic ? null
                         : objects.objectQuery().identityOf(role.root).orElse(null), role.keyIndex, role.commandIndex,
                         role.phaseStart, role.removalFrame, role.visible, role.instantiated, role.removed, role.stopped, role.mode, role.x, role.y, role.goal, role.template)).toList());
@@ -300,8 +302,7 @@ final class StageplayObjectCast implements AutoCloseable {
 
     void restore(Snapshot saved) {
         if (objects != context.getLevelManager().getObjectManager()) bindManager();
-        commandIndex = saved.commandIndex(); clearedObjects = saved.clearedObjects(); clearedBadniks = saved.clearedBadniks();
-        removedPlacements.clear(); removedPlacements.addAll(saved.removedPlacements());
+        commandIndex = saved.commandIndex();
         for (int i = 0; i < roles.size(); i++) {
             var role = roles.get(i); var state = saved.roles().get(i);
             if (!role.actor.id().equals(state.id())) throw new IllegalStateException("Object control snapshot belongs to another cast");
@@ -316,8 +317,7 @@ final class StageplayObjectCast implements AutoCloseable {
         }
     }
 
-    record Snapshot(int commandIndex, boolean clearedObjects, boolean clearedBadniks,
-                    Set<PlacementIdentity> removedPlacements, List<RoleSnapshot> roles) { }
+    record Snapshot(int commandIndex, List<RoleSnapshot> roles) { }
     private record RoleSnapshot(String id, boolean synthetic, ObjectRefId root, int keyIndex, int commandIndex,
                                 int phaseStart, int removalFrame, boolean visible, boolean instantiated, boolean removed, boolean stopped, ObjectMode mode,
                                 double x, double y, ObjectCommand goal, VisualTemplate template) { }
@@ -330,7 +330,7 @@ final class StageplayObjectCast implements AutoCloseable {
     private static boolean sameSource(ObjectActor actor, SetSource source) {
         return actor.gameId().equals(source.gameId()) && actor.zone() == source.zone() && actor.act() == source.act();
     }
-    private static PlacementIdentity identity(ObjectActor actor) { return new PlacementIdentity(actor.layoutIndex(), actor.objectId(), actor.subtype()); }
+    private static PlacementIdentity identity(ObjectActor actor) { return new PlacementIdentity(actor.gameId(), actor.zone(), actor.act(), actor.layoutIndex(), actor.objectId(), actor.subtype()); }
 
     static double[] move(double x, double y, double targetX, double targetY, double speed) {
         return StageplayObjectMotion.move(x, y, targetX, targetY, speed);
@@ -363,6 +363,8 @@ final class StageplayObjectCast implements AutoCloseable {
         final ObjectActor actor; final ObjectKey anchor;
         ObjectInstance root; VisualTemplate template; ObjectCommand goal;
         int keyIndex, commandIndex, phaseStart, removalFrame = -1; double x, y;
+        // Authored visibility/removal latch, distinct from the session policy's
+        // sole native placement-admission state. Re-entry in the timeline clears it.
         boolean visible, instantiated, synthetic, removed, stopped; ObjectMode mode;
         Role(ObjectActor actor, ObjectKey anchor, VisualTemplate template, int start) {
             this.actor = actor; this.anchor = anchor; this.template = template;

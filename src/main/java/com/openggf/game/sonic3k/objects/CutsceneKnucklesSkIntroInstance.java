@@ -41,6 +41,29 @@ import java.util.List;
  */
 public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
+    @com.openggf.game.rewind.RewindTransient(reason = "Captured as stable PlayerRefIds in DirectedControlSnapshot")
+    private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
+            new com.openggf.level.objects.PlayerControlOwners();
+
+    private record DirectedControlSnapshot(
+            java.util.List<com.openggf.game.rewind.identity.PlayerRefId> ownedPlayers)
+            implements com.openggf.level.objects.PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
+
+    @Override
+    public com.openggf.level.objects.PerObjectRewindSnapshot captureRewindState(
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        return super.captureRewindState(context).withObjectSubclassExtra(
+                new DirectedControlSnapshot(directedControlPlayers.capture(context)));
+    }
+
+    @Override
+    public void restoreRewindState(com.openggf.level.objects.PerObjectRewindSnapshot snapshot,
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        directedControlPlayers.restore(snapshot.objectSubclassExtra() instanceof DirectedControlSnapshot saved
+                ? saved.ownedPlayers() : java.util.List.of(), context);
+    }
+
     private static final int CAMERA_X = 0x0560;
     private static final int CAMERA_Y = 0x0948;
     private static final int INTRO_TIMER = 0xEF;
@@ -180,6 +203,16 @@ public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstanc
         }
     }
 
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (AbstractPlayableSprite player : directedControlPlayers.players()) {
+            player.setControlLocked(false);
+            player.clearLogicalInputState();
+            player.clearForcedInputMask();
+        }
+        directedControlPlayers.clear();
+    }
+
     private void routineInit(PlayableEntity playerEntity) {
         routine = ROUTINE_WAIT_BOMB_SIGNAL;
         timer = INTRO_TIMER;
@@ -191,6 +224,7 @@ public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstanc
             camera.setLevelStarted(false);
         }
         if (playerEntity instanceof AbstractPlayableSprite player) {
+            directedControlPlayers.add(player);
             player.setControlLocked(true);
             player.clearLogicalInputState();
             player.clearForcedInputMask();

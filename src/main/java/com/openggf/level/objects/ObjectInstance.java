@@ -430,6 +430,9 @@ public interface ObjectInstance {
      * Override to perform cleanup when the object goes off-screen or is removed.
      * Default implementation does nothing.
      */
+    /** Releases only owned player control before a director suspends or retires this routine. */
+    default void releasePlayersForVisualDirection() { }
+
     default void onUnload() {
         // Default no-op
     }

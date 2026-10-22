@@ -18,6 +18,8 @@ import java.util.LinkedHashMap;
 
 /**
  * Exact content binding for a disposable route attempt; never writes ROM or project bytes to disk.
+ * Document equality alone cannot detect edited terrain projects or replaced ROM bytes while the
+ * worker runs. The same snapshot supplies worker bytes and the off-thread Apply freshness check.
  */
 public final class StageplayRouteInputs {
     private StageplayRouteInputs() {}

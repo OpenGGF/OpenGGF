@@ -290,7 +290,6 @@ public class SwScrlCpz extends AbstractZoneScrollHandler implements ScrollProjec
             var output = new ScrollEffectComposer(view.height());
             compose(output, view.cameraX(), x1 + (dx << 13), x2 + (dx << 15), y + (dy << 14), phase, ripple);
             return Sonic2ProjectionOutput.finish(context, view, output);
-        };
+    };
     }
-
 }

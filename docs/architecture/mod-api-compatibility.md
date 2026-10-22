@@ -5,18 +5,14 @@ carried by `develop` and `next` after the 0.6 release rollover. No Mod API basel
 has been published yet. The runtime-visible, type-only `com.openggf.game.ModApi`
 annotation marks its roots.
 
-Stageplay keeps the mutable candidate at 0.7.0. Portable document version seven
-uses one native-world owner for both populated and initially cleared sets.
-`LEGACY_TERRAIN_ONLY` and `LEGACY_LIVE` preserve the execution and presentation
-of strictly migrated versions one through five. Existing record constructors
-remain available; five-argument set references retain detached compatibility.
-New authoring defaults to native worlds. Screenplay versions one through three
-compile through the old canonical contract; version four selects the current
-world model. Version five adds object roles and timed world commands. The
-candidate pin includes explicit compatibility policies and object directing
-records. Preview/export process and ROM-descriptor transport
-remain engine internals. No published baseline, API version or release topology
-changes.
+Stageplay uses the engine's unpublished 0.7.0 candidate. Canonical documents
+(version seven) and screenplays (version six) accept only their current shape;
+there is no published Stageplay format to migrate. Every set uses the same native
+world, camera, donor cast, activation and hand-back behavior. A terrain-only shot
+uses an ordinary `CLEAR_OBJECTS` command; rings retain their separate native owner.
+`WorldPolicy` contains only `LIVE`. The mutable candidate signature pin reflects
+the current format directly. Preview/export processes and ROM transport remain
+engine internals; publication state and branch topology are unchanged.
 
 Creator dynamic objects implement `ModRewindRecreatable` and receive
 `ObjectReconstructionContext`: captured spawn and typed payload, restore-time
@@ -892,12 +888,12 @@ its publication or branch policy. No published baseline changes.
 
 ### Stageplay unified worlds (2026-10-22)
 
-The unpublished 0.7.0 candidate adds `LEGACY_TERRAIN_ONLY` and `LEGACY_LIVE`
-to `StageplayDocument.WorldPolicy` so strictly migrated documents preserve their
-prior execution model. New v6 documents share native-world capabilities.
-The mutable `0.7` signature pin is regenerated in place. Policy classification,
-ROM transport, donor ownership and compositing helpers remain engine internals;
-the release descriptor and runtime API version remain candidate `0.7.0`.
+The unpublished engine-aligned 0.7.0 candidate has one `LIVE` world policy.
+Populated and explicitly cleared sets share the native-world owner and all
+presentation, donor, activation and hand-back capabilities. Unsupported old
+schemas fail instead of selecting compatibility execution. The mutable `0.7`
+signature pin is regenerated in place. ROM transport, donor ownership and
+compositing helpers remain engine internals. No publication/version bump occurs.
 
 ### Stageplay object directing (2026-10-22)
 
@@ -905,8 +901,8 @@ The unpublished 0.7.0 candidate appends immutable `ObjectActor` and `WorldComman
 tracks to the Stageplay document. Object source kinds, Free/Puppet/Pose keys,
 visual move/stop commands and portable child-part frame selections are typed
 creator data. The prior root constructor and earlier overloads remain available;
-all current document copy helpers retain the appended tracks. Canonical v1–v6
-migration supplies empty object tracks, and screenplay v5 compiles canonical v7.
+all current document copy helpers retain the appended tracks. Current screenplay
+v6 compiles canonical v7 directly; unsupported prior schemas are rejected.
 The mutable `0.7` pin is regenerated in place. Registry enumeration, visual graph
 capture, load suppression, palettes and object-manager direction ports stay outside
 annotated types. Descriptor and runtime API version remain candidate `0.7.0`.

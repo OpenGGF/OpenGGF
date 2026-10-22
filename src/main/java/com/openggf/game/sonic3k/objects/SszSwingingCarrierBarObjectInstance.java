@@ -99,6 +99,13 @@ public final class SszSwingingCarrierBarObjectInstance extends AbstractObjectIns
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        var query = services().playerQuery();
+        releaseDirectedPlayer(query.mainPlayerOrNull(), 0);
+        releaseDirectedPlayer(query.nativeP2OrNull(), 1);
+    }
+
+    @Override
     public SszSwingingCarrierBarObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new SszSwingingCarrierBarObjectInstance(ctx.spawn());
     }
@@ -190,9 +197,8 @@ public final class SszSwingingCarrierBarObjectInstance extends AbstractObjectIns
         if (!sprite.isLogicalJumpPressActive()) {
             return;
         }
-        setCarried(slot, false);
         sprite.setYSpeed((short) RELEASE_Y_VEL);
-        ObjectControlState.none().applyTo(sprite);
+        releaseControl(slot, sprite);
         sprite.setAir(true);
         sprite.setJumping(true);
         releaseRide(sprite);
@@ -219,14 +225,22 @@ public final class SszSwingingCarrierBarObjectInstance extends AbstractObjectIns
         if (distance > EJECT_FLOOR_DEPTH) {
             return false;
         }
-        setCarried(slot, false);
-        ObjectControlState.none().applyTo(sprite);
-        releaseRide(sprite);
+        releaseControl(slot, sprite);
         int velocity = isRenderFlipped() ? -EJECT_X_VEL : EJECT_X_VEL;
         sprite.setXSpeed((short) velocity);
         sprite.setGSpeed((short) velocity);
         services().playSfx(Sonic3kSfx.DASH.id);
         return true;
+    }
+
+    private void releaseControl(int slot, AbstractPlayableSprite sprite) {
+        setCarried(slot, false);
+        ObjectControlState.none().applyTo(sprite);
+        releaseRide(sprite);
+    }
+
+    private void releaseDirectedPlayer(PlayableEntity entity, int slot) {
+        if (carried(slot) && entity instanceof AbstractPlayableSprite player) releaseControl(slot, player);
     }
 
     private void releaseRide(AbstractPlayableSprite sprite) {

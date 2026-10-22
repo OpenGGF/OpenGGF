@@ -65,14 +65,8 @@ public final class StageplayScriptCompiler {
                             "objectCast",
                             "order");
             int version = integer(script, "version", -1);
-            if (version < 1 || version > VERSION)
-                throw new IOException("Unsupported screenplay version");
-            if (version < 6 && source.length > StageplayStore.MAX_BYTES)
-                throw new IOException("Screenplay versions 1-5 must not exceed 8 MiB");
-            if (version < 6 && script.has("order"))
-                throw new IOException("Explicit ordering requires screenplay version 6");
-            if (version < 5 && script.has("objectCast"))
-                throw new IOException("Object cast requires screenplay version 5");
+            if (version != VERSION)
+                throw new IOException("Unsupported screenplay version: " + version);
             ArrayNode cast = array(script, "cast"), shots = array(script, "shots");
             if (cast.size() > 32 || shots.isEmpty() || shots.size() > 129)
                 throw new IOException("Screenplay needs 1..129 shots and at most 32 cast members");
@@ -85,10 +79,7 @@ public final class StageplayScriptCompiler {
                 totalDuration += duration;
             }
             ObjectNode document = JSON.createObjectNode();
-            // Older recipes keep their original world/actor semantics through the same
-            // strict migration as saved canonical documents.
-            document.put(
-                    "version", version <= 3 ? 5 : version == 4 ? 6 : StageplayDocument.VERSION);
+            document.put("version", StageplayDocument.VERSION);
             document.set("name", required(script, "name"));
             document.put("width", integer(script, "width", 400));
             document.put("height", integer(script, "height", 224));
@@ -109,9 +100,7 @@ public final class StageplayScriptCompiler {
                         object(
                                         item,
                                         "cast member",
-                                        version == 1
-                                                ? new String[] {"id", "name", "gameId", "character"}
-                                                : new String[] {
+                                        new String[] {
                                                     "id",
                                                     "name",
                                                     "gameId",
@@ -123,7 +112,7 @@ public final class StageplayScriptCompiler {
                                 .deepCopy();
                 String id = text(role, "id");
                 if (roles.put(id, role) != null) throw new IOException("Duplicate cast id: " + id);
-                if (version >= 2 && bool(role, "puppet", true)) {
+                if (bool(role, "puppet", true)) {
                     var track =
                             puppets.addObject()
                                     .put("actorId", id)
@@ -142,7 +131,7 @@ public final class StageplayScriptCompiler {
             Map<String, ObjectNode> lastObjectPoses = new LinkedHashMap<>();
             Map<String, ArrayNode> objectCommands = new LinkedHashMap<>();
             ArrayNode worldCommands = JSON.createArrayNode();
-            if (version >= 5) {
+            {
                 ArrayNode objects = document.putArray("objectActors");
                 worldCommands = document.putArray("worldCommands");
                 ArrayNode objectCast = optionalArray(script, "objectCast");
@@ -198,31 +187,6 @@ public final class StageplayScriptCompiler {
                                 "objects",
                                 "objectActions",
                                 "worldCommands");
-                if (version < 5
-                        && (shot.has("objects")
-                                || shot.has("objectActions")
-                                || shot.has("worldCommands")))
-                    throw new IOException("Object directing requires screenplay version 5");
-                if (version == 1 && shot.has("actions"))
-                    throw new IOException("Puppet actions require screenplay version 2");
-                if (version < 3) {
-                    for (var cameraKey : optionalArray(shot, "camera"))
-                        if (cameraKey.has("follow"))
-                            throw new IOException("Camera following requires screenplay version 3");
-                    if (shot.has("actions")) {
-                        var actionTracks = object(shot.get("actions"), "actions");
-                        for (var track : actionTracks)
-                            for (var command : track) {
-                                String kind = command.path("kind").asText();
-                                if (command.has("target")
-                                        || command.has("condition")
-                                        || command.has("timeoutFrames")
-                                        || !Set.of("MOVE_TO", "STOP", "JUMP").contains(kind))
-                                    throw new IOException(
-                                            "Live directing fields require screenplay version 3");
-                            }
-                    }
-                }
                 String id = text(shot, "id");
                 if (!id.matches("[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}") || !shotIds.add(id))
                     throw new IOException("Invalid or duplicate shot id: " + id);
@@ -242,9 +206,7 @@ public final class StageplayScriptCompiler {
                                 .deepCopy();
                 defaults(set, "romSha1", "");
                 defaults(set, "levelProject", "");
-                if (version < 3 && set.has("worldPolicy"))
-                    throw new IOException("Live worlds require screenplay version 3");
-                defaults(set, "worldPolicy", version <= 3 ? "TERRAIN_ONLY" : "LIVE");
+                defaults(set, "worldPolicy", "LIVE");
                 if (offset == 0) {
                     document.set("set", set);
                     if (shot.has("transition"))
@@ -259,12 +221,10 @@ public final class StageplayScriptCompiler {
                                             "durationFrames",
                                             "id")
                                     : JSON.createObjectNode();
-                    if (version < 6 && transition.has("id"))
-                        throw new IOException("Transition identities require screenplay version 6");
                     var change = changes.addObject();
                     change.put(
                                     "id",
-                                    version >= 6 && transition.has("id")
+                                    transition.has("id")
                                             ? text(transition, "id")
                                             : id + ".change")
                             .put("frame", offset)
@@ -314,17 +274,16 @@ public final class StageplayScriptCompiler {
                         keys.add(hidden);
                     }
                 }
-                appendActions(shot, commands, id, offset, duration, version);
-                if (version >= 5) {
+                appendActions(shot, commands, id, offset, duration);
+                {
                     appendObjectTracks(shot, objectRoles, lastObjectPoses, id, offset, duration);
-                    appendObjectActions(shot, objectCommands, id, offset, duration, version);
+                    appendObjectActions(shot, objectCommands, id, offset, duration);
                     appendWorldCommands(
                             worldCommands,
                             optionalArray(shot, "worldCommands"),
                             id,
                             offset,
-                            duration,
-                            version);
+                            duration);
                 }
                 appendEvents(
                         captions,
@@ -334,7 +293,6 @@ public final class StageplayScriptCompiler {
                         offset,
                         duration,
                         text(set, "gameId"),
-                        version,
                         totalDuration);
                 appendEvents(
                         audio,
@@ -344,7 +302,6 @@ public final class StageplayScriptCompiler {
                         offset,
                         duration,
                         text(set, "gameId"),
-                        version,
                         totalDuration);
                 appendEvents(
                         effects,
@@ -354,7 +311,6 @@ public final class StageplayScriptCompiler {
                         offset,
                         duration,
                         text(set, "gameId"),
-                        version,
                         totalDuration);
                 appendDialogue(
                         dialogue,
@@ -364,7 +320,6 @@ public final class StageplayScriptCompiler {
                         duration,
                         document.path("width").intValue(),
                         document.path("height").intValue(),
-                        version,
                         totalDuration);
                 offset += duration;
             }
@@ -472,8 +427,7 @@ public final class StageplayScriptCompiler {
             Map<String, ArrayNode> tracks,
             String shotId,
             int offset,
-            int duration,
-            int version)
+            int duration)
             throws IOException {
         if (!shot.has("objectActions")) return;
         var actions = object(shot.get("objectActions"), "object actions");
@@ -503,15 +457,13 @@ public final class StageplayScriptCompiler {
                 }
                 command.put(
                         "id",
-                        version >= 6 && command.has("id")
+                        command.has("id")
                                 ? text(command, "id")
                                 : shotId
                                         + "."
                                         + actor
                                         + "."
-                                        + (command.has("id")
-                                                ? text(command, "id")
-                                                : "objectAction" + index));
+                                        + "objectAction" + index);
                 index++;
                 command.put("frame", offset + frame);
                 out.add(command);
@@ -520,7 +472,7 @@ public final class StageplayScriptCompiler {
     }
 
     private static void appendWorldCommands(
-            ArrayNode out, ArrayNode input, String shotId, int offset, int duration, int version)
+            ArrayNode out, ArrayNode input, String shotId, int offset, int duration)
             throws IOException {
         int index = 0, previous = -1;
         for (var item : input) {
@@ -548,13 +500,11 @@ public final class StageplayScriptCompiler {
             }
             command.put(
                     "id",
-                    version >= 6 && command.has("id")
+                    command.has("id")
                             ? text(command, "id")
                             : shotId
                                     + "."
-                                    + (command.has("id")
-                                            ? text(command, "id")
-                                            : "worldCommand" + index));
+                                    + "worldCommand" + index);
             index++;
             command.put("frame", offset + frame);
             out.add(command);
@@ -566,8 +516,7 @@ public final class StageplayScriptCompiler {
             Map<String, ArrayNode> tracks,
             String shotId,
             int offset,
-            int duration,
-            int version)
+            int duration)
             throws IOException {
         if (!shot.has("actions")) return;
         ObjectNode actions = object(shot.get("actions"), "puppet actions");
@@ -617,15 +566,13 @@ public final class StageplayScriptCompiler {
                     throw new IOException("Jump hold crosses a shot boundary");
                 command.put(
                         "id",
-                        version >= 6 && command.has("id")
+                        command.has("id")
                                 ? text(command, "id")
                                 : shotId
                                         + "."
                                         + actor
                                         + "."
-                                        + (command.has("id")
-                                                ? text(command, "id")
-                                                : "action" + index));
+                                        + "action" + index);
                 index++;
                 command.put("frame", offset + frame);
                 out.add(command);
@@ -687,7 +634,6 @@ public final class StageplayScriptCompiler {
             int duration,
             int width,
             int height,
-            int version,
             int totalDuration)
             throws IOException {
         int index = 0;
@@ -715,15 +661,15 @@ public final class StageplayScriptCompiler {
             if (start < 0
                     || start >= duration
                     || end <= start
-                    || end > (version >= 6 ? totalDuration - offset : duration))
+                    || end > (totalDuration - offset))
                 throw new IOException("Dialogue lies outside its shot start or scene end");
             cue.put(
                     "id",
-                    version >= 6 && cue.has("id")
+                    cue.has("id")
                             ? text(cue, "id")
                             : shot
                                     + "."
-                                    + (cue.has("id") ? text(cue, "id") : "dialogue" + index++));
+                                    + "dialogue" + index++);
             cue.put("startFrame", offset + start).put("endFrame", offset + end);
             defaults(cue, "speakerActor", "");
             defaults(cue, "speakerName", "");
@@ -798,7 +744,6 @@ public final class StageplayScriptCompiler {
             int offset,
             int duration,
             String gameId,
-            int version,
             int totalDuration)
             throws IOException {
         int index = 0;
@@ -837,9 +782,9 @@ public final class StageplayScriptCompiler {
                             .deepCopy();
             event.put(
                     "id",
-                    version >= 6 && event.has("id")
+                    event.has("id")
                             ? text(event, "id")
-                            : shot + "." + (event.has("id") ? text(event, "id") : kind + index++));
+                            : shot + "." + kind + index++);
             if (kind.equals("audio")) {
                 int frame = integer(event, "frame", -1);
                 if (frame < 0 || frame >= duration)
@@ -854,7 +799,7 @@ public final class StageplayScriptCompiler {
                 if (start < 0
                         || start >= duration
                         || end <= start
-                        || end > (version >= 6 ? totalDuration - offset : duration))
+                        || end > (totalDuration - offset))
                     throw new IOException(kind + " lies outside its shot start or scene end");
                 event.put("startFrame", offset + start).put("endFrame", offset + end);
                 if (kind.equals("caption")) {

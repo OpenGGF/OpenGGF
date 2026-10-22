@@ -14,6 +14,29 @@ import java.util.List;
  */
 public final class S3kNativeP2LockInstance extends AbstractObjectInstance
         implements ZeroArgRewindRecreatable {
+    @com.openggf.game.rewind.RewindTransient(reason = "Captured as stable PlayerRefIds in DirectedControlSnapshot")
+    private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
+            new com.openggf.level.objects.PlayerControlOwners();
+
+    private record DirectedControlSnapshot(
+            java.util.List<com.openggf.game.rewind.identity.PlayerRefId> ownedPlayers)
+            implements com.openggf.level.objects.PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
+
+    @Override
+    public com.openggf.level.objects.PerObjectRewindSnapshot captureRewindState(
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        return super.captureRewindState(context).withObjectSubclassExtra(
+                new DirectedControlSnapshot(directedControlPlayers.capture(context)));
+    }
+
+    @Override
+    public void restoreRewindState(com.openggf.level.objects.PerObjectRewindSnapshot snapshot,
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        directedControlPlayers.restore(snapshot.objectSubclassExtra() instanceof DirectedControlSnapshot saved
+                ? saved.ownedPlayers() : java.util.List.of(), context);
+    }
+
     private boolean lockIssued;
 
     public S3kNativeP2LockInstance() {
@@ -27,7 +50,10 @@ public final class S3kNativeP2LockInstance extends AbstractObjectInstance
             return;
         }
         if (!lockIssued) {
-            forEachSidekick(sprite -> sprite.setControlLocked(true));
+            forEachSidekick(sprite -> {
+                directedControlPlayers.add(sprite);
+                sprite.setControlLocked(true);
+            });
             if (nativeSidekick.getCpuController() != null) {
                 nativeSidekick.getCpuController().clearManualControlTimer();
                 nativeSidekick.getCpuController().clearController2LogicalLatch();
@@ -52,7 +78,20 @@ public final class S3kNativeP2LockInstance extends AbstractObjectInstance
         if (nativeSidekick.getCpuController() != null) {
             nativeSidekick.getCpuController().setController2Input(0, 0);
         }
+        directedControlPlayers.clear();
         ObjectLifetimeOps.expireDynamic(this);
+    }
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (AbstractPlayableSprite player : directedControlPlayers.players()) {
+            player.setControlLocked(false);
+            player.clearForcedInputMask();
+            player.clearLogicalInputState();
+            if (player.getCpuController() != null)
+                player.getCpuController().setController2Input(0, 0);
+        }
+        directedControlPlayers.clear();
     }
 
     private void forEachSidekick(java.util.function.Consumer<AbstractPlayableSprite> action) {

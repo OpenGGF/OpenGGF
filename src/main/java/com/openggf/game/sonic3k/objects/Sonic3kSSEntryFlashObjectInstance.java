@@ -47,6 +47,38 @@ import java.util.logging.Logger;
  * Reference: docs/skdisasm/sonic3k.asm lines 128384-128477
  */
 public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+    @com.openggf.game.rewind.RewindTransient(reason = "Captured as stable PlayerRefIds in DirectedControlSnapshot")
+    private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
+            new com.openggf.level.objects.PlayerControlOwners();
+
+    @com.openggf.game.rewind.RewindTransient(reason = "Captured as a stable PlayerRefId in DirectedControlSnapshot")
+    private AbstractPlayableSprite directedHiddenPlayer;
+
+    private record DirectedControlSnapshot(
+            java.util.List<com.openggf.game.rewind.identity.PlayerRefId> ownedPlayers,
+            com.openggf.game.rewind.identity.PlayerRefId hiddenPlayer)
+            implements com.openggf.level.objects.PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
+
+    @Override
+    public com.openggf.level.objects.PerObjectRewindSnapshot captureRewindState(
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        return super.captureRewindState(context).withObjectSubclassExtra(
+                new DirectedControlSnapshot(directedControlPlayers.capture(context), directedHiddenPlayer == null ? null
+                        : context.requireIdentityTable().encodePlayer(directedHiddenPlayer)));
+    }
+
+    @Override
+    public void restoreRewindState(com.openggf.level.objects.PerObjectRewindSnapshot snapshot,
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        directedControlPlayers.restore(snapshot.objectSubclassExtra() instanceof DirectedControlSnapshot saved
+                ? saved.ownedPlayers() : java.util.List.of(), context);
+        directedHiddenPlayer = snapshot.objectSubclassExtra() instanceof DirectedControlSnapshot saved
+                && saved.hiddenPlayer() != null ? (AbstractPlayableSprite) context.requireIdentityTable()
+                .resolvePlayer(saved.hiddenPlayer(), true) : null;
+    }
+
+
     private static final Logger LOGGER = Logger.getLogger(Sonic3kSSEntryFlashObjectInstance.class.getName());
 
     // AniRaw_SSEntryFlash: dc.b 0, 0, 0, 1, 2, 3|$40, 3, 2, 1, 0, $F4
@@ -118,6 +150,22 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
         this.transitionIntent = transitionIntent;
     }
 
+    void acceptCapturedPlayers(java.util.List<AbstractPlayableSprite> players, AbstractPlayableSprite hiddenPlayer) {
+        for (AbstractPlayableSprite player : players) directedControlPlayers.add(player);
+        directedHiddenPlayer = hiddenPlayer;
+    }
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (AbstractPlayableSprite player : directedControlPlayers.players()) {
+            com.openggf.sprites.playable.ObjectControlState.none().applyTo(player);
+            player.setObjectMappingFrameControl(false);
+        }
+        if (directedHiddenPlayer != null) directedHiddenPlayer.setHidden(false);
+        directedHiddenPlayer = null;
+        directedControlPlayers.clear();
+    }
+
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         if (ctx.spawn() == null) {
@@ -170,6 +218,7 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
                 && animIndex == RING_DELETE_ANIM_INDEX && !ringDeleteTriggered) {
             ringDeleteTriggered = true;
             if (parentRing != null) {
+                parentRing.transferCapturedPlayersTo(this);
                 parentRing.markForDeletion();
             }
         }

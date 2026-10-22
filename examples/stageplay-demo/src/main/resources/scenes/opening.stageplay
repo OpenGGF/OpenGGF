@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 7,
   "name": "A scene in Emerald Hill",
   "durationFrames": 900,
   "width": 320,
@@ -9,7 +9,8 @@
     "zone": 0,
     "act": 0,
     "romSha1": "",
-    "levelProject": ""
+    "levelProject": "",
+    "worldPolicy": "LIVE"
   },
   "actors": [
     {
@@ -112,21 +113,48 @@
       "x": 0,
       "y": 500,
       "zoom": 1,
-      "interpolation": "HOLD"
+      "interpolation": "HOLD",
+      "follow": {
+        "actors": [],
+        "deadZoneX": 0,
+        "deadZoneY": 0,
+        "lookAhead": 0,
+        "smoothing": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
     },
     {
       "frame": 480,
       "x": 0,
       "y": 500,
       "zoom": 1,
-      "interpolation": "SMOOTH"
+      "interpolation": "SMOOTH",
+      "follow": {
+        "actors": [],
+        "deadZoneX": 0,
+        "deadZoneY": 0,
+        "lookAhead": 0,
+        "smoothing": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
     },
     {
       "frame": 780,
       "x": 360,
       "y": 500,
       "zoom": 1,
-      "interpolation": "HOLD"
+      "interpolation": "HOLD",
+      "follow": {
+        "actors": [],
+        "deadZoneX": 0,
+        "deadZoneY": 0,
+        "lookAhead": 0,
+        "smoothing": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
     }
   ],
   "captions": [
@@ -185,6 +213,28 @@
       "soundId": 181,
       "asset": "",
       "gain": 1
+    }
+  ],
+  "cameraEffects": [],
+  "sceneChanges": [],
+  "dialogueTypers": [],
+  "dialogueSkins": [],
+  "dialogue": [],
+  "puppets": [],
+  "objectActors": [],
+  "worldCommands": [
+    {
+      "id": "clear-objects-0",
+      "frame": 0,
+      "kind": "CLEAR_OBJECTS",
+      "actorId": "",
+      "target": {
+        "layoutIndex": -1,
+        "objectId": 0,
+        "subtype": 0,
+        "offsetX": 0,
+        "offsetY": 0
+      }
     }
   ]
 }

@@ -74,6 +74,12 @@ public final class MhzMushroomParachuteObjectInstance extends AbstractObjectInst
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        if (grabbed) releaseGrabbedPlayer(PlayerSlot.P1, grabbedPlayer, false);
+        if (nativeP2Grabbed) releaseGrabbedPlayer(PlayerSlot.NATIVE_P2, nativeP2GrabbedPlayer, false);
+    }
+
+    @Override
     public int getX() {
         return motion.x;
     }

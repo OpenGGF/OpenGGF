@@ -20,6 +20,37 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 class TestCinematicScrollPublication {
     @Test
+    void tallDirectedBackgroundKeepsNativeRowsThenExtendsItsLastRowWithoutMovingForeground() {
+        TestEnvironment.resetAll();
+        GameServices.level().gameModule = new com.openggf.game.sonic2.Sonic2GameModule();
+        try {
+            var level = GameServices.level();
+            enableDirectedSnapshots(level);
+            level.parallaxManager.installContributedHandler(37,
+                    new com.openggf.game.sonic3k.scroll.SwScrlS3kDefault());
+            level.parallaxManager.update(37, 0, level.camera, 8);
+            var captured = LevelScrollPresentation.capture(level, AdvancedRenderFrameState.disabled());
+            var mask = captured.registers().arenaMask();
+            var nativeView = captured.forCinematicView(32, 10, 400, 224, mask);
+            var tall = captured.forCinematicView(32, 10, 400, 384, mask);
+            assertArrayEquals(nativeView.horizontal(), java.util.Arrays.copyOf(tall.horizontal(), 224),
+                    "The complete native logical image stays untouched");
+            var lower = tall.slice(0, 224, 400, 224, mask);
+            assertEquals(nativeView.registers().backgroundY(), lower.registers().backgroundY(),
+                    "Never advance the finite plane origin into another 256-pixel wrap");
+            assertEquals(tall.registers().foregroundY() + 224, lower.registers().foregroundY(),
+                    "The tall foreground remains continuous world space");
+            for (int row = 0; row < 160; row++) {
+                assertEquals(223, row + lower.backgroundLines()[row],
+                        "Each extra background row samples the last native line");
+                assertEquals((short) nativeView.horizontal()[223], (short) lower.horizontal()[row]);
+            }
+        } finally {
+            SessionManager.clear();
+        }
+    }
+
+    @Test
     void columnRemapIsCapturedWithNativeScrollAndRetainedAcrossPublicationAndRewind() {
         TestEnvironment.resetAll();
         // No level assembly occurs in this ROM-free fixture, so explicitly bind
@@ -67,7 +98,8 @@ class TestCinematicScrollPublication {
             assertEquals(17, directed.backgroundColumnsRemap().sourceX().get(17));
             var tile = directed.slice(17, 32, 63, 100, directed.registers().arenaMask());
             assertEquals(17, tile.backgroundColumnsRemap().sourceX().get(0));
-            assertEquals(32, tile.backgroundColumnsRemap().sourceYEndExclusive());
+            assertEquals(64, tile.backgroundColumnsRemap().sourceYEndExclusive(),
+                    "Background tiles retain the native source origin, so the native cutoff stays unchanged");
             assertEquals(1, tile.columnPhaseX());
             verifyNoInteractions(provider);
             level.parallaxManager.update(37, 0, camera, 9);

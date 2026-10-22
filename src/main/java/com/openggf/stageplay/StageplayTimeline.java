@@ -59,13 +59,16 @@ public final class StageplayTimeline {
         CameraKey camera = cameraKeys.get(cameraIndex);
         CameraKey nextCamera = cameraKeys.get(Math.min(cameraIndex + 1, cameraKeys.size() - 1));
         double weight = nextCamera.frame() == nextScene ? 0 : weight(camera.interpolation(), camera.frame(), nextCamera.frame(), frame);
-        // Imported v1-v5 shots keep their held zoom. Current native worlds use the
-        // same authored easing for all three camera coordinates; only the completed
-        // opaque world picture is resampled by StageplayWorldPresentation.
-        double zoom = StageplayWorldPolicies.legacy(set.worldPolicy()) ? camera.zoom()
-                : lerp(camera.zoom(), nextCamera.zoom(), weight);
-        CameraPose baseCamera = new CameraPose(lerp(camera.x(), nextCamera.x(), weight),
-                lerp(camera.y(), nextCamera.y(), weight), zoom);
+        // Keys describe a top-left origin, but interpolate their framing centres so
+        // a centred push-in keeps its subject still throughout the move.
+        double zoom = lerp(camera.zoom(), nextCamera.zoom(), weight);
+        double halfWidth = document.width() / 2.0, halfHeight = document.height() / 2.0;
+        double centreX = lerp(camera.x() + halfWidth / camera.zoom(),
+                nextCamera.x() + halfWidth / nextCamera.zoom(), weight);
+        double centreY = lerp(camera.y() + halfHeight / camera.zoom(),
+                nextCamera.y() + halfHeight / nextCamera.zoom(), weight);
+        CameraPose baseCamera = new CameraPose(centreX - halfWidth / zoom,
+                centreY - halfHeight / zoom, zoom);
         double shakeX = 0, shakeY = 0;
         for (CameraEffect effect : document.cameraEffects()) {
             if (frame < effect.startFrame() || frame >= effect.endFrame()) continue;
@@ -112,19 +115,19 @@ public final class StageplayTimeline {
             puppets = List.copyOf(puppets);
         }
 
-        /** Source-compatible version-three frame, without physics puppet observations. */
+        /** Pure frame without physics puppet observations. */
         public Frame(int frame, List<ActorPose> actors, CameraPose camera, List<Caption> captions,
                      SetSource set, TransitionPose transition, CameraPose baseCamera, List<DialoguePose> dialogue) {
             this(frame, actors, camera, captions, set, transition, baseCamera, dialogue, List.of());
         }
 
-        /** Source-compatible version-two frame, without dialogue. */
+        /** Pure frame without dialogue. */
         public Frame(int frame, List<ActorPose> actors, CameraPose camera, List<Caption> captions,
                      SetSource set, TransitionPose transition, CameraPose baseCamera) {
             this(frame, actors, camera, captions, set, transition, baseCamera, List.of());
         }
 
-        /** Legacy manually sampled frames use the renderer's document set. */
+        /** Pure layer samples may omit world data; runtime rendering requires native resolution. */
         public Frame(int frame, List<ActorPose> actors, CameraPose camera, List<Caption> captions) {
             this(frame, actors, camera, captions, null, NO_TRANSITION, camera);
         }

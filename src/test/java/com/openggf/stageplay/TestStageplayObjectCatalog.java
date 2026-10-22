@@ -1,18 +1,11 @@
 package com.openggf.stageplay;
 
-import com.openggf.game.mutators.ObjectHeadRole;
 import com.openggf.game.GameId;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.sonic3k.constants.S3kZoneSet;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.objects.AbstractObjectRegistry;
-import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRegistryCatalog;
-import com.openggf.level.objects.ObjectRenderManager;
-import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.ObjectSpriteSheet;
-import com.openggf.level.objects.PlaceholderObjectInstance;
-import com.openggf.level.render.PatternSpriteRenderer;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -20,7 +13,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.openggf.stageplay.StageplayObjectCatalog.*;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 class TestStageplayObjectCatalog {
     @Test
@@ -79,7 +71,7 @@ class TestStageplayObjectCatalog {
                             : catalog.context().zone() == Sonic3kZoneIds.ZONE_SSZ ? 11 : 10;
                     default -> throw new AssertionError(game);
                 };
-                var badniks = catalog.entries().stream().filter(e -> e.role() == Role.BADNIK).toList();
+                var badniks = catalog.entries().stream().filter(e -> e.role() == ObjectRegistryCatalog.Role.BADNIK).toList();
                 assertEquals(expected, badniks.size(), game + "/" + catalog.context());
                 for (var badnik : badniks) {
                     assertEquals(ObjectRegistryCatalog.FactoryStatus.REGISTERED, badnik.factoryStatus(), badnik.toString());
@@ -90,16 +82,16 @@ class TestStageplayObjectCatalog {
         var s3 = inspect("s3k", 0, 0).entries();
         var sk = inspect("s3k", Sonic3kZoneIds.ZONE_MHZ, 0).entries();
         assertEquals(9, java.util.stream.IntStream.range(0, 256)
-                .filter(id -> s3.get(id).role() == Role.BADNIK && sk.get(id).role() == Role.BADNIK).count());
+                .filter(id -> s3.get(id).role() == ObjectRegistryCatalog.Role.BADNIK && sk.get(id).role() == ObjectRegistryCatalog.Role.BADNIK).count());
         assertEquals(17, java.util.stream.IntStream.range(0, 256)
-                .filter(id -> s3.get(id).role() == Role.BADNIK && sk.get(id).role() != Role.BADNIK).count(),
+                .filter(id -> s3.get(id).role() == ObjectRegistryCatalog.Role.BADNIK && sk.get(id).role() != ObjectRegistryCatalog.Role.BADNIK).count(),
                 "boss, controller, cutscene and unsupported SKL aliases must not inherit S3KL badnik traits");
     }
 
     @Test
     void nativeArenaRestrictionComesFromProviderDeclarationInsteadOfBossRoleOrName() {
         var arena = entry("s2", 0, 1, 0x56);
-        assertEquals(Role.BOSS, arena.role());
+        assertEquals(ObjectRegistryCatalog.Role.BOSS, arena.role());
         assertEquals(ObjectRegistryCatalog.PositionRule.NATIVE_ARENA, arena.positionRule());
         assertEquals(NATIVE_ARENA_LABEL, arena.freeRestriction());
         assertTrue(arena.citation().contains("Obj56_Init"));
@@ -109,13 +101,9 @@ class TestStageplayObjectCatalog {
         assertTrue(arena.citation().contains("Ani_obj56_a"));
         assertEquals(Readiness.NEEDS_PREFLIGHT, arena.free().readiness(), "metadata does not execute native init");
         var anchored = entry("s2", 0, 1, 0xC5);
-        assertEquals(Role.BOSS, anchored.role());
+        assertEquals(ObjectRegistryCatalog.Role.BOSS, anchored.role());
         assertNotEquals(NATIVE_ARENA_LABEL, anchored.freeRestriction(), "boss role does not prove anchor rejection");
-        var instance = instance(7, ObjectHeadRole.BOSS);
-        var observed = observe(candidate(), instance, null, VisualMetadata.NONE);
-        assertEquals(Role.BOSS, observed.role());
-        assertNotEquals(NATIVE_ARENA_LABEL, observed.freeRestriction());
-        verify(instance, never()).update(anyInt(), any());
+
     }
 
     @Test
@@ -156,7 +144,7 @@ class TestStageplayObjectCatalog {
         for (var catalog : List.of(s2, s3k)) {
             var animal = catalog.auxiliaryEntries().getFirst();
             assertEquals("released-animal", animal.key());
-            assertEquals(Role.ANIMAL, animal.role());
+            assertEquals(ObjectRegistryCatalog.Role.ANIMAL, animal.role());
             assertEquals(Readiness.NEEDS_PREFLIGHT, animal.free().readiness());
             assertEquals(Readiness.NEEDS_PREFLIGHT, animal.pose().readiness());
             assertFalse(animal.routineCitations().isEmpty());
@@ -168,63 +156,12 @@ class TestStageplayObjectCatalog {
     }
 
     @Test
-    void visualReadinessRequiresCompleteNativeGraphAndEveryRomArtPart() {
-        var instance = instance(7, ObjectHeadRole.BADNIK);
-        var metadata = new VisualMetadata(Role.UNRESOLVED, List.of(
-                new VisualPart(List.of(), "body", 0), new VisualPart(List.of(0), "child", 1)),
-                true, Animation.ROM_SCRIPT, List.of("OwningNativeRoutine"));
-        var art = mock(ObjectRenderManager.class);
-        for (String key : List.of("body", "child")) {
-            var sheet = mock(ObjectSpriteSheet.class);
-            var renderer = mock(PatternSpriteRenderer.class);
-            when(sheet.getFrameCount()).thenReturn(2);
-            when(renderer.isReady()).thenReturn(true);
-            when(art.getSheet(key)).thenReturn(sheet);
-            when(art.getRenderer(key)).thenReturn(renderer);
-        }
-        var observed = observe(candidate(), instance, art, metadata);
-        assertEquals(Role.BADNIK, observed.role());
-        assertEquals(Readiness.AVAILABLE, observed.free().readiness());
-        assertEquals(Readiness.AVAILABLE, observed.puppet().readiness());
-        assertEquals(observed.puppet(), observed.pose());
-        assertEquals(List.of("body", "child"), observed.artKeys());
-        assertTrue(observed.pose().reasons().contains(Reason.VISUAL_ONLY));
-        when(art.getSheet("child")).thenReturn(null);
-        assertTrue(observe(candidate(), instance, art, metadata).pose().reasons().contains(Reason.ART_BANK_MISSING));
-        var incomplete = new VisualMetadata(Role.OBJECT, metadata.parts(), false, Animation.ROM_SCRIPT, List.of());
-        var incompleteObservation = observe(candidate(), instance, art, incomplete);
-        assertEquals(List.of(Reason.VISUAL_GRAPH_INCOMPLETE), incompleteObservation.pose().reasons());
-        assertEquals(Readiness.NEEDS_PREFLIGHT, incompleteObservation.pose().readiness());
-        verify(instance, never()).update(anyInt(), any());
-    }
-
-    @Test
-    void stateMachineAppearancesNeedExplicitHeldFrameAndCitationAndPlaceholderIsNotCastable() {
-        var metadata = new VisualMetadata(Role.OBJECT, List.of(new VisualPart(List.of(), "body", 0)),
-                true, Animation.HELD_OR_AUTHORED_FRAME, List.of());
-        var held = observe(candidate(), null, null, metadata);
-        assertEquals(Readiness.NEEDS_PREFLIGHT, held.pose().readiness());
-        assertTrue(held.pose().reasons().contains(Reason.STATE_MACHINE_ANIMATION_HELD));
-        assertTrue(held.pose().reasons().contains(Reason.ROUTINE_CITATION_MISSING));
-        var placeholder = mock(PlaceholderObjectInstance.class);
-        when(placeholder.headPresentationRole()).thenReturn(ObjectHeadRole.NONE);
-        assertEquals(List.of(Reason.FACTORY_RETURNED_PLACEHOLDER),
-                observe(candidate(), placeholder, null, VisualMetadata.NONE).free().reasons());
-        assertEquals(Readiness.UNAVAILABLE, observe(candidate(), placeholder, null, VisualMetadata.NONE).pose().readiness());
-        var emptyComplete = new VisualMetadata(Role.OBJECT, List.of(), true, Animation.UNDECLARED, List.of());
-        assertEquals(List.of(Reason.NO_VISUAL_OUTPUT), observe(candidate(), null, null, emptyComplete).pose().reasons());
-        assertThrows(IllegalArgumentException.class, () -> observe(candidate(), instance(8, ObjectHeadRole.NONE), null, VisualMetadata.NONE));
+    void stockMenusReuseTheirRomFreeContextCatalog() {
+        assertSame(inspect("s2", 0, 0), inspect("s2", 0, 0));
+        assertSame(entry("s2", 0, 0, 7), entry("s2", 0, 0, 7));
+        assertNotSame(inspect("s2", 0, 0), inspect("s2", 0, 1));
         assertThrows(IllegalArgumentException.class, () -> entry("s2", -1, 0, 7));
         assertThrows(IllegalArgumentException.class, () -> entry("s2", 0, 0, 256));
-    }
-
-    private static Entry candidate() { return inspect("test", registry(new AtomicInteger()), new Context(0, 0, "source")).entries().get(7); }
-
-    private static ObjectInstance instance(int id, ObjectHeadRole role) {
-        var instance = mock(ObjectInstance.class);
-        when(instance.getSpawn()).thenReturn(new ObjectSpawn(100, 200, id, 0, 0, false, 200));
-        when(instance.headPresentationRole()).thenReturn(role);
-        return instance;
     }
 
     private static AbstractObjectRegistry registry(AtomicInteger constructions) {

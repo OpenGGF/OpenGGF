@@ -14,7 +14,7 @@ public final class StageplayMovementIntent {
             double targetX,
             double urgency) {
         double speed = xSpeed / 256.0;
-        // Sonic_ChgJumpDir (s2.asm:37158-37175), shift at37161, doubles runAccel.
+        // Sonic_ChgJumpDir (s2.asm:37158-37175), shift at 37161, doubles runAccel.
         // Ground countersteering uses runDecel; arrival/braking margins are authoring policy.
         double brake = Math.max(1.0 / 256, (airborne ? 2 * runAccel : runDecel) / 256.0);
         double dx = targetX - centreX;

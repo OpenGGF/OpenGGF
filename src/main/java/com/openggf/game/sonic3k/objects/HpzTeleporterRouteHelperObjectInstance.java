@@ -42,6 +42,10 @@ import java.util.List;
  */
 public final class HpzTeleporterRouteHelperObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable {
+    @com.openggf.game.rewind.RewindTransient(reason = "Captured as stable PlayerRefIds in RewindExtra")
+    private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
+            new com.openggf.level.objects.PlayerControlOwners();
+
     static final int KNUCKLES_EXIT_CAMERA_Y = 0x240;
     static final int KNUCKLES_EXIT_PLAYER_X = 0xB00;
     static final int ALTAR_TELEPORTER_MIN_X = 0x1000;
@@ -68,7 +72,8 @@ public final class HpzTeleporterRouteHelperObjectInstance extends AbstractObject
 
     private record RewindExtra(boolean exitRequested, ObjectRefId teleporterId, boolean ending,
                                int[] stage, int[] playerTimer, int sequence, int sequenceTimer,
-                               int shake)
+                               int shake,
+                               java.util.List<com.openggf.game.rewind.identity.PlayerRefId> ownedPlayers)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public HpzTeleporterRouteHelperObjectInstance(ObjectSpawn spawn,
@@ -271,8 +276,26 @@ public final class HpzTeleporterRouteHelperObjectInstance extends AbstractObject
         return false;
     }
 
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (AbstractPlayableSprite player : directedControlPlayers.players()) {
+            ObjectControlState.none().applyTo(player);
+            player.setObjectMappingFrameControl(false);
+            player.setControlLocked(false);
+            player.clearForcedInputMask();
+            player.setForcedJumpPress(false);
+            player.clearLogicalInputState();
+            if (player.getCpuController() != null) {
+                player.getCpuController().setController2SignedLocked(false);
+                player.getCpuController().clearController2LogicalLatch();
+            }
+        }
+        directedControlPlayers.clear();
+    }
+
     /** {@code clr.w (a2)} / {@code st (a3)} on {@code Ctrl_1}/{@code Ctrl_2}. */
-    private static void lockController(AbstractPlayableSprite sprite, int index) {
+    private void lockController(AbstractPlayableSprite sprite, int index) {
+        directedControlPlayers.add(sprite);
         sprite.setControlLocked(true);
         sprite.clearLogicalInputState();
         sprite.setForcedInputMask(0);
@@ -293,7 +316,7 @@ public final class HpzTeleporterRouteHelperObjectInstance extends AbstractObject
                 .map(table -> table.encodeObject(teleporter)).orElse(null);
         return super.captureRewindState(context).withObjectSubclassExtra(
                 new RewindExtra(exitRequested, teleporterId, ending, stage.clone(),
-                        playerTimer.clone(), sequence, sequenceTimer, shake));
+                        playerTimer.clone(), sequence, sequenceTimer, shake, directedControlPlayers.capture(context)));
     }
 
     @Override
@@ -310,6 +333,7 @@ public final class HpzTeleporterRouteHelperObjectInstance extends AbstractObject
             sequence = extra.sequence();
             sequenceTimer = extra.sequenceTimer();
             shake = extra.shake();
+            directedControlPlayers.restore(extra.ownedPlayers(), context);
         }
     }
 

@@ -40,6 +40,15 @@ public final class SszCraneClaw extends AbstractSszCraneChild implements SszCran
         y = spawn.y();
     }
 
+    @Override
+    public void releasePlayersForVisualDirection() {
+        if ((phase == 4 || phase == 5)
+                && services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite player) {
+            SszCranePlayerRelease.releaseControl(player);
+            phase = 0;
+        }
+    }
+
     @Override public SszCraneClaw recreateForRewind(RewindRecreateContext context) {
         return new SszCraneClaw(context.spawn(), null);
     }

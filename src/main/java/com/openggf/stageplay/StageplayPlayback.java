@@ -62,7 +62,7 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
         if (boundActor.isEmpty()) return;
         // The isolated world supplies value poses only. The held interactive player is
         // still borrowed exclusively through CourseControl's visit-bound lease, so
-        // LIVE and cleared worlds use the same handover contract as legacy scenes.
+        // object clearing never changes the native handover contract.
         var actor = document.actors().stream().filter(value -> value.id().equals(boundActor)).findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Bound actor is missing"));
         if (!document.set().levelProject().isEmpty()

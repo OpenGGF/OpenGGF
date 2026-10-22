@@ -27,7 +27,7 @@ class TestStageplayObjectRoutePlanner {
     private static StageplayRouteResult plan(StageplayDocument document, StageplayRouteRequest request, RouteTerrainProbe probe) {
         return StageplayObjectRoutePlanner.plan(document, request, "exact-input-fingerprint", probe, () -> false);
     }
-    private static final class Terrain implements RouteTerrainProbe {
+    private static class Terrain implements RouteTerrainProbe {
         IntUnaryOperator heights = x -> 100;
         int gapLeft = Integer.MAX_VALUE, gapRight = Integer.MIN_VALUE;
         int wall = Integer.MAX_VALUE, ceiling = Integer.MIN_VALUE;
@@ -77,6 +77,54 @@ class TestStageplayObjectRoutePlanner {
         assertTrue(terrain.queries > result.path().size());
     }
 
+    @Test void smallStepsLiftBeforeTheRiserAndLowerAfterTheEdgeWithoutCuttingThroughTerrain() {
+        for (int change : new int[]{-6, 6}) {
+            var terrain = new Terrain() {
+                { heights = x -> x < 35 ? 100 : 100 + change; }
+                @Override public boolean clear(int left, int top, int right, int bottom, int path) {
+                    if (!super.clear(left, top, right, bottom, path)) return false;
+                    for (int x = left; x <= right; x++)
+                        if (bottom > heights.applyAsInt(x)) return false;
+                    return true;
+                }
+            };
+            var result = plan(scene(), request(60, 80 + change, .7), terrain);
+            assertEquals(VISUAL_TERRAIN, result.status(), result.message());
+            assertEquals(60, result.path().getLast().x());
+            assertEquals(80 + change, result.path().getLast().y());
+            assertTrue(result.objectCommands().size() >= 4, "A step retains its lift/cross/lower corners");
+            assertTrue(result.path().stream().anyMatch(p -> !p.grounded()),
+                    "Step clearance is visual movement above support, not native grounded physics");
+            for (var sample : result.path())
+                assertEquals("", StageplayObjectRoutePlanner.validateSample(terrain, FOOT, sample.x(), sample.y()));
+            double x = 20, y = 80;
+            int commandIndex = 0;
+            ObjectCommand active = null;
+            for (var sample : result.path()) {
+                while (commandIndex < result.objectCommands().size()
+                        && result.objectCommands().get(commandIndex).frame() <= sample.frame())
+                    active = result.objectCommands().get(commandIndex++);
+                assertNotNull(active);
+                assertEquals(ObjectCommandKind.MOVE_TO, active.kind());
+                double[] moved = StageplayObjectMotion.move(x, y, active.x(), active.y(), active.speed());
+                x = moved[0]; y = moved[1];
+                assertEquals(x, sample.x());
+                assertEquals(y, sample.y());
+            }
+        }
+    }
+
+    @Test void highStepsGapsAndWallsReportTheirActualLimits() {
+        var high = new Terrain(); high.heights = x -> x < 35 ? 100 : 90;
+        var gap = new Terrain(); gap.gapLeft = 35; gap.gapRight = 40;
+        var wall = new Terrain(); wall.wall = 38;
+        var headroom = new Terrain(); headroom.heights = x -> x < 35 ? 100 : 94; headroom.ceiling = 78;
+        assertTrue(plan(scene(), request(60, 74, 1), headroom).message().contains("step headroom"));
+        assertTrue(plan(scene(), request(60, 70, 1), high).message().contains("STEP_TOO_HIGH"));
+        assertTrue(plan(scene(), request(60, 80, 1), gap).message().contains("NO_FLOOR"));
+        assertTrue(plan(scene(), request(60, 80, 1), wall).message().contains("BLOCKED"));
+    }
+
     @Test void missingSupportSteepStepsWallsHeadroomAndAirborneAnchorsFailClearly() {
         var gap = new Terrain(); gap.gapLeft = 35; gap.gapRight = 40;
         var wall = new Terrain(); wall.wall = 38;
@@ -93,6 +141,26 @@ class TestStageplayObjectRoutePlanner {
         var airborne = new ObjectActor(actor.id(), actor.name(), actor.gameId(), 0, 0, actor.objectId(), 0, -1,
                 List.of(new ObjectKey(0, 20, 10, 0, -1, false, true, Interpolation.HOLD, ObjectMode.PUPPET)), List.of());
         assertTrue(plan(scene().withObjectActors(List.of(airborne)), request(60, 80, 1), new Terrain()).message().contains("START_NOT_GROUNDED"));
+    }
+
+    @Test void shotEntryObjectClearPrecedesRoleAdmissionAndKeepsTheSameVisualRoute() {
+        var original = scene();
+        var clear = new WorldCommand("entry-clear", 0, WorldCommandKind.CLEAR_OBJECTS, "", ObjectTarget.none());
+        var cleared = original.withWorldCommands(List.of(clear));
+        var expected = plan(original, request(60, 80, .7), new Terrain());
+        var result = plan(cleared, request(60, 80, .7), new Terrain());
+        assertEquals(VISUAL_TERRAIN, result.status(), result.message());
+        assertEquals(expected.path(), result.path());
+        assertEquals(expected.objectCommands(), result.objectCommands());
+        assertEquals(List.of(clear), result.candidate().worldCommands());
+        var removal = new WorldCommand("entry-remove", 0, WorldCommandKind.REMOVE_OBJECT,
+                "walker", ObjectTarget.none());
+        assertEquals(UNSUPPORTED, plan(original.withWorldCommands(List.of(removal)),
+                request(60, 80, .7), new Terrain()).status());
+        var laterClear = new WorldCommand("later-clear", 1, WorldCommandKind.CLEAR_OBJECTS,
+                "", ObjectTarget.none());
+        assertEquals(UNSUPPORTED, plan(original.withWorldCommands(List.of(laterClear)),
+                request(60, 80, .7), new Terrain()).status());
     }
 
     @Test void keysCastClearsAndBudgetsBoundTheWholeReplacementWindow() {
@@ -145,7 +213,7 @@ class TestStageplayObjectRoutePlanner {
     @Test void multipartVisualEnvelopeIsConservativeAndCannotFitThroughANarrowPassage() {
         var tile = new VisualTile(0, 0, false, false, false, -8, -8, 8, 8, false, 0, 0, 8);
         var distant = new VisualTile(0, 0, false, false, false, 40, -8, 8, 8, false, 0, 0, 8);
-        var template = new VisualTemplate(1, 0, 0, List.of(new VisualPart("root", 1, false, 0, 0,
+        var template = new VisualTemplate(0, 0, List.of(new VisualPart("root", 1, false, 0, 0,
                 List.of(new VisualPose(0, List.of(tile, distant), List.of())), List.of())),
                 List.of(new PatternPixels(0, 0, 0, 0)), List.of(new PaletteColors(java.util.Collections.nCopies(16, 0))), List.of());
         var footprint = StageplayObjectRoutePlanner.visualFootprint(template, 0);

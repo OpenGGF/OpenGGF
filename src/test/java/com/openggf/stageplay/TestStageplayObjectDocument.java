@@ -62,35 +62,13 @@ class TestStageplayObjectDocument {
         assertTrue(key(0, 100, ObjectMode.POSE).parts().isEmpty());
     }
 
-    @Test void exactVersionsOneThroughSixMigrateWithoutNewTracksOrPolicyChanges() throws Exception {
-        for (int version = 1; version <= 6; version++) {
+    @Test void onlyTheCurrentUnpublishedFormatIsAccepted() throws Exception {
+        for (int version = 1; version < VERSION; version++) {
             var old = (ObjectNode) JSON.readTree(StageplayStore.encode(scene()));
-            old.put("version", version); old.remove(List.of("objectActors", "worldCommands"));
-            if (version <= 4) {
-                ((ObjectNode) old.get("set")).remove("worldPolicy");
-                for (var camera : old.withArray("camera")) ((ObjectNode) camera).remove("follow");
-            }
-            if (version <= 3) old.remove("puppets");
-            if (version <= 2) old.remove(List.of("dialogueTypers", "dialogueSkins", "dialogue"));
-            if (version == 1) old.remove(List.of("cameraEffects", "sceneChanges"));
-            var migrated = StageplayStore.decode(JSON.writeValueAsBytes(old));
-            assertEquals(VERSION, migrated.version());
-            assertTrue(migrated.objectActors().isEmpty()); assertTrue(migrated.worldCommands().isEmpty());
-            assertEquals(version == 6 ? WorldPolicy.LIVE : version == 5 ? WorldPolicy.LEGACY_LIVE
-                    : WorldPolicy.LEGACY_TERRAIN_ONLY, migrated.set().worldPolicy());
-            for (String field : List.of("objectActors", "worldCommands")) {
-                var disguised = old.deepCopy(); disguised.putArray(field);
-                assertThrows(IOException.class, () -> StageplayStore.decode(JSON.writeValueAsBytes(disguised)));
-                disguised.putNull(field);
-                assertThrows(IOException.class, () -> StageplayStore.decode(JSON.writeValueAsBytes(disguised)));
-            }
-            assertEquals(migrated, StageplayStore.decode(StageplayStore.encode(migrated)));
+            old.put("version", version);
+            assertThrows(IOException.class, () -> StageplayStore.decode(JSON.writeValueAsBytes(old)));
         }
-        var d = scene();
-        var oldConstructor = new StageplayDocument(6, d.name(), d.durationFrames(), d.width(), d.height(),
-                d.set(), d.actors(), d.camera(), d.captions(), d.audio(), d.cameraEffects(), d.sceneChanges(),
-                d.dialogueTypers(), d.dialogueSkins(), d.dialogue(), d.puppets());
-        assertEquals(d, oldConstructor);
+        assertEquals(scene(), StageplayStore.decode(StageplayStore.encode(scene())));
     }
 
     @Test void strictObjectJsonRejectsMissingUnknownCoercedAndRuntimeIdentityFields() throws Exception {
@@ -139,8 +117,6 @@ class TestStageplayObjectDocument {
         assertThrows(IllegalArgumentException.class, () -> scene().withObjectActors(List.of(placed, duplicate)));
         assertThrows(IllegalArgumentException.class, () -> scene().withObjectActors(List.of(placed))
                 .withSet(new SetSource("s2", 1, 0, "", "", WorldPolicy.LIVE)));
-        assertThrows(IllegalArgumentException.class, () -> scene().withObjectActors(List.of(placed))
-                .withSet(new SetSource("s2", 0, 0, "", "", WorldPolicy.LEGACY_TERRAIN_ONLY)));
         var anchored = scene().withCamera(List.of(scene().camera().getFirst(), new CameraKey(100, 0, 0, 1, Interpolation.HOLD)))
                 .withSceneChanges(List.of(new SceneChange("next", 100, scene().set(), Transition.CUT, 0)));
         assertThrows(IllegalArgumentException.class, () -> anchored.withObjectActors(List.of(placed)));
@@ -164,7 +140,7 @@ class TestStageplayObjectDocument {
                 "remove", 1, WorldCommandKind.REMOVE_OBJECT, "missing", ObjectTarget.none()))));
     }
 
-    @Test void releasedAnimalsUseProviderIdentityAndKeepTheLegacyConstructorDefault() throws Exception {
+    @Test void releasedAnimalsUseProviderIdentityAndDefaultToLayoutObjects() throws Exception {
         var keys = List.of(key(0, 100, ObjectMode.FREE));
         assertEquals(ObjectSourceKind.LAYOUT_OBJECT, actor(keys, List.of()).sourceKind());
         var animal = new ObjectActor("animal", "Animal", "s2", 0, 0, 0, 0, -1, keys, List.of(), ObjectSourceKind.RELEASED_ANIMAL);

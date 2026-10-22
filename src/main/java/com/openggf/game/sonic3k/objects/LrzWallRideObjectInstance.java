@@ -101,11 +101,21 @@ public final class LrzWallRideObjectInstance extends AbstractObjectInstance
         this.leftward = (spawn.renderFlags() & 0x1) != 0;
     }
 
+    @Override
+    public void releasePlayersForVisualDirection() {
+        var query = services().playerQuery();
+        if (isRiding(true) && query.mainPlayerOrNull() instanceof AbstractPlayableSprite player)
+            releaseControl(player, true);
+        if (isRiding(false) && query.nativeP2OrNull() instanceof AbstractPlayableSprite player)
+            releaseControl(player, false);
+    }
+
     /**
      * {@code Obj_LRZWallRide} is installed from the SKL object pointer table at ROM
      * {@code $0004254A} (sonic3k.lst); its whole code block lies in one bank, so the high word
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} is {@code $0004}.
      */
+
     @Override
     public int romObjectCodePointerHighWord() {
         return 0x0004;
@@ -277,9 +287,15 @@ public final class LrzWallRideObjectInstance extends AbstractObjectInstance
         }
         // move.w #1,anim(a1) is a WORD write, so anim becomes 0 and prev_anim 1.
         player.setAnimationId(Sonic3kAnimationIds.WALK.id());
-        ObjectControlState.none().applyTo(player);
+        releaseControl(player, isPlayerOne);
         player.setXSpeed(player.getGSpeed());
         player.setYSpeed((short) 0);
+    }
+
+    private void releaseControl(AbstractPlayableSprite player, boolean playerOne) {
+        setRiding(playerOne, false);
+        player.setOnObject(false);
+        ObjectControlState.none().applyTo(player);
     }
 
     private void setInteractSlot(AbstractPlayableSprite player) {

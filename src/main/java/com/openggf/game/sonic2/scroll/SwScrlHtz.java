@@ -451,12 +451,11 @@ public class SwScrlHtz extends AbstractZoneScrollHandler implements ScrollProjec
                 output.setVscrollFactorBG((short) (nativeBgY + view.cameraY() - context.cameraY()));
                 output.fillPackedScrollWords(0, view.height(), M68KMath.negWord(view.cameraX() + shakeX),
                         M68KMath.negWord(view.cameraX() - bgXOffset + shakeX));
-            } else {
+    } else {
                 output.setVscrollFactorBG((short) nativeBgY);
                 composeNormal(output, new short[16], view.cameraX(), cloud);
-            }
-            return Sonic2ProjectionOutput.finish(context, view, output);
-        };
     }
-
+            return Sonic2ProjectionOutput.finish(context, view, output);
+    };
+    }
 }

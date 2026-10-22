@@ -271,8 +271,9 @@ public class SwScrlWfz extends AbstractZoneScrollHandler implements ScrollProjec
                     // reachable 224-line spans selected by BG Y & $7FF.
                     linesInCurrentSeg = composer.visibleLineCount(); // Won't run out again
                     bgScroll = M68KMath.negWord(layerScrollWord[LAYER_STATIC_BG]);
-                }
-            }
+    }
+
+}
         }
 
     }

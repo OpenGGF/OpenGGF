@@ -30,6 +30,16 @@ public final class FbzSpinningPoleObjectInstance
     super(s, "FBZSpinningPole");
     height = s.subtype() << 3;
   }
+  @Override
+  public void releasePlayersForVisualDirection() {
+    for (var entity : services().playerQuery().playersFor(
+        com.openggf.level.objects.ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+      if (entity instanceof AbstractPlayableSprite player) {
+        int slot = players.slot(player);
+        if (players.flag(slot, 0)) cleanup(player, slot);
+      }
+    }
+  }
   public void update(int vIntRunCount, PlayableEntity p) {
     services().playerQuery().visitPlayers(
         ObjectPlayerParticipationPolicy

@@ -10,28 +10,28 @@ import com.openggf.level.objects.StageplayObjectDirection.PlacementIdentity;
 import com.openggf.level.objects.StageplayObjectLoadPolicy;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /** Supplies an isolated authored set or cleared initial cast to the normal native load. */
 final class StageplayWorldModule extends DelegatingGameModule {
     private final Level authored;
-    private final boolean clearPlacements;
+    private final boolean initiallyCleared;
     private final Set<PlacementIdentity> suppressedPlacements;
     private List<ObjectSpawn> originalObjects = List.of();
 
-    StageplayWorldModule(GameModule base, Level authored, boolean clearPlacements) {
-        this(base, authored, clearPlacements, Set.of());
+    StageplayWorldModule(GameModule base, Level authored) {
+        this(base, authored, Set.of());
     }
 
-    StageplayWorldModule(
-            GameModule base,
-            Level authored,
-            boolean clearPlacements,
-            Set<PlacementIdentity> suppressedPlacements) {
+    StageplayWorldModule(GameModule base, Level authored, Set<PlacementIdentity> suppressedPlacements) {
+        this(base, authored, suppressedPlacements, false);
+    }
+
+    StageplayWorldModule(GameModule base, Level authored, Set<PlacementIdentity> suppressedPlacements,
+            boolean initiallyCleared) {
         super(base, "stageplay-native-world");
+        this.initiallyCleared = initiallyCleared;
         this.authored = authored;
-        this.clearPlacements = clearPlacements;
         this.suppressedPlacements = Set.copyOf(suppressedPlacements);
     }
 
@@ -45,8 +45,7 @@ final class StageplayWorldModule extends DelegatingGameModule {
     @Override
     public boolean isSidekickSuppressedForZone(int zoneId) {
         // The director owns this disposable world's authored roster. Native zone
-        // entry scenes must not remove its companions; legacy worlds use the
-        // undecorated module and keep their original suppression policy.
+        // entry scenes must not remove its companions.
         return false;
     }
 
@@ -54,33 +53,7 @@ final class StageplayWorldModule extends DelegatingGameModule {
     public Level transformDecodedLevel(Level source) {
         var transformed = super.transformDecodedLevel(source);
         originalObjects = List.copyOf(transformed.getObjects());
-        if (!clearPlacements && suppressedPlacements.isEmpty()) return transformed;
-        // Initial scene assembly, before gameplay publication: do not mutate the decoder's
-        // snapshot or install editor commands into a running world.
-        var isolated = MutableLevel.snapshot(transformed);
-        if (clearPlacements)
-            isolated.restoreObjectBackedRingState(
-                    new MutableLevel.ObjectBackedRingState(List.of(), List.of(), Map.of()));
-        else {
-            var state = isolated.snapshotObjectBackedRingState();
-            var placements =
-                    state.objects().stream()
-                            .filter(
-                                    spawn ->
-                                            spawn.layoutIndex() < 0
-                                                    || !suppressedPlacements.contains(
-                                                            PlacementIdentity.of(spawn)))
-                            .toList();
-            isolated.restoreObjectBackedRingState(
-                    new MutableLevel.ObjectBackedRingState(
-                            placements, state.rings(), state.mapping()));
-        }
-        // This transformed snapshot is the initial decoder input to both managers.
-        // Its editor mutation notifications would otherwise resync the placement
-        // lists on the first story tick, discarding explicitly admitted Free roles.
-        isolated.consumeObjectsDirty();
-        isolated.consumeRingsDirty();
-        return isolated;
+        return transformed;
     }
 
     List<ObjectSpawn> originalObjects() {
@@ -97,7 +70,7 @@ final class StageplayWorldModule extends DelegatingGameModule {
             return type.cast(
                     WorldSessionPolicyProvider.compose(
                             super.getGameService(WorldSessionPolicyProvider.class),
-                            world -> new StageplayObjectLoadPolicy(clearPlacements, suppressedPlacements),
+                            world -> new StageplayObjectLoadPolicy(initiallyCleared, suppressedPlacements),
                             world -> new com.openggf.level.objects.StageplayActivationPolicy()));
         return super.getGameService(type);
     }

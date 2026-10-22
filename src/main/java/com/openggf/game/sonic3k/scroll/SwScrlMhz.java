@@ -13,8 +13,9 @@ import com.openggf.level.scroll.compose.ScrollEffectComposer;
 /**
  * Mushroom Hill Zone scroll handler.
  *
- * <p>Ports the shared {@code MHZ_Deform} routine used by MHZ1 and normal MHZ2 play, plus the MHZ2
- * ship/end-boss H-int foreground overrides driven by event/runtime state.
+ * <p>Ports the shared {@code MHZ_Deform} routine used by MHZ1 and normal MHZ2
+ * play, plus the MHZ2 ship/end-boss H-int foreground overrides driven by
+ * event/runtime state.
  */
 public class SwScrlMhz extends AbstractZoneScrollHandler
         implements com.openggf.level.scroll.ScrollProjectionSource {
@@ -44,19 +45,19 @@ public class SwScrlMhz extends AbstractZoneScrollHandler
     }
 
     @Override
-    public void update(
-            int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter, int actId) {
+    public void update(int[] horizScrollBuf,
+                       int cameraX,
+                       int cameraY,
+                       int frameCounter,
+                       int actId) {
         resetScrollTracking();
         composer.reset();
 
         short fgScroll = negWord(cameraX);
         MhzZoneRuntimeState state = currentRuntimeState();
-        DeformOutputs outputs =
-                computeMhzDeform(
-                        adjustBgDuringLoop(cameraX),
-                        cameraY,
-                        state == null ? 0 : state.screenShakeOffset(),
-                        state != null && state.isBossAreaBackgroundDeformActive());
+        DeformOutputs outputs = computeMhzDeform(adjustBgDuringLoop(cameraX), cameraY,
+                state == null ? 0 : state.screenShakeOffset(),
+                state != null && state.isBossAreaBackgroundDeformActive());
         bgCameraX = outputs.bgCameraX();
         band1CameraX = outputs.band1CameraX();
         band2CameraX = outputs.band2CameraX();
@@ -76,7 +77,7 @@ public class SwScrlMhz extends AbstractZoneScrollHandler
         maxScrollOffset = composer.getMaxScrollOffset();
     }
 
-    private record LoopScrollState(boolean initialized, int actualX, int adjustedX) {}
+    private record LoopScrollState(boolean initialized, int actualX, int adjustedX) { }
 
     @Override
     public Object captureRewindState() {
@@ -84,15 +85,14 @@ public class SwScrlMhz extends AbstractZoneScrollHandler
     }
 
     /**
-     * MHZ1_BackgroundEvent rebases Camera_X_pos_copy and Events_fg_0 by $4200, but retains
-     * Events_fg_1, the loop-adjusted background accumulator. The engine replaces the act's scroll
-     * initialization, so carry the accumulator and rebase only its last physical-camera sample.
+     * MHZ1_BackgroundEvent rebases Camera_X_pos_copy and Events_fg_0 by $4200,
+     * but retains Events_fg_1, the loop-adjusted background accumulator. The
+     * engine replaces the act's scroll initialization, so carry the accumulator
+     * and rebase only its last physical-camera sample.
      */
     public Object captureForActTransition(int cameraOffsetX) {
-        return new LoopScrollState(
-                loopScrollInitialized,
-                (loopActualCameraX + cameraOffsetX) & 0xFFFF,
-                loopAdjustedCameraX);
+        return new LoopScrollState(loopScrollInitialized,
+                (loopActualCameraX + cameraOffsetX) & 0xFFFF, loopAdjustedCameraX);
     }
 
     @Override
@@ -146,12 +146,11 @@ public class SwScrlMhz extends AbstractZoneScrollHandler
         return loopAdjustedCameraX;
     }
 
-    private static DeformOutputs computeMhzDeform(
-            int cameraX, int cameraY, int screenShakeOffset, boolean bossAreaDeformActive) {
-        short bgY =
-                bossAreaDeformActive
-                        ? computeBgY(cameraY, 0x280, 0x180)
-                        : computeBgY(cameraY, 0, 0x76);
+    private static DeformOutputs computeMhzDeform(int cameraX, int cameraY, int screenShakeOffset,
+                                                   boolean bossAreaDeformActive) {
+        short bgY = bossAreaDeformActive
+                ? computeBgY(cameraY, 0x280, 0x180)
+                : computeBgY(cameraY, 0, 0x76);
         int adjustedCameraX = cameraX - screenShakeOffset;
         int d0 = ((short) adjustedCameraX) << 16;
         d0 >>= 1;
@@ -217,10 +216,8 @@ public class SwScrlMhz extends AbstractZoneScrollHandler
         // pillar ramp and its collision helpers. Widescreen moves only the
         // displayed origin; feeding that origin into the ROM math changes
         // the pillars' world positions and their collision surfaces.
-        int inset =
-                state.centerNativeArenaCamera()
-                        ? NativeViewportFraming.inset(GameServices.camera().getWidth())
-                        : 0;
+        int inset = state.centerNativeArenaCamera()
+                ? NativeViewportFraming.inset(GameServices.camera().getWidth()) : 0;
         int nativeCameraX = (cameraXCopy + inset) & 0xFFFF;
         int lineCount = Math.min(VISIBLE_LINES, 0x30);
         if ((short) (nativeCameraX - 0x4180) < -0x140) {
@@ -242,8 +239,7 @@ public class SwScrlMhz extends AbstractZoneScrollHandler
         publishEndBossArenaHelperXPositions(state, nativeCameraX, inset);
     }
 
-    private void publishEndBossArenaHelperXPositions(
-            MhzZoneRuntimeState state, int cameraX, int inset) {
+    private void publishEndBossArenaHelperXPositions(MhzZoneRuntimeState state, int cameraX, int inset) {
         int[] spikeX = new int[6];
         spikeX[0] = computeEndBossArenaHelperX(cameraX, 40, inset);
         spikeX[1] = spikeX[0];
@@ -251,8 +247,7 @@ public class SwScrlMhz extends AbstractZoneScrollHandler
         spikeX[3] = spikeX[2];
         spikeX[4] = computeEndBossArenaHelperX(cameraX, 17, inset);
         spikeX[5] = spikeX[4];
-        state.publishEndBossArenaHelperXPositions(
-                computeEndBossArenaHelperX(cameraX, 47, inset), spikeX);
+        state.publishEndBossArenaHelperXPositions(computeEndBossArenaHelperX(cameraX, 47, inset), spikeX);
     }
 
     private int computeEndBossArenaHelperX(int cameraX, int hScrollLine, int inset) {
@@ -295,8 +290,8 @@ public class SwScrlMhz extends AbstractZoneScrollHandler
         return S3kRuntimeStates.currentMhz(GameServices.zoneRuntimeRegistry()).orElse(null);
     }
 
-    private record DeformOutputs(
-            short bgCameraY, short bgCameraX, short band1CameraX, short band2CameraX) {}
+    private record DeformOutputs(short bgCameraY, short bgCameraX, short band1CameraX, short band2CameraX) {
+    }
 
     @Override
     public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(

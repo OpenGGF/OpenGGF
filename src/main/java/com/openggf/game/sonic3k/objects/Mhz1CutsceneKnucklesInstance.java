@@ -37,6 +37,29 @@ import java.util.List;
  */
 public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
+    @com.openggf.game.rewind.RewindTransient(reason = "Captured as stable PlayerRefIds in DirectedControlSnapshot")
+    private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
+            new com.openggf.level.objects.PlayerControlOwners();
+
+    private record DirectedControlSnapshot(
+            java.util.List<com.openggf.game.rewind.identity.PlayerRefId> ownedPlayers)
+            implements com.openggf.level.objects.PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
+
+    @Override
+    public com.openggf.level.objects.PerObjectRewindSnapshot captureRewindState(
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        return super.captureRewindState(context).withObjectSubclassExtra(
+                new DirectedControlSnapshot(directedControlPlayers.capture(context)));
+    }
+
+    @Override
+    public void restoreRewindState(com.openggf.level.objects.PerObjectRewindSnapshot snapshot,
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        directedControlPlayers.restore(snapshot.objectSubclassExtra() instanceof DirectedControlSnapshot saved
+                ? saved.ownedPlayers() : java.util.List.of(), context);
+    }
+
     private static final int ROUTINE_INIT = 0x00;
     private static final int ROUTINE_WAIT_PLAYER = 0x02;
     private static final int ROUTINE_WAIT_LANDING = 0x04;
@@ -137,6 +160,7 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
         if (playerEntity instanceof AbstractPlayableSprite playable) {
             playable.setDirection(Direction.RIGHT);
             playable.setRenderFlips(false, playable.getRenderVFlip());
+            directedControlPlayers.add(playable);
             playable.setControlLocked(true);
             playable.clearLogicalInputState();
             playable.clearForcedInputMask();
@@ -190,10 +214,21 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
         }
     }
 
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (AbstractPlayableSprite player : directedControlPlayers.players()) {
+            player.setControlLocked(false);
+            player.clearLogicalInputState();
+            player.clearForcedInputMask();
+        }
+        directedControlPlayers.clear();
+    }
+
     private void routineCleanup(PlayableEntity playerEntity) {
         workspaceRoutine = ROUTINE_INIT;
         if (playerEntity instanceof AbstractPlayableSprite playable) {
             playable.setControlLocked(false);
+            directedControlPlayers.remove(playable);
             playable.clearLogicalInputState();
             playable.clearForcedInputMask();
         }
@@ -312,6 +347,30 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
 
     private static final class Mhz1CutscenePlayerTwoStopper extends AbstractObjectInstance
             implements RewindRecreatable {
+        @com.openggf.game.rewind.RewindTransient(reason = "Captured as stable PlayerRefIds in DirectedControlSnapshot")
+        private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
+                new com.openggf.level.objects.PlayerControlOwners();
+
+        private record DirectedControlSnapshot(
+                java.util.List<com.openggf.game.rewind.identity.PlayerRefId> ownedPlayers)
+                implements com.openggf.level.objects.PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
+
+        @Override
+        public com.openggf.level.objects.PerObjectRewindSnapshot captureRewindState(
+                com.openggf.game.rewind.schema.RewindCaptureContext context) {
+            return super.captureRewindState(context).withObjectSubclassExtra(
+                    new DirectedControlSnapshot(directedControlPlayers.capture(context)));
+        }
+
+        @Override
+        public void restoreRewindState(com.openggf.level.objects.PerObjectRewindSnapshot snapshot,
+                com.openggf.game.rewind.schema.RewindCaptureContext context) {
+            super.restoreRewindState(snapshot, context);
+            directedControlPlayers.restore(snapshot.objectSubclassExtra() instanceof DirectedControlSnapshot saved
+                    ? saved.ownedPlayers() : java.util.List.of(), context);
+        }
+
+
         private Mhz1CutsceneKnucklesInstance owner;
         private boolean locked;
 
@@ -378,7 +437,15 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
         public void appendRenderCommands(List<GLCommand> commands) {
         }
 
-        private static void lockSidekick(AbstractPlayableSprite sidekick) {
+        @Override
+        public void releasePlayersForVisualDirection() {
+            for (AbstractPlayableSprite player : directedControlPlayers.players())
+                releaseSidekick(player);
+            directedControlPlayers.clear();
+        }
+
+        private void lockSidekick(AbstractPlayableSprite sidekick) {
+            directedControlPlayers.add(sidekick);
             sidekick.setControlLocked(true);
             sidekick.clearLogicalInputState();
             if (sidekick.getCpuController() != null) {
@@ -390,7 +457,8 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
             stopSidekick(sidekick);
         }
 
-        private static void releaseSidekick(AbstractPlayableSprite sidekick) {
+        private void releaseSidekick(AbstractPlayableSprite sidekick) {
+            directedControlPlayers.remove(sidekick);
             sidekick.setControlLocked(false);
             sidekick.clearLogicalInputState();
             if (sidekick.getCpuController() != null) {

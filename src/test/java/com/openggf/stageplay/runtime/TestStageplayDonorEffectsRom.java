@@ -278,7 +278,7 @@ class TestStageplayDonorEffectsRom {
         var cast=List.of(new Actor("lead","Lead","s3k","sonic",List.of(new ActorKey(0,96,655,0,-1,false,true,1,Interpolation.HOLD))),
                 new Actor("follower","Follower","s3k","sonic",List.of(new ActorKey(0,128,655,0,-1,false,true,1,Interpolation.HOLD))));
         return new StageplayDocument(VERSION,"Donor effects",90,320,224,
-                new SetSource("s2",0,0,"","",WorldPolicy.TERRAIN_ONLY),cast,
+                new SetSource("s2",0,0,"","",WorldPolicy.LIVE),cast,
                 List.of(new CameraKey(0,0,500,1,Interpolation.HOLD)),List.of(),List.of(),List.of(),List.of(),List.of(),List.of(),List.of(),
                 List.of(new PuppetTrack("lead",true,0,List.of(new PuppetCommand("jump",30,PuppetCommandKind.JUMP,0,0,0,8),
                                 new PuppetCommand("shield",45,PuppetCommandKind.JUMP,0,0,0,1))),

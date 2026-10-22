@@ -1,7 +1,5 @@
 package com.openggf.stageplay;
 
-import static com.openggf.stageplay.StageplayWorldPolicies.usesNativeWorld;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
@@ -11,49 +9,37 @@ import static com.openggf.stageplay.StageplayDocument.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestStageplayUnifiedWorldContract {
-    @Test void bothCurrentPoliciesAcceptTheSameMixedDonorCameraAndIntentContract() {
-        for (var policy : List.of(WorldPolicy.TERRAIN_ONLY, WorldPolicy.LIVE)) {
+    @Test void nativeWorldAcceptsMixedDonorCameraAndIntentContract() {
+        for (var policy : List.of(WorldPolicy.LIVE)) {
             var scene = scene(policy, "sets/scene.ogfproject");
             assertEquals(VERSION, scene.version());
-            assertTrue(usesNativeWorld(scene.set().worldPolicy()));
+            assertEquals(WorldPolicy.LIVE, scene.set().worldPolicy());
             assertEquals(448, scene.height());
             assertEquals(.75, scene.camera().getFirst().zoom());
             assertEquals(PuppetCommandKind.FLY_TO, scene.puppets().getFirst().commands().getFirst().kind());
         }
     }
 
-    @Test void versionFiveSourcesRetainTheirExecutionPoliciesAndLimits() throws Exception {
-        var legacy = new StageplayDocument(5, "Old", 120, 320, 224,
-                new SetSource("s2", 0, 0, "", "", WorldPolicy.TERRAIN_ONLY), List.of(),
-                List.of(new CameraKey(0, 0, 500, 1, Interpolation.HOLD)), List.of(), List.of(),
-                List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
-        assertEquals(WorldPolicy.LEGACY_TERRAIN_ONLY, legacy.set().worldPolicy());
-        var json = new ObjectMapper().readTree(StageplayStore.encode(legacy));
-        ((com.fasterxml.jackson.databind.node.ObjectNode) json).put("version", 5);
-        ((com.fasterxml.jackson.databind.node.ObjectNode) json).remove(List.of("objectActors", "worldCommands"));
-        ((com.fasterxml.jackson.databind.node.ObjectNode) json.get("set")).put("worldPolicy", "TERRAIN_ONLY");
-        assertEquals(legacy, StageplayStore.decode(new ObjectMapper().writeValueAsBytes(json)));
-        ((com.fasterxml.jackson.databind.node.ObjectNode) json.get("set")).put("worldPolicy", "LEGACY_TERRAIN_ONLY");
-        assertThrows(java.io.IOException.class, () -> StageplayStore.decode(new ObjectMapper().writeValueAsBytes(json)));
-
-        var live = new SetSource("s2", 0, 0, "", "", WorldPolicy.LIVE);
-        assertThrows(IllegalArgumentException.class, () -> new StageplayDocument(5, "Old", 120, 640, 448,
-                live, List.of(), List.of(new CameraKey(0, 0, 500, 1, Interpolation.HOLD)), List.of(), List.of(),
-                List.of(), List.of(), List.of(), List.of(), List.of(), List.of()));
-        assertThrows(IllegalArgumentException.class, () -> new StageplayDocument(5, "Old", 120, 320, 224,
-                live, List.of(), List.of(new CameraKey(0, 0, 500, 2, Interpolation.HOLD)), List.of(), List.of(),
-                List.of(), List.of(), List.of(), List.of(), List.of(), List.of()));
+    @Test void clearingObjectsIsAnOrdinaryWorldCommand() throws Exception {
+        var scene = scene(WorldPolicy.LIVE, "");
+        var cleared = scene.withWorldCommands(List.of(new WorldCommand("clear", 0,
+                WorldCommandKind.CLEAR_OBJECTS, "", ObjectTarget.none())));
+        assertEquals(scene.set(), cleared.set());
+        assertEquals(scene.camera(), cleared.camera());
+        assertEquals(scene.puppets(), cleared.puppets());
+        assertEquals(cleared, StageplayStore.decode(StageplayStore.encode(cleared)));
+        assertArrayEquals(new WorldPolicy[]{WorldPolicy.LIVE}, WorldPolicy.values());
     }
 
-    @Test void currentDocumentRoundTripPreservesLegacyAndNativePoliciesAndRejectsUnknownFields() throws Exception {
+    @Test void currentDocumentRoundTripHasOneNativePolicyAndRejectsUnknownFields() throws Exception {
         var scene = scene(WorldPolicy.LIVE, "");
         assertEquals(scene, StageplayStore.decode(StageplayStore.encode(scene)));
         var mapper = new ObjectMapper();
         var tree = (com.fasterxml.jackson.databind.node.ObjectNode) mapper.readTree(StageplayStore.encode(scene));
         tree.put("unknown", true);
         assertThrows(java.io.IOException.class, () -> StageplayStore.decode(mapper.writeValueAsBytes(tree)));
-        assertEquals(WorldPolicy.LEGACY_TERRAIN_ONLY, new SetSource("s2", 0, 0, "", "").worldPolicy(),
-                "Existing compiled five-argument callers retain detached semantics");
+        assertEquals(WorldPolicy.LIVE, new SetSource("s2", 0, 0, "", "").worldPolicy(),
+                "Five-argument sets use the same native world");
         assertEquals(WorldPolicy.LIVE, StageplayDocument.empty("s2", 0, 0, 0, 500, 640, 448).set().worldPolicy());
     }
 

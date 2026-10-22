@@ -92,6 +92,7 @@ public class SwScrlHpz extends SwScrlS3kDefault {
      * plain camera Y, which is also what an unshaken frame produces.
      */
     private short foregroundVscroll;
+
     private boolean presentationFarFraming;
     private int presentationShake;
 

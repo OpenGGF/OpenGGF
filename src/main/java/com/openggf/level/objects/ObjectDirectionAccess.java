@@ -21,13 +21,6 @@ public final class ObjectDirectionAccess {
         if (manager.stageplayActivation != null) manager.stageplayActivation.setWindows(windows);
     }
 
-    static boolean activationContains(ObjectServices services, int x, int y, int xMargin, int yMargin) {
-        var manager = services == null ? null : services.objectManager();
-        return manager != null && manager.stageplayActivation != null
-                && manager.stageplayActivation.contains(x, y, xMargin, yMargin);
-    }
-
-
     public static ObjectInstance createNative(ObjectManager manager, ObjectSpawn spawn) {
         return forManager(manager)
                 .explicitNativeAdmission(

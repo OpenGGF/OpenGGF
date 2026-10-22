@@ -8,22 +8,11 @@ import java.util.Objects;
 
 /** Immutable scroll registers/buffers paired with a prepared sprite table. */
 final class LevelScrollPresentation {
-    record Registers(
-            int cameraX,
-            int cameraY,
-            int cameraXWithShake,
-            short foregroundY,
-            short backgroundY,
-            int backgroundX,
-            int backgroundPeriod,
-            boolean heatHaze,
-            boolean perLineForeground,
-            boolean reversePlanes,
-            boolean overrideForegroundY,
-            short overriddenForegroundY,
-            boolean overrideBackgroundY,
-            short overriddenBackgroundY,
-            ArenaMaskState arenaMask) {}
+    record Registers(int cameraX, int cameraY, int cameraXWithShake,
+                     short foregroundY, short backgroundY, int backgroundX, int backgroundPeriod,
+                     boolean heatHaze, boolean perLineForeground, boolean reversePlanes,
+                     boolean overrideForegroundY, short overriddenForegroundY,
+                     boolean overrideBackgroundY, short overriddenBackgroundY, ArenaMaskState arenaMask) { }
 
     private final BackgroundBuildParameters backgroundBuild;
     private final Registers registers;
@@ -39,13 +28,8 @@ final class LevelScrollPresentation {
                     com.openggf.level.scroll.ScrollSpritePosition>
             spritePositions;
 
-    LevelScrollPresentation(
-            Registers registers,
-            int[] horizontal,
-            short[] backgroundLines,
-            short[] backgroundColumns,
-            short[] foregroundColumns,
-            short[] overrideColumns) {
+    LevelScrollPresentation(Registers registers, int[] horizontal, short[] backgroundLines,
+                            short[] backgroundColumns, short[] foregroundColumns, short[] overrideColumns) {
         this(
                 registers,
                 horizontal,
@@ -97,27 +81,13 @@ final class LevelScrollPresentation {
     static LevelScrollPresentation capture(LevelManager level, AdvancedRenderFrameState mode) {
         var camera = level.camera;
         var scroll = level.parallaxManager;
-        return new LevelScrollPresentation(
-                new Registers(
-                        camera.getX(),
-                        camera.getY(),
-                        camera.getXWithShake(),
-                        scroll.getVscrollFactorFG(),
-                        scroll.getVscrollFactorBG(),
-                        scroll.getBgCameraX(),
-                        scroll.getBgPeriodWidth(),
-                        mode.enableForegroundHeatHaze(),
-                        mode.enablePerLineForegroundScroll(),
-                        mode.reversePlaneAssignment(),
-                        mode.hasForegroundVScrollOverride(),
-                        mode.foregroundVScrollOverride(),
-                        mode.hasBackgroundVScrollOverride(),
-                        mode.backgroundVScrollOverride(),
-                        level.spritePresentationRenderer().boundsMask.sample()),
-                scroll.getHScrollForShader(),
-                scroll.getVScrollPerLineBGForShader(),
-                scroll.getVScrollPerColumnBGForShader(),
-                scroll.getVScrollPerColumnFGForShader(),
+        return new LevelScrollPresentation(new Registers(camera.getX(), camera.getY(), camera.getXWithShake(),
+                scroll.getVscrollFactorFG(), scroll.getVscrollFactorBG(), scroll.getBgCameraX(),
+                scroll.getBgPeriodWidth(), mode.enableForegroundHeatHaze(), mode.enablePerLineForegroundScroll(),
+                mode.reversePlaneAssignment(), mode.hasForegroundVScrollOverride(), mode.foregroundVScrollOverride(),
+                mode.hasBackgroundVScrollOverride(), mode.backgroundVScrollOverride(), level.spritePresentationRenderer().boundsMask.sample()),
+                scroll.getHScrollForShader(), scroll.getVScrollPerLineBGForShader(),
+                scroll.getVScrollPerColumnBGForShader(), scroll.getVScrollPerColumnFGForShader(),
                 mode.foregroundPerColumnVScrollOverride(),
                 scroll.projectionPhase(),
                 0,
@@ -128,10 +98,9 @@ final class LevelScrollPresentation {
                 scroll.backgroundBuildParameters());
     }
 
-    /**
-     * Capture the bounds in the same generation as the displayed camera and sprite table. ROM
-     * camera bounds remain gameplay-owned; this only hides newly exposed wide pixels. No zone ID,
-     * boss flag or explicit mask activation decides whether an edge is visible.
+    /** Capture the bounds in the same generation as the displayed camera and sprite table.
+     * ROM camera bounds remain gameplay-owned; this only hides newly exposed wide pixels.
+     * No zone ID, boss flag or explicit mask activation decides whether an edge is visible.
      */
     static ArenaMaskState captureArenaMask(LevelManager level) {
         var camera = level.camera;
@@ -139,10 +108,8 @@ final class LevelScrollPresentation {
         var rules = level.gameModule == null ? null : level.gameModule.getRules().playerMovement();
         if (rules != null && !rules.levelBoundaryRightStrict()) {
             var state = level.boundaryGameState();
-            boolean locked =
-                    rules.levelBoundaryLockUsesScreenLockFlag()
-                            ? state.isScreenLocked()
-                            : state.isBossFightActive();
+            boolean locked = rules.levelBoundaryLockUsesScreenLockFlag()
+                    ? state.isScreenLocked() : state.isBossFightActive();
             // S1/S2 permit another $40 pixels in ordinary play. Do not conceal
             // playable space merely because the camera itself stops earlier.
             if (!locked && !state.isEndOfLevelActive()) {
@@ -150,28 +117,18 @@ final class LevelScrollPresentation {
             }
         }
         var bounds = LevelBoundsMaskGeometry.select(level, currentMaxX);
-        return ArenaMaskState.fromBounds(
-                bounds.minX(),
-                bounds.maxX(),
-                camera.getXWithShake(),
-                camera.getWidth(),
-                level.objectManager == null
-                        ? level.frameCounter
-                        : level.objectManager.getFrameCounter(),
-                level.zoneFeatureProvider != null
-                        && level.zoneFeatureProvider.foregroundWrapsHorizontally());
+        return ArenaMaskState.fromBounds(bounds.minX(), bounds.maxX(), camera.getXWithShake(),
+                camera.getWidth(), level.objectManager == null ? level.frameCounter : level.objectManager.getFrameCounter(),
+                level.zoneFeatureProvider != null && level.zoneFeatureProvider.foregroundWrapsHorizontally());
     }
 
     BackgroundBuildParameters backgroundBuildParameters() {
         return backgroundBuild;
     }
 
-    Registers registers() {
-        return registers;
-    }
+    Registers registers() { return registers; }
 
-    /**
-     * Reframe the foreground without rerunning native deformation or advancing its owners.
+    /** Reframe the foreground without rerunning native deformation or advancing its owners.
      * Background registers keep their native phase (including deliberately stationary backgrounds).
      * Column scrolls are deltas, so only the scalar/override origin moves vertically.
      */
@@ -182,32 +139,15 @@ final class LevelScrollPresentation {
             short foreground = (short) ((short) (reframed[i] >>> 16) - dx);
             reframed[i] = (foreground << 16) | (reframed[i] & 0xffff);
         }
-        var view =
-                new Registers(
-                        x,
-                        y,
-                        registers.cameraXWithShake() + dx,
-                        (short) (registers.foregroundY() + dy),
-                        registers.backgroundY(),
-                        registers.backgroundX(),
-                        registers.backgroundPeriod(),
-                        registers.heatHaze(),
-                        registers.perLineForeground(),
-                        registers.reversePlanes(),
-                        registers.overrideForegroundY(),
-                        registers.overrideForegroundY()
-                                ? (short) (registers.overriddenForegroundY() + dy)
-                                : registers.overriddenForegroundY(),
-                        registers.overrideBackgroundY(),
-                        registers.overriddenBackgroundY(),
-                        mask);
-        return new LevelScrollPresentation(
-                view,
-                reframed,
-                backgroundLines,
-                backgroundColumns,
-                foregroundColumns,
-                overrideColumns);
+        var view = new Registers(x, y, registers.cameraXWithShake() + dx,
+                (short) (registers.foregroundY() + dy), registers.backgroundY(),
+                registers.backgroundX(), registers.backgroundPeriod(), registers.heatHaze(),
+                registers.perLineForeground(), registers.reversePlanes(), registers.overrideForegroundY(),
+                registers.overrideForegroundY() ? (short) (registers.overriddenForegroundY() + dy)
+                        : registers.overriddenForegroundY(),
+                registers.overrideBackgroundY(), registers.overriddenBackgroundY(), mask);
+        return new LevelScrollPresentation(view, reframed, backgroundLines, backgroundColumns,
+                foregroundColumns, overrideColumns);
     }
 
     /** Samples a frozen native phase once for the complete director raster. */
@@ -221,6 +161,22 @@ final class LevelScrollPresentation {
         if (output.horizontal().length != height) {
             throw new IllegalStateException(
                     "Directed scroll phase returned the wrong raster height");
+        }
+        int[] directedWords = output.horizontal();
+        short[] directedLines = output.backgroundLines();
+        if (height > 224 && !registers.reversePlanes()) {
+            // Native presentation is always 224 logical backdrop rows, even on
+            // tall displays. Extra world rows extend its bottom edge instead of
+            // revealing another turn of the finite VDP plane. Foreground rows
+            // remain independent and retain the full directed raster.
+            short[] extendedLines = new short[height];
+            for (int row = 0; row < height; row++) {
+                int nativeRow = Math.min(row, 223);
+                int nativeWord = directedWords[nativeRow];
+                directedWords[row] = (directedWords[row] & 0xffff0000) | (nativeWord & 0xffff);
+                extendedLines[row] = (short) ((directedLines == null ? 0 : directedLines[nativeRow]) + nativeRow - row);
+            }
+            directedLines = extendedLines;
         }
         int dy = y - registers.cameraY();
         var directed =
@@ -244,8 +200,8 @@ final class LevelScrollPresentation {
                         mask);
         return new LevelScrollPresentation(
                 directed,
-                output.horizontal(),
-                output.backgroundLines(),
+                directedWords,
+                directedLines,
                 output.backgroundColumns(),
                 output.foregroundColumns(),
                 shiftedColumns(overrideColumns, 0, (width + 15) / 16, 0),
@@ -280,7 +236,7 @@ final class LevelScrollPresentation {
                         registers.cameraY() + top,
                         registers.cameraXWithShake() + left,
                         (short) (registers.foregroundY() + top),
-                        (short) (registers.backgroundY() + top),
+                        registers.backgroundY(),
                         registers.backgroundX() == Integer.MIN_VALUE
                                 ? Integer.MIN_VALUE
                                 : registers.backgroundX() + left,
@@ -291,12 +247,12 @@ final class LevelScrollPresentation {
                         registers.overrideForegroundY(),
                         (short) (registers.overriddenForegroundY() + top),
                         registers.overrideBackgroundY(),
-                        (short) (registers.overriddenBackgroundY() + top),
+                        registers.overriddenBackgroundY(),
                         mask);
         return new LevelScrollPresentation(
                 view,
                 words,
-                slicedLines(backgroundLines, top, height),
+                backgroundTileLines(top, height),
                 shiftedColumns(backgroundColumns, left / 16, columns, 0),
                 shiftedColumns(foregroundColumns, left / 16, columns, 0),
                 shiftedColumns(overrideColumns, left / 16, columns, 0),
@@ -322,18 +278,6 @@ final class LevelScrollPresentation {
             int left, int top, int width) {
         if (columnsRemap == null) return null;
         int cutoff = columnsRemap.sourceYEndExclusive();
-        if (cutoff != Integer.MAX_VALUE) {
-            int originalOrigin =
-                    Math.floorDiv(registers.backgroundY(), LevelConstants.CHUNK_HEIGHT)
-                            * LevelConstants.CHUNK_HEIGHT;
-            int tileOrigin =
-                    Math.floorDiv(
-                                    (short) (registers.backgroundY() + top),
-                                    LevelConstants.CHUNK_HEIGHT)
-                            * LevelConstants.CHUNK_HEIGHT;
-            cutoff -= tileOrigin - originalOrigin;
-            if (cutoff <= 0) return null;
-        }
         return new com.openggf.game.internal.BackgroundColumnRemap.Columns(
                 sliceView(columnsRemap.sourceX(), left, width),
                 sliceView(columnsRemap.yOffsets(), left, width),
@@ -364,6 +308,14 @@ final class LevelScrollPresentation {
         return columnPhaseX;
     }
 
+    private short[] backgroundTileLines(int top, int height) {
+        if (top == 0) return slicedLines(backgroundLines, 0, height);
+        short[] result = slicedLines(backgroundLines, top, height);
+        if (result == null) result = new short[height];
+        for (int row = 0; row < height; row++) result[row] += (short) top;
+        return result;
+    }
+
     private static short[] slicedLines(short[] source, int first, int count) {
         if (source == null || source.length == 0) return null;
         short[] result = new short[count];
@@ -376,44 +328,26 @@ final class LevelScrollPresentation {
         if (result != null) for (int i = 0; i < result.length; i++) result[i] += (short) offset;
         return result;
     }
-
-    int[] horizontal() {
-        return horizontal.clone();
-    }
-
-    short[] backgroundLines() {
-        return copy(backgroundLines);
-    }
-
-    short[] backgroundColumns() {
-        return copy(backgroundColumns);
-    }
-
-    short[] foregroundColumns() {
-        return copy(foregroundColumns);
-    }
+    int[] horizontal() { return horizontal.clone(); }
+    short[] backgroundLines() { return copy(backgroundLines); }
+    short[] backgroundColumns() { return copy(backgroundColumns); }
+    short[] foregroundColumns() { return copy(foregroundColumns); }
 
     AdvancedRenderFrameState renderMode() {
         var builder = AdvancedRenderFrameState.builder();
         if (registers.heatHaze()) builder.enableForegroundHeatHaze();
         if (registers.perLineForeground()) builder.enablePerLineForegroundScroll();
         if (registers.reversePlanes()) builder.reversePlaneAssignment();
-        if (registers.overrideForegroundY())
-            builder.setForegroundVScrollOverride(registers.overriddenForegroundY());
-        if (registers.overrideBackgroundY())
-            builder.setBackgroundVScrollOverride(registers.overriddenBackgroundY());
+        if (registers.overrideForegroundY()) builder.setForegroundVScrollOverride(registers.overriddenForegroundY());
+        if (registers.overrideBackgroundY()) builder.setBackgroundVScrollOverride(registers.overriddenBackgroundY());
         builder.setForegroundPerColumnVScrollOverride(copy(overrideColumns));
         return builder.build();
     }
 
-    private static short[] copy(short[] source) {
-        return source == null ? null : source.clone();
-    }
+    private static short[] copy(short[] source) { return source == null ? null : source.clone(); }
 
-    @Override
-    public boolean equals(Object other) {
-        return other instanceof LevelScrollPresentation state
-                && registers.equals(state.registers)
+    @Override public boolean equals(Object other) {
+        return other instanceof LevelScrollPresentation state && registers.equals(state.registers)
                 && Arrays.equals(horizontal, state.horizontal)
                 && Arrays.equals(backgroundLines, state.backgroundLines)
                 && Arrays.equals(backgroundColumns, state.backgroundColumns)
@@ -421,14 +355,8 @@ final class LevelScrollPresentation {
                 && Arrays.equals(overrideColumns, state.overrideColumns);
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(
-                registers,
-                Arrays.hashCode(horizontal),
-                Arrays.hashCode(backgroundLines),
-                Arrays.hashCode(backgroundColumns),
-                Arrays.hashCode(foregroundColumns),
-                Arrays.hashCode(overrideColumns));
+    @Override public int hashCode() {
+        return Objects.hash(registers, Arrays.hashCode(horizontal), Arrays.hashCode(backgroundLines),
+                Arrays.hashCode(backgroundColumns), Arrays.hashCode(foregroundColumns), Arrays.hashCode(overrideColumns));
     }
 }

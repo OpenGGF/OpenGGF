@@ -1,5 +1,11 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
+
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.save.SaveReason;
@@ -63,6 +69,13 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     private int postButtonMaxYAccumulator;
     private int postResultsControlRestoreDelay = -1;
 
+    @RewindTransient(reason = "Acquired player identities are captured by control extras, including the embedded boss owner.")
+    private final PlayerControlOwners objectControlOwners = new PlayerControlOwners();
+    @RewindTransient(reason = "Acquired player identities are captured by control extras, including the embedded boss owner.")
+    private final PlayerControlOwners inputLockOwners = new PlayerControlOwners();
+    @RewindTransient(reason = "Acquired player identities are captured by control extras, including the embedded boss owner.")
+    private final PlayerControlOwners forcedInputOwners = new PlayerControlOwners();
+
     public Aiz2BossEndSequenceController(int arenaMaxX, int arenaBaseY) {
         super(new ObjectSpawn(arenaMaxX, arenaBaseY, Sonic3kObjectIds.EGG_CAPSULE, 0, 0, false, 0),
                 "AIZ2BossEndSequence");
@@ -73,6 +86,48 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     Aiz2BossEndSequenceController(ObjectSpawn spawn) {
         this(spawn.x(), spawn.y());
     }
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : objectControlOwners.players()) {
+            ObjectControlState.none().applyTo(player);
+            player.setForcedAnimationId(-1);
+        }
+        for (var player : inputLockOwners.players()) player.setControlLocked(false);
+        for (var player : forcedInputOwners.players()) {
+            player.clearForcedInputMask();
+            player.setForceInputRight(false);
+        }
+        objectControlOwners.clear();
+        inputLockOwners.clear();
+        forcedInputOwners.clear();
+    }
+
+    ControlOwners captureControlOwners(RewindCaptureContext context) {
+        return new ControlOwners(objectControlOwners.capture(context), inputLockOwners.capture(context), forcedInputOwners.capture(context));
+    }
+
+    void restoreControlOwners(ControlOwners state, RewindCaptureContext context) {
+        objectControlOwners.restore(state.object(), context);
+        inputLockOwners.restore(state.input(), context);
+        forcedInputOwners.restore(state.forced(), context);
+    }
+
+    record ControlOwners(List<PlayerRefId> object, List<PlayerRefId> input, List<PlayerRefId> forced) { }
+
+    @Override
+    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
+        return super.captureRewindState(context).withObjectSubclassExtra(new ControlExtra(captureControlOwners(context)));
+    }
+
+    @Override
+    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        restoreControlOwners(snapshot.objectSubclassExtra() instanceof ControlExtra extra ? extra.owners()
+                : new ControlOwners(List.of(), List.of(), List.of()), context);
+    }
+
+    private record ControlExtra(ControlOwners owners) implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
 
     void configureArena(int arenaMaxX, int arenaBaseY) {
         this.arenaMaxX = arenaMaxX;
@@ -175,6 +230,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
             pendingLookUpInputAfterStop = false;
             player.setForceInputRight(false);
             player.clearForcedInputMask();
+            forcedInputOwners.add(player);
             player.setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
         }
 
@@ -183,6 +239,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
             int stopX = arenaMaxX + PLAYER_STOP_X_OFFSET;
             if (player.getCentreX() < stopX) {
                 // ROM: loc_69526 — force right until x_pos >= threshold
+                inputLockOwners.add(player);
                 player.setControlLocked(true);
                 forceRightLogicalInput(player);
                 setSidekickControlLocked(player, true);
@@ -191,6 +248,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
 
             // ROM: loc_69546 — Stop_Object and spawn Knuckles
             knucklesSpawned = true;
+            inputLockOwners.add(player);
             player.setControlLocked(true);
             player.setXSpeed((short) 0);
             player.setYSpeed((short) 0);
@@ -214,6 +272,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
             // Retain the cleanup for standalone controller callers which only
             // publish the flag, without a live button owner.
             pendingButtonInputRelease = true;
+            inputLockOwners.remove(player);
             player.setControlLocked(false);
             services().camera().setMaxYTarget((short) POST_BUTTON_CAMERA_MAX_Y_TARGET);
             postButtonMaxYReleaseActive = true;
@@ -257,6 +316,8 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     }
 
     private void holdEndingPose(AbstractPlayableSprite player) {
+        objectControlOwners.add(player);
+        inputLockOwners.add(player);
         player.setControlLocked(true);
         player.clearForcedInputMask();
         player.setForceInputRight(false);
@@ -281,6 +342,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
                 continue;
             }
             ObjectControlState.none().applyTo(sprite);
+            objectControlOwners.remove(sprite);
             sprite.setAir(false);
             sprite.setForcedAnimationId(-1);
             sprite.setAnimationId(Sonic3kAnimationIds.WAIT);
@@ -291,6 +353,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         }
         // Restore_PlayerControl does not clear Ctrl_1_locked; loc_694D4
         // explicitly leaves the main input latch asserted for loc_69526.
+        inputLockOwners.add(player);
         player.setControlLocked(true);
         spawnChild(() -> new PostResultsGradualMaxX(
                 arenaMaxX + MAX_X_TARGET_OFFSET));
@@ -299,6 +362,8 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     private void startPostCapsuleSequence(AbstractPlayableSprite player) {
         postCapsuleSequenceStarted = true;
         ObjectControlState.none().applyTo(player);
+        objectControlOwners.remove(player);
+        inputLockOwners.add(player);
         player.setControlLocked(true);
         forceRightLogicalInput(player);
         restoreSidekickPostResultsControl(player);
@@ -306,6 +371,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     }
 
     private void forceRightLogicalInput(AbstractPlayableSprite player) {
+        forcedInputOwners.add(player);
         // ROM writes Ctrl_1_logical after both playable slots have already run.
         // The next Sonic_RecordPos call therefore records this word; do not
         // overwrite the current follower-history slot here.
@@ -350,6 +416,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
                 continue;
             }
             if (sidekick instanceof AbstractPlayableSprite sprite) {
+                if (locked) inputLockOwners.add(sprite); else inputLockOwners.remove(sprite);
                 sprite.setControlLocked(locked);
                 if (!locked) {
                     sprite.clearForcedInputMask();

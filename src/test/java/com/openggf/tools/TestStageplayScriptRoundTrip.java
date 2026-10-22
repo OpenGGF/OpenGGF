@@ -90,32 +90,11 @@ class TestStageplayScriptRoundTrip {
                 encoded.replaceFirst("\\\"order\\\"\\s*:", "\"order\":{},\"order\":").getBytes(StandardCharsets.UTF_8)), "Duplicate nested order must fail");
     }
 
-    @Test void versionFiveCannotOptIntoVersionSixIdsOrdersOrCrossShotIntervals() throws Exception {
-        var versionFive = minimalTwoShots(5);
-        shot(versionFive, 0).putArray("captions").addObject().put("id", "crossing").put("startFrame", 50)
-                .put("endFrame", 70).put("text", "Crosses the boundary");
-        assertThrows(IOException.class, () -> compile(versionFive));
-        versionFive.put("version", 6);
-        assertEquals(70, compile(versionFive).captions().getFirst().endFrame());
-        versionFive.put("version", 5);
-        ((ObjectNode) shot(versionFive, 0).path("captions").get(0)).put("endFrame", 60);
-        assertDoesNotThrow(() -> compile(versionFive), "The existing v5 shot-local end boundary remains accepted");
-        versionFive.putObject("order").putArray("captions").add("shot0.crossing");
-        assertThrows(IOException.class, () -> compile(versionFive));
-        versionFive.remove("order");
-        shot(versionFive, 1).putObject("transition").put("kind", "CUT").put("durationFrames", 0).put("id", "literal");
-        assertThrows(IOException.class, () -> compile(versionFive));
-        shot(versionFive, 1).remove("transition");
-        ((ObjectNode) shot(versionFive, 0).path("captions").get(0)).put("id", id("caption"));
-        assertThrows(IOException.class, () -> compile(versionFive), "V5 must retain its qualified-ID length bound");
-        versionFive.put("version", 6);
-        assertEquals(id("caption"), compile(versionFive).captions().getFirst().id());
-    }
-
-    @Test void eachLegacyWorldPolicySurvivesWithoutBeingPromotedToANewWorld() throws Exception {
-        for (WorldPolicy policy : List.of(WorldPolicy.LEGACY_LIVE, WorldPolicy.LEGACY_TERRAIN_ONLY))
-            roundTrip(StageplayDocument.empty("s1", 0, 0, 0, 0, 320, 224)
-                    .withSet(new SetSource("s1", 0, 0, "", "", policy)));
+    @Test void rejectsUnsupportedScreenplayVersionsWithoutMigration() throws Exception {
+        for (int version : new int[]{0, 1, 2, 3, 4, 5, 7}) {
+            var script = minimalTwoShots(version);
+            assertThrows(IOException.class, () -> compile(script));
+        }
     }
 
     private static byte[] roundTrip(StageplayDocument document) throws Exception {
@@ -154,8 +133,8 @@ class TestStageplayScriptRoundTrip {
 
     private static StageplayDocument refinedDocument() {
         var live = new SetSource("s2", 0, 0, "", "", WorldPolicy.LIVE);
-        var terrain = new SetSource("s2", 0, 0, "", "", WorldPolicy.TERRAIN_ONLY);
-        var legacy = new SetSource("s2", 0, 0, "", "", WorldPolicy.LEGACY_TERRAIN_ONLY);
+        var terrain = new SetSource("s2", 0, 0, "", "", WorldPolicy.LIVE);
+        var thirdSet = new SetSource("s2", 0, 0, "", "", WorldPolicy.LIVE);
         var actors = List.of(actor(A, "Alpha", "sonic"), actor(B, "Beta", "tails"),
                 new Actor(MANUAL, "Manual", "s3k", "knuckles", List.of(
                         new ActorKey(0, -17.25, 101.5, 18, 4, false, true, 2.25, Interpolation.SMOOTH),
@@ -192,7 +171,7 @@ class TestStageplayScriptRoundTrip {
                 List.of(new CameraEffect(id("effectLate"), 130, 170, 3, 4, 9, 7),
                         new CameraEffect(id("effectCross"), 50, 150, 8, 2, 6, Integer.MIN_VALUE)),
                 List.of(new SceneChange(id("transitionA"), 60, terrain, Transition.FADE_BLACK, 10),
-                        new SceneChange(id("transitionB"), 120, legacy, Transition.CUT, 0)),
+                        new SceneChange(id("transitionB"), 120, thirdSet, Transition.CUT, 0)),
                 List.of(new DialogueTyper("unusedTyper", 0, 0, 0), new DialogueTyper("usedTyper", 1, 2, 0)),
                 List.of(new DialogueSkin("unusedSkin", -1, -1, 0, 0, 7, "decor/unused.png", 3, false),
                         new DialogueSkin("usedSkin", -1, 0xFFCC8822, 0x80102030, 0xFF778899, 8, "", 0, true)),

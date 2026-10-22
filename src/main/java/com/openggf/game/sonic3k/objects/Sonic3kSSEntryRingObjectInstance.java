@@ -64,6 +64,37 @@ import java.util.logging.Logger;
  * Reference: docs/skdisasm/sonic3k.asm Obj_SSEntryRing (lines 128211-128530)
  */
 public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+    @com.openggf.game.rewind.RewindTransient(reason = "Captured as stable PlayerRefIds in DirectedControlSnapshot")
+    private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
+            new com.openggf.level.objects.PlayerControlOwners();
+
+    @com.openggf.game.rewind.RewindTransient(reason = "Captured as a stable PlayerRefId in DirectedControlSnapshot")
+    private AbstractPlayableSprite directedHiddenPlayer;
+
+    private record DirectedControlSnapshot(
+            java.util.List<com.openggf.game.rewind.identity.PlayerRefId> ownedPlayers,
+            com.openggf.game.rewind.identity.PlayerRefId hiddenPlayer)
+            implements com.openggf.level.objects.PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
+
+    @Override
+    public com.openggf.level.objects.PerObjectRewindSnapshot captureRewindState(
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        return super.captureRewindState(context).withObjectSubclassExtra(
+                new DirectedControlSnapshot(directedControlPlayers.capture(context), directedHiddenPlayer == null ? null
+                        : context.requireIdentityTable().encodePlayer(directedHiddenPlayer)));
+    }
+
+    @Override
+    public void restoreRewindState(com.openggf.level.objects.PerObjectRewindSnapshot snapshot,
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        directedControlPlayers.restore(snapshot.objectSubclassExtra() instanceof DirectedControlSnapshot saved
+                ? saved.ownedPlayers() : java.util.List.of(), context);
+        directedHiddenPlayer = snapshot.objectSubclassExtra() instanceof DirectedControlSnapshot saved
+                && saved.hiddenPlayer() != null ? (AbstractPlayableSprite) context.requireIdentityTable()
+                .resolvePlayer(saved.hiddenPlayer(), true) : null;
+    }
+
     private static final Logger LOGGER = Logger.getLogger(Sonic3kSSEntryRingObjectInstance.class.getName());
 
     // Collision extents from center (ROM: SSEntry_Range: dc.w -$18, $30, -$28, $50)
@@ -549,6 +580,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
             // loc_6173A does not select the byte through the touched character.
             art.vintDmaLedger().forcePlayerOneReload();
         }
+        directedHiddenPlayer = player;
         player.setHidden(true);
         lockCapturedPlayerAnimation(player);
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
@@ -617,7 +649,25 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
                 .toList();
     }
 
+    void transferCapturedPlayersTo(Sonic3kSSEntryFlashObjectInstance flash) {
+        flash.acceptCapturedPlayers(directedControlPlayers.players(), directedHiddenPlayer);
+        directedControlPlayers.clear();
+        directedHiddenPlayer = null;
+    }
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (AbstractPlayableSprite player : directedControlPlayers.players()) {
+            ObjectControlState.none().applyTo(player);
+            player.setObjectMappingFrameControl(false);
+        }
+        if (directedHiddenPlayer != null) directedHiddenPlayer.setHidden(false);
+        directedHiddenPlayer = null;
+        directedControlPlayers.clear();
+    }
+
     private void lockCapturedPlayerAnimation(AbstractPlayableSprite captured) {
+        directedControlPlayers.add(captured);
         captured.setForcedAnimationId(-1);
         // ROM writes mapping_frame(a1) = 0 itself rather than waiting for the
         // animation script, because Animate_Sonic has already run for this

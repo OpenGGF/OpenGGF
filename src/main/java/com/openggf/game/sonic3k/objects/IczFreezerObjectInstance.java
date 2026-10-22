@@ -738,6 +738,12 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
         }
 
         @Override
+        public void releasePlayersForVisualDirection() {
+            releaseOwnedControl(0);
+            capturedPlayer = null;
+        }
+
+        @Override
         public void onUnload() {
             releaseOwnedControl(0);
             capturedPlayer = null;

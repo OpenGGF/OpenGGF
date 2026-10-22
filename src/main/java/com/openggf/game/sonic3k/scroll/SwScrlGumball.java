@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.scroll;
 import static com.openggf.level.scroll.M68KMath.*;
 
 import com.openggf.game.GameServices;
+
 import com.openggf.game.sonic3k.objects.GumballMachineObjectInstance;
 import com.openggf.level.LevelManager;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
@@ -11,12 +12,12 @@ import com.openggf.level.scroll.compose.ScrollEffectComposer;
 /**
  * Gumball Machine bonus stage scroll handler.
  *
- * <p>Implements per-column FG VSCROLL so the machine body tiles drift with the gumball machine
- * object while the surrounding walls stay locked to the camera.
+ * <p>Implements per-column FG VSCROLL so the machine body tiles drift with
+ * the gumball machine object while the surrounding walls stay locked to
+ * the camera.
  *
- * <p>ROM reference: {@code Gumball_SetUpVScroll} / {@code Gumball_VScroll} (s3.asm lines
- * 76186-76203) runs every frame in {@code Gumball_ScreenEvent}:
- *
+ * <p>ROM reference: {@code Gumball_SetUpVScroll} / {@code Gumball_VScroll}
+ * (s3.asm lines 76186-76203) runs every frame in {@code Gumball_ScreenEvent}:
  * <pre>
  *   d0 = Camera_Y_pos_copy
  *   d1 = machineY_saved - $C8 - cameraY
@@ -28,13 +29,15 @@ import com.openggf.level.scroll.compose.ScrollEffectComposer;
  *   HScroll_table+$10 = d0   (strip 4 FG: camera Y)
  * </pre>
  *
- * <p>The scatter array {@code Gumball_VScrollArray = {$C0, $80, $7FFF}} (192px, 128px, terminator)
- * is combined with the 5 VScroll values via {@code DrawTilesVDeform} so that the machine-tracked
- * strip coincides with the body of the machine at world X around $100.
+ * <p>The scatter array {@code Gumball_VScrollArray = {$C0, $80, $7FFF}} (192px,
+ * 128px, terminator) is combined with the 5 VScroll values via
+ * {@code DrawTilesVDeform} so that the machine-tracked strip coincides with the
+ * body of the machine at world X around $100.
  *
- * <p>This implementation approximates the ROM behavior column-by-column: each 16-pixel column whose
- * world X falls inside the machine body range uses the machine-tracked VScroll; every other column
- * uses {@code cameraY}. This mirrors the visual effect of the ROM's strip scatter without having to
+ * <p>This implementation approximates the ROM behavior column-by-column: each
+ * 16-pixel column whose world X falls inside the machine body range uses the
+ * machine-tracked VScroll; every other column uses {@code cameraY}. This
+ * mirrors the visual effect of the ROM's strip scatter without having to
  * replicate the VDP VSRAM scatter layout.
  */
 public class SwScrlGumball extends AbstractZoneScrollHandler
@@ -72,8 +75,7 @@ public class SwScrlGumball extends AbstractZoneScrollHandler
     // center falls within this range.
     // Tuned from chunk boundaries [0x80, 0x180) by narrowing 4 columns (64px)
     // on each side to match the visible machine body tile area.
-    private static final int MACHINE_BODY_MIN_X = 0xC0; // 0x80 + 0x40
-
+    private static final int MACHINE_BODY_MIN_X = 0xC0;  // 0x80 + 0x40
     private static final int MACHINE_BODY_MAX_X = 0x140; // 0x180 - 0x40
 
     private final short[] fgColumns = new short[COLUMN_COUNT];
@@ -83,8 +85,11 @@ public class SwScrlGumball extends AbstractZoneScrollHandler
     private final ScrollEffectComposer composer = new ScrollEffectComposer();
 
     @Override
-    public void update(
-            int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter, int actId) {
+    public void update(int[] horizScrollBuf,
+                       int cameraX,
+                       int cameraY,
+                       int frameCounter,
+                       int actId) {
         resetScrollTracking();
         composer.reset();
 
@@ -107,10 +112,9 @@ public class SwScrlGumball extends AbstractZoneScrollHandler
         // d1 = cameraY + $C8 - machineY_saved.  (Use the drifted currentY so
         // the body tiles follow the machine as it sinks when gumballs drop.)
         LevelManager level = GameServices.levelOrNull();
-        GumballMachineObjectInstance machine =
-                level == null
-                        ? null
-                        : GumballMachineObjectInstance.current(level.getObjectManager());
+        GumballMachineObjectInstance machine = level == null
+                ? null
+                : GumballMachineObjectInstance.current(level.getObjectManager());
         if (machine == null) {
             // Fall back to flat FG VScroll when no machine is present.
             fgColumnsActive = false;

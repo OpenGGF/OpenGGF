@@ -66,6 +66,11 @@ public final class CnzSpiralTubeInstance extends AbstractObjectInstance implemen
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        onUnload();
+    }
+
+    @Override
     public CnzSpiralTubeInstance recreateForRewind(RewindRecreateContext ctx) {
         return new CnzSpiralTubeInstance(ctx.spawn());
     }

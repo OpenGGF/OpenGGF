@@ -385,7 +385,7 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
 - [Passive ending queue probe](../../src/main/java/com/openggf/tools/S3kEndingQueueProbeTool.java): two explicit solo/+2/NTSC products, bounded LF metadata, actual production handles/child fingerprints and LIVE service/readiness projections without payloads or timing writes; [causality evidence and budget blocker](../architecture/plans/2026-10-13-s3k-playable-completion.md#2026-10-17-passive-reunion-queue-causality).
 
 Stageplay's `level`, `catalog`, `simulate` and live offscreen preview/capture owners
-support reproducible native ensemble routes; see the [authoring guide](../guide/creating/stageplay-authoring.md#live-rom-worlds-screenplay-3-document-5)
+support reproducible native ensemble routes; see the [authoring guide](../guide/creating/stageplay-authoring.md#native-rom-worlds-screenplay-6-document-7)
 and [live-world plan](../architecture/plans/2026-10-21-stageplay-live-world-plan.md).
 
 - [Stageplay object coverage](../../src/main/java/com/openggf/tools/StageplayObjectCoverageTool.java): generate every native byte ID per registered source context, with factory, art and visual-mode reasons; constructor-free inventory, originating in the 2026-10-22 complete-cast task.

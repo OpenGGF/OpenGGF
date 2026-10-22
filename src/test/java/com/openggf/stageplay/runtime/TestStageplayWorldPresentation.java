@@ -127,6 +127,39 @@ class TestStageplayWorldPresentation {
         }
     }
 
+    @Test void fractionalCameraOriginsSurviveCompositionAndPushInRetainsItsAllocation() throws Exception {
+        try (var context = PresentationOffscreenTestContext.open(24, 16)) {
+            var graphics = new GraphicsManager();
+            var target = FboHelper.createColorOnly(12, 6, GL_CLAMP_TO_EDGE);
+            assertNotNull(target);
+            try (var presentation = new StageplayWorldPresentation()) {
+                var sourceField = StageplayWorldPresentation.class.getDeclaredField("source");
+                sourceField.setAccessible(true);
+                glBindFramebuffer(GL_FRAMEBUFFER, target.fboId()); glViewport(0, 0, 12, 6);
+                presentation.drawTiles(graphics, 0, 0, 1, 12, 6, 4, 3, TestStageplayWorldPresentation::paintWorld);
+                var allocation = sourceField.get(presentation);
+                for (double origin : new double[]{0, .125, .25, .375, .5, .625, .75, .875, 1}) {
+                    presentation.drawTiles(graphics, origin, origin, 2, 12, 6, 4, 3, TestStageplayWorldPresentation::paintWorld);
+                    assertSame(allocation, sourceField.get(presentation), "A push-in must reuse its backing FBO");
+                    glBindFramebuffer(GL_READ_FRAMEBUFFER, target.fboId());
+                    for (int x = 0; x < 12; x++) {
+                        double start = origin + x / 2.0, end = start + .5;
+                        double red = 0;
+                        for (int strip = (int) Math.floor(start); strip < Math.ceil(end); strip++)
+                            red += Math.max(0, Math.min(end, strip + 1) - Math.max(start, strip))
+                                    * (strip % 2 == 0 ? 255 : 0);
+                        assertEquals(Math.round(red * 2), pixel(x, 5)[0], 1, "Subpixel origin " + origin + " at " + x);
+                    }
+                    assertEquals(Math.round(Math.max(0, origin - .5) * 64), pixel(0, 5)[1], 1,
+                            "Vertical camera origin reaches the resampler too");
+                }
+                assertEquals(GL_NO_ERROR, glGetError());
+            } finally {
+                glBindFramebuffer(GL_FRAMEBUFFER, 0); FboHelper.destroy(target);
+            }
+        }
+    }
+
     @Test void restoresSeparateTargetsProjectionAndNativeGlStateAfterSuccessAndFailure() {
         try (var context = PresentationOffscreenTestContext.open(24, 16)) {
             var graphics = new GraphicsManager();

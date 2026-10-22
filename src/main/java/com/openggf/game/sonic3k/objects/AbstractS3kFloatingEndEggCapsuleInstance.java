@@ -1,5 +1,11 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -66,6 +72,8 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
     private int mappingFrame;
     private boolean opened;
     private boolean buttonTriggered;
+    @RewindTransient(reason = "Acquired players are encoded by stable PlayerRefId in control rewind extras.")
+    private final PlayerControlOwners resultControlOwners = new PlayerControlOwners();
     private boolean resultsStarted;
     private boolean releaseTriggered;
     private int postOpenTimer;
@@ -88,6 +96,35 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
                             : S3kBossExplosionController.fromSnapshot(snapshot, services().rng());
                 }
             };
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var sprite : resultControlOwners.players()) {
+            ObjectControlState.none().applyTo(sprite);
+            sprite.setControlLocked(false);
+            sprite.setForcedAnimationId(-1);
+        }
+        resultControlOwners.clear();
+    }
+
+    @Override
+    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
+        return super.captureRewindState(context).withObjectSubclassExtra(new CapsuleControlExtra(
+                resultControlOwners.capture(context)));
+    }
+
+    @Override
+    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        if (snapshot.objectSubclassExtra() instanceof CapsuleControlExtra extra) {
+            resultControlOwners.restore(extra.resultControlOwners(), context);
+        } else {
+            resultControlOwners.clear();
+        }
+    }
+
+    private record CapsuleControlExtra(List<PlayerRefId> resultControlOwners)
+            implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
 
     protected AbstractS3kFloatingEndEggCapsuleInstance(int initialX, int initialY, String debugName) {
         this(initialX, initialY, debugName, false);
@@ -561,6 +598,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
     }
 
     protected void lockForResults(AbstractPlayableSprite sprite) {
+        resultControlOwners.add(sprite);
         ObjectControlState.nativeBit7FullControl().applyTo(sprite);
         sprite.setControlLocked(true);
         sprite.setXSpeed((short) 0);

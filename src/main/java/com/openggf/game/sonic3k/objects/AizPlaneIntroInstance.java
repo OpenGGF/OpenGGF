@@ -196,6 +196,8 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
 
     /** Whether this object currently owns player control lock. */
     private boolean ownsPlayerControl;
+    @com.openggf.game.rewind.RewindTransient(reason = "Captured explicitly through PlayerRefId in the subclass snapshot.")
+    private AbstractPlayableSprite ownedPlayer;
 
     /** Reference to the plane child sprite (biplane visual). */
     private AizIntroPlaneChild planeChild;
@@ -390,24 +392,40 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        if (!ownsPlayerControl || ownedPlayer == null) return;
+        ownedPlayer.setControlLocked(false);
+        ObjectControlState.none().applyTo(ownedPlayer);
+        ownedPlayer.setObjectMappingFrameControl(false);
+        ownedPlayer.setHidden(false);
+        ownsPlayerControl = false;
+        ownedPlayer = null;
+    }
+
+    private record PlayerOwnership(com.openggf.game.rewind.identity.PlayerRefId player)
+            implements com.openggf.level.objects.PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
+
+    @Override
+    public com.openggf.level.objects.PerObjectRewindSnapshot captureRewindState(
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        var player = context.identityTable().map(table -> table.encodePlayer(ownedPlayer)).orElse(null);
+        return super.captureRewindState(context).withObjectSubclassExtra(new PlayerOwnership(player));
+    }
+
+    @Override
+    public void restoreRewindState(com.openggf.level.objects.PerObjectRewindSnapshot snapshot,
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        ownedPlayer = snapshot.objectSubclassExtra() instanceof PlayerOwnership extra && extra.player() != null
+                ? (AbstractPlayableSprite) context.requireIdentityTable().resolvePlayer(extra.player(), true) : null;
+    }
+
+    @Override
     public void onUnload() {
         if (activeIntroInstance == this) {
             activeIntroInstance = null;
         }
-        // Safety net: release player control if we still own it.
-        if (ownsPlayerControl) {
-            try {
-                var focusedSprite = services().camera().getFocusedSprite();
-                if (focusedSprite instanceof AbstractPlayableSprite ps) {
-                    ps.setControlLocked(false);
-                    ObjectControlState.none().applyTo(ps);
-                    ps.setHidden(false);
-                }
-            } catch (Exception e) {
-                LOG.fine(() -> "AizPlaneIntroInstance.onUnload: " + e.getMessage());
-            }
-            ownsPlayerControl = false;
-        }
+        releasePlayersForVisualDirection();
         activeWaves.clear();
         emeralds.clear();
         // Art reset moved to CutsceneKnucklesAiz1Instance.onUnload() —
@@ -614,6 +632,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
             ObjectControlState.engineScriptedPreserveCpuMovementSuppressed().applyTo(player);
             player.setHidden(true);
             ownsPlayerControl = true;
+            ownedPlayer = player;
         }
 
         // Load all intro art.
@@ -1064,6 +1083,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
                 player.setHidden(false);
                 ObjectControlState.none().applyTo(player);
                 ownsPlayerControl = false;
+                ownedPlayer = null;
                 // The object runs after the player slot. Retail publishes the
                 // Hurt byte immediately but leaves the already displayed intro
                 // frame intact until the next Animate_Sonic pass

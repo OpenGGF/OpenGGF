@@ -53,42 +53,49 @@ public final class StageplayWorldPresentation implements AutoCloseable {
                     + ", maximum source pixels " + MAX_SOURCE_PIXELS);
     }
 
-    public void draw(GraphicsManager graphics, LevelManager level, int x, int y, double zoom,
+    public void draw(GraphicsManager graphics, LevelManager level, double cameraX, double cameraY, double zoom,
                      int width, int height, Runnable nativeDraw) {
-        draw(graphics, level, x, y, zoom, width, height, (cx, cy, w, h) -> nativeDraw.run());
+        draw(graphics, level, cameraX, cameraY, zoom, width, height, (cx, cy, w, h) -> nativeDraw.run());
     }
 
-    public void draw(GraphicsManager graphics, LevelManager level, int x, int y, double zoom,
+    public void draw(GraphicsManager graphics, LevelManager level, double cameraX, double cameraY, double zoom,
                      int width, int height, WorldDraw worldDraw) {
         validate(width, height, zoom);
+        if (!Double.isFinite(cameraX) || !Double.isFinite(cameraY))
+            throw new IllegalArgumentException("Stageplay camera coordinates must be finite");
         int nativeWidth = LevelSpritePresentation.viewportWidth(level);
         int nativeHeight = LevelSpritePresentation.viewportHeight(level);
-        int rasterWidth = (int) Math.ceil(width / zoom);
-        int rasterHeight = (int) Math.ceil(height / zoom);
+        int x = (int) Math.floor(cameraX), y = (int) Math.floor(cameraY);
+        int rasterWidth = (int) Math.ceil(width / zoom + cameraX - x);
+        int rasterHeight = (int) Math.ceil(height / zoom + cameraY - y);
         LevelSpritePresentation.withCinematicView(level, x, y, rasterWidth, rasterHeight, () -> {
-            if (zoom == 1 && width == nativeWidth && height == nativeHeight) {
+            if (zoom == 1 && cameraX == x && cameraY == y && width == nativeWidth && height == nativeHeight) {
                 // Native-size output still uses the one full-view directed scroll sample.
                 LevelSpritePresentation.withCinematicTile(level, 0, 0, nativeWidth, nativeHeight,
                         () -> worldDraw.draw(x, y, nativeWidth, nativeHeight));
                 return;
             }
-            drawTiles(graphics, x, y, zoom, width, height, nativeWidth, nativeHeight,
+            drawTiles(graphics, cameraX, cameraY, zoom, width, height, nativeWidth, nativeHeight,
                     (cx, cy, w, h) -> LevelSpritePresentation.withCinematicTile(level, cx - x, cy - y, w, h,
                             () -> worldDraw.draw(cx, cy, w, h)));
         });
     }
 
     /** Component seam also used by the EGL pixel regression; no alternate renderer or world simulation. */
-    void drawTiles(GraphicsManager graphics, int x, int y, double zoom, int width, int height,
+    void drawTiles(GraphicsManager graphics, double cameraX, double cameraY, double zoom, int width, int height,
                    int nativeWidth, int nativeHeight, WorldDraw worldDraw) {
         validate(width, height, zoom);
+        if (!Double.isFinite(cameraX) || !Double.isFinite(cameraY))
+            throw new IllegalArgumentException("Stageplay camera coordinates must be finite");
         if (nativeWidth < 1 || nativeHeight < 1 || nativeWidth > MAX_SOURCE_SIDE || nativeHeight > MAX_SOURCE_SIDE)
             throw new IllegalArgumentException("Invalid native Stageplay viewport");
         if (drawing) throw new IllegalStateException("Nested Stageplay world composition");
         drawing = true;
         State saved = new State(graphics);
         try {
-            int w = (int) Math.ceil(width / zoom), h = (int) Math.ceil(height / zoom);
+            int x = (int) Math.floor(cameraX), y = (int) Math.floor(cameraY);
+            double offsetX = cameraX - x, offsetY = cameraY - y;
+            int w = (int) Math.ceil(width / zoom + offsetX), h = (int) Math.ceil(height / zoom + offsetY);
             ensureResources(w, h, nativeWidth, nativeHeight);
             glDisable(GL_SCISSOR_TEST);
             glColorMask(true, true, true, true);
@@ -117,11 +124,19 @@ public final class StageplayWorldPresentation implements AutoCloseable {
                         glBindFramebuffer(GL_READ_FRAMEBUFFER, tile.fboId());
                         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, source.fboId());
                         glBlitFramebuffer(0, nativeHeight - copyHeight, copyWidth, nativeHeight,
-                                column, h - row - copyHeight, column + copyWidth, h - row,
+                                column, sourceHeight - row - copyHeight, column + copyWidth, sourceHeight - row,
                                 GL_COLOR_BUFFER_BIT, GL_NEAREST);
                     }
                 }
             });
+            // Mip levels must see edge pixels rather than unused allocation space.
+            // Extend the active rectangle into its grow-only backing texture.
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, source.fboId());
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, source.fboId());
+            if (w < sourceWidth) glBlitFramebuffer(w - 1, sourceHeight - h, w, sourceHeight,
+                    w, sourceHeight - h, sourceWidth, sourceHeight, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+            if (h < sourceHeight) glBlitFramebuffer(0, sourceHeight - h, sourceWidth, sourceHeight - h + 1,
+                    0, 0, sourceWidth, sourceHeight - h, GL_COLOR_BUFFER_BIT, GL_NEAREST);
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, saved.drawFbo);
             glViewport(saved.viewport[0], saved.viewport[1], saved.viewport[2], saved.viewport[3]);
             glDisable(GL_DEPTH_TEST); glDisable(GL_STENCIL_TEST); glDisable(GL_SCISSOR_TEST);
@@ -132,7 +147,9 @@ public final class StageplayWorldPresentation implements AutoCloseable {
             glUniform4f(glGetUniformLocation(program, "Viewport"), saved.viewport[0], saved.viewport[1],
                     saved.viewport[2], saved.viewport[3]);
             glUniform2f(glGetUniformLocation(program, "SourceExtent"),
-                    (float) (width / zoom / w), (float) (height / zoom / h));
+                    (float) (width / zoom / sourceWidth), (float) (height / zoom / sourceHeight));
+            glUniform2f(glGetUniformLocation(program, "SourceOrigin"),
+                    (float) (offsetX / sourceWidth), (float) (offsetY / sourceHeight));
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, source.textureId());
             // Texture-local state, never the palette atlas, sprite art, or text textures.
@@ -153,6 +170,8 @@ public final class StageplayWorldPresentation implements AutoCloseable {
     }
 
     private void ensureResources(int width, int height, int nativeWidth, int nativeHeight) {
+        if (width > MAX_SOURCE_SIDE || height > MAX_SOURCE_SIDE || (long) width * height > MAX_SOURCE_PIXELS)
+            throw new IllegalArgumentException("Stageplay fractional view exceeds bounded composition");
         int maximum = glGetInteger(GL_MAX_TEXTURE_SIZE);
         if (Math.max(Math.max(width, height), Math.max(nativeWidth, nativeHeight)) > maximum)
             throw new IllegalArgumentException("Stageplay composition exceeds this device's maximum texture size " + maximum);
@@ -161,11 +180,20 @@ public final class StageplayWorldPresentation implements AutoCloseable {
             catch (IOException error) { throw new UncheckedIOException(error); }
             vao = glGenVertexArrays();
         }
-        if (source == null || sourceWidth != width || sourceHeight != height) {
+        if (source == null || sourceWidth < width || sourceHeight < height) {
+            // Bucket growth amortizes a pull-out too; a push-in never reallocates.
+            int grownWidth = Math.max(sourceWidth, Math.min(MAX_SOURCE_SIDE, Integer.highestOneBit(width - 1) << 1));
+            int grownHeight = Math.max(sourceHeight, Math.min(MAX_SOURCE_SIDE, Integer.highestOneBit(height - 1) << 1));
+            grownWidth = Math.max(width, grownWidth); grownHeight = Math.max(height, grownHeight);
+            if ((long) grownWidth * grownHeight > MAX_SOURCE_PIXELS) {
+                grownWidth = Math.max(sourceWidth, width); grownHeight = Math.max(sourceHeight, height);
+            }
+            if ((long) grownWidth * grownHeight > MAX_SOURCE_PIXELS)
+                throw new IllegalArgumentException("Stageplay world allocation exceeds bounded composition");
             FboHelper.destroy(source);
-            source = FboHelper.createColorOnly(width, height, GL_CLAMP_TO_EDGE);
+            source = FboHelper.createColorOnly(grownWidth, grownHeight, GL_CLAMP_TO_EDGE);
             if (source == null) throw new IllegalStateException("Stageplay world framebuffer is incomplete");
-            sourceWidth = width; sourceHeight = height;
+            sourceWidth = grownWidth; sourceHeight = grownHeight;
         }
         if (tile == null || tileWidth != nativeWidth || tileHeight != nativeHeight) {
             FboHelper.destroy(tile);

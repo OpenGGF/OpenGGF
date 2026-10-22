@@ -13,18 +13,12 @@ public final class StageplayObjectLoadPolicy implements WorldSessionPolicyState 
     final Set<StageplayObjectDirection.PlacementIdentity> removed = new HashSet<>();
     boolean clearObjects;
     boolean clearBadniks;
-    private final boolean initiallyCleared;
 
     public StageplayObjectLoadPolicy() { this(false, Set.of()); }
     public StageplayObjectLoadPolicy(boolean initiallyCleared,
             Set<StageplayObjectDirection.PlacementIdentity> suppressed) {
-        this.initiallyCleared = initiallyCleared;
         clearObjects = initiallyCleared;
         removed.addAll(suppressed);
-    }
-    void seedInitialLayout(java.util.List<ObjectSpawn> placements) {
-        if (initiallyCleared) for (var spawn : placements)
-            if (spawn.layoutIndex() >= 0) removed.add(StageplayObjectDirection.PlacementIdentity.of(spawn));
     }
 
     public record Snapshot(

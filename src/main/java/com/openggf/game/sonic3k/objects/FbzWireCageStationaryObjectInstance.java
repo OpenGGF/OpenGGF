@@ -37,6 +37,24 @@ public final class FbzWireCageStationaryObjectInstance extends AbstractObjectIns
         travelExtent = travelAngle << 2;
     }
 
+    @Override
+    public void releasePlayersForVisualDirection() {
+        int ordinal = 0;
+        for (var entity : services().playerQuery().playersFor(
+                com.openggf.level.objects.ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (entity instanceof AbstractPlayableSprite player) {
+                int slot = participants.slot(player);
+                boolean nativeP2 = ordinal == 1;
+                if (participants.flag(slot, 3) || (nativeP2 && nativeP2AliasStanding)) {
+                    release(player, slot, false, nativeP2, nativeP2 && nativeP2AliasStanding);
+                    participants.flag(slot, 3, false);
+                }
+                ordinal++;
+            }
+        }
+        nativeP2AliasStanding = false;
+    }
+
     @Override public void update(int vIntRunCount, PlayableEntity ignored) {
         visitOrdinal=0;primaryDplcDirtiedD6=false;
         try{services().playerQuery().visitPlayers(ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED,this,UPDATE_PLAYER);}

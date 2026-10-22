@@ -1,5 +1,4 @@
 package com.openggf.game.sonic3k.scroll;
-
 import static com.openggf.level.scroll.M68KMath.asrWord;
 import static com.openggf.level.scroll.M68KMath.negWord;
 
@@ -7,8 +6,9 @@ import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 
 /**
- * Default fallback scroll handler for Sonic 3&K zones that don't have a zone-specific
- * implementation yet. Provides simple parallax: BG X at 1/4 FG speed, BG Y at 1/4 FG speed.
+ * Default fallback scroll handler for Sonic 3&K zones that don't have
+ * a zone-specific implementation yet. Provides simple parallax:
+ * BG X at 1/4 FG speed, BG Y at 1/4 FG speed.
  */
 public class SwScrlS3kDefault extends AbstractZoneScrollHandler
         implements com.openggf.level.scroll.ScrollProjectionSource {
@@ -24,12 +24,15 @@ public class SwScrlS3kDefault extends AbstractZoneScrollHandler
     }
 
     @Override
-    public void update(
-            int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter, int actId) {
+    public void update(int[] horizScrollBuf,
+                       int cameraX,
+                       int cameraY,
+                       int frameCounter, int actId) {
         composeCamera(horizScrollBuf, cameraX, cameraY, actId);
     }
 
-    private void composeCamera(int[] horizScrollBuf, int cameraX, int cameraY, int actId) {
+    private void composeCamera(int[] horizScrollBuf, int cameraX, int cameraY,
+                       int actId) {
         resetScrollTracking();
         composer.reset();
 

@@ -1,26 +1,56 @@
 package com.openggf.level.objects;
 
-import com.openggf.game.DamageCause;
-import com.openggf.game.PlayableEntity;
 import com.openggf.game.mutators.PlayerFluidContextAccess;
+
+import com.openggf.camera.Camera;
+import com.openggf.game.CollisionModel;
+import com.openggf.game.GameStateManager;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.rules.PlayerCapabilityRules;
+import com.openggf.game.solid.ContactKind;
+import com.openggf.game.solid.ObjectSolidExecutionContext;
+import com.openggf.game.solid.PlayerSolidContactResult;
+import com.openggf.game.solid.PlayerStandingState;
+import com.openggf.game.solid.PostContactState;
+import com.openggf.game.solid.PreContactState;
+import com.openggf.game.solid.SolidCheckpointBatch;
+import com.openggf.game.solid.SolidExecutionRegistry;
+import com.openggf.graphics.FadeManager;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.rings.LostRingObjectInstance;
-import com.openggf.sprites.NativePositionOps;
+import com.openggf.level.spawn.AbstractPlacementManager;
+import com.openggf.physics.ObjectTerrainUtils;
+import com.openggf.physics.TerrainCheckResult;
+import com.openggf.game.PlayableEntity;
+import com.openggf.game.DamageCause;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.sprites.playable.Knuckles;
 import com.openggf.sprites.playable.SecondaryAbility;
+import com.openggf.sprites.NativePositionOps;
+import com.openggf.sprites.playable.Knuckles;
+import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Tails;
+import com.openggf.sprites.NativePositionOps;
+import com.openggf.sprites.managers.SpriteManager;
+import com.openggf.game.GroundMode;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 final class ObjectTouchResponseController {
@@ -590,20 +620,11 @@ final class ObjectTouchResponseController {
                     : -1;
             if (debugState.isEnabled()) {
                 debugState.addHit(
-                        new TouchResponseDebugHit(
-                                slotIndex,
-                                objectCallbacks.call(instance, instance::getSpawn),
-                                objX,
-                                objY,
-                                flags,
-                                sizeIndex,
-                                width,
-                                height,
-                                category,
-                                overlap,
+                        new TouchResponseDebugHit(slotIndex,
+                                objectCallbacks.call(instance, instance::getSpawn), objX, objY, flags, sizeIndex,
+                                 width, height, category, overlap,
                                 instance instanceof AbstractObjectInstance aoi
-                                        ? objectCallbacks.call(instance, aoi::traceDebugDetails)
-                                        : ""));
+                                        ? objectCallbacks.call(instance, aoi::traceDebugDetails) : ""));
             }
             if (!overlap) {
                 continue;
@@ -769,20 +790,11 @@ final class ObjectTouchResponseController {
                         ? objectCallbacks.call(instance, aoi::getSlotIndex)
                         : -1;
                 debugState.addHit(
-                        new TouchResponseDebugHit(
-                                slotIndex,
-                                objectCallbacks.call(instance, instance::getSpawn),
-                                region.x(),
-                                region.y(),
-                                flags,
-                                sizeIndex,
-                                width,
-                                height,
-                                category,
-                                overlap,
+                        new TouchResponseDebugHit(slotIndex,
+                                objectCallbacks.call(instance, instance::getSpawn), region.x(), region.y(),
+                                 flags, sizeIndex, width, height, category, overlap,
                                 instance instanceof AbstractObjectInstance aoi
-                                        ? objectCallbacks.call(instance, aoi::traceDebugDetails)
-                                        : ""));
+                                        ? objectCallbacks.call(instance, aoi::traceDebugDetails) : ""));
             }
             if (!overlap) {
                 continue;
@@ -1342,13 +1354,7 @@ final class ObjectTouchResponseController {
         if (instance != null) {
             String className = instance.getClass().getSimpleName();
             int objectId = objectCallbacks.call(instance, instance::getSpawn).objectId();
-            LOGGER.fine(
-                    () ->
-                            "Touch hurt by: "
-                                    + className
-                                    + " (ID: 0x"
-                                    + Integer.toHexString(objectId)
-                                    + ")");
+            LOGGER.fine(() -> "Touch hurt by: " + className + " (ID: 0x" + Integer.toHexString(objectId) + ")");
         }
 
         // For multi-region providers (e.g., spiked pole helix), use the matched region's X

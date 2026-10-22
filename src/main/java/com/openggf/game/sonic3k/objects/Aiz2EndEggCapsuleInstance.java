@@ -242,6 +242,18 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        // The false branch releases only this capsule's acquired P2/extension
+        // locks; the true branch also changes native animation and air state.
+        if (nativeP2EndingPoseOwner != null && (tailsOpenControllerLockApplied || tailsEndingPoseApplied)
+                && nativeP2EndingPoseOwner.getCpuController() != null)
+            nativeP2EndingPoseOwner.getCpuController().cancelQueuedNativeEndingPose();
+        releaseTailsControlNow(false);
+        tailsEndingPoseApplied = false;
+        super.releasePlayersForVisualDirection();
+    }
+
+    @Override
     public void onUnload() {
         releaseTailsControlNow(false);
         extensionEndingPoseStates.clear();

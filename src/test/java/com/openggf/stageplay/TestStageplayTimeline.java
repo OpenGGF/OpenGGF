@@ -34,7 +34,7 @@ class TestStageplayTimeline {
         var after = StageplayTimeline.sample(document, 105);
         assertEquals(1050, after.actors().getFirst().x());
         assertEquals(5, after.actors().getFirst().animationTick());
-        assertEquals(525, after.camera().x());
+        assertEquals(527.2222222222222, after.camera().x(), 1e-10);
         assertEquals(.5, after.transition().coverage());
         assertEquals(0, StageplayTimeline.sample(document, 110).transition().coverage());
         assertEquals(before, StageplayTimeline.sample(document, 99));
@@ -93,8 +93,8 @@ class TestStageplayTimeline {
         var first = StageplayTimeline.sample(document, 5);
         assertEquals(50, first.actors().getFirst().x());
         assertEquals(5, first.actors().getFirst().animationTick());
-        assertEquals(125, first.camera().x());
-        assertEquals(1, first.camera().zoom());
+        assertEquals(137, first.camera().x(), 1e-10);
+        assertEquals(1.25, first.camera().zoom());
         assertEquals(2, StageplayTimeline.sample(document, 20).camera().zoom());
         var smooth = StageplayTimeline.sample(document, 15).actors().getFirst();
         assertEquals(115.625, smooth.x());
@@ -106,22 +106,25 @@ class TestStageplayTimeline {
     }
 
     @Test
-    void legacyFractionalZoomIsHeldWhilePositionStillInterpolates() {
-        var document = scene().withSet(new SetSource("s2", 0, 0, "", "", WorldPolicy.LEGACY_TERRAIN_ONLY))
-                .withCamera(List.of(new CameraKey(0, 0, 0, 1.25, Interpolation.SMOOTH),
-                new CameraKey(20, 200, 400, 2, Interpolation.LINEAR),
-                new CameraKey(40, 400, 800, 3, Interpolation.HOLD)));
-        assertEquals(new StageplayTimeline.CameraPose(100, 200, 1.25), StageplayTimeline.sample(document, 10).camera());
-        assertEquals(1.25, StageplayTimeline.sample(document, 19).camera().zoom());
-        assertEquals(2, StageplayTimeline.sample(document, 20).camera().zoom());
-        assertEquals(new StageplayTimeline.CameraPose(300, 600, 2), StageplayTimeline.sample(document, 30).camera());
-        assertEquals(3, StageplayTimeline.sample(document, 40).camera().zoom());
-        assertEquals(1.25, StageplayTimeline.sample(document, 10).baseCamera().zoom());
+    void centredPushInKeepsBothFramingCoordinatesFixedAtEverySample() {
+        for (var easing : List.of(Interpolation.LINEAR, Interpolation.SMOOTH)) {
+            var document = scene().withCamera(List.of(
+                    new CameraKey(0, 0, 0, 1, easing),
+                    new CameraKey(20, 80, 56, 2, easing),
+                    new CameraKey(40, 120, 84, 4, Interpolation.HOLD)));
+            for (int frame = 0; frame <= 40; frame++) {
+                var camera = StageplayTimeline.sample(document, frame).camera();
+                assertEquals(160, camera.x() + 160 / camera.zoom(), 1e-10, "horizontal centre at " + frame);
+                assertEquals(112, camera.y() + 112 / camera.zoom(), 1e-10, "vertical centre at " + frame);
+            }
+            assertEquals(1.5, StageplayTimeline.sample(document, 10).camera().zoom());
+            assertEquals(3, StageplayTimeline.sample(document, 30).camera().zoom());
+        }
     }
 
     @Test
     void nativeWorldZoomSharesCameraEasingWithoutSeekHistoryOrShotBleed() {
-        for (var policy : List.of(WorldPolicy.TERRAIN_ONLY, WorldPolicy.LIVE)) {
+        for (var policy : List.of(WorldPolicy.LIVE, WorldPolicy.LIVE)) {
             var set = new SetSource("s2", 0, 0, "", "", policy);
             var document = scene().withSet(set).withCamera(List.of(
                     new CameraKey(0, 0, 0, .75, Interpolation.SMOOTH),

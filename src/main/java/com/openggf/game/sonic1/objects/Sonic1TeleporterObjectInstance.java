@@ -185,6 +185,11 @@ public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance imple
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        onUnload();
+    }
+
+    @Override
     public boolean isPersistent() {
         // While transporting the player, the object must remain active even if
         // the spawn position goes off-screen (player may be far from the object origin).

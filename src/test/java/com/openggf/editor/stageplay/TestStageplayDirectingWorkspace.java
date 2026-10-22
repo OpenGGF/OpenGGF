@@ -48,33 +48,13 @@ class TestStageplayDirectingWorkspace {
         assertEquals(StageplayTimeline.sample(before,20).baseCamera(),workspace.directorCamera());
     }
 
-    @Test void legacyLiveCameraKeepsFixedZoomWhilePanningRecordingAndRejectingInvalidFormEdits() {
-        var workspace = workspace();
-        var before = workspace.controller().document().withSet(new StageplayDocument.SetSource(
-                "s2",0,0,"","",StageplayDocument.WorldPolicy.LEGACY_LIVE));
-        workspace.controller().replace(before); workspace.invoke(CAMERA_MODE);
-        workspace.moveCamera(10,-4,2);
-        assertEquals(new StageplayTimeline.CameraPose(110,196,1),workspace.directorCamera());
-        workspace.invoke(SET_CAMERA_KEY);
-        assertEquals(1,workspace.controller().document().camera().getFirst().zoom());
-        workspace.invoke(CAMERA_KEY); choose(workspace.menu(),0);
-        workspace.menu().setValue("zoom","2"); workspace.menu().submit();
-        assertNotNull(workspace.menu().error());
-        assertEquals(1,workspace.controller().document().camera().getFirst().zoom());
-        workspace.menu().setValue("zoom","1"); workspace.menu().submit();
-        assertFalse(workspace.menu().isOpen());
-        workspace.invoke(RECORD_CAMERA); workspace.recordCameraStep(1,0,2); workspace.stop();
-        assertTrue(workspace.controller().document().camera().stream().allMatch(k -> k.zoom()==1));
-        assertEquals(112,workspace.controller().document().camera().getFirst().x());
-    }
-
     @Test void liveFollowViewSeedsPanCaptureRecordingAndFormWithoutRewritingItsAuthoredSeed() {
         var key=new StageplayDocument.ActorKey(0,100,200,0,-1,false,true,1,StageplayDocument.Interpolation.HOLD);
         var follow=new StageplayDocument.CameraFollow(List.of("lead"),12,8,4,.2,5,-6);
         var scene=StageplayDocument.empty("s2",0,0,100,200,320,224)
                 .withActors(List.of(new StageplayDocument.Actor("lead","Sonic","s2","sonic",List.of(key))))
                 .withPuppets(List.of(new StageplayDocument.PuppetTrack("lead",true,0,List.of())))
-                .withSet(new StageplayDocument.SetSource("s2",0,0,"","",StageplayDocument.WorldPolicy.LEGACY_LIVE))
+                .withSet(new StageplayDocument.SetSource("s2",0,0,"","",StageplayDocument.WorldPolicy.LIVE))
                 .withCamera(List.of(new StageplayDocument.CameraKey(0,100,200,1,StageplayDocument.Interpolation.HOLD,follow)));
         var view=new StageplayTimeline.CameraPose(700,900,1);
         var workspace=new StageplayWorkspace(new StageplayWorkspace.Host() {
@@ -91,7 +71,7 @@ class TestStageplayDirectingWorkspace {
         workspace.invoke(CAMERA_KEY); choose(workspace.menu(),0);
         assertEquals(700,Double.parseDouble(workspace.menu().values().get("x")));
         workspace.menu().submit(); assertEquals(scene,workspace.controller().document(),"Reading a resolved follow view cannot rewrite its smoothing seed");
-        workspace.moveCamera(10,-4,2); assertEquals(new StageplayTimeline.CameraPose(710,896,1),workspace.directorCamera());
+        workspace.moveCamera(10,-4,1); assertEquals(new StageplayTimeline.CameraPose(710,896,1),workspace.directorCamera());
         workspace.invoke(CAMERA_KEY); choose(workspace.menu(),0); workspace.menu().submit();
         var offsetKey=workspace.controller().document().camera().getFirst();
         assertEquals(100,offsetKey.x()); assertEquals(200,offsetKey.y());
@@ -107,7 +87,7 @@ class TestStageplayDirectingWorkspace {
     }
 
     @Test void nativeContentsPoliciesOfferTheSameZoomAndFilmDimensions() {
-        for (var policy : List.of(StageplayDocument.WorldPolicy.LIVE, StageplayDocument.WorldPolicy.TERRAIN_ONLY)) {
+        for (var policy : List.of(StageplayDocument.WorldPolicy.LIVE)) {
             var workspace = workspace();
             workspace.controller().replace(workspace.controller().document().withSet(new StageplayDocument.SetSource(
                     "s2", 0, 0, "", "", policy)).withSize(384, 216));

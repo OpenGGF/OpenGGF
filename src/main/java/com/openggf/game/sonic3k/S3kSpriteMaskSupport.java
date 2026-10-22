@@ -12,7 +12,7 @@ public final class S3kSpriteMaskSupport {
     public static void submitFrame(
             GraphicsManager graphics, com.openggf.data.Rom rom, int frame, int originX, int originY)
             throws java.io.IOException {
-        com.openggf.level.render.ObjectSpriteCapture.control(
+        com.openggf.graphics.SpriteCaptureControl.control(
                 "SAT sprite-mask controls require native display-list replay "
                         + "Obj_SpriteMask (docs/skdisasm/sonic3k.asm:181335); "
                         + "Map_SpriteMask (docs/skdisasm/sonic3k.asm:201991)");
@@ -26,18 +26,14 @@ public final class S3kSpriteMaskSupport {
             int size = pieces[i + 1] & 15;
             int x = (short) (((pieces[i + 4] & 255) << 8) | (pieces[i + 5] & 255));
             int tile = ((pieces[i + 2] & 255) << 8) | (pieces[i + 3] & 255);
-            graphics.submitSpriteSatControlEntry(
-                    originX + x,
-                    originY + pieces[i],
-                    (size >> 2) + 1,
-                    (size & 3) + 1,
-                    tile & 0x7FF);
+            graphics.submitSpriteSatControlEntry(originX + x, originY + pieces[i],
+                    (size >> 2) + 1, (size & 3) + 1, tile & 0x7FF);
         }
     }
 
     /** Submits exact mapping frame $04: marker tile $7C0 followed by its companion. */
     public static void submitFrame4(GraphicsManager graphics, int originX, int originY) {
-        com.openggf.level.render.ObjectSpriteCapture.control(
+        com.openggf.graphics.SpriteCaptureControl.control(
                 "SAT sprite-mask controls require native display-list replay "
                         + "Obj_SpriteMask (docs/skdisasm/sonic3k.asm:181335); "
                         + "Map_SpriteMask (docs/skdisasm/sonic3k.asm:201991)");
@@ -45,11 +41,7 @@ public final class S3kSpriteMaskSupport {
         graphics.requestSpriteMask();
         for (ControlEntry entry : frame4Entries(originX, originY)) {
             graphics.submitSpriteSatControlEntry(
-                    entry.x(),
-                    entry.y(),
-                    entry.widthTiles(),
-                    entry.heightTiles(),
-                    entry.rawTileWordLow11());
+                    entry.x(), entry.y(), entry.widthTiles(), entry.heightTiles(), entry.rawTileWordLow11());
         }
     }
 

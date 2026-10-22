@@ -13,7 +13,7 @@ public record StageplayRouteFootprint(
                 || collisionPath < 0
                 || collisionPath > 1)
             throw new IllegalArgumentException(
-                    "Visual route footprint requires half-width1..128, height1..256, foot"
-                            + " offset-256..256 and collision path0/1");
+                    "Visual route footprint requires half-width 1..128, height 1..256, foot"
+                            + " offset -256..256 and collision path 0/1");
     }
 }

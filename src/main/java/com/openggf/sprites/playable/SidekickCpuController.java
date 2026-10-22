@@ -606,6 +606,11 @@ public class SidekickCpuController {
         nativeEndingPosePending = true;
     }
 
+    /** Cancels only an ending-pose request whose native owner has relinquished control. */
+    public void cancelQueuedNativeEndingPose() {
+        nativeEndingPosePending = false;
+    }
+
     public void clearController2LogicalLatch() {
         // ROM objects that write Ctrl_2_locked often also clear Ctrl_2_logical
         // at the same site. Keep this separate from setController2SignedLocked:

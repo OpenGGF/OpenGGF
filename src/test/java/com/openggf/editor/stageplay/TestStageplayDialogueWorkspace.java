@@ -161,7 +161,10 @@ class TestStageplayDialogueWorkspace {
         workspace.invoke(SET_CAMERA_KEY); assertEquals(2,workspace.controller().document().camera().getFirst().zoom());
         workspace.seek(10); workspace.invoke(CAMERA_KEY); choose(workspace.menu(),0);
         workspace.menu().setValue("zoom","1.25"); workspace.menu().submit();
-        assertNotNull(workspace.menu().error()); assertEquals(1,workspace.controller().document().camera().size());
+        assertNull(workspace.menu().error());
+        assertEquals(2,workspace.controller().document().camera().size());
+        assertEquals(1.25,workspace.controller().document().camera().getLast().zoom());
+        assertEquals(1.25,workspace.previewFrame().camera().zoom(), "Typed fractional zoom reaches the shared camera timeline");
     }
 
     private static void choose(EditorProjectMenu menu,int row) {

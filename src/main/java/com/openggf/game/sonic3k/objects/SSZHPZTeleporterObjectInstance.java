@@ -154,6 +154,20 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        if (state < STATE_CHARGING || state > STATE_SETTLING) return;
+        if (services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite player) {
+            releaseControl(player);
+            player.setObjectMappingFrameControl(false);
+            var manager = services().objectManager();
+            if (manager != null) manager.releaseRidingObject(player, this);
+        }
+        playerOnObjCleared = false;
+        // Interrupt the local transport, without publishing arrival or route-completion effects.
+        state = STATE_IDLE;
+    }
+
+    @Override
     public SSZHPZTeleporterObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new SSZHPZTeleporterObjectInstance(ctx.spawn());
     }
@@ -485,6 +499,10 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
         state = STATE_SETTLING;
     }
 
+    private static void releaseControl(AbstractPlayableSprite sprite) {
+        ObjectControlState.none().applyTo(sprite);
+    }
+
     /** {@code loc_4581C}. */
     private void updateSettling(PlayableEntity player) {
         resolveTransportSolid(player);
@@ -496,7 +514,7 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
         if (swingSpeed < 0) {
             return;
         }
-        ObjectControlState.none().applyTo(sprite);
+        releaseControl(sprite);
         sprite.setAnimationId(Sonic3kAnimationIds.WALK);
         // Next frame Player_1 finds no floor under the settled position and sets Status_InAir,
         // after which SolidObjectTopSloped2_1P clears the standing bit (loc_1E338). Drop the

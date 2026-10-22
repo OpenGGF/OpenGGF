@@ -132,6 +132,11 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        onUnload();
+    }
+
+    @Override
     public LauncherBallObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new LauncherBallObjectInstance(ctx.spawn(), "LauncherBall");
     }

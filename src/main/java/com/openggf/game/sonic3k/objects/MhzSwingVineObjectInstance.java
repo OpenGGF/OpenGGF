@@ -106,6 +106,12 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
      */
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        clearPlayerControl(p1);
+        clearPlayerControl(p2);
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         boolean swingingRoutineAtEntry = rootState == RootState.SWINGING;
         updateRootState();

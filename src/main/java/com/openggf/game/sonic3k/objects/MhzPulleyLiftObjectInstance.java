@@ -93,6 +93,14 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
      */
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        for (var handle : List.of(leftHandle, rightHandle)) {
+            if (handle.player1.grabbed) releaseHandle(handle.player1, handle.player1.player, false);
+            if (handle.player2.grabbed) releaseHandle(handle.player2, handle.player2.player, false);
+        }
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         reserveHandleSlots();
         updateParentPosition();

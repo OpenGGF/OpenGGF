@@ -59,7 +59,7 @@ public final class StageplayRouteTool {
             for (String game : StageplayRomTransport.requiredGames(document)) {
                 var image = PhysicalImage.probe(Path.of(required(flags,game+"-rom")));
                 RomIdentity identity = switch(game) { case "s1" -> RomIdentity.S1; case "s2" -> RomIdentity.S2; default -> RomIdentity.S3K; };
-                if (image.size()>64L*1024*1024) throw new IOException("Route ROM exceeds64MiB");
+                if (image.size()>64L*1024*1024) throw new IOException("Route ROM exceeds 64 MiB");
                 resolutions.put(game,new RomImageCatalogue.Resolution(identity,List.of(new RomImageCatalogue.Part(identity,image,0,Math.toIntExact(image.size()))),
                         RomImageCatalogue.Source.EXPLICIT_KEY));
             }

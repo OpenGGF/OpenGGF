@@ -209,7 +209,7 @@ public class SwScrlSlz extends AbstractZoneScrollHandler implements ScrollProjec
             compose(output, new short[SCROLL_BUFFER_SIZE], view.cameraX(), bgY);
             return Sonic1ProjectionOutput.finish(context, view, output, context.nativeOutput().backgroundX(),
                     context.nativeOutput().backgroundPeriod());
-        };
+    };
     }
 
 }

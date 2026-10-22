@@ -89,10 +89,10 @@ class TestStageplayHudPictures {
             Path output = Path.of("target", "stageplay-hud").toAbsolutePath(); Files.createDirectories(output);
             Path source = output.resolve("screenplay-source.json");
             Files.writeString(source, """
-                    {"version":5,"name":"Two-way take","width":320,"height":224,
+                    {"version":6,"name":"Two-way take","width":320,"height":224,
                      "cast":[{"id":"hero","name":"Sonic","gameId":"s2","character":"sonic","puppet":false}],
                      "shots":[{"id":"opening","durationFrames":120,
-                     "set":{"gameId":"s2","zone":0,"act":0,"worldPolicy":"TERRAIN_ONLY"},
+                     "set":{"gameId":"s2","zone":0,"act":0,"worldPolicy":"LIVE"},
                      "camera":[{"frame":0,"x":0,"y":500}],"actors":{"hero":[
                      {"frame":0,"x":128,"y":648,"animation":5},{"frame":30,"x":128,"y":648,"animation":5},
                      {"frame":90,"x":256,"y":648,"animation":5},{"frame":119,"x":256,"y":648,"animation":5}]},
@@ -132,7 +132,7 @@ class TestStageplayHudPictures {
         try (var fixture = TestEditorProjectLifecycle.Fixture.open(GameId.S2);
              var context = PresentationOffscreenTestContext.open(1280,720);
              var renderer = new EditorProjectMenuRenderer()) {
-            for (var policy : List.of(StageplayDocument.WorldPolicy.LIVE, StageplayDocument.WorldPolicy.TERRAIN_ONLY)) {
+            for (var policy : List.of(StageplayDocument.WorldPolicy.LIVE)) {
                 var scene = StageplayDocument.empty("s2",0,0,0,500,320,224)
                         .withSet(new StageplayDocument.SetSource("s2",0,0,"","",policy));
                 var workspace = new StageplayWorkspace(() -> scene);
@@ -222,7 +222,12 @@ class TestStageplayHudPictures {
             var line = StageplayTimeline.sample(scene,60).dialogue().getFirst();
             assertEquals("Sonic",line.speakerName());
             assertFalse(line.visibleText().isEmpty());
-            var workspace = new StageplayWorkspace(() -> scene);
+            var workspace = new StageplayWorkspace(new StageplayWorkspace.Host() {
+                public StageplayDocument initialDocument() { return scene; }
+                public StageplayTimeline.Frame resolvePreview(StageplayDocument document, Path root, int frame) {
+                    return resources.resolveFrame(document, StageplayTimeline.sample(document, frame));
+                }
+            });
             workspace.activate();
             workspace.selectActor("hero");
             workspace.seek(60);
@@ -239,7 +244,7 @@ class TestStageplayHudPictures {
                 assertTrue(java.util.Arrays.stream(sprite.image().pixels()).anyMatch(pixel -> (pixel >>> 24) != 0),
                         "The pictured cast must resolve visible ROM artwork: " + actor.actorId() + " at frame " + frame);
             }
-            surface.record(scene.width(), scene.height(), canvas -> renderer.draw(scene, StageplayTimeline.sample(scene, 60), canvas));
+            surface.record(scene.width(), scene.height(), canvas -> renderer.draw(scene, workspace.previewFrame(), canvas));
             assertTrue(surface.recordedFrame().size() > 10, "The picture must contain the ROM set and cast");
             assertTrue(chrome.setActive(true));
             var input = new InputHandler();

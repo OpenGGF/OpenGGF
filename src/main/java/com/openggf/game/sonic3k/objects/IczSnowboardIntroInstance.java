@@ -136,6 +136,8 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
     private int overlayAnimationCursor;
     private int lastOverlayAnimationId = -1;
     private boolean initialized;
+    @com.openggf.game.rewind.RewindTransient(reason = "Captured explicitly through PlayerRefId in the subclass snapshot.")
+    private AbstractPlayableSprite ownedPlayer;
     private boolean sonicSnowboardOverlayActive;
     private boolean sonicSnowboardTouchedGround;
 
@@ -258,6 +260,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
     }
 
     public void primePostStartupWaitForBoardHandoff(AbstractPlayableSprite player) {
+        ownedPlayer = player;
         initialized = true;
         state = State.WAIT_FOR_BOARD_JUMP;
         startupTimer = 0;
@@ -288,6 +291,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
     }
 
     private void initializePlayer(AbstractPlayableSprite player) {
+        ownedPlayer = player;
         initialized = true;
         applyInitialPlayerLock(player);
     }
@@ -630,11 +634,31 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
         return services().camera().getFocusedSprite();
     }
 
+    @Override
+    public void releasePlayersForVisualDirection() {
+        releasePlayerLocks();
+    }
+
+    private record PlayerOwnership(com.openggf.game.rewind.identity.PlayerRefId player)
+            implements com.openggf.level.objects.PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
+
+    @Override
+    public com.openggf.level.objects.PerObjectRewindSnapshot captureRewindState(
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        var player = context.identityTable().map(table -> table.encodePlayer(ownedPlayer)).orElse(null);
+        return super.captureRewindState(context).withObjectSubclassExtra(new PlayerOwnership(player));
+    }
+
+    @Override
+    public void restoreRewindState(com.openggf.level.objects.PerObjectRewindSnapshot snapshot,
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        ownedPlayer = snapshot.objectSubclassExtra() instanceof PlayerOwnership extra && extra.player() != null
+                ? (AbstractPlayableSprite) context.requireIdentityTable().resolvePlayer(extra.player(), true) : null;
+    }
+
     private void releasePlayerLocks() {
-        AbstractPlayableSprite player = focusedPlayer();
-        if (player != null) {
-            releasePlayerLocks(player);
-        }
+        if (ownedPlayer != null) releasePlayerLocks(ownedPlayer);
     }
 
     private void releasePlayerLocks(AbstractPlayableSprite player) {
@@ -644,6 +668,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
         player.setHidden(false);
         player.clearForcedInputMask();
         player.clearQueuedControlState();
+        if (ownedPlayer == player) ownedPlayer = null;
     }
 
     private int clampFrame(int frame, int frameCount) {

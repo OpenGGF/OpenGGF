@@ -82,6 +82,19 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance implemen
         this.centreY = spawn.y();
     }
 
+    /** Stageplay interruption only: the unfinished native route has no completion/release routine yet. */
+    @Override
+    public void releasePlayersForVisualDirection() {
+        if (!armed && !playerCaptured && !playerHidden) return;
+        if (services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite player) {
+            if (playerCaptured) ObjectControlState.none().applyTo(player);
+            if (armed || playerCaptured) player.setControlLocked(false);
+            if (playerHidden) player.setHidden(false);
+        }
+        armed = playerCaptured = playerHidden = false;
+        // Camera locks, published route state, palette and queued art remain native-owned.
+    }
+
     @Override
     public int getX() {
         return TELEPORT_X;

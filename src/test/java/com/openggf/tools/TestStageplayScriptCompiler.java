@@ -18,9 +18,9 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestStageplayScriptCompiler {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final String SCREENPLAY = """
-            {"version":1,"name":"Three locations","width":320,"height":224,
-             "cast":[{"id":"hero","name":"Hero","gameId":"s2","character":"sonic"},
-                     {"id":"friend","name":"Friend","gameId":"s2","character":"tails"}],
+            {"version":6,"name":"Three locations","width":320,"height":224,
+             "cast":[{"id":"hero","name":"Hero","gameId":"s2","character":"sonic","puppet":false},
+                     {"id":"friend","name":"Friend","gameId":"s2","character":"tails","puppet":false}],
              "shots":[
               {"id":"opening","durationFrames":30,"set":{"gameId":"s2","zone":0,"act":0},
                "camera":[{"frame":0,"x":0,"y":0},{"frame":20,"x":100,"y":0}],
@@ -52,7 +52,7 @@ class TestStageplayScriptCompiler {
 
     private static ObjectNode puppetRecipe() throws IOException {
         return (ObjectNode) JSON.readTree("""
-                {"version":2,"name":"Real movement","cast":[
+                {"version":6,"name":"Real movement","cast":[
                   {"id":"hero","name":"Hero","gameId":"s2","character":"sonic"},
                   {"id":"prop","name":"Prop","gameId":"s2","character":"tails","puppet":false}],
                  "shots":[
@@ -71,7 +71,7 @@ class TestStageplayScriptCompiler {
                 """);
     }
 
-    @Test void versionTwoDefaultsToPhysicalPuppetsAndOffsetsIntentWithoutInventingMotion() throws Exception {
+    @Test void currentRecipesDefaultToPhysicalPuppetsAndOffsetsIntentWithoutInventingMotion() throws Exception {
         var document = compile(puppetRecipe());
         var puppet = document.puppets().getFirst();
         assertEquals(1, document.puppets().size());
@@ -90,7 +90,7 @@ class TestStageplayScriptCompiler {
         assertEquals(40, StageplayTimeline.sample(document, 30).actors().getLast().x(),
                 "explicit manual roles retain interpolated choreography");
         assertEquals(document, StageplayStore.decode(StageplayStore.encode(document)));
-        assertTrue(compile(recipe()).puppets().isEmpty(), "version one remains manual");
+        assertTrue(compile(recipe()).puppets().isEmpty(), "Explicit Poser roles remain manual");
     }
 
     @Test void puppetCommandsRejectSilentCoercionUnknownActorsAndInvalidPhysicsContracts() throws Exception {
@@ -114,8 +114,6 @@ class TestStageplayScriptCompiler {
             var script = puppetRecipe(); edit.accept(script);
             assertThrows(IOException.class, () -> compile(script), script.toString());
         }
-        var legacy = recipe(); shot(legacy, 0).putObject("actions");
-        assertThrows(IOException.class, () -> compile(legacy));
         var incompatible = recipe(); ((ObjectNode) incompatible.path("cast").get(0)).put("puppet", true);
         assertThrows(IOException.class, () -> compile(incompatible));
     }
@@ -139,7 +137,7 @@ class TestStageplayScriptCompiler {
         assertFalse(friend.keys().getLast().visible());
         assertEquals(940, friend.keys().getLast().x());
         assertTrue(hero.keys().getLast().visible(), "a returning track is visible by default");
-        assertEquals("middle.line", document.captions().getFirst().id());
+        assertEquals("line", document.captions().getFirst().id());
         assertEquals(32, document.captions().getFirst().startFrame());
         assertEquals(38, document.captions().getFirst().endFrame());
         assertEquals("middle.audio0", document.audio().getFirst().id());
@@ -161,7 +159,7 @@ class TestStageplayScriptCompiler {
         line.putArray("revealFrames").add(0).add(4);
         var document = compile(script);
         var cue = document.dialogue().getFirst();
-        assertEquals("middle.hello", cue.id());
+        assertEquals("hello", cue.id());
         assertEquals(32, cue.startFrame()); assertEquals(38, cue.endFrame());
         assertEquals(List.of(0, 4), cue.revealFrames(), "reveal offsets are elapsed time within the line");
         assertEquals(296, cue.width()); assertEquals(12, cue.x());
@@ -175,7 +173,7 @@ class TestStageplayScriptCompiler {
         assertEquals(document, StageplayStore.decode(StageplayStore.encode(document)));
     }
 
-    @Test void dialogueRejectsUnresolvedProfilesUnsafeArtAndWrongLocalTiming() throws Exception {
+    @Test void dialogueRejectsUnresolvedProfilesUnsafeArtAndIntervalsOutsideTheFilm() throws Exception {
         var script = recipe();
         var line = shot(script, 1).putArray("dialogue").addObject()
                 .put("startFrame", 2).put("endFrame", 20).put("speakerActor", "friend").put("text", "Hello");
@@ -186,7 +184,7 @@ class TestStageplayScriptCompiler {
             assertThrows(IOException.class, () -> compile(invalid));
         }
         for (Consumer<ObjectNode> edit : List.<Consumer<ObjectNode>>of(
-                cue -> cue.put("endFrame", 41), cue -> cue.put("startFrame", -1),
+                cue -> cue.put("endFrame", 61), cue -> cue.put("startFrame", -1),
                 cue -> cue.put("portraitAsset", "../escape.png"), cue -> cue.put("width", 400),
                 cue -> cue.put("typo", 1), cue -> cue.put("startFrame", "2"))) {
             var invalid = script.deepCopy(); edit.accept((ObjectNode) shot(invalid, 1).path("dialogue").get(0));
@@ -266,13 +264,13 @@ class TestStageplayScriptCompiler {
         for (var edit : edits) rejects(edit);
     }
 
-    @Test void shotLocalBoundsCannotLeakKeysOrEventsIntoAdjacentShots() throws Exception {
+    @Test void shotLocalKeysAndPointEventsStayWithinTheirShot() throws Exception {
         List<Consumer<ObjectNode>> edits = List.of(
                 root -> ((ObjectNode) shot(root, 0).path("camera").get(0)).put("frame", 1),
                 root -> ((ObjectNode) shot(root, 0).path("camera").get(1)).put("frame", 30),
                 root -> ((ObjectNode) shot(root, 0).path("actors").path("hero").get(0)).put("frame", 1),
                 root -> ((ObjectNode) shot(root, 0).path("actors").path("hero").get(1)).put("frame", 0),
-                root -> ((ObjectNode) shot(root, 1).path("captions").get(0)).put("endFrame", 41),
+                root -> ((ObjectNode) shot(root, 1).path("captions").get(0)).put("endFrame", 61),
                 root -> ((ObjectNode) shot(root, 1).path("audio").get(0)).put("frame", 40),
                 root -> ((ObjectNode) shot(root, 1).path("cameraEffects").get(0)).put("startFrame", -1),
                 root -> shot(root, 0).putObject("transition").put("kind", "CUT"),
@@ -283,6 +281,16 @@ class TestStageplayScriptCompiler {
             ((ObjectNode) shot(root, 1).get("transition")).put("durationFrames", 60);
             shot(root, 2).putObject("transition").put("kind", "FADE_WHITE").put("durationFrames", 30);
         });
+    }
+
+    @Test void captionAndDialogueIntervalsMayContinueAcrossShotsWithinTheFilm() throws Exception {
+        var script = recipe();
+        ((ObjectNode) shot(script, 1).path("captions").get(0)).put("endFrame", 41);
+        shot(script, 1).putArray("dialogue").addObject()
+                .put("startFrame", 2).put("endFrame", 41).put("speakerActor", "friend").put("text", "Across the cut");
+        var document = compile(script);
+        assertEquals(71, document.captions().getFirst().endFrame());
+        assertEquals(71, document.dialogue().getFirst().endFrame());
     }
 
     @Test void aggregateLimitsRejectOversizedScriptsAndAcceptTheMaximumShotCount() throws Exception {

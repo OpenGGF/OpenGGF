@@ -1,5 +1,11 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.level.objects.PlayerControlOwners;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -90,6 +96,14 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
     // State
     private int mappingFrame;
     private boolean opened;
+    @RewindTransient(reason = "Acquired players are encoded by stable PlayerRefId in control rewind extras.")
+    private final PlayerControlOwners resultControlOwners = new PlayerControlOwners();
+    @RewindTransient(reason = "Acquired players are encoded by stable PlayerRefId in control rewind extras.")
+    private final PlayerControlOwners sidekickControlOwners = new PlayerControlOwners();
+    @RewindTransient(reason = "Queued or applied P2 poses are encoded by stable PlayerRefId in control extras.")
+    private final PlayerControlOwners sidekickPoseOwners = new PlayerControlOwners();
+    @RewindTransient(reason = "Acquired players are encoded by stable PlayerRefId in control rewind extras.")
+    private final PlayerControlOwners geyserInputOwners = new PlayerControlOwners();
     private boolean resultsStarted;
     private boolean geyserSpawned;
     private boolean geyserHandoffMappingCaptured;
@@ -226,6 +240,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         // the signed lock suppresses Tails_CPU_Control beginning next frame.
         if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
                 && sidekick.getCpuController() != null) {
+            sidekickControlOwners.add(sidekick);
             sidekick.getCpuController().setController2SignedLocked(true);
         }
 
@@ -321,11 +336,13 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         // Set_PlayerEndingPose (sonic3k.asm:182010-182031).
         tailsEndingPoseApplied = true;
         if (sidekick.getCpuController() != null) {
+            sidekickPoseOwners.add(sidekick);
             sidekick.getCpuController().queueNativeEndingPoseForNextPlayerSlot();
         }
     }
 
     private void lockForResults(AbstractPlayableSprite sprite) {
+        resultControlOwners.add(sprite);
         ObjectControlState.nativeBit7FullControl().applyTo(sprite);
         // Set_PlayerEndingPose does not write Ctrl_1_locked/Ctrl_2_locked.
         sprite.setControlLocked(false);
@@ -386,13 +403,17 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
             int mappingFrame = geyserHandoffMappingCaptured
                     ? mainGeyserHandoffMappingFrame : main.getMappingFrame();
             restoreForGeyserHandoff(main, mappingFrame);
+            resultControlOwners.remove(main);
+            geyserInputOwners.add(main);
             main.setControlLocked(true);
         }
         if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick) {
             int mappingFrame = geyserHandoffMappingCaptured
                     ? sidekickGeyserHandoffMappingFrame : sidekick.getMappingFrame();
             restoreForGeyserHandoff(sidekick, mappingFrame);
+            resultControlOwners.remove(sidekick);
             if (sidekick.getCpuController() != null) {
+                sidekickControlOwners.add(sidekick);
                 sidekick.getCpuController().setController2SignedLocked(true);
                 sidekick.getCpuController().clearController2LogicalLatch();
             }
@@ -421,6 +442,56 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         player.setMappingFrame(mappingFrame);
     }
 
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var sprite : resultControlOwners.players()) {
+            ObjectControlState.none().applyTo(sprite);
+            sprite.setControlLocked(false);
+        }
+        for (var sprite : geyserInputOwners.players()) sprite.setControlLocked(false);
+        for (var sprite : sidekickPoseOwners.players()) {
+            if (sprite.getCpuController() != null) sprite.getCpuController().cancelQueuedNativeEndingPose();
+            if (sprite.isObjectControlled() && sprite.getAnimationId() == Sonic3kAnimationIds.VICTORY.id()) {
+                ObjectControlState.none().applyTo(sprite);
+                sprite.setControlLocked(false);
+            }
+        }
+        for (var sprite : sidekickControlOwners.players()) {
+            if (sprite.getCpuController() != null) sprite.getCpuController().setController2SignedLocked(false);
+        }
+        resultControlOwners.clear();
+        sidekickControlOwners.clear();
+        sidekickPoseOwners.clear();
+        geyserInputOwners.clear();
+    }
+
+    @Override
+    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
+        return super.captureRewindState(context).withObjectSubclassExtra(new CapsuleControlExtra(
+                resultControlOwners.capture(context), sidekickControlOwners.capture(context),
+                sidekickPoseOwners.capture(context), geyserInputOwners.capture(context)));
+    }
+
+    @Override
+    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        if (snapshot.objectSubclassExtra() instanceof CapsuleControlExtra extra) {
+            resultControlOwners.restore(extra.resultControlOwners(), context);
+            sidekickControlOwners.restore(extra.sidekickControlOwners(), context);
+            sidekickPoseOwners.restore(extra.sidekickPoseOwners(), context);
+            geyserInputOwners.restore(extra.geyserInputOwners(), context);
+        } else {
+            resultControlOwners.clear();
+            sidekickControlOwners.clear();
+            sidekickPoseOwners.clear();
+            geyserInputOwners.clear();
+        }
+    }
+
+    private record CapsuleControlExtra(List<PlayerRefId> resultControlOwners,
+            List<PlayerRefId> sidekickControlOwners, List<PlayerRefId> sidekickPoseOwners,
+            List<PlayerRefId> geyserInputOwners) implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
+
     // ===== Rendering =====
 
     @Override
@@ -441,6 +512,36 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
 
     private static final class HczEndBossResultsScreenObjectInstance
             extends S3kResultsScreenObjectInstance {
+        @RewindTransient(reason = "Actual acquired player locks are captured in results control extras.")
+        private final PlayerControlOwners inputOwners = new PlayerControlOwners();
+        @RewindTransient(reason = "Actual acquired CPU locks are captured in results control extras.")
+        private final PlayerControlOwners cpuOwners = new PlayerControlOwners();
+
+        @Override
+        public void releasePlayersForVisualDirection() {
+            for (var player : inputOwners.players()) player.setControlLocked(false);
+            for (var player : cpuOwners.players()) if (player.getCpuController() != null)
+                player.getCpuController().setController2SignedLocked(false);
+            inputOwners.clear(); cpuOwners.clear();
+        }
+
+        @Override
+        public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
+            return super.captureRewindState(context).withObjectSubclassExtra(new ResultsControlExtra(
+                    inputOwners.capture(context), cpuOwners.capture(context)));
+        }
+
+        @Override
+        public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
+            super.restoreRewindState(snapshot, context);
+            if (snapshot.objectSubclassExtra() instanceof ResultsControlExtra extra) {
+                inputOwners.restore(extra.input(), context); cpuOwners.restore(extra.cpu(), context);
+            } else { inputOwners.clear(); cpuOwners.clear(); }
+        }
+
+        private record ResultsControlExtra(java.util.List<PlayerRefId> input, java.util.List<PlayerRefId> cpu)
+                implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
+
         private HczEndBossResultsScreenObjectInstance(PlayerCharacter character, int act) {
             super(character, act);
         }
@@ -476,10 +577,12 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
             // player slots cannot take an extra CPU step; the pose itself is
             // published by the capsule on the next pass.
             if (services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite main) {
+                inputOwners.add(main);
                 main.setControlLocked(true);
             }
             if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
                     && sidekick.getCpuController() != null) {
+                cpuOwners.add(sidekick);
                 sidekick.getCpuController().setController2SignedLocked(true);
                 sidekick.getCpuController().clearController2LogicalLatch();
             }

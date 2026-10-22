@@ -54,24 +54,19 @@ import com.openggf.level.scroll.compose.ScrollValueTable;
  * Death Egg background sprite at the tail of {@code sub_57082}, and the boss act {@code $1600},
  * which has its own {@code LRZ3_BackgroundEvent} and does not use this handler.
  */
-public class SwScrlLrz extends SwScrlS3kDefault
-        implements com.openggf.level.scroll.ScrollOutputRebuilder {
+public class SwScrlLrz extends SwScrlS3kDefault implements com.openggf.level.scroll.ScrollOutputRebuilder {
 
     /**
      * {@code LRZ1_BGDeformArray} (sonic3k.asm:115689); the trailing {@code $7FFF} is the remainder.
      */
-    private static final int[] ACT1_BG_DEFORM = {
-        0x40, 0x20, 0x10, 0x10, 0x10, 0x10, 0x10, 0x100, 0x10, 0x10, 0x10, 0x20, 0x7FFF
-    };
-
+    private static final int[] ACT1_BG_DEFORM =
+            {0x40, 0x20, 0x10, 0x10, 0x10, 0x10, 0x10, 0x100, 0x10, 0x10, 0x10, 0x20, 0x7FFF};
     /** {@code LRZ2_BGDeformArray} (sonic3k.asm:115891). */
-    private static final int[] ACT2_BG_DEFORM = {
-        0x20, 0x20, 0x20, 0x10, 0x10, 0x10, 0x10, 0xF0, 0x10, 0x10, 0x10, 0x20, 0x7FFF
-    };
+    private static final int[] ACT2_BG_DEFORM =
+            {0x20, 0x20, 0x20, 0x10, 0x10, 0x10, 0x10, 0xF0, 0x10, 0x10, 0x10, 0x20, 0x7FFF};
 
     /** {@code lea (HScroll_table+$00C).w,a5} before {@code ApplyDeformation} (115379). */
     private static final int ACT1_DEFORM_START_WORD = 6;
-
     /** {@code lea (HScroll_table).w,a5} before {@code ApplyDeformation} (115738). */
     private static final int ACT2_DEFORM_START_WORD = 0;
 
@@ -80,17 +75,13 @@ public class SwScrlLrz extends SwScrlS3kDefault
 
     /** Act 1: {@code lea (HScroll_table+$01C).w,a1} for both runs. */
     private static final int ACT1_DESCENDING_FIRST_WORD = 13;
-
     private static final int ACT1_ASCENDING_FIRST_WORD = 14;
-
     /** Act 2: {@code lea (HScroll_table+$010).w,a1} for both runs. */
     private static final int ACT2_DESCENDING_FIRST_WORD = 7;
-
     private static final int ACT2_ASCENDING_FIRST_WORD = 8;
 
     /** {@code moveq #8-1,d3} and {@code moveq #5-1,d3}. */
     private static final int DESCENDING_WORDS = 8;
-
     private static final int ASCENDING_WORDS = 5;
 
     /** {@code Camera_X_pos_BG_copy} and, on act 1 only, {@code HScroll_table+$004}. */
@@ -111,33 +102,35 @@ public class SwScrlLrz extends SwScrlS3kDefault
     private final ScrollValueTable hScrollTable = ScrollValueTable.ofLength(TABLE_WORDS);
 
     /**
-     * ROM {@code V_scroll_value} for the foreground is {@code Camera_Y_pos_copy} after {@code
-     * LRZ1_ScreenEvent}/{@code LRZ2_ScreenEvent} added {@code Screen_shake_offset} to it. Zero
-     * selects the parallax manager's plain camera Y, which is what an unshaken frame gives.
+     * ROM {@code V_scroll_value} for the foreground is {@code Camera_Y_pos_copy} after
+     * {@code LRZ1_ScreenEvent}/{@code LRZ2_ScreenEvent} added {@code Screen_shake_offset} to it.
+     * Zero selects the parallax manager's plain camera Y, which is what an unshaken frame gives.
      */
     private short foregroundVscroll;
 
     @Override
-    public void update(
-            int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter, int actId) {
+    public void update(int[] horizScrollBuf,
+                       int cameraX,
+                       int cameraY,
+                       int frameCounter,
+                       int actId) {
         fillScrollOutput(horizScrollBuf, cameraX, cameraY, actId, true);
     }
 
     /**
-     * Post-restore presentation only. {@code LRZ1_Deform} / {@code sub_57082} and {@code sub_56DAC}
-     * write {@code Camera_X/Y_pos_BG_copy}, {@code Events_bg+$10/+$12} and the act-2 Death Egg word
-     * as part of the native scroll dispatch; a registry restore already brought those words back,
-     * including a load-frame snapshot taken before the first dispatch, so the rebuild derives the
-     * same scroll output without writing them again.
+     * Post-restore presentation only. {@code LRZ1_Deform} / {@code sub_57082} and
+     * {@code sub_56DAC} write {@code Camera_X/Y_pos_BG_copy}, {@code Events_bg+$10/+$12} and the
+     * act-2 Death Egg word as part of the native scroll dispatch; a registry restore already
+     * brought those words back, including a load-frame snapshot taken before the first dispatch,
+     * so the rebuild derives the same scroll output without writing them again.
      */
     @Override
-    public void rebuildOutput(
-            int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter, int actId) {
+    public void rebuildOutput(int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter, int actId) {
         fillScrollOutput(horizScrollBuf, cameraX, cameraY, actId, false);
     }
 
-    private void fillScrollOutput(
-            int[] horizScrollBuf, int cameraX, int cameraY, int actId, boolean publishScrollRam) {
+    private void fillScrollOutput(int[] horizScrollBuf, int cameraX, int cameraY, int actId,
+                                  boolean publishScrollRam) {
         resetScrollTracking();
         composer.reset();
 
@@ -147,9 +140,7 @@ public class SwScrlLrz extends SwScrlS3kDefault
         int cameraYCopy = (short) (cameraY + shake);
         foregroundVscroll = (short) cameraYCopy;
 
-        if (actId == 0
-                && lrz != null
-                && lrz.backgroundRoutine() == LrzBackgroundStageMachine.BG_STAGE_LOCKED) {
+        if (actId == 0 && lrz != null && lrz.backgroundRoutine() == LrzBackgroundStageMachine.BG_STAGE_LOCKED) {
             applyLockedDome(horizScrollBuf, cameraX, cameraYCopy, lrz, publishScrollRam);
             return;
         }
@@ -157,8 +148,8 @@ public class SwScrlLrz extends SwScrlS3kDefault
         short bgY = backgroundY(actId, cameraYCopy, shake);
         composer.setVscrollFactorBG(bgY);
 
-        int base = (cameraX << 16) >> 3; // asr.l #3: b
-        int step = base >> 2; // asr.l #2: s
+        int base = (cameraX << 16) >> 3;               // asr.l #3: b
+        int step = base >> 2;                          // asr.l #2: s
         buildHScrollTable(actId, base, step);
         if (publishScrollRam) {
             publishDeformationWords(lrz, bgY, base, step);
@@ -171,8 +162,7 @@ public class SwScrlLrz extends SwScrlS3kDefault
             // the plane keeps showing the dome while Draw_PlaneVertBottomUpComplex redraws it.
             short pinnedY = (short) lrz.savedBackgroundCameraY();
             composer.setVscrollFactorBG(pinnedY);
-            if (publishScrollRam)
-                lrz.publishLockedBackgroundCamera(lrz.savedBackgroundCameraX(), pinnedY);
+            if (publishScrollRam) lrz.publishLockedBackgroundCamera(lrz.savedBackgroundCameraX(), pinnedY);
             plainDeformation(cameraX, lrz.savedBackgroundCameraX());
         } else {
             DeformationPlan.applyTableBands(
@@ -192,18 +182,14 @@ public class SwScrlLrz extends SwScrlS3kDefault
     }
 
     /**
-     * {@code loc_56C6E}: {@code sub_56DCA}, then {@code sub_56DAC} in place of {@code LRZ1_Deform},
-     * then {@code loc_56C76}'s {@code DrawBGAsYouMove} + {@code PlainDeformation}. No {@code
-     * HScroll_table} word is rebuilt while the dome is locked, and neither are {@code
-     * Events_bg+$10}/{@code +$12}, so the animated-tile channels hold whatever phase the last
-     * unlocked frame published.
+     * {@code loc_56C6E}: {@code sub_56DCA}, then {@code sub_56DAC} in place of
+     * {@code LRZ1_Deform}, then {@code loc_56C76}'s {@code DrawBGAsYouMove} +
+     * {@code PlainDeformation}. No {@code HScroll_table} word is rebuilt while the dome is
+     * locked, and neither are {@code Events_bg+$10}/{@code +$12}, so the animated-tile channels
+     * hold whatever phase the last unlocked frame published.
      */
-    private void applyLockedDome(
-            int[] horizScrollBuf,
-            int cameraX,
-            int cameraYCopy,
-            LrzZoneRuntimeState lrz,
-            boolean publishScrollRam) {
+    private void applyLockedDome(int[] horizScrollBuf, int cameraX, int cameraYCopy,
+                                 LrzZoneRuntimeState lrz, boolean publishScrollRam) {
         int bgX = LrzDomeRegions.lockedBackgroundX(cameraX);
         short bgY = (short) LrzDomeRegions.lockedBackgroundY(cameraYCopy, lrz.domePlatformPhase());
         if (publishScrollRam) lrz.publishLockedBackgroundCamera(bgX, bgY);
@@ -216,16 +202,14 @@ public class SwScrlLrz extends SwScrlS3kDefault
     }
 
     /**
-     * {@code PlainDeformation} (sonic3k.asm:103644-103659): every line of {@code H_scroll_buffer}
-     * gets {@code -Camera_X_pos_copy} for the foreground and {@code -Camera_X_pos_BG_copy} for the
-     * background.
+     * {@code PlainDeformation} (sonic3k.asm:103644-103659): every line of
+     * {@code H_scroll_buffer} gets {@code -Camera_X_pos_copy} for the foreground and
+     * {@code -Camera_X_pos_BG_copy} for the background.
      */
     private void plainDeformation(int cameraXCopy, int backgroundCameraX) {
-        composer.fillPackedScrollWords(
-                0,
+        composer.fillPackedScrollWords(0,
                 composer.visibleLineCount(),
-                (short) negWord(cameraXCopy),
-                (short) negWord(backgroundCameraX));
+                (short) negWord(cameraXCopy), (short) negWord(backgroundCameraX));
     }
 
     @Override
@@ -236,8 +220,8 @@ public class SwScrlLrz extends SwScrlS3kDefault
     /**
      * {@code Camera_Y_pos_BG_copy}. Act 1 ({@code LRZ1_Deform}, 115390-115395) works in words:
      * {@code sub.w d1,d0 / asr.w #3,d0 / add.w d1,d0}. Act 2 ({@code sub_57082}, 115740-115751)
-     * works in 16.16: {@code asr.l #3} then a copy {@code asr.l #2} subtracted from it, i.e. {@code
-     * Y/8 - Y/32}, with the shake added back to the high word.
+     * works in 16.16: {@code asr.l #3} then a copy {@code asr.l #2} subtracted from it, i.e.
+     * {@code Y/8 - Y/32}, with the shake added back to the high word.
      */
     private static short backgroundY(int actId, int cameraYCopy, int shake) {
         int withoutShake = (short) (cameraYCopy - shake);
@@ -257,7 +241,11 @@ public class SwScrlLrz extends SwScrlS3kDefault
         if (lrz == null) {
             return;
         }
-        lrz.publishDeformationWords(base >> 16, bgY, (base - step) >> 16, (base - 2 * step) >> 16);
+        lrz.publishDeformationWords(
+                base >> 16,
+                bgY,
+                (base - step) >> 16,
+                (base - 2 * step) >> 16);
     }
 
     /**

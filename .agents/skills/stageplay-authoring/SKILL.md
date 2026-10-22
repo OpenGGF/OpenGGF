@@ -29,8 +29,11 @@ editors and can be registered by a mod.
   Registry presence alone does not mean that a detached set can be decoded.
   All frame/zone/act numbers are zero-based. Never invent art or copy ROMs to satisfy
   a command. Sprite positions use the sprite origin, not its top-left corner.
-- Author a version-six screenplay JSON for the current native world and object cast. Version five retains canonical-seven object support. Version four retains canonical-six behavior. Versions one through three retain compatibility behavior. New cast members default to physical puppets;
-  use `puppet:false` for Poser mode and deliberate manual choreography. Version-one recipes remain manual. Each shot has its own duration, set, camera
+- Author current version-six screenplay JSON, which compiles to a version-seven
+  canonical document. These unpublished formats accept only the current version;
+  there are no migration or compatibility modes. Candidate API versions follow the
+  engine version. Cast members default to physical puppets; use `puppet:false`
+  for Poser mode and deliberate manual choreography. Each shot has its own duration, set, camera
   and actor tracks. Local frame zero anchors each present actor and camera. Missing
   cast tracks are hidden for that shot. The compiler creates every scene-boundary
   key and preserves explicit cross-game art/audio references. It never interpolates
@@ -93,6 +96,11 @@ For basic player shot-entry planning, use `route --scene PATH --actor ID --frame
 existing movement/jump/wait intents and requires cold LIVE replay before VERIFIED;
 search failure is not proof of impossibility. Object Puppets require explicit
 visual footprint/speed and report VISUAL_TERRAIN, with native AI still suspended.
+Walking object routes follow slopes and steps up to eight pixels with explicit
+lift/cross/lower MOVE_TO corners. Gaps, walls, larger steps, insufficient headroom
+and changing collision fail explicitly; no detour or jump planner is provided.
+ROM/asset content fingerprints remain necessary because an unchanged scene document
+can refer to edited terrain or replaced ROM bytes; Apply checks those inputs again.
 An object route can also start at an existing visible Puppet key after an explicit
 Free initialization lead-in; the worker replays that prefix, never inserts a key
 or silently initializes a directed graph.
@@ -122,15 +130,16 @@ SMOOTH easing. The bounded world-compositing pass filters the completed opaque
 world picture, then draws text separately. Use held integer framing when the
 shot calls for pixel-stable pauses; review every animated zoom in motion at the
 intended output size and cadence. A larger export scale cannot repair an alias
-already present in the authored frame. Migrated legacy worlds retain held zoom
-(and legacy LIVE fixed1x) until upgraded.
+already present in the authored frame. Framing centres interpolate with zoom, so
+centred pushes keep their centre fixed. Fractional camera origins survive composition;
+the private world framebuffer is reused and grows only when needed.
 
 ## Boundaries that affect directing
 
-Current LIVE and TERRAIN_ONLY sets use the same native session. TERRAIN_ONLY
-clears initial placements and rings; it does not disable later native events.
-Strictly migrated legacy terrain scenes retain detached player physics without
-world objects/events. Neither authored shot spawns nor isolated simulation alone
+Every set uses the same native LIVE session. A terrain-only picture uses an ordinary
+`CLEAR_OBJECTS` command at shot frame zero. It clears object roots and their graphs;
+rings remain separately owned, and native events keep running. Zoom, sizes, native
+binding/hand-back, team limits and activation windows use the same rules everywhere. Neither authored shot spawns nor isolated simulation alone
 proves a continuous cold route or ROM parity. Camera shake and zoom affect presentation, not collision or
 native camera state. Native handover requires the same supported native set and resumes
 unshaken positions; cross-game scenery belongs to staged playback. State these limits
@@ -139,7 +148,8 @@ no voice service or fabricated licensing claim is part of this workflow.
 
 ## Live-world route evidence
 
-Current version-five screenplays default to `worldPolicy:LIVE`; choose `TERRAIN_ONLY` to clear its initial object/ring population using the same native owner. Earlier documents preserve their original compatibility policies. Use the
+Current screenplays use only `worldPolicy:LIVE`; author object clears as timed
+world commands. Use the
 `level` command to inspect stable ROM placements and rings, and `catalog` for native
 capabilities. Read the live schema in the authoring guide before using object
 targets, WAIT conditions, abilities or camera following. Unsupported donors must
@@ -153,8 +163,7 @@ state/timer and landing. Compare backward seek + forward replay across those eve
 Current worlds activate separate native-sized windows around performers; distant
 cast members can share a shot without activating the entire gap. They share the
 native object slot budget. An exhaustion message requires clearing unnecessary
-objects or splitting the shot. Native damage/destruction remains active; migrated
-legacy LIVE retains its single-window restriction until upgraded.
+objects or splitting the shot. Native damage/destruction remains active.
 
 LIVE simulate/capture owns an offline gameplay session and delegates to
 LevelFrameStep. Editor preview uses a persistent offscreen worker, with the same
@@ -201,8 +210,9 @@ parent-created parts, invisible controllers, unavailable art and unsupported con
 ## ROM object cast and native arena restrictions
 
 Use the shared ROM object cast / clear commands in either editor, or screenplay
-v5 `objectCast`, shot-local `objects`, `objectActions` and `worldCommands`.
-Object placements use `(layoutIndex, objectId, subtype)`, never a runtime SST slot.
+v6 `objectCast`, shot-local `objects`, `objectActions` and `worldCommands`.
+Object placement identity includes game, zone, act, layout index, object ID and
+subtype; never use a runtime SST slot or reuse an identity in another act.
 Consult `object-coverage --out PATH --format json` for every native byte ID and
 source context; registry presence, loaded ROM art and complete visual graphs are
 separate checks. Preserve explicit exclusions and owning routine citations. Append
@@ -216,8 +226,11 @@ Free source context must match the set. A globally registered arena routine may
 still run at its native coordinates in another source context; this is not a
 relocation. Prefer its original arena or a directed visual. Puppet and Pose suspend the whole native
 graph, including child routines and contacts; their motion is visual direction,
-not a controller that arbitrary objects do not have. Pure ROM animation scripts
-may run independently. Otherwise use the held/native mapping frame or explicit
+not a controller that arbitrary objects do not have. Directing/removing a holder
+releases its acquired players through native player-only cleanup. It must not
+complete the cutscene/world event; helper and queued-pose ownership must rewind. Pure ROM animation scripts and native timer-owned bird flap cycles
+run independently in Puppet/Pose. Walking animal frames tied to native vertical
+velocity retain an explicit held fallback; direction does not invent hop physics. Otherwise use the held/native mapping frame or explicit
 per-part frames and record the state-machine appearance exclusion. A newly cast
 object whose constructor has no visible graph must first appear as Free in its
 native set before a later directed key captures it; do not run its hidden AI in

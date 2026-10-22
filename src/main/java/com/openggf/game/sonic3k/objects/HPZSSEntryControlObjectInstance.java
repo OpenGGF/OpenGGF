@@ -29,6 +29,10 @@ import java.util.List;
  */
 public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable {
+    @com.openggf.game.rewind.RewindTransient(reason = "Captured as stable PlayerRefIds in RewindExtra")
+    private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
+            new com.openggf.level.objects.PlayerControlOwners();
+
     private static final int CENTRE_X = 0x1640;
 
     private S3kEmeraldProgression progression;
@@ -64,7 +68,8 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
             boolean freshLockApplied,
             boolean finalPanStarted,
             boolean conversionSequenceStarted,
-            boolean resultsBackdrop)
+            boolean resultsBackdrop,
+            java.util.List<com.openggf.game.rewind.identity.PlayerRefId> ownedPlayers)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public HPZSSEntryControlObjectInstance(ObjectSpawn spawn) {
@@ -434,6 +439,7 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
     }
 
     void applyFreshLockForTest(AbstractPlayableSprite player) {
+        directedControlPlayers.add(player);
         var superState = player.getSuperStateController();
         if (superState != null && superState.isSuper()) {
             // Player initialization on every ROM level load clears
@@ -472,6 +478,7 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
     }
 
     void releaseFreshLockForTest(AbstractPlayableSprite player) {
+        directedControlPlayers.remove(player);
         ObjectControlState.none().applyTo(player);
         player.setObjectMappingFrameControl(false);
         // loc_90C16 releases control after the final native pose. The shared
@@ -481,6 +488,14 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
             com.openggf.sprites.managers.SpriteManagerInternalAccess.releaseNativePlayerArt(
                     services().spriteManager(), player);
         }
+    }
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (AbstractPlayableSprite player : directedControlPlayers.players())
+            releaseFreshLockForTest(player);
+        directedControlPlayers.clear();
+        playersLocked = false;
     }
 
     private void releaseFreshLockFromParticipants(AbstractPlayableSprite primary) {
@@ -590,18 +605,30 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
 
     @Override
     public PerObjectRewindSnapshot captureRewindState() {
-        ensureState();
-        return super.captureRewindState().withObjectSubclassExtra(
-                new RewindExtra(runtime.capture(), reentry, childrenSpawned,
-                        exitBandArmed, exitRequested, introSignal, introCrystalSpawned,
-                        conversionTimer, conversionSpawnCursor, cameraTargetX,
-                        playersLocked, freshLockApplied, finalPanStarted,
-                        conversionSequenceStarted, resultsBackdrop));
+        return captureRewindState(com.openggf.game.rewind.schema.RewindCaptureContext.none());
     }
 
     @Override
     public void restoreRewindState(PerObjectRewindSnapshot snapshot) {
-        super.restoreRewindState(snapshot);
+        restoreRewindState(snapshot, com.openggf.game.rewind.schema.RewindCaptureContext.none());
+    }
+
+    @Override
+    public PerObjectRewindSnapshot captureRewindState(
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        ensureState();
+        return super.captureRewindState(context).withObjectSubclassExtra(
+                new RewindExtra(runtime.capture(), reentry, childrenSpawned,
+                        exitBandArmed, exitRequested, introSignal, introCrystalSpawned,
+                        conversionTimer, conversionSpawnCursor, cameraTargetX,
+                        playersLocked, freshLockApplied, finalPanStarted,
+                        conversionSequenceStarted, resultsBackdrop, directedControlPlayers.capture(context)));
+    }
+
+    @Override
+    public void restoreRewindState(PerObjectRewindSnapshot snapshot,
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
         if (snapshot.objectSubclassExtra() instanceof RewindExtra extra) {
             ensureState();
             runtime.restore(extra.runtime());
@@ -619,6 +646,7 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
             finalPanStarted = extra.finalPanStarted();
             conversionSequenceStarted = extra.conversionSequenceStarted();
             resultsBackdrop = extra.resultsBackdrop();
+            directedControlPlayers.restore(extra.ownedPlayers(), context);
         }
     }
 }

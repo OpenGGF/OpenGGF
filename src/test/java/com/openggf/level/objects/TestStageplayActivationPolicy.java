@@ -16,6 +16,13 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class TestStageplayActivationPolicy {
+    @Test void bindingOrdinaryServicesDoesNotQueryAManagerOrActivateStageplay() {
+        var services = mock(ObjectServices.class);
+        var object = new NativeObject(spawn(100, -1));
+        object.setServices(services);
+        verifyNoInteractions(services);
+    }
+
     @Test void processOwnersWithoutASpatialSpawnKeepTheirNativeLifetime() {
         var policy = new StageplayActivationPolicy();
         var process = mock(ObjectInstance.class, CALLS_REAL_METHODS);
@@ -229,6 +236,7 @@ class TestStageplayActivationPolicy {
         Fixture(boolean enabled, List<ObjectSpawn> canonical, List<ObjectSpawn> spawns, boolean clear) {
             var graphics = new GraphicsManager(); graphics.setHeadlessMode(true);
             var module = mock(GameModule.class);
+            when(module.getGameId()).thenReturn(com.openggf.game.GameId.S2);
             if (enabled) when(module.getGameService(WorldSessionPolicyProvider.class))
                     .thenReturn(WorldSessionPolicyProvider.compose(world -> policy,
                             clear ? world -> new StageplayObjectLoadPolicy(true, java.util.Set.of()) : null));

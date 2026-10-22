@@ -107,33 +107,36 @@ python3 tools/stageplay/stageplay.py render \
 ```
 
 Build the current engine first (`--build help`), choose a new output for each take,
-and keep media outside the checkout. The bundled version-two screenplay has a
-legacy version-four compiled scene; the current compiler writes version five
-with terrain-only behavior for this source. Inspect the simulated native positions, velocities and goal statuses
-before rendering: the authored timeline alone cannot resolve Puppet movement.
+and keep media outside the checkout. Every bundled screenplay is version six;
+canonical scenes are version seven and open directly in the current engine.
+Inspect the simulated native positions, velocities and goal statuses before
+rendering: the authored timeline alone cannot resolve Puppet movement.
 
-This performance uses native player physics on detached ROM terrain. Placed world
-objects, moving platforms, rings, water/zone events and automatic obstacle navigation
-do not run in this example. Each shot starts a new performance, so the scene changes
+This performance uses the shared native world with a frame-zero `CLEAR_OBJECTS`
+command in every shot. Object roots and their graphs are cleared; rings and native
+zone/events remain active under their own owners. The helper does not add automatic
+obstacle navigation. Each shot starts a new performance, so the scene changes
 are authored cuts rather than native gameplay transitions. Poser mode remains
 available for manual positioning, animation and mapping frames.
 
 ## Live-world demonstrations
 
-Screenplay 3 / portable scene 5 adds four ROM-backed sources beside the original
-terrain-only location remote:
+Four ROM-backed sources accompany the location-remote scene in the current formats:
 
 | Source | Length | Native obligations |
 | --- | --- | --- |
 | `live-platform-relay` | 8 s | Two performers board, ride and transfer DEZ2 placements 179 → 166 → 179. |
-| `live-air-traffic` | 9 s | S3K Tails takes off, flies, hovers, releases and lands; Knuckles jumps, glides, releases and lands. |
+| `live-air-traffic` | 10 s | S3K Tails takes off, flies, hovers, releases and lands; Knuckles jumps, glides, releases and lands. |
 | `live-ring-run` | 4 s | Three placed rings disappear once; the placed DEZ1 hazard causes hurt, knockback, native scattered rings and recovery. Camera hands off to Tails. |
 | `one-more-take` | 60 s | Five-shot rehearsal: relay, ring-spill mishap, airborne regrouping, retry, and all-three closing run. |
 
-All use `worldPolicy:LIVE`, physical performers and zoom one. Their controllers
+All use `worldPolicy:LIVE` and physical performers. Air traffic smoothly widens to
+zoom 0.7 while Tails hovers above Knuckles, then returns to zoom one after landing.
+Its RELEASE stops new flap inputs; the scene waits for native descent before the
+last reply. The other demonstrations use zoom one. Their controllers
 publish independent native input. Objects, rings, collision, clocks and RNG belong
-to one production world per shot. Posers and old files retain their original
-presentation/terrain-only behavior. The authored routes make explicit jump and
+to one production world per shot. Posers use explicit manual choreography;
+all shots have the same framing, team, binding and activation-window capabilities. The authored routes make explicit jump and
 wait decisions; no universal pathfinder is claimed. Each shot explicitly cues
 its matching ROM track at local frame zero: DEZ1 22, DEZ2 23 and AIZ1 1, verified
 by `catalog` against the supplied locked-on ROM. The parent preview and exporter
@@ -177,17 +180,18 @@ seek/replay through transfers, pickup/spill, airborne abilities and shot changes
 Both editors consume the shared scene schema and preview owner. Live in-engine
 preview runs a persistent offscreen worker, retains the parent world, accepts
 unkeyed camera drafts without advancing a repeated frame, and admits synthesized
-native SFX only during forward playback. The worker currently requires configured
-original whole-image ROM paths; it does not materialize composite ROMs. Keep the
-ensemble in the native camera's activation window; an authored offset does not
-create another activation region. Separated casts fail with an actionable route
-message. Author a closer route or a new shot.
+native SFX only during forward playback. The worker transports exact configured logical-ROM windows and composites without
+materializing joined ROMs. Separate native-sized activation windows follow each
+performer and explicit object role. They share native object slots; clear
+unnecessary objects or split the shot if that budget is exhausted.
 
 ## Unified native world sample
 
 [Screenplay](unified-world.script.json) and [canonical scene](unified-world.stageplay)
-show the current version-six model: S1 Sonic, S2 Tails and S3K Knuckles perform
+show the current version-seven canonical model (screenplay six): S1 Sonic, S2 Tails and S3K Knuckles perform
 native movement together, beside a posed actor. The 384×216 film holds fractional
-zoom 1.2 in both a populated world and the same world with initial objects/rings
-cleared. Supply all three ROMs to simulate or render it with the Stageplay CLI.
-Older examples retain their explicit compatibility policies when migrated.
+zoom 1.2 in both a populated world and the same world after `CLEAR_OBJECTS`.
+Rings remain separately owned. Supply all three ROMs to simulate or render it
+with the Stageplay CLI. All examples use `LIVE`; there are no format migrations
+or legacy world modes. The original opening deliberately uses manual Poser keys;
+physical examples use native Puppets.

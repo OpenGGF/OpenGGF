@@ -25,6 +25,24 @@ class TestStageplayRouteJob {
                 .withActors(List.of(new Actor("hero","Hero","s2","sonic",List.of(new ActorKey(0,100,200,0,-1,false,true,1,Interpolation.HOLD)))))
                 .withPuppets(List.of(new PuppetTrack("hero",false,0,List.of())));
     }
+    @Test void shippedWorkerCommandUsesTheHostClasspathAndTheLauncherOwnsTestOverrides() throws Exception {
+        var source = source();
+        var request = new StageplayRouteRequest("hero", 0, 150, 200, 30);
+        var capture = (StageplayRouteJob.Capture) (document, value, root) ->
+                new StageplayRouteInputs.Snapshot(document, value, root, "{}", "{}", "0".repeat(64));
+        var command = new AtomicReference<List<String>>();
+        try (var job = new StageplayRouteJob(capture, args -> {
+            command.set(args);
+            return child("success"); // This test-only seam supplies Surefire's classpath.
+        })) {
+            job.start(source, Path.of("/").toAbsolutePath(), request);
+            await(() -> job.poll().phase() == StageplayRouteJob.Phase.READY);
+            int classpathIndex = command.get().indexOf("-cp") + 1;
+            assertTrue(classpathIndex > 0);
+            assertEquals(System.getProperty("java.class.path"), command.get().get(classpathIndex));
+        }
+    }
+
     @Test void resultRequiresOffThreadFreshnessAndLateContentChangesCannotApply() throws Exception {
         var calls=new AtomicInteger();var changed=new AtomicBoolean();var threadNames=new ArrayList<String>();
         var request=new StageplayRouteRequest("hero",0,150,200,30);var source=source();

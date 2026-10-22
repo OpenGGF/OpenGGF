@@ -1,7 +1,5 @@
 package com.openggf.stageplay.runtime;
 
-import static com.openggf.stageplay.StageplayWorldPolicies.usesNativeWorld;
-
 import com.openggf.level.Level;
 import com.openggf.io.PngCodec;
 import com.openggf.stageplay.StageplayDialogue;
@@ -27,7 +25,6 @@ public final class StageplayResources implements AutoCloseable {
     private final List<String> available;
     private final Runnable release;
     private final SceneRomLibrary library;
-    private final StageplayPuppets puppets;
     private StageplayLiveWorld liveWorld;
     private StageplayOfflinePreview livePreview;
     private com.openggf.mods.scene.host.SceneSurface nativePosers;
@@ -51,12 +48,6 @@ public final class StageplayResources implements AutoCloseable {
     private StageplayResources(Function<String, SceneRomArt> resolver, List<String> available, Runnable release, SceneRomLibrary library) {
         this.resolver = Objects.requireNonNull(resolver); this.available = List.copyOf(available); this.release = release;
         this.library = library;
-        puppets = new StageplayPuppets((document, source, actor, anchor, track) -> {
-            requirePhysicalLibrary();
-            return PlayablePuppet.create(terrain(source), library.module(source.gameId()), source.zone(), source.act(),
-                    library.module(actor.gameId()), actor.character(), library.characterArt(actor.gameId(), actor.character()),
-                    nativePixel(anchor.x(), true), nativePixel(anchor.y(), false), track.collisionPath(), track.snapToFloor(), anchor.flipX());
-        });
     }
     public List<String> availableGames() { requireOpen(); return available; }
     public void setProjectRoot(Path root) {
@@ -95,13 +86,9 @@ public final class StageplayResources implements AutoCloseable {
     /** Resolves terrain puppets or the shared LIVE world; editor LIVE pixels/state come from an isolated worker. */
     public StageplayTimeline.Frame resolveFrame(StageplayDocument document, StageplayTimeline.Frame authoredFrame) {
         requireOpen();
-        var set = authoredFrame.set() == null ? document.set() : authoredFrame.set();
-        if (usesNativeWorld(set.worldPolicy())) {
-            if (liveWorld != null) return liveWorld.resolve(document, authoredFrame);
-            if (livePreview == null) livePreview = new StageplayOfflinePreview(StageplayPreviewAssets.source(projectRoot, assetReader));
-            return livePreview.resolve(document, authoredFrame.frame(), authoredFrame.world() == null ? null : authoredFrame.camera());
-        }
-        return puppets.resolve(document, authoredFrame);
+        if (liveWorld != null) return liveWorld.resolve(document, authoredFrame);
+        if (livePreview == null) livePreview = new StageplayOfflinePreview(StageplayPreviewAssets.source(projectRoot, assetReader));
+        return livePreview.resolve(document, authoredFrame.frame(), authoredFrame.world() == null ? null : authoredFrame.camera());
     }
 
     /** The caller supplies an explicitly owned offline world; resources owns its lifetime. */
@@ -124,8 +111,7 @@ public final class StageplayResources implements AutoCloseable {
         if (nativePosers == null) nativePosers = new com.openggf.mods.scene.host.SceneSurface();
         var renderer = new StageplayRenderer(this);
         liveWorld.draw(frame, view, (x, y, width, height) -> {
-            var camera = frame.set().worldPolicy() == StageplayDocument.WorldPolicy.LEGACY_LIVE
-                    ? view : new StageplayTimeline.CameraPose(x, y, 1);
+            var camera = new StageplayTimeline.CameraPose(x, y, 1);
             nativePosers.record(width, height, canvas -> renderer.drawLivePosers(document, frame, canvas, camera));
             nativePosers.render(com.openggf.mods.scene.host.SceneSurface.projection(width, height), new int[]{0, 0, width, height});
         });
@@ -136,7 +122,7 @@ public final class StageplayResources implements AutoCloseable {
     /** Captured native no-device SFX for this sampled frame; the editor decides forward-playback admission. */
     public com.openggf.audio.StreamedMusicPort.SfxPcm previewSound(int frame) { return livePreview==null ? null : livePreview.sound(frame); }
     SceneImage livePreviewImage() { return livePreview == null ? null : livePreview.image(); }
-    public void resetPuppets() { puppets.reset(); if (liveWorld != null) liveWorld.reset(); if (livePreview != null) livePreview.close(); }
+    public void resetPuppets() { if (liveWorld != null) liveWorld.reset(); if (livePreview != null) livePreview.close(); }
 
     public java.util.List<StageplayObjectInspection> objectInspection() {
         if (liveWorld != null) return liveWorld.objectInspection();
@@ -241,11 +227,8 @@ public final class StageplayResources implements AutoCloseable {
         prepareDialogue(document);
         validateSet(document.set());
         for (var change : document.sceneChanges()) validateSet(change.set());
-        for (var camera : document.camera()) {
-            var source = document.set();
-            for (var change : document.sceneChanges()) if (change.frame() <= camera.frame()) source = change.set();
-            if (usesNativeWorld(source.worldPolicy())) StageplayWorldPresentation.validate(document.width(), document.height(), camera.zoom());
-        }
+        for (var camera : document.camera())
+            StageplayWorldPresentation.validate(document.width(), document.height(), camera.zoom());
         for (var actor : document.actors()) {
             var art = character(actor.gameId(), actor.character());
             for (var key : actor.keys()) {
@@ -258,8 +241,6 @@ public final class StageplayResources implements AutoCloseable {
         }
         if (!document.puppets().isEmpty()) {
             requirePhysicalLibrary();
-            if (!usesNativeWorld(document.set().worldPolicy())) terrain(document.set());
-            for (var change : document.sceneChanges()) if (!usesNativeWorld(change.set().worldPolicy())) terrain(change.set());
             for (var track : document.puppets()) {
                 var actor = document.actors().stream().filter(value -> value.id().equals(track.actorId())).findFirst().orElseThrow();
                 if (library.characterArt(actor.gameId(), actor.character()) == null)
@@ -268,7 +249,6 @@ public final class StageplayResources implements AutoCloseable {
                 for (var command : track.commands()) {
                     var source = document.set();
                     for (var change : document.sceneChanges()) if (change.frame() <= command.frame()) source = change.set();
-                    if (!usesNativeWorld(source.worldPolicy())) continue;
                     var capabilities = library.module(actor.gameId()).getRules().playerCapability();
                     if ((command.kind() == StageplayDocument.PuppetCommandKind.FLY_TO || command.kind() == StageplayDocument.PuppetCommandKind.HOVER)
                             && !capabilities.tailsFlightEnabled()) throw new IllegalArgumentException("Donor module does not support native flight: " + actor.id());
@@ -286,11 +266,10 @@ public final class StageplayResources implements AutoCloseable {
     }
 
     private void validateSet(StageplayDocument.SetSource source) {
-        if (!usesNativeWorld(source.worldPolicy()) || !source.levelProject().isEmpty()) {
+        if (!source.levelProject().isEmpty()) {
             set(source);
             return;
         }
-        requirePhysicalLibrary();
         var art = rom(source.gameId());
         if (!source.romSha1().isEmpty() && !source.romSha1().equalsIgnoreCase(art.romSha1()))
             throw new IllegalArgumentException("Scene set requires a different exact ROM identity");
@@ -406,5 +385,5 @@ public final class StageplayResources implements AutoCloseable {
         };
     }
     private void requireOpen() { if (closed) throw new IllegalStateException("Stageplay resources are closed"); }
-    @Override public void close() { if (!closed) { closed = true; if (nativePosers != null) nativePosers.close(); puppets.close(); if (liveWorld != null) liveWorld.close(); if (livePreview != null) livePreview.close(); sets.clear(); terrains.clear(); clearDialogue(); release.run(); } }
+    @Override public void close() { if (!closed) { closed = true; if (nativePosers != null) nativePosers.close(); if (liveWorld != null) liveWorld.close(); if (livePreview != null) livePreview.close(); sets.clear(); terrains.clear(); clearDialogue(); release.run(); } }
 }

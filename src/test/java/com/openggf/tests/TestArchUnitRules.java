@@ -718,17 +718,17 @@ class TestArchUnitRules {
     }
 
     private static boolean stageplayCoreType(String name) {
-        return Set.of("StageplayDocument", "StageplayTimeline", "StageplayController", "StageplayStore", "StageplayControl", "StageplayDialogue", "StageplayWorldPolicies")
+        return Set.of("StageplayDocument", "StageplayTimeline", "StageplayController", "StageplayStore", "StageplayControl", "StageplayDialogue")
                 .stream().anyMatch(owner -> typeOrNested(name, "com.openggf.stageplay." + owner));
     }
 
     // Each adapter owns a bounded service boundary. Values remain independent and no runtime
     // owner is admitted to editor/tools; new adapters must be named here rather than frozen away.
     private static final java.util.Map<String, Set<String>> STAGEPLAY_CONSUMERS = java.util.Map.ofEntries(
-            java.util.Map.entry("com.openggf.editor.stageplay.StageplayWorkspace", Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.StageplayController", "com.openggf.stageplay.StageplayStore", "com.openggf.stageplay.StageplayDialogue", "com.openggf.stageplay.StageplayWorldPolicies", "com.openggf.stageplay.runtime.StageplayObjectInspection", "com.openggf.stageplay.editor.StageplayRouteJob", "com.openggf.stageplay.route.StageplayRouteContract", "com.openggf.stageplay.route.StageplayRouteFootprint", "com.openggf.stageplay.route.StageplayRouteProtocol", "com.openggf.stageplay.route.StageplayRouteRequest", "com.openggf.stageplay.route.StageplayRouteResult")),
+            java.util.Map.entry("com.openggf.editor.stageplay.StageplayWorkspace", Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.StageplayController", "com.openggf.stageplay.StageplayStore", "com.openggf.stageplay.StageplayDialogue", "com.openggf.stageplay.runtime.StageplayObjectInspection", "com.openggf.stageplay.editor.StageplayRouteJob", "com.openggf.stageplay.route.StageplayRouteContract", "com.openggf.stageplay.route.StageplayRouteFootprint", "com.openggf.stageplay.route.StageplayRouteProtocol", "com.openggf.stageplay.route.StageplayRouteRequest", "com.openggf.stageplay.route.StageplayRouteResult")),
             java.util.Map.entry("com.openggf.editor.stageplay.StageplayObjectAuthoring", Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayController", "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.StageplayObjectCatalog", "com.openggf.stageplay.runtime.StageplayObjectInspection")),
             java.util.Map.entry("com.openggf.editor.hud.StageplayHud", Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayController", "com.openggf.stageplay.StageplayDialogue", "com.openggf.stageplay.StageplayTimeline$CameraPose")),
-            java.util.Map.entry("com.openggf.tools.StageplayTool", Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayStore", "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.StageplayWorldPolicies", "com.openggf.stageplay.runtime.StageplayResources", "com.openggf.stageplay.runtime.StageplayLiveWorld")),
+            java.util.Map.entry("com.openggf.tools.StageplayTool", Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayStore", "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.runtime.StageplayResources", "com.openggf.stageplay.runtime.StageplayLiveWorld")),
             java.util.Map.entry("com.openggf.tools.StageplayScriptCompiler", Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayStore", "com.openggf.stageplay.StageplayTimeline")),
             java.util.Map.entry("com.openggf.tools.StageplayScriptDecompiler", Set.of("com.openggf.stageplay.StageplayDocument")),
             java.util.Map.entry("com.openggf.tools.StageplayObjectCoverageTool", Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayObjectCatalog")),
@@ -743,7 +743,6 @@ class TestArchUnitRules {
             java.util.Map.entry("com.openggf.stageplay.runtime.StageplayOfflinePreview", Set.of("audio", "data", "game", "mods")),
             java.util.Map.entry("com.openggf.stageplay.runtime.StageplayAudio", Set.of("audio", "data", "game", "io", "mods")),
             java.util.Map.entry("com.openggf.stageplay.runtime.StageplayResources", Set.of("audio", "level", "mods", "io", "game", "sprites", "physics")),
-            java.util.Map.entry("com.openggf.stageplay.runtime.StageplayPuppets", Set.of("sprites")),
             java.util.Map.entry("com.openggf.stageplay.runtime.StageplayAssets", Set.of("io")),
             java.util.Map.entry("com.openggf.stageplay.runtime.StageplayDialogueRenderer", Set.of("mods")),
             java.util.Map.entry("com.openggf.stageplay.runtime.StageplayRenderer", Set.of("mods")),

@@ -40,6 +40,15 @@ public final class FbzMagneticPendulumObjectInstance extends AbstractObjectInsta
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        var main = services().playerQuery().mainPlayerOrNull();
+        if ((grabbed || releaseCarryFrames > 0) && main instanceof AbstractPlayableSprite player) {
+            releaseControl(player);
+            releaseCarryFrames = 0;
+        }
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity ignored) {
         loadRespawnOrientationOnce();
         if (!graphAllocationAttempted) {
@@ -96,11 +105,15 @@ public final class FbzMagneticPendulumObjectInstance extends AbstractObjectInsta
         if (endpointReached) finishSwing(main);
     }
 
-    private void releaseByJump(AbstractPlayableSprite player) {
+    private void releaseControl(AbstractPlayableSprite player) {
         grabbed = false;
+        ObjectControlState.none().applyTo(player);
+    }
+
+    private void releaseByJump(AbstractPlayableSprite player) {
         int nativeX = player.getCentreX();
         int nativeY = player.getCentreY();
-        ObjectControlState.none().applyTo(player);
+        releaseControl(player);
         player.setSpindash(false);
         player.setAir(true);
         player.setJumping(true);

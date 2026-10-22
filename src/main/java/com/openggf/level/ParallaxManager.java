@@ -3,8 +3,8 @@ package com.openggf.level;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.data.Rom;
-import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
+import com.openggf.game.GameModule;
 import com.openggf.game.ScrollHandlerProvider;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.ParallaxSnapshot;
@@ -19,12 +19,12 @@ import java.io.IOException;
 import java.util.logging.Logger;
 
 /**
- * Manages parallax scrolling effects. Outputs scroll values compatible with the LevelManager
- * rendering system.
+ * Manages parallax scrolling effects.
+ * Outputs scroll values compatible with the LevelManager rendering system.
  *
- * <p>All game-specific scroll logic is provided by the current {@link ScrollHandlerProvider}
- * obtained from the active {@link GameModule}. ParallaxManager itself contains no game-specific
- * imports or constants.
+ * <p>All game-specific scroll logic is provided by the current
+ * {@link ScrollHandlerProvider} obtained from the active {@link GameModule}.
+ * ParallaxManager itself contains no game-specific imports or constants.
  */
 @com.openggf.game.ModApi
 public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
@@ -45,8 +45,7 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     public ParallaxManager() {
         int screenWidth;
         try {
-            screenWidth =
-                    GameServices.configuration().getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
+            screenWidth = GameServices.configuration().getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
         } catch (Exception e) {
             screenWidth = 320;
         }
@@ -93,6 +92,7 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     private boolean providerLoaded = false;
     private int contributedZone = -1;
     private ZoneScrollHandler contributedHandler;
+
     private com.openggf.level.scroll.ScrollProjectionPhase projectionPhase;
     private BackgroundBuildParameters backgroundBuild;
     private com.openggf.game.internal.BackgroundColumnProjection backgroundColumns;
@@ -110,8 +110,8 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     private BgTilemapUpdateMode cachedBgTilemapUpdateMode = BgTilemapUpdateMode.STATIC_WINDOW;
 
     /**
-     * Reset zone state to force reinitialization on next initZone call. Useful for tests to ensure
-     * deterministic state.
+     * Reset zone state to force reinitialization on next initZone call.
+     * Useful for tests to ensure deterministic state.
      */
     public void resetZoneState() {
         currentZone = -1;
@@ -122,8 +122,8 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     }
 
     /**
-     * Resets all mutable state without destroying the singleton instance. Clears scroll factors and
-     * provider so the next load starts fresh.
+     * Resets all mutable state without destroying the singleton instance.
+     * Clears scroll factors and provider so the next load starts fresh.
      */
     public void resetState() {
         resetZoneState();
@@ -175,8 +175,8 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     }
 
     /**
-     * Compatibility overload for callers that supplied the obsolete game-level background-Y hint.
-     * The active zone handler is authoritative.
+     * Compatibility overload for callers that supplied the obsolete game-level
+     * background-Y hint. The active zone handler is authoritative.
      */
     @Deprecated
     public void update(int zoneId, int actId, Camera camera, int frameCounter, int ignoredBackgroundY) {
@@ -215,8 +215,9 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     }
 
     /**
-     * Get the raw hScroll buffer for shader-based rendering. This returns the packed (FG << 16 |
-     * BG) format array. The BackgroundRenderer extracts BG values during upload.
+     * Get the raw hScroll buffer for shader-based rendering.
+     * This returns the packed (FG << 16 | BG) format array.
+     * The BackgroundRenderer extracts BG values during upload.
      */
     public int[] getHScrollForShader() {
         return hScroll;
@@ -231,13 +232,12 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     }
 
     /**
-     * Returns the active zone scroll handler for the given zone, or null. Used by event handlers
-     * that need to communicate directly with their zone's scroll handler (e.g., HCZ2 wall-chase
-     * driving SwScrlHcz).
+     * Returns the active zone scroll handler for the given zone, or null.
+     * Used by event handlers that need to communicate directly with
+     * their zone's scroll handler (e.g., HCZ2 wall-chase driving SwScrlHcz).
      */
     public ZoneScrollHandler getHandler(int zoneId) {
-        return zoneId == contributedZone
-                ? contributedHandler
+        return zoneId == contributedZone ? contributedHandler
                 : scrollProvider != null ? scrollProvider.getHandler(zoneId) : null;
     }
 
@@ -260,8 +260,9 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     }
 
     /**
-     * Optional per-column FG VScroll values for shader-based column distortion effects. Used by the
-     * S3K Gumball bonus stage to make machine body tiles drift with the gumball machine object.
+     * Optional per-column FG VScroll values for shader-based column distortion effects.
+     * Used by the S3K Gumball bonus stage to make machine body tiles drift with the
+     * gumball machine object.
      *
      * @return per-column FG VScroll array (ceil(screenWidth/16) entries), or null when not active
      */
@@ -270,8 +271,9 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     }
 
     /**
-     * Get the BG camera X position from the active scroll handler. Used by LevelManager to
-     * determine which region of a wide BG map to render into the 512px VDP nametable tilemap.
+     * Get the BG camera X position from the active scroll handler.
+     * Used by LevelManager to determine which region of a wide BG map
+     * to render into the 512px VDP nametable tilemap.
      *
      * @return BG camera X in pixels, or Integer.MIN_VALUE if no offset needed
      */
@@ -294,9 +296,9 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     }
 
     /**
-     * Get the current horizontal shake offset for this frame. This is propagated from the active
-     * zone scroll handler when screen shake is active. Used by LevelManager to set camera shake
-     * offsets for FG tiles and sprites.
+     * Get the current horizontal shake offset for this frame.
+     * This is propagated from the active zone scroll handler when screen shake is active.
+     * Used by LevelManager to set camera shake offsets for FG tiles and sprites.
      *
      * @return Horizontal shake offset in pixels, or 0 if no shake
      */
@@ -305,9 +307,9 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     }
 
     /**
-     * Get the current vertical shake offset for this frame. This is propagated from the active zone
-     * scroll handler when screen shake is active. Used by LevelManager to set camera shake offsets
-     * for FG tiles and sprites.
+     * Get the current vertical shake offset for this frame.
+     * This is propagated from the active zone scroll handler when screen shake is active.
+     * Used by LevelManager to set camera shake offsets for FG tiles and sprites.
      *
      * @return Vertical shake offset in pixels, or 0 if no shake
      */
@@ -316,24 +318,24 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     }
 
     /**
-     * Get the current Tornado X velocity (pixels per frame) for SCZ objects. ROM: loc_36776 adds
-     * Tornado_Velocity_X to object x_pos each frame.
+     * Get the current Tornado X velocity (pixels per frame) for SCZ objects.
+     * ROM: loc_36776 adds Tornado_Velocity_X to object x_pos each frame.
      */
     public int getTornadoVelocityX() {
         return scrollProvider != null ? scrollProvider.getTornadoVelocityX() : 0;
     }
 
     /**
-     * Get the current Tornado Y velocity (pixels per frame) for SCZ objects. ROM: loc_36776 adds
-     * Tornado_Velocity_Y to object y_pos each frame.
+     * Get the current Tornado Y velocity (pixels per frame) for SCZ objects.
+     * ROM: loc_36776 adds Tornado_Velocity_Y to object y_pos each frame.
      */
     public int getTornadoVelocityY() {
         return scrollProvider != null ? scrollProvider.getTornadoVelocityY() : 0;
     }
 
     /**
-     * Get the current background camera X offset used by WFZ scripted objects. ROM equivalent:
-     * Camera_BG_X_offset.
+     * Get the current background camera X offset used by WFZ scripted objects.
+     * ROM equivalent: Camera_BG_X_offset.
      */
     public int getCameraBgXOffset() {
         return scrollProvider != null ? scrollProvider.getCameraBgXOffset() : 0;
@@ -341,9 +343,8 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
 
     /**
      * Set the screen shake flag for MCZ.
-     *
-     * @deprecated Use GameServices.gameState().setScreenShakeActive() directly. Screen shake is now
-     *     a global state that all zones check.
+     * @deprecated Use GameServices.gameState().setScreenShakeActive() directly.
+     *             Screen shake is now a global state that all zones check.
      */
     @Deprecated
     public void setScreenShakeFlag(boolean screenShakeFlag) {
@@ -354,8 +355,7 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
         updateScrollOutput(zoneId, actId, cam, frameCounter, false);
     }
 
-    private void updateScrollOutput(
-            int zoneId, int actId, Camera cam, int frameCounter, boolean rebuild) {
+    private void updateScrollOutput(int zoneId, int actId, Camera cam, int frameCounter, boolean rebuild) {
         // Clear scroll buffer to ensure deterministic state
         // (some zone handlers intentionally leave lines unwritten)
         java.util.Arrays.fill(hScroll, 0);
@@ -410,11 +410,8 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
                 // An internal ExplicitForegroundVerticalScroll handler means its 0 as well.
                 short handlerFgVscroll = handler.getVscrollFactorFG();
                 if (handlerFgVscroll != 0
-                        || handler
-                                        instanceof
-                                        com.openggf.game.internal.ExplicitForegroundVerticalScroll
-                                                explicit
-                                && explicit.foregroundVerticalScrollExplicit()) {
+                        || handler instanceof com.openggf.game.internal.ExplicitForegroundVerticalScroll explicit
+                        && explicit.foregroundVerticalScrollExplicit()) {
                     vscrollFactorFG = handlerFgVscroll;
                 } else {
                     vscrollFactorFG = (short) cam.getY();
@@ -439,7 +436,7 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
                 || level.gameModule.getGameService(
                                 com.openggf.level.scroll.DirectedScrollPresentation.class)
                         == null) {
-            // Ordinary gameplay and compatibility camera reframing use the native
+            // Ordinary gameplay uses the native
             // registers directly. Never allocate or query directed descriptor owners.
             projectionPhase = null;
             backgroundBuild = null;
@@ -447,14 +444,9 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
             return;
         }
         backgroundBuild = BackgroundBuildParameters.capture(level);
-        backgroundColumns =
-                level != null
-                                && level.zoneFeatureProvider
-                                        instanceof
-                                        com.openggf.game.internal.BackgroundColumnProjectionSource
-                                                source
-                        ? source.captureBackgroundColumns()
-                        : null;
+        backgroundColumns = level.zoneFeatureProvider
+                instanceof com.openggf.game.internal.BackgroundColumnProjectionSource source
+                ? source.captureBackgroundColumns() : null;
         var output =
                 new com.openggf.level.scroll.ScrollProjection(
                         hScroll,
@@ -520,8 +512,8 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     }
 
     /**
-     * Advances scroll routines that drive foreground camera movement as gameplay state. Render-time
-     * parallax updates must only consume the resulting state.
+     * Advances scroll routines that drive foreground camera movement as gameplay
+     * state. Render-time parallax updates must only consume the resulting state.
      */
     public boolean advanceCameraDrivenScroll(int zoneId, int actId, Camera cam, int frameCounter) {
         if (!providerLoaded) {
@@ -545,8 +537,8 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     }
 
     /**
-     * Update parallax scrolling with dynamic art streaming support. This overload handles
-     * zone-specific dynamic art updates (HTZ mountains/clouds).
+     * Update parallax scrolling with dynamic art streaming support.
+     * This overload handles zone-specific dynamic art updates (HTZ mountains/clouds).
      *
      * @param zoneId Zone identifier
      * @param actId Act identifier
@@ -574,15 +566,15 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
 
     /**
      * Update parallax for the ending cutscene.
+     * <p>
+     * Uses camera (0,0) and a fixed BG vscroll value from the ending provider.
+     * Delegates to the scroll provider's ending handler for the
+     * zone-specific scroll behavior during the ending sequence.
      *
-     * <p>Uses camera (0,0) and a fixed BG vscroll value from the ending provider. Delegates to the
-     * scroll provider's ending handler for the zone-specific scroll behavior during the ending
-     * sequence.
-     *
-     * @param zoneId zone ID for the ending zone
-     * @param actId act ID
+     * @param zoneId     zone ID for the ending zone
+     * @param actId      act ID
      * @param frameCounter current frame counter
-     * @param bgVscroll ending BG vertical scroll (ROM: Camera_BG_Y_pos)
+     * @param bgVscroll  ending BG vertical scroll (ROM: Camera_BG_Y_pos)
      */
     public void updateForEnding(int zoneId, int actId, int frameCounter, int bgVscroll) {
         // This separate owner publishes special-ending output, not the ordinary
@@ -604,8 +596,7 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
 
         // Delegate to the provider for game-specific ending scroll
         if (scrollProvider != null) {
-            if (scrollProvider.updateForEnding(
-                    hScroll, zoneId, actId, frameCounter, vscrollFactorBG)) {
+            if (scrollProvider.updateForEnding(hScroll, zoneId, actId, frameCounter, vscrollFactorBG)) {
                 // Provider handled the ending - extract results from the handler
                 ZoneScrollHandler handler = getHandler(zoneId);
                 if (handler != null) {

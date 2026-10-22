@@ -1,18 +1,12 @@
 package com.openggf.graphics;
 
-import static com.openggf.level.LevelConstants.*;
-
-import static org.lwjgl.opengl.GL11.*;
-import static org.lwjgl.opengl.GL13.*;
-import static org.lwjgl.opengl.GL20.*;
-
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
 import com.openggf.graphics.color.DisplayColorConverter;
-import com.openggf.graphics.color.DisplayColorExpansion;
 import com.openggf.graphics.color.DisplayColorProfile;
+import com.openggf.graphics.color.DisplayColorExpansion;
 import com.openggf.graphics.pipeline.UiRenderPipeline;
 import com.openggf.graphics.shaderlib.DisplayShaderPipeline;
 import com.openggf.level.Palette;
@@ -21,20 +15,26 @@ import com.openggf.level.PatternDesc;
 import com.openggf.level.render.BackgroundRenderer;
 import com.openggf.level.render.SpritePieceRenderer;
 
+import static com.openggf.level.LevelConstants.*;
+
 import org.lwjgl.system.MemoryUtil;
 
-import java.io.IOException;
+import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL13.*;
+import static org.lwjgl.opengl.GL20.*;
+
+import java.util.Queue;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -138,7 +138,7 @@ public class GraphicsManager {
 	private static final String BASIC_VERTEX_SHADER_PATH = "shaders/shader_basic.vert";
 	private static final String DEBUG_VERTEX_SHADER_PATH = "shaders/shader_debug_color.vert";
 	private static final String INSTANCED_VERTEX_SHADER_PATH = "shaders/shader_instanced.vert";
-    private static final String SPRITE_PRIORITY_SHADER_PATH = "shaders/shader_sprite_priority.glsl";
+	private static final String SPRITE_PRIORITY_SHADER_PATH = "shaders/shader_sprite_priority.glsl";
 
 	// Sprite priority rendering for ROM-accurate sprite-to-tile layering
 	private SpritePriorityShaderProgram spritePriorityShaderProgram;
@@ -153,8 +153,8 @@ public class GraphicsManager {
 	private boolean spriteSatCollectionActive = false;
 	private boolean spriteMaskRequested = false;
 	private final List<SpriteSatEntry> spriteSatEntries = new ArrayList<>();
-    private final java.util.IdentityHashMap<SpriteSatEntry, Integer> objectVisualSatMasks =
-            new java.util.IdentityHashMap<>();
+	private final java.util.IdentityHashMap<SpriteSatEntry, Integer> objectVisualSatMasks =
+			new java.util.IdentityHashMap<>();
 	// Reusable buffers/scratch for endSpriteSatCollectionAndReplay() — avoids per-frame
 	// ArrayList and PatternDesc allocations on the SAT replay hot path.
 	private final ArrayList<PatternRenderCommand> reusableReplayCommands = new ArrayList<>();
@@ -267,9 +267,8 @@ public class GraphicsManager {
 				} else if (command instanceof GLCommandGroup group) {
 					geometry = group.prepareGroup(spritePresentationBuilder.cameraX, spritePresentationBuilder.cameraY);
 				} else {
-                    throw new IllegalStateException(
-                            "GPU command submitted during CPU sprite preparation: "
-                                    + command.getClass().getName());
+					throw new IllegalStateException("GPU command submitted during CPU sprite preparation: "
+							+ command.getClass().getName());
 				}
 				spritePresentationBuilder.primitives.add(new SpritePresentation.Primitive(
 						spritePresentationBuilder.tiles.size(), spritePresentationBuilder.layer, geometry, spritePresentationSubject));
@@ -379,11 +378,8 @@ public class GraphicsManager {
 	/** Internal post-SAT picture bridge: source row crop/flips stay native; only the final quad/colour changes. */
 	void renderPresentationPattern(int patternId, int paletteIndex, boolean hFlip, boolean vFlip, boolean priority,
 	                               int rowStart, int rowEnd, float[] quad, float hue, float opacity) {
-        if (quad.length != 8 || !Float.isFinite(hue) || !Float.isFinite(opacity))
-            throw new IllegalArgumentException("Invalid presentation geometry or colour");
-        for (float value : quad)
-            if (!Float.isFinite(value))
-                throw new IllegalArgumentException("Nonfinite picture vertex");
+		if(quad.length!=8||!Float.isFinite(hue)||!Float.isFinite(opacity))throw new IllegalArgumentException("Invalid presentation geometry or colour");
+		for(float value:quad)if(!Float.isFinite(value))throw new IllegalArgumentException("Nonfinite picture vertex");
 		if(headlessMode) return;
 		ensurePatternAtlas();
 		var entry=patternAtlas==null?null:patternAtlas.getEntry(patternId);
@@ -395,20 +391,20 @@ public class GraphicsManager {
 		registerCommand(command);
 	}
 
-    private final ObjectVisualPatternBanks objectVisualPatterns = new ObjectVisualPatternBanks();
+	private final ObjectVisualPatternBanks objectVisualPatterns = new ObjectVisualPatternBanks();
 
-    ObjectVisualPatternBanks.Bank objectVisualPatternBank(Object owner, int count) {
-        return objectVisualPatterns.acquire(
-                owner, count, presentationTrailBanks.values(), PRESENTATION_TRAIL_BANK_SIZE);
-    }
+	ObjectVisualPatternBanks.Bank objectVisualPatternBank(Object owner, int count) {
+		return objectVisualPatterns.acquire(
+				owner, count, presentationTrailBanks.values(), PRESENTATION_TRAIL_BANK_SIZE);
+	}
 
-    boolean objectVisualPatternBankValid(Object owner, ObjectVisualPatternBanks.Bank bank) {
-        return objectVisualPatterns.valid(owner, bank);
-    }
+	boolean objectVisualPatternBankValid(Object owner, ObjectVisualPatternBanks.Bank bank) {
+		return objectVisualPatterns.valid(owner, bank);
+	}
 
-    void releaseObjectVisualPatternBank(Object owner, ObjectVisualPatternBanks.Bank bank) {
-        objectVisualPatterns.release(owner, bank);
-    }
+	void releaseObjectVisualPatternBank(Object owner, ObjectVisualPatternBanks.Bank bank) {
+		objectVisualPatterns.release(owner, bank);
+	}
 
 	private final java.util.IdentityHashMap<Object,Integer> presentationTrailBanks=new java.util.IdentityHashMap<>();
 	private final java.util.IdentityHashMap<Object,Long> presentationTrailGenerations=new java.util.IdentityHashMap<>();
@@ -423,7 +419,7 @@ public class GraphicsManager {
 			// Owners use identity, but reserved numeric addresses must use value equality.
 			boolean occupied=false;
 			for(int assigned:presentationTrailBanks.values())if(assigned==base){occupied=true;break;}
-            if (objectVisualPatterns.overlaps(base, PRESENTATION_TRAIL_BANK_SIZE)) occupied = true;
+			if (objectVisualPatterns.overlaps(base, PRESENTATION_TRAIL_BANK_SIZE)) occupied = true;
 			if(!occupied) {
 				presentationTrailBanks.put(owner,base);presentationTrailGenerations.put(owner,++nextPresentationTrailGeneration);return base;
 			}
@@ -492,8 +488,8 @@ public class GraphicsManager {
 	 * Use this for testing game logic without rendering.
 	 */
 	public void initHeadless() {
-        objectVisualPatterns.clear();
-        objectVisualSatMasks.clear();
+		objectVisualPatterns.clear();
+		objectVisualSatMasks.clear();
 		this.headlessMode = true;
 		this.glInitialized = false;
 		if (this.patternAtlas == null) {
@@ -535,7 +531,7 @@ public class GraphicsManager {
 
 	public void bindRuntimeManagedReferences(Camera runtimeCamera, FadeManager runtimeFadeManager) {
 		camera = Objects.requireNonNull(runtimeCamera, "runtimeCamera");
-        setActiveFadeManager(Objects.requireNonNull(runtimeFadeManager, "runtimeFadeManager"));
+		setActiveFadeManager(Objects.requireNonNull(runtimeFadeManager, "runtimeFadeManager"));
 	}
 
 	public void clearRuntimeManagedReferences() {
@@ -847,12 +843,8 @@ public class GraphicsManager {
 	}
 
 	int scopedPaletteBank(Object owner,PaletteView[] palettes) {
-        if (owner == null
-                || palettes == null
-                || palettes.length != 4
-                || java.util.Arrays.stream(palettes).anyMatch(java.util.Objects::isNull))
-            throw new IllegalArgumentException(
-                    "A scoped palette bank needs an owner and exactly four ROM palette lines");
+		if(owner==null || palettes==null || palettes.length!=4 || java.util.Arrays.stream(palettes).anyMatch(java.util.Objects::isNull))
+			throw new IllegalArgumentException("A scoped palette bank needs an owner and exactly four ROM palette lines");
 		var lease=scopedPaletteOwners.get(owner);
 		if(lease==null || !RenderContext.scopedPaletteBankValid(lease.token(),lease.base())) {
 			Object token=new Object();int base=RenderContext.reserveScopedPaletteBank(token);
@@ -874,8 +866,7 @@ public class GraphicsManager {
 		var lease=scopedPaletteOwners.remove(owner);if(lease==null) return;
 		if(RenderContext.scopedPaletteBankValid(lease.token(),lease.base())) {
 			for(int line=lease.base();line<lease.base()+4;line++) {
-                uploadPaletteLine(ScopedUnderwaterBasis.blankLine(), line);
-                paletteTextureMap.remove("palette_" + line);
+				uploadPaletteLine(ScopedUnderwaterBasis.blankLine(),line);paletteTextureMap.remove("palette_"+line);
 				if(line<lastCachedPaletteLines.length)lastCachedPaletteLines[line]=null;
 				pendingPaletteUploads[line]=false;
 			}
@@ -1496,8 +1487,7 @@ public class GraphicsManager {
 				flushShadowBatch();
 				batchedRenderer.beginShadowBatch(entry.atlasIndex());
 				if (!batchedRenderer.addShadowPattern(entry, desc, x, y)) {
-                    throw new IllegalStateException(
-                            "Unable to add shadow pattern to a fresh batch");
+					throw new IllegalStateException("Unable to add shadow pattern to a fresh batch");
 				}
 			}
 		}
@@ -1627,23 +1617,23 @@ public class GraphicsManager {
 		this.cachedConfigScreenHeightPx = -1;
 	}
 
-    /** Internal bounded offscreen viewport; restores the host's projection source/override exactly. */
-    void withPresentationViewport(int width, int height, Runnable draw) {
-        int oldX = viewportX, oldY = viewportY, oldWidth = viewportWidth, oldHeight = viewportHeight;
-        int oldProjectionWidth = projectionWidth, oldLogicalHeight = cachedConfigScreenHeightPx;
-        float[] oldProjection = projectionMatrixBuffer;
-        try {
-            setViewport(0, 0, width, height);
-            projectionWidth = width;
-            cachedConfigScreenHeightPx = height;
-            projectionMatrixBuffer = new org.joml.Matrix4f().ortho2D(0, width, 0, height).get(new float[16]);
-            draw.run();
-        } finally {
-            viewportX = oldX; viewportY = oldY; viewportWidth = oldWidth; viewportHeight = oldHeight;
-            projectionWidth = oldProjectionWidth; cachedConfigScreenHeightPx = oldLogicalHeight;
-            projectionMatrixBuffer = oldProjection;
-        }
-    }
+	/** Internal bounded offscreen viewport; restores the host's projection source/override exactly. */
+	void withPresentationViewport(int width, int height, Runnable draw) {
+		int oldX = viewportX, oldY = viewportY, oldWidth = viewportWidth, oldHeight = viewportHeight;
+		int oldProjectionWidth = projectionWidth, oldLogicalHeight = cachedConfigScreenHeightPx;
+		float[] oldProjection = projectionMatrixBuffer;
+		try {
+			setViewport(0, 0, width, height);
+			projectionWidth = width;
+			cachedConfigScreenHeightPx = height;
+			projectionMatrixBuffer = new org.joml.Matrix4f().ortho2D(0, width, 0, height).get(new float[16]);
+			draw.run();
+		} finally {
+			viewportX = oldX; viewportY = oldY; viewportWidth = oldWidth; viewportHeight = oldHeight;
+			projectionWidth = oldProjectionWidth; cachedConfigScreenHeightPx = oldLogicalHeight;
+			projectionMatrixBuffer = oldProjection;
+		}
+	}
 
 	/**
 	 * Returns the configured logical screen height (SCREEN_HEIGHT_PIXELS), cached
@@ -2154,8 +2144,8 @@ public class GraphicsManager {
 	 * data and palette state so subsequent rendering starts from a clean GPU.
 	 */
 	public void resetPatternAndPaletteState() {
-        objectVisualPatterns.clear();
-        objectVisualSatMasks.clear();
+		objectVisualPatterns.clear();
+		objectVisualSatMasks.clear();
 		if (headlessMode || !glInitialized) {
 			return;
 		}
@@ -2175,8 +2165,8 @@ public class GraphicsManager {
 	 */
 	public void cleanup() {
         presentationTrailBanks.clear();
-        objectVisualPatterns.clear();
-        objectVisualSatMasks.clear();
+		objectVisualPatterns.clear();
+		objectVisualSatMasks.clear();
         presentationTrailGenerations.clear();
         if (!headlessMode) arenaMaskRenderer.cleanup();
 		clearPendingRenderThreadTasks();
@@ -2293,7 +2283,7 @@ public class GraphicsManager {
 		spriteMaskRequested = false;
 		satReplayBatchOpen = false;
 		spriteSatEntries.clear();
-        objectVisualSatMasks.clear();
+		objectVisualSatMasks.clear();
 		currentSpriteSatDebugSource = null;
 		spritePresentationSubject = SpritePresentation.Subject.WORLD;
         objectHeadFragmentBanks.reset();
@@ -2339,14 +2329,14 @@ public class GraphicsManager {
 		return priority&&spritePriorityShaderProgram!=null?spritePriorityShaderProgram:currentShaderProgram;
 	}
 
-    /** Immutable local cache sample for ROM-recipe projection; never supplies guest art content. */
-    PaletteView objectVisualPalette(int line) {
-        PaletteView palette =
-                line >= 0 && line < lastCachedPaletteLines.length
-                        ? lastCachedPaletteLines[line]
-                        : null;
-        return palette != null ? palette : getRenderContextPaletteForEffectiveLine(line);
-    }
+	/** Immutable local cache sample for ROM-recipe projection; never supplies guest art content. */
+	PaletteView objectVisualPalette(int line) {
+		PaletteView palette =
+				line >= 0 && line < lastCachedPaletteLines.length
+						? lastCachedPaletteLines[line]
+						: null;
+		return palette != null ? palette : getRenderContextPaletteForEffectiveLine(line);
+	}
 
 	SpritePresentation.PatternVersion scenePatternSample(int patternId) {
 		return patternAtlas == null ? null : patternAtlas.scenePatternSample(patternId);
@@ -2465,7 +2455,7 @@ public class GraphicsManager {
 		spriteSatCollectionActive = false;
 		spriteMaskRequested = false;
 		spriteSatEntries.clear();
-        objectVisualSatMasks.clear();
+		objectVisualSatMasks.clear();
 		currentSpriteSatDebugSource = null;
 		currentSpriteSatBucket = RenderPriority.MIN;
 	}
@@ -2474,7 +2464,7 @@ public class GraphicsManager {
 		spriteSatCollectionActive = true;
 		spriteMaskRequested = false;
 		spriteSatEntries.clear();
-        objectVisualSatMasks.clear();
+		objectVisualSatMasks.clear();
 		currentSpriteSatDebugSource = null;
 		currentSpriteSatBucket = RenderPriority.MIN;
 	}
@@ -2483,43 +2473,26 @@ public class GraphicsManager {
 		return spriteSatCollectionActive;
 	}
 
-    public void requestSpriteMask() {
-        SpriteCaptureControl.control(
-                "SAT sprite-mask controls require native display-list replay");
-        if (spriteSatCollectionActive) {
-            spriteMaskRequested = true;
-        }
-    }
+	public void requestSpriteMask() {
+		SpriteCaptureControl.control(
+				"SAT sprite-mask controls require native display-list replay");
+		if (spriteSatCollectionActive) {
+			spriteMaskRequested = true;
+		}
+	}
 
-    /** Submits one non-drawable SAT control entry while collection is active. */
-    public void submitSpriteSatControlEntry(
-            int x, int y, int widthTiles, int heightTiles, int rawTileWordLow11) {
-        SpriteCaptureControl.control(
-                "SAT control entries require native display-list replay");
-        if (!spriteSatCollectionActive) return;
-        spriteSatEntries.add(
-                new SpriteSatEntry(
-                        currentSpriteSatBucket,
-                        x,
-                        y,
-                        widthTiles,
-                        heightTiles,
-                        0,
-                        rawTileWordLow11,
-                        0,
-                        false,
-                        false,
-                        false,
-                        currentSpriteHighPriority,
-                        SpriteMaskReplayRole.NORMAL,
-                        0,
-                        widthTiles,
-                        0,
-                        heightTiles,
-                        spritePresentationBuilder == null
-                                ? currentSpriteSatDebugSource
-                                : spritePresentationBuilder.layer.name()));
-    }
+	/** Submits one non-drawable SAT control entry while collection is active. */
+	public void submitSpriteSatControlEntry(int x, int y, int widthTiles, int heightTiles,
+			int rawTileWordLow11) {
+		SpriteCaptureControl.control(
+				"SAT control entries require native display-list replay");
+		if (!spriteSatCollectionActive) return;
+		spriteSatEntries.add(new SpriteSatEntry(currentSpriteSatBucket, x, y,
+				widthTiles, heightTiles, 0, rawTileWordLow11, 0,
+				false, false, false, currentSpriteHighPriority,
+				SpriteMaskReplayRole.NORMAL, 0, widthTiles, 0, heightTiles,
+				spritePresentationBuilder == null ? currentSpriteSatDebugSource : spritePresentationBuilder.layer.name()));
+	}
 
 	public void setCurrentSpriteSatDebugSource(String debugSource) {
 		currentSpriteSatDebugSource = debugSource;
@@ -2543,32 +2516,32 @@ public class GraphicsManager {
 				? entry : entry.withPresentationSubject(spritePresentationSubject));
 	}
 
-    void attachObjectVisualSatMask(int mask) {
-        if (!spriteSatCollectionActive || spriteSatEntries.isEmpty()) {
-            throw new IllegalStateException("Visual palette mask has no submitted native SAT tile");
-        }
-        objectVisualSatMasks.put(spriteSatEntries.getLast(), mask & 15);
-    }
+	void attachObjectVisualSatMask(int mask) {
+		if (!spriteSatCollectionActive || spriteSatEntries.isEmpty()) {
+			throw new IllegalStateException("Visual palette mask has no submitted native SAT tile");
+		}
+		objectVisualSatMasks.put(spriteSatEntries.getLast(), mask & 15);
+	}
 
-    void clipObjectVisualSatTile(int rowStart, int rowEnd) {
-        if (!spriteSatCollectionActive || spriteSatEntries.isEmpty()) {
-            throw new IllegalStateException("Visual row clip has no submitted native SAT tile");
-        }
-        if (rowStart < 0 || rowEnd > 8 || rowStart > rowEnd) {
-            throw new IllegalArgumentException("Visual row clip must stay within one native tile");
-        }
-        if (rowStart == 0 && rowEnd == 8) {
-            return;
-        }
-        int index = spriteSatEntries.size() - 1;
-        SpriteSatEntry tile = spriteSatEntries.get(index);
-        SpriteSatEntry clipped = tile.withVisibleScanlines(tile.y() + rowStart, tile.y() + rowEnd);
-        spriteSatEntries.set(index, clipped);
-        Integer mask = objectVisualSatMasks.remove(tile);
-        if (mask != null) {
-            objectVisualSatMasks.put(clipped, mask);
-        }
-    }
+	void clipObjectVisualSatTile(int rowStart, int rowEnd) {
+		if (!spriteSatCollectionActive || spriteSatEntries.isEmpty()) {
+			throw new IllegalStateException("Visual row clip has no submitted native SAT tile");
+		}
+		if (rowStart < 0 || rowEnd > 8 || rowStart > rowEnd) {
+			throw new IllegalArgumentException("Visual row clip must stay within one native tile");
+		}
+		if (rowStart == 0 && rowEnd == 8) {
+			return;
+		}
+		int index = spriteSatEntries.size() - 1;
+		SpriteSatEntry tile = spriteSatEntries.get(index);
+		SpriteSatEntry clipped = tile.withVisibleScanlines(tile.y() + rowStart, tile.y() + rowEnd);
+		spriteSatEntries.set(index, clipped);
+		Integer mask = objectVisualSatMasks.isEmpty() ? null : objectVisualSatMasks.remove(tile);
+		if (mask != null) {
+			objectVisualSatMasks.put(clipped, mask);
+		}
+	}
 
 	public void endSpriteSatCollectionAndReplay() {
 		if (!spriteSatCollectionActive) {
@@ -2584,7 +2557,7 @@ public class GraphicsManager {
 		// finally block only after the replay finished with it.
 		// Lower SAT indices win overlap: mask in native order, replay in reverse painter order.
 		List<SpriteSatEntry> processedEntries = SpriteSatMaskPostProcessor.processReusable(spriteSatEntries, applyMask,
-                objectVisualSatMasks.isEmpty() ? null : objectVisualSatMasks);
+				objectVisualSatMasks.isEmpty() ? null : objectVisualSatMasks);
 
 		spriteSatCollectionActive = false;
 		spriteMaskRequested = false;
@@ -2641,7 +2614,7 @@ public class GraphicsManager {
 			reusableReplayCommands.clear();
 		} finally {
 			spriteSatEntries.clear();
-        objectVisualSatMasks.clear();
+			objectVisualSatMasks.clear();
 		}
 	}
 
@@ -2693,102 +2666,58 @@ public class GraphicsManager {
 		}
 	}
 
-    private void appendBatchedReplayCommands(SpriteSatEntry entry, int paletteTextureId) {
-        Integer visualMask = objectVisualSatMasks.get(entry);
-        int previousMask = getCurrentSpriteTileOcclusionPaletteMask();
-        if (visualMask != null) {
-            setCurrentSpriteTileOcclusionPaletteMask(visualMask);
-        }
-        try {
-            SpritePieceRenderer.renderPreparedPiece(
-                    entry.toPreparedPiece(),
-                    (patternIndex, pieceHFlip, pieceVFlip, paletteIndex, drawX, drawY) -> {
-                        // CPU preparation uses this same tile decoder before any atlas lookup.
-                        // A sprite-mask band can hide single scanlines of this tile.
-                        int rowStart = entry.visibleTileRowStart(drawY);
-                        int rowEnd = entry.visibleTileRowEnd(drawY);
-                        if (rowStart >= rowEnd) {
-                            return;
-                        }
-                        if (spritePresentationBuilder != null) {
-                            prepareReplayDesc(
-                                    entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
-                            if (rowStart == 0 && rowEnd == 8) {
-                                renderPatternWithId(patternIndex, reusableReplayDesc, drawX, drawY);
-                            } else {
-                                renderPatternRowsWithId(
-                                        patternIndex,
-                                        reusableReplayDesc,
-                                        paletteIndex,
-                                        pieceHFlip,
-                                        pieceVFlip,
-                                        entry.effectiveHighPriority(),
-                                        drawX,
-                                        drawY,
-                                        rowStart,
-                                        rowEnd);
-                            }
-                            return;
-                        }
-                        PatternAtlas.Entry atlasEntry =
-                                patternAtlas != null ? patternAtlas.getEntry(patternIndex) : null;
-                        if (atlasEntry == null) {
-                            return;
-                        }
-                        if (entry.presentationSubject().paletteReplay() != null) {
-                            prepareReplayDesc(
-                                    entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
-                            flushSatReplayBatch();
-                            registerCommand(
-                                    obtainReplayCommand(
-                                            entry,
-                                            atlasEntry,
-                                            paletteTextureId,
-                                            paletteIndex,
-                                            pieceHFlip,
-                                            pieceVFlip,
-                                            drawX,
-                                            drawY,
-                                            rowStart,
-                                            rowEnd));
-                            return;
-                        }
-                        prepareReplayDesc(
-                                entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
-                        if (addToSatReplayBatch(
-                                entry,
-                                atlasEntry,
-                                paletteIndex,
-                                pieceHFlip,
-                                pieceVFlip,
-                                drawX,
-                                drawY,
-                                rowStart,
-                                rowEnd)) {
-                            return;
-                        }
-                        // Unsupported state: flush first so draw order is preserved, then draw
-                        // direct.
+	private void appendBatchedReplayCommands(SpriteSatEntry entry, int paletteTextureId) {
+		Integer visualMask = objectVisualSatMasks.isEmpty() ? null : objectVisualSatMasks.get(entry);
+		int previousMask = getCurrentSpriteTileOcclusionPaletteMask();
+		if (visualMask != null) {
+			setCurrentSpriteTileOcclusionPaletteMask(visualMask);
+		}
+		try {
+		SpritePieceRenderer.renderPreparedPiece(entry.toPreparedPiece(),
+				(patternIndex, pieceHFlip, pieceVFlip, paletteIndex, drawX, drawY) -> {
+					// CPU preparation uses this same tile decoder before any atlas lookup.
+					// A sprite-mask band can hide single scanlines of this tile.
+					int rowStart = entry.visibleTileRowStart(drawY);
+					int rowEnd = entry.visibleTileRowEnd(drawY);
+					if (rowStart >= rowEnd) {
+						return;
+					}
+					if (spritePresentationBuilder != null) {
+						prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
+						if (rowStart == 0 && rowEnd == 8) {
+							renderPatternWithId(patternIndex, reusableReplayDesc, drawX, drawY);
+						} else {
+							renderPatternRowsWithId(patternIndex, reusableReplayDesc, paletteIndex, pieceHFlip, pieceVFlip,
+									entry.effectiveHighPriority(), drawX, drawY, rowStart, rowEnd);
+						}
+						return;
+					}
+					PatternAtlas.Entry atlasEntry = patternAtlas != null ? patternAtlas.getEntry(patternIndex) : null;
+					if (atlasEntry == null) {
+						return;
+					}
+                    if(entry.presentationSubject().paletteReplay()!=null) {
+                        prepareReplayDesc(entry,patternIndex,pieceHFlip,pieceVFlip,paletteIndex);
                         flushSatReplayBatch();
-                        registerCommand(
-                                obtainReplayCommand(
-                                        entry,
-                                        atlasEntry,
-                                        paletteTextureId,
-                                        paletteIndex,
-                                        pieceHFlip,
-                                        pieceVFlip,
-                                        drawX,
-                                        drawY,
-                                        rowStart,
-                                        rowEnd));
-                    });
-        } finally {
-            if (visualMask != null) {
-                setCurrentSpriteTileOcclusionPaletteMask(previousMask);
-            }
-        }
-    }
+                        registerCommand(obtainReplayCommand(entry,atlasEntry,paletteTextureId,paletteIndex,
+                                pieceHFlip,pieceVFlip,drawX,drawY,rowStart,rowEnd));return;
+                    }
+					prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
+					if (addToSatReplayBatch(entry, atlasEntry, paletteIndex, pieceHFlip, pieceVFlip, drawX, drawY,
+							rowStart, rowEnd)) {
+						return;
+					}
+					// Unsupported state: flush first so draw order is preserved, then draw direct.
+					flushSatReplayBatch();
+					registerCommand(obtainReplayCommand(entry, atlasEntry, paletteTextureId, paletteIndex,
+							pieceHFlip, pieceVFlip, drawX, drawY, rowStart, rowEnd));
+				});
+		} finally {
+			if (visualMask != null) {
+				setCurrentSpriteTileOcclusionPaletteMask(previousMask);
+			}
+		}
+	}
 
 	private boolean addToSatReplayBatch(SpriteSatEntry satEntry, PatternAtlas.Entry atlasEntry, int paletteIndex,
 			boolean pieceHFlip, boolean pieceVFlip, int drawX, int drawY, int rowStart, int rowEnd) {
@@ -2874,51 +2803,40 @@ public class GraphicsManager {
 		return headlessMode ? -1 : null;
 	}
 
-    private void appendDirectReplayCommands(
-            SpriteSatEntry entry, int paletteTextureId, List<PatternRenderCommand> replayCommands) {
-        if (entry == null || replayCommands == null) {
-            return;
-        }
-        Integer visualMask = objectVisualSatMasks.get(entry);
-        int previousMask = getCurrentSpriteTileOcclusionPaletteMask();
-        if (visualMask != null) {
-            setCurrentSpriteTileOcclusionPaletteMask(visualMask);
-        }
-        try {
-            SpritePieceRenderer.renderPreparedPiece(
-                    entry.toPreparedPiece(),
-                    (patternIndex, pieceHFlip, pieceVFlip, paletteIndex, drawX, drawY) -> {
-                        PatternAtlas.Entry atlasEntry =
-                                patternAtlas != null ? patternAtlas.getEntry(patternIndex) : null;
-                        if (atlasEntry == null) {
-                            return;
-                        }
-                        int rowStart = entry.visibleTileRowStart(drawY);
-                        int rowEnd = entry.visibleTileRowEnd(drawY);
-                        if (rowStart >= rowEnd) {
-                            return;
-                        }
-                        prepareReplayDesc(
-                                entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
-                        replayCommands.add(
-                                obtainReplayCommand(
-                                        entry,
-                                        atlasEntry,
-                                        paletteTextureId,
-                                        paletteIndex,
-                                        pieceHFlip,
-                                        pieceVFlip,
-                                        drawX,
-                                        drawY,
-                                        rowStart,
-                                        rowEnd));
-                    });
-        } finally {
-            if (visualMask != null) {
-                setCurrentSpriteTileOcclusionPaletteMask(previousMask);
-            }
-        }
-    }
+	private void appendDirectReplayCommands(
+			SpriteSatEntry entry,
+			int paletteTextureId,
+			List<PatternRenderCommand> replayCommands) {
+		if (entry == null || replayCommands == null) {
+			return;
+		}
+		Integer visualMask = objectVisualSatMasks.isEmpty() ? null : objectVisualSatMasks.get(entry);
+		int previousMask = getCurrentSpriteTileOcclusionPaletteMask();
+		if (visualMask != null) {
+			setCurrentSpriteTileOcclusionPaletteMask(visualMask);
+		}
+		try {
+		SpritePieceRenderer.renderPreparedPiece(entry.toPreparedPiece(),
+				(patternIndex, pieceHFlip, pieceVFlip, paletteIndex, drawX, drawY) -> {
+					PatternAtlas.Entry atlasEntry = patternAtlas != null ? patternAtlas.getEntry(patternIndex) : null;
+					if (atlasEntry == null) {
+						return;
+					}
+					int rowStart = entry.visibleTileRowStart(drawY);
+					int rowEnd = entry.visibleTileRowEnd(drawY);
+					if (rowStart >= rowEnd) {
+						return;
+					}
+					prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
+					replayCommands.add(obtainReplayCommand(entry, atlasEntry, paletteTextureId, paletteIndex,
+							pieceHFlip, pieceVFlip, drawX, drawY, rowStart, rowEnd));
+				});
+		} finally {
+			if (visualMask != null) {
+				setCurrentSpriteTileOcclusionPaletteMask(previousMask);
+			}
+		}
+	}
 
 	/**
 	 * Loads the shared replay PatternDesc with the tile word for one replayed SAT
@@ -3036,9 +2954,9 @@ public class GraphicsManager {
 			try {
 				backgroundRenderer = new BackgroundRenderer(this);
 				backgroundRenderer.init(PARALLAX_SHADER_PATH);
-                LOGGER.info("BackgroundRenderer initialized for shader-based parallax.");
+				LOGGER.info("BackgroundRenderer initialized for shader-based parallax.");
 			} catch (IOException e) {
-                LOGGER.log(Level.SEVERE, "Failed to initialize BackgroundRenderer", e);
+				LOGGER.log(Level.SEVERE, "Failed to initialize BackgroundRenderer", e);
 			}
 		}
 		return backgroundRenderer;

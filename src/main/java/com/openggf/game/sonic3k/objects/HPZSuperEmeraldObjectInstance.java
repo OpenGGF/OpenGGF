@@ -27,6 +27,10 @@ import java.util.List;
 /** ROM {@code Obj_HPZSuperEmerald} (SKL object $B4). */
 public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable, SolidObjectProvider {
+    @com.openggf.game.rewind.RewindTransient(reason = "Captured as stable PlayerRefIds in RewindExtra")
+    private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
+            new com.openggf.level.objects.PlayerControlOwners();
+
     private static final int[][] POSITIONS = {
             {0x1640, 0x368}, {0x15E0, 0x3A0}, {0x16A0, 0x3A0},
             {0x15A0, 0x350}, {0x16E0, 0x350}, {0x1550, 0x390},
@@ -53,7 +57,8 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
             long stageEntryPermit,
             int lastFrameCounter,
             int subtype,
-            ObjectRefId parentId)
+            ObjectRefId parentId,
+            java.util.List<com.openggf.game.rewind.identity.PlayerRefId> ownedPlayers)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public HPZSuperEmeraldObjectInstance(ObjectSpawn spawn) {
@@ -173,10 +178,18 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
             return false;
         }
         if (sprite != null) {
+            directedControlPlayers.add(sprite);
             ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
             sprite.setAnimationId(5);
         }
         return true;
+    }
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (AbstractPlayableSprite player : directedControlPlayers.players())
+            ObjectControlState.none().applyTo(player);
+        directedControlPlayers.clear();
     }
 
     public void updateSelection() {
@@ -286,7 +299,7 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
                 .map(table -> table.encodeObject(parentRef)).orElse(null);
         return super.captureRewindState(context).withObjectSubclassExtra(
                 new RewindExtra(runtime.capture(), requestPublished, stageEntryPermit, lastFrameCounter,
-                        subtype, parentId));
+                        subtype, parentId, directedControlPlayers.capture(context)));
     }
 
     @Override
@@ -304,6 +317,7 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
             stageEntryPermit = extra.stageEntryPermit();
             lastFrameCounter = extra.lastFrameCounter();
             subtype = extra.subtype();
+            directedControlPlayers.restore(extra.ownedPlayers(), context);
         }
     }
 

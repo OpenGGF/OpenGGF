@@ -11,10 +11,10 @@ Unreleased. The earlier development themes remain in
   direct scene changes across locations, acts and games with cuts, fades and wipes.
   Puppet mode follows destinations and urgency through native acceleration, terrain
   collision and jump physics; floor snapping defaults on. Poser mode retains manual
-  positioning, animation and frame selection, including older scenes. New scenes use
-  one native world with populated or initially cleared objects/rings, supplied-game
-  performers, authored terrain and common camera framing. Older scenes retain strict
-  compatibility behavior. Native ROM worlds share moving objects, collision pickups, native hurt and per-actor controllers;
+  positioning, animation and frame selection. Every scene uses one native world
+  with supplied-game performers, authored terrain and common framing, binding and
+  activation-window rules. Timed object clears preserve separately owned rings;
+  unpublished documents and screenplays accept only their current format. Native ROM worlds share moving objects, collision pickups, native hurt and per-actor controllers;
   bounded routes/placement targets, native flight/glide and actor/group
   camera follow use the production gameplay and rewind owners. Directed foreground,
   characters and occlusion stay aligned through camera movement. Current native
@@ -29,7 +29,9 @@ Unreleased. The earlier development themes remain in
   resource discovery, validation, lossless canonical-to-screenplay round trips and
   offline filmmaking; both editors import/export the same screenplay. A bounded
   route helper emits native movement/jump intents over actual collision terrain
-  with cold LIVE verification, plus explicitly visual walking-object routes.
+  with cold LIVE verification, plus visual walking-object routes over slopes and
+  steps up to eight pixels. Centred camera pushes preserve their framing centre,
+  fractional origins survive composition, and the world framebuffer is reused.
   Tails uses native accessory
   relationships, and both editors keep a usable constrained authoring window.
   Named dialogue, reusable typing profiles and creator PNG skins give mod scenes

@@ -37,7 +37,7 @@ public final class StageplayRouteAssets {
             byte[] bytes;
             try(var input=Files.newInputStream(file,java.nio.file.LinkOption.NOFOLLOW_LINKS)) { bytes=input.readNBytes(maximum+1); }
             total+=bytes.length;
-            if(bytes.length==0 || bytes.length>maximum || total>MAX_BYTES) throw new IOException("Route assets exceed per-file or aggregate64MiB budget");
+            if(bytes.length==0 || bytes.length>maximum || total>MAX_BYTES) throw new IOException("Route assets exceed per-file or aggregate 64 MiB budget");
             values.put(entry.getKey(),Base64.getEncoder().encodeToString(bytes));
         }
         String encoded=JSON.writeValueAsString(result);
@@ -64,7 +64,7 @@ public final class StageplayRouteAssets {
             try { decoded=Base64.getDecoder().decode(value.textValue()); }
             catch(IllegalArgumentException failure) { throw new IOException("Invalid route asset encoding",failure); }
             total+=decoded.length;
-            if(decoded.length==0 || decoded.length>maximum || total>totalLimit) throw new IOException("Route assets exceed per-file or aggregate64MiB budget");
+            if(decoded.length==0 || decoded.length>maximum || total>totalLimit) throw new IOException("Route assets exceed per-file or aggregate 64 MiB budget");
             bytes.put(entry.getKey(),decoded);
         }
         return entry -> {
@@ -79,7 +79,7 @@ public final class StageplayRouteAssets {
         document.sceneChanges().stream().map(c->c.set().levelProject()).filter(p->!p.isEmpty()).forEach(p->paths.putIfAbsent(p,AuthoredLevelResources.MAX_ENCODED_BYTES));
         StageplayAssets.imagePaths(document).forEach(p->paths.putIfAbsent(p,(int)StageplayAssets.MAX_ENCODED_BYTES));
         document.audio().stream().map(c->c.asset()).filter(p->!p.isEmpty()).forEach(p->paths.putIfAbsent(p,(int)StageplayAssets.MAX_ENCODED_BYTES));
-        if(paths.size()>StageplayAssets.MAX_ASSETS) throw new IOException("Route has more than256 declared assets");
+        if(paths.size()>StageplayAssets.MAX_ASSETS) throw new IOException("Route has more than 256 declared assets");
         for(String path:paths.keySet()) ModAssetRoot.requireNormalizedEntry(path);
         return paths;
     }

@@ -1,25 +1,49 @@
 package com.openggf.level.objects;
 
-import static org.lwjgl.opengl.GL11.GL_LINES;
-
-import com.openggf.camera.Camera;
-import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.game.ModApi;
-import com.openggf.game.PlayableEntity;
+import com.openggf.game.session.EngineServices;
+import static org.lwjgl.opengl.GL11.GL_LINES;
+import com.openggf.camera.Camera;
+import com.openggf.debug.DebugOverlayManager;
+import com.openggf.debug.DebugOverlayToggle;
+import com.openggf.game.CollisionModel;
+import com.openggf.game.GameStateManager;
 import com.openggf.game.PowerUpObject;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.SpawnRefId;
-import com.openggf.game.session.EngineServices;
-import com.openggf.game.session.SessionManager;
+import com.openggf.game.solid.ContactKind;
+import com.openggf.level.objects.boss.BossChildComponent;
+import com.openggf.game.solid.ObjectSolidExecutionContext;
+import com.openggf.game.solid.PlayerSolidContactResult;
+import com.openggf.game.solid.PlayerStandingState;
+import com.openggf.game.solid.PostContactState;
+import com.openggf.game.solid.PreContactState;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.solid.SolidExecutionRegistry;
+import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GLCommandGroup;
+import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.level.LevelManager;
+import com.openggf.level.ParallaxManager;
 import com.openggf.level.TransitionSstOccupant;
+import com.openggf.level.WaterSystem;
+import com.openggf.level.spawn.AbstractPlacementManager;
+import com.openggf.physics.ObjectTerrainUtils;
+import com.openggf.physics.TerrainCheckResult;
+import com.openggf.game.PlayableEntity;
+import com.openggf.game.DamageCause;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.Knuckles;
+import com.openggf.sprites.playable.SidekickCpuController;
+import com.openggf.sprites.playable.Tails;
+import com.openggf.sprites.NativePositionOps;
+import com.openggf.sprites.managers.SpriteManager;
+import com.openggf.game.GroundMode;
 
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -31,22 +55,25 @@ import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.logging.Logger;
 
 @ModApi
 public class ObjectManager {
     private static final int BUCKET_COUNT = RenderPriority.MAX - RenderPriority.MIN + 1;
     static final int ANIM_ROLL = 0x02;
     static final int ANIM_SPINDASH = 0x09;
-    private final ObjectPlacementController placement;
+    final ObjectPlacementController placement;
     private final ObjectPlacementAdmission placementAdmission;
-    private final ObjectRegistry registry;
+    final ObjectRegistry registry;
     private final GraphicsManager graphicsManager;
     private final Camera camera;
-    private final Map<ObjectSpawn, ObjectInstance> activeObjects = new IdentityHashMap<>();
-    private final Map<ObjectInstance, ObjectSpawn> instanceToSpawn = new IdentityHashMap<>();
+    final Map<ObjectSpawn, ObjectInstance> activeObjects = new IdentityHashMap<>();
+    final Map<ObjectInstance, ObjectSpawn> instanceToSpawn = new IdentityHashMap<>();
     private final List<ObjectInstance> dynamicObjects = new ArrayList<>();
     private final DynamicObjectOwnership dynamicOwnership = new DynamicObjectOwnership();
     private final List<ObjectInstance> dynamicFallbackScratch = new ArrayList<>();
@@ -117,18 +144,18 @@ public class ObjectManager {
     }
     private final boolean skipVerticalSpawnLoadFilterForGame;
 
-    private final ObjectServices objectServices;
+    final ObjectServices objectServices;
     StageplayObjectDirection stageplayDirection;
+    private ObjectStageplayController stageplayController;
     final StageplayActivationPolicy stageplayActivation;
-    private final List<ObjectSpawn> stageplaySourceSpawns;
-    private final ObjectCallbackRouter objectCallbacks;
+    final List<ObjectSpawn> stageplaySourceSpawns;
+    final String stageplaySourceGame;
+    final int stageplaySourceZone, stageplaySourceAct;
+    final ObjectCallbackRouter objectCallbacks;
     private final ObjectManagerPopulationView populationView;
     private final NativeChildReservationLedger childReservationLedger;
     private RewindClassResolver rewindClassResolver = RewindClassResolver.ENGINE_ONLY;
-
-    public void setRewindClassResolver(RewindClassResolver resolver) {
-        rewindClassResolver = java.util.Objects.requireNonNull(resolver, "resolver");
-    }
+    public void setRewindClassResolver(RewindClassResolver resolver) { rewindClassResolver = java.util.Objects.requireNonNull(resolver, "resolver"); }
 
     // Pre-bucketed lists for O(n) rendering instead of O(n*buckets)
     @SuppressWarnings("unchecked")
@@ -137,7 +164,7 @@ public class ObjectManager {
     private final List<ObjectRenderParts.RenderEntry>[] highPriorityBuckets = new ArrayList[BUCKET_COUNT];
     @SuppressWarnings("unchecked")
     private final List<ObjectRenderParts.RenderEntry>[] unifiedBuckets = new ArrayList[BUCKET_COUNT];
-    private boolean bucketsDirty = true;
+    boolean bucketsDirty = true;
     private final ObjectRenderBucketSnapshot renderBucketSnapshot =
             new ObjectRenderBucketSnapshot();
 
@@ -146,8 +173,8 @@ public class ObjectManager {
     private final List<ObjectInstance> cachedSolidProviderObjects = new ArrayList<>();
     private final List<ObjectInstance> cachedTouchResponseObjects = new ArrayList<>();
     private final ObjectCollisionResponseList collisionResponseList = new ObjectCollisionResponseList();
-    private boolean activeObjectsCacheDirty = true;
-    private final Set<ObjectInstance> deferredDynamicExecThisFrame =
+    boolean activeObjectsCacheDirty = true;
+    final Set<ObjectInstance> deferredDynamicExecThisFrame =
             Collections.newSetFromMap(new IdentityHashMap<>());
     private final ObjectManagerRuntimeState runtimeState = new ObjectManagerRuntimeState();
 
@@ -241,13 +268,16 @@ public class ObjectManager {
                 : objectServices.worldSession().getGameModule().getGameService(NativePlacementSource.class);
         var nativeSpawns = nativeSource == null ? spawns : List.copyOf(nativeSource.placements());
         this.stageplaySourceSpawns = List.copyOf(nativeSpawns);
+        var sourceWorld = objectServices == null ? null : objectServices.worldSession();
+        this.stageplaySourceGame = sourceWorld == null ? "test" : sourceWorld.getGameModule().getGameId().code();
+        this.stageplaySourceZone = sourceWorld == null ? 0 : sourceWorld.getCurrentZone();
+        this.stageplaySourceAct = sourceWorld == null ? 0 : sourceWorld.getCurrentAct();
         var directionPolicy =
                 objectServices == null
                         ? null
                         : com.openggf.game.session.WorldSessionPolicyAccess.getService(
                                 objectServices.worldSession(), StageplayObjectLoadPolicy.class);
         if (directionPolicy != null) {
-            directionPolicy.seedInitialLayout(nativeSpawns);
             stageplayDirection = new StageplayObjectDirection(this, directionPolicy);
         }
         this.placementAdmission = new ObjectPlacementAdmission(registry, objectServices);
@@ -333,6 +363,11 @@ public class ObjectManager {
 
 
     void runObjectCallback(ObjectInstance instance, Runnable callback) { objectCallbacks.run(instance, callback); }
+
+    void bindObjectServices(AbstractObjectInstance object) {
+        object.setServices(objectServices);
+        object.bindStageplayActivation(stageplayActivation);
+    }
 
     <T> T callObjectCallback(ObjectInstance instance, Supplier<T> callback) {
         return objectCallbacks.call(instance, callback);
@@ -1422,7 +1457,7 @@ public class ObjectManager {
                         spawn, () -> registry.create(spawn)) : null);
         if (instance != null) {
             if (instance instanceof AbstractObjectInstance aoi) {
-                objectCallbacks.run(aoi, () -> aoi.setServices(objectServices));
+                objectCallbacks.run(aoi, () -> bindObjectServices(aoi));
                 if (objectCallbacks.call(aoi, aoi::getSlotIndex) < 0) {
                     objectCallbacks.run(aoi, () -> aoi.setSlotIndex(preSlot));
                 }
@@ -2025,7 +2060,7 @@ public class ObjectManager {
         activeObjectsCacheDirty = true;
     }
 
-    private boolean removeDynamicObjectInstance(ObjectInstance object) {
+    boolean removeDynamicObjectInstance(ObjectInstance object) {
         boolean removed = dynamicObjects.remove(object);
         if (removed) {
             // Every delete routine zeroes the whole SST slot, status(a0) latch
@@ -2044,6 +2079,7 @@ public class ObjectManager {
     }
 
     private void notifyObjectManagerRemoval(ObjectInstance object) {
+        if (stageplayDirection != null) stageplayDirection.retired(object);
         // The deleted SST slot carries nothing into later touch passes: S3K
         // Delete_Current_Sprite zeroes it (docs/skdisasm/sonic3k.asm:36148-36165)
         // and Collision_response_list is rebuilt by every ExecuteObjects pass.
@@ -2199,7 +2235,7 @@ public class ObjectManager {
         }
         if (stageplayDirection != null) stageplayDirection.noteNativeAdmission(object);
         if (object instanceof AbstractObjectInstance aoi) {
-            objectCallbacks.run(object, () -> aoi.setServices(objectServices));
+            objectCallbacks.run(object, () -> bindObjectServices(aoi));
             // ROM parity: FindFreeObj allocates an SST slot for EVERY object,
             // including children spawned by other objects (lava balls, projectiles,
             // explosion effects, etc.). Without this, child objects don't consume
@@ -2272,7 +2308,7 @@ public class ObjectManager {
     public void addDynamicObjectAtSlot(ObjectInstance object, int slotIndex) {
         registerInheritedCallbackOwner(object);
         if (object instanceof AbstractObjectInstance aoi) {
-            objectCallbacks.run(object, () -> aoi.setServices(objectServices));
+            objectCallbacks.run(object, () -> bindObjectServices(aoi));
             objectCallbacks.run(object, () -> aoi.setSlotIndex(slotIndex));
         }
         addDynamicObject(object);
@@ -2297,7 +2333,7 @@ public class ObjectManager {
      * Equivalent to ROM's FindFreeObj — searches from the first dynamic slot forward.
      * Returns -1 if all slots are in use (overflow).
      */
-    private int allocateSlot() {
+    int allocateSlot() {
         return slotAllocator.allocate();
     }
 
@@ -2400,7 +2436,7 @@ public class ObjectManager {
             return;
         }
         registerInheritedCallbackOwner(ring);
-        objectCallbacks.run(ring, () -> ring.setServices(objectServices));
+        objectCallbacks.run(ring, () -> bindObjectServices(ring));
         // Slot is already reserved by RingManager — do NOT re-allocate.
         ring.setSlotIndex(reservedSlot);
         assignRewindObjectId(ring, ring.getSpawn());
@@ -2428,7 +2464,7 @@ public class ObjectManager {
         if (ring == null) {
             return;
         }
-        ring.setServices(objectServices);
+        bindObjectServices(ring);
         ring.setSlotIndex(-1);
         assignRewindObjectId(ring, ring.getSpawn());
         dynamicObjects.add(ring);
@@ -2491,14 +2527,14 @@ public class ObjectManager {
     /**
      * Releases a previously allocated dynamic slot index.
      */
-    private void releaseSlot(int slotIndex) {
+    void releaseSlot(int slotIndex) {
         if (updating && isManagedDynamicSlot(slotIndex)) {
             slotsFreedDuringObjectPass.set(slotIndex);
         }
         slotAllocator.release(slotIndex);
     }
 
-    private void releaseSlotIfManaged(ObjectInstance instance) {
+    void releaseSlotIfManaged(ObjectInstance instance) {
         if (instance instanceof AbstractObjectInstance aoi) {
             int slot = objectCallbacks.call(instance, aoi::getSlotIndex);
             if (isManagedDynamicSlot(slot)) {
@@ -2678,7 +2714,7 @@ public class ObjectManager {
             if (isManagedDynamicSlot(reservedSlot)) {
                 registerInheritedCallbackOwner(object);
                 if (object instanceof AbstractObjectInstance aoi) {
-                    objectCallbacks.run(aoi, () -> aoi.setServices(objectServices));
+                    objectCallbacks.run(aoi, () -> bindObjectServices(aoi));
                     objectCallbacks.run(aoi, () -> aoi.setSlotIndex(reservedSlot));
                     // Slot is already marked used in the allocator from pre-allocation;
                     // no need to call allocateSlot() again.
@@ -2800,7 +2836,7 @@ public class ObjectManager {
      * Frees all reserved child slots for a given spawn, removing the tracking entry.
      * Called when the parent object is destroyed or unloaded.
      */
-    private void freeAllReservedChildSlots(ObjectSpawn spawn) {
+    void freeAllReservedChildSlots(ObjectSpawn spawn) {
         int[] childSlots = reservedChildSlots.remove(spawn);
         if (childSlots != null) {
             for (int slot : childSlots) {
@@ -3653,7 +3689,7 @@ public class ObjectManager {
                                 spawn, () -> registry.create(spawn)) : null);
                 if (instance != null) {
                     if (instance instanceof AbstractObjectInstance aoi) {
-                        objectCallbacks.run(aoi, () -> aoi.setServices(objectServices));
+                        objectCallbacks.run(aoi, () -> bindObjectServices(aoi));
                         // Slot already set by constructor via PRE_ALLOCATED_SLOT.
                         // Ensure it's set (defensive, in case constructor didn't consume it).
                         if (objectCallbacks.call(aoi, aoi::getSlotIndex) < 0 && preSlot >= 0) {
@@ -3720,7 +3756,7 @@ public class ObjectManager {
                         spawn, () -> registry.create(spawn)) : null);
         if (instance != null) {
             if (instance instanceof AbstractObjectInstance aoi) {
-                objectCallbacks.run(aoi, () -> aoi.setServices(objectServices));
+                objectCallbacks.run(aoi, () -> bindObjectServices(aoi));
                 if (objectCallbacks.call(aoi, aoi::getSlotIndex) < 0 && preSlot >= 0) {
                     objectCallbacks.run(aoi, () -> aoi.setSlotIndex(preSlot));
                 }
@@ -3763,7 +3799,7 @@ public class ObjectManager {
                         spawn, () -> registry.create(spawn)) : null);
         if (instance != null) {
             if (instance instanceof AbstractObjectInstance aoi) {
-                objectCallbacks.run(aoi, () -> aoi.setServices(objectServices));
+                objectCallbacks.run(aoi, () -> bindObjectServices(aoi));
                 if (objectCallbacks.call(aoi, aoi::getSlotIndex) < 0 && preSlot >= 0) {
                     objectCallbacks.run(aoi, () -> aoi.setSlotIndex(preSlot));
                 }
@@ -3834,7 +3870,7 @@ public class ObjectManager {
         }
     }
 
-    private void registerActiveObject(ObjectSpawn spawn, ObjectInstance instance) {
+    void registerActiveObject(ObjectSpawn spawn, ObjectInstance instance) {
         objectCallbacks.register(instance, spawn);
         if (stageplayDirection != null && !stageplayDirection.allowsObject(instance)) {
             stageplayDirection.removeDynamic(instance);
@@ -3847,7 +3883,7 @@ public class ObjectManager {
         assignRewindObjectId(instance, spawn);
     }
 
-    private void removeActiveObject(ObjectSpawn spawn) {
+    void removeActiveObject(ObjectSpawn spawn) {
         ObjectInstance removed = activeObjects.remove(spawn);
         if (removed != null) {
             objectCallbacks.unregister(removed);
@@ -4229,7 +4265,7 @@ public class ObjectManager {
                                                     spawn, () -> registry.create(spawn)) : null));
                             if (inst != null) {
                                 if (inst instanceof AbstractObjectInstance constructed) {
-                                    objectCallbacks.run(constructed, () -> constructed.setServices(objectServices));
+                                    objectCallbacks.run(constructed, () -> bindObjectServices(constructed));
                                     objectCallbacks.run(constructed, () -> ObjectConstructionContext.withRewindActiveRestore(() -> {
                                         constructed.recreateConstructionChildrenForRewind();
                                         return null;
@@ -4251,7 +4287,7 @@ public class ObjectManager {
                             }
                         }
                         if (inst instanceof AbstractObjectInstance aoi) {
-                            objectCallbacks.run(aoi, () -> aoi.setServices(objectServices));
+                            objectCallbacks.run(aoi, () -> bindObjectServices(aoi));
                             if (objectCallbacks.call(aoi, aoi::getSlotIndex) < 0 && targetSlot >= 0) {
                                 objectCallbacks.run(aoi, () -> aoi.setSlotIndex(targetSlot));
                             }
@@ -4348,7 +4384,7 @@ public class ObjectManager {
                     if (!(inst instanceof AbstractObjectInstance aoi)) {
                         return false;
                     }
-                    objectCallbacks.run(aoi, () -> aoi.setServices(objectServices));
+                    objectCallbacks.run(aoi, () -> bindObjectServices(aoi));
                     // Both adopted children and generic recreations must own the
                     // captured slot before callbacks and execOrder registration.
                     // A spawn-only constructor leaves slotIndex at -1; waiting
@@ -4731,7 +4767,7 @@ public class ObjectManager {
             stageplayActivation.skippedFactory(placement.getSpawnIndex(spawn));
     }
 
-    private boolean stageplayAllowsPlacement(ObjectSpawn spawn) {
+    boolean stageplayAllowsPlacement(ObjectSpawn spawn) {
         return stageplayDirection == null || stageplayDirection.allowsPlacement(spawn);
     }
 
@@ -4746,122 +4782,30 @@ public class ObjectManager {
     }
 
     void suspendStageplayContacts(ObjectInstance object) {
+        objectCallbacks.run(object, object::releasePlayersForVisualDirection);
         solidContacts.suspendForVisualDirection(object);
         if (touchResponses != null) touchResponses.forgetRemovedObject(object);
     }
 
-    void retireStageplayObject(ObjectInstance object) {
-        ObjectSpawn placementSpawn = instanceToSpawn.get(object);
-        releaseSlotIfManaged(object);
-        if (object instanceof AbstractObjectInstance nativeObject) nativeObject.setSlotIndex(-1);
-        if (placementSpawn != null) {
-            freeAllReservedChildSlots(placementSpawn);
-            placement.removeFromActive(placementSpawn);
-            removeActiveObject(placementSpawn);
-        } else removeDynamicObjectInstance(object);
-        // A picture removal retires the graph without invoking native cleanup
-        // routines that can publish boss/event state. Structural members are
-        // retired explicitly by the controller, including constructor children.
-        suspendStageplayContacts(object);
-        deferredDynamicExecThisFrame.remove(object);
-        bucketsDirty = activeObjectsCacheDirty = true;
+    private ObjectStageplayController stageplayController() {
+        if (stageplayController == null) stageplayController = new ObjectStageplayController(this);
+        return stageplayController;
     }
 
-    ObjectInstance materializeStageplayPlacement(
-            StageplayObjectDirection.PlacementIdentity identity) {
-        ObjectSpawn spawn =
-                stageplaySourceSpawns.stream()
-                        .filter(
-                                p ->
-                                        p.layoutIndex() == identity.layoutIndex()
-                                                && p.objectId() == identity.objectId()
-                                                && p.subtype() == identity.subtype())
-                        .findFirst()
-                        .orElseThrow(
-                                () ->
-                                        new IllegalArgumentException(
-                                                "Portable object placement is absent from this set:"
-                                                        + " "
-                                                        + identity));
-        if (!stageplayAllowsPlacement(spawn)) {
-            throw new IllegalArgumentException("Object placement was removed by the screenplay");
-        }
-        return materializeStageplayPlacement(spawn);
+    StageplayObjectDirection.PlacementIdentity stageplayPlacementIdentity(ObjectSpawn spawn) {
+        return stageplayController().identity(spawn);
     }
 
-    ObjectInstance materializeStageplayPlacement(ObjectSpawn requested) {
-        ObjectSpawn spawn = stageplaySourceSpawns.stream().filter(value -> value.layoutIndex() == requested.layoutIndex()
-                && value.objectId() == requested.objectId() && value.subtype() == requested.subtype())
-                .findFirst().orElse(requested);
-        if (spawn.layoutIndex() < 0)
-            throw new IllegalArgumentException("Placed object requires portable layout identity");
-        ObjectInstance existing =
-                activeObjects.entrySet().stream()
-                        .filter(
-                                e ->
-                                        e.getKey().layoutIndex() == spawn.layoutIndex()
-                                                && e.getKey().objectId() == spawn.objectId()
-                                                && e.getKey().subtype() == spawn.subtype())
-                        .map(Map.Entry::getValue)
-                        .findFirst()
-                        .orElse(null);
-        if (existing != null) {
-            if (objectCallbacks.call(existing, existing::isDestroyed))
-                throw new IllegalStateException("Placed object is retired by native state; "
-                        + "cast a fresh unplaced object to start another native routine");
-            return existing;
-        }
-        if (placement.isCounterBasedRespawn()) {
-            if (stageplayActivation == null || placement.getSpawnIndex(spawn) < 0)
-                throw new IllegalStateException("Placed object has no canonical native respawn context; "
-                        + "retain the level layout or cast a fresh unplaced object");
-            if (!placement.admitStageplayPlacement(spawn, true))
-                throw new IllegalStateException("Placed object is retired or remembered by native state; "
-                        + "cast a fresh unplaced object to start another native routine");
-        }
-        // Explicit actor readmission preserves the removal filter for native placement scans.
-        int slot = allocateSlot();
-        if (slot < 0) throw new IllegalStateException("Native object activation window is full");
-        ObjectInstance instance;
-        try {
-            instance =
-                    ObjectDirectionAccess.forManager(this)
-                            .withAuthoredAdmission(
-                                    "stageplay-placement",
-                                    () ->
-                                            ObjectConstructionContext.with(
-                                                    objectServices,
-                                                    slot,
-                                                    () ->
-                                                            registry == null
-                                                                    ? null
-                                                                    : objectCallbacks.construct(
-                                                                            spawn,
-                                                                            () ->
-                                                                                    registry.create(
-                                                                                            spawn))));
-        } catch (RuntimeException | Error failure) {
-            releaseSlot(slot);
-            throw failure;
-        }
-        if (instance == null) {
-            releaseSlot(slot);
-            throw new IllegalArgumentException("Object placement has no native factory");
-        }
-        if (instance instanceof AbstractObjectInstance object) {
-            object.setServices(objectServices);
-            if (object.getSlotIndex() < 0) object.setSlotIndex(slot);
-            if (placement.isCounterBasedRespawn()) {
-                int counter = placement.getCounterForSpawn(spawn);
-                if (counter >= 0) object.setRespawnStateIndex(counter);
-            }
-        } else releaseSlot(slot);
-        // Explicit cast ownership must exist before the persistent clear admission gate.
-        // Keep vanilla placement scans filtered while permitting this authored readmission.
-        stageplayDirection.claimAuthored(instance);
-        registerActiveObject(spawn, instance);
-        bucketsDirty = activeObjectsCacheDirty = true;
-        return instance;
+    Optional<ObjectInstance> findStageplayPlacement(StageplayObjectDirection.PlacementIdentity identity) {
+        return stageplayController().find(identity);
+    }
+
+    void retireStageplayObject(ObjectInstance object) { stageplayController().retire(object); }
+    ObjectInstance materializeStageplayPlacement(StageplayObjectDirection.PlacementIdentity identity) {
+        return stageplayController().materialize(identity);
+    }
+    ObjectInstance materializeStageplayPlacement(ObjectSpawn spawn) {
+        return stageplayController().materialize(spawn);
     }
 
     /**

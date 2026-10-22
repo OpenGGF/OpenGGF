@@ -26,7 +26,7 @@ class TestStageplayWorkspace {
     private Path screenplay(String name) throws IOException {
         Path source = directory.resolve(name);
         java.nio.file.Files.writeString(source, """
-                {"version":5,"name":"Imported take","width":320,"height":224,
+                {"version":6,"name":"Imported take","width":320,"height":224,
                  "cast":[{"id":"lead","name":"Lead","gameId":"s2","character":"tails","puppet":false}],
                  "shots":[{"id":"first","durationFrames":120,"set":{"gameId":"s2","zone":0,"act":0},
                  "camera":[{"frame":0,"x":100,"y":200}],"actors":{"lead":[{"frame":0,"x":150,"y":350}]}}]}
@@ -201,7 +201,7 @@ class TestStageplayWorkspace {
     }
 
     @Test void sharedCameraFormsSaveAnAnimatedZoomInEitherNativeWorld() throws Exception {
-        for (var policy : List.of(StageplayDocument.WorldPolicy.LIVE, StageplayDocument.WorldPolicy.TERRAIN_ONLY)) {
+        for (var policy : List.of(StageplayDocument.WorldPolicy.LIVE)) {
             var workspace = workspace(); workspace.activate();
             workspace.controller().replace(workspace.controller().document().withSet(
                     new StageplayDocument.SetSource("s2", 0, 0, "", "", policy)));

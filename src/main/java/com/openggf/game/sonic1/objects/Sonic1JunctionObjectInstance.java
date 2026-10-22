@@ -193,6 +193,11 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
     // ========================================================================
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        onUnload();
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isDestroyed()) {

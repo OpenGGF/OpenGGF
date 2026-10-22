@@ -61,6 +61,189 @@ class TestStageplayObjectDirection {
     }
 
     @Test
+    void deadAndRejectedChildrenDoNotAccumulateInGraphOrRewind() {
+        Fixture fixture = new Fixture(List.of());
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        TestObject root = fixture.objects.createDynamicObject(
+                () -> new TestObject(new ObjectSpawn(100, 80, 1, 0, 0, false, 80)));
+        direction.claimAuthored("root", root);
+        for (int i = 0; i < 200; i++) {
+            TestObject child = root.child();
+            assertEquals(2, direction.graph(root).size());
+            fixture.objects.removeDynamicObject(child);
+            assertEquals(1, direction.graph(root).size());
+            assertTrue(direction.children.isEmpty());
+            assertEquals(1, direction.authored.size());
+        }
+        assertTrue(direction.rewindSnapshottable().capture().edges().isEmpty());
+        direction.clearObjects();
+        TestObject rejected = root.child();
+        assertFalse(fixture.objects.getActiveObjects().contains(rejected));
+        assertTrue(direction.children.isEmpty());
+        assertTrue(direction.nextChildOrdinals.isEmpty());
+        assertTrue(direction.authored.isEmpty());
+    }
+
+    @Test
+    void placementLookupNeverSelectsADynamicChildWithTheSameSpawnTupleAndRejectsOtherSets() {
+        ObjectSpawn spawn = new ObjectSpawn(100, 80, 1, 2, 0, false, 80, 4);
+        Fixture fixture = new Fixture(List.of(spawn));
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        ObjectInstance child = fixture.objects.createDynamicObject(() -> new TestObject(spawn));
+        ObjectInstance placed = direction.materializePlaced(spawn);
+        assertNotSame(child, placed);
+        assertSame(placed, direction.findPlaced(direction.placementIdentity(spawn)).orElseThrow());
+        assertThrows(IllegalArgumentException.class, () -> direction.materializePlaced(
+                new PlacementIdentity("test", 0, 1, 4, 1, 2)));
+        assertThrows(IllegalArgumentException.class, () -> direction.materializePlaced(
+                new ObjectSpawn(100, 80, 1, 2, 0, false, 80, 99)));
+        direction.remove(direction.placementIdentity(spawn));
+        assertTrue(fixture.objects.getActiveObjects().contains(child));
+        assertFalse(fixture.objects.getActiveObjects().contains(placed));
+    }
+
+    @Test
+    void directionAndRemovalReleaseNativeVineTubeAndGrabberOwnersWithoutUnloadingWorldState() throws Exception {
+        for (boolean remove : List.of(false, true)) for (String kind : List.of("vine", "tube", "grabber", "zipline", "pole", "grab", "spring", "hand", "pulley", "cup")) {
+            Fixture fixture = new Fixture(List.of());
+            var direction = ObjectDirectionAccess.forManager(fixture.objects);
+            var player = mock(com.openggf.sprites.playable.AbstractPlayableSprite.class);
+            var query = mock(ObjectPlayerQuery.class);
+            when(fixture.services.playerQuery()).thenReturn(query);
+            when(query.mainPlayerOrNull()).thenReturn(player);
+            when(query.playersFor(any())).thenReturn(List.of(player));
+            ObjectSpawn spawn = new ObjectSpawn(100, 80, 1, 0, 0, false, 80);
+            ObjectInstance object = fixture.objects.createDynamicObject(() -> switch (kind) {
+                case "vine" -> new com.openggf.game.sonic2.objects.VineSwitchObjectInstance(spawn, "vine");
+                case "tube" -> new com.openggf.game.sonic2.objects.MTZSpinTubeObjectInstance(spawn);
+                case "zipline" -> new com.openggf.game.sonic3k.objects.LbzRideGrappleInstance(spawn);
+                case "pole" -> new com.openggf.game.sonic1.objects.Sonic1PoleThatBreaksObjectInstance(spawn);
+                case "grab" -> new com.openggf.game.sonic2.objects.GrabObjectInstance(spawn, "grab");
+                case "spring" -> new com.openggf.game.sonic2.objects.LauncherSpringObjectInstance(spawn, "spring");
+                case "hand" -> new com.openggf.game.sonic3k.objects.HCZHandLauncherObjectInstance(spawn);
+                case "pulley" -> new com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance(spawn);
+                case "cup" -> new com.openggf.game.sonic3k.objects.LbzCupElevatorInstance(spawn);
+                default -> new com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance(spawn);
+            });
+            switch (kind) {
+                case "vine" -> {
+                    setField(object, "player1Grabbed", true);
+                    setField(object, "player1Owner", player);
+                }
+                case "tube" -> {
+                    setField(object, "mainStateOwner", player);
+                    var field = object.getClass().getDeclaredField("mainCharState"); field.setAccessible(true);
+                    setField(field.get(object), "state", 2);
+                }
+                case "zipline" -> {
+                    setField(object, "p1Owner", player);
+                    var field = object.getClass().getDeclaredField("p1"); field.setAccessible(true);
+                    setField(field.get(object), "grabbed", true);
+                }
+                case "pole" -> { setField(object, "poleGrabbed", true); setField(object, "controlledPlayer", player); }
+                case "grab" -> setField(object, "player1Grabbed", true);
+                case "spring" -> {
+                    var type = Class.forName(object.getClass().getName() + "$PlayerState");
+                    var ctor = type.getDeclaredConstructor(); ctor.setAccessible(true);
+                    var state = ctor.newInstance(); setField(state, "state", 1);
+                    @SuppressWarnings("unchecked") var states = (java.util.Map<Object, Object>) fieldValue(object, "playerStates");
+                    states.put(player, state);
+                }
+                case "hand" -> {
+                    setField(object, "p1Owner", player);
+                    setField(((Object[]) fieldValue(object, "nativeStates"))[0], "grabbed", true);
+                }
+                case "pulley" -> {
+                    when(player.isObjectControlled()).thenReturn(true);
+                    when(player.isObjectControlSuppressesMovement()).thenReturn(true);
+                    when(player.getAnimationId()).thenReturn(com.openggf.game.sonic3k.constants.Sonic3kAnimationIds.GET_UP.id());
+                    ((boolean[]) fieldValue(object, "grabbed"))[0] = true;
+                    ((com.openggf.sprites.playable.AbstractPlayableSprite[]) fieldValue(object, "grabbedPlayers"))[0] = player;
+                }
+                case "cup" -> { setField(object, "p1Owner", player); setField(fieldValue(object, "p1"), "inside", true); }
+                default -> setField(object, "grabbedPlayer", player);
+            }
+            if (remove) direction.removeDynamic(object);
+            else direction.direct(object, heldTemplate(), new Direction(200, 100, false, true, 0, -1));
+            if (kind.equals("pulley")) verify(player).releaseFromObjectControl(0);
+            else verify(player, atLeastOnce()).applyObjectControlState(com.openggf.sprites.playable.ObjectControlState.NONE);
+            if (!remove) assertTrue(direction.suspended(object));
+        }
+    }
+
+    @Test
+    void directingAndRemovingTheNativeZiplineReleasesItsStandingRider() {
+        for (boolean remove : List.of(false, true)) {
+            Fixture fixture = new Fixture(List.of());
+            var direction = ObjectDirectionAccess.forManager(fixture.objects);
+            var player = mock(com.openggf.sprites.playable.AbstractPlayableSprite.class);
+            ObjectInstance lift = fixture.objects.createDynamicObject(() -> new com.openggf.game.sonic2.objects.HTZLiftObjectInstance(
+                    new ObjectSpawn(100, 80, 0x16, 0, 0, false, 80), "zipline"));
+            fixture.objects.solidContacts().forceRidingObjectForBootstrap(player, lift);
+            clearInvocations(player);
+            if (remove) direction.removeDynamic(lift);
+            else direction.direct(lift, heldTemplate(), new Direction(200, 100, false, true, 0, -1));
+            assertFalse(fixture.objects.solidContacts().isPlayerRiding(player, lift));
+            verify(player).setOnObject(false);
+            verify(player).setAir(true);
+        }
+    }
+
+    private static Object fieldValue(Object target, String name) throws Exception {
+        var field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(target);
+    }
+
+    private static void setField(Object target, String name, Object value) throws Exception {
+        var field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(target, value);
+    }
+
+    @Test
+    void nativePictureCyclesAnimateCapturedPosesWithoutRunningTheNativeRoutine() {
+        Fixture fixture = new Fixture(List.of());
+        Pattern pixels = new Pattern(); pixels.setPixel(0, 0, (byte) 1);
+        var sheet = new ObjectSpriteSheet(new Pattern[] {pixels}, List.of(
+                new SpriteMappingFrame(List.of(new SpriteMappingPiece(0, 0, 1, 1, 0, false, false, 0))),
+                new SpriteMappingFrame(List.of(new SpriteMappingPiece(8, 0, 1, 1, 0, false, false, 0)))), 0, 1);
+        var renderer = new PatternSpriteRenderer(sheet, fixture.graphics);
+        renderer.ensurePatternsCached(fixture.graphics, 512);
+        class Cyclic extends TestObject implements ObjectVisualAnimationSource {
+            Cyclic() { super(new ObjectSpawn(100, 80, 1, 0, 0, false, 80)); }
+            public java.util.Optional<Cycle> visualAnimationCycle(int frame) {
+                return java.util.Optional.of(new Cycle(1, List.of(0, 1)));
+            }
+            public void appendRenderCommands(List<GLCommand> commands) { renderer.drawFrameIndex(0, getX(), getY()); }
+        }
+        Cyclic root = fixture.objects.createDynamicObject(Cyclic::new);
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        var picture = direction.captureDynamic(root);
+        var part = picture.parts().getFirst();
+        assertEquals(List.of(0, 1), part.animations().getFirst().frames());
+        direction.direct(root, picture, new Direction(100, 80, false, true, 0, -1));
+        assertNotEquals(StageplayObjectDirection.selectedPose(part, new Direction(100, 80, false, true, 0, -1, java.util.Map.of(), 0)),
+                StageplayObjectDirection.selectedPose(part, new Direction(100, 80, false, true, 0, -1, java.util.Map.of(), 2)));
+        fixture.objects.update(20, null, List.of(), 0, false);
+        assertEquals(0, root.updates);
+    }
+
+    @Test
+    void animalFlightCycleUsesNativeTwoTickFlapButWalkingFrameRemainsPhysicsOwned() {
+        Fixture fixture = new Fixture(List.of());
+        var art = mock(ObjectRenderManager.class);
+        when(fixture.services.renderManager()).thenReturn(art);
+        when(art.getAnimalTypeA()).thenReturn(AnimalType.FLICKY.ordinal());
+        var bird = new AnimalObjectInstance(new ObjectSpawn(100, 80, 0, 0, 0, false, 0), fixture.services);
+        assertEquals(1, bird.visualAnimationCycle(2).orElseThrow().delay());
+        assertEquals(List.of(0, 1), bird.visualAnimationCycle(2).orElseThrow().mappingFrames());
+        when(art.getAnimalTypeA()).thenReturn(AnimalType.RABBIT.ordinal());
+        var walker = new AnimalObjectInstance(new ObjectSpawn(100, 80, 0, 0, 0, false, 0), fixture.services);
+        assertTrue(walker.visualAnimationCycle(26).isEmpty());
+    }
+
+    @Test
     void ordinaryNativeChildSpawnDoesNotCreateAStageplayController() {
         Fixture fixture = new Fixture(List.of());
         TestObject root =
@@ -76,15 +259,15 @@ class TestStageplayObjectDirection {
         ObjectSpawn second = new ObjectSpawn(100, 80, 1, 2, 0, false, 80, 5);
         Fixture fixture = new Fixture(List.of(first, second));
         var direction = ObjectDirectionAccess.forManager(fixture.objects);
-        ObjectInstance a = direction.materializePlaced(PlacementIdentity.of(first));
-        ObjectInstance b = direction.materializePlaced(PlacementIdentity.of(second));
+        ObjectInstance a = direction.materializePlaced(direction.placementIdentity(first));
+        ObjectInstance b = direction.materializePlaced(direction.placementIdentity(second));
         assertNotSame(a, b);
         assertSame(a, direction.materializePlaced(first));
-        direction.remove(PlacementIdentity.of(first));
+        direction.remove(direction.placementIdentity(first));
         assertFalse(direction.allowsPlacement(first));
         assertTrue(direction.allowsPlacement(second));
-        assertTrue(direction.findPlaced(PlacementIdentity.of(first)).isEmpty());
-        assertSame(b, direction.findPlaced(PlacementIdentity.of(second)).orElseThrow());
+        assertTrue(direction.findPlaced(direction.placementIdentity(first)).isEmpty());
+        assertSame(b, direction.findPlaced(direction.placementIdentity(second)).orElseThrow());
         ObjectInstance readmitted = direction.materializePlaced(first);
         assertNotSame(a, readmitted);
         assertFalse(
@@ -107,7 +290,8 @@ class TestStageplayObjectDirection {
                         ObjectDirectionAccess.createNative(
                                 fixture.objects, new ObjectSpawn(100, 80, 1, 0, 0, false, 80));
         assertTrue(direction.allowsObject(authored));
-        TestObject child = authored.child();
+        TestObject child = direction.withAuthoredAdmission("stageplay-cast", authored::child);
+        assertTrue(fixture.objects.getActiveObjects().contains(child));
         assertTrue(direction.allowsObject(child));
         direction.clearObjects();
         assertFalse(fixture.objects.getActiveObjects().contains(authored));
@@ -179,6 +363,8 @@ class TestStageplayObjectDirection {
                                                 new ObjectSpawn(140, 80, 8, 0, 0, false, 80)));
         assertNotEquals(ObjectHeadRole.BADNIK, enemy.headPresentationRole());
         direction.clearBadniks();
+        assertFalse(direction.allowsPlacement(enemy.getSpawn()), "The same semantic policy suppresses inactive placements");
+        assertTrue(direction.allowsPlacement(machine.getSpawn()));
         assertFalse(fixture.objects.getActiveObjects().contains(enemy));
         assertFalse(fixture.objects.getActiveObjects().contains(child));
         assertTrue(fixture.objects.getActiveObjects().contains(machine));
@@ -198,10 +384,12 @@ class TestStageplayObjectDirection {
         assertTrue(
                 fixture.objects.getActiveObjects().contains(otherContext),
                 "Use the injected logical source context, not a cached role from another act");
+        assertTrue(direction.allowsPlacement(otherContext.getSpawn()),
+                "Placement admission also uses the current registry context");
     }
 
     @Test
-    void visualSnapshotRestoresHandleAndDirectionWithoutNativeSlotsAndRewindsRemovalPolicy() {
+    void visualSnapshotRestoresHandleAndDirectionWithoutNativeSlotsAndRewindsRemovalPolicy() throws Exception {
         Fixture fixture = new Fixture(List.of());
         var direction = ObjectDirectionAccess.forManager(fixture.objects);
         ObjectInstance visual =
@@ -209,8 +397,11 @@ class TestStageplayObjectDirection {
                         "cast-robot", heldTemplate(), new Direction(5, 7, false, true, 0, -1));
         var adapter = direction.rewindSnapshottable();
         var saved = adapter.capture();
+        var policy = (StageplayObjectLoadPolicy) fieldValue(direction, "loadPolicy");
+        var policySaved = policy.rewindAdapter().capture();
         direction.setDirection(visual, new Direction(100, 200, true, false, 0, -1));
         direction.clearObjects();
+        policy.rewindAdapter().restore(policySaved);
         adapter.restore(saved);
         assertTrue(
                 fixture.objects.getActiveObjects().isEmpty(),
@@ -411,7 +602,6 @@ class TestStageplayObjectDirection {
         var tile = new VisualTile(0, 0, false, true, false, 1, 2, 8, 8, false, 7, 2, 6);
         var template =
                 new VisualTemplate(
-                        1,
                         0,
                         0,
                         List.of(
@@ -478,7 +668,6 @@ class TestStageplayObjectDirection {
                 var tile = new VisualTile(0, 0, false, false, false, 0, 0, 8, 8, false, 15, 0, 8);
                 var template =
                         new VisualTemplate(
-                                1,
                                 0,
                                 0,
                                 List.of(
@@ -569,7 +758,6 @@ class TestStageplayObjectDirection {
         var second = new VisualTile(0, 0, false, false, false, 3, 0, 8, 8, false, 15, 0, 8);
         var template =
                 new VisualTemplate(
-                        1,
                         0,
                         0,
                         List.of(
@@ -677,8 +865,7 @@ class TestStageplayObjectDirection {
                 assertThrows(
                         UnsupportedRenderOrderException.class,
                         () ->
-                                new VisualTemplate(
-                                        1, 0, 0, List.of(part), List.of(), List.of(), List.of()));
+                                new VisualTemplate( 0, 0, List.of(part), List.of(), List.of(), List.of()));
         assertTrue(failure.getMessage().contains("use Free mode"));
         assertTrue(failure.getMessage().contains("Puppet/Pose cannot preserve this render order"));
     }
@@ -958,7 +1145,6 @@ class TestStageplayObjectDirection {
 
     private static VisualTemplate heldTemplate() {
         return new VisualTemplate(
-                1,
                 100,
                 80,
                 List.of(

@@ -5,18 +5,20 @@ import static com.openggf.stageplay.route.StageplayRouteResult.Status.*;
 
 import com.openggf.physics.RouteTerrainProbe;
 import com.openggf.stageplay.StageplayDocument;
-import com.openggf.stageplay.StageplayWorldPolicies;
 import com.openggf.stageplay.runtime.StageplayObjectMotion;
 
 import java.util.*;
 import java.util.function.BooleanSupplier;
 
 /**
- * Bounded continuous-floor graph for visual Puppet objects. No AI, collision response, native
- * controller, jump, teleport or terrain mutation is executed by this authoring helper. One-pixel
- * graph/sweep spacing and one-pixel support tolerance are authoring bounds.
+ * Bounded floor-following pathfinding for visual Puppet objects: slopes and steps up to eight
+ * pixels, without detours, jumps or gap crossing. No AI, collision response, native controller,
+ * teleport or terrain mutation is executed. These are authoring limits, not native physics.
  */
 public final class StageplayObjectRoutePlanner {
+    // Authoring clearance for a small walking step. Native object routines remain suspended.
+    private static final int MAX_STEP_HEIGHT = 8;
+
     private StageplayObjectRoutePlanner() {}
 
     private record Point(double x, double y) {}
@@ -93,18 +95,14 @@ public final class StageplayObjectRoutePlanner {
             if (request.startFrame() >= document.durationFrames())
                 throw new Stop(UNSUPPORTED, "Route starts outside the scene");
             int shotStart = 0, shotEnd = document.durationFrames();
-            SetSource source = document.set();
             for (var change : document.sceneChanges()) {
                 if (change.frame() <= request.startFrame()) {
                     shotStart = change.frame();
-                    source = change.set();
                 } else {
                     shotEnd = change.frame();
                     break;
                 }
             }
-            if (!StageplayWorldPolicies.usesNativeWorld(source.worldPolicy()))
-                throw new Stop(UNSUPPORTED, "Object terrain routing requires a native world");
             ObjectKey active = actor.keys().getFirst();
             int end = request.startFrame() + request.maxFrames();
             if (end > shotEnd || end > document.durationFrames())
@@ -121,7 +119,10 @@ public final class StageplayObjectRoutePlanner {
                 throw new Stop(
                         UNSUPPORTED, "Route starts on a continuously visible Puppet object key");
             for (var command : document.worldCommands())
-                if (command.frame() >= shotStart && command.frame() <= request.startFrame())
+                if (command.frame() >= shotStart && command.frame() <= request.startFrame()
+                        // beforeTick applies an entry clear before the role's first admission.
+                        && !(command.frame() == shotStart
+                                && command.kind() == WorldCommandKind.CLEAR_OBJECTS))
                     throw new Stop(
                             UNSUPPORTED,
                             "A preceding cast-clear/removal command makes the selected object's"
@@ -152,11 +153,24 @@ public final class StageplayObjectRoutePlanner {
                 double x =
                         previous.x() + Math.copySign(Math.min(1, Math.abs(remaining)), remaining);
                 Point point = support(x, previous.y(), footprint, terrain);
-                if (Math.abs(point.y() - previous.y()) > Math.abs(x - previous.x()) + 1e-9)
-                    throw new Stop(
-                            SEARCH_EXHAUSTED,
-                            "STEEP_OR_GAP: a walking visual cannot jump, drop or climb this floor"
-                                + " step");
+                double rise = previous.y() - point.y();
+                if (Math.abs(rise) > Math.abs(x - previous.x()) + 1e-9) {
+                    if (Math.abs(rise) > MAX_STEP_HEIGHT)
+                        throw new Stop(
+                                SEARCH_EXHAUSTED,
+                                "STEP_TOO_HIGH: walking steps are limited to " + MAX_STEP_HEIGHT
+                                        + " pixels; no jump or detour is attempted");
+                    // Lift before crossing a riser, or cross a descending edge before lowering.
+                    // Explicit MOVE_TO corners keep playback on the same collision-checked path;
+                    // interpolating diagonally through the riser would cut through solid terrain.
+                    Point corner = rise > 0
+                            ? new Point(previous.x(), point.y())
+                            : new Point(point.x(), previous.y());
+                    if (!clear(corner, footprint, terrain))
+                        throw new Stop(SEARCH_EXHAUSTED, "BLOCKED: insufficient step headroom");
+                    budget.node();
+                    graph.add(corner);
+                }
                 if (!clear(point, footprint, terrain))
                     throw new Stop(
                             SEARCH_EXHAUSTED,
@@ -204,7 +218,9 @@ public final class StageplayObjectRoutePlanner {
                     Point next = new Point(moved[0], moved[1]);
                     sweep(current, next, footprint, terrain, budget);
                     current = next;
-                    path.add(new StageplayRoutePoint(frame++, current.x(), current.y(), true));
+                    Point floor = support(current.x(), current.y(), footprint, terrain);
+                    path.add(new StageplayRoutePoint(frame++, current.x(), current.y(),
+                            Math.abs(floor.y() - current.y()) <= 1));
                 }
             }
             budget.check();
@@ -242,7 +258,8 @@ public final class StageplayObjectRoutePlanner {
             StageplayDocument candidate = document.withObjectActors(actors);
             return new StageplayRouteResult(
                     VISUAL_TERRAIN,
-                    "VISUAL_TERRAIN_ROUTE: fixed foreground ROM floor and visual clearance checked;"
+                    "VISUAL_TERRAIN_ROUTE: slopes, steps up to " + MAX_STEP_HEIGHT
+                        + " pixels and visual clearance checked; no gaps or detours;"
                         + " native AI, contacts and world effects remain suspended",
                     fingerprint,
                     request,
@@ -282,7 +299,8 @@ public final class StageplayObjectRoutePlanner {
         try {
             Point point = new Point(x, y);
             Point floor = support(x, y, footprint, terrain);
-            if (Math.abs(floor.y() - y) > 1) return "Visual route leaves continuous floor support";
+            if (!withinStepClearance(point, floor))
+                return "Visual route leaves floor support or the eight-pixel walking-step clearance";
             if (!clear(point, footprint, terrain)) return "Visual route intersects a wall or ceiling";
             return "";
         } catch (Stop | IllegalArgumentException failure) {
@@ -336,6 +354,11 @@ public final class StageplayObjectRoutePlanner {
         return new Point(x, y - f.footOffsetY());
     }
 
+    private static boolean withinStepClearance(Point point, Point floor) {
+        double clearance = floor.y() - point.y();
+        return clearance >= -1 && clearance <= MAX_STEP_HEIGHT;
+    }
+
     private static boolean clear(Point p, StageplayRouteFootprint f, RouteTerrainProbe terrain) {
         int feet = (int) Math.round(p.y() + f.footOffsetY());
         return terrain.clear(
@@ -367,7 +390,7 @@ public final class StageplayObjectRoutePlanner {
                     new Point(
                             from.x() + (to.x() - from.x()) * t, from.y() + (to.y() - from.y()) * t);
             Point floor = support(p.x(), p.y(), f, terrain);
-            if (Math.abs(floor.y() - p.y()) > 1 || !clear(p, f, terrain))
+            if (!withinStepClearance(p, floor) || !clear(p, f, terrain))
                 throw new Stop(
                         SEARCH_EXHAUSTED,
                         "BLOCKED_SWEEP: fractional visual movement leaves floor support or"

@@ -2009,3 +2009,175 @@ with `PATH="$HOME/.local/bin:$PATH"` and Maven
 
 These bounded checks resolve the candidate-hook blocker; the earlier incomplete
 combined smoke coverage and recorded baseline failures remain as documented.
+
+
+## Review correction round 2 (2026-10-22)
+
+The user rejected migration for all unpublished formats and the candidate API.
+Step 0 landed the previously qualified staged correction as `d8e441fbf`, after
+replacing the machine-local PowerShell path with `$HOME/.local/bin/pwsh`; no
+other staged implementation changed. The existing hook correction remains
+`9aec4bce0`.
+
+### Verified findings and design decisions
+
+- F1 / presentation 6,9: canonical v7 and screenplay v6 are the sole accepted
+  shapes. Remove migrations, legacy policies, held/fixed zoom, roster/donor and
+  single-window exceptions. `WorldPolicy` contains only `LIVE`; a cleared shot
+  carries `CLEAR_OBJECTS`, which preserves separate ring ownership. All eight
+  canonical scenes and seven screenplay examples are reauthored directly.
+- F2–F5: graph admission rejects unaccepted children and prunes retired members;
+  placement identity includes game/zone/act, lookup uses the placed-object owner,
+  stale materialization fails and a native source change requires a new shot.
+  Native holder release is explicit, before suspension/retirement, using native
+  cleanup paths. No blanket onUnload with world side effects is introduced.
+- F6–F11: admission/materialization/retirement and graph/capture/draw/rewind have
+  collaborators; remove speculative catalogue observations and duplicate roles.
+  LoadPolicy alone owns removed/clear state. Normal draws avoid capture lambdas
+  and Stageplay service lookups. Cache stock catalogues/classification. Restore
+  formatter-only changes/import ordering in shared files.
+- The already-landed plane-switcher extraction remains: restoring its original
+  nested block after extracting Stageplay behavior would leave about 3,198
+  effective facade lines against the existing 3,086 limit. Do not compact source
+  or raise the budget to hide this; native plane behavior remains the verified
+  identical collaborator. Current facade remains below the unchanged budget.
+- Camera interpolation follows framing centres; composition retains fractional
+  origin, grows the framebuffer allocation, and crops by source extent/origin.
+  The reviewed EHZ ensemble uses zoom .625, giving 359 source rows in a 224-high
+  film. Tall backgrounds preserve the native logical 224-row picture and extend
+  its edge, rather than reading another wrapped native plane. Native comparison
+  and motion acceptance remain required below.
+- Reject snapshotting initial camera bounds as an ICZ fix: Level bounds already
+  are loaded ROM bounds; boss events change Camera locks, a different owner.
+  Directed framing may extend beyond gameplay-origin bounds under the existing
+  finite coordinate/zoom/raster limits. Native camera, physics, events and arena
+  positions remain authoritative.
+- The HUD cut-at-zoom wording in presentation item 4 was stale against the
+  reviewed source: it already said pans and zoom animate. Legacy fixed-zoom
+  language elsewhere did survive and is removed from both frontends.
+- Object routing supports slopes and bounded 8-pixel steps via checked
+  lift/cross/lower corners. Larger steps, gaps, walls and headroom failures are
+  reported; no general planner or native-AI controller is claimed. A clear at
+  shot entry precedes initial role admission, so the helper accepts that cue;
+  later clear/removal boundaries remain unsupported.
+- Retain content fingerprints: unchanged documents can point to changed ROM or
+  authored-level bytes. Document equality alone cannot preserve the evidence
+  underlying a verified native route. The worker isolation remains necessary
+  because engine sessions have global ownership. Shipped workers use ordinary
+  Java classpaths, with test launch behavior injected through the Launcher seam.
+- F12 palette tests now compare captured ARGB values with authoritative native
+  palettes, including nonblack values. Desktop picture tests remain opt-in and
+  will be explicitly enabled for this round, not counted as default coverage.
+
+The mutable candidate pin removes three WorldPolicy constants and adds the
+native holder-release hook on ObjectInstance. The descriptor/runtime API were
+reviewed: unpublished candidate 0.7.0, no published baseline, no independent
+version increment, consistent with the user's engine-aligned version rule.
+
+### Validation checkpoint
+
+First `maven_queue.py -Dmse=off test-compile -B` failed main compilation with four
+introduced extraction errors: three malformed fully qualified SpriteCaptureControl
+references and an undefined CPZ frameCounter name. Zero tests ran; 58.538 seconds.
+After those repairs, the second identical command passed main compilation and
+failed test compilation only at three remaining TERRAIN_ONLY route fixtures.
+Zero tests ran; 1 minute 22 seconds. Those fixtures are reauthored with explicit
+clears. Native release audit extensions are not yet compiled or tested here.
+No broad smoke or guards have been launched in this round yet.
+
+Evidence root for this round is `$STAGEPLAY_EVIDENCE/round2/`. Capture acceptance,
+exact focused selections/results, final commit IDs and complete smoke/guards
+will be recorded after execution. Earlier historical results above are not
+claimed as qualification of this changed state.
+
+
+### Round-2 focused execution and ownership audit
+
+The clean build exposed seven introduced compile errors (57.374 seconds, zero
+tests): three hooks were nested in rewind adapters and the MHZ lift release
+extraction retained instance-only completion calls. Hooks now belong to their
+native objects; player-only lift release is separate from movement/story completion.
+The following test-compile passed in 1 minute21 seconds.
+
+The first focused selection completed 783 tests:756 passed, 14 failures, 13 errors,
+zero skips. Maven execution was 1 minute20 seconds after 561 seconds of measured
+queue waiting. Selection: `TestStageplay*`, object capture/composition/FBO/mask/API
+checks, the four required S3K checks, and adjacent intro/arrival/HPZ/capsule/CPU
+rewind regressions. All three supplied ROMs used absolute original paths;
+`-Dopenggf.headless.gl=surfaceless-egl`,
+`-Dopenggf.stageplay.hudPictures=true`, and native-background evidence output were
+explicit. All five HUD pictures and three native-background comparisons executed;
+all four required S3K checks passed. This red run is development feedback, not
+baseline attribution or final qualification.
+
+Introduced failures include stale legacy menu/interval expectations, mock source
+identity and construction context, admission/graph policy assumptions, contextual
+badnik caching, palette authority, and changed native-world example/route behavior.
+These are repaired with bounded affected checks; no unrelated native physics is
+changed to satisfy a fixture. Current screenplay intervals may cross cuts within
+film bounds; keys and point events remain shot-local. The old rejection at local
+end 41 inside a 90-frame film is replaced by a true film-overrun rejection and an
+explicit cross-cut acceptance assertion.
+
+The same-camera BG-only stills under `$STAGEPLAY_EVIDENCE/round2/native-background/`
+show the native ICZ pale bottom band. It is retained; treating that native band as
+a projection defect was rejected. Native top 224 rows compare byte-for-byte for
+GHZ/EHZ/ICZ; the next 160 rows extend the native bottom edge. The remaining 64 rows
+of the lower comparator tile are outside the 384-row film and are not acceptance
+coverage. Actual composed films still require motion review.
+
+The extended holder audit covers acquired P1/P2, handoffs to surviving helpers,
+and queued sidekick ending poses separately from already-applied control. A
+queued pose can reacquire control on the next physics pass; clearing only current
+player flags was rejected. The narrow CPU cancellation preserves unrelated CPU
+state. Acquired references rewind through stable PlayerRefId extras. No interrupt
+hook runs native completion transitions, camera/music/palette changes, explosions,
+checkpoint writes or end-level signals. Native CNZ teleporter route completion
+remains a pre-existing incomplete routine; this work only releases its owned
+player state on interruption.
+
+
+Air-traffic reauthoring preserves every native action, target, timing and wait.
+The current Tails_Move_FlySwim routine (sonic3k.asm:27632-27674; loc_14860 /
+loc_1488C) starts another flap only on pressed jump and applies native gravity;
+releasing buttons does not cancel flight. The every-five-frame diagnostic finds
+Tails airborne at 515 and grounded at 520 (landing bounded 516..520, not an exact
+frame claim). RELEASE remains at 360. The unchanged native performance needs more
+than 215 world pixels of vertical separation, which cannot fit the 184-pixel safe
+area at 1x. The current demo uses a smooth 0.7x group view, returns to 1x after the
+landing, and lasts 600 frames with the reply at 530..595. No fitted physics or
+legacy controller schedule is restored. Both canonical/source examples agree.
+
+Additional focused corrections inject the nullable activation policy directly from
+ObjectManager instead of looking up services during ordinary setServices; the
+negative regression asserts zero service calls. Badnik classification cache keys
+include zone/act. Tests explicitly register admitted child ownership, snapshot the
+single LoadPolicy owner, use real source identities, and compare palette values
+at capture entry before the following native palette cycle. Cleared-world tests
+permit only the exact native S1 ring class/ID and the directed graph, preserving
+ring population and rejecting other free objects. Mock constructor/holder fixtures
+now acquire the state they assert is released.
+
+
+### Focused repair qualification
+
+The affected 19-selector run completed 216 tests: 212 passed, four failures, zero
+errors/skips. Maven execution was 1 minute33 seconds after 483 seconds queue wait.
+The remaining failures separated two stale assertions (the pulley's native
+release seam and inactive Ring observations) from two actual bugs. Inactive
+badnik placement admission now applies CLEAR_BADNIKS through the same cached
+registry classification as active admission. Group-follow zoom now computes
+extra authored pan from framing-centre displacement, rather than adding its
+zoom-dependent origin shift twice; follow smoothing preserves the previous
+centre when scale changes.
+
+The new native camera regression compares fixed and animated zoom at every tick,
+with smoothing 1 and 0.2, identical native actor movement, and rewind/forward replay.
+The final affected command selected `TestStageplayObjectDirection`,
+`TestStageplayObjectRouteRom`, `TestStageplayLiveDemosRom`,
+`TestStageplayObjectCastRom`, and `TestStageplayUnifiedWorldRom` via the Maven queue,
+with surfaceless EGL, no DISPLAY/WAYLAND_DISPLAY/JAVA_TOOL_OPTIONS and all three
+absolute original ROM paths. It passed 49 tests with zero failures/errors/skips;
+Maven execution 1 minute26 seconds, queue waiting 271 seconds. Earlier successful
+focused coverage is not rerun merely as a ceremony. Combined smoke, independent
+guards, the desktop opt-in pictures and actual movie review remain required.

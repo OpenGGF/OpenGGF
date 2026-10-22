@@ -3,8 +3,8 @@ package com.openggf.level.render;
 import com.openggf.game.GameServices;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.SpriteMaskReplayRole;
-import com.openggf.level.Pattern;
 import com.openggf.level.PatternDesc;
+import com.openggf.level.Pattern;
 
 import java.util.List;
 import java.util.Objects;
@@ -312,7 +312,7 @@ public class PatternSpriteRenderer {
 
     private void drawFramePieces(List<? extends SpriteFramePiece> pieces,
             int originX, int originY, boolean hFlip, boolean vFlip, int paletteIndex) {
-        if (ObjectSpriteCapture.intercept(
+        if (ObjectSpriteCapture.isObserving() && ObjectSpriteCapture.intercept(
                 this,
                 spriteSheet,
                 pieces,
@@ -410,7 +410,7 @@ public class PatternSpriteRenderer {
         SpriteFrame<? extends SpriteFramePiece> frame = spriteSheet.getFrame(frameIndex);
         int paletteIndex = paletteOverride >= 0 ? paletteOverride : spriteSheet.getPaletteIndex();
         List<? extends SpriteFramePiece> pieces = frame.pieces();
-        if (ObjectSpriteCapture.intercept(
+        if (ObjectSpriteCapture.isObserving() && ObjectSpriteCapture.intercept(
                 this,
                 spriteSheet,
                 pieces,
@@ -505,7 +505,7 @@ public class PatternSpriteRenderer {
             boolean vFlip,
             int paletteIndex,
             boolean forcedPriority) {
-        if (ObjectSpriteCapture.intercept(
+        if (ObjectSpriteCapture.isObserving() && ObjectSpriteCapture.intercept(
                 this,
                 spriteSheet,
                 pieces,
@@ -627,13 +627,7 @@ public class PatternSpriteRenderer {
             }
             if (Math.abs(piece.xOffset()) > MAX_ABS_PIECE_OFFSET_PIXELS
                     || Math.abs(piece.yOffset()) > MAX_ABS_PIECE_OFFSET_PIXELS) {
-                return "piece "
-                        + i
-                        + " has extreme offset ("
-                        + piece.xOffset()
-                        + ","
-                        + piece.yOffset()
-                        + ")";
+                return "piece " + i + " has extreme offset (" + piece.xOffset() + "," + piece.yOffset() + ")";
             }
             int pieceTiles = widthTiles * heightTiles;
             totalTiles += pieceTiles;
@@ -674,16 +668,11 @@ public class PatternSpriteRenderer {
     }
 
     private String describeSheet(int frameIndex) {
-        return "sheet="
-                + spriteSheet.getClass().getName()
-                + ", frame="
-                + frameIndex
-                + ", frameCount="
-                + spriteSheet.getFrameCount()
-                + ", patternCount="
-                + (spriteSheet.getPatterns() != null ? spriteSheet.getPatterns().length : 0)
-                + ", palette="
-                + spriteSheet.getPaletteIndex();
+        return "sheet=" + spriteSheet.getClass().getName()
+                + ", frame=" + frameIndex
+                + ", frameCount=" + spriteSheet.getFrameCount()
+                + ", patternCount=" + (spriteSheet.getPatterns() != null ? spriteSheet.getPatterns().length : 0)
+                + ", palette=" + spriteSheet.getPaletteIndex();
     }
 
     private FrameBounds computeFrameBounds(SpriteFrame<? extends SpriteFramePiece> frame) {

@@ -37,6 +37,14 @@ public final class FbzSpiderCraneObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        if (state == State.CAPTURE || state == State.RETRACT || state == State.TRAVEL) {
+            releaseMain(services().playerQuery().mainPlayerOrNull());
+            state = State.INERT;
+        }
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity ignored) {
         PlayableEntity main = services().playerQuery().mainPlayerOrNull();
         switch (state) {

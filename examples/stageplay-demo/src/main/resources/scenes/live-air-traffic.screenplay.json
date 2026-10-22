@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 6,
   "name": "Air traffic",
   "width": 320,
   "height": 224,
@@ -9,20 +9,22 @@
       "name": "Tails",
       "gameId": "s3k",
       "character": "tails",
-      "snapToFloor": false
+      "snapToFloor": false,
+      "puppet": true
     },
     {
       "id": "knuckles",
       "name": "Knuckles",
       "gameId": "s3k",
       "character": "knuckles",
-      "snapToFloor": false
+      "snapToFloor": false,
+      "puppet": true
     }
   ],
   "shots": [
     {
       "id": "air",
-      "durationFrames": 540,
+      "durationFrames": 600,
       "set": {
         "gameId": "s3k",
         "zone": 0,
@@ -32,8 +34,27 @@
       "camera": [
         {
           "frame": 0,
-          "x": 5040,
-          "y": 928,
+          "x": 5040.0,
+          "y": 928.0,
+          "interpolation": "SMOOTH",
+          "follow": {
+            "actors": [
+              "tails",
+              "knuckles"
+            ],
+            "deadZoneX": 12,
+            "deadZoneY": 12,
+            "lookAhead": 4,
+            "smoothing": 0.2,
+            "offsetX": 0,
+            "offsetY": 0
+          },
+          "zoom": 1
+        },
+        {
+          "frame": 180,
+          "x": 4971.428571428572,
+          "y": 880.0,
           "interpolation": "HOLD",
           "follow": {
             "actors": [
@@ -46,7 +67,46 @@
             "smoothing": 0.2,
             "offsetX": 0,
             "offsetY": 0
-          }
+          },
+          "zoom": 0.7
+        },
+        {
+          "frame": 440,
+          "x": 4971.428571428572,
+          "y": 880.0,
+          "interpolation": "SMOOTH",
+          "follow": {
+            "actors": [
+              "tails",
+              "knuckles"
+            ],
+            "deadZoneX": 12,
+            "deadZoneY": 12,
+            "lookAhead": 4,
+            "smoothing": 0.2,
+            "offsetX": 0,
+            "offsetY": 0
+          },
+          "zoom": 0.7
+        },
+        {
+          "frame": 530,
+          "x": 5040.0,
+          "y": 928.0,
+          "interpolation": "HOLD",
+          "follow": {
+            "actors": [
+              "tails",
+              "knuckles"
+            ],
+            "deadZoneX": 12,
+            "deadZoneY": 12,
+            "lookAhead": 4,
+            "smoothing": 0.2,
+            "offsetX": 0,
+            "offsetY": 0
+          },
+          "zoom": 1
         }
       ],
       "actors": {
@@ -174,8 +234,8 @@
           "typerId": "pace"
         },
         {
-          "startFrame": 435,
-          "endFrame": 530,
+          "startFrame": 530,
+          "endFrame": 595,
           "speakerActor": "knuckles",
           "text": "Both back on the ground.",
           "x": 8,

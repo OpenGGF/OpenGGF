@@ -18,7 +18,7 @@ public class SwScrlHcz extends AbstractZoneScrollHandler
         implements com.openggf.level.scroll.ScrollProjectionSource {
 
     static final int[] HCZ1_DEFORM_HEIGHTS = {
-        0x40, 8, 8, 5, 5, 6, 0xF0, 6, 5, 5, 8, 8, 0x30, 0x80C0, 0x7FFF
+            0x40, 8, 8, 5, 5, 6, 0xF0, 6, 5, 5, 8, 8, 0x30, 0x80C0, 0x7FFF
     };
     private static final int EQUILIBRIUM_Y = 0x610;
     private static final int BG_Y_OFFSET = 0x190;
@@ -29,13 +29,18 @@ public class SwScrlHcz extends AbstractZoneScrollHandler
     static final int HCZ1_WATERLINE_END = 205;
 
     private static final int[] HCZ2_DEFORM_HEIGHTS = {
-        8, 8, 0x90, 0x10, 8, 0x30, 0x18, 8, 8, 0xA8, 0x30, 0x18, 8, 8, 0xA8, 0x30, 0x18, 8, 8, 0xB0,
-        0x10, 8, 0x7FFF
+            8, 8, 0x90, 0x10, 8, 0x30, 0x18, 8, 8, 0xA8, 0x30, 0x18,
+            8, 8, 0xA8, 0x30, 0x18, 8, 8, 0xB0, 0x10, 8, 0x7FFF
     };
     private static final int[] HCZ2_DEFORM_INDEX = {
-        4 - 1, 0x0A, 0x14, 0x1E, 0x2C, 3 - 1, 0x0C, 0x16, 0x20, 6 - 1, 0x00, 0x08, 0x0E, 0x18, 0x22,
-        0x2A, 4 - 1, 0x02, 0x10, 0x1A, 0x24, 2 - 1, 0x12, 0x1C, 2 - 1, 0x06, 0x28, 2 - 1, 0x04,
-        0x26, 0xFF
+            4 - 1, 0x0A, 0x14, 0x1E, 0x2C,
+            3 - 1, 0x0C, 0x16, 0x20,
+            6 - 1, 0x00, 0x08, 0x0E, 0x18, 0x22, 0x2A,
+            4 - 1, 0x02, 0x10, 0x1A, 0x24,
+            2 - 1, 0x12, 0x1C,
+            2 - 1, 0x06, 0x28,
+            2 - 1, 0x04, 0x26,
+            0xFF
     };
     private static final int HCZ2_HSCROLL_SIZE = 24;
 
@@ -43,12 +48,12 @@ public class SwScrlHcz extends AbstractZoneScrollHandler
     private static final int WALL_CHASE_BG_X_OFFSET = 0x200;
 
     private static final DeformationPlan.ScrollValueTransform NEGATE_WORD = value -> negWord(value);
-    private static final WaterlineBlendComposer WATERLINE_BLEND =
-            new WaterlineBlendComposer(
-                    HCZ1_WATERLINE_START,
-                    HCZ1_WATERLINE_MIDPOINT,
-                    HCZ1_WATERLINE_END,
-                    WATERLINE_THRESHOLD);
+    private static final WaterlineBlendComposer WATERLINE_BLEND = new WaterlineBlendComposer(
+            HCZ1_WATERLINE_START,
+            HCZ1_WATERLINE_MIDPOINT,
+            HCZ1_WATERLINE_END,
+            WATERLINE_THRESHOLD
+    );
 
     public enum Hcz2BgPhase {
         WALL_CHASE,
@@ -98,9 +103,9 @@ public class SwScrlHcz extends AbstractZoneScrollHandler
     /**
      * Prime the collision-facing BG camera state before physics runs.
      *
-     * <p>ROM: HCZ2_WallMove writes Camera_X/Y_pos_BG_copy before the dual-path BG collision
-     * routines read Camera_X/Y_diff. The engine's normal scroll update runs later in the frame, so
-     * HCZ2 needs this pre-physics cache.
+     * <p>ROM: HCZ2_WallMove writes Camera_X/Y_pos_BG_copy before the dual-path
+     * BG collision routines read Camera_X/Y_diff. The engine's normal scroll
+     * update runs later in the frame, so HCZ2 needs this pre-physics cache.
      */
     public void primeBgCollisionState(int cameraX, int cameraY) {
         if (hcz2Phase == Hcz2BgPhase.WALL_CHASE) {
@@ -127,12 +132,15 @@ public class SwScrlHcz extends AbstractZoneScrollHandler
     }
 
     @Override
-    public void update(
-            int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter, int actId) {
+    public void update(int[] horizScrollBuf,
+                       int cameraX,
+                       int cameraY,
+                       int frameCounter, int actId) {
         composeCamera(horizScrollBuf, cameraX, cameraY, actId);
     }
 
-    private void composeCamera(int[] horizScrollBuf, int cameraX, int cameraY, int actId) {
+    private void composeCamera(int[] horizScrollBuf, int cameraX, int cameraY,
+                       int actId) {
         resetScrollTracking();
         composer.reset();
         composer.setVscrollFactorFG((short) 0);
@@ -179,8 +187,7 @@ public class SwScrlHcz extends AbstractZoneScrollHandler
         fillCaveBands(scrollValue);
         short fastestCaveValue = hcz1HScroll.get(0);
         short slowestCaveValue = hcz1HScroll.get(6);
-        WATERLINE_BLEND.apply(
-                hcz1HScroll, equilibriumDelta, fastestCaveValue, slowestCaveValue, waterlineData);
+        WATERLINE_BLEND.apply(hcz1HScroll, equilibriumDelta, fastestCaveValue, slowestCaveValue, waterlineData);
 
         DeformationPlan.applyFlaggedTableBands(
                 composer,

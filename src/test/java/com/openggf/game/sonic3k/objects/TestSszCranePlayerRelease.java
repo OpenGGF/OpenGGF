@@ -25,7 +25,7 @@ class TestSszCranePlayerRelease {
         player.setGSpeed((short) 0x345);
         ObjectControlState.nativeBit7FullControl().applyTo(player);
         ((SszZoneRuntimeState) GameServices.zoneRuntimeState()).setBossRightX(0x220);
-        var release = new SszCranePlayerRelease(new ObjectSpawn(0, 0, 0, 0, 0, false, 0));
+        var release = new SszCranePlayerRelease(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), player);
         release.setServices(TestEnvironment.objectServices());
         GameServices.level().getObjectManager().addDynamicObject(release);
         for (int update = 0; update < 100 && !release.isDestroyed(); update++) {
@@ -46,7 +46,7 @@ class TestSszCranePlayerRelease {
         player.setCentreX((short) 0x200);
         player.setCentreY((short) 0x300);
         ((SszZoneRuntimeState) GameServices.zoneRuntimeState()).setBossRightX(0x208);
-        var release = new SszCranePlayerRelease(new ObjectSpawn(0, 0, 0, 0, 0, false, 0));
+        var release = new SszCranePlayerRelease(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), player);
         release.setServices(TestEnvironment.objectServices());
         GameServices.level().getObjectManager().addDynamicObject(release);
         release.update(0, null);

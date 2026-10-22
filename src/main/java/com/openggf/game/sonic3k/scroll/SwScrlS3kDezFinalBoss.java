@@ -9,14 +9,9 @@ public final class SwScrlS3kDezFinalBoss extends SwScrlS3kDefault {
     private short foregroundY;
     private int backgroundX;
 
-    @Override
-    public void update(int[] buffer, int cameraX, int cameraY, int clock, int act) {
-        var state =
-                GameServices.hasRuntime()
-                                && GameServices.zoneRuntimeState()
-                                        instanceof DezFinalBossZoneRuntimeState dez
-                        ? dez
-                        : null;
+    @Override public void update(int[] buffer, int cameraX, int cameraY, int clock, int act) {
+        var state = GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof DezFinalBossZoneRuntimeState dez
+                ? dez : null;
         if (state == null) return;
         int inset = NativeViewportFraming.inset(GameServices.camera().getWidth());
         render(buffer, cameraX, state, inset);
@@ -46,21 +41,9 @@ public final class SwScrlS3kDezFinalBoss extends SwScrlS3kDefault {
             trackOffset(fg, bg);
         }
     }
-
-    @Override
-    public short getVscrollFactorFG() {
-        return foregroundY;
-    }
-
-    @Override
-    public int getBgCameraX() {
-        return backgroundX - 1;
-    }
-
-    @Override
-    public int getBgPeriodWidth() {
-        return 512;
-    }
+    @Override public short getVscrollFactorFG() { return foregroundY; }
+    @Override public int getBgCameraX() { return backgroundX - 1; }
+    @Override public int getBgPeriodWidth() { return 512; }
 
     @Override
     public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(

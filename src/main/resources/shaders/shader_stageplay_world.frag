@@ -3,12 +3,14 @@
 uniform sampler2D World;
 uniform vec4 Viewport;
 uniform vec2 SourceExtent;
+uniform vec2 SourceOrigin;
 out vec4 FragColor;
 
 void main() {
     vec2 view = (gl_FragCoord.xy - Viewport.xy) / Viewport.zw;
     // Crop fractional source extents at the bottom/right without rounding zoom.
-    vec2 source = vec2(view.x * SourceExtent.x, 1.0 - (1.0 - view.y) * SourceExtent.y);
+    vec2 source = vec2(SourceOrigin.x + view.x * SourceExtent.x,
+                       1.0 - SourceOrigin.y - (1.0 - view.y) * SourceExtent.y);
     vec2 size = vec2(textureSize(World, 0));
     vec2 pixel = source * size;
     vec2 footprint = max(fwidth(pixel), vec2(0.00001));

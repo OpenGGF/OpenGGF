@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 6,
   "name": "One More Take",
   "width": 320,
   "height": 224,
@@ -9,21 +9,24 @@
       "name": "Sonic",
       "gameId": "s3k",
       "character": "sonic",
-      "snapToFloor": false
+      "snapToFloor": false,
+      "puppet": true
     },
     {
       "id": "tails",
       "name": "Tails",
       "gameId": "s3k",
       "character": "tails",
-      "snapToFloor": false
+      "snapToFloor": false,
+      "puppet": true
     },
     {
       "id": "knuckles",
       "name": "Knuckles",
       "gameId": "s3k",
       "character": "knuckles",
-      "snapToFloor": false
+      "snapToFloor": false,
+      "puppet": true
     }
   ],
   "shots": [

@@ -165,6 +165,12 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        var main = services().playerQuery().mainPlayerOrNull();
+        if (playersControlled && main instanceof AbstractPlayableSprite player) releasePlayers(player);
+    }
+
+    @Override
     public int getX() {
         return x;
     }

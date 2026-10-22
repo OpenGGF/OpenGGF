@@ -37,11 +37,11 @@ can browse local files. Properties apply together when their final action is cho
 Puppet roles use destination and urgency commands, with independent jump button
 holds. The inspector shows the resolved centre and movement status, including
 arrival or blocked attempts. A goal does not guarantee a route: jump explicitly
-where needed. New scenes use one shared native world. **LIVE** retains its placed objects and
-rings; **TERRAIN_ONLY** starts that same world with those populations cleared.
-Both choices use the same actor, camera and handover capabilities. Strictly
-migrated older scenes retain their original compatibility simulation. [The authoring reference](stageplay-authoring.md#puppet-and-poser-modes)
-describes command fields, compatibility and the windowless simulation tool.
+where needed. Every scene uses one shared **LIVE** native world. Use a timed
+**Clear objects** command at shot frame zero for a terrain-only picture; rings
+remain separately owned. Camera, actor and handover capabilities stay the same.
+[The authoring reference](stageplay-authoring.md#puppet-and-poser-modes)
+describes command fields and the windowless simulation tool.
 
 **Record directed take** stores physical movement intents for Puppet actors. Poser mode
 retains baked visual movement at two world pixels per tick. Space or Stop finishes
@@ -55,15 +55,13 @@ the authored picture into the game viewport; film output uses its exact dimensio
 
 ## Direct a live world
 
-In **Scene / set**, choose **LIVE** for the loaded population or **TERRAIN_ONLY**
-to clear initial placements and rings. Choose a ROM zone/act or link a saved
-`.ogfproject` set. Both choices use the native world owner. Each shot creates a fresh
+In **Scene / set**, choose a ROM zone/act or link a saved `.ogfproject` set.
+The native world starts with its ROM population. **Clear objects** and
+**Clear badniks** are ordinary timed commands; neither clears rings. Each shot creates a fresh
 native world with independent Puppet inputs, moving objects, rings, hazards,
 collision, clocks and rewind. Each performer uses its supplied game's native movement rules and ROM art over
 the shared terrain and collision owners. The document allows 32 actors, subject
 to the available native pattern-bank capacity; missing art fails explicitly.
-Versions 1–5 retain their original world behavior under visible compatibility
-policies when reopened. Selecting LIVE or TERRAIN_ONLY upgrades a shot explicitly.
 
 The selected actor's actions include **WAIT**, **RELEASE**, **CROUCH**, **LOOK_UP**
 and **ROLL**. S3K Tails also has **FLY_TO** and **HOVER**; S3K Knuckles has
@@ -86,13 +84,12 @@ the original bytes loaded during mod registration. Seeking is silent;
 forward playback admits native effects alongside authored music/voices. Add explicit
 music cues when the scene needs music in both preview and export.
 
-Current native films support **160–1920 × 112–1080** output dimensions and zoom
-in both contents policies. The completed opaque world is resampled separately
+Films support **160–1920 × 112–1080** output dimensions and zoom,
+with the same team, activation-window and binding rules after object clears. The completed opaque world is resampled separately
 from captions and dialogue. Native viewport tiles retain the engine's 224-line
 rendering contract; physics and native camera dimensions remain unchanged. The
 source view is bounded to 4096 pixels per side and 8 MiPixels in total, so extreme
 combinations of output size and zoom fail preflight with an actionable message.
-Legacy LIVE shots retain their original 224-high, fixed-1x presentation until upgraded.
 Current scenes activate a separate native-sized region around each performer,
 including objects near distant cast members. They share the native object slot
 budget; clear unnecessary objects or split a shot if that budget is exhausted.
@@ -101,24 +98,22 @@ transfers, flight/glide, rings/hurt and the 60-second **One More Take** rehearsa
 
 ## Direct the camera and change scenes
 
-Press **C** for camera directing mode. WASD/arrows pan, Q/E zoom in current native
-shots, **K** places a
+Press **C** for camera directing mode. WASD/arrows pan, Q/E zoom,
+**K** places a
 camera key and **R** records a camera take; Space finishes. A take is one undo edit.
-Current scenes animate position and zoom with the camera key's **HOLD**,
-**LINEAR** or **SMOOTH** easing. Numeric properties accept fractional zoom;
+Camera keys animate their framing centre and zoom with **HOLD**, **LINEAR** or
+**SMOOTH** easing. A centred push-in keeps its centre fixed. Numeric properties
+accept fractional zoom, and fractional camera positions survive composition;
 only the completed opaque world picture is filtered, leaving text sharp.
-Migrated legacy scenes keep held zoom until their world policy is upgraded.
 The draft camera stays separate from the evaluated shake, so saving a key never
 accidentally bakes earthquake offsets into it. Switch back to actor mode to direct
 cast movement. LIVE camera keys can follow one actor or a group: set **follow**
 to comma-separated actor IDs, then tune dead zones, look-ahead, smoothing and
-offsets. Follow uses actual native positions. Current native shots retain authored zoom;
-legacy LIVE shots remain at zoom one. The directed
+offsets. Follow uses actual native positions and retains authored zoom. The directed
 foreground, native sprites and priority mask share one view. In current scenes,
 background parallax and deformation follow that directed view while their native
 animation/event phase stays frozen to the displayed gameplay generation.
 S3K Death Egg's deliberately stationary background stays stationary.
-Migrated legacy scenes retain their previous background framing.
 
 Both editors expose **Camera effect** and **Scene change** commands with editable
 timeline rows. Camera effects add deterministic seeded shake over a half-open
@@ -180,8 +175,8 @@ final PCM mix without replacing other installed audio sources.
 
 The version-7 JSON document stores resource references, player and object keys,
 puppet commands, world clear/removal commands and presentation cues.
-Versions 1–5 migrate strictly: manual choreography, detached physics and original
-LIVE execution retain their behavior, including their previous presentation limits. ROM data
+Only the current document version is accepted. The unpublished format has no
+migration or compatibility modes. ROM data
 stays in the supplied-ROM pipeline. Authored `.ogfproject` sets, dialogue PNGs and audio stay
 beside the document. Move the whole folder to preserve relative references;
 Save As refuses to relocate a scene away from its asset root. Atomic saves
@@ -234,12 +229,11 @@ owns frame admission. The service and its rewind state share one owner-bound
 instance, with the normal creator fault boundary.
 
 The existing gameplay world stays held while the scene replaces its picture, and
-completion resumes it. Current LIVE and TERRAIN_ONLY scenes run their own
-native world in the same isolated preview host used by the editors; they do not
-replace or advance the held gameplay world. Older detached scenes retain their
-private native controllers and original authored choreography.
+completion resumes it. Scenes run their own native world in the same isolated
+preview host used by the editors; they do not replace or advance the held gameplay
+world. Poser actors retain explicitly authored manual choreography.
 
-For main-player handover in either native contents policy, the registration overload accepts the actor ID
+For main-player handover, the registration overload accepts the actor ID
 and `StageplayNativeBinding.FinishMode`. The bound actor must match the native
 game and character, with unit actor scale. Camera zoom is presentation-only. The first version
 requires a freely controlled player: dead, hurt, super, object-supported and
@@ -256,7 +250,8 @@ the player, and a changed level visit revokes the old lease.
 - Cancellation restores entry state. A changed level visit invalidates the old
   binding; it cannot write into the new level.
 
-These are unpublished **0.7.0 candidate** APIs. Match the engine and SDK commit.
+These are unpublished candidate APIs whose version follows the engine version.
+Match the engine and SDK commit.
 Branching dialogue, reusable shot libraries, rigs, lip sync and
 multi-user editing are future work, not version-1 controls.
 
@@ -275,9 +270,13 @@ A globally registered arena routine can still run at its native coordinates in
 another source context; choose its original arena or a directed mode. The anchor
 cannot relocate an arena-bound routine. Object **Puppet** moves a visual anchor toward destinations;
 object **Pose** authors positions and mapping frames. Both suspend the whole graph's
-native routines and contacts. Child parts follow the captured native relationships;
+native routines and contacts. Directing or removing a holder releases only the
+players it acquired through its native player-control cleanup, without completing
+the world event. Child parts follow the captured native relationships;
 pure ROM animation tables may run, while state-machine-only appearances use an
-explicit held/authored frame. Per-part frame overrides make those fallbacks editable.
+explicit held/authored frame. Native timer-owned bird flap cycles animate in
+Puppet/Pose; walking animal frames tied to native vertical velocity keep their
+held fallback. Per-part frame overrides make those fallbacks editable.
 A constructor with no visible graph needs a Free initialization in its native set
 before a later directed key can capture it; missing visuals fail clearly.
 
@@ -285,8 +284,8 @@ before a later directed key can capture it; missing visuals fail clearly.
 commands. Their placement suppression persists within the shot; a fresh shot starts
 with its own population. Players, attached character effects and rings are separate
 owners. Object properties, mode keys, visual move/stop commands, part overrides and
-clear/removal cues are saved in document version seven and screenplay version five.
-See the [authoring reference](stageplay-authoring.md#object-cast-screenplay-5-document-7)
+clear/removal cues are saved in document version seven and screenplay version six.
+See the [authoring reference](stageplay-authoring.md#object-cast-screenplay-6-document-7)
 for exact fields and the coverage-report command.
 
 ## Plan a basic route
@@ -312,8 +311,9 @@ while the object's AI, contacts and world effects stay suspended. The footprint
 is authored clearance, not a claim about that object's native controller or
 collision radii. Object routes use foreground collision, reject active background
 collision and do not navigate moving object/platform solids. Fresh replay checks
-the visual footprint against terrain on every tick. Gaps, jumps, blocked headroom and unsupported changing collision
-report failure. Pose and Free objects must first be deliberately switched to
+the visual footprint against terrain on every tick. Slopes and steps up to 8 pixels
+use explicit lift/cross/lower waypoints. Gaps, walls, larger steps, jumps, blocked
+headroom and unsupported changing collision report failure; it does not find detours. Pose and Free objects must first be deliberately switched to
 Puppet; the helper does not change their mode silently.
 
 The basic helper has explicit frame, node, tick and time budgets.

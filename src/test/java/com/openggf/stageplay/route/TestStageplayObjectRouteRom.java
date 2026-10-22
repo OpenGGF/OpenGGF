@@ -47,12 +47,14 @@ class TestStageplayObjectRouteRom {
     private static void verify(String game, int zone, int act, int objectId, int foot, String property, int freeLead) throws Exception {
         try (var library = SceneRomLibrary.open(Map.of(game, Path.of(System.getProperty(property))));
              var resources = new StageplayResources(library, false)) {
-            var source = new SetSource(game, zone, act, "", "", WorldPolicy.TERRAIN_ONLY);
+            var source = new SetSource(game, zone, act, "", "", WorldPolicy.LIVE);
             var world = SessionManager.getCurrentGameplayMode() == null ? StageplayLiveWorld.openOffline(library)
                     : StageplayLiveWorld.adoptOffline(library, SessionManager.getCurrentGameplayMode());
             resources.setLiveWorld(world);
+            var entryClear = new WorldCommand("clear-objects-0", 0, WorldCommandKind.CLEAR_OBJECTS,
+                    "", ObjectTarget.none());
             var opening = StageplayDocument.empty(game, zone, act, 0, 0, 320, 224)
-                    .withSet(source).withDurationFrames(180);
+                    .withSet(source).withDurationFrames(180).withWorldCommands(List.of(entryClear));
             resources.resolveFrame(opening, StageplayTimeline.sample(opening, 0));
             var terrain = resources.routeTerrainProbe(SessionManager.getCurrentGameplayMode().getLevelManager());
             var spawns = library.level(game, zone, act).getObjects().stream().filter(p -> p.objectId() == objectId).limit(24).toList();
@@ -77,7 +79,8 @@ class TestStageplayObjectRouteRom {
                     var actor = new ObjectActor("walker", "Walker", game, zone, act, objectId, spawn.subtype(), -1,
                             keys, List.of());
                     var scene = StageplayDocument.empty(game, zone, act, spawn.x() - 100, floor.y() - 120, 320, 224)
-                            .withSet(source).withDurationFrames(180).withObjectActors(List.of(actor));
+                            .withSet(source).withDurationFrames(180).withObjectActors(List.of(actor))
+                            .withWorldCommands(List.of(entryClear));
                     // Explicit visual clearance is author metadata, not a native hitbox adapter.
                     var request = new StageplayRouteRequest("walker", freeLead, targetX, target.y() - foot, 150,
                             1024, 2000, 15000, 1, new StageplayRouteFootprint(2, foot, foot, 0), .75);
@@ -103,8 +106,20 @@ class TestStageplayObjectRouteRom {
             var rendered = observed.world().objects().stream().filter(o -> o.type().equals("Stageplay:walker:PUPPET")).findFirst().orElseThrow();
             var last = chosen.path().getLast();
             assertEquals(Math.round(last.x()), rendered.x()); assertEquals(Math.round(last.y()), rendered.y());
-            assertTrue(observed.world().objects().stream().allMatch(o -> o.type().startsWith("Stageplay:")),
-                    "The cleared world must contain only the suspended visual graph, never Free badniks or children");
+            // S1 Ring_Main creates real parent/child ring routines, unlike the later
+            // games' separate ring manager: Ring_Main (_incObj/25, 37 Rings.asm:46-91).
+            // CLEAR_OBJECTS deliberately preserves those independent ring owners.
+            assertTrue(observed.world().objects().stream().allMatch(o -> o.type().startsWith("Stageplay:")
+                            || game.equals("s1")
+                                    && o.objectId() == com.openggf.game.sonic1.constants.Sonic1ObjectIds.RING
+                                    && (o.type().equals("Sonic1RingInstance")
+                                            || o.layoutIndex() >= 0 && o.type().equals("Ring"))),
+                    "Only the suspended graph and independent native ring routines may survive;"
+                            + " Free badniks/children must not: " + observed.world().objects());
+            assertEquals(library.level(game, zone, act).getRings().size(), observed.world().rings().size(),
+                    "An object clear must retain the separate native ring population");
+            assertTrue(observed.world().rings().stream().noneMatch(com.openggf.stageplay.StageplayTimeline.LiveRing::collected),
+                    "A visual object route cannot collect rings");
             resources.resolveFrame(chosen.candidate(), StageplayTimeline.sample(chosen.candidate(), 0));
             assertEquals(observed, resources.resolveFrame(chosen.candidate(), StageplayTimeline.sample(chosen.candidate(), end)));
             if (freeLead > 0) {

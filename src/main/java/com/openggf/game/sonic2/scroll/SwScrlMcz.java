@@ -131,8 +131,7 @@ public class SwScrlMcz extends AbstractZoneScrollHandler implements ScrollProjec
         composer.setVscrollFactorBG((short) (bgY + this.shakeOffsetY));
         vscrollFactorFG = (short) (cameraY + this.shakeOffsetY);
 
-        compose(composer, segScroll, tables == null ? null : tables.getMczRowHeights(),
-                cameraX, bgY, shakeOffsetX);
+        compose(composer, segScroll, tables == null ? null : tables.getMczRowHeights(), cameraX, bgY, shakeOffsetX);
 
         composer.copyPackedScrollWordsTo(horizScrollBuf);
         vscrollFactorBG = composer.getVscrollFactorBG();

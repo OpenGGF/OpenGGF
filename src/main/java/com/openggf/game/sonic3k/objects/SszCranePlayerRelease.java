@@ -22,6 +22,7 @@ import java.util.List;
  * Position writes copy words only, preserving the player's subpixel words.
  */
 public final class SszCranePlayerRelease extends AbstractObjectInstance implements SpawnRewindRecreatable {
+    private AbstractPlayableSprite ownedPlayer;
     private int phase;
     private int xFixed;
     private int yFixed;
@@ -29,12 +30,23 @@ public final class SszCranePlayerRelease extends AbstractObjectInstance implemen
     private int poseTimer;
 
     public SszCranePlayerRelease(ObjectSpawn spawn) {
+        this(spawn, null);
+    }
+
+    public SszCranePlayerRelease(ObjectSpawn spawn, AbstractPlayableSprite player) {
         super(spawn, "SszCranePlayerRelease");
+        ownedPlayer = player;
+    }
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        if (ownedPlayer != null) releaseControl(ownedPlayer);
+        ownedPlayer = null;
     }
 
     @Override public void update(int vIntRunCount, PlayableEntity ignored) {
         var state = S3kRuntimeStates.currentSsz(services().zoneRuntimeRegistry()).orElse(null);
-        AbstractPlayableSprite player = services().spriteManager().getMainPlayable();
+        AbstractPlayableSprite player = ownedPlayer;
         if (state == null || player == null) return;
         if (phase == 0) {
             xFixed = (player.getCentreX() & 0xFFFF) << 16;
@@ -65,13 +77,36 @@ public final class SszCranePlayerRelease extends AbstractObjectInstance implemen
                 xFixed >>> 16, (yFixed >>> 16) + 0x13);
         if (floor == null || floor.distance() >= 0) return;
         NativePositionOps.addYPosPreserveSubpixel(player, floor.distance());
-        ObjectControlState.none().applyTo(player);
-        player.setObjectMappingFrameControl(false);
+        releaseControl(player);
+        ownedPlayer = null;
         // Stop_Object clears velocities only; status/animation stay untouched.
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
         ObjectLifetimeOps.expireDynamic(this);
+    }
+
+    static void releaseControl(AbstractPlayableSprite player) {
+        ObjectControlState.none().applyTo(player);
+        player.setObjectMappingFrameControl(false);
+    }
+
+    private record RewindExtra(com.openggf.game.rewind.identity.PlayerRefId player)
+            implements com.openggf.level.objects.PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
+
+    @Override
+    public com.openggf.level.objects.PerObjectRewindSnapshot captureRewindState(
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        var player = context.identityTable().map(table -> table.encodePlayer(ownedPlayer)).orElse(null);
+        return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(player));
+    }
+
+    @Override
+    public void restoreRewindState(com.openggf.level.objects.PerObjectRewindSnapshot snapshot,
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        ownedPlayer = snapshot.objectSubclassExtra() instanceof RewindExtra extra && extra.player() != null
+                ? (AbstractPlayableSprite) context.requireIdentityTable().resolvePlayer(extra.player(), true) : null;
     }
 
     private void copyPosition(AbstractPlayableSprite player) {

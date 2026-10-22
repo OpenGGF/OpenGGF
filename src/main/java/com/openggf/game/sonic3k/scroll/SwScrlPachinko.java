@@ -8,9 +8,9 @@ import com.openggf.level.scroll.compose.ScrollEffectComposer;
 /**
  * Pachinko / Glowing Spheres bonus stage scroll handler.
  *
- * <p>ROM reference: {@code Pachinko_BGScroll} in sonic3k.asm. Background vertical scroll follows
- * camera Y at 1/8 speed. Background horizontal scroll uses an anchored 5/8 parallax curve around
- * screen center offset $A0.
+ * <p>ROM reference: {@code Pachinko_BGScroll} in sonic3k.asm.
+ * Background vertical scroll follows camera Y at 1/8 speed. Background horizontal
+ * scroll uses an anchored 5/8 parallax curve around screen center offset $A0.
  */
 public class SwScrlPachinko extends AbstractZoneScrollHandler
         implements com.openggf.level.scroll.ScrollProjectionSource {
@@ -27,12 +27,15 @@ public class SwScrlPachinko extends AbstractZoneScrollHandler
     }
 
     @Override
-    public void update(
-            int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter, int actId) {
+    public void update(int[] horizScrollBuf,
+                       int cameraX,
+                       int cameraY,
+                       int frameCounter, int actId) {
         composeCamera(horizScrollBuf, cameraX, cameraY, actId);
     }
 
-    private void composeCamera(int[] horizScrollBuf, int cameraX, int cameraY, int actId) {
+    private void composeCamera(int[] horizScrollBuf, int cameraX, int cameraY,
+                       int actId) {
         resetScrollTracking();
         composer.reset();
 

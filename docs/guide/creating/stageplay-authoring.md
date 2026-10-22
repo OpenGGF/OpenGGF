@@ -30,14 +30,14 @@ seconds, active set, poses, camera, transition and cues. `--every N` chooses a
 coarser inspection interval; it does not change the movie cadence. This is authored
 directing state: physical actors are explicitly `UNRESOLVED` here. Use `simulate`
 with explicit `--s1-rom`, `--s2-rom` and/or `--s3k-rom` paths to evaluate native
-behavior without a window or audio playback. Current `LIVE` and `TERRAIN_ONLY`
-share native actors, objects, rings and events in `sample.world`; `TERRAIN_ONLY`
-starts with cleared placements and rings. Migrated `LEGACY_TERRAIN_ONLY` retains
-detached static-terrain physics. Both simulation paths report actual positions,
-velocity, grounded state and movement status, advancing every native tick even
-with `--every N`. LIVE shot spawns and cuts remain authored; these observations
-do not alone prove a continuous cold route or ROM parity. Keep bulk timelines
-beside the movie, labelled by world policy rather than as normal gameplay CSV.
+behavior without a window or audio playback. Every scene uses one `LIVE` native
+world, including actors, objects, rings and events in `sample.world`. To stage a
+terrain-only picture, author a `CLEAR_OBJECTS` world command at shot frame zero;
+it clears object roots and their graphs, while rings remain separately owned.
+Simulation reports actual positions, velocity, grounded state and movement status,
+advancing every native tick even with `--every N`. Shot spawns and cuts remain
+authored; these observations do not alone prove a continuous cold route or ROM
+parity. Keep bulk timelines beside the movie, distinct from normal gameplay CSV.
 `catalog` verifies the requested ROM identity and reports native registry metadata,
 character animation IDs, delays and mapping frames. Add both `--zone` and `--act`
 to decode one detached set and report bounds. A registry entry alone does not certify
@@ -53,15 +53,15 @@ use the capture host's hidden native context; macOS uses Java's first thread.
 
 ## Return editor changes to a screenplay
 
-`decompile --scene PATH --out PATH` reads and strictly migrates the canonical scene,
+`decompile --scene PATH --out PATH` reads the current version-seven canonical scene,
 then writes deterministic version-six shot-local JSON. Recompile it to recover the
-same complete document, including legacy policies, unused profiles, object parts,
+same complete document, including unused profiles, object parts,
 cue ordering and exact IDs. Decompilation changes the source layout and formatting;
 it does not reconstruct comments or the original shot names. It does not need ROMs.
 Both editors expose the same import/export commands. Import starts an unsaved
 canonical scene; export does not mark the current scene saved or clear undo history.
 
-Version six adds optional literal `id` fields to actions/cues and `transition.id`.
+Screenplays accept optional literal `id` fields to actions/cues and `transition.id`.
 Omitting them retains generated IDs. The optional root `order` object has only
 `puppets` (actor IDs), `captions`, `audio`, `cameraEffects` and `dialogue`: each
 provided list must be an exact permutation of that track's IDs. This preserves
@@ -72,7 +72,6 @@ neutral `shot0`, `shot1`, … names independently of transition IDs.
 A caption, effect or dialogue interval belongs to the shot containing its start.
 Its local `endFrame` may extend into a later shot, bounded by the complete scene;
 the interval is retained whole so reveal, animation phase and effect seeds survive.
-Versions one through five retain their original shot-local interval restrictions.
 Commands at the same frame retain their authored order. Decompile scenes with
 relative assets beside their canonical file; compile beside the screenplay. Neither
 command overwrites existing outputs. No hidden canonical payload is embedded.
@@ -90,22 +89,18 @@ uninterrupted short.
 
 ## Screenplay format
 
-The current screenplay format is `version:6`; the generated scene uses Stageplay
-version 7. New recipes default to a populated native world; TERRAIN_ONLY clears
-its initial objects and rings. Both have the same directing capabilities.
-Version four retains canonical-six native worlds. Versions one through three
-compile through the strict legacy canonical migration,
-preserving their original simulation and presentation. Version-one screenplays retain manual movement; version two retains
-terrain-only native Puppets. The compatible version-two example below introduces
-the common tracks; see [Live ROM worlds](#live-rom-worlds-screenplay-3-document-5)
-for version-three additions. JSON numbers retain their types: numeric strings, duplicate fields,
-unknown fields and trailing input are rejected. Versions one through five retain their
-8-MiB input bound. Version six permits up to 32 MiB to accommodate lossless shot-local
-expansion of an 8-MiB canonical document; the canonical bound stays unchanged.
+Only screenplay `version:6` and canonical document `version:7` are accepted.
+These formats and the candidate API are unpublished; examples are authored directly
+in the current shape, with no migration or compatibility modes. The API version
+follows the engine release version. Every shot uses the same native `LIVE` world.
+Use timed `CLEAR_OBJECTS` commands for an empty object cast; rings remain separate.
+JSON numbers retain their types: numeric strings, duplicate fields, unknown fields
+and trailing input are rejected. Screenplays permit up to 32 MiB to accommodate
+lossless shot-local expansion of an 8-MiB canonical document.
 
 ```json
 {
-  "version": 2,
+  "version": 6,
   "name": "A change of scenery",
   "width": 400,
   "height": 224,
@@ -167,19 +162,18 @@ must compile beside the screenplay to preserve their root.
 An absent transition means `CUT` with duration zero. Non-cut transitions last 2..600
 frames and straddle the incoming shot's start: the set changes at the fully covered
 midpoint. The first shot cannot have an incoming transition. Leave sufficient room
-on both sides; transitions cannot overlap. Events use half-open local intervals and
-must stay within their shot. Shake is deterministic sine motion in stage pixels at
+on both sides; transitions cannot overlap. Events use half-open intervals and may
+extend beyond their starting shot within the scene. Shake is deterministic sine motion in stage pixels at
 1/60-second steps; `frequency` is Hz, greater than zero and at most 30.
 
 The compiler flattens offsets, adds all boundary anchors and prevents interpolation
-across them. Both editors can subsequently edit the canonical scene. Exporting it
-back to a shot-local screenplay is not currently supported; keep the screenplay as
-the source when you want to revise it programmatically.
+across them. Both editors can edit the canonical scene and export a lossless
+shot-local screenplay for subsequent programmatic revision.
 
 
 ## Puppet and Poser modes
 
-Version-two and version-three cast members default to `puppet:true`, `snapToFloor:true` and
+Cast members default to `puppet:true`, `snapToFloor:true` and
 `collisionPath:0` (**Puppet** mode). Add `puppet:false` for **Poser** mode, with
 manual position, animation and frame selection. A physical
 actor's frame-zero key is a spawn centre; it keeps `animation:0`, `pose:-1`,
@@ -196,7 +190,7 @@ The shot's `actions` object maps actor IDs to ordered command arrays:
 | `STOP` | `frame,kind` |
 | `JUMP` | `frame,kind`; `holdFrames:12`, from 1 to 60 |
 
-An optional short `id` is namespaced by shot and actor. A movement command and a
+An optional `id` is preserved literally; omitted IDs are generated from the shot and actor. A movement command and a
 jump may share a frame; two movement commands may not. Jump holds require a released tick between presses and cannot cross a shot boundary. The engine receives directional and jump button inputs:
 urgency requests a fraction of that character's native running speed, rather than
 setting velocity. Acceleration, slopes, jump impulse, variable jump height, gravity,
@@ -209,19 +203,18 @@ native collision maintains floor contact or lets the actor fall from an edge.
 `collisionPath` selects terrain path 0 or 1. A destination's Y is part of the
 arrival check, not a vertical movement command: use `JUMP` explicitly when needed.
 A MOVE_TO command does not automatically find a route or jump obstacles. The
-optional [route helper](#route-helper) emits explicit attempts. Current native worlds use
-objects and collision with explicit routes/targets and bounded waits. Cleared
-worlds omit the initial population; legacy terrain scenes omit world simulation.
+optional [route helper](#route-helper) emits explicit attempts. The native world uses
+objects and collision with explicit routes/targets and bounded waits. A timed
+`CLEAR_OBJECTS` command clears object roots while retaining native simulation.
 
-Legacy terrain simulation reports `IDLE`, `MOVING`, `STOPPING`, `ARRIVED` or `BLOCKED` plus the
+Simulation reports `IDLE`, `MOVING`, `STOPPING`, `ARRIVED` or `BLOCKED` plus the
 active movement-command ID. Blocking describes lack of progress and does not
 silently cancel the attempt. Roles hidden for the entire shot report `INACTIVE` and
 do not need a floor spawn in that shot. Inspect actual positions and status before rendering;
 a pure `timeline` sample deliberately reports `UNRESOLVED` for physical actors.
 Scrubbing and repeated drawing resolve the same frame without adding ticks or
-playing historical sounds. Legacy terrain movement effects are silent; place
-explicit ROM cues in the film. Native preview/export also includes forward-only
-native SFX; distinguish those observed events from authored audio cues.
+playing historical sounds. Native preview/export includes forward-only native SFX;
+distinguish those observed events from authored audio cues.
 
 ## Dialogue profiles and decorations
 
@@ -277,22 +270,23 @@ The same definitions work in both editors and offline rendering without mod code
 
 ## Pixel stability and performance
 
-Current camera keys interpolate position and zoom together using their
-`interpolation` easing. Fractional zoom filters only the completed opaque world
-picture; captions and dialogue remain sharp. Legacy LIVE remains fixed at 1x;
-legacy terrain preserves held zoom and its previous rendering. A larger export
-`--scale` cannot repair aliasing already present
+Camera keys interpolate the framing centre and zoom using their `interpolation`
+easing, so two keys with the same centre keep that centre fixed through a push-in.
+Fractional camera positions survive world composition and resampling; slow pans do
+not snap to whole source pixels. Fractional zoom filters only the completed opaque
+world picture; captions and dialogue remain sharp. The private world framebuffer
+is reused and grows only when needed, with the active source extent cropped for
+each view. A larger export `--scale` cannot repair aliasing already present
 in the authored frame. Stage entrances, exits, turns and listener reactions, then
 review the entire movie in motion at its intended output size.
 
-## Native ROM worlds (screenplay 5, document 7)
+## Native ROM worlds (screenplay 6, document 7)
 
 New scenes default to `LIVE`. A shot selects a populated native level with
 `"set":{"gameId":"s3k","zone":11,"act":1,"worldPolicy":"LIVE"}`.
-Legacy version-three recipes retain the original same-donor, native-height-224
-LIVE contract. Version-four recipes use one native-world model in LIVE and
-TERRAIN_ONLY, including saved authored terrain, mixed supplied-game performers
-and camera zoom. Output dimensions are 160–1920 by 112–1080; the source view
+Saved authored terrain, mixed supplied-game performers, zoom, output dimensions,
+team size, activation windows and native binding use the same rules with populated
+or cleared objects. Output dimensions are 160–1920 by 112–1080; the source view
 (width/zoom by height/zoom) is bounded to 4096 per side and 8 MiPixels. Extreme
 framing fails resource preflight explicitly. Native physics still uses its
 original viewport and 224-line scroll owners. Films omit
@@ -353,7 +347,7 @@ Camera keys optionally include a `follow` object:
 ```
 
 One actor follows that performer; several frame their centre bounds at authored
-zoom (legacy LIVE retains fixed 1x). Empty actors preserve authored camera keys. Handoffs occur at camera keys.
+zoom. Empty actors preserve authored camera keys. Handoffs occur at camera keys.
 The director uses simulated positions and deterministic tick-based smoothing,
 clamps to level bounds, then composes the existing shake. Native camera/focus
 continues to own gameplay camera state; directed rendering samples immutable native
@@ -369,8 +363,7 @@ Current scenes activate separate native-sized windows around players and explici
 object roles, including vertically separated performers. The gap between windows
 is not activated. All windows share native object slots and removal/remember
 state; exhaustion reports which placement needs space and suggests clearing
-objects or splitting the shot. Native damage/destruction still applies. Migrated
-legacy LIVE scenes keep their original single-window restriction until upgraded.
+objects or splitting the shot. Native damage/destruction still applies.
 
 `simulate` emits `sample.world`: native clocks, ring population/collection state,
 placed-object positions, actor ring deltas, hurt, support placement, ability state,
@@ -381,7 +374,7 @@ registry and director/control state, then silently replays controller inputs.
 Shot boundaries start a clean world; never interpret spawn placement as movement.
 
 Current native-world registered cutscenes use the same isolated world and forward-only native SFX
-packets as editor preview. The optional native binding supports either current contents policy
+packets as editor preview. The optional native binding uses the same world model,
 with a matching interactive set and character, using visit-bound ownership and explicit
 KEEP_FINAL_POSITION / RESTORE_ENTRY handover; see the Stageplay guide.
 
@@ -391,7 +384,7 @@ automatic level music because the parent owns authored music; offline exports
 consume those same cues alongside native SFX. Do not rely on capture-only level
 music as the film's directed soundtrack.
 
-## Object cast (screenplay 5, document 7)
+## Object cast (screenplay 6, document 7)
 
 Object roles are separate from player controller tracks. Declare their native
 source context in `objectCast`, then use shot-local object keys and actions:
@@ -421,7 +414,7 @@ source context in `objectCast`, then use shot-local object keys and actions:
 }
 ```
 
-This fragment belongs inside a version-five screenplay with its normal name,
+This fragment belongs inside a version-six screenplay with its normal name,
 size and player cast fields. Mapping/part IDs are object-specific: inspect the
 captured graph and coverage before selecting a frame; the sample numbers are
 syntax, not a guarantee of that boss's mapping layout.
@@ -437,8 +430,10 @@ ROM species/art. S1 layout animals remain ordinary native object IDs.
 Keys expose `frame,x,y,mode,animation,pose,flipX,visible,interpolation,parts`.
 `parts` contains stable parent/creation paths with independent animation/frame
 selection. `pose:-1` selects pure animation where available, otherwise the captured
-held frame. Explicit mapping frames win over animation. State-machine-only
-appearances stay held/authored and are listed with the owning routine citation.
+held frame. Native timer-owned bird flap cycles also run in Puppet/Pose. Walking
+animal frames selected by native vertical velocity keep a documented held fallback;
+direction does not invent hop physics. Explicit mapping frames win over animation.
+State-machine-only appearances stay held/authored with the owning routine citation.
 Uninitialized or unavailable art fails explicitly, with the native source context
 and the preparation needed; it is never replaced by unrelated art.
 
@@ -452,6 +447,9 @@ coordinates there, with its real world effects; the tool does not infer another
 arena restriction from the boss category. Use its original arena or a directed
 visual mode for predictable placement. There are no object-specific spatial adapters. Switching an existing graph to Puppet/Pose
 suspends all parent/child routines and contacts before the next native tick.
+Directing or removing a holder releases its acquired players through the native
+player-only cleanup. Helper handoffs and queued ending poses retain ownership
+through rewind; interruption does not complete a cutscene or change the world.
 Visual parts retain their native relative transforms. In directed modes, `flipX`
 mirrors the captured graph around its visual anchor; it is an additional visual
 transform, rather than a controller-facing input. In Free mode the initial flag
@@ -500,8 +498,7 @@ a file and failures do not publish a partial scene. Relative assets keep their
 source directory. Existing commands and actors outside the requested patch remain
 unchanged. The helper never inserts position keys or changes an actor's mode.
 
-Player planning starts at a shot entry in current LIVE or TERRAIN_ONLY policy;
-compatibility policies must be changed deliberately before using the helper.
+Player planning starts at a shot entry in the native world.
 It searches a bounded graph of native
 physics attempts over the actual ROM/authored collision terrain, using the same
 steering as LIVE `MOVE_TO` and native jump button holds. A proposal is accepted
@@ -526,8 +523,11 @@ background-plane collision rejects explicitly. Moving object/platform solids are
 not graph nodes and visual Puppets have no native contact response. Fresh linear
 replay checks the actual visual positions against each tick's foreground terrain,
 so changed terrain or insufficient clearance fails rather than certifying the
-entry snapshot for the whole shot. Unsupported gaps and dynamic collision fail
-explicitly.
+entry snapshot for the whole shot. Floor following handles slopes and steps up to
+8 pixels using explicit lift/cross/lower waypoints. Brief step clearance above the
+floor is visual direction, not a native grounded controller. Gaps, walls, larger
+steps, insufficient headroom and dynamic collision report failure; the helper
+does not search detours or jump.
 
 Optional budgets are `--frames` (default up to 300 remaining shot frames,
 maximum 3600), `--nodes` (default 1024, maximum 4096), `--ticks` (default 120000,
@@ -544,5 +544,7 @@ the routed scene before rendering.
 Editor planning owns an independent logic worker. Its input binds the canonical
 document, request, supplied logical ROM windows and content snapshots of relative
 project/assets. Freshness is checked again before one undoable Apply; changed
-inputs or late cancelled work cannot overwrite newer authoring edits. Planning
-does not borrow the active gameplay session, preview worker or audio ownership.
+inputs or late cancelled work cannot overwrite newer authoring edits. The content
+fingerprint is retained because a terrain project or ROM can change while the
+scene document remains equal; document equality cannot certify the tested route.
+Planning does not borrow the active gameplay session, preview worker or audio ownership.

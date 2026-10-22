@@ -35,6 +35,29 @@ import static com.openggf.game.sonic3k.objects.HpzKnucklesCutsceneSupport.*;
  */
 public final class HpzEmeraldTheftPlayerControlObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable {
+    @com.openggf.game.rewind.RewindTransient(reason = "Captured as stable PlayerRefIds in DirectedControlSnapshot")
+    private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
+            new com.openggf.level.objects.PlayerControlOwners();
+
+    private record DirectedControlSnapshot(
+            java.util.List<com.openggf.game.rewind.identity.PlayerRefId> ownedPlayers)
+            implements com.openggf.level.objects.PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
+
+    @Override
+    public com.openggf.level.objects.PerObjectRewindSnapshot captureRewindState(
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        return super.captureRewindState(context).withObjectSubclassExtra(
+                new DirectedControlSnapshot(directedControlPlayers.capture(context)));
+    }
+
+    @Override
+    public void restoreRewindState(com.openggf.level.objects.PerObjectRewindSnapshot snapshot,
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        directedControlPlayers.restore(snapshot.objectSubclassExtra() instanceof DirectedControlSnapshot saved
+                ? saved.ownedPlayers() : java.util.List.of(), context);
+    }
+
     private static final int STOP_X = 0x14D0;
     private static final int FREEZE_X = 0x15A8;
     private static final int PAN_END_X = 0x1580;
@@ -140,6 +163,7 @@ public final class HpzEmeraldTheftPlayerControlObjectInstance extends AbstractOb
                     return;
                 }
                 phase = PHASE_WAIT_GROUNDED;
+                directedControlPlayers.add(p1);
                 p1.setControlLocked(true);
                 // st (Ctrl_1_locked) without a Ctrl_1_logical write: Sonic_Control stops copying
                 // the pad, so the held bits latched this frame (e.g. a jump still held) keep
@@ -192,6 +216,7 @@ public final class HpzEmeraldTheftPlayerControlObjectInstance extends AbstractOb
                 }
                 phase = PHASE_WAIT_LEFT;
                 p1.setControlLocked(false);
+                directedControlPlayers.remove(p1);
                 camera.setMinY((short) 0x5C0);
             }
             case PHASE_WAIT_LEFT -> {
@@ -230,7 +255,20 @@ public final class HpzEmeraldTheftPlayerControlObjectInstance extends AbstractOb
         camera.setMinY(camera.getMaxY());
         p1.setControlLocked(false);
         p1.setForcedInputMask(0);
+        directedControlPlayers.remove(p1);
         unlockPlayer2();
+    }
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (AbstractPlayableSprite player : directedControlPlayers.players()) {
+            ObjectControlState.none().applyTo(player);
+            player.setObjectMappingFrameControl(false);
+            player.setControlLocked(false);
+            player.clearForcedInputMask();
+            player.clearLogicalInputState();
+        }
+        directedControlPlayers.clear();
     }
 
     private void holdLatchedInput(AbstractPlayableSprite p1) {
@@ -244,7 +282,8 @@ public final class HpzEmeraldTheftPlayerControlObjectInstance extends AbstractOb
     }
 
     /** {@code st (Ctrl_1_locked).w} with {@code Ctrl_1_logical} held bits. */
-    private static void lock(AbstractPlayableSprite p1, int heldMask) {
+    private void lock(AbstractPlayableSprite p1, int heldMask) {
+        directedControlPlayers.add(p1);
         p1.setControlLocked(true);
         p1.clearLogicalInputState();
         p1.setForcedInputMask(heldMask);

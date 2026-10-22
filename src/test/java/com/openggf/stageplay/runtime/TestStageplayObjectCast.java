@@ -104,7 +104,7 @@ class TestStageplayObjectCast {
     }
 
     @Test void authoredFreeBadnikOutsideSharedEnemyBaseUsesItsRegistryTraitWhenCleared() {
-        var fixture = new PlacedFixture();
+        var fixture = new PlacedFixture(com.openggf.game.GameId.S1);
         int bomb = com.openggf.game.sonic1.constants.Sonic1ObjectIds.BOMB;
         var role = new ObjectActor("bomb", "Bomb", "s1", 0, 0, bomb, 0, -1, List.of(
                 new ObjectKey(0, 100, 200, 0, -1, false, true, Interpolation.HOLD, ObjectMode.FREE)), List.of());
@@ -144,6 +144,20 @@ class TestStageplayObjectCast {
         }
     }
 
+    @Test void nativeSourceChangeFailsBeforePlacedRolesCanMaterializeInTheDestinationAct() {
+        var fixture = new PlacedFixture();
+        var role = new ObjectActor("loaded", "Loaded", "s2", 0, 0, 1, 7, 8,
+                List.of(new ObjectKey(0, 100, 200, 0, -1, false, true, Interpolation.HOLD, ObjectMode.PUPPET)), List.of());
+        var scene = com.openggf.stageplay.StageplayDocument.empty("s2", 0, 0, 0, 0, 320, 224).withObjectActors(List.of(role));
+        try (var cast = new StageplayObjectCast(fixture.context, scene, scene.set(), 0, scene.durationFrames(),
+                List.of(fixture.spawn), Map.of("loaded", fixture.template))) {
+            cast.beforeTick(0);
+            when(fixture.context.getLevelManager().getCurrentAct()).thenReturn(1);
+            assertTrue(assertThrows(IllegalStateException.class, () -> cast.beforeTick(1)).getMessage().contains("use a new shot"));
+            assertEquals(0, fixture.constructors.get());
+        }
+    }
+
     private static final class PlacedFixture {
         final AtomicInteger constructors = new AtomicInteger(), updates = new AtomicInteger();
         final AtomicReference<ObjectSpawn> constructed = new AtomicReference<>();
@@ -151,12 +165,19 @@ class TestStageplayObjectCast {
         final GameplayModeContext context = mock(GameplayModeContext.class);
         final ObjectManager objects;
         final StageplayObjectDirection direction;
-        final VisualTemplate template = new VisualTemplate(1, 5000, 80, List.of(new VisualPart("root/0", 4, false,
+        final VisualTemplate template = new VisualTemplate( 5000, 80, List.of(new VisualPart("root/0", 4, false,
                 0, 0, List.of(new VisualPose(0, List.of(), List.of())))), List.of(), List.of(), List.of());
-        PlacedFixture() {
+        PlacedFixture() { this(com.openggf.game.GameId.S2); }
+        PlacedFixture(com.openggf.game.GameId game) {
             var graphics = new GraphicsManager(); graphics.setHeadlessMode(true);
             var services = mock(ObjectServices.class);
             when(services.graphicsManager()).thenReturn(graphics);
+            var session = mock(com.openggf.game.session.WorldSession.class);
+            var module = mock(com.openggf.game.GameModule.class);
+            when(module.getGameId()).thenReturn(game);
+            when(session.getGameModule()).thenReturn(module);
+            when(services.worldSession()).thenReturn(session);
+            when(context.getWorldSession()).thenReturn(session);
             when(services.solidExecutionRegistry()).thenReturn(SolidExecutionRegistry.inert());
             var registry = new ObjectRegistry() {
                 public ObjectInstance create(ObjectSpawn source) {

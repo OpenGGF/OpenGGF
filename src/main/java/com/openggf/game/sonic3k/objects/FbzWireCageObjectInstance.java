@@ -33,6 +33,17 @@ public final class FbzWireCageObjectInstance extends AbstractObjectInstance impl
         verticalMode = (spawn.subtype() & 0x80) != 0;
     }
 
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var entity : services().playerQuery().playersFor(
+                com.openggf.level.objects.ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (entity instanceof AbstractPlayableSprite player) {
+                int slot = participants.slot(player);
+                if (participants.flag(slot, 2)) release(player, slot);
+            }
+        }
+    }
+
     @Override public void update(int vIntRunCount, PlayableEntity ignored) {
         services().playerQuery().visitPlayers(participationPolicy(),this,UPDATE_PLAYER);
         if (!isOnScreen(0x180) && !anyHeld()) setDestroyedByOffscreen();

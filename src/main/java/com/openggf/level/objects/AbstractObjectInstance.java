@@ -1,24 +1,25 @@
 package com.openggf.level.objects;
 
-import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
 import com.openggf.debug.DebugOverlayManager;
+import com.openggf.graphics.GLCommand;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.game.ModApi;
-import com.openggf.game.PlayableEntity;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.rewind.GenericFieldCapturer;
 import com.openggf.game.rewind.GenericRewindEligibility;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.rewind.schema.RewindObjectStateBlob;
-import com.openggf.game.rules.GameRules;
-import com.openggf.game.rules.ObjectInteractionRules;
-import com.openggf.game.solid.PlayerSolidContactResult;
-import com.openggf.game.solid.SolidCheckpointBatch;
-import com.openggf.graphics.GLCommand;
 import com.openggf.level.LevelManager;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.game.PlayableEntity;
+import com.openggf.game.solid.PlayerSolidContactResult;
+import com.openggf.game.solid.SolidCheckpointBatch;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -99,6 +100,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     private boolean destroyedRespawnable;
     private ObjectSpawn dynamicSpawn;
     private ObjectServices services;
+    private transient StageplayActivationPolicy stageplayActivation;
 
     /**
      * Pre-update position snapshot, saved by ObjectManager before the object update loop.
@@ -489,6 +491,11 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      */
     public void setServices(ObjectServices services) {
         this.services = services;
+        stageplayActivation = null;
+    }
+
+    void bindStageplayActivation(StageplayActivationPolicy policy) {
+        stageplayActivation = policy;
     }
 
     /**
@@ -714,7 +721,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     private boolean stageplayVisible(int x, int y, int xMargin, int yMargin) {
-        return ObjectDirectionAccess.activationContains(tryServices(), x, y, xMargin, yMargin);
+        return stageplayActivation != null && stageplayActivation.contains(x, y, xMargin, yMargin);
     }
 
     protected static boolean isWithinBuildSpritesBounds(
@@ -888,7 +895,6 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         // awaitingFirstTouchExecution (docs/s1disasm/_incObj/sub ReactToItem.asm:50-51).
         if (awaitingFirstTouchExecution) return false;
         if (!preUpdateValid) return false; // No snapshot → first frame, skip
-        if (stageplayVisible(preUpdateX, preUpdateY, getOnScreenHalfWidth(), getOnScreenHalfHeight())) return true;
         if (resolveTouchResponseUsesRenderFlagYGate()) {
             if (usesCustomRenderHeight()) {
                 // S1 BuildSprites custom-height path (btst #4 set,
@@ -899,16 +905,19 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
                 // obHeight=$80) keeps render_flags bit 7 set and stays
                 // touchable. Mirror the ROM custom-height bounds test.
                 return cameraBounds.containsRenderSpriteBounds(preUpdateX, preUpdateY,
-                        getOnScreenHalfWidth(), getOnScreenHalfHeight());
+                        getOnScreenHalfWidth(), getOnScreenHalfHeight())
+                        || stageplayVisible(preUpdateX, preUpdateY, getOnScreenHalfWidth(), getOnScreenHalfHeight());
             }
             // S1: include the BuildSprites .assumeHeight Y band.
             return cameraBounds.contains(preUpdateX, preUpdateY,
-                    getOnScreenHalfWidth(), TOUCH_RESPONSE_Y_MARGIN);
+                    getOnScreenHalfWidth(), TOUCH_RESPONSE_Y_MARGIN)
+                    || stageplayVisible(preUpdateX, preUpdateY, getOnScreenHalfWidth(), getOnScreenHalfHeight());
         }
         // S2/S3K: pre-Task-3 X-only behaviour. Matches ROM S2 Touch_Loop
         // (no render-flag gate) and S3K Collision_response_list (gate
         // happens upstream during list build, not at touch time).
-        return cameraBounds.containsX(preUpdateX);
+        return cameraBounds.containsX(preUpdateX)
+                || stageplayVisible(preUpdateX, preUpdateY, getOnScreenHalfWidth(), getOnScreenHalfHeight());
     }
 
     /**
@@ -980,9 +989,9 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
 
     /** Applies a coarse-X delete-touch check when an object has a camera service. */
     protected final void coarseXCull(int anchorX, int maximumDistance) {
-        if (stageplayVisible(anchorX, getY(), 128, 128)) return;
         if (services().camera() != null
-                && isCoarseXOutOfRange(anchorX, services().camera().getX(), maximumDistance)) {
+                && isCoarseXOutOfRange(anchorX, services().camera().getX(), maximumDistance)
+                && !stageplayVisible(anchorX, getY(), 128, 128)) {
             setDestroyedByOffscreen();
         }
     }
@@ -1066,12 +1075,11 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @return true if the coordinate is within range (should NOT be deleted)
      */
     protected boolean isInRangeAt(int objectX) {
-        if (stageplayVisible(objectX, getY(), 128, 128)) return true;
         int objAligned = objectX & 0xFF80;
         int screenAligned = (cameraBounds.left() - 128) & 0xFF80;
         // ROM does a 16-bit sub.w followed by unsigned bhi, so preserve wrap semantics.
         int dist = (objAligned - screenAligned) & 0xFFFF;
-        return dist <= (128 + viewportWidth() + 192);
+        return dist <= (128 + viewportWidth() + 192) || stageplayVisible(objectX, getY(), 128, 128);
     }
 
     /**
@@ -1120,11 +1128,10 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * Reference: docs/s1disasm/_incObj/sub ChkObjectVisible.asm
      */
     protected boolean isChkObjectVisible() {
-        if (stageplayVisible(getX(), getY(), 0, 0)) return true;
         int dx = getX() - cameraBounds.left();
-        if (dx < 0 || dx >= viewportWidth()) return false;
         int dy = getY() - cameraBounds.top();
-        return dy >= 0 && dy < viewportHeight();
+        return (dx >= 0 && dx < viewportWidth() && dy >= 0 && dy < viewportHeight())
+                || stageplayVisible(getX(), getY(), 0, 0);
     }
 
     /**
@@ -1176,11 +1183,10 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @return true if in range under the signed window (should NOT be deleted)
      */
     protected boolean isInRangeAtSigned(int objectX) {
-        if (stageplayVisible(objectX, getY(), 128, 128)) return true;
         int objAligned = objectX & 0xFF80;
         int screenAligned = (cameraBounds.left() - 128) & 0xFF80;
         short dist = (short) (objAligned - screenAligned);
-        return dist <= (128 + viewportWidth() + 192);
+        return dist <= (128 + viewportWidth() + 192) || stageplayVisible(objectX, getY(), 128, 128);
     }
 
     /**

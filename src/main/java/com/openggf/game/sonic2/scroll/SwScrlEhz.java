@@ -230,7 +230,7 @@ public class SwScrlEhz extends AbstractZoneScrollHandler implements ScrollProjec
         return view -> {
             var output = new ScrollEffectComposer(view.height());
             int written = compose(output, view.cameraX(), context.frameCounter(), finalLines, ripple);
-            // ROM only defines the native222/224 scanlines; retain that exact native
+            // ROM only defines the native 222/224 scanlines; retain that exact native
             // unwritten tail and continue the final defined band in additional raster rows.
             int[] nativeWords = context.nativeOutput().horizontal();
             for (int line = written; line < Math.min(224, view.height()); line++) {
@@ -240,7 +240,7 @@ public class SwScrlEhz extends AbstractZoneScrollHandler implements ScrollProjec
             int tail = output.packedScrollWordAt(Math.min(Math.max(written - 1, 0), view.height() - 1));
             for (int line = Math.max(224, written); line < view.height(); line++) output.writePackedScrollWord(line, tail);
             return Sonic2ProjectionOutput.finish(context, view, output);
-        };
+    };
     }
 
 }

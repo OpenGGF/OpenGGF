@@ -92,6 +92,11 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        clearGrabbedPlayers();
+    }
+
+    @Override
     public int getX() {
         return currentX;
     }

@@ -33,6 +33,13 @@ public class S3kDezHangCarrierObjectInstance extends AbstractObjectInstance
         remainingTravel = (spawn.subtype() & 0xFF) << 2;
     }
 
+    @Override
+    public void releasePlayersForVisualDirection() {
+        var query = services().playerQuery();
+        if (grabbed[0] && query.mainPlayerOrNull() instanceof AbstractPlayableSprite player) release(player, 0, 60);
+        if (grabbed[1] && query.nativeP2OrNull() instanceof AbstractPlayableSprite player) release(player, 1, 60);
+    }
+
     @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (routine == 0) {
             // Only the PREVIOUS P1 latch starts the carrier. Installing the
