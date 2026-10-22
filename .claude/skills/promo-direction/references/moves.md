@@ -119,4 +119,4 @@ AAC true peak as well.
 `sheet EDIT [step first last]`, `frames EDIT N...`, `audio EDIT`,
 `render EDIT`. Each edit command prints `check()` warnings and a `pacing:`
 summary: shot count, mean shot length, the busiest 20 s window and the cuts in
-the final 20 s, and the longest bare gameplay stretch (warned over 4 s).
+the final 20 s, the longest bare gameplay stretch (warned over 4 s; captions do not count) and the busiest 20 s of captions over gameplay (warned over 3).

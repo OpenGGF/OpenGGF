@@ -191,6 +191,18 @@ class EditChecks(unittest.TestCase):
             stats, warn = e.pacing()
         self.assertFalse(any('boring' in w for w in warn))
 
+    def test_captions_alone_are_not_accompaniment_and_dense_captions_are_flagged(self):
+        with tempfile.TemporaryDirectory() as d:
+            clip = self.frames(d)
+            e = SmallEdit()
+            e.S(kit.Game(0, 900, clip, hold=0))
+            word = np.zeros((4, 4, 4), np.float32)
+            for k in range(0, 900, 150):
+                e.O(kit.Txt(k, k + 140, word, 10, 10))
+            stats, warn = e.pacing()
+        self.assertTrue(any('boring' in w for w in warn))
+        self.assertTrue(any('over-captioned' in w for w in warn))
+
     def test_render_frame_composites_shot_overlay_and_transition(self):
         with tempfile.TemporaryDirectory() as d:
             clip = self.frames(d)

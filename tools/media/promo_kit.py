@@ -1130,8 +1130,10 @@ class Edit:
 
     def bare_stretches(self, max_s=4.0):
         """Stretches of full-screen gameplay longer than max_s in which nothing editorial happens:
-        no cut, overlay, stinger, punch or camera move. A cut that continues the same clip from the
-        same source frame is not an event. Returns [(f0, f1), ...] in output frames."""
+        no cut, graphic overlay, stinger, punch or camera move. Captions (Txt) do not count: a
+        coached draft answered this check with a filler caption every four beats, which the user
+        called "minimal effort". A cut that continues the same clip from the same source frame is
+        not an event either. Returns [(f0, f1), ...] in output frames."""
         total = self.end()
         bare = np.zeros(total, bool)
         events = set()
@@ -1145,7 +1147,7 @@ class Edit:
                 events.add(s.f0)
             prev = s
         for o in self.overlays:
-            if isinstance(o, (Fade, Shade)):
+            if isinstance(o, (Fade, Shade, Txt)):
                 continue
             bare[max(0, o.f0):max(0, o.f1)] = False
             events.add(o.f0)
@@ -1165,7 +1167,7 @@ class Edit:
             f = g
         return out
 
-    def pacing(self, window_s=20, max_cuts=10, min_mean_s=2.0, max_bare_s=4.0):
+    def pacing(self, window_s=20, max_cuts=10, min_mean_s=2.0, max_bare_s=4.0, max_captions=3):
         """Cut density: the archived promos that were rejected as 'rushed' or 'cluttered' averaged
         about 1.2 s a shot and had 16 cuts in their last 20 s; their accepted revisions held
         shots for about 4 s. The opposite failure is a long take with nothing on it: a coached
@@ -1182,14 +1184,25 @@ class Edit:
             warn.append(f"{busiest} cuts within {window_s} s: likely to read as rushed")
         if mean < min_mean_s:
             warn.append(f"mean shot {mean:.2f} s: below {min_mean_s} s")
+        gameplay = np.zeros(total, bool)
+        for s in self.shots:
+            if isinstance(s, Game):
+                gameplay[s.f0:s.f1] = True
+        caps = sorted({o.f0 for o in self.overlays if isinstance(o, Txt) and 0 <= o.f0 < total and gameplay[o.f0]})
+        busiest_caps = max([sum(1 for c in caps if a <= c < a + window_s * self.fps) for a in caps] or [0])
+        if busiest_caps > max_captions:
+            warn.append(f"{busiest_caps} captions over gameplay within {window_s} s: over-captioned; accompany "
+                        "with the footage's own events (punch or stinger on a spring, ring burst, landing; a "
+                        "counter or callout graphic) or cut the take down")
         bare = self.bare_stretches(max_bare_s)
         for f0, f1 in bare:
             warn.append(f"{(f1 - f0) / self.fps:.1f} s of bare gameplay at {f0 / self.fps:.1f}-{f1 / self.fps:.1f} s: "
-                        "likely to read as boring; add a caption beat, callout, counter, punch or a stinger "
-                        "on an in-game event")
+                        "likely to read as boring; sync a punch or stinger to an in-game event, add a counter "
+                        "or callout graphic, change the layout, or cut the take down. Captions do not count")
         return {"shots": len(self.shots), "mean_shot_s": round(mean, 2), "busiest_window_cuts": busiest,
                 "cuts_in_last_window": last, "seconds": round(total / self.fps, 2),
-                "longest_bare_s": round(max([(b - a) / self.fps for a, b in bare] or [0]), 2)}, warn
+                "longest_bare_s": round(max([(b - a) / self.fps for a, b in bare] or [0]), 2),
+                "busiest_window_captions": busiest_caps}, warn
 
     def mix(self):
         total = self.end()
