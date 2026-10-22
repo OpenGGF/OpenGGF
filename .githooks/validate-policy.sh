@@ -185,7 +185,7 @@ mod_api_surface_text() {
     }
     { source = source $0 "\n" }
     END {
-        top = 0; parens = 0; bodyDepth = 0; quote = ""; escaped = 0
+        top = 0; parens = 0; bodyDepth = 0; defaultDepth = 0; quote = ""; escaped = 0
         for (i = 1; i <= length(source); i++) {
             c = substr(source, i, 1); pair = substr(source, i, 2); triple = substr(source, i, 3)
             if (inLine) { if (c == "\n") inLine = 0; else continue }
@@ -216,6 +216,10 @@ mod_api_surface_text() {
             }
             if (c ~ /[ \t\r\n]/) { space(); continue }
             if (c == "{") {
+                # Annotation-element array defaults are declaration values.
+                if (defaultDepth > 0 || code ~ /(^|[^A-Za-z0-9_])default[ \t]*$/) {
+                    defaultDepth++; append(c, c); continue
+                }
                 if (parens > 0) { append(c, c); continue }
                 kind = ""
                 if (match(code, /(^|[ \t])(class|interface|record|enum|@interface)[ \t]+[A-Za-z_][A-Za-z0-9_]*/)) {
@@ -232,8 +236,11 @@ mod_api_surface_text() {
                 }
                 header = code = ""; continue
             }
+            if (c == "}" && defaultDepth > 0) { defaultDepth--; append(c, c); continue }
             if (c == "}" && parens == 0) {
                 if (top > 0) {
+                    # Enum constant lists need no terminating semicolon.
+                    if (member_visible()) emit()
                     if (visible[top]) print "}"
                     delete visible[top]; delete implicit[top]; top--
                 }

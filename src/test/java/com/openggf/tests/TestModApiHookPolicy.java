@@ -3,6 +3,7 @@ package com.openggf.tests;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
@@ -201,6 +202,69 @@ class TestModApiHookPolicy {
         write(repo, API, "@ModApi public interface Example {\n    void implicitlyPublic();\n}\n");
         git(repo, "add", API);
         assertStagedFails(repo);
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {"A|A, B", "A, B|A", "A|RENAMED", "A,|A, B,", "A;|A, B;"}, delimiter = '|')
+    void enumConstantEditsRequireAndAcceptTheSignaturePin(String before, String after) throws Exception {
+        Path repo = fixture();
+        write(repo, API, "@ModApi public enum Example { " + before + " }\n");
+        write(repo, PIN, "baseline enum constants\n");
+        git(repo, "add", API, PIN);
+        commit(repo);
+
+        write(repo, API, "@ModApi public enum Example { " + after + " }\n");
+        git(repo, "add", API);
+        assertStagedFails(repo);
+        write(repo, PIN, "updated enum constants\n");
+        git(repo, "add", PIN);
+        assertStagedPasses(repo);
+    }
+
+    @Test void privateEnumConstantEditsNeedNoSignaturePinChange() throws Exception {
+        Path repo = fixtureWithClassMembers("private enum Hidden { A }\n");
+        write(repo, CLASS_API, annotatedClass("private enum Hidden { A, B }\n"));
+        git(repo, "add", CLASS_API);
+        assertStagedPasses(repo);
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+            "String[] value() default {\"old\"};|String[] value() default {\"new\"};",
+            "int[] value() default {};|int[] value() default {1, 2};",
+            "String value() default \"old\";|String value() default \"new\";"
+    }, delimiter = '|')
+    void annotationElementDefaultEditsRequireAndAcceptTheSignaturePin(String before, String after) throws Exception {
+        Path repo = fixture();
+        write(repo, API, "@ModApi public @interface Example { " + before + " }\n");
+        write(repo, PIN, "baseline annotation default\n");
+        git(repo, "add", API, PIN);
+        commit(repo);
+
+        write(repo, API, "@ModApi public @interface Example { " + after + " }\n");
+        git(repo, "add", API);
+        assertStagedFails(repo);
+        write(repo, PIN, "updated annotation default\n");
+        git(repo, "add", PIN);
+        assertStagedPasses(repo);
+    }
+
+    @Test void defaultInterfaceMethodBodyEditsNeedNoSignaturePinChange() throws Exception {
+        Path repo = fixture();
+        write(repo, API, "@ModApi public interface Example { default String value() { return \"old\"; } }\n");
+        write(repo, PIN, "baseline interface default method\n");
+        git(repo, "add", API, PIN);
+        commit(repo);
+        write(repo, API, "@ModApi public interface Example { default String value() { return \"new\"; } }\n");
+        git(repo, "add", API);
+        assertStagedPasses(repo);
+    }
+
+    @Test void privateAnnotationArrayDefaultsNeedNoSignaturePinChange() throws Exception {
+        Path repo = fixtureWithClassMembers("private @interface Hidden { String[] value() default {\"old\"}; }\n");
+        write(repo, CLASS_API, annotatedClass("private @interface Hidden { String[] value() default {\"new\"}; }\n"));
+        git(repo, "add", CLASS_API);
+        assertStagedPasses(repo);
     }
 
     @Test void candidatePinContentCannotChangeByItself() throws Exception {

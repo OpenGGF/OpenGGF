@@ -206,7 +206,7 @@ function Test-ContainsModApiAnnotation([string]$Text) {
 function Get-ModApiSurfaceText([string]$Text) {
     $kept = New-Object System.Collections.Generic.List[string]
     $visible = @{}; $implicit = @{}
-    $top = 0; $parens = 0; $bodyDepth = 0
+    $top = 0; $parens = 0; $bodyDepth = 0; $defaultDepth = 0
     $header = ""; $code = ""; $quote = ""; $escaped = $false
     $inLine = $false; $inBlock = $false
     for ($i = 0; $i -lt $Text.Length; $i++) {
@@ -253,6 +253,10 @@ function Get-ModApiSurfaceText([string]$Text) {
             continue
         }
         if ($c -eq '{') {
+            # Annotation-element array defaults are declaration values.
+            if ($defaultDepth -gt 0 -or $code -cmatch '(?:^|[^A-Za-z0-9_])default[ \t]*$') {
+                $defaultDepth++; $header += $c; $code += $c; continue
+            }
             if ($parens -gt 0) { $header += $c; $code += $c; continue }
             $kind = ""
             if ($code -cmatch '(?:^|[ \t])(class|interface|record|enum|@interface)[ \t]+[A-Za-z_][A-Za-z0-9_]*') { $kind = $Matches[1] }
@@ -269,8 +273,12 @@ function Get-ModApiSurfaceText([string]$Text) {
             }
             $header = ""; $code = ""; continue
         }
+        if ($c -eq '}' -and $defaultDepth -gt 0) { $defaultDepth--; $header += $c; $code += $c; continue }
         if ($c -eq '}' -and $parens -eq 0) {
             if ($top -gt 0) {
+                # Enum constant lists need no terminating semicolon.
+                if ($header.Trim() -ne "" -and $visible[$top] -and $code -cnotmatch '(?:^|[^A-Za-z0-9_])private[ \t]' -and
+                        ($implicit[$top] -or $code -cmatch '(?:^|[^A-Za-z0-9_])(?:public|protected)[ \t]')) { $kept.Add($header.Trim()) }
                 if ($visible[$top]) { $kept.Add("}") }
                 $visible.Remove($top); $implicit.Remove($top); $top--
             }
