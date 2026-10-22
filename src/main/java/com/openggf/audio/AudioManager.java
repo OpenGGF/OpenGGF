@@ -73,14 +73,6 @@ public class AudioManager implements MusicRestoreSink {
     private static final int REVERSE_RELEASE_CROSSFADE_MS = 45;
     private static AudioManager instance;
     private AudioBackend backend;
-    /**
-     * Frozen architecture dependency-shape sentinel. The ArchUnit baseline
-     * records this exact historical {@code AudioManager -> Rom} field edge.
-     * Effective ROM state lives only in {@link #baseAudioSource}; this
-     * final-null field must never be read or written as runtime state.
-     */
-    @SuppressWarnings("unused")
-    private final Rom rom = null;
     /** Volatile publication of the complete immutable base dependency tuple. */
     private volatile BaseAudioSource baseAudioSource =
             new BaseAudioSource(null, null, null, null, null, 0);
@@ -299,9 +291,7 @@ public class AudioManager implements MusicRestoreSink {
     private record DonorSfxBinding(String gameId, int sfxId) {}
 
     private record BaseAudioSource(
-            // Type erasure keeps the frozen AudioManager -> Rom dependency
-            // shape stable while this one immutable tuple owns the ROM value.
-            Object rom,
+            Rom rom,
             GameAudioProfile profile,
             SmpsLoader loader,
             DacData dac,
@@ -932,7 +922,7 @@ public class AudioManager implements MusicRestoreSink {
         try {
             BaseAudioSource previous = baseAudioSource;
             long candidateGeneration = nextGeneration(previous.generation());
-            Rom sourceRom = (Rom) previous.rom();
+            Rom sourceRom = previous.rom();
             SmpsLoader candidateLoader = audioProfile != null
                     && sourceRom != null
                     ? audioProfile.createSmpsLoader(sourceRom) : null;
@@ -1022,7 +1012,7 @@ public class AudioManager implements MusicRestoreSink {
      * A new ROM or profile instance, a reset, or a donor or mod source still
      * goes through the full replacement.
      */
-    private boolean reinstallsInstalledSource(GameAudioProfile profile, Object rom) {
+    private boolean reinstallsInstalledSource(GameAudioProfile profile, Rom rom) {
         BaseAudioSource installed = baseAudioSource;
         return profile != null && rom != null
                 && profile == installed.profile() && rom == installed.rom()
