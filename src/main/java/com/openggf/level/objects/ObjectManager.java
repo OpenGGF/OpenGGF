@@ -168,6 +168,7 @@ public class ObjectManager {
     private final List<ObjectInstance> cachedTouchResponseObjects = new ArrayList<>();
     private final ObjectCollisionResponseList collisionResponseList = new ObjectCollisionResponseList();
     private boolean activeObjectsCacheDirty = true;
+    private final NativeObjectIndex nativeObjectIndex = new NativeObjectIndex();
     private final Set<ObjectInstance> deferredDynamicExecThisFrame =
             Collections.newSetFromMap(new IdentityHashMap<>());
     private final ObjectManagerRuntimeState runtimeState = new ObjectManagerRuntimeState();
@@ -1778,8 +1779,17 @@ public class ObjectManager {
     }
 
     private void rebuildActiveObjectCaches() {
+        if (activeObjectsCacheDirty) nativeObjectIndex.invalidate();
         activeObjectsCacheDirty = populationView.rebuildCachesIfDirty(activeObjectsCacheDirty,
                 cachedActiveObjects, cachedSolidProviderObjects, cachedTouchResponseObjects);
+    }
+
+    void invalidateNativeObjectIndex() { nativeObjectIndex.invalidate(); }
+
+    NativeObjectIndex nativeObjectIndex() {
+        rebuildActiveObjectCaches();
+        nativeObjectIndex.prepare(cachedActiveObjects, objectCallbacks);
+        return nativeObjectIndex;
     }
 
     public int getFrameCounter() {
@@ -1985,6 +1995,8 @@ public class ObjectManager {
     private boolean removeDynamicObjectInstance(ObjectInstance object) {
         boolean removed = dynamicObjects.remove(object);
         if (removed) {
+            // Removal callbacks and later slots may query before the pass tail.
+            activeObjectsCacheDirty = true;
             // Every delete routine zeroes the whole SST slot, status(a0) latch
             // bits included -- S3K Delete_Current_Sprite/Delete_Referenced_Sprite
             // (docs/skdisasm/sonic3k.asm:36148-36165), S2 DeleteObject
@@ -3777,6 +3789,7 @@ public class ObjectManager {
     private void registerActiveObject(ObjectSpawn spawn, ObjectInstance instance) {
         objectCallbacks.register(instance, spawn);
         activeObjects.put(spawn, instance);
+        activeObjectsCacheDirty = true;
         instanceToSpawn.put(instance, spawn);
         assignRewindObjectId(instance, spawn);
     }
@@ -3784,6 +3797,7 @@ public class ObjectManager {
     private void removeActiveObject(ObjectSpawn spawn) {
         ObjectInstance removed = activeObjects.remove(spawn);
         if (removed != null) {
+            activeObjectsCacheDirty = true;
             objectCallbacks.unregister(removed);
             instanceToSpawn.remove(removed);
             // ROM parity: an object's per-player pushing bits live in its SST
@@ -3818,6 +3832,7 @@ public class ObjectManager {
     private void clearActiveObjects() {
         objectCallbacks.unregisterAll(activeObjects.values());
         activeObjects.clear();
+        activeObjectsCacheDirty = true;
         instanceToSpawn.clear();
     }
 
