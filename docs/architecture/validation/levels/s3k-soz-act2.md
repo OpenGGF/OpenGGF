@@ -5,8 +5,10 @@ Status: dated native-movement solo Sonic, solo Tails, solo Knuckles and Sonic + 
 with rendered whole-world rewind checks and actual LRZ timeline isolation.
 Knuckles also has a separate 800px cold completion with the same replay obligations.
 The [2026-10-13 controller refresh](#knuckles-800px-controller-refresh-2026-10-13)
-passes its independent frozen-input check; fresh validation of all nine permanent
-cold-route cases on the latest merged runtime remains pending.
+passes its independent frozen-input check. On current pinned `fbeb962da80d3ec4ab726ad2b77e4b241c312e00`,
+the two maintained Knuckles cases fail as recorded below; the dated completion
+claims do not certify these current routes. Other current route coverage remains
+with the delivery lead.
 Full methodology acceptance, broader routes and native/visual parity remain open.
 “Native” configuration here means the engine movement profile, not emulator
 parity. Dated evidence retains its original scope; the final
@@ -14,6 +16,30 @@ parity. Dated evidence retains its original scope; the final
 Owning [v2 execution plan](../../plans/2026-09-15-soz-methodology-v2.md) and
 [placed inventory](../../research/s3k-zones/soz-object-inventory.md).
 
+
+## Current Knuckles cold-route limits (2026-10-22)
+
+An exact three-case focused selection on pinned
+`fbeb962da80d3ec4ab726ad2b77e4b241c312e00` includes
+`TestSozColdRouteCapture#knucklesColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef`
+and `#knucklesWideColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef`.
+The native320 case fails the survival assertion at zero-based input **12288**;
+the 800px case fails it at **24051**. The third selected case is solo Knuckles
+Act1, recorded in the [Act1 matrix](s3k-soz-act1.md). All three execute with
+zero skips or aborts. Separate uninterrupted ordinary observations reproduce
+the two Act2 deaths at `(5272,845)` and `(8583,172)` respectively.
+
+The configuration is native Knuckles, donor off, no followers, intro enabled,
+with the actual initial ProcessSprites pass consumed. Java 25.0.5 uses
+surfaceless EGL and no-device audio with no desktop/display connection. The
+absolute S3&K ROM has SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`.
+No Act2 controller, count, expected result, gameplay owner or rewind/drawing
+predicate changes in this bounded Act1 controller investigation. The final exact-three selection after the Act1-only data update passes
+Knuckles Act1 and reproduces these same two Act2 survival failures: **1 pass,
+2 failures, 0 errors, 0 skips**,19.743 seconds in JUnit. These two failures
+remain open; this is neither a fresh Act2 completion nor native parity.
+The command, identities and delivery limits are recorded in the
+[dated completion plan](../../plans/2026-10-13-s3k-playable-completion.md).
 
 ## Cold-route revalidation (2026-09-27)
 

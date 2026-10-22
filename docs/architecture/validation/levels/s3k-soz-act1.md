@@ -1,8 +1,11 @@
 # S3K Sandopolis Act 1 coverage matrix
 
 Canonical slot: `S3K_SANDOPOLIS_1`; ROM zone `$08`, act index 0, SKL pointer set.
-Status: native-movement solo Sonic, solo Tails, solo Knuckles and Sonic + Tails cold completion at width320 verified;
-full methodology acceptance, broader routes and native/visual parity remain open.
+Status: dated native-movement solo Sonic, solo Tails, solo Knuckles and Sonic + Tails cold completion at width320 verified.
+The original Knuckles route fails at input16819 on pinned
+`fbeb962da80d3ec4ab726ad2b77e4b241c312e00`; the current controller refresh below
+restores its maintained acceptance with52 full-world replay windows.
+Full methodology acceptance, broader routes and native/visual parity remain open.
 “Native” configuration here means the engine movement profile, not emulator
 parity. Dated evidence retains its original scope; the final
 [Cold controller completion](#cold-controller-completion) closes only that route.
@@ -10,6 +13,55 @@ Owning [v2 execution plan](../../plans/2026-09-15-soz-methodology-v2.md) and
 [placed inventory](../../research/s3k-zones/soz-object-inventory.md).
 
 
+
+## Current Knuckles controller continuation (2026-10-22)
+
+The exact original solo Knuckles parameterized identity `[5]`, arguments
+`0,knuckles`, fails survival at input **16819** on pinned
+`fbeb962da80d3ec4ab726ad2b77e4b241c312e00`. It executes with the two remaining
+Act2 Knuckles cases, three failures and no errors/skips/aborts. The original
+24,055-input movie's SHA-256 is
+`76ee24742ef3243bc1289d17ccaef50799ba487ff03036517f7be43925738e30`.
+The dated 2026-10-21 pass below retains its tested-source scope.
+
+Ordinary controller authoring preserves all original first16700 inputs, both
+pads and every action/Start field. The actual sand jump escape, first/second
+wall climbs and westward upper route now reach the native320 arena cap
+`(17464,2540)` alive with19 rings. The selected correction reaches actual arena
+background routine8 at30167, and ordinary admission input observes the real
+production golem at31168. Only after that activation is the maintained
+20203-onward boss/exit controller used as a new input lead. It reaches the
+actual positional sand defeat at33467 but dies at33634 before results or Act2.
+That is useful ordinary reachability and defeat evidence, **not completion**.
+The ordinary exit alternatives start from the exact reached33515-input
+prefix, after hurt release, with no pending fresh load or active fade. The
+selected20 Right+Action,1 Right,90 Right+Action continuation reaches finished
+results and actual Act2 load34694, with control release34793. Root confirms the
+unchanged test endpoint at ready+180: the fixed movie contains exactly34974
+inputs, ending34973. The extra idle observation dies35039; its image shows0:04,
+ghosts overlapping stationary Knuckles and0 rings. The actual damage owner is
+unproven; the timer-cap suspicion is withdrawn.
+
+The boot matches the maintained test: native Knuckles, donor off, no followers,
+intro enabled, actual initial ProcessSprites pass executed, verified absolute
+S3&K ROM, Java25.0.5, surfaceless EGL and no-device audio. No runtime gameplay,
+clock, cap, state seed, trace hydration or native-capture trajectory authority
+is used. Two separate uninterrupted fresh cold JVMs agree on all34974 rows and37
+recorded fields, including both bonus loads3215/3594, real golem entry31168,
+sinking33467, results33660..34405 and released Act2 through ready+180, alive.
+The final BK2 SHA-256 is
+`456a59e646c52ec17ca15a2eefb64f39dc93020bb59d630d5420463bd828e64e`.
+The maintained Act1-only data update retains all29 original windows, adds11
+periodic traversal windows and12 reached sand/wall/arena/boss/results/load
+windows, for52 full-registry45-input windows. Predicates, drawing and history
+isolation stay strict. The final exact-three maintained selection passes this
+Act1 case: ready34793,52 full-registry45-input windows and4824 drawn frames.
+The two Act2 cases still fail at12288/24051, with no errors or skips. No broader
+current route or native timing/pixel parity is certified by this selection.
+The ordinary source
+and rejected approaches are in the
+[dated completion plan](../../plans/2026-10-13-s3k-playable-completion.md).
+The [Act2 matrix](s3k-soz-act2.md) records its two remaining current failures.
 
 ## Natural Knuckles Glowing Sphere release (2026-10-21)
 

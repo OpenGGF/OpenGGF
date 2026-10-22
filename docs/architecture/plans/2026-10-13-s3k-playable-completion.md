@@ -30479,3 +30479,214 @@ Normal images corroborate presentation only. Original monitor/contact/award/ceil
 All four commands exit0 as **CLI observations,0JUnit/skips N/A**, including failed proposals; no suite/native/pixel/full-route claim. Queue/runtime/launcher intervals overlap, Engine-only timing is unmeasured. Exact commands/environment/source/input pins are in own `route_completion_r36.jobs`; common shape remains `python3 "$MAIN/tools/testing/maven_queue.py" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl compile exec:exec -Dexec.executable=/bin/bash -Dexec.classpathScope=runtime "-Dexec.args=<external shell/classpath/owned namespace/source/original ROM/20 movies/output/exact preceding movie/carry>" -B`.
 Frozen app/test/POM footprint SHA256 `19326dcef9bfc1833d36e3165f5736869cd0ff6f6a291bc75a2bd55f79bcbaeb`; final tested specific adapter `66da1dbebe19f973caf6ed2627faf01027eb1106bc4fbec0c61f4d859501e3b9`. Useful19006-input proposal BK2 SHA256 `8a9d478005466740e9c1d2f98f1602a3bcda69f37677d7d0f5e8b3a07ca5a22f`, script `39d5d37dea02af685bce66759c0e6fd5794d2466f3d2df183c7107b0ec3d65e2`; preserved18460prefix remains `f8a0bc33defcd13d198c002151068238650ef613ff3d202a10bbed0e86394ada`.
 Four ordinary requests are exhausted. Two reserved fresh-final-movie replays and one Root-disposition-dependent focused request remain unspent/inapplicable to this partial movie. All original streams/proofs/errors/complete new facts were read; useful specific sources/preimages/exact inputs/all546 newly observed public rows/selected normal images remain external in `$R36_PRODUCTS` recorded by the own registry. Owned raw/helper/extraction/tmp outputs consumed under leases; no live own job, push/integration or foreign cleanup. Native322actual/703index, skdisasm044actual/8b2index, config and all old refs/history preserved; Root owns any next scope/disposition.
+
+
+### SOZ current-route controller continuation — 2026-10-22
+
+This bounded implementation slice starts from exact local parent
+`fbeb962da80d3ec4ab726ad2b77e4b241c312e00` in owned worktree
+`feature/ai-soz-current-route-completion-20261022`. The supplied app checkout
+was at `94c40570a15a11b70caf7456e9b0d0a8eec8a9b4`; it was preserved, and the
+separate worktree's clean initial HEAD was verified as `fbeb962d` before edits.
+Main/develop, the foreign native checkout and other workers' movement/rules
+owners are outside this slice. No runtime code is changed.
+
+The first queued selection uses the maintained public configuration and exactly
+these three original `TestSozColdRouteCapture` identities:
+
+- `soloColdActCompletesWithTraversalReplayAndPlayableDestination(int,String)[5]`,
+  arguments `0,knuckles`: survival failure at zero-based input **16819**.
+- `knucklesColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef()`:
+  survival failure at **12288**.
+- `knucklesWideColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef()`:
+  survival failure at **24051**.
+
+All three execute: **3 failures, 0 errors, 0 skips/aborts**, 14.061 seconds in
+JUnit and 1m24s Maven execution, with no queue wait. The ordinary matched cold
+observations reproduce the same deaths. This establishes current identities;
+the dated prior completion records remain historical. The JUnit Console selector
+for the fifth parameterized invocation is zero-based
+`--select-iteration=method:com.openggf.tools.TestSozColdRouteCapture#soloColdActCompletesWithTraversalReplayAndPlayableDestination(int,java.lang.String)[4]`;
+the two Act2 cases use their exact `--select-method=method-name()` selectors.
+
+`OPENGGF_MAIN` denotes the foreign Main checkout; the ROM property is passed
+as its existing absolute path, never a copied ROM or link.
+The common launch environment removes `DISPLAY`, `WAYLAND_DISPLAY`,
+`JAVA_TOOL_OPTIONS`, `JDK_JAVA_OPTIONS` and `MAVEN_OPTS`, uses JDK
+`/usr/lib/jvm/java-25-openjdk` (actual XML: **25.0.5**), Lua5.4,
+`ALSOFT_DRIVERS=null`, `--normal -Dmse=off`,
+`-Dopenggf.headless.gl=surfaceless-egl`, and
+`-Ds3k.rom.path=$OPENGGF_MAIN/s3k.gen`.
+That existing absolute ROM has SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`. Headless boot owns no-device
+audio even with synthesis disabled; no ambient display or audio device is used.
+All uncertain Maven execution uses the absolute current Main
+`tools/testing/maven_queue.py` from the owned worktree; its target is not shared.
+The initial request combines `test-compile`, `dependency:build-classpath` and
+`exec:exec` for a temporary external ConsoleLauncher adapter. Ordinary authoring
+requests use queued `-Dexec.executable=python3 -Dexec.args=<temporary-adapter>
+exec:exec -B`. Those adapters call the existing production
+`GameplayCaptureSession`, `InputLogAuthorTool`, `Bk2MovieLoader` and
+`GameplayInputBranchTool` prefix writer. They explicitly set
+`S3K_SKIP_INTROS=false` after Settings construction, execute the initial
+ProcessSprites consumer, and draw through `RouteFrameDrawing` after stepping.
+No default skip-intro boot is treated as the maintained configuration.
+
+The maintained Act1 movie's original first **16700** rows, both pads, all action
+and Start fields remain exact throughout the ordinary proposals. A jump held
+for20 inputs, released for1, then held for90 replaces the next111 rows and
+escapes the quicksand death; the original16811-onward tail remains in that trial.
+It survives24055 inputs but stops short of the boss. Native `sub_400F0`,
+`loc_401AC` and `loc_401E6` (sonic3k.asm:84950-85054) explain the ordinary jump's sand release; no fixture
+clock, position or movement correction is justified. The pinned native source is
+`8b2cf3c4178f2382f844da67798de4befc50c5e0`, read through Git without switching
+the foreign working checkout.
+
+Subsequent reached-prefix controller proposals climb the actual first tower
+with800 Up inputs and the second wall with500. Shorter first-wall climbs fail
+to reach its top; longer blind holds can die later, so their unexecuted tails
+are not preserved as reached trajectories. At the third wall, the actual
+swinging-platform riding owner explains the interrupted low climb. The higher
+wall's ceiling stops an eastward jump after only a few pixels. Neither
+observation proves a shared movement defect; those runtime owners remain with
+the independent worker.
+
+The prior `campaign-20260927-knuckles-cold-act1-clear-320` engine capture supplies
+an ordinary Left/west/upper-route controller lead only. Its state CSV is neither
+a native oracle nor a gameplay seed. The old maintained14796-onward9259-input
+tail, applied after the actually reached25980-input prefix, produces35539
+uninterrupted ordinary rows alive, ending at `(17115,2540)` in Act1. It never
+spawns the golem, finishes results or reaches Act2. The old boss pause runs too
+early on this trajectory. The incomplete survivor is not given a fresh-pair
+qualification or accepted by changing maintained expectations.
+
+An ordinary correction instead starts at the actual upper wall grab at29970,
+`(16373,1738)`,19 rings, no pending fresh load or active fade. Trials of60/100/150
+Up inputs, followed by ordinary spindash/right input, all reach the arena cap
+`(17464,2540)` alive with19 rings. The selected60-Up path reaches actual arena
+background routine8 at30167. It has no golem by30441: production
+`SozAct1Events.raiseBackground`, `SozAct1ArenaController` and its actual door
+still own admission. Boss input remains conditional on observing a production
+`SozMinibossInstance`; no speculative boss pause or HP/state setter is used.
+
+
+Request13 continues ordinary input from the actual admitted arena; production
+golem activation occurs at31168, right cap `(17464,2540)`,19 rings. Only then
+is the exact actual31169-input prefix joined to the maintained20203-onward
+3852-input controller lead. The 35,021-input candidate reaches positional
+sand defeat at33467 but dies at33634, `(16824,2583)`, before results. Hurt starts
+33464 and releases33514; the exact33515-input prefix is alive,0 rings,
+`(16784,2558)`, LEVEL, no pending assembly or fade, with the golem already
+sinking. Existing short jump/release cycles fail to escape that sand. The
+candidate is rejected for completion; neither reserved qualification request
+is spent on it. Request13 waits336 seconds and executes11.610 seconds.
+
+Root prospectively authorizes exactly one additional ordinary request16,
+separately from the immutable initial6 and first+6/second+3 allocations.
+The total ceiling is16; reserved14 remains two separate uninterrupted fresh
+cold JVMs only after a genuinely completed fixed movie, and15 remains the
+exact original maintained3 after justified Act1 data adaptation. Request16
+tries20/30/40 Right+Action,1 Right,90 Right+Action after the exact33515-input
+prefix, followed by the maintained22549-onward controller lead, stopping at
+first actual completion. It uses the same shipped quicksand jump/retrigger
+owner as the first pit; no gameplay owner defect is inferred. The work cutoff
+is10:20Z, cleanup10:35Z and authority expiry10:45Z on2026-10-22.
+
+
+Request16 waits131 seconds and executes18.566 seconds. All three ordinary
+exit alternatives reach results33660..34405 and actual playable Act2:
+20-action trial load34694/release34793,30-action34698/34797,
+40-action34706/34805. All survive the existing180-input destination endpoint.
+The longer idle observations then die at release+246:35039/35043/35051.
+The first death image shows Act2 at0:04 with ghosts overlapping stationary
+Knuckles and0 rings. An initial timer-cap suspicion is withdrawn; the actual
+damage owner is unproven. These observations certify no onward Act2 route.
+
+Root inspects exact `fbeb962d` `TestSozColdRouteCapture`: the unchanged loop
+replays at ready+30 and checkpoints/breaks at ready+180. Root explicitly
+allows freezing the first20-action path at exactly34974 inputs, last34973,
+matching actual release34793+180. This preserves the current semantic endpoint;
+it does not change a clock, cap, oracle, predicate or destination requirement.
+The beyond-endpoint death remains an explicit limit. Reserved request14 will
+run two separate uninterrupted fresh cold JVMs of that fixed movie and compare
+all recorded rows/events with each other and the ordinary observation. Only
+agreement and complete bonus2loads/golem/sinking/results/playable destination
+allow the already authorized Act1 input/count/event-window data adaptation and
+reserved exact3 request15. No further ordinary request is authorized.
+
+
+Reserved14 qualifies two separate uninterrupted fresh cold JVMs. Each runs
+exactly34974 inputs; all34974 rows and37 recorded fields agree with each other
+and the ordinary witness. Both observe actual bonus loads3215/3594, golem31168,
+sinking33467, results33660..34405, Act2 load34694 and released controls34793,
+alive through34973=ready+180. Final BK2 SHA-256:
+`456a59e646c52ec17ca15a2eefb64f39dc93020bb59d630d5420463bd828e64e`.
+Queue wait309 seconds, Maven execution11.936 seconds; no rewind restoration is
+used in either fresh witness. All first16700 original input fields and the
+entire retained reached prefix remain exact.
+
+Only after that qualification, the maintained Act1 Knuckles script/BK2 and
+route-window data are updated. Periodic source coverage extends23000to34000;
+all29 old windows remain. Twelve additional owner windows are16700,17241,
+23803,25216,25979,29970,30167,31168,33467,34406,34648,34694. They cover actual
+sand/wall/platform contacts, arena admission, golem entry/sinking, results
+release, the final45-input window ending before load, and the incoming loaded
+world. With11 additional periodic windows, the expected count is52. The whole
+registry equality,45 inputs, drawing, survival, real boss/results/destination,
+bonus/history isolation and existing ready+30/ready+180 behavior are unchanged.
+An inverse-diff check proves that removing only these new data declarations,
+window membership, source limit and count reproduces the exact base test file.
+Every other SOZ route asset remains byte-identical to `fbeb962d`.
+
+Reserved15 now selects exactly the original3 maintained identities, after
+`test-compile` through the normal queue and the same external ConsoleLauncher
+adapter. No additional ordinary or broad validation is launched. Root owns
+combined smoke and PR223 delivery; this worker does not push or integrate Main.
+
+
+Final exact-three maintained qualification (request15) completes after the
+10:20Z implementation cutoff; the already queued request is retained as Root
+instructed. It waits357 seconds and executes50.677 seconds in Maven,19.743
+seconds in JUnit. All four Console XML engine reports are inspected: only
+Jupiter has cases, exactly3, with **1 pass,2 failures,0 errors,0 skips/aborts**.
+Properties confirm Java25.0.5, surfaceless EGL, the verified existing absolute
+ROM and this owned worktree. The command appends
+`-Dexec.executable=python3 -Dexec.args=target/soz-current/qualification-fifteen.py
+test-compile exec:exec -B` to the common queued environment above; the temporary
+launcher selects exactly the same original3 identities with the same public boot.
+
+`soloColdActCompletesWithTraversalReplayAndPlayableDestination(int,String)[5]`,
+arguments0,knuckles, now **passes**,8.607 seconds. Its own maintained output is
+ready34793,width320,**52** full-registry45-input replay windows,4824 drawn
+frames, with both real bonus loads/history resets and real boss/sinking,
+finished results and released destination still asserted. No rewind mismatch
+is observed. The two unchanged failures are exactly
+`knucklesColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef()` at12288 and
+`knucklesWideColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef()` at24051,
+both the same survival assertion as the initial selection. No new/worsened
+failure is observed in this bounded selection; no all-green claim is made.
+
+Root's independent input/source review executes0 workloads and verifies all
+34974 expanded rows, neutral P2, original0..16699 prefix, the inverse exact-base
+test comparison, unchanged semantic/replay/drawing/history predicates and
+29+11+12=52. The reviewed and final executable/data SHA-256 values are:
+
+- test Java: `381893ee80e2ce5b65cd87e4a2aec27af4e252054e937638bb95a9be1de4acfe`;
+- script: `9198b8ab86a1ed9d379fc7b27b7a533d8bbb6c9a81a1b5e46cbba9476f0550c4`;
+- BK2: `456a59e646c52ec17ca15a2eefb64f39dc93020bb59d630d5420463bd828e64e`.
+
+All16 prospectively authorized queued requests are accounted for: initial1–6,
+first extension7–12, second extension13–15, and the separately authorized
+ordinary16 executed before the reserved14/15. There are no new requests after
+the cutoff. Other character/donor/team/zone paths, broader smoke/guards, native
+pixel/timing parity and onward Act2 remain outside this worker's qualification.
+No runtime, Main branch, native working checkout, ROM or shared movement owner
+is edited. The local commit and retained worktree are for Root/PR223; no push,
+Main integration or worktree deletion is performed.
+
+Consumed temporary launch adapters/classes, ordinary/fresh CSVs, PNGs, logs and
+all initial/final Console XML reports are removed from the owned diagnostic
+directory after inspection. The production-authored chosen script/BK2 and this
+compact result preserve the useful work; no raw archive or validation receipt
+is retained. Normal build outputs may remain. No live job remains, and the
+owned branch/worktree stay available for Root inspection and integration.

@@ -77,6 +77,11 @@ class TestSozColdRouteCapture {
                         28920, 29060, 29240, 29300, 30180, 30360)
                 : java.util.Set.of(27290, 28090, 28150, 29200, 29400,
                         29575, 29720, 29855, 29900, 30850, 31020);
+        // Current Knuckles Act1 route: sand escape; tower, platform and upper-wall
+        // contacts; arena admission; actual golem entry/sinking; results release;
+        // last source window ending before the load; first completed incoming world.
+        var knucklesActOneSpots = java.util.Set.of(16700, 17241, 23803, 25216,
+                25979, 29970, 30167, 31168, 33467, 34406, 34648, 34694);
         long outgoingHistory = 0;
         Object bonusInteriorLevel = null, bonusReturnedLevel = null;
         long bonusInteriorGeneration = -1, bonusReturnedGeneration = -1;
@@ -246,11 +251,12 @@ class TestSozColdRouteCapture {
                 // a window must never restore the outgoing registry across a level load.
                 // Tails and the shorter solo Sonic route reach their destinations earlier;
                 // source windows must end before their actual level replacement.
-                int lastSourceSpot = knucklesActTwo ? 35000 : bonusRoute ? 23000 : main.equals("tails") ? (act == 0 ? 16000 : 28000)
+                int lastSourceSpot = knucklesActTwo ? 35000 : bonusRoute ? 34000 : main.equals("tails") ? (act == 0 ? 16000 : 28000)
                         : shorterSoloRoute ? 28000 : act == 0 && paired ? 26000 : 31000;
                 if ((frame >= 100 && frame <= lastSourceSpot && (frame == 100 || frame % 1000 == 0))
                         // Bonus windows follow actual scene release, not a fitted movie-frame schedule.
                         || (bonusRoute && (frame == 3100 || bonusReplaySpot != null))
+                        || (bonusRoute && knucklesActOneSpots.contains(frame))
                         || (knucklesActTwo && knucklesPuzzleSpots.contains(frame))
                         || (readyFrame >= 0 && frame == readyFrame + 30)) {
                     replay(session, movie, frame, drawing);
@@ -290,7 +296,7 @@ class TestSozColdRouteCapture {
             assertEquals(act == 0 ? 1 : 0, GameServices.level().getCurrentAct());
             assertTrue(readyFrame >= 0, "destination releases both control owners");
             assertEquals(
-                    knucklesActTwo ? 37 + knucklesPuzzleSpots.size() : bonusRoute ? 29 : main.equals("tails") ? (act == 0 ? 18 : 30) : shorterSoloRoute ? 30 : act == 0 && paired ? 28 : 33, checked.size(), "all traversal and destination replay windows ran");
+                    knucklesActTwo ? 37 + knucklesPuzzleSpots.size() : bonusRoute ? 40 + knucklesActOneSpots.size() : main.equals("tails") ? (act == 0 ? 18 : 30) : shorterSoloRoute ? 30 : act == 0 && paired ? 28 : 33, checked.size(), "all traversal and destination replay windows ran");
             if (act == 1) {
                 assertTrue(semanticChecked.contains("boss-entry"));
                 for (int hp = 0; hp < 8; hp++) assertTrue(semanticChecked.contains("boss-hp-" + hp));
