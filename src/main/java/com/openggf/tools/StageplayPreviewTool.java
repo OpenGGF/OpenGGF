@@ -85,7 +85,8 @@ public final class StageplayPreviewTool {
                                 sample=new StageplayTimeline.Frame(sample.frame(),sample.actors(),view,sample.captions(),sample.set(),sample.transition(),
                                         new StageplayTimeline.CameraPose(view.x()-shakeX,view.y()-shakeY,view.zoom()),sample.dialogue(),sample.puppets(),sample.world());
                             }
-                            output.println(json.writeValueAsString(Map.of("sample",sample,"rgba",Base64.getEncoder().encodeToString(pixels.grab()),"pcm",packet,"sampleRate",rate)));
+                            output.println(json.writeValueAsString(Map.of("sample",sample,"rgba",Base64.getEncoder().encodeToString(pixels.grab()),"pcm",packet,"sampleRate",rate,
+                                    "objectInspection",world.objectInspection())));
                             output.flush();
                         } catch (Exception failure) {
                             output.println(json.writeValueAsString(Map.of("error",Objects.toString(failure.getMessage(),failure.getClass().getName())))); output.flush();

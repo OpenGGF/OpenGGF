@@ -5,55 +5,39 @@ import com.openggf.camera.Camera;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.GroundMode;
+import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.rules.CollisionRules;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.rules.PlayerMovementRules;
-import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.solid.ContactKind;
-import com.openggf.game.solid.ObjectSolidExecutionContext;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.PlayerStandingState;
 import com.openggf.game.solid.PostContactState;
 import com.openggf.game.solid.PreContactState;
 import com.openggf.game.solid.SolidCheckpointBatch;
-import com.openggf.game.solid.SolidExecutionRegistry;
-import com.openggf.graphics.FadeManager;
-import com.openggf.graphics.RenderPriority;
-import com.openggf.level.spawn.AbstractPlacementManager;
 import com.openggf.physics.CollisionTrace;
 import com.openggf.physics.NoOpCollisionTrace;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
-import com.openggf.game.PlayableEntity;
-import com.openggf.game.DamageCause;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.sprites.playable.Knuckles;
-import com.openggf.sprites.playable.SidekickCpuController;
-import com.openggf.sprites.playable.Tails;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
-import com.openggf.sprites.managers.SpriteManager;
-import com.openggf.game.GroundMode;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.HashSet;
-import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 public final class ObjectSolidContactController {
@@ -1169,6 +1153,19 @@ public final class ObjectSolidContactController {
         return false;
     }
 
+    void suspendForVisualDirection(ObjectInstance object) {
+        releaseObjectPushLatchForAllPlayers(object);
+        releaseObjectStandingLatchForAllPlayers(object);
+        for (var entry : java.util.List.copyOf(ridingStates.entrySet()))
+            if (entry.getValue().object == object) {
+                PlayableEntity player = entry.getKey();
+                clearRidingObject(player);
+                player.setOnObject(false);
+                player.setAir(true);
+                player.setPushing(false);
+            }
+    }
+
     void clearRidingObject(PlayableEntity player) {
         if (player != null) {
             ridingStates.remove(player);
@@ -1543,6 +1540,8 @@ public final class ObjectSolidContactController {
     private SolidCheckpointBatch resolveCheckpointBatch(ObjectInstance instance, PlayableEntity player,
             List<? extends PlayableEntity> sidekicks, boolean postMovement,
             boolean compatibilityCallbacks) {
+        if (ObjectDirectionAccess.suspended(objectManager, instance))
+            return new SolidCheckpointBatch(instance, java.util.Map.of());
         return objectManager.callObjectCallback(instance,
                 () -> resolveCheckpointBatchInternal(instance, player, sidekicks,
                         postMovement, compatibilityCallbacks));
@@ -3625,6 +3624,7 @@ public final class ObjectSolidContactController {
     private SolidContact resolveContact(PlayableEntity player,
             int anchorX, int anchorY, int halfWidth, int halfHeight, SolidRoutineProfile profile,
             boolean useStickyBuffer, ObjectInstance instance, int pieceIndex, boolean apply) {
+        if (ObjectDirectionAccess.suspended(objectManager, instance)) return null;
         boolean topSolidOnly = profile.topSolidOnly();
         boolean monitorSolidity = profile.monitorSolidity();
         int monitorVerticalOffset = profile.monitorVerticalOffset();
@@ -4786,8 +4786,14 @@ public final class ObjectSolidContactController {
                 player.setYSpeed((short) 0);
                 player.setGSpeed(player.getXSpeed());
                 if (player.getAir()) {
-                    LOGGER.fine(() -> "Solid object landing at (" + player.getX() + "," + player.getY() +
-                        ") distY=" + distY);
+                    LOGGER.fine(
+                            () ->
+                                    "Solid object landing at ("
+                                            + player.getX()
+                                            + ","
+                                            + player.getY()
+                                            + ") distY="
+                                            + distY);
                     applyObjectLandingState(player, instance);
                 }
                 // ROM: bset #status.player.on_object (s2.asm:35739)
@@ -4862,7 +4868,8 @@ public final class ObjectSolidContactController {
             // Player is well inside horizontally - crush death.
             // ROM: KillCharacter (s2.asm:84995) - unconditional death.
             if (apply) {
-                LOGGER.fine(() -> "SolidObject crush: player sandwiched (absDistX=" + absDistX + ")");
+                LOGGER.fine(
+                        () -> "SolidObject crush: player sandwiched (absDistX=" + absDistX + ")");
                 player.applyCrushDeath();
             }
             return SolidContact.CEILING;
@@ -4885,7 +4892,8 @@ public final class ObjectSolidContactController {
                     : playerCenterY - distY;
             int newY = newCenterY - (player.getHeight() / 2);
             player.setY((short) newY);
-            LOGGER.fine(() -> "Solid object ceiling hit, zeroing ySpeed from " + player.getYSpeed());
+            LOGGER.fine(
+                    () -> "Solid object ceiling hit, zeroing ySpeed from " + player.getYSpeed());
             if (clearsGroundSpeedOnAirBottomSolidHit(player)) {
                 player.setGSpeed((short) 0);
             }

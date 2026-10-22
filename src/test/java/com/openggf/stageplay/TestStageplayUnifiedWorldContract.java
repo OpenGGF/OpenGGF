@@ -14,7 +14,7 @@ class TestStageplayUnifiedWorldContract {
     @Test void bothCurrentPoliciesAcceptTheSameMixedDonorCameraAndIntentContract() {
         for (var policy : List.of(WorldPolicy.TERRAIN_ONLY, WorldPolicy.LIVE)) {
             var scene = scene(policy, "sets/scene.ogfproject");
-            assertEquals(6, scene.version());
+            assertEquals(VERSION, scene.version());
             assertTrue(usesNativeWorld(scene.set().worldPolicy()));
             assertEquals(448, scene.height());
             assertEquals(.75, scene.camera().getFirst().zoom());
@@ -30,6 +30,7 @@ class TestStageplayUnifiedWorldContract {
         assertEquals(WorldPolicy.LEGACY_TERRAIN_ONLY, legacy.set().worldPolicy());
         var json = new ObjectMapper().readTree(StageplayStore.encode(legacy));
         ((com.fasterxml.jackson.databind.node.ObjectNode) json).put("version", 5);
+        ((com.fasterxml.jackson.databind.node.ObjectNode) json).remove(List.of("objectActors", "worldCommands"));
         ((com.fasterxml.jackson.databind.node.ObjectNode) json.get("set")).put("worldPolicy", "TERRAIN_ONLY");
         assertEquals(legacy, StageplayStore.decode(new ObjectMapper().writeValueAsBytes(json)));
         ((com.fasterxml.jackson.databind.node.ObjectNode) json.get("set")).put("worldPolicy", "LEGACY_TERRAIN_ONLY");

@@ -310,3 +310,40 @@ as render followers. State-machine-only appearance has an explicit held/authored
 frame fallback and cited per-object coverage exclusion. Never relocate the picture
 while leaving native effects active. Full private native graph ownership is deferred
 with the write-boundary analysis in the live-world plan.
+
+### Complete native cast contract
+
+Canonical v7 appends object roles and timed world commands; strict v1–v6 migration
+adds empty tracks, preserving old execution policy and data. Screenplay v5 carries
+shot-local object keys/actions and clear/removal cues. Object source context and
+portable layout tuple are document data; runtime slots/generations remain internal.
+Released animals have an explicit source kind using their existing factory instead
+of aliasing an unrelated S3K layout ID. The shared authoring forms expose every
+new field in both frontends.
+
+Registry enumeration is generic and constructor-free. Its complete ID/context
+report distinguishes registration, context acceptance, loaded ROM art and actual
+visual graph readiness. Game-owned metadata declares native arena restrictions;
+a semantic boss role alone does not establish that an anchor is ignored. New Free
+roles require matching native game/zone/act, giving a generic actionable rejection
+for incompatible arenas. No object-specific spatial relocation adapters are added.
+
+The object-manager direction owner freezes graph routines, contacts, unload effects
+and native drawing, separately from gameplay mutator policy ports. Immutable visual
+parts carry captured ROM patterns, palette values, mapping alternatives and pure
+animation scripts. Stable child paths follow parent creation relationships; changing
+frame or position cannot invoke the state machine. Missing/gated initialization and
+state-dependent appearance are explicit exclusions, with held/authored-frame fallback
+and citations. New constructor-ready visual preparation uses a short-lived owned
+offline context, retired before the scene; no continuously ticking private boss graph
+is installed. Existing initialized Free graphs can be captured at a directed mode key.
+Clear/removal suppression and visual state participate in rewind with native state.
+
+Directed visual capture preserves native per-tile terrain-occlusion masks and row
+clipping. It never infers that a missing SAT-control draw is an invisible child:
+active mask/control producers cause an explicit unsupported-appearance result.
+For example, SKL's DEZ miniboss and native SpriteMask entry carry a conditional
+exclusion citing `Obj_SpriteMask / loc_86308`; the S3KL alias does not inherit it.
+Templates retain child creation paths across rewind, including ordinal gaps left
+by deleted children. Draw-owned visual counters remain read-only during capture.
+Ordinary Free rendering and native SAT behavior keep their existing path.

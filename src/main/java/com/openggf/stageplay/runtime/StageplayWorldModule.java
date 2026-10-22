@@ -4,19 +4,32 @@ import com.openggf.game.GameModule;
 import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.level.Level;
 import com.openggf.level.MutableLevel;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.StageplayObjectLoadPolicy;
+import com.openggf.level.objects.StageplayObjectDirection.PlacementIdentity;
+import com.openggf.game.session.WorldSessionPolicyProvider;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /** Supplies an isolated authored set or cleared initial cast to the normal native load. */
 final class StageplayWorldModule extends DelegatingGameModule {
     private final Level authored;
     private final boolean clearPlacements;
+    private final Set<PlacementIdentity> suppressedPlacements;
+    private List<ObjectSpawn> originalObjects = List.of();
 
     StageplayWorldModule(GameModule base, Level authored, boolean clearPlacements) {
+        this(base, authored, clearPlacements, Set.of());
+    }
+
+    StageplayWorldModule(GameModule base, Level authored, boolean clearPlacements,
+                         Set<PlacementIdentity> suppressedPlacements) {
         super(base, "stageplay-native-world");
         this.authored = authored;
         this.clearPlacements = clearPlacements;
+        this.suppressedPlacements = Set.copyOf(suppressedPlacements);
     }
 
     @Override public Level loadLevelOverride(int levelIndex) throws java.io.IOException {
@@ -32,11 +45,33 @@ final class StageplayWorldModule extends DelegatingGameModule {
 
     @Override public Level transformDecodedLevel(Level source) {
         var transformed = super.transformDecodedLevel(source);
-        if (!clearPlacements) return transformed;
+        originalObjects = List.copyOf(transformed.getObjects());
+        if (!clearPlacements && suppressedPlacements.isEmpty()) return transformed;
         // Initial scene assembly, before gameplay publication: do not mutate the decoder's
         // snapshot or install editor commands into a running world.
         var isolated = MutableLevel.snapshot(transformed);
-        isolated.restoreObjectBackedRingState(new MutableLevel.ObjectBackedRingState(List.of(), List.of(), Map.of()));
+        if (clearPlacements)
+            isolated.restoreObjectBackedRingState(new MutableLevel.ObjectBackedRingState(List.of(), List.of(), Map.of()));
+        else {
+            var state = isolated.snapshotObjectBackedRingState();
+            var placements = state.objects().stream().filter(spawn -> spawn.layoutIndex() < 0
+                    || !suppressedPlacements.contains(PlacementIdentity.of(spawn))).toList();
+            isolated.restoreObjectBackedRingState(new MutableLevel.ObjectBackedRingState(placements, state.rings(), state.mapping()));
+        }
+        // This transformed snapshot is the initial decoder input to both managers.
+        // Its editor mutation notifications would otherwise resync the placement
+        // lists on the first story tick, discarding explicitly admitted Free roles.
+        isolated.consumeObjectsDirty();
+        isolated.consumeRingsDirty();
         return isolated;
+    }
+
+    List<ObjectSpawn> originalObjects() { return originalObjects; }
+
+    @Override public <T> T getGameService(Class<T> type) {
+        if (type == WorldSessionPolicyProvider.class)
+            return type.cast(WorldSessionPolicyProvider.compose(super.getGameService(WorldSessionPolicyProvider.class),
+                    world -> new StageplayObjectLoadPolicy()));
+        return super.getGameService(type);
     }
 }

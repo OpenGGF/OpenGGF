@@ -1,25 +1,24 @@
 package com.openggf.level.objects;
 
-import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.configuration.SonicConfiguration;
-import com.openggf.data.Rom;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.RomManager;
 import com.openggf.debug.DebugOverlayManager;
-import com.openggf.graphics.GLCommand;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.game.ModApi;
-import com.openggf.game.rules.GameRules;
-import com.openggf.game.rules.ObjectInteractionRules;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.GenericFieldCapturer;
 import com.openggf.game.rewind.GenericRewindEligibility;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.rewind.schema.RewindObjectStateBlob;
-import com.openggf.level.LevelManager;
-import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.game.PlayableEntity;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.SolidCheckpointBatch;
+import com.openggf.graphics.GLCommand;
+import com.openggf.level.LevelManager;
+import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -1246,6 +1245,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     /** Report structural children only after their native allocation and outside rewind probes. */
     private void notifyOwnedChild(ObjectInstance child) {
         if(!ObjectConstructionContext.isProbeConstruction() && !ObjectConstructionContext.isRewindActiveRestore()) {
+            ObjectDirectionAccess.childSpawned(services(), this, child);
             var policies=com.openggf.game.mutators.NativeObjectPolicyAccess.port(services());
             if(policies!=null && child!=null) policies.childSpawned(this,child);
         }
@@ -1517,10 +1517,14 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         ObjectServices services = tryServices();
         if (services == null) {
             if (RENDER_MANAGER_UNAVAILABLE_WARNED.add(getClass().getName())) {
-                LOG.warning(getClass().getSimpleName() + ": getRenderManager() called with no services and no "
-                        + "construction context — returns null. If this is a constructor caching the renderer, "
-                        + "spawn via spawnChild/spawnFreeChild/createDynamicObject (not raw addDynamicObject), "
-                        + "or fetch the renderer lazily in appendRenderCommands().");
+                LOG.warning(
+                        getClass().getSimpleName()
+                                + ": getRenderManager() called with no services and no construction"
+                                + " context — returns null. If this is a constructor caching the"
+                                + " renderer, spawn via"
+                                + " spawnChild/spawnFreeChild/createDynamicObject (not raw"
+                                + " addDynamicObject), or fetch the renderer lazily in"
+                                + " appendRenderCommands().");
             }
             return null;
         }

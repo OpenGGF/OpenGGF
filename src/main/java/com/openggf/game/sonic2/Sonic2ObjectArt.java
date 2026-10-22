@@ -48,7 +48,7 @@ public class Sonic2ObjectArt {
      */
     public static final int MONITOR_LIFE_ICON_TILE = 340;
     private static final AnimalType[] DEFAULT_ANIMALS = { AnimalType.RABBIT, AnimalType.RABBIT };
-    private static final AnimalType[][] ZONE_ANIMALS = {
+    static final AnimalType[][] ZONE_ANIMALS = {
             { AnimalType.SQUIRREL, AnimalType.FLICKY }, // 0 EHZ
             { AnimalType.SQUIRREL, AnimalType.FLICKY }, // 1 Zone 1
             { AnimalType.SQUIRREL, AnimalType.FLICKY }, // 2 WZ

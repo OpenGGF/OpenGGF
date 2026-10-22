@@ -29,7 +29,7 @@ editors and can be registered by a mod.
   Registry presence alone does not mean that a detached set can be decoded.
   All frame/zone/act numbers are zero-based. Never invent art or copy ROMs to satisfy
   a command. Sprite positions use the sprite origin, not its top-left corner.
-- Author a version-four screenplay JSON for the current native world. Versions one through three retain compatibility behavior. New cast members default to physical puppets;
+- Author a version-five screenplay JSON for the current native world and object cast. Version four retains canonical-six behavior. Versions one through three retain compatibility behavior. New cast members default to physical puppets;
   use `puppet:false` for Poser mode and deliberate manual choreography. Version-one recipes remain manual. Each shot has its own duration, set, camera
   and actor tracks. Local frame zero anchors each present actor and camera. Missing
   cast tracks are hidden for that shot. The compiler creates every scene-boundary
@@ -128,7 +128,7 @@ no voice service or fabricated licensing claim is part of this workflow.
 
 ## Live-world route evidence
 
-New version-four screenplays default to `worldPolicy:LIVE`; choose `TERRAIN_ONLY` to clear its initial object/ring population using the same native owner. Earlier documents preserve their original compatibility policies. Use the
+Current version-five screenplays default to `worldPolicy:LIVE`; choose `TERRAIN_ONLY` to clear its initial object/ring population using the same native owner. Earlier documents preserve their original compatibility policies. Use the
 `level` command to inspect stable ROM placements and rings, and `catalog` for native
 capabilities. Read the live schema in the authoring guide before using object
 targets, WAIT conditions, abilities or camera following. Unsupported donors must
@@ -180,3 +180,40 @@ factory/context cannot support the object. Directed Puppet/Pose relocation must
 include the parent's native child relationships; it must not masquerade as relocated
 Free collision or arena behavior. Coverage distinguishes independent factories,
 parent-created parts, invisible controllers, unavailable art and unsupported contexts.
+
+
+## ROM object cast and native arena restrictions
+
+Use the shared ROM object cast / clear commands in either editor, or screenplay
+v5 `objectCast`, shot-local `objects`, `objectActions` and `worldCommands`.
+Object placements use `(layoutIndex, objectId, subtype)`, never a runtime SST slot.
+Consult `object-coverage --out PATH --format json` for every native byte ID and
+source context; registry presence, loaded ROM art and complete visual graphs are
+separate checks. Preserve explicit exclusions and owning routine citations. Append
+reviewed exact-context samples with `--observations reviewed.json`; a successful
+sample never certifies other subtypes, contexts, frames or animal variants.
+
+Free alone runs native AI and world effects. Arena-bound routines retain their
+native coordinates: display **Free: native arena position, anchor ignored**.
+Do not author spatial adapters or claim that moving the anchor moves such a boss.
+Free source context must match the set. A globally registered arena routine may
+still run at its native coordinates in another source context; this is not a
+relocation. Prefer its original arena or a directed visual. Puppet and Pose suspend the whole native
+graph, including child routines and contacts; their motion is visual direction,
+not a controller that arbitrary objects do not have. Pure ROM animation scripts
+may run independently. Otherwise use the held/native mapping frame or explicit
+per-part frames and record the state-machine appearance exclusion. A newly cast
+object whose constructor has no visible graph must first appear as Free in its
+native set before a later directed key captures it; do not run its hidden AI in
+the directed scene to manufacture missing parts.
+
+Review multipart bosses in moving footage, including a known held-frame fallback.
+Check declared appearance exclusions in the parts menu. Active unsupported SAT
+mask/control graphs must fail explicitly, never omit the mask while keeping the
+body. Use per-part editing for long override lists; preserve stable child creation
+paths across rewind and keep the native cast order when editing a role.
+Clear badniks removes semantic badnik roots; Clear objects removes world object
+roots and their graphs. Players, player-attached effects and ring populations are
+separate owners. Keep clear/removal cues in the source instead of editing the ROM
+layout or relying on a runtime slot. Full continuously isolated native graphs for
+directed bosses remain deferred.

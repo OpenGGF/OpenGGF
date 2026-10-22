@@ -23,6 +23,7 @@ final class StageplayOfflinePreview implements AutoCloseable {
     private StageplayTimeline.Frame sample;
     private SceneImage image;
     private com.openggf.audio.StreamedMusicPort.SfxPcm sound;
+    private List<StageplayObjectInspection> objectInspection = List.of();
     private StageplayTimeline.CameraPose requestedCamera;
     private final ArrayDeque<String> diagnostics = new ArrayDeque<>();
     private final StageplayPreviewAssets.Source assets;
@@ -44,6 +45,8 @@ final class StageplayOfflinePreview implements AutoCloseable {
             var tree=JSON.readTree(response);
             if(tree.has("error")) throw new IOException(tree.get("error").asText());
             var resolved=JSON.treeToValue(tree.get("sample"),StageplayTimeline.Frame.class);
+            var inspections = tree.path("objectInspection");
+            objectInspection = inspections.isArray() ? List.of(JSON.treeToValue(inspections, StageplayObjectInspection[].class)) : List.of();
             if(resolved.frame()!=frame) throw new IOException("Live preview returned a different frame");
             byte[] rgba=Base64.getDecoder().decode(tree.path("rgba").asText());
             if(rgba.length!=value.width()*value.height()*4) throw new IOException("Live preview pixel size mismatch");
@@ -70,6 +73,7 @@ final class StageplayOfflinePreview implements AutoCloseable {
     }
     long processId() { return process == null ? 0 : process.pid(); }
     SceneImage image() { return image; }
+    List<StageplayObjectInspection> objectInspection() { return objectInspection; }
     com.openggf.audio.StreamedMusicPort.SfxPcm sound(int frame) { return sample!=null && sample.frame()==frame ? sound : null; }
     private void start(StageplayDocument value) throws IOException {
         close();
@@ -113,6 +117,6 @@ final class StageplayOfflinePreview implements AutoCloseable {
             catch(IOException ignored) { owned.destroyForcibly(); }
             catch(InterruptedException interrupted) { owned.destroyForcibly(); Thread.currentThread().interrupt(); }
         }
-        document=null; sample=null; image=null; sound=null; requestedCamera=null;
+        document=null; sample=null; image=null; sound=null; requestedCamera=null; objectInspection=List.of();
     }
 }

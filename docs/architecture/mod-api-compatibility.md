@@ -5,15 +5,16 @@ carried by `develop` and `next` after the 0.6 release rollover. No Mod API basel
 has been published yet. The runtime-visible, type-only `com.openggf.game.ModApi`
 annotation marks its roots.
 
-Stageplay keeps the mutable candidate at 0.7.0. Portable document version six
+Stageplay keeps the mutable candidate at 0.7.0. Portable document version seven
 uses one native-world owner for both populated and initially cleared sets.
 `LEGACY_TERRAIN_ONLY` and `LEGACY_LIVE` preserve the execution and presentation
 of strictly migrated versions one through five. Existing record constructors
 remain available; five-argument set references retain detached compatibility.
 New authoring defaults to native worlds. Screenplay versions one through three
 compile through the old canonical contract; version four selects the current
-world model. The candidate pin includes the explicit compatibility policies and
-policies. Preview/export process and ROM-descriptor transport
+world model. Version five adds object roles and timed world commands. The
+candidate pin includes explicit compatibility policies and object directing
+records. Preview/export process and ROM-descriptor transport
 remain engine internals. No published baseline, API version or release topology
 changes.
 
@@ -897,3 +898,15 @@ prior execution model. New v6 documents share native-world capabilities.
 The mutable `0.7` signature pin is regenerated in place. Policy classification,
 ROM transport, donor ownership and compositing helpers remain engine internals;
 the release descriptor and runtime API version remain candidate `0.7.0`.
+
+### Stageplay object directing (2026-10-22)
+
+The unpublished 0.7.0 candidate appends immutable `ObjectActor` and `WorldCommand`
+tracks to the Stageplay document. Object source kinds, Free/Puppet/Pose keys,
+visual move/stop commands and portable child-part frame selections are typed
+creator data. The prior root constructor and earlier overloads remain available;
+all current document copy helpers retain the appended tracks. Canonical v1–v6
+migration supplies empty object tracks, and screenplay v5 compiles canonical v7.
+The mutable `0.7` pin is regenerated in place. Registry enumeration, visual graph
+capture, load suppression, palettes and object-manager direction ports stay outside
+annotated types. Descriptor and runtime API version remain candidate `0.7.0`.

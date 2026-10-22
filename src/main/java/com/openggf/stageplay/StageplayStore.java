@@ -109,6 +109,12 @@ public final class StageplayStore {
             int sourceVersion = version.intValue();
             if (sourceVersion < 1 || sourceVersion > StageplayDocument.VERSION)
                 throw new IOException("Unsupported Stageplay version: " + sourceVersion);
+            if (sourceVersion <= 6) {
+                if (object.has("objectActors") || object.has("worldCommands"))
+                    throw new IOException("Version " + sourceVersion + " cannot contain object directing tracks");
+                object.putArray("objectActors");
+                object.putArray("worldCommands");
+            }
             if (sourceVersion == 1) {
                 // Exact legacy shapes remain authoritative: later fields cannot masquerade as old data.
                 if (object.has("cameraEffects") || object.has("sceneChanges"))
@@ -145,8 +151,8 @@ public final class StageplayStore {
             if (sourceVersion <= 5) {
                 migrateWorldPolicy((ObjectNode) object.get("set"));
                 for (var change : object.withArray("sceneChanges")) migrateWorldPolicy((ObjectNode) change.get("set"));
-                object.put("version", StageplayDocument.VERSION);
             }
+            object.put("version", StageplayDocument.VERSION);
             return JSON.treeToValue(object, StageplayDocument.class);
         } catch (IllegalArgumentException error) {
             throw new IOException("Invalid Stageplay document", error);

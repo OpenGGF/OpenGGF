@@ -110,6 +110,15 @@ class TestStageplayRomTransport {
         assertEquals(List.of("s1","s2","s3k"),StageplayRomTransport.requiredGames(scene));
     }
 
+    @Test void gamesIncludeObjectDonorsWithoutPlayerOrAudioReferences() {
+        var key = new StageplayDocument.ObjectKey(0, 0, 0, 0, -1, false, true,
+                StageplayDocument.Interpolation.HOLD, StageplayDocument.ObjectMode.FREE);
+        var object = new StageplayDocument.ObjectActor("guest", "Guest", "s3k", 0, 0, 1, 0, -1,
+                List.of(key), List.of());
+        var scene = StageplayDocument.empty("s1", 0, 0, 0, 0, 320, 224).withObjectActors(List.of(object));
+        assertEquals(List.of("s1", "s3k"), StageplayRomTransport.requiredGames(scene));
+    }
+
     @Test void producerRejectsAggregateLogicalOverflowBeforeLoadingThePhysicalImage() throws Exception {
         Path file=directory.resolve("large.gen");
         try(var channel=java.nio.channels.FileChannel.open(file,java.nio.file.StandardOpenOption.CREATE_NEW,

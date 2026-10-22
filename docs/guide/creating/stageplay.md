@@ -170,7 +170,8 @@ and after the chosen playhead. Start at frame zero for the complete soundtrack.
 Stopping restores the borrowed soundtrack; imported voices share the existing
 final PCM mix without replacing other installed audio sources.
 
-The version-6 JSON document stores resource references, keys, puppet commands and cues.
+The version-7 JSON document stores resource references, player and object keys,
+puppet commands, world clear/removal commands and presentation cues.
 Versions 1–5 migrate strictly: manual choreography, detached physics and original
 LIVE execution retain their behavior, including their previous presentation limits. ROM data
 stays in the supplied-ROM pipeline. Authored `.ogfproject` sets, dialogue PNGs and audio stay
@@ -250,3 +251,32 @@ the player, and a changed level visit revokes the old lease.
 These are unpublished **0.7.0 candidate** APIs. Match the engine and SDK commit.
 Branching dialogue, reusable shot libraries, rigs, lip sync and
 multi-user editing are future work, not version-1 controls.
+
+## Direct ROM objects
+
+The **ROM object cast / clear** command is shared by the in-engine editor and
+OpenGGF Editor. Populated sets retain their ROM placements. Select a loaded object
+by portable layout identity, or add a role from the native object catalog. The
+catalog covers every byte ID and source context, with explicit factory, art and
+visual-readiness reasons. Released animals use their existing native factory.
+
+Object **Free** runs its real native routine and world effects. Arena-bound bosses
+show **Free: native arena position, anchor ignored** and the owning routine
+citation. Free requires the scene to match its authored source game/zone/act.
+A globally registered arena routine can still run at its native coordinates in
+another source context; choose its original arena or a directed mode. The anchor
+cannot relocate an arena-bound routine. Object **Puppet** moves a visual anchor toward destinations;
+object **Pose** authors positions and mapping frames. Both suspend the whole graph's
+native routines and contacts. Child parts follow the captured native relationships;
+pure ROM animation tables may run, while state-machine-only appearances use an
+explicit held/authored frame. Per-part frame overrides make those fallbacks editable.
+A constructor with no visible graph needs a Free initialization in its native set
+before a later directed key can capture it; missing visuals fail clearly.
+
+**Clear badniks**, **Clear objects** and individual removal are timed, undoable
+commands. Their placement suppression persists within the shot; a fresh shot starts
+with its own population. Players, attached character effects and rings are separate
+owners. Object properties, mode keys, visual move/stop commands, part overrides and
+clear/removal cues are saved in document version seven and screenplay version five.
+See the [authoring reference](stageplay-authoring.md#object-cast-screenplay-5-document-7)
+for exact fields and the coverage-report command.

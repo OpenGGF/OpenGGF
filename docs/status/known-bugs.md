@@ -50,6 +50,24 @@ native presentation obligations remain in the [coverage backlog](level-test-cove
 2. [Persisted Editor Saves Disabled for S3K Gameplay Loads](#persisted-editor-saves-disabled-for-s3k-gameplay-loads)
 3. [Trace Replay Recorder Coverage Follow-Up](#trace-replay-recorder-coverage-follow-up)
 4. [S3K AIZ Items Carried From The 2026-03-25 Working List](#s3k-aiz-items-carried-from-the-2026-03-25-working-list)
+5. [S2 EHZ Boss Animation Tables Contain Three Extra Frames](#s2-ehz-boss-animation-tables-contain-three-extra-frames)
+
+---
+
+## S2 EHZ Boss Animation Tables Contain Three Extra Frames
+
+**Location:** `EHZBossAnimations`.
+
+An audit against S2 World REV01 (`8bca5dcef1af3e00098666fd892dc1c2a76333f9`)
+found one extra zero/frame in each of propeller animations 1 and 2, and vehicle-top
+animation 4. Eight other scripts match. Owning tables are `Ani_obj56_a`
+(`docs/s2disasm/s2.asm:64164-64177`) and `Ani_obj56_c` (`:64212-64227`).
+This is inherited native animation timing debt, not an accepted ROM deviation.
+Stageplay retains ordinary Free rendering and uses a cited held/authored fallback
+for these directed appearances. Correct the native tables with matched animation
+timing checks before removing this entry. The comparison and rejected aggregate
+animation approach are recorded in the
+[Stageplay plan](../architecture/plans/2026-10-21-stageplay-live-world-plan.md).
 
 ---
 

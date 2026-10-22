@@ -81,6 +81,13 @@ final class ObjectRenderParts {
         }
     }
     static void appendRenderCommands(RenderEntry entry, List<GLCommand> commands, int bucket, ObjectServices services) {
+        var direction =
+                services == null || services.objectManager() == null
+                        ? null
+                        : services.objectManager().stageplayDirection;
+        if (direction != null
+                && direction.drawReplacement(entry.instance(), bucket, entry.high(), entry.slot()))
+            return;
         ObjectHeadPresentation.draw(entry.instance(),services,()->appendRenderCommands(entry,commands,bucket));
     }
 }

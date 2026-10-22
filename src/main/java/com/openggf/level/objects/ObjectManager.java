@@ -1,49 +1,25 @@
 package com.openggf.level.objects;
 
-import com.openggf.game.ModApi;
-import com.openggf.game.session.EngineServices;
 import static org.lwjgl.opengl.GL11.GL_LINES;
+
 import com.openggf.camera.Camera;
-import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.DebugOverlayToggle;
-import com.openggf.game.CollisionModel;
-import com.openggf.game.GameStateManager;
+import com.openggf.game.ModApi;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.PowerUpObject;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.SpawnRefId;
-import com.openggf.game.solid.ContactKind;
-import com.openggf.level.objects.boss.BossChildComponent;
-import com.openggf.game.solid.ObjectSolidExecutionContext;
-import com.openggf.game.solid.PlayerSolidContactResult;
-import com.openggf.game.solid.PlayerStandingState;
-import com.openggf.game.solid.PostContactState;
-import com.openggf.game.solid.PreContactState;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.solid.SolidExecutionRegistry;
-import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GLCommandGroup;
-import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
-import com.openggf.level.LevelManager;
-import com.openggf.level.ParallaxManager;
 import com.openggf.level.TransitionSstOccupant;
-import com.openggf.level.WaterSystem;
-import com.openggf.level.spawn.AbstractPlacementManager;
-import com.openggf.physics.ObjectTerrainUtils;
-import com.openggf.physics.TerrainCheckResult;
-import com.openggf.game.PlayableEntity;
-import com.openggf.game.DamageCause;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.sprites.playable.Knuckles;
-import com.openggf.sprites.playable.SidekickCpuController;
-import com.openggf.sprites.playable.Tails;
-import com.openggf.sprites.NativePositionOps;
-import com.openggf.sprites.managers.SpriteManager;
-import com.openggf.game.GroundMode;
 
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -55,8 +31,6 @@ import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.HashSet;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -145,11 +119,16 @@ public class ObjectManager {
     private final boolean skipVerticalSpawnLoadFilterForGame;
 
     private final ObjectServices objectServices;
+    StageplayObjectDirection stageplayDirection;
+    private final List<ObjectSpawn> stageplaySourceSpawns;
     private final ObjectCallbackRouter objectCallbacks;
     private final ObjectManagerPopulationView populationView;
     private final NativeChildReservationLedger childReservationLedger;
     private RewindClassResolver rewindClassResolver = RewindClassResolver.ENGINE_ONLY;
-    public void setRewindClassResolver(RewindClassResolver resolver) { rewindClassResolver = java.util.Objects.requireNonNull(resolver, "resolver"); }
+
+    public void setRewindClassResolver(RewindClassResolver resolver) {
+        rewindClassResolver = java.util.Objects.requireNonNull(resolver, "resolver");
+    }
 
     // Pre-bucketed lists for O(n) rendering instead of O(n*buckets)
     @SuppressWarnings("unchecked")
@@ -255,6 +234,14 @@ public class ObjectManager {
         this.graphicsManager = graphicsManager;
         this.camera = camera;
         this.objectServices = objectServices;
+        this.stageplaySourceSpawns = List.copyOf(spawns);
+        var directionPolicy =
+                objectServices == null
+                        ? null
+                        : com.openggf.game.session.WorldSessionPolicyAccess.getService(
+                                objectServices.worldSession(), StageplayObjectLoadPolicy.class);
+        if (directionPolicy != null)
+            stageplayDirection = new StageplayObjectDirection(this, directionPolicy);
         this.placementAdmission = new ObjectPlacementAdmission(registry, objectServices);
         this.objectCallbacks = new ObjectCallbackRouter(registry);
         this.slotLayout = registry != null ? registry.objectSlotLayout() : ObjectSlotLayout.SONIC_1;
@@ -443,6 +430,9 @@ public class ObjectManager {
 
     private void reset(int cameraX, PersistentRespawnState persistentRespawnState,
             boolean materializeInitialWindow) {
+        if (stageplayDirection != null) {
+            stageplayDirection.close();
+        }
         clearActiveObjects();
         dynamicObjects.clear();
         objectCallbacks.clear();
@@ -660,16 +650,19 @@ public class ObjectManager {
         // touch pass, but one pass older for a spawnChild-created object updated after
         // it. Collision flags are unaffected: the previous-list path reads them live at
         // the touch site rather than from this cache.
-        objectCallbacks.run(inst, inst::snapshotTouchResponseState);
+        if (!ObjectDirectionAccess.suspended(this, inst))
+            objectCallbacks.run(inst, inst::snapshotTouchResponseState);
     }
 
     public void refreshPostCameraRenderState() {
         updateRenderCameraBounds();
         for (ObjectInstance inst : activeObjects.values()) {
-            objectCallbacks.run(inst, inst::refreshPostCameraRenderState);
+            if (!ObjectDirectionAccess.suspended(this, inst))
+                objectCallbacks.run(inst, inst::refreshPostCameraRenderState);
         }
         for (ObjectInstance inst : dynamicObjects) {
-            objectCallbacks.run(inst, inst::refreshPostCameraRenderState);
+            if (!ObjectDirectionAccess.suspended(this, inst))
+                objectCallbacks.run(inst, inst::refreshPostCameraRenderState);
         }
     }
 
@@ -843,7 +836,10 @@ public class ObjectManager {
      * collision dispatcher latches contact; the object's own later slot resolves its response.
      */
     public boolean admitTransientContactBeforePlayer(AbstractObjectInstance object) {
-        if (object == null || object.isDestroyed() || object.getSlotIndex() < 0
+        if (object == null
+                || ObjectDirectionAccess.suspended(this, object)
+                || object.isDestroyed()
+                || object.getSlotIndex() < 0
                 || objectQuery().identityOf(object).isEmpty()) return false;
         object.snapshotTouchResponseState();
         return collisionResponseList.admitBeforePlayer(object);
@@ -933,10 +929,12 @@ public class ObjectManager {
             boolean inlineSolidResolution, boolean solidPostMovement) {
         // Phase 1: Snapshot positions and build exec order from EXISTING objects.
         for (ObjectInstance inst : activeObjects.values()) {
-            objectCallbacks.run(inst, inst::snapshotPreUpdatePosition);
+            if (!ObjectDirectionAccess.suspended(this, inst))
+                objectCallbacks.run(inst, inst::snapshotPreUpdatePosition);
         }
         for (ObjectInstance inst : dynamicObjects) {
-            objectCallbacks.run(inst, inst::snapshotPreUpdatePosition);
+            if (!ObjectDirectionAccess.suspended(this, inst))
+                objectCallbacks.run(inst, inst::snapshotPreUpdatePosition);
         }
 
         Arrays.fill(execOrder, null);
@@ -978,6 +976,7 @@ public class ObjectManager {
                 }
                 ObjectInstance instance = execOrder[currentExecSlot];
                 if (instance == null) continue;
+                if (ObjectDirectionAccess.suspended(this, instance)) continue;
 
                 // ROM parity: most S1 objects check out_of_range at the START of
                 // their routine during ExecuteObjects (static scenery / fixed
@@ -1043,6 +1042,7 @@ public class ObjectManager {
             // Fallback: process dynamic objects without valid slots
             populateDynamicFallbackScratch();
             for (ObjectInstance inst : dynamicFallbackScratch) {
+                if (ObjectDirectionAccess.suspended(this, inst)) continue;
                 if (excludesFromOrdinaryDynamicPass(inst)) {
                     continue;
                 }
@@ -1071,6 +1071,7 @@ public class ObjectManager {
             // Fallback: process active objects without valid slots
             populateActiveFallbackScratch();
             for (ObjectInstance inst : activeFallbackScratch) {
+                if (ObjectDirectionAccess.suspended(this, inst)) continue;
                 if (excludesFromOrdinaryDynamicPass(inst)) {
                     continue;
                 }
@@ -1133,10 +1134,12 @@ public class ObjectManager {
         int unloadCameraX = objectUnloadCameraX(cameraX);
         // ROM parity: Snapshot all objects' positions BEFORE their updates run.
         for (ObjectInstance inst : activeObjects.values()) {
-            objectCallbacks.run(inst, inst::snapshotPreUpdatePosition);
+            if (!ObjectDirectionAccess.suspended(this, inst))
+                objectCallbacks.run(inst, inst::snapshotPreUpdatePosition);
         }
         for (ObjectInstance inst : dynamicObjects) {
-            objectCallbacks.run(inst, inst::snapshotPreUpdatePosition);
+            if (!ObjectDirectionAccess.suspended(this, inst))
+                objectCallbacks.run(inst, inst::snapshotPreUpdatePosition);
         }
 
         // ROM parity: Build slot-ordered execution array.
@@ -1183,6 +1186,7 @@ public class ObjectManager {
                 }
                 ObjectInstance instance = execOrder[currentExecSlot];
                 if (instance == null) continue;
+                if (ObjectDirectionAccess.suspended(this, instance)) continue;
                 processedInExecLoop.add(instance);
 
                 executeObjectWithSolidContext(
@@ -1235,6 +1239,7 @@ public class ObjectManager {
             // Fallback: process objects without valid slots
             populateDynamicFallbackScratch();
             for (ObjectInstance inst : dynamicFallbackScratch) {
+                if (ObjectDirectionAccess.suspended(this, inst)) continue;
                 if (excludesFromOrdinaryDynamicPass(inst)) {
                     continue;
                 }
@@ -1263,6 +1268,7 @@ public class ObjectManager {
             }
             populateActiveFallbackScratch();
             for (ObjectInstance inst : activeFallbackScratch) {
+                if (ObjectDirectionAccess.suspended(this, inst)) continue;
                 if (excludesFromOrdinaryDynamicPass(inst)) {
                     continue;
                 }
@@ -1389,7 +1395,9 @@ public class ObjectManager {
      * arriving 1px behind, s2.asm:58759-58799).
      */
     private boolean inlineCreateObject(ObjectSpawn spawn, int counterValue) {
-        if (activeObjects.containsKey(spawn) || !placementAdmission.allows(spawn)) {
+        if (activeObjects.containsKey(spawn)
+                || !placementAdmission.allows(spawn)
+                || !stageplayAllowsPlacement(spawn)) {
             return true; // Already exists or intentionally excluded from this load
         }
         if (!isSpawnVerticallyEligibleForLoad(spawn, true)) {
@@ -1506,11 +1514,23 @@ public class ObjectManager {
         // Bucket active and dynamic objects; an owner of inline-drawn ROM children
         // (MultiBucketRenderable) is listed in every bucket its parts occupy.
         for (ObjectInstance instance : activeObjects.values()) {
-            ObjectRenderParts.addToRenderBuckets(instance, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
+            if (stageplayDirection == null
+                    || !stageplayDirection.addRenderEntries(
+                            instance, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets))
+                ObjectRenderParts.addToRenderBuckets(
+                        instance, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
         }
         for (ObjectInstance instance : dynamicObjects) {
-            ObjectRenderParts.addToRenderBuckets(instance, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
+            if (stageplayDirection == null
+                    || !stageplayDirection.addRenderEntries(
+                            instance, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets))
+                ObjectRenderParts.addToRenderBuckets(
+                        instance, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
         }
+
+        if (stageplayDirection != null)
+            stageplayDirection.addVisualRenderEntries(
+                    unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
 
         // ROM parity: lower sprite-table indices render in front. Objects execute and
         // call Draw_Sprite in slot order, so lower SST slots must be drawn later in
@@ -1724,7 +1744,7 @@ public class ObjectManager {
      * playable update has completed for the current frame.
      */
     public void runPostPlayerHooks(PlayableEntity player, int vIntRunCount) {
-        populationView.runPostPlayerHooks(getActiveObjects(), player, vIntRunCount);
+        populationView.runPostPlayerHooks(stageplayActiveRoutineObjects(), player, vIntRunCount);
     }
 
     /**
@@ -1734,17 +1754,24 @@ public class ObjectManager {
      * with {@code render_flags} bit 2 set.
      */
     public void applyLevelRepeatOffsetToActiveObjects(int offsetX, int offsetY) {
-        populationView.applyLevelRepeatOffset(getActiveObjects(), offsetX, offsetY);
+        populationView.applyLevelRepeatOffset(stageplayActiveRoutineObjects(), offsetX, offsetY);
     }
 
     List<ObjectInstance> getSolidProviderObjects() {
         rebuildActiveObjectCaches();
-        return cachedSolidProviderObjects;
+        return stageplayDirection == null || !stageplayDirection.hasSuspension()
+                ? cachedSolidProviderObjects
+                : cachedSolidProviderObjects.stream()
+                        .filter(o -> !stageplayDirection.suspended(o))
+                        .toList();
     }
 
     List<ObjectInstance> getTouchResponseObjects() {
         rebuildActiveObjectCaches();
-        return collisionResponseList.touchResponseObjects(cachedTouchResponseObjects);
+        var result = collisionResponseList.touchResponseObjects(cachedTouchResponseObjects);
+        return stageplayDirection == null || !stageplayDirection.hasSuspension()
+                ? result
+                : result.stream().filter(o -> !stageplayDirection.suspended(o)).toList();
     }
 
     boolean touchUsesPreviousCollisionResponseList() { return collisionResponseList.usesPrevious(); }
@@ -1774,7 +1801,13 @@ public class ObjectManager {
 
     private void captureCollisionResponseListForNextFrame() {
         rebuildActiveObjectCaches();
-        collisionResponseList.captureForNextFrame(cachedTouchResponseObjects, objectCallbacks);
+        var touchObjects =
+                stageplayDirection == null || !stageplayDirection.hasSuspension()
+                        ? cachedTouchResponseObjects
+                        : cachedTouchResponseObjects.stream()
+                                .filter(object -> !stageplayDirection.suspended(object))
+                                .toList();
+        collisionResponseList.captureForNextFrame(touchObjects, objectCallbacks);
     }
 
     private void rebuildActiveObjectCaches() {
@@ -2150,6 +2183,11 @@ public class ObjectManager {
             boolean allowSameFrameExec,
             int explicitParentSlot) {
         registerInheritedCallbackOwner(object);
+        if (stageplayDirection != null && !stageplayDirection.allowsObject(object)) {
+            stageplayDirection.removeDynamic(object);
+            return;
+        }
+        if (stageplayDirection != null) stageplayDirection.noteNativeAdmission(object);
         if (object instanceof AbstractObjectInstance aoi) {
             objectCallbacks.run(object, () -> aoi.setServices(objectServices));
             // ROM parity: FindFreeObj allocates an SST slot for EVERY object,
@@ -3558,7 +3596,8 @@ public class ObjectManager {
         List<ObjectSpawn> sortedNewSpawns = newSpawnsScratch;
         sortedNewSpawns.clear();
         for (ObjectSpawn spawn : activeSpawns) {
-            if (placementAdmission.allowsNewSpawn(spawn, activeObjects, placement)) {
+            if (stageplayAllowsPlacement(spawn)
+                    && placementAdmission.allowsNewSpawn(spawn, activeObjects, placement)) {
                 sortedNewSpawns.add(spawn);
             }
         }
@@ -3640,7 +3679,8 @@ public class ObjectManager {
     }
 
     private boolean tryLoadPlacementSpawn(ObjectSpawn spawn, boolean allowVerticalLoadBypassForS2) {
-        if (!placementAdmission.allowsNewSpawn(spawn, activeObjects, placement)) {
+        if (!stageplayAllowsPlacement(spawn)
+                || !placementAdmission.allowsNewSpawn(spawn, activeObjects, placement)) {
             placement.completePendingCursorLoad(spawn);
             return false;
         }
@@ -3688,7 +3728,8 @@ public class ObjectManager {
     }
 
     private boolean tryLoadPlacementSpawnForTwoAxisYPass(ObjectSpawn spawn, int previousYCoarse, int currentYCoarse) {
-        if (!placementAdmission.allowsNewSpawn(spawn, activeObjects, placement)) {
+        if (!stageplayAllowsPlacement(spawn)
+                || !placementAdmission.allowsNewSpawn(spawn, activeObjects, placement)) {
             return false;
         }
         if (!isSpawnVerticallyEligibleForTwoAxisYPass(spawn, previousYCoarse, currentYCoarse)) {
@@ -3776,6 +3817,12 @@ public class ObjectManager {
 
     private void registerActiveObject(ObjectSpawn spawn, ObjectInstance instance) {
         objectCallbacks.register(instance, spawn);
+        if (stageplayDirection != null && !stageplayDirection.allowsObject(instance)) {
+            stageplayDirection.removeDynamic(instance);
+            objectCallbacks.unregister(instance);
+            return;
+        }
+        if (stageplayDirection != null) stageplayDirection.noteNativeAdmission(instance);
         activeObjects.put(spawn, instance);
         instanceToSpawn.put(instance, spawn);
         assignRewindObjectId(instance, spawn);
@@ -4643,10 +4690,148 @@ public class ObjectManager {
         return objectServices;
     }
 
+    String stageplayAuthoredExecutionParent() {
+        if (stageplayDirection == null
+                || !updating
+                || currentExecSlot < 0
+                || currentExecSlot >= execOrder.length) return null;
+        return stageplayDirection.authoredId(execOrder[currentExecSlot]);
+    }
+
+    void stageplayBucketsChanged() {
+        bucketsDirty = true;
+    }
+
+    boolean isStageplayRingPlacement(ObjectSpawn spawn) {
+        // Numeric layout IDs do not identify auxiliary routines (released animals
+        // deliberately have no layout identity and may share a ring's numeric ID).
+        return spawn != null && spawn.layoutIndex() >= 0
+                && registry instanceof MutatorPlacementClassifier classifier
+                && classifier.isRingPlacement(spawn);
+    }
+
+    boolean isStageplayPlayerAttachmentOrRing(ObjectInstance object) {
+        return object instanceof com.openggf.game.PowerUpObject
+                || object instanceof SkidDustObjectInstance
+                || object instanceof com.openggf.level.rings.LostRingObjectInstance
+                || registry instanceof MutatorPlacementClassifier classifier && classifier.isRingInstance(object)
+                || isStageplayRingPlacement(object.getSpawn());
+    }
+
+    private Collection<ObjectInstance> stageplayActiveRoutineObjects() {
+        var active = getActiveObjects();
+        return stageplayDirection == null || !stageplayDirection.hasSuspension()
+                ? active
+                : active.stream().filter(o -> !stageplayDirection.suspended(o)).toList();
+    }
+
+    private boolean stageplayAllowsPlacement(ObjectSpawn spawn) {
+        return stageplayDirection == null || stageplayDirection.allowsPlacement(spawn);
+    }
+
+    void suspendStageplayContacts(ObjectInstance object) {
+        solidContacts.suspendForVisualDirection(object);
+        if (touchResponses != null) touchResponses.forgetRemovedObject(object);
+    }
+
+    void retireStageplayObject(ObjectInstance object) {
+        ObjectSpawn placementSpawn = instanceToSpawn.get(object);
+        releaseSlotIfManaged(object);
+        if (object instanceof AbstractObjectInstance nativeObject) nativeObject.setSlotIndex(-1);
+        if (placementSpawn != null) {
+            freeAllReservedChildSlots(placementSpawn);
+            placement.removeFromActive(placementSpawn);
+            removeActiveObject(placementSpawn);
+        } else removeDynamicObjectInstance(object);
+        // A picture removal retires the graph without invoking native cleanup
+        // routines that can publish boss/event state. Structural members are
+        // retired explicitly by the controller, including constructor children.
+        suspendStageplayContacts(object);
+        deferredDynamicExecThisFrame.remove(object);
+        bucketsDirty = activeObjectsCacheDirty = true;
+    }
+
+    ObjectInstance materializeStageplayPlacement(
+            StageplayObjectDirection.PlacementIdentity identity) {
+        ObjectSpawn spawn =
+                stageplaySourceSpawns.stream()
+                        .filter(
+                                p ->
+                                        p.layoutIndex() == identity.layoutIndex()
+                                                && p.objectId() == identity.objectId()
+                                                && p.subtype() == identity.subtype())
+                        .findFirst()
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "Portable object placement is absent from this set:"
+                                                        + " "
+                                                        + identity));
+        if (!stageplayAllowsPlacement(spawn)) {
+            throw new IllegalArgumentException("Object placement was removed by the screenplay");
+        }
+        return materializeStageplayPlacement(spawn);
+    }
+
+    ObjectInstance materializeStageplayPlacement(ObjectSpawn spawn) {
+        if (spawn.layoutIndex() < 0)
+            throw new IllegalArgumentException("Placed object requires portable layout identity");
+        ObjectInstance existing =
+                activeObjects.entrySet().stream()
+                        .filter(
+                                e ->
+                                        e.getKey().layoutIndex() == spawn.layoutIndex()
+                                                && e.getKey().objectId() == spawn.objectId()
+                                                && e.getKey().subtype() == spawn.subtype())
+                        .map(Map.Entry::getValue)
+                        .findFirst()
+                        .orElse(null);
+        if (existing != null) return existing;
+        // Explicit actor readmission preserves the removal filter for native placement scans.
+        int slot = allocateSlot();
+        if (slot < 0) throw new IllegalStateException("Native object activation window is full");
+        ObjectInstance instance;
+        try {
+            instance =
+                    ObjectDirectionAccess.forManager(this)
+                            .withAuthoredAdmission(
+                                    "stageplay-placement",
+                                    () ->
+                                            ObjectConstructionContext.with(
+                                                    objectServices,
+                                                    slot,
+                                                    () ->
+                                                            registry == null
+                                                                    ? null
+                                                                    : objectCallbacks.construct(
+                                                                            spawn,
+                                                                            () ->
+                                                                                    registry.create(
+                                                                                            spawn))));
+        } catch (RuntimeException | Error failure) {
+            releaseSlot(slot);
+            throw failure;
+        }
+        if (instance == null) {
+            releaseSlot(slot);
+            throw new IllegalArgumentException("Object placement has no native factory");
+        }
+        if (instance instanceof AbstractObjectInstance object) {
+            object.setServices(objectServices);
+            if (object.getSlotIndex() < 0) object.setSlotIndex(slot);
+        } else releaseSlot(slot);
+        // Explicit cast ownership must exist before the persistent clear admission gate.
+        // Keep vanilla placement scans filtered while permitting this authored readmission.
+        stageplayDirection.claimAuthored(instance);
+        registerActiveObject(spawn, instance);
+        bucketsDirty = activeObjectsCacheDirty = true;
+        return instance;
+    }
+
     /**
-     * Returns the game-specific {@link ObjectRegistry} for use by
-     * {@link ObjectRewindDynamicCodecs#genericRecreate} during rewind restore.
-     * Package-private: shared by verified derivative admission and rewind recreation.
+     * Returns the game-specific {@link ObjectRegistry} for use by {@link
+     * ObjectRewindDynamicCodecs#genericRecreate} during rewind restore. Package-private: shared by
+     * verified derivative admission and rewind recreation.
      */
     ObjectRegistry objectRegistry() {
         return registry;
@@ -4977,11 +5162,21 @@ public class ObjectManager {
                         player.setTopSolidBit(config.getPath1TopSolidBit());
                         player.setLrbSolidBit(config.getPath1LrbSolidBit());
                     }
-                    LOGGER.fine(() -> String.format(
-                            "PlaneSwitcher path=%d: player(%d,%d) obj(%d,%d) sub=0x%02X side=%d→%d air=%b mode=%s",
-                            path, player.getCentreX(), player.getCentreY(),
-                            spawn.x(), spawn.y(), subtype, previousSide, sideNow,
-                            player.getAir(), player.getGroundMode()));
+                    LOGGER.fine(
+                            () ->
+                                    String.format(
+                                            "PlaneSwitcher path=%d: player(%d,%d) obj(%d,%d)"
+                                                    + " sub=0x%02X side=%d→%d air=%b mode=%s",
+                                            path,
+                                            player.getCentreX(),
+                                            player.getCentreY(),
+                                            spawn.x(),
+                                            spawn.y(),
+                                            subtype,
+                                            previousSide,
+                                            sideNow,
+                                            player.getAir(),
+                                            player.getGroundMode()));
                 }
                 boolean highPriority = decodePriority(subtype, sideNow);
                 player.setHighPriority(highPriority);

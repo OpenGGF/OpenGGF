@@ -7,8 +7,8 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.events.Sonic3kICZEvents;
 import com.openggf.graphics.GLCommand;
-import com.openggf.graphics.RenderPriority;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.LevelManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.PatternDesc;
@@ -122,7 +122,9 @@ public final class IczBigSnowPileInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        lastRenderedTileCount = 0;
+        if (!com.openggf.level.render.ObjectSpriteCapture.isObserving()) {
+            lastRenderedTileCount = 0;
+        }
     }
 
     public void renderBackgroundLayer(SpecialRenderEffectContext context) {

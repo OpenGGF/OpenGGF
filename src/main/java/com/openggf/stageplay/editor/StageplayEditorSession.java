@@ -84,6 +84,10 @@ public final class StageplayEditorSession implements AutoCloseable {
         return resources.resolveFrame(document, StageplayTimeline.sample(document, frame));
     }
 
+    public java.util.List<com.openggf.stageplay.runtime.StageplayObjectInspection> objectInspection() {
+        return resources == null ? java.util.List.of() : resources.objectInspection();
+    }
+
     /** Draws in the engine's current offscreen viewport; no desktop focus or window is created. */
     public void draw(StageplayDocument document, int frame, Path root, Consumer<Throwable> onFailure) {
         draw(document,StageplayTimeline.sample(document,frame),root,onFailure);

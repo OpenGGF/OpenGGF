@@ -38,6 +38,7 @@ public final class StageplayWorkspace {
         default StageplayTimeline.Frame resolvePreview(StageplayDocument document, Path assetRoot, int frame) throws IOException {
             return StageplayTimeline.sample(document, frame);
         }
+        default List<com.openggf.stageplay.runtime.StageplayObjectInspection> objectInspection() { return List.of(); }
         default void stop() { }
         default void export(StageplayDocument document, Path source, Path output) throws IOException {
             throw new IOException("Film export is unavailable in this host");
@@ -48,7 +49,7 @@ public final class StageplayWorkspace {
         NEW("New scene"), OPEN("Open scene"), SAVE("Save"), SAVE_AS("Save as"),
         SCENE("Scene / set"), ADD_ACTOR("Add actor"), EDIT_ACTOR("Actor properties"),
         DELETE_ACTOR("Remove actor"), SET_KEY("Direct actor / set key"), DELETE_KEY("Remove actor key / action"),
-        PUPPET_ACTIONS("Puppet actions"),
+        PUPPET_ACTIONS("Puppet actions"), OBJECTS("ROM object cast / clear"),
         CAMERA_MODE("Direct camera (C)"), SET_CAMERA_KEY("Capture camera key (K)"), CAMERA_KEY("Camera keys"),
         RECORD_CAMERA("Record camera take (R)"), CAMERA_EFFECTS("Camera shake / quake"),
         SCENE_CHANGES("Scene changes / transitions"), FILM_FORMAT("Film format presets"), CAPTION("Captions"), DIALOGUE("Dialogue lines"),
@@ -151,6 +152,8 @@ public final class StageplayWorkspace {
                 case SET_KEY -> { if (selectedActorIsPuppet()) puppetMenu(); else keyForm(); }
                 case DELETE_KEY -> deleteKey();
                 case PUPPET_ACTIONS -> puppetMenu();
+                case OBJECTS -> new StageplayObjectAuthoring(menu, controller, this::edit, this::previewFrame,
+                        () -> { previewFrame(); return host.objectInspection(); }).show();
                 case CAMERA_MODE -> {
                     cameraMode = !cameraMode; cameraDraft = null;
                     status = !cameraMode ? "Actor direction" : fixedZoom()
@@ -653,7 +656,8 @@ public final class StageplayWorkspace {
 
     private static StageplayDocument withCast(StageplayDocument d,List<Actor> actors,List<PuppetTrack> puppets) {
         return new StageplayDocument(d.version(),d.name(),d.durationFrames(),d.width(),d.height(),d.set(),actors,d.camera(),
-                d.captions(),d.audio(),d.cameraEffects(),d.sceneChanges(),d.dialogueTypers(),d.dialogueSkins(),d.dialogue(),puppets);
+                d.captions(),d.audio(),d.cameraEffects(),d.sceneChanges(),d.dialogueTypers(),d.dialogueSkins(),d.dialogue(),puppets,
+                d.objectActors(),d.worldCommands());
     }
 
     /** Native physics owns motion, scale and animation; authored keys retain shot placement and visibility. */
@@ -957,8 +961,31 @@ public final class StageplayWorkspace {
         }
         camera.sort(Comparator.comparingInt(CameraKey::frame));
         for (int i=0;i<actors.size();i++) if (puppet(doc,actors.get(i).id())!=null) actors.set(i,physicalKeys(actors.get(i),changes));
+        var objects = new ArrayList<ObjectActor>();
+        for (var object : doc.objectActors()) {
+            var keys = new ArrayList<>(object.keys());
+            for (var change : changes) if (keys.stream().noneMatch(k -> k.frame() == change.frame())) {
+                var key = object.keys().stream().filter(k -> k.frame() <= change.frame()).reduce((a,b) -> b).orElseThrow();
+                keys.add(new ObjectKey(change.frame(), key.x(), key.y(), key.animation(), key.pose(), key.flipX(),
+                        key.visible(), key.interpolation(), key.mode(), key.parts()));
+            }
+            keys.sort(Comparator.comparingInt(ObjectKey::frame));
+            if (object.layoutIndex() >= 0) {
+                keys = new ArrayList<>(keys.stream().map(key -> {
+                    SetSource incoming = doc.set();
+                    for (var change : changes) if (change.frame() <= key.frame()) incoming = change.set();
+                    boolean matches = object.gameId().equals(incoming.gameId()) && object.zone() == incoming.zone()
+                            && object.act() == incoming.act();
+                    return new ObjectKey(key.frame(), key.x(), key.y(), key.animation(), key.pose(), key.flipX(),
+                            key.visible() && matches, key.interpolation(), key.mode(), key.parts());
+                }).toList());
+            }
+            objects.add(new ObjectActor(object.id(), object.name(), object.gameId(), object.zone(), object.act(),
+                    object.objectId(), object.subtype(), object.layoutIndex(), keys, object.commands(), object.sourceKind()));
+        }
         return new StageplayDocument(doc.version(),doc.name(),doc.durationFrames(),doc.width(),doc.height(),doc.set(),
-                actors,camera,doc.captions(),doc.audio(),doc.cameraEffects(),changes,doc.dialogueTypers(),doc.dialogueSkins(),doc.dialogue(),doc.puppets());
+                actors,camera,doc.captions(),doc.audio(),doc.cameraEffects(),changes,doc.dialogueTypers(),doc.dialogueSkins(),doc.dialogue(),doc.puppets(),
+                objects,doc.worldCommands());
     }
 
 
@@ -1209,7 +1236,7 @@ public final class StageplayWorkspace {
     private void edit(UnaryOperator<StageplayDocument> operation) { controller.edit(operation); cameraDraft = null; status="Scene edited"; }
     public void report(Throwable failure) { status=failure.getMessage()==null?failure.toString():failure.getMessage(); menu.report(failure); }
     public void setStatus(String value) { status=Objects.requireNonNull(value); }
-    private static String nextId(String prefix,StageplayDocument doc) {
+    static String nextId(String prefix,StageplayDocument doc) {
         var used=allIds(doc); int i=1; while(used.contains(prefix+i)) i++; return prefix+i;
     }
     private static java.util.Set<String> allIds(StageplayDocument doc) {
@@ -1218,6 +1245,8 @@ public final class StageplayWorkspace {
         doc.cameraEffects().forEach(e -> used.add(e.id())); doc.sceneChanges().forEach(c -> used.add(c.id()));
         doc.dialogue().forEach(c -> used.add(c.id()));
         doc.puppets().forEach(p -> p.commands().forEach(c -> used.add(c.id())));
+        doc.objectActors().forEach(a -> { used.add(a.id()); a.commands().forEach(c -> used.add(c.id())); });
+        doc.worldCommands().forEach(c -> used.add(c.id()));
         return used;
     }
     private static String escapeCaption(String text) { return text.replace("\\","\\\\").replace("\n","\\n"); }

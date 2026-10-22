@@ -60,6 +60,7 @@ import com.openggf.level.objects.AbstractObjectRegistry;
 import com.openggf.level.objects.FixedSstSlotSink;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectFactory;
+import com.openggf.level.objects.ObjectRegistryCatalog.Role;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
@@ -100,7 +101,16 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
     }
 
     private record FactoryEntry(ObjectFactory factory,
-                                Predicate<S3kObjectCreationContext> compatibility) {}
+                                Predicate<S3kObjectCreationContext> compatibility,
+                                Role s3klRole, Role sklRole) {
+        FactoryEntry(ObjectFactory factory, Predicate<S3kObjectCreationContext> compatibility) {
+            this(factory, compatibility, Role.UNRESOLVED, Role.UNRESOLVED);
+        }
+
+        Role role(S3kObjectCreationContext context) {
+            return context.zoneSet() == S3kZoneSet.S3KL ? s3klRole : sklRole;
+        }
+    }
 
     @Override public boolean hasObjectKey(String key) { return hasHostObjectKey(key); }
     @Override public boolean hasHostObjectKey(String key) { return S3kAuthoredGoalInstance.OBJECT_KEY.equals(key); }
@@ -1058,7 +1068,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                         : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
         factories.put(Sonic3kObjectIds.GUMBALL_ITEM,
                 (spawn, registry) -> new GumballItemObjectInstance(spawn));
-        factories.put(Sonic3kObjectIds.BLOOMINATOR,
+        registerBadnikFactory(Sonic3kObjectIds.BLOOMINATOR,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -1066,7 +1076,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new BloominatorBadnikInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.RHINOBOT,
+        registerBadnikFactory(Sonic3kObjectIds.RHINOBOT,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -1074,7 +1084,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new RhinobotBadnikInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.MONKEY_DUDE,
+        registerBadnikFactory(Sonic3kObjectIds.MONKEY_DUDE,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -1082,7 +1092,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new MonkeyDudeBadnikInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.CATERKILLER_JR,
+        registerBadnikFactory(Sonic3kObjectIds.CATERKILLER_JR,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -1090,7 +1100,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new CaterkillerJrHeadInstance(spawn);
                 });
-        registerStockZoneBound(Sonic3kObjectIds.JAWZ,
+        registerStockZoneBound(Sonic3kObjectIds.JAWZ, Role.BADNIK, Role.UNRESOLVED,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -1101,7 +1111,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new JawzBadnikInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.BLASTOID,
+        registerBadnikFactory(Sonic3kObjectIds.BLASTOID,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -1109,7 +1119,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new BlastoidBadnikInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.BUGGERNAUT,
+        registerBadnikFactory(Sonic3kObjectIds.BUGGERNAUT,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -1117,7 +1127,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new BuggernautBadnikInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.TURBO_SPIKER,
+        registerBadnikFactory(Sonic3kObjectIds.TURBO_SPIKER,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -1125,7 +1135,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new TurboSpikerBadnikInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.MEGA_CHOPPER,
+        registerSetBadnikFactory(Sonic3kObjectIds.MEGA_CHOPPER, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -1133,7 +1143,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new MegaChopperBadnikInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.POINDEXTER,
+        registerSetBadnikFactory(Sonic3kObjectIds.POINDEXTER, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet == S3kZoneSet.SKL) return new SozEndBossInstance(spawn);
@@ -1142,7 +1152,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new PoindexterBadnikInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.SPIKER,
+        registerSetBadnikFactory(Sonic3kObjectIds.SPIKER, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -1150,7 +1160,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new SpikerBadnikInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.BUBBLES_BADNIK,
+        registerSetBadnikFactory(Sonic3kObjectIds.BUBBLES_BADNIK, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -1158,7 +1168,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new BubblesBadnikInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.MANTIS,
+        registerSetBadnikFactory(Sonic3kObjectIds.MANTIS, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -1166,7 +1176,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new MantisBadnikInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.TUNNELBOT,
+        registerSetBadnikFactory(Sonic3kObjectIds.TUNNELBOT, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -1174,7 +1184,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new TunnelbotBadnikInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.AIZ_MINIBOSS_CUTSCENE,
+        registerSetBadnikFactory(Sonic3kObjectIds.AIZ_MINIBOSS_CUTSCENE, S3kZoneSet.SKL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -1269,7 +1279,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
         factories.put(Sonic3kObjectIds.FBZ_SPRING_PLUNGER,
                 (spawn, registry) -> getCurrentZoneSet() == S3kZoneSet.S3KL ? new FbzSpringPlungerInstance(spawn)
                         : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
-        factories.put(Sonic3kObjectIds.CLAMER,
+        registerSetBadnikFactory(Sonic3kObjectIds.CLAMER, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -1277,7 +1287,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new ClamerObjectInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.SPARKLE,
+        registerBadnikFactory(Sonic3kObjectIds.SPARKLE,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet == S3kZoneSet.SKL) {
@@ -1290,7 +1300,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new SparkleBadnikInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.BATBOT,
+        registerBadnikFactory(Sonic3kObjectIds.BATBOT,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet == S3kZoneSet.SKL) {
@@ -1303,7 +1313,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new BatbotBadnikInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.PENGUINATOR,
+        registerSetBadnikFactory(Sonic3kObjectIds.PENGUINATOR, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -1311,7 +1321,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new PenguinatorBadnikInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.STAR_POINTER,
+        registerSetBadnikFactory(Sonic3kObjectIds.STAR_POINTER, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -1319,7 +1329,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new StarPointerBadnikInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.SNALE_BLASTER,
+        registerSetBadnikFactory(Sonic3kObjectIds.SNALE_BLASTER, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -1327,7 +1337,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new SnaleBlasterBadnikInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.ORBINAUT,
+        registerSetBadnikFactory(Sonic3kObjectIds.ORBINAUT, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -1335,7 +1345,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new OrbinautBadnikInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.RIBOT,
+        registerSetBadnikFactory(Sonic3kObjectIds.RIBOT, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -1343,7 +1353,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new RibotBadnikInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.CORKEY,
+        registerSetBadnikFactory(Sonic3kObjectIds.CORKEY, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -1351,7 +1361,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new CorkeyBadnikInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.FLYBOT_767,
+        registerSetBadnikFactory(Sonic3kObjectIds.FLYBOT_767, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -1399,7 +1409,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new MgzEndBossKnuxInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES,
+        registerSetBadnikFactory(Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet == S3kZoneSet.SKL) {
@@ -1407,7 +1417,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new BlasterBadnikInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON,
+        registerSetBadnikFactory(Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet == S3kZoneSet.SKL) {
@@ -1661,17 +1671,17 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                 (spawn, registry) -> new LrzSmashingSpikePlatformObjectInstance(spawn));
         // Id $99 is Obj_Fireworm in the SKL set (sonic3k.asm:196297); the S3KL set spends it on
         // Obj_HCZMiniboss, which is the name the id constant carries.
-        registerStockRomZoneBound(Sonic3kObjectIds.HCZ_MINIBOSS,
+        registerStockBadnikRomZoneBound(Sonic3kObjectIds.HCZ_MINIBOSS,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
                 (spawn, registry) -> new FirewormBadnikInstance(spawn));
         // Id $9A is Obj_Iwamodoki in the SKL set (sonic3k.asm:188133); the S3KL set spends it on
         // Obj_HCZEndBoss, which is the name the id constant carries.
-        registerStockRomZoneBound(Sonic3kObjectIds.HCZ_END_BOSS,
+        registerStockBadnikRomZoneBound(Sonic3kObjectIds.HCZ_END_BOSS,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
                 (spawn, registry) -> new IwamodokiBadnikInstance(spawn));
         // Id $9B is Obj_Toxomister in the SKL set (sonic3k.asm, ROM $8FD48); the S3KL set spends
         // it on Obj_Bubbles, which is the name the id constant carries.
-        registerStockRomZoneBound(Sonic3kObjectIds.BUBBLES_BADNIK,
+        registerStockBadnikRomZoneBound(Sonic3kObjectIds.BUBBLES_BADNIK,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
                 (spawn, registry) -> new ToxomisterBadnikInstance(spawn));
         // Id $9C is Obj_LRZRockCrusher in the SKL set (sonic3k.asm:197095); the S3KL set spends
@@ -1775,7 +1785,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
         registerStockRomZoneBound(Sonic3kObjectIds.SSZ_RETRACTING_SPRING,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
                 (spawn, registry) -> new SszRetractingSpringObjectInstance(spawn));
-        registerStockRomZoneBound(Sonic3kObjectIds.SSZ_EGG_ROBO,
+        registerStockBadnikRomZoneBound(Sonic3kObjectIds.SSZ_EGG_ROBO,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
                 (spawn, registry) -> new EggRoboBadnikInstance(spawn));
 
@@ -1840,13 +1850,85 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
         return entry != null && entry.compatibility().test(S3kObjectCreationContext.custom(zoneSet));
     }
 
+    @Override
+    protected com.openggf.level.objects.ObjectRegistryCatalog.Semantics catalogSemantics(int objectId,
+            com.openggf.level.objects.ObjectRegistryCatalog.Context source) {
+        if (S3kZoneSet.forZone(source.zone()) == S3kZoneSet.SKL
+                && (objectId == Sonic3kObjectIds.CNZ_MINIBOSS || objectId == 0x8B)) {
+            // The SKL pointer table aliases $A6 to the DEZ miniboss; S3KL $A6
+            // remains CNZ's different boss and must not inherit this restriction.
+            var role = objectId == Sonic3kObjectIds.CNZ_MINIBOSS
+                    ? com.openggf.level.objects.ObjectRegistryCatalog.Role.BOSS
+                    : com.openggf.level.objects.ObjectRegistryCatalog.Role.OBJECT;
+            return new com.openggf.level.objects.ObjectRegistryCatalog.Semantics(role,
+                    com.openggf.level.objects.ObjectRegistryCatalog.PositionRule.UNVERIFIED,
+                    List.of("Obj_SpriteMask / loc_86308 (docs/skdisasm/sonic3k.asm:181335-181376)"), List.of(),
+                    List.of("An active native SpriteMask child/control is not representable by the current directed visual template; Puppet/Pose reject this appearance instead of dropping its silhouette/occlusion. Free retains native SAT controls. Obj_SpriteMask / loc_86308 (docs/skdisasm/sonic3k.asm:181335-181376)."));
+        }
+        // The selected FactoryEntry owns this byte's role. A base registration
+        // trait must not leak through a different stock-zone override.
+        return com.openggf.level.objects.ObjectRegistryCatalog.Semantics.NONE;
+    }
+
+    @Override
+    protected java.util.Optional<com.openggf.level.objects.ObjectRegistryCatalog.AuxiliaryFactory> releasedAnimalFactory(
+            com.openggf.level.objects.ObjectRegistryCatalog.Context context) {
+        return java.util.Optional.of(new com.openggf.level.objects.ObjectRegistryCatalog.AuxiliaryFactory(
+                "released-animal", "Native released animal", List.of("loc_2C924 (docs/skdisasm/sonic3k.asm:61089-61102)"),
+                com.openggf.game.sonic3k.Sonic3kAnimalCatalog.variants(),
+                com.openggf.level.objects.DestructionEffects.deferredAnimalWithoutPopup(-1, false).animalFactory()));
+    }
+
+    @Override
+    protected com.openggf.level.objects.ObjectRegistryCatalog.Entry catalogEntry(int objectId,
+            com.openggf.level.objects.ObjectRegistryCatalog.Context source) {
+        ensureLoaded();
+        var context = S3kObjectCreationContext.stock(S3kZoneSet.forZone(source.zone()), source.zone());
+        var overrides = stockRomZoneFactoryEntries.getOrDefault(objectId, List.of());
+        FactoryEntry selected = null;
+        String selection = "none";
+        for (int index = 0; index < overrides.size(); index++) {
+            if (overrides.get(index).compatibility().test(context)) {
+                selected = overrides.get(index);
+                selection = "stock-zone-override-" + index;
+                break;
+            }
+        }
+        if (selected == null) {
+            selected = factoryEntries.get(objectId);
+            if (selected != null) selection = "pointer-table-entry";
+        }
+        var status = selected == null
+                ? com.openggf.level.objects.ObjectRegistryCatalog.FactoryStatus.ABSENT
+                : selected.compatibility().test(context)
+                    ? com.openggf.level.objects.ObjectRegistryCatalog.FactoryStatus.REGISTERED
+                    : com.openggf.level.objects.ObjectRegistryCatalog.FactoryStatus.CONTEXT_REJECTED;
+        var semantics = catalogSemantics(objectId, source);
+        if (selected != null && selected.role(context) != Role.UNRESOLVED && semantics.role() == Role.UNRESOLVED)
+            semantics = new com.openggf.level.objects.ObjectRegistryCatalog.Semantics(selected.role(context),
+                    semantics.positionRule(), semantics.routineCitations(), semantics.heldAppearanceRestrictions(),
+                    semantics.unsupportedAppearanceRestrictions());
+        return new com.openggf.level.objects.ObjectRegistryCatalog.Entry(objectId,
+                getPrimaryName(objectId, context.zoneSet()), context.zoneSet().name(), status, selection,
+                editorPreviewArtKey(objectId).orElse(""), true, semantics);
+    }
+
     Set<Integer> stockZoneBoundFactoryIds() {
         ensureLoaded();
         return Set.copyOf(stockZoneBoundFactoryIds);
     }
 
     private void registerSetOnly(int objectId, ObjectFactory factory) {
-        factoryEntries.putIfAbsent(objectId, new FactoryEntry(factory, ignored -> true));
+        var role = registeredFactoryRole(objectId);
+        factoryEntries.putIfAbsent(objectId, new FactoryEntry(factory, ignored -> true, role, role));
+    }
+
+    /** The same pointer-table byte can be an enemy in one set and a boss/controller in the other. */
+    private void registerSetBadnikFactory(int objectId, S3kZoneSet badnikSet, ObjectFactory factory) {
+        factories.put(objectId, factory);
+        factoryEntries.put(objectId, new FactoryEntry(factory, ignored -> true,
+                badnikSet == S3kZoneSet.S3KL ? Role.BADNIK : Role.UNRESOLVED,
+                badnikSet == S3kZoneSet.SKL ? Role.BADNIK : Role.UNRESOLVED));
     }
 
     /** Registers a factory whose pointer-table identity is sufficient in custom zones. */
@@ -1857,19 +1939,33 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
     }
 
     private void registerStockZoneBound(int objectId, ObjectFactory factory) {
+        registerStockZoneBound(objectId, Role.UNRESOLVED, Role.UNRESOLVED, factory);
+    }
+
+    private void registerStockZoneBound(int objectId, Role s3klRole, Role sklRole, ObjectFactory factory) {
         factories.put(objectId, factory);
         factoryEntries.put(objectId, new FactoryEntry(factory,
-                context -> context.source() != S3kObjectCreationContext.Source.CUSTOM));
+                context -> context.source() != S3kObjectCreationContext.Source.CUSTOM, s3klRole, sklRole));
         stockZoneBoundFactoryIds.add(objectId);
     }
 
     private void registerStockRomZoneBound(int objectId, S3kZoneSet zoneSet,
                                            int romZoneId, ObjectFactory factory) {
+        registerStockRomZoneBound(objectId, zoneSet, romZoneId, factory, Role.UNRESOLVED);
+    }
+
+    private void registerStockBadnikRomZoneBound(int objectId, S3kZoneSet zoneSet,
+                                                int romZoneId, ObjectFactory factory) {
+        registerStockRomZoneBound(objectId, zoneSet, romZoneId, factory, Role.BADNIK);
+    }
+
+    private void registerStockRomZoneBound(int objectId, S3kZoneSet zoneSet,
+                                           int romZoneId, ObjectFactory factory, Role role) {
         stockRomZoneFactoryEntries.computeIfAbsent(objectId, ignored -> new ArrayList<>())
                 .add(new FactoryEntry(factory,
                         context -> context.source() == S3kObjectCreationContext.Source.STOCK
                                 && context.zoneSet() == zoneSet
-                                && context.stockRomZoneId().orElse(-1) == romZoneId));
+                                && context.stockRomZoneId().orElse(-1) == romZoneId, role, role));
         stockZoneBoundFactoryIds.add(objectId);
     }
 
@@ -2350,6 +2446,11 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
             case 9 -> com.openggf.game.mutators.MonitorContent.SUPER;
             default -> com.openggf.game.mutators.MonitorContent.EGGMAN;
         };
+    }
+
+    @Override
+    public boolean isRingInstance(ObjectInstance object) {
+        return object instanceof Sonic3kPlacedRingObjectInstance;
     }
 
     @Override

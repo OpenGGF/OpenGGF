@@ -46,6 +46,46 @@ import static org.lwjgl.opengl.GL11.*;
 @Isolated
 class TestStageplayHudPictures {
     @Test
+    void captureObjectCastArenaRestrictionAndModeForm() throws Exception {
+        assumeTrue(Boolean.getBoolean("openggf.stageplay.hudPictures"), "Explicit Stageplay HUD picture refresh only");
+        assumeTrue(PresentationOffscreenTestContext.requested(), "Stageplay HUD pictures require display-free EGL");
+        TestEnvironment.resetAll();
+        try (var fixture = TestEditorProjectLifecycle.Fixture.open(GameId.S2);
+             var context = PresentationOffscreenTestContext.open(1280,720);
+             var renderer = new EditorProjectMenuRenderer()) {
+            var workspace = new StageplayWorkspace(() -> StageplayDocument.empty("s2",0,1,0,0,320,224));
+            workspace.activate(); workspace.invoke(StageplayWorkspace.Action.OBJECTS);
+            renderObjectMenu(renderer,workspace); capture("object-cast-commands",1280,720);
+            objectMenuChoose(workspace,0);
+            workspace.menu().setValue("name","EHZ boss"); workspace.menu().setValue("object","86");
+            workspace.menu().submit(); assertNull(workspace.menu().error());
+            renderObjectMenu(renderer,workspace); capture("object-arena-restriction",1280,720);
+            objectMenuChoose(workspace,1); objectMenuChoose(workspace,0);
+            renderObjectMenu(renderer,workspace); capture("object-mode-key",1280,720);
+        } finally {
+            SessionManager.clear(); RomManager.getInstance().setRom(null); Engine.clearGlobalInstance();
+            TestEnvironment.resetAll(); SonicConfigurationService.getInstance().resetToDefaults(); GameModuleRegistry.reset();
+        }
+    }
+
+    private static void renderObjectMenu(EditorProjectMenuRenderer renderer,StageplayWorkspace workspace) {
+        glViewport(0,0,1280,720); glDisable(GL_SCISSOR_TEST); glClearColor(0,0,0,1); glClear(GL_COLOR_BUFFER_BIT);
+        glViewport(160,24,960,672); renderer.render(workspace.menu(),SceneSurface.projection(320,224),320);
+        assertEquals(GL_NO_ERROR,glGetError());
+    }
+
+    private static void objectMenuChoose(StageplayWorkspace workspace,int row) {
+        var input = new InputHandler();
+        for (int i=0;i<row;i++) objectMenuPress(workspace,input,GLFW_KEY_DOWN);
+        objectMenuPress(workspace,input,GLFW_KEY_ENTER);
+    }
+
+    private static void objectMenuPress(StageplayWorkspace workspace,InputHandler input,int key) {
+        input.handleKeyEvent(key,GLFW_PRESS); input.refreshLogicalSnapshot(); workspace.menu().update(input); input.update();
+        input.handleKeyEvent(key,GLFW_RELEASE); input.update();
+    }
+
+    @Test
     void captureStageplayCastTimelineAndCommands() throws Exception {
         assumeTrue(Boolean.getBoolean("openggf.stageplay.hudPictures"), "Explicit Stageplay HUD picture refresh only");
         assumeTrue(PresentationOffscreenTestContext.requested(), "Stageplay HUD pictures require display-free EGL");

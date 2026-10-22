@@ -1045,3 +1045,283 @@ spellings were checked; new runtime helpers are unannotated. The affected queued
 lean selector `TestModApiSignatureSurface,TestStageplayUnifiedWorldContract,TestStageplayDocument,TestStageplayLiveBinding`
 passes 26 tests, zero failures/errors/skips (90 seconds execution, three seconds
 queue wait). No hooks were bypassed.
+
+## Complete-cast phase 2 implementation checkpoint (2026-10-22)
+
+Phase 1 engine landed as `bb9e30002`; desktop controls as `bc8d61e` with internal
+classification follow-up `f64acb8`. Phase 2 source builds on that boundary; final
+hashes, focused results, actual footage and remaining exclusions follow after
+validation. No merge/push was made.
+
+Canonical v7 and screenplay v5 append separate object roles and timed world
+commands, retaining strict old migrations and earlier constructors. The shared
+workspace owns all object forms in both frontends: native source, portable placed
+tuple, mode/position/frame keys, child part overrides, visual move/stop, clear and
+removal cues, and actual cached-part/exclusion inspection. Inspector transport is
+unannotated engine data; registry/graph/GPU owners do not enter the creator API.
+The mutable 0.7 candidate pin adds only document data, keeping descriptor/version
+unchanged under the clarified candidate policy.
+
+The first constructor-free coverage inventory generated **22,784 ID/context rows
+across 89 contexts**, grouped into ten distinct metadata sets. Every byte ID is
+present, including unavailable factories and context restrictions. S2/S3K released
+animals are separate existing native factories with source-context species/art
+inventory, rather than a fabricated S3K layout ID. This initial report is metadata,
+not ROM proof: registered but unobserved visuals require preflight, while a known
+missing factory/context/visual output is explicitly unavailable. Final reporting
+must retain that distinction alongside actual sample evidence.
+
+Free uses native factories/routines and rejects an incompatible native game/zone/
+act with an actionable source-set error. Verified arena resets are game-owned
+metadata; a boss role alone does not imply an ignored anchor. Directed modes freeze
+all native graph routines and contacts. New constructor-ready visual preparation
+uses a disposable source world before opening the final shot. The target never
+updates there; source level assembly may run its own initial owners, all retired
+with that world. A constructor-gated graph must initialize as Free before a later
+mode key captures it. This is not a continuously ticking private boss subsystem.
+Existing Free effects already committed to world state are not rewound by changing
+a visual mode; suspended routines emit no further native work.
+
+Clear/removal flags belong to the scene's typed world policy so replacement object
+managers inherit them before assembly. Opening clear cues run before explicit role
+admission; later clears remove existing roles until an authored visibility re-entry.
+Explicit Free roots and their child graphs inherit their authored admission. Native
+layout admission can be rejected before its factory; a native external dynamic
+producer may construct before submitting its object, so registration rejection
+cannot retract constructor work already emitted. Clear controls population and
+routines, not independent native zone events. This distinction matters for EHZ,
+whose zone event would otherwise create a second boss alongside the authored one.
+
+Rejected implementation approaches and review findings:
+
+- A single mutable policy port alongside `NativeObjectPolicyPort` would shadow
+  existing behavior under first-match service lookup. Use an independent typed
+  scene load/direction owner.
+- Eager child tracking created a Stageplay controller in ordinary gameplay and
+  retained native graph references. The hook now records only when a Stageplay
+  manager already has its controller, before initial construction.
+- Treating every `AbstractBossInstance.childComponents` entry as inline art drops
+  EHZ's independently rendered car, drill and wheels. Capture registered child
+  render entries and unmanaged folded parts through their actual native producers.
+  Preserve native bucket/class/slot ordering; stable structural part IDs are assigned
+  before sorting and never derive from runtime slots.
+- A trail bank reserved 6,144 patterns per graph, limiting even tiny directed casts
+  to ten graphs. Use actual-size, content-shared leases inside the governed range;
+  shared palette contents reuse their bank. Capacity remains bounded, including at
+  most fifteen distinct scoped palette snapshots, with explicit admission errors.
+- Whole-tile replay discarded native scanline clipping. Preserve the captured row
+  range in SAT and painter paths. Residual primitive/tile ordering cannot yet be
+  faithfully captured, so reject that appearance instead of replaying a wrong picture.
+- Provider animation sets are not automatically ROM-backed: some are synthesized
+  constants. Require parsed trailing ROM bytes and pure animation terminators;
+  routine-control terminators and unsafe SWITCH targets remain held/authored.
+
+The EHZ ROM audit used verified S2 REV01 SHA-1
+`8bca5dcef1af3e00098666fd892dc1c2a76333f9`. Eight of eleven existing hardcoded scripts
+match the ROM; three contain an extra zero/frame (propeller animations 1/2 and
+vehicle-top animation 4). Replacing native tables would change ordinary Free timing,
+so native behavior is retained. Also rejected: registering a single aggregate EHZ
+animation table, which would apply propeller animation to car parts. Coverage lists
+the held multipart state/animation exclusion with `loc_2F262` and
+`Ani_obj56_a/b/c` citations. The external `phase2/ehz-animation-rom-audit.json` and
+recipe README preserve the comparison and capture gates. No behavior constants
+were fitted or changed.
+
+Initial build-only validation caught one missing `ObjectInstance.isHighPriority`
+implementation on the synthetic visual handle (55.7 seconds, no tests). After
+fixing it, production compiled; test compilation exposed two fixture type errors
+(85 seconds, no tests). These are compilation outcomes, not test failures or
+suite results. The next combined focused selection covers the corrected source,
+object-manager consumers, API pins and required S3K checks with explicit ROM paths.
+
+The first focused request was cancelled before admission (271 seconds waiting,
+exit 130, no Maven execution) after review found that inactive placed Puppet/Pose
+roles could still call a factory in the shared world. Initially directed or hidden
+placed tuples are now suppressed before final level assembly; constructor-ready
+visuals use the exact original ROM spawn in the disposable source world. Returning
+a proxy to Free explicitly materializes its original portable placement. Already
+running Free graphs remain capturable before suspension.
+
+A second request was cancelled before admission (151 seconds waiting, exit 130,
+no execution) after the bounded renderer review found unused palette reservations,
+lost custom occlusion masks, child-edge sorting that could change structural paths
+after rewind, and silently omitted SAT control children. SAT controls require an
+explicit unsupported-appearance result until their complete semantics can be
+represented. Draw-owned MGZ/Pachinko counters also need a read-only capture boundary;
+capturing a visual must not advance the native Free state. These are pending focused
+verification, not attributed baseline failures. No full suite was requested.
+
+Continuously driven isolated native boss graphs (the user's option 1) remain deferred.
+They would need separate world/session, audio, palette, water, terrain and camera
+ownership, exact child graph lifecycle, cross-world asset leases, deterministic
+rewind, and a verified transfer of render output. Running a relocated native graph
+against the shared world would allow invisible arena effects and was rejected.
+The selected visual-puppetry contract runs no directed root/child AI, holds stateful
+appearance, and admits only pure ROM animation scripts. Constructor-only preparation
+is a bounded asset/graph observation, not that deferred continuously running system.
+
+The bounded shared-editor review also caught replacement-by-append changing native
+cast allocation order, placed-role visibility crossing foreign sets, and a single
+bulk field unable to represent every legal part-override list. Preserve role order,
+scope portable placements to their source at boundaries, and use per-part editing
+for long lists. Both frontends delegate to that shared form layer. Static catalog
+appearance exclusions must be reachable there as well as in the generated report.
+
+### Research retained for remaining phases (not implemented at this checkpoint)
+
+Directed parallax needs an immutable presentation phase captured with the native
+scroll publication, sampled through an unannotated game-owned service. Do not
+rerun live handlers, clone only their rewind mementos, or call a provider's normal
+zone initialization under the director camera: handlers can publish camera,
+terrain, PLC, runtime and shake changes. Reuse existing arithmetic/composer kernels;
+separate advance/publication from composition in the owning handler. At native
+camera coordinates the sampled registers/arrays must match the published picture.
+For AIZ capture native frame/act, wave origin, shake, intro offset, fire coordinates
+and curtain phase, post-fire haze, battleship smooth offsets, and world water Y.
+Freeze event-mode gates from native state; director X must not trigger an event.
+`ScrollEffectComposer` and deformation plans already support arbitrary line counts;
+AIZ's two fixed-224 writers need that same viewport contract. DEZ's stationary
+origin belongs to its own provider. Base director camera and raster tile origin
+must be separate: treating each 224-line strip as another camera produces seams.
+
+Cinematic background residency must be privately owned as well. The current
+`ensureBackgroundTilemapData()` rereads native parallax values, undoing a directed
+window selection. Preserve authoritative persistent descriptors/ring origins;
+a stateless rebuild loses native event history. Sampling must neither shift the
+native CPU cache nor overwrite its GPU texture.
+
+Lossless decompilation requires exact IDs and list ordering, including intervals
+that cross shot boundaries. A typed screenplay revision can preserve explicit IDs,
+transition IDs, global event ordinals and puppet-track order; earlier screenplay
+versions retain their generated IDs/bounds. Do not hide a canonical document blob
+inside the screenplay. Verify all shipped examples and editor-style mutations.
+
+A route helper can return existing intent commands without a canonical schema bump.
+Use actual collision and native movement in a disposable worker; speculative native
+branches must restore audio logical state as well as the world registry. Static
+`PlayablePuppet` probes cannot certify live objects/events/water. Cold replay the
+emitted commands before reporting arrival. Bound nodes/ticks/memory and report
+search exhaustion without claiming a route is impossible. Object Puppet routing
+is visual floor/headroom following only; reject jumps or controller-specific
+movement rather than running its suspended native AI.
+
+Phase-2 compilation passed production/test sources (88 seconds). The subsequent
+51-class focused selector completed **438 tests: 435 passed, two failures, one
+error, zero skips** (45.447 seconds execution; 330 seconds queue wait). API pins
+passed. All mandatory S3K checks executed green: AIZ 8, game loading 36, legacy
+loading 7, bootstrap 6, decoding 3. The three new-case findings are scoped palette
+capture selecting the native row instead of its trusted presentation resolver,
+missing explicit placed-role observation after initial clearing, and no published
+palette row 1 in a logic-only constructor-preparation world. They are development
+findings, not baseline-attributed failures. The palette correction must preserve
+the native presentation subject while enumerating mappings and use the existing
+level palette publication owner before source capture; it must not fabricate art.
+
+The generated registration-only inventory now exists in JSON and Markdown under
+`$TASK_EVIDENCE/stageplay-complete-cast/phase2/object-coverage-v2.*`: 89 contexts,
+22,784 ID/context rows, ten metadata groups. Each mode reports 8,861 unavailable
+rows and 13,923 requiring preflight; no unobserved visual is falsely certified as
+available. Known SKL SAT-control exclusions are included. All six source recipes
+compiled structurally to canonical v7; this is not yet moving visual evidence.
+
+The parallel `feature/ai-editor-authoring-parity` lane owns level-editor features
+and a placed trigger calling existing playback APIs. This branch preserves the
+shapes of `StageplayPlayback.register` and `StageplayControl.play()`. Its phase-1
+LIVE binding extension permits visit/lease-bound player handover, with unchanged
+KEEP_FINAL_POSITION / RESTORE_ENTRY choices and stricter native source matching.
+The lead should reconcile shared chrome changes and those trigger expectations.
+
+The subsequent palette/placement diagnostics completed 27 tests (25 passed, two
+failures, no errors/skips; 89 seconds execution, no queue delay), then two ROM
+methods (one passed, one failed; 86 seconds execution, 404 seconds queue wait),
+then six focused classes (46 tests: 45 passed, one failure, no errors/skips;
+88 seconds execution, two seconds queue wait). The scoped palette replay fixture
+was drawing bucket 4 instead of its captured native minimum bucket; correcting
+the request preserves the source-lease retirement, exact raw color and no-resolver
+reuse assertions. All five strict report-import tests and all six cast unit tests
+passed in the last run. The remaining placed-object case proved admission before
+execution and camera/latch X=860, rejecting the stale-camera hypothesis.
+
+Its source cause is initial `MutableLevel.restoreObjectBackedRingState` marking
+the transformed population dirty: the first runtime dirty-region flush resynced
+placements and cleared active placed actors. Initial Stageplay decoding consumes
+its own just-created object/ring notifications before managers assemble; ordinary
+editor/runtime edits retain their resync contract. An independent admission-order
+review also moved explicit authored ownership before the persistent clear filter.
+These latest fixes await the affected ROM regression; no native unload constants
+or routines changed. Temporary diagnostic logging/reflection was removed.
+
+All six provisional capture recipes reached their directed transition during
+logic-only CLI simulation, but none completed: five lacked native CPU palette
+publication when capturing a running Free graph; S1 GHZ boss encountered a missing
+pattern while freezing its renderer. Constructor-only preparation already publishes
+its palette successfully. Fixing the later capture boundary must consume current
+native ROM palette/art ownership without inventing colors or patterns. No phase-2
+film or sample-specific availability is claimed at this checkpoint.
+
+Arena-context choice: the generic Free guard matches the authored cast source to
+the current set and preserves registry compatibility checks. It does not infer a
+canonical arena act from the boss category. A global factory admitted in another
+source context still executes at its ROM routine's native coordinates and may
+apply world effects there; the exact anchor restriction remains visible. This
+uses the user's permitted native-coordinate behavior, with no spatial adapter.
+
+State review after six successful provisional simulations found two clear-command
+issues. S3K auxiliary animals use a non-layout source with transport ID 0; treating
+that numeric ID as a ring incorrectly preserved an animal. Require portable layout
+identity for numeric placement classification, and use game-owned instance traits
+for actual native dynamic rings. Inactive badnik inventory also needs semantic
+factory traits before activation: tag the existing registrations, including S3K
+context-selected aliases, rather than constructing objects or inspecting lambda
+classes. Native constructor expressions remain unchanged. Non-base enemy roots
+also need the same registry-trait fallback in clear/admission consumers.
+
+After the first repair,43 affected tests passed (zero failures/errors/skips;
+87 seconds execution,138 seconds queue wait). Packaging passed in43.655 seconds
+with tests skipped. The updated engine installed into the owned desktop editor's
+private repository;14 editor cases plus one EGL picture case passed (15 total,
+zero skips;3.490 seconds, no queue wait). Both frontends' object command, arena
+restriction and mode forms are captured under `$TASK_EVIDENCE/stageplay-complete-cast/phase2/{desktop,hud}/`.
+
+The later clear/registry/API/mandatory-S3K/HUD selection completed133 tests:
+132 passed, one failed, no errors or skips (97 seconds execution,27 seconds queue
+wait). Every required S3K class, API pin and HUD capture passed. The new S3K animal
+clear case failed its pre-clear presence assertion in an unverified AIZ setup;
+its exact native retirement branch was not measured. It now uses the ICZ source,
+anchor and camera already observed in actual scene simulation, with unchanged
+presence/clear/ring/rewind assertions. No native lifetime constants were tuned.
+
+The complete badnik trait audit converted14 S1,28 S2 and31 S3K existing factory
+declarations, covering14/26/40 native root classes respectively. Context-dependent
+S3K roles follow selected factory entries, including stock overrides; they do not
+leak to machinery, cutscene or boss aliases. Non-base enemies use that same trait
+at runtime after class/head-role checks. Exact native constructor expressions
+remain unchanged. Added Java citation strings were separately parsed as prose
+(the ordinary scanner skips Java string literals): all26 resolve to their owning
+pinned labels. The two new repeated-animation-frame pitfall citations also resolve.
+
+The corrected ICZ clear fixture and native read-only capture/mask consumers passed
+all seven affected tests (zero failures/errors/skips;82 seconds execution,55 seconds
+queue wait). Final packaging passed in43.988 seconds with tests intentionally
+skipped. The unchanged final production-source fingerprint is
+`088f5ff1d4aeef0c2fc6f0c48483e20c91ed9be55f458d372dbc8f6b2e530ff0`.
+All six final supplied-ROM scenes simulated and rendered successfully; ordinary
+samples are450 frames, GHZ boss690, EHZ/ICZ bosses750, all60fps with audio.
+Full lossless-file decode passed. Clear-command state samples confirm removal of
+authored/inactive badniks at330 and objects at390, including S3K auxiliary animals;
+ring counts remain unchanged. S1 ring-layout object entries intentionally remain.
+
+Evidence lives under `$TASK_EVIDENCE/stageplay-complete-cast/phase2/`: the six
+`*-final.mp4`/stills/state samples, with ICZ's further framing revision named
+`*-take4.*`; source recipes and canonical scenes are retained alongside them.
+Ordinary samples and multipart EHZ/GHZ/ICZ graphs were reviewed through normal and
+quarter-speed browser playback plus phase-boundary stills. Captured held animation
+is labeled honestly. GHZ's tall background repeats and the ICZ lower background
+edge remain phase-3 presentation work; these films certify cast behavior only.
+The exhaustive generated `object-coverage-final.{json,md}` includes exact scoped
+sample observations; it does not promote untested ID/subtype/context combinations.
+
+The final desktop dependency recheck first installed the thin jar by mistake:
+14 tests had five passes and nine missing-Jackson errors. Installing the packaged
+jar restored14/14 passes, zero skips (1.453 seconds, no queue wait). This was local
+consumer setup, not a source regression; the owned editor repository is repaired.

@@ -49,6 +49,7 @@ public final class StageplayRomTransport {
         games.add(document.set().gameId());
         document.sceneChanges().forEach(change -> games.add(change.set().gameId()));
         document.actors().forEach(actor -> games.add(actor.gameId()));
+        document.objectActors().forEach(actor -> games.add(actor.gameId()));
         document.audio().stream().filter(cue -> cue.kind() == StageplayDocument.AudioKind.ROM_MUSIC
                 || cue.kind() == StageplayDocument.AudioKind.ROM_SFX).forEach(cue -> games.add(cue.gameId()));
         return List.copyOf(games);

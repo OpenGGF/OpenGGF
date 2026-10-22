@@ -37,6 +37,14 @@ final class ObjectExecutionController {
             List<? extends PlayableEntity> sidekicks,
             boolean inlineSolidResolution,
             boolean solidPostMovement) {
+        if (ObjectDirectionAccess.suspended(objects, instance)) {
+            return;
+        }
+        if (objects.stageplayDirection != null
+                && !objects.stageplayDirection.allowsObject(instance)) {
+            objects.stageplayDirection.removeDynamic(instance);
+            return;
+        }
         SolidExecutionRegistry registry = objects.solidExecutionRegistry();
         SolidExecutionMode mode = null;
         if (instance instanceof SolidObjectProvider provider) {

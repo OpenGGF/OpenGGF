@@ -31,16 +31,18 @@ public final class StageplayScriptCompiler {
                 parsed = JSON.readTree(parser);
                 if (parser.nextToken() != null) throw new IOException("Trailing screenplay content");
             }
-            ObjectNode script = object(parsed, "screenplay", "version", "name", "width", "height", "cast", "shots", "dialogueTypers", "dialogueSkins");
+            ObjectNode script = object(parsed, "screenplay", "version", "name", "width", "height", "cast", "shots", "dialogueTypers", "dialogueSkins", "objectCast");
             int version = integer(script, "version", -1);
-            if (version < 1 || version > 4) throw new IOException("Unsupported screenplay version");
+            if (version < 1 || version > 5) throw new IOException("Unsupported screenplay version");
+            if (version < 5 && script.has("objectCast"))
+                throw new IOException("Object cast requires screenplay version 5");
             ArrayNode cast = array(script, "cast"), shots = array(script, "shots");
             if (cast.size() > 32 || shots.isEmpty() || shots.size() > 129)
                 throw new IOException("Screenplay needs 1..129 shots and at most 32 cast members");
             ObjectNode document = JSON.createObjectNode();
             // Older recipes keep their original world/actor semantics through the same
             // strict migration as saved canonical documents.
-            document.put("version", version <= 3 ? 5 : StageplayDocument.VERSION);
+            document.put("version", version <= 3 ? 5 : version == 4 ? 6 : StageplayDocument.VERSION);
             document.set("name", required(script, "name"));
             document.put("width", integer(script, "width", 400));
             document.put("height", integer(script, "height", 224));
@@ -69,11 +71,37 @@ public final class StageplayScriptCompiler {
                 role.remove(java.util.List.of("puppet", "snapToFloor", "collisionPath"));
                 role.putArray("keys"); actors.add(role);
             }
+            Map<String, ObjectNode> objectRoles = new LinkedHashMap<>();
+            Map<String, ObjectNode> lastObjectPoses = new LinkedHashMap<>();
+            Map<String, ArrayNode> objectCommands = new LinkedHashMap<>();
+            ArrayNode worldCommands = JSON.createArrayNode();
+            if (version >= 5) {
+                ArrayNode objects = document.putArray("objectActors");
+                worldCommands = document.putArray("worldCommands");
+                ArrayNode objectCast = optionalArray(script, "objectCast");
+                if (objectCast.size() > 1024) throw new IOException("Screenplay has more than 1024 object cast members");
+                for (JsonNode item : objectCast) {
+                    ObjectNode role = object(item, "object cast member", "id", "name", "gameId", "zone", "act",
+                            "objectId", "subtype", "layoutIndex", "sourceKind").deepCopy();
+                    String id = text(role, "id");
+                    if (roles.containsKey(id) || objectRoles.put(id, role) != null)
+                        throw new IOException("Duplicate cast id: " + id);
+                    required(role, "objectId");
+                    defaults(role, "zone", 0); defaults(role, "act", 0);
+                    defaults(role, "subtype", 0); defaults(role, "layoutIndex", -1);
+                    defaults(role, "sourceKind", "LAYOUT_OBJECT");
+                    role.putArray("keys"); objectCommands.put(id, role.putArray("commands"));
+                    objects.add(role);
+                }
+            }
             Set<String> shotIds = new HashSet<>();
             int offset = 0;
             for (JsonNode item : shots) {
                 ObjectNode shot = object(item, "shot", "id", "durationFrames", "set", "transition", "camera",
-                        "actors", "captions", "audio", "cameraEffects", "dialogue", "actions");
+                        "actors", "captions", "audio", "cameraEffects", "dialogue", "actions",
+                        "objects", "objectActions", "worldCommands");
+                if (version < 5 && (shot.has("objects") || shot.has("objectActions") || shot.has("worldCommands")))
+                    throw new IOException("Object directing requires screenplay version 5");
                 if (version == 1 && shot.has("actions")) throw new IOException("Puppet actions require screenplay version 2");
                 if (version < 3) {
                     for (var cameraKey : optionalArray(shot,"camera")) if (cameraKey.has("follow"))
@@ -135,6 +163,11 @@ public final class StageplayScriptCompiler {
                     }
                 }
                 appendActions(shot, commands, id, offset, duration);
+                if (version >= 5) {
+                    appendObjectTracks(shot, objectRoles, lastObjectPoses, id, offset, duration);
+                    appendObjectActions(shot, objectCommands, id, offset, duration);
+                    appendWorldCommands(worldCommands, optionalArray(shot, "worldCommands"), id, offset, duration);
+                }
                 appendEvents(captions, optionalArray(shot, "captions"), id, "caption", offset, duration, text(set, "gameId"));
                 appendEvents(audio, optionalArray(shot, "audio"), id, "audio", offset, duration, text(set, "gameId"));
                 appendEvents(effects, optionalArray(shot, "cameraEffects"), id, "effect", offset, duration, text(set, "gameId"));
@@ -146,6 +179,98 @@ public final class StageplayScriptCompiler {
             return StageplayStore.decode(JSON.writeValueAsBytes(document));
         } catch (IllegalArgumentException failure) {
             throw new IOException("Invalid screenplay: " + failure.getMessage(), failure);
+        }
+    }
+
+    private static void appendObjectTracks(ObjectNode shot, Map<String, ObjectNode> roles,
+                                           Map<String, ObjectNode> lastPoses, String shotId,
+                                           int offset, int duration) throws IOException {
+        ObjectNode tracks = shot.has("objects") ? object(shot.get("objects"), "object tracks") : JSON.createObjectNode();
+        var fields = tracks.fieldNames();
+        while (fields.hasNext()) {
+            String id = fields.next();
+            if (!roles.containsKey(id)) throw new IOException("Unknown object cast id: " + id);
+        }
+        for (var entry : roles.entrySet()) {
+            String id = entry.getKey();
+            ArrayNode keys = (ArrayNode) entry.getValue().get("keys");
+            if (tracks.has(id)) {
+                ArrayNode input = array(tracks, id);
+                if (input.isEmpty() || integer(object(input.get(0), "object key"), "frame", -1) != 0)
+                    throw new IOException("Object track must begin at local frame zero: " + shotId + "/" + id);
+                int previous = -1;
+                for (var item : input) {
+                    var key = object(item, "object key", "frame", "x", "y", "animation", "pose", "flipX",
+                            "visible", "interpolation", "mode", "parts").deepCopy();
+                    int frame = integer(key, "frame", -1);
+                    if (frame <= previous || frame < 0 || frame >= duration)
+                        throw new IOException("Object keys must ascend within their shot");
+                    previous = frame;
+                    objectDefaults(key);
+                    key.put("frame", offset + frame); keys.add(key);
+                }
+                lastPoses.put(id, ((ObjectNode) keys.get(keys.size() - 1)).deepCopy());
+            } else {
+                ObjectNode hidden = lastPoses.containsKey(id) ? lastPoses.get(id).deepCopy() : JSON.createObjectNode();
+                hidden.put("frame", offset).put("visible", false);
+                objectDefaults(hidden); keys.add(hidden);
+            }
+        }
+    }
+
+    private static void objectDefaults(ObjectNode key) throws IOException {
+        defaults(key, "x", 0); defaults(key, "y", 0); defaults(key, "animation", 0); defaults(key, "pose", -1);
+        defaults(key, "flipX", false); defaults(key, "visible", true); defaults(key, "mode", "FREE");
+        defaults(key, "interpolation", text(key, "mode").equals("FREE") ? "HOLD" : "LINEAR");
+        defaults(key, "parts", java.util.List.of());
+        for (var item : array(key, "parts")) {
+            var part = object(item, "object part pose", "partId", "animation", "pose");
+            defaults(part, "animation", 0); defaults(part, "pose", -1);
+        }
+    }
+
+    private static void appendObjectActions(ObjectNode shot, Map<String, ArrayNode> tracks, String shotId,
+                                             int offset, int duration) throws IOException {
+        if (!shot.has("objectActions")) return;
+        var actions = object(shot.get("objectActions"), "object actions");
+        var fields = actions.fieldNames();
+        while (fields.hasNext()) {
+            String actor = fields.next();
+            ArrayNode out = tracks.get(actor);
+            if (out == null) throw new IOException("Object actions require an object cast member: " + actor);
+            int index = 0, previous = -1;
+            for (var item : array(actions, actor)) {
+                var command = object(item, "object action", "id", "frame", "kind", "x", "y", "speed").deepCopy();
+                int frame = integer(command, "frame", -1);
+                if (frame <= previous || frame < 0 || frame >= duration)
+                    throw new IOException("Object actions must strictly ascend within their shot");
+                previous = frame;
+                if (text(command, "kind").equals("MOVE_TO")) {
+                    required(command, "x"); required(command, "y"); defaults(command, "speed", 1);
+                } else { defaults(command, "x", 0); defaults(command, "y", 0); defaults(command, "speed", 0); }
+                command.put("id", shotId + "." + actor + "."
+                        + (command.has("id") ? text(command, "id") : "objectAction" + index));
+                index++; command.put("frame", offset + frame); out.add(command);
+            }
+        }
+    }
+
+    private static void appendWorldCommands(ArrayNode out, ArrayNode input, String shotId,
+                                            int offset, int duration) throws IOException {
+        int index = 0, previous = -1;
+        for (var item : input) {
+            var command = object(item, "world command", "id", "frame", "kind", "actorId", "target").deepCopy();
+            int frame = integer(command, "frame", -1);
+            if (frame < previous || frame < 0 || frame >= duration)
+                throw new IOException("World commands must ascend within their shot");
+            previous = frame;
+            defaults(command, "actorId", ""); defaults(command, "target", StageplayDocument.ObjectTarget.none());
+            if (command.has("target")) {
+                var target = object(command.get("target"), "world command target", "layoutIndex", "objectId", "subtype", "offsetX", "offsetY");
+                defaults(target, "offsetX", 0); defaults(target, "offsetY", 0);
+            }
+            command.put("id", shotId + "." + (command.has("id") ? text(command, "id") : "worldCommand" + index));
+            index++; command.put("frame", offset + frame); out.add(command);
         }
     }
 

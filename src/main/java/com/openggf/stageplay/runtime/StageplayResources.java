@@ -138,6 +138,11 @@ public final class StageplayResources implements AutoCloseable {
     SceneImage livePreviewImage() { return livePreview == null ? null : livePreview.image(); }
     public void resetPuppets() { puppets.reset(); if (liveWorld != null) liveWorld.reset(); if (livePreview != null) livePreview.close(); }
 
+    public java.util.List<StageplayObjectInspection> objectInspection() {
+        if (liveWorld != null) return liveWorld.objectInspection();
+        return livePreview == null ? java.util.List.of() : livePreview.objectInspection();
+    }
+
     private void requirePhysicalLibrary() {
         if (library == null) throw new IllegalStateException("Physics puppets require supplied native ROM resources");
     }

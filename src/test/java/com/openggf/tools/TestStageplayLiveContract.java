@@ -65,6 +65,7 @@ class TestStageplayLiveContract {
                  "set":{"gameId":"s2","zone":0,"act":0},"camera":[{"frame":0,"x":0,"y":0}]}]}
                 """);
         ObjectNode encoded=(ObjectNode)JSON.readTree(StageplayStore.encode(old));
+        encoded.remove(java.util.List.of("objectActors", "worldCommands"));
         encoded.put("version",4); ((ObjectNode)encoded.get("set")).remove("worldPolicy");
         for(var key:encoded.withArray("camera")) ((ObjectNode)key).remove("follow");
         var migrated=StageplayStore.decode(JSON.writeValueAsBytes(encoded));

@@ -9,9 +9,9 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
-import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
@@ -314,7 +314,9 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        renderCount++;
+        if (!com.openggf.level.render.ObjectSpriteCapture.isObserving()) {
+            renderCount++;
+        }
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.PACHINKO_ENERGY_TRAP);
         if (renderer == null) {
             return;
@@ -426,7 +428,8 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
 
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
-            PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.PACHINKO_INVISIBLE_UNKNOWN);
+            PatternSpriteRenderer renderer =
+                    getRenderer(Sonic3kObjectArtKeys.PACHINKO_INVISIBLE_UNKNOWN);
             if (renderer == null) {
                 return;
             }

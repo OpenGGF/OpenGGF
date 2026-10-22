@@ -139,7 +139,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      * S3K zone-to-animal mapping from PLCLoad_Animals_Index in sonic3k.asm.
      * Each entry is {AnimalA, AnimalB} for that zone index.
      */
-    private static final AnimalType[][] S3K_ZONE_ANIMALS = {
+    static final AnimalType[][] S3K_ZONE_ANIMALS = {
             {AnimalType.FLICKY, AnimalType.CHICKEN},    // 0x00 AIZ
             {AnimalType.RABBIT, AnimalType.SEAL},       // 0x01 HCZ
             {AnimalType.FLICKY, AnimalType.CHICKEN},    // 0x02 MGZ

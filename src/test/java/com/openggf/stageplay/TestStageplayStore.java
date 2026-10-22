@@ -99,6 +99,7 @@ class TestStageplayStore {
         var mapper = new JsonMapper();
         ObjectNode legacy = (ObjectNode) mapper.readTree(StageplayStore.encode(source));
         legacy.put("version", 2);
+        legacy.remove(List.of("objectActors", "worldCommands"));
         ((ObjectNode) legacy.get("set")).remove("worldPolicy");
         for (var change : legacy.withArray("sceneChanges")) ((ObjectNode) change.get("set")).remove("worldPolicy");
         for (var key : legacy.withArray("camera")) ((ObjectNode) key).remove("follow");

@@ -2109,3 +2109,33 @@ Keep initialized atlas/tile renderers. `GraphicsManager.resetState()` drops the
 GL terrain renderers without recreating them and can leave valid bodies over
 black scenery. Verify visible terrain as a positive control, plus a return to an
 earlier act after changing cast; body-only and equal-blank-image checks can pass.
+
+### Native visual observation must be read-only (Stageplay, 2026-10-22)
+
+An object's render callback is not automatically pure. MGZ's boss/flicker parts
+advance draw-owned animation counters; observing them again to build a directed
+template would change resumed Free state. Keep an explicit capture scope and
+preserve those counters. Likewise, a CPU mapping observation must detect native
+SAT controls before an inactive-SAT guard returns: silently omitting a mask child
+can leave a plausible but incorrect parent picture. Reject unsupported controls.
+
+An animation set is not automatically a ROM script either. Synthesized tables
+can look equivalent while differing by a frame, and a parser can normalize a
+routine-control terminator into a loop. Admit parsed ROM bytes and verified pure
+terminators, including safe switch targets. EHZ's three extra hardcoded frames
+are recorded in the [bug ledger](../status/known-bugs.md#s2-ehz-boss-animation-tables-contain-three-extra-frames).
+Capture only palettes actually used by the graph; reserving four unused world
+palettes falsely rejects a graph using one scoped palette. Preserve native row
+clipping, custom occlusion masks and child creation ordinals across rewind.
+
+Logic-only level loading can leave the palette upload cache empty even though the
+current decoded ROM palettes exist. Publish those authoritative owners at the
+visual capture boundary, including native boss/event palette changes. Never fill
+missing rows with guessed colors. Sprite-sheet capacity can also contain unused
+null slots: bind only the tiles referenced by the selected mapping, and reject a
+referenced missing tile explicitly instead of reading stale atlas contents.
+
+Initial decoder transforms must consume their own object/ring dirty notifications
+before native managers assemble. Leaving an editor mutation notification pending
+can trigger a first-frame placement resync and erase an explicitly admitted cast.
+Do not weaken ordinary dirty-region processing or native unload windows to mask it.

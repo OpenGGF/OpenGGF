@@ -51,6 +51,14 @@ public final class StageplayTool {
 
     static Object run(String[] args) throws IOException {
         String command = args.length == 0 ? "help" : args[0];
+        if (command.equals("object-coverage")) {
+            var output = new java.io.ByteArrayOutputStream();
+            int status = StageplayObjectCoverageTool.execute(Arrays.copyOfRange(args, 1, args.length),
+                    new PrintStream(output, true, java.nio.charset.StandardCharsets.UTF_8));
+            var result = JSON.readTree(output.toByteArray());
+            if (status != 0) throw new IOException(result.path("error").asText("Object coverage failed"));
+            return result;
+        }
         if (command.equals("render")) {
             var parsed = StageplayCaptureTool.Arguments.parse(Arrays.copyOfRange(args, 1, args.length));
             Path movie = StageplayCaptureTool.run(parsed);
@@ -63,6 +71,7 @@ public final class StageplayTool {
                 yield Map.of("commands", List.of(
                         "init --out screenplay.json",
                         "compile --script screenplay.json --out film.stageplay",
+                        "object-coverage --out coverage.json [--game all|s1|s2|s3k --format json|markdown --observations reviewed.json]",
                         "validate --scene film.stageplay",
                         "inspect --scene film.stageplay [--frame N]",
                         "timeline --scene film.stageplay --out authored.jsonl [--every N]",
@@ -70,7 +79,7 @@ public final class StageplayTool {
                         "level --game s3k --rom PATH --zone 11 --act 1",
                         "catalog --game s2 --rom /absolute/game.gen [--character tails] [--zone 0 --act 0]",
                         "render --scene film.stageplay --out film.mkv --s1-rom PATH --s2-rom PATH --s3k-rom PATH"),
-                        "screenplayVersion", 4, "stageplayVersion", StageplayDocument.VERSION,
+                        "screenplayVersion", 5, "stageplayVersion", StageplayDocument.VERSION,
                         "fps", 60, "indices", "Frames, zones and acts are zero-based; every shot uses local frames.",
                         "outputs", "JSON result on stdout; exit 0 success, 2 invalid input/failure. Outputs are never overwritten.",
                         "resources", "catalog and simulate need supplied ROMs; simulate resolves native puppet physics without a window, graphics or audio playback. Render preflights resources and uses offline audio.");
@@ -257,6 +266,8 @@ public final class StageplayTool {
         result.put("dialogueTypers", document.dialogueTypers()); result.put("dialogueSkins", document.dialogueSkins());
         result.put("dialogue", document.dialogue());
         result.put("puppets", document.puppets());
+        result.put("objectActors", document.objectActors());
+        result.put("worldCommands", document.worldCommands());
         return result;
     }
 
@@ -306,8 +317,9 @@ public final class StageplayTool {
     static String scaffold() {
         return """
                 {
-                  "version": 4, "name": "First take", "width": 400, "height": 224,
+                  "version": 5, "name": "First take", "width": 400, "height": 224,
                   "cast": [{"id":"tails","name":"Tails","gameId":"s2","character":"tails"}],
+                  "objectCast": [],
                   "shots": [{
                     "id":"opening", "durationFrames":300,
                     "set":{"gameId":"s2","zone":0,"act":0},
@@ -317,7 +329,7 @@ public final class StageplayTool {
                       {"frame":30,"kind":"JUMP","holdFrames":12}]},
                     "dialogue":[{"startFrame":75,"endFrame":260,"speakerActor":"tails",
                       "text":"Ready for our first take!"}],
-                    "audio":[], "cameraEffects":[]
+                    "audio":[], "cameraEffects":[], "objects":{}, "objectActions":{}, "worldCommands":[]
                   }]
                 }
                 """;

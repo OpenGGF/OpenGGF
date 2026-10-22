@@ -63,10 +63,11 @@ uninterrupted short.
 
 ## Screenplay format
 
-The current screenplay format is `version:4`; the generated scene uses Stageplay
-version 6. New recipes default to a populated native world; TERRAIN_ONLY clears
+The current screenplay format is `version:5`; the generated scene uses Stageplay
+version 7. New recipes default to a populated native world; TERRAIN_ONLY clears
 its initial objects and rings. Both have the same directing capabilities.
-Versions one through three compile through the strict legacy canonical migration,
+Version four retains canonical-six native worlds. Versions one through three
+compile through the strict legacy canonical migration,
 preserving their original simulation and presentation. Version-one screenplays retain manual movement; version two retains
 terrain-only native Puppets. The compatible version-two example below introduces
 the common tracks; see [Live ROM worlds](#live-rom-worlds-screenplay-3-document-5)
@@ -341,12 +342,108 @@ Repeated frame sampling does not tick. Seeking restores the whole native rewind
 registry and director/control state, then silently replays controller inputs.
 Shot boundaries start a clean world; never interpret spawn placement as movement.
 
-LIVE registered cutscenes use the same isolated world and forward-only native SFX
-packets as editor preview. They cannot borrow/overwrite an interactive player
-through the optional native binding; that existing binding remains terrain-only.
+Current native-world registered cutscenes use the same isolated world and forward-only native SFX
+packets as editor preview. The optional native binding supports either current contents policy
+with a matching interactive set and character, using visit-bound ownership and explicit
+KEEP_FINAL_POSITION / RESTORE_ENTRY handover; see the Stageplay guide.
 
 Direct music explicitly with a `ROM_MUSIC` cue at each shot's local frame zero,
 using the matching `catalog` music ID. The isolated preview worker stops its
 automatic level music because the parent owns authored music; offline exports
 consume those same cues alongside native SFX. Do not rely on capture-only level
 music as the film's directed soundtrack.
+
+## Object cast (screenplay 5, document 7)
+
+Object roles are separate from player controller tracks. Declare their native
+source context in `objectCast`, then use shot-local object keys and actions:
+
+```json
+{
+  "objectCast": [
+    {"id":"prop","name":"ROM prop","gameId":"s2","zone":0,"act":0,
+     "objectId":86,"subtype":0,"layoutIndex":-1,"sourceKind":"LAYOUT_OBJECT"}
+  ],
+  "shots": [{
+    "id":"object-shot","durationFrames":180,
+    "set":{"gameId":"s2","zone":0,"act":0},
+    "camera":[{"frame":0,"x":0,"y":500}],
+    "objects":{"prop":[
+      {"frame":0,"x":128,"y":600,"mode":"FREE"},
+      {"frame":60,"x":128,"y":600,"mode":"PUPPET"},
+      {"frame":120,"x":200,"y":600,"mode":"POSE","pose":0,
+       "parts":[{"partId":"root/0","animation":0,"pose":0}]}
+    ]},
+    "objectActions":{"prop":[
+      {"frame":60,"kind":"MOVE_TO","x":200,"y":600,"speed":2},
+      {"frame":110,"kind":"STOP"}
+    ]},
+    "worldCommands":[{"frame":150,"kind":"REMOVE_OBJECT","actorId":"prop"}]
+  }]
+}
+```
+
+This fragment belongs inside a version-five screenplay with its normal name,
+size and player cast fields. Mapping/part IDs are object-specific: inspect the
+captured graph and coverage before selecting a frame; the sample numbers are
+syntax, not a guarantee of that boss's mapping layout.
+
+`layoutIndex:-1` creates a new role; a nonnegative layout index selects the loaded
+`(layoutIndex, objectId, subtype)` tuple in the matching native game/zone/act.
+The native level population is already present in populated worlds; claiming it
+adds directing controls without a second native object. Runtime slots are never
+portable identities. `sourceKind:RELEASED_ANIMAL` addresses the existing released
+animal factory, with `objectId:0` and `layoutIndex:-1`; the source set supplies the
+ROM species/art. S1 layout animals remain ordinary native object IDs.
+
+Keys expose `frame,x,y,mode,animation,pose,flipX,visible,interpolation,parts`.
+`parts` contains stable parent/creation paths with independent animation/frame
+selection. `pose:-1` selects pure animation where available, otherwise the captured
+held frame. Explicit mapping frames win over animation. State-machine-only
+appearances stay held/authored and are listed with the owning routine citation.
+Uninitialized or unavailable art fails explicitly, with the native source context
+and the preparation needed; it is never replaced by unrelated art.
+
+Free is the native routine, including contacts, child spawning and world effects.
+Some bosses reset themselves to their native arena coordinates. Their catalog and
+both editors display **Free: native arena position, anchor ignored**, with the
+initialization routine citation. Free requires the scene to match the cast entry's
+authored source game/zone/act. Registry context restrictions still apply. If a
+registry exposes an arena routine in another zone/act, it runs at its native
+coordinates there, with its real world effects; the tool does not infer another
+arena restriction from the boss category. Use its original arena or a directed
+visual mode for predictable placement. There are no object-specific spatial adapters. Switching an existing graph to Puppet/Pose
+suspends all parent/child routines and contacts before the next native tick.
+Visual parts retain their native relative transforms. In directed modes, `flipX`
+mirrors the captured graph around its visual anchor; it is an additional visual
+transform, rather than a controller-facing input. In Free mode the initial flag
+is passed to the native spawn. Puppet `MOVE_TO` drives its
+visual anchor at the requested pixels per frame; `STOP` ends that displacement.
+It is not controller input or a relocated native arena. Pose keys directly author
+position/mapping frames. Returning an existing graph to Free resumes its frozen
+native state/position, rather than moving its native arena to the last picture.
+
+`CLEAR_BADNIKS` and `CLEAR_OBJECTS` have no target. `REMOVE_OBJECT` takes exactly
+one `actorId` or `target:{layoutIndex,objectId,subtype}`. Clears/removals suppress
+native placement reloads for the shot. Players, their attached effects and rings
+have separate ownership and are preserved by these commands. Shot boundaries
+start fresh worlds. Both editors expose these same operations through **ROM object
+cast / clear**, including editing and deleting cues and child-part overrides.
+
+Generate the complete ID/context inventory with
+`object-coverage --out coverage.json --format json` (or `markdown`). Read its
+readiness and reason fields: a registered factory is distinct from actual loaded
+ROM art and a complete captured visual graph. Dynamic/parent-created routines are
+reported separately from layout IDs. Optional `--observations reviewed.json` appends
+exact-context capture, exclusion and failure samples without promoting the registry
+rows. The strict version-one observation file records source/ROM/scene hashes,
+mode, frame, evidence paths and limitations; it validates provenance fields, not
+whether the footage was reviewed. Full continuously driven private native
+boss graphs are deferred; directed pictures never keep native effects running
+behind them.
+
+An active native SAT mask/control is an explicit directed-appearance exclusion;
+it cannot be dropped while keeping only the parent body. The catalog and the
+**Available parts / appearance exclusions** menu identify known restrictions with
+the owning routine. SKL's DEZ miniboss mask is one such conditional exclusion.
+Initialize and direct a different supported appearance, or keep the graph Free.

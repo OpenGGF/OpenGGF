@@ -45,11 +45,20 @@ public final class SpriteSatMaskPostProcessor {
     }
 
     /**
-     * Allocation-minimized synchronous render path. Masked results are backed by
-     * thread-owned scratch and are invalidated by the next masked call on the
-     * same thread; callers must consume them before calling this method again.
+     * Allocation-minimized synchronous render path. Masked results are backed by thread-owned
+     * scratch and are invalidated by the next masked call on the same thread; callers must consume
+     * them before calling this method again.
      */
-    static List<SpriteSatEntry> processReusable(List<SpriteSatEntry> entries, boolean spriteMaskEnabled) {
+    static List<SpriteSatEntry> processReusable(
+            List<SpriteSatEntry> entries, boolean spriteMaskEnabled) {
+        return processReusable(entries, spriteMaskEnabled, null);
+    }
+
+    /** Preserve optional internal directed-visual attributes when a native mask splits an entry. */
+    static List<SpriteSatEntry> processReusable(
+            List<SpriteSatEntry> entries,
+            boolean spriteMaskEnabled,
+            java.util.Map<SpriteSatEntry, Integer> visualMasks) {
         if (!spriteMaskEnabled || entries == null || entries.isEmpty()) {
             return entries == null ? List.of() : entries;
         }
@@ -70,12 +79,13 @@ public final class SpriteSatMaskPostProcessor {
                 continue;
             }
 
-            if (entry.maskReplayRole() == SpriteMaskReplayRole.PRE_MASK_FRONT && preMaskInsertIndex >= 0) {
+            if (entry.maskReplayRole() == SpriteMaskReplayRole.PRE_MASK_FRONT
+                    && preMaskInsertIndex >= 0) {
                 scratch.processed.add(preMaskInsertIndex, entry);
                 preMaskInsertIndex++;
                 continue;
             }
-            clipAgainstBands(entry, scratch);
+            clipAgainstBands(entry, scratch, visualMasks);
         }
 
         return scratch.processed;
@@ -134,7 +144,10 @@ public final class SpriteSatMaskPostProcessor {
         return false;
     }
 
-    private static void clipAgainstBands(SpriteSatEntry entry, Scratch scratch) {
+    private static void clipAgainstBands(
+            SpriteSatEntry entry,
+            Scratch scratch,
+            java.util.Map<SpriteSatEntry, Integer> visualMasks) {
         int top = Math.max(entry.visibleTopY(), entry.y());
         int bottom = Math.min(entry.visibleBottomY(), entry.endYExclusive());
         boolean touched = false;
@@ -187,7 +200,14 @@ public final class SpriteSatMaskPostProcessor {
             int start = remaining[i * 2];
             int end = remaining[i * 2 + 1];
             if (end > start) {
-                scratch.processed.add(entry.withVisibleScanlines(start, end));
+                SpriteSatEntry clipped = entry.withVisibleScanlines(start, end);
+                scratch.processed.add(clipped);
+                if (visualMasks != null) {
+                    Integer mask = visualMasks.get(entry);
+                    if (mask != null) {
+                        visualMasks.put(clipped, mask);
+                    }
+                }
             }
         }
     }

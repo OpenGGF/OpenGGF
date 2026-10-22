@@ -28,7 +28,10 @@ Unreleased. The earlier development themes remain in
   Named dialogue, reusable typing profiles and creator PNG skins give mod scenes
   clear speakers and deterministic text reveal in playback, both editors and exports.
   Mods play the same scenes with held native gameplay and optional explicit
-  main-player handover. See the [guide](docs/guide/creating/stageplay.md) and
+  main-player handover. ROM object roles add Free native behavior and visual Puppet/Pose
+  direction with child-part frames, portable placed identities and timed clear/removal
+  commands. A generated ID/context catalog reports native arena and appearance
+  restrictions. See the [guide](docs/guide/creating/stageplay.md) and
   [directing examples](examples/stageplay-demo/README.md), including a 26-second
   beginner scene with a companion conceptual tutorial/promo.
 
