@@ -1,6 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
@@ -110,6 +111,41 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
     private PlayableEntity sidekickLockOwner;
     private final Set<PlayableEntity> extensionLockedPlayers =
             Collections.newSetFromMap(new IdentityHashMap<>());
+
+    // Separate lifetimes: locking a standing snapshot can invoke unload/release.
+    private final transient PlayerSnapshotScratch standingScratch = new PlayerSnapshotScratch();
+    private final transient PlayerSnapshotScratch lockedScratch = new PlayerSnapshotScratch();
+
+    /** Retention bound only; larger teams and reentrant callbacks keep independent snapshots. */
+    private static final class PlayerSnapshotScratch {
+        private static final int RETAINED_PLAYERS = 8;
+        private final ArrayList<AbstractPlayableSprite> players = new ArrayList<>(RETAINED_PLAYERS);
+        private boolean borrowed;
+
+        ArrayList<AbstractPlayableSprite> acquire(int maximumSize) {
+            if (borrowed || maximumSize > RETAINED_PLAYERS) {
+                return new ArrayList<>();
+            }
+            borrowed = true;
+            return players;
+        }
+
+        void release(ArrayList<AbstractPlayableSprite> snapshot) {
+            snapshot.clear();
+            if (snapshot == players) borrowed = false;
+        }
+
+        void clearIdle() {
+            // An active callback's snapshot remains valid until its own finally block.
+            if (!borrowed) players.clear();
+        }
+    }
+
+    @Override
+    protected void afterGenericRewindStateRestored(RewindCaptureContext context) {
+        standingScratch.clearIdle();
+        lockedScratch.clearIdle();
+    }
 
     // Flame child
     private OOZBurnerFlameObjectInstance flameChild;
@@ -305,28 +341,33 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
 
     private void updateWaitForPlayer(List<PlayableEntity> participants, int frameCounter) {
         ObjectManager objectManager = services().objectManager();
-        ArrayList<AbstractPlayableSprite> standing = new ArrayList<>();
-        for (PlayableEntity participant : participants) {
-            if (participant instanceof AbstractPlayableSprite player
-                    && isPlayerStandingOnThis(player, objectManager)) {
-                standing.add(player);
+        ArrayList<AbstractPlayableSprite> standing = standingScratch.acquire(participants.size());
+        try {
+            for (PlayableEntity participant : participants) {
+                if (participant instanceof AbstractPlayableSprite player
+                        && isPlayerStandingOnThis(player, objectManager)) {
+                    standing.add(player);
+                }
             }
-        }
-        if (standing.isEmpty()) {
-            return; // No one standing on platform
-        }
-        if (standing.stream().anyMatch(player -> !isPlayerInXRange(player))) {
-            return;
-        }
-        for (AbstractPlayableSprite player : standing) {
-            lockPlayer(player);
-            setLocked(player, participants.indexOf(player));
-        }
+            if (standing.isEmpty()) {
+                return; // No one standing on platform
+            }
+            for (int i = 0; i < standing.size(); i++) {
+                if (!isPlayerInXRange(standing.get(i))) return;
+            }
+            for (int i = 0; i < standing.size(); i++) {
+                AbstractPlayableSprite player = standing.get(i);
+                lockPlayer(player);
+                setLocked(player, participants.indexOf(player));
+            }
 
-        // Pop
-        velocity = POP_VELOCITY;
-        mode = Mode.RISE_AND_LAUNCH;
-        services().playSfx(Sonic2Sfx.OOZ_LID_POP.id);
+            // Pop
+            velocity = POP_VELOCITY;
+            mode = Mode.RISE_AND_LAUNCH;
+            services().playSfx(Sonic2Sfx.OOZ_LID_POP.id);
+        } finally {
+            standingScratch.release(standing);
+        }
     }
 
     private void setLocked(PlayableEntity player, int index) {
@@ -407,29 +448,43 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
                 clearLocked(rider);
             }
         }
-        for (AbstractPlayableSprite locked : lockedPlayersInNativeOrder(participants)) {
-            if (!objectManager.isRidingObject(locked, this)) {
-                ObjectControlState.none().applyTo(locked);
-            } else {
-                launchPlayer(locked, frameCounter);
+        ArrayList<AbstractPlayableSprite> lockedPlayers = lockedScratch.acquire(2 + extensionLockedPlayers.size());
+        try {
+            fillLockedPlayersInNativeOrder(lockedPlayers, participants);
+            for (int i = 0; i < lockedPlayers.size(); i++) {
+                AbstractPlayableSprite locked = lockedPlayers.get(i);
+                if (!objectManager.isRidingObject(locked, this)) {
+                    ObjectControlState.none().applyTo(locked);
+                } else {
+                    launchPlayer(locked, frameCounter);
+                }
             }
+            clearLockState();
+        } finally {
+            lockedScratch.release(lockedPlayers);
         }
-        clearLockState();
     }
 
     private void moveLockedPlayers(List<PlayableEntity> participants) {
-        for (AbstractPlayableSprite locked : lockedPlayersInNativeOrder(participants)) {
-            if (locked.getDead() || locked.isHurt() || locked.isDebugMode()) {
-                ObjectControlState.none().applyTo(locked);
-                clearLocked(locked);
-            } else {
-                NativePositionOps.writeYPosPreserveSubpixel(locked, currentY - SOLID_HALF_HEIGHT_AIR);
+        ArrayList<AbstractPlayableSprite> lockedPlayers = lockedScratch.acquire(2 + extensionLockedPlayers.size());
+        try {
+            fillLockedPlayersInNativeOrder(lockedPlayers, participants);
+            for (int i = 0; i < lockedPlayers.size(); i++) {
+                AbstractPlayableSprite locked = lockedPlayers.get(i);
+                if (locked.getDead() || locked.isHurt() || locked.isDebugMode()) {
+                    ObjectControlState.none().applyTo(locked);
+                    clearLocked(locked);
+                } else {
+                    NativePositionOps.writeYPosPreserveSubpixel(locked, currentY - SOLID_HALF_HEIGHT_AIR);
+                }
             }
+        } finally {
+            lockedScratch.release(lockedPlayers);
         }
     }
 
-    private List<AbstractPlayableSprite> lockedPlayersInNativeOrder(List<PlayableEntity> participants) {
-        ArrayList<AbstractPlayableSprite> result = new ArrayList<>();
+    private void fillLockedPlayersInNativeOrder(
+            ArrayList<AbstractPlayableSprite> result, List<PlayableEntity> participants) {
         if (mainCharLocked && mainLockOwner instanceof AbstractPlayableSprite main) result.add(main);
         if (sidekickLocked && sidekickLockOwner instanceof AbstractPlayableSprite p2 && p2 != mainLockOwner) result.add(p2);
         for (PlayableEntity participant : participants) {
@@ -441,7 +496,6 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
         for (PlayableEntity omitted : extensionLockedPlayers) {
             if (omitted instanceof AbstractPlayableSprite extension && !result.contains(extension)) result.add(extension);
         }
-        return result;
     }
 
     private void clearLocked(PlayableEntity player) {
@@ -464,10 +518,16 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
 
     @Override
     public void onUnload() {
-        for (AbstractPlayableSprite locked : lockedPlayersInNativeOrder(List.of())) {
-            ObjectControlState.none().applyTo(locked);
+        ArrayList<AbstractPlayableSprite> lockedPlayers = lockedScratch.acquire(2 + extensionLockedPlayers.size());
+        try {
+            fillLockedPlayersInNativeOrder(lockedPlayers, List.of());
+            for (int i = 0; i < lockedPlayers.size(); i++) {
+                ObjectControlState.none().applyTo(lockedPlayers.get(i));
+            }
+            clearLockState();
+        } finally {
+            lockedScratch.release(lockedPlayers);
         }
-        clearLockState();
     }
 
     /**
