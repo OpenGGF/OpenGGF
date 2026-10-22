@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
@@ -27,6 +28,7 @@ public final class SozSpringVineObjectInstance extends AbstractObjectInstance
         39,40,39,39,38,37,36,35,34,33,32,31,30,29,28,27,26,25,24,23,
         22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,0,0
     };
+    private static final SolidObjectParams SOLID_PARAMS = SolidObjectParams.of(0x30, 0, 0);
     // Columns: native object standing bit, signed crossing marker.
     private final FbzParticipantStateTable participants = new FbzParticipantStateTable(2);
     private final byte[] surface = new byte[0x60];
@@ -36,6 +38,9 @@ public final class SozSpringVineObjectInstance extends AbstractObjectInstance
     private boolean rebounding;
     private boolean initialized;
     private int displaySlot = -1;
+    // Derived only: invalidate after restore, while retaining captured surface RAM.
+    private transient int generatedPivot = -1;
+    private transient int generatedTension;
 
     public SozSpringVineObjectInstance(ObjectSpawn spawn) {
         super(spawn, "SOZSpringVine");
@@ -71,7 +76,7 @@ public final class SozSpringVineObjectInstance extends AbstractObjectInstance
         if (manager != null && displaySlot >= 0 && pivot != 0) {
             for (var object : manager.getActiveObjects()) {
                 if (object instanceof Display display && display.getSlotIndex() == displaySlot) {
-                    display.updateSurface(surface, flipped());
+                    display.updateSurface(surface, flipped(), generatedPivot, generatedTension);
                     break;
                 }
             }
@@ -113,9 +118,9 @@ public final class SozSpringVineObjectInstance extends AbstractObjectInstance
         return true;
     }
 
-    private void rebuildSurface() {
+    private boolean rebuildSurface() {
         // sub_40A08 returns without touching either slope RAM or child Ys at pivot zero.
-        if (pivot == 0) return;
+        if (pivot == 0 || (pivot == generatedPivot && tension == generatedTension)) return false;
         int bend = LEVERAGE[pivot] * tension + (pivot << 8);
         int step = (short) (bend / pivot) << 8;
         int accumulator = 0;
@@ -130,12 +135,19 @@ public final class SozSpringVineObjectInstance extends AbstractObjectInstance
                 accumulator += step;
             }
         }
+        generatedPivot = pivot;
+        generatedTension = tension;
+        return true;
+    }
+
+    @Override protected void afterGenericRewindStateRestored(RewindCaptureContext context) {
+        generatedPivot = -1;
     }
 
     private boolean flipped() { return (spawn.renderFlags() & 1) != 0; }
     @Override public int getY() { return (spawn.y() + 0x28) & 0xFFFF; }
     @Override public int romObjectCodePointerHighWord() { return 4; }
-    @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x30, 0, 0); }
+    @Override public SolidObjectParams getSolidParams() { return SOLID_PARAMS; }
     @Override public boolean isTopSolidOnly() { return true; }
     @Override public boolean usesCollisionHalfWidthForTopLanding() { return true; }
     @Override public boolean usesPlatformObjectLandingSnap() { return false; }
@@ -169,6 +181,9 @@ public final class SozSpringVineObjectInstance extends AbstractObjectInstance
     public static final class Display extends AbstractObjectInstance implements SpawnRewindRecreatable {
         private final int[] xs = new int[8];
         private final int[] ys = new int[8];
+        private transient int appliedPivot = -1;
+        private transient int appliedTension;
+        private transient boolean appliedFlipped;
         public Display(ObjectSpawn spawn) {
             super(spawn, "SOZSpringVineDisplay");
             int x = (spawn.x() - 0x28) << 16;
@@ -179,9 +194,17 @@ public final class SozSpringVineObjectInstance extends AbstractObjectInstance
                 x += 0xB504F; y -= 0xB504F;
             }
         }
-        private void updateSurface(byte[] heights, boolean flipped) {
+        private boolean updateSurface(byte[] heights, boolean flipped, int pivot, int tension) {
+            if (appliedPivot == pivot && appliedTension == tension && appliedFlipped == flipped) return false;
             for (int i = 0; i < 8; i++) ys[flipped ? 7-i : i] =
                     (spawn.y() + 0x28 + 6 - heights[6 + i * 12]) & 0xFFFF;
+            appliedPivot = pivot;
+            appliedTension = tension;
+            appliedFlipped = flipped;
+            return true;
+        }
+        @Override protected void afterGenericRewindStateRestored(RewindCaptureContext context) {
+            appliedPivot = -1;
         }
         @Override public void update(int vIntRunCount, PlayableEntity player) { }
         @Override public boolean requiresSameFrameUpdate() { return true; }
