@@ -161,58 +161,27 @@ public final class SpritePresentation {
         int lastPatternVersion = Integer.MIN_VALUE;
         final int cameraX, cameraY;
         final Function<Object, Attributes> descriptorDecoder;
-        final List<Tile> previousTiles;
         Layer layer = Layer.OBJECT;
-        Builder(int cameraX, int cameraY, Function<Object, Attributes> descriptorDecoder, Frame previous) {
+        Builder(int cameraX, int cameraY, Function<Object, Attributes> descriptorDecoder) {
             this.cameraX = cameraX; this.cameraY = cameraY; this.descriptorDecoder = descriptorDecoder;
-            previousTiles = previous == null ? List.of() : previous.tiles();
         }
         void add(GraphicsManager graphics, int id, Object descriptor,
                  float x, float y, float width, float height) {
             Attributes desc = descriptorDecoder.apply(descriptor);
-            addTile(graphics, id, desc, x - cameraX, y - cameraY, width, height, 0, 8);
+            tiles.add(new Tile(layer, id, desc.palette(), desc.hFlip(), desc.vFlip(),
+                    desc.priority(), x - cameraX, y - cameraY, width, height,
+                    graphics.isUseSpritePriorityShader(), graphics.getCurrentSpriteTileOcclusionPaletteMask(),
+                    graphics.isGhostRenderEffectActive(), graphics.getGhostRenderAlpha(), 0, 8,
+                    graphics.spritePresentationSubject));
         }
         void addRows(GraphicsManager graphics, int id, Object descriptor,
                      int x, int y, int rowStart, int rowEnd) {
             Attributes desc = descriptorDecoder.apply(descriptor);
-            addTile(graphics, id, desc, x - cameraX, y - cameraY, 8, 8, rowStart, rowEnd);
-        }
-        private void addTile(GraphicsManager graphics, int id, Attributes desc,
-                             float x, float y, float width, float height, int rowStart, int rowEnd) {
-            boolean priorityShader = graphics.isUseSpritePriorityShader();
-            int mask = graphics.getCurrentSpriteTileOcclusionPaletteMask();
-            boolean ghost = graphics.isGhostRenderEffectActive();
-            float alpha = graphics.getGhostRenderAlpha();
-            Subject subject = graphics.spritePresentationSubject;
-            // Compare before allocating, at this ordinal only. A miss never searches older frames.
-            if (tiles.size() < previousTiles.size()) {
-                Tile previous = previousTiles.get(tiles.size());
-                // Float.compare matches record equality, including NaNs and signed zero.
-                if (Float.compare(previous.x(), x) == 0 && Float.compare(previous.y(), y) == 0
-                        && previous.patternId() == id && previous.layer() == layer
-                        && previous.palette() == desc.palette() && previous.hFlip() == desc.hFlip()
-                        && previous.vFlip() == desc.vFlip() && previous.priority() == desc.priority()
-                        && Float.compare(previous.width(), width) == 0 && Float.compare(previous.height(), height) == 0
-                        && previous.priorityShader() == priorityShader && previous.occlusionMask() == mask
-                        && previous.ghost() == ghost && Float.compare(previous.ghostAlpha(), alpha) == 0
-                        && previous.rowStart() == rowStart && previous.rowEnd() == rowEnd
-                        && sameSubjectForReuse(previous.subject(), subject)) {
-                    tiles.add(previous);
-                    return;
-                }
-            }
-            tiles.add(new Tile(layer, id, desc.palette(), desc.hFlip(), desc.vFlip(), desc.priority(),
-                    x, y, width, height, priorityShader, mask, ghost, alpha, rowStart, rowEnd, subject));
-        }
-        private static boolean sameSubjectForReuse(Subject previous, Subject subject) {
-            if (previous == subject) return true;
-            if (subject == null || previous.paletteReplay() != subject.paletteReplay()) return false;
-            HeadTransform oldHead = previous.head(), head = subject.head();
-            // Composition groups native draw occurrences by mask identity, not mask value.
-            // Opaque callbacks can also implement equals without preserving their behavior.
-            return (oldHead == head || oldHead != null && head != null
-                    && oldHead.mask() == head.mask() && oldHead.replay() == head.replay())
-                    && previous.equals(subject);
+            tiles.add(new Tile(layer, id, desc.palette(), desc.hFlip(), desc.vFlip(),
+                    desc.priority(), x - cameraX, y - cameraY, 8, 8,
+                    graphics.isUseSpritePriorityShader(), graphics.getCurrentSpriteTileOcclusionPaletteMask(),
+                    graphics.isGhostRenderEffectActive(), graphics.getGhostRenderAlpha(), rowStart, rowEnd,
+                    graphics.spritePresentationSubject));
         }
     }
 
@@ -221,15 +190,9 @@ public final class SpritePresentation {
     /** The owning renderer decodes its opaque descriptor; this buffer knows only primitive attributes. */
     public static Frame prepare(GraphicsManager graphics, int cameraX, int cameraY, Runnable producer,
                                 Function<Object, Attributes> descriptorDecoder) {
-        return prepare(graphics, cameraX, cameraY, producer, descriptorDecoder, null);
-    }
-
-    /** Internal reuse hint owned by the caller's preparation stream; never changes publication or art versions. */
-    public static Frame prepare(GraphicsManager graphics, int cameraX, int cameraY, Runnable producer,
-                                Function<Object, Attributes> descriptorDecoder, Frame previous) {
         if (graphics.spritePresentationBuilder != null || graphics.isSpriteSatCollectionActive())
             throw new IllegalStateException("nested sprite preparation");
-        Builder builder = new Builder(cameraX, cameraY, descriptorDecoder, previous);
+        Builder builder = new Builder(cameraX, cameraY, descriptorDecoder);
         boolean priority = graphics.isUseSpritePriorityShader();
         int mask = graphics.getCurrentSpriteTileOcclusionPaletteMask();
         boolean ghost = graphics.isGhostRenderEffectActive();

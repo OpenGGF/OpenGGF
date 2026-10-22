@@ -1050,7 +1050,7 @@ public final class LevelRenderer {
                             prepareHudForDraw(lm.hudRenderManager, lm.graphicsManager);
                             lm.hudRenderManager.draw(lm.levelGamestate, lm.camera.getFocusedSprite());
                         }
-                    }, spriteTables.prepared()), scroll);
+                    }), scroll);
         } finally {
             preparingSpritePresentation = false;
         }
@@ -1065,7 +1065,7 @@ public final class LevelRenderer {
                     prepareHudForDraw(lm.hudRenderManager, lm.graphicsManager);
                     com.openggf.level.objects.HudProfileAccess.drawVBlankCounters(lm.hudRenderManager,
                             lm.levelGamestate, lm.camera.getFocusedSprite(), advanceTimer);
-                }, spriteTables.counters()));
+                }));
     }
 
     private void drawPublishedSprites(java.util.function.Predicate<SpritePresentation.Layer> visible) {

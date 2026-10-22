@@ -24,8 +24,8 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-/** Identity counts measure eliminated Tile constructions, not CPU time or GPU throughput. */
-class TestSpriteTileReuse {
+/** Fresh immutable preparation after the measured ordinal-reuse experiment was rejected. */
+class TestSpritePreparationSnapshots {
     private static final HeadSatReplay HEAD_REPLAY = (host, entries, emitter) -> { };
     private static final PaletteReplay PALETTE_REPLAY = (host, palette) -> palette;
     private static final HeadMask HEAD_MASK = new HeadMask(0, 2, Set.of(1), List.of(new MaskPoint(0, 0)));
@@ -40,22 +40,19 @@ class TestSpriteTileReuse {
 
     @AfterEach void cleanup() { SessionManager.clear(); GraphicsManager.destroyForReinit(); }
 
-    @Test void unchangedSceneReusesEveryTileWhileScrollingKeepsOnlyScreenAnchoredHud() {
-        Frame idle = scene(null, 100, false);
-        Frame stable = scene(idle, 100, false);
+    @Test void freshFramesDoNotCacheTilesAcrossUnchangedScrollingOrDebrisPreparations() {
+        Frame idle = scene(100, false), stable = scene(100, false);
         assertEquals(160, idle.tiles().size());
-        assertEquals(160, reused(idle, stable), "160/160 reused; no new Tiles on an unchanged preparation");
-        Frame scrolling = scene(stable, 108, false);
-        assertEquals(32, reused(stable, scrolling), "32/160 HUD tiles reused; all 128 world tiles moved");
-        Frame debris = scene(scrolling, 116, true);
-        assertEquals(32, reused(scrolling, debris), "new debris ordering/art cannot borrow earlier world tiles");
-        Frame fresh = scene(null, 116, true);
-        assertEquals(fresh, debris, "reuse must produce the same frame as a fresh preparation");
-        assertEquals(0, reused(fresh, debris), "the legacy no-hint path retains no hidden previous owner");
-        assertEquals(160, reused(idle, scene(idle, 100, false)), "retaining old snapshots remains safe");
+        assertEquals(idle, stable);
+        assertEquals(0, reused(idle, stable), "rejected reuse must not return through a hidden cache");
+        Frame scrolling = scene(108, false), debris = scene(116, true);
+        assertEquals(0, reused(stable, scrolling));
+        assertEquals(0, reused(scrolling, debris));
+        assertEquals(debris, scene(116, true));
+        assertEquals(idle, scene(100, false), "future preparations cannot change retained snapshots");
     }
 
-    private Frame scene(Frame previous, int cameraX, boolean debris) {
+    private Frame scene(int cameraX, boolean debris) {
         return SpritePresentationRenderer.prepare(graphics, cameraX, 200, () -> {
             PatternDesc descriptor = new PatternDesc();
             SpritePresentation.layer(graphics, Layer.OBJECT);
@@ -66,17 +63,18 @@ class TestSpriteTileReuse {
             SpritePresentation.layer(graphics, Layer.HUD);
             for (int i = 0; i < 32; i++)
                 graphics.renderPatternWithId(2000 + i, descriptor, cameraX + 8 + i * 8, 208);
-        }, previous);
+        });
     }
 
     @ParameterizedTest(name = "changed {0} replaces the tile")
     @MethodSource("changedTiles")
-    void everyScalarAndSubjectFieldUsesExactRecordEquality(String field, Tile changed) {
+    void freshPreparationCopiesEveryScalarAndSubjectField(String field, Tile changed) {
         Tile seed = seed();
-        Frame original = raw(seed, null);
-        Frame equal = raw(replace(seed, "subject", replace(seed.subject(), "id", new String(seed.subject().id()))), original);
-        assertSame(original.tiles().getFirst(), equal.tiles().getFirst(), "equal independent Subject records can reuse");
-        Frame next = raw(changed, original);
+        Frame original = raw(seed);
+        Frame equal = raw(replace(seed, "subject", replace(seed.subject(), "id", new String(seed.subject().id()))));
+        assertEquals(original, equal);
+        assertNotSame(original.tiles().getFirst(), equal.tiles().getFirst());
+        Frame next = raw(changed);
         assertEquals(changed, next.tiles().getFirst(), field);
         assertNotEquals(seed, changed, "positive control for " + field);
         assertNotSame(original.tiles().getFirst(), next.tiles().getFirst(), field);
@@ -140,7 +138,7 @@ class TestSpriteTileReuse {
     }
 
     /** Mock only scalar host state to exercise values (e.g. signed alpha zero) independently of setter clamps. */
-    private Frame raw(Tile tile, Frame previous) {
+    private Frame raw(Tile tile) {
         GraphicsManager host = mock(GraphicsManager.class);
         when(host.isUseSpritePriorityShader()).thenReturn(tile.priorityShader());
         when(host.getCurrentSpriteTileOcclusionPaletteMask()).thenReturn(tile.occlusionMask());
@@ -153,25 +151,25 @@ class TestSpriteTileReuse {
                     (int) tile.x(), (int) tile.y(), tile.rowStart(), tile.rowEnd());
             else host.spritePresentationBuilder.add(host, tile.patternId(), tile,
                     tile.x(), tile.y(), tile.width(), tile.height());
-        }, ignored -> new Attributes(tile.palette(), tile.hFlip(), tile.vFlip(), tile.priority()), previous);
+        }, ignored -> new Attributes(tile.palette(), tile.hFlip(), tile.vFlip(), tile.priority()));
     }
 
     @Test void nanAndSignedZeroMatchTileRecordEqualityForEveryFloatComponent() {
         for (String field : List.of("x", "y", "width", "height", "ghostAlpha")) {
             Tile firstNan = replace(seed(), field, Float.intBitsToFloat(0x7fc00001));
             Tile secondNan = replace(firstNan, field, Float.intBitsToFloat(0x7fc00002));
-            Frame before = raw(firstNan, null);
+            Frame before = raw(firstNan);
             assertEquals(firstNan, secondNan);
-            assertSame(before.tiles().getFirst(), raw(secondNan, before).tiles().getFirst(), field);
+            assertEquals(before, raw(secondNan), field);
             Tile positiveZero = replace(seed(), field, 0f);
             Tile negativeZero = replace(positiveZero, field, -0f);
-            Frame zero = raw(positiveZero, null);
+            Frame zero = raw(positiveZero);
             assertNotEquals(positiveZero, negativeZero);
-            assertNotSame(zero.tiles().getFirst(), raw(negativeZero, zero).tiles().getFirst(), field);
+            assertNotSame(zero.tiles().getFirst(), raw(negativeZero).tiles().getFirst(), field);
         }
     }
 
-    @Test void equalOpaqueHeadCallbacksMustKeepTheirIdentityAndBehavior() {
+    @Test void freshPreparationKeepsHeadCallbackIdentityAndBehavior() {
         var oldCalls = new java.util.concurrent.atomic.AtomicInteger();
         var newCalls = new java.util.concurrent.atomic.AtomicInteger();
         HeadSatReplay oldReplay = new EqualHeadReplay(oldCalls), newReplay = new EqualHeadReplay(newCalls);
@@ -180,24 +178,24 @@ class TestSpriteTileReuse {
         Tile input = replace(before, "subject", replace(before.subject(), "head",
                 replace(before.subject().head(), "replay", newReplay)));
         assertEquals(before, input, "opaque callback equality can deliberately ignore behavior");
-        Frame original = raw(before, null);
-        assertSame(original.tiles().getFirst(), raw(before, original).tiles().getFirst());
-        Tile prepared = raw(input, original).tiles().getFirst();
+        Frame original = raw(before);
+        assertEquals(original, raw(before));
+        Tile prepared = raw(input).tiles().getFirst();
         assertNotSame(original.tiles().getFirst(), prepared);
         assertSame(newReplay, prepared.subject().head().replay());
         prepared.subject().head().replay().replay(graphics, List.of(), entry -> { });
         assertEquals(0, oldCalls.get()); assertEquals(1, newCalls.get());
     }
 
-    @Test void equalOpaquePaletteCallbacksMustKeepTheirIdentityAndBehaviorWithoutAHead() {
+    @Test void freshPreparationKeepsPaletteCallbackIdentityAndBehaviorWithoutAHead() {
         PaletteReplay oldReplay = new EqualPaletteReplay(2), newReplay = new EqualPaletteReplay(3);
         Subject subject = new Subject("palette-owner", Part.WORLD, false, 100, null, null, oldReplay);
         Tile before = replace(seed(), "subject", subject);
         Tile input = replace(before, "subject", replace(subject, "paletteReplay", newReplay));
         assertEquals(before, input, "opaque callback equality can deliberately ignore behavior");
-        Frame original = raw(before, null);
-        assertSame(original.tiles().getFirst(), raw(before, original).tiles().getFirst());
-        Tile prepared = raw(input, original).tiles().getFirst();
+        Frame original = raw(before);
+        assertEquals(original, raw(before));
+        Tile prepared = raw(input).tiles().getFirst();
         assertNotSame(original.tiles().getFirst(), prepared);
         assertSame(newReplay, prepared.subject().paletteReplay());
         assertEquals(3, prepared.subject().paletteReplay().palette(graphics, 0));
@@ -216,21 +214,21 @@ class TestSpriteTileReuse {
         @Override public int hashCode() { return 1; }
     }
 
-    @Test void rowClippingAndFlipsReuseOnlyTheirExactVisibleRows() {
+    @Test void rowClippingAndFlipsKeepTheirExactVisibleRows() {
         PatternDesc descriptor = new PatternDesc();
         descriptor.setHFlip(true); descriptor.setVFlip(true);
         Runnable rows = () -> graphics.renderPatternRowsWithId(42, descriptor, 0, true, true, false, 120, 240, -2, 6);
         Frame first = SpritePresentationRenderer.prepare(graphics, 100, 200, rows);
-        Frame same = SpritePresentationRenderer.prepare(graphics, 100, 200, rows, first);
-        assertSame(first.tiles().getFirst(), same.tiles().getFirst());
+        Frame same = SpritePresentationRenderer.prepare(graphics, 100, 200, rows);
+        assertEquals(first, same);
         assertEquals(0, first.tiles().getFirst().rowStart()); assertEquals(6, first.tiles().getFirst().rowEnd());
         Frame changed = SpritePresentationRenderer.prepare(graphics, 100, 200,
-                () -> graphics.renderPatternRowsWithId(42, descriptor, 0, true, true, false, 120, 240, 2, 8), first);
+                () -> graphics.renderPatternRowsWithId(42, descriptor, 0, true, true, false, 120, 240, 2, 8));
         assertNotSame(first.tiles().getFirst(), changed.tiles().getFirst());
         assertEquals(2, changed.tiles().getFirst().rowStart()); assertEquals(8, changed.tiles().getFirst().rowEnd());
     }
 
-    @Test void changedArtGenerationIsFrozenSeparatelyFromReusedTileAndPrimitiveBoundaries() {
+    @Test void changedArtGenerationAndPrimitiveBoundariesRemainFrozen() {
         Pattern art = new Pattern(); art.setPixel(0, 0, (byte) 3);
         Runnable producer = () -> {
             SpritePresentationRenderer.bindPatternBank(graphics, 9000, new Pattern[]{art});
@@ -241,8 +239,8 @@ class TestSpriteTileReuse {
         Frame first = SpritePresentationRenderer.prepare(graphics, 0, 0, producer);
         var retainedVersions = Map.copyOf(first.patternVersions());
         art.setPixel(0, 0, (byte) 7);
-        Frame next = SpritePresentationRenderer.prepare(graphics, 0, 0, producer, first);
-        assertSame(first.tiles().getFirst(), next.tiles().getFirst());
+        Frame next = SpritePresentationRenderer.prepare(graphics, 0, 0, producer);
+        assertNotSame(first.tiles().getFirst(), next.tiles().getFirst());
         assertEquals(retainedVersions, first.patternVersions());
         assertEquals(3, SpritePresentationRenderer.pattern(first.patternVersions().get(9000)).getPixel(0, 0));
         assertEquals(7, SpritePresentationRenderer.pattern(next.patternVersions().get(9000)).getPixel(0, 0));
@@ -252,21 +250,21 @@ class TestSpriteTileReuse {
         assertThrows(UnsupportedOperationException.class, () -> next.tiles().clear());
     }
 
-    @Test void changedCountsAndOrdinalsDoNotSearchForMatchingTilesElsewhere() {
-        Frame original = scene(null, 100, false);
+    @Test void changedCountsAndOrdinalsCannotRetainUnrelatedTiles() {
+        Frame original = scene(100, false);
         Frame shorter = SpritePresentationRenderer.prepare(graphics, 100, 200, () -> {
             graphics.renderPatternWithId(1001, new PatternDesc(), 108, 224);
-        }, original);
+        });
         assertEquals(original.tiles().get(1), shorter.tiles().getFirst());
         assertNotSame(original.tiles().get(1), shorter.tiles().getFirst());
-        Frame empty = SpritePresentationRenderer.prepare(graphics, 0, 0, () -> { }, original);
+        Frame empty = SpritePresentationRenderer.prepare(graphics, 0, 0, () -> { });
         assertTrue(empty.tiles().isEmpty());
-        Frame longer = scene(shorter, 100, false);
+        Frame longer = scene(100, false);
         assertEquals(original, longer);
         assertEquals(0, reused(original, longer));
     }
 
-    @Test void composedHeadTopologyIsOnlyAHintAndCannotReplaceNativeInputOrArt() {
+    @Test void composedHeadTopologyAndArtStayFrozenAcrossFuturePreparation() {
         Pattern art = new Pattern();
         for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) art.setPixel(x, y, (byte) 3);
         var mask = new HeadMask(0, 4, Set.of(0), List.of(new MaskPoint(0, 0),
@@ -281,9 +279,9 @@ class TestSpriteTileReuse {
         Frame retained = SpritePresentationRenderer.prepare(graphics, 0, 0, producer);
         assertEquals(2, retained.tiles().size(), "composition expands one native tile into body and head");
         var frozen = new Frame(retained.tiles(), retained.primitives(), retained.patternVersions());
-        assertEquals(retained, SpritePresentationRenderer.prepare(graphics, 0, 0, producer, retained));
+        assertEquals(retained, SpritePresentationRenderer.prepare(graphics, 0, 0, producer));
         art.setPixel(0, 0, (byte) 7);
-        Frame changed = SpritePresentationRenderer.prepare(graphics, 0, 0, producer, retained);
+        Frame changed = SpritePresentationRenderer.prepare(graphics, 0, 0, producer);
         assertEquals(SpritePresentationRenderer.prepare(graphics, 0, 0, producer), changed,
                 "composed ordinals must never contaminate subsequent native preparation");
         assertNotEquals(retained.patternVersions(), changed.patternVersions());
@@ -291,7 +289,7 @@ class TestSpriteTileReuse {
     }
 
     @Test void failureRestoresCaptureScopesAndCannotMutatePreviousFrame() {
-        Frame original = scene(null, 100, false);
+        Frame original = scene(100, false);
         var snapshot = new Frame(original.tiles(), original.primitives(), original.patternVersions());
         assertThrows(IllegalStateException.class, () -> SpritePresentationRenderer.prepare(graphics, 100, 200, () -> {
             SpritePresentation.withSubject(graphics, seed().subject(), () -> {
@@ -302,13 +300,13 @@ class TestSpriteTileReuse {
                 graphics.beginSpriteSatCollection();
                 throw new IllegalStateException("failed preparation");
             });
-        }, original));
+        }));
         assertFalse(SpritePresentation.isPreparing(graphics)); assertFalse(graphics.isSpriteSatCollectionActive());
         assertEquals(Subject.WORLD, SpritePresentation.subject(graphics));
         assertFalse(graphics.isGhostRenderEffectActive()); assertFalse(graphics.isUseSpritePriorityShader());
         assertEquals(15, graphics.getCurrentSpriteTileOcclusionPaletteMask());
         assertEquals(snapshot, original);
-        assertEquals(160, reused(original, scene(original, 100, false)));
+        assertEquals(0, reused(original, scene(100, false)));
     }
 
     private static int reused(Frame first, Frame next) {
