@@ -333,9 +333,14 @@ final class StageplayObjectCast implements AutoCloseable {
     private static PlacementIdentity identity(ObjectActor actor) { return new PlacementIdentity(actor.layoutIndex(), actor.objectId(), actor.subtype()); }
 
     static double[] move(double x, double y, double targetX, double targetY, double speed) {
-        double dx = targetX - x, dy = targetY - y, distance = StrictMath.hypot(dx, dy);
-        if (distance <= speed) return new double[]{targetX, targetY};
-        return new double[]{x + dx / distance * speed, y + dy / distance * speed};
+        return StageplayObjectMotion.move(x, y, targetX, targetY, speed);
+    }
+
+    com.openggf.stageplay.route.StageplayRoutePoint routePosition(String actorId, int frame) {
+        for (var role : roles) if (role.actor.id().equals(actorId)
+                && role.visible && !role.removed && role.instantiated && role.mode == ObjectMode.PUPPET)
+            return new com.openggf.stageplay.route.StageplayRoutePoint(frame, role.x, role.y, true);
+        return null;
     }
 
     List<com.openggf.level.objects.StageplayActivationPolicy.Window> activationWindows(int width, int height) {

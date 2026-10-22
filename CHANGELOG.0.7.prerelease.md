@@ -27,7 +27,10 @@ Unreleased. The earlier development themes remain in
   Record directed takes, undo edits, save/reopen and export synchronized
   lossless films. Shot-local screenplay tools and a mirrored agent skill support
   resource discovery, validation, lossless canonical-to-screenplay round trips and
-  offline filmmaking; both editors import/export the same screenplay. Tails uses native accessory
+  offline filmmaking; both editors import/export the same screenplay. A bounded
+  route helper emits native movement/jump intents over actual collision terrain
+  with cold LIVE verification, plus explicitly visual walking-object routes.
+  Tails uses native accessory
   relationships, and both editors keep a usable constrained authoring window.
   Named dialogue, reusable typing profiles and creator PNG skins give mod scenes
   clear speakers and deterministic text reveal in playback, both editors and exports.

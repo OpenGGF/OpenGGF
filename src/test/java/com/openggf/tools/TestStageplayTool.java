@@ -350,12 +350,21 @@ class TestStageplayTool {
         assertEquals(Set.of("scene.stageplay", "state.jsonl", "wrong.gen"), entries(directory));
     }
 
+    @Test void routeDispatchPreservesFailureExitAndNeverPublishesPartialScene() throws Exception {
+        Path missing = directory.resolve("missing.stageplay"), output = directory.resolve("route.stageplay");
+        var result = execute("route", "--scene", missing.toString(), "--actor", "hero", "--frame", "0",
+                "--x", "320", "--y", "640", "--out", output.toString());
+        assertEquals(2, result.status());
+        assertFalse(Files.exists(output)); assertTrue(entries(directory).isEmpty());
+    }
+
     @Test void helpDocumentsMachineReadableExitCodesAndCurrentSchemaWithoutRomAccess() throws Exception {
         var result = execute();
         assertEquals(0, result.status());
         assertEquals(6, result.json().path("result").path("screenplayVersion").intValue());
         assertEquals(StageplayDocument.VERSION, result.json().path("result").path("stageplayVersion").intValue());
         assertEquals(60, result.json().path("result").path("fps").intValue());
+        assertTrue(result.json().path("result").path("commands").toString().contains("route --scene"));
         assertTrue(result.json().path("result").path("outputs").textValue().contains("never overwritten"));
         assertTrue(entries(directory).isEmpty());
     }

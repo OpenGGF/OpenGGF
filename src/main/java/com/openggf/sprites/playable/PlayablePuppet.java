@@ -109,6 +109,29 @@ public final class PlayablePuppet implements AutoCloseable {
         }
     }
 
+    /**
+     * Route proposal entry matches the current native Stageplay world, including its initially
+     * airborne status. The detached authoring snap in {@link #create} intentionally differs:
+     * it searches a larger range and explicitly attaches the actor to the floor.
+     */
+    public static PlayablePuppet createNativeWorldProbe(Level terrain, GameModule setModule, int zone, int act,
+            GameModule actorModule, String character, SpriteArtSet art,
+            int centreX, int centreY, int collisionPath, boolean snapToFloor, boolean flipX) {
+        var probe = create(terrain, setModule, zone, act, actorModule, character, art,
+                centreX, centreY, collisionPath, false, flipX);
+        try {
+            // Same injected collision owner/attachment policy as StageplayLiveWorld.begin.
+            // Ground attachment adjusts the native position/angle; it does not fabricate a
+            // grounded status or a controller edge before the first native physics tick.
+            if (snapToFloor) probe.context.collision.resolveGroundAttachment(probe.actor, 14, () -> false);
+            return probe;
+        } catch (RuntimeException | Error failure) {
+            try { probe.close(); }
+            catch (RuntimeException closeFailure) { failure.addSuppressed(closeFailure); }
+            throw failure;
+        }
+    }
+
     /** Buttons are held for this one native 60 Hz tick; jump release remains native input state. */
     public void tick(boolean left, boolean right, boolean jump, int frame) {
         requireOpen();
@@ -158,6 +181,7 @@ public final class PlayablePuppet implements AutoCloseable {
         private final TimerManagerSnapshot timers;
         private final long rng;
         private final int frame;
+        private final com.openggf.audio.rewind.AudioLogicalSnapshot audio;
         private Snapshot(PlayablePuppet owner) {
             this.owner = owner;
             this.actor = owner.actor.captureRewindState();
@@ -167,6 +191,7 @@ public final class PlayablePuppet implements AutoCloseable {
             this.timers = owner.context.timers.capture();
             this.rng = owner.context.rng.getSeed();
             this.frame = owner.context.sprites.getFrameCounter();
+            this.audio = owner.context.audio.captureLogicalSnapshot();
         }
     }
 
@@ -183,6 +208,13 @@ public final class PlayablePuppet implements AutoCloseable {
         context.rng.setSeed(snapshot.rng);
         context.sprites.setFrameCounter(snapshot.frame);
         actor.restoreRewindState(snapshot.actor);
+        context.audio.restoreLogicalSnapshot(snapshot.audio);
+    }
+
+    /** Internal probe diagnostics; silent simulation still has rewindable producer state. */
+    public com.openggf.audio.rewind.AudioLogicalSnapshot audioLogicalSnapshot() {
+        requireOpen();
+        return context.audio.captureLogicalSnapshot();
     }
 
     private void snapInitialFloor() {

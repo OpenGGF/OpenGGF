@@ -72,7 +72,8 @@ Move/fly/glide can target an actual placement using its layout index, expected
 object ID/subtype and offset. Use the offline tool's **level** command to discover
 those values from the loaded ROM. A wait can gate later commands until arrival,
 object support, landing, hurt, recovery or ring collection, with a finite timeout.
-Inspect actual outcomes; a destination does not supply general pathfinding.
+Inspect actual outcomes. A destination remains an input attempt; use **Route helper**
+for bounded planning over the set's real collision terrain.
 
 The external Editor inspector displays native ability state/timer, shared rings,
 hurt, supporting placement and target status. Its timeline names waits, object
@@ -287,3 +288,36 @@ owners. Object properties, mode keys, visual move/stop commands, part overrides 
 clear/removal cues are saved in document version seven and screenplay version five.
 See the [authoring reference](stageplay-authoring.md#object-cast-screenplay-5-document-7)
 for exact fields and the coverage-report command.
+
+## Plan a basic route
+
+Choose **Route helper** in either editor, select a Puppet actor and a destination
+centre. Player routes start at shot entry; object routes may also start at an
+existing visible Puppet key after a Free initialization lead-in. Planning runs in its own disposable process;
+Cancel retires that work. Review the result before applying it as one undoable edit.
+A changed scene, actor/frame, ROM or project invalidates the result. Planning never
+moves the interactive player or replaces the current preview.
+
+For playable characters, the helper searches actual native physics and collision
+with bounded movement/jump attempts, then cold-replays the emitted commands in a
+fresh LIVE world. `VERIFIED` means that replay reached the destination grounded
+and stable without hurt, death or a wait timeout. The result uses existing
+`MOVE_TO`, `JUMP` and `STOP` intents; `WAIT` remains available for authored
+synchronization. There is no route opcode or teleport.
+Runtime moves remain attempts if the scene is changed afterward.
+
+For walking object Puppets, enter a visual clearance footprint and speed. This is
+a **visual terrain route**: the picture follows checked floor/headroom waypoints
+while the object's AI, contacts and world effects stay suspended. The footprint
+is authored clearance, not a claim about that object's native controller or
+collision radii. Object routes use foreground collision, reject active background
+collision and do not navigate moving object/platform solids. Fresh replay checks
+the visual footprint against terrain on every tick. Gaps, jumps, blocked headroom and unsupported changing collision
+report failure. Pose and Free objects must first be deliberately switched to
+Puppet; the helper does not change their mode silently.
+
+The basic helper has explicit frame, node, tick and time budgets.
+It never inserts a key or resets an actor at an arbitrary frame. Search exhaustion or a verification failure does not prove a route
+impossible. Existing conflicting intents, intervening cuts/keys/clear commands
+and unsupported dynamic terrain are rejected with actionable diagnostics. Use
+the [terminal reference](stageplay-authoring.md#route-helper) for the same workflow.

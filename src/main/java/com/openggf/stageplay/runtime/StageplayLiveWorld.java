@@ -398,15 +398,9 @@ public final class StageplayLiveWorld implements AutoCloseable {
     }
 
     private static int steer(AbstractPlayableSprite sprite, double targetX, double urgency) {
-        double speed = sprite.getXSpeed() / 256.0;
-        // Sonic_ChgJumpDir uses twice runAccel, unlike the ground countersteer deceleration.
-        double brake = Math.max(1.0 / 256, (sprite.getAir() ? 2 * sprite.getRunAccel() : sprite.getRunDecel()) / 256.0);
-        double dx = targetX - sprite.getCentreX();
-        if (urgency == 0 || Math.abs(dx) <= 4 || Math.abs(dx) <= speed * speed / (2 * brake) + Math.abs(speed) + 4) {
-            return Math.abs(speed) <= Math.max(.25, brake) ? 0 : speed < 0 ? 1 : -1;
-        }
-        int toward = dx < 0 ? -1 : 1;
-        return speed * toward < 0 || Math.abs(speed) < sprite.getMax() / 256.0 * urgency ? toward : 0;
+        return com.openggf.stageplay.route.StageplayMovementIntent.direction(sprite.getCentreX(),
+                sprite.getXSpeed(), sprite.getRunAccel(), sprite.getRunDecel(), sprite.getMax(),
+                sprite.getAir(), targetX, urgency);
     }
 
     private double[] target(Performer p, PuppetCommand command) {
@@ -651,6 +645,11 @@ public final class StageplayLiveWorld implements AutoCloseable {
         PuppetCommand goal, wait, command; PuppetStatus status = PuppetStatus.IDLE; String targetStatus = "NONE";
         Performer(Actor actor, PuppetTrack track, ActorKey anchor) { this.actor=actor; this.track=track; this.anchor=anchor; }
     }
+    /** Exact directed-object centre for isolated route qualification, never a native position write. */
+    public com.openggf.stageplay.route.StageplayRoutePoint routeObjectPosition(String actorId) {
+        return objectCast == null ? null : objectCast.routePosition(actorId, cursor);
+    }
+
     public void reset() { closeOwned(); document=null; start=-1; cursor=-1; last=null; checkpoints.clear(); cast=List.of(); }
     private void closeOwned() {
         if (owned != null) {

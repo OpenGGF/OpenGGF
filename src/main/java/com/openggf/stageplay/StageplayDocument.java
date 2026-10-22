@@ -632,8 +632,9 @@ public record StageplayDocument(int version, String name, int durationFrames, in
     }
 
     /**
-     * Camera position is the top-left stage coordinate; interpolation applies only to x/y.
-     * Zoom is held until the next key to preserve nearest-neighbour pixel stability; one is native scale.
+     * Camera position is the top-left stage coordinate; one is native scale.
+     * Current native policies interpolate position and zoom. Migrated compatibility
+     * policies retain held zoom or their fixed native zoom constraint.
      */
     @ModApi
     public record CameraKey(int frame, double x, double y, double zoom, Interpolation interpolation, CameraFollow follow) {

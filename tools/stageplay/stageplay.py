@@ -4,7 +4,8 @@
 Inputs: shot-local screenplay, .stageplay scene, user-supplied ROMs, optional engine jar.
 Screenplay v6 supports lossless canonical decompilation and editor round trips.
 Object casts use per-shot objects/objectActions and worldCommands
-(CLEAR_BADNIKS, CLEAR_OBJECTS, REMOVE_OBJECT). Compile uses the engine's strict schema.
+(CLEAR_BADNIKS, CLEAR_OBJECTS, REMOVE_OBJECT). Compile uses the engine's strict schema. Route plans emit existing native input
+intents or explicitly labelled visual object movement; supplied ROMs are required.
 Origin: OpenGGF Stageplay directing extension, 2026-10-21.
 """
 import argparse
@@ -89,7 +90,7 @@ def main(argv=None):
     command += ['-cp', str(jar), 'com.openggf.tools.StageplayTool', args.command, *args.arguments]
     # CLI paths are interpreted relative to the caller, not the checkout used for leases.
     for index, item in enumerate(command[:-1]):
-        if item in {'--scene', '--script', '--out', '--rom', '--s1-rom', '--s2-rom', '--s3k-rom', '--staging-dir', '--observations'}:
+        if item in {'--scene', '--script', '--out', '--rom', '--s1-rom', '--s2-rom', '--s3k-rom', '--staging-dir', '--observations', '--request', '--rom-descriptor', '--asset-descriptor'}:
             command[index + 1] = str(Path(command[index + 1]).resolve())
     with redirect_stdout(sys.stderr), worktree_build_slot(ROOT) as tree_fd, build_activity_slot(ROOT) as activity:
         return run_owned(command, env=env, leases=inherited_slot(tree_fd, activity))

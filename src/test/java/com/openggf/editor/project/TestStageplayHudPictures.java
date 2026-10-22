@@ -21,6 +21,7 @@ import com.openggf.stageplay.runtime.StageplayRenderer;
 import com.openggf.stageplay.runtime.StageplayResources;
 import com.openggf.stageplay.editor.StageplayEditorSession;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tools.HeadlessGameBoot;
 import com.openggf.tools.PresentationOffscreenTestContext;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
@@ -45,6 +46,38 @@ import static org.lwjgl.opengl.GL11.*;
  */
 @Isolated
 class TestStageplayHudPictures {
+    @Test
+    void captureCollisionRouteAndVisualFootprintForms() throws Exception {
+        assumeTrue(Boolean.getBoolean("openggf.stageplay.hudPictures"), "Explicit Stageplay HUD picture refresh only");
+        assumeTrue(PresentationOffscreenTestContext.requested(), "Stageplay HUD pictures require display-free EGL");
+        TestEnvironment.resetAll();
+        // Match the production host's GL setup, rather than a bare component
+        // context, for the long scrolling authoring form's review pictures.
+        try (var boot=new HeadlessGameBoot(1280,720,320,224,320,224)) {
+            boot.setBootToTitle(true);
+            boot.boot(Path.of(System.getProperty("sonic2.rom.path")),0,0);
+            try (var renderer=new EditorProjectMenuRenderer()) {
+                var scene=routeFormScene();var workspace=new StageplayWorkspace(() -> scene);workspace.activate();workspace.selectActor("hero");
+                workspace.invoke(StageplayWorkspace.Action.ROUTE_HELPER);workspace.menu().setValue("x","240");workspace.menu().setValue("y","648");
+                renderObjectMenu(renderer,workspace);capture("route-player-form",1280,720);
+                workspace.menu().close();workspace.invoke(StageplayWorkspace.Action.ROUTE_HELPER);workspace.menu().setValue("actor","prop");
+                workspace.menu().setValue("halfWidth","12");workspace.menu().setValue("height","24");workspace.menu().setValue("footOffset","12");
+                var input=new InputHandler();for(int i=0;i<12;i++)objectMenuPress(workspace,input,GLFW_KEY_DOWN);
+                renderObjectMenu(renderer,workspace);capture("route-object-footprint-form",1280,720);
+            } finally { com.openggf.game.session.EngineServices.current().graphics().cleanup(); }
+        } finally {
+            SessionManager.clear();RomManager.getInstance().setRom(null);Engine.clearGlobalInstance();
+            TestEnvironment.resetAll();SonicConfigurationService.getInstance().resetToDefaults();GameModuleRegistry.reset();
+        }
+    }
+    private static StageplayDocument routeFormScene() {
+        return StageplayDocument.empty("s2",0,0,0,500,320,224).withActors(List.of(
+                new StageplayDocument.Actor("hero","Sonic","s2","sonic",List.of(new StageplayDocument.ActorKey(0,128,648,0,-1,false,true,1,StageplayDocument.Interpolation.HOLD)))))
+                .withPuppets(List.of(new StageplayDocument.PuppetTrack("hero",true,0,List.of())))
+                .withObjectActors(List.of(new StageplayDocument.ObjectActor("prop","Walking prop","s2",0,0,65,0,-1,
+                        List.of(new StageplayDocument.ObjectKey(0,128,648,0,-1,false,true,StageplayDocument.Interpolation.HOLD,StageplayDocument.ObjectMode.PUPPET)),List.of())));
+    }
+
     @Test
     void captureScreenplayImportRefineAndExportForms() throws Exception {
         assumeTrue(Boolean.getBoolean("openggf.stageplay.hudPictures"), "Explicit Stageplay HUD picture refresh only");

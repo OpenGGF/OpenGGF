@@ -38,6 +38,8 @@ public final class StageplayTool {
 
     static int execute(String[] args, PrintStream output) {
         try {
+            if (args.length > 0 && args[0].equals("route"))
+                return StageplayRouteTool.execute(Arrays.copyOfRange(args, 1, args.length), output);
             Object result = run(args);
             output.println(JSON.writeValueAsString(Map.of("ok", true, "result", result)));
             return 0;
@@ -72,6 +74,7 @@ public final class StageplayTool {
                         "init --out screenplay.json",
                         "compile --script screenplay.json --out film.stageplay",
                         "decompile --scene film.stageplay --out screenplay.json",
+                        "route --scene film.stageplay --actor hero --frame 0 --x 320 --y 640 --out routed.stageplay --s2-rom PATH",
                         "object-coverage --out coverage.json [--game all|s1|s2|s3k --format json|markdown --observations reviewed.json]",
                         "validate --scene film.stageplay",
                         "inspect --scene film.stageplay [--frame N]",

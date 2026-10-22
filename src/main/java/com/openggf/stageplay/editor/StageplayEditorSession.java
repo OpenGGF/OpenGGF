@@ -37,10 +37,12 @@ public final class StageplayEditorSession implements AutoCloseable {
     private SceneSurface surface;
     private StageplayDocument prepared;
     private final StageplayExportJob export = new StageplayExportJob();
+    private final StageplayRouteJob route;
 
     public StageplayEditorSession(Supplier<GameModule> module, RomManager roms, AudioManager audioManager) {
         this.module = Objects.requireNonNull(module); this.roms = Objects.requireNonNull(roms);
         this.audioManager = Objects.requireNonNull(audioManager);
+        this.route = new StageplayRouteJob(roms);
     }
 
     private void ensure(Path root) throws IOException {
@@ -127,6 +129,14 @@ public final class StageplayEditorSession implements AutoCloseable {
     }
     public String pollExport() { return export.poll(); }
 
+    /** Independent input snapshots: never ensure/release or advance the editor's preview session. */
+    public void startRoute(StageplayDocument document, Path root, com.openggf.stageplay.route.StageplayRouteRequest request) throws IOException {
+        route.start(document,root,request);
+    }
+    public StageplayRouteJob.Update pollRoute() { return route.poll(); }
+    public void requestRouteApply(StageplayDocument document, Path root) throws IOException { route.requestApply(document,root); }
+    public void cancelRoute() { route.cancel(); }
+
     /** Call before replacing a native session, while its borrowed ROM is still valid. */
     public void release() {
         prepared = null;
@@ -137,5 +147,8 @@ public final class StageplayEditorSession implements AutoCloseable {
         if (surface != null) surface.releaseTextures();
     }
 
-    @Override public void close() { export.close(); release(); if (surface != null) { surface.close(); surface = null; } }
+    @Override public void close() {
+        try { route.close(); }
+        finally { try { export.close(); } finally { release(); if (surface != null) { surface.close(); surface = null; } } }
+    }
 }

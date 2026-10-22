@@ -1566,3 +1566,175 @@ The driver `capture_roundtrip.py` records the exact production tool invocations.
 The main-player playback API and hand-back semantics remain as in Phase 1; this
 phase adds no candidate Mod API surface. Final combined smoke remains pending
 after Phase 5.
+
+## Complete-cast phase 5: bounded terrain route authoring
+
+Phase 4 commits: engine `e544f1587`, Editor `a189943`. Implement route planning
+without a new document version or opcode. Unannotated request/result helpers keep
+authoring/process internals out of the candidate API. Player search begins at a
+shot entry and uses real private-playable collision/physics, shared exact LIVE
+steering and bounded snapshots. Its emitted candidate must pass a fresh full
+linear LIVE replay before reporting VERIFIED. This avoids speculative LIVE
+branching: its existing Saved state lacks AudioLogicalSnapshot, and rewind replay
+suppression alone cannot restore a producer cursor or arbitrary branch history.
+
+Private PlayablePuppet already creates AudioManager.createSilent(), whose
+silentSimulation contract suppresses command admission as well as output. Preserve
+that behavior and capture/restore logical producer state where needed; do not add
+a broad public audio-history API for a probe whose history is empty by construction.
+Real LIVE effects run only during isolated cold verification.
+
+Object walking paths use native injected floor/wall/headroom queries and explicit
+authored visual clearance. Share the existing movement kernel and verify every
+emitted fractional step. Emit MOVE_TO/STOP commands, never intermediate keys,
+initial snaps or native AI. VISUAL_TERRAIN is an honest geometry-constrained picture
+route. Reject unsupported gaps, moving collision, mode/key/clear boundaries and
+conflicting intent windows rather than silently changing the scene.
+
+The worker owns immutable bounded document/request/logical-ROM/content-asset
+inputs. Root-directory strings and memoized ROM identity are insufficient freshness
+proofs: reverify content before one undoable Apply, off the UI thread. Generation
+and strict requested-track patch checks reject cancelled or stale responses.
+Both frontends share the same form/service; the active gameplay/preview/audio
+owners remain untouched.
+
+Rejected: straight-line target heuristics presented as pathfinding; fitting jump
+parabolas; raw directional probes with different MOVE_TO braking; hydrating a
+live body from observations; teleporting a goal; running relocated object AI behind
+a picture; claiming an exhausted bounded search proves impossibility. Continuously
+isolated native directed graphs remain deferred as decided in Phase 2.
+
+Focused validation and offscreen route evidence are recorded below. The final
+once-only change-based smoke follows the Phase 5 commits; its combined result
+will be recorded after that run.
+
+Phase 5 review corrections before qualification:
+
+- Preview asset transport snapshots only level projects. Route freshness must also
+  bind portrait/skin images and voice bytes; add a route-only union descriptor and
+  bounded reader rather than loosening the preview contract.
+- A collision-only probe injected with FOREGROUND_ONLY cannot prove the native
+  visit has no background collision. Inspect an actually loaded, linearly replayed
+  source visit and its injected provider. Reject active background collision,
+  then qualify the emitted visual positions against the actual foreground terrain
+  on every candidate tick. Moving object solids remain outside this visual graph.
+- Account for native prefix/preparation/qualification ticks as well as search work
+  in the reported/bounded attempt. Preserve narrow existing-file formatting.
+
+These findings do not change the phase scope or introduce isolated directed
+native graphs. They close concrete freshness/geometry ownership gaps in the
+existing shared-world worker. Results and captures remain pending.
+
+Phase 5 first focused iteration executed 99 tests: 97 passed, two failed, none
+skipped or errored. A 64-pixel empty span was traversable by native walking and
+floor reacquisition; the jump fixture now checks an independent no-jump pilot
+against a 128-pixel gap and raised ledge. No physics was tuned. The protocol
+failure exposed a real validation defect: restoring an entire original PuppetTrack
+masked worker edits to snapToFloor/collisionPath. Restore only original commands
+before comparing the whole candidate, preserving those changed policies so they
+are rejected. Add both policy mutations to the regression. Earlier build failures
+were a dangling preview-asset call after the route-only union transport and an
+invalid compound var declaration; neither executed tests. Focused rerun pending.
+
+The affected rerun passed 31 tests, zero failures/errors/skips:
+`python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestStageplayRoutePlanner,TestStageplayRouteProtocol,TestStageplayRouteJob,TestStageplayRouteWorkspace,TestStageplayRouteTool,TestStageplayTool' test -B`
+(97 seconds execution, 279 seconds queue). The earlier 97 passing checks cover
+object floor planning, native probes, full asset content binding, private audio
+checkpoint isolation and object direction/cast. A separate bounded read-only audit
+of the worker/job/apply path found no additional actionable defect. ROM/domain
+qualification and captures remain pending.
+
+The first ROM batch ran 94 tests: 91 passes, two failures, one error, no skips
+(36.028 seconds execution, 35 seconds queue). Required S3K families, API signatures,
+HUD route forms, S2 player route and S1/S2 object routes passed. Player fixture
+scans had confused camera maxima with terrain bounds and absolute versus
+minimum-relative X: GHZ's floor lay below the old scan, and AIZ's positive minimum
+X made its old scan empty. Fix only discovery bounds, retaining native arrival.
+Rhinobot's Map_Offscreen is intentionally empty until native wait/init dispatch;
+its sample now explicitly initializes as Free before a Puppet key. This exposed
+an authoring gap in the global shot-entry restriction: allow object routes at an
+existing visible Puppet key after that Free prefix, while preserving shot-entry
+only player routes. Full cold replay owns the prefix and checks every directed
+tick. Never manufacture an initial visual by secretly running directed AI.
+
+The corrected native/entry batch ran 16 tests: 14 passed, zero failures, two fixture
+errors, no skips (83 seconds execution, 116 seconds queue). All six S1/S2/S3K
+player/object ROM routes passed. The S3K object case additionally runs the actual
+shared facade: retain the Free prefix, cold-replay it, qualify 150 suspended visual
+samples and retire the native world. UI five cases and protocol three cases passed.
+The two new contract cases constructed their later set with the legacy five-arg
+SetSource constructor; use explicit current TERRAIN_ONLY there. Only those two
+checks are rerun; successful unchanged native coverage is retained.
+
+The final contract-only lean rerun passed both cases, zero failures/errors/skips
+(29.896 seconds execution, 67 seconds queue). Exact selector:
+`TestStageplayRouteContract`. Frozen Phase 5 source is packaged next; no remaining
+attributed focused failure. All native route cases used the three absolute ROM
+paths above, and no ROM requirement skipped.
+
+Capture qualification caught a genuine private-probe entry mismatch on the native
+EHZ hill. The first goal (400,656) was below the actual floor centre (400,624) and
+exhausted 120,000 ticks without publishing a candidate. Correcting the goal produced
+a proposal but cold verification rejected it. A 300-tick private/native comparison
+proved the cause: detached snap explicitly sets grounded, whereas current LIVE
+entry sets airborne and uses injected ground attachment before the first native
+tick. The proposed frame-30 jump executed privately but LIVE ignored that held edge
+until landing. Final centres were private (403.625,624.137) and native
+(321.281,633.004). A suspected terminal slope-drift explanation was rejected by
+this first-frame evidence; no STOP termination or physics constants were changed.
+
+Route probes now use a narrow native-world-entry factory with the existing LIVE
+injected attachment policy. The detached factory and legacy behavior remain
+unchanged. Add entry/rewind/controller-edge unit coverage, exact per-tick
+private-versus-LIVE ROM comparisons and the actual shot-30 hill regression before
+recapturing. Cold verification remains mandatory. The new HUD route picture also
+uses the production offscreen boot's GL setup instead of a bare component context;
+the desktop production host did not reproduce a component-only submit-prefix
+artifact. Focused qualification is pending.
+
+Entry-fix qualification ran 23 tests: 22 passed, one unit-fixture assumption failed,
+zero errors/skips (90 seconds execution, 3 seconds queue). All five player ROM
+checks passed, including the real hill route and exact 50-tick private/LIVE entry,
+held-jump, release/repress position/velocity/air comparison. Existing detached
+Puppet checks and the production-boot HUD capture passed. The unit expected landing
+on the very first tick; native collision legitimately lands after several ticks.
+Retain the no-invented-upward-impulse check, snapshot replay, bounded held-edge
+landing and fresh repressed jump. Its exact-method lean rerun passed one test,
+zero failures/errors/skips (29.676 seconds, no queue wait). Both HUD/desktop route
+forms now show the complete submit label in production boot captures.
+
+### Phase 5 final focused and visual qualification
+
+Build-only packaging passed (45.857 seconds); tests were intentionally skipped.
+The refreshed fat jar was installed into the owned Editor's private repository
+(0.223 seconds, no queue), and final dependency compilation passed (1.018 seconds).
+Desktop chrome/route-form qualification passed 17 tests, zero failures/errors/skips
+(2.759 seconds, no queue), using `TestStageplayChrome,TestStageplayChromePictures#captureCollisionRouteAndVisualFootprintForms`
+with `-Dopenggf.stageplay.desktopPictures=true`, EGL and the absolute S2 ROM.
+The later engine-only probe-entry correction adds no frontend API or form change;
+its native behavior is covered by the five ROM/player checks above.
+
+Accepted capture: `$STAGEPLAY_EVIDENCE/phase5/take3/`. The actual CLI plans
+`route --scene route-source.stageplay --actor hero --frame 30 --x 400 --y 624 --frames 300 --out routed.stageplay --s2-rom <absolute S2 ROM>`.
+It reports VERIFIED after 65 nodes and 5,562 total simulated ticks. Fresh native
+playback reaches (403.87890625,624.49609375), grounded and stable. The emitted
+commands are ordinary MOVE_TO, a native six-frame JUMP at frame 42, and STOP at
+148; anchors, modes, set and unrelated document data remain unchanged. Decompile
+returns the routed scene to ordinary screenplay six. Simulation records all 330
+frames independently before rendering.
+
+The 5.5-second 640x224 film is 60 fps with 48-kHz stereo offline audio, a 30-frame
+lead-in and more than 30 frames of settled lead-out. Both MKV and MP4 pass complete
+FFmpeg `-xerror` decoding. Continuous normal and quarter-speed playback, eight
+chronological samples and frame 15/60/120/210/315 PNGs were reviewed: native jump,
+hill contact, braking, final idle, camera/background motion and caption exit are
+visible. Normal playback displayed 300 callbacks; the visible-video quarter-speed
+pass observed all 330. Preview payload/time limits were handled through on-page
+samples and nonblocking playback; no desktop/window/input fallback was used.
+Both frontends' production-boot route forms are in `phase5/{hud,desktop}/`.
+The capture driver, typed result, routed canonical/screenplay, state JSONL, movie
+metadata and source/jar fingerprints are retained beside the film.
+
+No new candidate Mod API surface is exposed. The descriptor, candidate version and
+signature pin remain unchanged in this phase. The main-player register/play shapes
+and Phase 1 hand-back semantics remain unchanged. Final combined smoke is pending.

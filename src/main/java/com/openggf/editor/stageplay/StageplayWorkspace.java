@@ -12,6 +12,8 @@ import com.openggf.stageplay.StageplayStore;
 import com.openggf.stageplay.StageplayTimeline;
 import com.openggf.tools.StageplayScriptCompiler;
 import com.openggf.tools.StageplayScriptDecompiler;
+import com.openggf.stageplay.route.*;
+import com.openggf.stageplay.editor.StageplayRouteJob;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -42,6 +44,14 @@ public final class StageplayWorkspace {
         }
         default List<com.openggf.stageplay.runtime.StageplayObjectInspection> objectInspection() { return List.of(); }
         default void stop() { }
+        default void startRoute(StageplayDocument document, Path root, StageplayRouteRequest request) throws IOException {
+            throw new IOException("Route helper is unavailable in this host");
+        }
+        default StageplayRouteJob.Update pollRoute() { return null; }
+        default void requestRouteApply(StageplayDocument document, Path root) throws IOException {
+            throw new IOException("Route helper is unavailable in this host");
+        }
+        default void cancelRoute() { }
         default void export(StageplayDocument document, Path source, Path output) throws IOException {
             throw new IOException("Film export is unavailable in this host");
         }
@@ -52,7 +62,7 @@ public final class StageplayWorkspace {
         EXPORT_SCREENPLAY("Export screenplay"), SAVE("Save"), SAVE_AS("Save as"),
         SCENE("Scene / set"), ADD_ACTOR("Add actor"), EDIT_ACTOR("Actor properties"),
         DELETE_ACTOR("Remove actor"), SET_KEY("Direct actor / set key"), DELETE_KEY("Remove actor key / action"),
-        PUPPET_ACTIONS("Puppet actions"), OBJECTS("ROM object cast / clear"),
+        PUPPET_ACTIONS("Puppet actions"), ROUTE_HELPER("Plan collision route"), OBJECTS("ROM object cast / clear"),
         CAMERA_MODE("Direct camera (C)"), SET_CAMERA_KEY("Capture camera key (K)"), CAMERA_KEY("Camera keys"),
         RECORD_CAMERA("Record camera take (R)"), CAMERA_EFFECTS("Camera shake / quake"),
         SCENE_CHANGES("Scene changes / transitions"), FILM_FORMAT("Film format presets"), CAPTION("Captions"), DIALOGUE("Dialogue lines"),
@@ -69,6 +79,11 @@ public final class StageplayWorkspace {
     private final StageplayController controller;
     private Path path;
     private Path assetRoot;
+    private StageplayDocument routeSource;
+    private Path routeRoot;
+    private String routeSelection;
+    private StageplayRouteRequest routeRequest;
+    private StageplayRouteJob.Update routeUpdate;
     private boolean active;
     private boolean initialized;
     private String status = "Create a scene or open a .stageplay file";
@@ -134,7 +149,7 @@ public final class StageplayWorkspace {
     }
 
     /** Workspace changes preserve the scene and unsaved history. */
-    public void deactivate() { stop(); menu.close(); cameraDraft = null; cameraMode = false; active = false; }
+    public void deactivate() { cancelRoute(); stop(); menu.close(); cameraDraft = null; cameraMode = false; active = false; }
 
     public void seek(int frame) { stop(); controller.seek(frame); cameraDraft = null; }
     public void selectActor(String id) { stop(); controller.selectActor(id); }
@@ -160,6 +175,7 @@ public final class StageplayWorkspace {
                 case SET_KEY -> { if (selectedActorIsPuppet()) puppetMenu(); else keyForm(); }
                 case DELETE_KEY -> deleteKey();
                 case PUPPET_ACTIONS -> puppetMenu();
+                case ROUTE_HELPER -> routeMenu();
                 case OBJECTS -> new StageplayObjectAuthoring(menu, controller, this::edit, this::previewFrame,
                         () -> { previewFrame(); return host.objectInspection(); }).show();
                 case CAMERA_MODE -> {
@@ -193,6 +209,8 @@ public final class StageplayWorkspace {
     /** Called once per editor presentation tick, after the active frontend's queued commands. */
     public boolean tick(InputHandler input) {
         if (!active && !menu.isOpen()) return false;
+        try { pollRoute(); }
+        catch(RuntimeException failure) { cancelRoute(); report(failure); }
         if (menu.update(input)) { resetZoomRepeat(); return true; }
         try {
             if (recording()) {
@@ -509,6 +527,7 @@ public final class StageplayWorkspace {
     }
 
     private void newDocument() {
+        cancelRoute();
         controller.replace(host.initialDocument());
         cameraDraft = null; cameraMode = false;
         host.refreshResources();
@@ -535,7 +554,7 @@ public final class StageplayWorkspace {
         Path absolute = source.toAbsolutePath().normalize();
         StageplayDocument candidate = StageplayStore.read(absolute);
         // Parse first. Missing ROMs still permit repairing the document in either editor.
-        stop(); controller.replace(candidate); path = absolute; assetRoot = absolute.getParent();
+        cancelRoute(); stop(); controller.replace(candidate); path = absolute; assetRoot = absolute.getParent();
         cameraDraft = null; cameraMode = false;
         host.refreshResources();
         invalidatePreview();
@@ -561,7 +580,7 @@ public final class StageplayWorkspace {
         host.finishPendingEdits();
         stop(); // A pending take becomes an ordinary protected edit before asking to replace it.
         beforeReplace(() -> {
-            controller.replace(candidate); controller.markUnsaved();
+            cancelRoute(); controller.replace(candidate); controller.markUnsaved();
             path = null; assetRoot = absolute.getParent();
             cameraDraft = null; cameraMode = false;
             host.refreshResources(); invalidatePreview();
@@ -1286,6 +1305,90 @@ public final class StageplayWorkspace {
             return d.withAudio(values);
         }));
         menu.setSubtitle("Voice paths are relative to the saved scene. Sound seeking is not simulated; play starts cues at the playhead.");
+    }
+
+    private void routeMenu() {
+        pollRoute();
+        if (routeUpdate == null) { routeForm(); return; }
+        var actions = new ArrayList<EditorProjectMenu.Action>();
+        if (routeUpdate.phase() == StageplayRouteJob.Phase.READY)
+            actions.add(action("Check inputs and apply route", () -> io(() -> host.requestRouteApply(controller.document(),assetRoot))));
+        if (routeUpdate.phase() == StageplayRouteJob.Phase.PLANNING || routeUpdate.phase() == StageplayRouteJob.Phase.CHECKING)
+            actions.add(action("Refresh route status", this::routeMenu));
+        actions.add(action("Cancel route", this::cancelRoute));
+        actions.add(action("Plan another route", () -> { cancelRoute(); routeForm(); }));
+        actions.add(action("Back", () -> { }));
+        menu.showActions("Collision route",actions);
+        var result = routeUpdate.result();
+        menu.setSubtitle(routeUpdate.message() + (result == null ? "" : "\n" + result.path().size() + " path samples, "
+                + result.expandedNodes() + " nodes, " + result.simulatedTicks() + " simulated ticks. "
+                + (result.nativeVerified() ? "Native input replay verified."
+                        : result.status()==com.openggf.stageplay.route.StageplayRouteResult.Status.VISUAL_TERRAIN
+                                ? "Visual terrain route; object AI stays suspended." : "No applicable route.")
+                + " Apply replaces commands in the requested frame window."));
+    }
+
+    private void routeForm() {
+        int frame = controller.frame();
+        var document = controller.document();
+        boolean entry = frame == 0 || document.sceneChanges().stream().anyMatch(c -> c.frame()==frame);
+        var objectEntry = document.objectActors().stream().filter(actor -> actor.keys().stream().anyMatch(key ->
+                key.frame()==frame && key.visible() && key.mode()==ObjectMode.PUPPET)).findFirst();
+        if (!entry && objectEntry.isEmpty())
+            throw new IllegalArgumentException("Players start at a shot entry. Objects start at an existing visible PUPPET key in the same shot.");
+        String actor = controller.selectedActorId();
+        if (!entry) actor = objectEntry.orElseThrow().id();
+        else if (actor.isEmpty()) actor = document.puppets().isEmpty()
+                ? document.objectActors().stream().findFirst().map(ObjectActor::id).orElse("") : document.puppets().getFirst().actorId();
+        var view = StageplayTimeline.sample(document,frame);
+        menu.showForm("Route attempts (object AI off)",List.of(
+                text("actor","Puppet actor / object ID",actor), number("x","Destination centre X",view.camera().x()+160),
+                number("y","Destination centre Y",view.camera().y()+112),
+                number("frames","Attempt frames",Math.min(300,shotEnd(document,frame)-frame)),
+                number("nodes","Maximum search nodes",1024),number("ticks","Maximum probe ticks",120000),
+                number("millis","Search time budget (ms)",60000),number("urgency","Player urgency (0..1)",1),
+                number("speed","Visual object speed",1),number("halfWidth","Object half-width",8),
+                number("height","Object clearance height",16),number("footOffset","Object centre-to-foot Y",8),
+                number("collisionPath","Object collision path 0/1",0)),"Plan in isolated worker",values -> io(() -> {
+            String id = values.get("actor");
+            boolean object = document.objectActors().stream().anyMatch(a -> a.id().equals(id));
+            var footprint = object ? new StageplayRouteFootprint(integer(values,"halfWidth"),integer(values,"height"),
+                    integer(values,"footOffset"),integer(values,"collisionPath")) : null;
+            var request = new StageplayRouteRequest(id,frame,decimal(values,"x"),decimal(values,"y"),integer(values,"frames"),
+                    integer(values,"nodes"),integer(values,"ticks"),integer(values,"millis"),decimal(values,"urgency"),footprint,decimal(values,"speed"));
+            String unavailable=StageplayRouteContract.unavailableReason(document,request);
+            if(!unavailable.isEmpty()) throw new IOException(unavailable);
+            host.startRoute(document,assetRoot,request);
+            routeSource=document; routeRoot=assetRoot; routeSelection=controller.selectedActorId(); routeRequest=request;
+            routeUpdate=null; status="Route planning started in a separate logic worker. Reopen Plan collision route to cancel or review.";
+        }));
+        menu.setSubtitle("Objects: visual FG only. Players: native replay.");
+        status="Apply replaces commands only in the requested route window. Players start at shot entry; objects can retain an earlier native Free prefix.";
+    }
+
+    private void pollRoute() {
+        if (routeSource == null) return;
+        var next = host.pollRoute();
+        if (next == null) return;
+        if (!routeSource.equals(controller.document()) || !routeRoot.equals(assetRoot)
+                || controller.frame()!=routeRequest.startFrame() || !routeSelection.equals(controller.selectedActorId())) {
+            cancelRoute(); status="Stale route discarded: scene, asset root, selected actor or playhead changed."; return;
+        }
+        if (next.equals(routeUpdate)) return;
+        routeUpdate=next; status=next.message();
+        if (next.phase()==StageplayRouteJob.Phase.APPLY_READY) {
+            try {
+                StageplayRouteProtocol.validatePatch(routeSource,routeRequest,next.result().fingerprint(),next.result());
+                var candidate=next.result().candidate();
+                if(candidate==null) throw new IOException("Route did not return a verified candidate");
+                edit(ignored -> candidate); cancelRoute();
+                status="Applied collision route as one undo step. Playback remains an input attempt.";
+            } catch(IOException | RuntimeException failure) { cancelRoute(); report(failure); }
+        }
+    }
+    private void cancelRoute() {
+        host.cancelRoute(); routeSource=null; routeRoot=null; routeSelection=null; routeRequest=null; routeUpdate=null;
+        status="Route attempt cancelled";
     }
 
     private void exportForm() {

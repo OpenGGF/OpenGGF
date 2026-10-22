@@ -481,6 +481,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			public void present(com.openggf.stageplay.StageplayDocument document, int frame) { stageplaySession.present(document, frame); }
 			public void stop() { stageplaySession.stop(); }
 			public void export(com.openggf.stageplay.StageplayDocument document, Path source, Path output) throws IOException { stageplaySession.export(document, source, output); }
+			public void startRoute(com.openggf.stageplay.StageplayDocument document, Path root, com.openggf.stageplay.route.StageplayRouteRequest request) throws IOException { stageplaySession.startRoute(document,root,request); }
+			public com.openggf.stageplay.editor.StageplayRouteJob.Update pollRoute() { return stageplaySession.pollRoute(); }
+			public void requestRouteApply(com.openggf.stageplay.StageplayDocument document, Path root) throws IOException { stageplaySession.requestRouteApply(document,root); }
+			public void cancelRoute() { stageplaySession.cancelRoute(); }
 		});
 		this.contentImportScreen = new ContentImportScreen(new ContentImportService(Path.of("mods"), () ->
 				ModSubsystem.current().processCatalog().scanned().stream()

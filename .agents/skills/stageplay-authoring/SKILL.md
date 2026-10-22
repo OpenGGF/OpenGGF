@@ -86,9 +86,18 @@ pauses for emphasis or reading time. Avoid leaving the entire cast in idle loops
 through a promo whose story depends on their interaction.
 
 Place a physical spawn centre near the floor; floor snapping defaults on at spawn,
-then native terrain collision controls contact during movement. There is no automatic
-pathfinding or obstacle jump: a destination is an attempt, and `BLOCKED` must be
-inspected rather than hidden with a teleport. Check actual arrival and grounded state
+then native terrain collision controls contact during movement. A MOVE_TO destination
+is an attempt, and `BLOCKED` must be inspected rather than hidden with a teleport.
+For basic player shot-entry planning, use `route --scene PATH --actor ID --frame N --x X
+--y Y --out NEW.stageplay` with supplied ROM flags. The bounded helper emits
+existing movement/jump/wait intents and requires cold LIVE replay before VERIFIED;
+search failure is not proof of impossibility. Object Puppets require explicit
+visual footprint/speed and report VISUAL_TERRAIN, with native AI still suspended.
+An object route can also start at an existing visible Puppet key after an explicit
+Free initialization lead-in; the worker replays that prefix, never inserts a key
+or silently initializes a directed graph.
+Decompile the routed canonical scene to return it to screenplay. Both editors
+expose the same helper; review diagnostics and actual simulation before rendering. Check actual arrival and grounded state
 in simulation, then revise goals/timing as needed. Shot boundaries reset actors and
 commands. Interior physical keys may change visibility only. Poser mode retains
 position, facing, animation and pose keys for deliberate nonphysical staging.

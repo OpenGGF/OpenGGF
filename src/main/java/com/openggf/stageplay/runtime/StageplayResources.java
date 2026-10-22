@@ -155,6 +155,45 @@ public final class StageplayResources implements AutoCloseable {
         return terrains.computeIfAbsent(source, value -> library.level(value.gameId(), value.zone(), value.act()));
     }
 
+    /** Actual decoded collision terrain for the bounded, isolated authoring route worker. */
+    public Level routeTerrain(StageplayDocument.SetSource source) {
+        requireOpen();
+        return terrain(source);
+    }
+
+    /** Same donor, native anchor and collision setup as ordinary Stageplay physical actors. */
+    public PlayablePuppet createRouteProbe(
+            StageplayDocument.SetSource source,
+            StageplayDocument.Actor actor,
+            StageplayDocument.ActorKey anchor,
+            StageplayDocument.PuppetTrack track) {
+        requireOpen();
+        requirePhysicalLibrary();
+        return PlayablePuppet.createNativeWorldProbe(
+                terrain(source),
+                library.module(source.gameId()),
+                source.zone(),
+                source.act(),
+                library.module(actor.gameId()),
+                actor.character(),
+                library.characterArt(actor.gameId(), actor.character()),
+                nativePixel(anchor.x(), true),
+                nativePixel(anchor.y(), false),
+                track.collisionPath(),
+                track.snapToFloor(),
+                anchor.flipX());
+    }
+
+    /** Foreground query from an explicitly owned, initialized native route visit. */
+    public com.openggf.physics.RouteTerrainProbe routeTerrainProbe(com.openggf.level.LevelManager ownedLevel) {
+        requireOpen();
+        requirePhysicalLibrary();
+        var objects = Objects.requireNonNull(ownedLevel, "owned route level").getObjectManager();
+        if (objects == null) throw new IllegalArgumentException("Native route visit has no injected collision owner");
+        return new com.openggf.physics.NativeRouteTerrainProbe(ownedLevel,
+                objects.getObjectServices().backgroundPlaneCollisionProvider());
+    }
+
     private static int nativePixel(double value, boolean horizontal) {
         long rounded = Math.round(value);
         if (rounded < (horizontal ? 0 : Short.MIN_VALUE) || rounded > Short.MAX_VALUE)

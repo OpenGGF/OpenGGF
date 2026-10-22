@@ -208,7 +208,8 @@ surface; snapping is not a search through the entire level. Once moving, normal
 native collision maintains floor contact or lets the actor fall from an edge.
 `collisionPath` selects terrain path 0 or 1. A destination's Y is part of the
 arrival check, not a vertical movement command: use `JUMP` explicitly when needed.
-There is no automatic route finding or obstacle jump. Current native worlds use
+A MOVE_TO command does not automatically find a route or jump obstacles. The
+optional [route helper](#route-helper) emits explicit attempts. Current native worlds use
 objects and collision with explicit routes/targets and bounded waits. Cleared
 worlds omit the initial population; legacy terrain scenes omit world simulation.
 
@@ -484,3 +485,64 @@ it cannot be dropped while keeping only the parent body. The catalog and the
 **Available parts / appearance exclusions** menu identify known restrictions with
 the owning routine. SKL's DEZ miniboss mask is one such conditional exclusion.
 Initialize and direct a different supported appearance, or keep the graph Free.
+
+## Route helper
+
+```bash
+python3 tools/stageplay/stageplay.py route --scene /your/production/first.stageplay --actor tails --frame 0 --x 320 --y 648 --out /your/production/routed.stageplay --s2-rom /your/existing-s2.gen
+python3 tools/stageplay/stageplay.py decompile --scene /your/production/routed.stageplay --out /your/production/routed.script.json
+```
+
+Use the actor's native centre as the destination. Compile a screenplay first;
+route the canonical scene, then decompile it back into editable screenplay.
+Both editors expose the same **Route helper**. Output publication never overwrites
+a file and failures do not publish a partial scene. Relative assets keep their
+source directory. Existing commands and actors outside the requested patch remain
+unchanged. The helper never inserts position keys or changes an actor's mode.
+
+Player planning starts at a shot entry in current LIVE or TERRAIN_ONLY policy;
+compatibility policies must be changed deliberately before using the helper.
+It searches a bounded graph of native
+physics attempts over the actual ROM/authored collision terrain, using the same
+steering as LIVE `MOVE_TO` and native jump button holds. A proposal is accepted
+only after fresh linear cold LIVE replay reaches the requested centre grounded
+and stable, without hurt, death, wait timeout or an unexpected scene change.
+`VERIFIED` certifies that replay of this exact input; it does not certify arbitrary
+future edits or every route through moving objects, water and zone events.
+
+Object routes start at shot entry or an existing visible Puppet key in the same
+shot. This permits an explicit Free initialization lead-in for constructor-gated
+visuals; the worker replays that prefix before suspending the graph. Other
+interior frames, Free, Pose and hidden keys reject. No key is inserted for routing.
+Object Puppets require `--half-width N --height N --foot-offset N`;
+`--collision-path 0|1` selects the queried path and `--speed N` is visual pixels
+per tick. The footprint is an authored clearance envelope: half-width, height
+above the feet, and feet offset below the object's anchor. It is not a native
+collision-radius adapter. `VISUAL_TERRAIN` means checked floor/headroom waypoints
+for the suspended picture, emitted as ordinary object `MOVE_TO`/`STOP` commands.
+No object routine, child AI, contact, jump or native world effect is enabled.
+The object graph uses fixed foreground collision on the selected path; active
+background-plane collision rejects explicitly. Moving object/platform solids are
+not graph nodes and visual Puppets have no native contact response. Fresh linear
+replay checks the actual visual positions against each tick's foreground terrain,
+so changed terrain or insufficient clearance fails rather than certifying the
+entry snapshot for the whole shot. Unsupported gaps and dynamic collision fail
+explicitly.
+
+Optional budgets are `--frames` (default up to 300 remaining shot frames,
+maximum 3600), `--nodes` (default 1024, maximum 4096), `--ticks` (default 120000,
+maximum 500000), and `--millis` (default 60000, maximum 120000). `--urgency` is
+0..1 exclusive of zero; object speed is 0..16 exclusive of zero. Search resolution
+and budgets are authoring policies, not ROM physics constants. Player search is
+limited to destinations within 1536 horizontal and 768 vertical pixels of entry
+and at most 256 retained frontier checkpoints; these are basic-tool limits. `UNSUPPORTED`,
+`SEARCH_EXHAUSTED`, `BUDGET_EXCEEDED`, `CANCELLED`, `VERIFICATION_FAILED` and
+`STALE_INPUT` explain bounded failures; none means that every possible route is
+impossible. CLI failures exit 2. Inspect the returned diagnostics and simulate
+the routed scene before rendering.
+
+Editor planning owns an independent logic worker. Its input binds the canonical
+document, request, supplied logical ROM windows and content snapshots of relative
+project/assets. Freshness is checked again before one undoable Apply; changed
+inputs or late cancelled work cannot overwrite newer authoring edits. Planning
+does not borrow the active gameplay session, preview worker or audio ownership.

@@ -396,3 +396,28 @@ intervals (which would restart reveal/phase) and generated prefixes on already v
 64-character IDs. Both frontends share import/export actions and relative-asset
 semantics. Import creates an unsaved canonical document; export preserves save and
 undo state. This adds no public Mod API surface or playback ownership change.
+
+## Bounded terrain route helper (phase 5)
+
+Routes compile to existing intent commands; canonical version seven and screenplay
+six are unchanged. Shot-entry player planning searches native private-playable
+checkpoints through real collision terrain and shared LIVE steering. Checkpoints
+retain logical audio ownership as well as body, RNG, timers and collision state.
+Proposal search cannot certify live objects/events/water, so success requires
+fresh linear cold LIVE replay of the complete candidate. No speculative LIVE
+branching or trace-state hydration is used. Limits and cancellation are explicit.
+
+Object routes are visual floor/headroom paths with an authored clearance envelope.
+They share the existing Euclidean per-tick movement kernel, emit only movement
+commands, and keep native graph AI/contact/world effects suspended. They do not
+claim native walking physics, jump across gaps or silently snap an anchor.
+An existing visible Puppet key may begin an object route inside a shot after
+explicit Free initialization; cold qualification replays that prefix. Player
+routes retain the shot-entry rule. No route creates an anchor or changes mode.
+
+A dedicated logic worker receives bounded immutable document/request/ROM/asset
+inputs. Content fingerprints and generation checks protect asynchronous results;
+only the requested command-track patch may apply, once, through normal undo.
+Freshness is checked off the UI thread before Apply. Neither frontend replaces
+its gameplay/preview/audio session for planning. Exhaustion and unsupported
+geometry are explicit outcomes, not evidence that no route exists.
