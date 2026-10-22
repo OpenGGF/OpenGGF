@@ -14,8 +14,9 @@ the caller's preceding immutable frame at the same ordinal **before** its sole
 replacement. Position compares first to reject moving-world inputs cheaply.
 The comparison covers every Tile component, including complete Subject record
 equality (head mask/transform/art/replay, body role/anchor, palette replay and
-unknown producer IDs). `Float.compare` matches record equality for NaNs and
-signed zero. There are no scans, maps or matching searches for reuse.
+unknown producer IDs), with stricter mask/callback identity gates described
+below. `Float.compare` matches record equality for NaNs and signed zero. There
+are no scans, maps or matching searches for reuse.
 
 The existing public preparation signatures delegate with no hint. New overloads
 are engine-internal bridges, on unannotated classes, not creator API additions.
@@ -31,8 +32,8 @@ Tiles contain logical art addresses, not mutable pixels. Every new frame still
 captures its own referenced PatternVersions. Sharing a Tile therefore permits
 different immutable art generations at the same address. Primitive emission and
 its tile boundaries are unchanged. Head composition runs after native emission;
-its expanded/reordered previous frame remains only an exact ordinal hint, so
-composition can reduce hit rate without changing native input or frozen art.
+its expanded/reordered previous frame remains only an ordinal hint. Correct
+reuse also preserves identities observed by composition and opaque callbacks.
 
 ## Focused evidence
 
@@ -103,3 +104,58 @@ push and workspace cleanup. Concurrent production ownership is preserved:
 GraphicsManager, PatternAtlas, PatternRenderCommand and
 SpritePresentationRenderer.drawPicture are untouched; only the additive
 preparation overload/delegate at the top of that renderer changes.
+
+## Review correction: mask and callback identities
+
+Independent review found that initial implementation `da2d53023` was unsafe for
+a generic **raw** preceding-frame hint. `HeadMask.equals` accepts reconstructed
+equal masks, while `PlayerHeadPresentation.sameDraw` groups native draw
+occurrences with `mask() == mask()`. Reusing only one of two tiles could replace
+its current mask with the old equal instance and change body/head ordering.
+Normal LevelRenderer preceding tables have already been composed and tend to
+strip that metadata; this is a reproduced generic-hint defect, not a claimed
+stock gameplay reproduction.
+
+The builder now requires the same HeadMask and HeadSatReplay instances for
+head-bearing reuse, and the same PaletteReplay instance for every reuse.
+Both callback interfaces are opaque: legal implementations can override
+`equals` without encoding callback behavior. Identity is checked before the
+remaining exact Subject value comparison. Equal Subject/HeadTransform records
+with the same mask/callback instances remain eligible; changed scalar, body,
+head-art or other metadata still prevents reuse. No public signature changed.
+
+`TestSpriteTileReuseHeadComposition` prepares two native head tiles with a
+shared occurrence mask, changes the second tile's geometry, and compares full
+hinted/no-hint composition. Both same-instance and rebuilt-equal masks are
+covered, including explicit body/body/head/head order and retained raw state.
+Two callback tests deliberately define equal-but-behaviorally-distinct replay
+implementations and check that the new callback is retained and invoked.
+The scalar field matrix shares a fixed mask so identity gates cannot conceal
+a missing scalar comparison.
+
+Red command on `da2d53023` production plus the new regression inputs:
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestSpriteTileReuseHeadComposition,TestSpriteTileReuse#equalOpaqueHeadCallbacksMustKeepTheirIdentityAndBehavior+equalOpaquePaletteCallbacksMustKeepTheirIdentityAndBehaviorWithoutAHead' test -B
+```
+
+Completed 2026-10-22 12:36:30 BST: **4 tests, 3 failures, zero errors/skips**.
+The rebuilt-mask parameter and both callback tests failed; the same-mask
+parameter passed. XML identities were inspected and consumed reports removed.
+Queue wait was 28 seconds; Maven execution including test recompilation 27.110
+seconds. These are validation times, not benchmark results.
+
+The corrected focused run adds `TestSpriteTileReuseHeadComposition` to the
+previous exact selection:
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestSpriteTileReuse,TestSpriteTileReuseHeadComposition,TestLevelSpriteTileReuse,TestSpritePresentation,TestLevelSpritePresentation,TestLevelSpritePresentationLifecycle,TestModApiSignatureSurface#candidateZeroSevenSurfaceIsPinnedToTheCurrentSurface+engineInternalTerminalsArePinnedAndStayOutOfTheSurface,TestArchitecturalSourceGuard#lowLevelGraphicsAndAudioDoNotGainGameplayServiceLookups' '-Ds3k.rom.path=<absolute path to existing main-workspace s3k.gen>' test -B
+```
+
+Completed 2026-10-22 12:45:05 BST: **82 tests, zero failures/errors/skips**,
+including 47 Tile reuse tests, two raw composition cases and the unchanged
+33 existing/owner/API/architecture checks. All eight XML reports were inspected
+and removed. Queue wait was 369 seconds; Maven execution including recompilation
+1:21. Tested production is `da2d53023` plus the identity helper/gate; test inputs
+are the fixed-mask scalar matrix, two callback boundaries and new composition
+class committed with this correction. Probe timing is separate from these checks.
