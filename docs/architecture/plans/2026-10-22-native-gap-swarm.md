@@ -409,3 +409,43 @@ unpublished S1 preparation and tail bookkeeping at the existing full-load
 dedup clear, preserving published journal/IDs, S2 queues, snapshots and midgame
 refresh. Aggregate composition and affected checks remain next. The original
 native242 publication restrictions and the newer MHZ earlier-stop block remain.
+
+The aggregate's fresh `TestArchUnitRules` request88166 completed **32/32**,
+zero failures/errors/skips, on `35e3b1c23` plus the staged full-load leaf:
+`maven_queue.py --normal -Dmse=off -Pguards -Dtest=TestArchUnitRules test -B`,
+Java25, unset DISPLAY/WAYLAND and Lua5.4. Queue wait204 seconds, Maven1:31.
+The low-level layer rule and both parent-owned HubMusic identities passed in
+the actual XML. This closes the four new shadow edges and those two isolated
+worker negatives in this composition, not every structural guard.
+
+Request13359 on that same frozen source passed **28/28**, zero failures/errors/
+skips: actual full-load readiness3, palette-phase7, consumed native entry-fade5,
+the two affected title/Main producer cases and API11. The exact queued normal
+EGL/Java/three-original-ROM environment above selected
+`TestSonic1LevelLoadPlayerArtReadiness,TestSonic1PaletteFadePlayerArtService,TestGameLoopBlockingLevelEntryFadeS1,TestSonic1PlcProducerCoverage#titleScreenClearsPriorWorkAndPublishesMainAfterObjectsAndMusic+mainTitleRetriesOnlyMainWithoutReplayingObjectsOrMusic,TestModApiSignatureSurface`.
+Five actual XML suites were inspected. Queue wait420 seconds, Maven32.365s.
+Only old unpublished readiness is invalidated at the existing full-load clear;
+the normal buffer, published history, transfer identities and S2 queue remain.
+The S1 owner now qualifies the next whole tail on its independently composed
+title prerequisites, with the same temporary actual-loop observer removed
+afterward; no duplicate aggregate route is launched.
+
+An additional S2 owning `TestArchitecturalSourceGuard` run reports size failures
+in its unchanged parent dependency files: ObjectManager3107/3086 and
+Sonic1ObjectArtProvider2054/2047, plus AbstractPlayableSprite3296/3258 from earlier
+S2 additions. Those are a different source guard from the32-case ArchUnit class;
+its70/72 result is not fully green. Owners will extract focused draw/HUD and
+private power-up restore collaborators without raising ratchets or packing
+lines. Actual root composition contains later queue code, so its facade must
+be measured against its own source. These checks remain required.
+
+The PointPokey source audit also distinguishes a physical SST word from a live
+Java owner. Native DeleteObject clears the slot, later orphan prize settlement
+can decrement its empty2C word toFFFF/FFFE, and allocation does not clear that
+residue. A bounded shared backend is reserved for one unsigned word plus
+knownness, explicit clear/partial-write semantics and writable typed receiver
+projections with registered rewind. Implementation waits for stable Mode
+contracts and exact hook agreement. Arbitrary unrelated objects remain open:
+another prize aliases2C as the low word of its LONG counter address at2A,
+requiring real address and alignment semantics. No hidden value map, stale
+parent reference or default-zero projection certifies that case.

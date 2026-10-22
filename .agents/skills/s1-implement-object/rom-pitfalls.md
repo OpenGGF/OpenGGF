@@ -864,3 +864,22 @@ The branch is `FixBugs=0`; the fixed branch adds the missing deletion.
 **Origin.** S1 chain gap closure, 2026-10-22; native bytes, real cursor/lower-hole
 and destructive-restore cases in
 `docs/architecture/audits/2026-10-22-s1-chain-gap-closure.md`.
+
+
+## Player-art buffer readiness has separate fade and load boundaries
+
+S1 VBlank_PaletteFade (`docs/s1disasm/sonic.asm:967-970`) calls
+StandardTransfers and ProcessPLC_9Tiles, without the per-mode Sonic C800→F000
+DMA. Keep staged Sonic art pending through this fade; NORMAL_PAUSE still has
+its own Sonic graphics DMA. After fade-out, Level_ClrRam
+(`docs/s1disasm/sonic.asm:2739-2743`) clears F700-F7FF, including last-frame F766
+and ready flag F767 (`docs/s1disasm/_Variables.asm:230-231`). It leaves the
+C800-CADF buffer bytes intact (`docs/s1disasm/_Variables.asm:34-35`).
+
+At the existing full-load boundary before player-art priming and title VBlank,
+invalidate only old unpublished readiness and its held-tail bookkeeping. Keep
+published transfer IDs/history and other games' submitted queues. A fade-entry
+clear, journal filtering, or skipping Sonic's pit Animate/DPLC tail would model
+a different native boundary. Test real staging through fade, an actual full
+load/title/release prelude, fresh mapping-1 art, and registered restore/forward.
+See the [S1 chain audit](../../../docs/architecture/audits/2026-10-22-s1-chain-gap-closure.md).

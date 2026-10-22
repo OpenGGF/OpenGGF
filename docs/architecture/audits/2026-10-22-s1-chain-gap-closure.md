@@ -818,3 +818,72 @@ no extra dependency is imported, and lease/host/native-pause compatibility is
 reserved for the parent's aggregate checks. No whole-chain run has yet qualified
 this leaf.46550 remains the recorded three-axis frontier, terminal art not
 reached; native242 stays unpublished and prefix pins unchanged.
+
+
+## Full-load S1 readiness clear, separate from palette-fade service
+
+Independent native/source review finds the next boundary after palette fade:
+Level_ClrRam (`sonic.asm:2739-2743`, recorded pin28872a46) clears F700-F7FF,
+including v_sonframenum F766 and f_sonframechg F767 (`_Variables.asm:230-231`).
+The C800-CADF graphics buffer is outside the clear (`_Variables.asm:34-35`).
+Retail REV01 at381E is `43 F8 F7 00 70 00 32 3C 00 3F 22 C0 51 C9 FF FC`:
+64 longwords zero that256-byte range. First title VBlank is armed at3912
+(`11 FC 00 0C F6 2A`) before Sonic creation396C (`11 FC 00 01 D0 00`).
+Its F24 test `4A 38 F7 67 67 2A` skips the old buffer because readiness is zero.
+The later object prelude runs ExecuteObjects at39C4; Sonic_LoadGfx14312 sets
+new readiness at1433A (`11 FC 00 01 F7 67`) before copying selected tiles,
+then Level_Delay arms level VBlank at3A90. All listed bytes and the ROM
+SHA-1/CRC were independently rechecked on the absolute shipped REV01 file.
+
+The existing LevelManager.initArt already owns the appropriate full-load
+boundary before playableArtInitializer and title entry. Its sole production
+call to clearPlayerDplcDedupRegistersForLevelLoad previously cleared only dedup
+registers, leaving stale unpublished S1 readiness alive. The approved service
+repair retains that call/API and adds only three preparation nulls
+(s1Preparation, s1PreparationAfterPreMainLoopTail, initialLoadPreparation) and
+tailRows=-1/holdBoundary=0. Published ledger, buffered/gap journal, transfer IDs,
+S2 submitted queue, held entry art, render-buffer representation and snapshot
+shape remain untouched. Midgame refresh initializes renderers directly and
+bypasses this full-load clear. No LevelManager, GameLoop, event or journal
+implementation is edited.
+
+Old-service45714 (d90cc4160 plus the new three cases) reproduces two failures,
+zero errors/skips; wait170s/Maven30.380s. A real GHZ1→GHZ2 full load reaches
+title entry still owning old map50 preparation; direct clear in the registered
+restore case likewise leaves it pending. The S2 submitted-queue control passes.
+This is independent source-gap evidence, not identification of46550's unknown
+extra-transfer caller/phase.
+
+Candidate95396 passes79/79, zero failures/errors/skips; wait7s/Maven1m28s.
+XML inspected: new production-load/registered-restore/S2 cases3, existing art
+lifecycle32, palette-phase7, PLC coordinator27, actual entry-fade5 and model5.
+The actual full-load case retains all old readiness through fade, preserves the
+whole prior transfer history and next IDs across loading, rejects every old
+preparation after load while allowing legitimate fresh priming, and executes
+real title release/player prelude. The first eligible main-loop service emits
+exactly the fresh mapping1 ROM-request/completion pair, with continuous IDs and
+no old-generation journal entry. The existing registered adapter is captured,
+destructively changed, restored and forwarded twice to the identical whole
+journal. S2's original submitted transfer retains identity and completes.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestSonic1LevelLoadPlayerArtReadiness,TestDynamicArtLifecycleService,TestSonic1PaletteFadePlayerArtService,TestPlcFrameLifecycleCoordinator,TestGameLoopBlockingLevelEntryFadeS1,TestDynamicArtDmaServiceModel' "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" test -B
+```
+
+Independent read-only review found no material issue and did not inspect/watch
+or repeat the validation job. Mirrored S1 pitfalls now preserve the separate
+fade-service/load-clear rule. The seven added citation ranges pass the pinned
+checker without new hard/stale findings (two label anchors checked, five
+unverifiable anchors); the actual source and ROM bytes above provide the
+independent proof. Whole historical-file scans retain exactly four inherited
+service findings and12 per skill mirror, matched by citation identity to d90;
+no unrelated citation remap is included. Post-run test-header edits normalize
+citations only; executable source/assertions are unchanged.
+
+Coverage remains bounded: old staging is synthetic setup using real ROM DPLCs,
+not the SBZ2 pit route; art-journal proof is logic-only; registered service
+forward claims do not certify rewind of an asynchronous full-load callback;
+the S2 negative control uses a synthetic descriptor rather than an S2 route.
+46550's first extra map50 caller/phase remains historically UNKNOWN. No new
+whole-chain result follows from79 focused passes. Native242 publication and
+prefix advancement remain withheld pending all comparisons and terminal art.

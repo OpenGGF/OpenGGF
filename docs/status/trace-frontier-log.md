@@ -113317,3 +113317,23 @@ comparison was not reached. Final-mode/ending choreography and aggregate
 recorded-input lease compatibility remain unqualified here. No fixture values,
 forced ticks, comparison filters or prefix changes were introduced; the full242
 candidate remains unpublished.
+
+
+### 2026-10-22 S1 full-load readiness boundary, independent focused proof
+
+Isolated t3-bfcde7c7 source d90cc4160 plus the approved existing-service clear
+passes79/79 focused cases with zero failures/errors/skips (95396; wait7s,
+Maven1m28s). Exact six-class command, real-ROM clear bytes, valid old-service
+45714 two failures/one S2 pass and limits are in the
+[S1 chain audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#full-load-s1-readiness-clear-separate-from-palette-fade-service).
+Only unpublished S1 preparation/tail readiness is invalidated at the existing
+full-load-before-prime boundary. Actual load/title/release produces the fresh
+mapping1 pair with prior journal/IDs intact; registered restore/forward and S2
+submitted-work controls pass. No GameLoop/event/LevelManager/journal or snapshot
+shape change is made, and midgame renderer refresh retains its prior path.
+
+No route has run on this leaf yet.46550's extra SBZ2→LZ4 movie201916/map50 caller
+and service phase remain UNKNOWN; that measured three-axis frontier and the
+not-reached terminal-art comparison are unchanged. Full native242 candidate is
+unpublished, prefix pins unchanged. Next necessary tail composition includes
+the already-ready S1 title/input caller prerequisites before qualification.
