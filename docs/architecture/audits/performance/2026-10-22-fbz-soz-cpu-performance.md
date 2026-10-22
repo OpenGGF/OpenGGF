@@ -140,6 +140,10 @@ env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py --lean -D
 
 ## Follow-up wave: OOZ snapshots and rejected trig candidates
 
+The OOZ implementation in `cab1fcd05` described below was subsequently rejected
+and removed after the paired real-update experiment recorded later in this audit.
+The behavioral regression coverage remains.
+
 This independent wave starts at `98fc161d2c0b2bdfbe7a9f694979ab6bf486a1ab`,
 which the lead already integrated locally. It changes only the OOZ platform,
 its multi-sidekick tests, and this audit. No shared query, graphics, solid-param,
@@ -164,9 +168,9 @@ arrays per platform instance. Allocation counts here describe Java source
 operations, not measured heap bytes: escape analysis can remove some old lists,
 iterators, streams or lambdas. The participant query and omitted-extension copy
 still allocate. Net CPU/GC benefit and game-wide materiality are **unmeasured**;
-no percentages or frame-time claim is made. The recurring WAIT case justifies
-this bounded allocation cleanup; the finite 16-update rise alone would not
-justify a larger redesign. No timing ran alongside the tile worker's isolated
+no percentages or frame-time claim is made. The recurring WAIT case was the initial rationale
+for this bounded allocation cleanup; source counts did not establish its net
+cost. The paired experiment below supersedes that initial viability assessment. No timing ran alongside the tile worker's isolated
 measurement window.
 
 **Lifetime and behavior evidence.** Full snapshots remain in place before player
@@ -216,3 +220,148 @@ The inspected change-based plan (`run_categories.py --base 98fc161d2`) selects
 3,091 smoke classes plus guards. The requested focused checks replace that
 selection for this local snapshot-lifetime change; no shared algorithm or
 participation policy changed. There are no running task-owned jobs.
+
+## Java transient scalar comparison correction
+
+Root's frozen combined smoke at `3055eb336` exposed `generatedPivot: 96 -> -1`
+in the SOZ object probe and identity ratchet. Inspection of the owning runtime
+path found that `AbstractObjectInstance.captureRewindState(context)` uses
+`GenericFieldCapturer` (generic or compact sidecar), then restoration applies
+that sidecar before `afterGenericRewindStateRestored`. Java transient fields
+are explicitly excluded by `GenericFieldCapturer.isSkipped`,
+`RewindSchemaRegistry.policyFor`, and the documented
+`RewindCoverageAnalyzer.isUncapturedFinalScalar` contract. Invalidating the SOZ
+cache after restoring authoritative surface RAM is valid.
+
+The harness scalar walker skipped static/synthetic fields but compared Java
+transients. It now also skips Java transient fields uniformly, with no class or
+field-name exceptions. Production SOZ cache shape and invalidation are unchanged;
+root's independent display-query/direct-sample changes need no conflicting edit.
+A real round-trip control invalidates a transient cache and passes. A deliberately
+broken fixture drops its authoritative sidecar and restores a zeroed scalar;
+the same harness still reports exactly its non-transient `authoritative` field
+as `37 -> 0` (`isFinal=false`). No authoritative exclusion was introduced.
+
+Queued focused verification (existing external ROM directory substituted below):
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestEveryObjectRewindRoundTrip,TestRewindHarnessCoverageRatchet,TestSozSpringVine,TestRewindRoundTripHarnessFailures' \
+  "-Dsonic1.rom.path=${ROM_ROOT}/s1.gen" "-Dsonic2.rom.path=${ROM_ROOT}/s2.gen" \
+  "-Ds3k.rom.path=${ROM_ROOT}/s3k.gen" test
+```
+
+Passed 1,349 tests, zero failures/errors/skips (1,331 object sweep, one ratchet,
+four failure/contract controls, 13 SOZ). Ratchet: 1,086 isolated executions,
+243 graph declarations, zero unavailable prerequisites. Queue wait 17 seconds;
+Maven execution 30.342 seconds. Root's live smoke source/job was untouched.
+
+## OOZ paired real-update experiment and rejection
+
+**Decision.** Remove the `cab1fcd05` scratch implementation: its small, mixed CPU
+benefit does not justify the borrow/fallback/cleanup machinery and extra retained
+storage. The production platform is restored byte-for-byte to parent
+`98fc161d2`. This decision does not alter the earlier FBZ/SOZ optimization or the
+transient rewind-contract repair. No further candidate discovery was attempted.
+
+**Inputs and boundaries.** A dedicated detached cowtree at
+`.worktrees/ooz-measure-20261022-cab1` owned its compiled outputs and temporary
+probe. Old platform and flame sources came directly from `98fc161d2`; the only
+source transformations renamed their two mutually referenced types. Reversing
+both renames reproduced the originals exactly. The current arm used the actual
+`cab1fcd05` classes. Both arms called `AbstractObjectInstance.update` through the
+same probe callsite, with real `ObjectManager` riding-state identity checks,
+`ObjectPlayerQuery`, and `TestablePlayableSprite` callbacks. Inspected timed
+manager paths compare object identity and do not require the platform's concrete
+type/name. Distinct class shapes still permit different JIT inlining/escape
+analysis, so these are local paired microcases, not whole-engine estimates.
+
+Cases were empty WAIT, indefinitely blocked WAIT (main rider exactly at the
+exclusive +16 X boundary), and center admission plus all 16 rising updates through
+release. Each ran with native P1/P2 and with two additional extension players.
+The untimed oracle compared platform mode/position/fixed-point velocity/timer,
+lock flags, extension membership and player positions/speeds/control/air/support
+after every update, including the exact apex. Timed batches also consumed and
+compared final state. Cycles reset the same instances outside counters; object
+construction, reset costs, scratch retention, real scene frequency and total
+one-shot lifetime cost are excluded. Cycle counters surround each 17-update
+sequence, including counter overhead equally in both arms.
+
+Three fresh Java 25 JVMs warmed six passes over all cases, then ran eight paired
+rounds with alternating old/current order (also reversed by JVM ordinal). WAIT
+batches contained 16,384 real updates; cycle batches contained 256 sequences.
+Current-thread CPU and allocated bytes came from `com.sun.management.ThreadMXBean`.
+The one-off probe remained temporary; it did not replace algorithms with a list
+surrogate or introduce ROM/assets/gameplay fallback.
+
+**Admission and failed setup.** The first exclusive invocation waited 264 seconds,
+then failed before any timing: an untimed cycle reset used `setAir(false)`, whose
+landing callback requires an active gameplay session. It produced no usable
+performance evidence. One authorized correction used the existing fixture's
+`setAirForTest(false)` solely in reset; measured production calls and the equality
+oracle were unchanged. The retry waited 69 seconds, held exclusive test admission
+and then exclusive build activity, and completed successfully. Both leases were
+released normally; the 0.5-second interference guard reported no bypassing
+build/test/profiler. Three JVMs plus driver took 1.251 seconds (isolated lease
+execution 1.527 seconds), within the 30-second bound. No timing overlapped a
+build/test, no foreign job/lock was canceled or changed, and root's frozen smoke
+remained alive.
+
+The prebuilt launch was:
+
+```bash
+python3 tools/performance/run_isolated.py --worktree . --cwd . \
+  --audit-report target/ooz-isolation-retry.json --estimate-seconds 30 \
+  -- python3 target/run_ooz_probe.py
+```
+
+**Results.** Ranges below span the three per-JVM medians of eight paired rounds;
+bytes are allocated bytes per real update. All six cases passed state equality
+in all three JVMs. Ratios are medians of paired current/old CPU samples, not
+ratios of unrelated minimum/maximum values.
+
+| Case | Old CPU ns/update | Scratch CPU ns/update | Old bytes/update | Scratch bytes/update | Paired CPU ratio |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Empty, P1/P2 | 18.53–22.67 | 21.53–26.63 | 184 | 160–184 | 0.95–1.41 |
+| Empty, four players | 35.58–41.35 | 40.65–42.71 | 232 | 208–232 | 1.03–1.14 |
+| Blocked, P1/P2 | 35.42–42.02 | 26.91–31.96 | 368–416 | 160–184 | 0.64–0.89 |
+| Blocked, four players | 54.75–63.33 | 50.44–51.65 | 416–464 | 208–232 | 0.82–0.92 |
+| Admission/rise/release, P1/P2 | 44.03–46.49 | 44.80–51.71 | 282.82–306.82 | 217.88–241.88 | 0.95–1.18 |
+| Admission/rise/release, four players | 144.57–151.79 | 144.45–154.18 | 616.94–640.94 | 576–642.35 | 1.00–1.02 |
+
+Empty WAIT retained identical allocation in two JVMs while adding CPU; this is
+consistent with scalar replacement of old local storage, but does not prove a
+particular JIT decision. The third JVM's different allocation shapes underline
+that limitation. Blocked WAIT saved 184–256 bytes and roughly 4–15 ns per update.
+The short carry/release sequence showed no consistent CPU improvement, with
+variable allocation savings. These local magnitudes and tradeoffs do not support
+a material runtime benefit for the additional machinery. No FPS, frame-time,
+percentage-of-engine or GC-pause claim follows from these measurements.
+
+**Retained coverage.** Scratch-identity/borrow/reference-retention assertions were
+removed. The six added tests now assert gameplay invariants: repeated empty and
+boundary-blocked waits before admission; callback-safe native-order carry after
+nested unload; standing-snapshot survival during unload; recovery after throwing
+callbacks; 13-player admission/carry/release; and capture/restore plus exact replay
+of every rising update through apex. Existing omitted-player release, identity
+reordering and replacement-ref coverage remains. The mutation-safe snapshots are
+preserved by restoring the original production algorithm.
+
+**Removal verification and cleanup.** Java 25 gate and the exact focused command
+below passed 88 tests, zero failures/errors/skips (11 multi-sidekick, 60 trigger
+participation, 17 placed-object gaps). Queue wait was 305 seconds; Maven execution
+including compilation was 1 minute 30 seconds. The tested source restores OOZ to
+`98fc161d2`; unchanged rewind-harness repair coverage remains the 1,349-test run
+above. No broad/full suite was rerun; lead-owned source-frozen smoke is separate.
+
+```bash
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestOOZPoppingPlatformMultiSidekick,TestSonic2TriggerParticipation,TestOOZPlacedObjectGaps' test
+```
+
+The owned measurement identity/workspace/24-hour expiry and terminal job states
+were registered under the local measurement ownership directory. After checking
+unchanged tracked files and the three expected generated Java sources, the owned
+detached cowtree and its raw samples/probe/build outputs were removed. No foreign
+outputs, jobs, locks, ROMs or implementation worktrees were removed. No task-owned
+measurement or validation job remains live.
