@@ -251,6 +251,9 @@ Unreleased. The earlier development themes remain in
   follows the original velocity quadrant through wall, ceiling and floor checks;
   simultaneous contacts use S3K's floor-first response and KiS2's wall-first response.
   Reverse probes retain the solidity bit and collision path left by preceding checks.
+  Slides apply collision corrections before their separate floor scan, keep the
+  original signed zero-speed boundary, and preserve the turn byte through get-up
+  and landing callbacks. KiS2 keeps its temporary radii across both scans.
   Wall climbs
   include the native radius in vertical probes, powered speed and upper bound;
   floor landings preserve the native angle, animation and climb timer. The native

@@ -4941,14 +4941,18 @@ public class TestPlayableSpriteMovement {
                 mockSprite.setSubpixelRaw(0, 0xA500);
                 mockSprite.setDoubleJumpFlag(3);
                 setMovementField("inputJump", true);
-                int solidityBit = mockSprite.getLrbSolidBit() & 0xFF;
+                int solidityBit = mockSprite.getTopSolidBit() & 0xFF;
                 boolean secondaryCollisionPath = (mockSprite.getTopSolidBit() & 0xFF) != 0x0C;
                 try (var terrain = org.mockito.Mockito.mockStatic(ObjectTerrainUtils.class)) {
                         terrain.when(() -> ObjectTerrainUtils.checkPlayerCeilingDistWithFlipAwareAngle(
                                         org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt(),
                                         org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.eq(solidityBit),
                                         org.mockito.ArgumentMatchers.eq(secondaryCollisionPath)))
-                                        .thenReturn(new TerrainCheckResult(-3, (byte) 0x80, 1));
+                                        // Reverse horizontal collision first reloads TOP via its
+                                        // ceiling wrapper; the separate floor sees corrected Y.
+                                        .thenAnswer(call -> new TerrainCheckResult(
+                                                (int) call.getArgument(1) == 200 ? -3 : 0,
+                                                (byte) 0x80, 1));
                         Method method = PlayableSpriteMovement.class.getDeclaredMethod("updateSliding");
                         method.setAccessible(true);
                         method.invoke(manager);

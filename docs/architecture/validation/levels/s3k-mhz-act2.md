@@ -1169,3 +1169,27 @@ Reviewed76bac source is composed at `c4c66c1a07722a059b4094ffc431a66d7ca496da`; 
 The exact unchanged maintained `coldKnucklesCompletesActTwoAndIsolatesTheFbzTimeline` then reports1T/1F/0E/0S: `cold Knuckles death at 37752 ==> expected: <false> but was: <true>`, currentline158. Suite21.726/case21.408s, queue91s/Maven49.705s. Its66282-input movie first differs from the37753-row author diagnostic at35020, so matching death indices do not prove trajectory/cause equivalence. Historical complete assertion is UNKNOWN here; whether this worsens the prior red needs matched baseline/current attribution after combined selection. No maintained input/oracle/count/window changed and no Act2/FBZ pass is claimed.
 
 Both R33 ordinary docs leaves are composed; the unhurt37402 control-handoff proposal remains distinct from the maintained negative. Main is unmerged. Actual command, all suite identities/counts, warnings and consumed diagnostics are in the [Root record](../../plans/2026-10-13-s3k-playable-completion.md#root-mhz-native-glide-composition-and-affected-checks--2026-10-22).
+
+
+### Root slide collision and native landing component — 2026-10-22
+
+A source-backed correction separates slide collision-only collection from
+active-glide responses, then probes the floor again at corrected coordinates.
+It retains the scanner byte/path and KiS2 radii across both operations, moves both
+original velocity words, preserves the positive-zero BPL branch and signed-byte
+get-up adjustment, and retains the turn byte before landing callbacks. Ordinary
+landing behavior and the exported API/snapshot shape remain unchanged.
+
+Old executable source produced25 intended failures with0errors/skips. The new
+affected18-class selection passes462/0F/0E/0S, including all27 slide controls and
+two real-registry normal/reverse controls, each comparing every key through two
+restore/forward cycles. Independent source review found no material introduced
+defect. Queue320s/Maven1:33 are distinct; all actual XML identities/properties/
+skips were inspected and owned diagnostics consumed.
+
+No maintained movie, predicate, count or rewind window changed, and no new route
+was run. Earlier death37752 is retained at its original source epoch; cause and
+baseline/current attribution remain open. This does not qualify Act2/FBZ or the
+separate LevelBound/camera prelude and slide sound obligations. The
+[dated record](../../plans/2026-10-13-s3k-playable-completion.md#root-knuckles-slide-collision-and-landing-contract--2026-10-22)
+contains native pins, exact command and the fixture correction rationale.
