@@ -281,11 +281,63 @@ Start, and foreign-driver refusal. The actual S2 route now commits 600 forward
 presentations and the independently calculated NTSC PCM cadence on every row,
 441568 stereo frames in one session. This closes the measured missing-clock
 symptom; it is not a waveform match or complete-route proof.
+
+The subsequent production recapture on clean `9b898be5f` reproduced the full
+600-row native cadence and one session. Reusing the existing native control,
+strict comparison now reports only `SAMPLE_MISMATCH`: first stereo frame
+92739, native `(0,0)`, engine `(1,1)`, with 173162 equal stereo frames overall.
+It waited 317 seconds, then Maven took 21.614 seconds. Its modes are title
+screen through 498, title card 499..583 and level 584..599. This recapture
+precedes the separately reviewed native Pause_Game input read correction;
+the lease alone does not certify every recorded Start consumer.
+
+Independent review then found that `GameLoop.prepareAdmittedIteration` passed
+only physical or forced-playback Start to native Pause_Game. The correction
+adds the lease-owned logical edge to that existing OR, preserving every
+admission/title/setup gate. `TestRecordedInputNativePause` failed first on
+clean `9b898be5f` at the native paused-state assertion (one failure, zero skips;
+no queue wait, 28.749 seconds Maven). With the read corrected, the actual
+production loop pauses once on the edge, skips sprite iterations while held
+and released, and resumes the native gameplay iteration on the next edge.
+Host pause stays false and audio remains forward. The exact affected selection
+of that test, `TestLevelIterationAdmissionController`,
+`TestGameLoopTitleCardPause`, `TestRecordedInputHostPause`,
+`TestS2NativePcmPresentationClock`, `TestCompleteRunAudioAuthorityGuard` and
+`TestInGamePause` passed **46 tests, zero skips**, after 349 seconds queue wait
+and 79 seconds Maven execution, using the same Java 25/EGL/Lua environment
+and verified absolute S2 ROM property. No shared audio producer, sequencer or
+chip implementation changed.
 The S2 command is the S1 command above with `--game s2 --zone ehz --sidekick tails`
 and the verified S2 ROM/movie/output. Its comparator command is identical with
 S2 directories and the same explicit 600-row target.
 
 ## Coverage and remaining dependencies
+
+The final-PCM diagnostic's 216000-row operational ceiling is shorter than
+either current movie. A separate clean TraceChaser checkout now contains
+`3799bc63f01f7abd6012643f856f9bfcb43a5d31`, based on `322851cb`, raising only
+that ceiling to 432000 rows (two hours at 60 Hz). The unrelated ledger cap
+remains 216000. Exact requested/movie/completed-row checks, streamed outputs,
+create-new/external paths, on-disk hashes and last-marker publication remain.
+Eleven focused `FinalPcmWindowRunnerTests` passed with zero skips; the four
+new acceptance bounds first failed against the old ceiling. These are
+synthetic boundary/corruption controls, not new native captures.
+
+Its built harness SHA-256 is
+`3da284d7756f75abd00c3aa795d4212b2cc145b890a91607d3082cd008b9b9b2`.
+The stock runtime remains BizHawk 2.11.0.0, with `EmuHawk.exe`
+`b2d4be5e2a766a5161cc26f3af2a90753c39d64c91c54a9884171aed09e21df3`,
+managed cores `0144e6e236be68ce126eb771dcb5a9ae7c153a083fa0333f345ac37b4a60acf7`
+and stock `gpgx.wbx.zst`
+`c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12`.
+The outer gitlink is deliberately uncommitted pending parent composition;
+historical capability hashes were not rewritten to bless this build.
+Before four future full native captures (two per movie), parent must freeze
+source/build/runtime/core/input identities, deduplicate jobs and approve the
+schedule. Compare each full result's first 600 rows against the preserved
+control rather than launching another unchanged native startup capture.
+Diagnostic final-PCM v2 does not provide canonical host attestation, missing
+S1 terminal frontiers or permission to enable either unavailable binding.
 
 | Obligation | S1 | S2 |
 | --- | --- | --- |
