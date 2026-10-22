@@ -101,7 +101,8 @@ Unreleased. The earlier development themes remain in
   Settings show **RESTART** only for changed
   values awaiting a restart, clearing it when restored to the running value.
   The hub remembers the last game after navigation settles, with optional
-  quiet title music. Controller hints
+  quiet title music decoded through an isolated stock audio source that preserves
+  the suspended game and bootstrap owner. Controller hints
   follow the last device used. Compact Controls, Advanced and ROM browsing pages,
   direct ROM location, bounded setup badges, explicit Save changes actions,
   clearer inherited values, calmer backgrounds and more readable text,
