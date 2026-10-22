@@ -4,7 +4,6 @@ import com.openggf.ghost.GhostFrame;
 import com.openggf.mods.ui.NameFont;
 import com.openggf.mods.ui.PixelCanvas;
 import com.openggf.net.identity.PlayerAppearance;
-import com.openggf.sprites.ghost.ActiveGhost;
 
 import org.junit.jupiter.api.Test;
 

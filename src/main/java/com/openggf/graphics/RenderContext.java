@@ -88,8 +88,8 @@ public class RenderContext {
      * An unregistered context over a reserved bank whose rows its owner composes and uploads
      * itself ({@link AppearancePalettes}); donor/sidekick lookups never see it.
      */
-    static RenderContext privateBlock(GameId gameId, int base) {
-        return new RenderContext(gameId, base);
+    static RenderContext privateBlock(RenderContext source, int base) {
+        return new RenderContext(source == null ? null : source.gameId, base);
     }
 
     /**

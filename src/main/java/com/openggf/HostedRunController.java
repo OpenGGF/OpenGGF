@@ -18,7 +18,6 @@ import com.openggf.mods.run.RunSpec;
 import com.openggf.mods.run.RunStep;
 import com.openggf.ghost.GhostFrame;
 import com.openggf.mods.ui.LevelOverlayCanvas;
-import com.openggf.sprites.ghost.ActiveGhost;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.version.AppVersion;
 

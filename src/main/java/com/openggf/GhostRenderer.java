@@ -12,7 +12,6 @@ import com.openggf.mods.ui.NameFont;
 import com.openggf.mods.ui.PixelCanvas;
 import com.openggf.net.identity.PlayerAppearance;
 import com.openggf.sprites.art.SpriteArtSet;
-import com.openggf.sprites.ghost.ActiveGhost;
 import com.openggf.sprites.ghost.GhostArtBankAllocator;
 import com.openggf.sprites.ghost.GhostOpacityCalculator;
 import com.openggf.sprites.ghost.GhostTraceRenderer;
@@ -236,7 +235,8 @@ public final class GhostRenderer {
         // beside Sonic) recolours the live line, so palette cycles show; another character
         // (Knuckles in a Sonic race) is composed from its own stock colours.
         boolean liveSource = local != null && local.dataEquals(stock);
-        return AppearancePalettes.acquire(GameServices.graphics(), null, 0, 0, stock, liveSource, look);
+        return AppearancePalettes.acquire(GameServices.graphics(), null, 0, stock, liveSource,
+                LocalPlayerLook.overrideColours(look), LocalPlayerLook.overrideMask(look));
     }
 
     private void releaseIdlePalettes() {

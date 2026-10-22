@@ -1,11 +1,9 @@
 package com.openggf.graphics;
 
 import com.openggf.level.Palette;
-import com.openggf.net.identity.PlayerAppearance;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
 
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -43,9 +41,20 @@ class TestAppearancePalettes {
         return a.red(index) == b.red(index) && a.green(index) == b.green(index) && a.blue(index) == b.blue(index);
     }
 
-    private static final PlayerAppearance LOOK = new PlayerAppearance(RED, List.of(
-            new PlayerAppearance.Entry(2, RED), new PlayerAppearance.Entry(3, RED),
-            new PlayerAppearance.Entry(4, GREEN)));
+    /** The look under test: entries 2 and 3 red, entry 4 green. */
+    private static final int LOOK_MASK = 1 << 2 | 1 << 3 | 1 << 4;
+
+    private static Palette lookColours() {
+        Palette colours = new Palette();
+        colour(colours, 2, RED);
+        colour(colours, 3, RED);
+        colour(colours, 4, GREEN);
+        return colours;
+    }
+
+    private static AppearancePalettes.Block acquire(GraphicsManager graphics, PaletteView stock, boolean liveSource) {
+        return AppearancePalettes.acquire(graphics, null, 0, stock, liveSource, lookColours(), LOOK_MASK);
+    }
 
     @Test
     void composesTheLiveLineAndKeepsRuntimeWritesVisible() {
@@ -59,7 +68,7 @@ class TestAppearancePalettes {
             graphics.cachePaletteTexture(live, 0);
             graphics.cachePaletteTexture(line1, 1);
 
-            var block = AppearancePalettes.acquire(graphics, null, 0, 0, stockLine(), true, LOOK);
+            var block = acquire(graphics, stockLine(), true);
             assertNotNull(block);
             RenderContext context = block.context();
             assertTrue(context.getPaletteLineBase() >= RenderContext.LINES_PER_CONTEXT);
@@ -117,7 +126,7 @@ class TestAppearancePalettes {
             for (int i = 0; i < 16; i++) colour(shared, i, 0x0E0);
             graphics.cachePaletteTexture(shared, 0);
             Palette knuckles = stockLine();
-            var block = AppearancePalettes.acquire(graphics, null, 0, 0, knuckles, false, LOOK);
+            var block = acquire(graphics, knuckles, false);
             PaletteView row = block.composedLine(0);
             assertColour(RED, row, 2);
             assertTrue(same(knuckles, row, 7), "non-overridden entries come from the ghost's stock line");
@@ -139,7 +148,7 @@ class TestAppearancePalettes {
         try {
             Palette live = stockLine();
             graphics.cachePaletteTexture(live, 0);
-            var block = AppearancePalettes.acquire(graphics, null, 0, 0, stockLine(), true, LOOK);
+            var block = acquire(graphics, stockLine(), true);
             int base = block.context().getPaletteLineBase();
             Palette water0 = new Palette();
             for (int i = 0; i < 16; i++) colour(water0, i, 0x0A0 | (i % 4) << 9);
@@ -170,17 +179,17 @@ class TestAppearancePalettes {
             graphics.cachePaletteTexture(stockLine(), 0);
             var blocks = new java.util.ArrayList<AppearancePalettes.Block>();
             for (int i = 0; i < 15; i++) {
-                var block = AppearancePalettes.acquire(graphics, null, 0, 0, stockLine(), true, LOOK);
+                var block = acquire(graphics, stockLine(), true);
                 assertNotNull(block, "block " + i);
                 blocks.add(block);
             }
             assertEquals(64, RenderContext.getTotalPaletteLines());
-            assertNull(AppearancePalettes.acquire(graphics, null, 0, 0, stockLine(), true, LOOK),
+            assertNull(acquire(graphics, stockLine(), true),
                     "a full budget falls back to the shared rows instead of growing past 64");
-            assertNull(AppearancePalettes.acquire(graphics, null, 0, 0, stockLine(), true, PlayerAppearance.STOCK));
+            assertNull(acquire(graphics, null, true), "no stock line, no rows");
 
             blocks.getFirst().release();
-            assertNotNull(AppearancePalettes.acquire(graphics, null, 0, 0, stockLine(), true, LOOK));
+            assertNotNull(acquire(graphics, stockLine(), true));
 
             // A game change discards palette textures; a block reserves fresh rows on next use.
             var survivor = blocks.get(1);

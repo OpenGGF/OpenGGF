@@ -1,9 +1,5 @@
 package com.openggf.graphics;
 
-import com.openggf.game.GameId;
-import com.openggf.level.Palette;
-import com.openggf.net.identity.PlayerAppearance;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -31,26 +27,34 @@ public final class AppearancePalettes {
     }
 
     /**
-     * Reserves and composes private rows for {@code look}. Returns null for the stock look, a
-     * missing stock line, or when every bounded palette bank is already reserved (the caller then
-     * draws with the shared rows, as before).
+     * Reserves and composes private rows for a non-stock look. Returns null for a missing stock
+     * line, or when every bounded palette bank is already reserved (the caller then draws with
+     * the shared rows, as before). The caller keeps the stock look on the shared rows.
      *
-     * @param sourceBase    first texture row the block mirrors: 0 for the level's lines, or the
-     *                      base of the sprite's existing render context
+     * <p>The look arrives as plain colours so this renderer stays independent of the level,
+     * game and network layers: callers convert a player's look into {@code overrides}.
+     *
+     * @param source        the sprite's existing render context, whose rows the block mirrors and
+     *                      whose game it draws for; null for the level's own lines 0-3
      * @param characterLine logical line (0-3) holding the character's colours
      * @param stock         the character's stock 16-colour line, as the ROM loads it
      * @param liveSource    true when the source character line is this character's own line, so
      *                      runtime changes to it show through; false composes from {@code stock}
      *                      (another character's colours occupy the shared line)
+     * @param overrides     replacement colours, read only at the indices in {@code overrideMask}
+     * @param overrideMask  bit {@code i} set when entry {@code i} of the character line is replaced;
+     *                      zero keeps every stock colour (a look with only a base colour)
      */
-    public static Block acquire(GraphicsManager graphics, GameId gameId, int sourceBase, int characterLine,
-                                PaletteView stock, boolean liveSource, PlayerAppearance look) {
+    public static Block acquire(GraphicsManager graphics, RenderContext source, int characterLine,
+                                PaletteView stock, boolean liveSource, PaletteView overrides, int overrideMask) {
         engineCaller();
         Objects.requireNonNull(graphics, "graphics");
-        if (look == null || look.isStock() || stock == null) return null;
-        if (characterLine < 0 || characterLine >= RenderContext.LINES_PER_CONTEXT || sourceBase < 0)
-            throw new IllegalArgumentException("character line must be 0..3 and the source base non-negative");
-        Block block = new Block(graphics, gameId, sourceBase, characterLine, stock, liveSource, look);
+        if (stock == null) return null;
+        if (overrideMask != 0) Objects.requireNonNull(overrides, "overrides");
+        if (characterLine < 0 || characterLine >= RenderContext.LINES_PER_CONTEXT)
+            throw new IllegalArgumentException("character line must be 0..3");
+        if ((overrideMask & ~0xFFFF) != 0) throw new IllegalArgumentException("override mask covers entries 0..15");
+        Block block = new Block(graphics, source, characterLine, stock, liveSource, overrides, overrideMask);
         if (!graphics.appearancePaletteRows().admit(block)) return null;
         return block;
     }
@@ -58,41 +62,34 @@ public final class AppearancePalettes {
     /** One sprite's private palette rows. */
     public static final class Block {
         private final GraphicsManager graphics;
-        private final GameId gameId;
+        private final RenderContext source;
         private final int sourceBase;
         private final int characterLine;
-        private final Palette stock = new Palette();
+        private final Line stock = new Line();
         private final boolean liveSource;
-        private final PlayerAppearance look;
         private final boolean[] overridden = new boolean[16];
-        private final Palette.Color[] overrides = new Palette.Color[16];
-        private final Palette[] rows = newLines();
-        private final Palette[] liveRows = newLines();
-        private final Palette[] waterRows = newLines();
+        private final Line overrides = new Line();
+        private final Line[] rows = newLines();
+        private final Line[] liveRows = newLines();
+        private final Line[] waterRows = newLines();
         private Object token;
         private int base = -1;
         private RenderContext context;
         private boolean released;
 
-        private Block(GraphicsManager graphics, GameId gameId, int sourceBase, int characterLine,
-                      PaletteView stock, boolean liveSource, PlayerAppearance look) {
+        private Block(GraphicsManager graphics, RenderContext source, int characterLine,
+                      PaletteView stock, boolean liveSource, PaletteView overrides, int overrideMask) {
             this.graphics = graphics;
-            this.gameId = gameId;
-            this.sourceBase = sourceBase;
+            this.source = source;
+            this.sourceBase = source == null ? 0 : source.getPaletteLineBase();
             this.characterLine = characterLine;
             this.liveSource = liveSource;
-            this.look = look;
             copy(stock, this.stock);
-            for (PlayerAppearance.Entry entry : look.palette()) {
-                Palette.Color colour = new Palette.Color();
-                colour.fromSegaFormat(entry.colour());
-                overrides[entry.index()] = colour;
-                overridden[entry.index()] = true;
+            for (int i = 0; i < 16; i++) {
+                if ((overrideMask & (1 << i)) == 0) continue;
+                overridden[i] = true;
+                set(this.overrides, i, overrides.red(i), overrides.green(i), overrides.blue(i));
             }
-        }
-
-        public PlayerAppearance look() {
-            return look;
         }
 
         /**
@@ -128,21 +125,21 @@ public final class AppearancePalettes {
 
         /** Recomposes logical {@code line} from its source; true when the composed colours changed. */
         boolean compose(int line, PaletteView source) {
-            Palette live = liveRows[line];
+            Line live = liveRows[line];
             if (source != null) copy(source, live);
             else if (line == characterLine) copy(stock, live);
             else clear(live);
-            Palette out = rows[line];
+            Line out = rows[line];
             boolean changed = false;
             for (int i = 0; i < 16; i++) {
-                Palette.Color colour = live.getColor(i);
+                PaletteView colour = live;
                 if (line == characterLine && overridden[i]) {
-                    if (!liveSource) colour = overrides[i];
-                    else if (sameColour(live, stock, i)) colour = overrides[i];
+                    if (!liveSource) colour = overrides;
+                    else if (sameColour(live, stock, i)) colour = overrides;
                 } else if (line == characterLine && !liveSource) {
-                    colour = stock.getColor(i);
+                    colour = stock;
                 }
-                changed |= set(out, i, colour.r, colour.g, colour.b);
+                changed |= set(out, i, colour.red(i), colour.green(i), colour.blue(i));
             }
             return changed;
         }
@@ -154,15 +151,14 @@ public final class AppearancePalettes {
          * average shift (as donor rows do).
          */
         PaletteView underwater(int line, PaletteView[] water, int[] ratio) {
-            Palette out = waterRows[line];
+            Line out = waterRows[line];
             PaletteView waterLine = sourceBase == 0 && water != null && line < water.length ? water[line] : null;
             for (int i = 0; i < 16; i++) {
-                Palette.Color composed = rows[line].getColor(i);
                 if (waterLine == null || line == characterLine && !liveSource) {
-                    shift(out, i, composed, ratio);
+                    shift(out, i, rows[line], ratio);
                 } else if (line == characterLine && overridden[i] && sameColour(liveRows[line], stock, i)) {
                     // The stock entry's own water colour fixes the per-channel shift where it is defined.
-                    perEntryShift(out, i, overrides[i], liveRows[line], waterLine, ratio);
+                    perEntryShift(out, i, overrides, liveRows[line], waterLine, ratio);
                 } else {
                     set(out, i, waterLine.red(i), waterLine.green(i), waterLine.blue(i));
                 }
@@ -170,11 +166,11 @@ public final class AppearancePalettes {
             return out;
         }
 
-        private static void perEntryShift(Palette out, int i, Palette.Color override, PaletteView live,
+        private static void perEntryShift(Line out, int i, PaletteView override, PaletteView live,
                                           PaletteView water, int[] ratio) {
-            int r = channelShift(override.r, live.red(i), water.red(i), ratio[0]);
-            int g = channelShift(override.g, live.green(i), water.green(i), ratio[1]);
-            int b = channelShift(override.b, live.blue(i), water.blue(i), ratio[2]);
+            int r = channelShift(override.red(i), live.red(i), water.red(i), ratio[0]);
+            int g = channelShift(override.green(i), live.green(i), water.green(i), ratio[1]);
+            int b = channelShift(override.blue(i), live.blue(i), water.blue(i), ratio[2]);
             set(out, i, (byte) r, (byte) g, (byte) b);
         }
 
@@ -185,16 +181,16 @@ public final class AppearancePalettes {
             return Math.min(255, v * ratio / 256);
         }
 
-        private static void shift(Palette out, int i, Palette.Color colour, int[] ratio) {
-            set(out, i, (byte) Math.min(255, Byte.toUnsignedInt(colour.r) * ratio[0] / 256),
-                    (byte) Math.min(255, Byte.toUnsignedInt(colour.g) * ratio[1] / 256),
-                    (byte) Math.min(255, Byte.toUnsignedInt(colour.b) * ratio[2] / 256));
+        private static void shift(Line out, int i, PaletteView colour, int[] ratio) {
+            set(out, i, (byte) Math.min(255, Byte.toUnsignedInt(colour.red(i)) * ratio[0] / 256),
+                    (byte) Math.min(255, Byte.toUnsignedInt(colour.green(i)) * ratio[1] / 256),
+                    (byte) Math.min(255, Byte.toUnsignedInt(colour.blue(i)) * ratio[2] / 256));
         }
 
         private void bind(Object token, int base) {
             this.token = token;
             this.base = base;
-            this.context = RenderContext.privateBlock(gameId, base);
+            this.context = RenderContext.privateBlock(source, base);
         }
 
         private void unbind() {
@@ -313,9 +309,20 @@ public final class AppearancePalettes {
         }
     }
 
-    private static Palette[] newLines() {
-        Palette[] lines = new Palette[RenderContext.LINES_PER_CONTEXT];
-        for (int i = 0; i < lines.length; i++) lines[i] = new Palette();
+    /** A mutable 16-colour line owned by this renderer (8-bit RGB, as the palette texture holds). */
+    private static final class Line implements PaletteView {
+        private final byte[] red = new byte[16];
+        private final byte[] green = new byte[16];
+        private final byte[] blue = new byte[16];
+
+        @Override public byte red(int colorIndex) { return red[colorIndex]; }
+        @Override public byte green(int colorIndex) { return green[colorIndex]; }
+        @Override public byte blue(int colorIndex) { return blue[colorIndex]; }
+    }
+
+    private static Line[] newLines() {
+        Line[] lines = new Line[RenderContext.LINES_PER_CONTEXT];
+        for (int i = 0; i < lines.length; i++) lines[i] = new Line();
         return lines;
     }
 
@@ -323,20 +330,19 @@ public final class AppearancePalettes {
         return a.red(i) == b.red(i) && a.green(i) == b.green(i) && a.blue(i) == b.blue(i);
     }
 
-    private static void copy(PaletteView from, Palette to) {
+    private static void copy(PaletteView from, Line to) {
         for (int i = 0; i < 16; i++) set(to, i, from.red(i), from.green(i), from.blue(i));
     }
 
-    private static void clear(Palette palette) {
+    private static void clear(Line palette) {
         for (int i = 0; i < 16; i++) set(palette, i, (byte) 0, (byte) 0, (byte) 0);
     }
 
-    private static boolean set(Palette palette, int i, byte r, byte g, byte b) {
-        Palette.Color colour = palette.getColor(i);
-        if (colour.r == r && colour.g == g && colour.b == b) return false;
-        colour.r = r;
-        colour.g = g;
-        colour.b = b;
+    private static boolean set(Line line, int i, byte r, byte g, byte b) {
+        if (line.red[i] == r && line.green[i] == g && line.blue[i] == b) return false;
+        line.red[i] = r;
+        line.green[i] = g;
+        line.blue[i] = b;
         return true;
     }
 }

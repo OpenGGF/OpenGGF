@@ -22,6 +22,7 @@ import java.util.Objects;
 final class LocalPlayerLook {
     private PlayerAppearance requested = PlayerAppearance.STOCK;
     private AppearancePalettes.Block block;
+    private PlayerAppearance blockLook;
     private PlayerSpriteRenderer body;
     private PlayerSpriteRenderer tails;
     private RenderContext bodyOriginal;
@@ -60,7 +61,7 @@ final class LocalPlayerLook {
             clear();
             return;
         }
-        if (block == null || currentBody != body || currentTails != tails || !block.look().equals(requested)) {
+        if (block == null || currentBody != body || currentTails != tails || !blockLook.equals(requested)) {
             clear();
             if (currentBody == failedBody && requested.equals(failedLook)) {
                 return;
@@ -87,17 +88,35 @@ final class LocalPlayerLook {
         RenderContext original = currentBody.getRenderContext();
         int line = currentBody.paletteLine();
         Palette stock = original != null ? original.getPalette(line) : stockLines.apply(characterCode);
-        AppearancePalettes.Block acquired = AppearancePalettes.acquire(graphics,
-                original == null ? null : original.getGameId(),
-                original == null ? 0 : original.getPaletteLineBase(), line, stock, true, requested);
+        AppearancePalettes.Block acquired = AppearancePalettes.acquire(graphics, original, line, stock, true,
+                overrideColours(requested), overrideMask(requested));
         if (acquired == null) {
             return;
         }
         block = acquired;
+        blockLook = requested;
         body = currentBody;
         bodyOriginal = original;
         tails = currentTails;
         tailsOriginal = currentTails == null ? null : currentTails.getRenderContext();
+    }
+
+    /** The look's palette entries as renderer colours, decoded exactly as ROM palette words are. */
+    static Palette overrideColours(PlayerAppearance look) {
+        Palette colours = new Palette();
+        for (PlayerAppearance.Entry entry : look.palette()) {
+            colours.getColor(entry.index()).fromSegaFormat(entry.colour());
+        }
+        return colours;
+    }
+
+    /** Bit {@code i} set for each palette entry the look replaces. */
+    static int overrideMask(PlayerAppearance look) {
+        int mask = 0;
+        for (PlayerAppearance.Entry entry : look.palette()) {
+            mask |= 1 << entry.index();
+        }
+        return mask;
     }
 
     /** The current game's stock line for a builtin character, read through the ROM pipeline. */
@@ -120,6 +139,7 @@ final class LocalPlayerLook {
         block.release();
         applied = null;
         block = null;
+        blockLook = null;
         body = null;
         tails = null;
         bodyOriginal = null;

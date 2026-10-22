@@ -1,9 +1,13 @@
-package com.openggf.sprites.ghost;
+package com.openggf;
 
 import com.openggf.ghost.GhostFrame;
 import com.openggf.net.identity.PlayerAppearance;
 
-/** One ghost to draw this frame: art, resolved frame, and optional network presentation. */
+/**
+ * One ghost to draw this frame: art, resolved frame, and optional network presentation.
+ * Lives in the engine shell beside its producer ({@code HostedRunController}) and consumer
+ * ({@link GhostRenderer}), so the sprites layer never depends on the network look type.
+ */
 public record ActiveGhost(String slotId, String characterCode, GhostFrame frame,
                           String nameplate, float opacityScale, PlayerAppearance appearance) {
     public ActiveGhost {
