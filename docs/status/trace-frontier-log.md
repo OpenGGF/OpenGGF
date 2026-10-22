@@ -113126,3 +113126,19 @@ untracked dormant saw, shifting the spilled-ring SST index. Source-only evidence
 and focused loader/restore tests do not claim a new route result; original and
 emerald BK2 qualification will use the next necessary composed run. No shared
 manager, ring threshold, trace row or comparison changes.
+
+The next diagnostic at committed `e157bbadb` plus ROM mapping translation
+observed the second ARZ arrow at Y `$481` versus native `$461`. Original BK2
+native playback through row111839 then captured478 paired RNG calls: arrows
+consume draws477/478, while the engine seeds correspond to491/492. Fourteen
+extra engine producers precede the first arrow; their owner is not yet
+attributed. No seed correction or fixture-dependent compensation is justified.
+The temporary observation hook was removed; exact source/input hashes and the
+excluded sparse slot columns are recorded in the research artifact.
+
+The next transform-start correction is validated locally with6 new focused
+cases (within the final11-case two-class pass),0 skips. Stars at fixed129,
+invincibility clear and semantic Super audio now publish at the native start;
+ordinary engine93/Title96 namespaces remain unchanged. No chain measurement on
+that new source is claimed yet; normal-star Super rewind restoration and native
+H32 consumer composition remain separate active obligations.

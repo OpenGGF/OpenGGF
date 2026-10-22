@@ -57,6 +57,53 @@ unchanged. REV01 animation 6 points through `$1B7C6` to `$1B82A`, beginning
 
 ## Entry and title ownership
 
+### Transform-start effects
+
+`Sonic_CheckGoSuper` writes Obj7E's ID at fixed `$D040` immediately (REV01
+`$1AB6C = 11FC007ED040`), then dry constants, invincibility timer/status and
+the transform SFX / Super music requests. Those effects now belong to that
+start, rather than the later palette completion. An existing same-player Obj7E
+at slot129 retains routine, mapping and timer state, matching the ID-only write.
+Ordinary invincibility uses fixed136 / `$D200`, so that common path does not
+require rewriting an arbitrary foreign SST. Native constants reserve129 for
+Super stars and136–139 for Sonic invincibility; level RAM clearing includes
+`$D040`. No shared allocator change or foreign-class SST reinterpretation lands.
+
+The ordinary audio API uses engine playlist keys. Native request `$96` resolves
+to engine `GameMusic.SUPER` / `$93`, whose actual loader pointer is `$FCBBC`.
+Ordinary engine key `$96` resolves to Title at `$FD193`; passing raw `$96` to
+that API was rejected after the audio lane verified the driver's namespace.
+The existing semantic music request moves in time without changing its value,
+and donor requests keep donor semantic resolution. The new test checks both
+actual-ROM loader pointers and observes `SPECIAL_SFX:$DF` then `MUSIC:$93`.
+
+Obj7E's idle cycle trigger also preserves its current animation timer:
+`loc_1E188` writes frame0 and its active byte without resetting duration.
+Newly zeroed stars therefore advance to frame1 on the following active call.
+During the same-pass start, the already-published native control byte prevents
+an idle trigger even before the movement dispatcher has applied its freeze.
+Existing active animation and captured scalar state remain independent.
+
+Focused eight-class validation on `8d410a09b` plus these effects and the
+unwired native sprite assembler completed31 tests,3 new assertion failures,
+0 skips. Two new assertions named ordinary SFX instead of the existing
+special-channel diagnostic; another counted an offscreen piece after replay
+had correctly charged its width and omitted its pixels. Production was
+unchanged. The final two-class run
+`--lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+-Dtest=TestSonic2SuperTransformationStartEffects,TestSonic2SpecialStageSpriteAssembly`
+passed11/11,0 skips (Maven30.89s,queue0s); the other20 checks passed on the same
+production source. Start-effects coverage includes failed eligibility,
+exhausted general allocation, live ordinary stars at136, retained nonempty129,
+world restoration and five forward ticks, with no restore-time audio replay.
+
+One shared restore gap remains identified separately: timer-only
+`refreshInvincibilityStarsAfterRewindRestore` can delete captured normal stars
+after Super has cleared their timer. Retail Obj35 tests the secondary invincible
+bit; its Super deletion is under `fixBugs=1` (s2.asm:42494-42503), which is not
+the shipped branch. A bounded internal semantic restore hook is requested from
+the shared owner; no unapproved workaround is included here.
+
 Ordinary `Sonic2SpecialStageProvider.initializeStage` now arms the existing live
 104-presentation load hold. `TRACE_ACCURATE` leaves it unarmed because recorded
 row admission owns that span. The hold follows the 22 fade-to-white waits and
@@ -252,3 +299,36 @@ translation; no timing/fixture/hydration changes. The local policy hook rejected
 that record initializer as a surface delta despite11 normalized-signature checks
 passing; parent coordinates the existing policy correction rather than a pin
 change or hook bypass.
+
+## ARZ2 RNG producer evidence
+
+After the phase/balance correction, the first chain error at ARZ2 row5084 is
+Tails entering hurt while the native player keeps rolling. A temporary
+observation-only chain hook on `e157bbadb` plus the mapping translation showed
+the engine arrow at Y `$481`; the committed native observation places it at
+`$461`. The engine's second arrow consumed seed `$F6EE848A` and produced
+`$C64D3A1A`. The 55-row hook was removed after the failed probe (one test,
+zero skips, Maven42.37s, queue281s); comparisons and gameplay were unchanged.
+
+A separate read-only native capture played original BK2 SHA256
+`e850798f882b8c580aad148bc97cb50f260cae1d336dd649fe2f4dfae6796aa5`
+naturally from row0 through111839, with no save/setup/RAM writes. TraceChaser
+pin `322851cbfa2e1c1803332142e11ab74b4eb34eea` was built in this isolated tree;
+the stock GPGX core ran video/audio disabled and callbacks armed at row106753.
+All478 RandomNumber entries at `$3390` paired with returns at `$33B4`.
+The first arrow's native call at row111535 (returnPC `$30B0E`) is draw477:
+seed `$F9BA0D1A` → `$17F6192A`, D0 `$F9BA17F6`, choice2 / Y `$4A1`.
+The second at row111791 is draw478: seed `$17F6192A` → `$DE2407BA`,
+D0 `$17F6DE24`, choice0 / Y `$461`. There are no intervening RNG calls.
+The observed engine seeds are draws491/492 of that recurrence: fourteen extra
+engine calls already precede the first arrow. This proves a producer-count
+disagreement, not which producer is wrong; no RNG adjustment is justified.
+Native/current Super stars contain no RandomNumber caller.
+
+The external task capture is `native-gap-s2-rng-20261022/capture`, with paired
+call TSV SHA256 `3ca8b861fe5503cc323ee16415235191b67278a945a20381304f0332b4ce8d92`.
+The sparse `frames.tsv` slot19/20 columns accidentally used the S1 object base
+and are excluded; the callback seed/PC/register/row columns are independent and
+valid. No repeat capture was needed for the RNG objective. Committed trace aux
+rows contain no RNG samples at these arrow boundaries, so the native capture
+was necessary; nearest recurrence-pair fitting was rejected.
