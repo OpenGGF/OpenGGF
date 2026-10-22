@@ -163,6 +163,18 @@ platform subobjects after the parent before later object allocation scans run
 
 **Originating commit.** `fix(s2): advance ARZ2 Obj83 slot pressure`.
 
+**Capsule follow-up (2026-10-22).** Occupancy alone does not preserve execution.
+Obj3E uses `AllocateObject`, so a body at slot40 can create button/lock/broken
+children at16/20/35 even when41..127 are full. Each child must execute at its
+own SST cursor position. Folding lock movement or the broken timer into the
+body makes lower children run too early: the lock moves8px on its arming pass
+and the broken timer falls from$B4 to$B3 before either native child dispatches.
+Use lower-hole, mixed, full-RAM and later-child controls, plus graph recreation
+and forward replay. `loc_3F220 / loc_3F228 (s2.asm:84967-84990)`,
+`loc_3F38E (s2.asm:85081-85088)`,
+`loc_3F3A8 / loc_3F3F4 (s2.asm:85096-85122)`; originating task
+`coverage_assertions`, base `94c40570a`.
+
 ---
 
 ## P1 — Touch-response directional/state guards diverge from ROM
