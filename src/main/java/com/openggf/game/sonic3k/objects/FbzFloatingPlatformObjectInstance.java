@@ -108,7 +108,7 @@ public final class FbzFloatingPlatformObjectInstance extends AbstractObjectInsta
     }
     @Override public boolean fullSolidBottomOverlapUsesCurrentYRadiusOnly(PlayableEntity player) {
         // SolidObjectFull_Offset_1P builds the lower reject bound by doubling
-        // d2 after adding the live y_radius(a1) (sonic3k.asm:41303-41316).
+        // d2 after adding the live y_radius(a1) (sonic3k.asm:41343-41356).
         // Unlike SolidObject_cont, it never adds default_y_radius(a1).
         return true;
     }

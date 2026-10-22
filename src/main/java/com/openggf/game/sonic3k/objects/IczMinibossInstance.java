@@ -147,7 +147,7 @@ public final class IczMinibossInstance extends AbstractBossInstance
     private boolean arenaGateComplete;
     private boolean bossMusicStarted;
     private boolean shardsReleased;
-    // loc_711EC creates the six shard SSTs (CreateChild1_Normal, sonic3k.asm:149713-149714);
+    // loc_711EC creates the six shard SSTs (CreateChild1_Normal, sonic3k.asm:149781-149782);
     // from that dispatch on, loc_71446 draws them every frame (149901-149908).
     private boolean shardsCreated;
     private boolean orbThrowRight;
@@ -656,7 +656,7 @@ public final class IczMinibossInstance extends AbstractBossInstance
         switch (callback) {
             case ATTACH_TO_RING -> {
                 orb.routine = ORB_ROUTINE_ATTACH_TO_RING;
-                // loc_7153A: move.w #$180,priority(a0) (sonic3k.asm:150011).
+                // loc_7153A: move.w #$180,priority(a0) (sonic3k.asm:150079).
                 orb.priority = ORB_ATTACH_PRIORITY_WORD;
                 calculateOrbAttachVelocity(orb);
                 orb.timer = 0x1F;
@@ -814,7 +814,7 @@ public final class IczMinibossInstance extends AbstractBossInstance
             orb.frame = lowPriority ? 5 : 8;
         }
         // loc_7183C: move.w #$180,priority(a0), then #$300 when d3 is clear
-        // (sonic3k.asm:150313, 150316).
+        // (sonic3k.asm:150381, 150384).
         orb.priority = lowPriority ? ORB_FRONT_PRIORITY_WORD : ORB_BEHIND_PRIORITY_WORD;
         orb.front = !lowPriority;
     }
@@ -959,7 +959,7 @@ public final class IczMinibossInstance extends AbstractBossInstance
                 }
                 services.fadeOutMusic();
                 // ROM loc_71926: jmp (BossDefeated_StopTimer).l
-                // (sonic3k.asm:150472).
+                // (sonic3k.asm:150540).
                 stopLevelTimerOnBossDefeat();
             }
         } else {
@@ -1077,7 +1077,7 @@ public final class IczMinibossInstance extends AbstractBossInstance
         return Sonic3kSfx.EXPLODE.id;
     }
 
-    // ObjDat3_71960 priority $280 (sonic3k.asm:149704-149705, 150441).
+    // ObjDat3_71960 priority $280 (sonic3k.asm:149772-149773, 150509).
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
     // The ROM child SSTs are drawn inline from this owner, each in its own
     // priority list (MultiBucketRenderable):
@@ -1111,14 +1111,14 @@ public final class IczMinibossInstance extends AbstractBossInstance
 
     @Override
     public boolean isHighPriority() {
-        // ObjDat3_71960 art make_art_tile(ArtTile_ICZMiniboss,1,1) sets bit 15 (sonic3k.asm:150440).
+        // ObjDat3_71960 art make_art_tile(ArtTile_ICZMiniboss,1,1) sets bit 15 (sonic3k.asm:150508).
         return true;
     }
 
     @Override
     public boolean isHighPriority(int bucket) {
         // Body and shards carry art bit 15 (ObjDat3_71960 / CreateChild1_Normal copy);
-        // orbs never do (ObjDat3_71972, sonic3k.asm:150448).
+        // orbs never do (ObjDat3_71972, sonic3k.asm:150516).
         return bucket == PRIORITY_BUCKET ? isHighPriority() : ORB_HIGH_PRIORITY;
     }
 
@@ -1127,7 +1127,7 @@ public final class IczMinibossInstance extends AbstractBossInstance
         if (bucket != PRIORITY_BUCKET) {
             return LOW_PARTS;
         }
-        // Orbs still at their initial $280 word (until loc_7153A, sonic3k.asm:150011)
+        // Orbs still at their initial $280 word (until loc_7153A, sonic3k.asm:150079)
         // share the body's list with bit 15 clear: the list then holds both classes.
         return HIGH_PARTS | (hasVisibleOrbInBucket(bucket) ? LOW_PARTS : 0);
     }

@@ -184,7 +184,7 @@ class TestMhzCheckpointRoutes {
             // The configured roster survives both deaths. A native loc_68D8 Obj_Tails
             // left by this local fresh start is not part of it: with Last_star_post_hit
             // set, SpawnLevelMainSprites returns before loc_68C2/loc_68D8
-            // (sonic3k.asm:8115-8116), so every reload asserts its absence too.
+            // (sonic3k.asm:8147-8148), so every reload asserts its absence too.
             var sprites = GameServices.sprites();
             var followers = sprites.getRegisteredSidekicks().stream()
                     .filter(player -> !com.openggf.sprites.managers.SpriteManagerInternalAccess

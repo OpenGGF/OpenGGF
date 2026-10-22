@@ -71,7 +71,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
     // ===== ROM constants =====
 
     // ROM word_60D16: dc.w -$24, $48, -8, $10 = (xOffset=-36, width=72, yOffset=-8, height=16)
-    // Check_PlayerInRange / sub_8592C (sonic3k.asm:179994-180031) builds the box as
+    // Check_PlayerInRange / sub_8592C (sonic3k.asm:180085-180122) builds the box as
     //   left = objX + xOffset, right = left + width, top = objY + yOffset, bottom = top + height
     // and tests it HALF-OPEN: `cmp right,px / bhs out` and `cmp bottom,py / bhs out`
     // reject px>=right and py>=bottom, so the inclusive edges are only the low ones
@@ -198,7 +198,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
     // First byte (3) is the per-frame timer; frames are 5, 6, 7, $14, 5, then the $F4
     // control byte invokes the object's $34 routine (loc_60D32) which sets machine bit 3
     // and dispenses the ball.
-    // ROM Animate_RawNoSST (sonic3k.asm:177341): `subq.b #1,anim_frame_timer / bpl skip`,
+    // ROM Animate_RawNoSST (sonic3k.asm:177432): `subq.b #1,anim_frame_timer / bpl skip`,
     // else reload anim_frame_timer from the duration byte (3, i.e. held 4 calls) and
     // advance to the NEXT table entry. anim_frame_timer is 0 on SPIN entry
     // (SetUp_ObjAttributes clears it and the IDLE state never animates), so the FIRST
@@ -443,7 +443,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         // Initialize drift state on first update (separated from child spawning
         // so tests can exercise drift logic without requiring services()).
         if (!driftInitialized) {
-            // Obj_GumballMachine, sonic3k.asm:127412: move.l
+            // Obj_GumballMachine, sonic3k.asm:127466: move.l
             // (V_int_run_count).w,(RNG_seed).w. This replaces prior gameplay
             // entropy with the full native long on the first object pass only.
             // Rewind captures driftInitialized, so restoring an initialized
@@ -676,7 +676,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
      * LIVE y (ROM: {@code parent3(a0)}, the container/crank child), matching ROM
      * loc_60EE0's per-frame clamp that keeps the ball from rising above its
      * spawner while the machine itself may still be drifting downward
-     * (sonic3k.asm:127609-127616).
+     * (sonic3k.asm:127663-127670).
      */
     public void onContainerSpawnBall(int x, int y, java.util.function.IntSupplier parentYSupplier) {
         int subtype = chooseBallSubtype();
@@ -1157,7 +1157,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
             }
 
             if (!inExitRange(playerEntity)) {
-                // loc_61050 (sonic3k.asm:127741-127753): with Player_1 out of
+                // loc_61050 (sonic3k.asm:127795-127807): with Player_1 out of
                 // range, a Player_2 in range is removed by Delete_Referenced_Sprite.
                 // Check_PlayerInRange reads only the Player_1/Player_2 SSTs, so
                 // only the native P2 (first registered follower) is eligible.
@@ -1531,9 +1531,9 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
 
         @Override
         public boolean usesPlatformObjectLandingSnap() {
-            // ROM loc_60DAC calls SolidObjectFull2_1P (sonic3k.asm:127528), whose
+            // ROM loc_60DAC calls SolidObjectFull2_1P (sonic3k.asm:127582), whose
             // "d6 clear" fresh-contact path falls through to the shared
-            // SolidObject_cont -> loc_1E154 top-landing branch (sonic3k.asm:41070-
+            // SolidObject_cont -> loc_1E154 top-landing branch (sonic3k.asm:41110-
             // 41072, 41399, 41611-41637): `subq.w #1,y_pos(a1) / sub.w d3,y_pos(a1)`
             // -- the same relative playerY-distY placement resolveContactInternal
             // already produces. It is NOT PlatformObject_ChkYRange's absolute
@@ -1562,7 +1562,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
                 return;
             }
 
-            // ROM sub_22F98 (sonic3k.asm lines 47714-47766) — full red vertical spring bounce.
+            // ROM sub_22F98 (sonic3k.asm lines 47754-47806) — full red vertical spring bounce.
 
             // addq.w #8, y_pos(a1) — nudge player DOWN 8 pixels (start of compression)
             player.setY((short) (player.getY() + 8));
@@ -1602,7 +1602,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
             if (!player.isCpuControlled()) {
                 // bset #5,$38(a0); sub_22F98 sets anim 1, so Animate_Sprite's
                 // prev_anim is already 1 and loc_60E36 runs in this same pass:
-                // MoveChkDel and the parent's bit 1 (sonic3k.asm:127514-127556).
+                // MoveChkDel and the parent's bit 1 (sonic3k.asm:127568-127610).
                 triggered = true;
                 fallPending = true;
                 if (!signaledDispenser && dispenser != null) {

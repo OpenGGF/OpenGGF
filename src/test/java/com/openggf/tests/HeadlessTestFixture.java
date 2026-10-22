@@ -546,9 +546,9 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
             GameServices.level().initLevelEventsForLevel();
 
             // 10b. Re-apply S3K zone player state after sidekick reposition.
-            // ROM's SpawnLevelMainSprites_SpawnPlayers (sonic3k.asm:8335-8427)
+            // ROM's SpawnLevelMainSprites_SpawnPlayers (sonic3k.asm:8367-8459)
             // sets sidekick position FIRST, then SpawnLevelMainSprites
-            // (sonic3k.asm:8132-8205) sets the in-air status for zones like
+            // (sonic3k.asm:8164-8237) sets the in-air status for zones like
             // MGZ1 / HCZ1 / LRZ1 non-Knuckles. repositionRegisteredSidekicks at step
             // 7 clears the in-air bit via spawnSidekicks, so the zone-event
             // handler must run again to restore the falling-intro state.

@@ -22,7 +22,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code loc_91756}-{@code loc_917B4} (sonic3k.asm:198634-198669): the EggRobo's laser shot,
+ * ROM {@code loc_91756}-{@code loc_917B4} (sonic3k.asm:198639-198674): the EggRobo's laser shot,
  * created from {@code ChildObjDat_919DE}.
  *
  * <p>{@code word_919CA} gives it priority {@code $280}, {@code $20} by {@code 4} pixels and mapping

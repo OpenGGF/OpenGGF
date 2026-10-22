@@ -90,10 +90,45 @@ public interface SceneRomArt {
 
     /**
      * A character's separately drawn part, in the character's palette: Tails' two tails in
-     * Sonic 2 and Sonic 3 &amp; Knuckles (drawn at Tails' own position; in S3K the idle swish is
-     * frames 0x22-0x26 at 8 ticks each). Null when the character has none. Cached.
+     * Sonic 2 and Sonic 3 &amp; Knuckles (drawn at Tails' own position). Sonic 2 reuses the
+     * body art bank; Sonic 3 &amp; Knuckles has a separate bank. Null when the character has
+     * none. Cached. Prefer {@link #characterAccessoryPose} for matching a body performance.
      */
     SceneSpriteSet characterAccessory(String characterCode);
+
+    /**
+     * Pure random-access time at which an accessory last sampled the body's facing and
+     * velocity. Inputs and result are elapsed 60 Hz ticks from the performance's start.
+     * The result is between zero and {@code animationTick}. A caller sampling a movement
+     * track should use this time for the facing and velocity passed to
+     * {@link #characterAccessoryPose}. Most accessories follow the current tick; rotating
+     * appendages can latch direction until their next mapping frame.
+     *
+     * @param heldMappingFrame -1 for the animation script, or an explicit held body frame
+     */
+    default long characterAccessorySampleTick(String characterCode, int animationId,
+            int heldMappingFrame, long animationTick) {
+        if (animationTick < 0) throw new IllegalArgumentException("Negative accessory time");
+        return animationTick;
+    }
+
+    /**
+     * Pure random-access accessory pose; never advances a native actor or animation clock.
+     * Draw the result behind the body at the same origin and scale, using the returned
+     * flips. Null means no extra sprite is needed (including frames whose tails are already
+     * in the body). Time is elapsed 60 Hz ticks. Velocity is world pixels per 60 Hz tick,
+     * sampled with facing at {@link #characterAccessorySampleTick}.
+     *
+     * A held mapping keeps the requested animation's accessory relationship if its script
+     * contains that frame; otherwise the first matching native body script supplies it.
+     * Unrecognised held mappings have no inferred accessory.
+     *
+     * @param heldMappingFrame -1 for the animation script, or an explicit held body frame
+     */
+    default SceneAccessoryPose characterAccessoryPose(String characterCode, int animationId,
+            int heldMappingFrame, long animationTick, boolean flipX, double velocityX, double velocityY) {
+        return null;
+    }
 
     /**
      * The palette the character's sprites use (16 colours). Only meaningful for the characters

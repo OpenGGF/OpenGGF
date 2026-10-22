@@ -20,7 +20,7 @@ import com.openggf.physics.TrigLookupTable;
 import java.util.List;
 
 /**
- * ROM {@code loc_45F10}-{@code loc_460A6} (sonic3k.asm:91848-92022): the invisible wide bar
+ * ROM {@code loc_45F10}-{@code loc_460A6} (sonic3k.asm:91894-92068): the invisible wide bar
  * {@code Obj_SSZRotatingPlatform} allocates under itself. It never draws — it has no
  * {@code Draw_Sprite} of its own beyond the parent's — and exists to swing a player in a circle
  * around the post while keeping them solid.

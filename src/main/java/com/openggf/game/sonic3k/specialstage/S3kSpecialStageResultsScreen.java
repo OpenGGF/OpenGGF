@@ -41,7 +41,7 @@ import java.util.logging.Logger;
  * sanctuary colours ({@code sub_2ECBC}), and never reaches the Chaos Emerald reveal message,
  * because {@code loc_2E512} hands it to the sanctuary reveal first.
  * <p>
- * ROM: {@code Obj_SpecialStage_Results} (sonic3k.asm lines 63296-64164).
+ * ROM: {@code Obj_SpecialStage_Results} (sonic3k.asm lines 63336-64204).
  * Implements the ROM routines 0-$12. Routines $E-$12 run only for a cleared Super Emerald
  * stage: they pan the rebuilt Hidden Palace sanctuary ({@link S3kSanctuaryResultsBackdrop})
  * down to its pedestals, close a ring of invincibility stars on the new Super Emerald and,
@@ -532,7 +532,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
         phase1Elements.get(2).digitsCleared = true;
         phase1Elements.get(4).digitsCleared = true;
         if (showContinueIcon) {
-            // loc_2E622 (sonic3k.asm:63555-63560): the icon SST sits after this object, so loc_2EC4A's first
+            // loc_2E622 (sonic3k.asm:63595-63600): the icon SST sits after this object, so loc_2EC4A's first
             // decrement is this frame, like the sliders below.
             continueIconExitDelay = 20;
             updateContinueIconExit();
@@ -1050,7 +1050,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
     }
 
     /**
-     * loc_2E58C (sonic3k.asm:63472-63484): slots 44-48, the "&lt;name&gt; GOT ALL CHAOS EMERALDS"
+     * loc_2E58C (sonic3k.asm:63512-63524): slots 44-48, the "&lt;name&gt; GOT ALL CHAOS EMERALDS"
      * rows (elements 14-18), become loc_2EC1E sliders, with {@code $2E = 4} written to slots
      * 46 and 48 and {@code $30 = 5}. The tally rows stay. The sliders run after this object,
      * so their first pass is this frame.
@@ -1181,7 +1181,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
 
     /**
      * Render the native parent zero and seven child BCD slots with leading-zero suppression.
-     * ROM: LevResults_DisplayScore (044fa46 sonic3k.asm:62794-62821) keeps the
+     * ROM: LevResults_DisplayScore (044fa46 sonic3k.asm:62834-62861) keeps the
      * parent's mapping frame 1; Render_Sprites draws it before checking the child count.
      * <p>
      * Digit mapping frames (1-10) reference tiles at $520+ but general art is loaded
@@ -1401,7 +1401,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
 
     /**
      * Loads Pal_Results (128 bytes = 4 palette lines x 16 colors x 2 bytes).
-     * ROM: sonic3k.asm lines 63110-63117.
+     * ROM: sonic3k.asm lines 63150-63157.
      */
     private void loadPalette(com.openggf.data.Rom rom) {
         try {

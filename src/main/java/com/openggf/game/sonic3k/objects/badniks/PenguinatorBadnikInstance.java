@@ -18,7 +18,7 @@ import java.util.List;
 /**
  * S3K Obj $AD - Penguinator (ICZ).
  *
- * <p>ROM reference: {@code Obj_Penguinator} (sonic3k.asm:190431-190742).
+ * <p>ROM reference: {@code Obj_Penguinator} (sonic3k.asm:190524-190835).
  * The badnik accelerates in place while animating, hops forward, lands into a
  * belly slide, emits snow dust every four slide frames, then brakes and flips.
  */

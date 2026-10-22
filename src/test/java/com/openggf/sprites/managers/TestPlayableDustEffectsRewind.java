@@ -33,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Production fixed-Dust resource/rebuild and owner-registry boundary contracts.
- * Native044 loc_39AD2 (sonic3k.asm:77310) starts anim4 on Dust/Dust_P2 at
+ * Native044 loc_39AD2 (sonic3k.asm:77315) starts anim4 on Dust/Dust_P2 at
  * y=$5C0; loc_18BEC/18C04 (34051/34058) retain its world position and draw
  * ArtUnc_SplashDrown through the real ROM mappings/DPLCs. No splash trigger,
  * controller/renderer setter, clock/phase seed or fabricated snapshot is used.

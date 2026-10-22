@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code Obj_EggRobo} ({@code $A0}, sonic3k.asm:198438-198760) in Sky Sanctuary act 1.
+ * {@code Obj_EggRobo} ({@code $A0}, sonic3k.asm:198545-198867) in Sky Sanctuary act 1.
  *
  * <p>Expectations come from {@code SSZ1_Sprites}, from {@code sub_9185E}'s three-entry
  * {@code off_9186E} table and from {@code sub_91914}/{@code loc_91570}'s shared

@@ -269,12 +269,12 @@ capture of rows 0-2399 with no realignment:
     14-15) and 8 PSG silence writes the engine did not emit: the 68k-side 4 at row 14
     and 4 Z80 writes at row 15.
   - Native row 15's `2Bh = 0` is `zPlayDigitalAudio`'s entry write (Z80 driver
-    :4258-4262), which the recorder files with the first `vint` service.
+    :4290-4294), which the recorder files with the first `vint` service.
   - The Z80-side 4 (2026-10-17, fixed) come from ROM `Title_Screen`'s first request,
-    `Play_Music(cmd_FadeOut)` (sonic3k.asm:5393-5394, written straight into
-    `zMusicNumber`, :1471-1475). The first VInt services it: `zFadeOutMusic` arms the
+    `Play_Music(cmd_FadeOut)` (sonic3k.asm:5425-5426, written straight into
+    `zMusicNumber`, :1493-1497). The first VInt services it: `zFadeOutMusic` arms the
     fade counters and falls through `zHaltDACPSG` into `zPSGSilenceAll` (Z80 driver
-    :2307-2325, :2587-2597), so the PSG writes `9Fh BFh DFh FFh` with no song playing.
+    :2329-2347, :2609-2619), so the PSG writes `9Fh BFh DFh FFh` with no song playing.
     `Sonic3kTitleScreenManager.initialize`, which every engine entry to the title game
     mode calls, now issues that request; the engine's S3K fade policy already armed
     the counters and wrote `zPSGSilenceAll` without a song. A title-start capture's
@@ -293,7 +293,7 @@ capture of rows 0-2399 with no realignment:
   1. Native rows 0-12 are power-on lag rows (68k init and Z80 driver load), and the
      engine starts at `Sonic3kTitleScreenManager` `Phase.SEGA_FADE_IN` with no
      equivalent. Genesis CPU power-on is not modelled.
-  2. Before `cmd_SEGA`, ROM `Title_Screen` (sonic3k.asm:5392-5485) runs `cmd_FadeOut`,
+  2. Before `cmd_SEGA`, ROM `Title_Screen` (sonic3k.asm:5424-5517) runs `cmd_FadeOut`,
      `Pal_FadeToBlack`, the logo `Kos_Decomp`/`Eni_Decomp`, the plane map and
      `Pal_FadeFromBlack`. The engine ran a fixed 16-frame `SEGA_FADE_IN`
      (`SEGA_FADE_DURATION`) and issued `CMD_SEGA` at frame 16, after reading Start.
@@ -304,8 +304,8 @@ capture of rows 0-2399 with no realignment:
        that first frame issues `cmd_SEGA` then `cmd_StopSEGA` instead of a lone stop.
        `TestSonic3kTitleScreenSegaTiming` failed 4 of 4 on the old source.
      - Start in `Wait_SegaS3K` leaves through `loc_3FE4` like the timeout
-       (sonic3k.asm:5490-5500): `cmd_StopSEGA`, then the `Pal_Title` loop, which reads
-       no input (:5501-5512), then `mus_TitleScreen`. The engine had jumped to the
+       (sonic3k.asm:5522-5532): `cmd_StopSEGA`, then the `Pal_Title` loop, which reads
+       no input (:5533-5544), then `mus_TitleScreen`. The engine had jumped to the
        white flash and started the title music in the same frame (fixed aec7836ce).
      - Title entry after the ending (ending owner, a1afac243):
        `GameLoopTitleEntryFade.beginAfterLevelPass` still calls `stopMusic`, while ROM
@@ -319,7 +319,7 @@ capture of rows 0-2399 with no realignment:
      - Still open, with owners: (a) the cold boot before `Title_Screen`, rows 0-12
        (68000 `EntryPoint`, `Init_ClearRAM`, `Test_LockOn`, `GameProgram`,
        `SndDrvInit`), which the engine does not run; (b) the interrupt-masked span
-       (sonic3k.asm:5400-5483), whose hardware frames need the 68000 cost of
+       (sonic3k.asm:5432-5515), whose hardware frames need the 68000 cost of
        `Kos_Decomp`, `Eni_Decomp`, `Plane_Map_To_VRAM` and the RAM clears, which the
        engine has no model of. The title-loop Kos manifests time `Process_Kos_Queue`
        services and do not apply to this synchronous decode. (c) The Z80's service
@@ -466,13 +466,13 @@ are unchanged.
   rows 322-499 carry full audio, and its AIZ1 segment begins at BK2 row 577, so the
   movie's rows 200-328 are data-select input natively while the engine is already in
   the level (front-end timing). The ROM's own pause, `Pause_Game`
-  (sonic3k.asm:1528-1548: `zPauseFlag = 1`, so the Z80 runs `zPauseAudio` and skips
+  (sonic3k.asm:1550-1570: `zPauseFlag = 1`, so the Z80 runs `zPauseAudio` and skips
   track updates while the YM2612 keeps clocking), still differs from the engine's
   SILENT presentation, which writes nothing and freezes the chip.
   - ROM semantics (2026-10-17). `Pause_Game` writes `zPauseFlag = 1` on the pause
     press and `$80` on the unpause press; `Pause_Loop` runs only `Wait_VSync`.
     `zPauseUnpause` (Z80 driver :2232-2305) runs first in `zUpdateEverything`.
-    - Flag 1: the flag becomes 2 and `zPauseAudio` (:2552-2586, `fix_sndbugs = 0`)
+    - Flag 1: the flag becomes 2 and `zPauseAudio` (:2574-2608, `fix_sndbugs = 0`)
       writes 19 times: PSG `9F BF DF FF`, `B4/B5/B6 = 0` on part I and `B4/B5 = 0`
       on part II, `28h = 00..05`, then PSG `9F BF DF FF` again. FM6/DAC is left
       alone.

@@ -615,7 +615,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         if (!capsuleResultsComplete && services().gameState().isEndOfLevelFlag()) {
             // loc_6E724 reads _unkFAA8 itself after the lower-slot
             // Obj_LevelResults clears it; Obj_EggCapsule is not an
-            // intermediate notification owner (sonic3k.asm:146087-146103).
+            // intermediate notification owner (sonic3k.asm:146152-146168).
             capsuleResultsComplete = true;
         }
         if (capsuleResultsComplete && !cannonSpawned) {
@@ -747,7 +747,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         // anim and prev_anim, with anim_frame/time_frame reset. The boss slot
         // runs after the playable slots, so the old victory mapping remains
         // visible for this frame while the raw animation byte changes
-        // (sonic3k.asm:180361-180371,146037-146061).
+        // (sonic3k.asm:180452-180462,146102-146126).
         sprite.setAir(false);
         sprite.setAnimationId(Sonic3kAnimationIds.WAIT);
         sprite.setAnimationFrameIndex(0);

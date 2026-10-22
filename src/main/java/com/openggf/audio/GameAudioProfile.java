@@ -269,7 +269,7 @@ public interface GameAudioProfile {
      *
      * <p>The choice belongs to the game. Sonic 3 &amp; Knuckles substitutes one
      * of three tracks for the level track depending on player state
-     * (sonic3k.asm:33663-33686); Sonic 1's {@code ResumeMusic} and Sonic 2's
+     * (sonic3k.asm:33703-33726); Sonic 1's {@code ResumeMusic} and Sonic 2's
      * equivalent resume the level track unchanged, which is what this default
      * expresses for them.
      *

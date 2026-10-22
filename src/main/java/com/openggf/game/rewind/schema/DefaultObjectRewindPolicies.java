@@ -819,17 +819,17 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzStickyVineObjectInstance", "capturedPlayer"), RewindFieldPolicy.CAPTURED),
             // Obj_MHZMushroomCap keeps each character's last airborne y_vel at $30/$32(a0)
             // and its standing bits in status(a0) (MHZMushroomCap_BounceCharacter,
-            // sonic3k.asm:82282-82316). Neither can be re-derived once a rider stands on the cap;
+            // sonic3k.asm:82323-82357). Neither can be re-derived once a rider stands on the cap;
             // the restored cap otherwise re-records the landed y_vel and bounces at -$680.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMushroomCapObjectInstance", "previousYVelocities"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMushroomCapObjectInstance", "standingPlayers"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMushroomCapObjectInstance", "lastLaunchFrames"), RewindFieldPolicy.CAPTURED),
             // Obj_MHZCurledVine keeps the P1/P2 curl segment at $36/$37 beside the standing bits
-            // (loc_3E8A2, sonic3k.asm:82803-82812); sub_3E9C6's continued ride contours without
-            // loc_1E45A's landing -1 (sonic3k.asm:82941-82977).
+            // (loc_3E8A2, sonic3k.asm:82844-82853); sub_3E9C6's continued ride contours without
+            // loc_1E45A's landing -1 (sonic3k.asm:82982-83018).
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzCurledVineObjectInstance", "standingSegmentIndices"), RewindFieldPolicy.CAPTURED),
             // The catapult's riders mirror the standing bits that the next update's launch tests
-            // (sub_3FA26/sub_3FA5A, sonic3k.asm:84311-84353), so they cross the snapshot boundary;
+            // (sub_3FA26/sub_3FA5A, sonic3k.asm:84352-84394), so they cross the snapshot boundary;
             // the dropping platform releases its standing riders when it moves.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMushroomCatapultObjectInstance", "parentRiders"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMushroomCatapultObjectInstance", "childRiders"), RewindFieldPolicy.CAPTURED),
@@ -855,7 +855,7 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoFlipperObjectInstance", "lockedPlayer"), RewindFieldPolicy.CAPTURED),
             // Sibling of lockedPlayer: ROM Obj_PachinkoFlipper keeps one standing counter
             // byte per rider ($36(a0) for Player_1, $37(a0) for Player_2,
-            // sonic3k.asm:96389-96397), so the engine carries one lock reference each.
+            // sonic3k.asm:96435-96443), so the engine carries one lock reference each.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoFlipperObjectInstance", "lockedSidekick"), RewindFieldPolicy.CAPTURED),
             // Native parent3 points to the actual container through item expiry/recreation.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.GumballItemObjectInstance", "parentRef"), RewindFieldPolicy.CAPTURED),
@@ -873,7 +873,7 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kSlotSpikeRewardObjectInstance", "controller"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SinkingMudObjectInstance", "trackedPlayers"), RewindFieldPolicy.TRANSIENT),
             // Obj_SinkingMud keeps each character's surface depth and standing bit in its own
-            // RAM between frames (sonic3k.asm:68500-68661); a restore that drops them resets a
+            // RAM between frames (sonic3k.asm:68540-68701); a restore that drops them resets a
             // sinking player to the full $30 surface. killedThisFrame is cleared at the top of
             // every update before it is read, so it is re-derived.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SinkingMudObjectInstance", "rawSurfaceByPlayer"), RewindFieldPolicy.CAPTURED),

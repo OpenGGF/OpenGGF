@@ -17,8 +17,8 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * {@code AniPLC_DEZ} (sonic3k.asm:56079, ROM {@code $28AEE}) — the Sonic 3 &amp; Knuckles Death
- * Egg animated-art scripts. {@code Offs_AniFunc} entries 22 and 23 (:53885-53888) pair both acts
+ * {@code AniPLC_DEZ} (sonic3k.asm:56119, ROM {@code $28AEE}) — the Sonic 3 &amp; Knuckles Death
+ * Egg animated-art scripts. {@code Offs_AniFunc} entries 22 and 23 (:53925-53928) pair both acts
  * with the generic {@code AnimateTiles_DoAniPLC}, so all eight scripts run on every frame of both
  * acts with no camera, boss or trigger gate. Entry 46, the {@code $1700} final-boss act, is
  * {@code AnimateTiles_NULL} and has no script at all.

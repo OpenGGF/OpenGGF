@@ -123,7 +123,7 @@ S3K complete-run — now have byte-parity-gated native ports. Native suite **358
   to seg0 21 / seg1 12 / seg2 18,725, frontier back at the seg2 exit boundary. seg2's first
   divergence (f192 `y`) is unchanged, so the +14 vs the old 18,711 is downstream noise, not
   a new frontier — do not describe it as "restored exactly". The regression's own first
-  divergence was f1934, the AIZ Giant Ride Vine grab (`sonic3k.asm:46714-46748`, hold at
+  divergence was f1934, the AIZ Giant Ride Vine grab (`sonic3k.asm:46754-46788`, hold at
   `:46607-46613`). S1/S2 replays green; `TestS3kAizTraceReplay` 2/14 identically both arms.
 - **Superseded description of that debt (kept for context):** `TraceReplaySessionBootstrap:808-815`
   seeds the engine's level/sprite frame counters from this very column and branches on

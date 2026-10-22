@@ -127,8 +127,10 @@ class TestPresentationSpritePixels {
                 for(boolean h:new boolean[]{false,true})for(boolean v:new boolean[]{false,true}) {
                     Frame source=picture(20,30,h,v,0);
                     byte[] nativePixels=render(graphics,source,null,width);
+                    assertNativeCroppedPixels(nativePixels, width, h, v);
                     for(var mode:List.of(SpritePresentationPolicy.Mode.SCALE,SpritePresentationPolicy.Mode.ROTATE,SpritePresentationPolicy.Mode.SQUASH)) {
-                        var runtime=mock(LivePresentationRuntime.class);int strength=mode==SpritePresentationPolicy.Mode.SCALE?200:mode==SpritePresentationPolicy.Mode.SQUASH?120:100;
+                        // Avoid pixel-center crop edges, whose fragment ownership OpenGL leaves implementation-defined.
+                        var runtime=mock(LivePresentationRuntime.class);int strength=mode==SpritePresentationPolicy.Mode.SCALE?200:mode==SpritePresentationPolicy.Mode.SQUASH?115:100;
                         var entries=List.of(new TransientMutatorPolicySource.Entry("test",1,new SpritePresentationPolicy(mode,SpritePresentationPolicy.Target.BADNIKS,strength,120),30,100,false));
                         when(runtime.spritePolicies()).thenReturn(entries);when(runtime.trails()).thenReturn(List.of());
                         byte[] projected=render(graphics,source,runtime,width);
@@ -213,6 +215,21 @@ class TestPresentationSpritePixels {
             if(graphics!=null)graphics.cleanup();
             if(offscreen!=null)offscreen.close();
             if(window!=0){GL.setCapabilities(null);glfwDestroyWindow(window);}if(initialized)glfwTerminate();glfwInitHint(GLFW_PLATFORM,GLFW_ANY_PLATFORM);
+        }
+    }
+    private static void assertNativeCroppedPixels(byte[] pixels, int width, boolean hFlip, boolean vFlip) {
+        int[][] colours = {{0, 0, 0}, {255, 0, 0}, {0, 255, 0}, {0, 0, 255}, {255, 255, 255}};
+        for (int y = 28; y < 40; y++) for (int x = 18; x < 30; x++) {
+            int colour = 0;
+            if (x >= 20 && x < 28 && y >= 32 && y < 37) {
+                int sourceColumn = hFlip ? 27 - x : x - 20;
+                int sourceRow = vFlip ? 37 - y : y - 30;
+                colour = 1 + sourceColumn / 4 + 2 * (sourceRow / 4);
+            }
+            for (int channel = 0; channel < 3; channel++) {
+                assertEquals(colours[colour][channel], pixels[((223 - y) * width + x) * 4 + channel] & 255,
+                        "native crop flip=" + hFlip + "," + vFlip + " at=" + x + "," + y);
+            }
         }
     }
     private static Frame picture(int x,int y,boolean h,boolean v,int uniform) {

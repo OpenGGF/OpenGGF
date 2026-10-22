@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * HCZMiniboss_StartFight only installs Obj_HCZ_MinibossLoop; the loop's routine 0
  * (HCZMinibossLoop_Init) runs on the next dispatch and sets y_vel/$2E without
  * moving, so the first MoveSprite2 is one dispatch later
- * (docs/skdisasm/sonic3k.asm:139286-139294, 139319-139334).
+ * (docs/skdisasm/sonic3k.asm:139291-139299, 139324-139339).
  */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestHczMinibossFightStartPhase {
@@ -80,7 +80,7 @@ class TestHczMinibossFightStartPhase {
         HczMinibossInstance boss = installBoss(objectManager);
         // loc_6A5BC switched the water effect to routine 8 at the end of the
         // previous pass; loc_6A5D8 runs sub_6A9B8 on its first routine-8 pass
-        // (docs/skdisasm/sonic3k.asm:139841-139853).
+        // (docs/skdisasm/sonic3k.asm:139846-139858).
         set(field(boss, "state"), "routine", 20);
         set(boss, "vortexActive", true);
         set(boss, "waterEffectRoutine", 8);
@@ -115,7 +115,7 @@ class TestHczMinibossFightStartPhase {
 
         // The parent's Obj_Wait callback clears $38 bit 2; on the same pass the
         // water effect pulls once more, sees the bit clear and releases through
-        // loc_6A5FA -> loc_6A986/sub_6A996 (docs/skdisasm/sonic3k.asm:139860-139866).
+        // loc_6A5FA -> loc_6A986/sub_6A996 (docs/skdisasm/sonic3k.asm:139865-139871).
         set(boss, "waitTimer", 0);
         Class<?> callbackType = Class.forName(HczMinibossInstance.class.getName() + "$WaitCallback");
         set(boss, "waitCallback", enumConstant(callbackType, "END_VORTEX"));

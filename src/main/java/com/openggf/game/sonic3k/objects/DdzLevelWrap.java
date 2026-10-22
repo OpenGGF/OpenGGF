@@ -6,7 +6,7 @@ import com.openggf.level.rings.RingStatusTableWipe;
 
 /**
  * Non-object side effects of the Doomsday phase-2 wrap in {@code loc_81726}
- * (sonic3k.asm:173350-173378): after {@code Camera_X_pos} drops by {@code $2000} the ROM calls
+ * (sonic3k.asm:173441-173469): after {@code Camera_X_pos} drops by {@code $2000} the ROM calls
  * {@code Seek_Object_Manager} and clears {@code Ring_status_table}. Live DDZ objects subtract
  * {@code _unkFAAE} from their own positions.
  *

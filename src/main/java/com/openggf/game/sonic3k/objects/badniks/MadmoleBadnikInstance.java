@@ -33,7 +33,7 @@ import java.util.function.IntConsumer;
 /**
  * S3K SKL Obj $8C - Madmole.
  *
- * <p>ROM reference: {@code Obj_Madmole} at {@code sonic3k.asm:193075}. This
+ * <p>ROM reference: {@code Obj_Madmole} at {@code sonic3k.asm:193174}. This
  * class is the parent ground cap. It waits for a player within {@code $A0},
  * sets its {@code $38} bit 1 busy flag and allocates the separate
  * {@link MadmoleBodyChild} with {@code CreateChild1_Normal}
@@ -49,11 +49,11 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_Madmole} is installed from the S3K object pointer table at
      * {@code $0008D580} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:193075).
+     * label is defined at docs/skdisasm/sonic3k.asm:193174).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0008}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -62,7 +62,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
 
     private static final int CAP_COLLISION_FLAGS = 0;
     private static final int CAP_MAPPING_FRAME = 0x0D;
-    // word_8D9B4 (sonic3k.asm:193500): body collision_flags $0B.
+    // word_8D9B4 (sonic3k.asm:193599): body collision_flags $0B.
     private static final int BODY_CHILD_COLLISION_SIZE_INDEX = 0x0B;
     private static final int PRIORITY_BUCKET = 5;
     private static final int CAP_RENDER_HALF_WIDTH = 0x18;
@@ -78,7 +78,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
     private static final int[] SIDE_DRILL_FRAMES = {3, 3, 4, 4, 4, 4, 4, 4};
     private static final int[] SIDE_CHILD_FRAMES = {5, 6, 7, 8, 9, 10, 11, 12};
     private static final int COOLDOWN_FRAMES = 60;
-    // ChildObjDat_8D9C0 (sonic3k.asm:193505-193508): body offset (0,+$10).
+    // ChildObjDat_8D9C0 (sonic3k.asm:193604-193607): body offset (0,+$10).
     private static final int BODY_CHILD_Y_OFFSET = 0x10;
     private static final int SIDE_CHILD_X_OFFSET = 0x0E;
     private static final int SIDE_CHILD_Y_OFFSET = -0x0C;
@@ -93,13 +93,13 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
     private static final int SIDE_CHILD_ARC_RELEASE_PLAYER_Y_VELOCITY = -0x300;
     private static final int SIDE_CHILD_ARC_RELEASE_DRILL_Y_VELOCITY = -0x200;
     private static final int SIDE_CHILD_CAPTURE_WALL_SENSOR_OFFSET = 0x18;
-    // ROM loc_8D6E6 offscreen bands (sonic3k.asm:193223-193232).
+    // ROM loc_8D6E6 offscreen bands (sonic3k.asm:193322-193331).
     private static final int SIDE_CHILD_OFFSCREEN_BAND_X = 0x280;
     private static final int SIDE_CHILD_OFFSCREEN_BAND_Y = 0x200;
     // ROM loc_8D746 sets y_radius(a0) = 8 for the side drill; ObjCheckFloorDist
     // probes from (x_pos, y_pos + y_radius).
     private static final int SIDE_CHILD_Y_RADIUS = 0x08;
-    // ROM MoveSprite_LightGravity (sonic3k.asm:178357) uses moveq #$20,d1 as its
+    // ROM MoveSprite_LightGravity (sonic3k.asm:178448) uses moveq #$20,d1 as its
     // per-frame gravity, NOT the standard $38 object gravity. The arcing side
     // drill (loc_8D768/loc_8D778/loc_8D7A8) moves via MoveSprite_LightGravity.
     private static final int SIDE_CHILD_LIGHT_GRAVITY = 0x20;
@@ -158,7 +158,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         updateDynamicSpawn(currentX, currentY);
     }
 
-    /** loc_8D5B0 / loc_8D5BE (sonic3k.asm:193101-193117). */
+    /** loc_8D5B0 / loc_8D5BE (sonic3k.asm:193200-193216). */
     private void updateWaitForPlayer(PlayableEntity playerEntity) {
         PlayableEntity target = closestNativePlayerByHorizontalDistance(playerEntity);
         if (target == null) {
@@ -169,7 +169,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         }
         state = State.WAIT_FOR_BODY;
         bodyBusy = true;
-        // CreateChild1_Normal -> AllocateObjectAfterCurrent (sonic3k.asm:176924-176930):
+        // CreateChild1_Normal -> AllocateObjectAfterCurrent (sonic3k.asm:177015-177021):
         // the body takes the next free slot after the cap and runs its routine 0
         // later in this same object pass.
         int bodyX = currentX;
@@ -177,7 +177,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         spawnChild(() -> new MadmoleBodyChild(this, bodyX, bodyY));
     }
 
-    /** loc_8D5D4 / loc_8D5DE (sonic3k.asm:193119-193131). */
+    /** loc_8D5D4 / loc_8D5DE (sonic3k.asm:193218-193230). */
     private void updateWaitForBody() {
         // Uses the shipped branch: bit 1 is cleared only by loc_8D6D6. If the body
         // is destroyed through Touch_EnemyNormal/EnemyDefeated it becomes an
@@ -190,7 +190,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         timer = COOLDOWN_FRAMES;
     }
 
-    /** loc_8D5F4 -> Obj_Wait, then $34 = loc_8D5FA (sonic3k.asm:193133-193140). */
+    /** loc_8D5F4 -> Obj_Wait, then $34 = loc_8D5FA (sonic3k.asm:193232-193239). */
     private void updateCooldown() {
         timer--;
         if (timer >= 0) {
@@ -218,7 +218,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
 
     @Override
     public int getCollisionFlags() {
-        // ObjDat_Madmole collision_flags = 0 (sonic3k.asm:193493-193497); the cap
+        // ObjDat_Madmole collision_flags = 0 (sonic3k.asm:193592-193596); the cap
         // never calls Add_SpriteToCollisionResponseList.
         return CAP_COLLISION_FLAGS;
     }
@@ -242,20 +242,20 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
     @Override
     public boolean usesInclusiveRightEdge() {
         // sub_8D876 runs SolidObjectFull with d1 = $1F; SolidObject_cont's X
-        // gate rejects with bhi (sonic3k.asm:41394-41400), so a player resting
+        // gate rejects with bhi (sonic3k.asm:41434-41440), so a player resting
         // exactly at obj_x + d1 (d0 == d1 * 2) is a zero-distance side contact.
         // loc_1E042 takes the d0 == 0 branch straight to loc_1E06E, which
         // re-sets Status_Push on the grounded player every frame
-        // (sonic3k.asm:41498-41512) — the state Tails' CPU push-bypass
+        // (sonic3k.asm:41538-41552) — the state Tails' CPU push-bypass
         // auto-jump reads at loc_13DD0/loc_13E9C.
         return true;
     }
 
     @Override
     public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
-        // ROM Solid_Landed / loc_1E154 (sonic3k.asm:41611-41621) re-reads
+        // ROM Solid_Landed / loc_1E154 (sonic3k.asm:41651-41661) re-reads
         // width_pixels(a0) for the landing X gate. The cap keeps
-        // ObjDat_Madmole's width_pixels = $18 (sonic3k.asm:193493-193497),
+        // ObjDat_Madmole's width_pixels = $18 (sonic3k.asm:193592-193596),
         // wider than the default d1 - $B = $14 heuristic for sub_8D876's
         // d1 = $1F.
         return 0x18;
@@ -291,7 +291,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
 
     /**
      * Madmole body: ChildObjDat_8D9C0 code {@code loc_8D602}
-     * (sonic3k.asm:193142-193216). It owns its SST slot, rises, pauses, drills,
+     * (sonic3k.asm:193241-193315). It owns its SST slot, rises, pauses, drills,
      * sinks, clears the cap's busy bit and deletes through Go_Delete_Sprite.
      */
     static final class MadmoleBodyChild extends AbstractS3kBadnikInstance implements RewindRecreatable {
@@ -370,7 +370,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
                 case DRILLING -> updateDrilling();
                 case SINKING -> updateSinking();
             }
-            // Child_DrawTouch_Sprite (sonic3k.asm:178053-178058) runs after the
+            // Child_DrawTouch_Sprite (sonic3k.asm:178144-178149) runs after the
             // routine: if parent3's status bit 7 is set, Go_Delete_Sprite skips
             // both the touch list and Draw_Sprite for this pass.
             if (parent.romStatusDeleted()) {
@@ -382,7 +382,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             updateDynamicSpawn(currentX, currentY);
         }
 
-        /** loc_8D620 falling through to loc_8D636 (sonic3k.asm:193158-193177). */
+        /** loc_8D620 falling through to loc_8D636 (sonic3k.asm:193257-193276). */
         private void updateRising(PlayableEntity playerEntity) {
             if (!initialized) {
                 initialized = true;
@@ -566,12 +566,12 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         private boolean awaitingCarryRoutine;
         private AbstractPlayableSprite capturedPlayer;
         // ROM $44(a0). Written by the straight drill's touch response sub_8D8E6
-        // (move.w a2,$44(a0), sonic3k.asm:193439) and by the arc grab sub_8D94A
-        // (sonic3k.asm:193477), and never cleared afterwards: the wall and floor
+        // (move.w a2,$44(a0), sonic3k.asm:193538) and by the arc grab sub_8D94A
+        // (sonic3k.asm:193576), and never cleared afterwards: the wall and floor
         // release paths (loc_8D820/loc_8D85E into loc_8D834,
-        // sonic3k.asm:193337-193346 and 193363-193367) only set Status_InAir,
+        // sonic3k.asm:193436-193445 and 193363-193367) only set Status_InAir,
         // clear object_control and drop the arm to routine 6. The stale
-        // back-reference is what loc_8D724 (sonic3k.asm:193222-193228) re-uses
+        // back-reference is what loc_8D724 (sonic3k.asm:193321-193327) re-uses
         // when the arm later scrolls off-camera, so it must outlive
         // capturedPlayer rather than be nulled at release.
         private AbstractPlayableSprite releaseTargetPlayer;
@@ -626,7 +626,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
 
             // TouchResponse only writes collision_property. The arm consumes it
             // later in its own SST slot: sub_8D8E6 for a straight drill or
-            // sub_8D94A for an arcing drill (sonic3k.asm:193250-193266,
+            // sub_8D94A for an arcing drill (sonic3k.asm:193349-193365,
             // 193427-193452). Apply that pending response before the arm moves.
             if (arcing) {
                 applyPendingArcCapture();
@@ -696,7 +696,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             // ROM loc_8D6E6 runs the side-drill routine (loc_8D768/loc_8D778,
             // which move the arm via MoveSprite2 / MoveSprite_LightGravity) and
             // only THEN calls Add_SpriteToCollisionResponseList before Draw_Sprite
-            // (sonic3k.asm:193231-193243). The list therefore holds the arm's
+            // (sonic3k.asm:193330-193342). The list therefore holds the arm's
             // post-move coordinates, so the next frame's TouchResponse (which runs
             // before this object updates again) must read the current x/y, not the
             // two-frames-stale pre-update snapshot.
@@ -774,7 +774,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             player.setGSpeed((short) launchX);
             player.setYSpeed((short) -0x200);
             player.setAir(true);
-            // ROM sub_8D8E6 move.w a2,$44(a0) (sonic3k.asm:193439), the same
+            // ROM sub_8D8E6 move.w a2,$44(a0) (sonic3k.asm:193538), the same
             // back-reference the arc grab writes. The straight knock-back does
             // not carry the player, so this is the only record the arm keeps of
             // whom to detach when loc_8D724 despawns it off-camera.
@@ -875,7 +875,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         /**
-         * ROM {@code ObjHitFloor_DoRoutine} (sonic3k.asm:177964-177981): only a
+         * ROM {@code ObjHitFloor_DoRoutine} (sonic3k.asm:178055-178072): only a
          * downward-moving object probes the floor, and the {@code $34(a0)} hook
          * runs after the object is snapped onto the surface.
          */
@@ -910,7 +910,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         /**
-         * ROM {@code loc_8D6E6} (sonic3k.asm:193218-193243): after the routine
+         * ROM {@code loc_8D6E6} (sonic3k.asm:193317-193342): after the routine
          * dispatch, the arm tests a coarse horizontal band
          * ({@code (x_pos & $FF80) - Camera_X_pos_coarse_back > $280}) and a
          * vertical band ({@code y_pos - Camera_Y_pos + $80 > $200}), both
@@ -969,7 +969,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         /**
-         * ROM {@code loc_8D846} (sonic3k.asm:193353-193367), installed as
+         * ROM {@code loc_8D846} (sonic3k.asm:193452-193466), installed as
          * {@code $34(a0)} by the capture in {@code sub_8D94A} and invoked from
          * {@code ObjHitFloor_DoRoutine} when the carrying arm lands.
          */

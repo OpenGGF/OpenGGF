@@ -154,8 +154,8 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     private static final int CONTINUOUS_SFX_INTERVAL = 16;
     /**
      * ROM {@code BossDefeated}: {@code move.w #$3F,$2E(a0)}
-     * (docs/skdisasm/sonic3k.asm:180821), reached from {@code loc_6ACA6}'s tail-jump through
-     * {@code BossDefeated_StopTimer} (:140594-140599).
+     * (docs/skdisasm/sonic3k.asm:180912), reached from {@code loc_6ACA6}'s tail-jump through
+     * {@code BossDefeated_StopTimer} (:140659-140664).
      *
      * <p>This was {@code REOPEN_TIME + 1}. Both halves of that were wrong and they cancelled:
      * the {@code +1} compensated for the defeated arm being dispatched on the install frame,
@@ -271,9 +271,9 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
      *
      * <p>{@code Obj_HCZ_MinibossLoop} reads {@code routine(a0)} at its head, {@code jsr}s the
      * selected arm and only then {@code bsr.w sub_6AC48}
-     * (docs/skdisasm/sonic3k.asm:139296-139302); when {@code collision_property} has reached
+     * (docs/skdisasm/sonic3k.asm:139361-139367); when {@code collision_property} has reached
      * zero, {@code loc_6ACA6} installs {@code Wait_FadeToLevelMusic} into {@code (a0)}
-     * (:140594-140599). The dispatcher has already called this slot's handler for the frame,
+     * (:140659-140664). The dispatcher has already called this slot's handler for the frame,
      * so that wait's first decrement belongs to the next object pass and the killing frame
      * ends at {@code $3F}.
      */
@@ -570,12 +570,12 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         // Touch_Enemy sets the defeated status after Obj_HCZ_MinibossLoop has
         // already run. On the following object pass sub_6AC48 installs
         // Wait_FadeToLevelMusic, which counts the retained $3F wait before
-        // loc_6A22A calls Obj_EndSignControl (sonic3k.asm:140574-140594,
+        // loc_6A22A calls Obj_EndSignControl (sonic3k.asm:140639-140659,
         // 179651-179669,180372-180379). The explosion controller is a separate
         // child and must not gate this parent handoff.
         // Touch_Enemy runs from Draw_And_Touch_Sprite after the boss routine
         // dispatch, so Wait_FadeToLevelMusic's first decrement is necessarily
-        // on the following object pass (sonic3k.asm:139242-139249,20900-20925).
+        // on the following object pass (sonic3k.asm:139307-139314,20936-20961).
         defeatHandoffTimer = BOSS_DEFEATED_WAIT;
         defeatHandoffStarted = false;
         pendingDefeatDispatch = true;
@@ -585,7 +585,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         defeatExplosionController = new S3kBossExplosionController(state.x, state.y, 0);
         services().fadeOutMusic();
         services().gameState().setCurrentBossId(0);
-        // ROM loc_6ACA6: jmp (BossDefeated_StopTimer).l (sonic3k.asm:140649).
+        // ROM loc_6ACA6: jmp (BossDefeated_StopTimer).l (sonic3k.asm:140714).
         stopLevelTimerOnBossDefeat();
     }
 
@@ -668,7 +668,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
 
     /**
      * HCZMiniboss_StartFight installs Obj_HCZ_MinibossLoop and starts the boss
-     * music; the loop's Init runs on the next dispatch (sonic3k.asm:139286-139294).
+     * music; the loop's Init runs on the next dispatch (sonic3k.asm:139291-139299).
      */
     private void startFight() {
         services().gameState().setCurrentBossId(0x99);
@@ -679,7 +679,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     /**
      * HCZMinibossLoop_Init: attributes, y_vel=$100, $2E=$DF and the rockets/engine
      * children, without MoveSprite2; the first descent move is the following
-     * dispatch (sonic3k.asm:139319-139334).
+     * dispatch (sonic3k.asm:139324-139339).
      */
     private void updateLoopInit() {
         resetRocketPhases();
@@ -831,7 +831,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         }
         // This pass already ran the water effect's pull; on the same pass it
         // sees $38 bit 2 clear and releases via loc_6A5FA -> loc_6A986/sub_6A996
-        // (sonic3k.asm:139849-139866).
+        // (sonic3k.asm:139854-139871).
         releaseVortexPlayers();
         state.routine = ROUTINE_COOLDOWN;
         setWait(COOLDOWN_TIME, WaitCallback.START_POST_VORTEX_PAUSE);
@@ -943,7 +943,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         }
         // loc_6A5BC installs water-effect routine 8 at the end of a pass;
         // loc_6A5D8 runs sub_6A9B8 on routine 8's first pass, so the pull
-        // starts on the next dispatch (sonic3k.asm:139841-139853).
+        // starts on the next dispatch (sonic3k.asm:139846-139858).
         if (waterEffectRoutine == WATER_EFFECT_ROUTINE_PULL) {
             applyVortexPull(player);
         }
@@ -984,7 +984,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
                 releaseTrackedVortexPlayersOnWaterEffectDelete();
                 // loc_6A22A sets the global _unkFAA2 lock before entering
                 // Obj_EndSignControl, freezing DynamicWaterHeight_HCZ through
-                // the results-era act reload (sonic3k.asm:140574-140575).
+                // the results-era act reload (sonic3k.asm:140639-140640).
                 services().waterSystem().setDynamicWaterLocked(
                         services().featureZoneId(), services().featureActId(), true);
                 defeatHandoffStarted = true;
@@ -1755,7 +1755,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
             priority = xVel < 0 ? 6 : 2; // sub_6AA30: $300 behind, $100 in front.
 
             // ROM sub_6AA30 sign-extends the 8.8 velocity, shifts it by eight,
-            // and adds it to the full 16.16 x_pos (sonic3k.asm:140301-140315).
+            // and adds it to the full 16.16 x_pos (sonic3k.asm:140366-140380).
             // Retaining the low word is essential here: distant left-side
             // bubbles reset to +$40 every frame, so dropping the fraction
             // leaves them permanently still.

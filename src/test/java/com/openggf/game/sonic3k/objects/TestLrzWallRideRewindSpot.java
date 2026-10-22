@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * restore followed by a forward replay.
  *
  * <p>What has to survive is the ride accumulator, a long whose HIGH word is the ride parameter
- * (sonic3k.asm:87843-87844, :87853). A restore that brought back only the low half, or reset it to
+ * (sonic3k.asm:87889-87890, :87899). A restore that brought back only the low half, or reset it to
  * zero, would keep the rider on the wall and still look plausible frame to frame while placing it
  * at the wrong point of the sweep, so each case asserts the accumulator itself and then replays
  * enough frames to land on the state the uninterrupted timeline reached.

@@ -33,7 +33,7 @@ import static org.junit.Assert.assertEquals;
 
 /**
  * Verify PlayerCharacter enum ordinals match S3K ROM Player_mode values.
- * ROM reference: docs/skdisasm/sonic3k.asm lines 8090-8101
+ * ROM reference: docs/skdisasm/sonic3k.asm lines 8122-8133
  */
 public class TestTodo14_PlayerModeValues {
 
@@ -656,17 +656,17 @@ import static org.junit.Assert.assertTrue;
 
 /**
  * Verify AIZ/LRZ rock debris position and velocity tables match ROM data.
- * ROM reference: sonic3k.asm lines 44643-44720
+ * ROM reference: sonic3k.asm lines 44683-44760
  */
 public class TestTodo19_AizRockDebris {
 
-    // Expected frame 0 positions from ROM (off_2026E -> word_2027E, sonic3k.asm:44652)
+    // Expected frame 0 positions from ROM (off_2026E -> word_2027E, sonic3k.asm:44692)
     private static final int[][] EXPECTED_FRAME0_POSITIONS = {
             {-8, -0x18}, {0x0B, -0x1C}, {-4, -0x0C}, {0x0C, -4},
             {-0x0C, 4}, {4, 0x0C}, {-0x0C, 0x1C}, {0x0C, 0x1C}
     };
 
-    // Expected frame 0 velocities from ROM (off_202E4 -> word_202F4, sonic3k.asm:44712)
+    // Expected frame 0 velocities from ROM (off_202E4 -> word_202F4, sonic3k.asm:44752)
     private static final int[][] EXPECTED_FRAME0_VELOCITIES = {
             {-0x300, -0x300}, {-0x2C0, -0x280}, {-0x2C0, -0x280}, {-0x280, -0x200},
             {-0x280, -0x180}, {-0x240, -0x180}, {-0x240, -0x100}, {-0x200, -0x100}

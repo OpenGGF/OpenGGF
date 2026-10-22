@@ -21,6 +21,7 @@ import com.openggf.game.sonic2.titlescreen.TitleScreenDataLoader;
 import com.openggf.game.sonic2.titlescreen.TitleScreenManager;
 import com.openggf.game.sonic3k.titlescreen.Sonic3kTitleScreenDataLoader;
 import com.openggf.game.sonic3k.titlescreen.Sonic3kTitleScreenManager;
+import com.openggf.game.launch.LaunchProfile;
 import com.openggf.game.launch.LaunchProfileStore;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GLCommandable;

@@ -193,9 +193,9 @@ class TestLostRingObjectInstance {
     void s3kReverseGravityProbesCeilingNotFloor() {
         // ROM: S3K Reverse_gravity_flag routes Obj37 to Obj_Bouncing_Ring_Reverse_Gravity,
         // which probes the CEILING (RingCheckFloorDist_ReverseGravity, :20411-20423, scanning
-        // upward from y_pos - y_radius). loc_1A7E8's `bmi.s loc_1A83C` (sonic3k.asm:35679) gates
+        // upward from y_pos - y_radius). loc_1A7E8's `bmi.s loc_1A83C` (sonic3k.asm:35719) gates
         // that probe on y_vel being NON-NEGATIVE, exactly as the upright body's `bmi.s loc_1A7B0`
-        // (:35767) does: velocity is never inverted, so positive y_vel is "falling" toward the
+        // (:35807) does: velocity is never inverted, so positive y_vel is "falling" toward the
         // ceiling that serves as the floor here. The launch velocity that reaches this state is
         // the positive half of the spill fan. Relocated from RingManager.java:1271-1294.
         ProbeRecordingRing ring = new ProbeRecordingRing(0x100, 0x100, 0, /*y_vel falling*/0x0400,
@@ -209,12 +209,12 @@ class TestLostRingObjectInstance {
 
     @Test
     void s3kReverseGravitySpillArcThrowsRingsAwayFromTheCeilingFloor() {
-        // ROM Obj_Bouncing_Ring_Reverse_Gravity loc_1A7E8 (sonic3k.asm:35675-35678):
-        //   bsr.w MoveSprite_TestGravity2   ; y_pos += -y_vel  (:36089-36096)
+        // ROM Obj_Bouncing_Ring_Reverse_Gravity loc_1A7E8 (sonic3k.asm:35715-35718):
+        //   bsr.w MoveSprite_TestGravity2   ; y_pos += -y_vel  (:36129-36136)
         //   addi.w #$18,y_vel(a0)           ; gravity stays POSITIVE
         // Velocity is never inverted, only the position integration is — the same rule
         // MoveSprite_TestGravity states for the player. The spill loop that hands the ring
-        // its launch velocity (loc_1A6AE..loc_1A728, :35592-35613) has NO flag branch: d3
+        // its launch velocity (loc_1A6AE..loc_1A728, :35632-35653) has NO flag branch: d3
         // comes straight off GetSineCosine for both gravities. So an inverted ring launched
         // with a negative y_vel must move DOWN the screen, away from the ceiling it will
         // fall back onto, exactly as an upright ring with the same negative y_vel moves up.
@@ -282,7 +282,7 @@ class TestLostRingObjectInstance {
 
     @Test
     void s3kLostRingRenderFlagUsesZeroHeightPixelsAtBottomEdge() {
-        // S3K Render_Sprites always reads height_pixels (sonic3k.asm:36337-36370).
+        // S3K Render_Sprites always reads height_pixels (sonic3k.asm:36377-36410).
         // Obj_Bouncing_Ring leaves that field clear, so bit 7 clears exactly when
         // the ring centre reaches the 224-pixel bottom edge, unlike S2's +32 band.
         AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);

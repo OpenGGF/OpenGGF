@@ -66,7 +66,7 @@ class TestHczHandLauncherNativeUnload {
         }
 
         // Native loc_30C76 -> Sprite_OnScreen_Test -> Delete_Referenced_Sprite
-        // zeros ONLY this SST (sonic3k.asm:65909,37302,36148). No native player
+        // zeros ONLY this SST (sonic3k.asm:65914,37302,36148). No native player
         // control/status/interact write occurs. Keep these native oracles AFTER
         // both forced birth and held-world recreation/forward cycles.
         assertAll("both native players after every forced-world control",

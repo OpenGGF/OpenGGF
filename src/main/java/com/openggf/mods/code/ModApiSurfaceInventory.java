@@ -8,6 +8,12 @@ import java.util.List;
 /** Canonical annotated-type inventory shared by signature and Javadoc tooling. */
 public final class ModApiSurfaceInventory {
     private static final List<String> TYPE_NAMES = List.of(
+            "com.openggf.stageplay.StageplayDocument",
+            "com.openggf.stageplay.StageplayDialogue",
+            "com.openggf.stageplay.StageplayTimeline",
+            "com.openggf.stageplay.StageplayControl",
+            "com.openggf.stageplay.StageplayPlayback",
+            "com.openggf.stageplay.runtime.StageplayNativeBinding",
             "com.openggf.mods.code.GgfMod",
             "com.openggf.mods.mutators.MutatorConfigurationScreen",
             "com.openggf.mods.mutators.MutatorSupportProfile",

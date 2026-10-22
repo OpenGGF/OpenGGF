@@ -61,7 +61,7 @@ public final class CutsceneKnucklesLbz1ThrownBomb extends AbstractObjectInstance
         }
     }
 
-    // ObjDat3_6640E priority $80 (sonic3k.asm:134831).
+    // ObjDat3_6640E priority $80 (sonic3k.asm:134888).
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x80);
 
     @Override
@@ -71,7 +71,7 @@ public final class CutsceneKnucklesLbz1ThrownBomb extends AbstractObjectInstance
 
     @Override
     public boolean isHighPriority() {
-        // ObjDat3_6640E art make_art_tile(ArtTile_LBZKnuxBomb,1,1) sets bit 15 (sonic3k.asm:134830).
+        // ObjDat3_6640E art make_art_tile(ArtTile_LBZKnuxBomb,1,1) sets bit 15 (sonic3k.asm:134887).
         return true;
     }
 

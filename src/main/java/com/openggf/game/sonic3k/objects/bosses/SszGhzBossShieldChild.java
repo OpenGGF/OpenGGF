@@ -17,7 +17,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * {@code ChildObjDat_7A69E} -&gt; {@code loc_7A558} (sonic3k.asm:162906-162920): the flickering
+ * {@code ChildObjDat_7A69E} -&gt; {@code loc_7A558} (sonic3k.asm:162984-162998): the flickering
  * emitter the Green Hill recreation carries {@code $1E} pixels in front of itself once it starts
  * its run.
  *
@@ -43,7 +43,7 @@ import java.util.List;
  * ({@code sub_7A5A0}) and the defeat sets {@code $38} bit 4 ({@code loc_7A3F8}) — but the shared
  * touch response does: {@code Touch_Enemy}'s {@code .checkhurtenemy} runs
  * {@code subq.b #1,boss_hitcount2(a1) / bne.s .bossnotdefeated / bset #7,status(a1)}
- * (sonic3k.asm:20922) when the last hit lands. So {@code loc_7A568} takes {@code loc_7A59A} and
+ * (sonic3k.asm:20958) when the last hit lands. So {@code loc_7A568} takes {@code loc_7A59A} and
  * {@code Delete_Current_Sprite} on the frame after the eighth hit, well before the escape run
  * ends — not when the ship's slot is finally freed.
  */

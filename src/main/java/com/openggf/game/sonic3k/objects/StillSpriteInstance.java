@@ -19,7 +19,7 @@ import java.util.List;
  * maps to a specific art tile base, palette, priority, and mapping frame from
  * the ROM data table at word_2B968.
  * <p>
- * ROM reference: sonic3k.asm lines 60199-60372
+ * ROM reference: sonic3k.asm lines 60239-60412
  */
 public class StillSpriteInstance extends AbstractObjectInstance
         implements RewindRecreatable, com.openggf.level.objects.RomObjectCodePointerProvider {
@@ -27,7 +27,7 @@ public class StillSpriteInstance extends AbstractObjectInstance
     @Override
     public int romObjectCodePointerHighWord() {
         // Obj_StillSprite runs from $0002B962; Tails CPU sub_13EFC compares this word when
-        // a stale interact slot is reused by this object (sonic3k.asm:26816-26843).
+        // a stale interact slot is reused by this object (sonic3k.asm:26856-26883).
         return 0x0002;
     }
 

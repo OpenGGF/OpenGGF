@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * R87 independent ROM ring-status question, source HEAD54f3de67.
- * Native044 sonic3k.asm:61954..61966 keeps status at starpost bonus entry;
+ * Native044 sonic3k.asm:61959..61966 keeps status at starpost bonus entry;
  * Clear_SpriteRingMem:37983..38013 finishes consumption, sub_EB1A:18599..18616
  * skips the kept table wipe. Gumball:127803..127814 returns without clearing keep;
  * ordinary death:24624 clears it. HUD ring totals are a separate state contract.

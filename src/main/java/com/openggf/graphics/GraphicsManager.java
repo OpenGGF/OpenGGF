@@ -77,7 +77,7 @@ public class GraphicsManager {
 	private final boolean[] pendingPaletteUploads = new boolean[64];
 	private final PaletteFadePresentation paletteFadePresentation = new PaletteFadePresentation();
 	// The fade CRAM currently holds. A fade step is a Normal_palette rewrite by the
-	// game's logic (S3K Animate_Palette -> Pal_FromBlack, sonic3k.asm:5018-5028), so
+	// game's logic (S3K Animate_Palette -> Pal_FromBlack, sonic3k.asm:5050-5060), so
 	// while uploads are latched it reaches CRAM with the next V-int publication
 	// (VInt_8 dma68kToVDP Normal_palette), together with that frame's sprite table and
 	// scroll, not on the frame the logic requested it. Unlatched games keep the
@@ -1108,6 +1108,20 @@ public class GraphicsManager {
 			reuploadPaletteFadeLines(previousMask | publishedPaletteFade.lineMask());
 		}
 	}
+
+    /** Draw-only reveal: preserve native fade requests, publication gates and rewind state. */
+    void withoutDisplayedPaletteFade(Runnable draw) {
+        var saved = captureDisplayedPaletteFade();
+        boolean held = displayedPaletteFadeHeld;
+        try {
+            restoreDisplayedPaletteFade(new PaletteUploadPresentation.DisplayedFade(
+                    PaletteFadePresentation.Mode.NONE, 0, 0, saved.pending()));
+            draw.run();
+        } finally {
+            restoreDisplayedPaletteFade(saved);
+            displayedPaletteFadeHeld = held;
+        }
+    }
 
 	private void publishRequestedPaletteFade() {
         var previousMode = publishedPaletteFade.mode();

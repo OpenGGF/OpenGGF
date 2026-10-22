@@ -16,16 +16,16 @@ import java.util.List;
 
 /**
  * The Lava Reef miniboss's firing hand: subtype {@code $16}, the last child of each ring
- * ({@code loc_78922}, sonic3k.asm:160378-160386, and {@code loc_78946}/{@code loc_7897A},
- * sonic3k.asm:160388-160432).
+ * ({@code loc_78922}, sonic3k.asm:160454-160462, and {@code loc_78946}/{@code loc_7897A},
+ * sonic3k.asm:160464-160508).
  *
  * <p>It is the only child with its own {@code collision_property} ({@code 4}, so four hits), and
  * killing both hands is what shortens the parent's hover from {@code $15F} to {@code $1F}
- * ({@code loc_78D2C}, sonic3k.asm:160778-160791, via {@code loc_787D8}).
+ * ({@code loc_78D2C}, sonic3k.asm:160854-160867, via {@code loc_787D8}).
  *
  * <p>Firing runs off the parent's {@code $38} bit 3. When the boss extends, the hand arms with
  * {@code $2E = $7F}, or {@code $DF} on the mirrored ring so the two sides alternate, and
- * {@code loc_789CA} (sonic3k.asm:160434-160453) fires: a projectile from
+ * {@code loc_789CA} (sonic3k.asm:160510-160529) fires: a projectile from
  * {@code ChildObjDat_78D90} with the shot counter {@code $39} as its subtype, the next reload at
  * {@code $13} frames, and after the third shot {@code $FFF} -- which is not a long reload so much
  * as a stop, because the parent's bit 2 (set when the arm finishes retracting) returns the hand to
@@ -46,7 +46,7 @@ import java.util.List;
  *
  * <p>Position comes from {@code loc_7897A} alone, and it anchors on {@code parent3} -- the tenth
  * arm link, subtype {@code $14} -- through {@code MoveSprite_AtAngleLookup} over
- * {@code AngleLookup_2} (sonic3k.asm:178504-178523), not on the boss body. Syncing it to the parent
+ * {@code AngleLookup_2} (sonic3k.asm:178595-178614), not on the boss body. Syncing it to the parent
  * instead is what makes shots appear to leave the drill rather than the end of the arm.
  */
 final class LrzMinibossHandChild extends LrzMinibossRingChildBase
@@ -76,7 +76,7 @@ final class LrzMinibossHandChild extends LrzMinibossRingChildBase
 
     /**
      * {@code byte_78E05}: {@code dc.b 1,6,7,$B,$FC}, read by {@code Animate_Raw}
-     * (sonic3k.asm:177333-177362). Byte 0 is the shared frame delay; the walk starts at
+     * (sonic3k.asm:177424-177453). Byte 0 is the shared frame delay; the walk starts at
      * {@code anim_frame = 1} and reads {@code 1(a1,d0.w)}, so the frames are {@code 7}, {@code $B}
      * and then {@code $FC} -> {@code AnimateRaw_Restart}, which emits {@code 1(a1)} = {@code 6}.
      * Frame {@code 6} is therefore the restart target, not the first frame.
@@ -84,7 +84,7 @@ final class LrzMinibossHandChild extends LrzMinibossRingChildBase
     private static final int[] FIRE_ANIMATION = {1, 6, 7, 0x0B, 0xFC};
 
     /**
-     * {@code AngleLookup_2} (sonic3k.asm:201852-201859), 64 bytes.
+     * {@code AngleLookup_2} (sonic3k.asm:201966-201973), 64 bytes.
      * {@code MoveSprite_AtAngleLookup} loads {@code a3 = a2 + $40} and indexes it with
      * {@code not.w d0}, i.e. {@code -(lo + 1)}, which reads this same table backwards from its
      * end -- {@code AngleLookup_2[$3F - lo]}.
@@ -140,7 +140,7 @@ final class LrzMinibossHandChild extends LrzMinibossRingChildBase
         // hand is the last thing to come alive.
         this.waitTimer = (mirrored ? MIRRORED_STAGGER_BASE : 0) + childSubtype * 2;
         // CreateChild8_TreeListRepeated copies the parent's x_pos/y_pos into every child
-        // (sonic3k.asm:177196-177197). syncPositionWithParent() is a no-op for the hand because
+        // (sonic3k.asm:177287-177288). syncPositionWithParent() is a no-op for the hand because
         // loc_7897A anchors on parent3 instead, so without this the hand would sit at (0,0) until
         // its first volley -- which is a real position, off in the corner of the level, not a
         // harmless placeholder.
@@ -220,7 +220,7 @@ final class LrzMinibossHandChild extends LrzMinibossRingChildBase
     }
 
     /**
-     * {@code MoveSprite_AtAngleLookup} (sonic3k.asm:178504-178523) with {@code a2 = AngleLookup_2}
+     * {@code MoveSprite_AtAngleLookup} (sonic3k.asm:178595-178614) with {@code a2 = AngleLookup_2}
      * and {@code $3C = $80}: the hand hangs off {@code parent3}, the tenth arm link.
      *
      * <p>{@code move.w x_pos(a1),d2} / {@code move.w y_pos(a1),d3} read the anchor's ROM position
@@ -254,7 +254,7 @@ final class LrzMinibossHandChild extends LrzMinibossRingChildBase
         currentY = anchorY + dy;
     }
 
-    /** {@code loc_789CA} (sonic3k.asm:160434-160453). */
+    /** {@code loc_789CA} (sonic3k.asm:160510-160529). */
     private void fire() {
         shotCounter++;
         waitTimer = shotCounter >= SHOTS_PER_VOLLEY ? RELOAD_AFTER_LAST_SHOT : RELOAD_FRAMES;
@@ -273,7 +273,7 @@ final class LrzMinibossHandChild extends LrzMinibossRingChildBase
     }
 
     /**
-     * {@code Animate_Raw} / {@code Animate_RawNoSST} (sonic3k.asm:177333-177362) over
+     * {@code Animate_Raw} / {@code Animate_RawNoSST} (sonic3k.asm:177424-177453) over
      * {@code byte_78E05}. {@code anim_frame} steps by <b>one</b> and the frame read is
      * {@code 1(a1,d0.w)}; the delay for every frame is byte 0.
      */
@@ -296,7 +296,7 @@ final class LrzMinibossHandChild extends LrzMinibossRingChildBase
     }
 
     /**
-     * {@code sub_78CF4} (sonic3k.asm:160756-160776), the hand's own half of the hit.
+     * {@code sub_78CF4} (sonic3k.asm:160832-160852), the hand's own half of the hit.
      *
      * <p>Like the drill's {@code sub_78C14} it is gated on {@code collision_flags(a0)} being
      * <b>zero</b>: the shared touch pass zeroes the byte (stowing it in {@code $25}) and
@@ -330,7 +330,7 @@ final class LrzMinibossHandChild extends LrzMinibossRingChildBase
     }
 
     /**
-     * {@code loc_78D2C} (sonic3k.asm:160778-160791): set bit 6 (unmirrored) or bit 7 (mirrored) of
+     * {@code loc_78D2C} (sonic3k.asm:160854-160867): set bit 6 (unmirrored) or bit 7 (mirrored) of
      * the parent's {@code $38}, and if both are now set drop the parent's {@code $2E} to
      * {@code $1F}. Setting the bit is also what {@code sub_78B46} reads, so this is the step that
      * peels the dead hand's arm away.
@@ -342,7 +342,7 @@ final class LrzMinibossHandChild extends LrzMinibossRingChildBase
     }
 
     /**
-     * The shared touch pass's boss bookkeeping (sonic3k.asm:20916-20923): stow
+     * The shared touch pass's boss bookkeeping (sonic3k.asm:20952-20959): stow
      * {@code collision_flags} in {@code $25}, record the attacking player's object address in
      * {@code $1C}, zero {@code collision_flags}, decrement {@code collision_property}, and on the
      * blow that takes it to zero set {@code status} bit 7.

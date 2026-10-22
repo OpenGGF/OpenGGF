@@ -93,7 +93,7 @@ public final class FbzWireCageObjectInstance extends AbstractObjectInstance impl
             player.setRollingJump(false);
             // RideObject_SetRide calls Player_TouchFloor on airborne entry;
             // Sonic, Tails and Knuckles all clear the tumble state here
-            // (sonic3k.asm:24368-24373,29161-29166,32857-32862).
+            // (sonic3k.asm:24408-24413,29201-29206,32897-32902).
             player.setJumping(false);
             player.setFlipAngle(0);
             player.setFlipType(0);

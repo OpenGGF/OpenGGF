@@ -15,9 +15,9 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  *
  * <p>Ports {@code HPZ_BackgroundInit} / {@code HPZ_BackgroundEvent} and their two
  * scroll-parameter subroutines {@code sub_5A32C} / {@code sub_5A334}
- * (sonic3k.asm:120069-120280). The giant-ring sanctuary ({@code $1701}) runs the
+ * (sonic3k.asm:120115-120326). The giant-ring sanctuary ({@code $1701}) runs the
  * {@code HPZS_BackgroundInit} / {@code HPZS_BackgroundEvent} variants
- * (sonic3k.asm:120829-120855), which call {@code sub_5A334} unconditionally and
+ * (sonic3k.asm:120875-120901), which call {@code sub_5A334} unconditionally and
  * share the draw and deform tables. Both subroutines converge on {@code loc_5A33C},
  * which derives:
  * <ul>
@@ -88,7 +88,7 @@ public class SwScrlHpz extends SwScrlS3kDefault {
     /**
      * ROM {@code V_scroll_value} = {@code Camera_Y_pos_copy} after
      * {@code HPZS_ScreenEvent} added {@code Screen_shake_offset} to it
-     * (sonic3k.asm:120823-120825, 102254). Zero selects the parallax manager's
+     * (sonic3k.asm:120869-120871, 102300). Zero selects the parallax manager's
      * plain camera Y, which is also what an unshaken frame produces.
      */
     private short foregroundVscroll;
@@ -215,7 +215,7 @@ public class SwScrlHpz extends SwScrlS3kDefault {
     }
 
     /**
-     * ROM {@code loc_5A33C} (sonic3k.asm:120204-120216): {@code Camera_Y_pos_BG_copy}
+     * ROM {@code loc_5A33C} (sonic3k.asm:120250-120262): {@code Camera_Y_pos_BG_copy}
      * is 3/16 of the offset {@code Camera_Y_pos_copy} with {@code Screen_shake_offset}
      * removed before scaling ({@code sub.w d4,d0}) and added back afterwards
      * ({@code add.w d4,d0}), so the background shakes 1:1 with the foreground

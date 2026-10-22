@@ -18,13 +18,13 @@ import java.util.List;
 
 /**
  * One flame from {@code Obj_LRZFlameThrower}, ROM routine {@code loc_44048}
- * (sonic3k.asm:89434-89448). Both thrower variants allocate it with
- * {@code AllocateObjectAfterCurrent} and the same field writes (:89290-89317, :89399-89426), so
+ * (sonic3k.asm:89480-89494). Both thrower variants allocate it with
+ * {@code AllocateObjectAfterCurrent} and the same field writes (:89336-89363, :89445-89472), so
  * one class serves both; only the parent's velocity and spawn offset differ.
  *
  * <p>Two independent timers run it, and they are not the same timer:
  * <ul>
- *   <li>{@code $24}, seeded at {@code 8} by the parent (:89316, :89425), steps
+ *   <li>{@code $24}, seeded at {@code 8} by the parent (:89362, :89471), steps
  *       {@code mapping_frame} by <b>two</b> and deletes the flame the moment that takes the frame
  *       to {@code 6} or beyond ({@code bhs.s loc_44084}). {@code subq.b}/{@code bpl} makes the
  *       first step land on the ninth frame and each later one eight frames after, because the
@@ -36,18 +36,18 @@ import java.util.List;
  * The {@code bhs} test runs only on the {@code $24} step, so a bit-0 flip can put the frame at 7
  * for up to two frames without deleting anything; that is the ROM's own ordering.
  *
- * <p>{@code MoveSprite2} (:89444) applies {@code x_vel}/{@code y_vel} with no gravity term. The
+ * <p>{@code MoveSprite2} (:89490) applies {@code x_vel}/{@code y_vel} with no gravity term. The
  * flame is a hazard for its whole life: {@code collision_flags} {@code $98} and
  * {@code shield_reaction} bit 4, written once by the parent.
  */
 public final class LrzFlameObjectInstance extends AbstractObjectInstance
         implements TouchResponseProvider, RewindRecreatable {
 
-    /** {@code move.w #$300,priority(a1)} (sonic3k.asm:89300, :89409). */
+    /** {@code move.w #$300,priority(a1)} (sonic3k.asm:89346, :89455). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0300);
-    /** {@code move.b #$C,width_pixels(a1)} / {@code height_pixels(a1)} (:89301-89302). */
+    /** {@code move.b #$C,width_pixels(a1)} / {@code height_pixels(a1)} (:89347-89348). */
     private static final int HALF_EXTENT = 0x0C;
-    /** {@code move.b #$98,collision_flags(a1)} (:89303). */
+    /** {@code move.b #$98,collision_flags(a1)} (:89349). */
     private static final int COLLISION_FLAGS = 0x98;
     /** Both {@code loc_43E4E} and {@code loc_43F84}: {@code bset #4,shield_reaction(a1)}. */
     private static final int SHIELD_REACTION_FLAGS = 0x10;
@@ -60,13 +60,13 @@ public final class LrzFlameObjectInstance extends AbstractObjectInstance
                     com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
                     com.openggf.game.profiles.touchresponse.TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
                     com.openggf.game.profiles.touchresponse.TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS));
-    /** {@code move.b #8,$24(a0)} (:89316). */
+    /** {@code move.b #8,$24(a0)} (:89362). */
     private static final int FRAME_STEP_RELOAD = 8;
-    /** {@code move.b #7,$24(a0)} on the step (:89436). */
+    /** {@code move.b #7,$24(a0)} on the step (:89482). */
     private static final int FRAME_STEP_REPEAT = 7;
-    /** {@code move.b #2,$25(a0)} on the flicker (:89441). */
+    /** {@code move.b #2,$25(a0)} on the flicker (:89487). */
     private static final int FLICKER_RELOAD = 2;
-    /** {@code cmpi.b #6,mapping_frame(a0) / bhs.s loc_44084} (:89438-89439). */
+    /** {@code cmpi.b #6,mapping_frame(a0) / bhs.s loc_44084} (:89484-89485). */
     private static final int FRAME_LIMIT = 6;
 
     /** ROM {@code x_vel}/{@code y_vel}, 8.8 pixels a frame. */
@@ -81,7 +81,7 @@ public final class LrzFlameObjectInstance extends AbstractObjectInstance
     private int frameStepTimer;
     /** ROM {@code $25(a0)}, the bit-0 flicker timer, seeded from the parent's {@code $24}. */
     private int flickerTimer;
-    /** {@code move.b render_flags(a0),render_flags(a1)} (:89296): the parent's x/y flip. */
+    /** {@code move.b render_flags(a0),render_flags(a1)} (:89342): the parent's x/y flip. */
     private boolean flipX;
     private boolean flipY;
 
@@ -118,7 +118,7 @@ public final class LrzFlameObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
-        // subq.b #1,$24(a0) / bpl.s loc_44060 (sonic3k.asm:89434-89435).
+        // subq.b #1,$24(a0) / bpl.s loc_44060 (sonic3k.asm:89480-89481).
         frameStepTimer = (frameStepTimer - 1) & 0xFF;
         if (frameStepTimer > 0x7F) {
             frameStepTimer = FRAME_STEP_REPEAT;
@@ -129,7 +129,7 @@ public final class LrzFlameObjectInstance extends AbstractObjectInstance
                 return;
             }
         }
-        // subq.b #1,$25(a0) / bpl.s loc_44072 / bchg #0,mapping_frame(a0) (:89440-89443).
+        // subq.b #1,$25(a0) / bpl.s loc_44072 / bchg #0,mapping_frame(a0) (:89486-89489).
         flickerTimer = (flickerTimer - 1) & 0xFF;
         if (flickerTimer > 0x7F) {
             flickerTimer = FLICKER_RELOAD;
@@ -198,7 +198,7 @@ public final class LrzFlameObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isHighPriority() {
-        // make_art_tile(ArtTile_LRZ2Misc,1,0) (sonic3k.asm:89299): the priority bit is clear.
+        // make_art_tile(ArtTile_LRZ2Misc,1,0) (sonic3k.asm:89345): the priority bit is clear.
         return false;
     }
 

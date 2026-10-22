@@ -419,7 +419,7 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
     }
 
     // ObjSlot_CutsceneKnux priority $180, written by SetUp_ObjAttributesSlotted
-    // (sonic3k.asm:134800, 178886).
+    // (sonic3k.asm:134857, 178977).
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x180);
 
     @Override

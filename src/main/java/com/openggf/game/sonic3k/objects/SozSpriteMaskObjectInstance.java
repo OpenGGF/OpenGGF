@@ -15,7 +15,7 @@ public final class SozSpriteMaskObjectInstance extends AbstractObjectInstance
     @Override public int getOnScreenHalfWidth(){return 0x20;}
     @Override public int getOnScreenHalfHeight(){return (spawn.subtype()&0xF0)>>2;}
     /**
-     * {@code Offset_ObjectsDuringTransition} (sonic3k.asm:104166-104181) subtracts {@code d0}/
+     * {@code Offset_ObjectsDuringTransition} (sonic3k.asm:104212-104227) subtracts {@code d0}/
      * {@code d1} from the {@code x_pos}/{@code y_pos} of every SST slot whose
      * {@code render_flags} bit 2 is set, and a placed {@code Obj_SpriteMask} holds such a slot.
      */

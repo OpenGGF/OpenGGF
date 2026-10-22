@@ -70,7 +70,7 @@ final class GameLoopPlcLifecycle {
      * Reveals the screen after a data-select launch. When the launched level fades
      * its own palette in, the host adds no whole-screen fade over it: S3K's save
      * screen has already faded to black, {@code Level} loads line 0 with
-     * {@code LoadPalette_Immediate} (docs/skdisasm/sonic3k.asm:7666) and
+     * {@code LoadPalette_Immediate} (docs/skdisasm/sonic3k.asm:7698) and
      * {@code loc_64DC}'s {@code Pal_FromBlack} reveals lines 1-3 inside LevelLoop
      * (7874-7878, 5018-5028).
      *
@@ -89,7 +89,7 @@ final class GameLoopPlcLifecycle {
     /**
      * Reveals a reload that re-enters the game's own level routine (a death
      * restart, a bonus-stage return). S3K's {@code Level} has already faded to
-     * black, loads line 0 with {@code LoadPalette_Immediate} (sonic3k.asm:7666)
+     * black, loads line 0 with {@code LoadPalette_Immediate} (sonic3k.asm:7698)
      * before its title loop and fades lines 1-3 in at loc_64DC; no whole-screen
      * reveal runs over the card's slide-in.
      */

@@ -212,7 +212,7 @@ class TestS3kSlotBonusStageRuntime {
             coordinator.onFrameUpdate();
         }
 
-        // loc_4BC54 runs Pal_ToBlack on Normal_palette (sonic3k.asm:98981-98987); there is
+        // loc_4BC54 runs Pal_ToBlack on Normal_palette (sonic3k.asm:99027-99033); there is
         // no screen fade until Restart_level_flag reaches Level:'s Pal_FadeToBlack.
         assertTrue(runtime.activeExitSequenceForTest().isFading());
         assertFalse(GameServices.fade().isActive());

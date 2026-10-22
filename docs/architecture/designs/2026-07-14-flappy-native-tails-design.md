@@ -138,7 +138,7 @@ will not become a scroll-framework dependency.
 On activation and restart, the controller calls the existing
 `TailsFlightController.activate()` path. Every active frame it writes
 `doubleJumpProperty = 0xF0` (240), the ROM-authored refill used by MGZ2 scripted
-flight (`sonic3k.asm:26982-27106`) and already mirrored by
+flight (`sonic3k.asm:27022-27146`) and already mirrored by
 `SidekickCpuController.updateMgzBossTransitionCarryInput()`.
 
 This preserves the native decrement, lift, state machine, animation, and audio while

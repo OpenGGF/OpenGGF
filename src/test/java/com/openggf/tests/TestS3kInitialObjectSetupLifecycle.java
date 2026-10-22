@@ -81,7 +81,7 @@ class TestS3kInitialObjectSetupLifecycle {
             assertEquals(levelBefore, manager.getFrameCounter());
             assertFalse(manager.hasPendingInitialProcessSpritesPass());
             // Obj_AIZPlaneIntro publishes Player_1 object_control=$53 from its
-            // dynamic setup slot; it does not change P2 (sonic3k.asm:26101-26156).
+            // dynamic setup slot; it does not change P2 (sonic3k.asm:26141-26196).
             assertEquals(0x53, nativeObjectControl(p1));
             assertEquals(p2ControlBefore, nativeObjectControl(p2));
 

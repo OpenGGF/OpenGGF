@@ -133,7 +133,7 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
 
     @Override
     public boolean negativeTumbleUsesUnreflectedAngle(boolean facingLeft) {
-        // Anim_Tumble / Anim_TumbleLeft (sonic3k.asm:24938-24984):
+        // Anim_Tumble / Anim_TumbleLeft (sonic3k.asm:24978-25024):
         // FBZ/DEZ retain the angle for both facings; MHZ does so only left.
         int zone = getFeatureZoneId();
         return zone == Sonic3kZoneIds.ZONE_FBZ || zone == Sonic3kZoneIds.ZONE_DEZ
@@ -662,7 +662,7 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
     }
 
     /**
-     * CNZ {@code CNZ1BGE_Boss} (docs/skdisasm/sonic3k.asm:107498-107507) is the only
+     * CNZ {@code CNZ1BGE_Boss} (docs/skdisasm/sonic3k.asm:107544-107553) is the only
      * CNZ background phase that locks Plane B to a fixed 16-chunk band drawn from
      * layout Y={@code $200} and loops it via the VDP vertical scroll; the surrounding
      * {@code BossStart}/{@code AfterBoss}/refresh phases scroll the full layout via
@@ -701,20 +701,20 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
         aizTransitionRenderFeature.onZoneInit(zoneIndex, actIndex);
 
         // Initialize water surface manager for HCZ (zone 1)
-        // From sonic3k.asm:7777-7787: only HCZ loads Obj_HCZWaveSplash
+        // From sonic3k.asm:7809-7819: only HCZ loads Obj_HCZWaveSplash
         // Use a static zone check (not hasWater()) because the WaterSystem
         // is loaded in a later init phase (InitWater runs after InitZoneFeatures).
         if (zoneHasWaterSurface(zoneIndex)) {
             initWaterSurfaceManager(rom, zoneIndex, actIndex);
             // Init water skim handler (Obj_HCZWaterSplash subtype 1)
-            // ROM: sonic3k.asm:7786-7787 — spawned alongside Obj_HCZWaveSplash at HCZ init
+            // ROM: sonic3k.asm:7818-7819 — spawned alongside Obj_HCZWaveSplash at HCZ init
             HCZWaterSkimHandler.init(rom, actIndex);
         }
         if (zoneIndex == Sonic3kZoneIds.ZONE_SLOT_MACHINE) {
             initSlotMachineRenderer(rom);
         }
         // LevelLoop calls Draw_LRZ_Special_Rock_Sprites only for Current_zone 9
-        // (sonic3k.asm:7900-7903); the boss act's zone has no rock list.
+        // (sonic3k.asm:7932-7935); the boss act's zone has no rock list.
         lrzRockSpriteRenderer = zoneIndex == Sonic3kZoneIds.ZONE_LRZ
                 ? LrzRockSpriteRenderer.load(rom, actIndex)
                 : null;
@@ -726,7 +726,7 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
     }
 
     /**
-     * {@code Render_Sprites_NextLevel} (sonic3k.asm:36386-36390) appends the Lava Reef rocks while
+     * {@code Render_Sprites_NextLevel} (sonic3k.asm:36426-36430) appends the Lava Reef rocks while
      * the sprite-table pointer is still on priority level 0, so they sit behind everything already
      * in that level and in front of every later one. The Slot Machine layout follows the last
      * level instead ({@link #appendSlotLayoutSprites}).
@@ -972,7 +972,7 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
         // Static check: HCZ is the only S3K zone with water surface sprites.
         // Must not query WaterSystem here because this method may be called
         // before InitWater has run (e.g. from initZoneFeatures).
-        // ROM: CheckLevelForWater (sonic3k.asm:9754) — zone 1 (HCZ) has water.
+        // ROM: CheckLevelForWater (sonic3k.asm:9790) — zone 1 (HCZ) has water.
         return zoneHasWaterSurface(zoneIndex);
     }
 
@@ -1020,8 +1020,8 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
     }
 
     /**
-     * Slots_RenderLayout (sonic3k.asm:98158-98269) runs after Render_Sprites in LevelLoop
-     * (sonic3k.asm:7911-7915) and continues the same {@code Sprite_table} from
+     * Slots_RenderLayout (sonic3k.asm:98204-98315) runs after Render_Sprites in LevelLoop
+     * (sonic3k.asm:7943-7947) and continues the same {@code Sprite_table} from
      * {@code Sprites_drawn}, so the layout pieces follow every Render_Sprites entry
      * (behind them) and the next VBlank publishes them with that iteration's player and
      * objects.
@@ -1190,7 +1190,7 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
     @Override
     public boolean shouldSuppressHud(int zoneIndex, int actIndex) {
         // Level loc_6460 clears Level_started_flag for this scene;
-        // Render_Sprites skips Render_HUD at loc_1AD4A (sonic3k.asm:36326).
+        // Render_Sprites skips Render_HUD at loc_1AD4A (sonic3k.asm:36366).
         if (Sonic3kLevelResourceProfile.isHpzSanctuary(zoneIndex, actIndex)) return true;
         if(zoneIndex==0x0D&&actIndex==1)return true; // Level loc_6460 disables the native HUD timer.
         var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator

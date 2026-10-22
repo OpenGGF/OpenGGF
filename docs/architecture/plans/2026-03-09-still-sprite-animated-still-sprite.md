@@ -365,7 +365,7 @@ import java.util.List;
  * Static decorative sprites used across all zones (bridge posts, waterfalls,
  * tube bends, rails, signposts, etc.).
  *
- * ROM reference: sonic3k.asm lines 60199-60374 (Obj_StillSprite + word_2B968)
+ * ROM reference: sonic3k.asm lines 60239-60414 (Obj_StillSprite + word_2B968)
  *
  * Subtype directly selects the mapping frame and data table entry.
  * Each entry provides art_tile, priority, width, height.
@@ -595,7 +595,7 @@ import java.util.List;
  * Animated decorative sprites: waterfall splashes (AIZ), ceiling rock flicker (LRZ),
  * torch flames (LRZ2, SOZ).
  *
- * ROM reference: sonic3k.asm lines 60377-60427 (Obj_AnimatedStillSprite + word_2BF6C)
+ * ROM reference: sonic3k.asm lines 60417-60467 (Obj_AnimatedStillSprite + word_2BF6C)
  *
  * Subtype selects animation script and data table entry.
  * Uses Animate_Sprite to cycle through mapping frames.
@@ -614,7 +614,7 @@ public class AnimatedStillSpriteInstance extends AbstractObjectInstance {
         /*  7 */ { 0x440F, 0x0300, 0x54, 0x04 },  // SOZ torch 4-wide
     };
 
-    // Animation scripts from Ani_AnimatedStillSprites (sonic3k.asm:60424)
+    // Animation scripts from Ani_AnimatedStillSprites (sonic3k.asm:60464)
     // All use LOOP end action (0xFF terminator)
     private static final SpriteAnimationSet ANIMATIONS = createAnimations();
 
@@ -704,7 +704,7 @@ public class AnimatedStillSpriteInstance extends AbstractObjectInstance {
 
     /**
      * Animate_Sprite implementation matching ROM behavior.
-     * ROM: sonic3k.asm line 36157
+     * ROM: sonic3k.asm line 36197
      */
     private void updateAnimation() {
         SpriteAnimationScript script = ANIMATIONS.getScript(animId);

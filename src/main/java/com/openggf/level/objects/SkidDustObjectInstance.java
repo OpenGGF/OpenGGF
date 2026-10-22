@@ -39,7 +39,7 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
     private PlayerSpriteRenderer renderer;
     /**
      * Code of the player whose dust object spawned this puff. S3K loc_18D1C copies
-     * the owning dust object's art_tile (sonic3k.asm:34126), so a follower's puff
+     * the owning dust object's art_tile (sonic3k.asm:34166), so a follower's puff
      * draws from that follower's dust bank; a recreated puff must keep its owner.
      */
     private String ownerCode;
@@ -119,7 +119,7 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
         // MarkObjGone, so the puff's lifetime is owned entirely by its
         // animation counter ($FC -> routine 4 -> DeleteObject); it must survive
         // the camera scrolling away from where it was dropped. The S3K dash
-        // dust draws the same way (docs/skdisasm/sonic3k.asm:34023, 34068).
+        // dust draws the same way (docs/skdisasm/sonic3k.asm:34063, 34108).
         return true;
     }
 
@@ -269,7 +269,7 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
 
     /**
      * Skid dust bucket: S2 Obj08 {@code move.b #1,priority(a0)} (s2.asm:42725),
-     * S3K Obj_DashDust {@code move.w #$80,priority(a0)} (sonic3k.asm:33971).
+     * S3K Obj_DashDust {@code move.w #$80,priority(a0)} (sonic3k.asm:34011).
      */
     private static final int DUST_PRIORITY_BUCKET = RenderPriority.bucket(1);
 

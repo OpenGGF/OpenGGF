@@ -19,33 +19,33 @@ import java.util.List;
 
 /**
  * The projectile {@code Obj_LRZShootingTrigger} allocates, ROM routine {@code loc_42EE8}
- * (sonic3k.asm:88336-88346). It shares the trigger's own {@code Map_LRZShootingTrigger} mappings
+ * (sonic3k.asm:88382-88392). It shares the trigger's own {@code Map_LRZShootingTrigger} mappings
  * and draws frame 1.
  *
  * <p>{@code MoveSprite2} applies {@code x_vel} and {@code y_vel} with no gravity term, and both are
- * {@code $200} at birth (:88325-88326), so the shot travels diagonally down and away at two pixels
+ * {@code $200} at birth (:88371-88372), so the shot travels diagonally down and away at two pixels
  * a frame on each axis. The parent's {@code status} bit 0 - the placement's flip flag -
- * negates only {@code x_vel} (:88327-88330).
+ * negates only {@code x_vel} (:88373-88376).
  *
  * <p>It copies the trigger's {@code mappings} but not its {@code art_tile}: the parent writes
- * {@code make_art_tile(ArtTile_LRZMisc,0,0)} into the child (:88307), so the same
+ * {@code make_art_tile(ArtTile_LRZMisc,0,0)} into the child (:88353), so the same
  * {@code Map_LRZShootingTrigger} data is drawn on palette line 0 rather than the parent's line 3.
  * Frame 1 of that map is a single 8x8 piece at {@code (-4,-4)}, which is why the child's
  * {@code width_pixels}/{@code height_pixels} are 4.
  *
  * <p>{@code tst.b render_flags(a0) / bpl} deletes it the first frame the previous render pass left
- * it off-screen (:88337-88338, :88345).
+ * it off-screen (:88383-88384, :88391).
  */
 public final class LrzShootingTriggerProjectileInstance extends AbstractObjectInstance
         implements TouchResponseProvider, RewindRecreatable {
 
-    /** {@code move.w #$300,priority(a1)} (sonic3k.asm:88318). */
+    /** {@code move.w #$300,priority(a1)} (sonic3k.asm:88364). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0300);
-    /** {@code move.b #4,width_pixels(a1)} / {@code height_pixels(a1)} (:88319-88320). */
+    /** {@code move.b #4,width_pixels(a1)} / {@code height_pixels(a1)} (:88365-88366). */
     private static final int HALF_SIZE = 4;
-    /** {@code move.w #$200,x_vel(a1)} / {@code y_vel(a1)} (:88325-88326), 16.16 pixels a frame. */
+    /** {@code move.w #$200,x_vel(a1)} / {@code y_vel(a1)} (:88371-88372), 16.16 pixels a frame. */
     private static final int SPEED = 0x200;
-    /** {@code move.b #1,mapping_frame(a1)} (:88324). */
+    /** {@code move.b #1,mapping_frame(a1)} (:88370). */
     private static final int MAPPING_FRAME = 1;
 
     /** ROM {@code x_vel(a1)} / {@code y_vel(a1)}. Non-final so rewind sees restorable state. */
@@ -80,14 +80,14 @@ public final class LrzShootingTriggerProjectileInstance extends AbstractObjectIn
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
-        // tst.b render_flags(a0) / bpl.s loc_42F00 -> Delete_Current_Sprite (sonic3k.asm:88337,
+        // tst.b render_flags(a0) / bpl.s loc_42F00 -> Delete_Current_Sprite (sonic3k.asm:88383,
         // 88345). The engine's own off-screen self-delete keeps the spawn respawnable, which is
         // right here: the parent re-allocates a fresh shot every period.
         if (!isWithinSolidContactBounds()) {
             setDestroyedByOffscreen();
             return;
         }
-        // jsr (MoveSprite2): ext.l / lsl.l #8 / add.l for each axis (sonic3k.asm:36054-36061),
+        // jsr (MoveSprite2): ext.l / lsl.l #8 / add.l for each axis (sonic3k.asm:36094-36101),
         // so the 8.8 velocity lines up with the middle sixteen bits of the 16.16 position. Adding
         // the raw word instead moves the shot 1/256 of the distance, which is what this class did
         // until the fireball launcher's own motion test caught it.
@@ -116,7 +116,7 @@ public final class LrzShootingTriggerProjectileInstance extends AbstractObjectIn
 
     @Override
     public int getCollisionFlags() {
-        // move.b #$98,collision_flags(a1) (sonic3k.asm:88321): a harmful projectile.
+        // move.b #$98,collision_flags(a1) (sonic3k.asm:88367): a harmful projectile.
         return collisionEnabled ? 0x98 : 0;
     }
 
@@ -162,7 +162,7 @@ public final class LrzShootingTriggerProjectileInstance extends AbstractObjectIn
 
     @Override
     public boolean isHighPriority() {
-        // make_art_tile(ArtTile_LRZMisc,0,0) (sonic3k.asm:88317) leaves the priority bit clear.
+        // make_art_tile(ArtTile_LRZMisc,0,0) (sonic3k.asm:88363) leaves the priority bit clear.
         return false;
     }
 

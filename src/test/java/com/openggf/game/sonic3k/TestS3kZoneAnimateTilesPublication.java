@@ -33,11 +33,11 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The custom zone routines in Offs_AniFunc (AnimateTiles_HCZ1 sonic3k.asm:53974, _HCZ2 :54163,
- * _CNZ :54373, _ICZ :54439, _LBZ1 :54544, _LBZ2 :54639, _MHZ :54820, _SOZ1 :54944, _SOZ2 :55002,
- * _LRZ1/2 :55045-55051) send every transfer through Add_To_DMA_Queue (:1673). LevelLoop calls
- * Animate_Tiles (:7906) after DeformBgLayer/ScreenEvents, and the queue reaches VRAM only in the
- * next VInt_8_Cont Process_DMA_Queue (:764), together with that iteration's scroll and SAT. The
+ * The custom zone routines in Offs_AniFunc (AnimateTiles_HCZ1 sonic3k.asm:54014, _HCZ2 :54203,
+ * _CNZ :54413, _ICZ :54479, _LBZ1 :54584, _LBZ2 :54679, _MHZ :54860, _SOZ1 :54984, _SOZ2 :55042,
+ * _LRZ1/2 :55085-55091) send every transfer through Add_To_DMA_Queue (:1695). LevelLoop calls
+ * Animate_Tiles (:7938) after DeformBgLayer/ScreenEvents, and the queue reaches VRAM only in the
+ * next VInt_8_Cont Process_DMA_Queue (:786), together with that iteration's scroll and SAT. The
  * engine presents scroll/SAT published at the top of the following iteration, so art written
  * directly by the animator appeared one frame early. Found by the 2026-10-15 bonus-stage spot
  * stills (commit 938aef1f6) and reported for these zones by the same lane.
@@ -232,7 +232,7 @@ class TestS3kZoneAnimateTilesPublication {
 
     @Test
     void soz2TorchArtIsQueuedForTheFollowingVBlank() {
-        // AnimateTiles_SOZ2 (sonic3k.asm:55002-55035) steps its frame timer now and DMAs
+        // AnimateTiles_SOZ2 (sonic3k.asm:55042-55075) steps its frame timer now and DMAs
         // ArtUnc_AniSOZ2_BG to VRAM $6600 (tile $330) through Add_To_DMA_Queue.
         HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_SOZ, 1).build();
         Sonic3kPatternAnimator animator = animator();
@@ -282,7 +282,7 @@ class TestS3kZoneAnimateTilesPublication {
 
     @Test
     void aiz2FirstTreeIsQueuedOnEveryPassBelow1C0() throws IOException {
-        // AnimateTiles_AIZ2 (sonic3k.asm:53953-53967): below Camera_X_pos $1C0 every pass ends by
+        // AnimateTiles_AIZ2 (sonic3k.asm:53993-54007): below Camera_X_pos $1C0 every pass ends by
         // queueing ArtUnc_AniAIZ2_FirstTree ($230 words to tile $0CA) with Add_To_DMA_Queue.
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_AIZ, 1).build();
@@ -324,7 +324,7 @@ class TestS3kZoneAnimateTilesPublication {
     @Test
     void aiz2Below1C0ClearsTheSecondAndThirdScriptCounters() {
         // After AnimateTiles_DoAniPLC_Part2 runs the first script only, a3 points at
-        // Anim_Counters+2 and clr.l (a3) zeroes the counters of scripts 1 and 2 (sonic3k.asm:53958-53963).
+        // Anim_Counters+2 and clr.l (a3) zeroes the counters of scripts 1 and 2 (sonic3k.asm:53998-54003).
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_AIZ, 1).build();
         Sonic3kPatternAnimator animator = animator();
@@ -350,7 +350,7 @@ class TestS3kZoneAnimateTilesPublication {
     void hcz1EquilibriumFallsThroughBothFixRoutinesAndSkipsAniPlc() throws IOException {
         // Events_bg+$10 == 0: loc_2797E stores 1 in Anim_Counters+4, calls AniHCZ_FixLowerBG and
         // falls through into AniHCZ_FixUpperBG, whose jmp returns before AnimateTiles_DoAniPLC
-        // (sonic3k.asm:53993, 54078-54099). The stored 1 differs from 0, so every pass repeats it.
+        // (sonic3k.asm:54033, 54118-54139). The stored 1 differs from 0, so every pass repeats it.
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_HCZ, 0).build();
         Sonic3kPatternAnimator animator = animator();
@@ -383,7 +383,7 @@ class TestS3kZoneAnimateTilesPublication {
 
     @Test
     void hcz1BeyondSixtyLinesKeepsTheLastComposedStrip() throws IOException {
-        // addi.w #$60 / bcc loc_2797A (sonic3k.asm:54001-54002, 54042-54044): past +-$60 the routine
+        // addi.w #$60 / bcc loc_2797A (sonic3k.asm:54041-54042, 54082-54084): past +-$60 the routine
         // queues nothing and VRAM keeps the strip composed on the last pass inside the range.
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_HCZ, 0).build();
@@ -416,9 +416,9 @@ class TestS3kZoneAnimateTilesPublication {
 
     @Test
     void hcz1FreshLevelRunsAnimateInitWithTheCappedEventsBgValue() throws IOException {
-        // HCZ1_BackgroundInit leaves Events_bg+$10 at $60 when it exceeds $60 (sonic3k.asm:105690-105699);
+        // HCZ1_BackgroundInit leaves Events_bg+$10 at $60 when it exceeds $60 (sonic3k.asm:105736-105745);
         // Animate_Init's sub_279D4 then runs AniHCZ_FixUpperBG and the loc_2788C composition at
-        // offset 0 (sonic3k.asm:54117-54152). Above $60 the following passes queue nothing.
+        // offset 0 (sonic3k.asm:54157-54192). Above $60 the following passes queue nothing.
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_HCZ, 0).build();
         Sonic3kPatternAnimator animator = animator();
@@ -434,8 +434,8 @@ class TestS3kZoneAnimateTilesPublication {
 
     @Test
     void hcz1StopsAnimatingOnceTheHcz2ArtIsQueued() {
-        // AnimateTiles_HCZ1 returns at once while Events_bg+$16 is set (sonic3k.asm:53974-53977);
-        // HCZ1BGE_Normal sets it when it queues the HCZ2 art (sonic3k.asm:105716-105738).
+        // AnimateTiles_HCZ1 returns at once while Events_bg+$16 is set (sonic3k.asm:54014-54017);
+        // HCZ1BGE_Normal sets it when it queues the HCZ2 art (sonic3k.asm:105762-105784).
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_HCZ, 0).build();
         Sonic3kPatternAnimator animator = animator();

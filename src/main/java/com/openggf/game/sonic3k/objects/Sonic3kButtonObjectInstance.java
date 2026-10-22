@@ -55,11 +55,11 @@ public class Sonic3kButtonObjectInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_Button} is installed from the S3K object pointer table at
      * {@code $0002C518} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:60726).
+     * label is defined at docs/skdisasm/sonic3k.asm:60766).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0002}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -138,7 +138,7 @@ public class Sonic3kButtonObjectInstance extends AbstractObjectInstance
 
     /**
      * Resolves the art key based on Current_zone and Current_act.
-     * ROM: sonic3k.asm lines 60724-60787 (zone-specific branch chain)
+     * ROM: sonic3k.asm lines 60764-60827 (zone-specific branch chain)
      */
     private String resolveArtKey() {
         try {

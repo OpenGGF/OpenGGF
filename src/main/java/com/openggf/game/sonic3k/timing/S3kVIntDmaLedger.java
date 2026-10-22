@@ -265,7 +265,7 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
 
     /**
      * A native {@code move.b #-1,(Player_prev_frame).w}: {@code SonicKnux_SuperHyper .revertToNormal}
-     * (sonic3k.asm line 23655 at the 044fa46 pin) or giant-ring capture {@code loc_6173A}. The next
+     * (sonic3k.asm line 23695 at the 044fa46 pin) or giant-ring capture {@code loc_6173A}. The next
      * {@code Sonic_Load_PLC}/{@code Knuckles_Load_PLC} reloads even for an unchanged frame. Tails' revert writes no
      * previous-frame byte; the ring writes this global byte regardless of the touched character.
      */

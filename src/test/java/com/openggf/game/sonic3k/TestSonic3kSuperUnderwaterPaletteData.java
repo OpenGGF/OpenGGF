@@ -22,12 +22,12 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
  * provider selects, so Super Sonic stays gold below the surface instead of
  * reverting to his blue palette.
  *
- * <p>ROM: {@code SuperHyper_PalCycle_SonicApply} (sonic3k.asm:4666-4681).
+ * <p>ROM: {@code SuperHyper_PalCycle_SonicApply} (sonic3k.asm:4698-4713).
  */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSonic3kSuperUnderwaterPaletteData {
 
-    /** First cycle frame of each table (3 words), from sonic3k.asm:4855-4890. */
+    /** First cycle frame of each table (3 words), from sonic3k.asm:4887-4922. */
     private static final int[] SURFACE_FIRST_FRAME = {0x0E66, 0x0C42, 0x0822};
     private static final int[] AIZ_ICZ_FIRST_FRAME = {0x0A82, 0x0860, 0x0640};
     private static final int[] HCZ_CNZ_LBZ_FIRST_FRAME = {0x0C66, 0x0A44, 0x0624};

@@ -228,7 +228,7 @@ public final class BuggernautBadnikInstance extends AbstractS3kBadnikInstance im
     // ── Chase_Object ─────────────────────────────────────────────────────
 
     /**
-     * ROM {@code Chase_Object} (sonic3k.asm lines 179340–179386).
+     * ROM {@code Chase_Object} (sonic3k.asm lines 179431–179477).
      *
      * <p>ROM-accurate semantics:
      * <ul>

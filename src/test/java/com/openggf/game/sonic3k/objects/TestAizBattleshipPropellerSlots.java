@@ -25,9 +25,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Obj_AIZBattleship's init allocates two Obj_BattleshipPropeller SSTs after the
- * ship (docs/skdisasm/sonic3k.asm:105303-105318); each propeller animates with
+ * ship (docs/skdisasm/sonic3k.asm:105349-105364); each propeller animates with
  * Ani_AIZShipPropeller, translates from the ship's secondary camera and deletes
- * once Events_routine_fg reaches $C (:105385-105407).
+ * once Events_routine_fg reaches $C (:105431-105453).
  */
 class TestAizBattleshipPropellerSlots {
     private static final int SHIP_SLOT = 4;

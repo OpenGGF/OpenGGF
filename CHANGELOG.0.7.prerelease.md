@@ -5,6 +5,30 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
+  OpenGGF Editor's Stageplay workspace. Author actor movement, animation/poses,
+  camera movement, held integer zoom, earthquake effects, captions, ROM audio and WAV/Ogg voices;
+  direct scene changes across locations, acts and games with cuts, fades and wipes.
+  Puppet mode follows destinations and urgency through native acceleration, terrain
+  collision and jump physics; floor snapping defaults on. Poser mode retains manual
+  positioning, animation and frame selection, including older scenes. Opt-in live ROM
+  worlds share moving objects, collision pickups, native hurt and per-actor controllers;
+  bounded routes/placement targets, native flight/glide and fixed-scale actor/group
+  camera follow use the production gameplay and rewind owners. Directed foreground,
+  characters and occlusion stay aligned through camera movement. Inspect actual state
+  and events through windowless simulation and placement/capability discovery. Live
+  editor previews run in an isolated offscreen worker, preserving the active world.
+  Record directed takes, undo edits, save/reopen and export synchronized
+  lossless films. Shot-local screenplay tools and a mirrored agent skill support
+  resource discovery, validation and offline filmmaking; Tails uses native accessory
+  relationships, and both editors keep a usable constrained authoring window.
+  Named dialogue, reusable typing profiles and creator PNG skins give mod scenes
+  clear speakers and deterministic text reveal in playback, both editors and exports.
+  Mods play the same scenes with held native gameplay and optional explicit
+  main-player handover. See the [guide](docs/guide/creating/stageplay.md) and
+  [directing examples](examples/stageplay-demo/README.md), including a 26-second
+  beginner scene with a companion conceptual tutorial/promo.
+
 - **Recording imports:** copied BK2 recordings are bounded during decompression
   and parsing, including metadata, input rows and verification sidecars. Oversized,
   ambiguous or inconsistent files are rejected without hiding healthy recordings.
@@ -511,12 +535,14 @@ Unreleased. The earlier development themes remain in
   movie, preserving shared-movie priority and rejecting unsafe source aliases.
   Closing or rebooting a headless capture releases its owned audio ROM reference,
   so a subsequent title and saved-slot launch can read a fresh ROM in the same process.
-  Configured headless startup retains its supplied audio backend through the native
-  title, save selection and first gameplay frame.
+  Configured headless startup installs its supplied no-device audio backend through
+  the native title, save selection and first gameplay frame.
   A public state projection tool records controller-driven cold Sky Sanctuary
   paired widescreen play before and after each step and normal draw, including
   copied ring state and local player bindings, with explicit inputs and bounded
   temporary output.
+  Silent headless boots also retire inherited audio backends before playback, keeping
+  reused capture processes off desktop audio devices.
 
 - **Native-compatible PCM output (diagnostics):** An opt-in audio session setting
   feeds the accurate FM chip's own pin sums through a Java port of blip_buf. It

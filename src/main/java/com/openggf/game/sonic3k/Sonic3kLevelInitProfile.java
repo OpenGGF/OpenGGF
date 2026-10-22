@@ -15,7 +15,7 @@ import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 /**
  * Sonic 3&K level initialization profile.
  * <p>
- * Aligned to the S3K {@code Level:} routine at {@code sonic3k.asm:7505} (65 steps
+ * Aligned to the S3K {@code Level:} routine at {@code sonic3k.asm:7537} (65 steps
  * across phases A-Q). The teardown steps undo the state set up by that routine.
  * <p>
  * S3K-specific post-load characteristics:
@@ -279,7 +279,7 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
     // END HCZ1_DIRECT_FF_SELECTED_CANCEL
 
     /**
-     * ROM: SpawnLevelMainSprites zone-specific player state (sonic3k.asm:8132).
+     * ROM: SpawnLevelMainSprites zone-specific player state (sonic3k.asm:8164).
      * Runs after sidekick spawn so both main player and sidekicks exist.
      * Sets falling animation, airborne flag, and jumping for zone intros
      * (HCZ1, MGZ1, and LRZ1 non-Knuckles; SSZ has no corresponding branch).
@@ -289,7 +289,7 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
             "S3K: SpawnLevelMainSprites — zone-specific player animation/air state",
             () -> {
                 // SpawnLevelMainSprites chooses intro scripts from the native
-                // Current_zone_and_act word (sonic3k.asm:8143-8293). An authored
+                // Current_zone_and_act word (sonic3k.asm:8175-8325). An authored
                 // host's logical zone index does not identify a ROM script.
                 if (!Sonic3kLevel.currentLevelHasStockRomZoneIdentity()) return;
                 // Level loc_6460 clears Update_HUD_timer and Level_started_flag
@@ -367,7 +367,7 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
     /**
      * ROM fresh-level assembly creates players and zone state before the
      * initial Load_Sprites/Process_Sprites setup sequence
-     * (docs/skdisasm/sonic3k.asm:7849-7855, 7889-7906).
+     * (docs/skdisasm/sonic3k.asm:7881-7887, 7921-7938).
      */
     private InitStep requestInitialProcessSpritesStep(LevelLoadContext ctx) {
         return new InitStep("RequestInitialProcessSprites",
@@ -392,7 +392,7 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
         // ROM fresh-start frame 0 is already routine 2. Grounded control
         // selects Wait before Player_AnglePos detaches at the platform edge;
         // Animate_Sonic then publishes mapping $BA without an air-gravity tick
-        // (sonic3k.asm:24740-24771; AniSonic05).
+        // (sonic3k.asm:24780-24811; AniSonic05).
         return true;
     }
 

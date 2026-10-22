@@ -17,7 +17,7 @@ import com.openggf.physics.TrigLookupTable;
  * <ul>
  *   <li>S1: docs/s1disasm/_incObj/18 Platforms.asm — Plat_Nudge</li>
  *   <li>S2: docs/s2disasm/Objects/Obj18 - Platforms.asm — Obj18_Bob</li>
- *   <li>S3K: sonic3k.asm line 50190 — Platform_Stationary</li>
+ *   <li>S3K: sonic3k.asm line 50230 — Platform_Stationary</li>
  * </ul>
  */
 @com.openggf.game.ModApi

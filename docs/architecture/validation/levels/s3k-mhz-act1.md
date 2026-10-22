@@ -364,7 +364,7 @@ breadth remain explicit obligations.
 ## Solo Sonic movies re-authored for the native carry-in Tails (2026-10-15)
 
 aedc137a1 installs the ROM's temporary carry-in Tails for locked-on solo Sonic
-(`SpawnLevelMainSprites` `loc_68C2`→`loc_68D8`, sonic3k.asm:8180-8197). The old movies
+(`SpawnLevelMainSprites` `loc_68C2`→`loc_68D8`, sonic3k.asm:8212-8229). The old movies
 started on the ground; under the carrier they miss both opening rings and reach the
 Knuckles clamp (`Obj_MHZ1CutsceneKnuckles` `loc_62CF8`, x=$389) 39 frames early. The
 carry-in also changes the RNG from frame 0, so no opening can restore the old run exactly:

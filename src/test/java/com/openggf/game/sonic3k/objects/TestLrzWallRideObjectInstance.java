@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code Obj_LRZWallRide} (sonic3k.asm:87693-87795, ROM {@code $4254A}).
+ * {@code Obj_LRZWallRide} (sonic3k.asm:87739-87841, ROM {@code $4254A}).
  *
  * <p>The offsets asserted here were computed from the ROM's own {@code SineTable}
  * ({@code Levels/Misc/sine.bin}) through the routine's arithmetic, not read back from the class:
@@ -28,7 +28,7 @@ class TestLrzWallRideObjectInstance {
 
     /**
      * {@code sub}, {@code addi.w #$10}, {@code cmpi.w #$20}, {@code bhs} on both axes
-     * (sonic3k.asm:87730-87736). Unsigned, so the band is {@code [-$10, $10)} on each axis and a
+     * (sonic3k.asm:87776-87782). Unsigned, so the band is {@code [-$10, $10)} on each axis and a
      * rider one pixel outside either edge is not caught.
      */
     @Test
@@ -64,7 +64,7 @@ class TestLrzWallRideObjectInstance {
         assertFalse(ride.isRidingFor(true), "a rightward ride does not catch a leftward runner");
     }
 
-    /** {@code cmpi.w #$400,ground_vel(a1)} / {@code move.w #$400} (sonic3k.asm:87751-87754). */
+    /** {@code cmpi.w #$400,ground_vel(a1)} / {@code move.w #$400} (sonic3k.asm:87797-87800). */
     @Test
     void captureFloorsTheSpeedAtFourHundredHex() {
         LrzWallRideObjectInstance ride = ride(false);
@@ -79,7 +79,7 @@ class TestLrzWallRideObjectInstance {
     }
 
     /**
-     * {@code loc_425EA} (sonic3k.asm:87766-87780): the leftward placement wants a leftward runner,
+     * {@code loc_425EA} (sonic3k.asm:87812-87826): the leftward placement wants a leftward runner,
      * floors it at {@code -$400} and then negates it, so the accumulator runs forwards either way.
      */
     @Test
@@ -95,7 +95,7 @@ class TestLrzWallRideObjectInstance {
     }
 
     /**
-     * {@code lsl.l #7,d0 / add.l d0,(a2)} (sonic3k.asm:87839-87840): one bit less than the
+     * {@code lsl.l #7,d0 / add.l d0,(a2)} (sonic3k.asm:87885-87886): one bit less than the
      * corkscrew's {@code lsl.l #8}, and {@code ground_vel} climbs by {@code $10} a ridden frame.
      */
     @Test
@@ -112,7 +112,7 @@ class TestLrzWallRideObjectInstance {
         assertEquals(0x0410, player.getGSpeed(), "addi.w #$10,ground_vel(a1)");
     }
 
-    /** {@code cmpi.w #$100,(a2)} on the accumulator's HIGH word (sonic3k.asm:87843-87844). */
+    /** {@code cmpi.w #$100,(a2)} on the accumulator's HIGH word (sonic3k.asm:87889-87890). */
     @Test
     void theRideEndsWhenTheHighWordReachesOneHundredHex() {
         LrzWallRideObjectInstance ride = ride(false);
@@ -159,7 +159,7 @@ class TestLrzWallRideObjectInstance {
         assertEquals(161, LrzWallRideObjectInstance.rideYOffset(0x80, true), "leftward amplitude");
     }
 
-    /** {@code RawAni_42792} through {@code divu.w #$16} (sonic3k.asm:87884-87888). */
+    /** {@code RawAni_42792} through {@code divu.w #$16} (sonic3k.asm:87930-87934). */
     @Test
     void rideMappingFrameIndexesTheTwelveRawFrames() {
         assertEquals(0xEF, LrzWallRideObjectInstance.rideMappingFrame(0x00));
@@ -170,7 +170,7 @@ class TestLrzWallRideObjectInstance {
 
     /**
      * The live {@code FixBugs = 0} defect: {@code d2} holds the amplitude, not the saved previous
-     * X, when {@code sub.w d2,d0} makes the X velocity (sonic3k.asm:87852, :87859, :87868). The
+     * X, when {@code sub.w d2,d0} makes the X velocity (sonic3k.asm:87898, :87905, :87914). The
      * first ridden frame therefore reports {@code ((BASE_X + 0) - $165) << 8} as a word, which has
      * nothing to do with the frame's displacement -- and the Y velocity, computed from a properly
      * saved previous Y, is a real delta on the same frame.

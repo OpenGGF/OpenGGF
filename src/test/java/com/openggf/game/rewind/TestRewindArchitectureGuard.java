@@ -231,7 +231,7 @@ class TestRewindArchitectureGuard {
             // 2026-09-18 Lava Reef, the Fireworm. The head owns the list of the four segments it
             // created (ChildObjDat_8FA16); each segment reads the head's status bit 7 to decide
             // whether it is still publishing a hurt region (Child_DrawTouch_Sprite_FlickerMove,
-            // sonic3k.asm:178136-178141). A list of live objects is not a scalar and a restore
+            // sonic3k.asm:178227-178232). A list of live objects is not a scalar and a restore
             // cannot rebuild it, so it travels as ObjectRefId sidecars and each restored segment
             // is re-attached to this head. Without it a restored chain would keep hurting after
             // the head was destroyed.
@@ -244,7 +244,7 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/FirewormSegmentInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/FirewormSegmentInstance.java#restoreRewindState", 1),
             // 2026-10-16 Pachinko item orb. loc_4A238 rewrites the orb's own SST into the
-            // loc_4A34C reward (move.l #loc_4A34C,(a0), sonic3k.asm:96803), so the reward is an
+            // loc_4A34C reward (move.l #loc_4A34C,(a0), sonic3k.asm:96849), so the reward is an
             // unregistered Gumball delegate embedded in this slot, not a managed object. The
             // generic ObjectReferenceCodec throws for an object with no identity-table id, and a
             // RewindStateful holder has no RewindCaptureContext for the delegate's own capture;

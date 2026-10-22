@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
  * LBZ1 interior reveals are foreground layout copies, not render-only masks.
  *
  * <p>ROM: {@code LBZ1_ScreenEvent} / {@code LBZ1_CheckLayoutMod}
- * (docs/skdisasm/s3.asm:74713-75083).
+ * (docs/skdisasm/s3.asm:74769-75139).
  */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSonic3kLbzInteriorRevealEvents {

@@ -17,7 +17,7 @@ public final class PlayableHurtRecovery {
 
     static void clearObjectControlAfterLanding(AbstractPlayableSprite sprite) {
         // Sonic_HurtStop/Tails_HurtStop clear obj_control in S2 (s2.asm:38223,41110)
-        // and S3K (sonic3k.asm:24541,29286). S1 HurtStop preserves its control byte.
+        // and S3K (sonic3k.asm:24581,29326). S1 HurtStop preserves its control byte.
         var rules = sprite.getGameRules();
         if (rules != null && rules.playerMovement() != null
                 && rules.playerMovement().landing().hurtLandingClearsObjectControl()) {

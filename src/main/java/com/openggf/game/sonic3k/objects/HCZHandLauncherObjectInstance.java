@@ -47,11 +47,11 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_HCZHandLauncher} is installed from the S3K object pointer table at
      * {@code $00030AD0} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:65735).
+     * label is defined at docs/skdisasm/sonic3k.asm:65775).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0003}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -158,7 +158,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
         // HCZHandLauncher_UpdateSolid writes y_pos and then always calls
         // SolidObjectTop, so a rising or returning pass also lands/carries
         // riders. HCZHandLauncher_UpdateAfterLaunch makes the same call only
-        // while $30 <= $18 (sonic3k.asm:65824-65833, 65863-65874).
+        // while $30 <= $18 (sonic3k.asm:65829-65838, 65868-65879).
         if (solidActive) {
             retainStandingBits(checkpointAll(), player);
         }
@@ -273,7 +273,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
     private void processButtonCheckAllPlayers(AbstractPlayableSprite player) {
         // HCZHandLauncher_CheckPlayers runs before this pass's SolidObjectTop
         // and reads the standing bits the previous pass left in status(a0)
-        // (sonic3k.asm:65814-65816, 65966-65968).
+        // (sonic3k.asm:65819-65821, 65971-65973).
         NativePlayerSlots slots = nativePlayerSlots(player);
         if (slots.p1() != null) {
             processButtonCheckForPlayer(slots.p1(), nativeStates[0]);
@@ -361,7 +361,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
 
     private void launchReleaseAllPlayers(AbstractPlayableSprite player) {
         // HCZHandLauncher_ReleaseHeldPlayers clears the retained status(a0)
-        // standing bits; it does not run a solid pass (sonic3k.asm:65880-65918).
+        // standing bits; it does not run a solid pass (sonic3k.asm:65885-65923).
         NativePlayerSlots slots = nativePlayerSlots(player);
         if (slots.p1() != null) {
             launchReleasePlayer(slots.p1(), nativeStates[0]);
@@ -509,7 +509,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
     @Override
     public void onUnload() {
         // Native loc_30C76 -> Sprite_OnScreen_Test -> Delete_Referenced_Sprite
-        // clears only this SST, not native players (sonic3k.asm:65909,37302,36156).
+        // clears only this SST, not native players (sonic3k.asm:65914,37302,36156).
         // Retire local grab/standing/owner state; keep extension release policy.
         nativeStates[0].clear();
         nativeStates[1].clear();
@@ -567,7 +567,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
     public SolidObjectParams getSolidParams() {
         // Obj_HCZHandLauncher passes d3=$11 to both the fresh landing and
         // continued-ride paths; unlike SolidObjectFull callers, it does not
-        // supply a separate +1 ground height (sonic3k.asm:65798-65802).
+        // supply a separate +1 ground height (sonic3k.asm:65838-65842).
         return SolidObjectParams.of(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT, SOLID_HALF_HEIGHT);
     }
 
@@ -580,7 +580,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
     public boolean rejectsZeroDistanceTopSolidLanding() {
         // SolidObjectTop reaches loc_1E45A for a fresh launcher landing. Its
         // unsigned cmpi.w #-$10,d0 / blo rejects d0 == 0 and accepts only the
-        // negative overlap band [-$10,-1] (sonic3k.asm:42004-42020).
+        // negative overlap band [-$10,-1] (sonic3k.asm:42044-42060).
         return true;
     }
 
@@ -589,7 +589,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
         // Obj_HCZHandLauncher calls SolidObjectTop, whose fresh-contact path
         // reaches loc_1E45A/sub_1E410 and keeps its relative
         // playerY-distY+3 result. It does not run PlatformObject_ChkYRange's
-        // absolute surface snap (sonic3k.asm:65824-65831, 41982-42020).
+        // absolute surface snap (sonic3k.asm:65864-65871, 42022-42060).
         return false;
     }
 

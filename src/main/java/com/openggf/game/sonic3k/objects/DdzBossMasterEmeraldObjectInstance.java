@@ -14,7 +14,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.List;
 
 /**
- * ROM {@code loc_81CC6} / {@code loc_81D0E} / {@code loc_81D4A} (sonic3k.asm:173812-173858): the
+ * ROM {@code loc_81CC6} / {@code loc_81D0E} / {@code loc_81D4A} (sonic3k.asm:173903-173949): the
  * Master Emerald carried by the phase-2 ship ({@code ObjDat3_83226}: priority {@code $280},
  * {@code ArtTile_BossMasterEmerald} palette 3). It sits at the ship part's {@code $1C}, bobbing with
  * the part's animation ({@code child_dy = -4 + (frame - $3A)}). With all seven Super Emeralds

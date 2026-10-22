@@ -36,7 +36,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * Obj_MonitorSpawnIcon allocates Obj_MonitorContents as an independent SST
- * object (docs/skdisasm/sonic3k.asm:40640-40652). The broken shell is later
+ * object (docs/skdisasm/sonic3k.asm:40645-40657). The broken shell is later
  * deleted offscreen by Sprite_OnScreen_Test (loc_1D61A), while the contents
  * keep rising, award through loc_1D850 and delete only from loc_1DB2E's timer.
  */

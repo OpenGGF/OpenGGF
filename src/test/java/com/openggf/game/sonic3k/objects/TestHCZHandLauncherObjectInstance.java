@@ -51,7 +51,7 @@ class TestHCZHandLauncherObjectInstance {
             launcher.update(frame, player);
             // HCZHandLauncher_WaitForGrab subtracts 8 and branches straight to
             // HCZHandLauncher_UpdateSolid, which writes y_pos before
-            // SolidObjectTop (sonic3k.asm:65804-65833).
+            // SolidObjectTop (sonic3k.asm:65809-65838).
             assertEquals(calls + 1, launcher.checkpointYs().size(),
                     "every Main pass ends in SolidObjectTop, including a rising pass");
             assertEquals(launcher.getY(), launcher.checkpointYs().getLast(),
@@ -75,7 +75,7 @@ class TestHCZHandLauncherObjectInstance {
         launcher.update(1, player);
 
         // HCZHandLauncher_RestoreOffset adds 8 and falls into
-        // HCZHandLauncher_UpdateSolid (sonic3k.asm:65819-65833).
+        // HCZHandLauncher_UpdateSolid (sonic3k.asm:65824-65838).
         assertEquals(0x20, launcher.getYOffset());
         assertEquals(calls + 1, launcher.checkpointYs().size());
         assertEquals(launcher.getY(), launcher.checkpointYs().getLast());
@@ -101,7 +101,7 @@ class TestHCZHandLauncherObjectInstance {
         // HCZHandLauncher_TryGrabPlayer tests status(a0) before this pass's
         // SolidObjectTop runs, so the retained bit grabs even though the
         // later solid pass of the same dispatch reports no contact
-        // (sonic3k.asm:65814-65816, 65966-65968).
+        // (sonic3k.asm:65819-65821, 65971-65973).
         launcher.setCheckpointBatch(empty);
         launcher.update(2, player);
         assertTrue(player.isObjectControlled());
@@ -124,7 +124,7 @@ class TestHCZHandLauncherObjectInstance {
         assertEquals(0x20, launcher.getYOffset());
 
         // HCZHandLauncher_UpdateAfterLaunch calls SolidObjectTop only while
-        // $30 <= $18 (sonic3k.asm:65863-65874); the release pass already
+        // $30 <= $18 (sonic3k.asm:65868-65879); the release pass already
         // moved to $20, so neither it nor the rest of the return resolves.
         assertEquals(callsBeforePass, launcher.checkpointYs().size(),
                 "HCZHandLauncher_ReleaseHeldPlayers uses the retained standing bits, not a new solid pass");

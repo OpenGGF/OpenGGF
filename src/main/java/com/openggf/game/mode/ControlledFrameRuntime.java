@@ -32,14 +32,14 @@ public final class ControlledFrameRuntime {
     }
     public static LevelFrameResult step(GameplayModeContext context, InputHandler input,
                                         LogicalInputSnapshot snapshot, boolean audioFrameOwned, Runnable beforeGameplay) {
-        var controller = java.util.Objects.requireNonNull(controller(context));
-        if (prepareSetup(context)) return LevelFrameResult.SETUP_ONLY;
-        if (!audioFrameOwned) {
-            var audio = GameServices.audio();
-            audio.beginGameplayAudioFrame(audio.commandTimeline().currentFrame() + 1);
-        }
         var course = new CourseControl(context, input);
         try {
+            var controller = java.util.Objects.requireNonNull(controller(context));
+            if (prepareSetup(context)) return LevelFrameResult.SETUP_ONLY;
+            if (!audioFrameOwned) {
+                var audio = GameServices.audio();
+                audio.beginGameplayAudioFrame(audio.commandTimeline().currentFrame() + 1);
+            }
             var disposition = java.util.Objects.requireNonNull(controller.beforeFrame(course, snapshot), "gameplay frame disposition");
             boolean advance = disposition != GameplayFrameDisposition.HOLD;
             serviceTitleCardOverlay(context);
@@ -70,6 +70,12 @@ public final class ControlledFrameRuntime {
             if (!advance && !transition) serviceHeldLevelEntry(context);
             controller.afterTick(course, advance);
             return advance ? LevelFrameResult.GAMEPLAY_FRAME : LevelFrameResult.HELD;
+        } catch (RuntimeException | Error failure) {
+            try { context.directedPlayerLease().abort(); }
+            catch (RuntimeException | Error cleanupFailure) {
+                if (cleanupFailure != failure) failure.addSuppressed(cleanupFailure);
+            }
+            throw failure;
         } finally { course.closeFrame(); }
     }
 

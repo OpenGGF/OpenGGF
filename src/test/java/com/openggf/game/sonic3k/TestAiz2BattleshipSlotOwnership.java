@@ -40,14 +40,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <ul>
  *   <li>Obj_AIZBattleship init: two AllocateObjectAfterCurrent propellers
- *       (docs/skdisasm/sonic3k.asm:105303-105318).</li>
+ *       (docs/skdisasm/sonic3k.asm:105349-105364).</li>
  *   <li>Obj_AIZBattleshipMain exit: the ship's own SST becomes Obj_AIZ2BossSmall,
  *       Events_fg_4 is set, and Obj_AIZ2MakeTree is allocated after it
- *       (:105327-105339).</li>
+ *       (:105373-105385).</li>
  *   <li>AIZ2SE_ShipDraw/EndRefresh: Events_routine_fg holds $C for three
  *       ScreenEvents passes and only then writes the $46C0 loop boundary
- *       (:104978-105017); propellers delete on their first pass at $C
- *       (:105395-105399).</li>
+ *       (:105024-105063); propellers delete on their first pass at $C
+ *       (:105441-105445).</li>
  * </ul>
  *
  * <p>Only types that predate the propeller object are referenced, so the same

@@ -86,7 +86,7 @@ public class TestMegaChopperBadnikInstance {
         player.setRingCount(3);
         GameServices.camera().setFocusedSprite(player);
 
-        // Obj_MegaChopper begins with jsr (Obj_WaitOffscreen).l (sonic3k.asm:184233),
+        // Obj_MegaChopper begins with jsr (Obj_WaitOffscreen).l (sonic3k.asm:184326),
         // so no routine runs until Render_Sprites has drawn the placeholder. These
         // cases exercise post-Init behaviour directly, so release the gate here as
         // production does once render_flags bit 7 is set.
@@ -97,7 +97,7 @@ public class TestMegaChopperBadnikInstance {
 
         // A Player_1-only capture sets Ctrl_1_locked; the player stays mobile
         // through the left/right bits MegaChopper_CarryFollowPlayer republishes
-        // (sonic3k.asm:184356-184360, 184431-184435).
+        // (sonic3k.asm:184361-184365, 184436-184440).
         assertTrue(player.isControlLocked());
         assertFalse(player.isObjectControlled());
         assertEquals("CARRY", readState(megaChopper));
@@ -129,7 +129,7 @@ public class TestMegaChopperBadnikInstance {
         player.setRingCount(10);
         GameServices.camera().setFocusedSprite(player);
 
-        // Obj_MegaChopper begins with jsr (Obj_WaitOffscreen).l (sonic3k.asm:184233),
+        // Obj_MegaChopper begins with jsr (Obj_WaitOffscreen).l (sonic3k.asm:184326),
         // so no routine runs until Render_Sprites has drawn the placeholder. These
         // cases exercise post-Init behaviour directly, so release the gate here as
         // production does once render_flags bit 7 is set.
@@ -161,7 +161,7 @@ public class TestMegaChopperBadnikInstance {
         megaChopper.update(0, player);
 
         // MegaChopper_CheckCapture: clr.w (Ctrl_1_logical).w / st (Ctrl_1_locked).w
-        // when collision_property is exactly 1 (sonic3k.asm:184431-184435).
+        // when collision_property is exactly 1 (sonic3k.asm:184436-184440).
         assertEquals("CARRY", readState(megaChopper));
         assertTrue(player.isControlLocked());
         assertEquals(0, player.getLogicalInputState());
@@ -169,7 +169,7 @@ public class TestMegaChopperBadnikInstance {
 
         // MegaChopper_CarryFollowPlayer: Ctrl_1 & $8C8C -> Ctrl_1_logical, so
         // the next player pass sees left/right only; down, up and A/B/C drop out
-        // (sonic3k.asm:184356-184360).
+        // (sonic3k.asm:184361-184365).
         player.setDirectionalInputPressed(true, true, true, false);
         player.setJumpInputPressed(true, true);
         megaChopper.update(1, player);
@@ -195,7 +195,7 @@ public class TestMegaChopperBadnikInstance {
         assertTrue(player.isControlLocked());
 
         // anim 2 (roll) releases; MegaChopper_ReleasePlayer clears
-        // Ctrl_1_locked when $38 bit 2 is set (sonic3k.asm:184348-184351, 184393-184396).
+        // Ctrl_1_locked when $38 bit 2 is set (sonic3k.asm:184353-184356, 184398-184401).
         player.setAnimationId(Sonic3kAnimationIds.ROLL.id());
         megaChopper.update(2, player);
 
@@ -249,7 +249,7 @@ public class TestMegaChopperBadnikInstance {
         megaChopper.update(0, main);
 
         // collision_property 3 selects Player_1 but skips the cmpi.w #1,d2 lock
-        // arm (sonic3k.asm:184431-184437).
+        // arm (sonic3k.asm:184436-184442).
         assertEquals("CARRY", readState(megaChopper));
         assertFalse(main.isControlLocked());
         main.setDirectionalInputPressed(false, false, true, false);
@@ -280,7 +280,7 @@ public class TestMegaChopperBadnikInstance {
                 new ObjectSpawn(0x210, 0x180, Sonic3kObjectIds.MEGA_CHOPPER, 0, 0, false, 0));
         megaChopper.setServices(new QueryOnlyPlayerServices(null, List.of(nativeP2), List.of()));
 
-        // Obj_MegaChopper begins with jsr (Obj_WaitOffscreen).l (sonic3k.asm:184233),
+        // Obj_MegaChopper begins with jsr (Obj_WaitOffscreen).l (sonic3k.asm:184326),
         // so no routine runs until Render_Sprites has drawn the placeholder. These
         // cases exercise post-Init behaviour directly, so release the gate here as
         // production does once render_flags bit 7 is set.

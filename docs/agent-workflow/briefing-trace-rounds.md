@@ -86,6 +86,39 @@ and unknown operands. A subsequent cold continuation may evaluate its current
 boundary once, but cannot fill the earlier run's missing values. See the
 [R18 record](../architecture/plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-ledge-approachjump-glide-ordinary-question-r18--2026-10-21).
 
+A live scene can simulate correctly and render valid scenery while every actor is
+outside the picture (2026-10-21, Stageplay live-world review). ROM level maxima
+are camera-origin limits, not terrain dimensions; subtracting the viewport again
+hid the airborne cast. Compare resolved centres with the picture and actual native
+body pixels in each distinct camera regime. A platform-only pixel check or a
+complete lossless decode does not establish airborne framing.
+
+Grounded telemetry and visible actors do not prove floor alignment (2026-10-22,
+Stageplay ring-spill review). Sprites used director Y while foreground scroll
+retained gameplay Y. Check contact pixels and the priority mask under several
+director offsets; preserve native background phase and restore published state
+after drawing. A transparent native floor-art tile can have valid collision, so
+contact oracles must distinguish missing art from a displaced rendered surface.
+
+A JVM launch property is mutable test state (2026-10-21, Stageplay smoke).
+`TestSurfacelessEglContext` clears `openggf.headless.gl`; a later
+`TraceCaptureBootDimensionsTest` in the same JVM then tries GLFW even when
+JAVA_TOOL_OPTIONS selected EGL at launch. The same order reproduced both boot
+errors on the pinned baseline, while the isolated dimension check with explicit
+`-Dopenggf.headless.gl=surfaceless-egl` passed. JAVA_TOOL_OPTIONS also prepends a
+launcher notice to child stderr and breaks exact CLI-output assertions. Attribute
+these cases with bounded matched tests and preserve their coverage limits; a
+launch setting alone does not prove which backend a later test used.
+
+An inverse-affine pixel oracle can disagree with valid GPU edge ownership
+(2026-10-21, sprite presentation smoke). A clipped quad whose edge passes through
+a fragment center has an implementation-defined ownership rule, as explained in
+[ARB_clip_control issue 9](https://registry.khronos.org/OpenGL/extensions/ARB/ARB_clip_control.txt).
+The SQUASH fixture's 120-percent stretch put its bottom edge at y=36.5; CPU
+inverse-floor sampling excluded row 36 while CI rendered it. Keep exact color
+comparisons away from these ties, and independently check native clipping and
+flips. A local GPU pass does not establish portable ownership of a tied edge.
+
 An in-process network bot is not a socket-capacity measurement (2026-10-21,
 racing stress). The old load report called its largest emitted packet "queued
 bytes", although its sink discarded packets immediately. It also timed only hub
@@ -4001,7 +4034,7 @@ Three questions, in order; a "no" at any one ends it:
 2. In the ROM, is the write site reached **after** that object's dispatch already read its
    selector this frame? **This reduces to a single lookup, with no reasoning about slot order.**
    `TouchResponse` runs from the *player's own* control routine — `Sonic_Control` /
-   `Tails_Control` / `Knuckles_Control` (`sonic3k.asm:21947, :26159, :30389`) and from Sonic's
+   `Tails_Control` / `Knuckles_Control` (`sonic3k.asm:21983, :26199, :30429`) and from Sonic's
    and Tails' object code in S2 (`s2.asm:38998`) — and the players run before the object slots,
    so a `Touch_Response` write **always** lands before the touched object's own dispatch, in all
    three games. So: find where the ROM writes the selector. Inside `Touch_Response` /
@@ -4025,9 +4058,9 @@ child already ran is not a property of the write site at all.
    construction, so **not a member**. Before → **member**.
 
 **And Q4 is not always answerable by reading.** Slot order is the allocator's:
-`AllocateObjectAfterCurrent` (`s2.asm:33705-33724`, `sonic3k.asm:37917-37930`) scans forward from
+`AllocateObjectAfterCurrent` (`s2.asm:33705-33724`, `sonic3k.asm:37957-37970`) scans forward from
 `a0` and is therefore *always after* the parent — settled by reading. Plain `AllocateObject`
-(`s2.asm:33681-33695`, `sonic3k.asm:37911-37914`) scans from the start of the dynamic table for
+(`s2.asm:33681-33695`, `sonic3k.asm:37951-37954`) scans from the start of the dynamic table for
 the first free slot, so the child may land before *or* after depending on live occupancy.
 For those children **membership is a runtime property that reading cannot settle**, and it can
 differ between two runs of the same object. That is strictly harder than the same-object
@@ -4037,7 +4070,7 @@ population, where reading always settles it.
 true cross-object install, which resolves to a non-member by reading (S2's `LoadChildObject` calls
 `AllocateObjectAfterCurrent`, `s2.asm:73012-73014`). No level-event manager writes an object's
 selector. Nine of S3K's ten `CreateChild*` helpers use `AllocateObjectAfterCurrent`; the exception
-is `CreateChild7_Normal2` (`sonic3k.asm:177145-177175`), plain `AllocateObject`, whose four call
+is `CreateChild7_Normal2` (`sonic3k.asm:177236-177266`), plain `AllocateObject`, whose four call
 sites include `HCZEndBossBomb_ResetOrSpawn` (`:141453`) — inside the AIZ→HCZ slice and **not yet
 implemented**. That is a constraint to hand the implementer, not a defect to fix.
 
@@ -4106,7 +4139,7 @@ than an obviously broken probe. It was caught only by going to read *why* a resu
 instead of banking it.
 
 **Related, on scope:** the same batch settled its ROM half from **one routine per game**
-(`Touch_Enemy`'s boss path, `sonic3k.asm:20908-20925`; `Touch_Enemy_Part2`, `s2.asm:85373-85382`)
+(`Touch_Enemy`'s boss path, `sonic3k.asm:20944-20961`; `Touch_Enemy_Part2`, `s2.asm:85373-85382`)
 rather than nine readings — neither writes a routine, so the install is in each boss's own
 dispatch. Same fingerprint, same lever, one reading. But the engine half reached only 1 of 9: the
 rest are blocked on **fixture depth, not analysis** — objects no trace reaches, needing real level
@@ -4337,7 +4370,7 @@ itself is corrected — without treating the revival as evidence.
 ## One hundred and twentieth rule: "does the engine model this ROM behaviour" is a per-branch question
 
 `SpawnLevelMainSprites_SpawnPlayers` contains **two** `addi.w #4,y_pos` writes on **two branches**
-— one on the Player_2 arm (Tails as sidekick, `sonic3k.asm:8367`) and one on the Player_mode == 2
+— one on the Player_2 arm (Tails as sidekick, `sonic3k.asm:8399`) and one on the Player_mode == 2
 arm (Tails as Player 1, `:8388`). The engine implemented the first, and its comment cites the
 routine by name.
 

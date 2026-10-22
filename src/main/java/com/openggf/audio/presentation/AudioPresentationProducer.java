@@ -94,6 +94,7 @@ public final class AudioPresentationProducer {
     private boolean hasLastReverseFrame;
     private boolean closed;
     private ScenePcmSource scenePcmSource;
+    private final java.util.List<ScenePcmSource> pcmOverlays = new java.util.ArrayList<>();
     private AudioPresentationSink pendingSinkReplacement;
 
     /** Scene lifetime override; publication still uses this producer's sinks and captures. */
@@ -103,6 +104,19 @@ public final class AudioPresentationProducer {
         if (presenting) throw new IllegalStateException("cannot replace PCM during presentation");
         scenePcmSource = source;
         sink.onReverseBoundary();
+    }
+
+    /** Host-prepared additive voices; they share final PCM history, speaker and capture publication. */
+    public void addPcmOverlay(ScenePcmSource source) {
+        assertOwnerThread(); assertOpen();
+        if (presenting || pcmOverlays.size() >= 4) throw new IllegalStateException("PCM overlay capacity unavailable");
+        pcmOverlays.add(Objects.requireNonNull(source));
+    }
+
+    public void removePcmOverlay(ScenePcmSource source) {
+        assertOwnerThread();
+        if (presenting) throw new IllegalStateException("Cannot close PCM overlay during presentation");
+        pcmOverlays.remove(source);
     }
 
     public void pauseScenePcmSource() {
@@ -309,6 +323,11 @@ public final class AudioPresentationProducer {
                 applyReleaseCrossfade(pcm, stereoFrames);
                 if (scenePcmSource != null) {
                     scenePcmSource.render(pcm, stereoFrames);
+                }
+                // The producer owns this list; presentation forbids registration changes.
+                // Indexed traversal keeps the warmed frame path allocation-free.
+                for (int index = 0; index < pcmOverlays.size(); index++) {
+                    pcmOverlays.get(index).render(pcm, stereoFrames);
                 }
                 if (historyArmed) {
                     history.write(pcm, stereoFrames);
@@ -1086,6 +1105,7 @@ public final class AudioPresentationProducer {
             return;
         }
         closed = true;
+        pcmOverlays.clear();
         for (int index = 0; index < captureCount; index++) {
             CaptureHandle capture = captures[index];
             if (capture != null) {

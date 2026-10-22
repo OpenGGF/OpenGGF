@@ -9,8 +9,8 @@ import com.openggf.sprites.managers.InitialPlayableInput;
  *
  * <p>ROM order: {@code Load_Sprites}, Player 1, Player 2, collision-list reset,
  * absolute dynamic slot 3, managed dynamic slots 4-93, then fixed slots 94-109
- * (docs/skdisasm/sonic3k.asm:7848-7856,35965-36008;
- * docs/skdisasm/sonic3k.constants.asm:303-323).
+ * (docs/skdisasm/sonic3k.asm:7880-7888,36005-36048;
+ * docs/skdisasm/sonic3k.constants.asm:310-330).
  */
 final class InitialProcessSpritesCoordinator {
     enum Checkpoint {

@@ -26,12 +26,12 @@ import static org.junit.jupiter.api.Assertions.*;
  * Full-table Create_Continue_Sprite writes issued by the rescue director's OWN
  * routines, not by direct createGroup calls:
  * <ul>
- *   <li>loc_5DB76 (sonic3k.asm:123878-123895, skdisasm 044fa46): routine $C
+ *   <li>loc_5DB76 (sonic3k.asm:123924-123941, skdisasm 044fa46): routine $C
  *       hold expiry, word_5DBB6 x2 subtype $42, then Queue_Kos_Module.</li>
- *   <li>loc_5DD6A (:124031-124066): routine $1C expiry. Unless Player_mode 3
+ *   <li>loc_5DD6A (:124077-124112): routine $1C expiry. Unless Player_mode 3
  *       or _unkFA88 < 0, six tables (18 entries: $41x6, $43x2, $44x4,
  *       $45/$46/$47 x2).</li>
- *   <li>Create_Continue_Sprite (:126846-126858): unchecked AllocateObject,
+ *   <li>Create_Continue_Sprite (:126892-126904): unchecked AllocateObject,
  *       five partial writes (code, subtype $2C, $2D = 4*entry, x_pos, y_pos).</li>
  * </ul>
  * Legal SST93 victims come from real native allocations, never synthetic owners.
@@ -42,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * :140-153). Free SSTs are filled with IslandLift owners, the declared-pressure
  * boundary already accepted by TestS3kEndingNativeGraphPressure.
  * Expectations come from the independent byte-RAM oracle and loc_5EDAC/
- * loc_5EE18/loc_5EE86 literal writes (:125364-125453).
+ * loc_5EE18/loc_5EE86 literal writes (:125410-125499).
  */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kEndingDirectorContinuationDispatch {
@@ -153,7 +153,7 @@ class TestS3kEndingDirectorContinuationDispatch {
     }
 
     /**
-     * loc_5DD6A (044fa46 sonic3k.asm:124031-124040) writes routine $1E and Events_fg_4, then returns
+     * loc_5DD6A (044fa46 sonic3k.asm:124077-124086) writes routine $1E and Events_fg_4, then returns
      * before any Create_Continue_Sprite when Player_mode is 3 or _unkFA88 is negative. The real
      * routine $1C expiry must therefore leave every SST owner untouched.
      */

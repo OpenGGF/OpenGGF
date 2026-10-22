@@ -12,6 +12,7 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameRng;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.RomDetectionService;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.session.EditorModeContext;
 import com.openggf.game.session.EditorSessionFactory;
 import com.openggf.game.session.GameplayModeContext;
@@ -55,7 +56,7 @@ class TestLevelManagerModPatternWindows {
             return ((Integer) invocation.getArgument(1)) + 1;
         });
         GameModule module = mock(GameModule.class);
-        when(module.getRules()).thenReturn(com.openggf.game.rules.GameRules.SONIC_2);
+        when(module.getRules()).thenReturn(GameRules.SONIC_2);
         when(module.getObjectArtProvider()).thenReturn(provider);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
         WorldSession world = new WorldSession(module);

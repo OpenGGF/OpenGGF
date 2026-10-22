@@ -53,6 +53,9 @@ public final class DetachedLevelKit {
         this.backdrop = backdrop;
     }
 
+    /** Engine-internal detached terrain owner; consumers must not mutate its layout. */
+    public Level level() { return level; }
+
     /** The side of one layout block in pixels: 128, or 256 in Sonic 1. */
     public int blockSize() {
         return level.getBlockPixelSize();

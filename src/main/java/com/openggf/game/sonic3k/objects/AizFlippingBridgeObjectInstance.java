@@ -35,7 +35,7 @@ import java.util.List;
  * If the object's status bit 0 (X-flip) is set, the animation direction is
  * reversed (-1) and the max frame is decremented by 1.
  * <p>
- * ROM references: Obj_AIZFlippingBridge (sonic3k.asm:58872), loc_2AA56,
+ * ROM references: Obj_AIZFlippingBridge (sonic3k.asm:58912), loc_2AA56,
  * sub_2AA7E, sub_2ABF2, sub_2AC08, SolidObjSloped2.
  */
 public class AizFlippingBridgeObjectInstance extends AbstractObjectInstance
@@ -119,7 +119,7 @@ public class AizFlippingBridgeObjectInstance extends AbstractObjectInstance
         // ROM object RAM starts clear; sub_2AA7E immediately decrements
         // anim_frame_timer from 0 to -1 on the first loc_2AA56 update and
         // advances the child map frames before reloading $25(a0)
-        // (sonic3k.asm:58946-58969).
+        // (sonic3k.asm:58986-59009).
         this.animTimer = 0;
 
         // Bits 3-0: max frame = low_nib + 16

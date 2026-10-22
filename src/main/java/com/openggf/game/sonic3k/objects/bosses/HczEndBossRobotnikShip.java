@@ -17,7 +17,7 @@ import java.util.Objects;
 /**
  * HCZ's subtype-5 Obj_RobotnikShip2: an independent SST object, not a boss-lifetime
  * component. Head and flame are actual after-current allocations with their own
- * dispatch, drawing and deletion (sonic3k.asm:136360-136482).
+ * dispatch, drawing and deletion (sonic3k.asm:136365-136487).
  *
  * <p>Native boss geyser/Boss_flag terminal lifetime remains a separate implementation gap.
  */

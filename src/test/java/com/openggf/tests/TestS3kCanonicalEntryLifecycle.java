@@ -238,8 +238,8 @@ class TestS3kCanonicalEntryLifecycle {
 
     /**
      * A Sonic-led CNZ1 start always has one Obj_Tails story writer: loc_68D8 writes
-     * it to Player_2 for solo Sonic (sonic3k.asm:8190-8197) and loc_13A10 gives it
-     * the carry (sonic3k.asm:26389-26415). A configured Tails P2 is that carrier;
+     * it to Player_2 for solo Sonic (sonic3k.asm:8222-8229) and loc_13A10 gives it
+     * the carry (sonic3k.asm:26429-26455). A configured Tails P2 is that carrier;
      * any other configured follower keeps its place and the native actor joins it.
      */
     private static boolean hasNativeCarrier(Entry row) {

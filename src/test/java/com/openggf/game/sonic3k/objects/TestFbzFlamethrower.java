@@ -45,7 +45,7 @@ class TestFbzFlamethrower {
     void fullSolidIncludesExactRightBoundaryLikeRomBhiCheck() {
         // Obj_FBZFlamethrower passes d1=$1B to SolidObjectFull. The shared
         // S3K routine rejects only when relX is unsigned-HIGH, so relX=d1*2
-        // remains a grounded side contact (sonic3k.asm:41399-41407).
+        // remains a grounded side contact (sonic3k.asm:41439-41447).
         assertTrue(flame(0).getSolidRoutineProfile().inclusiveRightEdge());
     }
 

@@ -37,7 +37,7 @@ public final class Sonic3kPathSwapObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // Obj_PathSwap executes in its SST slot. Earlier slots in the same pass
-        // must still observe the old path bits (sonic3k.asm:39764-39887).
+        // must still observe the old path bits (sonic3k.asm:39804-39927).
         services().objectManager().applyInlinePlaneSwitcher(getSpawn(), playerEntity);
         ObjectPlayerQuery query = services().playerQuery();
         PlayableEntity playerTwo = new ObjectPlayerQuery(() -> playerEntity, query::sidekicks)
@@ -48,7 +48,7 @@ public final class Sonic3kPathSwapObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * {@code Offset_ObjectsDuringTransition} (sonic3k.asm:104166-104181) walks every SST slot
+     * {@code Offset_ObjectsDuringTransition} (sonic3k.asm:104212-104227) walks every SST slot
      * from {@code Dynamic_object_RAM+object_size} to {@code Breathing_bubbles} and subtracts
      * {@code d0}/{@code d1} from the {@code x_pos}/{@code y_pos} of each one whose
      * {@code render_flags} bit 2 is set. {@code Obj_PathSwap} holds a normal slot with that bit

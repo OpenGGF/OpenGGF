@@ -63,6 +63,16 @@ public final class ModFaultBoundary implements com.openggf.level.objects.ObjectC
                     failure instanceof IoCallbackFailure ? failure.getCause() : failure);
             if (loadAbort != null) throw loadAbort;
             Set<String> disabled = ownerAndDependents(owner);
+            // A different object/service can fail while a controller owns native direction.
+            // Restore that engine-owned lease before quarantine makes creator callbacks unavailable.
+            var gameplay = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            if (gameplay != null) {
+                try { gameplay.directedPlayerLease().abort(); }
+                catch (RuntimeException | Error cleanupFailure) {
+                    rethrowIfFatal(cleanupFailure);
+                    if (cleanupFailure != failure) failure.addSuppressed(cleanupFailure);
+                }
+            }
             // Observe before quarantine retires published plans. Context identifies
             // possible interactions, never grants a second owner causal blame.
             try {

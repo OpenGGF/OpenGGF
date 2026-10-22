@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * AnPal_AIZ1 boundaries taken from the ROM routine (sonic3k.asm:3205-3262) and its tables,
+ * AnPal_AIZ1 boundaries taken from the ROM routine (sonic3k.asm:3237-3294) and its tables,
  * observed through the level palette only:
  * <ul>
  *   <li>The normal branch's counters+$02 cycle is gated by {@code tst.b

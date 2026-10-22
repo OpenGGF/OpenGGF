@@ -1,0 +1,14 @@
+formatVersion: 1
+id: stageplay-demo
+name: OpenGGF Stageplay Demo
+version: 0.1.0
+authors:
+  - OpenGGF contributors
+description: A fifteen-second scene authored as reusable Stageplay data. The first act pauses for the performance, then resumes.
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: s2
+entrypoint: stageplaydemo.OpeningMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}

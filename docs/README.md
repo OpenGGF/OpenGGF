@@ -4,6 +4,8 @@ OpenGGF's documentation is organized by audience and purpose.
 
 Level authors can start with the [level editor guide](guide/creating/level-editor.md)
 for project creation, safe saves, playtesting, and all-game exports.
+Film and cutscene authors can use [OpenGGF Stageplay](guide/creating/stageplay.md)
+in the engine or the external editor.
 
 Level implementation and validation: [zone and act test standard](guide/contributing/level-test-standard.md),
 [coverage backlog](status/level-test-coverage.md), and

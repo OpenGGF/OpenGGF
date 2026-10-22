@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
  * title update. {@code Pal_FadeToBlack} leaves the power-on black (22 VSyncs); then
  * {@code Pal_FadeFromBlack} fills black and, each iteration, VSyncs (the VBlank
  * uploads the palette stepped last time) and runs {@code Pal_FromBlack} toward
- * {@code Pal_TitleSonic1} (sonic3k.asm:4903-4985, 5476-5481). The expected steps
+ * {@code Pal_TitleSonic1} (sonic3k.asm:4935-5017, 5508-5513). The expected steps
  * are transcribed here from {@code Pal_AddColor}, and the target is read from the
  * ROM file, independently of the manager. Round-2 lane pcm-output, 2026-10-17.
  */

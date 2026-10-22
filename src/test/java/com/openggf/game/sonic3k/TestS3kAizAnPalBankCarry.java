@@ -21,8 +21,8 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * AnPal_AIZ1 and AnPal_AIZ2 share one RAM bank: {@code Palette_cycle_counter0},
  * {@code Palette_cycle_counter1} and {@code Palette_cycle_counters}
- * (sonic3k.constants.asm:580-596). Level's loc_60DE clears it
- * (sonic3k.asm:7652); the seamless AIZ1-&gt;AIZ2 reload never reaches loc_60DE, so
+ * (sonic3k.constants.asm:599-615). Level's loc_60DE clears it
+ * (sonic3k.asm:7684); the seamless AIZ1-&gt;AIZ2 reload never reaches loc_60DE, so
  * AnPal_AIZ2 continues from AnPal_AIZ1's values. LevelLoop calls Animate_Palette
  * (7923) before the DeformBgLayer/ScreenEvents work that performs the reload
  * (7929-7930), so the reload iteration's call is still AnPal_AIZ1's.
@@ -33,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * fifth AIZ2 call and reads the inherited counters+$02 (entry 7).
  *
  * <p>Expectations here are derived from the ROM routines and tables only (normal-mode
- * AnPal_AIZ1 from a cleared bank, sonic3k.asm:3205-3233; AnPal_AIZ2, 3263-3300), and
+ * AnPal_AIZ1 from a cleared bank, sonic3k.asm:3237-3265; AnPal_AIZ2, 3263-3300), and
  * observed through the level palette, so the same checks run against any source.
  */
 @RequiresRom(SonicGame.SONIC_3K)

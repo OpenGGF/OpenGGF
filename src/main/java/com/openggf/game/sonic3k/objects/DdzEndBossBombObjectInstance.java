@@ -13,7 +13,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code loc_825CA} (sonic3k.asm:174588-174655): a phase-2 bomb dropped when Player 1 is below
+ * ROM {@code loc_825CA} (sonic3k.asm:174679-174746): a phase-2 bomb dropped when Player 1 is below
  * the ship ({@code ObjDat3_83244}: priority {@code $300}, frame {@code $25}). It leaves the ship at
  * {@code + ($52, $5A)} moving {@code ($200, $200)} for five frames, then waits
  * {@code subtype * 8} frames at priority {@code $80} emitting {@code loc_826A0} smoke every eighth

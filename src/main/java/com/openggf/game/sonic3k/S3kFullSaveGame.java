@@ -8,7 +8,7 @@ import com.openggf.level.objects.ObjectServices;
 public final class S3kFullSaveGame {
     /**
      * Marks the synchronous capture of a request made by {@link #complete}. Only SaveGame
-     * stores {@code SaveGame_NextLevel[Current_zone_and_act]} (sonic3k.asm:15860-15872);
+     * stores {@code SaveGame_NextLevel[Current_zone_and_act]} (sonic3k.asm:15896-15908);
      * the engine's persistence-only progression requests keep the current location.
      */
     private static final ScopedValue<Boolean> SAVE_GAME = ScopedValue.newInstance();
@@ -17,7 +17,7 @@ public final class S3kFullSaveGame {
 
     /**
      * SaveGame's common return loc_C4CC clears Collected_special_ring_array
-     * (sonic3k.asm:15922), including SK-alone and zero Save_pointer branches.
+     * (sonic3k.asm:15958), including SK-alone and zero Save_pointer branches.
      * Special-stage/lives saves use separate returns and must not call this.
      * Native clears after SRAM writes; Java requests asynchronous persistence
      * whose payload omits this mask. Clear before that request so No Save and

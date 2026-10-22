@@ -20,10 +20,14 @@ public final class EditorProjectMenu {
     public record Action(String label, Runnable callback) {
         public Action { Objects.requireNonNull(label); Objects.requireNonNull(callback); }
     }
-    public record Field(String key, String label, String value, MenuTextEditor.Mode mode) {
+    public record Field(String key, String label, String value, MenuTextEditor.Mode mode, int maxLength) {
+        public Field(String key, String label, String value, MenuTextEditor.Mode mode) {
+            this(key, label, value, mode, mode == MenuTextEditor.Mode.PATH ? 4096 : 256);
+        }
         public Field {
             Objects.requireNonNull(key); Objects.requireNonNull(label);
             Objects.requireNonNull(value); Objects.requireNonNull(mode);
+            if (maxLength < 1 || maxLength > 8192) throw new IllegalArgumentException("Field length must be 1..8192");
         }
     }
 
@@ -130,7 +134,7 @@ public final class EditorProjectMenu {
             Field field = fields.get(selected);
             editingKey = field.key();
             textEditor = new MenuTextEditor(field.label(), values.get(field.key()),
-                    field.mode() == MenuTextEditor.Mode.PATH ? 4096 : 256, null, field.mode());
+                    field.maxLength(), null, field.mode());
             MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
         } else if (submit != null) submit();
         else {

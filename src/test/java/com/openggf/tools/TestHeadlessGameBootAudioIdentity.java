@@ -3,6 +3,7 @@ package com.openggf.tools;
 import com.openggf.Engine;
 import com.openggf.InputBindingFactory;
 import com.openggf.audio.HeadlessSmpsAudioBackend;
+import com.openggf.audio.NullAudioBackend;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameId;
@@ -87,12 +88,23 @@ class TestHeadlessGameBootAudioIdentity {
     }
 
     @Test
-    void audioDisabledBootDoesNotClaimAnAlreadyInstalledHeadlessBackend() throws Exception {
-        var previous = new HeadlessSmpsAudioBackend(services.configuration(), services.profiler());
+    void audioDisabledBootRetiresAnAlreadyInstalledBackend() throws Exception {
+        var previous = new RetirementBackend();
         services.audio().setBackend(previous);
         services.configuration().setConfigValue(SonicConfiguration.AUDIO_ENABLED, false);
         boot.boot(RomTestUtils.ensureSonic2RomAvailable().toPath(), 0, 0);
         assertFalse(boot.hasInstalledHeadlessAudioBackend());
-        assertTrue(services.audio().hasInstalledBackend(previous));
+        assertFalse(services.audio().hasInstalledBackend(previous),
+                "silent headless boots must replace inherited device ownership");
+        assertEquals(1, previous.destroyCalls, "retire the previous backend before level playback");
+        assertEquals(NullAudioBackend.class, services.audio().getBackend().getClass());
+    }
+
+    private static final class RetirementBackend extends NullAudioBackend {
+        private int destroyCalls;
+
+        @Override public void destroy() {
+            destroyCalls++;
+        }
     }
 }

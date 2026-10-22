@@ -1,0 +1,223 @@
+{
+  "version": 3,
+  "name": "Ring run",
+  "width": 320,
+  "height": 224,
+  "cast": [
+    {
+      "id": "sonic",
+      "name": "Sonic",
+      "gameId": "s3k",
+      "character": "sonic",
+      "snapToFloor": false
+    },
+    {
+      "id": "tails",
+      "name": "Tails",
+      "gameId": "s3k",
+      "character": "tails",
+      "snapToFloor": false
+    }
+  ],
+  "shots": [
+    {
+      "id": "rings",
+      "durationFrames": 240,
+      "set": {
+        "gameId": "s3k",
+        "zone": 11,
+        "act": 0,
+        "worldPolicy": "LIVE"
+      },
+      "camera": [
+        {
+          "frame": 0,
+          "x": 1736,
+          "y": 1760,
+          "interpolation": "HOLD",
+          "follow": {
+            "actors": [
+              "sonic",
+              "tails"
+            ],
+            "deadZoneX": 12,
+            "deadZoneY": 12,
+            "lookAhead": 4,
+            "smoothing": 0.2,
+            "offsetX": 0,
+            "offsetY": 0
+          }
+        },
+        {
+          "frame": 130,
+          "x": 1736,
+          "y": 1760,
+          "interpolation": "HOLD",
+          "follow": {
+            "actors": [
+              "tails"
+            ],
+            "deadZoneX": 16,
+            "deadZoneY": 12,
+            "lookAhead": 5,
+            "smoothing": 0.18,
+            "offsetX": 0,
+            "offsetY": 0
+          }
+        }
+      ],
+      "actors": {
+        "sonic": [
+          {
+            "frame": 0,
+            "x": 1896,
+            "y": 1872
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "x": 1928,
+            "y": 1872
+          }
+        ]
+      },
+      "actions": {
+        "sonic": [
+          {
+            "frame": 0,
+            "kind": "MOVE_TO",
+            "x": 1960,
+            "y": 1960,
+            "urgency": 0.25
+          },
+          {
+            "frame": 1,
+            "kind": "WAIT",
+            "condition": "HURT",
+            "timeoutFrames": 180
+          },
+          {
+            "frame": 2,
+            "kind": "STOP"
+          },
+          {
+            "frame": 3,
+            "kind": "WAIT",
+            "condition": "RECOVERED",
+            "timeoutFrames": 180
+          },
+          {
+            "frame": 125,
+            "kind": "MOVE_TO",
+            "x": 2200,
+            "y": 2360,
+            "urgency": 0.4
+          },
+          {
+            "frame": 126,
+            "kind": "JUMP",
+            "holdFrames": 12
+          },
+          {
+            "frame": 127,
+            "kind": "WAIT",
+            "condition": "GROUNDED",
+            "timeoutFrames": 110
+          },
+          {
+            "frame": 128,
+            "kind": "STOP"
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "kind": "MOVE_TO",
+            "x": 1960,
+            "y": 1960,
+            "urgency": 0.25
+          },
+          {
+            "frame": 1,
+            "kind": "WAIT",
+            "condition": "HURT",
+            "timeoutFrames": 180
+          },
+          {
+            "frame": 2,
+            "kind": "STOP"
+          },
+          {
+            "frame": 3,
+            "kind": "WAIT",
+            "condition": "RECOVERED",
+            "timeoutFrames": 180
+          },
+          {
+            "frame": 125,
+            "kind": "MOVE_TO",
+            "x": 2200,
+            "y": 2360,
+            "urgency": 0.4
+          },
+          {
+            "frame": 126,
+            "kind": "JUMP",
+            "holdFrames": 12
+          },
+          {
+            "frame": 127,
+            "kind": "WAIT",
+            "condition": "GROUNDED",
+            "timeoutFrames": 110
+          },
+          {
+            "frame": 128,
+            "kind": "STOP"
+          }
+        ]
+      },
+      "dialogue": [
+        {
+          "startFrame": 4,
+          "endFrame": 90,
+          "speakerActor": "sonic",
+          "text": "Rings first. Mind the floor!",
+          "x": 184,
+          "y": 8,
+          "width": 128,
+          "height": 60,
+          "typerId": "pace"
+        },
+        {
+          "startFrame": 125,
+          "endFrame": 235,
+          "speakerActor": "tails",
+          "text": "Next mark!",
+          "x": 8,
+          "y": 8,
+          "width": 128,
+          "height": 60,
+          "typerId": "pace"
+        }
+      ],
+      "audio": [
+        {
+          "frame": 0,
+          "kind": "ROM_MUSIC",
+          "gameId": "s3k",
+          "soundId": 22
+        }
+      ]
+    }
+  ],
+  "dialogueTypers": [
+    {
+      "id": "pace",
+      "framesPerGrapheme": 1,
+      "punctuationPauseFrames": 2,
+      "spacePauseFrames": 0
+    }
+  ]
+}

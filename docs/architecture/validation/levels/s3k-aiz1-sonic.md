@@ -966,7 +966,7 @@ boot driven by the same BK2. Paired by Level_frame_counter 1-300:
 - The AnPal_AIZ1 destination words are equal on 279. Frames 1-17 are the level fade,
   which native writes into `Normal_palette` and the engine presents separately.
 - On frames 35-38, native shows L4c12-14 at the base colours. AIZ1_Resize's camera-`$1308`
-  `LoadPalette_Immediate PalID_AIZ` reloaded them (sonic3k.asm:38919-38929).
+  `LoadPalette_Immediate PalID_AIZ` reloaded them (sonic3k.asm:38959-38969).
 
 Fixed 2026-10-17 in `Sonic3kAIZEvents`:
 - The non-intro start keeps its `Pal_AIZ` preload but no longer marks routine 0's

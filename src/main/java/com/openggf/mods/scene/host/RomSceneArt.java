@@ -15,6 +15,7 @@ import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.ZonePictureSource;
 import com.openggf.mods.scene.RomSpriteRequest;
 import com.openggf.mods.scene.SceneBackdrop;
+import com.openggf.mods.scene.SceneAccessoryPose;
 import com.openggf.mods.scene.SceneImage;
 import com.openggf.mods.scene.SceneLevelKit;
 import com.openggf.mods.scene.SceneLevelStage;
@@ -24,6 +25,7 @@ import com.openggf.mods.scene.SceneSpriteSet;
 import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.art.SpriteArtSet;
+import com.openggf.sprites.managers.TailsTailPose;
 import com.openggf.util.PatternDecompressor;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -45,6 +47,7 @@ final class RomSceneArt implements SceneRomArt {
     private final ZonePictureSource zones;
     private RomByteReader reader;
     private final Map<String, SceneSpriteSet> characterCache = new HashMap<>();
+    private final Map<String, SpriteArtSet> playerArtCache = new HashMap<>();
     /** Per zone and act; unsupported zones cache as empty so they are asked once. */
     private final Map<List<Integer>, Optional<SceneBackdrop>> backdropCache = new HashMap<>();
     /** Per zone, act and height limit. */
@@ -190,37 +193,84 @@ final class RomSceneArt implements SceneRomArt {
     @Override
     public SceneSpriteSet character(String characterCode) {
         return characterCache.computeIfAbsent(characterCode, code -> {
-            PlayerSpriteArtProvider provider = players.get();
-            if (provider == null) {
-                throw new IllegalStateException("This game provides no character art");
+            if (players.get() == null) throw new IllegalStateException("This game provides no character art");
+            SpriteArtSet set = playerArt(code);
+            if (set == null || set.isEmpty()) {
+                throw new IllegalArgumentException("Unknown character " + code);
             }
+            int[] pal = padPalette(characterPalette(code));
+            return new LazySpriteSet(set.mappingFrames(), set.dplcFrames(), set.artTiles(), pal, 0, 0,
+                    set.animationSet());
+        });
+    }
+
+    SpriteArtSet playerArt(String code) {
+        return playerArtCache.computeIfAbsent(code, key -> {
+            PlayerSpriteArtProvider provider = players.get();
+            if (provider == null) return null;
             try {
-                SpriteArtSet set = provider.loadPlayerSpriteArt(code);
-                if (set == null || set.isEmpty()) {
-                    throw new IllegalArgumentException("Unknown character " + code);
-                }
-                int[] pal = padPalette(characterPalette(code));
-                return new LazySpriteSet(set.mappingFrames(), set.dplcFrames(), set.artTiles(), pal, 0, 0,
-                        set.animationSet());
-            } catch (IOException e) {
-                throw new IllegalStateException("Character art unavailable: " + e.getMessage(), e);
+                return provider.loadPlayerSpriteArt(key);
+            } catch (IOException error) {
+                throw new IllegalStateException("Character art unavailable: " + error.getMessage(), error);
             }
         });
     }
 
     @Override
     public SceneSpriteSet characterAccessory(String characterCode) {
-        if (!"tails".equals(characterCode) || tailsTails == null) {
+        if (!"tails".equals(characterCode)) {
             return null;
+        }
+        if (tailsTails == null) {
+            // Obj05_Init uses MapUnc_Tails and LoadTailsTailsDynPLC reads the same art bank
+            // as its parent. Only the separate-art donor supplies an independent tail set.
+            SpriteArtSet body = playerArt(characterCode);
+            return body == null || body.isEmpty() ? null : character(characterCode);
         }
         return characterCache.computeIfAbsent("tails#accessory", key -> {
             SpriteArtSet set = tailsTails.get();
             if (set == null || set.isEmpty()) {
-                return null;
+                throw new IllegalStateException("Tails accessory art is unavailable");
             }
             return new LazySpriteSet(set.mappingFrames(), set.dplcFrames(), set.artTiles(),
                     padPalette(characterPalette("tails")), 0, 0, set.animationSet());
         });
+    }
+
+    @Override
+    public long characterAccessorySampleTick(String characterCode, int animationId,
+                                              int heldMappingFrame, long animationTick) {
+        if (animationTick < 0) throw new IllegalArgumentException("Negative accessory time");
+        if (!"tails".equals(characterCode)) return animationTick;
+        return TailsTailPose.sampleTick(tailsTails != null,
+                accessoryAnimation(characterCode, animationId, heldMappingFrame), animationTick);
+    }
+
+    @Override
+    public SceneAccessoryPose characterAccessoryPose(String characterCode, int animationId,
+            int heldMappingFrame, long animationTick, boolean flipX, double velocityX, double velocityY) {
+        if (!"tails".equals(characterCode)) return null;
+        SceneSpriteSet art = characterAccessory(characterCode);
+        if (art == null) return null;
+        var pose = TailsTailPose.sample(tailsTails != null,
+                accessoryAnimation(characterCode, animationId, heldMappingFrame), animationTick,
+                flipX, velocityX, velocityY);
+        if (pose == null) return null;
+        if (pose.mappingFrame() >= art.frameCount())
+            throw new IllegalStateException("Character accessory mapping is unavailable");
+        return new SceneAccessoryPose(art.frame(pose.mappingFrame()), pose.flipX(), pose.flipY());
+    }
+
+    private int accessoryAnimation(String code, int requested, int heldMappingFrame) {
+        if (heldMappingFrame < 0) return requested;
+        SpriteArtSet art = playerArt(code);
+        var animations = art == null ? null : art.animationSet();
+        if (animations == null) return -1;
+        var requestedScript = animations.getScript(requested);
+        if (requestedScript != null && requestedScript.frames().contains(heldMappingFrame)) return requested;
+        return animations.getAllScripts().entrySet().stream()
+                .filter(entry -> entry.getValue().frames().contains(heldMappingFrame))
+                .mapToInt(Map.Entry::getKey).min().orElse(-1);
     }
 
     @Override
@@ -301,6 +351,12 @@ final class RomSceneArt implements SceneRomArt {
         }
         ZonePictureSource.Picture picture = zones.foreground(zone, act, x, y, width, height);
         return picture == null ? null : toSceneImage(picture);
+    }
+
+    /** Same detached native collision data as the pictured set; never the live world. */
+    com.openggf.level.Level puppetLevel(int zone, int act) {
+        var kit = zones == null ? null : zones.kit(zone, act);
+        return kit == null ? null : kit.level();
     }
 
     @Override

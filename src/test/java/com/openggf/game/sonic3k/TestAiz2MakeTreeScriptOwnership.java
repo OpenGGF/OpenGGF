@@ -35,12 +35,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Obj_AIZ2MakeTree script ownership through the live AIZ2 ObjectManager
- * (docs/skdisasm/sonic3k.asm:105553-105583).
+ * (docs/skdisasm/sonic3k.asm:105599-105629).
  *
  * <ul>
- *   <li>loc_50632 (:105564-105568): the terminator test precedes every
+ *   <li>loc_50632 (:105610-105614): the terminator test precedes every
  *       allocation attempt, so the maker outlives its last tree by one pass.</li>
- *   <li>loc_50640 (:105571-105580): one unsigned word compare and at most one
+ *   <li>loc_50640 (:105617-105626): one unsigned word compare and at most one
  *       AllocateObjectAfterCurrent per pass. A failure keeps $30. The second
  *       script word becomes the tree's priority.</li>
  * </ul>

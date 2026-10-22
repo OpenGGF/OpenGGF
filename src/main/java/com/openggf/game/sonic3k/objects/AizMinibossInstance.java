@@ -165,7 +165,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         // Draw_And_Touch_Sprite publishes this parent after its movement
         // routine. Collision_response_list keeps the object-RAM pointer, so
         // the following player slot observes that live post-motion position
-        // (sonic3k.asm:137222-137229,137262-137271,20656-20710).
+        // (sonic3k.asm:137287-137294,137327-137336,20692-20746).
         return true;
     }
 
@@ -208,7 +208,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
             // Obj_AIZMiniboss dispatches its current routine, then loc_68F62
             // polls collision_flags/HP. Touch publishes the fatal HP write;
             // it does not own a delayed defeat countdown (skdisasm 044fa46,
-            // sonic3k.asm:137287-137292,137826-137862).
+            // sonic3k.asm:137292-137297,137831-137867).
             fatalTouchPending = true;
         }
     }
@@ -347,7 +347,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
 
     private void lockArenaCamera(int triggerX) {
         var camera = services().camera();
-        // ROM loc_68556 (sonic3k.asm:136774-136780) writes both
+        // ROM loc_68556 (sonic3k.asm:136839-136845) writes both
         // Camera_min_X_pos and Camera_max_X_pos to d5 before the miniboss wait
         // and fight routines. Reasserting preserves that lock across the
         // engine's seamless AIZ1->AIZ2 reload bookkeeping.
@@ -542,7 +542,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         // Wait_FadeToLevelMusic allocates its independent music owner, then
         // tail-calls loc_68C02. That callback installs Obj_EndSignControl in
         // the SAME physical SST (044fa46:179742-179759,137455-137458).
-        // Wait_FadeToLevelMusic uses global AllocateObject (sonic3k.asm:179749),
+        // Wait_FadeToLevelMusic uses global AllocateObject (sonic3k.asm:179754),
         // so a lower free SST first dispatches on the following Process_Sprites pass.
         spawnDynamicObjectLowestFreeSlot(new SongFadeTransitionInstance(120, Sonic3kMusic.AIZ1.id));
         var retainedHeader = S3kChildDrawParentHeader.fromBoss(this);

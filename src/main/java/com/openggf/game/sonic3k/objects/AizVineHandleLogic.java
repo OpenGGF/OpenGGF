@@ -83,18 +83,18 @@ final class AizVineHandleLogic {
         // roll flag (which its own landing collision may clear early).
         boolean rollingAtGrab;
         // Latches the anim byte to Walk. ROM: CheckGrab writes anim=$14 once and
-        // the hanging hold never rewrites it (sonic3k.asm:46742, 46607-46636), so
+        // the hanging hold never rewrites it (sonic3k.asm:46782, 46647-46676), so
         // anim stays $14 while airborne. On grounding, Player_TouchFloor (dispatch
-        // at sonic3k.asm:24335; character_id branch to Knux_TouchFloor at :24339)
-        // runs the Knuckles landing body (Knux_TouchFloor label :32829), which has
+        // at sonic3k.asm:24375; character_id branch to Knux_TouchFloor at :24379)
+        // runs the Knuckles landing body (Knux_TouchFloor label :32869), which has
         // two independent anim-reset gates: (1) the roll gate -- btst #Status_Roll /
-        // beq skips clearing Roll+anim, so anim=0 only when rolling (:32833-32836,
-        // matching the Sonic body Player_TouchFloor :24344-24347); (2) the >=0x20
+        // beq skips clearing Roll+anim, so anim=0 only when rolling (:32873-32876,
+        // matching the Sonic body Player_TouchFloor :24384-24387); (2) the >=0x20
         // gate -- cmpi.b #$20,anim / blo / move.b #0,anim resets anim only for the
-        // glide family (:32865-32867; the glide-landing lane owns that path). A held
+        // glide family (:32905-32907; the glide-landing lane owns that path). A held
         // vine player is HANG2=$14 (or Walk=0), so ONLY the roll gate can fire; a
         // not-rolling grab hits NEITHER and keeps $14. The swing branch also writes
-        // anim=0 unconditionally (HoldPlayerSwinging :46656). Once set, the hold
+        // anim=0 unconditionally (HoldPlayerSwinging :46696). Once set, the hold
         // never rewrites anim, so Walk persists for the rest of the grab.
         boolean walkLatched;
     }
@@ -256,14 +256,14 @@ final class AizVineHandleLogic {
         player.setForcedAnimationId(Sonic3kAnimationIds.HANG2);
         player.setObjectMappingFrameControl(true);
         // ROM AIZRideVineHandle_CheckGrab: move.b #0,spin_dash_flag(a1)
-        // (sonic3k.asm:46743). That is a byte write, so it clears the WHOLE
+        // (sonic3k.asm:46783). That is a byte write, so it clears the WHOLE
         // field, and the engine splits that one ROM byte across three flags:
         //   bit 0 ($01) -> pinball mode
         //   bit 7 ($80) -> pinball speed lock
         //   the spindash-charge sense used by Tails_Spindash
         // Clearing only the charge left bit 7 latched from an earlier
         // Obj_AutoSpin capture, and Tails_RollSpeed's own entry test
-        //   tst.b spin_dash_flag(a0) / bmi.w loc_14DF0   (sonic3k.asm:28180-28181)
+        //   tst.b spin_dash_flag(a0) / bmi.w loc_14DF0   (sonic3k.asm:28220-28221)
         // then skipped input, friction and deceleration for the rest of the
         // level -- so a landed, rolling sidekick kept its ground_vel forever
         // and only slope gravity could change it.
@@ -271,7 +271,7 @@ final class AizVineHandleLogic {
         player.setPinballSpeedLock(false);
         player.setSpindash(false);
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
-        // ROM grab path (sonic3k.asm:46739-46743 loc_22302) writes only:
+        // ROM grab path (sonic3k.asm:46779-46783 loc_22302) writes only:
         //   move.b #3, object_control(a1)
         //   andi.b #$FD, render_flags(a1)
         //   move.b #1, (a2)
@@ -283,8 +283,8 @@ final class AizVineHandleLogic {
         // Engine analog: keep objectControlAllowsCpu=true so the SidekickCpuController
         // NORMAL/CATCH_UP_FLIGHT bit-7 gates evaluate the same way ROM's bmi.w does.
         // No Ctrl_1_locked write. ROM Sonic_Control still runs the input
-        // mirror (sonic3k.asm:21970 loc_10BF0 → move.w (Ctrl_1).w,
-        // (Ctrl_1_logical).w), so Sonic_RecordPos at sonic3k.asm:22132
+        // mirror (sonic3k.asm:22006 loc_10BF0 → move.w (Ctrl_1).w,
+        // (Ctrl_1_logical).w), so Sonic_RecordPos at sonic3k.asm:22168
         // captures the live BK2 input into Stat_table. Tails CPU then sees
         // that input 16 frames later via getInputHistory(16).
         //
@@ -299,7 +299,7 @@ final class AizVineHandleLogic {
         // and accumulated -0x14 instead of the expected +0x03 at F2878.
         //
         // CPU Tails is different: loc_13E0A/loc_13E34 in Tails_CPU_Control
-        // (sonic3k.asm:26717-26724, 26735-26742) suppress the +/-1 follow
+        // (sonic3k.asm:26757-26764, 26775-26782) suppress the +/-1 follow
         // nudge when object_control bit 0 is set. Obj_AIZGiantRideVine writes
         // object_control=3 in sub_220C2, so mirror bit 0 for CPU sidekicks
         // without applying the same input-history lock to Player_1.
@@ -356,10 +356,10 @@ final class AizVineHandleLogic {
         //   bpl.w  AIZRideVineHandle_ReleasePlayer
         //   cmpi.b #4,routine(a1)
         //   bhs.w  AIZRideVineHandle_ReleasePlayer
-        // (sonic3k.asm:46490-46494). Bit 7 is the on-screen flag written by the
+        // (sonic3k.asm:46530-46534). Bit 7 is the on-screen flag written by the
         // preceding display pass, so a held player that scrolls out of the
         // render box is dropped on the handle's NEXT pass. The target is the
-        // plain AIZRideVineHandle_ReleasePlayer (sonic3k.asm:46548-46552),
+        // plain AIZRideVineHandle_ReleasePlayer (sonic3k.asm:46588-46592),
         // which only clears object_control and the grab byte and arms the $3C
         // regrab cooldown -- unlike AIZRideVineHandle_ForcedRelease above it
         // writes no velocity, no Status_InAir and no animation, so the player
@@ -492,14 +492,14 @@ final class AizVineHandleLogic {
             angle = (-angle) & 0xFF;
         }
         // ROM anim-byte ownership during the hanging hold: CheckGrab writes
-        // anim=$14 once (sonic3k.asm:46742) and the hold NEVER rewrites it
+        // anim=$14 once (sonic3k.asm:46782) and the hold NEVER rewrites it
         // (AIZRideVineHandle_HoldPlayer only sets mapping_frame, 46607-46636).
         // So anim stays $14 (HANG2) while the held player is airborne. On the
-        // first grounding, Player_TouchFloor (dispatch :24335, character_id branch
-        // to Knux_TouchFloor at :24339) runs the Knuckles landing body (label
-        // :32829): it writes anim=0 + clears Status_Roll ONLY when Status_Roll is
-        // set (roll gate btst #Status_Roll / beq, :32833-32836; matching the Sonic
-        // body :24344-24347), and the >=0x20 glide gate (:32865-32867) can't fire
+        // first grounding, Player_TouchFloor (dispatch :24375, character_id branch
+        // to Knux_TouchFloor at :24379) runs the Knuckles landing body (label
+        // :32869): it writes anim=0 + clears Status_Roll ONLY when Status_Roll is
+        // set (roll gate btst #Status_Roll / beq, :32873-32876; matching the Sonic
+        // body :24384-24387), and the >=0x20 glide gate (:32905-32907) can't fire
         // for HANG2 ($14) -- so a not-rolling grounding leaves anim at $14. Only a
         // rolling grab latches Walk. Status_Roll during the hold equals its grab
         // value (object_control skips movement), so gate on the captured
@@ -536,7 +536,7 @@ final class AizVineHandleLogic {
         }
 
         // ROM AIZRideVineHandle_HoldPlayerSwinging writes anim=0 unconditionally
-        // (sonic3k.asm:46656). Latch Walk so a later swing->hang transition (mode
+        // (sonic3k.asm:46696). Latch Walk so a later swing->hang transition (mode
         // 1->0 without a grounding) keeps anim=0, matching the ROM (the hanging
         // hold never rewrites anim back to $14).
         playerState.walkLatched = true;

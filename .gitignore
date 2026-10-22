@@ -47,6 +47,9 @@ stable-retro-*.zip
 tools/*
 !tools/performance/
 !tools/media/
+!tools/stageplay/
+!tools/stageplay/*.py
+/tools/stageplay/__pycache__/
 !tools/tracechaser-bootstrap.sh
 !tools/tracechaser-forward.lua
 !tools/tracechaser.ps1
@@ -58,6 +61,9 @@ tools/*
 !tools/testing/**
 !tools/modding/
 !tools/modding/*.py
+!tools/disasm/
+!tools/disasm/*.py
+/tools/disasm/__pycache__/
 /tools/testing/__pycache__/
 /.openggf/test-runs/
 !tools/audio/lib/s1_audio_parity_protocol.sh

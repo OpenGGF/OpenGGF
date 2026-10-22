@@ -14,7 +14,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * The phase-2 rocket's children from {@code ChildObjDat_83294} (sonic3k.asm:174590-174616).
+ * The phase-2 rocket's children from {@code ChildObjDat_83294} (sonic3k.asm:174681-174707).
  *
  * <p>{@link #KIND_FLAME} is {@code loc_82588}: {@code word_8323E} (priority {@code $280}, frame
  * {@code $33}) at {@code +8,0}, animated by {@code byte_832C3}, dropping to priority {@code $100} once

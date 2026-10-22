@@ -11,25 +11,25 @@ other port of the same ROM accumulator and states each one's status.
 ## The ROM argument, verified
 
 `Obj_IncLevEndXGradual` / `Obj_DecLevStartXGradual` / `Obj_DecLevStartYGradual` /
-`Obj_IncLevEndYGradual` (`docs/skdisasm/sonic3k.asm:178159-178228`) each hold a longword
+`Obj_IncLevEndYGradual` (`docs/skdisasm/sonic3k.asm:178250-178319`) each hold a longword
 accumulator at `$30`, add `$4000` (X and min-Y) or `$8000` (max-Y) per dispatch, store it
 back, then `swap` to take the high word as the boundary step. `$30` is zero when the slot
 is allocated, so the **first** dispatch always yields integer step 0.
 
 Every creator of these workers reaches them in the same object pass:
 
-- `CreateChild1_Normal` (`sonic3k.asm:176924-176950`) and `CreateChild6_Simple`
-  (`sonic3k.asm:177119-177140`) both allocate through `AllocateObjectAfterCurrent`
-  (`sonic3k.asm:37917-37930`), which starts at `a0` (the creating object) and walks
+- `CreateChild1_Normal` (`sonic3k.asm:177015-177041`) and `CreateChild6_Simple`
+  (`sonic3k.asm:177210-177231`) both allocate through `AllocateObjectAfterCurrent`
+  (`sonic3k.asm:37957-37970`), which starts at `a0` (the creating object) and walks
   forward through `next_object`. By construction it can only return a slot **after** the
   creator.
-- `Process_Sprites` (`sonic3k.asm:35965-35995`) walks object RAM in ascending slot order
+- `Process_Sprites` (`sonic3k.asm:36005-36035`) walks object RAM in ascending slot order
   within a single pass.
 
 Therefore the creation frame **is** dispatch 1. Pre-charging an accumulator, or skipping
 the creation-frame dispatch, makes engine dispatch *k* behave as ROM dispatch *k+1*.
 
-`AllocateObject` (`sonic3k.asm:37909-37913`) scans from the bottom of
+`AllocateObject` (`sonic3k.asm:37949-37953`) scans from the bottom of
 `Dynamic_object_RAM` instead and *can* return an earlier slot; sites that port an
 `AllocateObject` creator must model that separately.
 
@@ -55,7 +55,7 @@ the creation-frame dispatch, makes engine dispatch *k* behave as ROM dispatch *k
 
 ## `LbzMinibossBoxKnuxInstance` (fixed)
 
-`loc_8CFC8` (`sonic3k.asm:192565-192600`) creates the `Child6_IncLevY` worker via
+`loc_8CFC8` (`sonic3k.asm:192664-192699`) creates the `Child6_IncLevY` worker via
 `CreateChild6_Simple`, so the worker dispatches later in the *same* pass. The engine
 called `updateGradualMaxYRaise()` near the top of `update`, **before** the `switch` whose
 `updateFight()` arm sets `maxYRaiseActive` — so the creation frame was skipped and every
@@ -87,7 +87,7 @@ joining the shared gradual-worker dispatch", "already contains the native two-pi
 at this owner handoff") rather than citing a ROM routine — the rule-40 signature.
 
 Statically the ROM argument applies unchanged: MGZ is zone 2, so `Change_Act2Sizes`
-(`sonic3k.asm:180580-180596`) passes both the SOZ1 and the HCZ (`d0 == $10`) early-outs and
+(`sonic3k.asm:180671-180687`) passes both the SOZ1 and the HCZ (`d0 == $10`) early-outs and
 falls through into `Make_LevelSizeObj` (`:180598-180604`), which creates all three workers
 with `CreateChild1_Normal` -> `AllocateObjectAfterCurrent`.
 

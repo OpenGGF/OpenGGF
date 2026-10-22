@@ -24,7 +24,7 @@ import java.util.Map;
  * S3K S3KL object $1F - Launch Base Zone Act 2 lowering grapple.
  *
  * <p>ROM reference: {@code Obj_LBZLoweringGrapple} and {@code sub_290F2}
- * ({@code sonic3k.asm:56687-56849}).
+ * ({@code sonic3k.asm:56727-56889}).
  */
 public final class LbzLoweringGrappleObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {

@@ -496,7 +496,7 @@ writes them. The SOZ2 cold route exposed this at `sub_40F52`: its correct
 
 **A held input row still owns a queue tail.** A native LEVEL lag iteration
 skips gameplay but still services the Kos module/direct queues (`LevelLoop`,
-sonic3k.asm:7908/7887). Use `TraceSuppressedRowClosure` in the live, recording
+sonic3k.asm:7940/7887). Use `TraceSuppressedRowClosure` in the live, recording
 and standalone drivers alike.
 
 **Reused position words.** A field named `x_sub` is not always a fraction.
@@ -544,7 +544,7 @@ defect; forcing `setActive(true)` at one of those points returned the ceiling at
 sensor does — `checkCeilingDist` says the Death Egg act 2 corridor ceiling ends at y=$051F,
 the sensor's first clear row is $0520, and an upright head-bonk comes to rest against $0520.
 Shipped player collision runs through the sensor (`Sonic_CheckCeiling`'s `eori.w #$F,d2`
-form of `FindFloor`, sonic3k.asm:20242-20256), so derive expected player positions from the
+form of `FindFloor`, sonic3k.asm:20278-20292), so derive expected player positions from the
 sensor or from a measured upright control, never from the convenience helper.
 
 **Clearing the air bit is not a landing.** Direct `bclr #Status_InAir,status`
@@ -560,7 +560,7 @@ capture, and native centre/fractions on release.
 **Hurt owns its terrain landing despite object control.** Normal held movement
 may skip `resetOnFloor`, but the hurt dispatch runs terrain outside that gate.
 Native `Player_TouchFloor`/`Knux_TouchFloor` clears InAir before HurtStop tests it
-and releases `object_control` (`sonic3k.asm:24365-24403,32894-32904,32967-32982`).
+and releases `object_control` (`sonic3k.asm:24405-24443,32934-32944,33007-33022`).
 Test through public movement and a real terrain floor callback: calling
 `setAir(false)` directly can conceal an early return that leaves a hurt player
 airborne with zero velocities and stale control.
@@ -730,7 +730,7 @@ link at launch and recreate from the captured spawn with the parent relinked by 
 by proximity to a live body (800px MHZ1 route, 2026-10-15).
 
 **Exact-SST act carries keep the fixed power-up slots.** `Shield` and
-`Invincibility_stars` are fixed `Level_object_RAM` slots (`sonic3k.constants.asm:318-321`)
+`Invincibility_stars` are fixed `Level_object_RAM` slots (`sonic3k.constants.asm:325-328`)
 that a `Load_Level` act reload never clears. `PERSISTENT_EXACT_SST` carries only
 persistent dynamic occupants, yet the manager rebuild skipped power-up registration for
 every exact-SST policy as if the carry had imported them (only `ALL_LIVE_SST` does). A
@@ -849,7 +849,7 @@ sprite-priority-mask contribution, or correctly low sprites still cover it.
 Assert both submerged pixels and exposed art so a missing sheet cannot make a
 mask test pass. Registry builder names use `Sonic3kObjectArtProvider.invokeBuilder`
 (the explicit switch, not reflection); wire that case as well as the registry.
-**ROM palette-line names are one-based.** `sonic3k.constants.asm:767-770` declares
+**ROM palette-line names are one-based.** `sonic3k.constants.asm:787-790` declares
 `Normal_palette ds.b $80` and then `Normal_palette_line_2 = Normal_palette+$20`,
 `_line_3 = +$40`, `_line_4 = +$60` — so `line_2` is the **second** line, engine palette
 index **1**, and `line_1` is the base label that never appears in a write. Reading the digit
@@ -1105,7 +1105,7 @@ second zone. Pixel oracles must sample the CPU scroll before the VBlank they
 describe; reading the next loop after rendering compares different generations.
 See the [MHZ follow-up](audits/2026-09-15-s3k-presentation-camera.md).
 Plane drawing is the exception: `ScreenEvents` ends in `DrawTilesAsYouMove`
-(`sonic3k.asm:104978`, `103171`), which reads live `Camera_X_pos_copy` against
+(`sonic3k.asm:105024`, `103171`), which reads live `Camera_X_pos_copy` against
 `Camera_X_pos_rounded` and writes VRAM inside the CPU loop, and
 `AIZ2_DoShipLoop` retargets that baseline in the same routine as its `$200`
 camera subtraction. The engine's AIZ2 foreground ring therefore takes the live
@@ -1655,7 +1655,7 @@ Evidence: 2026-09-25 S&K campaign broad-validation follow-up.
 
 ### Explicit floor probes must not inherit collision-dispatch activation
 
-`Sonic_Balance` calls `ChooseChkFloorEdge` directly (S3K `sonic3k.asm:22531-22535`;
+`Sonic_Balance` calls `ChooseChkFloorEdge` directly (S3K `sonic3k.asm:22566-22570`;
 S1/S2 equivalents are cited in `checkTerrainEdgeBalance`). The engine's sensor
 active flags emulate a different routine's quadrant dispatch. They are a cache,
 not a native precondition for Balance. The Knuckles cold LRZ2 route exposed a
@@ -1866,7 +1866,7 @@ clear only uncaptured deletion markers on restore (2026-10-16, `f07a25bf9`).
 `SkidDustObjectInstance` received its owner's dust renderer from its spawner;
 rewind recreation from the spawn record had none and borrowed P1's. A follower's
 puff then drew from P1's dust bank, although `loc_18D1C` copies the owning dust
-object's `art_tile` (sonic3k.asm:34126). Capture the owner's identity and
+object's `art_tile` (sonic3k.asm:34166). Capture the owner's identity and
 resolve its resource on restore (2026-10-16, `0ea15a057`).
 
 
@@ -2295,3 +2295,46 @@ are Draw_Sprite/Render_Sprites, Load_Sprites, Delete_Referenced_Sprite and
 Obj_AIZForegroundPlant; the
 [2026-10-20 source audit](plans/2026-10-13-s3k-playable-completion.md#physical-display-producer-integration-boundary--2026-10-20)
 records the concrete gap without claiming an observed pixel failure.
+
+### Detached player simulation must not publish live world events
+
+A private native player can still escape its service context through callbacks in
+`setAir(false)`. Stageplay's first standalone S3K simulation reached the live HCZ
+water-tunnel player query through `publishLandingAnimationWrite`, even though its
+hosted tests passed. Bound puppets skip live world-event publication; ordinary players
+retain it. Verify graphics-free tools in a fresh JVM with no gameplay/editor session,
+not only under a headless Engine fixture. Native floor collision also preserves the
+subpixel word: compare foot pixels for landing support, and exact fractions only
+when both runs consume identical inputs. See the
+[Stageplay design](designs/2026-10-21-stageplay.md).
+
+
+### Offline native worlds need the complete presentation binding (Stageplay, 2026-10-21)
+
+`GameplaySessionFactory.attachManagers` creates owners but does not bind the graphics
+camera; GameLoop normally completes that host step. A host that steps LevelFrameStep
+directly must call `GraphicsManager.bindRuntimeManagedReferences` with its session's
+camera/fade manager. Otherwise tile shaders show the level while queued sprite/HUD
+commands subtract a retired bootstrap camera and disappear. A nonblank frame or
+populated CPU SAT does not prove visible actors. Compare actual body pixels.
+
+Native published SAT/scroll coordinates belong to the native camera. Cinematic
+views reuse LevelRenderer's scoped current-world priority pass, preserving native
+publication and activation. Bind the native camera for updates, apply the director
+camera only for drawing, then restore it. Reopening a level also replaces its audio
+producer: establish/renew an offline capture lease after that boundary, not before.
+
+Stageplay camera limits are ROM camera origins, as consumed by
+`Camera.updatePosition`, not terrain dimensions. Subtracting a second viewport
+height from `Level.getMaxY()` can hide an entire valid airborne cast while native
+state and scenery still look plausible. Clamp the native-height director directly
+to those origins; adjust only the additional widescreen width. Exercise actual
+on-screen airborne body pixels as well as platform pixels.
+
+Fresh offline live-shot contexts also need the production game-entry palette
+boundary: reset `RenderContext` (including per-sidekick banks), then
+`GraphicsManager.clearPaletteTextures()`, before native load/graphics binding.
+Keep initialized atlas/tile renderers. `GraphicsManager.resetState()` drops the
+GL terrain renderers without recreating them and can leave valid bodies over
+black scenery. Verify visible terrain as a positive control, plus a return to an
+earlier act after changing cast; body-only and equal-blank-image checks can pass.

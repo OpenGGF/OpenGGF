@@ -261,7 +261,7 @@ exit state is seeded and no comparison data enters gameplay.
   23:07:42 UTC: native plus three representative products × five mechanisms
   (Knuckles/352/Tails+Sonic, Tails/S2/800/Sonic+Sonic, Sonic/S1/528/seven
   Sonic followers) and ten bounded neighbours.
-* **Gumball RNG initialization.** `Obj_GumballMachine` (`sonic3k.asm:127412`,
+* **Gumball RNG initialization.** `Obj_GumballMachine` (`sonic3k.asm:127466`,
   `move.l (V_int_run_count).w,(RNG_seed).w`) assigns the entire V-int long to
   the RNG on its first pass; prior shared entropy is not proof of equality.
   Three declared zero/full-long/high-bit vectors failed in 16706 at 23:09:52
@@ -270,7 +270,7 @@ exit state is seeded and no comparison data enters gameplay.
   row 365; paired 78 became 71, first row still 209). Fewer errors with an
   earlier first error is a worsened candidate and was not delivered.
 * **Bonus trace initial dispatch.** `TraceReplaySessionBootstrap` discarded the
-  admitted initial `Process_Sprites` token (`loc_6468`, `sonic3k.asm:7849-7853`),
+  admitted initial `Process_Sprites` token (`loc_6468`, `sonic3k.asm:7881-7885`),
   manually dispatched only the injected Pachinko trap and published a partial
   collision list, so Gumball initialized on the first driven row and clobbered
   the recorded seed. Two real-ROM setup checks failed in 1298 (2/2/0/0, 23:21:16
@@ -467,16 +467,16 @@ Defects found and fixed (red-first tests in `TestS3kSlotPresentationParity`,
 `TestS3kSlotsPaletteCycling`, `TestS3kBonusAnimateTilesPublication`,
 `TestTraceReplayDriveBonusLifecycle`):
 
-- `Slots_RenderLayout` (sonic3k.asm:98158) continues `Sprite_table` after
-  `Render_Sprites` (LevelLoop sonic3k.asm:7911-7915). The engine drew the
+- `Slots_RenderLayout` (sonic3k.asm:98204) continues `Sprite_table` after
+  `Render_Sprites` (LevelLoop sonic3k.asm:7943-7947). The engine drew the
   layout live after the published table, a frame ahead and in front of the
   player; it now joins the prepared table behind every Render_Sprites entry.
-- The goal tile (`loc_4BED0`, sonic3k.asm:99247) only advances `routine(a0)`;
+- The goal tile (`loc_4BED0`, sonic3k.asm:99293) only advances `routine(a0)`;
   the engine also ran `loc_4BC1E` in the goal iteration. A temporary probe
   showed engine `Stat_table` $D2C0 at LFC 929 where native RAM has it at 930.
 - `loc_4BC54` runs `Pal_ToBlack` on `Normal_palette` every third iteration
   (20 passes, red then green then blue); `Level:`'s `Pal_FadeToBlack`
-  (sonic3k.asm:7504, 7523, 5042) fades the rest. The engine used a 60-frame
+  (sonic3k.asm:7536, 7555, 5074) fades the rest. The engine used a 60-frame
   overlay that finished early and then showed the bright stage. AnPal_Slots
   stops after the trigger's `st (Palette_cycle_counters)`.
 - `AnPal_PalSlots_2` is at $3660 in the shipped ROM (the engine read $3658,
@@ -484,7 +484,7 @@ Defects found and fixed (red-first tests in `TestS3kSlotPresentationParity`,
   sees the cage/goal mode one iteration later because `Animate_Palette`
   precedes `Process_Sprites`. Native row 300 CRAM line 2 entry 14 ($EAC)
   exposed both.
-- `Render_HUD` (sonic3k.asm:17580) selects `Map_HUD` frame 4/5 in zones
+- `Render_HUD` (sonic3k.asm:17616) selects `Map_HUD` frame 4/5 in zones
   $13-$15, which keep the lives icon; the engine bonus HUD omitted it.
 - `AnimateTiles_Gumball`/`_Pachinko` use `Add_To_DMA_Queue`; the engine
   uploaded immediately (Pachinko background one frame early) and drove
@@ -523,12 +523,12 @@ caused by this lane.
 Continues the section above on Root `3ef45fbb3`.
 
 **Custom zone AnimateTiles.** Every custom `Offs_AniFunc` routine
-(`AnimateTiles_HCZ1` sonic3k.asm:53974, `_HCZ2` :54163, `_CNZ` :54373, `_ICZ`
-:54439, `_LBZ1` :54544, `_LBZ2` :54639, `_MHZ` :54820, `_SOZ1` :54944,
-`_SOZ2` :55002, `_LRZ1/2/3` :55039-55051) sends its art through
-`Add_To_DMA_Queue` (:1673); none writes VRAM directly. `LevelLoop` (:7884)
-calls `Animate_Tiles` (:7906) after `DeformBgLayer`/`ScreenEvents`, and
-`VInt_8_Cont` drains the queue with `Process_DMA_Queue` (:764) together with
+(`AnimateTiles_HCZ1` sonic3k.asm:54014, `_HCZ2` :54203, `_CNZ` :54413, `_ICZ`
+:54479, `_LBZ1` :54584, `_LBZ2` :54679, `_MHZ` :54860, `_SOZ1` :54984,
+`_SOZ2` :55042, `_LRZ1/2/3` :55079-55091) sends its art through
+`Add_To_DMA_Queue` (:1695); none writes VRAM directly. `LevelLoop` (:7916)
+calls `Animate_Tiles` (:7938) after `DeformBgLayer`/`ScreenEvents`, and
+`VInt_8_Cont` drains the queue with `Process_DMA_Queue` (:786) together with
 that iteration's scroll and SAT. The engine presents the scroll/SAT published
 at the top of the following iteration, so the animator's direct pattern
 writes appeared one frame early. They now use the AniPLC publication queue
@@ -538,17 +538,17 @@ rewind (previously a restore kept later tiles when the cached phase matched).
 `TestS3kZoneAnimateTilesPublication` was red 10/10 on `3ef45fbb3` with
 "art presented in its own iteration" for HCZ1, HCZ2, CNZ1, MHZ1, LRZ1, SOZ1,
 ICZ1 and LBZ1, SOZ2's torch art visible before VInt, and the rewind case.
-Not changed: `AnimateTiles_AIZ2`'s first-tree transfer (:53964-53967) is also
+Not changed: `AnimateTiles_AIZ2`'s first-tree transfer (:54004-54007) is also
 queued in the ROM and is still written immediately (AIZ→HCZ stability); the
 HCZ1 setup strips written while the animator is constructed precede display.
 Observed, not changed: at `Events_bg+$10 == 0` `AnimateTiles_HCZ1` stores 1
 in `Anim_Counters+4` and falls through `AniHCZ_FixLowerBG` into
-`AniHCZ_FixUpperBG` (:53993, :54071-54091), returning before
+`AniHCZ_FixUpperBG` (:54033, :54111-54131), returning before
 `AnimateTiles_DoAniPLC`; the engine uploads only the lower fix strips there.
 
 **Pachinko composition buffer.** `AnimateTiles_Pachinko` composes its
 background in `Chunk_table+$7000` over four passes before `loc_28610` queues
-it (:55291-55384). The animator snapshot omitted that buffer, so a restore in
+it (:55331-55424). The animator snapshot omitted that buffer, so a restore in
 mid-cycle blended later contents. `938aef1f6` exposed this by capturing the
 presented $0E9 range: `TestS3kGumballPachinkoRewardMechanics` failed 144/723
 on Root `3ef45fbb3` with identical identities and `pattern-animator.extra[74..77]`
@@ -561,10 +561,10 @@ had no camera; it now runs against a loaded Gumball level.
 **Slot machine plane at rows 930-974.** This is not a plane wrap. Native RAM
 at row 930 has `Events_bg+$00/$02` = ($5EE,$492), equal to the cage in SST
 slot 4 (`loc_4BF9A`), and `_unkEE98`/`_unkEE9C` = ($2E4,$38C), which is
-`Slots_ScreenEvent`'s step toward $400 − Events_bg + camera (:119061-119133).
+`Slots_ScreenEvent`'s step toward $400 − Events_bg + camera (:119107-119179).
 That places the machine's hexagon at screen x ≈ 284, as in the still. The
 cage rotates ($460,$430) about Player_1 by `Stat_table & $FC` every
-`Process_Sprites` pass (:99324-99348); at rows 971 and 974 it reads ($460,$430)
+`Process_Sprites` pass (:99370-99394); at rows 971 and 974 it reads ($460,$430)
 and ($4D4,$1EB) while the camera stays at ($4D2,$2C8), so the machine orbits
 the player during the goal spin. `S3kSlotBonusStageRuntime.update` returned
 early in the goal exit without ticking the cage, freezing `Events_bg`. The
@@ -613,7 +613,7 @@ and the lead-owned smoke/guards.
 
 Closes the two cases the section above left open, on Root `d3fb0625e`.
 
-**`AnimateTiles_AIZ2`** (sonic3k.asm:53953-53967). Below `Camera_X_pos` `$1C0` every
+**`AnimateTiles_AIZ2`** (sonic3k.asm:53993-54007). Below `Camera_X_pos` `$1C0` every
 pass calls `AnimateTiles_DoAniPLC_Part2` with `d6 = 0`, so only the first script runs.
 `a3` is then left at `Anim_Counters+2`, and `clr.l (a3)` zeroes the counters of
 scripts 1 and 2; the second `clr.l` writes the same longword. The pass ends by queueing
@@ -622,7 +622,7 @@ engine wrote the tree once, immediately, and kept the other counters. The tree n
 goes through the VBlank publication queue on every pass below `$1C0`, and the two
 counters are cleared.
 
-**`AnimateTiles_HCZ1`** (sonic3k.asm:53974-54108) keeps two words:
+**`AnimateTiles_HCZ1`** (sonic3k.asm:54014-54148) keeps two words:
 - `Anim_Counters+4` holds the last `Events_bg+$10` (`HCZ1_Deform`'s
   `(dy asr 2) - dy`, dy = `Camera_Y_pos_copy - $610`).
 - `Anim_Counters+6` records which fix strips were queued last.
@@ -637,11 +637,11 @@ opposite fix pair only when `Anim_Counters+6` changes side. Past ±$60, `addi.w 
 just after the equilibrium, a value of 1 equals the stored 1 and is skipped.
 
 `Events_bg+$16`, set by `HCZ1BGE_Normal` when it queues the HCZ2 art
-(sonic3k.asm:105716-105738), stops the whole routine. `Animate_Init` calls `sub_279D4`
-(sonic3k.asm:54117-54159) before `loc_6468`'s `Animate_Tiles`. `HCZ1_BackgroundInit` has
+(sonic3k.asm:105762-105784), stops the whole routine. `Animate_Init` calls `sub_279D4`
+(sonic3k.asm:54157-54199) before `loc_6468`'s `Animate_Tiles`. `HCZ1_BackgroundInit` has
 just left `Events_bg+$10` at `$60` above `$60`. From -`$60` through `$60` it is -`$60`,
 because the second compare stores -`$60` instead of keeping the value. Below -`$60` it is
-unchanged (sonic3k.asm:105690-105699).
+unchanged (sonic3k.asm:105736-105745).
 
 The engine had uploaded only the lower fix pair at the equilibrium and whole strips past
 ±$60, with both fix pairs on every change. It now keeps both words in the animator,
@@ -666,7 +666,7 @@ gameplay is unchanged.
 
 A bonus entry and a bonus return both run the native `Level` routine, so both cards now take
 the loc_62CC gates and release `LevelLoop` into the `$16` hold at `Level/loc_64DC`
-(sonic3k.asm:7874-7878). Before, they held a locked 90-frame DISPLAY and released at the
+(sonic3k.asm:7906-7910). Before, they held a locked 90-frame DISPLAY and released at the
 card's exit. The bonus return no longer runs a host fade from black over its card. The bonus
 card's Nemesis gate uses the loaded bonus zone's PLC. Per-route numbers are in the
 [HPZ matrix](s3k-hpz-act.md): the Pachinko entry now locks for 101 frames (was 107), against

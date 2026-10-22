@@ -10,7 +10,7 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.List;
 
-/** SKL $56, Obj_DEZEnergyBridgeCurved / sub_47F9C (sonic3k.asm:93992-94084). */
+/** SKL $56, Obj_DEZEnergyBridgeCurved / sub_47F9C (sonic3k.asm:94038-94130). */
 public final class S3kDezCurvedEnergyBridgeObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
     private boolean initialized;

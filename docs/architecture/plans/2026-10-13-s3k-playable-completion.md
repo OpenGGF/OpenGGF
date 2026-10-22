@@ -29910,3 +29910,60 @@ Separate offline-reader metadata error: r32_read.py47 incorrectly asserted more 
 Read then worktree/compatibility+activity cleanup removed1314 owned paths: three registered sources, three SourceFile/internal-name-proven temporary classes and1308 raw files/18519080bytes. Seven newly compiled normal owner files/other outputs preserved; old private compiled epoch was superseded by authorized normal recompile, with immutable R31 hashes/source retained. No raw series/checkpoints/logs/proof copies/tmp/archive/pass receipt or cleanup pending.
 Useful full source/wholepreimages/counted inverse/private patch/proposal/executed inputs/PNG/all51 lossless public64 rows remain external. Normal runtime/POM/maintained tests/movies/oracles/windows/counts unchanged; native actual322/index703 and foreign work preserved. No native/physics cause/receiver/protection/fluid/reverse/invulnerability/full Act2/FBZ/all-internals claim.
 Terminal02:25:30Z and raw cleanup02:32:33Z precede02:40:49 work/02:50:49 cleanup/03:00:49 expiry. One budget exhausted; docs-only local leaf/no push/integration/automatic next. STOP Root source/data review. See the [R32 matrix](../validation/levels/s3k-mhz-act2.md#knuckles-normal-runtime-fresh-ground-jump-r32--2026-10-22).
+
+## Current Main reconciliation of draft PR223 — 2026-10-22
+
+This bounded reconciliation starts at exact draft `e22ca2a0b127e335366c78ccaa21a09e38095f08`
+and merges exact fetched Main/develop `7d35d4a7b373a27ec10abcbf5972a3e1d36952f1`,
+with merge base `bd042f08094155a5b7da76e552f25d43d86d98d7`. The app supplied
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-d198e51f` at Main on the preserved
+`s3k-current-main-reconcile` ref; work belongs only to
+`feature/ai-s3k-current-main-reconcile-20261022`. Root owns subsequent broad
+validation, failure attribution, integration and push. No Main/Root checkout,
+native checkout/configuration, or native build is changed by this reconciliation.
+The draft's TraceChaser pin remains authoritative for its native evidence; the
+foreign working checkout is preserved rather than staged or updated.
+
+The 21 conflicted files were resolved by owner, not by taking either whole tree.
+Main's new runtime/context, headless no-device audio boundary, geometry-cache
+helper and Stageplay work compose with the draft's gameplay. LevelManager keeps
+package access for its tilemap rewind adapter while delegating dimension caching
+to Main's extracted helper, then rebuilding the draft's collision-layout Y mask.
+The draft's extracted seamless-transition owner remains the single owner; Main's
+citation-only copy of the removed LevelManager methods is not resurrected.
+
+The rejected source resolutions would restore folded/lifetime-bound HCZ children,
+monitor contents owned by their shell, the obsolete AIZ explosion controller and
+signpost/camera helper, or the pre-correction idle wall-climb floor probe. They
+would erase existing ROM-backed changes. Retained owners include
+`AIZMiniboss_StartDefeat`/`loc_68FE0` (sonic3k.asm:137862-137873),
+`Obj_MonitorSpawnIcon` (sonic3k.asm:40685-40697),
+`Obj_RobotnikShip2` (sonic3k.asm:136425-136487),
+`HCZEndBoss_WaitPostDefeatGeyser` (sonic3k.asm:141056-141123),
+`Knuckles_Wall_Climb` (sonic3k.asm:31074-31402), and the Shot's charging and
+independent moving entries `loc_9176C`/`loc_917B4`
+(sonic3k.asm:198747-198790), at Main's `8b2cf3c4178f` disassembly pin.
+Movement and Sidekick executable code remains draft-equivalent; the merge's
+changes to those files are citation comments. No route controller or oracle data
+is retuned, and none of the maintained MHZ/SSZ remaining coverage limits closes
+by this merge or compilation.
+
+Both histories of workflow tools, measurement hazards and implementation lessons
+are retained. Headless changelog wording now names the supplied no-device owner
+and the retirement of inherited backends when synthesis is disabled. Draft-only
+source citations are carried from `044fa46725c7` to `8b2cf3c4178f` with the
+existing citation remapper, including its checked in-place-edit mapping. Mixed
+files carry only exact draft comment lines absent from Main, avoiding a second
+shift of Main's remapped comments. Dated evidence remains as written against its
+original source revisions. A focused citation check reports inherited stale and
+unverifiable references, so this is not a clean whole-repository citation audit.
+
+Initial composition preparation: Java 25 command
+`python3 "$MAIN_WORKSPACE/tools/testing/maven_queue.py" -Dmse=off test-compile`
+passed (Maven 1m14s; 4,211 main sources; no test execution). No compile/API repair
+was needed. The first shell redirection failed before Maven because this fresh
+checkout lacked `target/`; creating that directory fixed the launch prerequisite.
+Focused bootstrap/climb/context/audio and conflicting object-owner consumers are
+pending in at most two queued requests. No broad smoke, guards or release full
+suite is launched by this worker; Root retains the exact prior-smoke identities
+and the delivery-wide coverage decision.

@@ -51,6 +51,7 @@ You want to add objects, bosses, zones, or engine improvements.
 ### I want to create levels
 
 - [Level Editor](creating/level-editor.md) -- Create, edit, save, reopen, playtest, and export levels for all three games
+- [Stageplay](creating/stageplay.md) -- Direct sprite films, animatics and reusable mod cutscenes in either editor
 
 ### I want to create mods
 

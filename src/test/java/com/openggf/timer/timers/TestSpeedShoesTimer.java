@@ -19,7 +19,7 @@ import static org.mockito.Mockito.when;
  * offset is zero: {@code (Level_frame_counter+1).w} reads the low byte at the
  * word label's second address and does not arithmetically add one, and the
  * engine advances its counter where {@code LevelLoop} does, before
- * {@code Process_Sprites} ({@code docs/skdisasm/sonic3k.asm:7919-7925}), so the
+ * {@code Process_Sprites} ({@code docs/skdisasm/sonic3k.asm:7951-7957}), so the
  * display step reads the ROM's own value. The timer therefore decrements when
  * {@code frameCounter & 7 == 0}.
  */

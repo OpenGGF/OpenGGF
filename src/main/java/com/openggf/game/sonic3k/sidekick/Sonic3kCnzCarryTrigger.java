@@ -86,7 +86,7 @@ public final class Sonic3kCnzCarryTrigger implements SidekickCarryTrigger, com.o
         // has teleported Sonic away from both pickup regions, leave control with
         // the object under test.
         // Tails_Init copies Last_star_post_hit to Tails_CPU_star_post_flag
-        // (sonic3k.asm:26155); loc_13A10's first branch bypasses BOTH carry
+        // (sonic3k.asm:26195); loc_13A10's first branch bypasses BOTH carry
         // inlets for a saved entry. Initial assembly publishes that existing
         // captured semantic flag before GameLoop consumes Saved2, retaining
         // the native CPU decision through the following ordinary pass.

@@ -117,7 +117,7 @@ class TestSonic3kHCZEvents {
                 frame < 100_000 && !events.isTransitionRequested();
                 frame++) {
             // Kos_modules_left is decremented only by Process_Kos_Module_Queue
-            // (docs/skdisasm/sonic3k.asm:2750-2752), which LevelLoop reaches at 7908 --
+            // (docs/skdisasm/sonic3k.asm:2782-2784), which LevelLoop reaches at 7908 --
             // after ScreenEvents (7898) and the object pass (7900-7906). Neither
             // VINT_SERVICE nor Process_Kos_Queue (7887, decompression queue only) can
             // advance it.
@@ -184,7 +184,7 @@ class TestSonic3kHCZEvents {
         assertEquals(lock, request.postTransitionMinX());
         assertEquals(lock, request.postTransitionMaxX());
         // Change_Act2Sizes stores HCZ2's sizes without applying them
-        // (sonic3k.asm:180666-180681); only loc_6A8AE's Make_LevelSizeObj
+        // (sonic3k.asm:180671-180686); only loc_6A8AE's Make_LevelSizeObj
         // later widens the bounds. The reload must not leave act-2 targets
         // for the camera to ease toward in the meantime.
         assertEquals(lock, request.postTransitionMinXTarget(),
@@ -338,9 +338,9 @@ class TestSonic3kHCZEvents {
         events.updateRetainedCarrierObjectPass(1);
         assertEquals(startX, player.getCentreX(), "the init dispatch does not move the carrier");
 
-        // loc_6A80C writes $3A = Camera_X_pos+$A0 once (sonic3k.asm:140092).
+        // loc_6A80C writes $3A = Camera_X_pos+$A0 once (sonic3k.asm:140097).
         // The camera moving afterwards must not move the swing centre that
-        // sub_6A916 compares against (sonic3k.asm:140177).
+        // sub_6A916 compares against (sonic3k.asm:140182).
         int target = 0x0080 + 0xA0;
         GameServices.camera().setX((short) 0x0010);
 

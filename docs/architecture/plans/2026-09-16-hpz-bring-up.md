@@ -28,7 +28,7 @@ ending. These are source-audit estimates, not measurements.
 Deliver ordinary entry, traversal, the Sonic/Tails Knuckles fight and teleporter
 exit to SSZ (`$A00`), and the short Knuckles route to SSZ act 2 (`$A01`). Cold
 entry uses the data-select destination `LevelList_DA6E` → `$1601`
-(`sonic3k.asm:17510`); the ordinary LRZ3 → HPZ transition is blocked until LRZ has
+(`sonic3k.asm:17546`); the ordinary LRZ3 → HPZ transition is blocked until LRZ has
 events and remains a recorded gap, not a reason to position the player.
 
 ## Findings that changed the plan
@@ -36,7 +36,7 @@ events and remains a recorded gap, not a reason to position the player.
 - **Identity (fixed, `e3ae26530`).** Engine zone `$16` act 1 resolved the `$1701`
   sanctuary resources, so HPZ was unreachable and its data-select slot entered the
   sanctuary. ROM evidence: sprite table `LRZ3, HPZ, DEZ3, HPZMini`
-  (`sonic3k.asm:202440-202443`), screen events `HPZ_*` for `$1601` and `HPZS_*` for
+  (`sonic3k.asm:202555-202558`), screen events `HPZ_*` for `$1601` and `HPZS_*` for
   `$1701` (`102347-102354`), LevelSizes rows (`38141-38144`), title-card selection
   (`62149-62151`). `$1601` now resolves the linear ROM level; the sanctuary keeps
   `$1701`.
@@ -121,12 +121,12 @@ Evidence (worktree, all ROMs by absolute path, `maven_queue.py -Dmse=off`):
 
 ## Next: slice 5 inventory (Knuckles fight)
 
-`CutsceneKnux_HPZ` (`sonic3k.asm:131264`) is a 47-routine AI fight, not a scripted
+`CutsceneKnux_HPZ` (`sonic3k.asm:131321`) is a 47-routine AI fight, not a scripted
 cutscene: proximity/decision tables (`loc_660BE`), `Find_SonicTails`, three DPLC sets
 switched through `$44(a0)`, `mus_Knuckles` via a delayed music object, `Pal_CutsceneKnux`
 on line 2, and shared coordination bits in `_unkFAB8` with the Robotnik ship sequence
-(`PLC_KnuxHPZCutsceneShip`, `sonic3k.asm:131961`) that follows the fight. The collapse
-sets `Events_fg_4` at `sonic3k.asm:132337`; music returns to `mus_LRZ2`
+(`PLC_KnuxHPZCutsceneShip`, `sonic3k.asm:132018`) that follows the fight. The collapse
+sets `Events_fg_4` at `sonic3k.asm:132394`; music returns to `mus_LRZ2`
 (`131801-131805`) and `mus_Miniboss` is used at `132591`. The routine block spans
 roughly `131264-133503`; decompose it into fight, ship/emerald theft and collapse
 children before implementation. Engine subtype `$28` still falls back to
@@ -390,7 +390,7 @@ Continuous native capture `probe-route` (movie 441758-444437, every frame, from
 after step *f* is native movie frame 441759+*f*. Four causes, fixed in order of first error:
 
 1. **441759, camera X -64:** `SpawnLevelMainSprites` loc_6986 places `Obj_LevelIntro_PlayerRun`
-   (sonic3k.asm:89940) for `$1601`, `$B00`, and Knuckles in `$300`/`$900`: held Right plus
+   (sonic3k.asm:89986) for `$1601`, `$B00`, and Knuckles in `$300`/`$900`: held Right plus
    `Scroll_forced_X_pos` = start X + `$B0` until `x_pos+$10` reaches it. New
    `LevelIntroPlayerRunInstance`; the target comes from `Sonic_/Knux_Start_Locations`
    because positioned harness starts otherwise moved it (first attempt used the live

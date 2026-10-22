@@ -207,7 +207,7 @@ class TestSonic3kMonitorObjectInstance {
     @Test
     void offscreenCpuTailsStillUsesMonitorSolidity() {
         // Obj_MonitorMain -> SolidObject_Monitor_Tails -> SolidObject_cont has no
-        // Player_2 render_flags gate (sonic3k.asm:40486-40500, 40588-40596).
+        // Player_2 render_flags gate (sonic3k.asm:40526-40540, 40628-40636).
         Sonic3kMonitorObjectInstance monitor = monitor();
         org.junit.jupiter.api.Assertions.assertTrue(monitor.bypassesOffscreenSolidGate());
         org.junit.jupiter.api.Assertions.assertTrue(monitor.getSolidRoutineProfile().bypassesOffscreenSolidGate());

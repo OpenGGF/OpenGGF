@@ -58,11 +58,11 @@ public final class CnzCannonInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_CNZCannon} is installed from the S3K object pointer table at
      * {@code $000318A4} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:66875).
+     * label is defined at docs/skdisasm/sonic3k.asm:66915).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0003}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -363,7 +363,7 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         // Obj_CNZCannon calls the shared SolidObjectTop entry. Its vertical
         // gate accepts only signed overlap d0 in [-$10,-1]: d0 == 0 survives
         // the first `bhi`, then the unsigned `blo` against -$10 rejects it
-        // (sonic3k.asm:41982-42015). Waiting for one pixel of overlap keeps
+        // (sonic3k.asm:42022-42055). Waiting for one pixel of overlap keeps
         // the standing-bit capture in sub_319F4 on the native object pass.
         return true;
     }

@@ -1,0 +1,409 @@
+{
+  "version": 3,
+  "name": "Wait for me",
+  "width": 320,
+  "height": 224,
+  "cast": [
+    {
+      "id": "sonic",
+      "name": "Sonic",
+      "gameId": "s3k",
+      "character": "sonic",
+      "snapToFloor": false
+    },
+    {
+      "id": "tails",
+      "name": "Tails",
+      "gameId": "s3k",
+      "character": "tails",
+      "snapToFloor": false
+    }
+  ],
+  "dialogueTypers": [
+    {
+      "id": "speech",
+      "framesPerGrapheme": 2,
+      "punctuationPauseFrames": 4,
+      "spacePauseFrames": 0
+    }
+  ],
+  "dialogueSkins": [
+    {
+      "id": "sonic",
+      "nameArgb": -7495937,
+      "borderArgb": -7495937
+    },
+    {
+      "id": "tails",
+      "nameArgb": -11172,
+      "borderArgb": -11172
+    }
+  ],
+  "shots": [
+    {
+      "id": "together",
+      "durationFrames": 1560,
+      "set": {
+        "gameId": "s3k",
+        "zone": 11,
+        "act": 1,
+        "worldPolicy": "LIVE"
+      },
+      "camera": [
+        {
+          "frame": 0,
+          "x": 5268,
+          "y": 1824,
+          "interpolation": "HOLD",
+          "follow": {
+            "actors": [
+              "sonic",
+              "tails"
+            ],
+            "deadZoneX": 12,
+            "deadZoneY": 12,
+            "lookAhead": 0,
+            "smoothing": 0.2,
+            "offsetX": 0,
+            "offsetY": 0
+          }
+        }
+      ],
+      "actors": {
+        "sonic": [
+          {
+            "frame": 0,
+            "x": 5428,
+            "y": 1936
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "x": 5472,
+            "y": 1936
+          }
+        ]
+      },
+      "actions": {
+        "sonic": [
+          {
+            "frame": 0,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 90,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 1,
+            "kind": "STOP"
+          },
+          {
+            "frame": 240,
+            "kind": "MOVE_TO",
+            "x": 0,
+            "y": 0,
+            "urgency": 0.65,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": -16,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 241,
+            "kind": "JUMP",
+            "holdFrames": 20
+          },
+          {
+            "frame": 242,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 180,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": -16,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 243,
+            "kind": "STOP"
+          },
+          {
+            "frame": 660,
+            "kind": "MOVE_TO",
+            "x": 0,
+            "y": 0,
+            "urgency": 0.65,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": -16,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 661,
+            "kind": "JUMP",
+            "holdFrames": 20
+          },
+          {
+            "frame": 662,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 180,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": -16,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 663,
+            "kind": "STOP"
+          },
+          {
+            "frame": 1140,
+            "kind": "MOVE_TO",
+            "x": 0,
+            "y": 0,
+            "urgency": 0.65,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": -16,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 1141,
+            "kind": "JUMP",
+            "holdFrames": 20
+          },
+          {
+            "frame": 1142,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 180,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": -16,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 1143,
+            "kind": "STOP"
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 90,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 0,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 1,
+            "kind": "STOP"
+          },
+          {
+            "frame": 50,
+            "kind": "MOVE_TO",
+            "x": 0,
+            "y": 0,
+            "urgency": 0.2,
+            "target": {
+              "layoutIndex": 179,
+              "objectId": 74,
+              "subtype": 1,
+              "offsetX": 12,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 51,
+            "kind": "WAIT",
+            "condition": "ARRIVED",
+            "timeoutFrames": 90
+          },
+          {
+            "frame": 52,
+            "kind": "STOP"
+          },
+          {
+            "frame": 390,
+            "kind": "LOOK_UP",
+            "holdFrames": 90
+          },
+          {
+            "frame": 1145,
+            "kind": "MOVE_TO",
+            "x": 0,
+            "y": 0,
+            "urgency": 0.65,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": 16,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 1146,
+            "kind": "JUMP",
+            "holdFrames": 20
+          },
+          {
+            "frame": 1147,
+            "kind": "WAIT",
+            "condition": "ON_OBJECT",
+            "timeoutFrames": 180,
+            "target": {
+              "layoutIndex": 166,
+              "objectId": 74,
+              "subtype": 4,
+              "offsetX": 16,
+              "offsetY": -35
+            }
+          },
+          {
+            "frame": 1148,
+            "kind": "STOP"
+          }
+        ]
+      },
+      "dialogue": [
+        {
+          "startFrame": 25,
+          "endFrame": 150,
+          "speakerActor": "tails",
+          "text": "Other lift. Together, okay?",
+          "x": 8,
+          "y": 170,
+          "width": 304,
+          "height": 48,
+          "typerId": "speech",
+          "skinId": "tails"
+        },
+        {
+          "startFrame": 160,
+          "endFrame": 300,
+          "speakerActor": "sonic",
+          "text": "Race you there!",
+          "x": 8,
+          "y": 170,
+          "width": 304,
+          "height": 48,
+          "typerId": "speech",
+          "skinId": "sonic"
+        },
+        {
+          "startFrame": 340,
+          "endFrame": 520,
+          "speakerActor": "tails",
+          "text": "You forgot the \"together\" bit.",
+          "x": 8,
+          "y": 170,
+          "width": 304,
+          "height": 48,
+          "typerId": "speech",
+          "skinId": "tails"
+        },
+        {
+          "startFrame": 550,
+          "endFrame": 655,
+          "speakerActor": "sonic",
+          "text": "Oh. Coming back!",
+          "x": 8,
+          "y": 170,
+          "width": 304,
+          "height": 48,
+          "typerId": "speech",
+          "skinId": "sonic"
+        },
+        {
+          "startFrame": 800,
+          "endFrame": 1000,
+          "speakerActor": "tails",
+          "text": "Try counting us in this time.",
+          "x": 8,
+          "y": 170,
+          "width": 304,
+          "height": 48,
+          "typerId": "speech",
+          "skinId": "tails"
+        },
+        {
+          "startFrame": 1010,
+          "endFrame": 1150,
+          "speakerActor": "sonic",
+          "text": "One. Two. Three!",
+          "x": 8,
+          "y": 170,
+          "width": 304,
+          "height": 48,
+          "typerId": "speech",
+          "skinId": "sonic"
+        },
+        {
+          "startFrame": 1240,
+          "endFrame": 1385,
+          "speakerActor": "tails",
+          "text": "See? Teamwork.",
+          "x": 8,
+          "y": 170,
+          "width": 304,
+          "height": 48,
+          "typerId": "speech",
+          "skinId": "tails"
+        },
+        {
+          "startFrame": 1395,
+          "endFrame": 1550,
+          "speakerActor": "sonic",
+          "text": "My slowest personal best.",
+          "x": 8,
+          "y": 170,
+          "width": 304,
+          "height": 48,
+          "typerId": "speech",
+          "skinId": "sonic"
+        }
+      ],
+      "audio": [
+        {
+          "frame": 0,
+          "kind": "ROM_MUSIC",
+          "gameId": "s3k",
+          "soundId": 23
+        }
+      ]
+    }
+  ]
+}

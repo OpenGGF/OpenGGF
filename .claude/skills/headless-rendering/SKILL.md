@@ -20,6 +20,7 @@ full-suite or ROM-parity result.
 | Need | Existing owner |
 | --- | --- |
 | Gameplay screenshots or movies | [gameplay-capture](../gameplay-capture/SKILL.md): `GameplayCaptureTool` |
+| Stageplay animatics, directed dialogue or staged promos | [stageplay-authoring](../stageplay-authoring/SKILL.md): `tools/stageplay/stageplay.py` and `StageplayCaptureTool`, using detached terrain or an explicitly owned live native world, with offline audio |
 | Render an existing trace replay | [trace-capture](../trace-capture/SKILL.md): `TraceCaptureTool`; video completion does not prove parity |
 | Rendered gameplay tests or custom route probes | `GameplayCaptureSession`: production boot, stepping, mode-aware drawing, and optional image readback |
 | Component, shader, framebuffer, or presentation pixel tests | `PresentationOffscreenTestContext.open(width, height)` in test scope; it owns a core-profile EGL context, not a loaded game or initialized graphics manager |
@@ -37,12 +38,10 @@ EGL, hidden windows, and `java.awt.headless` do not isolate audio. Establish a
 known no-device audio backend before anything can start playback; do not open a
 live OpenAL/device backend and rely on volume zero or desktop mute.
 
-- For silent rendering, leave `GameplayCaptureSession` audio disabled (its default)
-  and run in a fresh tool JVM whose `AudioManager` starts with `NullAudioBackend`.
-  A custom/reused host must replace any inherited device backend through
-  `AudioManager.setBackend(new NullAudioBackend())` before boot/playback, and keep
-  `AUDIO_ENABLED=false`. Disabling the setting alone does not retire a prior backend:
-  `HeadlessGameBoot` leaves it installed when audio is disabled.
+- For silent rendering, leave `GameplayCaptureSession` audio disabled (its default).
+  `HeadlessGameBoot` installs `NullAudioBackend` before level playback, retiring
+  any inherited backend even in reused JVMs. Custom hosts that do not use this
+  boot owner must establish their own no-device backend before playback.
 - For offline audio evidence, keep synthesis enabled with
   `HeadlessSmpsAudioBackend`, whose device hooks are no-ops and whose presentation
   sink is `NoDeviceAudioSink`. `HeadlessGameBoot` installs it before level music
@@ -56,8 +55,9 @@ live OpenAL/device backend and rely on volume zero or desktop mute.
 Verify the installed backend/sink path, not whether anyone heard sound.
 [TestHeadlessGameBootAudioIdentity](../../../src/test/java/com/openggf/tools/TestHeadlessGameBootAudioIdentity.java)
 provides ROM-backed backend identity, replacement and offline packet checks;
-its disabled-boot case also demonstrates retained ownership. A null-backend
-fallback is silent but cannot prove successful audio synthesis. Unexpected
+its disabled-boot case verifies retirement of inherited ownership. The ROM-free
+[TestHeadlessAudioOwnership](../../../src/test/java/com/openggf/tools/TestHeadlessAudioOwnership.java)
+checks the same installation boundary in ordinary CI. A null-backend fallback is silent but cannot prove successful audio synthesis. Unexpected
 speaker output means isolation failed: stop the owned run and fix its audio
 owner rather than muting the user's desktop.
 
@@ -146,9 +146,13 @@ above requires EGL and fails if context creation is unavailable on Linux;
 
 For gameplay captures, inspect `state.csv` before selecting frames; for trace
 captures, inspect the selected clip and replay reports using `trace-capture`.
-Confirm dimensions, scene/mode, nonblank pixels, and the playable sprite when
-expected. Compare
-relevant pixels or a deliberately cleared target to reject stale framebuffer
+For Stageplay, inspect the screenplay, labelled authored/simulated JSONL and moving
+footage using `stageplay-authoring`. TERRAIN_ONLY `simulate` resolves native puppet
+physics against detached terrain without GL. LIVE simulation advances one shared
+production object/ring/player world; its `sample.world` contains native states/events.
+Pure `timeline` remains authored and leaves puppets `UNRESOLVED`. A selected scene
+simulation is bounded evidence, not certification of a full level or ROM parity. Confirm dimensions, scene/mode, nonblank pixels, and the playable
+sprite when expected. Compare relevant pixels or a deliberately cleared target to reject stale framebuffer
 success; a PNG file's existence is insufficient. Distinguish capture correctness
 from gameplay/trace parity and from coverage of other modes or routes.
 

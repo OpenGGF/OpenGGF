@@ -196,7 +196,7 @@ public final class S3kResultsElementObjectInstance extends AbstractObjectInstanc
     }
 
     // Obj_LevelResultsCreate never writes priority for the ObjArray_LevResults SSTs
-    // (sonic3k.asm:62591-62612), so the cleared word 0 stands: display list 0 is the ROM value.
+    // (sonic3k.asm:62631-62652), so the cleared word 0 stands: display list 0 is the ROM value.
     private static final int PRIORITY_BUCKET = RenderPriority.bucket(0);
 
     @Override

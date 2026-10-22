@@ -213,9 +213,9 @@ public class TestS3kAiz1SpecialStageReturn {
                     + " solidBits=0x0E/0x0F ===");
 
             // Reload level (simulating special stage return). The stage clear ORs
-            // $80 into Last_star_post_hit before this reload (sonic3k.asm:12121,
+            // $80 into Last_star_post_hit before this reload (sonic3k.asm:12157,
             // 12676), as GameLoop.doExitResultsScreen does; a fresh level holds
-            // zero (sonic3k.asm:10039) and would read Sonic_Start_Locations.
+            // zero (sonic3k.asm:10075) and would read Sonic_Start_Locations.
             lm.setLastStarPostHit();
             lm.loadCurrentLevel();
             GroundSensor.setLevelManager(lm);
@@ -306,7 +306,7 @@ public class TestS3kAiz1SpecialStageReturn {
                 monitor.x(), monitor.y(),
                 monitor.x() - 0xA0, monitor.y() - 0x60, sprite.getRingCount(),
                 sprite.getTopSolidBit(), sprite.getLrbSolidBit(), fixture.camera().getMaxY()));
-        // Special-stage clear: ori.b #$80,(Last_star_post_hit).w (sonic3k.asm:12121, 12676)
+        // Special-stage clear: ori.b #$80,(Last_star_post_hit).w (sonic3k.asm:12157, 12712)
         // precedes the return reload, as GameLoop.doExitResultsScreen does.
         lm.setLastStarPostHit();
         lm.loadCurrentLevel();
@@ -333,8 +333,8 @@ public class TestS3kAiz1SpecialStageReturn {
 
     /**
      * Save_Level_Data2 records Saved2_zone_and_act with the rest of the return
-     * snapshot (sonic3k.asm:61735-61737); the stage clear restores it before the
-     * reload (sonic3k.asm:12120, 12675). A snapshot without that origin is not a
+     * snapshot (sonic3k.asm:61775-61777); the stage clear restores it before the
+     * reload (sonic3k.asm:12156, 12711). A snapshot without that origin is not a
      * reachable return.
      */
     private static BigRingReturnState saved2(int playerX, int playerY, int cameraX, int cameraY,
@@ -394,8 +394,8 @@ public class TestS3kAiz1SpecialStageReturn {
 
         // ---- Simulate doExitResultsScreen flow ----
         // The stage clear ORs $80 into Last_star_post_hit before the return
-        // reload (sonic3k.asm:12121, 12676); without it Get_LevelSizeStart
-        // reads Sonic_Start_Locations instead of Saved2 (sonic3k.asm:38147-38149).
+        // reload (sonic3k.asm:12157, 12712); without it Get_LevelSizeStart
+        // reads Sonic_Start_Locations instead of Saved2 (sonic3k.asm:38187-38189).
         lm.setLastStarPostHit();
         lm.loadCurrentLevel();
         GroundSensor.setLevelManager(lm);

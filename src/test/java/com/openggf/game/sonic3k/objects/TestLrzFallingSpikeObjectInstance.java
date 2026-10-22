@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code Obj_LRZFallingSpike} (sonic3k.asm:87946-88009, ROM {@code $4284C}).
+ * {@code Obj_LRZFallingSpike} (sonic3k.asm:87992-88055, ROM {@code $4284C}).
  *
  * <p>The behaviour worth pinning is the trigger distance. Init writes the subtype into
  * {@code $2F(a0)}, the low byte of the word the waiting routine compares at {@code $2E(a0)}, so
@@ -24,7 +24,7 @@ class TestLrzFallingSpikeObjectInstance {
     private static final int BASE_X = 0x0280;
     private static final int BASE_Y = 0x0504;
 
-    /** {@code move.b subtype(a0),$2F(a0)} into the word at {@code $2E} (sonic3k.asm:87955). */
+    /** {@code move.b subtype(a0),$2F(a0)} into the word at {@code $2E} (sonic3k.asm:88001). */
     @Test
     void theTriggerDistanceIsTheSubtypeInPixels() {
         for (int subtype : new int[] {1, 2, 3, 4, 5}) {
@@ -34,7 +34,7 @@ class TestLrzFallingSpikeObjectInstance {
     }
 
     /**
-     * {@code cmp.w $2E(a0),d0 / bhs} (:87977-87978): the drop starts only while the separation is
+     * {@code cmp.w $2E(a0),d0 / bhs} (:88023-88024): the drop starts only while the separation is
      * strictly smaller than the trigger, so a spike with subtype 4 releases at 3 pixels and not at
      * 4.
      */
@@ -49,7 +49,7 @@ class TestLrzFallingSpikeObjectInstance {
         }
     }
 
-    /** {@code neg.w d0} (:87963): the separation is an absolute value, so either side triggers. */
+    /** {@code neg.w d0} (:88009): the separation is an absolute value, so either side triggers. */
     @Test
     void theTriggerIsSymmetricAboutTheSpike() {
         LrzFallingSpikeObjectInstance left = spike(5);
@@ -64,7 +64,7 @@ class TestLrzFallingSpikeObjectInstance {
     }
 
     /**
-     * {@code move.b #$82,collision_flags(a0)} (:87954) and {@code move.b #0} on landing (:87992):
+     * {@code move.b #$82,collision_flags(a0)} (:88000) and {@code move.b #0} on landing (:88038):
      * the spike hurts while it hangs and while it falls, and stops once it has landed.
      */
     @Test
@@ -80,7 +80,7 @@ class TestLrzFallingSpikeObjectInstance {
         assertFalse(spike.isSolidFor(null), "a falling spike calls no SolidObjectFull");
     }
 
-    /** {@code move.w #$13,d1 / #$10,d2 / #$11,d3} (sonic3k.asm:88004-88006). */
+    /** {@code move.w #$13,d1 / #$10,d2 / #$11,d3} (sonic3k.asm:88050-88052). */
     @Test
     void solidParamsAreTheLandedRoutineArguments() {
         LrzFallingSpikeObjectInstance spike = spike(5);
@@ -90,7 +90,7 @@ class TestLrzFallingSpikeObjectInstance {
     }
 
     /**
-     * {@code jsr (MoveSprite)} (:87986) with both velocities starting at zero: the first falling
+     * {@code jsr (MoveSprite)} (:88032) with both velocities starting at zero: the first falling
      * frame moves nothing and leaves {@code y_vel} at one gravity step, exactly as the level-start
      * fall does.
      */

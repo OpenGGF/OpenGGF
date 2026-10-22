@@ -539,7 +539,7 @@ class TestSecondStrikeCheckpointGameplay {
 
     /**
      * Obj_MonitorContents owns the payload as an independent object
-     * (docs/skdisasm/sonic3k.asm:40640-40652); observe the contents that the
+     * (docs/skdisasm/sonic3k.asm:40645-40657); observe the contents that the
      * actual shell allocated at its own x, never the shell's inherited state.
      */
     private static boolean eggmanContentsApplied(Sonic3kMonitorObjectInstance shell) throws Exception {

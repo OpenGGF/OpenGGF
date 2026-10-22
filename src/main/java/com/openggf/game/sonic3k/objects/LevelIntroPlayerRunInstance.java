@@ -11,7 +11,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.List;
 
 /**
- * ROM {@code Obj_LevelIntro_PlayerRun} (sonic3k.asm:89940-89966), placed in dynamic slot 2 by
+ * ROM {@code Obj_LevelIntro_PlayerRun} (sonic3k.asm:89986-90012), placed in dynamic slot 2 by
  * {@code SpawnLevelMainSprites} loc_6986 for Hidden Palace ({@code $1601}), Death Egg 1
  * ({@code $B00}), and Knuckles in Carnival Night 1 ({@code $300}) and Lava Reef 1 ({@code $900}).
  *

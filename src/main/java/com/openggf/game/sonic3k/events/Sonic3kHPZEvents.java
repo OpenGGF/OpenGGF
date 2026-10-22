@@ -10,7 +10,7 @@ import com.openggf.level.objects.ObjectSpawn;
 /**
  * Hidden Palace ({@code $1601}) screen and background events:
  * {@code HPZ_ScreenInit}, {@code HPZ_ScreenEvent} and the Knuckles layout patch in
- * {@code HPZ_BackgroundInit} (sonic3k.asm:119993-120188).
+ * {@code HPZ_BackgroundInit} (sonic3k.asm:120039-120234).
  *
  * <p>The screen shake that {@code HPZ_ScreenEvent} adds to {@code Camera_Y_pos_copy}
  * and the background parallax are shared with the sanctuary and owned by

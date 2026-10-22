@@ -25,6 +25,7 @@ public final class SceneRomLibrary implements AutoCloseable {
     private static final Logger LOG = Logger.getLogger(SceneRomLibrary.class.getName());
     private static final List<String> GAMES = List.of("s1", "s2", "s3k");
     private final Map<String, SceneRomArt> art = new LinkedHashMap<>();
+    private final Map<String, GameModule> modules = new LinkedHashMap<>();
     private final Map<String, Rom> sourceRoms = new LinkedHashMap<>();
     private final List<Rom> ownedRoms = new ArrayList<>();
     private boolean closed;
@@ -40,6 +41,7 @@ public final class SceneRomLibrary implements AutoCloseable {
             if (code.equals(active)) {
                 art.put(code, SceneRomArtFactory.forModule(activeModule, activeRom));
                 sourceRoms.put(code, activeRom);
+                modules.put(code, activeModule);
                 continue;
             }
             RomIdentity identity = identity(code);
@@ -47,15 +49,63 @@ public final class SceneRomLibrary implements AutoCloseable {
             Rom extra = null;
             try {
                 extra = Rom.fromReader(roms.openLogicalRom(identity), "scene " + code);
-                SceneRomArt prepared = SceneRomArtFactory.forModule(module(code), extra);
+                GameModule extraModule = stockModule(code);
+                SceneRomArt prepared = SceneRomArtFactory.forModule(extraModule, extra);
                 ownedRoms.add(extra);
                 art.put(code, prepared);
                 sourceRoms.put(code, extra);
+                modules.put(code, extraModule);
             } catch (IOException | RuntimeException failure) {
                 if (extra != null) extra.close();
                 LOG.log(Level.WARNING, "Scene ROM unavailable: " + code, failure);
             }
         }
+    }
+
+    /** CPU-only supplied-ROM library for offline evaluation; every opened ROM is owned here. */
+    public static SceneRomLibrary open(Map<String, java.nio.file.Path> paths) throws IOException {
+        return new SceneRomLibrary(paths);
+    }
+
+    private SceneRomLibrary(Map<String, java.nio.file.Path> paths) throws IOException {
+        Objects.requireNonNull(paths);
+        if (paths.isEmpty() || !GAMES.containsAll(paths.keySet()))
+            throw new IllegalArgumentException("Supply one or more named stock ROMs");
+        activeGame = GAMES.stream().filter(paths::containsKey).findFirst().orElseThrow();
+        try {
+            for (String code : GAMES) {
+                if (!paths.containsKey(code)) continue;
+                Rom rom = new Rom(); ownedRoms.add(rom);
+                var detector = BuiltInRomDetectors.forGame(GameId.fromCode(code));
+                if (!rom.open(paths.get(code).toAbsolutePath().toString()) || !detector.canHandle(rom))
+                    throw new IOException("ROM does not match requested game " + code);
+                GameModule module = detector.createModule();
+                modules.put(code, module); sourceRoms.put(code, rom);
+                art.put(code, SceneRomArtFactory.forModule(module, rom));
+            }
+        } catch (IOException | RuntimeException failure) {
+            close(); throw failure;
+        }
+    }
+
+    /** Engine-internal physical resources from the same exact modules/ROMs used for presentation. */
+    public GameModule module(String gameId) {
+        requireOpen();
+        GameModule module = modules.get(gameId);
+        if (module == null) throw new IllegalArgumentException("Supply the " + gameId + " ROM");
+        return module;
+    }
+
+    public com.openggf.sprites.art.SpriteArtSet characterArt(String gameId, String character) {
+        requireOpen(); module(gameId);
+        return ((RomSceneArt) art.get(gameId)).playerArt(character);
+    }
+
+    public com.openggf.level.Level level(String gameId, int zone, int act) {
+        requireOpen(); module(gameId);
+        var level = ((RomSceneArt) art.get(gameId)).puppetLevel(zone, act);
+        if (level == null) throw new IllegalArgumentException("Set has no detached native terrain");
+        return level;
     }
 
     public List<String> availableGames() {
@@ -93,6 +143,7 @@ public final class SceneRomLibrary implements AutoCloseable {
         closed = true;
         art.clear();
         sourceRoms.clear();
+        modules.clear();
         ownedRoms.forEach(Rom::close);
         ownedRoms.clear();
     }
@@ -105,7 +156,7 @@ public final class SceneRomLibrary implements AutoCloseable {
         };
     }
 
-    private static GameModule module(String code) {
+    private static GameModule stockModule(String code) {
         return BuiltInRomDetectors.forGame(GameId.fromCode(code)).createModule();
     }
 }

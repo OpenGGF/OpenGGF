@@ -40,7 +40,7 @@ records the completed ordinary/guard result and separately attributed inherited
 CLI assertion. Develop source delivery and owned-worktree cleanup are complete.
 Nothing below certifies the act.
 
-LevelSizes (sonic3k.asm:38143): x `0`-`$6000`, y `$20`-`$20`. Level art
+LevelSizes (sonic3k.asm:38183): x `0`-`$6000`, y `$20`-`$20`. Level art
 `levartptrs $4C,$4C,$40` (PLC `$4C`, palette `$40`, `ArtKosM_DEZ3`,
 sonic3k.asm:199483). Music `Sonic3kMusic.DEZ2`. Animated tiles: `AnimateTiles_NULL`
 (Offs_AniFunc entry 46) — no AniPLC script; the only animated art is the laser DMA
@@ -48,7 +48,7 @@ sonic3k.asm:199483). Music `Sonic3kMusic.DEZ2`. Animated tiles: `AnimateTiles_NU
 
 Incoming: the act 2 boss exit (`loc_7F310` saves `Act3_ring_count`, `Act3_timer` and
 `Saved2_status_secondary`, then `StartNewLevel $1700`). The ROM level select lists
-`$1700` as "DDZ act 2" (sonic3k.asm:10161); the engine now exposes the distinct final-boss level-select entry.
+`$1700` as "DDZ act 2" (sonic3k.asm:10197); the engine now exposes the distinct final-boss level-select entry.
 Outgoing: `loc_803D6` → `$C00`, `$D01` or `Game_mode 0`.
 The2026-10-13 request adds native `$D01` continuation, tracked in
 [the ending matrix](s3k-ending.md); historical arrival coordinates describe the

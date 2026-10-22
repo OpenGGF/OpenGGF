@@ -227,3 +227,27 @@ count, with the corresponding modulo remainder. An entry may preserve a
 nonzero phase. Audio-follow controls should compare equal native state streams
 and outer PCM cadence before examining the waveform difference. A waveform
 difference proves an audio contribution, not isolated pitch/tempo accuracy.
+
+# Promo compositor
+
+`promo_kit.py` composes promo edits frame by frame with numpy and Pillow and
+encodes them with ffmpeg. Its inputs are lossless PNG clips from the offscreen
+capture tools and WAV beds and stems. An edit file sets `EDIT = dict(bpm=...,
+first=...)` and defines `build(e)`, placing shots, overlays and sound effects
+in beats. The creative rules are in the
+[promo-direction skill](../../.agents/skills/promo-direction/SKILL.md).
+
+```bash
+python3 tools/media/promo_kit.py fonts                      # display faces resolved, or FALLBACK
+python3 tools/media/promo_kit.py fetch-fonts /task/fonts     # OFL faces into a task directory
+python3 tools/media/promo_kit.py demo /task/kit-demo         # synthetic footage, no ROM
+python3 tools/media/promo_kit.py beats /task/audio/bed.wav   # BPM, beat phase, section changes
+python3 tools/media/promo_kit.py sheet /task/promo/edit.py 30
+python3 tools/media/promo_kit.py render /task/promo/edit.py
+python3 -m unittest tools/media/test_promo_kit.py
+```
+
+Requirements: Python 3 with numpy and Pillow, and ffmpeg. Keep fonts,
+captures, frames and renders in the task directory; never commit them.
+Archive the edit file and its sources in OpenGGF-Media per the
+gameplay-highlights skill.

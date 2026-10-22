@@ -93,7 +93,7 @@ public class SwScrlCnz extends AbstractZoneScrollHandler implements ScrollOutput
                                  int cameraY,
                                  int shakeY) {
         // ROM CNZ1_BossLevelScroll2 writes Camera_X_pos_BG_copy = Camera_X_pos_copy - $2F80;
-        // background collision probes use that copy through Camera_X_diff (sonic3k.asm:107721-107725).
+        // background collision probes use that copy through Camera_X_diff (sonic3k.asm:107767-107771).
         bossBgCameraX = cameraX - BOSS_BG_X_OFFSET;
         short bgScroll = negWord(bossBgCameraX);
         CnzZoneRuntimeState state = cnzRuntimeState();

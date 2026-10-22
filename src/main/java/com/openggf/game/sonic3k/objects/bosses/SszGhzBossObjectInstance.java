@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * ROM {@code Obj_SSZGHZBoss} (sonic3k.asm:162576-162942): the Green Hill recreation, the first of
+ * ROM {@code Obj_SSZGHZBoss} (sonic3k.asm:162654-163020): the Green Hill recreation, the first of
  * Sky Sanctuary act 1's three rebuilt boss fights. It is not placed — {@code sub_575EA}'s
  * {@code loc_576E8} allocates it once the arena lock has settled the camera at {@code $7C0}.
  *
@@ -128,7 +128,7 @@ public final class SszGhzBossObjectInstance extends AbstractBossInstance
     private static final int ROUTINE_SWEEP = 8;
     private static final int ROUTINE_WAIT_FOR_BALL = 0x0A;
 
-    /** {@code move.w #$3F,$2E(a0)} in {@code BossDefeated} (sonic3k.asm:180822). */
+    /** {@code move.w #$3F,$2E(a0)} in {@code BossDefeated} (sonic3k.asm:180913). */
     private static final int DEFEAT_WAIT_FRAMES = 0x3F;
     /** {@code move.b #$20,$20(a0)} in {@code sub_7A5A0}. */
     private static final int HIT_WINDOW_FRAMES = 0x20;
@@ -593,14 +593,14 @@ public final class SszGhzBossObjectInstance extends AbstractBossInstance
     protected void onDefeatStarted() {
         escaping = true;
         escapeRunning = false;
-        // move.w #$3F,$2E(a0) in BossDefeated (sonic3k.asm:180822), which loc_7A5EC jumps to
+        // move.w #$3F,$2E(a0) in BossDefeated (sonic3k.asm:180913), which loc_7A5EC jumps to
         // after installing Wait_FadeToLevelMusic. The fade wait is this value, not whatever the
         // last routine happened to leave in $2E.
         waitTimer = DEFEAT_WAIT_FRAMES;
         // loc_7A5EC clears no $38 bit and deletes nothing. What breaks the children up is the
         // shared touch response: Touch_Enemy's .checkhurtenemy runs
         // "subq.b #1,boss_hitcount2(a1) / bne.s .bossnotdefeated / bset #7,status(a1)"
-        // (sonic3k.asm:20922) on the killing hit, so the ship's status bit 7 goes up in the
+        // (sonic3k.asm:20958) on the killing hit, so the ship's status bit 7 goes up in the
         // collision pass. statusBit7 is that bit; the children read it through parent3.
         statusBit7 = true;
         // CreateChild1_Normal searches forward from this SST slot, once.
@@ -609,7 +609,7 @@ public final class SszGhzBossObjectInstance extends AbstractBossInstance
 
     /**
      * {@code status} bit 7, set on the ship by {@code Touch_Enemy}'s {@code .checkhurtenemy}
-     * when {@code boss_hitcount2} reaches zero (sonic3k.asm:20922) — not by anything inside
+     * when {@code boss_hitcount2} reaches zero (sonic3k.asm:20958) — not by anything inside
      * {@code Obj_SSZGHZBoss}. It is what {@code loc_7A568} and
      * {@code Child_Draw[Touch]_Sprite_FlickerMove} test on {@code parent3}: the emitter deletes
      * itself and every chain link converts to {@code Obj_FlickerMove} scatter debris.

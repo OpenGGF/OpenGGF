@@ -28,6 +28,10 @@ For split files, use `rg --files` under the relevant disassembly directory.
 A name match is a candidate, not proof: verify bytes/decompression and the
 routine's pointer to the asset. Check the actual ROM filename and revision.
 
+When citing disassembly lines in code or docs, name the label beside the numbers
+(`Label (_incObj/18 Platforms.asm:N-M)`) and count lines in the pinned revision; your local checkout
+may differ. `python3 tools/disasm/disasm_citations.py check <paths>` verifies them.
+
 ## Porting details
 
 S1 mapping frames have a byte piece count and 5-byte pieces (signed byte X).

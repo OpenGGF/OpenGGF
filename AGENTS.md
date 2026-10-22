@@ -260,6 +260,12 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   [briefing-trace-rounds.md](docs/agent-workflow/briefing-trace-rounds.md#measurement-hazards--all-produce-plausible-output).
   Attribute results to the command, commit, and completed run; inspect skips.
 
+## Enforced correction contracts
+
+| Contract | Owner and regression enforcement |
+| --- | --- |
+| Headless boot selects no-device audio even when synthesis is disabled; callers must not rely on a fresh JVM. | `HeadlessGameBoot.installAudioBackend()`; ROM-free `TestHeadlessAudioOwnership` in ordinary CI and ROM-backed `TestHeadlessGameBootAudioIdentity`. |
+
 ## Level test coverage
 
 New zone/act implementations must follow the
@@ -292,6 +298,10 @@ it matters:
 Disassemblies in `docs/s1disasm`, `docs/s2disasm`, and `docs/skdisasm` are
 optional development references. Builds, tests, and runtime do not require them.
 Use `git submodule update --init` when needed.
+Cite disassembly lines with the label beside them, e.g. `loc_390FA (s2.asm:77149-77163)`.
+`python3 tools/disasm/disasm_citations.py check` verifies citations against the pinned
+disassemblies; a commit that moves a disassembly pin also runs
+`disasm_citations.py remap <name> <old> <new> --write` so cited lines follow the content.
 Trace production/probes live in the optional pinned `tools/tracechaser/` submodule; initialize it with
 `git submodule update --init --recursive tools/tracechaser` for trace work.
 Follow its current guide and verified BizHawk 2.11 dependency. Use
@@ -448,10 +458,13 @@ never preserved.
   `bizhawk-native-reference-capture`.
 - Picture or movie of any gameplay section: `gameplay-capture`; scripted
   controller input for it or for a probe: `bk2-input-authoring`.
+- Promo, trailer or mod-showcase creative direction: `promo-direction`, composed
+  with `tools/media/promo_kit.py`; evidence reels and archiving: `gameplay-highlights`.
 - PLC/art queues: `plc-system`, plus `s3k-plc-system` for S3K.
 - Zone work: relevant S3K zone/events/parallax/animated-tiles/palette skill;
   whole-zone delivery: `s3k-zone-bring-up`.
 - Offscreen engine rendering for tests, captures and tools: `headless-rendering`.
+- Stageplay cutscene/animatic authoring: `stageplay-authoring`; [CLI reference](docs/guide/creating/stageplay-authoring.md).
 - Headless tests: [headless testing](docs/guide/contributing/headless-testing.md).
 - Current gaps: [general](docs/status/known-discrepancies.md),
   [S3K](docs/S3K_KNOWN_DISCREPANCIES.md). Configuration: [CONFIGURATION.md](CONFIGURATION.md).

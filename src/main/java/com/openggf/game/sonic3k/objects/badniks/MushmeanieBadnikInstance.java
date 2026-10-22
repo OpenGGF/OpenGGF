@@ -19,7 +19,7 @@ import java.util.List;
 /**
  * S3K SKL Obj $8D - Mushmeanie.
  *
- * <p>ROM reference: {@code Obj_Mushmeanie} at {@code sonic3k.asm:193522}.
+ * <p>ROM reference: {@code Obj_Mushmeanie} at {@code sonic3k.asm:193621}.
  * The parent body uses collision flag {@code $D7} and takes two attacks: the
  * first clears collision for {@code $20} frames and pops the shell, the second
  * runs the normal badnik defeat path.
@@ -381,7 +381,7 @@ public final class MushmeanieBadnikInstance extends AbstractS3kBadnikInstance
             }
             yVelocity = SHELL_LAUNCH_Y_VELOCITY;
             // loc_8DC42 is the last parent read; loc_8DC62 only runs MoveSprite_LightGravity
-            // and Sprite_CheckDeleteXY (sonic3k.asm:193654-193669). The body's second hit can
+            // and Sprite_CheckDeleteXY (sonic3k.asm:193753-193768). The body's second hit can
             // delete it while this shell flies, so drop the Java link rather than keep a
             // reference to a deleted SST that rewind capture cannot encode.
             detachFromParent();

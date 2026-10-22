@@ -42,7 +42,7 @@ import java.util.List;
  *   <li>Platform mode (bit 7): spawns a sliding solid block child</li>
  * </ul>
  * <p>
- * ROM references: Obj_HCZCGZFan (sonic3k.asm:65309-65520).
+ * ROM references: Obj_HCZCGZFan (sonic3k.asm:65349-65560).
  * <p>
  * Subtype encoding:
  * <pre>
@@ -179,7 +179,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
     /**
      * Spawns the sliding platform child when subtype bit 7 is set.
      * <p>
-     * ROM: AllocateObjectAfterCurrent (sonic3k.asm:65315-65336).
+     * ROM: AllocateObjectAfterCurrent (sonic3k.asm:65355-65376).
      * The original object (a0) becomes the platform, the child (a1) becomes the fan.
      * In our implementation, this object IS the fan, and we spawn the platform as a child.
      */
@@ -207,7 +207,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
         AbstractPlayableSprite player = (playerEntity instanceof AbstractPlayableSprite)
                 ? (AbstractPlayableSprite) playerEntity : null;
 
-        // ROM: btst #5,d0 — trigger-controlled fan (sonic3k.asm:65358-65366)
+        // ROM: btst #5,d0 — trigger-controlled fan (sonic3k.asm:65398-65406)
         if ((subtype & BIT_TRIGGER) != 0) {
             if (!Sonic3kLevelTriggerManager.testAny(0)) {
                 // Trigger not active — skip to on-screen test only
@@ -228,19 +228,19 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
     }
 
     private void updateFanRoutine(int vIntRunCount, AbstractPlayableSprite player) {
-        // ROM: tst.b $42(a0) — latched-on flag (sonic3k.asm:65368-65370)
+        // ROM: tst.b $42(a0) — latched-on flag (sonic3k.asm:65408-65410)
         if (latchedOn) {
             updateRampUp(vIntRunCount, player);
             return;
         }
 
-        // ROM: btst #4,subtype(a0) — always-on fan (sonic3k.asm:65372-65374)
+        // ROM: btst #4,subtype(a0) — always-on fan (sonic3k.asm:65412-65414)
         if ((subtype & BIT_ALWAYS_ON) != 0) {
             updatePlayerInteraction(vIntRunCount, player);
             return;
         }
 
-        // Timer-based toggle mode (sonic3k.asm:65376-65392)
+        // Timer-based toggle mode (sonic3k.asm:65416-65432)
         timer--;
         if (timer < 0) {
             speedRamp = 0;
@@ -265,7 +265,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
     /**
      * Ramp-up/ramp-down animation when fan is decelerating or latched.
      * <p>
-     * ROM: loc_306A2 (sonic3k.asm:65384-65392).
+     * ROM: loc_306A2 (sonic3k.asm:65424-65432).
      * Gradually increases frame delay as speedRamp increases, creating a slowing effect.
      */
     private void updateRampUp(int vIntRunCount, AbstractPlayableSprite player) {
@@ -288,7 +288,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
     /**
      * Active fan: processes player interaction and fast animation.
      * <p>
-     * ROM: loc_306C2 (sonic3k.asm:65394-65447).
+     * ROM: loc_306C2 (sonic3k.asm:65434-65487).
      */
     private void updatePlayerInteraction(int vIntRunCount, AbstractPlayableSprite player) {
         List<PlayableEntity> participants = services().playerQuery().playersFor(
@@ -305,7 +305,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
             }
         }
 
-        // Fast animation (sonic3k.asm:65398-65407)
+        // Fast animation (sonic3k.asm:65438-65447)
         animFrameTimer--;
         if (animFrameTimer < 0) {
             // ROM: move.b #0,anim_frame_timer(a0)
@@ -321,7 +321,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
         }
         int levelFrameCounter = levelManager.getFrameCounter();
 
-        // Sound effect (sonic3k.asm:65409-65417)
+        // Sound effect (sonic3k.asm:65449-65457)
         // ROM: tst.b render_flags(a0) / bpl.s — only if on-screen
         if (isOnScreen()) {
             // ROM: move.b (Level_frame_counter+1).w,d0 / addq.b #1,d0 / andi.b #$F,d0
@@ -335,7 +335,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
             }
         }
 
-        // Underwater bubble spawning (sonic3k.asm:65420-65447)
+        // Underwater bubble spawning (sonic3k.asm:65460-65487)
         if (isUnderwater) {
             spawnBubbles(levelFrameCounter);
         }
@@ -344,7 +344,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
     /**
      * Fan push physics subroutine applied to a single player.
      * <p>
-     * ROM: loc_3077E (sonic3k.asm:65453-65520).
+     * ROM: loc_3077E (sonic3k.asm:65493-65560).
      * Distance-dependent upward force with oscillation wobble.
      */
     private void applyFanPush(AbstractPlayableSprite player, int vIntRunCount) {
@@ -356,14 +356,14 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
         int playerX = player.getCentreX();
         int playerY = player.getCentreY();
 
-        // X range check (sonic3k.asm:65459-65466)
+        // X range check (sonic3k.asm:65499-65506)
         // ROM: move.w x_pos(a1),d0 / sub.w x_pos(a0),d0 / addi.w #$18,d0 / cmpi.w #$30,d0
         int dx = playerX - x + FAN_X_OFFSET;
         if (dx < 0 || dx >= FAN_X_RANGE) {
             return;
         }
 
-        // Y range check with oscillation (sonic3k.asm:65468-65480)
+        // Y range check with oscillation (sonic3k.asm:65508-65520)
         // ROM: move.b (Oscillating_table+$16).w,d1 — offset $14 in engine (minus 2 for control word)
         int oscillation = OscillationManager.getByte(0x14) & 0xFF;
         int dy = playerY + oscillation + innerRange - y;
@@ -374,14 +374,14 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
             return;  // too far above
         }
 
-        // Object control check (sonic3k.asm:65482-65484)
+        // Object control check (sonic3k.asm:65522-65524)
         if (player.isObjectControlled()) {
             // ROM: move.w #1,ground_vel(a1)
             player.setGSpeed((short) 1);
             return;
         }
 
-        // Fan lift force calculation (sonic3k.asm:65486-65498)
+        // Fan lift force calculation (sonic3k.asm:65526-65538)
         // ROM: sub.w $36(a0),d1 / bcs.s loc_307C6
         int force = dy - innerRange;
         if (force >= 0) {
@@ -397,7 +397,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
         // ROM: add.w d1,y_pos(a1) — directly adjust the native Y word.
         NativePositionOps.addYPosPreserveSubpixel(player, push);
 
-        // Player state changes (sonic3k.asm:65500-65510)
+        // Player state changes (sonic3k.asm:65540-65550)
         // ROM: bset #Status_InAir,status(a1)
         player.setAir(true);
         // ROM: bclr #Status_RollJump,status(a1)
@@ -418,7 +418,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
             return;
         }
 
-        // Normal fan — flip animation (sonic3k.asm:65512-65520)
+        // Normal fan — flip animation (sonic3k.asm:65552-65560)
         // ROM: move.w #1,ground_vel(a1)
         player.setGSpeed((short) 1);
         // ROM: tst.b flip_angle(a1) / bne.s locret_3081C
@@ -437,7 +437,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
     /**
      * Spawns bubble children when underwater (subtype bit 6 set).
      * <p>
-     * ROM: loc_3070C (sonic3k.asm:65420-65447).
+     * ROM: loc_3070C (sonic3k.asm:65460-65487).
      * Spawns a bubble every 4 frames that rises until it reaches the water surface.
      */
     private void spawnBubbles(int levelFrameCounter) {
@@ -466,7 +466,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
     /**
      * Advances the fan animation frame (cycles 0-4).
      * <p>
-     * ROM: loc_306E0 (sonic3k.asm:65403-65407).
+     * ROM: loc_306E0 (sonic3k.asm:65443-65447).
      */
     private void advanceFanFrame() {
         mappingFrame++;
@@ -542,7 +542,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
      * Solid sliding platform spawned when subtype bit 7 is set.
      * Extends/retracts based on player proximity to the fan.
      * <p>
-     * ROM: loc_30850 (sonic3k.asm:65523-65580).
+     * ROM: loc_30850 (sonic3k.asm:65563-65620).
      * Uses Map_HCZWaterRushBlock mappings, ArtTile_HCZMisc+$A.
      */
     static class FanPlatformChild extends AbstractObjectInstance
@@ -552,11 +552,11 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
          * Word 0 of this object's S3K SST holds its live ROM code pointer.
          * ROM {@code Obj_HCZCGZFan} is installed from the S3K object pointer table at
          * {@code $00030580} (table read from the user-supplied ROM; the
-         * label is defined at docs/skdisasm/sonic3k.asm:65314).
+         * label is defined at docs/skdisasm/sonic3k.asm:65354).
          * Its whole code block lies in one bank, so the HIGH word that
          * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
          * on the next off-screen on-object frame is {@code $0003}
-         * (docs/skdisasm/sonic3k.asm:26816-26843).
+         * (docs/skdisasm/sonic3k.asm:26856-26883).
          */
         @Override
         public int romObjectCodePointerHighWord() {
@@ -625,7 +625,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
                 if (playerRelY < 0) {
                     // Player above platform
                     if (playerRelY < ABOVE_THRESHOLD) {
-                        // Far above — unlatch fan (sonic3k.asm:65549-65556)
+                        // Far above — unlatch fan (sonic3k.asm:65589-65596)
                         if (fanParent.latchedOn) {
                             fanParent.setLatchedOn(false);
                             try {
@@ -637,7 +637,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
                         retractPlatform();
                     }
                 } else if (playerRelY >= BELOW_THRESHOLD) {
-                    // Player below platform — latch fan ON (sonic3k.asm:65530-65540)
+                    // Player below platform — latch fan ON (sonic3k.asm:65570-65580)
                     if (!fanParent.latchedOn) {
                         fanParent.setLatchedOn(true);
                         try {
@@ -652,7 +652,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
                 }
             }
 
-            // Update platform position (sonic3k.asm:65558-65568)
+            // Update platform position (sonic3k.asm:65598-65608)
             int offset = slideOffset;
             // ROM: btst #0,status(a0) — facing direction
             if (facingLeft) {
@@ -725,7 +725,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
      * Small bubble spawned by underwater fan (subtype bit 6).
      * Rises upward until it reaches the water surface.
      * <p>
-     * ROM: loc_30834 (sonic3k.asm:65511-65520).
+     * ROM: loc_30834 (sonic3k.asm:65551-65560).
      * Uses Map_Bubbler mappings, ArtTile_Bubbles ($045C), palette 0.
      */
     static class FanBubbleChild extends AbstractObjectInstance implements RewindRecreatable {
@@ -751,7 +751,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
 
         @Override
         public void update(int vIntRunCount, PlayableEntity playerEntity) {
-            // ROM checks water level BEFORE moving (sonic3k.asm:65511-65515)
+            // ROM checks water level BEFORE moving (sonic3k.asm:65551-65555)
             // ROM: cmp.w (Water_level).w,d0 / bhs.s — delete when above water level
             try {
                 WaterSystem water = services().waterSystem();

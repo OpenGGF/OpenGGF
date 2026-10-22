@@ -76,7 +76,7 @@ public class MhzShipPropellerInstance extends AbstractObjectInstance implements 
         }
     }
 
-    // loc_55814 writes priority $380 (sonic3k.asm:113467).
+    // loc_55814 writes priority $380 (sonic3k.asm:113513).
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x380);
 
     @Override
@@ -86,7 +86,7 @@ public class MhzShipPropellerInstance extends AbstractObjectInstance implements 
 
     @Override
     public boolean isHighPriority() {
-        // loc_55814 art make_art_tile(ArtTile_MHZShipPropeller,1,1) sets bit 15 (sonic3k.asm:113468).
+        // loc_55814 art make_art_tile(ArtTile_MHZShipPropeller,1,1) sets bit 15 (sonic3k.asm:113514).
         return true;
     }
 

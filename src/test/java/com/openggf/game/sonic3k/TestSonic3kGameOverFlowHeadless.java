@@ -28,9 +28,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Sonic 3&amp;K game over and time over from a live AIZ1: {@code loc_12432}
- * (docs/skdisasm/sonic3k.asm:24588-24616) loads {@code Obj_GameOver} into
+ * (docs/skdisasm/sonic3k.asm:24628-24656) loads {@code Obj_GameOver} into
  * {@code Reserved_object_3} and the first dynamic slot, they slide in, and
- * {@code loc_2D666} sends the game on (docs/skdisasm/sonic3k.asm:62089-62101).
+ * {@code loc_2D666} sends the game on (docs/skdisasm/sonic3k.asm:62129-62141).
  */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSonic3kGameOverFlowHeadless {
@@ -85,7 +85,7 @@ class TestSonic3kGameOverFlowHeadless {
         assertNull(level.getGameOverExitRequested());
         assertFalse(level.isRespawnRequestedForRewind(), "a game over never restarts the level");
 
-        // A/B/C/Start on either controller (loc_2D638 :62069-62072)
+        // A/B/C/Start on either controller (loc_2D638 :62109-62112)
         fixture.stepFrame(false, false, false, false, true);
         assertEquals(GameOverExit.TITLE_SCREEN, level.getGameOverExitRequested(),
                 "no continues: Game_mode 0 (Sega screen)");

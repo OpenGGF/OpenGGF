@@ -110,8 +110,8 @@ class TestAgentWorkflowTool {
         // so delegated agents keep zone-set + identity guidance.
         assertEquals(0x16, AgentWorkflowTool.resolveS3kZoneId("HPZ"));
         // Balloon Park is ROM zone $0F: LevelSizes rows 30/31
-        // (skdisasm/sonic3k.asm:38110-38111) and OffsAnPal entries 30/31
-        // (sonic3k.asm:3148-3149), both indexed zone*2 + act.
+        // (skdisasm/sonic3k.asm:38150-38151) and OffsAnPal entries 30/31
+        // (sonic3k.asm:3180-3181), both indexed zone*2 + act.
         assertEquals(0x0F, AgentWorkflowTool.resolveS3kZoneId("BPZ"));
         assertEquals(0x13, AgentWorkflowTool.resolveS3kZoneId("gumball")); // case-insensitive
         Request hpz = AgentWorkflowTool.parseArgs(new String[] {"object", "s3k", "HPZ", "0x01"});

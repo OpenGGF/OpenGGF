@@ -10,8 +10,8 @@ import java.util.Objects;
  *
  * <p>Delete_Current/Referenced_Sprite clears exactly$4A bytes
  * (sonic3k.asm:36148..36165). loc_60DE clears a range containing Object_RAM
- * (:7652..7656). Allocation (:37946..37975) reads code without clearing residue;
- * SetUp_ObjAttributes (:176987..177005) and other partial writes leave all
+ * (:7652..7656). Allocation (:37951..37975) reads code without clearing residue;
+ * SetUp_ObjAttributes (:176992..177005) and other partial writes leave all
  * unwritten bytes intact. There is deliberately no occupancy/free callback.
  *
  * <p>Source labels describe the caller's declared native writer, not proof that

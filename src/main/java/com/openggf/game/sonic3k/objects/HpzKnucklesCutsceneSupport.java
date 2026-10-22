@@ -12,7 +12,7 @@ import java.io.IOException;
 
 /**
  * Shared ROM helpers for the Hidden Palace Knuckles fight, the Master Emerald theft and the
- * altar teleporter ending ({@code CutsceneKnux_HPZ}, sonic3k.asm:131259-133700).
+ * altar teleporter ending ({@code CutsceneKnux_HPZ}, sonic3k.asm:131316-133757).
  *
  * <p>The ROM links these objects through RAM words: {@code _unkFAA4} (the Knuckles object),
  * {@code _unkFAAE} (the Robotnik ship) and {@code _unkFABA} (the Master Emerald). Each has at
@@ -127,7 +127,7 @@ final class HpzKnucklesCutsceneSupport {
     /**
      * {@code HurtCharacter_Directly}: {@code HurtCharacter} with no invulnerability test.
      *
-     * <p>{@code HurtCharacter} (sonic3k.asm:21580) reads {@code Ring_count} only for
+     * <p>{@code HurtCharacter} (sonic3k.asm:21616) reads {@code Ring_count} only for
      * {@code Player_1}; outside competition mode any other player branches straight to
      * {@code loc_102E0}, so a sidekick is always knocked back and never killed or stripped of
      * rings. {@code Player_1} with rings and no shield allocates {@code Obj_Bouncing_Ring};

@@ -140,7 +140,7 @@ class TestSonic3kTitleCardTeardownModel {
                 GameServices.module().getObjectArtProvider();
         // PLCKosM_FBZ: Blaster, Technosqueek, FBZButton. Literal ROM
         // addresses/destinations pin the production registration independently
-        // of its Java constants (sonic3k.asm:64386-64390).
+        // of its Java constants (sonic3k.asm:64426-64430).
         var expected = java.util.List.of(
                 new PlcProgressSnapshot.PendingKosModule(0x0DC6C2, 0x506),
                 new PlcProgressSnapshot.PendingKosModule(0x0DC9C4, 0x52E),

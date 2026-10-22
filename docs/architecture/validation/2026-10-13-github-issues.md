@@ -54,7 +54,7 @@ source inspection alone does not certify a complete act or route.
   295. The corrected test derives `$8C`–`$8E` from `ZONE_SYZ` and asserts the
   loaded native zone before inspecting its layout.
 - ICZ peer review initially questioned gravity and piece ordinal 4. Full reads
-  overturned both: `MoveSprite` adds `$38` gravity (`sonic3k.asm:36077`), and
+  overturned both: `MoveSprite` adds `$38` gravity (`sonic3k.asm:36117`), and
   `Go_Delete_Sprite_2` returns to the caller's final `sub_8AFA2` chain refresh.
   The valid finding was the narrower engine offscreen-delete window.
 - Preserve the unpublished Mod API `0.7.0` candidate. The new landing-rule

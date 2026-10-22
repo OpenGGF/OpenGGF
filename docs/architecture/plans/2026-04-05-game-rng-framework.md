@@ -9,7 +9,7 @@
 **Tech Stack:** Java 21, JUnit 5 / Jupiter only (matches rest of `com.openggf.game` test suite), Maven
 
 **Spec references:**
-- S3K: `docs/skdisasm/sonic3k.asm:2992-3011`
+- S3K: `docs/skdisasm/sonic3k.asm:3024-3043`
 - S2: `docs/s2disasm/s2.asm:3971-3995`
 - S1: `docs/s1disasm/_incObj/sub RandomNumber.asm`
 
@@ -136,7 +136,7 @@ package com.openggf.game;
  * <ul>
  *   <li>S1: {@code docs/s1disasm/_incObj/sub RandomNumber.asm}</li>
  *   <li>S2: {@code docs/s2disasm/s2.asm:3971-3995}</li>
- *   <li>S3K: {@code docs/skdisasm/sonic3k.asm:2992-3011}</li>
+ *   <li>S3K: {@code docs/skdisasm/sonic3k.asm:3024-3043}</li>
  * </ul>
  *
  * <p>The {@link Flavour} enum captures the two known variants: S1/S2 use reseed
@@ -774,7 +774,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Golden sequence + property tests for GameRng.
  * <p>
  * The expected hex values were computed from a direct simulation of the
- * 68000 assembly at {@code docs/skdisasm/sonic3k.asm:2992-3011} and
+ * 68000 assembly at {@code docs/skdisasm/sonic3k.asm:3024-3043} and
  * {@code docs/s2disasm/s2.asm:3971-3995}.
  */
 public class TestGameRngGoldenSequence {

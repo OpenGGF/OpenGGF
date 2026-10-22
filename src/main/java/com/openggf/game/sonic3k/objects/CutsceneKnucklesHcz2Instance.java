@@ -22,7 +22,7 @@ import java.util.logging.Logger;
 /**
  * Cutscene Knuckles for Hydrocity Zone Act 2.
  *
- * <p>ROM reference: CutsceneKnux_HCZ2 (s3.asm:80032).
+ * <p>ROM reference: CutsceneKnux_HCZ2 (s3.asm:80095).
  * Knuckles runs in from the right, presses a button destroying the bridge
  * Sonic is standing on, then jumps away laughing.
  *
@@ -68,7 +68,7 @@ public class CutsceneKnucklesHcz2Instance extends AbstractObjectInstance
     private static final int WALK_SPEED = 4;
 
     /**
-     * ROM: addi.w #$9E,x_pos(a0) in loc_6215E (sonic3k.asm:128949).
+     * ROM: addi.w #$9E,x_pos(a0) in loc_6215E (sonic3k.asm:129006).
      * Offsets Knuckles' start position to the right of his layout placement,
      * putting him off-screen. He then walks left into view.
      */
@@ -558,7 +558,7 @@ public class CutsceneKnucklesHcz2Instance extends AbstractObjectInstance
     // =========================================================================
 
     // ObjSlot_CutsceneKnux priority $180, written by SetUp_ObjAttributesSlotted
-    // (sonic3k.asm:134800, 178886).
+    // (sonic3k.asm:134857, 178977).
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x180);
 
     @Override

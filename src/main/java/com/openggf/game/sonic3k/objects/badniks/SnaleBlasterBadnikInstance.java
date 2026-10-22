@@ -31,7 +31,7 @@ import java.util.List;
 /**
  * S3K S3KL Obj $BE - SnaleBlaster (LBZ).
  *
- * <p>ROM reference: {@code Obj_SnaleBlaster} at {@code sonic3k.asm:190910}.
+ * <p>ROM reference: {@code Obj_SnaleBlaster} at {@code sonic3k.asm:191003}.
  * The parent badnik owns the shell collision/open-close timing and three child
  * pieces: two shooters plus the sliding cover. The children start their raw
  * firing animations from parent status bit 1, and the cover clears that bit

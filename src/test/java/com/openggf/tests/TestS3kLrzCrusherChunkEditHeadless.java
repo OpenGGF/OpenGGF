@@ -19,11 +19,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 /**
- * {@code LRZ1_ScreenEvent}'s chunk edits (sonic3k.asm:115199-115224), the consumer side of the
+ * {@code LRZ1_ScreenEvent}'s chunk edits (sonic3k.asm:115245-115270), the consumer side of the
  * rock crusher's {@code Events_bg+$0C} request.
  *
  * <p>{@code a3} is {@code Level_layout_main}, whose entries are longs
- * ({@code Layout_row_index_mask = $7C}, :102207), so {@code movea.w $38(a3)} / {@code $3C(a3)} /
+ * ({@code Layout_row_index_mask = $7C}, :102253), so {@code movea.w $38(a3)} / {@code $3C(a3)} /
  * {@code $40(a3)} are the FOREGROUND row pointers of layout rows 14, 15 and 16, and
  * {@code lea $1D(a1)} indexes column 29. The rock crusher's own bridge coordinates confirm the
  * reading independently: subtype 0 drops slabs at {@code ($F00,$760)} and {@code ($F80,$760)} --
@@ -47,7 +47,7 @@ class TestS3kLrzCrusherChunkEditHeadless {
         TestEnvironment.activeGameplayMode();
     }
 
-    /** {@code loc_56B2C} (:115210-115219): {@code $44,$00,$4A} then {@code $3E,$00,$4B}. */
+    /** {@code loc_56B2C} (:115256-115265): {@code $44,$00,$4A} then {@code $3E,$00,$4B}. */
     @Test
     void aNegativeRequestWritesTheTwoRowOpening() {
         HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_LRZ, 0).build();
@@ -75,7 +75,7 @@ class TestS3kLrzCrusherChunkEditHeadless {
                 "the positive branch's cell is untouched by this request");
     }
 
-    /** {@code move.b #$9C,$A(a1)} on the positive branch (:115205-115207). */
+    /** {@code move.b #$9C,$A(a1)} on the positive branch (:115251-115253). */
     @Test
     void aPositiveRequestWritesTheSingleBlock() {
         HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_LRZ, 0).build();
@@ -91,7 +91,7 @@ class TestS3kLrzCrusherChunkEditHeadless {
         assertEquals(0, state().chunkEditRequest());
     }
 
-    /** {@code tst.w (Events_bg+$0C).w / beq.s loc_56B5E} (:115203-115204). */
+    /** {@code tst.w (Events_bg+$0C).w / beq.s loc_56B5E} (:115249-115250). */
     @Test
     void noRequestChangesNothing() {
         HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_LRZ, 0).build();
