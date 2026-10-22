@@ -43,7 +43,8 @@ public class GroundSensor extends Sensor {
         overrideLevelManager = lm;
     }
 
-    private static LevelManager getLevelManager() {
+    private LevelManager getLevelManager() {
+        if (com.openggf.sprites.playable.PlayableRuntimeContext.isBound(sprite)) return sprite.currentLevelManager();
         LevelManager override = overrideLevelManager;
         if (override != null) return override;
         return GameServices.level();
@@ -90,7 +91,7 @@ public class GroundSensor extends Sensor {
         // When the flag is set, scan FG first, then BG (layer 1) with coordinates adjusted
         // by Camera_X_diff/Camera_Y_diff. Keep the result with the greater distance
         // (more lenient collision = less penetration).
-        BackgroundPlaneCollisionProvider provider = GameServices.backgroundPlaneCollisionOrNull();
+        BackgroundPlaneCollisionProvider provider = com.openggf.sprites.playable.PlayableRuntimeContext.background(sprite);
         BackgroundPlaneCollisionProvider.State collisionState = provider != null
                 ? provider.state(levelManager) : BackgroundPlaneCollisionProvider.State.INACTIVE;
         if (collisionState.active()) {
@@ -128,7 +129,7 @@ public class GroundSensor extends Sensor {
         } else {
             foreground = scanHorizontal(levelManager, originalX, originalY, solidityBit, globalDirection);
         }
-        BackgroundPlaneCollisionProvider provider = GameServices.backgroundPlaneCollisionOrNull();
+        BackgroundPlaneCollisionProvider provider = com.openggf.sprites.playable.PlayableRuntimeContext.background(sprite);
         BackgroundPlaneCollisionProvider.State collisionState = provider != null
                 ? provider.state(levelManager) : BackgroundPlaneCollisionProvider.State.INACTIVE;
         if (!collisionState.active()) {
@@ -199,7 +200,7 @@ public class GroundSensor extends Sensor {
                                                   int solidityBit,
                                                   Direction globalDirection,
                                                   boolean vertical) {
-        BackgroundPlaneCollisionProvider provider = GameServices.backgroundPlaneCollisionOrNull();
+        BackgroundPlaneCollisionProvider provider = com.openggf.sprites.playable.PlayableRuntimeContext.background(sprite);
         if (provider == null) return null;
         BackgroundPlaneCollisionProvider.State state = provider.state(lm);
         // The production callers gate this helper on state.active() before

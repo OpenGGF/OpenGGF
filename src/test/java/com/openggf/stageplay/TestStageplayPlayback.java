@@ -10,6 +10,55 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class TestStageplayPlayback {
+    @Test void nativeBindingRejectsOtherSetsBeforeCreatingAnyRuntimeHost() {
+        var actor = TestStageplayDocument.actor(List.of(
+                TestStageplayDocument.key(0, 100, 0, -1, StageplayDocument.Interpolation.HOLD),
+                TestStageplayDocument.key(100, 200, 0, -1, StageplayDocument.Interpolation.HOLD)));
+        var document = TestStageplayDocument.scene().withActors(List.of(actor))
+                .withCamera(List.of(new StageplayDocument.CameraKey(0, 100, 200, 1, StageplayDocument.Interpolation.HOLD),
+                        new StageplayDocument.CameraKey(100, 500, 300, 2, StageplayDocument.Interpolation.HOLD)))
+                .withSceneChanges(List.of(new StageplayDocument.SceneChange("other", 100,
+                        new StageplayDocument.SetSource("s3k", 1, 0, "", ""), StageplayDocument.Transition.CUT, 0)));
+        assertThrows(IllegalArgumentException.class, () -> new StageplayPlayback(document, "hero",
+                StageplayNativeBinding.FinishMode.KEEP_FINAL_POSITION, () -> { fail("must reject before opening runtime resources"); return host; }));
+        assertDoesNotThrow(() -> new StageplayPlayback(document.withSceneChanges(List.of())
+                .withCameraEffects(List.of(new StageplayDocument.CameraEffect("quake", 0, 60, 8, 4, 6, 3))),
+                "hero", StageplayNativeBinding.FinishMode.KEEP_FINAL_POSITION, () -> host));
+    }
+
+    @Test void nativeSetMismatchFailsBeforeCapturingThePlayerOrOpeningResources() {
+        var document = TestStageplayDocument.scene().withActors(List.of(TestStageplayDocument.actor(List.of(
+                TestStageplayDocument.key(0, 100, 0, -1, StageplayDocument.Interpolation.HOLD)))));
+        var player = new StageplayPlayback(document, "hero", StageplayNativeBinding.FinishMode.RESTORE_ENTRY,
+                () -> { fail("wrong native set must fail before opening runtime resources"); return host; });
+        when(course.presentationReady()).thenReturn(true);
+        when(course.objectServices().levelManager().getCurrentZone()).thenReturn(1);
+        player.play();
+        assertThrows(IllegalArgumentException.class, () -> player.beforeFrame(course, null));
+        verify(course, never()).captureDirectedPlayer();
+        assertEquals(StageplayControl.Status.CANCELLED, player.status());
+    }
+
+    @Test void nativeHandoverUsesUnshakenCoordinatesWhileZoomRemainsPresentationOnly() {
+        var document = TestStageplayDocument.scene().withDurationFrames(3)
+                .withActors(List.of(TestStageplayDocument.actor(List.of(
+                        TestStageplayDocument.key(0, 100, 0, -1, StageplayDocument.Interpolation.HOLD)))))
+                .withCamera(List.of(new StageplayDocument.CameraKey(0, 300, 200, 2, StageplayDocument.Interpolation.HOLD)))
+                .withCameraEffects(List.of(new StageplayDocument.CameraEffect("quake", 0, 3, 8, 4, 7, 42)));
+        var entry = mock(CourseControl.DirectedPlayerState.class);
+        when(entry.gameId()).thenReturn("s3k"); when(entry.character()).thenReturn("sonic");
+        when(course.captureDirectedPlayer()).thenReturn(entry);
+        when(course.isDirectedPlayerCurrent(entry)).thenReturn(true);
+        when(course.playerState()).thenReturn(new CourseControl.PlayerState("sonic", 0, 0, 0, 0, 0, 0,
+                false, true, false, false, false, 0, 0, 0, 0, 0));
+        when(course.objectServices().gameModule().getGameCode()).thenReturn("s3k");
+        when(course.presentationReady()).thenReturn(true);
+        var player = new StageplayPlayback(document, "hero", StageplayNativeBinding.FinishMode.KEEP_FINAL_POSITION, () -> host);
+        player.play(); player.beforeFrame(course, null); player.skip(); player.beforeFrame(course, null);
+        verify(course, times(2)).directPlayer(entry, 100, 200, 0, 0, false, false, true, 300, 200);
+        verify(course).releaseDirectedPlayer(entry, true);
+    }
+
     private final CourseControl course=mock(CourseControl.class,RETURNS_DEEP_STUBS);
     private final FakeHost host=new FakeHost();
     private StageplayPlayback player() {

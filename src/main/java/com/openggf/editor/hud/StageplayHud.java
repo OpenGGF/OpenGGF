@@ -5,6 +5,7 @@ import com.openggf.control.MenuInput;
 import com.openggf.editor.hud.EditorHudCanvas.Size;
 import com.openggf.editor.hud.EditorHudLayout.Rect;
 import com.openggf.stageplay.StageplayDocument;
+import com.openggf.stageplay.StageplayDialogue;
 import com.openggf.editor.stageplay.StageplayWorkspace;
 import com.openggf.editor.stageplay.StageplayWorkspace.Action;
 
@@ -59,18 +60,20 @@ final class StageplayHud {
 
     /** Always owns the tick, including the tick that returns to level editing. */
     boolean update(InputHandler input) {
+        workspace.setCameraInputEnabled(page != Page.COMMANDS);
         pad.sample(input.capturePhysicalInput().gamepads());
         controllerPrompts = MenuInput.controller(input);
         if (workspace.recording()) {
             if (input.isKeyPressed(GLFW_KEY_SPACE) || input.isKeyPressed(GLFW_KEY_ESCAPE)
-                    || pad.pressed(EAST) || pad.pressed(SOUTH)
-                    || stopButton != null && !Double.isNaN(pointerScale) && input.isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT)
+                    || pad.pressed(EAST) || pad.pressed(SOUTH)) workspace.stop();
+            else if (stopButton != null && !Double.isNaN(pointerScale) && input.isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT)
                     && stopButton.contains(input.getMouseX() * pointerScale, input.getMouseY() * pointerScale)) workspace.invoke(Action.STOP);
             return true;
         }
         if (input.isKeyPressed(GLFW_KEY_F4)) { workspace.deactivate(); return true; }
         if (input.isKeyPressed(GLFW_KEY_ESCAPE) || pad.pressed(EAST)) {
-            if (page == Page.COMMANDS) changePage(Page.CAST);
+            if (workspace.cameraMode()) workspace.invoke(Action.CAMERA_MODE);
+            else if (page == Page.COMMANDS) changePage(Page.CAST);
             else workspace.deactivate();
             return true;
         }
@@ -91,21 +94,23 @@ final class StageplayHud {
             return true;
         }
         if (input.isKeyPressed(GLFW_KEY_SPACE)) { workspace.invoke(Action.PLAY); return true; }
-        if (pad.pressed(WEST) || input.isKeyPressed(GLFW_KEY_K)) { workspace.invoke(Action.SET_KEY); return true; }
+        if (input.isKeyPressed(GLFW_KEY_C)) { workspace.invoke(Action.CAMERA_MODE); return true; }
+        if (input.isKeyPressed(GLFW_KEY_R)) { workspace.invoke(workspace.cameraMode() ? Action.RECORD_CAMERA : Action.RECORD); return true; }
+        if (pad.pressed(WEST) || input.isKeyPressed(GLFW_KEY_K)) { workspace.invoke(workspace.cameraMode() ? Action.SET_CAMERA_KEY : Action.SET_KEY); return true; }
         if (pad.pressed(NORTH)) { workspace.invoke(Action.ADD_ACTOR); return true; }
         if (pad.pressed(LB)) cycleActor(-1);
         if (pad.pressed(RB)) cycleActor(1);
         int step = input.isKeyDown(GLFW_KEY_LEFT_SHIFT) || input.isKeyDown(GLFW_KEY_RIGHT_SHIFT) ? 60 : 1;
         int horizontal = pad.navX();
-        if (input.isKeyPressed(GLFW_KEY_LEFT)) horizontal--;
-        if (input.isKeyPressed(GLFW_KEY_RIGHT)) horizontal++;
+        if (!workspace.cameraMode() && input.isKeyPressed(GLFW_KEY_LEFT)) horizontal--;
+        if (!workspace.cameraMode() && input.isKeyPressed(GLFW_KEY_RIGHT)) horizontal++;
         if (horizontal != 0) workspace.seek(workspace.controller().frame() + horizontal * step);
         if (input.isKeyPressed(GLFW_KEY_HOME)) workspace.seek(0);
         if (input.isKeyPressed(GLFW_KEY_END)) workspace.seek(workspace.controller().document().durationFrames() - 1);
         List<Row> rows = rows();
         int vertical = pad.navY();
-        if (input.isKeyPressed(GLFW_KEY_UP)) vertical--;
-        if (input.isKeyPressed(GLFW_KEY_DOWN)) vertical++;
+        if (!workspace.cameraMode() && input.isKeyPressed(GLFW_KEY_UP)) vertical--;
+        if (!workspace.cameraMode() && input.isKeyPressed(GLFW_KEY_DOWN)) vertical++;
         if (!rows.isEmpty()) {
             selected = Math.clamp(selected + vertical, 0, rows.size() - 1);
             if (pad.pressed(SOUTH) || input.isKeyPressed(GLFW_KEY_ENTER)) {
@@ -143,7 +148,7 @@ final class StageplayHud {
         workspace.selectActor(actors.get(Math.floorMod(index + direction, actors.size())).id());
     }
 
-    private void changePage(Page value) { page = value; selected = 0; }
+    private void changePage(Page value) { page = value; selected = 0; workspace.setCameraInputEnabled(value != Page.COMMANDS); }
 
     List<Row> rows() {
         var document = workspace.controller().document();
@@ -157,18 +162,38 @@ final class StageplayHud {
                 }));
             }
             case CAST -> {
-                for (var actor : document.actors()) rows.add(new Row(actor.name(),
-                        actor.gameId().toUpperCase(java.util.Locale.ROOT) + " / " + actor.character() + " / " + actor.keys().size() + " keys",
-                        -1, () -> workspace.selectActor(actor.id())));
+                for (var actor : document.actors()) {
+                    boolean physical = document.puppets().stream().anyMatch(p -> p.actorId().equals(actor.id()));
+                    rows.add(new Row(actor.name(), actor.gameId().toUpperCase(java.util.Locale.ROOT) + " / " + actor.character()
+                            + (physical ? " / Puppet" : " / Poser"), -1, () -> workspace.selectActor(actor.id())));
+                }
             }
             case TIMELINE -> {
                 for (var actor : document.actors()) for (var key : actor.keys()) {
-                    rows.add(new Row(actor.name(), key.pose() >= 0 ? "Pose " + key.pose() : "Animation " + key.animation(), key.frame(),
+                    boolean physical = document.puppets().stream().anyMatch(p -> p.actorId().equals(actor.id()));
+                    rows.add(new Row(actor.name(), physical ? "Placement / visibility" : key.pose() >= 0 ? "Pose " + key.pose() : "Animation " + key.animation(), key.frame(),
                             () -> { workspace.selectActor(actor.id()); workspace.seek(key.frame()); }));
+                }
+                for (var track : document.puppets()) for (var command : track.commands()) {
+                    var actor = document.actors().stream().filter(a -> a.id().equals(track.actorId())).findFirst().orElseThrow();
+                    String detail = command.kind() == StageplayDocument.PuppetCommandKind.MOVE_TO
+                            ? "Goal " + command.x() + ", " + command.y() + " / " + Math.round(command.urgency() * 100) + "%"
+                            : command.kind() == StageplayDocument.PuppetCommandKind.JUMP ? "Hold " + command.holdFrames() + " frames" : "Native braking";
+                    rows.add(new Row(actor.name() + " / " + command.kind(), detail, command.frame(),
+                            () -> { workspace.selectActor(actor.id()); workspace.seek(command.frame()); }));
                 }
                 for (var key : document.camera()) rows.add(new Row("Camera", key.interpolation().name(), key.frame(), () -> workspace.seek(key.frame())));
                 for (var caption : document.captions()) rows.add(new Row("Caption", caption.text(), caption.startFrame(), () -> workspace.seek(caption.startFrame())));
+                for (var cue : document.dialogue()) rows.add(new Row("Dialogue / "+StageplayDialogue.speakerName(document,cue),
+                        cue.text().replace('\n',' '),cue.startFrame(),() -> {
+                    if (!cue.speakerActor().isEmpty()) workspace.selectActor(cue.speakerActor());
+                    workspace.seek(cue.startFrame());
+                }));
                 for (var cue : document.audio()) rows.add(new Row("Audio", cue.kind().name(), cue.frame(), () -> workspace.seek(cue.frame())));
+                for (var effect : document.cameraEffects()) rows.add(new Row("Camera shake", effect.amplitudeX()+" / "+effect.amplitudeY()+" px, "+effect.frequency()+" Hz",
+                        effect.startFrame(), () -> workspace.seek(effect.startFrame())));
+                for (var change : document.sceneChanges()) rows.add(new Row("Scene change", change.transition()+" / "+change.set().gameId(),
+                        change.frame(), () -> workspace.seek(change.frame())));
                 rows.sort(Comparator.comparingInt(Row::frame));
             }
         }
@@ -199,9 +224,14 @@ final class StageplayHud {
         if (panel != null && panel.w() > 20) drawPanel(c, panel, nextHits);
         drawTimeline(c, layout.dock(), document, nextHits);
         c.rect(0, layout.promptBar().y(), layout.width(), layout.promptBar().h(), PANEL, 1);
-        String prompt = workspace.recording() ? "RECORDING DIRECTED TAKE  /  WASD move  /  Space or South stop"
+        String prompt = workspace.recordingCamera() ? "CAMERA TAKE  /  WASD or arrows pan  /  Q E integer zoom  /  Space stop"
+                : workspace.recordingPuppet() ? "PUPPET TAKE  /  A D move  /  W jump  /  release or S brake  /  Space end"
+                : workspace.recording() ? "POSER TAKE  /  WASD move  /  Space or South stop"
+                : workspace.cameraMode() ? "CAMERA  WASD/arrows pan  Q E integer zoom  K key  R record  C exit  F1 commands"
                 : controllerPrompts ? "D-pad seek/select   A choose   X key   Y actor   View timeline   Start commands"
-                : "Arrows seek/select  Enter choose  Tab timeline  K key  Space play  F1 commands";
+                : "Arrows seek/select  Tab timeline  K direct actor  R record  C camera  Space play  F1 commands";
+        if (workspace.cameraMode() && workspace.directorCamera().zoom()!=Math.rint(workspace.directorCamera().zoom()))
+            prompt = "FRACTIONAL ZOOM: Q/E choose integer framing; K capture. Imported zoom may shimmer while panning.";
         c.fittedText(prompt, 8, layout.promptBar().y() + 5, layout.width() - 16, Size.SMALL,
                 workspace.recording() ? WARN : TEXT_DIM, 1);
         hits = List.copyOf(nextHits);
@@ -232,17 +262,21 @@ final class StageplayHud {
             c.rect(area.x(), area.y(), area.w(), area.h(), chosen ? PANEL_HIGHLIGHT : PANEL_RAISED, 1);
             if (chosen) c.rect(area.x(), area.y(), 2, area.h(), GOLD, 1);
             String label = (row.frame() >= 0 ? row.frame() + "  " : "") + row.label();
-            if (page == Page.CAST && workspace.controller().document().actors().get(i).id().equals(workspace.controller().selectedActorId())) label = "* " + label;
+            boolean selectedActor = page == Page.CAST && workspace.controller().document().actors().get(i).id().equals(workspace.controller().selectedActorId());
+            if (selectedActor) label = "* " + label;
             c.fittedText(label, area.x() + 6, area.y() + 4, area.w() - 12, Size.SMALL, TEXT, 1);
-            c.fittedText(row.detail(), area.x() + 6, area.y() + 15, area.w() - 12, Size.SMALL, TEXT_DIM, 1);
+            c.fittedText(selectedActor ? workspace.selectedActorStatus() : row.detail(), area.x() + 6, area.y() + 15, area.w() - 12, Size.SMALL, TEXT_DIM, 1);
             nextHits.add(new Hit(area, () -> { selected = index; row.action().run(); }));
         }
         float bottom = panel.bottom() - 67;
         c.fittedText(rows.isEmpty() ? "" : (selected + 1) + " / " + rows.size() + "   Up / Down to browse",
                 panel.x() + 8, bottom - 10, panel.w() - 16, Size.SMALL, TEXT_FAINT, 1);
         float half = (panel.w() - 18) / 2;
-        Action[] actions = {Action.ADD_ACTOR, Action.EDIT_ACTOR, Action.SET_KEY, Action.SCENE};
-        String[] labels = {"Add actor", "Edit actor", "Set key", "Scene settings"};
+        Action[] actions = workspace.cameraMode()
+                ? new Action[] {Action.CAMERA_MODE, Action.SET_CAMERA_KEY, Action.RECORD_CAMERA, Action.CAMERA_EFFECTS}
+                : new Action[] {Action.ADD_ACTOR, Action.EDIT_ACTOR, Action.CAMERA_MODE, Action.SCENE_CHANGES};
+        String[] labels = workspace.cameraMode() ? new String[] {"Leave camera C", "Capture key K", "Record camera R", "Shake / quake"}
+                : new String[] {"Add actor", "Edit actor", "Direct camera C", "Scene changes"};
         for (int i = 0; i < actions.length; i++) {
             Action action = actions[i];
             button(c, nextHits, new Rect(panel.x() + 6 + (i % 2) * (half + 6), bottom + (i / 2) * 21, half, 18),
@@ -267,8 +301,13 @@ final class StageplayHud {
         for (var actor : document.actors()) if (actor.id().equals(workspace.controller().selectedActorId())) {
             for (var key : actor.keys()) marker(c, key.frame(), document.durationFrames(), ACCENT, 5);
         }
+        for (var track : document.puppets()) if (track.actorId().equals(workspace.controller().selectedActorId()))
+            for (var command : track.commands()) marker(c, command.frame(), document.durationFrames(), GOOD, 7);
         for (var caption : document.captions()) marker(c, caption.startFrame(), document.durationFrames(), GOOD, 3);
+        for (var cue : document.dialogue()) marker(c, cue.startFrame(), document.durationFrames(), GOLD, 4);
         for (var cue : document.audio()) marker(c, cue.frame(), document.durationFrames(), WARN, 3);
+        for (var effect : document.cameraEffects()) marker(c, effect.startFrame(), document.durationFrames(), WARN, 6);
+        for (var change : document.sceneChanges()) marker(c, change.frame(), document.durationFrames(), GOLD, 8);
         marker(c, workspace.controller().frame(), document.durationFrames(), GOLD, 12);
     }
 

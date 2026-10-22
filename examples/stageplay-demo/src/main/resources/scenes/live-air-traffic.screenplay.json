@@ -1,0 +1,206 @@
+{
+  "version": 3,
+  "name": "Air traffic",
+  "width": 320,
+  "height": 224,
+  "cast": [
+    {
+      "id": "tails",
+      "name": "Tails",
+      "gameId": "s3k",
+      "character": "tails",
+      "snapToFloor": false
+    },
+    {
+      "id": "knuckles",
+      "name": "Knuckles",
+      "gameId": "s3k",
+      "character": "knuckles",
+      "snapToFloor": false
+    }
+  ],
+  "shots": [
+    {
+      "id": "air",
+      "durationFrames": 540,
+      "set": {
+        "gameId": "s3k",
+        "zone": 0,
+        "act": 0,
+        "worldPolicy": "LIVE"
+      },
+      "camera": [
+        {
+          "frame": 0,
+          "x": 5040,
+          "y": 928,
+          "interpolation": "HOLD",
+          "follow": {
+            "actors": [
+              "tails",
+              "knuckles"
+            ],
+            "deadZoneX": 12,
+            "deadZoneY": 12,
+            "lookAhead": 4,
+            "smoothing": 0.2,
+            "offsetX": 0,
+            "offsetY": 0
+          }
+        }
+      ],
+      "actors": {
+        "tails": [
+          {
+            "frame": 0,
+            "x": 5200,
+            "y": 1040
+          }
+        ],
+        "knuckles": [
+          {
+            "frame": 0,
+            "x": 5232,
+            "y": 1040
+          }
+        ]
+      },
+      "actions": {
+        "tails": [
+          {
+            "frame": 0,
+            "kind": "WAIT",
+            "condition": "GROUNDED",
+            "timeoutFrames": 90
+          },
+          {
+            "frame": 1,
+            "kind": "MOVE_TO",
+            "x": 5250,
+            "y": 1040,
+            "urgency": 0.4
+          },
+          {
+            "frame": 80,
+            "kind": "FLY_TO",
+            "x": 5330,
+            "y": 940,
+            "urgency": 0.3
+          },
+          {
+            "frame": 260,
+            "kind": "HOVER",
+            "holdFrames": 100
+          },
+          {
+            "frame": 360,
+            "kind": "RELEASE"
+          },
+          {
+            "frame": 361,
+            "kind": "WAIT",
+            "condition": "GROUNDED",
+            "timeoutFrames": 240
+          },
+          {
+            "frame": 460,
+            "kind": "MOVE_TO",
+            "x": 5480,
+            "y": 1050,
+            "urgency": 0.4
+          }
+        ],
+        "knuckles": [
+          {
+            "frame": 0,
+            "kind": "WAIT",
+            "condition": "GROUNDED",
+            "timeoutFrames": 90
+          },
+          {
+            "frame": 1,
+            "kind": "MOVE_TO",
+            "x": 5260,
+            "y": 1040,
+            "urgency": 0.4
+          },
+          {
+            "frame": 100,
+            "kind": "GLIDE_TO",
+            "x": 5380,
+            "y": 1020,
+            "urgency": 0.4
+          },
+          {
+            "frame": 180,
+            "kind": "RELEASE"
+          },
+          {
+            "frame": 181,
+            "kind": "WAIT",
+            "condition": "GROUNDED",
+            "timeoutFrames": 180
+          },
+          {
+            "frame": 460,
+            "kind": "MOVE_TO",
+            "x": 5470,
+            "y": 1050,
+            "urgency": 0.4
+          }
+        ]
+      },
+      "dialogue": [
+        {
+          "startFrame": 15,
+          "endFrame": 78,
+          "speakerActor": "tails",
+          "text": "Air traffic: taking off.",
+          "x": 8,
+          "y": 8,
+          "width": 304,
+          "height": 48,
+          "typerId": "pace"
+        },
+        {
+          "startFrame": 265,
+          "endFrame": 355,
+          "speakerActor": "tails",
+          "text": "Holding here.",
+          "x": 184,
+          "y": 8,
+          "width": 128,
+          "height": 48,
+          "typerId": "pace"
+        },
+        {
+          "startFrame": 435,
+          "endFrame": 530,
+          "speakerActor": "knuckles",
+          "text": "Both back on the ground.",
+          "x": 8,
+          "y": 8,
+          "width": 304,
+          "height": 48,
+          "typerId": "pace"
+        }
+      ],
+      "audio": [
+        {
+          "frame": 0,
+          "kind": "ROM_MUSIC",
+          "gameId": "s3k",
+          "soundId": 1
+        }
+      ]
+    }
+  ],
+  "dialogueTypers": [
+    {
+      "id": "pace",
+      "framesPerGrapheme": 1,
+      "punctuationPauseFrames": 2,
+      "spacePauseFrames": 0
+    }
+  ]
+}

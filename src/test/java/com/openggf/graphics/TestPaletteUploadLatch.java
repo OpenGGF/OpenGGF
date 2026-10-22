@@ -95,6 +95,32 @@ class TestPaletteUploadLatch {
     }
 
     @Test
+    void cinematicRevealRestoresNativeFadeAndPublicationOwnershipEvenWhenDrawingFails() {
+        graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.FROM_BLACK, 0,
+                PaletteFadePresentation.LINES_1_TO_3);
+        PaletteUploadPresentation.publishAndLatch(graphics);
+        graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.FROM_BLACK, 1,
+                PaletteFadePresentation.LINES_1_TO_3);
+        var nativeFade = PaletteUploadPresentation.captureDisplayedFade(graphics);
+        assertThrows(IllegalStateException.class, () -> PaletteUploadPresentation.withoutDisplayedFade(graphics, () -> {
+            assertEquals(PaletteFadePresentation.Mode.NONE, PaletteUploadPresentation.captureDisplayedFade(graphics).mode());
+            assertEquals(1, graphics.getPaletteFadePresentation().steps(), "native requests are never changed");
+            throw new IllegalStateException("aborted draw");
+        }));
+        assertEquals(nativeFade, PaletteUploadPresentation.captureDisplayedFade(graphics));
+        assertTrue(graphics.isPaletteUploadLatched());
+        PaletteUploadPresentation.publishAndLatch(graphics);
+        assertEquals(1, PaletteUploadPresentation.captureDisplayedFade(graphics).steps());
+        PaletteUploadPresentation.release(graphics);
+        PaletteUploadPresentation.withoutDisplayedFade(graphics, () -> assertEquals(
+                PaletteFadePresentation.Mode.NONE, PaletteUploadPresentation.captureDisplayedFade(graphics).mode()));
+        graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.FROM_BLACK, 2,
+                PaletteFadePresentation.LINES_1_TO_3);
+        assertEquals(2, PaletteUploadPresentation.captureDisplayedFade(graphics).steps(),
+                "an immediate owner must not inherit the scope's temporary rewind hold");
+    }
+
+    @Test
     void scenesOutsideTheLevelPipelineUploadImmediatelyWhileLatched() throws Exception {
         // Special stages, menus and loads write CRAM directly; a stale level latch must not hold them.
         PaletteUploadPresentation.publishAndLatch(graphics);

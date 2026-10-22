@@ -640,6 +640,41 @@ public class SpriteManager implements PlayableSstDispatcher {
 		return joypadPressSnapshot;
 	}
 
+    private java.util.Map<String, PlayerInputState> scriptedActorInputs;
+
+    /** Frame-scoped independent controllers; the canonical playable/object passes still own updates. */
+    public void withScriptedInputs(java.util.Map<String, PlayerInputState> inputs,
+                                   java.util.function.Consumer<InputHandler> frame) {
+        if (scriptedActorInputs != null) throw new IllegalStateException("Nested scripted input frame");
+        scriptedActorInputs = java.util.Map.copyOf(inputs);
+        var handler = new InputHandler();
+        var main = getMainPlayable();
+        PlayerInputState first = main == null ? PlayerInputState.neutral()
+                : scriptedActorInputs.getOrDefault(main.getCode(), PlayerInputState.neutral());
+        PlayerInputState second = sidekicks.isEmpty() ? PlayerInputState.neutral()
+                : scriptedActorInputs.getOrDefault(sidekicks.getFirst().getCode(), PlayerInputState.neutral());
+        handler.setLogicalOverride(com.openggf.control.LogicalInputSnapshot.ofPlayers(first, second));
+        try {
+            publishHeldInputForLevelEvents(handler);
+            for (var entry : scriptedActorInputs.entrySet()) {
+                var sprite = getSprite(entry.getKey());
+                if (sprite instanceof AbstractPlayableSprite playable) {
+                    int held = entry.getValue().heldMask(), pressed = entry.getValue().pressedMask();
+                    playable.setDirectionalInputPressed((held & AbstractPlayableSprite.INPUT_UP) != 0,
+                            (held & AbstractPlayableSprite.INPUT_DOWN) != 0, (held & AbstractPlayableSprite.INPUT_LEFT) != 0,
+                            (held & AbstractPlayableSprite.INPUT_RIGHT) != 0);
+                    playable.setJumpInputPressed((held & AbstractPlayableSprite.INPUT_JUMP) != 0,
+                            (pressed & AbstractPlayableSprite.INPUT_JUMP) != 0);
+                }
+            }
+            frame.accept(handler);
+        } finally { scriptedActorInputs = null; }
+    }
+
+    public void updateScripted(java.util.Map<String, PlayerInputState> inputs) {
+        withScriptedInputs(inputs, this::update);
+    }
+
 	public void update(InputHandler handler) {
 		if (mutatorPolicySource != null) mutatorPolicySource.beforeForwardTick();
 		frameCounter++;
@@ -817,7 +852,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 					boolean skipCpuPhysicsThisFrame = false;
 					SidekickCpuController cpuControllerForDiagnostics = null;
 
-					if (context.runCpuControllers()
+					if (scriptedActorInputs == null && context.runCpuControllers()
 							&& playable.isCpuControlled()
 							&& playable.getCpuController() != null) {
 						// CPU-controlled sprite: run AI to generate virtual input
@@ -879,8 +914,18 @@ public class SpriteManager implements PlayableSstDispatcher {
 						if (aiJumpPress) {
 							playable.setForcedJumpPress(true);
 						}
-					} else {
-						// Player-controlled sprite, or the historical
+                    } else {
+                        PlayerInputState actorInput = scriptedActorInputs == null ? null : scriptedActorInputs.get(playable.getCode());
+                        if (scriptedActorInputs != null && actorInput == null)
+                            throw new IllegalArgumentException("Missing scripted controller: " + playable.getCode());
+                        int actorHeld = actorInput == null ? p1Held : actorInput.heldMask();
+                        up = (actorHeld & AbstractPlayableSprite.INPUT_UP) != 0;
+                        down = (actorHeld & AbstractPlayableSprite.INPUT_DOWN) != 0;
+                        left = (actorHeld & AbstractPlayableSprite.INPUT_LEFT) != 0;
+                        right = (actorHeld & AbstractPlayableSprite.INPUT_RIGHT) != 0;
+                        jump = (actorHeld & AbstractPlayableSprite.INPUT_JUMP) != 0;
+                        rawJumpPress = ((actorInput == null ? input.p1Pressed() : actorInput.pressedMask()) & AbstractPlayableSprite.INPUT_JUMP) != 0;
+                        // Player-controlled sprite, or the historical
 						// updateWithoutInput path where CPU dispatch is intentionally skipped.
 						boolean controlLocked = playable.isControlLocked();
 						boolean forcedRight = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT)
@@ -898,7 +943,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 							effectiveJump = (!controlLocked && jump) || forcedJump;
 							effectiveTest = !controlLocked && context.testButton();
 							recordedLogicalJumpPress = !controlLocked
-									&& input.p1ActionPressedMask() != 0;
+									&& (actorInput == null ? input.p1ActionPressedMask() : actorInput.actionPressedMask()) != 0;
 						} else {
 							effectiveRight = false;
 							effectiveLeft = false;
@@ -2141,7 +2186,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 * same frame's driver service, where the ROM's is.
 	 */
 	private static void tickDisplayPhaseTimers(AbstractPlayableSprite playable) {
-		TimerManager timers = GameServices.timersOrNull();
+		TimerManager timers = com.openggf.sprites.playable.PlayableRuntimeContext.timersOrNull(playable);
 		if (timers != null) {
 			timers.updateDisplayPhaseTimersFor(playable);
 		}
@@ -2153,7 +2198,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		if (objectManager == null) {
 			return;
 		}
-		CollisionSystem collisionSystem = GameServices.collisionOrNull();
+		CollisionSystem collisionSystem = playable.currentCollisionSystemOrNull();
 		if (collisionSystem != null) {
 			collisionSystem.setObjectManager(objectManager);
 			collisionSystem.runSolidObjectResolution(
@@ -2187,7 +2232,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 				&& cpu.deadFallBypassesScreenYWrapValue()) {
 			return;
 		}
-		Camera camera = GameServices.cameraOrNull();
+		Camera camera = com.openggf.sprites.playable.PlayableRuntimeContext.cameraOrNull(playable);
 		if (camera != null) {
 			camera.applyScreenYWrapValue(playable);
 		}

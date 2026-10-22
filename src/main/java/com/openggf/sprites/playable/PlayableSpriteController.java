@@ -238,6 +238,11 @@ public class PlayableSpriteController {
     }
 
     void publishLandingAnimationWrite() {
+        // Detached playables own static terrain only. Their native landing must
+        // not publish into the active world's zone-event state (or require one).
+        if (PlayableRuntimeContext.isBound(sprite)) {
+            return;
+        }
         GameModule module = sprite.currentGameModule();
         if (module != null && module.getLevelEventProvider() != null) {
             module.getLevelEventProvider().onPlayableLandingAnimationWrite(sprite);

@@ -41,7 +41,7 @@ class TestStageplayNativeBinding {
     }
 
     private static ActorPose pose(double x, double y) {
-        return new ActorPose("hero", "s3k", "sonic", x, y, 0, 12, 1, true, true, 1);
+        return new ActorPose("hero", "s3k", "sonic", x, y, 0, 12, 1, true, true, 1, true);
     }
 
     @Test void directsTheRealNativePlayerAndCancelRestoresItsEntryWithoutRestoringWorldOrAudio() throws Exception {
@@ -65,6 +65,7 @@ class TestStageplayNativeBinding {
         assertEquals(350, player.getCentreY());
         assertEquals(1, player.getMappingFrame());
         assertEquals(Direction.LEFT, player.getDirection());
+        assertTrue(player.getRenderVFlip(), "native sampled vertical orientation is retained under direction");
         assertTrue(player.isObjectMappingFrameControl());
         assertTrue(player.isControlLocked());
         assertEquals(0, player.getXSpeed());
@@ -101,6 +102,7 @@ class TestStageplayNativeBinding {
         assertEquals(0, player.getGSpeed());
         assertFalse(player.isControlLocked());
         assertFalse(player.isObjectMappingFrameControl());
+        assertFalse(player.getRenderVFlip(), "final-position handover restores an upright playable");
         assertEquals(0, player.getLogicalInputState());
         assertFalse(player.isJumpJustPressed());
         assertEquals(384, runtime.getCamera().getX());
@@ -115,8 +117,6 @@ class TestStageplayNativeBinding {
         assertThrows(IllegalArgumentException.class, () -> binding.apply(course,
                 new ActorPose("hero", "s3k", "sonic", 500, 300, 0, 0, 0, false, true, 2),
                 new CameraPose(0, 0, 1), 0));
-        assertThrows(IllegalArgumentException.class, () -> binding.apply(course, pose(500, 300),
-                new CameraPose(0, 0, 2), 0));
         assertThrows(IllegalArgumentException.class, () -> binding.apply(course,
                 new ActorPose("hero", "s2", "sonic", 500, 300, 0, 0, 0, false, true, 1),
                 new CameraPose(0, 0, 1), 0));
@@ -125,6 +125,18 @@ class TestStageplayNativeBinding {
         assertThrows(IllegalArgumentException.class, () -> binding.apply(course, pose(500, 300),
                 new CameraPose(0, 0, 1), 65_535));
         assertEquals(before, course.playerState());
+    }
+
+    @Test void presentationZoomDoesNotChangeNativeCameraCoordinatesOrReleasePosition() throws Exception {
+        var course = course();
+        var binding = new StageplayNativeBinding("hero");
+        binding.captureEntry(course);
+        binding.apply(course, pose(500, 300), new CameraPose(340, 180, 2.5), 1);
+        binding.finish(course, StageplayNativeBinding.FinishMode.KEEP_FINAL_POSITION);
+        assertEquals(500, course.playerState().x());
+        assertEquals(300, course.playerState().y());
+        assertEquals(340, course.playerState().cameraX());
+        assertEquals(180, course.playerState().cameraY());
     }
 
     @Test void closedFrameCapabilitiesAndReloadedLevelVisitsCannotApplyOrReleaseOldState() throws Exception {

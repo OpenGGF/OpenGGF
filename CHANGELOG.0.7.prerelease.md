@@ -7,11 +7,26 @@ Unreleased. The earlier development themes remain in
 
 - **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
   OpenGGF Editor's Stageplay workspace. Author actor movement, animation/poses,
-  camera keys, captions, ROM audio and WAV/Ogg voices; record directed visual
-  takes, undo edits, save/reopen and export synchronized lossless films.
+  camera movement, held integer zoom, earthquake effects, captions, ROM audio and WAV/Ogg voices;
+  direct scene changes across locations, acts and games with cuts, fades and wipes.
+  Puppet mode follows destinations and urgency through native acceleration, terrain
+  collision and jump physics; floor snapping defaults on. Poser mode retains manual
+  positioning, animation and frame selection, including older scenes. Opt-in live ROM
+  worlds share moving objects, collision pickups, native hurt and per-actor controllers;
+  bounded routes/placement targets, native flight/glide and fixed-scale actor/group
+  camera follow use the production gameplay and rewind owners. Directed foreground,
+  characters and occlusion stay aligned through camera movement. Inspect actual state
+  and events through windowless simulation and placement/capability discovery. Live
+  editor previews run in an isolated offscreen worker, preserving the active world.
+  Record directed takes, undo edits, save/reopen and export synchronized
+  lossless films. Shot-local screenplay tools and a mirrored agent skill support
+  resource discovery, validation and offline filmmaking; Tails uses native accessory
+  relationships, and both editors keep a usable constrained authoring window.
+  Named dialogue, reusable typing profiles and creator PNG skins give mod scenes
+  clear speakers and deterministic text reveal in playback, both editors and exports.
   Mods play the same scenes with held native gameplay and optional explicit
   main-player handover. See the [guide](docs/guide/creating/stageplay.md) and
-  [fifteen-second example](examples/stageplay-demo/README.md).
+  [directing examples](examples/stageplay-demo/README.md).
 
 - **Recording imports:** copied BK2 recordings are bounded during decompression
   and parsing, including metadata, input rows and verification sidecars. Oversized,

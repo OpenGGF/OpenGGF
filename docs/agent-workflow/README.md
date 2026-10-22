@@ -33,6 +33,7 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 ## Tools
 
 - [Stageplay capture](../../src/main/java/com/openggf/tools/StageplayCaptureTool.java): render a saved `.stageplay` scene with supplied ROMs to synchronized lossless MKV; see the [guide](../guide/creating/stageplay.md). [Stageplay HUD pictures](../../src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java) use explicit `-Dopenggf.stageplay.hudPictures=true`, surfaceless EGL and an absolute S2 REV01 ROM path, writing `target/stageplay-hud/` for visual review; desktop has its equivalent `TestStageplayChromePictures` in OpenGGF Editor. Origin: 2026-10-21 Stageplay delivery.
+- [Stageplay authoring CLI](../../tools/stageplay/stageplay.py): compiles shot-local screenplays, discovers supplied-ROM resources, samples/validates scenes and renders offline. [Command reference](../guide/creating/stageplay-authoring.md); skill `stageplay-authoring`. Origin: 2026-10-21 directing extension.
 
 - [Seven-Chaos gateway diagnostic](../../src/main/java/com/openggf/tools/S3kSevenChaosGatewayCaptureTool.java): repeats the declared Tails/LRZ2 ring→sanctuary→sphere-stage→results→return scenario with verified ROM identity, fixed Limited/RAW_RGB, event/state CSVs and original PNGs; `--rom` and `--out-dir` require absolute paths, Linux uses surfaceless EGL with no display. This preserves the 2026-10-17 native RGB investigation; it is not a cold-route certificate.
 
@@ -380,3 +381,7 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
 
 - [Positioned S3K ending sampler](../../src/main/java/com/openggf/tools/S3kEndingSamplerTool.java) and [fail-closed native RGB comparator](../../tools/bizhawk/compare_native_rgb.py): explicit nine Sonic/Tails/team NTSC 320×224 title-owner products with declared progress, spot-bound or title completion, complete raw RGB pairs and explicit native filename padding/mapping/crops (2026-10-17 recurring ending parity); [protocol, commands and limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#2026-10-17-nine-declared-ntsc-ending-products).
 - [Passive ending queue probe](../../src/main/java/com/openggf/tools/S3kEndingQueueProbeTool.java): two explicit solo/+2/NTSC products, bounded LF metadata, actual production handles/child fingerprints and LIVE service/readiness projections without payloads or timing writes; [causality evidence and budget blocker](../architecture/plans/2026-10-13-s3k-playable-completion.md#2026-10-17-passive-reunion-queue-causality).
+
+Stageplay's `level`, `catalog`, `simulate` and live offscreen preview/capture owners
+support reproducible native ensemble routes; see the [authoring guide](../guide/creating/stageplay-authoring.md#live-rom-worlds-screenplay-3-document-5)
+and [live-world plan](../architecture/plans/2026-10-21-stageplay-live-world-plan.md).

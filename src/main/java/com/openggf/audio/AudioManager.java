@@ -326,9 +326,18 @@ public class AudioManager implements MusicRestoreSink {
             String candidateGameId) {
     }
 
+    private boolean silentSimulation;
+
     private AudioManager() {
         // Default to NullBackend
         backend = new NullAudioBackend();
+    }
+
+    /** Creates an isolated, device-free audio sink for native simulation. */
+    public static AudioManager createSilent() {
+        AudioManager manager = new AudioManager();
+        manager.silentSimulation = true;
+        return manager;
     }
 
     public static synchronized AudioManager getInstance() {
@@ -1398,7 +1407,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public boolean isRewindReplaySuppressed() {
-        return rewindReplaySuppressionDepth > 0;
+        return silentSimulation || rewindReplaySuppressionDepth > 0;
     }
 
     public void replayTimelineCommand(AudioCommand command) {
@@ -1711,7 +1720,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     private boolean suppressingRewindReplay() {
-        return rewindReplaySuppressionDepth > 0;
+        return silentSimulation || rewindReplaySuppressionDepth > 0;
     }
 
     public boolean afterRewindRestore(

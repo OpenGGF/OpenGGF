@@ -27,6 +27,7 @@ class TestStageplayWorkspace {
         workspace.invoke(ADD_ACTOR);
         workspace.menu().setValue("name","Tails");
         workspace.menu().setValue("character","tails");
+        workspace.menu().setValue("mode","POSER");
         workspace.menu().submit();
     }
 

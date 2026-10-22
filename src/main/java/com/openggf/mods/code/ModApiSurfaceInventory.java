@@ -9,6 +9,7 @@ import java.util.List;
 public final class ModApiSurfaceInventory {
     private static final List<String> TYPE_NAMES = List.of(
             "com.openggf.stageplay.StageplayDocument",
+            "com.openggf.stageplay.StageplayDialogue",
             "com.openggf.stageplay.StageplayTimeline",
             "com.openggf.stageplay.StageplayControl",
             "com.openggf.stageplay.StageplayPlayback",

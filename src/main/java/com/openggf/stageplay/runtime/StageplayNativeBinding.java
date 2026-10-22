@@ -40,16 +40,18 @@ public final class StageplayNativeBinding {
         entry = Objects.requireNonNull(course, "course").captureDirectedPlayer();
     }
 
+    /** Camera coordinates must be the unshaken authored position; zoom is presentation-only. */
     public void apply(CourseControl course, ActorPose actor, CameraPose camera, int mappingFrame) {
         Objects.requireNonNull(actor, "actor");
         Objects.requireNonNull(camera, "camera");
         if (entry == null) throw new IllegalStateException("Native player is not bound");
         if (!actorId.equals(actor.actorId()) || !entry.gameId().equals(actor.gameId())
-                || !entry.character().equals(actor.character()) || actor.scale() != 1 || camera.zoom() != 1) {
-            throw new IllegalArgumentException("Native binding requires its matching game/character at unit scale and camera zoom");
+                || !entry.character().equals(actor.character()) || actor.scale() != 1
+                || !Double.isFinite(camera.zoom()) || camera.zoom() <= 0) {
+            throw new IllegalArgumentException("Native binding requires its matching game/character at unit actor scale");
         }
         course.directPlayer(entry, pixel(actor.x()), pixel(actor.y()), actor.animation(), mappingFrame,
-                actor.flipX(), actor.visible(), pixel(camera.x()), pixel(camera.y()));
+                actor.flipX(), actor.flipY(), actor.visible(), pixel(camera.x()), pixel(camera.y()));
     }
 
     public void finish(CourseControl course, FinishMode mode) {

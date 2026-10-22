@@ -1,0 +1,997 @@
+{
+  "version": 2,
+  "name": "Location, Location, Location",
+  "width": 400,
+  "height": 224,
+  "dialogueTypers": [
+    {
+      "id": "sonic",
+      "framesPerGrapheme": 1,
+      "punctuationPauseFrames": 5
+    },
+    {
+      "id": "tails",
+      "framesPerGrapheme": 2,
+      "punctuationPauseFrames": 8
+    },
+    {
+      "id": "knuckles",
+      "framesPerGrapheme": 3,
+      "punctuationPauseFrames": 10
+    }
+  ],
+  "dialogueSkins": [
+    {
+      "id": "sonic",
+      "nameArgb": -9060353,
+      "borderArgb": -9060353,
+      "decorationAsset": "decor/sonic.png",
+      "decorationBorder": 5,
+      "padding": 8
+    },
+    {
+      "id": "tails",
+      "nameArgb": -14756,
+      "borderArgb": -14756,
+      "decorationAsset": "decor/tails.png",
+      "decorationBorder": 5,
+      "padding": 8
+    },
+    {
+      "id": "knuckles",
+      "nameArgb": -32126,
+      "borderArgb": -32126,
+      "decorationAsset": "decor/knuckles.png",
+      "decorationBorder": 5,
+      "padding": 8
+    }
+  ],
+  "cast": [
+    {
+      "id": "sonic",
+      "name": "Sonic",
+      "gameId": "s2",
+      "character": "sonic"
+    },
+    {
+      "id": "tails",
+      "name": "Tails",
+      "gameId": "s2",
+      "character": "tails"
+    },
+    {
+      "id": "knuckles",
+      "name": "Knuckles",
+      "gameId": "s3k",
+      "character": "knuckles"
+    }
+  ],
+  "shots": [
+    {
+      "id": "remote",
+      "durationFrames": 480,
+      "set": {
+        "gameId": "s2",
+        "zone": 0,
+        "act": 0
+      },
+      "camera": [
+        {
+          "frame": 0,
+          "x": 0,
+          "y": 500,
+          "zoom": 1,
+          "interpolation": "HOLD"
+        },
+        {
+          "frame": 88,
+          "x": 5,
+          "y": 500,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
+        },
+        {
+          "frame": 155,
+          "x": 10,
+          "y": 455,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
+        },
+        {
+          "frame": 420,
+          "x": 25,
+          "y": 455,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
+        }
+      ],
+      "actors": {
+        "sonic": [
+          {
+            "frame": 0,
+            "x": 32,
+            "y": 655,
+            "flipX": false
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "x": 330,
+            "y": 648,
+            "flipX": true
+          }
+        ]
+      },
+      "dialogue": [
+        {
+          "startFrame": 100,
+          "endFrame": 265,
+          "speakerActor": "tails",
+          "text": "One button. Every location.",
+          "skinId": "tails",
+          "typerId": "tails",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
+        },
+        {
+          "startFrame": 285,
+          "endFrame": 455,
+          "speakerActor": "sonic",
+          "text": "Great! Skip the walking.",
+          "skinId": "sonic",
+          "typerId": "sonic",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
+        }
+      ],
+      "audio": [
+        {
+          "frame": 0,
+          "kind": "ROM_MUSIC",
+          "gameId": "s2",
+          "soundId": 129
+        },
+        {
+          "frame": 282,
+          "kind": "ROM_SFX",
+          "gameId": "s2",
+          "soundId": 160
+        },
+        {
+          "frame": 462,
+          "kind": "ROM_SFX",
+          "gameId": "s2",
+          "soundId": 160
+        }
+      ],
+      "cameraEffects": [],
+      "captions": [
+        {
+          "startFrame": 8,
+          "endFrame": 86,
+          "text": "LOCATION, LOCATION, LOCATION",
+          "x": 35,
+          "y": 18,
+          "argb": -256
+        }
+      ],
+      "actions": {
+        "sonic": [
+          {
+            "frame": 0,
+            "kind": "MOVE_TO",
+            "x": 150,
+            "y": 648,
+            "urgency": 0.65
+          },
+          {
+            "frame": 282,
+            "kind": "MOVE_TO",
+            "x": 220,
+            "y": 655,
+            "urgency": 0.6
+          },
+          {
+            "frame": 282,
+            "kind": "JUMP",
+            "holdFrames": 12
+          },
+          {
+            "frame": 390,
+            "kind": "MOVE_TO",
+            "x": 232,
+            "y": 656,
+            "urgency": 0.2
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "kind": "MOVE_TO",
+            "x": 265,
+            "y": 648,
+            "urgency": 0.35
+          }
+        ]
+      }
+    },
+    {
+      "id": "closer",
+      "durationFrames": 360,
+      "set": {
+        "gameId": "s2",
+        "zone": 0,
+        "act": 0
+      },
+      "camera": [
+        {
+          "frame": 0,
+          "x": 380,
+          "y": 470,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
+        },
+        {
+          "frame": 330,
+          "x": 410,
+          "y": 470,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
+        }
+      ],
+      "actors": {
+        "sonic": [
+          {
+            "frame": 0,
+            "x": 485,
+            "y": 622,
+            "flipX": false
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "x": 670,
+            "y": 624,
+            "flipX": true
+          }
+        ]
+      },
+      "dialogue": [
+        {
+          "startFrame": 45,
+          "endFrame": 178,
+          "speakerActor": "sonic",
+          "text": "That was three steps.",
+          "skinId": "sonic",
+          "typerId": "sonic",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
+        },
+        {
+          "startFrame": 190,
+          "endFrame": 330,
+          "speakerActor": "tails",
+          "text": "I was being careful.",
+          "skinId": "tails",
+          "typerId": "tails",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
+        }
+      ],
+      "audio": [
+        {
+          "frame": 342,
+          "kind": "ROM_SFX",
+          "gameId": "s2",
+          "soundId": 160
+        }
+      ],
+      "cameraEffects": [
+        {
+          "startFrame": 325,
+          "endFrame": 350,
+          "amplitudeX": 2,
+          "amplitudeY": 2,
+          "frequency": 9,
+          "seed": 17
+        }
+      ],
+      "captions": [],
+      "transition": {
+        "kind": "WIPE_LEFT",
+        "durationFrames": 30
+      },
+      "actions": {
+        "sonic": [
+          {
+            "frame": 0,
+            "kind": "MOVE_TO",
+            "x": 520,
+            "y": 622,
+            "urgency": 0.4
+          },
+          {
+            "frame": 170,
+            "kind": "MOVE_TO",
+            "x": 560,
+            "y": 624,
+            "urgency": 0.35
+          }
+        ],
+        "tails": [
+          {
+            "frame": 50,
+            "kind": "MOVE_TO",
+            "x": 640,
+            "y": 624,
+            "urgency": 0.3
+          }
+        ]
+      }
+    },
+    {
+      "id": "acttwo",
+      "durationFrames": 420,
+      "set": {
+        "gameId": "s2",
+        "zone": 0,
+        "act": 1
+      },
+      "camera": [
+        {
+          "frame": 0,
+          "x": 0,
+          "y": 490,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
+        },
+        {
+          "frame": 360,
+          "x": 35,
+          "y": 490,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
+        }
+      ],
+      "actors": {
+        "sonic": [
+          {
+            "frame": 0,
+            "x": 145,
+            "y": 687,
+            "flipX": false
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "x": 275,
+            "y": 687,
+            "flipX": true
+          }
+        ]
+      },
+      "dialogue": [
+        {
+          "startFrame": 75,
+          "endFrame": 215,
+          "speakerActor": "sonic",
+          "text": "Hang on... Act TWO?",
+          "skinId": "sonic",
+          "typerId": "sonic",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
+        },
+        {
+          "startFrame": 230,
+          "endFrame": 392,
+          "speakerActor": "tails",
+          "text": "Now you're getting it!",
+          "skinId": "tails",
+          "typerId": "tails",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
+        }
+      ],
+      "audio": [
+        {
+          "frame": 0,
+          "kind": "ROM_MUSIC",
+          "gameId": "s2",
+          "soundId": 129
+        },
+        {
+          "frame": 20,
+          "kind": "ROM_SFX",
+          "gameId": "s2",
+          "soundId": 160
+        },
+        {
+          "frame": 398,
+          "kind": "ROM_SFX",
+          "gameId": "s2",
+          "soundId": 160
+        }
+      ],
+      "cameraEffects": [
+        {
+          "startFrame": 380,
+          "endFrame": 410,
+          "amplitudeX": 4,
+          "amplitudeY": 2,
+          "frequency": 9,
+          "seed": 17
+        }
+      ],
+      "captions": [],
+      "transition": {
+        "kind": "FADE_BLACK",
+        "durationFrames": 30
+      },
+      "actions": {
+        "sonic": [
+          {
+            "frame": 20,
+            "kind": "JUMP",
+            "holdFrames": 12
+          },
+          {
+            "frame": 150,
+            "kind": "MOVE_TO",
+            "x": 215,
+            "y": 687,
+            "urgency": 0.5
+          }
+        ],
+        "tails": [
+          {
+            "frame": 235,
+            "kind": "MOVE_TO",
+            "x": 244,
+            "y": 687,
+            "urgency": 0.25
+          },
+          {
+            "frame": 360,
+            "kind": "JUMP",
+            "holdFrames": 8
+          }
+        ]
+      }
+    },
+    {
+      "id": "greenhill",
+      "durationFrames": 480,
+      "set": {
+        "gameId": "s1",
+        "zone": 0,
+        "act": 0
+      },
+      "camera": [
+        {
+          "frame": 0,
+          "x": 0,
+          "y": 800,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
+        },
+        {
+          "frame": 390,
+          "x": 60,
+          "y": 800,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
+        }
+      ],
+      "actors": {
+        "sonic": [
+          {
+            "frame": 0,
+            "x": 32,
+            "y": 944,
+            "flipX": false
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "x": 90,
+            "y": 944,
+            "flipX": false
+          }
+        ]
+      },
+      "dialogue": [
+        {
+          "startFrame": 100,
+          "endFrame": 245,
+          "speakerActor": "sonic",
+          "text": "I know this place!",
+          "skinId": "sonic",
+          "typerId": "sonic",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
+        },
+        {
+          "startFrame": 275,
+          "endFrame": 445,
+          "speakerActor": "tails",
+          "text": "Oops. Wrong decade.",
+          "skinId": "tails",
+          "typerId": "tails",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
+        }
+      ],
+      "audio": [
+        {
+          "frame": 0,
+          "kind": "ROM_MUSIC",
+          "gameId": "s1",
+          "soundId": 129
+        },
+        {
+          "frame": 462,
+          "kind": "ROM_SFX",
+          "gameId": "s2",
+          "soundId": 160
+        }
+      ],
+      "cameraEffects": [
+        {
+          "startFrame": 440,
+          "endFrame": 470,
+          "amplitudeX": 3,
+          "amplitudeY": 3,
+          "frequency": 9,
+          "seed": 17
+        }
+      ],
+      "captions": [],
+      "transition": {
+        "kind": "FADE_WHITE",
+        "durationFrames": 30
+      },
+      "actions": {
+        "sonic": [
+          {
+            "frame": 0,
+            "kind": "MOVE_TO",
+            "x": 190,
+            "y": 944,
+            "urgency": 0.7
+          },
+          {
+            "frame": 215,
+            "kind": "MOVE_TO",
+            "x": 160,
+            "y": 944,
+            "urgency": 0.25
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "kind": "MOVE_TO",
+            "x": 295,
+            "y": 944,
+            "urgency": 0.8
+          },
+          {
+            "frame": 250,
+            "kind": "MOVE_TO",
+            "x": 245,
+            "y": 944,
+            "urgency": 0.3
+          }
+        ]
+      }
+    },
+    {
+      "id": "island",
+      "durationFrames": 600,
+      "set": {
+        "gameId": "s3k",
+        "zone": 0,
+        "act": 0
+      },
+      "camera": [
+        {
+          "frame": 0,
+          "x": 4900,
+          "y": 865,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
+        },
+        {
+          "frame": 180,
+          "x": 4950,
+          "y": 865,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
+        },
+        {
+          "frame": 560,
+          "x": 4910,
+          "y": 865,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
+        }
+      ],
+      "actors": {
+        "sonic": [
+          {
+            "frame": 0,
+            "x": 5035,
+            "y": 1050,
+            "flipX": false
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "x": 5110,
+            "y": 1052,
+            "flipX": false
+          }
+        ],
+        "knuckles": [
+          {
+            "frame": 0,
+            "x": 5290,
+            "y": 1046,
+            "flipX": true
+          }
+        ]
+      },
+      "dialogue": [
+        {
+          "startFrame": 85,
+          "endFrame": 280,
+          "speakerActor": "knuckles",
+          "text": "This is a QUIET afternoon.",
+          "skinId": "knuckles",
+          "typerId": "knuckles",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
+        },
+        {
+          "startFrame": 295,
+          "endFrame": 440,
+          "speakerActor": "sonic",
+          "text": "We'll see ourselves out.",
+          "skinId": "sonic",
+          "typerId": "sonic",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
+        },
+        {
+          "startFrame": 455,
+          "endFrame": 575,
+          "speakerActor": "tails",
+          "text": "Found HOME!",
+          "skinId": "tails",
+          "typerId": "tails",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
+        }
+      ],
+      "audio": [
+        {
+          "frame": 0,
+          "kind": "ROM_MUSIC",
+          "gameId": "s3k",
+          "soundId": 1
+        },
+        {
+          "frame": 530,
+          "kind": "ROM_SFX",
+          "gameId": "s2",
+          "soundId": 160
+        },
+        {
+          "frame": 580,
+          "kind": "ROM_SFX",
+          "gameId": "s2",
+          "soundId": 160
+        }
+      ],
+      "cameraEffects": [
+        {
+          "startFrame": 565,
+          "endFrame": 592,
+          "amplitudeX": 2,
+          "amplitudeY": 2,
+          "frequency": 9,
+          "seed": 17
+        }
+      ],
+      "captions": [],
+      "transition": {
+        "kind": "WIPE_RIGHT",
+        "durationFrames": 30
+      },
+      "actions": {
+        "sonic": [
+          {
+            "frame": 295,
+            "kind": "MOVE_TO",
+            "x": 4970,
+            "y": 1050,
+            "urgency": 0.4
+          }
+        ],
+        "tails": [
+          {
+            "frame": 245,
+            "kind": "MOVE_TO",
+            "x": 5050,
+            "y": 1052,
+            "urgency": 0.4
+          },
+          {
+            "frame": 530,
+            "kind": "JUMP",
+            "holdFrames": 8
+          }
+        ],
+        "knuckles": [
+          {
+            "frame": 0,
+            "kind": "MOVE_TO",
+            "x": 5180,
+            "y": 1046,
+            "urgency": 0.3
+          },
+          {
+            "frame": 280,
+            "kind": "MOVE_TO",
+            "x": 5125,
+            "y": 1046,
+            "urgency": 0.35
+          }
+        ]
+      }
+    },
+    {
+      "id": "home",
+      "durationFrames": 420,
+      "set": {
+        "gameId": "s2",
+        "zone": 0,
+        "act": 0
+      },
+      "camera": [
+        {
+          "frame": 0,
+          "x": 25,
+          "y": 500,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
+        },
+        {
+          "frame": 380,
+          "x": 0,
+          "y": 500,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
+        }
+      ],
+      "actors": {
+        "sonic": [
+          {
+            "frame": 0,
+            "x": 170,
+            "y": 648,
+            "flipX": true
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "x": 285,
+            "y": 648,
+            "flipX": true
+          }
+        ]
+      },
+      "dialogue": [
+        {
+          "startFrame": 90,
+          "endFrame": 240,
+          "speakerActor": "tails",
+          "text": "Perfectly reliable!",
+          "skinId": "tails",
+          "typerId": "tails",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
+        },
+        {
+          "startFrame": 260,
+          "endFrame": 385,
+          "speakerActor": "sonic",
+          "text": "Put. It. Down.",
+          "skinId": "sonic",
+          "typerId": "sonic",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
+        }
+      ],
+      "audio": [
+        {
+          "frame": 0,
+          "kind": "ROM_MUSIC",
+          "gameId": "s2",
+          "soundId": 129
+        },
+        {
+          "frame": 398,
+          "kind": "ROM_SFX",
+          "gameId": "s2",
+          "soundId": 160
+        }
+      ],
+      "cameraEffects": [],
+      "captions": [],
+      "transition": {
+        "kind": "FADE_BLACK",
+        "durationFrames": 30
+      },
+      "actions": {
+        "sonic": [
+          {
+            "frame": 0,
+            "kind": "MOVE_TO",
+            "x": 100,
+            "y": 650,
+            "urgency": 0.4
+          },
+          {
+            "frame": 210,
+            "kind": "MOVE_TO",
+            "x": 140,
+            "y": 648,
+            "urgency": 0.3
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "kind": "MOVE_TO",
+            "x": 235,
+            "y": 660,
+            "urgency": 0.3
+          }
+        ]
+      }
+    },
+    {
+      "id": "mostly",
+      "durationFrames": 300,
+      "set": {
+        "gameId": "s1",
+        "zone": 0,
+        "act": 0
+      },
+      "camera": [
+        {
+          "frame": 0,
+          "x": 20,
+          "y": 800,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
+        },
+        {
+          "frame": 280,
+          "x": 100,
+          "y": 800,
+          "zoom": 1,
+          "interpolation": "SMOOTH"
+        }
+      ],
+      "actors": {
+        "sonic": [
+          {
+            "frame": 0,
+            "x": 130,
+            "y": 944,
+            "flipX": false
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "x": 240,
+            "y": 944,
+            "flipX": true
+          }
+        ]
+      },
+      "dialogue": [
+        {
+          "startFrame": 30,
+          "endFrame": 155,
+          "speakerActor": "tails",
+          "text": "...Mostly.",
+          "skinId": "tails",
+          "typerId": "tails",
+          "x": 12,
+          "y": 12,
+          "width": 376,
+          "height": 64
+        }
+      ],
+      "audio": [
+        {
+          "frame": 0,
+          "kind": "ROM_MUSIC",
+          "gameId": "s1",
+          "soundId": 129
+        }
+      ],
+      "cameraEffects": [],
+      "captions": [
+        {
+          "startFrame": 190,
+          "endFrame": 299,
+          "text": "OpenGGF Stageplay\nDirect the unexpected.",
+          "x": 35,
+          "y": 18,
+          "argb": -256
+        }
+      ],
+      "transition": {
+        "kind": "FADE_WHITE",
+        "durationFrames": 30
+      },
+      "actions": {
+        "sonic": [
+          {
+            "frame": 160,
+            "kind": "MOVE_TO",
+            "x": 575,
+            "y": 944,
+            "urgency": 1
+          }
+        ],
+        "tails": [
+          {
+            "frame": 180,
+            "kind": "MOVE_TO",
+            "x": 580,
+            "y": 944,
+            "urgency": 0.9
+          }
+        ]
+      }
+    }
+  ]
+}

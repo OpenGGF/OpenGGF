@@ -47,6 +47,9 @@ stable-retro-*.zip
 tools/*
 !tools/performance/
 !tools/media/
+!tools/stageplay/
+!tools/stageplay/*.py
+/tools/stageplay/__pycache__/
 !tools/tracechaser-bootstrap.sh
 !tools/tracechaser-forward.lua
 !tools/tracechaser.ps1

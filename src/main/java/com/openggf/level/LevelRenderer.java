@@ -939,7 +939,49 @@ public final class LevelRenderer {
     }
 
     /** Select the VDP scroll generation paired with the displayed sprite table. */
+    private boolean cinematicDraw;
+    private LevelScrollPresentation cinematicScroll;
+
+    /** A directed view consumes a private scroll snapshot; gameplay camera, deformation,
+     * published SAT/scroll and the previous draw's presentation remain native-owned.
+     */
+    void withCinematicCamera(int x, int y, Runnable draw) {
+        if (cinematicScroll != null) throw new IllegalStateException("Nested cinematic camera");
+        var camera = lm.camera;
+        var savedCamera = camera.capture();
+        var savedScroll = currentScrollPresentation;
+        // Controller results are double-buffered; retain an owned copy across resolution.
+        var savedMode = LevelScrollPresentation.capture(lm, currentAdvancedRenderFrameState).renderMode();
+        try {
+            // Contributors read the native camera. Do not resolve again under the director camera.
+            resolveAdvancedRenderFrameState(lm.frameCounter);
+            var nativeScroll = LevelScrollPresentation.capture(lm, currentAdvancedRenderFrameState);
+            camera.setX((short) x); camera.setY((short) y);
+            camera.setXCopy(camera.getX()); camera.setYCopy(camera.getY());
+            cinematicScroll = nativeScroll.forCinematicCamera(camera.getX(), camera.getY(),
+                    LevelScrollPresentation.captureArenaMask(lm));
+            draw.run();
+        } catch (RuntimeException | Error failure) {
+            lm.graphicsManager.discardQueuedCommands();
+            throw failure;
+        } finally {
+            cinematicScroll = null;
+            camera.restore(savedCamera, camera.getFocusedSprite());
+            currentScrollPresentation = savedScroll;
+            currentAdvancedRenderFrameState = savedMode;
+        }
+    }
+
+    /** Presentation-only view of the current world from a director camera; native SAT/scroll publication is retained. */
+    void drawCinematicWorld(SpriteManager sprites) {
+        if (cinematicDraw) throw new IllegalStateException("Nested cinematic world draw");
+        cinematicDraw = true;
+        try { drawWithRenderOptions(sprites, new LevelManager.LevelRenderOptions(true, true, true, false, false, false, true)); }
+        finally { cinematicDraw = false; }
+    }
+
     private LevelScrollPresentation scrollForDraw() {
+        if (cinematicDraw) return cinematicScroll;
         return LevelSpritePresentation.enabled(lm) ? spriteTables.publishedScroll() : null;
     }
 
@@ -1656,7 +1698,7 @@ public final class LevelRenderer {
      * sprites/objects visible while the level tiles remain hidden.
      */
     public void renderSpriteObjectPass(SpriteManager spriteManager, boolean includeWaterSurface) {
-        if (!preparingSpritePresentation && LevelSpritePresentation.enabled(lm)) {
+        if (!preparingSpritePresentation && LevelSpritePresentation.enabled(lm) && !cinematicDraw) {
             drawPublishedSprites(layer -> !layer.isHud());
         } else {
             prepareOrDrawLiveSprites(spriteManager);

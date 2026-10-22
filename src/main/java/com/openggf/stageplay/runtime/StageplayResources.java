@@ -1,11 +1,15 @@
 package com.openggf.stageplay.runtime;
 
 import com.openggf.level.Level;
+import com.openggf.io.PngCodec;
+import com.openggf.stageplay.StageplayDialogue;
 import com.openggf.level.render.DetachedLevelKit;
 import com.openggf.level.resources.AuthoredLevelResources;
 import com.openggf.mods.scene.*;
 import com.openggf.mods.scene.host.SceneRomLibrary;
 import com.openggf.stageplay.StageplayDocument;
+import com.openggf.stageplay.StageplayTimeline;
+import com.openggf.sprites.playable.PlayablePuppet;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
@@ -15,27 +19,54 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 
-/** Owns detached scene assets, never advances or changes the loaded gameplay world. */
+/** Owns scene assets and explicit offline simulation; an editor's active gameplay world is never replaced. */
 public final class StageplayResources implements AutoCloseable {
     private final Function<String, SceneRomArt> resolver;
     private final List<String> available;
     private final Runnable release;
+    private final SceneRomLibrary library;
+    private final StageplayPuppets puppets;
+    private StageplayLiveWorld liveWorld;
+    private StageplayOfflinePreview livePreview;
+    private final Map<StageplayDocument.SetSource, Level> terrains = new HashMap<>();
     private final Map<StageplayDocument.SetSource, SceneLevelKit> sets = new HashMap<>();
+    private Map<String, SceneImage> dialogueImages = Map.of();
+    private Map<String, Integer> dialogueImageBytes = Map.of();
+    private Map<String, StageplayDocument.DialogueSkin> dialogueStyles = Map.of();
+    private Map<String, StageplayDialogue.Layout> dialogueLayouts = Map.of();
+    private StageplayDocument preparedDialogue;
+    private StageplayAssets.Reader assetReader;
     private Path projectRoot;
     private boolean closed;
 
     public StageplayResources(SceneRomLibrary library, boolean ownsLibrary) {
-        this(library::rom, library.availableGames(), ownsLibrary ? library::close : () -> { });
+        this(library::rom, library.availableGames(), ownsLibrary ? library::close : () -> { }, library);
     }
     public StageplayResources(Function<String, SceneRomArt> resolver, List<String> available) {
-        this(resolver, available, () -> { });
+        this(resolver, available, () -> { }, null);
     }
-    private StageplayResources(Function<String, SceneRomArt> resolver, List<String> available, Runnable release) {
+    private StageplayResources(Function<String, SceneRomArt> resolver, List<String> available, Runnable release, SceneRomLibrary library) {
         this.resolver = Objects.requireNonNull(resolver); this.available = List.copyOf(available); this.release = release;
+        this.library = library;
+        puppets = new StageplayPuppets((document, source, actor, anchor, track) -> {
+            requirePhysicalLibrary();
+            return PlayablePuppet.create(terrain(source), library.module(source.gameId()), source.zone(), source.act(),
+                    library.module(actor.gameId()), actor.character(), library.characterArt(actor.gameId(), actor.character()),
+                    nativePixel(anchor.x(), true), nativePixel(anchor.y(), false), track.collisionPath(), track.snapToFloor(), anchor.flipX());
+        });
     }
     public List<String> availableGames() { requireOpen(); return available; }
     public void setProjectRoot(Path root) {
         requireOpen(); projectRoot = root == null ? null : root.toAbsolutePath().normalize(); sets.clear();
+        assetReader = null; terrains.clear(); resetPuppets(); clearDialogue();
+    }
+    /** A bounded owner snapshot reader, used by registered cutscenes without filesystem access. */
+    public void setAssetReader(StageplayAssets.Reader reader) {
+        requireOpen(); assetReader = Objects.requireNonNull(reader); resetPuppets(); clearDialogue();
+    }
+    private void clearDialogue() {
+        preparedDialogue = null; dialogueImages = Map.of(); dialogueLayouts = Map.of();
+        dialogueImageBytes = Map.of(); dialogueStyles = Map.of();
     }
     public SceneRomArt rom(String game) {
         requireOpen();
@@ -50,10 +81,68 @@ public final class StageplayResources implements AutoCloseable {
         requireOpen();
         if (source.levelProject().isEmpty()) throw new IllegalArgumentException("Only authored sets may be registered");
         sets.put(Objects.requireNonNull(source), Objects.requireNonNull(kit));
+        terrains.remove(source); resetPuppets();
     }
-    public SceneLevelKit set(StageplayDocument document) {
+    /** Registered authored terrain is shared by its pictured set and private playable simulation. */
+    public void registerSet(StageplayDocument.SetSource source, Level level) {
+        registerSet(source, authored(level));
+        terrains.put(source, Objects.requireNonNull(level)); resetPuppets();
+    }
+
+    /** Resolves terrain puppets or the shared LIVE world; editor LIVE pixels/state come from an isolated worker. */
+    public StageplayTimeline.Frame resolveFrame(StageplayDocument document, StageplayTimeline.Frame authoredFrame) {
         requireOpen();
-        var sourceKey = document.set();
+        var set = authoredFrame.set() == null ? document.set() : authoredFrame.set();
+        if (set.worldPolicy() == StageplayDocument.WorldPolicy.LIVE) {
+            if (liveWorld != null) return liveWorld.resolve(document, authoredFrame);
+            if (livePreview == null) livePreview = new StageplayOfflinePreview();
+            return livePreview.resolve(document, authoredFrame.frame(), authoredFrame.world() == null ? null : authoredFrame.camera());
+        }
+        return puppets.resolve(document, authoredFrame);
+    }
+
+    /** The caller supplies an explicitly owned offline world; resources owns its lifetime. */
+    public void setLiveWorld(StageplayLiveWorld world) {
+        requireOpen();
+        if (liveWorld != null) liveWorld.close();
+        liveWorld = Objects.requireNonNull(world);
+    }
+    public void drawLiveWorld(StageplayTimeline.Frame frame) {
+        if (liveWorld == null) throw new IllegalStateException("Live world was not resolved");
+        liveWorld.draw(frame);
+    }
+    /** Exact owned preview PID for lifecycle diagnostics, or zero before launch/after release. */
+    public long previewProcessId() { return livePreview == null ? 0 : livePreview.processId(); }
+    /** Captured native no-device SFX for this sampled frame; the editor decides forward-playback admission. */
+    public com.openggf.audio.StreamedMusicPort.SfxPcm previewSound(int frame) { return livePreview==null ? null : livePreview.sound(frame); }
+    SceneImage livePreviewImage() { return livePreview == null ? null : livePreview.image(); }
+    public void resetPuppets() { puppets.reset(); if (liveWorld != null) liveWorld.reset(); if (livePreview != null) livePreview.close(); }
+
+    private void requirePhysicalLibrary() {
+        if (library == null) throw new IllegalStateException("Physics puppets require supplied native ROM resources");
+    }
+
+    private Level terrain(StageplayDocument.SetSource source) {
+        set(source); // validates identity and prepares authored project data first
+        if (terrains.containsKey(source)) return terrains.get(source);
+        requirePhysicalLibrary();
+        if (!source.levelProject().isEmpty()) throw new IllegalArgumentException("Authored set has no native terrain data");
+        return terrains.computeIfAbsent(source, value -> library.level(value.gameId(), value.zone(), value.act()));
+    }
+
+    private static int nativePixel(double value, boolean horizontal) {
+        long rounded = Math.round(value);
+        if (rounded < (horizontal ? 0 : Short.MIN_VALUE) || rounded > Short.MAX_VALUE)
+            throw new IllegalArgumentException("Physics puppet spawn lies outside native 16-bit coordinates");
+        return (int) rounded;
+    }
+
+    public SceneLevelKit set(StageplayDocument document) {
+        return set(document.set());
+    }
+    /** Resolves any shot's set with the same identity and bounded-path checks as the opening set. */
+    public SceneLevelKit set(StageplayDocument.SetSource sourceKey) {
+        requireOpen();
         SceneRomArt art = rom(sourceKey.gameId());
         if (!sourceKey.romSha1().isEmpty() && !sourceKey.romSha1().equalsIgnoreCase(art.romSha1()))
             throw new IllegalArgumentException("Scene set requires a different exact ROM identity");
@@ -67,6 +156,7 @@ public final class StageplayResources implements AutoCloseable {
                     var project = AuthoredLevelResources.read("ogfproject", file);
                     if (!project.gameId().equals(source.gameId()))
                         throw new IOException("Authored level and scene set use different games");
+                    terrains.put(source, project.level());
                     return authored(project.level());
                 } catch (IOException error) { throw new UncheckedIOException("Cannot load the authored Stageplay set", error); }
             }
@@ -79,17 +169,123 @@ public final class StageplayResources implements AutoCloseable {
 
     /** Preflight before transport/export. Missing mapping frames and animations are errors, not invisible actors. */
     public void validate(StageplayDocument document) {
+        prepareDialogue(document);
         set(document);
+        for (var change : document.sceneChanges()) set(change.set());
         for (var actor : document.actors()) {
             var art = character(actor.gameId(), actor.character());
             for (var key : actor.keys()) {
                 if (key.pose() >= art.frameCount()) throw new IllegalArgumentException("Missing mapping frame for " + actor.name());
                 if (key.pose() < 0 && art.animationFrames(key.animation()).length == 0)
                     throw new IllegalArgumentException("Missing animation " + key.animation() + " for " + actor.name());
+                rom(actor.gameId()).characterAccessoryPose(actor.character(), key.animation(), key.pose(),
+                        0, key.flipX(), 0, 0);
+            }
+        }
+        if (!document.puppets().isEmpty()) {
+            requirePhysicalLibrary();
+            terrain(document.set());
+            for (var change : document.sceneChanges()) terrain(change.set());
+            for (var track : document.puppets()) {
+                var actor = document.actors().stream().filter(value -> value.id().equals(track.actorId())).findFirst().orElseThrow();
+                if (library.characterArt(actor.gameId(), actor.character()) == null)
+                    throw new IllegalArgumentException("Missing native character art: " + actor.id());
+                for (var key : actor.keys()) { nativePixel(key.x(), true); nativePixel(key.y(), false); }
+                for (var command : track.commands()) {
+                    var source = document.set();
+                    for (var change : document.sceneChanges()) if (change.frame() <= command.frame()) source = change.set();
+                    if (source.worldPolicy() != StageplayDocument.WorldPolicy.LIVE) continue;
+                    var capabilities = library.module(source.gameId()).getRules().playerCapability();
+                    if ((command.kind() == StageplayDocument.PuppetCommandKind.FLY_TO || command.kind() == StageplayDocument.PuppetCommandKind.HOVER)
+                            && !capabilities.tailsFlightEnabled()) throw new IllegalArgumentException("Donor module does not support native flight: " + actor.id());
+                    if (command.kind() == StageplayDocument.PuppetCommandKind.GLIDE_TO && !capabilities.glideAttacksEnabled())
+                        throw new IllegalArgumentException("Donor module does not support native glide: " + actor.id());
+                    var target = command.target();
+                    if (target.layoutIndex() >= 0 && terrain(source).getObjects().stream().noneMatch(o -> o.layoutIndex() == target.layoutIndex()
+                            && o.objectId() == target.objectId() && o.subtype() == target.subtype()))
+                        throw new IllegalArgumentException("Unknown placed-object target: " + command.id());
+                }
             }
         }
         for (var cue : document.audio()) if (cue.kind() != StageplayDocument.AudioKind.VOICE
                 && cue.kind() != StageplayDocument.AudioKind.MUSIC_STOP) rom(cue.gameId());
+    }
+
+    /**
+     * Prepares immutable dialogue images/layout without requiring any ROM or GL context.
+     * Publication is atomic; failed edits retain the previous complete resource snapshot.
+     */
+    public void prepareDialogue(StageplayDocument document) {
+        requireOpen(); Objects.requireNonNull(document);
+        if (document.equals(preparedDialogue)) return;
+        var paths = StageplayAssets.imagePaths(document);
+        if (paths.size() > StageplayAssets.MAX_ASSETS) throw new IllegalArgumentException("Too many dialogue images");
+        var images = new HashMap<String, SceneImage>();
+        var layouts = new HashMap<String, StageplayDialogue.Layout>();
+        var sizes = new HashMap<String, Integer>();
+        var styles = new HashMap<String, StageplayDocument.DialogueSkin>();
+        long pixels = 0, encodedBytes = 0;
+        try {
+            for (String path : paths) {
+                SceneImage image = dialogueImages.get(path);
+                int encodedSize = dialogueImageBytes.getOrDefault(path, 0);
+                if (image == null) {
+                    byte[] encoded = assetReader == null ? StageplayAssets.read(projectRoot, path) : assetReader.read(path);
+                    if (encoded == null || encoded.length == 0 || encoded.length > StageplayAssets.MAX_ENCODED_BYTES)
+                        throw new IOException("Invalid encoded dialogue image size: " + path);
+                    encodedSize = encoded.length;
+                    if (encodedBytes + encodedSize > StageplayAssets.MAX_TOTAL_BYTES)
+                        throw new IOException("Dialogue image assets exceed 64 MiB");
+                    var info = PngCodec.info(encoded);
+                    long count = (long) info.width() * info.height();
+                    if (info.width() > 1024 || info.height() > 1024 || count > 1_048_576)
+                        throw new IOException("Dialogue image exceeds 1024 pixels per side: " + path);
+                    if (pixels + count > 4_194_304) throw new IOException("Dialogue images exceed the decoded pixel budget");
+                    var decoded = PngCodec.decode(encoded);
+                    image = new SceneImage(decoded.getWidth(), decoded.getHeight(), decoded.pixels());
+                }
+                encodedBytes += encodedSize;
+                if (encodedBytes > StageplayAssets.MAX_TOTAL_BYTES) throw new IOException("Dialogue image assets exceed 64 MiB");
+                sizes.put(path, encodedSize);
+                pixels += (long) image.width() * image.height();
+                if (pixels > 4_194_304) throw new IOException("Dialogue images exceed the decoded pixel budget");
+                images.put(path, image);
+            }
+            for (var skin : document.dialogueSkins()) if (!skin.decorationAsset().isEmpty()) {
+                var image = images.get(skin.decorationAsset()); int border = skin.decorationBorder();
+                if (2 * border >= image.width() || 2 * border >= image.height())
+                    throw new IllegalArgumentException("Dialogue decoration border leaves no image centre: " + skin.id());
+            }
+            for (var cue : document.dialogue()) {
+                var skin = StageplayDialogue.skin(document, cue);
+                if (!skin.decorationAsset().isEmpty()
+                        && (2 * skin.decorationBorder() >= cue.width() || 2 * skin.decorationBorder() >= cue.height()))
+                    throw new IllegalArgumentException("Dialogue decoration border does not fit panel: " + cue.id());
+                layouts.put(cue.id(), StageplayDialogue.layout(document, cue));
+                styles.put(cue.id(), skin);
+            }
+        } catch (IOException error) { throw new UncheckedIOException("Cannot prepare Stageplay dialogue", error); }
+        dialogueImages = Map.copyOf(images); dialogueImageBytes = Map.copyOf(sizes);
+        dialogueLayouts = Map.copyOf(layouts); dialogueStyles = Map.copyOf(styles); preparedDialogue = document;
+    }
+
+    public StageplayDocument.DialogueSkin dialogueSkin(String cueId) {
+        requireOpen();
+        var skin = dialogueStyles.get(cueId);
+        if (skin == null) throw new IllegalArgumentException("Dialogue style was not prepared: " + cueId);
+        return skin;
+    }
+    public SceneImage dialogueImage(String path) {
+        requireOpen();
+        var image = dialogueImages.get(path);
+        if (image == null) throw new IllegalArgumentException("Dialogue image was not prepared: " + path);
+        return image;
+    }
+    public StageplayDialogue.Layout dialogueLayout(String cueId) {
+        requireOpen();
+        var layout = dialogueLayouts.get(cueId);
+        if (layout == null) throw new IllegalArgumentException("Dialogue layout was not prepared: " + cueId);
+        return layout;
     }
 
     /** Authoring uses its explicit level document; no live terrain is mutated. */
@@ -123,5 +319,5 @@ public final class StageplayResources implements AutoCloseable {
         };
     }
     private void requireOpen() { if (closed) throw new IllegalStateException("Stageplay resources are closed"); }
-    @Override public void close() { if (!closed) { closed = true; sets.clear(); release.run(); } }
+    @Override public void close() { if (!closed) { closed = true; puppets.close(); if (liveWorld != null) liveWorld.close(); if (livePreview != null) livePreview.close(); sets.clear(); terrains.clear(); clearDialogue(); release.run(); } }
 }
