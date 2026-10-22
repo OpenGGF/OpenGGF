@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 class TestCinematicScrollPublication {
     @Test
-    void tallDirectedBackgroundKeepsNativeRowsThenExtendsItsLastRowWithoutMovingForeground() {
+    void tallDirectedBackgroundKeepsNativeRowsThenRepeatsItsBottomPatternBandWithoutMovingForeground() {
         TestEnvironment.resetAll();
         GameServices.level().gameModule = new com.openggf.game.sonic2.Sonic2GameModule();
         try {
@@ -41,9 +41,10 @@ class TestCinematicScrollPublication {
             assertEquals(tall.registers().foregroundY() + 224, lower.registers().foregroundY(),
                     "The tall foreground remains continuous world space");
             for (int row = 0; row < 160; row++) {
-                assertEquals(223, row + lower.backgroundLines()[row],
-                        "Each extra background row samples the last native line");
-                assertEquals((short) nativeView.horizontal()[223], (short) lower.horizontal()[row]);
+                int nativeRow = 224 - Pattern.PATTERN_HEIGHT + row % Pattern.PATTERN_HEIGHT;
+                assertEquals(nativeRow, row + lower.backgroundLines()[row],
+                        "Extra background rows repeat all scanlines of the bottom native pattern band");
+                assertEquals((short) nativeView.horizontal()[nativeRow], (short) lower.horizontal()[row]);
             }
         } finally {
             SessionManager.clear();

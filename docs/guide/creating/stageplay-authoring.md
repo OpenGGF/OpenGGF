@@ -349,11 +349,13 @@ Camera keys optionally include a `follow` object:
 One actor follows that performer; several frame their centre bounds at authored
 zoom. Empty actors preserve authored camera keys. Handoffs occur at camera keys.
 The director uses simulated positions and deterministic tick-based smoothing,
-clamps to level bounds, then composes the existing shake. Native camera/focus
+validates the finite composition bounds, then composes the existing shake. Native camera/focus
 continues to own gameplay camera state; directed rendering samples immutable native
 scroll phases without advancing them. Background camera ratios, deformation and
 stationary regions come from the owning game handler, with private background
-residency for the complete bounded view.
+residency for the complete bounded view. Tall views repeat the bottom native
+pattern band beyond the 224-line backdrop instead of wrapping another sky or
+stretching one scanline. Gameplay camera locks remain native.
 The shared camera controls start from the resolved LIVE follow view. Capture key
 and Record camera store authored framing, clearing following at the captured keys.
 The camera form preserves follow targets: editing its displayed position adjusts

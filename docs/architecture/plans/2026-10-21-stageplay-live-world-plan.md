@@ -2097,7 +2097,7 @@ The clean build exposed seven introduced compile errors (57.374 seconds, zero
 tests): three hooks were nested in rewind adapters and the MHZ lift release
 extraction retained instance-only completion calls. Hooks now belong to their
 native objects; player-only lift release is separate from movement/story completion.
-The following test-compile passed in 1 minute21 seconds.
+The following test-compile passed in 1 minute 21 seconds.
 
 The first focused selection completed 783 tests:756 passed, 14 failures, 13 errors,
 zero skips. Maven execution was 1 minute20 seconds after 561 seconds of measured
@@ -2181,3 +2181,44 @@ absolute original ROM paths. It passed 49 tests with zero failures/errors/skips;
 Maven execution 1 minute26 seconds, queue waiting 271 seconds. Earlier successful
 focused coverage is not rerun merely as a ceremony. Combined smoke, independent
 guards, the desktop opt-in pictures and actual movie review remain required.
+
+
+### Motion review correction: preserve the native pattern band
+
+Engine correction `2dcd4dffa` and Editor parity `7cfd3b5` are committed. The engine
+packaged with tests skipped in 39.069 seconds. The Editor used that fatjar/POM in
+its private repository: 16 behavioral tests passed; all five desktop picture tests
+passed explicitly enabled, zero skips. Initial picture failures exposed missing
+fixture configuration (logical S2 ROM and explicit liveScene), not a production
+fallback to preserve. The picture host now resolves native frames and asserts
+world availability before drawing. Durable UI stills are under
+`$STAGEPLAY_EVIDENCE/round2/{desktop-pictures,hud-pictures}/`.
+
+Actual first-take playback at intended dimensions rejected the last-scanline
+extension from `2dcd4dffa`: GHZ 400x384 no longer stacked the sky, but stretching one
+water scanline over 160 rows produced long vertical stripes. This is why native
+comparison/tests alone were insufficient for visual acceptance. Verified first-
+take sources and movie hashes remain under `$STAGEPLAY_EVIDENCE/round2/first-take/`;
+`ghz-tall/film.mp4` is the kill evidence. The accepted next implementation keeps
+the first 224 native backdrop rows unchanged and repeats the bottom
+`Pattern.PATTERN_HEIGHT` band (eight ROM scanlines) for extra rows. This preserves
+the native texture instead of stretching individual pixels. Foreground height,
+reverse-plane semantics and native state ownership remain unchanged; no zone test
+selects the rule.
+
+Queued focused validation selected `TestCinematicScrollPublication`,
+`TestStageplayNativeBackgroundProjection`, and `TestStageplayDirectedBackgroundRendering`
+with surfaceless EGL/all three original ROM paths. Nine tests passed, zero
+failures/errors/skips; queue 559 seconds, Maven 1 minute 21 seconds. GHZ/EHZ/ICZ
+comparators assert unchanged native top 224 rows and the correct bottom-eight-row
+RGBA samples over all 160 additional film rows. The refreshed GHZ lower-band still
+shows native water texture without the long columns. New movies still require
+actual playback before acceptance.
+
+The far-left AIZ bird shot was also rejected: simulation failed before rendering,
+so the earlier claim of a simulation/render discrepancy was incorrect. Moving
+the unplaced animal near the logged native start (5104,1030; camera 4944,912) made
+the same packaged code complete simulation and capture its graph at Puppet 60 and
+Pose 210. No animal implementation changed. Final captions identify real bird flap
+cycles and are shortened to fit the film. Walking/state-owned animal frames keep
+the documented native held fallback.

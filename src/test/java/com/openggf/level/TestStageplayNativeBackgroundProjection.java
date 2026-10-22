@@ -33,7 +33,7 @@ class TestStageplayNativeBackgroundProjection {
     @AfterEach void restoreLogicGraphics() { GameServices.graphics().initHeadless(); }
 
     @Test @RequiresRom(SonicGame.SONIC_1)
-    void ghzTallBackdropExtendsNativeBottomWithoutStackingAnotherSky() throws Exception {
+    void ghzTallBackdropRepeatsNativeBottomPatternBandWithoutStackingAnotherSky() throws Exception {
         compare("s1", "sonic1.rom.path", 0, 0, 10496, 592);
     }
 
@@ -96,10 +96,11 @@ class TestStageplayNativeBackgroundProjection {
                         byte[] lower = grabber.grab().clone();
                         for (int row = 0; row < 160; row++) for (int column = 0; column < WIDTH; column++) {
                             int offset = ((HEIGHT - 1 - row) * WIDTH + column) * 4;
-                            int lastNative = column * 4; // GL readback is bottom-up.
+                            int nativeRow = HEIGHT - Pattern.PATTERN_HEIGHT + row % Pattern.PATTERN_HEIGHT;
+                            int nativeOffset = ((HEIGHT - 1 - nativeRow) * WIDTH + column) * 4;
                             for (int channel = 0; channel < 4; channel++)
-                                assertEquals(nativePicture[lastNative + channel], lower[offset + channel],
-                                        "Extra backdrop rows extend the native edge: " + column + "," + row);
+                                assertEquals(nativePicture[nativeOffset + channel], lower[offset + channel],
+                                        "Extra backdrop rows repeat the bottom native pattern band: " + column + "," + row);
                         }
                         writeEvidence(game + "-directed-lower", lower);
                     });

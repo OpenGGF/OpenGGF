@@ -166,12 +166,14 @@ final class LevelScrollPresentation {
         short[] directedLines = output.backgroundLines();
         if (height > 224 && !registers.reversePlanes()) {
             // Native presentation is always 224 logical backdrop rows, even on
-            // tall displays. Extra world rows extend its bottom edge instead of
-            // revealing another turn of the finite VDP plane. Foreground rows
-            // remain independent and retain the full directed raster.
+            // tall displays. Extra world rows repeat the bottom native pattern
+            // band instead of revealing another turn of the finite VDP plane.
+            // Keeping all pattern scanlines avoids stretching individual edge
+            // pixels into vertical stripes. Foreground rows remain independent.
             short[] extendedLines = new short[height];
             for (int row = 0; row < height; row++) {
-                int nativeRow = Math.min(row, 223);
+                int nativeRow = row < 224 ? row
+                        : 224 - Pattern.PATTERN_HEIGHT + (row - 224) % Pattern.PATTERN_HEIGHT;
                 int nativeWord = directedWords[nativeRow];
                 directedWords[row] = (directedWords[row] & 0xffff0000) | (nativeWord & 0xffff);
                 extendedLines[row] = (short) ((directedLines == null ? 0 : directedLines[nativeRow]) + nativeRow - row);

@@ -87,7 +87,9 @@ music cues when the scene needs music in both preview and export.
 Films support **160–1920 × 112–1080** output dimensions and zoom,
 with the same team, activation-window and binding rules after object clears. The completed opaque world is resampled separately
 from captions and dialogue. Native viewport tiles retain the engine's 224-line
-rendering contract; physics and native camera dimensions remain unchanged. The
+rendering contract. Tall views extend the bottom native background pattern band
+instead of stacking the whole backdrop; foreground terrain retains its full height.
+Physics and native camera dimensions remain unchanged. The
 source view is bounded to 4096 pixels per side and 8 MiPixels in total, so extreme
 combinations of output size and zoom fail preflight with an actionable message.
 Current scenes activate a separate native-sized region around each performer,

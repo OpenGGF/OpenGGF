@@ -32,6 +32,7 @@ Unreleased. The earlier development themes remain in
   with cold LIVE verification, plus visual walking-object routes over slopes and
   steps up to eight pixels. Centred camera pushes preserve their framing centre,
   fractional origins survive composition, and the world framebuffer is reused.
+  Tall views extend native background pattern bands without stacking another sky.
   Tails uses native accessory
   relationships, and both editors keep a usable constrained authoring window.
   Named dialogue, reusable typing profiles and creator PNG skins give mod scenes

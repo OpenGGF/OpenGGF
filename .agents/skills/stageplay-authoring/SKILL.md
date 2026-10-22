@@ -132,7 +132,9 @@ shot calls for pixel-stable pauses; review every animated zoom in motion at the
 intended output size and cadence. A larger export scale cannot repair an alias
 already present in the authored frame. Framing centres interpolate with zoom, so
 centred pushes keep their centre fixed. Fractional camera origins survive composition;
-the private world framebuffer is reused and grows only when needed.
+the private world framebuffer is reused and grows only when needed. Tall views
+extend the bottom native pattern band; review water, clouds and moving tall views
+for seams or stretched scanlines.
 
 ## Boundaries that affect directing
 
