@@ -1189,3 +1189,141 @@ APS replacement. Root already retains the private power-up restore extraction an
 passes its own size guard, so no source import is justified by size alone. A new
 peer-owned single two-method SOZ2 route request is deduplicated against Root;
 no MHZ paired observation is authorized by this reconciliation.
+
+
+## Root ordered native-mode consumers — 2026-10-23
+
+Qualified local parent8d2548b55 reconciles pinned developfa160d818 with Root's
+native rendering/rewind source. This new bounded cohort composes original leaves
+ff2e0c44b444a363f0a6f3d3314a7605768e60aa,
+fa415ba82b4db7b1320cc478ca363169f549d1ba,
+0f7b412eb609d0b6d73959726aac7c896af33da1,
+077553f302de881c98eec964db3ad6cabd9d62f0,
+09b57606984ddf34e767bbdfaba2611508e3d473 and
+f95df3e1e29e0f64611dbdef34f8aba12c4b1292. Runtime/tests are the original deltas,
+not a whole native-mode branch or compatibility ancestry. Original source and
+historical validation notes remain attributed in their existing design artifacts.
+
+The known native-view projection correction46e765fb388aa22e3302e0af0bd7506962a137e8
+is included early because its original qualified projection dependency already
+exists in Root. It drains prior owner work before opening the lexical projection
+and restores the exact raw matrix/source tuple. The whole native view test retains
+its poisoned projection control; no shared graphics API is expanded.
+
+Upfront placement is fitted into the already extracted
+ObjectManagerInternalAccess.Streaming. Original one-shot terminal-before-allocation,
+source order, fixed-origin culling, scratch respawn and rewind semantics are
+retained. S2 placement admission stays before reservation, outside the shared
+post-reservation construction tail. NativeObjectIndex and queue/Word2C hooks stay
+in their existing owners. OM grows3069 to3072 effective lines against3086;
+this is a static count until the fresh owning guard executes. Independent exact
+port review finds no material issue; original policy/test/doc bytes are exact,
+and the controller differs from its original only by the existing allocator
+injection. Strict scoped citations report zero findings and one unverifiable
+bare citation. No worker launches a JVM, test or native observation.
+
+The affected command uses43 explicit candidate classes, including both different
+packages named TestSonic3kLevelLoading. It covers all23 changed test classes,
+ordinary S1/S2 placement/monitor/signpost consumers, native streaming, both domain
+session dependencies, projection ownership, signatures and mandated S3K keepers.
+Expected Maven execution is1–3 minutes plus compilation and admission delay.
+Stop on any new failure and qualify corrections narrowly; no duplicate unchanged
+route, broad smoke or native capture is submitted. With the same explicit Java25,
+Lua5.4, EGL/no-display/null-audio environment and absolute three-ROM arguments from
+the preceding cohort, the exact selector is:
+
+```text
+TestSonic2AttractLifecycle,TestSonic2AttractRomData,TestNativeCompetitionUpfrontPlacement,TestNativeCompetitionViews,TestSonic2CompetitionInitializedTeleport,TestSonic2CompetitionObjectRom,TestSonic2CompetitionMonitorConsumer,TestSonic2CompetitionSignpostConsumer,TestSonic2InterlaceDecoder,TestSonic2InterlacePixels,TestSonic2InterlaceRom,TestS3kCompetitionArenaObjects,TestS3kCompetitionArtProvider,TestS3kCompetitionAssets,TestS3kCompetitionGoalAndItems,TestS3kCompetitionHud,TestS3kCompetitionLevelInitProfile,TestS3kCompetitionMenuScene,TestS3kCompetitionPatternAnimator,TestS3kCompetitionScreen,TestS3kCompetitionScroll,TestS3kCompetitionScrollProvider,TestS3kCompetitionTerrain,TestNativeCompetitionObjectStreaming,TestObjectPlacementControllerS1Counter,TestPlacementLowerRespawnBits,TestObjectManagerVerticalPlacement,TestMonitorObjectInstance,TestSonic2SignpostFinishSignal,TestMonitorIconDrawing,TestS3kCompetitionPlayer,TestS3kCompetitionSession,TestS3kCompetitionDispatch,TestS3kCompetitionRecords,TestS3kCompetitionBinding,TestSonic2CompetitionSession,TestGraphicsProjectionScope,TestModApiSignatureSurface,TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+The normal queued command is `python3 tools/testing/maven_queue.py --normal
+-Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dtest=<selector> test -B` with those
+same ROM arguments. Source/runtime/test bytes freeze through completion. This
+consumer milestone does not activate providers, connect physical video admission,
+certify S2 H-int/field timing or close complete native races and routes. Main,
+paired MHZ observations and push remain closed. The separate peer's current SOZ2
+request has stopped at11787/23478; its new source-only attribution audit is not a
+Root route job and does not infer the first divergent writer from those indices.
+
+
+First consumer session61569 completes421 distinct identities/43 XML suites:
+420 pass,1 assertion failure,0 errors/skips, after418 seconds of queue wait and
+Maven1:27. Its freeze digest ec5997e47e3b87638046fea9a5ba07c1a32cb9dae5ebb3a229a0765667f38e7d
+matches the post-run rehash. All new mode, upfront placement and actual view/field
+pixel consumers pass. The sole failure is the unchanged projection companion
+control's first red pixel at GL Y220 (expected255/actual0). Java25.0.5/EGL and
+all three absolute ROM properties match; output/error blocks and dumps are empty.
+
+The unchanged failed projection method passes alone in34536 (1/0F/E/S,
+queue0/Maven33.301 seconds). An unchanged-source two-method discriminator66065
+then runs the new interlace fixture before that projection method in the POM's
+single reused, alphabetical fork. Interlace passes; projection reproduces the
+same red220 failure (2T/1F/0E/S, queue0/Maven30.273 seconds). Source inspection
+shows the fixture destroys HeadlessGameBoot's EGL context without releasing
+PatternRenderCommand's static VAO/VBO/uniform state. The next context sees a
+nonzero stale VAO name and skips creation. The fixture owns this resource gap;
+no production projection/boot behavior or pixel oracle is changed to hide it.
+
+The correction obtains the actual graphics owner AFTER successful boot, closes
+the gameplay/scene owners and then that graphics manager in an inner cleanup
+resource before boot closes EGL. Try-with-resources retains an original assertion
+Throwable and suppresses cleanup failure normally. Configuration restoration and
+all field/row/colour/admission assertions remain intact. Capturing a graphics
+reference before boot would select the wrong session owner and is deliberately
+avoided. The affected rerun selects only TestSonic2InterlacePixels,
+TestGraphicsProjectionScope and TestNativeCompetitionViews. Previously passing
+runtime/domain/ordinary controls are unchanged and are not repeated.
+
+Citation attribution parses all60 changed/new Java files explicitly, including
+untracked files the canonical check's tracked-file scan omits before staging.
+At pinned references the current31 hard/stale findings all match parent8d2548b55
+by file/range/status/detail; there are zero new hard/stale findings and9 removed
+ones. Current totals include53 named matches,8 near and142 unverifiable citations.
+This is bounded attribution, not a whole-footprint strict-clean claim or a reason
+to repair unrelated inherited monitor/manager references.
+
+
+Corrected pixel-consumer session16524 exits0 with12 distinct cases across the
+three named classes,0 failures/errors/skips, queue0/Maven29.906 seconds. All9
+projection controls, the real interlace field test and both native-view controls
+pass in one reused fork. Java25.0.5/EGL/three absolute ROM properties and empty
+output/error/dump state were inspected. Runtime source is unchanged from the
+420 passing controls; only the fixture's owned cleanup changed.
+
+Fresh six-class structural97148 executes111 tests:110 pass,1 failure,0 errors or
+skips, queue0/Maven41.909 seconds. All fixed facade-size, ArchUnit32, native-image
+and rewind controls pass. The sole source rule flags S3kCompetitionRuntimeModule's
+constructor base.getGameId()!=S3K invariant. Its50-line decorator only assembles
+injected profile/art/scroll and suppresses campaign service types; it never
+selects gameplay behavior by identity. The rule already admits composition-root
+identity preconditions in ModContext, ModRegistrationPlan and HeadlessGameBoot.
+Independent exact source assessment confirms the same role here. The correction
+adds only this exact composition file to that existing classifier, with an
+explicit wiring-only rationale. No scanner regex, package prefix, frozen baseline,
+rule record, source budget, runtime condition or API pin is relaxed. Future
+GameId gameplay branches in this file would exceed this rationale.
+
+The actual module regression now rejects non-null S1/S2/STANDALONE bases before
+binding or invoking any injected consumer; its existing S3K positive delegation
+control remains. Only the complete affected source-guard class and that load/
+composition class are resubmitted in a fresh guards JVM. The other39 passing
+structural controls do not change and are not repeated.
+
+
+Final affected structural/composition8740 exits0:81 distinct cases,0 failures,
+errors or skips (source guards72 plus level/profile/composition9). Queue77 seconds,
+Maven32.743 seconds; exact XML identities/properties/output/skip state inspected.
+All72 source rules, including the fixed3072/3086 OM budget and3144/3144 LM budget,
+pass without cap changes. Existing S3K positive delegation and the new three-
+foreign-base rejection control pass. The independent classifier review approves
+only this current wiring role, not future gameplay branches in that file.
+
+This cohort's final evidence is bounded reuse: unchanged runtime/domain controls
+from the420 passing cases, the12 corrected ordered EGL/projection cases, the39
+unchanged structural cases from97148, and the final81 affected identities. It is
+not one green421-case invocation, a complete native-mode acceptance, a broad
+smoke or a route pass. All early failures remain above with their tested state.
+No live Root Maven job remains. Original sources are composed in order with the
+already qualified projection correction taken early; later concrete hosts,
+physical video/H-int admission, complete arenas and routes remain open. Main,
+provider activation, paired MHZ observations and push remain closed.

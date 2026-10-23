@@ -22,6 +22,20 @@ public final class ObjectManagerInternalAccess {
         manager.nativeCompetitionStreaming().enableNativeCompetitionStreaming(streaming);
     }
 
+    /** Bind before reset. One source-order pass, independent of either camera. */
+    public static void enableNativeCompetitionUpfrontPlacement(ObjectManager manager, int maxXExclusive) {
+        manager.nativeCompetitionStreaming().enableNativeCompetitionUpfrontPlacement(maxXExclusive);
+    }
+
+    /** Register alongside the ordinary object snapshot, which owns actors and respawn bytes. */
+    public static RewindSnapshottable<Object> nativeCompetitionUpfrontPlacementRewindAdapter(ObjectManager manager) {
+        return new RewindSnapshottable<>() {
+            @Override public String key() { return "native_competition_upfront_placement"; }
+            @Override public Object capture() { return manager.nativeCompetitionStreaming().captureNativeCompetitionUpfrontPlacement(); }
+            @Override public void restore(Object snapshot) { manager.nativeCompetitionStreaming().restoreNativeCompetitionUpfrontPlacement(snapshot); }
+        };
+    }
+
     /** -1 leaves ordinary allocation unchanged; the active policy supplies the exclusive bound. */
     public static int nativeCompetitionGeneralAllocationSlotLimitExclusive(ObjectManager manager) {
         return manager.nativeCompetitionStreaming().nativeCompetitionGeneralAllocationSlotLimitExclusive();
@@ -112,6 +126,64 @@ public final class ObjectManagerInternalAccess {
             placement.configureNativeCompetitionStreaming(streaming);
         }
 
+        boolean upfrontActive() {
+            return placement.hasNativeCompetitionUpfrontPlacement() && nativeCompetitionRoster() != null;
+        }
+
+        void enableNativeCompetitionUpfrontPlacement(int maxXExclusive) {
+            if (nativeCompetitionRoster() == null) {
+                throw new IllegalStateException("Native upfront placement requires an active explicit roster");
+            }
+            placement.configureNativeCompetitionUpfrontPlacement(maxXExclusive);
+        }
+
+        Object captureNativeCompetitionUpfrontPlacement() {
+            return placement.nativeCompetitionUpfrontPlacement().capture();
+        }
+
+        void restoreNativeCompetitionUpfrontPlacement(Object snapshot) {
+            placement.nativeCompetitionUpfrontPlacement().restore(snapshot);
+        }
+
+        void releaseUpfrontPlacementSlots() {
+            if (!upfrontActive()) return;
+            // reset() clears the entire allocator separately. Editor resync instead
+            // replaces only placement owners: retire their SST occupancy before
+            // discarding their identities, preserving unrelated dynamic owners.
+            for (ObjectInstance instance : activeObjects.values()) {
+                if (instance instanceof AbstractObjectInstance aoi) {
+                    releaseSlot.accept(objectCallbacks.call(aoi, aoi::getSlotIndex));
+                }
+            }
+        }
+
+        private int nextNativeCompetitionUpfrontSlot(int previousSlot) {
+            // CreateNewSprite4 continues the original AllocateObject scan strictly
+            // after the last actor; it never restarts at a newly freed earlier slot
+            // (sonic3k.asm:37934-37944). No empty probe reserves SST memory.
+            for (int slot = previousSlot + 1; slot < slotLayout.lastDynamicSlotExclusive(); slot++) {
+                if (slotAllocator.isEmpty(slot)) return slot;
+            }
+            return -1;
+        }
+
+        private boolean loadNativeCompetitionUpfrontSpawn(ObjectSpawn spawn, int slot) {
+            return placement.loadNativeCompetitionUpfrontSpawn(spawn,
+                    () -> slotAllocator.reserve(slot)
+                            && constructNativeCompetitionPlacement(spawn, placement.getCounterForSpawn(spawn), slot));
+        }
+
+        boolean initializeUpfrontPlacement() {
+            if (!upfrontActive()) return false;
+            placement.nativeCompetitionUpfrontPlacement().initialize(slotAllocator::firstFreeSlot,
+                    this::loadNativeCompetitionUpfrontSpawn, this::nextNativeCompetitionUpfrontSlot);
+            return true;
+        }
+
+        boolean isOutsideUpfrontUnloadWindow(int referenceX) {
+            return placement.nativeCompetitionUpfrontPlacement().isOutsideUnloadWindow(referenceX);
+        }
+
         int nativeCompetitionGeneralAllocationSlotLimitExclusive() {
             return active()
                     ? placement.nativeCompetitionGeneralAllocationSlotLimitExclusive() : -1;
@@ -145,7 +217,10 @@ public final class ObjectManagerInternalAccess {
                 if (slotAllocator.reserve(slot)) { selected = slot; break; }
             }
             if (selected < 0) return false;
-            final int preSlot = selected;
+            return constructNativeCompetitionPlacement(spawn, counter, selected);
+        }
+
+        private boolean constructNativeCompetitionPlacement(ObjectSpawn spawn, int counter, int preSlot) {
             ObjectInstance instance = ObjectConstructionContext.with(objectServices, preSlot,
                     () -> registry != null ? objectCallbacks.construct(spawn, () -> registry.create(spawn)) : null);
             if (instance == null) { releaseSlot.accept(preSlot); return false; }

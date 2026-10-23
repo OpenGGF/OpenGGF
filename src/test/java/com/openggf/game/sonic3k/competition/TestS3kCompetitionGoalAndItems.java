@@ -4,12 +4,19 @@ import com.openggf.game.rewind.GenericFieldCapturer;
 import com.openggf.game.sonic3k.competition.objects.CompetitionGoalObjectInstance;
 import com.openggf.game.sonic3k.competition.objects.CompetitionItemObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.DynamicObjectRecreateContext;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectRewindDynamicCodecs;
+import com.openggf.level.objects.StubObjectServices;
+import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 class TestS3kCompetitionGoalAndItems {
     @Test void cardinalWheelOrbitUses56PixelsWrapAndNativeFacingDirection() {
@@ -154,6 +161,107 @@ class TestS3kCompetitionGoalAndItems {
         GenericFieldCapturer.restore(goal,snapshot);
         goal.updateNative(world.session); assertEquals(1,goal.mappingFrame());
         assertTrue(goal.isPersistent()); assertEquals(5,goal.getPriorityBucket());
+    }
+
+    @Test void goalAndWheelPublishOnlyExecutedNativeDrawsWithExactDimensionsAndCompactRestore() {
+        var world = new CompetitionTestWorld(S3kCompetitionSession.Mode.MATCH_RACE);
+        world.session.signalGo();
+        var goal = new CompetitionGoalObjectInstance(new ObjectSpawn(1000,200,0x65,8,0,false,200));
+        assertEquals(8,goal.getOnScreenHalfWidth()); assertEquals(0x20,goal.getOnScreenHalfHeight());
+        assertFalse(goal.nativeDrawPublished());
+        var before = (CompetitionGoalObjectInstance) recreate(goal);
+        assertFalse(before.nativeDrawPublished());
+        goal.updateNative(world.session);
+        assertTrue(goal.nativeDrawPublished());
+        var restored = (CompetitionGoalObjectInstance) recreate(goal);
+        assertTrue(restored.nativeDrawPublished());
+        for (int tick=0;tick<13;tick++) { goal.updateNative(world.session); restored.updateNative(world.session); }
+        assertEquals(goal.captureRewindState(),restored.captureRewindState());
+        var wheel = wheel();
+        assertEquals(8,wheel.getOnScreenHalfWidth()); assertEquals(8,wheel.getOnScreenHalfHeight());
+        assertFalse(wheel.nativeDrawPublished());
+        wheel.updateNative(world.session); assertTrue(wheel.nativeDrawPublished());
+        var wheelRestored = (CompetitionItemObjectInstance) recreate(wheel);
+        assertTrue(wheelRestored.nativeDrawPublished());
+        for (int tick=0;tick<9;tick++) { wheel.updateNative(world.session); wheelRestored.updateNative(world.session); }
+        assertEquals(wheel.captureRewindState(),wheelRestored.captureRewindState());
+    }
+
+    @Test void reservedProjectileAllocationCannotDrawBeforeItsEarlierNativeSlotExecutes() {
+        var world = new CompetitionTestWorld(S3kCompetitionSession.Mode.MATCH_RACE);
+        var wheel = wheel(); wheel.replenish(4); wheel.updateNative(world.session);
+        wheel.collectNative(world.session,0);
+        var projectile = (CompetitionItemObjectInstance) world.reservedProjectile;
+        assertEquals(1,projectile.getSlotIndex()); assertTrue(projectile.getSlotIndex()<wheel.getSlotIndex());
+        assertFalse(projectile.nativeDrawPublished(), "native Draw_Sprite is not an allocation callback");
+        var restored = (CompetitionItemObjectInstance) recreate(projectile);
+        assertFalse(restored.nativeDrawPublished());
+        projectile.updateNative(world.session); restored.updateNative(world.session);
+        assertTrue(projectile.nativeDrawPublished()); assertTrue(restored.nativeDrawPublished());
+        assertEquals(projectile.captureRewindState(),restored.captureRewindState());
+        assertEquals(8,projectile.getOnScreenHalfWidth()); assertEquals(8,projectile.getOnScreenHalfHeight());
+    }
+
+    @Test void customBottomDeletionWithdrawsTheDroppedItemsNativeDrawPublication() {
+        var world = new CompetitionTestWorld(S3kCompetitionSession.Mode.MATCH_RACE);
+        world.floorY=10000;
+        var wheel = wheel(); wheel.replenish(5); wheel.collectNative(world.session,0);
+        var drop = (CompetitionItemObjectInstance) world.objects.getFirst();
+        assertFalse(drop.nativeDrawPublished());
+        drop.updateNative(world.session); assertTrue(drop.nativeDrawPublished());
+        for (int tick=0;tick<120 && !drop.isDestroyed();tick++) drop.updateNative(world.session);
+        assertTrue(drop.isDestroyed()); assertFalse(drop.nativeDrawPublished());
+        assertTrue(drop.getY()>world.bottomY()+0x60);
+    }
+
+    @Test void canonicalCollisionListKeepsConsumedWheelsAndRestoresBothPendingPlayerBits() {
+        var world=new CompetitionTestWorld(S3kCompetitionSession.Mode.MATCH_RACE);
+        Arrays.fill(world.occupied,true); // Native immediate effects still apply without an effect child.
+        var wheel=wheel();
+        var goal=new CompetitionGoalObjectInstance(new ObjectSpawn(1000,200,0x65,8,0,false,200));
+        var manager=new StubObjectServices().withIsolatedObjectManager().objectManager();
+        manager.addDynamicObjectAtSlot(wheel,48); manager.addDynamicObjectAtSlot(goal,49);
+        var adapter=manager.rewindSnapshottable();
+        manager.publishRepresentedInitialCollisionResponseList();
+        assertTrue(adapter.capture().collisionResponseState().previousCollisionObjectIds().isEmpty(),
+                "allocation has not yet called Add_SpriteToCollisionResponseList");
+        wheel.replenish(3); wheel.updateNative(world.session);
+        for (var player:world.players) {
+            player.setCentre(wheel.getX(),wheel.getY()); assertTrue(wheel.touchNativePlayer(player));
+        }
+        assertEquals(0xC7,wheel.getCollisionFlags()); assertEquals(3,wheel.getCollisionProperty());
+        assertFalse(wheel.requiresRenderFlagForTouch());
+        manager.publishRepresentedInitialCollisionResponseList();
+        var id=manager.objectQuery().identityOf(wheel).orElseThrow();
+        var before=adapter.capture(); var sessionBefore=world.session.capture();
+        assertEquals(List.of(id),before.collisionResponseState().previousCollisionObjectIds());
+        wheel.updateNative(world.session); manager.publishRepresentedInitialCollisionResponseList();
+        var forward=adapter.capture(); var sessionForward=world.session.capture();
+        assertEquals(0,wheel.getCollisionFlags()); assertEquals(0,wheel.getCollisionProperty());
+        assertEquals(List.of(id),forward.collisionResponseState().previousCollisionObjectIds(),
+                "Touch_Loop skips the live zero byte; native publication still retains the SST entry");
+        assertFalse(wheel.touchNativePlayer(world.players.getFirst()));
+        adapter.restore(before); world.session.restore(sessionBefore);
+        var restored=(CompetitionItemObjectInstance)manager.objectQuery().resolve(id).orElseThrow();
+        assertNotSame(wheel,restored); assertEquals(0xC7,restored.getCollisionFlags());
+        assertEquals(3,restored.getCollisionProperty());
+        assertEquals(before.collisionResponseState(),adapter.capture().collisionResponseState());
+        restored.updateNative(world.session); manager.publishRepresentedInitialCollisionResponseList();
+        assertEquals(forward.dynamicObjects(),adapter.capture().dynamicObjects());
+        assertEquals(forward.collisionResponseState(),adapter.capture().collisionResponseState());
+        assertEquals(sessionForward,world.session.capture());
+        assertEquals(1,world.session.rings(0)); assertEquals(0,world.session.rings(1));
+    }
+
+    private static AbstractObjectInstance recreate(AbstractObjectInstance original) {
+        var state=original.captureRewindState();
+        assertNotNull(state.compactGenericState());
+        var restored=(AbstractObjectInstance) ObjectRewindDynamicCodecs.genericRecreate(
+                new DynamicObjectEntry(original.getClass().getName(),original.getSpawn(),original.getSlotIndex(),state),
+                new DynamicObjectRecreateContext(mock(ObjectManager.class)));
+        assertNotNull(restored);
+        restored.restoreRewindState(state);
+        return restored;
     }
 
     private static CompetitionItemObjectInstance wheel() {

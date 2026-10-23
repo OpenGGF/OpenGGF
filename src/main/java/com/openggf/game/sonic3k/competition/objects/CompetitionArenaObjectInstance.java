@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 
@@ -33,7 +34,8 @@ import java.util.function.Supplier;
  * <p>The context owns native allocation, ROM assets, sound and player damage. It never supplies
  * trace/comparison state. Session transitions belong to the session, not these SST routines.
  */
-public final class CompetitionArenaObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public final class CompetitionArenaObjectInstance extends AbstractObjectInstance
+        implements RewindRecreatable, TouchResponseProvider {
     public enum Kind {
         TRIANGLE(null, 0), BLADE("competition_blade", 5),
         RETRACTING_SPRING("competition_retracting_spring", 4),
@@ -400,7 +402,8 @@ public final class CompetitionArenaObjectInstance extends AbstractObjectInstance
     private void retractingSpring(NativeContext context) {
         if ((subtype & 0x80) == 0) {
             if (delay != 0) {
-                if (--delay == 0) context.playSfx(Sonic3kSfx.SPIKE_MOVE.id);
+                // sub_23CDC reads the carried BuildSprites bit7 after its timer reaches zero.
+                if (--delay == 0 && nativeVisible) context.playSfx(Sonic3kSfx.SPIKE_MOVE.id);
             } else if (retracting) {
                 int next = extension - 0x800;
                 if (next < 0) { extension = 0; retracting = false; delay = 60; }
@@ -650,7 +653,7 @@ public final class CompetitionArenaObjectInstance extends AbstractObjectInstance
     }
 
     private void invisiblePlatform(NativeContext context) {
-        // loc_1ECAA retains the campaign +$B side allowance in competition (sonic3k.asm:42722-42734).
+        // loc_1ECAA (sonic3k.asm:42750-42760) retains the campaign +$B side allowance in competition.
         for (var player : context.players()) solid(player, width + 0xB, width,
                 nativeHeight, nativeHeight + 1, false);
     }
@@ -832,7 +835,7 @@ public final class CompetitionArenaObjectInstance extends AbstractObjectInstance
 
     private boolean touches(S3kCompetitionPlayer player, int halfWidth, int halfHeight) {
         if (player.routine() >= 4) return false;
-        // TouchResponse_CompetitionMode: X half-width4, y_radius-3 (sonic3k.asm:20596-20607).
+        // TouchResponse_CompetitionMode (sonic3k.asm:20632-20643): X half-width4, y_radius-3.
         int dx = Math.abs((short) (player.centreX() - x));
         int dy = Math.abs((short) (player.centreY() - y));
         return dx <= halfWidth + 4 && dy <= halfHeight + Math.max(0, player.yRadius() - 3);
@@ -872,6 +875,19 @@ public final class CompetitionArenaObjectInstance extends AbstractObjectInstance
     public int lifetimeByte() { return lifetime; }
     public int mudDepth(int slot) { return slot == 0 ? mudP1 : mudP2; }
 
+    /** Live native collision byte; list publication is a separate SST-routine decision. */
+    @Override public int getCollisionFlags() {
+        return switch (kind) {
+            case BUMPER, BALLOON -> 0xD7;
+            case BLADE_LEFT, BLADE_RIGHT -> 0xA6;
+            default -> 0;
+        };
+    }
+    @Override public int getCollisionProperty() { return pendingTouches & 0xFF; }
+    @Override public boolean publishesTouchResponseListEntryThisFrame() { return listedForTouch; }
+    // Touch_Loop reads collision_flags directly, without testing render_flags bit7.
+    @Override public boolean requiresRenderFlagForTouch() { return false; }
+
     private boolean xFlip() { return (spawn.renderFlags() & 1) != 0; }
 
     private boolean usesVisibleFullRoutine() {
@@ -896,6 +912,22 @@ public final class CompetitionArenaObjectInstance extends AbstractObjectInstance
     }
     @Override public boolean isPersistent() { return true; }
 
+    /** World position of the submitted mapping, distinct from Elephant's solid/visibility centre. */
+    public int nativeRenderX() {
+        return kind == Kind.ELEPHANT
+                ? (originX + (xFlip() ? (byte) (extension >>> 8) : -(byte) (extension >>> 8))) & 0xFFFF : x;
+    }
+    public int nativeRenderY() { return y; }
+    public boolean nativeRenderXFlip() { return xFlip(); }
+    public boolean nativeRenderYFlip() {
+        if (kind == Kind.ELEPHANT) return false;
+        if (kind == Kind.SPRING || kind == Kind.RETRACTING_SPRING) {
+            int orientation = (subtype >>> 4) & 7;
+            return orientation == 2 || orientation == 5 || orientation == 7;
+        }
+        return (spawn.renderFlags() & 2) != 0;
+    }
+
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (!renderPublished) return;
@@ -903,17 +935,9 @@ public final class CompetitionArenaObjectInstance extends AbstractObjectInstance
         if (key == null || kind == Kind.SPRING_BASE && frame == 0) return;
         var renderer = getRenderer(key);
         if (renderer == null) return;
-        if (kind == Kind.ELEPHANT) {
-            // Render_Sprites' multi-draw branch skips the main mapping_frame=0; only sub2 draws.
-            int tip = (originX + (xFlip() ? (byte) (extension >>> 8) : -(byte) (extension >>> 8))) & 0xFFFF;
-            renderer.drawFrameIndex(frame, tip, y, xFlip(), false);
-            return;
-        }
-        int orientation = (subtype >>> 4) & 7;
-        boolean verticalFlip = (spawn.renderFlags() & 2) != 0;
-        if (kind == Kind.SPRING || kind == Kind.RETRACTING_SPRING)
-            verticalFlip = orientation == 2 || orientation == 5 || orientation == 7;
-        renderer.drawFrameIndex(frame, x, y, xFlip(), verticalFlip);
+        // Elephant's native multi-draw branch submits only sub2; its main frame is empty.
+        renderer.drawFrameIndex(frame, nativeRenderX(), nativeRenderY(),
+                nativeRenderXFlip(), nativeRenderYFlip());
     }
 
     /** Palette/mapping variants are distinct ROM-backed sheets, not renderer-time tile guesses. */

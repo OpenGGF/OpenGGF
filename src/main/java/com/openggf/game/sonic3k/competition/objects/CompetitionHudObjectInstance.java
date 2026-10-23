@@ -12,11 +12,14 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /** Native goal-owned HUD records, including the neon animation that starts the timers. */
 public final class CompetitionHudObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     public enum Kind { ITEM_ICON, LAP, NEON, LOSER_NEON, FALSE_START, TIMER, RESERVED }
+    /** View-local pixels with the VDP $80 bias removed; pieceIndex=-1 submits the whole mapping. */
+    public record NativeDrawPiece(String artKey, int mappingFrame, int pieceIndex, int screenX, int screenY) { }
     private Kind kind;
     private int playerSlot;
     private int mappingFrame;
@@ -37,6 +40,7 @@ public final class CompetitionHudObjectInstance extends AbstractObjectInstance i
         super(new ObjectSpawn(0x120, 0xB8, 0x65, slot, 0, false, 0), "CompetitionHud" + kind);
         this.kind = java.util.Objects.requireNonNull(kind);
         this.playerSlot = slot;
+        setRomWorldPositioned(false); // Native HUD routines select screen views, never render_flags.level_fg.
         if (kind == Kind.FALSE_START) animation = 7;
         if (kind == Kind.LOSER_NEON) animation = 2;
     }
@@ -152,25 +156,50 @@ public final class CompetitionHudObjectInstance extends AbstractObjectInstance i
             case RESERVED -> null;
         };
     }
+    /** Exact native x_pos/y_pos before removing the VDP sprite-coordinate bias. */
+    public int nativeScreenX() { return kind == Kind.LAP ? 0x190 : kind == Kind.TIMER ? 0xC8 : 0x120; }
+    public int nativeScreenY() {
+        return switch (kind) { case ITEM_ICON -> 0xE0; case LAP -> 0x98; case TIMER -> 0x90; default -> 0xB8; };
+    }
+    @Override public int getX() { return nativeScreenX(); }
+    @Override public int getY() { return nativeScreenY(); }
+    @Override public int getOnScreenHalfWidth() {
+        return switch (kind) { case ITEM_ICON -> 0x10; case LAP -> 8; case TIMER -> 0x40;
+            case NEON, LOSER_NEON, FALSE_START -> 0x80; case RESERVED -> 0; };
+    }
+    @Override public int getOnScreenHalfHeight() {
+        return switch (kind) { case ITEM_ICON, TIMER -> 0x10; case LAP -> 0xC;
+            case NEON, LOSER_NEON, FALSE_START -> 0x28; case RESERVED -> 0; };
+    }
     @Override public boolean isPersistent() { return true; }
-    @Override public boolean isHighPriority() { return true; }
+    @Override public boolean isHighPriority() { return kind != Kind.RESERVED; }
     @Override public int getPriorityBucket() { return 0; } // Goal children explicitly write priority word zero.
+
+    /** Native HUD mapping submissions for either the existing drawer or the shared competition view. */
+    public List<NativeDrawPiece> nativeDrawPieces() {
+        if (artKey() == null || !drawPublished || isDestroyed()) return List.of();
+        int x = nativeScreenX() - 0x80;
+        int y = nativeScreenY() - 0x80;
+        if (kind != Kind.TIMER) return List.of(new NativeDrawPiece(artKey(), mappingFrame, -1, x, y));
+        var pieces = new ArrayList<NativeDrawPiece>(8);
+        // loc_37D7C..loc_37E14 rewrites only the five digit pieces of word_37E90.
+        for (int piece : new int[]{0, 2, 5}) pieces.add(new NativeDrawPiece(artKey(), 0, piece, x, y));
+        int min = packedTime >>> 16 & 0xFF, sec = packedTime >>> 8 & 0xFF, cs = packedTime & 0xFF;
+        int[] values = {min, sec / 10, sec % 10, cs / 10, cs % 10};
+        int[] offsets = {-0x18, -4, 8, 0x1C, 0x28};
+        for (int i = 0; i < values.length; i++) pieces.add(new NativeDrawPiece(
+                "competition_timer_digit", values[i], -1, x + offsets[i], y));
+        return List.copyOf(pieces);
+    }
+
     @Override public void appendRenderCommands(List<GLCommand> commands) {
-        if (artKey() == null || !drawPublished) return;
-        var renderer = getRenderer(artKey());
-        if (renderer == null || !renderer.isReady()) return;
-        if (kind == Kind.TIMER) {
-            for (int piece : new int[]{0, 2, 5}) renderer.drawFramePieceByIndex(0, piece, 0xC8 - 0x80, 0x90 - 0x80, false, false);
-            var digits = getRenderer("competition_timer_digit");
-            if (digits == null || !digits.isReady()) return;
-            int min = packedTime >>> 16 & 0xFF, sec = packedTime >>> 8 & 0xFF, cs = packedTime & 0xFF;
-            int[] values = {min, sec / 10, sec % 10, cs / 10, cs % 10};
-            int[] x = {-0x18, -4, 8, 0x1C, 0x28};
-            for (int i = 0; i < values.length; i++) digits.drawFrameIndex(values[i], 0xC8 - 0x80 + x[i], 0x90 - 0x80, false, false);
-        } else {
-            int x = kind == Kind.LAP ? 0x190 : 0x120;
-            int y = kind == Kind.ITEM_ICON ? 0xE0 : kind == Kind.LAP ? 0x98 : 0xB8;
-            renderer.drawFrameIndex(mappingFrame, x - 0x80, y - 0x80, false, false);
+        for (var piece : nativeDrawPieces()) {
+            var renderer = getRenderer(piece.artKey());
+            if (renderer == null || !renderer.isReady()) continue;
+            if (piece.pieceIndex() < 0) renderer.drawFrameIndex(piece.mappingFrame(),
+                    piece.screenX(), piece.screenY(), false, false);
+            else renderer.drawFramePieceByIndex(piece.mappingFrame(), piece.pieceIndex(),
+                    piece.screenX(), piece.screenY(), false, false);
         }
     }
     @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {

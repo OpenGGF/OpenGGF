@@ -173,3 +173,52 @@ Focused evidence, all queued with Java 25 and Lua 5.4:
 The complete product acceptance matrix above remains open for live world,
 S2 interlace/halfpipe/teleport, both native session/render/result products and
 actual route capture/restore coverage. Domain-only tests do not close those rows.
+
+## Immutable native view projection milestone
+
+`NativeCompetitionRenderer.View` pairs a captured camera, native VSRAM/BG
+registers, a complete packed horizontal-scroll page and an immutable admitted
+sprite frame. Each view renders its full native coordinate space to an owned
+scratch target before the compositor copies only its declared raster rows.
+This keeps background/priority scratch passes independent from the split and
+preserves the lower view's native screen-origin subtraction in VSRAM. No camera
+tracker, physics, world timer, animation or palette cycler runs during drawing.
+Separate `prepareSprites` collections retain independent H40 table/line budgets.
+
+`LevelArtInternalAccess.initializeObjectArt(level)` exposes the existing object/HUD
+art step internally; it does not run the ordinary playable-art admission bundled
+into campaign `initArt`. The generic renderer preserves native mode ownership of
+ROM plane addressing, sprite projection, page publication and visibility flags.
+In particular, ordinary decoded-world sampling is not proof of S3K competition's
+native refresh-row duplication, or S2's interlace VRAM/field/H-int state. Those
+producers remain explicit integration work.
+
+On `c98adcaec` plus this renderer/bridge, the exact focused selection
+`TestNativeCompetitionViews,TestNativeSpriteSubmissionQueue,TestObjectManagerNativeSpriteSubmissions,TestNativeSpriteSubmissionRegistration,TestModApiSignatureSurface`
+ran 57 tests with zero errors/skips. Its only failure was a test comparing
+array-backed `GameStateSnapshot` values by reference equality, after every
+composed framebuffer pixel and camera/frame assertion had passed. The test now
+uses the existing content-aware rewind diff. The affected two-view checks passed
+2/2, zero failures/errors/skips, after 22 seconds of queue waiting and 29.257
+seconds of Maven execution. Both commands used Java 25, Lua 5.4, the absolute
+verified S2 ROM and surfaceless EGL with display environment variables removed.
+
+The view test compares every pixel of a 108/116 split with the corresponding
+rows from independently rendered views of real loaded ROM terrain and admitted
+art. It checks independent 20-piece scanline admission, immutable scroll input,
+restored scissor state and unchanged camera/frame/game-state values. It is a
+render composition regression, not a native arena/field timing certification.
+
+The split renderer now drains earlier commands under their owning projection and
+uses `GraphicsProjectionAccess.openProjection` for each complete native draw.
+It clears an incoming local matrix override while drawing and restores the exact
+source/matrix tuple afterward. The real split-view pixel check seeds an identity
+matrix override that would otherwise replace the native orthographic matrix,
+verifies both retained terrain views and SAT images, then checks reference-exact
+restoration. On `e9236582a` plus this change, the queued five-selector check
+`TestNativePaletteOwnerReplacement,TestNativePatternOwnerReplacement,TestNativeCompetitionViews,TestRetainedPlaneRendering,TestGraphicsProjectionScope`
+passed 26 tests with zero failures, errors or skips (1:29 Maven execution, queue
+wait reported through 90s before admission). The command used Java 25, Lua 5.4,
+unset displays, explicit surfaceless EGL and both absolute S2/S3K ROM properties.
+This checks the composed palette-owner and projection seams; the synthetic split
+producer still does not certify the native arena's actual mappings or geometry.

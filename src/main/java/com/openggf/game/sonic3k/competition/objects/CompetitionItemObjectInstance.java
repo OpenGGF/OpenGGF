@@ -11,6 +11,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.physics.TrigLookupTable;
 
 import java.util.List;
@@ -21,7 +22,8 @@ import java.util.List;
  * separate from ordinary character touch: TouchResponse_CompetitionMode uses
  * an eight-pixel-wide player box and y_radius-3 (20595-20609).
  */
-public final class CompetitionItemObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class CompetitionItemObjectInstance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable, TouchResponseProvider {
     public static final String ART_KEY = "competition_item";
     public enum Kind { WHEEL, EFFECT, DROPPING_SLIDE, SLIDE, DROPPING_SPRING, SPRING,
         DROPPING_PROJECTILE, PROJECTILE }
@@ -45,6 +47,7 @@ public final class CompetitionItemObjectInstance extends AbstractObjectInstance 
     private int mappingFrame;
     private int collisionFlags = 0xC7;
     private boolean publishedTouch;
+    private boolean drawPublished;
     private boolean animationFinished;
     private boolean airborne;
     private boolean highPriority;
@@ -66,6 +69,7 @@ public final class CompetitionItemObjectInstance extends AbstractObjectInstance 
 
     public void updateNative(S3kCompetitionSession session) {
         if (isDestroyed()) return;
+        drawPublished = false;
         int touches = pendingTouchMask;
         pendingTouchMask = 0;
         publishedTouch = false;
@@ -107,6 +111,11 @@ public final class CompetitionItemObjectInstance extends AbstractObjectInstance 
             case SLIDE -> { updateSlide(session, touches); publishedTouch = true; }
             case PROJECTILE -> { updateProjectile(session, touches); publishedTouch = true; }
         }
+        // Native Draw_Sprite queues only an executed, surviving routine. In particular the
+        // reserved projectile slot precedes its collecting wheel, so it cannot draw until
+        // its first SST dispatch; allocation alone never publishes it to Render_Sprites.
+        drawPublished = !isDestroyed();
+        if (isDestroyed()) publishedTouch = false;
     }
 
     /** Player-slot prepass, before the object SST pass; collision uses last frame's position. */
@@ -296,15 +305,23 @@ public final class CompetitionItemObjectInstance extends AbstractObjectInstance 
     public int angle() { return angle; }
     public int mappingFrame() { return mappingFrame; }
     public int collisionFlags() { return collisionFlags; }
+    @Override public int getCollisionFlags() { return collisionFlags & 0xFF; }
+    @Override public int getCollisionProperty() { return pendingTouchMask & 0xFF; }
+    // The competition touch pass consumes its previous list even when no view drew the item.
+    @Override public boolean requiresRenderFlagForTouch() { return false; }
+    public boolean nativeDrawPublished() { return drawPublished; }
+    @Override public int getOnScreenHalfWidth() { return 8; }
+    @Override public int getOnScreenHalfHeight() { return 8; }
     @Override public boolean publishesTouchResponseListEntryThisFrame() { return publishedTouch; }
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
     @Override public boolean isPersistent() { return true; } // Obj_2PItem has no camera-cull tail.
     @Override public boolean isHighPriority() { return highPriority; }
     @Override public int getPriorityBucket() {
-        return RenderPriority.fromS3kWord(0x280); // Obj_2PItem, sonic3k.asm:73286.
+        return RenderPriority.fromS3kWord(0x280); // Obj_2PItem's native priority word.
     }
     @Override public void appendRenderCommands(List<GLCommand> commands) {
+        if (!drawPublished || isDestroyed()) return;
         var renderer = getRenderer(ART_KEY);
         if (renderer != null && renderer.isReady()) renderer.drawFrameIndex(mappingFrame, x, y, false, false);
     }

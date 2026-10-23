@@ -71,6 +71,16 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+An owned EGL fixture can pass while poisoning the next context (2026-10-23,
+native-mode composition). HeadlessGameBoot closes the session and EGL context;
+a fixture drawing through the legacy pattern path must also release its actual
+post-boot graphics owner's static VAO/VBO/uniform state while that context is
+current. Interlace passed, but the next projection control rendered black;
+projection alone passed and the ordered pair reproduced the failure. Closing
+scene owners then captured graphics before boot closes EGL preserved all pixel
+assertions. A graphics reference taken before boot names the previous owner.
+See the [composition evidence](../architecture/plans/2026-10-22-native-gap-swarm.md).
+
 Method selectors may not narrow ArchUnit field rules (2026-10-22, native-mode
 foundation guards). Surefire's two named architecture selectors ran all26
 ArchUnit field identities; adjacent Jupiter method tests were not selected.

@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.competition;
 import com.openggf.data.RomByteReader;
 import com.openggf.data.RomManager;
 import com.openggf.game.sonic3k.S3kSpriteDataLoader;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
@@ -16,6 +17,7 @@ import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.DynamicObjectRecreateContext;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
+import com.openggf.level.objects.StubObjectServices;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.tests.rules.RequiresRom;
@@ -156,11 +158,35 @@ class TestS3kCompetitionArenaObjects {
         for (int i = 1; i < 160; i++) extending.tickNative(f);
         assertEquals(0x5000, extending.extensionWord());
         assertEquals(0x531, extending.getX());
+        assertEquals(0x509, extending.nativeRenderX(), "sub2 is drawn at the tip, not the solid centre");
+        assertEquals(0x320, extending.nativeRenderY());
+        assertFalse(extending.nativeRenderXFlip()); assertFalse(extending.nativeRenderYFlip());
         var reflected = f.place(Kind.ELEPHANT, 0x4E7, 0x320, 0x50, 1);
         reflected.tickNative(f);
         assertEquals(0x4F80, reflected.extensionWord());
         assertEquals(0x50E, reflected.getX());
+        assertEquals(0x536, reflected.nativeRenderX());
+        assertTrue(reflected.nativeRenderXFlip()); assertFalse(reflected.nativeRenderYFlip());
         assertEquals(1, reflected.mappingFrame());
+    }
+
+    @Test
+    void elephantRenderDescriptorRestoresAndForwardsIndependentlyOfItsVisibilityCentre() {
+        Fixture f = fixture();
+        f.place(Kind.ELEPHANT, 0x4E7, 0x320, 0x50, 1);
+        for (int tick=0;tick<21;tick++) f.tick();
+        var before=f.capture();
+        for (int tick=0;tick<17;tick++) f.tick();
+        var forward=f.capture();
+        int renderX=f.objects.getFirst().nativeRenderX();
+        int solidX=f.objects.getFirst().getX();
+        assertNotEquals(renderX,solidX);
+        f.restore(before);
+        for (int tick=0;tick<17;tick++) f.tick();
+        assertEquals(renderX,f.objects.getFirst().nativeRenderX());
+        assertEquals(solidX,f.objects.getFirst().getX());
+        assertTrue(f.objects.getFirst().nativeRenderXFlip());
+        assertEquals(forward.objectStates,f.capture().objectStates);
     }
 
     @Test
@@ -524,6 +550,85 @@ class TestS3kCompetitionArenaObjects {
         assertEquals(0, blade.nativeStandingMask());
     }
 
+    @Test
+    void automaticRetractingSpringSoundUsesCapturedPreviousVisibilityWhenItsHoldExpires() {
+        for (boolean previousVisible : List.of(false,true)) {
+            Fixture f=fixture(); f.visible=previousVisible;
+            var spring=f.place(Kind.RETRACTING_SPRING,0x100,0x100,0,0);
+            // Three extension steps, then 59 hold steps: the next native pass expires $3A.
+            for (int tick=0;tick<62;tick++) f.tick();
+            assertEquals(1,spring.delayTicks());
+            assertEquals(previousVisible,spring.nativeVisible());
+            assertTrue(f.sounds.isEmpty());
+            var before=f.capture();
+            f.visible=!previousVisible; // This pass's later BuildSprites result must not decide its sound.
+            f.tick();
+            List<Integer> expected=previousVisible?List.of(Sonic3kSfx.SPIKE_MOVE.id):List.of();
+            assertEquals(expected,f.sounds);
+            assertEquals(!previousVisible,spring.nativeVisible());
+            var forward=f.capture();
+            f.restore(before); f.sounds.clear();
+            assertEquals(previousVisible,f.objects.getFirst().nativeVisible());
+            f.tick();
+            assertEquals(expected,f.sounds);
+            assertEquals(forward.objectStates,f.capture().objectStates);
+            assertEquals(forward.playerStates,f.capture().playerStates);
+        }
+    }
+
+    @Test
+    void canonicalCollisionListRetainsOnlyPublishedArenaEntriesInSstOrderAcrossRecreation() {
+        Fixture f=fixture();
+        var triangle=f.place(Kind.TRIANGLE,0x100,0x100,0,0);
+        var bumper=f.place(Kind.BUMPER,0x200,0x100,0,0);
+        var blade=f.place(Kind.BLADE,0x300,0x100,0,0);
+        var balloon=f.place(Kind.BALLOON,0x400,0x100,0,0);
+        f.tick();
+        var left=f.objects.get(4); var right=f.objects.get(5);
+        assertEquals(0,triangle.getCollisionFlags()); assertEquals(0,blade.getCollisionFlags());
+        assertEquals(0xD7,bumper.getCollisionFlags()); assertEquals(0xD7,balloon.getCollisionFlags());
+        assertEquals(0xA6,left.getCollisionFlags()); assertEquals(0xA6,right.getCollisionFlags());
+        assertFalse(bumper.requiresRenderFlagForTouch());
+        var manager=new StubObjectServices().withIsolatedObjectManager().objectManager();
+        // Reverse insertion proves the canonical list follows the SST, not registration order.
+        for (int i=f.objects.size()-1;i>=0;i--) manager.addDynamicObjectAtSlot(f.objects.get(i),32+i);
+        var bumperId=manager.objectQuery().identityOf(bumper).orElseThrow();
+        var balloonId=manager.objectQuery().identityOf(balloon).orElseThrow();
+        var leftId=manager.objectQuery().identityOf(left).orElseThrow();
+        var rightId=manager.objectQuery().identityOf(right).orElseThrow();
+        var adapter=manager.rewindSnapshottable();
+        manager.publishRepresentedInitialCollisionResponseList();
+        assertEquals(List.of(bumperId,leftId,rightId),
+                adapter.capture().collisionResponseState().previousCollisionObjectIds());
+        for (int tick=0;tick<60 && !balloon.publishesTouchResponseListEntryThisFrame();tick++) f.tick();
+        assertTrue(balloon.publishesTouchResponseListEntryThisFrame());
+        for (var player:f.players) {
+            player.setCentre(bumper.getX(),bumper.getY());
+            assertTrue(bumper.touchNativePlayer(f,player));
+        }
+        assertEquals(3,bumper.getCollisionProperty());
+        manager.publishRepresentedInitialCollisionResponseList();
+        var before=adapter.capture(); var playerBefore=f.players.stream().map(S3kCompetitionPlayer::capture).toList();
+        int frameBefore=f.frame;
+        assertEquals(List.of(bumperId,balloonId,leftId,rightId),
+                before.collisionResponseState().previousCollisionObjectIds());
+        f.tick(); manager.publishRepresentedInitialCollisionResponseList();
+        var forward=adapter.capture(); var playerForward=f.players.stream().map(S3kCompetitionPlayer::capture).toList();
+        assertEquals(0,bumper.getCollisionProperty());
+        adapter.restore(before);
+        f.objects.clear();
+        for (var object:manager.getActiveObjects()) f.objects.add((CompetitionArenaObjectInstance)object);
+        for (int i=0;i<f.players.size();i++) f.players.get(i).restore(playerBefore.get(i));
+        f.frame=frameBefore;
+        var restored=(CompetitionArenaObjectInstance)manager.objectQuery().resolve(bumperId).orElseThrow();
+        assertNotSame(bumper,restored); assertEquals(3,restored.getCollisionProperty());
+        assertEquals(before.collisionResponseState(),adapter.capture().collisionResponseState());
+        f.tick(); manager.publishRepresentedInitialCollisionResponseList();
+        assertEquals(forward.dynamicObjects(),adapter.capture().dynamicObjects());
+        assertEquals(forward.collisionResponseState(),adapter.capture().collisionResponseState());
+        assertEquals(playerForward,f.players.stream().map(S3kCompetitionPlayer::capture).toList());
+    }
+
     private int[] ids(int address, int count) {
         int[] result = new int[count];
         for (int i = 0; i < count; i++) result[i] = rom.readU8(address + i * 6 + 4);
@@ -544,9 +649,11 @@ class TestS3kCompetitionArenaObjects {
         final Map<String, SpriteAnimationSet> animationSets;
         final List<RockDebrisPiece> rockRows;
         final List<Integer> hurtSlots = new ArrayList<>();
+        final List<Integer> sounds = new ArrayList<>();
         final int[] triggers = new int[16];
         final int[][] palette = new int[4][16];
         int frame;
+        boolean visible = true;
         int capacity = 128;
         int allocationFailures;
         int floorDistance;
@@ -568,7 +675,7 @@ class TestS3kCompetitionArenaObjects {
 
         void tick() {
             for (int i = 0; i < objects.size(); i++) objects.get(i).tickNative(this);
-            for (var object : objects) object.refreshNativeVisibility(true);
+            for (var object : objects) object.refreshNativeVisibility(visible);
             frame++;
         }
 
@@ -630,7 +737,7 @@ class TestS3kCompetitionArenaObjects {
         @Override public int randomWord() { return randomWords[randomCalls++ % randomWords.length]; }
         @Override public int bottomY() { return 0x700; }
         @Override public int wrapYMask() { return -1; }
-        @Override public void playSfx(int id) { }
+        @Override public void playSfx(int id) { sounds.add(id); }
         @Override public void hurt(S3kCompetitionPlayer player, int sourceX) { hurtSlots.add(player.slot()); }
         @Override public int paletteColor(int line, int index) { return palette[line][index]; }
         @Override public void setPaletteColor(int line, int index, int nativeColor) { palette[line][index] = nativeColor; }

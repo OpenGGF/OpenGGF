@@ -106,6 +106,81 @@ class TestS3kCompetitionScreen {
         assertEquals(NativeMenuScreen.Exit.NONE, f.screen.consumeExit()); assertTrue(f.launches.isEmpty());
     }
 
+    @Test void wheelQueueKeepsPreviousActorWordsForBothPlayersDuringRotation() {
+        Fixture f = new Fixture();
+        assertEquals(List.of(0,0,0,0,0,0),f.screen.view().wheelQueuePriorityWords());
+        f.press(1,0,InputActionMasks.ACTION_A);
+        assertEquals(List.of(0x80,0x100,0x180,0x100,0x180,0x80),f.screen.view().wheelQueuePriorityWords());
+        f.press(0,8,0); // $40 -> $45 swaps the two rear actors in this frame's sub_C0AE.
+        assertEquals(0x45,f.screen.view().wheelAngles().getFirst());
+        assertEquals(List.of(0x80,0x100,0x180,0x100,0x180,0x80),f.screen.view().wheelQueuePriorityWords());
+        f.press(1,8,0); // P2 $95 -> $9A, independently of P1's next actor pass.
+        assertEquals(List.of(0x80,0x180,0x100,0x100,0x180,0x80),f.screen.view().wheelQueuePriorityWords());
+        f.idle(1);
+        assertEquals(List.of(0x80,0x180,0x100,0x180,0x100,0x80),f.screen.view().wheelQueuePriorityWords());
+    }
+
+    @Test void inactivePlayerTieSortSurvivesJoinAndMenuViewCopiesQueueWords() {
+        Fixture f = new Fixture(); f.press(0,0,InputActionMasks.ACTION_A);
+        assertEquals(1,f.screen.view().participants());
+        assertEquals(List.of(0x100,0x180,0x80),f.screen.view().wheelQueuePriorityWords().subList(3,6));
+        f.screen.update(LogicalInputSnapshot.ofPlayers(PlayerInputState.neutral(),
+                PlayerInputState.of(0,0,0,0,true,true)));
+        assertEquals(2,f.screen.view().participants());
+        assertEquals(List.of(0x100,0x180,0x80),f.screen.view().wheelQueuePriorityWords().subList(3,6));
+        assertThrows(UnsupportedOperationException.class,() -> f.screen.view().wheelQueuePriorityWords().clear());
+    }
+
+    @Test void nativeMenuEntriesResetClockAndResultsReturnClearsBothScrollWords() {
+        Fixture f = new Fixture(); assertFalse(f.screen.view().mainLoopStarted());
+        f.idle(13); assertEquals(13,f.screen.view().frame()); assertTrue(f.screen.view().mainLoopStarted());
+        f.press(1,0,InputActionMasks.ACTION_A); assertEquals(0,f.screen.view().frame());
+        assertFalse(f.screen.view().mainLoopStarted());
+        f.idle(7); assertEquals(7,f.screen.view().frame()); assertTrue(f.screen.view().mainLoopStarted());
+        f.press(0,0,InputActionMasks.ACTION_A); f.press(1,0,InputActionMasks.ACTION_A);
+        f.screen.requestResults(f.screen.session().result()); f.idle(1);
+        assertEquals(S3kCompetitionScreen.Phase.RESULTS,f.screen.view().phase());
+        assertEquals(0,f.screen.view().frame()); assertFalse(f.screen.view().mainLoopStarted());
+        f.idle(30); assertEquals(30,f.screen.view().frame()); assertTrue(f.screen.view().mainLoopStarted());
+        f.press(0,0,InputActionMasks.ACTION_A); f.idle(16);
+        assertEquals(-0x88,f.screen.view().horizontalScroll());
+        f.press(0,0,InputActionMasks.ACTION_A);
+        assertEquals(S3kCompetitionScreen.Phase.MODE,f.screen.view().phase());
+        assertFalse(f.screen.view().mainLoopStarted());
+        assertEquals(0,f.screen.view().frame()); assertEquals(0,f.screen.view().horizontalScroll());
+        assertEquals(0,f.screen.view().verticalScroll()); f.idle(1); assertEquals(1,f.screen.view().frame());
+        assertTrue(f.screen.view().mainLoopStarted());
+    }
+
+    @Test void selectionBackAndTimeAttackRecordReturnStartFreshNativeClocks() {
+        Fixture back = new Fixture(); back.press(0,0,InputActionMasks.ACTION_A); back.idle(11);
+        back.press(0,0,InputActionMasks.ACTION_B);
+        assertEquals(S3kCompetitionScreen.Phase.MODE,back.screen.view().phase());
+        assertEquals(0,back.screen.view().frame());
+        Fixture ta = new Fixture(); ta.press(0,2,0); ta.press(0,2,0);
+        ta.press(0,0,InputActionMasks.ACTION_A); assertEquals(0,ta.screen.view().frame());
+        ta.press(0,0,InputActionMasks.ACTION_A); ta.idle(10); ta.press(0,0,InputActionMasks.ACTION_A);
+        ta.screen.requestResults(ta.screen.session().result()); ta.idle(1);
+        assertEquals(0,ta.screen.view().frame());
+        ta.idle(30); ta.press(0,0,InputActionMasks.ACTION_A);
+        assertEquals(S3kCompetitionScreen.Phase.ARENA_SELECT,ta.screen.view().phase());
+        assertEquals(0,ta.screen.view().frame());
+    }
+
+    @Test void queuedWheelWordsAreAnImmutableSixWordNativeContract() {
+        var words = new ArrayList<>(List.of(0x80,0x100,0x180,0x100,0x180,0x80));
+        var view = new S3kCompetitionScreen.MenuView(S3kCompetitionScreen.Phase.PLAYER_SELECT,0,0,true,
+                S3kCompetitionSession.Mode.GRAND_PRIX,0,2,List.of(0,1),List.of(0x40,0x95),
+                List.of(false,false),0,0,null,words);
+        words.set(0,0); assertEquals(0x80,view.wheelQueuePriorityWords().getFirst());
+        assertThrows(IllegalArgumentException.class,() -> new S3kCompetitionScreen.MenuView(
+                view.phase(),0,0,true,view.mode(),0,2,view.characters(),view.wheelAngles(),view.confirmed(),
+                0,0,null,List.of(0,0,0,0,0)));
+        assertThrows(IllegalArgumentException.class,() -> new S3kCompetitionScreen.MenuView(
+                view.phase(),0,0,true,view.mode(),0,2,view.characters(),view.wheelAngles(),view.confirmed(),
+                0,0,null,List.of(1,0,0,0,0,0)));
+    }
+
     private static final class Fixture implements S3kCompetitionScreen.Host {
         final S3kCompetitionScreen screen = new S3kCompetitionScreen(this);
         final List<S3kCompetitionScreen.Launch> launches = new ArrayList<>();

@@ -11,13 +11,14 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 
 import java.util.List;
 
-/** S3KL $65, Obj_2PGoalMarker (sonic3k.asm:73950-74207). */
+/** S3KL $65, Obj_2PGoalMarker (sonic3k.asm:73992-74247). */
 public final class CompetitionGoalObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     public static final String ART_KEY = "competition_goal";
     private int animationFrame;
     private int animationTimer;
     private int mappingFrame;
     private boolean initialized;
+    private boolean drawPublished;
 
     public CompetitionGoalObjectInstance(ObjectSpawn spawn) { super(spawn, "CompetitionGoalMarker"); }
 
@@ -28,6 +29,8 @@ public final class CompetitionGoalObjectInstance extends AbstractObjectInstance 
     }
 
     public void updateNative(S3kCompetitionSession session) {
+        if (isDestroyed()) return;
+        drawPublished = false;
         if (!initialized) {
             initialized = true;
             session.beginGoalHud();
@@ -48,6 +51,8 @@ public final class CompetitionGoalObjectInstance extends AbstractObjectInstance 
             }
         }
         if (!session.tickGoalHold()) session.observeGoal(getX(), getY(), spawn.subtype(), this);
+        // Both goal routines always reach Draw_Sprite, even when Animate_Sprite keeps its frame.
+        drawPublished = true;
         // Animate_Sprite reads the ROM script, including its native six-tick cadence.
         animationTimer = (animationTimer - 1) & 0xFF;
         if ((byte) animationTimer >= 0) return;
@@ -60,12 +65,16 @@ public final class CompetitionGoalObjectInstance extends AbstractObjectInstance 
     }
 
     public int mappingFrame() { return mappingFrame; }
+    public boolean nativeDrawPublished() { return drawPublished; }
+    @Override public int getOnScreenHalfWidth() { return 8; }
+    @Override public int getOnScreenHalfHeight() { return 0x20; }
     @Override public boolean isPersistent() { return true; } // Native has no out-of-range tail.
     @Override public boolean isHighPriority() { return false; }
     @Override public int getPriorityBucket() {
-        return RenderPriority.fromS3kWord(0x280); // Obj_2PGoalMarker, sonic3k.asm:73955.
+        return RenderPriority.fromS3kWord(0x280); // Obj_2PGoalMarker's native priority word.
     }
     @Override public void appendRenderCommands(List<GLCommand> commands) {
+        if (!drawPublished || isDestroyed()) return;
         var renderer = getRenderer(ART_KEY);
         if (renderer != null && renderer.isReady()) renderer.drawFrameIndex(mappingFrame, getX(), getY(), false, false);
     }

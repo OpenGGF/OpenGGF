@@ -1782,7 +1782,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         }
     }
 
-    private void initObjectArt() {
+    void initObjectArt() {
         activeCustomZonePaletteBridge = null;
         PatternAtlas patternAtlas = graphicsManager.getPatternAtlas();
         if (patternAtlas != null) {

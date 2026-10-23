@@ -7,7 +7,8 @@ import java.util.Objects;
 
 /**
  * Native competition actor, independent of the campaign playable controller.
- * Obj_Sonic2P/Obj_Tails2P (sonic3k.asm:21416-21850,25565-25930).
+ * Obj_Sonic2P (sonic3k.asm:21452-21886) and
+ * Obj_Tails2P (sonic3k.asm:25605-25970).
  * Coordinates retain the full ROM 16:16 pair; velocities are signed 8:8 words.
  */
 public final class S3kCompetitionPlayer {
@@ -75,7 +76,7 @@ public final class S3kCompetitionPlayer {
     }
     private static int word(byte[] b,int i) { return (b[i]&255)<<8 | b[i+1]&255; }
     private static Speeds nativeSpeeds(Character c) {
-        // Character_Speeds (sonic3k.asm:202293-202296), ROM $1E3C00.
+        // Character_Speeds (sonic3k.asm:202408-202411), ROM $1E3C00.
         return switch(c) {
             case SONIC -> new Speeds(0x600,0x10,0x20);
             case TAILS -> new Speeds(0x4C0,0x1C,0x70);
@@ -196,7 +197,8 @@ public final class S3kCompetitionPlayer {
     }
 
     private void slopeForce(boolean roll) {
-        // Player_SlopeResist / Player_RollRepel (sonic3k.asm:23821-23900).
+        // Player_SlopeResist (sonic3k.asm:23861-23900) and
+        // Player_RollRepel (sonic3k.asm:23907-23940).
         if (((angle+0x60)&255)>=0xC0) return;
         int force=TrigLookupTable.sinHex(angle)*(roll?0x50:0x20)>>8;
         if (roll) {
@@ -412,6 +414,7 @@ public final class S3kCompetitionPlayer {
     public int statusSecondary(){return statusSecondary;} public int routine(){return routine;}
     public int objectControl(){return objectControl;} public int moveLock(){return moveLock;}
     public int animation(){return animation;} public int animationFrame(){return animationFrame;}
+    public boolean stickToConvex(){return stickToConvex;}
     public int xRadius(){return xRadius;} public int yRadius(){return yRadius;}
     public int angle(){return angle;} public int topSolidBit(){return topSolidBit;}
     public int lrbSolidBit(){return lrbSolidBit;} public int standingObject(){return standingObject;}
@@ -435,6 +438,11 @@ public final class S3kCompetitionPlayer {
     public void setRoutine(int v){routine=v&255;publish();} public void setObjectControl(int v){objectControl=v&255;publish();}
     public void setMoveLock(int v){moveLock=v&65535;publish();} public void setAnimation(int v){animation=v&255;publish();}
     public void setAnimationFrame(int v){animationFrame=v&255;publish();}
+    public void setPreviousAnimation(int v){
+        animationState=new S3kMiniatureAnimation.State(v&255,animationState.frame(),
+                animationState.timer(),animationState.mappingFrame(),animationState.renderFlips());
+        publish();
+    }
     public void setRadii(int x,int y){xRadius=x&255;yRadius=y&255;publish();}
     public void setAngle(int v){angle=v&255;publish();} public void setTopSolidBit(int v){topSolidBit=v&255;publish();}
     public void setLrbSolidBit(int v){lrbSolidBit=v&255;publish();}

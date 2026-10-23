@@ -180,6 +180,39 @@ class TestS3kCompetitionAssets {
         assertTrue(assets.rockDebris().stream().anyMatch(row->row.xVelocity()<0));
     }
 
+    @Test void arenaPaletteAppliesNativeTwoPlayerSecondaryOverrideInEveryArena() throws IOException {
+        assertEquals(0x43F9,reader.readU16BE(0x6BFA));
+        assertEquals(0x6C0C,longWord(0x6BFC),"owning main-half palette pointer, not a matching duplicate");
+        int[] sources={0xA99DC,0xA9A3C,0xA9A9C,0xA9AFC,0xA9B5C};
+        int[] pointers={0xA885C,0xA886C,0xA88CC,0xA88D4,0xA88DC};
+        for (int i=0;i<5;i++) {
+            assertEquals(sources[i],longWord(pointers[i]));
+            Palette[] palette=assets.arenaPalette(S3kCompetitionSession.Arena.forZone(0xE+i));
+            assertEquals(4,palette.length);
+            assertPaletteLine(palette[0],0xA8A3C);
+            assertPaletteLine(palette[1],0x6C0C);
+            assertPaletteLine(palette[2],sources[i]+32);
+            assertPaletteLine(palette[3],sources[i]+64);
+            assertNotSame(palette[1],assets.arenaPalette(S3kCompetitionSession.Arena.forZone(0xE+i))[1]);
+        }
+    }
+
+    @Test void arenaPaletteSourceSpansMatchEntireNativeAssets() throws IOException,NoSuchAlgorithmException {
+        int[] addresses={0x6C0C,0xA8A3C,0xA99DC,0xA9A3C,0xA9A9C,0xA9AFC,0xA9B5C};
+        int[] lengths={32,64,96,96,96,96,96};
+        String[] hashes={
+                "a3bcf3060412d93bb38a4f91d0921bbcf7aa583927506c7c271bf69cd6a70fa9",
+                "8d7d244bd1652e4f39806575a6a35f99ae2c533b325eed8441c95c9c79336db1",
+                "2ce7920efb399a9d15f52e84911053ff3e17bd0d93c9ee9185cf3041679e83a2",
+                "95bbd706d3a9f65d4fa0603bba38a682039cd55f9b518bd105fb229432c60b95",
+                "4e36eda39fb9b688cc72d8c758829115d4acfa6ba3f8e7e6d8aeb4b8870cf3f0",
+                "e3392a3d78ef3f65889e751296594647b54e2e05125e88f6211805ab4c45d66c",
+                "5ddf9f91816487fac3d9102c7cee753867090e60db4933945f35d63721c7ca25"};
+        MessageDigest digest=MessageDigest.getInstance("SHA-256");
+        for (int i=0;i<addresses.length;i++) assertEquals(hashes[i],HexFormat.of().formatHex(
+                digest.digest(rom.readBytes(addresses[i],lengths[i]))));
+    }
+
     private int longWord(int address) { return reader.readU16BE(address)<<16 | reader.readU16BE(address+2); }
     private void assertPaletteLine(Palette palette,int source) {
         for (int color=0;color<16;color++) {

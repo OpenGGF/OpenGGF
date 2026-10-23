@@ -514,7 +514,7 @@ public class ObjectManager {
         collisionResponseList.restoreRewindState(null, ignored -> null);
         s2LatchedObjectManagerCameraX = cameraX;
         twoAxisCameraYCoarse = Integer.MIN_VALUE;
-        placement.reset(cameraX, persistentRespawnState);
+        placement.reset(cameraX, persistentRespawnState, competitionStreaming.upfrontActive());
         if (competitionStreaming.active()) placement.resetNativeCompetitionStreaming(cameraX);
         if (registry != null) {
             registry.reportCoverage(placement.getAllSpawns());
@@ -599,6 +599,7 @@ public class ObjectManager {
      * the next frame will re-instantiate objects in the camera window.
      */
     public void resyncSpawnList(List<ObjectSpawn> newSpawns) {
+        competitionStreaming.releaseUpfrontPlacementSlots();
         nativeSpriteSubmissions.clear();
         nativeSpriteExternalResolver = null;
         nativeSpriteExternalSlotDispatch = null;
@@ -608,7 +609,7 @@ public class ObjectManager {
         markActiveObjectCachesDirty();
         bucketsDirty = true;
         twoAxisCameraYCoarse = Integer.MIN_VALUE;
-        placement.replaceSpawnsAndReset(newSpawns);
+        placement.replaceSpawnsAndReset(newSpawns, competitionStreaming.upfrontActive());
         if (planeSwitchers != null) {
             planeSwitchers.reset();
         }
@@ -1419,7 +1420,7 @@ public class ObjectManager {
      * @param postCameraX camera X position after the camera update step
      */
     public void postCameraPlacementUpdate(int postCameraX) {
-        if (competitionStreaming.active()) return;
+        if (competitionStreaming.active() || competitionStreaming.upfrontActive()) return;
         if (slotLayout == ObjectSlotLayout.SONIC_2) {
             s2LatchedObjectManagerCameraX = postCameraX;
         }
@@ -3295,6 +3296,7 @@ public class ObjectManager {
         // Native block ownership replaces MarkObjGone in competition.
         if (competitionStreaming.active()) return false;
         int referenceX = outOfRangeReferenceX(instance, spawn);
+        if (competitionStreaming.upfrontActive()) return competitionStreaming.isOutsideUpfrontUnloadWindow(referenceX);
         if (windowingStrategy.overridesUnloadWindow()) {
             if (windowingStrategy instanceof ViewportAwareObjectWindowingStrategy viewportAware) return viewportAware.isOutsideUnloadWindow(referenceX, cameraX, camera.getWidth());
             return windowingStrategy.isOutsideUnloadWindow(referenceX, cameraX);
@@ -3474,6 +3476,7 @@ public class ObjectManager {
      * the following frame's ExecuteObjects.
      */
     private void syncActiveSpawnsLoad(boolean allowVerticalLoadBypassForS2) {
+        if (competitionStreaming.initializeUpfrontPlacement()) return;
         if (competitionStreaming.active()) {
             competitionStreaming.update();
             return;

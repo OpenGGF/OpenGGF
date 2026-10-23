@@ -29,10 +29,12 @@ import java.util.Objects;
 /**
  * ROM-only competition art, mappings, DPLCs, menus and palettes.
  *
- * <p>Owning native pointers: Competition_Menu/Competition_LevelSelect/
- * Competition_Results (sonic3k.asm:13472-13515,13731-13800,14714-14760),
- * SonicKnuckles2P_Load_PLC (25521-25562), Tails2P_Load_PLC (29978-30018),
- * PLC_42..46 (199831-199888). Full compressed source spans and mapping bytes
+ * <p>Owning native pointers: Competition_Menu (sonic3k.asm:13480-13547),
+ * Competition_LevelSelect (sonic3k.asm:13742-13826),
+ * Competition_Results (sonic3k.asm:14720-14795),
+ * SonicKnuckles2P_Load_PLC (sonic3k.asm:25562-25606),
+ * Tails2P_Load_PLC (sonic3k.asm:30020-30062), and
+ * PLC_42 (sonic3k.asm:199945-200003). Full compressed source spans and mapping bytes
  * were compared with the locked-on ROM, not selected by a filename match.
  * The S3-half miniatures and menu assets are the pointers the locked-on
  * routines actually use. No disassembly file is consulted at runtime.
@@ -201,6 +203,26 @@ public final class S3kCompetitionAssets {
         }
         Palette[] result=new Palette[4];
         for (int i=0;i<4;i++) { result[i]=new Palette(); result[i].fromSegaFormat(Arrays.copyOfRange(raw,i*32,i*32+32)); }
+        return result;
+    }
+
+    /**
+     * Native arena palette after SpawnLevelMainSprites' competition override.
+     * Pal_Level_2P (sonic3k.asm:8494-8496) is the main-half $6C0C pointer,
+     * not the matching S3-half duplicate and not the campaign Knuckles line.
+     */
+    public Palette[] arenaPalette(S3kCompetitionSession.Arena arena) throws IOException {
+        Objects.requireNonNull(arena,"arena");
+        int[] levelPalettes={0xA99DC,0xA9A3C,0xA9A9C,0xA9AFC,0xA9B5C};
+        byte[] raw=new byte[128];
+        copyPalette(raw,0,0xA8A3C,32);
+        copyPalette(raw,32,levelPalettes[arena.zoneId()-0xE],96);
+        copyPalette(raw,32,0x6C0C,32);
+        Palette[] result=new Palette[4];
+        for (int i=0;i<4;i++) {
+            result[i]=new Palette();
+            result[i].fromSegaFormat(Arrays.copyOfRange(raw,i*32,i*32+32));
+        }
         return result;
     }
 

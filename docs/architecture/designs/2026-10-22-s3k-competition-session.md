@@ -143,6 +143,114 @@ history isolation, and actual ALZ followed by the other four complete routes.
 The domain's direct controller and state-machine tests do not establish those
 route or rendered acceptance rows.
 
+## Arena load and presentation consumers
+
+`S3kCompetitionLevelInitProfile` retains the existing ROM geometry/resource
+steps and replaces `InitArt` and `InitPlayerAndCheckpoint` with explicit native
+host callbacks. It resolves `Supplier<List<S3kCompetitionPlayer>>` once at the
+first executable step of each load. A profile created before rewind or a GP
+transition therefore cannot retain retired model identities. It does not request
+the common initial `Process_Sprites` token; the host executes the native initial
+player/object pass once and prepares both views. `S3kCompetitionRuntimeModule`
+supplies that profile, competition art and the injected scroll provider while
+suppressing campaign title and sidekick admission.
+
+The corrected `loc_1B720` contract is stricter than an all-arena lifetime mode:
+it changes `Object_load_routine` to 12 before its first allocation, including
+allocation failure and an initial placement at or beyond `$800`. Every placement
+uses the fixed `_unkF712` pointer without ordinary respawn-bit tests or counter
+advancement. `loc_1B74C` leaves the coarse back origin at zero. Standard range
+helpers consequently test the fixed origin, rather than the live P1 camera;
+they do not make competition objects immortal. The lead owns this shared loader
+and helper implementation. The domain profile passes the complete ROM list to
+its allocation callback and supplies no camera rescan or replacement lifetime
+policy.
+
+`S3kCompetitionScroll` owns both native cameras, their separate 64-entry position
+histories and camera-lag words, the arena events, and the native 108/116-line
+deformation regions. Both cameras initially derive from P1's centre, as in
+`loc_1A454`/`loc_1A46E`. The locked-on event table selects the actual S3-half
+routines and ALZ delta table. The profile's `vramDuplicateStride` is the native
+refresh write stride (`$100`, or `$80` in BPZ), rather than a level-layout row
+stride. Shared view code must consume the supplied profile and packed raster
+words rather than install an ordinary campaign scroll handler.
+
+The art provider uploads each shared `Pattern[]` bank once and binds its sheet
+aliases to that same virtual atlas base. CPU sheet and animation queries do not
+resolve ambient graphics. Arena palettes use their ROM level palette pointer,
+Sonic/Tails' first line and the native `Pal_Level_2P` replacement of line two.
+The owning instruction operand at `$6BFC` selects `$6C0C`; a guessed `$6C0E`
+would shift every secondary colour.
+
+Native page publication is explicit at the profile host boundary. Ordinary,
+pause and title V-int branches may flip a completed page before uploading its
+front. Lag republishes the retained front without a flip or DMA drain. Fade's
+`Do_ControllerPal` uses the fixed `Sprite_table`, without flipping, and drains
+DMA. The shared single-SAT and campaign numeric-HUD owners are disabled for
+this profile. These contracts do not certify a rendered arena or a full route.
+
+The first focused attempt for these consumers stopped in compilation because
+the campaign animation publication method is package-private. Calling through
+the campaign profile was rejected as well: its animation resolver omits the
+competition zones, while the native table selects ALZ/BPZ scripts and DPZ's
+custom camera-driven producer. `S3kCompetitionPatternAnimator` reads that ROM
+dispatch, submits script and DPZ uploads in native order, then publishes only
+at the profile's real DMA boundary. Its rewind payload retains both DPZ phase
+bytes, script counters, queued immutable bytes and the presented destination
+tiles. Existing BPZ/CGZ/EMZ palette animation remains in its original owner;
+installing this pattern manager must preserve that owner's rewind adapter.
+
+The object visual review also corrected the goal's `$08/$20` and item's
+`$08/$08` native visibility extents. Their captured draw-publication flags
+prevent an allocated reserved projectile from rendering before its earlier
+SST slot first executes. Arena descriptors preserve the elephant tip offset;
+HUD descriptors preserve the VDP-biased origins, view ownership and timer's
+three fixed mapping pieces plus five independent digits. Generic views must
+consume those submissions instead of inferring them from `artKey/getX`.
+
+`S3kCompetitionTerrain` implements the miniature and item terrain ports using
+the injected decoded collision geometry, native layer bits and 16-bit probe
+coordinates. It does not invoke ordinary playable movement. Death uses the
+session and P1 camera Y for both slots, including the shipped signed threshold
+and same-pass post-respawn gravity. The actual ALZ regression compares the
+decoded start neighbourhood with the existing floor oracle and derives both
+feet's response from the actual ROM angle, including the odd-angle cardinal fallback.
+
+`S3kCompetitionScrollProvider` uses the existing `CameraDrivenScrollHandler`
+boundary after object execution and before animated-tile submission. It advances
+both native cameras once, mirrors both outputs and suppresses ordinary camera
+following. Rendering and raster queries are read-only. The host records each
+actor's position immediately after that actor, before touch and object execution;
+the provider must not record it again. The active handler's existing parallax
+rewind path captures the supplied scroll owner, so a second independent scroll
+registration is unnecessary.
+
+The menu composer decodes native copy lists and object tables into 64-by-64
+tile planes and ordered mapping pieces. Current depth determines wheel art
+priority while the previously queued word determines its sprite bucket.
+`MenuView` carries those six words explicitly. Phase clocks reset at native
+entries; an explicit `mainLoopStarted` flag distinguishes initial result palette
+presentation from a later 16-bit frame wrap. Time Attack results use plane-A
+scroll `-$88`. Mapping-piece flags include full native art-word carry: the
+Knuckles record icon resolves `$85AF + $BFD5` to `$4584`, changing both palette
+and high-priority interpretation.
+
+Arena and item classes now implement the existing `TouchResponseProvider`
+admission contract. Their captured publication flag controls the canonical
+ordered collision list; their own miniature touch methods still dispatch the
+effects. A consumed wheel remains listed with collision byte zero, matching the
+native pointer list. The host must query the previous list separately after
+each participant so fixed-slot replacement can resolve a current SST owner.
+
+The concrete host remains a separate next milestone. Shared prerequisites are
+owned by the lead: the native world, supplied participant banks, fixed slot 94
+replacement, previous collision-list access, upfront placement and view/art
+injection. `Breathing_bubbles` is absolute SST slot 94; a wheel normally replaces
+it before the canonical loop reaches that slot, so the projectile can execute
+in the same pass. An earlier-slot fixture only proves deferred cursor behaviour,
+not this actual placement. The host will use the canonical live object loop,
+never execute an active-object snapshot itself.
+
 ## Focused verification checkpoint
 
 The first queued run used Java 25.0.5, absolute supplied S3K ROM and
@@ -179,6 +287,40 @@ and `test -B`. Exact focused selectors:
 2. `TestS3kCompetitionDispatch,TestS3kCompetitionPlayer,TestS3kCompetitionArenaObjects,TestS3kCompetitionSession,TestS3kCompetitionGoalAndItems,TestS3kCompetitionScreen,TestS3kCompetitionHud,TestS3kCompetitionBinding,TestS3kCompetitionRecords`
 3. `TestS3kCompetitionSession,TestS3kCompetitionGoalAndItems,TestS3kCompetitionScreen,TestS3kCompetitionHud,TestS3kCompetitionBinding`
 
-The third command is the final affected check. Asset, miniature, arena,
+The third command is the final affected check for the first milestone. Asset, miniature, arena,
 dispatch and record implementations had not changed since their respective
 passing executions. Whitespace and disassembly-citation checks also passed.
+
+The fourth command selected `TestS3kCompetitionScroll,TestS3kCompetitionArtProvider,TestS3kCompetitionAssets,TestS3kCompetitionLevelInitProfile`.
+It stopped in compilation before executing tests because of the inaccessible
+campaign animation method described above; execution took 52.917 seconds.
+
+The fifth command selected all sixteen domain classes explicitly: `TestS3kCompetitionDispatch,TestS3kCompetitionPlayer,TestS3kCompetitionSession,TestS3kCompetitionGoalAndItems,TestS3kCompetitionAssets,TestS3kCompetitionScreen,TestS3kCompetitionHud,TestS3kCompetitionBinding,TestS3kCompetitionRecords,TestS3kCompetitionArenaObjects,TestS3kCompetitionArtProvider,TestS3kCompetitionLevelInitProfile,TestS3kCompetitionScroll,TestS3kCompetitionPatternAnimator,TestS3kCompetitionMenuScene,TestS3kCompetitionTerrain`.
+It completed 200 tests with two failures, no errors and no skips. All fifteen
+non-terrain classes passed. The failures were a terrain expectation at the
+native `$F0` angle edge and the fixture's flat-floor assumption. Source
+`loc_11F7A` wraps `$F0 + $10` to zero, selecting horizontal momentum; `$E8`
+exercises the negative half-vertical branch. The ROM check now derives the
+actual paired slope rather than demanding a flat surface. These were new-work
+failures and were corrected without fitting production physics.
+
+The sixth affected command selects `TestS3kCompetitionTerrain,TestS3kCompetitionScrollProvider,TestS3kCompetitionScreen,TestS3kCompetitionMenuScene,TestS3kCompetitionArenaObjects,TestS3kCompetitionGoalAndItems`.
+It completed 103 tests with one failure, no errors and no skips. Canonical
+touch-list admission/recreation, native camera-boundary ownership and initial
+menu presentation passed. The remaining actual-ALZ fixture still excluded odd
+floor angles. The seventh command selected
+`TestS3kCompetitionTerrain,TestS3kCompetitionScrollProvider` and completed 31
+tests with that same one failure and no errors or skips. Its bounded observation
+showed 91 matching ROM floor samples, 52 negative paired samples, all with angle
+`$FF` in collision tiles `$54/$55`. Native floor selection converts this odd
+angle to cardinal zero; excluding it was an invalid fixture assumption.
+
+The eighth command selected only `TestS3kCompetitionTerrain`. It passed all 21
+tests with no failures, errors or skips after the assertion adopted the actual
+native cardinal conversion. Production terrain code was unchanged by the
+fixture repairs. Together with unchanged affected selections from commands five
+through seven, the current domain has 213 passing cases across seventeen
+focused classes. The camera provider's offset convention was independently
+checked against the existing `ScrollEffectComposer`; both use negated VDP words
+and the existing positive BG-minus-FG scroll offset. No sign change was needed.
+No renderer, complete arena route or broad suite is certified by these checks.

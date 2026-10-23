@@ -264,6 +264,15 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
     }
     public boolean teleport(Sonic2CompetitionHost host) {
         if (phase != Phase.ACT || progress[0].isTimerPaused() || progress[1].isTimerPaused()) return false;
+        return teleportInitializedMonitor(host);
+    }
+    /**
+     * Obj2E_Init already admitted content 8. teleport_monitor (s2.asm:26003-26011)
+     * tests actor routines, not the HUD timers, when the rising icon awards it.
+     * The host rejects illegal/dead routines before performing the atomic swap.
+     */
+    public boolean teleportInitializedMonitor(Sonic2CompetitionHost host) {
+        if (phase != Phase.ACT) return false;
         if (!host.swapNativeActorWorldState()) return false;
         teleportTimer = 0x40;
         host.freezeObjects(0x40);

@@ -7,7 +7,10 @@ import com.openggf.control.PlayerInputState;
 import com.openggf.game.GameMode;
 import com.openggf.game.nativemenu.NativeMenuScreen;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.graphics.RenderPriority;
+import com.openggf.physics.TrigLookupTable;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -24,7 +27,32 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
     public record MenuView(Phase phase, int frame, int modeRow, boolean itemsEnabled,
             S3kCompetitionSession.Mode mode, int arenaRow, int participants,
             List<Integer> characters, List<Integer> wheelAngles, List<Boolean> confirmed,
-            int horizontalScroll, int verticalScroll, S3kCompetitionSession.Result result) { }
+            int horizontalScroll, int verticalScroll, S3kCompetitionSession.Result result,
+            List<Integer> wheelQueuePriorityWords, boolean mainLoopStarted) {
+        public MenuView {
+            characters = List.copyOf(characters); wheelAngles = List.copyOf(wheelAngles);
+            confirmed = List.copyOf(confirmed); wheelQueuePriorityWords = List.copyOf(wheelQueuePriorityWords);
+            if (!wheelQueuePriorityWords.isEmpty() && wheelQueuePriorityWords.size() != 6)
+                throw new IllegalArgumentException("Native wheel queue contains six priority words");
+            wheelQueuePriorityWords.forEach(RenderPriority::fromS3kWord);
+        }
+        public MenuView(Phase phase, int frame, int modeRow, boolean itemsEnabled,
+                S3kCompetitionSession.Mode mode, int arenaRow, int participants,
+                List<Integer> characters, List<Integer> wheelAngles, List<Boolean> confirmed,
+                int horizontalScroll, int verticalScroll, S3kCompetitionSession.Result result,
+                List<Integer> wheelQueuePriorityWords) {
+            this(phase,frame,modeRow,itemsEnabled,mode,arenaRow,participants,characters,wheelAngles,
+                    confirmed,horizontalScroll,verticalScroll,result,wheelQueuePriorityWords,true);
+        }
+        /** Synthetic views without a prior native actor pass use current depth ordering. */
+        public MenuView(Phase phase, int frame, int modeRow, boolean itemsEnabled,
+                S3kCompetitionSession.Mode mode, int arenaRow, int participants,
+                List<Integer> characters, List<Integer> wheelAngles, List<Boolean> confirmed,
+                int horizontalScroll, int verticalScroll, S3kCompetitionSession.Result result) {
+            this(phase,frame,modeRow,itemsEnabled,mode,arenaRow,participants,characters,wheelAngles,
+                    confirmed,horizontalScroll,verticalScroll,result,List.of(),true);
+        }
+    }
 
     /** Implemented by the shared native world/view adapter; no ordinary gameplay bootstrap. */
     public interface Host {
@@ -44,9 +72,13 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
     private S3kCompetitionSession.Mode selectedMode = S3kCompetitionSession.Mode.GRAND_PRIX;
     private final int[] characters = {0, 1}, wheelAngles = {0x40, 0x95}, wheelTargets = {0x40, 0x95};
     private final int[] wheelDirections = new int[2];
+    // Native actor words and the queue already admitted by this frame's Process_Sprites.
+    // Flat player*3 + source object parameter; mapping-frame order is 0,2,1.
+    private final int[] wheelPriorityWords = new int[6], wheelQueuePriorityWords = new int[6];
     private final boolean[] confirmed = new boolean[2];
     private int horizontalScroll, verticalScroll, scrollRemaining, resultHold;
     private boolean resultSliding;
+    private boolean mainLoopStarted;
     private S3kCompetitionSession session;
     private S3kCompetitionSession.Arena pendingArena;
     private S3kCompetitionSession.Result pendingResult, result;
@@ -54,7 +86,7 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
 
     public S3kCompetitionScreen(Host host) { this.host = Objects.requireNonNull(host); }
     @Override public void initialize() {
-        phase = Phase.MODE; frame = 0; modeRow = Math.min(modeRow, 2);
+        enterMode(); Arrays.fill(wheelPriorityWords,0); Arrays.fill(wheelQueuePriorityWords,0);
         exit = Exit.NONE; result = null; session = null; pendingArena = null; pendingResult = null;
     }
     @Override public GameMode mode() {
@@ -65,9 +97,16 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
     public void update(LogicalInputSnapshot input) {
         Objects.requireNonNull(input);
         frame = frame + 1 & 0xFFFF;
+        mainLoopStarted = true;
         switch (phase) {
             case MODE -> updateMode(input);
-            case PLAYER_SELECT, ARENA_SELECT -> updateSelection(input);
+            case PLAYER_SELECT, ARENA_SELECT -> {
+                // loc_ADF2/loc_B4A8: Process_Sprites queues old priority words;
+                // sub_C0AE changes the actor words after their position update.
+                System.arraycopy(wheelPriorityWords,0,wheelQueuePriorityWords,0,6);
+                updateSelection(input);
+                if (phase == Phase.PLAYER_SELECT || phase == Phase.ARENA_SELECT) updateWheelDepth();
+            }
             case RACE -> {
                 host.stepArena(input, session);
                 if (pendingArena != null) {
@@ -79,7 +118,8 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
                     if (selectedMode == S3kCompetitionSession.Mode.MATCH_RACE) enterSelection();
                     else {
                         phase = selectedMode == S3kCompetitionSession.Mode.TIME_ATTACK ? Phase.TIME_ATTACK_RESULTS : Phase.RESULTS;
-                        horizontalScroll = 0; resultHold = 30; resultSliding = false;
+                        frame = 0; mainLoopStarted = false; horizontalScroll = 0; verticalScroll = 0;
+                        resultHold = 30; resultSliding = false;
                     }
                 }
             }
@@ -110,11 +150,18 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
 
     private void enterSelection() {
         phase = selectedMode == S3kCompetitionSession.Mode.GRAND_PRIX ? Phase.PLAYER_SELECT : Phase.ARENA_SELECT;
+        frame = 0; mainLoopStarted = false;
         confirmed[0] = confirmed[1] = false;
         wheelDirections[0] = wheelDirections[1] = 0;
         for (int slot = 0; slot < 2; slot++) wheelAngles[slot] = wheelTargets[slot] = (0x40 + 0x55 * characters[slot]) & 0xFF;
         horizontalScroll = 0; scrollRemaining = 0;
         verticalScroll = Math.clamp(arenaRow - 1, 0, 2) * 0x48;
+        Arrays.fill(wheelPriorityWords,0); Arrays.fill(wheelQueuePriorityWords,0);
+        // Native entry performs Process/Render, sub_C0AE, Process/Render before
+        // fading in. The zero-initialized first queue is consumed before the
+        // final initial view, which has the computed words in its second queue.
+        updateWheelDepth();
+        System.arraycopy(wheelPriorityWords,0,wheelQueuePriorityWords,0,6);
     }
 
     private void updateSelection(LogicalInputSnapshot input) {
@@ -134,7 +181,7 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
                     wheelAngles[slot] &= 0xFF; wheelTargets[slot] = target + 0x40;
                     wheelDirections[slot] = direction; rotateWheel(slot);
                     host.playSfx(Sonic3kSfx.GRAVITY_TUNNEL);
-                } else if (back(buttons)) { phase = Phase.MODE; return; }
+                } else if (back(buttons)) { enterMode(); return; }
                 else if (accept(buttons)) { confirmed[slot] = true; host.playSfx(Sonic3kSfx.STARPOST); }
             }
             if (!allConfirmed()) return;
@@ -165,6 +212,28 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
         }
         wheelAngles[slot] = next;
     }
+    /** sub_C0B8's two-pass pointer sort includes the native equal-Y swaps. */
+    private void updateWheelDepth() {
+        for (int player = 0; player < 2; player++) {
+            int[] y = new int[3];
+            for (int parameter = 0; parameter < 3; parameter++)
+                y[parameter] = player == 1 && participants == 1 ? 0
+                        : TrigLookupTable.sinHex(wheelAngles[player] + parameter * 0x55) >> 5;
+            int a = 0, b = 1, c = 2;
+            for (int pass = 0; pass < 2; pass++) {
+                if (y[a] <= y[b]) { int t = a; a = b; b = t; }
+                if (y[b] <= y[c]) { int t = b; b = c; c = t; }
+            }
+            wheelPriorityWords[player*3+a] = 0x80;
+            wheelPriorityWords[player*3+b] = 0x100;
+            wheelPriorityWords[player*3+c] = 0x180;
+        }
+    }
+    private void enterMode() {
+        // Competition_Menu clears display scroll and Level_frame_counter on entry.
+        phase = Phase.MODE; frame = 0; mainLoopStarted = false; if (modeRow >= 3) modeRow = 0;
+        horizontalScroll = 0; verticalScroll = 0; scrollRemaining = 0;
+    }
     private boolean allConfirmed() { return confirmed[0] && (participants == 1 || confirmed[1]); }
     private void openArena(S3kCompetitionSession.Arena arena) {
         var chars = java.util.stream.IntStream.range(0, participants)
@@ -188,7 +257,7 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
         var buttons = participants == 2 ? input.player1().merge(input.player2()) : input.player1();
         if (!accept(buttons)) return;
         if (horizontalScroll == 0) { resultSliding = true; horizontalScroll = -8; }
-        else phase = Phase.MODE;
+        else enterMode();
     }
     public void requestArena(S3kCompetitionSession.Arena arena) { pendingArena = Objects.requireNonNull(arena); }
     public void requestResults(S3kCompetitionSession.Result result) { pendingResult = Objects.requireNonNull(result); }
@@ -196,7 +265,8 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
     public MenuView view() {
         return new MenuView(phase, frame, modeRow, itemsEnabled, selectedMode, arenaRow, participants,
                 List.of(characters[0], characters[1]), List.of(wheelAngles[0] & 0xFF, wheelAngles[1] & 0xFF),
-                List.of(confirmed[0], confirmed[1]), horizontalScroll, verticalScroll, result);
+                List.of(confirmed[0], confirmed[1]), horizontalScroll, verticalScroll, result,
+                Arrays.stream(wheelQueuePriorityWords).boxed().toList(),mainLoopStarted);
     }
     @Override public void draw() { if (phase == Phase.RACE) host.drawArena(); else host.drawMenu(view()); }
     @Override public void setClearColor() { host.setClearColor(); }

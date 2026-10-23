@@ -921,6 +921,35 @@ public final class LevelRenderer {
     private boolean preparingSpritePresentation;
     private SpritePresentation.Frame liveSpriteFrame;
     private LevelScrollPresentation currentScrollPresentation;
+    private LevelScrollPresentation nativeCompetitionScroll;
+
+    void withNativeCompetitionView(NativeCompetitionRenderer.View view, Runnable draw) {
+        if (nativeCompetitionScroll != null) throw new IllegalStateException("Nested native competition view");
+        var camera = lm.camera;
+        var previousScroll = currentScrollPresentation;
+        var previousMode = currentAdvancedRenderFrameState;
+        var projection = new Camera(lm.configService);
+        projection.restore(view.camera(), camera.getFocusedSprite());
+        // Native VSRAM includes the lower view's screen origin. Keep the full
+        // screen coordinate system; the final compositor selects its raster rows.
+        projection.setY((short) view.foregroundVScroll());
+        projection.setYCopy(projection.getY());
+        var registers = new LevelScrollPresentation.Registers(projection.getX(), projection.getY(),
+                projection.getXWithShake(), (short) view.foregroundVScroll(),
+                (short) view.backgroundVScroll(), view.backgroundX(), view.backgroundPeriod(),
+                false, true, false, false, (short) 0, false, (short) 0,
+                new com.openggf.graphics.ArenaMaskState(0, NativeCompetitionRenderer.WIDTH, 0));
+        nativeCompetitionScroll = new LevelScrollPresentation(registers, view.horizontalScroll(),
+                null, null, null, null);
+        lm.camera = projection;
+        try { draw.run(); }
+        finally {
+            lm.camera = camera;
+            nativeCompetitionScroll = null;
+            currentScrollPresentation = previousScroll;
+            currentAdvancedRenderFrameState = previousMode;
+        }
+    }
     /** One draw's {@link LevelHudUnderlay}; cleared once painted. */
     Runnable hudUnderlay;
 
@@ -983,6 +1012,7 @@ public final class LevelRenderer {
     }
 
     private LevelScrollPresentation scrollForDraw() {
+        if (nativeCompetitionScroll != null) return nativeCompetitionScroll;
         if (cinematicDraw) return cinematicScroll;
         return LevelSpritePresentation.enabled(lm) ? spriteTables.publishedScroll() : null;
     }

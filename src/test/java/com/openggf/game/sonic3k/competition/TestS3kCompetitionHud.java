@@ -61,7 +61,9 @@ class TestS3kCompetitionHud {
         assertEquals(List.of(3, 4, 5, 6, 7, 8, 9, 10), huds(world).stream()
                 .map(AbstractObjectInstance::getSlotIndex).toList());
         assertEquals(3, world.session.capture().goalTimerMask());
-        assertTrue(huds(world).stream().allMatch(h -> h.getPriorityBucket() == 0 && h.isHighPriority()));
+        assertTrue(huds(world).stream().allMatch(h -> h.getPriorityBucket() == 0));
+        assertTrue(huds(world).stream().filter(h -> h.kind() != Kind.RESERVED).allMatch(CompetitionHudObjectInstance::isHighPriority));
+        assertFalse(hud(world, Kind.RESERVED, 0).isHighPriority(), "locret_3827A leaves fresh art_tile zero");
         assertEquals(5, goal(world).getPriorityBucket());
         assertFalse(goal(world).isHighPriority());
         step(world, 1);
@@ -373,6 +375,43 @@ class TestS3kCompetitionHud {
         assertEquals(forward.session, world.session.capture());
         assertEquals(forward.objects.stream().map(DynamicObjectEntry::state).toList(),
                 capture(world).objects.stream().map(DynamicObjectEntry::state).toList());
+    }
+
+    @Test
+    void hudDescriptorsExposeNativeScreenPositionsDimensionsAndOnlyTheTimerPiecesActuallyDrawn() throws Exception {
+        var world=world(Mode.MATCH_RACE,8); step(world,301);
+        for (int slot=0;slot<2;slot++) {
+            var icon=hud(world,Kind.ITEM_ICON,slot);
+            var lap=hud(world,Kind.LAP,slot);
+            var timer=hud(world,Kind.TIMER,slot);
+            assertEquals(0x120,icon.getX()); assertEquals(0xE0,icon.getY());
+            assertEquals(0x10,icon.getOnScreenHalfWidth()); assertEquals(0x10,icon.getOnScreenHalfHeight());
+            assertEquals(0x190,lap.getX()); assertEquals(0x98,lap.getY());
+            assertEquals(8,lap.getOnScreenHalfWidth()); assertEquals(0xC,lap.getOnScreenHalfHeight());
+            assertEquals(0xC8,timer.getX()); assertEquals(0x90,timer.getY());
+            assertEquals(0x40,timer.getOnScreenHalfWidth()); assertEquals(0x10,timer.getOnScreenHalfHeight());
+            assertEquals(List.of(new CompetitionHudObjectInstance.NativeDrawPiece("competition_item_icon",0,-1,0xA0,0x60)),
+                    icon.nativeDrawPieces());
+            assertEquals(List.of(new CompetitionHudObjectInstance.NativeDrawPiece("competition_lap",0,-1,0x110,0x18)),
+                    lap.nativeDrawPieces());
+            var pieces=timer.nativeDrawPieces();
+            assertEquals(8,pieces.size());
+            assertEquals(List.of(0,2,5,-1,-1,-1,-1,-1),pieces.stream()
+                    .map(CompetitionHudObjectInstance.NativeDrawPiece::pieceIndex).toList());
+            assertEquals(List.of(0x48,0x48,0x48,0x30,0x44,0x50,0x64,0x70),pieces.stream()
+                    .map(CompetitionHudObjectInstance.NativeDrawPiece::screenX).toList());
+            assertTrue(pieces.stream().allMatch(piece -> piece.screenY()==0x10));
+            assertEquals(List.of(0,0,1,0,0),pieces.subList(3,8).stream()
+                    .map(CompetitionHudObjectInstance.NativeDrawPiece::mappingFrame).toList());
+            assertTrue(pieces.subList(3,8).stream().allMatch(piece -> piece.artKey().equals("competition_timer_digit")));
+        }
+        var neon=hud(world,Kind.NEON,0);
+        assertEquals(0x80,neon.getOnScreenHalfWidth()); assertEquals(0x28,neon.getOnScreenHalfHeight());
+        var state=capture(world); var expected=huds(world).stream().map(CompetitionHudObjectInstance::nativeDrawPieces).toList();
+        step(world,8); restore(world,state);
+        assertEquals(expected,huds(world).stream().map(CompetitionHudObjectInstance::nativeDrawPieces).toList());
+        assertTrue(hud(world,Kind.RESERVED,0).nativeDrawPieces().isEmpty());
+        assertTrue(huds(world).stream().noneMatch(AbstractObjectInstance::participatesInRomWorldTransitionOffset));
     }
 
     private CompetitionTestWorld world(Mode mode, int available) throws Exception {
