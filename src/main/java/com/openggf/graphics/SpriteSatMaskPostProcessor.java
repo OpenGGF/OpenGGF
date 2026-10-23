@@ -74,7 +74,7 @@ public final class SpriteSatMaskPostProcessor {
                 continue;
             }
 
-            if (entry.maskReplayRole() == SpriteMaskReplayRole.PRE_MASK_FRONT && preMaskInsertIndex >= 0) {
+            if (entry.piece().maskReplayRole() == SpriteMaskReplayRole.PRE_MASK_FRONT && preMaskInsertIndex >= 0) {
                 scratch.processed.add(preMaskInsertIndex, entry);
                 preMaskInsertIndex++;
                 continue;
@@ -98,11 +98,11 @@ public final class SpriteSatMaskPostProcessor {
         if (entry.isGhost() || entries.get(index + 1).isGhost()) {
             return false;
         }
-        return entry.tileWordLow11() == MASK_TILE_WORD
-                && !entry.hFlip()
-                && !entry.vFlip()
-                && !entry.piecePriority()
-                && (entry.paletteIndex() & 0x3) == 0;
+        return entry.piece().rawTileWordLow11() == MASK_TILE_WORD
+                && !entry.piece().hFlip()
+                && !entry.piece().vFlip()
+                && !entry.piece().piecePriority()
+                && (entry.piece().paletteIndex() & 0x3) == 0;
     }
 
     /**
@@ -111,8 +111,8 @@ public final class SpriteSatMaskPostProcessor {
      */
     private static boolean addArmedBands(List<SpriteSatEntry> entries, int companionIndex,
             SpriteSatEntry companion, Scratch scratch) {
-        int top = companion.y();
-        int bottom = companion.endYExclusive();
+        int top = companion.piece().y();
+        int bottom = companion.piece().endYExclusive();
         boolean added = false;
         int runStart = Integer.MIN_VALUE;
         for (int line = top; line <= bottom; line++) {
@@ -137,7 +137,7 @@ public final class SpriteSatMaskPostProcessor {
             if (earlier.isGhost()) {
                 continue; // not a ROM sprite: it cannot arm the VDP's mask
             }
-            if (line >= earlier.y() && line < earlier.endYExclusive()) {
+            if (line >= earlier.piece().y() && line < earlier.piece().endYExclusive()) {
                 return true;
             }
         }
@@ -145,8 +145,8 @@ public final class SpriteSatMaskPostProcessor {
     }
 
     private static void clipAgainstBands(SpriteSatEntry entry, Scratch scratch) {
-        int top = Math.max(entry.visibleTopY(), entry.y());
-        int bottom = Math.min(entry.visibleBottomY(), entry.endYExclusive());
+        int top = Math.max(entry.visibleTopY(), entry.piece().y());
+        int bottom = Math.min(entry.visibleBottomY(), entry.piece().endYExclusive());
         boolean touched = false;
         scratch.rangeA[0] = top;
         scratch.rangeA[1] = bottom;

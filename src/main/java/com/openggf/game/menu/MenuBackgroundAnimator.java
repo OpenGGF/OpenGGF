@@ -1,4 +1,4 @@
-package com.openggf.game.sonic2.menu;
+package com.openggf.game.menu;
 
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Pattern;
