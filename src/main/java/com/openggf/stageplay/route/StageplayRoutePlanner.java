@@ -565,8 +565,6 @@ public final class StageplayRoutePlanner {
         List<StageplayRoutePoint> path = new ArrayList<>();
         Node root=found;
         while(root.parent!=null) root=root.parent;
-        if(root.actionStart>request.startFrame())
-            commands.add(command(ids,"route.land.",request.startFrame(),PuppetCommandKind.RELEASE,0,0,0,0,request.motion()));
         int moveStart=root.actionStart;
         if(request.motion().startingAction()==StartAction.SPINDASH) {
             commands.add(command(ids,"route.charge.",moveStart,PuppetCommandKind.SPINDASH,

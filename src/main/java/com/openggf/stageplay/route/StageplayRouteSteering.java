@@ -22,7 +22,7 @@ public final class StageplayRouteSteering {
         cap = Math.max(1, (int) (cap * urgency));
         int toward = goal < x ? -1 : 1;
         // Predict one acceleration tick. Countersteering also holds the stroll cap on slopes.
-        if (Math.abs(speed) * 256 > cap - (motion.travelSpeed() == TravelSpeed.WALK ? 64 : 0) || Math.abs(xSpeed) > cap)
+        if (motion.travelSpeed() == TravelSpeed.WALK && (Math.abs(speed) * 256 > cap - 64 || Math.abs(xSpeed) > cap))
             return speed < 0 ? 1 : -1;
         if (motion.endingAction() != EndingAction.GENTLE_STOP &&
                 !(motion.endingAction() == EndingAction.OVERSHOOT && returning))

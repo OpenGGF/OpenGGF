@@ -54,6 +54,7 @@ class TestStageplayRouteOverlayPictures {
                     public StageplayTimeline.Frame resolvePreview(StageplayDocument d,Path root,StageplayTimeline.Frame frame) throws java.io.IOException {
                         return session.resolvePreview(d,root,frame);
                     }
+                    public java.util.Set<com.openggf.game.CharacterDefinition.MovementAbility> movementAbilities(Actor actor,Path root) throws java.io.IOException { return session.movementAbilities(actor,root); }
                     public void startRoute(StageplayDocument d,Path root,StageplayRouteRequest r) throws java.io.IOException {session.startRoute(d,root,r);}
                     public StageplayRouteJob.Update pollRoute(){return session.pollRoute();}
                     public void requestRouteApply(StageplayDocument d,Path root) throws java.io.IOException {session.requestRouteApply(d,root);}
@@ -68,12 +69,16 @@ class TestStageplayRouteOverlayPictures {
                     public StageplayWorkspace stageplay(){return workspace;}
                 },1);
                 assertTrue(chrome.setActive(true));
+                workspace.invoke(StageplayWorkspace.Action.ROUTE_HELPER);
+                assertEquals("Walk",workspace.menu().values().get("travelSpeed"));
+                for(int i=0;i<60;i++){draw(chrome,session,workspace);video.frame(i==0?output.resolve("engine-motion-settings.png"):null);}
+                workspace.menu().close();
                 plan(workspace,"400","624","1024");
                 await(workspace,session,StageplayRouteJob.Phase.READY);
                 var success=session.pollRoute().result();
                 assertTrue(success.success(),success.message());
-                assertTrue(success.commands().stream().anyMatch(c->c.kind()==PuppetCommandKind.JUMP),"Evidence must include a native jump");
-                assertTrue(success.commands().stream().filter(c->c.kind()==PuppetCommandKind.MOVE_TO).count()>1,"Evidence needs a multi-segment plan");
+                assertTrue(success.commands().stream().noneMatch(c->c.kind()==PuppetCommandKind.JUMP),"The Walk rehearsal must stay grounded");
+                assertEquals(1,success.commands().stream().filter(c->c.kind()==PuppetCommandKind.MOVE_TO).count(),"A walk uses one destination");
                 Files.writeString(output.resolve("engine-success-result.json"),StageplayRouteProtocol.encodeResult(success));
                 StageplayStore.write(output.resolve("engine-source.stageplay"),source);
                 assertNotNull(workspace.routeOverlay()); assertFalse(workspace.routeOverlay().applied());
@@ -104,7 +109,7 @@ class TestStageplayRouteOverlayPictures {
                 workspace.invoke(StageplayWorkspace.Action.PLAY);
                 for(int i=0;i<300;i++) {
                     workspace.tick(new InputHandler()); draw(chrome,session,workspace);
-                    video.frame(i==60?output.resolve("engine-applied-jump.png"):i==299?output.resolve("engine-applied-arrived.png"):null);
+                    video.frame(i==60?output.resolve("engine-applied-motion.png"):i==299?output.resolve("engine-applied-arrived.png"):null);
                 }
                 workspace.stop(); workspace.seek(30);
                 plan(workspace,"400","300","8");
@@ -134,7 +139,7 @@ class TestStageplayRouteOverlayPictures {
                 assertEquals(path,workspace.routeOverlay().path());
                 assertEquals(GL_NO_ERROR,glGetError());
                 System.out.println("ROUTE_EVIDENCE success samples="+success.path().size()+" commands="+success.commands().size()
-                        +" failure="+failed.status()+" failureSamples="+failed.path().size()+" frames=480");
+                        +" failure="+failed.status()+" failureSamples="+failed.path().size()+" frames=540");
             }
         }
     }

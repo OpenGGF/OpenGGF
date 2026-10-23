@@ -825,7 +825,7 @@ public final class StageplayWorkspace {
 
     private void puppetCommandForm(Actor actor,PuppetCommand command,PuppetCommandKind kind) {
         var pose=selectedActorPose(); int frame=command==null?controller.frame():command.frame();
-        boolean move=kind==PuppetCommandKind.MOVE_TO || kind==PuppetCommandKind.FLY_TO || kind==PuppetCommandKind.GLIDE_TO;
+        boolean move=kind==PuppetCommandKind.MOVE_TO || kind==PuppetCommandKind.FLY_TO || kind==PuppetCommandKind.GLIDE_TO || kind==PuppetCommandKind.SPINDASH;
         boolean hold=kind==PuppetCommandKind.JUMP || kind==PuppetCommandKind.HOVER || kind==PuppetCommandKind.CROUCH || kind==PuppetCommandKind.LOOK_UP;
         boolean target=move || kind==PuppetCommandKind.WAIT;
         var fields=new ArrayList<EditorProjectMenu.Field>(); fields.add(number("frame","Earliest frame",frame));
@@ -854,7 +854,7 @@ public final class StageplayWorkspace {
             var track=puppet(d,actor.id()); var commands=new ArrayList<>(track.commands());
             String id=command==null?nextId("action",d):command.id(); commands.removeIf(c -> c.id().equals(id));
             commands.add(new PuppetCommand(id,integer(v,"frame"),kind,move?decimal(v,"x"):0,move?decimal(v,"y"):0,
-                    move?decimal(v,"urgency"):0,hold?integer(v,"hold"):0,
+                    move?decimal(v,"urgency"):0,kind==PuppetCommandKind.SPINDASH?StageplayRouteSteering.CHARGE_FRAMES:hold?integer(v,"hold"):0,
                     target?new ObjectTarget(integer(v,"layout"),integer(v,"object"),integer(v,"subtype"),decimal(v,"offsetX"),decimal(v,"offsetY")):ObjectTarget.none(),
                     kind==PuppetCommandKind.WAIT?WaitCondition.valueOf(v.get("condition").toUpperCase(java.util.Locale.ROOT)):WaitCondition.NONE,
                     integer(v,"timeout"),command==null?RouteMotion.NATIVE:command.motion()));

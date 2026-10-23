@@ -2818,3 +2818,13 @@ by 2000 score units and accepts arrival only when popped from the priority queue
 Immediate acceptance of a generated jumping child was rejected because a cheaper
 grounded path may still be pending. Per-edge MOVE_TO emission and +64/+128 goals
 are removed. Final film/motion qualification is recorded after focused checks.
+
+
+Controller/UI slice: `71e128275`; desktop motion summary: `7833420` in the editor
+repository. The build-only package of the following focused refinements passed:
+Run keeps native overspeed/coasting behavior; only Walk actively holds its stroll
+cap. Land-first waiting needs no extra RELEASE command at a clean shot boundary.
+Editing a generated SPINDASH keeps its fixed charge hold. The picture fixtures
+now require a grounded default rehearsal with one MOVE_TO and record the settings
+form before the observed route. Focused native/ROM/UI checks remain queued at
+this checkpoint; packaging success is not evidence of motion correctness.

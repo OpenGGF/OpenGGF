@@ -155,6 +155,43 @@ class TestStageplayRouteWorkspace {
         assertNull(workspace.routeOverlay());
     }
 
+    @Test void replanningAndActionEditingKeepTheSavedMotionPolicy() throws Exception {
+        var motion=new RouteMotion(StartAction.SPINDASH,TravelSpeed.RUN,EndingAction.OVERSHOOT,EndingFacing.LEFT);
+        var move=new PuppetCommand("saved-route",0,PuppetCommandKind.MOVE_TO,150,200,1,0,
+                ObjectTarget.none(),WaitCondition.NONE,0,motion);
+        var document=source().withPuppets(List.of(new PuppetTrack("hero",false,0,List.of(move))));
+        assertEquals(document,com.openggf.tools.StageplayScriptCompiler.compile(
+                com.openggf.tools.StageplayScriptDecompiler.decompile(document)));
+        var request=new java.util.concurrent.atomic.AtomicReference<StageplayRouteRequest>();
+        var workspace=new StageplayWorkspace(new StageplayWorkspace.Host(){
+            public StageplayDocument initialDocument(){return document;}
+            public Path initialAssetRoot(){return root;}
+            public java.util.Set<com.openggf.game.CharacterDefinition.MovementAbility> movementAbilities(Actor actor,Path root){
+                return java.util.Set.of(com.openggf.game.CharacterDefinition.MovementAbility.SPINDASH);
+            }
+            public void startRoute(StageplayDocument document,Path root,StageplayRouteRequest r){request.set(r);}
+        });
+        workspace.activate();workspace.selectActor("hero");workspace.invoke(ROUTE_HELPER);
+        assertEquals("Spindash",workspace.menu().values().get("startingAction"));
+        assertEquals("Run",workspace.menu().values().get("travelSpeed"));
+        assertEquals("Overshoot",workspace.menu().values().get("endingAction"));
+        assertEquals("Left",workspace.menu().values().get("endingFacing"));
+        workspace.menu().submit();assertNull(workspace.menu().error());assertEquals(motion,request.get().motion());
+        workspace.invoke(PUPPET_ACTIONS);
+        // Three core actions, five native intents, placement, visibility, then the saved action.
+        choose(workspace,10);choose(workspace,0);workspace.menu().setValue("x","155");workspace.menu().submit();
+        assertNull(workspace.menu().error());
+        assertEquals(motion,workspace.controller().document().puppets().getFirst().commands().getFirst().motion());
+    }
+
+    @Test void unavailableSpindashIsNotAmongCyclingStartChoices() {
+        var workspace=new StageplayWorkspace(new Host());workspace.activate();workspace.invoke(ROUTE_HELPER);
+        // Starting action follows actor, X, Y and frame budget.
+        choose(workspace,4);assertEquals("Jump",workspace.menu().values().get("startingAction"));
+        press(workspace,new InputHandler(),GLFW_KEY_ENTER);
+        assertEquals("Walk",workspace.menu().values().get("startingAction"));
+    }
+
     private static void choose(StageplayWorkspace workspace,int index){
         var input=new InputHandler();for(int i=0;i<index;i++)press(workspace,input,GLFW_KEY_DOWN);press(workspace,input,GLFW_KEY_ENTER);
     }

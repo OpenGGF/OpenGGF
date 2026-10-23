@@ -186,6 +186,30 @@ class TestStageplayRoutePlanner {
         }
     }
 
+    @Test void downhillWalkBrakesToKeepTheStrollCapWithoutSkidding() {
+        var terrain=terrain();
+        for(int half=0;half<2;half++) {
+            byte[] heights=new byte[16],widths=new byte[16];
+            for(int x=0;x<16;x++) heights[x]=(byte)(half*8+x/2+1);
+            for(int y=0;y<16;y++) for(int x=0;x<16;x++) if(y>=16-heights[x]) widths[y]++;
+            when(terrain.level.getChunk(half+2)).thenReturn(chunk(half+2,half+2));
+            when(terrain.level.getSolidTile(half+2)).thenReturn(new SolidTile(half+2,heights,widths,(byte)0xF0));
+            terrain.put(20+half,15,0xF000|half+2);
+        }
+        when(terrain.level.getChunkCount()).thenReturn(4);
+        for(int x=22;x<64;x++) terrain.put(x,15,0xF001);
+        var request=new StageplayRouteRequest("hero",0,224,237,400);
+        try(var probe=PlayablePuppet.createNativeWorldProbe(terrain.level,module,0,0,module,
+                "sonic",SpriteArtSet.EMPTY,448,221,0,true,true)) {
+            var initial=probe.capture();var result=search(probe,request);assertTrue(result.found(),result.message());
+            assertTrue(result.commands().stream().noneMatch(c->c.kind()==PuppetCommandKind.JUMP));
+            probe.restore(initial);var samples=replay(probe,request,result.commands());assertNear(samples.getLast(),request);
+            assertTrue(samples.stream().allMatch(o->Math.abs(o.groundSpeed())<=StageplayRouteSteering.STROLL_CAP),
+                    "Native downhill acceleration must be held by real braking inputs");
+            assertTrue(samples.stream().noneMatch(PlayablePuppet.Observation::skidding));
+        }
+    }
+
     @Test
     void sealedWallAndCeilingReportBoundedFailureWithoutMovingTheProbeToTheGoal() {
         var terrain = terrain();
@@ -273,7 +297,7 @@ class TestStageplayRoutePlanner {
             var request=new StageplayRouteRequest("hero",0,600,237,600,1024,120000,60000,1,null,1,motion);
             try(var probe=probe(terrain().level)) {
                 var start=probe.capture();var plan=search(probe,request);assertTrue(plan.found(),action+": "+plan.message());
-                assertEquals(PuppetCommandKind.RELEASE,plan.commands().getFirst().kind(),"Falling entry lands before starting action");
+                assertTrue(plan.commands().getFirst().frame()>0,"Falling entry lands before starting action");
                 probe.restore(start);var samples=replay(probe,request,plan.commands());
                 if(action==StartAction.JUMP) assertTrue(samples.stream().anyMatch(o->o.ySpeed()<0));
                 else assertTrue(samples.stream().anyMatch(PlayablePuppet.Observation::spindash));
