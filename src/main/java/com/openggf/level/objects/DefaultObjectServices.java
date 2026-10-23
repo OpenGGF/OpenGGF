@@ -188,6 +188,15 @@ public class DefaultObjectServices implements ObjectServices {
         return levelManager;
     }
 
+    boolean endSourceComparisonAtRomModeChange() {
+        if (gameplayMode == null || gameplayMode.getLevelManager() != levelManager
+                || gameplayMode.getWorldSession() != worldSession) return false;
+        ObjectManager current = levelManager.getObjectManager();
+        if (current == null || current.getObjectServices() != this) return false;
+        gameplayMode.endDynamicArtComparisonSegmentAtRomModeChange();
+        return true;
+    }
+
     /**
      * Resolves the CURRENT bonus stage provider registered on the owning
      * GameplayModeContext when one is available, else falls back to the

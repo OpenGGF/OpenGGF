@@ -60,6 +60,8 @@ Unreleased. The earlier development themes remain in
   normal load and release. Sonic's prepared art stays pending during palette
   fades until a native player-art service boundary. A full level load clears
   old readiness before the fresh player's art is primed.
+  Native Results exits retain the final player-art comparison row and every
+  physical transfer through the following transition.
 
 - **Sonic 2 player and entry timing:** Super Sonic control runs between movement
   and animation while its palette advances after objects, including hurt and

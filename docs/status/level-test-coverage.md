@@ -1,5 +1,14 @@
 # Level test coverage backlog
 
+S1 native exit-owner follow-up (2026-10-23): the [owner component evidence](../architecture/plans/2026-10-22-native-gap-swarm.md)
+records 90 focused and 109 structural checks without failures/errors/skips.
+Actual GHZ Results restart and special-entry controls preserve the published
+player-art prefix and full closing DMA journal, with refused-entry, stale-world,
+non-exit, SBZ2 and standalone-host controls. Special-stage startup handler/clear
+lifetime, carried-buffer terminal forwarding, historical route stamp/tail causes
+and complete per-act/roster/viewport/donor matrices remain open. No route or
+native capture was run for this bounded ownership correction.
+
 The [S1 boss mechanics matrix](../architecture/audits/2026-10-22-s1-boss-components.md#bounded-verification-and-inherited-gaps)
 records native component, allocation, animation, contact and recreation checks
 for GHZ3, MZ3, SYZ3, LZ3 and SLZ3, plus ROM explosion pixels. Continuous boss
