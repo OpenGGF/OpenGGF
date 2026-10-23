@@ -6,6 +6,9 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.RewindSnapshotDiff;
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.runtime.SozZoneRuntimeState;
 import com.openggf.game.solid.*;
 import com.openggf.graphics.GraphicsManager;
@@ -30,12 +33,13 @@ class TestSozEndBoss {
     private StubObjectServices services;
     private int requestedZone=-1,requestedAct=-1;
     private boolean deactivateRequested;
+    private List<com.openggf.game.PlayableEntity> rewindSidekicks = List.of();
     @BeforeEach void setup() throws Exception {
         rom=new Rom();assertTrue(rom.open(RomTestUtils.ensureSonic3kRomAvailable().getAbsolutePath()));
         TestEnvironment.configureRomFixture(rom);
         state=new SozZoneRuntimeState(1,PlayerCharacter.SONIC_ALONE);
         player=new TestablePlayableSprite("sonic",(short)0,(short)0);player.setCentreX((short)0x5100);player.setCentreY((short)0x600);
-        var gameState=new GameStateManager();var camera=new Camera();camera.setX((short)0x5100);camera.setY((short)0x600);
+        var gameState=new GameStateManager();var camera=new Camera();camera.setX((short)0x5100);camera.setY((short)0x600);camera.setFocusedSprite(player);
         contacts=mock(ObjectSolidExecutionContext.class);
         when(contacts.resolveSolidNowAll()).thenReturn(new SolidCheckpointBatch(null,Map.of()));
         services=new StubObjectServices(){
@@ -46,6 +50,7 @@ class TestSozEndBoss {
             @Override public SozZoneRuntimeState zoneRuntimeState(){return state;}
             @Override public GameStateManager gameState(){return gameState;}
             @Override public Camera camera(){return camera;}
+            @Override public List<com.openggf.game.PlayableEntity> sidekicks(){return rewindSidekicks;}
             @Override public ObjectSolidExecutionContext solidExecution(){return contacts;}
         }.withPlayerQuery(new ObjectPlayerQuery(()->player,List::of));
         manager=new ObjectManager(List.of(),new Sonic3kObjectRegistry(),0,null,null,null,camera,services);manager.reset(0);
@@ -165,14 +170,19 @@ class TestSozEndBoss {
         assertEquals(!knuckles,state.events().endBossFallStarted());
         if(!knuckles){assertEquals(8,integer(boss,"escapePhase"));assertEquals(-1,requestedZone);
             for(int i=0;i<127;i++)boss.update(i,player);assertEquals(-1,requestedZone);
-            var before=boss.captureRewindState();boss.update(127,player);assertTrue(boss.isDestroyed());
-            boss.restoreRewindState(before);boss.update(127,player);assertTrue(boss.isDestroyed());}
+            // Acquired native control is a stable player reference, not scalar-only state.
+            var identities=new RewindIdentityTable();identities.registerPlayer(player,PlayerRefId.mainPlayer());
+            var context=RewindCaptureContext.withIdentityTable(identities);
+            var before=boss.captureRewindState(context);boss.update(127,player);assertTrue(boss.isDestroyed());
+            boss.restoreRewindState(before,context);boss.update(127,player);assertTrue(boss.isDestroyed());}
         assertEquals(9,requestedZone);assertEquals(0,requestedAct);assertTrue(deactivateRequested);
     }
     @Test void independentExitFollowerUsesCapturedFallSignalAfterBossRetires() {
         var tails=new TestablePlayableSprite("tails",(short)0,(short)0);
         var extra=new TestablePlayableSprite("extra",(short)0x1234,(short)0x2345);
         tails.setObjectControlAllowsCpu(true);
+        // Rewind sees the canonical team; the participation query deliberately contains a duplicate.
+        rewindSidekicks=List.of(tails,extra);
         services.withPlayerQuery(new ObjectPlayerQuery(()->player,()->List.of(tails,extra,tails)));
         var boss=root();
         var follower=manager.createDynamicObject(()->new SozEndBossChild(boss,null,17));

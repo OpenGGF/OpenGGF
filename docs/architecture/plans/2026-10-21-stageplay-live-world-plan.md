@@ -3153,3 +3153,133 @@ two frontend source scenes, are unchanged across the scalar-adapter refactor:
 recorded native motion. No broad guards or mandatory-bootstrap rerun was added
 for this pure observation-boundary repair. Desktop chrome passes 17/17 again
 against the newly packaged engine. No live task jobs remain.
+
+
+#### Smoke repair after 657bbae86 (2026-10-23)
+
+The lead's change-based smoke `20261023T090056Z-4a39a6e3`, based on
+`7d35d4a7b`, exposed two missed consumer contracts. This repair is confined to
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-d68f46c5`; the lead retains smoke,
+integration and delivery ownership.
+
+- **SOZ rewind:** `SozEndBossInstance#visualControlOwners` and the child already
+  reach the central `PlayerControlOwnersCodec` through compact default capture.
+  The stack is that codec rejecting missing identity authority, not a missing
+  codec. The post-results test called the context-free snapshot overload after
+  acquiring P1. The independent-follower fixture supplied P2/extra through its
+  player query but inherited an empty `StubObjectServices.sidekicks()` list;
+  ObjectManager therefore could not register those acquired identities. Repair
+  the direct call with an explicit identity context and supply the canonical
+  team/focused P1 to the fixture. Retain strict rejection of missing identities;
+  do not create per-object codecs or context-free player fallbacks.
+- **Holder audit:** the net round-2 diff (`a070bbbc1^..657bbae86`) adds 61
+  `PlayerControlOwners` fields across 54 files, including nested and ending
+  controllers. All use the existing central helper type. Extend compact-policy
+  reachability enforcement to acquired-player helpers and other non-excluded
+  player-reference fields, including ending sources outside the ordinary object
+  scan roots. Negative fixtures cover excluded helper state and raw final player
+  collections omitted by the compact default schema.
+- **Background projection:** N1's loaded-envelope camera clamp is intentional and
+  remains in production. The old projection assertions instead required an
+  arbitrary authored camera to survive live-world resolution unchanged. Keep
+  the native pixel comparator at its existing explicit `withCinematicView` seam,
+  including GHZ tall-film, EHZ raised-group and ICZ bottom-band coordinates.
+  Check live evaluation against bounded framing separately. The 700x448 test
+  calls the existing production `StageplayWorldPresentation` compositor directly
+  at its deliberate off-camera coordinates; preserve its exact four-tile phase,
+  native state/GPU residency, opacity, abort and byte-identical ordinary-picture
+  assertions. No new production bypass is introduced.
+- **Selection gap:** previous holder tests populated the helper and always
+  supplied identity contexts; they did not run `TestSozEndBoss`'s native exit
+  consumers. The N1 selection exercised camera evaluation and editor pictures,
+  but omitted `TestStageplayDirectedBackgroundRendering` and
+  `TestStageplayNativeBackgroundProjection`, which also consume the changed
+  framing API. The repaired selection names those consumers explicitly and adds
+  related cinematic/live-world rendering, ownership/replay/codecs and mandatory
+  S3K checks. The structural holder hook test alone only proved hook existence.
+
+Rewind repair commit: `5c4c97daa`. The first completed repaired invocation used
+this exact common environment/ROM configuration (all commands start with an
+explicit `cd` into the authorized engine tree):
+
+```bash
+cd /mnt/LinuxData/T3/worktrees/OpenGGF/t3-d68f46c5
+TASK_ENGINE=/mnt/LinuxData/T3/worktrees/OpenGGF/t3-d68f46c5
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$TASK_ENGINE/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$TASK_ENGINE/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$TASK_ENGINE/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  '-Dtest=TestSozEndBoss,TestCapturedPolicyCompactReachabilityGuard,TestStageplayDirectedBackgroundRendering,TestStageplayNativeBackgroundProjection' test -B
+```
+
+Result: **72 tests, 0 failures, 0 errors, 0 skips** on the repair diff atop
+`657bbae86`; 61 SOZ, six reachability checks (254 production player-reference
+fields audited), two directed-raster and three native-background cases. Queue
+wait was 303 seconds; Maven execution was 30.910 seconds. CRC32/SHA-1 identities
+of all three supplied ROMs were verified against repository requirements. An
+initial invocation stopped at compilation because the new negative annotation
+fixture omitted its required `reason`; corrected before this successful run,
+with no tests executed by the failed compilation.
+
+Projection repair commit: `811bbd234`. The following additional selector used
+the same environment, queue, EGL and absolute ROM properties as above:
+
+```text
+-Dtest=TestRewindPlayerReferenceCodecs,TestRewindReferenceClosureValidation,TestRewindInPlaceObjectRestore,TestObjectRewindTypeSafetyDispatchPerformance,TestStageplayAcquiredControlRelease,TestStageplayNativeStateRelease,TestStageplayInteractionRelease,TestStageplayIntroControlRelease,TestStageplayStoryControlRelease,TestStageplayCapsuleControlRelease,TestStageplayLateHolderRelease,TestStageplayObjectDirection,TestStageplayCameraBounds,TestStageplayWorldPresentation,TestStageplayCinematicCameraRendering,TestStageplayLiveWorldRendering,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test -B
+```
+
+Result at `811bbd234`: **267 tests, 0 failures, 0 errors, 1 skip**, across
+21 classes. The skip is the opt-in allocation/throughput measurement in
+`TestObjectRewindTypeSafetyDispatchPerformance` (property
+`openggf.performance.rewindDispatch.measure` is intentionally unset); its eight
+functional dispatch tests executed. All 60 mandatory S3K cases executed without
+skips: AIZ1 skip (8), both LevelLoading classes (36 + 7), BootstrapResolver (6),
+DecodingUtils (3). Queue wait was 1105 seconds; Maven execution 37.486 seconds.
+No production/test source changed after the exact-failure run.
+
+The single complete guards invocation used:
+
+```bash
+cd /mnt/LinuxData/T3/worktrees/OpenGGF/t3-d68f46c5 && env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Pguards test -B
+```
+
+Result at `811bbd234` (plan prose uncommitted): **722 tests, 5 failures,
+0 errors, 0 skips**; admission wait 1725 seconds, Maven execution 5:07. The new
+central reachability checks passed (6/6, 254 fields audited), as did the existing
+native holder hook guard (2/2). Four failures match the supplied baseline:
+
+- `TestProductionSingletonClosureGuard.productionCodeDoesNotUseForbiddenProcessSingletonsOutsideEngineServices`
+  and `productionCodeOnlyUsesRawGetInstanceAtEngineServicesBootstrapBridge`:
+  `MenuAudioProbeTool.java:41`, the same forbidden `AudioManager.getInstance()`.
+- `TestArchUnitRules.shared_code_does_not_construct_concrete_sonic_provider_classes`:
+  the same three `HubMusicController.java:118` audio-profile constructors.
+- `TestArchUnitRules.shared_layers_do_not_depend_on_game_specific_packages`:
+  the same nine HubMusic constructor/title/id edges at lines 118/120.
+
+The fifth failure was introduced by this repair's two negative fixtures:
+`TestObjectUpdateClockTerminologyGuard.objectUpdateClockUsesVIntRunCountTerminologyAcrossBoundaryAndFrameworkHooks`
+rejected their unused `update(int frame, ...)` parameter names. Renamed both to
+`vIntRunCount`; the change affects fixture terminology only. The targeted rerun used:
+
+```bash
+cd /mnt/LinuxData/T3/worktrees/OpenGGF/t3-d68f46c5 && env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestObjectUpdateClockTerminologyGuard,TestCapturedPolicyCompactReachabilityGuard' test -B
+```
+
+Result on the two-parameter correction atop `811bbd234`: **7 tests, 0 failures,
+0 errors, 0 skips** (terminology 1/1, codec reachability 6/6). Admission wait was
+1303 seconds; Maven execution 1:30. This correction and the completed verification
+record land in the follow-up `test(rewind): name fixture update clocks by V-int`;
+the final STATUS handback records its exact commit hash.
+The complete guards run is not repeated; the lead owns the next broad smoke.
+No all-green guards or full-suite claim is made.
+
+
+All originally reported new failures are repaired and their exact classes passed.
+The earlier focused selectors omitted the native SOZ exit snapshot callers and
+both projection classes; the explicit selectors above close those omissions.
+The complete guards invocation was run once, with its repair verified narrowly.
+Queue intervals overlap and must not be added into elapsed delivery time; total
+wall-clock attribution outside the recorded waits/executions is unmeasured.
+The lead owns the next smoke/integration decision. No merge, push or PR was made.
+Consumed repair logs and commit-message temporaries are removed at final handback.
