@@ -7,19 +7,28 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The best time and the latest split beside the game's own HUD, whose TIME shows the attempt's
- * clock to the hundredth ({@code RunHandle.setHudTime}); a single bottom strip while the stock
- * act-clear card is visible.
+ * The best time and the latest split, directly under the game's own HUD rows (TIME, whose clock is
+ * the attempt's, and RINGS; see {@link TimeAttackRuntime#hudProfile}) and lined up with their
+ * labels; a single bottom strip while the stock act-clear card is visible.
  */
 public final class TimeAttackHud {
+    /** Native y just below the RINGS row (y 24, sixteen pixels tall) with a two-pixel gap. */
+    static final int UNDER_NATIVE_ROWS = 42;
+
     private TimeAttackHud() { }
 
     public static void draw(LevelOverlayCanvas canvas, TimeAttackHudState state) {
-        HudTextLayout.Panel panel = layout(canvas.width(), canvas.height(), state);
+        HudTextLayout.Panel panel = layout(canvas.width(), canvas.height(), state, canvas.hudOriginX());
         if (panel != null) HudTextLayout.drawPanel(canvas, panel);
     }
 
+    /** {@link #layout(int, int, TimeAttackHudState, int)} with the native HUD centred. */
     public static HudTextLayout.Panel layout(int width, int height, TimeAttackHudState state) {
+        return layout(width, height, state, (width - 320) / 2);
+    }
+
+    /** @param hudOriginX the native HUD frame's left edge on screen ({@code LevelOverlayCanvas.hudOriginX}) */
+    public static HudTextLayout.Panel layout(int width, int height, TimeAttackHudState state, int hudOriginX) {
         if (state == null || !state.active()) return null;
         if (state.finished()) {
             String line = "TIME " + TimeAttackTimeFormat.frames(state.elapsedDisplayFrames())
@@ -44,6 +53,7 @@ public final class TimeAttackHud {
                     state.lastSplitDelta() < 0 ? 0xFF79E5A8 : 0xFFFF8E83));
         }
         if (lines.isEmpty()) return null;
-        return HudTextLayout.panel(width, 4, HudTextLayout.PANEL_WIDTH, lines, HudTextLayout.ACCENT);
+        return HudTextLayout.panelAt(hudOriginX + HudTextLayout.NATIVE_LABEL_X - HudTextLayout.TEXT_INSET,
+                UNDER_NATIVE_ROWS, HudTextLayout.PANEL_WIDTH, lines, HudTextLayout.ACCENT);
     }
 }

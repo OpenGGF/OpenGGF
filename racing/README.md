@@ -35,8 +35,14 @@ this countdown and a room's round-start countdown use Death Egg Zone's tunnel-la
 ready beep as each of 3, 2 and 1 appears and the launch sound on GO. Acts start without
 their intro cutscene (Angel Island 1 begins on the beach), so the clock measures the race.
 The game's own HUD shows that clock: its TIME counts the attempt (first input to finish), to the
-hundredth (`0:00.00`), in each game's own HUD digits, and the Time Attack panel beside it shows
-only the best time and the latest split.
+hundredth (`0:00.00`), in each game's own HUD digits. Time Attack lays the native HUD out for
+racing (`RunHandle.setHudProfile`): TIME on the top row and RINGS beneath it, with no score or
+lives, and its own panel with the best time and the latest split sits directly under them, lined
+up with their labels (`LevelOverlayCanvas.hudOriginX`). In a room, the room panel takes the
+top-right corner, and a progress bar spans the bottom of the screen: every racer is a marker in
+their name colour, in race order (a tight pack spreads apart about where it really is), with
+yours taller and outlined in white. A racer's marker flashes red, shakes and grows while they are
+hurt and briefly after; other players' hurt state travels in their ghost frames.
 Best and imported ghosts remain in `ghosts/`, and player identity remains in `identity/`.
 
 A best save validates the ghost and its input recording before publication. The

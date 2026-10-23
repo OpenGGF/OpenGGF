@@ -269,6 +269,39 @@ class TestMultiplayerRaceCoordinator {
     }
 
     @Test
+    void aHurtPeersMarkerFlashesWhileHurtAndBrieflyAfter(@TempDir Path root) {
+        Rig rig = rig(root);
+        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RoomState(List.of(
+                new ControlMessage.PlayerInfo(0, "fp0", "ME", "sonic"),
+                new ControlMessage.PlayerInfo(3, "fp3", "PEER", "tails")))));
+        feedPeerFrames(rig, 1, 200);
+        rig.coordinator().pump();
+        rig.coordinator().afterLevelFrame();
+        assertEquals(0, rig.coordinator().hudState().hurtFlash(3), "not hurt");
+
+        for (int i = 12; i < 24; i += 3) {
+            byte[] data = new byte[3 * GhostFrameCodec.BYTES];
+            for (int k = 0; k < 3; k++) {
+                GhostFrameCodec.encode(new GhostFrame(210, 100, 26, false, false, false, 2, false, true),
+                        data, k * GhostFrameCodec.BYTES);
+            }
+            rig.transport().inbound.add(new RaceClient.GhostData(new GhostPackets.Aggregate(i, List.of(
+                    new GhostPackets.AggregateEntry(3, 1, i, 3, data)))));
+        }
+        rig.coordinator().pump();
+        int flashed = 0;
+        for (int frame = 0; frame < 30 && flashed == 0; frame++) {
+            rig.coordinator().afterLevelFrame();
+            flashed = rig.coordinator().hudState().hurtFlash(3);
+        }
+        assertTrue(flashed > 0, "the peer's hurt frames start its flash");
+        int tick = rig.coordinator().hudState().tick();
+        for (int frame = 0; frame < 200; frame++) rig.coordinator().afterLevelFrame();
+        assertEquals(0, rig.coordinator().hudState().hurtFlash(3), "the flash ends once the hits stop");
+        assertTrue(rig.coordinator().hudState().tick() > tick, "the flash clock runs every level frame");
+    }
+
+    @Test
     void membershipDeltasReachBothSessionAndRemotePlayback(@TempDir Path root) {
         Rig rig = rig(root);
         rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RoomState(List.of(

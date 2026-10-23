@@ -457,4 +457,14 @@ class TestHostedRunController {
         handle.setHudTime(99);
         assertEquals(-1, controller.hudTimeFrames(), "an ended run's handle no longer sets TIME");
     }
+
+    @Test
+    void aStepsPoseCarriesTheCharactersHurtState() {
+        var sprite = org.mockito.Mockito.mock(com.openggf.sprites.playable.AbstractPlayableSprite.class);
+        org.mockito.Mockito.when(sprite.getCentreX()).thenReturn((short) 100);
+        org.mockito.Mockito.when(sprite.isHurt()).thenReturn(true);
+        assertTrue(HostedRunController.poseOf(sprite).hurt(), "other players' HUDs flash a hurt player");
+        org.mockito.Mockito.when(sprite.isHurt()).thenReturn(false);
+        assertFalse(HostedRunController.poseOf(sprite).hurt());
+    }
 }

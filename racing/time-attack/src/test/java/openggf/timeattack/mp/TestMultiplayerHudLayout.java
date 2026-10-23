@@ -21,9 +21,13 @@ class TestMultiplayerHudLayout {
             var room = MultiplayerHudRenderer.layout(width, 224, state("RUNNING", 129), 8192, false);
             assertContained(clock, width);
             assertContained(room, width);
-            assertTrue(clock.x() >= 120, "stock score/time/rings must remain visible");
-            assertTrue(room.x() >= 120, "stock score/time/rings must remain visible");
-            assertTrue(clock.y() + clock.height() <= room.y(), "clock and room must not overlap");
+            assertEquals((width - 320) / 2 + HudTextLayout.NATIVE_LABEL_X - HudTextLayout.TEXT_INSET, clock.x(),
+                    "the best/split panel's text lines up with the native HUD labels");
+            assertTrue(clock.y() >= 40, "below the native TIME and RINGS rows");
+            assertTrue(room.x() >= 120, "stock time/rings must remain visible");
+            assertEquals(4, room.y(), "the room panel takes the top-right corner");
+            assertTrue(clock.x() + clock.width() <= room.x() || clock.y() >= room.y() + room.height(),
+                    "clock and room must not overlap");
             assertTrue(room.lines().size() <= 5, "header, position, and at most three nearby rows");
             assertTrue(room.lines().stream().anyMatch(line -> line.text().startsWith("129. ")));
             assertFalse(room.lines().stream().anyMatch(line -> line.text().startsWith("1. ")),
@@ -179,5 +183,50 @@ class TestMultiplayerHudLayout {
                 new RemoteGhostRegistry.FarPlayer(4, "A LONG PLAYER NAME BEHIND", "tails", 50, 0, -1)),
                 "OPEN", List.of("s1:0:0", "s1:0:1", "s3k:0:0"),
                 List.of(new ControlMessage.VoteCount("s1:0:0", 255)), 12_000, null, rows.subList(0, 3), localRank);
+    }
+
+    @Test
+    void theProgressBarSpansTheScreenAndAHurtPlayersMarkerFlashesOnTop() {
+        var players = List.of(new com.openggf.net.client.RemoteGhostRegistry.FarPlayer(3, "PEER", "tails", 50, 10, -1),
+                new com.openggf.net.client.RemoteGhostRegistry.FarPlayer(4, "HURT", "sonic", 50, 10, -1));
+        for (int width : new int[]{320, 424}) {
+            for (int tick : new int[]{0, 3}) {
+                var state = new MultiplayerHudState(true, "RUNNING", 60_000, 0, List.of(), List.of(), false, null, 3,
+                        players, "OPEN", List.of(), List.of(), 0, null, List.of(), 2,
+                        java.util.Map.of(3, 0xFF00FF00, 4, 0xFF0000FF), 0, tick, java.util.Map.of(4, 20));
+                List<int[]> fills = new ArrayList<>();
+                MultiplayerHudRenderer.drawProgress(new com.openggf.mods.ui.PixelCanvas() {
+                    public int width() { return width; }
+                    public int height() { return 224; }
+                    public void fill(int x, int y, int w, int h, int argb) { fills.add(new int[]{x, y, w, h, argb}); }
+                }, state, 6400, 1600);
+                int[] bar = fills.getFirst();
+                assertEquals(4, bar[0], "four pixels from the left edge, where the lives counter was");
+                assertEquals(width - 8, bar[2], "the whole screen width");
+                assertEquals(13, bar[3], "taller than before");
+                int peer = indexOfColour(fills, 0xFF00FF00);
+                int hurt = tick == 0 ? indexOfColour(fills, 0xFFFF3B3B) : indexOfColour(fills, 0xFF0000FF);
+                assertTrue(peer >= 0 && hurt > peer, "the hurt marker draws after its neighbour");
+                assertEquals(tick == 0, indexOfColour(fills, 0xFF0000FF) < 0, "the marker strobes red");
+            }
+        }
+    }
+
+    @Test
+    void aTightPackSpreadsInRaceOrderAboutWhereItReallyIsAndLoneMarkersStayPut() {
+        List<int[]> pack = List.of(new int[]{103, 1, 0}, new int[]{100, 2, 0}, new int[]{101, 3, 1},
+                new int[]{102, 4, 0}, new int[]{200, 5, 0});
+        int[] xs = MultiplayerHudRenderer.spread(pack, 10, 300);
+        assertEquals(List.of(94, 99, 104, 109), List.of(xs[1], xs[2], xs[3], xs[0]),
+                "five pixels apart, in race order (100, 101, 102, 103), centred on the pack's mean x (101)");
+        assertEquals(200, xs[4], "a marker with room keeps its true position");
+        int[] edge = MultiplayerHudRenderer.spread(List.of(new int[]{11, 1, 0}, new int[]{12, 2, 0}), 10, 300);
+        assertEquals(10, edge[0], "a pack at the start stays on the track");
+        assertEquals(15, edge[1]);
+    }
+
+    private static int indexOfColour(List<int[]> fills, int argb) {
+        for (int i = 0; i < fills.size(); i++) if (fills.get(i)[4] == argb) return i;
+        return -1;
     }
 }

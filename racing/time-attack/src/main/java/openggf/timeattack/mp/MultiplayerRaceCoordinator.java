@@ -43,6 +43,10 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     private final RaceTransport transport;
     private final ClientRaceSession session;
     private final RemoteGhostRegistry registry = new RemoteGhostRegistry();
+    /** Frames a player's progress marker keeps flashing after their hurt state ends. */
+    private static final int HURT_FLASH_FRAMES = 45;
+    private final java.util.Map<Integer, Integer> hurtFlash = new java.util.HashMap<>();
+    private int hudTick;
     /** Lobby presence: other players in the lobby level between rounds. */
     private final RemoteGhostRegistry lobbyRegistry = new RemoteGhostRegistry();
     private LobbyPosePublisher lobbyPublisher;
@@ -311,6 +315,28 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         }
         remoteGhosts = presentRemoteGhosts("net:",
                 registry.advanceAll(session.localSlot()), session::appearance);
+        trackHurt();
+    }
+
+    /**
+     * Counts down every player's hurt flash and restarts it for anyone hurt this frame: the
+     * remote ghosts' frames carry their hurt state, and the runtime knows the local player's.
+     */
+    private void trackHurt() {
+        hudTick++;
+        hurtFlash.replaceAll((slot, frames) -> frames - 1);
+        hurtFlash.values().removeIf(frames -> frames <= 0);
+        for (GhostPose ghost : remoteGhosts) {
+            if (!ghost.pose().hurt()) continue;
+            try {
+                hurtFlash.put(Integer.parseInt(ghost.slotId().substring("net:".length())), HURT_FLASH_FRAMES);
+            } catch (RuntimeException ignored) {
+                // Not a room slot.
+            }
+        }
+        if (runtime != null && runtime.isLocalHurt()) {
+            hurtFlash.put(session.localSlot(), HURT_FLASH_FRAMES);
+        }
     }
 
     public List<GhostPose> remoteActiveGhosts() {
@@ -342,7 +368,8 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                 config == null ? null : config.characterPolicy(),
                 session.voteOptions(), session.voteCounts(), session.voteRemainingMillis(),
                 session.lastVoteResultTrackKey(), session.podiumTop(3),
-                local == null ? localRank : local.rank(), nameColours());
+                local == null ? localRank : local.rank(), nameColours(), session.localSlot(), hudTick,
+                hurtFlash);
     }
 
     /** Name colours of the players whose look is not stock, by slot. */
@@ -398,7 +425,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
             return;
         }
         lobbyPublisher.onFrame(new GhostFrame(pose.centreX(), pose.centreY(), pose.mappingFrame(),
-                pose.hFlip(), pose.vFlip(), false, pose.priorityBucket(), pose.highPriority()));
+                pose.hFlip(), pose.vFlip(), false, pose.priorityBucket(), pose.highPriority(), pose.hurt()));
     }
 
     /** The lobby level ended. */
