@@ -229,5 +229,56 @@ class EditChecks(unittest.TestCase):
         self.assertGreater(np.abs(out).max(), 0.1)
 
 
+    def tone(self, path, left, right, seconds=0.5):
+        t = np.arange(int(seconds * kit.SR)) / kit.SR
+        wave = np.sin(2 * np.pi * 440 * t).astype(np.float32)
+        kit.write_wav(path, np.stack([wave * left, wave * right], axis=1))
+        return path
+
+    def test_buried_and_one_sided_stingers_are_flagged(self):
+        with tempfile.TemporaryDirectory() as d:
+            clip = self.frames(d)
+            bed = self.tone(Path(d) / 'bed.wav', 0.5, 0.5, seconds=3)
+            centre = self.tone(Path(d) / 'centre.wav', 0.5, 0.5)
+            right = self.tone(Path(d) / 'right.wav', 0.0, 0.5)
+            e = SmallEdit()
+            e.S(kit.Game(0, 150, clip, hold=0))
+            e.bed(bed, 0, 1.0)
+            e.X(10, centre, 0.8)
+            e.X(50, centre, 0.15)
+            e.X(90, right, 1.0)
+            warn = e.sound_balance()
+        self.assertEqual(2, len(warn), warn)
+        self.assertIn('centre.wav at 50', warn[0])
+        self.assertIn('dB under the music', warn[0])
+        self.assertIn('right.wav at 90', warn[1])
+        self.assertIn('right speaker only', warn[1])
+
+    def test_alternating_one_sided_stingers_are_the_games_pairing(self):
+        with tempfile.TemporaryDirectory() as d:
+            clip = self.frames(d)
+            right = self.tone(Path(d) / 'right.wav', 0.0, 0.5)
+            left = self.tone(Path(d) / 'left.wav', 0.5, 0.0)
+            e = SmallEdit()
+            e.S(kit.Game(0, 400, clip, hold=0))
+            for k in range(4):
+                e.X(10 + 24 * k, right if k % 2 == 0 else left, 1.0)
+            e.X(300, right, 1.0)
+            warn = e.sound_balance()
+        self.assertEqual(1, len(warn), warn)
+        self.assertIn('right.wav at 300', warn[0])
+
+    def test_stingers_after_the_bed_are_not_compared_with_silence(self):
+        with tempfile.TemporaryDirectory() as d:
+            clip = self.frames(d)
+            bed = self.tone(Path(d) / 'bed.wav', 0.5, 0.5, seconds=1)
+            quiet = self.tone(Path(d) / 'quiet.wav', 0.05, 0.05)
+            e = SmallEdit()
+            e.S(kit.Game(0, 150, clip, hold=0))
+            e.bed(bed, 0, 1.0)
+            e.X(100, quiet, 1.0)
+            self.assertEqual([], e.sound_balance())
+
+
 if __name__ == '__main__':
     unittest.main()

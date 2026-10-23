@@ -34,7 +34,25 @@ may need stable speech panels, longer reactions and intentional silence.
 | Chaos Mode revision 3 | "retain a coherent HCZ soundtrack…; do not fade into the ghost source's DEZ music… omit minigames and related challenge/chat spoilers" | One bed throughout, curated effects and no spoilers. |
 | Emerald Remix rough cut (coached Sol draft, 2026-10-22, 41 s) | "it's use of palettes with the text is horrible, particularly around the drop shadow" | Keep the ROM glyph's own colours, and sample the shadow from the native card. Effects go in whole glyph pixels, with no invented outline. `BitmapFont` now enforces the grid. |
 | Same draft | "the video is just very... boring... very lazy with long stretches of level showcased without any accompaniment" (14 s of bare Clover Valley) | Round 4 answered with a filler caption every four beats and a small static tile panel. User: "minimal effort has been put in to achieve the goals". Accompany with the footage's own events, then counters and layout changes, and cut long takes down. Captions are at most one per chapter. Give the mod's idea a memorable beat. `check` ignores captions for bare stretches and flags caption density. |
+| Time Attack A/B film A (Opus, 2026-10-23, 81.8 s; preferred) | "the audio has issues. it's way louder than the SFX. it's missing its PCM. there's a ring sound halfway through but it's stuck on the right channel"; then "in the split screen… he's off screen for Sonic 1", "Some of the sound effects early on are off-timing", "Sometimes jump is used as a sound effect which is confusing", "when the different language names come in, they're hard to see" | The bed was rendered again with `FmSfxRenderTool --paced`, which enables the S3K DAC; the default render had none. Bed at 0.75 with stingers ×2.2. The ring alternates `$33`/`$34`. Ticks land on the frames where the glyphs appear. Jump sounds play only on real take-offs. The S1 pane is padded and centred on Sonic. Callouts are 4× white with a colour bar and enter once the line-up settles. `check` now flags buried and one-sided stingers. |
+| Time Attack A/B film B (Sol, 2026-10-23, 58.6 s) | Coach review, not user words: the tagline was wedged into the HUD corner beside the room panel, nameplates and disclosure; close crops sliced `TIME` and the room panel on most race shots; the title slab left HUD fragments showing; a full-screen lobby menu was held; "the lobby is a level" was never said; no-lives retry, the vote and room size were dropped as "inventory"; two stingers sat 11 and 17 dB under the bed; its viewer pass was a muted browser playback | Native UI counts as type; crop at UI boundaries; name the relationship being shown; show every differentiator in motion; measure sound and say it was not heard |
 | Second Strike reels (flat reference) | DejaVu `drawtext` at `x=40`, a solid pad, hard concat, a text-only end card | Use this as the counter-example when choosing type and composition. |
+
+## Multiplayer Time Attack A/B (2026-10-23)
+
+Opus and Sol each made a promo from the same brief, without coaching. The user preferred
+Opus's film, "A is clearly better", for its story: one player names themselves, picks a
+colour, warms up in the lobby, dies, comes back in a measured 3.77 s, loses a photo finish
+and votes for the next track. Every difference from the stock game had a moving proof. Its
+type was the engine's own name font. The capacity test was labelled as a test. Sol's film
+was calmer, with strong race footage, but cluttered its opening with editorial type on top
+of native UI and left out the features that made the mode different.
+
+Both films failed on sound in ways neither agent noticed, because neither could listen.
+Opus's bed came from a render path that never enabled the S3K DAC, both buried their
+stingers under the music, and one ring sound played from the right speaker only.
+`FmSfxRenderTool --paced` and the stinger checks in `promo_kit.py check` came out of this
+review. Both productions are still local task directories and are not yet in this archive.
 
 ## Stageplay dialogue revision
 
