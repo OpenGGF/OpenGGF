@@ -74,10 +74,15 @@ continues those cuts rather than treating the inventory as untouched.
 
 | Slice / owner | Expected change | Completion evidence | Status |
 |---|---|---|---|
-| Menu and AniPLC composition / `game.menu`, S2 animation assembly | Cross-game 14 → 10 members; framework roots 1 → 0 records | Menu cadence/prime controls, post-install graphics rebinding, ROM animator adapter, strict frozen guards | Implemented; combined guard verification pending |
-| Canonical sprite geometry / `graphics`, legacy `level.render` ingress | Remove `SpriteSatEntry`'s 20 reverse records and replay callbacks; retain and explicitly relocate the pinned submission conversion | Complete field/geometry controls, SAT order/mask/ghost/replay checks, identical public API pins and audited member delta | Implemented; low-level records 187 → 181; combined verification pending |
+| Menu and AniPLC composition / `game.menu`, S2 animation assembly | Cross-game 14 → 10 members; framework roots 1 → 0 records | Menu cadence/prime controls, post-install graphics rebinding, ROM animator adapter, strict frozen guards | Completed; affected checks and strict frozen rules passed |
+| Canonical sprite geometry / `graphics`, legacy `level.render` ingress | Remove `SpriteSatEntry`'s 20 reverse records and replay callbacks; retain and explicitly relocate the pinned submission conversion | Complete field/geometry controls, SAT order/mask/ghost/replay checks, identical public API pins and audited member delta | Completed; low-level records 187 → 181; API and actual SAT pixel checks passed |
 | Master-title preview / `GameModule` preview capabilities | Shared concrete-game 9 → 0 records | S1/S2/S3K preview behavior and donor/host selection remain ROM-backed; no concrete type checks in shared preview orchestration | Next bounded slice, not delivered in this campaign |
 | Background renderer lifetime / level rendering composition | Evaluate the five `GraphicsManager` → `BackgroundRenderer` records | Ground construction, initialization, per-level cleanup and API compatibility before choosing a cut | Queued investigation; no promised removal yet |
+
+The combined guard profile has one independently reproduced pre-existing
+build-tooling assertion failure; the [plan](plans/2026-10-23-architecture-ratchet-paydown.md)
+records its exact identity, matched baseline/current command and coverage limits.
+This campaign does not claim an entirely green guard profile.
 
 Lifecycle calls are a separate migration inventory, not hundreds of automatically
 safe replacements. Preserve the intentional slot/reconstruction bridges and move

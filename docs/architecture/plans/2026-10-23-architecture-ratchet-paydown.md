@@ -26,8 +26,9 @@ decomposition or blanket lifecycle-call replacement is authorized by this scope.
 - [x] Implement: fill in the selected ownership changes and guard repairs.
 - [x] Scrap check: redesign if implementation repeatedly needs ownership
   workarounds, duplicated representations or public-contract escape hatches.
-- [ ] Verify, integrate, push only `develop`, and account for owned worktrees
-  before removing merged task branches.
+- [x] Verify the selected coverage and attribute the sole pre-existing failure.
+- Delivery uses `develop` only, with accounted worktree/branch cleanup after push;
+  the final delivery message records the operational result.
 
 The coordinator owns `TestArchitecturalSourceGuard`, ArchUnit rules/stores,
 shared documentation, composition and delivery-wide validation. A separate
@@ -152,9 +153,68 @@ T3 task IDs end in `architecture-ratchet-menu-animation-20261023-r1`,
 retained owned worktrees. Native read-only reviewers are finished. No idle CLI
 workers or native-session fallback registry was created.
 
-## Delivery checkpoint
+## Combined validation result
 
-Combined checks are pending. Main advanced independently to `aebb390ed` through
-tooling/evidence changes outside this diff; retain them during integration.
-Only the coordinator integrates and pushes `develop`. No main branch switch,
-worktree-branch push or cleanup of foreign work is authorized.
+Tested source: `d48d51304`, clean before execution, including the conflict-free
+merge of `develop` at `aebb390ed` in `44c183e29`. No production or test changes
+followed these runs; the final edits record results and completed queue status.
+The incoming develop delta concerned measurement tooling and evidence, with no
+ownership-code overlap or conflict. API descriptor, version, signature pins,
+`ChannelContext`, frozen rule descriptions and update-disabled configuration
+remain unchanged.
+
+- Focused combined command above: **224 tests, 0 failures/errors/skips**.
+  The 25 selectors matched 26 classes because `TestSonic3kLevelLoading` exists
+  in two packages. All required ROM-backed and EGL controls executed. Queue
+  wait was 945 seconds; Maven execution 1 minute 27 seconds.
+- Complete separate `-Pguards` command: **727 tests, 1 failure, 0 errors/skips**.
+  All 32 `TestArchUnitRules` checks, all 76 source guards, published accounting,
+  rewind and lifecycle checks passed. Queue wait was 1032 seconds; Maven
+  execution 5 minutes 18 seconds. The profile is not fully green.
+- Sole failure:
+  `TestBuildToolingGuard#canonicalDisassembliesStayOptionalAndTrackableWhileLocalReferencesStayIgnored`,
+  line 4152: `the default developer setup must use an ordinary clone`.
+  The test expects literal `git clone https://...`; the unchanged guide uses
+  `git clone --branch develop https://...`. Both the test and guide are identical
+  to the pinned pre-task base; the guide change predates this campaign.
+- Matched attribution at `b979916808b7f9379ede2b5dcdde1bcdc8bf8357` in the isolated
+  baseline worktree and at `d48d51304` in the development tree used:
+
+  ```bash
+  env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+    JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+    python3 tools/testing/maven_queue.py --lean -Dmse=off \
+    '-Dtest=TestBuildToolingGuard#canonicalDisassembliesStayOptionalAndTrackableWhileLocalReferencesStayIgnored' test -B
+  ```
+
+  Each run produced **1 test, 1 identical failure, 0 errors/skips** at line 4152.
+  XML test identity and assertion messages were compared directly. Baseline
+  waited 834 seconds and executed for 1 minute 28 seconds; current waited
+  833 seconds and executed for 32.307 seconds. Waiting intervals overlap and
+  must not be added as elapsed delivery time. Total delivery time is unmeasured.
+
+No new or worsened failures were observed within this bounded coverage. The
+pre-existing tooling failure is left unchanged and does not block integration
+under repository policy. The full 3621-class smoke selection, exhaustive traces
+and release-only full suite were not run. No gameplay parity/frontier claim is
+made beyond the named checks. Relative documentation links and `git diff --check`
+passed. Diagnostic XML was consumed; owned worktree cleanup removes it rather
+than archiving it. No category `--run` directories were created.
+
+## Delivery and remaining work
+
+The approved implementation is complete. Preserve `develop`'s unrelated dirty
+submodules and untracked files. Integrate the verified source without switching
+the main branch; check the integrated tree against the tested source, run branch
+policy, push only `develop`, then remove the five fully accounted owned worktrees
+(parent, three implementation workers and matched baseline) and their local
+branches. Only setup links, generated config examples, build output and Python
+bytecode were found outside tracked changes; original ROM/config/reference
+locations remain untouched. Temporary candidate sketches are superseded by the
+committed design. Integration/push/cleanup outcomes belong in the final delivery
+message rather than a separate tracking framework.
+
+Next architecture slice: the nine `MasterTitleRomPreview` dependencies, grounded
+in provider ownership and host/donor behavior. Background-renderer lifetime is a
+queued investigation. Remaining lifecycle and rewind inventories require
+behavior-specific migrations, not blanket substitution or automatic refreezing.
