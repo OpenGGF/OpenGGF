@@ -5,6 +5,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectConstructionContext;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -80,10 +82,10 @@ public final class FZBossVisualComponent extends AbstractObjectInstance implemen
     public FZBossVisualComponent recreateForRewind(RewindRecreateContext ctx) {
         return RewindRecreateObjectLinks.nearestObjectUnbounded(ctx, Sonic1FZBossInstance.class, true)
                 .map(owner -> {
-                    // Generic recreation is outside ObjectConstructionContext. All
-                    // ROM-derived metadata and animation fields follow from capture;
-                    // construction here must not request ROM services or allocate SSTs.
-                    FZBossVisualComponent restored = new FZBossVisualComponent(ctx.spawn());
+                    // Supply the restoring owner's services without replaying ROM-row
+                    // initialization or allocating SSTs; captured fields follow below.
+                    FZBossVisualComponent restored = ObjectConstructionContext.construct(
+                            ctx.objectServices(), () -> new FZBossVisualComponent(ctx.spawn()));
                     restored.parent = owner;
                     return restored;
                 }).orElse(null);
@@ -93,14 +95,14 @@ public final class FZBossVisualComponent extends AbstractObjectInstance implemen
     public void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed() || parent == null) return;
         if ((routine == 8 || routine == 12) && parent.isDestroyed()) {
-            setDestroyed(true); // These two routines test the parent's object ID.
+            ObjectLifetimeOps.destroyLatched(this); // These two routines test the parent's object ID.
             return;
         }
         switch (routine) {
             case 4 -> {
                 mappingFrame = 11;
                 if (player != null && (player.getCentreX() & 0xFFFF) >= x && !renderedLastPass) {
-                    setDestroyed(true);
+                    ObjectLifetimeOps.destroyLatched(this);
                     return;
                 }
                 displayedThisPass = true;
@@ -113,7 +115,7 @@ public final class FZBossVisualComponent extends AbstractObjectInstance implemen
                     if (animationTimer == 0) animationTimer = 20;
                     animationTimer = (byte) (animationTimer - 1);
                     if (animationTimer <= 0 && ++mappingFrame > 2) {
-                        setDestroyed(true);
+                        ObjectLifetimeOps.destroyLatched(this);
                         return;
                     }
                 }
@@ -130,7 +132,7 @@ public final class FZBossVisualComponent extends AbstractObjectInstance implemen
                     // FixBugs=0: the exploding cockpit alone can self-delete offscreen.
                     // FixBugs=1 removes this test and supplies nonzero culling extents.
                     if (!renderedLastPass) {
-                        setDestroyed(true);
+                        ObjectLifetimeOps.destroyLatched(this);
                         return;
                     }
                     parent.triggerBossDefeatedExplosion(vIntRunCount, x, y);
@@ -144,7 +146,7 @@ public final class FZBossVisualComponent extends AbstractObjectInstance implemen
             case 10 -> {
                 mappingFrame = 0;
                 if (parent.getState().routineSecondary == 12 && parent.isInEscapeShip()) {
-                    setDestroyed(true);
+                    ObjectLifetimeOps.destroyLatched(this);
                     return;
                 }
             }

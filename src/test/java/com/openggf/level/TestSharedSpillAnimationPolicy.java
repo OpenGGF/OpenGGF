@@ -175,7 +175,7 @@ class TestSharedSpillAnimationPolicy {
 
     private static final class InertObject extends AbstractObjectInstance {
         private InertObject() { super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "Retained slot owner"); }
-        @Override public void update(int frameCounter, PlayableEntity player) { }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { }
         @Override public void appendRenderCommands(List<com.openggf.graphics.GLCommand> commands) { }
     }
 }

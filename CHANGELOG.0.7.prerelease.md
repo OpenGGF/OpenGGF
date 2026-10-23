@@ -43,6 +43,9 @@ Unreleased. The earlier development themes remain in
   their own dispatch through late global animation and rewind. Native object-word
   snapshots synchronize only proven words, leaving unrelated fixed-slot shield
   helpers outside that memory projection while rejecting ambiguous native access.
+  Fresh S2 competition initialization owns its explicit object-memory clear;
+  bank eviction clears current live native owners in physical order while
+  preserving empty-slot residue and replacements created during notification.
 
 - **Native terrain rendering:** Retained plane images keep their original width,
   height and wrap independently of ordinary level layouts. Camera movement
@@ -60,16 +63,22 @@ Unreleased. The earlier development themes remain in
   Consumed native level-entry requests hold source gameplay during their
   blocking fade, preserving the completed event pass and the destination's
   normal load and release. Sonic's prepared art stays pending during palette
-  fades until a native player-art service boundary. A full level load clears
+  fades until a native player-art service boundary. Special-stage entry retains
+  that palette handler through both the white-out and reveal, with one PLC
+  preparation per owned token. A full level load clears
   old readiness before the fresh player's art is primed.
+  Native Results exits retain the final player-art comparison row and every
+  physical transfer through the following transition.
 
 - **Sonic 2 player and entry timing:** Super Sonic control runs between movement
   and animation while its palette advances after objects, including hurt and
   death. Transformation stars, timed-invincibility clear and audio requests occur
-  at transform start, and captured normal stars survive Super rewind restoration.
+  at transform start, and captured normal stars survive Super rewind restoration
+  and failed reconstruction retries with their original identity and animation.
   It preserves native balance, reversion animation and invincibility timing, and
-  keeps the speed constants written by an underwater transformation until their
-  next native writer. Ordinary special-stage entry presents its loading hold
+  keeps the literal speed, acceleration and deceleration words written by water,
+  shoes, Super and Wing Fortress events across rewind, including shoes expiring
+  while still underwater. Ordinary special-stage entry presents its loading hold
   without duplicating replay timing. Special-stage player pieces use ROM mappings
   and resolve each tile through their DPLC requests, preserving whole native
   sprite footprints even when the source art is scattered. Curved-track player
@@ -199,6 +208,12 @@ Unreleased. The earlier development themes remain in
   overlays using `LevelOverlayCanvas.hudOriginX()`, preserving each game's artwork
   and HUD anchor setting; clearing the override or ending the run restores the
   zone's layout.
+  Time Attack uses it: TIME and RINGS on the top rows with no score or lives, its best
+  time and split under them, and the room panel in the top-right corner. Its progress bar
+  spans the screen with every racer in their colour at their true place, racers at the
+  same place stacked so a column counts them, and flashes and shakes a racer's segment
+  while they are hurt (`GhostFrame.hurt`, `PlayerPose.hurt`, carried in the ghost
+  frame's spare flag bit).
   Time Attack has no lives counter and unlimited tries: after a death (skippable
   with jump after half a second) the act reloads at once from its start with no
   title card, then a 3-2-1 countdown over the visible level holds control before a
@@ -505,6 +520,8 @@ Unreleased. The earlier development themes remain in
   flame keep their original dispatch, animation and deletion behavior through
   rewind. Knuckles gets the EggRobo head art, and defeat explosions follow the
   ship. Death Egg Act 1's player launchers receive their missing ROM-backed art.
+  Death Egg's gravity tubes retain native rider transfers, mount velocities and
+  body-size adjustment; Chainspike's floor probe uses its native collision radius.
   Carnival Night's miniboss stays dormant until the arena camera gate and native
   wait release it, including at wide viewports. Its defeated top releases standing
   riders before deletion, preserving their status and the rewindable encounter.
@@ -639,7 +656,8 @@ Unreleased. The earlier development themes remain in
   sprite priority. The goal fade shows the native Sonic roll tiles on
   Knuckles and keeps Tails' last body tiles; the configured donor art returns on exit.
   Its rotating layout is now displayed with the sprite table of its own frame,
-  behind the player, cage and rewards, and the goal starts its wind-down on the
+  retaining native row-major cell admission and opaque overlap order behind the
+  player, cage and rewards, and the goal starts its wind-down on the
   following frame. The goal fade dims the palette in the native red, green, blue
   steps every third frame before the level reload fades the rest, the capture
   palette cycle uses the correct colour table and changes mode a frame later,

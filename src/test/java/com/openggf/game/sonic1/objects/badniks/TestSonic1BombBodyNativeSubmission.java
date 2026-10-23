@@ -345,7 +345,7 @@ class TestSonic1BombBodyNativeSubmission {
             super(new ObjectSpawn(160, 96, 0x7F, 0, 0, false, 0), "QueueProbe");
             this.requested = requested; this.bucket = bucket;
         }
-        @Override public void update(int tick, PlayableEntity player) {
+        @Override public void update(int vIntRunCount, PlayableEntity player) {
             accepted = 0;
             for (int i = 0; i < requested; i++)
                 if (NativeSpriteSubmissionAccess.submit(services().objectManager(), this, bucket)) accepted++;
@@ -357,7 +357,7 @@ class TestSonic1BombBodyNativeSubmission {
         RetireEarlier(Sonic1BombBadnikInstance earlier) {
             super(new ObjectSpawn(160, 96, 0x7F, 0, 0, false, 0), "RetireEarlier"); this.earlier = earlier;
         }
-        @Override public void update(int tick, PlayableEntity player) { earlier.setDestroyed(true); }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { earlier.setDestroyed(true); }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
     }
 }

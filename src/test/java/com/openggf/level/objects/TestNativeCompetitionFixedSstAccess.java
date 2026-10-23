@@ -49,7 +49,7 @@ class TestNativeCompetitionFixedSstAccess {
             constructionSlot = getSlotIndex();
         }
         ObjectServices injectedServices() { return services(); }
-        @Override public void update(int frame, PlayableEntity player) { ticks++; }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { ticks++; }
         @Override public void onUnload() { unloads++; }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
         @Override public boolean isPersistent() { return true; }
@@ -73,8 +73,8 @@ class TestNativeCompetitionFixedSstAccess {
     private static final class Wheel extends Actor {
         boolean replaced;
         Wheel(ObjectSpawn spawn) { super(spawn); }
-        @Override public void update(int frame, PlayableEntity player) {
-            super.update(frame, player);
+        @Override public void update(int vIntRunCount, PlayableEntity player) {
+            super.update(vIntRunCount, player);
             if (!replaced) {
                 replaced = true;
                 ObjectManagerInternalAccess.replaceNativeCompetitionFixedObject(

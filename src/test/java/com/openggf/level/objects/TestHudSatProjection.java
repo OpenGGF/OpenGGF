@@ -4,8 +4,6 @@ import com.openggf.camera.Camera;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelState;
 import com.openggf.game.internal.HudSatLayout;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kHudStaticArtFactory;
 import com.openggf.graphics.GraphicsManager;
@@ -18,6 +16,8 @@ import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.level.render.SpritePieceRenderer;
 import com.openggf.level.render.SpritePresentationRenderer;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,7 +44,7 @@ class TestHudSatProjection {
     @BeforeEach
     void setup() {
         GraphicsManager.destroyForReinit();
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
         graphics = GraphicsManager.getInstance();
         graphics.initHeadless();
         Camera camera = mock(Camera.class);

@@ -123,6 +123,7 @@ class TestSonic2SuperGlobalPalettePhase {
         NativePositionOps.writeXPosResetSubpixel(player, 0x300);
         NativePositionOps.writeYPosResetSubpixel(player, 0x100);
         player.setAir(true);
+        player.giveSpeedShoes(8);
         if (death) assertTrue(player.applyPitDeath());
         else assertTrue(player.applyHurt(player.getCentreX() - 16));
         assertEquals(death, player.getDead());
@@ -138,6 +139,12 @@ class TestSonic2SuperGlobalPalettePhase {
         for (int replay = 0; replay < 2; replay++) {
             if (replay != 0) registry.restore(before);
             for (int frame = 0; frame < 8; frame++) fixture.stepFrame(false, false, false, false, false);
+            assertEquals(0xC00, com.openggf.sprites.playable.PlayableSpriteInternalAccess.nativeMaximumSpeedWord(player),
+                    "hurt/death preserve the last speed writer");
+            assertEquals(0xC00, player.getMax());
+            assertEquals(0x18, player.getRunAccel());
+            assertEquals(8, player.captureRewindState().playerExtra().speedShoesRemainingTicks(),
+                    "hurt/death omit the display expiry owner");
             assertEquals(initial.ringDrainCounter(), owner.captureRewindState().ringDrainCounter(),
                     "Hurt/Dead do not call Sonic_Super");
             assertEquals(initial.paletteFrame() - 16, owner.getPaletteFrame(),

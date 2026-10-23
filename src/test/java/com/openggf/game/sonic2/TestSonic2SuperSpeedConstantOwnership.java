@@ -23,6 +23,10 @@ class TestSonic2SuperSpeedConstantOwnership {
     }
 
     private static HeadlessTestFixture transformWhileSubmerged() throws Exception {
+        return transformWhileSubmerged(false);
+    }
+
+    private static HeadlessTestFixture transformWhileSubmerged(boolean shoes) throws Exception {
         var config = SonicConfigurationService.getInstance();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
@@ -36,15 +40,17 @@ class TestSonic2SuperSpeedConstantOwnership {
             GameServices.gameState().markEmeraldCollected(emerald);
         }
         player.setRingCount(100);
-        player.setInWater(true);
+        player.updateWaterState(player.getCentreY() - 1);
         player.setAir(true);
         player.setJumping(true);
         player.setYSpeed((short) 0x20);
         player.currentLevelState().resumeTimer();
         assertSpeeds(player, 0x300, 6, 0x40);
+        if (shoes) { player.giveSpeedShoes(1200); assertSpeeds(player, 0xC00, 0x18, 0x80); }
 
         controller.checkTransformationBeforeMove();
 
+        assertSpeeds(player, 0xA00, 0x30, 0x100);
         assertEquals(SuperState.TRANSFORMING, controller.getState(), "ordinary apex gate transforms");
         assertEquals(PhysicsProfile.SONIC_2_SUPER_SONIC, player.getPhysicsProfile());
         return fixture;
@@ -104,4 +110,25 @@ class TestSonic2SuperSpeedConstantOwnership {
             assertSubmergedWithFullSuperSpeeds(player);
         }
     }
+    @Test
+    void paletteReleaseAndControllerReconciliationDoNotReplayTheShoesOrTransformationWriter() throws Exception {
+        var fixture = transformWhileSubmerged(true);
+        var player = fixture.sprite();
+        var owner = (Sonic2SuperStateController) player.getSuperStateController();
+        player.giveSpeedShoes(1200);
+        assertSpeeds(player, 0xC00, 0x18, 0x80);
+        for (int pass = 0; pass < 80 && owner.getState() != SuperState.SUPER; pass++) {
+            owner.updateNativeGlobalPaletteAfterObjects();
+            assertSpeeds(player, 0xC00, 0x18, 0x80);
+        }
+        assertEquals(SuperState.SUPER, owner.getState());
+        owner.restoreRewindState(owner.captureRewindState());
+        assertSpeeds(player, 0xC00, 0x18, 0x80);
+        owner.debugDeactivate();
+        assertTrue(player.hasSpeedShoes(), "reversion ignores the still-active shoes status");
+        assertSpeeds(player, 0x300, 6, 0x40);
+        assertTrue(player.isInWater());
+        assertEquals(0x10, player.getEffectiveGravity());
+    }
+
 }

@@ -1566,3 +1566,61 @@ estimates remain warnings, not native timing observations. Source/configuration
 remained unchanged; exact owned reports and extraction temporary files were
 consumed after inspection. This is the bounded direct-entry corridor scope
 above, not an act, seamless route, boss, ending, breadth or native acceptance.
+
+
+## Native tube ownership and Chainspike probe correction — 2026-10-23
+
+Frozen-base successor to `659b02c98a16da0723ef5f222acdc60ab7b0838f`, owned by
+`bugfix/ai-dez-native-object-fixes-20261023`; exact command, source blobs,
+reference pin and red/final manifests are in the
+[native-gap plan](../../plans/2026-10-22-native-gap-swarm.md#bounded-native-dez-successor--2026-10-23).
+The short checks use the actual DEZ2 ROM-loaded fixture with native Sonic at320,
+movement donation off. They are independent of long routes and rendering.
+
+- `TestS3kDezGravityTubeHeadless` adds the later-slot former-owner discriminator
+  and destructive full-registry recreation/replay of both tube owners and the
+  actual player latch. An airborne rolling horizontal mount restores the native
+  centre delta and fractional position in both gravity states, through recreation
+  and forward replay. A separate final-only control covers horizontal/vertical ×
+  grounded/airborne with unequal nonzero X/Y/ground velocity and incoming angle$60;
+  it verifies evaluated native velocity/angle/rolling/centre order and recreates
+  each tube before reproducing the same result. Horizontal uses
+  `RideObject_SetRide (sonic3k.asm:42067-42089)`; vertical uses
+  `sub_33C34 (sonic3k.asm:70207-70227)`. The existing support callback/rewind
+  adapter is retained. This does not introduce or certify a full Player_TouchFloor
+  tail/ability/bubble reset beyond the existing landing owners.
+- `TestChainspikeBadnikInstance` replaces the historical128-pixel-ahead rebound
+  expectation: the lower spike remains velocity8 at offsets8 and16 while its
+  centre probe is clear. Render half-height remains128; probe radius is0.
+  The exact-parent/orphan control also captures an extending child and parent,
+  destroys the original owner, recreates/restores both and compares the next
+  extension state before retaining the original orphan-retirement assertions.
+  `word_91EE6 (sonic3k.asm:199518-199520)` is decoded by
+  `SetUp_ObjAttributes3 (sonic3k.asm:176998-177005)`, which writes height_pixels;
+  `ObjCheckFloorDist (sonic3k.asm:20087-20095)` instead reads untouched y_radius.
+
+The old-source request executed the original four discriminators and failed all
+four assertions, with zero errors/skips; the later helper-order/gravity controls
+were added only after that run was terminal and are final-selection evidence.
+Final focused validation passes 99/99 with 0 failures/errors/skips, including 14
+tube and 10 Chainspike cases. The fresh guards pass 51/52, with no errors/skips:
+services, rewind architecture and field disposition pass; the lifecycle source
+ratchet reports inherited raw-destruction count 586 against budget 582. A matched
+static source audit finds the exact same call locations on frozen `659b02c98` and current;
+the failed method's later insertion assertion is unexecuted (static counts are
+also unchanged 10 against budget 9). No extra Maven request or unrelated fix was
+made; exact evidence and limitations are in the linked plan. These rows supersede
+the older Chainspike first-update rebound explanation, not the historical route
+observations. New controls are not native timing/trace or pixel comparisons.
+Act 1 bindings, other characters, P2/teams, donor/width products and cold/lifecycle
+route revalidation remain inherited obligations. The existing upper-spike signed
+outbound simplification is outside this bounded probe-radius correction.
+
+
+Inherited P2 limit: `loc_4906A (sonic3k.asm:95385-95404)` uses FixBugs=0,
+retaining possible d6 dirtiness from P1 before its byte standing-bit increment;
+FixBugs=1 instead reloads the whole register. Independent RiderState entries do
+not model that dirty support-bit/status aliasing. No runtime change or wider
+standing-bit owner interface follows here, and the focused P1 checks do not
+certify whole native two-player tube fidelity. The reverse-gravity centre
+control remains in the tested source.

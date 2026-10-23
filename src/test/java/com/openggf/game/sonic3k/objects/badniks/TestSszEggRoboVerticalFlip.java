@@ -39,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSszEggRoboVerticalFlip {
+    private static final int PICTURE_CAMERA_X = 0x100, PICTURE_CAMERA_Y = 0xB80;
     private record Family(EggRoboBadnikInstance body, EggRoboGunArmChildInstance gun,
                           EggRoboJetFlameChildInstance jet, EggRoboShotInstance shot) { }
     private record Ids(ObjectRefId body, ObjectRefId gun, ObjectRefId jet, ObjectRefId shot) { }
@@ -349,7 +350,7 @@ class TestSszEggRoboVerticalFlip {
         var fixture = HeadlessTestFixture.builder().withZoneAndAct(10, 0).build();
         fixture.stepIdleFrames(2);
         manager().setRewindInPlaceRestoreEnabledForTest(false);
-        GameServices.camera().setX((short) 0x100); GameServices.camera().setY((short) 0xB80);
+        GameServices.camera().setX((short) PICTURE_CAMERA_X); GameServices.camera().setY((short) PICTURE_CAMERA_Y);
         AbstractObjectInstance.updateCameraBounds(0x100, 0xB80, 0x240, 0xC60, 0x1000);
         ((SszZoneRuntimeState) TestEnvironment.objectServices().zoneRuntimeState()).markEggRoboFlyByPassed(0);
         return fixture;
@@ -420,7 +421,7 @@ class TestSszEggRoboVerticalFlip {
         boolean shader = g.isUseSpritePriorityShader(); int mask = g.getCurrentSpriteTileOcclusionPaletteMask();
         try {
             g.setUseSpritePriorityShader(true); g.setCurrentSpriteTileOcclusionPaletteMask(object.getTileOcclusionPaletteMask());
-            return SpritePresentationRenderer.prepare(g, 0, 0, () -> {
+            return SpritePresentationRenderer.prepare(g, PICTURE_CAMERA_X, PICTURE_CAMERA_Y, () -> {
                 SpritePresentation.layer(g, SpritePresentation.Layer.OBJECT);
                 if (sat) { g.beginSpriteSatCollection(); g.setCurrentSpriteSatBucket(object.getPriorityBucket()); }
                 try { object.appendRenderCommands(new ArrayList<>()); }
@@ -462,8 +463,8 @@ class TestSszEggRoboVerticalFlip {
             boolean ph = h ^ ((word & 0x800) != 0), pv = v ^ ((word & 0x1000) != 0);
             for (int r = 0; r < height; r++) for (int col = 0; col < w; col++) {
                 int pattern = base + (word & 0x7FF) + col * height + r;
-                int tx = x + dx + 8 * (ph ? w - 1 - col : col);
-                int ty = y + dy + 8 * (pv ? height - 1 - r : r);
+                int tx = x - PICTURE_CAMERA_X + dx + 8 * (ph ? w - 1 - col : col);
+                int ty = y - PICTURE_CAMERA_Y + dy + 8 * (pv ? height - 1 - r : r);
                 expected.add(new Tile(pattern, (word >> 13) & 3, ph, pv, true, 0, tx, ty, 8, 8));
             }
         }

@@ -1,17 +1,16 @@
 package com.openggf.level.objects;
 
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry;
 
-import java.util.ArrayDeque;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Predicate;
 
 /**
@@ -21,10 +20,31 @@ import java.util.function.Predicate;
  * work later in the same restore, and must not queue it twice.
  */
 final class ObjectRewindPlayerBindings {
-    private final Map<Class<?>, ArrayDeque<DynamicObjectEntry>> pendingEntries = new HashMap<>();
-    private final Set<DynamicObjectEntry> admittedEntries =
-            Collections.newSetFromMap(new IdentityHashMap<>());
+    private final Map<Class<?>, List<DynamicObjectEntry>> pendingEntries = new HashMap<>();
+    private final Map<DynamicObjectEntry, Admission> admittedEntries = new IdentityHashMap<>();
     private final Map<ObjectRefId, DynamicObjectEntry> admittedIds = new HashMap<>();
+
+    private record Admission(Class<?> baseType, int order) { }
+
+    /** Immutable claim tied to this admission, even if a later restore reuses the same entry. */
+    static final class PendingReturn {
+        private final ObjectRewindPlayerBindings bindings;
+        private final Admission admission;
+        private final DynamicObjectEntry entry;
+        private final PlayableEntity expectedOwner;
+
+        private PendingReturn(ObjectRewindPlayerBindings bindings, Admission admission,
+                              DynamicObjectEntry entry, PlayableEntity expectedOwner) {
+            this.bindings = bindings;
+            this.admission = admission;
+            this.entry = entry;
+            this.expectedOwner = expectedOwner;
+        }
+
+        void returnPending() {
+            bindings.returnConsumed(admission, entry, expectedOwner);
+        }
+    }
 
     /** Prepares one identity per original entry before either recreation phase runs. */
     Map<DynamicObjectEntry, DynamicObjectEntry> prepareEntries(
@@ -47,19 +67,50 @@ final class ObjectRewindPlayerBindings {
 
     void enqueue(Class<?> baseType, DynamicObjectEntry entry) {
         if (entry == null || entry.slotIndex() < 0) return;
-        if (admittedEntries.contains(entry)) return;
+        if (admittedEntries.containsKey(entry)) return;
         if (entry.objectId() != null) {
             DynamicObjectEntry previous = admittedIds.get(entry.objectId());
             if (previous != null && previous != entry)
                 throw new IllegalStateException("Distinct pending entries share captured object identity: " + entry.objectId());
             admittedIds.put(entry.objectId(), entry);
         }
-        admittedEntries.add(entry);
-        pendingEntries.computeIfAbsent(baseType, k -> new ArrayDeque<>()).add(entry);
+        admittedEntries.put(entry, new Admission(baseType, admittedEntries.size()));
+        pendingEntries.computeIfAbsent(baseType, k -> new ArrayList<>()).add(entry);
+    }
+
+    PendingReturn claimReturn(Class<?> baseType, DynamicObjectEntry entry, PlayableEntity expectedOwner) {
+        Admission admission = admittedEntries.get(entry);
+        validateReturn(admission, baseType, entry, expectedOwner);
+        return new PendingReturn(this, admission, entry, expectedOwner);
+    }
+
+    private void validateReturn(Admission admission, Class<?> baseType,
+                                DynamicObjectEntry entry, PlayableEntity expectedOwner) {
+        if (admission == null || admittedEntries.get(entry) != admission
+                || admission.baseType() != baseType || expectedOwner == null
+                || entry.playerOwner() != expectedOwner || entry.objectId() == null
+                || admittedIds.get(entry.objectId()) != entry) {
+            throw new IllegalStateException("Cannot return a mismatched or retired player-bound entry");
+        }
+    }
+
+    /** Native handoff/retry returns the prepared entry without reopening generic admission. */
+    private void returnConsumed(Admission admission, DynamicObjectEntry entry, PlayableEntity expectedOwner) {
+        validateReturn(admission, admission.baseType(), entry, expectedOwner);
+        var queue = pendingEntries.computeIfAbsent(admission.baseType(), k -> new ArrayList<>());
+        for (int index = 0; index < queue.size(); index++) {
+            DynamicObjectEntry pending = queue.get(index);
+            if (pending == entry) return; // A factory can fail before consuming the handoff.
+            if (admittedEntries.get(pending).order() > admission.order()) {
+                queue.add(index, entry);
+                return;
+            }
+        }
+        queue.add(entry);
     }
 
     DynamicObjectEntry consume(Class<?> baseType, Predicate<DynamicObjectEntry> matcher) {
-        ArrayDeque<DynamicObjectEntry> queue = pendingEntries.get(baseType);
+        List<DynamicObjectEntry> queue = pendingEntries.get(baseType);
         if (queue == null || queue.isEmpty()) return null;
         Iterator<DynamicObjectEntry> iterator = queue.iterator();
         while (iterator.hasNext()) {

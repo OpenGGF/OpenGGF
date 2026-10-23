@@ -6,6 +6,7 @@ import com.openggf.audio.presentation.AudioPresentationCommand.ChangeMusicTempo;
 import com.openggf.audio.presentation.AudioPresentationCommand.EndMusicOverride;
 import com.openggf.audio.presentation.AudioPresentationCommand.FadeMusic;
 import com.openggf.audio.presentation.AudioPresentationCommand.HardReset;
+import com.openggf.audio.presentation.AudioPresentationCommand.NativePause;
 import com.openggf.audio.presentation.AudioPresentationCommand.PushMusicOverride;
 import com.openggf.audio.presentation.AudioPresentationCommand.ReplaceMusic;
 import com.openggf.audio.presentation.AudioPresentationCommand.ReplaceRawPcm;
@@ -44,6 +45,7 @@ import java.util.function.Consumer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -165,6 +167,29 @@ class TestAudioPresentationCommandQueue {
         queue.applyPending(command -> applied.add(((FadeMusic) command).steps()));
 
         assertEquals(range(0, 300), applied);
+    }
+
+    @Test
+    void nativePauseAndResumeEdgesAreStructuralAndSurviveQueuePressureInOrder() {
+        AudioPresentationCommandQueue queue = new AudioPresentationCommandQueue();
+        List<AudioPresentationCommand> expected = new ArrayList<>();
+        List<AudioPresentationCommand> applied = new ArrayList<>();
+
+        for (int index = 0; index <= AudioPresentationCommandQueue.CAPACITY; index++) {
+            NativePause command = new NativePause(index % 2 == 0);
+            assertTrue(command.structural());
+            assertFalse(command.droppableSampleStart());
+            assertNull(command.coalescingKey());
+            expected.add(command);
+            queue.submit(command, () -> true, applied::add);
+        }
+
+        assertEquals(expected.subList(0, AudioPresentationCommandQueue.CAPACITY), applied,
+                "queue pressure must drain every pause/resume edge at the owner boundary");
+        assertEquals(1, queue.size());
+        queue.applyPending(applied::add);
+        assertEquals(expected, applied, "opposite primitive edges must never coalesce or drop");
+        assertEquals(0, queue.size());
     }
 
     @Test
@@ -316,7 +341,7 @@ class TestAudioPresentationCommandQueue {
                 SetSpeedShoes.class, SetSpeedMultiplier.class, ChangeMusicTempo.class,
                 AudioPresentationCommand.SetMusicTempoPercent.class,
                 ResetRingAlternation.class, ToggleMute.class, ToggleSolo.class,
-                RewindBoundary.class, HardReset.class);
+                RewindBoundary.class, HardReset.class, NativePause.class);
 
         assertEquals(expectedRecords,
                 Set.of(AudioPresentationCommand.class.getPermittedSubclasses()));

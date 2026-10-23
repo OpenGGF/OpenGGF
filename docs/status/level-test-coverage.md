@@ -1,5 +1,27 @@
 # Level test coverage backlog
 
+S1 native exit-owner follow-up (2026-10-23): the [owner component evidence](../architecture/plans/2026-10-22-native-gap-swarm.md)
+records 90 focused and 109 structural checks without failures/errors/skips.
+Actual GHZ Results restart and special-entry controls preserve the published
+player-art prefix and full closing DMA journal, with refused-entry, stale-world,
+non-exit, SBZ2 and standalone-host controls. Special-stage startup handler/clear
+lifetime, carried-buffer terminal forwarding, historical route stamp/tail causes
+and complete per-act/roster/viewport/donor matrices remain open. No route or
+native capture was run for this bounded ownership correction.
+
+S2 effective speed words (2026-10-23): the
+[native-gap implementation record](../architecture/plans/2026-10-22-native-gap-swarm.md#s2-effective-speed-words--isolated-implementation-scope-2026-10-23)
+tracks stock Sonic/Tails water, shoes, Super and WFZ writer controls, raw
+zero/unknown ownership, direct and destructive registered restore/forward, and
+non-S2/custom/donor/local-fluid negatives. This is a shared-player contract
+increment, not a level or route certificate. Ordinary initialization is explicitly
+coalesced at participant assembly; pre-init RAM clear, exact first-dispatch timing,
+full teleport swap and all unresolved ARZ2/other trace frontiers remain open.
+Final bounded qualification:540 affected tests and114 fresh owning guards pass
+with zero failures/errors/skips; exact source, XML identities and open limits
+are recorded in the linked task record.
+
+
 SSZ rotating post/carrier support (2026-10-21): the [ID76 component increment](../architecture/validation/levels/s3k-ssz-act1.md#r16-positive-control-rotating-solid-component-contract--2026-10-21)
 adds real-manager/manual-checkpoint P1 and CPU P2 held-control, fresh-jump release
 and signed-bit7 contact coverage for both owners. Final focused197 checks pass;
@@ -112,6 +134,12 @@ records native component, allocation, animation, contact and recreation checks
 for GHZ3, MZ3, SYZ3, LZ3 and SLZ3, plus ROM explosion pixels. Continuous boss
 routes, FZ topology, SLZ escape timing and broader roster/presentation coverage
 remain open; these local mechanics do not certify any complete act.
+
+The [2026-10-23 S1 native boss rewind repair](../architecture/plans/2026-10-22-native-gap-swarm.md#s1-native-boss-rewind-fixture-and-coverage-repair--2026-10-23)
+adds bounded forced-reconstruction/forward obligations for independent SYZ, GHZ,
+standard Eggman and FZ components and Obj3F display/lifetime/SFX boundaries. Its
+focused execution status is recorded there; it does not certify continuous boss
+routes, pixel parity or broader act/character/donor/team/viewport coverage.
 
 The [2026-10-22 S2 presentation matrix](../architecture/validation/2026-10-22-s2-presentation.md)
 records bounded MTZ3, SCZ and DEZ palette-cycle coverage and the seeded native
@@ -590,7 +618,7 @@ isolation is qualified; the cold native320 Sonic+Tails and Tails-alone campaigns
 | S3K | `S3K_GUMBALL_2` | Audit pending |
 | S3K | `S3K_GLOWING_SPHERE` | Audit pending |
 | S3K | `S3K_GLOWING_SPHERE_2` | Audit pending |
-| S3K | `S3K_SLOT_MACHINE` | [Bonus transition matrix](../architecture/validation/levels/s3k-bonus-stage-transitions.md#native-slot-sprite-banks-and-complete-rewind--2026-10-15) — complete within-stage rewind and the native host sprite/resident-bank owner pass140 finite mechanism/live-history products and three actual-portal bank pilots; bonus-loop player priority and glass overlap remain covered by `TestGameLoopBonusPlayerPriority` and `TestS3kSlotsGlassNative` ([scope and evidence](../architecture/validation/2026-09-14-slots-glass-layering.md)). Cold traversal and native pictures/audio remain open. |
+| S3K | `S3K_SLOT_MACHINE` | [Bonus transition matrix](../architecture/validation/levels/s3k-bonus-stage-transitions.md#native-slot-sprite-banks-and-complete-rewind--2026-10-15) — complete within-stage rewind and the native host sprite/resident-bank owner pass140 finite mechanism/live-history products and three actual-portal bank pilots; bonus-loop player priority and glass overlap remain covered by `TestGameLoopBonusPlayerPriority` and `TestS3kSlotsGlassNative` ([scope and evidence](../architecture/validation/2026-09-14-slots-glass-layering.md)). [Layout submission/publication component controls](../architecture/validation/levels/s3k-bonus-stage-transitions.md#slot-layout-submission-order-and-exact-publication--2026-10-23) pass ROM cell order/capacity controls; the exact prior prepared-frame check has an explicit initial priming iteration and awaits class-only qualification; bootstrap latency remains unqualified. Cold traversal and native pictures/audio remain open. |
 | S3K | `S3K_SLOT_MACHINE_2` | Audit pending |
 | S3K | `S3K_LRZ_BOSS` | [Boss-act matrix](../architecture/validation/levels/s3k-lrz-boss.md) —35 placements resolve,52 live rings; carry, checkpoint, flash, autoscroll, platforms/lava, boss, capsule/results and HPZ exit implemented. Ordinary native320 Sonic+Tails now completes the entire cold LRZ chain in53047 inputs, zero deaths, with a real fire-shield pickup and no encounter hurt. The earlier declared-shield standalone completion retains separate bonus-return evidence. Widescreen generator activation now preserves the native timing window; matched320/800 checkpoint movement agrees through2634 inputs. See the matrix for the separate centered-presentation checks. Native capsule pose/slots, timing/pixels and remaining route-product/lifecycle obligations remain open; [R9 short terrain-owner check](../architecture/validation/levels/s3k-lrz-boss.md#r9-current-terrain-owner-after-restoration--2026-10-17) rebinds the current encoded/decoded map after two forced world replays; no runtime or new route-product qualification |
 | S3K | `S3K_HIDDEN_PALACE` | [Act matrix](../architecture/validation/levels/s3k-hpz-act.md) — entry/events, Knuckles fight/theft/collapse and both SSZ exits are implemented with positioned and fresh direct-HPZ route evidence. Cold LRZ chains reach released HPZ for Sonic+Tails at 320px, Sonic+Tails at 800px, Tails at 320px and Knuckles at 320px with their recorded replay windows. Joined cold chains continue through HPZ to SSZ arrival for native320 Sonic+Tails (LRZ1→LRZ3→HPZ→SSZ1 control release) and Knuckles (LRZ1→LRZ2→HPZ→SSZ2 crane release), qualified at `e49ee9126` and requalified on `ef61a560f` after the native single-fade retiming (2/0/0/0, 2026-10-15); the Knuckles chain now continues through both SSZ2 fights, the ending and the title (2026-10-15, SSZ2 matrix); the ordinary title→data select→LOAD_SLOT entry into LRZ1 and the native SaveGame next-level resume at the LRZ/HPZ save sites are covered by `TestS3kLrzHpzSszColdCampaign`. The LRZ2 giant ring s9 gateway (no emeralds: Blue Sphere fail and the Saved2 LRZ2 return) is covered (LRZ2 matrix). The pair campaign continues through SSZ1's replicas, Mecha Sonic, the results SaveGame and the DEZ1 load to its intro release (85544 inputs, 2026-10-15, SSZ1 matrix). Tails alone now crosses the same chain: HPZ's Knuckles fight and altar, SSZ1 and DEZ1's release in one replay (86090 inputs, 2026-10-15, SSZ1 matrix). Sonic alone now crosses the same chain from the declared LRZ1 boot, taking LRZ3's placed fire shield before the end boss (52271 inputs, 2026-10-16, SSZ1 matrix). The separate seven-Chaos `$1701` gateway route and its declared native twin are implemented (LRZ2 matrix); authentic native cold ingress and broader products remain open. Legacy-width, configured roster/lifecycle and native whole-scene breadth remain separate |
@@ -1839,3 +1867,23 @@ also preserves native cleared-frame initialization and replays after forced
 recreation. [Exact selection and limitations](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#retail-grounded-roll-camera-and-fresh-fragment-animation)
 retain the remaining PLC, later-route, queue and API pin obligations; this does
 not certify a complete act matrix or complete emerald chain.
+
+
+### DEZ native tube/Chainspike component follow-up — 2026-10-23
+
+The [DEZ2 matrix](../architecture/validation/levels/s3k-dez-act2.md#native-tube-ownership-and-chainspike-probe-correction--2026-10-23)
+records a bounded successor to frozen `659b02c98`: a gravity-tube owner-transfer guard,
+native pre-resize centre correction, distinct horizontal/vertical mount-helper
+order, and Chainspike's zero floor-probe radius separate from its 128-pixel
+render bound. Short native Sonic 320/off tests add destructive owner/child
+recreation and forward replay. The original four checks are observed red on
+unchanged runtime; helper-order and reverse-gravity controls are final-only.
+Final focused validation passes 99/99 with 0 failures/errors/skips; fresh owning
+guards pass 51/52 with one inherited lifecycle source-ratchet failure (586 raw
+destruction calls against budget 582), no errors/skips. A matched static audit
+against frozen `659b02c98` finds identical offending source; baseline JUnit was not
+rerun. Native P2 dirty-d6/status aliasing in the FixBugs=0 vertical dispatch
+remains unmodelled by independent RiderState entries; no whole two-player tube
+fidelity or FixBugs=1 adoption is claimed. No long route,
+broad smoke, native capture, rendering or new act/character/roster/donor/width
+certification is claimed; inherited matrix obligations remain open.

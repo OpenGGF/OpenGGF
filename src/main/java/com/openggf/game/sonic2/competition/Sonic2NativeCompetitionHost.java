@@ -26,6 +26,7 @@ import com.openggf.game.sonic2.competition.lifecycle.Sonic2CompetitionCheckpoint
 import com.openggf.level.Level;
 import com.openggf.level.LevelArtInternalAccess;
 import com.openggf.level.objects.ObjectManagerInternalAccess;
+import com.openggf.level.objects.NativeSstSlotAccess;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.managers.SpriteManager;
@@ -419,9 +420,20 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
 
     void initializeObjects() throws IOException {
         var mode = context(); var level = mode.getLevelManager();
+        var ownerWorld = mode.getWorldSession();
         level.initObjectManager();
         var objects = level.getObjectManager();
-        ObjectManagerInternalAccess.enableNativeCompetitionStreaming(objects, new Sonic2CompetitionObjectStreaming());
+        // Level_ClrRam (s2.asm:4806-4808) owns this fresh clear, before streaming
+        // reset/publication. This proves only the clear event; external/folded
+        // SST writers still need their own later projection or invalidation.
+        for (int slot = 0; slot < objects.getLastProcessSlotExclusive(); slot++)
+            NativeSstSlotAccess.clearWord2C(objects, slot);
+        ObjectManagerInternalAccess.enableNativeCompetitionStreaming(objects, new Sonic2CompetitionObjectStreaming(), slot -> {
+            if (mode.getWorldSession() != ownerWorld || mode.getLevelManager() != level
+                    || level.getObjectManager() != objects)
+                throw new IllegalStateException("Native object delete lost its bound world/manager");
+            NativeSstSlotAccess.clearWord2C(objects, slot);
+        });
         level.initCameraBounds();
         mode.registerLevelAdapters(level);
         replaceRewindAdapter(ObjectManagerInternalAccess.nativeCompetitionStreamingRewindAdapter(objects));
@@ -478,6 +490,8 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
             // Obj01_Init_Continued (s2.asm:36201-36221), Obj02_Init_Continued (s2.asm:38934-38947).
             player.resetPositionAndStatTableHistoryAtCentre((short) (slot == 0 ? start.x() - 0x20 : 0),
                     (short) (slot == 0 ? start.y() + 4 : 0));
+            // Obj01_Init/Obj02_Init own the effective words, independent of profile binding.
+            com.openggf.sprites.playable.PlayableSpriteInternalAccess.initializeNativeSpeedWords(player, context().getWorldSession());
         }
         context().getLevelManager().refreshPlayablePowerUpSpawners();
     }

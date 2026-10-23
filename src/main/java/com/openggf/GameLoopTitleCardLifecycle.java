@@ -74,6 +74,11 @@ final class GameLoopTitleCardLifecycle {
                     PlcLifecyclePhase.LEVEL_TITLE_CARD, () ->
                             com.openggf.game.sonic3k.titlecard.S3kTitleCardWorldAccess.update(
                                     titleCard, gameplayMode.getWorldSession()));
+            // This caller claimed the title token before querying its provider;
+            // the external scan only prepares a token it claimed itself.
+            if (frame.isOwnedBy(PlcLifecyclePhase.LEVEL_TITLE_CARD)) {
+                frame.prepareAfterLoop(PlcLifecyclePhase.LEVEL_TITLE_CARD);
+            }
         } else if (titleCard != null) {
             com.openggf.game.sonic3k.titlecard.S3kTitleCardWorldAccess.update(
                     titleCard, gameplayMode.getWorldSession());

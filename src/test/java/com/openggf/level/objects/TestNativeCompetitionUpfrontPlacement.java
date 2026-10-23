@@ -40,7 +40,7 @@ class TestNativeCompetitionUpfrontPlacement {
     private static final class Actor extends AbstractObjectInstance implements RewindRecreatable {
         int ticks;
         Actor(ObjectSpawn spawn) { super(spawn, "native-upfront-test"); }
-        @Override public void update(int frame, PlayableEntity player) { ticks++; }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { ticks++; }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
         @Override public boolean isPersistent() { return getSpawn().objectId() == 1; }
         @Override public boolean usesCustomOutOfRangeCheck() { return getSpawn().objectId() == 3; }

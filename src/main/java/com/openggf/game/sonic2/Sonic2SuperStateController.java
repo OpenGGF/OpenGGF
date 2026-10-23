@@ -144,7 +144,7 @@ public class Sonic2SuperStateController extends SuperStateController
         if (snapshot.state() == com.openggf.sprites.playable.SuperState.TRANSFORMING) {
             // Sonic_CheckGoSuper installs Super physics before the palette ends;
             // the run threshold and animation scripts switch only on activation.
-            player.applyExternalPhysicsProfile(getSuperProfile());
+            PlayableSpriteInternalAccess.installSuperPhysicsProfile(player, this, getSuperProfile());
         }
         SpriteAnimationSet scripts = active ? superAnimSet : normalAnimSet;
         if (scripts != null) player.setAnimationSet(scripts);
@@ -219,6 +219,7 @@ public class Sonic2SuperStateController extends SuperStateController
         // when Status_Underwater is already set. Sonic_Water's existing-water
         // branch retains that bank (s2.asm:37481-37483,36379-36382).
         PlayableSpriteInternalAccess.publishNativeSpeedConstantsWaterState(player, false);
+        PlayableSpriteInternalAccess.publishNativeSpeedWords(player, 0xA00, 0x30, 0x100);
         // REV01 $1AB84 clears invincibility_time; $1AB8A sets secondary bit1.
         // The already-published Super flag supplies inherent protection in the
         // playable's native damage gate, independently of the cleared timer.
@@ -372,6 +373,9 @@ public class Sonic2SuperStateController extends SuperStateController
         // plays none itself and lets Obj01_ChkInvin re-issue Level_Music when
         // the timer expires on the next tick.
         player.setInvincibleFrames(1);
+        // Sonic_RevertToNormal (s2.asm:37535-37542) writes after invincibility_time=1; shoes are ignored.
+        PlayableSpriteInternalAccess.publishNativeSpeedWords(player, player.isInWater() ? 0x300 : 0x600,
+                player.isInWater() ? 6 : 0xC, player.isInWater() ? 0x40 : 0x80);
         // Restore normal animation set
         if (normalAnimSet != null) {
             player.setAnimationSet(normalAnimSet);

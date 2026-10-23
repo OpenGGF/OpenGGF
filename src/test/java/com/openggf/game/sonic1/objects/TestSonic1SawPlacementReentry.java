@@ -279,7 +279,7 @@ class TestSonic1SawPlacementReentry {
 
     public static final class HoleMarker extends AbstractObjectInstance implements SpawnRewindRecreatable {
         public HoleMarker(ObjectSpawn spawn) { super(spawn, "lower-hole"); }
-        @Override public void update(int frameCounter, PlayableEntity player) { }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { }
         @Override public boolean isPersistent() { return true; }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
     }

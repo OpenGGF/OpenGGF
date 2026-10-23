@@ -4,6 +4,91 @@ import com.openggf.level.objects.ObjectInstance;
 
 /** Engine-only cross-package access to playable controller internals. */
 public final class PlayableSpriteInternalAccess {
+    /** Unknown is -1, outside the complete unsigned WORD domain (including zero). */
+    public static int nativeMaximumSpeedWord(AbstractPlayableSprite player) {
+        return player.nativeSpeedPolicy() != null ? player.nativeSpeedWords.maximum() : -1;
+    }
+
+    public static int nativeAccelerationWord(AbstractPlayableSprite player) {
+        return player.nativeSpeedPolicy() != null ? player.nativeSpeedWords.acceleration() : -1;
+    }
+
+    public static int nativeDecelerationWord(AbstractPlayableSprite player) {
+        return player.nativeSpeedPolicy() != null ? player.nativeSpeedWords.deceleration() : -1;
+    }
+
+    public static void publishNativeSpeedWords(AbstractPlayableSprite player, int maximum, int acceleration, int deceleration) {
+        if (player.nativeSpeedPolicy() != null) player.nativeSpeedWords.publish(maximum, acceleration, deceleration);
+        else player.nativeSpeedWords.forget();
+    }
+
+    public static void invalidateNativeSpeedWords(AbstractPlayableSprite player) {
+        player.nativeSpeedWords.forget();
+    }
+
+    /** Primitive only: the currently unavailable native teleport transaction must own its eventual call. */
+    public static void swapNativeSpeedWords(AbstractPlayableSprite first, AbstractPlayableSprite second) {
+        var firstWords = first.nativeSpeedPolicy() != null ? first.nativeSpeedWords.capture() : null;
+        var secondWords = second.nativeSpeedPolicy() != null ? second.nativeSpeedWords.capture() : null;
+        first.nativeSpeedWords.restore(first.nativeSpeedPolicy() != null ? secondWords : null);
+        second.nativeSpeedWords.restore(second.nativeSpeedPolicy() != null ? firstWords : null);
+    }
+
+    /** Structural authority only; binding never publishes effective speed words. */
+    public static void bindNativeSpeedOwner(AbstractPlayableSprite player,
+                                            com.openggf.game.session.WorldSession world) {
+        player.nativeSpeedWords.bindOwner(world);
+    }
+
+    public static void initializeNativeSpeedWords(AbstractPlayableSprite player,
+                                                  com.openggf.game.session.WorldSession world) {
+        bindNativeSpeedOwner(player, world);
+        initializeNativeSpeedWords(player);
+    }
+
+    public static void initializeNativeSpeedWords(AbstractPlayableSprite player) {
+        var policy = player.nativeSpeedPolicy();
+        if (policy != null) policy.initialize(player);
+        else player.nativeSpeedWords.forget();
+    }
+
+    static void nativeSpeedWaterEdge(AbstractPlayableSprite player, boolean underwater) {
+        var policy = player.nativeSpeedPolicy();
+        if (policy != null) policy.waterEdge(player, underwater);
+        else player.nativeSpeedWords.forget();
+    }
+
+    static void giveNativeSpeedShoes(AbstractPlayableSprite player) {
+        var policy = player.nativeSpeedPolicy();
+        if (policy != null) policy.giveSpeedShoes(player);
+        else player.nativeSpeedWords.forget();
+    }
+
+    static void expireNativeSpeedShoes(AbstractPlayableSprite player) {
+        var policy = player.nativeSpeedPolicy();
+        if (policy != null) policy.expireSpeedShoes(player);
+        else player.nativeSpeedWords.forget();
+    }
+
+    /** The native controller's profile is descriptive; it must not erase or replay a WORD write. */
+    public static void installSuperPhysicsProfile(AbstractPlayableSprite player, SuperStateController controller,
+                                                  com.openggf.game.PhysicsProfile profile) {
+        var policy = player.nativeSpeedPolicy();
+        if (policy != null && policy.ownsProfileInstallation(controller)) player.applyNativePhysicsProfile(profile);
+        else player.applyExternalPhysicsProfile(profile);
+    }
+
+    /** Select before traction, so the modifier is applied exactly once to the chosen native operand. */
+    public static short neutralGroundFrictionBase(AbstractPlayableSprite player) {
+        var policy = player.nativeSpeedPolicy();
+        if (policy != null) {
+            int acceleration = PlayablePhysicsValueResolver.nativeAcceleration(player);
+            return policy.neutralGroundFriction(player,
+                    acceleration >= 0 ? (short) acceleration : player.getFriction());
+        }
+        return player.isSuperSonic() ? (short) 0xC : player.getFriction();
+    }
+
     /** Raw native 2/4 dispatch only; leave animation, hurt effects and frame ownership attached. */
     public static void applyCapturedControlRoutineByte(AbstractPlayableSprite player, int raw) {
         if (raw != 2 && raw != 4) throw new IllegalArgumentException("Native control routine " + raw);

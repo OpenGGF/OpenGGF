@@ -446,7 +446,11 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         setDestroyed(true);
         com.openggf.game.mutators.LevelMutatorPolicyAccess.publish(services(),
                 com.openggf.game.mutators.StageEntryKind.SPECIAL, stageEntryPermit,
-                () -> services().advanceToSpecialStageEntryRoutine());
+                () -> {
+                    services().advanceToSpecialStageEntryRoutine();
+                    com.openggf.level.objects.NativeLevelExitInternalAccess
+                            .endSourceComparisonAtRomModeChange(services());
+                });
     }
 
     private void triggerFadeToBlack() {
@@ -472,6 +476,11 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         if (levelManager != null) {
             levelManager.setLevelInactiveForTransition(true);
         }
+
+        // f_restart leaves Level_MainLoop before another comparison row;
+        // the opening VBlank's real DMA remains in the full gap journal.
+        com.openggf.level.objects.NativeLevelExitInternalAccess
+                .endSourceComparisonAtRomModeChange(services());
 
         var fadeManager = services().fadeManager();
         var marker = services().nativeFadeLifecycle().beginNativeBlockingFade();

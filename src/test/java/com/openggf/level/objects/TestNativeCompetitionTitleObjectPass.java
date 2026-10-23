@@ -41,7 +41,7 @@ class TestNativeCompetitionTitleObjectPass {
         Runnable firstDispatch;
         Probe(int id) { this(new ObjectSpawn(0x100, 0x100, id, 0, 0, false, 0x100)); }
         Probe(ObjectSpawn spawn) { super(spawn, "title-scan-test"); }
-        @Override public void update(int vInt, PlayableEntity player) {
+        @Override public void update(int vIntRunCount, PlayableEntity player) {
             ticks++;
             if (fail) throw new IllegalStateException("owned failure");
             if (firstDispatch != null) {

@@ -31,7 +31,7 @@ class TestNativeCompetitionObjectStreaming {
     private static final class Actor extends AbstractObjectInstance implements RewindRecreatable {
         int ticks;
         Actor(ObjectSpawn spawn) { super(spawn, "native-stream-test"); }
-        @Override public void update(int frame, PlayableEntity player) { ticks++; }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { ticks++; }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
         @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
             return new Actor(context.spawn());

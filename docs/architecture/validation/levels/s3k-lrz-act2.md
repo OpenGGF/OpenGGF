@@ -1810,3 +1810,31 @@ Consumed CSV/PNG/log/temp outputs were removed from the owned target namespaces;
 compiled output and foreign native/ROM/configuration files were preserved. See
 the [dated plan](../../plans/2026-10-13-s3k-playable-completion.md#current-lrz-stair-and-tube-authoring--2026-10-22)
 for commands, measured intervals and remaining coverage.
+
+## Matched current first-door regression — 2026-10-23
+
+The unchanged maintained first-door and middle-corridor methods were compared
+on historical `ae025629e971e4ff9616d5a7c400834505741e1d` and receiving candidate
+`1237de4bc0d3d2c3c73d3335df91cfeff65bd099`. Complete test and all six Knuckles
+script/BK2 pairs are identical; the candidate adds only the documented false
+hundredths default to bundled configuration. Working configuration is absent.
+
+| Obligation | Historical80355 | Candidate87702 | Current limit |
+| --- | --- | --- | --- |
+| Incoming route and first Act2 door,17 replay windows | PASS,60 keys | FAIL: death15323 | Stops in incoming LRZ1 before the explicit23307 history request/23397 destination capture |
+| Middle-corridor traversal,48 replay windows | FAIL: death5027 | FAIL: death5027 | No replay window reached in either run |
+
+Both requests execute2 tests with0 errors/skips. Historical totals1 pass/1 failure,
+queue430s/Maven1:29; current0 pass/2 failures, queue750s/Maven1:52. Java25.0.5,
+surfaceless EGL, original absolute ROM properties, selected identities and
+streams were inspected. This proves a changed first-door outcome between
+source epochs; first departure, contact owner and native cause remain unknown.
+No physics, pad, timing or comparison adaptation is made. The existing
+historical17-window evidence above remains attributed to its original source,
+not the current candidate. Whole Act2/HPZ/campaign coverage remains open.
+
+Exact selector, launch environment, source framing and warning limits are in
+the [matched source comparison](../../plans/2026-10-22-native-gap-swarm.md#matched-lrz-knuckles-source-comparison--2026-10-23).
+The two-request matched scope is closed. A separate current-source diagnostic
+preparation permits source and pure-unit work only; its gameplay driver and
+all historical passive observation packages remain disabled.

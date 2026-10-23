@@ -4,6 +4,7 @@ import com.openggf.audio.AudioManager;
 import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.game.LevelLoadContext;
+import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
 import com.openggf.tests.TestEnvironment;
@@ -218,7 +219,7 @@ public class TestSonic2LevelInitProfile {
         ctx.setIncludePostLoadAssembly(true);
         List<InitStep> steps = profile.levelLoadSteps(ctx);
 
-        assertEquals(23, steps.size());
+        assertEquals(24, steps.size());
 
         // Original 12 ROM-aligned resource loading steps
         // (InitObjectManager + InitCameraBounds merged into InitObjectSystem)
@@ -243,14 +244,49 @@ public class TestSonic2LevelInitProfile {
         assertEquals("InitWater", steps.get(14).name());
         assertEquals("InitBackgroundRenderer", steps.get(15).name());
 
-        // 7 post-load assembly steps (14-20)
+        // Seven existing assembly steps plus the coalesced native speed-word initializer
         assertEquals("RestoreCheckpoint", steps.get(16).name());
         assertEquals("SpawnPlayer", steps.get(17).name());
         assertEquals("ResetPlayerState", steps.get(18).name());
         assertEquals("InitCamera", steps.get(19).name());
         assertEquals("InitLevelEvents", steps.get(20).name());
         assertEquals("SpawnSidekick", steps.get(21).name());
-        assertEquals("RequestTitleCard", steps.get(22).name());
+        assertEquals("InitNativePlayerSpeedWords", steps.get(22).name());
+        assertEquals("RequestTitleCard", steps.get(23).name());
+    }
+
+    @Test
+    void nativeSpeedInitializationIsOnlyAnAssembledNonPreviewBoundary() {
+        var unassembled = new LevelLoadContext();
+        assertFalse(profile.levelLoadSteps(unassembled).stream().anyMatch(step -> step.name().equals("InitNativePlayerSpeedWords")));
+        var preview = new LevelLoadContext();
+        preview.setIncludePostLoadAssembly(true);
+        preview.setLoadMode(com.openggf.game.LevelLoadMode.PREVIEW_CAPTURE);
+        assertFalse(profile.levelLoadSteps(preview).stream().anyMatch(step -> step.name().equals("InitNativePlayerSpeedWords")));
+        TestEnvironment.configureGameModuleFixture(com.openggf.tests.rules.SonicGame.SONIC_2);
+        var sonic = new com.openggf.sprites.playable.Sonic("sonic", (short) 100, (short) 200);
+        var tails = new com.openggf.sprites.playable.Tails("tails", (short) 100, (short) 200);
+        GameServices.sprites().addSprite(sonic); tails.setCpuControlled(true); GameServices.sprites().addSprite(tails);
+        sonic.giveSpeedShoes(8); tails.giveSpeedShoes(8);
+        sonic.resetState(); tails.resetState();
+        assertEquals(-1, com.openggf.sprites.playable.PlayableSpriteInternalAccess.nativeMaximumSpeedWord(sonic));
+        assertEquals(-1, com.openggf.sprites.playable.PlayableSpriteInternalAccess.nativeMaximumSpeedWord(tails));
+        var assembled = new LevelLoadContext(); assembled.setIncludePostLoadAssembly(true);
+        var steps = profile.levelLoadSteps(assembled);
+        int init = stepIndex(steps, "InitNativePlayerSpeedWords");
+        assertEquals(stepIndex(steps, "SpawnSidekick") + 1, init);
+        assertEquals(init + 1, stepIndex(steps, "RequestTitleCard"));
+        com.openggf.game.LevelLoadRuntimeAccess.bindWorld(assembled, GameServices.level().getWorldSession());
+        assertThrows(NullPointerException.class, () -> steps.get(init).execute(),
+                "assembled init requires its actual participants, with no global manager fallback");
+        com.openggf.game.LevelLoadRuntimeAccess.bindParticipants(assembled,
+                GameServices.level().getWorldSession(), GameServices.sprites());
+        steps.get(init).execute();
+        for (var actor : List.of(sonic, tails)) {
+            assertEquals(0x600, com.openggf.sprites.playable.PlayableSpriteInternalAccess.nativeMaximumSpeedWord(actor));
+            assertEquals(0xC, com.openggf.sprites.playable.PlayableSpriteInternalAccess.nativeAccelerationWord(actor));
+            assertEquals(0x80, com.openggf.sprites.playable.PlayableSpriteInternalAccess.nativeDecelerationWord(actor));
+        }
     }
 
     @Test

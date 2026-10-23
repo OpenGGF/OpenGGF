@@ -161,14 +161,11 @@ class TestS3kCnz2KnucklesColdRouteCapture {
                     assertEquals(5, level.getCurrentZone()); assertEquals(0, level.getCurrentAct());
                     assertNotSame(sourceLevel, level.getCurrentLevel());
                     assertTrue(outgoingHistory > 10, "nonempty source history exists before the actual load");
-                    assertNotNull(controller);
-                    assertTrue(controller.currentFrame() < outgoingHistory,
-                            "actual level replacement retires the source timeline before destination advancement");
-                    assertEquals(0, controller.earliestAvailableFrame(), "new timeline has its own frame-zero floor");
+                    assertNull(controller,
+                            "pending title-card entry has no admitted live rewind floor");
                     assertTrue(level.hasPendingFreshLevelTransitionBoundary());
-                    historyIsolated = true; currentLevel = level.getCurrentLevel();
+                    currentLevel = level.getCurrentLevel();
                     event(events, "load", frame);
-                    GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
                 }
                 if (frame >= 6815 && level.getCurrentZone() == 3 && controller != null)
                     outgoingHistory = Math.max(outgoingHistory, controller.currentFrame());
@@ -182,6 +179,17 @@ class TestS3kCnz2KnucklesColdRouteCapture {
                     if ((main().getCentreY() & 0xffff) == 0 && main().isObjectControlled()) event(events, "hide", frame);
                 } else {
                     assertEquals(5, level.getCurrentZone()); assertEquals(0, level.getCurrentAct());
+                    if (!historyIsolated && controller != null) {
+                        assertEquals(GameMode.LEVEL, session.loop().getCurrentGameMode(),
+                                "the destination floor belongs to admitted level play");
+                        assertFalse(level.isLevelInactiveForTransition());
+                        assertTrue(controller.currentFrame() < outgoingHistory,
+                                "the admitted destination floor has retired the outgoing timeline");
+                        assertEquals(0, controller.earliestAvailableFrame(),
+                                "new timeline has its own frame-zero floor");
+                        historyIsolated = true;
+                        GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
+                    }
                     sawTitle |= session.loop().getCurrentGameMode() == GameMode.TITLE_CARD;
                     sawPendingAssembly |= level.hasPendingFreshLevelTransitionBoundary();
                     assertTrue(level.getObjectManager().activeObjectsOfType(CnzTeleporterInstance.class).isEmpty());

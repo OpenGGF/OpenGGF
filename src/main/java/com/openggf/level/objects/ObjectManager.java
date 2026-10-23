@@ -4659,6 +4659,12 @@ public class ObjectManager {
         playerBoundRewind.enqueue(baseType, entry);
     }
 
+    /** Checked native restitution retains this restore's admission and pending order. */
+    ObjectRewindPlayerBindings.PendingReturn claimPendingPlayerBoundReturn(Class<?> baseType,
+            com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry, PlayableEntity owner) {
+        return playerBoundRewind.claimReturn(baseType, entry, owner);
+    }
+
     /**
      * Pops the next captured entry for the given base type, or returns
      * {@code null} if none is pending. Called by {@code DefaultPowerUpSpawner}

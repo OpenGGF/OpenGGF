@@ -48,7 +48,7 @@ class TestNativeCompetitionPrefixSstAccess {
         boolean publishes = true;
         Actor(ObjectSpawn spawn) { super(spawn, "native-prefix-test"); constructionSlot = getSlotIndex(); }
         ObjectServices injectedServices() { return services(); }
-        @Override public void update(int frame, PlayableEntity player) { ticks++; }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { ticks++; }
         @Override public void onUnload() { unloads++; }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
         @Override public boolean isPersistent() { return true; }
@@ -72,8 +72,8 @@ class TestNativeCompetitionPrefixSstAccess {
     private static final class Writer extends Actor {
         boolean replaced;
         Writer(ObjectSpawn spawn) { super(spawn); }
-        @Override public void update(int frame, PlayableEntity player) {
-            super.update(frame, player);
+        @Override public void update(int vIntRunCount, PlayableEntity player) {
+            super.update(vIntRunCount, player);
             if (!replaced) {
                 replaced = true;
                 ObjectManagerInternalAccess.replaceNativeCompetitionPrefixObject(services().objectManager(),

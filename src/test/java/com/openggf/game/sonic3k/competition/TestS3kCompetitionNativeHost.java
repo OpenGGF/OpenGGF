@@ -8,7 +8,6 @@ import com.openggf.control.PlayerInputState;
 import com.openggf.game.GameServices;
 import com.openggf.game.competition.NativeCompetitionIterationAccess;
 import com.openggf.game.competition.NativeCompetitionRoster;
-import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplayModeContext;
@@ -476,6 +475,9 @@ class TestS3kCompetitionNativeHost {
         var downA=PlayerInputState.of(2,2,InputActionMasks.ACTION_A,InputActionMasks.ACTION_A,false,false);
         assertSame(failure,assertThrows(IllegalStateException.class,
                 () -> step(LogicalInputSnapshot.ofPlayers(PlayerInputState.neutral(),downA))));
+        assertNoActiveFixtureIteration(context);
+        assertEquals(1,failure.getSuppressed().length);
+        assertEquals("missing PLC preparation for ORDINARY_LEVEL",failure.getSuppressed()[0].getMessage());
         assertEquals(1,writes.get()); assertNotEquals(before.players().getFirst().body(),host.players().getFirst().capture(),
                 "P1 already dispatched before P2's callback failed");
         assertEquals(prepared,views.prepared);
@@ -498,6 +500,9 @@ class TestS3kCompetitionNativeHost {
         NativeSpriteSubmissionAccess.bindBeforePassPrefix(objects(),()->{throw new IllegalStateException("queue prefix failed");});
         var failure=assertThrows(IllegalStateException.class,()->step(LogicalInputSnapshot.neutral()));
         assertEquals("queue prefix failed",failure.getMessage());
+        assertNoActiveFixtureIteration(context);
+        assertEquals(1,failure.getSuppressed().length);
+        assertEquals("missing PLC preparation for ORDINARY_LEVEL",failure.getSuppressed()[0].getMessage());
         assertTrue(NativeSpriteSubmissionAccess.nativePassPresent(objects()));
         assertTrue(NativeSpriteSubmissionAccess.admissions(objects()).isEmpty(),"reset precedes the failing prefix");
         assertEquals(prepared,views.prepared);
@@ -575,9 +580,27 @@ class TestS3kCompetitionNativeHost {
     }
     private void step(LogicalInputSnapshot logical) {
         input.setLogicalOverride(logical);
-        var frame = host.world().context().plcFrameLifecycle().latchBeforeFadeUpdate();
-        try { NativeCompetitionIterationAccess.runAdmitted(frame,() -> host.stepArena(logical,host.session())); }
-        finally { frame.finish(); }
+        runFixtureIteration(() -> host.stepArena(logical,host.session()));
+    }
+    private void runFixtureIteration(Runnable body) {
+        var lifecycle = host.world().context().plcFrameLifecycle();
+        try {
+            lifecycle.runLogicalIteration(() -> {},frame -> {
+                NativeCompetitionIterationAccess.runAdmitted(frame,body);
+                return null;
+            });
+        } catch (RuntimeException | Error failure) {
+            // This fixture owns the abandoned outer iteration. Preserve the
+            // primary failure and its suppressed preparation guard, then let
+            // the test restore the genuine registry before stepping again.
+            lifecycle.reset();
+            throw failure;
+        }
+    }
+    private void assertNoActiveFixtureIteration(GameplayModeContext context) {
+        var completed = new AtomicInteger();
+        context.plcFrameLifecycle().afterConsumedIteration(completed::incrementAndGet);
+        assertEquals(1,completed.get(),"the failed fixture token must no longer own completion callbacks");
     }
     private void press(int slot,int direction,int action) {
         var buttons = PlayerInputState.of(direction,direction,action,action,false,false);
@@ -586,12 +609,9 @@ class TestS3kCompetitionNativeHost {
     }
     private void updateScreen(LogicalInputSnapshot logical) {
         input.setLogicalOverride(logical);
-        PlcLifecycleFrame frame = host.screen().view().phase()==S3kCompetitionScreen.Phase.RACE
-                ?host.world().context().plcFrameLifecycle().latchBeforeFadeUpdate():null;
-        try {
-            if(frame==null) host.screen().update(logical);
-            else NativeCompetitionIterationAccess.runAdmitted(frame,() -> host.screen().update(logical));
-        } finally { if(frame!=null)frame.finish(); }
+        if (host.screen().view().phase()==S3kCompetitionScreen.Phase.RACE)
+            runFixtureIteration(() -> host.screen().update(logical));
+        else host.screen().update(logical);
         host.screen().afterFrame();
     }
     private CompetitionItemObjectInstance ringWheelAt(int x,int y) {
@@ -658,7 +678,7 @@ class TestS3kCompetitionNativeHost {
     }
     private static final class ProbeObject extends AbstractObjectInstance {
         ProbeObject() { super(new ObjectSpawn(0,0,0,0,0,false,0),"NativeHostAllocationProbe"); }
-        @Override public void update(int count,com.openggf.game.PlayableEntity player) { }
+        @Override public void update(int vIntRunCount,com.openggf.game.PlayableEntity player) { }
         @Override public void appendRenderCommands(List<com.openggf.graphics.GLCommand> commands) { }
     }
 }

@@ -210,7 +210,7 @@ class TestNativeCompetitionCameraRestore {
         private AbstractPlayableSprite rider;
         private int ticks;
         StandingObject(ObjectSpawn spawn) { super(spawn, "camera-restore-standing"); }
-        @Override public void update(int frame, PlayableEntity player) {
+        @Override public void update(int vIntRunCount, PlayableEntity player) {
             var solids = services().solidExecutionRegistry();
             if (solids.previousStanding(this, rider).standing()) ticks++;
             var contact = new PlayerSolidContactResult(ContactKind.TOP, true, true, false, false, null, null, 0);

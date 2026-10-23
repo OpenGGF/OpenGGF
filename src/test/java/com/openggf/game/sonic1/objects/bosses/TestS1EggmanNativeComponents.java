@@ -6,6 +6,7 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.GameRng;
 import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.rewind.RewindRegistry;
+import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -23,6 +24,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -32,6 +35,14 @@ class TestS1EggmanNativeComponents {
     private static final int[] TABLES = {0x17EC2, 0x189F8, 0x198B6, 0x185F8, 0x19080};
     private static final int[] STRIDES = {2, 3, 3, 2, 3};
     private static final int[] COUNTS = {3, 4, 4, 3, 4};
+    // Native routine4=face, routine6=flame, and MZ/SLZ routine8=accessory.
+    // SYZ routine8 is the separate SYZBossSpike, not an Eggman visual role.
+    private static final List<List<Integer>> VISUAL_ROLES = List.of(
+            List.of(S1EggmanVisualComponent.FACE, S1EggmanVisualComponent.FLAME),
+            List.of(S1EggmanVisualComponent.FACE, S1EggmanVisualComponent.FLAME, S1EggmanVisualComponent.ACCESSORY),
+            List.of(S1EggmanVisualComponent.FACE, S1EggmanVisualComponent.FLAME),
+            List.of(S1EggmanVisualComponent.FACE, S1EggmanVisualComponent.FLAME),
+            List.of(S1EggmanVisualComponent.FACE, S1EggmanVisualComponent.FLAME, S1EggmanVisualComponent.ACCESSORY));
 
     @BeforeEach void setup() { GraphicsManager.getInstance().initHeadless(); }
     @AfterEach void cleanup() { GraphicsManager.getInstance().resetState(); }
@@ -168,11 +179,22 @@ class TestS1EggmanNativeComponents {
             h.manager.setRewindInPlaceRestoreEnabledForTest(false);
             RewindRegistry registry = new RewindRegistry();
             registry.register(h.manager.rewindSnapshottable());
+            AbstractS1EggmanBossInstance originalBoss = h.boss;
+            List<S1EggmanVisualComponent> originalParts = h.parts();
+            Map<Integer, ObjectRefId> capturedIds = h.partIds();
+            List<Integer> capturedSlots = originalParts.stream().map(AbstractObjectInstance::getSlotIndex).toList();
+            assertEquals(VISUAL_ROLES.get(index(id)),
+                    originalParts.stream().map(S1EggmanVisualComponent::getComponent).toList());
+            assertEquals(VISUAL_ROLES.get(index(id)).size(), capturedIds.size());
             var snapshot = registry.capture();
             List<String> expected = h.forward(20);
             registry.restore(snapshot);
             h.boss = h.objects().stream().filter(AbstractS1EggmanBossInstance.class::isInstance)
                     .map(AbstractS1EggmanBossInstance.class::cast).findFirst().orElseThrow();
+            assertNotSame(originalBoss, h.boss);
+            assertEquals(capturedIds, h.partIds(), "captured identities remain associated with their native roles");
+            assertEquals(capturedSlots, h.parts().stream().map(AbstractObjectInstance::getSlotIndex).toList());
+            for (int n = 0; n < originalParts.size(); n++) assertNotSame(originalParts.get(n), h.parts().get(n));
             assertEquals(COUNTS[index(id)] - (id == 0x75 ? 2 : 1), h.parts().size(), "recreate every visual component");
             for (var part : h.parts()) assertSame(h.boss, part.getShipOwner(), "exact restored owner");
             assertEquals(expected, h.forward(20), "native timers/cursors/order and slot ownership survive restore");
@@ -341,6 +363,16 @@ class TestS1EggmanNativeComponents {
         }
         S1EggmanVisualComponent part(int component) {
             return parts().stream().filter(p -> p.getComponent() == component).findFirst().orElseThrow();
+        }
+        Map<Integer, ObjectRefId> partIds() {
+            Map<Integer, ObjectRefId> ids = new LinkedHashMap<>();
+            var identityTable = manager.captureIdentityContext().requireIdentityTable();
+            for (var part : parts()) {
+                ObjectRefId id = identityTable.idFor(part);
+                assertNotNull(id);
+                assertNull(ids.put(part.getComponent(), id), "each native visual role occurs exactly once");
+            }
+            return ids;
         }
         List<String> forward(int count) {
             List<String> sequence = new ArrayList<>();

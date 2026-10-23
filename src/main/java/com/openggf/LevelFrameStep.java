@@ -198,7 +198,7 @@ public final class LevelFrameStep {
             LevelFrameContext context, PlcLifecycleFrame frame,
             PlcLifecyclePhase phase, Runnable objectScan) {
         Objects.requireNonNull(objectScan, "objectScan");
-        frame.claim(phase);
+        boolean claimed = frame.claim(phase);
         if (frame.consumedHeldLoopTailPreparation()) {
             context.runtimeArtCoordinator()
                     .deferProductionSubmissionForHeldLoopTailClosure();
@@ -215,7 +215,9 @@ public final class LevelFrameStep {
         serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
         serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
         context.runtimeArtCoordinator().finishHeldLoopTailClosure();
-        if (frame.isOwnedBy(phase)) {
+        // A blocking fade may already own and prepare this same phase. The
+        // losing external scan keeps its body, but cannot repeat that tail.
+        if (claimed) {
             frame.prepareAfterLoop(phase);
         }
     }

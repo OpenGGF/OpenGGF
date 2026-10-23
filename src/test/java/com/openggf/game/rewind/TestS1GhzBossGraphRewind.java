@@ -79,6 +79,8 @@ class TestS1GhzBossGraphRewind {
         seedBallScalars(ball);
 
         GhzGraph before = GhzGraph.fromLiveObjects(objectManager);
+        assertEquals(5, before.parts().size(), "native anchor must own four links and the final ball");
+        List<Integer> beforeSlots = before.parts().stream().map(GHZBossWreckingBall.NativeComponent::getSlotIndex).toList();
         Map<String, ObjectRefId> beforeIds = before.ids(objectManager);
         Map<String, Integer> beforeScalars = before.scalarSnapshot();
         RewindRegistry registry = new RewindRegistry();
@@ -100,6 +102,11 @@ class TestS1GhzBossGraphRewind {
                 "restore must preserve captured GHZ wrecking ball identity");
         assertEquals(beforeScalars, restored.scalarSnapshot(),
                 "compact restore must round-trip meaningful GHZ wrecking ball scalar state");
+        assertEquals(beforeSlots, restored.parts().stream().map(GHZBossWreckingBall.NativeComponent::getSlotIndex).toList());
+        for (int index = 0; index < before.parts().size(); index++) {
+            assertNotSame(before.parts().get(index), restored.parts().get(index),
+                    "each captured native component must be reconstructed with its original identity");
+        }
 
         assertNotSame(before.boss(), restored.boss(),
                 "test harness disables in-place restore so stale parent refs are observable");
@@ -151,18 +158,45 @@ class TestS1GhzBossGraphRewind {
         assertEquals(1, liveObjects(objectManager, GHZBossWreckingBall.NativeComponent.class).size(),
                 "the final ball independently survives the anchor and four links' Obj3F animations");
         assertTrue(childComponents(boss).isEmpty());
+        GHZBossWreckingBall.NativeComponent survivingBall = only(
+                objectManager, GHZBossWreckingBall.NativeComponent.class);
+        ObjectRefId capturedId = objectId(objectManager, survivingBall);
+        int capturedSlot = survivingBall.getSlotIndex();
 
         RewindRegistry registry = new RewindRegistry();
         registry.register(objectManager.rewindSnapshottable());
         CompositeSnapshot snapshot = registry.capture();
+        List<String> expectedForward = remainingBallLifetime(objectManager, player);
+        assertFalse(expectedForward.isEmpty(), "capture precedes the surviving ball's own remaining animation");
         assertDoesNotThrow(() -> registry.restore(snapshot),
                 "capture at anchor retirement must retain the live ball without a stale root reference");
         Sonic1GHZBossInstance restoredBoss = only(objectManager, Sonic1GHZBossInstance.class);
         assertNull(readObject(restoredBoss, "wreckingBall"));
         GHZBossWreckingBall.NativeComponent restoredBall = only(
                 objectManager, GHZBossWreckingBall.NativeComponent.class);
+        assertNotSame(survivingBall, restoredBall);
+        assertNotSame(boss, restoredBoss);
+        assertEquals(capturedId, objectId(objectManager, restoredBall));
+        assertEquals(capturedSlot, restoredBall.getSlotIndex());
         assertSame(restoredBoss, readObject(restoredBall, "parent"));
         assertTrue(childComponents(restoredBoss).isEmpty());
+        assertEquals(expectedForward, remainingBallLifetime(objectManager, player),
+                "the final native ball must independently finish the same Obj3F lifetime after anchor retirement");
+    }
+
+    private static List<String> remainingBallLifetime(ObjectManager manager, TestablePlayableSprite player) {
+        List<String> rows = new java.util.ArrayList<>();
+        for (int clock = 1; clock <= 100; clock++) {
+            manager.update(0, player, List.of(), clock, false);
+            List<GHZBossWreckingBall.NativeComponent> remaining = liveObjects(
+                    manager, GHZBossWreckingBall.NativeComponent.class);
+            if (remaining.isEmpty()) return rows;
+            assertEquals(1, remaining.size());
+            var ball = remaining.getFirst();
+            rows.add(ball.getX() + ":" + ball.getY() + ":" + readInt(ball, "ballFrame")
+                    + ":" + readInt(ball, "explosionFrame") + ":" + readInt(ball, "explosionDuration"));
+        }
+        throw new AssertionError("surviving native ball must release its slot after its remaining animation");
     }
 
     @Test

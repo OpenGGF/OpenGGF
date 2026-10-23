@@ -28,6 +28,9 @@ class TestLevelSpritePreparationOwnership {
         GraphicsManager.destroyForReinit();
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         graphics = GraphicsManager.getInstance(); graphics.initHeadless();
+        // Both captures intentionally have equal scalar values while retaining distinct owners.
+        graphics.setUseSpritePriorityShader(true);
+        graphics.setCurrentSpriteHighPriority(true);
         fail = new AtomicBoolean();
         renderer = renderer();
     }
@@ -37,6 +40,8 @@ class TestLevelSpritePreparationOwnership {
     private LevelRenderer renderer() {
         var level = mock(LevelManager.class);
         level.graphicsManager = graphics;
+        level.cachedScreenWidth = 320;
+        level.cachedScreenHeight = 224;
         level.camera = mock(Camera.class);
         level.profiler = mock(PerformanceProfiler.class);
         level.levelGamestate = mock(LevelState.class);

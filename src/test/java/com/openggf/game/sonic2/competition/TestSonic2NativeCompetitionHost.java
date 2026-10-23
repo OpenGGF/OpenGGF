@@ -74,6 +74,59 @@ class TestSonic2NativeCompetitionHost {
     private static final LogicalInputSnapshot NEUTRAL = LogicalInputSnapshot.neutral();
 
     @Test
+    void freshNativeObjectRamClearBelongsOnlyToTheActualHostInitializer() throws Exception {
+        assertNull(System.getenv("DISPLAY"));
+        assertNull(System.getenv("WAYLAND_DISPLAY"));
+        var services = EngineServices.current();
+        var configuration = services.configuration();
+        var previous = new EnumMap<SonicConfiguration, Object>(SonicConfiguration.class);
+        for (var key : SonicConfiguration.values()) previous.put(key, configuration.getConfigValue(key));
+        try {
+            configuration.setConfigValue(SonicConfiguration.AUDIO_ENABLED, false);
+            configuration.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
+            configuration.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+            configuration.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+            configuration.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+            configuration.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+            configuration.resolveDisplayAspect();
+            try (var boot = new HeadlessGameBoot(320, 224, services)) {
+                var loop = boot.boot(RomTestUtils.ensureSonic2RomAvailable().toPath().toAbsolutePath(), 0, 0);
+                assertInstanceOf(NullAudioBackend.class, services.audio().getBackend());
+                var ordinary = SessionManager.getCurrentGameplayMode().getObjectManager();
+                assertThrows(IllegalStateException.class, () -> NativeSstSlotAccess.readWord2C(ordinary, 56),
+                        "ordinary initialization must not manufacture a native clear");
+                var session = new Sonic2CompetitionSession();
+                var host = new Sonic2NativeCompetitionHost(SessionManager.getCurrentWorldSession().rootGameModule(),
+                        services, loop::setGameplayMode, new UnqualifiedViews(), new UnavailableNativeState());
+                var driver = new Driver(host, session, new CountingInput());
+                startThroughMenu(session, 0);
+                host.loadAct(session, 0, 0);
+                var objects = host.context().getObjectManager();
+                assertNotSame(ordinary, objects);
+                assertNull(NativeSstSlotAccess.currentOwner(objects, 56));
+                assertEquals(0, NativeSstSlotAccess.readWord2C(objects, 56),
+                        "actual native Level_ClrRam must clear an empty represented native bank SST");
+                NativeSstSlotAccess.writeWord2C(objects, 56, 0xFFFF);
+                var registry = host.context().getRewindRegistry();
+                var saved = registry.capture();
+                assertEquals(0xFFFF, NativeSstSlotAccess.readWord2C(objects, 56), "capture is not a clear");
+                driver.tick(NEUTRAL);
+                NativeSstSlotAccess.writeWord2C(objects, 56, 7);
+                registry.restore(saved);
+                assertSame(objects, host.context().getObjectManager());
+                assertEquals(0xFFFF, NativeSstSlotAccess.readWord2C(objects, 56),
+                        "destructive registered graph restore must preserve the cell");
+                driver.tick(NEUTRAL);
+                assertEquals(0xFFFF, NativeSstSlotAccess.readWord2C(objects, 56));
+            }
+        } finally {
+            TestEnvironment.resetAll();
+            previous.forEach(configuration::setConfigValue);
+            configuration.resolveDisplayAspect();
+        }
+    }
+
+    @Test
     void sixRealActsKeepIndependentHumansCanonicalTimersRewindAndTheActLedger() throws Exception {
         assertNull(System.getenv("DISPLAY"), "launch this EGL test with DISPLAY unset");
         assertNull(System.getenv("WAYLAND_DISPLAY"), "launch this EGL test with WAYLAND_DISPLAY unset");
@@ -152,6 +205,7 @@ class TestSonic2NativeCompetitionHost {
                     if (zone[0] == 0) verifyNativePauseAndContinuation(driver, menus, screen, views);
                     assertEquals(savedCharacter, configuration.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
                     if (zone[0] == 0) verifyRegistryRestoreAndForwardReplay(driver);
+                    if (zone[0] == 0) verifySpeedWordsAcrossDestructiveRestore(driver);
                     verifyNativeRingCollection(driver);
                     if (zone[0] == 0) verifyNativeP2DeathAndRespawn(driver);
                     if (zone[0] == 0) earnP1BadnikScoreForOverallTie(driver);
@@ -343,6 +397,7 @@ class TestSonic2NativeCompetitionHost {
         assertSame(session.player(0), host.context().getCamera().getFocusedSprite());
         for (int slot = 0; slot < 2; slot++) {
             var actor = session.player(slot);
+            assertNativeSpeedWords(actor, 0x600, 0xC, 0x80);
             assertNotNull(actor.getAnimationProfile(), "ROM animation logic must be installed for each human");
             assertNotNull(actor.getAnimationSet());
             assertNotNull(actor.getSpindashDustController());
@@ -596,6 +651,68 @@ class TestSonic2NativeCompetitionHost {
         driver.ticks(32, directions(AbstractPlayableSprite.INPUT_RIGHT, AbstractPlayableSprite.INPUT_LEFT));
         driver.ticks(16, NEUTRAL);
         assertEquals(expected, state(driver), "restored world must reproduce the same forward input segment");
+    }
+
+    private static void assertNativeSpeedWords(AbstractPlayableSprite actor, int max, int accel, int decel) {
+        assertEquals(max, com.openggf.sprites.playable.PlayableSpriteInternalAccess.nativeMaximumSpeedWord(actor));
+        assertEquals(accel, com.openggf.sprites.playable.PlayableSpriteInternalAccess.nativeAccelerationWord(actor));
+        assertEquals(decel, com.openggf.sprites.playable.PlayableSpriteInternalAccess.nativeDecelerationWord(actor));
+        assertEquals(max, actor.getMax()); assertEquals(accel, actor.getRunAccel()); assertEquals(decel, actor.getRunDecel());
+    }
+
+    private static void verifySpeedWordsAcrossDestructiveRestore(Driver driver) {
+        var mode = driver.host.context();
+        var registry = mode.getRewindRegistry();
+        var original = registry.capture();
+        try {
+            var outsider = new com.openggf.sprites.playable.Sonic("probe", (short) 100, (short) 200);
+            com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindNativeSpeedOwner(outsider, mode.getWorldSession());
+            com.openggf.sprites.playable.PlayableSpriteInternalAccess.publishNativeSpeedWords(outsider, 0, 0, 0);
+            assertEquals(-1, com.openggf.sprites.playable.PlayableSpriteInternalAccess.nativeMaximumSpeedWord(outsider),
+                    "a non-roster actor cannot acquire this Host's authority");
+            for (int slot = 0; slot < 2; slot++) {
+                var actor = driver.session.player(slot);
+                actor.setHurt(false); actor.setDead(false);
+                assertFalse(actor.isSuperSonic(), "this writer replay has a normal native control precondition");
+                actor.updateWaterState(actor.getCentreY() - 1);
+                actor.giveSpeedShoes(8);
+                assertEquals(8, actor.captureRewindState().playerExtra().speedShoesRemainingTicks());
+                assertNativeSpeedWords(actor, 0xC00, 0x18, 0x80);
+            }
+            var before = registry.capture();
+            List<com.openggf.level.objects.PerObjectRewindSnapshot> expected = null;
+            for (int pass = 0; pass < 2; pass++) {
+                var abandonedOne = driver.session.player(0);
+                var abandonedTwo = driver.session.player(1);
+                if (pass != 0) {
+                    mode.getSpriteManager().removeSprite(abandonedOne.getCode());
+                    mode.getSpriteManager().removeSprite(abandonedTwo.getCode());
+                    registry.restore(before);
+                    assertNotSame(abandonedOne, driver.session.player(0));
+                    assertNotSame(abandonedTwo, driver.session.player(1));
+                    assertRestoredRoster(driver);
+                }
+                for (int slot = 0; slot < 2; slot++) {
+                    var actor = driver.session.player(slot);
+                    assertNativeSpeedWords(actor, 0xC00, 0x18, 0x80);
+                    actor.updateWaterState(actor.getCentreY());
+                    assertNativeSpeedWords(actor, 0x600, 0xC, 0x80);
+                    assertTrue(actor.hasSpeedShoes());
+                    actor.updateWaterState(actor.getCentreY() - 1);
+                    assertNativeSpeedWords(actor, 0x300, 6, 0x40);
+                    for (int tick = 0; tick < 8; tick++) actor.currentTimerManager().updateDisplayPhaseTimersFor(actor);
+                    assertNativeSpeedWords(actor, 0x600, 0xC, 0x80);
+                    assertTrue(actor.isInWater()); assertEquals(0x10, actor.getEffectiveGravity());
+                    assertFalse(actor.hasSpeedShoes());
+                    if (pass != 0) assertEquals(List.of(), com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
+                            "player", expected.get(slot), actor.captureRewindState()),
+                            "destructive registered restore must reproduce the full forward player state");
+                }
+                if (pass == 0) expected = List.of(driver.session.player(0).captureRewindState(),
+                        driver.session.player(1).captureRewindState());
+            }
+        } finally { registry.restore(original); }
+        assertRestoredRoster(driver);
     }
 
     private static void verifyNativeRingCollection(Driver driver) {

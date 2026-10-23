@@ -6,6 +6,7 @@ import com.openggf.camera.Camera;
 import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.control.PlayerInputState;
 import com.openggf.game.GameModule;
+import com.openggf.game.RuntimeArtCoordinator;
 import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
 import com.openggf.game.resources.PlcLifecyclePhase;
@@ -20,6 +21,7 @@ import com.openggf.game.sonic2.competition.Sonic2CompetitionSession;
 import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
+import com.openggf.level.objects.DefaultObjectServices;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.TerrainCollisionManager;
@@ -244,6 +246,14 @@ class TestNativeCompetitionFixedAuxiliaryDispatch {
         var terrain = mock(TerrainCollisionManager.class);
         gameplay.attachLevelManagers(new WaterSystem(), new ParallaxManager(), terrain,
                 new CollisionSystem(terrain), sprites, level);
+        var services = new DefaultObjectServices(gameplay, EngineServices.current());
+        when(objects.getObjectServices()).thenReturn(services);
+        assertSame(gameplay.getWorldSession(), services.worldSession());
+        assertSame(level, services.levelManager());
+        assertSame(objects, services.objectManager());
+        assertSame(gameplay.runtimeArtCoordinator(), services.runtimeArtCoordinator());
+        assertSame(RuntimeArtCoordinator.NONE, services.runtimeArtCoordinator(),
+                "ordinary module dispatch does not qualify physical tail DPLC loading");
         // Reversed insertion does not grant a human or CPU actor the native P2 slot.
         sprites.addSprite(tails);
         sprites.addSprite(sonic);

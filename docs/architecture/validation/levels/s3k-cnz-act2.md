@@ -364,3 +364,20 @@ The [query/allocation audit](../../audits/performance/2026-10-22-native-object-q
 and its companion implementation records own exact tested states, commands and
 remaining delivery checks. These local checks do not close inherited viewport,
 donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.
+
+
+## Admitted live-history fixture receiving check — 2026-10-23
+
+The current pending title-card entry intentionally has no live rewind controller.
+The maintained test now observes the new floor when actual ICZ level play is
+admitted, retaining the nonempty outgoing-history retirement/zero-earliest-floor
+assertions before switching the optional recording request off. Production,
+recording, event rows and all21 replay spots are unchanged.
+
+Receivingd7849bf4d plus this test-only patch passes the whole maintained class2
+and22 owning live-rewind controls (24T/0F/0E/0S). All63 current registry keys,
+21 two-cycle45-input windows,7164 main inputs,9999 draws/zero skips and the exact
+6870/6987/7050 load/assembly/release rows are preserved. Earlier60-key qualification
+above remains its historical source epoch. See the
+[exact command, source fingerprint and limits](../../plans/2026-10-22-native-gap-swarm.md#cnz2-cold-handoff-observes-the-admitted-live-history-floor--2026-10-23).
+This does not qualify the other CNZ/ICZ routes, native timing, breadth or full acts.

@@ -115322,3 +115322,48 @@ Mono/core UNKNOWN and required trust gates unchanged. This qualifies owner753
 only, excludes initial intros/newer aggregate sources, and authorizes no retry,
 new probe, runtime fix or capture after the15Z cutoff. Consumed diagnostics
 are cleaned after exact readback; candidate and foreign state remain preserved.
+
+### 2026-10-23 LRZ ordinary maintained first-door outcome regresses on matched source
+
+This is an ordinary BK2 route comparison, not a native TraceReplay measurement
+or a new canonical trace qualification. Exact maintained selector
+`com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesReplaysIncomingRouteAndFirstActTwoDoor+coldKnucklesRestoresActTwoTraversalToTheMiddleCorridor`
+runs once on historical `ae025629e971e4ff9616d5a7c400834505741e1d` (80355:
+2T/1PASS/1FAIL/0E/0S) and receiving candidate
+`1237de4bc0d3d2c3c73d3335df91cfeff65bd099` (87702:2T/2FAIL/0E/0S).
+The first-door case passes17 replay windows historically but dies at input15323
+on the candidate; middle-corridor death5027 is shared and precedes all48
+replay windows. The full test blob and six Knuckles script/BK2 pairs match.
+
+Both commands use the current main queue wrapper with normal admission,
+`-Dmse=off -Dopenggf.headless.gl=surfaceless-egl`, Java25.0.5/Lua5.4,
+null audio, unset display/JVM overrides and the three verified original ROMs.
+Exact portable command, accepted bundled false-hundredths configuration
+difference, source framing and warnings are in the
+[dated plan](../architecture/plans/2026-10-22-native-gap-swarm.md#matched-lrz-knuckles-source-comparison--2026-10-23).
+Queue/Maven times are430s/1:29 historical and750s/1:52 current. No errors,
+skips or dumps; all identities/properties/streams inspected. The changed
+outcome is attributed to the source epochs only: first divergent production
+decision, receiver, writer and native cause remain unknown. No input, physics,
+timing or oracle adjustment and no automatic third request follow. A separate
+source/pure-unit diagnostic task has no gameplay observation authority.
+
+### 2026-10-23 Frozen common659 smoke closes red; route causes remain open
+
+Root category request71076 on `659b02c98a16da0723ef5f222acdc60ab7b0838f`
+completes all79 ordinary batches:40688T/81F/58E/92 skips, followed by separate
+fresh guards727T/5F/0E/0S. All139 ordinary and5 guard failed identities and all
+92 skip reasons are read, with zero omitted entries and matching source framing.
+This is all smoke categories, not the public-release full suite. Exact command,
+receiving-source map, timing and skips are in the
+[terminal plan entry](../architecture/plans/2026-10-22-native-gap-swarm.md#frozen-common659-smoke-terminal-readback--2026-10-23).
+
+Nineteen ordinary route/campaign failures include LRZ5027/15323, MHZ26853,
+CNZ live-history null, joined-HPZ5027, campaign Sonic44639/Tails80320/pair73285/
+Knuckles5027, SOZ15850/11787/23478 and SSZ-wide ring46/48 plus forward death11664.
+The CNZ live-history fixture has separate current24-pass evidence; the LRZ
+first-door matched outcome regression has separate historical/current evidence
+above. No other cause or native frontier is inferred from these indices.
+Held component fixes and later receiving-source passes do not rewrite this
+old run's reds/skips. Consume diagnostics through runner acknowledgment after
+readback. Final receiving-candidate smoke and delivery remain outstanding.

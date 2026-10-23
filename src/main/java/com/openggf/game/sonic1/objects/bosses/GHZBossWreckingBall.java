@@ -99,7 +99,7 @@ public class GHZBossWreckingBall extends AbstractBossChild implements RewindRecr
         for (int index = 1; index < TOTAL_ELEMENTS; index++) {
             NativeComponent component = new NativeComponent(parent, index, currentX, currentY);
             // FindNextFreeObj restarts at the root for each child, scanning live occupancy.
-            manager.addDynamicObjectAfterSlot(component, getSlotIndex());
+            spawnAfterCurrentSibling(() -> component);
             if (component.getSlotIndex() < 0 || component.isDestroyed()) {
                 // FixBugs=0: exhausted FindNextFreeObj leaves a1=v_lvlobjend.
                 // GBall_MakeBall writes to non-object (SMPS) RAM, NOT the last
