@@ -142,6 +142,11 @@ public final class Sonic1SpecialStageProvider implements SpecialStageProvider, c
     }
 
     @Override
+    public com.openggf.game.resources.PlcLifecyclePhase specialStagePlcLifecyclePhase() {
+        return manager.plcLifecyclePhase();
+    }
+
+    @Override
     public void onEnterResults() {
         if (resultsPlcSubmitted) return;
         try {
