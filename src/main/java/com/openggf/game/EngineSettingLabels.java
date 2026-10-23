@@ -32,6 +32,7 @@ final class EngineSettingLabels {
             case DISPLAY_COLOR_PROFILE_TOGGLE_KEY -> "Colour profile shortcut";
             case WIDESCREEN_DEADZONE_MODE -> "Wide camera movement";
             case DISPLAY_HUD_ANCHOR -> "Widescreen HUD position";
+            case DISPLAY_HUD_TIME_HUNDREDTHS -> "Time in hundredths";
             case AUDIO_ENABLED -> "Music and sound effects";
             case AUDIO_HUB_MUSIC_ENABLED -> "Hub music";
             case AUDIO_HUB_MUSIC_VOLUME -> "Hub music volume";

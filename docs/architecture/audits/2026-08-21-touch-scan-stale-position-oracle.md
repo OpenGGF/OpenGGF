@@ -161,3 +161,57 @@ def touches(px, py, y_radius, ox, oy, w, h):
 
 Sonic 1 uses the same predicate with `d4 = 16` and half-extent radii
 (`_incObj/Sonic ReactToItem.asm:135-175`).
+
+## 8. Parallel-lane reconciliation (historical evidence)
+
+Originally recorded in `9f5a503e427c4297c2ad2e61fc877cd3bb338dee` on 2026-08-21; source line numbers below describe that historical tree.
+
+### Reconciliation with the parallel oracle lane (`6f7074f4c`) — the two agree
+
+Both lanes ran the oracle independently and reached the **same** verdict on the ROM: the touch
+scan reads last frame's object positions. The apparent conflict was this round's commit
+*subject* (`efcabc0d2`, "kill the touch-scan ordering hypothesis"), which compressed a two-part
+verdict — ROM half confirmed, **engine** half dead — into a word that reads as a flat denial.
+The body and the audit doc always said both halves. The subject is the defect, not the
+measurement.
+
+**The overlapping evidence is identical, not merely compatible.** Both lanes independently
+produced the same four discriminating events, with the same slots and the same one-frame gap:
+
+| fixture | frame | slot | badnik | live first hit | stale first hit |
+|---|---|---|---|---|---|
+| `hcz_completerun` | 14034 | 22 | Jawz | 14033 | 14034 |
+| `hcz_completerun` | 20393 | 11 | Jawz | 20392 | 20393 |
+| `hcz_completerun` | 21540 | 27 | Jawz | 21539 | 21540 |
+| `hcz_completerun` | 22861 | 14 | Jawz | 22860 | 22861 |
+
+Both established the same sampling phase (row *N* is post-frame-advance state), the same touch
+box (`collision_flags $D7` → `Touch_Sizes[$17]` = 8×8; player half-extents from
+`Touch_NoInstaShield`), and the same ROM ordering argument.
+
+**The 14-vs-24 event count is a resolvable difference of scope, not of result.** The other lane
+counted 14 defeats whose box it could resolve — the `$D7` objects only. This lane additionally
+resolved `Obj_TurboSpiker` (`$1A` → 12×12) and `Obj_Poindexter` (`$0A` → 16×8) from their
+`ObjDat_*` tables, giving 24 in `hcz_completerun` alone. The arithmetic closes exactly:
+`hcz`'s `$D7` kills are Jawz 7 + Blastoid 4 + MegaChopper 2 = 13, plus the other lane's single
+`mhz_completerun` Mushmeanie = **14**.
+
+**The two lanes are complementary on the second game.** The other lane was blocked on S2 because
+`collision_flags` comes from a subtype-indexed table and aux `object_near` records no `subtype`.
+This lane used **S1** instead, where `object_near` carries the object id directly and
+`React_Sizes` is indexed by `obColType`: 6 defeats in `ghz1_completerun`, stale model correct
+6/6, none discriminating. So the ROM verdict rests on S3K measurement plus an S1 corroboration;
+the S2 replication remains unmeasured by either lane, and adding `subtype` to `object_near`
+would unblock it.
+
+**What only this lane measured, and what actually decides the change.** The hypothesis had a
+second half — that the *engine* tests against positions updated closer to the scan. It does
+not. `LevelFrameStep.java:299` snapshots at frame start, `:302` runs player physics with the
+touch pass inside (`SpriteManager.java:1813`), `:318-320` runs `ExecuteObjects` after; and
+`ObjectTouchResponseController.java:485-486` reads `getPreUpdateX()/getPreUpdateY()`.
+`objectsExecuteAfterPlayerPhysics` is true for all three games (`GameRules.java:121, 276, 425`).
+The other lane's entry does not address the engine side. **The ROM behaviour is confirmed and
+the engine already implements it, so the cross-game ordering change is still retired** — and the
+two compensations previously predicted as its fallout (a hover duration of 59 against the ROM's
+60, and a boss child's wait one above its literal) remain unexplained by scan phase and need
+their own attribution.

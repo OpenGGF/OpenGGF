@@ -7,7 +7,7 @@ Existing coverage is being audited through the [level backlog](../../status/leve
 For local check selection, use the [test category runner](../../../tools/testing/README.md#test-categories).
 It selects ordinary tests from the change against the integration base and runs structural
 guards separately. Focused categories do not replace affected trace fixtures or native tests;
-CI and release full-suite coverage remains unchanged.
+routine CI uses smoke and public release preparation uses the explicit full suite.
 
 
 `HeadlessTestRunner` (`com.openggf.tests.HeadlessTestRunner`) runs physics and collision
@@ -119,7 +119,9 @@ ordinary selection still excludes their `fbz-route` tag.
 
 1. Reset test state: `TestEnvironment.resetAll()` (use `resetState()`, **not** the
    deprecated `resetInstance()`).
-2. Initialise headless graphics: `GameServices.graphics().initHeadless()`.
+2. Prefer `HeadlessGameBoot` for bootstrapping. It installs no-device audio even
+   when synthesis is disabled; a reused JVM must not retain a previous device backend.
+   Logic-only graphics use `GameServices.graphics().initHeadless()`.
 3. Create and register the playable sprite **first** — add the main sprite to
    `GameServices.sprites()` and set camera focus before `loadZoneAndAct(...)`; the current
    `LevelManager` load path requires it.
@@ -166,7 +168,7 @@ streaming test retains its original size and 32 MiB child-JVM limit in the stres
 lane:
 
 ```bash
-mvn -Dmse=off -Paudio-stress test -B
+python3 tools/testing/maven_queue.py -Dmse=off -Paudio-stress test -B
 ```
 
 Run game-reference comparisons with an external fixture root and verified local
@@ -178,7 +180,7 @@ must fail when its prerequisites are missing. Independent reference expectations
 must not be regenerated from the engine under test to make a comparison pass.
 
 ```bash
-mvn -Dmse=off -Paudio-reference -Dopenggf.audio.fixtures=/absolute/reference-root \
+python3 tools/testing/maven_queue.py -Dmse=off -Paudio-reference -Dopenggf.audio.fixtures=/absolute/reference-root \
   -Dsonic1.rom.path=/absolute/s1.gen -Dsonic2.rom.path=/absolute/s2.gen \
   -Ds3k.rom.path=/absolute/s3k.gen test -B
 ```
@@ -199,7 +201,7 @@ files from the current tree does not erase that history or certify unrelated
 trace fixtures as free of game assets.
 
 For machines with room for two 3 GiB heaps plus Maven and native memory, use
-`mvn -Dmse=off -Ptest-concurrent test -B`, or the category runner's `--workers 2`.
+the category runner's `--workers 2` option for the selected smoke coverage.
 The default remains one worker. Tests stay serial inside each JVM because the
 engine's global teardown is unsafe alongside another class. Multiple forks divide
 classes, so one large test class remains a lower bound on elapsed time. Guards
@@ -217,7 +219,7 @@ Run all eleven complete Act 2 routes explicitly for FBZ route changes and exhaus
 ROM validation (five teams, four additional widths, two active movement donors):
 
 ```bash
-mvn -Dmse=off -Pfbz-routes -Dsonic1.rom.path=/absolute/s1.gen \
+python3 tools/testing/maven_queue.py -Dmse=off -Pfbz-routes -Dsonic1.rom.path=/absolute/s1.gen \
   -Dsonic2.rom.path=/absolute/s2.gen -Ds3k.rom.path=/absolute/s3k.gen test -B
 ```
 

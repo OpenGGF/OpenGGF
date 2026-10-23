@@ -46,6 +46,31 @@ public interface RunHandle {
      */
     default void setLevelCovered(boolean covered) { }
 
+    /**
+     * Shows your run's own clock in the stock HUD's TIME, in frames (60 per second), instead of
+     * the act's timer; a negative value shows the act's timer again. Set it after each step, for
+     * example from {@code RunHost.afterStep}, and the HUD shows it that frame. Presentation only:
+     * the act's timer, its time-over and its warning flash are unchanged. The engine's handle
+     * implements this; the default ignores it.
+     */
+    default void setHudTime(int frames) { }
+
+    /**
+     * While {@code shown}, the stock HUD's TIME adds hundredths of a second (0:00.00), as Sonic
+     * CD's does, in the game's own HUD digits. Players can also turn this on for every game in the
+     * display settings. Presentation only. The engine's handle implements this; the default
+     * ignores it.
+     */
+    default void setHudTimeHundredths(boolean shown) { }
+
+    /**
+     * Overrides the native HUD rows for this run, surviving retries and level reloads.
+     * Null restores the current zone's profile; ending the run also restores it. The run's
+     * lives policy still applies. Presentation only: counters and timer rules are unchanged.
+     * Debug and bonus-stage HUDs retain their dedicated layouts. The default ignores it.
+     */
+    default void setHudProfile(com.openggf.level.objects.HudProfile profile) { }
+
     /** True until the run has ended. */
     boolean isActive();
 }

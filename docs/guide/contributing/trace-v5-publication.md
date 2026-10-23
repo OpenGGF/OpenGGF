@@ -31,7 +31,7 @@ verified user-supplied ROM and a destination that does not exist.
 | S3K standard | BK2 + `--trace-profile aiz_end_to_end`, `level_gated_reset_aware`, or `gameplay_unlock` | one fixture |
 | S3K complete/named run | BK2 + `--trace-profile complete_run` or `--run-id <id>` | level, bonus, and special-stage segments; optional manifest |
 
-Ordinary level rows have 42 columns. Special stages have fixed game/profile
+Ordinary level rows have 42 columns, or 43 with trailing `life_count`. Special stages have fixed game/profile
 widths: S1 14, S2 48, and S3K 20. Presence of
 `hardware_timing.jsonl` (or its `.gz` sibling) enables the one current hardware
 timing registry. The loader prefers a plain sibling when both exist and applies
@@ -115,7 +115,7 @@ placed inside the candidate root.
 Replay tests may read a complete scratch fleet without installing it:
 
 ```bash
-mvn -Dmse=off \
+python3 tools/testing/maven_queue.py -Dmse=off \
   -Dopenggf.trace.fixtureRoot=/scratch/v5-candidate/traces \
   -Dtest='*TraceReplay' test
 ```

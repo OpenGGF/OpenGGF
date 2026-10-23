@@ -380,6 +380,11 @@ public class Sonic3kGameModule implements GameModule {
     }
 
     @Override
+    public com.openggf.game.preview.TitlePreviewProvider getTitlePreviewProvider() {
+        return new com.openggf.game.sonic3k.titlescreen.Sonic3kTitlePreviewProvider();
+    }
+
+    @Override
     public TitleScreenProvider getTitleScreenProvider() {
         return titleScreenProvider;
     }

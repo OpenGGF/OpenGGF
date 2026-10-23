@@ -160,15 +160,15 @@ in S2, SFX IDs start at a different value than music IDs).
 
 ```bash
 # Find music-related addresses
-mvn exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
+python3 tools/testing/maven_queue.py exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
     -Dexec.args="search Mus" -q
 
 # Find SFX pointer tables
-mvn exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
+python3 tools/testing/maven_queue.py exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
     -Dexec.args="search SndPtr" -q
 
 # Search ROM for a pointer pattern
-mvn exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
+python3 tools/testing/maven_queue.py exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
     -Dexec.args="search-rom \"07 72 73 26\"" -q
 ```
 

@@ -221,7 +221,7 @@ class TestPlayableMutatorPresentation {
         var behind = SpriteSatEntry.of(16, 0, 1, 1, 4, 0, false, false, false, false);
         var nativeEntries = SpriteSatMaskPostProcessor.process(List.of(armer, marker, companion, behind), true);
         assertEquals(1, nativeEntries.size(), "hidden body still arms the mask hiding later sprites");
-        assertEquals(armer.toPreparedPiece(), nativeEntries.getFirst().toPreparedPiece());
+        assertEquals(armer.piece(), nativeEntries.getFirst().piece());
         assertEquals(hidden, nativeEntries.getFirst().presentationSubject());
         assertEquals(hidden, armer.withVisibleScanlines(1, 7).presentationSubject());
         assertEquals(hidden, armer.clipRows(0, 1).presentationSubject());

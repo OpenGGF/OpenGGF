@@ -93,15 +93,26 @@ public class LevelTimer {
      * (though actual logic triggers death at 10:00).
      */
     public String getDisplayTime() {
-        int minutes = getMinutes();
-        int seconds = getSeconds();
+        return displayTime(totalFrames, false);
+    }
 
+    /**
+     * {@code frames} (60 per second) as the HUD shows it: "M:SS", or "M:SS.HH" with hundredths
+     * as Sonic CD shows them. Over 9:59 it holds at 9:59 (9:59.99), as the HUD does until the
+     * act's own time-over at 10:00.
+     */
+    public static String displayTime(long frames, boolean hundredths) {
+        long clamped = Math.max(0, frames);
+        int minutes = (int) (clamped / 3600);
+        int seconds = (int) ((clamped / 60) % 60);
+        int centis = (int) ((clamped % 60) * 100 / 60);
         if (minutes >= MAX_MINUTES) {
             minutes = 9;
             seconds = 59;
+            centis = 99;
         }
-
-        return String.format("%d:%02d", minutes, seconds);
+        return hundredths ? String.format("%d:%02d.%02d", minutes, seconds, centis)
+                : String.format("%d:%02d", minutes, seconds);
     }
 
     /**

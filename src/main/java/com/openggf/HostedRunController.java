@@ -72,6 +72,9 @@ final class HostedRunController {
     private boolean controlsHeld;
     private boolean controlsHoldApplied;
     private boolean levelCovered;
+    private com.openggf.level.objects.HudProfile hudProfile;
+    private int hudTimeFrames = -1;
+    private boolean hudTimeHundredths;
 
     HostedRunController(SonicConfigurationService configuration) {
         this.configuration = Objects.requireNonNull(configuration, "configuration");
@@ -100,6 +103,9 @@ final class HostedRunController {
         controlsHeld = false;
         controlsHoldApplied = false;
         levelCovered = false;
+        hudProfile = null;
+        hudTimeFrames = -1;
+        hudTimeHundredths = false;
         return handle;
     }
 
@@ -151,7 +157,20 @@ final class HostedRunController {
     /** Hides the stock HUD while the host's scene covers the level (the flag is re-applied each frame). */
     private void applyLevelCover() {
         var level = GameServices.levelOrNull();
-        if (level != null) com.openggf.level.LevelHudCoverAccess.setCovered(level, levelCovered);
+        if (level == null) return;
+        com.openggf.level.LevelHudCoverAccess.setCovered(level, levelCovered);
+        com.openggf.level.LevelHudCoverAccess.setRunProfile(level, hudProfile);
+        com.openggf.level.LevelHudCoverAccess.setRunTime(level, hudTimeFrames, hudTimeHundredths);
+    }
+
+    /** The run's own clock for the HUD's TIME, or -1 for the act timer (tests). */
+    int hudTimeFrames() {
+        return hudTimeFrames;
+    }
+
+    /** True while the run asks for hundredths in the HUD's TIME (tests). */
+    boolean hudTimeHundredths() {
+        return hudTimeHundredths;
     }
 
     /** True while the host's scene covers the level (tests). */
@@ -204,6 +223,7 @@ final class HostedRunController {
         RunLevelStart start = new RunLevelStart(spec, determinismFingerprint, debugAssisted, size[0], size[1],
                 deathRestart);
         guarded(() -> host.onLevelReady(start));
+        if (host != null) applyLevelCover();
     }
 
     private static int[] levelSize() {
@@ -346,7 +366,7 @@ final class HostedRunController {
     static PlayerPose poseOf(AbstractPlayableSprite sprite) {
         return new PlayerPose(sprite.getCentreX(), sprite.getCentreY(), sprite.getMappingFrame(),
                 sprite.getRenderHFlip(), sprite.getRenderVFlip(), sprite.getPriorityBucket(),
-                sprite.isHighPriority());
+                sprite.isHighPriority(), sprite.isHurt());
     }
 
     boolean consumeRetry() {
@@ -428,6 +448,9 @@ final class HostedRunController {
         controlsHeld = false;
         applyControlHold();
         levelCovered = false;
+        hudProfile = null;
+        hudTimeFrames = -1;
+        hudTimeHundredths = false;
         applyLevelCover();
         detachRenderer();
         ghostRenderer.clearSlots();
@@ -605,6 +628,30 @@ final class HostedRunController {
         public void setLevelCovered(boolean covered) {
             if (active) {
                 levelCovered = covered;
+            }
+        }
+
+        @Override
+        public void setHudTime(int frames) {
+            if (active) {
+                hudTimeFrames = Math.max(-1, frames);
+                applyLevelCover();
+            }
+        }
+
+        @Override
+        public void setHudTimeHundredths(boolean shown) {
+            if (active) {
+                hudTimeHundredths = shown;
+                applyLevelCover();
+            }
+        }
+
+        @Override
+        public void setHudProfile(com.openggf.level.objects.HudProfile profile) {
+            if (active) {
+                hudProfile = profile == null ? null
+                        : com.openggf.level.objects.HudProfileAccess.forRunPolicy(profile, spec.policy());
             }
         }
 

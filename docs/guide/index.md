@@ -6,7 +6,9 @@ runs its own implementation of the game logic, physics, rendering, and audio. No
 assets are included. You must supply your own legally obtained ROM files.
 
 The engine currently supports Sonic the Hedgehog (S1), Sonic the Hedgehog 2 (S2), and
-Sonic 3 & Knuckles (S3K) at varying levels of completeness.
+Sonic 3 & Knuckles (S3K) at varying levels of completeness. This guide follows the current `0.7.prerelease`
+development line; the [published 0.6 summary](../changelog/v0.6-release-summary.md)
+records the older release scope.
 
 ## Choose Your Path
 
@@ -16,7 +18,7 @@ You have ROM files and want to get the engine running.
 
 - [Getting Started](playing/getting-started.md) -- From zero to playing in five minutes
 - [Configuration](playing/configuration.md) -- Common setup questions answered
-- [Controls](playing/controls.md) -- Full keyboard reference
+- [Controls](playing/controls.md) -- Keyboard and controller reference
 - [Game Status](playing/game-status.md) -- What works, what's incomplete, what to expect
 - [Troubleshooting](playing/troubleshooting.md) -- Fixing common problems
 
@@ -45,6 +47,7 @@ You want to add objects, bosses, zones, or engine improvements.
 - [Adding Zones](contributing/adding-zones.md) -- Bringing up a new zone
 - [Audio System](contributing/audio-system.md) -- SMPS driver, FM synthesis, PSG
 - [Rewind System](contributing/rewind-system.md) -- Using, validating, and extending frame rewind
+- [Zone and Act Test Standard](contributing/level-test-standard.md) -- Route, character, rewind and load-boundary obligations
 - [Testing](contributing/testing.md) -- Writing and running tests
 - [Trace Replay Testing](contributing/trace-replay.md) -- BizHawk recordings, replay tests, and divergence analysis
 
@@ -56,9 +59,11 @@ You want to add objects, bosses, zones, or engine improvements.
 ### I want to create mods
 
 Start with the [creator handbook](../modding/index.md) for the maintained workflow,
-formats, and samples. Mod API 0.7 is the first creator contract; the
-[compatibility guide](../architecture/mod-api-compatibility.md) is the sole current
-version authority.
+formats, and samples. Mod API 0.7.0 is an unpublished, mutable candidate; use
+matching engine and SDK artifacts from one commit. The
+[release-policy descriptor](../../mod-api-release-policy.properties) owns the
+current API version and publication status; the
+[compatibility guide](../architecture/mod-api-compatibility.md) explains the contract.
 
 ## Related Documents
 

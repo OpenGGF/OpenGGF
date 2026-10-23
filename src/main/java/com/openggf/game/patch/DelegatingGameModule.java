@@ -307,6 +307,11 @@ public class DelegatingGameModule implements GameModule {
     }
 
     @Override
+    public com.openggf.game.preview.TitlePreviewProvider getTitlePreviewProvider() {
+        return base.getTitlePreviewProvider();
+    }
+
+    @Override
     public DataSelectProvider getDataSelectProvider() {
         return base.getDataSelectProvider();
     }

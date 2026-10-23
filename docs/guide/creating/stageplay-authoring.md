@@ -5,6 +5,9 @@ menus. It compiles a shot-local screenplay into the same `.stageplay` document u
 by the in-engine editor, OpenGGF Editor and mod registration. Java 25 is required;
 movie capture additionally needs FFmpeg and the platform's headless GL prerequisites.
 
+These commands target the **0.7.prerelease development line**, alongside the
+unpublished candidate Mod API. They are not part of the published 0.6 release.
+
 ```bash
 python3 tools/stageplay/stageplay.py --build help
 python3 tools/stageplay/stageplay.py init --out /your/production/first.script.json

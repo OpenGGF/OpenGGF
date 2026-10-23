@@ -7,6 +7,13 @@ import com.openggf.graphics.PaletteUploadPresentation;
 final class LevelEditorViewPreparation {
     private LevelEditorViewPreparation() { }
 
+    static void restoreSourceContext(LevelManager manager, WorldSession world) {
+        manager.currentZone = world.getCurrentZone();
+        manager.currentAct = world.getCurrentAct();
+        manager.setApparentAct(world.getApparentAct());
+        manager.gameModule = world.getGameModule();
+    }
+
     static Level prepare(LevelManager manager, Level requested, WorldSession world) {
         manager.authoringView = true;
         // Editor rendering has no native V-int publication to release this latch or fade.

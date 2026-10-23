@@ -27,6 +27,51 @@ class TestHostedRunController {
     private final HostedRunController controller = new HostedRunController(mock(SonicConfigurationService.class));
 
     @Test
+    void runHudProfileSurvivesReloadsAndCannotEscapeItsHandleLifetime() throws Exception {
+        var graphics = mock(com.openggf.graphics.GraphicsManager.class);
+        var level = mock(com.openggf.level.LevelManager.class);
+        var hud = new com.openggf.level.objects.HudRenderManager(graphics,
+                mock(com.openggf.camera.Camera.class), mock(com.openggf.game.GameStateManager.class));
+        var field = com.openggf.level.LevelManager.class.getDeclaredField("hudRenderManager");
+        field.setAccessible(true);
+        field.set(level, hud);
+        try (var services = org.mockito.Mockito.mockStatic(com.openggf.game.GameServices.class)) {
+            services.when(com.openggf.game.GameServices::levelOrNull).thenReturn(level);
+            RunHandle handle = controller.begin(SPEC, new RunHost() { });
+            var profile = new com.openggf.level.objects.HudProfile(List.of());
+            handle.setHudProfile(profile);
+            controller.onLevelReady(false);
+            assertEquals(profile, com.openggf.level.objects.HudProfileAccess.current(hud));
+            var nextHud = new com.openggf.level.objects.HudRenderManager(graphics,
+                    mock(com.openggf.camera.Camera.class), mock(com.openggf.game.GameStateManager.class));
+            field.set(level, nextHud);
+            controller.onLevelReady(false, true);
+            assertEquals(profile, com.openggf.level.objects.HudProfileAccess.current(nextHud));
+            handle.setHudProfile(null);
+            controller.onLevelReady(false);
+            assertEquals(com.openggf.level.objects.HudProfile.stock(),
+                    com.openggf.level.objects.HudProfileAccess.current(nextHud));
+            handle.setHudProfile(profile);
+            controller.onLevelReady(false);
+            controller.end(RunEndReason.LEFT);
+            assertEquals(com.openggf.level.objects.HudProfile.stock(),
+                    com.openggf.level.objects.HudProfileAccess.current(nextHud));
+            RunHandle nextHandle = controller.begin(new RunSpec("s3k", 0, 0, "sonic",
+                    GameplayRunPolicy.isolatedAct().withFastRestarts()), new RunHost() { });
+            handle.setHudProfile(profile);
+            controller.onLevelReady(false);
+            assertEquals(com.openggf.level.objects.HudProfile.stock(),
+                    com.openggf.level.objects.HudProfileAccess.current(nextHud));
+            nextHandle.setHudProfile(com.openggf.level.objects.HudProfile.stock());
+            controller.onLevelReady(false);
+            var filtered = com.openggf.level.objects.HudProfileAccess.current(nextHud);
+            assertFalse(filtered.rows().get(3).visible(), "a profile cannot restore policy-hidden lives");
+            assertTrue(filtered.rows().get(1).visible(), "TIME remains visible");
+            controller.end(RunEndReason.LEFT);
+        }
+    }
+
+    @Test
     void handleCommandsAreQueuedUntilConsumedOnce() {
         RunHandle handle = controller.begin(SPEC, new RunHost() { });
         assertTrue(controller.isActive());
@@ -393,5 +438,33 @@ class TestHostedRunController {
         assertFalse(controller.levelCovered(), "the cover ends with its run");
         handle.setLevelCovered(true);
         assertFalse(controller.levelCovered(), "an ended run's handle no longer covers the level");
+    }
+
+    @Test
+    void aRunsHudClockIsHeldForTheRunAndClearedWithIt() {
+        RunHandle handle = controller.begin(SPEC, new RunHost() { });
+        assertEquals(-1, controller.hudTimeFrames(), "the act timer until the run sets its own");
+        handle.setHudTime(3210);
+        handle.setHudTimeHundredths(true);
+        assertEquals(3210, controller.hudTimeFrames());
+        assertTrue(controller.hudTimeHundredths());
+        handle.setHudTime(-5);
+        assertEquals(-1, controller.hudTimeFrames(), "any negative value returns TIME to the act timer");
+        handle.setHudTime(42);
+        controller.end(RunEndReason.LEFT);
+        assertEquals(-1, controller.hudTimeFrames(), "the clock ends with its run");
+        assertFalse(controller.hudTimeHundredths());
+        handle.setHudTime(99);
+        assertEquals(-1, controller.hudTimeFrames(), "an ended run's handle no longer sets TIME");
+    }
+
+    @Test
+    void aStepsPoseCarriesTheCharactersHurtState() {
+        var sprite = org.mockito.Mockito.mock(com.openggf.sprites.playable.AbstractPlayableSprite.class);
+        org.mockito.Mockito.when(sprite.getCentreX()).thenReturn((short) 100);
+        org.mockito.Mockito.when(sprite.isHurt()).thenReturn(true);
+        assertTrue(HostedRunController.poseOf(sprite).hurt(), "other players' HUDs flash a hurt player");
+        org.mockito.Mockito.when(sprite.isHurt()).thenReturn(false);
+        assertFalse(HostedRunController.poseOf(sprite).hurt());
     }
 }

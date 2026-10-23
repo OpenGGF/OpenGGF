@@ -1,8 +1,13 @@
 # Sonic 2 (Genesis) REV01 (Sonic 2 “01”) Checkpoints (Starposts) (Object $79)
 
-This document is intended to be a source-of-truth reference for reimplementing **Sonic 2 REV01** checkpoints (starposts) in another engine while pulling data directly from the ROM. It is based on the provided `s2disasm` and written so a coding agent can compare an existing implementation against the original.
+This page describes **Sonic 2 REV01** checkpoint (starpost) behavior for comparison
+with OpenGGF. The ROM routines are the reference; their description here does not
+certify that every saved field, allocation failure or 2P branch has engine parity.
+See [current implementation entry points](#current-openggf-implementation-entry-points)
+below for the classes to inspect.
 
-Repository referenced (local zip): `s2disasm` (fragag)
+Reference: the repository-pinned `docs/s2disasm` submodule. Match its commit when
+citing lines; a locally modified checkout or a different build can move addresses.
 Primary files:
 - `s2.asm` (main disassembly)
 - `s2.constants.asm` (RAM + constants)
@@ -17,7 +22,7 @@ Primary files:
 
 Sonic 2 calls these “star poles / starposts” (often called “lampposts” in older docs). Internally they are **Object ID $79** (`ObjID_Starpost`).
 
-There are two distinct visual/gameplay pieces:
+There are three distinct visual/gameplay pieces:
 
 Checkpoint pole (object $79, routine 0/2/4)
 - the pole sprite itself, idle or activated
@@ -112,7 +117,7 @@ Checkpoint pole mappings: `mappings/sprite/obj79_a.asm` (`Obj79_MapUnc_1F424`) d
 Animation script `Ani_obj79` (in `s2.asm`) chooses frames as follows:
 - anim 0: static frame 0 (idle)
 - anim 1: static frame 1 (activated but not yet “finished”)
-- anim 2: alternates frame 0 and frame 4 quickly (the short activation sparkle/flash state)
+- anim 2: alternates frame 0 and frame 4 with delay 3 (the persistent activated appearance)
 
 The spawned “dongle” object uses `mapping_frame = 2` (a 2x2 piece) and is animated by movement rather than the animation script.
 
@@ -132,8 +137,8 @@ Activation guard:
 - If the last hit checkpoint index is already >= this checkpoint index, it will not re-activate.
 
 Overlap region (player must pass through):
-- Horizontal: player within roughly 16 pixels of the starpost center (a +/- 8 window implemented as `x_delta + 8 < $10`)
-- Vertical: a larger window, roughly from 0x40 pixels above to 0x28 below (implemented as `y_delta + $40 < $68`)
+- Horizontal: centre delta from -8 inclusive to +8 exclusive (`x_delta + 8 < $10`, unsigned word comparison).
+- Vertical: centre delta from -$40 inclusive to +$28 exclusive (`y_delta + $40 < $68`, unsigned word comparison).
 
 On success (player passes through and it’s “new”):
 - Plays `SndID_Checkpoint` (“ding-dong”)
@@ -147,12 +152,13 @@ On success (player passes through and it’s “new”):
 ## Special-stage stars (>= 50 rings)
 
 Stars are created at the moment the checkpoint is activated if all are true:
+- the activation dongle allocation succeeded
 - not in 2-player mode
 - `Emerald_count != 7`
 - `Ring_count >= 50`
 
 Creation (`Obj79_MakeSpecialStars`):
-- Spawns 4 objects (same ID $79) with routine 8 (“star”)
+- Attempts to allocate four objects after the current slot (same ID $79), each with routine 8 (“star”); allocation exhaustion stops the loop.
 - Each star stores:
   - a center point (checkpoint X, checkpoint Y - $30)
   - an angle offset (0, $40, $80, $C0)
@@ -254,67 +260,37 @@ Stars object (routine 8):
 
 ---
 
-## Implementation strategy for your Java engine
+## Current OpenGGF implementation entry points
 
-This is written to map onto the structure in `feature/ai-objects-expanded` while keeping the original behavior.
+The implementation now exists; use these owners instead of recreating the earlier
+prototype design:
 
-### 1) ROM-driven data extraction
+| Responsibility | Current owner |
+|---|---|
+| Pole activation and native overlap checks | `game/sonic2/objects/CheckpointObjectInstance` |
+| Swinging marker and orbiting stars | `CheckpointDongleInstance`, `CheckpointStarInstance` in the same package |
+| Shared saved checkpoint state and rewind capture | `game/CheckpointState` |
+| Level-load restoration | `level/LevelCheckpointCoordinator`, called by `LevelManager` |
+| ROM art and mapping addresses | `game/sonic2/constants/Sonic2Constants` |
+| Standard art registration and decode | `Sonic2PlcArtRegistry`, `Sonic2ObjectArt` |
 
-At runtime or level-load time (matching your existing architecture for objects):
-- Read object placements from the level object layout (you already do this).
-- For each object $79:
-  - store `x`, `y`, and `subtype` exactly (preserve bit 7)
+Paths are relative to `src/main/java/com/openggf/`. The art constants are
+`ART_NEM_CHECKPOINT_ADDR`, `MAP_UNC_CHECKPOINT_ADDR`,
+`MAP_UNC_CHECKPOINT_STAR_ADDR` and `ART_TILE_CHECKPOINT`. Decode their bytes from
+the user-supplied ROM. Disassembly mapping files are research references, never
+runtime assets or baked fallbacks.
 
-Assets:
-- Decompress `art/nemesis/Star pole.nem` into your pattern cache at VRAM tile base `$047C` (or your equivalent tile index) as part of “standard level assets”.
-- Load mappings from the ROM ranges corresponding to `Obj79_MapUnc_1F424` and `Obj79_MapUnc_1F4A0` (or parse the disasm mapping files and bake them into your asset pipeline).
+Objects use injected `services()` for checkpoint, audio and child-object access.
+Separate Java classes for pole, dongle and stars are intentional; preserve the
+native object ID, allocation order and behavior rather than requiring one class
+for every routine. Save/restore changes must also preserve rewind and load boundaries.
 
-### 2) Engine-level checkpoint state block
-
-Maintain a struct matching the saved variables (for player 1 at minimum):
-- lastStarpostSubtype (byte)
-- savedX, savedY (word)
-- savedTimer (long) + the timer tweak on restore
-- savedCamera positions (main + BG1/BG2/BG3)
-- savedWater info (only relevant if zone has water)
-- savedDynamicResizeRoutine, savedCameraMaxY
-- savedArtTile and savedSolidBits (if these concepts exist in your engine; otherwise capture the equivalent “sprite tile base” and “collision layer bits”)
-
-Do not overfit to Sonic’s RAM addresses in your engine, but keep one-to-one fields so the agent can reason about parity.
-
-### 3) Activation behavior (collision / overlap)
-
-Each frame for starpost objects in range:
-- If debug placement mode is active, skip activation checks (original does).
-- Compare `(lastStarpostSubtype & 0x7F)` to `(thisSubtype & 0x7F)` and require strictly less.
-- Check overlap window roughly matching the original comparisons.
-
-On activation:
-- play checkpoint sound
-- set pole anim = 1
-- spawn dongle helper object (same object type, routine 6 in your internal state machine)
-- if 1P and emeralds < 7 and rings >= 50: spawn 4 star helper objects (routine 8)
-- update lastStarpostSubtype = thisSubtype (raw, including bit 7)
-- snapshot all “saved” state fields
-
-### 4) Respawn / restart from checkpoint
-
-When the player loses a life and the act restarts:
-- If lastStarpostSubtype == 0: use the act start location
-- Else:
-  - restore player position to savedX/savedY
-  - restore camera/parallax/water/event state fields
-  - restore timer to savedTimer, then apply the same tweak (frame=59 and second-1)
-  - clear rings to 0 (match original)
-  - if (lastStarpostSubtype & 0x80) != 0: set cameraMinX = savedX - 0xA0
-
-### 5) Visual persistence when objects stream
-
-If your object system despawns starposts and later respawns them from the ROM object layout, you need an equivalent of Sonic’s respawn-table “activated” bit.
-
-A practical reimplementation:
-- If `(lastStarpostSubtype & 0x7F) >= (thisSubtype & 0x7F)`, force this pole to render in its activated appearance.
-- This teaches the agent to reproduce the same result without literally implementing the original respawn table bitfield, unless you already have one.
+Focused checks include `TestCheckpointDongleInstance`,
+`TestCheckpointObjectInstanceTimeAttackGate`, `TestCheckpointStateRewind`,
+`TestCheckpointStarpostGraphRewind` and `TestOrdinaryCheckpointActivationRestore`.
+These cover specific contracts; their existence does not establish complete
+REV01 checkpoint parity. Use [the testing guide](../contributing/testing.md)
+and the affected ROM-backed route checks when changing behavior.
 
 ---
 
@@ -324,8 +300,9 @@ If you see visual or state corruption in your current implementation, checkpoint
 - Treating subtype as signed without masking for ordering (you must compare on `& $7F`)
 - Dropping subtype bit 7 (camera min X lock after restore will not work)
 - Not restoring camera BG/BG2/BG3 positions, causing parallax jumps after death
-- Spawning “stars” as a separate object ID rather than object $79 routine 8 (this breaks mappings and collision expectations)
+- Confusing a separate helper class with a separate native ID: stars still represent object $79 routine 8.
 - Loading checkpoint art on-demand instead of as part of standard level PLC (can lead to missing tiles if your load timing differs)
+- Reading the `fixBugs` branch as retail behavior: shipped REV01 uses `fixBugs = 0`, including its missing respawn-index guard for debug-created posts.
 
 ---
 

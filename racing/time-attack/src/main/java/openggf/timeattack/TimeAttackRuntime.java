@@ -133,6 +133,8 @@ public final class TimeAttackRuntime implements RunHost {
     private boolean holdingFrames;
     private int catchUpCounter;
     private final CountdownCues countdownCues = new CountdownCues();
+    /** The local player was in their hurt state after the latest step (the progress bar flashes them). */
+    private boolean localHurt;
     private java.util.function.BiFunction<String, String, com.openggf.net.identity.PlayerAppearance> lookSource =
             (gameId, character) -> com.openggf.net.identity.PlayerAppearance.STOCK;
 
@@ -248,6 +250,41 @@ public final class TimeAttackRuntime implements RunHost {
         if (handle != null && launch != null) {
             // The engine starts every run with the stock look; recolour the player's own character.
             handle.setPlayerAppearance(lookSource.apply(launch.gameId(), launch.character()));
+        }
+        if (handle != null) {
+            // The game's own HUD shows the attempt's clock, to the hundredth (0:00.00).
+            handle.setHudTimeHundredths(true);
+            handle.setHudProfile(hudProfile());
+            publishHudTime();
+        }
+    }
+
+    /**
+     * Time Attack's native HUD: TIME (the attempt's clock) on the top row and RINGS beneath it.
+     * Score means nothing in a time attack and lives are hidden by the fast-restart policy, so the
+     * row they free holds the best time ({@link TimeAttackHud}). The act timer's nine-minute flash
+     * is off: TIME is not the act timer here.
+     */
+    public static com.openggf.level.objects.HudProfile hudProfile() {
+        return new com.openggf.level.objects.HudProfile(java.util.List.of(
+                new com.openggf.level.objects.HudRow(false, com.openggf.level.objects.HudLabel.SCORE,
+                        com.openggf.level.objects.HudMetric.SCORE, 16, 8, 64, 8, 6,
+                        com.openggf.level.objects.HudWarningPolicy.NONE),
+                new com.openggf.level.objects.HudRow(true, com.openggf.level.objects.HudLabel.TIME,
+                        com.openggf.level.objects.HudMetric.TIME, 16, 8, 56, 8, 4,
+                        com.openggf.level.objects.HudWarningPolicy.NONE),
+                new com.openggf.level.objects.HudRow(true, com.openggf.level.objects.HudLabel.RINGS,
+                        com.openggf.level.objects.HudMetric.RINGS, 16, 24, 64, 24, 3,
+                        com.openggf.level.objects.HudWarningPolicy.ZERO_FLASH),
+                new com.openggf.level.objects.HudRow(false, com.openggf.level.objects.HudLabel.LIVES,
+                        com.openggf.level.objects.HudMetric.LIVES, 16, 200, 56, 208, 2,
+                        com.openggf.level.objects.HudWarningPolicy.NONE)));
+    }
+
+    /** The attempt's clock in the stock HUD's TIME (first input to finish, as the room times it). */
+    private void publishHudTime() {
+        if (handle != null) {
+            handle.setHudTime(attempt == null ? 0 : attempt.elapsedDisplayFrames());
         }
     }
 
@@ -471,11 +508,13 @@ public final class TimeAttackRuntime implements RunHost {
         clearHeldFrames();
         restartCountdownFrames = 0;
         countdownCues.reset();
+        localHurt = false;
         restartLeadIn = start.deathRestart();
         leadInSteps = 0;
         holdInputThisStep = false;
         holdingFrames = restartLeadIn;
         beginAttemptForTest(start.determinismFingerprint());
+        publishHudTime();
         if (start.debugAssisted()) {
             // An overlay already visible before spawn is as much an advantage as
             // toggling one on mid-run, so taint immediately.
@@ -484,6 +523,11 @@ public final class TimeAttackRuntime implements RunHost {
         if (companion != null) {
             companion.levelReady(start);
         }
+    }
+
+    /** True while the local player is in their hurt state, as of the latest step. */
+    public boolean isLocalHurt() {
+        return localHurt;
     }
 
     /** Plays the game's countdown sounds by driver ID; unset, the countdowns are silent. */
@@ -557,10 +601,12 @@ public final class TimeAttackRuntime implements RunHost {
         localCentreX = pose.centreX();
         tickForTest(step.heldMask(), step.startHeld(), step.actComplete(), step.checkpointIndex(),
                 new GhostFrame(pose.centreX(), pose.centreY(), pose.mappingFrame(), pose.hFlip(),
-                        pose.vFlip(), false, pose.priorityBucket(), pose.highPriority()));
+                        pose.vFlip(), false, pose.priorityBucket(), pose.highPriority(), pose.hurt()));
+        localHurt = pose.hurt();
         if (restartLeadIn) {
             leadInSteps++;
         }
+        publishHudTime();
         if (companion != null) {
             companion.afterStep();
         }
@@ -622,7 +668,7 @@ public final class TimeAttackRuntime implements RunHost {
     /** A recorded ghost frame as the engine's presentation pose. */
     public static PlayerPose poseOf(GhostFrame frame) {
         return new PlayerPose(frame.x(), frame.y(), frame.mappingFrame(), frame.hFlip(), frame.vFlip(),
-                frame.priorityBucket(), frame.highPriority());
+                frame.priorityBucket(), frame.highPriority(), frame.hurt());
     }
 
     List<GhostPose> activeGhostsForTest() {

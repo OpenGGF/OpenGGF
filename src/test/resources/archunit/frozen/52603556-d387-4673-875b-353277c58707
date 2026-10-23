@@ -1,1 +1,0 @@
-Method <com.openggf.game.animation.strategies.ScriptFramesApplyStrategy.apply(com.openggf.game.animation.ChannelContext)> calls method <com.openggf.game.GameServices.graphics()> in (ScriptFramesApplyStrategy.java:37)

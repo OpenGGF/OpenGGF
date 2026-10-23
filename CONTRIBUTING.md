@@ -17,12 +17,12 @@ Good contributions include:
 - Trace replay, rewind, and debugging improvements that preserve the engine's native behavior.
 - Documentation that helps future contributors understand a real workflow or parity pitfall.
 
-Current project priority is Sonic 3 & Knuckles vertical-slice parity and release readiness. AIZ
-through HCZ remains the primary release slice, but CNZ, MGZ, ICZ, MHZ, and LBZ now have enough
-coverage that route blockers, complete-run trace frontiers, and release gates should drive task
-selection more than broad checklist work. Check [`ROADMAP.md`](ROADMAP.md), [`CHANGELOG.md`](CHANGELOG.md),
-[`OBJECT_CHECKLIST.md`](OBJECT_CHECKLIST.md), [`S1_OBJECT_CHECKLIST.md`](S1_OBJECT_CHECKLIST.md),
-and [`S3K_OBJECT_CHECKLIST.md`](S3K_OBJECT_CHECKLIST.md) before choosing a larger task.
+Current priority is completing and validating the stock campaigns, especially Sonic 3 &
+Knuckles character routes and finales. Preserve AIZ → HCZ while choosing later-zone work
+by current route blockers and trace frontiers. Start with the [0.7 roadmap](docs/project/v0.7-roadmap.md),
+[game status](docs/guide/playing/game-status.md), [coverage backlog](docs/status/level-test-coverage.md),
+and [trace frontier log](docs/status/trace-frontier-log.md). The per-game object checklists
+record implementation coverage, not proof that a complete route matches the ROM.
 
 ## Legal And Asset Rules
 
@@ -52,24 +52,32 @@ Minimum requirements:
 - OpenGL 4.1+ for running the engine window.
 - Optional local ROM files for ROM-dependent tests and gameplay.
 
-Build and test:
+Build without running tests, then inspect and run the change-based smoke selection:
 
 ```bash
-mvn package
-mvn test
+python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package
+python3 tools/testing/run_categories.py --base <pre-task-commit>
+python3 tools/testing/run_categories.py --base <pre-task-commit> --preflight
+python3 tools/testing/run_categories.py --base <pre-task-commit> --run
 ```
 
-Run the built jar:
+Replace `<pre-task-commit>` with the pinned destination commit from before your change.
+For a bounded local change, focused checks can replace broad smoke coverage when the
+[testing guidance](docs/guide/contributing/testing.md) supports that choice:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestCollisionLogic" test
+```
+
+Use the queue for local test-running Maven commands; category runs queue themselves.
+Routine validation uses smoke, including CI. The explicit `-Pfull-suite` selection is
+reserved for preparing a new public release. Documentation-only changes use relevant
+syntax, link, mirror, policy and example checks. Full Maven logs are enabled by `-Dmse=off`.
+
+Run the built jar (on macOS, add `-XstartOnFirstThread` before `-jar`):
 
 ```bash
 java -jar target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar
-```
-
-Maven output is quiet by default through the Maven Silent Extension. Use `-Dmse=off` when you need
-full logs:
-
-```bash
-mvn -Dmse=off test
 ```
 
 ## Accuracy Rules
@@ -82,8 +90,9 @@ single observed symptom.
 - Trace fixes must not branch on zone id/name, route, frame number, or a known failing trace. Model
   the ROM state that drives the branch: object id/routine, status/control bits, frame counter,
   physics profile, event flag, subtype, or data-driven condition.
-- Trace data is comparison-only diagnostic input. Do not hydrate or sync engine state from trace
-  frame data in committed test or engine code.
+- Physics and auxiliary trace rows are comparison-only: never hydrate or sync gameplay
+  from them. The isolated [hardware-timing input contract](docs/architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md)
+  can release matching, already-submitted ROM-backed work; it cannot supply gameplay values.
 - ROM `x_pos` / `y_pos` map to `getCentreX()` / `getCentreY()` in the engine. `getX()` / `getY()`
   are top-left sprite bounds.
 - Object art, mappings, DPLCs, animation scripts, PLC data, and runtime bytes must be ROM-backed.
@@ -141,7 +150,9 @@ Release maintainers: pushing `master` automatically publishes a GitHub release
 after validation and builds succeed. Manual dispatch is validation-only; see [Publishing a GitHub release](docs/project/release-publishing.md)
 for the command, tag ownership, and final checks.
 
-Use focused branches from `develop`:
+For normal contributions, use focused branches from `develop`. In an existing delegated
+workspace, use its current branch as the base unless another is specified; create the
+task branch in a separate worktree and leave the main checkout on its existing branch:
 
 - `feature/ai-...` for new features.
 - `bugfix/ai-...` for fixes.
@@ -173,8 +184,13 @@ A `feat`, `fix`, or `perf` commit that touches `src/main/` must either update
 [`CHANGELOG.md`](CHANGELOG.md) or justify the skip, for example:
 
 ```text
-Changelog: n/a: test-only helper
+Changelog: n/a: release note recorded in CHANGELOG.0.7.prerelease.md
 ```
+
+New development release notes belong in `CHANGELOG.0.7.prerelease.md`; the root
+`CHANGELOG.md` is the release index and alone owns the `Changelog` trailer mapping.
+End AI-assisted commit messages with a `Co-authored-by` line for each contributing
+model, after the documentation trailers.
 
 See [Documentation And Branch Policy](docs/guide/contributing/documentation-policy.md) for the
 human-facing policy details.
@@ -186,10 +202,12 @@ Before opening a PR:
 - Rebase or merge from current `develop` if your branch is stale.
 - Confirm no ROM files or copyrighted game assets are staged.
 - Run the focused tests for the changed area and include the commands in the PR description.
-- Run broader regression tests when touching shared physics, object lifecycle, rendering, audio,
-  rewind, trace replay, or runtime ownership.
-- Update `CHANGELOG.md`, guide docs, configuration docs, known-discrepancy docs, and trace frontier
-  logs where the change requires it.
+- Inspect and run the change-based smoke selection for shared physics, lifecycle, rendering,
+  audio, rewind, trace or runtime changes, plus affected domain checks. Keep public-release
+  full-suite validation separate. Inspect skipped tests and attribute disputed failures by
+  matched baseline/current test identity and assertion.
+- Update the current development changelog, guide, configuration, discrepancy and trace-frontier
+  documentation where required; change the root changelog only when its index/pointer changes.
 - Explain ROM citations or parity reasoning for gameplay behavior changes.
 - Call out known limitations or intentional discrepancies instead of hiding them in implementation
   details.

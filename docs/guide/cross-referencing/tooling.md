@@ -10,12 +10,28 @@ them against the actual ROM binary.
 
 ### Base Command
 
+Run from the checkout root with Java 25. Initialize the relevant optional
+disassembly submodule if it is absent (for example,
+`git submodule update --init docs/s2disasm`). Keep any existing local reference
+changes intact, and use the pinned revision when citing line numbers.
+
 ```bash
-mvn exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
-    -Dexec.args="<command>" -q
+python3 tools/testing/maven_queue.py -Dmse=off compile exec:java \
+    -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
+    -Drom.path="/absolute/path/to/your-existing-s2.gen" \
+    -Dexec.args="--game s2 search Buzzer" -q
 ```
 
-The `-q` flag suppresses Maven output so you only see the tool's results.
+Replace the ROM path with your existing matching image; do not rename or copy a
+ROM to satisfy the example. `-Drom.path` is this tool's property, separate from
+the ROM-backed test properties. `-Ddisasm.path=/absolute/path/to/reference` can
+select another reference tree. Without overrides, the profiles use `s1.gen`,
+`s2.gen` or `s3k.gen` and the matching `docs/*disasm` directory.
+
+`compile` prepares current classes and can be omitted until sources change.
+The wrapper coordinates the Maven invocation; the tool does not run the engine
+test suite. `-q` suppresses ordinary Maven chatter. The snippets below replace
+`-Dexec.args` in this command; keep the matching ROM/reference properties.
 
 ### Game Selection
 
@@ -51,7 +67,8 @@ command.
 -Dexec.args="search Pal_"
 ```
 
-Results show the label name, file path, compression type, and calculated ROM offset.
+Results show the label name, file path, compression type, source location and,
+when resolution succeeds, a ROM offset and its verification status.
 For S3K, this includes assembly data labels inside `.asm` files reached by `include`
 directives, such as mapping tables under `Levels/*/Misc Object Data/`.
 
@@ -66,11 +83,28 @@ Verify that a specific label's calculated offset matches the actual data in the 
 -Dexec.args="verify ArtNem_Buzzer"
 ```
 
-The tool reads the ROM at the calculated offset and confirms whether the data there
-matches the expected compression signature.
+For binary includes, the tool compares the reference file's raw bytes at the
+calculated offset and searches nearby if they differ. Read whether the result is
+verified, relocated, missing or an error. Assembly-data labels are resolved from
+anchors and instruction/data sizing; their reported verification does not perform
+the same binary-file byte comparison. Check the owning ROM pointer and data when
+using such an address for implementation.
 
 **When to use:** You want to confirm that the engine's address for a piece of data is
 correct.
+
+#### find -- Resolve one resource
+
+Find a specific label's ROM offset, optionally starting a binary search at a
+given address:
+
+```bash
+-Dexec.args="find ArtNem_Buzzer"
+-Dexec.args="--game s3k find Map_MHZPollen"
+```
+
+Binary resources are matched against ROM data. Included assembly-data labels use
+the offset calculator, with the same evidence limit described under `verify`.
 
 #### list -- List items by type
 
@@ -91,7 +125,7 @@ List all items of a given compression type, or all items if no type is specified
 ```
 
 Supported types: `nem` (Nemesis), `kos` (Kosinski), `kosm` (KosinskiM), `eni` (Enigma),
-`sax` (Saxman), `bin` (uncompressed).
+`sax` (Saxman), `bin` (uncompressed), and `asm` (assembly data).
 
 **When to use:** You want to see what resources exist of a certain type.
 
@@ -100,8 +134,8 @@ Supported types: `nem` (Nemesis), `kos` (Kosinski), `kosm` (KosinskiM), `eni` (E
 Attempt to decompress data at a specific ROM offset.
 
 ```bash
-# Test if offset 0xDD8CE contains Nemesis data
--Dexec.args="test 0xDD8CE nem"
+# Test the S2 REV01 Buzzer art constant
+-Dexec.args="test 0x8316A nem"
 
 # Auto-detect compression type
 -Dexec.args="test 0x3000 auto"
@@ -162,8 +196,9 @@ Export verified offsets as Java constant definitions.
 -Dexec.args="export nem ART_"
 ```
 
-This outputs lines like `public static final int ART_BUZZER = 0xDD8CE;` that can be
-pasted into a constants file.
+This writes Java declarations for the resolved entries. Review each result's
+source, status and target revision before using it in a constants file; formatting
+an address is not independent proof that the runtime routine uses it.
 
 **When to use:** You are adding new ROM addresses to the engine and want correctly
 formatted constant definitions.
@@ -176,8 +211,8 @@ between games:
 | Concept | S1 label | S2 label | S3K label |
 |---------|----------|----------|-----------|
 | Nemesis art | `Nem_Crabmeat` | `ArtNem_Buzzer` | `ArtNem_` / `ArtKos_` |
-| Kosinski art | `Kos_GHZ` | `ArtKos_EHZ` | `KosM_` |
-| Uncompressed art | `Unc_Sonic` | `ArtUnc_Sonic` | `ArtUnc_` |
+| Kosinski art | `Kos_EndFlowers` | `ArtKos_EHZ` | `*_Kos` / `*_KosM` (moduled) |
+| Uncompressed art | `Art_Sonic` | `ArtUnc_Sonic` | `ArtUnc_` |
 | Sprite mappings | `Map_Crabmeat` | `MapUnc_Sonic` | `Map_` |
 | Palettes | `Pal_GHZ` | `Pal_EHZ` | `Pal_` |
 

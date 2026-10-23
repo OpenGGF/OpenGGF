@@ -438,3 +438,32 @@ native-GL profile and two optional creator-mod fixtures. No required primary-ROM
 case skipped. Every record was inspected and diagnostics acknowledged. This is
 completed bounded smoke coverage with inherited errors, not a green broad run
 or release-only full-suite certification. No unrelated graphics fix was made.
+
+After the repair was pushed as `1a71493fa`, develop advanced and PR #228 became
+conflicted. The user authorized merging `origin/develop` (`1f1649e86`) into the
+feature branch, retaining a normal two-parent history. The two conflicts were
+`TestArchUnitRules` and its exception catalogue. The resolution retains upstream's
+seven removed stale pairs, three removed obsolete ignores and new live-edge
+assertion, plus this feature's narrow editor-tool and public Stageplay ownership
+constraints. The actual allowed set contains 153 distinct pairs, verified against
+the live dependency graph and documented as 153; stale allowances were not united.
+The auto-merged 0.7 candidate API pin exactly matches the compiled surface,
+including upstream's 44 added signature lines. No version/descriptor change.
+
+The first merged guards run exposed the tighter upstream ObjectManager and
+LevelManager budgets (two excess effective lines each) and a literal clone guard
+that rejected the guide's valid ordinary clone selecting `develop`. Budgets remain
+unchanged. Configured native/authored population installation now has a focused
+package-private collaborator, and editor source-context restoration lives in the
+existing authoring-view helper. Installation/restoration order is preserved.
+The clone guard accepts the canonical ordinary clone with optional develop branch
+selection while retaining its recursive-clone prohibition.
+
+Combined merge verification passed 181 focused cases without skips, including
+ArchUnit, editor lifecycle, required S3K and API policies. ROM-less toggle passed
+25 cases with the same five expected ROM skips; its temporary POM setting was
+restored. After the guard repairs, all 220 affected source/build/object/editor/art/
+S3K/API cases passed without skips, followed by all 728 fresh `-Pguards` cases
+with zero failures/errors/skips (4m32s). This is the user-requested post-merge
+focused/guards validation; the earlier complete category run remains attributed
+to the pre-merge repair, including its two inherited GLFW errors.

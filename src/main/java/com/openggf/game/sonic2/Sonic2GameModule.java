@@ -403,6 +403,11 @@ public class Sonic2GameModule implements GameModule {
     }
 
     @Override
+    public com.openggf.game.preview.TitlePreviewProvider getTitlePreviewProvider() {
+        return new com.openggf.game.sonic2.titlescreen.Sonic2TitlePreviewProvider();
+    }
+
+    @Override
     public TitleScreenProvider getTitleScreenProvider() {
         return titleScreenProvider;
     }

@@ -450,6 +450,11 @@ public interface GameModule {
         return NoOpTitleScreenProvider.INSTANCE;
     }
 
+    /** Detached CPU-only preview art; does not initialize the live title screen. */
+    default com.openggf.game.preview.TitlePreviewProvider getTitlePreviewProvider() {
+        return com.openggf.game.preview.TitlePreviewProvider.NONE;
+    }
+
     /**
      * Returns the data select provider for this game.
      * Provides the save file selection screen (S3K-style).

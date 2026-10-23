@@ -201,7 +201,7 @@ no committed reference capture for any game.
 
 | Tool | Captures |
 |---|---|
-| `FmSfxRenderTool` | one ROM SFX/song through the real driver: mix WAV, FM-only WAV, and `ym-writes.txt` (`frame port reg val`, frame = output frames rendered before the write; exact at `--rate internal`). Internally scheduled DAC `0x2A` writes are not observed. Games s1/s2/s3k |
+| `FmSfxRenderTool` | one ROM SFX/song through the real driver: mix WAV, FM-only WAV, and `ym-writes.txt` (`frame port reg val`, frame = output frames rendered before the write; exact at `--rate internal`). Internally scheduled DAC `0x2A` writes are not observed. Games s1/s2/s3k. `--paced` instead renders one 60 Hz service per frame through the game's own physical policy, writes only `-paced.wav` and reports `dac-enables`; the default legacy path never enables the S3K DAC (2026-10-23) |
 | `PsgSfxRenderTool` | same for PSG: mix WAV, PSG-only WAV, `psg-writes.txt` (`frame byte`) |
 | `ChipWriteObserver` | `onYm2612Write(port, register, value)` / `onPsgWrite(value)`; implemented by `Ym2612Chip`, `PsgChip`, `VirtualSynthesizer`, `SmpsDriver`, the two render tools and `S1OpenGgfAudioCapture` |
 

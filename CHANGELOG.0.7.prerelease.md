@@ -71,8 +71,11 @@ Unreleased. The earlier development themes remain in
   starts), the start of Green Hill 1 (S1) or Emerald Hill 1 (S2), so nobody needs a ROM
   the room does not race. Players ready up from the menu; once ready, Start or Enter
   hides the menu and hands the controller to the character, and pressing it again
-  brings the menu back. The menu sits on a dark translucent panel with the level
-  still moving behind it; the stock HUD and ghost nameplates are hidden under it. Other players walk the lobby as named ghosts in their looks
+  brings the menu back. The menu is a set of cards in the race HUD's style (the room
+  and next track, the players with ready boxes and characters, the chat, vote or
+  podium, and the menu with who the room is waiting for), with the level moving
+  around them; the stock HUD and ghost nameplates are hidden under it. The vote shows
+  all three tracks. Other players walk the lobby as named ghosts in their looks
   (presence is streamed between rounds only, and relay rooms send each player its
   nearest eight). The room owner chooses whether the round start waits for everyone
   to be ready: always, never, or (the default) only with five or fewer players
@@ -103,6 +106,20 @@ Unreleased. The earlier development themes remain in
   hosting a LAN or master-listed room. Pools hold 3-32 acts of the room's own game.
   The master and the host reject a malformed, foreign or ineligible act with the reason.
   S1 and S2 boss acts now finish a timed run at the capsule switch, where the ROM clock stops.
+  The HUD's TIME can show hundredths of a second (`0:00.00`), as Sonic CD does, in
+  every game's own HUD digits: `display.hudTimeHundredths` turns it on for normal play,
+  and runs can ask for it and show their own clock there (`RunHandle.setHudTime`,
+  `setHudTimeHundredths`). Time Attack uses both, so the game's TIME is the attempt's
+  time and the run panel no longer repeats it. Hosted runs can also override native HUD rows
+  with `RunHandle.setHudProfile` and align compact overlays using
+  `LevelOverlayCanvas.hudOriginX()`, preserving each game's artwork and HUD anchor setting;
+  clearing the override or ending the run restores the zone's layout.
+  Time Attack uses it: TIME and RINGS on the top rows with no score or lives, its best
+  time and split under them, and the room panel in the top-right corner. Its progress bar
+  spans the screen with every racer in their colour at their true place, racers at the
+  same place stacked so a column counts them, and flashes and shakes a racer's segment
+  while they are hurt (`GhostFrame.hurt`, `PlayerPose.hurt`, carried in the ghost
+  frame's spare flag bit).
   Time Attack has no lives counter and unlimited tries: after a death (skippable
   with jump after half a second) the act reloads at once from its start with no
   title card, then a 3-2-1 countdown over the visible level holds control before a
@@ -550,6 +567,16 @@ Unreleased. The earlier development themes remain in
   source stays in one immutable, typed tuple. Sonic 1 and Sonic 2 selected-slot images use the shared data-select
   converter and payload validators; Sonic 3 & Knuckles keeps explicit host ROM
   donation while consuming the same patterns, palette and mapping contract.
+  Architecture ratchets measure the dispatcher bodies behind profiling wrappers,
+  reject stale rewind and dependency allowances, and identify raw lifecycle calls
+  by caller rather than a shared total. Shared menu animation and execution-time
+  graphics injection close the remaining menu/framework seams. SAT replay uses a
+  graphics-owned geometry value and one tile-expansion implementation while
+  preserving the existing candidate Mod API submission signature. Stock title
+  previews use detached game-owned providers, preserving animated pixels and
+  catalogue ROM views without consulting a suspended game's live services. Remaining
+  migrations and exact allowance accounting live in the
+  [exception guide](docs/architecture/archunit-exceptions.md).
 
 - **Native-compatible PCM output (diagnostics):** An opt-in audio session setting
   feeds the accurate FM chip's own pin sums through a Java port of blip_buf. It

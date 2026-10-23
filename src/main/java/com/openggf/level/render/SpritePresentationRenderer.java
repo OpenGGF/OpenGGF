@@ -73,7 +73,7 @@ public final class SpritePresentationRenderer {
                             || part == SpritePresentation.Part.OBJECT_BODY ? Layer.OBJECT : Layer.PLAYER);
                     if (entry.presentationSubject().head() != null)
                         SpritePresentation.bindPatternVersions(graphics, entry.presentationSubject().head().patterns());
-                    graphics.setCurrentSpriteHighPriority(entry.globalHighPriority());
+                    graphics.setCurrentSpriteHighPriority(entry.piece().globalHighPriority());
                     SpritePresentation.withSubject(graphics, entry.presentationSubject(), () -> emitter.accept(entry));
                 }
             }

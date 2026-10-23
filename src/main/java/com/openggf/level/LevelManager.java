@@ -891,10 +891,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             return;
         }
         writeCurrentLevel(restoredLevel);
-        currentZone = worldSession.getCurrentZone();
-        currentAct = worldSession.getCurrentAct();
-        apparentAct = worldSession.getApparentAct();
-        gameModule = worldSession.getGameModule();
+        LevelEditorViewPreparation.restoreSourceContext(this, worldSession);
         rebuildLevelDerivedState();
     }
 
@@ -1819,8 +1816,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
             hudRenderManager = new HudRenderManager(graphicsManager, camera, gameState);
             HudProfileAccess.install(hudRenderManager, activeHudProfile);
-            HudProfileAccess.setScreenLeftAnchorEnabled(hudRenderManager,
-                    "LEFT_EDGE".equals(configService.getString(SonicConfiguration.DISPLAY_HUD_ANCHOR)));
+            HudProfileAccess.applyDisplaySettings(hudRenderManager, configService);
             hudRenderManager.setHudPalettes(provider.getHudTextPaletteLine(), provider.getHudFlashPaletteLine());
             var warningCycle = gameModule.getGameService(com.openggf.game.internal.HudWarningPolicyProvider.class);
             if (warningCycle != null) {
@@ -1855,6 +1851,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                     graphicsManager.cachePatternTexture(hudDigits[i], hudBaseIndex + i);
                 }
                 hudRenderManager.setDigitPatternIndex(hudBaseIndex);
+                HudProfileAccess.measureTimeSeparators(hudRenderManager, hudDigits);
 
                 int nextHudIndex = hudBaseIndex + hudDigits.length;
                 HudStaticArt staticHudArt = provider.getHudStaticArt();

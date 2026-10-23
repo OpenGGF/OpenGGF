@@ -5,6 +5,10 @@ linear sprite films, animatics and mod cutscenes. Both the built-in editor HUD a
 [OpenGGF Editor](https://github.com/OpenGGF/OpenGGF-Editor) use the engine's same
 scene document, editing commands and evaluator. A `.stageplay` file opens in either.
 
+This guide describes the current **0.7.prerelease development line**. Stageplay
+and its unpublished candidate Mod API are outside the published 0.6 release scope;
+use a matching development engine/editor build.
+
 ## Make a first scene
 
 1. Open a level project, or enter the [level editor](level-editor.md) from gameplay.
@@ -13,7 +17,7 @@ scene document, editing commands and evaluator. A `.stageplay` file opens in eit
    to a new `projects/stageplay-<id>/set.ogfproject`, preserving the level editor's
    original document and savepoint.
 3. Choose **Add actor**, name the role and select its ROM (`s1`, `s2`, `s3k`) and
-   character. The first version supports Sonic, S2/S3K Tails and S3K Knuckles.
+   character. Supported native cast are Sonic, S2/S3K Tails and S3K Knuckles.
    Each game's ROM must be available when its cast or audio is used.
 4. New roles default to **Puppet** mode. Set their spawn centre near the floor,
    then choose **Set actor key** to add a destination/urgency, stop or jump action.
@@ -157,8 +161,9 @@ and after the chosen playhead. Start at frame zero for the complete soundtrack.
 Stopping restores the borrowed soundtrack; imported voices share the existing
 final PCM mix without replacing other installed audio sources.
 
-The version-4 JSON document stores resource references, keys, puppet commands and cues.
-Versions 1–3 migrate strictly and retain their manual choreography. ROM data
+The version-5 JSON document stores resource references, keys, puppet commands and cues.
+Versions 1–4 migrate strictly to terrain-only sets. Versions 1–3 retain manual
+choreography; version 4 retains its native terrain-only Puppets. ROM data
 stays in the supplied-ROM pipeline. Authored `.ogfproject` sets, dialogue PNGs and audio stay
 beside the document. Move the whole folder to preserve relative references;
 Save As refuses to relocate a scene away from its asset root. Atomic saves
@@ -171,7 +176,7 @@ Export runs in an independent process with its own transport and ROM views.
 It does not advance the open editor or native gameplay. FFmpeg must be available.
 The export preserves every frame, uses lossless video and the final mixed PCM,
 and reports failure instead of publishing a partial film. Existing outputs are
-never overwritten. The first version requires a 60 Hz audio source.
+never overwritten. Export requires a 60 Hz audio source.
 
 The [demo](../../../examples/stageplay-demo/README.md) includes a saved scene and
 CLI command. `StageplayCaptureTool` accepts `--scene`, `--out`, optional `--game`
@@ -218,7 +223,7 @@ replace or advance the held gameplay world.
 
 For terrain-only main-player handover, the registration overload accepts the actor ID
 and `StageplayNativeBinding.FinishMode`. The bound actor must match the native
-game and character, with unit actor scale. Camera zoom is presentation-only. The first version
+game and character, with unit actor scale. Camera zoom is presentation-only. Handover
 requires a freely controlled player: dead, hurt, super, object-supported and
 object/ability-controlled states are rejected. Other actors remain detached.
 LIVE scenes reject this binding: their performers belong to the isolated world.
@@ -232,4 +237,4 @@ LIVE scenes reject this binding: their performers belong to the isolated world.
 
 These are unpublished **0.7.0 candidate** APIs. Match the engine and SDK commit.
 Branching dialogue, reusable shot libraries, rigs, lip sync and
-multi-user editing are future work, not version-1 controls.
+multi-user editing are future work.

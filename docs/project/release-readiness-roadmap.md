@@ -2,6 +2,11 @@
 
 Date: 2026-06-06
 
+Historical 0.6 hardening and freeze record. Its dated branch restrictions and
+verification counts apply to that release effort. Current development priorities
+are in the [0.7 roadmap](v0.7-roadmap.md) and [future 0.8 roadmap](v0.8-roadmap.md);
+the [testing guide](../guide/contributing/testing.md) owns current validation commands.
+
 For delivery after sign-off, follow [release publishing](release-publishing.md)
 and [release rollover](release-rollover.md). A push to `master` automatically
 publishes after validation and builds; manual dispatch is validation-only.

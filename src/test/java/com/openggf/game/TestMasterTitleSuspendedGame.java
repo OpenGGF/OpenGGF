@@ -1,5 +1,7 @@
 package com.openggf.game;
 
+import com.openggf.game.preview.TitlePreviewProvider.Image;
+
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import org.junit.jupiter.api.Test;
@@ -53,7 +55,7 @@ class TestMasterTitleSuspendedGame {
             var almost = screen.suspendZoomLayout();
             assertTrue(almost.width() < start.width());
             var thumbnail = MasterTitleScreen.fitThumbnail(
-                    new MasterTitleRomPreview.Image(width, 224, new byte[width * 224 * 4]), 126, 78);
+                    new Image(width, 224, new byte[width * 224 * 4]), 126, 78);
             assertEquals(thumbnail.width(), almost.width(), 1);
             assertEquals(thumbnail.height(), almost.height(), 1);
             assertTrue(almost.height() < start.height());
@@ -222,7 +224,7 @@ class TestMasterTitleSuspendedGame {
             byte value = (byte) ((pixel % 320 + pixel / 320) % 2 == 0 ? 0xFF : 0x00);
             rgba[i] = value; rgba[i + 1] = value; rgba[i + 2] = value; rgba[i + 3] = (byte) 0xFF;
         }
-        var fitted = MasterTitleScreen.fitThumbnail(new MasterTitleRomPreview.Image(320, 224, rgba), 126, 78);
+        var fitted = MasterTitleScreen.fitThumbnail(new Image(320, 224, rgba), 126, 78);
 
         assertTrue(fitted.width() <= 126 && fitted.height() <= 78);
         assertEquals(320 / (double) 224, fitted.width() / (double) fitted.height(), 0.03, "keeps the picture's shape");
