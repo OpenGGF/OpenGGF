@@ -113,6 +113,10 @@ public class DelegatingGameModule implements GameModule {
         return base.getModZoneAdapter();
     }
 
+    @Override public com.openggf.game.modzone.ModLevelSettingsProvider getModLevelSettingsProvider() {
+        return base.getModLevelSettingsProvider();
+    }
+
     @Override public GameplayPolicyProvider getGameplayPolicyProvider() {
         return base.getGameplayPolicyProvider();
     }
@@ -300,6 +304,11 @@ public class DelegatingGameModule implements GameModule {
     @Override
     public TitleScreenProvider getTitleScreenProvider() {
         return base.getTitleScreenProvider();
+    }
+
+    @Override
+    public com.openggf.game.preview.TitlePreviewProvider getTitlePreviewProvider() {
+        return base.getTitlePreviewProvider();
     }
 
     @Override

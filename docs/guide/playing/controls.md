@@ -58,8 +58,8 @@ confirm.
 
 The master title also takes the mouse: point at a tab or button to highlight it
 and click to open it (the setup chips are status only and do not respond), click a side card (or roll the wheel) to change game, click the
-centre card to start it, click the page dots to browse the list, and right-click to go
-back. The game browser, quit prompt, tools and start choices answer clicks the same way.
+centre card to start it, and right-click to go back. Page dots report the
+selection and are not clickable controls. The game browser, quit prompt, tools and start choices answer clicks the same way.
 Settings and Game Setup accept hover and click on their rows, tabs and prompt buttons.
 In the Mod Manager, hover a mod or button to highlight it and click to toggle the mod or
 open the button; the wheel moves through the list (or scrolls a details page), clicking a
@@ -79,17 +79,23 @@ connected pad:
 
 ## Rewind
 
-Live rewind is only active when `rewind.liveEnabled` is `true` in `config.yaml`.
+Enable live rewind in **Settings → Gameplay** or the selected game’s **Game Setup**.
+The global setting is `rewind.liveEnabled`; a per-game setup can override it.
 Visual Trace Test Mode uses the same default key through `debug.traceRewind.key`.
 
 | Key | Action |
 |-----|--------|
 | R | Hold to rewind live gameplay (`rewind.liveKey`) |
 | R | Hold to rewind visual trace playback (`debug.traceRewind.key`) |
+| Ctrl + R | Rewind at half speed |
+| Shift + R | Rewind at double speed |
+
+Either left or right modifier works; holding both restores normal rewind speed.
 
 ## Zone Navigation
 
-These shortcuts let you move through the game quickly during development or exploration.
+These shortcuts require **Debug tools** (`debug.flags.debugView`) and let you
+move through the game during development or exploration.
 
 | Key | Action |
 |-----|--------|
@@ -97,9 +103,9 @@ These shortcuts let you move through the game quickly during development or expl
 | Page Up | Cycle to the next act within the current zone (`debug.keys.nextAct`) |
 | F9 | Open the level select screen (`debug.keys.levelSelect`) |
 
-`F9` also toggles the ring-bounds debug overlay. That overlap is current engine
-behavior: the level-select shortcut is configurable, while the overlay toggle is
-hardcoded in the debug overlay subsystem.
+`Shift+F9` starts a gameplay input recording or opens Recordings at the hub.
+Plain `F9` stops an active recording; otherwise it opens level select when debug
+tools are enabled. The ring-bounds overlay uses `K`.
 
 ## Debug Overlays
 
@@ -116,10 +122,16 @@ These toggle visual debug information drawn over the game scene. They require
 | F6 | **Camera bounds** -- Current camera boundary rectangle |
 | F7 | **Player bounds** -- Player collision bounding box |
 | F8 | **Object points** -- Object origin and debug points |
-| F9 | **Ring bounds** -- Ring collision areas |
+| K | **Ring bounds** -- Ring collision areas |
 | F10 | **Plane switchers** -- Plane switcher trigger zones |
 | F11 | **Touch response** -- Object touch/collision areas |
 | F12 | **Art viewer** -- Loaded sprite art atlas |
+| Backtick | **Collision view** -- Level collision overlay |
+| = | **Tile priority** -- Priority visualization |
+| O | **Object debug** -- Object diagnostic overlay |
+
+`P` toggles the performance overlay even when debug tools are disabled. With
+debug tools enabled, left Ctrl+P copies performance statistics to the clipboard.
 
 F12 also saves a screenshot as `screenshot_yyyyMMdd_HHmmss.png` in the working
 directory. PNG encoding and disk writing run in the background, with at most
@@ -149,7 +161,9 @@ properties, resizing, and export limits.
 |-----|--------|
 | Shift+Tab | Switch between the project editor and its playtest |
 | F5 | Fresh playtest of the current project at its authored start |
-| F1 / north controller button | Open the editor command palette |
+| F1 / controller Menu (Start/Options) | Open the editor command menu |
+| Tab / north controller button | Open the brush library |
+| Q / hold controller View (Select) | Open the tools wheel |
 | Ctrl+S | Save the complete `.ogfproject` |
 | Ctrl+Shift+E | Export to a new chosen directory |
 | Ctrl+Z / Ctrl+Y | Undo / redo |
@@ -163,14 +177,19 @@ It does not auto-save the project or write stock gameplay saves.
 
 ## Super Sonic / Emerald Debug
 
+These shortcuts require **Debug tools** and honour their configured modifiers.
+
 | Key | Action |
 |-----|--------|
 | E | Instantly award all Chaos Emeralds |
-| U | Toggle Super Sonic transformation (requires all emeralds) |
+| U | Toggle the current character’s super transformation (requires the appropriate emeralds) |
+| Shift+E | Award all Super Emeralds |
+| Shift+U | Toggle the highest unlocked S3K form: Hyper Sonic, Super Tails or Hyper Knuckles |
 
 ## Special Stage Debug
 
-These keys are only active during a Special Stage. Unsupported tools are
+These shortcuts require **Debug tools**. Tab enters or exits a Special Stage;
+the remaining keys apply during a stage. Unsupported tools are
 unavailable for the active game's stage provider and do not silently call a
 stage no-op or consume a stage rewind boundary. The global debug-overlay
 bindings remain active during the stage; F1/F3/F4/F12 can toggle their general
@@ -199,8 +218,9 @@ Host menus repeat held directions after a short delay; confirm and Back remain s
 presses. Prompt names follow the last device: Xbox A/B/Y, PlayStation
 Cross/Circle/Triangle, or South/East/North for unknown controllers.
 
-In the master-title game pane, Confirm opens Browse Games; Up/Down enters the action
-list. Settings and text editors expose full manually scrollable Details with F1 or
+On the master-title game card, Confirm starts the selected game or resumes its
+paused session. Left/Right changes game; Down enters its actions and Up enters
+the engine tabs. Settings and text editors expose full manually scrollable Details with F1 or
 the north controller button. Numeric values use a numeric keypad; Up from a path
 field opens the file browser. Mods requires explicit Apply to save drafts.
 
@@ -239,9 +259,9 @@ example, to open their own pause menu). While one is running, a tap reaches the 
 and shows no toast; the toast appears once Escape has been held for a quarter of a
 second, and the full one-second hold still returns to the master title.
 
-The experimental level editor opens its command palette with F1 or the north
-controller button. Directions choose a command, Confirm executes it, and Back
-closes the palette. It includes placement, hierarchy/focus, library/filter,
+The experimental level editor opens its command menu with F1 or controller
+Menu (Start/Options). The north button opens the brush library. Directions choose
+a command, Confirm executes it, and Back closes the menu. It includes placement, hierarchy/focus, library/filter,
 undo/redo, Editor projects, Save project as, Level properties, Resize level,
 Playtest from level start/cursor, Export level, and Close project. Project forms
 use the shared text editor and file browser; their final action applies the fields and Back cancels the form. Modal input suppresses

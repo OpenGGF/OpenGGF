@@ -107,7 +107,7 @@ class TestEditorToggleIntegration {
     }
 
     @Test
-    void editorEntryCreatesIndependentDocumentAndDiscardsParkedGameplayStash() {
+    void nativeEditorEntryCreatesIndependentLevelAndDiscardsParkedGameplayStash() {
         enableEditor();
         var engine = new Engine();
         var gameplay = createGameplayMode(engine);
@@ -116,15 +116,49 @@ class TestEditorToggleIntegration {
         var stash = new EditorPlaytestStash(100, 200, 9, -3, true, 47, 1);
         engine.enterEditorFromCurrentPlayer(stash, 100, 200);
         assertEquals(GameMode.EDITOR, engine.getCurrentGameMode());
-        var document = engine.getEditorProjectWorkspace().document();
-        assertNotNull(document);
-        assertNotSame(source, document.level());
+        var authored = engine.getLevelEditorController().currentLevel();
+        assertNotNull(authored);
+        assertNull(engine.getEditorProjectWorkspace().document(), "Native entry does not implicitly create a portable project");
+        assertNotSame(source, authored);
         assertNotSame(world, SessionManager.getCurrentWorldSession());
-        assertSame(document.level(), SessionManager.getCurrentWorldSession().getCurrentLevel());
+        assertSame(authored, SessionManager.getCurrentWorldSession().getCurrentLevel());
         assertNull(SessionManager.getCurrentGameplayMode());
         assertEquals(new EditorCursorState(100, 200), SessionManager.getCurrentEditorMode().getCursor());
         assertNull(SessionManager.getCurrentEditorMode().getPlaytestStash());
+        assertFalse(authored.isModifiedSinceLastSave(), "Entering native editing establishes its initial save baseline");
+    }
+
+    @Test
+    void explicitNativeCloneCreatesIndependentModifiedProjectDocument() {
+        enableEditor();
+        var engine = new Engine();
+        var gameplay = createGameplayMode(engine);
+        var source = gameplay.getLevelManager().getCurrentLevel();
+        enter(engine, 100, 200);
+        var nativeLevel = engine.getLevelEditorController().currentLevel();
+        engine.getLevelEditorController().placeBlock(0, 2, 2, 1);
+        var nativeWorld = SessionManager.getCurrentWorldSession();
+        var input = inputFor(engine);
+        engine.getEditorProjectWorkspace().openMenu();
+        press(engine, input, GLFW_KEY_DOWN);
+        press(engine, input, GLFW_KEY_DOWN);
+        press(engine, input, GLFW_KEY_DOWN);
+        press(engine, input, GLFW_KEY_ENTER);
+        var document = engine.getEditorProjectWorkspace().document();
+        assertNotNull(document, engine.getLevelEditorController().statusText());
         assertTrue(document.isModified());
+        assertNotSame(source, document.level());
+        assertNotSame(nativeLevel, document.level());
+        assertNotSame(nativeWorld, SessionManager.getCurrentWorldSession());
+        assertSame(document.level(), SessionManager.getCurrentWorldSession().getCurrentLevel());
+        assertSame(document.level(), engine.getLevelEditorController().currentLevel());
+        assertNull(SessionManager.getCurrentGameplayMode());
+        assertEquals(1, document.level().getMap().getValue(0, 2, 2) & 0xFF);
+        engine.getLevelEditorController().placeBlock(0, 2, 2, 0);
+        assertEquals(1, nativeLevel.getMap().getValue(0, 2, 2) & 0xFF);
+        assertEquals(0, source.getMap().getValue(0, 2, 2) & 0xFF);
+        engine.getLevelEditorController().undo();
+        assertEquals(1, document.level().getMap().getValue(0, 2, 2) & 0xFF);
     }
 
     @Test
@@ -136,7 +170,7 @@ class TestEditorToggleIntegration {
         var originalLevel = originalGameplay.getLevelManager().getCurrentLevel();
         originalGameplay.getGameStateManager().addScore(7777);
         enter(engine, 100, 200);
-        var document = engine.getEditorProjectWorkspace().document();
+        var authored = engine.getLevelEditorController().currentLevel();
         engine.getLevelEditorController().placeBlock(0, 2, 2, 1);
         engine.getLevelEditorController().setWorldCursor(new EditorCursorState(320, 448));
         engine.resumePlaytestFromEditor();
@@ -144,7 +178,7 @@ class TestEditorToggleIntegration {
         var runtime = SessionManager.getCurrentGameplayMode();
         assertNotSame(originalGameplay, runtime);
         assertNotSame(originalGameplay.getWorldSession(), runtime.getWorldSession());
-        assertNotSame(document.level(), runtime.getLevelManager().getCurrentLevel());
+        assertNotSame(authored, runtime.getLevelManager().getCurrentLevel());
         assertEquals(1, runtime.getLevelManager().getCurrentLevel().getMap().getValue(0, 2, 2) & 0xFF);
         assertEquals(0, originalLevel.getMap().getValue(0, 2, 2) & 0xFF);
         assertTrue(runtime.getResumeStash().isEmpty());
@@ -156,12 +190,35 @@ class TestEditorToggleIntegration {
         assertSame(player, runtime.getCamera().getFocusedSprite());
         assertFalse(Files.exists(new EditorSaveManager(tempSaves).editPath(
                 com.openggf.game.GameId.S2, 0, 0)), "playtesting must not auto-publish a gameplay sidecar");
+        var requestExit = Engine.class.getDeclaredMethod("requestApplicationExit");
+        requestExit.setAccessible(true);
+        requestExit.invoke(engine);
+        assertTrue(engine.getEditorProjectWorkspace().menu().isOpen(),
+                "Unsaved native edits remain protected while a detached playtest runs");
+        press(engine, inputFor(engine), GLFW_KEY_ESCAPE);
+        assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
+        assertSame(runtime, SessionManager.getCurrentGameplayMode());
+        ((MutableLevel) runtime.getLevelManager().getCurrentLevel()).setBlockInMap(0, 2, 2, 0);
+        assertEquals(1, authored.getMap().getValue(0, 2, 2) & 0xFF,
+                "Gameplay terrain mutations must not change authored terrain");
         engine.toggleEditorPlaytestMode();
         assertEquals(GameMode.EDITOR, engine.getCurrentGameMode());
-        assertSame(document, engine.getEditorProjectWorkspace().document());
-        assertSame(document.level(), engine.getLevelEditorController().currentLevel());
+        assertNull(engine.getEditorProjectWorkspace().document());
+        assertSame(authored, engine.getLevelEditorController().currentLevel());
+        engine.startGameplayFromBeginning();
+        var fresh = SessionManager.getCurrentGameplayMode();
+        assertNotSame(runtime, fresh);
+        assertNotSame(authored, fresh.getLevelManager().getCurrentLevel());
+        assertEquals(1, fresh.getLevelManager().getCurrentLevel().getMap().getValue(0, 2, 2) & 0xFF);
+        assertEquals(nativeStart()[0], player(fresh).getCentreX());
+        assertEquals(nativeStart()[1], player(fresh).getCentreY());
+        engine.toggleEditorPlaytestMode();
+        assertSame(authored, engine.getLevelEditorController().currentLevel());
+        assertTrue(authored.isModifiedSinceLastSave(), "Playtesting must not mark native edits saved");
+        assertFalse(Files.exists(new EditorSaveManager(tempSaves).editPath(
+                com.openggf.game.GameId.S2, 0, 0)));
         engine.getLevelEditorController().undo();
-        assertEquals(0, document.level().getMap().getValue(0, 2, 2) & 0xFF);
+        assertEquals(0, authored.getMap().getValue(0, 2, 2) & 0xFF);
     }
 
     @Test
@@ -173,10 +230,10 @@ class TestEditorToggleIntegration {
         source.setBlockInMap(0, 0, 0, 1);
         var oldSprites = gameplay.getSpriteManager();
         enter(engine, 100, 200);
-        var document = engine.getEditorProjectWorkspace().document();
-        assertEquals(1, document.level().getMap().getValue(0, 0, 0) & 0xFF);
-        assertNotSame(source, document.level());
-        document.level().setBlockInMap(0, 0, 0, 0);
+        var authored = engine.getLevelEditorController().currentLevel();
+        assertEquals(1, authored.getMap().getValue(0, 0, 0) & 0xFF);
+        assertNotSame(source, authored);
+        authored.setBlockInMap(0, 0, 0, 0);
         assertEquals(1, source.getMap().getValue(0, 0, 0) & 0xFF);
         assertNull(gameplay.getSpriteManager());
         assertDoesNotThrow(oldSprites::drawLowPriority);
@@ -190,7 +247,7 @@ class TestEditorToggleIntegration {
         var source = gameplay.getLevelManager().getCurrentLevel();
         enter(engine, 100, 128);
         var view = engineLevelManager(engine);
-        var authored = engine.getEditorProjectWorkspace().document().level();
+        var authored = engine.getLevelEditorController().currentLevel();
         assertNull(SessionManager.getCurrentGameplayMode());
         assertNotSame(source, authored);
         assertSame(authored, engine.getLevelEditorController().currentLevel());
@@ -199,6 +256,24 @@ class TestEditorToggleIntegration {
         assertNull(view.getObjectManager());
         assertNull(view.getRingManager());
         assertSame(authored.getBlock(0), lookupBlock(view, (byte) 0, 0, 0));
+    }
+
+    @Test
+    void nativeEntryPreservesCollisionDelegationAndNativeBounds() {
+        enableEditor();
+        var engine = new Engine();
+        var gameplay = createGameplayMode(engine);
+        var source = spy(gameplay.getLevelManager().getCurrentLevel());
+        doReturn(1500).when(source).getMaxX();
+        doReturn(1).when(source).resolveCollisionBlockIndex(0, 2, 2);
+        gameplay.getLevelManager().setLevel(source);
+        enter(engine, 100, 200);
+        assertEquals(GameMode.EDITOR, engine.getCurrentGameMode());
+        assertNull(engine.getEditorProjectWorkspace().document());
+        var authored = engine.getLevelEditorController().currentLevel();
+        assertNotSame(source, authored);
+        assertEquals(1500, authored.getMaxX(), "Native bounds are not flattened to the portable map domain");
+        assertEquals(1, authored.resolveCollisionBlockIndex(0, 2, 2));
     }
 
     @Test
@@ -260,16 +335,16 @@ class TestEditorToggleIntegration {
         var oldGameplay = createGameplayMode(engine);
         var input = inputFor(engine);
         enter(engine, 100, 200);
-        var document = engine.getEditorProjectWorkspace().document();
+        var authored = engine.getLevelEditorController().currentLevel();
         engine.getLevelEditorController().setWorldCursor(new EditorCursorState(320, 448));
         press(engine, input, GLFW_KEY_F5);
         assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
         var gameplay = SessionManager.getCurrentGameplayMode();
         assertNotSame(oldGameplay, gameplay);
-        assertEquals(document.metadata().startX(), player(gameplay).getCentreX());
-        assertEquals(document.metadata().startY(), player(gameplay).getCentreY());
+        assertEquals(nativeStart()[0], player(gameplay).getCentreX());
+        assertEquals(nativeStart()[1], player(gameplay).getCentreY());
         assertTrue(gameplay.getResumeStash().isEmpty());
-        assertNotSame(document.level(), gameplay.getLevelManager().getCurrentLevel());
+        assertNotSame(authored, gameplay.getLevelManager().getCurrentLevel());
     }
 
     @Test
@@ -284,11 +359,12 @@ class TestEditorToggleIntegration {
             var engine = new Engine();
             createGameplayMode(engine);
             enter(engine, 100, 200);
-            var document = engine.getEditorProjectWorkspace().document();
+            var authored = engine.getLevelEditorController().currentLevel();
             assertDoesNotThrow(engine::startGameplayFromBeginning);
             assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
-            assertEquals(document.metadata().startX(), player(SessionManager.getCurrentGameplayMode()).getCentreX());
-            assertEquals(document.metadata().startY(), player(SessionManager.getCurrentGameplayMode()).getCentreY());
+            assertNotSame(authored, SessionManager.getCurrentGameplayMode().getLevelManager().getCurrentLevel());
+            assertEquals(nativeStart()[0], player(SessionManager.getCurrentGameplayMode()).getCentreX());
+            assertEquals(nativeStart()[1], player(SessionManager.getCurrentGameplayMode()).getCentreY());
         }
     }
 
@@ -330,21 +406,26 @@ class TestEditorToggleIntegration {
     }
 
     @Test
-    void unsafeProgrammaticCursorIsRejectedWithoutRetiringTheEditorDocument() throws Exception {
-        requireS2Rom();
+    void unsafeProgrammaticCursorIsRejectedWithoutLosingNativeEdits() throws Exception {
         enableEditor();
         var engine = new Engine();
         createGameplayMode(engine);
         enter(engine, 100, 200);
-        var document = engine.getEditorProjectWorkspace().document();
+        var authored = engine.getLevelEditorController().currentLevel();
+        engine.getLevelEditorController().placeBlock(0, 2, 2, 1);
         setPrivateField(engine.getLevelEditorController(), "worldCursor", new EditorCursorState(9999, -99));
         engine.resumePlaytestFromEditor();
         assertEquals(GameMode.EDITOR, engine.getCurrentGameMode());
-        assertSame(document, engine.getEditorProjectWorkspace().document());
-        assertSame(document.level(), engine.getLevelEditorController().currentLevel());
+        assertNull(engine.getEditorProjectWorkspace().document());
+        assertSame(authored, engine.getLevelEditorController().currentLevel());
         assertTrue(engine.getEditorProjectWorkspace().menu().isOpen());
         assertTrue(engine.getEditorProjectWorkspace().menu().error().contains("bounds"));
         assertNull(SessionManager.getCurrentGameplayMode());
+        assertEquals(1, authored.getMap().getValue(0, 2, 2) & 0xFF);
+        engine.getLevelEditorController().undo();
+        assertEquals(0, authored.getMap().getValue(0, 2, 2) & 0xFF);
+        assertFalse(Files.exists(new EditorSaveManager(tempSaves).editPath(
+                com.openggf.game.GameId.S2, 0, 0)));
     }
 
     @Test
@@ -358,31 +439,39 @@ class TestEditorToggleIntegration {
         assertEquals(GameMode.EDITOR, engine.getCurrentGameMode());
         press(engine, input, GLFW_KEY_RIGHT, GLFW_KEY_DOWN);
         var cursor = engine.getLevelEditorController().worldCursor();
-        var document = engine.getEditorProjectWorkspace().document();
+        var authored = engine.getLevelEditorController().currentLevel();
         press(engine, input, GLFW_KEY_LEFT_SHIFT, GLFW_KEY_TAB);
         assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
         var gameplay = SessionManager.getCurrentGameplayMode();
         assertEquals(cursor.x(), player(gameplay).getCentreX());
         assertEquals(cursor.y(), player(gameplay).getCentreY());
         assertTrue(gameplay.getResumeStash().isEmpty());
-        assertNotSame(document.level(), gameplay.getLevelManager().getCurrentLevel());
+        assertNotSame(authored, gameplay.getLevelManager().getCurrentLevel());
         press(engine, input, GLFW_KEY_LEFT_SHIFT, GLFW_KEY_TAB);
         assertEquals(GameMode.EDITOR, engine.getCurrentGameMode());
-        assertSame(document, engine.getEditorProjectWorkspace().document());
+        assertNull(engine.getEditorProjectWorkspace().document());
+        assertSame(authored, engine.getLevelEditorController().currentLevel());
         assertEquals(cursor, engine.getLevelEditorController().worldCursor());
     }
 
     @Test
-    void worldMovementClampsCursorToTheActualProjectBounds() {
+    void worldMovementClampsCursorToTheActualNativeLevelBounds() {
         enableEditor();
         var engine = new Engine();
-        createGameplayMode(engine);
+        var gameplay = createGameplayMode(engine);
+        var source = spy(gameplay.getLevelManager().getCurrentLevel());
+        doReturn(512).when(source).getMaxX();
+        doReturn(512).when(source).getMaxY();
+        gameplay.getLevelManager().setLevel(source);
         var input = inputFor(engine);
         enter(engine, 100, 200);
-        var level = engine.getEditorProjectWorkspace().document().level();
-        engine.getLevelEditorController().setWorldCursor(new EditorCursorState(level.getMaxX(), level.getMaxY()));
+        var level = engine.getLevelEditorController().currentLevel();
+        int maxX = level.getMap().getWidth() * level.getBlockPixelSize() - 1;
+        int maxY = level.getMap().getHeight() * level.getBlockPixelSize() - 1;
+        engine.getLevelEditorController().setWorldCursor(new EditorCursorState(maxX, maxY));
         press(engine, input, GLFW_KEY_RIGHT, GLFW_KEY_DOWN);
-        assertEquals(new EditorCursorState(level.getMaxX(), level.getMaxY()), SessionManager.getCurrentEditorMode().getCursor());
+        assertEquals(new EditorCursorState(maxX, maxY), SessionManager.getCurrentEditorMode().getCursor(),
+                "Authoring reaches the real map edges independently of native camera-origin limits");
     }
 
     @Test
@@ -406,7 +495,7 @@ class TestEditorToggleIntegration {
         var source = original.getLevelManager().getCurrentLevel();
         var input = inputFor(engine);
         press(engine, input, GLFW_KEY_LEFT_SHIFT, GLFW_KEY_TAB);
-        var document = engine.getEditorProjectWorkspace().document();
+        var authored = engine.getLevelEditorController().currentLevel();
         assertEquals(new EditorCursorState(125, 125), engine.getLevelEditorController().worldCursor());
         press(engine, input, GLFW_KEY_RIGHT, GLFW_KEY_DOWN);
         assertEquals(new EditorCursorState(128, 128), engine.getLevelEditorController().worldCursor());
@@ -415,7 +504,7 @@ class TestEditorToggleIntegration {
         engine.getLevelEditorController().setWorldCursor(new EditorCursorState(253, 253));
         press(engine, input, GLFW_KEY_RIGHT, GLFW_KEY_DOWN);
         press(engine, input, GLFW_KEY_SPACE);
-        assertEquals(1, document.level().getMap().getValue(0, 2, 2) & 0xFF);
+        assertEquals(1, authored.getMap().getValue(0, 2, 2) & 0xFF);
         assertEquals(0, source.getMap().getValue(0, 2, 2) & 0xFF);
         press(engine, input, GLFW_KEY_LEFT_SHIFT, GLFW_KEY_TAB);
         assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
@@ -425,8 +514,8 @@ class TestEditorToggleIntegration {
         assertEquals(GameMode.EDITOR, engine.getCurrentGameMode());
         press(engine, input, GLFW_KEY_F5);
         assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
-        assertEquals(document.metadata().startX(), player(SessionManager.getCurrentGameplayMode()).getCentreX());
-        assertEquals(document.metadata().startY(), player(SessionManager.getCurrentGameplayMode()).getCentreY());
+        assertEquals(nativeStart()[0], player(SessionManager.getCurrentGameplayMode()).getCentreX());
+        assertEquals(nativeStart()[1], player(SessionManager.getCurrentGameplayMode()).getCentreY());
     }
 
     @Test
@@ -488,6 +577,10 @@ class TestEditorToggleIntegration {
         assertTrue(fixtureRom.open(file.getAbsolutePath()), "configured S2 ROM must be readable");
         TestEnvironment.configureRomFixture(fixtureRom);
         GraphicsManager.getInstance().initHeadless();
+    }
+
+    private static int[] nativeStart() {
+        return new Sonic2GameModule().getZoneRegistry().getStartPosition(0, 0);
     }
 
     private static Sonic player(GameplayModeContext mode) {

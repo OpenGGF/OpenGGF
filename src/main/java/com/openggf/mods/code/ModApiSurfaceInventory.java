@@ -8,6 +8,10 @@ import java.util.List;
 /** Canonical annotated-type inventory shared by signature and Javadoc tooling. */
 public final class ModApiSurfaceInventory {
     private static final List<String> TYPE_NAMES = List.of(
+            "com.openggf.level.objects.authored.AuthoredObjectProperties",
+            "com.openggf.level.objects.authored.AuthoredStageplayService",
+            "com.openggf.game.modzone.ModLevelSettings",
+            "com.openggf.game.modzone.ModLevelSettingsProvider",
             "com.openggf.stageplay.StageplayDocument",
             "com.openggf.stageplay.StageplayDialogue",
             "com.openggf.stageplay.StageplayTimeline",
@@ -121,6 +125,8 @@ public final class ModApiSurfaceInventory {
             "com.openggf.mods.code.RewindableZoneEvents",
             // Optional creator presentation helpers; static utilities need explicit roots.
             "com.openggf.mods.ui.CompactFont",
+            "com.openggf.mods.ui.NameFont",
+            "com.openggf.mods.run.CharacterLooks",
             "com.openggf.mods.ui.BitmapFont",
             "com.openggf.mods.ui.AtlasFont",
             "com.openggf.mods.ui.TextLayout",
@@ -135,6 +141,7 @@ public final class ModApiSurfaceInventory {
             "com.openggf.net.client.DirectJoinAddress",
             "com.openggf.net.client.DirectRoomRegistration",
             "com.openggf.net.client.GhostStreamPublisher",
+            "com.openggf.net.client.LobbyPosePublisher",
             "com.openggf.net.client.MasterClient",
             "com.openggf.net.client.RaceClient",
             "com.openggf.net.client.RaceConnection",
@@ -156,11 +163,13 @@ public final class ModApiSurfaceInventory {
             "com.openggf.net.hub.TrackValidationProfileSource",
             "com.openggf.net.hub.ViolationSink",
             "com.openggf.net.identity.PlayerIdentity",
+            "com.openggf.net.identity.DisplayNames",
             "com.openggf.net.protocol.ControlJsonCodec",
             "com.openggf.net.protocol.ControlMessage",
             "com.openggf.net.protocol.GhostPackets",
             "com.openggf.net.protocol.Protocol",
             "com.openggf.net.protocol.ProtocolViolationException",
+            "com.openggf.net.protocol.ReadyRules",
             // ROM-qualified art recipes and optional scene utilities.
             "com.openggf.mods.scene.art.StockSceneArt",
             "com.openggf.mods.scene.art.PaletteAssembly",

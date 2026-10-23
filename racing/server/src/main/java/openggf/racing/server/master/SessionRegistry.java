@@ -143,7 +143,11 @@ public final class SessionRegistry {
     }
 
     public int totalPages(String gameFilterOrNull) {
-        int count = list(gameFilterOrNull).size();
+        return totalPagesForCount(list(gameFilterOrNull).size());
+    }
+
+    int totalPagesForCount(int count) {
+        if (count < 0) throw new IllegalArgumentException("negative room count");
         return count == 0 ? 0
                 : (count + config.browserPageSize() - 1) / config.browserPageSize();
     }

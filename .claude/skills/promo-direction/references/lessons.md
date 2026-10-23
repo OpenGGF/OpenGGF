@@ -32,7 +32,28 @@ may need stable speech panels, longer reactions and intentional silence.
 | Sitar Hero edit-v1 | A 1.5 s silent count-in | Dead air removed. |
 | Starpost Valley first cuts | 800×448, uniform crossfades, a caption on nearly every shot | Larger cards, cinema crops, the diagonal gallery and a slower bed. |
 | Chaos Mode revision 3 | "retain a coherent HCZ soundtrack…; do not fade into the ghost source's DEZ music… omit minigames and related challenge/chat spoilers" | One bed throughout, curated effects and no spoilers. |
+| Emerald Remix rough cut (coached Sol draft, 2026-10-22, 41 s) | "it's use of palettes with the text is horrible, particularly around the drop shadow" | Keep the ROM glyph's own colours, and sample the shadow from the native card. Effects go in whole glyph pixels, with no invented outline. `BitmapFont` now enforces the grid. |
+| Same draft | "the video is just very... boring... very lazy with long stretches of level showcased without any accompaniment" (14 s of bare Clover Valley) | Round 4 answered with a filler caption every four beats and a small static tile panel. User: "minimal effort has been put in to achieve the goals". Accompany with the footage's own events, then counters and layout changes, and cut long takes down. Captions are at most one per chapter. Give the mod's idea a memorable beat. `check` ignores captions for bare stretches and flags caption density. |
+| Time Attack A/B film A (Opus, 2026-10-23, 81.8 s; preferred) | "the audio has issues. it's way louder than the SFX. it's missing its PCM. there's a ring sound halfway through but it's stuck on the right channel"; then "in the split screen… he's off screen for Sonic 1", "Some of the sound effects early on are off-timing", "Sometimes jump is used as a sound effect which is confusing", "when the different language names come in, they're hard to see" | The bed was rendered again with `FmSfxRenderTool --paced`, which enables the S3K DAC; the default render had none. Bed at 0.75 with stingers ×2.2. The ring alternates `$33`/`$34`. Ticks land on the frames where the glyphs appear. Jump sounds play only on real take-offs. The S1 pane is padded and centred on Sonic. Callouts are 4× white with a colour bar and enter once the line-up settles. `check` now flags buried and one-sided stingers. |
+| Time Attack A/B film A, later review | "sometimes the text and display used e.g 'no more lives go again' is exactly the same as the hud style. So I don't know if the promo is talking to me, or the game displays that text in normal play." | Every editorial caption, header, counter and the end card moved to Fira Sans Extra Condensed Black Italic with a navy stroke and hard shadow; labels became pills in each player's colour. Player names and captured UI kept the engine's name font. |
+| Time Attack A/B film B (Sol, 2026-10-23, 58.6 s) | Coach review, not user words: the tagline was wedged into the HUD corner beside the room panel, nameplates and disclosure; close crops sliced `TIME` and the room panel on most race shots; the title slab left HUD fragments showing; a full-screen lobby menu was held; "the lobby is a level" was never said; no-lives retry, the vote and room size were dropped as "inventory"; two stingers sat 11 and 17 dB under the bed; its viewer pass was a muted browser playback | Native UI counts as type; crop at UI boundaries; name the relationship being shown; show every differentiator in motion; measure sound and say it was not heard |
 | Second Strike reels (flat reference) | DejaVu `drawtext` at `x=40`, a solid pad, hard concat, a text-only end card | Use this as the counter-example when choosing type and composition. |
+
+## Multiplayer Time Attack A/B (2026-10-23)
+
+Opus and Sol each made a promo from the same brief, without coaching. The user preferred
+Opus's film, "A is clearly better", for its story: one player names themselves, picks a
+colour, warms up in the lobby, dies, comes back in a measured 3.77 s, loses a photo finish
+and votes for the next track. Every difference from the stock game had a moving proof. Its
+type was the engine's own name font. The capacity test was labelled as a test. Sol's film
+was calmer, with strong race footage, but cluttered its opening with editorial type on top
+of native UI and left out the features that made the mode different.
+
+Both films failed on sound in ways neither agent noticed, because neither could listen.
+Opus's bed came from a render path that never enabled the S3K DAC, both buried their
+stingers under the music, and one ring sound played from the right speaker only.
+`FmSfxRenderTool --paced` and the stinger checks in `promo_kit.py check` came out of this
+review. Both productions are still local task directories and are not yet in this archive.
 
 ## Stageplay dialogue revision
 
@@ -126,7 +147,27 @@ within their scope and do not establish creative acceptance.
 For a conceptual tutorial, connect each directing choice to its visible result.
 Use a coherent sample, show the actual settings and allow time to read them while
 the performance continues. Label editorial notes and track diagrams honestly; do
-not imitate controls the editor does not have. Finish with the complete scene so
-viewers can judge the relationships and pacing without instructional interruptions.
-Keep an editable sample and a direct path from the lesson to opening it. A first
-lesson does not need every available ability or a second unrelated showcase.
+not imitate controls the editor does not have. Let viewers judge the complete scene
+without instructional interruptions; its position in the film should serve the
+lesson. Keep an editable sample and a direct path from the lesson to opening it.
+A first lesson does not need every available ability or a second unrelated showcase.
+
+An Opus 5.5 aesthetic review found that revision seven repeated the same short
+action under seven lessons before showing the story, used small static notes, and
+stepped up roughly 7–8 LU at the story boundary. The approved revision-eight
+direction leads with the short, follows it with one continuous annotated pass,
+and changes one actual setting for a measured comparison. Enlarge the game and
+use one readable note per beat. Label any instructional freeze; do not silently
+retime native movement. A new moving tail can carry the invitation without
+replaying the climax. This is a response to this production, not a mandatory
+sequence for every tutorial.
+
+Performance details matter: acknowledge a character ability when its omission
+would undermine the premise (Tails can fly), give a listener a visible native
+reaction, and synchronize a count with actual takeoff rather than its authored
+command alone. Check dialogue against the whole jump arc and supporting surfaces;
+blindly moving every panel into the top band can obscure an apex. Use one music
+owner with genuine SFX stems and measure the encoded sections, since a whole-film
+loudness average can conceal a jump in level. The aesthetic review used sampled
+frames and source/audio measurements, not full-motion playback or physical hearing;
+its proposals still require those applicable checks and user creative acceptance.

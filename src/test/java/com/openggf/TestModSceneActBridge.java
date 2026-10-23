@@ -110,12 +110,13 @@ class TestModSceneActBridge {
                 new SceneServices(null, null, temp, null, () -> {}, () -> {}), 400, 224);
         return new ModSceneActBridge(loop, EngineServices.current(), (root, module, zone, launch) ->
                 GameplayTeamBootstrapContext.registryOnly().openAndLoad(root, module, EngineServices.current(),
-                        SonicConfigurationService.getInstance(), zone, launch.act(), mode -> {
-                            loop.setGameplayMode(mode); mode.setRewindBoundaryReporter(boundaries::add);
-                        }, launch));
+                        SonicConfigurationService.getInstance(), zone, launch.act(), loop::setGameplayMode, launch));
     }
     @Test void nativeStartOverrideTeamRingsAudioAndRewindBoundariesRoundTrip() throws Exception {
         Probe probe = new Probe(); var bridge = openProbe(probe);
+        // Observe through the loop that installs each history's reporter; a
+        // raw context reporter is retired when mode entry installs live history.
+        loop.installLiveRewindBoundaryReporter(boundaries::add);
         probe.context.startAct(launch()); bridge.admitLaunch();
         assertTrue(loop.modSceneHost.isSuspended()); bridge.updateScene(input); assertEquals(0, probe.updates);
         drainFade();
@@ -147,6 +148,49 @@ class TestModSceneActBridge {
         assertFalse(bridge.consumeExitOrHold(input)); assertEquals(1, probe.resumes);
         assertTrue(loop.modSceneHost.isOpen()); assertFalse(loop.modSceneHost.isSuspended());
         bridge.reset();
+    }
+    @Test void sceneReturnRetiresOwnedLiveHistoryWithoutAReporterOverride() {
+        var config = SonicConfigurationService.getInstance();
+        boolean oldEnabled = config.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED);
+        config.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+        try {
+            Probe probe = new Probe(); var bridge = openProbe(probe);
+            probe.context.startAct(launch()); bridge.admitLaunch(); drainFade();
+            var runtime = loop.resolveGameplayModeContext();
+            assertSame(runtime, SessionManager.getCurrentGameplayMode());
+            for (int n = 0; n < 8; n++) {
+                var current = runtime.getRewindController();
+                if (current != null && current.currentFrame() >= 2) break;
+                loop.step();
+            }
+            var controller = runtime.getRewindController();
+            assertNotNull(controller, "the act installs history on its owned runtime");
+            assertTrue(controller.currentFrame() >= 2, "real native ticks enter that history");
+            var playback = runtime.getPlaybackController();
+            assertNotNull(playback);
+            int frame = controller.currentFrame();
+
+            runtime.getLevelManager().requestActExit(ActExit.LEFT, Map.of("door", "inn"));
+            assertTrue(bridge.consumeExitOrHold(input)); drainFade();
+
+            assertEquals(GameMode.MOD_SCENE, loop.getCurrentGameMode());
+            assertEquals(1, probe.resumes);
+            assertSame(runtime, loop.resolveGameplayModeContext(), "scene return retains its owned session");
+            assertSame(runtime, SessionManager.getCurrentGameplayMode());
+            assertNull(runtime.getRewindController(), "the production mode-exit reporter retires history");
+            assertNull(runtime.getPlaybackController());
+            int worldFrame = runtime.getLevelManager().getFrameCounter();
+            int rings = runtime.getLevelManager().getLevelGamestate().getRings();
+            playback.stepForwardOnce();
+            controller.seekTo(0);
+            assertFalse(controller.stepBackward());
+            assertEquals(frame, controller.currentFrame(), "retained handles cannot replay retired act history");
+            assertEquals(worldFrame, runtime.getLevelManager().getFrameCounter());
+            assertEquals(rings, runtime.getLevelManager().getLevelGamestate().getRings());
+            bridge.reset();
+        } finally {
+            config.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, oldEnabled);
+        }
     }
     @Test void signedAndUnsignedNativeCentreWordsSurviveLaunch() {
         Probe probe = new Probe(); var bridge = openProbe(probe);

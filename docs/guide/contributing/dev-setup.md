@@ -7,9 +7,11 @@ This page gets you from a fresh clone to running tests.
 | Requirement | Version | Notes |
 |-------------|---------|-------|
 | Java (JDK) | 25 | [Adoptium](https://adoptium.net/) recommended. Run `java -version` to check. |
-| Maven | 3.8+ | Bundled with most IDEs. Run `mvn -version` to check. |
-| GPU | OpenGL 4.1+ | Required for the rendering pipeline. Not needed for headless tests. |
+| Maven | 3.8+ | Use `python3 tools/testing/maven_queue.py -v` to check Maven and its selected JDK. |
+| GPU | OpenGL 4.1+ | Required for rendering, including offscreen tests. Logic-only headless tests do not need a GL context. |
 | ROM files | See below | Required for ROM-dependent tests and running the engine. |
+
+For Linux offscreen rendering, install the [Mesa/EGL prerequisites](headless-testing.md#offscreen-rendering-prerequisites).
 
 An IDE is recommended but not required. The project is developed in IntelliJ IDEA and
 includes IntelliJ project files. Any IDE with Maven support will work.
@@ -17,10 +19,10 @@ includes IntelliJ project files. Any IDE with Maven support will work.
 ## Clone and Build
 
 ```bash
-git clone https://github.com/OpenGGF/OpenGGF.git
+git clone --branch develop https://github.com/OpenGGF/OpenGGF.git
 cd OpenGGF
 tools/testing/install-hooks.sh
-mvn package
+python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package
 ```
 
 The pinned Sonic Retro disassemblies are optional development references. The engine,
@@ -69,15 +71,16 @@ Place ROM files in the project root directory (next to `pom.xml`):
 
 ROM files are gitignored. Test classes annotated `@RequiresRom` are disabled (reported as
 skipped) when their ROM cannot be found, so you can build and run most tests without any
-ROMs. Two classes are stricter: `TestS2CompleteRunStateDecoder` and
-`TestS3kCompleteRunStateDecoder` throw unless the matching property is set explicitly.
+ROMs. This includes `TestS2CompleteRunStateDecoder` and
+`TestS3kCompleteRunStateDecoder`, which use assumptions when their ROM is absent.
+Explicit external-reference lanes have stricter prerequisites; see [Testing](testing.md).
 
 ROM paths are passed per game as system properties -- note the S3K property is
 `s3k.rom.path`, not `sonic3k.rom.path`:
 
 ```bash
-mvn -Dmse=off test -Dsonic1.rom.path=/abs/path/s1.gen \
-    -Dsonic2.rom.path=/abs/path/s2.gen -Ds3k.rom.path=/abs/path/s3k.gen
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestSonic3kLevelLoading \
+    -Ds3k.rom.path=/abs/path/s3k.gen test
 ```
 
 Use **absolute** paths. From a git worktree (or any directory that is not the repository
@@ -118,26 +121,33 @@ arrow keys and press Space. If a ROM file is missing, you will see an error mess
 ## Run Tests
 
 ```bash
-# Run all tests
-mvn test
+# Inspect the change-based smoke selection against your pinned integration base.
+python3 tools/testing/run_categories.py --base <pre-task-commit>
+python3 tools/testing/run_categories.py --base <pre-task-commit> --preflight
+python3 tools/testing/run_categories.py --base <pre-task-commit> --run
 
-# Run a single test class
-mvn test -Dtest=TestCollisionLogic
-
-# Run a single test method
-mvn test -Dtest=TestCollisionLogic#testSlopeAngle
+# Run a single test class or method.
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestCollisionLogic test
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestCollisionLogic#testCollisionLogic' test
 ```
 
-Tests run across 4 JVM forks by default (`surefire.forkCount` in `pom.xml`; the CI profile
-drops to 1). Override with `-Dsurefire.forkCount=N`. ROM-dependent tests are gated as
-described under "ROM files" above.
+Use focused checks for bounded changes and the change-based smoke selection for
+shared or uncertain changes. Routine validation never selects the release-only
+`-Pfull-suite`. Inspect executed tests and skips, then acknowledge category-runner
+results with `python3 tools/testing/run_categories.py --acknowledge <run-id>`.
+See [Testing](testing.md) and the [testing tools](../../../tools/testing/README.md)
+for selection, queue admission and diagnostics.
+
+Tests use one reused 3 GiB JVM by default. The optional `test-concurrent` profile
+uses two forks; tests remain serial within each fork. ROM-dependent tests are
+gated as described under "ROM files" above. Maven's JDK must be Java 25 exactly.
 
 ## Project Structure
 
 ```
 OpenGGF/
   pom.xml                    -- Maven build file
-  config.yaml                -- Runtime configuration (gitignored if custom)
+  config.yaml                -- Optional runtime configuration (gitignored)
   src/
     main/java/com/openggf/   -- Engine source code
     main/resources/           -- Bundled default config, shaders
@@ -164,7 +174,7 @@ profile:
 ```bash
 export JAVA_HOME=/path/to/graalvm-25
 export PATH="$JAVA_HOME/bin:$PATH"
-mvn -Dmse=off -Pnative -DskipTests package -B
+python3 tools/testing/maven_queue.py -Dmse=off -Pnative -DskipTests package -B
 ```
 
 On macOS Apple Silicon this produces `target/OpenGGF.app` as well as the direct

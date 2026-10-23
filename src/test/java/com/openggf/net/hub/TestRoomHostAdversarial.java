@@ -186,10 +186,10 @@ class TestRoomHostAdversarial {
     private static void apply(Harness harness, Peer bad, Peer witness, Attack attack) {
         String token = bad.join == null ? "unadmitted" : bad.join.sessionToken();
         switch (attack) {
-            case MALFORMED -> harness.text(bad, "{\"v\":2,\"token\":null,\"msg\":null}");
+            case MALFORMED -> harness.text(bad, "{\"v\":" + Protocol.VERSION + ",\"token\":null,\"msg\":null}");
             case TRAILING_ROOT -> harness.text(bad, CODEC.encode(token, new ControlMessage.Ping(1)) + " {}");
             case WRAPPED_VERSION -> harness.text(bad, CODEC.encode(token, new ControlMessage.Ping(1))
-                    .replace("\"v\":2", "\"v\":4294967298"));
+                    .replace("\"v\":" + Protocol.VERSION, "\"v\":" + ((1L << 32) + Protocol.VERSION)));
             case PROOF_REPLAY -> harness.control(bad, bad.proof == null
                     ? new ControlMessage.AuthProof("AA==") : bad.proof);
             case HELLO_REPLAY -> harness.control(bad, bad.handshake.hello());
@@ -236,6 +236,12 @@ class TestRoomHostAdversarial {
         }
         assertEquals(256, harness.room.playerCount());
         assertEquals(256, harness.room.players().stream().map(ControlMessage.PlayerInfo::fingerprint).distinct().count());
+        assertTrue(peers.stream().allMatch(peer -> peer.snapshots == 1),
+                "each connection gets only its initial membership snapshot");
+        assertEquals(256L * 255 / 2, peers.stream().mapToLong(peer -> peer.upserts).sum(),
+                "each admission sends one upsert to each incumbent");
+        assertTrue(peers.stream().mapToLong(peer -> peer.textBytes).sum() < 32L * 1024 * 1024,
+                "bounded fixture admission traffic stays below 32 MiB without cubic snapshot fanout");
         Peer overflow = harness.connect(host, "Overflow");
         harness.hello(overflow);
         harness.prove(overflow);
@@ -261,6 +267,144 @@ class TestRoomHostAdversarial {
         assertEquals(256, ((ControlMessage.RoomState) CODEC.decodeRoom(roster).message()).players().size());
         harness.room.close("capacity complete");
         assertEquals(0, harness.room.playerCount());
+    }
+
+    @Test
+    void validAttemptBurstsRetainCanonicalDecodedWorkCap() throws Exception {
+        assertValidAttemptBurstIsDelivered(3, 15, 12, true);
+    }
+
+    @Test
+    void validAttemptBurstsAcrossSendersSplitAtAggregateEntryCap() throws Exception {
+        assertValidAttemptBurstIsDelivered(8, 32, 1, true);
+    }
+
+    @Test
+    void formerly4094ByteBurstCompressesWithRelayEnvelopeHeadroom() throws Exception {
+        // Canonical bytes remain 4,094, while packet-local motion deltas reduce the wire packet.
+        assertValidAttemptBurstIsDelivered(new int[]{17, 16, 16},
+                entry -> entry < 24 ? 11 : 10, 1769, false);
+    }
+
+    private void assertValidAttemptBurstIsDelivered(int senderCount, int attempts,
+                                                   int framesPerAttempt,
+                                                   boolean expectSplit) throws Exception {
+        int[] attemptsPerSender = new int[senderCount];
+        java.util.Arrays.fill(attemptsPerSender, attempts);
+        assertValidAttemptBurstIsDelivered(attemptsPerSender, entry -> framesPerAttempt,
+                0, expectSplit);
+    }
+
+    private void assertValidAttemptBurstIsDelivered(int[] attemptsPerSender,
+                                                   java.util.function.IntUnaryOperator framesPerEntry,
+                                                   int expectedAggregateBytes,
+                                                   boolean expectSplit) throws Exception {
+        int senderCount = attemptsPerSender.length;
+        PlayerIdentity host = PlayerIdentity.loadOrCreate(dir.resolve("burst-host"));
+        Harness harness = new Harness(host, senderCount + 1, false);
+        Peer witness = harness.join(PlayerIdentity.loadOrCreate(dir.resolve("burst-witness")), "Witness");
+        witness.capturedBinary = new ArrayList<>();
+        witness.wrapRelayBinary = true;
+        List<Peer> senders = new ArrayList<>();
+        for (int index = 0; index < senderCount; index++) {
+            senders.add(harness.join(PlayerIdentity.loadOrCreate(dir.resolve("burst-" + index)),
+                    "Sender-" + index));
+        }
+        assertTrue(harness.room.requestStartRound(CONFIG));
+        harness.advance(HostRoundEngine.COUNTDOWN_MILLIS);
+        // Seed the witness too: its pending data must never appear in its own aggregates.
+        streamAttempt(harness, witness, 1, 1);
+        List<GhostPackets.AggregateEntry> expected = new ArrayList<>();
+        int entryIndex = 0;
+        for (int senderIndex = 0; senderIndex < senderCount; senderIndex++) {
+            Peer sender = senders.get(senderIndex);
+            int inboundMessages = 2; // Admission hello and proof.
+            int frames = 0;
+            for (int attempt = 1; attempt <= attemptsPerSender[senderIndex]; attempt++) {
+                int count = framesPerEntry.applyAsInt(entryIndex++);
+                inboundMessages += 2 + (count + 2) / 3;
+                frames += count;
+                byte[] data = streamAttempt(harness, sender, attempt, count);
+                expected.add(new GhostPackets.AggregateEntry(sender.join.playerSlot(),
+                        attempt, 0, count, data));
+            }
+            assertTrue(inboundMessages <= com.openggf.net.host.ConnectionHygiene.MESSAGE_RATE_BURST,
+                    "the burst plus admission fits the real transport's inbound message budget");
+            assertTrue(frames <= GhostStreamValidator.RATE_BURST_FRAMES);
+        }
+        if (expectedAggregateBytes > 0) {
+            assertEquals(expectedAggregateBytes, GhostPackets.encodeAggregate(0, expected).length,
+                    "packet-local compression must retain deterministic relay headroom");
+        }
+        // All starts/resets and frames are valid at the same server clock, before one tick.
+        assertDoesNotThrow(harness.room::tick);
+        if (expectSplit) {
+            assertTrue(witness.capturedBinary.size() > 1, "entry cap requires bounded chunks");
+        } else {
+            assertEquals(1, witness.capturedBinary.size(), "compressed aggregate should fit one packet");
+        }
+        int firstTick = assertBurstEntries(witness.capturedBinary, expected);
+        assertEquals(senderCount + 1, harness.room.playerCount());
+        assertTrue(senders.stream().noneMatch(peer -> peer.closed));
+        assertFalse(witness.closed);
+
+        witness.capturedBinary.clear();
+        Peer sender = senders.getFirst();
+        int nextAttempt = attemptsPerSender[0] + 1;
+        byte[] next = streamAttempt(harness, sender, nextAttempt, 3);
+        assertDoesNotThrow(harness.room::tick);
+        assertEquals(firstTick + 1, assertBurstEntries(witness.capturedBinary,
+                List.of(new GhostPackets.AggregateEntry(sender.join.playerSlot(),
+                        nextAttempt, 0, 3, next))));
+        witness.capturedBinary.clear();
+        harness.room.tick();
+        assertTrue(witness.capturedBinary.isEmpty(), "delivered entries were drained exactly once");
+        harness.room.close("burst complete");
+    }
+
+    private static byte[] streamAttempt(Harness harness, Peer peer, int attempt, int count) {
+        harness.control(peer, new ControlMessage.AttemptStart(attempt));
+        byte[] data = new byte[count * GhostFrameCodec.BYTES];
+        for (int frame = 0; frame < count; frame++) {
+            GhostFrameCodec.encode(new GhostFrame(100 + frame, 100, 1, false, false,
+                    false, 0, false), data, frame * GhostFrameCodec.BYTES);
+        }
+        for (int frame = 0; frame < count; frame += GhostPackets.MAX_UPSTREAM_FRAMES_PER_PACKET) {
+            int end = Math.min(count, frame + GhostPackets.MAX_UPSTREAM_FRAMES_PER_PACKET);
+            harness.room.onBinary(peer, GhostPackets.encodeFrames(attempt, frame,
+                    java.util.Arrays.copyOfRange(data, frame * GhostFrameCodec.BYTES,
+                            end * GhostFrameCodec.BYTES)));
+        }
+        harness.control(peer, new ControlMessage.AttemptReset(attempt));
+        return data;
+    }
+
+    private static int assertBurstEntries(List<byte[]> packets,
+                                         List<GhostPackets.AggregateEntry> expected) {
+        List<GhostPackets.AggregateEntry> actual = new ArrayList<>();
+        Integer tick = null;
+        for (byte[] packet : packets) {
+            assertTrue(packet.length <= Protocol.MAX_BINARY_BYTES - 3,
+                    "every aggregate leaves room for the relay guest envelope");
+            assertDoesNotThrow(() -> GhostPackets.encodeRelayGuestBinary(7, packet));
+            GhostPackets.Aggregate aggregate = GhostPackets.decodeAggregate(packet);
+            assertTrue(aggregate.entries().size() <= 255);
+            if (tick == null) tick = aggregate.hubTick();
+            assertEquals(tick.intValue(), aggregate.hubTick(), "all chunks retain the same hub tick");
+            actual.addAll(aggregate.entries());
+        }
+        assertEquals(expected.size(), actual.size());
+        for (int index = 0; index < expected.size(); index++) {
+            GhostPackets.AggregateEntry left = expected.get(index);
+            GhostPackets.AggregateEntry right = actual.get(index);
+            assertEquals(left.playerSlot(), right.playerSlot(), "sender order at " + index);
+            assertEquals(left.attemptId(), right.attemptId(), "attempt order at " + index);
+            assertEquals(left.startFrameIndex(), right.startFrameIndex());
+            assertEquals(left.frameCount(), right.frameCount());
+            assertArrayEquals(left.frameData(), right.frameData());
+        }
+        assertNotNull(tick);
+        return tick;
     }
 
     private static final class Harness {
@@ -337,18 +481,30 @@ class TestRoomHostAdversarial {
         boolean closed;
         boolean disconnectDelivered;
         int binaryCount;
+        List<byte[]> capturedBinary;
+        boolean wrapRelayBinary;
+        long textBytes;
+        int snapshots;
+        int upserts;
 
         Peer(ClientHandshake handshake) { this.handshake = handshake; }
 
         @Override public void sendText(String text) {
+            textBytes += text.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
             ControlMessage message = CODEC.decodeRoom(text).message();
+            if (message instanceof ControlMessage.RoomState) snapshots++;
+            if (message instanceof ControlMessage.PlayerUpsert) upserts++;
             if (message instanceof ControlMessage.Welcome value) welcome = value;
             if (message instanceof ControlMessage.JoinAccepted value) lastAdmission = value;
             if (messages.size() == 8) messages.removeFirst();
             messages.addLast(message);
         }
 
-        @Override public void sendBinary(byte[] bytes) { binaryCount++; }
+        @Override public void sendBinary(byte[] bytes) {
+            if (wrapRelayBinary) GhostPackets.encodeRelayGuestBinary(7, bytes);
+            binaryCount++;
+            if (capturedBinary != null) capturedBinary.add(bytes.clone());
+        }
         @Override public void close(String reason) { closed = true; }
         @Override public String remoteHost() { return "model-peer"; }
         @Override public String authenticationBinding() { return AuthenticationTranscript.LOCAL_PLAINTEXT; }

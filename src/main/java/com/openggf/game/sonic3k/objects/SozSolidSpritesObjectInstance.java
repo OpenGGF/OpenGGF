@@ -14,8 +14,8 @@ public final class SozSolidSpritesObjectInstance extends AbstractObjectInstance
     @Override public void update(int vIntRunCount, PlayableEntity player) { checkpointAll(); }
     @Override public SolidExecutionMode solidExecutionMode() { return SolidExecutionMode.MANUAL_CHECKPOINT; }
     @Override public SolidObjectParams getSolidParams() {
-        return spawn.subtype() == 0 ? new SolidObjectParams(0x1B, 0x18, 0x19)
-                : new SolidObjectParams(0x2B, 8, 9);
+        return spawn.subtype() == 0 ? SolidObjectParams.of(0x1B, 0x18, 0x19)
+                : SolidObjectParams.of(0x2B, 8, 9);
     }
     @Override public boolean usesInstanceSolidStateLatchKey() { return true; }
     @Override public int romObjectCodePointerHighWord() { return 4; }

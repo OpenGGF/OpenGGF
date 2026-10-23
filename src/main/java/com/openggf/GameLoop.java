@@ -277,8 +277,7 @@ public class GameLoop {
 
     private PostTitleCardDestination postTitleCardDestination = PostTitleCardDestination.LEVEL;
     private LevelFrameResult titleReleaseResult = LevelFrameResult.GAMEPLAY_FRAME;
-    private final LevelIterationAdmissionController levelIterationAdmission =
-            new LevelIterationAdmissionController();
+    private final LevelIterationAdmissionController levelIterationAdmission;
 
     // Deferred bonus stage setup — applied when title card exits with BONUS_STAGE destination
     private BonusStageProvider deferredBonusProvider;
@@ -294,7 +293,7 @@ public class GameLoop {
 
     // Optional trace camera focus controller — ticked at the top of every stepInternal()
     private TraceCameraFocusController traceCameraFocusController;
-    private GameplayModeContext liveRewindBoundaryReporterContext;
+    private final GameLoopRewindBoundaryReporter liveRewindBoundaryReporter;
     private GameplayModeContext livePlaybackInputPublisherContext;
     private final Runnable scheduledPlaybackInputPublisher = this::applyScheduledPlaybackInputImmediately;
 
@@ -328,10 +327,11 @@ public class GameLoop {
         this.playbackDebugManager = this.engineServices.playbackDebug();
         this.moduleResolutionService = this.engineServices.moduleResolutionService();
         this.liveRewindManager = new LiveRewindManager(
-                configService,
-                () -> currentGameMode,
-                this::getActiveSpecialStageProvider,
-                LevelRewindFrameRecorder::activeScriptedRewind);
+                configService, audioManager, () -> currentGameMode);
+        this.liveRewindBoundaryReporter = new GameLoopRewindBoundaryReporter(
+                liveRewindManager, () -> TraceSessionLauncher.active() == null);
+        this.levelIterationAdmission = new LevelIterationAdmissionController(context ->
+                liveRewindBoundaryReporter.initialAssemblyCompleted(context, resolveGameplayModeContext(), currentGameMode));
         this.userRecordingSessionLauncher = new UserRecordingSessionLauncher(this);
         this.userRecordingControls = new UserRecordingRuntimeControls(
                 new LiveUserRecordingRuntime(configService, userRecordingSessionLauncher, playbackDebugManager,
@@ -383,6 +383,9 @@ public class GameLoop {
 
     void refreshRuntimeBindings() {
         GameplayModeContext currentGameplayMode = resolveGameplayModeContext();
+        liveRewindManager.bindOwner(TraceSessionLauncher.active() == null
+                        ? (suspension.parked() ? suspension.parkedOwner() : currentGameplayMode) : null,
+                suspension.parked(), currentGameMode);
         if (currentGameplayMode == null || !currentGameplayMode.isGameplayRuntimeReady()) {
             bindScheduledPlaybackInputPublisher(null);
             // Gameplay mode has been torn down (e.g. trace teardown returning to
@@ -399,7 +402,7 @@ public class GameLoop {
             this.gameState = null;
             this.fadeManager = null;
             this.waterSystem = null;
-            this.liveRewindBoundaryReporterContext = null;
+            liveRewindBoundaryReporter.clear();
             engineServices.graphics().clearRuntimeManagedReferences();
             return;
         }
@@ -416,9 +419,7 @@ public class GameLoop {
         this.waterSystem = currentGameplayMode.getWaterSystem();
         bindScheduledPlaybackInputPublisher(currentGameplayMode);
         engineServices.graphics().bindRuntimeManagedReferences(this.camera, this.fadeManager);
-        if (currentGameplayMode != liveRewindBoundaryReporterContext) {
-            installLiveRewindBoundaryReporter();
-        }
+        liveRewindBoundaryReporter.refresh(currentGameplayMode);
     }
 
     private void bindScheduledPlaybackInputPublisher(GameplayModeContext context) {
@@ -653,20 +654,11 @@ public class GameLoop {
     }
 
     void installLiveRewindBoundaryReporter() {
-        installLiveRewindBoundaryReporter(liveRewindManager::markBoundary);
+        liveRewindBoundaryReporter.install(resolveGameplayModeContext());
     }
 
     void installLiveRewindBoundaryReporter(Consumer<RewindBoundary> liveBoundaryConsumer) {
-        GameplayModeContext context = resolveGameplayModeContext();
-        if (context == null) {
-            return;
-        }
-        context.setRewindBoundaryReporter(boundary -> {
-            if (TraceSessionLauncher.active() == null) {
-                liveBoundaryConsumer.accept(boundary);
-            }
-        });
-        liveRewindBoundaryReporterContext = context;
+        liveRewindBoundaryReporter.install(resolveGameplayModeContext(), liveBoundaryConsumer);
     }
 
     GameMode changeGameModeForBoundary(GameMode nextMode) {
@@ -704,6 +696,8 @@ public class GameLoop {
                 context.markRewindBoundary(RewindBoundary.MODE_EXIT_TO_NON_REWINDABLE);
             }
         }
+        liveRewindManager.bindOwner(TraceSessionLauncher.active() == null ? context : null, false, newMode);
+        installLiveRewindBoundaryReporter();
         if (newMode == GameMode.SPECIAL_STAGE && isActiveSpecialStageProviderRewindable()) {
             context.markRewindBoundary(RewindBoundary.MODE_ENTER_REWINDABLE);
         }
@@ -1141,6 +1135,7 @@ public class GameLoop {
                 && com.openggf.game.mode.ControlledFrameRuntime.controller(lifecycleContext) != null) {
             requireInputHandler();
             audioUpdatedThisStep = false;
+            if (RewindReleaseRetryCoordinator.consumePendingFrame(liveRewindManager, inputHandler)) return;
             ControlledLevelIteration.step(lifecycleContext, inputHandler, escapeToMasterTitleController,
                     userRecordingControls, liveRewindManager, playbackDebugManager,
                     new ControlledLevelIteration.HostPause(configService.getInt(SonicConfiguration.PAUSE_KEY),
@@ -1292,7 +1287,7 @@ public class GameLoop {
             inputHandler.update();
             return;
         }
-        boolean overlayOwnsPause = GameLoopPauseInput.handleOverlay(currentGameMode, inputHandler);
+        boolean overlayOwnsPause = GameLoopPauseInput.handleOverlay(currentGameMode, inputHandler) || hostedRuns.ownsStart(currentGameMode);
         var overlay = GameLoopPauseInput.overlay(currentGameMode);
         var titleInputOwner = currentGameMode == GameMode.TITLE_SCREEN ? getTitleScreenProviderLazy() : null;
         boolean titleOwnsEscape = titleInputOwner != null && titleInputOwner.ownsEscapeInput();
@@ -1351,7 +1346,9 @@ public class GameLoop {
             updateNonGameplayAudio(doFrameStep);
         }
 
-        if (!playbackDebugManager.isCurrentGameplayTickSuppressed()) {
+        // Master-title Extras can open a MOD_SCENE before the first gameplay
+        // session. Its menu has no world timers until a run actually loads.
+        if (timerManager != null && !playbackDebugManager.isCurrentGameplayTickSuppressed()) {
             profiler.beginSection("timers");
             timerManager.update();
             profiler.endSection("timers");
@@ -1750,7 +1747,7 @@ public class GameLoop {
             // defeat -> credits, and the S3K seamless cross-act reload).
             if (levelManager.consumeHostReturnRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-                endHostedRun(RunEndReason.ACT_COMPLETED);
+                completeHostedRunAct();
                 levelIterationAdmission.finishPlaybackBoundary(
                         false, playbackDebugManager, userRecordingControls);
                 updateNonGameplayAudio(doFrameStep);
@@ -1758,9 +1755,9 @@ public class GameLoop {
             }
             if (levelManager.consumeNextActRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-                // A host-returning run ends instead of bleeding into the next act.
+                // A host-returning run ends (or retries) instead of bleeding into the next act.
                 if (runPolicy().returnsToHostOnActCompletion()) {
-                    endHostedRun(RunEndReason.ACT_COMPLETED);
+                    completeHostedRunAct();
                 } else {
                     startNextActFade();
                 }
@@ -1771,9 +1768,9 @@ public class GameLoop {
             }
             if (levelManager.consumeNextZoneRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-                // A host-returning run ends instead of bleeding into the next zone.
+                // A host-returning run ends (or retries) instead of bleeding into the next zone.
                 if (runPolicy().returnsToHostOnActCompletion()) {
-                    endHostedRun(RunEndReason.ACT_COMPLETED);
+                    completeHostedRunAct();
                 } else {
                     startNextZoneFade();
                 }
@@ -1793,9 +1790,9 @@ public class GameLoop {
             }
             if (levelManager.consumeCreditsRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-                // A host-returning run ends instead of bleeding into the credits.
+                // A host-returning run ends (or retries) instead of bleeding into the credits.
                 if (runPolicy().returnsToHostOnActCompletion()) {
-                    endHostedRun(RunEndReason.ACT_COMPLETED);
+                    completeHostedRunAct();
                 } else if (GameServices.module().getGameId() == GameId.STANDALONE) {
                     masterTitleExitCoordinator.startStandaloneCompletion();
                 } else {
@@ -1816,9 +1813,7 @@ public class GameLoop {
                 return false;
             }
             if (hostedRuns.consumeRetry()) {
-                RunSpec retrySpec = hostedRuns.spec();
-                levelManager.getCheckpointState().clear();
-                levelManager.getTransitions().requestZoneAndAct(retrySpec.zone(), retrySpec.act());
+                requestHostedRunRetry(false);
                 levelIterationAdmission.finishPlaybackBoundary(
                         false, playbackDebugManager, userRecordingControls);
                 updateNonGameplayAudio(doFrameStep);
@@ -1838,6 +1833,8 @@ public class GameLoop {
         // ending transition, or a pending zone/act fade (ObjB2 transition parity).
         boolean freezeForNonRewindableTransition = isNonRewindableTransitionPending();
         if (!freezeForArtViewer && !freezeForNonRewindableTransition) {
+            GameplayModeContext executedOwner = gameplayMode;
+            GameMode executedMode = currentGameMode;
             beginGameplayAudioFrameForTick();
             // LiveTraceComparator (or any PlaybackFrameObserver) may ask
             // us to skip the gameplay tick on ROM lag frames so the
@@ -1926,7 +1923,7 @@ public class GameLoop {
                 LevelRewindFrameRecorder.record(
                         traceSession,
                         liveRewindManager,
-                        currentGameMode,
+                        executedOwner, executedMode,
                         freezeForNonRewindableTransition,
                         inputHandler,
                         seamlessTransitionCompleted);
@@ -2000,9 +1997,20 @@ public class GameLoop {
     }
 
     /**
-     * Ends a host-returning run on a cross-act seamless request before the admission owner
-     * applies its destination. Mid-act seamless requests remain owned by the ordinary
-     * transition path.
+     * Completes a host-returning run's act on a cross-act seamless request before the admission
+     * owner applies its destination: the run ends or, like the other act-completion sites,
+     * retries. Mid-act seamless requests remain owned by the ordinary transition path.
+     *
+     * <p>Only a deferred request reaches this route. The S3K events that reload in place inside
+     * their own event pass (AIZ1's fire finish, CNZ1, HCZ1, MGZ1 and others once a level is
+     * loaded) never queue one, so their act completes later through the results exit's
+     * host-return request. MHZ1 queues its reload while the act-1 tally is still running, so
+     * the run completes here, a few frames into the tally.
+     *
+     * <p>The request is dropped either way, so its single-use resource handoff is released
+     * rather than left in the session registry holding the outgoing level. Everything else its
+     * zone event armed for the reload (per-zone event handlers, queued art) belongs to the act
+     * that a retry's fresh load replaces, as it does for a retry pressed mid-act.
      */
     private boolean routeHostedRunSeamlessTransitionBeforeApply(
             SeamlessLevelTransitionRequest request, boolean doFrameStep) {
@@ -2011,9 +2019,44 @@ public class GameLoop {
                 run.getRunZone(), run.getRunAct(), request.type(), request.targetZone(), request.targetAct())) {
             return false;
         }
-        endHostedRun(RunEndReason.ACT_COMPLETED);
+        var handoffs = run.seamlessTransitionResourceHandoffs();
+        if (request.resourceHandoffId() != null && !handoffs.hasFailedTransfer(request.resourceHandoffId())) {
+            handoffs.claim(request.resourceHandoffId());
+        }
+        completeHostedRunAct();
         updateNonGameplayAudio(doFrameStep);
         return true;
+    }
+
+    /**
+     * A host-returning run completed its act: it restarts the act as a retry or ends, as
+     * {@link HostedRunController#resolveActCompletion} decides.
+     */
+    private void completeHostedRunAct() {
+        RunEndReason ended = hostedRuns.resolveActCompletion();
+        if (ended == null) {
+            requestHostedRunRetry(true);
+        } else {
+            endHostedRun(ended);
+        }
+    }
+
+    /**
+     * Reloads the hosted run's act from its start with star posts cleared (a retry). A
+     * completed act stays frozen under the reload fade, as the level reload that follows a
+     * shipped results exit fades out with no object pass (S1 {@code f_restart}, S2
+     * {@code Level_Inactive_flag}); an S2 results exit has already frozen it for its own fade,
+     * and nothing left in it may raise another completion. A retry pressed mid-act keeps
+     * playing under the fade as before.
+     */
+    private void requestHostedRunRetry(boolean actCompleted) {
+        RunSpec retrySpec = hostedRuns.spec();
+        levelManager.getCheckpointState().clear();
+        if (actCompleted) {
+            levelManager.getTransitions().requestZoneAndAct(retrySpec.zone(), retrySpec.act(), true);
+        } else {
+            levelManager.getTransitions().requestZoneAndAct(retrySpec.zone(), retrySpec.act());
+        }
     }
 
     /** Ends the session's hosted run and hands control back to its host. */
@@ -2038,12 +2081,15 @@ public class GameLoop {
     }
 
     private void startPendingHostedRunLaunch() {
-        if (pendingHostedRunLaunch != null && !resolveFadeManager().isActive()) {
+        if (pendingHostedRunLaunch != null && GameLoopMenuTransitions.idleOrHeldBlack(resolveFadeManager())) {
             Runnable launch = pendingHostedRunLaunch;
             pendingHostedRunLaunch = null;
-            fadeOutTo(launch);
+            GameLoopMenuTransitions.fadeOutOrContinue(resolveFadeManager(), audioManager, launch);
         }
     }
+
+    /** A scene asked to launch a run (for example from {@code resumed}) and it has not started yet. */
+    boolean hostedRunLaunchPending() { return pendingHostedRunLaunch != null; }
 
     /** Ends a hosted run whose session failed to load; optionally hands control back to its host. */
     void endHostedRunAfterFailedLaunch(boolean returnToHost) {
@@ -2055,9 +2101,12 @@ public class GameLoop {
         }
     }
 
-    /** Tells the hosted run its level is ready when a launch bypassed {@code doZoneAct}. */
-    void announceHostedRunLevelReady() {
-        hostedRuns.onLevelReady(debugOverlayManager.isEnabled(DebugOverlayToggle.OVERLAY));
+    /**
+     * Tells the hosted run its level is ready when a launch or a fast death restart
+     * ({@code deathRestart}) bypassed {@code doZoneAct}.
+     */
+    void announceHostedRunLevelReady(boolean deathRestart) {
+        hostedRuns.onLevelReady(debugOverlayManager.isEnabled(DebugOverlayToggle.OVERLAY), deathRestart);
     }
 
     /** Hosts {@code host}'s run of {@code spec}; {@code returnToHost} runs once when it ends. */
@@ -2110,6 +2159,9 @@ public class GameLoop {
         // Bonus stage runs the same level frame steps as LEVEL mode
         boolean freezeForBonusExit = bonusStageTransitionPending;
         if (!freezeForBonusExit) {
+            GameplayModeContext executedOwner = gameplayMode;
+            GameMode executedMode = currentGameMode;
+            BonusStageProvider executedProvider = activeBonusStageProvider;
             beginGameplayAudioFrameForTick();
             spriteManager.publishHeldInputForLevelEvents(inputHandler);
             // LiveTraceComparator (or any PlaybackFrameObserver) may ask us to
@@ -2135,15 +2187,16 @@ public class GameLoop {
                 forcePlayerHighPriorityInBonusStage();
 
                 // Notify coordinator of frame tick
-                com.openggf.game.internal.BonusStageFrameLifecycle.updateProvider(activeBonusStageProvider);
+                com.openggf.game.internal.BonusStageFrameLifecycle.updateProvider(executedProvider);
 
                 // Record a rewind keyframe/step for rewind-supported bonus stages
                 // whose providers capture their interior state. Placed before
                 // the completion check so the transition boundary can retire
                 // the interior history independently of ordinary LEVEL history.
-                if (isBonusStageRewindable() && TraceSessionLauncher.active() == null) {
-                    liveRewindManager.recordExternalFrame(
-                            currentGameMode, bonusStageTransitionPending, inputHandler);
+                if (executedProvider != null && executedProvider.supportsRewind()
+                        && TraceSessionLauncher.active() == null) {
+                    liveRewindManager.recordExternalFrame(executedOwner,
+                            executedMode, null, executedProvider, freezeForBonusExit, inputHandler, false);
                 }
 
                 // Check bonus stage completion
@@ -4379,13 +4432,7 @@ public class GameLoop {
      * Starts the fade-to-black transition for death respawn.
      */
     private void startRespawnFade() {
-        LOGGER.info("Starting fade-to-black for respawn");
-
-        // Fade out current music (ROM: s2.asm:4757 - level entry with title card)
-        audioManager.fadeOutMusic();
-
-        // Start fade-to-black, then respawn when complete
-        GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), fadeManager, continueScreen::respawn);
+        continueScreen.startRespawn(runPolicy(), audioManager::fadeOutMusic);
     }
 
     /**
@@ -4473,6 +4520,15 @@ public class GameLoop {
             // last so the old fade cannot win the handoff.
             if (postLoadMusicId >= 0) {
                 levelManager.setSuppressNextMusicChange(true);
+            }
+            // A mid-act retry keeps the replaced act playing under its fade, so its results
+            // object can still finish there. This load satisfies any act completion raised
+            // before it, as HostedRunController.onLevelReady does a retry request.
+            if (hostedRuns.isActive()) {
+                levelManager.consumeHostReturnRequest();
+                levelManager.consumeNextActRequest();
+                levelManager.consumeNextZoneRequest();
+                levelManager.consumeCreditsRequest();
             }
             // Only a title owner that models the native fresh title/terrain loop
             // (S3K Level/loc_6310-loc_64DC) holds players behind the title card.

@@ -45,6 +45,7 @@ clip frame N. Use it only on a deliberate final pose, never to pad time.
 | Call | Example |
 |---|---|
 | `slanted_split(e, f, panes, slant=0.22)` | `panes = [(b(4), lambda lf: arr(game_view(s1.frame(lf), 120, None, 1.0, e.W, e.H)), "SONIC THE HEDGEHOG"), ...]`. Each pane's screen centre is moved to its slice centre, so frame the subject at screen centre. Each slice drops in on its start beat. |
+| `stacked_split(e, f, panes)` | `panes = [(b(4), stock, 120, "ORIGINAL", None), (b(6), remix, 120, "REMIX", None)]`. Full-width strips stacked top to bottom, each sliding in from the left on its beat. Use it for horizontal routes, where a slanted slice would crop the feature to a sliver. Capture with `--width 800`: two strips fill 1080p at 2.4x. |
 | `grid(e, f, cells, cols, rows)` | `cells = [(b(88 + 3*i), clip, src, "LABEL" or None, (cx, cy, zoom) or None), ...]`. Cells pop in with overshoot and labels appear beneath. |
 | `vertical_slices(e, f - s.f0, parts, u=s.u(f))` | A dimmed wall behind a statement. |
 | `pop_panel(c, img, x, y, f, t0, label)` | Hand-placed framed views, for rooms or code plus game. |
@@ -67,7 +68,7 @@ dialogue typer.
 | `Counter(f0, f1, 139, "CARDS", cx)` | A count-up number with a label. Stagger several by 8 frames. |
 | `Typed(f0, f1, lines, x, y, title="HelloSceneMod.java")` | A code panel typed on, with light syntax colouring. |
 | `chip(label)` | A yellow pill label. |
-| `BitmapFont(path).render(word, scale, fill, outline, drop, upscale)` | A game- or mod-native logo word, drawn crisp at integer scale. |
+| `BitmapFont(path).render(word, scale, fill, outline, drop, shades=, drop_dx=)` | A game- or mod-native logo word. Glyphs and every effect are drawn on the glyph grid, then enlarged by `scale`. For ROM type, pass its extra colours in `shades` and the shadow colour/offset sampled from a native frame, with `outline=None` unless the game outlines it. |
 
 Word stack on beats:
 
@@ -118,4 +119,4 @@ AAC true peak as well.
 `sheet EDIT [step first last]`, `frames EDIT N...`, `audio EDIT`,
 `render EDIT`. Each edit command prints `check()` warnings and a `pacing:`
 summary: shot count, mean shot length, the busiest 20 s window and the cuts in
-the final 20 s.
+the final 20 s, the longest bare gameplay stretch (warned over 4 s; captions do not count) and the busiest 20 s of captions over gameplay (warned over 3).

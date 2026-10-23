@@ -153,7 +153,7 @@ class TestTimeAttackRuntimeMultiplayerSeams {
         com.openggf.mods.ui.LevelOverlayCanvas canvas =
                 org.mockito.Mockito.mock(com.openggf.mods.ui.LevelOverlayCanvas.class);
         com.openggf.mods.run.RunSpec spec = runtime.runSpec();
-        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(spec, "0.6:cafe", false, 9216, 1024));
+        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(spec, "0.6:cafe", false, 9216, 1024, false));
         runtime.drawOverlay(canvas);
         runtime.afterStep(new com.openggf.mods.run.RunStep(0, 0, false,
                 new com.openggf.mods.run.PlayerPose(567, 300, 1, false, false, 2, false), false, -1, false));

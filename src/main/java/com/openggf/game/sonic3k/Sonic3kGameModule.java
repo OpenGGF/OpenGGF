@@ -170,6 +170,10 @@ public class Sonic3kGameModule implements GameModule {
         return modZoneAdapter;
     }
 
+    @Override public com.openggf.game.modzone.ModLevelSettingsProvider getModLevelSettingsProvider() {
+        return new Sonic3kModLevelSettingsProvider();
+    }
+
     @Override
     public com.openggf.game.palette.CustomZonePaletteBridge createCustomZonePaletteBridge(
             com.openggf.game.modzone.ModZoneRuntimeContribution contribution,
@@ -373,6 +377,11 @@ public class Sonic3kGameModule implements GameModule {
         return new com.openggf.game.sonic3k.continuescreen.Sonic3kContinueScreenProvider(
                 com.openggf.game.sonic3k.runtime.S3kRuntimeStates.resolvePlayerCharacter(
                         GameServices.zoneRuntimeRegistry(), GameServices.configuration()).ordinal(), false);
+    }
+
+    @Override
+    public com.openggf.game.preview.TitlePreviewProvider getTitlePreviewProvider() {
+        return new com.openggf.game.sonic3k.titlescreen.Sonic3kTitlePreviewProvider();
     }
 
     @Override

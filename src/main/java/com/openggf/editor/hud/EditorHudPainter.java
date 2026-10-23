@@ -28,6 +28,8 @@ final class EditorHudPainter implements AutoCloseable {
     private static final int SLOT = 40;
     private static final int SLOT_GAP = 4;
     private final EditorTileAtlas atlas = new EditorTileAtlas();
+    private final EditorTileAtlas ghostAtlas = new EditorTileAtlas();
+    private final com.openggf.editor.render.EditorObjectPreviewCache objectArt = new com.openggf.editor.render.EditorObjectPreviewCache();
     private List<Hit> hits;
     // Free span of the top bar between the breadcrumb and the chips, for status messages.
     private float topBarFreeLeft;
@@ -45,9 +47,19 @@ final class EditorHudPainter implements AutoCloseable {
         }
         Integer patternRaw = controller.selectedPatternRaw();
         atlas.refresh(level, patternRaw == null ? 0 : (patternRaw >>> 13) & 3);
+        objectArt.refresh(level, controller.objectPaletteOrNull());
+        if (controller.objectPaletteOrNull() != null) {
+            var indices = new java.util.ArrayList<Integer>();
+            var entries = controller.objectPalette().entries();
+            for (int i = 0; i < entries.size(); i++)
+                if (hud.showInternalObjects || controller.isPlaceableObject(entries.get(i)) && (entries.get(i).objectKey() != null || objectArt.available(entries.get(i)))) indices.add(i);
+            hud.setObjectLibrary(indices);
+        }
         backdrop(c, layout);
         canvasFrame(c, layout.game(), hud.tick);
+        if (layout.workbench() == null) placements(c, layout, controller);
         if (layout.workbench() == null && level != null && hud.modal != Modal.MENU) worldCursor(c, layout, controller, level, hud.tick);
+        if (level != null && layout.workbench() == null) region(c, layout, controller, level);
         topBar(c, layout, controller);
         if (layout.workbench() != null && level != null) {
             highlightEditedBlock(c, layout, controller, level);
@@ -60,6 +72,9 @@ final class EditorHudPainter implements AutoCloseable {
             case LIBRARY -> library(c, layout, hud, level);
             case WHEEL -> wheel(c, layout, hud);
             case MENU -> menu(c, layout, hud);
+            case PROPERTIES -> properties(c, layout, hud);
+            case PALETTE -> palette(c, layout, hud);
+            case SETTINGS -> settings(c, layout, hud);
             case NONE -> { }
         }
         hud.hits = List.copyOf(hits);
@@ -123,6 +138,7 @@ final class EditorHudPainter implements AutoCloseable {
         boolean modified = controller.isModified();
         right = chip(c, right, modified ? "Unsaved" : "Saved", modified ? GOLD : GOOD, true);
         right = chip(c, right, controller.activeLayer() == 0 ? "FG" : "BG", TEXT, false);
+        right = chip(c, right, "Zoom " + controller.canvasView().zoom() + "x", TEXT, false);
         if (controller.isCollisionOverlayEnabled()) {
             right = chip(c, right, controller.collisionPath().name().startsWith("P") ? "Solid A" : "Solid B", ACCENT, false);
         }
@@ -198,7 +214,7 @@ final class EditorHudPainter implements AutoCloseable {
             c.fittedText(name, 10, dock.y() + 25, sideW - 10, Size.BODY, TEXT, 1);
             c.fittedText(brushDetail(kind, controller), 10, dock.y() + 39, sideW - 10, Size.SMALL, TEXT_DIM, 1);
             float rx = x0 + barW + 40;
-            c.text("UNDER CURSOR", rx, dock.y() + 14, Size.SMALL, TEXT_FAINT, 1);
+            c.text(controller.isSpawnEditing() ? "SELECTION" : "UNDER CURSOR", rx, dock.y() + 14, Size.SMALL, TEXT_FAINT, 1);
             c.fittedText(underCursor(controller, level), rx, dock.y() + 25, dock.w() - rx - 8, Size.BODY, TEXT, 1);
         }
     }
@@ -229,13 +245,51 @@ final class EditorHudPainter implements AutoCloseable {
             if (cell != null) c.image(cell.texture(), x, y, size, size, cell.u0(), cell.v0(), cell.u1(), cell.v1(), 1);
             return;
         }
-        // Objects: the stock id as a badge; names are shown beside the selection.
         EditorStockObjectPalette palette = controller.objectPaletteOrNull();
-        if (palette == null || value >= palette.entries().size()) return;
-        EditorStockObjectPalette.Entry entry = palette.entries().get(value);
-        String badge = entry.stockObjectId() != null ? "%02X".formatted(entry.stockObjectId()) : "MOD";
-        c.rect(x, y, size, size, ACCENT_DARK, 1);
-        c.text(badge, x + (size - EditorHudCanvas.textWidth(badge, Size.BODY)) / 2f, y + size / 2f - 5, Size.BODY, TEXT, 1);
+        if (palette == null || value < 0 || value >= palette.entries().size()) return;
+        var entry = palette.entries().get(value);
+        boolean selected = value == (palette.selectedIsKeyed() ? -1 : palette.selectedObjectId());
+        var sprite = objectArt.sprite(palette.previewSpawn(entry, selected ? palette.selectedSubtype() : 0,
+                selected ? palette.renderFlags() : 0));
+        if (sprite != null) {
+            float scale = Math.min(3, (size - 4) / Math.max(sprite.width(), sprite.height()));
+            float w = sprite.width() * scale, h = sprite.height() * scale;
+            c.image(sprite.texture(), x + (size - w) / 2, y + (size - h) / 2, w, h, 0, 0, 1, 1, 1);
+        } else {
+            c.pill(x + 2, y + 2, size - 4, size - 4, ACCENT_DARK, 1);
+            c.frame(x + 7, y + 7, size - 14, size - 14, 1, ACCENT, .7f);
+            c.text(entry.objectKey() == null ? "?" : "+", x + size / 2 - 3, y + size / 2 - 5, Size.BODY, TEXT, 1);
+        }
+    }
+
+    private void placements(EditorHudCanvas c, EditorHudLayout layout, LevelEditorController controller) {
+        var editor = com.openggf.game.session.SessionManager.getCurrentEditorMode();
+        if (editor == null) return;
+        var g = layout.game();
+        c.clip(g);
+        try {
+            float unit = layout.gameViewport()[4] / (float) layout.uiScale() * controller.canvasView().zoom();
+            com.openggf.editor.render.EditorPlacementScene.draw(controller, objectArt,
+                    new com.openggf.editor.render.EditorPlacementScene.Painter() {
+                public void image(com.openggf.editor.render.EditorObjectPreviewCache.Sprite sprite,
+                                  float x, float y, float w, float h, float alpha) {
+                    c.image(sprite.texture(), x, y, w, h, 0, 0, 1, 1, alpha);
+                }
+                public void rectangle(float x, float y, float w, float h, int color, float alpha, boolean fill) {
+                    if (fill) c.rect(x, y, w, h, color, alpha);
+                    else c.frame(x, y, w, h, 1, color, alpha);
+                }
+                public void chip(String label, float x, float y, int color, float alpha) {
+                    String text = EditorHudCanvas.fit(label, Math.min(125, g.w() - 20), Size.SMALL);
+                    float w = EditorHudCanvas.textWidth(text, Size.SMALL) + 16;
+                    x = Math.clamp(x, g.x() + 2, g.right() - w - 2);
+                    y = Math.clamp(y, g.y() + 2, g.bottom() - 16);
+                    c.pill(x, y, w, 14, PANEL, .94f * alpha);
+                    c.rect(x + 4, y + 5, 3, 3, color, alpha);
+                    c.text(text, x + 11, y + 3, Size.SMALL, TEXT, alpha);
+                }
+            }, g.x(), g.y(), g.w(), g.h(), unit, editor.getCamera().getXCopy(), editor.getCamera().getYCopy());
+        } finally { c.unclip(); }
     }
 
     private void toast(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
@@ -387,7 +441,7 @@ final class EditorHudPainter implements AutoCloseable {
         var editor = com.openggf.game.session.SessionManager.getCurrentEditorMode();
         if (editor == null || editor.getCamera() == null) return;
         Rect g = layout.game();
-        float unitsPerPixel = layout.gameViewport()[4] / (float) layout.uiScale();
+        float unitsPerPixel = layout.gameViewport()[4] / (float) layout.uiScale() * (float) controller.canvasView().zoom();
         var cursor = controller.worldCursor();
         float cx = g.x() + (cursor.x() - editor.getCamera().getXCopy()) * unitsPerPixel;
         float cy = g.y() + (cursor.y() - editor.getCamera().getYCopy()) * unitsPerPixel;
@@ -412,6 +466,47 @@ final class EditorHudPainter implements AutoCloseable {
         c.unclip();
     }
 
+    private void region(EditorHudCanvas c, EditorHudLayout layout, LevelEditorController controller, MutableLevel level) {
+        var editor = com.openggf.game.session.SessionManager.getCurrentEditorMode();
+        if (editor == null || editor.getCamera() == null) return;
+        Rect g = layout.game();
+        float unit = layout.gameViewport()[4] / (float) layout.uiScale() * (float) controller.canvasView().zoom();
+        int cameraX = Short.toUnsignedInt(editor.getCamera().getXCopy()), cameraY = editor.getCamera().getYCopy();
+        int size = level.getBlockPixelSize();
+        var rect = controller.regionSelection();
+        c.clip(g);
+        try {
+            if (rect != null) c.frame(g.x() + (rect.x() * size - cameraX) * unit,
+                    g.y() + (rect.y() * size - cameraY) * unit, rect.width() * size * unit, rect.height() * size * unit, 2, ACCENT, 1);
+            if (!controller.isPastePreviewActive()) return;
+            try {
+                var ghost = controller.pastePreview();
+                ghostAtlas.refresh(controller.clipboardLibrary(), 0);
+                rect = ghost.rectangle();
+                float cell = size * unit;
+                for (int y = 0; y < rect.height(); y++) for (int x = 0; x < rect.width(); x++) {
+                    float sx = g.x() + ((rect.x() + x) * size - cameraX) * unit;
+                    float sy = g.y() + ((rect.y() + y) * size - cameraY) * unit;
+                    if (sx >= g.right() || sy >= g.bottom() || sx + cell < g.x() || sy + cell < g.y()) continue;
+                    var tile = ghostAtlas.cell(EditorTileAtlas.Kind.BLOCK, ghost.blocks().get(y * rect.width() + x));
+                    if (tile != null) c.image(tile.texture(), sx, sy, cell, cell, tile.u0(), tile.v0(), tile.u1(), tile.v1(), .6f);
+                    c.frame(sx, sy, cell, cell, 1, GOOD, .8f);
+                }
+                for (var object : ghost.objects()) {
+                    var sprite = objectArt.sprite(object);
+                    if (sprite != null) c.image(sprite.texture(),
+                            g.x() + (object.x() - cameraX - sprite.originX()) * unit,
+                            g.y() + (object.y() - cameraY - sprite.originY()) * unit,
+                            sprite.width() * unit, sprite.height() * unit, 0, 0, 1, 1, .5f);
+                }
+                for (var ring : ghost.rings()) c.frame(g.x() + (ring.x() - cameraX) * unit - 3,
+                        g.y() + (ring.y() - cameraY) * unit - 3, 6, 6, 1, GOLD, 1);
+            } catch (IllegalArgumentException invalid) {
+                c.text("Paste outside bounds or incompatible placement", g.x() + 8, g.y() + 8, Size.SMALL, GOLD, 1);
+            }
+        } finally { c.unclip(); }
+    }
+
     // ------------------------------------------------------------------ workbench
 
     /** In Block/Chunk view, dims the world except the block being edited and outlines it. */
@@ -421,7 +516,7 @@ final class EditorHudPainter implements AutoCloseable {
         if (editor == null || editor.getCamera() == null) return;
         Rect g = layout.game();
         int[] viewport = layout.gameViewport();
-        float unitsPerPixel = viewport[4] / (float) layout.uiScale();
+        float unitsPerPixel = viewport[4] / (float) layout.uiScale() * (float) controller.canvasView().zoom();
         int size = level.getBlockPixelSize();
         var cursor = controller.worldCursor();
         float bx = g.x() + (Math.floorDiv(cursor.x(), size) * size - editor.getCamera().getXCopy()) * unitsPerPixel;
@@ -568,7 +663,7 @@ final class EditorHudPainter implements AutoCloseable {
         LibraryKind kind = hud.libraryKind;
         int count = hud.libraryCount(kind);
         c.text(kindTitle(kind), sheet.x() + 12, sheet.y() + 8, Size.LARGE, TEXT, 1);
-        String countText = count + " in this level's library";
+        String countText = count + (kind == LibraryKind.OBJECT ? " objects   X: all / internal" : " in this level's library");
         c.text(countText, sheet.x() + 18 + EditorHudCanvas.textWidth(kindTitle(kind), Size.LARGE), sheet.y() + 16,
                 Size.SMALL, TEXT_DIM, 1);
         float detailW = Math.min(170, sheet.w() * .3f);
@@ -579,9 +674,9 @@ final class EditorHudPainter implements AutoCloseable {
             case BLOCK -> 52;
             case CHUNK -> 40;
             case PATTERN -> 32;
-            default -> 150;
+            default -> 92;
         };
-        float cellH = objects ? 24 : cellW;
+        float cellH = objects ? 72 : cellW;
         int columns = Math.max(1, (int) (grid.w() / cellW));
         int rows = Math.max(1, (int) (grid.h() / cellH));
         hud.libraryColumns = columns;
@@ -607,15 +702,15 @@ final class EditorHudPainter implements AutoCloseable {
                 if (index >= count) break;
                 float x = offsetX + column * cellW, y = grid.y() + (row - hud.libraryScroll) * cellH;
                 if (index == hud.libraryCursor) { focusX = x; focusY = y; focusVisible = true; continue; }
-                libraryTile(c, kind, index, x + 2, y + 2, cellW - 4, cellH - 4, hud.controller(), contains(bar, index));
+                libraryTile(c, kind, hud.libraryValue(kind, index), x + 2, y + 2, cellW - 4, cellH - 4, hud.controller(), contains(bar, hud.libraryValue(kind, index)));
                 hit(new Rect(x, y, cellW, cellH), grid, Modal.LIBRARY, EditorHud.HIT_LIBRARY, index);
             }
         }
         if (focusVisible) {
             float grow = 3;
             c.rect(focusX - grow + 3, focusY - grow + 4, cellW + 2 * grow - 4, cellH + 2 * grow - 4, SHADOW, .5f);
-            libraryTile(c, kind, hud.libraryCursor, focusX - grow + 2, focusY - grow + 2, cellW + 2 * grow - 4,
-                    cellH + 2 * grow - 4, hud.controller(), contains(bar, hud.libraryCursor));
+            libraryTile(c, kind, hud.libraryValue(kind, hud.libraryCursor), focusX - grow + 2, focusY - grow + 2, cellW + 2 * grow - 4,
+                    cellH + 2 * grow - 4, hud.controller(), contains(bar, hud.libraryValue(kind, hud.libraryCursor)));
             float pulse = .75f + .25f * (float) Math.sin(hud.tick * .12);
             c.frame(focusX - grow, focusY - grow, cellW + 2 * grow, cellH + 2 * grow, 2, GOLD, pulse);
             hit(new Rect(focusX, focusY, cellW, cellH), grid, Modal.LIBRARY, EditorHud.HIT_LIBRARY, hud.libraryCursor);
@@ -636,7 +731,8 @@ final class EditorHudPainter implements AutoCloseable {
         c.rect(x, y, w, h, TILE, 1);
         if (kind == LibraryKind.OBJECT) {
             EditorStockObjectPalette.Entry entry = controller.objectPalette().entries().get(index);
-            c.fittedText(entry.label(), x + 5, y + (h - 8) / 2f, w - 10, Size.SMALL, TEXT, 1);
+            thumbnail(c, kind, index, x + (w - 46) / 2, y + 2, 46, controller);
+            c.fittedText(EditorStockObjectPalette.displayName(entry.label()), x + 5, y + h - 13, w - 10, Size.SMALL, TEXT, 1);
         } else {
             thumbnail(c, kind, index, x + 1, y + 1, w - 2, controller);
             String label = hex(index);
@@ -650,7 +746,7 @@ final class EditorHudPainter implements AutoCloseable {
 
     private void libraryDetail(EditorHudCanvas c, Rect detail, LibraryKind kind, EditorHud hud, MutableLevel level) {
         c.rect(detail.x(), detail.y(), detail.w(), detail.h(), PANEL_RAISED, 1);
-        int index = hud.libraryCursor;
+        int index = hud.libraryValue(kind, hud.libraryCursor);
         float preview = Math.min(detail.w() - 20, 132);
         float px = detail.x() + (detail.w() - preview) / 2f, py = detail.y() + 10;
         c.rect(px - 2, py - 2, preview + 4, preview + 4, SHADOW, .7f);
@@ -747,6 +843,74 @@ final class EditorHudPainter implements AutoCloseable {
     }
 
     // ------------------------------------------------------------------ menu
+
+    private void palette(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
+        float w = Math.min(500, layout.width() - 24), h = 236;
+        float x = (layout.width() - w) / 2, y = (layout.height() - h) / 2;
+        c.panel(x, y, w, h, PANEL, .99f);
+        c.text("Level palette / Genesis 9-bit", x + 12, y + 10, Size.BODY, TEXT, 1);
+        var level = hud.controller().currentLevel();
+        for (int line = 0; line < 4; line++) for (int color = 0; color < 16; color++) {
+            var rgb = level.getPalette(line).getColor(color);
+            int value = Byte.toUnsignedInt(rgb.r) << 16 | Byte.toUnsignedInt(rgb.g) << 8 | Byte.toUnsignedInt(rgb.b);
+            float cx = x + 12 + color * 25, cy = y + 34 + line * 25;
+            c.rect(cx, cy, 23, 23, value, 1);
+            if (line * 16 + color == hud.paletteCell) c.frame(cx - 1, cy - 1, 25, 25, 2, GOLD, 1);
+        }
+        int line = hud.paletteCell / 16, color = hud.paletteCell % 16;
+        var rgb = level.getPalette(line).getColor(color);
+        c.text("Line " + line + " / color " + color + (hud.controller().isPaletteCellEditable(line, color) ? "" : " / host owned"),
+                x + 12, y + 142, Size.BODY, TEXT, 1);
+        int[] components = {Byte.toUnsignedInt(rgb.r), Byte.toUnsignedInt(rgb.g), Byte.toUnsignedInt(rgb.b)};
+        String[] names = {"Red", "Green", "Blue"};
+        for (int i = 0; i < 3; i++) c.text((i == hud.paletteComponent ? "> " : "  ") + names[i] + "  " + components[i],
+                x + 12 + i * 135, y + 170, Size.BODY, i == hud.paletteComponent ? ACCENT : TEXT, 1);
+        c.text("Bumpers: color   Up/down: channel   Left/right: value", x + 12, y + 204, Size.SMALL, TEXT_DIM, 1);
+    }
+
+    private void settings(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
+        var workspace = hud.controller().projects();
+        if (workspace == null || workspace.document() == null) return;
+        dim(c, layout, .6f);
+        var rows = workspace.settingsRows();
+        float w = Math.min(500, layout.width() - 24), h = 76 + rows.size() * 26;
+        float x = (layout.width() - w) / 2, y = (layout.height() - h) / 2;
+        c.panel(x, y, w, h, PANEL, .99f);
+        c.text("Level settings", x + 12, y + 10, Size.BODY, TEXT, 1);
+        for (int i = 0; i < rows.size(); i++) {
+            float rowY = y + 34 + i * 26;
+            if (i == hud.settingsIndex) c.rect(x + 6, rowY - 3, w - 12, 24, ACCENT_DARK, 1);
+            c.text(rows.get(i).label(), x + 12, rowY, Size.BODY, TEXT, 1);
+            c.text(EditorHudCanvas.fit("< " + rows.get(i).value() + " >", w * .60f - 16, Size.BODY),
+                    x + w * .40f, rowY, Size.BODY, ACCENT, 1);
+        }
+        c.text("Up/down: field   Left/right: change   Esc: close", x + 12, y + h - 32, Size.SMALL, TEXT_DIM, 1);
+        c.text("Each change is undoable. Playtest applies the environment.", x + 12, y + h - 18, Size.SMALL, TEXT_DIM, 1);
+    }
+
+    private void properties(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
+        var spawn = hud.controller().selectedObjectSpawn();
+        if (spawn == null) return;
+        var fields = hud.controller().selectedObjectProperties().editableFields();
+        var gizmos = hud.controller().selectedGizmoFields();
+        int count = gizmos.isEmpty() ? fields.size() : gizmos.size();
+        int visible = Math.min(count, Math.max(3, (layout.height() - 100) / 24));
+        int first = Math.clamp(hud.propertyIndex - visible / 2, 0, Math.max(0, count - visible));
+        float w = Math.min(500, layout.width() - 24), h = 64 + visible * 24;
+        float x = (layout.width() - w) / 2, y = (layout.height() - h) / 2;
+        c.panel(x, y, w, h, PANEL, .99f);
+        c.text("Object properties", x + 12, y + 10, Size.BODY, TEXT, 1);
+        for (int i = first; i < first + visible; i++) {
+            String label = gizmos.isEmpty() ? fields.get(i).label() : gizmos.get(i).label();
+            String value = gizmos.isEmpty() ? fields.get(i).display(spawn.subtype())
+                    : gizmos.get(i).value(spawn.authoredProperties()).toString();
+            float rowY = y + 34 + (i - first) * 24;
+            if (i == hud.propertyIndex) c.rect(x + 6, rowY - 3, w - 12, 22, ACCENT_DARK, 1);
+            c.text(EditorHudCanvas.fit(label, w * .46f - 18, Size.BODY), x + 12, rowY, Size.BODY, TEXT, 1);
+            c.text(EditorHudCanvas.fit("< " + value + " >", w * .54f - 12, Size.BODY), x + w * .46f, rowY, Size.BODY, ACCENT, 1);
+        }
+        c.text("Up/down: field   Left/right: value   A/Enter: edit text", x + 12, y + h - 20, Size.SMALL, TEXT_DIM, 1);
+    }
 
     private void menu(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
         dim(c, layout, .6f);
@@ -857,7 +1021,10 @@ final class EditorHudPainter implements AutoCloseable {
         }
         if (controller.spawnEditMode() != EditorSpawnEditMode.TILES) {
             var selected = controller.selectedObjectSpawn();
-            return selected == null ? "None" : "Object " + "%02X".formatted(selected.objectId());
+            if (selected == null) return "None";
+            if (selected.objectKey() != null) return EditorStockObjectPalette.displayName(selected.objectKey());
+            var palette = controller.objectPaletteOrNull();
+            return palette == null ? "Object" : EditorStockObjectPalette.displayName(palette.entries().get(selected.objectId()).label());
         }
         var cursor = controller.worldCursor();
         var map = level.getMap();
@@ -879,5 +1046,7 @@ final class EditorHudPainter implements AutoCloseable {
     @Override
     public void close() {
         atlas.close();
+        ghostAtlas.close();
+        objectArt.close();
     }
 }

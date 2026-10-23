@@ -42,6 +42,28 @@ class TestLiveRewindInputSource {
     }
 
     @Test
+    void deferredAppendUsesTheOriginalInputSampleAfterHostInputUpdate() {
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
+        LiveRewindInputSource source = new LiveRewindInputSource();
+        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
+                PlayerInputState.of(AbstractPlayableSprite.INPUT_RIGHT, 0,
+                        InputActionMasks.ACTION_C, 0, true, true), PlayerInputState.neutral())
+                .withDebugInput(true, true, false, false, false));
+        var captured = LiveRewindInputSource.captureFrame(input, config);
+        input.setLogicalOverride(LogicalInputSnapshot.neutral());
+        input.update();
+        source.appendFrame(captured, null);
+        var recorded = source.read(1);
+        assertEquals(1, recorded.frameIndex());
+        assertEquals(AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP,
+                recorded.p1InputMask());
+        assertEquals(InputActionMasks.ACTION_C, recorded.p1ActionMask());
+        assertTrue(recorded.p1StartPressed());
+        assertTrue(recorded.debugModeTogglePressed());
+        assertTrue(recorded.debugShiftDown());
+    }
+
+    @Test
     void appendFrameRecordsP1LogicalHeldButtonsActionMaskAndStartPressEdge() {
         InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
         LiveRewindInputSource source = new LiveRewindInputSource();

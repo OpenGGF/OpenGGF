@@ -14,7 +14,10 @@ import java.util.List;
  */
 @ModApi
 public interface RunHost {
-    /** The run's level is loaded and its first step is next (on launch and after every retry). */
+    /**
+     * The run's level is loaded and its first step is next: on launch, after every retry and
+     * after every fast death restart ({@link RunLevelStart#deathRestart()}).
+     */
     default void onLevelReady(RunLevelStart start) {
     }
 
@@ -26,8 +29,25 @@ public interface RunHost {
         return true;
     }
 
+    /**
+     * Asked when {@link #admitStep} admitted a step: true runs it with player 1's controller
+     * released, so the player cannot act and the {@link RunStep} reports no buttons. The world
+     * still advances (a lead-in while the level fades in).
+     */
+    default boolean holdsPlayerInput() {
+        return false;
+    }
+
     /** The step just executed. */
     default void afterStep(RunStep step) {
+    }
+
+    /**
+     * Asked when a host-returning run completes its act, before the run would end. Returning
+     * true restarts the act as a retry ({@link #onLevelReady} follows) instead of ending the run.
+     */
+    default boolean retryOnActCompletion() {
+        return false;
     }
 
     /** Ghosts to draw this frame; at most eight are drawn. */

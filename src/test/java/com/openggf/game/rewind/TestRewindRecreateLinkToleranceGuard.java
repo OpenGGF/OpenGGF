@@ -18,6 +18,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Build-time ratchet for tolerant rewind recreate links.
@@ -56,16 +57,6 @@ class TestRewindRecreateLinkToleranceGuard {
 
     private static final Path BASELINE_RESOURCE =
             Path.of("src/test/resources/rewind/recreate-throw-baseline.txt");
-
-    /**
-     * Files whose recreate throws are owned by a sibling effort and intentionally
-     * excluded from this sweep. IczSegmentColumnObjectInstance's break-then-rewind
-     * crash is fixed on bugfix/ai-icz-segment-column-rewind-break; excluding it here
-     * keeps this guard valid whether or not that branch has merged.
-     */
-    private static final Set<String> EXCLUDED_FILES = Set.of(
-            "src/main/java/com/openggf/game/sonic3k/objects/IczSegmentColumnObjectInstance.java"
-    );
 
     private static final Pattern RECREATE_DECL = Pattern.compile(
             "\\brecreateForRewind\\s*\\(\\s*RewindRecreateContext\\b");
@@ -118,19 +109,44 @@ class TestRewindRecreateLinkToleranceGuard {
         Map<String, Integer> counts = new TreeMap<>();
         for (Path source : objectSources()) {
             String normalized = normalize(source);
-            if (EXCLUDED_FILES.contains(normalized)) {
-                continue;
-            }
-            String text = blankCommentsAndLiterals(Files.readString(source));
-            if (!RECREATE_DECL.matcher(text).find()) {
-                continue;
-            }
-            int throwCount = countThrowsInRecreateScope(text);
-            if (throwCount > 0) {
-                counts.put(normalized, throwCount);
-            }
+            counts.putAll(throwCountsForSource(normalized, Files.readString(source)));
         }
         return counts;
+    }
+
+    private static Map<String, Integer> throwCountsForSource(String normalizedPath, String source) {
+        String text = blankCommentsAndLiterals(source);
+        int count = RECREATE_DECL.matcher(text).find() ? countThrowsInRecreateScope(text) : 0;
+        return count > 0 ? Map.of(normalizedPath, count) : Map.of();
+    }
+
+    @Test
+    void iczMissingLinkThrowCannotHideBehindAnObsoleteBranchExclusion() {
+        String path = "src/main/java/com/openggf/game/sonic3k/objects/IczSegmentColumnObjectInstance.java";
+        assertEquals(Map.of(path, 1), throwCountsForSource(path, """
+                class Column {
+                    Object recreateForRewind(RewindRecreateContext ctx) { return previous(); }
+                    private Object previous() {
+                        throw new IllegalStateException("Missing restored previous segment");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void recreateScannerCountsTransitiveThrowAndOptionalButIgnoresUnrelatedThrow() {
+        assertEquals(Map.of("Sample.java", 2), throwCountsForSource("Sample.java", """
+                class Sample {
+                    Object recreateForRewind(RewindRecreateContext ctx) { return helper(); }
+                    private Object helper() { return next(); }
+                    private Object next() {
+                        // throw is only a comment; orElseThrow too.
+                        if (missing) { throw new IllegalStateException("throw orElseThrow"); }
+                        return optional.orElseThrow(IllegalStateException::new);
+                    }
+                    private Object unrelated() { throw new IllegalArgumentException(); }
+                }
+                """));
     }
 
     /**

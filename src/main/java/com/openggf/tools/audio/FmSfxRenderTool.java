@@ -1,21 +1,29 @@
 package com.openggf.tools.audio;
 
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.GameAudioProfile;
 import com.openggf.audio.session.LegacyCompatibilitySmpsPhysicalPolicy;
 import com.openggf.audio.session.OwnedSmpsAudioStream;
+import com.openggf.audio.session.SmpsDriverSessionConfiguration;
 import com.openggf.audio.session.SmpsPhysicalDevice;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
+import com.openggf.audio.smps.SmpsConfigBinding;
+import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
+import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.audio.synth.Ym2612Chip;
 import com.openggf.data.Rom;
+import com.openggf.game.sonic1.audio.Sonic1AudioProfile;
 import com.openggf.game.sonic1.audio.Sonic1SmpsSequencerConfig;
 import com.openggf.game.sonic1.audio.smps.Sonic1SmpsLoader;
+import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
 import com.openggf.game.sonic2.audio.Sonic2SmpsSequencerConfig;
 import com.openggf.game.sonic2.audio.smps.Sonic2SmpsLoader;
+import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
 import com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kSmpsLoader;
 import com.openggf.version.AppVersion;
@@ -27,6 +35,7 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -51,6 +60,13 @@ import java.util.Locale;
  *       one frame at a time so the position is exact.</li>
  * </ul>
  *
+ * <p>{@code --paced} instead renders the way the game plays: one 60 Hz service per frame through
+ * the game's own physical policy (its {@link GameAudioProfile}), as scene music does. It writes
+ * only {@code <game>-<kind>-<id>-paced.wav} and reports how many times the DAC was enabled. Use it
+ * for anything meant to be heard, such as a promo bed or stinger: the default direct-read render
+ * uses the legacy policy, which never enables the Sonic 3 &amp; Knuckles DAC, so its S3K music has
+ * no drums (2026-10-23 Time Attack promo).</p>
+ *
  * <p>The legacy write log remains a frame-stamped logical diagnostic. Pass
  * {@code --physical-writes} to also produce {@code -ym-bus.jsonl}: dispatched
  * raw YM address/data strobes (including DAC bytes) and PSG data bytes at
@@ -63,7 +79,7 @@ import java.util.Locale;
  * java -cp target/classes:... com.openggf.tools.audio.FmSfxRenderTool \
  *     --game s1 --rom /path/to/s1.gen (--sfx A6 | --music 81) --out /task/dir \
  *     [--rate 44100 | --rate internal] [--max-seconds 5]
- *     [--physical-writes [--physical-capacity 1000000]]
+ *     [--physical-writes [--physical-capacity 1000000]] [--paced]
  * </pre>
  */
 public final class FmSfxRenderTool {
@@ -86,6 +102,7 @@ public final class FmSfxRenderTool {
         double rate = DEFAULT_RATE;
         double maxSeconds = -1;
         boolean physicalWrites = false;
+        boolean paced = false;
         int physicalCapacity = DEFAULT_PHYSICAL_CAPTURE_CAPACITY;
         for (int i = 0; i < arguments.length; i++) {
             switch (arguments[i]) {
@@ -97,13 +114,14 @@ public final class FmSfxRenderTool {
                 case "--rate" -> rate = parseRate(arguments[++i]);
                 case "--max-seconds" -> maxSeconds = Double.parseDouble(arguments[++i]);
                 case "--physical-writes" -> physicalWrites = true;
+                case "--paced" -> paced = true;
                 case "--physical-capacity" -> physicalCapacity = Integer.parseInt(arguments[++i]);
                 default -> throw new IllegalArgumentException("unknown argument: " + arguments[i]);
             }
         }
         if (game == null || romPath == null || (sfxId < 0) == (musicId < 0) || out == null) {
             System.err.println("usage: --game s1|s2|s3k --rom <path> (--sfx <hex id> | --music <hex id>)"
-                    + " --out <dir> [--rate hz|internal] [--max-seconds s]");
+                    + " --out <dir> [--rate hz|internal] [--max-seconds s] [--paced]");
             System.exit(2);
         }
         boolean music = musicId >= 0;
@@ -115,6 +133,22 @@ public final class FmSfxRenderTool {
         if (!rom.open(romPath)) {
             System.err.println("failed to open ROM: " + romPath);
             System.exit(1);
+        }
+        if (paced) {
+            GameAudioProfile profile = switch (game) {
+                case "s1" -> new Sonic1AudioProfile();
+                case "s2" -> new Sonic2AudioProfile();
+                case "s3k" -> new Sonic3kAudioProfile();
+                default -> throw new IllegalArgumentException("unknown game: " + game);
+            };
+            Files.createDirectories(out);
+            int id = music ? musicId : sfxId;
+            String stem = String.format(Locale.ROOT, "%s-%s-%02x", game, music ? "music" : "sfx", id);
+            PacedRender render = renderPaced(profile, game, rom, id, music, rate, (int) (maxSeconds * rate));
+            StereoPcmWavWriter.write(out.resolve(stem + "-paced.wav"), render.samples, rate);
+            System.out.printf(Locale.ROOT, "%s: %d frames (%.3f s) paced, dac-enables=%d, complete=%s%n",
+                    stem, render.frames, render.frames / rate, render.dacEnables, render.complete);
+            return;
         }
         SmpsLoader loader;
         SmpsSequencerConfig config;
@@ -203,6 +237,69 @@ public final class FmSfxRenderTool {
     }
 
     private record Write(long frame, int port, int register, int value) {
+    }
+
+    record PacedRender(short[] samples, int frames, boolean complete, int dacEnables) {
+    }
+
+    /**
+     * Renders through the production-paced session, as {@code LiveSceneMusic} plays scene music:
+     * the game's physical and stateful command policies, its presentation coordination flags, and
+     * one driver service per 60 Hz frame followed by that frame's PCM (with the DAC idle loop).
+     */
+    static PacedRender renderPaced(GameAudioProfile profile, String game, Rom rom, int id,
+            boolean music, double rate, int maxFrames) {
+        SmpsLoader loader = profile.createSmpsLoader(rom);
+        AbstractSmpsData data = music ? loader.loadMusic(id) : loader.loadSfx(id);
+        if (data == null) {
+            throw new IllegalArgumentException((music ? "music" : "SFX") + " 0x"
+                    + Integer.toHexString(id) + " did not load for " + game);
+        }
+        DacData dac = loader.loadDacData();
+        SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState());
+        profile.configurePresentationCoordFlagHandlers(handlers);
+        SmpsSequencerConfig base = profile.getSequencerConfig();
+        SmpsSequencerConfig config = SmpsConfigBinding.bind(base,
+                () -> base.getCoordFlagHandler() == null ? null : handlers.handlerFor(game));
+        int[] dacEnables = {0};
+        ChipWriteObserver observer = new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) {
+                if (port == 0 && register == 0x2B && (value & 0x80) != 0) {
+                    dacEnables[0]++;
+                }
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+            }
+        };
+        short[] samples = new short[maxFrames * 2];
+        int frames = 0;
+        boolean complete;
+        try (OwnedSmpsAudioStream stream = new OwnedSmpsAudioStream(game, 0,
+                new SmpsPhysicalDevice.Settings(rate, false), profile.smpsPhysicalPolicy(), observer,
+                new SmpsDriverSessionConfiguration(profile.smpsStatefulCommandPolicy()))) {
+            SmpsDriver driver = stream.logicalDriver();
+            driver.setRegion(SmpsSequencer.Region.NTSC);
+            SmpsSequencer seq = new SmpsSequencer(data, dac, driver, () -> { }, config);
+            seq.setSampleRate(rate);
+            seq.setSfxMode(!music);
+            if (music) {
+                seq.setFallbackVoiceData(data);
+            }
+            driver.addSequencer(seq, !music);
+            short[] packet = new short[((int) Math.ceil(rate / 60) + 1) * 2];
+            for (long tick = 0; frames < maxFrames && !driver.isComplete(); tick++) {
+                int available = (int) (Math.floor((tick + 1) * rate / 60) - Math.floor(tick * rate / 60));
+                stream.serviceAndRenderFrame(packet, available);
+                int count = Math.min(available, maxFrames - frames);
+                System.arraycopy(packet, 0, samples, frames * 2, count * 2);
+                frames += count;
+            }
+            complete = driver.isComplete();
+        }
+        return new PacedRender(Arrays.copyOf(samples, frames * 2), frames, complete, dacEnables[0]);
     }
 
     private record Render(short[] samples, int frames, boolean complete,

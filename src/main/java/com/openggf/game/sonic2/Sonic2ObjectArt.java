@@ -6,6 +6,7 @@ import com.openggf.game.ZoneArtProvider;
 import com.openggf.game.common.CommonSpriteDataLoader;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.level.objects.AnimalType;
 
 import com.openggf.data.Rom;
@@ -506,6 +507,15 @@ public class Sonic2ObjectArt {
                 : Sonic2Constants.MAP_UNC_OBJ32_CPZ_ADDR;
         List<SpriteMappingFrame> mappings = loadMappingFrames(mappingAddr);
         return new ObjectSpriteSheet(patterns, mappings, palette, 1);
+    }
+
+    /** Obj18 renders ROM mappings directly against level tiles; expose the same sheet to authoring. */
+    public ObjectSpriteSheet loadGenericPlatformASheet(com.openggf.level.Level level, int zoneIndex) {
+        Pattern[] tiles = new Pattern[level.getPatternCount()];
+        for (int i = 0; i < tiles.length; i++) tiles[i] = level.getPattern(i);
+        int address = zoneIndex == Sonic2ZoneConstants.ROM_ZONE_ARZ
+                ? Sonic2Constants.MAP_UNC_OBJ18_B_ADDR : Sonic2Constants.MAP_UNC_OBJ18_A_ADDR;
+        return new ObjectSpriteSheet(tiles, loadMappingFrames(address), 2, 0);
     }
 
     public ObjectSpriteSheet loadGenericPlatformBSheet(int zoneIndex) {

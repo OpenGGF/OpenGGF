@@ -212,6 +212,11 @@ public final class IczEndBossInstance extends AbstractBossInstance
     private StructuralChildElement[] structuralChildren;
     private int structuralBottomChildSlot;
     private List<EffectChild> effectChildren;
+    // Scratch is derived from the restored authoritative list on every pass.
+    private transient List<EffectChild> effectUpdateOrder = new ArrayList<>();
+    private transient List<EffectChild> effectDrawOrder = new ArrayList<>();
+    private transient java.util.Set<EffectChild> effectUpdateMembers =
+            java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
     private int defeatTimer;
     private int damagedRiseTimer;
     private int damagedTopSteamTimer;
@@ -648,6 +653,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
                     frostInitialTimerForSubtype(selector, i), nativeSlot);
             puff.ledgerReserved = ledger[0] && nativeSlot >= 0;
             effectChildren.add(puff);
+            if (effectUpdateMembers != null) effectUpdateMembers.add(puff);
         }
     }
 
@@ -743,20 +749,32 @@ public final class IczEndBossInstance extends AbstractBossInstance
         // reuse an earlier free slot on a later emission, so list order is not
         // necessarily native execution order. Preserve the public list order
         // for rewind/test inspection while using a native-order snapshot here.
-        List<EffectChild> updateOrder = new ArrayList<>(effectChildren);
+        List<EffectChild> updateOrder = effectUpdateOrder;
+        updateOrder.clear();
+        updateOrder.addAll(effectChildren);
+        effectUpdateMembers.clear();
+        effectUpdateMembers.addAll(effectChildren);
         updateOrder.sort((left, right) -> Integer.compare(
                 nativeEffectExecutionSlot(left), nativeEffectExecutionSlot(right)));
-        for (EffectChild child : updateOrder) {
-            if (!effectChildren.contains(child)) {
-                continue;
+        try {
+            for (EffectChild child : updateOrder) {
+                if (!effectUpdateMembers.contains(child)) {
+                    continue;
+                }
+                AnchorPoint anchor = resolveEffectAnchor(child.anchor);
+                child.update(anchor);
+                capturePlayersInFrostPuff(child, player);
+                if (child.isFinished()) {
+                    releaseEffectSlot(child);
+                    effectUpdateMembers.remove(child);
+                }
             }
-            AnchorPoint anchor = resolveEffectAnchor(child.anchor);
-            child.update(anchor);
-            capturePlayersInFrostPuff(child, player);
-            if (child.isFinished()) {
-                releaseEffectSlot(child);
-                effectChildren.remove(child);
-            }
+        } finally {
+            // Stable compaction avoids repeated shifts when a puff group expires,
+            // and commits earlier retirements even if a later callback fails.
+            effectChildren.removeIf(child -> !effectUpdateMembers.contains(child));
+            updateOrder.clear();
+            effectUpdateMembers.clear();
         }
     }
 
@@ -1420,6 +1438,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
             releaseEffectSlot(child);
         }
         effectChildren.clear();
+        if (effectUpdateMembers != null) effectUpdateMembers.clear();
         boolean flipped = (state.renderFlags & 1) != 0;
         for (int i = 0; i < DEFEAT_DEBRIS_OFFSETS.length; i++) {
             int[] offset = DEFEAT_DEBRIS_OFFSETS[i];
@@ -1757,15 +1776,21 @@ public final class IczEndBossInstance extends AbstractBossInstance
         }
         // Frost puffs share one list; the lowest native slot is drawn on top, so
         // paint in descending slot order (folded children without a slot first).
-        List<EffectChild> drawOrder = new ArrayList<>(effectChildren);
+        List<EffectChild> drawOrder = effectDrawOrder;
+        drawOrder.clear();
+        drawOrder.addAll(effectChildren);
         drawOrder.sort((left, right) -> Integer.compare(
                 nativeEffectExecutionSlot(right), nativeEffectExecutionSlot(left)));
-        for (EffectChild child : drawOrder) {
-            if (!child.isVisible()) {
-                continue;
+        try {
+            for (EffectChild child : drawOrder) {
+                if (!child.isVisible()) {
+                    continue;
+                }
+                renderer.drawFrameIndexWithPaletteBase(child.frame, child.x, child.y, child.flipX, child.flipY,
+                        BODY_PALETTE_BASE);
             }
-            renderer.drawFrameIndexWithPaletteBase(child.frame, child.x, child.y, child.flipX, child.flipY,
-                    BODY_PALETTE_BASE);
+        } finally {
+            drawOrder.clear();
         }
     }
 

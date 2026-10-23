@@ -16,9 +16,9 @@ hardware behavior has been reimplemented at a higher level of abstraction:
 | VDP pattern table + sprite table | GPU texture atlas + instanced quad rendering |
 | VDP scroll planes A/B | Tilemap shader with per-line scroll offsets |
 | Z80 running SMPS sound driver | Reimplemented SMPS sequencer in the main process |
-| YM2612 FM synthesis chip | Software FM synthesis (based on Genesis Plus GX core) |
+| YM2612 FM synthesis chip | Software FM synthesis through the Nuked-OPN2 port |
 | SN76489 PSG chip | Software PSG emulation |
-| Object RAM (64-byte slots) | Typed object instances with named fields |
+| Object RAM (64-byte S1/S2 slots; 74-byte S3K slots) | Typed object instances with named fields |
 | RAM variables (camera, state) | Dedicated manager classes |
 
 The ROM is treated as a **read-only data source**. The engine reads bytes at known offsets,
@@ -36,15 +36,15 @@ with different maintainers and different conventions. They do not share a common
 | Object code | Separate files in `_incObj/` | Inline in `s2.asm` | Inline in main source |
 | Object naming | `ObjXX` (hex ID as filename prefix) | `Obj__` labels with named aliases | `Obj__` labels |
 | Art directories | `artnem/`, `artkos/`, `artunc/` | `art/nemesis/`, `art/kosinski/` | Various per-zone |
-| Mapping directories | `_maps/` (5-byte format) | `mappings/sprite/` (6-byte format) | `mappings/sprite/` |
-| Level layouts | `levels/` (uncompressed) | Kosinski-compressed includes | KosinskiM-compressed |
+| Mapping directories | `_maps/` (5-byte pieces) | `mappings/sprite/` (8-byte pieces) | Per-object/character includes (normally 6-byte pieces) |
+| Level layouts | `levels/` (uncompressed) | Kosinski-compressed includes | Uncompressed header, row pointers and layout data |
 | Metatile size | 256x256 pixels | 128x128 pixels | 128x128 pixels |
 | Level data tables | `LevelHeaders` | `MainLoadBlockX` / `Off_Level` | `LevelLoadBlock` (24-byte entries) |
-| Compression types | Nemesis, Kosinski | Nemesis, Kosinski, Enigma, Saxman | Kosinski, KosinskiM, Nemesis |
-| Constants file | `Constants.asm` | `s2.constants.asm` | Equates in main source |
+| Compression types | Nemesis, Kosinski, Enigma | Nemesis, Kosinski, Enigma, Saxman | Kosinski, KosinskiM, Nemesis, Enigma |
+| Constants file | `_Constants.asm` | `s2.constants.asm` | `sonic3k.constants.asm` / `s3.constants.asm` |
 
 The examples on this page and in the [Mapping Exercises](mapping-exercises.md) use Sonic 2
-as the primary reference because it is the most complete engine module. The methods transfer
+as the primary reference. The methods transfer
 to S1 and S3K, but you will need to adjust for the structural differences. See
 [Per-Game Notes](per-game-notes.md) for game-specific details.
 
@@ -61,7 +61,7 @@ Each game has a constants file that lists verified ROM addresses:
 - `Sonic3kConstants.java` -- Sonic 3&K addresses
 
 These are verified against specific ROM revisions (S1 REV01, S2 REV01, S3K combined).
-A constant like `LEVEL_LAYOUT_DIR_ADDR = 0x045A80` means "the level layout directory
+A constant like `DEFAULT_LEVEL_LAYOUT_DIR_ADDR = 0x045A80` means "the level layout directory
 starts at byte offset 0x45A80 in the ROM." These values were confirmed by cross-referencing
 the disassembly labels, checking the compiled ROM binary, and in some cases pattern-matching
 the raw data.
@@ -94,11 +94,18 @@ Sonic 2 REV00 instead of REV01) will produce incorrect results.
 
 This is the path from ROM bytes to the tile grid you see on screen.
 
+The following uses disassembly terminology: a **chunk** is a 128×128 or 256×256
+metatile and a **block** is a 16×16 tile. OpenGGF's Java classes and level editor
+reverse those names: `Block` is the large metatile and `Chunk` is the 16×16 tile.
+Keep this distinction in mind when following `LevelResourcePlan` operations.
+
 ### 1. Level Layout Directory
 
 Each game has a level layout directory: a table in the ROM that maps zone/act combinations
 to the offsets of their layout data. In Sonic 2, this is a 68-byte table at
-`LEVEL_LAYOUT_DIR_ADDR`.
+`DEFAULT_LEVEL_LAYOUT_DIR_ADDR`. `Sonic2.getLevelLayoutAddr()` reads the actual
+table pointer from the instruction operand at `LEVEL_LAYOUT_DIR_ADDR_LOC`, then
+adds the selected zone/act's relative word offset.
 
 In the disassembly, this corresponds to the `Off_Level` table and the `Level_` labels
 that follow it.
@@ -109,18 +116,20 @@ The layout is a 2D grid of **chunk IDs**. Each cell says "put chunk number N her
 grid is typically 128 or 256 cells wide (depending on the zone) and defines the foreground
 and background planes separately.
 
-In Sonic 1, layouts are uncompressed. In Sonic 2 and S3K, they are Kosinski-compressed.
+Sonic 1 layouts are uncompressed and Sonic 2 layouts use Kosinski compression.
+S3K layouts are uncompressed: `Sonic3kLevel.loadMap()` reads an eight-byte
+dimension header, foreground/background row pointers and the referenced cells.
 
-In the disassembly, these are the `level/*.bin` files (S1) or the Kosinski-compressed
-layout includes.
+In the disassembly, look under `levels/` (S1), `level/` (S2), or the relevant
+`Levels/` layout include (S3K).
 
 ### 3. Chunks (Metatiles)
 
 Each chunk is a grid of **block IDs**. In Sonic 2, chunks are 128x128 pixels (8x8 blocks
 of 16x16 pixels each). In Sonic 1, they are 256x256 pixels.
 
-Chunk definitions are loaded from Enigma-compressed mappings in Sonic 2, or from
-`map256/*.bin` files in Sonic 1.
+Chunk definitions use Kosinski compression in Sonic 1, Sonic 2 and S3K.
+S1's files are under `map256/` (for example, `GHZ.kos`).
 
 In the disassembly: `mappings/128x128/` (S2) or `map256/` (S1).
 
@@ -130,15 +139,17 @@ Each block is a 2x2 grid of **pattern IDs** (8x8 pixel tiles). Block definitions
 the pattern index, palette line, flip flags, and priority bit -- the same information
 that would go into a VDP nametable entry.
 
-In the disassembly: `mappings/16x16/` (S2) or `map16/` (S1).
+These mappings use Enigma in S1 and Kosinski in S2/S3K. In the disassembly:
+`mappings/16x16/` (S2) or `map16/` (S1, for example `GHZ.eni`).
 
 ### 5. Patterns (8x8 Tiles)
 
 Patterns are the raw pixel data: 8x8 grids of 4-bit palette indices. In the ROM, zone
-patterns are typically Kosinski-compressed. The engine decompresses them and uploads them
+patterns use Nemesis in S1, Kosinski in S2 and moduled Kosinski in S3K. The engine decompresses them and uploads them
 to a GPU texture atlas.
 
-In the disassembly: `art/kosinski/` (S2) or `artkos/` (S1).
+In the disassembly: `art/kosinski/` (S2), `artnem/` (S1), or the zone's
+`*_KosM` art includes (S3K).
 
 ### Summary
 
@@ -189,8 +200,10 @@ In the disassembly: `art/nemesis/` (S2), `artnem/` (S1), or the Kosinski art inc
 
 Mappings define how tiles are arranged into sprite frames. Each frame is a list of
 **pieces**, where each piece specifies a tile offset, position, size, and flip flags.
-Sonic 2 uses a 6-byte-per-piece format; Sonic 1 uses a 5-byte format (the X offset
-is a single byte instead of a word).
+Sonic 1 uses five-byte pieces with a signed byte X offset. Stock Sonic 2 uses
+eight-byte pieces, including separate 1P/2P tile words and a signed word X offset.
+S3K normally uses six-byte pieces without that extra 2P tile word. The game-specific
+sprite data loaders handle these formats; they are not interchangeable.
 
 In the disassembly: `mappings/sprite/obj__.asm`.
 
@@ -225,7 +238,7 @@ maps IDs to code entry points.
 
 Each active object is an instance of a class that extends `AbstractObjectInstance`. The
 instance has named fields for position, velocity, animation state, and any object-specific
-data. This replaces the original's 64-byte object RAM slots, where fields were accessed
+data. This replaces the original's object RAM slots, where fields were accessed
 by numeric offset (e.g., `x_pos(a0)`, `routine(a0)`).
 
 Every frame, each active object's `update()` method is called. This is the engine's
@@ -261,17 +274,21 @@ in separate driver implementations.
 
 ### 3. YM2612 and SN76489
 
-The YM2612 FM synthesiser and SN76489 PSG chip are emulated in software. The FM core is
-based on the Genesis Plus GX reference implementation. The PSG core follows the SN76489
-documentation from SMS Power. Both produce audio samples that are mixed and sent to the
-system audio output.
+The YM2612 FM synthesiser and SN76489 PSG chip are emulated in software.
+`Ym2612Chip` wraps the Nuked-OPN2 port; `PsgChip` is a clean-room implementation
+of the documented Sega-integrated PSG model, with a discrete-chip option.
+See the [FM port contract](../../architecture/designs/2026-08-29-nuked-opn2-port-contract.md)
+and [PSG specification](../../architecture/research/audio/2026-08-29-sn76489-clean-room-spec.md)
+for provenance and model boundaries. Their output is mixed through the selected
+audio backend, including no-device/offline backends used by headless tools.
 
 ### 4. DAC Samples
 
-Drum and percussion samples (DAC) are stored as raw PCM in the ROM. The engine reads
-them at the addresses specified by the DAC sample table, applies the correct playback
-rate (derived from the Z80 driver's `djnz` loop timing), and mixes them into the audio
-output.
+Drum and percussion samples (DAC) are read through the game's sample tables and
+decoder. Encoding and playback timing vary by driver; S2/S3K include differential
+PCM decoding, so treating every sample as raw PCM is incorrect. The loader resolves
+banked addresses, decodes samples and derives playback rates from driver timing
+before the audio system mixes them.
 
 ## Collision Pipeline
 

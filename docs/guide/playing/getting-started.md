@@ -1,15 +1,17 @@
 # Getting Started
 
-This page gets you from zero to playing in under five minutes.
+This guide follows the **0.7 development branch**. Published 0.6 packages may have
+different menus and fewer features; use the documentation included with your download
+for that release.
 
 ## What You Need
 
-- **For downloaded releases:** no separate Java install is required; release packages include a
-  native OpenGGF executable for your platform.
+- **For native release packages:** no separate Java install is required. The universal
+  JAR and source-built JAR require Java 25 or later.
 - **For source builds:** JDK 25. The executable JAR requires Java 25 or later. Download from [Adoptium](https://adoptium.net/) or
   your preferred distribution. Run `java -version` to check.
-- **A GPU that supports OpenGL 4.1.** Any discrete GPU from the last decade will work.
-  Integrated graphics (Intel HD 4000+, Apple Silicon) are fine.
+- **A graphics driver that supports an OpenGL 4.1 core context.** Support depends
+  on both the GPU and its operating-system driver.
 - **ROM files** for the games you want to play. The engine does not include any game data.
   You must supply your own legally obtained copies.
 
@@ -36,13 +38,14 @@ Filenames do not matter. Put your images next to `config.yaml` (or in the folder
 The per-game keys (`roms.sonic1`, `roms.sonic2`, `roms.sonic3k`) remain as explicit
 overrides through master-title **Settings** or `config.yaml`: leave them at their
 defaults or blank to let the engine find your images, or set one to a file that must
-exist. See [Configuration](configuration.md) for the full identity table.
+exist. See the [image identity table](../../../CONFIGURATION.md#image-identity)
+for all recognised layouts.
 
 ## Install and Run
 
 ### Option A: Download a Release
 
-1. Download the latest release package for your platform from the Releases page:
+1. Download a package for your platform from [GitHub Releases](https://github.com/OpenGGF/OpenGGF/releases):
    - Windows: `OpenGGF-windows.zip`
    - macOS: `OpenGGF-macos.zip`
    - Linux: `OpenGGF-linux.tar.gz`
@@ -52,7 +55,9 @@ exist. See [Configuration](configuration.md) for the full identity table.
    - Windows: double-click `OpenGGF.exe`, or run it from a terminal.
    - macOS: open `OpenGGF.app`.
    - Linux: run `./OpenGGF` from the extracted `OpenGGF` directory.
-5. If your ROM filenames differ from the defaults, set their paths in master-title **Settings**, or edit `config.yaml` in the extracted package.
+5. Configure any missing ROM paths in the package’s Settings or `config.yaml`.
+   In development builds, **Locate ROM** and **Add your games** also locate images
+   or scan a folder; filenames need not match the defaults.
 
 Windows terminal example:
    ```
@@ -69,23 +74,27 @@ Linux terminal example:
 
 1. Clone the repository:
    ```
-   git clone https://github.com/OpenGGF/OpenGGF.git
+   git clone --branch develop https://github.com/OpenGGF/OpenGGF.git
    cd OpenGGF
    ```
-2. Build with Maven:
+2. Build with Maven (packaging without running tests):
    ```
    tools/testing/install-hooks.sh
-   mvn package
+   python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package
    ```
+   On Windows, use `tools/testing/install-hooks.ps1` and your Python 3 launcher.
+   For development validation, follow the [testing guide](../contributing/testing.md).
 3. Place your ROM files in the project root directory (next to `pom.xml`); any filename works.
 4. Run:
    ```
    java -jar target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar
    ```
+   On macOS, add `-XstartOnFirstThread` before `-jar`. The filename follows the
+   version in `pom.xml`; use the artifact produced by your checkout.
 
 ## First Launch
 
-When the engine starts, you will see:
+The legal disclaimer appears first by default. After accepting it:
 
 1. **Master title screen** -- A shelf of game cards with each game's original
    animated title logo. Left/right changes game and Enter (A) starts it. Under the card,
@@ -142,8 +151,9 @@ the mods at the title. Controller prompts follow Xbox/PlayStation labels or phys
 button positions. See [configuration](../../../CONFIGURATION.md#engine-settings-from-the-title)
 for details.
 
-The engine reads settings from `config.yaml` in the working directory. If the file
-does not exist, defaults are used. A few settings you might want to change immediately:
+The engine reads settings from `config.yaml` in the working directory. It stores only your overrides;
+`config.yaml.example` lists the bundled reference settings. Missing keys use built-in
+defaults. A few settings you might want to change immediately:
 
 | Setting | What it does | Default |
 |---------|-------------|---------|
@@ -152,7 +162,7 @@ does not exist, defaults are used. A few settings you might want to change immed
 | `startup.masterTitleScreen` | Show game picker on launch | `true` |
 | `display.windowAutosize` | Derive the window size from the aspect preset | `true` |
 | `audio.enabled` | Enable or disable sound | `true` |
-| `characters.sidekick` | Add Tails as a CPU sidekick (`"tails"` or `""`) | `"tails"` |
+| `characters.sidekick` | CPU sidekick for direct launches; hub launches use each game’s Game Setup | `"tails"` |
 | `debug.flags.editor` | Allow `Shift+Tab` to open the experimental editor overlay | `false` |
 
 Key bindings can be written as names like `"SPACE"` and `"F9"` instead of raw numeric key codes.

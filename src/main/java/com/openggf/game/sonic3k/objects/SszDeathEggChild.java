@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.NativeObjectQueries;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -73,10 +74,10 @@ public final class SszDeathEggChild extends AbstractObjectInstance implements Sp
         } else {
             // Refresh_ChildPosition reads the SST slot, without a parent-alive
             // guard. The trails' animation callback, not parent deletion, owns exit.
-            int px = 0, py = 0;
-            for (var object : services().objectManager().getActiveObjects()) {
-                if (object instanceof AbstractObjectInstance instance && instance.getSlotIndex() == parentSlot) { px = object.getX(); py = object.getY(); break; }
-            }
+            var occupant = NativeObjectQueries.atSlot(services().objectManager(), parentSlot,
+                    AbstractObjectInstance.class);
+            int px = occupant == null ? 0 : occupant.getX();
+            int py = occupant == null ? 0 : occupant.getY();
             int dx = switch (spawn.subtype()) {
                 case 4 -> -0x20; case 6 -> -0x10; case 8 -> 8; case 10 -> 0x10; case 12 -> 0x28;
                 default -> throw new IllegalStateException("SSZ trail subtype " + spawn.subtype());

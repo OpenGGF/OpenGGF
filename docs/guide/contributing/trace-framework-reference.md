@@ -32,7 +32,7 @@ is the long-form companion that documents every layer.
    - 4.5 [Platform setup (WSL / macOS / Linux)](#45-platform-setup-wsl--macos--linux)
 5. [Part III — Trace File Formats](#5-part-iii--trace-file-formats)
    - 5.1 [`metadata.json`](#51-metadatajson)
-   - 5.2 [`physics.csv` — all schema versions](#52-physicscsv--all-schema-versions)
+   - 5.2 [`physics.csv` — v5](#52-physicscsv--v5)
    - 5.3 [`aux_state.jsonl` — event catalogue](#53-aux_statejsonl--event-catalogue)
    - 5.4 [`.bk2` BizHawk movie](#54-bk2-bizhawk-movie)
 6. [Part IV — Java Replay Harness](#6-part-iv--java-replay-harness)
@@ -43,7 +43,7 @@ is the long-form companion that documents every layer.
    - 6.5 [Comparison — `TraceBinder` / `ToleranceConfig`](#65-comparison--tracebinder--toleranceconfig)
    - 6.6 [`DivergenceReport` and the JSON/context outputs](#66-divergencereport-and-the-jsoncontext-outputs)
    - 6.7 [Execution phase model (lag-frame detection)](#67-execution-phase-model-lag-frame-detection)
-   - 6.8 [S3K elastic windows & required checkpoints](#68-s3k-elastic-windows--required-checkpoints)
+   - 6.8 [S3K checkpoints and historical elastic windows](#68-s3k-checkpoints-and-historical-elastic-windows)
    - 6.9 [`EngineDiagnostics` and context windows](#69-enginediagnostics-and-context-windows)
 7. [Part V — Runtime Collision Tracing](#7-part-v--runtime-collision-tracing)
 8. [Part VI — Test Resource Layout](#8-part-vi--test-resource-layout)
@@ -59,7 +59,7 @@ is the long-form companion that documents every layer.
     - 10.8 [Branch policy feedback into the loop](#108-branch-policy-feedback-into-the-loop)
 11. [Part IX — Appendices](#11-part-ix--appendices)
     - 11.1 [RAM address reference per game](#111-ram-address-reference-per-game)
-    - 11.2 [Schema version history](#112-schema-version-history)
+    - 11.2 [Pre-v5 schema history](#112-pre-v5-schema-history)
     - 11.3 [S1/S2/S3K zone name tables](#113-s1s2s3k-zone-name-tables)
     - 11.4 [Related source files](#114-related-source-files)
 
@@ -68,9 +68,9 @@ is the long-form companion that documents every layer.
 ## 1. What the Trace Framework Is For
 
 OpenGGF reimplements the physics, collision, object timing, and scroll behaviour of Sonic 1, 2
-and 3&K at pixel-level parity. The only way to prove that parity empirically is to feed the
-engine the same inputs that were fed to the original ROM, running in BizHawk, and compare
-their state frame by frame.
+and 3&K at pixel-level parity. Trace replay measures that parity on a recorded route by feeding the
+engine the same inputs as the original ROM and comparing their state frame by frame.
+Its evidence is bounded by the fixture, compared fields and completed run.
 
 The trace framework is the plumbing that does that:
 
@@ -80,8 +80,7 @@ The trace framework is the plumbing that does that:
   honouring the same ROM-internal pacing (gameplay frames vs VBlank-only lag frames).
 - **Compare** — match the engine's per-frame state against the recorded ROM state, with
   configurable tolerances, and emit a structured divergence report.
-- **Iterate** — feed the divergence report back to humans or to agents (via the `/loop`
-  skill and/or subagent-driven execution) to diagnose and fix the first non-cascading error,
+- **Iterate** — feed the divergence report back to humans or to agents (through a bounded debugging task) to diagnose and fix the first non-cascading error,
   and re-run.
 
 Trace replay tests are described by [`trace-replay.md`](trace-replay.md) as "the highest-signal
@@ -100,11 +99,11 @@ tests in the repo for physics, object timing, spawn timing, and collision parity
                                    │  per-frame RAM reads
                                    ▼
                 ┌──────────────────────────────────────────┐
-                │  Recorder (Lua or Python)                │
-                │   - tools/tracechaser/bizhawk/*.lua                  │
-                │   - tools/tracechaser/retro/*.py                     │
+                │  Native recorder                         │
+                │   tools/tracechaser/bizhawk-headless/     │
+                │   src/Recording/                         │
                 └──────────────────────────────────────────┘
-                                   │ writes 3 files
+                                   │ writes v5 payloads
                                    ▼
                 ┌──────────────────────────────────────────┐
                 │  Trace fixture                           │
@@ -118,7 +117,7 @@ tests in the repo for physics, object timing, spawn timing, and collision parity
                 │   - HeadlessTestFixture                  │
                 │   - TraceBinder                          │
                 │   - TraceExecutionModel                  │
-                │   - S3kElasticWindowController           │
+                │   - ROM-backed timing admission          │
                 └──────────────────────────────────────────┘
                                    │ emits
                                    ▼
@@ -131,28 +130,33 @@ tests in the repo for physics, object timing, spawn timing, and collision parity
                                    ▼
                 ┌──────────────────────────────────────────┐
                 │  Agent iteration loop                    │
-                │   - `/loop` skill                        │
+                │   - trace-replay-bug-fixing skill         │
                 │   - subagent-driven-development skill    │
                 │   - trace-replay / bizhawk-headless      │
                 │   - plan/research/spec docs              │
                 └──────────────────────────────────────────┘
 ```
 
-Every piece of this pipeline is in-tree. The ROM is not; it is gitignored and users must supply
+The recorder lives in the optional pinned `tools/tracechaser` submodule; initialize
+it explicitly before capture. Java replay lives in OpenGGF. The ROM is not tracked; it is gitignored and users must supply
 their own legally-obtained copy.
 
 ---
 
 ## 3. Part I — Recording: BizHawk Lua
 
+**Historical implementation background.** The schemas, metadata and algorithms in
+this section describe predecessor recorders. They are not accepted production
+formats or current bootstrap authority; use the v5/native path above.
+
 BizHawk (`tools/tracechaser/.dependencies/BizHawk-2.11-win-x64/EmuHawk.exe`, not checked in) runs the ROM with a
 deterministic BK2 movie. A companion Lua script is loaded with `--lua` which, via
 `event.onframeend`, snapshots RAM into `physics.csv` and emits diagnostic events into
-`aux_state.jsonl`. The script is the authoritative source of truth for the fixture format.
+`aux_state.jsonl`. The historical script defined its predecessor fixture format.
 
 ### 3.1 Script inventory
 
-`tools/tracechaser/bizhawk/` contains **15 Lua files** and **4 batch launchers**:
+The historical recorder/probe inventory included:
 
 | Category | File | Purpose |
 |---|---|---|
@@ -163,7 +167,7 @@ deterministic BK2 movie. A companion Lua script is loaded with `--lua` which, vi
 | Launcher | `record_trace.bat` | Wraps BizHawk for S1 recording |
 | Launcher | `record_s2_trace.bat` | Wraps BizHawk for S2 recording with PowerShell stdout bridge |
 | Launcher | `record_s3k_trace.bat` | Wraps BizHawk for S3K recording, exposes `aiz_end_to_end` profile |
-| Launcher | `record_s1_credits_traces.bat` | Wraps BizHawk for credits demos |
+| Removed launcher | `record_s1_credits_traces.bat` | Former credits-demo wrapper |
 | Debug | `debug_s2_endact_inputs.lua` | Dump S2 end-of-act input handling |
 | Debug | `debug_s2_tails_despawn.lua` | Log Tails despawn/render flags near frame 5490–5520 |
 | Debug | `s3k_domain_probe.lua` | Probe multiple BizHawk memory domains to verify the right one |
@@ -188,7 +192,7 @@ Recording starts when the ROM transitions into `game_mode == 0x0C` (GAMEMODE_LEV
 returns without writing; the next `on_frame_end()` writes trace frame `0x0000`. Recording
 stops when `game_mode` transitions away from `0x0C`.
 
-#### CSV v4 schema (22 columns)
+#### Historical CSV v4 schema (22 columns)
 
 ```
 frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode,
@@ -224,7 +228,7 @@ All events carry `frame` (the trace frame number) and `vfc` (`gameplay_frame_cou
 |---|---|---|---|
 | `ADDR_GAME_MODE` | `0xF600` | byte | `0x0C` = GAMEMODE_LEVEL |
 | `ADDR_ZONE` / `ADDR_ACT` | `0xFE10` / `0xFE11` | byte | |
-| `ADDR_RING_COUNT` | `0xFE20` | word BE, BCD | |
+| `ADDR_RING_COUNT` | `0xFE20` | word BE | |
 | `ADDR_FRAMECOUNT` | **`0xFE04`** | word BE | `v_framecount`; advances only on Level_MainLoop completion. **Not** `0xFE02` (common trap — see MZ1 case study) |
 | `ADDR_VBLA_WORD` | `0xFE0E` | word BE | Advances every VBlank |
 | `ADDR_CAMERA_X` / `ADDR_CAMERA_Y` | `0xF700` / `0xF704` | long, read hi word | |
@@ -237,7 +241,7 @@ All events carry `frame` (the trace frame number) and `vfc` (`gameplay_frame_cou
 | `ADDR_OPL_SCREEN` | `0xF76E` | word BE | ObjPosLoad last processed chunk |
 | `ADDR_OPL_DATA_FWD/BWD` | `0xF770` / `0xF774` | long BE | OPL cursor pointers |
 
-#### metadata.json
+#### Historical metadata.json (rejected by current readers)
 
 ```json
 {
@@ -274,7 +278,7 @@ All events carry `frame` (the trace frame number) and `vfc` (`gameplay_frame_cou
 - **Player history snapshot** (frame `-1`): 64-entry ring buffer of Sonic position/input/
   status captured from RAM at `$FFE400/E500` for pre-trace position history hydration.
 
-#### CSV v6 schema (38 columns)
+#### Historical CSV v6 schema (38 columns)
 
 ```
 frame,input,camera_x,camera_y,rings,gameplay_frame_counter,vblank_counter,lag_counter,
@@ -349,17 +353,16 @@ In `aiz_end_to_end` mode the recorder emits:
   - `aiz2_main_gameplay` — zone=0, act=1, unlocked
   - `hcz_handoff_complete` — zone=1, act=0, unlocked
 
-A PowerShell sanity gate in [`trace-replay.md`](trace-replay.md) (section "Recording The S3K
-End-To-End Fixture") verifies the checkpoint set is complete and ordered before the fixture
-is committed.
+Current capture and checkpoint validation use the native workflow in
+[Trace v5 capture and publication](trace-v5-publication.md).
 
 ### 3.5 `s1_credits_trace_recorder.lua` (removed)
 
 This Lua recorder and its `record_s1_credits_traces.bat` launcher no longer exist in the
 tree; the surviving credits recorder is the stable-retro
 `tools/tracechaser/retro/s1_credits_trace_recorder.py` (section 4.4), which writes the same layout
-under `trace_output/credits_demos/`. The description below is kept because the trace
-schema it produced is still what the credits fixtures carry.
+under `trace_output/credits_demos/`. The description below records the predecessor workflow. Current credits fixtures
+use v5 and the native harness; neither predecessor producer is a publication path.
 
 Recorded the eight ROM-owned credits demos. The inputs are not in a BK2 — they are embedded
 in the ROM at `DemoEndData` (see `Sonic1CreditsDemoData`) and replayed by the stock
@@ -367,7 +370,7 @@ in the ROM at `DemoEndData` (see `Sonic1CreditsDemoData`) and replayed by the st
 each demo to become active (`demo_flag == 0x8001` and `credits_num` matches), and writes a
 separate trace directory per demo under `trace_output/credits_demos/` (gitignored).
 
-Each demo trace carries the S1 v4 schema plus these extra metadata fields:
+Each predecessor demo trace carried the S1 v4 schema plus these metadata fields:
 
 ```json
 "trace_type": "credits_demo",
@@ -406,9 +409,10 @@ stream alone cannot answer.
 
 ### 3.7 Batch launchers
 
-All launchers resolve `BIZHAWK_EXE` from env or default to
-`C:\Users\farre\IdeaProjects\sonic-engine\docs\BizHawk-2.11-win-x64\EmuHawk.exe`, then run
-BizHawk with `--chromeless --lua <script> --movie <bk2> <rom>`.
+These predecessor launchers drove BizHawk with `--chromeless --lua <script>
+--movie <bk2> <rom>`. Do not copy historical workstation paths or in-repository
+output defaults. Retained diagnostic launchers require explicit external output
+and consumer-root settings; read the pinned script before using one.
 
 **`record_trace.bat`:** Direct shell invocation — simplest form.
 
@@ -428,9 +432,13 @@ script know how long the movie is and which profile to activate (`gameplay_unloc
 
 ## 4. Part II — Recording: stable-retro Python
 
+**Historical diagnostic background.** This is the predecessor Python workflow;
+current fixture publication uses the native BizHawk harness.
+
 stable-retro is a Python library that embeds the same Genesis Plus GX core as BizHawk but is
-fully headless and runs on macOS / Linux / WSL. It produces byte-identical output to the
-BizHawk Lua recorder. S1 has full Python support; S2 and S3K are planned.
+fully headless and runs on macOS / Linux / WSL. The S1 Python recorder was used
+for earlier diagnostics. Do not assume byte-identical output across these hosts
+and the canonical native recorder; publication requires measured candidate comparison.
 
 `tools/tracechaser/retro/` contents:
 
@@ -610,10 +618,10 @@ wsl -d Ubuntu-24.04 -- bash -c 'mkdir -p /tmp/roms && cp "/mnt/c/.../s1.gen" /tm
 wsl -d Ubuntu-24.04 -- bash -c 'cd /home && source ~/retro-env/bin/activate && PYTHONPATH="" python3 -m stable_retro.import /tmp/roms'
 ```
 
-Critical: the project root contains `stable-retro-0.9.9/stable_retro/` which shadows the
-installed package, so **always `cd /home`** and **always set `PYTHONPATH=""`** before running
-retro scripts inside WSL. All subsequent `python3` commands must be wrapped in
-`wsl -d Ubuntu-24.04 -- bash -c 'cd /home && source ~/retro-env/bin/activate && PYTHONPATH="" python3 -u ...'`.
+A historical workstation had a local `stable-retro-0.9.9/stable_retro/` checkout
+that shadowed the installed package. That directory is not a repository prerequisite.
+When reproducing these diagnostics, use an isolated environment and verify which
+package Python imports; the old `cd /home` workaround is host-specific.
 
 ROM SHA-1 must be `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b` (Sonic 1 REV01 World).
 
@@ -626,7 +634,8 @@ the BK2 movie for BK2-owned recordings).
 
 ### 5.1 `metadata.json`
 
-Minimum required fields across all games:
+Common metadata fields (profile-specific validation lives in `TraceMetadata` and
+the native candidate validator):
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -639,7 +648,7 @@ Minimum required fields across all games:
 | `start_x`, `start_y` | `"0x….."` | Sonic's starting coordinates |
 | `recording_date` | string | `YYYY-MM-DD` |
 | `recorder` | string | opaque producer identity; canonical fixtures use `native-bizhawk-headless` |
-| `recorder_version` | string | opaque native implementation version, currently `3.0` |
+| `recorder_version` | string | opaque implementation version; never a parser selector |
 | `trace_schema` | int | the sole data contract selector; exactly `5` |
 | `rom_checksum` | string | optional |
 | `notes` | string | optional |
@@ -696,7 +705,7 @@ sidekick-capable schemas.
 One JSON object per line, compact (no whitespace). Every event carries `frame` and `event`
 keys; most also carry `vfc` (`gameplay_frame_counter`).
 
-Canonical union of event types across all three games:
+Representative diagnostic event types (not an exhaustive capability inventory):
 
 | `event` | Games | Frame | Purpose |
 |---|---|---|---|
@@ -725,15 +734,17 @@ A zipped bundle of text files containing:
 - `Header.txt` — emulator, core, ROM hash, log key
 - `Comments.txt`, `Subtitles.txt`, etc. (unused here)
 
-The trace replay reads only `Input Log.txt` (and only the P1 button group, identified via
-the LogKey).
+`Bk2MovieLoader` parses `Input Log.txt` and its LogKey bindings for P1 and optional
+explicitly labelled P2 controls, including Start. Unlabelled legacy logs do not
+invent a P2 lane.
 
 ---
 
 ## 6. Part IV — Java Replay Harness
 
-All replay code lives under `src/test/java/com/openggf/tests/trace/`. The collision-tracing
-runtime hooks live in `src/main/java/com/openggf/physics/`.
+JUnit replay harnesses live under `src/test/java/com/openggf/tests/trace/`. Shared
+models, parsers, comparators and bootstrap logic live in `src/main/java/com/openggf/trace/`;
+runtime collision hooks live in `src/main/java/com/openggf/physics/`.
 
 ### 6.1 `AbstractTraceReplayTest`
 
@@ -743,56 +754,37 @@ The base JUnit-5 test class. Subclasses override `game()`, `zone()`, `act()`,
 `traceDirectory()`, and optionally `tolerances()` / `reportOutputDir()` /
 `overridePreTraceOscFrames()`.
 
-`replayMatchesTrace()` walks through these steps:
+`replayMatchesTrace()` performs these operations:
 
-1. **Gate on fixture presence.** If any of `metadata.json`, `physics.csv`, or the `.bk2`
-   is missing, the test is *skipped* via `Assumptions.assumeTrue`, not failed. This is how
-   CI stays green in environments without ROMs / movies.
-2. **Load `TraceData`.** Parses all three files; exposes `List<TraceFrame>` and
-   `Map<Integer, List<TraceEvent>> eventsByFrame`.
-3. **Load level.** `SharedLevel.load(game, zone, act)` constructs the engine level from the
-   ROM.
-4. **Build `HeadlessTestFixture`.** Configures BK2 movie playback starting at
-   `meta.bk2FrameOffset()`; seeds Sonic's start position from `meta.start_x/y` (treated as
-   centre coordinates).
-5. **Initialise VBlank counter.** `ObjectManager.initVblaCounter(trace.initialVblankCounter() - 1)`
-   aligns the engine's VBlank clock with the ROM's at trace frame 0.
-6. **Pre-oscillation hydration.** For `preTraceOscFrames` iterations, advance
-   `OscillationManager.update()` with *negative* frame numbers (keeps the engine's timeline
-   clean while letting its internal oscillation phase catch up to ROM oscillation at trace
-   frame 0). This is critical for MZ1 (`OscillationManager` drives the MovingBlock
-   platforms — see 10.6).
-7. **Pre-trace object snapshot hydration.** If the fixture has S2-style frame `-1` events,
-   `TraceObjectSnapshotBinder` replays them onto the engine's `ObjectManager` so that every
-   ROM slot's routine/timer state exists before frame 0.
-8. **Frame-by-frame loop.** For each `i` in `[startTraceIndex, frameCount)`:
-   - Ask `TraceExecutionModel.forGame(meta.game).phaseFor(previous, expected)` whether this
-     frame is `FULL_FRAME` or `VBLANK_ONLY` (see 6.7).
-   - `fixture.stepFrameFromRecording()` for FULL_FRAME, else
-     `fixture.skipFrameFromRecording()`.
-   - Capture `EngineDiagnostics` from the sprite.
-   - `TraceBinder.compareFrame(...)` produces one `FrameComparison`.
-   - For S3K, `S3kReplayCheckpointDetector.observe(probe)` may emit a checkpoint, fed to
-     `S3kElasticWindowController` which decides strict vs elastic comparison and may advance
-     the drive cursor asymmetrically.
-9. **Build `DivergenceReport`.** S3K passes its `TraceData` in so the report can enrich
-   itself with checkpoint metadata.
-10. **Write report.** Always writes
-    `target/trace-reports/<profile>/<logical-key>-<lane>-<owner-hash>.json` plus its
-    `.json.owner.json` ownership sidecar. If there are errors, it also writes the same
-    owner-keyed stem with `_context.txt` — a side-by-side context window around the first
-    error, sized `radius=10` frames.
-11. **Fail the test** if `report.hasErrors()`. Print `report.toSummary()` and the context
-    window to `System.err`.
+1. Resolve the canonical or candidate fixture root and gate on required fixture
+   payloads/ROMs. Missing inputs may skip the test; inspect skips before claiming parity.
+2. Parse strict v5 data, validate replay eligibility and resolve the movie from
+   metadata's shared `_movies/<source_bk2>` placement or a retained local `.bk2`.
+3. Prepare the recorded team and ROM-backed level through `TraceReplaySessionBootstrap`,
+   `TraceReplayBootstrap` and `HeadlessTestFixture`. Some entry profiles require a
+   fresh level load rather than a reused `SharedLevel`.
+4. Step the production frame driver with movie input and the supported phase model.
+   Dedicated hardware timing can release only matching prepared production work,
+   under the [timing input contract](../../architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md).
+5. Capture engine snapshots and compare the selected verification groups with
+   `TraceBinder`. Physics/aux rows are comparison evidence, never gameplay write-back.
+6. Publish an owner-keyed report and validate group accounting, warnings/errors,
+   rewind closure and timing closure as applicable. The finalization path regenerates
+   the report even when replay fails early so stale evidence cannot mask that failure.
+
+Reports live under
+`target/trace-reports/<profile>/<logical-key>-<lane>-<owner-hash>.json`, with
+ownership sidecars and divergence context. Consult the report's completed frame
+count and selected groups, not just Maven's exit status.
 
 ### 6.2 `AbstractCreditsDemoTraceReplayTest`
 
-Specialises the base test for S1 credits demos:
+Provides a separate JUnit harness for S1 credits demos:
 
 - **No `.bk2`.** Input is read from the ROM's `DemoEndData` table via
   `Sonic1CreditsDemoData.DEMO_DATA_ADDR[idx]` / `DEMO_DATA_SIZE[idx]`, wrapped in a
   `DemoInputPlayer` that implements the ROM's demo-input protocol.
-- **Demo-specific initial state.** When `idx == 3` (LZ3), `setupLzDemoState(fixture)`
+- **Demo-specific initial state.** When `idx == 3` (LZ3), `Sonic1CreditsDemoBootstrap.applyLzLampostState(...)`
   restores the lamp state (ring count, camera, water level/routine).
 - **Frame limit = `min(trace.frameCount, DEMO_TIMER[idx])`.**
 - **REV01 demo bug emulation.** `MoveSonicInDemo` has a bug that zeroes `d2` before reading
@@ -818,27 +810,26 @@ Specialises the base test for S1 credits demos:
 **Sonic 3K full-run & supporting:**
 - `TestS3kAizTraceReplay` — AIZ1 → AIZ2 → HCZ1 end-to-end
 - `TestS3kAizReplayBootstrap` — bootstrap hydration unit test
-- `TestS3kReplayCheckpointDetector` / `TestS3kElasticWindowController` /
-  `TestS3kRequiredCheckpointGuard` — unit tests for the S3K-specific pieces
+- `TestS3kReplayCheckpointDetector` / `TestS3kRequiredCheckpointGuard` — unit tests for the S3K-specific pieces
 - `DebugS3kAizReplayWindowProbe` (diagnostic)
 
 **Synthetic / unit:**
-- `TestS2SyntheticV3Fixture`, `TestS3kSyntheticV3Fixture` — exercise schema parsing without
-  needing a real ROM
+- `TestS2SyntheticV3Fixture`, `TestS3kSyntheticV3Fixture` — exercise v5 parsing
+  without a real ROM; the class names retain historical `V3` wording
 
 ### 6.4 Trace data models
 
 - **`TraceData`** — owns `List<TraceFrame>` and a `Map<Integer,List<TraceEvent>>` of aux
   events, plus `preTraceObjectSnapshots()`, `initialVblankCounter()`.
-- **`TraceFrame`** — record with hex-parsed fields; `parseCsvRow(line, schema)` dispatches
-  on column count (11/18/19/20/22/37/38). Holds `hasExtendedData()`, `stateEquals()` (used
+- **`TraceFrame`** — record with hex-parsed fields; `parseCsvRow(line)` accepts only
+  the ordinary v5 widths (42 columns, or 43 with `life_count`). Holds `hasExtendedData()`, `stateEquals()` (used
   for physics-only equality in lag detection), `formatDiagnostics()`.
 - **`TraceMetadata`** — parsed `metadata.json`.
 - **`TraceEvent`** — sealed interface; subtypes include `Checkpoint`, `ZoneActState`,
   `ObjectStateSnapshot`, `PlayerHistorySnapshot`, `CpuStateSnapshot`, `ObjectAppeared`,
   `ObjectRemoved`, `ObjectNear`, `ModeChange`, `RoutineChange`, `StateSnapshot` (fallback
   for unknown event types).
-- **`TraceCharacterState`** — per-character physics state for S2 v6's Tails block.
+- **`TraceCharacterState`** — per-character state for the v5 sidekick block.
 - **`RomObjectSnapshot`** — the raw-bytes-plus-semantic-aliases structure used by
   `object_state_snapshot`.
 
@@ -930,53 +921,34 @@ eng: rtn=02 onSlot=-1 rings=10 st=00 cam=0300
 
 ### 6.7 Execution phase model (lag-frame detection)
 
-The ROM's VBlank interrupt can fire without a Level_MainLoop completing — e.g. when the game
-is paused, lagging, or in a title-card/zone-transition pause. During those frames, physics
-is unchanged but one full animation frame is still displayed.
+`TraceExecutionModel` and `TraceReplayBootstrap.phaseForReplay(...)` classify
+recorded execution boundaries. `TraceExecutionPhase` contains
+`FULL_LEVEL_FRAME`, `FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD`,
+`PLAYABLE_ANIMATION_ONLY`, `ADVANCE_ONLY`, and `VBLANK_ONLY`. The frame-closure
+driver maps each phase to the corresponding existing engine loop/input operation.
 
-`TraceExecutionModel.forGame(game).phaseFor(previous, expected)` returns one of:
+The distinction matters when a VBlank completes without a level iteration, or
+when a native loop services animation/input without the full gameplay pass. It
+does not authorize copying recorded gameplay values into the engine. Current
+readers require v5; there is no pre-v3 schema fallback.
 
-- `FULL_FRAME` — `gameplay_frame_counter` advanced: run full engine tick
-- `VBLANK_ONLY` — `gameplay_frame_counter` did **not** advance but `vblank_counter` did:
-  skip the engine's physics tick, still consume the BK2 input
+### 6.8 S3K checkpoints and historical elastic windows
 
-For pre-v3 fixtures that lack these counters the model falls back to a `bk2_frame_offset`
-heuristic (documented in the guide) and emits a one-shot warning so the user knows the
-fixture should be regenerated.
+`S3kReplayCheckpointDetector` and `S3kRequiredCheckpointGuard` provide semantic
+milestone checks for supported S3K replays. Checkpoint identity and order supplement
+frame comparisons; they do not establish that an unobserved route is correct.
 
-Synthetic fixtures for this path are built in-test (see `TestSpecialStageHardwareTimingLifecycle`
-and `TestPlaybackAdvanceOnlyInputBridge`) rather than committed under
-`src/test/resources/traces/`, so they need no ROM.
-
-### 6.8 S3K elastic windows & required checkpoints
-
-S3K's AIZ1 intro runs through a fire-bridge cutscene and a seamless AIZ1→AIZ2 transition
-that introduces small amounts of per-frame latency we cannot match pixel-perfectly. The
-solution is the **elastic window** pattern:
-
-- `S3kReplayCheckpointDetector` emits `TraceEvent.Checkpoint` events as the engine reaches
-  each of the six required milestones.
-- `S3kElasticWindowController` holds a `Map<String,String>` of window entry→exit
-  checkpoints — currently `"intro_begin" → "gameplay_start"` and
-  `"aiz1_fire_transition_begin" → "aiz2_main_gameplay"`.
-- Inside a window, the drive cursor is allowed to drift by up to
-  `max(180, exitTrace - entryTrace)` engine ticks relative to the trace index. Strict
-  field-by-field comparison is disabled (`isStrictComparisonEnabled() == false`).
-- At each checkpoint boundary, `S3kRequiredCheckpointGuard.validate()` asserts that all
-  earlier required checkpoints have been emitted in order. A missing or reordered
-  checkpoint fails the test immediately.
-
-The six required checkpoints: `intro_begin`, `gameplay_start`,
-`aiz1_fire_transition_begin`, `aiz2_reload_resume`, `aiz2_main_gameplay`,
-`hcz_handoff_complete`.
-
-This is the design documented in
-`docs/architecture/designs/2026-04-21-s3k-aiz-intro-parity-gate-design.md`.
+The April 2026
+[intro parity design](../../architecture/designs/2026-04-21-s3k-aiz-intro-parity-gate-design.md)
+described an elastic-window controller that disabled strict comparisons inside
+selected cutscenes. That controller is no longer present. Read the current
+`AbstractTraceReplayTest.replayS3kTrace(...)` and production bootstrap/phase owners
+when changing replay alignment; do not reintroduce that historical bypass.
 
 ### 6.9 `EngineDiagnostics` and context windows
 
-`EngineDiagnostics` is a record snapshot captured every frame but **never compared**. It
-holds:
+`EngineDiagnostics` is a record snapshot. Selected fields are compared for
+pass/fail when both sides provide them; other fields enrich diagnostic context. It holds:
 
 - `routine`, `standOnSlot`, `standOnType`
 - `rings`, `statusByte`
@@ -1023,69 +995,34 @@ regressions, not a recording of full gameplay.
 
 ## 8. Part VI — Test Resource Layout
 
-```
-src/test/resources/traces/
-├── s1/
-│   ├── ghz1_fullrun/           metadata.json  physics.csv  aux_state.jsonl  ghz1_fullrun.bk2
-│   ├── mz1_fullrun/            metadata.json  physics.csv  aux_state.jsonl  mz1.bk2
-│   ├── credits_00_ghz1/        metadata.json  physics.csv  aux_state.jsonl
-│   ├── credits_01_mz2/         ...
-│   ├── credits_02_syz3/
-│   ├── credits_03_lz3/
-│   ├── credits_04_slz3/
-│   ├── credits_05_sbz1/
-│   ├── credits_06_sbz2/        ← currently 0 errors / 0 warnings
-│   └── credits_07_ghz1b/
-├── s2/
-│   └── ehz1_fullrun/           metadata.json  physics.csv  aux_state.jsonl  s2-ehz1.bk2
-└── s3k/
-    └── aiz1_to_hcz_fullrun/    metadata.json  physics.csv  aux_state.jsonl  s3-aiz1-2-sonictails.bk2
-synthetic/
-├── basic_3frames/                       — tiny shape tests
-├── execution_v3_2frames/                — TraceExecutionModel unit fixture (S1)
-├── s2_execution_v3_2frames/             — S2 counters, lag_counter=0
-└── s3k_execution_v3_2frames/            — S3K counters, real lag_counter increments on frame 2
-```
+Canonical fixtures live under `src/test/resources/traces/<game>/`. They include
+single-level routes, credits demos, complete-run segments and manifests, plus
+shared deduplicated movies under `<game>/_movies/`. A representative level fixture
+contains `metadata.json`, `physics.csv.gz`, `aux_state.jsonl.gz`, and optional
+dedicated timing data. Movie location is resolved from metadata/run ownership;
+not every segment has its own `.bk2`.
 
-Fixture sizes:
-
-| Trace | `physics.csv` | `aux_state.jsonl` | BK2 |
-|---|---|---|---|
-| S1 GHZ1 | ~370 KB, 3 905 frames | ~3.5 MB | 2.9 KB |
-| S1 MZ1 | ~750 KB, 7 936 frames | ~8 MB | — |
-| S2 EHZ1 | ~580 KB, 5 853 frames | ~2 MB | 3.9 KB |
-| S3K AIZ→HCZ | ~2 MB, 20 913 frames | ~18 MB | 9.1 KB |
-
-`aux_state.jsonl` dominates disk use — S3K AIZ→HCZ is 209 K+ events because it captures
-every nearby-object position every frame through a 20-minute run.
+Keep payloads compressed in Git. Native candidates are recorded outside the
+repository and installed only through the validated publication workflow. Synthetic
+parser/phase fixtures may be built directly in tests and need no ROM. Directory
+names, file sizes and test presence are not parity evidence; current dated results
+belong in the [trace frontier log](../../status/trace-frontier-log.md).
 
 ---
 
 ## 9. Part VII — CI Pipeline
 
-**`.github/workflows/ci.yml`** runs on every PR into `develop`. Two jobs:
+[Testing](testing.md#ci-in-github) describes the current event matrix owned by
+`.github/workflows/ci.yml`: develop/next push smoke after a quiet period, non-draft
+PR/manual smoke with separate policy/guard checks as applicable, and optional
+manual ROM-fixture trace replay. Master publication uses the separate Release
+workflow's explicit full suite and guards.
 
-1. **`policy`** — validates the branch trailer/file policy. On the PR, checks that every
-   new non-merge commit carries the required trailers (`Changelog`, `Guide`, `Known-Discrepancies`,
-   `S3K-Known-Discrepancies`, `Agent-Docs`, `Configuration-Docs`, `Skills`) with `updated`
-   or `n/a`, and cross-checks trailer ↔ file staging (e.g. `Changelog: updated` requires
-   `CHANGELOG.md` to be in the diff). Runs via `bash .githooks/validate-policy.sh ci-pr ...`.
-2. **`test`** — sets up Java 25 (Temurin) with Maven cache, then runs
-   `mvn test -B` and reads `target/surefire-reports` plus owner-keyed reports recursively
-   below `target/trace-reports/<profile>/`.
-
-Trace replay tests run in the `test` job but **skip gracefully** (`Assumptions.assumeTrue`)
-whenever their `.bk2` or ROM is unavailable — so CI passes without committing ROMs. What CI
-does exercise:
-
-- Synthetic fixture parsing (schema v3 fidelity)
-- The S3K checkpoint detector / elastic window / required-checkpoint guard unit tests
-- `TestExecutionModel` unit tests against the synthetic fixtures
-- Every `TestS1*`, `TestS2*`, `TestS3k*` test's *construction and skip logic* — any
-  refactor that breaks the abstract base class will fail here even without a ROM
-
-There is no dedicated CI job for recording — that's a human/agent-driven activity on
-workstations with BizHawk installed.
+Hosted jobs do not have private ROMs. They exercise v5 parser, bootstrap, timing,
+checkpoint and guard contracts where synthetic inputs suffice; ROM-gated skips do
+not demonstrate gameplay parity. Inspect test identities and skips rather than
+assuming every replay body ran. Native capture is performed separately with the
+pinned TraceChaser harness, verified ROMs and BizHawk prerequisites.
 
 ---
 
@@ -1107,7 +1044,8 @@ every frame where the engine diverges from the ROM is one such edge case. If you
 4. Re-run the fixture,
 5. Compare the new error count / first-error frame to the baseline,
 
-and repeat, the error count monotonically decreases as each root cause is found. Agents
+and repeat, comparing exact frontiers and regressions rather than assuming the
+error count will decrease monotonically. Agents
 excel at this because steps 1, 4 and 5 are mechanical (parse JSON, count errors, diff
 frames) and steps 2, 3 are LLM-friendly (read disassembly, read engine, edit Java).
 
@@ -1119,10 +1057,10 @@ For any given trace divergence, the agent has:
   machine-readable error list.
 - **`target/trace-reports/<profile>/<logical-key>-<lane>-<owner-hash>_context.txt`** —
   human-readable first-error window with side-by-side ROM vs engine diagnostics.
-- **`src/test/resources/traces/<game>/<name>/physics.csv`** — every ROM-state row.
-- **`src/test/resources/traces/<game>/<name>/aux_state.jsonl`** — every ROM event.
-- **`docs/s1disasm/` / `docs/s2disasm/` / `docs/skdisasm/`** — the original ROM source (not
-  checked in but available locally).
+- **`src/test/resources/traces/<game>/<name>/physics.csv.gz`** — every ROM-state row.
+- **`src/test/resources/traces/<game>/<name>/aux_state.jsonl.gz`** — every ROM event.
+- **`docs/s1disasm/` / `docs/s2disasm/` / `docs/skdisasm/`** — optional pinned disassembly submodules
+  for ROM research, never runtime asset sources.
 - **`RomOffsetFinder` tool** (`com.openggf.tools.disasm.RomOffsetFinder`) — symbol → offset
   resolution with ROM verification.
 - **Engine code under `src/main/java/com/openggf/`** — the thing being fixed.
@@ -1135,60 +1073,37 @@ For any given trace divergence, the agent has:
 
 ### 10.3 The skills that drive iteration
 
-Skills in `.claude/skills/` that are directly about the trace loop:
+Project skills are mirrored in `.agents/skills/` and `.claude/skills/`:
 
-- **`s1-trace-replay`** — "Record a Sonic 1 BizHawk trace, copy it to the test resources,
-  run the trace replay tests, and interpret the divergence results." Supports
-  `mz1` / `ghz1` / `all` / `test-only` / `interpret` modes.
-- **`bizhawk-headless-trace`** — canonical native capture and publication,
-  including ROM-owned S1 credits-demo recording.
+- `trace-replay-bug-fixing` owns divergence diagnosis and ROM-backed fixes.
+- `s1-trace-replay` covers running and adding Sonic 1 replay fixtures.
+- `bizhawk-headless-trace` owns canonical native capture and publication.
+- `trace-green-fleet` coordinates independent failing trace frontiers.
+- The matching disassembly, object/boss, zone and rendering skills provide domain
+  guidance when a fix crosses those owners.
 
-Supporting skills that a trace-driven agent routinely calls:
-
-- **`s1disasm-guide` / `s2disasm-guide` / `s3k-disasm-guide`** — how to navigate the
-  disassemblies to verify a ROM routine.
-- **`s1-implement-object` / `s2-implement-object` / `s3k-implement-object`** — used when the
-  fix is "this object's AI was wrong."
-- **`superpowers:systematic-debugging`** — the meta-debug flow.
-- **`superpowers:test-driven-development`** — if the fix needs a narrower unit test first.
-- **`superpowers:verification-before-completion`** — mandatory before claiming the fix
-  works.
-- **`superpowers:receiving-code-review`** / **`requesting-code-review`** — for review loops.
-- **`superpowers:subagent-driven-development`** — the pattern that makes long iterations
-  feasible by dispatching independent sub-tasks in parallel.
-- **`superpowers:using-git-worktrees`** — isolate a long-running iteration in a worktree
-  without polluting the main checkout.
+Use repository delivery and validation policy; skill workflow defaults do not
+require extra approval ceremonies or repeated unchanged reviews.
 
 ### 10.4 The `/loop` and subagent-driven patterns
 
-Two mechanisms move the iteration forward:
+Earlier sessions used client-specific `/loop` scheduling. It is not a repository
+prerequisite or a portable API. Current work can run inline or use bounded delegated
+tasks with explicit file/worktree ownership and stopping conditions.
 
-**`/loop` skill** — runs a prompt or slash command on a recurring schedule, either at a
-fixed interval (`/loop 5m /foo`) or self-paced (`/loop /foo` with no interval), suitable for
-**"check the fixture, note the error count, if it went down commit, if it went up revert,
-work on the first non-cascading error"** kind of cycles. In self-paced mode the agent uses
-`ScheduleWakeup(delaySeconds, prompt, reason)` to plan its own cadence — typically 270 s
-(stays in Anthropic prompt cache) or 1 200+ s (amortises cache misses).
-
-**`superpowers:subagent-driven-development`** — when a plan has multiple independent tasks,
-the orchestrating agent dispatches sub-agents (via the Agent tool) in parallel, each getting
-a self-contained briefing. In the trace context, typical sub-agent roles are:
-
-- "Read the first error in the context file and identify the ROM routine implicated."
-- "Find the corresponding engine code and propose a minimal fix."
-- "Run `mvn test -Dtest=TestS1Mz1TraceReplay`, inspect
-  `target/trace-reports/trace/`, and report the new error count."
-- "Record a fresh trace in BizHawk and update the fixture."
-
-Results come back as short reports; the orchestrator decides what to do next.
+One lead owns delivery-wide validation. Workers run focused checks for their edits;
+reuse existing queued/running jobs for unchanged inputs instead of launching duplicate
+suites. Keep one command session and observer per job, and treat queue waiting as
+pending work. See [agent guidance](../../../AGENTS.md) for checkpoints, resource
+admission and delivery rules.
 
 ### 10.5 Plan/research/spec artefacts
 
 Longer, structured work lives under `docs/architecture/`:
 
 - **`architecture/plans/`** — step-by-step execution plans (`executing-plans` skill format). Current
-  trace-related plans:
-  - `2026-04-20-s2-s3k-trace-recorder-v3.md` — the plan this branch implements
+  trace-related historical plans:
+  - `2026-04-20-s2-s3k-trace-recorder-v3.md` — historical recorder plan
   - `2026-04-21-s3k-aiz-intro-parity-gate.md` — aligning elastic-window replay with the
     approved parity gate
   - `2026-04-21-s3k-end-to-end-trace-fixture.md` — roadmap for the real AIZ→HCZ fixture
@@ -1199,9 +1114,10 @@ Longer, structured work lives under `docs/architecture/`:
 - **`architecture/designs/`** — concrete design contracts.
   - `2026-04-21-s3k-aiz-intro-parity-gate-design.md` — the six-checkpoint gate contract
 
-Plans are written once (`superpowers:writing-plans`), executed repeatedly
-(`superpowers:executing-plans` or `subagent-driven-development`), and referenced by commits
-via the `Changelog`/`Guide`/`Agent-Docs` trailers required by the branch policy.
+Keep task decisions and rejected approaches in the existing dated architecture
+artifact when they would otherwise need to be re-derived. Update a compact checkpoint
+at handoff; do not add validation receipts or raw-log archives. Documentation trailers
+describe the staged file obligations under the repository policy.
 
 ### 10.6 Case study — MZ1: 229 → 147 → 57 errors
 
@@ -1400,21 +1316,25 @@ None of these predecessor versions is a current compatibility target.
 - `tools/tracechaser/retro/s1_credits_trace_recorder.py`
 - `tools/tracechaser/retro/requirements.txt`
 
-**Java harness** (`src/test/java/com/openggf/tests/trace/`):
+**JUnit harness** (`src/test/java/com/openggf/tests/trace/`):
 
 - `AbstractTraceReplayTest.java`
 - `AbstractCreditsDemoTraceReplayTest.java`
+- `s3k/S3kReplayCheckpointDetector.java`, `s3k/S3kCheckpointProbe.java`,
+  `s3k/S3kRequiredCheckpointGuard.java`
+
+**Production trace model and replay helpers** (`src/main/java/com/openggf/trace/`):
+
 - `TraceData.java`, `TraceFrame.java`, `TraceMetadata.java`, `TraceEvent.java`,
-  `TraceCharacterState.java`, `RomObjectSnapshot.java`
+  `TraceCharacterState.java`
 - `TraceBinder.java`, `ToleranceConfig.java`, `Severity.java`, `FieldComparison.java`,
   `FrameComparison.java`
 - `DivergenceReport.java`, `DivergenceGroup.java`
 - `EngineDiagnostics.java`, `EngineNearbyObjectFormatter.java`,
   `TouchResponseDebugHitFormatter.java`, `TraceEventFormatter.java`
 - `TraceExecutionModel.java`, `TraceExecutionPhase.java`
-- `TraceReplayBootstrap.java`, `TraceObjectSnapshotBinder.java`
-- `s3k/S3kReplayCheckpointDetector.java`, `s3k/S3kCheckpointProbe.java`,
-  `s3k/S3kRequiredCheckpointGuard.java`
+- `TraceReplayBootstrap.java`
+- `RomObjectSnapshot.java` (under `src/main/java/com/openggf/level/objects/`)
 - `Sonic1CreditsDemoData.java` (under `src/main/java/com/openggf/game/sonic1/credits/`)
 
 **Runtime collision trace** (`src/main/java/com/openggf/physics/`):

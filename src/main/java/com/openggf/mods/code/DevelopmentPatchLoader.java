@@ -47,9 +47,11 @@ public final class DevelopmentPatchLoader {
         } catch (com.openggf.mods.ModManifestException e) {
             throw new IOException("Invalid manifest in " + absolute + ": " + e.getMessage(), e);
         }
-        if (manifest.entrypoint() == null) throw new IOException(absolute + " has no code entrypoint");
+        if (manifest.entrypoint() == null && manifest.campaign() == null)
+            throw new IOException(absolute + " has no code entrypoint or data-only campaign");
         var loader = new URLClassLoader(new java.net.URL[]{absolute.toUri().toURL()},
                 DevelopmentPatchLoader.class.getClassLoader());
+        if (manifest.entrypoint() == null) return new PreparedDecorator(absolute, manifest, loader, null);
         try {
             var entrypoint = loader.loadClass(manifest.entrypoint()).asSubclass(GgfMod.class);
             entrypoint.getConstructor();
@@ -108,8 +110,9 @@ public final class DevelopmentPatchLoader {
             java.util.Objects.requireNonNull(request, "request");
             ModRegistrationPlan frozen;
             try (var assets = ModAssetRoot.jar(jar.getParent(), jar, ModInputLimits.production())) {
-                var context = new ModContext(manifest.id(), manifest.baseGame(), assets);
-                entrypoint.getConstructor().newInstance().register(context);
+                var context = new ModContext(manifest.id(), manifest.baseGame(), assets, manifest.insertAfter());
+                ModCampaignRegistration.register(manifest, context);
+                if (entrypoint != null) entrypoint.getConstructor().newInstance().register(context);
                 frozen = context.freeze();
             } catch (IOException failure) {
                 throw new java.io.UncheckedIOException("Could not open development mod " + jar, failure);

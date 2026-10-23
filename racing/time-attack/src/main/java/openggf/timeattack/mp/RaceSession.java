@@ -16,6 +16,8 @@ import com.openggf.net.host.jdk.JdkRaceHostServer;
 import com.openggf.net.hub.RoomHostConfig;
 import com.openggf.net.hub.TrackValidationProfile;
 import com.openggf.net.hub.TrackValidationProfileSource;
+import com.openggf.net.identity.DisplayNames;
+import com.openggf.net.identity.PlayerAppearance;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.Protocol;
@@ -23,6 +25,7 @@ import openggf.timeattack.GhostStore;
 import openggf.timeattack.TimeAttackLaunchRequest;
 import openggf.timeattack.TimeAttackRuntime;
 import openggf.timeattack.TimeAttackSettings;
+import openggf.timeattack.TimeAttackTrackCatalog;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -34,6 +37,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -70,6 +74,8 @@ public final class RaceSession implements AutoCloseable {
     /** Storage file holding the last LAN invite this player hosted. */
     public static final String INVITE_FILE = "lan-invite.txt";
     private static final int MAX_ROOM_PLAYERS = 8;
+    // RoomDescriptor names are bounded by the master and room hosts (RoomBroker boundedField).
+    private static final int MAX_ROOM_NAME_BYTES = 64;
     private static final int DEFAULT_JOIN_WINDOW_SECONDS = 300;
     private static final long MASTER_LINK_TICK_MILLIS = 1000;
     private static final int HEARTBEAT_TICKS = 5;
@@ -78,13 +84,25 @@ public final class RaceSession implements AutoCloseable {
     /** Where the session is. */
     public enum State { IDLE, CONNECTING, BROWSING, LOBBY, RACING }
 
-    /** The route and rules the menu chose for a hosted room or a master browse. */
+    /**
+     * The route and rules the menu chose for a hosted room or a master browse, with the round-end
+     * vote pool a room created from it carries (validated by {@link VoteTrackPools#rejection}
+     * before any room is created).
+     */
     public record RoundSetup(String gameId, int zone, int act, String character,
-                             String characterPolicy, String lockedCharacter, int windowSeconds) {
+                             String characterPolicy, String lockedCharacter, int windowSeconds,
+                             List<String> voteTrackKeys) {
         public RoundSetup {
             Objects.requireNonNull(gameId, "gameId");
             Objects.requireNonNull(character, "character");
             Objects.requireNonNull(characterPolicy, "characterPolicy");
+            voteTrackKeys = List.copyOf(voteTrackKeys == null ? VoteTrackPools.forGame(gameId) : voteTrackKeys);
+        }
+
+        /** A setup whose rooms vote from the game's default pool. */
+        public RoundSetup(String gameId, int zone, int act, String character,
+                          String characterPolicy, String lockedCharacter, int windowSeconds) {
+            this(gameId, zone, act, character, characterPolicy, lockedCharacter, windowSeconds, null);
         }
     }
 
@@ -111,6 +129,8 @@ public final class RaceSession implements AutoCloseable {
     private final Object identityLock = new Object();
     private final AtomicInteger connectWorkers = new AtomicInteger();
     private PlayerIdentity identity;
+    private java.util.function.BiFunction<String, String, PlayerAppearance> lookSource =
+            (gameId, character) -> PlayerAppearance.STOCK;
 
     private State state = State.IDLE;
     private String status = "";
@@ -135,6 +155,10 @@ public final class RaceSession implements AutoCloseable {
     private TimeAttackRuntime runtime;
     private RunHandle handle;
     private int launchedRound = -1;
+    private RunLauncher lobbyLauncher;
+    private LobbyRun lobbyRun;
+    /** False once this room's lobby level failed; the lobby menu then shows on its own. */
+    private boolean lobbyLevelEnabled = true;
 
     public RaceSession(Path identityDir, GhostStore ghostStore, TimeAttackSettings settings,
                        ModStorage storage, RunLauncher launcher,
@@ -158,8 +182,15 @@ public final class RaceSession implements AutoCloseable {
     public void hostLan(RoundSetup setup, String fingerprint) {
         Objects.requireNonNull(setup, "setup");
         leave();
+        Optional<String> rejected = VoteTrackPools.rejection(setup.gameId(), setup.voteTrackKeys(),
+                setup.lockedCharacter());
+        if (rejected.isPresent()) {
+            fail("Cannot host: " + rejected.get());
+            return;
+        }
         int port = settings.hostPort();
         String configuredName = settings.displayName();
+        String look = lookSource.apply(setup.gameId(), setup.character()).encode();
         start("Starting LAN room...", State.IDLE, op -> {
             PlayerIdentity me = identity();
             String name = displayName(me, configuredName);
@@ -170,13 +201,13 @@ public final class RaceSession implements AutoCloseable {
             String invite = "HOST_IP:" + server.port() + "#"
                     + DirectJoinAddress.shareCode(pin, me.fingerprint());
             RaceClient client = op.own(op.await(RaceClient.connect(
-                    URI.create("wss://127.0.0.1:" + server.port() + "/race"), me, name, fingerprint,
+                    URI.create("wss://127.0.0.1:" + server.port() + "/race"), me, name, look, fingerprint,
                     pin, me.fingerprint()), RaceClient.JOIN_TIMEOUT_MILLIS + 2000, RaceClient::close),
                     RaceClient::close);
             ControlMessage.RoundConfig round = roundConfigFor(setup);
             return () -> {
                 host = server;
-                enterLobby(client, true, round, setup.character(), invite);
+                enterLobby(client, true, round, setup.character(), invite, name, look);
             };
         });
     }
@@ -200,7 +231,7 @@ public final class RaceSession implements AutoCloseable {
         start("Joining LAN room...", State.IDLE, op -> {
             PlayerIdentity me = identity();
             String name = displayName(me, configuredName);
-            RaceClient client = op.own(op.await(RaceClient.connect(address.uri(), me, name, fingerprint,
+            RaceClient client = op.own(op.await(RaceClient.connect(address.uri(), me, name, "", fingerprint,
                     address.certificateSha256(), address.hostFingerprint()),
                     RaceClient.JOIN_TIMEOUT_MILLIS + 2000, RaceClient::close), RaceClient::close);
             ControlMessage.RoomDescriptor room = client.joinAccepted().room();
@@ -210,7 +241,7 @@ public final class RaceSession implements AutoCloseable {
             return () -> {
                 settings.setLastJoinAddress(trimmed);
                 boolean saved = settings.save(storage);
-                enterLobby(client, false, round, chosen, null);
+                enterLobby(client, false, round, chosen, null, name, "");
                 if (!saved) notice = "Settings active - save pending";
             };
         });
@@ -261,10 +292,11 @@ public final class RaceSession implements AutoCloseable {
         RoundSetup setup = browseSetup;
         String fingerprint = browseFingerprint;
         String configuredName = settings.displayName();
+        String look = lookSource.apply(setup.gameId(), setup.character()).encode();
         start("Joining " + room.name() + "...", State.BROWSING, op -> {
             PlayerIdentity me = identity();
             String name = displayName(me, configuredName);
-            RaceConnection connection = op.own(op.await(client.joinRoom(room.roomId(), me, name, fingerprint),
+            RaceConnection connection = op.own(op.await(client.joinRoom(room.roomId(), me, name, look, fingerprint),
                     MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + RaceClient.JOIN_TIMEOUT_MILLIS,
                     RaceConnection::close), RaceConnection::close);
             ControlMessage.RoomDescriptor joined = connection.joinAccepted().room();
@@ -274,7 +306,7 @@ public final class RaceSession implements AutoCloseable {
             return () -> {
                 masterRoomId = room.roomId();
                 startMasterLink(null);
-                enterLobby(connection, false, round, chosen, null);
+                enterLobby(connection, false, round, chosen, null, name, look);
             };
         });
     }
@@ -290,17 +322,24 @@ public final class RaceSession implements AutoCloseable {
         MasterClient client = master;
         RoundSetup setup = browseSetup;
         String fingerprint = browseFingerprint;
+        Optional<String> rejected = VoteTrackPools.rejection(setup.gameId(), setup.voteTrackKeys(),
+                setup.lockedCharacter());
+        if (rejected.isPresent()) {
+            notice = "Cannot create the room: " + rejected.get();
+            return;
+        }
         boolean direct = "DIRECT".equals(routing);
         int port = settings.hostPort();
         String configuredName = settings.displayName();
+        String look = lookSource.apply(setup.gameId(), setup.character()).encode();
         start("Creating room...", State.BROWSING, op -> {
             PlayerIdentity me = identity();
             String name = displayName(me, configuredName);
-            List<String> votePool = VoteTrackPools.forGame(setup.gameId());
+            List<String> votePool = setup.voteTrackKeys();
             JdkRaceHostServer server = !direct ? null : op.own(JdkRaceHostServer.startTls(port,
                     roomConfig(name, setup, fingerprint), me, TrackValidationProfileSource.none()),
                     JdkRaceHostServer::close);
-            ControlMessage.RoomDescriptor descriptor = new ControlMessage.RoomDescriptor(name + "'s room",
+            ControlMessage.RoomDescriptor descriptor = new ControlMessage.RoomDescriptor(roomName(name),
                     setup.gameId(), setup.zone(), setup.act(), setup.characterPolicy(),
                     setup.lockedCharacter(), MAX_ROOM_PLAYERS, false);
             String roomId = op.await(DirectRoomRegistration.createRoom(client, descriptor, direct ? "DIRECT" : "RELAY",
@@ -317,7 +356,7 @@ public final class RaceSession implements AutoCloseable {
                 // A failed join must not leave the browser's master socket feeding a closed host.
                 op.own(client, linked -> linked.bindHostLink(null));
             }
-            RaceConnection connection = op.own(op.await(client.joinRoom(roomId, me, name, fingerprint),
+            RaceConnection connection = op.own(op.await(client.joinRoom(roomId, me, name, look, fingerprint),
                     MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + RaceClient.JOIN_TIMEOUT_MILLIS,
                     RaceConnection::close), RaceConnection::close);
             ControlMessage.RoundConfig round = roundConfigFor(setup);
@@ -325,7 +364,7 @@ public final class RaceSession implements AutoCloseable {
                 host = server;
                 masterRoomId = roomId;
                 startMasterLink(server);
-                enterLobby(connection, true, round, setup.character(), null);
+                enterLobby(connection, true, round, setup.character(), null, name, look);
             };
         });
     }
@@ -366,6 +405,9 @@ public final class RaceSession implements AutoCloseable {
         if (activeRun != null && activeRun.isActive()) {
             activeRun.leave();
         }
+        if (lobbyRun != null) {
+            lobbyRun.leave();
+        }
         if (master != null) {
             MasterClient leaving = master;
             master = null;
@@ -387,6 +429,7 @@ public final class RaceSession implements AutoCloseable {
         character = null;
         lanInvite = null;
         launchedRound = -1;
+        lobbyLevelEnabled = true;
         state = State.IDLE;
         status = "";
     }
@@ -453,7 +496,99 @@ public final class RaceSession implements AutoCloseable {
             notice = reason;
             return;
         }
+        if (lobbyRun != null) {
+            // A round starting ends the lobby level; the round launches once the scene is back.
+            if (roundPending()) {
+                lobbyRun.leave();
+            } else if (!coordinator.session().isLocalReady() && !lobbyRun.isMenuShown()) {
+                lobbyRun.setMenuShown(true); // only a ready player may play behind a hidden menu
+            }
+            return;
+        }
         maybeLaunchRound();
+        if (state == State.LOBBY && !roundPending()) {
+            maybeLaunchLobbyRun();
+        }
+    }
+
+    /**
+     * Supplies the launcher for the lobby level ({@code ctx.gameplay().launchBehind}); without
+     * one the lobby menu shows on its own, as before lobby levels.
+     */
+    public void setLobbyLauncher(RunLauncher launcher) {
+        lobbyLauncher = launcher;
+    }
+
+    /** True while the room's lobby level plays behind the lobby menu. */
+    public boolean lobbyRunActive() {
+        return lobbyRun != null;
+    }
+
+    /** Whether the lobby menu is shown over the lobby level (true without a lobby level). */
+    public boolean lobbyMenuShown() {
+        return lobbyRun == null || lobbyRun.isMenuShown();
+    }
+
+    /**
+     * Shows or hides the lobby menu over the lobby level. Only a ready player may hide it: the
+     * character then takes the controller and the menu gets no input until it is shown again.
+     */
+    public void setLobbyMenuShown(boolean shown) {
+        if (lobbyRun == null || (!shown && !coordinator.session().isLocalReady())) {
+            return;
+        }
+        lobbyRun.setMenuShown(shown);
+    }
+
+    /**
+     * The scene is back from a run. A lobby level that ended hands over to the pending round,
+     * relaunches (after a round, or an act restart that ended it) or, after a load failure or a
+     * host fault, leaves the lobby menu on its own for this room. Returns false when the ended run
+     * was not the lobby level.
+     */
+    public boolean lobbyRunEnded(com.openggf.mods.run.RunEndReason reason) {
+        if (lobbyRun == null) {
+            return false;
+        }
+        lobbyRun = null;
+        if (reason == com.openggf.mods.run.RunEndReason.LOAD_FAILED
+                || reason == com.openggf.mods.run.RunEndReason.ABORTED) {
+            lobbyLevelEnabled = false;
+            notice = reason == com.openggf.mods.run.RunEndReason.LOAD_FAILED
+                    ? "The lobby level could not be loaded" : "The lobby level stopped";
+        }
+        return true;
+    }
+
+    /** A round has started that this session has not launched yet. */
+    private boolean roundPending() {
+        if (coordinator == null) {
+            return false;
+        }
+        ClientRaceSession.Phase phase = coordinator.session().phase();
+        return (phase == ClientRaceSession.Phase.COUNTDOWN || phase == ClientRaceSession.Phase.RUNNING)
+                && coordinator.roundsStarted() != launchedRound;
+    }
+
+    private void maybeLaunchLobbyRun() {
+        if (lobbyLauncher == null || !lobbyLevelEnabled || closed || roundConfig == null) {
+            return;
+        }
+        LobbyAreas.LobbyArea area = LobbyAreas.forGame(roundConfig.gameId());
+        if (area == null) {
+            return;
+        }
+        String chosen = LobbyAreas.characterFor(area.gameId(),
+                roundConfig.lockedCharacter() != null ? roundConfig.lockedCharacter() : character);
+        LobbyRun run = new LobbyRun(coordinator, lookSource.apply(area.gameId(), chosen));
+        try {
+            run.attachHandle(lobbyLauncher.launch(LobbyAreas.runSpec(area, chosen), run));
+            lobbyRun = run;
+        } catch (RuntimeException e) {
+            lobbyLevelEnabled = false;
+            LOGGER.log(Level.WARNING, "Unable to launch the lobby level", e);
+            notice = "The lobby level could not be started: " + rootMessage(e);
+        }
     }
 
     /** The launched round's run has ended; the scene is back and the lobby resumes. */
@@ -490,6 +625,14 @@ public final class RaceSession implements AutoCloseable {
         }
         launchedRound = coordinator.roundsStarted();
         String chosen = round.lockedCharacter() != null ? round.lockedCharacter() : character;
+        // A custom pool can vote in an act the player's character does not race (S3K routes
+        // differ by character); that round uses the act's first permitted character.
+        List<String> permitted = TimeAttackTrackCatalog.eligible(round.gameId(), round.zone(), round.act())
+                .map(TimeAttackTrackCatalog.Track::characters).orElse(List.of());
+        if (!permitted.isEmpty() && !permitted.contains(chosen)) {
+            notice = chosen.toUpperCase() + " cannot race this act; racing as " + permitted.getFirst().toUpperCase();
+            chosen = permitted.getFirst();
+        }
         TimeAttackRuntime run = runtimeFactory.get();
         run.armForLaunch(new TimeAttackLaunchRequest(round.gameId(), round.zone(), round.act(), chosen, List.of()));
         if (!run.isActive()) {
@@ -511,9 +654,20 @@ public final class RaceSession implements AutoCloseable {
     }
 
     private void enterLobby(RaceConnection connection, boolean hostingRoom, ControlMessage.RoundConfig round,
-                            String localCharacter, String invite) {
+                            String localCharacter, String invite, String joinedName, String joinedLook) {
         if (localCharacter != null) {
             connection.sendControl(new ControlMessage.SelectCharacter(localCharacter));
+        }
+        // The Hello carried the look for the character known before joining; the room's
+        // game and locked character can differ, so correct it once the lobby is known.
+        String look = lookSource.apply(round.gameId(),
+                localCharacter != null ? localCharacter : "sonic").encode();
+        if (!look.equals(joinedLook)) {
+            connection.sendControl(new ControlMessage.UpdateProfile(joinedName, look));
+        }
+        if (hostingRoom && settings.readyRule() != com.openggf.net.protocol.ReadyRules.DEFAULT_BY_SIZE) {
+            // The owner's last choice; the host ignores it from anyone else.
+            connection.sendControl(new ControlMessage.SetReadyRule(settings.readyRule().name()));
         }
         ClientRaceSession clientSession = new ClientRaceSession(clockMillis);
         clientSession.applyJoin(connection.joinAccepted());
@@ -641,7 +795,7 @@ public final class RaceSession implements AutoCloseable {
     void enterLobbyForTest(RaceConnection connection, boolean hostingRoom, ControlMessage.RoundConfig round,
                            String localCharacter) {
         leave();
-        enterLobby(connection, hostingRoom, round, localCharacter, null);
+        enterLobby(connection, hostingRoom, round, localCharacter, null, "Tester", "");
     }
 
     // ── Connecting operations ────────────────────────────────────────────
@@ -801,15 +955,35 @@ public final class RaceSession implements AutoCloseable {
         }
     }
 
-    /** The configured name (captured on the engine thread), or the identity prefix when blank. */
+    /** The configured name in canonical form (captured on the engine thread), or the identity prefix. */
     private static String displayName(PlayerIdentity me, String configured) {
-        return configured.isBlank() ? me.fingerprint().substring(0, 8) : configured.trim();
+        String name = DisplayNames.sanitize(configured);
+        return name.isEmpty() ? me.fingerprint().substring(0, 8) : name;
+    }
+
+    /** "NAME's room", cut at a code-point boundary to the descriptor's 64-byte limit. */
+    static String roomName(String name) {
+        String suffix = "'s room";
+        String cut = name;
+        while (cut.getBytes(java.nio.charset.StandardCharsets.UTF_8).length
+                + suffix.length() > MAX_ROOM_NAME_BYTES) {
+            cut = cut.substring(0, cut.offsetByCodePoints(cut.length(), -1)).strip();
+        }
+        return cut + suffix;
+    }
+
+    /**
+     * Supplies the look to announce for a game and character; the scene installs the player's
+     * saved choices. Called on the engine thread.
+     */
+    public void setLookSource(java.util.function.BiFunction<String, String, PlayerAppearance> source) {
+        lookSource = Objects.requireNonNull(source, "source");
     }
 
     private static RoomHostConfig roomConfig(String name, RoundSetup setup, String fingerprint) {
-        return new RoomHostConfig(name + "'s room", setup.gameId(), setup.zone(), setup.act(),
+        return new RoomHostConfig(roomName(name), setup.gameId(), setup.zone(), setup.act(),
                 setup.characterPolicy(), setup.lockedCharacter(), Protocol.MAX_PLAYERS_DIRECT, fingerprint,
-                VoteTrackPools.forGame(setup.gameId()));
+                setup.voteTrackKeys());
     }
 
     private static ControlMessage.RoundConfig roundConfigFor(RoundSetup setup) {

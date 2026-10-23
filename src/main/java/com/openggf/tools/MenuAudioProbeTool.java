@@ -8,6 +8,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.game.MasterTitleScreen;
 import com.openggf.game.launch.LaunchProfileStore;
+import com.openggf.game.session.EngineServices;
 import org.lwjgl.opengl.GL;
 
 import java.nio.file.Files;
@@ -38,7 +39,7 @@ public final class MenuAudioProbeTool {
             throw new IllegalArgumentException("usage: MenuAudioProbeTool [width=320, up to 528] [hub|settings|launch]");
         if (!glfwInit()) throw new IllegalStateException("Unable to initialize GLFW");
         long window = 0;
-        AudioManager audio = AudioManager.getInstance();
+        AudioManager audio = EngineServices.current().audio();
         MasterTitleScreen screen = null;
         try {
             glfwDefaultWindowHints();

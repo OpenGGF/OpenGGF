@@ -193,9 +193,16 @@ public final class MasterClient implements AutoCloseable {
     public CompletableFuture<RaceConnection> joinRoom(
             String roomId, PlayerIdentity roomIdentity, String displayName,
             String determinismFingerprint) {
+        return joinRoom(roomId, roomIdentity, displayName, "", determinismFingerprint);
+    }
+
+    /** Joins with the player's look (canonical {@link com.openggf.net.identity.PlayerAppearance} form). */
+    public CompletableFuture<RaceConnection> joinRoom(
+            String roomId, PlayerIdentity roomIdentity, String displayName, String appearance,
+            String determinismFingerprint) {
         return requestJoin(roomId).thenCompose(result -> {
             if ("RELAY".equals(result.routing())) {
-                return relayHandshake(roomId, roomIdentity, displayName,
+                return relayHandshake(roomId, roomIdentity, displayName, appearance,
                         determinismFingerprint, result.hostServerId());
             }
             if (result.certificateSha256() == null || result.hostServerId() == null) {
@@ -210,7 +217,7 @@ public final class MasterClient implements AutoCloseable {
             } catch (URISyntaxException e) {
                 return CompletableFuture.failedFuture(e);
             }
-            return RaceClient.connect(directUri, roomIdentity, displayName,
+            return RaceClient.connect(directUri, roomIdentity, displayName, appearance,
                             determinismFingerprint, result.certificateSha256(),
                             result.hostServerId())
                     .thenApply(client -> {
@@ -222,16 +229,16 @@ public final class MasterClient implements AutoCloseable {
                         }
                         return (RaceConnection) client;
                     }).exceptionallyCompose(error -> relayHandshake(roomId, roomIdentity,
-                            displayName, determinismFingerprint, result.hostServerId()));
+                            displayName, appearance, determinismFingerprint, result.hostServerId()));
         });
     }
 
     private CompletableFuture<RaceConnection> relayHandshake(
-            String roomId, PlayerIdentity roomIdentity, String displayName,
+            String roomId, PlayerIdentity roomIdentity, String displayName, String appearance,
             String determinismFingerprint, String expectedServerId) {
         try {
             return completeRoomHandshake(attachRelay(roomId), roomIdentity,
-                    displayName, determinismFingerprint, expectedServerId);
+                    displayName, appearance, determinismFingerprint, expectedServerId);
         } catch (RuntimeException e) {
             return CompletableFuture.failedFuture(e);
         }
@@ -252,17 +259,17 @@ public final class MasterClient implements AutoCloseable {
     public static CompletableFuture<RaceConnection> completeRoomHandshake(
             RaceConnection raw, PlayerIdentity identity, String displayName,
             String determinismFingerprint) {
-        return completeRoomHandshake(raw, identity, displayName,
+        return completeRoomHandshake(raw, identity, displayName, "",
                 determinismFingerprint, null);
     }
 
     private static CompletableFuture<RaceConnection> completeRoomHandshake(
-            RaceConnection raw, PlayerIdentity identity, String displayName,
+            RaceConnection raw, PlayerIdentity identity, String displayName, String appearance,
             String determinismFingerprint, String expectedServerId) {
         CompletableFuture<RaceConnection> joined = new CompletableFuture<>();
         Thread.ofVirtual().name("relay-room-handshake").start(() -> {
             ClientHandshake handshake = new ClientHandshake(
-                    identity, displayName, determinismFingerprint, expectedServerId,
+                    identity, displayName, appearance, determinismFingerprint, expectedServerId,
                     AuthenticationTranscript.Role.ROOM_RELAY,
                     raw instanceof RelayRaceConnection relay ? () -> relay.parent.transportBinding.get()
                             : () -> { throw new IllegalStateException("relay has no authenticated master transport"); });
@@ -761,6 +768,8 @@ public final class MasterClient implements AutoCloseable {
                 int type = data[0] & 0xFF;
                 if (type == GhostPackets.TYPE_GHOST_AGGREGATE) {
                     enqueue(new RaceClient.GhostData(GhostPackets.decodeAggregate(data)));
+                } else if (type == GhostPackets.TYPE_LOBBY_AGGREGATE) {
+                    enqueue(new RaceClient.LobbyGhostData(GhostPackets.decodeLobbyAggregate(data)));
                 } else if (type == GhostPackets.TYPE_ROSTER) {
                     enqueue(new RaceClient.Roster(GhostPackets.decodeRoster(data)));
                 } else {

@@ -59,6 +59,16 @@ final class SceneRunLauncher implements SceneGameplay {
 
     @Override
     public RunHandle launch(RunSpec spec, RunHost host) {
+        return start(spec, host, false);
+    }
+
+    /** The scene stays open over the run: ticked from the level frame and drawn over it. */
+    @Override
+    public RunHandle launchBehind(RunSpec spec, RunHost host) {
+        return start(spec, host, true);
+    }
+
+    private RunHandle start(RunSpec spec, RunHost host, boolean behindScene) {
         Objects.requireNonNull(spec, "spec");
         Objects.requireNonNull(host, "host");
         if (gameLoop.getCurrentGameMode() != com.openggf.game.GameMode.MOD_SCENE) {
@@ -80,6 +90,17 @@ final class SceneRunLauncher implements SceneGameplay {
                 gameLoop.fadeOutTo(() -> returnToScene.accept(reason));
             }
         });
+        if (behindScene) {
+            gameLoop.hostedRuns.setSceneOverlay(new HostedRunController.SceneOverlay() {
+                @Override public void update(com.openggf.control.InputHandler input) {
+                    gameLoop.modSceneHost.update(input);
+                }
+
+                @Override public void draw(int width, int height) {
+                    ModSceneLauncher.drawOver(gameLoop, com.openggf.game.GameServices.graphics(), width, height);
+                }
+            });
+        }
         gameLoop.requestHostedRunLaunch(() -> startSession.accept(spec));
         return handle;
     }

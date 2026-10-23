@@ -15,6 +15,36 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class TestRecordingBlobStore {
     private static final String HASH = "a".repeat(64);
+    private static final String OTHER_HASH = "b".repeat(64);
+
+    @Test
+    void accountsForExistingWritesOverwritesAndRetentionWithoutRescanning(@TempDir Path dir) throws Exception {
+        Files.write(dir.resolve(HASH), new byte[]{1, 2, 3});
+        RecordingBlobStore store = new RecordingBlobStore(dir);
+        assertEquals(3, store.totalBytes());
+
+        assertTrue(store.putIfWithinLimit(OTHER_HASH, new byte[]{4, 5}, 5));
+        assertEquals(5, store.totalBytes());
+        store.put(HASH, new byte[]{6});
+        assertEquals(3, store.totalBytes());
+        assertTrue(store.putIfWithinLimit(HASH, new byte[100], 3), "content-address reuse only refreshes retention");
+        assertEquals(3, store.totalBytes());
+
+        long cutoff = System.currentTimeMillis() - 1_000;
+        Files.setLastModifiedTime(dir.resolve(OTHER_HASH), FileTime.fromMillis(cutoff - 1));
+        assertEquals(1, store.deleteOlderThan(cutoff));
+        assertEquals(1, store.totalBytes());
+    }
+
+    @Test
+    void rejectsNewBlobWhenCachedQuotaWouldBeExceeded(@TempDir Path dir) throws Exception {
+        Files.write(dir.resolve(HASH), new byte[]{1, 2, 3});
+        RecordingBlobStore store = new RecordingBlobStore(dir);
+
+        assertTrue(!store.putIfWithinLimit(OTHER_HASH, new byte[]{4}, 3));
+        assertEquals(3, store.totalBytes());
+        assertTrue(Files.notExists(dir.resolve(OTHER_HASH)));
+    }
 
     @Test
     void reusedRecordingSurvivesRetentionForFreshJob(@TempDir Path dir) throws Exception {
@@ -41,5 +71,16 @@ class TestRecordingBlobStore {
 
         assertThrows(IllegalStateException.class,
                 () -> store.putIfWithinLimit(HASH, new byte[]{1, 2, 3}, 100));
+    }
+
+    @Test
+    void startupRemovesInterruptedPublicationArtifactsFromQuota(@TempDir Path dir) throws Exception {
+        Path staging = dir.resolve(".recording-interrupted.tmp");
+        Files.write(staging, new byte[]{1, 2, 3});
+
+        RecordingBlobStore store = new RecordingBlobStore(dir);
+
+        assertEquals(0, store.totalBytes());
+        assertTrue(Files.notExists(staging));
     }
 }

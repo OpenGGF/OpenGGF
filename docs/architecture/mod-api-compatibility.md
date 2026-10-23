@@ -77,6 +77,24 @@ Native white steps precede profile/range conversion, including backdrop and deri
 water colours. The normalized mutable `0.7` pin and runtime description are updated
 together; descriptor candidate `0.7.0` and published baselines are unchanged.
 
+Repeated Time Attack attempts add `RunHost.retryOnActCompletion()` (default
+`false`): when a host-returning run completes its act, a host may restart the act as
+a retry instead of ending the run, and a retry requested on that frame now wins over
+the return. A pending leave or host failure still ends the run; a host failure
+pending at act completion now reports `ABORTED` rather than `ACT_COMPLETED`.
+`GhostHub.onAttemptFinished(int,int)` records a finished attempt's roster status. The
+normalized mutable `0.7` pin changes with them; descriptor candidate `0.7.0` and
+published baselines are unchanged.
+
+`GameModule.getTitlePreviewProvider()` supplies a detached CPU-only title-preview
+capability, explicitly forwarded by `DelegatingGameModule`. Its image and sequence
+contracts describe RGBA pixels, dimensions, the still tick and reusable animation
+tokens. Providers read the supplied ROM before returning and leave live services
+untouched. The stock hub resolves its card's provider directly at the composition
+root, so gameplay patches and donor choices do not replace stock-card art.
+This is an additive unpublished 0.7 candidate change; the descriptor and
+`ModApiVersion` remain at 0.7.0, with the candidate signature pin regenerated.
+
 The exact current candidate inventory is
 `src/test/resources/mods/mod-api-signatures-0.7.txt`. `TestModApiSignatureSurface`
 requires that file to be unique, sorted canonical UTF-8 text and exactly equal to
@@ -840,6 +858,13 @@ tools are outside that surface. `RuntimeException` (typed connection/protocol re
 and `IntSupplier` (room capacity callbacks) are individually audited JDK signature types;
 no third-party signature or package-prefix exemption is added.
 
+Protocol v3 replaces repeated whole-room membership snapshots with `PlayerUpsert` and
+`PlayerLeft` messages after the joining client receives its initial `RoomState`. The
+candidate surface therefore adds those two immutable control records and incremental
+`RemoteGhostRegistry` hooks. This protocol has not shipped, so v2 compatibility is not
+retained. Ghost packet compression is an internal wire encoding: decoded public frame
+records and canonical stream hashing remain unchanged.
+
 The mutable `mod-api-signatures-0.7.txt` pin is regenerated against the shared development line's complete
 surface, including its existing scene art/audio capabilities. `ModApiVersion` describes
 the additions; the policy descriptor remains unpublished candidate `0.7.0` and published
@@ -877,6 +902,22 @@ candidate with no published baselines; its strict key/value schema does not carr
 surface prose. `ModApiVersion`, curated roots and the exact mutable pin describe
 the additions together.
 
+
+### Player names and looks (2026-10-22)
+
+The unpublished `0.7.0` candidate adds Unicode player text and player looks for Time
+Attack and other multiplayer mods. `NameFont` draws any Basic Multilingual Plane text
+from bundled, unmodified Fusion Pixel 10px and GNU Unifont glyphs (left to right, no
+shaping); `DisplayNames` defines the canonical name every host enforces;
+`SceneContext.typedText()` delivers typed code points to scenes. `PlayerAppearance`
+carries a base colour and the palette entries that differ from stock in a canonical
+wire form, `CharacterLooks` builds body-ramp looks from disassembly-cited tables,
+`GhostPose.appearance` colours a ghost and `RunHandle.setPlayerAppearance` recolours
+the run's own character through private palette rows. Protocol version 4 adds
+`Hello.appearance`, `UpdateProfile` and `PlayerLook`, and `RoomHostHooks` gains a
+`ProfileListener`. The descriptor keeps `0.7.0` candidate with no published
+baselines; `ModApiVersion`, curated roots and the regenerated mutable pin describe
+the additions together.
 
 The October 15 hub polish adds twelve `SonicConfiguration` enum constants for
 optional hub music, volume, focused-game history and per-game Continue zone,

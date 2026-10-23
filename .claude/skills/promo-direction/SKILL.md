@@ -57,6 +57,73 @@ Being bold does not mean being busy. The two most common rejections were
 "very rushed" (Putt-Putt Paradise v5) and "rapid cuts / cluttered audio"
 (Mutator Lab).
 
+Being restrained does not mean being safe, either. A coached plan that avoided
+every rejection above still came out flat:
+
+- The footage was inset in a frame over a blurred copy of itself for the whole
+  film. Full-bleed `game_view` is the default canvas. An inset frame is a
+  layout for a particular beat.
+- The title drop had no flash, no stinger and no camera move, and the
+  plan said to "avoid zoom punches".
+- Editorial type re-announced a zone that the game's own title card
+  announces better.
+- The opening showed establishing scenery and held the hero shot back until 13 s.
+- Shots named "keep the momentum" and "leave room for discovery" sold nothing.
+- Requirements and caveats (Java version, ROM revision) crowded the end card.
+
+For a gameplay showcase, the treatments in this skill are the **defaults**:
+a cold open from the hero footage, a title drop with flash, stinger and slam,
+ROM title-card headers, banded wipes at chapter changes, full-bleed footage and
+splits for comparisons. If your plan drops one, the brief says why in one line.
+
+**Long takes need accompaniment.** The next coached draft fixed every point above
+and was rejected as "very... boring... very lazy with long stretches of level
+showcased without any accompaniment". It held 14 s of a new zone with nothing
+on it. The fix for "rushed" is a longer take with something happening on it,
+never bare level. About every bar or two, give the viewer something new. In order
+of preference:
+
+1. A punch-in, stinger or flash synced to an in-game event: a spring, a ring
+   burst, a badnik pop or a landing. Find the frame in the state CSV.
+2. A counter, callout or arrow tied to what is on screen: rings collected, crests
+   passed, or "NEW" on a feature as it enters.
+3. A change of layout: a split opening, a picture-in-picture or a map strip.
+4. Cutting the take down to its best moments. A take that is still dull with
+   accompaniment is too long.
+
+A caption is the weakest accompaniment. Use at most one per chapter, and only
+when it moves the pitch on ("Same hill." → "New route."). The next draft answered
+the bare-stretch warning with "TAKE THE HIGH ROAD", "FOLLOW THE GOLD",
+"ONE MORE LEAP" and "YOUR TURN" over the same 13 s take. The user agreed it was
+"minimal effort... to achieve the goals". `promo_kit.py check` flags full-screen
+gameplay over 4 s with no cut, graphic overlay, stinger, punch or camera move
+(captions don't count), and more than three captions over gameplay in 20 s.
+
+**A small mod needs an idea, not just footage.** When the change is modest (a
+remixed act, a new tileset), the level alone won't sell it. Sell how it was made,
+and make the viewer play along. For example, a remix built from strips can show
+the strips flying into place on a map before the run. A generated zone can show
+its tiles drawing themselves across the screen. A "spot the difference" beat asks
+the viewer to look. Find the cleverest true thing about the mod and give it a
+beat that is big enough to remember. A 16-pixel tile in a corner box is not that beat.
+
+**A passing check is a floor, not the goal.** An empty warning list proves only
+that the known failures are absent. Drafts that passed every check were still
+rejected as "boring" and "minimal effort". The cheapest move that silences a
+warning is usually the wrong one, and the user can tell. Work toward the viewer:
+
+- For each weak section, sketch two or three treatments, at least one of them
+  ambitious, and build the one a viewer would remember. Note the rejected ones in
+  one line each.
+- Before stopping, do a **viewer pass**: a table with one row for every 4 s of
+  output, saying what is new on screen and why a viewer keeps watching. A row
+  whose answer is "a caption" or "the level continues" is the next thing to fix.
+- You cannot hear the film. Playing it in a muted browser is not a listening pass;
+  say plainly that sound was checked by measurement only. Measure what can be measured:
+  `check`'s stinger levels and panning, `dac-enables` for S3K music, and each synced
+  sound's frame against its event frame. In the A/B, the user heard every audio fault
+  that both agents' passes missed.
+
 These are recorded problems with particular promo drafts. Preserve the preference
 for crafted type, readable action and deliberate rhythm; do not turn it into a
 ban on a stable dialogue panel, a purposeful reaction hold or a quiet story beat.
@@ -83,6 +150,10 @@ grid, title drop or chapter structure.
 
 ### 2. Write the brief at the top of the edit file
 
+The plan is this brief, in the docstring of `edit.py` from `promo_kit.py template`,
+plus the beat sheet. Do not write separate essays, storyboard sites or
+rejected-alternative surveys. Give each choice its reason in one clause.
+
 Write one line each:
 
 - **Audience.** For example: general Sonic fans, or modders.
@@ -94,30 +165,57 @@ Write one line each:
   "Configurable" is shown by toggling, then by the result. It is never shown
   by an options page. For a story, describe the action, speaking turns and reactions
   that make the premise clear.
+  The ban on a feature inventory is about static menus, not about leaving the features
+  out. List what makes this feature different from the stock game, and give each
+  difference a moving proof unless the brief excludes it. One angle can carry them all.
+  In the 2026-10-23 Time Attack A/B, one film chose "identity beside you" and dropped
+  the no-lives retry, the vote and the room size as "inventory". What remained was a
+  Green Hill run with ghosts, which any Sonic race could show. The other film followed
+  one player from naming to the rematch and proved each difference on the way.
+- **Name the relationship you are showing.** When the novelty is a relationship ("the
+  lobby is a level", "your colour in every game"), show it in one continuous shot or
+  one split, and say it once. A menu that disappears into play does not tell a
+  first-time viewer that they are now in the lobby.
+- **Proof.** For each selling point, name what the viewer will *see* that
+  proves it. A claim that something changed (a remix, a fix, a new version,
+  "now with") is a comparison, so plan the stock version beside the new one in a
+  split. Shown alone, a remixed level just looks like the level.
 - **Hero moment.** The single shot people will remember. Plan the climax
-  around it.
+  around it, and cut a one- or two-second fragment of it into the cold open.
 - **Sound.** Music structure and, where relevant, BPM/first beat; dialogue,
   effects and intended pauses. A jingle or separate end-card track is a choice,
   not a requirement.
 - **Palette.** Three or four colours *sampled from the game itself*: its title
   card, logo or HUD.
 - **Title face.** Prefer the game's or mod's own letterforms: a ROM title-card
-  font, or a mod `art/font.txt` drawn with `BitmapFont`. Otherwise use a heavy
-  condensed TTF.
+  font, or a mod `art/font.txt` drawn with `BitmapFont`. A mod without a font
+  still has the base game's letters. The simplest native type is the game's
+  own presentation as it ships, filmed: a title card, a results tally or a menu reveal in one
+  take into play. Do not cover a native card with an editorial copy of it.
+  Use a heavy condensed TTF only for lines the game cannot supply.
 - **End card.** Logo, one line, URL, status line, and the disclaimer "Fan-made
-  and free. Not affiliated with SEGA. Requires your own ROM."
+  and free. Not affiliated with SEGA. Requires your own ROM." Nothing else.
+  Build requirements and ROM revisions belong in the linked README.
 
 ### 3. Storyboard to the film's rhythm
 
 For a music-led showcase, choose the music first and build a beat sheet:
 
-1. Render the bed through OpenGGF's own SMPS driver from the ROM. See Slay's
-   `render_audio.py`. Never use unlicensed external music.
+1. Render the bed through OpenGGF's own SMPS driver from the ROM with
+   `com.openggf.tools.audio.FmSfxRenderTool --game s2 --rom <rom> --music 91
+   --rate 48000 --max-seconds 80 --out <dir> --paced`. `--sfx <id>` renders a
+   stinger the same way. `--paced` plays it as the game does and writes
+   `<game>-<kind>-<id>-paced.wav`. Without it, S3K music has no drums: the
+   default render never enables the DAC, and the tool reports `dac-enables=0`.
+   Never use unlicensed external music. The chip output starts on a DC offset,
+   so high-pass it before checking the first onset.
 2. Run `python3 tools/media/promo_kit.py beats bed.wav` to get the BPM, beat
    phase and section changes. Confirm the phase by ear or against a known
    onset.
 3. Write a beat sheet before capturing: chapter, beats, layout, type, sound
-   cue. Put chapter changes, header wipes and the title drop on **section
+   cue, and **what the shot proves**. A shot whose purpose is "keep the
+   momentum", "breathe" or "leave room" is padding. Cut it, or spend its bars on
+   a comparison or the hero. Put chapter changes, header wipes and the title drop on **section
    changes**. Put ordinary cuts on bar lines (every four beats) or phrase
    lines (every eight). An effect's arrival or a contact should land *on* a
    beat where that preserves a readable complete action.
@@ -140,10 +238,12 @@ An example 60–90 s showcase shape at 120–175 BPM, not a required narrative f
 | End card | 5–7 s | Over blurred gameplay. Fade to black. |
 
 For a tutorial/promo, teach a small set of choices through one coherent example.
-Show choice → visible result, then let the finished scene play without instruction.
-Use real values, distinguish explanatory graphics from actual editor UI, and give
-viewers an editable source and a clear first step. Read the Stageplay first-creator
-lesson in the reference before repeating a feature-check montage as a story.
+Give the complete scene room to establish its premise, then connect each directing
+choice to a visible result in a continuous annotated pass when that serves the
+lesson. Avoid restarting the same action for every concept. Use real values and a
+measured single-setting comparison where useful; distinguish explanatory graphics
+from actual editor UI. Give viewers an editable source and a clear first step.
+Read the Stageplay first-creator lesson before choosing the teaching sequence.
 
 ### 4. Shot list and capture
 
@@ -156,7 +256,9 @@ lesson in the reference before repeating a feature-check montage as a story.
 - Prefer one take across a natural chain over cutting it up. Good chains are
   menu → title card → level, or map → node → fight → victory.
 - Preserve lossless source frames where the capture workflow supports them.
-  For gameplay clips under an editorial bed, capture SFX separately from music.
+  `GameplayCaptureTool --audio` records music and SFX as one mix, and there is
+  no SFX-only stem. Under an editorial bed, capture silently and add ROM
+  stingers rendered with `FmSfxRenderTool --sfx <id> --paced`.
   Stageplay exports combine authored cues with native SFX in LIVE shots; avoid mixing that soundtrack
   with a second unplanned bed in the compositor.
 - Gameplay start positions must be real for the act; disclose debug jumps and
@@ -167,6 +269,20 @@ lesson in the reference before repeating a feature-check montage as a story.
   gameplay from staged native interactions or positioned excerpts.
 - Make a contact sheet of each clip, for example Slay's `sheet.py` or
   `strips.py`, and pick in-points by frame number.
+- **Frame the claim.** If it is a count, a shape or a length (three
+  corkscrews, a longer route), the frame has to be able to show it. When only one
+  hump fits on screen, the viewer can't count to three. `--width 800` shows
+  twice the native view, and `stacked_split` compares horizontal routes without
+  cropping them to slices.
+- **Check the hero's pose, not just its path.** The CSV proves the route, and the
+  frames have to show the character at its best. For example, a spindash
+  carried through a corkscrew rolls as a ball and hides the corkscrew tumble.
+  Build the speed so the character runs through, for instance by landing from a
+  jump, and check the CSV's roll column across the feature.
+- **Film presentation as it ships.** A native card or screen that needs a
+  non-default preference, a debug option or an engine repair is not what players
+  see. Use editorial type in the game's letterforms, and record the gap.
+  Don't turn a promo into engine work.
 
 For Stageplay blocking, give characters purposeful entrances, approaches, turns,
 gestures, reactions and exits as the scene needs. Prefer physical puppets for player
@@ -200,7 +316,8 @@ python3 tools/media/promo_kit.py template /task/promo/edit.py
 python3 tools/media/promo_kit.py demo /task/kit-demo   # shows every move on synthetic footage
 ```
 
-Keep fonts in the task directory, never in a repository. `DejaVu` in the
+`promo_kit` needs numpy and Pillow. If the system Python lacks them, use a venv
+under the checkout's `target/`. Keep fonts in the task directory, never in a repository. `DejaVu` in the
 `fonts` report means the result will look flat. Fix the fonts before
 composing.
 
@@ -255,9 +372,52 @@ panel is appropriate and does not need to fly on and off with each speaking turn
   gradient (`Shade`, header shades) when a full line sits over busy art.
 - Use a wide-tracked small kicker (`tracking=8–12`) sparingly, above a
   display line.
+- Keep editorial graphics off the native HUD. A header tab cutting through
+  `TIME`, or a split label beside two stacked HUDs, reads as an accident. Place
+  the labels on the side away from the HUD, or crop the HUD out deliberately.
+- **The film's voice must not look like the game's UI.** Captions, headers, counters and labels
+  that the film says to the viewer need a treatment the game never shows during play. A Time
+  Attack draft set every caption in the feature's own name font on the HUD's dark plates, and the
+  user could not tell "if the promo is talking to me, or the game displays that text in normal
+  play". The fix used the display face with stroke and hard shadow for lines and pills for labels,
+  and kept the game's font only for player names and captured footage. A ROM title-card font is
+  still a good title face: it is the game's presentation type, not its in-play UI.
+- **Native UI is already type.** Multiplayer footage carries a HUD, a room panel and a
+  nameplate on every racer. Count them before adding anything. One A/B film opened with
+  its tagline wedged into the `TIME`/`RINGS` corner, beside the room panel, six
+  nameplates and a disclosure strip: five layers of text in the first second. Over
+  busy native UI, add one editorial element at most, in the region the game leaves
+  empty, or cut to a shot that leaves room.
+- **Crop at UI boundaries.** A crop keeps each native UI element whole or removes it
+  whole. The same film's close crops cut `TIME` to `ME` and sliced the room panel's
+  columns mid-word on almost every race shot. A title slab over gameplay must hide the
+  HUD completely, not leave fragments of it showing above and below.
+- **Labels must read at a glance.** A label you add under gameplay needs at least about
+  50 px of cap height at 1080p, white or near-white text on a dark plate, and the
+  player's colour as a bar rather than as the text colour. Dark blue and violet names
+  on a dark plate were "hard to see". Bring labels in once their subjects have settled,
+  and keep them from touching each other or the game's own text.
+- A native bitmap font shows its construction at display scale. Sonic 2's
+  title-card diagonals are split strokes, which can read as "E/MERALD" at 9×.
+  Judge every word at final size, and choose the scale or the word accordingly.
+- **Give a native font the game's own treatment.** The stroke-and-shadow row
+  in the table above is for TTF type. A coached draft reduced Sonic 2's
+  title-card glyphs to one colour, then added a navy outline and a red drop
+  a third of a game pixel thick. The user called its "use of palettes with the
+  text... horrible, particularly around the drop shadow". Instead:
+  - Keep the glyph's palette indices when you extract it ('#' face, other
+    characters for the extra colours, passed as `shades=`).
+  - Sample the face, edge and shadow colours, and the shadow's offset, from a
+    native frame of the game's own card.
+  - Let `BitmapFont.render` draw every effect in whole glyph pixels.
+  - Add an outline only if the game's type has one.
+  - A native font comes with its native ground. Sonic 2's card letters are
+    drawn to sit on the card's solid blue band, and over grass and clouds they
+    lose their shape. Put display type on that band (with the red tab and yellow
+    strip when they help) rather than straight over busy gameplay.
 - Hero logos are redrawn from the game's or mod's own font at integer scale,
-  with an outline, a drop and a sweeping shine. Banners come from the ROM's
-  own title-card art, dumped by tests, never from the disassembly.
+  with the game's own treatment and an optional sweeping shine. Banners come
+  from the ROM's own title-card art, dumped by tests, never from the disassembly.
 
 ### Composition: show several things at once instead of cutting fast
 
@@ -266,7 +426,11 @@ to preserve eyelines, speaker identity and the timing of a reaction.
 
 - **Slanted split (2–3 slices).** For comparisons and "all three games". The
   dividers lean like title-card speed lines (slant ≈0.22), each slice drops in
-  on its beat, and a pill label names each slice.
+  on its beat, and a pill label names each slice. A slice shows only the middle
+  of its pane, so check that the subject is inside it in a still of every pane.
+  `game_view` clamps at the frame edge: a hero standing near the level's left
+  boundary (x≈80) fell outside the S1 slice, and the user found Sonic "off screen
+  for Sonic 1". Pad the frame horizontally and centre on the subject.
 - **Grid (2×2, 3×1, 4×2).** For "many at once": bosses, events, rooms. Cells
   pop in one beat apart in reading order, on moving stripes, with a stinger
   on each pop. A cell must stay readable: at least about 2.3× native scale.
@@ -344,13 +508,33 @@ signature move is what makes it a brand.
 - Use editorial stingers as punctuation: a ring on a pop, a spin dash before
   a wipe, a Giant Ring under an iris, a boss hit on a punch. A staged story can
   retain sounds motivated by its action as well as deliberate musical accents.
+- **A game sound means its event.** A jump sound tells the viewer someone jumped.
+  Play it only when the jump is on screen, on the take-off frame from the state CSV,
+  not on the beat or at the apex. The user called jumps used as punctuation
+  "confusing". Punctuate graphics with sounds that cannot contradict the picture:
+  Giant Ring, Register, a spin dash release.
+- **Sync to the frame, not the plan.** Typing ticks, presses and landings land on the
+  frame where the picture changes. Find it in the CSV or by differencing source
+  frames. One draft's ticks came 36 frames before the letters they announced.
+- **Stingers sit at game level.** In the game, music and effects share one driver at
+  comparable loudness. Both A/B films mixed stingers 8–18 dB under full-level music,
+  and the user heard the music as "way louder than the SFX". Start with stingers near
+  gain 1 and the bed around 0.75. `promo_kit.py check` warns when a stinger sits more
+  than 9 dB under the music.
+- **Mind hard-panned effects.** Some ROM effects play from one speaker. The S1 ring is
+  right-only, and S3K alternates its right and left ring sounds (`$33`/`$34`) on every
+  ring. A draft that used `$33` alone put every ring "stuck on the right channel".
+  Alternate the pair as the game does, or centre a lone stinger. `check` warns about a
+  one-sided stinger that is not part of an alternating run.
 - Under an editorial bed, clip audio is SFX only, with one owner for each intended
   music/effect layer. Keep speech intelligible and avoid duplicating Stageplay's
   authored audio in the edit. Duck menu
   stretches. Keep genuine native audio when it is the subject, for example a
   speed effect or an announcer.
 - `master()` targets about −16 dBFS RMS, not measured −16 LUFS. Measure integrated
-  loudness as needed and the true peak of the AAC-encoded file, not only the PCM.
+  and sectional loudness across story/tutorial boundaries and the true peak of the
+  AAC-encoded file, not only the PCM. A whole-film average can hide an abrupt level
+  step; continuous music needs genuine SFX-only stems beneath it.
 
 ## Editorial review before delivery
 
@@ -374,14 +558,18 @@ not mandatory ingredients for a narrative film.
    reactions and whole camera moves, not only shot-length averages or stills.
 9. Are gameplay claims shown in actual gameplay? For staged scenes, do deliberate
    blocking and named dialogue carry the story rather than an idle cast?
-10. Is the soundtrack coherent, speech clear and every silence intentional?
+10. Is the soundtrack coherent, speech clear and every silence intentional? Does each
+    game sound mean what it sounds like, land on its event's frame and sit at game
+    level beside the music, from the speaker the game would use?
 11. Does the closing identification provide the logo, promise, URL, status and
     disclaimer? A showcase end card typically needs 5–7 s; a story's closing
     treatment still needs enough time to read its information.
 12. Is it honest? Staged, positioned or debug setups are labelled in the provenance,
     nothing claims to be online or real time when it is not, and any "reviews"
     are obviously in-character jokes, never presented as real quotes.
-13. Are sprites, scenery and text stable through motion at final cadence and size?
+13. Is every native UI element either whole or gone, with no editorial type on it, and
+    is every split's subject inside its slice?
+14. Are sprites, scenery and text stable through motion at final cadence and size?
     Distinguish compositor filtering from Stageplay's held zoom. No final upscale
     can serve as a substitute for correcting shimmer in the source render.
 

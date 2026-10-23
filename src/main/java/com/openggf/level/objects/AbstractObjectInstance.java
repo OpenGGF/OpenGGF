@@ -467,6 +467,9 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @param index slot index (0-127 for ROM-matching slots, may exceed 127 for overflow)
      */
     public void setSlotIndex(int index) {
+        if (this.slotIndex != index && services != null && services.objectManager() != null) {
+            services.objectManager().invalidateNativeObjectIndex();
+        }
         this.slotIndex = index;
     }
 
@@ -1377,7 +1380,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     protected ObjectSpawn buildSpawnAt(int x, int y) {
         return new ObjectSpawn(x, y, spawn.objectId(), spawn.subtype(),
                 spawn.renderFlags(), spawn.respawnTracked(), spawn.rawYWord(),
-                spawn.layoutIndex(), spawn.ownerModId(), spawn.objectKey());
+                spawn.layoutIndex(), spawn.ownerModId(), spawn.objectKey(), spawn.authoredProperties());
     }
 
     /**

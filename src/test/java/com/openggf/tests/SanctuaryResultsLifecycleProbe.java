@@ -15,6 +15,9 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static com.openggf.GameLoopRewindTestAccess.owner;
+import static com.openggf.tests.TestS3kSanctuaryOriginReturnLifecycle.requireHistory;
+import static com.openggf.tests.TestS3kSanctuaryOriginReturnLifecycle.assertRetiredHistory;
 
 /**
  * Actual sanctuary result/return owners, originating in the S3K parity task.
@@ -44,7 +47,8 @@ final class SanctuaryResultsLifecycleProbe {
         assertFalse(GameServices.fade().isActive());
         assertFalse(GameServices.fade().hasPendingCompletion());
         assertEquals(saved, GameServices.level().getBigRingReturn());
-        int stageHistory = fixture.gameplayMode().getRewindController().currentFrame();
+        var stageController = requireHistory(loop, "the actual incoming stage owns live history");
+        int stageHistory = stageController.currentFrame();
         assertTrue(stageHistory > 10, "actual incoming stage built a live timeline");
         var stageObjects = GameServices.level().getObjectManager();
 
@@ -78,7 +82,8 @@ final class SanctuaryResultsLifecycleProbe {
         assertEquals(0x17, GameServices.level().getCurrentZone());
         assertEquals(1, GameServices.level().getCurrentAct());
         assertEquals(saved, GameServices.level().getBigRingReturn(), "backdrop rebuild preserves Saved2");
-        assertTrue(fixture.gameplayMode().getRewindController().currentFrame() < stageHistory,
+        assertNull(owner(loop).getRewindController(), "results do not install a gameplay timeline");
+        assertRetiredHistory(loop, stageController,
                 "results backdrop load retires the actual outgoing stage history");
         assertEquals((width - 320) / 2, (int) field(screen, "viewportXOffset"));
         assertEquals(outcome != Outcome.FAILURE, (boolean) call(screen, "charNameVisibleForTest"));
@@ -135,8 +140,16 @@ final class SanctuaryResultsLifecycleProbe {
         assertNotSame(backdrop, GameServices.level().getObjectManager(), "results exit actually loads its owned destination");
         assertEquals(saved == null ? 0x17 : 7, GameServices.level().getCurrentZone());
         assertEquals(saved == null ? 1 : 0, GameServices.level().getCurrentAct());
-        assertTrue(fixture.gameplayMode().getRewindController().currentFrame() <= 1,
-                "actual origin load starts a new live timeline");
+        var incoming = owner(loop).getRewindController();
+        if (incoming != null) {
+            assertEquals(0, incoming.earliestAvailableFrame());
+            assertTrue(incoming.currentFrame() <= 1, "actual origin load starts a new live timeline");
+        } else {
+            // The fresh load may still be assembling its destination. The
+            // caller's waitForReleasedWorld requires the first installed
+            // production history at frame zero and a controller once ready.
+            assertRetiredHistory(loop, stageController, "destination assembly cannot revive stage replay");
+        }
         return stageHistory;
     }
 

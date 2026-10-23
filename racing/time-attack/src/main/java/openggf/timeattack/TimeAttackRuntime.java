@@ -54,6 +54,24 @@ public final class TimeAttackRuntime implements RunHost {
         default void drawOverlay(com.openggf.mods.ui.LevelOverlayCanvas canvas, int levelWidth,
                                  int localCentreX) {
         }
+
+        /**
+         * Asked when the act is complete and the run would return to its host: true restarts the
+         * act as a fresh attempt instead (a round window that is still open).
+         */
+        default boolean continueAfterActCompletion() {
+            return false;
+        }
+
+        /** Whether the retry key may restart the act now; false ignores it (a closed window). */
+        default boolean mayRetry() {
+            return true;
+        }
+
+        /** The companion's own countdown digit now on screen (a round's start), or 0 for none. */
+        default int countdownDigit() {
+            return 0;
+        }
     }
 
     /** Multiplayer bridge for spawn-anchored attempt lifecycle and frame streaming. */
@@ -93,6 +111,32 @@ public final class TimeAttackRuntime implements RunHost {
     private Supplier<List<GhostPose>> extraGhostSupplier;
     private int levelWidth;
     private int localCentreX = -1;
+    /** Level frames the post-death countdown still holds the run for; 0 when none is running. */
+    private int restartCountdownFrames;
+    /**
+     * A death restart's lead-in: its steps run with the player's input held until the reloaded
+     * level is visible (its spawn step has run and it has finished fading its palette in);
+     * the countdown follows.
+     */
+    private boolean restartLeadIn;
+    private int leadInSteps;
+    /** The step just admitted runs with the player's input held (the lead-in). */
+    private boolean holdInputThisStep;
+    /**
+     * Frames sampled before the player had control, and any queued behind them, waiting for
+     * the attempt listener. A room's {@code AttemptStart} goes out with the first frame, so it
+     * and the host's pacing clock start when control returns; the backlog then drains inside
+     * the host's stream rate limits ({@link #STREAM_RELEASE_BURST},
+     * {@link #STREAM_CATCH_UP_INTERVAL}).
+     */
+    private final java.util.ArrayDeque<GhostFrame> pendingFrames = new java.util.ArrayDeque<>();
+    private boolean holdingFrames;
+    private int catchUpCounter;
+    private final CountdownCues countdownCues = new CountdownCues();
+    /** The local player was in their hurt state after the latest step (the progress bar flashes them). */
+    private boolean localHurt;
+    private java.util.function.BiFunction<String, String, com.openggf.net.identity.PlayerAppearance> lookSource =
+            (gameId, character) -> com.openggf.net.identity.PlayerAppearance.STOCK;
 
     public TimeAttackRuntime(GhostStore store, java.nio.file.Path identityDir,
                              java.util.function.BooleanSupplier launchBlocked) {
@@ -203,6 +247,58 @@ public final class TimeAttackRuntime implements RunHost {
     /** The run handle the engine returned when it began hosting this runtime's run. */
     public void attachHandle(RunHandle handle) {
         this.handle = handle;
+        if (handle != null && launch != null) {
+            // The engine starts every run with the stock look; recolour the player's own character.
+            handle.setPlayerAppearance(lookSource.apply(launch.gameId(), launch.character()));
+        }
+        if (handle != null) {
+            // The game's own HUD shows the attempt's clock, to the hundredth (0:00.00).
+            handle.setHudTimeHundredths(true);
+            handle.setHudProfile(hudProfile());
+            publishHudTime();
+        }
+    }
+
+    /**
+     * Time Attack's native HUD: TIME (the attempt's clock) on the top row and RINGS beneath it.
+     * Score means nothing in a time attack and lives are hidden by the fast-restart policy, so the
+     * row they free holds the best time ({@link TimeAttackHud}). The act timer's nine-minute flash
+     * is off: TIME is not the act timer here.
+     */
+    public static com.openggf.level.objects.HudProfile hudProfile() {
+        return new com.openggf.level.objects.HudProfile(java.util.List.of(
+                new com.openggf.level.objects.HudRow(false, com.openggf.level.objects.HudLabel.SCORE,
+                        com.openggf.level.objects.HudMetric.SCORE, 16, 8, 64, 8, 6,
+                        com.openggf.level.objects.HudWarningPolicy.NONE),
+                new com.openggf.level.objects.HudRow(true, com.openggf.level.objects.HudLabel.TIME,
+                        com.openggf.level.objects.HudMetric.TIME, 16, 8, 56, 8, 4,
+                        com.openggf.level.objects.HudWarningPolicy.NONE),
+                new com.openggf.level.objects.HudRow(true, com.openggf.level.objects.HudLabel.RINGS,
+                        com.openggf.level.objects.HudMetric.RINGS, 16, 24, 64, 24, 3,
+                        com.openggf.level.objects.HudWarningPolicy.ZERO_FLASH),
+                new com.openggf.level.objects.HudRow(false, com.openggf.level.objects.HudLabel.LIVES,
+                        com.openggf.level.objects.HudMetric.LIVES, 16, 200, 56, 208, 2,
+                        com.openggf.level.objects.HudWarningPolicy.NONE)));
+    }
+
+    /** The attempt's clock in the stock HUD's TIME (first input to finish, as the room times it). */
+    private void publishHudTime() {
+        if (handle != null) {
+            handle.setHudTime(attempt == null ? 0 : attempt.elapsedDisplayFrames());
+        }
+    }
+
+    /** Supplies the player's saved look for a game and character (the settings own it). */
+    public void setLookSource(java.util.function.BiFunction<String, String,
+            com.openggf.net.identity.PlayerAppearance> source) {
+        lookSource = java.util.Objects.requireNonNull(source, "source");
+    }
+
+    /** Asks the engine to end the run and return to the host at the next safe boundary. */
+    public void leaveRun() {
+        if (handle != null) {
+            handle.leave();
+        }
     }
 
     /** Key (GLFW/SceneKeys code) that retries the attempt. */
@@ -221,10 +317,104 @@ public final class TimeAttackRuntime implements RunHost {
         this.companion = companion;
     }
 
-    /** The spec the engine runs for the armed launch: one isolated act. */
+    /**
+     * Level frames (60 per second) the 3-2-1 countdown holds the run after a fast death restart.
+     * The reloaded act's lead-in runs first with the player's input held: its spawn step (the
+     * engine builds the player's and objects' sprites only in a step) and any steps in which the
+     * level is still fading its palette in. Those steps are part of the attempt but carry no
+     * input, so the clock (first input to finish) does not count them. The countdown frames
+     * then execute no step, so they are neither recorded nor timed.
+     */
+    public static final int RESTART_COUNTDOWN_FRAMES = 3 * 60;
+
+    /**
+     * Held-back frames handed over at once when control returns: below the host's 12-frame
+     * stream lead ({@code GhostStreamValidator.MAX_FRAME_LEAD}) by one 3-frame batch.
+     */
+    static final int STREAM_RELEASE_BURST = 9;
+
+    /**
+     * Steps between extra backlog frames while a backlog drains: one every 12 steps is 5 frames
+     * per second above play, inside the host's 66-per-second refill
+     * ({@code GhostStreamValidator.RATE_REFILL_PER_SECOND}).
+     */
+    static final int STREAM_CATCH_UP_INTERVAL = 12;
+
+    /** The policy every Time Attack run uses; the verifier replays attempts under it. */
+    public static GameplayRunPolicy runPolicy() {
+        return GameplayRunPolicy.isolatedAct().withFastRestarts().withoutZoneIntros();
+    }
+
+    /**
+     * The spec the engine runs for the armed launch: one isolated act with fast restarts, so a
+     * death reloads the act from its start as a fresh attempt with no lives and no title card,
+     * and without intro cutscenes, so the clock measures the race alone.
+     */
     public RunSpec runSpec() {
         return new RunSpec(launch.gameId(), launch.zone(), launch.act(), launch.character(),
-                GameplayRunPolicy.isolatedAct());
+                runPolicy());
+    }
+
+    /**
+     * Level frames the post-death countdown still holds the run for; 0 during the lead-in (the
+     * countdown has not started) and when none is running.
+     */
+    public int restartCountdownFrames() {
+        return restartCountdownFrames;
+    }
+
+    /**
+     * The countdown digit on screen (3, 2 or 1), or 0 for none. Nothing is drawn during the
+     * lead-in: the digits appear only once the reloaded level is visible and frozen.
+     */
+    public int countdownDigit() {
+        return restartCountdownFrames > 0 ? (restartCountdownFrames + 59) / 60 : 0;
+    }
+
+    /** True while a death restart's lead-in steps run with the player's input held. */
+    public boolean inRestartLeadIn() {
+        return restartLeadIn;
+    }
+
+    /** Hands a sampled frame to the listener, behind any backlog and inside the host's limits. */
+    private void offerFrame(GhostFrame frame) {
+        if (holdingFrames || !pendingFrames.isEmpty()) {
+            pendingFrames.add(frame);
+        } else if (attemptListener != null) {
+            attemptListener.onFrameSampled(attemptOrdinal, frame);
+            return;
+        }
+        if (holdingFrames) {
+            return;
+        }
+        int allowance = 1;
+        if (++catchUpCounter >= STREAM_CATCH_UP_INTERVAL) {
+            catchUpCounter = 0;
+            allowance++;
+        }
+        deliverPending(allowance);
+    }
+
+    /** Control has returned: the held-back frames start reaching the listener. */
+    private void releaseHeldFrames() {
+        holdingFrames = false;
+        catchUpCounter = 0;
+        deliverPending(STREAM_RELEASE_BURST);
+    }
+
+    private void deliverPending(int count) {
+        for (int i = 0; i < count && !pendingFrames.isEmpty(); i++) {
+            GhostFrame frame = pendingFrames.poll();
+            if (attemptListener != null && isAttemptActive()) {
+                attemptListener.onFrameSampled(attemptOrdinal, frame);
+            }
+        }
+    }
+
+    private void clearHeldFrames() {
+        pendingFrames.clear();
+        holdingFrames = false;
+        catchUpCounter = 0;
     }
 
     /** Voids an ARMED or RUNNING attempt exactly once. */
@@ -257,11 +447,12 @@ public final class TimeAttackRuntime implements RunHost {
         capture.capture(sampledFrame.x(), sampledFrame.y(), sampledFrame.mappingFrame(),
                 sampledFrame.hFlip(), sampledFrame.vFlip(), sampledFrame.priorityBucket(),
                 sampledFrame.highPriority(), attempt.phase() == TimeAttackAttempt.Phase.FINISHED);
-        if (attemptListener != null) {
-            attemptListener.onFrameSampled(attemptOrdinal, sampledFrame);
-        }
+        offerFrame(sampledFrame);
         if (before != TimeAttackAttempt.Phase.FINISHED
                 && attempt.phase() == TimeAttackAttempt.Phase.FINISHED) {
+            // The finish needs its whole stream; a backlog only outlives the first seconds.
+            holdingFrames = false;
+            deliverPending(pendingFrames.size());
             if (!tainted) {
                 persistIfBest();
             }
@@ -312,7 +503,18 @@ public final class TimeAttackRuntime implements RunHost {
     public void onLevelReady(RunLevelStart start) {
         levelWidth = start.levelWidth();
         localCentreX = -1;
+        // A death restart reloads the act under a still-running attempt; it can never finish.
+        voidCurrentAttempt();
+        clearHeldFrames();
+        restartCountdownFrames = 0;
+        countdownCues.reset();
+        localHurt = false;
+        restartLeadIn = start.deathRestart();
+        leadInSteps = 0;
+        holdInputThisStep = false;
+        holdingFrames = restartLeadIn;
         beginAttemptForTest(start.determinismFingerprint());
+        publishHudTime();
         if (start.debugAssisted()) {
             // An overlay already visible before spawn is as much an advantage as
             // toggling one on mid-run, so taint immediately.
@@ -323,12 +525,71 @@ public final class TimeAttackRuntime implements RunHost {
         }
     }
 
+    /** True while the local player is in their hurt state, as of the latest step. */
+    public boolean isLocalHurt() {
+        return localHurt;
+    }
+
+    /** Plays the game's countdown sounds by driver ID; unset, the countdowns are silent. */
+    public void setSfxPlayer(java.util.function.IntConsumer player) {
+        countdownCues.setPlayer(player);
+    }
+
     @Override
     public boolean admitStep(RunInput input) {
-        if (retryKey != null && input.keyPressed(retryKey.getAsInt())) {
+        boolean admitted = admitStepHeld(input);
+        // The lead-in admits steps with input held; only a step with control releases the run.
+        countdownCues.observe(launch == null ? null : launch.gameId(), shownCountdownDigit(),
+                admitted && !holdInputThisStep);
+        return admitted;
+    }
+
+    /** The countdown digit drawn over the run: a fast restart's, else the companion's round start. */
+    private int shownCountdownDigit() {
+        int digit = countdownDigit();
+        return digit == 0 && companion != null ? companion.countdownDigit() : digit;
+    }
+
+    private boolean admitStepHeld(RunInput input) {
+        // The companion drains the network first, so a window that closed this frame refuses
+        // the retry key.
+        FrameCompanion partner = companion;
+        boolean admitted = partner == null || partner.admit(input);
+        if (retryKey != null && input.keyPressed(retryKey.getAsInt())
+                && (partner == null || partner.mayRetry())) {
             requestRetry();
         }
-        return companion == null || companion.admit(input);
+        holdInputThisStep = false;
+        if (restartLeadIn) {
+            // Lead-in: the spawn step, then every step in which the reloaded level is still
+            // fading its own palette in (S3K Level/loc_64DC arms Palette_fade_timer,
+            // sonic3k.asm:7906-7910; the fade itself is untouched), runs with input held.
+            if (leadInSteps == 0 || input.levelFadingIn()) {
+                holdInputThisStep = admitted;
+                return admitted;
+            }
+            restartLeadIn = false;
+            restartCountdownFrames = RESTART_COUNTDOWN_FRAMES;
+        }
+        if (restartCountdownFrames > 0) {
+            if (--restartCountdownFrames == 0) {
+                releaseHeldFrames();
+            }
+            return false;
+        }
+        return admitted;
+    }
+
+    /** Lead-in steps run with the player's input held. */
+    @Override
+    public boolean holdsPlayerInput() {
+        return holdInputThisStep;
+    }
+
+    /** Solo runs return to their host; a multiplayer companion may keep an open window going. */
+    @Override
+    public boolean retryOnActCompletion() {
+        return companion != null && companion.continueAfterActCompletion();
     }
 
     @Override
@@ -340,7 +601,12 @@ public final class TimeAttackRuntime implements RunHost {
         localCentreX = pose.centreX();
         tickForTest(step.heldMask(), step.startHeld(), step.actComplete(), step.checkpointIndex(),
                 new GhostFrame(pose.centreX(), pose.centreY(), pose.mappingFrame(), pose.hFlip(),
-                        pose.vFlip(), false, pose.priorityBucket(), pose.highPriority()));
+                        pose.vFlip(), false, pose.priorityBucket(), pose.highPriority(), pose.hurt()));
+        localHurt = pose.hurt();
+        if (restartLeadIn) {
+            leadInSteps++;
+        }
+        publishHudTime();
         if (companion != null) {
             companion.afterStep();
         }
@@ -353,9 +619,16 @@ public final class TimeAttackRuntime implements RunHost {
 
     @Override
     public void drawOverlay(com.openggf.mods.ui.LevelOverlayCanvas canvas) {
+        // A round's count also runs over the title card, when the run takes no steps: sound each
+        // digit as it is drawn. Only a released step (admitStep) says go.
+        countdownCues.observe(launch == null ? null : launch.gameId(), shownCountdownDigit(), false);
         TimeAttackHud.draw(canvas, hudState());
         if (companion != null) {
             companion.drawOverlay(canvas, levelWidth, localCentreX);
+        }
+        int digit = countdownDigit();
+        if (digit > 0) {
+            openggf.timeattack.mp.MultiplayerHudRenderer.drawCountdown(canvas, digit);
         }
     }
 
@@ -395,7 +668,7 @@ public final class TimeAttackRuntime implements RunHost {
     /** A recorded ghost frame as the engine's presentation pose. */
     public static PlayerPose poseOf(GhostFrame frame) {
         return new PlayerPose(frame.x(), frame.y(), frame.mappingFrame(), frame.hFlip(), frame.vFlip(),
-                frame.priorityBucket(), frame.highPriority());
+                frame.priorityBucket(), frame.highPriority(), frame.hurt());
     }
 
     List<GhostPose> activeGhostsForTest() {
@@ -411,6 +684,11 @@ public final class TimeAttackRuntime implements RunHost {
         attempt = null;
         attemptListener = null;
         extraGhostSupplier = null;
+        restartCountdownFrames = 0;
+        countdownCues.reset();
+        restartLeadIn = false;
+        holdInputThisStep = false;
+        clearHeldFrames();
         handle = null;
         companion = null;
     }

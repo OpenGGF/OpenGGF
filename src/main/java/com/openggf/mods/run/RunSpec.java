@@ -15,9 +15,17 @@ import java.util.Objects;
  * @param act       act index within the zone
  * @param character stock main character ({@code sonic}, {@code tails}, {@code knuckles})
  * @param policy    what the run permits beyond its starting act
+ * @param area      a fenced part of the act the run is held in, or null for the whole act from
+ *                  its usual start
  */
 @ModApi
-public record RunSpec(String gameId, int zone, int act, String character, GameplayRunPolicy policy) {
+public record RunSpec(String gameId, int zone, int act, String character, GameplayRunPolicy policy,
+                      RunArea area) {
+    /** The whole act from its usual start. */
+    public RunSpec(String gameId, int zone, int act, String character, GameplayRunPolicy policy) {
+        this(gameId, zone, act, character, policy, null);
+    }
+
     public RunSpec {
         Objects.requireNonNull(gameId, "gameId");
         Objects.requireNonNull(character, "character");

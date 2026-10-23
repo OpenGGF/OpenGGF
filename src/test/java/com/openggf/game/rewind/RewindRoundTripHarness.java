@@ -6,6 +6,7 @@ import com.openggf.tests.RomTestUtils;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameId;
+import com.openggf.game.MusicReference;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
@@ -37,6 +38,8 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.authored.AuthoredGizmoInstance;
+import com.openggf.level.objects.authored.AuthoredObjectProperties;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
@@ -1556,6 +1559,14 @@ public final class RewindRoundTripHarness {
             Class<? extends AbstractObjectInstance> cls,
             StubObjectServices stub) {
 
+        // Authored regions require their typed immutable placement, not an anonymous native byte.
+        if (cls == AuthoredGizmoInstance.class) {
+            var properties = new AuthoredObjectProperties.MusicZone(32, 32, MusicReference.stock(1), true);
+            var spawn = new ObjectSpawn(0x100, 0x100, 0, 0, 0, false, 0, 0,
+                    "openggf", properties.objectKey(), properties);
+            return ObjectConstructionContext.construct(stub, () -> new AuthoredGizmoInstance(spawn));
+        }
+
         // Strategy 1: zero-arg
         Constructor<? extends AbstractObjectInstance> ctor0 = findCtor(cls);
         if (ctor0 != null) {
@@ -2516,7 +2527,7 @@ public final class RewindRoundTripHarness {
     }
 
     /**
-     * Captures all non-static, non-synthetic primitive/enum/String fields from
+     * Captures all non-static, non-transient, non-synthetic primitive/enum/String fields from
      * the object's class hierarchy between the concrete class and
      * {@code AbstractObjectInstance} (exclusive).
      */
@@ -2528,7 +2539,9 @@ public final class RewindRoundTripHarness {
                 c != null && c != AbstractObjectInstance.class && c != Object.class;
                 c = c.getSuperclass()) {
             for (Field f : c.getDeclaredFields()) {
-                if (Modifier.isStatic(f.getModifiers())) continue;
+                // Match GenericFieldCapturer/RewindSchemaRegistry: Java transient
+                // caches may be invalidated after authoritative state is restored.
+                if (Modifier.isStatic(f.getModifiers()) || Modifier.isTransient(f.getModifiers())) continue;
                 if (f.isSynthetic()) continue;
                 Class<?> type = f.getType();
                 if (!type.isPrimitive() && !type.isEnum() && type != String.class) continue;

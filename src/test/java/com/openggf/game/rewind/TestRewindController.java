@@ -501,6 +501,69 @@ class TestRewindController {
         assertFalse(controller.stepBackward());
     }
 
+    @Test
+    void rejectedEntriesDoNotRestoreCaptureAdvanceOrEvictWarmHistory() {
+        AtomicInteger state = new AtomicInteger();
+        AtomicInteger restores = new AtomicInteger();
+        AtomicInteger captures = new AtomicInteger();
+        RewindRegistry registry = new RewindRegistry();
+        registry.register(new RewindSnapshottable<Integer>() {
+            public String key() { return "state"; }
+            public Integer capture() { captures.incrementAndGet(); return state.get(); }
+            public void restore(Integer value) { restores.incrementAndGet(); state.set(value); }
+        });
+        AtomicInteger steps = new AtomicInteger();
+        RewindController controller = new RewindController(registry, new InMemoryKeyframeStore(),
+                new FakeInputSource(30), in -> {
+                    steps.incrementAndGet();
+                    state.incrementAndGet();
+                    return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+                }, 10);
+        for (int i = 0; i < 8; i++) controller.step();
+        assertTrue(controller.stepBackward());
+        assertEquals(7, state.get());
+        int oldCaptures = captures.get(), oldRestores = restores.get(), oldSteps = steps.get();
+        controller.setReplayAdmission(() -> false);
+
+        controller.seekTo(0);
+        controller.step();
+        assertFalse(controller.stepBackward());
+        assertFalse(controller.recordExternalStep());
+        new PlaybackController(controller).stepForwardOnce();
+
+        assertEquals(7, controller.currentFrame());
+        assertEquals(7, state.get());
+        assertEquals(oldCaptures, captures.get());
+        assertEquals(oldRestores, restores.get());
+        assertEquals(oldSteps, steps.get());
+        controller.setReplayAdmission(() -> true);
+        assertTrue(controller.stepBackward());
+        assertEquals(oldSteps, steps.get(), "rejected entries must leave the warm strip intact");
+    }
+
+    @Test
+    void admittedPauseConsumesInputButSetupRetriesTheSameReplayRow() {
+        AtomicBoolean setup = new AtomicBoolean(true);
+        List<Integer> rows = new ArrayList<>();
+        RewindController controller = new RewindController(new RewindRegistry(),
+                new InMemoryKeyframeStore(), new FakeInputSource(10), in -> {
+                    rows.add(in.frameIndex());
+                    if (setup.getAndSet(false)) return com.openggf.LevelFrameResult.SETUP_ONLY;
+                    return com.openggf.LevelFrameResult.PAUSED;
+                }, 5);
+        controller.step();
+        assertEquals(0, controller.currentFrame());
+        controller.step();
+        assertEquals(1, controller.currentFrame());
+        controller.step();
+        assertEquals(2, controller.currentFrame());
+        rows.clear();
+        setup.set(true);
+        controller.seekTo(1);
+        assertEquals(List.of(1, 1), rows);
+        assertEquals(1, controller.currentFrame());
+    }
+
     private static class FakeInputSource implements InputSource {
         private final int count;
 

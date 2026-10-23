@@ -84,6 +84,30 @@ for observed Duck, and require native charge **and release** in search and cold
 LIVE replay. The actual-incline fixture must observe a nonzero native angle;
 starting on a flat before traversing a slope does not establish this case.
 
+Standalone route authoring can boot a real engine from an immutable JAR while
+bypassing build/test admission. `GameplayInputBranchTool` is measurement
+interference even when its classes and output directory are isolated; an
+immutable artifact prevents target races, not CPU or memory contention. Match
+the explicit Java main-class argument, excluding classpath values and application
+arguments; JAR, module, source-file and argument-file launches need separate
+identification. This detector
+gap was identified in the 2026-10-14 runtime performance series (`da6330ae6328`)
+and recovered during the 2026-10-23 branch reconciliation. Keep the current
+own-tree, test-admission and exclusive build-activity lease ordering; the old
+foreign-worktree removal retry (`808d9eead4e2`) belongs to its superseded design.
+
+Different virtual pattern IDs do not imply different physical atlas pages
+(2026-10-22, object-pipeline batching). A page-barrier seam incorrectly expected
+separate commands for two IDs that the allocator placed on the same page. Use
+`PatternAtlas.Entry.atlasIndex()` as the oracle and a deliberately small atlas
+when the test needs forced physical page transitions.
+
+An injected offline audio backend can be replaced at a later launch boundary
+(2026-10-21, full Time Attack capture). EGL and `java.awt.headless` isolate no
+audio devices. Ordinary Engine launch preparation previously replaced the supplied
+headless backend with LWJGL. Verify exact backend and no-device sink ownership
+through startup, level launch and return, and check the production PCM packets;
+startup identity alone does not establish isolation for the recording.
 
 A live scene can simulate correctly and render valid scenery while every actor is
 outside the picture (2026-10-21, Stageplay live-world review). ROM level maxima

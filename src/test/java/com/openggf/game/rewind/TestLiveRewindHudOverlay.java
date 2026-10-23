@@ -41,7 +41,8 @@ class TestLiveRewindHudOverlay {
         var config = com.openggf.configuration.SonicConfigurationService.getInstance();
         config.resetToDefaults();
         config.setConfigValue(com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
-        LiveRewindManager manager = new LiveRewindManager(config);
+        LiveRewindManager manager = new LiveRewindManager(config, com.openggf.audio.AudioManager.getInstance());
+        manager.bindOwner(com.openggf.tests.TestEnvironment.activeGameplayMode(), false, com.openggf.game.GameMode.LEVEL);
 
         manager.renderHud(com.openggf.game.GameMode.LEVEL, text, 320);
 

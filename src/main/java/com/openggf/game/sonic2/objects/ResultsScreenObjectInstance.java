@@ -380,18 +380,30 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
         }
 
         ensureWritableDigitPatterns(patterns);
-        writeBonusValue(patterns, 0, totalBonus, digitPatterns);
-        writeBonusValue(patterns, Sonic2Constants.RESULTS_BONUS_DIGIT_GROUP_TILES, timeBonus, digitPatterns);
-        writeBonusValue(patterns, Sonic2Constants.RESULTS_BONUS_DIGIT_GROUP_TILES * 2, ringBonus, digitPatterns);
-        if (perfectBonus) {
-            writeBonusValue(patterns, Sonic2Constants.RESULTS_BONUS_DIGIT_GROUP_TILES * 3, perfectBonusRemaining,
-                    digitPatterns);
-        } else {
-            clearBonusValue(patterns, Sonic2Constants.RESULTS_BONUS_DIGIT_GROUP_TILES * 3);
-        }
-
         GraphicsManager graphicsManager = services().graphicsManager();
-        renderer.updatePatternRange(graphicsManager, 0, Sonic2Constants.RESULTS_BONUS_DIGIT_TILES);
+        int group = Sonic2Constants.RESULTS_BONUS_DIGIT_GROUP_TILES;
+        graphicsManager.beginPatternAtlasBatch();
+        try {
+            if (totalBonus != lastTotalBonus) {
+                writeBonusValue(patterns, 0, totalBonus, digitPatterns);
+                renderer.updatePatternRange(graphicsManager, 0, group);
+            }
+            if (timeBonus != lastTimeBonus) {
+                writeBonusValue(patterns, group, timeBonus, digitPatterns);
+                renderer.updatePatternRange(graphicsManager, group, group);
+            }
+            if (ringBonus != lastRingBonus) {
+                writeBonusValue(patterns, group * 2, ringBonus, digitPatterns);
+                renderer.updatePatternRange(graphicsManager, group * 2, group);
+            }
+            if (currentPerfect != lastPerfectBonus) {
+                if (perfectBonus) writeBonusValue(patterns, group * 3, currentPerfect, digitPatterns);
+                else clearBonusValue(patterns, group * 3);
+                renderer.updatePatternRange(graphicsManager, group * 3, group);
+            }
+        } finally {
+            graphicsManager.endPatternAtlasBatch();
+        }
 
         lastTimeBonus = timeBonus;
         lastRingBonus = ringBonus;

@@ -91,6 +91,17 @@ class TestLevelRuntimeBackdrop {
         }
     }
 
+    @Test
+    void editorEntryRetiresNativePublicationFadeWithoutAdvancingGameplay() {
+        var graphics = levelManager.graphicsManager;
+        graphics.setPaletteFadePresentation(com.openggf.graphics.PaletteFadePresentation.Mode.FROM_BLACK, 3,
+                com.openggf.graphics.PaletteFadePresentation.LINES_1_TO_3);
+        com.openggf.graphics.PaletteUploadPresentation.publishAndLatch(graphics);
+        levelManager.restoreEditorLevelView(null);
+        var displayed = com.openggf.graphics.PaletteUploadPresentation.displayedFade(graphics);
+        assertEquals(com.openggf.graphics.PaletteFadePresentation.Mode.NONE, displayed.mode());
+    }
+
     private static void assertBlack(Palette.Color color) {
         assertEquals(0, color.r & 0xFF);
         assertEquals(0, color.g & 0xFF);

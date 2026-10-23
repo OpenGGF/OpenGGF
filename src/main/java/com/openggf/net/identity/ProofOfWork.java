@@ -2,6 +2,7 @@ package com.openggf.net.identity;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.security.DigestException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -35,12 +36,26 @@ public final class ProofOfWork {
     /** Bounded client work; cancellation is checked inside the actual hashing loop. */
     public static long solve(byte[] payload, int difficultyBits, long deadlineNanos) {
         requireDifficulty(difficultyBits);
+        if (payload == null) {
+            throw new IllegalArgumentException("proof payload is required");
+        }
+        MessageDigest digest = sha256();
+        byte[] nonceBytes = new byte[Long.BYTES];
+        byte[] hash = new byte[32];
         for (long nonce = 0; ; nonce++) {
             if (Thread.currentThread().isInterrupted())
                 throw new java.util.concurrent.CancellationException("proof solve interrupted");
             if (deadlineNanos != Long.MAX_VALUE && System.nanoTime() - deadlineNanos >= 0)
                 throw new java.util.concurrent.CancellationException("proof solve deadline exceeded");
-            if (verify(payload, nonce, difficultyBits)) {
+            putLittleEndian(nonceBytes, nonce);
+            digest.update(payload);
+            digest.update(nonceBytes);
+            try {
+                digest.digest(hash, 0, hash.length);
+            } catch (DigestException impossible) {
+                throw new IllegalStateException(impossible);
+            }
+            if (meetsDifficulty(hash, difficultyBits)) {
                 return nonce;
             }
             if (nonce == Long.MAX_VALUE) {
@@ -67,6 +82,20 @@ public final class ProofOfWork {
     private static void requireDifficulty(int difficultyBits) {
         if (difficultyBits < 0 || difficultyBits > 256) {
             throw new IllegalArgumentException("difficulty must be between 0 and 256 bits");
+        }
+    }
+
+    private static MessageDigest sha256() {
+        try {
+            return MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException(impossible);
+        }
+    }
+
+    private static void putLittleEndian(byte[] bytes, long value) {
+        for (int index = 0; index < Long.BYTES; index++) {
+            bytes[index] = (byte) (value >>> (index * Byte.SIZE));
         }
     }
 }

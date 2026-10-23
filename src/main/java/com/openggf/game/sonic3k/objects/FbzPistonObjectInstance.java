@@ -32,7 +32,7 @@ public final class FbzPistonObjectInstance extends AbstractObjectInstance
   public int getX() { return spawn.x() - displacement; }
   public int getPriorityBucket() { return 5; }
   public SolidObjectParams getSolidParams() {
-    return new SolidObjectParams(0x2B, 0x20, 0x21);
+    return SolidObjectParams.of(0x2B, 0x20, 0x21);
   }
   public SolidRoutineProfile getSolidRoutineProfile() {
     return SolidRoutineProfile.fullSolid(false);

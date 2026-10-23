@@ -1311,7 +1311,8 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
             return false;
         }
         SonicConfigurationService configService = GameServices.configuration();
-        if (configService.getBoolean(SonicConfiguration.S3K_SKIP_INTROS)) {
+        if (configService.getBoolean(SonicConfiguration.S3K_SKIP_INTROS)
+                || !com.openggf.game.session.GameplayRunRouting.currentPolicy().zoneIntros()) {
             return false;
         }
         String mainCharacter = ActiveGameplayTeamResolver.resolveMainCharacterCode(configService);

@@ -83,7 +83,8 @@ final class ObjectStageplayController {
         // routines that can publish boss/event state. Structural members are
         // retired explicitly by the controller, including constructor children.
         objects.deferredDynamicExecThisFrame.remove(object);
-        objects.bucketsDirty = objects.activeObjectsCacheDirty = true;
+        objects.bucketsDirty = true;
+        objects.markActiveObjectCachesDirty();
     }
 
     ObjectInstance materialize(
@@ -153,7 +154,8 @@ final class ObjectStageplayController {
         // Keep vanilla placement scans filtered while permitting this authored readmission.
         objects.stageplayDirection.claimAuthored(instance);
         objects.registerActiveObject(spawn, instance);
-        objects.bucketsDirty = objects.activeObjectsCacheDirty = true;
+        objects.bucketsDirty = true;
+        objects.markActiveObjectCachesDirty();
         return instance;
     }
 

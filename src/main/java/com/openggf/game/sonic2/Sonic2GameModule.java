@@ -180,6 +180,10 @@ public class Sonic2GameModule implements GameModule {
         return modZoneAdapter;
     }
 
+    @Override public com.openggf.game.modzone.ModLevelSettingsProvider getModLevelSettingsProvider() {
+        return new Sonic2ModLevelSettingsProvider();
+    }
+
     @Override
     public List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
         return plcService == null
@@ -396,6 +400,11 @@ public class Sonic2GameModule implements GameModule {
     @Override
     public com.openggf.game.ContinueScreenProvider createContinueScreenProvider() {
         return new com.openggf.game.sonic2.continuescreen.Sonic2ContinueScreenProvider();
+    }
+
+    @Override
+    public com.openggf.game.preview.TitlePreviewProvider getTitlePreviewProvider() {
+        return new com.openggf.game.sonic2.titlescreen.Sonic2TitlePreviewProvider();
     }
 
     @Override

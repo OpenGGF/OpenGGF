@@ -1963,3 +1963,12 @@ Validation on 0b03f8705 (focused selectors through `tools/testing/maven_queue.py
 lane, S3K/S1/S2 ROMs, run `v-ssz`, Maven Finished 17:47:00Z):
 `TestSszTailsColdRouteCapture` 11/0/0/0, `TestSszBossInputAuthorTool` 2/0/0/0,
 `TestSszSoloColdRouteCapture` 3/0/0/0 — 16 tests, no failures, errors or skips.
+
+## Object-pipeline performance follow-up (2026-10-22)
+
+Death Egg trails use raw owned-slot dereference: pending-deletion positions remain readable until removal, empty slots supply zero, and a new occupant of any type supplies its position. `TestSszDeathEggCutscene` adds the raw/removal/replacement boundary; trail animation continues to own lifetime.
+
+The [query/allocation audit](../../audits/performance/2026-10-22-native-object-query-performance.md)
+and its companion implementation records own exact tested states, commands and
+remaining delivery checks. These local checks do not close inherited viewport,
+donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.

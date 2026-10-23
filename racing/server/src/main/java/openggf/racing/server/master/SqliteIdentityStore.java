@@ -39,6 +39,12 @@ public final class SqliteIdentityStore implements IdentityStore {
                           id INTEGER PRIMARY KEY AUTOINCREMENT, fingerprint TEXT,
                           attempt_ref TEXT, input_recording_hash TEXT, result TEXT,
                           verifier_signature TEXT, timestamp INTEGER)""");
+                statement.execute("""
+                        CREATE INDEX IF NOT EXISTS sanctions_fingerprint_expiry
+                        ON sanctions(fingerprint, expiry)""");
+                statement.execute("""
+                        CREATE INDEX IF NOT EXISTS identities_new_last_seen
+                        ON identities(last_seen) WHERE tier = 'NEW'""");
             }
         } catch (SQLException | IOException e) {
             throw new IllegalStateException("failed to open identity store at " + dbFile, e);

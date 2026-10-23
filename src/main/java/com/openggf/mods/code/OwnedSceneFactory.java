@@ -134,6 +134,11 @@ public final class OwnedSceneFactory {
             }
 
             @Override
+            public boolean retryOnActCompletion() {
+                return boundary.call(ownerModId, host::retryOnActCompletion);
+            }
+
+            @Override
             public java.util.List<com.openggf.mods.run.GhostPose> ghosts() {
                 return boundary.call(ownerModId, () -> {
                     java.util.List<com.openggf.mods.run.GhostPose> poses = host.ghosts();

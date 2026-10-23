@@ -22,6 +22,10 @@ import java.util.List;
  * visible scanline window per entry). The pair itself is not drawn. Not modelled:
  * the 20-sprites/line and 320-pixel/line limits, and GPGX's carry of a previous
  * line's pixel overflow, which also arms masking on the next line.</p>
+ *
+ * <p>Gameplay ghost entries ({@link SpriteSatEntry#isGhost()}) are not in the ROM's sprite
+ * table. A mask clips them like any later entry, as it would clip the player they stand for,
+ * but they never arm a mask or form a marker pair, so real sprites mask exactly as without them.</p>
  */
 public final class SpriteSatMaskPostProcessor {
 
@@ -79,8 +83,7 @@ public final class SpriteSatMaskPostProcessor {
                 continue;
             }
 
-            if (entry.maskReplayRole() == SpriteMaskReplayRole.PRE_MASK_FRONT
-                    && preMaskInsertIndex >= 0) {
+            if (entry.piece().maskReplayRole() == SpriteMaskReplayRole.PRE_MASK_FRONT && preMaskInsertIndex >= 0) {
                 scratch.processed.add(preMaskInsertIndex, entry);
                 preMaskInsertIndex++;
                 continue;
@@ -101,11 +104,14 @@ public final class SpriteSatMaskPostProcessor {
             return false;
         }
         SpriteSatEntry entry = entries.get(index);
-        return entry.tileWordLow11() == MASK_TILE_WORD
-                && !entry.hFlip()
-                && !entry.vFlip()
-                && !entry.piecePriority()
-                && (entry.paletteIndex() & 0x3) == 0;
+        if (entry.isGhost() || entries.get(index + 1).isGhost()) {
+            return false;
+        }
+        return entry.piece().rawTileWordLow11() == MASK_TILE_WORD
+                && !entry.piece().hFlip()
+                && !entry.piece().vFlip()
+                && !entry.piece().piecePriority()
+                && (entry.piece().paletteIndex() & 0x3) == 0;
     }
 
     /**
@@ -114,8 +120,8 @@ public final class SpriteSatMaskPostProcessor {
      */
     private static boolean addArmedBands(List<SpriteSatEntry> entries, int companionIndex,
             SpriteSatEntry companion, Scratch scratch) {
-        int top = companion.y();
-        int bottom = companion.endYExclusive();
+        int top = companion.piece().y();
+        int bottom = companion.piece().endYExclusive();
         boolean added = false;
         int runStart = Integer.MIN_VALUE;
         for (int line = top; line <= bottom; line++) {
@@ -137,7 +143,10 @@ public final class SpriteSatMaskPostProcessor {
                 continue;
             }
             SpriteSatEntry earlier = entries.get(j);
-            if (line >= earlier.y() && line < earlier.endYExclusive()) {
+            if (earlier.isGhost()) {
+                continue; // not a ROM sprite: it cannot arm the VDP's mask
+            }
+            if (line >= earlier.piece().y() && line < earlier.piece().endYExclusive()) {
                 return true;
             }
         }
@@ -148,8 +157,8 @@ public final class SpriteSatMaskPostProcessor {
             SpriteSatEntry entry,
             Scratch scratch,
             java.util.Map<SpriteSatEntry, Integer> visualMasks) {
-        int top = Math.max(entry.visibleTopY(), entry.y());
-        int bottom = Math.min(entry.visibleBottomY(), entry.endYExclusive());
+        int top = Math.max(entry.visibleTopY(), entry.piece().y());
+        int bottom = Math.min(entry.visibleBottomY(), entry.piece().endYExclusive());
         boolean touched = false;
         scratch.rangeA[0] = top;
         scratch.rangeA[1] = bottom;

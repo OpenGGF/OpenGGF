@@ -2,10 +2,13 @@ package openggf.timeattack.mp;
 
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneKeys;
+import com.openggf.mods.ui.NameFont;
 import com.openggf.mods.ui.TextLayout;
 import com.openggf.net.client.ClientRaceSession;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.Protocol;
+import com.openggf.net.protocol.ReadyRules;
+import openggf.timeattack.ProfileView;
 import openggf.timeattack.ui.MenuCue;
 import openggf.timeattack.ui.TextEntry;
 import openggf.timeattack.ui.ViewInput;
@@ -14,11 +17,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
- * The race lobby between rounds, drawn as a Time Attack scene view: the room's players, chat
- * history (with the LAN invite for a LAN host), the host's START ROUND, chat entry, track votes
- * (keys 1-3) and LEAVE ROOM. The network pump and the round launch belong to
+ * The race lobby between rounds, drawn as a Time Attack scene view: the room's players (names in
+ * each player's colour, in any script), chat history (with the LAN invite for a LAN host), the
+ * host's START ROUND, chat entry, PROFILE (rename and change look, announced to the room while
+ * it is in the lobby), track votes (keys 1-3) and LEAVE ROOM. The network pump and the round launch belong to
  * {@link RaceSession#poll()}, which runs every tick before this view, so an open chat editor or
  * details page can never delay a round start.
  *
@@ -28,17 +33,11 @@ import java.util.function.Consumer;
 public final class RaceLobbyView {
     private static final int BACKGROUND = 0x101830;
     private static final int TITLE = 0xFFFFE070;
-    private static final int LABEL = 0xFFB0C8E8;
     private static final int VALUE = 0xFFFFFFFF;
     private static final int DIM = 0xFF8C8C8C;
-    private static final int VERIFIED = 0xFF99CCFF;
-    private static final int UNVERIFIED = 0xFFFFCC4C;
-    private static final int FOCUS = 0x803060C0;
     private static final int HINT = 0xFF8090B0;
-    /** Characters accepted in chat messages, besides letters and digits. */
-    static final String CHAT_CHARACTERS = " .,!?'-_:;/+#[]";
 
-    private enum Focus { PLAYERS, HISTORY, START, CHAT, LEAVE }
+    private enum Focus { PLAYERS, HISTORY, READY, START, RULE, CHAT, PROFILE, LEAVE }
 
     private final MultiplayerRaceCoordinator coordinator;
     private final boolean host;
@@ -46,12 +45,18 @@ public final class RaceLobbyView {
     private final String shareCode;
     private final Runnable leaveHandler;
     private final Consumer<MenuCue> cues;
+    private final Supplier<ProfileView> profiles;
+    private ProfileView profile;
     private Focus focus;
     private int playerPage;
     private int chatPage;
     private TextEntry editor;
     private boolean details;
     private String notice;
+    private Consumer<ReadyRules> readyRuleChosen = rule -> { };
+    private boolean levelBehind;
+    /** Players on one page of the roster card, from the last drawn screen height. */
+    private int playersPerPage = RaceLobbyScreen.playersPerPage(224, true);
 
     /**
      * @param shareCode the LAN invite template a LAN host shares, or null
@@ -59,16 +64,53 @@ public final class RaceLobbyView {
     public RaceLobbyView(MultiplayerRaceCoordinator coordinator, boolean host,
                          ControlMessage.RoundConfig configuredRound, String shareCode,
                          Runnable leaveHandler, Consumer<MenuCue> cues) {
+        this(coordinator, host, configuredRound, shareCode, leaveHandler, cues, null);
+    }
+
+    /**
+     * @param profiles opens the profile page for the PROFILE action (its SAVE writes the settings);
+     *                 null hides the action
+     */
+    public RaceLobbyView(MultiplayerRaceCoordinator coordinator, boolean host,
+                         ControlMessage.RoundConfig configuredRound, String shareCode,
+                         Runnable leaveHandler, Consumer<MenuCue> cues, Supplier<ProfileView> profiles) {
+        this.profiles = profiles;
         this.coordinator = Objects.requireNonNull(coordinator, "coordinator");
         this.host = host;
         this.configuredRound = Objects.requireNonNull(configuredRound, "configuredRound");
         this.shareCode = shareCode;
         this.leaveHandler = Objects.requireNonNull(leaveHandler, "leaveHandler");
         this.cues = Objects.requireNonNull(cues, "cues");
-        this.focus = host ? Focus.START : Focus.CHAT;
+        this.focus = Focus.READY;
+    }
+
+    /** Called with the owner's newly chosen ready rule (the scene saves it in the settings). */
+    public void setReadyRuleListener(Consumer<ReadyRules> listener) {
+        readyRuleChosen = Objects.requireNonNull(listener, "listener");
+    }
+
+    /** The view is drawn over the lobby level: its hint says how to play once ready. */
+    public void setLevelBehind(boolean behind) {
+        levelBehind = behind;
+    }
+
+    /**
+     * True on the lobby's own page (no chat editor, profile or details page open): only there do
+     * Start and Enter toggle between the menu and the character.
+     */
+    public boolean isOnMainPage() {
+        return profile == null && editor == null && !details;
     }
 
     public void update(ViewInput input) {
+        if (profile != null) {
+            profile.update(input);
+            if (profile.consumeCloseRequested()) {
+                if (profile.wasSaved()) announceProfile(profile);
+                profile = null;
+            }
+            return;
+        }
         if (details) {
             if (input.back() || input.accept()) {
                 details = false;
@@ -104,37 +146,55 @@ public final class RaceLobbyView {
         Focus beforeFocus = focus;
         int beforePlayers = playerPage;
         int beforeChat = chatPage;
-        List<Focus> choices = host
-                ? List.of(Focus.PLAYERS, Focus.HISTORY, Focus.START, Focus.CHAT, Focus.LEAVE)
-                : List.of(Focus.PLAYERS, Focus.HISTORY, Focus.CHAT, Focus.LEAVE);
+        List<Focus> choices = choices();
         int delta = input.up() ? -1 : input.down() ? 1 : 0;
         if (delta != 0) focus = choices.get(Math.floorMod(choices.indexOf(focus) + delta, choices.size()));
         int horizontal = input.left() ? -1 : input.right() ? 1 : 0;
         if (focus == Focus.PLAYERS) playerPage = Math.clamp(playerPage + horizontal, 0,
-                Math.max(0, (coordinator.session().players().size() - 1) / 2));
+                Math.max(0, (coordinator.session().players().size() - 1) / playersPerPage));
         if (focus == Focus.HISTORY) chatPage = Math.clamp(chatPage + horizontal, 0,
-                Math.max(0, (coordinator.session().chatLines().size() - 1) / 2));
+                Math.max(0, coordinator.session().chatLines().size() - 1));
+        if (focus == Focus.RULE && horizontal != 0) changeReadyRule(horizontal);
         if (focus != beforeFocus || playerPage != beforePlayers || chatPage != beforeChat) {
             cues.accept(MenuCue.NAVIGATE);
         }
         if (input.accept()) {
             switch (focus) {
                 case CHAT -> {
-                    editor = new TextEntry("ROOM CHAT", "", Protocol.MAX_CHAT_CHARS, CHAT_CHARACTERS);
+                    editor = TextEntry.text("ROOM CHAT", "", Protocol.MAX_CHAT_CHARS);
                     cues.accept(MenuCue.CONFIRM);
+                }
+                case PROFILE -> {
+                    if (canEditProfile()) {
+                        profile = profiles.get();
+                        cues.accept(MenuCue.CONFIRM);
+                    } else {
+                        notice = "Profile changes wait for the lobby";
+                        cues.accept(MenuCue.ERROR);
+                    }
                 }
                 case LEAVE -> {
                     cues.accept(MenuCue.CANCEL);
                     leaveHandler.run();
                 }
                 case START -> {
-                    if (canStart()) {
+                    if (canStart() && everyoneReadyEnough()) {
                         coordinator.sendRoundConfigure(configuredRound);
+                        cues.accept(MenuCue.CONFIRM);
+                    } else {
+                        if (canStart()) notice = "Waiting for every player to be ready";
+                        cues.accept(MenuCue.ERROR);
+                    }
+                }
+                case READY -> {
+                    if (betweenRounds()) {
+                        coordinator.setReady(!coordinator.session().isLocalReady());
                         cues.accept(MenuCue.CONFIRM);
                     } else {
                         cues.accept(MenuCue.ERROR);
                     }
                 }
+                case RULE -> changeReadyRule(1);
                 case HISTORY -> {
                     details = true;
                     cues.accept(MenuCue.CONFIRM);
@@ -158,6 +218,66 @@ public final class RaceLobbyView {
         }
     }
 
+    /** The owner steps through the ready rules; the host announces the change to everyone. */
+    private void changeReadyRule(int step) {
+        if (!host || !betweenRounds()) {
+            cues.accept(MenuCue.ERROR);
+            return;
+        }
+        ReadyRules[] rules = ReadyRules.values();
+        ReadyRules current = ReadyRules.parse(coordinator.session().readyRule());
+        int index = current == null ? 0 : current.ordinal();
+        ReadyRules next = rules[Math.floorMod(index + step, rules.length)];
+        coordinator.setReadyRule(next);
+        readyRuleChosen.accept(next);
+        cues.accept(MenuCue.NAVIGATE);
+    }
+
+    private boolean betweenRounds() {
+        ClientRaceSession.Phase phase = coordinator.session().phase();
+        return phase == ClientRaceSession.Phase.LOBBY || phase == ClientRaceSession.Phase.ROUND_END
+                || phase == ClientRaceSession.Phase.VOTE;
+    }
+
+    /** The room's rule does not wait, or every present player is ready. */
+    private boolean everyoneReadyEnough() {
+        return !coordinator.session().readyRequired() || coordinator.session().playersNotReady().isEmpty();
+    }
+
+    private List<Focus> choices() {
+        List<Focus> choices = new ArrayList<>(List.of(Focus.PLAYERS, Focus.HISTORY, Focus.READY));
+        if (host) {
+            choices.add(Focus.START);
+            choices.add(Focus.RULE);
+        }
+        choices.add(Focus.CHAT);
+        if (profiles != null) choices.add(Focus.PROFILE);
+        choices.add(Focus.LEAVE);
+        return choices;
+    }
+
+    /** The host accepts renames and looks only while the room is in its lobby phase. */
+    private boolean canEditProfile() {
+        return profiles != null && coordinator.session().phase() == ClientRaceSession.Phase.LOBBY;
+    }
+
+    /** Tells the room the saved name and look; the host answers with PlayerUpsert and PlayerLook. */
+    private void announceProfile(ProfileView saved) {
+        if (coordinator.session().phase() != ClientRaceSession.Phase.LOBBY) {
+            notice = "Saved; the room sees it next time you join";
+            return;
+        }
+        String name = saved.name();
+        if (name.isEmpty()) {
+            // A profile without a chosen name keeps the identity-prefix name the room already has.
+            int slot = coordinator.session().localSlot();
+            name = coordinator.session().players().stream().filter(player -> player.slot() == slot)
+                    .map(ControlMessage.PlayerInfo::displayName).findFirst().orElse("");
+        }
+        if (name.isEmpty()) return;
+        coordinator.updateProfile(name, saved.appearance());
+    }
+
     private boolean canStart() {
         ClientRaceSession.Phase phase = coordinator.session().phase();
         return host && (phase == ClientRaceSession.Phase.LOBBY || phase == ClientRaceSession.Phase.ROUND_END);
@@ -173,12 +293,26 @@ public final class RaceLobbyView {
         return editor != null;
     }
 
+    /** True while any field (chat, or the profile's name) takes keyboard text. */
+    public boolean isEditingText() {
+        return editor != null || (profile != null && profile.isEditingText());
+    }
+
+    /** True while the profile page is open (tests). */
+    boolean isShowingProfile() {
+        return profile != null;
+    }
+
     /** True while the invite and history page is open (tests). */
     boolean isShowingDetails() {
         return details;
     }
 
     public void draw(SceneCanvas canvas) {
+        if (profile != null) {
+            profile.draw(canvas);
+            return;
+        }
         if (editor != null) {
             editor.draw(canvas);
             return;
@@ -187,65 +321,201 @@ public final class RaceLobbyView {
             drawDetails(canvas);
             return;
         }
-        int width = canvas.width();
-        canvas.clear(BACKGROUND);
-        ControlMessage.RoomDescriptor room = coordinator.session().room();
-        canvas.text("RACE LOBBY", 10, 10, TITLE);
-        canvas.text(fit(canvas, room == null ? "Connecting..." : room.name(), width - 20), 10, 24, HINT);
-        List<ControlMessage.PlayerInfo> players = coordinator.session().players();
-        playerPage = Math.min(playerPage, Math.max(0, (players.size() - 1) / 2));
-        if (focus == Focus.PLAYERS) canvas.fill(8, 38, width - 16, 56, FOCUS);
-        canvas.text("PLAYERS  < " + (playerPage + 1) + "/" + Math.max(1, (players.size() + 1) / 2) + " >",
-                12, 41, LABEL);
-        for (int i = playerPage * 2; i < Math.min(players.size(), playerPage * 2 + 2); i++) {
-            ControlMessage.PlayerInfo player = players.get(i);
-            int y = 54 + (i % 2) * 20;
-            String character = player.character() == null ? "?" : player.character().toUpperCase();
-            int characterX = width - 12 - canvas.textWidth(character);
-            canvas.text(fit(canvas, player.displayName(), characterX - 20), 12, y, VALUE);
-            canvas.text(character, characterX, y, VALUE);
-            String fingerprint = player.fingerprint() == null ? "????"
-                    : player.fingerprint().substring(0, Math.min(4, player.fingerprint().length()));
-            String badge = i == 0 ? " HOST" : player.newPlayer() ? " NEW" : "";
-            canvas.text("#" + fingerprint + badge, 20, y + 10, DIM);
-        }
-        drawHistoryOrVote(canvas, width);
-        boolean verified = room != null && room.verified();
-        if (notice != null) {
-            canvas.text(fit(canvas, notice, width - 20), 10, 140, TITLE);
-        } else {
-            canvas.text(fit(canvas, (verified ? "VERIFIED" : "UNVERIFIED TIMES") + " / "
-                    + coordinator.session().phase(), width - 20), 10, 140, verified ? VERIFIED : UNVERIFIED);
-        }
-        if (host) action(canvas, Focus.START, canStart() ? "START ROUND" : "WAITING FOR ROUND", 154, canStart());
-        action(canvas, Focus.CHAT, "WRITE CHAT MESSAGE", 170, true);
-        action(canvas, Focus.LEAVE, "LEAVE ROOM", 186, true);
-        canvas.text(fit(canvas, "Up/Down select  Left/Right page  B leave", width - 20), 10, 208, HINT);
+        // Over the lobby level only the cards are drawn, so the level stays in view around them.
+        if (!(canvas instanceof openggf.timeattack.ui.OverLevelCanvas)) canvas.clear(BACKGROUND);
+        RaceLobbyScreen.draw(canvas, screen(canvas.width(), canvas.height()));
     }
 
-    private void drawHistoryOrVote(SceneCanvas canvas, int width) {
-        if (coordinator.session().phase() == ClientRaceSession.Phase.VOTE) {
-            List<String> lines = HudTextLayout.voteLines(coordinator.session().voteOptions(),
-                    coordinator.session().voteCounts(), coordinator.session().voteRemainingMillis(),
-                    MultiplayerHudRenderer::trackLabel);
-            int y = 98;
-            for (String line : lines.subList(0, Math.min(4, lines.size()))) {
-                canvas.text(fit(canvas, line, width - 24), 12, y, TITLE);
-                y += 10;
+    /** The main page as measured cards (tests read its text). */
+    RaceLobbyScreen.Screen screen(int width, int height) {
+        ClientRaceSession race = coordinator.session();
+        ControlMessage.RoomDescriptor room = race.room();
+        List<ControlMessage.PlayerInfo> players = race.players();
+        List<RaceLobbyScreen.Player> rows = new ArrayList<>();
+        for (int i = 0; i < players.size(); i++) {
+            ControlMessage.PlayerInfo player = players.get(i);
+            String character = player.character() == null ? "?"
+                    : player.character().toUpperCase(java.util.Locale.ROOT);
+            rows.add(new RaceLobbyScreen.Player(player.displayName(), nameColour(player.slot()),
+                    race.isReady(player.slot()), player.slot() == race.localSlot(),
+                    i == 0 ? "HOST" : player.newPlayer() ? "NEW" : "", character));
+        }
+        boolean secondaryCard = true;
+        playersPerPage = RaceLobbyScreen.playersPerPage(height, secondaryCard);
+        playerPage = Math.min(playerPage, Math.max(0, (players.size() - 1) / playersPerPage));
+
+        List<RaceLobbyScreen.Note> status = new ArrayList<>();
+        if (!race.readyRequired()) {
+            status.add(new RaceLobbyScreen.Note("NOBODY WAITS", HudTextLayout.MUTED, false));
+        } else if (race.playersNotReady().isEmpty()) {
+            status.add(new RaceLobbyScreen.Note("EVERYONE IS READY", RaceLobbyScreen.READY, false));
+        } else {
+            StringBuilder names = new StringBuilder();
+            for (ControlMessage.PlayerInfo player : race.playersNotReady()) {
+                if (!names.isEmpty()) names.append(", ");
+                names.append(player.displayName());
             }
+            status.add(new RaceLobbyScreen.Note("WAITING FOR", HudTextLayout.GOLD, false));
+            status.add(new RaceLobbyScreen.Note(names.toString(), HudTextLayout.WHITE, true));
+        }
+        if (notice != null) status.add(new RaceLobbyScreen.Note(notice, HudTextLayout.GOLD, false));
+
+        boolean ready = race.isLocalReady();
+        List<RaceLobbyScreen.Action> actions = new ArrayList<>();
+        for (Focus item : choices()) {
+            switch (item) {
+                case READY -> actions.add(action(item, ready ? "CANCEL READY" : "READY UP", betweenRounds()));
+                case START -> {
+                    boolean startable = canStart() && everyoneReadyEnough();
+                    actions.add(action(item, startable ? "START ROUND" : canStart() ? "START - WAITING"
+                            : "WAITING FOR ROUND", startable));
+                }
+                case RULE -> actions.add(action(item, "RULE < " + ruleLabel(race.readyRule()) + " >",
+                        betweenRounds()));
+                case CHAT -> actions.add(action(item, "CHAT", true));
+                case PROFILE -> actions.add(action(item, "NAME AND LOOK", canEditProfile()));
+                case LEAVE -> actions.add(action(item, "LEAVE ROOM", true));
+                case PLAYERS, HISTORY -> { }
+            }
+        }
+        long readyCount = players.stream().filter(player -> race.isReady(player.slot())).count();
+
+        String hint = "UP/DOWN  A OK  B LEAVE";
+        if (race.phase() == ClientRaceSession.Phase.VOTE) hint = "1-3 VOTE  " + hint;
+        if (levelBehind && ready) hint += "  START PLAY";
+        RaceLobbyScreen.Model model = new RaceLobbyScreen.Model(
+                room == null ? "Connecting..." : room.name(), nextTrack(room), phaseLabel(),
+                phaseColour(), room != null && room.verified(), rows, room == null ? 0 : room.maxPlayers(),
+                playerPage, focus == Focus.PLAYERS, secondary(), "READY " + ruleLabel(race.readyRule()),
+                readyCount + "/" + players.size(), status, actions, hint);
+        return RaceLobbyScreen.layout(model, width, height);
+    }
+
+    private RaceLobbyScreen.Action action(Focus item, String label, boolean enabled) {
+        return new RaceLobbyScreen.Action(label, focus == item, enabled);
+    }
+
+    /** The card under the players: the vote while one runs, the last round's podium, else the chat. */
+    private RaceLobbyScreen.Secondary secondary() {
+        ClientRaceSession race = coordinator.session();
+        boolean focused = focus == Focus.HISTORY;
+        if (race.phase() == ClientRaceSession.Phase.VOTE) {
+            List<String> options = race.voteOptions();
+            List<ControlMessage.VoteCount> counts = race.voteCounts();
+            int total = counts.stream().mapToInt(ControlMessage.VoteCount::votes).sum();
+            List<RaceLobbyScreen.Row> rows = new ArrayList<>();
+            for (int index = 0; index < Math.min(3, options.size()); index++) {
+                String key = options.get(index);
+                int votes = counts.stream().filter(count -> count.trackKey().equals(key))
+                        .mapToInt(ControlMessage.VoteCount::votes).findFirst().orElse(0);
+                rows.add(new RaceLobbyScreen.Choice(index + 1, MultiplayerHudRenderer.trackLabel(key), votes, total));
+            }
+            return new RaceLobbyScreen.Secondary("NEXT TRACK", Math.max(0, race.voteRemainingMillis() / 1000) + "S",
+                    rows, focused, -1);
+        }
+        if (race.phase() == ClientRaceSession.Phase.ROUND_END && !race.podiumTop(3).isEmpty()) {
+            List<RaceLobbyScreen.Row> rows = new ArrayList<>();
+            ControlMessage.RoundConfig config = race.roundConfig();
+            String policy = config == null ? null : config.characterPolicy();
+            for (ControlMessage.StandingsRow row : race.podiumTop(3)) {
+                rows.add(new RaceLobbyScreen.Note(HudTextLayout.standingsLine(row, policy),
+                        HudTextLayout.WHITE, true));
+            }
+            return new RaceLobbyScreen.Secondary("RESULTS", "", rows, focused, -1);
+        }
+        List<String> history = race.chatLines();
+        chatPage = Math.min(chatPage, Math.max(0, history.size() - 1));
+        List<RaceLobbyScreen.Row> rows = new ArrayList<>();
+        for (String line : history) rows.add(chatRow(line));
+        if (rows.isEmpty()) {
+            rows.add(new RaceLobbyScreen.Note(shareCode == null ? "NO MESSAGES YET" : "OPEN FOR THE LAN INVITE",
+                    RaceLobbyScreen.DISABLED, false));
+        }
+        String right = focused ? "A: OPEN" : chatPage > 0 ? "OLDER" : "";
+        return new RaceLobbyScreen.Secondary(shareCode == null ? "CHAT" : "CHAT + INVITE", right, rows,
+                focused, history.isEmpty() ? -1 : chatPage);
+    }
+
+    /** A {@code name: text} chat line, with the sender coloured when exactly one player has that name. */
+    private RaceLobbyScreen.Row chatRow(String line) {
+        int colon = line.indexOf(": ");
+        if (colon > 0) {
+            String sender = line.substring(0, colon);
+            List<ControlMessage.PlayerInfo> matches = coordinator.session().players().stream()
+                    .filter(player -> sender.equals(player.displayName())).toList();
+            int colour = matches.size() == 1 ? nameColour(matches.getFirst().slot()) : VALUE;
+            return new RaceLobbyScreen.Chat(sender, colour, line.substring(colon + 2));
+        }
+        return new RaceLobbyScreen.Chat("", VALUE, line);
+    }
+
+    /** What happens next: the voted track, else the room's own. */
+    private static String nextTrackKey(ControlMessage.RoomDescriptor room, String voted) {
+        if (voted != null) return voted;
+        return room == null ? null : room.gameId() + ":" + room.zone() + ":" + room.act();
+    }
+
+    private String nextTrack(ControlMessage.RoomDescriptor room) {
+        if (coordinator.session().phase() == ClientRaceSession.Phase.VOTE) return "NEXT  TRACK BY VOTE";
+        String key = nextTrackKey(room, coordinator.session().lastVoteResultTrackKey());
+        if (key == null) return "";
+        String game = key.substring(0, Math.max(0, key.indexOf(':'))).toUpperCase(java.util.Locale.ROOT);
+        return "NEXT  " + game + "  " + MultiplayerHudRenderer.trackLabel(key);
+    }
+
+    private String phaseLabel() {
+        ClientRaceSession race = coordinator.session();
+        return switch (race.phase()) {
+            case LOBBY -> "LOBBY";
+            case VOTE -> "VOTE";
+            case ROUND_END -> "ROUND OVER";
+            case COUNTDOWN -> "STARTING";
+            case RUNNING -> "ROUND RUNNING";
+        };
+    }
+
+    private int phaseColour() {
+        return coordinator.session().phase() == ClientRaceSession.Phase.LOBBY ? HudTextLayout.ACCENT
+                : HudTextLayout.GOLD;
+    }
+
+    private static String ruleLabel(String rule) {
+        ReadyRules parsed = ReadyRules.parse(rule);
+        if (parsed == null) return "?";
+        return switch (parsed) {
+            case REQUIRED -> "REQUIRED";
+            case AUTO -> "AUTO";
+            case DEFAULT_BY_SIZE -> "BY SIZE";
+        };
+    }
+
+    /** The colour a player chose for their name ({@link com.openggf.net.identity.PlayerAppearance#nameArgb}). */
+    private int nameColour(int slot) {
+        return coordinator.session().appearance(slot).nameArgb();
+    }
+
+    /**
+     * One {@code name: text} chat line in the name font; the sender's name takes their colour when
+     * exactly one player in the room has that name (lines carry the name, not the slot).
+     */
+    private void chatLine(SceneCanvas canvas, String line, int x, int y, int maxWidth) {
+        String shown = NameFont.fit(line, maxWidth);
+        int colon = line.indexOf(": ");
+        int colour = VALUE;
+        if (colon > 0) {
+            String sender = line.substring(0, colon);
+            List<ControlMessage.PlayerInfo> matches = coordinator.session().players().stream()
+                    .filter(player -> sender.equals(player.displayName())).toList();
+            if (matches.size() == 1) colour = nameColour(matches.getFirst().slot());
+        }
+        if (colon <= 0 || colour == VALUE) {
+            NameFont.draw(canvas, shown, x, y, VALUE);
             return;
         }
-        List<String> history = coordinator.session().chatLines();
-        chatPage = Math.min(chatPage, Math.max(0, (history.size() - 1) / 2));
-        if (focus == Focus.HISTORY) canvas.fill(8, 96, width - 16, 38, FOCUS);
-        canvas.text((shareCode == null ? "CHAT HISTORY" : "LAN INVITE / CHAT") + "  < " + (chatPage + 1) + " >",
-                12, 99, LABEL);
-        int last = Math.max(0, history.size() - chatPage * 2);
-        int first = Math.max(0, last - 2);
-        for (int i = first; i < last; i++) {
-            canvas.text(fit(canvas, history.get(i), width - 24), 12, 111 + (i - first) * 11, VALUE);
-        }
-        if (history.isEmpty()) canvas.text("No messages yet", 12, 111, DIM);
+        int split = Math.min(colon, shown.length());
+        String name = shown.substring(0, split);
+        NameFont.draw(canvas, name, x, y, colour);
+        NameFont.draw(canvas, shown.substring(split), x + NameFont.width(name), y, VALUE);
     }
 
     private void drawDetails(SceneCanvas canvas) {
@@ -267,12 +537,7 @@ public final class RaceLobbyView {
             y += 16;
         }
         List<String> history = coordinator.session().chatLines();
-        if (!history.isEmpty()) {
-            lines.add("");
-            for (String line : history) {
-                lines.addAll(TextLayout.wrap(line, width - 24, canvas::textWidth));
-            }
-        } else if (shareCode == null) {
+        if (history.isEmpty() && shareCode == null) {
             lines.add("No messages yet");
         }
         for (String line : lines) {
@@ -280,15 +545,32 @@ public final class RaceLobbyView {
             canvas.text(line, 12, y, VALUE);
             y += 11;
         }
+        // Each player's identity tag, which tells two players with the same name apart.
+        y += 4;
+        if (y <= 180) {
+            canvas.text("PLAYERS", 10, y, TITLE);
+            y += 13;
+        }
+        for (ControlMessage.PlayerInfo player : coordinator.session().players()) {
+            if (y > 180) break;
+            String fingerprint = player.fingerprint() == null ? "????"
+                    : player.fingerprint().substring(0, Math.min(4, player.fingerprint().length()));
+            String tag = "#" + fingerprint + (player.newPlayer() ? " NEW" : "");
+            int tagWidth = com.openggf.mods.ui.CompactFont.width(tag, 1);
+            NameFont.draw(canvas, NameFont.fit(player.displayName(), width - 32 - tagWidth), 12, y,
+                    nameColour(player.slot()));
+            com.openggf.mods.ui.CompactFont.draw(canvas, tag, width - 12 - tagWidth, y + 3, 1, DIM);
+            y += NameFont.LINE_HEIGHT;
+        }
+        if (!history.isEmpty()) y += 4;
+        for (String message : history) {
+            for (String line : TextEntry.wrapPixels(message, width - 24)) {
+                if (y > 192) break;
+                chatLine(canvas, line, 12, y, width - 24);
+                y += NameFont.LINE_HEIGHT;
+            }
+        }
         canvas.text("Enter or B to return", 10, 208, HINT);
     }
 
-    private void action(SceneCanvas canvas, Focus item, String label, int y, boolean enabled) {
-        if (focus == item) canvas.fill(8, y - 3, canvas.width() - 16, 16, FOCUS);
-        canvas.text(label, 12, y, enabled ? VALUE : DIM);
-    }
-
-    private static String fit(SceneCanvas canvas, String text, int maxWidth) {
-        return TextLayout.ellipsis(text == null ? "" : text, Math.max(0, maxWidth), canvas::textWidth);
-    }
 }

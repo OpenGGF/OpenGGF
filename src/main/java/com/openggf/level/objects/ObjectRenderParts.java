@@ -1,13 +1,19 @@
 package com.openggf.level.objects;
 
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.GLCommandGroup;
+import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PresentationGraphicsAccess;
 import com.openggf.graphics.RenderPriority;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+import static org.lwjgl.opengl.GL11.GL_LINES;
+
 /**
- * Render-bucket entries for {@link ObjectManager}: one per object and
+ * Render-bucket entries and ordered command submission for {@link ObjectManager}: one per object and
  * tile-priority class in each display list it occupies, each carrying the SST
  * slot that orders it. Ordinary objects contribute one entry; a
  * {@link MultiBucketRenderable} contributes one per bucket and class, with the
@@ -22,7 +28,15 @@ final class ObjectRenderParts {
     /** ROM parity: lower SST slots render later and therefore in front. */
     static final Comparator<RenderEntry> SLOT_DESCENDING = (a, b) -> Integer.compare(b.slot(), a.slot());
 
-    private ObjectRenderParts() {
+    private final List<GLCommand> commands = new ArrayList<>();
+    private final ObjectCallbackRouter callbacks;
+    private final ObjectServices services;
+    private final GraphicsManager graphics;
+
+    ObjectRenderParts(ObjectCallbackRouter callbacks, ObjectServices services, GraphicsManager graphics) {
+        this.callbacks = callbacks;
+        this.services = services;
+        this.graphics = graphics;
     }
 
     /** SST slot of an object for render ordering; objects without a slot sort behind everything. */
@@ -89,5 +103,47 @@ final class ObjectRenderParts {
                 && direction.drawReplacement(entry.instance(), bucket, entry.high(), entry.slot()))
             return;
         ObjectHeadPresentation.draw(entry.instance(),services,()->appendRenderCommands(entry,commands,bucket));
+    }
+
+    /** Draws ordinary painter order; the caller owns the vertical-wrap scope. */
+    void drawBucket(List<RenderEntry> entries, int bucket, ObjectManager.ObjectDrawCallback callback) {
+        commands.clear();
+        for (RenderEntry entry : entries) {
+            if (callback != null) {
+                callback.beforeDraw(entry.instance(), entry.high());
+            }
+            callbacks.run(entry.instance(), () -> appendRenderCommands(entry, commands, bucket, services));
+        }
+        enqueueDebugCommands();
+    }
+
+    /** Keeps native SAT order or reverse painter order and the backend's mask boundaries. */
+    void drawBucketWithPriority(List<RenderEntry> entries, int bucket, GraphicsManager priorityGraphics) {
+        commands.clear();
+        // Draw_Sprite / Render_Sprites consume SST order; masks affect later entries.
+        // The cached lists use reverse order for ordinary painter drawing.
+        boolean collectingSat = priorityGraphics.isSpriteSatCollectionActive();
+        for (int i = 0; i < entries.size(); i++) {
+            RenderEntry entry = entries.get(collectingSat ? entries.size() - 1 - i : i);
+            callbacks.run(entry.instance(), () -> {
+                int mask = tileOcclusionPaletteMask(entry);
+                if (priorityGraphics.getCurrentSpriteTileOcclusionPaletteMask() != mask) {
+                    boolean perInstance = PresentationGraphicsAccess.maskIsPerInstance(priorityGraphics);
+                    if (!perInstance) priorityGraphics.flushPatternBatch();
+                    priorityGraphics.setCurrentSpriteTileOcclusionPaletteMask(mask);
+                    if (!perInstance) priorityGraphics.beginPatternBatch();
+                }
+                appendRenderCommands(entry, commands, bucket, services);
+            });
+        }
+        enqueueDebugCommands();
+    }
+
+    private void enqueueDebugCommands() {
+        if (!commands.isEmpty()) {
+            graphics.enqueueDebugLineState();
+            graphics.registerCommand(new GLCommandGroup(GL_LINES, commands));
+            graphics.enqueueDefaultShaderState();
+        }
     }
 }

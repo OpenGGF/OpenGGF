@@ -5,7 +5,6 @@ import java.util.Objects;
 
 /** Canonical provider-to-profile mapping used by compatibility views. */
 public final class TouchResponseProfileMapper {
-    private static final int SHIELD_REACTION_BOUNCE_BIT = 0x08;
 
     private TouchResponseProfileMapper() {
     }
@@ -17,21 +16,9 @@ public final class TouchResponseProfileMapper {
         Objects.requireNonNull(provider, "provider");
         Objects.requireNonNull(decodeMode, "decodeMode");
         int shieldFlags = provider.getShieldReactionFlags();
-        return new TouchResponseProfile(
-                decodeMode,
-                provider.requiresContinuousTouchCallbacks(),
-                provider.requiresRenderFlagForTouch(),
-                multiRegionSource,
-                (shieldFlags & SHIELD_REACTION_BOUNCE_BIT) != 0
-                        ? TouchShieldDeflectCapability.SHIELD_DEFLECT
-                        : TouchShieldDeflectCapability.NONE,
-                shieldFlags,
-                provider.enablesPostSpecialTouchAirborneSideVelocityPreservation(),
-                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
-                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
-                multiRegionSource
-                        ? TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY
-                        : TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
+        return TouchResponseProfile.decoded(decodeMode, provider.requiresContinuousTouchCallbacks(),
+                provider.requiresRenderFlagForTouch(), multiRegionSource, shieldFlags,
+                provider.enablesPostSpecialTouchAirborneSideVelocityPreservation());
     }
 
     static TouchCategoryDecodeMode decodeMode(boolean sonic1, boolean sonic2, boolean s3k) {

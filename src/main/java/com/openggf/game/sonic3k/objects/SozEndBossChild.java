@@ -207,16 +207,13 @@ public final class SozEndBossChild extends AbstractObjectInstance
     private boolean terminalFinished(){
         if(terminal!=null)return terminal.retired;
         if(terminalSlot<0)return false;
-        for(var object:services().objectManager().getActiveObjects()) {
-            if(object instanceof AbstractObjectInstance instance&&instance.getSlotIndex()==terminalSlot){
-                if(object instanceof SozEndBossChild child)return child.retired;
-                if(object instanceof SozEndBossInstance root)return root.dismantling()||root.hidden();
-                // A failed native allocation may point at an unrelated live SST.
-                // Arbitrary foreign $38 bytes have no ObjectServices representation;
-                // retain the slot, but never substitute the last successful particle.
-                return false;
-            }
-        }
+        var object=NativeObjectQueries.atSlot(services().objectManager(),terminalSlot,
+                AbstractObjectInstance.class);
+        if(object instanceof SozEndBossChild child)return child.retired;
+        if(object instanceof SozEndBossInstance root)return root.dismantling()||root.hidden();
+        // A failed native allocation may point at an unrelated live SST.
+        // Arbitrary foreign $38 bytes have no ObjectServices representation;
+        // retain the slot, but never substitute the last successful particle.
         return false;
     }
     private void charge(int vIntRunCount){
@@ -265,9 +262,9 @@ public final class SozEndBossChild extends AbstractObjectInstance
     @Override public boolean isSolidFor(PlayableEntity p){return !dying&&!isDestroyed()&&role<=HAND
             &&(role<=REAR||role>=SHOULDER)&&!shellWaiting;}
     @Override public SolidObjectParams getSolidParams(){return switch(role){
-        case UPPER->new SolidObjectParams(0x2B,0x28,0x28);case LOWER->new SolidObjectParams(0x3B,0x30,0x30);
-        case REAR->new SolidObjectParams(0x2B,0x200,0x200);case SHOULDER->new SolidObjectParams(0x1F,0x14,0x14);
-        case ELBOW->new SolidObjectParams(0x1B,0x10,0x10);default->new SolidObjectParams(0x2B,0x14,0xC);};}
+        case UPPER->SolidObjectParams.of(0x2B,0x28,0x28);case LOWER->SolidObjectParams.of(0x3B,0x30,0x30);
+        case REAR->SolidObjectParams.of(0x2B,0x200,0x200);case SHOULDER->SolidObjectParams.of(0x1F,0x14,0x14);
+        case ELBOW->SolidObjectParams.of(0x1B,0x10,0x10);default->SolidObjectParams.of(0x2B,0x14,0xC);};}
     // loc_1E154 re-reads the SetUp_ObjAttributes3 width_pixels (word_782AE/BA/C6), not d1-$B.
     @Override public int getTopLandingHalfWidth(PlayableEntity player,int collisionHalfWidth){return switch(role){
         case SHOULDER->0x18;case ELBOW->0x14;case HAND->0x28;default->SolidObjectProvider.super.getTopLandingHalfWidth(player,collisionHalfWidth);};}

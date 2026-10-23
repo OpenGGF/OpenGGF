@@ -93,7 +93,8 @@ class TestLiveRewindMonitorState {
         assertIntact(objects, initialMonitor);
 
         InputHandler rewindInput = new InputHandler();
-        LiveRewindManager manager = new LiveRewindManager(config);
+        LiveRewindManager manager = new LiveRewindManager(config, com.openggf.audio.AudioManager.getInstance());
+        manager.bindOwner(com.openggf.tests.TestEnvironment.activeGameplayMode(), false, com.openggf.game.GameMode.LEVEL);
         int rewindKey = config.getInt(SonicConfiguration.LIVE_REWIND_KEY);
         float heldIntensity = 0.0f;
         try {

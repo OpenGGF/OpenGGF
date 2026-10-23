@@ -7,7 +7,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ObjectSpawnStateV3(int placementId, int x, int y, Integer stockObjectId,
                                  String objectKey, int subtype, int renderFlags,
-                                 boolean respawnTracked, int rawYWord) {
+                                 boolean respawnTracked, int rawYWord,
+                                 com.fasterxml.jackson.databind.JsonNode authoredProperties) {
     public ObjectSpawnStateV3 {
         if ((stockObjectId == null) == (objectKey == null)) {
             throw new IllegalArgumentException("Object spawn requires exactly one identity arm");
@@ -21,6 +22,25 @@ public record ObjectSpawnStateV3(int placementId, int x, int y, Integer stockObj
             throw new IllegalArgumentException("stockObjectId must be unsigned 8-bit");
         }
         if (objectKey != null) objectKey = ModKeySyntax.requireDisplayKey(objectKey);
+        if (authoredProperties != null && !authoredProperties.isNull()) {
+            authoredProperties = authoredProperties.deepCopy();
+            try {
+                var properties = com.openggf.level.objects.authored.AuthoredObjectPropertiesJson.parse(authoredProperties);
+                if (objectKey == null || !objectKey.equals(properties.objectKey())
+                        || (long) x + properties.width() > 0x10000L || (long) y + properties.height() > 0x1000L)
+                    throw new IllegalArgumentException("Authored override properties do not match object identity/geometry");
+            } catch (java.io.IOException error) { throw new IllegalArgumentException("Invalid authored override properties", error); }
+        }
+    }
+
+    public ObjectSpawnStateV3(int placementId, int x, int y, Integer stockObjectId, String objectKey,
+                             int subtype, int renderFlags, boolean respawnTracked, int rawYWord) {
+        this(placementId, x, y, stockObjectId, objectKey, subtype, renderFlags, respawnTracked, rawYWord, null);
+    }
+
+    public com.openggf.level.objects.authored.AuthoredObjectProperties properties() {
+        try { return com.openggf.level.objects.authored.AuthoredObjectPropertiesJson.parse(authoredProperties); }
+        catch (java.io.IOException error) { throw new IllegalArgumentException("Invalid authored override properties", error); }
     }
 
     public static ObjectSpawnStateV3 stock(EditorSavePayload.ObjectState state) {

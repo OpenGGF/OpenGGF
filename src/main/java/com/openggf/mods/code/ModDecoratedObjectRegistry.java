@@ -14,7 +14,7 @@ import java.util.Objects;
 
 /** Routes tagged mod spawns by namespaced key while leaving stock registry behavior untouched. */
 public final class ModDecoratedObjectRegistry implements ObjectRegistry, MutatorPlacementClassifier,
-        java.util.function.Supplier<Object>, com.openggf.level.objects.HostObjectKeyRegistry {
+        java.util.function.Supplier<Object>, com.openggf.level.objects.HostObjectKeyRegistry, com.openggf.level.metadata.ObjectPropertyProvider, com.openggf.level.metadata.EditorPalettePolicyProvider, com.openggf.level.metadata.ObjectPreviewProvider {
     private final ObjectRegistry base;
     private final ModObjectKeyRegistry modKeys;
     private final java.util.Map<String,String> previewArtKeys;
@@ -61,6 +61,16 @@ public final class ModDecoratedObjectRegistry implements ObjectRegistry, Mutator
         return boundary.call(owner, () -> ownerLookup.remember(owner, factory.create(spawn, this)));
     }
 
+    @Override public boolean isPaletteCellEditable(int line, int color) {
+        return base instanceof com.openggf.level.metadata.EditorPalettePolicyProvider provider
+                && provider.isPaletteCellEditable(line, color);
+    }
+
+    @Override public com.openggf.level.metadata.ObjectPropertySchema objectProperties(int stockObjectId) {
+        return base instanceof com.openggf.level.metadata.ObjectPropertyProvider provider
+                ? provider.objectProperties(stockObjectId) : com.openggf.level.metadata.ObjectPropertySchema.FALLBACK;
+    }
+
     @Override public MonitorContent monitorContent(ObjectSpawn spawn) {
         return spawn.ownerModId() == null && base instanceof MutatorPlacementClassifier classifier
                 ? classifier.monitorContent(spawn) : null;
@@ -91,6 +101,14 @@ public final class ModDecoratedObjectRegistry implements ObjectRegistry, Mutator
     @Override public List<String> browsableObjectKeys() {
         var keys=new java.util.LinkedHashSet<String>(base.browsableObjectKeys()); keys.addAll(modKeys.keys());
         return List.copyOf(keys);
+    }
+    @Override public com.openggf.level.metadata.ObjectPreview objectPreview(ObjectSpawn spawn) {
+        if ((spawn.objectKey() == null || hasHostObjectKey(spawn.objectKey()))
+                && base instanceof com.openggf.level.metadata.ObjectPreviewProvider provider)
+            return provider.objectPreview(spawn);
+        var key = spawn.objectKey() == null ? editorPreviewArtKey(spawn.objectId()) : editorPreviewArtKey(spawn.objectKey());
+        return key.map(value -> com.openggf.level.metadata.ObjectPreview.frame(value, 0))
+                .orElseGet(com.openggf.level.metadata.ObjectPreview::empty);
     }
     @Override public java.util.Optional<String> editorPreviewArtKey(int stockObjectId) {
         return base.editorPreviewArtKey(stockObjectId);

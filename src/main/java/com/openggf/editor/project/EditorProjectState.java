@@ -131,6 +131,8 @@ record EditorProjectState(int zoneIndex, int blockGridSide, byte[][] patterns, i
             if (usableBlocks.isEmpty()) usableBlocks.add(new int[source.getChunksPerBlockSide() * source.getChunksPerBlockSide()]);
             chunks = usableChunks.toArray(int[][]::new);
             blocks = usableBlocks.toArray(int[][]::new);
+        } else {
+            patterns = neutralizeUnplacedUnavailableArt(source, patterns, chunks, blocks);
         }
         int side = source.getChunksPerBlockSide();
         EditorProjectState state = blank
@@ -142,6 +144,53 @@ record EditorProjectState(int zoneIndex, int blockGridSide, byte[][] patterns, i
                     objects, rings, List.copyOf(backing), source.getMinX(), source.getMaxX(), source.getMinY(), source.getMaxY());
         state.validate();
         return new BlankCapture(state, omittedChunks, omittedBlocks);
+    }
+
+    /**
+     * A native library can define chunks whose tiles live outside its decoded pattern table:
+     * stock Sonic 2 Emerald Hill has 32 such references, in chunks that no placed block uses.
+     * The layout never draws them, so a clone keeps their index and collision and points the
+     * unavailable tiles at a transparent pattern. A placed chunk with unavailable art still
+     * fails, so the clone never changes what the layout shows.
+     */
+    private static byte[][] neutralizeUnplacedUnavailableArt(Level source, byte[][] patterns, int[][] chunks, int[][] blocks) {
+        boolean[] placedBlocks = new boolean[blocks.length];
+        for (byte cell : source.getMap().getData()) {
+            int block = Byte.toUnsignedInt(cell);
+            if (block < placedBlocks.length) placedBlocks[block] = true;
+        }
+        boolean[] placed = new boolean[chunks.length];
+        for (int b = 0; b < blocks.length; b++) {
+            if (!placedBlocks[b]) continue;
+            for (int descriptor : blocks[b]) {
+                int chunk = descriptor & 0x3FF;
+                if (chunk < placed.length) placed[chunk] = true;
+            }
+        }
+        int transparent = -1;
+        for (int i = 0; i < chunks.length; i++) {
+            int[] chunk = chunks[i];
+            if (chunk == null || chunk.length != 6) continue;
+            for (int j = 0; j < 4; j++) {
+                if ((chunk[j] & 0x7FF) < patterns.length) continue;
+                if (placed[i]) throw new IllegalArgumentException("Placed chunk " + i + " references missing pattern " + (chunk[j] & 0x7FF));
+                if (transparent < 0) {
+                    for (int p = 0; p < Math.min(2048, patterns.length) && transparent < 0; p++) {
+                        boolean empty = true;
+                        for (byte pixel : patterns[p]) empty &= pixel == 0;
+                        if (empty) transparent = p;
+                    }
+                    if (transparent < 0) {
+                        if (patterns.length >= 2048) throw new IllegalArgumentException("Asset library has no transparent pattern or free pattern slot");
+                        transparent = patterns.length;
+                        patterns = Arrays.copyOf(patterns, patterns.length + 1);
+                        patterns[transparent] = new byte[64];
+                    }
+                }
+                chunk[j] = transparent;
+            }
+        }
+        return patterns;
     }
 
     void validate() {
@@ -232,10 +281,16 @@ record EditorProjectState(int zoneIndex, int blockGridSide, byte[][] patterns, i
     record BackingState(int objectPlacementId, int[] ringPlacementIds) {}
     record RingState(int x, int y, int placementId) {}
     record ObjectState(int placementId, int x, int y, int objectId, int subtype, int renderFlags,
-            boolean respawnTracked, int rawYWord, String ownerModId, String objectKey) {
+            boolean respawnTracked, int rawYWord, String ownerModId, String objectKey,
+            com.fasterxml.jackson.databind.JsonNode authoredProperties) {
+        ObjectState(int placementId, int x, int y, int objectId, int subtype, int renderFlags,
+                    boolean respawnTracked, int rawYWord, String ownerModId, String objectKey) {
+            this(placementId, x, y, objectId, subtype, renderFlags, respawnTracked, rawYWord, ownerModId, objectKey, null);
+        }
         static ObjectState capture(ObjectSpawn spawn) {
             return new ObjectState(spawn.layoutIndex(), spawn.x(), spawn.y(), spawn.objectId(), spawn.subtype(),
-                    spawn.renderFlags(), spawn.respawnTracked(), spawn.rawYWord(), spawn.ownerModId(), spawn.objectKey());
+                    spawn.renderFlags(), spawn.respawnTracked(), spawn.rawYWord(), spawn.ownerModId(), spawn.objectKey(),
+                    spawn.authoredProperties() == null ? null : com.openggf.level.objects.authored.AuthoredObjectPropertiesJson.toJson(spawn.authoredProperties()));
         }
         void validate() {
             if (placementId < 0) throw new IllegalArgumentException("Invalid object placement id");
@@ -247,9 +302,13 @@ record EditorProjectState(int zoneIndex, int blockGridSide, byte[][] patterns, i
                 ModKeySyntax.requireManifestId(ownerModId); ModKeySyntax.requireDisplayKey(objectKey);
                 if (!objectKey.startsWith(ownerModId + ":")) throw new IllegalArgumentException("Object key owner mismatch");
             }
+            spawn(); // Decode typed properties and validate their identity/geometry before admission.
         }
         ObjectSpawn spawn() {
-            return new ObjectSpawn(x, y, objectId, subtype, renderFlags, respawnTracked, rawYWord, placementId, ownerModId, objectKey);
+            try {
+                return new ObjectSpawn(x, y, objectId, subtype, renderFlags, respawnTracked, rawYWord, placementId, ownerModId, objectKey,
+                        com.openggf.level.objects.authored.AuthoredObjectPropertiesJson.parse(authoredProperties));
+            } catch (java.io.IOException error) { throw new IllegalArgumentException("Invalid project authored properties: " + error.getMessage(), error); }
         }
     }
 }

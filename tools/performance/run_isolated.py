@@ -16,6 +16,27 @@ import argparse
 
 import os, signal, time, json
 
+def launches_java_class(args, main_class):
+    """Recognize an explicit class launch, excluding option values and app args."""
+    options_with_value = {
+        '-cp', '-classpath', '--class-path', '-p', '--module-path',
+        '--upgrade-module-path', '--add-modules', '--limit-modules',
+        '--add-reads', '--add-exports', '--add-opens', '--patch-module',
+        '--enable-native-access', '--illegal-native-access',
+    }
+    arguments = iter(args[1:])
+    for argument in arguments:
+        if argument in options_with_value:
+            next(arguments, None)
+        elif argument in ('-jar', '-m', '--module', '--source') or argument.startswith(
+                ('--module=', '--source=', '@')):
+            # Other launch modes/argument files do not expose a class target here.
+            return False
+        elif not argument.startswith('-'):
+            return argument == main_class
+    return False
+
+
 def interfering_command(args):
     if not args:
         return False
@@ -23,6 +44,7 @@ def interfering_command(args):
     return executable in ('mvn', 'mvnw', 'javac', 'asprof') or (
         executable == 'java' and (
             'org.codehaus.plexus.classworlds.launcher.Launcher' in args
+            or launches_java_class(args, 'com.openggf.tools.GameplayInputBranchTool')
             or any('surefirebooter' in value for value in args)))
 
 

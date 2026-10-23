@@ -1085,4 +1085,5 @@ com.openggf.level.objects.ScreenShakeTimerSlotObjectInstance
 com.openggf.level.objects.SignpostSparkleObjectInstance
 com.openggf.level.objects.SkidDustObjectInstance
 com.openggf.level.objects.SplashObjectInstance
+com.openggf.level.objects.authored.AuthoredGizmoInstance
 com.openggf.level.objects.boss.BossExplosionObjectInstance

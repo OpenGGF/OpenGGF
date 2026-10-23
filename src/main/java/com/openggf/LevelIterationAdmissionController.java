@@ -14,16 +14,26 @@ import com.openggf.level.SeamlessLevelTransitionRequest;
 
 import java.util.Objects;
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /** Owns level/title admission and deferred seamless-boundary completion. */
 final class LevelIterationAdmissionController {
+    private final Consumer<GameplayModeContext> initialAssemblyCompleted;
     private boolean seamlessBoundaryCompletionPending;
     private boolean freshLoadThisIteration;
     private boolean freshTitleCompleted;
     private boolean freshOrdinaryBoundaryObserved;
+
+    LevelIterationAdmissionController() {
+        this(context -> { });
+    }
+
+    LevelIterationAdmissionController(Consumer<GameplayModeContext> initialAssemblyCompleted) {
+        this.initialAssemblyCompleted = Objects.requireNonNull(initialAssemblyCompleted);
+    }
 
     void beginIteration() {
         freshLoadThisIteration = false;
@@ -119,6 +129,9 @@ final class LevelIterationAdmissionController {
                 return LevelFrameResult.SETUP_ONLY;
             }
             levelManager.completeFreshLevelTransitionBoundary();
+            // Fresh title loads retain player assembly past the release row;
+            // capture frame zero after that assembly and before its first tick.
+            initialAssemblyCompleted.accept(gameplayMode);
             freshTitleCompleted = false;
             freshOrdinaryBoundaryObserved = false;
         }

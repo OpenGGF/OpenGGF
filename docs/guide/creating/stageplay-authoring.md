@@ -5,6 +5,9 @@ menus. It compiles a shot-local screenplay into, and decompiles from, the same `
 by the in-engine editor, OpenGGF Editor and mod registration. Java 25 is required;
 movie capture additionally needs FFmpeg and the platform's headless GL prerequisites.
 
+These commands target the **0.7.prerelease development line**, alongside the
+unpublished candidate Mod API. They are not part of the published 0.6 release.
+
 ```bash
 python3 tools/stageplay/stageplay.py --build help
 python3 tools/stageplay/stageplay.py init --out /your/production/first.script.json
@@ -84,8 +87,8 @@ It uses two physical actors, actual moving platforms, finite landing waits, a gr
 camera and named dialogue. Open its `.stageplay` in either editor, or revise the
 screenplay and use the commands above. Change one choice, preview its consequence,
 then watch the whole scene before exporting. The accompanying production archive
-shows each directing concept beside the resulting performance, followed by the
-uninterrupted short.
+opens with the uninterrupted short, then shows directing choices beside one
+continuous performance and compares a single changed setting.
 
 ## Screenplay format
 

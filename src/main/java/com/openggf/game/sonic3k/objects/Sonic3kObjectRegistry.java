@@ -88,7 +88,13 @@ import java.util.function.Predicate;
  * use SK Set 1 as the canonical source; S3-only remappings share the
  * same underlying object names in most cases.
  */
-public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com.openggf.level.objects.MutatorPlacementClassifier, com.openggf.level.objects.HostObjectKeyRegistry {
+public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com.openggf.level.objects.MutatorPlacementClassifier, com.openggf.level.objects.HostObjectKeyRegistry , com.openggf.level.metadata.ObjectPropertyProvider, com.openggf.level.metadata.EditorPalettePolicyProvider, com.openggf.level.metadata.ObjectPreviewProvider {
+    @Override public boolean isPaletteCellEditable(int line, int color) {
+        return com.openggf.game.sonic3k.Sonic3kEditorPalettePolicy.isEditable(line, color);
+    }
+    @Override public com.openggf.level.metadata.ObjectPropertySchema objectProperties(int stockObjectId) {
+        return Sonic3kObjectProperties.schema(stockObjectId);
+    }
     private final Map<Integer, FactoryEntry> factoryEntries = new HashMap<>();
     private final Map<Integer, List<FactoryEntry>> stockRomZoneFactoryEntries = new HashMap<>();
     private final Set<Integer> stockZoneBoundFactoryIds = new HashSet<>();
@@ -113,16 +119,23 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
     }
 
     @Override public boolean hasObjectKey(String key) { return hasHostObjectKey(key); }
-    @Override public boolean hasHostObjectKey(String key) { return S3kAuthoredGoalInstance.OBJECT_KEY.equals(key); }
+    @Override public boolean hasHostObjectKey(String key) { return S3kAuthoredGoalInstance.OBJECT_KEY.equals(key) || super.hasHostObjectKey(key); }
     @Override public boolean ownsHostObject(ObjectSpawn spawn,ObjectInstance instance) {
-        return spawn!=null && hasHostObjectKey(spawn.objectKey())
+        return super.ownsHostObject(spawn, instance) || spawn!=null && hasHostObjectKey(spawn.objectKey())
                 && instance instanceof S3kAuthoredGoalInstance
                 && instance.getClass().getClassLoader()==Sonic3kObjectRegistry.class.getClassLoader()
                 && spawn.equals(instance.getSpawn());
     }
-    @Override public List<String> browsableObjectKeys() { return List.of(S3kAuthoredGoalInstance.OBJECT_KEY); }
+    @Override public List<String> browsableObjectKeys() { return java.util.stream.Stream.concat(super.browsableObjectKeys().stream(), java.util.stream.Stream.of(S3kAuthoredGoalInstance.OBJECT_KEY)).toList(); }
     @Override public java.util.Optional<String> editorPreviewArtKey(String key) {
-        return hasHostObjectKey(key)?java.util.Optional.of(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.END_SIGN):java.util.Optional.empty();
+        return S3kAuthoredGoalInstance.OBJECT_KEY.equals(key)?java.util.Optional.of(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.END_SIGN):java.util.Optional.empty();
+    }
+
+    @Override public com.openggf.level.metadata.ObjectPreview objectPreview(ObjectSpawn spawn) {
+        if (spawn.objectKey() != null) return editorPreviewArtKey(spawn.objectKey())
+                .map(key -> com.openggf.level.metadata.ObjectPreview.frame(key, 0))
+                .orElseGet(com.openggf.level.metadata.ObjectPreview::empty);
+        return Sonic3kObjectPreviews.preview(spawn);
     }
 
     @Override public java.util.Optional<String> editorPreviewArtKey(int objectId) {
@@ -1819,7 +1832,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
     public ObjectInstance create(ObjectSpawn spawn) {
         if(spawn.objectKey()!=null) {
             if(!hasHostObjectKey(spawn.objectKey())) throw new IllegalArgumentException("No host factory registered for "+spawn.objectKey());
-            return new S3kAuthoredGoalInstance(spawn);
+            return com.openggf.level.objects.authored.AuthoredGizmos.handlesKey(spawn.objectKey())
+                    ? com.openggf.level.objects.authored.AuthoredGizmos.create(spawn) : new S3kAuthoredGoalInstance(spawn);
         }
         ensureLoaded();
         S3kObjectCreationContext context = currentCreationContext();

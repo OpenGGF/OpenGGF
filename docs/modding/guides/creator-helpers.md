@@ -29,7 +29,8 @@ UiPrimitives.meter(ui, 8, 36, 120, 6, health, maximumHealth,
 ```
 
 `CompactFont` is a code-drawn 5×7 font with six-pixel advance and scale 1–8.
-`width`, `fit` and `glyphs` share the same metrics; lowercase uses uppercase glyphs
+`width`, `fit` and `glyphs` share the same metrics. It draws `A`–`Z`, `0`–`9` and
+``. : - _ / + = > < ! ? % [ ] ( ) * , ' & ; @ $ #``; lowercase uses uppercase glyphs
 and unsupported characters use `?`. `draw`, `shadowed` and `outlined` work on
 either canvas. Use `glyphs` when an existing mod command renderer needs the
 horizontal pixel runs directly. Golf and Sitar keep their color/style decisions

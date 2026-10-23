@@ -1,0 +1,118 @@
+name: openggf-racing
+
+x-runtime: &runtime
+  platform: linux/amd64
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  pids_limit: 256
+  tmpfs:
+    - /tmp:rw,exec,size=128m,mode=1777
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
+x-verifier: &verifier
+  <<: *runtime
+  image: ${IMAGE_PREFIX:-openggf-racing}-verifier:${IMAGE_TAG:?Set IMAGE_TAG to the built revision tag}
+  pull_policy: never
+  environment:
+    JAVA_TOOL_OPTIONS: -Xms256m -Xmx2g
+  cpus: 2.0
+  mem_limit: 4g
+  stop_grace_period: 45s
+  command:
+    - --master
+    - https://${MASTER_HOSTNAME:?Set the hostname covered by the TLS certificate}:27900
+    - --registration-token-file
+    - /run/secrets/verifier_registration_token
+    - --rom
+    - /roms/game.gen
+    - --data
+    - /data
+    - --shutdown-grace-seconds
+    - "30"
+  secrets:
+    - verifier_registration_token
+  depends_on:
+    master:
+      condition: service_healthy
+  networks: [racing]
+
+services:
+  master:
+    <<: *runtime
+    image: ${IMAGE_PREFIX:-openggf-racing}-master:${IMAGE_TAG:?Set IMAGE_TAG to the built revision tag}
+    pull_policy: never
+    environment:
+      JAVA_TOOL_OPTIONS: -Xms256m -Xmx1g
+    cpus: 4.0
+    mem_limit: 4g
+    stop_grace_period: 30s
+    ports:
+      - "${MASTER_BIND_IP:-0.0.0.0}:27900:27900"
+    volumes:
+      - master-data:/data
+      - type: bind
+        source: ${OPERATOR_DIR:?Set an absolute operator directory}/master.yaml
+        target: /config/master.yaml
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${OPERATOR_DIR:?Set an absolute operator directory}/fullchain.pem
+        target: /config/fullchain.pem
+        read_only: true
+        bind:
+          create_host_path: false
+    secrets:
+      - admin_token
+      - verifier_registration_token
+      - tls_key
+    networks:
+      racing:
+        aliases:
+          - ${MASTER_HOSTNAME:?Set the hostname covered by the TLS certificate}
+
+  verifier-1:
+    <<: *verifier
+    volumes:
+      - verifier-1-data:/data
+      - type: bind
+        source: ${ROM_PATH:?Set an absolute existing ROM path}
+        target: /roms/game.gen
+        read_only: true
+        bind:
+          create_host_path: false
+
+  # Enable with --profile second-verifier. Each worker needs its own identity.
+  verifier-2:
+    <<: *verifier
+    profiles: [second-verifier]
+    volumes:
+      - verifier-2-data:/data
+      - type: bind
+        source: ${ROM_PATH:?Set an absolute existing ROM path}
+        target: /roms/game.gen
+        read_only: true
+        bind:
+          create_host_path: false
+
+secrets:
+  admin_token:
+    file: ${OPERATOR_DIR:?Set an absolute operator directory}/admin-token
+  verifier_registration_token:
+    file: ${OPERATOR_DIR:?Set an absolute operator directory}/verifier-token
+  tls_key:
+    file: ${OPERATOR_DIR:?Set an absolute operator directory}/privkey.pem
+
+volumes:
+  master-data:
+  verifier-1-data:
+  verifier-2-data:
+
+networks:
+  racing:

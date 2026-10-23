@@ -38,11 +38,8 @@ public final class SszMechaSuperGlow extends AbstractObjectInstance implements S
             catch (IOException failure) { throw new UncheckedIOException(failure); }
         }
         animator.animateNoSst(animation, 0x7D67B, () -> { });
-        SszMechaSonicObjectInstance parent = null;
-        for (var object : services().objectManager().getActiveObjects()) {
-            if (object instanceof SszMechaSonicObjectInstance mecha && mecha.getSlotIndex() == parentSlot
-                    && !mecha.isDestroyed()) { parent = mecha; break; }
-        }
+        SszMechaSonicObjectInstance parent = com.openggf.level.objects.NativeObjectQueries.liveAtSlot(
+                services().objectManager(), parentSlot, SszMechaSonicObjectInstance.class);
         flipped = parent != null && parent.renderFlippedForTest();
         updateDynamicSpawn(((parent == null ? 0 : parent.getX()) + (flipped ? -0x14 : 0x14)) & 0xFFFF,
                 ((parent == null ? 0 : parent.getY()) - 4) & 0xFFFF);

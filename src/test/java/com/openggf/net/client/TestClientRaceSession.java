@@ -45,6 +45,37 @@ class TestClientRaceSession {
     }
 
     @Test
+    void membershipDeltasReplaceBySlotAndFreshJoinClearsTheOldMirror() {
+        var session = session();
+        var a = new ControlMessage.PlayerInfo(0, "a", "A", "sonic");
+        var b = new ControlMessage.PlayerInfo(2, "b", "B", "tails");
+        session.onControl(new ControlMessage.RoomState(List.of(b, a)));
+        var c = new ControlMessage.PlayerInfo(0, "c", "Replacement", "knuckles");
+        session.onControl(new ControlMessage.PlayerUpsert(c));
+        assertEquals(List.of(c, b), session.players());
+        session.onControl(new ControlMessage.PlayerLeft(2));
+        assertEquals(List.of(c), session.players());
+        session.applyJoin(new ControlMessage.JoinAccepted("new-token", 1, session.room(),
+                new ControlMessage.RoundSnapshot("LOBBY", null, 0, 0, List.of())));
+        assertTrue(session.players().isEmpty());
+        session.onControl(new ControlMessage.RoomState(List.of(b)));
+        assertEquals(List.of(b), session.players());
+    }
+
+    @Test
+    void membershipUpsertMovesAnIdentityInsteadOfDuplicatingIt() {
+        var session = session();
+        var original = new ControlMessage.PlayerInfo(0, "identity", "A", "sonic");
+        var other = new ControlMessage.PlayerInfo(1, "other", "B", "tails");
+        session.onControl(new ControlMessage.RoomState(List.of(original, other)));
+
+        var moved = new ControlMessage.PlayerInfo(2, "identity", "A", "knuckles");
+        session.onControl(new ControlMessage.PlayerUpsert(moved));
+
+        assertEquals(List.of(other, moved), session.players());
+    }
+
+    @Test
     void clockOffsetIsMedianOfSamples() {
         ClientRaceSession session = session();
         assertEquals(0, session.clockOffsetMillis());
@@ -114,5 +145,44 @@ class TestClientRaceSession {
         assertNull(session.kickReason());
         session.onControl(new ControlMessage.Kick("violations"));
         assertEquals("violations", session.kickReason());
+    }
+
+    @Test
+    void looksAreTrackedPerSlotClearedOnLeaveAndMalformedOnesShowStock() {
+        ClientRaceSession session = new ClientRaceSession(() -> 0L);
+        session.onControl(new ControlMessage.PlayerLook(2, "00E.200E"));
+        assertEquals("00E.200E", session.appearance(2).encode());
+        assertTrue(session.appearance(3).isStock());
+        session.onControl(new ControlMessage.PlayerLook(3, "not a look"));
+        assertTrue(session.appearance(3).isStock());
+        session.onControl(new ControlMessage.PlayerLeft(2));
+        assertTrue(session.appearance(2).isStock());
+    }
+
+    @Test
+    void readyStateFollowsTheHostAndClearsAtARoundStart() {
+        ClientRaceSession session = new ClientRaceSession(() -> 0L);
+        session.applyJoin(new ControlMessage.JoinAccepted("t", 1, null, null));
+        session.onControl(new ControlMessage.RoomState(List.of(
+                new ControlMessage.PlayerInfo(0, "aa", "A", "sonic"),
+                new ControlMessage.PlayerInfo(1, "bb", "B", "tails"))));
+        assertEquals("DEFAULT_BY_SIZE", session.readyRule());
+        assertTrue(session.readyRequired());
+        assertEquals(2, session.playersNotReady().size());
+        session.onControl(new ControlMessage.PlayerReady(1, true));
+        assertTrue(session.isLocalReady());
+        assertEquals(List.of("A"), session.playersNotReady().stream().map(ControlMessage.PlayerInfo::displayName).toList());
+        session.onControl(new ControlMessage.ReadyRule("AUTO", false));
+        session.onControl(new ControlMessage.ReadyReset(true));
+        assertFalse(session.readyRequired());
+        assertTrue(session.isReady(0) && session.isReady(1));
+        session.onControl(new ControlMessage.RoundStart(
+                new ControlMessage.RoundConfig("s2", 0, 0, 60, "OPEN", null), 100, 1000));
+        assertFalse(session.isReady(0) || session.isReady(1), "a round start clears ready");
+        session.onControl(new ControlMessage.PlayerReady(0, true));
+        session.onControl(new ControlMessage.PlayerLeft(0));
+        assertFalse(session.isReady(0));
+        session.onControl(new ControlMessage.ReadyReset(false));
+        assertFalse(session.isLocalReady());
     }
 }

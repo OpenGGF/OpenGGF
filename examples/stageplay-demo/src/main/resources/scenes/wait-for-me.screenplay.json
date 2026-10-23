@@ -44,7 +44,7 @@
   "shots": [
     {
       "id": "together",
-      "durationFrames": 1560,
+      "durationFrames": 2040,
       "set": {
         "gameId": "s3k",
         "zone": 11,
@@ -56,6 +56,7 @@
           "x": 5268,
           "y": 1824,
           "interpolation": "HOLD",
+          "zoom": 1,
           "follow": {
             "actors": [
               "sonic",
@@ -139,6 +140,15 @@
           },
           {
             "frame": 243,
+            "kind": "STOP"
+          },
+          {
+            "frame": 535,
+            "kind": "CROUCH",
+            "holdFrames": 45
+          },
+          {
+            "frame": 580,
             "kind": "STOP"
           },
           {
@@ -306,7 +316,7 @@
           "speakerActor": "tails",
           "text": "Other lift. Together, okay?",
           "x": 8,
-          "y": 170,
+          "y": 0,
           "width": 304,
           "height": 48,
           "typerId": "speech",
@@ -314,11 +324,11 @@
         },
         {
           "startFrame": 160,
-          "endFrame": 300,
+          "endFrame": 235,
           "speakerActor": "sonic",
           "text": "Race you there!",
           "x": 8,
-          "y": 170,
+          "y": 0,
           "width": 304,
           "height": 48,
           "typerId": "speech",
@@ -330,7 +340,7 @@
           "speakerActor": "tails",
           "text": "You forgot the \"together\" bit.",
           "x": 8,
-          "y": 170,
+          "y": 0,
           "width": 304,
           "height": 48,
           "typerId": "speech",
@@ -338,39 +348,69 @@
         },
         {
           "startFrame": 550,
-          "endFrame": 655,
+          "endFrame": 645,
           "speakerActor": "sonic",
           "text": "Oh. Coming back!",
           "x": 8,
-          "y": 170,
+          "y": 0,
           "width": 304,
           "height": 48,
           "typerId": "speech",
           "skinId": "sonic"
         },
         {
-          "startFrame": 800,
-          "endFrame": 1000,
+          "startFrame": 780,
+          "endFrame": 945,
           "speakerActor": "tails",
-          "text": "Try counting us in this time.",
+          "text": "I could just fly over.",
           "x": 8,
-          "y": 170,
+          "y": 0,
           "width": 304,
           "height": 48,
           "typerId": "speech",
           "skinId": "tails"
         },
         {
-          "startFrame": 1010,
-          "endFrame": 1150,
+          "startFrame": 950,
+          "endFrame": 1060,
           "speakerActor": "sonic",
-          "text": "One. Two. Three!",
+          "text": "This time, together.",
           "x": 8,
-          "y": 170,
+          "y": 0,
           "width": 304,
           "height": 48,
           "typerId": "speech",
           "skinId": "sonic"
+        },
+        {
+          "startFrame": 1065,
+          "endFrame": 1170,
+          "speakerActor": "sonic",
+          "text": "One. Two. Three!",
+          "x": 8,
+          "y": 0,
+          "width": 304,
+          "height": 48,
+          "typerId": "speech",
+          "skinId": "sonic",
+          "revealFrames": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            33,
+            34,
+            35,
+            36,
+            37,
+            70,
+            71,
+            72,
+            73,
+            74,
+            75
+          ]
         },
         {
           "startFrame": 1240,
@@ -378,7 +418,7 @@
           "speakerActor": "tails",
           "text": "See? Teamwork.",
           "x": 8,
-          "y": 170,
+          "y": 0,
           "width": 304,
           "height": 48,
           "typerId": "speech",
@@ -390,7 +430,7 @@
           "speakerActor": "sonic",
           "text": "My slowest personal best.",
           "x": 8,
-          "y": 170,
+          "y": 0,
           "width": 304,
           "height": 48,
           "typerId": "speech",

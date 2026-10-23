@@ -182,7 +182,7 @@ public final class FbzEndEggCapsuleInstance extends AbstractObjectInstance
     // Obj_EggCapsule and its button loc_86754 remain in ROM code bank $0008.
     @Override public int romObjectCodePointerHighWord() { return 0x0008; }
 
-    @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x2B, 0x18, 0x18); }
+    @Override public SolidObjectParams getSolidParams() { return SolidObjectParams.of(0x2B, 0x18, 0x18); }
     @Override public int getX() { return spawn.x(); }
     @Override public int getY() { return spawn.y(); }
     @Override public boolean isPersistent() { return true; }

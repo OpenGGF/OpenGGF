@@ -1,5 +1,22 @@
 # Build an owned two-act campaign
 
+
+For an ordered sequence of authored levels, the editor can now export a campaign
+without Java. Save each `.ogfproject`, open **Campaign levels**, append the relative
+project paths in order, and choose **Export playable campaign**. The generated
+manifest/JSON registers the existing multi-act runtime and ends the final act at
+credits. All acts share one host game and required team. See the
+[level editor guide](../../guide/creating/level-editor.md#campaigns-and-art-import)
+and [data-only manifest contract](../ggfmod.md#data-only-editor-campaigns).
+
+Place `openggf:authored-goal` in every act to use its native signpost/results
+flow, including later acts where numeric stock signposts retire. It is a
+host-provided placement in all three games. The editor does not infer a goal from
+the right edge of the terrain.
+
+The code-backed example below remains useful for custom gates, streamed assets,
+stock-campaign insertion and bespoke runtime services.
+
 [Tide Circuit's complete source](../../../src/test/resources/mods/sample-two-act-campaign-src/project/)
 is a small Sonic 2 patch with two original exported acts. The user's Sonic 2 World
 REV01 ROM supplies the native player, rings, signpost, music and results services;

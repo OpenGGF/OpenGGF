@@ -17,7 +17,7 @@ class TestEditorStockObjectPalette {
         assertEquals(0, palette.selectedObjectId());
         palette.previousObject();
         assertEquals(0xFF, palette.selectedObjectId());
-        assertEquals("FF: Object-FF", palette.selectedLabel());
+        assertEquals("FF: Object FF", palette.selectedLabel());
         palette.nextObject();
         assertEquals(0, palette.selectedObjectId());
     }

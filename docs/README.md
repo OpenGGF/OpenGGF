@@ -1,6 +1,9 @@
 # OpenGGF documentation
 
-OpenGGF's documentation is organized by audience and purpose.
+OpenGGF's documentation is organized by audience and purpose. Start with the
+[user guide](guide/index.md) for playing, creating, contributing or cross-referencing.
+Live guides follow the `0.7.prerelease` development line; dated engineering and
+release records describe their recorded commits, not current verification.
 
 Level authors can start with the [level editor guide](guide/creating/level-editor.md)
 for project creation, safe saves, playtesting, and all-game exports.
@@ -23,6 +26,8 @@ Maintainers publishing a release should start with
 - [Changelog](changelog/) contains detailed release history.
 - [Guide](guide/) contains player, level-author, contributor, and ROM cross-referencing
   documentation.
+- [Modding](modding/index.md) contains the unpublished candidate API handbook,
+  formats, quickstarts and maintained samples.
 - [Project](project/) contains project history, roadmaps, and process
   direction.
 - [Status](status/) contains active bug, discrepancy, trace-frontier, and

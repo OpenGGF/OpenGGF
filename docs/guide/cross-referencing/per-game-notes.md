@@ -13,13 +13,13 @@ Repository: https://github.com/sonicretro/s1disasm
 ### Disassembly Structure
 
 The main source file is `sonic.asm` (unlike S2's `s2.asm`). Constants are in
-`Constants.asm`.
+`_Constants.asm`.
 
 Object code lives in **separate files** in `_incObj/`, named with a hex ID prefix:
 ```
-_incObj/1F Crabmeat.asm
-_incObj/22 Buzz Bomber.asm
-_incObj/3D Boss - Green Hill (part 1).asm
+_incObj/1F Badnik - Crabmeat.asm
+_incObj/22, 23 Badnik - Buzz Bomber and Missile.asm
+_incObj/3D, 48 Boss - GHZ Main and Wrecking Ball.asm
 ```
 
 Related animation and mapping files:
@@ -38,34 +38,39 @@ S1 uses shorter, different prefixes than S2:
 |----|---------------|---------|
 | `Nem_` | `ArtNem_` | Nemesis-compressed art |
 | `Kos_` | `ArtKos_` | Kosinski-compressed art |
-| `Unc_` | `ArtUnc_` | Uncompressed art |
+| `Art_` | `ArtUnc_` | Uncompressed art |
 | `Map_` | `MapUnc_` | Sprite mappings |
 | `Ani_` | (inline) | Animation scripts |
 | `Blk16_` | (16x16 dir) | 16x16 block mappings |
 | `Blk256_` | (128x128 dir) | 256x256 metatile mappings |
-| `DPLC_` | (inline) | Dynamic Pattern Load Cues |
+| `SonicDynPLC` | (inline) | Sonic's Dynamic Pattern Load Cues |
 
 When using RomOffsetFinder with `--game s1`, use S1 prefixes (`Nem_`, not `ArtNem_`).
 
 ### Sprite Mapping Format
 
-S1 uses a **5-byte per piece** format. S2 and S3K use 6 bytes:
+S1 uses **5-byte pieces**. Stock S2 uses **8-byte pieces**; S3K normally uses
+**6-byte pieces**. S2 includes a second tile word for its two-player renderer:
 
-| Field | S1 | S2/S3K |
-|-------|-----|--------|
-| Y offset | 1 byte (signed) | 1 byte (signed) |
-| Size | 1 byte | 1 byte |
-| Pattern | 2 bytes | 2 bytes |
-| X offset | **1 byte (signed)** | **2 bytes (signed word)** |
+| Field, in stored order | S1 | S2 | S3K standard |
+|-------|-----|--------|--------|
+| Y offset | 1 byte (signed) | 1 byte (signed) | 1 byte (signed) |
+| Size | 1 byte | 1 byte | 1 byte |
+| Pattern | 2 bytes | 2 bytes (1P) | 2 bytes |
+| Extra pattern word | None | 2 bytes (2P) | None |
+| X offset | 1 byte (signed) | 2 bytes (signed word) | 2 bytes (signed word) |
 
 The single-byte X offset limits S1 sprite pieces to -128..+127 pixels from center.
+S1 frame piece counts are bytes; stock S2 and standard S3K counts are words.
+Use `S1SpriteDataLoader`, `S2SpriteDataLoader` or `S3kSpriteDataLoader` for the
+matching format. S3K's loader also supports explicit legacy byte-X mappings.
 
 ### Level Data
 
 S1 uses **256x256 pixel metatiles** (S2/S3K use 128x128). This means:
 - Level layouts reference different-sized chunks.
-- Block mapping files are in `map256/` (not `mappings/128x128/`).
-- 16x16 block mappings are in `map16/` (not `mappings/16x16/`).
+- Metatile mappings are Kosinski-compressed files in `map256/` (not `mappings/128x128/`).
+- 16x16 block mappings are Enigma-compressed files in `map16/` (not `mappings/16x16/`).
 - Level layouts are **uncompressed** binary files in `levels/`.
 
 ### Object Field Names
@@ -171,8 +176,10 @@ S3K has the most complex disassembly. The main source file is `sonic3k.asm`, but
 is also `s3.asm` for Sonic 3-specific data. Some labels (like `Map_Sonic`) are defined
 in **both** files with different addresses.
 
-**Always verify addresses against the machine code, not just the disasm labels.** The
-`sonic3k.asm` definition is authoritative for the S3K combined ROM.
+**Verify addresses against the machine code and the owning routine's pointer.**
+Start with `sonic3k.asm` for the locked-on game, but some resources legitimately
+come from the Sonic 3 half. Matching a label in both files does not establish which
+copy the routine uses. Constants live in `sonic3k.constants.asm` and `s3.constants.asm`.
 
 ### Combined 1P+2P Tables
 
@@ -191,17 +198,24 @@ When parsing these tables, trim to the first half (`size / 2`) to get only the 1
 ### Level Loading
 
 S3K uses `LevelLoadBlock` with **24-byte entries** (S2 uses a 12-byte `MainLoadBlock`).
-Each entry contains pointers to the zone's art, chunks, blocks, collision, and other data.
+Its six longwords hold primary/secondary art, 16×16 block and 128×128 chunk
+pointers, with additional data packed into high bytes. Layouts and collision
+indices use separate `LevelPtrs` and `SolidIndexes` tables. Layout data itself is
+uncompressed; terrain art is moduled Kosinski and both mapping sizes use Kosinski.
 
 ### SolidIndexes Pointer Format
 
-SolidIndexes entries are 32-bit values with two flag bits:
-- **Bit 31:** Non-interleaved flag (set = S3K zones, clear = S&K zones).
-- **Bit 0:** +1 offset baked into some entries.
+`SolidIndexes` has one longword per act. For the standard combined ROM,
+`LoadSolids (sonic3k.asm:9575-9593)` chooses non-interleaved data by comparing
+the pointer with `S3_Level_Solid_Data` (`0x260000`). The alternate
+`Sonic3_Complete` build uses a high-bit marker instead.
 
-To decode: `collisionBase = rawPtr & 0x7FFFFFFE` (strip both flags). Then:
-- Non-interleaved (bit 31 set): primary data at base, secondary at base + 0x600.
-- Interleaved (bit 31 clear): primary and secondary alternate bytes in a 0xC00 block.
+`Sonic3k.decodeCollisionPointer()` accepts the address threshold and explicit
+high/low-bit markers. It removes the high marker and keeps the 24-bit address,
+including an intentional low-bit `+1` offset; do not clear that bit from the address.
+Non-interleaved data has secondary indices at primary + `0x600`. Interleaved data
+uses primary and secondary at adjacent bytes, stepping by two through a `0xC00`
+block. Object families (`S3KL`/`SKL`) do not determine this encoding.
 
 ### Compression
 
@@ -244,9 +258,9 @@ normal palette cycle system. These are specific colors written directly during l
 |---------|-----|-----|------|
 | Object files | Separate (`_incObj/`) | Inline (`s2.asm`) | Inline (`sonic3k.asm`) |
 | Art label prefix | `Nem_` | `ArtNem_` | `ArtNem_` / `ArtKos_` |
-| Mapping format | 5 bytes/piece | 6 bytes/piece | 6 bytes/piece |
+| Standard mapping format | 5 bytes/piece | 8 bytes/piece | 6 bytes/piece |
 | Metatile size | 256x256 | 128x128 | 128x128 |
-| Level compression | Uncompressed | Kosinski | KosinskiM |
-| Tempo mode | -- | OVERFLOW2 | OVERFLOW |
+| Layout compression | Uncompressed | Kosinski | Uncompressed |
+| Tempo mode | TIMEOUT | OVERFLOW2 | OVERFLOW |
 | ROM scanner | No | No | Yes (`Sonic3kRomScanner`) |
 | RomOffsetFinder flag | `--game s1` | (default) | `--game s3k` |

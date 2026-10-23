@@ -17,6 +17,20 @@ import java.util.function.Supplier;
 
 @com.openggf.game.ModApi
 public class HudRenderManager {
+    /** A hosted run's scene covers the level with its menu: the HUD is not drawn (the timer runs). */
+    boolean coveredByHost;
+    /** TIME shows hundredths (0:00.00): the display setting, or a hosted run asking for it. */
+    boolean timeHundredths;
+    boolean hostTimeHundredths;
+    /** A hosted run's own clock for TIME, in frames, or -1 for the act timer. Presentation only. */
+    long hostTimeFrames = -1;
+    /**
+     * The colon's ink columns (first and last, shadow included) in this game's HUD art, measured
+     * from its lower tile when the art is installed; -1 until then. With hundredths the colon and
+     * the point take only their ink plus a small gap, instead of a whole eight-pixel cell.
+     */
+    int separatorInkLeft = -1;
+    int separatorInkRight = -1;
     com.openggf.game.session.WorldSession presentationWorld;
 
     private static final java.util.logging.Logger LOGGER =
@@ -66,6 +80,7 @@ public class HudRenderManager {
     }
 
     private HudProfile profile = HudProfile.stock();
+    private HudProfile hostProfile;
     private int viewportWidth = 320;
     private boolean screenLeftAnchorEnabled;
 
@@ -112,8 +127,15 @@ public class HudRenderManager {
         invalidateCache();
     }
 
+    void installHostProfile(HudProfile profile) {
+        if (hostProfile != profile) {
+            hostProfile = profile;
+            invalidateCache();
+        }
+    }
+
     HudProfile currentProfile() {
-        return profile;
+        return hostProfile != null ? hostProfile : profile;
     }
 
     public void setDigitPatternIndex(int digitPatternIndex) {
@@ -191,7 +213,7 @@ public class HudRenderManager {
         return count;
     }
 
-    private String vblankTimeDisplay;
+    private long vblankTimerFrames = -1;
 
     /** Presentation-only projection of UpdateHUD; does not advance the gameplay timer. */
     void drawForCounterPublication(LevelState state, PlayableEntity player, boolean advanceTimer) {
@@ -201,9 +223,9 @@ public class HudRenderManager {
         // tiles. The existing level-state owner advances later in this engine
         // loop; present that same increment without a second gameplay update.
         timer.setTotalFrames(state.getTimerFrames() + (advanceTimer && !state.isTimerPaused() ? 1 : 0));
-        vblankTimeDisplay = timer.getDisplayTime();
+        vblankTimerFrames = timer.getTotalFrames();
         try { draw(state, player); }
-        finally { vblankTimeDisplay = null; }
+        finally { vblankTimerFrames = -1; }
     }
 
     public void draw(LevelState levelGamestate) {
@@ -239,7 +261,7 @@ public class HudRenderManager {
                 rows = bonusStageRows();
             } else {
                 hudOrigin = nativeOrigin();
-                rows = debugMode ? HudProfile.stock().rows() : profile.rows();
+                rows = debugMode ? HudProfile.stock().rows() : currentProfile().rows();
                 drawOrdinaryRows(rows, levelGamestate, player, debugMode, hudOrigin);
             }
 
@@ -317,7 +339,7 @@ public class HudRenderManager {
     private List<HudRow> bonusStageRows() {
         var rows = new java.util.ArrayList<HudRow>(2);
         rows.add(new HudRow(true, HudLabel.RINGS, HudMetric.RINGS, 16, 8, 64, 8, 3, HudWarningPolicy.ZERO_FLASH));
-        for (HudRow row : profile.rows()) {
+        for (HudRow row : currentProfile().rows()) {
             if (row.visible() && isLivesRow(row)) {
                 rows.add(row);
             }
@@ -332,7 +354,7 @@ public class HudRenderManager {
     List<com.openggf.game.mutators.HudPresentationRuntime.Readout> presentationReadouts() {
         var player = camera.getFocusedSprite();
         boolean debug = player != null && player.isDebugMode();
-        List<HudRow> rows = bonusStageHudLayout ? bonusStageRows() : debug ? HudProfile.stock().rows() : profile.rows();
+        List<HudRow> rows = bonusStageHudLayout ? bonusStageRows() : debug ? HudProfile.stock().rows() : currentProfile().rows();
         var readouts = new java.util.ArrayList<com.openggf.game.mutators.HudPresentationRuntime.Readout>();
         for (int index = 0; index < rows.size(); index++) {
             var row = rows.get(index); if (!row.visible()) continue;
@@ -349,7 +371,8 @@ public class HudRenderManager {
                 maxY = Math.max(maxY, piece.yOffset() + piece.heightTiles() * 8);
             }
             boolean hasLabel = minX != Integer.MAX_VALUE;
-            int valueWidth = debug && row.metric() == HudMetric.SCORE ? 64 : row.maxDigits() * 8;
+            int valueWidth = debug && row.metric() == HudMetric.SCORE ? 64
+                    : row.metric() == HudMetric.TIME ? timeDisplayWidth() : row.maxDigits() * 8;
             int valueHeight = row.metric() == HudMetric.LIVES ? 8 : 16;
             readouts.add(new com.openggf.game.mutators.HudPresentationRuntime.Readout(index,
                     row.labelX() + (hasLabel ? minX : 0), row.labelY() + (hasLabel ? minY : 0),
@@ -403,8 +426,7 @@ public class HudRenderManager {
             switch (row.metric()) {
                 case SCORE -> drawNumberRightAligned(row.valueRightX(), row.valueY(),
                         gameState.getScore(), row.maxDigits(), hudOrigin);
-                case TIME -> drawTime(row.valueRightX(), row.valueY(),
-                        vblankTimeDisplay != null ? vblankTimeDisplay : levelState.getDisplayTime(), hudOrigin);
+                case TIME -> drawTime(row.valueRightX(), row.valueY(), timeText(levelState), hudOrigin);
                 case RINGS -> drawNumberRightAligned(row.valueRightX(), row.valueY(),
                         com.openggf.game.LevelRingDisplay.value(levelState), row.maxDigits(), hudOrigin);
                 case LIVES -> drawLives(gameState.getLives(), row.valueRightX(), row.valueY(),
@@ -609,21 +631,73 @@ public class HudRenderManager {
         return Math.max(0, Math.min(value, maximum));
     }
 
+    /**
+     * TIME's text: the act timer as the game shows it, or a hosted run's own clock, with
+     * hundredths when the display setting or the run asks for them.
+     */
+    private String timeText(LevelState levelState) {
+        boolean hundredths = timeHundredths || hostTimeHundredths;
+        long frames = hostTimeFrames >= 0 ? hostTimeFrames
+                : vblankTimerFrames >= 0 ? vblankTimerFrames : -1;
+        if (frames < 0 && !hundredths) {
+            return levelState.getDisplayTime();
+        }
+        return com.openggf.game.LevelTimer.displayTime(frames >= 0 ? frames : levelState.getTimerFrames(),
+                hundredths);
+    }
+
     private void drawTime(int x, int y, String timeStr, int hudOrigin) {
         int camX = camera.getXWithShake();
         int camY = camera.getYWithShake();
+        // Whole seconds keep the games' own fixed eight-pixel cells. With hundredths the colon and
+        // point are packed: two pixels after the previous digit's shadow column, their ink, one
+        // pixel, then the next digit (the games leave three and two around the colon).
+        boolean packed = timeStr.indexOf('.') >= 0 && separatorInkLeft >= 0;
+        int cursor = 0;
         for (int i = 0; i < timeStr.length(); i++) {
             char c = timeStr.charAt(i);
+            boolean separator = c == '.' || c == ':';
+            int cell = cursor;
+            if (packed && separator) {
+                cell = cursor + 2 - separatorInkLeft;
+                cursor += timeSeparatorWidth();
+            } else {
+                cursor += 8;
+            }
+            if (c == '.') {
+                // The games' HUD art has no point, so it is the colon's lower dot. That dot
+                // straddles the colon's two tiles (rows 7-9 of 16; the upper tile also holds the
+                // upper dot), so the lower tile is drawn twice, one row apart, to rebuild all of
+                // it, two rows lower so it sits on the digits' baseline (their ink ends on row 10,
+                // their shadow on row 11, in all three games).
+                int px = hudOrigin + x + camX + cell;
+                renderSafe(digitPatternIndex + 21, hudPatternDesc, px, y + camY + 9);
+                renderSafe(digitPatternIndex + 21, hudPatternDesc, px, y + camY + 10);
+                continue;
+            }
             int patternIdx = (c == ':')
                     ? digitPatternIndex + 20
                     : digitPatternIndex + ((c - '0') * 2);
-            renderSafe(patternIdx, hudPatternDesc, hudOrigin + x + camX + (i * 8), y + camY);
-            renderSafe(patternIdx + 1, hudPatternDesc, hudOrigin + x + camX + (i * 8), y + camY + 8);
+            renderSafe(patternIdx, hudPatternDesc, hudOrigin + x + camX + cell, y + camY);
+            renderSafe(patternIdx + 1, hudPatternDesc, hudOrigin + x + camX + cell, y + camY + 8);
         }
     }
 
+    private int timeSeparatorWidth() {
+        return separatorInkLeft >= 0 ? 2 + (separatorInkRight - separatorInkLeft + 1) + 1 : 8;
+    }
+
+    private int timeDisplayWidth() {
+        return timeHundredths || hostTimeHundredths ? 5 * 8 + 2 * timeSeparatorWidth() : 4 * 8;
+    }
+
     private int nativeOrigin() {
-        int liveWidth = Math.max(viewportWidth, graphicsManager.getProjectionWidth());
+        return nativeOriginX(Math.max(viewportWidth, graphicsManager.getProjectionWidth()));
+    }
+
+    int nativeOriginX(int width) {
+        if (bonusStageHudLayout) return 0;
+        int liveWidth = Math.max(320, width);
         if (screenLeftAnchorEnabled && liveWidth > 320) {
             return 0;
         }

@@ -62,6 +62,33 @@ public final class GameModuleRegistry {
         };
     }
 
+    /** Resolve the card's stock presentation without consulting or replacing a live session. */
+    static com.openggf.game.preview.TitlePreviewProvider createStockTitlePreview(GameId gameId) {
+        // Full modules construct live title/level-select collaborators and may register donors.
+        // Menu decoding needs only the detached capability, as with stock menu audio below.
+        return switch (java.util.Objects.requireNonNull(gameId, "gameId")) {
+            case S1 -> new com.openggf.game.sonic1.titlescreen.Sonic1TitlePreviewProvider();
+            case S2 -> new com.openggf.game.sonic2.titlescreen.Sonic2TitlePreviewProvider();
+            case S3K -> new com.openggf.game.sonic3k.titlescreen.Sonic3kTitlePreviewProvider();
+            case STANDALONE -> com.openggf.game.preview.TitlePreviewProvider.NONE;
+        };
+    }
+
+    /** Menu-only stock source; creating it never changes a gameplay or bootstrap module. */
+    static StockMenuAudio createStockMenuAudio(GameId gameId) {
+        return switch (java.util.Objects.requireNonNull(gameId, "gameId")) {
+            case S1 -> new StockMenuAudio(new com.openggf.game.sonic1.audio.Sonic1AudioProfile(),
+                    com.openggf.game.sonic1.audio.Sonic1Music.TITLE.id);
+            case S2 -> new StockMenuAudio(new com.openggf.game.sonic2.audio.Sonic2AudioProfile(),
+                    com.openggf.game.sonic2.audio.Sonic2Music.TITLE.id);
+            case S3K -> new StockMenuAudio(new com.openggf.game.sonic3k.audio.Sonic3kAudioProfile(),
+                    com.openggf.game.sonic3k.audio.Sonic3kMusic.TITLE.id);
+            case STANDALONE -> throw new IllegalArgumentException("Standalone has no stock title theme");
+        };
+    }
+
+    record StockMenuAudio(com.openggf.audio.GameAudioProfile profile, int titleMusicId) { }
+
     /**
      * Returns the bootstrap default module without consulting session state.
      * Use this only for construction paths that intentionally run before a

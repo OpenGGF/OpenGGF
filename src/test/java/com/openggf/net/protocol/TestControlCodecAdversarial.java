@@ -14,9 +14,12 @@ class TestControlCodecAdversarial {
     void protocolVersionCannotAliasTheSupportedVersionByIntegerTruncation() {
         String valid = codec.encode(null, new ControlMessage.Ping(7));
         assertEquals(new ControlMessage.Ping(7), codec.decode(valid).message());
-        for (String version : List.of("4294967298", "-4294967294",
-                "18446744073709551618", "2.0", "\"2\"", "null", "true")) {
-            String mutated = valid.replace("\"v\":2", "\"v\":" + version);
+        java.math.BigInteger supported = java.math.BigInteger.valueOf(Protocol.VERSION);
+        for (String version : List.of(supported.add(java.math.BigInteger.ONE.shiftLeft(32)).toString(),
+                supported.subtract(java.math.BigInteger.ONE.shiftLeft(32)).toString(),
+                supported.add(java.math.BigInteger.ONE.shiftLeft(64)).toString(),
+                Protocol.VERSION + ".0", "\"" + Protocol.VERSION + "\"", "null", "true")) {
+            String mutated = valid.replace("\"v\":" + Protocol.VERSION, "\"v\":" + version);
             assertNotEquals(valid, mutated);
             assertThrows(ProtocolViolationException.class, () -> codec.decode(mutated),
                     "version=" + version);
@@ -43,5 +46,17 @@ class TestControlCodecAdversarial {
             assertThrows(ProtocolViolationException.class, () -> codec.decode(mutated),
                     "attemptId=" + value);
         }
+    }
+
+    @Test
+    void membershipDeltaSlotsRejectExplicitNull() {
+        String left = codec.encode("session", new ControlMessage.PlayerLeft(4));
+        assertThrows(ProtocolViolationException.class,
+                () -> codec.decode(left.replace("\"slot\":4", "\"slot\":null")));
+
+        String upsert = codec.encode("session", new ControlMessage.PlayerUpsert(
+                new ControlMessage.PlayerInfo(4, "identity", "Player", "sonic")));
+        assertThrows(ProtocolViolationException.class,
+                () -> codec.decode(upsert.replace("\"slot\":4", "\"slot\":null")));
     }
 }

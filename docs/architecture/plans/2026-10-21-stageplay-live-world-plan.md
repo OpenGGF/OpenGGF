@@ -3283,3 +3283,38 @@ Queue intervals overlap and must not be added into elapsed delivery time; total
 wall-clock attribution outside the recorded waits/executions is unmeasured.
 The lead owns the next smoke/integration decision. No merge, push or PR was made.
 Consumed repair logs and commit-message temporaries are removed at final handback.
+
+## Story-first aesthetic revision — 2026-10-22
+
+The user requested an Opus 5.5 aesthetic review, then authorized implementation
+with Sol subagents. The review identified repeated instructional excerpts, small
+notes, weak listener reaction and a roughly 7–8 LU step into the finished short.
+It used sampled frames, screenplay inspection and encoded-audio measurements;
+it did not establish normal-speed motion quality or physical listening.
+
+Revision eight retains the small teamwork premise, acknowledges Tails can fly,
+adds Sonic's native crouch reaction and completes the count at frame 1140 before
+his native takeoff at 1141. All platform transfers remain production Puppet
+inputs. The single-setting comparison changes jump hold 20 to 8 frames: both
+land on placement 166; the shorter hold lowers the apex by 20.34375 pixels and
+lands eight frames earlier. This is evidence for this authored route, not an
+automatic pathfinder or a cold level-completion claim.
+
+The editorial direction is story first, one continuous annotated pass, one
+measured comparison and an invitation over a new eight-second platform ride.
+Native 320×224 frames use a stable 4× enlargement on a 1920×1080 canvas. One
+large note accompanies each beat; any rehearsal freeze is explicitly labelled.
+Dialogue occupies checked clear space above the action and clears the return
+jump before its apex. Increasing obstacle difficulty was rejected because it
+would not strengthen the relationship or explain directing to a new creator.
+
+Content validation uses a fresh package of base
+`1a5ae4adf487efe224f466f936d7fd8a8eded2e5`, which includes unrelated upstream
+level-editor and Emerald Remix work. Those changes are preserved. No Java,
+physics, public API or editor behavior is changed by this revision. Native scene
+compilation/simulation, decoded capture equivalence, actual output cadence,
+sectional audio measurements and syntax/mirror/policy checks are the relevant
+checks. The change-based selector selected all 3,566 smoke classes because example paths
+are unclassified; that broad fallback is disproportionate; no engine smoke/full-suite result is implied.
+Final production identities, outcomes and review limits belong to the revision-eight
+README and source manifest in the existing Stageplay media archive.

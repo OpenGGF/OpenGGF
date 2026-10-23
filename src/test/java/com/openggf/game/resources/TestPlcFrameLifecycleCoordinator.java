@@ -761,6 +761,74 @@ class TestPlcFrameLifecycleCoordinator {
                 "the released tail runs before the resuming row's own tail");
     }
 
+    @Test
+    void consumedIterationCompletionRunsOnceAfterPublicationAndCanReplay() {
+        List<String> events = new ArrayList<>();
+        DynamicArtLifecycleService dynamicArt = new DynamicArtLifecycleService();
+        dynamicArt.beginRun();
+        dynamicArt.openComparisonSegment();
+        var coordinator = new PlcFrameLifecycleCoordinator(recording(events), dynamicArt);
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            frame.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            coordinator.afterConsumedIteration(() -> {
+                assertEquals(0, dynamicArt.latestSnapshot().frame());
+                events.add("completed");
+                coordinator.runReplayedLogicalIteration(() -> { }, replay -> {
+                    replay.claim(PlcLifecyclePhase.SPECIAL_STAGE);
+                    return null;
+                });
+            });
+            assertFalse(events.contains("completed"));
+            return null;
+        });
+        assertEquals(1, events.stream().filter("completed"::equals).count());
+        assertEquals(1, dynamicArt.latestSnapshot().frame());
+    }
+
+    @Test
+    void completionIsImmediateWithoutAConsumedIterationAndDoesNotRepeat() {
+        List<String> events = new ArrayList<>();
+        var coordinator = new PlcFrameLifecycleCoordinator(recording(events));
+        coordinator.afterConsumedIteration(() -> events.add("outside"));
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            coordinator.afterConsumedIteration(() -> events.add("pre-tick"));
+            assertEquals(List.of("outside", "pre-tick"), events);
+            return null;
+        });
+        coordinator.afterConsumedIteration(() -> events.add("finished"));
+        assertEquals(List.of("outside", "pre-tick", "finished"), events);
+    }
+
+    @Test
+    void failedBodyAndFailedPublicationDiscardTheirCompletionActions() {
+        List<String> events = new ArrayList<>();
+        var coordinator = new PlcFrameLifecycleCoordinator(recording(events));
+        assertThrows(IllegalArgumentException.class, () ->
+                coordinator.runLogicalIteration(() -> { }, frame -> {
+                    frame.claim(PlcLifecyclePhase.SPECIAL_STAGE);
+                    coordinator.afterConsumedIteration(() -> events.add("failed-body"));
+                    throw new IllegalArgumentException("body failed");
+                }));
+        coordinator.runLogicalIteration(() -> { }, frame -> null);
+        assertFalse(events.contains("failed-body"));
+
+        DynamicArtLifecycleService dynamicArt = mock(DynamicArtLifecycleService.class);
+        when(dynamicArt.isRunActive()).thenReturn(true);
+        org.mockito.Mockito.doThrow(new IllegalStateException("publication failed"))
+                .when(dynamicArt).finishProductionIteration(false);
+        var failedPublication = new PlcFrameLifecycleCoordinator(recording(events), dynamicArt);
+        assertThrows(IllegalStateException.class, () ->
+                failedPublication.runLogicalIteration(() -> { }, frame -> {
+                    frame.claim(PlcLifecyclePhase.SPECIAL_STAGE);
+                    failedPublication.afterConsumedIteration(() -> events.add("failed-publication"));
+                    return null;
+                }));
+        failedPublication.reset();
+        failedPublication.runLogicalIteration(() -> { }, frame -> null);
+        assertFalse(events.contains("failed-publication"));
+    }
+
     private static void observeSonicDplc(
             DynamicArtLifecycleService dynamicArt, int mappingFrame) {
         dynamicArt.observePlayerDplc(

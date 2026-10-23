@@ -342,10 +342,11 @@ def chip(label, size=50, fg=NAVY, bg=YELLOW, role="title_it"):
 
 
 class BitmapFont:
-    """A pixel font in the example mods' art/font.txt layout: '= X' starts glyph X, then rows of
-    '#' (ink) and '.' (paper). Drawing at an integer scale keeps it crisp; outline() gives the
-    thick dark border that classic Sonic logos use. Prefer a font the game or mod already owns
-    to a generic TTF for the hero title."""
+    """A pixel font in the example mods' art/font.txt layout: '= X' starts glyph X, then rows where
+    '.' is paper, '#' is the face and any other character is a further native colour named in
+    `shades` (for example '+' for a ROM font's grey edge). Glyphs, outlines and shadows are drawn
+    on the glyph grid and only then enlarged, so every effect is whole glyph pixels, as the game
+    draws them. Prefer a font the game or mod already owns to a generic TTF for the hero title."""
 
     def __init__(self, path, space=4):
         self.glyphs, name, rows = {}, None, []
@@ -354,7 +355,7 @@ class BitmapFont:
                 if name is not None and rows:
                     self.glyphs[name] = rows
                 name, rows = line[2:3], []
-            elif name is not None and line and line[0] in "#.":
+            elif name is not None and line and not line.startswith("="):
                 rows.append(line)
         if name is not None and rows:
             self.glyphs[name] = rows
@@ -366,34 +367,44 @@ class BitmapFont:
     def height(self):
         return max(len(rows) for rows in self.glyphs.values())
 
-    def draw(self, px, s, x, y, colour, scale=1):
+    def draw(self, px, s, x, y, colour, scale=1, shades=None):
+        """Ink every non-paper pixel in `colour`; with `shades`, '#' takes `colour` and other
+        characters take their own colour (falling back to `colour`)."""
         for ch in s:
             if ch == " ":
                 x += self.space * scale
                 continue
             for gy, row in enumerate(self.glyphs[ch]):
                 for gx, v in enumerate(row):
-                    if v == "#":
-                        px[y + gy * scale:y + (gy + 1) * scale, x + gx * scale:x + (gx + 1) * scale] = colour
+                    if v != ".":
+                        c = colour if shades is None or v == "#" else shades.get(v, colour[:3]) + colour[3:]
+                        px[y + gy * scale:y + (gy + 1) * scale, x + gx * scale:x + (gx + 1) * scale] = c
             x += (len(self.glyphs[ch][0]) + 1) * scale
 
     def render(self, s, scale=4, fill=WHITE, outline=NAVY, outline_px=1, drop=(0x90, 0, 0), drop_px=1,
-               upscale=1):
-        """Logo-style word: outline ring, a darker drop under the body, then the body; returned as
-        a float RGBA array, nearest-neighbour upscaled by `upscale` for output size."""
-        pad = outline_px + drop_px + 1
-        w, h = self.width(s) * scale + 2 * pad, self.height() * scale + 2 * pad
+               upscale=1, shades=None, drop_dx=0):
+        """Logo-style word as a float RGBA array: outline ring, drop shadow, then the body, each in
+        glyph pixels, enlarged nearest-neighbour by scale * upscale. A ROM font usually wants the
+        game's own treatment instead: its native colours in `shades`, outline=None, and the shadow
+        colour and offset (drop_dx, drop_px) sampled from a native frame."""
+        o = outline_px if outline else 0
+        d = drop_px if drop else 0
+        dx = drop_dx if drop else 0
+        pad = o + max(d, abs(dx)) + 1
+        w, h = self.width(s) + 2 * pad, self.height() + 2 * pad
         px = np.zeros((h, w, 4), np.uint8)
         if outline:
-            for dy in range(-outline_px, outline_px + 1):
-                for dx in range(-outline_px, outline_px + 1):
-                    self.draw(px, s, pad + dx, pad + dy + (drop_px if dy > 0 else 0), outline + (255,), scale)
+            for oy in range(-o, o + 1):
+                for ox in range(-o, o + 1):
+                    self.draw(px, s, pad + ox + (dx if ox * dx > 0 else 0), pad + oy + (d if oy > 0 else 0),
+                              outline + (255,))
         if drop:
-            self.draw(px, s, pad, pad + drop_px, drop + (255,), scale)
-        self.draw(px, s, pad, pad, fill + (255,), scale)
+            self.draw(px, s, pad + dx, pad + d, drop + (255,))
+        self.draw(px, s, pad, pad, fill + (255,), shades=shades)
         im = Image.fromarray(px, "RGBA")
-        if upscale > 1:
-            im = im.resize((im.width * upscale, im.height * upscale), Image.NEAREST)
+        k = scale * upscale
+        if k > 1:
+            im = im.resize((im.width * k, im.height * k), Image.NEAREST)
         return arr(im)
 
 
@@ -817,6 +828,32 @@ def slanted_split(edit, f, panes, slant=0.22, divider=YELLOW, divider_px=14, dro
     return c
 
 
+def stacked_split(edit, f, panes, divider=YELLOW, divider_px=10, slide_frames=16, bg=None):
+    """Full-width strips stacked top to bottom, for comparing horizontal routes. A slanted split
+    crops each pane to a narrow slice; a strip keeps the whole run in view, so two 800x224
+    captures (--width 800) fill 1920x1080 at 2.4x. panes: (start_frame, clip, src, label, cam)
+    with cam=(cx, cy, zoom) or None. Each strip slides in from the left on its start frame."""
+    c = stripes(edit, f) if bg is None else bg.copy()
+    n = len(panes)
+    sh = (edit.H - (n - 1) * divider_px) // n
+    for i, (t0, clip, src, label, cam) in enumerate(panes):
+        if f < t0:
+            continue
+        cx, cy, z = cam if cam else (None, None, 1.0)
+        strip = arr(game_view(clip.frame(src + f - t0), cx, cy, z, edit.W, sh))
+        x = int(round(-(1 - ease_out((f - t0) / slide_frames)) * edit.W))
+        y = i * (sh + divider_px)
+        vis = edit.W + x
+        if vis > 0:
+            c[y:y + sh, :vis] = strip[:, -x:]
+            if i > 0:
+                c[y - divider_px:y, :vis] = np.array(divider, np.float32)
+        if label:
+            pill = chip(label)
+            paste(c, pill, 40 + x, y + sh - pill.shape[0] - 24, clamp((f - t0 - 8) / 8))
+    return c
+
+
 def pop_panel(c, img, x, y, f, t0, label=None, border=5, colour=SKY, dur=10):
     """A picture in a coloured frame that pops (overshoot scale) into place at t0, with an
     optional label fading in beneath."""
@@ -1089,12 +1126,115 @@ class Edit:
                             f"{s.clip.path.name} (holds last frame)")
             prev = s
         warn += self.pacing()[1]
+        warn += self.sound_balance()
         return warn
 
-    def pacing(self, window_s=20, max_cuts=10, min_mean_s=2.0):
+    def sound_balance(self, quiet_db=9.0, side_db=12.0):
+        """Each stinger against the bed at the moment it plays. Both films of the 2026-10-23
+        Time Attack A/B mixed ROM stingers 8-16 dB under full-level music, and the user heard the
+        music as "way louder than the SFX": in the game, music and effects share one driver at
+        comparable levels. A stinger can also sound from one speaker only, because some ROM
+        effects are hard-panned. The S1 ring is right-only; S3K alternates its right and left ring
+        sounds ($33/$34) on every ring, and a promo using $33 alone put every ring on the right.
+        Compares the loudest 100 ms of each stinger (with its gain) with the beds under it.
+        Returns warnings."""
+        spf = SR // self.fps
+        win = SR // 10
+        wavs = {}
+
+        def load(path):
+            if path not in wavs:
+                wavs[path] = read_wav(path)
+            return wavs[path]
+
+        def level(a):
+            return 20 * np.log10(max(float(np.sqrt((a ** 2).mean())) if len(a) else 0.0, 1e-9))
+
+        def bed_under(at, n):
+            under = np.zeros((n, 2), np.float32)
+            for wav, b_at, gain, src, length, fin, fout in self.beds:
+                offset = at - b_at * spf
+                if offset < 0 or (length is not None and offset >= length * SR):
+                    continue
+                seg = load(wav)[int(src * SR) + offset:int(src * SR) + offset + n]
+                under[:len(seg)] += seg * gain
+            return under
+
+        warn, sided = [], []
+        for f, wav, gain, length in sorted(self.sfx, key=lambda x: x[0]):
+            a = load(wav)
+            if length is not None:
+                a = a[:int(length * SR)]
+            if len(a) == 0:
+                continue
+            power = (a ** 2).mean(axis=1)
+            n = min(win, len(a))
+            i = int(np.argmax(np.convolve(power, np.ones(n) / n, mode="valid")))
+            loud = a[i:i + n] * gain
+            name, when = Path(wav).name, f"{f} ({f / self.fps:.2f}s)"
+            sting, bed = level(loud), level(bed_under(f * spf + i, n))
+            if bed > -60 and sting < bed - quiet_db:
+                warn.append(f"stinger {name} at {when} is {bed - sting:.0f} dB under the music: "
+                            f"raise its gain or lower the bed")
+            left, right = level(loud[:, 0]), level(loud[:, 1])
+            if abs(left - right) > side_db:
+                sided.append((f, "left" if left > right else "right", name, when))
+        # A run that alternates sides within a couple of seconds is the game's own pairing (S3K
+        # rings), not a stuck speaker.
+        for k, (f, side, name, when) in enumerate(sided):
+            near = [o for o in (sided[k - 1] if k else None, sided[k + 1] if k + 1 < len(sided) else None)
+                    if o is not None and abs(o[0] - f) <= 2 * self.fps]
+            if not any(o[1] != side for o in near):
+                warn.append(f"stinger {name} at {when} plays from the {side} speaker only: "
+                            f"use the game's paired sound or centre it")
+        return warn
+
+    def bare_stretches(self, max_s=4.0):
+        """Stretches of full-screen gameplay longer than max_s in which nothing editorial happens:
+        no cut, graphic overlay, stinger, punch or camera move. Captions (Txt) do not count: a
+        coached draft answered this check with a filler caption every four beats, which the user
+        called "minimal effort". A cut that continues the same clip from the same source frame is
+        not an event either. Returns [(f0, f1), ...] in output frames."""
+        total = self.end()
+        bare = np.zeros(total, bool)
+        events = set()
+        prev = None
+        for s in self.shots:
+            if isinstance(s, Game) and s.cam is None:
+                bare[s.f0:s.f1] = True
+            continues = (isinstance(s, Game) and isinstance(prev, Game) and s.clip is prev.clip and
+                         s.src == prev.src + (prev.f1 - prev.f0) and not s.trans)
+            if not continues:
+                events.add(s.f0)
+            prev = s
+        for o in self.overlays:
+            if isinstance(o, (Fade, Shade, Txt)):
+                continue
+            bare[max(0, o.f0):max(0, o.f1)] = False
+            events.add(o.f0)
+        events.update(f for f, *_ in self.sfx)
+        events.update(f for f, _ in self.punches)
+        out = []
+        f = 0
+        while f < total:
+            if not bare[f]:
+                f += 1
+                continue
+            g = f + 1
+            while g < total and bare[g] and g not in events:
+                g += 1
+            if g - f > max_s * self.fps:
+                out.append((f, g))
+            f = g
+        return out
+
+    def pacing(self, window_s=20, max_cuts=10, min_mean_s=2.0, max_bare_s=4.0, max_captions=3):
         """Cut density: the archived promos that were rejected as 'rushed' or 'cluttered' averaged
         about 1.2 s a shot and had 16 cuts in their last 20 s; their accepted revisions held
-        shots for about 4 s. Returns (stats, warnings)."""
+        shots for about 4 s. The opposite failure is a long take with nothing on it: a coached
+        draft with 14 s of unaccompanied level was rejected as 'boring' and 'lazy'. Longer takes
+        are the fix for rushed only when something editorial keeps happening on them.
+        Returns (stats, warnings)."""
         cuts = sorted(s.f0 for s in self.shots[1:])
         total = self.end()
         mean = total / self.fps / max(1, len(self.shots))
@@ -1105,8 +1245,25 @@ class Edit:
             warn.append(f"{busiest} cuts within {window_s} s: likely to read as rushed")
         if mean < min_mean_s:
             warn.append(f"mean shot {mean:.2f} s: below {min_mean_s} s")
+        gameplay = np.zeros(total, bool)
+        for s in self.shots:
+            if isinstance(s, Game):
+                gameplay[s.f0:s.f1] = True
+        caps = sorted({o.f0 for o in self.overlays if isinstance(o, Txt) and 0 <= o.f0 < total and gameplay[o.f0]})
+        busiest_caps = max([sum(1 for c in caps if a <= c < a + window_s * self.fps) for a in caps] or [0])
+        if busiest_caps > max_captions:
+            warn.append(f"{busiest_caps} captions over gameplay within {window_s} s: over-captioned; accompany "
+                        "with the footage's own events (punch or stinger on a spring, ring burst, landing; a "
+                        "counter or callout graphic) or cut the take down")
+        bare = self.bare_stretches(max_bare_s)
+        for f0, f1 in bare:
+            warn.append(f"{(f1 - f0) / self.fps:.1f} s of bare gameplay at {f0 / self.fps:.1f}-{f1 / self.fps:.1f} s: "
+                        "likely to read as boring; sync a punch or stinger to an in-game event, add a counter "
+                        "or callout graphic, change the layout, or cut the take down. Captions do not count")
         return {"shots": len(self.shots), "mean_shot_s": round(mean, 2), "busiest_window_cuts": busiest,
-                "cuts_in_last_window": last, "seconds": round(total / self.fps, 2)}, warn
+                "cuts_in_last_window": last, "seconds": round(total / self.fps, 2),
+                "longest_bare_s": round(max([(b - a) / self.fps for a, b in bare] or [0]), 2),
+                "busiest_window_captions": busiest_caps}, warn
 
     def mix(self):
         total = self.end()
@@ -1397,6 +1554,9 @@ def main(argv):
 
 
 if __name__ == "__main__":
+    # Edit files run `from promo_kit import *`. Without this alias they would import a second copy
+    # of this module, and every isinstance check in Edit.check() would silently fail.
+    sys.modules.setdefault("promo_kit", sys.modules[__name__])
     if not shutil.which("ffmpeg"):
         print("warning: ffmpeg not found; render will fail", file=sys.stderr)
     sys.exit(main(sys.argv))

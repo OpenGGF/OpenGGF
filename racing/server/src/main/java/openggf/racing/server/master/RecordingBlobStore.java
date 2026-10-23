@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.FileTime;
 import java.util.Optional;
@@ -18,22 +19,50 @@ import java.util.stream.Stream;
  */
 public final class RecordingBlobStore {
     private static final Pattern HASH = Pattern.compile("[0-9a-f]{64}");
+    private static final String STAGING_PREFIX = ".recording-";
+    private static final String STAGING_SUFFIX = ".tmp";
     private final Path dir;
+    private long storedBytes;
 
     public RecordingBlobStore(Path dir) {
         this.dir = dir.toAbsolutePath().normalize();
         try {
             Files.createDirectories(this.dir);
+            removeInterruptedPublications();
+            storedBytes = scanTotalBytes();
         } catch (IOException failure) {
             throw new IllegalStateException("unable to create recording store", failure);
         }
     }
 
     public synchronized void put(String hashHex, byte[] bytes) {
+        Path target = pathFor(hashHex);
+        Path staging = null;
         try {
-            Files.write(pathFor(hashHex), bytes);
-        } catch (IOException failure) {
+            long previous = 0;
+            if (Files.exists(target, LinkOption.NOFOLLOW_LINKS)) {
+                if (!Files.isRegularFile(target, LinkOption.NOFOLLOW_LINKS)) {
+                    throw new IllegalStateException("recording path is not a regular file");
+                }
+                previous = Files.size(target);
+            }
+            long updatedBytes = Math.addExact(
+                    Math.subtractExact(storedBytes, previous), bytes.length);
+            staging = Files.createTempFile(dir, STAGING_PREFIX, STAGING_SUFFIX);
+            Files.write(staging, bytes);
+            movePublished(staging, target);
+            staging = null;
+            storedBytes = updatedBytes;
+        } catch (IOException | ArithmeticException failure) {
             throw new IllegalStateException("unable to store recording", failure);
+        } finally {
+            if (staging != null) {
+                try {
+                    Files.deleteIfExists(staging);
+                } catch (IOException ignored) {
+                    // The next store startup removes interrupted publication artifacts.
+                }
+            }
         }
     }
 
@@ -52,23 +81,43 @@ public final class RecordingBlobStore {
                 throw new IllegalStateException("unable to refresh recording retention", failure);
             }
         }
-        if (totalBytes() + bytes.length > maxTotalBytes) {
+        if (maxTotalBytes < 0 || bytes.length > maxTotalBytes
+                || storedBytes > maxTotalBytes - bytes.length) {
             return false;
         }
         put(hashHex, bytes);
         return true;
     }
 
-    public long totalBytes() {
+    public synchronized long totalBytes() {
+        return storedBytes;
+    }
+
+    private long scanTotalBytes() throws IOException {
         try (Stream<Path> files = Files.list(dir)) {
             long total = 0;
-            for (Path path : files.filter(Files::isRegularFile).toList()) {
+            for (Path path : files.filter(path -> Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)
+                    && HASH.matcher(path.getFileName().toString()).matches()).toList()) {
                 total = Math.addExact(total, Files.size(path));
             }
             return total;
-        } catch (IOException | ArithmeticException failure) {
-            throw new IllegalStateException("unable to measure recording store", failure);
         }
+    }
+
+    private void removeInterruptedPublications() throws IOException {
+        try (Stream<Path> files = Files.list(dir)) {
+            for (Path path : files.filter(path -> {
+                String name = path.getFileName().toString();
+                return name.startsWith(STAGING_PREFIX) && name.endsWith(STAGING_SUFFIX);
+            }).toList()) {
+                Files.deleteIfExists(path);
+            }
+        }
+    }
+
+    private static void movePublished(Path staging, Path target) throws IOException {
+        Files.move(staging, target, StandardCopyOption.ATOMIC_MOVE,
+                StandardCopyOption.REPLACE_EXISTING);
     }
 
     public Optional<byte[]> get(String hashHex) {
@@ -86,15 +135,17 @@ public final class RecordingBlobStore {
     public synchronized int deleteOlderThan(long cutoffMillis) {
         int deleted = 0;
         try (Stream<Path> files = Files.list(dir)) {
-            for (Path path : files.filter(Files::isRegularFile).toList()) {
+            for (Path path : files.filter(path -> Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)).toList()) {
                 if (HASH.matcher(path.getFileName().toString()).matches()
-                        && Files.getLastModifiedTime(path).toMillis() < cutoffMillis
-                        && Files.deleteIfExists(path)) {
+                        && Files.getLastModifiedTime(path).toMillis() < cutoffMillis) {
+                    long size = Files.size(path);
+                    if (!Files.deleteIfExists(path)) continue;
+                    storedBytes = Math.subtractExact(storedBytes, size);
                     deleted++;
                 }
             }
             return deleted;
-        } catch (IOException failure) {
+        } catch (IOException | ArithmeticException failure) {
             throw new IllegalStateException("unable to collect recording store", failure);
         }
     }

@@ -6,6 +6,26 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestCreatorUi {
+    @Test void hudOriginUsesTheOverlayViewportAndLiveNativeAnchor() {
+        var graphics = org.mockito.Mockito.mock(com.openggf.graphics.GraphicsManager.class);
+        var pipeline = new com.openggf.graphics.pipeline.UiRenderPipeline(graphics);
+        org.mockito.Mockito.when(graphics.getUiRenderPipeline()).thenReturn(pipeline);
+        var canvas = new LevelOverlayCanvas(graphics, 400, 224);
+        assertEquals(40, canvas.hudOriginX(), "center the native frame when no HUD is installed");
+        var hud = new com.openggf.level.objects.HudRenderManager(graphics,
+                org.mockito.Mockito.mock(com.openggf.camera.Camera.class),
+                org.mockito.Mockito.mock(com.openggf.game.GameStateManager.class));
+        pipeline.setHudRenderManager(hud);
+        assertEquals(40, canvas.hudOriginX());
+        com.openggf.level.objects.HudProfileAccess.setScreenLeftAnchorEnabled(hud, true);
+        assertEquals(0, canvas.hudOriginX());
+        assertEquals(0, new LevelOverlayCanvas(graphics, 320, 224).hudOriginX());
+        com.openggf.level.objects.HudProfileAccess.setScreenLeftAnchorEnabled(hud, false);
+        assertEquals(47, new LevelOverlayCanvas(graphics, 414, 224).hudOriginX());
+        hud.setBonusStageHudLayout(true);
+        assertEquals(0, canvas.hudOriginX(), "bonus HUD draws at native origin even in widescreen");
+    }
+
     @Test void bitmapGeometryIsCachedAsDisjointRectanglesWithoutLosingPixels() {
         BitmapFont solid = BitmapFont.binary("A", "1".repeat(64), 1, 64, 2);
         List<List<Integer>> solidRuns = new ArrayList<>();
@@ -275,6 +295,21 @@ class TestCreatorUi {
         assertEquals("AB...", CompactFont.fit("ABCDEFG", 29, 1));
         assertEquals("..", CompactFont.fit("ABCDEFG", 11, 1));
         assertThrows(IllegalArgumentException.class, () -> CompactFont.width("A", 0));
+    }
+
+    @Test void compactFontDrawsCommonPlayerNameSymbolsInsteadOfTheFallback() {
+        String fallback = compactRuns("?");
+        for (String symbol : new String[] {"@", "$", "#"}) {
+            assertNotEquals(fallback, compactRuns(symbol), symbol);
+        }
+        assertEquals(fallback, compactRuns("\u0394"), "unsupported glyphs still fall back to ?");
+    }
+
+    private static String compactRuns(String text) {
+        StringBuilder runs = new StringBuilder();
+        CompactFont.glyphs(text, 0, 0, 1, (x, y, w, h) -> runs.append(x).append(',').append(y)
+                .append(',').append(w).append(';'));
+        return runs.toString();
     }
 
     @Test void compactLargeScalesKeepEveryTranslucentPixelAndMatchingMetrics() {

@@ -68,7 +68,7 @@ public final class EditorProjectLevel extends AbstractLevel implements RingObjec
     public static EditorProjectLevel copyOf(Level source) {
         Objects.requireNonNull(source, "source");
         rejectNativeCollisionRemaps(source);
-        return new EditorProjectLevel(EditorProjectState.capture(source), source.getRingSpriteSheet());
+        return LevelObjectArt.initialize(new EditorProjectLevel(EditorProjectState.capture(source), source.getRingSpriteSheet()), source);
     }
 
     /** A blank layout keeps the asset library and discards stock placements/native layout features. */
@@ -78,7 +78,7 @@ public final class EditorProjectLevel extends AbstractLevel implements RingObjec
         // Asset extraction uses authored geometry immediately: native storage/camera
         // bounds and placements belong to the layout this operation discards.
         EditorProjectState.BlankCapture captured = EditorProjectState.captureBlankLibrary(library, width, height);
-        EditorProjectLevel result = new EditorProjectLevel(captured.state(), library.getRingSpriteSheet());
+        EditorProjectLevel result = LevelObjectArt.initialize(new EditorProjectLevel(captured.state(), library.getRingSpriteSheet()), library);
         // Required empty terrain gets first claim on capacity, before optional spare slots.
         int emptyBlock = result.ensureEmptyBlock();
         result = withSpareSlots(result);
@@ -89,7 +89,7 @@ public final class EditorProjectLevel extends AbstractLevel implements RingObjec
         result.minY = 0; result.maxY = height * result.getBlockPixelSize() - 1;
         // Reconstruct to drop discarded ring groups and isolate every data array.
         EditorProjectState state = EditorProjectState.captureWithoutBacking(result);
-        return new EditorProjectLevel(state, result.ringSpriteSheet, captured.omittedChunks(), captured.omittedBlocks());
+        return LevelObjectArt.inherit(new EditorProjectLevel(state, result.ringSpriteSheet, captured.omittedChunks(), captured.omittedBlocks()), library);
     }
 
     public int omittedNativeChunkCount() { return omittedNativeChunks; }
@@ -106,13 +106,19 @@ public final class EditorProjectLevel extends AbstractLevel implements RingObjec
         int chunkCount = source.chunkCount < 1024 ? Math.min(1024, source.chunkCount + 64) : source.chunkCount;
         int blockCount = Math.min(256, source.blockCount + 16);
         EditorProjectState base = EditorProjectState.capture(source);
+        // Native libraries can contain additional sprite-only art beyond the terrain
+        // descriptor's 11-bit address space. Retain it; only append authoring slots
+        // when there is still addressable capacity, and never overwrite stock art.
+        int patternCount = base.patterns().length < 2048 ? Math.min(2048, base.patterns().length + 256) : base.patterns().length;
+        byte[][] patterns = Arrays.copyOf(base.patterns(), patternCount);
+        for (int i = base.patterns().length; i < patterns.length; i++) patterns[i] = new byte[64];
         int[][] chunks = Arrays.copyOf(base.chunks(), chunkCount);
         for (int i = base.chunks().length; i < chunks.length; i++) chunks[i] = new int[6];
         int[][] blocks = Arrays.copyOf(base.blocks(), blockCount);
         for (int i = base.blocks().length; i < blocks.length; i++) blocks[i] = new int[source.side * source.side];
-        return new EditorProjectLevel(new EditorProjectState(base.zoneIndex(), base.blockGridSide(), base.patterns(), chunks, blocks,
+        return LevelObjectArt.inherit(new EditorProjectLevel(new EditorProjectState(base.zoneIndex(), base.blockGridSide(), patterns, chunks, blocks,
                 base.solids(), base.palettes(), base.layers(), base.width(), base.height(), base.map(), base.objects(), base.rings(), base.ringBacking(),
-                base.minX(), base.maxX(), base.minY(), base.maxY()), source.ringSpriteSheet);
+                base.minX(), base.maxX(), base.minY(), base.maxY()), source.ringSpriteSheet), source);
     }
 
     /** Shrinking requires explicit crop authorization. Entire object-backed ring groups crop together. */
@@ -146,9 +152,9 @@ public final class EditorProjectLevel extends AbstractLevel implements RingObjec
         List<EditorProjectState.ObjectState> objects = base.objects().stream().filter(o -> !removedObjects.contains(o.placementId())).toList();
         List<EditorProjectState.RingState> rings = base.rings().stream().filter(r -> !removedRings.contains(r.placementId())).toList();
         List<EditorProjectState.BackingState> backing = base.ringBacking().stream().filter(g -> !removedObjects.contains(g.objectPlacementId())).toList();
-        return new EditorProjectLevel(new EditorProjectState(base.zoneIndex(), base.blockGridSide(), base.patterns(), base.chunks(), base.blocks(),
+        return LevelObjectArt.inherit(new EditorProjectLevel(new EditorProjectState(base.zoneIndex(), base.blockGridSide(), base.patterns(), base.chunks(), base.blocks(),
                 base.solids(), base.palettes(), base.layers(), width, height, resized.getData(), objects, rings, backing,
-                Math.min(base.minX(), pixelWidth - 1), pixelWidth - 1, Math.min(base.minY(), pixelHeight - 1), pixelHeight - 1), source.getRingSpriteSheet());
+                Math.min(base.minX(), pixelWidth - 1), pixelWidth - 1, Math.min(base.minY(), pixelHeight - 1), pixelHeight - 1), source.getRingSpriteSheet()), source);
     }
 
     /** Finds actual empty terrain, allocating definitions only when the library has none. */
@@ -201,9 +207,9 @@ public final class EditorProjectLevel extends AbstractLevel implements RingObjec
 
     public static EditorProjectLevel withBounds(Level source, int minX, int maxX, int minY, int maxY) {
         EditorProjectState base = EditorProjectState.capture(copyOf(source));
-        return new EditorProjectLevel(new EditorProjectState(base.zoneIndex(), base.blockGridSide(), base.patterns(), base.chunks(), base.blocks(),
+        return LevelObjectArt.inherit(new EditorProjectLevel(new EditorProjectState(base.zoneIndex(), base.blockGridSide(), base.patterns(), base.chunks(), base.blocks(),
                 base.solids(), base.palettes(), base.layers(), base.width(), base.height(), base.map(), base.objects(), base.rings(), base.ringBacking(),
-                minX, maxX, minY, maxY), source.getRingSpriteSheet());
+                minX, maxX, minY, maxY), source.getRingSpriteSheet()), source);
     }
 
     static void validateDimensions(int side, int width, int height) {

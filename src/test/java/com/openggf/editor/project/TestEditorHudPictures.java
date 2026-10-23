@@ -253,6 +253,28 @@ class TestEditorHudPictures {
                         shot.press(BUTTON_Y);
                         shot.picture("objects-library");
                         shot.press(BUTTON_B);
+
+                        // Real HUD property sheets opened through the same keyboard event path
+                        // used by a desktop keyboard, delivered only to our owned InputHandler.
+                        controller.objectPalette().setObjectId(0x26);
+                        controller.objectPalette().setSubtype(4);
+                        controller.setWorldCursor(new EditorCursorState(2 * size + 64, Math.max(0, floor - 48)));
+                        controller.placeObjectSpawnAtCursor();
+                        assertTrue(controller.selectedObjectProperties().editableFields().stream()
+                                .anyMatch(field -> field.id().equals("contents")));
+                        shot.key(GLFW_KEY_F2);
+                        shot.picture("hud-properties");
+                        shot.press(BUTTON_B);
+
+                        controller.objectPalette().setObjectKey("openggf:camera-zone");
+                        controller.setWorldCursor(new EditorCursorState(2 * size + 160, Math.max(0, floor - 96)));
+                        controller.placeObjectSpawnAtCursor();
+                        controller.setSelectedGizmoProperty("width", 160);
+                        controller.setSelectedGizmoProperty("height", 96);
+                        assertEquals("openggf:camera-zone", controller.selectedObjectSpawn().objectKey());
+                        shot.key(GLFW_KEY_F2);
+                        shot.picture("hud-gizmo");
+                        shot.press(BUTTON_B);
                         controller.setSpawnEditMode(EditorSpawnEditMode.TILES);
                     }
 
@@ -322,6 +344,13 @@ class TestEditorHudPictures {
             buttons[button] = true;
             tick();
             buttons[button] = false;
+            tick();
+        }
+
+        void key(int key) {
+            pads.handleKeyEvent(key, GLFW_PRESS);
+            tick();
+            pads.handleKeyEvent(key, GLFW_RELEASE);
             tick();
         }
 

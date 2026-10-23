@@ -34,7 +34,7 @@ class TestGameLoopRewindBoundaryPolicy {
         context = SessionManager.getCurrentGameplayMode();
         boundaries = new ArrayList<>();
         loop = new GameLoop(new InputHandler());
-        context.setRewindBoundaryReporter(boundaries::add);
+        loop.installLiveRewindBoundaryReporter(boundaries::add);
     }
 
     @AfterEach

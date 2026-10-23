@@ -55,7 +55,8 @@ Unreleased. The earlier development themes remain in
   that ownership. A generated ID/context catalog reports native arena and appearance
   restrictions. See the [guide](docs/guide/creating/stageplay.md) and
   [directing examples](examples/stageplay-demo/README.md), including a 26-second
-  beginner scene with a companion conceptual tutorial/promo.
+  beginner scene with a story-first tutorial/promo, native reactions, timed dialogue
+  and a single-setting jump comparison.
 
 - **Recording imports:** copied BK2 recordings are bounded during decompression
   and parsing, including metadata, input rows and verification sidecars. Oversized,
@@ -68,6 +69,99 @@ Unreleased. The earlier development themes remain in
   including recording uploads. Master challenge solving is serial, cancellable and
   limited to 24 bits and 30 seconds, with one coalesced pending proof write under
   transport backpressure.
+  Separate master/relay and verifier Docker images support individual containers
+  or a single-host Compose deployment, with TLS, file-backed secrets, persistent
+  identities, master readiness and verifier startup retries and bounded shutdown.
+  The same verifier image can run on another machine; its engine build must match
+  the clients it verifies. See the [deployment guide](racing/deploy/README.md).
+  Time Attack opens directly from a fresh boot, retains its lobby and connections
+  while launching a level, and resumes its owning scene after a run or load failure.
+  Every visible multiplayer ghost shows its player name above the sprite,
+  including ghosts beyond the four nearest racers. Nameplates draw after the world
+  so deferred level rendering cannot overwrite them, on a small backing plate;
+  bunched names stack instead of overlapping and fade with their ghost. The in-run HUD is a narrower, translucent right-hand column that
+  shrinks to its text: one rival ahead and one behind instead of three, and a slim
+  progress strip with a finish flag beside the lives counter. `CompactFont` gains
+  `@`, `$` and `#`, which are common in player names.
+
+- **Time Attack player names and looks:** names can be written in any left-to-right
+  script (accented Latin, Vietnamese, Greek, Cyrillic, Japanese, Chinese, Korean and
+  more) and are drawn with bundled Fusion Pixel 10px and GNU Unifont glyphs in the
+  lobby, browser, chat, standings, HUD and above ghosts. Text fields accept typed
+  characters from any keyboard layout or input method. A new player chooses a name
+  before their identity is created, and can rename later in Settings or from the
+  lobby without a new identity. A look editor offers ten presets or a custom palette:
+  pick a base colour (the name's colour) and edit the character's Mega Drive colours.
+  Others see the ghost in those colours, and the player's own character uses them
+  too; rings, the HUD and other sprites keep their stock colours, and Super palette
+  cycling still shows. Only the colours that differ from the ROM palette are sent
+  when joining. Hosts reject names with hidden or direction-changing characters.
+  Protocol version 4; right-to-left reordering and script shaping are not yet done.
+
+- **Time Attack lobby level:** a room's lobby is now a short, fenced level of its own
+  game that every player spawns into behind the lobby menu: the Hidden Palace arena
+  where Knuckles fights Sonic (S3K, left of the fight trigger so the fight never
+  starts), the start of Green Hill 1 (S1) or Emerald Hill 1 (S2), so nobody needs a ROM
+  the room does not race. Players ready up from the menu; once ready, Start or Enter
+  hides the menu and hands the controller to the character, and pressing it again
+  brings the menu back. The menu is a set of cards in the race HUD's style (the room
+  and next track, the players with ready boxes and characters, the chat, vote or
+  podium, and the menu with who the room is waiting for), with the level moving
+  around them; the stock HUD and ghost nameplates are hidden under it. The vote shows
+  all three tracks. Other players walk the lobby as named ghosts in their looks
+  (presence is streamed between rounds only, and relay rooms send each player its
+  nearest eight). The room owner chooses whether the round start waits for everyone
+  to be ready: always, never, or (the default) only with five or fewer players
+  present; rounds still start only when the owner starts them. A round start hands
+  the lobby level straight to the race through one black load, and the lobby level
+  returns after the round. A lobby death reloads at once at the lobby spawn, with no
+  lives or game over. Ghosts and their nameplates now also draw in S3K's
+  sprite-masking zones (Sandopolis, Lava Reef, Sky Sanctuary and Hidden Palace), in
+  races and in the lobby. Protocol version 5. Mods get `RunArea` (a fenced spawn for a run),
+  `RunHandle.holdControls`, `RunHandle.setLevelCovered` and `SceneGameplay.launchBehind`
+  (a run that plays behind its still-active scene).
+
+- **Time Attack multiple attempts:** players can submit several runs inside one
+  round window, and the best valid run counts. While the window is open a finish's
+  results tally is followed by a fresh attempt; the retry key still restarts mid-run.
+  Retried attempts and late joiners no longer trip the host's pacing check, a retry
+  after the deadline or a second retry press during the reload no longer aborts the
+  run, and an unfinished run returns to the lobby when the host closes its round.
+  Verified rooms keep superseded claims as fallbacks, so a failed or voided later run
+  no longer erases an earlier run that passed. Deadline clock skew no longer kicks
+  players, a player pushed out of the top ten sees its new rank, finished and
+  reloading racers stop holding nearby ghost slots and show their state in the
+  roster, and verifiers keep polling after a failed cycle. Mods can opt into the
+  same act-completion retry through `RunHost.retryOnActCompletion()`.
+  Round-end votes can draw from a custom pool: the room owner starts from the game's
+  default pool, adds or removes any act that ends in a results tally (signpost acts
+  and boss/capsule acts, never special or bonus stages), names it and chooses it when
+  hosting a LAN or master-listed room. Pools hold 3-32 acts of the room's own game.
+  The master and the host reject a malformed, foreign or ineligible act with the reason.
+  S1 and S2 boss acts now finish a timed run at the capsule switch, where the ROM clock stops.
+  The HUD's TIME can show hundredths of a second (`0:00.00`), as Sonic CD does, in
+  every game's own HUD digits: `display.hudTimeHundredths` turns it on for normal play,
+  and runs can ask for it and show their own clock there (`RunHandle.setHudTime`,
+  `setHudTimeHundredths`). Time Attack uses both, so the game's TIME is the attempt's
+  time and the run panel no longer repeats it. Hosted runs can also override native HUD rows
+  with `RunHandle.setHudProfile` and align compact overlays using
+  `LevelOverlayCanvas.hudOriginX()`, preserving each game's artwork and HUD anchor setting;
+  clearing the override or ending the run restores the zone's layout.
+  Time Attack uses it: TIME and RINGS on the top rows with no score or lives, its best
+  time and split under them, and the room panel in the top-right corner. Its progress bar
+  spans the screen with every racer in their colour at their true place, racers at the
+  same place stacked so a column counts them, and flashes and shakes a racer's segment
+  while they are hurt (`GhostFrame.hurt`, `PlayerPose.hurt`, carried in the ghost
+  frame's spare flag bit).
+  Time Attack has no lives counter and unlimited tries: after a death (skippable
+  with jump after half a second) the act reloads at once from its start with no
+  title card, then a 3-2-1 countdown over the visible level holds control before a
+  fresh attempt. In S3K that countdown and a room's round-start countdown sound like
+  Death Egg Zone's tunnel launcher: a ready beep on each of 3, 2 and 1, and its launch
+  sound on GO. Angel Island 1 starts on the beach without the plane intro.
+  `GameplayRunPolicy.withFastRestarts()` (`DeathRestart.FAST_FROM_START`, hidden
+  lives counter), `withoutZoneIntros()`, `RunLevelStart.deathRestart()`,
+  `RunInput.levelFadingIn()` and `RunHost.holdsPlayerInput()` give mods the same.
 
 - **Multiplayer services:** The master recording/verifier API bounds outstanding
   requests and copied bodies across connections, closes overlapping HTTP pipelines,
@@ -83,7 +177,27 @@ Unreleased. The earlier development themes remain in
   Creation-proof reconnect stamps and one-use room-attach grants have explicit
   expiry and cardinality bounds.
   Capacity reports count completed work and rejections separately from latency and
-  colocated process costs.
+  colocated process costs. A multi-process scale harness now isolates one to four
+  full 256-player relay rooms from their load generators and records room/broker
+  latency, traffic, CPU, memory and lifecycle evidence. Recording quota checks,
+  verifier input reads and client proof solving avoid scale-dependent allocation
+  or directory scans; verifier heartbeats preserve long-running job authorization,
+  and live SQLite sanction/identity cleanup predicates are indexed. Protocol v3
+  replaces repeated whole-room membership snapshots with incremental joins/leaves,
+  while packet-local ghost deltas reduce steady relay traffic without cross-packet
+  state; at four full rooms these cut admission traffic 98.5% and steady traffic
+  about 24%. Valid attempts at the published countdown boundary are
+  admitted even when the scheduled host tick has not run yet. Multiplayer race
+  panels now preserve the stock HUD and act-completion card, with a compact
+  nearby-player list. The capacity recording places the live player mid-pack
+  and checks ghosts leaving and returning to its viewport. Nearby ghost
+  routing bounds selected-sender work and avoids redundant copies and standings
+  sorting. Slow-consumer removal remains safe within an aggregation tick.
+  Valid rapid-attempt backlogs split into ordered packets within both the binary
+  and fallback-envelope caps. Fallback host downlink quotas are isolated per
+  guest, and coalesced broker fanout is bounded by frame count and retained bytes,
+  so healthy multi-tunnel fanout no longer retires the shared broker link and an
+  oversized unclassified backlog has a fixed memory ceiling.
 
 - **Putt Putt Paradise multiplayer:** Scene admission bounds aggregate clipped
   raster work, lines clip before traversal, and unchanged presentations reuse
@@ -97,6 +211,13 @@ Unreleased. The earlier development themes remain in
 - **Widescreen HUD position:** score, time, rings and lives can keep their
   centered native-frame position or align to the screen's left edge. Native
   4:3 positioning is unchanged.
+
+- **Emerald Remix:** a new example mod for Sonic 2 with two level changes. Emerald Hill
+  Act 1 is rebuilt at load time from column strips of the player's own ROM, using a small
+  text recipe: an Act 2 stretch, a triple corkscrew made from Act 1's pieces, and an
+  authored monitor. Clover Valley, an original act with generated tiles and a parallax
+  background, plays between Emerald Hill and Chemical Plant. Both levels open in the
+  level editor.
 
 - **Super Sonic Bros.:** a new example mod, a platform fighter for one to four
   players (people or CPUs) on Sonic 3 & Knuckles. Sonic, Tails, Knuckles, Robotnik,
@@ -153,16 +274,37 @@ Unreleased. The earlier development themes remain in
   Atomic saves retain placements and missing dependency records; close and quit
   protect unsaved work. Start/cursor
   playtests use fresh native runtime snapshots and return to the authored
-  document with selection and undo history. Host-validated exports support
-  S1/S2 v1 and S3K v2, including a native results goal for S3K. Title Tools and
+  level with selection and undo history, including native in-place editing without
+  automatically publishing gameplay sidecars. Host-validated exports support
+  S1/S2 v1 and S3K v2, including a host-owned native results goal in every game. Title Tools and
   the editor menu expose creation, import, properties, resizing and
   Save As; pattern browsing, descriptor controls, local collision edits, erase
-  and spawn inspection complete layout authoring. A controller-first HUD drawn at
+  and spawn inspection complete layout authoring. 52 named hazard, checkpoint, badnik, spring, monitor and
+  platform schemas share lossless subtype schemas between desktop inspectors
+  and a controller-navigable HUD property list; other IDs retain raw-byte editing.
+  World-cell regions copy terrain and native spawn groups, with undoable cut/paste,
+  translucent destination previews, delete and rectangle/flood fill. Independent
+  mouse, keyboard and controller canvas pan and integer 1×–8× magnification keep
+  hit tests aligned. Creator-owned palette cells use exact Genesis RGB values and
+  preserve colors through undo, project saves and existing exports. Provider-backed
+  background scrolling, fixed water height and required teams persist into native
+  playtests and packages. Typed camera/music regions, paired warps and blocking
+  public-API Stageplay triggers support runtime rewind. Ordered saved projects
+  export data-only playable campaigns; project-contained PNG/sheet imports install
+  native art and optional palettes in one undo step. A controller-first HUD drawn at
   window resolution frames the level with a brush hotbar, a full-screen library
-  of ROM-art thumbnails, a tools wheel, block and chunk workbenches and button
+  of ROM-art thumbnails, native sprite placements and translucent brush previews.
+  Picture-based object browsing hides internal IDs by default, while compact gizmo
+  labels and a dock-fitted desktop canvas keep the level readable. Native editing
+  retains ROM collision semantics, with explicit compatible-layout cloning and
+  save/cancel/discard protection before replacing unsaved work. A tools wheel,
+  block and chunk workbenches and button
   prompts for the pad in use. It is the sole built-in editor UI, with world-space
   editing guides underneath; a separate OpenGGF-Editor provider can replace it
-  through the window-chrome extension.
+  through the window-chrome extension. Stock Emerald Hill can be adopted, playtested
+  and exported. A full clone keeps unplaced library chunks whose art lies outside the
+  decoded pattern table, drawing them transparent; placed ones still fail. Sonic 2
+  placements may carry the Y-word bit 12 that the ROM's object loader never reads.
 
 - **S3K save slots:** A file saved by the native SaveGame (act results, Knuckles'
   Lava Reef exit and both Hidden Palace exits) now resumes at the level that exit
@@ -246,7 +388,20 @@ Unreleased. The earlier development themes remain in
   verified instruction terms from work that is still unpriced. Giant-ring capture retains
   the original blank-frame ownership and art-reload state; ordinary animation
   is released again on return. Robotnik's ship stays with the beaten boss through
-  its defeat pause before flying off, as in the original.
+  its defeat pause before flying off, as in the original. Boss water/effect
+  children use less repeated population and ordering work while retaining native
+  slots and rewind. CNZ, LRZ, DEZ, SSZ and SOZ consumers replace repeated scans
+  with native-owned-slot queries. FBZ squeeze discovery skips ineligible actors
+  and reuses winning projections; unchanged SOZ vine surfaces and displays reuse
+  their cached work. Direct signed surface sampling avoids bulk copies while
+  bulk reads remain defensive; FBZ/SOZ solid getters reuse bounded immutable
+  parameters. Optional sprite
+  transforms share picture calculations and batch compatible geometry in painter
+  order. Instanced masks share batches, frozen art restores compare physical atlas
+  bytes, and final offscreen geometry skips submission after native admission.
+  Results/snowboard pattern updates batch atlas writes and results refresh only
+  changed counter ranges. Stable touch configurations reuse immutable profiles
+  while dynamic provider flags remain live.
 
 - **Spin dash camera:** While a spin dash charges, and on its release frame, the
   camera eases back toward its normal height as it does when standing, as Sonic 2
@@ -436,6 +591,25 @@ Unreleased. The earlier development themes remain in
   so a subsequent title and saved-slot launch can read a fresh ROM in the same process.
   Silent headless boots also retire inherited audio backends before playback, keeping
   reused capture processes off desktop audio devices.
+
+- **Runtime ownership:** Live rewind retains its gameplay owner and outgoing
+  input, audio and fade cleanup through suspension and replacement. Destination
+  history starts after deferred title-card assembly, and replay cannot mutate a
+  replacement owner's history. Floors and checkpoints include completed frame
+  publication; inactive outgoing worlds cannot seed new history. Audio's installed
+  source stays in one immutable, typed tuple. Sonic 1 and Sonic 2 selected-slot images use the shared data-select
+  converter and payload validators; Sonic 3 & Knuckles keeps explicit host ROM
+  donation while consuming the same patterns, palette and mapping contract.
+  Architecture ratchets measure the dispatcher bodies behind profiling wrappers,
+  reject stale rewind and dependency allowances, and identify raw lifecycle calls
+  by caller rather than a shared total. Shared menu animation and execution-time
+  graphics injection close the remaining menu/framework seams. SAT replay uses a
+  graphics-owned geometry value and one tile-expansion implementation while
+  preserving the existing candidate Mod API submission signature. Stock title
+  previews use detached game-owned providers, preserving animated pixels and
+  catalogue ROM views without consulting a suspended game's live services. Remaining
+  migrations and exact allowance accounting live in the
+  [exception guide](docs/architecture/archunit-exceptions.md).
 
 - **Native-compatible PCM output (diagnostics):** An opt-in audio session setting
   feeds the accurate FM chip's own pin sums through a Java port of blip_buf. It

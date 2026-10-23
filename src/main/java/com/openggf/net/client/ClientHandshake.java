@@ -13,6 +13,7 @@ import java.util.Base64;
 public final class ClientHandshake {
     private final PlayerIdentity identity;
     private final String displayName;
+    private final String appearance;
     private final String determinismFingerprint;
     private final String expectedServerId;
     private final AuthenticationTranscript.Role role;
@@ -34,8 +35,16 @@ public final class ClientHandshake {
     public ClientHandshake(PlayerIdentity identity, String displayName,
                            String determinismFingerprint, String expectedServerId,
                            AuthenticationTranscript.Role role, Supplier<String> transportBinding) {
+        this(identity, displayName, "", determinismFingerprint, expectedServerId, role, transportBinding);
+    }
+
+    /** @param appearance canonical {@link com.openggf.net.identity.PlayerAppearance} wire form */
+    public ClientHandshake(PlayerIdentity identity, String displayName, String appearance,
+                           String determinismFingerprint, String expectedServerId,
+                           AuthenticationTranscript.Role role, Supplier<String> transportBinding) {
         this.identity = identity;
         this.displayName = displayName;
+        this.appearance = java.util.Objects.requireNonNull(appearance, "appearance");
         this.determinismFingerprint = determinismFingerprint;
         this.expectedServerId = expectedServerId;
         this.role = role;
@@ -47,7 +56,8 @@ public final class ClientHandshake {
                 Protocol.VERSION,
                 Base64.getEncoder().encodeToString(identity.publicKeyEncoded()),
                 displayName,
-                determinismFingerprint);
+                determinismFingerprint,
+                appearance);
     }
 
     public ControlMessage.AuthProof onWelcome(ControlMessage.Welcome welcome)

@@ -336,6 +336,36 @@ class TestEditorProjectWorkspace {
         return host;
     }
 
+    @Test
+    void nativeEditsSurviveCancelledOrFailedSaveBeforeQuitAndProjectReplacement() throws Exception {
+        fixture = Fixture.open(GameId.S2);
+        var host = new FaultingHost(fixture);
+        host.nativeDirty = true;
+        var exits = new AtomicInteger();
+        host.workspace.requestQuit(exits::incrementAndGet);
+        assertEquals("Unsaved native edits", host.workspace.menu().title());
+        choose(host.workspace, fixture.input, 0);
+        assertEquals(0, exits.get());
+        assertTrue(host.nativeDirty);
+        host.nativeSaveFails = true;
+        host.workspace.requestQuit(exits::incrementAndGet);
+        choose(host.workspace, fixture.input, 1);
+        assertEquals("Native save failed", host.workspace.menu().error());
+        assertEquals(0, exits.get());
+        assertTrue(host.nativeDirty);
+        host.nativeSaveFails = false;
+        host.workspace.requestQuit(exits::incrementAndGet);
+        choose(host.workspace, fixture.input, 1);
+        assertEquals(1, exits.get());
+        assertFalse(host.nativeDirty);
+        host.nativeDirty = true;
+        host.workspace.openMenu();
+        choose(host.workspace, fixture.input, 0);
+        assertEquals("Unsaved native edits", host.workspace.menu().title());
+        choose(host.workspace, fixture.input, 2);
+        assertEquals("Choose project game", host.workspace.menu().title());
+    }
+
     /** Faults are at the host I/O boundary; all document libraries, codecs and validation are real. */
     private static final class FaultingHost implements EditorProjectWorkspace.Host {
         final Fixture fixture;
@@ -345,6 +375,7 @@ class TestEditorProjectWorkspace {
         boolean failSelection;
         boolean failPresentation;
         boolean failClose;
+        boolean nativeDirty, nativeSaveFails;
         int finishCount;
         int preparedPlaytests;
 
@@ -387,5 +418,10 @@ class TestEditorProjectWorkspace {
         @Override public void menuClosed(EditorProjectDocument document) { }
         @Override public void execute(EditorCommand command) { controller.executeCommand(command); }
         @Override public void status(String message) { controller.setStatus(message); }
+        @Override public boolean nativeLayoutModified() { return nativeDirty; }
+        @Override public void saveNativeLayout() throws IOException {
+            if (nativeSaveFails) throw new IOException("Native save failed");
+            nativeDirty = false;
+        }
     }
 }

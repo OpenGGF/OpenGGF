@@ -8,6 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.NativeObjectQueries;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
@@ -71,8 +72,23 @@ public final class CnzHoverFanInstance extends AbstractObjectInstance implements
         if (svc == null || spawn.layoutIndex() < 0 || !activeVariant) {
             return super.getExecutionSlotIndex();
         }
-        return resolveActiveVariantExecutionSlot(
-                svc.objectManager().activeObjectsOfType(CnzHoverFanInstance.class));
+        int ownSlot = getSlotIndex();
+        if (ownSlot < 0) return ownSlot;
+        // Only adjacent owned SST slots can affect this alias. Visit the lower
+        // neighbour first, matching the former slot-sorted population query.
+        // Pending deletions remain observable until their SST is removed.
+        int earlier = adjacentSlotExecutionSlot(svc, ownSlot, ownSlot - 1);
+        return earlier != ownSlot ? earlier : adjacentSlotExecutionSlot(svc, ownSlot, ownSlot + 1);
+    }
+
+    private int adjacentSlotExecutionSlot(ObjectServices svc, int ownSlot, int adjacentSlot) {
+        for (int occurrence = 0; ; occurrence++) {
+            var other = NativeObjectQueries.atSlot(svc.objectManager(), adjacentSlot,
+                    CnzHoverFanInstance.class, occurrence);
+            if (other == null) return ownSlot;
+            int candidate = adjacentExecutionSlot(ownSlot, other);
+            if (candidate != ownSlot) return candidate;
+        }
     }
 
     int resolveActiveVariantExecutionSlot(List<CnzHoverFanInstance> activeFans) {
@@ -85,19 +101,20 @@ public final class CnzHoverFanInstance extends AbstractObjectInstance implements
             return ownSlot;
         }
         for (CnzHoverFanInstance other : activeFans) {
-            if (other == null || other == this || !other.activeVariant
-                    || other.spawn.layoutIndex() < 0
-                    || Math.abs(other.getSlotIndex() - ownSlot) != 1
-                    || !influenceWindowsOverlap(other)) {
-                continue;
-            }
-            boolean slotOrder = ownSlot < other.getSlotIndex();
-            boolean layoutOrder = spawn.layoutIndex() < other.spawn.layoutIndex();
-            if (slotOrder != layoutOrder) {
-                return other.getSlotIndex();
-            }
+            int candidate = adjacentExecutionSlot(ownSlot, other);
+            if (candidate != ownSlot) return candidate;
         }
         return ownSlot;
+    }
+
+    private int adjacentExecutionSlot(int ownSlot, CnzHoverFanInstance other) {
+        if (other == null || other == this || !other.activeVariant
+                || other.spawn.layoutIndex() < 0
+                || Math.abs(other.getSlotIndex() - ownSlot) != 1
+                || !influenceWindowsOverlap(other)) return ownSlot;
+        boolean slotOrder = ownSlot < other.getSlotIndex();
+        boolean layoutOrder = spawn.layoutIndex() < other.spawn.layoutIndex();
+        return slotOrder != layoutOrder ? other.getSlotIndex() : ownSlot;
     }
 
     private boolean influenceWindowsOverlap(CnzHoverFanInstance other) {

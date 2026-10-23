@@ -1,8 +1,9 @@
 # Configuration
 
-The engine reads settings from `config.yaml` in the working directory (next to the JAR).
-If the file does not exist, the bundled default template is used. A legacy `config.json`
-is migrated automatically on first run. This page answers common setup
+The engine reads `config.yaml` from the working directory. This sparse file holds
+only your overrides; missing keys use built-in defaults. Each run writes the bundled
+reference to `config.yaml.example` without replacing your settings. A legacy
+`config.json` is migrated automatically on first run. This page answers common setup
 questions. For the full reference of every key, see the
 [Configuration Reference](../../../CONFIGURATION.md).
 
@@ -10,7 +11,9 @@ questions. For the full reference of every key, see the
 
 ## How do I change the window size?
 
-Set `display.windowAutosize` to `false`, then set `debug.window.width` and
+You can resize or maximise the window normally. **Settings → Display → Scaling**
+chooses integer scaling or a proportional fit. For a fixed startup size, set
+`display.windowAutosize` to `false`, then set `debug.window.width` and
 `debug.window.height` to the window dimensions you want in OS pixels.
 For pixel-perfect 2x scaling of the native 320x224 resolution:
 
@@ -34,8 +37,8 @@ debug:
     height: 672
 ```
 
-Do not change the derived logical pixel dimensions unless you understand the implications.
-They control the Mega Drive logical resolution, not the OS window size.
+Logical pixel dimensions are derived from `display.aspect` and are not writable
+configuration keys. All current aspect presets are 224 pixels high.
 
 ## How do I change fullscreen mode?
 
@@ -79,15 +82,21 @@ This opens the game's level select menu instead of starting from the first zone.
 
 ## How do I play as Tails?
 
-Set the sidekick character:
+For Sonic 2, open **Game Setup → Character → Tails**, with **Sidekick → None**.
+For Sonic 3&K, select Tails on Data Select. Available characters depend on the
+game, donor and any installed character patches.
+
+For a direct Sonic 2 launch that bypasses the hub, set the main character:
 
 ```yaml
 characters:
-  sidekick: "tails"
+  main: "tails"
+  sidekick: ""
 ```
 
-Tails will appear as a CPU-controlled follower alongside Sonic. Set to `""` (empty) to
-disable.
+To keep Sonic as the main character and add a CPU Tails follower instead, use
+`main: "sonic"` and `sidekick: "tails"`. Hub launches use their per-game setup;
+these global character keys configure direct launches.
 
 Sonic 2 does not currently expose the ROM's native two-player/competition mode
 (`Two_player_mode`), so Player 2 bindings do not create a human second player.
@@ -134,16 +143,16 @@ qualified by modifiers. The following formats all work:
 - `"CTRL+SHIFT+O"`
 
 The modifier names are `CTRL`/`CONTROL`, `SHIFT`, `ALT`/`OPTION`, and
-`META`/`SUPER`/`CMD`/`COMMAND`/`WIN`, all case-insensitive. Matching is exact: a
-binding fires only with exactly the modifiers it names, so a plain `"O"` does not
-fire while Shift is held. Because `+` is the separator, bind the plus key as
+`META`/`SUPER`/`CMD`/`COMMAND`/`WIN`, all case-insensitive. For the chord-aware
+shortcuts listed below, matching is exact: a binding fires only with the modifiers
+it names. Because `+` is the separator, bind the plus key as
 `"EQUAL"` or `"KP_ADD"`.
 
-Today `capture.toggleKey` (live viewport recording, default `"SHIFT+O"`) is the
-one shortcut that acts on a chord. Elsewhere the modifiers are parsed and then
-dropped, so the binding ends up on the bare key the chord names: writing
-`"CTRL+P"` binds plain `P`, and for a few shortcuts that only ever fire with no
-modifier held, the chord as written can never fire at all. The full per-binding
+Live viewport recording (`capture.toggleKey`, default `"SHIFT+O"`) and the four
+form/emerald debug shortcuts (`superSonic`, `giveEmeralds`, `hyperForm`,
+`giveSuperEmeralds` under `debug.keys`) honour chords. Other configured bindings
+currently read the bare key: their modifiers are dropped, and some also require
+that no modifier is held. The full per-binding
 table is in [CONFIGURATION.md](../../../CONFIGURATION.md).
 
 Invalid names log a warning and fall back to the default binding for that action.
@@ -200,7 +209,8 @@ its authored start. See the [level editor guide](../creating/level-editor.md).
 
 ## How do I enable live rewind?
 
-Live rewind is an experimental gameplay debugging feature. Enable it explicitly:
+Enable **Rewind** in Settings → Gameplay, or override it for one game in
+**Game Setup**. The equivalent global setting is:
 
 ```yaml
 rewind:
@@ -267,15 +277,14 @@ Accepted values are `"RAW_RGB"`, `"MD_ANALOG"`, and `"NTSC_SOFT"`. During play, 
 confirmation appears in the bottom-left corner. The key can be rebound with
 `display.colorProfileToggleKey`.
 
-## How do I use a wider display aspect? (experimental)
+## How do I use a wider display aspect?
 
-> **This feature is experimental and incomplete.** Widescreen rendering — UI pillarboxing,
-> extended parallax columns, and camera deadzone scaling — is not finished. Only
-> `NATIVE_4_3` (the default 320×224 resolution) is fully supported. Setting a widescreen
-> preset will change the logical pixel width but may produce missing art at the sides,
-> stretched HUD elements, or other visual artifacts.
+Choose **Settings → Display → Aspect ratio**, or override it for one game in
+**Game Setup**. Native 4:3, 16:10 and 16:9 are supported presentation targets;
+21:9 and 32:9 remain experimental. Support does not imply every route, boss,
+character and donor combination has been verified at that width.
 
-To try a widescreen preset anyway:
+For a global 16:9 setting:
 
 ```yaml
 display:
@@ -286,11 +295,11 @@ Available presets:
 
 | Value | Pixel width | Notes |
 |-------|-------------|-------|
-| `"NATIVE_4_3"` | 320 | Default; fully supported |
-| `"WIDE_16_10"` | 352 | Experimental |
-| `"WIDE_16_9"` | 400 | Experimental |
-| `"ULTRA_21_9"` | 528 | Experimental |
-| `"SUPER_32_9"` | 800 | Experimental |
+| `"NATIVE_4_3"` | 320 | Default; native presentation |
+| `"WIDE_16_10"` | 352 | Supported |
+| `"WIDE_16_9"` | 400 | Primary widescreen target |
+| `"ULTRA_21_9"` | 528 | Experimental; best-effort coverage |
+| `"SUPER_32_9"` | 800 | Experimental; exploratory coverage |
 
 By default (`display.windowAutosize: true`), the OS window is automatically sized to
 twice the preset pixel width (e.g. `WIDE_16_9` → 800×448). To keep a custom window size,
@@ -304,11 +313,15 @@ audio:
   region: "PAL"
 ```
 
-PAL runs at 50 Hz instead of 60 Hz and affects audio timing. The default is `"NTSC"`.
+PAL fixes the engine frame rate at 50 Hz and changes audio timing; NTSC uses
+`display.fps` (60 by default). The logical display height stays 224 pixels.
+This setting does not select a different ROM revision or establish complete PAL parity.
 
 ## How do I use different ROM filenames?
 
-If your ROM files have different names from the defaults:
+Ordinary filenames need no configuration: the engine scans `roms.directory`
+(`"."` by default) and identifies images by size and header. Use explicit paths
+when you want to select particular images:
 
 ```yaml
 roms:
@@ -317,7 +330,11 @@ roms:
   sonic3k: "my-s3k.bin"
 ```
 
-Paths are relative to the working directory.
+Paths are relative to the working directory, or may be absolute. An explicit
+non-default path that does not exist is an error; blank/default hints allow
+discovery. The hub also offers **Locate ROM** and **Scan a folder**. See the
+[image identity table](../../../CONFIGURATION.md#image-identity) for verified dumps
+and separate Sonic 3 + Sonic & Knuckles support.
 
 ## How do I skip S3K intro cutscenes?
 

@@ -149,6 +149,40 @@ class TestMasterHttpRoutes {
     }
 
     @Test
+    void heartbeatAuthenticatesWorkerWithoutTakingAJobOrRenewingItsLease() throws Exception {
+        PlayerIdentity identity = PlayerIdentity.loadOrCreate(dir.resolve("worker-heartbeat"));
+        WorkerAuth worker = register(identity, Set.of("fp"));
+        String jobId = jobs.submit(job("fp", "aa"), 1000);
+        jobs.onRecordingUploaded("aa", "player");
+
+        FullHttpResponse unauthorized = send(HttpMethod.POST, "/verifier/heartbeat",
+                new byte[0], "Bearer wrong-token", worker.id());
+        assertEquals(HttpResponseStatus.UNAUTHORIZED, unauthorized.status());
+        unauthorized.release();
+        now += 900;
+        FullHttpResponse heartbeat = send(HttpMethod.POST, "/verifier/heartbeat",
+                new byte[0], "Bearer " + worker.token(), worker.id());
+        assertEquals(HttpResponseStatus.NO_CONTENT, heartbeat.status());
+        heartbeat.release();
+        assertEquals(VerificationJobQueue.State.QUEUED, jobs.stateOf(jobId));
+        assertTrue(jobs.lease(worker.id(), Set.of("fp")).isPresent());
+        now += 900;
+        heartbeat = send(HttpMethod.POST, "/verifier/heartbeat", new byte[0],
+                "Bearer " + worker.token(), worker.id());
+        assertEquals(HttpResponseStatus.NO_CONTENT, heartbeat.status());
+        heartbeat.release();
+        now += 101;
+        assertEquals(1, jobs.requeueExpiredLeases(), "heartbeat must not extend job lease");
+        assertEquals(VerificationJobQueue.State.QUEUED, jobs.stateOf(jobId));
+
+        now += 1000;
+        FullHttpResponse stale = send(HttpMethod.POST, "/verifier/heartbeat", new byte[0],
+                "Bearer " + worker.token(), worker.id());
+        assertEquals(HttpResponseStatus.UNAUTHORIZED, stale.status());
+        stale.release();
+    }
+
+    @Test
     void workerCannotPostMasterOnlyOrUnknownResult() throws Exception {
         PlayerIdentity identity = PlayerIdentity.loadOrCreate(dir.resolve("worker"));
         WorkerAuth worker = register(identity, Set.of("0.6:cafe"));
