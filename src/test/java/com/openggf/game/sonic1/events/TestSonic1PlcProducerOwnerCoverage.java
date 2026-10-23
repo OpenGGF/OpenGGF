@@ -42,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class TestSonic1PlcProducerOwnerCoverage {
     @BeforeEach
     void setUp() throws Exception {
-        GameServices.module().createGame(TestEnvironment.currentRom());
+        GameServices.module().createGame(GameServices.worldSession().getDataSource());
         TestEnvironment.activeGameplayMode();
         // SBZ2's real threshold first spawns the false floor, then publishes
         // PLC 30.  Supply the normal manager dependency so the test reaches

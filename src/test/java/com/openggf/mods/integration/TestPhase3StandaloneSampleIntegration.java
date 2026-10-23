@@ -105,7 +105,9 @@ class TestPhase3StandaloneSampleIntegration {
                 @Override public String identity() { return "standalone:" + OWNER + ":acceptance"; }
             };
             var game = module.createGame(source);
-            assertNull(game.getRom());
+            assertTrue(source.rom().isEmpty());
+            assertFalse(game.canSave());
+            assertFalse(game.canRelocateLevels());
             assertInstanceOf(ModLevel.class, game.loadLevel(0x400));
             ModLevel level = (ModLevel) game.loadLevel(0x400);
             assertEquals(0x400, module.getZoneRegistry().getLevelDataForZone(0).getFirst().levelIndex(),

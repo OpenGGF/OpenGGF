@@ -27,7 +27,7 @@ class TestSonic1PlcRetryDleContinuity {
 
     @BeforeEach
     void setUp() throws Exception {
-        GameServices.module().createGame(TestEnvironment.currentRom());
+        GameServices.module().createGame(GameServices.worldSession().getDataSource());
         TestEnvironment.activeGameplayMode();
         GameServices.camera().resetState();
         events = new Sonic1SBZEvents();

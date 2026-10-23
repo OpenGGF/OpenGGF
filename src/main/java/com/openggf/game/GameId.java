@@ -2,6 +2,8 @@ package com.openggf.game;
 
 import com.openggf.data.RomGame;
 
+import java.util.Optional;
+
 /**
  * Identifies a specific Sonic game for cross-game resource isolation
  * (e.g., palette contexts, art providers).
@@ -11,6 +13,7 @@ public enum GameId {
     S1("s1"),
     S2("s2"),
     S3K("s3k"),
+    SCD("scd"),
     STANDALONE("standalone");
 
     private final String code;
@@ -24,12 +27,17 @@ public enum GameId {
     }
 
     public RomGame romGame() {
+        return cartridgeGame().orElseThrow(() -> new IllegalStateException(
+                "Game " + code + " has no cartridge ROM mapping"));
+    }
+
+    /** Cartridge-media capability, independent of stock-game membership. */
+    public Optional<RomGame> cartridgeGame() {
         return switch (this) {
-            case S1 -> RomGame.S1;
-            case S2 -> RomGame.S2;
-            case S3K -> RomGame.S3K;
-            case STANDALONE -> throw new IllegalStateException(
-                    "Standalone games do not have a stock ROM mapping");
+            case S1 -> Optional.of(RomGame.S1);
+            case S2 -> Optional.of(RomGame.S2);
+            case S3K -> Optional.of(RomGame.S3K);
+            case SCD, STANDALONE -> Optional.empty();
         };
     }
 

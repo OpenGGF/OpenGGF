@@ -35,6 +35,7 @@ import com.openggf.game.EndingProvider;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.GameModule;
+import com.openggf.game.GameDataSource;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.LevelEventProvider;
@@ -141,6 +142,12 @@ public class Sonic2GameModule implements GameModule {
     }
 
     @Override
+    public Game createGame(GameDataSource source) {
+        return createGame(source.rom().orElseThrow(() ->
+                new IllegalStateException("Sonic 2 requires a ROM data source")));
+    }
+
+    /** Cartridge convenience factory; session callers supply a GameDataSource. */
     public Game createGame(Rom rom) {
         activeRom = java.util.Objects.requireNonNull(rom, "rom");
         additiveRingSheet = null;
@@ -206,6 +213,12 @@ public class Sonic2GameModule implements GameModule {
     }
 
     @Override
+    public TouchResponseTable createTouchResponseTable(GameDataSource source) throws java.io.IOException {
+        return createTouchResponseTable(RomByteReader.fromRom(source.rom().orElseThrow(() ->
+                new IllegalStateException("Sonic 2 requires a ROM data source"))));
+    }
+
+    /** Cartridge convenience factory for an already-open byte reader. */
     public TouchResponseTable createTouchResponseTable(RomByteReader romReader) {
         return new TouchResponseTable(romReader,
                 Sonic2ObjectConstants.TOUCH_SIZES_ADDR,

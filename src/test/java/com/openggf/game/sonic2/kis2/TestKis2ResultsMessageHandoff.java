@@ -21,7 +21,7 @@ class TestKis2ResultsMessageHandoff {
         var dump = Kis2TestRoms.lockOnDumpOrNull();
         assumeTrue(dump != null, "KiS2 lock-on dump required");
         var rom = TestEnvironment.currentRom();
-        GameServices.module().createGame(rom);
+        GameServices.module().createGame(GameServices.worldSession().getDataSource());
         var space = LockOnAddressSpace.tierTwo(dump.window(0,0x200000), dump.window(0x200000,0x100000),dump);
         var loader = new Kis2SpecialStageDataLoader(rom, space);
         var manager = mock(Sonic2SpecialStageManager.class);

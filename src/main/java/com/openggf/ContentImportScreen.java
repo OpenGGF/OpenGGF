@@ -374,6 +374,7 @@ public final class ContentImportScreen implements AutoCloseable {
             case S1 -> "Sonic 1";
             case S2 -> "Sonic 2";
             case S3K -> "Sonic 3&K";
+            case SCD -> "Sonic CD";
             case STANDALONE -> "Standalone";
         };
     }

@@ -111,7 +111,7 @@ class TestNativeObjectFieldCallbacks {
             var module=mock(GameModule.class);var data=mock(GameDataSource.class);
             when(data.rom()).thenReturn(Optional.of(com.openggf.data.Rom.fromReader(com.openggf.data.RomByteReader.fromBytes(new byte[128]),"field-callback fixture")));
             var sizes=mock(TouchResponseTable.class);when(sizes.getWidthRadius(anyInt())).thenReturn(16);when(sizes.getHeightRadius(anyInt())).thenReturn(16);
-            when(module.createTouchResponseTable(any(com.openggf.data.RomByteReader.class))).thenReturn(sizes);
+            when(module.createTouchResponseTable(data)).thenReturn(sizes);
             var source=mock(TransientMutatorPolicySource.class);when(source.entries()).thenAnswer(call->entries.get());when(source.ownerAvailable(anyString())).thenAnswer(call->boundary.isOwnerAvailable(call.getArgument(0)));
             var sourceState=new WorldSessionPolicyState(){
                 public <T>T getService(Class<T> type){return type.isInstance(source)?type.cast(source):null;}

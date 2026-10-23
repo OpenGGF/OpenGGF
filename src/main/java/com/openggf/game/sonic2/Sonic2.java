@@ -48,7 +48,7 @@ public class Sonic2 extends Game implements PlayerSpriteArtProvider, SpindashDus
         this.rom = rom;
     }
 
-    @Override
+    /** Returns this cartridge game's backing ROM. */
     public Rom getRom() {
         return rom;
     }

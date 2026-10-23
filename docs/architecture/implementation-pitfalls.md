@@ -56,6 +56,15 @@ unreferenced words can address unavailable resident data and must not create
 zero-filled blocks. See the
 [R11A loader checkpoint](plans/2026-10-23-sonic-cd-implementation.md#verified-r11a-loader-graphics-service-and-pcm-comparisons).
 
+**A live level load must preserve its initialized tilemap renderer.**
+`GraphicsManager.resetState()` destroys the non-lazy `TilemapGpuRenderer` as well
+as cached level data. For a decoded-level replacement within an active GL owner,
+use `resetPatternAndPaletteState()` and rebind the normal camera/fade owners;
+reserve full reset for teardown or logic-only headless setup. Publish decoded
+patterns and palettes before rebuilding derived tilemaps. The CD static-stage
+entry exercises this through the ordinary load lifecycle and capture renderer;
+see the [partial R11A matrix](validation/levels/scd-palmtree-panic-act1-present.md).
+
 A headless boot must release its audio base-ROM reference before closing the
 owned ROM. A later title boot installs its audio profile before the new ROM;
 otherwise the loader reads the previous, closed FileChannel. Close/reboot

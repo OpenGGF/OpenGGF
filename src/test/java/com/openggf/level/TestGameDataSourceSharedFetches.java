@@ -23,6 +23,9 @@ import com.openggf.game.ZoneRegistry;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
+import com.openggf.game.sonic1.Sonic1GameModule;
+import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.sprites.managers.SpriteManager;
@@ -48,11 +51,16 @@ class TestGameDataSourceSharedFetches {
     @AfterEach void clearSession() { SessionManager.clear(); }
 
     @Test
-    void sourceDefaultsRequireRomCapabilityButPreserveStockRomBytes(@TempDir Path directory) throws Exception {
-        GameModule module = mock(GameModule.class, CALLS_REAL_METHODS);
+    void cartridgeSourceAdaptersRequireRomCapabilityButPreserveStockRomBytes(@TempDir Path directory) throws Exception {
+        Sonic1GameModule sonic1 = mock(Sonic1GameModule.class, CALLS_REAL_METHODS);
+        Sonic2GameModule sonic2 = mock(Sonic2GameModule.class, CALLS_REAL_METHODS);
+        Sonic3kGameModule sonic3k = mock(Sonic3kGameModule.class, CALLS_REAL_METHODS);
+        var modules = java.util.List.<GameModule>of(sonic1, sonic2, sonic3k);
         GameDataSource missing = missingSource();
-        assertThrows(IllegalStateException.class, () -> module.createGame(missing));
-        assertThrows(IllegalStateException.class, () -> module.createTouchResponseTable(missing));
+        for (GameModule module : modules) {
+            assertThrows(IllegalStateException.class, () -> module.createGame(missing));
+            assertThrows(IllegalStateException.class, () -> module.createTouchResponseTable(missing));
+        }
 
         Path path = directory.resolve("source.gen");
         Files.write(path, new byte[] { 0x12, 0x34, 0x56 });
@@ -60,15 +68,26 @@ class TestGameDataSourceSharedFetches {
             assertTrue(rom.open(path.toString()));
             Game expectedGame = mock(Game.class);
             TouchResponseTable expectedTable = mock(TouchResponseTable.class);
-            when(module.createGame(rom)).thenReturn(expectedGame);
-            when(module.createTouchResponseTable(any(RomByteReader.class))).thenReturn(expectedTable);
-            RomDataSource source = new RomDataSource(rom, "rom:test");
+            // Keep the source adapters real while isolating cartridge decoding.
+            doReturn(expectedGame).when(sonic1).createGame(rom);
+            doReturn(expectedGame).when(sonic2).createGame(rom);
+            doReturn(expectedGame).when(sonic3k).createGame(rom);
+            doReturn(expectedTable).when(sonic1).createTouchResponseTable(any(RomByteReader.class));
+            doReturn(expectedTable).when(sonic2).createTouchResponseTable(any(RomByteReader.class));
+            doReturn(expectedTable).when(sonic3k).createTouchResponseTable(any(RomByteReader.class));
+            RomDataSource source = new RomDataSource(rom, "rom:test-uncatalogued");
 
-            assertSame(expectedGame, module.createGame(source));
-            assertSame(expectedTable, module.createTouchResponseTable(source));
+            for (GameModule module : modules) {
+                assertSame(expectedGame, module.createGame(source));
+                assertSame(expectedTable, module.createTouchResponseTable(source));
+            }
             ArgumentCaptor<RomByteReader> reader = ArgumentCaptor.forClass(RomByteReader.class);
-            verify(module).createTouchResponseTable(reader.capture());
-            assertArrayEquals(new byte[] { 0x12, 0x34, 0x56 }, reader.getValue().slice(0, 3));
+            verify(sonic1).createTouchResponseTable(reader.capture());
+            verify(sonic2).createTouchResponseTable(reader.capture());
+            verify(sonic3k).createTouchResponseTable(reader.capture());
+            for (RomByteReader value : reader.getAllValues()) {
+                assertArrayEquals(new byte[] { 0x12, 0x34, 0x56 }, value.slice(0, 3));
+            }
         }
     }
 
@@ -132,7 +151,7 @@ class TestGameDataSourceSharedFetches {
     }
 
     @Test
-    void objectInitializationUsesSourceOverloadBeforeLegacyReaderPath() throws Exception {
+    void objectInitializationUsesCanonicalSourceFactory() throws Exception {
         GameDataSource source = missingSource();
         GameModule module = mock(GameModule.class);
         when(module.getPlayableCharacterRegistry()).thenReturn(PlayableCharacterRegistry.empty());
@@ -144,7 +163,6 @@ class TestGameDataSourceSharedFetches {
 
         assertSame(sentinel, assertThrows(IOException.class, levelManager::initObjectManager));
         verify(module).createTouchResponseTable(source);
-        verify(module, never()).createTouchResponseTable(any(RomByteReader.class));
     }
 
     @Test

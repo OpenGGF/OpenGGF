@@ -155,7 +155,7 @@ class TestRomDetectionService {
         }
 
         @Override
-        public com.openggf.data.Game createGame(Rom rom) {
+        public com.openggf.data.Game createGame(GameDataSource source) {
             return null;
         }
 
@@ -176,7 +176,7 @@ class TestRomDetectionService {
 
         @Override
         public com.openggf.level.objects.TouchResponseTable createTouchResponseTable(
-                com.openggf.data.RomByteReader romReader) {
+                GameDataSource source) {
             return null;
         }
 

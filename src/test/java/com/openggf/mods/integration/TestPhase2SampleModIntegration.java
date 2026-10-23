@@ -107,7 +107,7 @@ class TestPhase2SampleModIntegration {
             var romFile = RomTestUtils.ensureSonic2RomAvailable();
             assertNotNull(romFile);
             assertTrue(rom.open(romFile.getAbsolutePath()));
-            GameModule base=new Sonic2GameModule();base.createGame(rom);
+            GameModule base=new Sonic2GameModule();base.createGame(new com.openggf.game.RomDataSource(rom, "rom:test:explicit"));
             ModuleResolutionService resolver=resolver(base,fixture);
             GameModule resolved=resolver.resolveForLaunch(base,new GameplayLaunchRequest("s2","sonic",List.of()),
                     ModuleResolutionService.LaunchPolicy.STANDARD);

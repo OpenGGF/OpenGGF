@@ -52,7 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestSonic2BossPlcProducerCoverage {
     @BeforeEach
     void setUp() throws Exception {
-        GameServices.module().createGame(TestEnvironment.currentRom());
+        GameServices.module().createGame(GameServices.worldSession().getDataSource());
         GameplayModeContext gameplay = TestEnvironment.activeGameplayMode();
         GraphicsManager.getInstance().initHeadless();
         Sonic2ObjectArtProvider provider =

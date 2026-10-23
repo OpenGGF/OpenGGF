@@ -63,6 +63,36 @@ class TestKis2GamePatchResolution {
     }
 
     @Test
+    void canonicalFactoryPreservesTheExactHostSourceBeforeDonorAssembly() {
+        GameModule base = org.mockito.Mockito.mock(GameModule.class);
+        var source = new com.openggf.game.RomDataSource(
+                org.mockito.Mockito.mock(com.openggf.data.Rom.class), "rom:kis2:host-source");
+        var failure = new IllegalStateException("host source rejected");
+        org.mockito.Mockito.when(base.createGame(source)).thenThrow(failure);
+        PatchContext context = new PatchContext(rom -> {
+            throw new AssertionError("Donor data must wait for host admission");
+        }, SonicConfigurationService.createStandalone(tempDir));
+        var module = new Kis2GameModule(base, context);
+
+        assertSame(failure, assertThrows(IllegalStateException.class, () -> module.createGame(source)));
+        org.mockito.Mockito.verify(base).createGame(source);
+    }
+
+    @Test
+    void romlessSourceIsRejectedBeforeHostOrDonorAssembly() {
+        GameModule base = org.mockito.Mockito.mock(GameModule.class);
+        var source = org.mockito.Mockito.mock(com.openggf.game.GameDataSource.class);
+        org.mockito.Mockito.when(source.rom()).thenReturn(java.util.Optional.empty());
+        PatchContext context = new PatchContext(rom -> {
+            throw new AssertionError("A ROM-less host must not open donor data");
+        }, SonicConfigurationService.createStandalone(tempDir));
+        var module = new Kis2GameModule(base, context);
+
+        assertThrows(IllegalStateException.class, () -> module.createGame(source));
+        org.mockito.Mockito.verifyNoInteractions(base);
+    }
+
+    @Test
     void withoutTheLockOnDumpTheModuleRunsTierOneAndKeepsStockWaterAndContinueSeams() {
         Sonic2GameModule base = new Sonic2GameModule();
         PatchContext context = new PatchContext(rom -> {

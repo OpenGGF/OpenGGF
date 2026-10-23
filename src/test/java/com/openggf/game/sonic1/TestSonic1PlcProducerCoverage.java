@@ -54,7 +54,7 @@ class TestSonic1PlcProducerCoverage {
 
     @BeforeEach
     void createSonic1Services() {
-        GameServices.module().createGame(TestEnvironment.currentRom());
+        GameServices.module().createGame(GameServices.worldSession().getDataSource());
     }
 
     @Test

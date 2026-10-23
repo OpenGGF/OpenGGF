@@ -41,15 +41,19 @@ public final class LazyMappingHolder {
             // permanently starve every later consumer of its mapping frames.
             return Collections.emptyList();
         }
-        attempted = true;
-
         try {
-            var rom = manager.getGame().getRom();
-            var reader = RomByteReader.fromRom(rom);
+            var rom = manager.getWorldSession().getDataSource().rom();
+            if (rom.isEmpty()) {
+                // A source without cartridge bytes cannot satisfy this mapping loader.
+                return Collections.emptyList();
+            }
+            attempted = true;
+            var reader = RomByteReader.fromRom(rom.orElseThrow());
             mappings = loader.load(reader, mappingAddr);
             LOG.fine("Loaded " + mappings.size() + " " + label + " mapping frames");
             return mappings;
         } catch (IOException | RuntimeException e) {
+            attempted = true;
             LOG.warning("Failed to load " + label + " mappings: " + e.getMessage());
             return Collections.emptyList();
         }

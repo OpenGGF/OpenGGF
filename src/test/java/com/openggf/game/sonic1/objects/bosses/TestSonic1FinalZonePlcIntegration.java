@@ -27,7 +27,7 @@ class TestSonic1FinalZonePlcIntegration {
 
     @BeforeEach
     void setUp() {
-        GameServices.module().createGame(TestEnvironment.currentRom());
+        GameServices.module().createGame(GameServices.worldSession().getDataSource());
         plc = GameServices.module().getGameService(Sonic1PlcService.class);
         rng = new GameRng(GameRng.Flavour.S1_S2);
         GameServices.camera().setX((short) 0x2450);

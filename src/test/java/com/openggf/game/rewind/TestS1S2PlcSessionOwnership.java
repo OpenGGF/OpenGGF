@@ -33,14 +33,14 @@ class TestS1S2PlcSessionOwnership {
     @Test
     void sequentialSonic1AndSonic2SessionsDoNotSharePlcProgressOrAdapterIdentity() {
         Sonic1GameModule sonic1 = new Sonic1GameModule();
-        sonic1.createGame(new Rom());
+        sonic1.createGame(new com.openggf.game.RomDataSource(new Rom(), "rom:test:plc-ownership"));
         Sonic1PlcService s1Service = sonic1.getGameService(Sonic1PlcService.class);
         s1Service.restore(nonEmptySnapshot());
         assertTrue(s1Service.isBusy());
         assertSingleAdapter(sonic1, s1Service);
 
         Sonic2GameModule sonic2 = new Sonic2GameModule();
-        sonic2.createGame(new Rom());
+        sonic2.createGame(new com.openggf.game.RomDataSource(new Rom(), "rom:test:plc-ownership"));
         Sonic2PlcService s2Service = sonic2.getGameService(Sonic2PlcService.class);
         assertFalse(s2Service.isBusy(), "the next session must start with an empty PLC FIFO");
         assertEquals(3, sonic2.rewindAdapters().size());
@@ -65,7 +65,7 @@ class TestS1S2PlcSessionOwnership {
         GameplayModeContext context = attachedBeforeGameCreation(module);
         assertFalse(context.getRewindRegistry().capture().containsKey(Sonic1PlcService.REWIND_KEY));
 
-        module.createGame(new Rom());
+        module.createGame(new com.openggf.game.RomDataSource(new Rom(), "rom:test:plc-ownership"));
         context.registerLevelAdapters(context.getLevelManager());
         Sonic1PlcService service = module.getGameService(Sonic1PlcService.class);
         assertRegistryReplaysAndResetsMissingAdapter(context, service, Sonic1PlcService.REWIND_KEY,
@@ -80,7 +80,7 @@ class TestS1S2PlcSessionOwnership {
         assertTrue(context.getRewindRegistry().capture()
                 .containsKey(Sonic2LevelMusicScheduler.REWIND_KEY));
 
-        module.createGame(new Rom());
+        module.createGame(new com.openggf.game.RomDataSource(new Rom(), "rom:test:plc-ownership"));
         context.registerLevelAdapters(context.getLevelManager());
         Sonic2PlcService service = module.getGameService(Sonic2PlcService.class);
         assertRegistryReplaysAndResetsMissingAdapter(context, service, Sonic2PlcService.REWIND_KEY,

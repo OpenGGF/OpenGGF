@@ -1,7 +1,6 @@
 package com.openggf.mods.code;
 
 import com.openggf.data.Game;
-import com.openggf.data.Rom;
 import com.openggf.game.GameModule;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.level.objects.BakedSheetReader;
@@ -308,14 +307,6 @@ final class OwnerAwareStandaloneModule {
         }
         @Override public int[] getBackgroundScroll(int levelIdx, int cameraX, int cameraY) {
             return call(() -> delegate.getBackgroundScroll(levelIdx, cameraX, cameraY));
-        }
-        @Override public Rom getRom() {
-            Rom rom = call(delegate::getRom);
-            if (rom != null) {
-                return call(() -> { throw new IllegalStateException(
-                        "Standalone games must not expose a ROM"); });
-            }
-            return null;
         }
     }
 }

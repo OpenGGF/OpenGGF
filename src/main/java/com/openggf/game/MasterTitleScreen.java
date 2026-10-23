@@ -1059,7 +1059,8 @@ public class MasterTitleScreen {
     }
 
     private static RomIdentity logicalRomFor(GameEntry game) {
-        return GameId.fromCode(game.gameId).romGame().identity();
+        return GameId.fromCode(game.gameId).cartridgeGame().orElseThrow(() ->
+                new IllegalArgumentException("This menu entry requires cartridge media: " + game.gameId)).identity();
     }
 
     private void refreshRomPreviews() {

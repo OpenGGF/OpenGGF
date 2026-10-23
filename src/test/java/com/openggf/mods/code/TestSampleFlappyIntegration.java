@@ -133,7 +133,7 @@ class TestSampleFlappyIntegration {
                     "Configured Sonic 3&K ROM must be readable");
 
             GameModule base = new Sonic3kGameModule();
-            base.createGame(rom);
+            base.createGame(new com.openggf.game.RomDataSource(rom, "rom:test:explicit"));
             ModuleResolutionService resolver = resolver(fixture);
             GameModule resolved = resolver.resolveForLaunch(base,
                     new GameplayLaunchRequest("s3k", "sonic", List.of()),
@@ -720,7 +720,7 @@ class TestSampleFlappyIntegration {
             assumeTrue(rom.open(romFile.getAbsolutePath()),
                     "Configured Sonic 3&K ROM must be readable");
             GameModule base = new Sonic3kGameModule();
-            base.createGame(rom);
+            base.createGame(new com.openggf.game.RomDataSource(rom, "rom:test:explicit"));
 
             SonicConfigurationService configuration = SonicConfigurationService.createStandalone();
             if (aspect != null) {

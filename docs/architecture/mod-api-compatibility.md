@@ -5,6 +5,16 @@ carried by `develop` and `next` after the 0.6 release rollover. No Mod API basel
 has been published yet. The runtime-visible, type-only `com.openggf.game.ModApi`
 annotation marks its roots.
 
+The canonical `GameModule` factories now require the session `GameDataSource`.
+Their former ROM-only interface overloads and `Game.getRom()` are removed;
+concrete cartridge modules retain their convenience factories/accessors. Decorators
+forward the exact source, and resource consumers query its optional cartridge
+capability. `GameId.SCD` is a stock identity with no cartridge mapping;
+`GameId.cartridgeGame()` distinguishes that capability from stock membership.
+The mutable `0.7` pin and runtime description change together. Candidate `0.7.0`,
+the descriptor and published baselines remain unchanged. Existing compiled mods
+that implement the replaced candidate factories must rebuild against this surface.
+
 Stageplay keeps the mutable candidate at 0.7.0. Portable document version five
 adds opt-in LIVE worlds, stable ROM-placement targets, bounded waits, native
 ability intents, fixed-scale camera following and sampled native state/events.

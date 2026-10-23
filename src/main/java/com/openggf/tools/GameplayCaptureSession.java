@@ -112,6 +112,17 @@ public final class GameplayCaptureSession implements AutoCloseable {
     private boolean showTitleCard;
     private boolean completeSpecialStage;
 
+    /** Render a prepared static CD stage through this session's ordinary controller passes. */
+    public void bootSonicCdStatic(com.openggf.game.soniccd.CdGameDataSource source) throws IOException {
+        if (loop != null || closed) {
+            throw new IllegalStateException("session is already booted or closed");
+        }
+        if (startAtTitle || developmentMod != null) {
+            throw new IllegalStateException("Static CD capture does not execute native titles or cartridge patch mods");
+        }
+        loop = boot.bootSonicCdStatic(source);
+    }
+
     /** Boots with a packaged patch mod applied, as if it were enabled in the launcher. */
     public void applyMod(Path modJar) throws IOException {
         if (loop != null) throw new IllegalStateException("capture session is already booted");

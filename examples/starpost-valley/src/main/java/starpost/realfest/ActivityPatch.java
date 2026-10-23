@@ -30,7 +30,7 @@ public final class ActivityPatch implements GamePatch {
                 if(!session.active() || !session.kind().equals(contribution.localKey())) throw new IOException("Activity needs its retained scene session");
                 if(terrain==null) try(var rom=Rom.fromReader(context.openLogicalRom(LogicalRom.S1),"Starpost activities S1")) {
                     var module=RomDetectionService.getInstance().detectAndCreateModule(rom).orElseThrow();
-                    terrain=S1TerrainReader.read(module.createGame(rom).loadLevel(0x80));
+                    terrain=S1TerrainReader.read(module.createGame(new com.openggf.game.RomDataSource(rom, "rom:starpost-valley:s1")).loadLevel(0x80));
                 }
                 var data=CourseLevel.build(contribution.levelData(),terrain,session);
                 seasons.remember(contribution.localKey(),data.paletteClaims());

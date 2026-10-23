@@ -489,17 +489,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
         GameplayModeContext mode = SessionManager.openGameplaySession(rootModule, resolved,
                 com.openggf.game.StockGameDataSources.pinned(rom, rootModule), null);
         GameModule module = mode.getWorldSession().resolvedGameModule();
-        GameplaySessionFactory.attachManagers(mode, services, createGameplayCamera(services));
-        if (!mode.isGameplayRuntimeReady()) {
-            throw new IllegalStateException(
-                    "Gameplay runtime not ready after attachManagers");
-        }
-
-        // --- game loop wiring -------------------------------------------
-        GameLoop loop = new GameLoop(services);
-        loop.setGameplayMode(mode);
-        loop.setInputHandler(new InputHandler());
-        loop.setGameMode(GameMode.LEVEL);
+        GameLoop loop = attachLevelLoop(mode);
         loop.setDataSelectActionHandler(action -> com.openggf.game.dataselect.NativeDataSelectLaunchFlow.launch(
                 action, services, loop, new com.openggf.game.dataselect.NativeDataSelectLaunchFlow.Host() {
                     @Override public ModuleResolutionService.PreparedLaunch prepareLaunch() {
@@ -580,6 +570,48 @@ public final class HeadlessGameBoot implements AutoCloseable {
             GameServices.camera().updatePosition(true);
         }
 
+        return loop;
+    }
+
+    /**
+     * Development static-stage entry from an already authenticated detached disc source.
+     * Uses the normal world, manager, load and rendering owners without entering cartridge
+     * detection, a title program, actor bootstrap or trace replay. Held frames are presentation,
+     * not native gameplay ticks. The original disc was closed by CdStockLaunch.prepare().
+     */
+    public GameLoop bootSonicCdStatic(com.openggf.game.soniccd.CdGameDataSource source) throws IOException {
+        java.util.Objects.requireNonNull(source, "source");
+        if (bootToTitle) {
+            throw new IllegalStateException("Static Sonic CD admission cannot boot a native title program");
+        }
+        retireBootSession();
+        EngineContext services = engineServices;
+        services.roms().setRom(null);
+        com.openggf.graphics.color.DisplayColorProfileController.applySavedSettings(
+                services.configuration(), services.graphics());
+        SessionManager.armNextGameplayAdmissionPolicy(HardwareReadinessAdmissionPolicy.LIVE);
+        GameModule root = GameModuleRegistry.createStockModule(com.openggf.game.GameId.SCD);
+        GameplayModeContext mode = openResolvedSessionForBoot(services, root,
+                ModuleResolutionService.LaunchPolicy.DETERMINISTIC, source);
+        GameLoop loop = attachLevelLoop(mode);
+        GameModuleRegistry.setCurrent(mode.getWorldSession().resolvedGameModule());
+        installAudioBackend();
+        TraceReplaySessionBootstrap.resetLevelSubsystemsForReplay();
+        mode.getLevelManager().loadLevel(0, com.openggf.game.LevelLoadMode.FULL,
+                com.openggf.game.soniccd.SonicCdLevelInitProfile.staticStageContext());
+        return loop;
+    }
+
+    /** Common session/loop attachment for cartridge gameplay and prepared static terrain. */
+    private GameLoop attachLevelLoop(GameplayModeContext mode) {
+        GameplaySessionFactory.attachManagers(mode, engineServices, createGameplayCamera(engineServices));
+        if (!mode.isGameplayRuntimeReady()) {
+            throw new IllegalStateException("Gameplay runtime not ready after attachManagers");
+        }
+        GameLoop loop = new GameLoop(engineServices);
+        loop.setGameplayMode(mode);
+        loop.setInputHandler(new InputHandler());
+        loop.setGameMode(GameMode.LEVEL);
         return loop;
     }
 
@@ -697,6 +729,11 @@ public final class HeadlessGameBoot implements AutoCloseable {
             int act,
             HardwareReadinessAdmissionPolicy admissionPolicy)
             throws IOException {
+        retireBootSession();
+        return boot(romPath, zone, act, admissionPolicy);
+    }
+
+    private void retireBootSession() {
         Throwable failure = null;
         try {
             sessionCloser.close();
@@ -715,7 +752,6 @@ public final class HeadlessGameBoot implements AutoCloseable {
         if (failure != null) {
             rethrowCloseFailure(failure);
         }
-        return boot(romPath, zone, act, admissionPolicy);
     }
 
     /**

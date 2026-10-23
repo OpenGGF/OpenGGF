@@ -74,7 +74,12 @@ All paths above are relative to `docs/scddisasm`. These source locations are
 for this pinned commit. Do not treat an address-derived name as proof of its
 meaning without tracing callers and data flow.
 
-## How the engine works today
+## Engine baseline when this design was written
+
+This baseline predates the local static-stage implementation. Its source-factory
+migration and bounded normal CD module are recorded in the
+[implementation checkpoint](../plans/2026-10-23-sonic-cd-implementation.md#static-stock-admission-in-progress).
+The blueprint below retains the assumptions that motivated those changes.
 
 ### Stock launch and data ownership
 

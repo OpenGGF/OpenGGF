@@ -70,7 +70,7 @@ class TestSonic2RuntimePlcRendererRefresh {
     @BeforeEach
     void setUp() throws Exception {
         GraphicsManager.getInstance().initHeadless();
-        GameServices.module().createGame(TestEnvironment.currentRom());
+        GameServices.module().createGame(GameServices.worldSession().getDataSource());
         GameplayModeContext gameplay = TestEnvironment.activeGameplayMode();
         provider = (Sonic2ObjectArtProvider) GameServices.module().getObjectArtProvider();
         provider.loadArtForZone(Sonic2ZoneConstants.ROM_ZONE_WFZ);

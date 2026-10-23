@@ -37,7 +37,7 @@ class TestSonic2ArzBossPlcReadiness {
 
     @BeforeEach
     void setUp() {
-        GameServices.module().createGame(TestEnvironment.currentRom());
+        GameServices.module().createGame(GameServices.worldSession().getDataSource());
         plc = GameServices.module().getGameService(Sonic2PlcService.class);
         player = Mockito.mock(AbstractPlayableSprite.class);
         sidekick = Mockito.mock(AbstractPlayableSprite.class);

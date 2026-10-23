@@ -102,7 +102,7 @@ public final class RealValleyPatch implements GamePatch {
                     // Decode through the published game contract, before the host publishes its own level art.
                     GameModule source = RomDetectionService.getInstance().detectAndCreateModule(rom)
                             .orElseThrow(() -> new IOException("Unrecognised Sonic 1 ROM"));
-                    terrain = S1TerrainReader.read(source.createGame(rom)
+                    terrain = S1TerrainReader.read(source.createGame(new com.openggf.game.RomDataSource(rom, "rom:starpost-valley:s1"))
                             .loadLevel(RealValley.S1_GHZ1_LEVEL_INDEX));
                 } catch (IOException | RuntimeException failure) {
                     Logger.getLogger(Module.class.getName())

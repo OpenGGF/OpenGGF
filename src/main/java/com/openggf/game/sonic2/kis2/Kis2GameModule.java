@@ -12,6 +12,7 @@ import com.openggf.game.GameId;
 import com.openggf.game.GameModule;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.PhysicsProvider;
+import com.openggf.game.RomDataSource;
 import com.openggf.game.WaterDataProvider;
 import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.patch.LogicalRom;
@@ -82,23 +83,24 @@ final class Kis2GameModule extends DelegatingGameModule implements com.openggf.g
         return "knuckles".equals(owner) ? new ConvertedBank(0xFFF100, 0xF000) : null;
     }
 
-    @Override
+    /** Cartridge convenience factory for an already-open Sonic 2 ROM. */
     public Game createGame(Rom rom) {
+        return createGame(new RomDataSource(rom, "rom:kis2:explicit"));
+    }
+
+    @Override
+    public Game createGame(GameDataSource source) {
+        Rom rom = source.rom().orElseThrow(() ->
+                new IllegalStateException("Knuckles in Sonic 2 requires a ROM data source"));
         // Run the base module's side effects (PLC service, active ROM) and
-        // replace only the game data object.
-        base().createGame(rom);
+        // replace only the game data object, retaining the caller's exact source.
+        base().createGame(source);
         chipPlcService = kis2Image().map(image ->
                 new com.openggf.game.sonic2.resources.Sonic2PlcService(
                         Rom.fromReader(image, "KiS2 lock-on PLC address space"),
                         Kis2Constants.ART_LOAD_CUES)).orElse(null);
         game = new Kis2Game(rom, skReader(), skKnucklesArt(), kis2Image().orElse(null), chipArt().orElse(null));
         return game;
-    }
-
-    @Override
-    public Game createGame(GameDataSource source) {
-        return createGame(source.rom().orElseThrow(() ->
-                new IllegalStateException("Knuckles in Sonic 2 requires a ROM data source")));
     }
 
     @Override

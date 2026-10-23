@@ -58,6 +58,7 @@ public final class GameModuleRegistry {
             case S1 -> new com.openggf.game.sonic1.Sonic1GameModule();
             case S2 -> new Sonic2GameModule();
             case S3K -> new com.openggf.game.sonic3k.Sonic3kGameModule();
+            case SCD -> new com.openggf.game.soniccd.SonicCdGameModule();
             case STANDALONE -> throw new IllegalArgumentException("Standalone has no stock game host");
         };
     }
@@ -71,6 +72,7 @@ public final class GameModuleRegistry {
                     com.openggf.game.sonic2.audio.Sonic2Music.TITLE.id);
             case S3K -> new StockMenuAudio(new com.openggf.game.sonic3k.audio.Sonic3kAudioProfile(),
                     com.openggf.game.sonic3k.audio.Sonic3kMusic.TITLE.id);
+            case SCD -> throw new IllegalArgumentException("Sonic CD title audio is not implemented");
             case STANDALONE -> throw new IllegalArgumentException("Standalone has no stock title theme");
         };
     }

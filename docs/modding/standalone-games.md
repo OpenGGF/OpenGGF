@@ -98,7 +98,11 @@ survives gameplay/editor context rebuilds. Do not call `GameServices.rom()` or a
 a working-directory asset fallback.
 
 Extend `ModGame` for the module's `Game`. Its protected `dataSource()` returns the
-source passed by `createGame`, while `getRom()` is intentionally `null`. Implement
+source passed by `createGame`. `Game` has no universal ROM accessor; obtain an
+optional cartridge capability from the owning source when the consumer requires
+one. `GameModule` requires `createGame(GameDataSource)` and
+`createTouchResponseTable(GameDataSource)`; ROM convenience factories belong to
+concrete cartridge modules. Implement
 `loadLevel(int)` and `getMusicId(int)`; override other neutral defaults only when the
 game needs them.
 

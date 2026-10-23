@@ -71,7 +71,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class TestSonic2PlcProducerCoverage {
     @BeforeEach
     void createSonic2Services() {
-        GameServices.module().createGame(TestEnvironment.currentRom());
+        GameServices.module().createGame(GameServices.worldSession().getDataSource());
     }
 
     @AfterEach

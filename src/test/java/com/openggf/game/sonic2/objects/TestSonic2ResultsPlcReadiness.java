@@ -20,7 +20,7 @@ class TestSonic2ResultsPlcReadiness {
 
     @BeforeEach
     void setUp() {
-        GameServices.module().createGame(TestEnvironment.currentRom());
+        GameServices.module().createGame(GameServices.worldSession().getDataSource());
         plc = GameServices.module().getGameService(Sonic2PlcService.class);
         results = new ResultsScreenObjectInstance(30, 7, 1, false);
         results.setServices(new TestObjectServices() {

@@ -36,7 +36,7 @@ class TestSonic2SpecialStageSuperResults {
     void setUp() {
         SessionManager.clear();
         SessionManager.openGameplaySession(GameModuleRegistry.getCurrent());
-        GameServices.module().createGame(TestEnvironment.currentRom());
+        GameServices.module().createGame(GameServices.worldSession().getDataSource());
         configuration = mock(SonicConfigurationService.class);
         when(configuration.getString(SonicConfiguration.MAIN_CHARACTER_CODE)).thenReturn("sonic");
         services = new TestObjectServices() {

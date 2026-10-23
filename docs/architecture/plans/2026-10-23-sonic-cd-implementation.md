@@ -1425,3 +1425,163 @@ module, media and API obligations for the next real disc consumer. It writes
 only external research. The next integration still needs a deliberate engine
 adapter and stock bootstrap; no GameId.SCD or playable game module exists yet.
 All implementation remains local with no merge, push or main-workspace mutation.
+
+
+### Static stock admission in progress
+
+The verified units were saved locally as `08bc9aa91` (R11A assets),
+`78f4fc226` (bounded graphics service), and `56beba899` (exact PCM comparisons).
+Their three source patches and refreshed index/checkpoint are in the external
+Downloads bundle. The worktree branch still has no upstream. No main checkout,
+merge, push or PR action was taken.
+
+Read-only task `sonic-cd-stock-admission-audit-20261023-r1` completed its external
+engineering map. Current implementation ownership at base `56beba899` is:
+
+- `sonic-cd-engine-level-adapter-20261023-r1`: new native-to-engine level geometry
+  and tests, preserving original CD collision words separately from rendering.
+- `sonic-cd-source-factory-migration-20261023-r1`: frozen 61-file canonical source
+  factory migration, maintained consumers and tests. Its source-only handoff hash
+  is `4d31740f6ab637e4a41d62dcb5855ca9be8f65c2de642aaf04d4720f647efb56`.
+  Independent task `sonic-cd-source-factory-review-20261023-r1` is reviewing it.
+- `sonic-cd-static-module-20261023-r1`: new normal CD module, static profile,
+  controlled terrain presentation and tests. No native actors or title execution.
+- Lead: detached `CdGameDataSource`/`CdStockLaunch`, public stock identity with
+  cartridge capability separated, rejection at unsupported ROM/audio/editor/trace
+  consumers, existing headless/capture boot seam, tests and eventual API pin.
+
+These pending changes have not been compiled or executed. The earlier 87-test
+result applies to their unchanged dependencies, not this admission unit. There
+is no live or queued Maven job. Candidate signature pins remain deliberately
+stale until all source handoffs are stable and compilation succeeds.
+
+The change-based category plan at this checkpoint selects all smoke categories,
+3,654 candidate classes and guards because public/shared factories changed.
+This is routine smoke selection, not the public-release full suite. Combined
+broad execution waits until focused fixes and API generation are complete.
+Display-free preflight initially failed because the default Lua was not 5.4;
+explicit `LUA_BIN=/usr/bin/lua5.4` fixed it. The repaired invocation passed Java,
+Lua and PowerShell prerequisites with no tests executed:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 56beba899 --preflight
+```
+
+`TestSonicCdDirectStageBoot` is authored for actual supplied media and explicit
+surfaceless EGL. It uses `GameplayCaptureSession`'s ordinary rendering passes,
+checks visible terrain and same-world camera/level restore, and can save images
+only when an external capture root is supplied. It has not run. Existing rewind
+snapshots do not bind cross-registry source identity; this remains an open
+acceptance issue, separate from module source-rebinding rejection. No CD-07 or
+playable-game/parity completion is claimed.
+
+
+The source-factory review returned bounded PASS with no P1/P2 finding. The lead
+recomputed the frozen 61-file handoff fingerprint and it still matches exactly.
+Expected migration-only API delta is eight obsolete method entries removed and
+two canonical interface factories changed from default to abstract; the later
+SCD identity/capability addition is a separate intended pin delta.
+
+The seven-file detached preparation/engine geometry review also returned bounded
+PASS. Its ordered path/NUL/bytes/NUL SHA256 is
+`1d46b97b4aa5ae28a0e128e515e1b4881c52544ca2808a830032201718b9ab61`, independently
+recomputed by the lead unchanged. Both reviews are source inspection only.
+Unloaded geometry stays unavailable, whole-block serialization of those cells
+is unsupported, and native collision/actor execution remains outside this slice.
+The adapter task is complete; the static module task is the only active child.
+No task-owned Maven job has started for these pending changes.
+
+
+### Combined admission validation queued, 24 October 2026
+
+The static module source handoff is frozen: ten files, aggregate sorted
+path/NUL/bytes/NUL SHA256
+`232d03415237dbac9591307c46e55a758e485f0cc121eca4ca546cdf4e04cf02`, verified
+unchanged by the lead. The existing transform hook publishes decoded graphics;
+no additional shared graphics hook was needed. Independent task
+`sonic-cd-static-admission-review-20261023-r1` is reviewing the module and lead's
+shared stock/boot changes without running Java or changing source.
+
+One focused Maven job is alive in command session `12065`. It is waiting for
+shared admission, not failing or executing tests yet. Keep this request alive;
+do not submit a duplicate. The command is:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestSonicCdStockPreparation,TestSonicCdLevelGeometry,TestSonicCdLevelRetail,TestSonicCdModuleContracts,TestSonicCdStaticStageLoad,TestStockGameCapabilityMembership,TestTraceToolRomLocations,TestRomManagerGameResolution,TestRomManagerLocationResolution,TestGameDataSourceSharedFetches,TestGameDataSourceSessionOwnership,TestDelegatingGameModuleCoversInterface,TestGameModuleProfiles,TestLazyMappingHolder,TestLoadedLevelSceneSourceCapability,TestKis2GamePatchResolution,TestHeadlessAudioOwnership,TestNoProvisionalModApiShims' -Dsoniccd.media.root=${SCD_MEDIA_ROOT} test -B
+```
+
+All Java is frozen for this run. Compilation/runtime results and candidate pin
+remain pending. Next: inspect this job's exact outcome, fix concrete failures,
+then generate/inspect the compiled candidate pin and execute the explicit EGL
+render check. Required broad smoke remains after focused fixes. The lead also
+read-only verified existing root `s1.gen`, `s2.gen`, `s3k.gen` against the
+repository's CRC32/SHA-1 pairs for later affected cartridge/S3K validation; no
+ROM was copied, renamed or linked.
+
+
+### Verified normal static entry and API migration, 24 October 2026
+
+The 25-file module/shared-admission review returned bounded PASS with no new
+P1/P2 findings, aggregate sorted path/NUL/bytes/NUL SHA256
+`cf3f1f1c042d39616be963a57881fbbcbb331a3405f319c914779be348c49782`.
+Its proof was source inspection, separate from the execution below.
+
+All 4,244 production sources compiled. The first two focused invocations then
+stopped in test compilation: `RewindRoundTripHarness.registryFor` and
+`TestScalarOnlyCodecDeletion.invokeGenericRecreateWithState` had exhaustive
+cartridge object-registry switches. Each now explicitly rejects SCD; neither
+harness supplies native CD object execution. These were new enum-admission
+compile failures, not baseline test failures. No JUnit ran in those attempts.
+Session `12065` waited 223 seconds and ran Maven 77 seconds; repaired session
+`79802` waited zero and stopped after 22.600 seconds.
+
+The repaired focused selection in session `87412` compiled all 4,349 test sources
+and passed 98 tests with zero failures, errors or skips. Maven took 34.613 seconds,
+queue wait zero; completion was 00:05:12 BST. The eighteen-class selector is the
+same command recorded above. Expected rejection of unsupported native title
+entry is exercised in all three load tests; its logged exceptions are asserted
+negative cases, not unreported load failures. Actual supplied regional media ran.
+
+The lead generated the mutable candidate pin from the just-compiled classpath,
+using `ModApiSignatureSurface --snapshot` under the shared build-activity lease.
+Its exact delta was ten removed entries (eight obsolete methods and two previous
+default factory signatures) and four additions (two abstract canonical factories,
+SCD identity and optional cartridge mapping). The descriptor and `CURRENT=0.7.0`
+remain unchanged; standalone/compatibility guidance and the runtime description
+now describe source factories. Historical design assumptions remain labelled.
+
+Session `41463` then passed 34 tests with zero failures, errors or skips: 31 API
+signature/pin/release/runtime policy checks and three regional real GL checks.
+It waited 35 seconds; Maven took 34.685 seconds, completion 00:07:21 BST:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestSonicCdDirectStageBoot,TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiReleasePolicy,TestModApiRuntimePolicy' -Dsoniccd.media.root=${SCD_MEDIA_ROOT} -Dsoniccd.static.capture.root=${SCD_STATIC_CAPTURES} -Dopenggf.headless.gl=surfaceless-egl test -B
+```
+
+The lead inspected all three actual 320x224 PNGs. Each shows Palmtree Panic
+terrain/palette through the ordinary world, loop, load and capture renderer;
+all camera-change/restore images and subsequent held presentations match their
+assertions. Captures are external under `native/engine-static-r1` in the Downloads
+bundle. No native Sonic/object execution, parallax/pixel parity, audio service,
+firmware, complete entry route or USA MVP result is claimed. The
+[partial act matrix](../validation/levels/scd-palmtree-panic-act1-present.md)
+records every outstanding coverage dimension and cross-registry snapshot gap.
+
+All newly introduced documentation link targets resolve. Two targets already
+absent at base `56beba899` remain absent in the workflow index:
+`examples/starpost-valley/generate_resources.py` and optional
+`tools/tracechaser/bizhawk-headless/README.md#diagnostic-rendered-frames`.
+They were attributed against base, not repaired as unrelated work.
+
+The next required check is the change-based 3,654-class smoke selection plus
+guards at base `56beba899`, with verified original root cartridge images and
+surfaceless EGL. Expected cost is roughly an hour of execution, with queue delay
+unknown. It will use a 90-minute execution budget excluding waits, the runner's
+10-minute no-output stop, and fail visibly on launcher/compilation/source changes.
+Ordinary batches retain their full selection and release admission between at
+most fifty classes; this is not the public-release full suite. No smoke result
+has been claimed yet. Do not mutate the tested tree while that runner is alive.
+
+Task `sonic-cd-r11a-player-bringup-20261024-r1` is read-only on concrete native
+player/collision prerequisites and writes external research only, independently
+of parent validation. No further design council or second game runner is planned.

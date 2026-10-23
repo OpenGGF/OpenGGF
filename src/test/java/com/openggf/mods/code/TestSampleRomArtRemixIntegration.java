@@ -113,7 +113,7 @@ class TestSampleRomArtRemixIntegration {
             System.out.println("sample-rom-art-remix package sha256=" + fixture.sha256());
 
             GameModule base = new Sonic2GameModule();
-            base.createGame(rom);
+            base.createGame(new com.openggf.game.RomDataSource(rom, "rom:test:explicit"));
             ModuleResolutionService resolver = resolver(fixture);
             EngineContext previous = EngineServices.current();
             EngineContext injected = withResolver(previous, resolver, isolatedRomManager());

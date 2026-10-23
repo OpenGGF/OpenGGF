@@ -20,7 +20,7 @@ class TestSonic2SpecialStageResultsPlcReadiness {
 
     @BeforeEach
     void setUp() {
-        GameServices.module().createGame(TestEnvironment.currentRom());
+        GameServices.module().createGame(GameServices.worldSession().getDataSource());
         plc = GameServices.module().getGameService(Sonic2PlcService.class);
         TestObjectServices services = new TestObjectServices() {
             @Override

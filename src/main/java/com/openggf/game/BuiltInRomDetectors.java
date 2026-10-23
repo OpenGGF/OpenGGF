@@ -36,6 +36,7 @@ public final class BuiltInRomDetectors {
             case S1 -> new Sonic1RomDetector();
             case S2 -> new Sonic2RomDetector();
             case S3K -> new Sonic3kRomDetector();
+            case SCD -> throw new IllegalArgumentException("Sonic CD requires disc-content recognition, not a ROM detector");
             case STANDALONE -> throw new IllegalArgumentException(
                     "Standalone games do not have a built-in ROM detector");
         };

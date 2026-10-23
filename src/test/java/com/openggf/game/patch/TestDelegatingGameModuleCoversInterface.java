@@ -37,6 +37,25 @@ class TestDelegatingGameModuleCoversInterface {
     }
 
     @Test
+    void sourceFactoriesPreserveTheExactCapabilityAndCheckedFailure() throws Exception {
+        GameModule base = mock(GameModule.class);
+        var source = mock(com.openggf.game.GameDataSource.class);
+        when(source.rom()).thenReturn(java.util.Optional.empty());
+        var game = mock(com.openggf.data.Game.class);
+        var table = mock(com.openggf.level.objects.TouchResponseTable.class);
+        var failure = new java.io.IOException("bounded source read failed");
+        when(base.createGame(source)).thenReturn(game);
+        when(base.createTouchResponseTable(source)).thenReturn(table).thenThrow(failure);
+        DelegatingGameModule patched = new DelegatingGameModule(base, "source-patch");
+
+        assertSame(game, patched.createGame(source));
+        assertSame(table, patched.createTouchResponseTable(source));
+        assertSame(failure, org.junit.jupiter.api.Assertions.assertThrows(
+                java.io.IOException.class, () -> patched.createTouchResponseTable(source)));
+        org.mockito.Mockito.verifyNoInteractions(source);
+    }
+
+    @Test
     void gameplayFactoriesAndGameOverFlowPreserveWrappedProviders() {
         GameModule base = mock(GameModule.class);
         var flow = mock(com.openggf.game.GameOverFlowProvider.class);

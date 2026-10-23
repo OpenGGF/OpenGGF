@@ -58,7 +58,7 @@ class TestNativeMutatorRuntime {
             when(data.rom()).thenReturn(Optional.of(rom));
             var sizes=mock(TouchResponseTable.class);
             when(sizes.getWidthRadius(anyInt())).thenReturn(16); when(sizes.getHeightRadius(anyInt())).thenReturn(16);
-            when(module.createTouchResponseTable(any(com.openggf.data.RomByteReader.class))).thenReturn(sizes);
+            when(module.createTouchResponseTable(data)).thenReturn(sizes);
             when(source.completions()).thenAnswer(i->completions.get());
             when(source.acknowledgeCompletion(anyLong())).thenAnswer(i->{completions.set(List.of());return true;});
             when(source.ownerAvailable(anyString())).thenReturn(true);

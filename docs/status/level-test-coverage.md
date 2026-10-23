@@ -1,5 +1,12 @@
 # Level test coverage backlog
 
+Sonic CD local static-entry work (2026-10-24): the
+[Palmtree Panic Act 1 Present matrix](../architecture/validation/levels/scd-palmtree-panic-act1-present.md)
+records authenticated regional data, existing-engine terrain presentation and
+same-world camera/level restoration. Native player/object execution and complete
+gameplay, lifecycle, viewport, donor and roster products remain missing. Static
+loading and three visible images do not certify the act or USA MVP.
+
 Object-pipeline performance follow-up (2026-10-22, local candidate): the
 [query/allocation audit](../architecture/audits/performance/2026-10-22-native-object-query-performance.md)
 and linked wave records track native owned-slot, FBZ/SOZ collision-allocation and
