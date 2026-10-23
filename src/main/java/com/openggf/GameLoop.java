@@ -1292,7 +1292,7 @@ public class GameLoop {
             inputHandler.update();
             return;
         }
-        boolean overlayOwnsPause = GameLoopPauseInput.handleOverlay(currentGameMode, inputHandler);
+        boolean overlayOwnsPause = GameLoopPauseInput.handleOverlay(currentGameMode, inputHandler) || hostedRuns.ownsStart(currentGameMode);
         var overlay = GameLoopPauseInput.overlay(currentGameMode);
         var titleInputOwner = currentGameMode == GameMode.TITLE_SCREEN ? getTitleScreenProviderLazy() : null;
         boolean titleOwnsEscape = titleInputOwner != null && titleInputOwner.ownsEscapeInput();
@@ -2084,12 +2084,15 @@ public class GameLoop {
     }
 
     private void startPendingHostedRunLaunch() {
-        if (pendingHostedRunLaunch != null && !resolveFadeManager().isActive()) {
+        if (pendingHostedRunLaunch != null && GameLoopMenuTransitions.idleOrHeldBlack(resolveFadeManager())) {
             Runnable launch = pendingHostedRunLaunch;
             pendingHostedRunLaunch = null;
-            fadeOutTo(launch);
+            GameLoopMenuTransitions.fadeOutOrContinue(resolveFadeManager(), audioManager, launch);
         }
     }
+
+    /** A scene asked to launch a run (for example from {@code resumed}) and it has not started yet. */
+    boolean hostedRunLaunchPending() { return pendingHostedRunLaunch != null; }
 
     /** Ends a hosted run whose session failed to load; optionally hands control back to its host. */
     void endHostedRunAfterFailedLaunch(boolean returnToHost) {

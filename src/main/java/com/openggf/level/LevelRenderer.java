@@ -1256,7 +1256,7 @@ public final class LevelRenderer {
             underlay.run();
         }
         profiler.beginSection("render.hud");
-        if (options.includeHud() && lm.hudRenderManager != null
+        if (options.includeHud() && lm.hudRenderManager != null && !lm.isHudCoveredByHost()
                 && (LevelSpritePresentation.enabled(lm) || !lm.isHudSuppressed())
                 && (TraceGhostHook.active() == null || currentTraceVisibility.showGameHud())) {
             if (LevelSpritePresentation.enabled(lm)) {

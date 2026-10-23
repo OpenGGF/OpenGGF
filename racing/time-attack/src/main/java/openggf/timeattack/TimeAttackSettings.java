@@ -4,6 +4,7 @@ import com.openggf.mods.ModStorage;
 import com.openggf.mods.run.CharacterLooks;
 import com.openggf.net.identity.DisplayNames;
 import com.openggf.net.identity.PlayerAppearance;
+import com.openggf.net.protocol.ReadyRules;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,7 +17,8 @@ import java.util.TreeMap;
 /**
  * The Time Attack mod's own settings (the engine has no {@code timeAttack.*} keys): the port for
  * player-hosted rooms, the last LAN invite, the multiplayer display name and look, the master
- * server URL and its development-only trust-all switch, and the multiplayer minimap.
+ * server URL and its development-only trust-all switch, the multiplayer minimap and the ready
+ * rule for rooms this player owns.
  *
  * <p>The display name is stored canonical ({@link DisplayNames#sanitize}), as hosts require. The
  * look is a base colour ({@code lookBase}, the name and ghost colour; empty for the stock look)
@@ -50,6 +52,7 @@ public final class TimeAttackSettings {
     private String masterUrl = "";
     private boolean masterTrustInsecure;
     private boolean minimap = true;
+    private ReadyRules readyRule = ReadyRules.DEFAULT_BY_SIZE;
     private int lookBase = PlayerAppearance.NO_BASE_COLOUR;
     private final Map<String, List<PlayerAppearance.Entry>> customPalettes = new TreeMap<>();
     private final Map<String, List<VotePool>> votePools = new TreeMap<>();
@@ -147,6 +150,10 @@ public final class TimeAttackSettings {
                 case "masterUrl" -> settings.setMasterUrl(value);
                 case "masterTrustInsecure" -> settings.masterTrustInsecure = "true".equalsIgnoreCase(value);
                 case "minimap" -> settings.minimap = !"false".equalsIgnoreCase(value);
+                case "readyRule" -> {
+                    ReadyRules rule = ReadyRules.parse(value);
+                    if (rule != null) settings.readyRule = rule;
+                }
                 case "lookBase" -> {
                     try { settings.setLookBase(value.isEmpty() ? PlayerAppearance.NO_BASE_COLOUR
                             : PlayerAppearance.decode(value).baseColour()); }
@@ -218,6 +225,7 @@ public final class TimeAttackSettings {
                 .append("masterUrl=").append(masterUrl).append('\n')
                 .append("masterTrustInsecure=").append(masterTrustInsecure).append('\n')
                 .append("minimap=").append(minimap).append('\n')
+                .append("readyRule=").append(readyRule.name()).append('\n')
                 .append("lookBase=").append(lookBase == PlayerAppearance.NO_BASE_COLOUR ? ""
                         : new PlayerAppearance(lookBase, List.of()).encode()).append('\n');
         votePools.forEach((game, pools) -> {
@@ -432,6 +440,15 @@ public final class TimeAttackSettings {
 
     public void setMinimap(boolean show) {
         minimap = show;
+    }
+
+    /** The ready rule this player last chose for rooms they own. */
+    public ReadyRules readyRule() {
+        return readyRule;
+    }
+
+    public void setReadyRule(ReadyRules rule) {
+        readyRule = Objects.requireNonNull(rule, "rule");
     }
 
     private static String singleLine(String value, int maxLength) {

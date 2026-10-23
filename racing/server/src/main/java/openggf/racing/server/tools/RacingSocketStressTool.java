@@ -256,6 +256,8 @@ public final class RacingSocketStressTool {
             stage = "control warmup";
             warmup();
             stage = "countdown";
+            // Load peers never ready up; nobody waits under AUTO.
+            peers.getFirst().control(new ControlMessage.SetReadyRule("AUTO"), totals);
             peers.getFirst().control(new ControlMessage.RoundConfigure(new ControlMessage.RoundConfig(
                     "s3k", 0, 0, config.durationSeconds() + 2, "OPEN", null)), totals);
             await(() -> peers.stream().allMatch(peer -> peer.roundStarted), "round start for every peer");
@@ -505,6 +507,8 @@ public final class RacingSocketStressTool {
             // Results reserve wire slots through round end, including all 256 slots at capacity.
             // A real next-round control transition clears that authority before any replacement.
             peers.forEach(peer -> peer.roundStarted = false);
+            // Load peers never ready up; nobody waits under AUTO.
+            peers.getFirst().control(new ControlMessage.SetReadyRule("AUTO"), totals);
             peers.getFirst().control(new ControlMessage.RoundConfigure(new ControlMessage.RoundConfig(
                     "s3k", 0, 0, config.durationSeconds() + 2, "OPEN", null)), totals);
             await(() -> peers.stream().allMatch(peer -> peer.roundStarted), "next-round reset");
@@ -593,6 +597,7 @@ public final class RacingSocketStressTool {
                                 if (totals.measuring) totals.receivedGhostFrames += entry.frameCount();
                             }
                         }
+                        case RaceClient.LobbyGhostData ignored -> { }
                         case RaceClient.Roster roster -> {
                             if (totals.measuring) {
                                 totals.receivedBinary++;

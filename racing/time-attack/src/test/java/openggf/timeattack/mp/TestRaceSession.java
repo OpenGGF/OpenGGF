@@ -264,6 +264,19 @@ class TestRaceSession {
         assertTrue(guestStorage.read(TimeAttackSettings.FILE_NAME).orElseThrow()
                 .contains("lastJoinAddress=" + guestInvite));
 
+        // Two players under the default rule: the owner's start waits for both to be ready.
+        assertTrue(host.coordinator().session().readyRequired());
+        host.coordinator().sendRoundConfigure(host.roundConfig());
+        for (int i = 0; i < 20; i++) {
+            host.poll();
+            guest.poll();
+            Thread.sleep(5);
+        }
+        assertEquals(RaceSession.State.LOBBY, host.state(), "the start waits for readiness");
+        host.coordinator().setReady(true);
+        guest.coordinator().setReady(true);
+        pollUntil("both players ready", () -> host.coordinator().session().playersNotReady().isEmpty()
+                && guest.coordinator().session().isLocalReady(), host, guest);
         host.coordinator().sendRoundConfigure(host.roundConfig());
         pollUntil("both players racing", () -> host.state() == RaceSession.State.RACING
                 && guest.state() == RaceSession.State.RACING, host, guest);

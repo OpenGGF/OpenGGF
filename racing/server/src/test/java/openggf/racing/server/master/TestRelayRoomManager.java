@@ -123,6 +123,8 @@ class TestRelayRoomManager {
         var access = manager.find(entry.roomId()).orElseThrow();
         FakeConnection connection = new FakeConnection();
         String token = admit(manager, access, entry.roomId(), connection, player, "P");
+        // One present player under the default rule: ready up before the owner starts.
+        access.room().onText(connection, ControlCodec.encode(token, new ControlMessage.SetReady(true)));
         access.room().onText(connection, ControlCodec.encode(token,
                 new ControlMessage.RoundConfigure(new ControlMessage.RoundConfig(
                         "s3k", 0, 0, 60, "OPEN", null))));
@@ -253,6 +255,8 @@ class TestRelayRoomManager {
             FakeConnection oldConnection = new FakeConnection();
             String oldToken = admit(manager, access, entry.roomId(), oldConnection,
                     player, "Old");
+            // One present player under the default rule: ready up before the owner starts.
+            access.room().onText(oldConnection, ControlCodec.encode(oldToken, new ControlMessage.SetReady(true)));
             access.room().onText(oldConnection, ControlCodec.encode(oldToken,
                     new ControlMessage.RoundConfigure(new ControlMessage.RoundConfig(
                             "s3k", 0, 0, 60, "OPEN", null))));
@@ -382,6 +386,8 @@ class TestRelayRoomManager {
             access.room().onText(creator, ControlCodec.encode(null,
                     handshake.onWelcome((ControlMessage.Welcome) lastMessage(creator))));
             String token = lastOfType(creator, ControlMessage.JoinAccepted.class).sessionToken();
+            // One present player under the default rule: ready up before the owner starts.
+            access.room().onText(creator, ControlCodec.encode(token, new ControlMessage.SetReady(true)));
             access.room().onText(creator, ControlCodec.encode(token,
                     new ControlMessage.RoundConfigure(new ControlMessage.RoundConfig(
                             "s3k", 0, 0, 60, "OPEN", null))));
@@ -431,6 +437,8 @@ class TestRelayRoomManager {
                     handshake.onWelcome((ControlMessage.Welcome) lastMessage(connection))));
             String token = lastOfType(connection,
                     ControlMessage.JoinAccepted.class).sessionToken();
+            // One present player under the default rule: ready up before the owner starts.
+            access.room().onText(connection, ControlCodec.encode(token, new ControlMessage.SetReady(true)));
             access.room().onText(connection, ControlCodec.encode(token,
                     new ControlMessage.RoundConfigure(new ControlMessage.RoundConfig(
                             "s3k", 0, 0, 60, "OPEN", null))));

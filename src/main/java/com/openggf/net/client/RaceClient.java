@@ -45,7 +45,7 @@ public final class RaceClient implements RaceConnection {
     }
 
     @com.openggf.game.ModApi
-    public sealed interface InboundEvent permits Control, GhostData, Roster, Disconnected {
+    public sealed interface InboundEvent permits Control, GhostData, LobbyGhostData, Roster, Disconnected {
     }
 
     @com.openggf.game.ModApi
@@ -58,6 +58,14 @@ public final class RaceClient implements RaceConnection {
     @com.openggf.game.ModApi
     public record GhostData(GhostPackets.Aggregate aggregate) implements InboundEvent {
         public GhostData {
+            Objects.requireNonNull(aggregate, "aggregate");
+        }
+    }
+
+    /** Nearby players' lobby poses between rounds ({@link GhostPackets#TYPE_LOBBY_AGGREGATE}). */
+    @com.openggf.game.ModApi
+    public record LobbyGhostData(GhostPackets.Aggregate aggregate) implements InboundEvent {
+        public LobbyGhostData {
             Objects.requireNonNull(aggregate, "aggregate");
         }
     }
@@ -169,6 +177,9 @@ public final class RaceClient implements RaceConnection {
                         if (type == GhostPackets.TYPE_GHOST_AGGREGATE) {
                             client.enqueueInbound(ws, new GhostData(
                                     GhostPackets.decodeAggregate(packet)));
+                        } else if (type == GhostPackets.TYPE_LOBBY_AGGREGATE) {
+                            client.enqueueInbound(ws, new LobbyGhostData(
+                                    GhostPackets.decodeLobbyAggregate(packet)));
                         } else if (type == GhostPackets.TYPE_ROSTER) {
                             client.enqueueInbound(ws, new Roster(GhostPackets.decodeRoster(packet)));
                         } else {

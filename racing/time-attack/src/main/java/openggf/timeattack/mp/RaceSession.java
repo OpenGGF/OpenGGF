@@ -155,6 +155,10 @@ public final class RaceSession implements AutoCloseable {
     private TimeAttackRuntime runtime;
     private RunHandle handle;
     private int launchedRound = -1;
+    private RunLauncher lobbyLauncher;
+    private LobbyRun lobbyRun;
+    /** False once this room's lobby level failed; the lobby menu then shows on its own. */
+    private boolean lobbyLevelEnabled = true;
 
     public RaceSession(Path identityDir, GhostStore ghostStore, TimeAttackSettings settings,
                        ModStorage storage, RunLauncher launcher,
@@ -401,6 +405,9 @@ public final class RaceSession implements AutoCloseable {
         if (activeRun != null && activeRun.isActive()) {
             activeRun.leave();
         }
+        if (lobbyRun != null) {
+            lobbyRun.leave();
+        }
         if (master != null) {
             MasterClient leaving = master;
             master = null;
@@ -422,6 +429,7 @@ public final class RaceSession implements AutoCloseable {
         character = null;
         lanInvite = null;
         launchedRound = -1;
+        lobbyLevelEnabled = true;
         state = State.IDLE;
         status = "";
     }
@@ -488,7 +496,99 @@ public final class RaceSession implements AutoCloseable {
             notice = reason;
             return;
         }
+        if (lobbyRun != null) {
+            // A round starting ends the lobby level; the round launches once the scene is back.
+            if (roundPending()) {
+                lobbyRun.leave();
+            } else if (!coordinator.session().isLocalReady() && !lobbyRun.isMenuShown()) {
+                lobbyRun.setMenuShown(true); // only a ready player may play behind a hidden menu
+            }
+            return;
+        }
         maybeLaunchRound();
+        if (state == State.LOBBY && !roundPending()) {
+            maybeLaunchLobbyRun();
+        }
+    }
+
+    /**
+     * Supplies the launcher for the lobby level ({@code ctx.gameplay().launchBehind}); without
+     * one the lobby menu shows on its own, as before lobby levels.
+     */
+    public void setLobbyLauncher(RunLauncher launcher) {
+        lobbyLauncher = launcher;
+    }
+
+    /** True while the room's lobby level plays behind the lobby menu. */
+    public boolean lobbyRunActive() {
+        return lobbyRun != null;
+    }
+
+    /** Whether the lobby menu is shown over the lobby level (true without a lobby level). */
+    public boolean lobbyMenuShown() {
+        return lobbyRun == null || lobbyRun.isMenuShown();
+    }
+
+    /**
+     * Shows or hides the lobby menu over the lobby level. Only a ready player may hide it: the
+     * character then takes the controller and the menu gets no input until it is shown again.
+     */
+    public void setLobbyMenuShown(boolean shown) {
+        if (lobbyRun == null || (!shown && !coordinator.session().isLocalReady())) {
+            return;
+        }
+        lobbyRun.setMenuShown(shown);
+    }
+
+    /**
+     * The scene is back from a run. A lobby level that ended hands over to the pending round,
+     * relaunches (after a round, or an act restart that ended it) or, after a load failure or a
+     * host fault, leaves the lobby menu on its own for this room. Returns false when the ended run
+     * was not the lobby level.
+     */
+    public boolean lobbyRunEnded(com.openggf.mods.run.RunEndReason reason) {
+        if (lobbyRun == null) {
+            return false;
+        }
+        lobbyRun = null;
+        if (reason == com.openggf.mods.run.RunEndReason.LOAD_FAILED
+                || reason == com.openggf.mods.run.RunEndReason.ABORTED) {
+            lobbyLevelEnabled = false;
+            notice = reason == com.openggf.mods.run.RunEndReason.LOAD_FAILED
+                    ? "The lobby level could not be loaded" : "The lobby level stopped";
+        }
+        return true;
+    }
+
+    /** A round has started that this session has not launched yet. */
+    private boolean roundPending() {
+        if (coordinator == null) {
+            return false;
+        }
+        ClientRaceSession.Phase phase = coordinator.session().phase();
+        return (phase == ClientRaceSession.Phase.COUNTDOWN || phase == ClientRaceSession.Phase.RUNNING)
+                && coordinator.roundsStarted() != launchedRound;
+    }
+
+    private void maybeLaunchLobbyRun() {
+        if (lobbyLauncher == null || !lobbyLevelEnabled || closed || roundConfig == null) {
+            return;
+        }
+        LobbyAreas.LobbyArea area = LobbyAreas.forGame(roundConfig.gameId());
+        if (area == null) {
+            return;
+        }
+        String chosen = LobbyAreas.characterFor(area.gameId(),
+                roundConfig.lockedCharacter() != null ? roundConfig.lockedCharacter() : character);
+        LobbyRun run = new LobbyRun(coordinator, lookSource.apply(area.gameId(), chosen));
+        try {
+            run.attachHandle(lobbyLauncher.launch(LobbyAreas.runSpec(area, chosen), run));
+            lobbyRun = run;
+        } catch (RuntimeException e) {
+            lobbyLevelEnabled = false;
+            LOGGER.log(Level.WARNING, "Unable to launch the lobby level", e);
+            notice = "The lobby level could not be started: " + rootMessage(e);
+        }
     }
 
     /** The launched round's run has ended; the scene is back and the lobby resumes. */
@@ -564,6 +664,10 @@ public final class RaceSession implements AutoCloseable {
                 localCharacter != null ? localCharacter : "sonic").encode();
         if (!look.equals(joinedLook)) {
             connection.sendControl(new ControlMessage.UpdateProfile(joinedName, look));
+        }
+        if (hostingRoom && settings.readyRule() != com.openggf.net.protocol.ReadyRules.DEFAULT_BY_SIZE) {
+            // The owner's last choice; the host ignores it from anyone else.
+            connection.sendControl(new ControlMessage.SetReadyRule(settings.readyRule().name()));
         }
         ClientRaceSession clientSession = new ClientRaceSession(clockMillis);
         clientSession.applyJoin(connection.joinAccepted());

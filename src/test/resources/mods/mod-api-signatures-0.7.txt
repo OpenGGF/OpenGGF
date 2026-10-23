@@ -898,6 +898,7 @@ CF-ANNOTATION TYPE com.openggf.mods.objects.MushroomHillFactory visible @com.ope
 CF-ANNOTATION TYPE com.openggf.mods.run.CharacterLooks visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.GhostPose visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.PlayerPose visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.run.RunArea visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.RunEndReason visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.RunHandle visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.RunHost visible @com.openggf.game.ModApi
@@ -995,6 +996,7 @@ CF-ANNOTATION TYPE com.openggf.net.client.DirectRoomRegistration visible @com.op
 CF-ANNOTATION TYPE com.openggf.net.client.GhostStreamPublisher visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.GhostStreamPublisher$BinarySender visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.GhostStreamPublisher$BinarySender visible @java.lang.FunctionalInterface
+CF-ANNOTATION TYPE com.openggf.net.client.LobbyPosePublisher visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.MasterClient visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.RaceClient visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.RaceClient$Control visible @com.openggf.game.ModApi
@@ -1002,6 +1004,7 @@ CF-ANNOTATION TYPE com.openggf.net.client.RaceClient$Disconnected visible @com.o
 CF-ANNOTATION TYPE com.openggf.net.client.RaceClient$GhostData visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.RaceClient$InboundEvent visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.RaceClient$JoinRejectedException visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.client.RaceClient$LobbyGhostData visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.RaceClient$Roster visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.RaceConnection visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.RemoteGhostPlayback visible @com.openggf.game.ModApi
@@ -1059,11 +1062,14 @@ CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$Ping visible @com.ope
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$PlayerInfo visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$PlayerLeft visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$PlayerLook visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$PlayerReady visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$PlayerUpsert visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$Pong visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$PowChallenge visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$PowSolution visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RankUpdate visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$ReadyReset visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$ReadyRule visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RecordingRequest visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RelayAttach visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RelayGuestClose visible @com.openggf.game.ModApi
@@ -1088,6 +1094,8 @@ CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoundEnd visible @com
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoundSnapshot visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoundStart visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$SelectCharacter visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$SetReady visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$SetReadyRule visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$StandingsDelta visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$StandingsPage visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$StandingsPageRequest visible @com.openggf.game.ModApi
@@ -1107,6 +1115,7 @@ CF-ANNOTATION TYPE com.openggf.net.protocol.GhostPackets$RelayGuestBinary visibl
 CF-ANNOTATION TYPE com.openggf.net.protocol.GhostPackets$RosterEntry visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.Protocol visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ProtocolViolationException visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ReadyRules visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.physics.BackgroundPlaneCollisionProvider visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.physics.BackgroundPlaneCollisionProvider visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.physics.BackgroundPlaneCollisionProvider$State visible @com.openggf.game.ModApi
@@ -1820,8 +1829,10 @@ CONSTRUCTOR com.openggf.mods.mutators.TransportPolicy public  <init>(com.openggf
 CONSTRUCTOR com.openggf.mods.run.GhostPose public  <init>(java.lang.String,java.lang.String,com.openggf.mods.run.PlayerPose,java.lang.String,float)
 CONSTRUCTOR com.openggf.mods.run.GhostPose public  <init>(java.lang.String,java.lang.String,com.openggf.mods.run.PlayerPose,java.lang.String,float,com.openggf.net.identity.PlayerAppearance)
 CONSTRUCTOR com.openggf.mods.run.PlayerPose public  <init>(int,int,int,boolean,boolean,int,boolean)
+CONSTRUCTOR com.openggf.mods.run.RunArea public  <init>(int,int,int,int,int,int)
 CONSTRUCTOR com.openggf.mods.run.RunLevelStart public  <init>(com.openggf.mods.run.RunSpec,java.lang.String,boolean,int,int,boolean)
 CONSTRUCTOR com.openggf.mods.run.RunSpec public  <init>(java.lang.String,int,int,java.lang.String,com.openggf.game.session.GameplayRunPolicy)
+CONSTRUCTOR com.openggf.mods.run.RunSpec public  <init>(java.lang.String,int,int,java.lang.String,com.openggf.game.session.GameplayRunPolicy,com.openggf.mods.run.RunArea)
 CONSTRUCTOR com.openggf.mods.run.RunStep public  <init>(long,int,boolean,com.openggf.mods.run.PlayerPose,boolean,int,boolean)
 CONSTRUCTOR com.openggf.mods.scene.ActLaunch public  <init>(com.openggf.game.ZoneKey$Mod,int,com.openggf.game.CharacterKey,java.util.List<com.openggf.game.CharacterKey>,java.util.OptionalInt,java.util.OptionalInt,int,java.util.Map<java.lang.String,java.lang.String>)
 CONSTRUCTOR com.openggf.mods.scene.ActResult public  <init>(com.openggf.game.ZoneKey$Mod,com.openggf.game.ActExit,int,long,java.util.Map<java.lang.String,java.lang.String>)
@@ -1860,10 +1871,12 @@ CONSTRUCTOR com.openggf.mods.ui.SceneCanvasTransform public  <init>(com.openggf.
 CONSTRUCTOR com.openggf.net.client.ClientRaceSession public  <init>(java.util.function.LongSupplier)
 CONSTRUCTOR com.openggf.net.client.DirectJoinAddress public  <init>(java.net.URI,java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.net.client.GhostStreamPublisher public  <init>(com.openggf.net.client.GhostStreamPublisher$BinarySender)
+CONSTRUCTOR com.openggf.net.client.LobbyPosePublisher public  <init>(com.openggf.net.client.GhostStreamPublisher$BinarySender)
 CONSTRUCTOR com.openggf.net.client.RaceClient$Control public  <init>(com.openggf.net.protocol.ControlMessage)
 CONSTRUCTOR com.openggf.net.client.RaceClient$Disconnected public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.net.client.RaceClient$GhostData public  <init>(com.openggf.net.protocol.GhostPackets$Aggregate)
 CONSTRUCTOR com.openggf.net.client.RaceClient$JoinRejectedException public  <init>(java.lang.String)
+CONSTRUCTOR com.openggf.net.client.RaceClient$LobbyGhostData public  <init>(com.openggf.net.protocol.GhostPackets$Aggregate)
 CONSTRUCTOR com.openggf.net.client.RaceClient$Roster public  <init>(java.util.List<com.openggf.net.protocol.GhostPackets$RosterEntry>)
 CONSTRUCTOR com.openggf.net.client.RemoteGhostPlayback public  <init>()
 CONSTRUCTOR com.openggf.net.client.RemoteGhostPlayback$RenderState public  <init>(com.openggf.net.ghost.GhostFrame,float,boolean)
@@ -1908,11 +1921,14 @@ CONSTRUCTOR com.openggf.net.protocol.ControlMessage$PlayerInfo public  <init>(in
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$PlayerInfo public  <init>(int,java.lang.String,java.lang.String,java.lang.String,boolean)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$PlayerLeft public  <init>(int)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$PlayerLook public  <init>(int,java.lang.String)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$PlayerReady public  <init>(int,boolean)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$PlayerUpsert public  <init>(com.openggf.net.protocol.ControlMessage$PlayerInfo)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$Pong public  <init>(long,long)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$PowChallenge public  <init>(java.lang.String,java.lang.String,int)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$PowSolution public  <init>(java.lang.String,long)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RankUpdate public  <init>(int,int)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$ReadyReset public  <init>(boolean)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$ReadyRule public  <init>(java.lang.String,boolean)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RecordingRequest public  <init>(int,java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RelayAttach public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RelayGuestClose public  <init>(int,java.lang.String)
@@ -1940,6 +1956,8 @@ CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoundEnd public  <init>(java
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoundSnapshot public  <init>(java.lang.String,com.openggf.net.protocol.ControlMessage$RoundConfig,long,long,java.util.List<com.openggf.net.protocol.ControlMessage$StandingsRow>)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoundStart public  <init>(com.openggf.net.protocol.ControlMessage$RoundConfig,long,long)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$SelectCharacter public  <init>(java.lang.String)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$SetReady public  <init>(boolean)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$SetReadyRule public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$StandingsDelta public  <init>(java.util.List<com.openggf.net.protocol.ControlMessage$StandingsRow>)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$StandingsPage public  <init>(java.util.List<com.openggf.net.protocol.ControlMessage$StandingsRow>,int,int)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$StandingsPageRequest public  <init>(int)
@@ -3548,6 +3566,8 @@ FIELD com.openggf.net.protocol.GhostPackets public,static,final int ROSTER_STATU
 FIELD com.openggf.net.protocol.GhostPackets public,static,final int ROSTER_STATUS_RUNNING
 FIELD com.openggf.net.protocol.GhostPackets public,static,final int TYPE_GHOST_AGGREGATE
 FIELD com.openggf.net.protocol.GhostPackets public,static,final int TYPE_GHOST_FRAMES
+FIELD com.openggf.net.protocol.GhostPackets public,static,final int TYPE_LOBBY_AGGREGATE
+FIELD com.openggf.net.protocol.GhostPackets public,static,final int TYPE_LOBBY_FRAMES
 FIELD com.openggf.net.protocol.GhostPackets public,static,final int TYPE_RELAY_GUEST_BINARY
 FIELD com.openggf.net.protocol.GhostPackets public,static,final int TYPE_ROSTER
 FIELD com.openggf.net.protocol.Protocol public,static,final int MAX_BINARY_BYTES
@@ -3560,6 +3580,11 @@ FIELD com.openggf.net.protocol.Protocol public,static,final int ROOM_LIST_RATE_L
 FIELD com.openggf.net.protocol.Protocol public,static,final int VERSION
 FIELD com.openggf.net.protocol.Protocol public,static,final long CHAT_MIN_INTERVAL_MILLIS
 FIELD com.openggf.net.protocol.Protocol public,static,final long PROFILE_MIN_INTERVAL_MILLIS
+FIELD com.openggf.net.protocol.Protocol public,static,final long READY_MIN_INTERVAL_MILLIS
+FIELD com.openggf.net.protocol.ReadyRules public,static,final com.openggf.net.protocol.ReadyRules AUTO
+FIELD com.openggf.net.protocol.ReadyRules public,static,final com.openggf.net.protocol.ReadyRules DEFAULT_BY_SIZE
+FIELD com.openggf.net.protocol.ReadyRules public,static,final com.openggf.net.protocol.ReadyRules REQUIRED
+FIELD com.openggf.net.protocol.ReadyRules public,static,final int MAX_PLAYERS_REQUIRED_BY_DEFAULT
 FIELD com.openggf.physics.BackgroundPlaneCollisionProvider public,static,final com.openggf.physics.BackgroundPlaneCollisionProvider FOREGROUND_ONLY
 FIELD com.openggf.physics.BackgroundPlaneCollisionProvider$State public,static,final com.openggf.physics.BackgroundPlaneCollisionProvider$State INACTIVE
 FIELD com.openggf.physics.CollisionEvent$EventType public,static,final com.openggf.physics.CollisionEvent$EventType POST_ADJUSTMENT
@@ -4013,6 +4038,7 @@ INTERFACE com.openggf.net.client.RaceClient com.openggf.net.client.RaceConnectio
 INTERFACE com.openggf.net.client.RaceClient$Control com.openggf.net.client.RaceClient$InboundEvent
 INTERFACE com.openggf.net.client.RaceClient$Disconnected com.openggf.net.client.RaceClient$InboundEvent
 INTERFACE com.openggf.net.client.RaceClient$GhostData com.openggf.net.client.RaceClient$InboundEvent
+INTERFACE com.openggf.net.client.RaceClient$LobbyGhostData com.openggf.net.client.RaceClient$InboundEvent
 INTERFACE com.openggf.net.client.RaceClient$Roster com.openggf.net.client.RaceClient$InboundEvent
 INTERFACE com.openggf.net.host.RaceRoomHost java.lang.AutoCloseable
 INTERFACE com.openggf.net.host.jdk.JdkRaceHostServer com.openggf.net.host.RaceRoomHost
@@ -4030,11 +4056,14 @@ INTERFACE com.openggf.net.protocol.ControlMessage$Kick com.openggf.net.protocol.
 INTERFACE com.openggf.net.protocol.ControlMessage$Ping com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$PlayerLeft com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$PlayerLook com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$PlayerReady com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$PlayerUpsert com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$Pong com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$PowChallenge com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$PowSolution com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RankUpdate com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$ReadyReset com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$ReadyRule com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RecordingRequest com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RelayAttach com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RelayGuestClose com.openggf.net.protocol.ControlMessage
@@ -4055,6 +4084,8 @@ INTERFACE com.openggf.net.protocol.ControlMessage$RoundConfigure com.openggf.net
 INTERFACE com.openggf.net.protocol.ControlMessage$RoundEnd com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoundStart com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$SelectCharacter com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$SetReady com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$SetReadyRule com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$StandingsDelta com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$StandingsPage com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$StandingsPageRequest com.openggf.net.protocol.ControlMessage
@@ -9175,6 +9206,7 @@ METHOD com.openggf.level.LevelManager public  boolean hasPendingLevelExit()
 METHOD com.openggf.level.LevelManager public  boolean hasPrebuiltTilemaps()
 METHOD com.openggf.level.LevelManager public  boolean isApplyingSynchronousScreenEventTransition(int,int,int,int)
 METHOD com.openggf.level.LevelManager public  boolean isBonusStageReturn()
+METHOD com.openggf.level.LevelManager public  boolean isHudCoveredByHost()
 METHOD com.openggf.level.LevelManager public  boolean isLevelInactiveForTransition()
 METHOD com.openggf.level.LevelManager public  boolean isRespawnRequestedForRewind()
 METHOD com.openggf.level.LevelManager public  boolean isSanctuaryOriginRestorePending(int,int)
@@ -9411,6 +9443,7 @@ METHOD com.openggf.level.LevelManager public  void setClearColor()
 METHOD com.openggf.level.LevelManager public  void setEditorSaveManager(com.openggf.editor.persistence.EditorSaveManager)
 METHOD com.openggf.level.LevelManager public  void setForceHudSuppressed(boolean)
 METHOD com.openggf.level.LevelManager public  void setFrameCounter(int)
+METHOD com.openggf.level.LevelManager public  void setHudCoveredByHost(boolean)
 METHOD com.openggf.level.LevelManager public  void setLastStarPostHit()
 METHOD com.openggf.level.LevelManager public  void setLevel(com.openggf.level.Level)
 METHOD com.openggf.level.LevelManager public  void setLevelInactiveForTransition(boolean)
@@ -12392,8 +12425,19 @@ METHOD com.openggf.mods.run.PlayerPose public  int priorityBucket()
 METHOD com.openggf.mods.run.PlayerPose public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.mods.run.PlayerPose public,final  int hashCode()
 METHOD com.openggf.mods.run.PlayerPose public,final  java.lang.String toString()
+METHOD com.openggf.mods.run.RunArea public  int maxX()
+METHOD com.openggf.mods.run.RunArea public  int maxY()
+METHOD com.openggf.mods.run.RunArea public  int minX()
+METHOD com.openggf.mods.run.RunArea public  int minY()
+METHOD com.openggf.mods.run.RunArea public  int spawnX()
+METHOD com.openggf.mods.run.RunArea public  int spawnY()
+METHOD com.openggf.mods.run.RunArea public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.run.RunArea public,final  int hashCode()
+METHOD com.openggf.mods.run.RunArea public,final  java.lang.String toString()
 METHOD com.openggf.mods.run.RunEndReason public,static  com.openggf.mods.run.RunEndReason valueOf(java.lang.String)
 METHOD com.openggf.mods.run.RunEndReason public,static  com.openggf.mods.run.RunEndReason[] values()
+METHOD com.openggf.mods.run.RunHandle public  void holdControls(boolean)
+METHOD com.openggf.mods.run.RunHandle public  void setLevelCovered(boolean)
 METHOD com.openggf.mods.run.RunHandle public  void setPlayerAppearance(com.openggf.net.identity.PlayerAppearance)
 METHOD com.openggf.mods.run.RunHandle public,abstract  boolean isActive()
 METHOD com.openggf.mods.run.RunHandle public,abstract  void leave()
@@ -12421,6 +12465,7 @@ METHOD com.openggf.mods.run.RunLevelStart public,final  boolean equals(java.lang
 METHOD com.openggf.mods.run.RunLevelStart public,final  int hashCode()
 METHOD com.openggf.mods.run.RunLevelStart public,final  java.lang.String toString()
 METHOD com.openggf.mods.run.RunSpec public  com.openggf.game.session.GameplayRunPolicy policy()
+METHOD com.openggf.mods.run.RunSpec public  com.openggf.mods.run.RunArea area()
 METHOD com.openggf.mods.run.RunSpec public  int act()
 METHOD com.openggf.mods.run.RunSpec public  int zone()
 METHOD com.openggf.mods.run.RunSpec public  java.lang.String character()
@@ -12581,6 +12626,7 @@ METHOD com.openggf.mods.scene.SceneDraw public  int hashCode()
 METHOD com.openggf.mods.scene.SceneDraw public  int tint()
 METHOD com.openggf.mods.scene.SceneDraw public  java.lang.String toString()
 METHOD com.openggf.mods.scene.SceneDraw public,static  com.openggf.mods.scene.SceneDraw plain()
+METHOD com.openggf.mods.scene.SceneGameplay public  com.openggf.mods.run.RunHandle launchBehind(com.openggf.mods.run.RunSpec,com.openggf.mods.run.RunHost)
 METHOD com.openggf.mods.scene.SceneGameplay public  java.util.Optional<java.lang.String> determinismFingerprint(java.lang.String)
 METHOD com.openggf.mods.scene.SceneGameplay public,abstract  com.openggf.mods.run.RunHandle launch(com.openggf.mods.run.RunSpec,com.openggf.mods.run.RunHost)
 METHOD com.openggf.mods.scene.SceneGameplay public,abstract  java.util.List<java.lang.String> availableGames()
@@ -12923,8 +12969,11 @@ METHOD com.openggf.mods.ui.TextLayout$Metrics public,abstract  int width(java.la
 METHOD com.openggf.mods.ui.UiPrimitives public,static  void frame(com.openggf.mods.ui.PixelCanvas,int,int,int,int,int)
 METHOD com.openggf.mods.ui.UiPrimitives public,static  void gradient(com.openggf.mods.ui.PixelCanvas,int,int,int,int,int,int)
 METHOD com.openggf.mods.ui.UiPrimitives public,static  void meter(com.openggf.mods.ui.PixelCanvas,int,int,int,int,int,int,int,int)
+METHOD com.openggf.net.client.ClientRaceSession public  boolean isLocalReady()
+METHOD com.openggf.net.client.ClientRaceSession public  boolean isReady(int)
 METHOD com.openggf.net.client.ClientRaceSession public  boolean isWindowOpen()
 METHOD com.openggf.net.client.ClientRaceSession public  boolean needsMoreClockSamples()
+METHOD com.openggf.net.client.ClientRaceSession public  boolean readyRequired()
 METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.client.ClientRaceSession$Phase phase()
 METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.identity.PlayerAppearance appearance(int)
 METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.protocol.ControlMessage$RoomDescriptor room()
@@ -12933,7 +12982,9 @@ METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.protocol
 METHOD com.openggf.net.client.ClientRaceSession public  int localSlot()
 METHOD com.openggf.net.client.ClientRaceSession public  java.lang.String kickReason()
 METHOD com.openggf.net.client.ClientRaceSession public  java.lang.String lastVoteResultTrackKey()
+METHOD com.openggf.net.client.ClientRaceSession public  java.lang.String readyRule()
 METHOD com.openggf.net.client.ClientRaceSession public  java.util.List<com.openggf.net.protocol.ControlMessage$PlayerInfo> players()
+METHOD com.openggf.net.client.ClientRaceSession public  java.util.List<com.openggf.net.protocol.ControlMessage$PlayerInfo> playersNotReady()
 METHOD com.openggf.net.client.ClientRaceSession public  java.util.List<com.openggf.net.protocol.ControlMessage$StandingsRow> podiumTop(int)
 METHOD com.openggf.net.client.ClientRaceSession public  java.util.List<com.openggf.net.protocol.ControlMessage$StandingsRow> standings()
 METHOD com.openggf.net.client.ClientRaceSession public  java.util.List<com.openggf.net.protocol.ControlMessage$VoteCount> voteCounts()
@@ -12965,6 +13016,11 @@ METHOD com.openggf.net.client.GhostStreamPublisher public  void beginAttempt(int
 METHOD com.openggf.net.client.GhostStreamPublisher public  void finishAttempt()
 METHOD com.openggf.net.client.GhostStreamPublisher public  void onFrame(com.openggf.net.ghost.GhostFrame)
 METHOD com.openggf.net.client.GhostStreamPublisher$BinarySender public,abstract  void sendBinary(byte[])
+METHOD com.openggf.net.client.LobbyPosePublisher public  boolean isActive()
+METHOD com.openggf.net.client.LobbyPosePublisher public  int streamId()
+METHOD com.openggf.net.client.LobbyPosePublisher public  void beginStream()
+METHOD com.openggf.net.client.LobbyPosePublisher public  void end()
+METHOD com.openggf.net.client.LobbyPosePublisher public  void onFrame(com.openggf.net.ghost.GhostFrame)
 METHOD com.openggf.net.client.MasterClient public  boolean isOpen()
 METHOD com.openggf.net.client.MasterClient public  com.openggf.net.client.RaceConnection attachRelay(java.lang.String)
 METHOD com.openggf.net.client.MasterClient public  java.lang.String masterSessionToken()
@@ -13007,6 +13063,10 @@ METHOD com.openggf.net.client.RaceClient$GhostData public  com.openggf.net.proto
 METHOD com.openggf.net.client.RaceClient$GhostData public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.client.RaceClient$GhostData public,final  int hashCode()
 METHOD com.openggf.net.client.RaceClient$GhostData public,final  java.lang.String toString()
+METHOD com.openggf.net.client.RaceClient$LobbyGhostData public  com.openggf.net.protocol.GhostPackets$Aggregate aggregate()
+METHOD com.openggf.net.client.RaceClient$LobbyGhostData public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.client.RaceClient$LobbyGhostData public,final  int hashCode()
+METHOD com.openggf.net.client.RaceClient$LobbyGhostData public,final  java.lang.String toString()
 METHOD com.openggf.net.client.RaceClient$Roster public  java.util.List<com.openggf.net.protocol.GhostPackets$RosterEntry> entries()
 METHOD com.openggf.net.client.RaceClient$Roster public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.client.RaceClient$Roster public,final  int hashCode()
@@ -13153,10 +13213,13 @@ METHOD com.openggf.net.hub.HubConnection public,abstract  java.lang.String remot
 METHOD com.openggf.net.hub.HubConnection public,abstract  void close(java.lang.String)
 METHOD com.openggf.net.hub.HubConnection public,abstract  void sendBinary(byte[])
 METHOD com.openggf.net.hub.HubConnection public,abstract  void sendText(java.lang.String)
+METHOD com.openggf.net.hub.RoomHost public  boolean isReady(int)
+METHOD com.openggf.net.hub.RoomHost public  boolean readyToStart()
 METHOD com.openggf.net.hub.RoomHost public  boolean requestStartRound(com.openggf.net.protocol.ControlMessage$RoundConfig)
 METHOD com.openggf.net.hub.RoomHost public  com.openggf.net.hub.GhostHub hub()
 METHOD com.openggf.net.hub.RoomHost public  com.openggf.net.hub.HostRoundEngine round()
 METHOD com.openggf.net.hub.RoomHost public  com.openggf.net.protocol.ControlMessage$RoomDescriptor descriptor()
+METHOD com.openggf.net.hub.RoomHost public  com.openggf.net.protocol.ReadyRules readyRule()
 METHOD com.openggf.net.hub.RoomHost public  int playerCount()
 METHOD com.openggf.net.hub.RoomHost public  java.lang.String determinismFingerprint()
 METHOD com.openggf.net.hub.RoomHost public  java.lang.String identityFingerprintForSlot(int)
@@ -13327,6 +13390,11 @@ METHOD com.openggf.net.protocol.ControlMessage$PlayerLook public  java.lang.Stri
 METHOD com.openggf.net.protocol.ControlMessage$PlayerLook public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$PlayerLook public,final  int hashCode()
 METHOD com.openggf.net.protocol.ControlMessage$PlayerLook public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$PlayerReady public  boolean ready()
+METHOD com.openggf.net.protocol.ControlMessage$PlayerReady public  int slot()
+METHOD com.openggf.net.protocol.ControlMessage$PlayerReady public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$PlayerReady public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$PlayerReady public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$PlayerUpsert public  com.openggf.net.protocol.ControlMessage$PlayerInfo player()
 METHOD com.openggf.net.protocol.ControlMessage$PlayerUpsert public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$PlayerUpsert public,final  int hashCode()
@@ -13352,6 +13420,15 @@ METHOD com.openggf.net.protocol.ControlMessage$RankUpdate public  int rank()
 METHOD com.openggf.net.protocol.ControlMessage$RankUpdate public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$RankUpdate public,final  int hashCode()
 METHOD com.openggf.net.protocol.ControlMessage$RankUpdate public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$ReadyReset public  boolean ready()
+METHOD com.openggf.net.protocol.ControlMessage$ReadyReset public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$ReadyReset public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$ReadyReset public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$ReadyRule public  boolean required()
+METHOD com.openggf.net.protocol.ControlMessage$ReadyRule public  java.lang.String rule()
+METHOD com.openggf.net.protocol.ControlMessage$ReadyRule public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$ReadyRule public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$ReadyRule public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$RecordingRequest public  int attemptId()
 METHOD com.openggf.net.protocol.ControlMessage$RecordingRequest public  java.lang.String expectedHashHex()
 METHOD com.openggf.net.protocol.ControlMessage$RecordingRequest public  java.lang.String uploadUrl()
@@ -13495,6 +13572,14 @@ METHOD com.openggf.net.protocol.ControlMessage$SelectCharacter public  java.lang
 METHOD com.openggf.net.protocol.ControlMessage$SelectCharacter public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$SelectCharacter public,final  int hashCode()
 METHOD com.openggf.net.protocol.ControlMessage$SelectCharacter public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$SetReady public  boolean ready()
+METHOD com.openggf.net.protocol.ControlMessage$SetReady public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$SetReady public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$SetReady public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$SetReadyRule public  java.lang.String rule()
+METHOD com.openggf.net.protocol.ControlMessage$SetReadyRule public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$SetReadyRule public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$SetReadyRule public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$StandingsDelta public  java.util.List<com.openggf.net.protocol.ControlMessage$StandingsRow> rows()
 METHOD com.openggf.net.protocol.ControlMessage$StandingsDelta public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$StandingsDelta public,final  int hashCode()
@@ -13553,10 +13638,14 @@ METHOD com.openggf.net.protocol.ControlMessage$Welcome public,final  int hashCod
 METHOD com.openggf.net.protocol.ControlMessage$Welcome public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.GhostPackets public,static  byte[] encodeAggregate(int,java.util.List<com.openggf.net.protocol.GhostPackets$AggregateEntry>)
 METHOD com.openggf.net.protocol.GhostPackets public,static  byte[] encodeFrames(int,int,byte[])
+METHOD com.openggf.net.protocol.GhostPackets public,static  byte[] encodeLobbyAggregate(int,java.util.List<com.openggf.net.protocol.GhostPackets$AggregateEntry>)
+METHOD com.openggf.net.protocol.GhostPackets public,static  byte[] encodeLobbyFrames(int,int,byte[])
 METHOD com.openggf.net.protocol.GhostPackets public,static  byte[] encodeRelayGuestBinary(int,byte[])
 METHOD com.openggf.net.protocol.GhostPackets public,static  byte[] encodeRoster(java.util.List<com.openggf.net.protocol.GhostPackets$RosterEntry>)
 METHOD com.openggf.net.protocol.GhostPackets public,static  com.openggf.net.protocol.GhostPackets$Aggregate decodeAggregate(byte[])
+METHOD com.openggf.net.protocol.GhostPackets public,static  com.openggf.net.protocol.GhostPackets$Aggregate decodeLobbyAggregate(byte[])
 METHOD com.openggf.net.protocol.GhostPackets public,static  com.openggf.net.protocol.GhostPackets$FramesBatch decodeFrames(byte[])
+METHOD com.openggf.net.protocol.GhostPackets public,static  com.openggf.net.protocol.GhostPackets$FramesBatch decodeLobbyFrames(byte[])
 METHOD com.openggf.net.protocol.GhostPackets public,static  com.openggf.net.protocol.GhostPackets$RelayGuestBinary decodeRelayGuestBinary(byte[])
 METHOD com.openggf.net.protocol.GhostPackets public,static  java.util.List<com.openggf.net.protocol.GhostPackets$RosterEntry> decodeRoster(byte[])
 METHOD com.openggf.net.protocol.GhostPackets$Aggregate public  int hubTick()
@@ -13591,6 +13680,10 @@ METHOD com.openggf.net.protocol.GhostPackets$RosterEntry public  int status()
 METHOD com.openggf.net.protocol.GhostPackets$RosterEntry public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.GhostPackets$RosterEntry public,final  int hashCode()
 METHOD com.openggf.net.protocol.GhostPackets$RosterEntry public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ReadyRules public  boolean required(int)
+METHOD com.openggf.net.protocol.ReadyRules public,static  com.openggf.net.protocol.ReadyRules parse(java.lang.String)
+METHOD com.openggf.net.protocol.ReadyRules public,static  com.openggf.net.protocol.ReadyRules valueOf(java.lang.String)
+METHOD com.openggf.net.protocol.ReadyRules public,static  com.openggf.net.protocol.ReadyRules[] values()
 METHOD com.openggf.physics.BackgroundPlaneCollisionProvider public  com.openggf.physics.BackgroundPlaneCollisionProvider$State state(com.openggf.level.LevelManager)
 METHOD com.openggf.physics.BackgroundPlaneCollisionProvider public  int backgroundX(com.openggf.physics.BackgroundPlaneCollisionProvider$State,int,com.openggf.physics.Direction)
 METHOD com.openggf.physics.BackgroundPlaneCollisionProvider public  int backgroundY(com.openggf.physics.BackgroundPlaneCollisionProvider$State,int)
@@ -16157,6 +16250,7 @@ NESTED com.openggf.net.client.RaceClient com.openggf.net.client.RaceClient$Disco
 NESTED com.openggf.net.client.RaceClient com.openggf.net.client.RaceClient$GhostData
 NESTED com.openggf.net.client.RaceClient com.openggf.net.client.RaceClient$InboundEvent
 NESTED com.openggf.net.client.RaceClient com.openggf.net.client.RaceClient$JoinRejectedException
+NESTED com.openggf.net.client.RaceClient com.openggf.net.client.RaceClient$LobbyGhostData
 NESTED com.openggf.net.client.RaceClient com.openggf.net.client.RaceClient$Roster
 NESTED com.openggf.net.client.RemoteGhostPlayback com.openggf.net.client.RemoteGhostPlayback$RenderState
 NESTED com.openggf.net.client.RemoteGhostRegistry com.openggf.net.client.RemoteGhostRegistry$FarPlayer
@@ -16186,11 +16280,14 @@ NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlM
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PlayerInfo
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PlayerLeft
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PlayerLook
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PlayerReady
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PlayerUpsert
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Pong
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PowChallenge
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PowSolution
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RankUpdate
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$ReadyReset
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$ReadyRule
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RecordingRequest
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RelayAttach
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RelayGuestClose
@@ -16215,6 +16312,8 @@ NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlM
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoundSnapshot
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoundStart
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$SelectCharacter
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$SetReady
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$SetReadyRule
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$StandingsDelta
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$StandingsPage
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$StandingsPageRequest
@@ -16421,6 +16520,7 @@ PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.Transp
 PERMITS com.openggf.net.client.RaceClient$InboundEvent com.openggf.net.client.RaceClient$Control
 PERMITS com.openggf.net.client.RaceClient$InboundEvent com.openggf.net.client.RaceClient$Disconnected
 PERMITS com.openggf.net.client.RaceClient$InboundEvent com.openggf.net.client.RaceClient$GhostData
+PERMITS com.openggf.net.client.RaceClient$InboundEvent com.openggf.net.client.RaceClient$LobbyGhostData
 PERMITS com.openggf.net.client.RaceClient$InboundEvent com.openggf.net.client.RaceClient$Roster
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$AttemptFinish
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$AttemptReset
@@ -16436,11 +16536,14 @@ PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.Control
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Ping
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PlayerLeft
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PlayerLook
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PlayerReady
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PlayerUpsert
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Pong
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PowChallenge
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PowSolution
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RankUpdate
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$ReadyReset
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$ReadyRule
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RecordingRequest
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RelayAttach
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RelayGuestClose
@@ -16461,6 +16564,8 @@ PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.Control
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoundEnd
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoundStart
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$SelectCharacter
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$SetReady
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$SetReadyRule
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$StandingsDelta
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$StandingsPage
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$StandingsPageRequest
@@ -18254,6 +18359,12 @@ RECORD-COMPONENT com.openggf.mods.run.PlayerPose highPriority boolean
 RECORD-COMPONENT com.openggf.mods.run.PlayerPose mappingFrame int
 RECORD-COMPONENT com.openggf.mods.run.PlayerPose priorityBucket int
 RECORD-COMPONENT com.openggf.mods.run.PlayerPose vFlip boolean
+RECORD-COMPONENT com.openggf.mods.run.RunArea maxX int
+RECORD-COMPONENT com.openggf.mods.run.RunArea maxY int
+RECORD-COMPONENT com.openggf.mods.run.RunArea minX int
+RECORD-COMPONENT com.openggf.mods.run.RunArea minY int
+RECORD-COMPONENT com.openggf.mods.run.RunArea spawnX int
+RECORD-COMPONENT com.openggf.mods.run.RunArea spawnY int
 RECORD-COMPONENT com.openggf.mods.run.RunLevelStart deathRestart boolean
 RECORD-COMPONENT com.openggf.mods.run.RunLevelStart debugAssisted boolean
 RECORD-COMPONENT com.openggf.mods.run.RunLevelStart determinismFingerprint java.lang.String
@@ -18261,6 +18372,7 @@ RECORD-COMPONENT com.openggf.mods.run.RunLevelStart levelHeight int
 RECORD-COMPONENT com.openggf.mods.run.RunLevelStart levelWidth int
 RECORD-COMPONENT com.openggf.mods.run.RunLevelStart spec com.openggf.mods.run.RunSpec
 RECORD-COMPONENT com.openggf.mods.run.RunSpec act int
+RECORD-COMPONENT com.openggf.mods.run.RunSpec area com.openggf.mods.run.RunArea
 RECORD-COMPONENT com.openggf.mods.run.RunSpec character java.lang.String
 RECORD-COMPONENT com.openggf.mods.run.RunSpec gameId java.lang.String
 RECORD-COMPONENT com.openggf.mods.run.RunSpec policy com.openggf.game.session.GameplayRunPolicy
@@ -18363,6 +18475,7 @@ RECORD-COMPONENT com.openggf.net.client.DirectJoinAddress uri java.net.URI
 RECORD-COMPONENT com.openggf.net.client.RaceClient$Control message com.openggf.net.protocol.ControlMessage
 RECORD-COMPONENT com.openggf.net.client.RaceClient$Disconnected reason java.lang.String
 RECORD-COMPONENT com.openggf.net.client.RaceClient$GhostData aggregate com.openggf.net.protocol.GhostPackets$Aggregate
+RECORD-COMPONENT com.openggf.net.client.RaceClient$LobbyGhostData aggregate com.openggf.net.protocol.GhostPackets$Aggregate
 RECORD-COMPONENT com.openggf.net.client.RaceClient$Roster entries java.util.List<com.openggf.net.protocol.GhostPackets$RosterEntry>
 RECORD-COMPONENT com.openggf.net.client.RemoteGhostPlayback$RenderState frame com.openggf.net.ghost.GhostFrame
 RECORD-COMPONENT com.openggf.net.client.RemoteGhostPlayback$RenderState opacityScale float
@@ -18467,6 +18580,8 @@ RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$PlayerInfo slot int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$PlayerLeft slot int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$PlayerLook appearance java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$PlayerLook slot int
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$PlayerReady ready boolean
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$PlayerReady slot int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$PlayerUpsert player com.openggf.net.protocol.ControlMessage$PlayerInfo
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$Pong hubMillis long
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$Pong t0ClientMillis long
@@ -18477,6 +18592,9 @@ RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$PowSolution kind java.l
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$PowSolution nonce long
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RankUpdate bestTimeFrames int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RankUpdate rank int
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$ReadyReset ready boolean
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$ReadyRule required boolean
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$ReadyRule rule java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RecordingRequest attemptId int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RecordingRequest expectedHashHex java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RecordingRequest uploadUrl java.lang.String
@@ -18548,6 +18666,8 @@ RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoundStart config com.o
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoundStart countdownEndsAtHubMillis long
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoundStart deadlineHubMillis long
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$SelectCharacter character java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$SetReady ready boolean
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$SetReadyRule rule java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$StandingsDelta rows java.util.List<com.openggf.net.protocol.ControlMessage$StandingsRow>
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$StandingsPage page int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$StandingsPage rows java.util.List<com.openggf.net.protocol.ControlMessage$StandingsRow>
@@ -19667,6 +19787,7 @@ TYPE class public,final com.openggf.mods.ui.UiPrimitives SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.ClientRaceSession SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.DirectRoomRegistration SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.GhostStreamPublisher SUPER java.lang.Object
+TYPE class public,final com.openggf.net.client.LobbyPosePublisher SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.MasterClient SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.RaceClient SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.RemoteGhostPlayback SUPER java.lang.Object
@@ -19809,6 +19930,7 @@ TYPE enum public,final com.openggf.mods.mutators.MutatorScope SUPER java.lang.En
 TYPE enum public,final com.openggf.mods.run.RunEndReason SUPER java.lang.Enum<com.openggf.mods.run.RunEndReason>
 TYPE enum public,final com.openggf.mods.scene.art.StockSceneArt SUPER java.lang.Enum<com.openggf.mods.scene.art.StockSceneArt>
 TYPE enum public,final com.openggf.mods.state.ModSaveWriteResult SUPER java.lang.Enum<com.openggf.mods.state.ModSaveWriteResult>
+TYPE enum public,final com.openggf.net.protocol.ReadyRules SUPER java.lang.Enum<com.openggf.net.protocol.ReadyRules>
 TYPE enum public,final com.openggf.physics.Direction SUPER java.lang.Enum<com.openggf.physics.Direction>
 TYPE enum public,final com.openggf.sprites.animation.SpriteAnimationEndAction SUPER java.lang.Enum<com.openggf.sprites.animation.SpriteAnimationEndAction>
 TYPE enum public,final com.openggf.sprites.playable.ObjectControlState SUPER java.lang.Enum<com.openggf.sprites.playable.ObjectControlState>
@@ -20309,6 +20431,7 @@ TYPE record public,final com.openggf.mods.mutators.SpritePresentationPolicy SUPE
 TYPE record public,final com.openggf.mods.mutators.TransportPolicy SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.run.GhostPose SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.run.PlayerPose SUPER java.lang.Record
+TYPE record public,final com.openggf.mods.run.RunArea SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.run.RunLevelStart SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.run.RunSpec SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.run.RunStep SUPER java.lang.Record
@@ -20489,6 +20612,7 @@ TYPE record public,static,final com.openggf.mods.ui.FocusRegions$Region SUPER ja
 TYPE record public,static,final com.openggf.net.client.RaceClient$Control SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.client.RaceClient$Disconnected SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.client.RaceClient$GhostData SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.client.RaceClient$LobbyGhostData SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.client.RaceClient$Roster SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.client.RemoteGhostPlayback$RenderState SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.client.RemoteGhostRegistry$FarPlayer SUPER java.lang.Record
@@ -20511,11 +20635,14 @@ TYPE record public,static,final com.openggf.net.protocol.ControlMessage$Ping SUP
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$PlayerInfo SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$PlayerLeft SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$PlayerLook SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$PlayerReady SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$PlayerUpsert SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$Pong SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$PowChallenge SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$PowSolution SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RankUpdate SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$ReadyReset SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$ReadyRule SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RecordingRequest SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RelayAttach SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RelayGuestClose SUPER java.lang.Record
@@ -20540,6 +20667,8 @@ TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoundEnd
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoundSnapshot SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoundStart SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$SelectCharacter SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$SetReady SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$SetReadyRule SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$StandingsDelta SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$StandingsPage SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$StandingsPageRequest SUPER java.lang.Record
@@ -21535,6 +21664,7 @@ TYPE-ANNOTATION com.openggf.mods.objects.MushroomHillFactory @com.openggf.game.M
 TYPE-ANNOTATION com.openggf.mods.run.CharacterLooks @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.GhostPose @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.PlayerPose @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.run.RunArea @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.RunEndReason @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.RunHandle @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.RunHost @com.openggf.game.ModApi
@@ -21632,6 +21762,7 @@ TYPE-ANNOTATION com.openggf.net.client.DirectRoomRegistration @com.openggf.game.
 TYPE-ANNOTATION com.openggf.net.client.GhostStreamPublisher @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.GhostStreamPublisher$BinarySender @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.GhostStreamPublisher$BinarySender @java.lang.FunctionalInterface
+TYPE-ANNOTATION com.openggf.net.client.LobbyPosePublisher @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.MasterClient @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.RaceClient @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.RaceClient$Control @com.openggf.game.ModApi
@@ -21639,6 +21770,7 @@ TYPE-ANNOTATION com.openggf.net.client.RaceClient$Disconnected @com.openggf.game
 TYPE-ANNOTATION com.openggf.net.client.RaceClient$GhostData @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.RaceClient$InboundEvent @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.RaceClient$JoinRejectedException @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.client.RaceClient$LobbyGhostData @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.RaceClient$Roster @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.RaceConnection @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.RemoteGhostPlayback @com.openggf.game.ModApi
@@ -21696,11 +21828,14 @@ TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$Ping @com.openggf.game.M
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$PlayerInfo @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$PlayerLeft @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$PlayerLook @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$PlayerReady @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$PlayerUpsert @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$Pong @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$PowChallenge @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$PowSolution @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RankUpdate @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$ReadyReset @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$ReadyRule @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RecordingRequest @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RelayAttach @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RelayGuestClose @com.openggf.game.ModApi
@@ -21725,6 +21860,8 @@ TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoundEnd @com.openggf.ga
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoundSnapshot @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoundStart @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$SelectCharacter @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$SetReady @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$SetReadyRule @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$StandingsDelta @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$StandingsPage @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$StandingsPageRequest @com.openggf.game.ModApi
@@ -21744,6 +21881,7 @@ TYPE-ANNOTATION com.openggf.net.protocol.GhostPackets$RelayGuestBinary @com.open
 TYPE-ANNOTATION com.openggf.net.protocol.GhostPackets$RosterEntry @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.Protocol @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ProtocolViolationException @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ReadyRules @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.physics.BackgroundPlaneCollisionProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.physics.BackgroundPlaneCollisionProvider @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.physics.BackgroundPlaneCollisionProvider$State @com.openggf.game.ModApi

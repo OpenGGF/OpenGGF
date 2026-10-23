@@ -22,6 +22,14 @@ public interface ViewInput {
 
     boolean back();
 
+    /**
+     * Start (any controller) or Enter went down this tick. Over the lobby level it toggles between
+     * the lobby menu and the character once the player is ready.
+     */
+    default boolean start() {
+        return false;
+    }
+
     /** True on the tick the key went down ({@link SceneKeys} code). */
     boolean keyPressed(int key);
 
@@ -46,6 +54,10 @@ public interface ViewInput {
             }
             @Override public boolean back() {
                 return ctx.buttonPressed(SceneButtons.B) || ctx.keyPressed(SceneKeys.ESCAPE);
+            }
+            @Override public boolean start() {
+                return ctx.buttonPressed(SceneButtons.START)
+                        || ctx.keyPressed(SceneKeys.ENTER) || ctx.keyPressed(SceneKeys.KP_ENTER);
             }
             @Override public boolean keyPressed(int key) { return ctx.keyPressed(key); }
             @Override public boolean keyDown(int key) { return ctx.keyDown(key); }
