@@ -59,6 +59,13 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
   [PCM source oracle](../../tools/soniccd/pcm_oracle_check.py) checks constructed
   expectations against pinned integer C with delta collection; it is secondary
   source-model evidence, not official-core audio or resampling proof. Origin: 2026-10-23 CD-06.
+- [Native CD owner build](../../tools/soniccd/native_owner_build.py) and
+  [event controls](../../tools/soniccd/native_owner_run.py) prepare a separate
+  pinned core with read-only owner hooks, typed Waterbox exports and explicit
+  clock epochs. [Inspection](../../tools/soniccd/native_owner_inspect.py) binds
+  ABI/storage identity; [analysis](../../tools/soniccd/native_owner_analyze.py)
+  rejects incomplete event evidence. Origin and bounded USA title coverage are
+  recorded in the [local plan](../architecture/plans/2026-10-23-sonic-cd-implementation.md#verified-owner-ledger-r4).
 - [Stageplay capture](../../src/main/java/com/openggf/tools/StageplayCaptureTool.java): render a saved `.stageplay` scene with supplied ROMs to synchronized lossless MKV; see the [guide](../guide/creating/stageplay.md). [Stageplay HUD pictures](../../src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java) use explicit `-Dopenggf.stageplay.hudPictures=true`, surfaceless EGL and an absolute S2 REV01 ROM path, writing `target/stageplay-hud/` for visual review; desktop has its equivalent `TestStageplayChromePictures` in OpenGGF Editor. Origin: 2026-10-21 Stageplay delivery.
 - [Stageplay authoring CLI](../../tools/stageplay/stageplay.py): compiles shot-local screenplays, discovers supplied-ROM resources, samples/validates scenes and renders offline. [Command reference](../guide/creating/stageplay-authoring.md); skill `stageplay-authoring`. Origin: 2026-10-21 directing extension.
 

@@ -82,6 +82,14 @@ bind mode/priority across ingress and egress. Comparing all RAM bytes proves the
 bounded transform, not scheduling or full-submission state. See the
 [local CD observation handoff](../architecture/plans/2026-10-23-sonic-cd-implementation.md#native-continuation-and-service-observation-handoff).
 
+Register mirrors must follow each native CPU map and handler decoder, including
+both independently decoded word legs of a long write. Canonical-port captures
+cannot certify alias selection. Within one identified binary, compare complete
+observer-enabled/disabled states to test side effects; different loader/core
+binaries have pointer-bearing state and are not raw-state equivalents. An
+unretained differing checkpoint hash cannot later be explained by matching
+public RAM/CPU views. See the [owner-ledger evidence](../architecture/plans/2026-10-23-sonic-cd-implementation.md#verified-owner-ledger-r4).
+
 Different virtual pattern IDs do not imply different physical atlas pages
 (2026-10-22, object-pipeline batching). A page-barrier seam incorrectly expected
 separate commands for two IDs that the allocator placed on the same page. Use

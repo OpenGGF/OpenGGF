@@ -1,0 +1,643 @@
+--- a/waterbox/gpgx/Genesis-Plus-GX/core/cd_hw/cdc.c
++++ b/waterbox/gpgx/Genesis-Plus-GX/core/cd_hw/cdc.c
+@@ -37,6 +37,7 @@
+  ****************************************************************************************/
+ 
+ #include "shared.h"
++#include "native_owner_ledger.h"
+ 
+ /* IFSTAT register bitmasks */
+ #define BIT_DTEI  0x40
+@@ -242,7 +243,8 @@
+   return bufferptr;
+ }
+ 
+-void cdc_dma_init(void)
++void cdc_dma_init(void);
++static void cdc_dma_init_owner_original(void)
+ {
+   /* no effect if data transfer is not started */
+   if (cdc.ifstat & BIT_DTEN)
+@@ -459,6 +461,7 @@
+ 
+     /* disable DMA */
+     cdc.dma_w = cdc.halted_dma_w = 0;
++    native_owner_mark(OWNER_CDC_COMPLETE, cycles);
+   }
+   else if (dma_bytes > 0)
+   {
+@@ -958,3 +961,10 @@
+ 
+   return data;
+ }
++
++void cdc_dma_init(void)
++{
++  native_owner_mark(OWNER_CDC_TRIGGER_BEFORE, 0);
++  cdc_dma_init_owner_original();
++  native_owner_mark(OWNER_CDC_TRIGGER_AFTER, 0);
++}
+--- a/waterbox/gpgx/Genesis-Plus-GX/core/cd_hw/cdd.c
++++ b/waterbox/gpgx/Genesis-Plus-GX/core/cd_hw/cdd.c
+@@ -36,6 +36,7 @@
+  *
+  ****************************************************************************************/
+ #include "shared.h"
++#include "native_owner_ledger.h"
+ #include "megasd.h"
+ 
+ #if defined(USE_LIBTREMOR) || defined(USE_LIBVORBIS)
+@@ -1778,6 +1779,7 @@
+   if (cdd.latency > 0)
+   {
+     cdd.latency--;
++    if (!cdd.latency) native_owner_mark(OWNER_LATENCY_EXHAUSTED, 0);
+   }
+   else
+   {
+@@ -1997,10 +1999,12 @@
+ 
+     /* clear pending flag */
+     cdd.pending = 0;
++    native_owner_mark(OWNER_SEEK_APPLIED, 0);
+   }
+ }
+ 
+-void cdd_process(void)
++void cdd_process(void);
++static void cdd_process_owner_original(void)
+ {
+   /* Process CDD command */
+   switch (scd.regs[0x42>>1].byte.h & 0x0f)
+@@ -2316,3 +2320,10 @@
+                                scd.regs[0x3e>>1].byte.h + scd.regs[0x3e>>1].byte.l +
+                                scd.regs[0x40>>1].byte.h) & 0x0f;
+ }
++
++void cdd_process(void)
++{
++  native_owner_mark(OWNER_COMMAND_BEFORE, 0);
++  cdd_process_owner_original();
++  native_owner_mark(OWNER_COMMAND_AFTER, 0);
++}
+--- a/waterbox/gpgx/Genesis-Plus-GX/core/cd_hw/gfx.c
++++ b/waterbox/gpgx/Genesis-Plus-GX/core/cd_hw/gfx.c
+@@ -36,6 +36,7 @@
+  *
+  ****************************************************************************************/
+ #include "shared.h"
++#include "native_owner_ledger.h"
+ 
+ /***************************************************************/
+ /*          WORD-RAM DMA interfaces (1M & 2M modes)            */
+@@ -669,10 +670,12 @@
+ 
+   /* start graphics operation */
+   scd.regs[0x58>>1].byte.h = 0x80;
++  native_owner_mark(OWNER_GFX_START, cycles);
+ }
+ 
+ void gfx_update(int cycles)
+ {
++  int owner_final_lines = 0;
+   /* make sure Word-RAM is assigned to SUB-CPU in 2M mode */
+   if ((scd.regs[0x02>>1].byte.l & 0x05) != 0x01)
+   {
+@@ -707,6 +710,8 @@
+ 
+         /* end of graphics operation */
+         scd.regs[0x58>>1].byte.h = 0;
++        owner_final_lines = 1;
++        native_owner_mark(OWNER_GFX_BUSY_CLEAR, cycles);
+    
+         /* SUB-CPU idle on register $58 polling ? */
+         if (s68k.stopped & (1<<0x08))
+@@ -744,6 +749,7 @@
+         /* increment image buffer start index for next line (8 pixels/line) */
+         gfx.bufferStart += 8;
+       }
++      if (owner_final_lines) native_owner_mark(OWNER_GFX_RENDERED, cycles);
+     }
+   }
+   else
+--- a/waterbox/gpgx/Genesis-Plus-GX/core/cd_hw/pcm.c
++++ b/waterbox/gpgx/Genesis-Plus-GX/core/cd_hw/pcm.c
+@@ -36,6 +36,7 @@
+  *
+  ****************************************************************************************/
+ #include "shared.h"
++#include "native_owner_ledger.h"
+ 
+ #define PCM_SCYCLES_RATIO (384 * 4)
+ 
+@@ -217,6 +218,7 @@
+ 
+ void pcm_update(unsigned int samples)
+ {
++  native_owner_mark(OWNER_PCM_BEGIN, samples);
+   /* get number of internal clocks (samples) needed */
+   unsigned int clocks = blip_clocks_needed(snd.blips[1], samples);
+ 
+@@ -227,7 +229,9 @@
+   }
+ 
+   /* reset PCM master clocks counter */
++  native_owner_mark(OWNER_PCM_BEFORE, samples);
+   pcm.cycles = 0;
++  native_owner_mark(OWNER_PCM_AFTER, samples);
+ }
+ 
+ void pcm_write(unsigned int address, unsigned char data, unsigned int cycles)
+--- a/waterbox/gpgx/Genesis-Plus-GX/core/cd_hw/scd.c
++++ b/waterbox/gpgx/Genesis-Plus-GX/core/cd_hw/scd.c
+@@ -37,6 +37,7 @@
+  ****************************************************************************************/
+ 
+ #include "shared.h"
++#include "native_owner_ledger.h"
+ 
+ /*--------------------------------------------------------------------------*/
+ /* Unused area (return open bus data, i.e prefetched instruction word)      */
+@@ -804,7 +805,8 @@
+ 
+ static void scd_write_word(unsigned int address, unsigned int data);
+ 
+-static void scd_write_byte(unsigned int address, unsigned int data)
++static void scd_write_byte(unsigned int address, unsigned int data);
++static void scd_write_byte_owner_original(unsigned int address, unsigned int data)
+ {
+   /* PCM area (8K) mirrored into $xF0000-$xF7FFF */
+   if (!(address & 0x8000))
+@@ -1164,7 +1166,8 @@
+   }
+ }
+ 
+-static void scd_write_word(unsigned int address, unsigned int data)
++static void scd_write_word(unsigned int address, unsigned int data);
++static void scd_write_word_owner_original(unsigned int address, unsigned int data)
+ {
+   /* PCM area (8K) mirrored into $xF0000-$xF7FFF */
+   if (!(address & 0x8000))
+@@ -1780,7 +1783,8 @@
+   memset(scd.bram, 0x00, sizeof(scd.bram));
+ }
+ 
+-void scd_reset(int hard)
++void scd_reset(int hard);
++static void scd_reset_owner_original(int hard)
+ {
+   if (hard)
+   {
+@@ -1933,7 +1937,9 @@
+       cdd.cycles -= (500000 * 4);
+ 
+       /* update CDD sector */
++      native_owner_mark(OWNER_CDD_BEFORE, s68k_run_cycles);
+       cdd_update();
++      native_owner_mark(OWNER_CDD_AFTER, s68k_run_cycles);
+ 
+       /* check if CDD communication is enabled */
+       if (scd.regs[0x37>>1].byte.l & 0x04)
+@@ -1957,6 +1963,7 @@
+       scd.timer -= s68k_run_cycles;
+       if (scd.timer <= 0)
+       {
++        native_owner_mark(OWNER_TIMER_EXPIRED, s68k_run_cycles);
+         /* reload timer (one timer clock = 384 CPU cycles) */
+         scd.timer += (scd.regs[0x30>>1].byte.l * TIMERS_SCYCLES_RATIO);
+ 
+@@ -1965,6 +1972,7 @@
+         {
+           /* trigger level 3 interrupt */
+           scd.pending |= (1 << 3);
++          native_owner_mark(OWNER_TIMER_PENDING, 3);
+ 
+           /* update IRQ level */
+           s68k_update_irq((scd.pending & scd.regs[0x32>>1].byte.l) >> 1);
+@@ -1989,6 +1997,7 @@
+ 
+ void scd_end_frame(unsigned int cycles)
+ {
++  native_owner_mark(OWNER_CD_BEFORE, cycles);
+   /* run Stopwatch until end of frame */
+   int ticks = (cycles - scd.stopwatch) / TIMERS_SCYCLES_RATIO;
+   scd.regs[0x0c>>1].w = (scd.regs[0x0c>>1].w + ticks) & 0xfff;
+@@ -2001,6 +2010,7 @@
+   gfx.cycles    -= cycles;
+   cdc.cycles[0] -= cycles;
+   cdc.cycles[1] -= cycles;
++  native_owner_mark(OWNER_CD_AFTER, cycles);
+ 
+   /* reset CPU registers polling */
+   m68k.poll.cycle = 0;
+@@ -2352,7 +2362,8 @@
+   return bufferptr;
+ }
+ 
+-int scd_68k_irq_ack(int level)
++int scd_68k_irq_ack(int level);
++static int scd_68k_irq_ack_owner_original(int level)
+ {
+ #ifdef LOG_SCD
+   error("INT ack level %d  (%X)\n", level, s68k.pc);
+@@ -2373,3 +2384,33 @@
+ 
+   return M68K_INT_ACK_AUTOVECTOR;
+ }
++
++void scd_reset(int hard)
++{
++  native_owner_mark(OWNER_RESET_BEFORE, hard);
++  scd_reset_owner_original(hard);
++  native_owner_mark(OWNER_RESET_AFTER, hard);
++}
++
++static void scd_write_byte(unsigned int address, unsigned int data)
++{
++  unsigned int mode = scd.regs[0x02>>1].w, dmna = scd.dmna;
++  scd_write_byte_owner_original(address, data);
++  native_owner_wordram(2, 1, address, data, mode, dmna);
++}
++
++static void scd_write_word(unsigned int address, unsigned int data)
++{
++  unsigned int mode = scd.regs[0x02>>1].w, dmna = scd.dmna;
++  scd_write_word_owner_original(address, data);
++  native_owner_wordram(2, 2, address, data, mode, dmna);
++}
++
++int scd_68k_irq_ack(int level)
++{
++  int result;
++  native_owner_mark(OWNER_IRQ_BEFORE, level);
++  result = scd_68k_irq_ack_owner_original(level);
++  native_owner_mark(OWNER_IRQ_AFTER, level);
++  return result;
++}
+--- a/waterbox/gpgx/Genesis-Plus-GX/core/m68k/m68kcpu.c
++++ b/waterbox/gpgx/Genesis-Plus-GX/core/m68k/m68kcpu.c
+@@ -16,6 +16,7 @@
+ #endif
+ 
+ #include "m68kconf.h"
++#define NATIVE_OWNER_CPU 1
+ #include "m68kcpu.h"
+ #include "m68kops.h"
+ #include "../shared.h"
+--- a/waterbox/gpgx/Genesis-Plus-GX/core/m68k/m68kcpu.h
++++ b/waterbox/gpgx/Genesis-Plus-GX/core/m68k/m68kcpu.h
+@@ -843,6 +843,8 @@
+ 
+ 
+ 
++#include "native_owner_ledger.h"
++
+ /* ------------------------- Top level read/write ------------------------- */
+ 
+ /* Handles all memory accesses (except for immediate reads if they are
+@@ -924,6 +926,7 @@
+     value = cpu_hook(HOOK_M68K_W, 1, address, value);
+ #endif
+ 
++  native_owner_access(OWNER_WRITE_BEFORE, NATIVE_OWNER_CPU, 1, address, value, m68ki_cpu.cycles);
+   temp = &m68ki_cpu.memory_map[((address)>>16)&0xff];
+   if (temp->write8) (*temp->write8)(ADDRESS_68K(address),value);
+   else WRITE_BYTE(temp->base, (address) & 0xffff, value);
+@@ -933,6 +936,7 @@
+     for (int i = 0; i < deepfreeze_list_size; i++)
+       work_ram[deepfreeze_list[i].address] = deepfreeze_list[i].value;
+ #endif
++  native_owner_access(OWNER_WRITE_AFTER, NATIVE_OWNER_CPU, 1, address, value, m68ki_cpu.cycles);
+ }
+ 
+ INLINE void m68ki_write_16(uint address, uint value)
+@@ -947,6 +951,7 @@
+     value = cpu_hook(HOOK_M68K_W, 2, address, value);
+ #endif
+ 
++  native_owner_access(OWNER_WRITE_BEFORE, NATIVE_OWNER_CPU, 2, address, value, m68ki_cpu.cycles);
+   temp = &m68ki_cpu.memory_map[((address)>>16)&0xff];
+   if (temp->write16) (*temp->write16)(ADDRESS_68K(address),value);
+   else *(uint16 *)(temp->base + ((address) & 0xffff)) = value;
+@@ -956,6 +961,7 @@
+     for (int i = 0; i < deepfreeze_list_size; i++)
+       work_ram[deepfreeze_list[i].address] = deepfreeze_list[i].value;
+ #endif
++  native_owner_access(OWNER_WRITE_AFTER, NATIVE_OWNER_CPU, 2, address, value, m68ki_cpu.cycles);
+ }
+ 
+ INLINE void m68ki_write_32(uint address, uint value)
+@@ -970,6 +976,7 @@
+     value = cpu_hook(HOOK_M68K_W, 4, address, value);
+ #endif
+ 
++  native_owner_access(OWNER_WRITE_BEFORE, NATIVE_OWNER_CPU, 4, address, value, m68ki_cpu.cycles);
+   temp = &m68ki_cpu.memory_map[((address)>>16)&0xff];
+   if (temp->write16) (*temp->write16)(ADDRESS_68K(address),value>>16);
+   else *(uint16 *)(temp->base + ((address) & 0xffff)) = value >> 16;
+@@ -983,6 +990,7 @@
+     for (int i = 0; i < deepfreeze_list_size; i++)
+       work_ram[deepfreeze_list[i].address] = deepfreeze_list[i].value;
+ #endif
++  native_owner_access(OWNER_WRITE_AFTER, NATIVE_OWNER_CPU, 4, address, value, m68ki_cpu.cycles);
+ }
+ 
+ 
+--- a/waterbox/gpgx/Genesis-Plus-GX/core/m68k/s68kcpu.c
++++ b/waterbox/gpgx/Genesis-Plus-GX/core/m68k/s68kcpu.c
+@@ -16,6 +16,7 @@
+ #endif
+ 
+ #include "s68kconf.h"
++#define NATIVE_OWNER_CPU 2
+ #include "m68kcpu.h"
+ #include "m68kops.h"
+ 
+--- a/waterbox/gpgx/Genesis-Plus-GX/core/mem68k.c
++++ b/waterbox/gpgx/Genesis-Plus-GX/core/mem68k.c
+@@ -38,6 +38,7 @@
+  ****************************************************************************************/
+ 
+ #include "shared.h"
++#include "native_owner_ledger.h"
+ 
+ /*--------------------------------------------------------------------------*/
+ /* Unused areas (return open bus data, i.e prefetched instruction word)     */
+@@ -629,7 +630,8 @@
+   }
+ }
+ 
+-void ctrl_io_write_byte(unsigned int address, unsigned int data)
++void ctrl_io_write_byte(unsigned int address, unsigned int data);
++static void ctrl_io_write_byte_owner_original(unsigned int address, unsigned int data)
+ {
+   switch ((address >> 8) & 0xFF)
+   {
+@@ -995,7 +997,8 @@
+   }
+ }
+ 
+-void ctrl_io_write_word(unsigned int address, unsigned int data)
++void ctrl_io_write_word(unsigned int address, unsigned int data);
++static void ctrl_io_write_word_owner_original(unsigned int address, unsigned int data)
+ {
+   switch ((address >> 8) & 0xFF)
+   {
+@@ -1608,3 +1611,17 @@
+ {
+   return (pico_read_byte(address | 1) | (pico_read_byte(address) << 8));
+ }
++
++void ctrl_io_write_byte(unsigned int address, unsigned int data)
++{
++  unsigned int mode = scd.regs[0x02>>1].w, dmna = scd.dmna;
++  ctrl_io_write_byte_owner_original(address, data);
++  native_owner_wordram(1, 1, address, data, mode, dmna);
++}
++
++void ctrl_io_write_word(unsigned int address, unsigned int data)
++{
++  unsigned int mode = scd.regs[0x02>>1].w, dmna = scd.dmna;
++  ctrl_io_write_word_owner_original(address, data);
++  native_owner_wordram(1, 2, address, data, mode, dmna);
++}
+--- a/waterbox/gpgx/Genesis-Plus-GX/core/system.c
++++ b/waterbox/gpgx/Genesis-Plus-GX/core/system.c
+@@ -40,6 +40,7 @@
+  ****************************************************************************************/
+ 
+ #include "shared.h"
++#include "native_owner_ledger.h"
+ #include "yx5200.h"
+ #include "eq.h"
+ 
+@@ -697,7 +698,9 @@
+ 
+   /* reset frame cycle counter */
+   mcycles_vdp = 0;
++  native_owner_mark(OWNER_SCHEDULER_BEFORE, 0);
+   scd.cycles = 0;
++  native_owner_mark(OWNER_SCHEDULER_AFTER, 0);
+ 
+   /* reset VDP FIFO */
+   fifo_cycles[0] = 0;
+@@ -1012,8 +1015,10 @@
+   /* adjust timings for next frame */
+   scd_end_frame(scd.cycles);
+   input_end_frame(mcycles_vdp);
++  native_owner_mark(OWNER_MAIN_BEFORE, mcycles_vdp);
+   m68k.refresh_cycles -= mcycles_vdp;
+   m68k.cycles -= mcycles_vdp;
++  native_owner_mark(OWNER_MAIN_AFTER, mcycles_vdp);
+   Z80.cycles -= mcycles_vdp;
+   dma_endCycles = 0;
+ }
+--- a/waterbox/gpgx/Makefile
++++ b/waterbox/gpgx/Makefile
+@@ -89,6 +89,7 @@
+ 	$(GPGX_DIR)/core/z80/z80.c \
+ 	cinterface/cdStreamImpl.c \
+ 	cinterface/cinterface.c \
++	cinterface/native_owner_ledger.c \
+ 	util/scrc32.c
+ 
+ include ../common.mak
+--- a/waterbox/gpgx/cinterface/cinterface.c
++++ b/waterbox/gpgx/cinterface/cinterface.c
+@@ -5,6 +5,7 @@
+ #include "callbacks.h"
+ 
+ #include <shared.h>
++#include "native_owner_ledger.h"
+ #include <genesis.h>
+ #include <md_ntsc.h>
+ #include <sms_ntsc.h>
+@@ -179,6 +180,7 @@
+ 
+ GPGX_EX void gpgx_advance(void)
+ {
++	native_owner_mark(OWNER_FRAME_BEGIN, 0);
+ 	if (system_hw == SYSTEM_MCD)
+ 		system_frame_scd(0);
+ 	else if ((system_hw & SYSTEM_PBC) == SYSTEM_MD)
+@@ -193,6 +195,7 @@
+ 	}
+ 
+ 	nsamples = audio_update(soundbuffer);
++	native_owner_mark(OWNER_FRAME_END, nsamples);
+ }
+ 
+ extern toc_t pending_toc;
+--- a/waterbox/gpgx/cinterface/native_owner_ledger.c
++++ b/waterbox/gpgx/cinterface/native_owner_ledger.c
+@@ -0,0 +1,144 @@
++/* Private owner-ledger, CD-02, 2026-10-23. All mutable observer bytes are
++ * ECL_INVISIBLE, excluded by Waterbox's actual state contract. Hooks only read
++ * owners. They call no device handlers, CPU runners or managed callbacks.
++ * Overflow is sticky and never changes emulation or writes beyond the ledger.
++ */
++#include "shared.h"
++#include <emulibc.h>
++#include <stdint.h>
++#include "native_owner_ledger.h"
++
++#define OWNER_WORDS 64
++#define OWNER_CAPACITY 8192
++typedef struct { uint32_t word[OWNER_WORDS]; } owner_event;
++typedef char owner_event_size_must_be_256[(sizeof(owner_event) == 256) ? 1 : -1];
++static struct {
++  uint32_t enabled, limit, count, fault, dropped;
++  uint32_t call, reset_epoch, scheduler_epoch, cd_epoch, main_epoch, pcm_epoch, gfx_operation;
++  uint64_t sequence;
++  owner_event events[OWNER_CAPACITY];
++} owner ECL_INVISIBLE;
++
++static uint32_t word_offset(const void *pointer)
++{
++  uintptr_t value = (uintptr_t)pointer, base = (uintptr_t)scd.word_ram_2M;
++  return (value >= base && value <= base + sizeof(scd.word_ram_2M)) ? value-base : UINT32_MAX;
++}
++static uint32_t map_kind(const void *pointer)
++{
++  uintptr_t p = (uintptr_t)pointer;
++  if (p >= (uintptr_t)scd.word_ram_2M && p < (uintptr_t)(scd.word_ram_2M + sizeof(scd.word_ram_2M))) return 1;
++  if (p >= (uintptr_t)scd.word_ram[0] && p < (uintptr_t)(scd.word_ram[0] + sizeof(scd.word_ram[0]))) return 2;
++  if (p >= (uintptr_t)scd.word_ram[1] && p < (uintptr_t)(scd.word_ram[1] + sizeof(scd.word_ram[1]))) return 3;
++  return 0;
++}
++void native_owner_emit(uint32_t kind, uint32_t cpu, uint32_t width,
++                       uint32_t address, uint32_t value, uint32_t aux0, uint32_t aux1)
++{
++  owner_event *e;
++  uint32_t *w;
++  if (!owner.enabled) return;
++  if (owner.count >= owner.limit) { owner.fault = 1; owner.dropped++; return; }
++  e = &owner.events[owner.count++];
++  memset(e, 0, sizeof(*e));
++  w = e->word;
++  owner.sequence++;
++  w[0] = owner.sequence; w[1] = owner.sequence >> 32;
++  w[2] = owner.call; w[3] = kind; w[4] = cpu; w[5] = width; w[6] = address; w[7] = value;
++  w[8] = owner.reset_epoch; w[9] = owner.scheduler_epoch; w[10] = owner.cd_epoch;
++  w[11] = owner.main_epoch; w[12] = owner.pcm_epoch; w[13] = owner.gfx_operation;
++  w[14] = m68k.cycles; w[15] = s68k.cycles; w[16] = scd.cycles;
++  w[17] = gfx.cycles; w[18] = gfx.cyclesPerLine;
++  w[19] = cdc.cycles[0]; w[20] = cdc.cycles[1]; w[21] = scd.pcm_hw.cycles;
++  w[22] = cdd.cycles; w[23] = cdd.latency; w[24] = cdd.lba; w[25] = cdd.status; w[26] = cdd.pending;
++  w[27] = scd.regs[0x02>>1].w; w[28] = scd.dmna;
++  for (int n = 0; n < 8; n++) w[29+n] = scd.regs[(0x58>>1)+n].w;
++  w[37] = word_offset(gfx.tracePtr); w[38] = word_offset(gfx.mapPtr); w[39] = gfx.bufferStart;
++  w[40] = cdc.ifstat; w[41] = cdc.ifctrl; w[42] = cdc.dbc.w; w[43] = cdc.dma_w != 0;
++  w[44] = scd.pending; w[45] = scd.timer; w[46] = scd.stopwatch;
++  w[47] = map_kind(m68k.memory_map[scd.cartridge.boot+0x20].base);
++  w[48] = map_kind(s68k.memory_map[0x08].base);
++  w[49] = m68k.memory_map[scd.cartridge.boot+0x20].read8 != 0;
++  w[50] = s68k.memory_map[0x08].read8 != 0;
++  w[51] = aux0; w[52] = aux1;
++}
++void native_owner_mark(uint32_t kind, uint32_t argument)
++{
++  if (!owner.enabled) return;
++  switch (kind) {
++    case OWNER_FRAME_BEGIN: owner.call++; break;
++    case OWNER_SCHEDULER_AFTER: owner.scheduler_epoch++; break;
++    case OWNER_CD_AFTER: owner.cd_epoch++; break;
++    case OWNER_MAIN_AFTER: owner.main_epoch++; break;
++    case OWNER_PCM_AFTER: owner.pcm_epoch++; break;
++    case OWNER_RESET_AFTER: owner.reset_epoch++; break;
++    case OWNER_GFX_START: owner.gfx_operation++; break;
++  }
++  native_owner_emit(kind, 0, 0, 0, 0, argument, 0);
++}
++static uint32_t selected_write(uint32_t cpu, uint32_t width, uint32_t address)
++{
++  /* m68kcpu.h dispatches through the 24-bit CPU map. mem68k.c's main
++   * control page contains all four $40-byte gate aliases. scd_init maps
++   * every $xF page to scd_write_byte/word; bit 15 selects gates, otherwise
++   * PCM sees (address >> 1) & $1fff. Only PCM indices 0..8 are writable
++   * registers; reserved indices and wave RAM are outside this selection.
++   */
++  if (cpu == 1) return (address & 0xffff00) == 0xa12000;
++  if (cpu != 2 || (address & 0xf0000) != 0xf0000) return 0;
++  if (address & 0x8000) return 1;
++  return ((address >> 1) & 0x1fff) <= 8 && (width == 2 || (address & 1));
++}
++void native_owner_access(uint32_t kind, uint32_t cpu, uint32_t width,
++                         uint32_t address, uint32_t value, uint32_t cpu_cycles)
++{
++  if (!owner.enabled) return;
++  /* CPU is a literal supplied by each CPU compilation unit. Mirrored sub-CPU
++   * gates are selected using that CPU's real map, not a last-executing latch.
++   * Reads are deliberately outside ABI 1; every selected write is retained.
++   */
++  /* A native long invokes two independently mapped word handlers, including
++   * page crossings and 24-bit wrap. Select their union, preserving the
++   * original address/value and width 4 on the surrounding access pair.
++   */
++  if (((width == 1 || width == 2) && selected_write(cpu, width, address)) ||
++      (width == 4 && (selected_write(cpu, 2, address) || selected_write(cpu, 2, address + 2))))
++    native_owner_emit(kind, cpu, width, address, value, cpu_cycles, 0);
++}
++void native_owner_wordram(uint32_t handler, uint32_t width, uint32_t address,
++                          uint32_t value, uint32_t previous_mode, uint32_t previous_dmna)
++{
++  if (!owner.enabled) return;
++  if (width != 1 && width != 2) return;
++  if (handler == 1) {
++    if ((address & 0xffff00) != 0xa12000 ||
++        (address & (width == 1 ? 0x3f : 0x3e)) != (width == 1 ? 3 : 2)) return;
++  } else if (handler == 2) {
++    if ((address & 0xf0000) != 0xf0000 || !(address & 0x8000) || (address & 0x1fe) != 2) return;
++  } else return;
++  /* WP, PRG bank and dot-priority bits are not Word-RAM ownership commits. */
++  if (((previous_mode ^ scd.regs[0x02>>1].w) & 7) || previous_dmna != scd.dmna)
++    /* handler is source ownership, not a guessed caller CPU identity */
++    native_owner_emit(OWNER_WORDRAM_COMMIT, 0, width, address, value, handler, previous_mode | (previous_dmna << 16));
++}
++ECL_EXPORT uint32_t native_owner_abi_version(void) { return 1; }
++ECL_EXPORT uint32_t native_owner_event_size(void) { return sizeof(owner_event); }
++ECL_EXPORT uint32_t native_owner_capacity(void) { return OWNER_CAPACITY; }
++ECL_EXPORT uint32_t native_owner_fault(void) { return owner.fault; }
++ECL_EXPORT uint32_t native_owner_dropped(void) { return owner.dropped; }
++ECL_EXPORT uint32_t native_owner_count(void) { return owner.count; }
++ECL_EXPORT int native_owner_configure(uint32_t enabled, uint32_t limit)
++{
++  if (enabled > 1 || limit < 1 || limit > OWNER_CAPACITY) return -1;
++  memset(&owner, 0, sizeof(owner));
++  owner.enabled = enabled; owner.limit = limit;
++  return 0;
++}
++ECL_EXPORT int native_owner_poll(void *destination, uint32_t bytes)
++{
++  uint32_t count = owner.count;
++  if (!destination || bytes != OWNER_CAPACITY * sizeof(owner_event)) return -1;
++  memcpy(destination, owner.events, count * sizeof(owner_event));
++  owner.count = 0;
++  return count;
++}
+--- a/waterbox/gpgx/cinterface/native_owner_ledger.h
++++ b/waterbox/gpgx/cinterface/native_owner_ledger.h
+@@ -0,0 +1,23 @@
++/* Private read-only CD-02 observer ABI, 2026-10-23. No guest state writes. */
++#ifndef NATIVE_OWNER_LEDGER_H
++#define NATIVE_OWNER_LEDGER_H
++#include <stdint.h>
++enum {
++  OWNER_FRAME_BEGIN=1, OWNER_FRAME_END, OWNER_SCHEDULER_BEFORE,
++  OWNER_SCHEDULER_AFTER, OWNER_CD_BEFORE, OWNER_CD_AFTER, OWNER_MAIN_BEFORE,
++  OWNER_MAIN_AFTER, OWNER_PCM_BEGIN, OWNER_PCM_BEFORE, OWNER_PCM_AFTER,
++  OWNER_RESET_BEFORE, OWNER_RESET_AFTER, OWNER_WRITE_BEFORE, OWNER_WRITE_AFTER,
++  OWNER_WORDRAM_COMMIT, OWNER_GFX_START, OWNER_GFX_BUSY_CLEAR, OWNER_GFX_RENDERED,
++  OWNER_CDD_BEFORE, OWNER_CDD_AFTER, OWNER_COMMAND_BEFORE, OWNER_COMMAND_AFTER,
++  OWNER_SEEK_APPLIED, OWNER_LATENCY_EXHAUSTED, OWNER_CDC_TRIGGER_BEFORE,
++  OWNER_CDC_TRIGGER_AFTER, OWNER_CDC_COMPLETE, OWNER_TIMER_EXPIRED,
++  OWNER_TIMER_PENDING, OWNER_IRQ_BEFORE, OWNER_IRQ_AFTER
++};
++void native_owner_emit(uint32_t kind, uint32_t cpu, uint32_t width,
++                       uint32_t address, uint32_t value, uint32_t aux0, uint32_t aux1);
++void native_owner_mark(uint32_t kind, uint32_t argument);
++void native_owner_access(uint32_t kind, uint32_t cpu, uint32_t width,
++                         uint32_t address, uint32_t value, uint32_t cpu_cycles);
++void native_owner_wordram(uint32_t handler, uint32_t width, uint32_t address,
++                          uint32_t value, uint32_t previous_mode, uint32_t previous_dmna);
++#endif

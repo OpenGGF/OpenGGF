@@ -1140,3 +1140,98 @@ The stage-inventory task continues independently. No task-owned Maven or native
 diagnostic process remains active at this checkpoint; delegated work may create
 its own bounded external builds. The lead owns subsequent target writes, Git
 and validation. All commits remain local, and no playable CD module exists yet.
+
+The verified PCM unit is committed locally as `89fc2b9a0`. Native-owner review
+found one P2 selector gap: main gate-array mirror `A12043` decodes to register
+03 but was excluded from ownership commits; sub alias `FF8203` was accepted by
+the owner hook but omitted from CPU write pairs. All 1,194 recorded R3 commits
+used canonical ports, so their evidence remains valid. Fix task
+`sonic-cd-native-owner-alias-fix-20261023-r1` owns only the selector/derived-patch
+and affected tests, plus a separate R4 build and controls. The PCM-native worker
+uses the immutable R3 source snapshot rather than concurrently changing files.
+The review's fifteen-file fingerprint was
+`be13540d8915813ef8ff63d10c71dd6d5a514412afd3966637b73ff9a2dfbfce`.
+
+Stage-data analysis returned two stable new tools with 23 passing Python tests.
+It inventories all 210 regional MMD headers and verifies 69 R11A blob views and
+29 tables against actual media and pinned consumer encodings. Other stages
+remain header-only. Native chunk IDs are one-based, pointer high bytes can
+select PLCs, and Sonic's DPLC consumes one verified alignment byte beyond the
+raw art blob. Gameplay, decompression output, carry suffixes and timing remain
+unproven. Fresh task `sonic-cd-stage-inventory-review-20261023-r1` is reviewing
+the tool and its metadata before they become production-loader inputs.
+
+The alias fix requires one additional frozen-file edit: the analyzer duplicated
+the canonical-only ownership-address check and would reject corrected mirror
+events. The lead admitted the minimal `native_owner_analyze.py` validation change
+with cases in the already-owned analyzer test. Original addresses and CPU access
+widths stay in events; long selection unions both native word legs, including
+decoder boundaries. The R4 inventory and producer pins will include that change.
+Other frozen files and immutable R3 evidence remain unchanged.
+
+Stage-inventory review found one P2 encoding error before loader use. Its
+generic `.nem` filename inference mislabeled Game Over and Time Over art.
+`LoadShieldArt` selects five raw pointers and copies 256 longs, or 1,024 bytes.
+Some consumed views continue into the following source blob: Time Over by
+64 bytes and Time Warp Stars by 32. The following DMA reads 1,152 bytes from
+the animated-art RAM buffer, so its final 128 bytes are resident RAM, not extra
+file bytes or invented zeroes. Task
+`sonic-cd-stage-inventory-encoding-fix-20261023-r1` owns the two tool files,
+source-consumer proof, regression cases and a separate R2 metadata output.
+The original metadata remains immutable and superseded for encoding decisions.
+No production stage loader consumes it yet. Other reviewed R11A offsets,
+one-based chunk and tagged-pointer rules, and the verified Sonic alignment byte
+remain valid within their stated bounds. No Java/native process is owned by
+the lead; the three delegated units continue independently.
+
+The mirror-fix worker reports 32 passing native-owner Python/C tests, zero
+skips, a regenerated patch and a separate single-worker R4 build with passing
+ABI inspection. Four fresh native controls are running. The lead inspected the
+R3-to-R4 selector, analyzer and test changes while those controls execute.
+Selection now follows actual mirrored decoder maps and unions both word legs
+for native long writes while retaining the original access identity. These
+pending native controls are not yet a completed validation result, and the
+owner tools remain uncommitted.
+
+### Verified owner ledger R4
+
+The final alias fix and analyzer validation passed 32 native-owner Python/C
+tests with zero skips. Its compiled controlled oracle uses the pinned native
+CPU helpers, mapped handler bodies and decoder markers. This certifies alias
+selection within that controlled source model, not real-route alias exercise.
+The lead reviewed the selector/analyzer/test delta against the immutable R3
+snapshot. No further material issue was found in that bounded review.
+
+The separate R4 build passed ELF/ABI inspection and four fresh 1,800-call
+disabled/enabled boots, each with a 120-call restored continuation. All four
+complete states are 2,035,641 bytes with SHA256
+`097368d1cb17c9dd313ff8ac460a2e48fa1d3d421666d0806fa2b0f12eec43c8`.
+The lead checked their full hashes, lengths, saved restore flags and exact
+official AV/public CPU/RAM/continuation streams. Enabled capture, per-call
+counts and restored event bytes match R3 exactly, without forcing the counts:
+103,646 capture events, 1,194 ownership commits and 4,936 continuation events.
+
+Real identity/layout rejection controls passed. Overflow dropped 766 events,
+was rejected as incomplete evidence, and preserved complete state equality
+against its disabled control plus matching AV. Native core compressed SHA256 is
+`82af02e7080426f11d5618221a7b05d62565504cbe4caa698cf687d76077b515`;
+patch SHA256 is
+`de60a4ea90b6b1f51b02d1914562b76646ab793c6b9fccca48ac7da9004af769`.
+The final sixteen-file input fingerprint is
+`7d9ef07172a299309db8b95a440af1ac03f97bed80fd19e67b2b5675fa26e5e4`.
+R3 source/artifacts remain unchanged. The R4 inventory binds the actual sources,
+compiled producer dependencies, toolchain, patch and native build.
+
+This unit provides source-model owner observations only. Title captures use
+canonical ports; mirrors have controlled decoder proof. CDC DMA completion,
+enabled level-3 timer pending, general 1M paths, later gameplay routes, other
+regions and complete firmware/drive behavior remain uncertified. The historical
+official checkpoint discrepancy remains unattributed despite the two matching
+lead follow-up boots. There is no physical timing, V5 or gameplay-input authority.
+No installed core, shared TraceChaser or Java target was changed by this unit.
+The parent owns staging/local delivery; no owner job is running.
+
+The generated native patch retains exact upstream context, including CRLF and
+whitespace-only context lines. Its single path joins the existing native-patch
+whitespace attribute policy; the patch bytes and tested source fingerprint are
+unchanged. Ordinary source whitespace checks still apply to all other new files.
