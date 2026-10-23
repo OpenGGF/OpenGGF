@@ -13,6 +13,8 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.rings.RingManagerInternalAccess;
 import com.openggf.level.rings.RingSpawn;
+import com.openggf.sprites.playable.Sonic;
+import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.SonicGame;
@@ -73,9 +75,15 @@ class TestNativeCompetitionRingInitialization {
         TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_2);
         var roster = mock(NativeCompetitionRoster.class);
         when(roster.gameState(0)).thenReturn(new com.openggf.game.GameStateManager());
+        var sonic = new Sonic("sonic", (short) 0, (short) 0x100);
+        var tails = new Tails("tails", (short) 0x140, (short) 0x100);
+        when(roster.player(0)).thenReturn(sonic);
+        when(roster.player(1)).thenReturn(tails);
         var cameras = new Camera[]{new Camera(), new Camera()};
         when(roster.camera(0)).thenReturn(cameras[0]);
         when(roster.camera(1)).thenReturn(cameras[1]);
+        cameras[0].setFocusedSprite(sonic);
+        cameras[1].setFocusedSprite(tails);
         var policy = mock(WorldSessionPolicyState.class);
         when(policy.getService(NativeCompetitionRoster.class)).thenReturn(roster);
         doReturn(new com.openggf.game.rewind.RewindSnapshottable<Integer>() {
@@ -93,6 +101,15 @@ class TestNativeCompetitionRingInitialization {
         try {
             com.openggf.game.session.GameplaySessionFactory.attachManagers(context,
                     com.openggf.game.session.EngineServices.current());
+            var sprites = context.getSpriteManager();
+            assertNotSame(sonic, tails);
+            assertSame(sonic, sprites.getSprite("sonic"));
+            assertSame(tails, sprites.getSprite("tails"));
+            assertEquals(2, sprites.getAllSprites().size());
+            assertFalse(sonic.isCpuControlled());
+            assertFalse(tails.isCpuControlled());
+            assertSame(sonic, cameras[0].getFocusedSprite());
+            assertSame(tails, cameras[1].getFocusedSprite());
             var level = mock(LevelManager.class);
             var terrain = mock(Level.class);
             var objects = mock(ObjectManager.class);
@@ -118,10 +135,26 @@ class TestNativeCompetitionRingInitialization {
             assertNotEquals(retiredState, replacementState);
             var adapter = RingManagerInternalAccess.nativeCompetitionStreamingRewindAdapter(newRings);
             var captured = context.getRewindRegistry().capture();
+            assertTrue(captured.containsKey("sprites"));
+            assertTrue(captured.containsKey("camera"));
+            assertTrue(captured.containsKey("native_competition_camera_2"));
+            assertTrue(captured.containsKey("rings"));
             assertEquals(replacementState, captured.get(adapter.key()));
             newRings.update(0, null, 2, false);
             assertNotEquals(replacementState, newStream.capture());
+            cameras[0].setFocusedSprite(tails);
+            cameras[1].setFocusedSprite(sonic);
+            assertSame(sprites.getSprite("tails"), cameras[0].getFocusedSprite());
+            assertSame(sprites.getSprite("sonic"), cameras[1].getFocusedSprite());
+            assertNotEquals(captured.get("camera"), cameras[0].capture());
+            assertNotEquals(captured.get("native_competition_camera_2"), cameras[1].capture());
             context.getRewindRegistry().restore(captured);
+            assertSame(sonic, sprites.getSprite("sonic"));
+            assertSame(tails, sprites.getSprite("tails"));
+            assertSame(sprites.getSprite("sonic"), cameras[0].getFocusedSprite());
+            assertSame(sprites.getSprite("tails"), cameras[1].getFocusedSprite());
+            assertEquals(captured.get("camera"), cameras[0].capture());
+            assertEquals(captured.get("native_competition_camera_2"), cameras[1].capture());
             assertEquals(replacementState, newStream.capture());
             assertEquals(retiredState, oldStream.capture(), "restore must not target the retired act's cursors");
         } finally {
