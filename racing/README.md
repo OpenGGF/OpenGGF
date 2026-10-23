@@ -41,7 +41,9 @@ lives, and its own panel with the best time and the latest split sits directly u
 up with their labels (`LevelOverlayCanvas.hudOriginX`). In a room, the room panel takes the
 top-right corner, and a progress bar spans the bottom of the screen: every racer is a segment in
 their name colour at their true place, and racers at the same place stack upwards, so a column's
-height counts them; yours is outlined in white at the bottom of its column. A racer's segment
+height counts them; yours is outlined in white at the bottom of its column. A column draws at
+most five segments (you, then anyone hurt, then by slot) under the number of racers there, so a
+big room's pack stays short. A racer's segment
 flashes red and shakes while they are hurt and briefly after; other players' hurt state travels
 in their ghost frames.
 Best and imported ghosts remain in `ghosts/`, and player identity remains in `identity/`.

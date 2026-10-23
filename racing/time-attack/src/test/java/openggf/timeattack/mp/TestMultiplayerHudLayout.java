@@ -231,6 +231,33 @@ class TestMultiplayerHudLayout {
         assertEquals(0, bySlot.get(5)[2], "a racer alone is a single segment where they are");
     }
 
+    @Test
+    void aBigRoomsPackIsAShortColumnUnderItsCount() {
+        List<com.openggf.net.client.RemoteGhostRegistry.FarPlayer> crowd = new ArrayList<>();
+        for (int slot = 1; slot <= 40; slot++) {
+            crowd.add(new com.openggf.net.client.RemoteGhostRegistry.FarPlayer(slot, "B" + slot, "sonic", 10, 10, -1));
+        }
+        var state = new MultiplayerHudState(true, "RUNNING", 60_000, 0, List.of(), List.of(), false, null, 41,
+                crowd, "OPEN", List.of(), List.of(), 0, null, List.of(), 2, java.util.Map.of(), 0, 0,
+                java.util.Map.of(17, 30));
+        List<int[]> fills = new ArrayList<>();
+        MultiplayerHudRenderer.drawProgress(new com.openggf.mods.ui.PixelCanvas() {
+            public int width() { return 320; }
+            public int height() { return 224; }
+            public void fill(int x, int y, int w, int h, int argb) { fills.add(new int[]{x, y, w, h, argb}); }
+        }, state, 6400, 640);
+        int barTop = 224 - 13 - 3;
+        int top = fills.stream().mapToInt(f -> f[1]).min().orElseThrow();
+        assertTrue(top >= barTop - MultiplayerHudRenderer.STACK_MAX * 4 - 12,
+                "the 41-racer column stays short: top " + top);
+        // 41 racers share the column (40 rivals and you): you, the hurt racer and three others are drawn.
+        var placed = MultiplayerHudRenderer.stack(List.of(new int[]{100, 9, 0, 0}, new int[]{100, 3, 0, 1},
+                new int[]{100, 2, 1, 0}, new int[]{100, 1, 0, 0}));
+        var byLevel = new java.util.TreeMap<Integer, Integer>();
+        for (int[] p : placed) byLevel.put(p[2], new int[][]{{100, 9}, {100, 3}, {100, 2}, {100, 1}}[p[0]][1]);
+        assertEquals(List.of(2, 3, 1, 9), List.copyOf(byLevel.values()), "you, then anyone hurt, then by slot");
+    }
+
     private static int indexOfColour(List<int[]> fills, int argb) {
         for (int i = 0; i < fills.size(); i++) if (fills.get(i)[4] == argb) return i;
         return -1;

@@ -18,6 +18,8 @@ public final class MultiplayerHudRenderer {
     private static final int HURT = 0xFFFF3B3B;
     /** Racers within one column of this many track pixels share a stack. */
     static final int STACK_BIN = 4;
+    /** The most segments a column draws; a taller column shows its count above. */
+    static final int STACK_MAX = 5;
     private static final int SEGMENT_WIDTH = 3;
     private static final int SEGMENT_HEIGHT = 3;
     /** A segment and the dark pixel between it and the next one up. */
@@ -196,23 +198,48 @@ public final class MultiplayerHudRenderer {
         // {x on the track, slot, local}.
         List<int[]> markers = new ArrayList<>();
         if (localCentreX >= 0) {
-            markers.add(new int[] {progressX(localCentreX, levelWidth, trackWidth), state.localSlot(), 1});
+            markers.add(new int[] {progressX(localCentreX, levelWidth, trackWidth), state.localSlot(), 1,
+                    state.hurtFlash(state.localSlot()) > 0 ? 1 : 0});
         }
         for (var player : state.farPlayers()) {
             if (player.status() != -1 && player.status() != 1 && player.status() != 2) continue;
             if (player.slot() == state.localSlot()) continue;
             int position = player.status() == 2 ? levelWidth : player.cellX() * 64;
-            markers.add(new int[] {progressX(position, levelWidth, trackWidth), player.slot(), 0});
+            markers.add(new int[] {progressX(position, levelWidth, trackWidth), player.slot(), 0,
+                    state.hurtFlash(player.slot()) > 0 ? 1 : 0});
         }
         int base = y + PROGRESS_HEIGHT - 2;
+        List<int[]> placed = stack(markers);
+        // A column taller than STACK_MAX shows its first STACK_MAX segments (you, then anyone hurt,
+        // then by slot) under the number of racers there, so a big room's pack stays one short
+        // column instead of climbing the screen.
+        java.util.Map<Integer, Integer> counts = new java.util.HashMap<>();
+        for (int[] p : placed) counts.merge(p[1], 1, Integer::sum);
+        List<int[]> labels = new ArrayList<>();
+        counts.entrySet().stream().filter(entry -> entry.getValue() > STACK_MAX)
+                .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
+                .forEach(entry -> {
+                    String count = Integer.toString(entry.getValue());
+                    int w = CompactFont.width(count, 1);
+                    int lx = left + entry.getKey() + SEGMENT_WIDTH / 2 - w / 2;
+                    // Keep the larger counts when two columns' numbers would overlap.
+                    for (int[] other : labels) if (lx < other[0] + other[1] + 2 && other[0] < lx + w + 2) return;
+                    labels.add(new int[] {lx, w, entry.getValue()});
+                });
+        int labelY = base - STACK_MAX * STACK_STEP - 9;
+        for (int[] label : labels) {
+            CompactFont.shadowed(canvas, Integer.toString(label[2]), label[0], labelY, 1, HudTextLayout.WHITE,
+                    0xC0000000);
+        }
         // Hurt racers draw after the rest and the local player last, so no outline covers theirs.
-        List<int[]> drawOrder = new ArrayList<>(stack(markers));
-        drawOrder.sort(java.util.Comparator.comparingInt(placed -> markers.get(placed[0])[2] == 1 ? 2
-                : state.hurtFlash(markers.get(placed[0])[1]) > 0 ? 1 : 0));
-        for (int[] placed : drawOrder) {
-            int[] m = markers.get(placed[0]);
-            int sx = left + placed[1];
-            int sy = base - (placed[2] + 1) * STACK_STEP;
+        List<int[]> drawOrder = new ArrayList<>();
+        for (int[] p : placed) if (p[2] < STACK_MAX) drawOrder.add(p);
+        drawOrder.sort(java.util.Comparator.comparingInt(spot -> markers.get(spot[0])[2] == 1 ? 2
+                : state.hurtFlash(markers.get(spot[0])[1]) > 0 ? 1 : 0));
+        for (int[] spot : drawOrder) {
+            int[] m = markers.get(spot[0]);
+            int sx = left + spot[1];
+            int sy = base - (spot[2] + 1) * STACK_STEP;
             int colour = state.nameColour(m[1], stock);
             int dx = 0;
             if (state.hurtFlash(m[1]) > 0) {
@@ -229,8 +256,9 @@ public final class MultiplayerHudRenderer {
     /**
      * Where each marker goes: {@code {marker index, x on the track, level}}. Positions are kept
      * true to within one {@link #STACK_BIN}-pixel column; racers in the same column stack upwards,
-     * one segment each, so the column's height is how many are there. The local player sits at
-     * the bottom of their column, then the others in slot order.
+     * one segment each, so the column's height is how many are there (up to {@link #STACK_MAX},
+     * then a number). The local player sits at the bottom of their column, then anyone hurt,
+     * then the others in slot order. Markers are {@code {x, slot, local, hurt}}.
      */
     static List<int[]> stack(List<int[]> markers) {
         java.util.Map<Integer, Integer> heights = new java.util.HashMap<>();
@@ -238,6 +266,7 @@ public final class MultiplayerHudRenderer {
         for (int i = 0; i < order.length; i++) order[i] = i;
         java.util.Arrays.sort(order, java.util.Comparator
                 .comparingInt((Integer i) -> -markers.get(i)[2])
+                .thenComparingInt(i -> markers.get(i).length > 3 ? -markers.get(i)[3] : 0)
                 .thenComparingInt(i -> markers.get(i)[1]));
         List<int[]> placed = new ArrayList<>();
         for (int i : order) {
