@@ -23,6 +23,24 @@ class TestStageplayActivationPolicy {
         verifyNoInteractions(services);
     }
 
+    @Test void nativeChildAndRewindServiceReinjectionPreserveTheAdmittingWindow() {
+        var f = new Fixture(true, List.of());
+        f.policy.setWindows(List.of(new StageplayActivationPolicy.Window(6000, 0, 320, 224)));
+        var child = new NativeObject(spawn(6100, -1));
+        f.objects.addDynamicObject(child);
+        assertTrue(child.isOnScreen());
+        // LBZ recordChild/ship and FBZ ExactAdoptionSurface re-inject after admission.
+        child.setServices(f.services);
+        assertTrue(child.isOnScreen());
+        child.cull();
+        assertFalse(child.isDestroyed());
+        // Policy lifetime remains owned by the window, even after reinjection.
+        f.policy.setWindows(List.of());
+        assertFalse(child.isOnScreen());
+        child.cull();
+        assertTrue(child.isDestroyed());
+    }
+
     @Test void processOwnersWithoutASpatialSpawnKeepTheirNativeLifetime() {
         var policy = new StageplayActivationPolicy();
         var process = mock(ObjectInstance.class, CALLS_REAL_METHODS);

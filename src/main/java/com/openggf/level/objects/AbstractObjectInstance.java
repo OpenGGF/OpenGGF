@@ -491,7 +491,8 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      */
     public void setServices(ObjectServices services) {
         this.services = services;
-        stageplayActivation = null;
+        // Native parent/rewind adoption may re-inject services after admission.
+        // The admitting manager owns policy replacement through bindStageplayActivation.
     }
 
     void bindStageplayActivation(StageplayActivationPolicy policy) {
