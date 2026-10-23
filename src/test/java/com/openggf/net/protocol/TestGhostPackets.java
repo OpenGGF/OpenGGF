@@ -258,4 +258,32 @@ class TestGhostPackets {
         assertThrows(ProtocolViolationException.class,
                 () -> GhostPackets.decodeAggregate(new byte[0]));
     }
+
+    @Test
+    void lobbyPacketsShareTheGhostLayoutsUnderTheirOwnTypes() {
+        byte[] upstream = GhostPackets.encodeLobbyFrames(4, 30, frames(3));
+        assertEquals(GhostPackets.TYPE_LOBBY_FRAMES, upstream[0] & 0xFF);
+        GhostPackets.FramesBatch batch = GhostPackets.decodeLobbyFrames(upstream);
+        assertEquals(4, batch.attemptId());
+        assertEquals(30, batch.startFrameIndex());
+        assertArrayEquals(frames(3), batch.frameData());
+        // A lobby pose is never mistaken for an attempt's frames, nor the other way round.
+        assertThrows(ProtocolViolationException.class, () -> GhostPackets.decodeFrames(upstream));
+        assertThrows(ProtocolViolationException.class,
+                () -> GhostPackets.decodeLobbyFrames(GhostPackets.encodeFrames(4, 30, frames(3))));
+
+        List<GhostPackets.AggregateEntry> entries = List.of(
+                new GhostPackets.AggregateEntry(255, 1, 0, 3, frames(3)),
+                new GhostPackets.AggregateEntry(7, 2, 3, 1, frames(1)));
+        byte[] downstream = GhostPackets.encodeLobbyAggregate(9, entries);
+        assertEquals(GhostPackets.TYPE_LOBBY_AGGREGATE, downstream[0] & 0xFF);
+        GhostPackets.Aggregate back = GhostPackets.decodeLobbyAggregate(downstream);
+        assertEquals(9, back.hubTick());
+        assertEquals(2, back.entries().size());
+        assertEquals(255, back.entries().getFirst().playerSlot());
+        assertArrayEquals(frames(1), back.entries().get(1).frameData());
+        assertThrows(ProtocolViolationException.class, () -> GhostPackets.decodeAggregate(downstream));
+        assertThrows(ProtocolViolationException.class,
+                () -> GhostPackets.decodeLobbyFrames(Arrays.copyOf(upstream, upstream.length - 1)));
+    }
 }

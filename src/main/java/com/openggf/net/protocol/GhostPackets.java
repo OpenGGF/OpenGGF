@@ -15,6 +15,13 @@ public final class GhostPackets {
     public static final int TYPE_GHOST_AGGREGATE = 0x02;
     public static final int TYPE_ROSTER = 0x03;
     public static final int TYPE_RELAY_GUEST_BINARY = 0x04;
+    /**
+     * Client to host between rounds: the sender's lobby-level pose, in the frames layout. Its
+     * {@code attemptId} names a lobby stream (a new one per lobby level load or teleport).
+     */
+    public static final int TYPE_LOBBY_FRAMES = 0x05;
+    /** Host to clients between rounds: nearby players' lobby poses, in the aggregate layout. */
+    public static final int TYPE_LOBBY_AGGREGATE = 0x06;
 
     public static final int ROSTER_STATUS_IDLE = 0;
     public static final int ROSTER_STATUS_RUNNING = 1;
@@ -90,16 +97,42 @@ public final class GhostPackets {
     }
 
     public static byte[] encodeFrames(int attemptId, int startFrameIndex, byte[] frameData) {
+        return encodeFrames(TYPE_GHOST_FRAMES, attemptId, startFrameIndex, frameData);
+    }
+
+    public static FramesBatch decodeFrames(byte[] packet) {
+        return decodeFrames(TYPE_GHOST_FRAMES, packet);
+    }
+
+    /** A lobby pose batch: the frames layout under {@link #TYPE_LOBBY_FRAMES}. */
+    public static byte[] encodeLobbyFrames(int streamId, int startFrameIndex, byte[] frameData) {
+        return encodeFrames(TYPE_LOBBY_FRAMES, streamId, startFrameIndex, frameData);
+    }
+
+    public static FramesBatch decodeLobbyFrames(byte[] packet) {
+        return decodeFrames(TYPE_LOBBY_FRAMES, packet);
+    }
+
+    /** Nearby lobby poses: the aggregate layout under {@link #TYPE_LOBBY_AGGREGATE}. */
+    public static byte[] encodeLobbyAggregate(int hubTick, List<AggregateEntry> entries) {
+        return encodeAggregate(TYPE_LOBBY_AGGREGATE, hubTick, entries);
+    }
+
+    public static Aggregate decodeLobbyAggregate(byte[] packet) {
+        return decodeAggregate(TYPE_LOBBY_AGGREGATE, packet);
+    }
+
+    private static byte[] encodeFrames(int type, int attemptId, int startFrameIndex, byte[] frameData) {
         int count = validFrameCount(frameData, MAX_UPSTREAM_FRAMES_PER_PACKET);
         int encodedBytes = encodedFrameBytes(frameData);
         ByteBuffer out = ByteBuffer.allocate(FRAMES_HEADER + encodedBytes);
-        out.put((byte) TYPE_GHOST_FRAMES).putInt(attemptId).putInt(startFrameIndex);
+        out.put((byte) type).putInt(attemptId).putInt(startFrameIndex);
         putFrameData(out, count, frameData, encodedBytes);
         return out.array();
     }
 
-    public static FramesBatch decodeFrames(byte[] packet) {
-        ByteBuffer in = checked(packet, TYPE_GHOST_FRAMES, FRAMES_HEADER);
+    private static FramesBatch decodeFrames(int type, byte[] packet) {
+        ByteBuffer in = checked(packet, type, FRAMES_HEADER);
         int attemptId = in.getInt();
         int startFrameIndex = in.getInt();
         int countByte = in.get() & 0xFF;
@@ -110,6 +143,14 @@ public final class GhostPackets {
     }
 
     public static byte[] encodeAggregate(int hubTick, List<AggregateEntry> entries) {
+        return encodeAggregate(TYPE_GHOST_AGGREGATE, hubTick, entries);
+    }
+
+    public static Aggregate decodeAggregate(byte[] packet) {
+        return decodeAggregate(TYPE_GHOST_AGGREGATE, packet);
+    }
+
+    private static byte[] encodeAggregate(int type, int hubTick, List<AggregateEntry> entries) {
         if (entries == null || entries.size() > 255) {
             throw new ProtocolViolationException("aggregate entry count");
         }
@@ -133,7 +174,7 @@ public final class GhostPackets {
             }
         }
         ByteBuffer out = ByteBuffer.allocate(size);
-        out.put((byte) TYPE_GHOST_AGGREGATE).putInt(hubTick).put((byte) entries.size());
+        out.put((byte) type).putInt(hubTick).put((byte) entries.size());
         for (AggregateEntry entry : entries) {
             out.put((byte) entry.playerSlot())
                     .putInt(entry.attemptId())
@@ -144,8 +185,8 @@ public final class GhostPackets {
         return out.array();
     }
 
-    public static Aggregate decodeAggregate(byte[] packet) {
-        ByteBuffer in = checked(packet, TYPE_GHOST_AGGREGATE, AGGREGATE_HEADER);
+    private static Aggregate decodeAggregate(int type, byte[] packet) {
+        ByteBuffer in = checked(packet, type, AGGREGATE_HEADER);
         int hubTick = in.getInt();
         int entryCount = in.get() & 0xFF;
         List<AggregateEntry> entries = new ArrayList<>(entryCount);

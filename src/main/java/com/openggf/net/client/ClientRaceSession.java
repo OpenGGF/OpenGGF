@@ -34,6 +34,9 @@ public final class ClientRaceSession {
     private List<ControlMessage.StandingsRow> standings = List.of();
     private List<ControlMessage.PlayerInfo> players = List.of();
     private final Map<Integer, PlayerAppearance> looks = new HashMap<>();
+    private final java.util.Set<Integer> readySlots = new java.util.HashSet<>();
+    private String readyRule = com.openggf.net.protocol.ReadyRules.DEFAULT_BY_SIZE.name();
+    private boolean readyRequired = true;
     private String kickReason;
     private List<String> voteOptions = List.of();
     private List<ControlMessage.VoteCount> voteCounts = List.of();
@@ -50,6 +53,9 @@ public final class ClientRaceSession {
         localSlot = accepted.playerSlot();
         players = List.of();
         looks.clear();
+        readySlots.clear();
+        readyRule = com.openggf.net.protocol.ReadyRules.DEFAULT_BY_SIZE.name();
+        readyRequired = true;
         ControlMessage.RoundSnapshot snapshot = accepted.round();
         if (snapshot != null) {
             basePhase = Phase.valueOf(snapshot.phase());
@@ -59,6 +65,31 @@ public final class ClientRaceSession {
             standings = List.copyOf(snapshot.standings());
             finalStandings = basePhase == Phase.ROUND_END ? standings : List.of();
         }
+    }
+
+    /** Whether the player in {@code slot} is ready. */
+    public boolean isReady(int slot) {
+        return readySlots.contains(slot);
+    }
+
+    /** Whether this player is ready. */
+    public boolean isLocalReady() {
+        return readySlots.contains(localSlot);
+    }
+
+    /** The room's ready rule by name ({@link com.openggf.net.protocol.ReadyRules}). */
+    public String readyRule() {
+        return readyRule;
+    }
+
+    /** True while the owner's round start waits for every present player to be ready. */
+    public boolean readyRequired() {
+        return readyRequired;
+    }
+
+    /** Present players who are not ready yet. */
+    public List<ControlMessage.PlayerInfo> playersNotReady() {
+        return players.stream().filter(player -> !readySlots.contains(player.slot())).toList();
     }
 
     public void onControl(ControlMessage message) {
@@ -74,6 +105,7 @@ public final class ClientRaceSession {
             case ControlMessage.PlayerLeft left -> {
                 players = players.stream().filter(player -> player.slot() != left.slot()).toList();
                 looks.remove(left.slot());
+                readySlots.remove(left.slot());
             }
             case ControlMessage.PlayerLook look -> {
                 PlayerAppearance appearance;
@@ -86,7 +118,22 @@ public final class ClientRaceSession {
                 if (appearance.isStock()) looks.remove(look.slot());
                 else looks.put(look.slot(), appearance);
             }
+            case ControlMessage.PlayerReady ready -> {
+                if (ready.ready()) readySlots.add(ready.slot());
+                else readySlots.remove(ready.slot());
+            }
+            case ControlMessage.ReadyReset reset -> {
+                readySlots.clear();
+                if (reset.ready()) players.forEach(player -> readySlots.add(player.slot()));
+            }
+            case ControlMessage.ReadyRule rule -> {
+                readyRule = rule.rule();
+                readyRequired = rule.required();
+            }
             case ControlMessage.RoundStart start -> {
+                // The host clears every ready state at a round start (and re-readies everyone
+                // with ReadyReset when its rule needs nobody to wait).
+                readySlots.clear();
                 basePhase = Phase.COUNTDOWN;
                 roundConfig = start.config();
                 countdownEndsAtHub = start.countdownEndsAtHubMillis();

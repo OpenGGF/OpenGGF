@@ -17,6 +17,7 @@ import com.openggf.game.rules.PowerUpRules;
 
 import com.openggf.camera.Camera;
 import com.openggf.level.LevelManager;
+import com.openggf.game.session.GameplayRunPolicy;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.MultiPieceSolidProvider;
 import com.openggf.level.objects.ObjectInstance;
@@ -118,6 +119,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	// Input tracking
 	private boolean jumpPressed;
+	/**
+	 * Executed movement updates this player has spent dead (one per executed level step); a fast
+	 * death restart admits its jump skip from this count. Engine bookkeeping with no ROM
+	 * counterpart: it changes nothing under the stock policy.
+	 */
+	private int deathElapsedFrames;
 	private boolean jumpPrevious;
 	private boolean jumpReleasedSinceJump;
 	private boolean testKeyPressed;
@@ -257,6 +264,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		preMoveBalanceDirection = null;
 		latchedNextTilt = 0;
 		latchedTilt = 0;
+		deathElapsedFrames = 0;
+	}
+
+	/** Executed movement updates the player has spent dead in the current death. */
+	public int deathElapsedFrames() {
+		return deathElapsedFrames;
 	}
 
 	public RewindState captureRewindState() {
@@ -283,7 +296,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				preMoveBalanceState,
 				preMoveBalanceDirection,
 				latchedNextTilt,
-				latchedTilt);
+				latchedTilt,
+				deathElapsedFrames);
 	}
 
 	public void restoreRewindState(RewindState state) {
@@ -314,6 +328,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		preMoveBalanceDirection = state.preMoveBalanceDirection();
 		latchedNextTilt = state.latchedNextTilt();
 		latchedTilt = state.latchedTilt();
+		deathElapsedFrames = state.deathElapsedFrames();
 	}
 
 	@com.openggf.game.ModApi
@@ -340,7 +355,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			int preMoveBalanceState,
 			Direction preMoveBalanceDirection,
 			int latchedNextTilt,
-			int latchedTilt
+			int latchedTilt,
+			int deathElapsedFrames
 	) {}
 
 	public void clearJumpHeightLatch() {
@@ -497,6 +513,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	private void handleMovementDispatch(boolean up, boolean down, boolean left, boolean right,
 			boolean jump, boolean testKey, boolean speedUp, boolean slowDown) {
+		if (!sprite.getDead()) {
+			deathElapsedFrames = 0;
+		}
 		// Note: Raw input state for objects is now stored in SpriteManager BEFORE filtering,
 		// so objects can query button state even when control is locked (ROM: obj_control).
 		// The parameters here are already filtered by control lock state.
@@ -4885,6 +4904,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
     }
 
 	private short applyDeathMovement() {
+		if (skipFastRestartDeathAnimation()) {
+			return 0;
+		}
 		if (sprite.isInDeathRestartRoutine()) {
 			tickRestartCountdown();
 			return 0;
@@ -4937,8 +4959,55 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		return sprite.getCentreY() > reference + 0x100;
 	}
 
+	/**
+	 * A run whose policy restarts fast lets the dead main player cut the death animation short:
+	 * a jump press once it has spent {@link GameplayRunPolicy#FAST_RESTART_SKIP_FRAMES} executed
+	 * movement updates dead requests the reload at once. The count is this player's own dead
+	 * updates (one per executed level step, {@link #deathElapsedFrames}), not
+	 * {@code V_int_run_count} or wall time, so a replay of the same inputs skips on the same
+	 * step. Stock deaths never reach this branch.
+	 *
+	 * @return true when the reload was requested this update and the corpse stays put
+	 */
+	private boolean skipFastRestartDeathAnimation() {
+		if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
+			return false;
+		}
+		LevelManager level = levelManager();
+		if (level == null || !level.runPolicy().fastDeathRestart()) {
+			return false;
+		}
+		boolean skip = deathElapsedFrames >= GameplayRunPolicy.FAST_RESTART_SKIP_FRAMES
+				&& sprite.isJumpJustPressed()
+				&& !(sprite.isInDeathRestartRoutine() && sprite.getDeathCountdown() == 0);
+		if (deathElapsedFrames < Integer.MAX_VALUE) {
+			deathElapsedFrames++;
+		}
+		if (!skip) {
+			return false;
+		}
+		// Park the corpse in the restart routine with no countdown left, so it stays put and
+		// the routine never requests a second reload.
+		sprite.setDeathCountdown(0);
+		sprite.enterDeathRestartRoutine(0);
+		level.requestRespawn();
+		return true;
+	}
+
 	private void enterDeathRestartRoutine() {
 		if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
+			sprite.enterDeathRestartRoutine(DEATH_RESTART_DELAY_FRAMES);
+			return;
+		}
+		LevelManager level = levelManager();
+		if (level != null && level.runPolicy().fastDeathRestart()) {
+			// GameplayRunPolicy.DeathRestart.FAST_FROM_START keeps the shipped restart delay
+			// (move.w #60 into the restart countdown) and drops the rest of the branch: the
+			// life decrement and the GAME OVER / TIME OVER objects of Sonic_HandleDeath
+			// (S1 Sonic_HandleDeath, 01 Sonic.asm:2011-2054), CheckGameOver / Obj01_ResetLevel (S2
+			// s2.asm:38274-38317) and loc_12432 / loc_12498 (S3K sonic3k.asm:24621-24659).
+			// The countdown's expiry then requests the reload as Sonic_ResetLevel,
+			// Obj01_Gone and loc_1257C do, which the run's fast restart owns.
 			sprite.enterDeathRestartRoutine(DEATH_RESTART_DELAY_FRAMES);
 			return;
 		}

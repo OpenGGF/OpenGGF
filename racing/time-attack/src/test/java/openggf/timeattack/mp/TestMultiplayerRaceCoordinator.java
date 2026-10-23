@@ -122,7 +122,7 @@ class TestMultiplayerRaceCoordinator {
 
     /** The engine reloading the act (launch, retry key or act-completion retry). */
     private static void levelReady(TimeAttackRuntime runtime) {
-        runtime.onLevelReady(new RunLevelStart(runtime.runSpec(), "0.6:cafe", false, 4096, 1024));
+        runtime.onLevelReady(new RunLevelStart(runtime.runSpec(), "0.6:cafe", false, 4096, 1024, false));
     }
 
     private static RunInput keys(int... pressed) {

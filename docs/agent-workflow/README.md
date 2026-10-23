@@ -386,6 +386,7 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
 - [Passive ending queue probe](../../src/main/java/com/openggf/tools/S3kEndingQueueProbeTool.java): two explicit solo/+2/NTSC products, bounded LF metadata, actual production handles/child fingerprints and LIVE service/readiness projections without payloads or timing writes; [causality evidence and budget blocker](../architecture/plans/2026-10-13-s3k-playable-completion.md#2026-10-17-passive-reunion-queue-causality).
 
 - `TimeAttackCapacityVideoTool` (`racing-server capture-video`): display-free actual first boot, master browser, full relay lobby and ROM-backed natural GHZ1 completion beside authenticated simulated peers; video/PCM, chapters and observed state are written to an owned external capture directory (2026-10-21 capacity demonstration).
+- `TimeAttackLobbyVideoTool` (`racing-server capture-lobby OUTPUT ROOT s1|s2|s3k`): display-free first boot into a hosted LAN room's lobby level with three loopback peers (international names/looks, lobby presence replaying the player's own poses at an offset); records the menu over the level, ready, hidden-menu play, menu return and the round hand-over as stills, `lobby.mp4` and `state.csv` with received lobby ghost positions (2026-10-22 lobby-level lane).
 
 Stageplay's `level`, `catalog`, `simulate` and live offscreen preview/capture owners
 support reproducible native ensemble routes; see the [authoring guide](../guide/creating/stageplay-authoring.md#live-rom-worlds-screenplay-3-document-5)

@@ -356,4 +356,15 @@ class TestTimeAttackSettings {
         }
         return canvas.joined();
     }
+
+    @Test
+    void theOwnersReadyRuleRoundTripsAndUnknownValuesKeepTheDefault() {
+        TimeAttackSettings settings = new TimeAttackSettings();
+        assertEquals(com.openggf.net.protocol.ReadyRules.DEFAULT_BY_SIZE, settings.readyRule());
+        settings.setReadyRule(com.openggf.net.protocol.ReadyRules.AUTO);
+        TimeAttackSettings back = TimeAttackSettings.parse(settings.encode());
+        assertEquals(com.openggf.net.protocol.ReadyRules.AUTO, back.readyRule());
+        assertEquals(com.openggf.net.protocol.ReadyRules.DEFAULT_BY_SIZE,
+                TimeAttackSettings.parse("readyRule=SOMETIMES\n").readyRule());
+    }
 }

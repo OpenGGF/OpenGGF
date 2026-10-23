@@ -128,6 +128,8 @@ public final class TimeAttackVideoPeers implements AutoCloseable {
     public void startRound(int seconds) {
         if (connectedCount() != players) throw new IllegalStateException("room is not full: " + connectedCount());
         peers.getFirst().connection.sendControl(new ControlMessage.Chat(players + " connected. Good luck!"));
+        // Bots never ready up; nobody waits under AUTO.
+        peers.getFirst().connection.sendControl(new ControlMessage.SetReadyRule("AUTO"));
         peers.getFirst().connection.sendControl(new ControlMessage.RoundConfigure(
                 new ControlMessage.RoundConfig("s1", 0, 0, seconds, "LOCKED", "sonic")));
     }

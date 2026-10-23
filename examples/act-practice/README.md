@@ -16,7 +16,7 @@ src/main/java/practice/PracticeHost.java       the run host: timing, ghost, over
 ```
 
 Unlike Time Attack, practice runs keep special stages and live rewind
-(`new GameplayRunPolicy(true, true, RETURN_TO_HOST, true, false)`); they still hand control back
+(`new GameplayRunPolicy(true, true, RETURN_TO_HOST, true, false, STOCK, true, true)`); they still hand control back
 to the scene when the act is complete. The run itself contains no mod content, so it is the
 stock game; the host only observes it, draws over it and asks for retries.
 
