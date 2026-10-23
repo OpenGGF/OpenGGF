@@ -93,7 +93,7 @@ class Sonic2PatternAnimator implements AnimatedPatternManager, RewindSnapshottab
             AniPlcParser.ensurePatternCapacity(scripts, level);
             AniPlcParser.primeScripts(scripts, level, GameServices.graphics());
         }
-        this.graph.install(Sonic2AnimatedTileChannels.fromScripts(this.scripts));
+        this.graph.install(Sonic2AnimatedTileChannels.fromScripts(this.scripts, GameServices::graphics));
     }
 
     private static int scanForTable(RomByteReader reader) {
