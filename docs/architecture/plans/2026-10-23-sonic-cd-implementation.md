@@ -1050,3 +1050,35 @@ Pinned `gfx_render` preserves that paired pixel. The lead removed the erroneous
 expected-byte assignment; production source is unchanged. Only
 `TestCdStampGraphics` is rerunning, in session `82450`. The other 58 passing
 invocations retain unchanged source and need no ceremonial repeat.
+
+### Verified pure stamp transform
+
+The focused rerun passed all 54 `TestCdStampGraphics` invocations with zero
+failures, errors or skips. Maven took 24.041 seconds, with zero queue wait.
+Together with the unchanged six native continuations and 52 admission checks,
+this establishes 112 distinct passing checks across the two affected runs.
+It is not a single green combined run or a broad smoke result. Session `82450`
+is finished; no task-owned Maven job remains.
+
+Fresh review `sonic-cd-stamp-java-review-20261023-r1` returned bounded PASS on
+the final seven files. Independent calculations matched all 10,240 local
+orientation coordinates and 262,144 priority-byte combinations against the
+native source semantics. It also reproduced all six complete egress RAM images,
+hashes and cursor results, and verified the overlap correction. The reviewed
+production file SHA256 is
+`83683b04ee3f218fbf20d841dbb2dd978f6824c9c1c8d6f7cee76b7446cf1253`.
+
+The transform supports both stamp sizes, both map sizes, all eight orientations,
+priorities, clipping/repeat, unsigned cursor wrapping and overlapping reads and
+writes. Immutable semantic progress plus caller-owned memory is sufficient to
+restore and replay a bounded operation. These source/constructed checks do not
+extend the native capture coverage beyond mode-7 title continuations. There is
+no game module, live scheduling or 1M RAM integration in this unit.
+
+The native probe tools were committed locally as `39dd03c50`. Next bounded
+tasks are `sonic-cd-pcm-device-20261023-r1`, owning only the new PCM subpackage
+and optional integer-oracle tool prefix, and `sonic-cd-stage-data-20261023-r1`,
+owning only new stage-inventory tools and external evidence. The separate
+`sonic-cd-native-owner-ledger-20261023-r1` continues its source-built core work.
+The lead owns future compilation, validation and local commits. No branch is
+being merged or pushed.

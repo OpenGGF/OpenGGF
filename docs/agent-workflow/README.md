@@ -50,6 +50,10 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
   The [fixture validator](../../tools/soniccd/stamp_fixture_validate.py) compares
   complete external RAM payloads. Origin and limits are in the
   [23 October implementation plan](../architecture/plans/2026-10-23-sonic-cd-implementation.md#native-continuation-and-service-observation-handoff).
+- [Pure CD stamp graphics](../../src/main/java/com/openggf/game/soniccd/device/CdStampGraphics.java)
+  executes bounded line transforms over caller-owned Word RAM. Opt-in
+  `TestCdStampNativeContinuations` checks complete external RAM payloads;
+  scheduling and ownership remain outside the transform. Origin: 2026-10-23 CD-05.
 - [Stageplay capture](../../src/main/java/com/openggf/tools/StageplayCaptureTool.java): render a saved `.stageplay` scene with supplied ROMs to synchronized lossless MKV; see the [guide](../guide/creating/stageplay.md). [Stageplay HUD pictures](../../src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java) use explicit `-Dopenggf.stageplay.hudPictures=true`, surfaceless EGL and an absolute S2 REV01 ROM path, writing `target/stageplay-hud/` for visual review; desktop has its equivalent `TestStageplayChromePictures` in OpenGGF Editor. Origin: 2026-10-21 Stageplay delivery.
 - [Stageplay authoring CLI](../../tools/stageplay/stageplay.py): compiles shot-local screenplays, discovers supplied-ROM resources, samples/validates scenes and renders offline. [Command reference](../guide/creating/stageplay-authoring.md); skill `stageplay-authoring`. Origin: 2026-10-21 directing extension.
 
