@@ -3,6 +3,7 @@ package com.openggf.tools;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.GameServices;
+import com.openggf.game.rewind.RewindController;
 import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.objects.LrzDoorObjectInstance;
@@ -18,6 +19,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static com.openggf.GameLoopRewindTestAccess.owner;
 
 /** Ordinary cold Act1 entry owns every preceding clock and object admission. */
 @RequiresRom(SonicGame.SONIC_3K)
@@ -43,6 +45,7 @@ class TestLrzWideActTwoColdRouteCapture {
                 39120, 39260, 39880, 40650, 40720, 40900, 41070, 41211, 41281));
         var checked = new HashSet<Integer>();
         long outgoingHistory = 0;
+        RewindController outgoingController = null, incomingController = null;
         int loadFrame = -1;
         var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
@@ -52,6 +55,7 @@ class TestLrzWideActTwoColdRouteCapture {
                         SonicConfiguration.LIVE_REWIND_ENABLED, true);
                 session.step(movie.getFrame(frame));
                 drawing.afterStep(session);
+                incomingController = observeIncomingHistory(session, outgoingController, incomingController);
                 assertFalse(session.player().getDead(), "death at input " + frame);
                 assertFalse(session.player().isSuperSonic());
                 assertInstanceOf(Sonic.class, session.player());
@@ -62,10 +66,17 @@ class TestLrzWideActTwoColdRouteCapture {
                     assertEquals(1, GameServices.level().getCurrentAct());
                 }
                 if (frame >= 40700 && frame < 41138) {
-                    outgoingHistory = Math.max(outgoingHistory,
-                            SessionManager.getCurrentGameplayMode().getRewindController().currentFrame());
+                    var installed = owner(session.loop()).getRewindController();
+                    if (installed != null) outgoingController = installed;
+                    assertNotNull(outgoingController, "the enabled Act2 route records before its exit");
+                    outgoingHistory = Math.max(outgoingHistory, outgoingController.currentFrame());
+                    if (installed == null) assertRetiredHistory(session, outgoingController);
                 }
-                if (GameServices.level().getCurrentZone() == 22 && loadFrame < 0) loadFrame = frame;
+                if (GameServices.level().getCurrentZone() == 22 && loadFrame < 0) {
+                    loadFrame = frame;
+                    assertNotNull(outgoingController);
+                    assertRetiredHistory(session, outgoingController);
+                }
                 if (frame == 31000 || frame == 37080) {
                     int trigger = frame == 31000 ? 8 : 6;
                     assertTrue(GameServices.level().getObjectManager()
@@ -85,12 +96,18 @@ class TestLrzWideActTwoColdRouteCapture {
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
                 drawing.checkpoint(session);
                 var saved = registry.capture();
-                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); drawing.draw(session); }
+                for (int n = 1; n <= 45; n++) {
+                    session.step(movie.getFrame(frame + n)); drawing.draw(session);
+                    incomingController = observeIncomingHistory(session, outgoingController, incomingController);
+                }
                 var forward = registry.capture();
                 for (int cycle = 0; cycle < 2; cycle++) {
                     registry.restore(saved);
                     session.restoreInputHistory(movie.getFrame(frame));
-                    for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); drawing.draw(session); }
+                    for (int n = 1; n <= 45; n++) {
+                        session.step(movie.getFrame(frame + n)); drawing.draw(session);
+                        incomingController = observeIncomingHistory(session, outgoingController, incomingController);
+                    }
                     var replay = registry.capture();
                     assertEquals(forward.entries().keySet(), replay.entries().keySet());
                     for (String key : forward.entries().keySet()) {
@@ -110,9 +127,49 @@ class TestLrzWideActTwoColdRouteCapture {
             assertEquals(10, session.player().getRingCount());
             assertFalse(session.player().isObjectControlled());
             assertTrue(outgoingHistory > 10, "record actual outgoing Act2 history");
-            var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
+            assertNotNull(incomingController, "the route reaches an admitted boss-act timeline");
+            var rewind = owner(session.loop()).getRewindController();
+            assertNotNull(rewind, "released boss-act gameplay requires production history");
+            assertEquals(0, rewind.earliestAvailableFrame());
             assertTrue(rewind.currentFrame() < outgoingHistory, "full boss-act load retires the outgoing timeline");
             System.out.println("LRZ wide cold Act2 clear: " + checked.size() + " two-cycle rewind windows");
         }
+    }
+
+    private static RewindController observeIncomingHistory(GameplayCaptureSession session,
+            RewindController outgoing, RewindController first) {
+        var context = owner(session.loop());
+        var level = context.getLevelManager();
+        // Completed gameplay ticks can record during a cosmetic reveal fade.
+        // Observe their first installation before that engagement-only hold ends.
+        if (first == null && session.loop().getCurrentGameMode() == com.openggf.game.GameMode.LEVEL
+                && level.getCurrentZone() == 22 && level.getCurrentAct() == 0
+                && !level.hasPendingFreshLevelTransitionBoundary() && !level.isLevelInactiveForTransition()) {
+            var installed = context.getRewindController();
+            if (installed != null) {
+                assertNotNull(outgoing);
+                assertNotSame(outgoing, installed);
+                assertEquals(0, installed.earliestAvailableFrame());
+                assertTrue(installed.currentFrame() <= 1,
+                        () -> "the first recorded boss-act history starts at frame zero: " + installed.currentFrame());
+                return installed;
+            }
+        }
+        return first;
+    }
+
+    private static void assertRetiredHistory(GameplayCaptureSession session, RewindController outgoing) {
+        var context = owner(session.loop());
+        assertNotSame(outgoing, context.getRewindController());
+        int frame = outgoing.currentFrame();
+        var level = context.getLevelManager();
+        int worldFrame = level.getFrameCounter();
+        var objects = level.getObjectManager();
+        outgoing.step();
+        outgoing.seekTo(0);
+        assertFalse(outgoing.stepBackward(), "retired Act2 history rejects replay");
+        assertEquals(frame, outgoing.currentFrame());
+        assertEquals(worldFrame, level.getFrameCounter());
+        assertSame(objects, level.getObjectManager());
     }
 }

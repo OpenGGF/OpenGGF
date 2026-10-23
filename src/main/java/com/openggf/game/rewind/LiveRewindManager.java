@@ -78,12 +78,14 @@ public final class LiveRewindManager {
         drainBoundaries();
         if (!parked && !releasePending && ready(boundOwner)) {
             RewindContext context = rewindContextFromSupplier();
-            // Binding precedes the loop's entry admission. A stopped source
-            // world cannot supply a floor; explicit boundaries and completed
-            // ticks retain their own admission, as do registered special stages.
-            if (context.stepperKind() == StepperKind.LEVEL_FRAME
-                    && boundOwner.getLevelManager().isLevelInactiveForTransition()) return;
-            if (context.supported() && enabled(scriptedRewind(context))) ensureInstalled(context);
+            if (context.supported() && enabled(scriptedRewind(context))) {
+                // Binding precedes the loop's entry admission. A stopped source
+                // world cannot supply a floor; explicit boundaries and completed
+                // ticks retain their own admission, as do registered special stages.
+                if (context.stepperKind() == StepperKind.LEVEL_FRAME
+                        && boundOwner.getLevelManager().isLevelInactiveForTransition()) return;
+                ensureInstalled(context);
+            }
         }
     }
 

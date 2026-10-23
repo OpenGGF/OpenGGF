@@ -418,6 +418,26 @@ class TestLiveRewindOwnerLifetime {
     }
 
     @Test
+    void unsupportedOrDisabledBindingDoesNotReadObjectWorldInstallationState() {
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
+        GameplayModeContext worldOwner = privateOwner(new com.openggf.game.sonic2.Sonic2GameModule());
+        GameplayModeContext owner = org.mockito.Mockito.mock(GameplayModeContext.class);
+        org.mockito.Mockito.when(owner.isGameplayRuntimeReady()).thenReturn(true);
+        org.mockito.Mockito.when(owner.getWorldSession()).thenReturn(worldOwner.getWorldSession());
+
+        for (GameMode entry : List.of(GameMode.MASTER_TITLE_SCREEN, GameMode.SPECIAL_STAGE,
+                GameMode.LEVEL, GameMode.BONUS_STAGE)) {
+            mode.set(entry);
+            manager.bindOwner(owner, false, entry);
+            assertNull(owner.getRewindController());
+        }
+
+        org.mockito.Mockito.verify(owner, org.mockito.Mockito.never()).getLevelManager();
+        org.mockito.Mockito.verify(owner, org.mockito.Mockito.never()).installPlaybackController(
+                org.mockito.Mockito.any(), org.mockito.Mockito.any(), org.mockito.Mockito.anyInt());
+    }
+
+    @Test
     void inactiveLevelBindingDoesNotCaptureBeforeAdmissionAndActiveFadeTicksStillRecord() {
         mode.set(GameMode.LEVEL);
         GameplayModeContext owner = privateOwner();
