@@ -3648,6 +3648,38 @@ primary holds and forward replay; `TestSonic2NativeEndingEntry` checks the
 production boss-to-palette-manager boundary. Origin: the 2026-10-22 S2
 presentation audit lane, based on `94c40570a15a`.
 
+## P90 -- Effective speed words retain their native last writer
+
+**Symptom.** A native monitor award or actor swap produces the wrong speed
+while underwater or Super, despite preserving the shoes timer and status bits.
+
+**Cause.** The three native top-speed, acceleration and deceleration WORDs
+are mutable RAM, not a formula of water/shoes/Super flags. `super_shoes` writes
+$C00/$18/$80 without a water or Super gate. Shoes expiry writes dry normal
+$600/$C/$80, or Sonic's Super $A00/$30/$100, even while the underwater status
+remains set. Re-deriving effective words from attached Java base profiles and
+flags loses that last-writer state. Inverting halving/doubling is not lossless
+for arbitrary words, odd values or word wrap.
+
+**Correct pattern.** An exact native owner captures and transfers the three
+actual effective words and updates them at their source writer events. Keep
+identity, profiles, friction fields and Super state attached. Native neutral
+ground deceleration consumes the acceleration word where the owning routine
+uses it; do not transfer an unrelated Java friction field to approximate it.
+A water-factorization latch is not a fourth native speed word. The optional
+three-word owner and its consumers remain a separate prerequisite until wired;
+do not claim an actor-transfer helper closes that gap.
+
+**ROM citation.** super_shoes and super_shoes_Tails (s2.asm:25924-25949),
+Obj01_ChkShoes (s2.asm:36307-36329), Obj02_ChkShoes (s2.asm:39042-39056).
+
+**Required controls.** Underwater shoes award and expiry, attached Super with
+shoes, unequal raw words, swapped actors, and capture/restore with forward
+replay must distinguish actual RAM writes from getter-derived values.
+
+**Originating work.** Native competition selective-transfer source audit,
+2026-10-22; implementation and activation remain pending the explicit owner.
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

@@ -44,6 +44,13 @@ Unreleased. The earlier development themes remain in
   snapshots synchronize only proven words, leaving unrelated fixed-slot shield
   helpers outside that memory projection while rejecting ambiguous native access.
 
+- **Native terrain rendering:** Retained plane images keep their original width,
+  height and wrap independently of ordinary level layouts. Camera movement
+  preserves their cells; owner revisions and rewind refresh the derived images.
+  Internal S3K competition views combine these planes with published sprite pages
+  and split scroll registers, retaining the picture through human reconstruction.
+  Complete competition entry remains gated.
+
 - **Sonic 1 level entry:** background scrolling starts from each level or credits
   demo's final camera, and lamppost returns retain the original background camera
   words. Scrap Brain Act 3 uses the original Labyrinth background scrolling
