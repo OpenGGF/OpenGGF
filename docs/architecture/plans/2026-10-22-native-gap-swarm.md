@@ -3015,3 +3015,69 @@ are separate from JVM qualification. Consumed owned logs, XML and invocation
 temporary output are removed; compiled outputs and the unmerged local worktree
 are retained for the lead. No main-workspace mutation, merge or push is part of
 this implementation slice.
+
+
+### Deferred native ring fixture ownership — 2026-10-23
+
+The ring child repairs only `TestNativeCompetitionRingInitialization` on
+`bugfix/ai-native-ring-restore-fixture-20261023`, based on
+`659b02c98a16da0723ef5f222acdc60ab7b0838f`. Parent-provided common71076 evidence
+identified a null native camera owner during full registry restore; that live
+parent job and its outputs were not inspected or reproduced here. Current
+`GameplaySessionFactory.attachManagers` registers the supplied roster humans,
+and `NativeCompetitionCameras` requires those owners and registers the secondary
+camera only when P2 exists. The fixture now supplies distinct stock Sonic/Tails
+before attachment, binds both focuses, and checks actual SpriteManager
+registration and human flags. All three original tests and their existing
+cursor/replacement/retired-stream assertions remain.
+
+The original full registry capture is restored unchanged, including `sprites`,
+`camera`, `native_competition_camera_2`, ordinary `rings` and the native cursor
+adapter. After the existing ring update, swapping the two focuses observably
+changes both actor ownership and camera RAM. Restore must recover each actual
+registered human and exact original camera snapshots alongside the original
+ring assertions. These same human instances remain registered: this adds no
+missing-human reconstruction claim. `TestNativeCompetitionCameraRestore`
+separately exercises that path. No production, API, POM, metadata shape,
+selection policy, extra test file or art/SAT leaf was changed or imported.
+One bounded independent source review found no additional shared surface needed.
+
+One normal queued request, observed only by the ring child, exited 0 at
+15:39:22Z: **15 distinct tests / 3 XML reports / 0 failures / 0 errors / 0 skips**
+(ring initialization 3, camera restore 3 including both parameter cases, sprite
+submission registration 9). Queue wait was 406 seconds; Maven reported 1:23;
+observed end-to-end request time was 490.401 seconds. Source was frozen from
+15:31:01Z through terminal: tree fingerprint
+`8cb938737ed668ad6ad81f19b6d10f1cfe021ad1d653ea5a90161ae695801f06`, fixture SHA-256
+`f080207ef11d5e1028dac1cb65ca5cef1dd7945bb86e03d1becd8f35f844a25f`.
+The later documentation append changes no executable input. All XML identities,
+skips, relevant JVM/cwd/ROM/backend properties and streams were inspected;
+Java 25.0.5 and this worktree's output were confirmed, with no dumps. Test
+streams contain 34 FAST-without-manifest warnings; the complete Maven log has
+37 such warnings, fresh-target temporary-directory startup output and compiler
+deprecation warnings. These warnings do not establish native timing coverage.
+
+Equivalent portable command, run from the child worktree with `MAIN_WORKSPACE`
+and `JDK25_HOME` set to the existing current-main checkout and JDK 25:
+
+```bash
+env -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u MAVEN_OPTS -u MAVEN_ARGS \
+  -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME="$JDK25_HOME" PATH="$JDK25_HOME/bin:$PATH" \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 "$MAIN_WORKSPACE/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  -Dtest=TestNativeCompetitionRingInitialization,TestNativeCompetitionCameraRestore,TestNativeSpriteSubmissionRegistration \
+  "-Dsonic1.rom.path=$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$PWD/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+The existing original ROM files were hash-verified against the documented
+S1 REV01, S2 REV01 and S3&K identities before launch; none was created or changed.
+This is bounded fixture/consumer verification, with no second request, broad
+suite, fresh guard, native reference run, route or capture. Consumed owned raw
+Maven/XML/text diagnostics are removed after readback; compiled output remains.
+The clean local test-only commit and useful worktree are retained for the
+parent. Main integration, push, PR work, provider activation and paired
+MHZ/SOZ observations remain closed.
