@@ -112,6 +112,7 @@ com.openggf.game.sonic1.objects.badniks.Sonic1NewtronMissileInstance
 com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance
 com.openggf.game.sonic1.objects.badniks.Sonic1RollerBadnikInstance
 com.openggf.game.sonic1.objects.badniks.Sonic1YadrinBadnikInstance
+com.openggf.game.sonic1.objects.bosses.S1BossExplosion
 com.openggf.game.sonic1.objects.bosses.Sonic1BossBlockInstance
 com.openggf.game.sonic1.objects.bosses.Sonic1BossFireInstance
 com.openggf.game.sonic1.objects.bosses.Sonic1FZBossInstance

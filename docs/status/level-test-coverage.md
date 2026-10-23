@@ -113,6 +113,12 @@ for GHZ3, MZ3, SYZ3, LZ3 and SLZ3, plus ROM explosion pixels. Continuous boss
 routes, FZ topology, SLZ escape timing and broader roster/presentation coverage
 remain open; these local mechanics do not certify any complete act.
 
+The [2026-10-23 S1 native boss rewind repair](../architecture/plans/2026-10-22-native-gap-swarm.md#s1-native-boss-rewind-fixture-and-coverage-repair--2026-10-23)
+adds bounded forced-reconstruction/forward obligations for independent SYZ, GHZ,
+standard Eggman and FZ components and Obj3F display/lifetime/SFX boundaries. Its
+focused execution status is recorded there; it does not certify continuous boss
+routes, pixel parity or broader act/character/donor/team/viewport coverage.
+
 The [2026-10-22 S2 presentation matrix](../architecture/validation/2026-10-22-s2-presentation.md)
 records bounded MTZ3, SCZ and DEZ palette-cycle coverage and the seeded native
 DEZ boss-to-ending/NTSC-PAL credits boundaries. Continuous routes and the wider

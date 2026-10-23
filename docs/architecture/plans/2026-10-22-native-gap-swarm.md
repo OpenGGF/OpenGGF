@@ -1745,3 +1745,144 @@ For later independent ending controls, decimal mappings 30/32 are native fr_Run1
 On 2026-10-23 Root received `534438e73c2cb6ca400ca4c6d899f6feed9f4258` once by ancestry into `1d4375d155816b7712922891ad9feb42448abfe4`. The peer successor includes the previously qualified native-human/Host/GPU source and pinned develop `d9b8edded8a9517dd7cf1bc3fcd4dcd6e53f4e0a`, with its PR-specific world PLC, ring, known-word capture and hosted HUD receiving ports. Peer reported the final exact d9 focus as 227 distinct tests, zero failures/errors/skips (21 selectors, 23 XML files; queue 80 seconds, Maven 1:35), and fresh source/ArchUnit/API/field checks as 116 tests, zero failures/errors/skips (queue 454 seconds, Maven 45.292 seconds). Earlier red pixel and SST evidence remains in the peer completion record. These are bounded peer results, not a Root union compile or combined smoke pass.
 
 The sole text conflict was `TestSurfacelessEglContext`: both sides restore the incoming backend property, and Root retained the exact already-qualified `3ce2664` fixture including its class-level lifecycle witness. Test bodies and GL cleanup are identical to the peer source. Root's category-runner headless option, property-scope guidance and S1 source audit remain present. No GPU, Python tool or fixture check was repeated just to receive the same tested source. One combined change-based smoke plan remains Root-owned and pending against the pre-task integration SHA `94c40570a15a11b70caf7456e9b0d0a8eec8a9b4`. Main integration/push, provider activation and passive SOZ/MHZ observations remain closed.
+
+
+### S1 native boss rewind fixture and coverage repair — 2026-10-23
+
+This isolated test-only correction starts at
+`659b02c98a16da0723ef5f222acdc60ab7b0838f` in
+`bugfix/ai-s1-native-boss-rewind-coverage-20261023`. The parent reported the frozen
+common smoke's obsolete SYZ constructor/`childComponents` assertion and four
+undeclared object identities (`TestEveryObjectRewindRoundTrip` invocations
+34/35/36/42, with declaration failures in the tail inventory and coverage ratchet).
+Those are observations of the original `659` source, not a passing baseline or
+results of this repair's focused run. No parent/Main job was inspected or changed.
+
+The owning source epoch predates composition: `d8aca9ad72607` introduced standard
+native ship components, the independent GHZ ball components and Obj3F boss effect,
+and moved SYZ child allocation to its first native ship update; `9f7c034f11bf`
+introduced the independent FZ visual component. The five production files
+`AbstractS1EggmanBossInstance`, `GHZBossWreckingBall`, `S1BossExplosion`,
+`S1EggmanVisualComponent` and `FZBossVisualComponent` are byte-identical between
+`1d4375` and `659`. Existing graph/native tests are likewise inherited; the exact
+SYZ fixture and identity inventories were unchanged from pre-task
+`94c40570a15a11b70caf7456e9b0d0a8eec8a9b4`. This is source attribution, not an
+inference that an earlier suite passed, and not peer-merge loss.
+
+Pinned S1 reference `28872a46e2d4c94c5c4818cbd3c04e6eb17edb67` was read directly:
+`BossSpringYard_Main` / `BossSpringYard_LoadBoss`
+(`_incObj/75, 76 Boss - SYZ Main and Blocks.asm:35-71`) allocate the native later
+slots on routine0; `BossSpringYard_SpikeMain` (same file:660-684) independently
+reads the parent and extends seven units during descent. `Expl_Main`
+(`_incObj/27, 3F Explosions.asm:72-84`) returns after the initialization sound,
+without display; `ExItem_Animate` (same file:44-53) displays five eight-pass frames
+and deletes before frame5 is displayed. Production behavior and default capture
+remain unchanged. The inherited concrete spawn/services recreator, generic S1
+subclass booleans and explosion superclass animation/SFX capture already cover
+Obj3F; no runtime capture omission was supported.
+
+The repaired SYZ case executes real ObjectManager passes, reconstructs fresh Java
+objects with stable captured IDs/slots, checks the live parent and absence of a
+synthetic child-update edge, and continues independent extension. GHZ graph
+checks cover all five native component identities/slots, anchor array links and
+fresh parents, plus the final ball's remaining forward lifetime after anchor
+retirement. Five ROM-backed ship families retain their exact face/flame and native accessory
+roles, captured identities/slots, fresh owners and equal forward frames. FZ adds real ROM-backed
+non-init leg/flame/cockpit clocks, positions, flip and both sides of post-camera
+render publication, with forced reconstruction and forward passes; the native
+clock and damaged-cockpit controls remain. Obj3F reconstructs from pre-init,
+initialized-without-display and mid-animation captures after retiring the original,
+then checks render submission, remaining lifetime, slot release and exactly one
+initial sound request per continuous timeline. Renderer mocks observe production
+submission; this is not pixel or native-emulator evidence.
+
+Only three graph dispositions are added, each naming its actual evidence:
+`GHZBossWreckingBall$NativeComponent` → `TestS1GhzBossGraphRewind`,
+`FZBossVisualComponent` → `TestS1FzBossGraphRewind`, and
+`S1EggmanVisualComponent` → the five-ship `TestS1EggmanNativeComponents` rewind
+method. `S1BossExplosion` is an isolated identity, contingent on the live controls
+above. The bounded identity test probes exactly these four classes; inventory
+assertions and negative discrimination stay intact. Unchanged global object and
+ratchet sweeps are not required for this local declaration repair.
+
+Validation is limited to at most two focused requests and one affected fresh
+guard. Java25/Lua5.4/PowerShell tool preflight passed without executing tests. The
+original absolute S1/S2/S3K ROM files were verified against the repository's
+CRC32/SHA1 identities. The launch environment removes display and injected Java
+options and selects surfaceless EGL; these state/submission tests use headless
+logic and stub SFX services, while AudioManager's default remains NullAudioBackend.
+Focused execution and fresh guard results are recorded below. No broad smoke, release suite, route,
+native process, capture, Main integration, PR or push is authorized here. Continuous
+boss routes, full act/character/donor/team/viewport breadth and pixel validation
+remain inherited gaps.
+
+Focused request1 (session24738) completed on source fingerprint
+`d87bfdc1e31ac58c510641bab23a08d13e067bdf47eed1d34cc5f68a798e3ddf`:
+56 identities in ten XML suites, 55 pass / one new fixture failure / zero errors
+or skips, queue69s / Maven32.326s. The failure is exactly
+`TestS1EggmanNativeComponents#midScriptRewindRecreatesIdentityAndProducesTheSameForwardFramesWithoutRespawn`:
+the added role assertion wrongly expected `[FACE, FLAME]` for every ship and saw
+`[FACE, FLAME, ACCESSORY]`. The rejected universal two-role expectation is corrected
+by the actual native tables: GHZ `[1,2]`, MZ `[1,2,3]`, SYZ `[1,2]` (its routine8
+is the separate spike), LZ `[1,2]`, SLZ `[1,2,3]`. `BossMarble_ObjData`
+(`_incObj/73, 74 Boss - MZ Main and Fire.asm:27-32`) and
+`BossStarLight_ObjData` (`_incObj/7A, 7B Boss - SLZ Main and Spike Balls.asm:30-35`)
+match original-ROM rows at `$189F8` / `$19080`; accessory3 remains covered, not
+filtered. Only this expected role set/count changes for the second request.
+All other first-source identities passed, including meaningful Obj3F reconstruction,
+render submission, five-frame lifetime and single-request SFX controls. They retain
+that source attribution; no fictional combined rerun is claimed. All ten XML files,
+complete output streams, skips and properties were inspected: Java25.0.5,
+current worktree, surfaceless EGL and all three verified original absolute ROM
+paths; no dumps. Output contains inherited compiler deprecations and FAST→NONE
+load-time simulation warnings, not native timing evidence. Consumed first-run
+reports/logs are removed before the final narrow request; compiled output remains.
+
+Focused commands for this isolated worktree, with `OPENGGF_MAIN` substituting
+the actual main-workspace path in the inspected XML. The absolute original-ROM
+identities and all other flags/selectors remain as executed. Log targets were
+temporary and are deleted after inspection:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS -u JDK_JAVA_OPTIONS JAVA_HOME=/usr/lib/jvm/java-25-openjdk PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH LUA_BIN=/usr/bin/lua5.4 python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestBossChildExactStateRewind#syzBossSpikeExactNonInitStateRestoredWithReferenceIntact,TestS1GhzBossGraphRewind,TestS1GhzWreckingBallNative,TestS1FzBossGraphRewind,TestS1FzNativeComponents,TestS1EggmanNativeComponents,TestS1BossExplosionRewind,TestRewindRoundTripHarnessCoverage,TestRemainingRewindTailInventory,TestEveryObjectRewindRoundTrip#everySpawnableClassHasAnExplicitCoverageDisposition' "-Dsonic1.rom.path=$OPENGGF_MAIN/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$OPENGGF_MAIN/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$OPENGGF_MAIN/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B > target/s1-boss-rewind-focused-1.log 2>&1
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS -u JDK_JAVA_OPTIONS JAVA_HOME=/usr/lib/jvm/java-25-openjdk PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH LUA_BIN=/usr/bin/lua5.4 python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS1EggmanNativeComponents#midScriptRewindRecreatesIdentityAndProducesTheSameForwardFramesWithoutRespawn' "-Dsonic1.rom.path=$OPENGGF_MAIN/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$OPENGGF_MAIN/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$OPENGGF_MAIN/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B > target/s1-boss-rewind-focused-2.log 2>&1
+```
+
+Focused request2 (session73322) ran only the corrected five-ship rewind method on
+source fingerprint `6cfffb21223faef78fd75b576bd4951e46c6201015c7f37ce88fc7e833db87cf`:
+one Jupiter identity passed, zero failures/errors/skips, queue243s /
+Maven31.810s. Exact per-ship roles, captured IDs/slots, fresh component/parent Java
+identities and equal forward frames all passed. The single XML, complete Maven
+and test streams, properties and absence of dumps were inspected; source hash
+matched at completion. This corrects only the first run's added role assertion;
+the other55 passes keep their first-source attribution. No unchanged global
+inventory/ratchet sweep or production correction was needed. The affected field
+capture guard follows once in a fresh JVM.
+
+Fresh affected guard command (the same portable path substitution):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS -u JDK_JAVA_OPTIONS JAVA_HOME=/usr/lib/jvm/java-25-openjdk PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH LUA_BIN=/usr/bin/lua5.4 python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off -Pguards -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestRewindFieldDispositionGuard' "-Dsonic1.rom.path=$OPENGGF_MAIN/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$OPENGGF_MAIN/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$OPENGGF_MAIN/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B > target/s1-boss-rewind-guard.log 2>&1
+```
+
+Fresh affected guard (session8746), `TestRewindFieldDispositionGuard` in a
+separate `-Pguards` JVM, passed one identity with zero failures/errors/skips on
+the same final source fingerprint
+`6cfffb21223faef78fd75b576bd4951e46c6201015c7f37ce88fc7e833db87cf`.
+Queue waiting was1126s; Maven execution/build time30.792s. The single XML,
+complete streams/properties, generated field report and absence of dumps were
+inspected. The report retains23 inherited gap rows, none for the four newly
+declared component classes; its41 baseline-closure notices are inherited source
+observations, not changes made by this test repair. No runtime or baseline policy
+was changed. Four new source citations pass the pinned-disassembly checker; the
+new coverage-backlog link/anchor and test-only staged scope were verified.
+
+The two focused requests and one fresh affected guard exhaust the authorized
+validation budget. These are separate bounded results, not a broad-smoke or
+release-suite pass. Common `659` smoke failures retain their historical source
+attribution. No Main/Root job, integration, PR, push, route, native process or
+capture was touched. Consumed logs, raw XML, field diagnostics and invocation
+scratch are deleted after inspection; compiled outputs and the unmerged local
+branch/worktree are retained for parent delivery. The final local commit is made
+through normal hooks with all seven policy trailers and the exact requested
+final co-author parsed before committing.
