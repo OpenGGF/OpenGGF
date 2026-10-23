@@ -13,6 +13,8 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.StubObjectServices;
@@ -30,12 +32,60 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TestS3kIczCrushingColumnObject {
+
+    /** Declared component fixture: real child allocation/recreate, no ordinary-route claim. */
+    @Test
+    void bottomDecorationRecreationPreservesBirthSpawnAcrossTwoMovingParentCycles() {
+        ObjectManager[] owner = new ObjectManager[1];
+        var services = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return owner[0]; }
+        };
+        var manager = new ObjectManager(List.of(), new Sonic3kObjectRegistry(), 0, null, null,
+                null, null, services);
+        owner[0] = manager;
+        manager.reset(0);
+        var parent = manager.createDynamicObject(() -> new TestableColumn(spawn(1)));
+        parent.update(0, null); // Ordinary initial dispatch creates the real decoration.
+        var children = manager.getActiveObjects().stream().filter(object -> object != parent).toList();
+        assertEquals(1, children.size());
+        var child = children.getFirst();
+        var factory = assertInstanceOf(RewindRecreatable.class, child);
+        var identity = manager.objectQuery().identityOf(child).orElseThrow();
+        var captured = manager.rewindSnapshottable().capture().dynamicObjects().stream()
+                .filter(entry -> identity.equals(entry.objectId())).findFirst().orElseThrow();
+        var birth = captured.spawn();
+        assertEquals(child.getSpawn(), birth);
+        assertEquals(parent.getY() + 0xB0, birth.y(), "native decoration birth offset");
+        assertFalse(captured.state().hasDynamicSpawn(), "immutable construction spawn is authoritative");
+        PlayableEntity player = mock(PlayableEntity.class);
+        parent.onSolidContact(player, standingContact(), 1);
+        parent.update(1, player); // Consume actual standing latch, enter upward crush.
+        for (int cycle = 0; cycle < 2; cycle++) {
+            for (int tick = 0; tick < 4; tick++) parent.update(2 + cycle * 8 + tick, player);
+            assertNotEquals(birth.y(), parent.getY() + 0xB0, "parent has really moved since child birth");
+            var context = new RewindRecreateContext(birth, captured.state(), services, manager, captured);
+            var recreated = factory.recreateForRewind(context);
+            assertNotSame(child, recreated);
+            assertEquals(birth, recreated.getSpawn(), "full captured birth record survives reconstruction " + cycle);
+            int before = recreated.getY();
+            assertEquals(parent.getX(), recreated.getX());
+            for (int tick = 4; tick < 8; tick++) {
+                parent.update(2 + cycle * 8 + tick, player);
+                recreated.update(2 + cycle * 8 + tick, player);
+                assertEquals(parent.getY() + 0xB0, recreated.getY(), "loc_8A612 follows actual current parent");
+                assertEquals(birth, recreated.getSpawn(), "live following must not rewrite birth metadata");
+            }
+            assertNotEquals(before, recreated.getY(), "recreated child actually follows further parent motion");
+        }
+    }
 
     @Test
     void registryCreatesIczCrushingColumnInstance() {

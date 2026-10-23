@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.audio;
 import com.openggf.audio.AbstractAudioProfile;
 import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
+import com.openggf.audio.NativeMailboxMusicRoutes;
 import com.openggf.audio.SegaPcmSpec;
 import com.openggf.game.audio.SegaPcmRomReader;
 import com.openggf.audio.smps.SmpsLoader;
@@ -19,7 +20,40 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-public class Sonic2AudioProfile extends AbstractAudioProfile {
+public class Sonic2AudioProfile extends AbstractAudioProfile implements NativeMailboxMusicRoutes {
+
+    /**
+     * Retail requests index {@code zMasterPlaylist}, not the engine's historical music ids.
+     * {@code zBGMLoad} subtracts $81, reads the playlist metadata and follows its bank/pointer
+     * index (s2.sounddriver.asm:1736-1779). The playlist order is owned by
+     * {@code zMasterPlaylist} (s2.sounddriver.asm:3823-3855). Keep existing engine ids stable;
+     * in particular, request $91 is Options while engine id $91 is EHZ 2P.
+     */
+    private static final Sonic2Music[] NATIVE_MUSIC_ROUTES = {
+            Sonic2Music.RESULTS_2P, Sonic2Music.EMERALD_HILL,
+            Sonic2Music.MYSTIC_CAVE_2P, Sonic2Music.OIL_OCEAN,
+            Sonic2Music.METROPOLIS, Sonic2Music.HILL_TOP,
+            Sonic2Music.AQUATIC_RUIN, Sonic2Music.CASINO_NIGHT_2P,
+            Sonic2Music.CASINO_NIGHT, Sonic2Music.DEATH_EGG,
+            Sonic2Music.MYSTIC_CAVE, Sonic2Music.EMERALD_HILL_2P,
+            Sonic2Music.SKY_CHASE, Sonic2Music.CHEMICAL_PLANT,
+            Sonic2Music.WING_FORTRESS, Sonic2Music.HIDDEN_PALACE,
+            Sonic2Music.OPTIONS, Sonic2Music.SPECIAL_STAGE,
+            Sonic2Music.BOSS, Sonic2Music.FINAL_BOSS,
+            Sonic2Music.ENDING, Sonic2Music.SUPER_SONIC,
+            Sonic2Music.INVINCIBILITY, Sonic2Music.EXTRA_LIFE,
+            Sonic2Music.TITLE, Sonic2Music.ACT_CLEAR,
+            Sonic2Music.GAME_OVER, Sonic2Music.CONTINUE,
+            Sonic2Music.GOT_EMERALD, Sonic2Music.CREDITS,
+            Sonic2Music.UNDERWATER
+    };
+
+    @Override
+    public int musicForNativeRequest(int nativeRequestId) {
+        int index = nativeRequestId - 0x81;
+        return index >= 0 && index < NATIVE_MUSIC_ROUTES.length
+                ? NATIVE_MUSIC_ROUTES[index].id : -1;
+    }
 
     private final Consumer<Sonic2SoundRequestService.Event> requestObserver;
 

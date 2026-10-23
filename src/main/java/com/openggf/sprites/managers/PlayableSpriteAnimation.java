@@ -227,8 +227,10 @@ public class PlayableSpriteAnimation {
             animationUpdateSuppressedThisFrame = true;
             return;
         }
-        if (sprite.getSpindashDustController() != null) {
-            sprite.getSpindashDustController().update();
+        var dust = sprite.getSpindashDustController();
+        if (dust != null && (dust.fixedSlotIndex() < 0
+                || !NativeCompetitionTitlePlayableScope.suppressFixedDustFor(sprite))) {
+            dust.update();
         }
 
         // Knuckles_Climbing_Onto_Ledge / Knuckles_Climb_Ledge owns the

@@ -1,19 +1,18 @@
 package com.openggf.level.objects;
 
 import com.openggf.graphics.GLCommand;
-import com.openggf.graphics.GLCommandGroup;
-import com.openggf.graphics.GraphicsManager;
-import com.openggf.graphics.PresentationGraphicsAccess;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.game.PlayableEntity;
+import com.openggf.level.render.SpriteSlotEmission;
 
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
-
-import static org.lwjgl.opengl.GL11.GL_LINES;
+import java.util.function.IntFunction;
+import java.util.function.Supplier;
 
 /**
- * Render-bucket entries and ordered command submission for {@link ObjectManager}: one per object and
+ * Render-bucket entries for {@link ObjectManager}: one per object and
  * tile-priority class in each display list it occupies, each carrying the SST
  * slot that orders it. Ordinary objects contribute one entry; a
  * {@link MultiBucketRenderable} contributes one per bucket and class, with the
@@ -22,21 +21,83 @@ import static org.lwjgl.opengl.GL11.GL_LINES;
 final class ObjectRenderParts {
 
     /** One display-list entry: the object, the class it draws here, and its ordering slot. */
-    record RenderEntry(ObjectInstance instance, boolean high, int slot) {
+    record RenderEntry(ObjectInstance instance, boolean high, int slot,
+                       boolean nativeSubmission, int admissionOrdinal) {
+        RenderEntry(ObjectInstance instance, boolean high, int slot) {
+            this(instance, high, slot, false, -1);
+        }
     }
 
     /** ROM parity: lower SST slots render later and therefore in front. */
     static final Comparator<RenderEntry> SLOT_DESCENDING = (a, b) -> Integer.compare(b.slot(), a.slot());
 
-    private final List<GLCommand> commands = new ArrayList<>();
-    private final ObjectCallbackRouter callbacks;
-    private final ObjectServices services;
-    private final GraphicsManager graphics;
+    private ObjectRenderParts() {
+    }
 
-    ObjectRenderParts(ObjectCallbackRouter callbacks, ObjectServices services, GraphicsManager graphics) {
-        this.callbacks = callbacks;
-        this.services = services;
-        this.graphics = graphics;
+    /** Rebuilds presentation lists without changing submission or simulation state. */
+    static void populateBuckets(Collection<ObjectInstance> active, List<ObjectInstance> dynamic,
+            NativeSpriteSubmissionQueue queue, IntFunction<AbstractObjectInstance> currentOwner,
+            Supplier<IntFunction<SpriteSlotEmission>> externalResolver,
+            List<RenderEntry>[] unified, List<RenderEntry>[] low, List<RenderEntry>[] high) {
+        // Clear all buckets
+        for (int i = 0; i < unified.length; i++) {
+            low[i].clear();
+            high[i].clear();
+            unified[i].clear();
+        }
+
+        // Bucket active and dynamic objects; an owner of inline-drawn ROM children
+        // (MultiBucketRenderable) is listed in every bucket its parts occupy.
+        for (ObjectInstance instance : active) {
+            if (!NativeSpriteSubmissionAccess.authoritative(instance)) {
+                ObjectRenderParts.addToRenderBuckets(instance, unified, low, high);
+            }
+        }
+        for (ObjectInstance instance : dynamic) {
+            if (!NativeSpriteSubmissionAccess.authoritative(instance)) {
+                ObjectRenderParts.addToRenderBuckets(instance, unified, low, high);
+            }
+        }
+
+        // ROM parity: lower sprite-table indices render in front. Objects execute and
+        // call Draw_Sprite in slot order, so lower SST slots must be drawn later in
+        // painter's-algorithm order. Sort each bucket descending by slot so lower
+        // slot indices appear on top.
+        for (int i = 0; i < unified.length; i++) {
+            low[i].sort(ObjectRenderParts.SLOT_DESCENDING);
+            high[i].sort(ObjectRenderParts.SLOT_DESCENDING);
+            unified[i].sort(ObjectRenderParts.SLOT_DESCENDING);
+        }
+
+        // BuildSprites (_inc/BuildSprites.asm:29-38) walks accepted SST pointers
+        // FIFO, resolving current RAM even after deletion/reuse. Cached lists
+        // are painter order, reversed by the SAT consumer: append reverse FIFO
+        // so native calls form its FIFO prefix. Unported legacy objects retain
+        // their old SST ordering as a suffix; that mixed bridge is not evidence
+        // of native DisplaySprite call coverage or capacity for those objects.
+        for (int ordinal = queue.size() - 1; ordinal >= 0; ordinal--) {
+            int slot = queue.slotAt(ordinal);
+            AbstractObjectInstance currentObject = currentOwner.apply(slot);
+            ObjectInstance occupant = currentObject;
+            if (currentObject != null) {
+                // ID zero consumes the already admitted queue word but emits no
+                // SAT pieces. Do not replace a real cleared owner with a ring.
+                if ((currentObject.getLiveObjectId() & 0xFF) == 0) continue;
+            } else {
+                IntFunction<SpriteSlotEmission> resolver = externalResolver.get();
+                if (resolver != null) {
+                    SpriteSlotEmission emission = resolver.apply(slot);
+                    if (emission != null && emission.slot() == slot) {
+                        occupant = ObjectRenderParts.externalSprite(emission);
+                    }
+                }
+            }
+            if (occupant != null) {
+                ObjectRenderParts.addNativeToRenderBuckets(occupant,
+                        queue.bucketAt(ordinal), slot, ordinal,
+                        unified, low, high);
+            }
+        }
     }
 
     /** SST slot of an object for render ordering; objects without a slot sort behind everything. */
@@ -59,6 +120,41 @@ final class ObjectRenderParts {
                 addParts(parts, bucket, unified, low, high);
             }
         }
+    }
+
+    /** One authenticated call uses its captured bucket, never inferred extra buckets. */
+    static void addNativeToRenderBuckets(ObjectInstance instance, int bucket, int slot, int ordinal,
+                                        List<RenderEntry>[] unified, List<RenderEntry>[] low,
+                                        List<RenderEntry>[] high) {
+        if (instance instanceof MultiBucketRenderable parts) {
+            int classes = parts.partTilePriorities(bucket);
+            if ((classes & MultiBucketRenderable.LOW_PARTS) != 0) {
+                add(new RenderEntry(instance, false, slot, true, ordinal), bucket, unified, low, high);
+            }
+            if ((classes & MultiBucketRenderable.HIGH_PARTS) != 0) {
+                add(new RenderEntry(instance, true, slot, true, ordinal), bucket, unified, low, high);
+            }
+        } else {
+            add(new RenderEntry(instance, instance.isHighPriority(), slot, true, ordinal),
+                    bucket, unified, low, high);
+        }
+    }
+
+    static ObjectInstance externalSprite(SpriteSlotEmission emission) {
+        return new ExternalSprite(emission);
+    }
+
+    /** A presentation-cache value only: never registered, updated, or snapshotted. */
+    private record ExternalSprite(SpriteSlotEmission emission) implements ObjectInstance {
+        @Override public ObjectSpawn getSpawn() {
+            return new ObjectSpawn(0, 0, 1, 0, 0, false, 0);
+        }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { }
+        @Override public void appendRenderCommands(List<GLCommand> commands) { emission.draw().run(); }
+        @Override public boolean isHighPriority() { return emission.tileOcclusionPaletteMask() == 0; }
+        @Override public int getTileOcclusionPaletteMask() { return emission.tileOcclusionPaletteMask(); }
+        @Override public int getPriorityBucket() { return emission.bucket(); }
+        @Override public boolean isDestroyed() { return false; }
     }
 
     private static void addParts(MultiBucketRenderable parts, int bucket, List<RenderEntry>[] unified,
@@ -95,48 +191,10 @@ final class ObjectRenderParts {
         }
     }
     static void appendRenderCommands(RenderEntry entry, List<GLCommand> commands, int bucket, ObjectServices services) {
-        ObjectHeadPresentation.draw(entry.instance(),services,()->appendRenderCommands(entry,commands,bucket));
-    }
-
-    /** Draws ordinary painter order; the caller owns the vertical-wrap scope. */
-    void drawBucket(List<RenderEntry> entries, int bucket, ObjectManager.ObjectDrawCallback callback) {
-        commands.clear();
-        for (RenderEntry entry : entries) {
-            if (callback != null) {
-                callback.beforeDraw(entry.instance(), entry.high());
-            }
-            callbacks.run(entry.instance(), () -> appendRenderCommands(entry, commands, bucket, services));
-        }
-        enqueueDebugCommands();
-    }
-
-    /** Keeps native SAT order or reverse painter order and the backend's mask boundaries. */
-    void drawBucketWithPriority(List<RenderEntry> entries, int bucket, GraphicsManager priorityGraphics) {
-        commands.clear();
-        // Draw_Sprite / Render_Sprites consume SST order; masks affect later entries.
-        // The cached lists use reverse order for ordinary painter drawing.
-        boolean collectingSat = priorityGraphics.isSpriteSatCollectionActive();
-        for (int i = 0; i < entries.size(); i++) {
-            RenderEntry entry = entries.get(collectingSat ? entries.size() - 1 - i : i);
-            callbacks.run(entry.instance(), () -> {
-                int mask = tileOcclusionPaletteMask(entry);
-                if (priorityGraphics.getCurrentSpriteTileOcclusionPaletteMask() != mask) {
-                    boolean perInstance = PresentationGraphicsAccess.maskIsPerInstance(priorityGraphics);
-                    if (!perInstance) priorityGraphics.flushPatternBatch();
-                    priorityGraphics.setCurrentSpriteTileOcclusionPaletteMask(mask);
-                    if (!perInstance) priorityGraphics.beginPatternBatch();
-                }
-                appendRenderCommands(entry, commands, bucket, services);
-            });
-        }
-        enqueueDebugCommands();
-    }
-
-    private void enqueueDebugCommands() {
-        if (!commands.isEmpty()) {
-            graphics.enqueueDebugLineState();
-            graphics.registerCommand(new GLCommandGroup(GL_LINES, commands));
-            graphics.enqueueDefaultShaderState();
+        if (entry.instance() instanceof ExternalSprite) {
+            appendRenderCommands(entry, commands, bucket);
+        } else {
+            ObjectHeadPresentation.draw(entry.instance(),services,()->appendRenderCommands(entry,commands,bucket));
         }
     }
 }

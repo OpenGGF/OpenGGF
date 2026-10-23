@@ -379,6 +379,24 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
     }
 
     @Override
+    protected void updateWait() {
+        // Got_Wait only advances the routine on expiry and displays the card
+        // (docs/s1disasm/_incObj/3A Got Through Card.asm:112-119). Got_NextLevel
+        // performs its restart or special-stage write on the following pass
+        // (:175-211), after another ordinary VBlank can service Sonic_LoadGfx.
+        // SBZ2's callback already only arms Got_SBZ2_MoveOut (:227-236); its
+        // first movement belongs to that following pass, with no extra delay.
+        // Keep the non-native host-return policy's existing expiry boundary.
+        if (services().runPolicy().returnsToHostOnActCompletion()
+                || (!specialStageAfter && isSBZ2())) {
+            super.updateWait();
+        } else if (stateTimer > getWaitDuration()) {
+            state = STATE_EXIT;
+            onExitReady();
+        }
+    }
+
+    @Override
     protected void onExitReady() {
         // Not a ROM branch: a run whose GameplayRunPolicy returns to its host on
         // act completion ends here instead of any of the below. This matters most
@@ -428,7 +446,11 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         setDestroyed(true);
         com.openggf.game.mutators.LevelMutatorPolicyAccess.publish(services(),
                 com.openggf.game.mutators.StageEntryKind.SPECIAL, stageEntryPermit,
-                () -> services().advanceToSpecialStageEntryRoutine());
+                () -> {
+                    services().advanceToSpecialStageEntryRoutine();
+                    com.openggf.level.objects.NativeLevelExitInternalAccess
+                            .endSourceComparisonAtRomModeChange(services());
+                });
     }
 
     private void triggerFadeToBlack() {
@@ -454,6 +476,11 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         if (levelManager != null) {
             levelManager.setLevelInactiveForTransition(true);
         }
+
+        // f_restart leaves Level_MainLoop before another comparison row;
+        // the opening VBlank's real DMA remains in the full gap journal.
+        com.openggf.level.objects.NativeLevelExitInternalAccess
+                .endSourceComparisonAtRomModeChange(services());
 
         var fadeManager = services().fadeManager();
         var marker = services().nativeFadeLifecycle().beginNativeBlockingFade();

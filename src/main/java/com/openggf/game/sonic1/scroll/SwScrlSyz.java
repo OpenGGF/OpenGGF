@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.scroll;
 
+import com.openggf.game.internal.CheckpointBackgroundScroll;
+
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import static com.openggf.level.scroll.M68KMath.*;
@@ -24,7 +26,7 @@ import static com.openggf.level.scroll.M68KMath.*;
  * not delta-accumulated. Vertical scroll uses delta-accumulated Bg_Scroll_Y
  * at scrshifty * 48/256 (~18.75%).
  */
-public class SwScrlSyz extends AbstractZoneScrollHandler {
+public class SwScrlSyz extends AbstractZoneScrollHandler implements Sonic1CheckpointScrollHandler {
 
     private static final int BUFFER_SIZE = 33;
     private static final int LINES_PER_ENTRY = 16;
@@ -46,6 +48,11 @@ public class SwScrlSyz extends AbstractZoneScrollHandler {
         bgYPos = (long) initialBgY << 16;
         lastCameraY = cameraY;
         initialized = true;
+    }
+
+    @Override
+    public void init(int actId, int cameraX, int cameraY) {
+        init(cameraX, cameraY);
     }
 
     @Override
@@ -200,4 +207,35 @@ public class SwScrlSyz extends AbstractZoneScrollHandler {
         }
     }
 
+
+    @Override
+    public Object captureRewindState() {
+        return new State(bgYPos, lastCameraY, initialized, vscrollFactorBG, minScrollOffset, maxScrollOffset);
+    }
+
+    @Override
+    public void restoreRewindState(Object state) {
+        if (state instanceof State saved) {
+            bgYPos = saved.bgYPos;
+            lastCameraY = saved.lastCameraY;
+            initialized = saved.initialized;
+            vscrollFactorBG = saved.vscrollFactorBG;
+            minScrollOffset = saved.minScrollOffset;
+            maxScrollOffset = saved.maxScrollOffset;
+        }
+    }
+
+    private record State(
+                long bgYPos, int lastCameraY, boolean initialized, short vscrollFactorBG,
+                int minScrollOffset, int maxScrollOffset) { }
+
+    @Override
+    public CheckpointBackgroundScroll captureBackgroundScroll() {
+        return new CheckpointBackgroundScroll(0, (int) (bgYPos >> 16), 0, 0, 0, 0);
+    }
+
+    @Override
+    public void restoreBackgroundScroll(CheckpointBackgroundScroll state) {
+        // BgScroll_SYZ REV01 replaces both active words even on lamppost entry.
+    }
 }

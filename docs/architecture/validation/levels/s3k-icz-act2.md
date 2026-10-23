@@ -92,6 +92,247 @@ Corrected qualification, all on `0197c5a5a` plus this commit's test-only deltas 
 
 Death/reload products, combined smoke and integration were not rerun here. This requalifies the held-Right entry floor only; it is not act certification.
 
+
+## Incoming synchronous retained16 handoff — 2026-10-17
+
+ICZ R11 preserves559 known outgoing native pattern groups with current ICZ2
+collision indices until the existing queued payload publishes all589 groups.
+The independent component checks two forced whole-world restores/publication
+replays within the new ICZ2 timeline. Initial77 focused cases and the later4
+opaque-extent repair cases are separate source epochs, not one combined rerun.
+Unknown688..717 remain absent until publication; async/cold/presentation builds
+receive no new predecessor. [Exact sources, old-reds, commands and limits](s3k-icz-act1.md#r11-synchronous-known16-handoff-repair--2026-10-17).
+No ICZ2 route, native pixel, full aux, physical death/reload or full-act claim follows.
+
+
+## Ordinary solo Sonic boss-admission authoring frontier — 2026-10-21
+
+A bounded input-only authoring bout on unchanged runtime
+`7fbcfbd8a4597163390d5d813facec4c3e69a637` used direct `5/1`, native 320,
+solo Sonic, donor off and explicit title-enabled `GameplayCaptureSession.Settings`.
+All position, rings, checkpoint, emerald, clock, camera-fraction and reverse-gravity
+setup fields were null/false. This admits the existing fresh assembly/title owners;
+it does not import an ICZ1 world or a native trace. The ROM Sonic start
+`$07E0/$0370` and placed boss record 340 (`$4490/$05B8`, ID `$BD`) remained controls.
+
+Eleven exploratory branch requests produced 30 controller variants. One separate
+uninterrupted 1800-input observation retained public loop/path/cork fields.
+All 12 original Jupiter harness invocations passed 1/0/0/0 with no skips, but those
+harness passes are **not route passes**: branches may stall or die. The best
+proposal ends alive at `$22F5/$08EE` with 6 rings after 3821 inputs, before boss
+placement/admission. One periodic-jump variant died at zero-based input 450.
+No runtime omission was established; no new maintained boss-route consumer or
+controller resource was promoted. Two fresh full-route witnesses, admission
+rewind windows and the final route-class check were therefore not launched.
+
+The real loop path marker 157 (`$2180/$0600`, subtype `$91`) switched C/D→E/F
+at input 1709 in the observed prefix; actual corks 150/151 broke at 1724/1733.
+Releasing Right through that drop let the next proposal reach the lower cave.
+The remaining source-backed interaction question is actual ice cube 162
+(`$2240/$08F4`) → ordinary rolling top landing/shatter → button 163
+(`$2240/$08FC`, subtype 2) → trigger-mode collapsing bridge 165
+(`$22C0/$0911`, subtype `$82`). `Obj_ICZIceCube`/`sub_8B3AA` requires saved
+animation 2 and real standing contact; the button writes momentary trigger 2,
+and `loc_20B40` latches that trigger in the bridge. This chain was not completed
+or observed, and is not proof of a terrain-wall defect or an obligatory whole-act path.
+The last checked restorable branch prefix is 2040 inputs of the lower-cave
+proposal: alive `$221D/$08EE`, 6 rings, LEVEL, camera `$217D/$088E`; pending fresh
+assembly and callback-bearing fade were rejected by the existing author tool.
+Resume by replaying inputs from row 0, never by importing that checkpoint.
+
+Useful input pairs, the exact temporary adapter source and an already-created
+normal end PNG remain in the owned external task directory named in the dated
+[completion plan](../../plans/2026-10-13-s3k-playable-completion.md).
+Raw CSVs/PNGs other than that end still, temporary repository source/class and
+owned Maven reports were consumed. This changes the authoring frontier only;
+boss admission, fight/exit, incoming ICZ1 history, ordinary full-act completion,
+other roster/donor/widths and native timing/pixels remain open.
+
+
+## Ordinary cube/button2/bridge cold crossing — R2, 2026-10-21
+
+The follow-up to the authoring frontier above reaches the actual lower-cave
+interaction on unchanged production `7fbcfbd8a4597163390d5d813facec4c3e69a637`,
+starting from docs-only `79103a4aa4cad48662cd32c521a325cc87869364`.
+Only three additional controller policies were tried. The selected policy retains
+all 2040 prior input rows, holds Jump before steering onto cube 162, releases
+movement for the landing/bounce/button, then continues Right. The final 2292-row
+proposal is an exact prefix of that policy, ending before the later enemy encounter.
+
+Two fresh JVMs independently cold-replayed the final input, drawing every tick,
+without capture/restore, authoring calls or gameplay seeds. Each original
+`TestIcz2ColdRouteAuthor#coldWitness` passed 1T/0F/0E/0S. Both measured the same
+placed-owner chain: cube 162 saved roll animation 2 top landing/deletion and native
+`-$300` bounce at input 2095; actual button 163 riding/standing and trigger 2 at 2131;
+the same bridge 165 first fell from Y 2321 to 2322 at 2183; P1 was grounded beyond
+its stock `$50` right span plus player radius at 2276. After row 2291 P1 is alive,
+grounded and control-released at `9023,2544`, moving right at 713, with 6 rings and
+3 lives; camera `8863,2448`, same 5/1 world, native 320 solo Sonic/off.
+
+The witness checks production script-compiler/BK2-loader equality for every row
+and both pads, neutral P2/no Start/debug inputs, the unchanged 2040-row prefix,
+and the final prefix against its original candidate. Explicit title-enabled
+15-field Settings retain null/false gameplay setup fields. The input pair and
+exact temporary witness source remain outside the repository; see the dated
+[completion plan](../../plans/2026-10-13-s3k-playable-completion.md).
+
+This is repeated ordinary gameplay evidence for this partial interaction/crossing,
+not a runtime fix or maintained regression-test qualification. A maintained input
+resource/consumer and the affected full-registry rewind spots are still pending.
+No snapshot or newly admitted rewind checkpoint is retained. Boss admission,
+combat/exit, full act, incoming ICZ1 history, roster/donor/viewport breadth and
+native timing/pixel conformance remain open.
+
+
+## Maintained ordinary partial crossing — 2026-10-21
+
+[`TestIcz2ColdCubeBridgeRoute`](../../../../src/test/java/com/openggf/tools/TestIcz2ColdCubeBridgeRoute.java)
+promotes the exact R2 2292-row script/BK2 as an ordinary partial-route consumer.
+The independent packaging test checks all rows/both pads through the production
+compiler/writer/loader, neutral P2/no Start/debug/state payload, full-file hashes
+and the original 2040-row prefix digest. The route uses the same explicit
+title-enabled native 320 solo Sonic/off direct 5/1 inlet, with all gameplay setup
+fields null/false and normal drawing on every main and branch input. It checks
+no death or life loss on every input; it permits the prefix's earlier hurt.
+
+Ten 45-input whole-registry spots cover before/active/after path/corks
+1664/1709/1724/1733/1778, cube approach/shatter/button 2040/2095/2131, bridge fall
+2183 and the final crossing 2246→2291. Each compares all 60 registered keys on
+immediate restore and two forward cycles, restores the external held-input
+history, and rejects loads/mode changes/fresh assembly/callback-bearing fades.
+Actual normal-update references and captured ObjectRefIds bind the placed owners;
+equal class/coordinates are not used as identity across restore.
+
+The original 35T/1F group failed the second restore at row 2040. An authorized
+error-context-only method diagnostic (1T/1F) identified
+`IczCrushingColumnObjectInstance.BottomDecoration`, raw ID `$AF`, child entry
+slot 16, separately ObjectRefId slot -1/dynamicId 253. Its immutable birth spawn
+Y/rawYWord changed from 2818 to 2817. Reconstruction now uses the captured spawn;
+live drawing still follows `parent.y + $B0` (`loc_8A612`). A short independent
+actual-manager component reconstructs twice after ordinary parent movement and
+checks both the complete birth record and further live following. It is a
+declared component fixture, not a second cold route.
+
+The affected 107T/1F/0E/0S group completed all ten world windows and passed its
+other 106 cases, including input packaging, 12 column controls, 8 cube, 11 button,
+14 bridge and 60 required S3K core cases (both level-loading classes are included).
+Its remaining failure exposed the new consumer's break/retirement confusion:
+`isDestroyed` observed cork retirement at 1746/1758; public `isBroken` is the
+actual break writer at the unchanged expected 1724/1733. Only that detector was
+corrected; no runtime/input/timestamp or other assertion changed.
+
+The corrected-detector route method (73490) still fails 1T/1F/0E/0S on cork151:
+actual break1732 versus old expected1733, with all ten windows complete and the
+requested cube/button/bridge/crossing observations unchanged. Retained observer
+source shows that1733 came from attempt07, while this movie retains attempt09's
+prefix; they first differ at1724 (Right versus neutral). That old data point did
+not apply to this input. No runtime/input/timestamp fitting was performed.
+
+After Root's bounded source/data review, only the cork151 expected movie datum
+changes to1732; window1733 and all inputs/runtime/predicates remain unchanged.
+The final exact route method (96349) passes **1T/0F/0E/0S**, with all ten 60-key
+windows and 3642 normally drawn main/forward/replay inputs. It asserts actual
+cube162 shatter/-$300 bounce2095, actual button163 standing/trigger2 at2131,
+same placed bridge165 first fall2183 and grounded crossing2276. After input2291
+P1 is alive, grounded and control-released at9023/2544, velocity713/0, rings6,
+lives3 and camera8863/2448, with the original native320 solo Sonic/off roster.
+
+Qualification combines that separately executed route pass with the affected
+group's 106 unchanged passing cases; it is not a wholly green107-case invocation
+or a full-suite result. The maintained partial interaction and these same-world
+rewind spots are locally qualified on the pinned private-owner source; incoming
+load/history boundaries and other configurations are not added.
+
+The original failures and diagnostic remain recorded in the dated
+[completion plan](../../plans/2026-10-13-s3k-playable-completion.md). This consumer
+adds only this partial native 320 solo Sonic/off interaction and same-world replay.
+Boss admission/combat/exit, full act, incoming ICZ1 history, roster/donor/viewport
+breadth and native timing/pixel conformance remain open.
+
+## Ordinary platform continuation capped before boss admission — R3/R4, 2026-10-21
+
+On `8dee30daf3ed58bd8eaf39c52de5c7c0f6bf7942`, eight R3 and four R4 unique
+finite input policies preserve every row and both pads of the qualified 2292-input
+crossing. The explicit title-enabled native 320 solo Sonic/off direct 5/1 inlet,
+null/false gameplay seeds and normal drawing remain unchanged. These are ordinary
+controller proposals, not an extension of the maintained route qualification.
+The exact policies, input/source hashes and original outcomes are in the dated
+[completion plan](../../plans/2026-10-13-s3k-playable-completion.md#icz2-platform-continuation-r3r4--capped-ordinary-frontier-2026-10-21).
+
+R3's best proposal dies after row 3368 at X12085. Its reached prefix 3265 ends after
+row 3264 at `11914,2737`, grounded, alive, unhurt, zero rings, velocity 1536/0,
+camera 11754/2626. R4 cold-replays that prefix and binds the actual selected
+riding/standing receiver to ROM placement 226, ID `$B0`, subtype 6, rawY 2774/current
+Y2776. A is released; the native `Sonic_Jump` press/headroom owner decides the
+fresh jump. `byte_89FB2` selects routine `$0E` for subtype 6; `loc_8A178/192` sinks
+the platform while stood on. No collision query is rerun to choose an input.
+
+R4's 12- and 30-input Right+A holds reach Special Stage mode at rows 3570/3569,
+respectively, without seeing the placed boss. The 12-input proposal has actual
+riding/standing contact with a path-follow platform at X12480 on rows 3363–3375;
+riding ends after 3376. Static ROM placement 245 is `$B0`/subtype 6 at 12480/2772, but that
+later receiver's placement lineage was not retained. Likewise, static giant-ring
+placement 256 at 12736/2888 is source support for the nearby entry branch, **not**
+a retained selected-ring receiver. The best movie proposes 5065 rows but executes
+only 3571; its remaining tail is unqualified. Both pads round-trip through the
+production compiler/writer/loader, with P2 neutral and both prior prefixes exact.
+
+Two author invocations each finish **1T/0F/1E/0S**: the world/mode guard
+refuses the next restore after Special Stage entry. Only the untried policies are
+then run from fresh cold prefixes; no restore crosses the boundary. The final
+single-policy harness passes 1T/0F/0E/0S, not a boss route. All four R4 policies
+are consumed, and no boss-admission qualifier is launched. The delayed two-Right
+policy does not prove a grounded fresh jump.
+
+The next source-supported question is a fresh ordinary jump while still riding
+the later sinking platform, before falling into the giant-ring corridor. A new
+checkpoint's actual ground/standing/press history, lineage and restorability
+must first be measured under new authority; no saved state or fitted frame is an
+inlet. No runtime omission or fix is proved. The maintained 2292 partial crossing
+stays qualified; boss/full-act, incoming history, broader products and native
+physical timing/pixels remain open. Useful external proposals, adapter sources
+and existing normal PNGs are named in the Plan; raw diagnostics are consumed.
+
+## Ordinary later-platform fresh jump — R5, 2026-10-21
+
+On `b078214e74ddbcb393cbc0173fd8c74055b0dadb`, four finite ordinary policies
+preserve every row through 3370 of R4's actually reached input and the complete
+2292-row maintained crossing. Each cold-replays the same explicit title-enabled
+native 320 solo Sonic/off direct 5/1 inlet with null/false gameplay seeds and
+normal drawing. Production author/loader roundtrips and all-row checks retain
+neutral P2. This is controller exploration, not a maintained route extension.
+
+The actual checkpoint after input 3370 has P1 `12491,2739`, grounded, standing,
+alive and unhurt, with released jump and controls, LEVEL mode, no pending fresh
+assembly and fade NONE. Its selected sinking platform is now bound by the public
+live query: spawn `12480,2778,$B0,6`, rawY2772/layout 245, and ObjectRefId
+`slot=-1,generation=0,spawnId=245,dynamicId=456,DYNAMIC`. The captured receiver
+record and lineage agree after restore; static placement245 alone is not the
+identity. All four policies genuinely jump at3371, airborne with Yvelocity −1664.
+
+| Right+A hold, then Right | Actual outcome | Original author request |
+|---|---|---|
+| 4 inputs | SpecialStage at3597, `12712,2908`; 3598 rows executed | 1T/0F/1E/0S; mode guard refuses next restore |
+| 8 inputs | SpecialStage at3600, `12713,2908`; 3601 rows executed | 1T/0F/1E/0S; mode guard refuses next restore |
+| 12 inputs | LEVEL death3850, `13685,2521`; 3851 rows executed | 1T/0F/1E/0S; death guard refuses next restore |
+| 20 inputs | LEVEL death3850, `13685,2522`; 3851 rows executed | 1T/0F/0E/0S; final single-policy harness only |
+
+Only untried policies start from fresh cold prefixes after a guard error. No
+restore crosses a real mode/load/death boundary. Every proposal has 5171 rows;
+its unexecuted tail is not reached-state evidence. The longer holds pass the
+ring corridor and retain actual selected spring259, cubes271/274, monitors272/275 and
+tension-platform285 contacts. Both are last alive at3849, `13685,2515`, airborne;
+the actual death writer is unretained. No runtime omission or fix is inferred.
+
+No placed boss is observed and no fresh uninterrupted qualifier is launched.
+The final harness pass is **not route qualification**. The dated
+[completion plan](../../plans/2026-10-13-s3k-playable-completion.md#icz2-later-platform-exit-r5--four-policy-cap-2026-10-21)
+records all inputs, source/hash pins, selected lineage and retained normal images.
+The maintained 2292 movie, strict oracle and its qualification remain unchanged.
+Boss/full-act, incoming history, roster/donor/viewport breadth and native
+timing/pixels remain open. A future checkpoint before platform285 releases its
+rider still needs actual ground, fresh-press and restorability evidence.
+
 ## Object pipeline optimization — 2026-10-22
 
 ICZ frost child ordering retains native lifetime/replacement and rewind ownership while

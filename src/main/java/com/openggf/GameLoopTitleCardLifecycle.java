@@ -20,6 +20,24 @@ final class GameLoopTitleCardLifecycle {
     private GameLoopTitleCardLifecycle() {
     }
 
+    /**
+     * Level already submitted its Nemesis work on the load frame. Entering
+     * loc_62CC dispatches Obj_TitleCardInit once, then reaches the queue tail:
+     * its first VBlank precedes Process_Nem_Queue_Init, not an extra idle row.
+     */
+    static void enterPending(GameLoop loop, GameplayModeContext gameplayMode,
+                             LevelManager levelManager, PlcLifecycleFrame frame) {
+        loop.enterTitleCard(levelManager.getTitleCardZone(), levelManager.getTitleCardAct());
+        TitleCardProvider titleCard = loop.getTitleCardProvider();
+        if (titleCard != null && titleCard.shouldAdvanceVblankClockDuringLockedPhase()) {
+            // initialize has represented Obj_TitleCardInit; do not also run
+            // its next routine during the same represented object scan.
+            LevelFrameStep.executeHardwareTimedObjectScan(LevelFrameContext.from(gameplayMode),
+                    frame, PlcLifecyclePhase.LEVEL_TITLE_CARD, () -> { });
+            levelManager.advanceTitleCardVblankOnly();
+        }
+    }
+
     static boolean update(
             boolean doFrameStep,
             TitleCardProvider titleCard,
@@ -53,9 +71,17 @@ final class GameLoopTitleCardLifecycle {
         if (hardwareTimedProviderScan) {
             LevelFrameStep.executeHardwareTimedObjectScan(
                     frameContext, frame,
-                    PlcLifecyclePhase.LEVEL_TITLE_CARD, titleCard::update);
+                    PlcLifecyclePhase.LEVEL_TITLE_CARD, () ->
+                            com.openggf.game.sonic3k.titlecard.S3kTitleCardWorldAccess.update(
+                                    titleCard, gameplayMode.getWorldSession()));
+            // This caller claimed the title token before querying its provider;
+            // the external scan only prepares a token it claimed itself.
+            if (frame.isOwnedBy(PlcLifecyclePhase.LEVEL_TITLE_CARD)) {
+                frame.prepareAfterLoop(PlcLifecyclePhase.LEVEL_TITLE_CARD);
+            }
         } else if (titleCard != null) {
-            titleCard.update();
+            com.openggf.game.sonic3k.titlecard.S3kTitleCardWorldAccess.update(
+                    titleCard, gameplayMode.getWorldSession());
         }
 
         // Publish while the provider still owns its fresh mode; completing

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.game.CharacterKey;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
@@ -7,16 +8,16 @@ import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.events.S3kHczEventWriteSupport;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 // HczEndBossEggCapsuleInstance is in the same package (bosses)
-import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
-import com.openggf.game.sonic3k.objects.S3kBossExplosionController;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnConstructionContextRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -24,6 +25,8 @@ import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.SwingMotion;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -154,7 +157,6 @@ public class HczEndBossInstance extends AbstractBossInstance
     private int targetLockYBottom;
     private int targetLockXLeft;
     private int targetLockXRight;
-    private S3kBossExplosionController defeatExplosionController;
 
     private enum WaitCallback {
         NONE,
@@ -220,7 +222,6 @@ public class HczEndBossInstance extends AbstractBossInstance
         propellerActive = false;
         bladeFireSignal = false;
         defeatSignal = false;
-        defeatExplosionController = null;
         swingVelocity = 0;
         swingDown = false;
         hoverCentreY = 0;
@@ -280,9 +281,11 @@ public class HczEndBossInstance extends AbstractBossInstance
 
     @Override
     public boolean isPersistent() {
-        // ROUTINE_FLEE runs off-screen for 0x77 frames before loc_6B0E8 clears
-        // Boss_flag, widens the camera, and spawns Obj_EggCapsule.
-        return state.routine == ROUTINE_FLEE;
+        // The offscreen native root survives flee, the complete results wait,
+        // and Go_Delete_Sprite_2's pending-code entry until its next dispatch.
+        return state.routine == ROUTINE_FLEE
+                || state.routine == ROUTINE_CAPSULE_WAIT
+                || state.routine == ROUTINE_DONE;
     }
 
     @Override
@@ -372,6 +375,11 @@ public class HczEndBossInstance extends AbstractBossInstance
             case ROUTINE_ATTACK -> updateAttackPatrol();
             case ROUTINE_DEFEATED -> updateDefeated();
             case ROUTINE_FLEE -> updateFlee();
+            case ROUTINE_CAPSULE_WAIT -> updateCapsuleWait();
+            case ROUTINE_DONE -> {
+                ObjectLifetimeOps.deleteNoRespawn(this);
+                return;
+            }
             default -> { }
         }
 
@@ -668,7 +676,6 @@ public class HczEndBossInstance extends AbstractBossInstance
         state.invulnerable = false;
         state.invulnerabilityTimer = 0;
         loadBossPalette();
-        defeatExplosionController = new S3kBossExplosionController(state.x, state.y, 0);
         services().fadeOutMusic();
         services().gameState().setCurrentBossId(0);
         // ROM loc_6BC1C: jmp (BossDefeated_StopTimer).l (sonic3k.asm:142163).
@@ -678,19 +685,10 @@ public class HczEndBossInstance extends AbstractBossInstance
     }
 
     /**
-     * ROM: post-BossDefeated_StopTimer — tick explosion controller each frame,
-     * spawn visual explosion children, and tick the defeat wait timer.
+     * Wait_FadeToLevelMusic owns this countdown. Actual Ship MAIN separately
+     * allocates the parent-following subtype-4 explosion controller.
      */
     private void updateDefeated() {
-        if (defeatExplosionController != null) {
-            defeatExplosionController.tick();
-            for (var pending : defeatExplosionController.drainPendingExplosions()) {
-                if (pending.playSfx()) {
-                    services().playSfx(Sonic3kSfx.EXPLODE.id);
-                }
-                spawnChild(() -> new S3kBossExplosionChild(pending.x(), pending.y()));
-            }
-        }
         tickWait();
     }
 
@@ -722,16 +720,13 @@ public class HczEndBossInstance extends AbstractBossInstance
     }
 
     /**
-     * ROM: loc_6B0E8 — Flee complete. Hide boss, clear boss flag, expand camera,
-     * resume zone music, and spawn the egg capsule.
-     *
-     * <p>The boss self-destructs here. The egg capsule takes responsibility for
-     * polling the results-complete flag and spawning the geyser cutscene.
-     * This avoids the boss being culled by the object manager's out-of-range
-     * check (it has flown far off-screen during the flee) before it can poll
-     * the flag.
+     * HCZEndBoss_StartPostDefeat retains the hidden root as the native
+     * HCZEndBoss_WaitPostDefeatGeyser owner (sonic3k.asm:140963-141015).
      */
     private void onFleeComplete() {
+        state.routine = ROUTINE_CAPSULE_WAIT;
+        state.renderFlags &= ~0x80;
+        services().gameState().setEndOfLevelActive(true); // Native _unkFAA8, before either allocation.
         // Clear boss flag
         setBossFlag(false);
 
@@ -746,19 +741,80 @@ public class HczEndBossInstance extends AbstractBossInstance
         spawnAfterCurrentSibling(() -> new com.openggf.game.sonic3k.objects.S3kIncLevelEndXGradualInstance(
                 state.x, state.y));
 
-        // Resume zone music
-        services().playMusic(Sonic3kMusic.HCZ2.id);
-
-        // Spawn Egg Capsule at character-specific position.
-        // The capsule handles the geyser spawn after results complete.
-        boolean isKnuckles = (getPlayerCharacter() == PlayerCharacter.KNUCKLES);
+        // AllocateObject scans from the beginning, independently of the camera
+        // helper's after-current allocation. Failure does not retry the capsule.
+        var main = services().playerQuery().mainPlayerOrNull();
+        boolean isKnuckles = main instanceof AbstractPlayableSprite sprite
+                && CharacterKey.KNUCKLES.equals(sprite.characterKey());
         int capsuleX = isKnuckles ? K_CAPSULE_X : ST_CAPSULE_X;
         int capsuleY = isKnuckles ? K_CAPSULE_Y : ST_CAPSULE_Y;
-        spawnChild(() -> new HczEndBossEggCapsuleInstance(capsuleX, capsuleY));
+        spawnFreeChild(() -> new HczEndBossEggCapsuleInstance(capsuleX, capsuleY));
         LOG.fine("HCZ End Boss: flee complete, ground capsule spawned at (" + capsuleX + ", " + capsuleY + ")");
 
-        // Boss is done — capsule + geyser handle the rest
-        setDestroyed(true);
+        // StartPostDefeat returns: the first min-X write/poll belongs to the
+        // next root dispatch, regardless of whether the capsule was allocated.
+    }
+
+    private void updateCapsuleWait() {
+        var camera = services().camera();
+        camera.setMinX((short) camera.getX());
+        if (services().gameState().isEndOfLevelActive()) return;
+
+        var players = services().playerQuery();
+        AbstractPlayableSprite main = players.mainPlayerOrNull() instanceof AbstractPlayableSprite sprite
+                ? sprite : null;
+        AbstractPlayableSprite sidekick = players.nativeP2OrNull() instanceof AbstractPlayableSprite sprite
+                ? sprite : null;
+        // WaitPostDefeatGeyser clears both logical words and sets the signed
+        // locks before Restore_PlayerControl/2. Extra engine participants are
+        // not native P2 RAM and do not acquire this handoff.
+        if (main != null) {
+            main.clearLogicalInputState();
+            main.setForcedInputMask(0);
+            main.setControlLocked(true);
+            ObjectControlState.nativeBit7FullControl().applyTo(main);
+        }
+        if (sidekick != null) {
+            sidekick.clearLogicalInputState();
+            sidekick.setForcedInputMask(0);
+            if (sidekick.getCpuController() != null) {
+                sidekick.getCpuController().clearController2LogicalLatch();
+                sidekick.getCpuController().setController2SignedLocked(true);
+            } else {
+                sidekick.setControlLocked(true);
+            }
+        }
+        restoreNativeTerminalControl(main);
+        restoreNativeTerminalControl(sidekick);
+
+        // Restore_LevelMusic selects Apparent_zone_and_act, then substitutes
+        // the native invincibility song when Player_1 still owns that status.
+        int music = services().levelManager() != null
+                ? services().levelManager().getApparentLevelMusicId()
+                : services().getCurrentLevelMusicId();
+        if (main != null && main.getInvincibleFrames() > 0) {
+            music = services().gameModule().getAudioProfile().getInvincibilityMusicId();
+        }
+        if (music >= 0) services().playMusic(music);
+
+        // AllocateObject writes only the new code owner here. The geyser's
+        // existing Init later resolves live player/camera coordinates itself.
+        spawnFreeChild(() -> HczEndBossGeyserCutscene.createWithQueuedArt(0, 0));
+        camera.setMinY((short) 0);
+        state.routine = ROUTINE_DONE; // Go_Delete_Sprite_2; also selected when allocation fails.
+    }
+
+    private static void restoreNativeTerminalControl(AbstractPlayableSprite player) {
+        if (player == null) return;
+        ObjectControlState.none().applyTo(player);
+        player.clearAirForNativeControlRestore();
+        player.setForcedAnimationId(-1);
+        player.setAnimationId(Sonic3kAnimationIds.WAIT);
+        player.getAnimationManager().publishPreviousAnimationId(
+                Sonic3kAnimationIds.WAIT.id());
+        player.setAnimationFrameIndex(0);
+        player.setAnimationTick(0);
+        // Restore_PlayerControl does not write mapping_frame or standing ownership.
     }
 
     // =========================================================================

@@ -11,17 +11,35 @@ class TestGlideWallGrabTerrain {
         var player = org.mockito.Mockito.mock(com.openggf.sprites.playable.AbstractPlayableSprite.class);
         org.mockito.Mockito.when(player.getLrbSolidBit()).thenReturn((byte) 13);
         org.mockito.Mockito.when(player.getTopSolidBit()).thenReturn((byte) 12);
+        org.mockito.Mockito.when(player.getXRadius()).thenReturn((short) 10);
         for (boolean reversed : List.of(false, true)) {
             for (boolean ledge : List.of(false, true)) {
                 try (var sensors = org.mockito.Mockito.mockConstruction(GroundSensor.class)) {
                     GlideWallGrabTerrain.climbVerticalDistance(player, ledge, reversed);
                     boolean up = ledge != reversed;
-                    int offset = (ledge ? 8 : 9) * (up ? -1 : 1);
+                    // WithRadius applies XR after the caller's literal 8/9.
+                    int offset = reversed ? (ledge ? 18 : -19) : (ledge ? -18 : 19);
                     org.mockito.Mockito.verify(sensors.constructed().getFirst()).scanWorld(
                             up ? Direction.UP : Direction.DOWN, (short) 0, (short) offset,
                             (short) 0, (short) 0, (byte) (ledge ? 13 : 12));
                 }
             }
+        }
+    }
+
+    @Test
+    void verticalRadiusIsSignExtendedFromTheNativeByte() {
+        var player = org.mockito.Mockito.mock(com.openggf.sprites.playable.AbstractPlayableSprite.class);
+        org.mockito.Mockito.when(player.getXRadius()).thenReturn((short) 0x80);
+        org.mockito.Mockito.when(player.getLrbSolidBit()).thenReturn((byte) 15);
+        org.mockito.Mockito.when(player.getTopSolidBit()).thenReturn((byte) 14);
+        try (var sensors = org.mockito.Mockito.mockConstruction(GroundSensor.class)) {
+            GlideWallGrabTerrain.climbVerticalDistance(player, true, false);
+            org.mockito.Mockito.verify(sensors.constructed().getFirst()).scanWorld(
+                    Direction.UP, (short) 0, (short) 120, (short) 0, (short) 0, 15);
+            GlideWallGrabTerrain.climbVerticalDistance(player, false, false);
+            org.mockito.Mockito.verify(sensors.constructed().getLast()).scanWorld(
+                    Direction.DOWN, (short) 0, (short) -119, (short) 0, (short) 0, 14);
         }
     }
 

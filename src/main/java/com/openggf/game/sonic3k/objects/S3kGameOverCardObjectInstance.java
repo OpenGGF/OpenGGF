@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.JoypadPressSnapshot;
 import com.openggf.game.save.SaveReason;
+import com.openggf.game.sonic3k.Sonic3kGameOverPlcService;
 import com.openggf.level.objects.AbstractGameOverCardObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 
@@ -11,9 +12,8 @@ import com.openggf.level.objects.ObjectConstructionContext;
  * <ul>
  *   <li>{@code tst.l (Nem_decomp_queue).w} (:62061-62063): the ROM holds until
  *       the Nemesis queue that {@code Load_PLC_2 #3} filled has drained. The
- *       engine has no per-frame S3K Nemesis drain (see
- *       {@code Sonic3kTitleCardManager}), so the card starts sliding on its
- *       first frame; recorded in docs/S3K_KNOWN_DISCREPANCIES.md.</li>
+ *       ordinary level loop services three patterns per VBlank before this
+ *       object can initialize or request its save.</li>
  *   <li>{@code loc_2D5CE}: the GAME word (frame 0 only, {@code tst.b
  *       mapping_frame}) calls {@code SaveGame_LivesContinues} before setting
  *       up (:62067-62070; routine at :16011-16033), so the save slot records
@@ -39,10 +39,13 @@ public final class S3kGameOverCardObjectInstance extends AbstractGameOverCardObj
         this(FRAME_GAME);
     }
 
-    /** The engine keeps ArtNem_GameOver resident; no Nemesis queue exists to wait on. */
     @Override
     protected boolean isArtPending() {
-        return false;
+        Sonic3kGameOverPlcService plc = services().gameService(Sonic3kGameOverPlcService.class);
+        if (plc == null) {
+            throw new IllegalStateException("S3K GAME OVER card requires its native PLC service");
+        }
+        return plc.isBusy();
     }
 
     @Override

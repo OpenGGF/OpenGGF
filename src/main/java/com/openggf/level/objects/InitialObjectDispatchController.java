@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
 
 /** Owns the exceptional initial object-dispatch scope and its fixed-slot set. */
 final class InitialObjectDispatchController {
@@ -17,6 +18,40 @@ final class InitialObjectDispatchController {
 
     InitialObjectDispatchController(ObjectManager objects) {
         this.objects = objects;
+    }
+
+    /**
+     * RunObjects while the S2 title bit remains set (s2.asm:29805-29819).
+     * The caller already ran both human slots. Preserve the existing native
+     * execution/solid owners, but neither dispatch ObjectsManager nor count a
+     * VBlank here: the leading scan has none and each later wait owns its own.
+     */
+    void runNativeCompetitionTitleObjectPass(ObjectSlotLayout slotLayout, BooleanSupplier updating) {
+        var roster = com.openggf.game.competition.NativeCompetitionRoster.from(objects.services().worldSession());
+        if (roster == null || roster.player(0) == null || roster.player(1) == null
+                || roster.player(0) == roster.player(1)
+                || roster.player(0).isCpuControlled() || roster.player(1).isCpuControlled()
+                || slotLayout != ObjectSlotLayout.SONIC_2) {
+            throw new IllegalStateException("S2 native title scan requires two supplied human slots");
+        }
+        if (updating.getAsBoolean() || objects.hasActiveInitialProcessSpritesDispatch()) {
+            throw new IllegalStateException("Native title object scans cannot nest another object pass");
+        }
+        var player = roster.player(0);
+        var second = List.of(roster.player(1));
+        int cameraX = roster.camera(0).getX();
+        SolidExecutionRegistry registry = objects.beginInitialSolidExecution(player, second);
+        try {
+            objects.solidContacts().beginInlineFrame(player, second, true);
+            objects.assignPendingPlayerSlotAllocations();
+            objects.cleanupDestroyedDynamicObjects();
+            objects.runExecLoop(cameraX, player, second, true, true);
+            objects.flushPostExecDynamicSpawns();
+        } finally {
+            objects.solidContacts().finishInlineFrame(player, second);
+            registry.finishFrame();
+        }
+        objects.captureCollisionResponseListForNextFrame();
     }
 
     InitialObjectDispatchScope begin(

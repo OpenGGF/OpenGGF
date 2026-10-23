@@ -485,8 +485,11 @@ final class ObjectTouchResponseController {
 
         buffers.building.clear();
 
+        var roster = com.openggf.game.competition.NativeCompetitionRoster.from(objectManager.services().worldSession());
+        boolean nativeHuman = sidekick instanceof AbstractPlayableSprite sprite
+                && roster != null && roster.slotOf(sprite) == 1;
         processCollisionLoop(sidekick, playerX, playerY, playerHeight, 0x10,
-                buffers.building, buffers.overlapping, true, usePreUpdateState);
+                buffers.building, buffers.overlapping, !nativeHuman, usePreUpdateState);
 
         buffers.swap();
     }
@@ -645,8 +648,9 @@ final class ObjectTouchResponseController {
             // drops below 90 while the player is still continuously overlapping.
             // Keyed on the LostRingObjectInstance marker, NOT the 0x47 byte shape -
             // so other SPECIAL objects sharing $47 (e.g. S1 placed rings) keep their
-            // own listener path. ROM tests MainCharacter+invulnerable_time even
-            // on the sidekick pass, then stores the touching player in parent(a1).
+            // own listener path. ROM tests MainCharacter+invulnerable_time in
+            // ordinary play, but the actual actor in competition, then stores
+            // the touching player in parent(a1) (Touch_ChkValue, s2.asm:85413-85436).
             // CollectRing_Tails falls through to the 1P shared counter/sound path
             // outside two-player mode (docs/s2disasm/s2.asm:85201-85219,
             // 25023-25075). This is now the sole lost-ring collection path - the
@@ -655,7 +659,7 @@ final class ObjectTouchResponseController {
                 if (player instanceof AbstractPlayableSprite aps) {
                     int invuln = lostRingCollectionInvulnerableFrames(aps, isSidekick);
                     if (invuln < LOST_RING_INVULNERABLE_THRESHOLD && !lostRing.isCollected()) {
-                        lostRing.markCollected(currentFrameCounter);
+                        lostRing.markCollected(currentFrameCounter, player);
                     }
                 }
                 break; // ROM: rts — first overlapping object ends the loop (both paths).
@@ -1128,7 +1132,7 @@ final class ObjectTouchResponseController {
         }
 
         switch (result.category()) {
-            case HURT -> applyHurt(player, instance, result);
+            case HURT -> applyHurt(player, instance, result, profile);
             case ENEMY -> {
                 if (isPlayerAttacking(player, instance)) {
                     // ROM: Touch_Enemy_Part2 checks collision_property BEFORE decrementing HP.
@@ -1180,7 +1184,7 @@ final class ObjectTouchResponseController {
                         }
                     }
                 } else {
-                    applyHurt(player, instance, result);
+                    applyHurt(player, instance, result, profile);
                 }
             }
             case SPECIAL -> {
@@ -1194,7 +1198,7 @@ final class ObjectTouchResponseController {
                     }
                     applyBossBounce(player, profile);
                 } else {
-                    applyHurt(player, instance, result);
+                    applyHurt(player, instance, result, profile);
                 }
             }
         }
@@ -1343,7 +1347,19 @@ final class ObjectTouchResponseController {
         return null;
     }
 
-    private void applyHurt(PlayableEntity player, ObjectInstance instance, TouchResponseResult result) {
+    private boolean usesNativeP2HurtTail(PlayableEntity player, TouchResponseProfile profile) {
+        var module = objectManager.services().gameModule();
+        // Native companion gameplay currently has no competitive-mode state.
+        // S3K HurtCharacter (sonic3k.asm:21101..21111), and S2's equivalent
+        // (s2.asm:85604..85611), branch by player slot before checking rings.
+        return profile != null
+                && profile.actorContextPolicy() == TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY
+                && module != null && module.supportsSidekick()
+                && player == objectManager.services().playerQuery().nativeP2OrNull();
+    }
+
+    private void applyHurt(PlayableEntity player, ObjectInstance instance, TouchResponseResult result,
+            TouchResponseProfile profile) {
         if (player.getInvulnerable()) {
             return;
         }
@@ -1374,19 +1390,25 @@ final class ObjectTouchResponseController {
                 : fireHit ? DamageCause.FIRE
                 : DamageCause.NORMAL;
 
-        boolean hadRings = player.getRingCount() > 0;
-        boolean suppressLostRingSpawn = player instanceof AbstractPlayableSprite aps
-                && aps.suppressesLostRingSpawnOnHurt();
-        if (hadRings && !player.hasShield() && !suppressLostRingSpawn) {
-            // Requires the concrete playable type, but still goes through ObjectServices.
-            if (player instanceof AbstractPlayableSprite aps) {
-                // ROM Obj37 allocation becomes visible after the current player slot's
-                // hurt handling, but later playable slots do not refresh their CPU
-                // interact latch from those new rings until their next object tick.
-                objectManager.services().spawnLostRingsAfterCurrentFrame(aps, currentFrameCounter - 1);
+        if (usesNativeP2HurtTail(player, profile)) {
+            // Keep this pass's overlap, attack, listener and damage-cause handling.
+            // Only the registered native P2 bypasses the ring-loss/death choice.
+            player.applyHurt(sourceX, cause);
+        } else {
+            boolean hadRings = player.getRingCount() > 0;
+            boolean suppressLostRingSpawn = player instanceof AbstractPlayableSprite aps
+                    && aps.suppressesLostRingSpawnOnHurt();
+            if (hadRings && !player.hasShield() && !suppressLostRingSpawn) {
+                // Requires the concrete playable type, but still goes through ObjectServices.
+                if (player instanceof AbstractPlayableSprite aps) {
+                    // ROM Obj37 allocation becomes visible after the current player slot's
+                    // hurt handling, but later playable slots do not refresh their CPU
+                    // interact latch from those new rings until their next object tick.
+                    objectManager.services().spawnLostRingsAfterCurrentFrame(aps, currentFrameCounter - 1);
+                }
             }
+            player.applyHurtOrDeath(sourceX, cause, hadRings);
         }
-        player.applyHurtOrDeath(sourceX, cause, hadRings);
         var policies = com.openggf.game.mutators.NativeObjectPolicyAccess.port(objectManager.services());
         if (policies != null && instance != null) policies.projectileImpact(instance, player);
     }

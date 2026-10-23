@@ -1,238 +1,249 @@
 package com.openggf.graphics;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
- * Applies the S3K sprite-mask post-pass to SAT-like mapping-piece entries before
- * they are expanded into 8x8 tiles.
+ * Mode-5 SAT evaluation before mapping pieces expand into tiles. Admission follows
+ * SAT order, independent of the sprite/background priority bit. The optional S3K
+ * Render_Sprites rewrite changes whole-word $07C0 entries to X=1 and their successor
+ * to X=0; hardware budgets and ordinary X=0 masking apply even without that rewrite.
  *
- * <p>ROM (sonic3k.asm, end of {@code Render_Sprites}, loc_1AE34): while
- * {@code Spritemask_flag} is set, every built SAT entry whose whole tile word is
- * {@code $07C0} gets X=1 and the entry after it gets X=0. The VDP then applies
- * sprite masking; Genesis Plus GX {@code render_obj_m5} (vdp_render.c) walks each
- * scanline's sprite list in SAT order: any sprite with xpos != 0 arms masking, and
- * a later sprite with xpos == 0 hides itself and every remaining sprite on that
- * line, across the whole line width. The arming sprite need not be the $7C0
- * marker; any earlier SAT sprite on the line qualifies.</p>
+ * <p>Hardware rules: Genesis Plus GX, vdp_render.c, parse_satb_m5/render_obj_m5,
+ * revision 49c584764893b0505ac7f768a754f97330fa4392. Offscreen, transparent and masked
+ * entries consume declared width. Reaching (not only exceeding) the pixel budget
+ * arms X=0 masking on the next line; count overflow alone does not. An overflowing
+ * piece retains its leftmost screen columns, including when horizontally flipped.
+ * Evaluation is frame-local, with no state retained across render/rewind calls.</p>
  *
- * <p>The software replay models that per scanline: for each marker pair the
- * masked lines are the X=0 companion's lines that some earlier entry also covers,
- * and every later entry loses exactly those scanlines (pixel precise, carried as a
- * visible scanline window per entry). The pair itself is not drawn. Not modelled:
- * the 20-sprites/line and 320-pixel/line limits, and GPGX's carry of a previous
- * line's pixel overflow, which also arms masking on the next line.</p>
- *
- * <p>Gameplay ghost entries ({@link SpriteSatEntry#isGhost()}) are not in the ROM's sprite
- * table. A mask clips them like any later entry, as it would clip the player they stand for,
- * but they never arm a mask or form a marker pair, so real sprites mask exactly as without them.</p>
+ * <p>Gameplay ghosts are presentation-only: native entries retain their table, line
+ * and pixel budgets when ghosts are interleaved. Ghosts are clipped by the mask at
+ * their submission position, but never arm one or become a native marker/companion.</p>
  */
 public final class SpriteSatMaskPostProcessor {
-
-    /** ROM {@code move.w #$7C0,d0 / cmp.w (a0),d0}: the whole SAT tile word. */
     private static final int MASK_TILE_WORD = 0x7C0;
     private static final ThreadLocal<Scratch> SCRATCH = ThreadLocal.withInitial(Scratch::new);
 
-    private SpriteSatMaskPostProcessor() {
+    private SpriteSatMaskPostProcessor() { }
+
+    /** Logical raster, not the physical window size or a trace's native camera width. */
+    public record Raster(int x, int y, int width, int height, int hardwareWidth) {
+        public Raster(int x, int y, int width, int height) {
+            this(x, y, width, height, width == 256 ? 256 : 320);
+        }
+        public Raster {
+            if ((hardwareWidth != 256 && hardwareWidth != 320)
+                    || width < hardwareWidth || (width & 7) != 0 || height <= 0) {
+                throw new IllegalArgumentException("SAT raster needs a tile-aligned width >= 256 and positive height");
+            }
+        }
+
+        public static Raster h40(int x, int y, int height) { return new Raster(x, y, 320, height); }
+        public static Raster h32(int x, int y, int height) { return new Raster(x, y, 256, height); }
+
+        /**
+         * Wider gameplay is a presentation extension with fixed H40 hardware capacity.
+         * Side pieces compete for the same 20/320/80 budget; masks span the full logical
+         * raster, whose coordinates do not wrap at nine bits. This is not a native-wide
+         * parity claim. H32 consumers pass their fixed inner 256px raster.
+         */
+        public static Raster extended(int x, int y, int width, int height) {
+            return new Raster(x, y, width, height);
+        }
+
+        int lineSprites() { return hardwareWidth / 16; }
+        int tableSprites() { return hardwareWidth / 4; }
     }
 
-    /**
-     * Returns a retainable fresh result when masking is enabled. When masking is
-     * off (or the input is empty), the input list itself is returned for legacy
-     * identity compatibility.
-     */
+    /** Fresh, retainable native H40 result. The flag controls only the ROM marker rewrite. */
     public static List<SpriteSatEntry> process(List<SpriteSatEntry> entries, boolean spriteMaskEnabled) {
-        if (!spriteMaskEnabled || entries == null || entries.isEmpty()) {
-            return entries == null ? List.of() : entries;
-        }
-        return new ArrayList<>(processReusable(entries, true));
+        return process(entries, spriteMaskEnabled, Raster.h40(0, 0, 224));
     }
 
-    /**
-     * Allocation-minimized synchronous render path. Masked results are backed by
-     * thread-owned scratch and are invalidated by the next masked call on the
-     * same thread; callers must consume them before calling this method again.
-     */
+    public static List<SpriteSatEntry> process(List<SpriteSatEntry> entries, boolean spriteMaskEnabled, Raster raster) {
+        return new ArrayList<>(processReusable(entries, spriteMaskEnabled, raster));
+    }
+
+    /** Thread-owned synchronous result, invalidated by the next call on this thread. */
     static List<SpriteSatEntry> processReusable(List<SpriteSatEntry> entries, boolean spriteMaskEnabled) {
-        if (!spriteMaskEnabled || entries == null || entries.isEmpty()) {
-            return entries == null ? List.of() : entries;
-        }
+        return processReusable(entries, spriteMaskEnabled, Raster.h40(0, 0, 224));
+    }
 
+    static List<SpriteSatEntry> processReusable(List<SpriteSatEntry> entries, boolean spriteMaskEnabled, Raster raster) {
         Scratch scratch = SCRATCH.get();
-        scratch.reset();
-        int preMaskInsertIndex = -1;
-
-        for (int i = 0; i < entries.size(); i++) {
-            SpriteSatEntry entry = entries.get(i);
-            if (isMaskMarker(entries, i)) {
-                SpriteSatEntry companion = entries.get(i + 1);
-                if (addArmedBands(entries, i + 1, companion, scratch) && preMaskInsertIndex < 0) {
-                    preMaskInsertIndex = scratch.processed.size();
-                }
-                scratch.companionIndexes.set(i + 1);
-                i++; // The helper pair becomes the mask; neither piece replays visibly.
-                continue;
+        scratch.processed.clear();
+        if (entries == null || entries.isEmpty()) return scratch.processed;
+        int size = entries.size();
+        scratch.reset(size, raster.height());
+        int firstMarker = -1;
+        for (int i = 0; i < size; i++) {
+            int companion = spriteMaskEnabled ? maskCompanion(entries, i) : -1;
+            if (companion >= 0) {
+                scratch.control[i] = true;
+                scratch.control[companion] = true;
+                scratch.xOverride[i] = 1;
+                scratch.xOverride[companion] = 0;
+                if (firstMarker < 0) firstMarker = i;
             }
-
-            if (entry.piece().maskReplayRole() == SpriteMaskReplayRole.PRE_MASK_FRONT && preMaskInsertIndex >= 0) {
-                scratch.processed.add(preMaskInsertIndex, entry);
-                preMaskInsertIndex++;
-                continue;
-            }
-            clipAgainstBands(entry, scratch);
         }
-
+        // Existing front-shell producers describe native entries preceding the mask,
+        // although the object can submit them later. Place them before evaluation too:
+        // they must compete for the same budgets as every other entry.
+        int ordered = 0;
+        for (int i = 0; i < size; i++) {
+            if (i == firstMarker) {
+                for (int j = i + 1; j < size; j++) {
+                    if (entries.get(j).piece().maskReplayRole() == SpriteMaskReplayRole.PRE_MASK_FRONT && !scratch.control[j]) {
+                        scratch.order[ordered++] = j;
+                    }
+                }
+            }
+            if (firstMarker >= 0 && i > firstMarker
+                    && entries.get(i).piece().maskReplayRole() == SpriteMaskReplayRole.PRE_MASK_FRONT && !scratch.control[i]) continue;
+            scratch.order[ordered++] = i;
+        }
+        int total = 0;
+        int nativeEntries = 0;
+        for (int slot = 0; slot < ordered; slot++) {
+            int index = scratch.order[slot];
+            if (entries.get(index).isGhost() || nativeEntries++ < raster.tableSprites()) {
+                scratch.order[total++] = index;
+            }
+        }
+        boolean carry = false;
+        for (int row = 0; row < raster.height(); row++) {
+            int line = raster.y() + row;
+            boolean armed = carry;
+            boolean masked = false;
+            carry = false;
+            int count = 0;
+            int pixels = 0;
+            boolean nativeExhausted = false;
+            for (int slot = 0; slot < total; slot++) {
+                int index = scratch.order[slot];
+                SpriteSatEntry entry = entries.get(index);
+                if (line < entry.piece().y() || line >= entry.piece().endYExclusive()) continue;
+                if (entry.isGhost()) {
+                    if (!masked && entry.piece().endXExclusive() > raster.x() && entry.piece().x() < raster.x() + raster.width()) {
+                        scratch.columns[index * raster.height() + row] = entry.piece().widthTiles();
+                    }
+                    continue;
+                }
+                if (nativeExhausted) continue;
+                if (count++ == raster.lineSprites()) {
+                    nativeExhausted = true;
+                    continue;
+                }
+                int rawX = scratch.xOverride[index];
+                if (rawX < 0) {
+                    int biasedX = entry.piece().x() - raster.x() + 128;
+                    // Expanded raster coordinates exceed the native nine-bit SAT field.
+                    rawX = raster.width() <= 320 ? biasedX & 0x1FF : biasedX;
+                }
+                if (rawX != 0) armed = true;
+                else if (armed) masked = true;
+                int columns = Math.min(entry.piece().widthTiles(), Math.max(0, (raster.hardwareWidth() - pixels) / 8));
+                pixels += entry.piece().widthTiles() * 8;
+                if (!masked && !scratch.control[index]
+                        && entry.piece().endXExclusive() > raster.x() && entry.piece().x() < raster.x() + raster.width()) {
+                    scratch.columns[index * raster.height() + row] = columns;
+                }
+                if (pixels >= raster.hardwareWidth()) {
+                    carry = true;
+                    nativeExhausted = true;
+                }
+            }
+        }
+        for (int slot = 0; slot < total; slot++) {
+            int index = scratch.order[slot];
+            if (!scratch.control[index]) appendVisible(entries.get(index), index, raster, scratch);
+        }
         return scratch.processed;
     }
 
-    /**
-     * The ROM compares the whole SAT word, so a $7C0 tile carrying flip, palette or
-     * mapping priority bits is not a marker. (The object's art_tile priority is an
-     * engine-side flag here; every current mask producer uses art_tile 0.)
-     */
-    private static boolean isMaskMarker(List<SpriteSatEntry> entries, int index) {
-        if (index + 1 >= entries.size()) {
-            return false;
-        }
+    private static int maskCompanion(List<SpriteSatEntry> entries, int index) {
         SpriteSatEntry entry = entries.get(index);
-        if (entry.isGhost() || entries.get(index + 1).isGhost()) {
-            return false;
+        if (entry.isGhost() || entry.piece().rawTileWordLow11() != MASK_TILE_WORD || entry.piece().hFlip() || entry.piece().vFlip()
+                || entry.piece().piecePriority() || (entry.piece().paletteIndex() & 3) != 0) return -1;
+        // Ghosts do not occupy the native SAT link that selects the companion.
+        for (int next = index + 1; next < entries.size(); next++) {
+            if (!entries.get(next).isGhost()) return next;
         }
-        return entry.piece().rawTileWordLow11() == MASK_TILE_WORD
-                && !entry.piece().hFlip()
-                && !entry.piece().vFlip()
-                && !entry.piece().piecePriority()
-                && (entry.piece().paletteIndex() & 0x3) == 0;
+        return -1;
     }
 
-    /**
-     * Adds the companion's scanlines on which an earlier SAT entry with X != 0 is
-     * present (GPGX {@code spr_ovr}). Earlier X=0 companions do not arm.
-     */
-    private static boolean addArmedBands(List<SpriteSatEntry> entries, int companionIndex,
-            SpriteSatEntry companion, Scratch scratch) {
-        int top = companion.piece().y();
-        int bottom = companion.piece().endYExclusive();
-        boolean added = false;
-        int runStart = Integer.MIN_VALUE;
-        for (int line = top; line <= bottom; line++) {
-            boolean armed = line < bottom && isArmed(entries, companionIndex, line, scratch);
-            if (armed && runStart == Integer.MIN_VALUE) {
-                runStart = line;
-            } else if (!armed && runStart != Integer.MIN_VALUE) {
-                scratch.addBand(runStart, line);
-                runStart = Integer.MIN_VALUE;
-                added = true;
+    private static void appendVisible(SpriteSatEntry entry, int index, Raster raster, Scratch scratch) {
+        int top = Math.max(Math.max(entry.piece().y(), entry.visibleTopY()), raster.y());
+        int bottom = Math.min(Math.min(entry.piece().endYExclusive(), entry.visibleBottomY()), raster.y() + raster.height());
+        int start = top;
+        while (start < bottom) {
+            int columns = scratch.columns[index * raster.height() + start - raster.y()];
+            int end = start + 1;
+            while (end < bottom && scratch.columns[index * raster.height() + end - raster.y()] == columns) end++;
+            if (columns > 0) {
+                int left = entry.piece().hFlip() ? entry.piece().widthTiles() - columns : 0;
+                int right = entry.piece().hFlip() ? entry.piece().widthTiles() : columns;
+                left = Math.max(left, entry.piece().startColTile());
+                right = Math.min(right, entry.piece().startColTile() + entry.piece().colCountTiles());
+                if (right > left) {
+                    SpriteSatEntry clipped = left == entry.piece().startColTile() && right - left == entry.piece().colCountTiles()
+                            ? entry : entry.clipRect(left, right - left, entry.piece().startRowTile(), entry.piece().rowCountTiles());
+                    if (start != Math.max(entry.piece().y(), entry.visibleTopY())
+                            || end != Math.min(entry.piece().endYExclusive(), entry.visibleBottomY())) {
+                        clipped = clipped.withVisibleScanlines(start, end);
+                    }
+                    appendReplay(clipped, scratch.processed);
+                }
             }
+            start = end;
         }
-        return added;
     }
 
-    private static boolean isArmed(List<SpriteSatEntry> entries, int companionIndex, int line, Scratch scratch) {
-        for (int j = 0; j < companionIndex; j++) {
-            if (scratch.companionIndexes.get(j)) {
-                continue;
-            }
-            SpriteSatEntry earlier = entries.get(j);
-            if (earlier.isGhost()) {
-                continue; // not a ROM sprite: it cannot arm the VDP's mask
-            }
-            if (line >= earlier.piece().y() && line < earlier.piece().endYExclusive()) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static void clipAgainstBands(SpriteSatEntry entry, Scratch scratch) {
-        int top = Math.max(entry.visibleTopY(), entry.piece().y());
-        int bottom = Math.min(entry.visibleBottomY(), entry.piece().endYExclusive());
-        boolean touched = false;
-        scratch.rangeA[0] = top;
-        scratch.rangeA[1] = bottom;
-        int[] remaining = scratch.rangeA;
-        int remainingCount = 1;
-
-        for (int bandIndex = 0; bandIndex < scratch.bandCount && remainingCount > 0; bandIndex++) {
-            int bandStart = scratch.bandStarts[bandIndex];
-            int bandEnd = scratch.bandEnds[bandIndex];
-            if (bandEnd <= top || bandStart >= bottom) {
-                continue;
-            }
-            touched = true;
-            boolean usingA = remaining == scratch.rangeA;
-            scratch.ensureRangeCapacity((remainingCount + 1) * 2);
-            remaining = usingA ? scratch.rangeA : scratch.rangeB;
-            int[] next = usingA ? scratch.rangeB : scratch.rangeA;
-            int nextCount = 0;
-            for (int i = 0; i < remainingCount; i++) {
-                int start = remaining[i * 2];
-                int end = remaining[i * 2 + 1];
-                if (bandEnd <= start || bandStart >= end) {
-                    next[nextCount * 2] = start;
-                    next[nextCount * 2 + 1] = end;
-                    nextCount++;
-                    continue;
-                }
-                if (bandStart > start) {
-                    next[nextCount * 2] = start;
-                    next[nextCount * 2 + 1] = bandStart;
-                    nextCount++;
-                }
-                if (bandEnd < end) {
-                    next[nextCount * 2] = bandEnd;
-                    next[nextCount * 2 + 1] = end;
-                    nextCount++;
-                }
-            }
-            remaining = next;
-            remainingCount = nextCount;
-        }
-
-        if (!touched) {
-            scratch.processed.add(entry);
+    private static void appendReplay(SpriteSatEntry admitted, List<SpriteSatEntry> output) {
+        if (admitted.replayFragments() == null) {
+            output.add(admitted);
             return;
         }
-        for (int i = 0; i < remainingCount; i++) {
-            int start = remaining[i * 2];
-            int end = remaining[i * 2 + 1];
-            if (end > start) {
-                scratch.processed.add(entry.withVisibleScanlines(start, end));
+        int left = admitted.piece().x() + (admitted.piece().hFlip()
+                ? admitted.piece().widthTiles() - admitted.piece().startColTile() - admitted.piece().colCountTiles()
+                : admitted.piece().startColTile()) * 8;
+        int right = left + admitted.piece().colCountTiles() * 8;
+        for (SpriteSatEntry fragment : admitted.replayFragments()) {
+            int firstScreenCol = Math.max(0, Math.floorDiv(left - fragment.piece().x() + 7, 8));
+            int endScreenCol = Math.min(fragment.piece().widthTiles(), Math.floorDiv(right - fragment.piece().x(), 8));
+            int sourceLeft = fragment.piece().hFlip() ? fragment.piece().widthTiles() - endScreenCol : firstScreenCol;
+            int sourceRight = fragment.piece().hFlip() ? fragment.piece().widthTiles() - firstScreenCol : endScreenCol;
+            sourceLeft = Math.max(sourceLeft, fragment.piece().startColTile());
+            sourceRight = Math.min(sourceRight, fragment.piece().startColTile() + fragment.piece().colCountTiles());
+            int top = Math.max(Math.max(admitted.visibleTopY(), admitted.piece().y()),
+                    Math.max(fragment.piece().y(), fragment.visibleTopY()));
+            int bottom = Math.min(Math.min(admitted.visibleBottomY(), admitted.piece().endYExclusive()),
+                    Math.min(fragment.piece().endYExclusive(), fragment.visibleBottomY()));
+            if (sourceRight > sourceLeft && bottom > top) {
+                output.add(fragment.clipRect(sourceLeft, sourceRight - sourceLeft,
+                        fragment.piece().startRowTile(), fragment.piece().rowCountTiles()).withVisibleScanlines(top, bottom));
             }
         }
     }
 
     private static final class Scratch {
-        private final ArrayList<SpriteSatEntry> processed = new ArrayList<>();
-        private final java.util.BitSet companionIndexes = new java.util.BitSet();
-        private int[] bandStarts = new int[8];
-        private int[] bandEnds = new int[8];
-        private int bandCount;
-        private int[] rangeA = new int[8];
-        private int[] rangeB = new int[8];
+        final ArrayList<SpriteSatEntry> processed = new ArrayList<>();
+        int[] columns = new int[0];
+        int[] xOverride = new int[0];
+        int[] order = new int[0];
+        boolean[] control = new boolean[0];
 
-        private void reset() {
-            processed.clear();
-            companionIndexes.clear();
-            bandCount = 0;
-        }
-
-        private void addBand(int start, int end) {
-            if (bandCount == bandStarts.length) {
-                int size = bandStarts.length * 2;
-                bandStarts = java.util.Arrays.copyOf(bandStarts, size);
-                bandEnds = java.util.Arrays.copyOf(bandEnds, size);
-            }
-            bandStarts[bandCount] = start;
-            bandEnds[bandCount] = end;
-            bandCount++;
-        }
-
-        private void ensureRangeCapacity(int required) {
-            if (rangeA.length >= required) return;
-            int size = Math.max(required, rangeA.length * 2);
-            rangeA = java.util.Arrays.copyOf(rangeA, size);
-            rangeB = java.util.Arrays.copyOf(rangeB, size);
+        void reset(int size, int height) {
+            int cells = Math.multiplyExact(size, height);
+            if (columns.length < cells) columns = new int[cells];
+            else Arrays.fill(columns, 0, cells, 0);
+            if (order.length < size) {
+                order = new int[size];
+                xOverride = new int[size];
+                control = new boolean[size];
+            } else Arrays.fill(control, 0, size, false);
+            Arrays.fill(xOverride, 0, size, -1);
         }
     }
 }

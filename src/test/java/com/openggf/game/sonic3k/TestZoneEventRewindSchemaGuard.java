@@ -163,6 +163,8 @@ public class TestZoneEventRewindSchemaGuard {
             "carrierP2XVelocity",
             "carrierP1TargetSide",
             "carrierP2TargetSide",
+            "carrierP1TargetX",
+            "carrierP2TargetX",
             "carrierP1BoundsYOffset",
             "carrierP2BoundsYOffset",
             "transitionBubbleSpawnFrames"

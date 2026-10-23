@@ -7,6 +7,8 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
 import com.openggf.game.ObjectArtProvider;
+import com.openggf.game.internal.HudSatLayout;
+import com.openggf.game.internal.HudSatLayoutSource;
 import com.openggf.game.RuntimeArtAdmissionLease;
 import com.openggf.game.RuntimeArtAdmissionOwnerKind;
 import com.openggf.game.RuntimeArtAdmissionPolicy;
@@ -59,10 +61,14 @@ import java.util.logging.Logger;
  * This provider builds sprite sheets from the loaded level's pattern data
  * after the level has been loaded.
  */
-public class Sonic3kObjectArtProvider implements ObjectArtProvider, com.openggf.level.metadata.ObjectArtPreviewSource,
+public class Sonic3kObjectArtProvider implements ObjectArtProvider,
+        HudSatLayoutSource,
+        com.openggf.level.metadata.ObjectArtPreviewSource,
         com.openggf.game.internal.RuntimeObjectArtQueue,
         com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.PlcProgressSnapshot> {
     private static final Logger LOG = Logger.getLogger(Sonic3kObjectArtProvider.class.getName());
+    /** Map_HUD, locked-on S&K half; six-byte pieces, including bonus frames four and five. */
+    private static final int HUD_SAT_MAPPING_ADDR = 0xDBB6;
     private static final List<String> FBZ_EXIT_ART_KEYS = List.of(
             Sonic3kObjectArtKeys.FBZ_EXIT_DOOR,
             Sonic3kObjectArtKeys.FBZ_EXIT_HALL_DOOR_SCENERY,
@@ -95,7 +101,10 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider, com.openggf.
     private com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardTeardownModel
             titleCardTeardown;
 
-    private record EnemyKosEntry(int source, int destinationTile) {
+    private record EnemyKosEntry(int source, int destinationTile, boolean physicalPublication) {
+        private EnemyKosEntry(int source, int destinationTile) {
+            this(source, destinationTile, false);
+        }
     }
 
     private enum RuntimeArtState {
@@ -130,6 +139,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider, com.openggf.
     private Pattern[] hudLivesNumbers;
     private Pattern[] hudHexDigits;
     private HudStaticArt hudStaticArt;
+    private HudSatLayout hudSatLayout;
 
     // Zone-specific animal types (set per loadArtForZone call)
     private int animalTypeA = AnimalType.FLICKY.ordinal();
@@ -311,6 +321,9 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider, com.openggf.
             LOG.warning("ROM not available for HUD art loading");
             return;
         }
+
+        hudSatLayout = new HudSatLayout(S3kSpriteDataLoader.loadMappingFrames(
+                RomByteReader.fromRom(rom), HUD_SAT_MAPPING_ADDR, 6));
 
         // HUD digits (0-9, colon, E) - uncompressed
         hudDigitPatterns = loadUncompressedPatterns(rom,
@@ -1650,11 +1663,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider, com.openggf.
             }
             // Preserve native FIFO order if activation occurs while the
             // title-retired enemy group is waiting to submit.
-            for (EnemyKosEntry entry : pendingEnemyKosEntries) {
-                enemyKosHandles.add(enemyKosQueue.queue(
-                        rom, entry.source(), entry.destinationTile()));
-            }
-            pendingEnemyKosEntries = List.of();
+            flushAdmittedEnemyKosEntries(rom);
+            if (!enemyKosQueue.hasCapacity()) return; // Ordinary bounded one-shot rejection.
             enemyKosHandles.add(enemyKosQueue.queue(
                     rom,
                     sourceAddress,
@@ -1702,11 +1712,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider, com.openggf.
                 enemyKosQueue =
                         S3kRuntimeArtCoordinator.current().moduleQueue();
             }
-            for (EnemyKosEntry entry : pendingEnemyKosEntries) {
-                enemyKosHandles.add(enemyKosQueue.queue(
-                        rom, entry.source(), entry.destinationTile()));
-            }
-            pendingEnemyKosEntries = List.of();
+            flushAdmittedEnemyKosEntries(rom);
+            if (!enemyKosQueue.hasCapacity()) return; // The native producer owns no later retry.
             enemyKosHandles.add(enemyKosQueue.queue(
                     rom,
                     Sonic3kConstants.ART_KOSM_BADNIK_EXPLOSION_ADDR,
@@ -1916,6 +1923,11 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider, com.openggf.
                     new EnemyKosEntry(
                             Sonic3kConstants.ART_KOSM_ROCKN_ADDR,
                             Sonic3kConstants.ARTTILE_ROCKN));
+            // Offs_LoadEnemyArt -> PLCKosM_SSZ, also restored by loc_91570.
+            // This is physical residency, independent of the prepared standalone sheet.
+            case Sonic3kZoneIds.ZONE_SSZ -> List.of(new EnemyKosEntry(
+                    Sonic3kConstants.ART_KOSM_EGG_ROBO_BADNIK_ADDR,
+                    Sonic3kConstants.ARTTILE_EGG_ROBO_BADNIK, true));
             default -> List.of();
         };
     }
@@ -1950,6 +1962,12 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider, com.openggf.
             hash *= 0x100000001b3L;
             hash ^= Integer.toUnsignedLong(entry.destinationTile());
             hash *= 0x100000001b3L;
+            if (entry.physicalPublication()) {
+                // Preserve prior timing-only recipes' fingerprints; physical
+                // publication is additional owner intent, not source magic.
+                hash ^= 1;
+                hash *= 0x100000001b3L;
+            }
         }
         return hash;
     }
@@ -2030,29 +2048,24 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider, com.openggf.
         if (pendingEnemyKosEntries.isEmpty() && enemyKosHandles.isEmpty()) {
             return;
         }
-        if (enemyKosHandles.isEmpty()) {
-            if (!enemyKosSubmissionArmed) {
-                return;
-            }
-            var timing = GameServices.hardwareTiming();
+        if (!pendingEnemyKosEntries.isEmpty() && enemyKosSubmissionArmed) {
             try {
                 Rom rom = GameServices.rom().getRom();
                 enemyKosQueue = S3kRuntimeArtCoordinator.current().moduleQueue();
-                if (!enemyKosQueue.hasCapacityFor(pendingEnemyKosEntries.size())) {
+                if (enemyKosQueue.hasCapacityFor(pendingEnemyKosEntries.size())
+                        && hasPhysicalEnemyKosCapacity()) {
+                    for (EnemyKosEntry entry : pendingEnemyKosEntries) {
+                        enemyKosHandles.add(queueEnemyKosEntry(rom, entry));
+                    }
+                    pendingEnemyKosEntries = List.of();
                     return;
                 }
-                for (EnemyKosEntry entry : pendingEnemyKosEntries) {
-                    enemyKosHandles.add(enemyKosQueue.queue(
-                            rom, entry.source(), entry.destinationTile()));
-                }
-                pendingEnemyKosEntries = List.of();
             } catch (IOException e) {
                 throw new IllegalStateException(
                         "Unable to queue S3K enemy KosM art", e);
             }
-            return;
         }
-        if (enemyKosHandles.stream().allMatch(enemyKosQueue::isReady)) {
+        if (!enemyKosHandles.isEmpty() && enemyKosHandles.stream().allMatch(enemyKosQueue::isReady)) {
             S3kKosModuleQueue completedQueue = enemyKosQueue;
             for (HardwareWorkHandle handle : enemyKosHandles) {
                 enemyKosQueue.claim(handle);
@@ -2061,6 +2074,45 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider, com.openggf.
             enemyKosQueue = null;
             completedQueue.allowChildSubmissionAfterHeldAdmission();
         }
+    }
+
+    private void flushAdmittedEnemyKosEntries(Rom rom) throws IOException {
+        // An incidental producer owns only its own request. In particular an
+        // unretired title's physical batch cannot borrow StarPost/explosion
+        // authority. Keep it pending independently of the incidental handle,
+        // including when its owner is armed but either native FIFO is full.
+        var deferred = new ArrayList<EnemyKosEntry>();
+        for (EnemyKosEntry entry : pendingEnemyKosEntries) {
+            if (entry.physicalPublication() && (!enemyKosSubmissionArmed
+                    || !enemyKosQueue.hasCapacity() || !hasPhysicalEnemyKosCapacity())) {
+                deferred.add(entry);
+            } else {
+                enemyKosHandles.add(queueEnemyKosEntry(rom, entry));
+            }
+        }
+        pendingEnemyKosEntries = List.copyOf(deferred);
+    }
+
+    private boolean hasPhysicalEnemyKosCapacity() {
+        long physicalEntries = pendingEnemyKosEntries.stream()
+                .filter(EnemyKosEntry::physicalPublication).count();
+        if (physicalEntries == 0) return true;
+        var physical = GameServices.level().getObjectManager().getObjectServices()
+                .kosinskiModuleQueue();
+        if (physical == null) throw new IllegalStateException("Enemy art has no physical KosM owner");
+        return physical.queuedArchiveCount() + physicalEntries
+                <= com.openggf.level.resources.KosinskiModuleQueue.CAPACITY;
+    }
+
+    private HardwareWorkHandle queueEnemyKosEntry(Rom rom, EnemyKosEntry entry) throws IOException {
+        if (!entry.physicalPublication()) {
+            return enemyKosQueue.queue(rom, entry.source(), entry.destinationTile());
+        }
+        var services = GameServices.level().getObjectManager().getObjectServices();
+        var handle = S3kRuntimeArtCoordinator.queueRetainedPatternModule(
+                services, entry.source(), entry.destinationTile() * 32);
+        if (handle == null) throw new IllegalStateException("Enemy art physical KosM FIFO is full");
+        return handle;
     }
 
     /**
@@ -2862,6 +2914,11 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider, com.openggf.
     }
 
     @Override
+    public HudSatLayout getHudSatLayout() {
+        return hudSatLayout;
+    }
+
+    @Override
     public List<String> getRendererKeys() {
         return new ArrayList<>(rendererKeys);
     }
@@ -2911,7 +2968,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider, com.openggf.
                 pendingModules = pendingEnemyKosEntries.stream()
                 .map(entry ->
                         new com.openggf.game.rewind.snapshot.PlcProgressSnapshot.PendingKosModule(
-                                entry.source(), entry.destinationTile()))
+                                entry.source(), entry.destinationTile(), entry.physicalPublication()))
                 .toList();
         return new com.openggf.game.rewind.snapshot.PlcProgressSnapshot(
                 loadEpoch, cnzTeleporterArtState.ordinal()
@@ -2947,7 +3004,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider, com.openggf.
         enemyKosArmOnNextRuntimePass = (packedState & (1 << 4)) != 0;
         pendingEnemyKosEntries = snap.pendingKosModules().stream()
                 .map(entry -> new EnemyKosEntry(
-                        entry.sourceAddress(), entry.destinationTile()))
+                        entry.sourceAddress(), entry.destinationTile(), entry.physicalPublication()))
                 .toList();
         enemyKosSubmissionArmed = snap.kosSubmissionArmed();
         runtimeArtAdmissionGeneration = snap.runtimeArtAdmissionGeneration();

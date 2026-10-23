@@ -433,3 +433,165 @@ python3 tools/testing/run_categories.py --base 098053c4a01c2af283ca6797463bb5051
 ```
 
 REDs select the existing fan class alone with supported lean. The clock-only focus selects its three named clock/positive allocation methods plus the same graph/conveyor/keeper selectors; pending saturation semantics were intentionally excluded only from that intermediate clock measurement, then included in the final90-test focus. All canonical stages use the identical four-class selection and normal trace-profile fork1; no fixture/input/comparator/heap/fork changes. Source remains frozen throughout each invocation. The category plan selects2648 ordinary classes from3027 plus fresh guards; it was inspected, not executed by this lane. Coordinator owns combined actual-destination broad validation/integration/delivery. Native observations remain durable outside the repository; temporary production logging, backups and probe-built classes are removed. Final target outputs are normal ignored lane artifacts, not archived evidence or committed tools.
+
+
+## Narrow native object fidelity follow-up — 2026-10-22
+
+Implementation starts from `94c40570a15a11b70caf7456e9b0d0a8eec8a9b4` in
+`${OPENGGF_WORKTREE_ROOT}/t3-a1d6305f`, local branch
+`bugfix/ai-gap-s3k-narrow-fidelity-20261022`. The coordinator owns integration
+and combined smoke. References use the pinned skdisasm
+`8b2cf3c4178f2382f844da67798de4befc50c5e0`, read from Git objects because
+the main reference checkout is a different revision; that checkout is preserved.
+The supplied locked-on ROM has CRC32 `63522553`, SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`.
+
+### Slot rewards
+
+`loc_1AA02 (sonic3k.asm:35898-35927)` and
+`Obj_SlotSpike (sonic3k.asm:99608-99650)` perform signed long
+`current - ((current - target) >> 4)`. Reversing the subtraction before adding
+rounds negative fractions differently and loses native long wrap. Both children
+now retain 32-bit state and exact register-vector regressions in both directions
+and across the position-word boundary.
+
+`Obj_SlotRing` animates the spin script before decrementing its `$1A` timer,
+then grants the ring, retires the cage counter and falls through to
+`loc_1AA56 (sonic3k.asm:35928-35932)`. Animation id zero does not change:
+`anim_frame` and `anim_frame_timer` survive the switch of script pointer. Actual
+ROM tables at `$1AA66` and `$1A992` supply the bytes. With native clean allocation,
+the 26th movement pass displays sparkle mapping 5, followed by 6 and 7; the
+`$FC` pass still displays 7, and `loc_1AA62` deletes on pass 45. The previous
+eight-update timer and global spinning-ring drawing could not reproduce this.
+The production render consumer now receives the object's mapping frame, and
+the native cage assignments retain buckets 3/4 and clear art priority for
+ring/spike children. Mutated-ROM script tests prove that data reaches the child.
+Generic rewind captures animation cursor, pending deletion and fractional motion;
+immutable scripts reload from the same live slot ROM bank on recreation.
+
+### Event-owned game-over PLC3
+
+`loc_12478 (sonic3k.asm:24636-24643)` creates the card pair, plays music and
+issues `Load_PLC_2 #3`. The actual PLC at `$924CC` names art `$191DE4`,
+VRAM `$F380` (tile `$79C`), and 34 Nemesis patterns. `Load_PLC_2` calls
+`Clear_Nem_Queue (sonic3k.asm:2123-2130)`, clearing active decoding as well as
+queued descriptors. Replacing only waiting descriptors is therefore rejected.
+
+`LevelLoop (sonic3k.asm:7916-7940)` prepares after objects;
+`Do_Updates (sonic3k.asm:806-815)` services three prepared patterns in ordinary
+VBlank. The existing `tools/timing/s3k-instruction-ledgers/vint/nem/nem_decoder.py`
+ROM-opcode microexecutor and independent `nem_reference.py` decoder
+reproduce remaining counts `[31,28,25,22,19,16,13,10,7,4,1,0]` and all 272
+decoded rows. This is instruction evidence, not an emulator timing/cycle claim.
+Fresh-title six-pattern service cannot stand in for this event phase.
+
+The new internal event owner shares the physical FIFO with the existing title
+owner. The existing title lifecycle facade selects exactly one owner per
+opportunity; it neither
+adds service nor clears prior work on a phase change. Only explicit native
+queue-replacement operations clear work. The existing title rewind adapter
+captures that queue once, including submitted identity and remaining patterns;
+readiness derives from the restored queue. A separate lifecycle object was
+rejected during source self-review because `TestNativeRewindAdapterPublication`
+requires lifecycle lookup and registered native adapter to have the same identity.
+The facade preserves that contract and its public constructor. No additional
+owner latch or measured
+cost is fabricated. GAME/TIME cards remain undisplayed in routine zero until
+completion. `Obj_GameOver (sonic3k.asm:62060-62094)` then saves GAME's
+lives/continues before initializing its position and performing its first slide.
+TIME does not request that save. Reconstructing pending or initialized cards
+does not issue a save; ordinary forward replay through release does.
+
+### HCZ2 cutscene contacts
+
+`loc_620AA (sonic3k.asm:128931-128953)` calls native `MoveSprite`, tests the
+updated signed velocity and accepts only a negative `ObjCheckFloorDist`. First
+contact sets the bounce flag and negates velocity words, retaining penetration,
+fractions and facing. `loc_620D8` corrects only the Y word on second contact and
+starts the laugh without clearing velocities. Spawn-height collision, first
+contact clamping/facing toggles and second-contact zero velocities are rejected
+by the ROM instructions. The injected foreground/background floor query now
+owns those branches; no shared terrain or playable movement contract changes.
+
+Existing native `s3k-sonic-tails-complete-emeralds/hcz_4` aux object observations
+(slot 22, subtype `$08`, code `$62124`) independently show first contact at
+row 884 `$3A3E,$066D`, next row `$3A3F,$0669`, and second contact row 925
+`$3A67,$066C` in routine `$C`. The focused update-path test reproduces these
+positions over a static terrain plane and replays across both contacts after
+fresh-instance restoration; comparison rows never supply runtime state.
+
+### Validation scope
+
+Java 25 / Lua 5.4 preflight passes with
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 94c40570a15a11b70caf7456e9b0d0a8eec8a9b4 --preflight`.
+The commands below spell the discovered existing absolute ROM path as
+`${OPENGGF_S3K_ROM}`; its identity is pinned above. The focused command completes
+on the base plus this lane's source at
+`2026-10-22T10:23:20+01:00`: 145 tests in 18 classes, zero failures/errors/skips.
+The shared queue wait was 376 seconds; Maven compilation/execution was 1m24s.
+Both packages containing `TestSonic3kLevelLoading` execute; this is why 17
+selectors produce 18 classes. All four required S3K stability selectors pass.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestS3kSlotRingRewardObjectInstance,TestS3kSlotRewardObjects,com.openggf.game.sonic3k.bonusstage.slots.TestS3kSlotBonusStageRuntime,com.openggf.game.sonic3k.TestS3kSlotBonusStageRuntime,TestS3kSlotRomData,TestRewindFixS3KSlotCodecs,TestHcz2CutsceneFloorContacts,TestSonic3kGameOverPlcService,TestSonic3kGameOverFlowHeadless,TestSonic3kLevelTitlePlcService,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits,TestPatternSpriteRendererCorruptionGuard,TestGameOverCardObjectInstance' \
+  "-Ds3k.rom.path=${OPENGGF_S3K_ROM}" \
+  test -B
+```
+
+`TestSonic3kGameOverPlcService` proves native descriptor replacement, retained
+prior-owner work, phase budgets `[28,25,22,16,13]`, no double drain, native
+lifecycle/publication identity and one rewind key. Its producer/card tests
+exercise GAME and TIME independently. `TestSonic3kGameOverFlowHeadless` also
+passes the real last-life/time-out routes, eleven held frames/twelfth service
+release, full-registry reconstruction and save-before-position ordering.
+The slot/HCZ2 tests and mapping corruption guards pass in the same invocation.
+
+The fresh-JVM focused guard/publication selection completes at
+`2026-10-22T10:30:21+01:00`: six tests across five classes, zero
+failures/errors/skips. Queue wait was 360 seconds; Maven was 29.895 seconds.
+The exact command is:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestRewindFieldDispositionGuard,TestRewindTransientGuard,TestHelperStateRewindCoverageGuard,TestRewindCoverageGuard,TestNativeRewindAdapterPublication#actualSonic3kNativeServiceRecreationKeepsWholePlcStateAndOwnedModePartition' \
+  "-Ds3k.rom.path=${OPENGGF_S3K_ROM}" \
+  test -B
+```
+
+The two existing slot BK2 controls also pass separately on the same source:
+
+| Profile / executed nested class | Completion | Result | Queue wait / Maven |
+| --- | --- | --- | --- |
+| `trace-replay` / `TestS3kSlotsBonusTraceReplay$SonicAndTails$Segment1` | 2026-10-22 10:36:37 BST | 1/0/0/0 | 315s / 31.597s |
+| `trace-replay-r7` / `TestS3kSlotsBonusTraceReplay$Knuckles$Segment1` | 2026-10-22 10:42:47 BST | 1/0/0/0 | 307s / 28.376s |
+
+Each uses the following command with its corresponding profile:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off -P<profile> \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestS3kSlotsBonusTraceReplay*' \
+  "-Ds3k.rom.path=${OPENGGF_S3K_ROM}" test -B
+```
+
+These are separate default `ALL` divergence gates; errors and warnings fail.
+No environment or local Maven configuration overrides the scope. Zero-test
+nested-container lines are not extra executed tests. Successful raw diagnostics
+are automatically retired; a compared-row count is not claimed from the retained
+summary. The [frontier ledger](../../status/trace-frontier-log.md#2026-10-22--narrow-slot-reward-fidelity-controls)
+records the same bounded controls. No source edits follow the 145-case pass;
+subsequent changes are result prose only. Source self-review, pinned citation
+checking, changed local link targets and the repository staged-content hook pass.
+Consumed owned success logs are removed before handoff.
+
+Native emulator game-over/payout frame captures, whole-scene pixel parity and
+full route/preset/donor/roster breadth are not established by these component
+checks; inherited campaign and matrix gaps remain open. No new trace-frontier
+or full-suite claim is made.

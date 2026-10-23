@@ -37,6 +37,7 @@ public class InputHandler {
 	private int droppedSceneEvents;
 	private LogicalInputSnapshot logicalSnapshot = LogicalInputSnapshot.neutral();
 	private LogicalInputSnapshot logicalOverride;
+    RecordedInputOwnership.Lease recordedInputOwner;
 	private LogicalInputSnapshot physicalGamepadSnapshot = LogicalInputSnapshot.neutral();
 	private double mouseX;
 	private double mouseY;
@@ -446,6 +447,14 @@ public class InputHandler {
 	public void clearLogicalOverride() {
 		logicalOverride = null;
 	}
+
+    boolean clearLogicalOverrideIfSame(LogicalInputSnapshot expected) {
+        if (expected == null || logicalOverride != expected) {
+            return false;
+        }
+        clearLogicalOverride();
+        return true;
+    }
 
 	public boolean hasLogicalOverride() {
 		return logicalOverride != null;

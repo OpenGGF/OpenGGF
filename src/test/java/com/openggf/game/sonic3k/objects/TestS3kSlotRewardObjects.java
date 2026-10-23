@@ -17,6 +17,8 @@ import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.level.rings.RingManager;
 import com.openggf.sprites.playable.Sonic;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -89,8 +91,8 @@ class TestS3kSlotRewardObjects {
         assertEquals(1, player.liveRingDelta);
         assertEquals(1, controller.rewardCount());
 
-        // Sparkle phase (8 frames) then destroyed
-        stepFrames(reward, 8, player);
+        // Retained cursor starts at sparkle mapping 5; $FC draws once before deletion.
+        stepFrames(reward, 19, player);
         assertTrue(reward.isDestroyed());
     }
 
@@ -161,6 +163,79 @@ class TestS3kSlotRewardObjects {
         assertEquals(0, controller.rewardCount());
         assertEquals(0, services.totalBonusStageRingDelta);
         assertEquals(0, services.levelState.getRings());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void repeatedSpikeImpactsConsumeEveryLiveRingBeforeStopping(boolean usePlayable) {
+        TrackingBonusStageServices services = new TrackingBonusStageServices(20);
+        S3kSlotStageController controller = new S3kSlotStageController(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
+        controller.bootstrap();
+        TrackingPlayableSprite player = usePlayable ? new TrackingPlayableSprite(20) : null;
+
+        // Obj_SlotSpike / loc_4C3CA tests the changing live Ring_count on every
+        // impact. Net reward bookkeeping must not make the last ten unavailable.
+        for (int impact = 0; impact < 20; impact++) {
+            expireSpike(controller, services, player);
+        }
+
+        assertEquals(0, player != null ? player.getRingCount() : services.levelState.getRings());
+        assertEquals(-20, controller.rewardCount());
+        assertEquals(-20, services.totalBonusStageRingDelta);
+        expireSpike(controller, services, player);
+        assertEquals(0, player != null ? player.getRingCount() : services.levelState.getRings());
+        assertEquals(-20, controller.rewardCount(), "an impact at zero changes no reward bookkeeping");
+        assertEquals(-20, services.totalBonusStageRingDelta);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void earnedRewardRingsRemainAvailableToFollowingSpikeImpacts(boolean usePlayable) {
+        TrackingBonusStageServices services = new TrackingBonusStageServices();
+        S3kSlotStageController controller = new S3kSlotStageController(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
+        controller.bootstrap();
+        TrackingPlayableSprite player = usePlayable ? new TrackingPlayableSprite(0) : null;
+
+        for (int grant = 0; grant < 4; grant++) {
+            grantRewardRing(controller, services, player);
+        }
+        assertEquals(4, player != null ? player.getRingCount() : services.levelState.getRings());
+        assertEquals(4, controller.rewardCount());
+        assertEquals(4, services.totalBonusStageRingDelta);
+
+        for (int impact = 0; impact < 5; impact++) {
+            expireSpike(controller, services, player);
+        }
+        assertEquals(0, player != null ? player.getRingCount() : services.levelState.getRings());
+        assertEquals(0, controller.rewardCount());
+        assertEquals(0, services.totalBonusStageRingDelta);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void zeroLiveRingsCannotBeSpentFromPositiveRewardBookkeeping(boolean usePlayable) {
+        TrackingBonusStageServices services = new TrackingBonusStageServices();
+        S3kSlotStageController controller = new S3kSlotStageController(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
+        controller.bootstrap();
+        TrackingPlayableSprite player = usePlayable ? new TrackingPlayableSprite(0) : null;
+        grantRewardRing(controller, services, player);
+        if (player != null) {
+            player.addRings(-1);
+        } else {
+            services.levelState.addRings(-1);
+        }
+
+        expireSpike(controller, services, player);
+
+        assertEquals(0, player != null ? player.getRingCount() : services.levelState.getRings());
+        assertEquals(1, controller.rewardCount());
+        assertEquals(1, services.totalBonusStageRingDelta);
     }
 
     // -------------------------------------------------------------------------
@@ -316,7 +391,7 @@ class TestS3kSlotRewardObjects {
 
         reward.appendRenderCommands(new ArrayList<>());
 
-        verify(ringManager).drawRingAt(reward.getInterpolatedX(), reward.getInterpolatedY(), 7);
+        verify(ringManager).drawRingFrameAt(reward.getInterpolatedX(), reward.getInterpolatedY(), 0);
     }
 
     @Test
@@ -346,6 +421,27 @@ class TestS3kSlotRewardObjects {
         for (int frame = 0; frame < frames; frame++) {
             reward.update(frame, player);
         }
+    }
+
+    private static void grantRewardRing(S3kSlotStageController controller,
+            TrackingBonusStageServices services, Sonic player) {
+        var reward = new S3kSlotRingRewardObjectInstance(
+                new ObjectSpawn(0x460, 0x430, 0, 0, 0, false, 0), controller);
+        reward.setServices(services);
+        reward.activate();
+        stepFrames(reward, 0x1A, player);
+        assertTrue(reward.isInSparkle());
+    }
+
+    private static void expireSpike(S3kSlotStageController controller,
+            TrackingBonusStageServices services, Sonic player) {
+        var reward = new S3kSlotSpikeRewardObjectInstance(
+                new ObjectSpawn(0x460, 0x430, 0, 0, 0, false, 0), controller);
+        reward.setServices(services);
+        reward.activate();
+        stepFrames(reward, 0x1E, player);
+        assertTrue(reward.isDestroyed());
+        assertFalse(reward.isActive());
     }
 
     private static void stepFrames(S3kSlotSpikeRewardObjectInstance reward, int frames, Sonic player) {

@@ -90,6 +90,8 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     // Game-agnostic scroll handler provider (from current GameModule)
     private ScrollHandlerProvider scrollProvider;
     private boolean providerLoaded = false;
+    /** The level that actually injected this manager, never a borrowed singleton level. */
+    private LevelManager loadedLevelOwner;
     private int contributedZone = -1;
     private ZoneScrollHandler contributedHandler;
 
@@ -125,6 +127,7 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
         resetZoneState();
         scrollProvider = null;
         providerLoaded = false;
+        loadedLevelOwner = null;
         contributedZone = -1;
         contributedHandler = null;
         vscrollFactorFG = 0;
@@ -146,6 +149,7 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     }
 
     public void load(Rom rom) {
+        bindLoadedLevelOwner(GameServices.levelOrNull());
         if (providerLoaded) {
             return;
         }
@@ -165,6 +169,10 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
                 }
             }
         }
+    }
+
+    private void bindLoadedLevelOwner(LevelManager candidate) {
+        loadedLevelOwner = candidate != null && candidate.parallaxManager == this ? candidate : null;
     }
 
     /**
@@ -372,10 +380,26 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
 
         // Native providers and contributed handlers use the same update path.
         if (scrollProvider != null || zoneId == contributedZone) {
-            initZone(zoneId, actId, cameraX, cameraY);
+            // Reconciliation is not the pending native initialization dispatch.
+            // In particular, a capture before initial Process_Sprites must keep
+            // that first init owned by the next ordinary scroll pass.
+            if (!rebuild) initZone(zoneId, actId, cameraX, cameraY);
 
             ZoneScrollHandler handler = getHandler(zoneId);
             if (handler != null) {
+                if (rebuild && (currentZone != zoneId || currentAct != actId)
+                        && !(handler instanceof ScrollOutputRebuilder)
+                        && handler.captureRewindState() != null) {
+                    // This handler has not published its first native output,
+                    // and exposes no separate output-only reconstruction. Keep
+                    // the pending scene flat instead of consuming that dispatch.
+                    cachedBgCameraX = Integer.MIN_VALUE;
+                    cachedBgPeriodWidth = 512;
+                    cachedBgTilemapUpdateMode = BgTilemapUpdateMode.STATIC_WINDOW;
+                    vscrollFactorBG = 0;
+                    fillMinimal(cam);
+                    return;
+                }
                 if (rebuild && handler instanceof ScrollOutputRebuilder rebuilder) {
                     rebuilder.rebuildOutput(hScroll, cameraX, cameraY, frameCounter, actId);
                 } else {
@@ -584,25 +608,54 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
         return "parallax";
     }
 
+    private record HandlerSelection(int zone, int act) { }
+
+    /** Immutable logical data only; no level, provider or handler reference enters history. */
+    private record HandlerRewindState(int initializedZone, int initializedAct,
+                                      HandlerSelection selection, Object logicalState) { }
+
     @Override
     public ParallaxSnapshot capture() {
-        // Dense/scalar parallax is derived from the restored camera/frame/zone
-        // and recomputed after the registry restore. The only state that must be
-        // carried is the active handler's genuinely-stateful logical scroll
-        // state (e.g. SCZ's camera-driven BG accumulator + level-event routine),
-        // which is not recomputable from the camera/frame.
-        return new ParallaxSnapshot(captureActiveHandlerRewindState());
+        // The owning loaded handler already has logical state before the first
+        // init/scroll dispatch. Keep it together with the exact init cursor so
+        // restoring that valid boundary neither loses state nor consumes init.
+        HandlerSelection selection = rewindSelection();
+        if (selection == null) return new ParallaxSnapshot(captureActiveHandlerRewindState());
+        ZoneScrollHandler handler = getHandler(selection.zone());
+        return new ParallaxSnapshot(new HandlerRewindState(currentZone, currentAct, selection,
+                handler != null ? handler.captureRewindState() : null));
     }
 
     @Override
     public void restore(ParallaxSnapshot s) {
-        // Dense/scalar parallax is recomputed by GameplayModeContext after the
-        // registry restore; only the active handler's logical state is restored
-        // here so re-simulation continues from the correct values.
+        if (s.handlerRewindState() instanceof HandlerRewindState saved) {
+            currentZone = saved.initializedZone();
+            currentAct = saved.initializedAct();
+            ZoneScrollHandler handler = getHandler(saved.selection().zone());
+            if (handler != null) {
+                handler.restoreRewindState(saved.logicalState());
+            } else if (saved.logicalState() != null) {
+                throw new IllegalStateException("Missing restored parallax handler for " + saved.selection());
+            }
+            return;
+        }
+        // Legacy markers retain their former behavior. Dense/scalar output is
+        // still rebuilt by GameplayModeContext after all logical owners restore.
         ZoneScrollHandler handler = activeHandler();
         if (handler != null) {
             handler.restoreRewindState(s.handlerRewindState());
         }
+    }
+
+    private HandlerSelection rewindSelection() {
+        // A loaded context is admitted only by load()'s injected-owner identity
+        // check. Standalone/contributed managers never borrow the active level.
+        if (loadedLevelOwner != null && loadedLevelOwner.getCurrentLevel() != null) {
+            return new HandlerSelection(loadedLevelOwner.getCurrentZone(), loadedLevelOwner.getCurrentAct());
+        }
+        if (currentZone >= 0) return new HandlerSelection(currentZone, currentAct);
+        if (contributedZone >= 0) return new HandlerSelection(contributedZone, -1);
+        return null;
     }
 
     private Object captureActiveHandlerRewindState() {
@@ -618,6 +671,10 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
         }
         contributedZone = logicalZone;
         contributedHandler = handler;
+    }
+
+    ScrollHandlerProvider checkpointScrollProvider() {
+        return currentZone == contributedZone ? null : scrollProvider;
     }
 
     private ZoneScrollHandler activeHandler() {

@@ -2,6 +2,8 @@ package com.openggf.game.sonic2;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.ObjectArtProvider;
+import com.openggf.game.internal.HudSatLayout;
+import com.openggf.game.internal.HudSatLayoutSource;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
@@ -36,9 +38,13 @@ import java.util.logging.Logger;
  * This provider lazily initializes the art loader when first needed, obtaining the ROM
  * from RomManager.
  */
-public class Sonic2ObjectArtProvider implements ObjectArtProvider, com.openggf.level.metadata.ObjectArtPreviewSource, com.openggf.game.presentation.RomSceneArtSource,
+public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutSource,
+        com.openggf.level.metadata.ObjectArtPreviewSource,
+        com.openggf.game.presentation.RomSceneArtSource,
         com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.PlcProgressSnapshot> {
     private static final Logger LOGGER = Logger.getLogger(Sonic2ObjectArtProvider.class.getName());
+    /** HUD_MapUnc_40A9A, World REV01; word counts and eight-byte pieces. */
+    private static final int HUD_SAT_MAPPING_ADDR = 0x40A9A;
 
     @FunctionalInterface
     private interface ZoneSheetBuilder {
@@ -85,6 +91,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, com.openggf.l
     private Pattern[] hudLivesNumbers;
     private Pattern[] hudHexDigits;
     private HudStaticArt hudStaticArt;
+    private HudSatLayout hudSatLayout;
     private boolean livesNameUsesIconPalette;
     /** Patch-supplied main-character life icon (HUD and 1-up monitor face), or null for stock. */
     private final java.util.function.Supplier<Pattern[]> mainCharacterLifeIcon;
@@ -131,6 +138,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, com.openggf.l
     public Sonic2ObjectArtProvider(Rom rom, RomByteReader reader) {
         this.artLoader = new Sonic2ObjectArt(rom, reader);
         this.sceneRom = rom;
+        hudSatLayout = loadHudSatLayout(reader);
         this.mainCharacterLifeIcon = null;
         this.sheetPatches = List.of();
         this.resultsSheetOverlay = java.util.function.UnaryOperator.identity();
@@ -142,9 +150,15 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, com.openggf.l
             if (rom == null) {
                 throw new IllegalStateException("ROM not loaded");
             }
-            artLoader = new Sonic2ObjectArt(rom, RomByteReader.fromRom(rom));
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            artLoader = new Sonic2ObjectArt(rom, reader);
             sceneRom = rom;
+            hudSatLayout = loadHudSatLayout(reader);
         }
+    }
+
+    private static HudSatLayout loadHudSatLayout(RomByteReader reader) {
+        return new HudSatLayout(S2SpriteDataLoader.loadMappingFrames(reader, HUD_SAT_MAPPING_ADDR, 4));
     }
 
     /** Both stock life-counter source recipes stay resident independently of the lead character's VRAM slot.
@@ -532,6 +546,11 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, com.openggf.l
     @Override
     public HudStaticArt getHudStaticArt() {
         return hudStaticArt;
+    }
+
+    @Override
+    public HudSatLayout getHudSatLayout() {
+        return hudSatLayout;
     }
 
     /**

@@ -54,6 +54,9 @@ import com.openggf.level.WaterSystem;
 import com.openggf.level.animation.AnimatedPatternManager;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.NativeSpriteSubmissionAccess;
+import com.openggf.level.objects.NativeSstSlotAccess;
+import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.rings.RingManager;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
@@ -114,6 +117,48 @@ class TestGameplayModeContextRewindRegistry {
 
         ctx.attachGameplayManagers(camera, timers, gameState, fade, rng, solid);
         return ctx;
+    }
+
+    @Test
+    void nativeWorldDataReattachmentKeepsCameraSpritesDataObjectOrderAndStableOwner() throws Exception {
+        var root = new com.openggf.game.sonic3k.Sonic3kGameModule();
+        var world = new WorldSession(root);
+        var ctx = new GameplayModeContext(world);
+        ctx.attachGameplayManagers(new Camera(), new TimerManager(), new GameStateManager(),
+                new FadeManager(), new GameRng(GameRng.Flavour.S1_S2), new DefaultSolidExecutionRegistry());
+        var ownerField = WorldSession.class.getDeclaredField("worldPhysicalData"); ownerField.setAccessible(true);
+        Object owner = ownerField.get(world);
+        var adapterField = owner.getClass().getDeclaredField("rewindAdapter"); adapterField.setAccessible(true);
+        Object adapter = adapterField.get(owner);
+        assertNotSame(owner, adapter, "The durable DATA service and runtime rewind projection have distinct owners");
+        String physical = com.openggf.game.sonic3k.render.S3kPhysicalDisplayWorld.KEY;
+        assertFalse(ctx.getRewindRegistry().capture().containsKey(physical));
+        LevelManager level = mock(LevelManager.class);
+        when(level.getTilemapManager()).thenReturn(mock(com.openggf.level.LevelTilemapManager.class));
+        when(level.levelRewindSnapshottable()).thenReturn(new LevelTestSnapshot());
+        when(level.levelTilemapRewindSnapshottable()).thenReturn(new LevelTilemapTestSnapshot());
+        @SuppressWarnings("unchecked") var objectAdapter = (RewindSnapshottable<ObjectManagerSnapshot>) mock(RewindSnapshottable.class);
+        when(objectAdapter.key()).thenReturn("object-manager");
+        when(objectAdapter.capture()).thenReturn(mock(ObjectManagerSnapshot.class));
+        ObjectManager objects = managerWithAdapter(objectAdapter);
+        when(level.getObjectManager()).thenReturn(objects);
+        for (int attachment = 0; attachment < 2; attachment++) {
+            var terrain = new TerrainCollisionManager();
+            ctx.attachLevelManagers(new WaterSystem(), new ParallaxManager(), terrain,
+                    new CollisionSystem(terrain), new SpriteManager(), level);
+            ctx.registerLevelAdapters(level); ctx.registerLevelAdapters(level);
+            var keys = new java.util.ArrayList<>(ctx.getRewindRegistry().capture().entries().keySet());
+            assertTrue(keys.indexOf("camera") < keys.indexOf("sprites"));
+            assertTrue(keys.indexOf("sprites") < keys.indexOf(physical));
+            assertTrue(keys.indexOf(physical) < keys.indexOf("object-manager"));
+            assertSame(owner, ownerField.get(world));
+        }
+        var cache = GameplayModeContext.class.getDeclaredField("worldRewindAdapter"); cache.setAccessible(true);
+        assertSame(adapter, cache.get(ctx));
+        ctx.tearDownManagers();
+        assertNull(cache.get(ctx));
+        assertSame(owner, ownerField.get(world), "Manager teardown must preserve the world's DATA owner");
+        assertSame(adapter, adapterField.get(owner), "Manager teardown must preserve the DATA projection identity");
     }
 
     @Test
@@ -185,13 +230,12 @@ class TestGameplayModeContextRewindRegistry {
         when(level.levelRewindSnapshottable()).thenReturn(new LevelTestSnapshot());
         when(level.levelTilemapRewindSnapshottable()).thenReturn(new LevelTilemapTestSnapshot());
         when(level.getRingManager()).thenReturn(rings);
-        ObjectManager objects = mock(ObjectManager.class);
         @SuppressWarnings("unchecked")
         RewindSnapshottable<ObjectManagerSnapshot> objectAdapter = mock(RewindSnapshottable.class);
         ObjectManagerSnapshot objectSnapshot = mock(ObjectManagerSnapshot.class);
         when(objectAdapter.key()).thenReturn("object-manager");
         when(objectAdapter.capture()).thenReturn(objectSnapshot);
-        when(objects.rewindSnapshottable()).thenReturn(objectAdapter);
+        ObjectManager objects = managerWithAdapter(objectAdapter);
         when(level.getObjectManager()).thenReturn(objects);
         ctx.registerLevelAdapters(level);
         ctx.registerLevelAdapters(level);
@@ -261,15 +305,16 @@ class TestGameplayModeContextRewindRegistry {
         registry.register(solids);
         registry.register(tilemap);
         CompositeSnapshot sourceSnapshot = registry.capture();
+        assertFalse(sourceSnapshot.containsKey(NativeSpriteSubmissionAccess.REWIND_KEY));
+        assertFalse(sourceSnapshot.containsKey(NativeSstSlotAccess.WORD_2C_REWIND_KEY));
         List<String> before = List.copyOf(sourceSnapshot.entries().keySet());
 
-        ObjectManager replacementObjects = mock(ObjectManager.class);
         @SuppressWarnings("unchecked")
         RewindSnapshottable<ObjectManagerSnapshot> objectAdapter =
                 mock(RewindSnapshottable.class);
         when(objectAdapter.key()).thenReturn("object-manager");
         when(objectAdapter.capture()).thenReturn(mock(ObjectManagerSnapshot.class));
-        when(replacementObjects.rewindSnapshottable()).thenReturn(objectAdapter);
+        ObjectManager replacementObjects = managerWithAdapter(objectAdapter);
         RingManager replacementRings = mock(RingManager.class);
         when(replacementRings.key()).thenReturn("rings");
         when(replacementRings.capture()).thenReturn(mock(RingSnapshot.class));
@@ -279,11 +324,26 @@ class TestGameplayModeContextRewindRegistry {
         List<String> after = List.copyOf(registry.capture().entries().keySet());
         assertEquals(withoutTransitionManagers(before), withoutTransitionManagers(after),
                 "the narrow transition rebind must not move title, provider, event, solid, or tilemap owners");
-        assertEquals(List.of("object-manager", "rings"), after.subList(after.size() - 2, after.size()));
+        assertEquals(List.of("object-manager", NativeSpriteSubmissionAccess.REWIND_KEY,
+                        NativeSstSlotAccess.WORD_2C_REWIND_KEY, "rings"),
+                after.subList(after.size() - 4, after.size()));
         assertTrue(after.indexOf("s3k-title-card") < after.indexOf("s3k-plc-art"),
                 "title-before-provider restore ordering must remain unchanged");
 
+        // Slot 40 is explicitly unowned: missing state invalidates residue,
+        // rather than inferring a native clear or preserving the replacement's data.
+        assertNull(NativeSstSlotAccess.currentOwner(replacementObjects, 40));
+        assertTrue(NativeSpriteSubmissionAccess.submit(replacementObjects, 40, 4));
+        NativeSstSlotAccess.writeWord2C(replacementObjects, 40, 0x1234);
+        assertEquals(List.of(new NativeSpriteSubmissionAccess.Admission(40, 4)),
+                NativeSpriteSubmissionAccess.admissions(replacementObjects));
+        assertEquals(0x1234, NativeSstSlotAccess.readWord2C(replacementObjects, 40));
+
         registry.restore(sourceSnapshot);
+
+        assertTrue(NativeSpriteSubmissionAccess.admissions(replacementObjects).isEmpty());
+        assertThrows(IllegalStateException.class,
+                () -> NativeSstSlotAccess.readWord2C(replacementObjects, 40));
 
         verify(objectAdapter).restore(sourceObjectSnapshot);
         verify(replacementRings).restore(sourceRingSnapshot);
@@ -335,7 +395,17 @@ class TestGameplayModeContextRewindRegistry {
     private static List<String> withoutTransitionManagers(List<String> keys) {
         return keys.stream()
                 .filter(key -> !key.equals("object-manager") && !key.equals("rings"))
+                .filter(key -> !key.equals(NativeSpriteSubmissionAccess.REWIND_KEY))
+                .filter(key -> !key.equals(NativeSstSlotAccess.WORD_2C_REWIND_KEY))
                 .toList();
+    }
+
+    /** Keep the ordering probe's mocked graph adapter around real queue and word owners. */
+    private static ObjectManager managerWithAdapter(RewindSnapshottable<ObjectManagerSnapshot> adapter) {
+        return new ObjectManager(List.of(), null, 0, null, null,
+                GraphicsManager.getInstance(), mock(Camera.class), new StubObjectServices()) {
+            @Override public RewindSnapshottable<ObjectManagerSnapshot> rewindSnapshottable() { return adapter; }
+        };
     }
 
     @Test

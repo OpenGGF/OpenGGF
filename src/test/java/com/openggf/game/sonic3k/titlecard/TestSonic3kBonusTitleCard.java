@@ -111,7 +111,7 @@ public class TestSonic3kBonusTitleCard {
      * GameLoopTitleCardLifecycle performs in production.
      */
     private void dispatch() {
-        manager.update();
+        S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
         if (manager.shouldCompleteFreshLevelTransitionBoundary()) {
             manager.completeFreshLevelRuntimeArtHandoff();
         }

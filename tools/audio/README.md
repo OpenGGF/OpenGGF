@@ -24,7 +24,13 @@ cannot replace its class IDs or register implementations. Each profile pins
 REFERENCE and OPENGGF independently and returns `PRODUCER_UNAVAILABLE` without
 output for an unpinned kind. Built-in producers must write a fresh canonical
 capture directory. Only the reference producer receives the separately
-installed BizHawk home.
+installed reference bundle. Its root is the authenticated BizHawk installation
+(`EmuHawk.exe`, `dll/`) together with the source-owned `bizhawk-headless/`
+launcher, harness and pinned fixtures. The complete tree is covered by the
+installation digest; adding a launcher to an already pinned installation
+requires fresh review and a new digest. The fixed subprocess exports that exact
+root as `BIZHAWK_HOME`, so it cannot silently load an unmeasured nested
+`.dependencies` installation.
 
 V2 keeps ten evidence layers independent. Each producer declares what it
 observed, while the shared comparison inventory separately declares what may be
@@ -50,6 +56,15 @@ Git, SSH, and dynamic-loader injection variables are rejected.
 `producer-status <profile>` remains pair-wide and is what the parity wrapper
 uses. `producer-kind-status <REFERENCE|OPENGGF> <profile>` checks one fixed
 producer independently and reports that binding's exact unavailable reason.
+
+`compare_native_pcm_window.py` compares diagnostic final-PCM captures against
+the engine's native-compatible PCM. Supply `--rows` to require the intended
+presentation count; otherwise equality covers only the inferred observed span.
+It validates complete native completion metadata, hashes, counts and per-row
+cadence before accepting a result. PCM hashing and comparison read sequential
+chunks of at most 64 KiB; only the per-row tables grow with capture duration.
+This diagnostic comparison does not install producer identities or publish a
+canonical complete-run reference.
 
 `run_s1_ghz1_gameplay_audio_timeline.sh` has never been exercised end-to-end:
 its hardcoded in-repo `OUTPUT_ROOT` is rejected by TraceChaser's

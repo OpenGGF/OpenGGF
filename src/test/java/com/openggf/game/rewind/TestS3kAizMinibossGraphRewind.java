@@ -105,7 +105,6 @@ class TestS3kAizMinibossGraphRewind {
                 () -> new AizMinibossArmChild(boss));
         AizMinibossFlameBarrelChild barrel = objectManager.createDynamicObject(
                 () -> new AizMinibossFlameBarrelChild(boss, 0, true));
-        boss.getChildComponents().addAll(List.of(body, arm, barrel));
 
         RewindRegistry rewindRegistry = new RewindRegistry();
         rewindRegistry.register(objectManager.rewindSnapshottable());
@@ -123,10 +122,10 @@ class TestS3kAizMinibossGraphRewind {
         AizMinibossArmChild restoredArm = only(objectManager, AizMinibossArmChild.class);
         AizMinibossFlameBarrelChild restoredBarrel =
                 only(objectManager, AizMinibossFlameBarrelChild.class);
-        assertEquals(3, restoredBoss.getChildComponents().size());
-        assertSame(restoredBoss, readObjectField(restoredBody, "parent"));
-        assertSame(restoredBoss, readObjectField(restoredArm, "parent"));
-        assertSame(restoredBoss, readObjectField(restoredBarrel, "parent"));
+        assertEquals(0, restoredBoss.getChildComponents().size(), "native AIZ components own their SST dispatch");
+        assertEquals(restoredBoss.getSlotIndex(), readObjectField(restoredBody, "parentSlot"));
+        assertEquals(restoredBoss.getSlotIndex(), readObjectField(restoredArm, "parentSlot"));
+        assertEquals(restoredBoss.getSlotIndex(), readObjectField(restoredBarrel, "parentSlot"));
     }
 
     @Test
@@ -144,14 +143,14 @@ class TestS3kAizMinibossGraphRewind {
     }
 
     private static void assertAllReferencesPointAtRestoredGraph(AizGraph graph) throws Exception {
-        assertSame(graph.boss(), readObjectField(graph.body(), "parent"));
-        assertSame(graph.boss(), readObjectField(graph.arm(), "parent"));
-        assertSame(graph.boss(), readObjectField(graph.napalm(), "parent"));
+        assertEquals(graph.boss().getSlotIndex(), readObjectField(graph.body(), "parentSlot"));
+        assertEquals(graph.boss().getSlotIndex(), readObjectField(graph.arm(), "parentSlot"));
+        assertEquals(graph.boss().getSlotIndex(), readObjectField(graph.napalm(), "parentSlot"));
         assertSame(graph.barrel2(), readObjectField(graph.napalm(), "barrel"),
                 "FallingShot must relink to the existing barrel that spawned it");
-        assertSame(graph.boss(), readObjectField(graph.barrel0(), "parent"));
-        assertSame(graph.boss(), readObjectField(graph.barrel1(), "parent"));
-        assertSame(graph.boss(), readObjectField(graph.barrel2(), "parent"));
+        assertEquals(graph.boss().getSlotIndex(), readObjectField(graph.barrel0(), "parentSlot"));
+        assertEquals(graph.boss().getSlotIndex(), readObjectField(graph.barrel1(), "parentSlot"));
+        assertEquals(graph.boss().getSlotIndex(), readObjectField(graph.barrel2(), "parentSlot"));
         assertSame(graph.boss(), readObjectField(graph.flame(), "parent"));
         assertSame(graph.boss(), readObjectField(graph.shot(), "parent"));
         assertSame(graph.barrel2(), readObjectField(graph.shot(), "barrel"),

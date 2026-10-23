@@ -14,7 +14,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.objects.CnzCannonInstance;
 import com.openggf.game.sonic3k.objects.CnzEggCapsuleInstance;
-import com.openggf.game.sonic3k.objects.CnzTeleporterBeamInstance;
+import com.openggf.game.sonic3k.objects.TeleporterBeamObjectInstance;
 import com.openggf.game.sonic3k.objects.CnzTeleporterInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.SongFadeTransitionInstance;
@@ -99,7 +99,7 @@ class TestS3kCnzTeleporterRouteHeadless {
 
         teleporter.update(0, fixture.sprite());
 
-        assertFalse(isObjectPresent(CnzTeleporterBeamInstance.class),
+        assertFalse(isObjectPresent(TeleporterBeamObjectInstance.class),
                 "Obj_CNZTeleporter must return after Queue_Kos_Module and poll readiness next frame");
         Sonic3kObjectArtProvider artProvider = (Sonic3kObjectArtProvider)
                 TestEnvironment.objectServices().renderManager().getArtProvider();
@@ -121,7 +121,7 @@ class TestS3kCnzTeleporterRouteHeadless {
         assertFalse(artProvider.isCnzTeleporterArtPending());
         assertTrue(artProvider.isCnzTeleporterArtComplete(),
                 "the shared frame pipeline should consume the queued KosM workload");
-        assertTrue(isObjectPresent(CnzTeleporterBeamInstance.class),
+        assertTrue(isObjectPresent(TeleporterBeamObjectInstance.class),
                 "the V-int art pump completes the preceding frame's request before Obj_CNZTeleporterMain polls readiness");
     }
 
@@ -180,22 +180,29 @@ class TestS3kCnzTeleporterRouteHeadless {
         fixture.sprite().setJumping(false);
         fixture.stepIdleFrames(1);
 
-        assertTrue(isObjectPresent(CnzTeleporterBeamInstance.class),
+        assertTrue(isObjectPresent(TeleporterBeamObjectInstance.class),
                 "Obj_CNZTeleporterMain should spawn the shared beam once the player is grounded");
         assertTrue(events.isTeleporterBeamSpawned(),
                 "The CNZ event bridge should record the explicit beam-handoff seam");
         assertFalse(isObjectPresent(CnzEggCapsuleInstance.class),
                 "The teleporter route must not spawn the capsule; that belongs to Obj_CNZEndBoss");
 
-        fixture.stepIdleFrames(CnzTeleporterBeamInstance.PLAYER_CAPTURE_COUNTER);
+        TeleporterBeamObjectInstance beam = findObject(TeleporterBeamObjectInstance.class);
+        for (int frame = 0; frame < 192 && beam.progress() < 8; frame++) {
+            fixture.stepIdleFrames(1);
+            assertFalse(fixture.sprite().isObjectControlled(),
+                    "the earlier parent slot cannot see a same-pass child progress write");
+        }
+        assertEquals(8, beam.progress(), "the real two waits/build/expansion must reach eight");
+        fixture.stepIdleFrames(1);
         assertTrue(fixture.sprite().isObjectControlled(),
-                "At beam counter 8, Obj_CNZTeleporterMain should take full player object control");
-        assertFalse(fixture.sprite().isObjectControlAllowsCpu(),
-                "Full bit-7 teleporter control should not leave CPU movement enabled");
+                "At beam progress 8, loc_523B6 writes object_control=1");
+        assertTrue(fixture.sprite().isObjectControlAllowsCpu(),
+                "Native control byte 1 leaves the bit-7 CPU gate clear");
         assertTrue(fixture.sprite().isObjectControlSuppressesMovement(),
-                "Full bit-7 teleporter control should suppress player movement");
-        assertTrue(fixture.sprite().isTouchResponseSuppressedByObjectControl(),
-                "Full bit-7 teleporter control should suppress normal touch responses");
+                "Native control byte 1 suppresses player movement");
+        assertFalse(fixture.sprite().isTouchResponseSuppressedByObjectControl(),
+                "Knuckles' native $A0 touch gate remains clear for control byte 1");
     }
 
     private static void assertSegaColor(Palette.Color actual, int segaWord) {

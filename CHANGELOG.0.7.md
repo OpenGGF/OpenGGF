@@ -196,6 +196,13 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Rewind preserves a fresh-load insta-shield's pending attack and slot state,
   leaving its registration to the next ordinary status tick. Fresh title
   boundaries retain their deferred assembly and publication state on rewind.
+  Carnival Night background rebuilds preserve captured event scroll state,
+  including fresh entry before its first deformation dispatch, while restoring
+  the displayed scroll output without running another gameplay publication.
+  Knuckles’ second-act Carnival Night event now admits its separate teleporter
+  and capsule at the ROM trigger, with allocation failures preserving the native
+  clamp transition. The object retains its later, independent airborne arming gate,
+  and successful capsule admission appends its original raw PLC descriptor.
   HCZ hanging bars read the native raw companion-controller directions,
   preserving neutral input while the follower CPU steers. Full native saves
   clear collected giant rings at their seven existing save points, including in
@@ -550,6 +557,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   during gameplay; the shared bonus loop no longer overrides the slot player's
   priority. Bonus title-card release completes the initial object setup before
   the first gameplay tick, preserving the first controller input and its movement.
+  Saved-origin bonus returns carry collected origin rings in the kept respawn-table
+  snapshot; ordinary level reloads continue to clear ring collection.
 
 - **Knuckles in Sonic 2:** selecting Knuckles as the Sonic 2 main
   character now activates a built-in game patch implemented from the s2disasm

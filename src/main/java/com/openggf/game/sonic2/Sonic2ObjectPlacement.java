@@ -13,6 +13,8 @@ public class Sonic2ObjectPlacement {
     // Off_Objects pointer table in s2.asm (Rev01) – label resolves to this ROM address
     // Verified against the disassembly and s2.txt split list (Off_Objects -> object BINCLUDE stream).
     public static final int OFF_OBJECTS_REV01 = 0x0E6800;
+    private static final int CNZ1_2P_REV01 = 0x1802A;
+    private static final int CNZ2_2P_REV01 = 0x18492;
     private static final int ACTS_PER_ZONE = 2; // zoneOrderedOffsetTable 2,2 in s2.asm (SCZ/WFZ/DEZ are 1-act, MTZ is 3-act)
 
     private final RomByteReader rom;
@@ -22,6 +24,17 @@ public class Sonic2ObjectPlacement {
     }
 
     public List<ObjectSpawn> load(ZoneAct zoneAct) {
+        return load(zoneAct, false);
+    }
+
+    /** Explicit native profile selection; ordinary/CPU-sidekick callers use load(zoneAct). */
+    public List<ObjectSpawn> load(ZoneAct zoneAct, boolean nativeCompetition) {
+        // ObjectsManager_Init selects only CNZ's competition layouts
+        // (s2.asm:32943-32952); other native competition acts retain Off_Objects.
+        if (nativeCompetition && zoneAct.zone() == com.openggf.game.sonic2.constants.Sonic2Constants.ZONE_CNZ) {
+            return CommonPlacementParser.parseObjectRecords(rom,
+                    zoneAct.act() == 0 ? CNZ1_2P_REV01 : CNZ2_2P_REV01);
+        }
         int pointerIndex = zoneAct.pointerIndex(ACTS_PER_ZONE);
         if (isSingleActZone(zoneAct.zone())) {
             pointerIndex = zoneAct.zone() * ACTS_PER_ZONE;

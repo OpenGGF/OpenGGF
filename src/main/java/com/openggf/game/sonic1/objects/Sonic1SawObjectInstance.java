@@ -9,6 +9,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
@@ -187,6 +188,25 @@ public class Sonic1SawObjectInstance extends AbstractObjectInstance
             case 3 -> updateType03(player);
             case 4 -> updateType04(player);
             default -> { /* Unknown subtypes: do nothing */ }
+        }
+        releaseUntrackedPlacementAfterSkippedDelete();
+    }
+
+    private void releaseUntrackedPlacementAfterSkippedDelete() {
+        if (!skipOutOfRangeThisFrame || spawn.respawnTracked()) {
+            return;
+        }
+        // Saw_Type3/4 .hide pops Saw_Action's return (_incObj/6A SBZ Saws
+        // and Pizza Cutters.asm:151-160,199-207). FixBugs=0 omits the added
+        // deletion: the SST survives even after its native $280 window ends.
+        // Untracked OPL_SpawnObj entries go straight to FindFreeObj on a later
+        // cursor crossing (_inc/ObjPosLoad.asm:257-275), with no live-copy gate.
+        // Drop only the engine's placement ownership at that skipped-delete
+        // boundary, retaining this SST, its slot and rewind identity. In-range
+        // hidden saws and Y-failure paths must keep their normal ownership.
+        int distance = ((origX & 0xFF80) - ((cameraLeft() - 0x80) & 0xFF80)) & 0xFFFF;
+        if (distance > 0x280) {
+            ObjectLifetimeOps.releaseSpawnForRespawn(services().objectManager(), this, spawn);
         }
     }
 

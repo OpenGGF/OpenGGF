@@ -78,6 +78,7 @@ public class Sonic1RingInstance extends AbstractObjectInstance
     private int outOfRangeAnchorX;
 
     private State state;
+    private int displayPriority = 2;
 
     /**
      * Creates a parent ring instance from a layout entry.
@@ -183,6 +184,7 @@ public class Sonic1RingInstance extends AbstractObjectInstance
                 }
             }
             case SPARKLE -> {
+                displayPriority = 1;
                 RingManager ringManager = services().ringManager();
                 int gameplayFrameCounter = vIntRunCount;
                 ObjectManager objectManager = services().objectManager();
@@ -360,7 +362,17 @@ public class Sonic1RingInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        // No rendering: handled by RingManager
+        RingManager manager = services().ringManager();
+        if (manager == null || state == State.INIT) return;
+        var level = services().levelManager();
+        int frame = level != null ? level.getFrameCounter() : 0;
+        com.openggf.level.rings.RingDrawInternalAccess.drawPlacedObject(manager, ringSpawn, frame);
+    }
+
+    @Override
+    public int getPriorityBucket() {
+        // Ring_SpawnRing priority2; Ring_Collect switches to priority1 before sparkle display.
+        return displayPriority;
     }
 
     @Override

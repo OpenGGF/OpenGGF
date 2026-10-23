@@ -20,6 +20,11 @@ public final class HudProfileAccess {
         Objects.requireNonNull(hud, "hud").installProfile(profile);
     }
 
+    /** Internal ROM topology installation; the creator-facing HudStaticArt shape stays unchanged. */
+    public static void installSatLayout(HudRenderManager hud, com.openggf.game.internal.HudSatLayout layout) {
+        Objects.requireNonNull(hud, "hud").setSatLayout(layout);
+    }
+
     /** A run's presentation override; null reveals the current destination's profile. */
     public static void setHostProfile(HudRenderManager hud, HudProfile profile) {
         if (hud != null) hud.installHostProfile(profile);
@@ -181,7 +186,7 @@ public final class HudProfileAccess {
                     tile.ghost(), tile.ghostAlpha(), tile.rowStart(), tile.rowEnd(),
                     new SpritePresentation.Subject("projected-" + tile.subject().id(), tile.subject().part(),
                             tile.subject().suppressed(), tile.subject().headScalePercent(), tile.subject().head()),
-                    tile.ghostColour()));
+                    tile.ghostColour(), tile.pixelOperation()));
         }
         if (!changed) return frame;
         retainedBefore[frame.tiles().size()] = tiles.size();

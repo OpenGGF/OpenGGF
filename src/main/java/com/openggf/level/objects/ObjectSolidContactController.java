@@ -10,6 +10,9 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.rules.PlayerMovementRules;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.ObjectSolidExecutionContext;
 import com.openggf.game.solid.PlayerSolidContactResult;
@@ -871,6 +874,53 @@ public final class ObjectSolidContactController {
                 captureLatchEntries(objectStandingBitSnapshot));
     }
 
+    ObjectManagerSnapshot.SolidContactState captureRewindState(RewindCaptureContext context) {
+        var state = captureRewindState();
+        var table = context.identityTable().orElse(null);
+        if (table == null) return state;
+        // Transform after the original live-player sort so mixed standalone/registered
+        // members retain their complete order. Registered snapshots hold no incarnation.
+        return new ObjectManagerSnapshot.SolidContactState(
+                state.frameCounter(),
+                state.riding().stream().map(entry -> {
+                    var player = captureContactPlayer(entry.player(), table);
+                    return new ObjectManagerSnapshot.SolidContactRidingEntry(player.player(),
+                            entry.objectSpawn(), entry.objectSlotIndex(), entry.x(), entry.y(), entry.pieceIndex(),
+                            player.playerId());
+                }).toList(),
+                List.of(), List.of(),
+                state.standingSnapshots().stream().map(entry -> {
+                    var player = captureContactPlayer(entry.player(), table);
+                    return new ObjectManagerSnapshot.SolidContactStandingSnapshotEntry(player.player(),
+                            entry.kind(), entry.standing(), entry.pushing(), player.playerId());
+                }).toList(),
+                state.headroomSnapshots().stream().map(entry -> {
+                    var player = captureContactPlayer(entry.player(), table);
+                    return new ObjectManagerSnapshot.SolidContactHeadroomSnapshotEntry(player.player(),
+                            entry.hexAngle(), entry.distance(), player.playerId());
+                }).toList(),
+                captureContactLatchPlayers(state.standingBits(), table),
+                captureContactLatchPlayers(state.pushingBits(), table),
+                captureContactLatchPlayers(state.standingBitSnapshots(), table),
+                state.inlineSupportedPlayers().stream().map(player -> captureContactPlayer(player, table)).toList(),
+                state.forceAirOnStaleSupportLoss().stream().map(player -> captureContactPlayer(player, table)).toList());
+    }
+
+    private static ObjectManagerSnapshot.SolidContactPlayerBinding captureContactPlayer(
+            PlayableEntity player, RewindIdentityTable table) {
+        PlayerRefId id = table.encodePlayer(player);
+        return new ObjectManagerSnapshot.SolidContactPlayerBinding(id == null ? player : null, id);
+    }
+
+    private static List<ObjectManagerSnapshot.SolidContactLatchEntry> captureContactLatchPlayers(
+            List<ObjectManagerSnapshot.SolidContactLatchEntry> entries, RewindIdentityTable table) {
+        return entries.stream().map(entry -> {
+            var player = captureContactPlayer(entry.player(), table);
+            return new ObjectManagerSnapshot.SolidContactLatchEntry(
+                    player.player(), entry.keys(), player.playerId());
+        }).toList();
+    }
+
     private List<ObjectManagerSnapshot.SolidContactStandingSnapshotEntry> captureStandingSnapshots() {
         ArrayList<ObjectManagerSnapshot.SolidContactStandingSnapshotEntry> entries = new ArrayList<>();
         for (var entry : latestStandingSnapshots.entrySet()) {
@@ -927,7 +977,8 @@ public final class ObjectSolidContactController {
                 }
             }
             if (!snapshotKeys.isEmpty()) {
-                snapshotKeys.sort(Comparator.comparing(ObjectSolidContactController::latchKeySnapshotKey));
+                snapshotKeys.sort(Comparator.comparing(ObjectSolidContactController::latchKeySnapshotKey)
+                        .thenComparingInt(ObjectManagerSnapshot.SolidContactLatchKey::pieceIndex));
                 entries.add(new ObjectManagerSnapshot.SolidContactLatchEntry(player, snapshotKeys));
             }
         }
@@ -974,6 +1025,11 @@ public final class ObjectSolidContactController {
     }
 
     private static ObjectManagerSnapshot.SolidContactLatchKey latchKeyForSnapshot(Object key) {
+        if (key instanceof PieceStandingLatchKey piece) {
+            var owner = latchKeyForSnapshot(piece.objectKey());
+            return owner == null ? null : new ObjectManagerSnapshot.SolidContactLatchKey(
+                    owner.spawn(), owner.slotIndex(), owner.instanceKey(), piece.pieceIndex());
+        }
         if (key instanceof ObjectSpawn spawn) {
             return new ObjectManagerSnapshot.SolidContactLatchKey(spawn, -1, false);
         }
@@ -993,6 +1049,59 @@ public final class ObjectSolidContactController {
     }
 
     void restoreRewindState(ObjectManagerSnapshot.SolidContactState state) {
+        restoreRewindState(state, RewindCaptureContext.none());
+    }
+
+    void restoreRewindState(ObjectManagerSnapshot.SolidContactState state, RewindCaptureContext context) {
+        if (state == null) {
+            restoreResolvedRewindState(null);
+            return;
+        }
+        // Resolve every required role before clearing or populating any runtime map.
+        // The resolved copy is restore-local; saved structural snapshots stay immutable.
+        var resolved = new ObjectManagerSnapshot.SolidContactState(
+                state.frameCounter(),
+                state.riding().stream().map(entry -> new ObjectManagerSnapshot.SolidContactRidingEntry(
+                        resolveContactPlayer(entry.player(), entry.playerId(), context), entry.objectSpawn(),
+                        entry.objectSlotIndex(), entry.x(), entry.y(), entry.pieceIndex())).toList(),
+                resolveContactMembership(state.inlineSupportedPlayers(), state.inlineSupportedPlayerBindings(), context),
+                resolveContactMembership(state.forceAirOnStaleSupportLoss(),
+                        state.forceAirOnStaleSupportLossPlayerBindings(), context),
+                state.standingSnapshots().stream().map(entry ->
+                        new ObjectManagerSnapshot.SolidContactStandingSnapshotEntry(
+                                resolveContactPlayer(entry.player(), entry.playerId(), context),
+                                entry.kind(), entry.standing(), entry.pushing())).toList(),
+                state.headroomSnapshots().stream().map(entry ->
+                        new ObjectManagerSnapshot.SolidContactHeadroomSnapshotEntry(
+                                resolveContactPlayer(entry.player(), entry.playerId(), context),
+                                entry.hexAngle(), entry.distance())).toList(),
+                resolveContactLatchPlayers(state.standingBits(), context),
+                resolveContactLatchPlayers(state.pushingBits(), context),
+                resolveContactLatchPlayers(state.standingBitSnapshots(), context));
+        restoreResolvedRewindState(resolved);
+    }
+
+    private static PlayableEntity resolveContactPlayer(
+            PlayableEntity player, PlayerRefId playerId, RewindCaptureContext context) {
+        return playerId == null ? player : context.requireIdentityTable().resolvePlayer(playerId, true);
+    }
+
+    private static List<PlayableEntity> resolveContactMembership(List<PlayableEntity> legacy,
+            List<ObjectManagerSnapshot.SolidContactPlayerBinding> bindings, RewindCaptureContext context) {
+        ArrayList<PlayableEntity> players = new ArrayList<>(legacy);
+        for (var binding : bindings) {
+            players.add(resolveContactPlayer(binding.player(), binding.playerId(), context));
+        }
+        return List.copyOf(players);
+    }
+
+    private static List<ObjectManagerSnapshot.SolidContactLatchEntry> resolveContactLatchPlayers(
+            List<ObjectManagerSnapshot.SolidContactLatchEntry> entries, RewindCaptureContext context) {
+        return entries.stream().map(entry -> new ObjectManagerSnapshot.SolidContactLatchEntry(
+                resolveContactPlayer(entry.player(), entry.playerId(), context), entry.keys())).toList();
+    }
+
+    private void restoreResolvedRewindState(ObjectManagerSnapshot.SolidContactState state) {
         ridingStates.clear();
         inlineSupportedPlayers.clear();
         forceAirOnStaleSupportLoss.clear();
@@ -1118,14 +1227,15 @@ public final class ObjectSolidContactController {
         if (key == null) {
             return null;
         }
+        Object owner;
         if (!key.instanceKey() && key.spawn() != null) {
-            return key.spawn();
+            owner = key.spawn();
+        } else {
+            ObjectInstance instance = objectManager.findRestoredRidingObject(key.spawn(), key.slotIndex());
+            owner = instance != null ? airUnseatLatchKeyFor(instance) : key.spawn();
         }
-        ObjectInstance instance = objectManager.findRestoredRidingObject(key.spawn(), key.slotIndex());
-        if (instance != null) {
-            return airUnseatLatchKeyFor(instance);
-        }
-        return key.spawn();
+        return owner != null && key.pieceIndex() >= 0
+                ? new PieceStandingLatchKey(owner, key.pieceIndex()) : owner;
     }
 
     private void cacheStandingSnapshot(PlayableEntity player, PlayerStandingState snapshot) {

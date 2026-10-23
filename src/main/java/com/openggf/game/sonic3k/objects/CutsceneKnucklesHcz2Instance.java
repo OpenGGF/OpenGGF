@@ -14,6 +14,8 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.ObjectTerrainUtils;
+import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -22,7 +24,7 @@ import java.util.logging.Logger;
 /**
  * Cutscene Knuckles for Hydrocity Zone Act 2.
  *
- * <p>ROM reference: CutsceneKnux_HCZ2 (s3.asm:80095).
+ * <p>ROM reference: CutsceneKnux_HCZ2 (sonic3k.asm:128970).
  * Knuckles runs in from the right, presses a button destroying the bridge
  * Sonic is standing on, then jumps away laughing.
  *
@@ -384,13 +386,14 @@ public class CutsceneKnucklesHcz2Instance extends AbstractObjectInstance
     }
 
     // =========================================================================
-    // Routine 10: Jump/bounce (loc_44A38)
+    // Routine 10: Jump/bounce (loc_620AA)
     // =========================================================================
 
     private void routineJumpBounce() {
         animateLoop(JUMP_FRAMES, JUMP_ANIM_DELAY);
 
-        // ROM: MoveSprite — apply velocity + gravity
+        // MoveSprite adds signed velocity << 8 to the 16.16 positions, then
+        // applies word gravity (sonic3k.asm:36072-36084).
         SubpixelMotion.State motion = new SubpixelMotion.State(
                 currentX, currentY, xSub, ySub, xVel, yVel);
         SubpixelMotion.objectFallXY(motion, SubpixelMotion.S3K_GRAVITY);
@@ -398,39 +401,40 @@ public class CutsceneKnucklesHcz2Instance extends AbstractObjectInstance
         currentY = motion.y;
         xSub = motion.xSub;
         ySub = motion.ySub;
-        xVel = motion.xVel;
-        yVel = motion.yVel;
+        xVel = (short) motion.xVel;
+        yVel = (short) motion.yVel;
 
-        // Still rising — don't check floor
+        // loc_620AA tests the updated y_vel word after MoveSprite, including
+        // the apex dispatch where the old velocity was still negative.
         if (yVel < 0) {
             return;
         }
 
-        // ROM: ObjCheckFloorDist — simplified: check if below starting Y
-        // The floor is approximately at the spawn Y position
-        int floorY = getSpawnY();
-        if (currentY < floorY) {
+        // ObjCheckFloorDist probes x_pos/y_pos+y_radius through FindFloor;
+        // only negative penetration takes the contact branch (:128935-128940).
+        var svc = services();
+        TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(
+                svc.levelManager(), svc.backgroundPlaneCollisionProvider(),
+                svc.useSecondaryTerrainCollisionPath(), currentX, currentY + Y_RADIUS);
+        if (!floor.foundSurface() || floor.distance() >= 0) {
             return;
         }
 
         if (!bounced) {
-            // First landing — bounce back
+            // bset #2,$38 / neg.w x_vel / neg.w y_vel (:128939-128942).
+            // First contact retains penetration, subpixels and render_flags.
             bounced = true;
-            currentY = floorY;
-            xVel = -xVel;
-            yVel = -yVel;
-            // ROM: bchg #0,render_flags — flip facing
-            facingRight = !facingRight;
+            xVel = (short) -xVel;
+            yVel = (short) -yVel;
             return;
         }
 
-        // Second landing — start laughing
-        currentY = floorY;
+        // loc_620D8 (:128948-128951) corrects only the Y word on the second
+        // contact, then enters loc_62056 without clearing either velocity.
+        currentY = (short) (currentY + floor.distance());
         routine = 12;
-        xVel = 0;
-        yVel = 0;
 
-        // ROM: loc_449E4 — setup laugh animation
+        // loc_62056 (sonic3k.asm:128900-128905): setup laugh animation.
         mappingFrame = 0x1C;
         animationTick = 0;
         animationIndex = 0;
@@ -525,10 +529,6 @@ public class CutsceneKnucklesHcz2Instance extends AbstractObjectInstance
         // Simplified: set targets and let the camera ease to them.
         camera.setMinY((short) storedMinY);
         camera.setMaxX((short) storedMaxX);
-    }
-
-    private int getSpawnY() {
-        return getSpawn().y();
     }
 
     private void animateLoop(int[] frames, int delay) {

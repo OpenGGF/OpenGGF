@@ -200,105 +200,175 @@ function Test-ContainsModApiAnnotation([string]$Text) {
     return $Text -match '(?m)^\s*@(?:com\.openggf\.game\.)?ModApi(?:[.(\s]|$)'
 }
 
-# Mirrors the conservative declaration projection in mod_api_surface_text.
-# Annotations travel with their declaration; private enclosing types hide their
-# entire subtree. The exact signature snapshot remains authoritative.
+# Mirrors the declaration/owner/reachability pass in mod_api_surface_text (SH).
+# The compiled signature guard remains authoritative for Java name resolution.
 function Get-ModApiSurfaceText([string]$Text) {
-    $python = Get-Command python3, python -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($null -eq $python) { Fail "Python 3 is required for Mod API record admission." }
-    $surface = $Text | & $python.Source (Join-Path $PSScriptRoot "mod_api_record_surface.py")
-    if ($LASTEXITCODE -eq 0) { return ($surface -join "`n") }
-    if ($LASTEXITCODE -ne 2) { Fail "Cannot inspect Java record declaration." }
-    $kept = New-Object System.Collections.Generic.List[string]
-    $visible = @{}; $implicit = @{}
-    $top = 0; $parens = 0; $bodyDepth = 0; $defaultDepth = 0
-    $header = ""; $code = ""; $quote = ""; $escaped = $false
-    $inLine = $false; $inBlock = $false
+    if ($Text -cmatch '\\u') { return $Text }
+    $cleanBuilder = [System.Text.StringBuilder]::new()
+    $lexBuilder = [System.Text.StringBuilder]::new()
+    $state = ""; $escaped = $false
     for ($i = 0; $i -lt $Text.Length; $i++) {
         $c = $Text[$i]
-        $pair = if ($i + 1 -lt $Text.Length) { $Text.Substring($i, 2) } else { "" }
-        $triple = if ($i + 2 -lt $Text.Length) { $Text.Substring($i, 3) } else { "" }
-        if ($inLine) { if ($c -eq "`n") { $inLine = $false } else { continue } }
-        if ($inBlock) {
-            if ($pair -eq "*/") { $inBlock = $false; $i++ }
-            continue
-        }
-        if ($quote -ne "") {
-            if ($bodyDepth -eq 0) { $header += $c; $code += " " }
-            if ($escaped) { $escaped = $false }
-            elseif ($c -eq '\') { $escaped = $true }
-            elseif ($quote -eq '"""' -and $triple -eq $quote) {
-                if ($bodyDepth -eq 0) { $header += '""'; $code += "  " }
-                $i += 2; $quote = ""
-            } elseif ([string]$c -ceq $quote) { $quote = "" }
-            continue
-        }
-        if ($pair -eq "//" -or $pair -eq "/*") {
-            if ($bodyDepth -eq 0 -and -not $header.EndsWith(" ")) { $header += " "; $code += " " }
-            if ($pair -eq "//") { $inLine = $true } else { $inBlock = $true }
-            $i++; continue
-        }
-        if ($c -eq '"' -or $c -eq [char]39) {
-            $quote = [string]$c
-            if ($triple -eq '"""') {
-                $quote = $triple
-                if ($bodyDepth -eq 0) { $header += '""'; $code += "  " }
-                $i += 2
-            }
-            if ($bodyDepth -eq 0) { $header += $c; $code += " " }
-            continue
-        }
-        if ($bodyDepth -gt 0) {
-            if ($c -eq '{') { $bodyDepth++ }
-            elseif ($c -eq '}') { $bodyDepth-- }
-            continue
-        }
-        if ($c -match '[ \t\r\n]') {
-            if (-not $header.EndsWith(" ")) { $header += " "; $code += " " }
-            continue
-        }
-        if ($c -eq '{') {
-            # Annotation-element array defaults are declaration values.
-            if ($defaultDepth -gt 0 -or $code -cmatch '(?:^|[^A-Za-z0-9_])default[ \t]*$') {
-                $defaultDepth++; $header += $c; $code += $c; continue
-            }
-            if ($parens -gt 0) { $header += $c; $code += $c; continue }
-            $kind = ""
-            if ($code -cmatch '(?:^|[ \t])(class|interface|record|enum|@interface)[ \t]+[A-Za-z_][A-Za-z0-9_]*') { $kind = $Matches[1] }
-            $memberVisible = $top -gt 0 -and $visible[$top] -and $code -cnotmatch '(?:^|[^A-Za-z0-9_])private[ \t]' -and
-                    ($implicit[$top] -or $code -cmatch '(?:^|[^A-Za-z0-9_])(?:public|protected)[ \t]')
-            $header += $c; $code += $c
-            if ($kind -ne "") {
-                $allowed = ($top -eq 0 -or $visible[$top]) -and $code -cnotmatch '(?:^|[^A-Za-z0-9_])private[ \t]'
-                if ($allowed) { $kept.Add($header.Trim()) }
-                $top++; $visible[$top] = $allowed; $implicit[$top] = $kind -cne "class"
+        $pair = $Text.Substring($i, [Math]::Min(2, $Text.Length - $i))
+        $triple = $Text.Substring($i, [Math]::Min(3, $Text.Length - $i))
+        $a = [string]$c; $b = $a
+        if ($state -ceq "line") {
+            if ($c -eq "`n") { $state = "" } else { $a = " "; $b = " " }
+        } elseif ($state -ceq "block") {
+            if ($pair -ceq "*/") { $state = ""; $i++; $a = "  "; $b = "  " }
+            elseif ($c -ne "`n") { $a = " "; $b = " " }
+        } elseif ($state -cne "") {
+            if ($state -ceq "text" -and $triple -ceq '"""' -and -not $escaped) {
+                $a = $triple; $b = "~~~"; $i += 2; $state = ""
             } else {
-                if ($memberVisible) { $kept.Add($header.Trim()) }
-                $bodyDepth = 1
+                $b = "~"
+                if ($escaped) { $escaped = $false }
+                elseif ($c -ceq '\') { $escaped = $true }
+                elseif ([string]$c -ceq $state) { $state = "" }
             }
-            $header = ""; $code = ""; continue
-        }
-        if ($c -eq '}' -and $defaultDepth -gt 0) { $defaultDepth--; $header += $c; $code += $c; continue }
-        if ($c -eq '}' -and $parens -eq 0) {
-            if ($top -gt 0) {
-                # Enum constant lists need no terminating semicolon.
-                if ($header.Trim() -ne "" -and $visible[$top] -and $code -cnotmatch '(?:^|[^A-Za-z0-9_])private[ \t]' -and
-                        ($implicit[$top] -or $code -cmatch '(?:^|[^A-Za-z0-9_])(?:public|protected)[ \t]')) { $kept.Add($header.Trim()) }
-                if ($visible[$top]) { $kept.Add("}") }
-                $visible.Remove($top); $implicit.Remove($top); $top--
+        } elseif ($pair -ceq "//" -or $pair -ceq "/*") {
+            $state = if ($pair -ceq "//") { "line" } else { "block" }
+            $i++; $a = "  "; $b = "  "
+        } elseif ($triple -ceq '"""') {
+            $state = "text"; $a = $triple; $b = "~~~"; $i += 2
+        } elseif ($c -ceq '"' -or $c -ceq [char]39) { $state = [string]$c; $b = "~" }
+        [void]$cleanBuilder.Append($a); [void]$lexBuilder.Append($b)
+    }
+    $clean = $cleanBuilder.ToString(); $lex = $lexBuilder.ToString()
+    if (($state -cne "" -and $state -cne "line") -or $lex -cmatch '[^\t\r\n -~]') { return $Text }
+    $types = [System.Collections.Generic.List[object]]::new()
+    $types.Add([pscustomobject]@{ Kind = ""; Name = ""; Parent = 0; Exposed = $false; Visible = $false; EnumConstants = $false })
+    $declarations = [System.Collections.Generic.List[object]]::new()
+    $omitted = [bool[]]::new($lex.Length)
+    $addDeclaration = {
+        param([int]$First, [int]$Last, [int]$Owner)
+        $value = [System.Text.StringBuilder]::new(); $pending = $false
+        $referenceText = [System.Text.StringBuilder]::new()
+        for ($k = $First; $k -lt $Last; $k++) {
+            if ($omitted[$k]) { [void]$referenceText.Append(' '); $pending = $value.Length -gt 0; continue }
+            [void]$referenceText.Append($lex[$k])
+            if ([char]::IsWhiteSpace($lex[$k])) { $pending = $value.Length -gt 0 }
+            else {
+                if ($pending) { [void]$value.Append(' ') }
+                [void]$value.Append($clean[$k]); $pending = $false
             }
-            $header = ""; $code = ""; continue
         }
-        $header += $c; $code += $c
-        if ($c -eq '(') { $parens++ }
-        elseif ($c -eq ')') { $parens-- }
-        elseif ($c -eq ';' -and $parens -eq 0) {
-            if ($top -gt 0 -and $visible[$top] -and $code -cnotmatch '(?:^|[^A-Za-z0-9_])private[ \t]' -and
-                    ($implicit[$top] -or $code -cmatch '(?:^|[^A-Za-z0-9_])(?:public|protected)[ \t]')) { $kept.Add($header.Trim()) }
-            $header = ""; $code = ""
+        if ($value.Length -gt 0) {
+            $references = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+            foreach ($token in ($referenceText.ToString() -csplit '[^A-Za-z0-9_$]+')) {
+                [void]$references.Add($token)
+            }
+            $declarations.Add([pscustomobject]@{ Text = $value.ToString(); References = $references; Owner = $Owner })
         }
     }
-    return ($kept -join "`n")
+    $first = 0; $owner = 0; $parens = 0; $body = 0; $init = -1; $initDepth = 0; $bodyFirst = -1
+    $firstInit = -1; $initAngles = 0; $uncertainInit = $false
+    for ($i = 0; $i -lt $lex.Length; $i++) {
+        $c = $lex[$i]
+        if ($body -gt 0) {
+            if ($c -ceq '{') { $body++ }
+            elseif ($c -ceq '}') {
+                $body--
+                if ($body -eq 0) {
+                    if ($bodyFirst -ge 0) { & $addDeclaration $bodyFirst ($i + 1) $owner }
+                    $bodyFirst = -1; $first = $i + 1
+                }
+            }
+            continue
+        }
+        if ($c -ceq '(') { $parens++ } elseif ($c -ceq ')') { $parens-- }
+        if ($parens -ne 0) { continue }
+        if ($init -ge 0) {
+            if ($c -ceq '{') { $initDepth++ } elseif ($c -ceq '}') { $initDepth-- }
+            if ($firstInit -ge 0 -and $initDepth -eq 0) {
+                if ($c -ceq '<') {
+                    $prefix = $lex.Substring($init, $i - $init)
+                    do {
+                        $prior = $prefix; $prefix = [regex]::Replace($prefix, '<[^<>]*>', '')
+                    } while ($prefix -cne $prior)
+                    $generic = $prefix -cmatch '[.=?:]\s*$|->\s*$|(?:^|[^A-Za-z0-9_$])new\s*$|(?:^|[^A-Za-z0-9_$])new\s+[A-Za-z0-9_$.@\s]+$'
+                    if ($initAngles -gt 0 -or $generic) { $initAngles++ }
+                    elseif ($prefix -cmatch '(?:^|[^A-Za-z0-9_$])new\s+@') { $uncertainInit = $true }
+                } elseif ($c -ceq '>' -and $initAngles -gt 0) { $initAngles-- }
+                elseif ($c -ceq ',' -and $initAngles -eq 0) {
+                    for ($k = $init; $k -lt $i; $k++) { $omitted[$k] = $true }
+                    $init = -1; continue
+                }
+            }
+            if ($c -cne ';' -or $initDepth -ne 0) { continue }
+            if ($firstInit -ge 0) {
+                if ($initAngles -ne 0) { return $Text }
+                for ($k = $init; $k -lt $i; $k++) { $omitted[$k] = $true }
+            }
+        }
+        if ($c -ceq '=' -and $init -lt 0 -and -not ($types[$owner].Kind -ceq '@interface' -and
+                $lex.Substring($first, $i - $first) -cmatch '(?:^|[^A-Za-z0-9_$])default(?:[^A-Za-z0-9_$]|$)')) {
+            $init = $i; if ($firstInit -lt 0) { $firstInit = $i }; $initAngles = 0; continue
+        }
+        if ($c -ceq '{' -or $c -ceq ';') {
+            $headerEnd = if ($firstInit -ge 0) { $firstInit } elseif ($init -ge 0) { $init } else { $i }
+            $h = $lex.Substring($first, $headerEnd - $first)
+            if ($c -ceq '{' -and $types[$owner].Kind -ceq '@interface' -and $h -cmatch '(?:^|[^A-Za-z0-9_$])default(?:[^A-Za-z0-9_$]|$)') {
+                $init = $i; $initDepth = 1; continue
+            }
+            $typeMatch = [regex]::Match($h, '(?:^|\s)(class|interface|record|enum|@interface)\s+([A-Za-z_$][A-Za-z0-9_$]*)')
+            $supported = $h -cmatch '(?:^|[^A-Za-z0-9_$])(?:public|protected)\s'
+            if ($c -ceq '{' -and $typeMatch.Success) {
+                $id = $types.Count
+                $types.Add([pscustomobject]@{
+                    Kind = $typeMatch.Groups[1].Value; Name = $typeMatch.Groups[2].Value; Parent = $owner
+                    EnumConstants = $typeMatch.Groups[1].Value -ceq 'enum'
+                    Exposed = $supported -or ($owner -gt 0 -and $types[$owner].Kind -cin @('interface', '@interface'))
+                    Visible = $owner -eq 0 -or $h -cmatch '@(?:[A-Za-z0-9_$.]+\.)?ModApi(?:[^A-Za-z0-9_$]|$)'
+                    InferredSealed = $h -cmatch '(?:^|\s)sealed\s' -and $h -cnotmatch '(?:^|\s)permits\s'
+                    TypeReferences = $h -csplit '[^A-Za-z0-9_$]+'
+                })
+                & $addDeclaration $first $i $id
+                $owner = $id
+            } else {
+                # Records and interfaces may own private implementation members.
+                $keep = $owner -gt 0 -and $h -cnotmatch '(?:^|[^A-Za-z0-9_$])private\s' -and
+                        ($supported -or $types[$owner].Kind -cne 'class')
+                if ($keep -and -not ($c -ceq '{' -and $types[$owner].EnumConstants)) { & $addDeclaration $first $i $owner }
+                if ($c -ceq '{') { $body = 1; if ($types[$owner].EnumConstants) { $bodyFirst = $first } }
+            }
+            # Only the constant list precedes the first owner-level semicolon.
+            if ($c -ceq ';' -and $types[$owner].Kind -ceq 'enum') { $types[$owner].EnumConstants = $false }
+            $first = $i + 1; $init = -1; $firstInit = -1; $initAngles = 0
+        } elseif ($c -ceq '}') {
+            if ($types[$owner].Kind -ceq 'enum') { & $addDeclaration $first $i $owner }
+            $owner = $types[$owner].Parent; $first = $i + 1
+        }
+    }
+    if ($owner -ne 0 -or $parens -ne 0 -or $body -ne 0 -or $initDepth -ne 0 -or $uncertainInit) { return $Text }
+    $changed = $true
+    while ($changed) {
+        $changed = $false
+        for ($t = 1; $t -lt $types.Count; $t++) {
+            $type = $types[$t]
+            if ($type.Visible) {
+                if ($type.Parent -gt 0 -and -not $types[$type.Parent].Visible) { $types[$type.Parent].Visible = $true; $changed = $true }
+                continue
+            }
+            $reach = $types[$type.Parent].Visible -and $type.Exposed
+            foreach ($declaration in $declarations) {
+                if ($reach) { break }
+                if ($types[$declaration.Owner].Visible -and $declaration.References.Contains($type.Name)) { $reach = $true }
+            }
+            for ($s = 1; $s -lt $types.Count -and -not $reach; $s++) {
+                if ($types[$s].Visible -and $types[$s].InferredSealed -and $type.TypeReferences -ccontains $types[$s].Name) { $reach = $true }
+            }
+            if ($reach) { $type.Visible = $true; $changed = $true }
+        }
+    }
+    # Scope is part of identity, matching the SH emitter, without exposing hidden owners.
+    return (($declarations | Where-Object { $types[$_.Owner].Visible } | ForEach-Object {
+        $owner = $_.Owner; $ownerPath = $types[$owner].Name
+        while ($types[$owner].Parent -gt 0) {
+            $owner = $types[$owner].Parent; $ownerPath = $types[$owner].Name + '/' + $ownerPath
+        }
+        $ownerPath + "`t" + $_.Text
+    }) -join "`n")
 }
 
 function Validate-ModApiCoupling([string]$OldRef, [string]$NewRef, [string[]]$DiffArguments) {

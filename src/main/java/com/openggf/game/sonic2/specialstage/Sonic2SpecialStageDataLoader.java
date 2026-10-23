@@ -11,11 +11,13 @@ import com.openggf.data.compression.NemesisReader;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.EnumMap;
 import java.util.logging.Logger;
 
 /**
@@ -40,7 +42,14 @@ public class Sonic2SpecialStageDataLoader {
     private byte[] ringRequirementsTeam;
     private byte[] ringRequirementsSolo;
     private byte[] animDurationTable;
+    private byte[] geometryOffsets;
     private PlayerDplcPlans playerDplcPlans;
+    private final EnumMap<Sonic2SpecialStageRomMappings.Family,
+            List<Sonic2SpecialStageRomMappings.Frame>> nativeSpriteFrames =
+            new EnumMap<>(Sonic2SpecialStageRomMappings.Family.class);
+    private final EnumMap<Sonic2SpecialStageRomMappings.Family,
+            Sonic2SpecialStageSpriteMappings.SpriteFrame[]> playerRenderFrames =
+            new EnumMap<>(Sonic2SpecialStageRomMappings.Family.class);
 
     private Pattern[] backgroundArtPatterns;
     private Pattern[] trackArtPatterns;
@@ -65,11 +74,112 @@ public class Sonic2SpecialStageDataLoader {
 
     /** Presentation data follows the same session-owned ROM loader as gameplay data. */
     public com.openggf.level.Palette[] getPalettes(int stageIndex) {
-        return Sonic2SpecialStagePalette.createPalettes(stageIndex);
+        try {
+            return Sonic2SpecialStagePalette.createPalettes(rom, stageIndex);
+        } catch (IOException failure) {
+            throw new UncheckedIOException("Cannot read S2 special-stage palettes", failure);
+        }
+    }
+
+    int[] getEmeraldColors(int stageIndex) {
+        try {
+            return Sonic2SpecialStagePalette.getEmeraldColors(rom, stageIndex);
+        } catch (IOException failure) {
+            throw new UncheckedIOException("Cannot read S2 special-stage emerald colours", failure);
+        }
     }
 
     public Sonic2SpecialStageSpriteMappings.SpriteFrame getMainPlayerFrame(int frame) {
-        return Sonic2SpecialStageSpriteMappings.getSonicFrame(frame);
+        return getPlayerRenderFrame(Sonic2SpecialStageRomMappings.Family.SONIC, frame);
+    }
+
+    public Sonic2SpecialStageSpriteMappings.SpriteFrame getTailsPlayerFrame(int frame) {
+        return getPlayerRenderFrame(Sonic2SpecialStageRomMappings.Family.TAILS, frame);
+    }
+
+    public Sonic2SpecialStageSpriteMappings.SpriteFrame getTailsTailFrame(int frame) {
+        return getPlayerRenderFrame(Sonic2SpecialStageRomMappings.Family.TAILS_TAILS, frame);
+    }
+
+    /** Whole native SAT geometry, independent of scattered resident source art. */
+    public Sonic2SpecialStageRomMappings.Frame getNativeMainPlayerFrame(int frame) {
+        return getNativeSpriteFrame(Sonic2SpecialStageRomMappings.Family.SONIC, frame);
+    }
+
+    public Sonic2SpecialStageRomMappings.Frame getNativeSpriteFrame(
+            Sonic2SpecialStageRomMappings.Family family, int frame) {
+        if (frame >= family.frameCount()) {
+            // RingsNeeded's retail 101 -> $02F7 reaches mapping byte $F.
+            // BuildSprites reads that table word; clamping it to digit10 hides
+            // the native signed-count skip (REV01 $72CE contains $A800).
+            try {
+                return Sonic2SpecialStageRomMappings.readNativeFrame(
+                        RomByteReader.fromRom(rom), family, frame, 64);
+            } catch (IOException failure) {
+                throw new UncheckedIOException("Cannot read native S2 mapping byte", failure);
+            }
+        }
+        var frames = nativeSpriteFrames.computeIfAbsent(family, key -> {
+            try {
+                return Sonic2SpecialStageRomMappings.load(rom, key);
+            } catch (IOException failure) {
+                throw new UncheckedIOException("Cannot read S2 special-stage mappings", failure);
+            }
+        });
+        return frames.get(Math.clamp(frame, 0, frames.size() - 1));
+    }
+
+    private Sonic2SpecialStageSpriteMappings.SpriteFrame getPlayerRenderFrame(
+            Sonic2SpecialStageRomMappings.Family family, int frame) {
+        var frames = playerRenderFrames.computeIfAbsent(family,
+                key -> new Sonic2SpecialStageSpriteMappings.SpriteFrame[key.frameCount()]);
+        int index = Math.clamp(frame, 0, frames.length - 1);
+        if (frames[index] == null) {
+            try {
+                PlayerDplcPlans plans = getPlayerDplcPlans();
+                List<SpriteDplcFrame> cues = switch (family) {
+                    case SONIC -> plans.sonic();
+                    case TAILS -> plans.tails();
+                    case TAILS_TAILS -> plans.tailsTails();
+                    default -> throw new IllegalArgumentException("Not a player mapping family: " + family);
+                };
+                frames[index] = translatePlayerArt(getNativeSpriteFrame(family, index), cues.get(index));
+            } catch (IOException failure) {
+                throw new UncheckedIOException("Cannot read S2 special-stage player DPLC", failure);
+            }
+        }
+        return frames[index];
+    }
+
+    /** Resolve each destination independently; a native piece can cross DPLC requests. */
+    private static Sonic2SpecialStageSpriteMappings.SpriteFrame translatePlayerArt(
+            Sonic2SpecialStageRomMappings.Frame geometry, SpriteDplcFrame cue) {
+        List<Integer> sourceTiles = new ArrayList<>();
+        for (TileLoadRequest request : cue.requests()) {
+            int destination = request.destinationOffset() < 0
+                    ? sourceTiles.size() : request.destinationOffset();
+            while (sourceTiles.size() < destination + request.count()) sourceTiles.add(-1);
+            for (int tile = 0; tile < request.count(); tile++) {
+                sourceTiles.set(destination + tile, request.startTile() + tile);
+            }
+        }
+        List<Sonic2SpecialStageSpriteMappings.SpritePiece> fragments = new ArrayList<>();
+        for (var piece : geometry.pieces()) {
+            for (int column = 0; column < piece.widthTiles(); column++) {
+                for (int row = 0; row < piece.heightTiles(); row++) {
+                    int sourceColumn = piece.hFlip() ? piece.widthTiles() - 1 - column : column;
+                    int sourceRow = piece.vFlip() ? piece.heightTiles() - 1 - row : row;
+                    int destination = piece.tileIndex() + sourceColumn * piece.heightTiles() + sourceRow;
+                    int source = sourceTiles.get(destination);
+                    if (source < 0) throw new IllegalStateException("Unpopulated SS DPLC destination " + destination);
+                    fragments.add(new Sonic2SpecialStageSpriteMappings.SpritePiece(
+                            piece.xOffset() + column * 8, piece.yOffset() + row * 8,
+                            1, 1, source, piece.hFlip(), piece.vFlip()));
+                }
+            }
+        }
+        return new Sonic2SpecialStageSpriteMappings.SpriteFrame(
+                fragments.toArray(Sonic2SpecialStageSpriteMappings.SpritePiece[]::new));
     }
 
     public com.openggf.game.sonic2.objects.Sonic2SpecialStageResultsMappings.ResultsPiece[] getResultsFrame(int frame) {
@@ -224,6 +334,20 @@ public class Sonic2SpecialStageDataLoader {
             LOGGER.fine("Loaded perspective data: " + perspectiveData.length + " bytes");
         }
         return perspectiveData;
+    }
+
+    record GeometryOffset(byte x, byte y) { }
+
+    /** SSCurveOffsets (s2.asm:10110-10124), read from the session's supplied ROM. */
+    GeometryOffset getGeometryOffset(int mappingFrame) throws IOException {
+        if (mappingFrame < 0 || mappingFrame >= Sonic2SpecialStageConstants.TRACK_FRAME_COUNT) {
+            throw new IllegalArgumentException("Invalid special-stage mapping frame " + mappingFrame);
+        }
+        if (geometryOffsets == null) {
+            geometryOffsets = rom.readBytes(Sonic2SpecialStageConstants.GEOMETRY_OFFSETS_OFFSET,
+                    Sonic2SpecialStageConstants.GEOMETRY_OFFSETS_SIZE);
+        }
+        return new GeometryOffset(geometryOffsets[mappingFrame * 2], geometryOffsets[mappingFrame * 2 + 1]);
     }
 
     /**

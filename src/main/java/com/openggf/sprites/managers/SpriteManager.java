@@ -504,6 +504,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 * Returns empty list when sidekicks are suppressed for the current zone.
 	 */
 	public List<AbstractPlayableSprite> getSidekicks() {
+		var roster = nativeCompetitionRoster();
+		if (roster != null) return roster.player(1) == null ? List.of() : List.of(roster.player(1));
 		if (isCpuSidekickSuppressed()) {
 			return List.of();
 		}
@@ -516,6 +518,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 * sidekick state without mutating it.
 	 */
 	public List<AbstractPlayableSprite> getRegisteredSidekicks() {
+		var roster = nativeCompetitionRoster();
+		if (roster != null) return roster.player(1) == null ? List.of() : List.of(roster.player(1));
 		return Collections.unmodifiableList(sidekicks);
 	}
 
@@ -523,6 +527,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 * Returns the character name for a sidekick (e.g. "tails", "sonic", "knuckles").
 	 */
 	public String getSidekickCharacterName(AbstractPlayableSprite sidekick) {
+		var roster = nativeCompetitionRoster();
+		if (roster != null && roster.slotOf(sidekick) == 1) return sidekick.characterKey().persisted();
 		return sidekickCharacterNames.get(sidekick);
 	}
 
@@ -541,6 +547,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 
 	/** Returns the active session/configured main playable participant. */
 	public AbstractPlayableSprite getMainPlayable() {
+		var roster = nativeCompetitionRoster();
+		if (roster != null) return roster.player(0);
 		String mainCode = ActiveGameplayTeamResolver.resolveMainCharacterCode(configService);
 		Sprite namedMain = sprites.get(mainCode);
 		if (namedMain instanceof AbstractPlayableSprite playable && !playable.isCpuControlled()) {
@@ -630,7 +638,15 @@ public class SpriteManager implements PlayableSstDispatcher {
 		boolean right = (p1Held & AbstractPlayableSprite.INPUT_RIGHT) != 0;
 		for (Sprite sprite : getAllSprites()) {
 			if (sprite instanceof AbstractPlayableSprite playable && !playable.isCpuControlled()) {
-				playable.setDirectionalInputPressed(up, down, left, right);
+				var roster = nativeCompetitionRoster();
+				if (roster != null && roster.slotOf(playable) == 1) {
+					int held = suppressInput ? 0 : p2.heldMask();
+					playable.setDirectionalInputPressed(
+							(held & AbstractPlayableSprite.INPUT_UP) != 0,
+							(held & AbstractPlayableSprite.INPUT_DOWN) != 0,
+							(held & AbstractPlayableSprite.INPUT_LEFT) != 0,
+							(held & AbstractPlayableSprite.INPUT_RIGHT) != 0);
+				} else playable.setDirectionalInputPressed(up, down, left, right);
 			}
 		}
 	}
@@ -699,10 +715,12 @@ public class SpriteManager implements PlayableSstDispatcher {
 		// trigger, while the manual-control timer uses controller2Held.
 		int p2Held = 0;
 		int p2Logical = 0;
+		int p2ActionPressedMask = 0;
 		if (!suppressInput) {
 			PlayerInputState p2 = handler.logical().player2();
 			p2Held = p2.heldMask();
 			p2Logical = p2.pressedMask();
+			p2ActionPressedMask = p2.actionPressedMask();
 			if (p2.startPressed()) {
 				p2Logical |= 0x20;
 			}
@@ -745,7 +763,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 						frameCounter,
 						currentObjectDispatchOrdinal()),
 				new InitialPlayableInput(
-						p1Held, p1Pressed, p1ActionPressedMask, p2Held, p2Logical, true),
+						p1Held, p1Pressed, p1ActionPressedMask, p2Held, p2Logical, p2ActionPressedMask, true),
 				testButton,
 				speedUp,
 				slowDown,
@@ -799,6 +817,42 @@ public class SpriteManager implements PlayableSstDispatcher {
 		}
 	}
 
+	/**
+	 * S2 Level's leading RunObjects and locked leave-loop player slots. These
+	 * execute ordinary physics, history and animation with both controllers zero,
+	 * while Level_frame_counter remains zero. Level (s2.asm:4945-4952) clears
+	 * and locks both controllers; Level_FromCheckpoint (s2.asm:5004-5009) and
+	 * Level_FromCheckpoint (s2.asm:5056-5066) own these object passes. The caller
+	 * owns the following object pass and any preceding WaitForVint; neither
+	 * clock advances here.
+	 */
+	void runNativeCompetitionTitlePlayablePass() {
+		var roster = nativeCompetitionRoster();
+		LevelManager manager = getLevelManager();
+		ObjectManager objects = manager != null ? manager.getObjectManager() : null;
+		if (roster == null || objects == null || frameCounter != 0
+				|| manager.getFrameCounter() != 0 || objects.hasActiveInitialProcessSpritesDispatch()) {
+			throw new IllegalStateException("Native title playable pass requires the assembled zero-epoch world");
+		}
+		AbstractPlayableSprite p1 = roster.player(0);
+		AbstractPlayableSprite p2 = roster.player(1);
+		if (p1 == null || p2 == null || p1 == p2) {
+			throw new IllegalStateException("Native title playable pass requires two distinct human actors");
+		}
+		for (AbstractPlayableSprite player : List.of(p1, p2)) {
+			if (player.isCpuControlled() || player.getCpuController() != null
+					|| sprites.get(player.getCode()) != player
+					|| player.currentSpriteManagerOrNull() != this
+					|| player.currentLevelManagerIfAvailable() != manager) {
+				throw new IllegalStateException("Native title playable pass requires this world's registered human actors");
+			}
+		}
+		var epoch = new ProcessSpritesEpoch(0, objects.getFrameCounter() + 1, false);
+		try (var ignored = NativeCompetitionTitlePlayableScope.enter(p1, p2)) {
+			processPlayableSlots(PlayableDispatchContext.ordinaryWithoutInput(epoch));
+		}
+	}
+
 	private void processPlayableSlots(PlayableDispatchContext context) {
 		// Note: bucketsDirty is already marked in addSprite()/removeSprite(),
 		// no need to unconditionally mark dirty every frame.
@@ -806,6 +860,14 @@ public class SpriteManager implements PlayableSstDispatcher {
 		List<AbstractPlayableSprite> playables = buildPlayableUpdateOrderInto(
 				sprites, sidekicks, isCpuSidekickSuppressed(),
 				playableOrderScratch, playableScheduledScratch, playableAvailableScratch);
+		var nativeRoster = nativeCompetitionRoster();
+		if (nativeRoster != null) {
+			// Native SST player slots execute in controller order, independent of
+			// map iteration, selected character, or ordinary CPU-follow ordering.
+			playables.clear();
+			if (nativeRoster.player(0) != null) playables.add(nativeRoster.player(0));
+			if (nativeRoster.player(1) != null) playables.add(nativeRoster.player(1));
+		}
 		beginPlayableFrame(playables);
 
 		InitialPlayableInput input = context.input();
@@ -918,13 +980,18 @@ public class SpriteManager implements PlayableSstDispatcher {
                         PlayerInputState actorInput = scriptedActorInputs == null ? null : scriptedActorInputs.get(playable.getCode());
                         if (scriptedActorInputs != null && actorInput == null)
                             throw new IllegalArgumentException("Missing scripted controller: " + playable.getCode());
-                        int actorHeld = actorInput == null ? p1Held : actorInput.heldMask();
+                        boolean nativeSecondController = scriptedActorInputs == null && nativeRoster != null
+                                && nativeRoster.slotOf(playable) == 1;
+                        int actorHeld = actorInput != null ? actorInput.heldMask()
+                                : nativeSecondController ? input.p2Held() : p1Held;
                         up = (actorHeld & AbstractPlayableSprite.INPUT_UP) != 0;
                         down = (actorHeld & AbstractPlayableSprite.INPUT_DOWN) != 0;
                         left = (actorHeld & AbstractPlayableSprite.INPUT_LEFT) != 0;
                         right = (actorHeld & AbstractPlayableSprite.INPUT_RIGHT) != 0;
                         jump = (actorHeld & AbstractPlayableSprite.INPUT_JUMP) != 0;
-                        rawJumpPress = ((actorInput == null ? input.p1Pressed() : actorInput.pressedMask()) & AbstractPlayableSprite.INPUT_JUMP) != 0;
+                        rawJumpPress = ((actorInput != null ? actorInput.pressedMask()
+                                : nativeSecondController ? input.p2Pressed() : input.p1Pressed())
+                                & AbstractPlayableSprite.INPUT_JUMP) != 0;
                         // Player-controlled sprite, or the historical
 						// updateWithoutInput path where CPU dispatch is intentionally skipped.
 						boolean controlLocked = playable.isControlLocked();
@@ -943,7 +1010,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 							effectiveJump = (!controlLocked && jump) || forcedJump;
 							effectiveTest = !controlLocked && context.testButton();
 							recordedLogicalJumpPress = !controlLocked
-									&& (actorInput == null ? input.p1ActionPressedMask() : actorInput.actionPressedMask()) != 0;
+                                    && (actorInput != null ? actorInput.actionPressedMask()
+                                        : nativeSecondController ? input.p2ActionPressedMask() : input.p1ActionPressedMask()) != 0;
 						} else {
 							effectiveRight = false;
 							effectiveLeft = false;
@@ -1074,16 +1142,18 @@ public class SpriteManager implements PlayableSstDispatcher {
 		cpu.suppressInitialLevelEventPresentationIfNeeded();
 	}
 
-	private static void publishInitialAssemblyInput(
+	private void publishInitialAssemblyInput(
 			AbstractPlayableSprite playable,
 			InitialPlayableInput input) {
-		int held = playable.isCpuControlled() ? input.p2Held() : input.p1Held();
+		var roster = nativeCompetitionRoster();
+		boolean secondController = playable.isCpuControlled() || roster != null && roster.slotOf(playable) == 1;
+		int held = secondController ? input.p2Held() : input.p1Held();
 		boolean rawUp = (held & AbstractPlayableSprite.INPUT_UP) != 0;
 		boolean rawDown = (held & AbstractPlayableSprite.INPUT_DOWN) != 0;
 		boolean rawLeft = (held & AbstractPlayableSprite.INPUT_LEFT) != 0;
 		boolean rawRight = (held & AbstractPlayableSprite.INPUT_RIGHT) != 0;
 		boolean rawJump = (held & AbstractPlayableSprite.INPUT_JUMP) != 0;
-		boolean rawJumpPress = ((playable.isCpuControlled() ? input.p2Pressed() : input.p1Pressed())
+		boolean rawJumpPress = ((secondController ? input.p2Pressed() : input.p1Pressed())
 				& AbstractPlayableSprite.INPUT_JUMP) != 0;
 		boolean controlLocked = playable.isControlLocked();
 		boolean forcedRight = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT)
@@ -1154,7 +1224,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		if (main != null && main.getTailsTailsController() != null) {
 			main.getTailsTailsController().update();
 		}
-		for (AbstractPlayableSprite sidekick : sidekicks) {
+		for (AbstractPlayableSprite sidekick : getRegisteredSidekicks()) {
 			if (sidekick != null && sidekick.getTailsTailsController() != null) {
 				sidekick.getTailsTailsController().update();
 			}
@@ -1180,7 +1250,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 		// assuming that the slot always belongs to player two.
 		AbstractPlayableSprite owner = getMainPlayable();
 		if (owner == null || owner.getTailsTailsController() == null) {
-			owner = sidekicks.isEmpty() ? null : sidekicks.getFirst();
+			List<AbstractPlayableSprite> registeredSidekicks = getRegisteredSidekicks();
+			owner = registeredSidekicks.isEmpty() ? null : registeredSidekicks.getFirst();
 		}
 		if (owner != null && owner.getTailsTailsController() != null) {
 			owner.getTailsTailsController().update();
@@ -1192,7 +1263,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 		if (playerIndex == 0) {
 			owner = getMainPlayable();
 		} else if (playerIndex == 1) {
-			owner = sidekicks.isEmpty() ? null : sidekicks.getFirst();
+			List<AbstractPlayableSprite> registeredSidekicks = getRegisteredSidekicks();
+			owner = registeredSidekicks.isEmpty() ? null : registeredSidekicks.getFirst();
 		} else {
 			throw new IllegalArgumentException("fixed dust slot player index must be 0 or 1");
 		}
@@ -1719,6 +1791,18 @@ public class SpriteManager implements PlayableSstDispatcher {
 			boolean collectingSat = gfx.isSpriteSatCollectionActive();
 			boolean lowHookDrawn = false;
 			boolean highHookDrawn = false;
+            // Remote ghosts have layers even when no local player anchors them.
+            // Painter order places such layers behind this bucket's local actors.
+            if (!collectingSat && hook != null) {
+                if (lowPriorityBuckets[idx].isEmpty()) {
+                    drawUnanchoredPriorityLayer(hook, bucket, false, gfx);
+                    lowHookDrawn = true;
+                }
+                if (highPriorityBuckets[idx].isEmpty()) {
+                    drawUnanchoredPriorityLayer(hook, bucket, true, gfx);
+                    highHookDrawn = true;
+                }
+            }
 			for (int i = 0; i < instances.size(); i++) {
 				AbstractPlayableSprite sprite = instances.get(collectingSat ? instances.size() - 1 - i : i);
 				boolean high = sprite.isHighPriority();
@@ -1744,6 +1828,14 @@ public class SpriteManager implements PlayableSstDispatcher {
 					gfx.beginPatternBatch();
 				}
 			}
+            if (collectingSat && hook != null) {
+                // Reverse painter order: missing layers follow every local actor.
+                if (!highHookDrawn) drawUnanchoredPriorityLayer(hook, bucket, true, gfx);
+                if (!lowHookDrawn) drawUnanchoredPriorityLayer(hook, bucket, false, gfx);
+                gfx.flushPatternBatch();
+                gfx.setCurrentSpriteHighPriority(false);
+                gfx.beginPatternBatch();
+            }
 			if (bucket == RenderPriority.MIN && !nonPlayableSprites.isEmpty()) {
 				gfx.flushPatternBatch();
 				gfx.setCurrentSpriteHighPriority(false);
@@ -1754,6 +1846,17 @@ public class SpriteManager implements PlayableSstDispatcher {
 			if (wrapEnabled) disableVerticalWrap();
 		}
 	}
+
+    private void drawUnanchoredPriorityLayer(SpritePriorityLayerHook hook, int bucket, boolean high,
+            GraphicsManager graphics) {
+        graphics.flushPatternBatch();
+        graphics.setCurrentSpriteHighPriority(high);
+        graphics.beginPatternBatch();
+        hook.beforePriorityLayer(bucket, high);
+        graphics.flushPatternBatch();
+        graphics.setCurrentSpriteHighPriority(high);
+        graphics.beginPatternBatch();
+    }
 
 	/** Whether no sprite before {@code index} in painter order shares its priority layer. */
 	private static boolean lastOfLayer(List<AbstractPlayableSprite> instances, int index, boolean high) {
@@ -1869,6 +1972,12 @@ public class SpriteManager implements PlayableSstDispatcher {
 			levelManager = runtimeLevelManager;
 		}
 		return levelManager;
+	}
+
+	private com.openggf.game.competition.NativeCompetitionRoster nativeCompetitionRoster() {
+		var gameplay = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+		return gameplay != null && gameplay.getSpriteManager() == this
+				? com.openggf.game.competition.NativeCompetitionRoster.from(gameplay.getWorldSession()) : null;
 	}
 
 	private GameStateManager currentGameStateManager() {
@@ -2097,13 +2206,15 @@ public class SpriteManager implements PlayableSstDispatcher {
 		// that enters death during its own boundary checks still finishes the
 		// already-selected control routine in the ROM.
 		boolean deadAtTickStart = playable.getDead();
+		var nativeDeath = com.openggf.game.competition.NativePlayerDeathPass.from(playable);
+		boolean nativeDeathDispatch = nativeDeath != null && nativeDeath.ownsDispatch(playable);
 		// For S1 UNIFIED: skip pre-movement solid pass. ROM processes all solid
 		// objects AFTER Sonic's movement (his slot runs first in ExecuteObjects),
 		// so only the post-movement pass is ROM-accurate. Running both creates
 		// double-correction artifacts.
 		// For S2/S3K: solid contacts now resolve inline during the object exec loop
 		// after movement, so the old pre-movement batched pass must be skipped.
-		if (!isUnified && !usesInlineSolidResolution) {
+		if (!nativeDeathDispatch && !isUnified && !usesInlineSolidResolution) {
 			applySolidContacts(levelManager, playable, false, false);
 		}
 		// ROM Obj01_Modes dispatches the movement mode BEFORE the move itself
@@ -2115,7 +2226,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		// the end of this tick read the value this frame's move had just
 		// produced, firing the same predicate one frame early.
 		var superStateBeforeMove = playable.getSuperStateController();
-		if (superStateBeforeMove != null) {
+		if (superStateBeforeMove != null && !nativeDeathDispatch) {
 			superStateBeforeMove.checkTransformationBeforeMove();
 		}
 		if (playable instanceof CustomPlayablePhysics customPhysics) {
@@ -2123,6 +2234,13 @@ public class SpriteManager implements PlayableSstDispatcher {
 					levelManager, frameCounter);
 		} else {
 			playable.getMovementManager().handleMovement(up, down, left, right, jump, test, speedUp, slowDown);
+		}
+		if (nativeDeathDispatch) {
+			// Native 6/8/A own no control tail; the dispatch selected before
+			// movement remains authoritative even when 6 -> A or A -> 2.
+			if (nativeDeath.animatesThisPass(playable)) playable.getAnimationManager().update(frameCounter);
+			playable.endOfTick();
+			return;
 		}
 		applyScreenYWrapValueAfterControl(playable);
 		SidekickCpuController cpuController = playable.getCpuController();
@@ -2144,6 +2262,20 @@ public class SpriteManager implements PlayableSstDispatcher {
 			}
 			playable.getTailsCarryController().updateAfterTailsCollision(mainCarryInput);
 		}
+		// Obj01_Control calls Sonic_Display / Sonic_Super immediately after
+		// movement, before Sonic_RecordPos, Sonic_Water and Sonic_Animate
+		// (s2.asm:36248-36264). Reversion must reset prev_anim before this
+		// frame's animation dispatch. Controllers with other native owners
+		// keep their existing status-tail phase.
+		boolean nativeSuperControlPhase = playable.getSuperStateController() instanceof
+				com.openggf.game.internal.NativeSuperStateBeforeAnimation;
+		if (nativeSuperControlPhase && !hurtAtTickStart && !deadAtTickStart) {
+			playable.tickInvulnerabilityDisplayTimerBeforeTouchResponse();
+			com.openggf.sprites.playable.PlayableSpriteInternalAccess.tickNativeDisplayInvincibility(playable);
+			tickDisplayPhaseTimers(playable);
+            ((com.openggf.game.internal.NativeSuperStateBeforeAnimation)
+                    playable.getSuperStateController()).updateNativeControlBeforeAnimation();
+		}
 		playable.recordFollowerHistoryForTick();
 		if (usesInlineSolidResolution && !hurtAtTickStart && !deadAtTickStart) {
 			// S2/S3K run Sonic_Water/Tails_Water after movement and the
@@ -2161,8 +2293,10 @@ public class SpriteManager implements PlayableSstDispatcher {
 		// S3K sonic3k.asm:22031-22058). Sonic_Display decrements
 		// invulnerable_time, and spilled-ring touch checks read that decremented
 		// value in the same object-interaction pass.
-		playable.tickInvulnerabilityDisplayTimerBeforeTouchResponse();
-		tickDisplayPhaseTimers(playable);
+		if (!nativeSuperControlPhase) {
+			playable.tickInvulnerabilityDisplayTimerBeforeTouchResponse();
+			tickDisplayPhaseTimers(playable);
+		}
 		// ROM Obj01_Control: movement runs first, then Sonic_Animate, then
 		// TouchResponse. Special objects like monitors gate on anim(a0), so
 		// ReactToItem must observe the post-movement animation state from the
@@ -2412,6 +2546,10 @@ public class SpriteManager implements PlayableSstDispatcher {
 				for (com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry entry : s.sprites()) {
 					snapshotCodes.add(entry.code());
 				}
+				var gameplay = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+				var nativeRoster = gameplay != null && gameplay.getSpriteManager() == SpriteManager.this
+						? com.openggf.game.competition.NativeCompetitionRoster.from(gameplay.getWorldSession()) : null;
+				if (nativeRoster != null) nativeRoster.prepareRestore(gameplay, Set.copyOf(snapshotCodes));
 				restoreRetiredSidekickRoster(snapshotCodes);
 				for (AbstractPlayableSprite sidekick : new ArrayList<>(temporarySidekicks)) {
 					if (!snapshotCodes.contains(sidekick.getCode())) {
@@ -2450,6 +2588,18 @@ public class SpriteManager implements PlayableSstDispatcher {
 						}
 						if (perSprite != null) {
 							aps.restoreRewindState(perSprite);
+						}
+					}
+				}
+				if (gameplay != null && gameplay.getSpriteManager() == SpriteManager.this) {
+					com.openggf.game.session.WorldSessionPolicyAccess.bindRoster(gameplay.getWorldSession(), SpriteManager.this);
+					if (nativeRoster != null) {
+						// Object reconstruction resolves participants through both native cameras.
+						// Repair references now, retaining the exact restored camera RAM; the
+						// final camera callback still reconciles after all adapters complete.
+						for (int slot = 0; slot < 2; slot++) {
+							var actor = nativeRoster.player(slot);
+							if (actor != null) nativeRoster.camera(slot).restore(nativeRoster.camera(slot).capture(), actor);
 						}
 					}
 				}

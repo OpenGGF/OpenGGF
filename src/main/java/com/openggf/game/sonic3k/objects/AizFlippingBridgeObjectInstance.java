@@ -299,9 +299,13 @@ public class AizFlippingBridgeObjectInstance extends AbstractObjectInstance
             }
         }
 
-        // ROM: play sfx_GlideLand every 8th frame when on-screen.
-        // Condition: (Level_frame_counter_low_byte + 3) & 7 == 0, i.e., frameCounter & 7 == 5
-        if (isOnScreen(0) && ((vIntRunCount + 3) & 7) == 0) {
+        // ROM sub_2AA7E reads (Level_frame_counter+1).w: +1 selects the
+        // word's low byte, not the independent V_int_run_count clock. The
+        // level counter already advances before Process_Sprites. Component
+        // fixtures without a level manager retain their explicit clock input.
+        var levelManager = services().levelManager();
+        int levelFrameCounter = levelManager != null ? levelManager.getFrameCounter() : vIntRunCount;
+        if (isOnScreen(0) && ((levelFrameCounter + 3) & 7) == 0) {
             services().playSfx(Sonic3kSfx.GLIDE_LAND.id);
         }
     }

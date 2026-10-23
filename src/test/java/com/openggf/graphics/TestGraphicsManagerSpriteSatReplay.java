@@ -33,7 +33,7 @@ public class TestGraphicsManagerSpriteSatReplay {
     }
 
     @Test
-    public void spriteSatReplay_replaysBucketsBackToFrontWhileReversingSatOrderWithinEachBucket() throws Exception {
+    public void spriteSatReplay_replaysNativeBucketsFrontToBackWithFirstSatEntryFirst() throws Exception {
         graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), 0);
         graphicsManager.cachePatternTexture(createSolidPattern((byte) 2), 1);
         graphicsManager.cachePatternTexture(createSolidPattern((byte) 3), 2);
@@ -82,9 +82,9 @@ public class TestGraphicsManagerSpriteSatReplay {
         assertTrue(graphicsManager.commands.get(0) instanceof PatternRenderCommand);
         assertTrue(graphicsManager.commands.get(1) instanceof PatternRenderCommand);
         assertTrue(graphicsManager.commands.get(2) instanceof PatternRenderCommand);
-        assertEquals(20f, getFloatField(graphicsManager.commands.get(0), "x"));
+        assertEquals(10f, getFloatField(graphicsManager.commands.get(0), "x"));
         assertEquals(30f, getFloatField(graphicsManager.commands.get(1), "x"));
-        assertEquals(10f, getFloatField(graphicsManager.commands.get(2), "x"));
+        assertEquals(20f, getFloatField(graphicsManager.commands.get(2), "x"));
     }
 
     @Test
@@ -121,11 +121,25 @@ public class TestGraphicsManagerSpriteSatReplay {
             float v0 = getFloatField(command, "v0");
             float v1 = getFloatField(command, "v1");
             // Four of eight texel rows: half the atlas entry's V span.
-            PatternAtlas.Entry entry = graphicsManager.getPatternAtlas().getEntry(i == 0 ? 1 : 0);
+            PatternAtlas.Entry entry = graphicsManager.getPatternAtlas().getEntry(i);
             assertEquals((entry.v1() - entry.v0()) / 2f, Math.abs(v0 - v1), 1e-6f);
         }
         assertEquals(4f, heights[0]);
         assertEquals(4f, heights[1]);
+    }
+
+    @Test
+    public void nativeBudgetAppliesWithoutRequestingSpriteMask() {
+        graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), 0);
+        graphicsManager.beginSpriteSatCollection();
+        for (int index = 0; index < 21; index++) {
+            graphicsManager.submitSpriteSatPiece(new SpritePieceRenderer.PreparedPiece(
+                    10 + index * 8, 20, 1, 1, 0, 0, 0,
+                    false, false, false, false, SpriteMaskReplayRole.NORMAL,
+                    0, 1, 0, 1, null));
+        }
+        graphicsManager.endSpriteSatCollectionAndReplay();
+        assertEquals(20, graphicsManager.commands.size(), "H40 admits only the first twenty pieces on a line");
     }
 
     @Test
@@ -182,6 +196,22 @@ public class TestGraphicsManagerSpriteSatReplay {
         graphicsManager.submitSpriteSatPiece(legacy);
         assertNull(collectedEntries().getFirst().piece().maskReplayRole());
         assertNull(collectedEntries().getFirst().piece().debugSource());
+    }
+
+    @Test
+    void shadowTileRepublishKeepsColouredGhostAndAllImmutablePresentationFields() {
+        graphicsManager.cachePatternTexture(createSolidPattern((byte) 15), 3);
+        var subject = new SpritePresentation.Subject("shadow-copy", SpritePresentation.Part.BODY, false, 100);
+        var tile = new SpritePresentation.Tile(SpritePresentation.Layer.PLAYER, 3, 3, true, false,
+                false, 40, 50, 8, 8, true, 5, true, 0.375f, 2, 7, subject, true,
+                SpriteSatEntry.PixelOperation.SHADOW_15);
+        var frame = SpritePresentation.prepare(graphicsManager, 7, 11,
+                () -> graphicsManager.renderShadowTile(tile, 13, 17, null, 1),
+                descriptor -> { throw new AssertionError("Republishing must retain the immutable tile"); });
+        assertEquals(List.of(new SpritePresentation.Tile(SpritePresentation.Layer.PLAYER, 3, 3, true, false,
+                false, 46, 56, 8, 8, true, 5, true, 0.375f, 2, 7, subject, true,
+                SpriteSatEntry.PixelOperation.SHADOW_15)), frame.tiles());
+        assertEquals(SpritePresentation.patternSample(graphicsManager, 3), frame.patternVersions().get(3));
     }
 
     @SuppressWarnings("unchecked")

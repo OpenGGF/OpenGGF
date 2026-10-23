@@ -28,7 +28,9 @@ class TestDdzSuperStars {
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
         SessionManager.clear(); TestEnvironment.activeGameplayMode();
-        var fixture = HeadlessTestFixture.builder().withZoneAndAct(12, 0).build();
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(12, 0)
+                // Sonic_Init returns without a floor probe; loc_81554 owns the next movement.
+                .withFreshLevelStartLifecycle().build();
         GameServices.gameState().restoreS3kEmeraldProgress(java.util.Collections.nCopies(7, hyper ? 3 : 1), hyper);
         return fixture;
     }

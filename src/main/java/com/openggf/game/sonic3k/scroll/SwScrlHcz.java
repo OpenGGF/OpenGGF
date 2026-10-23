@@ -79,6 +79,26 @@ public class SwScrlHcz extends AbstractZoneScrollHandler {
         this(null);
     }
 
+    private record RewindState(Hcz2BgPhase phase, int screenShakeOffset, int wallChaseOffsetX) { }
+
+    @Override
+    public Object captureRewindState() {
+        return new RewindState(hcz2Phase, screenShakeOffset, wallChaseOffsetX);
+    }
+
+    @Override
+    public void restoreRewindState(Object state) {
+        if (state instanceof RewindState saved) {
+            // Native HCZ2_WallMove / ShakeScreen_Setup publish these retained
+            // inputs before deformation (sonic3k.asm:106180,104234). The
+            // post-restore parallax rebuild must not consume a future event's
+            // publication; it does not dispatch the ordinary event owner.
+            hcz2Phase = saved.phase();
+            screenShakeOffset = saved.screenShakeOffset();
+            wallChaseOffsetX = saved.wallChaseOffsetX();
+        }
+    }
+
     public void setHcz2BgPhase(Hcz2BgPhase phase) {
         this.hcz2Phase = phase;
     }

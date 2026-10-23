@@ -22,7 +22,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code loc_91756}-{@code loc_917B4} (sonic3k.asm:198781-198819): the EggRobo's laser shot,
+ * ROM {@code loc_91756}-{@code loc_917B4} (sonic3k.asm:198741-198776): the EggRobo's laser shot,
  * created from {@code ChildObjDat_919DE}.
  *
  * <p>{@code word_919CA} gives it priority {@code $280}, {@code $20} by {@code 4} pixels and mapping
@@ -33,8 +33,11 @@ import java.util.List;
  * become {@code -$800} away from the arm's facing, and {@code sfx_Laser} play. That charge window
  * is why a player standing in the line of fire can still walk out of it.
  *
- * <p>The moving phase is {@code MoveSprite2} plus {@code Sprite_CheckDeleteTouch}; there is no
- * gravity and no lifetime beyond leaving the screen.
+ * <p>Each charging entry, including arming and its SFX, ends at
+ * {@code Child_DrawTouch_Sprite}. Its immediate parent is the allocating Gun, whose pending
+ * {@code Go_Delete_Sprite} status suppresses touch/drawing before physical deletion next entry.
+ * The moving phase is {@code MoveSprite2} plus {@code Sprite_CheckDeleteTouch}; it no longer
+ * reads the Gun and has no gravity or lifetime beyond leaving the screen.
  */
 public final class EggRoboShotInstance extends AbstractObjectInstance
         implements TouchResponseProvider, RewindRecreatable, com.openggf.game.mutators.NativeObjectFieldTarget {
@@ -49,10 +52,15 @@ public final class EggRoboShotInstance extends AbstractObjectInstance
     /** {@code moveq #0,d0} / {@code moveq #7,d0} on {@code V_int_run_count+3} bit 0. */
     private static final int CHARGE_FRAME_A = 0;
     private static final int CHARGE_FRAME_B = 7;
-    private static final int SHIELD_REACTION = 1 << 3;
+    /**
+     * Native shield_reaction ($2B) stays zero after loc_60DE / Delete_Referenced_Sprite clear SST.
+     * CreateChild10_NormalAdjusted ($84328), SetUp_ObjAttributes3 ($84040) and
+     * loc_91756..loc_917BE leave it untouched (shipped FixBugs=0).
+     */
+    private static final int SHIELD_REACTION = 0;
     private static final TouchResponseProfile TOUCH = new TouchResponseProfile(
             TouchCategoryDecodeMode.NORMAL, false, true, false,
-            TouchShieldDeflectCapability.SHIELD_DEFLECT, SHIELD_REACTION,
+            TouchShieldDeflectCapability.NONE, SHIELD_REACTION,
             TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
             TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
             TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
@@ -64,7 +72,14 @@ public final class EggRoboShotInstance extends AbstractObjectInstance
     private int charge = CHARGE_FRAMES;
     private int xVelocity;
     private boolean playerOwned;
+    /** CreateChild10 copies the allocating Gun art_tile, independently of charging parent3. */
+    private boolean artHigh;
     private int mappingFrame = CHARGE_FRAME_B;
+    // CreateChild10_NormalAdjusted stores the immediate Gun's exact parent3 identity.
+    // These mutable fields use the existing compact scalar/ObjectRef capture path.
+    private EggRoboGunArmChildInstance chargingGun;
+    private boolean chargingGunBound;
+    private boolean pendingDelete;
 
     public EggRoboShotInstance(ObjectSpawn spawn, boolean facingLeft) {
         super(spawn, "SSZEggRoboShot");
@@ -72,6 +87,23 @@ public final class EggRoboShotInstance extends AbstractObjectInstance
         this.x = spawn.x();
         this.y = spawn.y();
         this.xFixed = spawn.x() << 16;
+    }
+
+    /** Pure native allocation binding; public unparented/probe/player-shot inlets stay independent. */
+    static EggRoboShotInstance gunShot(ObjectSpawn spawn, boolean facingLeft,
+                                       EggRoboGunArmChildInstance chargingGun) {
+        var shot = new EggRoboShotInstance(spawn, facingLeft);
+        shot.chargingGun = chargingGun;
+        shot.chargingGunBound = true;
+        return shot;
+    }
+
+    /** CreateChild10's allocation-time copy survives charging parent3's last-use release. */
+    static EggRoboShotInstance gunShot(ObjectSpawn spawn, boolean facingLeft,
+                                       EggRoboGunArmChildInstance chargingGun, boolean artHigh) {
+        var shot = gunShot(spawn, facingLeft, chargingGun);
+        shot.artHigh = artHigh;
+        return shot;
     }
 
     /** Same native charging/motion owner, admitted with a player attack allegiance. */
@@ -101,6 +133,10 @@ public final class EggRoboShotInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
+        if (pendingDelete) {
+            ObjectLifetimeOps.deleteNoRespawn(this);
+            return;
+        }
         if (tryServices() == null) {
             return;
         }
@@ -109,11 +145,13 @@ public final class EggRoboShotInstance extends AbstractObjectInstance
             // a set bit selects frame 7.
             mappingFrame = (vIntRunCount & 1) != 0 ? CHARGE_FRAME_B : CHARGE_FRAME_A;
             if (--charge >= 0) {
+                finishChargingTail();
                 return;
             }
             mappingFrame = CHARGE_FRAME_B;
             xVelocity = facingLeft ? -SHOT_X_VEL : SHOT_X_VEL;
             services().playSfx(Sonic3kSfx.LASER.id);
+            finishChargingTail();
             return;
         }
         xFixed += xVelocity << 8;
@@ -132,6 +170,32 @@ public final class EggRoboShotInstance extends AbstractObjectInstance
         }
     }
 
+    /** loc_917AE: charge arithmetic/arming/SFX have already run before this parent test. */
+    private void finishChargingTail() {
+        if (!chargingGunBound) {
+            return;
+        }
+        if (chargingGun == null || chargingGun.hasNativeRetirementStatus()) {
+            // A missing bound owner is an unsupported negative inlet, never an invented parent.
+            pendingDelete = true;
+            chargingGun = null;
+            chargingGunBound = false;
+            return;
+        }
+        if (charge < 0) {
+            // loc_917B4 never reads parent3 again; release only after its last successful tail.
+            chargingGun = null;
+            chargingGunBound = false;
+        }
+    }
+
+    @Override
+    public boolean publishesTouchResponseListEntryThisFrame() {
+        // Preserve the native collision byte; parent retirement skips Add_SpriteToCollisionResponseList.
+        return !pendingDelete && !isDestroyed();
+    }
+
+    @Override public boolean isHighPriority() { return artHigh; }
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
     @Override public int getPriorityBucket() { return PRIORITY_BUCKET; }
@@ -150,9 +214,12 @@ public final class EggRoboShotInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        if (pendingDelete || isDestroyed()) {
+            return;
+        }
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.SSZ_EGG_ROBO);
         if (renderer != null && renderer.isReady()) {
-            renderer.drawFrameIndex(mappingFrame, x, y, !facingLeft, false, 0);
+            renderer.drawFrameIndexForcedPriority(mappingFrame, x, y, !facingLeft, false, 0, artHigh);
         }
     }
 }

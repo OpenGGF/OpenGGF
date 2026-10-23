@@ -9,18 +9,13 @@ import java.util.Map;
  */
 final class Sonic2SpecialStageLagModel {
     /**
-     * V-ints the ROM's entry load blocks for. {@code SpecialStage} masks all
-     * interrupts right after {@code Pal_FadeToWhite} returns
-     * ({@code move #$2700,sr}, docs/s2disasm/s2.asm:6557) and does not wait
-     * for a V-int again until the first startup loop (s2.asm:6645), so the
-     * VDP fill, RAM clears, {@code ssLdComprsdData} and the entry PLC all run
-     * with no V-int at all. Only the layout differs per stage, not the art:
-     * every S2 special-stage fixture segment (stages 1-7 across both recorded
-     * runs) shows exactly 104 lag rows between the 22 {@code Pal_FadeToWhite}
-     * rows and the first {@code Vint_S2SS} row. Trace replay admits those
-     * rows through the timing port. Ordinary play skips the span; the
-     * manager's {@code armLiveEntryLoadHold()} reproduces it for an accurate
-     * presentation mode that has not been wired to configuration yet.
+     * Observed NTSC presentations spent by the shared retail entry load.
+     * {@code SpecialStage} masks interrupts for screen/RAM setup, then restores
+     * SR=$2300 before its loaders (s2.asm:6557-6617). With Vint_routine still
+     * zero, unmasked load interrupts take Vint_Lag until the first startup
+     * wait at :6644. All seven stages load the shared layout/art collection.
+     * This duration is measured native evidence, not a ROM timer literal or
+     * a cycle-accurate load-cost model; PAL cost closure remains separate.
      */
     static final int ENTRY_LOAD_LAG_FRAMES = 104;
 

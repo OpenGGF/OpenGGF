@@ -339,12 +339,115 @@ java -cp $cp com.openggf.mods.code.ModApiSignatureSurface --snapshot |
     Set-Content -Encoding utf8NoBOM src/test/resources/mods/mod-api-signatures-0.7.txt
 ```
 
-The pre-commit and CI policy hooks require the candidate pin to be staged whenever a
-`@ModApi` source changes its declaration text: comments are ignored; interfaces,
-records, enums and annotation types compare every remaining line; classes compare
-annotations, type declarations and `public`/`protected` declarations. A body-only
-edit to an annotated class therefore commits without a pin change, and
-`TestModApiSignatureSurface` remains the exact check.
+The commit-message and CI policy hooks require the candidate pin when a `@ModApi`
+source changes its retained declarations. Both shell and PowerShell track nested
+owners: a private or package-private nested implementation, including public
+members beneath it, contributes only when retained declarations reference its
+name or it carries `@ModApi`. Public/protected nested types and implicitly public
+interface members remain guarded. References follow annotations, signatures,
+generic bounds, record components and sealed permits, including source-local
+subtypes of a sealed type with inferred permits. Each retained declaration carries
+its complete enclosing type path; retaining ancestor headers alone does not
+preserve which owner declares a nested type or member.
+
+Comments and ordinary executable bodies are excluded; declaration continuations,
+annotation values/defaults and compact-constructor annotations are retained.
+Ordinary field initializer values and bodies are excluded. `snapshotLines()` pins
+field owner, modifiers, generic type, name and annotations; it does not read a
+field or constant value. All declarators and their individual array dimensions
+remain in the staging comparison, including after multiline/lambda/anonymous
+initializers. Annotation defaults and annotation values remain pin content.
+Enum bodies remain conservative because enum constant subclasses can enter the
+sealed closure. Unrecognized annotated generic initializer syntax also falls
+back to complete source rather than guessing at declarator boundaries.
+Simple-name collisions may retain an otherwise hidden type. Unicode escapes,
+non-ASCII identifiers and unbalanced lexical scopes compare the complete source
+rather than silently discard a declaration; Unicode punctuation in comments and
+literals is supported. This source-only staging heuristic does not resolve
+cross-file references, imports or the curated compiled inventory, and does not
+evaluate constant expressions used by annotations/defaults.
+`TestModApiSignatureSurface` remains the exact recursive contract check; a hook
+pass alone does not prove pin equality or waive that check.
+
+The R2 policy correction (2026-10-18) rejected the flat declaration emitter in
+`6df0c52ba218b2b18ed25b94ad48c3a305d41c6d`: moving `Api$A$B` to `Api$B`
+kept identical declaration text despite changing the compiled type identity.
+Before changing either hook, the focused Python tests
+`SnapshotPolicyTests.test_retained_nested_type_owner_movement_requires_pin` and
+`SnapshotPolicyTests.test_retained_nested_type_owner_movement_accepts_changed_pin`
+each produced four failures: shell and installed PowerShell, each in `commit-msg`
+and `ci-push`. The former wrongly admitted the move without a pin; the latter
+wrongly rejected a changed candidate pin as having no detectable surface change.
+Run either identity with `python3 -m unittest tools.testing.test_release_snapshot_policy.<identity> -v`.
+Owner paths now distinguish these declarations without making hidden
+implementations part of the surface. The safety harness reports missing `pwsh`
+as explicit skipped PowerShell subtests while still executing the shell checks.
+
+The R3 reconciliation (2026-10-18) rejected the R1/R2 assumption that public
+initializer values should demand a pin. The authoritative field emission in
+`ModApiSignatureSurface.snapshotLines()` includes no initializer/constant value;
+changing a preset value differs from changing a declaration annotation/default.
+Root reported one genuine HCZ R67 composed run with the exact `6970113` shell and
+PowerShell hooks and composed test SHA-256
+`2436906789946fd0c2c76661ca814a4e73167f9c77812e3cb464d67b58c6d856`:
+66 tests in 138.763 seconds, eight failing subtests, zero errors/suite skips.
+Each of these retained identities failed in both shell and installed PowerShell
+7.6.5, expecting admission but receiving a candidate-pin requirement:
+
+- `test_actual_game_rules_preset_initializer_change_does_not_require_pin`
+- `test_class_multiline_initializer_does_not_capture_following_private_body`
+- `test_record_initializer_lambdas_arrays_and_multiple_fields_keep_only_declarations`
+- `test_record_preset_initializer_and_implementation_bodies_do_not_require_pin`
+
+That composed old-red run was retained as evidence, not repeated unchanged.
+The seven retained HCZ tests and their two staging helpers were imported exactly;
+all 39 pre-existing HCZ test bodies remain unchanged. Only the newer
+`test_public_field_initializers_remain_conservative` oracle was corrected and
+renamed to `test_public_field_initializer_values_do_not_require_a_pin` to match
+the compiled exporter. Field name/type/modifier/annotation/declarator changes
+still require a changed candidate pin; initializer exclusion does not waive the
+compiled signature guard or expand the hook into a full Java resolver.
+
+R3 read-back also found that array defaults next to punctuation could be mistaken
+for executable bodies. The new
+`test_annotation_default_arrays_at_punctuation_boundaries_remain_pin_content`
+produced 24 genuine focused failures before the token-boundary correction: three
+layouts, both pin operations, shell/PowerShell and commit-message/CI modes. A
+Java keyword boundary, rather than surrounding whitespace, now identifies
+`default`; these values remain part of the pin when ordinary preset values do not.
+
+The R4 correction (2026-10-18) preserves the rejected R3 candidate
+`5d115a0e5d2bcc5f56859e7b752717534f9ef9cc`. Its independent review reported four
+genuine failing subtests: shell and installed PowerShell, each in `commit-msg`
+and `ci-push`. In `public static final Object VALUE = new <String, Hidden> Box();`
+with a private generic-constructor `Box` and private `Hidden`, changing the public
+member `Hidden.value` from `int` to `long` wrongly required a pin. The lexer
+recognized type arguments after a class name but not directly after `new`, so
+their comma ended initializer omission and leaked `Hidden` into reachability.
+Both hooks now recognize that Java keyword boundary before constructor type
+arguments, including adjacent `<` and comment-separated layouts. This retains
+the existing comparison/generic-invocation handling and conservative unknown
+syntax fallback; it does not resolve Java types or change compiled authority.
+The independent four-subtest result supplies pre-edit evidence without repeating
+the unchanged full suite. The new tests
+`test_explicit_constructor_type_arguments_do_not_expose_hidden_implementation_types`
+and `test_explicit_constructor_nested_generics_preserve_following_field_declarators`
+exercise the actual reproducer, nested constructor/class type arguments and
+multiple declarators. Initializer values/references remain excluded, while
+following field names, removal, types, modifiers, dimensions and method signatures
+reject an unchanged pin and accept a changed candidate pin. All previous 70 test
+bodies and helpers are preserved.
+
+The final `python3 -m unittest tools.testing.test_release_snapshot_policy -v`
+run passed all 72 tests in 173.600 seconds, with zero failures, errors or suite
+skips. Paired shell/installed PowerShell 7.6.5 execution covers 59 policy test
+identities; the remaining coverage is 11 tree-audit tests, one audit CLI test and
+the missing-PowerShell reporting control (which captures two expected skips
+internally). The two new identities exercise 20 source-change cases across both
+implementations and both policy modes: 80 actual policy checks. Shell/PowerShell
+syntax, LF and diff checks passed. No engine/JVM validation was run for this
+bounded source-hook correction; the compiled signature guard remains required
+when the delivery components are composed.
 
 Release packaging generates exact-inventory Javadoc and attaches
 `openggf-mod-sdk` and `openggf-mod-sdk-javadoc` classifier jars beside the engine
@@ -927,3 +1030,26 @@ act and leader. The normalized mutable `0.7` pin and runtime candidate descripti
 are updated together. The release descriptor was reviewed and remains byte-identical
 at unpublished candidate `0.7.0`: ordinary signature regeneration must not edit
 its publication or branch policy. No published baseline changes.
+
+### Drowned player routine rule (2026-10-16)
+
+`DrowningBubbleRules` gains `drownInstallsDedicatedPlayerRoutine`. S3K's
+`AirCountdown_ReduceAir` installs player routine $C, whose dispatch never runs
+`Sonic_Water`/`Tails_Water`, so a drowning S3K player keeps `Status_Underwater`.
+S1 and S2 keep the control routine, and its water check still runs.
+
+The record's canonical constructor now takes the flag; the four-argument candidate constructor remains available and defaults it to false. The stock factories in
+`GameRules` pass `false` for S1/S2 and `true` for S3K. The normalized mutable
+`0.7` pin and the `ModApiVersion` description change together. The descriptor
+remains the unpublished candidate `0.7.0`, and no published baseline changes.
+
+### Native-mode host modes (2026-10-22)
+
+The October 22 native-mode host adds four `GameMode` enum values: `OPTIONS`,
+`COMPETITION_MENU`, `COMPETITION`, and `COMPETITION_RESULTS`. They are appended
+so existing enum positions remain stable. The internal menu, launch and native
+participant services are outside the creator surface. The exact mutable `0.7`
+pin gains only those four fields, checked against the compiled surface. The
+candidate remains `0.7.0`; descriptor topology/status and published baselines
+are unchanged. Competition activation still requires a connected native session,
+arena and results provider; the mode names alone expose no playable product.

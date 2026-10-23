@@ -1,6 +1,8 @@
 package com.openggf.game;
 
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.game.internal.HudSatLayout;
+import com.openggf.game.internal.HudSatLayoutSource;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
@@ -18,7 +20,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /** Engine-side implementation of a static sheet overlay over an object-art provider. */
-public class ObjectArtOverlayProvider implements ObjectArtProvider {
+public class ObjectArtOverlayProvider implements ObjectArtProvider, HudSatLayoutSource {
     private final ObjectArtProvider base;
     private final Map<String, ObjectSpriteSheet> sheets;
     private final Map<String, PatternSpriteRenderer> renderers = new LinkedHashMap<>();
@@ -94,6 +96,9 @@ public class ObjectArtOverlayProvider implements ObjectArtProvider {
     @Override public Pattern[] getHudLivesPatterns() { return base.getHudLivesPatterns(); }
     @Override public Pattern[] getHudLivesNumbers() { return base.getHudLivesNumbers(); }
     @Override public HudStaticArt getHudStaticArt() { return base.getHudStaticArt(); }
+    @Override public HudSatLayout getHudSatLayout() {
+        return base instanceof HudSatLayoutSource source ? source.getHudSatLayout() : null;
+    }
     @Override public Pattern[] getHudHexDigitPatterns() { return base.getHudHexDigitPatterns(); }
     @Override public Palette getHudLivesPaletteOverride() { return base.getHudLivesPaletteOverride(); }
 

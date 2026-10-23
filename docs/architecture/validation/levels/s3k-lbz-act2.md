@@ -157,3 +157,19 @@ Final combined integration must retain upstream AIZ `standingPlayers` capture
 and the four exact CA graph-edge policies together. The later upstream AIZ
 source changes are lead-owned integration work and were not silently added to
 this frozen, focused-tested candidate.
+
+
+## R13 native launch row pointers and rewind — 2026-10-17
+
+loc544C6 reassigns BG pointers row2→0 and row3→1; actual ROM BG width4 is
+independent of the154-column FG map. The old byte copy corrupts overlapping row
+storage. A short production-ROM owner test fails at8EF8/8F00 before repair, then
+requires only the exact two pointer words to change. Source bytes stay unchanged;
+live source-row mutation updates both aliases and the collision descriptor.
+Two forced whole-world recreations restore every registry key and replay the
+mutation plus two ordinary forward ticks exactly. The existing launch-signal
+control uses the real four BG columns. Three affected LBZ controls pass inside
+86 focused checks;118 affected source/authority/rewind guards pass, no skips.
+Root's exact-hash source inspection has no material finding. No full LBZ route,
+new native picture or broader product breadth is certified. [Commands and owner
+limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r13-residency-smoke-regressions-native-row-pointers-and-ddz-fixture-entry--2026-10-17).

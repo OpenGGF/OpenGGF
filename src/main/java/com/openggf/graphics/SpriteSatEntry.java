@@ -10,7 +10,13 @@ public record SpriteSatEntry(
         int visibleTopY,
         int visibleBottomY,
         SpritePresentation.Subject presentationSubject,
+        java.util.List<SpriteSatEntry> replayFragments,
+        int tileOcclusionPaletteMask,
+        PixelOperation pixelOperation,
         Ghost ghost) {
+    /** Constrained indexed native operators; this does not enable general shadow/highlight mode. */
+    public enum PixelOperation { NORMAL, SHADOW_15 }
+
     /**
      * A gameplay ghost's draw style. Ghosts are not ROM sprites: a sprite mask clips them like
      * any later SAT entry, but they never arm one (see {@link SpriteSatMaskPostProcessor}).
@@ -26,6 +32,8 @@ public record SpriteSatEntry(
 
     public SpriteSatEntry {
         java.util.Objects.requireNonNull(presentationSubject, "presentation subject");
+        java.util.Objects.requireNonNull(pixelOperation, "pixel operation");
+        replayFragments = replayFragments == null ? null : java.util.List.copyOf(replayFragments);
         if (priorityBucket < RenderPriority.MIN || priorityBucket > RenderPriority.MAX) {
             throw new IllegalArgumentException("Priority bucket out of range");
         }
@@ -33,6 +41,17 @@ public record SpriteSatEntry(
         if (visibleTopY > visibleBottomY) {
             throw new IllegalArgumentException("Visible scanlines must not be inverted");
         }
+        if ((tileOcclusionPaletteMask & ~0xF) != 0) {
+            throw new IllegalArgumentException("Terrain palette mask must contain only four palette bits");
+        }
+    }
+
+    /** Ordinary low sprites hide behind every high terrain palette. */
+    public SpriteSatEntry(int priorityBucket, SpritePiece piece, int visibleTopY, int visibleBottomY,
+            SpritePresentation.Subject presentationSubject, Ghost ghost) {
+        this(priorityBucket, piece, visibleTopY, visibleBottomY, presentationSubject, null,
+                java.util.Objects.requireNonNull(piece, "sprite piece").globalHighPriority() ? 0 : 0xF,
+                PixelOperation.NORMAL, ghost);
     }
 
     /** A real (ROM) sprite entry without a scanline clip or presentation overlay. */
@@ -45,11 +64,29 @@ public record SpriteSatEntry(
     }
 
     public SpriteSatEntry withGhost(Ghost style) {
-        return new SpriteSatEntry(priorityBucket, piece, visibleTopY, visibleBottomY, presentationSubject, style);
+        return new SpriteSatEntry(priorityBucket, piece, visibleTopY, visibleBottomY, presentationSubject,
+                replayFragments, tileOcclusionPaletteMask, pixelOperation, style);
     }
 
     public SpriteSatEntry withPresentationSubject(SpritePresentation.Subject subject) {
-        return new SpriteSatEntry(priorityBucket, piece, visibleTopY, visibleBottomY, subject, ghost);
+        return new SpriteSatEntry(priorityBucket, piece, visibleTopY, visibleBottomY, subject,
+                replayFragments, tileOcclusionPaletteMask, pixelOperation, ghost);
+    }
+
+    /** One hardware admission piece may replay scattered, immutable ROM-backed art fragments. */
+    public SpriteSatEntry withReplayFragments(java.util.List<SpriteSatEntry> fragments) {
+        return new SpriteSatEntry(priorityBucket, piece, visibleTopY, visibleBottomY, presentationSubject,
+                fragments, tileOcclusionPaletteMask, pixelOperation, ghost);
+    }
+
+    public SpriteSatEntry withTileOcclusionPaletteMask(int mask) {
+        return new SpriteSatEntry(priorityBucket, piece, visibleTopY, visibleBottomY, presentationSubject,
+                replayFragments, mask, pixelOperation, ghost);
+    }
+
+    public SpriteSatEntry withPixelOperation(PixelOperation operation) {
+        return new SpriteSatEntry(priorityBucket, piece, visibleTopY, visibleBottomY, presentationSubject,
+                replayFragments, tileOcclusionPaletteMask, operation, ghost);
     }
 
     public static SpriteSatEntry of(int x, int y, int widthTiles, int heightTiles,
@@ -70,7 +107,8 @@ public record SpriteSatEntry(
 
     public SpriteSatEntry clipRect(int col, int cols, int row, int rows) {
         return new SpriteSatEntry(priorityBucket, piece.clipRect(col, cols, row, rows),
-                visibleTopY, visibleBottomY, presentationSubject, ghost);
+                visibleTopY, visibleBottomY, presentationSubject, replayFragments,
+                tileOcclusionPaletteMask, pixelOperation, ghost);
     }
 
     public SpriteSatEntry clipRows(int row, int rows) {
@@ -79,12 +117,14 @@ public record SpriteSatEntry(
 
     public SpriteSatEntry withMaskReplayRole(SpriteMaskReplayRole role) {
         return new SpriteSatEntry(priorityBucket, piece.withMaskReplayRole(role),
-                visibleTopY, visibleBottomY, presentationSubject, ghost);
+                visibleTopY, visibleBottomY, presentationSubject, replayFragments,
+                tileOcclusionPaletteMask, pixelOperation, ghost);
     }
 
     /** Copy restricted to screen scanlines {@code [top, bottom)}; tile rows are left whole. */
     public SpriteSatEntry withVisibleScanlines(int top, int bottom) {
-        return new SpriteSatEntry(priorityBucket, piece, top, bottom, presentationSubject, ghost);
+        return new SpriteSatEntry(priorityBucket, piece, top, bottom, presentationSubject,
+                replayFragments, tileOcclusionPaletteMask, pixelOperation, ghost);
     }
 
     /**

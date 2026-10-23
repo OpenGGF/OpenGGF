@@ -33,6 +33,27 @@ See [testing utilities](../../../tools/testing/README.md#default-suite-and-relea
 Tests use one reused 3 GiB JVM by default. `test-concurrent` opts into two forks;
 Jupiter execution remains serial inside each fork. Guards use a separate JVM.
 
+### TraceChaser immutable consumer copies
+
+Ordinary `TestTraceChaserV5ConsumerContract` runs the frozen v5 pack through Java
+consumers and checks its declared provenance without an initialized submodule.
+Its temporary local Git fixtures also distinguish immutable-origin preservation
+from a later producer HEAD, and reject byte tampering and missing/extra files.
+
+The opt-in method first requires the initialized checkout to match OpenGGF's
+exact gitlink. It then compares all three declared copies, including complete v5
+file membership and exact bytes, with Git objects at `provenance.json`'s
+`origin_commit`. That origin must already be available locally; the test fails
+clearly if it is absent and never fetches or substitutes HEAD. A passing
+historical-copy check does not establish current producer compatibility.
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=com.openggf.trace.TestTraceChaserV5ConsumerContract' test -B
+python3 tools/testing/maven_queue.py -Dmse=off -Ptracechaser-integration \
+  '-Dtest=com.openggf.trace.TestTraceChaserV5ConsumerContract#initializedCheckoutPreservesConsumerCopiesFromDeclaredImmutableOrigin' test -B
+```
+
 ## CI in GitHub
 
 | Event | What runs |

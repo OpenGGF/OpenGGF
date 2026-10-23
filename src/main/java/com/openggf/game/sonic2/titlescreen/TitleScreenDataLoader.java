@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.util.Arrays;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -84,6 +85,8 @@ public class TitleScreenDataLoader {
     // Standard menu font (ArtNem_FontStuff) uploaded to ArtTile_ArtNem_FontStuff_TtlScr
     // during TitleScreen setup; only the "@ 1992 SEGA" copyright line reads it.
     private Pattern[] fontPatterns;
+    private Pattern[] menuPlayerPatterns;
+    private List<SpriteMappingFrame> menuMappingFrames;
     private Pattern[] segaLogoPatterns;
     private Pattern[] segaGiantSonicPatterns;
     private SpriteMappingFrame[] segaGiantSonicMappingFrames;
@@ -178,6 +181,15 @@ public class TitleScreenDataLoader {
             // the Plane A copyright line "@ 1992 SEGA" indexes (s2.asm TitleScreen setup).
             fontPatterns = PatternDecompressor.nemesis(rom, Sonic2Constants.ART_NEM_FONT_STUFF_ADDR, 4096, "TitleFontStuff");
             LOGGER.info("Loaded title font patterns: " + (fontPatterns != null ? fontPatterns.length : 0));
+
+            // Obj0F uses absolute VRAM tiles: Player1VS2 at $402, MenuJunk arrow at $3FA,
+            // and FontStuff at $680. Read the shipped 8-byte S2 mappings from the ROM.
+            menuPlayerPatterns = PatternDecompressor.nemesis(rom, 0x3DF4, 1024, "TitlePlayer1VS2");
+            try {
+                menuMappingFrames = S2SpriteDataLoader.loadMappingFrames(RomByteReader.fromRom(rom), 0x13B70);
+            } catch (IOException e) {
+                throw new IllegalStateException("Cannot load Obj0F title mappings", e);
+            }
 
             // Load intro palette (Sonic/Tails palette used as text color on the intro screen)
             loadIntroPalette(rom);
@@ -606,6 +618,18 @@ public class TitleScreenDataLoader {
             }
         }
 
+        if (menuPlayerPatterns != null) {
+            for (int i = 0; i < menuPlayerPatterns.length; i++) {
+                graphicsManager.cachePatternTexture(menuPlayerPatterns[i], PATTERN_BASE + 0x402 + i);
+            }
+        }
+        // MenuJunk already resides in the title sprite sheet. Obj0F instead uses native tiles.
+        if (spritePatterns != null) {
+            for (int i = 0; i < 10 && 0x2A2 + i < spritePatterns.length; i++) {
+                graphicsManager.cachePatternTexture(spritePatterns[0x2A2 + i], PATTERN_BASE + 0x3F2 + i);
+            }
+        }
+
         LOGGER.info("Cached " + cachedCount + " background + " + spriteCachedCount + " sprite patterns to GPU");
         artCached = true;
     }
@@ -794,6 +818,20 @@ public class TitleScreenDataLoader {
 
     public Pattern[] getSpritePatterns() {
         return spritePatterns;
+    }
+
+    List<SpriteMappingFrame> getMenuMappingFrames() {
+        return menuMappingFrames;
+    }
+
+    Pattern getMenuPattern(int tile) {
+        if (tile >= 0x402 && tile < 0x402 + menuPlayerPatterns.length) {
+            return menuPlayerPatterns[tile - 0x402];
+        }
+        if (tile >= 0x680 && tile < 0x680 + fontPatterns.length) {
+            return fontPatterns[tile - 0x680];
+        }
+        return spritePatterns[tile - 0x150];
     }
 
     public int[] getSegaLogoMap() {

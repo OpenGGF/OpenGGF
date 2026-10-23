@@ -12,43 +12,74 @@ import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
+import com.openggf.control.InputActionMasks;
 import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
 import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.PerformanceProfiler;
 import com.openggf.debug.playback.PlaybackDebugManager;
+import com.openggf.debug.playback.Bk2FrameInput;
+import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameModule;
 import com.openggf.game.RomDetectionService;
 import com.openggf.game.RuntimeArtCoordinator;
+import com.openggf.game.DataSelectProvider;
+import com.openggf.game.GameId;
+import com.openggf.game.GameMode;
+import com.openggf.game.RomDataSource;
+import com.openggf.game.TitleScreenProvider;
+import com.openggf.game.dataselect.DataSelectPresentationProvider;
+import com.openggf.game.save.SavePaths;
+import com.openggf.game.sonic3k.Sonic3kLevel;
+import com.openggf.game.sonic3k.titlescreen.Sonic3kTitleScreenManager;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.tests.RomTestUtils;
+import com.openggf.trace.replay.runs.RunLevelLoadCause;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.parallel.Isolated;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.util.EnumSet;
+import java.util.HexFormat;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@Isolated
 class TestEngineConfiguredHeadlessStartup {
+    @TempDir
+    Path temporaryDirectory;
+
     private SonicConfigurationService config;
     private AudioManager audio;
     private CrossGameFeatureProvider crossGameFeatures;
 
     @BeforeEach
     void setUp() {
-        config = SonicConfigurationService.createStandalone();
+        config = SonicConfigurationService.createStandalone(temporaryDirectory);
         config.setConfigValue(SonicConfiguration.AUDIO_ENABLED, true);
         config.setConfigValue(
                 SonicConfiguration.SHOW_LEGAL_DISCLAIMER_ON_STARTUP, false);
@@ -257,6 +288,200 @@ class TestEngineConfiguredHeadlessStartup {
 
         assertNull(SessionManager.getCurrentWorldSession());
         assertNull(SessionManager.getCurrentGameplayMode());
+    }
+
+    @Test
+    void realS3kConfiguredFrontendLaunchesFreshAizThroughOrdinaryInput()
+            throws Exception {
+        var romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null, "S3K ROM unavailable");
+        Path romPath = romFile.toPath().toRealPath();
+        assertEquals("cfbf98c36c776677290a872547ac47c53d2761d6",
+                HexFormat.of().formatHex(MessageDigest.getInstance("SHA-1")
+                        .digest(Files.readAllBytes(romPath))),
+                "this control requires the original locked-on World ROM");
+        config.setConfigValue(SonicConfiguration.DEFAULT_ROM, "s3k");
+        config.setConfigValue(SonicConfiguration.SONIC_3K_ROM, romPath.toString());
+        config.setConfigValue(SonicConfiguration.ROMS_DIRECTORY,
+                temporaryDirectory.toString());
+        config.setConfigValue(SonicConfiguration.TITLE_SCREEN_ON_STARTUP, true);
+        config.setConfigValue(SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
+        config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
+        config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+        config.setConfigValue(SonicConfiguration.LAUNCH_S3K_CROSS_GAME_SOURCE, "off");
+        config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+        config.setConfigValue(SonicConfiguration.REGION, "NTSC");
+
+        GraphicsManager graphics = new GraphicsManager();
+        graphics.initHeadless();
+        RomManager roms = RomManager.getInstance();
+        Rom previousRom = roms.isRomAvailable() ? roms.getRom() : null;
+        String previousSaveRoot = System.getProperty(SavePaths.ROOT_PROPERTY);
+        System.setProperty(SavePaths.ROOT_PROPERTY,
+                temporaryDirectory.resolve("saves").toString());
+        roms.setRom(null); // Let production open the configured file and detect its module.
+        Engine engine = new Engine(new EngineContext(config, graphics, audio, roms,
+                PerformanceProfiler.getInstance(), DebugOverlayManager.getInstance(),
+                PlaybackDebugManager.getInstance(), RomDetectionService.getInstance(),
+                CrossGameFeatureProvider.getInstance()));
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
+        NullAudioBackend backend = new NullAudioBackend();
+        Rom openedRom = null;
+        try {
+            engine.initializeConfiguredHeadlessSession(input, backend);
+            openedRom = roms.getRom();
+            GameLoop loop = engine.getGameLoop();
+            assertSame(input, loop.getInputHandler());
+            assertSame(backend, audio.getBackend(),
+                    "real configured startup must retain the caller-owned headless backend");
+            var frontend = SessionManager.getCurrentGameplayMode();
+            var frontendWorld = frontend.getWorldSession();
+            var source = assertInstanceOf(RomDataSource.class,
+                    frontendWorld.getDataSource());
+            assertSame(openedRom, source.rom().orElseThrow());
+            assertEquals(GameId.S3K, frontendWorld.rootGameModule().getGameId());
+            assertSame(frontendWorld.rootGameModule(), frontendWorld.resolvedGameModule());
+            assertEquals(GameMode.TITLE_SCREEN, loop.getCurrentGameMode());
+            var title = assertInstanceOf(Sonic3kTitleScreenManager.class,
+                    loop.getTitleScreenProvider());
+            assertEquals(TitleScreenProvider.State.INTRO_TEXT_FADE_IN, title.getState());
+            assertNull(frontendWorld.getCurrentLevel());
+            assertEquals(0, frontend.getLevelManager().getCompletedProductionLoadGeneration());
+            assertTrue(frontend.runLevelLoads().latest().isEmpty());
+
+            // Safety budgets only: these iterations are not a native reset/movie clock oracle.
+            Bk2FrameInput previous = null;
+            var titleStates = EnumSet.of(title.getState());
+            for (int budget = 3000; title.getState() != TitleScreenProvider.State.ACTIVE
+                    && budget > 0; budget--) {
+                previous = presentConfiguredInput(loop, input, previous, 0, false);
+                titleStates.add(title.getState());
+                assertSame(frontend, SessionManager.getCurrentGameplayMode());
+                assertNull(frontendWorld.getCurrentLevel());
+            }
+            assertEquals(TitleScreenProvider.State.ACTIVE, title.getState());
+            assertTrue(titleStates.contains(TitleScreenProvider.State.INTRO_TEXT_HOLD));
+            previous = presentConfiguredInput(loop, input, previous, 0, true);
+            for (int budget = 3000; loop.getCurrentGameMode() == GameMode.TITLE_SCREEN
+                    && budget > 0; budget--) {
+                previous = presentConfiguredInput(loop, input, previous, 0, false);
+            }
+            assertEquals(GameMode.DATA_SELECT, loop.getCurrentGameMode());
+            var menu = assertInstanceOf(DataSelectPresentationProvider.class,
+                    loop.getDataSelectProvider());
+            for (int budget = 3000; menu.getState() != DataSelectProvider.State.ACTIVE
+                    && budget > 0; budget--) {
+                previous = presentConfiguredInput(loop, input, previous, 0, false);
+            }
+            assertEquals(DataSelectProvider.State.ACTIVE, menu.getState());
+            assertEquals(0, menu.controller().menuModel().getSelectedRow(), "NO SAVE row");
+            assertTrue(menu.controller().slotSummaries().stream()
+                    .noneMatch(summary -> summary.isLoadable()), "isolated blank save root");
+            assertSame(frontend, SessionManager.getCurrentGameplayMode());
+            assertEquals(0, frontend.getLevelManager().getCompletedProductionLoadGeneration());
+            previous = presentConfiguredInput(loop, input, previous, 0, true);
+            for (int budget = 3000; loop.getCurrentGameMode() == GameMode.DATA_SELECT
+                    && budget > 0 && menu.launchErrorMessage().isEmpty(); budget--) {
+                previous = presentConfiguredInput(loop, input, previous, 0, false);
+            }
+            assertTrue(menu.launchErrorMessage().isEmpty(),
+                    () -> "production launch failure: " + menu.launchErrorMessage());
+            assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
+            var gameplay = SessionManager.getCurrentGameplayMode();
+            var world = gameplay.getWorldSession();
+            var level = gameplay.getLevelManager();
+            assertNotSame(frontend, gameplay);
+            assertNotSame(frontendWorld, world);
+            assertSame(source, world.getDataSource(), "DataSelect retains the pinned ROM source");
+            assertSame(world, level.getWorldSession());
+            assertSame(level.getCurrentLevel(), world.getCurrentLevel());
+            assertInstanceOf(Sonic3kLevel.class, world.getCurrentLevel());
+            assertEquals(0, level.getCurrentZone());
+            assertEquals(0, level.getRomZoneId());
+            assertEquals(0, level.getCurrentAct());
+            assertEquals(1, level.getCompletedProductionLoadGeneration());
+            var receipt = gameplay.runLevelLoads().latest().orElseThrow();
+            assertEquals(RunLevelLoadCause.ORDINARY, receipt.cause());
+            assertEquals(level.getCompletedProductionLoadGeneration(),
+                    receipt.identity().loadGeneration());
+            assertEquals(level.getCurrentZone(), receipt.identity().progressionZone());
+            assertEquals(level.getRomZoneId(), receipt.identity().romZone());
+            assertEquals(level.getCurrentAct(), receipt.identity().act());
+            assertTrue(world.getSaveSessionContext().activeSlot().isEmpty());
+            var sprites = gameplay.getSpriteManager();
+            var player = sprites.getMainPlayable();
+            assertEquals("sonic", player.characterKey().persisted());
+            assertEquals(1, sprites.getSidekicks().size());
+            assertEquals("tails", sprites.getSidekicks().getFirst().characterKey().persisted());
+
+            // Observe the genuine first level body, including native intro ownership.
+            var objects = gameplay.getObjectManager();
+            boolean ordinaryPass = false;
+            for (int budget = 3000; !ordinaryPass && budget > 0; budget--) {
+                int beforeSprites = sprites.getFrameCounter();
+                int beforeObjects = objects.getFrameCounter();
+                int beforeLevel = level.getFrameCounter();
+                previous = presentConfiguredInput(loop, input, previous,
+                        AbstractPlayableSprite.INPUT_RIGHT, false);
+                assertSame(gameplay, SessionManager.getCurrentGameplayMode());
+                assertSame(player, sprites.getMainPlayable());
+                assertSame(input, loop.getInputHandler());
+                assertSame(backend, audio.getBackend());
+                assertSame(receipt, gameplay.runLevelLoads().latest().orElseThrow());
+                ordinaryPass = sprites.getFrameCounter() == beforeSprites + 1
+                        && objects.getFrameCounter() == beforeObjects + 1
+                        && level.getFrameCounter() == beforeLevel + 1;
+            }
+            assertTrue(ordinaryPass, "first production input/player/object body must execute");
+            int beforeSprites = sprites.getFrameCounter();
+            int beforeObjects = objects.getFrameCounter();
+            int beforeLevel = level.getFrameCounter();
+            var action = new Bk2FrameInput(previous.frameIndex() + 1,
+                    AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP,
+                    InputActionMasks.ACTION_B, false, "ordinary AIZ input edge");
+            input.setLogicalOverride(RecordedInputSnapshots.fromBk2(action, previous));
+            loop.step();
+            Engine.presentOuterAudioFrame(loop, false, false);
+            assertEquals(beforeSprites + 1, sprites.getFrameCounter());
+            assertEquals(beforeObjects + 1, objects.getFrameCounter());
+            assertEquals(beforeLevel + 1, level.getFrameCounter());
+            assertEquals(InputActionMasks.ACTION_B,
+                    sprites.getJoypadPressSnapshot().player1ActionPressed());
+            assertEquals(AbstractPlayableSprite.INPUT_RIGHT,
+                    input.logical().player1().heldMask() & AbstractPlayableSprite.INPUT_RIGHT);
+            assertSame(gameplay, SessionManager.getCurrentGameplayMode());
+            assertSame(world, SessionManager.getCurrentWorldSession());
+            assertSame(world.getCurrentLevel(), level.getCurrentLevel());
+            assertSame(player, sprites.getMainPlayable());
+            assertSame(input, loop.getInputHandler());
+            assertSame(backend, audio.getBackend());
+            assertSame(receipt, gameplay.runLevelLoads().latest().orElseThrow());
+            assertFalse(player.getDead());
+        } finally {
+            try {
+                engine.closeConfiguredHeadlessSession();
+            } finally {
+                input.clearLogicalOverride();
+                graphics.cleanup();
+                if (openedRom != null && openedRom != previousRom) openedRom.close();
+                roms.setRom(previousRom);
+                if (previousSaveRoot == null) System.clearProperty(SavePaths.ROOT_PROPERTY);
+                else System.setProperty(SavePaths.ROOT_PROPERTY, previousSaveRoot);
+            }
+        }
+        assertFalse(input.hasLogicalOverride());
+        assertNull(SessionManager.getCurrentGameplayMode());
+        assertNull(SessionManager.getCurrentWorldSession());
+    }
+
+    private static Bk2FrameInput presentConfiguredInput(GameLoop loop, InputHandler input,
+            Bk2FrameInput previous, int held, boolean start) {
+        var current = new Bk2FrameInput(previous == null ? 0 : previous.frameIndex() + 1,
+                held, 0, start, "ordinary configured startup control");
+        input.setLogicalOverride(RecordedInputSnapshots.fromBk2(current, previous));
+        loop.step();
+        Engine.presentOuterAudioFrame(loop, false, false);
+        return current;
     }
 
     private EngineContext context() {

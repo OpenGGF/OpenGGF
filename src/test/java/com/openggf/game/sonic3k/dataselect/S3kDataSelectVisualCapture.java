@@ -4,6 +4,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineServices;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestSessionOutputPaths;
+import com.openggf.tools.PresentationOffscreenTestContext;
 
 import com.openggf.Engine;
 import com.openggf.camera.Camera;
@@ -39,6 +40,7 @@ import static org.lwjgl.glfw.GLFW.glfwDefaultWindowHints;
 import static org.lwjgl.glfw.GLFW.glfwDestroyWindow;
 import static org.lwjgl.glfw.GLFW.glfwInit;
 import static org.lwjgl.glfw.GLFW.glfwMakeContextCurrent;
+import static org.lwjgl.glfw.GLFW.glfwSetErrorCallback;
 import static org.lwjgl.glfw.GLFW.glfwTerminate;
 import static org.lwjgl.glfw.GLFW.glfwWindowHint;
 import static org.lwjgl.opengl.GL11.GL_BLEND;
@@ -79,6 +81,9 @@ public final class S3kDataSelectVisualCapture {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
 
         long window = NULL;
+        PresentationOffscreenTestContext offscreen = null;
+        GLFWErrorCallback errorCallback = null;
+        GraphicsManager graphics = null;
         try {
             String romPath = System.getProperty("s3k.rom.path",
                     "s3k.gen");
@@ -91,39 +96,48 @@ public final class S3kDataSelectVisualCapture {
             Files.createDirectories(SAVE_ROOT.resolve("s3k"));
             clearDirectory(SAVE_ROOT.resolve("s3k"));
 
-            GLFWErrorCallback.createPrint(System.err).set();
-            if (!glfwInit()) {
-                throw new IllegalStateException("Unable to initialize GLFW");
-            }
+            if (PresentationOffscreenTestContext.requested()) {
+                // The explicit EGL owner fails visibly and never tries a desktop window.
+                offscreen = PresentationOffscreenTestContext.open(SCREEN_WIDTH, SCREEN_HEIGHT);
+            } else {
+                errorCallback = GLFWErrorCallback.createPrint(System.err);
+                errorCallback.set();
+                if (!glfwInit()) {
+                    throw new IllegalStateException("Unable to initialize GLFW");
+                }
 
-            glfwDefaultWindowHints();
-            glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-            glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-            window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "S3K Data Select Capture", NULL, NULL);
-            if (window == NULL) {
-                throw new IllegalStateException("Failed to create hidden GLFW window");
-            }
+                glfwDefaultWindowHints();
+                glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+                glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+                window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "S3K Data Select Capture", NULL, NULL);
+                if (window == NULL) {
+                    throw new IllegalStateException("Failed to create hidden GLFW window");
+                }
 
-            glfwMakeContextCurrent(window);
-            GL.createCapabilities();
+                glfwMakeContextCurrent(window);
+                GL.createCapabilities();
+            }
 
             GraphicsManager.destroyForReinit();
             EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
 
-            GraphicsManager graphics = GraphicsManager.getInstance();
+            graphics = GraphicsManager.getInstance();
             graphics.init(Engine.RESOURCES_SHADERS_PIXEL_SHADER_GLSL);
 
             glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-            glMatrixMode(GL_PROJECTION);
-            glLoadIdentity();
             Matrix4f projection = new Matrix4f().ortho2D(0, SCREEN_WIDTH, 0, SCREEN_HEIGHT);
             float[] matrixBuffer = new float[16];
             projection.get(matrixBuffer);
-            glLoadMatrixf(matrixBuffer);
             graphics.setProjectionMatrixBuffer(matrixBuffer.clone());
 
-            glMatrixMode(GL_MODELVIEW);
-            glLoadIdentity();
+            if (offscreen == null) {
+                // Retain the compatibility setup for the legacy manual hidden-window path.
+                glMatrixMode(GL_PROJECTION);
+                glLoadIdentity();
+                glLoadMatrixf(matrixBuffer);
+                glMatrixMode(GL_MODELVIEW);
+                glLoadIdentity();
+            }
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             graphics.setViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -165,15 +179,28 @@ public final class S3kDataSelectVisualCapture {
 
             System.out.println(EMPTY_OUTPUT_FILE.toAbsolutePath());
         } finally {
-            if (window != NULL) {
+            try {
+                // Release shader/atlas/static GL resources while their context is current.
+                if (graphics != null) {
+                    GraphicsManager.destroyForReinit();
+                }
+            } finally {
                 try {
-                    glfwDestroyWindow(window);
-                } catch (Exception ignored) {
+                    if (offscreen != null) {
+                        offscreen.close();
+                    } else if (errorCallback != null) {
+                        GL.setCapabilities(null);
+                        if (window != NULL) {
+                            glfwDestroyWindow(window);
+                        }
+                        glfwTerminate();
+                        glfwSetErrorCallback(null);
+                        errorCallback.free();
+                    }
+                } finally {
+                    SessionManager.clear();
                 }
             }
-            glfwTerminate();
-            GraphicsManager.getInstance().resetState();
-            SessionManager.clear();
         }
     }
 

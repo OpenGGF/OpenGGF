@@ -5,6 +5,7 @@ import com.openggf.level.TransitionSstOccupant;
 import com.openggf.level.objects.boss.BossChildComponent;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Comparator;
 import java.util.Collection;
 import java.util.HashMap;
@@ -97,6 +98,34 @@ final class ObjectManagerPopulationView {
         if (instance instanceof AbstractObjectInstance object) {
             int slot = callbacks.call(instance, object::getSlotIndex);
             if (slot >= 0) snapshot.add(new TransitionSstOccupant(instance, slot));
+        }
+    }
+
+    long[] captureOwnedUsedSlotBits() {
+        BitSet owned = new BitSet(slots.dynamicSlotCount());
+        for (ObjectInstance instance : placed.values()) {
+            markOwnedSlot(owned, instance);
+        }
+        for (ObjectInstance instance : dynamic) {
+            markOwnedSlot(owned, instance);
+        }
+        for (int[] childSlots : reservedChildren.values()) {
+            if (childSlots == null) {
+                continue;
+            }
+            for (int slot : childSlots) {
+                if (slots.isDynamicSlot(slot)) {
+                    owned.set(slots.toExecIndex(slot));
+                }
+            }
+        }
+        return owned.toLongArray();
+    }
+
+    private void markOwnedSlot(BitSet owned, ObjectInstance instance) {
+        if (instance instanceof AbstractObjectInstance object) {
+            int slot = callbacks.call(instance, object::getSlotIndex);
+            if (slots.isDynamicSlot(slot)) owned.set(slots.toExecIndex(slot));
         }
     }
 

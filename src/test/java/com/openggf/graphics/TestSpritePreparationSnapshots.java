@@ -29,6 +29,7 @@ class TestSpritePreparationSnapshots {
     private static final HeadSatReplay HEAD_REPLAY = (host, entries, emitter) -> { };
     private static final PaletteReplay PALETTE_REPLAY = (host, palette) -> palette;
     private static final HeadMask HEAD_MASK = new HeadMask(0, 2, Set.of(1), List.of(new MaskPoint(0, 0)));
+    private static final PatternVersion SHADOW_SAMPLE = new PatternVersion(0xF, 0, 0, 0);
     private GraphicsManager graphics;
 
     @BeforeEach void setup() {
@@ -76,6 +77,8 @@ class TestSpritePreparationSnapshots {
         assertNotSame(original.tiles().getFirst(), equal.tiles().getFirst());
         Frame next = raw(changed);
         assertEquals(changed, next.tiles().getFirst(), field);
+        assertEquals(changed.pixelOperation() == SpriteSatEntry.PixelOperation.SHADOW_15
+                ? Map.of(changed.patternId(), SHADOW_SAMPLE) : Map.of(), next.patternVersions(), field);
         assertNotEquals(seed, changed, "positive control for " + field);
         assertNotSame(original.tiles().getFirst(), next.tiles().getFirst(), field);
         assertEquals(seed, original.tiles().getFirst(), "the retained frame remains exact");
@@ -89,7 +92,9 @@ class TestSpritePreparationSnapshots {
                 Map.entry("hFlip", true), Map.entry("vFlip", true), Map.entry("priority", true),
                 Map.entry("x", 21f), Map.entry("y", 41f), Map.entry("width", 16f), Map.entry("height", 4f),
                 Map.entry("priorityShader", true), Map.entry("occlusionMask", 7), Map.entry("ghost", false),
-                Map.entry("ghostAlpha", .5f), Map.entry("rowStart", 2), Map.entry("rowEnd", 6));
+                Map.entry("ghostAlpha", .5f), Map.entry("ghostColour", true),
+                Map.entry("pixelOperation", SpriteSatEntry.PixelOperation.SHADOW_15),
+                Map.entry("rowStart", 2), Map.entry("rowEnd", 6));
         fields.forEach((name, value) -> cases.add(Arguments.of(name, replace(seed, name, value))));
         Subject subject = seed.subject();
         Map<String, Object> subjects = Map.of("id", "unknown-another-owner", "part", Part.APPENDAGE,
@@ -144,6 +149,11 @@ class TestSpritePreparationSnapshots {
         when(host.getCurrentSpriteTileOcclusionPaletteMask()).thenReturn(tile.occlusionMask());
         when(host.isGhostRenderEffectActive()).thenReturn(tile.ghost());
         when(host.getGhostRenderAlpha()).thenReturn(tile.ghostAlpha());
+        when(host.isGhostRenderColourPreserved()).thenReturn(tile.ghostColour());
+        host.currentSpritePixelOperation = tile.pixelOperation();
+        if (tile.pixelOperation() == SpriteSatEntry.PixelOperation.SHADOW_15)
+            when(host.scenePatternSample(tile.patternId())).thenReturn(SHADOW_SAMPLE);
+        else when(host.scenePatternSample(anyInt())).thenAnswer(new NoPixels());
         host.spritePresentationSubject = tile.subject();
         return SpritePresentation.prepare(host, 0, 0, () -> {
             SpritePresentation.layer(host, tile.layer());
@@ -152,6 +162,13 @@ class TestSpritePreparationSnapshots {
             else host.spritePresentationBuilder.add(host, tile.patternId(), tile,
                     tile.x(), tile.y(), tile.width(), tile.height());
         }, ignored -> new Attributes(tile.palette(), tile.hFlip(), tile.vFlip(), tile.priority()));
+    }
+
+    /** Ordinary scalar snapshots must never consult pixel data; shadow operators freeze a sample. */
+    private static final class NoPixels implements org.mockito.stubbing.Answer<PatternVersion> {
+        @Override public PatternVersion answer(org.mockito.invocation.InvocationOnMock ignored) {
+            throw new AssertionError("ordinary scalar snapshot sampled pixels");
+        }
     }
 
     @Test void nanAndSignedZeroMatchTileRecordEqualityForEveryFloatComponent() {

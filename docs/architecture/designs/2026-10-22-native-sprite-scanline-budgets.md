@@ -1,0 +1,528 @@
+# Native sprite scanline budgets
+
+Task: the 2026-10-22 sprite_limits audit lane, based on develop `94c40570a15a11b70caf7456e9b0d0a8eec8a9b4`.
+The internal evaluator/fragment contract is committed as
+`ccab504e3eb0d708bd2fee0433cc611034d2a174`; production consumer follow-up is
+recorded in this lane's delivery commits.
+
+The audit's 21 overlapping one-tile pieces survived the old SAT postprocessor.
+A new production GraphicsManager regression reproduced 21 commands where H40
+admits 20, including with no S3K mask request. The root causes were the absence
+of hardware evaluation and LevelRenderer choosing SAT collection only in mask
+zones. Ordinary gameplay and the separately drawn HUD bypassed it.
+
+## Hardware authority and behavior
+
+Primary reference: Genesis Plus GX revision
+[`49c584764893b0505ac7f768a754f97330fa4392`](https://github.com/ekeeke/Genesis-Plus-GX/blob/49c584764893b0505ac7f768a754f97330fa4392/core/vdp_render.c),
+`parse_satb_m5` and `render_obj_m5`; `vdp_ctrl.c` selects the H32/H40 width.
+The Sega Genesis Software Manual's Mode-5 sprite capacity table independently
+lists 64/16/256 for H32 and 80/20/320 for H40 (table entries / pieces per line /
+fetched pixels per line).
+
+Evaluation visits linked SAT order, before painter replay and independently of
+the sprite/background priority bit. Vertically active pieces consume one count
+and their full declared width, including transparent, overlapping, offscreen
+and already masked art. Count overflow excludes later pieces on that line.
+Pixel overflow keeps the final piece's remaining screen-left tile columns;
+horizontal flipping changes which source columns occupy that edge. Reaching
+the pixel budget exactly arms X=0 masking for the next line. Count overflow
+alone does not. Masking does not stop width evaluation, and a line that does
+not exhaust its pixel budget clears carry.
+
+S3K's optional whole-word `$07C0` rewrite remains separate from hardware
+admission: it makes that entry X=1 and its successor X=0. Native X=0 masking
+also applies without the rewrite, and masks the whole logical scanline. The
+scratch evaluator starts each collection with no prior-frame carry; it never
+retains gameplay, trace, rewind or comparison-row state.
+
+## Runtime integration and HUD topology
+
+`SpriteSatInternalAccess.beginCollection(GraphicsManager, Raster)` defines a logical raster in
+the same coordinate space as submitted pieces. `Raster.h40` and `Raster.h32`
+retain native capacities. Producers submit complete native mapping footprints,
+then finish with `endSpriteSatCollectionAndReplay`. Partial columns use source
+column clipping; vertical windows remain pixel precise through direct,
+instanced and immutable presentation replay.
+
+`SpriteSatInternalAccess.submitGroups(GraphicsManager, List<SpriteSatEntry>, Runnable)` admits each supplied
+native footprint once while freezing its producer's scattered ROM-backed art
+fragments. Empty art does not release hardware capacity. This avoids counting
+individual HUD letters or digit tiles as separate native sprites. The runtime
+ROM supplies the geometry through the internal `HudSatLayoutSource`; creator
+`HudStaticArt` remains unchanged. Verified map roots and ROM identities:
+
+| Game | Mapping root | Shape | SHA-1 |
+| --- | --- | --- | --- |
+| S1 World REV01 | `$1CD6A` | byte count, 5-byte pieces, 4 frames | `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
+| S2 World REV01 | `$40A9A` | word count, 8-byte pieces, 4 frames | `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
+| S3&K locked-on | `$DBB6` | word count, 6-byte pieces, 6 frames | `CFBF98C36C776677290A872547AC47C53D2761D6` |
+
+Normal HUDs have ten footprints. S1/S2 warning frames change palettes without
+releasing pieces. S3K warning frames remove label pieces; bonus frames use a
+rings-only layout with lives. Debug digits change art without adding hardware
+pieces. These claims have direct, independently expected ROM topology tests.
+Frozen-fragment checks also cover the wide bonus HUD's existing left origin,
+and native two-digit life placement at x48/x56 (one digit stays at x56).
+HUD geometry precedes ordinary gameplay pieces in the admitted table, and HUD
+visibility filtering happens afterward. VBlank numeric-art publication reuses
+the already admitted head geometry; it does not introduce more SAT pieces.
+
+Legacy live gameplay now prepares and consumes the same immutable admitted
+presentation values as the published-table renderer, retaining high-background
+priority flags and permitting post-admission layer filtering. Graphics scratch
+and frozen fragments are consumed before a new collection; retained frames and
+existing sprite-table rewind snapshots own immutable values.
+
+## Wider presentation and other consumers
+
+Wider gameplay retains H40's fixed 20/320/80 capacity. Side pieces compete for
+that capacity. Ordinary expanded coordinates do not wrap at the native nine-bit
+X field, but explicit X=0 controls still mask the entire logical raster and
+carry uses the native 320-pixel threshold. This is an engine presentation
+extension, not native-wide parity. It follows the existing distinction between
+wider visibility and fixed native world/object capacity; no proportional sprite
+capacity had an established contract.
+
+Rejected: proportional count/pixel/table budgets. The repository documents
+wider viewports but no native capacity-scaling rule; scaling would change the
+meaning of overflow-derived masking. Also rejected: leaving hardware admission
+behind the S3K flag, or admitting expanded HUD tiles individually; each leaves
+an actual production bypass or invents overflow.
+
+S2's special stage is a fixed inner H32 raster, even in a wide outer display.
+Its separate renderer consumer belongs to the S2 special-stage lane; split
+competition view adapters belong to native_modes. Neither should infer hardware
+capacity from the outer framebuffer, nor submit one entry per expanded tile.
+Interlace/compressed mapping production belongs to its native consumer adapter;
+ordinary 8px Mode-5 tile replay is not proof of that separate mode.
+
+## Validation scope
+
+Focused logic boundaries distinguish 20/21 and 16/17 pieces, count versus pixel
+exhaustion, offscreen widths, exact-budget carry, masked consumption, table
+walk limits, helper markers, both flips, translated origins and repeated calls.
+EGL pixel tests exercise both replay paths. ROM-backed gameplay checks exercise
+native HUD competition and actual displayed pixels for S1/S2/S3K, rather than
+only constructing the helper. Exact completed commands/results are recorded in
+the lane handoff; the integration coordinator owns combined smoke. No fixture
+or comparison row supplies rendered or gameplay state.
+
+
+## Pixel ownership and producer order
+
+An independent read-only lifecycle review found that painter replay plus terrain
+fragment discard leaks a later high-priority sprite through an earlier opaque
+low-priority sprite hidden by high terrain. The native sprite result must be
+selected before comparing that winner with the planes. The admitted SAT now
+replays front to back inside a scoped stencil coverage pass. Transparent indexed
+art discards before claiming coverage; a terrain-hidden winner blends no color
+while retaining ownership. Direct, batched, instanced and immutable-frame paths
+use that rule. Partial rows and flips retain their source-pixel coverage.
+
+The scope preserves foreign stencil contents, attachments, framebuffer bindings,
+stencil/depth/blend/scissor state, program, VAO, buffer and renderer-touched
+texture bindings; deferred failure unwinding closes it. Color-only owned scene
+FBOs receive a temporary owned stencil attachment. Existing packed depth/stencil
+images use a backup with their exact format rather than an incompatible stencil-only
+blit. No desktop display, gameplay state or rewind identity belongs to this pass.
+
+Review also found that always collecting SAT entries lost the AIZ bridges'
+selective terrain palette mask. That mask is now frozen with each entry and
+fragment, preserved by clipping, and restored during replay. A palette-3 versus
+palette-0 EGL control distinguishes the waterfall exemption from ordinary terrain
+occlusion. A separate published-frame regression exposed the plain batch's
+failure to treat a high-priority tile's effective occlusion mask as zero; batch
+transitions now use the effective mask in all three rendering modes.
+
+The internal `SpriteTableBuildProfile` selects placed rings independently of
+game names: S2 `BuildSprites` (`s2.asm:30523–30535`) and S3K `Render_Sprites`
+(`sonic3k.asm:36358–36373`) emit HUD, then placed rings, then object buckets.
+S1 rings emit through their actual object slots in bucket 2; `Ring_Collect`
+changes their subsequent sparkle submission to bucket 1 (`_incObj/25, 37 Rings.asm:148–165`).
+`RingDrawInternalAccess` separates the placed list from reserved attracted-ring
+emissions, retaining frozen art callbacks and draw-only state. Lost rings already
+emit through their individual object owners. Rendering no longer clears expired
+placement sparkle state. Ring producers also freeze their semantic `RINGS` layer
+inside object-slot traversal: `includeRings` and `includeObjectSprites` remain
+orthogonal after admission. Hidden rings still compete for native capacity.
+Actual S1/S2/S3K EGL controls compare objects-only, rings-only and neither,
+including a surviving lower ring row beneath a full upper scanline. The native
+entry fade is scoped out only for this displayed-palette control; no gameplay
+or fade clock advances.
+
+The external slot bridge preserves the existing entry list, including repeated
+or inverted DisplaySprite FIFO entries. It can anchor legacy external emissions
+between entries without sorting or deduplicating that list. This is a documented
+mixed bridge, not proof of complete native queue topology. The generic queue
+backend belongs to the coverage lane; `d89c09e6` supplies admitted slot/bucket
+values, live resolution and actual per-slot dispatch, and `c89fd18a` adds captured
+pass presence and conditional source authority. Attracted-ring motion now runs
+at its actual reserved slot and submits only genuine `Draw_Sprite` tails.
+Guessed early admission and a late slot sort were rejected because they change
+capacity and call order. Initial, empty, rejected and truncated passes suppress
+legacy rescue; live real owners precede external ring lookup. A stale external
+DTO cannot free a replacement's slot. Reset and restore rebind live callbacks,
+while queue snapshots retain only admissions and pass metadata. The existing
+late helper is used only when no actual pass ran for its LevelManager ring clock.
+
+Converted bouncers retain bucket 2 throughout routine 2, plus the attracted art
+and mapping until their first actual bouncer dispatch. GiveRing changes the
+bucket to 1. Captured conditional native authority prevents rejected or zero-call
+converted frames from falling back to inferred sprites; ordinary lost-ring
+factories retain their existing legacy path. Their injected render profile
+selects low tile priority for S1/S2 and high for S3K. Accepted native slots also
+suppress inferred duplicates across buckets without removing repeated FIFO calls.
+The converted path copies the shared native spill frame at each genuine routine-2
+SST dispatch and retains that scalar through rendering, pause and rewind. Native
+`loc_1A75C` (sonic3k.asm:35664–35667) and `loc_1A7E8`
+(sonic3k.asm:35715–35718) contain the same byte copy (`1178 FEB7 0022` in the
+locked-on ROM). `LevelLoop` calls `ChangeRingFrame` after `Process_Sprites` and
+before `Render_Sprites` (`Level_NotLRZ`, sonic3k.asm:7937–7943); reading the shared owner at draw time was an introduced
+ordering defect in `323239a13` and is corrected by the follow-up. The existing
+captured mapping scalar owns this copy; no GPU or callback identity is captured.
+The ordinary legacy path's inherited phase-added mapping remains outside this
+native converted-path claim.
+
+The same review found that the native reserved-slot callback incorrectly copied
+a late-helper P1-dead guard. Neither `loc_1A88C` nor `loc_1A920` has that guard:
+live ring movement, sparkle `$FC`, submission and deletion continue during P1's
+death routine. Only the native callback's dead-player rejection is removed;
+missing/non-playable targets retain their existing separate handling. New controls
+cover both branches, exact admitted FIFO, no-execution redraws, destructive
+registered recreation and forward replay. The previously green movie intervals
+do not cover dead P1 or a shield-loss bouncer's late global spin, so those old
+passes were not accepted as proof of either repair.
+
+Native `loc_1A88C` (sonic3k.asm:35763–35787) resets the spill counter after motion
+and before spin/range testing. The consumer stages that side effect at the same
+point even when the same invocation deletes out of range; surviving conversions
+retain the newly advanced mapping. Existing lightning capability owns this native
+branch, while non-native field attraction keeps its prior conversion behavior.
+S2 placed rings retain the shipped mask-before-bias top-edge bug; S3K biases
+before its screen wrap. Vertical producer rejection precedes table admission,
+so distant stage rings cannot consume all hardware entries. These are ordinary
+stage-list rules, not a substitute for competition-specific producers.
+
+Independent slot-walk controls cover future/past allocation, current-slot
+conversion, rejected capacity, the sparkle `$FC` invocation and next-pass delete,
+replacement precedence, native range boundaries and spill-state restore/forward.
+Actual ROM/EGL scene controls also exercise queued S3K lightning attraction and
+orthogonal ring/object visibility through the public production renderer.
+
+## Ring repair and two-movie qualification
+
+Independent review of `323239a13` found the dead-P1 rejection and draw-time
+shared-frame read described above. Earlier green movie intervals did not exercise
+those branches. The repaired source over that commit passed queued job 36034:
+48 tests, zero failures/errors/skips, including 17 native-slot cases, three
+lost-ring render cases, two actual movie intervals, four S1/S2/S3K EGL gameplay
+controls, seven projection-scope controls, four existing projection controls and
+11 Mod API checks. Queue wait was 183 seconds; Maven execution was 1m32s. The
+separate projection bridge remains a separately published dependency.
+
+Exact selection:
+`TestRingNativeSlotDispatch,TestLostRingRenderState,TestS3kAttractedRingMoviePhase#standaloneMgzAttractionThroughSlotDeletion+completeMovieMgzAttractionThroughSlotDeletion,TestNativeSpriteSatGameplay,TestGraphicsProjectionScope,TestRenderProjection,TestModApiSignatureSurface`.
+Command: `python3 tools/testing/maven_queue.py --normal -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl '-Dtest=<selection above>'
+'-Dsonic1.rom.path=<original absolute REV01 ROM>'
+'-Dsonic2.rom.path=<original absolute REV01 ROM>'
+'-Ds3k.rom.path=<original absolute locked-on ROM>' test -B`, from the isolated
+sprite worktree with Java 25, `LUA_BIN=/usr/bin/lua5.4`, `ALSOFT_DRIVERS=null`
+and DISPLAY/WAYLAND_DISPLAY unset. Surefire XML was filtered by the exact
+selection; stale reports were excluded. Fresh affected guards are tracked
+separately by the integration handoff.
+
+`TestS3kAttractedRingMoviePhase` starts MGZ1 through production ROM entry with
+native-320 Sonic plus CPU Tails. The standalone BK2 uses offset 2602 and rows
+0–650; the independent complete-movie MGZ interval uses offset 58653 and rows
+0–500. Natural monitor gameplay must acquire LIGHTNING at row 374/316; missing
+shield, live reserved-slot flight, native bucket-2 submission, GiveRing bucket 1,
+award or sparkle deletion fails the test. Registry windows 534→550 and 447→465
+restore ring DTOs, SST reservations, native queue/pass metadata, players, camera,
+hardware timing and replay input port, then compare forward execution.
+
+Comparison rows select checkpoints and assert expected motion/awards only. No
+trace pose, camera, RNG, counters, bootstrap state or synthetic shield is installed.
+Only matching production hardware-readiness/input admission uses the existing
+restricted timing contract. BK2 cursor restoration re-arms input transport, not
+gameplay. These are two bounded semantic intervals, not complete physics/art
+trace replays, whole-campaign arrival proof, donor/wide/other-character breadth or
+act certification. The ordinary legacy spill approximation and mixed FIFO/SST
+bridge remain explicit limits. The cancelled stale guard request 52459 never
+executed and supplies no pass/fail evidence.
+
+## Explicit remaining integration boundaries
+
+The shared count/width evaluator does not establish exact native topology for
+all producers. The S2 special-stage lane owns its native H32 SAT consumer;
+native_modes owns compressed/interlace and split-view consumers. Exact sprite
+queue closure also depends on each object's authored DisplaySprite call sites,
+including the separately owned S1 Bomb duplicate/orphan-pointer behavior.
+
+S2 special-stage shadows require operation metadata alongside admitted geometry.
+Its owner independently decoded the original ROM's flat/diagonal/side Nemesis
+families and found only indices 0 and 15. Pinned GPGX's `make_lut_bgobj_ste`
+selects shadow for palette-3 index 15 and intensity increment for index 14;
+the old shader comment calling any nonzero index a shadow was rejected. A first
+`SHADOW_15` implementation preserved row clipping, frozen fragments and first-pixel
+ownership, but its final-RGB multiplication was rejected before publication.
+Synthetic 204-to-102 readback proved multiplication, not native intensity. GPGX
+`palette_init` selects shadow intensity `n` versus normal `2*n` before output
+conversion; low-priority background pixels already at shadow intensity must not
+be darkened again. Canonical FULL output rounding and the nonlinear display
+profiles also make post-conversion halving incorrect.
+
+The bounded replacement samples a producer-owned shadow-intensity color target
+made from the same native background mappings, track strips and scroll projection.
+`withShadow15Backdrop` supplies its live texture and bottom-left pixel rectangle;
+no GPU identity enters the admitted frame or rewind state. Missing input fails
+explicitly. `NativeIntensityPalette.shadow` carries the original palette and
+native source-line ownership so fades run before intensity and display conversion.
+RAW output uses `round(255*n/14)` for FULL and `17*n` for LIMITED. Analog and soft
+profiles extend their existing normal ramps by interpolating the intermediate
+four-bit levels before cross-channel mixing and output gain; that is explicit
+presentation policy. Source index 0 discards, index 15 selects this target, and
+other nonzero indices are rejected. Index 14 remains a source-proven highlight
+operator outside this bounded contract, rather than silently becoming a shadow.
+The S2 renderer owns companion production and low/high plane intensity choice;
+this shared seam does not certify its consumer until composed checks pass.
+
+Rejected validation interpretations: offscreen Tails mappings at origin (0,0)
+losing unused presentation versions did not prove lost ROM art; moving the
+unchanged art comparison inside the native raster preserved its purpose.
+A test probe at virtual tile9000 failed atlas range governance before drawing;
+using the task-owned transient-effects subrange corrected the test harness.
+S3K boot could retire a dynamic probe during native entry; the final check
+inserts it after neutral entry steps and exercises real table capture,
+publication, restore and framebuffer replay without a gameplay fixture seed.
+
+
+## Scoped companion projection ownership
+
+The internal `GraphicsProjectionAccess.openProjection(GraphicsManager,
+RenderProjection)` returns an engine-only `AutoCloseable` scope. It captures the
+exact source and nullable local matrix override separately, installs the temporary
+source with a null local override, and restores the original two references by
+identity. Capturing `getProjectionMatrixBuffer()` was rejected: that effective
+getter can materialize a source fallback where the host's actual override was
+null, hiding later source changes. One package-private raw nullable getter is the
+only new GraphicsManager accessor; the Mod API surface is unchanged.
+
+Scopes close on their opening thread in strict LIFO order. Invalid foreign-thread,
+out-of-order or repeated closes fail before mutation. Nested scopes and exceptions
+restore the exact saved tuple. No GL/FBO stack, viewport, frame upload or command
+flushing belongs to this bridge; the renderer consumer owns those lifetimes.
+
+Commands bake logical height when obtained; plain and instanced batches capture it
+at batch begin. Shader matrices resolve at execution. Therefore callers must end
+existing batches and drain queued commands under their owning projection before a
+transition, and complete scoped batches before closing. Retained construction and
+execution are distinct: reopening the matching source for deferred BEGIN/batch/END
+is required. Scope close never flushes or rebakes queued art. CPU controls retain
+old-batch row0 Y216 after a 224→256 source switch, then obtain Y248 only after
+restarting the batch under 256. Real EGL controls distinguish the matrix-only
+Y216 defect, premature scope-close loss, correct Y248 and restored 224/256 hosts.
+The S2 lane owns static-background/companion FBO consumers and their qualified
+adoption; the shared bridge alone does not certify that rendering pipeline.
+
+
+## Scoped palette cleanup retry
+
+S2 companion fault review exposed an existing ownership leak: `Bank.release`
+called a GraphicsManager cleanup that removed its exact owner lease before blanking
+four GPU rows. A second-row exception left the RenderContext token reserved while
+the retained Bank failed validity; retry then marked the handle released without
+freeing the token. The corrected cleanup retains the lease through all row/cache
+cleanup and context-token release, then conditionally removes that exact lease.
+A retry deliberately repeats all four blank uploads. Derived underwater state and
+pattern tracking invalidate in `finally` because a failed attempt can already have
+changed rows or texture bindings. RenderContext release itself is a simple identity
+map removal; this change makes no concurrent/reentrant cleanup guarantee.
+
+The existing upload helper becomes package-private solely for a same-package
+failure-injection subclass that otherwise calls the production helper. No public
+GraphicsManager signature, Mod API or alternate cleanup path is added. Tests enter
+the real owner/generation-checked `Bank.release`, fail its second blank upload,
+retain a valid handle and reservation, preserve an unrelated owner's cache/pending
+rows, then retry all four rows and reuse the released bank. A stale unreleased
+same-owner alias cannot clear its replacement generation. Both attempts invalidate
+derived state. Injection covers Java/headless failure bookkeeping, not a simulated
+GPU-driver failure; separate EGL shadow/companion controls exercise live rendering.
+
+
+The composed projection/palette candidate over `287c79e73` passed queued job46042:
+46 tests, zero failures/errors/skips; projection9, existing projection4, scoped
+palette5, native intensity5, live EGL shadow9, registered scoped rewind3 and Mod
+API11. Queue wait429s; Maven execution1m33s. Exact selection:
+`TestGraphicsProjectionScope,TestRenderProjection,TestScopedPaletteGraphicsAccess,TestNativeIntensityPalette,TestNativeShadow15Pixels,TestScopedPalettePresentationRewind,TestModApiSignatureSurface`.
+The queue command used `--lean -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl '-Dtest=<selection above>' test -B` and
+the same Java25/Lua5.4/no-display/null-audio/original-ROM environment and absolute
+ROM properties recorded for36034. Exact-selector XML inspection excluded older
+reports. Source and tests froze before submission. Independent read-only review
+found no concrete lifecycle defect. Projection and palette cleanup publish as
+separate local leaves; this is composed focused validation, not standalone S2
+consumer validation or combined smoke. Fresh affected guards are recorded in the
+final handoff separately.
+
+
+## Neutral native-operator submission boundary
+
+Fresh affected guards on `61171cb7a` (job96044:54 tests, four failures, no
+errors/skips) exposed four new low-level dependency edges introduced by `c49`'s
+typed shadow convenience methods. They were not accepted as frozen-baseline debt.
+The correction removes those new graphics→level types/calls without loosening the
+architecture rule or changing `PreparedPiece`/Mod API signatures. The existing
+normal intake still constructs the immutable graphics-owned `SpriteSatEntry`;
+operator validation then inspects that entry's selected source columns and rows,
+with column-major pattern addresses and resident immutable indexed bytes.
+
+Engine callers replace `submitShadowPiece(graphics, piece)` with:
+
+```java
+SpriteSatInternalAccess.submitShadowPieces(graphics,
+        () -> graphics.submitSpriteSatPiece(piece));
+```
+
+`submitShadowGroups(graphics, wholeNativeGeometry, preparedSubmissions)` remains
+unchanged. The callback only submits prepared pieces through the existing intake;
+it owns no direct/prepass GL or table lifecycle. Operation scopes restore their
+previous value after success, rejection or producer exception and may nest
+lexically. Begin/end attempts while preparing an operator fail before mutating
+the outer table; ordinary collector behavior outside that scope is unchanged.
+The plain scope is lexical tagging, not a transaction: successful normal-intake
+admissions remain if a later callback statement throws. Groups retain their staged
+fragment rollback and nested-fragment rejection. Admission, source rows,
+flips, masks, ownership, subject and operation metadata retain their normal path.
+An asymmetric 3×3 source crop selects offsets3,4,6,7 while excluded source tiles
+contain native highlight14, so a row-major or whole-footprint validator fails the
+independent control; selected14 still rejects.
+
+The other96044 failures are separately attributed. Two HubMusic architecture
+identities are parent-owned, already repaired in peer823eda. The native-image
+missing service is source-equivalent to base `94c40570a`, not a new executed
+baseline JUnit pass: the actual guard/config/service blobs are identical at base,
+`61171cb7a` and the working tree. A read-only guard-equivalent inventory/Java-regex
+comparison returns the same sole missing
+`META-INF/services/com.openggf.level.resources.AuthoredLevelDecoder` from both
+Git trees and the physical current resources. The new shadow shader is covered.
+Unchanged paths/blobs:
+
+- `src/test/java/com/openggf/tests/TestNativeImageResourceGuard.java`:
+  `d161575707073531fac8aa56b0d357defc3eb32a`.
+- `src/main/resources/META-INF/native-image/com.openggf/OpenGGF/resource-config.json`:
+  `6128f9b73943b16025fca7d1af077d10b61f9a98`.
+- `src/main/resources/META-INF/services/com.openggf.level.resources.AuthoredLevelDecoder`:
+  `61f6891454d9c0ebbf921ce2a54a362696e6807a`.
+
+No unrelated resource/provider or guard-baseline edits belong to this correction.
+
+
+The corrected operator source passed focused job94450:36 tests, zero
+failures/errors/skips, queue22s/Maven1m36s. Exact selection:
+`TestNativeShadow15Pixels,TestNativeShadow15Rom,TestGraphicsManagerSpriteSatReplay,TestSatReplayBatching,TestNativeSpriteOwnershipPixels,TestModApiSignatureSurface`;
+command `python3 tools/testing/maven_queue.py --lean -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl '-Dtest=<selection above>' test -B`, with
+the same original absolute ROM properties, Java25/Lua5.4/no-display/null-audio
+environment above. All six exact-selection XML reports were inspected. The owning
+architecture rule is qualified separately before this correction is published;
+existing HubMusic/resource debt is not described as a green guard run.
+
+
+Owning guard job67704 used the same environment with
+`python3 tools/testing/maven_queue.py --normal -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl -Pguards '-Dtest=TestArchUnitRules' test -B`.
+Result:32 tests, two failures, zero errors/skips; queue42s/Maven36.794s.
+`low_level_layers_do_not_depend_on_runtime_layers` passed, proving the four owned
+shadow edges are removed. Exact remaining failures are the already parent-owned
+`shared_code_does_not_construct_concrete_sonic_provider_classes` and
+`shared_layers_do_not_depend_on_game_specific_packages`, both in HubMusicController.
+Their repair is composed by the coordinator; this isolated result is not a green
+full guard run. No unchanged broad/resource/clock selection was repeated.
+
+## Draw and HUD collaborator extraction
+
+The ordinary S2 consumer's source-size guards exposed an omitted validation
+obligation in the original native HUD/draw bridge. On composed source
+`81a0bc1fe8bf56ba74da678727992ed360c9c588`, ObjectManager had 3180 effective
+lines against 3086; Sonic1ObjectArtProvider had 2060 against 2047. The latter
+includes six separately owned boss-art lines absent from the sprite lane.
+The remedy extracts responsibilities into existing collaborators without
+changing the guard budgets or native submission lifecycle.
+
+`ObjectDrawInternalAccess.Drawing` retains the manager's graphics, camera,
+callback router, services, scratch commands and bucket arrays. Owner lookup and
+live external-resolver suppliers are allocated once; `ObjectRenderParts` reads
+the resolver anew for each unresolved admission. Dirty clearing and snapshot
+capture remain in the manager at their original positions. ID-zero owners never
+fall through to external rings, explicit submissions retain reverse-FIFO cache
+order, and accepted native slots still suppress inferred duplicates across all
+buckets. Wrap/debug cleanup continues to use the owned graphics manager while
+SAT and mask transitions use the supplied graphics manager.
+
+A first copied-loop version would have bypassed subclasses overriding the public
+`ObjectManager.drawPriorityBucket` method. Read-only review rejected it before
+validation. The collaborator retains the original manager receiver for those
+virtual calls, with independent subclass controls. Callback-created objects in
+a later bucket also verify that both the outer and per-bucket refresh remain;
+a throwing external emission verifies graphics identity and wrap cleanup.
+The reflected private four-argument forwarding method and unified array remain.
+
+The existing S1 HUD factory now owns the unchanged four-frame ROM layout loader
+and donor palette construction. Provider load order, donor selection, package
+forwarding method, deep-copy behavior and public HUD shape are preserved.
+The exact source counter yields ObjectManager 3046, leaving 33 lines after a
+seven-line future 2C addition; the provider becomes 2040 in the sprite tree,
+equivalent to 2046 with the composed tree's six boss-art lines. Queue, allocator,
+retirement, dispatch, gameplay, and rewind ownership are unchanged.
+
+The frozen extraction passed focused job21995: 75 tests, zero failures, errors
+or skips; queue273s and Maven1m40. Command: `python3 tools/testing/maven_queue.py
+--lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+'-Dtest=TestObjectDrawSlotEmissions,TestObjectManagerNativeSpriteSubmissions,TestObjectManagerMultiBucketRenderable,TestModApiSignatureSurface,TestHudSatLayoutRom#sonic1ProviderLoadsTenNativePiecesAndPaletteOnlyWarningVariants,TestHudStaticArtLivesFrameMappings,TestSonic1LivesHudDonation,TestNativeSpriteSatGameplay'
+'-Dsonic1.rom.path=<original absolute REV01 ROM>'
+'-Dsonic2.rom.path=<original absolute REV01 ROM>'
+'-Ds3k.rom.path=<original absolute locked-on ROM>' test -B`, with Java25,
+`LUA_BIN=/usr/bin/lua5.4`, `ALSOFT_DRIVERS=null` and DISPLAY/WAYLAND_DISPLAY unset.
+All eight exact-selection XML reports were inspected: draw10, manager33,
+multipart5, API11, S1 HUD ROM1, static HUD7, donation4 and real EGL gameplay4.
+The five new cases cover virtual overrides, callback-created next-bucket objects
+for both priority classes, and graphics-identity cleanup on an emission failure.
+No unchanged movies, emulator/native checks or broad smoke were repeated.
+
+Exact size-guard job23297 passed both selected methods with zero failures,
+errors or skips: `python3 tools/testing/maven_queue.py -Dmse=off -Pguards
+'-Dtest=TestArchitecturalSourceGuard#objectManagerFacadeStaysWithinExtractedCollaboratorBudget+releaseCriticalLargeClassesDoNotGrowWithoutExtraction'
+test -B`. Queue456s; Maven27.070s; exact two-method XML inspected, Java25.0.5.
+No guard baseline changed. This isolated result does not certify the independent
+S2 AbstractPlayable extraction or later composed-root growth; Parent owns that
+composition and combined validation. Only one affected request plus these two
+exact guards was used, with no second affected run needed.
+
+
+## Develop ghost composition — 2026-10-23
+
+The aggregate's pinned develop reconciliation keeps gameplay ghosts as an engine
+presentation extension. Interleaving ghosts does not spend native table, line or
+pixel capacity, change the real SAT's marker/companion links, or arm masking.
+A ghost retains the mask window at its presentation position. Both prepared
+priority layers are visited even when no local player occupies one.
+
+A ghost cannot own the opaque native-source stencil. For tables containing
+both kinds, contiguous source-order spans receive ranks0..254;255 denotes no
+native winner. Native spans draw first with a less-than rank test and replace
+coverage on source-opaque pixels, including terrain-hidden winners. Ghost spans
+then draw in reverse span and tile order with stencil writes disabled. They
+blend over the real sprites behind them, remain hidden by earlier real winners,
+and blend with one another in painter order. A256th span is rejected before
+opening a scope or emitting commands. Ghost-free tables retain the original
+coverage scope and single picture replay. Foreign stencil attachments, contents,
+face states and failure cleanup retain their existing ownership contract.
+
+The direct SAT path uses admitted, expanded fragments and actual bucket/source
+order. Published frames carry the same immutable tiles, frozen art, native pixel
+operation and coloured-ghost fields. No physical console ghost or new timing
+behaviour is inferred. The initial composed source reproduced six assertion
+failures in seven matched cases before this correction; current qualification
+is recorded in the existing native-gap delivery plan.

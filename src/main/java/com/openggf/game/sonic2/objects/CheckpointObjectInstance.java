@@ -98,12 +98,49 @@ public class CheckpointObjectInstance extends BoxObjectInstance implements Rewin
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        var level = services().levelManager();
+        var nativeRoster = level == null ? null
+                : com.openggf.game.competition.NativeCompetitionRoster.from(level.getWorldSession());
+        if (nativeRoster != null) {
+            var lifecycle = com.openggf.game.sonic2.competition.lifecycle.Sonic2CompetitionLifecycle.from(level);
+            if (lifecycle == null) throw new IllegalStateException("Native starpost lost its lifecycle owner");
+            updateNativeCheckpoint(lifecycle, nativeRoster);
+            updateAnimation();
+            return;
+        }
         ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!activated && player != null) {
             checkActivation(player);
         }
         updateAnimation();
+    }
+
+    /** Obj79_Main keeps testing P1 then P2 independently; visual activation is not a gate. */
+    private void updateNativeCheckpoint(
+            com.openggf.game.sonic2.competition.lifecycle.Sonic2CompetitionLifecycle lifecycle,
+            com.openggf.game.competition.NativeCompetitionRoster roster) {
+        if (roster.player(0).isDebugMode()) return;
+        for (int slot = 0; slot < 2; slot++) {
+            if (!lifecycle.canActivateCheckpoint(slot, spawn.subtype())) {
+                if (animId == ANIM_IDLE) {
+                    activated = true;
+                    animId = ANIM_BLINKING;
+                }
+                continue;
+            }
+            var actor = roster.player(slot);
+            int x = ((short) (actor.getCentreX() - spawn.x()) + 8) & 0xFFFF;
+            int y = ((short) (actor.getCentreY() - spawn.y()) + 0x40) & 0xFFFF;
+            if (x >= 0x10 || y >= 0x68) continue;
+            // Native 2P never reaches the ordinary special-star allocation branch.
+            services().playSfx(Sonic2Sfx.CHECKPOINT.id);
+            spawnDongle();
+            lifecycle.saveCheckpoint(slot, spawn.subtype(), spawn.x(), spawn.y());
+            activated = dongleActive = true;
+            animId = ANIM_NO_BALL;
+            mappingFrame = FRAME_NO_BALL;
+        }
     }
 
     private void updateAnimation() {

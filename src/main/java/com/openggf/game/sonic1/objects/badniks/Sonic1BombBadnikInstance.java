@@ -1,18 +1,15 @@
 package com.openggf.game.sonic1.objects.badniks;
 
-import com.openggf.audio.AudioManager;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.PlayableEntity;
-import com.openggf.level.objects.ExplosionObjectInstance;
 import com.openggf.graphics.GLCommand;
-import com.openggf.graphics.RenderPriority;
-import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.NativeSpriteSubmissionAccess;
+import com.openggf.level.objects.NativeSpriteSubmissionSource;
 import com.openggf.level.objects.ObjectManager;
-import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseAttackable;
@@ -42,7 +39,7 @@ import java.util.List;
  *   <li>1 (.wait): Walking with obVelX. Timer counts down. When timer expires, stops
  *       and returns to .walk state. Continuously checks if Sonic is within $60px range.</li>
  *   <li>2 (.explode): Fuse lit, countdown to explosion. When timer expires, changes
- *       object to ExplosionBomb (object $3F). The explosion spawns independently.</li>
+ *       SST to object $3F. The next dispatch initializes the fiery explosion.</li>
  * </ul>
  * <p>
  * Sub-objects spawned:
@@ -64,7 +61,8 @@ import java.util.List;
  * </ul>
  */
 public class Sonic1BombBadnikInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable {
+        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable,
+        NativeSpriteSubmissionSource {
 
     // --- Collision ---
     // From disassembly: move.b #$9A,obColType(a0)
@@ -88,9 +86,6 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
     private static final int WALK_SPEED = 0x10;
     // From disassembly: move.w #$10,obVelY(a1) (fuse rise speed)
     private static final int FUSE_Y_SPEED = 0x10;
-    // From disassembly: addi.w #$18,obVelY(a0) (shrapnel gravity)
-    private static final int SHRAPNEL_GRAVITY = 0x18;
-
     // --- Shrapnel velocities from Bom_ShrSpeed ---
     // dc.w -$200, -$300, -$100, -$200, $200, -$300, $100, -$200
     private static final int[][] SHRAPNEL_VELOCITIES = {
@@ -105,25 +100,12 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
     private static final int ANIM_STAND = 0;
     private static final int ANIM_WALK = 1;
     private static final int ANIM_ACTIVATED = 2;
-    private static final int ANIM_FUSE = 3;
-    private static final int ANIM_SHRAPNEL = 4;
-
-    // Animation speed $13 + 1 = 20 ticks per frame
-    private static final int ANIM_SPEED_NORMAL = 0x13 + 1;
-    // Animation speed 3 + 1 = 4 ticks per frame
-    private static final int ANIM_SPEED_FAST = 3 + 1;
-
     // Stand animation: frames 1, 0
     private static final int[] STAND_FRAMES = {1, 0};
     // Walk animation: frames 5, 4, 3, 2
     private static final int[] WALK_FRAMES = {5, 4, 3, 2};
     // Activated animation: frames 7, 6
     private static final int[] ACTIVATED_FRAMES = {7, 6};
-    // Fuse animation: frames 8, 9
-    private static final int[] FUSE_FRAMES = {8, 9};
-    // Shrapnel animation: frames 10, 11
-    private static final int[] SHRAPNEL_FRAMES = {10, 11};
-
     // --- State machine values (ob2ndRout / 2) ---
     private static final int STATE_WALK = 0;
     private static final int STATE_WAIT = 1;
@@ -145,7 +127,15 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
     private int state;          // ob2ndRout / 2
     private int timer;          // bom_time (objoff_30)
     private int currentAnim;    // obAnim
-    private int animTickCounter;
+    // Native SST state stays on this live owner across the in-place ID write.
+    // All fields are scalar and enter the existing generic rewind codec.
+    private boolean bodyInitialized;
+    private boolean explosionCode;
+    private boolean explosionInitialized;
+    private int previousAnim;
+    private int animationIndex;
+    private int animationDuration;
+    private int mappingFrame;
 
     public Sonic1BombBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Bomb");
@@ -156,12 +146,11 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
         this.yVelocity = 0;
         this.motionState = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
 
-        // obStatus bit 0 is initialized from spawn data's render flags.
-        // Bom_Main: bchg #0,obStatus(a0) toggles it.
-        // facingLeft=true ↔ status bit 0=0; after bchg, new bit = !original.
-        // So facingLeft = (new bit == 0) = (original bit == 1) = spawnBit0.
+        // The stored direction is inverse to native obStatus bit0.
         boolean spawnBit0 = (spawn.renderFlags() & 1) != 0;
-        this.facingLeft = spawnBit0;
+        // Before Bom_Main the SST still has the placement status. Main's
+        // bchg executes on the first object dispatch, not in construction.
+        this.facingLeft = !spawnBit0;
         // obStatus bit 1: ceiling bomb (upside-down). Used for V-flip rendering
         // and negating fuse Y velocity. From: btst #1,obStatus(a0)
         this.ceilingBomb = (spawn.renderFlags() & 2) != 0;
@@ -176,7 +165,6 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
             this.state = STATE_WALK;
             this.timer = 0;  // ROM: bom_time starts at 0 (zero-init)
             this.currentAnim = ANIM_STAND;
-            this.animTickCounter = 0;
         }
         // Subtypes 4 (fuse) and 6 (shrapnel) are handled by dedicated child classes
     }
@@ -187,8 +175,26 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
         if (destroyed) {
             return;
         }
+        if (explosionCode) {
+            updateExplosion();
+            return;
+        }
+        if (!bodyInitialized) {
+            // Bom_Main (_incObj/5F Badnik - Walking Bomb.asm:22-39) falls
+            // through to Bom_Action for subtype 0. It makes no earlier call.
+            bodyInitialized = true;
+            facingLeft = !facingLeft;
+        }
         updateMovement(vIntRunCount, player);
+        // Even an ID3F write returns through the old Bomb call stack. Keep
+        // Bomb mappings, animation and priority until the NEXT SST dispatch.
         updateAnimation(vIntRunCount);
+        if (!isInRange()) {
+            destroyed = true;
+            setDestroyedByOffscreen();
+            return;
+        }
+        NativeSpriteSubmissionAccess.submit(services().objectManager(), this, 3);
     }
 
     /**
@@ -313,27 +319,11 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
     private void updateExplode(int vIntRunCount) {
         timer--;
         if (timer < 0) {
-            // Timer expired: change the bomb into an explosion (object $3F).
-            // ROM Bom_Action_WaitAndExplode does this IN PLACE via
-            // _move.b #id_Explosion,obID(a0) (docs/s1disasm/_incObj/5F Badnik -
-            // Walking Bomb.asm:93-94), keeping the bomb's SST slot. Detach the
-            // slot so removing the bomb does not free it, then place the
-            // explosion at that same slot (mirrors the badnik-kill in-place
-            // obID change, DestructionEffects/AbstractBadnikInstance.destroyBadnik).
-            // Spawning the explosion at the lowest free slot instead shifted OST
-            // occupancy and cascaded later FindFreeObj allocations (SBZ2 f1596).
-            int mySlot = ObjectLifetimeOps.detachSlotForTransfer(this);
-            spawnBombExplosion(mySlot);
-            destroyed = true;
-            setDestroyed(true);
-            var objectManager = services().objectManager();
-            if (objectManager != null) {
-                if (spawn.respawnTracked()) {
-                    ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
-                } else {
-                    ObjectLifetimeOps.removeSpawnFromActive(objectManager, spawn);
-                }
-            }
+            // Bom_Action_WaitAndExplode writes only ID3F and routine0
+            // (_incObj/5F Badnik - Walking Bomb.asm:89-97). The SST, placement
+            // ownership, fuse reference and all other bytes survive. Its caller
+            // still animates/displays the Bomb on this pass (FixBugs=0).
+            explosionCode = true;
         }
     }
 
@@ -443,27 +433,30 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
     }
 
     /**
-     * Spawns a bomb explosion (object $3F = ExplosionBomb).
-     * From ExBom_Main: uses Map_ExplodeBomb, ArtTile_Explosion, plays sfx_Bomb (0xC4).
-     * The explosion reuses the standard ExItem_Animate with 5 frames at 7 ticks each.
+     * Expl_Main (_incObj/27, 3F Explosions.asm:72-84), then
+     * ExItem_Animate (_incObj/27, 3F Explosions.asm:44-53).
      */
-    private void spawnBombExplosion(int transferredSlot) {
-        var objectManager = services().objectManager();
-        if (objectManager == null) {
+    private void updateExplosion() {
+        if (!explosionInitialized) {
+            explosionInitialized = true;
+            mappingFrame = 0;
+            animationDuration = 7;
+            // Native init ends in JMP QueueSound2, not Animate/DisplaySprite.
+            // No animal/points allocation or RNG belongs to object 3F.
+            services().playSfx(Sonic1Sfx.BOSS_EXPLOSION.id);
             return;
         }
-
-        // Place the explosion into the bomb's just-vacated slot (in-place obID
-        // change parity). Constructed directly (no spawnFreeChild) like the
-        // shared badnik-kill path in DestructionEffects, which also uses
-        // addReplacementAtTransferredSlot; ExplosionObjectInstance's constructor
-        // does not require the spawn ConstructionContext.
-        ExplosionObjectInstance explosion = new ExplosionObjectInstance(
-                0x3F, currentX, currentY, services().renderManager());
-        ObjectLifetimeOps.addReplacementAtTransferredSlot(objectManager, explosion, transferredSlot);
-
-        // sfx_Bomb = $C4 = BOSS_EXPLOSION
-        services().playSfx(Sonic1Sfx.BOSS_EXPLOSION.id);
+        animationDuration = (byte) (animationDuration - 1);
+        if (animationDuration < 0) {
+            animationDuration = 7;
+            mappingFrame = (mappingFrame + 1) & 0xFF;
+            if (mappingFrame == 5) {
+                destroyed = true;
+                setDestroyed(true);
+                return; // DeleteObject precedes DisplaySprite.
+            }
+        }
+        NativeSpriteSubmissionAccess.submit(services().objectManager(), this, 1);
     }
 
     /**
@@ -489,12 +482,13 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
      *     bset    #7,obRender(a1)
      * </pre>
      */
-    void spawnShrapnel(int fuseX, int fuseY, int fuseSlot) {
+    Sonic1BombShrapnelInstance spawnShrapnel(int fuseX, int fuseY, int fuseSlot) {
         final ObjectManager objectManager = services().objectManager();
         if (objectManager == null) {
-            return;
+            return null;
         }
 
+        Sonic1BombShrapnelInstance firstShrapnel = null;
         for (int i = 0; i < SHRAPNEL_VELOCITIES.length; i++) {
             final int vx = SHRAPNEL_VELOCITIES[i][0];
             final int vy = SHRAPNEL_VELOCITIES[i][1];
@@ -537,7 +531,7 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
             } else {
                 assignedSlot = -1;
             }
-            spawnFreeChild(() -> {
+            Sonic1BombShrapnelInstance child = spawnFreeChild(() -> {
                 Sonic1BombShrapnelInstance shrapnel = new Sonic1BombShrapnelInstance(
                         fuseX, fuseY, vx, vy, deferFirstMove);
                 if (assignedSlot >= 0) {
@@ -545,18 +539,37 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
                 }
                 return shrapnel;
             });
+            if (firstPiece) {
+                firstShrapnel = child;
+            }
         }
+        return firstShrapnel;
     }
 
     private void setAnimation(int newAnim) {
         if (newAnim != currentAnim) {
             currentAnim = newAnim;
-            animTickCounter = 0;
         }
     }
 
     private void updateAnimation(int vIntRunCount) {
-        animTickCounter++;
+        // AnimateSprite: animation changes reset index/duration, then the
+        // signed-byte predecrement runs even on the conversion's final tail.
+        if (currentAnim != previousAnim) {
+            previousAnim = currentAnim;
+            animationIndex = 0;
+            animationDuration = 0;
+        }
+        animationDuration = (byte) (animationDuration - 1);
+        if (animationDuration >= 0) return;
+        animationDuration = 0x13;
+        int[] frames = switch (currentAnim) {
+            case ANIM_WALK -> WALK_FRAMES;
+            case ANIM_ACTIVATED -> ACTIVATED_FRAMES;
+            default -> STAND_FRAMES;
+        };
+        if (animationIndex >= frames.length) animationIndex = 0;
+        mappingFrame = frames[animationIndex++];
     }
 
     /**
@@ -567,7 +580,7 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
         motionState.y = currentY;
         motionState.xVel = xVelocity;
         motionState.yVel = yVelocity;
-        SubpixelMotion.moveSprite2(motionState);
+        SubpixelMotion.speedToPos(motionState);
         currentX = motionState.x;
         currentY = motionState.y;
     }
@@ -584,25 +597,14 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
      * </pre>
      */
     private int getMappingFrame() {
-        int[] frames;
-        int speed;
-        switch (currentAnim) {
-            case ANIM_STAND -> { frames = STAND_FRAMES; speed = ANIM_SPEED_NORMAL; }
-            case ANIM_WALK -> { frames = WALK_FRAMES; speed = ANIM_SPEED_NORMAL; }
-            case ANIM_ACTIVATED -> { frames = ACTIVATED_FRAMES; speed = ANIM_SPEED_NORMAL; }
-            case ANIM_FUSE -> { frames = FUSE_FRAMES; speed = ANIM_SPEED_FAST; }
-            case ANIM_SHRAPNEL -> { frames = SHRAPNEL_FRAMES; speed = ANIM_SPEED_FAST; }
-            default -> { return 0; }
-        }
-        int step = (animTickCounter / speed) % frames.length;
-        return frames[step];
+        return mappingFrame;
     }
 
     // --- TouchResponseProvider / TouchResponseAttackable ---
 
     @Override
     public int getCollisionFlags() {
-        if (destroyed) {
+        if (destroyed || !bodyInitialized || explosionInitialized) {
             return 0;
         }
         // obColType = $9A: HURT category ($80) + size index $1A
@@ -636,28 +638,49 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
         // 160px past the right edge that the ROM had already deleted at the 640px
         // window edge (BizHawk s1-complete-run: the SBZ2 x=0x12C0/0x12F0 bodies
         // delete at trace f2931 when chunk-aligned obX - screen exceeds 640).
-        return !destroyed && isInRange();
+        return !destroyed && (explosionCode || isInRange());
     }
 
     @Override
+    public boolean checksOutOfRangeAfterRoutine() {
+        // Bom_Action reaches RememberState only AFTER its action/animation.
+        // ID3F dispatches never call RememberState, even outside the viewport.
+        return true;
+    }
+
+    @Override
+    public int getLiveObjectId() {
+        // Placement/factory identity remains the original spawn; only the
+        // live code pointer changes, as for other native in-place S1 objects.
+        return isDestroyed() ? 0 : explosionCode ? 0x3F : 0x5F;
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() { return 12; }
+
+    @Override
     public int getPriorityBucket() {
-        // obPriority = 3
-        return RenderPriority.clamp(RENDER_PRIORITY);
+        // Expl_Main changes the SST bucket only on the dispatch after ID3F.
+        return explosionInitialized ? 1 : bodyInitialized ? RENDER_PRIORITY : 0;
     }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (destroyed) {
+        if (isDestroyed()) {
             return;
         }
 
-        PatternSpriteRenderer renderer = getRenderer(ObjectArtKeys.BOMB);
-        if (renderer == null) return;
+        PatternSpriteRenderer renderer = explosionInitialized
+                ? services().renderManager() == null ? null
+                    : services().renderManager().getBossExplosionRenderer()
+                : getRenderer(ObjectArtKeys.BOMB);
+        if (renderer == null || !renderer.isReady()) return;
 
         int frame = getMappingFrame();
         // ori.b #4,obRender(a0): bit 2 set = use obStatus for flipping
         // obStatus bit 0 = X flip, obStatus bit 1 = Y flip (ceiling bomb)
-        renderer.drawFrameIndex(frame, currentX, currentY, !facingLeft, ceilingBomb);
+        renderer.drawFrameIndex(frame, currentX, currentY,
+                !explosionInitialized && !facingLeft, !explosionInitialized && ceilingBomb);
     }
 
     @Override

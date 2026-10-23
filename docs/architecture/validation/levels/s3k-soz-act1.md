@@ -1,8 +1,11 @@
 # S3K Sandopolis Act 1 coverage matrix
 
 Canonical slot: `S3K_SANDOPOLIS_1`; ROM zone `$08`, act index 0, SKL pointer set.
-Status: native-movement solo Sonic, solo Tails, solo Knuckles and Sonic + Tails cold completion at width320 verified;
-full methodology acceptance, broader routes and native/visual parity remain open.
+Status: dated native-movement solo Sonic, solo Tails, solo Knuckles and Sonic + Tails cold completion at width320 verified.
+The original Knuckles route fails at input16819 on pinned
+`fbeb962da80d3ec4ab726ad2b77e4b241c312e00`; the current controller refresh below
+restores its maintained acceptance with52 full-world replay windows.
+Full methodology acceptance, broader routes and native/visual parity remain open.
 “Native” configuration here means the engine movement profile, not emulator
 parity. Dated evidence retains its original scope; the final
 [Cold controller completion](#cold-controller-completion) closes only that route.
@@ -10,6 +13,146 @@ Owning [v2 execution plan](../../plans/2026-09-15-soz-methodology-v2.md) and
 [placed inventory](../../research/s3k-zones/soz-object-inventory.md).
 
 
+
+## Current Knuckles controller continuation (2026-10-22)
+
+The exact original solo Knuckles parameterized identity `[5]`, arguments
+`0,knuckles`, fails survival at input **16819** on pinned
+`fbeb962da80d3ec4ab726ad2b77e4b241c312e00`. It executes with the two remaining
+Act2 Knuckles cases, three failures and no errors/skips/aborts. The original
+24,055-input movie's SHA-256 is
+`76ee24742ef3243bc1289d17ccaef50799ba487ff03036517f7be43925738e30`.
+The dated 2026-10-21 pass below retains its tested-source scope.
+
+Ordinary controller authoring preserves all original first16700 inputs, both
+pads and every action/Start field. The actual sand jump escape, first/second
+wall climbs and westward upper route now reach the native320 arena cap
+`(17464,2540)` alive with19 rings. The selected correction reaches actual arena
+background routine8 at30167, and ordinary admission input observes the real
+production golem at31168. Only after that activation is the maintained
+20203-onward boss/exit controller used as a new input lead. It reaches the
+actual positional sand defeat at33467 but dies at33634 before results or Act2.
+That is useful ordinary reachability and defeat evidence, **not completion**.
+The ordinary exit alternatives start from the exact reached33515-input
+prefix, after hurt release, with no pending fresh load or active fade. The
+selected20 Right+Action,1 Right,90 Right+Action continuation reaches finished
+results and actual Act2 load34694, with control release34793. Root confirms the
+unchanged test endpoint at ready+180: the fixed movie contains exactly34974
+inputs, ending34973. The extra idle observation dies35039; its image shows0:04,
+ghosts overlapping stationary Knuckles and0 rings. The actual damage owner is
+unproven; the timer-cap suspicion is withdrawn.
+
+The boot matches the maintained test: native Knuckles, donor off, no followers,
+intro enabled, actual initial ProcessSprites pass executed, verified absolute
+S3&K ROM, Java25.0.5, surfaceless EGL and no-device audio. No runtime gameplay,
+clock, cap, state seed, trace hydration or native-capture trajectory authority
+is used. Two separate uninterrupted fresh cold JVMs agree on all34974 rows and37
+recorded fields, including both bonus loads3215/3594, real golem entry31168,
+sinking33467, results33660..34405 and released Act2 through ready+180, alive.
+The final BK2 SHA-256 is
+`456a59e646c52ec17ca15a2eefb64f39dc93020bb59d630d5420463bd828e64e`.
+The maintained Act1-only data update retains all29 original windows, adds11
+periodic traversal windows and12 reached sand/wall/arena/boss/results/load
+windows, for52 full-registry45-input windows. Predicates, drawing and history
+isolation stay strict. The final exact-three maintained selection passes this
+Act1 case: ready34793,52 full-registry45-input windows and4824 drawn frames.
+The two Act2 cases still fail at12288/24051, with no errors or skips. No broader
+current route or native timing/pixel parity is certified by this selection.
+The ordinary source
+and rejected approaches are in the
+[dated completion plan](../../plans/2026-10-13-s3k-playable-completion.md).
+The [Act2 matrix](s3k-soz-act2.md) records its two remaining current failures.
+
+## Natural Knuckles Glowing Sphere release (2026-10-21)
+
+Worktree `bugfix/ai-s3k-soz-knuckles-bonus-route-20261021`, accepted runtime
+base `bf2c7c7211a7c71385e4649717ed80fa7383b0a9`. The maintained original movie
+(SHA-256 `f2d6cdccac2a5f1ca7d70c6aa8f62a8803cbb972ba66be3dc71c3b4f28f332d6`)
+reproduces the current cold-route death at zero-based input 11174,
+`($2870,$0C00)`. A temporary ordinary controller observation, using the maintained
+route's exact public boot and initial ProcessSprites consumer, observes actual
+bonus load 3215, natural bonus title release 3328, saved-origin load 3549 and return
+title release 3649. That observation has no survival assertion or original rewind
+windows; its successful diagnostic mechanism is not a route pass.
+
+The entry-only controller trial adds 11 neutral inputs before the interior Left
+block. It survives its 24,016 inputs but does not reach the destination, ending at
+`(10759,2825)` in SOZ1. Its actual return load is 3594 and natural return release
+is 3694; the traversal input block advances during that locked title phase. This
+rejects entry-only retiming as a route repair. The selected authored route adds 39
+neutral inputs inside that observed return title, preserving all original
+ordinary controller actions after release. These waits follow actual gameplay
+observations, with no production readiness, clock or physics change.
+
+The independent `TestSozKnucklesGlowingSphereTitleRelease` now covers the short
+cold portal prefix, actual Glowing Sphere `$1400` world/load generation, saved
+`$0800` origin, four native title archives in order including Num1, world-owned
+Nemesis and the physical terrain FIFO. It holds ordinary controller Left through
+natural release and observes setup-only release followed by one ordinary bonus
+tick, one real energy-trap update and input-driven Knuckles movement in the same
+loaded world. It neither requests a bonus entry nor writes mode, position,
+health, timing readiness or phase. The initial public ProcessSprites consumer
+executes its production object pass; it does not discard that pass.
+
+The source audit established no candidate-native release mismatch. Native
+`044fa46725c71187399e13f5ddb70e11d32dc024` `Obj_TitleCardInit` (62156–62201),
+`loc_62CC` (7769–7780) and `LoadLevelLoadBlock` (9737–9780) require the title
+archives, settled children, idle Nemesis and drained physical terrain work.
+`loc_64DC` (7906–7926) returns to LevelLoop before its first ordinary object
+pass. Earlier release in `c13be267f` is not a ROM timing oracle; the production
+release workloads remain intact. Controller authoring here is engine gameplay
+coverage, not native clock, pixel or whole-world parity proof.
+
+`InputLogAuthorTool` compiled and round-trip checked the maintained script into
+24,055 BK2 rows (SHA-256
+`76ee24742ef3243bc1289d17ccaef50799ba487ff03036517f7be43925738e30`).
+Removing only the added neutral rows 3312–3322 and 3614–3652 reproduces all
+24,005 original controller rows, in order. Both inserted spans are inside the
+observed locked title phases. The entry-only trial's BK2 SHA-256 is
+`f49a872e218927d99c99b8b621192b5b815c933e97c061be2d621ec0f82cd8d8`.
+The selected route independently reaches unlocked SOZ2 at input 23853 without a
+death; that authoring observation is separate from maintained route acceptance.
+The final short regression passes with zero skips (one case, 0.438 seconds).
+The temporary authoring class and its compiled class were removed after consuming
+the observations; no diagnostic source or raw archive is retained.
+
+Focused validation used Java 25.0.4.1, Lua 5.4, no display connection,
+`-Dmse=off`, `--normal`, `-Dopenggf.headless.gl=surfaceless-egl` and the absolute
+Main ROM selected through the absolute `S3K_ROM_PATH`
+(CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`).
+All tests ran on accepted base `bf2c7c721` plus these uncommitted task changes,
+in this isolated worktree and its own `target/`. Command prefix below parameterizes only machine-local paths: `OPENGGF_MAIN` is
+the Main checkout and `S3K_ROM_PATH` is that verified existing absolute ROM path.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Ds3k.rom.path=$S3K_ROM_PATH"
+```
+
+The final author/short-check command appended
+`-Dexec.mainClass=com.openggf.tools.InputLogAuthorTool`,
+`'-Dexec.args=--script src/test/resources/routes/s3k/soz1-cold-knuckles.script --out src/test/resources/routes/s3k/soz1-cold-knuckles.bk2 --game s3k'`,
+`-Dtest=TestSozKnucklesControllerAuthoring,TestSozKnucklesGlowingSphereTitleRelease`,
+`-Dsoz.authoring.output=target/soz-authoring-both-waits exec:java test -B`.
+It passed both cases without skips: one temporary authoring observation and the
+independent short regression. Maven execution was 30.857 seconds after a
+171-second queue wait; these are separate intervals.
+
+The acceptance command appended `-Dtest=TestSozColdRouteCapture test -B` to
+that prefix, selecting the **whole maintained class**. It passed **9 tests,
+0 failures, 0 errors, 0 skips**, 65.55 seconds in JUnit, 1m31s Maven execution
+after a 35-second queue wait. The existing class is unchanged: survival, actual
+golem defeat/results/seamless playable destination, both real bonus loads and
+history resets, three distinct semantic bonus replay windows and all 29 Knuckles
+traversal/destination windows remain strict. The caller's live-history arm at
+3100 and off at 3753 remain unchanged; the actual return load and released
+45-input replay fit within those original bounds. All other BK2s, character/team
+cases and viewport coverage are unchanged. Production code is unchanged, so no
+new production-domain control or broad smoke run was needed here; Root owns
+combined validation. This is bounded gameplay/rewind coverage, not a release
+suite or native timing/pixel certificate.
 
 ## Solo Knuckles cold completion (2026-09-27)
 
@@ -615,6 +758,19 @@ act-1 and act-2 routes are unchanged: ready 28436, 31587, 16626 and 28612.
 | Movie | Old SHA-256 | New SHA-256 | Removed | Frames | Releases |
 |---|---|---|---|---|---|
 | `soz1-cold-knuckles.bk2` | `1f470578c537eb075398b77b0614884efda6deaf8e099d4e243d0be5775f198e` | `f2d6cdccac2a5f1ca7d70c6aa8f62a8803cbb972ba66be3dc71c3b4f28f332d6` | -5 at 3312 (bonus entry), -64 at 3588 (bonus return) | 24005 | bonus 3317, return 3644 |
+
+
+### Root composed Act1 qualification — 2026-10-22
+
+Leaf922b577 is independently source/data reviewed and composed as `ea01f2c3e`,
+after Root's HCZ lifetime correction. One exact native320 solo-Knuckles Act1
+iteration passes **1T/0F/0E/0S**, ready34793/52 strict45-input registry windows,
+Java25.0.5/EGL/original ROM; case10.018s, queue53s/Maven37.729s. Actual four
+Console XML engines contain one Jupiter case, not a whole-class pass.
+Its4824 draws/34974 skipped draws preserve the existing maintained drawing
+policy; worker full ordinary witnesses remain separate. Act2 deaths12288/24051
+and later idle-tail death35039 limits stay open.
+[Exact command, hashes and composition](../../plans/2026-10-13-s3k-playable-completion.md#root-composed-soz1-knuckles-qualification--2026-10-22).
 
 ## Object-pipeline performance follow-up (2026-10-22)
 

@@ -612,6 +612,14 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             this.iczArt4Data = null;
             this.iczArt5Data = null;
         }
+        // Capture the presented ICZ direct-DMA ranges before the first Animate_Tiles submission.
+        // Capacity was ensured above; use the same ownership gates as the producing channels.
+        if (shouldRunIczHorizontalCustomChannels()) {
+            aniPlcPublications.registerDestination(0x10E, 16);
+        }
+        if (shouldRunIczAct1VerticalCustomChannels()) {
+            aniPlcPublications.registerDestination(0x122, 15);
+        }
 
         loadLbzRawArt(reader);
         loadLrzRawArt(reader);

@@ -475,6 +475,7 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
         private boolean failed;
         private java.util.ArrayDeque<Runnable> completionActions;
         private boolean consumedHeldLoopTailPreparation;
+        private PlcLifecyclePhase heldPatternPreparation;
         private boolean gameVblankDispatched;
         private boolean explicitDmaQueueService;
 
@@ -525,7 +526,15 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
                 heldLoopTailPreparation = null;
                 consumedHeldLoopTailPreparation = true;
                 if (service != null) {
-                    service.prepareAfterLoop(held);
+                    if (held == PlcLifecyclePhase.ORDINARY_LEVEL
+                            && service instanceof com.openggf.game.internal.WorldPlcPatternPublication) {
+                        // Its physical service occurs later, after queued DMA.
+                        // Keep Init AFTER that service as in the original claim
+                        // order; arming here would spend the same boundary twice.
+                        heldPatternPreparation = held;
+                    } else {
+                        service.prepareAfterLoop(held);
+                    }
                 }
             }
             // The DMA-queue-only declaration is a one-shot consumed by the very
@@ -614,6 +623,40 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             return true;
         }
 
+        /**
+         * Native ordinary Nemesis Init belongs after Animate_Tiles. Other games'
+         * existing PLC loop positions are unchanged.
+         */
+        public boolean preparesAfterLevelAnimation() {
+            return owner == PlcLifecyclePhase.ORDINARY_LEVEL
+                    && service instanceof com.openggf.game.internal.WorldPlcPatternPublication;
+        }
+
+        /** Physical raw PLC publication follows the callback's queued DMA. */
+        public boolean dispatchGameVBlank(Runnable dispatch,
+                com.openggf.level.LevelManager manager,
+                com.openggf.level.resources.KosinskiModuleQueue journal) {
+            return dispatchGameVBlank(() -> {
+                dispatch.run();
+                if (owner == PlcLifecyclePhase.ORDINARY_LEVEL
+                        && service instanceof com.openggf.game.internal.WorldPlcPatternPublication publication) {
+                    publication.publishOrdinaryPatterns(manager, journal);
+                }
+                if (heldPatternPreparation != null) {
+                    service.prepareAfterLoop(heldPatternPreparation);
+                    heldPatternPreparation = null;
+                }
+            });
+        }
+
+        /** Native transition returned before Animate_Tiles; no Init ran. */
+        public void omitUnreachedLevelAnimationTail() {
+            requireOpen();
+            if (!preparesAfterLevelAnimation() || prepared)
+                throw new IllegalStateException("No unexecuted ordinary animation tail");
+            prepared = true; // Account for the omitted boundary without arming work.
+        }
+
         /** Whether this represented iteration's loop-tail work belongs to a later closure. */
         public boolean defersLoopTailPreparation() {
             return representedIterationDefersLoopTailPreparation;
@@ -643,6 +686,8 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
         }
 
         private void finishPublication() {
+            if (heldPatternPreparation != null)
+                throw new IllegalStateException("missing physical VBlank before held Nemesis Init");
             if (service != null && owner != null
                     && service.hasPreparationBoundary(owner) && !prepared) {
                 throw new IllegalStateException("missing PLC preparation for " + owner);

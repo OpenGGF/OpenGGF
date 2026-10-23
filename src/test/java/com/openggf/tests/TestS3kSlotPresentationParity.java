@@ -1,5 +1,6 @@
 package com.openggf.tests;
 
+import com.openggf.LevelFrameResult;
 import com.openggf.game.BonusStageProvider;
 import com.openggf.game.BonusStageState;
 import com.openggf.game.BonusStageType;
@@ -8,11 +9,13 @@ import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusStageRuntime;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.graphics.SpritePresentation;
 import com.openggf.level.Level;
 import com.openggf.level.LevelSpritePresentation;
+import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.render.SpritePresentationRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
@@ -21,11 +24,16 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -47,45 +55,136 @@ class TestS3kSlotPresentationParity {
     }
 
     @Test
-    void layoutIsPublishedWithTheSpriteTableOfItsIterationBehindRenderSprites() {
+    void layoutIsPublishedWithTheSpriteTableOfItsIterationBehindRenderSprites() throws ReflectiveOperationException {
         HeadlessTestFixture fixture = enterSlots();
-        S3kSlotBonusStageRuntime runtime = activeRuntime();
-        var graphics = GameServices.graphics();
+        activeRuntime();
+        // The first call also drains the real SETUP_ONLY pass. Prime one ordinary
+        // Slot table before the 48 sampled iterations; bootstrap latency is separate.
+        assertEquals(LevelFrameResult.GAMEPLAY_FRAME,
+                fixture.runner().stepFrame(false, false, false, false, false),
+                "prime initial setup and the first ordinary Slot table");
+        var level = GameServices.level();
+        var graphics = level.getObjectManager().getObjectServices().graphicsManager();
         var camera = GameServices.camera();
+        assertSame(graphics, GameServices.graphics(), "loaded level and fixture share the graphics owner");
+        var renderManager = level.getObjectRenderManager();
+        var layoutFrames = Map.of(
+                Sonic3kObjectArtKeys.SLOT_COLORED_WALL, 16,
+                Sonic3kObjectArtKeys.SLOT_GOAL, 3,
+                Sonic3kObjectArtKeys.SLOT_BUMPER, 3,
+                Sonic3kObjectArtKeys.SLOT_R_LABEL, 1,
+                Sonic3kObjectArtKeys.SLOT_PEPPERMINT, 4,
+                Sonic3kObjectArtKeys.SLOT_RING_STAGE, 8);
+        Set<Integer> layoutPatterns = new HashSet<>();
+        for (var entry : layoutFrames.entrySet()) {
+            addMappingPatterns(layoutPatterns, renderManager, entry.getKey(), entry.getValue());
+            assertSame(graphics, field(renderManager.getRenderer(entry.getKey()), "graphicsManager"),
+                    "the collection flag must come from each layout renderer's actual graphics owner");
+        }
+        Set<Integer> otherObjectPatterns = new HashSet<>();
+        for (String key : renderManager.getArtProvider().getRendererKeys()) {
+            if (!layoutFrames.containsKey(key)) {
+                var sheet = renderManager.getSheet(key);
+                assertNotNull(sheet, "registered object renderer has a ROM sheet: " + key);
+                addMappingPatterns(otherObjectPatterns, renderManager, key, sheet.getFrameCount());
+            }
+        }
+        assertFalse(layoutPatterns.isEmpty(), "actual emitted layout mappings own patterns");
+        assertTrue(Collections.disjoint(layoutPatterns, otherObjectPatterns),
+                "layout and nonlayout ROM mapping ownership must be unambiguous");
 
         int compared = 0;
         boolean geometryChanged = false;
-        List<Key> previousLayout = null;
+        List<LayoutGeometry> previousGeometry = null;
         for (int frame = 0; frame < 48; frame++) {
+            // Retain the actual immutable production result BEFORE ordinary VBlank.
+            // No standalone layout render can reproduce native SAT admission.
+            SpritePresentation.Frame precedingPrepared = preparedFrame();
             fixture.stepIdleFrames(1);
-            List<Key> published = keys(LevelSpritePresentation.published(GameServices.level()).tiles());
-            if (previousLayout != null && !previousLayout.isEmpty()) {
-                // The table published by this frame's VBlank was produced by the previous
-                // iteration: its Render_Sprites entries followed by that iteration's layout.
-                assertTrue(published.size() >= previousLayout.size(),
-                        "published table holds the previous iteration's layout at frame " + frame);
-                assertEquals(previousLayout, published.subList(0, previousLayout.size()),
-                        "previous iteration's layout is published first (painter order: behind"
-                                + " every Render_Sprites entry) at frame " + frame);
+            SpritePresentation.Frame published = LevelSpritePresentation.published(level);
+            assertSame(precedingPrepared, published,
+                    "exact preceding CPU table reaches the next VBlank at frame " + frame);
+            assertEquals(precedingPrepared, published,
+                    "all admitted tiles, attributes, primitives and pattern versions at frame " + frame);
+            if (!published.tiles().isEmpty()) {
+                List<LayoutGeometry> geometry = layoutPrefixGeometry(published, layoutPatterns, otherObjectPatterns);
+                if (previousGeometry != null && !geometry.equals(previousGeometry)) {
+                    geometryChanged = true;
+                }
+                previousGeometry = geometry;
                 compared++;
             }
-            List<Key> layout = keys(SpritePresentationRenderer.prepare(graphics,
-                    camera.getXWithShake(), camera.getYWithShake(),
-                    () -> runtime.renderSlotLayout(camera)).tiles());
-            if (previousLayout != null && !layout.equals(previousLayout)) {
-                geometryChanged = true;
-            }
-            previousLayout = layout;
         }
-        assertTrue(compared > 40, "layout pieces were visible and compared");
-        assertTrue(geometryChanged, "the stage rotated during the comparison, so latency is observable");
+        assertTrue(compared > 40, "nonempty production tables with layout and Render_Sprites witnesses compared");
+        assertTrue(geometryChanged, "layout geometry changed, so one-VBlank latency is observable");
 
         // The live draw pass must not draw this iteration's layout on top of the published table.
-        var provider = GameServices.level().getZoneFeatureProvider();
+        var provider = level.getZoneFeatureProvider();
         assertNotNull(provider);
         var live = SpritePresentationRenderer.prepare(graphics, camera.getXWithShake(), camera.getYWithShake(),
                 () -> provider.render(camera, 0));
         assertTrue(live.tiles().isEmpty(), "zone feature render draws no unlatched layout pieces");
+    }
+
+    private static SpritePresentation.Frame preparedFrame() throws ReflectiveOperationException {
+        return (SpritePresentation.Frame) field(field(field(GameServices.level(), "levelRenderer"),
+                "spriteTables"), "prepared");
+    }
+
+    private static Object field(Object owner, String name) throws ReflectiveOperationException {
+        var field = owner.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(owner);
+    }
+
+    private static void addMappingPatterns(Set<Integer> patterns, ObjectRenderManager renderManager,
+                                           String key, int frameCount) {
+        var renderer = renderManager.getRenderer(key);
+        var sheet = renderManager.getSheet(key);
+        assertNotNull(renderer, "actual ROM renderer: " + key);
+        assertNotNull(sheet, "actual ROM sheet: " + key);
+        int base = renderer.getPatternBase();
+        assertTrue(base >= 0, "actual cached ROM pattern base: " + key);
+        assertTrue(frameCount <= sheet.getFrameCount(), "declared emitted frames exist: " + key);
+        for (int frame = 0; frame < frameCount; frame++) {
+            for (var piece : sheet.getFrame(frame).pieces()) {
+                for (int tile = 0; tile < piece.widthTiles() * piece.heightTiles(); tile++) {
+                    patterns.add(base + piece.tileIndex() + tile);
+                }
+            }
+        }
+    }
+
+    private record LayoutGeometry(float x, float y, float width, float height, int rowStart, int rowEnd) { }
+
+    private static List<LayoutGeometry> layoutPrefixGeometry(SpritePresentation.Frame frame,
+            Set<Integer> layoutPatterns, Set<Integer> otherObjectPatterns) {
+        List<LayoutGeometry> geometry = new ArrayList<>();
+        boolean renderSpritesSeen = false, playerSeen = false, hudSeen = false;
+        for (var tile : frame.tiles()) {
+            boolean layout = layoutPatterns.contains(tile.patternId());
+            if (layout) {
+                assertFalse(otherObjectPatterns.contains(tile.patternId()), "ambiguous production pattern ownership");
+                assertEquals(SpritePresentation.Layer.OBJECT, tile.layer(), "actual layout entry layer");
+                assertFalse(renderSpritesSeen, "every layout entry is behind every Render_Sprites entry in painter order");
+                geometry.add(new LayoutGeometry(tile.x(), tile.y(), tile.width(), tile.height(),
+                        tile.rowStart(), tile.rowEnd()));
+            } else {
+                renderSpritesSeen = true;
+                if (tile.layer() == SpritePresentation.Layer.OBJECT) {
+                    assertTrue(otherObjectPatterns.contains(tile.patternId()),
+                            "nonlayout production object has independently declared ROM mapping ownership");
+                }
+                playerSeen |= tile.layer() == SpritePresentation.Layer.PLAYER;
+                hudSeen |= tile.layer().isHud();
+            }
+        }
+        assertFalse(geometry.isEmpty(), "admitted layout prefix is nonempty");
+        assertTrue(playerSeen, "actual Render_Sprites player entries follow the layout");
+        // S3kSlotBonusCageObjectInstance deliberately emits no sprites: its face
+        // belongs to the machine plane. Require actual nonlayout producers here.
+        assertTrue(hudSeen, "actual nonlayout Render_Sprites HUD entries follow the layout");
+        return List.copyOf(geometry);
     }
 
     @Test
@@ -233,20 +332,6 @@ class TestS3kSlotPresentationParity {
             else if ((word & 0xE00) != 0) word -= 0x200;
         }
         return word;
-    }
-
-    private record Key(int patternId, int palette, boolean hFlip, boolean vFlip, boolean priority, float x, float y) { }
-
-    private static List<Key> keys(List<SpritePresentation.Tile> tiles) {
-        List<Key> keys = new ArrayList<>();
-        for (var tile : tiles) {
-            if (tile.layer().isHud()) {
-                continue;
-            }
-            keys.add(new Key(tile.patternId(), tile.palette(), tile.hFlip(), tile.vFlip(), tile.priority(),
-                    tile.x(), tile.y()));
-        }
-        return keys;
     }
 
     private static S3kSlotBonusStageRuntime activeRuntime() {

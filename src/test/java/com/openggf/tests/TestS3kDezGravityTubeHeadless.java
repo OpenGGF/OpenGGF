@@ -14,9 +14,13 @@ import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -115,6 +119,205 @@ class TestS3kDezGravityTubeHeadless {
         }
     }
 
+    /**
+     * {@code RideObject_SetRide} (sonic3k.asm:42067-42087) clears the old owner's standing
+     * bit before the next object's slot runs. Recreate both owners before replaying that edge.
+     */
+    @Test
+    void aTubeTransferClearsTheFormerTubesRideBeforeItsLaterSlotRuns() {
+        var fixture = fixture();
+        var sprite = fixture.sprite();
+        var manager = GameServices.level().getObjectManager();
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        var former = placeAt(0x0F80, 0x07C0, 0x10);
+        var replacement = placeAt(0x0EC0, 0x0780, 0x48);
+        moveTo(sprite, 0x0F01, 0x07CB);
+        sprite.setAir(false);
+        former.update(0, sprite);
+        assertTrue(former.isRidingForTest(true), "precondition: the former tube owns the ride");
+        assertSame(former, sprite.getLatchedSolidObjectInstance());
+        var registry = TestEnvironment.activeGameplayMode().getRewindRegistry();
+        var beforeTransfer = registry.capture();
+
+        transfer(sprite, former, replacement);
+        assertTransferred(sprite, former, replacement);
+        int replacementAngle = replacement.angleForTest(true);
+        replacement.update(2, sprite);
+        int replayY = sprite.getCentreY();
+        int replayAngle = replacement.angleForTest(true);
+
+        manager.removeDynamicObject(former);
+        manager.removeDynamicObject(replacement);
+        registry.restore(beforeTransfer);
+        var restoredFormer = restored(former);
+        var restoredReplacement = restored(replacement);
+        assertNotSame(former, restoredFormer, "destructive restore must recreate the former owner");
+        assertNotSame(replacement, restoredReplacement, "and the replacement owner");
+        assertSame(restoredFormer, sprite.getLatchedSolidObjectInstance(), "restore the actual ride link");
+        assertTrue(restoredFormer.isRidingForTest(true));
+        assertFalse(restoredReplacement.isRidingForTest(true));
+        transfer(sprite, restoredFormer, restoredReplacement);
+        assertTransferred(sprite, restoredFormer, restoredReplacement);
+        assertEquals(replacementAngle, restoredReplacement.angleForTest(true));
+        restoredReplacement.update(2, sprite);
+        assertEquals(replayY, sprite.getCentreY(), "the new owner's lift replays after recreation");
+        assertEquals(replayAngle, restoredReplacement.angleForTest(true));
+    }
+
+    /** {@code Player_TouchFloor} (sonic3k.asm:24375-24416) changes Sonic's native centre by -5. */
+    @Test
+    void anAirborneRollingMountAppliesTheNativeCentreRadiusDelta() {
+        assertAirborneRollingMount(false);
+        SessionManager.clear();
+        assertAirborneRollingMount(true);
+    }
+
+    private void assertAirborneRollingMount(boolean reverseGravity) {
+        var fixture = fixture();
+        var sprite = fixture.sprite();
+        GameServices.gameState().setReverseGravityActive(reverseGravity);
+        var manager = GameServices.level().getObjectManager();
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        var tube = place(0x48);
+        sprite.setRolling(true);
+        moveTo(sprite, OBJECT_X, OBJECT_Y + 0x14);
+        sprite.setSubpixelRaw(0x2345, 0x6789);
+        sprite.setAir(true);
+        sprite.setXSpeed((short) 0);
+        sprite.setYSpeed((short) 0);
+        sprite.setPushing(true);
+        sprite.setJumping(true);
+        int rollingCentreY = sprite.getCentreY();
+        var registry = TestEnvironment.activeGameplayMode().getRewindRegistry();
+        var beforeMount = registry.capture();
+
+        tube.update(0, sprite);
+        assertStandingMount(sprite, tube, rollingCentreY, reverseGravity);
+        manager.removeDynamicObject(tube);
+        registry.restore(beforeMount);
+        var restoredTube = restored(tube);
+        assertNotSame(tube, restoredTube, "destructive restore must recreate the tube");
+        assertTrue(sprite.getRolling(), "restore must return the pre-mount rolling state");
+        assertTrue(sprite.getAir());
+        assertEquals(rollingCentreY, sprite.getCentreY());
+        assertFalse(restoredTube.isRidingForTest(true));
+        restoredTube.update(0, sprite);
+        assertStandingMount(sprite, restoredTube, rollingCentreY, reverseGravity);
+    }
+
+    /**
+     * Final-selection addition after the old-source red: horizontal RideObject_SetRide
+     * (sonic3k.asm:42067-42089) and vertical sub_33C34 (:70207-70227) are different helpers.
+     */
+    @Test
+    void theTwoBodiesKeepTheirNativeVelocityAngleAndGroundedRollOrderThroughRecreation() {
+        for (boolean vertical : new boolean[]{false, true}) {
+            for (boolean airborne : new boolean[]{false, true}) {
+                SessionManager.clear();
+                var fixture = fixture();
+                var sprite = fixture.sprite();
+                var manager = GameServices.level().getObjectManager();
+                manager.setRewindInPlaceRestoreEnabledForTest(false);
+                var tube = place(vertical ? 0x98 : 0x48);
+                sprite.setRolling(true);
+                moveTo(sprite, OBJECT_X, OBJECT_Y + 0x14);
+                sprite.setSubpixelRaw(0x3456, 0x789A);
+                sprite.setAir(airborne);
+                sprite.setAngle((byte) 0x60);
+                sprite.setXSpeed((short) 0x300);
+                sprite.setYSpeed((short) 0x180);
+                sprite.setGSpeed((short) 0x555);
+                sprite.setPushing(true);
+                sprite.setJumping(true);
+                var registry = TestEnvironment.activeGameplayMode().getRewindRegistry();
+                var beforeMount = registry.capture();
+
+                tube.update(0, sprite);
+                assertNativeMountOrder(sprite, tube, vertical, airborne);
+                var afterMount = mountState(sprite);
+                manager.removeDynamicObject(tube);
+                registry.restore(beforeMount);
+                var restoredTube = restored(tube);
+                assertNotSame(tube, restoredTube);
+                assertEquals(0x60, sprite.getAngle() & 0xFF, "restore the original angle");
+                assertEquals(0x555, sprite.getGSpeed(), "restore the unrelated original ground velocity");
+                assertTrue(sprite.getRolling());
+                assertEquals(airborne, sprite.getAir());
+                restoredTube.update(0, sprite);
+                assertNativeMountOrder(sprite, restoredTube, vertical, airborne);
+                assertEquals(afterMount, mountState(sprite), "replay the same evaluated native mount");
+            }
+        }
+    }
+
+    private void assertNativeMountOrder(AbstractPlayableSprite sprite,
+                                       S3kDezGravityTubeObjectInstance tube,
+                                       boolean vertical, boolean airborne) {
+        assertSame(tube, sprite.getLatchedSolidObjectInstance());
+        assertTrue(sprite.isOnObject());
+        assertFalse(sprite.getAir());
+        assertEquals(vertical && airborne ? 0 : 0x300, sprite.getXSpeed(),
+                "only airborne sub_33C34 clears x_vel");
+        assertEquals(vertical ? 0x180 : 0, sprite.getYSpeed(),
+                "only horizontal RideObject_SetRide clears y_vel");
+        assertEquals(vertical ? -0x180 : 0x300, sprite.getGSpeed(),
+                "vertical derives -y_vel; horizontal copies the preserved x_vel");
+        assertEquals(vertical ? 0xC0 : 0, sprite.getAngle() & 0xFF);
+        assertEquals(!airborne, sprite.getRolling(), "already grounded riders skip TouchFloor");
+        assertEquals(!airborne, sprite.getPushing());
+        assertEquals(!airborne, sprite.isJumping());
+        // Horizontal clears angle before TouchFloor. Vertical's incoming $60 angle
+        // reverses the -5 radius delta, before its caller installs angle $C0.
+        assertEquals(OBJECT_Y + 0x14 + (airborne ? (vertical ? 5 : -5) : 0),
+                sprite.getCentreY(), "native centre uses the helper's evaluated incoming angle");
+        assertEquals(0x3456, sprite.getXSubpixelRaw());
+        assertEquals(0x789A, sprite.getYSubpixelRaw());
+    }
+
+    private List<Object> mountState(AbstractPlayableSprite sprite) {
+        return List.of(sprite.getCentreX(), sprite.getCentreY(),
+                sprite.getXSubpixelRaw(), sprite.getYSubpixelRaw(), sprite.getXSpeed(),
+                sprite.getYSpeed(), sprite.getGSpeed(), sprite.getAngle(), sprite.getRolling(),
+                sprite.getYRadius(), sprite.getAnimationId(), sprite.getFlipAngle(),
+                sprite.getFlipType(), sprite.getMappingFrame(), sprite.isObjectControlled(),
+                sprite.isOnObject(), sprite.getAir(), sprite.getPushing(), sprite.isJumping());
+    }
+
+    private void transfer(AbstractPlayableSprite sprite, S3kDezGravityTubeObjectInstance former,
+                          S3kDezGravityTubeObjectInstance replacement) {
+        moveTo(sprite, 0x0EFD, 0x07CB);
+        replacement.update(1, sprite);
+        assertTrue(replacement.isRidingForTest(true), "the earlier slot takes ownership first");
+        former.update(1, sprite);
+    }
+
+    private void assertTransferred(AbstractPlayableSprite sprite, S3kDezGravityTubeObjectInstance former,
+                                   S3kDezGravityTubeObjectInstance replacement) {
+        assertFalse(former.isRidingForTest(true), "the former SST standing bit was cleared");
+        assertTrue(replacement.isRidingForTest(true));
+        assertTrue(sprite.isOnObject(), "the later former owner must not eject the rider");
+        assertFalse(sprite.getAir());
+        assertSame(replacement, sprite.getLatchedSolidObjectInstance());
+    }
+
+    private void assertStandingMount(AbstractPlayableSprite sprite, S3kDezGravityTubeObjectInstance tube,
+                                     int rollingCentreY, boolean reverseGravity) {
+        assertTrue(tube.isRidingForTest(true));
+        assertSame(tube, sprite.getLatchedSolidObjectInstance());
+        assertTrue(sprite.isOnObject());
+        assertFalse(sprite.getAir());
+        assertFalse(sprite.getRolling());
+        assertFalse(sprite.getPushing());
+        assertFalse(sprite.isJumping());
+        assertEquals(0x13, sprite.getYRadius(), "restore Sonic's standing radius");
+        assertEquals(rollingCentreY + (reverseGravity ? 5 : -5), sprite.getCentreY(),
+                "Sonic's y_radius $0E -> $13 applies the gravity-signed native centre delta");
+        assertEquals(0x2345, sprite.getXSubpixelRaw());
+        assertEquals(0x6789, sprite.getYSubpixelRaw(), "the ROM writes only the position word");
+        assertEquals(1, sprite.getAnimationId(), "the tube applies its pose after TouchFloor");
+        assertEquals(0x80, sprite.getFlipType());
+    }
+
     /** {@code moveq #4,d3} and {@code move.w #$5000,d0} for the bit 6 tube (:95349-95352). */
     @Test
     void theBitSixTubeStepsByFourAndSwingsFurther() {
@@ -158,12 +361,12 @@ class TestS3kDezGravityTubeHeadless {
 
     /**
      * {@code Obj_DEZGravityTube}'s init branches on {@code subtype} bit 7 (:95216-95217), and
-     * the vertical body ({@code sub_49090}) reads {@code Reverse_gravity_flag} nowhere — its
-     * exit at :95466-95474 has no mirror. That asymmetry is a ROM fact worth pinning, because
-     * it is the obvious thing to "fix".
+     * the vertical body ({@code sub_49090}) has no direct reverse-gravity branch — its
+     * exit at :95466-95474 has no mirror. An airborne rolling mount's shared floor-reset
+     * radius adjustment is separate from that exit behavior.
      */
     @Test
-    void theVerticalTubeSwingsTheRiderAndNeverReadsTheFlag() {
+    void theVerticalTubeSwingsTheRiderAndItsExitDoesNotMirrorTheFlag() {
         HeadlessTestFixture fixture = fixture();
         try {
             AbstractPlayableSprite sprite = fixture.sprite();
@@ -304,8 +507,12 @@ class TestS3kDezGravityTubeHeadless {
     }
 
     private S3kDezGravityTubeObjectInstance place(int subtype) {
-        ObjectSpawn spawn = new ObjectSpawn(OBJECT_X, OBJECT_Y, 0x5A, subtype, 0,
-                false, OBJECT_Y, -1);
+        return placeAt(OBJECT_X, OBJECT_Y, subtype);
+    }
+
+    private S3kDezGravityTubeObjectInstance placeAt(int x, int y, int subtype) {
+        ObjectSpawn spawn = new ObjectSpawn(x, y, 0x5A, subtype, 0,
+                false, y, -1);
         S3kDezGravityTubeObjectInstance tube = new S3kDezGravityTubeObjectInstance(spawn);
         GameServices.level().getObjectManager().addDynamicObject(tube);
         return tube;
@@ -313,11 +520,12 @@ class TestS3kDezGravityTubeHeadless {
 
     private S3kDezGravityTubeObjectInstance restored(S3kDezGravityTubeObjectInstance original) {
         for (var instance : GameServices.level().getObjectManager().getActiveObjects()) {
-            if (instance instanceof S3kDezGravityTubeObjectInstance tube) {
+            if (instance instanceof S3kDezGravityTubeObjectInstance tube
+                    && !tube.isDestroyed() && tube.getSpawn().equals(original.getSpawn())) {
                 return tube;
             }
         }
-        return original;
+        throw new AssertionError("Missing managed restored tube at " + original.getSpawn());
     }
 
     private void moveTo(AbstractPlayableSprite sprite, int centreX, int centreY) {

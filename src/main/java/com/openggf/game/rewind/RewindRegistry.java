@@ -98,6 +98,7 @@ public final class RewindRegistry {
         requireMutationAuthority();
         Objects.requireNonNull(adapter, "adapter");
         Objects.requireNonNull(authority, "authority");
+        validateNativePublication(adapter, authority);
         String key = adapter.key();
         RewindSnapshottable<?> existing = entries.get(key);
         Object previousAuthority = nativePublicationAuthorities.get(key);
@@ -117,6 +118,20 @@ public final class RewindRegistry {
         entries.put(key, adapter);
         invalidateLayout();
         if (existing != modeAdapter || adapter != modeAdapter) courseLayoutVersion++;
+    }
+
+    /** Preflight a native companion bundle before either key is inserted. */
+    void validateNativePublication(RewindSnapshottable<?> adapter, Object authority) {
+        requireMutationAuthority();
+        Objects.requireNonNull(adapter, "adapter");
+        Objects.requireNonNull(authority, "authority");
+        String key = Objects.requireNonNull(adapter.key(), "native publication key");
+        RewindSnapshottable<?> existing = entries.get(key);
+        Object previousAuthority = nativePublicationAuthorities.get(key);
+        if (existing == adapter && previousAuthority != null && previousAuthority != authority)
+            throw new IllegalStateException("Native rewind publication authority cannot change: " + key);
+        if (existing != null && existing != adapter && previousAuthority != authority)
+            throw new IllegalStateException("RewindSnapshottable already registered: " + key);
     }
 
     public void deregister(String key) {

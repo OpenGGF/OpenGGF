@@ -42,6 +42,11 @@ Every new per-game divergence must document:
 - Prefer provider/profile ownership when a divergence is not shared runtime behavior.
 - Prefer a new narrow rule group over growing an unrelated rule record.
 - Do not add raw game-name branches in shared runtime code.
+- `PlayerAirMovementRules.glideFloorContactPrecedesWallGrab` selects the native
+  response to simultaneous glide contacts: S3K checks floor before wall grab,
+  while KiS2 checks wall grab first. This policy is independent of temporary
+  collision radii. The original four-argument candidate constructor retains its
+  wall-first default; game providers select the explicit policy.
 - Do not add broad feature-set bags or compatibility bridges as a parallel rule source.
 - Do not raise rule-record component-count guard thresholds without architecture review.
 - `CollisionRules` is pinned at 21 record components by the current Mod API 0.7 candidate: its three

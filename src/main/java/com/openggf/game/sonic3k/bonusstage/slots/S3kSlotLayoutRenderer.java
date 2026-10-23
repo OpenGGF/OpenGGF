@@ -212,10 +212,20 @@ public final class S3kSlotLayoutRenderer {
 
     void renderVisibleCells(S3kSlotRenderBuffers.VisibleCells visibleCells,
                             Camera camera, ObjectRenderManager renderManager) {
+        renderVisibleCells(visibleCells, camera, renderManager, false);
+    }
+
+    void renderVisibleCells(S3kSlotRenderBuffers.VisibleCells visibleCells,
+                            Camera camera, ObjectRenderManager renderManager, boolean collectingSpriteTable) {
         if (visibleCells == null || visibleCells.isEmpty() || camera == null || renderManager == null) {
             return;
         }
-        for (int i = 0; i < visibleCells.size(); i++) {
+        // loc_4B424 / loc_4B428 (sonic3k.asm:98276-98315) appends cells in row-major
+        // SAT order: earlier opaque sprites win. The direct painter needs the reverse
+        // walk; PatternSpriteRenderer independently chooses each frame's piece order.
+        int increment = collectingSpriteTable ? 1 : -1;
+        for (int i = collectingSpriteTable ? 0 : visibleCells.size() - 1;
+                i >= 0 && i < visibleCells.size(); i += increment) {
             int cellId = visibleCells.cellIdAt(i);
             if (cellId <= 0 || cellId == 0x09 || cellId >= PIECE_DEFS.length) {
                 continue;

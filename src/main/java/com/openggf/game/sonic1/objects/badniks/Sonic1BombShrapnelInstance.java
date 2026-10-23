@@ -6,6 +6,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.NativeSpriteSubmissionAccess;
+import com.openggf.level.objects.NativeSpriteSubmissionSource;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnCoordinateZeroPairRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -31,7 +33,8 @@ import java.util.List;
  * Animations: Uses shrapnel animation (Ani_Bomb index 4): frames $A, $B at speed 3.
  */
 public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, SpawnCoordinateZeroPairRewindRecreatable {
+        implements TouchResponseProvider, SpawnCoordinateZeroPairRewindRecreatable,
+        NativeSpriteSubmissionSource {
 
     // From disassembly: move.b #$98,obColType(a1)
     // $80 = HURT category, $18 = size index (width 4, height 4)
@@ -58,6 +61,8 @@ public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
     private final SubpixelMotion.State motionState;
     private int animTickCounter;
     private boolean destroyed;
+    private boolean renderXFlip;
+    private boolean renderYFlip;
     // Non-final so the generic rewind field capturer records it like the other
     // scalar state; it is only read by skipsSameFrameUpdateAfterSpawn() at spawn
     // scheduling and is inert afterwards.
@@ -105,7 +110,10 @@ public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
         this.xVelocity = xVel;
         this.yVelocity = yVel;
         this.motionState = new SubpixelMotion.State(x, y, 0, 0, xVel, yVel);
-        this.animTickCounter = 0;
+        // Bom_Main returns without AnimateSprite for fresh higher-slot children.
+        // Keep their cleared obFrame until the first Bom_Shrapnel pass; the
+        // in-place fuse instead enters its animation immediately below.
+        this.animTickCounter = deferFirstMove ? -1 : 0;
         this.destroyed = false;
         this.deferFirstMove = deferFirstMove;
     }
@@ -116,6 +124,45 @@ public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
         // fuse-slot-reuse first piece moves the same frame. See the deferring
         // constructor's Javadoc for the ROM citation.
         return deferFirstMove;
+    }
+
+    /** Complete the native in-place fuse-to-shrapnel fallthrough in the current SST. */
+    void continueFromFuse(int xFraction, int yFraction, boolean xFlip, boolean yFlip) {
+        motionState.xSub = xFraction;
+        motionState.ySub = yFraction;
+        renderXFlip = xFlip;
+        renderYFlip = yFlip;
+        advanceMotion();
+        animTickCounter++;
+        clearAwaitingFirstTouchExecution();
+
+        // FixBugs=0: .firstShrapnel forces obRender bit 7 before Bom_Shrapnel,
+        // so its initial render-bit deletion test passes even outside the viewport.
+        // It then returns through Bom_Fuse's AnimateSprite/RememberState tail.
+        // FixBugs=1 skips that return to avoid display/delete and double-delete bugs.
+        // Bom_BurnFuseAndExplode (_incObj/5F Badnik - Walking Bomb.asm:171-220).
+        // Bom_Shrapnel always reaches its first DisplaySprite here because
+        // .firstShrapnel set obRender bit 7. Submit before RememberState can
+        // delete this SST: FixBugs=0 retains that queued slot pointer.
+        NativeSpriteSubmissionAccess.submit(services().objectManager(), this, getPriorityBucket());
+        if (!isInRange()) {
+            setDestroyedByOffscreen();
+        } else {
+            // The native RTS returns to Bom_Fuse's second AnimateSprite and
+            // RememberState, which queues the same slot again when in range.
+            NativeSpriteSubmissionAccess.submit(services().objectManager(), this, getPriorityBucket());
+        }
+    }
+
+    private void advanceMotion() {
+        motionState.x = currentX;
+        motionState.y = currentY;
+        motionState.xVel = xVelocity;
+        motionState.yVel = yVelocity;
+        SubpixelMotion.speedToPos(motionState);
+        currentX = motionState.x;
+        currentY = motionState.y;
+        yVelocity = (short) (yVelocity + GRAVITY);
     }
 
     @Override
@@ -133,16 +180,7 @@ public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
         // bra.w DisplaySprite
 
         // SpeedToPos + gravity: apply velocity then add gravity
-        motionState.x = currentX;
-        motionState.y = currentY;
-        motionState.xVel = xVelocity;
-        motionState.yVel = yVelocity;
-        SubpixelMotion.moveSprite2(motionState);
-        currentX = motionState.x;
-        currentY = motionState.y;
-
-        // Apply gravity
-        yVelocity += GRAVITY;
+        advanceMotion();
 
         // ROM Bom_Shrapnel deletes via the render flag, not a raw camera margin:
         //   tst.b obRender(a0) / bpl.w DeleteObject
@@ -159,8 +197,10 @@ public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
             return;
         }
 
-        // Animate
+        // Bom_Shrapnel (_incObj/5F Badnik - Walking Bomb.asm:211-220):
+        // the regular pass queues once, after its render-bit deletion test.
         animTickCounter++;
+        NativeSpriteSubmissionAccess.submit(services().objectManager(), this, getPriorityBucket());
     }
 
     /**
@@ -168,6 +208,9 @@ public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
      * From Ani_Bomb .shrapnel: dc.b 3, $A, $B, afEnd
      */
     private int getMappingFrame() {
+        if (animTickCounter < 0) {
+            return 0;
+        }
         int step = (animTickCounter / ANIM_SPEED) % SHRAPNEL_FRAMES.length;
         return SHRAPNEL_FRAMES[step];
     }
@@ -223,8 +266,8 @@ public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
         if (renderer == null) return;
 
         int frame = getMappingFrame();
-        // Shrapnel does not flip based on facing direction
-        renderer.drawFrameIndex(frame, currentX, currentY, false, false);
+        // Fresh child SSTs have clear status; the in-place fuse retains its flags.
+        renderer.drawFrameIndex(frame, currentX, currentY, renderXFlip, renderYFlip);
     }
 
     @Override

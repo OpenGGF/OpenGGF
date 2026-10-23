@@ -998,6 +998,13 @@ class Sonic2SpecialStageBootstrapCadenceTest {
         }
 
         @Override
+        void renderNativeSprites(java.util.List<Sonic2SpecialStageSlotPool.RenderState> states,
+                                 RingHudState composition) {
+            // This fixture observes only track reconstruction. Native owner/SAT
+            // rendering is exercised by the dedicated ROM-backed pixel checks.
+        }
+
+        @Override
         public void renderTrack(int trackFrameIndex, int[] frameTiles) {
             trackRenderCalls++;
         }

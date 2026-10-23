@@ -149,7 +149,7 @@ class TestAizMinibossFallingShotNativeGraph {
         var rising = rewind.capture();
         for (int cycle = 0; cycle < 2; cycle++) {
             rewind.restore(before); same("object-manager",before,rewind.capture());
-            assertSame(h.boss(), field(owner(h,9),"parent"));
+            assertEquals(h.boss().getSlotIndex(), field(owner(h,9),"parentSlot"));
             assertSame(h.barrel(7), field(owner(h,9),"barrel"));
             for (int entry = 0; entry < 45; entry++) h.step(entry);
             same("object-manager",rising,rewind.capture());
@@ -176,7 +176,6 @@ class TestAizMinibossFallingShotNativeGraph {
         var boss = manager.createDynamicObject(() -> new TestAizMinibossFlareNativeGraph.FrozenBoss(
                 new ObjectSpawn(x,y,0x90,0,0,false,0)));
         var barrel = manager.createDynamicObject(() -> new AizMinibossFlameBarrelChild(boss,0,true));
-        boss.getChildComponents().add(barrel);
         var shot = manager.createDynamicObject(() -> new AizMinibossNapalmProjectile(boss,barrel,x,y+4,2));
         int slot = shot.getSlotIndex();
         var registry = fixture.gameplayMode().getRewindRegistry();
@@ -226,7 +225,6 @@ class TestAizMinibossFallingShotNativeGraph {
         var h=harness(320);
         var barrel=index==0?h.barrel(7):h.manager.createDynamicObjectAtSlot(
                 ()->new AizMinibossFlameBarrelChild(h.boss(),index,true),9);
-        if(index==2)h.boss().getChildComponents().add(barrel);
         barrel.setPositionCounter(3);
         call(barrel,"fireCutsceneShot");
         h.step(0);
@@ -239,7 +237,7 @@ class TestAizMinibossFallingShotNativeGraph {
     private static AizMinibossFlameBarrelChild barrel(TestAizMinibossFlareNativeGraph.Harness h, boolean cutscene) {
         if(cutscene) return h.barrel(7);
         var barrel = h.manager.createDynamicObjectAtSlot(() -> new AizMinibossFlameBarrelChild(h.boss(),0,false),9);
-        h.boss().getChildComponents().add(barrel); return barrel;
+        return barrel;
     }
     private static AizMinibossNapalmProjectile addShot(TestAizMinibossFlareNativeGraph.Harness h,
             AizMinibossFlameBarrelChild barrel, int slot) {

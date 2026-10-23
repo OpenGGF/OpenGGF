@@ -12,6 +12,8 @@ import com.openggf.game.CollisionModel;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
+import com.openggf.game.sonic2.competition.Sonic2CompetitionObjectAccess;
+import com.openggf.game.sonic2.competition.Sonic2CompetitionSession;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.ObjectAnimationState;
@@ -99,11 +101,23 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
         return new SignpostObjectInstance(ctx.spawn(), "Signpost");
     }
 
+    private Sonic2CompetitionSession competitionSession() {
+        // Authored goals use campaign completion even when the host exposes a competition session.
+        return AUTHORED_GOAL_KEY.equals(spawn.objectKey()) ? null
+                : Sonic2CompetitionObjectAccess.session(services());
+    }
+
     private void ensureInitialized() {
         if (initialized) {
             return;
         }
         initialized = true;
+
+        var competition = competitionSession();
+        if (competition != null) {
+            // Obj0D_Init's native branch bypasses ordinary act-two suppression.
+            competition.initializeSignpost();
+        }
 
         // ROM: loc_19208 (s2.asm:34650-34656)
         // Signpost is disabled in Act 2+ except for MTZ Act 2
@@ -115,7 +129,7 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
         // metropolis_zone_act_2 = (7 << 8) | 1 = 0x0701
         // A host-owned authored goal explicitly chooses completion in this
         // campaign slot; numeric stock signposts keep the native act gate.
-        if (!AUTHORED_GOAL_KEY.equals(spawn.objectKey()) && currentAct > 0) {
+        if (competition == null && !AUTHORED_GOAL_KEY.equals(spawn.objectKey()) && currentAct > 0) {
             boolean isMTZAct2 = (currentZone == Sonic2ZoneConstants.ROM_ZONE_MTZ && currentAct == 1);
             if (!isMTZAct2) {
                 // Mark as remembered to prevent respawning, then destroy
@@ -137,6 +151,11 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
+        var competition = competitionSession();
+        if (competition != null) {
+            updateCompetition(competition, vIntRunCount);
+            return;
+        }
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Don't update if destroyed (disabled in Act 2+)
         if (isDestroyed()) {
@@ -174,6 +193,50 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
             animationState.update();
             mappingFrame = animationState.getMappingFrame();
         }
+    }
+
+    private void updateCompetition(Sonic2CompetitionSession session, int vIntRunCount) {
+        if (session.phase() == Sonic2CompetitionSession.Phase.ACT) {
+            // Obj0D_Main (s2.asm:34671-34740): an accepted P1 crossing jumps
+            // straight to dispatch. P2 is sampled only if P1 did not arrive.
+            boolean firstArrival = session.firstFinisher() < 0;
+            int loserSubsecond = session.loserTimeLeft() & 0xFF;
+            boolean arrived = observeCompetitionGoal(session, 0);
+            if (!arrived) arrived = observeCompetitionGoal(session, 1);
+            if (arrived) {
+                services().playMusicMailboxNativeRequest(Sonic2Sfx.SIGNPOST.id);
+                if (loserSubsecond <= 0xC)
+                    services().playMusicMailboxNativeRequest(services().getCurrentLevelMusicId());
+                if (firstArrival) services().playSfx(Sonic2Sfx.SIGNPOST_2P.id);
+                routineState = STATE_SPINNING;
+                spinTimer = 0;
+                finalAnimId = session.signpostFace();
+                setAnimationId(ANIM_IDLE);
+                // ROM retains the sparkle countdown/index across a second arrival.
+            }
+            if (routineState == STATE_SPINNING) {
+                updateSpinning(vIntRunCount);
+            } else if (routineState == STATE_WALK_OFF) {
+                // Obj0D_Main_State4 (s2.asm:34900-34914) holds the final face
+                // for the remaining 60..0 countdown before checking results.
+                if (--spinTimer < 0) {
+                    routineState = STATE_DONE;
+                    session.completeSignpostSpin();
+                }
+            }
+        }
+        if (animationState != null) {
+            animationState.update();
+            mappingFrame = animationState.getMappingFrame();
+        }
+    }
+
+    private boolean observeCompetitionGoal(Sonic2CompetitionSession session, int slot) {
+        var player = session.player(slot);
+        if (player == null) return false;
+        // sub.w / bcs rejects borrow even if modular subtraction would be small.
+        int dx = (player.getCentreX() & 0xFFFF) - (spawn.x() & 0xFFFF);
+        return dx >= 0 && dx < 0x20 && session.observeGoal(slot, player.getCentreX(), spawn.x());
     }
 
     /**
@@ -264,6 +327,7 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
 
     @Override
     public void updatePostPlayer(int frameCounter, PlayableEntity playerEntity) {
+        if (competitionSession() != null) return;
         if (!(playerEntity instanceof AbstractPlayableSprite player)) {
             return;
         }

@@ -1,9 +1,8 @@
 package com.openggf.capture;
 
+import com.openggf.tools.PresentationOffscreenTestContext;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
-
-import java.nio.ByteBuffer;
 
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
@@ -78,9 +77,9 @@ class GlReadPixelsGrabberTest {
     }
 
     @Test
-    void grabsOnlyNonZeroOriginViewportFromOffscreenBackBuffer() {
-        long window = createOffscreenContextOrAbort();
-        try {
+    void grabsOnlyNonZeroOriginViewportFromOffscreenBackBuffer() throws Exception {
+        try (var context = createOffscreenContextOrAbort();
+             var grabber = new GlReadPixelsGrabber(5, 4, 16, 12)) {
             glDisable(GL_SCISSOR_TEST);
             glClearColor(1f, 0f, 0f, 1f);
             glClear(GL_COLOR_BUFFER_BIT);
@@ -92,22 +91,25 @@ class GlReadPixelsGrabberTest {
             glDisable(GL_SCISSOR_TEST);
             glFinish();
 
-            byte[] pixels = new GlReadPixelsGrabber(5, 4, 16, 12).grab();
+            byte[] pixels = grabber.grab();
             assertRgba(pixels, 0, 0, 255, 0, 255);
             assertRgba(pixels, pixels.length - 4, 0, 255, 0, 255);
-        } finally {
-            glfwDestroyWindow(window);
-            glfwTerminate();
+            assertEquals(GL_NO_ERROR, glGetError());
         }
     }
 
     @Test
-    void pboReadbackPreservesBothFramesAndExternalPackBinding() {
-        long window = createOffscreenContextOrAbort();
-        try {
-            Assumptions.assumeTrue(org.lwjgl.opengl.GL.getCapabilities().OpenGL21);
+    void pboReadbackPreservesBothFramesAndExternalPackBinding() throws Exception {
+        try (var context = createOffscreenContextOrAbort()) {
+            if (PresentationOffscreenTestContext.requested()) {
+                assertTrue(org.lwjgl.opengl.GL.getCapabilities().OpenGL21,
+                        "the requested core EGL context must execute the PBO path");
+            } else {
+                Assumptions.assumeTrue(org.lwjgl.opengl.GL.getCapabilities().OpenGL21);
+            }
             int external = org.lwjgl.opengl.GL15.glGenBuffers();
             try (VideoFrameGrabber grabber = GlPboFrameGrabber.create(new CaptureViewport(5, 4, 16, 12))) {
+                assertTrue(grabber.deferredReadback(), "exercise actual PBO readback, not its synchronous fallback");
                 org.lwjgl.opengl.GL15.glBindBuffer(org.lwjgl.opengl.GL21.GL_PIXEL_PACK_BUFFER, external);
                 glClearColor(1f, 0f, 0f, 1f);
                 glClear(GL_COLOR_BUFFER_BIT);
@@ -122,23 +124,26 @@ class GlReadPixelsGrabberTest {
                 grabber.grabInto(pixels);
                 assertRgba(pixels, 0, 0, 255, 0, 255);
                 assertEquals(external, glGetInteger(org.lwjgl.opengl.GL21.GL_PIXEL_PACK_BUFFER_BINDING));
+                assertEquals(GL_NO_ERROR, glGetError());
             } finally {
                 org.lwjgl.opengl.GL15.glBindBuffer(org.lwjgl.opengl.GL21.GL_PIXEL_PACK_BUFFER, 0);
                 org.lwjgl.opengl.GL15.glDeleteBuffers(external);
             }
-        } finally {
-            glfwDestroyWindow(window);
-            glfwTerminate();
         }
     }
 
-    private static long createOffscreenContextOrAbort() {
+    private static AutoCloseable createOffscreenContextOrAbort() {
+        // An explicitly requested EGL context must fail visibly if unavailable;
+        // it never retries against a desktop or turns missing EGL into a skip.
+        if (PresentationOffscreenTestContext.requested()) {
+            return PresentationOffscreenTestContext.open(32, 24);
+        }
         boolean initialized;
         try {
             initialized = glfwInit();
         } catch (Throwable unavailable) {
             Assumptions.abort("GLFW is unavailable: " + unavailable.getMessage());
-            return NULL;
+            return null;
         }
         Assumptions.assumeTrue(initialized, "GLFW could not initialize");
         glfwDefaultWindowHints();
@@ -151,12 +156,16 @@ class GlReadPixelsGrabberTest {
         try {
             glfwMakeContextCurrent(window);
             org.lwjgl.opengl.GL.createCapabilities();
-            return window;
+            return () -> {
+                org.lwjgl.opengl.GL.setCapabilities(null);
+                glfwDestroyWindow(window);
+                glfwTerminate();
+            };
         } catch (Throwable unavailable) {
             glfwDestroyWindow(window);
             glfwTerminate();
             Assumptions.abort("OpenGL is unavailable: " + unavailable.getMessage());
-            return NULL;
+            return null;
         }
     }
 

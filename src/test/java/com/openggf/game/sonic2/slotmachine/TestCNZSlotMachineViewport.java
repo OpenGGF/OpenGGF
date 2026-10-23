@@ -2,6 +2,7 @@ package com.openggf.game.sonic2.slotmachine;
 
 import com.openggf.data.Rom;
 import com.openggf.graphics.ShaderProgram;
+import com.openggf.tools.PresentationOffscreenTestContext;
 import org.junit.jupiter.api.Test;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryUtil;
@@ -10,6 +11,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
@@ -21,17 +23,9 @@ import static org.mockito.Mockito.*;
 class TestCNZSlotMachineViewport {
     @Test
     void reelsStayAtGameCoordinatesAcrossViewportChanges() throws Exception {
-        assumeTrue(glfwInit(), "GLFW unavailable");
-        glfwDefaultWindowHints();
-        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-        long window = glfwCreateWindow(960, 800, "CNZ viewport regression", 0, 0);
-        try {
-            assumeTrue(window != 0, "OpenGL 4.1 unavailable");
-            glfwMakeContextCurrent(window);
-            GL.createCapabilities();
+        try (var context = openContext()) {
+            assertTrue(GL.getCapabilities().OpenGL41,
+                    "the owned context must execute the real OpenGL 4.1 shader path");
             ShaderProgram shader = new ShaderProgram(ShaderProgram.FULLSCREEN_VERTEX_SHADER,
                     "shaders/shader_cnz_slots.glsl");
             CNZSlotMachineRenderer renderer = new CNZSlotMachineRenderer();
@@ -73,6 +67,7 @@ class TestCNZSlotMachineViewport {
                                     "viewport=" + Arrays.toString(v) + " game pixel=" + x + "," + y);
                         }
                     }
+                    assertEquals(GL_NO_ERROR, glGetError());
                 }
             } finally {
                 MemoryUtil.memFree(pixels);
@@ -80,10 +75,41 @@ class TestCNZSlotMachineViewport {
                 glDeleteTextures(palette);
                 glDeleteProgram(shader.getProgramId());
             }
-        } finally {
-            glfwMakeContextCurrent(0);
-            if (window != 0) glfwDestroyWindow(window);
+        }
+    }
+
+    private static AutoCloseable openContext() {
+        // An explicit display-free request must execute or fail; never retry
+        // against a desktop or turn missing EGL into an assumption skip.
+        if (PresentationOffscreenTestContext.requested()) {
+            return PresentationOffscreenTestContext.open(960, 800);
+        }
+        assumeTrue(glfwInit(), "GLFW unavailable");
+        glfwDefaultWindowHints();
+        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        long window = glfwCreateWindow(960, 800, "CNZ viewport regression", 0, 0);
+        if (window == 0) {
             glfwTerminate();
+            assumeTrue(false, "OpenGL 4.1 unavailable");
+        }
+        try {
+            glfwMakeContextCurrent(window);
+            GL.createCapabilities();
+            return () -> {
+                GL.setCapabilities(null);
+                glfwMakeContextCurrent(0);
+                glfwDestroyWindow(window);
+                glfwTerminate();
+            };
+        } catch (RuntimeException | Error failure) {
+            GL.setCapabilities(null);
+            glfwMakeContextCurrent(0);
+            glfwDestroyWindow(window);
+            glfwTerminate();
+            throw failure;
         }
     }
 }

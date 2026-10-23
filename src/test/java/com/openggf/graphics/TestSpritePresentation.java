@@ -168,11 +168,12 @@ class TestSpritePresentation {
         // AniTails02 frame $96 uses only 16; Obj_Tails_Tail frame 5 uses $6B0.
         body.drawFrame(7, 0, 0, false, false);
         var expected = com.openggf.level.render.SpritePresentationRenderer.prepare(graphics, 0, 0,
-                () -> tail.drawFrame(5, 0, 0, false, false));
+                () -> tail.drawFrame(5, 64, 64, false, false));
+        // Keep the comparison art inside the evaluated native raster.
         var combined = com.openggf.level.render.SpritePresentationRenderer.prepare(graphics, 0, 0, () -> {
             if (sat) graphics.beginSpriteSatCollection();
-            tail.drawFrame(5, 0, 0, false, false);
-            body.drawFrame(0x96, 0, 0, false, false);
+            tail.drawFrame(5, 64, 64, false, false);
+            body.drawFrame(0x96, 64, 64, false, false);
             if (sat) graphics.endSpriteSatCollectionAndReplay();
         });
         assertFalse(expected.patternVersions().isEmpty());
