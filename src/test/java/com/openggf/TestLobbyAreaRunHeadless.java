@@ -118,12 +118,12 @@ class TestLobbyAreaRunHeadless {
             handle.setLevelCovered(true);
             long timerBefore = GameServices.level().getLevelGamestate().getTimerFrames();
             for (int frame = 0; frame < 40; frame++) step(controller, fixture, input, false, true, false);
-            assertTrue(GameServices.level().isHudCoveredByHost(), "the menu hides the stock HUD");
+            assertTrue(com.openggf.level.LevelHudCoverAccess.covered(GameServices.level()), "the menu hides the stock HUD");
             assertTrue(GameServices.level().getLevelGamestate().getTimerFrames() > timerBefore,
                     "covering is presentation only: the level timer keeps running");
             handle.setLevelCovered(false);
             controller.admitStep(input);
-            assertFalse(GameServices.level().isHudCoveredByHost());
+            assertFalse(com.openggf.level.LevelHudCoverAccess.covered(GameServices.level()));
             int heldX = player.getCentreX() & 0xFFFF;
             assertTrue(Math.abs(heldX - area.spawnX()) <= 2, "held controls keep the character still: " + heldX);
 

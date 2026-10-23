@@ -71,6 +71,13 @@ public final class HudProfileAccess {
     }
 
     public static void bindWorld(HudRenderManager hud,WorldSession world) { hud.presentationWorld=world; }
+
+    /** See {@link com.openggf.level.LevelHudCoverAccess}. */
+    public static void setCoveredByHost(HudRenderManager hud, boolean covered) {
+        if (hud != null) hud.coveredByHost = covered;
+    }
+
+    public static boolean coveredByHost(HudRenderManager hud) { return hud != null && hud.coveredByHost; }
     static HudPresentationRuntime runtime(GraphicsManager graphics) {
         var pipeline=graphics.getUiRenderPipeline();
         var hud=pipeline==null?null:pipeline.getHudRenderManager();

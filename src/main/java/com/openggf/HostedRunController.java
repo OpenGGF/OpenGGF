@@ -151,9 +151,7 @@ final class HostedRunController {
     /** Hides the stock HUD while the host's scene covers the level (the flag is re-applied each frame). */
     private void applyLevelCover() {
         var level = GameServices.levelOrNull();
-        if (level != null && level.isHudCoveredByHost() != levelCovered) {
-            level.setHudCoveredByHost(levelCovered);
-        }
+        if (level != null) com.openggf.level.LevelHudCoverAccess.setCovered(level, levelCovered);
     }
 
     /** True while the host's scene covers the level (tests). */
