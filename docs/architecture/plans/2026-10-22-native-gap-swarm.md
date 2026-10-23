@@ -1745,3 +1745,167 @@ For later independent ending controls, decimal mappings 30/32 are native fr_Run1
 On 2026-10-23 Root received `534438e73c2cb6ca400ca4c6d899f6feed9f4258` once by ancestry into `1d4375d155816b7712922891ad9feb42448abfe4`. The peer successor includes the previously qualified native-human/Host/GPU source and pinned develop `d9b8edded8a9517dd7cf1bc3fcd4dcd6e53f4e0a`, with its PR-specific world PLC, ring, known-word capture and hosted HUD receiving ports. Peer reported the final exact d9 focus as 227 distinct tests, zero failures/errors/skips (21 selectors, 23 XML files; queue 80 seconds, Maven 1:35), and fresh source/ArchUnit/API/field checks as 116 tests, zero failures/errors/skips (queue 454 seconds, Maven 45.292 seconds). Earlier red pixel and SST evidence remains in the peer completion record. These are bounded peer results, not a Root union compile or combined smoke pass.
 
 The sole text conflict was `TestSurfacelessEglContext`: both sides restore the incoming backend property, and Root retained the exact already-qualified `3ce2664` fixture including its class-level lifecycle witness. Test bodies and GL cleanup are identical to the peer source. Root's category-runner headless option, property-scope guidance and S1 source audit remain present. No GPU, Python tool or fixture check was repeated just to receive the same tested source. One combined change-based smoke plan remains Root-owned and pending against the pre-task integration SHA `94c40570a15a11b70caf7456e9b0d0a8eec8a9b4`. Main integration/push, provider activation and passive SOZ/MHZ observations remain closed.
+
+
+### Isolated art and sprite fixture ports — 2026-10-23
+
+This test-only candidate starts at frozen parent
+`659b02c98a16da0723ef5f222acdc60ab7b0838f` on local branch
+`bugfix/ai-smoke-art-sat-fixture-ports-20261023`. It does not alter production
+code, APIs, donor art, physics, native budgets, masks or allocation. Root's
+running common-source smoke remains frozen; this worker neither reads its
+logs nor imports into its tree.
+
+The lead reported these existing red groups: eight donor-tail failures,
+thirteen mod-art failures, forty-one snapshot precondition errors (the original
+thirty-eight parameter cases and three ordinary tests), three ownership raster
+errors, and sixteen EggRobo mapping failures before the independent ROM oracle.
+Those are supplied prior observations, not a repeated baseline run here. The
+unchanged Dust companion additionally has a reported null object-services error
+in `productionInitializerAssignsHumanPlayerTwoItsNativeDustSlotAndReplaysAuxiliaries`;
+the owning source audit traced this to its mock object manager lacking services.
+The authorized sixth test-file repair uses the actual gameplay-bound
+`DefaultObjectServices` after attaching managers, before initialization. The
+whole class remains selected.
+
+The candidate hunk manifest is:
+
+- `TestDonorTailsTailBanks`: stub the injected level's main-character resolver
+  with `mainCode` in its parameterized setup. The reflection-only native-tail
+  test is unchanged.
+- `TestLevelPlayableArtInitializerModArt`: stub the same owner in the shared
+  fixture with `mainKey.persisted()` and the independent built-in fixture with
+  `tails`. Preserve capacity atomicity, palette, key, dynamic-DPLC and negative
+  publication assertions.
+- `TestSpritePreparationSnapshots`: copy the input tile's pixel operation and
+  ghost-colour state into the mock host; retain all original thirty-eight
+  mutations and add the two new scalar cases. Ordinary scalar snapshots use a
+  `NoPixels` sentinel; the shadow case binds a deterministic immutable source
+  sample. Equality, callback identity/behavior, fresh instances, retained frames,
+  rows and primitive boundaries remain asserted.
+- `TestLevelSpritePreparationOwnership`: provide an actual 320 by 224 fixture
+  raster and matching initial priority/mask state for world and counter captures.
+  Preserve the equal-value/different-identity discriminator, failure publication,
+  pending/published ownership and rewind assertions.
+- `TestSszEggRoboVerticalFlip`: use the scene's fixed presentation camera
+  `(0x100, 0xB80)` for direct and SAT preparation, and subtract exactly that
+  translation in the independent ROM coordinate expansion. Full ordered lists,
+  tile flags, palettes, priority, masks, geometry, rejection of row clipping,
+  owner clocks, delayed/live Y, fresh identities and native limits remain intact.
+
+- `TestNativeCompetitionDustArtInitialization` (additional authorized owner):
+  construct `DefaultObjectServices(gameplay, EngineServices.current())` after
+  `attachLevelManagers` and return it from the mock object manager. This supplies
+  the selected world timing/art coordinator and preserves real tail/dust RAM,
+  native slots, player identity and replay assertions. Its wrapped Sonic2 module
+  selects the ordinary NONE coordinator; this is a RAM/art/identity control, not
+  qualification of native physical DPLC queues or submission identities.
+
+One normal queued focused request will select these six whole classes. At most one
+conditional second request may follow changed source or an actual failure. No
+broad suite, unchanged structural guard, route replay, native observation or
+production correction belongs to this slice. The pre-focus source freeze (tracked `src/` and `pom.xml`, sorted path/NUL/content/NUL)
+is SHA-256 `7bfd67e90e1d9c4ea2eb223b87f600129eddca668de617f9e0aead29245e6259`; the six-test diff is SHA-256
+`410be05f0afc8347aadb861fc2f8eda89320d47b6f497de74673c365c0394d17`. An independent exact five-file diff review
+found no issues before the authorized three-line Dust fixture addition. Actual
+results remain pending; no H/V parity or bounded qualification is claimed yet.
+
+
+The first six-class focus completed on the frozen source above: 124 unique test
+identities in six XML files, eight failures, no errors or skips. EggRobo's 44,
+snapshot's 49 (including all forty scalar/subject mutations), ModArt's 14,
+ownership's three and Dust's five passed. The donor native-tail reflection
+control passed; all eight donor parameter cases reached the previously hidden
+full tail-pixel assertion and failed because a referenced pattern was absent.
+This was a red qualification, not an accepted pass. Reported queue wait was
+602 seconds, Maven execution 1:30, and measured request wall time 693.630
+seconds. All XML properties, unique identities, skips, streams and dumps were
+inspected: Java 25.0.5, the owned cwd, surfaceless EGL and original three ROM
+paths matched; there were no dump files. Stream output contained the expected
+supplier-failure negative control and missing FAST-manifest/NONE notices.
+The post-run source hash still matched the freeze.
+
+Source and verified S2 ROM mapping inspection explains the donor failure:
+selected tail frames 0x49–0x4C and 0x81–0x84 occupy X -36 through -8 and Y -8
+through 8 around the fixture's (0,0), wholly outside the SAT raster horizontally.
+`SpriteSatMaskPostProcessor.appendVisible` clips to that raster, and prepared
+frames retain pattern versions only for displayed tiles. All Sonic mapping
+bounds are (-30,-35) through (28,30); Tails bounds are (-36,-30) through (24,44).
+The second-request hunk moves every expected and combined draw to the common
+fixture point (160,112), retaining the complete pixel-map assertions, all body
+frames, tail frames, banks, order and SAT/direct dimensions. The inspected
+combinations peak at seven native sprites and 152 declared pixels per line,
+below unchanged H40 limits. No filtering or production correction is used.
+
+The second-request Dust hunk adds the authorized exact identity controls for
+its actual services: gameplay world, injected level, attached mock object
+manager and selected runtime-art coordinator. Ring's separate fixture proposal
+arrived after the first freeze/submission and is deferred to a receiving step;
+it is neither edited nor selected here. The sole conditional second request
+will select the two changed owning whole classes, donor and Dust. The other
+four classes remain covered by the unchanged first-focus source. Results of
+that second request remain pending.
+
+The second-request source freeze uses the same tracked source hash method:
+SHA-256 `93d344b2f2520aaece27863eef3d925d9ce7a4dad42032ae42f57d05572d1894`, with test diff SHA-256
+`e2c36b373cfe206b6a147a0596163eecde49b920f9ae84443016ba2ffa2f269d`. Only donor and Dust changed after
+the first focus; no production source changed. Consumed first-request XML and
+raw output were removed before the next invocation.
+
+
+The sole conditional second focus passed all fourteen distinct identities:
+nine donor cases and five Dust cases, zero failures, errors or skips. Reported
+queue wait was 450 seconds, Maven execution 31.168 seconds, and measured request
+wall time 481.736 seconds. Both XML files, all properties, identities, streams
+and dumps were inspected. Java 25.0.5, owned cwd, exact two-class selector,
+surfaceless EGL and original three ROM paths matched; there were no duplicates
+or dumps. Only expected FAST-manifest/NONE notices appeared in the streams.
+The post-run source hash matched the second freeze. Independent review of the
+changed donor-centering and Dust service/identity hunks found no issues.
+
+The final bounded qualification covers 124 distinct test identities across the
+six owning classes: the unchanged EggRobo 44, snapshot 49, ModArt 14 and ownership
+three passed in the first request; final donor nine and Dust five passed in the
+second. This does not describe the first red run as passing or imply a fresh
+six-class run on the second source. No third request, broad smoke, structural
+guard, route/native/paired observation or other held-source import was made.
+In particular EggRobo's independent ROM oracle is now reached and passes all
+selected H/V component cases; this is not a natural vertical-flip route claim.
+Dust retains its ordinary NONE coordinator and RAM/controller/identity scope,
+without physical-DPLC submission qualification. Ring is still deferred, and
+Root import remains gated on the lead's frozen common job ending.
+
+For reproducibility, the exact focused commands used the current shared queue
+wrapper with the owned worktree as cwd and these portable variables. Set
+`QUEUE_WRAPPER`, `JAVA_25_HOME`, `LUA_54_BIN` and the three absolute original
+ROM paths `S1_ROM`, `S2_ROM`, `S3K_ROM` in the launch environment; no ROM copies
+or links are required. The originals matched S1 CRC32 AFE05EEE / SHA-1
+69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B, S2 7B905383 /
+8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9, and S3K 63522553 /
+CFBF98C36C776677290A872547AC47C53D2761D6. Checkout-hook-generated ROM links
+were removed before either request; runtime inputs use the original files.
+
+```bash
+run_fixture_focus() {
+  env -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS -u JDK_JAVA_OPTIONS \
+    -u MAVEN_OPTS -u JAVA_OPTS -u MAVEN_ARGS \
+    -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+    JAVA_HOME="$JAVA_25_HOME" LUA_BIN="$LUA_54_BIN" \
+    ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+    python3 "$QUEUE_WRAPPER" --normal -Dmse=off \
+    -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$1" \
+    "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" \
+    "-Ds3k.rom.path=$S3K_ROM" test -B
+}
+run_fixture_focus 'com.openggf.level.TestDonorTailsTailBanks,com.openggf.level.TestLevelPlayableArtInitializerModArt,com.openggf.graphics.TestSpritePreparationSnapshots,com.openggf.level.TestLevelSpritePreparationOwnership,com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboVerticalFlip,com.openggf.level.TestNativeCompetitionDustArtInitialization'
+run_fixture_focus 'com.openggf.level.TestDonorTailsTailBanks,com.openggf.level.TestNativeCompetitionDustArtInitialization'
+```
+
+The three prepared method-preservation hazards were added to the existing
+measurement catalogue only after both requests were terminal. Its slot-reward
+paragraph is explicitly independent held-leaf `7cb60793c` evidence, not coverage
+from this branch; that source was not imported. Documentation/link/diff checks
+are separate from JVM qualification. Consumed owned logs, XML and invocation
+temporary output are removed; compiled outputs and the unmerged local worktree
+are retained for the lead. No main-workspace mutation, merge or push is part of
+this implementation slice.
