@@ -54,6 +54,16 @@ public final class ObjectManagerInternalAccess {
         manager.nativeCompetitionStreaming().swapNativeCompetitionStreamingSlots();
     }
 
+    /** Unconditional non-player prefix SST write in [2, firstDynamicSlot), without allocation or unloading. */
+    public static <T extends AbstractObjectInstance> T replaceNativeCompetitionPrefixObject(
+            ObjectManager manager, int absoluteSlot, Supplier<T> factory) {
+        enableNativeCompetitionCollisionPointers(manager);
+        // CheckGameOver writes Obj39 directly to shared SSTs 2/3, with no
+        // allocation or occupancy branch (s2.asm:38274-38316,41157-41209).
+        return ObjectNativeSstOverwrite.replacePrefix(manager.nativeSstSurface(),
+                manager.initialCollisionResponseList(), absoluteSlot, factory);
+    }
+
     /** Unconditional fixed-address write; does not delete, unload or allocate the previous owner. */
     public static <T extends AbstractObjectInstance> T replaceNativeCompetitionFixedObject(
             ObjectManager manager, int absoluteSlot, Supplier<T> factory) {

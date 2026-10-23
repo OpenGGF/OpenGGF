@@ -35,6 +35,11 @@ public final class S3kCompetitionPlayer {
         /** sub_123C2 prepass (also Tails loc_157C8); the session owns saved positions and notification. */
         void resolveDeath(S3kCompetitionPlayer player);
     }
+    /** Exact writes through this actor's a6 pointer; the host resolves the current fixed dust SST. */
+    public interface NativeDustWrites {
+        void setAnimation(int animation);
+        void startSkid();
+    }
     public record State(int slot, Character character, Speeds baseSpeeds, Speeds speeds,
             int xFixed, int yFixed, int xVelocity, int yVelocity, int groundVelocity,
             int status, int statusSecondary, int routine, int objectControl,
@@ -44,7 +49,8 @@ public final class S3kCompetitionPlayer {
             int doubleJumpFlag, int doubleJumpProperty, int flipAngle, int flipType,
             int flipsRemaining, int flipSpeed, int speedShoesTimer,
             int invulnerabilityTimer, boolean stickToConvex, boolean highPriority,
-            S3kMiniatureAnimation.State animationState, boolean bodyVisible) { }
+            S3kMiniatureAnimation.State animationState, boolean bodyVisible,
+            int nativeRenderFlags, boolean nativeInitialized, int airLeft) { }
 
     private final int slot;
     private final Character character;
@@ -57,6 +63,11 @@ public final class S3kCompetitionPlayer {
     private int flipAngle,flipType,flipsRemaining,flipSpeed=4,speedShoesTimer,invulnerabilityTimer;
     private boolean stickToConvex,highPriority;
     private boolean bodyVisible=true;
+    private int nativeRenderFlags;
+    private boolean nativeInitialized;
+    private int airLeft=30;
+    // Runtime binding, deliberately excluded from captured player state and installed on roster rebind.
+    private transient NativeDustWrites nativeDustWrites;
     private S3kMiniatureSprite sprite;
     private S3kMiniatureAnimation animator;
     private S3kMiniatureAnimation.State animationState=S3kMiniatureAnimation.State.INITIAL;
@@ -169,6 +180,7 @@ public final class S3kCompetitionPlayer {
         if (((angle+0x20)&0xC0)==0 && (direction<0?nativeCompare>=0x400:nativeCompare<=-0x400)
                 && (flipType&0x80)==0) {
             animation=0xD; setFacingLeft(direction>0);
+            if(airLeft>=12 && nativeDustWrites!=null)nativeDustWrites.startSkid();
         }
     }
 
@@ -225,12 +237,14 @@ public final class S3kCompetitionPlayer {
         if (spinDashFlag==0) {
             if (animation!=8 || (input.pressed()&JUMP)==0) return false;
             animation=9; spinDashFlag=1; spinDashCounter=0;
+            if(airLeft>=12 && nativeDustWrites!=null)nativeDustWrites.setAnimation(2);
             terrain.followGround(this); return true;
         }
         if ((input.held()&DOWN)==0) {
             setRolling(true); setRadii(3,7); animation=2;
             setCentreNative(centreX(),centreY()+4); spinDashFlag=0;
             groundVelocity=(0x800+((spinDashCounter>>>8)*0x80))*(facingLeft()?-1:1);
+            if(nativeDustWrites!=null)nativeDustWrites.setAnimation(0);
         } else {
             spinDashCounter-=spinDashCounter>>>5;
             if ((input.pressed()&JUMP)!=0) {
@@ -331,13 +345,47 @@ public final class S3kCompetitionPlayer {
     private void advanceAnimation() {
         if (animator!=null) {
             animationState=animator.tick(this,animationState); animationFrame=animationState.frame();
+            nativeRenderFlags=(nativeRenderFlags&0xFC)|(animationState.renderFlips()&3);
         }
     }
     public void setAnimator(S3kMiniatureAnimation animator) { this.animator=Objects.requireNonNull(animator); }
     public boolean bodyVisible() { return bodyVisible; }
     public int mappingFrame() { return animationState.mappingFrame(); }
-    public int renderFlips() { return animationState.renderFlips(); }
+    public int renderFlips() { return nativeRenderFlags&3; }
     public S3kMiniatureAnimation.State animationState() { return animationState; }
+
+    /**
+     * Obj_Sonic2P/Obj_Tails2P entry, once per actual actor SST dispatch, before movement.
+     * Matching characters toggle P1 bit3/P2 bit4; init then overwrites that first toggle
+     * (sonic3k.asm:21416-21466,25565-25616). True tells the host to install Tails' fixed tail.
+     */
+    public boolean beginNativeActorPass(int partnerCharacterId) {
+        if (partnerCharacterId==character.ordinal()) nativeRenderFlags^=slot==0?8:0x10;
+        boolean first=!nativeInitialized;
+        if (first) {
+            nativeInitialized=true;
+            airLeft=30;
+            setNativeRenderFlags(character==Character.TAILS?0x84:4);
+        } else publish();
+        return first;
+    }
+    public int nativeRenderFlags() { return nativeRenderFlags; }
+    public boolean nativeInitialized() { return nativeInitialized; }
+    public void setNativeDustWrites(NativeDustWrites writes) { nativeDustWrites=Objects.requireNonNull(writes); }
+    public int airLeft() { return airLeft; }
+    public void setAirLeft(int value) { airLeft=value&0xFF; publish(); }
+    /** BuildSprites publishes the union of both views; skipped body submissions retain their bit. */
+    public void refreshNativeVisibility(boolean visible) {
+        nativeRenderFlags=(nativeRenderFlags&0x7F)|(visible?0x80:0); publish();
+    }
+    public void setNativeRenderFlags(int flags) {
+        nativeRenderFlags=flags&0xFF;
+        animationState=new S3kMiniatureAnimation.State(animationState.previousAnimation(),
+                animationState.frame(),animationState.timer(),animationState.mappingFrame(),nativeRenderFlags&3);
+        publish();
+    }
+    /** Both miniature actor routines initialize this word and never change it. */
+    public int nativePriorityWord() { return 0x100; }
 
     public TouchBounds touchBounds() {
         int h=(yRadius-3)&255;
@@ -390,7 +438,8 @@ public final class S3kCompetitionPlayer {
                 status,statusSecondary,routine,objectControl,moveLock,animation,animationFrame,xRadius,yRadius,
                 angle,topSolidBit,lrbSolidBit,standingObject,jumping,spinDashFlag,spinDashCounter,
                 doubleJumpFlag,doubleJumpProperty,flipAngle,flipType,flipsRemaining,flipSpeed,
-                speedShoesTimer,invulnerabilityTimer,stickToConvex,highPriority,animationState,bodyVisible);
+                speedShoesTimer,invulnerabilityTimer,stickToConvex,highPriority,animationState,bodyVisible,
+                nativeRenderFlags,nativeInitialized,airLeft);
     }
     public void restore(State s) {
         if (s.slot()!=slot || s.character()!=character || !s.baseSpeeds().equals(baseSpeeds))
@@ -404,7 +453,8 @@ public final class S3kCompetitionPlayer {
         doubleJumpFlag=s.doubleJumpFlag(); doubleJumpProperty=s.doubleJumpProperty(); flipAngle=s.flipAngle();
         flipType=s.flipType(); flipsRemaining=s.flipsRemaining(); flipSpeed=s.flipSpeed();
         speedShoesTimer=s.speedShoesTimer(); invulnerabilityTimer=s.invulnerabilityTimer();
-        stickToConvex=s.stickToConvex(); highPriority=s.highPriority(); animationState=s.animationState(); bodyVisible=s.bodyVisible(); publish();
+        stickToConvex=s.stickToConvex(); highPriority=s.highPriority(); animationState=s.animationState(); bodyVisible=s.bodyVisible();
+        nativeRenderFlags=s.nativeRenderFlags(); nativeInitialized=s.nativeInitialized(); airLeft=s.airLeft(); publish();
     }
     public int slot(){return slot;} public Character character(){return character;}
     public int centreX(){return xFixed>>16;} public int centreY(){return yFixed>>16;}

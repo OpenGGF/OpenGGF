@@ -675,7 +675,7 @@ class TestS3kCompetitionArenaObjects {
 
         void tick() {
             for (int i = 0; i < objects.size(); i++) objects.get(i).tickNative(this);
-            for (var object : objects) object.refreshNativeVisibility(visible);
+            for (var object : objects) if (object.nativeDrawPublished()) object.refreshNativeVisibility(visible);
             frame++;
         }
 

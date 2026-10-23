@@ -6,6 +6,7 @@ import com.openggf.game.PhysicsProfile;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.PerObjectRewindSnapshot.PlayableSubclassRewindExtra;
+import com.openggf.level.objects.NativeSpriteSubmissionSource;
 import com.openggf.physics.Direction;
 import com.openggf.physics.Sensor;
 import com.openggf.sprites.NativePositionOps;
@@ -18,7 +19,7 @@ import com.openggf.sprites.playable.PlayableSensorSpec;
  * host ticks {@link S3kCompetitionPlayer}, never the campaign movement owner.
  * ROM art/animation banks are installed by the competition presentation owner.
  */
-public final class S3kMiniatureSprite extends AbstractPlayableSprite {
+public final class S3kMiniatureSprite extends AbstractPlayableSprite implements NativeSpriteSubmissionSource {
     @RewindTransient(reason="native model captured explicitly in miniature subclass rewind payload")
     private final S3kCompetitionPlayer player;
 

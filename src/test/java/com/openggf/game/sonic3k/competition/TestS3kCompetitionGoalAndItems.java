@@ -187,12 +187,12 @@ class TestS3kCompetitionGoalAndItems {
         assertEquals(wheel.captureRewindState(),wheelRestored.captureRewindState());
     }
 
-    @Test void reservedProjectileAllocationCannotDrawBeforeItsEarlierNativeSlotExecutes() {
+    @Test void reservedProjectileAllocationCannotDrawBeforeItsFixedNativeSlotExecutes() {
         var world = new CompetitionTestWorld(S3kCompetitionSession.Mode.MATCH_RACE);
         var wheel = wheel(); wheel.replenish(4); wheel.updateNative(world.session);
         wheel.collectNative(world.session,0);
         var projectile = (CompetitionItemObjectInstance) world.reservedProjectile;
-        assertEquals(1,projectile.getSlotIndex()); assertTrue(projectile.getSlotIndex()<wheel.getSlotIndex());
+        assertEquals(94,projectile.getSlotIndex()); assertTrue(projectile.getSlotIndex()>wheel.getSlotIndex());
         assertFalse(projectile.nativeDrawPublished(), "native Draw_Sprite is not an allocation callback");
         var restored = (CompetitionItemObjectInstance) recreate(projectile);
         assertFalse(restored.nativeDrawPublished());

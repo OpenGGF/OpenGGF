@@ -181,11 +181,90 @@ class TestS3kCompetitionScreen {
                 0,0,null,List.of(1,0,0,0,0,0)));
     }
 
+    @Test void nativeTimeAttackExitWaitsForHostBodyAndPreservesCharacterAndArenaSelection() {
+        Fixture f=timeAttackRaceWithTailsInDesertPalace(); var retired=f.screen.session();
+        var selected=f.screen.view();
+        f.arenaStep=() -> {
+            f.screen.requestArena(S3kCompetitionSession.Arena.ENDLESS_MINE);
+            f.screen.requestResults(retired.result());
+            f.screen.requestTimeAttackSelection();
+            assertSame(retired,f.screen.session()); assertEquals(0,f.closes);
+            assertEquals(S3kCompetitionScreen.Phase.RACE,f.screen.view().phase());
+        };
+        f.idle(1);
+        assertEquals(1,f.steps); assertEquals(1,f.closes); assertNull(f.screen.session());
+        assertEquals(S3kCompetitionScreen.Phase.ARENA_SELECT,f.screen.view().phase());
+        assertEquals(S3kCompetitionSession.Mode.TIME_ATTACK,f.screen.view().mode());
+        assertEquals(selected.characters(),f.screen.view().characters()); assertEquals(3,f.screen.view().arenaRow());
+        assertEquals(List.of(false,false),f.screen.view().confirmed());
+        assertEquals(0,f.screen.view().frame()); assertFalse(f.screen.view().mainLoopStarted());
+        assertEquals(0,f.screen.view().horizontalScroll()); assertEquals(0x90,f.screen.view().verticalScroll());
+        assertEquals(1,f.launches.size()); assertEquals(NativeMenuScreen.Exit.NONE,f.screen.consumeExit());
+        // Both stale requests were discarded: the next chosen race stays on
+        // this retained arena instead of launching EMZ or showing old results.
+        f.arenaStep=() -> { };
+        f.press(0,0,InputActionMasks.ACTION_A); f.idle(10); f.press(0,0,InputActionMasks.ACTION_A); f.idle(1);
+        assertEquals(2,f.launches.size()); assertEquals(1,f.closes);
+        assertEquals(S3kCompetitionSession.Arena.DESERT_PALACE,f.launches.getLast().config().arena());
+        assertEquals(S3kCompetitionScreen.Phase.RACE,f.screen.view().phase());
+    }
+
+    @Test void nativeTitleExitWinsPendingArenaResultAndSelectionWithoutResettingProgress() {
+        Fixture f=timeAttackRaceWithTailsInDesertPalace(); var retired=f.screen.session();
+        retired.setNativeRings(0,37);
+        f.arenaStep=() -> {
+            f.screen.requestResults(retired.result());
+            f.screen.requestArena(S3kCompetitionSession.Arena.BALLOON_PARK);
+            f.screen.requestTitleScreen(); f.screen.requestTimeAttackSelection();
+            assertEquals(NativeMenuScreen.Exit.NONE,f.screen.consumeExit());
+            assertEquals(0,f.closes); assertSame(retired,f.screen.session());
+        };
+        f.idle(1);
+        assertEquals(1,f.steps); assertEquals(1,f.closes); assertNull(f.screen.session());
+        var exit=f.screen.consumeExit();
+        assertEquals(NativeMenuScreen.Destination.TITLE_SCREEN,exit.destination());
+        assertNull(exit.team()); assertFalse(exit.resetProgress()); assertEquals(37,retired.rings(0));
+        assertEquals(NativeMenuScreen.Exit.NONE,f.screen.consumeExit()); assertEquals(1,f.launches.size());
+        f.arenaStep=() -> { }; f.idle(2);
+        assertEquals(1,f.closes); assertEquals(1,f.launches.size()); assertTrue(f.savedRecords.isEmpty());
+    }
+
+    @Test void queuedNativeExitDoesNotCloseImmediatelyAndInitializeDiscardsIt() {
+        Fixture f=timeAttackRaceWithTailsInDesertPalace(); var active=f.screen.session();
+        f.screen.requestTimeAttackSelection();
+        assertEquals(0,f.closes); assertSame(active,f.screen.session());
+        assertEquals(S3kCompetitionScreen.Phase.RACE,f.screen.view().phase());
+        f.arenaStep=() -> assertSame(active,f.screen.session());
+        f.idle(1); assertEquals(1,f.steps); assertEquals(1,f.closes);
+        f.screen.requestTitleScreen(); f.screen.initialize();
+        assertEquals(NativeMenuScreen.Exit.NONE,f.screen.consumeExit());
+        f.arenaStep=() -> { };
+        f.press(0,0,InputActionMasks.ACTION_A); f.press(0,0,InputActionMasks.ACTION_A);
+        f.idle(10); f.press(0,0,InputActionMasks.ACTION_A); f.idle(1);
+        assertEquals(S3kCompetitionScreen.Phase.RACE,f.screen.view().phase());
+        assertEquals(2,f.launches.size()); assertEquals(1,f.closes);
+        assertEquals(NativeMenuScreen.Exit.NONE,f.screen.consumeExit());
+    }
+
+    private static Fixture timeAttackRaceWithTailsInDesertPalace() {
+        Fixture f=new Fixture(); f.press(0,2,0); f.press(0,2,0); f.press(0,0,InputActionMasks.ACTION_A);
+        f.press(0,8,0); f.idle(16); // Native $55 rotation, five angle units per update.
+        f.press(0,0,InputActionMasks.ACTION_A); f.idle(10);
+        f.press(0,2,0); f.press(0,2,0); f.idle(9); f.press(0,2,0); f.idle(9);
+        f.press(0,0,InputActionMasks.ACTION_A);
+        assertEquals(S3kCompetitionScreen.Phase.RACE,f.screen.view().phase());
+        assertEquals(S3kCompetitionSession.Arena.DESERT_PALACE,f.launches.getFirst().config().arena());
+        assertEquals(S3kCompetitionPlayer.Character.TAILS,f.launches.getFirst().characters().getFirst());
+        return f;
+    }
+
     private static final class Fixture implements S3kCompetitionScreen.Host {
         final S3kCompetitionScreen screen = new S3kCompetitionScreen(this);
         final List<S3kCompetitionScreen.Launch> launches = new ArrayList<>();
         final List<S3kCompetitionSession.PlayerResult> savedRecords = new ArrayList<>();
         final List<Sonic3kSfx> sounds = new ArrayList<>();
+        Runnable arenaStep=() -> { };
+        int steps,closes;
         Fixture() { screen.initialize(); }
         void press(int slot,int direction,int action) {
             var p = PlayerInputState.of(direction,direction,action,action,false,false);
@@ -199,11 +278,11 @@ class TestS3kCompetitionScreen {
             return world.session = new S3kCompetitionSession(launch.config(),world,
                     CompetitionTestWorld.SEQUENCE, CompetitionTestWorld.ITEM_ANIMATION, CompetitionTestWorld.GOAL_ANIMATION);
         }
-        @Override public void stepArena(LogicalInputSnapshot input,S3kCompetitionSession session) { }
+        @Override public void stepArena(LogicalInputSnapshot input,S3kCompetitionSession session) {steps++;arenaStep.run();}
         @Override public void drawArena() { }
         @Override public void drawMenu(S3kCompetitionScreen.MenuView view) { }
         @Override public void setClearColor() { }
-        @Override public void closeArena() { }
+        @Override public void closeArena() {closes++;}
         @Override public void playSfx(Sonic3kSfx sound) { sounds.add(sound); }
     }
 }

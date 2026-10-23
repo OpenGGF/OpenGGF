@@ -5,9 +5,12 @@ import com.openggf.game.session.WorldSessionPolicyAccess;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.competition.S3kCompetitionPlayer;
 import com.openggf.game.sonic3k.competition.S3kCompetitionSession;
+import com.openggf.game.sonic3k.competition.S3kCompetitionDamage;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.NativeSpriteSubmissionAccess;
+import com.openggf.level.objects.NativeSpriteSubmissionSource;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -23,7 +26,7 @@ import java.util.List;
  * an eight-pixel-wide player box and y_radius-3 (20595-20609).
  */
 public final class CompetitionItemObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable, TouchResponseProvider {
+        implements SpawnRewindRecreatable, TouchResponseProvider, NativeSpriteSubmissionSource {
     public static final String ART_KEY = "competition_item";
     public enum Kind { WHEEL, EFFECT, DROPPING_SLIDE, SLIDE, DROPPING_SPRING, SPRING,
         DROPPING_PROJECTILE, PROJECTILE }
@@ -64,7 +67,11 @@ public final class CompetitionItemObjectInstance extends AbstractObjectInstance
     @Override public void update(int vIntRunCount, PlayableEntity ignored) {
         S3kCompetitionSession session = WorldSessionPolicyAccess.getService(
                 services().worldSession(), S3kCompetitionSession.class);
-        if (session != null) updateNative(session);
+        if (session != null) {
+            updateNative(session);
+            if (drawPublished) NativeSpriteSubmissionAccess.submitSpilling(
+                    services().objectManager(), getSlotIndex(), getPriorityBucket());
+        }
     }
 
     public void updateNative(S3kCompetitionSession session) {
@@ -112,8 +119,8 @@ public final class CompetitionItemObjectInstance extends AbstractObjectInstance
             case PROJECTILE -> { updateProjectile(session, touches); publishedTouch = true; }
         }
         // Native Draw_Sprite queues only an executed, surviving routine. In particular the
-        // reserved projectile slot precedes its collecting wheel, so it cannot draw until
-        // its first SST dispatch; allocation alone never publishes it to Render_Sprites.
+        // reserved projectile cannot draw until its first SST dispatch (slot $5E
+        // follows the wheel in the native pass); allocation alone never publishes it to Render_Sprites.
         drawPublished = !isDestroyed();
         if (isDestroyed()) publishedTouch = false;
     }
@@ -210,7 +217,7 @@ public final class CompetitionItemObjectInstance extends AbstractObjectInstance
         for (S3kCompetitionPlayer player : session.players()) {
             if (player.topSolidBit() != topSolidBit || (touches & (1 << player.slot())) == 0) continue;
             kind = Kind.EFFECT; animation = 11;
-            session.nativeObjectContext().hurt(player, x);
+            S3kCompetitionDamage.projectile(session,session.damageContext(),player,x);
         }
         // Changing the next routine does not skip the current loc_368D0 tail:
         // both touch bits, movement and angle-derived mapping still run this pass.

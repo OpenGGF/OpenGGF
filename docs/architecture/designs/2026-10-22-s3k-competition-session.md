@@ -324,3 +324,179 @@ focused classes. The camera provider's offset convention was independently
 checked against the existing `ScrollEffectComposer`; both use negated VDP words
 and the existing positive BG-minus-FG scroll offset. No sign change was needed.
 No renderer, complete arena route or broad suite is certified by these checks.
+
+
+## Concrete native world checkpoint after shared boundary composition
+
+The implementation checkout remains `s3k-native-competition`, isolated from the
+main workspace. It composed the authorized shared roster/world/upfront/SST and
+retained-plane dependencies, including the documented compatibility subsets at
+`6715c9d75` and `c97b67d9e`. The latter deliberately omits the root-owned EGL
+consumer test; this checkout does not contain the root renderer dependency range.
+The palette lifecycle bridge is separately committed as `d08a9776f`: independent
+native palette registration preserves an original combined owner while it still
+owns patterns, retires palette-only predecessors, and removes the native binding
+on normal reload/teardown. The committed pause primitive was imported with exact
+source equivalence to root `b0c2c6ae` in source-only dependency `1cd8a10fb`.
+
+`S3kCompetitionNativeHost` now opens the canonical shared world with the exact
+human miniature pair, native LevelState/game-state banks, actual ROM terrain,
+object art and source-order upfront placements. It bypasses ordinary player/CPU
+bootstrap and uses one canonical world step. P1/P2 movement, position recording
+and native touch consume the previous published physical SST pointer list; the
+list resolves each current occupant again before P2. General allocation stays
+inside the native window, and projectile SST94 replacement remains unconditional
+at full RAM. The Host owns transitions after the canonical pass, never in objects.
+
+Fixed Tails tails96/97 and dust98/99 execute in the real SST pass. Miniature dust
+writes resolve the current fixed address after object recreation rather than
+holding a retired Java actor. Skid children retain the shipped unscaled +$C Y
+write and deferred earlier-slot execution. Native damage, life thresholds,
+projectile knockback and bouncing-ring owners retain FixBugs=0 P2 spill/collection
+bank quirks. GP level reload clears both total-ring words and P1 life flags while
+preserving the complete P2 extra-life flag byte.
+
+The domain owns retained 8KiB foreground/background descriptor buffers and both
+physical native sprite pages. Both planes publish their exact native geometry
+through the active ZoneFeatureProvider. BPZ uses64x64 tiles; the other arenas
+use128x32, independent of ordinary level-layout dimensions. Page production
+consumes actual admitted queue pointers, including duplicate/late-reused and
+stale input words. It preserves the two physical P1 prefix entries, P1/P2 range
+flag asymmetry, whole mapping footprints and uploaded-versus-prepared identity.
+The root renderer consumes those DTOs; it does not infer art or advance owners.
+
+Ordinary native phase order is now cameras/ScreenEvents, Animate_Tiles,
+Render_Sprites, Animate_Palette. A domain callback at the end of the pattern pass
+prepares pages before the palette update; the previous campaign pre-actor AnPal
+call and duplicate post-world page build were rejected. Initial load instead
+renders sprites, runs the initial tile pass, then arms the all64 current-RAM black
+fade at loc_665A. The native palette owns raw16-bit current and target words,
+22 fade passes and first AnPal on call23, including BPZ/CGZ/EMZ cycles. Only words
+actually written by that later native phase override an object palette claim.
+A direct world switch also clears an inherited graphics fade presentation;
+otherwise an outgoing campaign black fade can multiply the new native RAM fade.
+Existing latchable palette uploads retain VBlank publication authority.
+
+The ROM loop dispatch span at loc_66EA omits shared ring animation and global
+oscillation. The internal default-true spill-clock capability leaves ordinary
+updates unchanged; competition retains its native three-word bank while still
+retiring stale object mirrors. Native fresh state is zero, then ring loss writes
+counterFF without a later ChangeRingFrame decrement. The feature provider also
+retains initialized oscillator RAM instead of advancing it each competition body.
+
+The captured pause planner seeds Ctrl1=$8000 from GetDemoPtr, checks the previous
+P1 Start sample, and accepts current input only at its selected native wait. A
+pause wait always skips miniature/object/session-tail/page preparation, including
+the resume wait. Its continuation reaches a distinct ordinary wait/body before a
+pending TA-B selection or slow-motion title request is consumed. P2 does not pause.
+The dedicated adapter restores the planner and native Game_paused flag together.
+The parent-owned native audio pause port remains explicitly outstanding; the
+Host does not substitute the application/window PCM pause API.
+
+### Current bounded evidence and acceptance limits
+
+R9 and R10 stopped in compilation before tests (52.788s and55.505s): the first
+used an invalid typed SFX call, the second omitted checked-ROM failure handling
+in the tail bank. Both were corrected. R11 ran66 tests (7failures,1error,0skips):
+58 passed, while Host fixtures incorrectly expected first dynamic SST3 rather
+than4, treated structural human P2 registration as a CPU controller, and used a
+mock missing its solid-execution registry. These fixture repairs preserved real
+no-CPU assertions and native allocation semantics. R12 ran all23 exact domain
+classes:268 tests,3failures,0errors,0skips. Its remaining fixtures manually
+published invisible EMZ visibility and used the same invalid allocation boundary;
+R14 covers all three repaired cases. R13 stopped in compilation (55.979s) because
+the new feature provider omitted its required no-extra-art cache method.
+
+R14 completed205 tests across17 exact classes with0 failures/errors/skips,
+after263s queue waiting and87s execution. It covered all changed failed R12
+fixtures, the real Host15 cases, damage12, all5 palette owners11, dust10,
+pause17, pattern9, planes12, sprite pages7, player21, session11, binding3,
+load profile8, arena29, HUD14, palette/pattern lifecycle14 and retained-cache12.
+It used Java25, Lua5.4, the absolute supplied S3K ROM and display-free
+surfaceless-EGL flags through the shared Maven queue. The checks are logic/asset
+and ownership tests: no child renderer/whole-arena visual qualification is claimed.
+
+Exact R14 selector:
+`TestNativePaletteOwnerReplacement,TestNativePatternOwnerReplacement,TestS3kCompetitionPaletteAnimator,TestS3kMiniatureDust,TestS3kCompetitionPatternAnimator,TestS3kCompetitionNativeHost,TestS3kCompetitionPause,TestS3kCompetitionArenaObjects,TestS3kCompetitionHud,TestS3kCompetitionDamage,TestS3kCompetitionSession,TestS3kCompetitionPlanes,TestS3kCompetitionLevelInitProfile,TestRetainedPlaneDescriptors,TestS3kCompetitionPlayer,TestS3kCompetitionBinding,TestS3kCompetitionSpritePages`.
+
+The next affected selection is deliberately seven classes, reusing unchanged R14
+coverage: `TestSharedSpillAnimationPolicy,TestRingManagerRewindSnapshot,TestNativeParticipantLostRingOwnership,TestNativeCompetitionIteration,TestS3kCompetitionNativeHost,TestS3kCompetitionScreen,TestS3kCompetitionPatternAnimator`.
+R15 stopped in test compilation before any execution after76s: its new inert
+ring-policy fixture omitted the required render-command override. The only repair
+was that empty fixture method. R16 reran the same seven selectors and passed79
+cases with0 failures/errors/skips after9s queue waiting and31.606s execution:
+native iteration8, actual Host18, pattern10, Screen15, shared spill policy7,
+participant ownership8 and ring snapshots13. Host coverage includes17 frozen
+pause waits with restore/forward, previous-P1 versus P2 input, the separate resume
+boundary, inherited-fade retirement and actual TA-B ordinary-body-before-selection.
+The semantic ring seam is separately committed as `e3ccf2040`. Unchanged classes
+reuse their exact R14 or earlier affected passing executions; no all23 repeat
+or broad engine suite was launched.
+
+| Arena | Native placement count | Objects, palette, retained-plane source checks | Remaining acceptance |
+| --- | ---: | --- | --- |
+| Azure Lake |8| Implemented; actual Host/ROM terrain/timer/touch/restore checks | Root concrete view and complete supported route/finish qualification |
+| Balloon Park |15| Implemented; actual GP reload, all descriptor words and palette cycles checked | Full player/object traversal, root view and finish qualification |
+| Desert Palace |17| Implemented; both-camera tile DMA phases, descriptor words and native objects checked | Full player/object traversal, root view and finish qualification |
+| Chrome Gadget |15| Implemented; descriptor words, palette cycles and native objects checked | Full player/object traversal, root view and finish qualification |
+| Endless Mine |15| Implemented; descriptor words, palette/button ordering and native objects checked | Full player/object traversal, root view and finish qualification |
+
+All rows remain unactivated. Native audio pause integration, parent view/route
+qualification and the parent-coordinated required S3K boot/loading/resolver/decoder
+guards remain outside this child's completed evidence. Direct goal-crossing,
+full-RAM and rewind checks are meaningful behavior controls, not complete arena
+traversal proof. No broad smoke/full suite, main mutation, push, PR or cleanup of
+the owned worktree has been performed.
+
+
+## Counted actor Draw calls at the canonical queue reset
+
+The parent's actual EGL arena consumer exposed a missing normal-frame actor after
+90 world steps. In `98bead812`, `nativePlayerPass` submitted P1/P2 Draw calls
+before `ObjectManager.update` entered its canonical `beginNativeSpriteFrame`.
+That reset discarded the actor calls. Initial assembly had passed because
+`beginInitialSolidExecution` resets the queue before the miniature pass instead.
+The existing initial-only admission assertions did not cover this counted-frame
+boundary; the earlier focused passes must not be read as proof of it.
+
+The minimal correction preserves actual calls at the existing post-player-tick,
+pre-touch point as ordered raw slot/requested-bucket intents. The normal pass
+emits those intents immediately after the queue resets and before external/dynamic
+SST execution. Initial assembly explicitly emits them after its actor pass and
+before dynamic slots. Neither path derives calls from later visibility, end-of-
+frame blink timers or an earlier completed queue. The intent list contains no
+actor references, clears before emission, and clears on load, roster rebind and
+both initial/counted failure exits. Completed queue admissions and physical/uploaded
+sprite pages retain their existing separate rewind ownership.
+
+A direct replacement of `ExternalSlotDispatch` was rejected after reading the
+parent's incoming `RingSlotDispatch`: rings own that single callback and rebind
+it at construction/reset/restore. Instead, the approved independent prefix lives
+inside `NativeSpriteSubmissionQueue`. Its `beginFrame` resets admission then
+runs the prefix; ObjectManager's unchanged caller next invokes its original
+external begin hook. `clear` unbinds the prefix; queue restore neither invokes nor
+restores callback identity. State shape, ObjectManager, walkers, allocator,
+capacity and spill limits are unchanged. The Host binds after its explicit object
+reset; an existing fresh-load RingManager reset reinstalls the ring owner's
+independent resolver/dispatcher that the object reset cleared, without advancing
+or resetting the native three-word spill-animation bank.
+
+The affected focused selection is
+`TestNativeSpritePassPrefix,TestObjectManagerNativeSpriteSubmissions,TestS3kCompetitionNativeHost,TestS3kCompetitionSpritePages,TestS3kCompetitionSpriteSubmissions`.
+The new controls cover queue-reset/prefix/external/dynamic order in both walkers,
+duplicates and native pressure, reset/resync/rebind, queue snapshot restore with
+current callback identity and callback failure recovery. The real-ROM Host checks
+assert exact actor calls on every one of90 counted passes, uploaded P1 presence,
+blink read-before-decrement, equal-character view flags, initial/full-RAM/GP reload,
+actor recreation plus queue/page restore-forward, and failures before and at the
+queue boundary. No view/test fallback, GPU source copy, API change to Host Views
+or SpritePages, renderer qualification or native-audio claim accompanies this fix.
+R18 passed79 tests with0 failures/errors/skips after643s queue waiting and81s
+Maven execution: actual Host23, SpritePages10, domain submissions3, new prefix10
+and existing queue33. The90-frame check reached the actual uploaded native P1
+piece; initial-only assertions are no longer its proxy. The tested state was
+`98bead812` plus these two corrective leaves. Independent bounded source review
+found no stale-intent/order/restore/failure defect. Incoming RingSlotDispatch
+rebinding was inspected read-only in the parent's source; that implementation is
+not imported into this child, so its composed integration and the actual EGL
+rerun remain parent-owned. ObjectManager has zero changes in both leaves.

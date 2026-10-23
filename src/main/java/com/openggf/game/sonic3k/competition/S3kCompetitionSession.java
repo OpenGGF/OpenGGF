@@ -85,6 +85,10 @@ public final class S3kCompetitionSession implements WorldSessionPolicyState,
         /** Item 4 writes the reserved Breathing_bubbles SST even when dynamic RAM is full. */
         AbstractObjectInstance overwriteProjectile(Supplier<? extends AbstractObjectInstance> factory);
         CompetitionArenaObjectInstance.NativeContext nativeObjectContext();
+        default S3kCompetitionDamage.Context damageContext() {
+            if (this instanceof S3kCompetitionDamage.Context context) return context;
+            throw new IllegalStateException("Native competition damage context is not installed");
+        }
         ItemTerrain itemTerrain();
         int xWrapMask();
         /** Raw Screen_Y_wrap_value; the rolling projectile applies it unconditionally. */
@@ -159,7 +163,7 @@ public final class S3kCompetitionSession implements WorldSessionPolicyState,
     public record State(Arena arena, int levelFrameCounter, boolean go, int falseStartTicks, int falseStartFrame,
             int falseStarter, int replenishmentOffset, int finishWait, boolean resultSent,
             List<PlayerState> players, List<StartPosition> starts, List<Integer> triggers,
-            List<List<Integer>> grandPrixTimes, int goalTimerMask) {
+            List<List<Integer>> grandPrixTimes, int goalTimerMask, S3kCompetitionDamage.State damage) {
         public State {
             players = List.copyOf(players);
             starts = List.copyOf(starts);
@@ -185,6 +189,7 @@ public final class S3kCompetitionSession implements WorldSessionPolicyState,
     private final int[] completedCentiseconds = new int[2];
     private final int[][] lapTimes = new int[2][TOTAL_LAPS];
     private final int[] rings = new int[2];
+    private final S3kCompetitionDamage damage = new S3kCompetitionDamage();
     private final int[] triggers = new int[16];
     private final int[][] grandPrixTimes = new int[2][5];
     private Arena arena;
@@ -237,6 +242,8 @@ public final class S3kCompetitionSession implements WorldSessionPolicyState,
     public CompetitionArenaObjectInstance.NativeContext nativeObjectContext() {
         return host.nativeObjectContext();
     }
+    public S3kCompetitionDamage.Context damageContext() { return host.damageContext(); }
+    public S3kCompetitionDamage damage() { return damage; }
     public ItemTerrain itemTerrain() { return host.itemTerrain(); }
     public int xWrapMask() { return host.xWrapMask() & 0xFFFF; }
     public int yWrapMask() { return nativeObjectContext().wrapYMask(); }
@@ -247,7 +254,18 @@ public final class S3kCompetitionSession implements WorldSessionPolicyState,
     public void setTrigger(int index, int value) { triggers[index & 0xF] = value & 0xFF; }
     public int lap(int slot) { return laps[slot]; }
     public int rings(int slot) { return rings[slot]; }
-    public void giveRing(int slot) { rings[slot] = (rings[slot] + 1) & 0xFFFF; host.playSfx(Sonic3kSfx.RING_RIGHT); }
+    // Raw RAM writes do not invoke GiveRing's threshold awards. Native GiveRing owns those separately.
+    void setNativeRings(int slot, int value) { rings[slot] = value & 0xFFFF; }
+    int nativeLapTimerFrames(int slot) { return lapFrames[slot]; }
+    void setNativeLapTimerFrames(int slot, int frames) {
+        if (frames < 0 || frames > 36000) throw new IllegalArgumentException("Native lap clock range");
+        lapFrames[slot] = frames;
+    }
+    int nativeTimerFlag(int slot) { return finished[slot] ? 0x80 : timerRunning[slot] ? 1 : 0; }
+    void setNativeTimerRunning(int slot, boolean running) {
+        if (!finished[slot]) timerRunning[slot] = running;
+    }
+    public void giveRing(int slot) { S3kCompetitionDamage.giveRing(this,damageContext(),slot); }
     public boolean controlsLocked() { return falseStartTicks != 0; }
     public int falseStartTicks() { return falseStartTicks; }
     public int falseStarter() { return falseStarter; }
@@ -528,6 +546,7 @@ public final class S3kCompetitionSession implements WorldSessionPolicyState,
         Arrays.fill(laps, 0); Arrays.fill(highestLaps, 0); Arrays.fill(rightOfGoal, false);
         Arrays.fill(respawnPending, false); Arrays.fill(timerRunning, false); Arrays.fill(finished, false);
         Arrays.fill(lapFrames, 0); Arrays.fill(completedCentiseconds, 0); Arrays.fill(rings, 0);
+        damage.resetForArena();
         for (int[] times : lapTimes) Arrays.fill(times, 0);
         Arrays.fill(triggers, 0);
         go = false; falseStartTicks = 0; falseStarter = -1; replenishmentOffset = 0;
@@ -568,7 +587,7 @@ public final class S3kCompetitionSession implements WorldSessionPolicyState,
         return new State(arena, levelFrameCounter, go, falseStartTicks, falseStartFrame, falseStarter,
                 replenishmentOffset, finishWait, resultSent, states, starts,
                 Arrays.stream(triggers).boxed().toList(), Arrays.stream(grandPrixTimes)
-                .map(times -> Arrays.stream(times).boxed().toList()).toList(), goalTimerMask);
+                .map(times -> Arrays.stream(times).boxed().toList()).toList(), goalTimerMask, damage.capture());
     }
     @Override public void restore(State state) {
         if (state.players().size() != players.size()) throw new IllegalArgumentException("Competition roster changed across restore");
@@ -576,6 +595,7 @@ public final class S3kCompetitionSession implements WorldSessionPolicyState,
         falseStartTicks = state.falseStartTicks(); falseStartFrame = state.falseStartFrame(); falseStarter = state.falseStarter();
         replenishmentOffset = state.replenishmentOffset(); finishWait = state.finishWait(); resultSent = state.resultSent();
         goalTimerMask = state.goalTimerMask();
+        damage.restore(state.damage());
         starts = state.starts();
         for (int slot = 0; slot < players.size(); slot++) {
             PlayerState p = state.players().get(slot);

@@ -4,6 +4,9 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.competition.objects.CompetitionArenaObjectInstance;
 import com.openggf.game.sonic3k.competition.objects.CompetitionItemObjectInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.rings.SpillAnimationState;
+import com.openggf.sprites.animation.SpriteAnimationEndAction;
+import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 
 import java.util.ArrayList;
@@ -12,7 +15,8 @@ import java.util.function.Supplier;
 
 /** Independent bounded SST/terrain fixture; never used as production terrain. */
 final class CompetitionTestWorld implements S3kCompetitionSession.Host,
-        CompetitionArenaObjectInstance.NativeContext, S3kCompetitionSession.ItemTerrain {
+        CompetitionArenaObjectInstance.NativeContext, S3kCompetitionSession.ItemTerrain,
+        S3kCompetitionDamage.Context {
     // Input oracle transcribed from byte_36FDA and Ani_2PItem, not production defaults.
     static final byte[] SEQUENCE = {0,1,2,3,4,5,6,0,1,2,3,4,5,6,2,3,0,1,2,3,4,5,6,0};
     static final byte[] ITEM_ANIMATION = java.util.HexFormat.of().parseHex(
@@ -28,18 +32,23 @@ final class CompetitionTestWorld implements S3kCompetitionSession.Host,
     final List<S3kCompetitionSession.Result> results = new ArrayList<>();
     final List<S3kCompetitionSession.PlayerResult> savedTimeAttackRecords = new ArrayList<>();
     final boolean[] occupied = new boolean[128];
+    final SpillAnimationState spillAnimation = new SpillAnimationState();
+    final int[] lifeAwards = new int[2];
+    int extraLifeMusicCalls;
     S3kCompetitionSession session;
     AbstractObjectInstance reservedProjectile;
     int floorY = 256;
     int leftWallDistance;
     int hurtCalls;
-    java.util.Map<String, SpriteAnimationSet> animationSets = java.util.Map.of();
+    java.util.Map<String, SpriteAnimationSet> animationSets = java.util.Map.of(
+            S3kCompetitionRingLoss.ART_KEY,ringSparkleOracle());
 
     CompetitionTestWorld(S3kCompetitionSession.Mode mode) {
         players.add(new S3kCompetitionPlayer(0, S3kCompetitionPlayer.Character.SONIC, 984, 200));
         if (mode != S3kCompetitionSession.Mode.TIME_ATTACK)
             players.add(new S3kCompetitionPlayer(1, S3kCompetitionPlayer.Character.TAILS, 980, 200));
-        occupied[0] = occupied[1] = true;
+        java.util.Arrays.fill(occupied,0,4,true);
+        java.util.Arrays.fill(occupied,94,occupied.length,true);
         session = new S3kCompetitionSession(new S3kCompetitionSession.Config(mode,
                 S3kCompetitionSession.Arena.AZURE_LAKE, true), this,
                 SEQUENCE, ITEM_ANIMATION, GOAL_ANIMATION);
@@ -55,17 +64,28 @@ final class CompetitionTestWorld implements S3kCompetitionSession.Host,
     }
     @Override public AbstractObjectInstance allocateAfter(AbstractObjectInstance parent,
             Supplier<? extends AbstractObjectInstance> factory) {
-        for (int slot = Math.max(2, parent.getSlotIndex() + 1); slot < occupied.length; slot++) {
+        return allocateFrom(Math.max(4,parent.getSlotIndex()+1),factory);
+    }
+    @Override public AbstractObjectInstance allocateFree(Supplier<? extends AbstractObjectInstance> factory) {
+        return allocateFrom(4,factory);
+    }
+    private AbstractObjectInstance allocateFrom(int first,Supplier<? extends AbstractObjectInstance> factory) {
+        for (int slot = first; slot < 94; slot++) {
             if (occupied[slot]) continue;
             occupied[slot] = true;
-            AbstractObjectInstance object = factory.get(); object.setSlotIndex(slot); objects.add(object);
-            return object;
+            try {
+                AbstractObjectInstance object = factory.get(); object.setSlotIndex(slot); objects.add(object);
+                return object;
+            } catch(RuntimeException | Error failure) {occupied[slot]=false;throw failure;}
         }
         return null;
     }
     @Override public AbstractObjectInstance overwriteProjectile(Supplier<? extends AbstractObjectInstance> factory) {
-        reservedProjectile = factory.get(); reservedProjectile.setSlotIndex(1); return reservedProjectile;
+        reservedProjectile = factory.get(); reservedProjectile.setSlotIndex(94); return reservedProjectile;
     }
+    @Override public SpillAnimationState spillAnimation() {return spillAnimation;}
+    @Override public void awardLife(int slot) {lifeAwards[slot]++;}
+    @Override public void playExtraLifeMusic() {extraLifeMusicCalls++;}
     @Override public CompetitionArenaObjectInstance.NativeContext nativeObjectContext() { return this; }
     @Override public S3kCompetitionSession.ItemTerrain itemTerrain() { return this; }
     @Override public int xWrapMask() { return 0x3FF; }
@@ -96,7 +116,9 @@ final class CompetitionTestWorld implements S3kCompetitionSession.Host,
     @Override public int bottomY() { return 512; }
     @Override public int wrapYMask() { return -1; }
     @Override public void playSfx(int sound) { throw new AssertionError("Use typed native sounds in item fixture"); }
-    @Override public void hurt(S3kCompetitionPlayer player, int sourceX) { hurtCalls++; player.hurt(); }
+    @Override public void hurt(S3kCompetitionPlayer player, int sourceX) {
+        hurtCalls++; S3kCompetitionDamage.contact(session,this,player,sourceX);
+    }
     @Override public int paletteColor(int line, int index) { throw new AssertionError("Goal/item has no palette writes"); }
     @Override public void setPaletteColor(int line, int index, int color) { throw new AssertionError("Goal/item has no palette writes"); }
     @Override public int floorDistance(int x, int y, int radius, int topBit) { return floorY - y - radius; }
@@ -122,5 +144,11 @@ final class CompetitionTestWorld implements S3kCompetitionSession.Host,
         session.observeGoal(1000, 200, 8);
         step(ticks);
         cross(slot, true);
+    }
+    private static SpriteAnimationSet ringSparkleOracle() {
+        // Literal ROM $1A992..$1A999: 0002 05 04 05 06 07 FC.
+        var set=new SpriteAnimationSet();
+        set.addScript(0,new SpriteAnimationScript(5,List.of(4,5,6,7),SpriteAnimationEndAction.HOLD,0,List.of(0xFC)));
+        return set;
     }
 }

@@ -6,6 +6,8 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.competition.S3kCompetitionSession;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.NativeSpriteSubmissionAccess;
+import com.openggf.level.objects.NativeSpriteSubmissionSource;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
@@ -16,7 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Native goal-owned HUD records, including the neon animation that starts the timers. */
-public final class CompetitionHudObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public final class CompetitionHudObjectInstance extends AbstractObjectInstance implements RewindRecreatable, NativeSpriteSubmissionSource {
     public enum Kind { ITEM_ICON, LAP, NEON, LOSER_NEON, FALSE_START, TIMER, RESERVED }
     /** View-local pixels with the VDP $80 bias removed; pieceIndex=-1 submits the whole mapping. */
     public record NativeDrawPiece(String artKey, int mappingFrame, int pieceIndex, int screenX, int screenY) { }
@@ -47,7 +49,11 @@ public final class CompetitionHudObjectInstance extends AbstractObjectInstance i
 
     @Override public void update(int vIntRunCount, PlayableEntity ignored) {
         var session = WorldSessionPolicyAccess.getService(services().worldSession(), S3kCompetitionSession.class);
-        if (session != null) updateNative(session);
+        if (session != null) {
+            updateNative(session);
+            if (drawPublished) NativeSpriteSubmissionAccess.submitSpilling(
+                    services().objectManager(), getSlotIndex(), getPriorityBucket());
+        }
     }
 
     public void updateNative(S3kCompetitionSession session) {

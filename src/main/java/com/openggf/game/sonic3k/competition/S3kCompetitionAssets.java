@@ -108,6 +108,9 @@ public final class S3kCompetitionAssets {
         put(emz,0x300,PatternDecompressor.nemesis(rom,0x399A32));
 
         add("competition_item",common,0x36AA6,32,0x3C6);
+        // Obj_Bouncing_Ring has no competition override: native $A6BC reads the
+        // competition startpost bank, unlike Obj_RingInit's alternate art word.
+        add("competition_ring_loss",common,0x1A99A,9,0xA6BC);
         add("competition_goal",common,0x36FFA,4,0x6BC);
         add("competition_lap",common,0x370D6,10,0x8700);
         add("competition_item_icon",common,0x37F6A,4,0x8750);
@@ -234,6 +237,7 @@ public final class S3kCompetitionAssets {
         for (String key:List.of("competition_spring","competition_spring_horizontal","competition_spring_yellow",
                 "competition_spring_horizontal_yellow","competition_retracting_spring")) animations.put(key,spring);
         animations.put("competition_item",S3kSpriteDataLoader.loadAnimationSet(reader,0x36A58,12));
+        animations.put("competition_ring_loss",S3kSpriteDataLoader.loadAnimationSet(reader,0x1A992,1));
         animations.put("competition_goal",S3kSpriteDataLoader.loadAnimationSet(reader,0x36FF2,1));
         animations.put("competition_neon",S3kSpriteDataLoader.loadAnimationSet(reader,0x3750E,8));
         animations.put("competition_sonic",signedAnimations(0x12F84,36));

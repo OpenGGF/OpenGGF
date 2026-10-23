@@ -6,13 +6,15 @@ import com.openggf.game.sonic3k.competition.S3kCompetitionSession;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.NativeSpriteSubmissionAccess;
+import com.openggf.level.objects.NativeSpriteSubmissionSource;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 
 import java.util.List;
 
 /** S3KL $65, Obj_2PGoalMarker (sonic3k.asm:73992-74247). */
-public final class CompetitionGoalObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class CompetitionGoalObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, NativeSpriteSubmissionSource {
     public static final String ART_KEY = "competition_goal";
     private int animationFrame;
     private int animationTimer;
@@ -25,7 +27,11 @@ public final class CompetitionGoalObjectInstance extends AbstractObjectInstance 
     @Override public void update(int vIntRunCount, PlayableEntity ignored) {
         S3kCompetitionSession session = WorldSessionPolicyAccess.getService(
                 services().worldSession(), S3kCompetitionSession.class);
-        if (session != null) updateNative(session);
+        if (session != null) {
+            updateNative(session);
+            if (drawPublished) NativeSpriteSubmissionAccess.submitSpilling(
+                    services().objectManager(), getSlotIndex(), getPriorityBucket());
+        }
     }
 
     public void updateNative(S3kCompetitionSession session) {

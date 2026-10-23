@@ -6,6 +6,7 @@ import com.openggf.game.LevelInitProfile;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.ScrollHandlerProvider;
 import com.openggf.game.TitleCardProvider;
+import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.resources.PlcLifecycleService;
 import com.openggf.game.rewind.RewindSnapshottable;
@@ -20,19 +21,32 @@ public final class S3kCompetitionRuntimeModule extends DelegatingGameModule {
     private final S3kCompetitionLevelInitProfile profile;
     private final ObjectArtProvider art;
     private final ScrollHandlerProvider scroll;
+    private final ZoneFeatureProvider features;
 
     public S3kCompetitionRuntimeModule(GameModule base, S3kCompetitionLevelInitProfile profile,
             ObjectArtProvider art, ScrollHandlerProvider scroll) {
+        this(base,profile,art,scroll,new S3kCompetitionZoneFeatures(()->null));
+    }
+
+    public S3kCompetitionRuntimeModule(GameModule base, S3kCompetitionLevelInitProfile profile,
+            ObjectArtProvider art, ScrollHandlerProvider scroll,ZoneFeatureProvider features) {
         super(base, "engine:s3k-native-competition");
-        if (base.getGameId() != GameId.S3K) throw new IllegalArgumentException("S3K ROM module required");
+        requireS3kModule(base, "S3K ROM module required");
         this.profile = Objects.requireNonNull(profile, "profile");
         this.art = Objects.requireNonNull(art, "art");
         this.scroll = Objects.requireNonNull(scroll, "scroll");
+        this.features = Objects.requireNonNull(features, "features");
+    }
+
+    /** Assembly precondition shared with the host; never a gameplay policy selector. */
+    static void requireS3kModule(GameModule module, String message) {
+        if (module.getGameId() != GameId.S3K) throw new IllegalArgumentException(message);
     }
 
     @Override public LevelInitProfile getLevelInitProfile() { return profile; }
     @Override public ObjectArtProvider getObjectArtProvider() { return art; }
     @Override public ScrollHandlerProvider getScrollHandlerProvider() { return scroll; }
+    @Override public ZoneFeatureProvider getZoneFeatureProvider() { return features; }
     @Override public boolean supportsSidekick() { return false; }
     @Override public TitleCardProvider getTitleCardProvider() { return null; }
 

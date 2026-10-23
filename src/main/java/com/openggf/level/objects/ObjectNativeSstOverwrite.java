@@ -48,6 +48,20 @@ final class ObjectNativeSstOverwrite {
         if (slot < s.layout().lastDynamicSlotExclusive() || slot >= s.layout().lastProcessSlotExclusive()) {
             throw new IllegalArgumentException("Native fixed write requires a processed fixed SST slot: " + slot);
         }
+        return replaceValidated(s, collisions, slot, factory);
+    }
+
+    /** Native fixed prefix write, excluding both player SSTs and the allocatable window. */
+    static <T extends AbstractObjectInstance> T replacePrefix(Surface s,
+            ObjectCollisionResponseList collisions, int slot, Supplier<T> factory) {
+        if (slot < 2 || slot >= s.layout().firstDynamicSlot()) {
+            throw new IllegalArgumentException("Native prefix write requires a non-player prefix SST slot: " + slot);
+        }
+        return replaceValidated(s, collisions, slot, factory);
+    }
+
+    private static <T extends AbstractObjectInstance> T replaceValidated(Surface s,
+            ObjectCollisionResponseList collisions, int slot, Supplier<T> factory) {
         java.util.Objects.requireNonNull(factory, "factory");
         AbstractObjectInstance old = registeredOwner(s, slot);
         T next = ObjectConstructionContext.with(s.services(), slot, factory);

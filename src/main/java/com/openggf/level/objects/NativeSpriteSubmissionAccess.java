@@ -51,6 +51,16 @@ public final class NativeSpriteSubmissionAccess {
     }
 
     /**
+     * Replays prior actor calls after admission resets, before external-slot begin
+     * and dynamic dispatch. This separate binding preserves the external-slot owner.
+     * Reset/resync unbind it; rewind neither invokes nor restores callback identity.
+     * Passing null unbinds it.
+     */
+    public static void bindBeforePassPrefix(ObjectManager manager, Runnable prefix) {
+        if (manager != null) manager.nativeSpriteSubmissions().bindBeforePassPrefix(prefix);
+    }
+
+    /**
      * Render-only late lookup of a currently reserved external slot. Real objects
      * take precedence. The callback and returned draw closures never enter rewind
      * state; bind again after full manager reset/resync. Passing null unbinds it.

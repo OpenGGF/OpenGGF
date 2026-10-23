@@ -10,6 +10,7 @@ import com.openggf.level.animation.AnimatedPatternManager;
 import com.openggf.level.animation.AniPlcParser;
 import com.openggf.level.animation.AniPlcScriptState;
 import com.openggf.level.animation.InitialLevelAnimationPass;
+import com.openggf.level.animation.StageRingAnimationFrameProvider;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -24,7 +25,7 @@ import java.util.function.Supplier;
  * Script counters submit immutable DMA payloads; only the VBlank owner publishes them.
  */
 public final class S3kCompetitionPatternAnimator implements AnimatedPatternManager,
-        InitialLevelAnimationPass, RewindSnapshottable<byte[]> {
+        InitialLevelAnimationPass, StageRingAnimationFrameProvider, RewindSnapshottable<byte[]> {
     public static final int DISPATCH_ADDRESS=0x27778;
     private static final int DPZ_SOURCE=0x2C0180, DPZ_SPLIT_TABLE=0x28446;
     private final RomByteReader reader;
@@ -36,6 +37,7 @@ public final class S3kCompetitionPatternAnimator implements AnimatedPatternManag
     private final List<Upload> pending=new ArrayList<>();
     private final BitSet destinations=new BitSet();
     private final int[] dpzPhase=new int[2];
+    private transient Runnable afterTilePass=()->{};
 
     public S3kCompetitionPatternAnimator(Rom rom,Level level,S3kCompetitionSession.Arena arena,
             Supplier<S3kCompetitionScroll> scroll,GraphicsManager graphics) throws IOException {
@@ -57,7 +59,10 @@ public final class S3kCompetitionPatternAnimator implements AnimatedPatternManag
         }
     }
 
-    @Override public void update() {
+    /** loc_66EA follows Animate_Tiles with Render_Sprites, before Animate_Palette. */
+    public void setAfterTilePass(Runnable callback) { afterTilePass=Objects.requireNonNull(callback); }
+    @Override public void update() { updateTiles(); afterTilePass.run(); }
+    private void updateTiles() {
         if(arena==S3kCompetitionSession.Arena.DESERT_PALACE) {
             var cameras=Objects.requireNonNull(scroll.get(),"DPZ native cameras");
             for(int slot=0;slot<2;slot++) {
@@ -76,7 +81,7 @@ public final class S3kCompetitionPatternAnimator implements AnimatedPatternManag
         }
         for(var script:scripts) script.tickSubmission(tile -> submit(script.destinationTileIndex(),script.copyFramePayload(tile)));
     }
-    @Override public void runInitialLevelAnimationPass() { update(); }
+    @Override public void runInitialLevelAnimationPass() { updateTiles(); }
     private void submit(int destination,byte[] bytes) { pending.add(new Upload(destination,bytes)); }
 
     /** Native Add_To_DMA_Queue order; payload queries never mutate either CPU or GPU tiles. */
@@ -102,6 +107,9 @@ public final class S3kCompetitionPatternAnimator implements AnimatedPatternManag
             if(graphics.isGlInitialized()) graphics.updatePatternTexture(pattern,tile);
         }
     }
+    // loc_66EA (sonic3k.asm:8052-8070) dispatches no shared ring-animation step.
+    @Override public int stageRingAnimationFrame() { return 0; }
+    @Override public boolean advancesSharedSpillAnimation() { return false; }
     @Override public String key() { return "sonic3k.competition.animated-tiles"; }
     @Override public byte[] capture() {
         int size=24+scripts.size()*8+destinations.cardinality()*36;

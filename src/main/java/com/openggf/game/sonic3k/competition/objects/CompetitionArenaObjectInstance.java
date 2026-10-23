@@ -8,6 +8,8 @@ import com.openggf.game.sonic3k.competition.S3kCompetitionSession;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.NativeSpriteSubmissionAccess;
+import com.openggf.level.objects.NativeSpriteSubmissionSource;
 import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
@@ -35,7 +37,7 @@ import java.util.function.Supplier;
  * trace/comparison state. Session transitions belong to the session, not these SST routines.
  */
 public final class CompetitionArenaObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable, TouchResponseProvider {
+        implements RewindRecreatable, TouchResponseProvider, NativeSpriteSubmissionSource {
     public enum Kind {
         TRIANGLE(null, 0), BLADE("competition_blade", 5),
         RETRACTING_SPRING("competition_retracting_spring", 4),
@@ -181,7 +183,11 @@ public final class CompetitionArenaObjectInstance extends AbstractObjectInstance
     public void update(int vIntRunCount, PlayableEntity ignoredCampaignPlayer) {
         S3kCompetitionSession session = WorldSessionPolicyAccess.getService(
                 services().worldSession(), S3kCompetitionSession.class);
-        if (session != null) tickNative(session.nativeObjectContext());
+        if (session != null) {
+            tickNative(session.nativeObjectContext());
+            if (renderPublished) NativeSpriteSubmissionAccess.submitSpilling(
+                    services().objectManager(), getSlotIndex(), getPriorityBucket());
+        }
     }
 
     /** Execute one native object pass after the miniature players' movement/touch pass. */
@@ -895,8 +901,8 @@ public final class CompetitionArenaObjectInstance extends AbstractObjectInstance
                 || kind == Kind.SPRING_BASE || kind == Kind.ROCK;
     }
 
-    /** Publish the carried native BuildSprites bit7 after both views have been built, never during updates. */
-    public void refreshNativeVisibility(boolean visible) { if (renderPublished) nativeVisible = visible; }
+    /** The caller must resolve an admitted SST pointer; late slot reuse need not make another Draw_Sprite call. */
+    public void refreshNativeVisibility(boolean visible) { nativeVisible = visible; }
     public boolean nativeVisible() { return nativeVisible; }
     public boolean nativeDrawPublished() { return renderPublished; }
 

@@ -82,12 +82,14 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
     private S3kCompetitionSession session;
     private S3kCompetitionSession.Arena pendingArena;
     private S3kCompetitionSession.Result pendingResult, result;
+    private boolean pendingTimeAttackSelection, pendingTitleScreen;
     private Exit exit = Exit.NONE;
 
     public S3kCompetitionScreen(Host host) { this.host = Objects.requireNonNull(host); }
     @Override public void initialize() {
         enterMode(); Arrays.fill(wheelPriorityWords,0); Arrays.fill(wheelQueuePriorityWords,0);
         exit = Exit.NONE; result = null; session = null; pendingArena = null; pendingResult = null;
+        pendingTimeAttackSelection = pendingTitleScreen = false;
     }
     @Override public GameMode mode() {
         return phase == Phase.RACE ? GameMode.COMPETITION
@@ -109,7 +111,17 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
             }
             case RACE -> {
                 host.stepArena(input, session);
-                if (pendingArena != null) {
+                if (pendingTitleScreen || pendingTimeAttackSelection) {
+                    // Pause_Game returns through loc_6678's ordinary wait/body.
+                    // Its mode write is consumed only after that body returns.
+                    boolean title = pendingTitleScreen;
+                    pendingTitleScreen = pendingTimeAttackSelection = false;
+                    pendingArena = null; pendingResult = null; result = null;
+                    host.closeArena(); session = null;
+                    if (title) {
+                        enterMode(); exit = new Exit(Destination.TITLE_SCREEN, null, false);
+                    } else enterSelection();
+                } else if (pendingArena != null) {
                     var next = pendingArena; pendingArena = null;
                     openArena(next);
                 } else if (pendingResult != null) {
@@ -261,6 +273,10 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
     }
     public void requestArena(S3kCompetitionSession.Arena arena) { pendingArena = Objects.requireNonNull(arena); }
     public void requestResults(S3kCompetitionSession.Result result) { pendingResult = Objects.requireNonNull(result); }
+    /** Queued after the native pause continuation's final ordinary arena body. */
+    public void requestTimeAttackSelection() { pendingTimeAttackSelection = true; }
+    /** Slow-motion A's native Game_mode=4 write; existing progress remains owned by the host. */
+    public void requestTitleScreen() { pendingTitleScreen = true; }
     public S3kCompetitionSession session() { return session; }
     public MenuView view() {
         return new MenuView(phase, frame, modeRow, itemsEnabled, selectedMode, arenaRow, participants,

@@ -241,6 +241,9 @@ class TestS3kCompetitionLevelInitProfile {
         var module = new S3kCompetitionRuntimeModule(base, profile, art, scroll);
         assertSame(profile, module.getLevelInitProfile()); assertSame(art, module.getObjectArtProvider());
         assertSame(scroll, module.getScrollHandlerProvider()); assertSame(offsets, module.getRomOffsetProvider());
+        assertInstanceOf(S3kCompetitionZoneFeatures.class,module.getZoneFeatureProvider());
+        var retained=assertInstanceOf(com.openggf.game.internal.RetainedPlaneDescriptorSource.class,module.getZoneFeatureProvider());
+        assertNull(retained.foregroundPlane());assertNull(retained.backgroundPlane());
         module.createGame(rom); verify(base).createGame(rom);
         module.onLevelLoad(); verify(base).onLevelLoad();
         assertNull(module.getTitleCardProvider()); assertFalse(module.supportsSidekick());

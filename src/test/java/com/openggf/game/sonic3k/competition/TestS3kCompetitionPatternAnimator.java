@@ -64,6 +64,18 @@ class TestS3kCompetitionPatternAnimator {
         for(int i=0;i<address.length;i++) assertEquals(sha[i],HexFormat.of().formatHex(
                 MessageDigest.getInstance("SHA-256").digest(rom.readBytes(address[i],size[i]))));
     }
+    @Test void shippedCompetitionBodyDispatchesTilesSpritesPaletteWithoutSharedRingClock() throws Exception {
+        var reader=RomByteReader.fromRom(rom);
+        var calls=new java.util.ArrayList<Integer>();
+        for(int pc=0x66EA;pc<0x672E;pc+=2)
+            if(reader.readU16BE(pc)==0x4EB9)calls.add((int)reader.readU32BE(pc+2));
+        assertEquals(List.of(0x4E408,0x27758,0x1AD20,0x3BB8,0x1B28),calls);
+        for(var arena:Arena.values()) {
+            var owner=animator(arena);
+            assertFalse(owner.advancesSharedSpillAnimation());
+            assertEquals(0,owner.stageRingAnimationFrame());
+        }
+    }
     @Test void azureSubmitsFirstFrameThenWaitsTenPassesAndPublishesOnlyAtVblank() throws Exception {
         var owner=animator(Arena.AZURE_LAKE);byte[] before=encode(0x238,16);
         owner.runInitialLevelAnimationPass();assertEquals(1,owner.pendingTransfers().size());
@@ -129,6 +141,18 @@ class TestS3kCompetitionPatternAnimator {
         owner.restore(saved);assertArrayEquals(saved,owner.capture());
         owner.publishAtVBlank();owner.update();owner.publishAtVBlank();assertArrayEquals(expected,owner.capture());
         assertThrows(IllegalArgumentException.class,()->animator(Arena.AZURE_LAKE).restore(saved));
+    }
+    @Test void ordinaryRenderCallbackFollowsTilesButInitialLoadHasItsOwnEarlierSpritePass() throws Exception {
+        var owner=animator(Arena.AZURE_LAKE);
+        var observations=new java.util.ArrayList<Integer>();
+        owner.setAfterTilePass(()->observations.add(owner.pendingTransfers().size()));
+        owner.runInitialLevelAnimationPass();
+        assertTrue(observations.isEmpty());
+        owner.publishAtVBlank();
+        for(int i=0;i<10;i++) owner.update();
+        assertEquals(10,observations.size());
+        assertEquals(0,observations.getFirst());
+        assertEquals(1,observations.getLast(),"Render_Sprites observes the just-completed tile phase");
     }
     private byte[] encode(int start,int count) {
         byte[] out=new byte[count*32];for(int i=0;i<count;i++)for(int y=0;y<8;y++)for(int x=0;x<8;x+=2)

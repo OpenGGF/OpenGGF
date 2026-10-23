@@ -22,6 +22,7 @@ final class NativeSpriteSubmissionQueue {
     private final byte[] buckets = new byte[slots.length];
     private final int[] counts = new int[BUCKET_COUNT];
     private final Runnable invalidate;
+    private Runnable beforePassPrefix;
     private int size;
     private boolean nativePassPresent;
 
@@ -60,11 +61,15 @@ final class NativeSpriteSubmissionQueue {
 
     void beginFrame() {
         reset(true);
+        if (beforePassPrefix != null) beforePassPrefix.run();
     }
 
     void clear() {
+        beforePassPrefix = null;
         reset(false);
     }
+
+    void bindBeforePassPrefix(Runnable prefix) { beforePassPrefix = prefix; }
 
     private void reset(boolean passPresent) {
         size = 0;

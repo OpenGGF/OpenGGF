@@ -65,6 +65,7 @@ class TestS3kCompetitionAssets {
     @Test void allArenaAndHudMappingsHaveExactNativeTableSizes() {
         Map<String,Integer> counts=Map.ofEntries(
                 Map.entry("competition_item",32),Map.entry("competition_goal",4),
+                Map.entry("competition_ring_loss",9),
                 Map.entry("competition_lap",10),Map.entry("competition_item_icon",4),
                 Map.entry("competition_neon",19),Map.entry("competition_position",5),
                 Map.entry("competition_timer",1),Map.entry("competition_timer_digit",10),
@@ -146,6 +147,19 @@ class TestS3kCompetitionAssets {
         assertEquals(0x12CA4,0x12F84+(short)reader.readU16BE(0x12F84+62));
         assertEquals(4,assets.animations("competition_sand_bar").getScriptCount());
         assertEquals(4,assets.animations("competition_balloon").getScriptCount());
+    }
+
+    @Test void spilledRingsRetainTheirOrdinaryMappingAndStartpostVramBankInCompetition() {
+        assertEquals(0x237C,reader.readU16BE(0x1A6D4));
+        assertEquals(0x1A99A,longWord(0x1A6D6));
+        assertEquals(0xA6BC,reader.readU16BE(0x1A6DE));
+        var sheet=assets.sheet(S3kCompetitionRingLoss.ART_KEY);
+        assertSame(assets.sheet("competition_goal").getPatterns(),sheet.getPatterns());
+        var first=sheet.getFrame(0).pieces().getFirst();
+        assertEquals(0x6BC,first.tileIndex()); assertEquals(1,first.paletteIndex()); assertTrue(first.priority());
+        var sparkle=assets.animations(S3kCompetitionRingLoss.ART_KEY).getScript(0);
+        assertEquals(5,sparkle.delay()); assertEquals(List.of(4,5,6,7),sparkle.frames());
+        assertEquals(0xFC,sparkle.flatByteAt(4));
     }
 
     @Test void menuPlanesAndPaletteLinesUseNativeArtWordsAndFiveArenaOrder() throws IOException {

@@ -58,7 +58,7 @@ class TestS3kCompetitionHud {
                 Kind.NEON, Kind.TIMER, Kind.TIMER, Kind.RESERVED), hudKinds(world));
         assertEquals(List.of(0, 1, 0, 1, 0, 0, 1, 0), huds(world).stream()
                 .map(CompetitionHudObjectInstance::playerSlot).toList());
-        assertEquals(List.of(3, 4, 5, 6, 7, 8, 9, 10), huds(world).stream()
+        assertEquals(List.of(4, 5, 6, 7, 8, 9, 10, 11), huds(world).stream()
                 .map(AbstractObjectInstance::getSlotIndex).toList());
         assertEquals(3, world.session.capture().goalTimerMask());
         assertTrue(huds(world).stream().allMatch(h -> h.getPriorityBucket() == 0));
@@ -82,7 +82,7 @@ class TestS3kCompetitionHud {
             assertEquals(available >= 7 ? 3 : available == 6 ? 1 : 0,
                     world.session.capture().goalTimerMask());
             // A newly free later slot cannot cause goal initialization to run again.
-            world.occupied[100] = false;
+            world.occupied[50] = false;
             step(world, 300);
             assertEquals(available + 1, world.objects.size());
             assertEquals(available >= 5, world.session.started());
@@ -352,7 +352,7 @@ class TestS3kCompetitionHud {
         world.session.restore(new S3kCompetitionSession.State(state.arena(), state.levelFrameCounter(),
                 state.go(), state.falseStartTicks(), state.falseStartFrame(), state.falseStarter(),
                 state.replenishmentOffset(), state.finishWait(), state.resultSent(), players, state.starts(),
-                state.triggers(), state.grandPrixTimes(), state.goalTimerMask()));
+                state.triggers(), state.grandPrixTimes(), state.goalTimerMask(), state.damage()));
         step(world, 1);
         assertTrue(world.session.finished(0)); assertFalse(world.session.finished(1));
         assertEquals(0x093B63, hud(world, Kind.TIMER, 0).packedTime());
@@ -420,7 +420,7 @@ class TestS3kCompetitionHud {
                 new S3kCompetitionSession.Config(mode, Arena.AZURE_LAKE, true), world);
         world.animationSets = Map.of("competition_neon", neonScripts);
         Arrays.fill(world.occupied, true);
-        for (int slot = 3; slot < (available == 8 ? 128 : 3 + available); slot++) world.occupied[slot] = false;
+        for (int slot = 4; slot < (available == 8 ? 94 : 4 + available); slot++) world.occupied[slot] = false;
         var goal = new CompetitionGoalObjectInstance(new ObjectSpawn(1000, 200, 0x65, 8, 0, false, 0));
         goal.setSlotIndex(2); world.objects.add(goal);
         return world;
