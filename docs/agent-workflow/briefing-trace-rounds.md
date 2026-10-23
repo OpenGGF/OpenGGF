@@ -85,6 +85,15 @@ director offsets; preserve native background phase and restore published state
 after drawing. A transparent native floor-art tile can have valid collision, so
 contact oracles must distinguish missing art from a displaced rendered surface.
 
+Source edits during compilation can survive as stale bytecode even on the next
+incremental build (2026-10-23, Stageplay holder continuation). Javac had already
+read a class before a later source edit, then wrote its old class after the new
+source timestamp; Maven subsequently reported everything up to date. Keep source
+stable from submission until the job exits. If this boundary was violated,
+force recompilation of the affected source and repeat its checks before making a
+claim about the new field or behavior. A newer class-file timestamp alone does
+not prove that it contains the current source.
+
 A JVM launch property is mutable test state (2026-10-21, Stageplay smoke).
 `TestSurfacelessEglContext` clears `openggf.headless.gl`; a later
 `TraceCaptureBootDimensionsTest` in the same JVM then tries GLFW even when

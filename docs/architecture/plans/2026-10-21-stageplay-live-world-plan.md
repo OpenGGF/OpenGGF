@@ -2527,7 +2527,7 @@ classes. Scan control locks, object-control states, movement suppression, forced
 and controller-2 writes. The guard rejects a writer with only the interface no-op.
 Non-object helper acquisition paths were followed to their object callers (AIZ vine
 logic, boss signpost flow and AIZ end sequence); their owning hooks already delegate
-release. Added exact acquired-identity tracking to 42 owners, including 7 nested
+release. Added exact acquired-identity tracking to 42 owners, including 8 nested
 owners, and native interaction-release hooks for flippers, turbine, magnet and loop.
 The S1 prison regression exercises direction, removal and CLEAR_OBJECTS after its
 actual forced-right acquisition. Native release tails relinquish tracked identities;
@@ -2564,3 +2564,96 @@ Tests now use its actual entry and ordinary landing. Focused combined checks pas
 112/112 with no skips. Old assertions for the removed detached entry and a stale
 internal manager-field assertion were corrected; no production branch was retained
 for those tests. Remaining verification: ROM route/preview, mandatory S3K and guards.
+
+#### Complete round-3 holder audit class list
+
+The AST guard checks these 138 direct acquisition-writer classes (nested
+classes are separate; inherited hooks resolve through reflection).
+
+- sonic1: `objects.Sonic1EggPrisonObjectInstance`, `objects.Sonic1JunctionObjectInstance`, `objects.Sonic1PoleThatBreaksObjectInstance`, `objects.Sonic1RingFlashObjectInstance`, `objects.Sonic1SignpostObjectInstance`, `objects.Sonic1TeleporterObjectInstance`, `objects.bosses.Sonic1FZBossInstance`.
+- sonic2: `objects.BreakablePlatingObjectInstance`, `objects.CPZSpinTubeObjectInstance`, `objects.FlipperObjectInstance`, `objects.GrabObjectInstance`, `objects.LauncherBallObjectInstance`, `objects.LauncherSpringObjectInstance`, `objects.MTZSpinTubeObjectInstance`, `objects.MovingVineObjectInstance`, `objects.OOZLauncherObjectInstance`, `objects.OOZPoppingPlatformObjectInstance`, `objects.PointPokeyObjectInstance`, `objects.TornadoObjectInstance`, `objects.VineSwitchObjectInstance`, `objects.badniks.GrabberBadnikInstance`, `objects.bosses.Sonic2DeathEggRobotInstance`.
+- sonic3k: `ending.EndingKnucklesFlightObjectInstance`, `ending.EndingRescueDirectorObjectInstance`, `objects.AbstractS3kFloatingEndEggCapsuleInstance`, `objects.AbstractS3kUprightEggCapsuleInstance`, `objects.Aiz2BossEndSequenceController`, `objects.Aiz2EndEggCapsuleInstance`, `objects.AizHollowTreeObjectInstance`, `objects.AizPlaneIntroInstance`, `objects.AutomaticTunnelObjectInstance`, `objects.CnzCannonInstance`, `objects.CnzCylinderInstance`, `objects.CnzSpiralTubeInstance`, `objects.CnzTeleporterInstance`, `objects.CnzWireCageObjectInstance`, `objects.CutsceneKnucklesCnz2BInstance`, `objects.CutsceneKnucklesLbz1RangeHelper`, `objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild`, `objects.CutsceneKnucklesMhz2Instance`, `objects.CutsceneKnucklesSkIntroInstance`, `objects.DdzEndBossObjectInstance`, `objects.DdzFlightControllerObjectInstance`, `objects.DezFinalBossController`, `objects.DezMinibossTransport$P2Hold`, `objects.DezMinibossTransport`, `objects.FbzChainLinkObjectInstance`, `objects.FbzEndBossInstance`, `objects.FbzEndEggCapsuleInstance`, `objects.FbzMagneticPendulumObjectInstance`, `objects.FbzSpiderCraneObjectInstance`, `objects.FbzSpinningPoleObjectInstance`, `objects.FbzWireCageObjectInstance`, `objects.FbzWireCageStationaryObjectInstance`, `objects.HCZBreakableBarObjectInstance`, `objects.HCZConveyorBeltObjectInstance`, `objects.HCZHandLauncherObjectInstance`, `objects.HCZSpinningColumnObjectInstance`, `objects.HCZTwistingLoopObjectInstance`, `objects.HCZWaterWallObjectInstance`, `objects.HPZSSEntryControlObjectInstance`, `objects.HPZSuperEmeraldObjectInstance`, `objects.HczMinibossInstance`, `objects.HpzEmeraldTheftPlayerControlObjectInstance`, `objects.HpzTeleporterRouteHelperObjectInstance`, `objects.IczFreezerObjectInstance$CaptureCloud`, `objects.IczFreezerObjectInstance$FrozenPlayerBlock`, `objects.IczSnowboardIntroInstance`, `objects.Lbz1GroundLaunchIntroInstance`, `objects.Lbz2RobotnikShipInstance`, `objects.LbzCupElevatorInstance`, `objects.LbzLoweringGrappleObjectInstance`, `objects.LbzRideGrappleInstance`, `objects.LbzTubeElevatorInstance`, `objects.LevelIntroPlayerRunInstance`, `objects.LrzAutoscrollObjectInstance`, `objects.LrzBoulderCutsceneObjectInstance`, `objects.LrzCorkscrewObjectInstance`, `objects.LrzCutsceneBoulderObjectInstance`, `objects.LrzTurbineSpritesObjectInstance`, `objects.LrzWallRideObjectInstance`, `objects.MGZPulleyObjectInstance`, `objects.MGZTopPlatformObjectInstance`, `objects.MGZTwistingLoopObjectInstance`, `objects.MgzEndBossKnuxInstance`, `objects.Mhz1CutsceneKnucklesInstance$Mhz1CutscenePlayerTwoStopper`, `objects.Mhz1CutsceneKnucklesInstance`, `objects.MhzMushroomParachuteObjectInstance`, `objects.MhzPulleyLiftObjectInstance`, `objects.MhzSwingBarHorizontalObjectInstance`, `objects.MhzSwingBarVerticalObjectInstance`, `objects.MhzSwingVineObjectInstance`, `objects.PachinkoEnergyTrapObjectInstance`, `objects.PachinkoFlipperObjectInstance`, `objects.PachinkoMagnetOrbObjectInstance`, `objects.S3kDezGravityHubObjectInstance`, `objects.S3kDezGravityRoomObjectInstance`, `objects.S3kDezGravityTubeObjectInstance`, `objects.S3kDezHangCarrierObjectInstance`, `objects.S3kDezTeleporterObjectInstance`, `objects.S3kDezTunnelLauncherObjectInstance$Controller`, `objects.S3kDezTunnelLauncherObjectInstance`, `objects.S3kNativeP2LockInstance`, `objects.S3kSignpostInstance`, `objects.S3kSlotBonusCageObjectInstance`, `objects.SSZHPZTeleporterObjectInstance`, `objects.Sonic3kSSEntryRingObjectInstance`, `objects.SozEndBossChild`, `objects.SozEndBossInstance`, `objects.SozFallingIntroInstance`, `objects.SozLightSwitchObjectInstance`, `objects.SozLoopFallthroughObjectInstance`, `objects.SozMinibossChild$Alignment`, `objects.SozMinibossChild$P2Hold`, `objects.SozRapelWireObjectInstance$Segment`, `objects.SszArrivalControllerObjectInstance`, `objects.SszCraneClaw`, `objects.SszElevatorBarObjectInstance`, `objects.SszLaunchControllerObjectInstance`, `objects.SszRotatingPlatformCarrierObjectInstance`, `objects.SszRotatingPlatformObjectInstance`, `objects.SszSwingingCarrierBarObjectInstance`, `objects.badniks.MadmoleBadnikInstance$SideDrillChild`, `objects.bosses.CnzEndBossInstance`, `objects.bosses.HczEndBossEggCapsuleInstance$HczEndBossResultsScreenObjectInstance`, `objects.bosses.HczEndBossEggCapsuleInstance`, `objects.bosses.HczEndBossGeyserCutscene`, `objects.bosses.HczEndBossWaterColumn`, `objects.bosses.IczEndBossInstance`, `objects.bosses.LbzFinalBoss1Instance`, `objects.bosses.LbzFinalBoss2Instance$GrabOwnerChild`, `objects.bosses.LbzFinalBoss2Instance`, `objects.bosses.MhzEndBossInstance$MhzEndBossSidekickLockChild`, `objects.bosses.MhzEndBossInstance$MhzEndBossWalkoffPrepChild`, `objects.bosses.MhzEndBossInstance$MhzEndBossPlayerTwoCarryChild`, `objects.bosses.MhzEndBossInstance`, `objects.bosses.SszMechaSonicActEndObjectInstance`, `objects.bosses.SszMechaSonicObjectInstance`.
+
+Additional hook owners/helper paths checked for inherited behavior, native state
+preservation, constructor handoff or per-player support ownership:
+
+- sonic3k: `objects.AizEndBossInstance`, `objects.AizGiantRideVineObjectInstance`, `objects.AizRideVineObjectInstance`, `objects.CnzBarberPoleObjectInstance`, `objects.Sonic3kSSEntryFlashObjectInstance`, `objects.SszCranePlayerRelease`, `objects.SszTailsArrivalHelperObjectInstance`.
+
+AIZ vine acquisition is implemented by `AizVineHandleLogic` and released by its
+ride/giant-vine owners. `S3kBossDefeatSignpostFlow` and the shared signpost pose
+helpers were checked alongside their caller hooks; queued native P2 poses remain
+owned by the upright/HCZ capsule paths. This is a source/hook audit plus focused
+regressions, not an exhaustive native route or ROM-parity certification.
+
+#### Round-3 final dispositions and bounded verification
+
+| Finding | Disposition |
+| --- | --- |
+| N1 | Fixed: evaluate authored/follow/shake/draft cameras inside the loaded native envelope, accounting for viewport/zoom; keys stay authored. Both editor picture paths show the resolved view. Animals re-shot and reviewed in playback at resolved Y=768, authored Y=832. |
+| N2 / F4 | Fixed across the audited holder set: native acquisition writers, nested/P2/ending helpers and shared acquisition helpers have owned player-release paths; new structural guard passes. Complete class lists above. |
+| N3 / F9 | Fixed in 482916ad1: native service reinjection keeps the admitting activation policy; remote visibility/culling/retirement regression passes. |
+| N6 | Fixed in ee17589b1: native routine/transport progress survives direction; acquired-player state and existing ROM release cooldowns remain separate. |
+| WorldPolicy / API | Removed directly in a070bbbc1 from unpublished formats, editor field, examples, compiler/decompiler and candidate pin; no migration. Signature checks pass. |
+| Probe / source identity / duplicate check | Obsolete detached probe factory/floor search removed; route probes use native entry. Missing source game identity rejects portable placements. Duplicate source check removed; placement policy moved out of the manager facade. |
+| N5 / style / scaffold | Misplaced Javadocs repaired, release/rewind qualifiers use imports, the warning-string rewrap is reverted, and scaffold version uses the compiler constant. |
+| P3-4 | The earlier rejection rationale was false; the original disposition row is corrected to Fixed. |
+
+Production source is pinned to `507056604eceaed3afbb5dc45ec00a0aae4dbb19`.
+The subsequent commit adds only the corrected native-entry ROM discovery fixture
+and this review/measurement record. Editor source is `01bf8ae`.
+No merge, push or PR was performed; the lead owns broader smoke/integration.
+
+All Maven invocations used `python3 tools/testing/maven_queue.py -Dmse=off`
+from this engine worktree (the Editor used its absolute path). ROM invocations
+passed the existing absolute S1 REV01, S2 REV01 and S3K locked-on paths in this
+worktree; no ROM files/links were created or changed. Rendering used
+`-Dopenggf.headless.gl=surfaceless-egl`; opt-in picture flags were explicit.
+
+| Exact focused selector / command suffix | Result |
+| --- | --- |
+| `-Dtest=TestStageplayDocument,TestStageplayStore,TestStageplayUnifiedWorldContract,TestStageplayScriptRoundTrip,TestStageplayLiveContract,TestStageplayObjectScriptCompiler,TestStageplayWorkspace,TestStageplayDirectingWorkspace,TestStageplayObjectWorkspace,TestStageplayCameraBounds,TestStageplayTimeline,TestStageplayObjectDocument,TestStageplayLiveBinding,TestStageplayObjectCast,TestStageplayRouteContract test -B` | 136, 0F/0E/0S |
+| `-Dtest=TestStageplayActivationPolicy test -B` | 13, 0F/0E/0S |
+| `-Dtest=TestStageplayIntroControlRelease,TestStageplayStoryControlRelease,TestStageplayCapsuleControlRelease,TestStageplayLateHolderRelease,TestS3kSignpostInstance,TestFbzMinibossChildren test -B` | 155, 0F/0E/0S |
+| `-Dtest=TestStageplayAcquiredControlRelease,TestStageplayInteractionRelease,TestStageplayObjectDirection test -B` | 74, 0F/0E/0S |
+| `-Dtest=TestStageplayAcquiredControlRelease,TestStageplayLateHolderRelease,TestStageplayIntroControlRelease,TestStageplayCapsuleControlRelease,TestStageplayObjectDirection test -B` | 126, 0F/0E/0S after native-state changes |
+| `-Dtest=TestPlayablePuppet,TestStageplayNativeStateRelease,TestStageplayObjectDirection,TestStageplayObjectCast,TestStageplayObjectRingProvenance,TestStageplayActivationPolicy,TestObjectManagerLifecycle,TestStageplayRoutePlanner,TestStageplayLateHolderRelease test -B` | 112, 0F/0E/0S on final cleanup |
+| `-Dtest=TestPlayablePuppetRom,TestStageplayPlayerRouteRom,TestStageplayObjectRouteRom,TestStageplayLivePreviewRom,TestStageplayLiveWorldRom,TestStageplayS1EnsembleRom,TestStageplayHudPictures#captureStageplayCastTimelineAndCommands,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestModApiSignatureSurface test -B` | 94, 1F/0E/0S: native-entry discovery still assumed detached snapping; all mandatory S3K tests, signature checks and picture capture passed. |
+| `-Dtest=TestStageplayPlayerRouteRom test -B` | Corrected shared discovery fixture: 5, 0F/0E/0S across all games. |
+| `-Pguards test -B` (once; Java 25, Lua 5.4, displays unset) | 720, 4F/0E/0S; exact recorded baseline identities below. New holder guard 2/2 passes. Execution 5:23, admission wait 0s. |
+| Editor: `-Dtest=TestStageplayChrome,TestStageplayChromePictures#captureActualDesktopStageplayWithRomSetAndActors test -B` | 18, 0F/0E/0S with current engine privately installed and explicit desktop picture flag. |
+| `-DskipTests package -B` | Build succeeds; no tests run. |
+
+Earlier ROM preview/route group: 41 tests, zero failures/errors, five opt-in HUD
+refresh skips. The actual bounded HUD capture was enabled in the final ROM run;
+no required ROM test skipped. Counts above overlap and are per completed invocation,
+not a unique-test total. An initial tool preflight selected a wrong default Lua;
+explicit `LUA_BIN=/usr/bin/lua5.4` passed, with no tests launched by preflight.
+
+The four guard failures exactly match the baseline identities/assertions already
+recorded in this plan: both `TestProductionSingletonClosureGuard` methods at
+`MenuAudioProbeTool.java:41`, plus the three HubMusic construction edges and nine
+HubMusic package edges in the two `TestArchUnitRules` methods. No new guard failure,
+error or skip. This is bounded validation with known baseline failures, not a green
+full-suite or a new broad smoke result.
+
+Evidence root: `$STAGEPLAY_EVIDENCE/round3/` (the external task capture directory).
+`capture-source.json` pins production SHA, source/scene/JAR fingerprints and ROM
+identities; `capture_round3.py` records reproducible commands. `s1-animals/film.mkv`
+is 450 frames / 7.5s, 320x224 at 60 fps, FFV1 + 48 kHz stereo FLAC. Both MKV and MP4
+passed complete `ffmpeg -xerror` decoding. All sampled state cameras are `(0,768,1)`;
+the stored scene key remains Y=832. Browser playback completed at rate 1 with
+1350 decoded frames across three plays and zero reported dropped frames. Reviewed
+the Free/Puppet/Pose/flip and clear beats; native bird flap remains animated, and
+the accepted held walking/state-machine appearance limitation remains. The review
+browser and local HTTP server were closed. `editors/hud-camera-{720p,small}.png`
+and `editors/desktop-camera-{720p,small}.png` show actual bounded paused drafts;
+the desktop inspector shows resolved position `(120,916)` at zoom 2 rather than
+the requested 100000-pixel pan. Authored keys remain unchanged in both checks.
+
+The optional global `disasm_citations.py check` reports the repository's existing
+citation backlog: 3370 stale, 122 missing-file, 35 out-of-range, 179 unresolved-file,
+plus historic/unverifiable references. This round introduces no new line-numbered
+disassembly citations and moves no reference pins; those unrelated citations were
+not rewritten. Changed-document whitespace, skill mirrors and API signature checks
+pass. No category run directory was created (preflight only); consumed task Maven
+diagnostics are removed before handback.

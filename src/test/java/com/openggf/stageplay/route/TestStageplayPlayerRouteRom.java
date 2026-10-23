@@ -278,8 +278,13 @@ class TestStageplayPlayerRouteRom {
                                 0,
                                 true,
                                 false)) {
+                    // Discover starts through production entry and ordinary landing.
+                    // The removed detached factory searched 128px from a coarse anchor;
+                    // native attachment keeps its airborne status until physics lands.
+                    for (int frame = 0; frame < 60 && probe.sample().airborne(); frame++)
+                        probe.tick(false, false, false, frame);
                     var start = probe.sample();
-                    if (start.angle() != 0) continue;
+                    if (!start.onGround() || start.angle() != 0) continue;
                     for (int frame = 0; frame < 120; frame++) {
                         var sample = probe.sample();
                         int direction =
@@ -302,7 +307,7 @@ class TestStageplayPlayerRouteRom {
                             && Math.abs(end.groundSpeed()) <= 64)
                         return new StageplayRoutePoint(0, start.x(), start.y(), true);
                 } catch (IllegalArgumentException noFloor) {
-                    // The bounded native floor search honestly found no valid standable start here.
+                    // This candidate does not admit a native route probe.
                 }
             }
         }
