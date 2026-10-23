@@ -98,6 +98,28 @@ budget; clear unnecessary objects or split a shot if that budget is exhausted.
 The [examples](../../../examples/stageplay-demo/README.md) include platform
 transfers, flight/glide, rings/hurt and the 60-second **One More Take** rehearsal.
 
+## See the planned route
+
+Select a player or walking object in **Cast**, then use **Plan collision route**.
+When planning finishes, close the route menu to inspect the proposal in the viewport
+before Apply. Cyan follows grounded samples; gold shows airborne movement and
+small takeoff chevrons. A square marks the first observed position and a diamond
+marks the requested destination. The line follows the camera, zoom and viewport fit.
+
+A red cross marks the last observed point of a failed attempt; the overlay and route
+menu give the planner's reason, such as missing floor, wall/clearance or a budget
+limit. A search limit does not prove a destination unreachable. No line is invented
+between missing observations or from an unfinished attempt to its goal. Failures
+before any movement observation show only the destination and diagnostic.
+
+After **Check inputs and apply route**, the selected actor's plan remains visible
+while seeking or playing that shot. A white cross follows the player's actual preview
+centre for comparison. Edits to the applied scene or asset-root changes hide the old
+plan; undoing those edits restores it. Replanning, cancellation and the freshness
+check still apply to proposals. Routes are temporary workspace aids: reopening a
+scene does not restore them, and saving, film export and mod playback contain no
+route graphics. Object routes retain the helper's visual walking limits.
+
 ## Direct the camera and change scenes
 
 Press **C** for camera directing mode. WASD/arrows pan, Q/E zoom,

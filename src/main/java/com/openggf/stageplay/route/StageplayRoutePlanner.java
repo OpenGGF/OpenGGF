@@ -131,7 +131,7 @@ public final class StageplayRoutePlanner {
                     fingerprint,
                     request,
                     proposal.nodes(),
-                    proposal.ticks());
+                    proposal.ticks(), proposal.path());
         StageplayDocument candidate;
         try {
             candidate = patch(document, request, proposal.commands());
@@ -240,7 +240,7 @@ public final class StageplayRoutePlanner {
                     fingerprint,
                     request,
                     proposed.expandedNodes(),
-                    ticks);
+                    ticks, proposed.path());
         List<StageplayRoutePoint> path = new ArrayList<>();
         com.openggf.level.Level initialLevel = null;
         int nativeZone = -1, nativeAct = -1;
@@ -255,7 +255,7 @@ public final class StageplayRoutePlanner {
                             fingerprint,
                             request,
                             proposed.expandedNodes(),
-                            ticks);
+                            ticks, path);
                 if (System.nanoTime() >= deadline)
                     return failure(
                             BUDGET_EXCEEDED,
@@ -263,7 +263,7 @@ public final class StageplayRoutePlanner {
                             fingerprint,
                             request,
                             proposed.expandedNodes(),
-                            ticks);
+                            ticks, path);
                 int cost = coldTickCost(proposed.candidate(), frame);
                 if (cost > request.maxTicks() - ticks)
                     return failure(
@@ -272,7 +272,7 @@ public final class StageplayRoutePlanner {
                             fingerprint,
                             request,
                             proposed.expandedNodes(),
-                            ticks);
+                            ticks, path);
                 resources.resolveFrame(
                         proposed.candidate(), StageplayTimeline.sample(proposed.candidate(), frame));
                 ticks += cost;
@@ -291,7 +291,7 @@ public final class StageplayRoutePlanner {
                             fingerprint,
                             request,
                             proposed.expandedNodes(),
-                            ticks);
+                            ticks, path);
                 var position = world.routeObjectPosition(request.actorId());
                 if (position == null)
                     return failure(
@@ -300,7 +300,7 @@ public final class StageplayRoutePlanner {
                             fingerprint,
                             request,
                             proposed.expandedNodes(),
-                            ticks);
+                            ticks, path);
                 String invalid =
                         StageplayObjectRoutePlanner.validateSample(
                                 resources.routeTerrainProbe(level),
@@ -314,7 +314,7 @@ public final class StageplayRoutePlanner {
                             fingerprint,
                             request,
                             proposed.expandedNodes(),
-                            ticks);
+                            ticks, path);
                 path.add(position);
             }
             var finalPoint = path.getLast();
@@ -326,7 +326,7 @@ public final class StageplayRoutePlanner {
                         fingerprint,
                         request,
                         proposed.expandedNodes(),
-                        ticks);
+                        ticks, path);
             return new StageplayRouteResult(
                     VISUAL_TERRAIN,
                     "Visual slopes, steps up to 8 pixels and floor/head/side clearance checked"
@@ -348,7 +348,7 @@ public final class StageplayRoutePlanner {
                     fingerprint,
                     request,
                     proposed.expandedNodes(),
-                    ticks);
+                    ticks, path);
         }
     }
 
@@ -386,13 +386,15 @@ public final class StageplayRoutePlanner {
                         0,
                         score(initial, request, 0),
                         0);
+        root.edge = List.of(new StageplayRoutePoint(request.startFrame(), initial.x(), initial.y(), initial.onGround()));
+        Node best = root;
         frontier.add(root);
         Map<Key, Integer> visited = new HashMap<>();
         int expanded = 0, ticks = 0, ordinal = 1;
         boolean trimmed = false;
         while (!frontier.isEmpty()) {
             if (cancelled.getAsBoolean())
-                return rejected(CANCELLED, "Route search cancelled", expanded, ticks);
+                return rejected(CANCELLED, "Route search cancelled", expanded, ticks, best);
             if (System.nanoTime() >= deadline
                     || expanded >= request.maxNodes()
                     || ticks >= request.maxTicks())
@@ -401,7 +403,7 @@ public final class StageplayRoutePlanner {
                         "Native terrain search exhausted its bounded work budget; reachability is"
                                 + " not disproved",
                         expanded,
-                        ticks);
+                        ticks, best);
             Node current = frontier.remove();
             PlayablePuppet.Snapshot checkpoint = current.snapshot;
             current.snapshot = null;
@@ -427,13 +429,14 @@ public final class StageplayRoutePlanner {
                             || goal > 32767
                             || hold > request.startFrame() + request.maxFrames() - nextFrame) continue;
                     if (cancelled.getAsBoolean())
-                        return rejected(CANCELLED, "Route search cancelled", expanded, ticks);
+                        return rejected(CANCELLED, "Route search cancelled", expanded, ticks, best);
                     probe.restore(checkpoint);
                     int jumpEnd = hold == 0 ? current.jumpEnd : nextFrame + hold;
                     int finalFrame =
                             Math.min(nextFrame + EDGE_TICKS, request.startFrame() + request.maxFrames());
                     PlayablePuppet.Observation sample = current.observation;
                     boolean outside = false;
+                    List<StageplayRoutePoint> edge = new ArrayList<>();
                     int frame = nextFrame;
                     for (; frame < finalFrame; frame++) {
                         if (ticks >= request.maxTicks() || System.nanoTime() >= deadline)
@@ -441,7 +444,7 @@ public final class StageplayRoutePlanner {
                                     BUDGET_EXCEEDED,
                                     "Native terrain search exhausted its tick/time budget",
                                     expanded,
-                                    ticks);
+                                    ticks, best);
                         int direction =
                                 StageplayMovementIntent.direction(
                                         Math.floor(sample.x()),
@@ -455,6 +458,7 @@ public final class StageplayRoutePlanner {
                         ticks++;
                         probe.tick(direction < 0, direction > 0, frame < jumpEnd, frame);
                         sample = probe.sample();
+                        edge.add(new StageplayRoutePoint(frame, sample.x(), sample.y(), sample.onGround()));
                         if (sample.x() < minX || sample.x() > maxX || sample.y() < minY || sample.y() > maxY) {
                             outside = true;
                             break;
@@ -484,6 +488,8 @@ public final class StageplayRoutePlanner {
                                     elapsed,
                                     score(sample, request, elapsed),
                                     ordinal++);
+                    child.edge = List.copyOf(edge);
+                    if (distance(sample, request) < distance(best.observation, request)) best = child;
                     if (arrived(sample, request)) return proposal(document, request, child, expanded, ticks);
                     frontier.add(child);
                     if (frontier.size() > MAX_FRONTIER_CHECKPOINTS) {
@@ -500,7 +506,25 @@ public final class StageplayRoutePlanner {
                         + (trimmed ? " and retained-checkpoint budget" : "")
                         + "; this does not prove the destination unreachable",
                 expanded,
-                ticks);
+                ticks, best);
+    }
+
+    private static double distance(PlayablePuppet.Observation point, StageplayRouteRequest request) {
+        return Math.hypot(point.x() - request.targetX(), point.y() - request.targetY());
+    }
+
+    private static List<StageplayRoutePoint> observedPath(Node end) {
+        List<Node> chain = new ArrayList<>();
+        for (Node node = end; node != null; node = node.parent) chain.add(node);
+        java.util.Collections.reverse(chain);
+        List<StageplayRoutePoint> path = new ArrayList<>();
+        for (Node node : chain) path.addAll(node.edge);
+        return path;
+    }
+
+    private static StageplayRouteProposal rejected(
+            StageplayRouteResult.Status status, String message, int nodes, int ticks, Node best) {
+        return new StageplayRouteProposal(status, message, List.of(), observedPath(best), nodes, ticks);
     }
 
     private static StageplayRouteProposal proposal(
@@ -600,7 +624,7 @@ public final class StageplayRoutePlanner {
                             fingerprint,
                             request,
                             proposal.nodes(),
-                            ticks);
+                            ticks, path);
                 if (System.nanoTime() >= deadline)
                     return failure(
                             BUDGET_EXCEEDED,
@@ -608,7 +632,7 @@ public final class StageplayRoutePlanner {
                             fingerprint,
                             request,
                             proposal.nodes(),
-                            ticks);
+                            ticks, path);
                 int cost = coldTickCost(candidate, frame);
                 if (cost > request.maxTicks() - ticks)
                     return failure(
@@ -618,7 +642,7 @@ public final class StageplayRoutePlanner {
                             fingerprint,
                             request,
                             proposal.nodes(),
-                            ticks);
+                            ticks, path);
                 sample = resources.resolveFrame(candidate, StageplayTimeline.sample(candidate, frame));
                 ticks += cost;
                 if (frame < request.startFrame()) continue;
@@ -636,7 +660,7 @@ public final class StageplayRoutePlanner {
                             fingerprint,
                             request,
                             proposal.nodes(),
-                            ticks);
+                            ticks, path);
                 }
                 var pose =
                         sample.actors().stream()
@@ -667,7 +691,7 @@ public final class StageplayRoutePlanner {
                             fingerprint,
                             request,
                             proposal.nodes(),
-                            ticks);
+                            ticks, path);
                 if (!sample.set().equals(StageplayRouteContract.source(candidate, request.startFrame())))
                     return failure(
                             VERIFICATION_FAILED,
@@ -675,7 +699,7 @@ public final class StageplayRoutePlanner {
                             fingerprint,
                             request,
                             proposal.nodes(),
-                            ticks);
+                            ticks, path);
                 if (sample.world().events().stream()
                         .anyMatch(
                                 event ->
@@ -689,7 +713,7 @@ public final class StageplayRoutePlanner {
                             fingerprint,
                             request,
                             proposal.nodes(),
-                            ticks);
+                            ticks, path);
                 path.add(new StageplayRoutePoint(frame, pose.x(), pose.y(), !state.airborne()));
             }
             var pose =
@@ -714,7 +738,7 @@ public final class StageplayRoutePlanner {
                         fingerprint,
                         request,
                         proposal.nodes(),
-                        ticks);
+                        ticks, path);
             return new StageplayRouteResult(
                     VERIFIED,
                     "Reached and settled after a fresh linear native-world replay",
@@ -734,7 +758,7 @@ public final class StageplayRoutePlanner {
                     fingerprint,
                     request,
                     proposal.nodes(),
-                    ticks);
+                    ticks, path);
         }
     }
 
@@ -789,6 +813,7 @@ public final class StageplayRoutePlanner {
 
     private static final class Node {
         final Node parent;
+        List<StageplayRoutePoint> edge = List.of();
         PlayablePuppet.Snapshot snapshot;
         final PlayablePuppet.Observation observation;
         final int frame, jumpEnd, hold;
@@ -826,6 +851,12 @@ public final class StageplayRoutePlanner {
     private static StageplayRouteProposal rejected(
             StageplayRouteResult.Status status, String message, int nodes, int ticks) {
         return new StageplayRouteProposal(status, message, List.of(), List.of(), nodes, ticks);
+    }
+
+    private static StageplayRouteResult failure(
+            StageplayRouteResult.Status status, String message, String fingerprint,
+            StageplayRouteRequest request, int nodes, int ticks, List<StageplayRoutePoint> path) {
+        return StageplayRouteResult.failure(status, message, fingerprint, request, nodes, ticks, path);
     }
 
     private static StageplayRouteResult failure(

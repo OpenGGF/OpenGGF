@@ -44,6 +44,20 @@ class TestStageplayObjectRoutePlanner {
         public boolean dynamicCollision() { return dynamic; }
     }
 
+    @Test void failedGapAndWallRetainOnlyMovementSimulatedBeforeTheObstruction() {
+        var gap = new Terrain(); gap.gapLeft = 35; gap.gapRight = 40;
+        var wall = new Terrain(); wall.wall = 35;
+        for (var terrain : List.of(gap, wall)) {
+            var result = plan(scene(), request(60,80,.7), terrain);
+            assertFalse(result.success()); assertFalse(result.path().isEmpty(), result.message());
+            assertTrue(result.path().getLast().x() < 35);
+            assertTrue(result.path().stream().allMatch(p -> p.x() < 35));
+            assertTrue(result.commands().isEmpty()); assertTrue(result.objectCommands().isEmpty());
+            var decoded = assertDoesNotThrow(() -> StageplayRouteProtocol.decodeResult(StageplayRouteProtocol.encodeResult(result)));
+            assertEquals(result.path(), decoded.path());
+        }
+    }
+
     @Test void fractionalMovementUsesPlaybackKernelAndStopsOnTheFollowingFrameWithoutAddingKeys() {
         var original = scene(); var result = plan(original, request(60, 80, .7), new Terrain());
         assertEquals(VISUAL_TERRAIN, result.status(), result.message()); assertFalse(result.nativeVerified());

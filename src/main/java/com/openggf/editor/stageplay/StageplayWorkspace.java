@@ -86,6 +86,9 @@ public final class StageplayWorkspace {
     private String routeSelection;
     private StageplayRouteRequest routeRequest;
     private StageplayRouteJob.Update routeUpdate;
+    private com.openggf.stageplay.editor.StageplayRouteOverlay proposedOverlay;
+    private com.openggf.stageplay.editor.StageplayRouteOverlay appliedOverlay;
+    private Path appliedRouteRoot;
     private boolean active;
     private boolean initialized;
     private String status = "Create a scene or open a .stageplay file";
@@ -133,6 +136,35 @@ public final class StageplayWorkspace {
     public String status() { return status; }
     public Path path() { return path; }
     public Path assetRoot() { return assetRoot; }
+
+    /** Authoring-only state. It is never passed to the runtime renderer, exporter or document. */
+    public com.openggf.stageplay.editor.StageplayRouteOverlay routeOverlay() {
+        var overlay = proposedOverlay != null ? proposedOverlay : appliedOverlay;
+        if (overlay == null || !active || !overlay.result().request().actorId().equals(controller.selectedActorId())) return null;
+        if (overlay.applied() && (!overlay.result().candidate().equals(controller.document())
+                || !Objects.equals(appliedRouteRoot, assetRoot))) return null;
+        int start = overlay.result().request().startFrame();
+        // A route belongs to one shot, even when another shot reuses the same set.
+        int shotStart = 0, shotEnd = controller.document().durationFrames();
+        for (var change : controller.document().sceneChanges()) {
+            if (change.frame() <= start) shotStart = change.frame();
+            else { shotEnd = change.frame(); break; }
+        }
+        return controller.frame() >= shotStart && controller.frame() < shotEnd ? overlay : null;
+    }
+
+    public void paintRouteOverlay(com.openggf.stageplay.editor.StageplayRouteOverlay.Painter painter,
+                                  float left, float top, float width, float height) {
+        var overlay = routeOverlay();
+        if (overlay == null) return;
+        var sample = previewFrame();
+        double actualX = Double.NaN, actualY = Double.NaN;
+        for (var actor : sample.actors()) if (actor.actorId().equals(controller.selectedActorId()) && actor.visible()) {
+            actualX = actor.x(); actualY = actor.y(); break;
+        }
+        overlay.paint(painter, sample.camera(), controller.document().width(), controller.document().height(),
+                left, top, width, height, actualX, actualY);
+    }
 
     public void activate() {
         try {
@@ -532,6 +564,7 @@ public final class StageplayWorkspace {
 
     private void newDocument() {
         cancelRoute();
+        appliedOverlay=null;
         controller.replace(host.initialDocument());
         cameraDraft = null; cameraMode = false;
         host.refreshResources();
@@ -558,7 +591,7 @@ public final class StageplayWorkspace {
         Path absolute = source.toAbsolutePath().normalize();
         StageplayDocument candidate = StageplayStore.read(absolute);
         // Parse first. Missing ROMs still permit repairing the document in either editor.
-        cancelRoute(); stop(); controller.replace(candidate); path = absolute; assetRoot = absolute.getParent();
+        cancelRoute(); appliedOverlay=null; stop(); controller.replace(candidate); path = absolute; assetRoot = absolute.getParent();
         cameraDraft = null; cameraMode = false;
         host.refreshResources();
         invalidatePreview();
@@ -584,7 +617,7 @@ public final class StageplayWorkspace {
         host.finishPendingEdits();
         stop(); // A pending take becomes an ordinary protected edit before asking to replace it.
         beforeReplace(() -> {
-            cancelRoute(); controller.replace(candidate); controller.markUnsaved();
+            cancelRoute(); appliedOverlay=null; controller.replace(candidate); controller.markUnsaved();
             path = null; assetRoot = absolute.getParent();
             cameraDraft = null; cameraMode = false;
             host.refreshResources(); invalidatePreview();
@@ -1350,6 +1383,7 @@ public final class StageplayWorkspace {
             String unavailable=StageplayRouteContract.unavailableReason(document,request);
             if(!unavailable.isEmpty()) throw new IOException(unavailable);
             host.startRoute(document,assetRoot,request);
+            controller.selectActor(id); proposedOverlay=null;
             routeSource=document; routeRoot=assetRoot; routeSelection=controller.selectedActorId(); routeRequest=request;
             routeUpdate=null; status="Route planning started in a separate logic worker. Reopen Plan collision route to cancel or review.";
         }));
@@ -1367,17 +1401,21 @@ public final class StageplayWorkspace {
         }
         if (next.equals(routeUpdate)) return;
         routeUpdate=next; status=next.message();
+        if (next.result()!=null) proposedOverlay=new com.openggf.stageplay.editor.StageplayRouteOverlay(next.result(),false);
         if (next.phase()==StageplayRouteJob.Phase.APPLY_READY) {
             try {
                 StageplayRouteProtocol.validatePatch(routeSource,routeRequest,next.result().fingerprint(),next.result());
                 var candidate=next.result().candidate();
                 if(candidate==null) throw new IOException("Route did not return a verified candidate");
-                edit(ignored -> candidate); cancelRoute();
+                edit(ignored -> candidate);
+                appliedOverlay=new com.openggf.stageplay.editor.StageplayRouteOverlay(next.result(),true);
+                appliedRouteRoot=assetRoot; cancelRoute();
                 status="Applied collision route as one undo step. Playback remains an input attempt.";
             } catch(IOException | RuntimeException failure) { cancelRoute(); report(failure); }
         }
     }
     private void cancelRoute() {
+        proposedOverlay=null;
         host.cancelRoute(); routeSource=null; routeRoot=null; routeSelection=null; routeRequest=null; routeUpdate=null;
         status="Route attempt cancelled";
     }

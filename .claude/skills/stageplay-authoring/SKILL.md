@@ -104,6 +104,14 @@ can refer to edited terrain or replaced ROM bytes; Apply checks those inputs aga
 An object route can also start at an existing visible Puppet key after an explicit
 Free initialization lead-in; the worker replays that prefix, never inserts a key
 or silently initializes a directed graph.
+In either editor, select the player or walking object in Cast and use Plan collision
+route. Close the menu to review the observed path before Apply: cyan ground, gold
+air/takeoff chevrons, start square, goal diamond, red failed endpoint plus diagnostic.
+Do not replace missing samples or a failed prefix with an invented goal line. Apply
+retains the plan during that shot's playback, with a white actual-player-centre cross.
+Camera framing transforms the overlay; it never enters the scene or exported film.
+Old plans hide after scene/root changes; changed ROM/assets require replanning.
+Capture editor evidence through its frontend, and separately verify clean film output.
 Decompile the routed canonical scene to return it to screenplay. Both editors
 expose the same helper; review diagnostics and actual simulation before rendering. Check actual arrival and grounded state
 in simulation, then revise goals/timing as needed. Shot boundaries reset actors and

@@ -103,7 +103,8 @@ public final class StageplayController {
     /** Empty string clears selection. */
     public void selectActor(String id) {
         Objects.requireNonNull(id, "id");
-        if (!id.isEmpty() && document.actors().stream().noneMatch(actor -> actor.id().equals(id))) {
+        if (!id.isEmpty() && document.actors().stream().noneMatch(actor -> actor.id().equals(id))
+                && document.objectActors().stream().noneMatch(actor -> actor.id().equals(id))) {
             throw new IllegalArgumentException("Unknown actor: " + id);
         }
         selectedActorId = id;
@@ -112,7 +113,8 @@ public final class StageplayController {
     private void reconcile() {
         playing = false;
         seek(frame);
-        if (document.actors().stream().noneMatch(actor -> actor.id().equals(selectedActorId))) selectedActorId = "";
+        if (document.actors().stream().noneMatch(actor -> actor.id().equals(selectedActorId))
+                && document.objectActors().stream().noneMatch(actor -> actor.id().equals(selectedActorId))) selectedActorId = "";
     }
 
     private static void push(Deque<StageplayDocument> history, StageplayDocument value) {

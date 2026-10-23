@@ -35,7 +35,7 @@ class TestStageplayRouteWorkspace {
         StageplayRouteResult result(){
             var commands=List.of(new PuppetCommand("route.go",0,PuppetCommandKind.MOVE_TO,150,200,1,0),new PuppetCommand("route.stop",29,PuppetCommandKind.STOP,0,0,0,0));
             var candidate=source.withPuppets(List.of(new PuppetTrack("hero",false,0,commands)));
-            return new StageplayRouteResult(StageplayRouteResult.Status.VERIFIED,"verified fixture","0".repeat(64),request,candidate,commands,List.of(),List.of(),1,30,true);
+            return new StageplayRouteResult(StageplayRouteResult.Status.VERIFIED,"verified fixture","0".repeat(64),request,candidate,commands,List.of(),List.of(new StageplayRoutePoint(0,100,200,true),new StageplayRoutePoint(1,101,200,true)),1,30,true);
         }
     }
     private StageplayWorkspace start(Host host){
@@ -60,7 +60,7 @@ class TestStageplayRouteWorkspace {
             switch(change){
                 case "document" -> workspace.controller().edit(d->d.withName("Changed"));
                 case "frame" -> workspace.seek(1);
-                case "selection" -> workspace.selectActor("hero");
+                case "selection" -> workspace.selectActor("");
                 case "root" -> workspace.saveTo(root.resolve("moved/scene.stageplay"));
             }
             var expected=workspace.controller().document();host.update=new StageplayRouteJob.Update(1,StageplayRouteJob.Phase.APPLY_READY,"late",result);
@@ -108,6 +108,23 @@ class TestStageplayRouteWorkspace {
         assertEquals(document,workspace.controller().document(),"Opening/planning does not insert a boundary or reset the native Free prefix");
         assertFalse(workspace.controller().canUndo());
     }
+    @Test void overlayIsProposedBeforeApplyPersistsInPlaybackAndHidesForUnrelatedEdits() {
+        var host=new Host(); var workspace=start(host); var source=workspace.controller().document();
+        var result=host.result(); host.update=new StageplayRouteJob.Update(1,StageplayRouteJob.Phase.READY,"ready",result);
+        workspace.tick(new InputHandler());
+        assertNotNull(workspace.routeOverlay()); assertFalse(workspace.routeOverlay().applied());
+        assertEquals(source,workspace.controller().document());
+        host.update=new StageplayRouteJob.Update(1,StageplayRouteJob.Phase.APPLY_READY,"fresh",result);
+        workspace.tick(new InputHandler()); assertTrue(workspace.routeOverlay().applied());
+        workspace.seek(15); assertNotNull(workspace.routeOverlay());
+        workspace.invoke(PLAY); workspace.tick(new InputHandler()); assertNotNull(workspace.routeOverlay());
+        workspace.stop(); workspace.controller().edit(d->d.withName("Changed")); assertNull(workspace.routeOverlay());
+        workspace.invoke(UNDO); assertNotNull(workspace.routeOverlay());
+        workspace.selectActor(""); assertNull(workspace.routeOverlay());
+        workspace.selectActor("hero"); assertNotNull(workspace.routeOverlay());
+        workspace.deactivate(); assertNull(workspace.routeOverlay());
+    }
+
     private static void choose(StageplayWorkspace workspace,int index){
         var input=new InputHandler();for(int i=0;i<index;i++)press(workspace,input,GLFW_KEY_DOWN);press(workspace,input,GLFW_KEY_ENTER);
     }

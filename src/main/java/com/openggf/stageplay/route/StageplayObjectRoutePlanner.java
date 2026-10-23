@@ -76,6 +76,8 @@ public final class StageplayObjectRoutePlanner {
         Objects.requireNonNull(terrain);
         Objects.requireNonNull(cancelled);
         var budget = new Budget(request, cancelled);
+        var path = new ArrayList<StageplayRoutePoint>();
+        StageplayRoutePoint initialPoint = null;
         try {
             budget.check();
             if (request.footprint() == null)
@@ -131,6 +133,7 @@ public final class StageplayObjectRoutePlanner {
                 if (command.frame() > request.startFrame() && command.frame() < end)
                     throw new Stop(UNSUPPORTED, "Route replacement window crosses a cast-clear/removal boundary");
             Point start = startPosition(document, actor, request.startFrame(), shotStart, budget);
+            initialPoint = new StageplayRoutePoint(request.startFrame(), start.x(), start.y(), true);
             var footprint = request.footprint();
             Point supported = support(start.x(), start.y(), footprint, terrain);
             if (Math.abs(supported.y() - start.y()) > 1 || !clear(start, footprint, terrain))
@@ -148,48 +151,55 @@ public final class StageplayObjectRoutePlanner {
             budget.node();
             Point previous = start;
             double remaining = request.targetX() - start.x();
-            while (Math.abs(remaining) > 1e-9) {
-                budget.node();
-                double x =
-                        previous.x() + Math.copySign(Math.min(1, Math.abs(remaining)), remaining);
-                Point point = support(x, previous.y(), footprint, terrain);
-                double rise = previous.y() - point.y();
-                if (Math.abs(rise) > Math.abs(x - previous.x()) + 1e-9) {
-                    if (Math.abs(rise) > MAX_STEP_HEIGHT)
+            Stop graphStop = null;
+            try {
+                while (Math.abs(remaining) > 1e-9) {
+                    budget.node();
+                    double x =
+                            previous.x() + Math.copySign(Math.min(1, Math.abs(remaining)), remaining);
+                    Point point = support(x, previous.y(), footprint, terrain);
+                    double rise = previous.y() - point.y();
+                    if (Math.abs(rise) > Math.abs(x - previous.x()) + 1e-9) {
+                        if (Math.abs(rise) > MAX_STEP_HEIGHT)
+                            throw new Stop(
+                                    SEARCH_EXHAUSTED,
+                                    "STEP_TOO_HIGH: walking steps are limited to " + MAX_STEP_HEIGHT
+                                            + " pixels; no jump or detour is attempted");
+                        // Lift before crossing a riser, or cross a descending edge before lowering.
+                        // Explicit MOVE_TO corners keep playback on the same collision-checked path;
+                        // interpolating diagonally through the riser would cut through solid terrain.
+                        Point corner = rise > 0
+                                ? new Point(previous.x(), point.y())
+                                : new Point(point.x(), previous.y());
+                        if (!clear(corner, footprint, terrain))
+                            throw new Stop(SEARCH_EXHAUSTED, "BLOCKED: insufficient step headroom");
+                        budget.node();
+                        graph.add(corner);
+                    }
+                    if (!clear(point, footprint, terrain))
                         throw new Stop(
                                 SEARCH_EXHAUSTED,
-                                "STEP_TOO_HIGH: walking steps are limited to " + MAX_STEP_HEIGHT
-                                        + " pixels; no jump or detour is attempted");
-                    // Lift before crossing a riser, or cross a descending edge before lowering.
-                    // Explicit MOVE_TO corners keep playback on the same collision-checked path;
-                    // interpolating diagonally through the riser would cut through solid terrain.
-                    Point corner = rise > 0
-                            ? new Point(previous.x(), point.y())
-                            : new Point(point.x(), previous.y());
-                    if (!clear(corner, footprint, terrain))
-                        throw new Stop(SEARCH_EXHAUSTED, "BLOCKED: insufficient step headroom");
-                    budget.node();
-                    graph.add(corner);
+                                "BLOCKED: wall or ceiling intersects the visual footprint");
+                    graph.add(point);
+                    previous = point;
+                    remaining = request.targetX() - point.x();
                 }
-                if (!clear(point, footprint, terrain))
+                if (Math.abs(previous.y() - target.y()) > 1)
                     throw new Stop(
                             SEARCH_EXHAUSTED,
-                            "BLOCKED: wall or ceiling intersects the visual footprint");
-                graph.add(point);
-                previous = point;
-                remaining = request.targetX() - point.x();
+                            "NO_CONTINUOUS_FLOOR: the target is on another floor branch");
+                if (graph.size() == 1 && Math.abs(start.y() - target.y()) > 1e-9) graph.add(target);
+            } catch (Stop stop) {
+                // Simulate only the checked prefix so the editor can show where walking stopped.
+                graphStop = stop;
             }
-            if (Math.abs(previous.y() - target.y()) > 1)
-                throw new Stop(
-                        SEARCH_EXHAUSTED,
-                        "NO_CONTINUOUS_FLOOR: the target is on another floor branch");
-            if (graph.size() == 1 && Math.abs(start.y() - target.y()) > 1e-9) graph.add(target);
             var waypoints = compact(graph);
             var commands = new ArrayList<ObjectCommand>();
-            var path = new ArrayList<StageplayRoutePoint>();
+
             var used = ids(document);
             int frame = request.startFrame(), ordinal = 0;
             Point current = start;
+
             for (int i = 1; i < waypoints.size(); i++) {
                 Point goal = waypoints.get(i);
                 if (current.equals(goal)) continue;
@@ -222,6 +232,11 @@ public final class StageplayObjectRoutePlanner {
                     path.add(new StageplayRoutePoint(frame++, current.x(), current.y(),
                             Math.abs(floor.y() - current.y()) <= 1));
                 }
+            }
+            if (graphStop != null) {
+                if (path.isEmpty()) path.add(initialPoint);
+                return StageplayRouteResult.failure(graphStop.status, graphStop.getMessage(), fingerprint,
+                        request, budget.nodes, budget.ticks, path);
             }
             budget.check();
             if (frame >= end)
@@ -271,13 +286,14 @@ public final class StageplayObjectRoutePlanner {
                     budget.ticks,
                     false);
         } catch (Stop stop) {
+            if (path.isEmpty() && initialPoint != null) path.add(initialPoint);
             return StageplayRouteResult.failure(
                     stop.status,
                     stop.getMessage(),
                     fingerprint,
                     request,
                     budget.nodes,
-                    budget.ticks);
+                    budget.ticks, path);
         } catch (IllegalArgumentException failure) {
             return StageplayRouteResult.failure(
                     UNSUPPORTED,
@@ -285,7 +301,7 @@ public final class StageplayObjectRoutePlanner {
                     fingerprint,
                     request,
                     budget.nodes,
-                    budget.ticks);
+                    budget.ticks, path);
         }
     }
 

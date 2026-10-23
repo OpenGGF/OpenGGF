@@ -56,6 +56,13 @@ public record StageplayRouteResult(
             StageplayRouteRequest request,
             int nodes,
             int ticks) {
+        return failure(status, message, fingerprint, request, nodes, ticks, List.of());
+    }
+
+    /** Observed partial movement only; a failure never carries an applicable patch. */
+    public static StageplayRouteResult failure(
+            Status status, String message, String fingerprint, StageplayRouteRequest request,
+            int nodes, int ticks, List<StageplayRoutePoint> path) {
         return new StageplayRouteResult(
                 status,
                 message,
@@ -64,7 +71,7 @@ public record StageplayRouteResult(
                 null,
                 List.of(),
                 List.of(),
-                List.of(),
+                path,
                 nodes,
                 ticks,
                 false);

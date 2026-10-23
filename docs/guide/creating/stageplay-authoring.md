@@ -503,6 +503,24 @@ a file and failures do not publish a partial scene. Relative assets keep their
 source directory. Existing commands and actors outside the requested patch remain
 unchanged. The helper never inserts position keys or changes an actor's mode.
 
+In both editors, select a cast member and use **Plan collision route**. The transient
+viewport overlay draws the result's observed `path`, never command-to-goal lines:
+cyan grounded segments, gold airborne segments/takeoff chevrons, a start square,
+and a destination diamond. Failed attempts retain their sampled prefix with a red
+terminal cross and the exact diagnostic. Missing samples break the line; a failure
+before observations has no invented start or stop. Search-budget exhaustion is not
+reported as a proven wall or gap. Close the route menu to review before Apply.
+
+The same engine-owned overlay model projects through the evaluated camera
+(including shake, follow, zoom and pan) into each frontend's fitted film rectangle.
+Markers remain screen-sized and clipped to that rectangle. Apply retains the plan
+for the selected actor throughout its shot; player playback adds a white actual-centre
+cross. Other scene edits or asset-root changes hide it. The overlay is separate from
+the canonical document, screenplay, renderer and export/registered playback. It
+neither advances simulation nor persists when a file is reopened. External changes
+to ROM/asset bytes still require replanning; the retained applied line is a reference
+for the accepted attempt, not a fresh certification of modified resources.
+
 Player planning starts at a shot entry in the native world.
 It searches a bounded graph of native
 physics attempts over the actual ROM/authored collision terrain, using the same
