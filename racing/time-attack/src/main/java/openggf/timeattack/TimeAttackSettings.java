@@ -5,10 +5,12 @@ import com.openggf.mods.run.CharacterLooks;
 import com.openggf.net.identity.DisplayNames;
 import com.openggf.net.identity.PlayerAppearance;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.TreeMap;
 
 /**
@@ -22,6 +24,11 @@ import java.util.TreeMap;
  * Without a custom palette a character's body ramp follows the base colour
  * ({@link CharacterLooks#withBaseColour}); see {@link #appearanceFor}.
  *
+ * <p>Custom round-end vote pools are per game: {@code votePool.<game>.<n>=<zone:act>,...|<name>}
+ * (numbered from 1 in the order the owner created them) and the pool hosted rooms use,
+ * {@code votePoolChoice.<game>=<name>} (absent or empty for the game's default pool). See
+ * {@link VotePool}.
+ *
  * <p>Stored as UTF-8 {@code key=value} lines in the mod's private storage file
  * {@value #FILE_NAME}; unknown keys and unreadable values fall back to the defaults.
  */
@@ -33,6 +40,8 @@ public final class TimeAttackSettings {
     public static final int MAX_TEXT_LENGTH = 192;
     /** Most custom palettes kept, so a hand-edited file cannot grow the settings without bound. */
     public static final int MAX_CUSTOM_PALETTES = 64;
+    /** Most custom vote pools kept per game. */
+    public static final int MAX_VOTE_POOLS_PER_GAME = 8;
 
     private int retryKey = com.openggf.mods.scene.SceneKeys.R;
     private int hostPort = DEFAULT_HOST_PORT;
@@ -43,6 +52,8 @@ public final class TimeAttackSettings {
     private boolean minimap = true;
     private int lookBase = PlayerAppearance.NO_BASE_COLOUR;
     private final Map<String, List<PlayerAppearance.Entry>> customPalettes = new TreeMap<>();
+    private final Map<String, List<VotePool>> votePools = new TreeMap<>();
+    private final Map<String, String> votePoolChoices = new TreeMap<>();
     private static final int RETRY_TICKS = 60;
     private String publishedEncoding = encode();
     private boolean publicationConfirmed;
@@ -110,6 +121,7 @@ public final class TimeAttackSettings {
         if (text == null) {
             return settings;
         }
+        Map<String, TreeMap<Integer, VotePool>> storedPools = new TreeMap<>();
         for (String rawLine : text.split("\n", -1)) {
             String line = rawLine.strip();
             int equals = line.indexOf('=');
@@ -143,16 +155,48 @@ public final class TimeAttackSettings {
                 default -> {
                     if (key.startsWith(PALETTE_PREFIX)) {
                         settings.parsePalette(key.substring(PALETTE_PREFIX.length()), value);
+                    } else if (key.startsWith(POOL_PREFIX)) {
+                        parsePool(storedPools, key.substring(POOL_PREFIX.length()), value);
+                    } else if (key.startsWith(POOL_CHOICE_PREFIX)) {
+                        String game = key.substring(POOL_CHOICE_PREFIX.length());
+                        if (validGame(game) && !value.isEmpty()) settings.votePoolChoices.put(game, value);
                     }
                 }
             }
         }
+        storedPools.forEach((game, numbered) -> numbered.values().forEach(pool -> {
+            List<VotePool> pools = settings.votePools.computeIfAbsent(game, ignored -> new ArrayList<>());
+            if (pools.size() < MAX_VOTE_POOLS_PER_GAME && indexOf(pools, pool.name()) < 0) pools.add(pool);
+        }));
+        // A choice naming no stored pool falls back to the default pool.
+        settings.votePoolChoices.entrySet().removeIf(choice ->
+                indexOf(settings.votePools(choice.getKey()), choice.getValue()) < 0);
         settings.publishedEncoding = settings.encode();
         settings.publicationConfirmed = true;
         return settings;
     }
 
     private static final String PALETTE_PREFIX = "lookPalette.";
+    private static final String POOL_PREFIX = "votePool.";
+    private static final String POOL_CHOICE_PREFIX = "votePoolChoice.";
+
+    /** {@code <game>.<n>} = {@code <zone:act>,...|<name>}; malformed or excess entries are dropped. */
+    private static void parsePool(Map<String, TreeMap<Integer, VotePool>> stored, String key, String value) {
+        int dot = key.indexOf('.');
+        int bar = value.indexOf('|');
+        if (dot <= 0 || bar < 0) return;
+        String game = key.substring(0, dot);
+        String number = key.substring(dot + 1);
+        if (!validGame(game) || !number.matches("[0-9]{1,3}")) return;
+        String acts = value.substring(0, bar).strip();
+        try {
+            VotePool pool = new VotePool(value.substring(bar + 1).strip(),
+                    acts.isEmpty() ? List.of() : List.of(acts.split(",", -1)));
+            stored.computeIfAbsent(game, ignored -> new TreeMap<>()).putIfAbsent(Integer.parseInt(number), pool);
+        } catch (IllegalArgumentException ignored) {
+            // an unreadable pool is dropped; hosting falls back to the default pool
+        }
+    }
 
     private void parsePalette(String key, String value) {
         if (!validKey(key) || customPalettes.size() >= MAX_CUSTOM_PALETTES) return;
@@ -176,6 +220,15 @@ public final class TimeAttackSettings {
                 .append("minimap=").append(minimap).append('\n')
                 .append("lookBase=").append(lookBase == PlayerAppearance.NO_BASE_COLOUR ? ""
                         : new PlayerAppearance(lookBase, List.of()).encode()).append('\n');
+        votePools.forEach((game, pools) -> {
+            for (int i = 0; i < pools.size(); i++) {
+                out.append(POOL_PREFIX).append(game).append('.').append(i + 1).append('=')
+                        .append(String.join(",", pools.get(i).acts())).append('|')
+                        .append(pools.get(i).name()).append('\n');
+            }
+        });
+        votePoolChoices.forEach((game, name) ->
+                out.append(POOL_CHOICE_PREFIX).append(game).append('=').append(name).append('\n'));
         customPalettes.forEach((key, entries) -> {
             String encoded = new PlayerAppearance(0, entries).encode();
             out.append(PALETTE_PREFIX).append(key).append('=')
@@ -275,6 +328,86 @@ public final class TimeAttackSettings {
 
     private static boolean validKey(String key) {
         return key.length() <= 40 && key.matches("[a-z0-9]+:[a-z0-9_]+");
+    }
+
+    /** The custom vote pools saved for {@code gameId}, in creation order. */
+    public List<VotePool> votePools(String gameId) {
+        return List.copyOf(votePools.getOrDefault(gameId, List.of()));
+    }
+
+    /** The saved pool of {@code gameId} named {@code name}. */
+    public Optional<VotePool> votePool(String gameId, String name) {
+        List<VotePool> pools = votePools(gameId);
+        int index = indexOf(pools, name);
+        return index < 0 ? Optional.empty() : Optional.of(pools.get(index));
+    }
+
+    /**
+     * Saves {@code pool} for {@code gameId}, replacing the pool named {@code replacing} (null to add
+     * a new one). A renamed pool that rooms were hosted with stays chosen.
+     *
+     * @throws IllegalArgumentException when another pool already has the name, or the game is invalid
+     * @throws IllegalStateException when the game already has {@link #MAX_VOTE_POOLS_PER_GAME} pools
+     */
+    public void putVotePool(String gameId, String replacing, VotePool pool) {
+        Objects.requireNonNull(pool, "pool");
+        if (!validGame(gameId)) throw new IllegalArgumentException("bad game: " + gameId);
+        List<VotePool> pools = votePools.getOrDefault(gameId, new ArrayList<>());
+        int existing = replacing == null ? -1 : indexOf(pools, replacing);
+        int clash = indexOf(pools, pool.name());
+        if (clash >= 0 && clash != existing) {
+            throw new IllegalArgumentException("A pool named " + pool.name() + " already exists");
+        }
+        if (existing >= 0) {
+            pools.set(existing, pool);
+            if (replacing.equals(votePoolChoices.get(gameId))) votePoolChoices.put(gameId, pool.name());
+            return;
+        }
+        if (pools.size() >= MAX_VOTE_POOLS_PER_GAME) {
+            throw new IllegalStateException("At most " + MAX_VOTE_POOLS_PER_GAME + " pools per game");
+        }
+        pools.add(pool);
+        votePools.put(gameId, pools);
+    }
+
+    /** Deletes the pool; a room choice naming it returns to the default pool. */
+    public void removeVotePool(String gameId, String name) {
+        List<VotePool> pools = votePools.get(gameId);
+        int index = pools == null ? -1 : indexOf(pools, name);
+        if (index < 0) return;
+        pools.remove(index);
+        if (pools.isEmpty()) votePools.remove(gameId);
+        if (name.equals(votePoolChoices.get(gameId))) votePoolChoices.remove(gameId);
+    }
+
+    /** The name of the pool hosted rooms of {@code gameId} use, or empty for the default pool. */
+    public String votePoolChoice(String gameId) {
+        return votePoolChoices.getOrDefault(gameId, "");
+    }
+
+    /**
+     * Chooses the pool hosted rooms of {@code gameId} use; null or empty selects the default pool.
+     *
+     * @throws IllegalArgumentException when no saved pool has that name
+     */
+    public void setVotePoolChoice(String gameId, String name) {
+        if (name == null || name.isEmpty()) {
+            votePoolChoices.remove(gameId);
+            return;
+        }
+        if (votePool(gameId, name).isEmpty()) throw new IllegalArgumentException("No pool named " + name);
+        votePoolChoices.put(gameId, name);
+    }
+
+    private static int indexOf(List<VotePool> pools, String name) {
+        for (int i = 0; i < pools.size(); i++) {
+            if (pools.get(i).name().equals(name)) return i;
+        }
+        return -1;
+    }
+
+    private static boolean validGame(String gameId) {
+        return gameId != null && gameId.matches("[a-z0-9]{1,16}");
     }
 
     public String masterUrl() {

@@ -369,6 +369,32 @@ class TestRaceSession {
     }
 
     @Test
+    void anIneligibleVotePoolIsRefusedBeforeAnyRoomStarts() {
+        RaceSession session = session("host", settings(27888), new MemoryModStorage(), new Launches());
+        session.hostLan(new RaceSession.RoundSetup("s2", 0, 0, "sonic", "OPEN", null, 60,
+                List.of("s2:0:1", "s2:7:2", "s2:9:0")), FP);
+        assertEquals(RaceSession.State.IDLE, session.state());
+        assertNull(session.hostServer(), "no room is started for a refused pool");
+        assertEquals("Cannot host: Vote track s2:9:0 is not an act Time Attack can finish",
+                session.consumeNotice());
+    }
+
+    @Test
+    void aVotedActTheCharacterCannotRaceUsesItsFirstPermittedCharacter() {
+        AtomicLong clock = new AtomicLong();
+        Launches launches = new Launches();
+        RaceSession session = session("guest", settings(27888), new MemoryModStorage(), launches, clock::get);
+        FakeConnection connection = new FakeConnection();
+        ControlMessage.RoundConfig skySanctuary = new ControlMessage.RoundConfig("s3k", 10, 0, 60, "OPEN", null);
+        session.enterLobbyForTest(connection, false, skySanctuary, "knuckles");
+        connection.control(new ControlMessage.RoundStart(skySanctuary, 1_000, 100_000));
+        session.poll();
+        assertEquals(List.of("sonic"), launches.specs.stream().map(RunSpec::character).toList(),
+                "Knuckles' route never reaches Sky Sanctuary act 1");
+        assertEquals("KNUCKLES cannot race this act; racing as SONIC", session.consumeNotice());
+    }
+
+    @Test
     void occupiedHostPortFailsWithTheReason() throws Exception {
         try (ServerSocket occupied = new ServerSocket(0)) {
             RaceSession host = session("host", settings(occupied.getLocalPort()), new MemoryModStorage(),

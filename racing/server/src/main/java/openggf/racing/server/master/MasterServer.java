@@ -2,6 +2,7 @@ package openggf.racing.server.master;
 
 import com.openggf.net.host.ConnectionHygiene;
 import openggf.racing.server.master.BundledProfileSource;
+import openggf.timeattack.TimeAttackTrackCatalog;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.Protocol;
 import io.netty.bootstrap.ServerBootstrap;
@@ -137,7 +138,8 @@ public final class MasterServer implements AutoCloseable {
                     config, verificationJobs, verdictConsequences, verifiers);
             RoomBroker broker = new RoomBroker(masterIdentity, config, registry, store,
                     ladder, cache, clock, relays, tunnels,
-                    key -> profileExists(profiles, key), verifiers);
+                    key -> TimeAttackTrackCatalog.isEligibleKey(key) && profileExists(profiles, key),
+                    verifiers);
             ConnectionHygiene.ConnectionCounter counter =
                     new ConnectionHygiene.ConnectionCounter(MAX_CONNECTIONS_PER_IP);
             SslContext ssl = sslContext(config);

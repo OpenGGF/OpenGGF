@@ -25,6 +25,7 @@ import openggf.timeattack.GhostStore;
 import openggf.timeattack.TimeAttackLaunchRequest;
 import openggf.timeattack.TimeAttackRuntime;
 import openggf.timeattack.TimeAttackSettings;
+import openggf.timeattack.TimeAttackTrackCatalog;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -36,6 +37,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -82,13 +84,25 @@ public final class RaceSession implements AutoCloseable {
     /** Where the session is. */
     public enum State { IDLE, CONNECTING, BROWSING, LOBBY, RACING }
 
-    /** The route and rules the menu chose for a hosted room or a master browse. */
+    /**
+     * The route and rules the menu chose for a hosted room or a master browse, with the round-end
+     * vote pool a room created from it carries (validated by {@link VoteTrackPools#rejection}
+     * before any room is created).
+     */
     public record RoundSetup(String gameId, int zone, int act, String character,
-                             String characterPolicy, String lockedCharacter, int windowSeconds) {
+                             String characterPolicy, String lockedCharacter, int windowSeconds,
+                             List<String> voteTrackKeys) {
         public RoundSetup {
             Objects.requireNonNull(gameId, "gameId");
             Objects.requireNonNull(character, "character");
             Objects.requireNonNull(characterPolicy, "characterPolicy");
+            voteTrackKeys = List.copyOf(voteTrackKeys == null ? VoteTrackPools.forGame(gameId) : voteTrackKeys);
+        }
+
+        /** A setup whose rooms vote from the game's default pool. */
+        public RoundSetup(String gameId, int zone, int act, String character,
+                          String characterPolicy, String lockedCharacter, int windowSeconds) {
+            this(gameId, zone, act, character, characterPolicy, lockedCharacter, windowSeconds, null);
         }
     }
 
@@ -164,6 +178,12 @@ public final class RaceSession implements AutoCloseable {
     public void hostLan(RoundSetup setup, String fingerprint) {
         Objects.requireNonNull(setup, "setup");
         leave();
+        Optional<String> rejected = VoteTrackPools.rejection(setup.gameId(), setup.voteTrackKeys(),
+                setup.lockedCharacter());
+        if (rejected.isPresent()) {
+            fail("Cannot host: " + rejected.get());
+            return;
+        }
         int port = settings.hostPort();
         String configuredName = settings.displayName();
         String look = lookSource.apply(setup.gameId(), setup.character()).encode();
@@ -298,6 +318,12 @@ public final class RaceSession implements AutoCloseable {
         MasterClient client = master;
         RoundSetup setup = browseSetup;
         String fingerprint = browseFingerprint;
+        Optional<String> rejected = VoteTrackPools.rejection(setup.gameId(), setup.voteTrackKeys(),
+                setup.lockedCharacter());
+        if (rejected.isPresent()) {
+            notice = "Cannot create the room: " + rejected.get();
+            return;
+        }
         boolean direct = "DIRECT".equals(routing);
         int port = settings.hostPort();
         String configuredName = settings.displayName();
@@ -305,7 +331,7 @@ public final class RaceSession implements AutoCloseable {
         start("Creating room...", State.BROWSING, op -> {
             PlayerIdentity me = identity();
             String name = displayName(me, configuredName);
-            List<String> votePool = VoteTrackPools.forGame(setup.gameId());
+            List<String> votePool = setup.voteTrackKeys();
             JdkRaceHostServer server = !direct ? null : op.own(JdkRaceHostServer.startTls(port,
                     roomConfig(name, setup, fingerprint), me, TrackValidationProfileSource.none()),
                     JdkRaceHostServer::close);
@@ -499,6 +525,14 @@ public final class RaceSession implements AutoCloseable {
         }
         launchedRound = coordinator.roundsStarted();
         String chosen = round.lockedCharacter() != null ? round.lockedCharacter() : character;
+        // A custom pool can vote in an act the player's character does not race (S3K routes
+        // differ by character); that round uses the act's first permitted character.
+        List<String> permitted = TimeAttackTrackCatalog.eligible(round.gameId(), round.zone(), round.act())
+                .map(TimeAttackTrackCatalog.Track::characters).orElse(List.of());
+        if (!permitted.isEmpty() && !permitted.contains(chosen)) {
+            notice = chosen.toUpperCase() + " cannot race this act; racing as " + permitted.getFirst().toUpperCase();
+            chosen = permitted.getFirst();
+        }
         TimeAttackRuntime run = runtimeFactory.get();
         run.armForLaunch(new TimeAttackLaunchRequest(round.gameId(), round.zone(), round.act(), chosen, List.of()));
         if (!run.isActive()) {
@@ -845,7 +879,7 @@ public final class RaceSession implements AutoCloseable {
     private static RoomHostConfig roomConfig(String name, RoundSetup setup, String fingerprint) {
         return new RoomHostConfig(roomName(name), setup.gameId(), setup.zone(), setup.act(),
                 setup.characterPolicy(), setup.lockedCharacter(), Protocol.MAX_PLAYERS_DIRECT, fingerprint,
-                VoteTrackPools.forGame(setup.gameId()));
+                setup.voteTrackKeys());
     }
 
     private static ControlMessage.RoundConfig roundConfigFor(RoundSetup setup) {

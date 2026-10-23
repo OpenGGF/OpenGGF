@@ -178,6 +178,12 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
         if (levelGamestate != null) {
             levelGamestate.pauseTimer();
         }
+        // The game-agnostic act-completion signal marks the same frame for observers such as
+        // Time Attack: the boss act's clock stops here as the signpost act's stops at
+        // Sign_Touch. Not consumed by physics; cleared on level load (resetForLevel()).
+        if (services().gameState() != null) {
+            services().gameState().setActCompletionSignalActive(true);
+        }
 
         // ROM: Pri_Switch (3E Prison Capsule.asm:97) only does clr.b (f_lockscreen).w
         // here — it does NOT touch v_limitleft2/v_limitright2. The camera keeps
