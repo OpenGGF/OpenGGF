@@ -12,6 +12,8 @@ import com.openggf.game.GameServices;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.FieldKey;
 import com.openggf.game.rewind.GenericFieldCapturer;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.audio.smps.Sonic2SmpsLoader;
 import com.openggf.game.sonic2.objects.SuperSonicStarsObjectInstance;
@@ -198,6 +200,7 @@ class TestSonic2SuperTransformationStartEffects {
         assertStarted(fixture);
         var beforeState = old.captureRewindState();
         var entry = capturedEntry(objects(), player);
+        var beforeObjects = objects().rewindSnapshottable().capture();
         var registry = fixture.gameplayMode().getRewindRegistry();
         var saved = registry.capture();
         old.destroy();
@@ -220,6 +223,12 @@ class TestSonic2SuperTransformationStartEffects {
             var restoredEntry = capturedEntry(objects(), player);
             assertEquals(entry.objectId(), restoredEntry.objectId());
             assertEquals(entry.ownerModId(), restoredEntry.ownerModId());
+            assertEquals(entry.playerOwnerId(), restoredEntry.playerOwnerId());
+            assertEquals(entry.rewindableAuxiliary(), restoredEntry.rewindableAuxiliary());
+            var restoredObjects = objects().rewindSnapshottable().capture();
+            assertEquals(beforeObjects.dynamicObjectIdCounter(), restoredObjects.dynamicObjectIdCounter());
+            assertEquals(beforeObjects.dynamicObjects().stream().map(DynamicObjectEntry::objectId).toList(),
+                    restoredObjects.dynamicObjects().stream().map(DynamicObjectEntry::objectId).toList());
             assertNotNull(stars(), "fixed Obj7E at129 remains a separate captured owner");
             assertEquals(0, player.getInvincibleFrames());
             for (int tick = 0; tick < 5; tick++) fixture.stepFrame(false, false, false, false, false);
@@ -254,17 +263,25 @@ class TestSonic2SuperTransformationStartEffects {
         assertNull(fixture.sprite().getInvincibilityObject());
     }
 
-    private static com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry capturedEntry(
-            ObjectManager manager, PlayableEntity owner) {
-        return manager.rewindSnapshottable().capture().dynamicObjects().stream()
-                .filter(entry -> entry.playerOwner() == owner
-                        && entry.className().equals(InvincibilityStarsObjectInstance.class.getName()))
+    private static DynamicObjectEntry capturedEntry(ObjectManager manager, PlayableEntity owner) {
+        var role = manager.captureIdentityContext().requireIdentityTable().encodePlayer(owner);
+        var captured = manager.rewindSnapshottable().capture().dynamicObjects().stream()
+                .filter(entry -> entry.className().equals(InvincibilityStarsObjectInstance.class.getName())
+                        && (role != null ? role.equals(entry.playerOwnerId())
+                                : entry.playerOwnerId() == null && entry.playerOwner() == owner))
                 .findFirst().orElseThrow();
+        if (role != null) assertNull(captured.playerOwner(), "registered owners capture only their role");
+        return captured;
     }
 
-    private static void pending(ObjectManager manager,
-            com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
-        new RewindRecreateContext(entry.spawn(), entry.state(), null, manager, entry)
+    private static void pending(ObjectManager manager, DynamicObjectEntry entry,
+                                RewindIdentityTable sourceIdentities, PlayableEntity expectedOwner) {
+        var preparedOwner = entry.playerOwnerId() == null ? entry.playerOwner()
+                : sourceIdentities.resolvePlayer(entry.playerOwnerId(), true);
+        assertSame(expectedOwner, preparedOwner, "prepare the captured role against its source roster");
+        var prepared = new DynamicObjectEntry(entry.className(), entry.spawn(), entry.slotIndex(), entry.state(),
+                preparedOwner, entry.objectId(), entry.ownerModId(), entry.rewindableAuxiliary(), entry.playerOwnerId());
+        new RewindRecreateContext(prepared.spawn(), prepared.state(), null, manager, prepared)
                 .enqueuePendingPlayerBoundEntry(InvincibilityStarsObjectInstance.class);
     }
 
@@ -280,10 +297,11 @@ class TestSonic2SuperTransformationStartEffects {
         ObjectLifetimeOps.addDynamicAtReservedSlot(objects(), foreign, 140);
         var primaryEntry = capturedEntry(objects(), player);
         var foreignEntry = capturedEntry(objects(), other);
+        var sourceIdentities = objects().captureIdentityContext().requireIdentityTable();
         objects().removeDynamicObject(primary);
         objects().removeDynamicObject(foreign);
-        pending(objects(), foreignEntry);
-        pending(objects(), primaryEntry);
+        pending(objects(), foreignEntry, sourceIdentities, other);
+        pending(objects(), primaryEntry, sourceIdentities, player);
         var unsupported = new DefaultPowerUpSpawner(objects()) {
             @Override public com.openggf.game.PowerUpObject spawnInvincibilityStars(PlayableEntity owner) {
                 fail("an unsupported spawner must never be invoked");
@@ -298,16 +316,22 @@ class TestSonic2SuperTransformationStartEffects {
         assertTrue(objects().getActiveObjects().contains(occupied));
         assertFalse(occupied.isDestroyed());
         objects().removeDynamicObject(occupied);
+        int nextOrdinal = objects().rewindSnapshottable().capture().dynamicObjectIdCounter();
         var restored = assertInstanceOf(InvincibilityStarsObjectInstance.class,
                 PlayerBoundPowerUpRestoreAccess.restoreCapturedInvincibilityStars(objects(), player.getPowerUpSpawner(), player));
         assertEquals(136, restored.getSlotIndex());
         assertSame(player, restored.boundPlayer());
+        assertEquals(primaryEntry.objectId(), objects().objectQuery().identityOf(restored).orElseThrow());
+        assertEquals(primaryEntry.state(), restored.captureRewindState());
         var restoredOther = assertInstanceOf(InvincibilityStarsObjectInstance.class,
                 PlayerBoundPowerUpRestoreAccess.restoreCapturedInvincibilityStars(objects(), player.getPowerUpSpawner(), other));
         assertEquals(140, restoredOther.getSlotIndex(), "the first, other-owner pending entry was not consumed");
         assertSame(other, restoredOther.boundPlayer());
+        assertEquals(foreignEntry.objectId(), objects().objectQuery().identityOf(restoredOther).orElseThrow());
         assertEquals(foreignEntry.state(), restoredOther.captureRewindState());
+        assertEquals(nextOrdinal, objects().rewindSnapshottable().capture().dynamicObjectIdCounter());
         assertNull(PlayerBoundPowerUpRestoreAccess.restoreCapturedInvincibilityStars(objects(), player.getPowerUpSpawner(), player));
+        assertNull(PlayerBoundPowerUpRestoreAccess.restoreCapturedInvincibilityStars(objects(), player.getPowerUpSpawner(), other));
     }
 
     @Test
@@ -318,29 +342,35 @@ class TestSonic2SuperTransformationStartEffects {
         var entry = capturedEntry(objects(), player);
         com.openggf.game.GameModule[] module = {new com.openggf.game.sonic3k.Sonic3kGameModule()};
         boolean[] failConstruction = {false};
+        var constructionFailure = new IllegalStateException("injected native constructor failure");
         var services = new StubObjectServices() {
             @Override public com.openggf.game.GameModule gameModule() { return module[0]; }
             @Override public com.openggf.level.objects.ObjectRenderManager renderManager() {
-                if (failConstruction[0]) throw new IllegalStateException("injected native constructor failure");
+                if (failConstruction[0]) throw constructionFailure;
                 return null;
             }
         };
         var isolated = new ObjectManager(List.of(), null, 0, null, null,
                 GameServices.graphics(), GameServices.camera(), services);
         var stock = new DefaultPowerUpSpawner(isolated);
-        pending(isolated, entry);
+        pending(isolated, entry, objects().captureIdentityContext().requireIdentityTable(), player);
         assertNull(PlayerBoundPowerUpRestoreAccess.restoreCapturedInvincibilityStars(isolated, stock, player),
                 "an S3K/custom factory must not substitute a different concrete class");
         assertTrue(isolated.getActiveObjects().isEmpty());
         module[0] = new Sonic2GameModule();
         failConstruction[0] = true;
-        assertThrows(IllegalStateException.class,
-                () -> PlayerBoundPowerUpRestoreAccess.restoreCapturedInvincibilityStars(isolated, stock, player));
+        assertSame(constructionFailure, assertThrows(IllegalStateException.class,
+                () -> PlayerBoundPowerUpRestoreAccess.restoreCapturedInvincibilityStars(isolated, stock, player)));
         assertTrue(isolated.getActiveObjects().isEmpty());
+        assertEquals(0, isolated.rewindSnapshottable().capture().dynamicObjectIdCounter());
         failConstruction[0] = false;
         var restored = assertInstanceOf(InvincibilityStarsObjectInstance.class,
                 PlayerBoundPowerUpRestoreAccess.restoreCapturedInvincibilityStars(isolated, stock, player));
         assertEquals(entry.state(), restored.captureRewindState());
+        assertEquals(entry.objectId(), isolated.objectQuery().identityOf(restored).orElseThrow());
+        assertEquals(entry.slotIndex(), restored.getSlotIndex());
+        assertSame(player, restored.boundPlayer());
+        assertEquals(0, isolated.rewindSnapshottable().capture().dynamicObjectIdCounter());
         assertNull(PlayerBoundPowerUpRestoreAccess.restoreCapturedInvincibilityStars(isolated, stock, player),
                 "the pending entry survived exactly once, never a fresh-spawn fallback");
         assertEquals(1, isolated.getActiveObjects().size());

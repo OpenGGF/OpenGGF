@@ -66,7 +66,8 @@ Unreleased. The earlier development themes remain in
 - **Sonic 2 player and entry timing:** Super Sonic control runs between movement
   and animation while its palette advances after objects, including hurt and
   death. Transformation stars, timed-invincibility clear and audio requests occur
-  at transform start, and captured normal stars survive Super rewind restoration.
+  at transform start, and captured normal stars survive Super rewind restoration
+  and failed reconstruction retries with their original identity and animation.
   It preserves native balance, reversion animation and invincibility timing, and
   keeps the literal speed, acceleration and deceleration words written by water,
   shoes, Super and Wing Fortress events across rewind, including shoes expiring

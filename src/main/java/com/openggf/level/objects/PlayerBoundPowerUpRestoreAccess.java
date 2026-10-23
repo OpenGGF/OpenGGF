@@ -85,21 +85,22 @@ public final class PlayerBoundPowerUpRestoreAccess {
             return null;
         }
         var captured = manager.consumePendingPlayerBoundEntry(InvincibilityStarsObjectInstance.class,
-                entry -> entry.playerOwner() == owner
+                entry -> entry.playerOwner() == owner && entry.objectId() != null
                         && entry.className().equals(InvincibilityStarsObjectInstance.class.getName()));
         if (captured == null) return null;
+        var pendingReturn = manager.claimPendingPlayerBoundReturn(InvincibilityStarsObjectInstance.class, captured, owner);
         // Never substitute a foreign live SST occupant with the captured graph.
         for (var object : manager.getActiveObjects()) {
             if (object instanceof AbstractObjectInstance occupant
                     && occupant.getSlotIndex() == captured.slotIndex()
                     && !ObjectCallbackDispatch.call(manager, object, object::isDestroyed)) {
-                manager.enqueuePendingPlayerBoundEntry(InvincibilityStarsObjectInstance.class, captured);
+                pendingReturn.returnPending();
                 return null;
             }
         }
         var before = Collections.newSetFromMap(new IdentityHashMap<ObjectInstance, Boolean>());
         before.addAll(manager.getActiveObjects());
-        manager.enqueuePendingPlayerBoundEntry(InvincibilityStarsObjectInstance.class, captured);
+        pendingReturn.returnPending();
         try {
             // The existing trusted path consumes this same owner/class entry,
             // retaining callback owner, identity, slot and captured scalar state.
@@ -107,6 +108,7 @@ public final class PlayerBoundPowerUpRestoreAccess {
             if (!(restored instanceof InvincibilityStarsObjectInstance stars)
                     || stars.getClass() != InvincibilityStarsObjectInstance.class
                     || stars.boundPlayer() != owner || stars.getSlotIndex() != captured.slotIndex()
+                    || !captured.objectId().equals(manager.captureIdentityContext().requireIdentityTable().idFor(stars))
                     || !manager.getActiveObjects().contains(stars)) {
                 throw new IllegalStateException("captured native invincibility owner was not restored");
             }
@@ -115,8 +117,11 @@ public final class PlayerBoundPowerUpRestoreAccess {
             // Construction/registration can fail after consuming the entry.
             // Remove only this attempt's native owner and retain the original
             // pending entry exactly once; callers must not fallback-spawn.
-            manager.consumePendingPlayerBoundEntry(InvincibilityStarsObjectInstance.class, entry -> entry == captured);
-            manager.enqueuePendingPlayerBoundEntry(InvincibilityStarsObjectInstance.class, captured);
+            try {
+                pendingReturn.returnPending();
+            } catch (RuntimeException | Error restitutionFailure) {
+                failure.addSuppressed(restitutionFailure);
+            }
             for (var object : new java.util.ArrayList<>(manager.getActiveObjects())) {
                 if (!before.contains(object) && object.getClass() == InvincibilityStarsObjectInstance.class
                         && object instanceof InvincibilityStarsObjectInstance stars

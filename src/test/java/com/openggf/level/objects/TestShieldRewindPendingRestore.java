@@ -317,6 +317,106 @@ class TestShieldRewindPendingRestore {
         assertSame(entry, manager.consumePendingPlayerBoundEntry(ShieldObjectInstance.class));
     }
 
+    @Test
+    void explicitReturnRestoresOriginalPendingPositionWithoutDuplicatingTheHandoff() {
+        var manager = new ObjectManager(List.of(), null, 0, null, null);
+        var firstOwner = player("sonic");
+        var secondOwner = player("tails");
+        var spawner = new DefaultPowerUpSpawner(manager);
+        spawner.spawnShield(firstOwner, ShieldType.BASIC);
+        spawner.spawnShield(secondOwner, ShieldType.BASIC);
+        var entries = manager.rewindSnapshottable().capture().dynamicObjects();
+        var first = entries.get(0);
+        var second = entries.get(1);
+        manager.enqueuePendingPlayerBoundEntry(ShieldObjectInstance.class, first);
+        manager.enqueuePendingPlayerBoundEntry(ShieldObjectInstance.class, second);
+        assertSame(first, manager.consumePendingPlayerBoundEntry(ShieldObjectInstance.class));
+
+        var pendingReturn = manager.claimPendingPlayerBoundReturn(ShieldObjectInstance.class, first, firstOwner);
+        pendingReturn.returnPending();
+        pendingReturn.returnPending();
+        manager.enqueuePendingPlayerBoundEntry(ShieldObjectInstance.class, first);
+        assertSame(first, manager.consumePendingPlayerBoundEntry(ShieldObjectInstance.class),
+                "the returned first entry must still precede the untouched second entry");
+        assertSame(second, manager.consumePendingPlayerBoundEntry(ShieldObjectInstance.class));
+        manager.enqueuePendingPlayerBoundEntry(ShieldObjectInstance.class, first);
+        assertNull(manager.consumePendingPlayerBoundEntry(ShieldObjectInstance.class),
+                "a successful handoff never reopens generic admission");
+    }
+
+    @Test
+    void explicitReturnRejectsForeignOwnerWrongTypeDistinctSameIdAndRetiredLifetime() {
+        var manager = new ObjectManager(List.of(), null, 0, null, null);
+        var owner = player("sonic");
+        new DefaultPowerUpSpawner(manager).spawnShield(owner, ShieldType.BASIC);
+        var entry = manager.rewindSnapshottable().capture().dynamicObjects().getFirst();
+        manager.enqueuePendingPlayerBoundEntry(ShieldObjectInstance.class, entry);
+        assertSame(entry, manager.consumePendingPlayerBoundEntry(ShieldObjectInstance.class));
+        var copy = new ObjectManagerSnapshot.DynamicObjectEntry(entry.className(), entry.spawn(),
+                entry.slotIndex(), entry.state(), entry.playerOwner(), entry.objectId(), entry.ownerModId(),
+                entry.rewindableAuxiliary(), entry.playerOwnerId());
+        assertThrows(IllegalStateException.class,
+                () -> manager.claimPendingPlayerBoundReturn(ShieldObjectInstance.class, entry, player("sonic")));
+        assertThrows(IllegalStateException.class,
+                () -> manager.claimPendingPlayerBoundReturn(InvincibilityStarsObjectInstance.class, entry, owner));
+        assertThrows(IllegalStateException.class,
+                () -> manager.claimPendingPlayerBoundReturn(ShieldObjectInstance.class, copy, owner));
+        assertNull(manager.consumePendingPlayerBoundEntry(ShieldObjectInstance.class));
+        var pendingReturn = manager.claimPendingPlayerBoundReturn(ShieldObjectInstance.class, entry, owner);
+        pendingReturn.returnPending();
+        assertSame(entry, manager.consumePendingPlayerBoundEntry(ShieldObjectInstance.class));
+
+        manager.reset(0);
+        assertThrows(IllegalStateException.class, pendingReturn::returnPending);
+        manager.enqueuePendingPlayerBoundEntry(ShieldObjectInstance.class, entry);
+        assertSame(entry, manager.consumePendingPlayerBoundEntry(ShieldObjectInstance.class));
+        assertThrows(IllegalStateException.class, pendingReturn::returnPending,
+                "the old claim stays retired even when a new admission reuses the exact captured entry");
+        var currentReturn = manager.claimPendingPlayerBoundReturn(ShieldObjectInstance.class, entry, owner);
+        currentReturn.returnPending();
+        assertSame(entry, manager.consumePendingPlayerBoundEntry(ShieldObjectInstance.class));
+        assertNull(manager.consumePendingPlayerBoundEntry(ShieldObjectInstance.class));
+    }
+
+    @Test
+    void explicitReturnRequiresThePreparedCurrentRegisteredOwnerAndRetainsEveryCapturedField() {
+        var owners = new RegisteredOwners();
+        var old = player("sonic");
+        owners.roster(old);
+        new DefaultPowerUpSpawner(owners.manager).spawnShield(old, ShieldType.BASIC);
+        var entry = owners.manager.rewindSnapshottable().capture().dynamicObjects().getFirst();
+        assertNull(entry.playerOwner());
+        assertEquals(PlayerRefId.mainPlayer(), entry.playerOwnerId());
+        var fresh = player("sonic");
+        owners.roster(fresh);
+        var bindings = new ObjectRewindPlayerBindings();
+        bindings.enqueue(ShieldObjectInstance.class, entry);
+        assertSame(entry, bindings.consume(ShieldObjectInstance.class, ignored -> true));
+        assertThrows(IllegalStateException.class,
+                () -> bindings.claimReturn(ShieldObjectInstance.class, entry, fresh));
+        bindings.clear();
+        var prepared = bindings.prepareEntries(List.of(entry), owners.manager.captureIdentityContext()
+                .requireIdentityTable()).get(entry);
+        assertSame(fresh, prepared.playerOwner());
+        assertEquals(entry.className(), prepared.className());
+        assertEquals(entry.spawn(), prepared.spawn());
+        assertEquals(entry.slotIndex(), prepared.slotIndex());
+        assertSame(entry.state(), prepared.state());
+        assertEquals(entry.objectId(), prepared.objectId());
+        assertEquals(entry.ownerModId(), prepared.ownerModId());
+        assertEquals(entry.rewindableAuxiliary(), prepared.rewindableAuxiliary());
+        assertEquals(entry.playerOwnerId(), prepared.playerOwnerId());
+        bindings.enqueue(ShieldObjectInstance.class, prepared);
+        assertSame(prepared, bindings.consume(ShieldObjectInstance.class, ignored -> true));
+        assertThrows(IllegalStateException.class,
+                () -> bindings.claimReturn(ShieldObjectInstance.class, prepared, old));
+        var pendingReturn = bindings.claimReturn(ShieldObjectInstance.class, prepared, fresh);
+        pendingReturn.returnPending();
+        pendingReturn.returnPending();
+        assertSame(prepared, bindings.consume(ShieldObjectInstance.class, ignored -> true));
+        assertNull(bindings.consume(ShieldObjectInstance.class, ignored -> true));
+    }
+
     private static TestablePlayableSprite player(String code) {
         return new TestablePlayableSprite(code, (short) 100, (short) 200);
     }
