@@ -114,6 +114,11 @@ Unreleased. The earlier development themes remain in
   with `RunHandle.setHudProfile` and align compact overlays using
   `LevelOverlayCanvas.hudOriginX()`, preserving each game's artwork and HUD anchor setting;
   clearing the override or ending the run restores the zone's layout.
+  Time Attack uses it: TIME and RINGS on the top rows with no score or lives, its best
+  time and split under them, and the room panel in the top-right corner. Its progress bar
+  spans the screen with every racer in their colour and in race order, and flashes,
+  shakes and grows a racer's marker while they are hurt (`GhostFrame.hurt`,
+  `PlayerPose.hurt`, carried in the ghost frame's spare flag bit).
   Time Attack has no lives counter and unlimited tries: after a death (skippable
   with jump after half a second) the act reloads at once from its start with no
   title card, then a 3-2-1 countdown over the visible level holds control before a

@@ -17,15 +17,23 @@ public final class HudTextLayout {
     public static final int LINE_HEIGHT = 9;
     /** Rows that show a player's name use the name font's taller line, so any script fits. */
     public static final int NAME_LINE_HEIGHT = NameFont.LINE_HEIGHT;
-    /** Below the run clock's tallest (three-line, 4 + 3 * 9 pixel) panel at y=4, with a three-pixel gap. */
-    public static final int ROOM_TOP = 4 + (4 + 3 * LINE_HEIGHT) + 3;
+    /**
+     * The room panel's top: the top-right corner, now that Time Attack's own clock panel has moved
+     * under the native HUD rows (the game's TIME shows the attempt's clock).
+     */
+    public static final int ROOM_TOP = 4;
+    /**
+     * Native HUD x of its row labels; a left-anchored panel's text lines up with them when the
+     * panel starts {@link #TEXT_INSET} pixels to the left.
+     */
+    public static final int NATIVE_LABEL_X = 16;
     public static final int WHITE = 0xFFF5F8FF;
     public static final int MUTED = 0xFFB9CADC;
     public static final int ACCENT = 0xFF67DDF5;
     public static final int GOLD = 0xFFFFDD67;
     /** Translucent enough to keep the level readable behind the white text. */
     public static final int FILL = 0xC8122032;
-    private static final int TEXT_INSET = 6;
+    public static final int TEXT_INSET = 6;
     private static final int TEXT_TOP = 3;
 
     /**
@@ -88,6 +96,14 @@ public final class HudTextLayout {
         int text = fitted.stream().mapToInt(Line::width).max().orElse(0);
         int width = Math.min(maximum, text + 12);
         return new Panel(viewportWidth - width - 4, top, width,
+                4 + fitted.stream().mapToInt(Line::height).sum(), fitted, accent);
+    }
+
+    /** A panel whose left edge is {@code x}, as wide as its widest line (at most {@code maxWidth}). */
+    public static Panel panelAt(int x, int top, int maxWidth, List<Line> lines, int accent) {
+        List<Line> fitted = lines.stream().map(line -> fit(line, maxWidth - 12)).toList();
+        int text = fitted.stream().mapToInt(Line::width).max().orElse(0);
+        return new Panel(x, top, Math.min(maxWidth, text + 12),
                 4 + fitted.stream().mapToInt(Line::height).sum(), fitted, accent);
     }
 

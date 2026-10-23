@@ -210,6 +210,7 @@ class TestTimeAttackRuntime {
         runtime.armForLaunch(new TimeAttackLaunchRequest("s1", 0, 0, "sonic", java.util.List.of()));
         java.util.List<Integer> times = new java.util.ArrayList<>();
         boolean[] hundredths = {false};
+        com.openggf.level.objects.HudProfile[] profile = {null};
         runtime.attachHandle(new com.openggf.mods.run.RunHandle() {
             @Override public void retry() { }
             @Override public void leave() { }
@@ -217,8 +218,15 @@ class TestTimeAttackRuntime {
             @Override public boolean isActive() { return true; }
             @Override public void setHudTime(int frames) { times.add(frames); }
             @Override public void setHudTimeHundredths(boolean shown) { hundredths[0] = shown; }
+            @Override public void setHudProfile(com.openggf.level.objects.HudProfile p) { profile[0] = p; }
         });
         assertTrue(hundredths[0], "Time Attack asks for 0:00.00");
+        assertEquals(TimeAttackRuntime.hudProfile(), profile[0], "TIME and RINGS on top, score and lives hidden");
+        var rows = profile[0].rows();
+        assertTrue(rows.stream().noneMatch(row -> row.visible() && (row.metric() == com.openggf.level.objects.HudMetric.SCORE
+                || row.metric() == com.openggf.level.objects.HudMetric.LIVES)));
+        assertTrue(rows.stream().anyMatch(row -> row.visible() && row.metric() == com.openggf.level.objects.HudMetric.TIME
+                && row.labelY() == 8));
         runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(runtime.runSpec(), "fp", false, 0, 0, false));
         assertEquals(0, times.getLast(), "a fresh attempt shows 0:00.00");
         assertTrue(runtime.admitStep(NO_KEYS));
