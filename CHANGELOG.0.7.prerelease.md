@@ -653,7 +653,8 @@ Unreleased. The earlier development themes remain in
   sprite priority. The goal fade shows the native Sonic roll tiles on
   Knuckles and keeps Tails' last body tiles; the configured donor art returns on exit.
   Its rotating layout is now displayed with the sprite table of its own frame,
-  behind the player, cage and rewards, and the goal starts its wind-down on the
+  retaining native row-major cell admission and opaque overlap order behind the
+  player, cage and rewards, and the goal starts its wind-down on the
   following frame. The goal fade dims the palette in the native red, green, blue
   steps every third frame before the level reload fades the rest, the capture
   palette cycle uses the correct colour table and changes mode a frame later,

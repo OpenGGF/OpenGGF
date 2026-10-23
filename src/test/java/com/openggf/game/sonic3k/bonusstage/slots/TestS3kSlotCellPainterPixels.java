@@ -20,16 +20,35 @@ import java.util.ArrayList;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.lwjgl.opengl.GL11.*;
 
-/** ROM wall pieces through Slot's actual direct painter, in an owned offscreen context. */
+/** ROM wall pieces through Slot's direct painter and native collection, in an owned offscreen context. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kSlotCellPainterPixels {
     @Test
     void earlierOpaqueBlackCellOccludesLaterBlueAndRenderingIsPassive() throws Exception {
+        assertCellOrderAndPassivity(false);
+    }
+
+    @Test
+    void earlierOpaqueBlackCellWinsDuringNativeCollectionAndCapacityKeepsSourceOrder() throws Exception {
+        assertCellOrderAndPassivity(true);
+    }
+
+    private static void assertCellOrderAndPassivity(boolean collect) throws Exception {
         var saved = TraceReplaySessionBootstrap.snapshotGameplayConfig();
         try (var session = enterSlot()) {
             var level = GameServices.level();
             var camera = GameServices.camera();
             var graphics = GameServices.graphics();
+            var services = level.getObjectManager().getObjectServices();
+            assertInstanceOf(com.openggf.level.objects.DefaultObjectServices.class, services);
+            assertSame(graphics, services.graphicsManager(), "loaded Slot uses the actual captured graphics owner");
+            var wallRenderer = level.getObjectRenderManager().getRenderer(
+                    com.openggf.game.sonic3k.Sonic3kObjectArtKeys.SLOT_COLORED_WALL);
+            var graphicsField = com.openggf.level.render.PatternSpriteRenderer.class.getDeclaredField("graphicsManager");
+            graphicsField.setAccessible(true);
+            assertSame(services.graphicsManager(), graphicsField.get(wallRenderer),
+                    "native collection flag and cached ROM wall renderer share their graphics owner");
+            assertInstanceOf(com.openggf.audio.NullAudioBackend.class, GameServices.audio().getBackend());
             assertFalse(level.getZoneFeatureProvider().useSpriteSatMasking(level.getCurrentZone()),
                     "this regression must exercise the actual Slot non-SAT painter branch");
             assertFalse(graphics.isSpriteSatCollectionActive());
@@ -52,8 +71,8 @@ class TestS3kSlotCellPainterPixels {
             // Relative displacement of retained native SAT13/14: (166,-23) -> (177,-2).
             var earlier = cells(x, y);
             var later = cells(x + 11, y + 21);
-            byte[] earlierPixels = draw(renderer, earlier, graphics);
-            byte[] laterPixels = draw(renderer, later, graphics);
+            byte[] earlierPixels = draw(renderer, earlier, graphics, collect, 0);
+            byte[] laterPixels = draw(renderer, later, graphics, collect, 0);
             var witnesses = new ArrayList<Integer>();
             for (int i = 0; i < earlierPixels.length; i += 4) {
                 if (rgb(earlierPixels, i) == 0 && (rgb(laterPixels, i) & 0xFFFF00) == 0
@@ -63,18 +82,35 @@ class TestS3kSlotCellPainterPixels {
             // Magenta clear survives index zero. A black pixel in earlierPixels is therefore
             // a drawn NONZERO pattern index, not a transparent RGB-black special case.
             var ordered = cells(x, y, x + 11, y + 21);
-            byte[] combined = draw(renderer, ordered, graphics);
+            byte[] combined = draw(renderer, ordered, graphics, collect, 0);
             for (int at : witnesses) assertEquals(0, rgb(combined, at),
                     "earlier native SAT cell must occlude later blue at buffer pixel " + at / 4);
-            assertArrayEquals(combined, draw(renderer, ordered, graphics), "repeat render is identical");
+            assertArrayEquals(combined, draw(renderer, ordered, graphics, collect, 0), "repeat render is identical");
             var reversed = cells(x + 11, y + 21, x, y);
-            byte[] reversePixels = draw(renderer, reversed, graphics);
+            byte[] reversePixels = draw(renderer, reversed, graphics, collect, 0);
             for (int at : witnesses) assertEquals(rgb(laterPixels, at), rgb(reversePixels, at),
                     "swapping native order changes the overlap winner");
             var separated = cells(x, y, x + 64, y);
-            byte[] separatePixels = draw(renderer, separated, graphics);
+            byte[] separatePixels = draw(renderer, separated, graphics, collect, 0);
             assertTrue(coloredPixels(separatePixels) > coloredPixels(earlierPixels),
                     "both non-overlapping ROM cells remain visible");
+            if (collect) {
+                // sub_4B490 (sonic3k.asm:98324-98348) stops at d5 == $50.
+                // Off-raster native entries consume table capacity without touching
+                // the layout's scanlines, pixel budget, or mask state.
+                var wall = level.getObjectRenderManager().getSheet(
+                        com.openggf.game.sonic3k.Sonic3kObjectArtKeys.SLOT_COLORED_WALL);
+                assertEquals(1, wall.getFrame(11).pieces().size(), "one native piece per ROM wall cell");
+                byte[] secondOnly = draw(renderer, cells(x + 64, y), graphics, true, 0);
+                assertArrayEquals(separatePixels, draw(renderer, separated, graphics, true, 78),
+                        "78 preceding entries leave both native layout slots");
+                assertArrayEquals(earlierPixels, draw(renderer, separated, graphics, true, 79),
+                        "entry 80 belongs to the earlier source cell; only the later cell is rejected");
+                assertArrayEquals(secondOnly, draw(renderer, cells(x + 64, y, x, y), graphics, true, 79),
+                        "reversing source order changes which cell receives entry 80");
+                assertEquals(0, coloredPixels(draw(renderer, separated, graphics, true, 80)),
+                        "80 preceding native entries reject all layout pieces");
+            }
             assertEquals(before, CompactFieldCapturer.capture(renderer), "render does not advance animation state");
             assertEquals(2, ordered.size());assertEquals(x, ordered.worldXAt(0));
             assertEquals(x + 11, ordered.worldXAt(1));
@@ -210,10 +246,29 @@ class TestS3kSlotCellPainterPixels {
 
     private static byte[] draw(S3kSlotLayoutRenderer renderer, S3kSlotRenderBuffers.VisibleCells cells,
                                GraphicsManager graphics) {
+        return draw(renderer, cells, graphics, false, 0);
+    }
+
+    private static byte[] draw(S3kSlotLayoutRenderer renderer, S3kSlotRenderBuffers.VisibleCells cells,
+                               GraphicsManager graphics, boolean collect, int precedingEntries) {
         graphics.flush();
         glDisable(GL_DITHER);glClearColor(1, 0, 1, 1);glClear(GL_COLOR_BUFFER_BIT);
         graphics.beginPatternBatch();
-        renderer.renderVisibleCells(cells, GameServices.camera(), GameServices.level().getObjectRenderManager());
+        if (collect) {
+            graphics.beginSpriteSatCollection();
+            var camera = GameServices.camera();
+            for (int i = 0; i < precedingEntries; i++) {
+                graphics.submitSpriteSatControlEntry(camera.getX() + 8, camera.getY() - 32, 1, 1, 0);
+            }
+        }
+        assertEquals(collect, graphics.isSpriteSatCollectionActive());
+        if (collect) {
+            renderer.renderVisibleCells(cells, GameServices.camera(), GameServices.level().getObjectRenderManager(),
+                    graphics.isSpriteSatCollectionActive());
+        } else {
+            renderer.renderVisibleCells(cells, GameServices.camera(), GameServices.level().getObjectRenderManager());
+        }
+        if (collect) graphics.endSpriteSatCollectionAndReplay();
         graphics.flushPatternBatch();graphics.flush();glFinish();
         ByteBuffer buffer = MemoryUtil.memAlloc(320 * 224 * 4);
         try {
