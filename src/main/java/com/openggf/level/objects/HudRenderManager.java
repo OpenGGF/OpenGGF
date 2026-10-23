@@ -80,6 +80,7 @@ public class HudRenderManager {
     }
 
     private HudProfile profile = HudProfile.stock();
+    private HudProfile hostProfile;
     private int viewportWidth = 320;
     private boolean screenLeftAnchorEnabled;
 
@@ -126,8 +127,15 @@ public class HudRenderManager {
         invalidateCache();
     }
 
+    void installHostProfile(HudProfile profile) {
+        if (hostProfile != profile) {
+            hostProfile = profile;
+            invalidateCache();
+        }
+    }
+
     HudProfile currentProfile() {
-        return profile;
+        return hostProfile != null ? hostProfile : profile;
     }
 
     public void setDigitPatternIndex(int digitPatternIndex) {
@@ -253,7 +261,7 @@ public class HudRenderManager {
                 rows = bonusStageRows();
             } else {
                 hudOrigin = nativeOrigin();
-                rows = debugMode ? HudProfile.stock().rows() : profile.rows();
+                rows = debugMode ? HudProfile.stock().rows() : currentProfile().rows();
                 drawOrdinaryRows(rows, levelGamestate, player, debugMode, hudOrigin);
             }
 
@@ -331,7 +339,7 @@ public class HudRenderManager {
     private List<HudRow> bonusStageRows() {
         var rows = new java.util.ArrayList<HudRow>(2);
         rows.add(new HudRow(true, HudLabel.RINGS, HudMetric.RINGS, 16, 8, 64, 8, 3, HudWarningPolicy.ZERO_FLASH));
-        for (HudRow row : profile.rows()) {
+        for (HudRow row : currentProfile().rows()) {
             if (row.visible() && isLivesRow(row)) {
                 rows.add(row);
             }
@@ -346,7 +354,7 @@ public class HudRenderManager {
     List<com.openggf.game.mutators.HudPresentationRuntime.Readout> presentationReadouts() {
         var player = camera.getFocusedSprite();
         boolean debug = player != null && player.isDebugMode();
-        List<HudRow> rows = bonusStageHudLayout ? bonusStageRows() : debug ? HudProfile.stock().rows() : profile.rows();
+        List<HudRow> rows = bonusStageHudLayout ? bonusStageRows() : debug ? HudProfile.stock().rows() : currentProfile().rows();
         var readouts = new java.util.ArrayList<com.openggf.game.mutators.HudPresentationRuntime.Readout>();
         for (int index = 0; index < rows.size(); index++) {
             var row = rows.get(index); if (!row.visible()) continue;
@@ -363,7 +371,8 @@ public class HudRenderManager {
                 maxY = Math.max(maxY, piece.yOffset() + piece.heightTiles() * 8);
             }
             boolean hasLabel = minX != Integer.MAX_VALUE;
-            int valueWidth = debug && row.metric() == HudMetric.SCORE ? 64 : row.maxDigits() * 8;
+            int valueWidth = debug && row.metric() == HudMetric.SCORE ? 64
+                    : row.metric() == HudMetric.TIME ? timeDisplayWidth() : row.maxDigits() * 8;
             int valueHeight = row.metric() == HudMetric.LIVES ? 8 : 16;
             readouts.add(new com.openggf.game.mutators.HudPresentationRuntime.Readout(index,
                     row.labelX() + (hasLabel ? minX : 0), row.labelY() + (hasLabel ? minY : 0),
@@ -651,7 +660,7 @@ public class HudRenderManager {
             int cell = cursor;
             if (packed && separator) {
                 cell = cursor + 2 - separatorInkLeft;
-                cursor += 2 + (separatorInkRight - separatorInkLeft + 1) + 1;
+                cursor += timeSeparatorWidth();
             } else {
                 cursor += 8;
             }
@@ -674,8 +683,21 @@ public class HudRenderManager {
         }
     }
 
+    private int timeSeparatorWidth() {
+        return separatorInkLeft >= 0 ? 2 + (separatorInkRight - separatorInkLeft + 1) + 1 : 8;
+    }
+
+    private int timeDisplayWidth() {
+        return timeHundredths || hostTimeHundredths ? 5 * 8 + 2 * timeSeparatorWidth() : 4 * 8;
+    }
+
     private int nativeOrigin() {
-        int liveWidth = Math.max(viewportWidth, graphicsManager.getProjectionWidth());
+        return nativeOriginX(Math.max(viewportWidth, graphicsManager.getProjectionWidth()));
+    }
+
+    int nativeOriginX(int width) {
+        if (bonusStageHudLayout) return 0;
+        int liveWidth = Math.max(320, width);
         if (screenLeftAnchorEnabled && liveWidth > 320) {
             return 0;
         }

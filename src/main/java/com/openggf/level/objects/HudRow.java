@@ -5,7 +5,8 @@ import java.util.Objects;
 /**
  * Immutable mapping from existing label art and counters to one screen-space HUD row.
  * Numeric metrics use a width from 1 through 9 and saturate into that width.
- * The existing timer renderer has one fixed four-character display width.
+ * TIME requires maxDigits=4 for its ordinary format; the renderer measures its extended
+ * hundredths format using the loaded separator art.
  */
 @com.openggf.game.ModApi
 public record HudRow(boolean visible, HudLabel label, HudMetric metric,

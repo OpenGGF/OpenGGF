@@ -18,6 +18,14 @@ public final class LevelOverlayCanvas implements PixelCanvas {
     }
     public int width() { return width; }
     public int height() { return height; }
+    /**
+     * Screen-space origin of the native HUD's 320-pixel frame at this canvas width,
+     * honouring the live HUD anchor. Add native row offsets to align overlay text.
+     * Without an installed HUD the frame is centered; bonus-stage HUDs use zero.
+     */
+    public int hudOriginX() {
+        return com.openggf.level.objects.HudProfileAccess.nativeOriginX(graphics, width);
+    }
     public void fill(int x, int y, int w, int h, int argb) {
         if (w <= 0 || h <= 0 || (argb >>> 24) == 0) return;
         int left = Math.max(0, x), top = Math.max(0, y);

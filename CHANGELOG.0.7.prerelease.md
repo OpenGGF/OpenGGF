@@ -110,7 +110,10 @@ Unreleased. The earlier development themes remain in
   every game's own HUD digits: `display.hudTimeHundredths` turns it on for normal play,
   and runs can ask for it and show their own clock there (`RunHandle.setHudTime`,
   `setHudTimeHundredths`). Time Attack uses both, so the game's TIME is the attempt's
-  time and the run panel no longer repeats it.
+  time and the run panel no longer repeats it. Hosted runs can also override native HUD rows
+  with `RunHandle.setHudProfile` and align compact overlays using
+  `LevelOverlayCanvas.hudOriginX()`, preserving each game's artwork and HUD anchor setting;
+  clearing the override or ending the run restores the zone's layout.
   Time Attack has no lives counter and unlimited tries: after a death (skippable
   with jump after half a second) the act reloads at once from its start with no
   title card, then a 3-2-1 countdown over the visible level holds control before a

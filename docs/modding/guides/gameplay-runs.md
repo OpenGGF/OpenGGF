@@ -143,6 +143,20 @@ still the stock one, so Super/Hyper cycles still show. Only that sprite changes;
 and objects keep their colours, and the simulation is untouched. `CharacterLooks.withBaseColour`
 builds a look from one colour; `PlayerAppearance.STOCK` restores the stock palette.
 
+`setHudProfile(HudProfile)` overrides the native HUD rows for this run, including on retries
+and death reloads. Pass `null` to restore the current zone's profile; ending the run also
+restores it. The run's lives policy still applies. This changes presentation only: hiding
+SCORE or moving TIME does not change the score, act timer or warning rules. Debug mode
+retains its stock readouts and bonus stages retain their dedicated layout.
+
+For example, a host can hide SCORE and LIVES and move the stock TIME and RINGS rows to
+`y=8` and `y=24`. Keep TIME's `maxDigits=4`: this describes its ordinary format, while the
+renderer measures its extended hundredths format from the loaded separator art.
+`LevelOverlayCanvas.hudOriginX()` returns the native HUD origin in screen coordinates for
+that canvas width, honouring the HUD anchor setting. Add native offsets (such as `16`) to
+align compact overlay text beneath the native rows. With no native HUD installed it returns
+the centered 320-pixel origin; a bonus-stage HUD uses zero.
+
 ## Determinism and fairness
 
 Because runs admit no mod content and record their policy, two players with the same engine
