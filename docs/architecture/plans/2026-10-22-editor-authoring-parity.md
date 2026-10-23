@@ -377,3 +377,64 @@ GLFW/legacy graphics or isolated audio contexts, optional mod fixture JARs,
 InfiniteSonic act prerequisites, a CPZ spin-tube prerequisite and local audio
 references. No required primary-ROM/S3K check skipped. This is bounded smoke plus
 focused recovery, not a green rerun or release/full-suite certification.
+
+### Round four: native editor lifecycle regression (#228)
+
+CI on `109835249` exposed four stale adopt-on-entry assertions in
+`TestEditorToggleIntegration`. The ROM-backed reproduction also exposes real
+lifecycle regressions: the native path retains the parked gameplay stash,
+auto-saves a sidecar on resume, accepts an unsafe cursor, and reuses the authored
+world/level for gameplay. Restoring implicit portable cloning is rejected: it
+would reintroduce the GHZ collision-remap and AIZ camera-domain failures above.
+
+The native-entry tests must instead address the controller's mutable authored
+level, while retaining assertions for independent data/world ownership, runtime
+retirement, rendering without gameplay objects/rings, cursor bounds, visible
+failure, and undo across playtests. Native entry establishes a native save
+baseline; only explicit cloning creates an unsaved portable project document.
+An integration test exercises the actual "Clone native layout as project" menu
+action and preserves the old independent-document assertions there. Native F5
+uses the source act's start rather than nonexistent project metadata. Unsafe
+cursor rejection must preserve actual terrain edits and undo, not merely compare
+two null document references.
+
+The repair gives native authoring a session-owned level and cursor, independent
+of every disposable world. A module-local frozen snapshot supplies a fresh mutable
+copy on each playtest load, with native collision delegation intact; already
+applied module transforms are not applied again. Both project and native runs
+share the existing hosted completion policy. Native runs retain the old full-load
+route: their complete CPU terrain library has no stock S3K fresh-ROM art selection
+token. They do not save on launch, restore a parked stash, or mark edits saved.
+The quit guard also recognizes the authored owner while a detached run is active.
+
+Real-ROM entry/playtest checks for GHZ, EHZ and AIZ rejected an initial attempt to
+reuse portable spawn bounds: GHZ and AIZ starts can lie beyond camera-origin
+maxima while remaining inside terrain. Native validation therefore checks the
+terrain/coordinate domain and body clearance, while portable validation retains
+its explicit authored bounds. Clearance uses the level's collision block resolver,
+including S1 loop remaps. The original ROM-less integration failures and all six
+ROM-dependent cases remain covered; unsafe-cursor rejection no longer needs a ROM.
+
+Round-four final source verification at `109835249` plus the repair passed 122
+focused ROM-backed cases (25 toggle, 17 project/native lifecycle, eight spawn
+validation and 72 architectural guards), with no failures/errors/skips. The
+ROM-less toggle class passed 25 cases with five expected hosted-ROM skips;
+unsafe rejection runs without a ROM. The affected art/runtime/remix/S3K selection
+passed 110 cases without skips, including all 60 required S3K checks. Engine
+shrinks by 42 physical lines; both its method and effective-source budgets pass.
+
+After a reboot interrupted the first category invocation, its incomplete
+seven-batch diagnostics were acknowledged and discarded. The final detached
+`--category tooling --guards --run --max-minutes 150` invocation,
+`20261023T192555Z-075f9b38`, completed all 545 common/tooling candidates in eleven
+ordinary batches plus fresh guards. Ordinary: 3,721 tests, zero failures, two
+errors and seven skips (1,810.91 execution seconds). Guards: 722 tests, zero
+failures/errors/skips (247.78 seconds). Both errors are the identical inherited
+`TraceCaptureBootDimensionsTest` GLFW failures documented above: the same two
+parameterizations and stack head as the matched baseline/current reproducer;
+all three owning files remain unchanged from `695fe0379`. The seven skips are
+two unavailable GLFW readback contexts, two explicit HUD picture opt-ins, one
+native-GL profile and two optional creator-mod fixtures. No required primary-ROM
+case skipped. Every record was inspected and diagnostics acknowledged. This is
+completed bounded smoke coverage with inherited errors, not a green broad run
+or release-only full-suite certification. No unrelated graphics fix was made.

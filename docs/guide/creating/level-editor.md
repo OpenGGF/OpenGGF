@@ -33,7 +33,10 @@ To edit a stock layout, enable `debug.flags.editor`, load the zone/act in
 gameplay, and press `Shift+Tab`. Native editing preserves ROM collision and
 camera semantics, including Sonic 1 loop flags. S3K starts from its complete ROM
 asset library rather than transient intro art; this does not import a running
-cutscene or event phase. Returning from a playtest retains your edits. Save records native edits;
+cutscene or event phase. Native playtests use independent snapshots; returning restores
+your edits and undo history. `F5` starts at the source act's start, while `Shift+Tab`
+starts at a validated cursor. Playtesting does not save native edits or publish a
+gameplay sidecar. Save records native edits;
 leaving for another project or quitting prompts for unsaved changes. Native edit
 files store terrain descriptors and object/ring placements. Palette edits, imported
 art and project settings require a portable project; native palette cells are read-only.
@@ -406,12 +409,14 @@ open; cancelling restores the editor or active playtest.
 
 ## Playtest and return
 
-Choose **Playtest from level start** for the authored start or **Playtest from
-cursor** for a validated cursor position. Cursor launches use the same camera
-bounds and body-clearance checks as the authored start, so the final runway beyond
-Camera maximum X cannot be a launch point. `F5` starts a fresh playtest of the
-current project from its authored start. `Shift+Tab` switches between the editor and its playtest;
-when entering from ordinary gameplay, enable `debug.flags.editor` first.
+For a project, choose **Playtest from level start** for the authored start or
+**Playtest from cursor** for a validated cursor position. Project launches use
+its authored bounds and body-clearance checks, so the final runway beyond Camera
+maximum X cannot be a launch point. Native cursor launches use the loaded terrain
+bounds and native collision mapping; native camera-origin limits do not bound
+player positions. `F5` starts a fresh playtest from the project's authored start
+or the native source act's start. `Shift+Tab` switches between the editor and its
+playtest; when entering from ordinary gameplay, enable `debug.flags.editor` first.
 
 Each playtest builds a fresh runtime snapshot. Rings collected, objects destroyed,
 terrain changed by gameplay, score/timer/checkpoint state, and other runtime

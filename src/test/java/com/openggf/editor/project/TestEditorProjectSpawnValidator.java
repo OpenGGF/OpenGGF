@@ -54,6 +54,32 @@ class TestEditorProjectSpawnValidator {
     }
 
     @Test
+    void nativeCollisionDelegateAlsoControlsPlaytestBodyClearance() {
+        Level nativeLevel = org.mockito.Mockito.spy(level(GameId.S1, 0x3001));
+        Arrays.fill(nativeLevel.getSolidTile(1).heights, (byte) 16);
+        assertTrue(EditorProjectSpawnValidator.insideTerrain(nativeLevel, 8, 8),
+                "Rendered block 0 is solid before selecting the native collision remap");
+        nativeLevel.getBlock(1).setChunkDesc(0, 0, new com.openggf.level.ChunkDesc(0));
+        org.mockito.Mockito.doReturn(1).when(nativeLevel).resolveCollisionBlockIndex(0, 0, 0);
+        assertFalse(EditorProjectSpawnValidator.insideTerrain(nativeLevel, 8, 8),
+                "The native collision remap selects clear block 1 rather than rendered solid block 0");
+        assertFalse(EditorProjectSpawnValidator.insideTerrain(
+                com.openggf.level.MutableLevel.snapshot(nativeLevel), 8, 8));
+    }
+
+    @Test
+    void nativeCameraOriginBoundsDoNotRestrictValidNativePlayerStarts() {
+        Level nativeLevel = org.mockito.Mockito.spy(level(GameId.S1, 0));
+        org.mockito.Mockito.doReturn(32).when(nativeLevel).getMaxY();
+        assertThrows(IllegalArgumentException.class, () -> EditorProjectSpawnValidator.validate(nativeLevel, 64, 64));
+        assertDoesNotThrow(() -> EditorProjectSpawnValidator.validateNative(nativeLevel, 64, 64));
+        int width = nativeLevel.getMap().getWidth() * nativeLevel.getBlockPixelSize();
+        var failure = assertThrows(IllegalArgumentException.class,
+                () -> EditorProjectSpawnValidator.validateNative(nativeLevel, width, 64));
+        assertTrue(failure.getMessage().contains("bounds"));
+    }
+
+    @Test
     void invalidBoundsFailBeforeRuntimeCreation() {
         Level level = level(GameId.S2, 1);
         for (int[] point : new int[][] {{-1, 64}, {64, -1}, {level.getMaxX() + 1, 64}, {64, level.getMaxY() + 1}}) {

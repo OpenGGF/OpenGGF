@@ -299,7 +299,7 @@ class TestEmeraldRemix {
             enter(play, 0, 0);
             play.runner.stepIdleFrames(60);
             Level remix = play.manager.getCurrentLevel();
-            // Shift+Tab from gameplay: EditorProjectWorkspace.adoptLoadedLevel clones the live level.
+            // Explicit "Clone native layout as project": adoptLoadedLevel clones the edited layout.
             int[] start = fixture.resolved.getZoneRegistry().getStartPosition(0, 0);
             var metadata = new EditorProjectMetadata(GameId.S2, "Emerald Hill Act 1", 0, 0, "test", start[0], start[1],
                     remix.getMinX(), remix.getMaxX(), remix.getMinY(), remix.getMaxY(),

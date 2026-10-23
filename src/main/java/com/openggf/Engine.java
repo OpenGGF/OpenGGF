@@ -49,7 +49,6 @@ import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.debug.DebugRenderer;
 import com.openggf.debug.PerformanceProfiler;
 import com.openggf.debug.DebugState;
-import com.openggf.game.ShieldType;
 import com.openggf.level.LevelManager;
 import com.openggf.level.Level;
 import com.openggf.level.MutableLevel;
@@ -180,6 +179,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private GameModule editorProjectRootModule;
 	private GameDataSource editorProjectDataSource;
 	private boolean editorProjectPlaytestActive;
+	private NativeEditorSession nativeEditorSession;
 	private EditorQuitView editorQuitView;
 	private record EditorQuitView(GameMode mode, Camera camera, short x, short y, short renderX, short renderY) { }
 	// Match the rest of the debug overlay — no drop shadow.
@@ -1727,6 +1727,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	/** Clears a game's runtime while retaining the scene that owns a hosted run. */
 	private void resetGameplayRuntime() {
+		nativeEditorSession = null;
 		if (suspendedGame != null) {
 			suspendedGame = null;
 			gameLoop.suspension.discard();
@@ -1885,26 +1886,14 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				showEditorProject(editorProjects.document());
 			} else {
 				var world = SessionManager.getCurrentWorldSession();
-				editorProjectBaseModule = world.getGameModule();
-				editorProjectRootModule = world.rootGameModule();
-				editorProjectDataSource = world.getDataSource();
-				// Native maps retain ROM collision remaps and camera limits. Portable
-				// project cloning is an explicit authoring operation, not editor entry.
-				MutableLevel level = com.openggf.editor.EditorNativeLevelView.prepare(levelManager.getCurrentLevel(),
-						editorProjectBaseModule.getObjectArtProvider());
-				EditorCursorState cursor = new EditorCursorState(playerX, playerY);
-				world.setCurrentLevel(level);
-				SessionManager.enterEditorMode(cursor, stash);
-				gameplayMode = null; gameLoop.setGameplayMode(null);
-				bindEditorLevelView(level, (short) 0,
-						(short) Math.max(0, level.getMap().getWidth() * level.getBlockPixelSize() - camera.getWidth()),
-						(short) 0, (short) Math.max(0, level.getMap().getHeight() * level.getBlockPixelSize() - camera.getHeight()));
-				cacheEditorLevelArt(level);
-				prepareMutableEditorLevel();
-				levelEditorController.setWorldCursor(cursor);
-				primeEditorSelection(playerX, playerY);
-				gameLoop.setGameMode(GameMode.EDITOR);
-				syncEditorState();
+				if (nativeEditorSession == null || !editorProjectPlaytestActive) {
+					editorProjectBaseModule = world.getGameModule();
+					editorProjectRootModule = world.rootGameModule();
+					editorProjectDataSource = world.getDataSource();
+					nativeEditorSession = new NativeEditorSession(world, levelManager.getCurrentLevel(),
+							new EditorCursorState(playerX, playerY));
+				}
+				showNativeEditor();
 			}
 			return;
 		} catch (IOException | RuntimeException failure) {
@@ -1919,29 +1908,58 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			catch (RuntimeException failure) { reportEditorProjectFailure(failure); }
 			return;
 		}
+		startNativeEditorPlaytest(true);
+	}
+
+	private void showNativeEditor() {
 		editorInputHandler.finishPendingEdits();
-		if (!saveCurrentEditorLevel()) {
-			return;
+		if (editorProjectPlaytestActive) {
+			gameLoop.stopEditorHostedRun();
+			editorProjectPlaytestActive = false;
 		}
-		repairEditorCursorForResume();
+		var session = nativeEditorSession;
+		session.openEditorWorld();
+		gameplayMode = null;
+		gameLoop.setGameplayMode(null);
+		var level = session.level();
+		bindEditorLevelView(level, (short) 0,
+				(short) Math.max(0, level.getMap().getWidth() * level.getBlockPixelSize() - camera.getWidth()),
+				(short) 0, (short) Math.max(0, level.getMap().getHeight() * level.getBlockPixelSize() - camera.getHeight()));
+		cacheEditorLevelArt(level);
+		boolean newLevel = levelEditorController.currentLevel() != level;
+		prepareMutableEditorLevel();
+		levelEditorController.setWorldCursor(session.cursor());
+		if (newLevel) primeEditorSelection(session.cursor().x(), session.cursor().y());
+		gameLoop.setGameMode(GameMode.EDITOR);
 		syncEditorState();
-		GameplayModeContext gameplay = SessionManager.resumeGameplayFromEditor();
-		// Build a fresh gameplay mode over the surviving WorldSession, then
-		// rehydrate the loaded level (preserving any MutableLevel mutations
-		// made in editor) via restoreInheritedLevel.
-		initializeGameplayRuntime(gameplay, false);
+	}
+
+	private void startNativeEditorPlaytest(boolean fromCursor) {
+		editorInputHandler.finishPendingEdits();
 		try {
-			gameplay.getLevelManager().restoreInheritedLevel();
-		} catch (IOException e) {
-			throw new RuntimeException("Failed to restore inherited level on editor exit", e);
+			var session = java.util.Objects.requireNonNull(nativeEditorSession, "No native editor level is open");
+			session.setCursor(levelEditorController.worldCursor());
+			// Validate before retiring the editor; rejection preserves its runtime and undo history.
+			var spawn = session.start(fromCursor);
+			var module = session.preparePlaytest();
+			var gameplay = session.openWorld(module);
+			initializeGameplayRuntime(gameplay, false);
+			levelManager.setEditorSaveManager(null);
+			com.openggf.level.LevelSceneActAccess.prepareSpawn(levelManager,
+					java.util.OptionalInt.of(spawn.x()), java.util.OptionalInt.of(spawn.y()));
+			loadEditorHostedPlaytest(gameplay, session.zone(), session.act(), false, reason -> {
+				try { showNativeEditor(); levelEditorController.setStatus("Playtest finished: " + reason); }
+				catch (RuntimeException failure) { reportEditorProjectFailure(failure); }
+			});
+		} catch (IOException | RuntimeException failure) {
+			gameLoop.stopEditorHostedRun();
+			editorProjectPlaytestActive = false;
+			if (nativeEditorSession != null && SessionManager.getCurrentEditorMode() == null) {
+				try { showNativeEditor(); }
+				catch (RuntimeException restoreFailure) { failure.addSuppressed(restoreFailure); }
+			}
+			reportEditorProjectFailure(failure);
 		}
-		// Per the design, editor exit reinitializes gameplay session state as
-		// fresh — score/timer/checkpoint must not carry over from before the
-		// editor detour. (Counters that initializeGameplayRuntime already set —
-		// special-stage progress configuration — stay.)
-		gameplay.initializeFreshGameplayState();
-		applyResumedPlaytestState(gameplay);
-		gameLoop.setGameMode(GameMode.LEVEL);
 	}
 
 	private boolean saveCurrentEditorLevel() {
@@ -1974,8 +1992,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		GameMode mode = editorQuitView == null ? getCurrentGameMode() : editorQuitView.mode();
 		var world = SessionManager.getCurrentWorldSession();
 		var level = levelEditorController.currentLevel();
-		return mode == GameMode.EDITOR && editorProjects.document() == null && world != null
-				&& level != null && world.getCurrentLevel() == level && level.isModifiedSinceLastSave();
+		if (editorProjects.document() != null || level == null) return false;
+		boolean ownedNativeLevel = nativeEditorSession != null && nativeEditorSession.level() == level;
+		boolean editorOwnsWorld = mode == GameMode.EDITOR && world != null && world.getCurrentLevel() == level;
+		return (editorOwnsWorld || ownedNativeLevel && editorProjectPlaytestActive) && level.isModifiedSinceLastSave();
 	}
 
 	/**
@@ -2026,11 +2046,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			catch (RuntimeException failure) { reportEditorProjectFailure(failure); }
 			return;
 		}
-		GameplayModeContext gameplay = SessionManager.restartGameplayFromBeginning();
-		initializeGameplayRuntime(gameplay, false);
-		try { gameplay.getLevelManager().restoreInheritedLevel(); }
-		catch (IOException failure) { throw new IllegalStateException("Unable to restart the edited act", failure); }
-		gameLoop.setGameMode(GameMode.LEVEL);
+		startNativeEditorPlaytest(false);
 	}
 
 	private GameModule selectEditorProjectGame(GameId game) throws IOException {
@@ -2108,6 +2124,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		shownEditorProject = document;
 		gameLoop.setGameMode(GameMode.EDITOR);
 		syncEditorState();
+		nativeEditorSession = null;
 	}
 
 	private void cacheEditorLevelArt(Level level) {
@@ -2139,22 +2156,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		var gameplay = SessionManager.openGameplaySession(editorProjectRootModule, module, editorProjectDataSource, module.launchContext());
 		initializeGameplayRuntime(gameplay, false);
 		levelManager.setEditorSaveManager(null);
-		var policy = new com.openggf.game.session.GameplayRunPolicy(false, false,
-				com.openggf.game.session.GameplayRunPolicy.ActCompletion.RETURN_TO_HOST, true, true,
-				com.openggf.game.session.GameplayRunPolicy.DeathRestart.STOCK, true, true);
-		gameplay.beginGameplayRun(policy, 0, 0);
-		gameLoop.beginHostedRun(new com.openggf.mods.run.RunSpec(module.getGameId().code(), 0, 0,
-				configService.getString(SonicConfiguration.MAIN_CHARACTER_CODE), policy), new com.openggf.mods.run.RunHost() {},
-				reason -> {
-					editorProjectPlaytestActive = false;
-					try { showEditorProject(document); levelEditorController.setStatus("Playtest finished: " + reason); }
-					catch (IOException | RuntimeException failure) { reportEditorProjectFailure(failure); }
-				});
-			levelManager.loadZoneAndActForFreshRuntime(0, 0);
-			gameplay.initializeFreshGameplayState();
-			editorProjectPlaytestActive = true;
-			gameLoop.announceHostedRunLevelReady(false);
-			gameLoop.setGameMode(GameMode.LEVEL);
+		loadEditorHostedPlaytest(gameplay, 0, 0, true, reason -> {
+				try { showEditorProject(document); levelEditorController.setStatus("Playtest finished: " + reason); }
+				catch (IOException | RuntimeException failure) { reportEditorProjectFailure(failure); }
+			});
 		} catch (IOException | RuntimeException failure) {
 			gameLoop.stopEditorHostedRun();
 			editorProjectPlaytestActive = false;
@@ -2162,6 +2167,26 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			catch (IOException | RuntimeException restoreFailure) { failure.addSuppressed(restoreFailure); }
 			throw failure;
 		}
+	}
+
+	private void loadEditorHostedPlaytest(GameplayModeContext gameplay, int zone, int act, boolean queueFreshRuntimeArt,
+			java.util.function.Consumer<com.openggf.mods.run.RunEndReason> returnToEditor) throws IOException {
+		var module = gameplay.getWorldSession().getGameModule();
+		var policy = new com.openggf.game.session.GameplayRunPolicy(false, false,
+				com.openggf.game.session.GameplayRunPolicy.ActCompletion.RETURN_TO_HOST, true, true,
+				com.openggf.game.session.GameplayRunPolicy.DeathRestart.STOCK, true, true);
+		gameplay.beginGameplayRun(policy, zone, act);
+		gameLoop.beginHostedRun(new com.openggf.mods.run.RunSpec(module.getGameId().code(), zone, act,
+				configService.getString(SonicConfiguration.MAIN_CHARACTER_CODE), policy), new com.openggf.mods.run.RunHost() {},
+				reason -> { editorProjectPlaytestActive = false; returnToEditor.accept(reason); });
+		// A native authoring snapshot already owns its complete terrain library;
+		// it has no stock ROM load-selection token for a second terrain-art queue.
+		if (queueFreshRuntimeArt) levelManager.loadZoneAndActForFreshRuntime(zone, act);
+		else levelManager.loadZoneAndAct(zone, act);
+		gameplay.initializeFreshGameplayState();
+		editorProjectPlaytestActive = true;
+		gameLoop.announceHostedRunLevelReady(false);
+		gameLoop.setGameMode(GameMode.LEVEL);
 	}
 
 	private void reportEditorProjectFailure(Throwable failure) {
@@ -2872,35 +2897,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		camera.setY((short) Math.clamp(y, 0, maxY));
 	}
 
-	private void repairEditorCursorForResume() {
-		EditorModeContext editorMode = SessionManager.getCurrentEditorMode();
-		if (editorMode == null) {
-			return;
-		}
-
-		EditorCursorState repaired = clampCursorToCurrentLevel(levelEditorController.worldCursor());
-		levelEditorController.setWorldCursor(repaired);
-		editorMode.setCursor(levelEditorController.worldCursor());
-	}
-
-	private EditorCursorState clampCursorToCurrentLevel(EditorCursorState cursor) {
-		if (cursor == null || levelManager == null || levelManager.getCurrentLevel() == null) {
-			return cursor;
-		}
-
-		Level level = levelManager.getCurrentLevel();
-		return new EditorCursorState(
-				clampToBounds(cursor.x(), level.getMinX(), level.getMaxX()),
-				clampToBounds(cursor.y(), level.getMinY(), level.getMaxY()));
-	}
-
-	private int clampToBounds(int value, int min, int max) {
-		if (max < min) {
-			return value < min ? min : value;
-		}
-		return Math.max(min, Math.min(max, value));
-	}
-
 	private short clampCameraAxisWithWrap(int value, short min, short max) {
 		if (max < min) {
 			return (short) (value < min ? min : value);
@@ -2912,44 +2908,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			return max;
 		}
 		return (short) value;
-	}
-
-	private void applyResumedPlaytestState(GameplayModeContext gameplay) {
-		AbstractPlayableSprite player = resolveMainPlayableSprite();
-		if (player == null) {
-			return;
-		}
-
-		player.setCentreX((short) gameplay.getSpawnX());
-		player.setCentreY((short) gameplay.getSpawnY());
-
-		if (gameplay.getResumeStash().isPresent()) {
-			EditorPlaytestStash stash = gameplay.getResumeStash().orElseThrow();
-			player.setXSpeed((short) stash.xVelocity());
-			player.setYSpeed((short) stash.yVelocity());
-			player.setDirection(stash.facingRight() ? Direction.RIGHT : Direction.LEFT);
-			player.setRingCount(stash.rings());
-			player.clearPowerUps();
-			ShieldType shieldType = decodeShieldState(stash.shieldState());
-			if (shieldType != null) {
-				player.giveShield(shieldType);
-			}
-		}
-
-		camera.setFocusedSprite(player);
-		camera.updatePosition(true);
-	}
-
-	private ShieldType decodeShieldState(int shieldState) {
-		if (shieldState <= 0) {
-			return null;
-		}
-		ShieldType[] values = ShieldType.values();
-		int index = shieldState - 1;
-		if (index < 0 || index >= values.length) {
-			return null;
-		}
-		return values[index];
 	}
 
 	private void reshape(int width, int height) {

@@ -78,6 +78,38 @@ class TestEditorProjectLifecycle {
         GameModuleRegistry.reset();
     }
 
+    @ParameterizedTest(name = "{0}: native entry, isolated playtest and undo use real ROM geometry")
+    @EnumSource(value = GameId.class, names = {"S1", "S2", "S3K"})
+    void nativeRomEntryPlaytestAndReturnPreserveEditsAndUndo(GameId game) throws Exception {
+        start(game);
+        var source = GameServices.level().getCurrentLevel();
+        int[] start = fixture.module.getZoneRegistry().getStartPosition(0, 0);
+        engine.enterEditorFromCurrentPlayer(null, start[0], start[1]);
+        assertEquals(GameMode.EDITOR, engine.getCurrentGameMode(), engine.getLevelEditorController().statusText());
+        assertNull(engine.getEditorProjectWorkspace().document());
+        var controller = engine.getLevelEditorController();
+        var authored = controller.currentLevel();
+        int x = authored.getMap().getWidth() - 1, y = authored.getMap().getHeight() - 1;
+        int before = Byte.toUnsignedInt(authored.getMap().getValue(0, x, y));
+        int edited = before == 0 ? 1 : 0;
+        controller.placeBlock(0, x, y, edited);
+        engine.startGameplayFromBeginning();
+        assertEquals(GameMode.LEVEL, engine.getCurrentGameMode(), controller.statusText());
+        var runtime = GameServices.level().getCurrentLevel();
+        assertNotSame(source, runtime);
+        assertNotSame(authored, runtime);
+        assertEquals(edited, Byte.toUnsignedInt(runtime.getMap().getValue(0, x, y)));
+        runtime.getMap().setValue(0, x, y, (byte) before);
+        assertEquals(edited, Byte.toUnsignedInt(authored.getMap().getValue(0, x, y)));
+        engine.toggleEditorPlaytestMode();
+        assertEquals(GameMode.EDITOR, engine.getCurrentGameMode(), controller.statusText());
+        assertSame(authored, controller.currentLevel());
+        controller.undo();
+        assertEquals(before, Byte.toUnsignedInt(authored.getMap().getValue(0, x, y)));
+        assertFalse(java.nio.file.Files.exists(new EditorSaveManager(temporary.resolve("legacy-sidecars"))
+                .editPath(game, 0, 0)));
+    }
+
     @ParameterizedTest(name = "{0}: create, author, save, reopen, clone and export to its native host")
     @EnumSource(value = GameId.class, names = {"S1", "S2", "S3K"})
     void romLibraryProjectRoundTripsAndExportLoadsInSelectedHost(GameId game) throws Exception {

@@ -224,7 +224,8 @@ Unreleased. The earlier development themes remain in
   Atomic saves retain placements and missing dependency records; close and quit
   protect unsaved work. Start/cursor
   playtests use fresh native runtime snapshots and return to the authored
-  document with selection and undo history. Host-validated exports support
+  level with selection and undo history, including native in-place editing without
+  automatically publishing gameplay sidecars. Host-validated exports support
   S1/S2 v1 and S3K v2, including a host-owned native results goal in every game. Title Tools and
   the editor menu expose creation, import, properties, resizing and
   Save As; pattern browsing, descriptor controls, local collision edits, erase
