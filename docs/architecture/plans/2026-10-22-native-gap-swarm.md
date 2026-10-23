@@ -2216,3 +2216,88 @@ Completed commands from the isolated owner worktree, with machine-local paths re
 env -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH -u LIBGL_DRIVERS_PATH -u LIBGL_ALWAYS_SOFTWARE -u MESA_LOADER_DRIVER_OVERRIDE JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless python3 "$QUEUE" --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dsonic1.rom.path=$S1_ROM" '-Dtest=TestSonic1ResultsNativeWaitBoundary,TestNativeLevelExitInternalAccess,TestPlcObjectOwnedFadeLifecycle,TestSonic1PaletteFadePlayerArtService,TestSonic1ResultsPlcReadiness,TestSonic1LevelLoadPlayerArtReadiness,TestPlcFrameLifecycleCoordinator,TestObjectServicesExpansion,TestLevelMutatorRuntime,TestModApiSignatureSurface' test -B
 env -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH -u LIBGL_DRIVERS_PATH -u LIBGL_ALWAYS_SOFTWARE -u MESA_LOADER_DRIVER_OVERRIDE JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless python3 "$QUEUE" -Dmse=off -Pguards '-Dtest=TestArchitecturalSourceGuard,TestArchUnitRules,TestRewindArchitectureGuard,TestRewindFieldDispositionGuard' test -B
 ```
+
+
+### S1 special-stage entry: palette-phase ownership (2026-10-23)
+
+A new isolated source step starts from common `659b02c98`; the separate native
+Results exit-owner leaf `3e1c88d76` remains held and is not silently included.
+The actual S1 provider previously reported `SPECIAL_STAGE` throughout both
+entry fades. Native `PaletteWhiteOut` and `PaletteWhiteIn` each arm
+`id_VBlank_PaletteFade` before their 22 waits (`_inc/Palette Fading.asm`,
+`PaletteWhiteIn`:228-233 and `PaletteWhiteOut`:318-322 at pinned `28872a46`).
+That handler omits Sonic's staged-buffer DMA. This is a production caller-phase
+correction, with no fixture timing input or gameplay hydration.
+
+The old-source focused request executed seven identities: five controls passed,
+two new cases failed, with zero errors/skips. One actual GameLoop entry stepped
+both native fade halves; all 44 provider phase observations were incorrectly
+`SPECIAL_STAGE`, and its independently ROM-staged player preparation had been
+consumed from the first row. A separate component reproduced a double
+`prepareAfterLoop` when the external scan requested the same `PALETTE_FADE`
+phase already owned and prepared by the blocking-fade wrapper. Queue wait was
+132s and Maven was 1:37. Both XMLs, identities, Java 25.0.5/EGL/S1 ROM/cwd
+properties, streams and source pins were inspected. No observation/native
+capture or route was run.
+
+The candidate derives its phase from the existing S1 startup hold; no new
+counter, snapshot or exported shape is added. The shared external scan prepares
+its loop tail only when its own `claim` succeeds. A losing scan retains the
+existing body and hardware-boundary traversal while leaving the previous
+owner's preparation intact. Direct duplicate preparation still throws. The
+candidate test additionally checks unchanged transfer/edge counters, retaining
+the complete gap journal rather than filtering expected events.
+
+The first candidate request ran 156 distinct identities across 18 XMLs: 155
+passed and one existing title-card parity case errored, with zero failures or
+skips (queue 757s, Maven 1:38). The locked title caller already claims its token
+before querying the provider; the claimed-only external scan therefore omitted
+that caller's required preparation. This is a real candidate regression, not a
+waived baseline error. The actual 44-tick entry, ordering and S3K keeper cases
+passed at that source. All properties, streams and exact source pins were read;
+the inherited mapping warning and unmeasured KOS estimate are not native-cost
+evidence.
+
+The correction leaves the shared scan's claim rule intact and gives the title
+caller its own tail immediately after the hardware scan, using the exact passed
+token. Service, provider-query and hardware-boundary order remain unchanged;
+there is no phase exception, idempotent preparation or new public API. An
+independent read-only caller audit found no other same-phase preclaim among
+the external scan's actual callers. The prospectively allocated correction
+request 97408 passed all 69 distinct identities across 12 XML suites, with zero
+failures/errors/skips (queue 904s, Maven 1:32). This includes the previously
+failing locked-title caller, all 44 actual S1 entry ticks, duplicate-preparation
+discrimination, title-card physics/object execution, and affected S3K title
+callers. Exact source pins, Java 25.0.5/EGL/cwd/three absolute original ROM
+properties, streams and absence of dumps were inspected.
+
+Fresh guard request 35526 passed 105 distinct identities across three XML
+suites, with zero failures/errors/skips (queue 806s, Maven 40.876s): all 72
+architectural source checks, 32 ArchUnit checks and the field-disposition
+guard. The latter still reports 23 inherited gap rows and 41 baseline closure
+notices; no budget, pin, baseline or ratchet was changed. The tested staged
+source/documentation diff was
+`69f66f9d3c41259f72eeed34d23ddbf829f16e383e8e85204b85f169a46bb0d6`
+through both completed requests; only this factual evidence append follows.
+The inherited mapping warning and unmeasured KOS fingerprints remain outside
+native-cost qualification.
+
+Both requests used the current queue wrapper from the isolated worktree,
+`--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl test -B`, explicit
+JDK 25/Lua 5.4/null-audio/surfaceless EGL environment, unset Java launcher and
+display variables, and absolute original ROM properties. Reproduce with
+`python3 "$QUEUE" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+"-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM"
+"-Ds3k.rom.path=$S3K_ROM" "-Dtest=$S1_ENTRY_AFFECTED" test -B`, where
+`S1_ENTRY_AFFECTED` is exactly
+`TestPlcVBlankOrdering,TestSonic1SpecialStageEntryPlcBoundary,TestPlcFrameLifecycleCoordinator,TestPlcLifecycleDriverParity,TestGameLoopTitleCardLifecycle,TestGameLoopTitleCardPause,TestS3kFreshTitleCardLevelFadeIn,TestS3kHeadlessInLevelTitleCardProgression,TestS3kFreshTitleCardSstGraph,TestS3kTitleCardVintPublication,TestTitleCardPhysicsPolicy,TestTitleCardObjectExecution`.
+The separate guard command uses the same wrapper/environment and
+`-Pguards -Dtest=TestArchitecturalSourceGuard,TestArchUnitRules,TestRewindFieldDispositionGuard`.
+These are bounded component checks; the common smoke remains on unchanged
+`659b02c98`, and this leaf is held outside that source freeze. Main integration,
+push, provider activation and passive observations remain closed.
+
+The independent GM_Special setup clear, pre-init residue,
+setup/reveal offset, recorder carried-prefix versus whole-batch closure,
+last-row stamps and terminal art producers remain open. This step stops before
+the first active stage VBlank and does not claim those contracts closed.
