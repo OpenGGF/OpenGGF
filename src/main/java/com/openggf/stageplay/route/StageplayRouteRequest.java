@@ -12,13 +12,20 @@ public record StageplayRouteRequest(
         int maxMillis,
         double urgency,
         StageplayRouteFootprint footprint,
-        double objectSpeed) {
+        double objectSpeed, com.openggf.stageplay.StageplayDocument.RouteMotion motion) {
+    public StageplayRouteRequest(String actorId, int startFrame, double targetX, double targetY,
+            int maxFrames, int maxNodes, int maxTicks, int maxMillis, double urgency,
+            StageplayRouteFootprint footprint, double objectSpeed) {
+        this(actorId, startFrame, targetX, targetY, maxFrames, maxNodes, maxTicks, maxMillis,
+                urgency, footprint, objectSpeed, com.openggf.stageplay.StageplayDocument.RouteMotion.DEFAULT);
+    }
     public StageplayRouteRequest(
             String actorId, int startFrame, double targetX, double targetY, int maxFrames) {
         this(actorId, startFrame, targetX, targetY, maxFrames, 1024, 120_000, 60_000, 1, null, 1);
     }
 
     public StageplayRouteRequest {
+        java.util.Objects.requireNonNull(motion, "motion");
         if (actorId == null || !actorId.matches("[A-Za-z0-9][A-Za-z0-9._-]{0,63}"))
             throw new IllegalArgumentException("Route actorId must be a portable actor identity");
         if (startFrame < 0

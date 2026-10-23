@@ -577,3 +577,16 @@ Planning does not borrow the active gameplay session, preview worker or audio ow
 Evaluated cameras, including authored keys, follow offsets, shake and paused director
 drafts, clamp to the loaded level camera envelope at the current viewport and zoom.
 Keys retain their authored values. Both editors display the resolved framing.
+
+
+### Route motion settings
+
+A planned playable route stores its `motion` on its MOVE_TO command in canonical
+v7 documents and screenplay v6 actions. The object mover is unchanged. The four
+fields are `startingAction` (WALK/JUMP/SPINDASH), `travelSpeed` (WALK/RUN),
+`endingAction` (GENTLE_STOP/HARD_STOP/OVERSHOOT) and `endingFacing`
+(INHERIT/LEFT/RIGHT). Planned defaults are WALK/WALK/GENTLE_STOP/INHERIT.
+Ordinary action defaults retain native-speed, hard-stop steering. Actor-declared
+movement abilities are intersected with donor support; unsupported spindash must
+be rejected rather than simulated by a pose or velocity write. These unpublished
+formats change directly, without a migration path.

@@ -496,24 +496,48 @@ public record StageplayDocument(int version, String name, int durationFrames, in
     }
 
     /** Native input intent. WAIT gates subsequent due commands until success or a bounded timeout. */
+    /** Per-route directing policy; all motion is produced by native controller inputs. */
+    @ModApi public record RouteMotion(StartAction startingAction, TravelSpeed travelSpeed,
+                                     EndingAction endingAction, EndingFacing endingFacing) {
+        public static final RouteMotion DEFAULT = new RouteMotion(StartAction.WALK, TravelSpeed.WALK,
+                EndingAction.GENTLE_STOP, EndingFacing.INHERIT);
+        /** Ordinary hand-authored intents retain their native-speed countersteering semantics. */
+        public static final RouteMotion NATIVE = new RouteMotion(StartAction.WALK, TravelSpeed.RUN,
+                EndingAction.HARD_STOP, EndingFacing.INHERIT);
+        public RouteMotion {
+            require(startingAction != null && travelSpeed != null && endingAction != null && endingFacing != null,
+                    "Route motion settings are required");
+        }
+    }
+    @ModApi public enum StartAction { WALK, JUMP, SPINDASH }
+    @ModApi public enum TravelSpeed { WALK, RUN }
+    @ModApi public enum EndingAction { GENTLE_STOP, HARD_STOP, OVERSHOOT }
+    @ModApi public enum EndingFacing { INHERIT, LEFT, RIGHT }
+
     @ModApi
     public record PuppetCommand(String id, int frame, PuppetCommandKind kind, double x, double y,
                                 double urgency, int holdFrames, ObjectTarget target,
-                                WaitCondition condition, int timeoutFrames) {
+                                WaitCondition condition, int timeoutFrames, RouteMotion motion) {
         public PuppetCommand(String id, int frame, PuppetCommandKind kind, double x, double y,
                              double urgency, int holdFrames) {
-            this(id, frame, kind, x, y, urgency, holdFrames, ObjectTarget.none(), WaitCondition.NONE, 0);
+            this(id, frame, kind, x, y, urgency, holdFrames, ObjectTarget.none(), WaitCondition.NONE, 0, RouteMotion.NATIVE);
+        }
+        public PuppetCommand(String id, int frame, PuppetCommandKind kind, double x, double y,
+                             double urgency, int holdFrames, ObjectTarget target,
+                             WaitCondition condition, int timeoutFrames) {
+            this(id, frame, kind, x, y, urgency, holdFrames, target, condition, timeoutFrames, RouteMotion.NATIVE);
         }
         public PuppetCommand {
             id = identifier(id);
             range(frame, 0, MAX_DURATION_FRAMES - 1, "puppet command frame");
-            require(kind != null && target != null && condition != null, "Puppet intent fields are required");
+            require(kind != null && target != null && condition != null && motion != null, "Puppet intent fields are required");
             coordinate(x, "puppet destination x"); coordinate(y, "puppet destination y");
             finiteRange(urgency, 0, 1, "puppet urgency");
             range(timeoutFrames, 0, MAX_DURATION_FRAMES, "timeoutFrames");
             boolean movement = kind == PuppetCommandKind.MOVE_TO || kind == PuppetCommandKind.FLY_TO
                     || kind == PuppetCommandKind.GLIDE_TO;
-            if (movement) require(urgency > 0 && holdFrames == 0, "Movement requires urgency and no hold");
+            if (kind == PuppetCommandKind.SPINDASH) require(urgency > 0 && holdFrames == 24, "Spindash uses the fixed 24-tick charge");
+            else if (movement) require(urgency > 0 && holdFrames == 0, "Movement requires urgency and no hold");
             else {
                 require(x == 0 && y == 0 && urgency == 0, "Only movement has a destination and urgency");
                 if (kind == PuppetCommandKind.JUMP) range(holdFrames, 1, 60, "jump hold frames");
@@ -543,7 +567,7 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         public static ObjectTarget none() { return new ObjectTarget(-1, 0, 0, 0, 0); }
     }
     @ModApi public enum WaitCondition { NONE, ARRIVED, ON_OBJECT, GROUNDED, AIRBORNE, HURT, RECOVERED, RING_COLLECTED, TARGET_AVAILABLE }
-    @ModApi public enum PuppetCommandKind { MOVE_TO, STOP, JUMP, WAIT, FLY_TO, HOVER, GLIDE_TO, RELEASE, CROUCH, LOOK_UP, ROLL }
+    @ModApi public enum PuppetCommandKind { MOVE_TO, STOP, JUMP, WAIT, FLY_TO, HOVER, GLIDE_TO, RELEASE, CROUCH, LOOK_UP, ROLL, SPINDASH, FACE_LEFT, FACE_RIGHT }
 
     /** Following uses real actor positions; camera keys add authored framing-centre offsets. */
     @ModApi

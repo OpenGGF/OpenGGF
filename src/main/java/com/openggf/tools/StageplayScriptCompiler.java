@@ -539,18 +539,18 @@ public final class StageplayScriptCompiler {
                                         "holdFrames",
                                         "target",
                                         "condition",
-                                        "timeoutFrames")
+                                        "timeoutFrames", "motion")
                                 .deepCopy();
                 int frame = integer(command, "frame", -1);
                 if (frame < previous || frame < 0 || frame >= duration)
                     throw new IOException("Puppet actions must ascend within their shot");
                 previous = frame;
                 String kind = text(command, "kind");
-                if (kind.equals("MOVE_TO") || kind.equals("FLY_TO") || kind.equals("GLIDE_TO")) {
+                if (kind.equals("MOVE_TO") || kind.equals("FLY_TO") || kind.equals("GLIDE_TO") || kind.equals("SPINDASH")) {
                     required(command, "x");
                     required(command, "y");
                     defaults(command, "urgency", 0.5);
-                    defaults(command, "holdFrames", 0);
+                    defaults(command, "holdFrames", kind.equals("SPINDASH") ? 24 : 0);
                 } else {
                     defaults(command, "x", 0);
                     defaults(command, "y", 0);
@@ -560,6 +560,7 @@ public final class StageplayScriptCompiler {
                 defaults(command, "target", StageplayDocument.ObjectTarget.none());
                 defaults(command, "condition", "NONE");
                 defaults(command, "timeoutFrames", 0);
+                defaults(command, "motion", StageplayDocument.RouteMotion.NATIVE);
                 if (kind.equals("JUMP") && integer(command, "holdFrames", -1) > duration - frame)
                     throw new IOException("Jump hold crosses a shot boundary");
                 command.put(

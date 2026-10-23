@@ -2786,3 +2786,16 @@ frontend boundary. The affected picture/model/workspace/HUD plus ArchUnit rechec
 executes 57 tests: 55 pass, with only the two inherited HubMusicController failures
 and no errors/skips; the Stageplay ownership rule passes. The full guards selection
 was not repeated. The additive accessor changes neither geometry nor UI output.
+
+
+### Route motion settings (2026-10-23)
+
+The agreed route design replaces speed-seeking jumps with explicit starting action,
+travel speed, ending action and facing. Settings live on the route MOVE_TO intent,
+so scene persistence, screenplay round trips and editing preserve them without a
+parallel mutable route store. Ordinary hand-authored intents retain native-speed
+countersteering defaults; planned routes default to Walk / Gentle Stop / Inherit.
+Actor movement-ability declarations are intersected with donor native support;
+creator definitions can declare or decline moves independently of character names.
+The unpublished canonical command format changes directly; no migration is added.
+Implementation and native-input verification continue in the following slices.

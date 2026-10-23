@@ -25,17 +25,20 @@ final class StockPlayableCharacters {
                         CharacterKey.SONIC, "Sonic",
                         (code, x, y) -> new Sonic(code, (short) x, (short) y),
                         SonicRespawnStrategy::new, PlayerCharacter.SONIC_ALONE,
-                        SecondaryAbility.INSTA_SHIELD, true, ignored -> SpriteArtSet.EMPTY))
+                        SecondaryAbility.INSTA_SHIELD, true, ignored -> SpriteArtSet.EMPTY, null,
+                        java.util.Set.of(CharacterDefinition.MovementAbility.SPINDASH)))
                 .register(CharacterKey.TAILS, new CharacterDefinition(
                         CharacterKey.TAILS, "Tails",
                         (code, x, y) -> new Tails(code, (short) x, (short) y),
                         TailsRespawnStrategy::new, PlayerCharacter.TAILS_ALONE,
-                        SecondaryAbility.FLY, true, ignored -> SpriteArtSet.EMPTY))
+                        SecondaryAbility.FLY, true, ignored -> SpriteArtSet.EMPTY, null,
+                        java.util.Set.of(CharacterDefinition.MovementAbility.SPINDASH)))
                 .register(CharacterKey.KNUCKLES, new CharacterDefinition(
                         CharacterKey.KNUCKLES, "Knuckles",
                         (code, x, y) -> new Knuckles(code, (short) x, (short) y),
                         KnucklesRespawnStrategy::new, PlayerCharacter.KNUCKLES,
-                        SecondaryAbility.GLIDE, true, ignored -> SpriteArtSet.EMPTY));
+                        SecondaryAbility.GLIDE, true, ignored -> SpriteArtSet.EMPTY, null,
+                        java.util.Set.of(CharacterDefinition.MovementAbility.SPINDASH)));
     }
 
 }
