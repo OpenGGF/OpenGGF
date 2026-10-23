@@ -555,7 +555,6 @@ class TestArchUnitRules {
                             .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("camera"))
                             .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("configuration"))
                             .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("control"))
-                            .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("data"))
                             .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("game"))
                             .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("graphics"))
                             .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("level"))
@@ -638,7 +637,6 @@ class TestArchUnitRules {
                             .ignoreDependency(inTopLevelSlice("testmode"), inTopLevelSlice("sprites"))
                             .ignoreDependency(inTopLevelSlice("testmode"), inTopLevelSlice("trace"))
                             .ignoreDependency(inTopLevelSlice("timer"), inTopLevelSlice("audio"))
-                            .ignoreDependency(inTopLevelSlice("timer"), inTopLevelSlice("camera"))
                             .ignoreDependency(inTopLevelSlice("timer"), inTopLevelSlice("game"))
                             .ignoreDependency(inTopLevelSlice("timer"), inTopLevelSlice("level"))
                             .ignoreDependency(inTopLevelSlice("timer"), inTopLevelSlice("sprites"))
@@ -664,7 +662,6 @@ class TestArchUnitRules {
                             .ignoreDependency(inTopLevelSlice("util"), inTopLevelSlice("data"))
                             .ignoreDependency(inTopLevelSlice("util"), inTopLevelSlice("game"))
                             .ignoreDependency(inTopLevelSlice("util"), inTopLevelSlice("level"))
-                            .ignoreDependency(inTopLevelSlice("util"), inTopLevelSlice("tools"))
                             // @ModApi is compatibility metadata, not runtime collaboration.
                             .ignoreDependency(DescribedPredicate.alwaysTrue(), modApiMarkerType())
                             // Release tooling reads the inventory but is not runtime orchestration.

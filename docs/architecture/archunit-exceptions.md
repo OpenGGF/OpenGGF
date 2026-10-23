@@ -244,7 +244,8 @@ source/target top-level package pairs inside or adjacent to that cluster.
 set. The live dependency census on 2026-10-23 found seven unused permissions:
 `debug -> data`, `sprites -> ghost`, `stageplay -> configuration`,
 `timer -> camera`, `tools -> ghost`, `tools -> net`, and `util -> tools`.
-These were pruned from 159 to 152. The runtime-edge guard now rejects both
+These were pruned from 159 to 152, along with the three matching obsolete
+cycle ignores (`debug -> data`, `timer -> camera`, `util -> tools`). The runtime-edge guard now rejects both
 unapproved edges and stale permissions; the documentation check verifies the
 published allowance count.
 
@@ -337,12 +338,11 @@ Target direction:
 
 Rule: `per-game packages should not cross-depend`
 
-The 2 committed grouped records contain 14 member dependencies across these
-categories:
+The 2 committed grouped records contain 10 member dependencies for explicit
+host donation:
 
 - S3K host-preview presentation uses the S1/S2 cached preview managers and S1
   special-stage palette extraction for explicit host ROM donation.
-- S3K level select reuses the S2 menu background animator.
 
 The selected-slot converter, `LoadedPreview` result, and common payload validator
 now belong to `com.openggf.game.dataselect`. Both host paths consume that converter
@@ -352,7 +352,8 @@ cross-game allowances. ROM title previews remain outside this migration.
 
 Target direction:
 
-- Extract the shared menu animation helper out of the remaining per-game path.
+- Menu animation now belongs to shared `game.menu`, closing the four former
+  S3K-to-S2 animator members without replacement cross-game dependencies.
 - Keep cross-game donation explicit when reuse is intentional and ROM-accurate
   host presentation depends on older-game assets.
 
@@ -360,9 +361,9 @@ Target direction:
 
 Rule: `runtime-owned framework packages should not access GameServices, SessionManager, or EngineServices directly`
 
-The 1 committed record is `ScriptFramesApplyStrategy` resolving
-`GameServices.graphics()` at apply time as a bridge for existing animated tile
-script paths. Live rewind now binds its installed gameplay owner, registered
+No committed records remain. `ScriptFramesApplyStrategy` resolves an injected
+graphics supplier at apply time, with S2 composition selecting the current runtime
+manager. Live rewind binds its installed gameplay owner, registered
 special-stage provider and fade explicitly, with engine-owned audio injected.
 The 10 former manager/stepper root-access records were removed rather than
 relocated.
