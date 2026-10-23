@@ -206,6 +206,10 @@ class TestSonic3kModZoneObjectSet {
         Sonic3kObjectRegistry registry = new Sonic3kObjectRegistry();
 
         assertEquals(Set.of(
+                // Native competition overrides contribute to this union even when
+                // a slot has a custom-compatible base or no base factory.
+                0x02, 0x05, 0x07, 0x28, 0x33, 0x38, 0x4F,
+                0x5D, 0x5E, 0x5F, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66,
                 // LRZ/SSZ stock overrides coexist with the other ROM pointer table.
                 0x25,
                 Sonic3kObjectIds.LBZ_CUP_ELEVATOR_POLE,
@@ -298,10 +302,13 @@ class TestSonic3kModZoneObjectSet {
     void stockZoneDependencyInventoryRemainsExplicitFactoryMetadata() {
         Sonic3kObjectRegistry registry = new Sonic3kObjectRegistry();
         // Base factories for these slots are set-only (including SKL placeholders).
-        // A stock-zone override does not remove their custom-compatible base.
+        // The inventory includes stock-zone overrides, including native competition
+        // arenas, but those overrides do not remove a custom-compatible base.
         Set<Integer> setOnlyBaseIds = Set.of(
+                0x02, 0x05, 0x07,
                 0x15, 0x16, 0x17, 0x18, 0x19, 0x20, 0x22,
-                0x29, 0x2B, 0x2C, 0x2D, 0x37,
+                0x28, 0x29, 0x2B, 0x2C, 0x2D, 0x33, 0x37, 0x38,
+                0x4F, 0x5D, 0x5E, 0x5F, 0x60, 0x61,
                 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0xAD, 0xAF, 0xB2);
         // FBZ/ICZ base factories are explicitly restricted to the S3KL table.
         Set<Integer> s3klBaseIds = Set.of(
@@ -314,6 +321,14 @@ class TestSonic3kModZoneObjectSet {
             assertEquals(setOnlyBaseIds.contains(objectId),
                     registry.canCreateInCustomZone(S3kZoneSet.SKL, objectId),
                     () -> "SKL base compatibility at $" + Integer.toHexString(objectId));
+        }
+        // Existing stock-dependent $4A and competition-only slots have no
+        // custom-compatible base in either pointer table.
+        for (int objectId : new int[] {0x4A, 0x62, 0x63, 0x64, 0x65, 0x66}) {
+            for (S3kZoneSet zoneSet : S3kZoneSet.values()) {
+                assertFalse(registry.canCreateInCustomZone(zoneSet, objectId),
+                        () -> zoneSet + " restricted base at $" + Integer.toHexString(objectId));
+            }
         }
     }
 
