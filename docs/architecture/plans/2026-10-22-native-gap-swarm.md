@@ -1745,3 +1745,110 @@ For later independent ending controls, decimal mappings 30/32 are native fr_Run1
 On 2026-10-23 Root received `534438e73c2cb6ca400ca4c6d899f6feed9f4258` once by ancestry into `1d4375d155816b7712922891ad9feb42448abfe4`. The peer successor includes the previously qualified native-human/Host/GPU source and pinned develop `d9b8edded8a9517dd7cf1bc3fcd4dcd6e53f4e0a`, with its PR-specific world PLC, ring, known-word capture and hosted HUD receiving ports. Peer reported the final exact d9 focus as 227 distinct tests, zero failures/errors/skips (21 selectors, 23 XML files; queue 80 seconds, Maven 1:35), and fresh source/ArchUnit/API/field checks as 116 tests, zero failures/errors/skips (queue 454 seconds, Maven 45.292 seconds). Earlier red pixel and SST evidence remains in the peer completion record. These are bounded peer results, not a Root union compile or combined smoke pass.
 
 The sole text conflict was `TestSurfacelessEglContext`: both sides restore the incoming backend property, and Root retained the exact already-qualified `3ce2664` fixture including its class-level lifecycle witness. Test bodies and GL cleanup are identical to the peer source. Root's category-runner headless option, property-scope guidance and S1 source audit remain present. No GPU, Python tool or fixture check was repeated just to receive the same tested source. One combined change-based smoke plan remains Root-owned and pending against the pre-task integration SHA `94c40570a15a11b70caf7456e9b0d0a8eec8a9b4`. Main integration/push, provider activation and passive SOZ/MHZ observations remain closed.
+
+
+### Bounded smoke fixture contracts — 2026-10-23
+
+The test worker starts from clean `659b02c98a16da0723ef5f222acdc60ab7b0838f`
+in the isolated `bugfix/ai-smoke-fixture-contracts-20261023` worktree. Root's
+combined smoke session `71076` remains frozen and is neither observed nor
+restarted here. The Root-reported historical reds are
+`TestGameplayModeContextRewindRegistry#nativeWorldDataReattachmentKeepsCameraSpritesDataObjectOrderAndStableOwner`
+(null queue on a bare mock), `#actTransitionRebindMovesOnlyObjectAndRingManagers`
+(stale three-key bundle),
+`TestAudioPresentationCommandQueue#resolvedCommandsContainNoConsumerRunnableOrMutableClosure`
+(missing internal `NativePause` record), and
+`TestPostLoadAssemblyBehavior#s1ProfileHas6PostLoadSteps` (20 versus 21 steps).
+These are supplied historical failures on `659b02c`, not a fresh baseline run or
+a verdict on the still-frozen combined smoke. Root's supplied final registry
+source audit concludes no production bug; that conclusion was not executed.
+
+Only the three tests change. The DATA order/identity fixture now wraps its mocked
+graph adapter in the existing real manager helper. The transition assertion
+requires the exact graph → submission queue → Word2C → rings suffix, filters
+only the two companion keys in addition to the two replaced managers from the
+exact unaffected-order comparison, and retains all five restore counts. Its old
+snapshot explicitly lacks both companions; replacement slot 40 is explicitly
+unowned, then seeded with a real admission and known `0x1234` word. Restore must
+empty admissions and make the word unknown, so a missing-state no-op fails.
+Existing real registration and destructive/missing Word2C controls stay intact.
+
+The sealed presentation inventory adds precisely `NativePause(boolean paused)`;
+recursive immutable-payload and the public 21-variant `AudioCommand` checks remain.
+A pressure control submits 257 alternating primitive pause/resume edges, requiring
+structural, non-droppable, non-coalescing admission and exact ordered drain. The
+S1 contract names all 14 core steps and the seven-step post-load suffix, including
+`InitBackgroundScroll` between camera and events. Existing checkpoint/title
+behavior and the S1 preview omission control remain. Runtime source is unchanged.
+A separate read-only audit of these tests found no correctness issue and ran no
+commands that execute tests or inspect jobs.
+
+The change-based plan selects 3,146 smoke candidates in audio/common/gameplay/rewind.
+That breadth is disproportionate for corrected test fixtures with unchanged runtime,
+POM, selection policy and guards. Qualification instead selects exactly eight
+classes: the three repaired classes, `TestNativeSpriteSubmissionRegistration`,
+`TestNativeSstWord2C`, `TestAudioPresentationProducerRewind`,
+`TestTraceCaptureUnifiedAudio`, and `TestSonic1LevelInitProfile`. Expected cost is
+one fresh compilation plus a few minutes of focused execution, excluding queue
+wait. Stop on a concrete failure, investigate only the owning test contract, and
+use at most one necessary focused follow-up; no broad/native/route/capture tool
+run, Main edit, PR or push is authorized. This selection is not in the registered
+small-test inventory and keeps normal admission. No fresh structural guard is
+needed unless this bounded run exposes an affected structural contract.
+
+Actual category tool preflight with `--base 659b02c98a16da0723ef5f222acdc60ab7b0838f
+--headless-gl surfaceless-egl --rom-directory "$rom_root" --preflight` passed Java
+25, Lua 5.4 and PowerShell; no tests executed. Existing original S1/S2 REV01/S3K
+ROMs were discovered without changes and their SHA-1/CRC32 matched AGENTS. The
+queue wrapper is byte-identical to the current Main wrapper, so the worktree copy
+is current. Qualification command, with `JDK25_HOME` pointing to the installed
+JDK 25 and `LUA54_BIN` to Lua 5.4:
+
+```bash
+rom_root=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
+env -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS \
+  -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH -u LIBGL_DRIVERS_PATH \
+  -u LIBGL_ALWAYS_SOFTWARE -u MESA_LOADER_DRIVER_OVERRIDE \
+  JAVA_HOME="$JDK25_HOME" LUA_BIN="${LUA54_BIN:-lua5.4}" \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=${rom_root}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${rom_root}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${rom_root}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  '-Dtest=TestGameplayModeContextRewindRegistry,TestAudioPresentationCommandQueue,TestPostLoadAssemblyBehavior,TestNativeSpriteSubmissionRegistration,TestNativeSstWord2C,TestAudioPresentationProducerRewind,TestTraceCaptureUnifiedAudio,TestSonic1LevelInitProfile' \
+  test -B
+```
+
+Corrected-source request `9491` exits 0 at 12:41:29 UTC: **132 distinct
+identities / 8 XML suites / 0 failures / 0 errors / 0 skips**. Class totals are
+queue 14, producer rewind 24, post-load 20, context registry 30, real registration
+9, S1 profile 7, Word2C 20 and unified capture consumer 8. The repaired DATA,
+transition, sealed inventory and S1 ordered-suffix cases execute, as do the new
+pause pressure control, both existing destructive/missing Word2C controls and the
+existing preview omission control. Queue wait is 381 seconds; Maven reports
+1:19, including fresh compilation. These intervals are separate from unmeasured
+setup/review time and are not a task elapsed-time measurement.
+
+The full working-tree fingerprint is
+`c8401c302c8c1f259bf60d47c96d94febeabd2674a151147d73ab20514db06c5`
+on parent `659b02c98a16da0723ef5f222acdc60ab7b0838f`, including the three test
+edits and the prepared plan section. It matches before submission and after
+terminal completion, before this evidence-only prose addition. All eight XML
+property sets confirm Java 25.0.5, surfaceless EGL, intended worktree cwd and the
+original absolute three-ROM properties. Every XML/output stream and unique test
+identity was inspected; no skips, failure entries or JVM dumps are present.
+Observed output includes the fresh-worktree java.io.tmpdir startup warning,
+existing compile deprecation/unchecked notices and FAST-without-manifest/NONE
+fixture warnings; none qualifies native timing. No runtime mismatch appeared.
+The test-only result does not close Root's frozen smoke, public-release suite,
+native emulator, route, physical timing or full capture-tool obligations.
+
+Exactly one focused request was used; no focused follow-up or fresh structural
+guard was necessary, and no other jobs were observed. Consumed own Maven log,
+XML/text reports and invocation temporary files are deleted after inspection;
+compiled outputs and the useful local unmerged worktree are retained for Root.
+The local normal-hook commit carries all seven policy trailers and the exact
+GPT-6.1-Sol co-author, verified with `git interpret-trailers --parse` before
+commit. No Main integration, PR, push, runtime edit or additional execution is
+claimed. Final lifecycle expiry/cleanup state is recorded in the task registry.
