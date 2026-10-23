@@ -71,6 +71,12 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Mock objects do not inherit constructor state or resolved ownership (2026-10-23, native-gap smoke). A mocked graphics manager supplied null for the new pixel-operation field, a mocked level supplied zero raster dimensions, and mocked main-character resolution returned null before art preflight. Those preconditions hid the intended copy, ownership and capacity assertions. Supply the actual fixture dimensions, input scalar state and owning resolver result; preserve all downstream negative controls rather than restoring production fallbacks. See the [fixture evidence](../architecture/plans/2026-10-22-native-gap-swarm.md).
+
+The explicit presentation origin controls SAT admission (2026-10-23, SSZ fixtures). A gameplay camera did not affect a separate prepare(graphics,0,0) capture: world objects near Y $C00 fell outside its zero-origin raster, while direct capture retained them. Use the same scene origin in direct and SAT preparation and independently translate the ROM oracle. Preserve complete lists, masks, native budgets and owner clocks; filtering to an intersection would hide the error. See the [fixture evidence](../architecture/plans/2026-10-22-native-gap-swarm.md).
+
+A clamped zero does not prove a single retirement (2026-10-23, slot rewards). The active-reward counter clamps at zero, so a second expiration callback could leave the same final count. The qualified 7cb60793c fixture keeps the native grant/sparkle/deletion schedule and checks exactly one real expiration callback alongside the final counter and one grant/sound/saved-ring write. This is independent held-leaf evidence, not a test run on this art-fixture branch; see the [fixture evidence](../architecture/plans/2026-10-22-native-gap-swarm.md).
+
 A matching patch preimage does not establish owning dependency closure
 (2026-10-23, PR223/develop reconciliation). The four terminal-input files
 matched their leaf parent, but the imported regression also assumed an implicit

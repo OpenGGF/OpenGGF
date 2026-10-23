@@ -105,6 +105,7 @@ class TestLevelPlayableArtInitializerModArt {
         when(sprites.getSidekicks()).thenReturn(List.of());
         SonicConfigurationService config = mock(SonicConfigurationService.class);
         when(config.getString(SonicConfiguration.MAIN_CHARACTER_CODE)).thenReturn("tails");
+        when(level.resolveMainCharacterCode()).thenReturn("tails");
         LevelPlayableArtInitializer initializer = new LevelPlayableArtInitializer(level, sprites,
                 mock(GraphicsManager.class), config, mock(CrossGameFeatureProvider.class));
 
@@ -338,6 +339,7 @@ class TestLevelPlayableArtInitializerModArt {
         }
         SonicConfigurationService config = mock(SonicConfigurationService.class);
         when(config.getString(SonicConfiguration.MAIN_CHARACTER_CODE)).thenReturn(mainKey.persisted());
+        when(level.resolveMainCharacterCode()).thenReturn(mainKey.persisted());
         return new Fixture(new LevelPlayableArtInitializer(level, sprites,
                 mock(GraphicsManager.class), config, mock(CrossGameFeatureProvider.class)),
                 main, level, sprites, config);

@@ -25,6 +25,7 @@ import com.openggf.game.sonic2.competition.Sonic2CompetitionPolicy;
 import com.openggf.game.sonic2.competition.Sonic2CompetitionSession;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderContext;
+import com.openggf.level.objects.DefaultObjectServices;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.TerrainCollisionManager;
@@ -196,6 +197,12 @@ class TestNativeCompetitionDustArtInitialization {
         var terrain = mock(TerrainCollisionManager.class);
         gameplay.attachLevelManagers(new WaterSystem(), new ParallaxManager(), terrain,
                 new CollisionSystem(terrain), sprites, level);
+        var objectServices = new DefaultObjectServices(gameplay, EngineServices.current());
+        when(objects.getObjectServices()).thenReturn(objectServices);
+        assertSame(gameplay.getWorldSession(), objectServices.worldSession());
+        assertSame(level, objectServices.levelManager());
+        assertSame(objects, objectServices.objectManager());
+        assertSame(gameplay.runtimeArtCoordinator(), objectServices.runtimeArtCoordinator());
         var config = mock(SonicConfigurationService.class);
         when(config.getString(SonicConfiguration.MAIN_CHARACTER_CODE)).thenReturn(main.getCode());
         var initializer = new LevelPlayableArtInitializer(level, sprites,
