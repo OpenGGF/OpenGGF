@@ -61,6 +61,28 @@ class TestEditorLevelSettingsIO {
     }
 
     @Test
+    void onlyDeserializedDocumentsRequireTransientPreviewArtAndTheMarkerIsNotSerialized() throws Exception {
+        var prepared = document(ModLevelSettings.DEFAULT);
+        var store = new EditorProjectStore();
+        Path original = directory.resolve("prepared.ogfproject");
+        store.save(original, prepared);
+        assertFalse(prepared.needsObjectPreviewLibrary(), "A save path does not make prepared assets incomplete");
+        byte[] canonical = Files.readAllBytes(original);
+        var decoded = store.decode(canonical);
+        assertTrue(decoded.needsObjectPreviewLibrary());
+        assertTrue(decoded.duplicate(decoded.metadata()).needsObjectPreviewLibrary());
+        assertTrue(decoded.copyForReplacement().needsObjectPreviewLibrary());
+        Path copy = directory.resolve("copy.ogfproject");
+        store.save(copy, decoded);
+        assertArrayEquals(canonical, Files.readAllBytes(copy), "Presentation readiness changes no format bytes");
+        assertTrue(decoded.needsObjectPreviewLibrary(), "Saving does not invent ROM pictures");
+        decoded.attachObjectPreviewLibrary(prepared.level());
+        assertFalse(decoded.needsObjectPreviewLibrary());
+        assertFalse(decoded.isModified(), "Attaching transient art leaves the authored savepoint intact");
+        assertFalse(decoded.duplicate(decoded.metadata()).needsObjectPreviewLibrary());
+    }
+
+    @Test
     void defaultsAreExplicitAndUnknownNestedProjectSettingsAreRejectedAfterChecksumValidation() throws Exception {
         assertEquals(ModLevelSettings.DEFAULT, ModLevelSettingsJson.parse(null));
         assertEquals(ModLevelSettings.DEFAULT, ModLevelSettingsJson.parse(JSON.readTree("null")));

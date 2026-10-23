@@ -49,6 +49,10 @@ public final class EditorProjectWorkspace {
         default boolean isPaletteCellEditable(int line, int color) { return false; }
         default void refreshPalette(int line) { }
         default void artImported(EditorProjectDocument document, List<Integer> patternIndices) { }
+        default boolean nativeLayoutAvailable() { return false; }
+        default boolean nativeLayoutModified() { return false; }
+        default void saveNativeLayout() throws IOException { }
+        default void cloneNativeLayout() throws IOException { }
     }
 
     private final Host host;
@@ -188,6 +192,8 @@ public final class EditorProjectWorkspace {
         actions.add(action("New blank level", () -> beforeReplace(this::chooseGame)));
         actions.add(action("Open project", () -> beforeReplace(this::openProjectForm)));
         actions.add(action("Import exported level", () -> beforeReplace(this::chooseImportGame)));
+        if (document == null && host.nativeLayoutAvailable())
+            actions.add(action("Clone native layout as project", () -> io(host::cloneNativeLayout)));
         if (document != null) {
             actions.add(action("Save project", this::save));
             actions.add(action("Save project as", this::saveAs));
@@ -205,11 +211,11 @@ public final class EditorProjectWorkspace {
                 + (document.isModified() ? " - unsaved changes" : " - saved"));
     }
 
-    /** First entry from gameplay captures the authored layout before any runtime mode is destroyed. */
+    /** Explicitly copies a compatible loaded layout into a portable authored project. */
     public void adoptLoadedLevel(GameModule module, Level level, int zone, int act) throws IOException {
         // First native entry uses complete ROM libraries; reopening authored data preserves its pixels.
         if (!(level instanceof com.openggf.level.MutableLevel) && !(level instanceof EditorProjectLevel))
-            level = com.openggf.level.LevelObjectArt.authoringLibrary(level);
+            level = com.openggf.level.LevelObjectArt.authoringLibrary(level, module.getObjectArtProvider());
         var zones = module.getZoneRegistry();
         int[] start = zones.getStartPosition(zone, act);
         ModObjectZoneSet family = module.getGameId() == GameId.S3K
@@ -255,7 +261,7 @@ public final class EditorProjectWorkspace {
         menu.showForm("New blank level", List.of(text("name", "Name", "New Level"),
                 integer("width", "Width in blocks", 16), integer("height", "Height in blocks", 8)),
                 "Create level", values -> io(() -> {
-                    Level library = com.openggf.level.LevelObjectArt.authoringLibrary(host.loadLibrary(zone, act));
+                    Level library = com.openggf.level.LevelObjectArt.authoringLibrary(host.loadLibrary(zone, act), module.getObjectArtProvider());
                     var blank = EditorProjectLevel.blank(library, number(values, "width"), number(values, "height"));
                     ModObjectZoneSet family = module.getGameId() == GameId.S3K
                             ? ModObjectZoneSet.valueOf((library instanceof Sonic3kLevel nativeLevel
@@ -294,10 +300,11 @@ public final class EditorProjectWorkspace {
     }
 
     private void publishProject(EditorProjectDocument candidate) throws IOException {
-        host.selectGame(candidate.metadata().gameId());
-        if (com.openggf.level.LevelObjectArt.sheets(candidate.level()).isEmpty()) {
-            Level library = com.openggf.level.LevelObjectArt.authoringLibrary(host.loadLibrary(candidate.metadata().sourceZone(), candidate.metadata().sourceAct()));
-            com.openggf.level.LevelObjectArt.inherit(candidate.level(), library);
+        var module = host.selectGame(candidate.metadata().gameId());
+        // Deserialization marks missing presentation art; a prepared document can also have a save path.
+        if (candidate.needsObjectPreviewLibrary()) {
+            Level library = com.openggf.level.LevelObjectArt.authoringLibrary(host.loadLibrary(candidate.metadata().sourceZone(), candidate.metadata().sourceAct()), module.getObjectArtProvider());
+            candidate.attachObjectPreviewLibrary(library);
         }
         replaceDocument(candidate);
         host.status("Opened " + (candidate.path() == null ? candidate.metadata().name() : candidate.path()));
@@ -522,6 +529,11 @@ public final class EditorProjectWorkspace {
 
     private void beforeReplace(Runnable next, String cancel, String save, String discard) {
         host.finishPendingEdits();
+        if (document == null && host.nativeLayoutModified()) {
+            menu.showActions("Unsaved native edits", List.of(action(cancel, () -> {}),
+                    action(save, () -> io(() -> { host.saveNativeLayout(); next.run(); })), action(discard, next)));
+            return;
+        }
         if (document == null || !document.isModified()) { next.run(); return; }
         menu.showActions("Unsaved project", List.of(action(cancel, () -> {}),
                 action(save, () -> {

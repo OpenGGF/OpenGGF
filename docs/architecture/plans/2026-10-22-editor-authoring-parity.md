@@ -238,3 +238,95 @@ fade at `restoreEditorLevelView`; the editor has no native V-int to retire them.
 No gameplay objects are created for previews. The viewer also rejected Newtron's
 native materialization stipple as a browsing pose; its existing standing mapping
 frame is used instead. Changing tool mode retires stale object-selection status.
+
+The final smoke exposed nine prepared-project failures (seven settings and two art
+import cases): rebuilding transient art unconditionally in `publishProject` made
+self-contained in-memory imports reload a ROM. Rejected weakening those Host
+assertions. A first path-based gate repaired six cases, but three already-saved
+prepared documents still failed: a save path does not identify deserialization.
+The decoder now marks only omitted presentation art as missing, and the document
+carries that transient readiness through duplicates/replacements. Attaching the
+library clears it without changing authored bytes or savepoints. Prepared
+documents retain their supplied assets. The ownership review also rejected applying the detached
+native builder or AIZ palette phase to `ModLevel`. A ROM-free regression entered
+the native ROM scanner and failed with `Could not find LevelSizes table in S3K
+ROM`; the extra preparation methods now accept only actual `Sonic3kLevel` sources.
+Other sources keep themselves and their existing provider sheets.
+
+The HUD viewer additionally found a middle-dot separator rendered as a question
+mark by the native menu font, and a keyed gizmo described as `Object 00` under an
+incorrect “under cursor” heading. The library heading uses supported spacing,
+and the spawn dock names the selected placement with the registry/key display
+name. These bounded corrections are developed in a temporary recovery checkout
+while the smoke source stays frozen, then verified narrowly and integrated after
+the complete run. Unchanged broad coverage is not repeated.
+
+Two smoke errors in `TestS3kCustomZonePaletteBridge` exposed static authoring phase
+selection in generic `MutableLevel.snapshot`. That ownership was wrong even for
+real levels: a runtime snapshot must retain its current palette. Generic copies
+only inherit transient pictures; the explicit `EditorProjectLevel` first native
+library copy selects the authoring phase. An art-ownership regression checks both
+outcomes without gameplay. The screenshot fixture uses an explicit authoring boundary rather than relying
+on generic snapshot behavior.
+
+Newtron's nonzero subtype uses the production renderer's absolute palette-line 1
+override (`Newt_Type1`); the readonly pose now carries that value into the existing
+rasterizer. A real texture readback checks the override/cache key. The desktop
+palette reveals newly selected offscreen items without fighting manual browsing,
+and S1 captures show the green subtype picture and ghost in both editor fronts.
+
+The refreshed viewer exposed native GHZ loop-remap and AIZ camera-bound domains
+that portable flat-project cloning intentionally rejects. Native editor entry
+now preserves a `MutableLevel` source delegate, including collision remaps and
+native bounds, using the existing native save/playtest route. A query-only
+`EditorNativeLevelView` prepares detached ROM art and the authoring palette
+without mutating the gameplay source. Initial S3K authoring uses the complete
+ROM library rather than transient intro VRAM residency; existing mutable levels
+retain all edits on re-entry. Portable project cloning keeps its
+validation; native formats are not silently flattened or caught and replaced.
+The viewer fixture uses this same preparation seam for all three games.
+
+Native edit persistence remains the existing terrain/placement format, with no
+migration. Palette cells are read-only in that route because its save payload
+does not contain colors; portable project authoring retains the normal palette
+policy. Save/cancel/discard guards cover replacing a native workspace and quitting,
+including failed saves. The guard checks active world ownership so a discarded
+project's stale controller cannot produce a spurious native-unsaved prompt.
+
+The broad smoke checkpoint graph test found another ownership leak: retaining
+the live art provider on `AbstractLevel` made an opaque Putt Putt checkpoint
+reach ROM file channels. This approach is rejected. Library preparation instead
+receives the current module's provider explicitly for that call; a weak level-keyed presentation sidecar retains detached CPU sheets, source IDs,
+palette data and publication metadata outside the level/checkpoint graph. The existing opaque-course checkpoint graph regression is
+the kill/verification evidence, alongside the readonly preview ownership tests.
+
+The actual Engine-entry viewer rejected an attempted current-native snapshot
+with only static palette replacement: AIZ intro-only VRAM patterns produced
+corrupted terrain at the monitor location. The complete existing `SKIP_INTRO`
+ROM library is therefore the first native authoring source, including native
+collision delegates and bounds. A mutable editor level is returned unchanged on
+re-entry. This is an initial authoring view, not a snapshot of transient native
+cutscene/event progression. No live gameplay ticks or object factories prepare it.
+
+After removing the provider, that same graph check exceeded its 100,000-node
+limit through the detached art itself. Keeping those pattern banks as level
+fields is also rejected. A synchronized weak-key presentation sidecar now owns
+the catalogue; its values never capture the key, a provider, or a gameplay owner.
+This keeps pictures alive for live levels/copies without adding art to rewind
+state or retaining abandoned levels. The graph test's existing bound is unchanged.
+
+Native S3K delta-file auto-application remains unsupported by the existing
+`EditorSaveManager` policy. This pass does not change that runtime contract or
+the native edit format. The guide distinguishes that inherited limitation from
+the complete portable-project save/open workflow.
+
+Final recovery verification on the merged-develop source: the expanded focused
+selection passed 417 of 418 cases with no skips, with only the checkpoint graph
+bound still red. After moving the catalogue outside level state, all 89 affected
+project/art/ownership/API/architecture cases passed with no errors or skips.
+The desktop consumer passed all 27 cases except its two explicit Stageplay
+picture opt-ins; all 29 final images were reviewed, and a fresh consumer run
+after the storage change reproduced their bytes exactly. API snapshot output
+exactly matches the merged 0.7 candidate pin; no version/descriptor change.
+The one broad smoke run remains attributed to frozen source `7fdfc9518`; its
+final totals and inherited-failure comparisons will be recorded after completion.

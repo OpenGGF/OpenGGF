@@ -24,6 +24,8 @@ public final class EditorProjectDocument {
     private EditorProjectLevel savedLevel;
     private EditorProjectAssets assets = EditorProjectAssets.EMPTY;
     private EditorProjectAssets savedAssets;
+    // Presentation-only readiness: ROM object pictures are never part of the canonical payload.
+    private boolean objectPreviewLibraryMissing;
 
     private EditorProjectDocument(EditorProjectMetadata metadata, Level source) {
         replace(metadata, source);
@@ -46,6 +48,12 @@ public final class EditorProjectDocument {
     public EditorProjectMetadata metadata() { return metadata; }
     public Path path() { return path; }
     public BitSet importedPatternSlots() { return assets.slots(); }
+    boolean needsObjectPreviewLibrary() { return objectPreviewLibraryMissing; }
+    void requireObjectPreviewLibrary() { objectPreviewLibraryMissing = true; }
+    void attachObjectPreviewLibrary(Level library) {
+        com.openggf.level.LevelObjectArt.inherit(level, library);
+        objectPreviewLibraryMissing = false;
+    }
     EditorProjectAssets assets() { return assets; }
     void restoreAssets(EditorProjectAssets value) {
         Objects.requireNonNull(value, "assets").validateAgainst(level.getPatternCount());
@@ -56,6 +64,7 @@ public final class EditorProjectDocument {
     public EditorProjectDocument duplicate(EditorProjectMetadata value) {
         var candidate = create(value, level);
         candidate.assets = assets;
+        candidate.objectPreviewLibraryMissing = objectPreviewLibraryMissing;
         return candidate;
     }
 
@@ -119,6 +128,7 @@ public final class EditorProjectDocument {
         candidate.savedLevel = savedLevel;
         candidate.assets = assets;
         candidate.savedAssets = savedAssets;
+        candidate.objectPreviewLibraryMissing = objectPreviewLibraryMissing;
         return candidate;
     }
 

@@ -244,7 +244,9 @@ Unreleased. The earlier development themes remain in
   window resolution frames the level with a brush hotbar, a full-screen library
   of ROM-art thumbnails, native sprite placements and translucent brush previews.
   Picture-based object browsing hides internal IDs by default, while compact gizmo
-  labels and a dock-fitted desktop canvas keep the level readable. A tools wheel,
+  labels and a dock-fitted desktop canvas keep the level readable. Native editing
+  retains ROM collision semantics, with explicit compatible-layout cloning and
+  save/cancel/discard protection before replacing unsaved work. A tools wheel,
   block and chunk workbenches and button
   prompts for the pad in use. It is the sole built-in editor UI, with world-space
   editing guides underneath; a separate OpenGGF-Editor provider can replace it

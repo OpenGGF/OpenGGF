@@ -214,7 +214,7 @@ final class EditorHudPainter implements AutoCloseable {
             c.fittedText(name, 10, dock.y() + 25, sideW - 10, Size.BODY, TEXT, 1);
             c.fittedText(brushDetail(kind, controller), 10, dock.y() + 39, sideW - 10, Size.SMALL, TEXT_DIM, 1);
             float rx = x0 + barW + 40;
-            c.text("UNDER CURSOR", rx, dock.y() + 14, Size.SMALL, TEXT_FAINT, 1);
+            c.text(controller.isSpawnEditing() ? "SELECTION" : "UNDER CURSOR", rx, dock.y() + 14, Size.SMALL, TEXT_FAINT, 1);
             c.fittedText(underCursor(controller, level), rx, dock.y() + 25, dock.w() - rx - 8, Size.BODY, TEXT, 1);
         }
     }
@@ -663,7 +663,7 @@ final class EditorHudPainter implements AutoCloseable {
         LibraryKind kind = hud.libraryKind;
         int count = hud.libraryCount(kind);
         c.text(kindTitle(kind), sheet.x() + 12, sheet.y() + 8, Size.LARGE, TEXT, 1);
-        String countText = count + (kind == LibraryKind.OBJECT ? " objects · X: all / internal" : " in this level's library");
+        String countText = count + (kind == LibraryKind.OBJECT ? " objects   X: all / internal" : " in this level's library");
         c.text(countText, sheet.x() + 18 + EditorHudCanvas.textWidth(kindTitle(kind), Size.LARGE), sheet.y() + 16,
                 Size.SMALL, TEXT_DIM, 1);
         float detailW = Math.min(170, sheet.w() * .3f);
@@ -1021,7 +1021,10 @@ final class EditorHudPainter implements AutoCloseable {
         }
         if (controller.spawnEditMode() != EditorSpawnEditMode.TILES) {
             var selected = controller.selectedObjectSpawn();
-            return selected == null ? "None" : "Object " + "%02X".formatted(selected.objectId());
+            if (selected == null) return "None";
+            if (selected.objectKey() != null) return EditorStockObjectPalette.displayName(selected.objectKey());
+            var palette = controller.objectPaletteOrNull();
+            return palette == null ? "Object" : EditorStockObjectPalette.displayName(palette.entries().get(selected.objectId()).label());
         }
         var cursor = controller.worldCursor();
         var map = level.getMap();

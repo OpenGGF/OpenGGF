@@ -178,6 +178,12 @@ public final class LevelEditorController {
         configureSpawnEditing(registry, encoding, registry::getPrimaryName);
     }
 
+    /** Native edit files persist terrain/placements; palette authoring belongs to portable projects. */
+    public void configureNativeSpawnEditing(ObjectRegistry registry, ObjectPlacementEncoding encoding) {
+        configureSpawnEditing(registry, encoding);
+        paletteEditable = (line, color) -> false;
+    }
+
     public void configureSpawnEditing(ObjectRegistry registry, ObjectPlacementEncoding encoding,
                                       java.util.function.IntFunction<String> names) {
         MutableLevel attachedLevel = requireLevel();

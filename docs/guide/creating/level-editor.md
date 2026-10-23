@@ -29,10 +29,19 @@ directing document and preserves the level workspace when you switch back.
 *New blank level after choosing Sonic 2 and an Emerald Hill asset library.
 Dimensions count map cells; an 8×4 Sonic 2 canvas is 1024×512 pixels.*
 
-To begin from a supported stock layout, enable `debug.flags.editor`, load the
-zone/act in gameplay, and press `Shift+Tab`. The editor adopts it as a project.
-With a project open, **Clone this layout** makes a named copy of the current
-layout and placements.
+To edit a stock layout, enable `debug.flags.editor`, load the zone/act in
+gameplay, and press `Shift+Tab`. Native editing preserves ROM collision and
+camera semantics, including Sonic 1 loop flags. S3K starts from its complete ROM
+asset library rather than transient intro art; this does not import a running
+cutscene or event phase. Returning from a playtest retains your edits. Save records native edits;
+leaving for another project or quitting prompts for unsaved changes. Native edit
+files store terrain descriptors and object/ring placements. Palette edits, imported
+art and project settings require a portable project; native palette cells are read-only.
+S3K native edit files are not automatically reapplied on a fresh ROM load; use a
+portable project for a complete reusable authoring document.
+Choose **Editor projects → Clone native layout as project** to turn a compatible
+stock layout into a portable project. With a project open, **Clone this layout**
+makes a named copy of its layout and placements.
 
 Cloning copies level data into an authored level with a fresh, flat runtime.
 Native zone events, terrain swaps, animations, water programs, and PLC scripts do

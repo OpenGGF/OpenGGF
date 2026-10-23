@@ -19,6 +19,19 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestEditorPaletteEditing {
     @TempDir Path directory;
 
+    @Test void nativeSaveWorkflowCannotOfferPaletteEditsThatItsFormatDoesNotPersist() {
+        var controller = new com.openggf.editor.LevelEditorController();
+        controller.attachLevel(com.openggf.level.MutableLevel.snapshot(new TestEditorProjects.Fixture(GameId.S2)));
+        var registry = new com.openggf.game.sonic2.objects.Sonic2ObjectRegistry();
+        var encoding = new com.openggf.game.common.CommonObjectPlacementEncoding();
+        controller.configureSpawnEditing(registry, encoding);
+        assertTrue(controller.isPaletteCellEditable(2, 3));
+        controller.configureNativeSpawnEditing(registry, encoding);
+        assertFalse(controller.isPaletteCellEditable(2, 3));
+        assertThrows(IllegalArgumentException.class, () -> controller.editPaletteColor(2, 3, 0, 0, 0));
+        assertFalse(controller.isModified());
+    }
+
     @Test void eachCellEditUndoesExactPriorRgbAndRedoesIndependentCopies() {
         var source = new TestEditorProjects.Fixture(GameId.S2);
         source.getPalette(2).setColor(3, new Palette.Color((byte) 17, (byte) 218, (byte) 129));

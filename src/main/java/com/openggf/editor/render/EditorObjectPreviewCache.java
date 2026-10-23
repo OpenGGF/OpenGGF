@@ -98,12 +98,13 @@ public final class EditorObjectPreviewCache implements AutoCloseable {
             int offset = offsets.computeIfAbsent(sheet, source -> {
                 int base = tiles.size(); java.util.Collections.addAll(tiles, source.getPatterns()); return base;
             });
+            int paletteLine = part.paletteLine() < 0 ? sheet.getPaletteIndex() : part.paletteLine();
             for (var piece : sheet.getFrame(part.frame()).pieces()) {
                 int x = part.x() + (part.hFlip() ? -piece.xOffset() - piece.widthTiles() * 8 : piece.xOffset());
                 int y = part.y() + (part.vFlip() ? -piece.yOffset() - piece.heightTiles() * 8 : piece.yOffset());
                 pieces.add(new com.openggf.level.render.SpriteMappingPiece(x, y, piece.widthTiles(), piece.heightTiles(),
                         piece.tileIndex() + offset, part.hFlip() ^ piece.hFlip(), part.vFlip() ^ piece.vFlip(),
-                        (sheet.getPaletteIndex() + piece.paletteIndex()) & 3, piece.priority()));
+                        (paletteLine + piece.paletteIndex()) & 3, piece.priority()));
             }
         }
         var pixels = SpriteMappingRasterizer.rasterize(new com.openggf.level.render.SpriteMappingFrame(pieces),

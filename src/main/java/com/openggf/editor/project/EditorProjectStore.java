@@ -108,6 +108,7 @@ public final class EditorProjectStore {
             }
             var document = EditorProjectDocument.create(metadata, level);
             document.restoreAssets(payload.assets());
+            document.requireObjectPreviewLibrary();
             return document;
         } catch (IllegalArgumentException | NullPointerException error) {
             throw new IOException("Invalid project data: " + error.getMessage(), error);

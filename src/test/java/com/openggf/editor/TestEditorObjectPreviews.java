@@ -28,6 +28,8 @@ class TestEditorObjectPreviews {
     }
     @Test void newtronUsesItsVisibleStandingPoseRatherThanMaterializationStipple() {
         assertEquals(1, new Sonic1ObjectRegistry().objectPreview(spawn(0x42, 0)).parts().getFirst().frame());
+        assertEquals(-1, new Sonic1ObjectRegistry().objectPreview(spawn(0x42, 0)).parts().getFirst().paletteLine());
+        assertEquals(1, new Sonic1ObjectRegistry().objectPreview(spawn(0x42, 0xff)).parts().getFirst().paletteLine());
     }
     @Test void internalPlayersAndUnknownIdsHaveNoMisleadingSprite() {
         assertTrue(new Sonic2ObjectRegistry().objectPreview(spawn(1, 0)).parts().isEmpty());

@@ -157,12 +157,14 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider, com.openggf.
     private static final AnimalType[] DEFAULT_ANIMALS = {AnimalType.FLICKY, AnimalType.CHICKEN};
 
     @Override public Level editorAssetLibrary(Level level) throws IOException {
+        if (!(level instanceof Sonic3kLevel)) return level;
         // Reuse the ROM-only, non-publishing builder already used by scene backdrops.
         // A project library is complete art, not the intro's temporary frontend VRAM residency.
         return new Sonic3k(GameServices.rom().getRom()).buildDetachedLevel(level.getZoneIndex(), currentActIndex,
                 Sonic3kLoadBootstrap.Mode.SKIP_INTRO);
     }
     @Override public java.util.Map<String, ObjectSpriteSheet> editorPreviewSheets(Level level) throws IOException {
+        if (!(level instanceof Sonic3kLevel)) return java.util.Map.of();
         var prepared = buildLevelArtSheets(level, level.getZoneIndex(), currentActIndex,
                 RomByteReader.fromRom(GameServices.rom().getRom()));
         var sheets = new java.util.LinkedHashMap<String, ObjectSpriteSheet>();
@@ -171,7 +173,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider, com.openggf.
     }
 
     @Override public java.util.Map<Integer, com.openggf.level.Palette> editorPreviewPalettes(Level level) throws IOException {
-        if (level.getZoneIndex() != com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_AIZ || currentActIndex != 0)
+        if (!(level instanceof Sonic3kLevel)
+                || level.getZoneIndex() != com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_AIZ || currentActIndex != 0)
             return java.util.Map.of();
         // The AIZ1 event installs PalPointers $2A after the intro (PAL_AIZ_INDEX in
         // Sonic3kAIZEvents). Select those same ROM colors for a detached authoring library;

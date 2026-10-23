@@ -77,7 +77,7 @@ public class MutableLevel extends AbstractLevel implements com.openggf.level.obj
         this.solidTileCount = solidTileCount;
         this.map = map;
         this.palettes = palettes;
-        LevelObjectArt.initialize(this, sourceLevel);
+        LevelObjectArt.inherit(this, sourceLevel);
         this.mutableObjects = mutableObjects;
         this.mutableRings = mutableRings;
         this.ringObjectPlacementMapping = ringObjectPlacementMapping;

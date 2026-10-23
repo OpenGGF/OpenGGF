@@ -463,6 +463,21 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			}
 			public void execute(com.openggf.editor.EditorCommand command) { levelEditorController.executeCommand(command); }
 			public void status(String message) { levelEditorController.setStatus(message); }
+			public boolean nativeLayoutAvailable() {
+				return getCurrentGameMode() == GameMode.EDITOR && editorProjects.document() == null
+						&& levelEditorController.currentLevel() != null;
+			}
+			public boolean nativeLayoutModified() {
+				return hasUnsavedNativeEditorEdits();
+			}
+			public void saveNativeLayout() throws IOException {
+				if (!saveCurrentEditorLevel()) throw new IOException("Native edits could not be saved. Check the editor save directory.");
+			}
+			public void cloneNativeLayout() throws IOException {
+				var world = SessionManager.getCurrentWorldSession();
+				editorProjects.adoptLoadedLevel(world.getGameModule(), levelEditorController.currentLevel(),
+						world.getCurrentZone(), world.getCurrentAct());
+			}
 			public void metadataChanged(EditorProjectDocument document) { configureEditorProjectSpawnEditing(document); }
             public boolean isPaletteCellEditable(int line, int color) { return levelEditorController.isPaletteCellEditable(line, color); }
             public void refreshPalette(int line) {
@@ -481,7 +496,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		levelEditorController.setModifiedStateSupplier(() -> editorProjects.document() != null
 				? editorProjects.document().isModified()
 				: levelEditorController.currentLevel() != null && levelEditorController.currentLevel().isModifiedSinceLastSave());
-		levelEditorController.setCanvasNavigationSupplier(() -> editorProjects.document() != null || shownEditorProject != null);
+		levelEditorController.setCanvasNavigationSupplier(() -> getCurrentGameMode() == GameMode.EDITOR
+				|| editorProjects.document() != null || shownEditorProject != null);
 		this.stageplaySession = new com.openggf.stageplay.editor.StageplayEditorSession(
 				() -> editorProjectBaseModule != null ? editorProjectBaseModule : GameServices.module(), romManager, audioManager);
 		this.stageplay = new com.openggf.editor.stageplay.StageplayWorkspace(new com.openggf.editor.stageplay.StageplayWorkspace.Host() {
@@ -1588,7 +1604,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		stageplay.stop();
 		editorInputHandler.finishPendingEdits();
 		var document = editorProjects.document();
-		if ((document == null || !document.isModified()) && !stageplay.controller().dirty()) { closeApplicationWindow(); return; }
+		if (!hasUnsavedNativeEditorEdits() && (document == null || !document.isModified())
+				&& !stageplay.controller().dirty()) { closeApplicationWindow(); return; }
 		editorQuitView = new EditorQuitView(getCurrentGameMode(), camera,
 				camera == null ? 0 : camera.getX(), camera == null ? 0 : camera.getY(),
 				camera == null ? 0 : camera.getXCopy(), camera == null ? 0 : camera.getYCopy());
@@ -1871,9 +1888,22 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				editorProjectBaseModule = world.getGameModule();
 				editorProjectRootModule = world.rootGameModule();
 				editorProjectDataSource = world.getDataSource();
-				editorProjects.adoptLoadedLevel(editorProjectBaseModule, levelManager.getCurrentLevel(),
-						world.getCurrentZone(), world.getCurrentAct());
-				levelEditorController.setWorldCursor(new EditorCursorState(playerX, playerY));
+				// Native maps retain ROM collision remaps and camera limits. Portable
+				// project cloning is an explicit authoring operation, not editor entry.
+				MutableLevel level = com.openggf.editor.EditorNativeLevelView.prepare(levelManager.getCurrentLevel(),
+						editorProjectBaseModule.getObjectArtProvider());
+				EditorCursorState cursor = new EditorCursorState(playerX, playerY);
+				world.setCurrentLevel(level);
+				SessionManager.enterEditorMode(cursor, stash);
+				gameplayMode = null; gameLoop.setGameplayMode(null);
+				bindEditorLevelView(level, (short) 0,
+						(short) Math.max(0, level.getMap().getWidth() * level.getBlockPixelSize() - camera.getWidth()),
+						(short) 0, (short) Math.max(0, level.getMap().getHeight() * level.getBlockPixelSize() - camera.getHeight()));
+				cacheEditorLevelArt(level);
+				prepareMutableEditorLevel();
+				levelEditorController.setWorldCursor(cursor);
+				primeEditorSelection(playerX, playerY);
+				gameLoop.setGameMode(GameMode.EDITOR);
 				syncEditorState();
 			}
 			return;
@@ -1938,6 +1968,14 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			LOGGER.warning("Failed to save editor edits: " + e.getMessage());
 			return false;
 		}
+	}
+
+	private boolean hasUnsavedNativeEditorEdits() {
+		GameMode mode = editorQuitView == null ? getCurrentGameMode() : editorQuitView.mode();
+		var world = SessionManager.getCurrentWorldSession();
+		var level = levelEditorController.currentLevel();
+		return mode == GameMode.EDITOR && editorProjects.document() == null && world != null
+				&& level != null && world.getCurrentLevel() == level && level.isModifiedSinceLastSave();
 	}
 
 	/**
@@ -2058,12 +2096,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				(short) Math.max(0, level.getMap().getWidth() * level.getBlockPixelSize() - camera.getWidth()),
 				(short) 0, (short) Math.max(0, level.getMap().getHeight() * level.getBlockPixelSize() - camera.getHeight()));
 		levelManager.setEditorSaveManager(null);
-		if (graphicsManager.isGlInitialized()) {
-			for (int p = 0; p < level.getPaletteCount(); p++) graphicsManager.cachePaletteTexture(level.getPalette(p), p);
-			graphicsManager.beginPatternAtlasBatch();
-			try { for (int p = 0; p < level.getPatternCount(); p++) graphicsManager.cachePatternTexture(level.getPattern(p), p); }
-			finally { graphicsManager.endPatternAtlasBatch(); }
-		}
+		cacheEditorLevelArt(level);
 		boolean newLevel = levelEditorController.currentLevel() != document.level();
 		levelEditorController.attachLevel(document.level());
 		configureEditorProjectSpawnEditing(document);
@@ -2075,6 +2108,14 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		shownEditorProject = document;
 		gameLoop.setGameMode(GameMode.EDITOR);
 		syncEditorState();
+	}
+
+	private void cacheEditorLevelArt(Level level) {
+		if (!graphicsManager.isGlInitialized()) return;
+		for (int p = 0; p < level.getPaletteCount(); p++) graphicsManager.cachePaletteTexture(level.getPalette(p), p);
+		graphicsManager.beginPatternAtlasBatch();
+		try { for (int p = 0; p < level.getPatternCount(); p++) graphicsManager.cachePatternTexture(level.getPattern(p), p); }
+		finally { graphicsManager.endPatternAtlasBatch(); }
 	}
 
 	private void configureEditorProjectSpawnEditing(EditorProjectDocument document) {
@@ -2768,7 +2809,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		levelEditorController.attachLevel(mutableLevel);
 		levelEditorController.setPersistenceStatus(editorSaveManager.lastApplyResult());
 		GameModule editorModule = GameServices.module();
-		levelEditorController.configureSpawnEditing(
+		levelEditorController.configureNativeSpawnEditing(
 				editorModule.createObjectRegistry(), editorModule.getObjectPlacementEncoding());
 	}
 

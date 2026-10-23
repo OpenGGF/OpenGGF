@@ -24,7 +24,11 @@ final class Sonic1ObjectPreviews {
         }
 
         // Map_Newt's frame 0 is the materializing stipple; frame 1 is its readable standing pose.
-        if (id == Sonic1ObjectIds.NEWTRON) return ObjectPreview.frame("newtron", 1);
+        if (id == Sonic1ObjectIds.NEWTRON) {
+            // Newt_Type1's make_art_tile(ArtTile_Newtron,1,0), also used by the production draw call.
+            return new ObjectPreview(java.util.List.of(new ObjectPreview.Part("newtron", 1, 0, 0, false, false,
+                    spawn.subtype() != 0 ? 1 : -1)));
+        }
         if (id == Sonic1ObjectIds.SPIKES) return ObjectPreview.frame("spike", Math.min(5, (spawn.subtype() >> 4) & 15));
         if (id == Sonic1ObjectIds.PLATFORM) return ObjectPreview.frame("platform", (spawn.subtype() & 15) == 10 ? 1 : 0);
         if (id == Sonic1ObjectIds.SCENERY) return ObjectPreview.frame("bridge", 1);

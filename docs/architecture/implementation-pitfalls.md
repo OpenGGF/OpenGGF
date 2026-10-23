@@ -79,6 +79,16 @@ select the ROM-backed static authoring palette only on the first library copy,
 never by advancing gameplay or overwriting a reopened project's edited colors
 (October 2026 visual-polish viewer pass).
 
+**Detached editor art must not retain runtime providers.** Keep an editor picture catalogue in a weak level-keyed presentation sidecar,
+outside the level/checkpoint graph, with detached CPU art and value metadata only. Do not retain a live object-art provider or a closure
+that captures it: level references can appear in opaque checkpoint graphs, and
+the provider can lead to ROM file channels or runtime managers. Pass the provider
+explicitly while preparing an authoring library, then release it. Even detached
+pattern banks made the checkpoint graph exceed its bounded traversal budget when
+stored directly on the level.
+`TestPuttPuttParadise.opaqueCourseCheckpointGraphDoesNotRetainMutableSessionOwners`
+caught this during the October 2026 editor polish pass.
+
 **Editor rendering uses editor-owned managers.** Once an authored document enters
 `EDITOR`, `GameServices.camera()`, `level()` and `sprites()` require a gameplay
 mode and reject the call. Offscreen editor examples use the active
