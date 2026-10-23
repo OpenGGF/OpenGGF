@@ -295,13 +295,9 @@ it matters:
 | S2 World REV01 | `-Dsonic2.rom.path=` | `7B905383` | `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
 | S3&K locked-on | `-Ds3k.rom.path=` | `63522553` | `CFBF98C36C776677290A872547AC47C53D2761D6` |
 
-Disassemblies in `docs/s1disasm`, `docs/s2disasm`, `docs/skdisasm`, and
-`docs/scddisasm` are optional development references. Builds, tests, and runtime
-do not require them.
+Disassemblies in `docs/s1disasm`, `docs/s2disasm`, and `docs/skdisasm` are
+optional development references. Builds, tests, and runtime do not require them.
 Use `git submodule update --init` when needed.
-`docs/scddisasm` pins James' `OpenGGF/scddisasm` `ai-development` reference.
-Sonic CD is planned as the fourth official game; its reference checkout does not
-provide runtime support. Start with the [implementation plan](docs/architecture/plans/2026-10-23-sonic-cd-implementation.md).
 Cite disassembly lines with the label beside them, e.g. `loc_390FA (s2.asm:77149-77163)`.
 `python3 tools/disasm/disasm_citations.py check` verifies citations against the pinned
 disassemblies; a commit that moves a disassembly pin also runs

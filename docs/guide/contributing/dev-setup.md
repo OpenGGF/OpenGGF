@@ -25,18 +25,13 @@ tools/testing/install-hooks.sh
 python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package
 ```
 
-The pinned disassemblies are optional development references. The engine,
+The pinned Sonic Retro disassemblies are optional development references. The engine,
 Maven build, and ordinary tests do not require them. Contributors doing disassembly-backed
 parity research can initialize the exact reference revisions after cloning:
 
 ```bash
-git submodule update --init docs/s1disasm docs/s2disasm docs/skdisasm docs/scddisasm
+git submodule update --init docs/s1disasm docs/s2disasm docs/skdisasm
 ```
-
-The Sonic CD reference pins [James' ai-development branch](https://github.com/OpenGGF/scddisasm/tree/ai-development)
-at `docs/scddisasm`. Ordinary submodule updates use the committed pin. The branch
-setting identifies the upstream for deliberate reference updates. Sonic CD runtime
-support is [planned](../../architecture/plans/2026-10-23-sonic-cd-implementation.md).
 
 Trace recording and analysis are also optional. Those workflows use the exact
 TraceChaser release pinned by OpenGGF and the verified official BizHawk 2.11
@@ -161,7 +156,6 @@ OpenGGF/
     s1disasm/                -- Sonic 1 disassembly (Sonic Retro submodule)
     s2disasm/                -- Sonic 2 disassembly (Sonic Retro submodule)
     skdisasm/                -- Sonic 3&K disassembly (Sonic Retro submodule)
-    scddisasm/               -- Sonic CD disassembly (OpenGGF ai-development submodule)
     guide/                   -- This user guide
   tools/                     -- External reference tools
 ```
