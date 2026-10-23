@@ -381,7 +381,7 @@ class TestStageplayRoutePlanner {
             if(moving && goal.motion().endingAction()==EndingAction.OVERSHOOT)
                 returning=StageplayRouteSteering.returning(Math.floor(before.x()),goal.x(),approach,returning);
             int direction=moving?StageplayRouteSteering.direction(Math.floor(before.x()),before.xSpeed(),before.groundSpeed(),
-                    before.runAccel(),before.runDecel(),before.friction(),before.maxSpeed(),before.angle(),before.slopeRunning(),before.airborne(),goal.x(),goal.urgency(),goal.motion(),returning,approach)
+                    before.runAccel(),before.runDecel(),before.friction(),before.maxSpeed(),before.slopeImpulse(),before.airborne(),goal.x(),goal.urgency(),goal.motion(),returning,approach)
                     :goal!=null && goal.kind()==PuppetCommandKind.STOP && goal.motion().endingAction()!=EndingAction.GENTLE_STOP
                             ?StageplayMovementIntent.direction(Math.floor(before.x()),before.xSpeed(),before.runAccel(),before.runDecel(),before.maxSpeed(),before.airborne(),before.x(),0):0;
             boolean down=false,jump=frame<jumpEnd;

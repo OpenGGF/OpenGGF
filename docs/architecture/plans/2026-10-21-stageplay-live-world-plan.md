@@ -2865,3 +2865,22 @@ non-Overshoot route that passes the goal beyond tolerance, with advice to choose
 Walk start or move the destination farther away. The final ROM selection adds
 the reverse EHZ downhill route and asserts no unintended pass for every other
 ending. Its new result is pending at this checkpoint.
+
+
+Final single-press native charge and actual EHZ downhill selection passed all nine
+variants (one JUnit test, zero skips). Spindash now peaks at native `$800`, charges
+for 21 sampled ticks and settles at x396.78515625 without an unintended pass.
+Downhill Walk peaks at exactly `$180`, never skids and settles at x95.94921875 for
+x100. All non-Overshoot variants remain within the six-pixel pass tolerance.
+
+The once-only guards run executed 720 tests: 715 passed, five failed, zero skips.
+Four match the already attributed baseline: the two singleton guard methods on
+MenuAudioProbeTool.java:41 and the two concrete-provider/shared-layer ArchUnit
+rules on HubMusicController.java:118/120. Those source and guard files have zero
+diff from pre-task `d8099d53f`; prior matched baseline evidence remains in the
+overlay qualification record. The owned fifth failure was direct native trig
+access from StageplayRouteSteering. Physics-derived slope impulse now crosses
+from the native observation adapters as an integer; steering stays value-only.
+Native rolling coast drag also reads live acceleration / 2, per
+`Sonic_RollSpeed` (s2.asm:37009-37013). Only the affected ArchUnit and native ROM
+selection is being rechecked, with no repeated broad guards or smoke run.

@@ -476,7 +476,7 @@ public final class StageplayRoutePlanner {
                             returning=StageplayRouteSteering.returning(Math.floor(sample.x()),goal,current.approach,returning);
                         int direction = StageplayRouteSteering.direction(Math.floor(sample.x()),sample.xSpeed(),
                                 sample.groundSpeed(),sample.runAccel(),sample.runDecel(),sample.friction(),
-                                sample.maxSpeed(),sample.angle(),sample.slopeRunning(),sample.airborne(),goal,request.urgency(),request.motion(),returning,current.approach);
+                                sample.maxSpeed(),sample.slopeImpulse(),sample.airborne(),goal,request.urgency(),request.motion(),returning,current.approach);
                         ticks++;
                         probe.tick(direction < 0, direction > 0, frame < jumpEnd, frame);
                         sample = probe.sample();

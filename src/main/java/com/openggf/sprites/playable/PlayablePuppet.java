@@ -139,7 +139,7 @@ public final class PlayablePuppet implements AutoCloseable {
     public record Observation(double x, double y, int xSpeed, int ySpeed, int groundSpeed,
             int angle, int animation, int mappingFrame, boolean flipX, boolean flipY,
             boolean airborne, boolean onGround, int maxSpeed, int xRadius, int yRadius,
-            Tail tail, int runAccel, int runDecel, int friction, boolean skidding, boolean spindash, int slopeRunning) { }
+            Tail tail, int runAccel, int runDecel, int friction, boolean skidding, boolean spindash, int slopeImpulse) { }
 
     public record Tail(int mappingFrame, boolean flipX, boolean flipY) { }
 
@@ -154,7 +154,10 @@ public final class PlayablePuppet implements AutoCloseable {
                 actor.getAir(), !actor.getAir(), actor.getMax(), actor.getXRadius(), actor.getYRadius(),
                 tail == null ? null : new Tail(tail.mappingFrame(), tail.flipX(), tail.flipY()),
                 actor.getRunAccel(), actor.getRolling() ? actor.getRollDecel() : actor.getRunDecel(),
-                actor.getFriction(), actor.getSkidding(), actor.getSpindash(), actor.getSlopeRunning());
+                // Sonic_RollSpeed (s2.asm:37009-37013): natural roll drag is live acceleration / 2.
+                actor.getRolling() ? actor.getRunAccel() / 2 : actor.getFriction(),
+                actor.getSkidding(), actor.getSpindash(),
+                (actor.getSlopeRunning() * com.openggf.physics.TrigLookupTable.sinHex(actor.getAngle() & 0xFF)) >> 8);
     }
 
     /** An opaque checkpoint, accepted only by the same puppet instance. */

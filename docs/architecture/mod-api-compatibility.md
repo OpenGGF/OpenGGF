@@ -906,3 +906,13 @@ v6 compiles canonical v7 directly; unsupported prior schemas are rejected.
 The mutable `0.7` pin is regenerated in place. Registry enumeration, visual graph
 capture, load suppression, palettes and object-manager direction ports stay outside
 annotated types. Descriptor and runtime API version remain candidate `0.7.0`.
+
+
+The unpublished 0.7 candidate now includes `StageplayDocument.RouteMotion` on
+Puppet commands and `CharacterDefinition.MovementAbility` declarations. Old Java
+convenience constructors retain ordinary native intent defaults and declare no
+new movement abilities. Canonical Stageplay v7 requires the new motion field;
+current screenplay v6 actions supply an explicit policy or their normal defaults.
+There is no serialized-format migration. The mutable 0.7 signature pin and runtime
+candidate description change together; API version/status and the release policy
+descriptor remain unchanged, as required for ordinary candidate regeneration.

@@ -625,3 +625,8 @@ for the fixed interval. This selects the native minimum charge, rather than a
 maximal launch that cannot brake within a short acting route. A non-Overshoot
 ending that physically passes the point beyond tolerance fails cold qualification
 with advice to use a Walk start or a farther destination.
+
+Coasting from a roll follows native roll drag, which differs from standing
+friction (`Sonic_RollSpeed`, s2.asm:37009-37013: live acceleration / 2).
+Allow a longer route/window for a Spindash start with Gentle Stop; the director
+cannot remove native momentum to force an arrival.

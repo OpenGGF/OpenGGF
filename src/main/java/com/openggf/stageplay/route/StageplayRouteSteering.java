@@ -13,7 +13,7 @@ public final class StageplayRouteSteering {
     private StageplayRouteSteering() { }
 
     public static int direction(double x, int xSpeed, int groundSpeed, int accel, int decel,
-            int friction, int maxSpeed, int angle, int slopeRunning, boolean airborne, double targetX, double urgency,
+            int friction, int maxSpeed, int slopeImpulse, boolean airborne, double targetX, double urgency,
             RouteMotion motion, boolean returning, int approach) {
         double goal = motion.endingAction() == EndingAction.OVERSHOOT && !returning
                 ? targetX + approach * OVERSHOOT_PIXELS : targetX;
@@ -23,7 +23,7 @@ public final class StageplayRouteSteering {
         int toward = goal < x ? -1 : 1;
         // Native Sonic_SlopeResist (s2.asm:37709-37732) precedes acceleration.
         // Predict it from the actor's live slope factor, without changing physics.
-        int drift = airborne ? 0 : (slopeRunning * com.openggf.physics.TrigLookupTable.sinHex(angle)) >> 8;
+        int drift = airborne ? 0 : slopeImpulse;
         double predictedSpeed = (airborne ? xSpeed : groundSpeed) + drift;
         if (motion.travelSpeed() == TravelSpeed.WALK && (Math.abs(predictedSpeed) > cap || Math.abs(xSpeed) > cap))
             return speed < 0 ? 1 : -1;
